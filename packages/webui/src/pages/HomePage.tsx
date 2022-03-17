@@ -1,24 +1,38 @@
-import {Button, Group} from '@mantine/core';
-import {useNotifications} from '@mantine/notifications';
+import {Select, SelectItem} from '@mantine/core';
+import {Navigate, useNavigate} from 'react-router-dom';
+import useWorkspace from '../hooks/useWorkspace';
 import styles from './HomePage.module.sass';
 
 export function HomePage() {
-  const notifications = useNotifications();
+  const workspace = useWorkspace();
+  const navigate = useNavigate();
 
+  if (!workspace.projects || workspace.projects.length === 0) {
+    return (
+      <div className={styles.HomePage}>
+        <div className={styles.HomePage_Title}>No projects.</div>
+      </div>
+    );
+  }
+
+  if (workspace.projects.length === 1) {
+    return <Navigate to={`/cms/${workspace.projects[0].id}`} />;
+  }
+
+  const projectOptions: SelectItem[] = workspace.projects.map(project => {
+    return {
+      value: project.id,
+      label: `${project.name || project.id} (id: ${project.id})`,
+    };
+  });
   return (
     <div className={styles.HomePage}>
-      <Group position="center">
-        <Button
-          onClick={() =>
-            notifications.showNotification({
-              title: 'Default notification',
-              message: 'Hey there, your code is awesome! 🤥',
-            })
-          }
-        >
-          Show notification
-        </Button>
-      </Group>
+      <div className={styles.HomePage_Title}>Select a project to continue:</div>
+      <Select
+        placeholder="Projects"
+        data={projectOptions}
+        onChange={projectId => navigate(`/cms/${projectId}`)}
+      />
     </div>
   );
 }
