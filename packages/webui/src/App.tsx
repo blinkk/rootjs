@@ -1,44 +1,22 @@
-import {useState} from 'react';
-import logo from './logo.svg';
-import './App.css';
+import {MantineProvider} from '@mantine/core';
+import {ModalsProvider} from '@mantine/modals';
+import {BrowserRouter, Routes, Route} from 'react-router-dom';
+import {HomePage} from './pages/HomePage';
+import {NotificationsProvider} from '@mantine/notifications';
 
 function App() {
-  const [count, setCount] = useState(0);
-
   return (
-    <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>Hello Vite + React!</p>
-        <p>
-          <button type="button" onClick={() => setCount(count => count + 1)}>
-            count is: {count}
-          </button>
-        </p>
-        <p>
-          Edit <code>App.tsx</code> and save to test HMR updates.
-        </p>
-        <p>
-          <a
-            className="App-link"
-            href="https://reactjs.org"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Learn React
-          </a>
-          {' | '}
-          <a
-            className="App-link"
-            href="https://vitejs.dev/guide/features.html"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Vite Docs
-          </a>
-        </p>
-      </header>
-    </div>
+    <MantineProvider>
+      <ModalsProvider labels={{confirm: 'Confirm', cancel: 'Cancel'}}>
+        <NotificationsProvider>
+          <BrowserRouter>
+            <Routes>
+              <Route path="/cms/" element={<HomePage />} />
+            </Routes>
+          </BrowserRouter>
+        </NotificationsProvider>
+      </ModalsProvider>
+    </MantineProvider>
   );
 }
 
