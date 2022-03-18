@@ -13,9 +13,9 @@ export interface FieldConfig {
    */
   help?: string | Record<string, string>;
   /**
-   * Key to reference the field in the data.
+   * Id to reference the field in the data.
    */
-  key: string;
+  id: string;
   /**
    * Label for the field in the editor.
    */
