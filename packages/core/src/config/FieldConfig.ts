@@ -1,5 +1,3 @@
-import {ValidationRuleConfig} from './ValidationConfig';
-
 /**
  * Base interface for all field types.
  */
@@ -26,12 +24,4 @@ export interface FieldConfig {
    * Type of field. Used to create the correct field in the editor UI.
    */
   type: string;
-  /**
-   * Validation rules that should be applied to the field.
-   *
-   * In complex fields, this can be broken up into zones.
-   */
-  validation?:
-    | Array<ValidationRuleConfig>
-    | Record<string, Array<ValidationRuleConfig>>;
 }
