@@ -1,7 +1,7 @@
 /**
- * Base interface for all field types.
+ * Base interface for all field configs.
  */
-export interface FieldConfig {
+export interface BaseFieldConfig {
   /**
    * default value to use for the field when no value is provided.
    */
@@ -13,10 +13,6 @@ export interface FieldConfig {
    */
   help?: string | Record<string, string>;
   /**
-   * Id to reference the field in the data.
-   */
-  id: string;
-  /**
    * Label for the field in the editor.
    */
   label?: string;
@@ -24,4 +20,14 @@ export interface FieldConfig {
    * Type of field. Used to create the correct field in the editor UI.
    */
   type: string;
+}
+
+/**
+ * Field config with the required id for standard field configs.
+ */
+export interface FieldConfig extends BaseFieldConfig {
+  /**
+   * Id to reference the field in the data.
+   */
+  id: string;
 }
