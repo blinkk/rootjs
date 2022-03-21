@@ -1,6 +1,6 @@
 import {Loader} from '@mantine/core';
-import {createContext, useContext, useEffect, useState} from 'react';
-import {rpc} from '../utils/rpc';
+import {createContext, useContext, useState} from 'react';
+import {useJsonRpc} from './useJsonRpc';
 
 interface Collection {
   id: string;
@@ -19,17 +19,13 @@ export interface Workspace {
 
 export const WorkspaceContext = createContext<Workspace>({projects: []});
 
-export function WorkspaceProvider({children}: any) {
+export function WorkspaceProvider({children}: {children: JSX.Element}) {
   const [loading, setLoading] = useState(false);
   const [workspace, setWorkspace] = useState<Workspace>({projects: []});
-  useEffect(() => {
-    async function getPodData() {
-      const workspace = await rpc<Workspace>('workspace.json');
-      setWorkspace(workspace);
-      setLoading(false);
-    }
-    getPodData();
-  }, []);
+  useJsonRpc<Workspace>('workspace.json', workspace => {
+    setWorkspace(workspace);
+    setLoading(false);
+  });
   if (loading) {
     return <Loader />;
   }

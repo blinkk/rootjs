@@ -8,10 +8,10 @@ import {WorkspaceProvider} from './hooks/useWorkspace';
 
 function App() {
   return (
-    <WorkspaceProvider>
-      <MantineProvider>
-        <ModalsProvider labels={{confirm: 'Confirm', cancel: 'Cancel'}}>
-          <NotificationsProvider>
+    <MantineProvider>
+      <ModalsProvider labels={{confirm: 'Confirm', cancel: 'Cancel'}}>
+        <NotificationsProvider>
+          <WorkspaceProvider>
             <BrowserRouter>
               <Routes>
                 <Route path="/cms/" element={<HomePage />} />
@@ -26,10 +26,10 @@ function App() {
                 />
               </Routes>
             </BrowserRouter>
-          </NotificationsProvider>
-        </ModalsProvider>
-      </MantineProvider>
-    </WorkspaceProvider>
+          </WorkspaceProvider>
+        </NotificationsProvider>
+      </ModalsProvider>
+    </MantineProvider>
   );
 }
 
