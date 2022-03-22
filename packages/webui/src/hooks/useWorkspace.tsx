@@ -1,6 +1,6 @@
 import {Loader} from '@mantine/core';
-import {createContext, useContext, useEffect, useState} from 'react';
-import {rpc} from '../utils/rpc';
+import {createContext, useContext, useState} from 'react';
+import {useJsonRpc} from './useJsonRpc';
 
 interface Collection {
   id: string;
@@ -19,17 +19,18 @@ export interface Workspace {
 
 export const WorkspaceContext = createContext<Workspace>({projects: []});
 
-export function WorkspaceProvider({children}: any) {
+/**
+ * WorkspaceProvider is a context provider that fetches the CMS workspace.
+ */
+export function WorkspaceProvider({children}: {children: JSX.Element}) {
   const [loading, setLoading] = useState(false);
   const [workspace, setWorkspace] = useState<Workspace>({projects: []});
-  useEffect(() => {
-    async function getPodData() {
-      const workspace = await rpc<Workspace>('workspace.json');
-      setWorkspace(workspace);
-      setLoading(false);
-    }
-    getPodData();
-  }, []);
+
+  useJsonRpc<Workspace>('workspace.json', workspace => {
+    setWorkspace(workspace);
+    setLoading(false);
+  });
+
   if (loading) {
     return <Loader />;
   }
@@ -40,8 +41,27 @@ export function WorkspaceProvider({children}: any) {
   );
 }
 
+/**
+ * useWorkspace is a hook that provides the CMS workspace.
+ *
+ * To use this hook, the `{@link WorkspaceProvider}` must be mounted somewhere
+ * higher up in the component tree.
+ *
+ * For example, in your `App.tsx` file:
+ *
+ * ```tsx
+ * <WorkspaceProvider>
+ *   <ExampleComponent />
+ * </WorkspaceProvider>
+ * ```
+ *
+ * ```tsx
+ * function ExampleComponent(props) {
+ *   const workspace = useWorkspace();
+ *   return <>{workspace.projects.length}</>;
+ * }
+ * ```
+ */
 export function useWorkspace() {
   return useContext(WorkspaceContext);
 }
-
-export default useWorkspace;
