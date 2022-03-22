@@ -3,21 +3,21 @@
  */
 export interface BaseFieldConfig {
   /**
-   * Default value to use for the field when no value is provided.
+   * Type of field.
    */
-  default?: unknown;
-  /**
-   * Help string to assist user in understanding the expectations of the field.
-   */
-  help?: string;
+  type: string;
   /**
    * Label for the field in the editor.
    */
   label?: string;
   /**
-   * Type of field.
+   * Help string to assist user in understanding the expectations of the field.
    */
-  type: string;
+  help?: string;
+  /**
+   * Default value to use for the field when no value is provided.
+   */
+  default?: unknown;
 }
 
 /**
