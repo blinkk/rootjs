@@ -1,10 +1,10 @@
 import * as path from 'path';
 import {cwd, env} from 'process';
 import {Server} from '../server';
+import {loadEnv} from '../utils/loadEnv';
 import Workspace from '../workspace/Workspace';
 
 export async function dev(dirPath?: string) {
-  // TODO(stevenle): load dotenv files.
   let workspaceDir = dirPath || env.CMS_WORKSPACE;
   if (workspaceDir) {
     if (!workspaceDir.startsWith('/')) {
@@ -14,6 +14,7 @@ export async function dev(dirPath?: string) {
   } else {
     workspaceDir = cwd();
   }
+  loadEnv(workspaceDir, {mode: 'development'});
   const workspace = await Workspace.init(workspaceDir);
   const server = new Server({
     workspace: workspace,

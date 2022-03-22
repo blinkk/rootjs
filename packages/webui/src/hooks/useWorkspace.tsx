@@ -1,5 +1,5 @@
-import {Loader} from '@mantine/core';
 import {createContext, useContext, useState} from 'react';
+import {LoadingPage} from '../pages/LoadingPage';
 import {useJsonRpc} from './useJsonRpc';
 
 interface Collection {
@@ -15,24 +15,29 @@ interface Project {
 
 export interface Workspace {
   projects: Project[];
+  firebase: {
+    apiKey: string;
+    authDomain: string;
+  };
 }
 
-export const WorkspaceContext = createContext<Workspace>({projects: []});
+export const WorkspaceContext = createContext<Workspace | null>(null);
 
 /**
  * WorkspaceProvider is a context provider that fetches the CMS workspace.
  */
 export function WorkspaceProvider({children}: {children: JSX.Element}) {
-  const [loading, setLoading] = useState(false);
-  const [workspace, setWorkspace] = useState<Workspace>({projects: []});
+  const [loading, setLoading] = useState(true);
+  const [workspace, setWorkspace] = useState<Workspace | null>(null);
 
   useJsonRpc<Workspace>('workspace.json', workspace => {
+    console.log(workspace);
     setWorkspace(workspace);
     setLoading(false);
   });
 
   if (loading) {
-    return <Loader />;
+    return <LoadingPage />;
   }
   return (
     <WorkspaceContext.Provider value={workspace}>
@@ -63,5 +68,5 @@ export function WorkspaceProvider({children}: {children: JSX.Element}) {
  * ```
  */
 export function useWorkspace() {
-  return useContext(WorkspaceContext);
+  return useContext(WorkspaceContext)!;
 }

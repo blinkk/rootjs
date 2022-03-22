@@ -7,6 +7,12 @@ import * as path from 'path';
 
 export interface WorkspaceSerialized {
   projects: ProjectSerialized[];
+  firebase: FirebaseConfig;
+}
+
+interface FirebaseConfig {
+  apiKey: string;
+  authDomain: string;
 }
 
 async function loadConfig(workspaceDir: string): Promise<WorkspaceConfig> {
@@ -83,9 +89,21 @@ export class Workspace {
     return this.projects.find(p => p.id === projectId) || null;
   }
 
+  getFirebaseConfig(): FirebaseConfig {
+    const apiKey = process.env.FIREBASE_API_KEY;
+    const authDomain = process.env.FIREBASE_AUTH_DOMAIN;
+    if (!apiKey || !authDomain) {
+      throw new Error(
+        'missing firebase credentials, please set environment variables: FIREBASE_API_KEY and FIREBASE_AUTH_DOMAIN'
+      );
+    }
+    return {apiKey, authDomain};
+  }
+
   serialize(): WorkspaceSerialized {
     return {
       projects: this.projects.map(p => p.serialize()),
+      firebase: this.getFirebaseConfig(),
     };
   }
 }

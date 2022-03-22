@@ -13,8 +13,10 @@
     "@mantine/modals": "^4.0.5",
     "@mantine/notifications": "^4.0.5",
     "@primer/octicons-react": "^17.0.0",
+    "firebase": "^9.6.9",
     "react": "^17.0.2",
     "react-dom": "^17.0.2",
+    "react-firebaseui": "^6.0.0",
     "react-router-dom": "^6.2.2",
     "sass": "^1.49.9"
   },
