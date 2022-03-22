@@ -1,7 +1,7 @@
 import {MantineProvider} from '@mantine/core';
 import {ModalsProvider} from '@mantine/modals';
 import {BrowserRouter, Routes, Route} from 'react-router-dom';
-import {HomePage} from './pages/HomePage';
+import {ProjectSelectPage} from './pages/ProjectSelectPage';
 import {NotificationsProvider} from '@mantine/notifications';
 import {WIP} from './pages/WIP';
 import {WorkspaceProvider} from './hooks/useWorkspace';
@@ -14,14 +14,14 @@ function App() {
           <WorkspaceProvider>
             <BrowserRouter>
               <Routes>
-                <Route path="/cms/" element={<HomePage />} />
+                <Route path="/cms/" element={<ProjectSelectPage />} />
                 <Route path="/cms/:project" element={<WIP />} />
                 <Route
-                  path="/cms/:project/docs/:collection"
+                  path="/cms/:project/content/:collection"
                   element={<WIP />}
                 />
                 <Route
-                  path="/cms/:project/docs/:collection/:slug"
+                  path="/cms/:project/content/:collection/:slug"
                   element={<WIP />}
                 />
               </Routes>
