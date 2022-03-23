@@ -33,7 +33,6 @@ export const requestExtras = fp(
       const url = new URL(req.url, `${req.protocol}://${req.hostname}`);
       req.path = url.pathname;
       req.queryString = url.search;
-      req.workspace = workspace;
       req.getHeader = (name: string) => {
         const val = req.headers[name.toLowerCase()];
         if (Array.isArray(val)) {
@@ -47,7 +46,14 @@ export const requestExtras = fp(
       req.getQueryParams = (name: string) => {
         return url.searchParams.getAll(name);
       };
-      done();
+
+      // For dev purposes, the workspace is regenerated on every request so that
+      // the server does not need to be reloaded for every config change.
+      // TODO(stevenle): use a static workspace in prod.
+      Workspace.init(workspace.workspaceDir).then(workspace => {
+        req.workspace = workspace;
+        done();
+      });
     });
   }
 );

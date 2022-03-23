@@ -6,6 +6,7 @@ import {NotificationsProvider} from '@mantine/notifications';
 import {WIP} from './pages/WIP';
 import {WorkspaceProvider} from './hooks/useWorkspace';
 import {UserProvider} from './hooks/useUser';
+import {ProjectPage} from './pages/ProjectPage';
 
 function App() {
   return (
@@ -17,13 +18,13 @@ function App() {
               <BrowserRouter>
                 <Routes>
                   <Route path="/cms/" element={<ProjectSelectPage />} />
-                  <Route path="/cms/:project" element={<WIP />} />
+                  <Route path="/cms/:projectId" element={<ProjectPage />} />
                   <Route
-                    path="/cms/:project/content/:collection"
+                    path="/cms/:projectId/content/:collectionId"
                     element={<WIP />}
                   />
                   <Route
-                    path="/cms/:project/content/:collection/:slug"
+                    path="/cms/:projectId/content/:collectionId/:slug"
                     element={<WIP />}
                   />
                 </Routes>

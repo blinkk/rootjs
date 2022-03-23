@@ -1,14 +1,23 @@
-import ProjectConfig from '../config/ProjectConfig';
+import {promise as glob} from 'glob-promise';
+import {loadConfigPath} from '../config/loadConfigFile';
+import {ProjectConfig} from '../config/ProjectConfig';
+import {Collection, CollectionSerialized} from './Collection';
 
 export interface ProjectSerialized {
   id: string;
   name?: string;
   domains?: string[];
+  collections?: CollectionSerialized[];
 }
 
-async function loadConfig(projectDir: string): Promise<ProjectConfig> {
-  const configPath = `${projectDir}/${Project.CONFIG_FILE}`;
-  return (await import(configPath)).default as ProjectConfig;
+async function loadCollections(projectDir: string): Promise<Collection[]> {
+  const collections: Collection[] = [];
+  const configFiles = await glob(`${projectDir}/collections/*.ts`);
+  for (const configFile of configFiles) {
+    const collection = await Collection.init(configFile);
+    collections.push(collection);
+  }
+  return collections;
 }
 
 export class Project {
@@ -17,6 +26,7 @@ export class Project {
   projectDir: string;
   config: ProjectConfig;
   id: string;
+  collections: Collection[] = [];
 
   constructor(projectDir: string, config: ProjectConfig) {
     this.projectDir = projectDir;
@@ -25,8 +35,12 @@ export class Project {
   }
 
   static async init(projectDir: string) {
-    const config = await loadConfig(projectDir);
-    return new Project(projectDir, config);
+    const config = await loadConfigPath<ProjectConfig>(
+      `${projectDir}/${Project.CONFIG_FILE}`
+    );
+    const project = new Project(projectDir, config);
+    project.collections = await loadCollections(projectDir);
+    return project;
   }
 
   serialize(): ProjectSerialized {
@@ -34,6 +48,7 @@ export class Project {
       id: this.id,
       name: this.config.name,
       domains: this.config.domains,
+      collections: this.collections.map(c => c.serialize()),
     };
   }
 }

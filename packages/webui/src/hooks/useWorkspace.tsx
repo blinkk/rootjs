@@ -2,11 +2,11 @@ import {createContext, useContext, useState} from 'react';
 import {LoadingPage} from '../pages/LoadingPage';
 import {useJsonRpc} from './useJsonRpc';
 
-interface Collection {
+export interface Collection {
   id: string;
 }
 
-interface Project {
+export interface Project {
   id: string;
   name?: string;
   description?: string;

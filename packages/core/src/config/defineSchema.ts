@@ -6,5 +6,3 @@ import {SchemaConfig} from './SchemaConfig';
 export function defineSchema(config: SchemaConfig): SchemaConfig {
   return config;
 }
-
-export default defineSchema;

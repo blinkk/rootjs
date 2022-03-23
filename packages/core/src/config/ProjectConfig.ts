@@ -15,5 +15,3 @@ export interface ProjectConfig {
    */
   domains?: string[];
 }
-
-export default ProjectConfig;

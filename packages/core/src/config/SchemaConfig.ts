@@ -5,5 +5,3 @@ export interface SchemaConfig {
   description?: string;
   fields?: FieldConfig[];
 }
-
-export default SchemaConfig;

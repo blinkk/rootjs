@@ -1,9 +1,10 @@
-import WorkspaceConfig from '../config/WorkspaceConfig';
+import {WorkspaceConfig} from '../config/WorkspaceConfig';
 import {Project, ProjectSerialized} from './Project';
 import {constants as fsConstants} from 'fs';
 import {access} from 'fs/promises';
 import {promise as glob} from 'glob-promise';
 import * as path from 'path';
+import {loadConfigPath} from '../config/loadConfigFile';
 
 export interface WorkspaceSerialized {
   projects: ProjectSerialized[];
@@ -15,11 +16,6 @@ interface FirebaseConfig {
   authDomain: string;
 }
 
-async function loadConfig(workspaceDir: string): Promise<WorkspaceConfig> {
-  const configPath = `${workspaceDir}/${Workspace.CONFIG_FILE}`;
-  return (await import(configPath)).default as WorkspaceConfig;
-}
-
 async function loadProjects(
   workspaceDir: string,
   projectDirGlobs: string[]
@@ -28,7 +24,8 @@ async function loadProjects(
   for (const globPattern of projectDirGlobs) {
     const projectDirs = await glob(path.join(workspaceDir, globPattern));
     for (const projectDir of projectDirs) {
-      if (await hasConfigFile(projectDir, Project.CONFIG_FILE)) {
+      const configPath = `${projectDir}/${Project.CONFIG_FILE}`;
+      if (await hasConfigFile(configPath)) {
         const project = await Project.init(projectDir);
         projects.push(project);
       }
@@ -37,8 +34,7 @@ async function loadProjects(
   return projects;
 }
 
-async function hasConfigFile(dirPath: string, configFileName: string) {
-  const configPath = `${dirPath}/${configFileName}`;
+async function hasConfigFile(configPath: string) {
   try {
     await access(configPath, fsConstants.F_OK);
     return true;
@@ -72,8 +68,9 @@ export class Workspace {
     // workspace config file. Otherwise, it's assumed that the workspace is a
     // single-project workspace.
     let projectDirs = [workspaceDir];
-    if (await hasConfigFile(workspaceDir, Workspace.CONFIG_FILE)) {
-      const config = await loadConfig(workspaceDir);
+    const configPath = `${workspaceDir}/${Workspace.CONFIG_FILE}`;
+    if (await hasConfigFile(configPath)) {
+      const config = await loadConfigPath<WorkspaceConfig>(configPath);
       if (config.projects) {
         projectDirs = config.projects;
       }
