@@ -6,5 +6,3 @@ import {ProjectConfig} from './ProjectConfig';
 export function defineProject(config: ProjectConfig): ProjectConfig {
   return config;
 }
-
-export default defineProject;

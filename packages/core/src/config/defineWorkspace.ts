@@ -6,5 +6,3 @@ import {WorkspaceConfig} from './WorkspaceConfig';
 export function defineWorkspace(config: WorkspaceConfig): WorkspaceConfig {
   return config;
 }
-
-export default defineWorkspace;

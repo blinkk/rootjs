@@ -7,5 +7,3 @@ export interface WorkspaceConfig {
    */
   projects?: string[];
 }
-
-export default WorkspaceConfig;
