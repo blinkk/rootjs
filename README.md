@@ -9,8 +9,16 @@ This project uses [PNPM](https://pnpm.io/). Install it using `npm install -g pnp
 
 Project setup:
 
-```
+```shell
 git clone git@github.com:blinkk/cms.git
 cd cms
 pnpm install
+```
+
+Copy `.env.local.example` to `.env.local` and populate it with an API key from firebase.
+
+Start the dev server:
+
+```shell
+pnpm run dev
 ```
