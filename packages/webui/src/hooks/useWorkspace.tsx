@@ -1,25 +1,7 @@
 import {createContext, useContext, useState} from 'react';
+import {Workspace, WorkspaceConfig} from '../lib/Workspace';
 import {LoadingPage} from '../pages/LoadingPage';
 import {useJsonRpc} from './useJsonRpc';
-
-export interface Collection {
-  id: string;
-}
-
-export interface Project {
-  id: string;
-  name?: string;
-  description?: string;
-  collections: Collection[];
-}
-
-export interface Workspace {
-  projects: Project[];
-  firebase: {
-    apiKey: string;
-    authDomain: string;
-  };
-}
 
 export const WorkspaceContext = createContext<Workspace | null>(null);
 
@@ -30,8 +12,8 @@ export function WorkspaceProvider({children}: {children: JSX.Element}) {
   const [loading, setLoading] = useState(true);
   const [workspace, setWorkspace] = useState<Workspace | null>(null);
 
-  useJsonRpc<Workspace>('workspace.json', workspace => {
-    console.log(workspace);
+  useJsonRpc<WorkspaceConfig>('workspace.json', workspaceConfig => {
+    const workspace = new Workspace(workspaceConfig);
     setWorkspace(workspace);
     setLoading(false);
   });

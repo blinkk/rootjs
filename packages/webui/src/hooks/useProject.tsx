@@ -1,20 +1,24 @@
 import {useNotifications} from '@mantine/notifications';
 import {useParams} from 'react-router-dom';
-import {Project, useWorkspace} from './useWorkspace';
+import {Project} from '../lib/Project';
+import {useWorkspace} from './useWorkspace';
 
-export function useProject(): Project {
+export function useProject(projectId?: string): Project {
   const notifications = useNotifications();
   const workspace = useWorkspace();
-  const {projectId} = useParams();
-  const project = workspace.projects.find(p => p.id === projectId);
-  if (!project) {
+  if (!projectId) {
+    projectId = useParams().projectId;
+  }
+  const projectConfig = workspace.projects.find(p => p.id === projectId);
+  if (!projectConfig) {
     notifications.showNotification({
-      title: `Project Not Found`,
+      title: 'Project Not Found',
       message: `${projectId} does not exist`,
       color: 'red',
       autoClose: false,
     });
     throw new Error(`project not found: ${projectId}`);
   }
+  const project = new Project(workspace, projectConfig);
   return project;
 }

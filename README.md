@@ -22,3 +22,5 @@ Start the dev server:
 ```shell
 pnpm run dev
 ```
+
+And then visit: http://localhost:3000/cms/

@@ -1,5 +1,5 @@
 import firebase from 'firebase/compat/app';
-import {Avatar, Header, Text} from '@mantine/core';
+import {Avatar, Header, Menu, Text, UnstyledButton} from '@mantine/core';
 import {useUser} from '../hooks/useUser';
 import styles from './AppHeader.module.sass';
 
@@ -13,16 +13,32 @@ function getInitials(user: firebase.User): string {
   return user.email![0].toUpperCase();
 }
 
+function UserAvatar(props: {user: firebase.User}) {
+  const user = props.user;
+  const initials = getInitials(user);
+  return (
+    <Avatar color="cyan" size="md" radius="xl" title={user.email || ''}>
+      {initials}
+    </Avatar>
+  );
+}
+
 export function AppHeader() {
   const user = useUser();
-  const initials = getInitials(user);
   return (
     <Header height={70} p="md">
       <div className={styles.AppHeader_Contents}>
         <Text weight={700}>Blinkk CMS</Text>
-        <Avatar color="cyan" size="md" radius="xl" title={user.email || ''}>
-          {initials}
-        </Avatar>
+        <Menu
+          control={
+            <UnstyledButton>
+              <UserAvatar user={user} />
+            </UnstyledButton>
+          }
+          gutter={10}
+        >
+          <Menu.Item onClick={() => alert('coming soon')}>Sign Out</Menu.Item>
+        </Menu>
       </div>
     </Header>
   );
