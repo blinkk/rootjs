@@ -6,7 +6,6 @@ import {UserSignInPage} from '../pages/UserSignInPage';
 import {LoadingPage} from '../pages/LoadingPage';
 
 type User = firebase.User;
-type Auth = firebase.auth.Auth;
 
 export const UserContext = createContext<User | null>(null);
 
@@ -14,16 +13,13 @@ export function UserProvider({children}: {children: JSX.Element}) {
   const [isSignedIn, setIsSignedIn] = useState(false);
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
-  const [auth, setAuth] = useState<Auth | null>(null);
   const workspace = useWorkspace();
 
   useEffect(() => {
     if (!workspace) {
       return;
     }
-    const app = firebase.initializeApp(workspace.firebase);
-    const auth = app.auth();
-    setAuth(auth);
+    const auth = workspace.firebase.auth();
     const unregisterAuthObserver = auth.onAuthStateChanged(user => {
       setIsSignedIn(!!user);
       if (user) {
@@ -38,7 +34,7 @@ export function UserProvider({children}: {children: JSX.Element}) {
     return <LoadingPage />;
   }
   if (!isSignedIn) {
-    return <UserSignInPage auth={auth} />;
+    return <UserSignInPage />;
   }
   return <UserContext.Provider value={user}>{children}</UserContext.Provider>;
 }

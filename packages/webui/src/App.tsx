@@ -7,6 +7,8 @@ import {WIP} from './pages/WIP';
 import {WorkspaceProvider} from './hooks/useWorkspace';
 import {UserProvider} from './hooks/useUser';
 import {ProjectPage} from './pages/ProjectPage';
+import {CollectionPage} from './pages/CollectionPage';
+import {DocumentPage} from './pages/DocumentPage';
 
 function App() {
   return (
@@ -21,11 +23,11 @@ function App() {
                   <Route path="/cms/:projectId" element={<ProjectPage />} />
                   <Route
                     path="/cms/:projectId/content/:collectionId"
-                    element={<WIP />}
+                    element={<CollectionPage />}
                   />
                   <Route
                     path="/cms/:projectId/content/:collectionId/:slug"
-                    element={<WIP />}
+                    element={<DocumentPage />}
                   />
                 </Routes>
               </BrowserRouter>
