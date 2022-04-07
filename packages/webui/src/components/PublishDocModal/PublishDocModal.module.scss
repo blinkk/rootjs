@@ -1,0 +1,16 @@
+.whenInputWrap {
+  margin-top: 20px;
+  input {
+    display: block;
+    margin-top: 4px;
+    border: 1px solid #dedede;
+    padding: 8px 12px;
+  }
+}
+
+.buttonGroup {
+  justify-content: flex-end;
+  margin-top: 40px;
+  border-top: 1px solid #dedede;
+  padding-top: 20px;
+}

@@ -24,6 +24,7 @@ export function UserProvider({children}: {children: JSX.Element}) {
       setIsSignedIn(!!user);
       if (user) {
         setUser(user);
+        workspace.setUser(user);
       }
       setLoading(false);
     });
