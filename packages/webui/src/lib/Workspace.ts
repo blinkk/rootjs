@@ -14,6 +14,7 @@ export class Workspace {
   config: WorkspaceConfig;
   projects: ProjectConfig[];
   firebase: firebase.app.App;
+  user?: firebase.User;
 
   constructor(config: WorkspaceConfig) {
     this.config = config;
@@ -36,5 +37,9 @@ export class Workspace {
 
   db(): firebase.firestore.Firestore {
     return this.firebase.firestore();
+  }
+
+  setUser(user: firebase.User) {
+    this.user = user;
   }
 }

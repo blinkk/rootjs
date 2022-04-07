@@ -3,7 +3,6 @@ import {ModalsProvider} from '@mantine/modals';
 import {BrowserRouter, Routes, Route} from 'react-router-dom';
 import {ProjectSelectPage} from './pages/ProjectSelectPage';
 import {NotificationsProvider} from '@mantine/notifications';
-import {WIP} from './pages/WIP';
 import {WorkspaceProvider} from './hooks/useWorkspace';
 import {UserProvider} from './hooks/useUser';
 import {ProjectPage} from './pages/ProjectPage';
