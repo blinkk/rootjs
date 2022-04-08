@@ -67,7 +67,7 @@ export function CollectionPage() {
               to={`/cms/${project.id}/content/${collection.id}/${doc.slug}`}
               key={doc.slug}
             >
-              {doc.draft.meta.title} ({doc.slug})
+              {doc.draft.meta?.title} ({doc.slug})
             </Link>
           ))}
         </Group>
