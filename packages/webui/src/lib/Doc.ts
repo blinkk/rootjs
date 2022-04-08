@@ -42,10 +42,8 @@ export class Doc {
     );
     await db.runTransaction(async transaction => {
       transaction.update(docRef, {
-        draft: {
-          modifiedAt: new Date(),
-          modifiedBy: email,
-        },
+        'draft.modifiedAt': new Date(),
+        'draft.modifiedBy': email,
       });
       transaction.set(contentRef, content);
     });
@@ -67,11 +65,12 @@ export class Doc {
       `Projects/${this.project.id}/Collections/${this.collection.id}/Docs/${this.slug}/Content/published`
     );
     await db.runTransaction(async transaction => {
+      const doc = await transaction.get(docRef);
+      const meta = doc.data()?.draft?.meta || {};
       transaction.update(docRef, {
-        published: {
-          modifiedAt: new Date(),
-          modifiedBy: email,
-        },
+        'published.meta': meta,
+        'published.modifiedAt': new Date(),
+        'published.modifiedBy': email,
       });
       transaction.set(contentRef, content);
     });
