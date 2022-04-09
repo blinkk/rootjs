@@ -1,5 +1,5 @@
 {
-  "name": "webui",
+  "name": "@blinkk/root-webui",
   "private": true,
   "version": "0.0.0",
   "scripts": {
@@ -8,6 +8,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@babel/core": "^7.17.9",
     "@mantine/core": "^4.1.2",
     "@mantine/hooks": "^4.1.2",
     "@mantine/modals": "^4.1.2",

@@ -1,5 +1,5 @@
 {
-  "name": "@blinkk/cms-core",
+  "name": "@blinkk/root-core",
   "version": "1.0.0",
   "description": "",
   "main": "dist/lib.js",
@@ -12,20 +12,20 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/blinkk/cms.git"
+    "url": "git+https://github.com/blinkk/rootjs.git"
   },
   "author": "",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/blinkk/cms/issues"
+    "url": "https://github.com/blinkk/rootjs/issues"
   },
-  "homepage": "https://github.com/blinkk/cms#readme",
+  "homepage": "https://github.com/blinkk/rootjs#readme",
   "files": [
     "dist",
     "package.json"
   ],
   "bin": {
-    "cms": "dist/cli.js"
+    "root": "dist/cli.js"
   },
   "engines": {
     "node": "16.x.x"

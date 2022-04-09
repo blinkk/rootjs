@@ -1,4 +1,10 @@
-import {SchemaConfig} from './SchemaConfig';
+import {FieldConfig} from './FieldConfig';
+
+export interface SchemaConfig {
+  name?: string;
+  description?: string;
+  fields?: FieldConfig[];
+}
 
 /**
  * Helper function for defining a schema config with type checking.

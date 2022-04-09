@@ -15,3 +15,10 @@ export interface ProjectConfig {
    */
   domains?: string[];
 }
+
+/**
+ * Helper function for defining a project config with type checking.
+ */
+export function defineProject(config: ProjectConfig): ProjectConfig {
+  return config;
+}

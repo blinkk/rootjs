@@ -1,27 +1,28 @@
 {
-  "name": "cms",
+  "name": "@blinkk/root-project",
   "version": "1.0.0",
-  "description": "",
+  "private": true,
+  "description": "RootJS is a developer-focused CMS that writes directly to Firestore.",
   "main": "index.js",
   "scripts": {
     "dev": "npm-run-all --parallel dev:server dev:webui",
-    "dev:server": "CMS_WORKSPACE=../.. npm --prefix=./packages/core run dev:server",
-    "dev:webui": "npm --prefix=./packages/webui run dev",
+    "dev:server": "CMS_WORKSPACE=../.. npm --prefix=./packages/root-core run dev:server",
+    "dev:webui": "npm --prefix=./packages/root-webui run dev",
     "fix": "eslint . --ext .ts,.tsx --fix",
     "lint": "eslint . --ext .ts,.tsx"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/blinkk/cms.git"
+    "url": "git+https://github.com/blinkk/rootjs.git"
   },
   "author": "",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/blinkk/cms/issues"
+    "url": "https://github.com/blinkk/rootjs/issues"
   },
-  "homepage": "https://github.com/blinkk/cms#readme",
+  "homepage": "https://github.com/blinkk/rootjs#readme",
   "dependencies": {
-    "@blinkk/cms-core": "workspace:*"
+    "@blinkk/root-core": "workspace:*"
   },
   "devDependencies": {
     "@typescript-eslint/eslint-plugin": "^5.15.0",
@@ -32,6 +33,7 @@
     "eslint-plugin-prettier": "^4.0.0",
     "npm-run-all": "^4.1.5",
     "prettier": "^2.6.0",
+    "release-please": "^13.8.0",
     "typescript": "^4.6.2"
   }
 }
