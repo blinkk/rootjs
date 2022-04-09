@@ -1,5 +1,5 @@
 {
-  "name": "@blinkk/cms-example-nextjs-blog",
+  "name": "@blinkk/root-example-nextjs-blog",
   "version": "0.1.0",
   "private": true,
   "scripts": {
@@ -9,7 +9,7 @@
     "lint": "next lint"
   },
   "dependencies": {
-    "@blinkk/cms-core": "workspace:*",
+    "@blinkk/root-core": "workspace:*",
     "next": "12.1.0",
     "react": "17.0.2",
     "react-dom": "17.0.2"

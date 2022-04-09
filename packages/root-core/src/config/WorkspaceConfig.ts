@@ -7,3 +7,10 @@ export interface WorkspaceConfig {
    */
   projects?: string[];
 }
+
+/**
+ * Helper function for defining a workspace config with type checking.
+ */
+export function defineWorkspace(config: WorkspaceConfig): WorkspaceConfig {
+  return config;
+}

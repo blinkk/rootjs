@@ -1,4 +1,4 @@
-import {defineProject} from '@blinkk/cms-core';
+import {defineProject} from '@blinkk/root-core';
 
 export default defineProject({
   id: 'example-nextjs-blog',

@@ -48,7 +48,7 @@ async function hasConfigFile(configPath: string) {
  * many projects (like a monorepo and npm workspaces).
  */
 export class Workspace {
-  static CONFIG_FILE = 'cms.workspace.ts';
+  static CONFIG_FILE = 'root.workspace.ts';
 
   workspaceDir: string;
   projects: Project[];
@@ -64,7 +64,7 @@ export class Workspace {
 
   static async init(workspaceDir: string) {
     console.log(`initializing workspace: ${workspaceDir}`);
-    // If a cms.workspace.ts file is found, load the projects defined in the
+    // If a root.workspace.ts file is found, load the projects defined in the
     // workspace config file. Otherwise, it's assumed that the workspace is a
     // single-project workspace.
     let projectDirs = [workspaceDir];

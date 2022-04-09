@@ -21,7 +21,7 @@ async function loadCollections(projectDir: string): Promise<Collection[]> {
 }
 
 export class Project {
-  static CONFIG_FILE = 'cms.config.ts';
+  static CONFIG_FILE = 'root.config.ts';
 
   projectDir: string;
   config: ProjectConfig;
