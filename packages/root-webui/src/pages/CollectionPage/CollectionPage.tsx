@@ -1,8 +1,8 @@
 import {Breadcrumbs, Title, Text, Group} from '@mantine/core';
 import {useEffect, useState} from 'react';
 import {Link} from 'react-router-dom';
-import {AppShell} from '../components/AppShell';
-import {useCollection} from '../hooks/useCollection';
+import {WebUIShell} from '../../components/WebUIShell/WebUIShell';
+import {useCollection} from '../../hooks/useCollection';
 
 export function CollectionPage() {
   const collection = useCollection();
@@ -45,7 +45,7 @@ export function CollectionPage() {
     </Link>
   ));
   return (
-    <AppShell>
+    <WebUIShell>
       <Breadcrumbs>{breadcrumbs}</Breadcrumbs>
       <Group direction="column" sx={{marginTop: 20}} spacing={10}>
         <Title>{collection.id}</Title>
@@ -72,6 +72,6 @@ export function CollectionPage() {
           ))}
         </Group>
       </Group>
-    </AppShell>
+    </WebUIShell>
   );
 }

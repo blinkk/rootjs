@@ -1,6 +1,6 @@
 import {Select, SelectItem} from '@mantine/core';
 import {Navigate, useNavigate} from 'react-router-dom';
-import {useWorkspace} from '../hooks/useWorkspace';
+import {useWorkspace} from '../../hooks/useWorkspace';
 import styles from './ProjectSelectPage.module.sass';
 
 /**

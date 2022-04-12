@@ -1,6 +1,6 @@
 import firebase from 'firebase/compat/app';
 import {Avatar, Header, Menu, Text, UnstyledButton} from '@mantine/core';
-import {useUser} from '../hooks/useUser';
+import {useUser} from '../../hooks/useUser';
 import styles from './AppHeader.module.sass';
 
 function getInitials(user: firebase.User): string {
