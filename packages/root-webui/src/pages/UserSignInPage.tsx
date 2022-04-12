@@ -1,5 +1,5 @@
 import firebase from 'firebase/compat/app';
-import StyledFirebaseAuth from 'react-firebaseui/StyledFirebaseAuth';
+import sfa from 'react-firebaseui/StyledFirebaseAuth';
 import {Title} from '@mantine/core';
 import styles from './UserSignInPage.module.sass';
 import {useWorkspace} from '../hooks/useWorkspace';
@@ -21,9 +21,13 @@ const FIREBASE_UI_CONFIG = {
 export function UserSignInPage() {
   const workspace = useWorkspace();
   if (!workspace) {
-    return <></>;
+    return <div>No workspace found</div>;
   }
   const auth = workspace.firebase.auth();
+  // For some reason, in the production build, vite has problems resolving
+  // default exports.
+  // https://github.com/vitejs/vite/issues/6776
+  const StyledFirebaseAuth = (sfa as any).default || sfa;
   return (
     <div className={styles.UserSignInPage}>
       <div className={styles.UserSignInPage_Logo}></div>
