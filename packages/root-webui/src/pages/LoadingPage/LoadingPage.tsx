@@ -1,10 +1,10 @@
 import {Loader} from '@mantine/core';
-import styles from './LoadingPage.module.sass';
+import styles from './LoadingPage.module.scss';
 
 export function LoadingPage() {
   return (
     <div className={styles.LoadingPage}>
-      <Loader color="lime" variant="dots" />
+      <Loader variant="dots" />
     </div>
   );
 }

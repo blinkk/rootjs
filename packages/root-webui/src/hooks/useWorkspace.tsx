@@ -1,6 +1,6 @@
 import {createContext, useContext, useState} from 'react';
 import {Workspace, WorkspaceConfig} from '../lib/Workspace';
-import {LoadingPage} from '../pages/LoadingPage';
+import {LoadingPage} from '../pages/LoadingPage/LoadingPage';
 import {useJsonRpc} from './useJsonRpc';
 
 export const WorkspaceContext = createContext<Workspace | null>(null);

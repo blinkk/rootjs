@@ -2,13 +2,16 @@ import {Breadcrumbs, Button, Group, JsonInput, Title} from '@mantine/core';
 import {useModals} from '@mantine/modals';
 import {useEffect, useState} from 'react';
 import {Link} from 'react-router-dom';
-import {AppShell} from '../components/AppShell';
+import {WebUIShell} from '../../components/WebUIShell/WebUIShell';
 import {
   PublishDocModal,
   PublishDocModalConfirmProps,
-} from '../components/PublishDocModal/PublishDocModal';
-import {useDoc} from '../hooks/useDoc';
+} from '../../components/PublishDocModal/PublishDocModal';
+import {useDoc} from '../../hooks/useDoc';
 import {useNotifications} from '@mantine/notifications';
+import {ResizePanel} from '../../components/ResizePanel/ResizePanel';
+import {useLocalStorageValue} from '@mantine/hooks';
+import styles from './DocumentPage.module.scss';
 
 export function DocumentPage() {
   const doc = useDoc();
@@ -16,6 +19,10 @@ export function DocumentPage() {
   const collection = doc.collection;
   const [content, setContent] = useState<any>({});
   const [publishModalOpened, setPublishModalOpened] = useState(false);
+  const [panelWidth, setPanelWidth] = useLocalStorageValue<string>({
+    key: 'editor-panel-width',
+    defaultValue: '500',
+  });
 
   const notifications = useNotifications();
 
@@ -81,31 +88,40 @@ export function DocumentPage() {
   }
 
   return (
-    <AppShell>
-      <Breadcrumbs>{breadcrumbs}</Breadcrumbs>
-      <Group direction="column" sx={{marginTop: 20}} spacing={10}>
-        <Title>{doc.id}</Title>
+    <WebUIShell classNames={{main: styles.shell}}>
+      <ResizePanel
+        className={styles.resizePanel}
+        initialWidth={Number(panelWidth)}
+        onResize={width => setPanelWidth(String(width))}
+      >
+        <ResizePanel.Item className={styles.leftPanel}>
+          <Group direction="column" spacing={10}>
+            <Breadcrumbs>{breadcrumbs}</Breadcrumbs>
+            <Title>{doc.id}</Title>
 
-        <Title order={2}>Content</Title>
-        <JsonInput
-          label="Draft Data"
-          validationError="Invalid json"
-          formatOnBlur
-          autosize
-          minRows={4}
-          value={JSON.stringify(content, null, 2)}
-          onChange={value => setContent(JSON.parse(value))}
-          style={{width: '100%'}}
-        />
-        <Button onClick={() => saveDraft()}>Save</Button>
-        <Button onClick={() => setPublishModalOpened(true)}>Publish</Button>
-      </Group>
+            <Title order={2}>Content</Title>
+            <JsonInput
+              label="Draft Data"
+              validationError="Invalid json"
+              formatOnBlur
+              autosize
+              minRows={4}
+              value={JSON.stringify(content, null, 2)}
+              onChange={value => setContent(JSON.parse(value))}
+              style={{width: '100%'}}
+            />
+            <Button onClick={() => saveDraft()}>Save</Button>
+            <Button onClick={() => setPublishModalOpened(true)}>Publish</Button>
+          </Group>
+        </ResizePanel.Item>
+        <ResizePanel.Item>Preview</ResizePanel.Item>
+      </ResizePanel>
       <PublishDocModal
         docId={doc.id}
         opened={publishModalOpened}
         onClose={() => setPublishModalOpened(false)}
         onConfirm={publish}
       />
-    </AppShell>
+    </WebUIShell>
   );
 }

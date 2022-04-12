@@ -1,8 +1,8 @@
 import firebase from 'firebase/compat/app';
 import sfa from 'react-firebaseui/StyledFirebaseAuth';
 import {Title} from '@mantine/core';
-import styles from './UserSignInPage.module.sass';
-import {useWorkspace} from '../hooks/useWorkspace';
+import {useWorkspace} from '../../hooks/useWorkspace';
+import styles from './UserSignInPage.module.scss';
 import 'firebase/compat/auth';
 
 // Configure Firebase UI.

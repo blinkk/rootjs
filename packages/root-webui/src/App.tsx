@@ -1,13 +1,13 @@
 import {MantineProvider} from '@mantine/core';
 import {ModalsProvider} from '@mantine/modals';
 import {BrowserRouter, Routes, Route} from 'react-router-dom';
-import {ProjectSelectPage} from './pages/ProjectSelectPage';
+import {ProjectSelectPage} from './pages/ProjectSelectPage/ProjectSelectPage';
 import {NotificationsProvider} from '@mantine/notifications';
 import {WorkspaceProvider} from './hooks/useWorkspace';
 import {UserProvider} from './hooks/useUser';
-import {ProjectPage} from './pages/ProjectPage';
-import {CollectionPage} from './pages/CollectionPage';
-import {DocumentPage} from './pages/DocumentPage';
+import {ProjectPage} from './pages/ProjectPage/ProjectPage';
+import {CollectionPage} from './pages/CollectionPage/CollectionPage';
+import {DocumentPage} from './pages/DocumentPage/DocumentPage';
 
 function App() {
   return (

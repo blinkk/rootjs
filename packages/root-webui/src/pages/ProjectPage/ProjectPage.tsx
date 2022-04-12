@@ -1,12 +1,12 @@
 import {Link} from 'react-router-dom';
-import {AppShell} from '../components/AppShell';
-import {useProject} from '../hooks/useProject';
+import {WebUIShell} from '../../components/WebUIShell/WebUIShell';
+import {useProject} from '../../hooks/useProject';
 import style from './ProjectPage.module.sass';
 
 export function ProjectPage() {
   const project = useProject();
   return (
-    <AppShell>
+    <WebUIShell>
       <div className={style.ProjectPage}>
         <div className={style.ProjectPage_ProjectName}>
           {project.name || project.id}
@@ -23,6 +23,6 @@ export function ProjectPage() {
           ))}
         </div>
       </div>
-    </AppShell>
+    </WebUIShell>
   );
 }

@@ -2,8 +2,8 @@ import {useWorkspace} from './useWorkspace';
 import firebase from 'firebase/compat/app';
 import 'firebase/compat/auth';
 import {createContext, useContext, useEffect, useState} from 'react';
-import {UserSignInPage} from '../pages/UserSignInPage';
-import {LoadingPage} from '../pages/LoadingPage';
+import {UserSignInPage} from '../pages/UserSignInPage/UserSignInPage';
+import {LoadingPage} from '../pages/LoadingPage/LoadingPage';
 
 type User = firebase.User;
 
