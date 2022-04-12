@@ -2,7 +2,7 @@
   "name": "@blinkk/root-project",
   "version": "1.0.0",
   "private": true,
-  "description": "RootJS is a developer-focused CMS that writes directly to Firestore.",
+  "description": "Root.js is a developer-focused CMS that writes directly to Firestore.",
   "main": "index.js",
   "scripts": {
     "dev": "npm-run-all --parallel dev:server dev:webui",

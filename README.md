@@ -1,6 +1,6 @@
-# RootJS CMS
+# Root.js CMS
 
-RootJS is a developer-focused CMS that writes directly to Firestore. This
+Root.js is a developer-focused CMS that writes directly to Firestore. This
 project is still in early development, stay tuned to learn more!
 
 ## Development
