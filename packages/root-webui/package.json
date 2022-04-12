@@ -4,9 +4,13 @@
   "version": "0.0.0",
   "scripts": {
     "dev": "vite",
-    "build": "tsc && vite build",
+    "build": "tsc && vite build --base=/cms/",
     "preview": "vite preview"
   },
+  "main": "dist/index.html",
+  "files": [
+    "dist/**/*"
+  ],
   "dependencies": {
     "@babel/core": "^7.17.9",
     "@mantine/core": "^4.1.2",

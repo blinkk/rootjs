@@ -36,12 +36,14 @@
     "tsup": "^5.12.1"
   },
   "dependencies": {
+    "@blinkk/root-webui": "workspace:^0.0.0",
     "commander": "^9.0.0",
     "dotenv": "^16.0.0",
     "esbuild": "^0.14.27",
     "esbuild-register": "^3.3.2",
     "fastify": "^3.27.4",
     "fastify-plugin": "^3.0.1",
+    "fastify-static": "^4.6.1",
     "glob": "^7.2.0",
     "glob-promise": "^4.2.2",
     "typescript": "^4.6.2"
