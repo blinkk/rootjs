@@ -1,4 +1,13 @@
-import {Breadcrumbs, Button, Group, JsonInput, Tab, Tabs, Text, Title} from '@mantine/core';
+import {
+  Breadcrumbs,
+  Button,
+  Group,
+  JsonInput,
+  Tab,
+  Tabs,
+  Text,
+  Title,
+} from '@mantine/core';
 import {useModals} from '@mantine/modals';
 import {useEffect, useState} from 'react';
 import {Link} from 'react-router-dom';
