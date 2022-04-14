@@ -1,7 +1,7 @@
 import firebase from 'firebase/compat/app';
 import {Avatar, Header, Menu, Text, UnstyledButton} from '@mantine/core';
 import {useUser} from '../../hooks/useUser';
-import styles from './AppHeader.module.sass';
+import styles from './WebUIHeader.module.scss';
 
 function getInitials(user: firebase.User): string {
   if (user.displayName && user.displayName.includes(' ')) {
@@ -23,11 +23,11 @@ function UserAvatar(props: {user: firebase.User}) {
   );
 }
 
-export function AppHeader() {
+export function WebUIHeader() {
   const user = useUser();
   return (
-    <Header height={70} p="md">
-      <div className={styles.AppHeader_Contents}>
+    <Header height={60} px="md">
+      <div className={styles.content}>
         <Text weight={700}>Blinkk CMS</Text>
         <Menu
           control={

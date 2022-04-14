@@ -1,11 +1,22 @@
+@use 'tokens';
+
 .shell {
   padding: 0;
 }
 
 .resizePanel {
-  height: calc(100vh - 70px);
+  height: calc(100vh - #{tokens.$navbar-height});
 }
 
 .leftPanel {
   padding: 20px;
+}
+
+.leftPanelGroup {
+  width: 100%;
+}
+
+.tabs {
+  width: 100%;
+  margin-top: 20px;
 }

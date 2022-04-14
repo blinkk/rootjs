@@ -1,4 +1,4 @@
-import {Breadcrumbs, Button, Group, JsonInput, Title} from '@mantine/core';
+import {Breadcrumbs, Button, Group, JsonInput, Tab, Tabs, Text, Title} from '@mantine/core';
 import {useModals} from '@mantine/modals';
 import {useEffect, useState} from 'react';
 import {Link} from 'react-router-dom';
@@ -12,6 +12,23 @@ import {useNotifications} from '@mantine/notifications';
 import {ResizePanel} from '../../components/ResizePanel/ResizePanel';
 import {useLocalStorageValue} from '@mantine/hooks';
 import styles from './DocumentPage.module.scss';
+import {ContentTab} from './ContentTab';
+import {LocalizationTab} from './LocalizationTab';
+import {MetaTab} from './MetaTab';
+
+const TABS = [
+  {label: 'Meta', ContentComponent: MetaTab, PreviewComponent: MetaTab.Preview},
+  {
+    label: 'Content',
+    ContentComponent: ContentTab,
+    PreviewComponent: ContentTab.Preview,
+  },
+  {
+    label: 'Localization',
+    ContentComponent: LocalizationTab,
+    PreviewComponent: LocalizationTab.Preview,
+  },
+];
 
 export function DocumentPage() {
   const doc = useDoc();
@@ -35,9 +52,11 @@ export function DocumentPage() {
     },
   ].map((item, index) => (
     <Link to={item.href} key={index}>
-      {item.title}
+      <Text size="sm">{item.title}</Text>
     </Link>
   ));
+
+  const [activeTab, setActiveTab] = useState(1);
 
   const fetchDocContent = async () => {
     if (!doc) {
@@ -87,6 +106,8 @@ export function DocumentPage() {
     });
   }
 
+  const PreviewComponent = TABS[activeTab].PreviewComponent;
+
   return (
     <WebUIShell classNames={{main: styles.shell}}>
       <ResizePanel
@@ -95,11 +116,15 @@ export function DocumentPage() {
         onResize={width => setPanelWidth(String(width))}
       >
         <ResizePanel.Item className={styles.leftPanel}>
-          <Group direction="column" spacing={10}>
+          <Group
+            className={styles.leftPanelGroup}
+            direction="column"
+            spacing={10}
+          >
             <Breadcrumbs>{breadcrumbs}</Breadcrumbs>
-            <Title>{doc.id}</Title>
+            {/* <Title>{doc.id}</Title> */}
 
-            <Title order={2}>Content</Title>
+            {/* <Title order={2}>Content</Title>
             <JsonInput
               label="Draft Data"
               validationError="Invalid json"
@@ -111,10 +136,25 @@ export function DocumentPage() {
               style={{width: '100%'}}
             />
             <Button onClick={() => saveDraft()}>Save</Button>
-            <Button onClick={() => setPublishModalOpened(true)}>Publish</Button>
+            <Button onClick={() => setPublishModalOpened(true)}>Publish</Button> */}
+
+            <Tabs
+              className={styles.tabs}
+              active={activeTab}
+              onTabChange={setActiveTab}
+              variant="outline"
+            >
+              {TABS.map((tab, i) => (
+                <Tabs.Tab label={tab.label} key={i}>
+                  <tab.ContentComponent />
+                </Tabs.Tab>
+              ))}
+            </Tabs>
           </Group>
         </ResizePanel.Item>
-        <ResizePanel.Item>Preview</ResizePanel.Item>
+        <ResizePanel.Item>
+          <PreviewComponent />
+        </ResizePanel.Item>
       </ResizePanel>
       <PublishDocModal
         docId={doc.id}

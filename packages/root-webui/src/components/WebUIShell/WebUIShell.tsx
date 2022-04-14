@@ -1,9 +1,9 @@
 import {AppShell, AppShellProps} from '@mantine/core';
-import {AppHeader} from '../AppHeader/AppHeader';
+import {WebUIHeader} from './WebUIHeader';
 
 export function WebUIShell(props: AppShellProps) {
   return (
-    <AppShell {...props} padding="md" header={<AppHeader />}>
+    <AppShell {...props} padding="md" header={<WebUIHeader />}>
       {props.children}
     </AppShell>
   );
