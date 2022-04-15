@@ -1,5 +1,6 @@
 {
   "packages": {
     "packages/root-core": {}
-  }
+  },
+  "bootstrap-sha": "105168b5c4ef2f46affbbae426493bd89c82a478"
 }

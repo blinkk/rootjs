@@ -1,0 +1,31 @@
+name: 'Release Please'
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+jobs:
+  release-please:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: GoogleCloudPlatform/release-please-action@v2
+        id: release
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          release-type: node
+          monorepo-tags: true
+          command: manifest
+          default-branch: main
+      - uses: actions/checkout@v2
+        if: ${{ steps.release.outputs.releases_created }}
+      - uses: actions/setup-node@v2
+        with:
+          node-version: 16
+          registry-url: 'https://registry.npmjs.org'
+        if: ${{ steps.release.outputs.releases_created }}
+      - run: npm install
+        if: ${{ steps.release.outputs.releases_created }}
+      - run: npm publish -w packages/root-core
+        env:
+          NODE_AUTH_TOKEN: ${{secrets.NPM_TOKEN}}
+        if: ${{ steps.release.outputs['packages/root-core--release_created'] }}
