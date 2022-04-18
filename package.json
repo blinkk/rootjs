@@ -7,6 +7,7 @@
   "scripts": {
     "build": "turbo run build --ignore=\"examples/**/*\"",
     "dev": "npm-run-all --parallel dev:server dev:webui",
+    "dev:storybook": "npm --prefix=./apps/storybook run dev",
     "dev:server": "CMS_WORKSPACE=../.. npm --prefix=./packages/root-core run dev:server",
     "dev:webui": "npm --prefix=./packages/root-webui run dev",
     "fix": "eslint . --ext .ts,.tsx --fix",
