@@ -1,7 +1,11 @@
 /**
  * Base interface for all field configs.
  */
-export interface BaseFieldConfig {
+export interface FieldConfig {
+  /**
+   * Id to reference the field in the data.
+   */
+  id: string;
   /**
    * Type of field.
    */
@@ -18,14 +22,4 @@ export interface BaseFieldConfig {
    * Default value to use for the field when no value is provided.
    */
   default?: unknown;
-}
-
-/**
- * Field config with the required id for standard field configs.
- */
-export interface FieldConfig extends BaseFieldConfig {
-  /**
-   * Id to reference the field in the data.
-   */
-  id: string;
 }

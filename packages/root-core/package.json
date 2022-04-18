@@ -36,7 +36,8 @@
     "tsup": "^5.12.1"
   },
   "dependencies": {
-    "@blinkk/root-webui": "workspace:^0.0.0",
+    "@blinkk/root-form": "workspace:*",
+    "@blinkk/root-webui": "workspace:*",
     "commander": "^9.0.0",
     "dotenv": "^16.0.0",
     "esbuild": "^0.14.27",
