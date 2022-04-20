@@ -24,8 +24,8 @@ export function TextField(props: TextFieldProps): JSX.Element {
           props.setValue(e.target.value);
         }}
         value={
-          (props.currentValue[props.fieldConfig.id] as String) ??
-          (props.originalValue[props.fieldConfig.id] as String) ??
+          (props.currentValue[props.fieldConfig.id] as string) ??
+          (props.originalValue[props.fieldConfig.id] as string) ??
           ''
         }
       ></TextInput>
