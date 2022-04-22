@@ -5,11 +5,7 @@
 }
 
 .resizePanel {
-  height: calc(100vh - #{tokens.$navbar-height});
-}
-
-.leftPanel {
-  padding: 20px;
+  height: calc(100vh - #{tokens.$nav-size});
 }
 
 .leftPanelGroup {
@@ -18,5 +14,34 @@
 
 .tabs {
   width: 100%;
-  margin-top: 20px;
+}
+
+.tabControl {
+  padding: 10px;
+}
+
+.tabsList {
+  justify-content: flex-end;
+  padding: 0 12px;
+}
+
+.tabContent {
+  padding: 10px 12px;
+}
+
+.rightPanelContainer {
+  width: 100%;
+}
+
+.breadcrumbs a {
+  text-decoration: none;
+  border-bottom: 1px solid transparent;
+  transition: border-color 0.3s ease;
+  &:hover {
+    border-bottom: 1px solid black;
+  }
+}
+
+.breadcrumbText {
+  font-weight: 700;
 }

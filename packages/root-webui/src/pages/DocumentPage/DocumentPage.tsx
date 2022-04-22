@@ -3,6 +3,7 @@ import {
   Button,
   Group,
   JsonInput,
+  Stack,
   Tab,
   Tabs,
   Text,
@@ -24,6 +25,7 @@ import styles from './DocumentPage.module.scss';
 import {ContentTab} from './ContentTab';
 import {LocalizationTab} from './LocalizationTab';
 import {MetaTab} from './MetaTab';
+import {WebUISubheader} from '../../components/WebUIShell/WebUISubheader';
 
 const TABS = [
   {label: 'Meta', ContentComponent: MetaTab, PreviewComponent: MetaTab.Preview},
@@ -53,15 +55,16 @@ export function DocumentPage() {
   const notifications = useNotifications();
 
   const breadcrumbs = [
-    {title: project.id, href: `/cms/${project.id}`},
     {title: collection.id, href: `/cms/${project.id}/content/${collection.id}`},
     {
       title: doc.slug,
       href: `/cms/${project.id}/content/${collection.id}/${doc.slug}`,
     },
   ].map((item, index) => (
-    <Link to={item.href} key={index}>
-      <Text size="sm">{item.title}</Text>
+    <Link className={styles.breadcrumbLink} to={item.href} key={index}>
+      <Text className={styles.breadcrumbText} size="sm">
+        {item.title}
+      </Text>
     </Link>
   ));
 
@@ -118,19 +121,19 @@ export function DocumentPage() {
   const PreviewComponent = TABS[activeTab].PreviewComponent;
 
   return (
-    <WebUIShell classNames={{main: styles.shell}}>
+    <WebUIShell>
       <ResizePanel
         className={styles.resizePanel}
         initialWidth={Number(panelWidth)}
         onResize={width => setPanelWidth(String(width))}
       >
         <ResizePanel.Item className={styles.leftPanel}>
-          <Group
-            className={styles.leftPanelGroup}
-            direction="column"
-            spacing={10}
-          >
-            <Breadcrumbs>{breadcrumbs}</Breadcrumbs>
+          <Stack className={styles.leftPanelGroup}>
+            <WebUISubheader>
+              <Breadcrumbs className={styles.breadcrumbs}>
+                {breadcrumbs}
+              </Breadcrumbs>
+            </WebUISubheader>
             {/* <Title>{doc.id}</Title> */}
 
             {/* <Title order={2}>Content</Title>
@@ -149,20 +152,33 @@ export function DocumentPage() {
 
             <Tabs
               className={styles.tabs}
+              classNames={{
+                tabsList: styles.tabsList,
+                tabControl: styles.tabControl,
+              }}
               active={activeTab}
               onTabChange={setActiveTab}
-              variant="outline"
+              variant="pills"
             >
               {TABS.map((tab, i) => (
                 <Tabs.Tab label={tab.label} key={i}>
-                  <tab.ContentComponent />
+                  <div className={styles.tabContent}>
+                    <tab.ContentComponent />
+                  </div>
                 </Tabs.Tab>
               ))}
             </Tabs>
-          </Group>
+          </Stack>
         </ResizePanel.Item>
         <ResizePanel.Item>
-          <PreviewComponent />
+          <Stack
+            className={styles.rightPanelContainer}
+            align="stretch"
+            spacing={0}
+          >
+            <WebUISubheader>Preview</WebUISubheader>
+            <PreviewComponent />
+          </Stack>
         </ResizePanel.Item>
       </ResizePanel>
       <PublishDocModal
