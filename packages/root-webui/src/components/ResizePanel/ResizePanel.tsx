@@ -22,6 +22,7 @@ export function ResizePanel({
   }
 
   const [isDragging, setIsDragging] = useState(false);
+  const [leftOffset, setLeftOffset] = useState(0);
 
   if (typeof initialWidth !== 'number') {
     initialWidth = 300;
@@ -39,12 +40,17 @@ export function ResizePanel({
   useEffect(() => {
     const onMouseUp = () => setIsDragging(false);
     window.addEventListener('mouseup', onMouseUp);
+
+    const container = containerRef.current;
+    if (container) {
+      setLeftOffset(container.getBoundingClientRect().left);
+    }
     return () => window.removeEventListener('mouseup', onMouseUp);
   }, []);
 
   useEffect(() => {
     const onMouseMove = (e: MouseEvent) => {
-      const newPanelWidth = e.clientX;
+      const newPanelWidth = e.clientX - leftOffset;
       setPanelWidth(newPanelWidth);
       if (onResize) {
         onResize(newPanelWidth);
@@ -57,7 +63,7 @@ export function ResizePanel({
   }, [isDragging]);
 
   return (
-    <Box
+    <div
       className={joinClassNames(className, styles.container)}
       ref={containerRef}
     >
@@ -97,7 +103,7 @@ export function ResizePanel({
         ></div>
         {children[1]}
       </div>
-    </Box>
+    </div>
   );
 }
 
@@ -117,8 +123,8 @@ ResizePanel.Item = function ({
     style.width = width;
   }
   return (
-    <Box className={joinClassNames(className, styles.container)} style={style}>
+    <div className={joinClassNames(className, styles.container)} style={style}>
       {children}
-    </Box>
+    </div>
   );
 };

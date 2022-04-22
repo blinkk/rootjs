@@ -1,10 +1,10 @@
-interface MetaTabProps {}
+type MetaTabProps = {};
 
 export function MetaTab(props: MetaTabProps) {
   return <>Meta Tab Content</>;
 }
 
-interface MetaTabPreviewProps {}
+type MetaTabPreviewProps = {};
 
 MetaTab.Preview = (props: MetaTabPreviewProps) => {
   return <>Meta Preview</>;

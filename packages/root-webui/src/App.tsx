@@ -11,7 +11,9 @@ import {DocumentPage} from './pages/DocumentPage/DocumentPage';
 
 function App() {
   return (
-    <MantineProvider>
+    <MantineProvider
+      theme={{fontSizes: {xs: 10, sm: 12, md: 14, lg: 16, xl: 18}}}
+    >
       <ModalsProvider labels={{confirm: 'Confirm', cancel: 'Cancel'}}>
         <NotificationsProvider>
           <WorkspaceProvider>

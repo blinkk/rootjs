@@ -1,0 +1,16 @@
+@use 'tokens';
+
+@mixin font($font-size: null, $line-height: null, $font-weight: null, $letter-spacing: null) {
+  font-size: $font-size;
+  font-weight: weight($font-weight);
+  line-height: $line-height;
+  letter-spacing: $letter-spacing;
+}
+
+// https://developer.mozilla.org/en-US/docs/Web/CSS/font-weight#common_weight_name_mapping
+@function weight($name) {
+  @if map-has-key(tokens.$font-weight-map, $name) {
+    @return map-get(tokens.$font-weight-map, $name);
+  }
+  @return $name;
+}
