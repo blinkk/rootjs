@@ -12,7 +12,7 @@ import {DocumentPage} from './pages/DocumentPage/DocumentPage';
 function App() {
   return (
     <MantineProvider
-      theme={{fontSizes: {xs: 10, sm: 12, md: 14, lg: 16, xl: 18}}}
+      theme={{fontSizes: {xs: 12, sm: 14, md: 16, lg: 18, xl: 20}}}
     >
       <ModalsProvider labels={{confirm: 'Confirm', cancel: 'Cancel'}}>
         <NotificationsProvider>

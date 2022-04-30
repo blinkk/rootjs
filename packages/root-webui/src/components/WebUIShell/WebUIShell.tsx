@@ -51,6 +51,11 @@ WebUIShell.Sidebar = () => {
               <MaterialIcon icon="home" />
             </ActionIcon>
           </Tooltip>
+          <Tooltip label="Content" position="right" withArrow>
+            <ActionIcon onClick={() => navigate(`/cms/${project.id}/content`)}>
+              <MaterialIcon icon="folder" />
+            </ActionIcon>
+          </Tooltip>
         </Stack>
         <div className={styles.avatarWrap}>
           <Menu
