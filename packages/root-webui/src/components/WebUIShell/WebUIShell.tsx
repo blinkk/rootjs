@@ -1,18 +1,29 @@
 import firebase from 'firebase/compat/app';
-import {Avatar, Group, Menu, Stack, UnstyledButton} from '@mantine/core';
-import {Link} from 'react-router-dom';
+import {
+  ActionIcon,
+  Avatar,
+  Group,
+  Menu,
+  Stack,
+  Sx,
+  Tooltip,
+  UnstyledButton,
+} from '@mantine/core';
+import {Link, useNavigate} from 'react-router-dom';
 import {useProject} from '../../hooks/useProject';
 import {useUser} from '../../hooks/useUser';
 import styles from './WebUIShell.module.scss';
+import {MaterialIcon} from '../../icons/MaterialIcon';
 
 interface WebUIShellProps {
   header?: React.ReactNode;
   children: React.ReactNode;
+  sx?: Sx;
 }
 
 export function WebUIShell(props: WebUIShellProps) {
   return (
-    <Group spacing={0} align="flex-start" grow>
+    <Group spacing={0} align="flex-start" grow sx={props.sx}>
       <WebUIShell.Sidebar />
       <WebUIShell.Content>
         {props.header ? props.header : <WebUIShell.Header></WebUIShell.Header>}
@@ -24,6 +35,8 @@ export function WebUIShell(props: WebUIShellProps) {
 
 WebUIShell.Sidebar = () => {
   const user = useUser();
+  const project = useProject();
+  const navigate = useNavigate();
   return (
     <div className={styles.sidebar}>
       <div className={styles.logoWrap}>
@@ -32,7 +45,13 @@ WebUIShell.Sidebar = () => {
         </Link>
       </div>
       <Stack className={styles.sidebarMain} align="center" justify="flex-end">
-        <div></div>
+        <Stack>
+          <Tooltip label="Project Home" position="right" withArrow>
+            <ActionIcon onClick={() => navigate(`/cms/${project.id}`)}>
+              <MaterialIcon icon="home" />
+            </ActionIcon>
+          </Tooltip>
+        </Stack>
         <div className={styles.avatarWrap}>
           <Menu
             control={
@@ -61,10 +80,9 @@ WebUIShell.Content = (props: WebUIShellContentProps) => {
 type WebUIShellHeaderProps = {};
 
 WebUIShell.Header = (props: WebUIShellHeaderProps) => {
-  const project = useProject();
   return (
     <div className={styles.header}>
-      <div className={styles.headerTitle}>{project.name || project.id}</div>
+      <div className={styles.headerTitle}>Root.js CMS</div>
     </div>
   );
 };
