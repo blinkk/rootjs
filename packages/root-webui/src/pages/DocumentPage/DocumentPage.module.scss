@@ -35,10 +35,14 @@
 
 .breadcrumbs a {
   text-decoration: none;
-  border-bottom: 1px solid transparent;
-  transition: border-color 0.3s ease;
+  padding: 4px 12px;
+  background-color: transparent;
+  border-radius: 4px;
+  transition: background-color 0.3s ease;
+  margin-left: -10px;
+  margin-right: -10px;
   &:hover {
-    border-bottom: 1px solid black;
+    background-color: #f8f9fa;
   }
 }
 

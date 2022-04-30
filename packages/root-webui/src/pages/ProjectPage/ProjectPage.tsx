@@ -1,4 +1,4 @@
-import {Box, Stack, Tabs, Text, Title} from '@mantine/core';
+import {Box, Group, Stack, Tabs, Text, Title} from '@mantine/core';
 import {Link} from 'react-router-dom';
 import {WebUIShell} from '../../components/WebUIShell/WebUIShell';
 import {useProject} from '../../hooks/useProject';
@@ -10,23 +10,33 @@ export function ProjectPage() {
   return (
     <WebUIShell>
       <Box sx={theme => ({backgroundColor: theme.colors.gray[0]})}>
-        <Stack spacing={0} sx={{padding: '40px 20px'}}>
-          <Text weight="bold">Project</Text>
-          <Title>{project.name || project.id}</Title>
+        <Stack spacing={0} sx={{padding: '30px 20px'}}>
+          <Text size="sm" weight={600}>
+            Project
+          </Text>
+          <Title order={2}>{project.name || project.id}</Title>
         </Stack>
         <Tabs
           variant="outline"
-          styles={{
+          styles={theme => ({
+            root: {flex: 1, display: 'flex', flexDirection: 'column'},
             tabsList: {paddingLeft: 20},
-            body: {paddingTop: 0},
+            body: {
+              padding: '20px',
+              flex: 1,
+              backgroundColor: theme.white,
+            },
             tabLabel: {fontSize: 14, fontWeight: 600},
-          }}
+          })}
         >
           <Tabs.Tab label="Content" icon={<MaterialIcon icon="folder" />}>
             <ProjectPage.ContentTab project={project} />
           </Tabs.Tab>
           <Tabs.Tab label="Roles" icon={<MaterialIcon icon="face" />}>
             <ProjectPage.RolesTab />
+          </Tabs.Tab>
+          <Tabs.Tab label="Settings" icon={<MaterialIcon icon="settings" />}>
+            <ProjectPage.SettingsTab />
           </Tabs.Tab>
         </Tabs>
       </Box>
@@ -41,47 +51,32 @@ interface ContentTabProps {
 ProjectPage.ContentTab = function (props: ContentTabProps) {
   const project = props.project;
   return (
-    <Box
-      sx={theme => ({
-        backgroundColor: theme.white,
-        padding: '20px 30px',
-      })}
-    >
-      <Stack spacing={0}>
-        {project.collections.map(collection => (
-          <Box
-            key={collection.id}
-            sx={{
-              borderBottom: '1px solid #dedede',
-              padding: '20px 10px',
-            }}
+    <Stack spacing={0}>
+      {project.collections.map(collection => (
+        <Box
+          key={collection.id}
+          sx={{
+            borderBottom: '1px solid #dedede',
+            padding: '20px 10px',
+          }}
+        >
+          <Link
+            to={`/cms/${project.id}/content/${collection.id}`}
+            style={{textDecoration: 'none'}}
           >
-            <Link
-              to={`/cms/${project.id}/content/${collection.id}`}
-              style={{textDecoration: 'none'}}
-            >
-              <Title order={4}>{collection.id}</Title>
-            </Link>
-            <Text>{collection.description || ''}</Text>
-          </Box>
-        ))}
-      </Stack>
-    </Box>
+            <Title order={4}>{collection.id}</Title>
+          </Link>
+          <Text size="sm">{collection.description || ''}</Text>
+        </Box>
+      ))}
+    </Stack>
   );
 };
 
-interface RolesTabProps {
-}
+ProjectPage.RolesTab = function () {
+  return <Title>Roles</Title>;
+};
 
-ProjectPage.RolesTab = function (props: RolesTabProps) {
-  return (
-    <Box
-      sx={theme => ({
-        backgroundColor: theme.white,
-        padding: '20px 40px',
-      })}
-    >
-      Roles
-    </Box>
-  );
+ProjectPage.SettingsTab = function () {
+  return <Title>Settings</Title>;
 };

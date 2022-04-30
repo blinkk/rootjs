@@ -3,11 +3,14 @@ import {useParams} from 'react-router-dom';
 import {Collection} from '../lib/Collection';
 import {useProject} from './useProject';
 
-export function useCollection(collectionId?: string): Collection {
+export function useCollection(collectionId?: string): Collection | null {
   const notifications = useNotifications();
   const project = useProject();
   if (!collectionId) {
     collectionId = useParams().collectionId;
+  }
+  if (!collectionId) {
+    return null;
   }
   const collectionConfig = project.collections.find(c => c.id === collectionId);
   if (!collectionConfig) {

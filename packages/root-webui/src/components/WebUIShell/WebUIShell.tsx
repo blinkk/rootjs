@@ -14,6 +14,7 @@ import {useProject} from '../../hooks/useProject';
 import {useUser} from '../../hooks/useUser';
 import styles from './WebUIShell.module.scss';
 import {MaterialIcon} from '../../icons/MaterialIcon';
+import iconUrl from '../../icon.svg';
 
 interface WebUIShellProps {
   header?: React.ReactNode;
@@ -41,7 +42,7 @@ WebUIShell.Sidebar = () => {
     <div className={styles.sidebar}>
       <div className={styles.logoWrap}>
         <Link to="/cms">
-          <div className={styles.logo} />
+          <img src={iconUrl} width={32} height={32} alt="Root.js icon" />
         </Link>
       </div>
       <Stack className={styles.sidebarMain} align="center" justify="flex-end">
@@ -54,6 +55,11 @@ WebUIShell.Sidebar = () => {
           <Tooltip label="Content" position="right" withArrow>
             <ActionIcon onClick={() => navigate(`/cms/${project.id}/content`)}>
               <MaterialIcon icon="folder" />
+            </ActionIcon>
+          </Tooltip>
+          <Tooltip label="Asset Manager" position="right" withArrow>
+            <ActionIcon onClick={() => navigate(`/cms/${project.id}/assets`)}>
+              <MaterialIcon icon="panorama" />
             </ActionIcon>
           </Tooltip>
         </Stack>
