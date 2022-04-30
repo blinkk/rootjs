@@ -156,6 +156,7 @@ export function DocumentPage() {
                 tabsList: styles.tabsList,
                 tabControl: styles.tabControl,
               }}
+              styles={{body: {padding: 0}}}
               active={activeTab}
               onTabChange={setActiveTab}
               variant="pills"
@@ -163,7 +164,7 @@ export function DocumentPage() {
               {TABS.map((tab, i) => (
                 <Tabs.Tab label={tab.label} key={i}>
                   <div className={styles.tabContent}>
-                    <tab.ContentComponent />
+                    <tab.ContentComponent doc={doc} />
                   </div>
                 </Tabs.Tab>
               ))}

@@ -1,5 +1,5 @@
 import {defineCollection} from '@blinkk/root-core';
 
 export default defineCollection({
-  description: 'Blog posts.',
+  description: 'A collection of posts for the blog.',
 });

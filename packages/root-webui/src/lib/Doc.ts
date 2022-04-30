@@ -17,6 +17,17 @@ export class Doc {
     this.id = `${collection.id}/${slug}`;
   }
 
+  async getMeta(options?: {mode?: 'draft' | 'published'}): Promise<any> {
+    const mode = options?.mode || 'draft';
+    const db = this.workspace.db();
+    const contentRef = db.doc(
+      `Projects/${this.project.id}/Collections/${this.collection.id}/Docs/${this.slug}`
+    );
+    const snapshot = await contentRef.get();
+    const docData = snapshot.data() || {};
+    return docData[mode] || {};
+  }
+
   async getContent(options?: {mode?: 'draft' | 'published'}): Promise<any> {
     const mode = options?.mode || 'draft';
     const db = this.workspace.db();

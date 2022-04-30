@@ -193,6 +193,7 @@ importers:
       react-firebaseui: ^6.0.0
       react-router-dom: ^6.2.2
       sass: ^1.49.9
+      swr: ^1.3.0
       typescript: ^4.5.4
       vite: ^2.8.0
     dependencies:
@@ -208,6 +209,7 @@ importers:
       react-firebaseui: 6.0.0_firebase@9.6.9+react@17.0.2
       react-router-dom: 6.2.2_react-dom@17.0.2+react@17.0.2
       sass: 1.49.9
+      swr: 1.3.0_react@17.0.2
     devDependencies:
       '@types/react': 17.0.40
       '@types/react-dom': 17.0.13
@@ -14122,6 +14124,14 @@ packages:
   /supports-preserve-symlinks-flag/1.0.0:
     resolution: {integrity: sha512-ot0WnXS9fgdkgIcePe6RHNk1WA8+muPa6cSjeR3V8K27q9BB1rTE3R1p7Hv0z1ZyAc8s6Vvv8DIyWf681MAt0w==}
     engines: {node: '>= 0.4'}
+
+  /swr/1.3.0_react@17.0.2:
+    resolution: {integrity: sha512-dkghQrOl2ORX9HYrMDtPa7LTVHJjCTeZoB1dqTbnnEDlSvN8JEKpYIYurDfvbQFUUS8Cg8PceFVZNkW0KNNYPw==}
+    peerDependencies:
+      react: ^16.11.0 || ^17.0.0 || ^18.0.0
+    dependencies:
+      react: 17.0.2
+    dev: false
 
   /symbol.prototype.description/1.0.5:
     resolution: {integrity: sha512-x738iXRYsrAt9WBhRCVG5BtIC3B7CUkFwbHW2zOvGtwM33s7JjrCDyq8V0zgMYVb5ymsL8+qkzzpANH63CPQaQ==}
