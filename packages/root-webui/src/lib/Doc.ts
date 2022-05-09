@@ -1,16 +1,13 @@
 import {Collection} from './Collection';
 import {Project} from './Project';
-import {Workspace} from './Workspace';
 
 export class Doc {
-  readonly workspace: Workspace;
   readonly project: Project;
   readonly collection: Collection;
   readonly slug: string;
   readonly id: string;
 
   constructor(collection: Collection, slug: string) {
-    this.workspace = collection.project.workspace;
     this.project = collection.project;
     this.collection = collection;
     this.slug = slug;
@@ -19,7 +16,7 @@ export class Doc {
 
   async getMeta(options?: {mode?: 'draft' | 'published'}): Promise<any> {
     const mode = options?.mode || 'draft';
-    const db = this.workspace.db();
+    const db = this.project.db();
     const contentRef = db.doc(
       `Projects/${this.project.id}/Collections/${this.collection.id}/Docs/${this.slug}`
     );
@@ -30,7 +27,7 @@ export class Doc {
 
   async getContent(options?: {mode?: 'draft' | 'published'}): Promise<any> {
     const mode = options?.mode || 'draft';
-    const db = this.workspace.db();
+    const db = this.project.db();
     const contentRef = db.doc(
       `Projects/${this.project.id}/Collections/${this.collection.id}/Docs/${this.slug}/Content/${mode}`
     );
@@ -44,7 +41,7 @@ export class Doc {
       throw new Error('no logged in user');
     }
 
-    const db = this.workspace.db();
+    const db = this.project.db();
     const docRef = db.doc(
       `Projects/${this.project.id}/Collections/${this.collection.id}/Docs/${this.slug}`
     );
@@ -68,7 +65,7 @@ export class Doc {
       throw new Error('no logged in user');
     }
 
-    const db = this.workspace.db();
+    const db = this.project.db();
     const docRef = db.doc(
       `Projects/${this.project.id}/Collections/${this.collection.id}/Docs/${this.slug}`
     );

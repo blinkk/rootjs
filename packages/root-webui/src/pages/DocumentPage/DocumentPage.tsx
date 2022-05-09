@@ -1,15 +1,4 @@
-import {
-  Breadcrumbs,
-  Button,
-  Group,
-  JsonInput,
-  Stack,
-  Tab,
-  Tabs,
-  Text,
-  Title,
-} from '@mantine/core';
-import {useModals} from '@mantine/modals';
+import {Breadcrumbs, Stack, Tabs, Text} from '@mantine/core';
 import {useEffect, useState} from 'react';
 import {Link} from 'react-router-dom';
 import {WebUIShell} from '../../components/WebUIShell/WebUIShell';
@@ -25,7 +14,6 @@ import styles from './DocumentPage.module.scss';
 import {ContentTab} from './ContentTab';
 import {LocalizationTab} from './LocalizationTab';
 import {MetaTab} from './MetaTab';
-import {WebUISubheader} from '../../components/WebUIShell/WebUISubheader';
 
 const TABS = [
   {label: 'Meta', ContentComponent: MetaTab, PreviewComponent: MetaTab.Preview},
@@ -43,7 +31,6 @@ const TABS = [
 
 export function DocumentPage() {
   const doc = useDoc();
-  const project = doc.project;
   const collection = doc.collection;
   const [content, setContent] = useState<any>({});
   const [publishModalOpened, setPublishModalOpened] = useState(false);
@@ -55,10 +42,10 @@ export function DocumentPage() {
   const notifications = useNotifications();
 
   const breadcrumbs = [
-    {title: collection.id, href: `/cms/${project.id}/content/${collection.id}`},
+    {title: collection.id, href: `/cms/content/${collection.id}`},
     {
       title: doc.slug,
-      href: `/cms/${project.id}/content/${collection.id}/${doc.slug}`,
+      href: `/cms/content/${collection.id}/${doc.slug}`,
     },
   ].map((item, index) => (
     <Link className={styles.breadcrumbLink} to={item.href} key={index}>
@@ -129,11 +116,11 @@ export function DocumentPage() {
       >
         <ResizePanel.Item className={styles.leftPanel}>
           <Stack className={styles.leftPanelGroup}>
-            <WebUISubheader>
+            <WebUIShell.Subheader>
               <Breadcrumbs className={styles.breadcrumbs}>
                 {breadcrumbs}
               </Breadcrumbs>
-            </WebUISubheader>
+            </WebUIShell.Subheader>
             {/* <Title>{doc.id}</Title> */}
 
             {/* <Title order={2}>Content</Title>
@@ -177,7 +164,7 @@ export function DocumentPage() {
             align="stretch"
             spacing={0}
           >
-            <WebUISubheader>Preview</WebUISubheader>
+            <WebUIShell.Subheader>Preview</WebUIShell.Subheader>
             <PreviewComponent />
           </Stack>
         </ResizePanel.Item>

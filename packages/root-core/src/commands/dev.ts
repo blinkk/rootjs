@@ -1,23 +1,22 @@
-import * as path from 'path';
-import {cwd, env} from 'process';
-import {Server} from '../server';
+import path from 'path';
+import {cwd} from 'process';
+import {createServer} from '../server/createServer';
 import {loadEnv} from '../utils/loadEnv';
-import Workspace from '../workspace/Workspace';
+import {Project} from '../workspace/Project';
 
 export async function dev(dirPath?: string) {
-  let workspaceDir = dirPath || env.CMS_WORKSPACE;
-  if (workspaceDir) {
-    if (!workspaceDir.startsWith('/')) {
+  let projectDir = dirPath || process.env.ROOT_PROJECT;
+  if (projectDir) {
+    if (!projectDir.startsWith('/')) {
       // Resolve relative paths.
-      workspaceDir = path.resolve(cwd(), workspaceDir);
+      projectDir = path.resolve(cwd(), projectDir);
     }
   } else {
-    workspaceDir = cwd();
+    projectDir = cwd();
   }
-  loadEnv(workspaceDir, {mode: 'development'});
-  const workspace = await Workspace.init(workspaceDir);
-  const server = new Server({
-    workspace: workspace,
-  });
-  await server.listen();
+  loadEnv(projectDir, {mode: 'development'});
+
+  const project = await Project.init(projectDir);
+  const app = await createServer(project);
+  app.listen(process.env.PORT || 4007);
 }

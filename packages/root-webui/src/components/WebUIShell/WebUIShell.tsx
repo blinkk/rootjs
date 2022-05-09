@@ -2,6 +2,7 @@ import firebase from 'firebase/compat/app';
 import {
   ActionIcon,
   Avatar,
+  Box,
   Group,
   Menu,
   Stack,
@@ -10,7 +11,6 @@ import {
   UnstyledButton,
 } from '@mantine/core';
 import {Link, useNavigate} from 'react-router-dom';
-import {useProject} from '../../hooks/useProject';
 import {useUser} from '../../hooks/useUser';
 import styles from './WebUIShell.module.scss';
 import {MaterialIcon} from '../../icons/MaterialIcon';
@@ -36,7 +36,6 @@ export function WebUIShell(props: WebUIShellProps) {
 
 WebUIShell.Sidebar = () => {
   const user = useUser();
-  const project = useProject();
   const navigate = useNavigate();
   return (
     <div className={styles.sidebar}>
@@ -48,33 +47,37 @@ WebUIShell.Sidebar = () => {
       <Stack className={styles.sidebarMain} align="center" justify="flex-end">
         <Stack>
           <Tooltip label="Project Home" position="right" withArrow>
-            <ActionIcon onClick={() => navigate(`/cms/${project.id}`)}>
+            <ActionIcon onClick={() => navigate('/cms')}>
               <MaterialIcon icon="home" />
             </ActionIcon>
           </Tooltip>
           <Tooltip label="Content" position="right" withArrow>
-            <ActionIcon onClick={() => navigate(`/cms/${project.id}/content`)}>
+            <ActionIcon onClick={() => navigate('/cms/content')}>
               <MaterialIcon icon="folder" />
             </ActionIcon>
           </Tooltip>
           <Tooltip label="Asset Manager" position="right" withArrow>
-            <ActionIcon onClick={() => navigate(`/cms/${project.id}/assets`)}>
+            <ActionIcon onClick={() => navigate('/cms/assets')}>
               <MaterialIcon icon="panorama" />
             </ActionIcon>
           </Tooltip>
         </Stack>
-        <div className={styles.avatarWrap}>
-          <Menu
-            control={
-              <UnstyledButton>
-                <UserAvatar user={user} />
-              </UnstyledButton>
-            }
-            gutter={10}
-          >
-            <Menu.Item onClick={() => alert('coming soon')}>Sign Out</Menu.Item>
-          </Menu>
-        </div>
+        {user && (
+          <div className={styles.avatarWrap}>
+            <Menu
+              control={
+                <UnstyledButton>
+                  <UserAvatar user={user} />
+                </UnstyledButton>
+              }
+              gutter={10}
+            >
+              <Menu.Item onClick={() => alert('coming soon')}>
+                Sign Out
+              </Menu.Item>
+            </Menu>
+          </div>
+        )}
       </Stack>
     </div>
   );
@@ -95,6 +98,26 @@ WebUIShell.Header = (props: WebUIShellHeaderProps) => {
     <div className={styles.header}>
       <div className={styles.headerTitle}>Root.js CMS</div>
     </div>
+  );
+};
+
+interface WebUIShellSubeaderProps {
+  children?: React.ReactNode;
+}
+
+WebUIShell.Subheader = (props: WebUIShellSubeaderProps) => {
+  return (
+    <Box
+      sx={theme => ({
+        height: 48,
+        display: 'flex',
+        alignItems: 'center',
+        borderBottom: `1px solid ${theme.colors.gray[2]}`,
+      })}
+      px={12}
+    >
+      {props.children}
+    </Box>
   );
 };
 
