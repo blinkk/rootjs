@@ -1,5 +1,6 @@
+import firebase from 'firebase/compat/app';
+import 'firebase/compat/firestore';
 import {Project} from './Project';
-import {Workspace} from './Workspace';
 
 export interface CollectionConfig {
   id: string;
@@ -7,14 +8,12 @@ export interface CollectionConfig {
 }
 
 export class Collection {
-  workspace: Workspace;
   project: Project;
   config: CollectionConfig;
   id: string;
   description?: string;
 
   constructor(project: Project, config: CollectionConfig) {
-    this.workspace = project.workspace;
     this.project = project;
     this.config = config;
     this.id = config.id;
@@ -22,7 +21,7 @@ export class Collection {
   }
 
   async listDocs(): Promise<any[]> {
-    const db = this.workspace.db();
+    const db = this.project.db();
     const docsRef = db.collection(
       `Projects/${this.project.id}/Collections/${this.id}/Docs`
     );
@@ -31,7 +30,7 @@ export class Collection {
   }
 
   async getRoles(): Promise<Record<string, string>> {
-    const db = this.workspace.db();
+    const db = this.project.db();
     const docRef = db.doc(`Projects/${this.project.id}/Collections/${this.id}`);
     const snapshot = await docRef.get();
     return snapshot?.data()?.roles || {};

@@ -1,5 +1,5 @@
+import firebase from 'firebase/compat/app';
 import {CollectionConfig} from './Collection';
-import {Workspace} from './Workspace';
 
 export interface ProjectConfig {
   id: string;
@@ -9,15 +9,15 @@ export interface ProjectConfig {
 }
 
 export class Project {
-  readonly workspace: Workspace;
+  readonly app: firebase.app.App;
   readonly config: ProjectConfig;
   readonly id: string;
   readonly name?: string;
   readonly description?: string;
   readonly collections: CollectionConfig[];
 
-  constructor(workspace: Workspace, config: ProjectConfig) {
-    this.workspace = workspace;
+  constructor(app: firebase.app.App, config: ProjectConfig) {
+    this.app = app;
     this.config = config;
     this.id = config.id;
     this.name = config.name;
@@ -27,5 +27,9 @@ export class Project {
 
   async getRoles(): Promise<Record<string, string>> {
     return {};
+  }
+
+  db() {
+    return this.app.firestore();
   }
 }

@@ -1,7 +1,0 @@
-@use 'tokens';
-
-.container {
-  height: tokens.$nav-size;
-  border-bottom: 1px solid tokens.$color-border;
-  padding: 0 12px;
-}

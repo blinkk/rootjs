@@ -38,7 +38,7 @@ export function CollectionPage() {
               })}
             >
               <Link
-                to={`/cms/${project.id}/content/${c.id}`}
+                to={`/cms/content/${c.id}`}
                 style={{textDecoration: 'none'}}
               >
                 <Group
@@ -148,7 +148,7 @@ CollectionPage.DocumentsTab = (props: DocumentsTabProps) => {
           }}
         >
           <Link
-            to={`/cms/${project.id}/content/${collection.id}/${doc.slug}`}
+            to={`/cms/content/${collection.id}/${doc.slug}`}
             style={{textDecoration: 'none'}}
           >
             <Group>

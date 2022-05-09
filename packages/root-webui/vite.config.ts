@@ -10,8 +10,7 @@ export default defineConfig(({mode}) => {
     base: mode === 'production' ? '/cms/' : '/',
     server: {
       proxy: {
-        '/cms/api': 'http://localhost:4000',
-        '/cms/preview': 'http://localhost:4000',
+        '/cms/api': 'http://localhost:4007',
       },
     },
     css: {

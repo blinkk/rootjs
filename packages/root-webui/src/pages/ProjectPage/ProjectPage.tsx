@@ -1,4 +1,4 @@
-import {Box, Group, Stack, Tabs, Text, Title} from '@mantine/core';
+import {Box, Stack, Tabs, Text, Title} from '@mantine/core';
 import {Link} from 'react-router-dom';
 import {WebUIShell} from '../../components/WebUIShell/WebUIShell';
 import {useProject} from '../../hooks/useProject';
@@ -61,7 +61,7 @@ ProjectPage.ContentTab = function (props: ContentTabProps) {
           }}
         >
           <Link
-            to={`/cms/${project.id}/content/${collection.id}`}
+            to={`/cms/content/${collection.id}`}
             style={{textDecoration: 'none'}}
           >
             <Title order={4}>{collection.id}</Title>

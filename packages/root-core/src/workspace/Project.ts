@@ -2,6 +2,11 @@ import {promise as glob} from 'glob-promise';
 import {loadConfigPath} from '../config/loadConfigFile';
 import {ProjectConfig} from '../config/ProjectConfig';
 import {Collection, CollectionSerialized} from './Collection';
+import firebase from 'firebase-admin';
+import {applicationDefault} from 'firebase-admin/app';
+import {User} from '../server/types';
+
+const APP_ID = 'rootjs';
 
 export interface ProjectSerialized {
   id: string;
@@ -43,6 +48,40 @@ export class Project {
     return project;
   }
 
+  /**
+   * Returns the Firebase admin app for the project.
+   */
+  app() {
+    let app = firebase.apps.find(app => app?.name === APP_ID);
+    if (app) {
+      return app;
+    }
+    app = firebase.initializeApp(
+      {
+        projectId: this.config.gcpProjectId,
+        credential: applicationDefault(),
+      },
+      APP_ID
+    );
+    return app;
+  }
+
+  /**
+   * Returns whether the user is authorized to view the project.
+   */
+  async isAuthorized(user: User) {
+    const email = user.email_verified && user.email;
+    if (!email) {
+      return false;
+    }
+
+    // TODO(stevenle): impl this logic.
+    return true;
+  }
+
+  /**
+   * Returns an object representation that can be JSON serialized.
+   */
   serialize(): ProjectSerialized {
     return {
       id: this.id,
@@ -52,5 +91,3 @@ export class Project {
     };
   }
 }
-
-export default Project;

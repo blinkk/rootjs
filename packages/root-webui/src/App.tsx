@@ -3,12 +3,13 @@ import {ModalsProvider} from '@mantine/modals';
 import {BrowserRouter, Routes, Route} from 'react-router-dom';
 import {ProjectSelectPage} from './pages/ProjectSelectPage/ProjectSelectPage';
 import {NotificationsProvider} from '@mantine/notifications';
-import {WorkspaceProvider} from './hooks/useWorkspace';
 import {UserProvider} from './hooks/useUser';
 import {ProjectPage} from './pages/ProjectPage/ProjectPage';
 import {CollectionPage} from './pages/CollectionPage/CollectionPage';
 import {DocumentPage} from './pages/DocumentPage/DocumentPage';
 import {WIP} from './pages/WIP';
+import {ProjectProvider} from './hooks/useProject';
+import {FirebaseProvider} from './hooks/useFirebase';
 
 function App() {
   return (
@@ -20,29 +21,25 @@ function App() {
     >
       <ModalsProvider labels={{confirm: 'Confirm', cancel: 'Cancel'}}>
         <NotificationsProvider>
-          <WorkspaceProvider>
-            <UserProvider>
+          <FirebaseProvider>
+            <ProjectProvider>
               <BrowserRouter>
                 <Routes>
-                  <Route path="/cms/" element={<ProjectSelectPage />} />
-                  <Route path="/cms/:projectId" element={<ProjectPage />} />
-                  <Route path="/cms/:projectId/assets" element={<WIP />} />
+                  <Route path="/cms/" element={<ProjectPage />} />
+                  <Route path="/cms/assets" element={<WIP />} />
+                  <Route path="/cms/content" element={<CollectionPage />} />
                   <Route
-                    path="/cms/:projectId/content"
+                    path="/cms/content/:collectionId"
                     element={<CollectionPage />}
                   />
                   <Route
-                    path="/cms/:projectId/content/:collectionId"
-                    element={<CollectionPage />}
-                  />
-                  <Route
-                    path="/cms/:projectId/content/:collectionId/:slug"
+                    path="/cms/content/:collectionId/:slug"
                     element={<DocumentPage />}
                   />
                 </Routes>
               </BrowserRouter>
-            </UserProvider>
-          </WorkspaceProvider>
+            </ProjectProvider>
+          </FirebaseProvider>
         </NotificationsProvider>
       </ModalsProvider>
     </MantineProvider>
