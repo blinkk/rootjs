@@ -3,7 +3,6 @@
   "version": "1.0.0",
   "description": "",
   "main": "dist/lib.js",
-  "module": "dist/lib.mjs",
   "scripts": {
     "compile": "tsup-node src/cli.ts src/lib.ts --dts src/lib.ts --format esm,cjs --no-splitting",
     "dev": "nodemon --watch src -e ts --exec npm run compile",
