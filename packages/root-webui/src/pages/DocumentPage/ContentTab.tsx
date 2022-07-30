@@ -1,7 +1,7 @@
 import {Button, Group, JsonInput, Loader, Stack, Text, Title} from '@mantine/core';
 import {useModals} from '@mantine/modals';
 import {useEffect, useState} from 'react';
-import {useDocContent} from '../../hooks/useDocContent';
+import {useDocData} from '../../hooks/useDocData';
 import {MaterialIcon} from '../../icons/MaterialIcon';
 import {Doc} from '../../lib/Doc';
 
@@ -11,19 +11,17 @@ interface ContentTabProps {
 
 export function ContentTab(props: ContentTabProps) {
   const doc = props.doc;
-  const {content, isLoading, isError} = useDocContent(doc.id, {mode: 'draft'});
+  const docData = useDocData(props.doc.id, {mode: 'draft'});
+  // const {content, isLoading, isError} = useDocContent(doc.id, {mode: 'draft'});
   const [value, setValue] = useState('');
   const modals = useModals();
 
   useEffect(() => {
-    setValue(JSON.stringify(content, null, 2));
-  }, [content]);
+    setValue(JSON.stringify(docData.content, null, 2));
+  }, [docData.content]);
 
-  if (isLoading) {
+  if (docData.loading) {
     return <Loader variant="oval" />;
-  }
-  if (isError) {
-    return <Text>Error</Text>;
   }
 
   function openModuleLibrary() {
