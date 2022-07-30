@@ -1,4 +1,12 @@
-import {Button, Group, JsonInput, Loader, Stack, Text, Title} from '@mantine/core';
+import {
+  Button,
+  Group,
+  JsonInput,
+  Loader,
+  Stack,
+  Text,
+  Title,
+} from '@mantine/core';
 import {useModals} from '@mantine/modals';
 import {useEffect, useState} from 'react';
 import {useDocData} from '../../hooks/useDocData';
@@ -12,7 +20,6 @@ interface ContentTabProps {
 export function ContentTab(props: ContentTabProps) {
   const doc = props.doc;
   const docData = useDocData(props.doc.id, {mode: 'draft'});
-  // const {content, isLoading, isError} = useDocContent(doc.id, {mode: 'draft'});
   const [value, setValue] = useState('');
   const modals = useModals();
 
