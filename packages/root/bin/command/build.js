@@ -31,7 +31,7 @@ export default async function build() {
   const pageFiles = await glob('./src/pages/**/*');
   pageFiles.forEach((file) => {
     const parts = path.parse(file);
-      if (isJsFile(parts.base)) {
+      if (!parts.name.startsWith('_') && isJsFile(parts.base)) {
         pages.push(file);
       }
   });
@@ -92,6 +92,7 @@ export default async function build() {
       outDir: path.join(distDir, 'server'),
       ssr: true,
       ssrManifest: false,
+      cssCodeSplit: true,
       target: 'esnext',
       minify: false,
       polyfillModulePreload: false,
@@ -100,7 +101,7 @@ export default async function build() {
   });
 
   // Pre-render any client scripts and CSS deps.
-  const clientOutput = await viteBuild({
+  await viteBuild({
     ...viteConfig,
     mode: 'production',
     publicDir: false,
@@ -115,7 +116,9 @@ export default async function build() {
       },
       outDir: path.join(distDir, 'client'),
       ssr: false,
-      ssrManifest: true,
+      ssrManifest: false,
+      manifest: true,
+      cssCodeSplit: true,
       target: 'esnext',
       minify: true,
       polyfillModulePreload: false,
@@ -123,35 +126,17 @@ export default async function build() {
     }
   });
 
+  const manifest = await loadJson(path.join(distDir, 'client/manifest.json'));
+
   // Use the output of the client build to generate an asset map, which is used
   // by the renderer for automatically injecting dependencies for a page.
-  const assetMap = new BuildAssetMap();
-  clientOutput.output.forEach(output => {
-    if (!output.facadeModuleId) {
-      return;
-    }
-    if (!output.facadeModuleId.startsWith(rootDir)) {
-      return;
-    }
-    const moduleId = output.facadeModuleId.replace(rootDir, '');
-    const assetUrl = `/${output.fileName}`;
-    const importedModulesSet = new Set();
-    Object.keys(output.modules).forEach((filePath) => {
-      if (filePath.startsWith(rootDir)) {
-        const moduleId = filePath.replace(rootDir, '').split('?')[0];
-        importedModulesSet.add(moduleId);
-      }
-    });
-    const importedModules = Array.from(importedModulesSet);
-    const importedCss = [];
-    if (output.viteMetadata?.importedCss) {
-      output.viteMetadata?.importedCss.forEach((assetId) => {
-        const cssAssetUrl = `/${assetId}`;
-        importedCss.push(cssAssetUrl);
-      })
-    }
-    assetMap.add({moduleId, assetUrl, importedModules, importedCss});
-  });
+  const assetMap = new BuildAssetMap(manifest);
+
+  // Save the asset map to `dist/client` for use by the prod SSR server.
+  writeFile(
+    path.join(distDir, 'client/root-manifest.json'),
+    JSON.stringify(assetMap.toJson(), null, 2)
+  );
 
   // Write SSG output to `dist/html`.
   const buildDir = path.join(distDir, 'html');
@@ -175,7 +160,10 @@ export default async function build() {
   router.walk((url, route) => {
     const promise = new Promise(async (resolve, reject) => {
       const data = await render(url, {config: rootConfig, assetMap});
-      const outPath = path.join(distDir, `html${url}`, 'index.html');
+      let outPath = path.join(distDir, `html${url}`, 'index.html');
+      if (outPath.endsWith('404/index.html')) {
+        outPath = outPath.replace('404/index.html', '404.html');
+      }
       await writeFile(outPath, data.html);
       console.log(`saved ${outPath}`);
       resolve();
@@ -208,4 +196,9 @@ async function copyDir(srcDir, dstDir) {
     return;
   }
   fsExtra.copySync(srcDir, dstDir, {recursive: true, overwrite: true});
+}
+
+async function loadJson(filePath) {
+  const content = await fsPromises.readFile(filePath);
+  return JSON.parse(content);
 }
