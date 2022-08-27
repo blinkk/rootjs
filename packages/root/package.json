@@ -1,0 +1,38 @@
+{
+  "name": "root",
+  "version": "0.0.1",
+  "author": "s@blinkk.com",
+  "license": "MIT",
+  "bin": {
+    "root": "./bin/root.js"
+  },
+  "type": "module",
+  "module": "./dist/lib.js",
+  "exports": {
+    ".": "./dist/lib.js",
+    "./config": "./dist/config/index.js",
+    "./dev": "./bin/command/dev.js",
+    "./runtime": "./dist/runtime/index.js",
+    "./server": "./dist/server/index.js"
+  },
+  "scripts": {
+    "build": "rm -rf dist && tsc",
+    "dev": "nodemon --watch src --exec yarn build"
+  },
+  "dependencies": {
+    "@proload/core": "^0.3.2",
+    "@proload/plugin-typescript": "^0.2.1",
+    "commander": "^9.4.0",
+    "express": "^4.18.1",
+    "html-minifier-terser": "^7.0.0",
+    "preact": "^10.10.6",
+    "preact-render-to-string": "^5.2.2",
+    "tiny-glob": "^0.2.9",
+    "vite": "^3.0.8"
+  },
+  "devDependencies": {
+    "@types/html-minifier-terser": "^7.0.0",
+    "nodemon": "^2.0.19",
+    "typescript": "^4.7.4"
+  }
+}
