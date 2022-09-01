@@ -137,13 +137,14 @@ async function getScriptDeps(html: string, options: any): Promise<string[]> {
   const assetMap = options.assetMap as AssetMap;
   const deps = new Set<string>();
 
-  const re = /<(\w[\w-]+\w)/g;
+  // Find all custom elements used by the page. Note: custom elements require a
+  // dash in the tag name.
+  const re = /<(\w+(?:-\w+)+)/g;
   const matches = Array.from(html.matchAll(re));
   await Promise.all(
     matches.map(async match => {
       const tagName = match[1];
-      // Custom elements require a dash.
-      if (tagName && tagName.includes('-') && tagName in ELEMENTS_MAP) {
+      if (tagName && tagName in ELEMENTS_MAP) {
         const modulePath = ELEMENTS_MAP[tagName];
         const asset = await assetMap.get(modulePath);
         if (!asset) {
