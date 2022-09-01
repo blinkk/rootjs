@@ -21,16 +21,16 @@ export class RouteTrie<T> {
     }
 
     const [head, tail] = this.splitPath(path);
-    if (head[0] === '*') {
-      const paramName = head.slice(1);
+    if (head.startsWith('[...') && head.endsWith(']')) {
+      const paramName = head.slice(4, -1);
       this.wildcardChild = new WildcardChild(paramName, route);
       return;
     }
 
     let nextNode: RouteTrie<T>;
-    if (head[0] === ':') {
+    if (head.startsWith('[') && head.endsWith(']')) {
       if (!this.paramChild) {
-        const paramName = head.slice(1);
+        const paramName = head.slice(1, -1);
         this.paramChild = new ParamChild(paramName);
       }
       nextNode = this.paramChild.trie;
@@ -78,6 +78,16 @@ export class RouteTrie<T> {
         cb(`/${subpath}${childPath}`, childRoute);
       });
     }
+  }
+
+  /**
+   * Removes all routes from the trie.
+   */
+  clear() {
+    this.children = {};
+    this.paramChild = undefined;
+    this.wildcardChild = undefined;
+    this.route = undefined;
   }
 
   private getRoute(

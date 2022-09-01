@@ -35,20 +35,6 @@ export function getRoutes(config: RootConfig) {
     } else {
       routePath = path.join(parts.dir, parts.name);
     }
-    const segments = routePath.split('/');
-    for (let i = 0; i < segments.length; i++) {
-      const segment = segments[i];
-      if (segment.startsWith('[') && segment.endsWith(']')) {
-        let param = segment.slice(1, -1);
-        if (param.startsWith('...')) {
-          param = param.slice(3);
-          segments[i] = `*${param}`;
-        } else {
-          segments[i] = `:${param}`;
-        }
-      }
-    }
-    routePath = segments.join('/');
     trie.add(routePath, {
       modulePath: pagePath,
       module: pages[pagePath] as PageModule,
