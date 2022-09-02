@@ -19,13 +19,12 @@ export function getRoutes(config: RootConfig) {
   const i18nUrlFormat = config.i18n?.urlFormat || '/{locale}/{path}';
   const defaultLocale = config.i18n?.defaultLocale || 'en';
 
-  const pages = import.meta.glob(
-    ['/src/pages/**/*.jsx', '/src/pages/**/*.tsx'],
-    {eager: true}
-  );
+  const pages = import.meta.glob(['/routes/**/*.jsx', '/routes/**/*.tsx'], {
+    eager: true,
+  });
   const trie = new RouteTrie<Route>();
   Object.keys(pages).forEach(pagePath => {
-    let routePath = pagePath.replace(/^\/src\/pages/, '');
+    let routePath = pagePath.replace(/^\/routes/, '');
     const parts = path.parse(routePath);
     if (parts.name.startsWith('_')) {
       return;

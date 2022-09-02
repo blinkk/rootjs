@@ -17,7 +17,7 @@ export function pluginRoot(options?: RootPluginOptions) {
 
   async function updateElementMap() {
     elementMap = {};
-    const files = await glob('./src/elements/**/*', {cwd: rootDir});
+    const files = await glob('./elements/**/*', {cwd: rootDir});
     files.forEach(file => {
       const parts = path.parse(file);
       if (isJsFile(parts.base)) {

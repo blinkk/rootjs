@@ -42,16 +42,19 @@ export async function getMiddlewares() {
   const viteServer = await createViteServer({
     server: {middlewareMode: true},
     appType: 'custom',
+    optimizeDeps: {
+      entries: []
+    },
     resolve: {
       alias: {
-        '@': path.resolve(rootDir, './src'),
+        '@': path.resolve(rootDir),
       },
     },
     css: {
       preprocessorOptions: {
         scss: {
           includePaths: [
-            path.resolve(rootDir, './src/styles')
+            path.resolve(rootDir, './styles')
           ],
         },
       },

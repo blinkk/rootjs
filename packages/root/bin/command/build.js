@@ -27,17 +27,17 @@ export default async function build() {
 
   const distDir = path.join(rootDir, 'dist');
 
-  const pages = [];
-  const pageFiles = await glob('./src/pages/**/*');
-  pageFiles.forEach((file) => {
+  const routes = [];
+  const routeFiles = await glob('./routes/**/*');
+  routeFiles.forEach((file) => {
     const parts = path.parse(file);
       if (!parts.name.startsWith('_') && isJsFile(parts.base)) {
-        pages.push(file);
+        routes.push(file);
       }
   });
 
   const elements = [];
-  const elementFiles = await glob('./src/elements/**/*');
+  const elementFiles = await glob('./elements/**/*');
   elementFiles.forEach((file) => {
     const parts = path.parse(file);
       if (isJsFile(parts.base)) {
@@ -46,7 +46,7 @@ export default async function build() {
   });
 
   const bundleScripts = [];
-  const bundleFiles = await glob('./src/bundles/*');
+  const bundleFiles = await glob('./bundles/*');
   bundleFiles.forEach((file) => {
     const parts = path.parse(file);
     if (isJsFile(parts.base)) {
@@ -57,14 +57,14 @@ export default async function build() {
   const viteConfig = {
     resolve: {
       alias: {
-        '@': path.resolve(process.cwd(), './src'),
+        '@': path.resolve(process.cwd()),
       },
     },
     css: {
       preprocessorOptions: {
         scss: {
           includePaths: [
-            path.resolve(process.cwd(), './src/styles')
+            path.resolve(process.cwd(), './styles')
           ],
         },
       },
@@ -107,7 +107,7 @@ export default async function build() {
     publicDir: false,
     build: {
       rollupOptions: {
-        input: [...pages, ...elements, ...bundleScripts],
+        input: [...routes, ...elements, ...bundleScripts],
         output: {
           format: 'esm',
           chunkFileNames: 'chunks/[name].[hash].js',
@@ -157,15 +157,30 @@ export default async function build() {
   const {render, getRouter} = await import(path.join(distDir, 'server/render.js'));
   const router = getRouter(rootConfig);
   const promises = [];
-  router.walk((url, route) => {
+  router.walk((routePath, route) => {
     const promise = new Promise(async (resolve, reject) => {
-      const data = await render(url, {config: rootConfig, assetMap});
-      let outPath = path.join(distDir, `html${url}`, 'index.html');
-      if (outPath.endsWith('404/index.html')) {
-        outPath = outPath.replace('404/index.html', '404.html');
+      const urls = [];
+      if (route.getStaticPaths) {
+        const staticPaths = await route.getStaticPaths();
+        if (!staticPaths) {
+          return;
+        }
+        const routeParams = staticPaths.paths || [];
+        routeParams.forEach((routeParam) => {
+          urls.push(replaceParams(routePath, routeParam.params));
+        });
+      } else {
+        urls.push(routePath);
       }
-      await writeFile(outPath, data.html);
-      console.log(`saved ${outPath}`);
+      for (const url of urls) {
+        const data = await render(url, {config: rootConfig, assetMap});
+        let outPath = path.join(distDir, `html${url}`, 'index.html');
+        if (outPath.endsWith('404/index.html')) {
+          outPath = outPath.replace('404/index.html', '404.html');
+        }
+        await writeFile(outPath, data.html);
+        console.log(`saved ${outPath}`);
+      }
       resolve();
     });
     promises.push(promise);
@@ -201,4 +216,12 @@ async function copyDir(srcDir, dstDir) {
 async function loadJson(filePath) {
   const content = await fsPromises.readFile(filePath);
   return JSON.parse(content);
+}
+
+function replaceParams(urlPath, params) {
+  for (const key of Object.keys(params)) {
+    const val = params[key];
+    urlPath = urlPath.replace(`[${key}]`, val).replace(`[...${key}]`, val);
+  }
+  return urlPath;
 }

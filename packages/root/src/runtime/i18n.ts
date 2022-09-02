@@ -5,7 +5,7 @@ import {useContext} from 'preact/hooks';
 export const TRANSLATIONS_CONTEXT = createContext<Record<string, string>>({});
 
 const TRANSLATIONS: Record<string, Record<string, string>> = {};
-const TRANSLATIONS_FILES = import.meta.glob(['/src/translations/*.json'], {
+const TRANSLATIONS_FILES = import.meta.glob(['/translations/*.json'], {
   eager: true,
 }) as Record<string, {default?: Record<string, string>}>;
 Object.keys(TRANSLATIONS_FILES).forEach(translationPath => {

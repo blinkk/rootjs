@@ -14,10 +14,10 @@ import {AssetMap} from './asset-map';
 const ELEMENTS_MAP: Record<string, string> = {};
 // TODO(stevenle): this should be added via config.
 const ELEMENTS_MODULES = import.meta.glob([
-  '/src/elements/**/*.js',
-  '/src/elements/**/*.jsx',
-  '/src/elements/**/*.ts',
-  '/src/elements/**/*.tsx',
+  '/elements/**/*.js',
+  '/elements/**/*.jsx',
+  '/elements/**/*.ts',
+  '/elements/**/*.tsx',
 ]) as Record<string, () => Promise<PageModule>>;
 Object.keys(ELEMENTS_MODULES).forEach(elementPath => {
   const parts = path.parse(elementPath);
