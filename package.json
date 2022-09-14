@@ -6,6 +6,7 @@
   "main": "index.js",
   "scripts": {
     "build": "turbo run build --ignore=\"examples/**/*\"",
+    "changeset": "changeset",
     "dev": "npm-run-all --parallel dev:server dev:webui",
     "dev:storybook": "npm --prefix=./apps/storybook run dev",
     "dev:server": "ROOT_PROJECT=../../examples/nextjs-blog npm --prefix=./packages/root-core run dev:server",
@@ -27,6 +28,7 @@
     "@blinkk/root-core": "workspace:*"
   },
   "devDependencies": {
+    "@changesets/cli": "^2.24.4",
     "@typescript-eslint/eslint-plugin": "^5.15.0",
     "@typescript-eslint/parser": "^5.15.0",
     "eslint": "^8.11.0",
