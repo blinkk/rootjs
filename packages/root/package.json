@@ -1,41 +1,69 @@
 {
-  "name": "root",
-  "version": "0.0.1",
+  "name": "@blinkk/root",
+  "version": "1.0.0-alpha.0",
   "author": "s@blinkk.com",
   "license": "MIT",
   "bin": {
     "root": "./bin/root.js"
   },
   "type": "module",
-  "module": "./dist/lib.js",
+  "module": "./dist/core.js",
+  "types": "./dist/core.d.ts",
   "exports": {
-    ".": "./dist/lib.js",
-    "./config": "./dist/config/index.js",
-    "./dev": "./bin/command/dev.js",
-    "./runtime": "./dist/runtime/index.js",
-    "./server": "./dist/server/index.js"
+    ".": {
+      "default": "./dist/core.js",
+      "import": "./dist/core.js",
+      "types": "./dist/core.d.ts"
+    },
+    "./cli": {
+      "default": "./dist/cli.js",
+      "import": "./dist/cli.js",
+      "types": "./dist/cli.d.ts"
+    },
+    "./render": {
+      "default": "./dist/render.js",
+      "import": "./dist/render.js",
+      "types": "./dist/render.d.ts"
+    }
+  },
+  "files": [
+    "bin/*",
+    "dist/**/*"
+  ],
+  "engines": {
+    "node": ">=16.0.0"
   },
   "scripts": {
-    "build": "rm -rf dist && tsc",
-    "dev": "nodemon --watch src --exec yarn build",
-    "test": "vitest"
+    "build": "rm -rf dist && tsup",
+    "dev": "nodemon --watch src -e ts,tsx --exec pnpm build",
+    "test": "pnpm build && vitest"
   },
   "dependencies": {
-    "@proload/core": "^0.3.2",
-    "@proload/plugin-typescript": "^0.2.1",
+    "bundle-require": "^3.1.0",
     "commander": "^9.4.0",
+    "esbuild": "^0.14.27",
     "express": "^4.18.1",
     "fs-extra": "^10.1.0",
     "html-minifier-terser": "^7.0.0",
-    "preact": "^10.10.6",
-    "preact-render-to-string": "^5.2.2",
+    "joycon": "^3.1.1",
+    "sass": "^1.49.9",
     "tiny-glob": "^0.2.9",
-    "vite": "^3.0.8"
+    "vite": "^3.1.0"
+  },
+  "peerDependencies": {
+    "preact": "10.x",
+    "preact-render-to-string": "5.x"
   },
   "devDependencies": {
+    "@types/express": "^4.17.13",
+    "@types/fs-extra": "^9.0.13",
     "@types/html-minifier-terser": "^7.0.0",
     "@types/node": "^18.7.14",
     "nodemon": "^2.0.19",
+    "preact": "^10.10.6",
+    "preact-render-to-string": "^5.2.3",
+    "rollup": "^2.79.0",
+    "tsup": "^5.12.1",
     "typescript": "^4.7.4",
     "vitest": "^0.18.1"
   }

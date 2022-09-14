@@ -4,9 +4,7 @@
     "allowUnusedLabels": false,
     "declaration": true,
     "forceConsistentCasingInFileNames": true,
-    "lib": [
-      "esnext"
-    ],
+    "lib": ["esnext"],
     "module": "esnext",
     "noEmitOnError": true,
     "noFallthroughCasesInSwitch": true,
@@ -15,7 +13,6 @@
     "sourceMap": true,
     "strict": true,
     "target": "es2020",
-    "rootDir": "./src",
     "outDir": "dist",
     "types": [
       "node",
@@ -25,16 +22,16 @@
     "esModuleInterop": true,
     "resolveJsonModule": true,
     "moduleResolution": "node",
-    "jsx": "preserve",
-    "jsxFactory": "h",
-    "jsxFragmentFactory": "Fragment"
+    "jsx": "react-jsx",
+    "jsxImportSource": "preact"
   },
   "include": [
     "src/**/*.ts",
-    "src/**/*.tsx"
+    "src/**/*.tsx",
+    "test/**/*.ts",
+    "test/**/*.tsx",
   ],
   "exclude": [
-    "node_modules",
     "src/**/*.test.ts"
   ]
 }
