@@ -1,6 +1,7 @@
 {
   "name": "@blinkk/root-core",
-  "version": "1.0.0",
+  "private": true,
+  "version": "0.0.0",
   "description": "",
   "main": "dist/lib.js",
   "scripts": {
