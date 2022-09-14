@@ -1,6 +1,6 @@
 import {promises as fs} from 'node:fs';
 import path from 'node:path';
-import {assert, beforeEach, test, expect} from 'vitest';
+import {assert, beforeEach, test, expect, afterEach} from 'vitest';
 import {fileExists} from '../src/core/fsutils';
 import {Fixture, loadFixture} from './testutils';
 
@@ -10,11 +10,11 @@ beforeEach(async () => {
   fixture = await loadFixture('./fixtures/minimal');
 });
 
-// afterEach(async () => {
-//   if (fixture) {
-//     await fixture.cleanup();
-//   }
-// });
+afterEach(async () => {
+  if (fixture) {
+    await fixture.cleanup();
+  }
+});
 
 test('build minimal project', async () => {
   await fixture.build();
