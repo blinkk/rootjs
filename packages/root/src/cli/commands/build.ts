@@ -88,7 +88,7 @@ export async function build(rootDir?: string) {
         input: [path.resolve(__dirname, './render.js')],
         output: {
           format: 'esm',
-          chunkFileNames: 'chunks/[name].[hash][extname]',
+          chunkFileNames: 'chunks/[name].[hash].js',
           assetFileNames: 'assets/[name].[hash][extname]',
         },
       },
