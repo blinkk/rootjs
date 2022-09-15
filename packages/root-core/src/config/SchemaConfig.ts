@@ -1,4 +1,4 @@
-import {FieldConfig} from '@blinkk/root-form/src/field';
+import {FieldConfig} from '@private/root-form/src/field';
 
 export interface SchemaConfig {
   name?: string;

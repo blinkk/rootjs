@@ -4,7 +4,6 @@ importers:
 
   .:
     specifiers:
-      '@blinkk/root-core': workspace:*
       '@changesets/cli': ^2.24.4
       '@typescript-eslint/eslint-plugin': ^5.15.0
       '@typescript-eslint/parser': ^5.15.0
@@ -17,8 +16,6 @@ importers:
       release-please: ^13.8.0
       turbo: ^1.2.3
       typescript: ^4.6.2
-    dependencies:
-      '@blinkk/root-core': link:packages/root-core
     devDependencies:
       '@changesets/cli': 2.24.4
       '@typescript-eslint/eslint-plugin': 5.15.0_6lcjzz6q5e7lz7nuw7jfwey3fa
@@ -94,10 +91,10 @@ importers:
 
   packages/root-core:
     specifiers:
-      '@blinkk/root-form': workspace:*
-      '@blinkk/root-webui': workspace:*
       '@firebase/app-compat': ^0.1.33
       '@firebase/app-types': ^0.7.0
+      '@private/root-form': workspace:*
+      '@private/root-webui': workspace:*
       '@types/connect': ^3.4.35
       '@types/node': ^17.0.21
       '@types/send': ^0.17.1
@@ -121,10 +118,10 @@ importers:
       tsup: ^5.12.1
       typescript: ^4.6.2
     dependencies:
-      '@blinkk/root-form': link:../root-form
-      '@blinkk/root-webui': link:../root-webui
       '@firebase/app-compat': 0.1.33
       '@firebase/app-types': 0.7.0
+      '@private/root-form': link:../root-form
+      '@private/root-webui': link:../root-webui
       body-parser: 1.20.0
       commander: 9.2.0
       connect: 3.7.0

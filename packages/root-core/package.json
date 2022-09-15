@@ -36,10 +36,10 @@
     "tsup": "^5.12.1"
   },
   "dependencies": {
-    "@blinkk/root-form": "workspace:*",
-    "@blinkk/root-webui": "workspace:*",
     "@firebase/app-compat": "^0.1.33",
     "@firebase/app-types": "^0.7.0",
+    "@private/root-form": "workspace:*",
+    "@private/root-webui": "workspace:*",
     "body-parser": "^1.20.0",
     "commander": "^9.0.0",
     "connect": "^3.7.0",

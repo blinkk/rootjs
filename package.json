@@ -24,9 +24,6 @@
     "url": "https://github.com/blinkk/rootjs/issues"
   },
   "homepage": "https://github.com/blinkk/rootjs#readme",
-  "dependencies": {
-    "@blinkk/root-core": "workspace:*"
-  },
   "devDependencies": {
     "@changesets/cli": "^2.24.4",
     "@typescript-eslint/eslint-plugin": "^5.15.0",

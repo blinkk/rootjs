@@ -34,7 +34,7 @@
     "node": ">=16.0.0"
   },
   "scripts": {
-    "build": "rm -rf dist && tsup",
+    "build": "rm -rf dist && tsup-node",
     "dev": "nodemon --watch src -e ts,tsx --exec pnpm build",
     "test": "pnpm build && vitest"
   },
