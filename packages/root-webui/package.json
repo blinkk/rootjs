@@ -1,5 +1,5 @@
 {
-  "name": "@blinkk/root-webui",
+  "name": "@private/root-webui",
   "private": true,
   "version": "0.0.0",
   "scripts": {
