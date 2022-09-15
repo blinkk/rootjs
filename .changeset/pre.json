@@ -2,9 +2,15 @@
   "mode": "pre",
   "tag": "alpha",
   "initialVersions": {
-    "@blinkk/root": "0.0.0"
+    "@blinkk/root": "0.0.0",
+    "@examples/starter": "0.0.0",
+    "@private/root-core": "0.0.0",
+    "@private/root-db": "0.0.0",
+    "@private/root-form": "0.0.0",
+    "@private/root-webui": "0.0.0"
   },
   "changesets": [
-    "dirty-steaks-hammer"
+    "dirty-steaks-hammer",
+    "three-melons-exist"
   ]
 }
