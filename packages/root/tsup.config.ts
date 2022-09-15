@@ -15,4 +15,5 @@ export default defineConfig({
   splitting: true,
   jsxFactory: 'h',
   jsxFragment: 'Fragment',
+  external: ['preact', 'preact-render-to-string'],
 });

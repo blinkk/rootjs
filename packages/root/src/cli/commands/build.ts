@@ -21,8 +21,7 @@ import {htmlMinify} from '../../render/html-minify.js';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 export async function build(rootDir?: string) {
-  const version = process.env.npm_package_version || 'dev';
-  console.log(`🌳 Root.js v${version}`);
+  console.log('🌳 Root.js');
 
   if (!rootDir) {
     rootDir = process.cwd();

@@ -18,8 +18,7 @@ export async function createServer(options?: {rootDir?: string}) {
   middlewares.forEach((middleware) => app.use(middleware));
 
   const port = parseInt(process.env.PORT || '4007');
-  const version = process.env.npm_package_version || 'dev';
-  console.log(`🌳 Root.js v${version}`);
+  console.log('🌳 Root.js');
   console.log();
   console.log(`Started server: http://localhost:${port}`);
   app.listen(port);
@@ -37,6 +36,7 @@ export async function getMiddlewares(options?: {rootDir?: string}) {
     appType: 'custom',
     optimizeDeps: {
       include: [renderModulePath],
+      exclude: ['preact'],
     },
     esbuild: {
       jsx: 'automatic',
