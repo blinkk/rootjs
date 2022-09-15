@@ -2,12 +2,7 @@
   "mode": "pre",
   "tag": "alpha",
   "initialVersions": {
-    "@examples/starter": "0.0.0",
-    "@blinkk/root": "0.0.0",
-    "@blinkk/root-core": "0.0.0",
-    "@blinkk/root-db": "0.0.0",
-    "@blinkk/root-form": "0.0.0",
-    "@blinkk/root-webui": "0.0.0"
+    "@blinkk/root": "0.0.0"
   },
   "changesets": [
     "dirty-steaks-hammer"
