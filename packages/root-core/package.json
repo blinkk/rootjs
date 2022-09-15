@@ -1,6 +1,7 @@
 {
   "name": "@blinkk/root-core",
-  "version": "1.0.0",
+  "private": true,
+  "version": "0.0.0",
   "description": "",
   "main": "dist/lib.js",
   "scripts": {
@@ -23,9 +24,6 @@
     "dist",
     "package.json"
   ],
-  "bin": {
-    "root": "dist/cli.js"
-  },
   "engines": {
     "node": "16.x.x"
   },
@@ -40,6 +38,8 @@
   "dependencies": {
     "@blinkk/root-form": "workspace:*",
     "@blinkk/root-webui": "workspace:*",
+    "@firebase/app-compat": "^0.1.33",
+    "@firebase/app-types": "^0.7.0",
     "body-parser": "^1.20.0",
     "commander": "^9.0.0",
     "connect": "^3.7.0",

@@ -1,6 +1,6 @@
 {
-  "name": "root-db",
-  "version": "1.0.0",
+  "name": "@blinkk/root-db",
+  "version": "0.0.0",
   "description": "",
   "main": "index.js",
   "scripts": {
