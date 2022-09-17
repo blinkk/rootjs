@@ -25,7 +25,7 @@ export class Collection {
       `Projects/${this.project.id}/Collections/${this.id}/Docs`
     );
     const snapshot = await docsRef.orderBy('draft.modifiedAt', 'desc').get();
-    return snapshot.docs.map(doc => ({...doc.data(), slug: doc.id}));
+    return snapshot.docs.map((doc) => ({...doc.data(), slug: doc.id}));
   }
 
   async getRoles(): Promise<Record<string, string>> {

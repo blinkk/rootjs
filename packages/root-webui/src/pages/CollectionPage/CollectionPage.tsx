@@ -28,10 +28,10 @@ export function CollectionPage() {
         sx={{height: 'calc(100vh - 48px)', overflow: 'hidden'}}
       >
         <Stack spacing={0}>
-          {project.collections.map(c => (
+          {project.collections.map((c) => (
             <Box
               key={c.id}
-              sx={theme => ({
+              sx={(theme) => ({
                 borderBottom: '1px solid #dedede',
                 backgroundColor:
                   c.id === collection?.id ? theme.colors.gray[0] : theme.white,
@@ -42,7 +42,7 @@ export function CollectionPage() {
                 style={{textDecoration: 'none'}}
               >
                 <Group
-                  sx={theme => ({
+                  sx={(theme) => ({
                     minWidth: 280,
                     padding: '12px 20px',
                     color:
@@ -67,7 +67,7 @@ export function CollectionPage() {
         <Box sx={{borderLeft: '1px solid #dedede', height: '100%', flex: 1}}>
           {collection && (
             <Stack
-              sx={theme => ({
+              sx={(theme) => ({
                 backgroundColor: theme.colors.gray[0],
                 height: '100%',
                 overflow: 'auto',
@@ -81,7 +81,7 @@ export function CollectionPage() {
               </Stack>
               <Tabs
                 variant="outline"
-                styles={theme => ({
+                styles={(theme) => ({
                   root: {flex: 1, display: 'flex', flexDirection: 'column'},
                   tabsList: {paddingLeft: 20},
                   body: {
@@ -139,7 +139,7 @@ CollectionPage.DocumentsTab = (props: DocumentsTabProps) => {
 
   return (
     <Stack spacing={0}>
-      {docs.map(doc => (
+      {docs.map((doc) => (
         <Box
           key={doc.slug}
           sx={{

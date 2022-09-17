@@ -1,6 +1,7 @@
 import path from 'path';
 import glob from 'tiny-glob';
 import {ViteDevServer} from 'vite';
+import {isJsFile} from '../core/fsutils';
 
 const ELEMENTS_REGEX = /h\("(\w[\w-]+\w)"/g;
 
@@ -11,7 +12,7 @@ export interface RootPluginOptions {
 
 export function pluginRoot(options?: RootPluginOptions) {
   const rootDir = options?.rootDir || process.cwd();
-  let config: any;
+  // let config: any;
   let server: ViteDevServer;
   let elementMap: Record<string, string>;
 
@@ -48,15 +49,18 @@ export function pluginRoot(options?: RootPluginOptions) {
 
     // TODO(stevenle): when the config is resolved, store a list of places to
     // find custom elements.
-    configResolved(resolvedConfig: any) {
-      config = resolvedConfig;
-    },
+    // configResolved(resolvedConfig: any) {
+    //   config = resolvedConfig;
+    // },
 
     configureServer(_server: ViteDevServer) {
       server = _server;
     },
 
-    async transform(src: string, id: string): Promise<any> {
+    async transform(
+      src: string,
+      id: string
+    ): Promise<{code: string} | null | undefined> {
       if (id.includes('/elements/') && isJsFile(id)) {
         const idParts = path.parse(id);
         const deps = new Set<string>();
@@ -93,14 +97,10 @@ ${importLines}
 `;
           return {code};
         }
-        return null;
       }
+      return null;
     },
   };
-}
-
-function isJsFile(file: string): boolean {
-  return !!file.match(/\.(j|t)sx?$/);
 }
 
 export default pluginRoot;

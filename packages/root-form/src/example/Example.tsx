@@ -64,7 +64,7 @@ fields:
             <Textarea
               autosize
               label="Original value (YAML)"
-              onChange={event => {
+              onChange={(event) => {
                 try {
                   setRawOriginalValue(event.currentTarget.value);
                   setOriginalValue(yaml.load(event.currentTarget.value));
@@ -79,7 +79,7 @@ fields:
             <Textarea
               autosize
               label="Field configuration (YAML)"
-              onChange={event => {
+              onChange={(event) => {
                 try {
                   setRawConfiguration(event.currentTarget.value);
                   setConfiguration(yaml.load(event.currentTarget.value));

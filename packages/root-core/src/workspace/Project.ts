@@ -52,7 +52,7 @@ export class Project {
    * Returns the Firebase admin app for the project.
    */
   app() {
-    let app = firebase.apps.find(app => app?.name === APP_ID);
+    let app = firebase.apps.find((app) => app?.name === APP_ID);
     if (app) {
       return app;
     }
@@ -87,7 +87,7 @@ export class Project {
       id: this.id,
       name: this.config.name,
       domains: this.config.domains,
-      collections: this.collections.map(c => c.serialize()),
+      collections: this.collections.map((c) => c.serialize()),
     };
   }
 }

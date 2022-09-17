@@ -1,4 +1,12 @@
-import {Button, Group, JsonInput, Loader, Stack, Text, Title} from '@mantine/core';
+import {
+  Button,
+  Group,
+  JsonInput,
+  Loader,
+  Stack,
+  Text,
+  Title,
+} from '@mantine/core';
 import {useModals} from '@mantine/modals';
 import {useEffect, useState} from 'react';
 import {useDocContent} from '../../hooks/useDocContent';

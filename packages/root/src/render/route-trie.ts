@@ -57,9 +57,9 @@ export class RouteTrie<T> {
   /**
    * Walks the route trie and calls a callback function for each route.
    */
-  walk(cb: (urlPath: string, route: T) => Promise<any> | void): Promise<any> {
-    const promises: Array<Promise<any>> = [];
-    const addPromise = (promise: Promise<any> | void) => {
+  walk(cb: (urlPath: string, route: T) => Promise<void> | void): Promise<void> {
+    const promises: Array<Promise<void>> = [];
+    const addPromise = (promise: Promise<void> | void) => {
       if (promise) {
         promises.push(promise);
       }
@@ -84,7 +84,7 @@ export class RouteTrie<T> {
         addPromise(cb(`/${subpath}${childPath}`, childRoute));
       });
     }
-    return Promise.all(promises);
+    return Promise.all(promises).then(() => {});
   }
 
   /**

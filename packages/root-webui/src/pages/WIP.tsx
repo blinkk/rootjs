@@ -8,7 +8,7 @@ export function WIP() {
       <Center sx={{width: '100%', height: 'calc(100vh - 48px)'}}>
         <Stack align="center">
           <Center
-            sx={theme => ({
+            sx={(theme) => ({
               borderRadius: '50%',
               width: 64,
               height: 64,

@@ -20,7 +20,7 @@ export function TextField(props: TextFieldProps): JSX.Element {
       <TextInput
         placeholder={props.fieldConfig.placeholder}
         label={props.fieldConfig.label ?? props.fieldConfig.id}
-        onChange={e => {
+        onChange={(e) => {
           props.setValue(e.target.value);
         }}
         value={

@@ -55,7 +55,7 @@ function sendFile(
 ): Promise<void> {
   return new Promise((resolve, reject) => {
     send(req, filePath)
-      .on('error', e => reject(e))
+      .on('error', (e) => reject(e))
       .on('end', () => resolve())
       .pipe(res);
   });

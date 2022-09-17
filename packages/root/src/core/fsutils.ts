@@ -31,7 +31,7 @@ export async function rmDir(dirPath: string) {
   await fs.rm(dirPath, {recursive: true, force: true});
 }
 
-export async function loadJson(filePath: string): Promise<any> {
+export async function loadJson<T = unknown>(filePath: string): Promise<T> {
   const content = await fs.readFile(filePath, 'utf-8');
   return JSON.parse(content);
 }

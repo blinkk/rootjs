@@ -17,7 +17,9 @@ export function useDoc(docId?: string): Doc {
     slug = params.slug || '';
     docId = `${collectionId}/${slug}`;
   }
-  const collectionConfig = project.collections.find(c => c.id === collectionId);
+  const collectionConfig = project.collections.find(
+    (c) => c.id === collectionId
+  );
   if (!collectionConfig) {
     notifications.showNotification({
       title: 'Collection Not Found',

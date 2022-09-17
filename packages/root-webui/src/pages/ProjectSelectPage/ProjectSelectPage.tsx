@@ -26,7 +26,7 @@ export function ProjectSelectPage() {
     return <Navigate to={`/cms/${workspace.projects[0].id}`} />;
   }
 
-  const projectOptions: SelectItem[] = workspace.projects.map(project => {
+  const projectOptions: SelectItem[] = workspace.projects.map((project) => {
     return {
       value: project.id,
       label: `${project.name || project.id} (id: ${project.id})`,
@@ -40,7 +40,7 @@ export function ProjectSelectPage() {
       <Select
         placeholder="Projects"
         data={projectOptions}
-        onChange={projectId => navigate(`/cms/${projectId}`)}
+        onChange={(projectId) => navigate(`/cms/${projectId}`)}
       />
     </div>
   );

@@ -2,6 +2,16 @@ import path from 'path';
 import {Manifest, ManifestChunk} from 'vite';
 import {Asset, AssetMap} from './asset-map';
 
+type BuildAssetManifest = Record<
+  string,
+  {
+    moduleId: string;
+    assetUrl: string;
+    importedModules: string[];
+    importedCss: string[];
+  }
+>;
+
 export class BuildAssetMap implements AssetMap {
   private manifest: Manifest;
   private moduleIdToAsset: Map<string, BuildAsset>;
@@ -22,8 +32,8 @@ export class BuildAssetMap implements AssetMap {
     return this.moduleIdToAsset.get(moduleId) || null;
   }
 
-  toJson(): any {
-    const result: any = {};
+  toJson(): BuildAssetManifest {
+    const result: BuildAssetManifest = {};
     for (const moduleId of this.moduleIdToAsset.keys()) {
       result[moduleId] = this.moduleIdToAsset.get(moduleId)!.toJson();
     }
@@ -126,7 +136,7 @@ export class BuildAsset {
     );
   }
 
-  toJson(): any {
+  toJson() {
     return {
       moduleId: this.moduleId,
       assetUrl: this.assetUrl,

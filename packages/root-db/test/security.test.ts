@@ -1,6 +1,11 @@
 import * as fs from 'fs';
 import {afterAll, beforeAll, beforeEach, test} from 'vitest';
-import {assertFails, assertSucceeds, initializeTestEnvironment, RulesTestEnvironment} from '@firebase/rules-unit-testing';
+import {
+  assertFails,
+  assertSucceeds,
+  initializeTestEnvironment,
+  RulesTestEnvironment,
+} from '@firebase/rules-unit-testing';
 import {collection, doc, getDoc, getDocs, setDoc} from 'firebase/firestore';
 
 let testEnv: RulesTestEnvironment;
@@ -25,13 +30,19 @@ test('should not allow arbitrary users to read/write', async () => {
   await assertFails(getDoc(doc(unauthedDb, 'Projects/foo')));
   await assertFails(getDoc(doc(unauthedDb, 'Projects/foo/Collection/bar')));
   await assertFails(setDoc(doc(unauthedDb, 'Projects/foo'), {foo: 'bar'}));
-  await assertFails(setDoc(doc(unauthedDb, 'Projects/foo/Collection/bar'), {foo: 'bar'}));
+  await assertFails(
+    setDoc(doc(unauthedDb, 'Projects/foo/Collection/bar'), {foo: 'bar'})
+  );
 
-  const hackerDb = testEnv.authenticatedContext('hacker', {email: 'hacker@example.com'}).firestore();
+  const hackerDb = testEnv
+    .authenticatedContext('hacker', {email: 'hacker@example.com'})
+    .firestore();
   await assertFails(getDoc(doc(hackerDb, 'Projects/foo')));
   await assertFails(getDoc(doc(hackerDb, 'Projects/foo/Collection/bar')));
   await assertFails(setDoc(doc(hackerDb, 'Projects/foo'), {foo: 'bar'}));
-  await assertFails(setDoc(doc(hackerDb, 'Projects/foo/Collection/bar'), {foo: 'bar'}));
+  await assertFails(
+    setDoc(doc(hackerDb, 'Projects/foo/Collection/bar'), {foo: 'bar'})
+  );
 });
 
 test('should allow certain users to read/write from a project', async () => {
@@ -45,9 +56,15 @@ test('should allow certain users to read/write from a project', async () => {
     });
   });
 
-  const adamDb = testEnv.authenticatedContext('adam', {email: 'adam@example.com'}).firestore();
-  const edithDb = testEnv.authenticatedContext('edith', {email: 'edith@example.com'}).firestore();
-  const victorDb = testEnv.authenticatedContext('victor', {email: 'victor@example.com'}).firestore();
+  const adamDb = testEnv
+    .authenticatedContext('adam', {email: 'adam@example.com'})
+    .firestore();
+  const edithDb = testEnv
+    .authenticatedContext('edith', {email: 'edith@example.com'})
+    .firestore();
+  const victorDb = testEnv
+    .authenticatedContext('victor', {email: 'victor@example.com'})
+    .firestore();
 
   const docPath = 'Projects/foo/Docs/bar';
   await assertSucceeds(getDoc(doc(adamDb, docPath)));
@@ -78,10 +95,18 @@ test('should allow certain users to list docs from a project', async () => {
   });
 
   const unauthedDb = testEnv.unauthenticatedContext().firestore();
-  const adamDb = testEnv.authenticatedContext('adam', {email: 'adam@example.com'}).firestore();
-  const edithDb = testEnv.authenticatedContext('edith', {email: 'edith@example.com'}).firestore();
-  const victorDb = testEnv.authenticatedContext('victor', {email: 'victor@example.com'}).firestore();
-  const hackerDb = testEnv.authenticatedContext('hacker', {email: 'hacker@example.com'}).firestore();
+  const adamDb = testEnv
+    .authenticatedContext('adam', {email: 'adam@example.com'})
+    .firestore();
+  const edithDb = testEnv
+    .authenticatedContext('edith', {email: 'edith@example.com'})
+    .firestore();
+  const victorDb = testEnv
+    .authenticatedContext('victor', {email: 'victor@example.com'})
+    .firestore();
+  const hackerDb = testEnv
+    .authenticatedContext('hacker', {email: 'hacker@example.com'})
+    .firestore();
 
   await assertSucceeds(getDocs(collection(adamDb, collectionPath)));
   await assertSucceeds(getDocs(collection(edithDb, collectionPath)));

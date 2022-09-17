@@ -108,7 +108,7 @@ interface WebUIShellSubeaderProps {
 WebUIShell.Subheader = (props: WebUIShellSubeaderProps) => {
   return (
     <Box
-      sx={theme => ({
+      sx={(theme) => ({
         height: 48,
         display: 'flex',
         alignItems: 'center',

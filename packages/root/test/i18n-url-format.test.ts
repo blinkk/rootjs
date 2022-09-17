@@ -1,3 +1,5 @@
+/* eslint-disable no-irregular-whitespace */
+
 import {promises as fs} from 'node:fs';
 import path from 'node:path';
 import {assert, beforeEach, test, expect, afterEach} from 'vitest';

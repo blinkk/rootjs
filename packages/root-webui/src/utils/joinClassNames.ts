@@ -6,5 +6,5 @@ type MaybeString = string | false | null | undefined;
  * ignored.
  */
 export function joinClassNames(...classNames: MaybeString[]) {
-  return classNames.filter(c => !!c).join(' ') || undefined;
+  return classNames.filter((c) => !!c).join(' ') || undefined;
 }

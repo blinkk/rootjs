@@ -12,7 +12,9 @@ export function useCollection(collectionId?: string): Collection | null {
   if (!collectionId) {
     return null;
   }
-  const collectionConfig = project.collections.find(c => c.id === collectionId);
+  const collectionConfig = project.collections.find(
+    (c) => c.id === collectionId
+  );
   if (!collectionConfig) {
     notifications.showNotification({
       title: 'Collection Not Found',

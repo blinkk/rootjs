@@ -96,7 +96,7 @@ export function PublishDocModal(props: PublishDocModalProps) {
               <input
                 type="datetime-local"
                 value={publishAt}
-                onChange={e => setPublishAt(e.target.value)}
+                onChange={(e) => setPublishAt(e.target.value)}
               />
             </InputWrapper>
           )}

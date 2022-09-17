@@ -57,7 +57,7 @@ export class Workspace {
     this.workspaceDir = workspaceDir;
     this.projects = projects;
     console.log('projects:');
-    this.projects.forEach(project => {
+    this.projects.forEach((project) => {
       console.log(`  ${JSON.stringify(project.serialize())}`);
     });
   }
@@ -83,7 +83,7 @@ export class Workspace {
   }
 
   getProject(projectId: string): Project | null {
-    return this.projects.find(p => p.id === projectId) || null;
+    return this.projects.find((p) => p.id === projectId) || null;
   }
 
   getFirebaseConfig(): FirebaseConfig {
@@ -99,7 +99,7 @@ export class Workspace {
 
   serialize(): WorkspaceSerialized {
     return {
-      projects: this.projects.map(p => p.serialize()),
+      projects: this.projects.map((p) => p.serialize()),
       firebase: this.getFirebaseConfig(),
     };
   }

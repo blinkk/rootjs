@@ -12,7 +12,7 @@ export function WorkspaceProvider({children}: {children: JSX.Element}) {
   const [loading, setLoading] = useState(true);
   const [workspace, setWorkspace] = useState<Workspace | null>(null);
 
-  useJsonRpc<WorkspaceConfig>('workspace.json', workspaceConfig => {
+  useJsonRpc<WorkspaceConfig>('workspace.json', (workspaceConfig) => {
     const workspace = new Workspace(workspaceConfig);
     setWorkspace(workspace);
     setLoading(false);

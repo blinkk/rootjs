@@ -112,7 +112,7 @@ export function DocumentPage() {
       <ResizePanel
         className={styles.resizePanel}
         initialWidth={Number(panelWidth)}
-        onResize={width => setPanelWidth(String(width))}
+        onResize={(width) => setPanelWidth(String(width))}
       >
         <ResizePanel.Item className={styles.leftPanel}>
           <Stack className={styles.leftPanelGroup}>

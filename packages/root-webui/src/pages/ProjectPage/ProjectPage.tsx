@@ -9,7 +9,7 @@ export function ProjectPage() {
   const project = useProject();
   return (
     <WebUIShell>
-      <Box sx={theme => ({backgroundColor: theme.colors.gray[0]})}>
+      <Box sx={(theme) => ({backgroundColor: theme.colors.gray[0]})}>
         <Stack spacing={0} sx={{padding: '30px 20px'}}>
           <Text size="sm" weight={600}>
             Project
@@ -18,7 +18,7 @@ export function ProjectPage() {
         </Stack>
         <Tabs
           variant="outline"
-          styles={theme => ({
+          styles={(theme) => ({
             root: {flex: 1, display: 'flex', flexDirection: 'column'},
             tabsList: {paddingLeft: 20},
             body: {
@@ -52,7 +52,7 @@ ProjectPage.ContentTab = function (props: ContentTabProps) {
   const project = props.project;
   return (
     <Stack spacing={0}>
-      {project.collections.map(collection => (
+      {project.collections.map((collection) => (
         <Box
           key={collection.id}
           sx={{

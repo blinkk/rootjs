@@ -48,7 +48,7 @@ export class Doc {
     const contentRef = db.doc(
       `Projects/${this.project.id}/Collections/${this.collection.id}/Docs/${this.slug}/Content/draft`
     );
-    await db.runTransaction(async transaction => {
+    await db.runTransaction(async (transaction) => {
       transaction.update(docRef, {
         'draft.modifiedAt': new Date(),
         'draft.modifiedBy': email,
@@ -72,7 +72,7 @@ export class Doc {
     const contentRef = db.doc(
       `Projects/${this.project.id}/Collections/${this.collection.id}/Docs/${this.slug}/Content/published`
     );
-    await db.runTransaction(async transaction => {
+    await db.runTransaction(async (transaction) => {
       const doc = await transaction.get(docRef);
       const meta = doc.data()?.draft?.meta || {};
       transaction.update(docRef, {
