@@ -11,7 +11,7 @@
     "dev": "npm-run-all --parallel dev:server dev:webui",
     "format": "eslint . --ext .ts,.tsx --fix",
     "lint": "eslint . --ext .ts,.tsx",
-    "version": "changeset version && pnpm install --no-frozen-lockfile && pnpm run format",
+    "version": "changeset version && pnpm install --no-frozen-lockfile",
     "release": "turbo run prepare && changeset publish"
   },
   "repository": {
