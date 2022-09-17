@@ -143,10 +143,6 @@ export class Renderer {
       <html lang={options.locale}>
         <head>
           <meta charSet="utf-8" />
-          <meta
-            name="viewport"
-            content="width=device-width, initial-scale=1.0"
-          />
           {options.headComponents}
         </head>
         <body dangerouslySetInnerHTML={{__html: options.mainHtml}} />
