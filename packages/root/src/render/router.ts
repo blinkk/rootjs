@@ -1,11 +1,11 @@
 import path from 'node:path';
-import {FunctionalComponent} from 'preact';
+import {ComponentType} from 'preact';
 import {RootConfig} from '../core/config';
 import {GetStaticPaths, GetStaticProps} from '../core/types';
 import {RouteTrie} from './route-trie';
 
 export interface RouteModule {
-  default: FunctionalComponent;
+  default?: ComponentType<unknown>;
   getStaticPaths?: GetStaticPaths;
   getStaticProps?: GetStaticProps;
 }

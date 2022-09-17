@@ -58,6 +58,11 @@ export class Renderer {
     const routeParams = options.routeParams;
     const assetMap = options.assetMap;
     const Component = route.module.default;
+    if (!Component) {
+      throw new Error(
+        'unable to render route. the route should have a default export that renders a jsx component.'
+      );
+    }
     let props = {};
     if (route.module.getStaticProps) {
       const propsData = await route.module.getStaticProps({

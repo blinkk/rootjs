@@ -2,7 +2,7 @@ import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 import fsExtra from 'fs-extra';
 import glob from 'tiny-glob';
-import {build as viteBuild, UserConfig} from 'vite';
+import {build as viteBuild, Manifest, UserConfig} from 'vite';
 import {pluginRoot} from '../../render/vite-plugin-root.js';
 import {BuildAssetMap} from '../../render/asset-map/build-asset-map.js';
 import {loadRootConfig} from '../load-config.js';
@@ -130,7 +130,9 @@ export async function build(rootDir?: string) {
     },
   });
 
-  const manifest = await loadJson(path.join(distDir, 'client/manifest.json'));
+  const manifest = await loadJson<Manifest>(
+    path.join(distDir, 'client/manifest.json')
+  );
 
   // Use the output of the client build to generate an asset map, which is used
   // by the renderer for automatically injecting dependencies for a page.
