@@ -9,22 +9,6 @@ export interface I18nContext {
   translations: Record<string, string>;
 }
 
-export function t(str: string, params?: Record<string, string>) {
-  const context = useContext(I18N_CONTEXT);
-  if (!context) {
-    throw new Error('could not find i18n context');
-  }
-  const translations = context?.translations || {};
-  let translation = translations[str] || str;
-  if (params) {
-    for (const key in params) {
-      const val = String(params[key] || '');
-      translation = translation.replaceAll(`{${key}}`, val);
-    }
-  }
-  return translation;
-}
-
 export function getTranslations(locale: string): Record<string, string> {
   const translations: Record<string, Record<string, string>> = {};
   const translationsFiles = import.meta.glob(['/translations/*.json'], {
@@ -39,4 +23,23 @@ export function getTranslations(locale: string): Record<string, string> {
     }
   });
   return translations[locale] || {};
+}
+
+export function useTranslations() {
+  const context = useContext(I18N_CONTEXT);
+  if (!context) {
+    throw new Error('could not find i18n context');
+  }
+  const translations = context?.translations || {};
+  const t = (str: string, params?: Record<string, string>) => {
+    let translation = translations[str] || str || '';
+    if (params) {
+      for (const key of Object.keys(params)) {
+        const val = String(params[key] || '');
+        translation = translation.replaceAll(`{${key}}`, val);
+      }
+    }
+    return translation;
+  };
+  return t;
 }
