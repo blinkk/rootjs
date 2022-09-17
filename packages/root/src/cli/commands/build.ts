@@ -100,6 +100,9 @@ export async function build(rootDir?: string) {
       polyfillModulePreload: false,
       reportCompressedSize: false,
     },
+    ssr: {
+      noExternal: ['@blinkk/root'],
+    },
   });
 
   // Pre-render any client scripts and CSS deps.

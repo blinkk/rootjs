@@ -7,6 +7,8 @@ import {DevServerAssetMap} from '../../render/asset-map/dev-asset-map.js';
 import {loadRootConfig} from '../load-config.js';
 import {htmlMinify} from '../../render/html-minify.js';
 import {Renderer} from '../../render/render.js';
+import {isDirectory, isJsFile} from '../../core/fsutils.js';
+import glob from 'tiny-glob';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -30,13 +32,48 @@ export async function getMiddlewares(options?: {rootDir?: string}) {
   const viteConfig = rootConfig.vite || {};
   const renderModulePath = path.resolve(__dirname, './render.js');
 
+  const pages: string[] = [];
+  if (await isDirectory(path.join(rootDir, 'routes'))) {
+    const pageFiles = await glob(path.join(rootDir, 'routes/**/*'));
+    pageFiles.forEach((file) => {
+      const parts = path.parse(file);
+      if (!parts.name.startsWith('_') && isJsFile(parts.base)) {
+        pages.push(file);
+      }
+    });
+  }
+
+  const elements: string[] = [];
+  if (await isDirectory(path.join(rootDir, 'elements'))) {
+    const elementFiles = await glob(path.join(rootDir, 'elements/**/*'));
+    elementFiles.forEach((file) => {
+      const parts = path.parse(file);
+      if (isJsFile(parts.base)) {
+        elements.push(file);
+      }
+    });
+  }
+
+  const bundleScripts: string[] = [];
+  if (await isDirectory(path.join(rootDir, 'bundles'))) {
+    const bundleFiles = await glob(path.join(rootDir, 'bundles/*'));
+    bundleFiles.forEach((file) => {
+      const parts = path.parse(file);
+      if (isJsFile(parts.base)) {
+        bundleScripts.push(file);
+      }
+    });
+  }
+
   const viteServer = await createViteServer({
     ...viteConfig,
     server: {middlewareMode: true},
     appType: 'custom',
     optimizeDeps: {
-      include: [renderModulePath],
-      exclude: ['preact'],
+      include: [...pages, ...elements, ...bundleScripts],
+    },
+    ssr: {
+      noExternal: ['@blinkk/root'],
     },
     esbuild: {
       jsx: 'automatic',
