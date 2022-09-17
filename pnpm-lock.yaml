@@ -48,6 +48,7 @@ importers:
       '@types/fs-extra': ^9.0.13
       '@types/html-minifier-terser': ^7.0.0
       '@types/node': ^18.7.14
+      '@types/preact-custom-element': ^4.0.1
       bundle-require: ^3.1.0
       commander: ^9.4.0
       esbuild: ^0.14.27
@@ -57,6 +58,7 @@ importers:
       joycon: ^3.1.1
       nodemon: ^2.0.19
       preact: ^10.10.6
+      preact-custom-element: ^4.2.1
       preact-render-to-string: ^5.2.3
       rollup: ^2.79.0
       sass: ^1.49.9
@@ -81,8 +83,10 @@ importers:
       '@types/fs-extra': 9.0.13
       '@types/html-minifier-terser': 7.0.0
       '@types/node': 18.7.17
+      '@types/preact-custom-element': 4.0.1
       nodemon: 2.0.20
       preact: 10.11.0
+      preact-custom-element: 4.2.1_preact@10.11.0
       preact-render-to-string: 5.2.4_preact@10.11.0
       rollup: 2.79.0
       tsup: 5.12.7_typescript@4.8.2
@@ -2152,6 +2156,12 @@ packages:
   /@types/parse-json/4.0.0:
     resolution: {integrity: sha512-//oorEZjL6sbPcKUaCdIGlIUeH26mgzimjBB77G6XRgnDl/L5wOnpyBGRe/Mmf5CVW3PwEBE1NjiMZ/ssFh4wA==}
     dev: false
+
+  /@types/preact-custom-element/4.0.1:
+    resolution: {integrity: sha512-oduUzzxJAZ7qWJ5EsUffxvpRFnzgffilDlfxLR9Q2YkEzSfn3vudIrnDg0AiQgZJ0GkAjLzkxQyAxH6sS/EQdQ==}
+    dependencies:
+      preact: 10.11.0
+    dev: true
 
   /@types/prop-types/15.7.4:
     resolution: {integrity: sha512-rZ5drC/jWjrArrS8BR6SIr4cWpW09RNTYt9AMZo3Jwwif+iacXAqgVjm0B0Bv/S1jhDXKHqRVNCbACkJ89RAnQ==}
@@ -6593,6 +6603,14 @@ packages:
       nanoid: 3.3.4
       picocolors: 1.0.0
       source-map-js: 1.0.2
+
+  /preact-custom-element/4.2.1_preact@10.11.0:
+    resolution: {integrity: sha512-/fiEEAyC+MXRlCBRmv/owoN5BLpO2nF/MF3YBHLtp4C2lNqlhV+a4he74A5DhfDoRmxDHm0sYVgQzWFEyzTDsw==}
+    peerDependencies:
+      preact: 10.x
+    dependencies:
+      preact: 10.11.0
+    dev: true
 
   /preact-render-to-string/5.2.3_preact@10.10.6:
     resolution: {integrity: sha512-aPDxUn5o3GhWdtJtW0svRC2SS/l8D9MAgo2+AWml+BhDImb27ALf04Q2d+AHqUUOc6RdSXFIBVa2gxzgMKgtZA==}

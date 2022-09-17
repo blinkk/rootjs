@@ -97,7 +97,7 @@ export class BuildAsset {
     visited.add(asset.moduleId);
     const parts = path.parse(asset.assetUrl);
     if (
-      ['.ts', '.tsx'].includes(parts.ext) &&
+      ['.js', '.jsx', '.ts', '.tsx'].includes(parts.ext) &&
       asset.moduleId.includes('/elements/')
     ) {
       urls.add(asset.assetUrl);
