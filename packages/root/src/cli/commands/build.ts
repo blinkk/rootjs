@@ -71,8 +71,9 @@ export async function build(rootDir?: string) {
     esbuild: {
       jsx: 'automatic',
       jsxImportSource: 'preact',
+      treeShaking: true,
     },
-    plugins: [...(viteConfig.plugins || []), pluginRoot()],
+    plugins: [...(viteConfig.plugins || []), pluginRoot({rootDir, rootConfig})],
   };
 
   // Bundle the render.js file with vite, which is pre-optimized for rendering

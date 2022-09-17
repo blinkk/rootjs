@@ -21,7 +21,6 @@ Object.keys(ELEMENTS_MODULES).forEach((elementPath) => {
   const parts = path.parse(elementPath);
   ELEMENTS_MAP[parts.name] = elementPath;
 });
-console.log(ELEMENTS_MAP);
 
 interface RenderOptions {
   assetMap: AssetMap;
@@ -188,12 +187,10 @@ export class Renderer {
     await Promise.all(
       matches.map(async (match) => {
         const tagName = match[1];
-        console.log(`tag: ${tagName}`);
         // Custom elements require a dash.
         if (tagName && tagName.includes('-') && tagName in ELEMENTS_MAP) {
           const modulePath = ELEMENTS_MAP[tagName];
           const asset = await assetMap.get(modulePath);
-          console.log(`asset: ${asset}`);
           if (!asset) {
             return;
           }

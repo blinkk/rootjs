@@ -1,5 +1,3 @@
-/* eslint-disable @typescript-eslint/no-namespace */
-
 import {useState} from 'preact/hooks';
 import register from 'preact-custom-element';
 
@@ -19,7 +17,7 @@ function Counter(props: CounterProps) {
   const [count, setCount] = useState(props.start || 0);
   return (
     <>
-      <div>Count: {count}</div>
+      <root-label>Count: {count}</root-label>
       <button onClick={() => setCount(count - 1)}>Subtract</button>
       <button onClick={() => setCount(count + 1)}>Add</button>
     </>

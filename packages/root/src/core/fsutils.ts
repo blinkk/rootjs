@@ -2,43 +2,43 @@ import {promises as fs} from 'node:fs';
 import path from 'node:path';
 import fsExtra from 'fs-extra';
 
-export function isJsFile(file: string) {
-  return !!file.match(/\.(j|t)sx?$/);
+export function isJsFile(filename: string) {
+  return !!filename.match(/\.(j|t)sx?$/);
 }
 
-export async function writeFile(filePath: string, content: string) {
-  const dirPath = path.dirname(filePath);
+export async function writeFile(filepath: string, content: string) {
+  const dirPath = path.dirname(filepath);
   await makeDir(dirPath);
-  await fs.writeFile(filePath, content);
+  await fs.writeFile(filepath, content);
 }
 
-export async function makeDir(dirPath: string) {
+export async function makeDir(dirpath: string) {
   try {
-    await fs.access(dirPath);
+    await fs.access(dirpath);
   } catch (e) {
-    await fs.mkdir(dirPath, {recursive: true});
+    await fs.mkdir(dirpath, {recursive: true});
   }
 }
 
-export async function copyDir(srcDir: string, dstDir: string) {
-  if (!fsExtra.existsSync(srcDir)) {
+export async function copyDir(srcdir: string, dstdir: string) {
+  if (!fsExtra.existsSync(srcdir)) {
     return;
   }
-  fsExtra.copySync(srcDir, dstDir, {recursive: true, overwrite: true});
+  fsExtra.copySync(srcdir, dstdir, {recursive: true, overwrite: true});
 }
 
-export async function rmDir(dirPath: string) {
-  await fs.rm(dirPath, {recursive: true, force: true});
+export async function rmDir(dirpath: string) {
+  await fs.rm(dirpath, {recursive: true, force: true});
 }
 
-export async function loadJson<T = unknown>(filePath: string): Promise<T> {
-  const content = await fs.readFile(filePath, 'utf-8');
+export async function loadJson<T = unknown>(filepath: string): Promise<T> {
+  const content = await fs.readFile(filepath, 'utf-8');
   return JSON.parse(content);
 }
 
-export async function isDirectory(dirPath: string) {
+export async function isDirectory(dirpath: string) {
   return fs
-    .stat(dirPath)
+    .stat(dirpath)
     .then((fsStat) => {
       return fsStat.isDirectory();
     })
@@ -50,9 +50,9 @@ export async function isDirectory(dirPath: string) {
     });
 }
 
-export function fileExists(filePath: string): Promise<boolean> {
+export function fileExists(filepath: string): Promise<boolean> {
   return fs
-    .access(filePath)
+    .access(filepath)
     .then(() => true)
     .catch(() => false);
 }

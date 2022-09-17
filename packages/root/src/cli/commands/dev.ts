@@ -2,7 +2,7 @@ import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {default as express, Request, Response, NextFunction} from 'express';
 import {createServer as createViteServer} from 'vite';
-import pluginRoot from '../../render/vite-plugin-root.js';
+import {pluginRoot} from '../../render/vite-plugin-root.js';
 import {DevServerAssetMap} from '../../render/asset-map/dev-asset-map.js';
 import {loadRootConfig} from '../load-config.js';
 import {htmlMinify} from '../../render/html-minify.js';
@@ -79,7 +79,7 @@ export async function getMiddlewares(options?: {rootDir?: string}) {
       jsx: 'automatic',
       jsxImportSource: 'preact',
     },
-    plugins: [...(viteConfig.plugins || []), pluginRoot()],
+    plugins: [...(viteConfig.plugins || []), pluginRoot({rootDir, rootConfig})],
   });
 
   const rootMiddleware = async (

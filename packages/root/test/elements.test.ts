@@ -21,12 +21,17 @@ test('add custom element to a page', async () => {
   const index = path.join(fixture.distDir, 'html/index.html');
   assert.isTrue(await fileExists(index));
   const html = await fs.readFile(index, 'utf-8');
+  // The root-counter dep should be included through direct usage.
+  assert.isTrue(html.includes('assets/root-counter'));
+  // The root-label dep should be included as a dependency of root-counter.
+  assert.isTrue(html.includes('assets/root-label'));
   expect(html).toMatchInlineSnapshot(`
     "<!doctype html>
     <html lang=\\"en\\">
     <head>
     <meta charset=\\"utf-8\\">
-    <script type=\\"module\\" src=\\"/assets/root-counter.31473159.js\\"></script>
+    <script type=\\"module\\" src=\\"/assets/root-counter.5a3d9f5d.js\\"></script>
+    <script type=\\"module\\" src=\\"/assets/root-label.dc252114.js\\"></script>
     </head>
     <body>
     <h1>Counter</h1>
