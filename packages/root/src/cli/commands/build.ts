@@ -2,7 +2,7 @@ import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 import fsExtra from 'fs-extra';
 import glob from 'tiny-glob';
-import {build as viteBuild} from 'vite';
+import {build as viteBuild, UserConfig} from 'vite';
 import {pluginRoot} from '../../render/vite-plugin-root.js';
 import {BuildAssetMap} from '../../render/asset-map/build-asset-map.js';
 import {loadRootConfig} from '../load-config.js';
@@ -65,13 +65,12 @@ export async function build(rootDir?: string) {
   }
 
   const viteConfig = rootConfig.vite || {};
-  const baseConfig = {
+  const baseConfig: UserConfig = {
     ...viteConfig,
     root: rootDir,
     esbuild: {
-      jsxFactory: 'h',
-      jsxFragment: 'Fragment',
-      jsxInject: 'import {h, Fragment} from "preact";',
+      jsx: 'automatic',
+      jsxImportSource: 'preact',
     },
     plugins: [...(viteConfig.plugins || []), pluginRoot()],
   };
