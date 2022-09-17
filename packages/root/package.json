@@ -34,9 +34,11 @@
     "node": ">=16.0.0"
   },
   "scripts": {
+    "prepare": "pnpm test",
     "build": "rm -rf dist && tsup-node",
     "dev": "nodemon --watch src -e ts,tsx --exec pnpm build",
-    "test": "pnpm build && vitest"
+    "test": "pnpm build && vitest run",
+    "test:watch": "pnpm build && vitest"
   },
   "dependencies": {
     "bundle-require": "^3.1.0",

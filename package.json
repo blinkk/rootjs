@@ -8,11 +8,10 @@
     "build": "turbo run build --ignore=\"examples/**/*\"",
     "changeset": "changeset",
     "dev": "npm-run-all --parallel dev:server dev:webui",
-    "dev:storybook": "npm --prefix=./apps/storybook run dev",
-    "dev:server": "ROOT_PROJECT=../../examples/nextjs-blog npm --prefix=./packages/root-core run dev:server",
-    "dev:webui": "npm --prefix=./packages/root-webui run dev",
-    "fix": "eslint . --ext .ts,.tsx --fix",
-    "lint": "eslint . --ext .ts,.tsx"
+    "format": "eslint . --ext .ts,.tsx --fix",
+    "lint": "eslint . --ext .ts,.tsx",
+    "version": "changeset version && pnpm install --no-frozen-lockfile && pnpm run format",
+    "release": "turbo run prepare && changeset publish"
   },
   "repository": {
     "type": "git",
