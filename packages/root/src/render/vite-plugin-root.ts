@@ -3,7 +3,8 @@ import glob from 'tiny-glob';
 import {RootConfig} from '../core/config';
 import {isJsFile} from '../core/fsutils';
 
-const ELEMENTS_REGEX = /jsxs?\("(\w[\w-]+\w)"/g;
+const JSX_ELEMENTS_REGEX = /jsxs?\("(\w[\w-]+\w)"/g;
+const HTML_ELEMENTS_REGEX = /<(\w[\w-]+\w)/g;
 
 export interface RootPluginOptions {
   rootDir: string;
@@ -47,8 +48,11 @@ export function pluginRoot(options?: RootPluginOptions) {
       if (moduleId.startsWith('/elements/') && isJsFile(id)) {
         const idParts = path.parse(id);
         const deps = new Set<string>();
-        const elementsRe = ELEMENTS_REGEX;
-        for (const match of src.matchAll(elementsRe)) {
+        const tagnames = [
+          ...src.matchAll(JSX_ELEMENTS_REGEX),
+          ...src.matchAll(HTML_ELEMENTS_REGEX),
+        ];
+        for (const match of tagnames) {
           const tagname = match[1];
           // All custom elements should contain a dash.
           if (!tagname.includes('-')) {
