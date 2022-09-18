@@ -10,8 +10,11 @@
     "@private/root-webui": "0.0.0"
   },
   "changesets": [
+    "brown-ladybugs-fix",
     "dirty-steaks-hammer",
     "fuzzy-poems-suffer",
+    "moody-mirrors-unite",
+    "plenty-starfishes-decide",
     "stupid-dingos-yawn",
     "three-melons-exist"
   ]
