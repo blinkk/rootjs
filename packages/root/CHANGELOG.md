@@ -1,5 +1,13 @@
 # @blinkk/root
 
+## 1.0.0-alpha.3
+
+### Patch Changes
+
+- c1d7940: fix: inject element deps used by other elements
+- 17b7e51: refactor: switch from t to useTranslations
+- 08c7b17: fix: fix auto-inject of element islands
+
 ## 1.0.0-alpha.2
 
 ### Patch Changes
