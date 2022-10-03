@@ -1,0 +1,80 @@
+@use 'breakpoints';
+@use 'tokens';
+
+:root {
+  --content-max-width: #{tokens.$content-max-width};
+  --content-padding: #{tokens.$content-padding-mobile};
+  --header-height: #{tokens.$header-height};
+  @include breakpoints.tablet {
+    --content-padding: #{tokens.$content-padding-tablet};
+  }
+  @include breakpoints.laptop-gt {
+    --content-padding: #{tokens.$content-padding-laptop-gt};
+  }
+}
+
+html {
+  box-sizing: border-box;
+  scroll-behavior: smooth;
+  scroll-margin-top: var(--header-height);
+}
+
+*,
+*:before,
+*:after {
+  box-sizing: inherit;
+}
+
+body {
+  font-family: tokens.$font-family-primary;
+  margin: 0;
+  padding: 0;
+  color: tokens.$color-text-default;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+*[role="heading"] {
+  font-family: tokens.$font-family-headline;
+}
+
+img,
+picture,
+figure,
+video,
+canvas,
+svg {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  margin: 0;
+}
+
+.container {
+  max-width: var(--content-max-width);
+  margin: 0 auto;
+}
+
+*:not(:defined) {
+  visibility: hidden;
+}
+
+.hljs {
+  border-radius: 8px;
+  padding: 20px;
+  font-family: tokens.$font-family-mono;
+  font-size: 13px;
+  line-height: 20px;
+  font-weight: 600;
+}
+
+code {
+  font-family: tokens.$font-family-mono;
+  font-size: 0.9em;
+  background: #f9f9f9;
+  padding: 4px 8px;
+}
