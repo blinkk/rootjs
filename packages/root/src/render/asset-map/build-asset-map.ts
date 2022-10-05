@@ -15,9 +15,14 @@ type BuildAssetManifest = Record<
 export class BuildAssetMap implements AssetMap {
   private manifest: Manifest;
   private moduleIdToAsset: Map<string, BuildAsset>;
+  private elementMap: Record<string, string>;
 
-  constructor(manifest: Manifest) {
+  constructor(
+    manifest: Manifest,
+    options: {elementMap: Record<string, string>}
+  ) {
     this.manifest = manifest;
+    this.elementMap = options.elementMap;
     this.moduleIdToAsset = new Map();
     Object.keys(this.manifest).forEach((manifestKey) => {
       const moduleId = `/${manifestKey}`;
@@ -30,6 +35,10 @@ export class BuildAssetMap implements AssetMap {
 
   async get(moduleId: string): Promise<Asset | null> {
     return this.moduleIdToAsset.get(moduleId) || null;
+  }
+
+  isElement(moduleId: string): boolean {
+    return Object.values(this.elementMap).includes(moduleId);
   }
 
   toJson(): BuildAssetManifest {
@@ -98,7 +107,7 @@ export class BuildAsset {
     const parts = path.parse(asset.assetUrl);
     if (
       ['.js', '.jsx', '.ts', '.tsx'].includes(parts.ext) &&
-      asset.moduleId.includes('/elements/')
+      this.assetMap.isElement(asset.moduleId)
     ) {
       urls.add(asset.assetUrl);
     }

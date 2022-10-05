@@ -1,8 +1,7 @@
-import path from 'node:path';
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 import {h, ComponentChildren} from 'preact';
 import renderToString from 'preact-render-to-string';
-import {getRoutes, RouteModule, Route, getAllPathsForRoute} from './router';
+import {getRoutes, Route, getAllPathsForRoute} from './router';
 import {HEAD_CONTEXT} from '../core/components/head';
 import {ErrorPage} from '../core/components/error-page';
 import {getTranslations, I18N_CONTEXT} from '../core/i18n';
@@ -10,17 +9,7 @@ import {ScriptProps, SCRIPT_CONTEXT} from '../core/components/script';
 import {AssetMap} from './asset-map/asset-map';
 import {RootConfig} from '../core/config';
 import {RouteTrie} from './route-trie';
-
-// TODO(stevenle): this should be added via config.
-const ELEMENTS_MAP: Record<string, string> = {};
-const ELEMENTS_MODULES = import.meta.glob([
-  '/elements/**/*.ts',
-  '/elements/**/*.tsx',
-]) as Record<string, () => Promise<RouteModule>>;
-Object.keys(ELEMENTS_MODULES).forEach((elementPath) => {
-  const parts = path.parse(elementPath);
-  ELEMENTS_MAP[parts.name] = elementPath;
-});
+import {elementsMap} from 'virtual:root-elements';
 
 interface RenderOptions {
   assetMap: AssetMap;
@@ -188,14 +177,16 @@ export class Renderer {
       matches.map(async (match) => {
         const tagName = match[1];
         // Custom elements require a dash.
-        if (tagName && tagName.includes('-') && tagName in ELEMENTS_MAP) {
-          const modulePath = ELEMENTS_MAP[tagName];
+        if (tagName && tagName.includes('-') && tagName in elementsMap) {
+          const modulePath = elementsMap[tagName];
           const asset = await assetMap.get(modulePath);
           if (!asset) {
             return;
           }
           const assetJsDeps = await asset.getJsDeps();
           assetJsDeps.forEach((dep) => deps.add(dep));
+        } else {
+          console.log(`could not find tag name: ${tagName}`);
         }
       })
     );

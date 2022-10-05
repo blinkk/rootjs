@@ -1,7 +1,7 @@
 import path from 'path';
 import glob from 'tiny-glob';
 import {RootConfig} from '../core/config';
-import {isJsFile} from '../core/fsutils';
+import {isDirectory, isJsFile} from '../core/fsutils';
 
 const JSX_ELEMENTS_REGEX = /jsxs?\("(\w[\w-]+\w)"/g;
 const HTML_ELEMENTS_REGEX = /<(\w[\w-]+\w)/g;
@@ -12,18 +12,43 @@ export interface RootPluginOptions {
 }
 
 export function pluginRoot(options?: RootPluginOptions) {
-  const rootDir = options?.rootDir || process.cwd();
-  let elementMap: Record<string, string>;
+  const elementsVirtualId = 'virtual:root-elements';
+  const resolvedElementsVirtualId = '\0' + elementsVirtualId;
 
+  const rootDir = options?.rootDir || process.cwd();
+  const rootConfig = options?.rootConfig || {};
+  const elementsDirs = [path.join(rootDir, 'elements')];
+  const includeDirs = rootConfig.elements?.include || [];
+  includeDirs.forEach((dirPath) => {
+    const elementsDir = path.resolve(rootDir, dirPath);
+    if (!elementsDir.startsWith(rootDir)) {
+      throw new Error(
+        `the elements dir (${dirPath}) should be relative to the project's root dir (${rootDir})`
+      );
+    }
+    elementsDirs.push(elementsDir);
+  });
+
+  let elementMap: Record<string, string>;
   async function updateElementMap() {
     elementMap = {};
-    const files = await glob('./elements/**/*', {cwd: rootDir});
-    files.forEach((file) => {
-      const parts = path.parse(file);
-      if (isJsFile(parts.base)) {
-        elementMap[parts.name] = `/${file}`;
-      }
-    });
+    await Promise.all(
+      elementsDirs.map(async (dirPath: string) => {
+        const dirExists = await isDirectory(dirPath);
+        if (!dirExists) {
+          return;
+        }
+        const files = await glob('**/*', {cwd: dirPath});
+        files.forEach((file) => {
+          const parts = path.parse(file);
+          if (isJsFile(parts.base)) {
+            const fullPath = path.join(dirPath, file);
+            const moduleId = fullPath.slice(rootDir.length);
+            elementMap[parts.name] = moduleId;
+          }
+        });
+      })
+    );
   }
 
   async function getElementImport(tagname: string): Promise<string | null> {
@@ -36,15 +61,35 @@ export function pluginRoot(options?: RootPluginOptions) {
     return null;
   }
 
+  function isCustomElement(id: string) {
+    if (!isJsFile(id)) {
+      return false;
+    }
+    return elementsDirs.some((elementsDir) => {
+      return id.startsWith(elementsDir);
+    });
+  }
+
   return {
     name: 'vite-plugin-root',
 
-    async transform(src: string, id: string): Promise<any> {
-      if (!id.startsWith(rootDir)) {
-        return null;
+    resolveId(id: string) {
+      if (id === elementsVirtualId) {
+        return resolvedElementsVirtualId;
       }
-      const moduleId = id.slice(rootDir.length);
-      if (moduleId.startsWith('/elements/') && isJsFile(id)) {
+      return null;
+    },
+
+    async load(id: string) {
+      if (id === resolvedElementsVirtualId) {
+        await updateElementMap();
+        return `export const elementsMap = ${JSON.stringify(elementMap)}`;
+      }
+      return null;
+    },
+
+    async transform(src: string, id: string): Promise<any> {
+      if (isCustomElement(id)) {
         const idParts = path.parse(id);
         const deps = new Set<string>();
         const tagnames = [
@@ -85,6 +130,7 @@ ${importLines}
         }
         return null;
       }
+      return null;
     },
   };
 }

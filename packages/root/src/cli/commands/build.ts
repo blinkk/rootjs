@@ -20,12 +20,10 @@ import {htmlMinify} from '../../render/html-minify.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-export async function build(rootDir?: string) {
+export async function build(rootProjectDir?: string) {
   console.log('🌳 Root.js');
 
-  if (!rootDir) {
-    rootDir = process.cwd();
-  }
+  const rootDir = rootProjectDir || process.cwd();
   const rootConfig = await loadRootConfig(rootDir);
   const distDir = path.join(rootDir, 'dist');
   await rmDir(distDir);
@@ -42,15 +40,32 @@ export async function build(rootDir?: string) {
     });
   }
 
+  const elementsDirs = [path.join(rootDir, 'elements')];
+  const elementsInclude = rootConfig.elements?.include || [];
+  for (const dirPath of elementsInclude) {
+    const elementsDir = path.resolve(rootDir, dirPath);
+    if (!elementsDir.startsWith(rootDir)) {
+      throw new Error(
+        `the elements dir (${dirPath}) should be relative to the project's root dir (${rootDir})`
+      );
+    }
+    elementsDirs.push(elementsDir);
+  }
   const elements: string[] = [];
-  if (await isDirectory(path.join(rootDir, 'elements'))) {
-    const elementFiles = await glob(path.join(rootDir, 'elements/**/*'));
-    elementFiles.forEach((file) => {
-      const parts = path.parse(file);
-      if (isJsFile(parts.base)) {
-        elements.push(file);
-      }
-    });
+  const elementMap: Record<string, string> = {};
+  for (const dirPath of elementsDirs) {
+    if (await isDirectory(dirPath)) {
+      const elementFiles = await glob('**/*', {cwd: dirPath});
+      elementFiles.forEach((file) => {
+        const parts = path.parse(file);
+        if (isJsFile(parts.base)) {
+          const fullPath = path.join(dirPath, file);
+          const moduleId = fullPath.slice(rootDir.length);
+          elements.push(fullPath);
+          elementMap[parts.name] = moduleId;
+        }
+      });
+    }
   }
 
   const bundleScripts: string[] = [];
@@ -137,7 +152,7 @@ export async function build(rootDir?: string) {
 
   // Use the output of the client build to generate an asset map, which is used
   // by the renderer for automatically injecting dependencies for a page.
-  const assetMap = new BuildAssetMap(manifest);
+  const assetMap = new BuildAssetMap(manifest, {elementMap});
 
   // Save the asset map to `dist/client` for use by the prod SSR server.
   writeFile(

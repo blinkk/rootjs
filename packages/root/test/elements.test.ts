@@ -11,9 +11,9 @@ beforeEach(async () => {
 });
 
 afterEach(async () => {
-  if (fixture) {
-    await fixture.cleanup();
-  }
+  // if (fixture) {
+  //   await fixture.cleanup();
+  // }
 });
 
 test('add custom element to a page', async () => {
@@ -30,12 +30,33 @@ test('add custom element to a page', async () => {
     <html lang=\\"en\\">
     <head>
     <meta charset=\\"utf-8\\">
-    <script type=\\"module\\" src=\\"/assets/root-counter.5a3d9f5d.js\\"></script>
-    <script type=\\"module\\" src=\\"/assets/root-label.dc252114.js\\"></script>
+    <script type=\\"module\\" src=\\"/assets/root-counter.2ed2a8cc.js\\"></script>
+    <script type=\\"module\\" src=\\"/assets/root-label.71e76948.js\\"></script>
     </head>
     <body>
     <h1>Counter</h1>
     <root-counter start=\\"3\\"></root-counter>
+    </body>
+    </html>
+    "
+  `);
+});
+
+test('use custom elements from another directory', async () => {
+  await fixture.build();
+  const foo = path.join(fixture.distDir, 'html/ds-foo/index.html');
+  assert.isTrue(await fileExists(foo));
+  const html = await fs.readFile(foo, 'utf-8');
+  assert.isTrue(html.includes('assets/ds-foo'));
+  expect(html).toMatchInlineSnapshot(`
+    "<!doctype html>
+    <html lang=\\"en\\">
+    <head>
+    <meta charset=\\"utf-8\\">
+    <script type=\\"module\\" src=\\"/assets/ds-foo.f2646fe7.js\\"></script>
+    </head>
+    <body>
+    <ds-foo name=\\"Alice\\"></ds-foo>
     </body>
     </html>
     "
