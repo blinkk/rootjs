@@ -1,5 +1,11 @@
 # @blinkk/root
 
+## 1.0.0-alpha.4
+
+### Patch Changes
+
+- 1884ecc: feat: add config to include element dirs
+
 ## 1.0.0-alpha.3
 
 ### Patch Changes
