@@ -10,6 +10,7 @@
     "@private/root-webui": "0.0.0"
   },
   "changesets": [
+    "afraid-dots-run",
     "brown-ladybugs-fix",
     "dirty-steaks-hammer",
     "fuzzy-poems-suffer",
