@@ -25,13 +25,12 @@ function RootCode(props: RootCode) {
 
   useEffect(() => {
     const el = ref.current!;
-    const codeEl = el.firstElementChild!;
-    codeEl.textContent = code;
+    el.textContent = code;
     hljs.highlightElement(el);
   }, []);
 
   // eslint-disable-next-line prettier/prettier
-  return <pre ref={ref} className={className}><code /></pre>
+  return <pre ref={ref} className={className}></pre>
 }
 
 register(RootCode, 'root-code');
