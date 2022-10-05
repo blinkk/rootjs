@@ -4,11 +4,6 @@ import {defineConfig} from '@blinkk/root';
 const rootDir = process.cwd();
 
 export default defineConfig({
-  i18n: {
-    urlFormat: '/{locale}/{path}',
-    locales: ['en', 'ja'],
-    defaultLocale: 'en',
-  },
   vite: {
     resolve: {
       alias: {

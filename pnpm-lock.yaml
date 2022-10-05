@@ -30,6 +30,23 @@ importers:
       turbo: 1.2.3
       typescript: 4.6.2
 
+  docs:
+    specifiers:
+      '@blinkk/root': workspace:*
+      highlight.js: ^11.6.0
+      preact: ^10.10.6
+      preact-custom-element: ^4.2.1
+      preact-render-to-string: ^5.2.3
+      vite: ^3.1.4
+    dependencies:
+      '@blinkk/root': link:../packages/root
+      highlight.js: 11.6.0
+      preact: 10.11.0
+      preact-custom-element: 4.2.1_preact@10.11.0
+      preact-render-to-string: 5.2.4_preact@10.11.0
+    devDependencies:
+      vite: 3.1.4
+
   examples/starter:
     specifiers:
       '@blinkk/root': workspace:*
@@ -5115,6 +5132,11 @@ packages:
     hasBin: true
     dev: true
 
+  /highlight.js/11.6.0:
+    resolution: {integrity: sha512-ig1eqDzJaB0pqEvlPVIpSSyMaO92bH1N2rJpLMN/nX396wTpDA4Eq0uK+7I/2XG17pFaaKE0kjV/XPeGt7Evjw==}
+    engines: {node: '>=12.0.0'}
+    dev: false
+
   /history/5.3.0:
     resolution: {integrity: sha512-ZqaKwjjrAYUYfLG+htGaIIZ4nioX2L70ZUMIFysS3xvBsSG4x/n1V6TXV3N8ZYNuFGlDirFg32T7B6WOUPDYcQ==}
     dependencies:
@@ -6610,7 +6632,6 @@ packages:
       preact: 10.x
     dependencies:
       preact: 10.11.0
-    dev: true
 
   /preact-render-to-string/5.2.3_preact@10.10.6:
     resolution: {integrity: sha512-aPDxUn5o3GhWdtJtW0svRC2SS/l8D9MAgo2+AWml+BhDImb27ALf04Q2d+AHqUUOc6RdSXFIBVa2gxzgMKgtZA==}
@@ -6628,7 +6649,6 @@ packages:
     dependencies:
       preact: 10.11.0
       pretty-format: 3.8.0
-    dev: true
 
   /preact/10.10.6:
     resolution: {integrity: sha512-w0mCL5vICUAZrh1DuHEdOWBjxdO62lvcO++jbzr8UhhYcTbFkpegLH9XX+7MadjTl/y0feoqwQ/zAnzkc/EGog==}
@@ -6636,7 +6656,6 @@ packages:
 
   /preact/10.11.0:
     resolution: {integrity: sha512-Fk6+vB2kb6mSJfDgODq0YDhMfl0HNtK5+Uc9QqECO4nlyPAQwCI+BKyWO//idA7ikV7o+0Fm6LQmNuQi1wXI1w==}
-    dev: true
 
   /preferred-pm/3.0.3:
     resolution: {integrity: sha512-+wZgbxNES/KlJs9q40F/1sfOd/j7f1O9JaHcW5Dsn3aUUOZg3L2bjpVUcKV2jvtElYfoTuQiNeMfQJ4kwUAhCQ==}
@@ -8466,6 +8485,33 @@ packages:
       sass: 1.49.9
     optionalDependencies:
       fsevents: 2.3.2
+
+  /vite/3.1.4:
+    resolution: {integrity: sha512-JoQI08aBjY9lycL7jcEq4p9o1xUjq5aRvdH4KWaXtkSx7e7RpAh9D3IjzDWRD4Fg44LS3oDAIOG/Kq1L+82psA==}
+    engines: {node: ^14.18.0 || >=16.0.0}
+    hasBin: true
+    peerDependencies:
+      less: '*'
+      sass: '*'
+      stylus: '*'
+      terser: ^5.4.0
+    peerDependenciesMeta:
+      less:
+        optional: true
+      sass:
+        optional: true
+      stylus:
+        optional: true
+      terser:
+        optional: true
+    dependencies:
+      esbuild: 0.15.7
+      postcss: 8.4.16
+      resolve: 1.22.1
+      rollup: 2.78.1
+    optionalDependencies:
+      fsevents: 2.3.2
+    dev: true
 
   /vitest/0.18.1:
     resolution: {integrity: sha512-4F/1K/Vn4AvJwe7i2YblR02PT5vMKcw9KN4unDq2KD0YcSxX0B/6D6Qu9PJaXwVuxXMFTQ5ovd4+CQaW3bwofA==}

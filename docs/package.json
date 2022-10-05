@@ -1,0 +1,25 @@
+{
+  "name": "docs",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Documentation site for rootjs.dev",
+  "type": "module",
+  "scripts": {
+    "dev": "root dev",
+    "build": "root build",
+    "deploy": "rm -rf dist/ && pnpm run build && firebase deploy --only=hosting"
+  },
+  "keywords": [],
+  "author": "s@blinkk.com",
+  "license": "MIT",
+  "dependencies": {
+    "@blinkk/root": "workspace:*",
+    "highlight.js": "^11.6.0",
+    "preact": "^10.10.6",
+    "preact-custom-element": "^4.2.1",
+    "preact-render-to-string": "^5.2.3"
+  },
+  "devDependencies": {
+    "vite": "^3.1.4"
+  }
+}

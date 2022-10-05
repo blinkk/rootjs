@@ -1,0 +1,14 @@
+{
+  "hosting": {
+    "site": "rootjs-dev",
+    "public": "dist/html",
+    "ignore": [
+      "firebase.json",
+      "**/.*",
+      "**/node_modules/**"
+    ],
+    "i18n": {
+      "root": "/"
+    }
+  }
+}
