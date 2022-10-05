@@ -31,7 +31,7 @@ function RootCode(props: RootCode) {
   }, []);
 
   // eslint-disable-next-line prettier/prettier
-  return <pre ref={ref}><code className={className} /></pre>
+  return <pre ref={ref} className={className}><code /></pre>
 }
 
 register(RootCode, 'root-code');

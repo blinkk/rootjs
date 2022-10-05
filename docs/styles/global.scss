@@ -73,6 +73,7 @@ svg {
 }
 
 code {
+  display: inline-block;
   font-family: tokens.$font-family-mono;
   font-size: 0.9em;
   background: #f9f9f9;

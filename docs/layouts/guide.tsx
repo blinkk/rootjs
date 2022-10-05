@@ -22,7 +22,7 @@ export function Guide(props: GuideProps) {
       <Head>
         <link
           rel="stylesheet"
-          href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.6.0/styles/github-dark-dimmed.min.css"
+          href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.6.0/styles/night-owl.min.css"
         />
       </Head>
       <div class={styles.layout}>
@@ -59,12 +59,15 @@ Guide.Sidebar = () => (
       <div class={styles.sidebarSectionItems}>
         <a href="/guide">Getting started</a>
         <a href="/guide/features">Features</a>
+        <a href="/guide/project-structure">Project structure</a>
+        <a href="/guide/routes">Routes</a>
       </div>
     </div>
     <div class={styles.sidebarSection}>
       <div class={styles.sidebarSectionTitle}>API</div>
       <div class={styles.sidebarSectionItems}>
         <a href="/guide/api">API reference</a>
+        <a href="/guide/cli">CLI reference</a>
       </div>
     </div>
     <div class={styles.sidebarSection}>

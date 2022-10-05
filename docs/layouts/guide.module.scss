@@ -59,6 +59,9 @@
 .content {
   padding-left: var(--content-padding);
   padding-right: var(--content-padding);
+  > * {
+    max-width: 70ch;
+  }
   a {
     color: inherit;
   }
@@ -76,6 +79,19 @@
   }
   ul li {
     margin: 8px 0;
+  }
+  table {
+    display: block;
+    border-collapse: collapse;
+    margin: 20px 0;
+  }
+  th {
+    background-color: #f9f9f9;
+  }
+  td,
+  th {
+    border: 1px solid #8882;
+    padding: 8px;
   }
 }
 

@@ -9,6 +9,7 @@
     ],
     "i18n": {
       "root": "/"
-    }
+    },
+    "trailingSlash": false
   }
 }

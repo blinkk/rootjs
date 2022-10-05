@@ -8,9 +8,9 @@ export function Page() {
 
       <h2 id="overview">Overview</h2>
       <p>
-        This framework is heavily inspired by a few existing projects that have
-        similar goals: Next.js, Astro, and Deno Fresh. Features borrowed from
-        these frameworks include:
+        The Root.js framework is heavily inspired by a few existing projects
+        that have similar goals: Next.js, Astro, and Deno Fresh. Features
+        borrowed from these frameworks include:
       </p>
       <ul>
         <li>SSR and SSG support using JSX files (with Preact for rendering)</li>
