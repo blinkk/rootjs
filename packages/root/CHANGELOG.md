@@ -1,5 +1,11 @@
 # @blinkk/root
 
+## 1.0.0-alpha.5
+
+### Patch Changes
+
+- e8ba905: fix: fix dev server crash on syntax errors
+
 ## 1.0.0-alpha.4
 
 ### Patch Changes
