@@ -5,17 +5,17 @@ import hljs from 'highlight.js/lib/common';
 declare module 'preact' {
   namespace JSX {
     interface IntrinsicElements {
-      'root-code': RootCode;
+      'root-code': RootCodeProps;
     }
   }
 }
 
-interface RootCode {
+interface RootCodeProps {
   code: string;
   language?: string;
 }
 
-function RootCode(props: RootCode) {
+function RootCode(props: RootCodeProps) {
   const ref = useRef<HTMLPreElement>(null);
   const code: string = JSON.parse(props.code || '');
   let className: string;

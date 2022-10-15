@@ -1,5 +1,5 @@
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-import {h, ComponentChildren} from 'preact';
+import {ComponentChildren} from 'preact';
 import renderToString from 'preact-render-to-string';
 import {getRoutes, Route, getAllPathsForRoute} from './router';
 import {HEAD_CONTEXT} from '../core/components/head';
