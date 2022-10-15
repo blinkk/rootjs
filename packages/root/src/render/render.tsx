@@ -102,11 +102,10 @@ export class Renderer {
     await Promise.all(
       userScripts.map(async (scriptDep) => {
         const scriptAsset = await assetMap.get(scriptDep.src);
-        if (!scriptAsset && import.meta.env.PROD) {
-          console.log(`could not find precompiled asset: ${scriptDep.src}`);
+        if (scriptAsset) {
+          const scriptUrl = scriptAsset ? scriptAsset.assetUrl : scriptDep.src;
+          headComponents.push(<script type="module" src={scriptUrl} />);
         }
-        const scriptUrl = scriptAsset ? scriptAsset.assetUrl : scriptDep.src;
-        headComponents.push(<script type="module" src={scriptUrl} />);
       })
     );
 
@@ -185,8 +184,6 @@ export class Renderer {
           }
           const assetJsDeps = await asset.getJsDeps();
           assetJsDeps.forEach((dep) => deps.add(dep));
-        } else {
-          console.log(`could not find tag name: ${tagName}`);
         }
       })
     );

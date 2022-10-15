@@ -22,7 +22,7 @@ export async function createServer(options?: {rootDir?: string}) {
   const port = parseInt(process.env.PORT || '4007');
   console.log('🌳 Root.js');
   console.log();
-  console.log(`Started server: http://localhost:${port}`);
+  console.log(`Started dev server: http://localhost:${port}`);
   app.listen(port);
 }
 
@@ -67,6 +67,7 @@ export async function getMiddlewares(options?: {rootDir?: string}) {
 
   const viteServer = await createViteServer({
     ...viteConfig,
+    mode: 'development',
     server: {middlewareMode: true},
     appType: 'custom',
     optimizeDeps: {
@@ -88,27 +89,32 @@ export async function getMiddlewares(options?: {rootDir?: string}) {
     next: NextFunction
   ) => {
     const url = req.originalUrl;
-    const render = await viteServer.ssrLoadModule(renderModulePath);
-    const renderer = new render.Renderer(rootConfig) as Renderer;
+    let renderer: Renderer | null = null;
     try {
+      const render = await viteServer.ssrLoadModule(renderModulePath);
+      renderer = new render.Renderer(rootConfig) as Renderer;
       // Create a dev asset map using Vite dev server's module graph.
       const assetMap = new DevServerAssetMap(viteServer.moduleGraph);
       const data = await renderer.render(url, {
         assetMap: assetMap,
       });
       // Inject the Vite HMR client.
-      const html = await htmlMinify(
-        await viteServer.transformIndexHtml(url, data.html || '')
-      );
-
+      let html = await viteServer.transformIndexHtml(url, data.html || '');
+      if (rootConfig.minifyHtml !== false) {
+        html = await htmlMinify(html);
+      }
       res.status(200).set({'Content-Type': 'text/html'}).end(html);
     } catch (e) {
       // If an error is caught, let Vite fix the stack trace so it maps back to
       // your actual source code.
       viteServer.ssrFixStacktrace(e);
       try {
-        const {html} = await renderer.renderError(e);
-        res.status(500).set({'Content-Type': 'text/html'}).end(html);
+        if (renderer) {
+          const {html} = await renderer.renderError(e);
+          res.status(500).set({'Content-Type': 'text/html'}).end(html);
+        } else {
+          next(e);
+        }
       } catch (e2) {
         console.error('failed to render custom error');
         console.error(e2);
@@ -120,6 +126,11 @@ export async function getMiddlewares(options?: {rootDir?: string}) {
   return [viteServer.middlewares, rootMiddleware];
 }
 
-export function dev(rootDir?: string) {
-  createServer({rootDir});
+export async function dev(rootDir?: string) {
+  process.env.NODE_ENV = 'development';
+  try {
+    await createServer({rootDir});
+  } catch (err) {
+    console.error('an error occurred');
+  }
 }

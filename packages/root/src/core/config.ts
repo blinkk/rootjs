@@ -25,6 +25,11 @@ export interface RootConfig {
   vite?: ViteUserConfig;
 
   /**
+   * Whether to automatically minify HTML output.
+   */
+  minifyHtml?: boolean;
+
+  /**
    * Whether to include a sitemap.xml file to the build output.
    */
   sitemap?: boolean;
