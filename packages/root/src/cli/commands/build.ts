@@ -4,7 +4,7 @@ import fsExtra from 'fs-extra';
 import glob from 'tiny-glob';
 import {build as viteBuild, Manifest, UserConfig} from 'vite';
 import {pluginRoot} from '../../render/vite-plugin-root.js';
-import {BuildAssetMap} from '../../render/asset-map/build-asset-map.js';
+import {BuildAssetManifest, BuildAssetMap} from '../../render/asset-map/build-asset-map.js';
 import {loadRootConfig} from '../load-config.js';
 import {
   copyDir,
@@ -146,13 +146,13 @@ export async function build(rootProjectDir?: string) {
     },
   });
 
-  const manifest = await loadJson<Manifest>(
+  const viteManifest = await loadJson<Manifest>(
     path.join(distDir, 'client/manifest.json')
   );
 
   // Use the output of the client build to generate an asset map, which is used
   // by the renderer for automatically injecting dependencies for a page.
-  const assetMap = new BuildAssetMap(manifest, {elementMap});
+  const assetMap = BuildAssetMap.fromViteManifest(viteManifest, elementMap);
 
   // Save the asset map to `dist/client` for use by the prod SSR server.
   writeFile(

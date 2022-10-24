@@ -1,44 +1,30 @@
-import path from 'path';
-import {Manifest, ManifestChunk} from 'vite';
+import {Manifest} from 'vite';
 import {Asset, AssetMap} from './asset-map';
 
-type BuildAssetManifest = Record<
+export type BuildAssetManifest = Record<
   string,
   {
     moduleId: string;
     assetUrl: string;
     importedModules: string[];
     importedCss: string[];
+    isElement: boolean;
   }
 >;
 
 export class BuildAssetMap implements AssetMap {
-  private manifest: Manifest;
   private moduleIdToAsset: Map<string, BuildAsset>;
-  private elementMap: Record<string, string>;
 
-  constructor(
-    manifest: Manifest,
-    options: {elementMap: Record<string, string>}
-  ) {
-    this.manifest = manifest;
-    this.elementMap = options.elementMap;
+  constructor() {
     this.moduleIdToAsset = new Map();
-    Object.keys(this.manifest).forEach((manifestKey) => {
-      const moduleId = `/${manifestKey}`;
-      this.moduleIdToAsset.set(
-        moduleId,
-        new BuildAsset(this, moduleId, this.manifest[manifestKey])
-      );
-    });
   }
 
   async get(moduleId: string): Promise<Asset | null> {
     return this.moduleIdToAsset.get(moduleId) || null;
   }
 
-  isElement(moduleId: string): boolean {
-    return Object.values(this.elementMap).includes(moduleId);
+  private add(asset: BuildAsset) {
+    this.moduleIdToAsset.set(asset.moduleId, asset);
   }
 
   toJson(): BuildAssetManifest {
@@ -48,31 +34,70 @@ export class BuildAssetMap implements AssetMap {
     }
     return result;
   }
+
+  static fromViteManifest(
+    viteManifest: Manifest,
+    elementMap: Record<string, string>
+  ) {
+    const assetMap = new BuildAssetMap();
+
+    const elementModuleIds = new Set();
+    Object.values(elementMap).forEach((moduleId) =>
+      elementModuleIds.add(moduleId)
+    );
+
+    Object.keys(viteManifest).forEach((manifestKey) => {
+      const moduleId = `/${manifestKey}`;
+      const manifestChunk = viteManifest[manifestKey];
+      const isElement = elementModuleIds.has(moduleId);
+      const assetData = {
+        moduleId,
+        assetUrl: `/${manifestChunk.file}`,
+        importedModules: (manifestChunk.imports || []).map(
+          (relPath) => `/${relPath}`
+        ),
+        importedCss: (manifestChunk.css || []).map((relPath) => `/${relPath}`),
+        isElement: isElement,
+      };
+      assetMap.add(new BuildAsset(assetMap, assetData));
+    });
+    return assetMap;
+  }
+
+  static fromRootManifest(rootManifest: BuildAssetManifest) {
+    const assetMap = new BuildAssetMap();
+    Object.keys(rootManifest).forEach((moduleId) => {
+      const assetData = rootManifest[moduleId];
+      assetMap.add(new BuildAsset(assetMap, assetData));
+    });
+    return assetMap;
+  }
 }
 
 export class BuildAsset {
   moduleId: string;
   assetUrl: string;
   private assetMap: BuildAssetMap;
-  private manifestData: ManifestChunk;
   private importedModules: string[];
   private importedCss: string[];
+  isElement: boolean;
 
   constructor(
     assetMap: BuildAssetMap,
-    moduleId: string,
-    manifestData: ManifestChunk
+    assetData: {
+      moduleId: string;
+      assetUrl: string;
+      importedModules: string[];
+      importedCss: string[];
+      isElement: boolean;
+    }
   ) {
     this.assetMap = assetMap;
-    this.moduleId = moduleId;
-    this.manifestData = manifestData;
-    this.assetUrl = `/${manifestData.file}`;
-    this.importedModules = (this.manifestData.imports || []).map(
-      (relPath) => `/${relPath}`
-    );
-    this.importedCss = (this.manifestData.css || []).map(
-      (relPath) => `/${relPath}`
-    );
+    this.moduleId = assetData.moduleId;
+    this.assetUrl = assetData.assetUrl;
+    this.importedModules = assetData.importedModules;
+    this.importedCss = assetData.importedCss;
+    this.isElement = assetData.isElement;
   }
 
   async getCssDeps(): Promise<string[]> {
@@ -104,11 +129,7 @@ export class BuildAsset {
       return;
     }
     visited.add(asset.moduleId);
-    const parts = path.parse(asset.assetUrl);
-    if (
-      ['.js', '.jsx', '.ts', '.tsx'].includes(parts.ext) &&
-      this.assetMap.isElement(asset.moduleId)
-    ) {
+    if (asset.isElement) {
       urls.add(asset.assetUrl);
     }
     await Promise.all(
@@ -151,6 +172,7 @@ export class BuildAsset {
       assetUrl: this.assetUrl,
       importedModules: this.importedModules,
       importedCss: this.importedCss,
+      isElement: this.isElement,
     };
   }
 }

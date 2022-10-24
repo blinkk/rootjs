@@ -10,6 +10,7 @@
   "scripts": {
     "build": "root build",
     "dev": "root dev",
+    "start": "root start",
     "test": "npm run build"
   },
   "dependencies": {
