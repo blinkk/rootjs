@@ -1,5 +1,11 @@
 # @blinkk/root
 
+## 1.0.0-alpha.6
+
+### Patch Changes
+
+- 042309b: feat: add root start command
+
 ## 1.0.0-alpha.5
 
 ### Patch Changes
