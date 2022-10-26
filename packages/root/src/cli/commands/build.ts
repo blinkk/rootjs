@@ -42,6 +42,11 @@ export async function build(rootProjectDir?: string) {
 
   const elementsDirs = [path.join(rootDir, 'elements')];
   const elementsInclude = rootConfig.elements?.include || [];
+  const excludePatterns = rootConfig.elements?.exclude || [];
+  const excludeElement = (moduleId: string) => {
+    return excludePatterns.some((pattern) => Boolean(moduleId.match(pattern)));
+  };
+
   for (const dirPath of elementsInclude) {
     const elementsDir = path.resolve(rootDir, dirPath);
     if (!elementsDir.startsWith(rootDir)) {
@@ -61,8 +66,10 @@ export async function build(rootProjectDir?: string) {
         if (isJsFile(parts.base)) {
           const fullPath = path.join(dirPath, file);
           const moduleId = fullPath.slice(rootDir.length);
-          elements.push(fullPath);
-          elementMap[parts.name] = moduleId;
+          if (!excludeElement(moduleId)) {
+            elements.push(fullPath);
+            elementMap[parts.name] = moduleId;
+          }
         }
       });
     }

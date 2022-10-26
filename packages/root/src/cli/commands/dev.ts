@@ -43,15 +43,37 @@ export async function getMiddlewares(options?: {rootDir?: string}) {
     });
   }
 
+  const elementsDirs = [path.join(rootDir, 'elements')];
+  const elementsInclude = rootConfig.elements?.include || [];
+  const excludePatterns = rootConfig.elements?.exclude || [];
+  const excludeElement = (moduleId: string) => {
+    return excludePatterns.some((pattern) => Boolean(moduleId.match(pattern)));
+  };
+
+  for (const dirPath of elementsInclude) {
+    const elementsDir = path.resolve(rootDir, dirPath);
+    if (!elementsDir.startsWith(rootDir)) {
+      throw new Error(
+        `the elements dir (${dirPath}) should be relative to the project's root dir (${rootDir})`
+      );
+    }
+    elementsDirs.push(elementsDir);
+  }
   const elements: string[] = [];
-  if (await isDirectory(path.join(rootDir, 'elements'))) {
-    const elementFiles = await glob(path.join(rootDir, 'elements/**/*'));
-    elementFiles.forEach((file) => {
-      const parts = path.parse(file);
-      if (isJsFile(parts.base)) {
-        elements.push(file);
-      }
-    });
+  for (const dirPath of elementsDirs) {
+    if (await isDirectory(dirPath)) {
+      const elementFiles = await glob('**/*', {cwd: dirPath});
+      elementFiles.forEach((file) => {
+        const parts = path.parse(file);
+        if (isJsFile(parts.base)) {
+          const fullPath = path.join(dirPath, file);
+          const moduleId = fullPath.slice(rootDir.length);
+          if (!excludeElement(moduleId)) {
+            elements.push(fullPath);
+          }
+        }
+      });
+    }
   }
 
   const bundleScripts: string[] = [];
