@@ -1,5 +1,11 @@
 # @blinkk/root
 
+## 1.0.0-alpha.7
+
+### Patch Changes
+
+- b9838fd: feat: add exclude regex patterns for elements
+
 ## 1.0.0-alpha.6
 
 ### Patch Changes
