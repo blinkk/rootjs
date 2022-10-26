@@ -62,3 +62,32 @@ test('use custom elements from another directory', async () => {
     "
   `);
 });
+
+test('exclude elements matching a certain pattern', async () => {
+  await fixture.build();
+  const htmlPath = path.join(
+    fixture.distDir,
+    'html/exclude-stories/index.html'
+  );
+  assert.isTrue(await fileExists(htmlPath));
+  const html = await fs.readFile(htmlPath, 'utf-8');
+  expect(html).toMatchInlineSnapshot(`
+    "<!doctype html>
+    <html lang=\\"en\\">
+    <head>
+    <meta charset=\\"utf-8\\">
+    <script type=\\"module\\" src=\\"/assets/root-counter.2ed2a8cc.js\\"></script>
+    <script type=\\"module\\" src=\\"/assets/root-label.71e76948.js\\"></script>
+    </head>
+    <body>
+    <h1>Counter</h1>
+    <root-counter start=\\"3\\"></root-counter>
+    <h1>
+    The following element deps should not be auto-injected:
+    </h1>
+    <root-exclude></root-exclude>
+    </body>
+    </html>
+    "
+  `);
+});

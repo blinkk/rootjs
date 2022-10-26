@@ -29,6 +29,11 @@ export function pluginRoot(options?: RootPluginOptions) {
     elementsDirs.push(elementsDir);
   });
 
+  const excludePatterns = rootConfig.elements?.exclude || [];
+  const excludeElement = (moduleId: string) => {
+    return excludePatterns.some((pattern) => Boolean(moduleId.match(pattern)));
+  };
+
   let elementMap: Record<string, string>;
   async function updateElementMap() {
     elementMap = {};
@@ -44,7 +49,9 @@ export function pluginRoot(options?: RootPluginOptions) {
           if (isJsFile(parts.base)) {
             const fullPath = path.join(dirPath, file);
             const moduleId = fullPath.slice(rootDir.length);
-            elementMap[parts.name] = moduleId;
+            if (!excludeElement(moduleId)) {
+              elementMap[parts.name] = moduleId;
+            }
           }
         });
       })

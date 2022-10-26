@@ -11,6 +11,12 @@ export interface RootConfig {
      * "node_modules/my-package".
      */
     include?: string[];
+
+    /**
+     * A list of RegEx patterns to exclude. The string passed to the RegEx is
+     * the file URL relative to the project root, e.g. "/elements/foo/foo.ts".
+     */
+    exclude?: RegExp[];
   };
 
   /**
