@@ -11,7 +11,7 @@ export interface ScriptProps {
 /**
  * The <Script> component is used for rendering any custom script modules. At
  * the moment, the system only pre-renders and bundles files that are in the
- * `src/bundles` folder at the root of the project.
+ * `/bundles` folder at the root of the project.
  */
 export function Script(props: ScriptProps) {
   let context: ScriptProps[];

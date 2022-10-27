@@ -48,6 +48,7 @@
     "fs-extra": "^10.1.0",
     "html-minifier-terser": "^7.0.0",
     "joycon": "^3.1.1",
+    "kleur": "^4.1.5",
     "sass": "^1.49.9",
     "tiny-glob": "^0.2.9",
     "vite": "^3.1.0"
