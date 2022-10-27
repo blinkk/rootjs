@@ -1,5 +1,11 @@
 # @blinkk/root
 
+## 1.0.0-alpha.9
+
+### Patch Changes
+
+- 67c9731: fix: fix --mode flag
+
 ## 1.0.0-alpha.8
 
 ### Patch Changes
