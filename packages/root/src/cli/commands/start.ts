@@ -10,10 +10,9 @@ import {
 import {htmlMinify} from '../../render/html-minify';
 
 export async function start(rootProjectDir?: string) {
-  console.log('🌳 Root.js');
   process.env.NODE_ENV = 'production';
-
   const rootDir = rootProjectDir || process.cwd();
+  process.chdir(rootDir);
   const rootConfig = await loadRootConfig(rootDir);
   const distDir = path.join(rootDir, 'dist');
 

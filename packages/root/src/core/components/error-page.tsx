@@ -1,6 +1,3 @@
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-import {h} from 'preact';
-
 export interface ErrorPageProps {
   error: unknown;
 }

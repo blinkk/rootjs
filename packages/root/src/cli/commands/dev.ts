@@ -9,20 +9,23 @@ import {htmlMinify} from '../../render/html-minify.js';
 import {Renderer} from '../../render/render.js';
 import {isDirectory, isJsFile} from '../../core/fsutils.js';
 import glob from 'tiny-glob';
+import {dim} from 'kleur/colors';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 export async function createServer(options?: {rootDir?: string}) {
-  const app = express();
+  const rootDir = options?.rootDir || process.cwd();
 
+  const app = express();
   app.use(express.static('public'));
-  const middlewares = await getMiddlewares({rootDir: options?.rootDir});
+  const middlewares = await getMiddlewares({rootDir});
   middlewares.forEach((middleware) => app.use(middleware));
 
   const port = parseInt(process.env.PORT || '4007');
-  console.log('🌳 Root.js');
   console.log();
-  console.log(`Started dev server: http://localhost:${port}`);
+  console.log(`${dim('┃')} project:  ${rootDir}`);
+  console.log(`${dim('┃')} server:   http://localhost:${port}`);
+  console.log();
   app.listen(port);
 }
 
@@ -34,7 +37,7 @@ export async function getMiddlewares(options?: {rootDir?: string}) {
 
   const pages: string[] = [];
   if (await isDirectory(path.join(rootDir, 'routes'))) {
-    const pageFiles = await glob(path.join(rootDir, 'routes/**/*'));
+    const pageFiles = await glob('routes/**/*', {cwd: rootDir});
     pageFiles.forEach((file) => {
       const parts = path.parse(file);
       if (!parts.name.startsWith('_') && isJsFile(parts.base)) {
@@ -89,6 +92,7 @@ export async function getMiddlewares(options?: {rootDir?: string}) {
 
   const viteServer = await createViteServer({
     ...viteConfig,
+    root: rootDir,
     mode: 'development',
     server: {middlewareMode: true},
     appType: 'custom',
@@ -120,6 +124,10 @@ export async function getMiddlewares(options?: {rootDir?: string}) {
       const data = await renderer.render(url, {
         assetMap: assetMap,
       });
+      if (data.notFound || !data.html) {
+        next();
+        return;
+      }
       // Inject the Vite HMR client.
       let html = await viteServer.transformIndexHtml(url, data.html || '');
       if (rootConfig.minifyHtml !== false) {
@@ -130,6 +138,7 @@ export async function getMiddlewares(options?: {rootDir?: string}) {
       // If an error is caught, let Vite fix the stack trace so it maps back to
       // your actual source code.
       viteServer.ssrFixStacktrace(e);
+      console.error(e);
       try {
         if (renderer) {
           const {html} = await renderer.renderError(e);
@@ -145,11 +154,27 @@ export async function getMiddlewares(options?: {rootDir?: string}) {
     }
   };
 
-  return [viteServer.middlewares, rootMiddleware];
+  const notFoundMiddleware = async (req: Request, res: Response) => {
+    const url = req.originalUrl;
+    const ext = path.extname(url);
+    if (!ext) {
+      const render = await viteServer.ssrLoadModule(renderModulePath);
+      const renderer = new render.Renderer(rootConfig) as Renderer;
+      const data = await renderer.renderDevNotFound();
+      const html = data.html || '';
+      res.status(404).set({'Content-Type': 'text/html'}).end(html);
+      return;
+    }
+    res.status(404).set({'Content-Type': 'text/plain'}).end('404');
+  };
+
+  return [viteServer.middlewares, rootMiddleware, notFoundMiddleware];
 }
 
-export async function dev(rootDir?: string) {
+export async function dev(rootProjectDir?: string) {
   process.env.NODE_ENV = 'development';
+  const rootDir = rootProjectDir || process.cwd();
+  process.chdir(rootDir);
   try {
     await createServer({rootDir});
   } catch (err) {

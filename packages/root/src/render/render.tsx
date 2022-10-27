@@ -10,6 +10,7 @@ import {AssetMap} from './asset-map/asset-map';
 import {RootConfig} from '../core/config';
 import {RouteTrie} from './route-trie';
 import {elementsMap} from 'virtual:root-elements';
+import {DevNotFoundPage} from '../core/components/dev-not-found-page';
 
 interface RenderOptions {
   assetMap: AssetMap;
@@ -31,19 +32,19 @@ export class Renderer {
   async render(
     url: string,
     options: RenderOptions
-  ): Promise<{html: string; notFound?: boolean}> {
+  ): Promise<{html?: string; notFound?: boolean}> {
     const assetMap = options.assetMap;
     const [route, routeParams] = this.routes.get(url);
     if (route && route.module && route.module.default) {
       return await this.renderRoute(route, {routeParams, assetMap});
     }
-    return this.render404();
+    return {notFound: true};
   }
 
   async renderRoute(
     route: Route,
     options: {routeParams: Record<string, string>; assetMap: AssetMap}
-  ): Promise<{html: string; notFound?: boolean}> {
+  ): Promise<{html?: string; notFound?: boolean}> {
     const routeParams = options.routeParams;
     const assetMap = options.assetMap;
     const Component = route.module.default;
@@ -161,6 +162,25 @@ export class Renderer {
     const mainHtml = renderToString(<ErrorPage error={error} />);
     const html = await this.renderHtml({mainHtml, locale: 'en'});
     return {html};
+  }
+
+  async renderDevNotFound() {
+    const routes = await this.getAllRoutes();
+    const mainHtml = renderToString(<DevNotFoundPage routes={routes} />);
+    const html = await this.renderHtml({
+      mainHtml,
+      locale: 'en',
+      headComponents: [<title>404: Not Found</title>],
+    });
+    return {html};
+  }
+
+  async getAllRoutes() {
+    const routes: Record<string, Route> = {};
+    await this.routes.walk((urlPath: string, route: Route) => {
+      routes[urlPath] = route;
+    });
+    return routes;
   }
 
   private async getScriptDeps(
