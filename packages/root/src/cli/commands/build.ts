@@ -17,14 +17,27 @@ import {
 } from '../../core/fsutils.js';
 import {Renderer} from '../../render/render.js';
 import {htmlMinify} from '../../render/html-minify.js';
+import {dim} from 'kleur/colors';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-export async function build(rootProjectDir?: string) {
-  const rootDir = rootProjectDir || process.cwd();
-  process.chdir(rootDir);
+interface BuildOptions {
+  ssrOnly?: boolean;
+  mode?: string;
+}
+
+export async function build(rootProjectDir?: string, options?: BuildOptions) {
+  const rootDir = path.resolve(rootProjectDir || process.cwd());
   const rootConfig = await loadRootConfig(rootDir);
   const distDir = path.join(rootDir, 'dist');
+  const ssrOnly = options?.ssrOnly || false;
+  const mode = options?.mode || 'production';
+
+  console.log();
+  console.log(`${dim('┃')} project:  ${rootDir}`);
+  console.log(`${dim('┃')} output:   ${distDir}/html`);
+  console.log();
+
   await rmDir(distDir);
   await makeDir(distDir);
 
@@ -101,7 +114,7 @@ export async function build(rootProjectDir?: string) {
   // HTML routes.
   await viteBuild({
     ...baseConfig,
-    mode: 'production',
+    mode: mode,
     publicDir: false,
     build: {
       rollupOptions: {
@@ -129,7 +142,7 @@ export async function build(rootProjectDir?: string) {
   // Pre-render any client scripts and CSS deps.
   await viteBuild({
     ...baseConfig,
-    mode: 'production',
+    mode: mode,
     publicDir: false,
     build: {
       rollupOptions: {
@@ -181,32 +194,34 @@ export async function build(rootProjectDir?: string) {
   copyDir(path.join(distDir, 'client/assets'), path.join(buildDir, 'assets'));
   copyDir(path.join(distDir, 'client/chunks'), path.join(buildDir, 'chunks'));
 
-  // Render HTML pages.
-  const render = await import(path.join(distDir, 'server/render.js'));
-  const renderer = new render.Renderer(rootConfig) as Renderer;
-  const sitemap = await renderer.getSitemap();
+  // Pre-render HTML pages (SSG).
+  if (!ssrOnly) {
+    const render = await import(path.join(distDir, 'server/render.js'));
+    const renderer = new render.Renderer(rootConfig) as Renderer;
+    const sitemap = await renderer.getSitemap();
 
-  await Promise.all(
-    Object.keys(sitemap).map(async (urlPath) => {
-      const {route, params} = sitemap[urlPath];
-      const data = await renderer.renderRoute(route, {
-        assetMap,
-        routeParams: params,
-      });
+    await Promise.all(
+      Object.keys(sitemap).map(async (urlPath) => {
+        const {route, params} = sitemap[urlPath];
+        const data = await renderer.renderRoute(route, {
+          assetMap,
+          routeParams: params,
+        });
 
-      // The renderer currently assumes that all paths serve HTML.
-      // TODO(stevenle): support non-HTML routes using `routes/[name].[ext].ts`.
-      let outPath = path.join(distDir, `html${urlPath}`, 'index.html');
+        // The renderer currently assumes that all paths serve HTML.
+        // TODO(stevenle): support non-HTML routes using `routes/[name].[ext].ts`.
+        let outPath = path.join(distDir, `html${urlPath}`, 'index.html');
 
-      if (outPath.endsWith('404/index.html')) {
-        outPath = outPath.replace('404/index.html', '404.html');
-      }
+        if (outPath.endsWith('404/index.html')) {
+          outPath = outPath.replace('404/index.html', '404.html');
+        }
 
-      const html = await htmlMinify(data.html || '');
-      await writeFile(outPath, html);
+        const html = await htmlMinify(data.html || '');
+        await writeFile(outPath, html);
 
-      const relPath = outPath.slice(path.dirname(distDir).length + 1);
-      console.log(`saved ${relPath}`);
-    })
-  );
+        const relPath = outPath.slice(path.dirname(distDir).length + 1);
+        console.log(`saved ${relPath}`);
+      })
+    );
+  }
 }

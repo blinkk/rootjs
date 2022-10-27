@@ -10,8 +10,9 @@ import {
 import {htmlMinify} from '../../render/html-minify';
 import {dim} from 'kleur/colors';
 
-export async function start(rootProjectDir?: string) {
-  process.env.NODE_ENV = 'production';
+export async function preview(rootProjectDir?: string) {
+  // TODO(stevenle): figure out standard practice for NODE_ENV.
+  process.env.NODE_ENV = 'development';
   const rootDir = path.resolve(rootProjectDir || process.cwd());
   const rootConfig = await loadRootConfig(rootDir);
   const distDir = path.join(rootDir, 'dist');
@@ -22,7 +23,7 @@ export async function start(rootProjectDir?: string) {
   const manifestPath = path.join(distDir, 'client/root-manifest.json');
   if (!(await fileExists(manifestPath))) {
     throw new Error(
-      `could not find ${manifestPath}. run \`root build\` before \`root start\`.`
+      `could not find ${manifestPath}. run \`root build\` before \`root preview\`.`
     );
   }
   const rootManifest = await loadJson<BuildAssetManifest>(manifestPath);

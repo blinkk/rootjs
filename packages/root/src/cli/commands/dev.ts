@@ -30,7 +30,7 @@ export async function createServer(options?: {rootDir?: string}) {
 }
 
 export async function getMiddlewares(options?: {rootDir?: string}) {
-  const rootDir = options?.rootDir || process.cwd();
+  const rootDir = path.resolve(options?.rootDir || process.cwd());
   const rootConfig = await loadRootConfig(rootDir);
   const viteConfig = rootConfig.vite || {};
   const renderModulePath = path.resolve(__dirname, './render.js');
@@ -72,7 +72,7 @@ export async function getMiddlewares(options?: {rootDir?: string}) {
           const fullPath = path.join(dirPath, file);
           const moduleId = fullPath.slice(rootDir.length);
           if (!excludeElement(moduleId)) {
-            elements.push(fullPath);
+            elements.push(moduleId.slice(1));
           }
         }
       });
@@ -92,8 +92,8 @@ export async function getMiddlewares(options?: {rootDir?: string}) {
 
   const viteServer = await createViteServer({
     ...viteConfig,
-    root: rootDir,
     mode: 'development',
+    root: rootDir,
     server: {middlewareMode: true},
     appType: 'custom',
     optimizeDeps: {
@@ -173,8 +173,7 @@ export async function getMiddlewares(options?: {rootDir?: string}) {
 
 export async function dev(rootProjectDir?: string) {
   process.env.NODE_ENV = 'development';
-  const rootDir = rootProjectDir || process.cwd();
-  process.chdir(rootDir);
+  const rootDir = path.resolve(rootProjectDir || process.cwd());
   try {
     await createServer({rootDir});
   } catch (err) {
