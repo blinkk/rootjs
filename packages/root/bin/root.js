@@ -20,7 +20,7 @@ async function main() {
     .command('build [path]')
     .description('generates a static build')
     .option('--ssr-only', 'produce a ssr-only build')
-    .option('--mode', 'see: https://vitejs.dev/guide/env-and-mode.html#modes', 'production')
+    .option('--mode <mode>', 'see: https://vitejs.dev/guide/env-and-mode.html#modes', 'production')
     .action(build);
   program
     .command('dev [path]')
