@@ -1,5 +1,13 @@
 # @blinkk/root
 
+## 1.0.0-alpha.8
+
+### Patch Changes
+
+- e1da510: fix: add exclude support in build and dev commands
+- e0eb4d1: feat: add custom 404 page used in dev
+- f264412: feat: add root build --ssr-only and root preview
+
 ## 1.0.0-alpha.7
 
 ### Patch Changes
