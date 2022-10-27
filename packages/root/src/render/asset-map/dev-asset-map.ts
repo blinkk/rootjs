@@ -12,7 +12,14 @@ export class DevServerAssetMap implements AssetMap {
   async get(moduleId: string): Promise<Asset | null> {
     const viteModule = await this.moduleGraph.getModuleByUrl(moduleId);
     if (!viteModule || !viteModule.id) {
-      return null;
+      // On dev, in some cases the module doesn't make it into the module graph
+      // so return a generic asset.
+      return {
+        moduleId: moduleId,
+        assetUrl: moduleId,
+        getCssDeps: async () => [],
+        getJsDeps: async () => [moduleId],
+      };
     }
     return new DevServerAsset(this, viteModule);
   }
