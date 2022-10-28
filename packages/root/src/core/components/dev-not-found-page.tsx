@@ -28,13 +28,14 @@ hr {
 `;
 
 interface DevNotFoundPageProps {
-  routes: Record<string, Route>;
+  sitemap: Record<string, {route: Route; params: Record<string, string>}>;
 }
 
 export function DevNotFoundPage(props: DevNotFoundPageProps) {
   const routesList: Array<Route & {urlPath: string}> = [];
-  Object.keys(props.routes).forEach((urlPath) => {
-    routesList.push(Object.assign({}, props.routes[urlPath], {urlPath}));
+  Object.keys(props.sitemap).forEach((urlPath) => {
+    const route = props.sitemap[urlPath].route;
+    routesList.push(Object.assign({}, route, {urlPath}));
   });
   return (
     <>

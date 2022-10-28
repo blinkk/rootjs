@@ -165,22 +165,14 @@ export class Renderer {
   }
 
   async renderDevNotFound() {
-    const routes = await this.getAllRoutes();
-    const mainHtml = renderToString(<DevNotFoundPage routes={routes} />);
+    const sitemap = await this.getSitemap();
+    const mainHtml = renderToString(<DevNotFoundPage sitemap={sitemap} />);
     const html = await this.renderHtml({
       mainHtml,
       locale: 'en',
       headComponents: [<title>404: Not Found</title>],
     });
     return {html};
-  }
-
-  async getAllRoutes() {
-    const routes: Record<string, Route> = {};
-    await this.routes.walk((urlPath: string, route: Route) => {
-      routes[urlPath] = route;
-    });
-    return routes;
   }
 
   private async getScriptDeps(

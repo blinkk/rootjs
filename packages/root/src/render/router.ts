@@ -74,11 +74,22 @@ export async function getAllPathsForRoute(
     const staticPaths = await routeModule.getStaticPaths();
     staticPaths.paths.forEach(
       (pathParams: {params: Record<string, string>}) => {
-        urlPaths.push({
-          urlPath: replaceParams(urlPathFormat, pathParams.params),
-          params: pathParams.params || {},
-        });
+        const urlPath = replaceParams(urlPathFormat, pathParams.params);
+        if (pathContainsPlaceholders(urlPath)) {
+          console.warn(
+            `path contains placeholders: ${urlPathFormat}, double check getStaticPaths() and ensure all params are returned`
+          );
+        } else {
+          urlPaths.push({
+            urlPath: replaceParams(urlPathFormat, pathParams.params),
+            params: pathParams.params || {},
+          });
+        }
       }
+    );
+  } else if (pathContainsPlaceholders(urlPathFormat)) {
+    console.warn(
+      `path contains placeholders: ${urlPathFormat}, did you forget to define getStaticPaths()?`
     );
   } else {
     urlPaths.push({urlPath: urlPathFormat, params: {}});
@@ -101,4 +112,11 @@ export function replaceParams(
     }
   );
   return urlPath;
+}
+
+function pathContainsPlaceholders(urlPath: string) {
+  const segments = urlPath.split('/');
+  return segments.some((segment) => {
+    return segment.startsWith('[') && segment.endsWith(']');
+  });
 }
