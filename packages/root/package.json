@@ -3,10 +3,17 @@
   "version": "1.0.0-alpha.9",
   "author": "s@blinkk.com",
   "license": "MIT",
+  "type": "module",
+  "engines": {
+    "node": ">=16.0.0"
+  },
+  "files": [
+    "bin/*",
+    "dist/**/*"
+  ],
   "bin": {
     "root": "./bin/root.js"
   },
-  "type": "module",
   "module": "./dist/core.js",
   "types": "./dist/core.d.ts",
   "exports": {
@@ -26,15 +33,7 @@
       "types": "./dist/render.d.ts"
     }
   },
-  "files": [
-    "bin/*",
-    "dist/**/*"
-  ],
-  "engines": {
-    "node": ">=16.0.0"
-  },
   "scripts": {
-    "prepare": "pnpm test",
     "build": "rm -rf dist && tsup-node",
     "dev": "nodemon --watch src -e ts,tsx --exec pnpm build",
     "test": "pnpm build && vitest run",
