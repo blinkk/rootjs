@@ -36,6 +36,7 @@ export async function build(rootProjectDir?: string, options?: BuildOptions) {
   console.log();
   console.log(`${dim('┃')} project:  ${rootDir}`);
   console.log(`${dim('┃')} output:   ${distDir}/html`);
+  console.log(`${dim('┃')} mode:     ${mode}`);
   console.log();
 
   await rmDir(distDir);
@@ -102,6 +103,7 @@ export async function build(rootProjectDir?: string, options?: BuildOptions) {
   const baseConfig: UserConfig = {
     ...viteConfig,
     root: rootDir,
+    mode: mode,
     esbuild: {
       jsx: 'automatic',
       jsxImportSource: 'preact',
@@ -114,7 +116,6 @@ export async function build(rootProjectDir?: string, options?: BuildOptions) {
   // HTML routes.
   await viteBuild({
     ...baseConfig,
-    mode: mode,
     publicDir: false,
     build: {
       rollupOptions: {
@@ -142,7 +143,6 @@ export async function build(rootProjectDir?: string, options?: BuildOptions) {
   // Pre-render any client scripts and CSS deps.
   await viteBuild({
     ...baseConfig,
-    mode: mode,
     publicDir: false,
     build: {
       rollupOptions: {
