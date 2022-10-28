@@ -1,0 +1,31 @@
+{
+  "name": "@blinkk/root-cms",
+  "version": "1.0.0",
+  "author": "s@blinkk.com",
+  "license": "MIT",
+  "main": "index.js",
+  "type": "module",
+  "engines": {
+    "node": ">=16.0.0"
+  },
+  "files": [
+    "bin/*",
+    "dist/**/*"
+  ],
+  "exports": {
+    "./schema": {
+      "default": "./dist/schema.js",
+      "import": "./dist/schema.js",
+      "types": "./dist/schema.d.ts"
+    }
+  },
+  "scripts": {
+    "build": "rm -rf dist && tsup",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "devDependencies": {
+    "tsup": "^6.3.0",
+    "vitest": "^0.18.1"
+  }
+}
