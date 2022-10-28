@@ -61,6 +61,7 @@ Guide.Sidebar = () => (
         <a href="/guide/features">Features</a>
         <a href="/guide/project-structure">Project structure</a>
         <a href="/guide/routes">Routes</a>
+        <a href="/guide/localization">Localization</a>
       </div>
     </div>
     <div class={styles.sidebarSection}>
