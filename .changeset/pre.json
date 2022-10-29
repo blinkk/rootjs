@@ -7,7 +7,8 @@
     "@private/root-core": "0.0.0",
     "@private/root-db": "0.0.0",
     "@private/root-form": "0.0.0",
-    "@private/root-webui": "0.0.0"
+    "@private/root-webui": "0.0.0",
+    "@blinkk/root-cms": "1.0.0"
   },
   "changesets": [
     "afraid-dots-run",
@@ -21,6 +22,7 @@
     "plenty-starfishes-decide",
     "pretty-radios-develop",
     "seven-chicken-boil",
+    "strong-phones-tan",
     "stupid-dingos-yawn",
     "three-melons-exist",
     "tidy-rings-kiss",

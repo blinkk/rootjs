@@ -1,6 +1,6 @@
 {
   "name": "@blinkk/root-cms",
-  "version": "1.0.0",
+  "version": "1.0.1-alpha.0",
   "author": "s@blinkk.com",
   "license": "MIT",
   "main": "index.js",
