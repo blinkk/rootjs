@@ -1,5 +1,11 @@
 # @blinkk/root-cms
 
+## 1.0.0-alpha.3
+
+### Patch Changes
+
+- 596fd46: build: fix root-cms ci build
+
 ## 1.0.0-alpha.2
 
 ### Patch Changes
