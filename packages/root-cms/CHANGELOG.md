@@ -1,5 +1,11 @@
 # @blinkk/root-cms
 
+## 1.0.0-alpha.2
+
+### Patch Changes
+
+- ee240c9: build: fix root-cms packaging
+
 ## 1.0.0-alpha.1
 
 ### Patch Changes
