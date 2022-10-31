@@ -15,8 +15,7 @@
     "target": "es2020",
     "outDir": "dist",
     "types": [
-      "node",
-      "vite/client"
+      "node"
     ],
     "useUnknownInCatchVariables": false,
     "esModuleInterop": true,

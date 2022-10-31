@@ -4,6 +4,7 @@ import {defineConfig} from 'tsup';
 
 export default defineConfig({
   entry: {
+    index: 'src/index.ts',
     schema: 'src/schema.ts',
   },
   sourcemap: true,

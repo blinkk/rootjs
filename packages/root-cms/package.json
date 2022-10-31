@@ -4,6 +4,7 @@
   "author": "s@blinkk.com",
   "license": "MIT",
   "type": "module",
+  "module": "./dist/index.js",
   "engines": {
     "node": ">=16.0.0"
   },
@@ -11,6 +12,11 @@
     "dist/*"
   ],
   "exports": {
+    ".": {
+      "default": "./dist/index.js",
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
     "./schema": {
       "default": "./dist/schema.js",
       "import": "./dist/schema.js",
@@ -19,10 +25,11 @@
   },
   "scripts": {
     "build": "rm -rf dist && tsup",
-    "test": "vitest run",
-    "test:watch": "vitest"
+    "test": "pnpm build && vitest run",
+    "test:watch": "pnpm build && vitest"
   },
   "devDependencies": {
+    "@types/node": "^18.11.8",
     "tsup": "^6.3.0",
     "vitest": "^0.18.1"
   }
