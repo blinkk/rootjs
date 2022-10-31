@@ -181,9 +181,5 @@ export async function getMiddlewares(options?: {rootDir?: string}) {
 export async function dev(rootProjectDir?: string) {
   process.env.NODE_ENV = 'development';
   const rootDir = path.resolve(rootProjectDir || process.cwd());
-  try {
-    await createServer({rootDir});
-  } catch (err) {
-    console.error('an error occurred');
-  }
+  await createServer({rootDir});
 }
