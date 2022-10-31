@@ -29,6 +29,12 @@ export async function start(rootProjectDir?: string) {
   const assetMap = BuildAssetMap.fromRootManifest(rootManifest);
 
   const app = express();
+  app.disable('x-powered-by');
+
+  const userMiddlewares = rootConfig.server?.middlewares || [];
+  userMiddlewares.forEach((middleware) => {
+    app.use(middleware);
+  });
 
   const publicDir = path.join(distDir, 'html');
   app.use(express.static(publicDir));

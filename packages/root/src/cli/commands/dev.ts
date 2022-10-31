@@ -17,6 +17,7 @@ export async function createServer(options?: {rootDir?: string}) {
   const rootDir = options?.rootDir || process.cwd();
 
   const app = express();
+  app.disable('x-powered-by');
   app.use(express.static('public'));
   const middlewares = await getMiddlewares({rootDir});
   middlewares.forEach((middleware) => app.use(middleware));
@@ -168,7 +169,13 @@ export async function getMiddlewares(options?: {rootDir?: string}) {
     res.status(404).set({'Content-Type': 'text/plain'}).end('404');
   };
 
-  return [viteServer.middlewares, rootMiddleware, notFoundMiddleware];
+  const userMiddlewares = rootConfig.server?.middlewares || [];
+  return [
+    ...userMiddlewares,
+    viteServer.middlewares,
+    rootMiddleware,
+    notFoundMiddleware,
+  ];
 }
 
 export async function dev(rootProjectDir?: string) {

@@ -1,8 +1,9 @@
+import {Request, Response, NextFunction} from './types';
 import {UserConfig as ViteUserConfig} from 'vite';
 
 export interface RootConfig {
   /**
-   * Configuration for auto-injecting custom element dependencies.
+   * Config for auto-injecting custom element dependencies.
    */
   elements?: {
     /**
@@ -20,12 +21,17 @@ export interface RootConfig {
   };
 
   /**
-   * Configuration options for localization and internationalization.
+   * Config options for localization and internationalization.
    */
   i18n?: RootI18nConfig;
 
   /**
-   * Vite configuration.
+   * Config options for the Root.js express server.
+   */
+  server?: RootServerConfig;
+
+  /**
+   * Vite config.
    * @see {@link https://vitejs.dev/config/} for more information.
    */
   vite?: ViteUserConfig;
@@ -56,6 +62,16 @@ export interface RootI18nConfig {
    * URL format for localized content. Default is `/{locale}/{path}`.
    */
   urlFormat?: string;
+}
+
+export interface RootServerConfig {
+  /**
+   * An array of middleware to add to the express server. These middleware are
+   * added to the beginning of the express app.
+   */
+  middlewares?: Array<
+    (req: Request, res: Response, next: NextFunction) => void | Promise<void>
+  >;
 }
 
 export function defineConfig(config: RootConfig): RootConfig {
