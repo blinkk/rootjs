@@ -8,7 +8,7 @@
     "@private/root-db": "0.0.0",
     "@private/root-form": "0.0.0",
     "@private/root-webui": "0.0.0",
-    "@blinkk/root-cms": "1.0.0"
+    "@blinkk/root-cms": "0.0.0"
   },
   "changesets": [
     "afraid-dots-run",
