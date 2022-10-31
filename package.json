@@ -6,13 +6,13 @@
   "packageManager": "pnpm@7.11.0",
   "main": "index.js",
   "scripts": {
-    "build": "turbo run build --ignore=\"examples/**/*\"",
+    "build": "turbo run build --ignore=\"examples/**/*\" --ignore=\"@private/*\"",
     "changeset": "changeset",
     "dev": "npm-run-all --parallel dev:server dev:webui",
     "format": "eslint . --ext .ts,.tsx --fix",
     "lint": "eslint . --ext .ts,.tsx",
     "version": "changeset version && pnpm install --no-frozen-lockfile",
-    "release": "turbo run prepare && changeset publish"
+    "release": "pnpm run build && changeset publish"
   },
   "repository": {
     "type": "git",
