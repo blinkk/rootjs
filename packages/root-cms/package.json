@@ -8,8 +8,7 @@
     "node": ">=16.0.0"
   },
   "files": [
-    "bin/*",
-    "dist/**/*"
+    "dist/*"
   ],
   "exports": {
     "./schema": {
