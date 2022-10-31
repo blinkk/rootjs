@@ -1,5 +1,11 @@
 # @blinkk/root-cms
 
+## 1.0.0-alpha.4
+
+### Patch Changes
+
+- a36c2c6: feat: add server config to inject middleware
+
 ## 1.0.0-alpha.3
 
 ### Patch Changes
