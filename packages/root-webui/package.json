@@ -4,7 +4,7 @@
   "version": "0.0.0",
   "scripts": {
     "dev": "vite",
-    "build": "tsc && vite build --base=/cms/",
+    "build:dev": "tsc && vite build --base=/cms/",
     "preview": "vite preview"
   },
   "main": "dist/index.html",
