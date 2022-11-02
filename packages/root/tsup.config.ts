@@ -13,6 +13,4 @@ export default defineConfig({
   dts: true,
   format: ['esm'],
   splitting: true,
-  jsxFactory: 'h',
-  jsxFragment: 'Fragment',
 });

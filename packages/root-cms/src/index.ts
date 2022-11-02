@@ -1,1 +1,1 @@
-console.log('TODO');
+export const test = {};

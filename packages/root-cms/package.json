@@ -14,18 +14,16 @@
   "types": "./dist/index.d.ts",
   "exports": {
     ".": {
-      "default": "./dist/index.js",
-      "import": "./dist/index.js",
-      "types": "./dist/index.d.ts"
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
     },
-    "./schema": {
-      "default": "./dist/schema.js",
-      "import": "./dist/schema.js",
-      "types": "./dist/schema.d.ts"
+    "./*": {
+      "types": "./dist/*.d.ts",
+      "import": "./dist/*.js"
     }
   },
   "scripts": {
-    "build": "rm -rf dist && tsup",
+    "build": "rm -rf dist && tsup-node",
     "test": "pnpm build && vitest run",
     "test:watch": "pnpm build && vitest"
   },
