@@ -1,5 +1,12 @@
 # @blinkk/root
 
+## 1.0.0-alpha.11
+
+### Patch Changes
+
+- c8a7250: fix: fix dev server errors on startup
+- ed1bcf8: fix: handle bad user values from getStaticPaths
+
 ## 1.0.0-alpha.10
 
 ### Patch Changes
