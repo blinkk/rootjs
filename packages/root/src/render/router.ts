@@ -72,21 +72,23 @@ export async function getAllPathsForRoute(
   const routeModule = route.module;
   if (routeModule.getStaticPaths) {
     const staticPaths = await routeModule.getStaticPaths();
-    staticPaths.paths.forEach(
-      (pathParams: {params: Record<string, string>}) => {
-        const urlPath = replaceParams(urlPathFormat, pathParams.params);
-        if (pathContainsPlaceholders(urlPath)) {
-          console.warn(
-            `path contains placeholders: ${urlPathFormat}, double check getStaticPaths() and ensure all params are returned`
-          );
-        } else {
-          urlPaths.push({
-            urlPath: replaceParams(urlPathFormat, pathParams.params),
-            params: pathParams.params || {},
-          });
+    if (staticPaths.paths) {
+      staticPaths.paths.forEach(
+        (pathParams: {params: Record<string, string>}) => {
+          const urlPath = replaceParams(urlPathFormat, pathParams.params || {});
+          if (pathContainsPlaceholders(urlPath)) {
+            console.warn(
+              `path contains placeholders: ${urlPathFormat}, double check getStaticPaths() and ensure all params are returned`
+            );
+          } else {
+            urlPaths.push({
+              urlPath: replaceParams(urlPathFormat, pathParams.params),
+              params: pathParams.params || {},
+            });
+          }
         }
-      }
-    );
+      );
+    }
   } else if (pathContainsPlaceholders(urlPathFormat)) {
     console.warn(
       `path contains placeholders: ${urlPathFormat}, did you forget to define getStaticPaths()?`
