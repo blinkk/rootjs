@@ -10,24 +10,44 @@ import {Renderer} from '../../render/render.js';
 import {isDirectory, isJsFile} from '../../core/fsutils.js';
 import glob from 'tiny-glob';
 import {dim} from 'kleur/colors';
+import {Server} from '../../core/types.js';
+import {configureServerPlugins} from '../../core/plugins.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-export async function createServer(options?: {rootDir?: string}) {
-  const rootDir = options?.rootDir || process.cwd();
-
-  const app = express();
-  app.disable('x-powered-by');
-  app.use(express.static('public'));
-  const middlewares = await getMiddlewares({rootDir});
-  middlewares.forEach((middleware) => app.use(middleware));
-
+export async function dev(rootProjectDir?: string) {
+  process.env.NODE_ENV = 'development';
+  const rootDir = path.resolve(rootProjectDir || process.cwd());
+  const server = await createServer({rootDir});
   const port = parseInt(process.env.PORT || '4007');
   console.log();
   console.log(`${dim('┃')} project:  ${rootDir}`);
   console.log(`${dim('┃')} server:   http://localhost:${port}`);
   console.log();
-  app.listen(port);
+  server.listen(port);
+}
+
+export async function createServer(options?: {
+  rootDir?: string;
+}): Promise<Server> {
+  const rootDir = path.resolve(options?.rootDir || process.cwd());
+  const rootConfig = await loadRootConfig(rootDir);
+  const plugins = rootConfig.plugins || [];
+
+  const server = express();
+  server.disable('x-powered-by');
+
+  await configureServerPlugins(
+    server,
+    async () => {
+      const middlewares = await getMiddlewares({rootDir});
+      middlewares.forEach((middleware) => server.use(middleware));
+    },
+    plugins,
+    {type: 'dev'}
+  );
+
+  return server;
 }
 
 export async function getMiddlewares(options?: {rootDir?: string}) {
@@ -95,6 +115,7 @@ export async function getMiddlewares(options?: {rootDir?: string}) {
     ...viteConfig,
     mode: 'development',
     root: rootDir,
+    publicDir: path.join(rootDir, 'public'),
     server: {middlewareMode: true},
     appType: 'custom',
     optimizeDeps: {
@@ -176,10 +197,4 @@ export async function getMiddlewares(options?: {rootDir?: string}) {
     rootMiddleware,
     notFoundMiddleware,
   ];
-}
-
-export async function dev(rootProjectDir?: string) {
-  process.env.NODE_ENV = 'development';
-  const rootDir = path.resolve(rootProjectDir || process.cwd());
-  await createServer({rootDir});
 }

@@ -1,4 +1,5 @@
 import {
+  Express,
   Request as ExpressRequest,
   Response as ExpressResponse,
   NextFunction as ExpressNextFunction,
@@ -15,6 +16,8 @@ export type GetStaticProps<T = unknown> = (ctx: {
 export type GetStaticPaths<T = Record<string, string>> = () => Promise<{
   paths: Array<{params: T}>;
 }>;
+
+export type Server = Express;
 
 export type Request = ExpressRequest;
 

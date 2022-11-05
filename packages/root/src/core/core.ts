@@ -3,4 +3,5 @@ export * from './components/head';
 export * from './components/script';
 export * from './i18n';
 export * from './config';
+export * from './plugins';
 export * from './types';

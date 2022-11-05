@@ -9,6 +9,9 @@ import {
 } from '../../render/asset-map/build-asset-map';
 import {htmlMinify} from '../../render/html-minify';
 import {dim} from 'kleur/colors';
+import {configureServerPlugins} from '../../core/plugins';
+import sirv from 'sirv';
+import compression from 'compression';
 
 export async function preview(rootProjectDir?: string) {
   // TODO(stevenle): figure out standard practice for NODE_ENV.
@@ -31,44 +34,54 @@ export async function preview(rootProjectDir?: string) {
 
   const app = express();
   app.disable('x-powered-by');
+  app.use(compression());
 
-  const userMiddlewares = rootConfig.server?.middlewares || [];
-  userMiddlewares.forEach((middleware) => {
-    app.use(middleware);
-  });
+  const plugins = rootConfig.plugins || [];
+  configureServerPlugins(
+    app,
+    async () => {
+      const publicDir = path.join(distDir, 'html');
+      app.use(sirv(publicDir, {dev: false}));
 
-  const publicDir = path.join(distDir, 'html');
-  app.use(express.static(publicDir));
-  // TODO(stevenle): add middleware that checks for pre-built HTML in dist/.
-
-  app.use(async (req: Request, res: Response, next: NextFunction) => {
-    try {
-      const url = req.originalUrl;
-      const data = await renderer.render(url, {
-        assetMap: assetMap,
+      const userMiddlewares = rootConfig.server?.middlewares || [];
+      userMiddlewares.forEach((middleware) => {
+        app.use(middleware);
       });
-      if (data.notFound || !data.html) {
-        next();
-        return;
-      }
-      let html = data.html || '';
-      if (rootConfig.minifyHtml !== false) {
-        html = await htmlMinify(html);
-      }
-      res.status(200).set({'Content-Type': 'text/html'}).end(html);
-    } catch (e) {
-      try {
-        const {html} = await renderer.renderError(e);
-        res.status(500).set({'Content-Type': 'text/html'}).end(html);
-      } catch (e2) {
-        console.error('failed to render custom error');
-        console.error(e2);
-        next(e);
-      }
-    }
-  });
 
-  // TODO(stevenle): add 404 handler.
+      // TODO(stevenle): add middleware that checks for pre-built HTML in dist/.
+
+      app.use(async (req: Request, res: Response, next: NextFunction) => {
+        try {
+          const url = req.originalUrl;
+          const data = await renderer.render(url, {
+            assetMap: assetMap,
+          });
+          if (data.notFound || !data.html) {
+            next();
+            return;
+          }
+          let html = data.html || '';
+          if (rootConfig.minifyHtml !== false) {
+            html = await htmlMinify(html);
+          }
+          res.status(200).set({'Content-Type': 'text/html'}).end(html);
+        } catch (e) {
+          try {
+            const {html} = await renderer.renderError(e);
+            res.status(500).set({'Content-Type': 'text/html'}).end(html);
+          } catch (e2) {
+            console.error('failed to render custom error');
+            console.error(e2);
+            next(e);
+          }
+        }
+      });
+    },
+    plugins,
+    {type: 'preview'}
+  );
+
+  // TODO(stevenle): add 404/500 handler.
 
   const port = parseInt(process.env.PORT || '4007');
   console.log();

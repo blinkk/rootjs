@@ -20,7 +20,7 @@
     "useUnknownInCatchVariables": false,
     "esModuleInterop": true,
     "resolveJsonModule": true,
-    "moduleResolution": "node",
+    "moduleResolution": "node16"
   },
   "include": [
     "src/**/*.ts"
