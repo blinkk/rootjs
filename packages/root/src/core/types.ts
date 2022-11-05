@@ -4,6 +4,8 @@ import {
   Response as ExpressResponse,
   NextFunction as ExpressNextFunction,
 } from 'express';
+import {ViteDevServer} from 'vite';
+import {RootConfig} from './config';
 
 export type GetStaticProps<T = unknown> = (ctx: {
   params: Record<string, string>;
@@ -19,7 +21,10 @@ export type GetStaticPaths<T = Record<string, string>> = () => Promise<{
 
 export type Server = Express;
 
-export type Request = ExpressRequest;
+export type Request = ExpressRequest & {
+  rootConfig?: RootConfig & {rootDir: string};
+  viteServer?: ViteDevServer;
+};
 
 export type Response = ExpressResponse;
 
