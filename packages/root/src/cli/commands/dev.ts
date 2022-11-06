@@ -6,13 +6,13 @@ import {pluginRoot} from '../../render/vite-plugin-root.js';
 import {DevServerAssetMap} from '../../render/asset-map/dev-asset-map.js';
 import {loadRootConfig} from '../load-config.js';
 import {htmlMinify} from '../../render/html-minify.js';
-import {Renderer} from '../../render/render.js';
 import {isDirectory, isJsFile} from '../../core/fsutils.js';
 import glob from 'tiny-glob';
 import {dim} from 'kleur/colors';
 import {Server, Request, Response, NextFunction} from '../../core/types.js';
 import {configureServerPlugins} from '../../core/plugins.js';
 import {RootConfig} from '../../core/config.js';
+import {rootProjectMiddleware} from '../../core/middleware.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -24,24 +24,24 @@ export async function dev(rootProjectDir?: string) {
   console.log();
   console.log(`${dim('┃')} project:  ${rootDir}`);
   console.log(`${dim('┃')} server:   http://localhost:${port}`);
+  console.log(`${dim('┃')} mode:     dev`);
   console.log();
   server.listen(port);
 }
 
-export async function createServer(options?: {
-  rootDir?: string;
-}): Promise<Server> {
+async function createServer(options?: {rootDir?: string}): Promise<Server> {
   const rootDir = path.resolve(options?.rootDir || process.cwd());
   const rootConfig = await loadRootConfig(rootDir);
-  const plugins = rootConfig.plugins || [];
 
   const server = express();
   server.disable('x-powered-by');
 
-  // Inject req.rootConfig and req.viteServer context vars.
+  // Inject req context vars.
   server.use(rootProjectMiddleware({rootDir, rootConfig}));
   server.use(await viteServerMiddleware({rootDir, rootConfig}));
+  server.use(rootDevRendererMiddleware());
 
+  const plugins = rootConfig.plugins || [];
   await configureServerPlugins(
     server,
     async () => {
@@ -59,21 +59,6 @@ export async function createServer(options?: {
   );
 
   return server;
-}
-
-/**
- * Middleware that injects the root.js project config into the request context.
- */
-function rootProjectMiddleware(options: {
-  rootDir: string;
-  rootConfig: RootConfig;
-}) {
-  return (req: Request, _: Response, next: NextFunction) => {
-    req.rootConfig = Object.assign({}, options.rootConfig, {
-      rootDir: options.rootDir,
-    });
-    next();
-  };
 }
 
 /**
@@ -168,21 +153,28 @@ async function viteServerMiddleware(options: {
   };
 }
 
-function rootDevServerMiddleware() {
+function rootDevRendererMiddleware() {
   const renderModulePath = path.resolve(__dirname, './render.js');
+  return async (req: Request, _: Response, next: NextFunction) => {
+    const rootConfig = req.rootConfig!;
+    const viteServer = req.viteServer!;
+    // Dynamically import the render.js module using vite's SSR import loader.
+    const render = await viteServer.ssrLoadModule(renderModulePath);
+    // Create a dev asset map using Vite dev server's module graph.
+    const assetMap = new DevServerAssetMap(viteServer.moduleGraph);
+    req.renderer = new render.Renderer(rootConfig, {assetMap});
+    next();
+  };
+}
+
+function rootDevServerMiddleware() {
   return async (req: Request, res: Response, next: NextFunction) => {
     const url = req.originalUrl;
-    let renderer: Renderer | null = null;
+    const renderer = req.renderer!;
     const viteServer = req.viteServer!;
     const rootConfig = req.rootConfig!;
     try {
-      const render = await viteServer.ssrLoadModule(renderModulePath);
-      renderer = new render.Renderer(rootConfig) as Renderer;
-      // Create a dev asset map using Vite dev server's module graph.
-      const assetMap = new DevServerAssetMap(viteServer.moduleGraph);
-      const data = await renderer.render(url, {
-        assetMap: assetMap,
-      });
+      const data = await renderer.render(url);
       if (data.notFound || !data.html) {
         next();
         return;
@@ -215,16 +207,12 @@ function rootDevServerMiddleware() {
 }
 
 function rootDevServer404Middleware() {
-  const renderModulePath = path.resolve(__dirname, './render.js');
   return async (req: Request, res: Response) => {
     const url = req.originalUrl;
     const ext = path.extname(url);
-    const viteServer = req.viteServer!;
-    const rootConfig = req.rootConfig!;
+    const renderer = req.renderer!;
     if (!ext) {
-      const render = await viteServer.ssrLoadModule(renderModulePath);
-      const renderer = new render.Renderer(rootConfig) as Renderer;
-      const data = await renderer.renderDevNotFound();
+      const data = await renderer.renderDevServer404();
       const html = data.html || '';
       res.status(404).set({'Content-Type': 'text/html'}).end(html);
       return;

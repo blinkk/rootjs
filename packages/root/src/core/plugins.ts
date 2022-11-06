@@ -18,6 +18,11 @@ export interface Plugin {
   configureServer?: ConfigureServerHook;
 }
 
+/**
+ * Runs the pre-hook configureServer method of every plugin, calls a callback
+ * function, and then runs the configureServer's post-hook if provided. Plugins
+ * provide a post-hook by returning a callback function from configureServer.
+ */
 export async function configureServerPlugins(
   server: Server,
   callback: () => Promise<void>,

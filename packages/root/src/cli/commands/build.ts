@@ -21,6 +21,8 @@ import {dim} from 'kleur/colors';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
+type RenderModule = typeof import('../../render/render.js');
+
 interface BuildOptions {
   ssrOnly?: boolean;
   mode?: string;
@@ -196,15 +198,16 @@ export async function build(rootProjectDir?: string, options?: BuildOptions) {
 
   // Pre-render HTML pages (SSG).
   if (!ssrOnly) {
-    const render = await import(path.join(distDir, 'server/render.js'));
-    const renderer = new render.Renderer(rootConfig) as Renderer;
+    const render: RenderModule = await import(
+      path.join(distDir, 'server/render.js')
+    );
+    const renderer = new render.Renderer(rootConfig, {assetMap});
     const sitemap = await renderer.getSitemap();
 
     await Promise.all(
       Object.keys(sitemap).map(async (urlPath) => {
         const {route, params} = sitemap[urlPath];
         const data = await renderer.renderRoute(route, {
-          assetMap,
           routeParams: params,
         });
 
