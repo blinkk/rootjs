@@ -9,7 +9,7 @@ import {
 } from '../../render/asset-map/build-asset-map';
 import {htmlMinify} from '../../render/html-minify';
 import {dim} from 'kleur/colors';
-import {configureServerPlugins} from '../../core/plugins';
+import {configureServerPlugins} from '../../core/plugin';
 import sirv from 'sirv';
 import compression from 'compression';
 import {Request, Response, NextFunction, Server} from '../../core/types.js';
@@ -26,7 +26,7 @@ export async function start(rootProjectDir?: string) {
   console.log();
   console.log(`${dim('┃')} project:  ${rootDir}`);
   console.log(`${dim('┃')} server:   http://localhost:${port}`);
-  console.log(`${dim('┃')} mode:     prod`);
+  console.log(`${dim('┃')} mode:     production`);
   console.log();
   server.listen(port);
 }

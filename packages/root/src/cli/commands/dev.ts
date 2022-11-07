@@ -10,7 +10,7 @@ import {isDirectory, isJsFile} from '../../core/fsutils.js';
 import glob from 'tiny-glob';
 import {dim} from 'kleur/colors';
 import {Server, Request, Response, NextFunction} from '../../core/types.js';
-import {configureServerPlugins} from '../../core/plugins.js';
+import {configureServerPlugins, getVitePlugins} from '../../core/plugin.js';
 import {RootConfig} from '../../core/config.js';
 import {rootProjectMiddleware} from '../../core/middleware.js';
 
@@ -24,7 +24,7 @@ export async function dev(rootProjectDir?: string) {
   console.log();
   console.log(`${dim('┃')} project:  ${rootDir}`);
   console.log(`${dim('┃')} server:   http://localhost:${port}`);
-  console.log(`${dim('┃')} mode:     dev`);
+  console.log(`${dim('┃')} mode:     development`);
   console.log();
   server.listen(port);
 }
@@ -128,6 +128,12 @@ async function viteServerMiddleware(options: {
     });
   }
 
+  const vitePlugins = [
+    pluginRoot({rootDir, rootConfig}),
+    ...(viteConfig.plugins || []),
+    ...getVitePlugins(rootConfig.plugins || []),
+  ];
+
   const viteServer = await createViteServer({
     ...viteConfig,
     mode: 'development',
@@ -145,7 +151,7 @@ async function viteServerMiddleware(options: {
       jsx: 'automatic',
       jsxImportSource: 'preact',
     },
-    plugins: [...(viteConfig.plugins || []), pluginRoot({rootDir, rootConfig})],
+    plugins: vitePlugins,
   });
   return async (req: Request, _: Response, next: NextFunction) => {
     req.viteServer = viteServer;

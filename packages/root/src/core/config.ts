@@ -1,5 +1,5 @@
 import {Request, Response, NextFunction} from './types';
-import {Plugin} from './plugins';
+import {Plugin} from './plugin';
 import {UserConfig as ViteUserConfig} from 'vite';
 
 export interface RootConfig {

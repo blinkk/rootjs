@@ -1,3 +1,4 @@
+import {PluginOption as VitePlugin} from 'vite';
 import {Server} from './types';
 
 type MaybePromise<T> = T | Promise<T>;
@@ -16,6 +17,9 @@ export interface Plugin {
 
   /** Configures the root.js express server . */
   configureServer?: ConfigureServerHook;
+
+  /** Adds vite plugins. */
+  vitePlugins?: VitePlugin[];
 }
 
 /**
@@ -48,4 +52,14 @@ export async function configureServerPlugins(
   for (const postHook of postHooks) {
     await postHook();
   }
+}
+
+export function getVitePlugins(plugins: Plugin[]): VitePlugin[] {
+  const vitePlugins: VitePlugin[] = [];
+  for (const plugin of plugins) {
+    if (plugin.vitePlugins) {
+      vitePlugins.push(...plugin.vitePlugins);
+    }
+  }
+  return vitePlugins;
 }
