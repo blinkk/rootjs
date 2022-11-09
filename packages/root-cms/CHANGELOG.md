@@ -1,5 +1,16 @@
 # @blinkk/root-cms
 
+## 1.0.0-alpha.5
+
+### Patch Changes
+
+- 4f14b3c: feat: inject context vars to dev server requests
+- Updated dependencies [4f14b3c]
+- Updated dependencies [4f14b3c]
+- Updated dependencies [4f14b3c]
+- Updated dependencies [4f14b3c]
+  - @blinkk/root@1.0.0-alpha.12
+
 ## 1.0.0-alpha.4
 
 ### Patch Changes

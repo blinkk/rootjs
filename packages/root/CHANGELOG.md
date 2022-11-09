@@ -1,5 +1,14 @@
 # @blinkk/root
 
+## 1.0.0-alpha.12
+
+### Patch Changes
+
+- 4f14b3c: feat: add plugin system and configureServer hooks
+- 4f14b3c: feat: add plugins to preview and prod servers
+- 4f14b3c: feat: add vitePlugins option for root.js plugins
+- 4f14b3c: feat: inject context vars to dev server requests
+
 ## 1.0.0-alpha.11
 
 ### Patch Changes

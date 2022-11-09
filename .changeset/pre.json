@@ -8,7 +8,8 @@
     "@private/root-db": "0.0.0",
     "@private/root-form": "0.0.0",
     "@private/root-webui": "0.0.0",
-    "@blinkk/root-cms": "0.0.0"
+    "@blinkk/root-cms": "0.0.0",
+    "docs": "0.0.0"
   },
   "changesets": [
     "afraid-dots-run",
@@ -17,7 +18,10 @@
     "calm-toes-love",
     "cool-toys-play",
     "dirty-steaks-hammer",
+    "five-balloons-build",
     "fuzzy-poems-suffer",
+    "great-countries-add",
+    "hungry-jokes-act",
     "kind-beds-end",
     "moody-mirrors-unite",
     "nervous-peas-guess",
@@ -32,6 +36,7 @@
     "stupid-dingos-yawn",
     "three-melons-exist",
     "tidy-rings-kiss",
+    "two-adults-joke",
     "yellow-falcons-help"
   ]
 }
