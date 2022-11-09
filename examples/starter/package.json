@@ -8,13 +8,15 @@
     "node": ">=16.0.0"
   },
   "scripts": {
-    "build": "root build",
+    "build": "rm -rf dist/ && root build",
     "dev": "root dev",
+    "preview": "pnpm run build && root preview",
     "start": "root start",
-    "test": "npm run build"
+    "test": "pnpm run build"
   },
   "dependencies": {
     "@blinkk/root": "workspace:*",
+    "@blinkk/root-cms": "workspace:*",
     "preact": "^10.10.6",
     "preact-render-to-string": "^5.2.3",
     "vite": "^3.1.0"

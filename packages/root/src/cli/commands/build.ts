@@ -15,11 +15,13 @@ import {
   rmDir,
   writeFile,
 } from '../../core/fsutils.js';
-import {Renderer} from '../../render/render.js';
 import {htmlMinify} from '../../render/html-minify.js';
 import {dim} from 'kleur/colors';
+import {getVitePlugins} from '../../core/plugin.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
+type RenderModule = typeof import('../../render/render.js');
 
 interface BuildOptions {
   ssrOnly?: boolean;
@@ -100,6 +102,12 @@ export async function build(rootProjectDir?: string, options?: BuildOptions) {
   }
 
   const viteConfig = rootConfig.vite || {};
+  const vitePlugins = [
+    pluginRoot({rootDir, rootConfig}),
+    ...(viteConfig.plugins || []),
+    ...getVitePlugins(rootConfig.plugins || []),
+  ];
+
   const baseConfig: UserConfig = {
     ...viteConfig,
     root: rootDir,
@@ -109,7 +117,7 @@ export async function build(rootProjectDir?: string, options?: BuildOptions) {
       jsxImportSource: 'preact',
       treeShaking: true,
     },
-    plugins: [...(viteConfig.plugins || []), pluginRoot({rootDir, rootConfig})],
+    plugins: vitePlugins,
   };
 
   // Bundle the render.js file with vite, which is pre-optimized for rendering
@@ -196,15 +204,16 @@ export async function build(rootProjectDir?: string, options?: BuildOptions) {
 
   // Pre-render HTML pages (SSG).
   if (!ssrOnly) {
-    const render = await import(path.join(distDir, 'server/render.js'));
-    const renderer = new render.Renderer(rootConfig) as Renderer;
+    const render: RenderModule = await import(
+      path.join(distDir, 'server/render.js')
+    );
+    const renderer = new render.Renderer(rootConfig, {assetMap});
     const sitemap = await renderer.getSitemap();
 
     await Promise.all(
       Object.keys(sitemap).map(async (urlPath) => {
         const {route, params} = sitemap[urlPath];
         const data = await renderer.renderRoute(route, {
-          assetMap,
           routeParams: params,
         });
 

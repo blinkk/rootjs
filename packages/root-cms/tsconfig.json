@@ -20,12 +20,14 @@
     "useUnknownInCatchVariables": false,
     "esModuleInterop": true,
     "resolveJsonModule": true,
-    "moduleResolution": "node",
+    "moduleResolution": "node"
   },
   "include": [
-    "src/**/*.ts"
+    "src/*.ts",
+    "src/**/*.ts",
   ],
   "exclude": [
-    "src/**/*.test.ts"
+    "src/*.test.ts",
+    "src/**/*.test.ts",
   ]
 }

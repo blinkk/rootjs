@@ -12,10 +12,6 @@ import {RouteTrie} from './route-trie';
 import {elementsMap} from 'virtual:root-elements';
 import {DevNotFoundPage} from '../core/components/dev-not-found-page';
 
-interface RenderOptions {
-  assetMap: AssetMap;
-}
-
 interface RenderHtmlOptions {
   mainHtml: string;
   locale: string;
@@ -24,29 +20,27 @@ interface RenderHtmlOptions {
 
 export class Renderer {
   private routes: RouteTrie<Route>;
+  private assetMap: AssetMap;
 
-  constructor(config: RootConfig) {
+  constructor(config: RootConfig, options: {assetMap: AssetMap}) {
     this.routes = getRoutes(config);
+    this.assetMap = options.assetMap;
   }
 
-  async render(
-    url: string,
-    options: RenderOptions
-  ): Promise<{html?: string; notFound?: boolean}> {
-    const assetMap = options.assetMap;
+  async render(url: string): Promise<{html?: string; notFound?: boolean}> {
     const [route, routeParams] = this.routes.get(url);
     if (route && route.module && route.module.default) {
-      return await this.renderRoute(route, {routeParams, assetMap});
+      return await this.renderRoute(route, {routeParams});
     }
     return {notFound: true};
   }
 
   async renderRoute(
     route: Route,
-    options: {routeParams: Record<string, string>; assetMap: AssetMap}
+    options: {routeParams: Record<string, string>}
   ): Promise<{html?: string; notFound?: boolean}> {
     const routeParams = options.routeParams;
-    const assetMap = options.assetMap;
+    const assetMap = this.assetMap;
     const Component = route.module.default;
     if (!Component) {
       throw new Error(
@@ -94,7 +88,7 @@ export class Renderer {
 
     // Parse the HTML for custom elements that are found within the project
     // and automatically inject the script deps for them.
-    const scriptDeps = await this.getScriptDeps(mainHtml, {assetMap});
+    const scriptDeps = await this.getScriptDeps(mainHtml);
     scriptDeps.forEach((jsUrls) => {
       headComponents.push(<script type="module" src={jsUrls} />);
     });
@@ -164,7 +158,7 @@ export class Renderer {
     return {html};
   }
 
-  async renderDevNotFound() {
+  async renderDevServer404() {
     const sitemap = await this.getSitemap();
     const mainHtml = renderToString(<DevNotFoundPage sitemap={sitemap} />);
     const html = await this.renderHtml({
@@ -175,11 +169,8 @@ export class Renderer {
     return {html};
   }
 
-  private async getScriptDeps(
-    html: string,
-    options: {assetMap: AssetMap}
-  ): Promise<string[]> {
-    const assetMap = options.assetMap as AssetMap;
+  private async getScriptDeps(html: string): Promise<string[]> {
+    const assetMap = this.assetMap;
     const deps = new Set<string>();
 
     const re = /<(\w[\w-]+\w)/g;

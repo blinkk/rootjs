@@ -1,48 +1,85 @@
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
-import {default as express, Request, Response, NextFunction} from 'express';
+import {default as express} from 'express';
 import {createServer as createViteServer} from 'vite';
 import {pluginRoot} from '../../render/vite-plugin-root.js';
 import {DevServerAssetMap} from '../../render/asset-map/dev-asset-map.js';
 import {loadRootConfig} from '../load-config.js';
 import {htmlMinify} from '../../render/html-minify.js';
-import {Renderer} from '../../render/render.js';
 import {isDirectory, isJsFile} from '../../core/fsutils.js';
 import glob from 'tiny-glob';
 import {dim} from 'kleur/colors';
+import {Server, Request, Response, NextFunction} from '../../core/types.js';
+import {configureServerPlugins, getVitePlugins} from '../../core/plugin.js';
+import {RootConfig} from '../../core/config.js';
+import {rootProjectMiddleware} from '../../core/middleware.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-export async function createServer(options?: {rootDir?: string}) {
-  const rootDir = options?.rootDir || process.cwd();
-
-  const app = express();
-  app.disable('x-powered-by');
-  app.use(express.static('public'));
-  const middlewares = await getMiddlewares({rootDir});
-  middlewares.forEach((middleware) => app.use(middleware));
-
+export async function dev(rootProjectDir?: string) {
+  process.env.NODE_ENV = 'development';
+  const rootDir = path.resolve(rootProjectDir || process.cwd());
+  const server = await createServer({rootDir});
   const port = parseInt(process.env.PORT || '4007');
   console.log();
   console.log(`${dim('┃')} project:  ${rootDir}`);
   console.log(`${dim('┃')} server:   http://localhost:${port}`);
+  console.log(`${dim('┃')} mode:     development`);
   console.log();
-  app.listen(port);
+  server.listen(port);
 }
 
-export async function getMiddlewares(options?: {rootDir?: string}) {
+async function createServer(options?: {rootDir?: string}): Promise<Server> {
   const rootDir = path.resolve(options?.rootDir || process.cwd());
   const rootConfig = await loadRootConfig(rootDir);
-  const viteConfig = rootConfig.vite || {};
-  const renderModulePath = path.resolve(__dirname, './render.js');
 
-  const pages: string[] = [];
+  const server = express();
+  server.disable('x-powered-by');
+
+  // Inject req context vars.
+  server.use(rootProjectMiddleware({rootDir, rootConfig}));
+  server.use(await viteServerMiddleware({rootDir, rootConfig}));
+  server.use(rootDevRendererMiddleware());
+
+  const plugins = rootConfig.plugins || [];
+  await configureServerPlugins(
+    server,
+    async () => {
+      // Add user-configured middlewares from `root.config.ts`.
+      const userMiddlewares = rootConfig.server?.middlewares || [];
+      for (const middleware of userMiddlewares) {
+        server.use(middleware);
+      }
+      // Add the root.js dev server middlewares.
+      server.use(rootDevServerMiddleware());
+      server.use(rootDevServer404Middleware());
+    },
+    plugins,
+    {type: 'dev'}
+  );
+
+  return server;
+}
+
+/**
+ * Middleware that initializes a vite server and injects it into the request
+ * context.
+ */
+async function viteServerMiddleware(options: {
+  rootDir: string;
+  rootConfig: RootConfig;
+}) {
+  const rootDir = options.rootDir;
+  const rootConfig = options.rootConfig;
+  const viteConfig = rootConfig.vite || {};
+
+  const routeFiles: string[] = [];
   if (await isDirectory(path.join(rootDir, 'routes'))) {
     const pageFiles = await glob('routes/**/*', {cwd: rootDir});
     pageFiles.forEach((file) => {
       const parts = path.parse(file);
       if (!parts.name.startsWith('_') && isJsFile(parts.base)) {
-        pages.push(file);
+        routeFiles.push(file);
       }
     });
   }
@@ -91,14 +128,26 @@ export async function getMiddlewares(options?: {rootDir?: string}) {
     });
   }
 
+  const vitePlugins = [
+    pluginRoot({rootDir, rootConfig}),
+    ...(viteConfig.plugins || []),
+    ...getVitePlugins(rootConfig.plugins || []),
+  ];
+
   const viteServer = await createViteServer({
     ...viteConfig,
     mode: 'development',
     root: rootDir,
+    publicDir: path.join(rootDir, 'public'),
     server: {middlewareMode: true},
     appType: 'custom',
     optimizeDeps: {
-      include: [...pages, ...elements, ...bundleScripts],
+      include: [
+        ...routeFiles,
+        ...elements,
+        ...bundleScripts,
+        ...(viteConfig.optimizeDeps?.include || []),
+      ],
     },
     ssr: {
       noExternal: ['@blinkk/root'],
@@ -107,24 +156,36 @@ export async function getMiddlewares(options?: {rootDir?: string}) {
       jsx: 'automatic',
       jsxImportSource: 'preact',
     },
-    plugins: [...(viteConfig.plugins || []), pluginRoot({rootDir, rootConfig})],
+    plugins: vitePlugins,
   });
+  return async (req: Request, _: Response, next: NextFunction) => {
+    req.viteServer = viteServer;
+    next();
+  };
+}
 
-  const rootMiddleware = async (
-    req: Request,
-    res: Response,
-    next: NextFunction
-  ) => {
+function rootDevRendererMiddleware() {
+  const renderModulePath = path.resolve(__dirname, './render.js');
+  return async (req: Request, _: Response, next: NextFunction) => {
+    const rootConfig = req.rootConfig!;
+    const viteServer = req.viteServer!;
+    // Dynamically import the render.js module using vite's SSR import loader.
+    const render = await viteServer.ssrLoadModule(renderModulePath);
+    // Create a dev asset map using Vite dev server's module graph.
+    const assetMap = new DevServerAssetMap(viteServer.moduleGraph);
+    req.renderer = new render.Renderer(rootConfig, {assetMap});
+    next();
+  };
+}
+
+function rootDevServerMiddleware() {
+  return async (req: Request, res: Response, next: NextFunction) => {
     const url = req.originalUrl;
-    let renderer: Renderer | null = null;
+    const renderer = req.renderer!;
+    const viteServer = req.viteServer!;
+    const rootConfig = req.rootConfig!;
     try {
-      const render = await viteServer.ssrLoadModule(renderModulePath);
-      renderer = new render.Renderer(rootConfig) as Renderer;
-      // Create a dev asset map using Vite dev server's module graph.
-      const assetMap = new DevServerAssetMap(viteServer.moduleGraph);
-      const data = await renderer.render(url, {
-        assetMap: assetMap,
-      });
+      const data = await renderer.render(url);
       if (data.notFound || !data.html) {
         next();
         return;
@@ -154,32 +215,19 @@ export async function getMiddlewares(options?: {rootDir?: string}) {
       }
     }
   };
+}
 
-  const notFoundMiddleware = async (req: Request, res: Response) => {
+function rootDevServer404Middleware() {
+  return async (req: Request, res: Response) => {
     const url = req.originalUrl;
     const ext = path.extname(url);
+    const renderer = req.renderer!;
     if (!ext) {
-      const render = await viteServer.ssrLoadModule(renderModulePath);
-      const renderer = new render.Renderer(rootConfig) as Renderer;
-      const data = await renderer.renderDevNotFound();
+      const data = await renderer.renderDevServer404();
       const html = data.html || '';
       res.status(404).set({'Content-Type': 'text/html'}).end(html);
       return;
     }
     res.status(404).set({'Content-Type': 'text/plain'}).end('404');
   };
-
-  const userMiddlewares = rootConfig.server?.middlewares || [];
-  return [
-    ...userMiddlewares,
-    viteServer.middlewares,
-    rootMiddleware,
-    notFoundMiddleware,
-  ];
-}
-
-export async function dev(rootProjectDir?: string) {
-  process.env.NODE_ENV = 'development';
-  const rootDir = path.resolve(rootProjectDir || process.cwd());
-  await createServer({rootDir});
 }

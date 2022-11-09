@@ -1,4 +1,5 @@
 import {Request, Response, NextFunction} from './types';
+import {Plugin} from './plugin';
 import {UserConfig as ViteUserConfig} from 'vite';
 
 export interface RootConfig {
@@ -45,6 +46,11 @@ export interface RootConfig {
    * Whether to include a sitemap.xml file to the build output.
    */
   sitemap?: boolean;
+
+  /**
+   * Plugins.
+   */
+  plugins?: Plugin[];
 }
 
 export interface RootI18nConfig {
