@@ -1,7 +1,7 @@
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {default as express} from 'express';
-import {createServer as createViteServer} from 'vite';
+import {createServer as createViteServer, HmrOptions} from 'vite';
 import {pluginRoot} from '../../render/vite-plugin-root.js';
 import {DevServerAssetMap} from '../../render/asset-map/dev-asset-map.js';
 import {loadRootConfig} from '../load-config.js';
@@ -13,32 +13,38 @@ import {Server, Request, Response, NextFunction} from '../../core/types.js';
 import {configureServerPlugins, getVitePlugins} from '../../core/plugin.js';
 import {RootConfig} from '../../core/config.js';
 import {rootProjectMiddleware} from '../../core/middleware.js';
+import {findOpenPort} from '../ports.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 export async function dev(rootProjectDir?: string) {
   process.env.NODE_ENV = 'development';
   const rootDir = path.resolve(rootProjectDir || process.cwd());
-  const server = await createServer({rootDir});
-  const port = parseInt(process.env.PORT || '4007');
+  const defaultPort = parseInt(process.env.PORT || '4007');
+  const port = await findOpenPort(defaultPort, defaultPort + 10);
   console.log();
   console.log(`${dim('┃')} project:  ${rootDir}`);
   console.log(`${dim('┃')} server:   http://localhost:${port}`);
   console.log(`${dim('┃')} mode:     development`);
   console.log();
+  const server = await createServer({rootDir, port});
   server.listen(port);
 }
 
-async function createServer(options?: {rootDir?: string}): Promise<Server> {
+async function createServer(options?: {
+  rootDir?: string;
+  port?: number;
+}): Promise<Server> {
   const rootDir = path.resolve(options?.rootDir || process.cwd());
   const rootConfig = await loadRootConfig(rootDir);
+  const port = options?.port;
 
   const server = express();
   server.disable('x-powered-by');
 
   // Inject req context vars.
   server.use(rootProjectMiddleware({rootDir, rootConfig}));
-  server.use(await viteServerMiddleware({rootDir, rootConfig}));
+  server.use(await viteServerMiddleware({rootDir, rootConfig, port}));
   server.use(rootDevRendererMiddleware());
 
   const plugins = rootConfig.plugins || [];
@@ -68,10 +74,18 @@ async function createServer(options?: {rootDir?: string}): Promise<Server> {
 async function viteServerMiddleware(options: {
   rootDir: string;
   rootConfig: RootConfig;
+  port?: number;
 }) {
   const rootDir = options.rootDir;
   const rootConfig = options.rootConfig;
   const viteConfig = rootConfig.vite || {};
+
+  let hmrOptions = viteConfig.server?.hmr;
+  if (typeof hmrOptions === 'undefined' && options.port) {
+    // Automatically set the HMR port to `port + 10`. This allows multiple
+    // root.js dev servers to run without conflicts.
+    hmrOptions = {port: options.port + 10};
+  }
 
   const routeFiles: string[] = [];
   if (await isDirectory(path.join(rootDir, 'routes'))) {
@@ -136,6 +150,7 @@ async function viteServerMiddleware(options: {
     server: {
       ...(viteConfig.server || {}),
       middlewareMode: true,
+      hmr: hmrOptions,
     },
     appType: 'custom',
     optimizeDeps: {
