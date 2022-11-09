@@ -128,20 +128,18 @@ async function viteServerMiddleware(options: {
     });
   }
 
-  const vitePlugins = [
-    pluginRoot({rootDir, rootConfig}),
-    ...(viteConfig.plugins || []),
-    ...getVitePlugins(rootConfig.plugins || []),
-  ];
-
   const viteServer = await createViteServer({
     ...viteConfig,
     mode: 'development',
     root: rootDir,
     publicDir: path.join(rootDir, 'public'),
-    server: {middlewareMode: true},
+    server: {
+      ...(viteConfig.server || {}),
+      middlewareMode: true,
+    },
     appType: 'custom',
     optimizeDeps: {
+      ...(viteConfig.optimizeDeps || {}),
       include: [
         ...routeFiles,
         ...elements,
@@ -150,13 +148,19 @@ async function viteServerMiddleware(options: {
       ],
     },
     ssr: {
+      ...(viteConfig.ssr || {}),
       noExternal: ['@blinkk/root'],
     },
     esbuild: {
+      ...(viteConfig.esbuild || {}),
       jsx: 'automatic',
       jsxImportSource: 'preact',
     },
-    plugins: vitePlugins,
+    plugins: [
+      pluginRoot({rootDir, rootConfig}),
+      ...(viteConfig.plugins || []),
+      ...getVitePlugins(rootConfig.plugins || []),
+    ],
   });
   return async (req: Request, res: Response, next: NextFunction) => {
     req.viteServer = viteServer;
