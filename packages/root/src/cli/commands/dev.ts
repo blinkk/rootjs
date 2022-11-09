@@ -142,7 +142,12 @@ async function viteServerMiddleware(options: {
     server: {middlewareMode: true},
     appType: 'custom',
     optimizeDeps: {
-      include: [...routeFiles, ...elements, ...bundleScripts],
+      include: [
+        ...routeFiles,
+        ...elements,
+        ...bundleScripts,
+        ...(viteConfig.optimizeDeps?.include || []),
+      ],
     },
     ssr: {
       noExternal: ['@blinkk/root'],
