@@ -1,5 +1,11 @@
 # @blinkk/root
 
+## 1.0.0-alpha.13
+
+### Patch Changes
+
+- f80b585: fix: fix vite devserver middleware
+
 ## 1.0.0-alpha.12
 
 ### Patch Changes
