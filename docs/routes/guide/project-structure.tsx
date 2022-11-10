@@ -229,7 +229,10 @@ export default function Page() {
       <root-code
         code={JSON.stringify(`// root.config.ts
 import path from 'node:path';
+import {URL} from 'node:url';
 import {defineConfig} from '@blinkk/root';
+
+const rootDir = new URL('.', import.meta.url).pathname;
 
 export default defineConfig({
   i18n: {
@@ -239,13 +242,13 @@ export default defineConfig({
   vite: {
     resolve: {
       alias: {
-        '@': path.resolve(process.cwd()),
+        '@': rootDir,
       },
     },
     css: {
       preprocessorOptions: {
         scss: {
-          includePaths: [path.resolve(process.cwd(), './styles')],
+          includePaths: [path.resolve(rootDir, './styles')],
         },
       },
     },

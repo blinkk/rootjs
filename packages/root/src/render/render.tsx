@@ -19,11 +19,13 @@ interface RenderHtmlOptions {
 }
 
 export class Renderer {
+  private rootConfig: RootConfig;
   private routes: RouteTrie<Route>;
   private assetMap: AssetMap;
 
-  constructor(config: RootConfig, options: {assetMap: AssetMap}) {
-    this.routes = getRoutes(config);
+  constructor(rootConfig: RootConfig, options: {assetMap: AssetMap}) {
+    this.rootConfig = rootConfig;
+    this.routes = getRoutes(rootConfig);
     this.assetMap = options.assetMap;
   }
 
@@ -78,7 +80,7 @@ export class Renderer {
 
     // Walk the page's dependency tree for CSS dependencies that are added via
     // `import 'foo.scss'` or `import 'foo.module.scss'`.
-    const pageAsset = await assetMap.get(route.modulePath);
+    const pageAsset = await assetMap.get(route.src);
     const cssDeps = await pageAsset?.getCssDeps();
     if (cssDeps) {
       cssDeps.forEach((cssUrl) => {
@@ -180,8 +182,8 @@ export class Renderer {
         const tagName = match[1];
         // Custom elements require a dash.
         if (tagName && tagName.includes('-') && tagName in elementsMap) {
-          const modulePath = elementsMap[tagName];
-          const asset = await assetMap.get(modulePath);
+          const elementModule = elementsMap[tagName];
+          const asset = await assetMap.get(elementModule.src);
           if (!asset) {
             return;
           }

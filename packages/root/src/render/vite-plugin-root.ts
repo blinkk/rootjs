@@ -1,69 +1,43 @@
-import path from 'path';
-import glob from 'tiny-glob';
+import path from 'node:path';
+import {ElementModule} from 'virtual:root-elements';
 import {RootConfig} from '../core/config';
-import {isDirectory, isJsFile} from '../core/fsutils';
+import {getElements} from '../core/elements';
+import {isJsFile} from '../core/fsutils';
 
 const JSX_ELEMENTS_REGEX = /jsxs?\("(\w[\w-]+\w)"/g;
 const HTML_ELEMENTS_REGEX = /<(\w[\w-]+\w)/g;
 
 export interface RootPluginOptions {
-  rootDir: string;
   rootConfig: RootConfig;
 }
 
-export function pluginRoot(options?: RootPluginOptions) {
+export async function pluginRoot(options: RootPluginOptions) {
   const elementsVirtualId = 'virtual:root-elements';
   const resolvedElementsVirtualId = '\0' + elementsVirtualId;
+  const rootConfig = options.rootConfig;
 
-  const rootDir = options?.rootDir || process.cwd();
-  const rootConfig = options?.rootConfig || {};
-  const elementsDirs = [path.join(rootDir, 'elements')];
-  const includeDirs = rootConfig.elements?.include || [];
-  includeDirs.forEach((dirPath) => {
-    const elementsDir = path.resolve(rootDir, dirPath);
-    if (!elementsDir.startsWith(rootDir)) {
-      throw new Error(
-        `the elements dir (${dirPath}) should be relative to the project's root dir (${rootDir})`
-      );
-    }
-    elementsDirs.push(elementsDir);
-  });
-
-  const excludePatterns = rootConfig.elements?.exclude || [];
-  const excludeElement = (moduleId: string) => {
-    return excludePatterns.some((pattern) => Boolean(moduleId.match(pattern)));
-  };
-
-  let elementMap: Record<string, string>;
+  let tagNameToElement: Record<string, ElementModule>;
+  const customElementFiles: Set<string> = new Set();
   async function updateElementMap() {
-    elementMap = {};
-    await Promise.all(
-      elementsDirs.map(async (dirPath: string) => {
-        const dirExists = await isDirectory(dirPath);
-        if (!dirExists) {
-          return;
-        }
-        const files = await glob('**/*', {cwd: dirPath});
-        files.forEach((file) => {
-          const parts = path.parse(file);
-          if (isJsFile(parts.base)) {
-            const fullPath = path.join(dirPath, file);
-            const moduleId = fullPath.slice(rootDir.length);
-            if (!excludeElement(moduleId)) {
-              elementMap[parts.name] = moduleId;
-            }
-          }
-        });
-      })
-    );
+    tagNameToElement = await getElements(rootConfig);
+    customElementFiles.clear();
+    Object.values(tagNameToElement).forEach((elementModule) => {
+      customElementFiles.add(elementModule.filePath);
+      customElementFiles.add(elementModule.realPath);
+    });
   }
+  await updateElementMap();
 
   async function getElementImport(tagname: string): Promise<string | null> {
-    if (!elementMap) {
+    if (!tagNameToElement) {
       await updateElementMap();
     }
-    if (tagname in elementMap) {
-      return elementMap[tagname];
+    if (tagname in tagNameToElement) {
+      const elementModule = tagNameToElement[tagname];
+      if (elementModule.filePath === elementModule.realPath) {
+        return elementModule.src;
+      }
+      // TODO(stevenle): handle symlinked elements.
     }
     return null;
   }
@@ -72,9 +46,7 @@ export function pluginRoot(options?: RootPluginOptions) {
     if (!isJsFile(id)) {
       return false;
     }
-    return elementsDirs.some((elementsDir) => {
-      return id.startsWith(elementsDir);
-    });
+    return customElementFiles.has(id);
   }
 
   return {
@@ -90,7 +62,7 @@ export function pluginRoot(options?: RootPluginOptions) {
     async load(id: string) {
       if (id === resolvedElementsVirtualId) {
         await updateElementMap();
-        return `export const elementsMap = ${JSON.stringify(elementMap)}`;
+        return `export const elementsMap = ${JSON.stringify(tagNameToElement)}`;
       }
       return null;
     },
@@ -126,7 +98,7 @@ export function pluginRoot(options?: RootPluginOptions) {
         );
         if (importUrls.length > 0) {
           const importLines = importUrls
-            .map((url) => `import '${url}';`)
+            .map((url) => `import '/${url}';`)
             .join('\n');
           const code = `${src}
 

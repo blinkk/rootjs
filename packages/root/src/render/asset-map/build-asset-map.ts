@@ -1,10 +1,11 @@
+import {ElementModule} from 'virtual:root-elements';
 import {Manifest} from 'vite';
 import {Asset, AssetMap} from './asset-map';
 
 export type BuildAssetManifest = Record<
   string,
   {
-    moduleId: string;
+    src: string;
     assetUrl: string;
     importedModules: string[];
     importedCss: string[];
@@ -13,49 +14,52 @@ export type BuildAssetManifest = Record<
 >;
 
 export class BuildAssetMap implements AssetMap {
-  private moduleIdToAsset: Map<string, BuildAsset>;
+  private srcToAsset: Map<string, BuildAsset>;
 
   constructor() {
-    this.moduleIdToAsset = new Map();
+    this.srcToAsset = new Map();
   }
 
-  async get(moduleId: string): Promise<Asset | null> {
-    return this.moduleIdToAsset.get(moduleId) || null;
+  async get(src: string): Promise<Asset | null> {
+    const asset = this.srcToAsset.get(src);
+    if (asset) {
+      return asset;
+    }
+    console.log(`could not find build asset: ${src}`);
+    return null;
   }
 
   private add(asset: BuildAsset) {
-    this.moduleIdToAsset.set(asset.moduleId, asset);
+    this.srcToAsset.set(asset.src, asset);
   }
 
   toJson(): BuildAssetManifest {
     const result: BuildAssetManifest = {};
-    for (const moduleId of this.moduleIdToAsset.keys()) {
-      result[moduleId] = this.moduleIdToAsset.get(moduleId)!.toJson();
+    for (const src of this.srcToAsset.keys()) {
+      result[src] = this.srcToAsset.get(src)!.toJson();
     }
     return result;
   }
 
   static fromViteManifest(
     viteManifest: Manifest,
-    elementMap: Record<string, string>
+    elementMap: Record<string, ElementModule>
   ) {
     const assetMap = new BuildAssetMap();
 
-    const elementModuleIds = new Set();
-    Object.values(elementMap).forEach((moduleId) =>
-      elementModuleIds.add(moduleId)
+    const elementFiles = new Set();
+    Object.values(elementMap).forEach((elementModule) =>
+      elementFiles.add(elementModule.src)
     );
 
     Object.keys(viteManifest).forEach((manifestKey) => {
-      const moduleId = `/${manifestKey}`;
+      const src = manifestKey;
       const manifestChunk = viteManifest[manifestKey];
-      const isElement = elementModuleIds.has(moduleId);
+      const isElement = elementFiles.has(src);
       const assetData = {
-        moduleId,
+        src: src,
         assetUrl: `/${manifestChunk.file}`,
-        importedModules: (manifestChunk.imports || []).map(
-          (relPath) => `/${relPath}`
-        ),
+        importedModules: manifestChunk.imports || [],
         importedCss: (manifestChunk.css || []).map((relPath) => `/${relPath}`),
         isElement: isElement,
       };
@@ -75,7 +79,7 @@ export class BuildAssetMap implements AssetMap {
 }
 
 export class BuildAsset {
-  moduleId: string;
+  src: string;
   assetUrl: string;
   private assetMap: BuildAssetMap;
   private importedModules: string[];
@@ -85,7 +89,7 @@ export class BuildAsset {
   constructor(
     assetMap: BuildAssetMap,
     assetData: {
-      moduleId: string;
+      src: string;
       assetUrl: string;
       importedModules: string[];
       importedCss: string[];
@@ -93,7 +97,7 @@ export class BuildAsset {
     }
   ) {
     this.assetMap = assetMap;
-    this.moduleId = assetData.moduleId;
+    this.src = assetData.src;
     this.assetUrl = assetData.assetUrl;
     this.importedModules = assetData.importedModules;
     this.importedCss = assetData.importedCss;
@@ -122,19 +126,19 @@ export class BuildAsset {
     if (!asset) {
       return;
     }
-    if (!asset.moduleId) {
+    if (!asset.src) {
       return;
     }
-    if (visited.has(asset.moduleId)) {
+    if (visited.has(asset.src)) {
       return;
     }
-    visited.add(asset.moduleId);
+    visited.add(asset.src);
     if (asset.isElement) {
       urls.add(asset.assetUrl);
     }
     await Promise.all(
-      asset.importedModules.map(async (moduleId) => {
-        const importedAsset = (await this.assetMap.get(moduleId)) as BuildAsset;
+      asset.importedModules.map(async (src) => {
+        const importedAsset = (await this.assetMap.get(src)) as BuildAsset;
         this.collectJs(importedAsset, urls, visited);
       })
     );
@@ -151,10 +155,10 @@ export class BuildAsset {
     if (!asset.assetUrl) {
       return;
     }
-    if (visited.has(asset.moduleId)) {
+    if (visited.has(asset.src)) {
       return;
     }
-    visited.add(asset.moduleId);
+    visited.add(asset.src);
     if (asset.importedCss) {
       asset.importedCss.forEach((cssUrl) => urls.add(cssUrl));
     }
@@ -168,7 +172,7 @@ export class BuildAsset {
 
   toJson() {
     return {
-      moduleId: this.moduleId,
+      src: this.src,
       assetUrl: this.assetUrl,
       importedModules: this.importedModules,
       importedCss: this.importedCss,

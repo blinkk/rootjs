@@ -11,7 +11,7 @@ export interface RouteModule {
 }
 
 export interface Route {
-  modulePath: string;
+  src: string;
   module: RouteModule;
   locale: string;
 }
@@ -28,8 +28,9 @@ export function getRoutes(config: RootConfig) {
     }
   );
   const trie = new RouteTrie<Route>();
-  Object.keys(routes).forEach((filePath) => {
-    let routePath = filePath.replace(/^\/routes/, '');
+  Object.keys(routes).forEach((modulePath) => {
+    const src = modulePath.slice(1);
+    let routePath = modulePath.replace(/^\/routes/, '');
     const parts = path.parse(routePath);
     if (parts.name.startsWith('_')) {
       return;
@@ -40,8 +41,8 @@ export function getRoutes(config: RootConfig) {
       routePath = path.join(parts.dir, parts.name);
     }
     trie.add(routePath, {
-      modulePath: filePath,
-      module: routes[filePath] as RouteModule,
+      src,
+      module: routes[modulePath] as RouteModule,
       locale: defaultLocale,
     });
 
@@ -54,8 +55,8 @@ export function getRoutes(config: RootConfig) {
         .replace('{path}', routePath.replace(/^\/*/, ''));
       if (localeRoutePath !== routePath) {
         trie.add(localeRoutePath, {
-          modulePath: filePath,
-          module: routes[filePath] as RouteModule,
+          src,
+          module: routes[modulePath] as RouteModule,
           locale: locale,
         });
       }

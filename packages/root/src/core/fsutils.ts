@@ -56,3 +56,13 @@ export function fileExists(filepath: string): Promise<boolean> {
     .then(() => true)
     .catch(() => false);
 }
+
+export async function directoryContains(
+  dirpath: string,
+  subpath: string
+): Promise<boolean> {
+  const outer = await fs.realpath(dirpath);
+  const inner = await fs.realpath(subpath);
+  const rel = path.relative(outer, inner);
+  return !rel.startsWith('..');
+}

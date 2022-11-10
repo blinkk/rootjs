@@ -12,7 +12,7 @@ export async function loadRootConfig(rootDir: string): Promise<RootConfig> {
     const configBundle = await bundleRequire({
       filepath: configPath,
     });
-    return configBundle.mod.default || {};
+    return Object.assign({}, configBundle.mod.default || {}, {rootDir});
   }
-  return {};
+  return {rootDir};
 }

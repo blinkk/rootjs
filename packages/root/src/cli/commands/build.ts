@@ -18,6 +18,7 @@ import {
 import {htmlMinify} from '../../render/html-minify.js';
 import {dim} from 'kleur/colors';
 import {getVitePlugins} from '../../core/plugin.js';
+import {getElements} from '../../core/elements.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -44,66 +45,36 @@ export async function build(rootProjectDir?: string, options?: BuildOptions) {
   await rmDir(distDir);
   await makeDir(distDir);
 
-  const pages: string[] = [];
+  const routeFiles: string[] = [];
   if (await isDirectory(path.join(rootDir, 'routes'))) {
-    const pageFiles = await glob(path.join(rootDir, 'routes/**/*'));
+    const pageFiles = await glob('routes/**/*', {cwd: rootDir});
     pageFiles.forEach((file) => {
       const parts = path.parse(file);
       if (!parts.name.startsWith('_') && isJsFile(parts.base)) {
-        pages.push(file);
+        routeFiles.push(path.resolve(rootDir, file));
       }
     });
   }
 
-  const elementsDirs = [path.join(rootDir, 'elements')];
-  const elementsInclude = rootConfig.elements?.include || [];
-  const excludePatterns = rootConfig.elements?.exclude || [];
-  const excludeElement = (moduleId: string) => {
-    return excludePatterns.some((pattern) => Boolean(moduleId.match(pattern)));
-  };
-
-  for (const dirPath of elementsInclude) {
-    const elementsDir = path.resolve(rootDir, dirPath);
-    if (!elementsDir.startsWith(rootDir)) {
-      throw new Error(
-        `the elements dir (${dirPath}) should be relative to the project's root dir (${rootDir})`
-      );
-    }
-    elementsDirs.push(elementsDir);
-  }
-  const elements: string[] = [];
-  const elementMap: Record<string, string> = {};
-  for (const dirPath of elementsDirs) {
-    if (await isDirectory(dirPath)) {
-      const elementFiles = await glob('**/*', {cwd: dirPath});
-      elementFiles.forEach((file) => {
-        const parts = path.parse(file);
-        if (isJsFile(parts.base)) {
-          const fullPath = path.join(dirPath, file);
-          const moduleId = fullPath.slice(rootDir.length);
-          if (!excludeElement(moduleId)) {
-            elements.push(fullPath);
-            elementMap[parts.name] = moduleId;
-          }
-        }
-      });
-    }
-  }
+  const elementsMap = await getElements(rootConfig);
+  const elements = Object.values(elementsMap).map((mod) =>
+    path.resolve(rootDir, mod.src)
+  );
 
   const bundleScripts: string[] = [];
   if (await isDirectory(path.join(rootDir, 'bundles'))) {
-    const bundleFiles = await glob(path.join(rootDir, 'bundles/*'));
+    const bundleFiles = await glob('bundles/*', {cwd: rootDir});
     bundleFiles.forEach((file) => {
       const parts = path.parse(file);
       if (isJsFile(parts.base)) {
-        bundleScripts.push(file);
+        bundleScripts.push(path.resolve(rootDir, file));
       }
     });
   }
 
   const viteConfig = rootConfig.vite || {};
   const vitePlugins = [
-    pluginRoot({rootDir, rootConfig}),
+    pluginRoot({rootConfig}),
     ...(viteConfig.plugins || []),
     ...getVitePlugins(rootConfig.plugins || []),
   ];
@@ -154,7 +125,7 @@ export async function build(rootProjectDir?: string, options?: BuildOptions) {
     publicDir: false,
     build: {
       rollupOptions: {
-        input: [...pages, ...elements, ...bundleScripts],
+        input: [...routeFiles, ...elements, ...bundleScripts],
         output: {
           format: 'esm',
           chunkFileNames: 'chunks/[name].[hash].js',
@@ -179,7 +150,7 @@ export async function build(rootProjectDir?: string, options?: BuildOptions) {
 
   // Use the output of the client build to generate an asset map, which is used
   // by the renderer for automatically injecting dependencies for a page.
-  const assetMap = BuildAssetMap.fromViteManifest(viteManifest, elementMap);
+  const assetMap = BuildAssetMap.fromViteManifest(viteManifest, elementsMap);
 
   // Save the asset map to `dist/client` for use by the prod SSR server.
   writeFile(

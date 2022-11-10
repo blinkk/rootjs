@@ -1,3 +1,8 @@
 declare module 'virtual:root-elements' {
-  export const elementsMap: Record<string, string>;
+  interface ElementModule {
+    src: string;
+    filePath: string;
+    realPath: string;
+  }
+  export const elementsMap: Record<string, ElementModule>;
 }

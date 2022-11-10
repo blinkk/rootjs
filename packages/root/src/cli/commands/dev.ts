@@ -1,7 +1,7 @@
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {default as express} from 'express';
-import {createServer as createViteServer, HmrOptions} from 'vite';
+import {createServer as createViteServer} from 'vite';
 import {pluginRoot} from '../../render/vite-plugin-root.js';
 import {DevServerAssetMap} from '../../render/asset-map/dev-asset-map.js';
 import {loadRootConfig} from '../load-config.js';
@@ -14,6 +14,7 @@ import {configureServerPlugins, getVitePlugins} from '../../core/plugin.js';
 import {RootConfig} from '../../core/config.js';
 import {rootProjectMiddleware} from '../../core/middleware.js';
 import {findOpenPort} from '../ports.js';
+import {getElements} from '../../core/elements.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -98,42 +99,12 @@ async function viteServerMiddleware(options: {
     });
   }
 
-  const elementsDirs = [path.join(rootDir, 'elements')];
-  const elementsInclude = rootConfig.elements?.include || [];
-  const excludePatterns = rootConfig.elements?.exclude || [];
-  const excludeElement = (moduleId: string) => {
-    return excludePatterns.some((pattern) => Boolean(moduleId.match(pattern)));
-  };
-
-  for (const dirPath of elementsInclude) {
-    const elementsDir = path.resolve(rootDir, dirPath);
-    if (!elementsDir.startsWith(rootDir)) {
-      throw new Error(
-        `the elements dir (${dirPath}) should be relative to the project's root dir (${rootDir})`
-      );
-    }
-    elementsDirs.push(elementsDir);
-  }
-  const elements: string[] = [];
-  for (const dirPath of elementsDirs) {
-    if (await isDirectory(dirPath)) {
-      const elementFiles = await glob('**/*', {cwd: dirPath});
-      elementFiles.forEach((file) => {
-        const parts = path.parse(file);
-        if (isJsFile(parts.base)) {
-          const fullPath = path.join(dirPath, file);
-          const moduleId = fullPath.slice(rootDir.length);
-          if (!excludeElement(moduleId)) {
-            elements.push(moduleId.slice(1));
-          }
-        }
-      });
-    }
-  }
+  const elementsMap = await getElements(rootConfig);
+  const elements = Object.values(elementsMap).map((mod) => mod.src);
 
   const bundleScripts: string[] = [];
   if (await isDirectory(path.join(rootDir, 'bundles'))) {
-    const bundleFiles = await glob(path.join(rootDir, 'bundles/*'));
+    const bundleFiles = await glob('bundles/*', {cwd: rootDir});
     bundleFiles.forEach((file) => {
       const parts = path.parse(file);
       if (isJsFile(parts.base)) {
@@ -172,12 +143,12 @@ async function viteServerMiddleware(options: {
       jsxImportSource: 'preact',
     },
     plugins: [
-      pluginRoot({rootDir, rootConfig}),
+      pluginRoot({rootConfig}),
       ...(viteConfig.plugins || []),
       ...getVitePlugins(rootConfig.plugins || []),
     ],
   });
-  return async (req: Request, res: Response, next: NextFunction) => {
+  return (req: Request, res: Response, next: NextFunction) => {
     req.viteServer = viteServer;
     viteServer.middlewares(req, res, next);
   };
@@ -191,7 +162,7 @@ function rootDevRendererMiddleware() {
     // Dynamically import the render.js module using vite's SSR import loader.
     const render = await viteServer.ssrLoadModule(renderModulePath);
     // Create a dev asset map using Vite dev server's module graph.
-    const assetMap = new DevServerAssetMap(viteServer.moduleGraph);
+    const assetMap = new DevServerAssetMap(rootConfig, viteServer.moduleGraph);
     req.renderer = new render.Renderer(rootConfig, {assetMap});
     next();
   };

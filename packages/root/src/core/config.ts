@@ -2,7 +2,7 @@ import {Request, Response, NextFunction} from './types';
 import {Plugin} from './plugin';
 import {UserConfig as ViteUserConfig} from 'vite';
 
-export interface RootConfig {
+export interface RootUserConfig {
   /**
    * Config for auto-injecting custom element dependencies.
    */
@@ -53,6 +53,10 @@ export interface RootConfig {
   plugins?: Plugin[];
 }
 
+export type RootConfig = RootUserConfig & {
+  rootDir: string;
+};
+
 export interface RootI18nConfig {
   /**
    * Locales enabled for the site.
@@ -80,6 +84,6 @@ export interface RootServerConfig {
   >;
 }
 
-export function defineConfig(config: RootConfig): RootConfig {
+export function defineConfig(config: RootUserConfig): RootUserConfig {
   return config;
 }
