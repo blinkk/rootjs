@@ -1,5 +1,11 @@
 # @blinkk/root
 
+## 1.0.0-alpha.16
+
+### Patch Changes
+
+- 38b6b6f: fix: various bug fixes
+
 ## 1.0.0-alpha.15
 
 ### Patch Changes
