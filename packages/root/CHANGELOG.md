@@ -1,5 +1,11 @@
 # @blinkk/root
 
+## 1.0.0-alpha.15
+
+### Patch Changes
+
+- 03d468e: refactor: handle monorepo symlink packages
+
 ## 1.0.0-alpha.14
 
 ### Patch Changes
