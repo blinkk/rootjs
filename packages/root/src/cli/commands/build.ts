@@ -150,7 +150,11 @@ export async function build(rootProjectDir?: string, options?: BuildOptions) {
 
   // Use the output of the client build to generate an asset map, which is used
   // by the renderer for automatically injecting dependencies for a page.
-  const assetMap = BuildAssetMap.fromViteManifest(viteManifest, elementsMap);
+  const assetMap = BuildAssetMap.fromViteManifest(
+    rootConfig,
+    viteManifest,
+    elementsMap
+  );
 
   // Save the asset map to `dist/client` for use by the prod SSR server.
   writeFile(

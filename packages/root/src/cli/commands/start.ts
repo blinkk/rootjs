@@ -86,7 +86,7 @@ async function rootProdRendererMiddleware(options: {
     );
   }
   const rootManifest = await loadJson<BuildAssetManifest>(manifestPath);
-  const assetMap = BuildAssetMap.fromRootManifest(rootManifest);
+  const assetMap = BuildAssetMap.fromRootManifest(rootConfig, rootManifest);
   const renderer = new render.Renderer(rootConfig, {assetMap}) as Renderer;
   return async (req: Request, _: Response, next: NextFunction) => {
     req.renderer = renderer;

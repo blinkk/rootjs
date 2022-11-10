@@ -1,5 +1,8 @@
+import fs from 'node:fs';
+import path from 'node:path';
 import {ElementModule} from 'virtual:root-elements';
 import {Manifest} from 'vite';
+import {RootConfig} from '../../core/config';
 import {Asset, AssetMap} from './asset-map';
 
 export type BuildAssetManifest = Record<
@@ -14,9 +17,11 @@ export type BuildAssetManifest = Record<
 >;
 
 export class BuildAssetMap implements AssetMap {
+  private rootConfig: RootConfig;
   private srcToAsset: Map<string, BuildAsset>;
 
-  constructor() {
+  constructor(rootConfig: RootConfig) {
+    this.rootConfig = rootConfig;
     this.srcToAsset = new Map();
   }
 
@@ -24,6 +29,14 @@ export class BuildAssetMap implements AssetMap {
     const asset = this.srcToAsset.get(src);
     if (asset) {
       return asset;
+    }
+    // Try resolving the realpath of the asset, following symlinks.
+    const realSrc = realpathRelativeToRoot(this.rootConfig.rootDir, src);
+    if (realSrc !== src) {
+      const asset = this.srcToAsset.get(realSrc);
+      if (asset) {
+        return asset;
+      }
     }
     console.log(`could not find build asset: ${src}`);
     return null;
@@ -42,15 +55,25 @@ export class BuildAssetMap implements AssetMap {
   }
 
   static fromViteManifest(
+    rootConfig: RootConfig,
     viteManifest: Manifest,
     elementMap: Record<string, ElementModule>
   ) {
-    const assetMap = new BuildAssetMap();
+    const assetMap = new BuildAssetMap(rootConfig);
 
     const elementFiles = new Set();
-    Object.values(elementMap).forEach((elementModule) =>
-      elementFiles.add(elementModule.src)
-    );
+    Object.values(elementMap).forEach((elementModule) => {
+      elementFiles.add(elementModule.src);
+      // Vite will resolve symlinks, so we need to follow the src and add the
+      // realpath to the element files.
+      const realSrc = realpathRelativeToRoot(
+        rootConfig.rootDir,
+        elementModule.src
+      );
+      if (realSrc !== elementModule.src) {
+        elementFiles.add(realSrc);
+      }
+    });
 
     Object.keys(viteManifest).forEach((manifestKey) => {
       const src = manifestKey;
@@ -68,14 +91,25 @@ export class BuildAssetMap implements AssetMap {
     return assetMap;
   }
 
-  static fromRootManifest(rootManifest: BuildAssetManifest) {
-    const assetMap = new BuildAssetMap();
+  static fromRootManifest(
+    rootConfig: RootConfig,
+    rootManifest: BuildAssetManifest
+  ) {
+    const assetMap = new BuildAssetMap(rootConfig);
     Object.keys(rootManifest).forEach((moduleId) => {
       const assetData = rootManifest[moduleId];
       assetMap.add(new BuildAsset(assetMap, assetData));
     });
     return assetMap;
   }
+}
+
+/**
+ * Returns the realpath of a src file, relative to the rootDir.
+ */
+function realpathRelativeToRoot(rootDir: string, src: string) {
+  const realpath = fs.realpathSync(path.resolve(rootDir, src));
+  return path.relative(rootDir, realpath);
 }
 
 export class BuildAsset {
