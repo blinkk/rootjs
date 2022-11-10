@@ -98,7 +98,7 @@ export class Renderer {
     // Add user defined scripts added via the `<Script>` component.
     await Promise.all(
       userScripts.map(async (scriptDep) => {
-        const scriptAsset = await assetMap.get(scriptDep.src);
+        const scriptAsset = await assetMap.get(scriptDep.src.slice(1));
         if (scriptAsset) {
           const scriptUrl = scriptAsset ? scriptAsset.assetUrl : scriptDep.src;
           headComponents.push(<script type="module" src={scriptUrl} />);

@@ -31,7 +31,7 @@ export class BuildAssetMap implements AssetMap {
       return asset;
     }
     // Try resolving the realpath of the asset, following symlinks.
-    const realSrc = realpathRelativeToRoot(this.rootConfig.rootDir, src);
+    const realSrc = realPathRelativeTo(this.rootConfig.rootDir, src);
     if (realSrc !== src) {
       const asset = this.srcToAsset.get(realSrc);
       if (asset) {
@@ -66,7 +66,7 @@ export class BuildAssetMap implements AssetMap {
       elementFiles.add(elementModule.src);
       // Vite will resolve symlinks, so we need to follow the src and add the
       // realpath to the element files.
-      const realSrc = realpathRelativeToRoot(
+      const realSrc = realPathRelativeTo(
         rootConfig.rootDir,
         elementModule.src
       );
@@ -107,7 +107,11 @@ export class BuildAssetMap implements AssetMap {
 /**
  * Returns the realpath of a src file, relative to the rootDir.
  */
-function realpathRelativeToRoot(rootDir: string, src: string) {
+function realPathRelativeTo(rootDir: string, src: string) {
+  const fullPath = path.resolve(rootDir, src);
+  if (!fs.existsSync(fullPath)) {
+    return src;
+  }
   const realpath = fs.realpathSync(path.resolve(rootDir, src));
   return path.relative(rootDir, realpath);
 }
