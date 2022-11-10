@@ -11,7 +11,7 @@ export interface RootPluginOptions {
   rootConfig: RootConfig;
 }
 
-export async function pluginRoot(options: RootPluginOptions) {
+export function pluginRoot(options: RootPluginOptions) {
   const elementsVirtualId = 'virtual:root-elements';
   const resolvedElementsVirtualId = '\0' + elementsVirtualId;
   const rootConfig = options.rootConfig;
@@ -26,7 +26,6 @@ export async function pluginRoot(options: RootPluginOptions) {
       customElementFiles.add(elementModule.realPath);
     });
   }
-  await updateElementMap();
 
   async function getElementImport(tagname: string): Promise<string | null> {
     if (!tagNameToElement) {
@@ -69,6 +68,7 @@ export async function pluginRoot(options: RootPluginOptions) {
 
     async transform(src: string, id: string): Promise<any> {
       if (isCustomElement(id)) {
+        await updateElementMap();
         const idParts = path.parse(id);
         const deps = new Set<string>();
         const tagnames = [

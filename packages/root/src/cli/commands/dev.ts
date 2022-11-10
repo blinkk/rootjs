@@ -143,7 +143,7 @@ async function viteServerMiddleware(options: {
       jsxImportSource: 'preact',
     },
     plugins: [
-      pluginRoot({rootConfig}),
+      await pluginRoot({rootConfig}),
       ...(viteConfig.plugins || []),
       ...getVitePlugins(rootConfig.plugins || []),
     ],
