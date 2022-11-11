@@ -1,5 +1,12 @@
 # @blinkk/root-cms
 
+## 1.0.0-alpha.11
+
+### Patch Changes
+
+- Updated dependencies [46a35e2]
+  - @blinkk/root@1.0.0-alpha.18
+
 ## 1.0.0-alpha.10
 
 ### Patch Changes

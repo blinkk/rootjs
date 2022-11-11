@@ -1,5 +1,11 @@
 # @blinkk/root
 
+## 1.0.0-alpha.18
+
+### Patch Changes
+
+- 46a35e2: fix: fix bundle scripts
+
 ## 1.0.0-alpha.17
 
 ### Patch Changes
