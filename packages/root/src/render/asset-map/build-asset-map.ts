@@ -66,10 +66,7 @@ export class BuildAssetMap implements AssetMap {
       elementFiles.add(elementModule.src);
       // Vite will resolve symlinks, so we need to follow the src and add the
       // realpath to the element files.
-      const realSrc = realPathRelativeTo(
-        rootConfig.rootDir,
-        elementModule.src
-      );
+      const realSrc = realPathRelativeTo(rootConfig.rootDir, elementModule.src);
       if (realSrc !== elementModule.src) {
         elementFiles.add(realSrc);
       }

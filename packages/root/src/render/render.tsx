@@ -98,6 +98,7 @@ export class Renderer {
       userScripts.map(async (scriptDep) => {
         const scriptAsset = await assetMap.get(scriptDep.src.slice(1));
         if (scriptAsset) {
+          jsDeps.add(scriptAsset.assetUrl);
           const scriptJsDeps = await scriptAsset.getJsDeps();
           scriptJsDeps.forEach((dep) => jsDeps.add(dep));
         }
