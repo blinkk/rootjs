@@ -1,5 +1,11 @@
 # @blinkk/root
 
+## 1.0.0-alpha.17
+
+### Patch Changes
+
+- c0245ca: fix: add css deps from auto-injected elements
+
 ## 1.0.0-alpha.16
 
 ### Patch Changes
