@@ -78,33 +78,38 @@ export class Renderer {
     );
     const mainHtml = renderToString(vdom, {}, {pretty: true});
 
+    const jsDeps = new Set<string>();
+    const cssDeps = new Set<string>();
+
     // Walk the page's dependency tree for CSS dependencies that are added via
     // `import 'foo.scss'` or `import 'foo.module.scss'`.
     const pageAsset = await assetMap.get(route.src);
-    const cssDeps = await pageAsset?.getCssDeps();
-    if (cssDeps) {
-      cssDeps.forEach((cssUrl) => {
-        headComponents.push(<link rel="stylesheet" href={cssUrl} />);
-      });
+    if (pageAsset) {
+      const pageCssDeps = await pageAsset.getCssDeps();
+      pageCssDeps.forEach((dep) => cssDeps.add(dep));
     }
 
     // Parse the HTML for custom elements that are found within the project
     // and automatically inject the script deps for them.
-    const scriptDeps = await this.getScriptDeps(mainHtml);
-    scriptDeps.forEach((jsUrls) => {
-      headComponents.push(<script type="module" src={jsUrls} />);
-    });
+    await this.collectElementDeps(mainHtml, jsDeps, cssDeps);
 
     // Add user defined scripts added via the `<Script>` component.
     await Promise.all(
       userScripts.map(async (scriptDep) => {
         const scriptAsset = await assetMap.get(scriptDep.src.slice(1));
         if (scriptAsset) {
-          const scriptUrl = scriptAsset ? scriptAsset.assetUrl : scriptDep.src;
-          headComponents.push(<script type="module" src={scriptUrl} />);
+          const scriptJsDeps = await scriptAsset.getJsDeps();
+          scriptJsDeps.forEach((dep) => jsDeps.add(dep));
         }
       })
     );
+
+    cssDeps.forEach((cssUrl) => {
+      headComponents.push(<link rel="stylesheet" href={cssUrl} />);
+    });
+    jsDeps.forEach((jsUrls) => {
+      headComponents.push(<script type="module" src={jsUrls} />);
+    });
 
     const html = await this.renderHtml({mainHtml, locale, headComponents});
     return {html};
@@ -171,9 +176,16 @@ export class Renderer {
     return {html};
   }
 
-  private async getScriptDeps(html: string): Promise<string[]> {
+  /**
+   * Parses rendered HTML for custom element tags used on the page and
+   * automatically adds the JS/CSS deps to the page.
+   */
+  private async collectElementDeps(
+    html: string,
+    jsDeps: Set<string>,
+    cssDeps: Set<string>,
+  ): Promise<{jsDeps: Set<string>; cssDeps: Set<string>}> {
     const assetMap = this.assetMap;
-    const deps = new Set<string>();
 
     const re = /<(\w[\w-]+\w)/g;
     const matches = Array.from(html.matchAll(re));
@@ -188,11 +200,13 @@ export class Renderer {
             return;
           }
           const assetJsDeps = await asset.getJsDeps();
-          assetJsDeps.forEach((dep) => deps.add(dep));
+          assetJsDeps.forEach((dep) => jsDeps.add(dep));
+          const assetCssDeps = await asset.getCssDeps();
+          assetCssDeps.forEach((dep) => cssDeps.add(dep));
         }
       })
     );
 
-    return Array.from(deps);
+    return {jsDeps, cssDeps};
   }
 }
