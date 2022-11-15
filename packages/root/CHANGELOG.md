@@ -1,5 +1,12 @@
 # @blinkk/root
 
+## 1.0.0-alpha.19
+
+### Patch Changes
+
+- b2f6ff8: feat: print output file sizes
+- 6c9cf6f: fix: exclude routes files from build output
+
 ## 1.0.0-alpha.18
 
 ### Patch Changes
