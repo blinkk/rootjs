@@ -157,9 +157,10 @@ export async function build(rootProjectDir?: string, options?: BuildOptions) {
   );
 
   // Save the asset map to `dist/client` for use by the prod SSR server.
+  const rootManifest = assetMap.toJson();
   writeFile(
     path.join(distDir, 'client/root-manifest.json'),
-    JSON.stringify(assetMap.toJson(), null, 2)
+    JSON.stringify(rootManifest, null, 2)
   );
 
   // Write SSG output to `dist/html`.
@@ -173,9 +174,23 @@ export async function build(rootProjectDir?: string, options?: BuildOptions) {
     makeDir(buildDir);
   }
 
-  // Copy files from `dist/client/{assets,chunks}` to `dist/html`.
-  copyDir(path.join(distDir, 'client/assets'), path.join(buildDir, 'assets'));
-  copyDir(path.join(distDir, 'client/chunks'), path.join(buildDir, 'chunks'));
+  // Copy files from `dist/client/{assets,chunks}` to `dist/html` using the
+  // root manifest. Ignore route files.
+  makeDir(path.join(buildDir, 'assets'));
+  makeDir(path.join(buildDir, 'chunks'));
+  Object.keys(rootManifest).forEach((src) => {
+    // Don't expose route files in the final output. If any client-side code
+    // relies on route dependencies, it should probably be broken out into a
+    // shared component instead.
+    if (src.startsWith('routes/')) {
+      return;
+    }
+    const assetData = rootManifest[src];
+    const assetRelPath = assetData.assetUrl.slice(1);
+    const assetFrom = path.join(distDir, 'client', assetRelPath);
+    const assetTo = path.join(buildDir, assetRelPath);
+    fsExtra.copySync(assetFrom, assetTo);
+  });
 
   // Pre-render HTML pages (SSG).
   if (!ssrOnly) {
