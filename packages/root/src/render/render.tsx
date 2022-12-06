@@ -11,6 +11,7 @@ import {RootConfig} from '../core/config';
 import {RouteTrie} from './route-trie';
 import {elementsMap} from 'virtual:root-elements';
 import {DevNotFoundPage} from '../core/components/dev-not-found-page';
+import {RequestContext, REQUEST_CONTEXT} from '../core/context';
 
 interface RenderHtmlOptions {
   mainHtml: string;
@@ -25,7 +26,7 @@ export class Renderer {
 
   constructor(rootConfig: RootConfig, options: {assetMap: AssetMap}) {
     this.rootConfig = rootConfig;
-    this.routes = getRoutes(rootConfig);
+    this.routes = getRoutes(this.rootConfig);
     this.assetMap = options.assetMap;
   }
 
@@ -62,19 +63,21 @@ export class Renderer {
       }
     }
 
+    const ctx: RequestContext = {route};
     const locale = route.locale;
     const translations = getTranslations(locale);
-
     const headComponents: ComponentChildren[] = [];
     const userScripts: ScriptProps[] = [];
     const vdom = (
-      <I18N_CONTEXT.Provider value={{locale, translations}}>
-        <SCRIPT_CONTEXT.Provider value={userScripts}>
-          <HEAD_CONTEXT.Provider value={headComponents}>
-            <Component {...props} />
-          </HEAD_CONTEXT.Provider>
-        </SCRIPT_CONTEXT.Provider>
-      </I18N_CONTEXT.Provider>
+      <REQUEST_CONTEXT.Provider value={ctx}>
+        <I18N_CONTEXT.Provider value={{locale, translations}}>
+          <SCRIPT_CONTEXT.Provider value={userScripts}>
+            <HEAD_CONTEXT.Provider value={headComponents}>
+              <Component {...props} />
+            </HEAD_CONTEXT.Provider>
+          </SCRIPT_CONTEXT.Provider>
+        </I18N_CONTEXT.Provider>
+      </REQUEST_CONTEXT.Provider>
     );
     const mainHtml = renderToString(vdom, {}, {pretty: true});
 
