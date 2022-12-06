@@ -1,5 +1,11 @@
 # @blinkk/root
 
+## 1.0.0-alpha.20
+
+### Patch Changes
+
+- 7828b62: feat: add useRequestContext hook
+
 ## 1.0.0-alpha.19
 
 ### Patch Changes
