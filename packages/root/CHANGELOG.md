@@ -1,5 +1,11 @@
 # @blinkk/root
 
+## 1.0.0-alpha.21
+
+### Patch Changes
+
+- 53b316e: feat: add additional props to request context
+
 ## 1.0.0-alpha.20
 
 ### Patch Changes
