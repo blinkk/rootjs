@@ -25,12 +25,17 @@ export function getTranslations(locale: string): Record<string, string> {
   return translations[locale] || {};
 }
 
-export function useTranslations() {
+export function useI18nContext() {
   const context = useContext(I18N_CONTEXT);
   if (!context) {
     throw new Error('could not find i18n context');
   }
-  const translations = context?.translations || {};
+  return context;
+}
+
+export function useTranslations() {
+  const context = useI18nContext();
+  const translations = context.translations || {};
   const t = (str: string, params?: Record<string, string>) => {
     let translation = translations[str] || str || '';
     if (params) {

@@ -11,7 +11,7 @@ import {RootConfig} from '../core/config';
 import {RouteTrie} from './route-trie';
 import {elementsMap} from 'virtual:root-elements';
 import {DevNotFoundPage} from '../core/components/dev-not-found-page';
-import {RequestContext, REQUEST_CONTEXT} from '../core/context';
+import {RequestContext, REQUEST_CONTEXT} from '../core/request-context';
 
 interface RenderHtmlOptions {
   mainHtml: string;
@@ -63,9 +63,15 @@ export class Renderer {
       }
     }
 
-    const ctx: RequestContext = {route};
     const locale = route.locale;
     const translations = getTranslations(locale);
+    const ctx: RequestContext = {
+      route,
+      props,
+      routeParams,
+      locale,
+      translations,
+    };
     const headComponents: ComponentChildren[] = [];
     const userScripts: ScriptProps[] = [];
     const vdom = (

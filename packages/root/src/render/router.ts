@@ -11,9 +11,31 @@ export interface RouteModule {
 }
 
 export interface Route {
+  /** The relative path to the route file, e.g. `routes/index.tsx`. */
   src: string;
+
+  /** The imported route module. */
   module: RouteModule;
+
+  /** The locale used for the route. */
   locale: string;
+
+  /**
+   * The mapped URL path for the route, e.g.:
+   *
+   *   routes/index.tsx => `/`.
+   *   routes/events.tsx => `/events`.
+   *   routes/blog/[slug].tsx => `/blog/[slug]`.
+   *
+   * Per the example above, this value may contain placeholder params.
+   */
+  routePath: string;
+
+  /**
+   * The localized URL path for the route, e.g. `/[locale]/blog/[slug]`.
+   * Per the example above, this value contains placeholder params.
+   */
+  localeRoutePath: string;
 }
 
 export function getRoutes(config: RootConfig) {
@@ -40,24 +62,31 @@ export function getRoutes(config: RootConfig) {
     } else {
       routePath = path.join(parts.dir, parts.name);
     }
+
+    const localeRoutePath = i18nUrlFormat
+      .replace('{locale}', '[locale]')
+      .replace('{path}', routePath.replace(/^\/*/, ''));
+
     trie.add(routePath, {
       src,
       module: routes[modulePath] as RouteModule,
       locale: defaultLocale,
+      routePath,
+      localeRoutePath,
     });
 
     // At the moment, all routes are assumed to use the site-wide i18n config.
     // TODO(stevenle): provide routes with a way to override the default
     // i18n serving behavior.
     locales.forEach((locale) => {
-      const localeRoutePath = i18nUrlFormat
-        .replace('{locale}', locale)
-        .replace('{path}', routePath.replace(/^\/*/, ''));
-      if (localeRoutePath !== routePath) {
-        trie.add(localeRoutePath, {
+      const localePath = localeRoutePath.replace('[locale]', locale);
+      if (localePath !== routePath) {
+        trie.add(localePath, {
           src,
           module: routes[modulePath] as RouteModule,
           locale: locale,
+          routePath,
+          localeRoutePath,
         });
       }
     });
@@ -69,8 +98,12 @@ export async function getAllPathsForRoute(
   urlPathFormat: string,
   route: Route
 ): Promise<Array<{urlPath: string; params: Record<string, string>}>> {
-  const urlPaths: Array<{urlPath: string; params: Record<string, string>}> = [];
   const routeModule = route.module;
+  if (!routeModule.default) {
+    return [];
+  }
+
+  const urlPaths: Array<{urlPath: string; params: Record<string, string>}> = [];
   if (routeModule.getStaticPaths) {
     const staticPaths = await routeModule.getStaticPaths();
     if (staticPaths.paths) {
@@ -79,7 +112,7 @@ export async function getAllPathsForRoute(
           const urlPath = replaceParams(urlPathFormat, pathParams.params || {});
           if (pathContainsPlaceholders(urlPath)) {
             console.warn(
-              `path contains placeholders: ${urlPathFormat}, double check getStaticPaths() and ensure all params are returned`
+              `path contains placeholders: ${urlPathFormat}, double check getStaticPaths() and ensure all params are returned. more info: https://rootjs.dev/guide/routes#getStaticPaths`
             );
           } else {
             urlPaths.push({
@@ -92,7 +125,7 @@ export async function getAllPathsForRoute(
     }
   } else if (pathContainsPlaceholders(urlPathFormat)) {
     console.warn(
-      `path contains placeholders: ${urlPathFormat}, did you forget to define getStaticPaths()?`
+      `path contains placeholders: ${urlPathFormat}, did you forget to define getStaticPaths()? more info: https://rootjs.dev/guide/routes#getStaticPaths`
     );
   } else {
     urlPaths.push({urlPath: urlPathFormat, params: {}});

@@ -3,6 +3,6 @@ export * from './components/head';
 export * from './components/script';
 export * from './i18n';
 export * from './config';
-export * from './context';
 export * from './plugin';
+export * from './request-context';
 export * from './types';
