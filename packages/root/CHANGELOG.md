@@ -1,5 +1,11 @@
 # @blinkk/root
 
+## 1.0.0-alpha.23
+
+### Patch Changes
+
+- b92cf04: fix: add async to vite middleware
+
 ## 1.0.0-alpha.22
 
 ### Patch Changes
