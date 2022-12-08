@@ -1,5 +1,11 @@
 # @blinkk/root
 
+## 1.0.0-alpha.25
+
+### Patch Changes
+
+- f1bdaf6: fix: fix routing with query params
+
 ## 1.0.0-alpha.24
 
 ### Patch Changes
