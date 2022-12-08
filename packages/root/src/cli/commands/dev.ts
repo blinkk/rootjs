@@ -148,7 +148,7 @@ async function viteServerMiddleware(options: {
       ...getVitePlugins(rootConfig.plugins || []),
     ],
   });
-  return (req: Request, res: Response, next: NextFunction) => {
+  return async (req: Request, res: Response, next: NextFunction) => {
     try {
       req.viteServer = viteServer;
       viteServer.middlewares(req, res, next);
