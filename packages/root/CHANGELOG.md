@@ -1,5 +1,11 @@
 # @blinkk/root
 
+## 1.0.0-alpha.22
+
+### Patch Changes
+
+- f9e00d2: fix: wrap vite middleware in try/catch
+
 ## 1.0.0-alpha.21
 
 ### Patch Changes
