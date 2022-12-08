@@ -149,8 +149,12 @@ async function viteServerMiddleware(options: {
     ],
   });
   return (req: Request, res: Response, next: NextFunction) => {
-    req.viteServer = viteServer;
-    viteServer.middlewares(req, res, next);
+    try {
+      req.viteServer = viteServer;
+      viteServer.middlewares(req, res, next);
+    } catch (e) {
+      next(e);
+    }
   };
 }
 
