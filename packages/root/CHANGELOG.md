@@ -1,5 +1,11 @@
 # @blinkk/root
 
+## 1.0.0-alpha.24
+
+### Patch Changes
+
+- 93f37a2: fix: add try/catch around vite ssr load
+
 ## 1.0.0-alpha.23
 
 ### Patch Changes
