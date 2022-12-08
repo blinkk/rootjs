@@ -163,12 +163,19 @@ function rootDevRendererMiddleware() {
   return async (req: Request, _: Response, next: NextFunction) => {
     const rootConfig = req.rootConfig!;
     const viteServer = req.viteServer!;
-    // Dynamically import the render.js module using vite's SSR import loader.
-    const render = await viteServer.ssrLoadModule(renderModulePath);
-    // Create a dev asset map using Vite dev server's module graph.
-    const assetMap = new DevServerAssetMap(rootConfig, viteServer.moduleGraph);
-    req.renderer = new render.Renderer(rootConfig, {assetMap});
-    next();
+    try {
+      // Dynamically import the render.js module using vite's SSR import loader.
+      const render = await viteServer.ssrLoadModule(renderModulePath);
+      // Create a dev asset map using Vite dev server's module graph.
+      const assetMap = new DevServerAssetMap(
+        rootConfig,
+        viteServer.moduleGraph
+      );
+      req.renderer = new render.Renderer(rootConfig, {assetMap});
+      next();
+    } catch (e) {
+      next(e);
+    }
   };
 }
 
