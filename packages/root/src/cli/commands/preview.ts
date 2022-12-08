@@ -104,7 +104,7 @@ function rootPreviewServerMiddleware() {
     const rootConfig = req.rootConfig!;
     const renderer = req.renderer!;
     try {
-      const url = req.originalUrl;
+      const url = req.path;
       const data = await renderer.render(url);
       if (data.notFound || !data.html) {
         next();

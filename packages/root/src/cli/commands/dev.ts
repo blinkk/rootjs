@@ -181,7 +181,7 @@ function rootDevRendererMiddleware() {
 
 function rootDevServerMiddleware() {
   return async (req: Request, res: Response, next: NextFunction) => {
-    const url = req.originalUrl;
+    const url = req.path;
     const renderer = req.renderer!;
     const viteServer = req.viteServer!;
     const rootConfig = req.rootConfig!;
@@ -220,7 +220,7 @@ function rootDevServerMiddleware() {
 
 function rootDevServer404Middleware() {
   return async (req: Request, res: Response) => {
-    const url = req.originalUrl;
+    const url = req.path;
     const ext = path.extname(url);
     const renderer = req.renderer!;
     if (!ext) {
