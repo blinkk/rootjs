@@ -38,7 +38,8 @@ export interface RootUserConfig {
   vite?: ViteUserConfig;
 
   /**
-   * Whether to automatically minify HTML output.
+   * Whether to automatically minify HTML output. This is enabled by default,
+   * in order to disable, pass `minifyHtml: false` to root.config.ts.
    */
   minifyHtml?: boolean;
 

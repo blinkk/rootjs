@@ -218,7 +218,11 @@ export async function build(rootProjectDir?: string, options?: BuildOptions) {
         }
         const outPath = path.join(buildDir, outFilePath);
 
-        const html = await htmlMinify(data.html || '');
+        let html = data.html || '';
+        // HTML minification is `true` by default. Set to `false` to disable.
+        if (rootConfig.minifyHtml !== false) {
+          html = await htmlMinify(html);
+        }
         await writeFile(outPath, html);
 
         printFileOutput(fileSize(outPath), 'dist/html/', outFilePath);

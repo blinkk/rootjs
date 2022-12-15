@@ -109,6 +109,7 @@ function rootProdServerMiddleware() {
         return;
       }
       let html = data.html || '';
+      // HTML minification is `true` by default. Set to `false` to disable.
       if (rootConfig.minifyHtml !== false) {
         html = await htmlMinify(html);
       }
