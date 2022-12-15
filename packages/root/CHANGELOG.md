@@ -1,5 +1,11 @@
 # @blinkk/root
 
+## 1.0.0-alpha.26
+
+### Patch Changes
+
+- 1a60d4e: fix: remove renderToString pretty rendering
+
 ## 1.0.0-alpha.25
 
 ### Patch Changes
