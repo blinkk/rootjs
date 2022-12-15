@@ -85,7 +85,7 @@ export class Renderer {
         </I18N_CONTEXT.Provider>
       </REQUEST_CONTEXT.Provider>
     );
-    const mainHtml = renderToString(vdom, {}, {pretty: true});
+    const mainHtml = renderToString(vdom);
 
     const jsDeps = new Set<string>();
     const cssDeps = new Set<string>();
@@ -154,11 +154,7 @@ export class Renderer {
         <body dangerouslySetInnerHTML={{__html: options.mainHtml}} />
       </html>
     );
-    const html = `<!doctype html>\n${renderToString(
-      page,
-      {},
-      {pretty: true}
-    )}\n`;
+    const html = `<!doctype html>\n${renderToString(page)}\n`;
     return html;
   }
 
