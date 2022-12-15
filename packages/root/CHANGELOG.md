@@ -1,5 +1,11 @@
 # @blinkk/root
 
+## 1.0.0-alpha.27
+
+### Patch Changes
+
+- 2ef1d63: fix: fix minifyHtml config for build command
+
 ## 1.0.0-alpha.26
 
 ### Patch Changes
