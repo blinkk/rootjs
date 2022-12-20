@@ -97,6 +97,7 @@ export async function build(rootProjectDir?: string, options?: BuildOptions) {
     publicDir: false,
     build: {
       rollupOptions: {
+        ...viteConfig?.build?.rollupOptions,
         input: [path.resolve(__dirname, './render.js')],
         output: {
           format: 'esm',
@@ -124,6 +125,7 @@ export async function build(rootProjectDir?: string, options?: BuildOptions) {
     publicDir: false,
     build: {
       rollupOptions: {
+        ...viteConfig?.build?.rollupOptions,
         input: [...routeFiles, ...elements, ...bundleScripts],
         output: {
           format: 'esm',
@@ -172,7 +174,6 @@ export async function build(rootProjectDir?: string, options?: BuildOptions) {
   } else {
     makeDir(buildDir);
   }
-
 
   // Copy files from `dist/client/{assets,chunks}` to `dist/html` using the
   // root manifest. Ignore route files.
