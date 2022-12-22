@@ -101,7 +101,7 @@ export async function build(rootProjectDir?: string, options?: BuildOptions) {
         input: [path.resolve(__dirname, './render.js')],
         output: {
           format: 'esm',
-          chunkFileNames: 'chunks/[name].[hash].js',
+          chunkFileNames: 'chunks/[name].[hash].min.js',
           assetFileNames: 'assets/[name].[hash][extname]',
         },
       },
@@ -129,8 +129,10 @@ export async function build(rootProjectDir?: string, options?: BuildOptions) {
         input: [...routeFiles, ...elements, ...bundleScripts],
         output: {
           format: 'esm',
-          chunkFileNames: 'chunks/[name].[hash].js',
+          entryFileNames: '[name].[hash].min.js',
+          chunkFileNames: 'chunks/[name].[hash].min.js',
           assetFileNames: 'assets/[name].[hash][extname]',
+          ...viteConfig?.build?.rollupOptions?.output,
         },
       },
       outDir: path.join(distDir, 'client'),
