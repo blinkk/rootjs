@@ -97,10 +97,11 @@ export async function build(rootProjectDir?: string, options?: BuildOptions) {
     publicDir: false,
     build: {
       rollupOptions: {
+        ...viteConfig?.build?.rollupOptions,
         input: [path.resolve(__dirname, './render.js')],
         output: {
           format: 'esm',
-          chunkFileNames: 'chunks/[name].[hash].js',
+          chunkFileNames: 'chunks/[name].[hash].min.js',
           assetFileNames: 'assets/[name].[hash][extname]',
         },
       },
@@ -124,11 +125,14 @@ export async function build(rootProjectDir?: string, options?: BuildOptions) {
     publicDir: false,
     build: {
       rollupOptions: {
+        ...viteConfig?.build?.rollupOptions,
         input: [...routeFiles, ...elements, ...bundleScripts],
         output: {
           format: 'esm',
-          chunkFileNames: 'chunks/[name].[hash].js',
+          entryFileNames: '[name].[hash].min.js',
+          chunkFileNames: 'chunks/[name].[hash].min.js',
           assetFileNames: 'assets/[name].[hash][extname]',
+          ...viteConfig?.build?.rollupOptions?.output,
         },
       },
       outDir: path.join(distDir, 'client'),
@@ -172,7 +176,6 @@ export async function build(rootProjectDir?: string, options?: BuildOptions) {
   } else {
     makeDir(buildDir);
   }
-
 
   // Copy files from `dist/client/{assets,chunks}` to `dist/html` using the
   // root manifest. Ignore route files.
