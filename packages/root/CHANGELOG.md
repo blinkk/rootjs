@@ -1,5 +1,11 @@
 # @blinkk/root
 
+## 1.0.0-alpha.28
+
+### Patch Changes
+
+- 2747d11: allow developer to specify rollupOptions
+
 ## 1.0.0-alpha.27
 
 ### Patch Changes
