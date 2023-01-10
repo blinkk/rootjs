@@ -24,16 +24,28 @@
   },
   "scripts": {
     "build": "rm -rf dist && tsup-node",
+    "dev": "rm -rf dist && tsup-node --watch",
     "test": "pnpm build && vitest run",
     "test:watch": "pnpm build && vitest"
   },
   "dependencies": {
     "@blinkk/root": "workspace:*",
-    "firebase": "^9.13.0"
+    "@preact/signals": "^1.1.2",
+    "axios": "^1.2.2",
+    "cookie-parser": "^1.4.6",
+    "dotenv": "^16.0.0",
+    "firebase": "^9.13.0",
+    "jsonwebtoken": "^9.0.0"
   },
   "devDependencies": {
+    "@types/cookie-parser": "^1.4.3",
+    "@types/jsonwebtoken": "^9.0.1",
     "@types/node": "^18.11.8",
+    "preact": "*",
     "tsup": "^6.3.0",
     "vitest": "^0.18.1"
+  },
+  "peerDependencies": {
+    "preact": "*"
   }
 }

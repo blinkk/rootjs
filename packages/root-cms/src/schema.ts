@@ -1,3 +1,5 @@
+import {FunctionalComponent} from 'preact';
+
 export interface CommonFieldProps {
   id?: string;
   label?: string;
@@ -148,3 +150,21 @@ export function defineSchema(schema: Schema): Schema {
 }
 
 export const define = defineSchema;
+
+export type Collection = Schema & {
+  // URL where the collection serves from.
+  url?: string;
+  // Page component to render for the collection.
+  Component: FunctionalComponent;
+  // Defines the fields to use for document preview.
+  preview?: {
+    title?: string;
+    image?: string;
+  };
+};
+
+export function defineCollection(collection: Collection): Collection {
+  return collection;
+}
+
+export const collection = defineCollection;
