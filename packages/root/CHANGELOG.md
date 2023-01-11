@@ -1,5 +1,11 @@
 # @blinkk/root
 
+## 1.0.0-alpha.29
+
+### Patch Changes
+
+- 81c367e: feat: add Html component to override lang
+
 ## 1.0.0-alpha.28
 
 ### Patch Changes
