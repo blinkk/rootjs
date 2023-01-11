@@ -12,6 +12,7 @@ import {RouteTrie} from './route-trie';
 import {elementsMap} from 'virtual:root-elements';
 import {DevNotFoundPage} from '../core/components/dev-not-found-page';
 import {RequestContext, REQUEST_CONTEXT} from '../core/request-context';
+import {HtmlContextValue, HTML_CONTEXT} from '../core/components/html';
 
 interface RenderHtmlOptions {
   mainHtml: string;
@@ -74,14 +75,17 @@ export class Renderer {
     };
     const headComponents: ComponentChildren[] = [];
     const userScripts: ScriptProps[] = [];
+    const htmlContext: HtmlContextValue = {attrs: {}};
     const vdom = (
       <REQUEST_CONTEXT.Provider value={ctx}>
         <I18N_CONTEXT.Provider value={{locale, translations}}>
-          <SCRIPT_CONTEXT.Provider value={userScripts}>
+          <HTML_CONTEXT.Provider value={htmlContext}>
             <HEAD_CONTEXT.Provider value={headComponents}>
-              <Component {...props} />
+              <SCRIPT_CONTEXT.Provider value={userScripts}>
+                <Component {...props} />
+              </SCRIPT_CONTEXT.Provider>
             </HEAD_CONTEXT.Provider>
-          </SCRIPT_CONTEXT.Provider>
+          </HTML_CONTEXT.Provider>
         </I18N_CONTEXT.Provider>
       </REQUEST_CONTEXT.Provider>
     );
@@ -121,7 +125,12 @@ export class Renderer {
       headComponents.push(<script type="module" src={jsUrls} />);
     });
 
-    const html = await this.renderHtml({mainHtml, locale, headComponents});
+    const htmlLang = htmlContext.attrs.lang || locale;
+    const html = await this.renderHtml({
+      mainHtml,
+      locale: htmlLang,
+      headComponents,
+    });
     return {html};
   }
 
@@ -189,7 +198,7 @@ export class Renderer {
   private async collectElementDeps(
     html: string,
     jsDeps: Set<string>,
-    cssDeps: Set<string>,
+    cssDeps: Set<string>
   ): Promise<{jsDeps: Set<string>; cssDeps: Set<string>}> {
     const assetMap = this.assetMap;
 
