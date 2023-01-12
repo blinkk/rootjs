@@ -1,5 +1,13 @@
 # @blinkk/root
 
+## 1.0.0-alpha.30
+
+### Patch Changes
+
+- d6e961c: feat: add prettyHtml option and fix tests
+- 7b5530a: fix: update typescript typedef for Html component
+- 6d4b8a7: feat: add minifyHtmlOptions to root.config.ts
+
 ## 1.0.0-alpha.29
 
 ### Patch Changes
