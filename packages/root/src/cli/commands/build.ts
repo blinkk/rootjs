@@ -224,7 +224,7 @@ export async function build(rootProjectDir?: string, options?: BuildOptions) {
         let html = data.html || '';
         // HTML minification is `true` by default. Set to `false` to disable.
         if (rootConfig.minifyHtml !== false) {
-          html = await htmlMinify(html);
+          html = await htmlMinify(html, rootConfig.minifyHtmlOptions);
         }
         await writeFile(outPath, html);
 

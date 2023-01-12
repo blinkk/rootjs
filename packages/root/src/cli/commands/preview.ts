@@ -113,7 +113,7 @@ function rootPreviewServerMiddleware() {
       let html = data.html || '';
       // HTML minification is `true` by default. Set to `false` to disable.
       if (rootConfig.minifyHtml !== false) {
-        html = await htmlMinify(html);
+        html = await htmlMinify(html, rootConfig.minifyHtmlOptions);
       }
       res.status(200).set({'Content-Type': 'text/html'}).end(html);
     } catch (e) {

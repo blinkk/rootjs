@@ -1,6 +1,7 @@
 import {Request, Response, NextFunction} from './types';
 import {Plugin} from './plugin';
 import {UserConfig as ViteUserConfig} from 'vite';
+import {HtmlMinifyOptions} from '../render/html-minify';
 
 export interface RootUserConfig {
   /**
@@ -42,6 +43,11 @@ export interface RootUserConfig {
    * in order to disable, pass `minifyHtml: false` to root.config.ts.
    */
   minifyHtml?: boolean;
+
+  /**
+   * Options to pass to html-minifier-terser.
+   */
+  minifyHtmlOptions?: HtmlMinifyOptions;
 
   /**
    * Whether to include a sitemap.xml file to the build output.
