@@ -1,4 +1,4 @@
-import {createContext} from 'preact';
+import {ComponentChildren, createContext} from 'preact';
 import {useContext} from 'preact/hooks';
 
 export interface HtmlContextValue {
@@ -7,12 +7,12 @@ export interface HtmlContextValue {
 
 export const HTML_CONTEXT = createContext<HtmlContextValue>({attrs: {}});
 
-export type HtmlProps = {
-  [key: string]: string;
-} & preact.JSX.HTMLAttributes<HTMLHtmlElement>;
+export type HtmlProps = preact.JSX.HTMLAttributes<HTMLHtmlElement> & {
+  children?: ComponentChildren;
+};
 
 /**
- * The <Html> component can be used to update attrs used in the <html> tag.
+ * The `<Html>` component can be used to update attrs used in the `<html>` tag.
  *
  * Usage:
  *
