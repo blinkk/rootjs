@@ -1,6 +1,6 @@
 import path from 'node:path';
-import {build} from '../dist/cli';
-import {rmDir} from '../src/core/fsutils';
+import {build} from '../dist/cli.js';
+import {rmDir} from '../src/core/fsutils.js';
 
 export class Fixture {
   rootDir: string;
@@ -17,7 +17,7 @@ export class Fixture {
 
   async cleanup() {
     // Remove dist/ dir.
-    // await rmDir(this.distDir);
+    await rmDir(this.distDir);
   }
 }
 
