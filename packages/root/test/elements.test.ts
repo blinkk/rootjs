@@ -30,12 +30,11 @@ test('add custom element to a page', async () => {
     <html lang=\\"en\\">
     <head>
     <meta charset=\\"utf-8\\">
-    <script type=\\"module\\" src=\\"/assets/root-counter.2ed2a8cc.js\\"></script>
-    <script type=\\"module\\" src=\\"/assets/root-label.71e76948.js\\"></script>
+    <script type=\\"module\\" src=\\"/assets/root-counter.78056760.min.js\\"></script>
+    <script type=\\"module\\" src=\\"/assets/root-label.4d6a96dc.min.js\\"></script>
     </head>
     <body>
-    <h1>Counter</h1>
-    <root-counter start=\\"3\\"></root-counter>
+    <h1>Counter</h1><root-counter start=\\"3\\"></root-counter>
     </body>
     </html>
     "
@@ -53,11 +52,9 @@ test('use custom elements from another directory', async () => {
     <html lang=\\"en\\">
     <head>
     <meta charset=\\"utf-8\\">
-    <script type=\\"module\\" src=\\"/assets/ds-foo.f2646fe7.js\\"></script>
+    <script type=\\"module\\" src=\\"/assets/ds-foo.2a99b03e.min.js\\"></script>
     </head>
-    <body>
-    <ds-foo name=\\"Alice\\"></ds-foo>
-    </body>
+    <body><ds-foo name=\\"Alice\\"></ds-foo></body>
     </html>
     "
   `);
@@ -76,16 +73,12 @@ test('exclude elements matching a certain pattern', async () => {
     <html lang=\\"en\\">
     <head>
     <meta charset=\\"utf-8\\">
-    <script type=\\"module\\" src=\\"/assets/root-counter.2ed2a8cc.js\\"></script>
-    <script type=\\"module\\" src=\\"/assets/root-label.71e76948.js\\"></script>
+    <script type=\\"module\\" src=\\"/assets/root-counter.78056760.min.js\\"></script>
+    <script type=\\"module\\" src=\\"/assets/root-label.4d6a96dc.min.js\\"></script>
     </head>
     <body>
-    <h1>Counter</h1>
-    <root-counter start=\\"3\\"></root-counter>
-    <h1>
-    The following element deps should not be auto-injected:
-    </h1>
-    <root-exclude></root-exclude>
+    <h1>Counter</h1><root-counter start=\\"3\\"></root-counter>
+    <h1>The following element deps should not be auto-injected:</h1><root-exclude></root-exclude>
     </body>
     </html>
     "

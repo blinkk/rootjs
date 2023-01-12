@@ -17,7 +17,7 @@ export class Fixture {
 
   async cleanup() {
     // Remove dist/ dir.
-    await rmDir(this.distDir);
+    // await rmDir(this.distDir);
   }
 }
 

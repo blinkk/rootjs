@@ -18,6 +18,7 @@ import {htmlMinify} from '../../render/html-minify.js';
 import {dim, blue, cyan} from 'kleur/colors';
 import {getVitePlugins} from '../../core/plugin.js';
 import {getElements} from '../../core/elements.js';
+import {htmlPretty} from '../../render/html-pretty.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -129,7 +130,7 @@ export async function build(rootProjectDir?: string, options?: BuildOptions) {
         input: [...routeFiles, ...elements, ...bundleScripts],
         output: {
           format: 'esm',
-          entryFileNames: '[name].[hash].min.js',
+          entryFileNames: 'assets/[name].[hash].min.js',
           chunkFileNames: 'chunks/[name].[hash].min.js',
           assetFileNames: 'assets/[name].[hash][extname]',
           ...viteConfig?.build?.rollupOptions?.output,
@@ -222,6 +223,9 @@ export async function build(rootProjectDir?: string, options?: BuildOptions) {
         const outPath = path.join(buildDir, outFilePath);
 
         let html = data.html || '';
+        if (rootConfig.prettyHtml !== false) {
+          html = await htmlPretty(html, rootConfig.prettyHtmlOptions);
+        }
         // HTML minification is `true` by default. Set to `false` to disable.
         if (rootConfig.minifyHtml !== false) {
           html = await htmlMinify(html, rootConfig.minifyHtmlOptions);

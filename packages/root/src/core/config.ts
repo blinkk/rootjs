@@ -2,6 +2,7 @@ import {Request, Response, NextFunction} from './types';
 import {Plugin} from './plugin';
 import {UserConfig as ViteUserConfig} from 'vite';
 import {HtmlMinifyOptions} from '../render/html-minify';
+import {HtmlPrettyOptions} from '../render/html-pretty';
 
 export interface RootUserConfig {
   /**
@@ -48,6 +49,16 @@ export interface RootUserConfig {
    * Options to pass to html-minifier-terser.
    */
   minifyHtmlOptions?: HtmlMinifyOptions;
+
+  /**
+   * Whether to pretty print HTML output.
+   */
+  prettyHtml?: boolean;
+
+  /**
+   * Options to pass to js-beautify.
+   */
+  prettyHtmlOptions?: HtmlPrettyOptions;
 
   /**
    * Whether to include a sitemap.xml file to the build output.
