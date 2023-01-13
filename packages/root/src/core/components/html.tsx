@@ -38,5 +38,5 @@ export function Html({children, ...attrs}: HtmlProps) {
       {cause: err}
     );
   }
-  return children;
+  return <>{children}</>;
 }
