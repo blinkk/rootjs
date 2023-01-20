@@ -23,7 +23,7 @@ test('inject meta tags into <head>', async () => {
   const html = await fs.readFile(index, 'utf-8');
   expect(html).toMatchInlineSnapshot(`
     "<!doctype html>
-    <html lang=\\"en\\">
+    <html lang=\\"en-GB\\">
     <head>
     <meta charset=\\"utf-8\\">
     <title>Hello world</title>
