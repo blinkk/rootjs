@@ -30,7 +30,9 @@ export function Html({children, ...attrs}: HtmlProps) {
   let context: Record<string, any>;
   try {
     context = useContext(HTML_CONTEXT);
-    context.attrs = attrs;
+    if (!Object.isFrozen(context)) {
+      context.attrs = attrs;
+    }
   } catch (err) {
     console.log(err);
     throw new Error(

@@ -23,6 +23,8 @@ export function Script(props: ScriptProps) {
       {cause: err}
     );
   }
-  context.push(props);
+  if (!Object.isFrozen(context)) {
+    context.push(props);
+  }
   return null;
 }

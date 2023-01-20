@@ -22,6 +22,8 @@ export function Head(props: HeadProps) {
       {cause: err}
     );
   }
-  context.push(props.children);
+  if (!Object.isFrozen(context)) {
+    context.push(props.children);
+  }
   return null;
 }

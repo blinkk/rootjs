@@ -1,6 +1,7 @@
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 import {ComponentChildren} from 'preact';
 import renderToString from 'preact-render-to-string';
+import ssrPrepass from 'preact-ssr-prepass';
 import {getRoutes, Route, getAllPathsForRoute} from './router';
 import {HEAD_CONTEXT} from '../core/components/head';
 import {ErrorPage} from '../core/components/error-page';
@@ -73,14 +74,14 @@ export class Renderer {
       locale,
       translations,
     };
-    const headComponents: ComponentChildren[] = [];
+    const userHeadComponents: ComponentChildren[] = [];
     const userScripts: ScriptProps[] = [];
     const htmlContext: HtmlContextValue = {attrs: {}};
     const vdom = (
       <REQUEST_CONTEXT.Provider value={ctx}>
         <I18N_CONTEXT.Provider value={{locale, translations}}>
           <HTML_CONTEXT.Provider value={htmlContext}>
-            <HEAD_CONTEXT.Provider value={headComponents}>
+            <HEAD_CONTEXT.Provider value={userHeadComponents}>
               <SCRIPT_CONTEXT.Provider value={userScripts}>
                 <Component {...props} />
               </SCRIPT_CONTEXT.Provider>
@@ -89,6 +90,14 @@ export class Renderer {
         </I18N_CONTEXT.Provider>
       </REQUEST_CONTEXT.Provider>
     );
+
+    // Do an initial pass on the vdom to evaluate any Suspense components.
+    await ssrPrepass(vdom);
+    // Freeze the context variables on the second pass and render the vdom to
+    // an HTML string.
+    Object.freeze(userHeadComponents);
+    Object.freeze(userScripts);
+    Object.freeze(htmlContext);
     const mainHtml = renderToString(vdom);
 
     const jsDeps = new Set<string>();
@@ -118,6 +127,7 @@ export class Renderer {
       })
     );
 
+    const headComponents = [...userHeadComponents];
     cssDeps.forEach((cssUrl) => {
       headComponents.push(<link rel="stylesheet" href={cssUrl} />);
     });
@@ -128,8 +138,8 @@ export class Renderer {
     const htmlLang = htmlContext.attrs.lang || locale;
     const html = await this.renderHtml({
       mainHtml,
-      locale: htmlLang,
       headComponents,
+      locale: htmlLang,
     });
     return {html};
   }

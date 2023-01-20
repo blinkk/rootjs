@@ -84,6 +84,7 @@ importers:
       preact: ^10.10.6
       preact-custom-element: ^4.2.1
       preact-render-to-string: ^5.2.3
+      preact-ssr-prepass: ^1.2.0
       rollup: ^2.79.0
       sass: ^1.49.9
       sirv: ^2.0.2
@@ -103,6 +104,7 @@ importers:
       joycon: 3.1.1
       js-beautify: 1.14.7
       kleur: 4.1.5
+      preact-ssr-prepass: 1.2.0_preact@10.11.0
       sass: 1.49.9
       sirv: 2.0.2
       tiny-glob: 0.2.9
@@ -7601,6 +7603,14 @@ packages:
     dependencies:
       preact: 10.11.0
       pretty-format: 3.8.0
+
+  /preact-ssr-prepass/1.2.0_preact@10.11.0:
+    resolution: {integrity: sha512-UKz6FB2+KepjHQ6aGqiTUMZfGgdoTunxtByczdUNho9UvSRTJw31Np9J+wUSAlJ1kALJGX1BpcBLvO3iohQUSA==}
+    peerDependencies:
+      preact: '>=10 || ^10.0.0-beta.0 || ^10.0.0-alpha.0'
+    dependencies:
+      preact: 10.11.0
+    dev: false
 
   /preact/10.10.6:
     resolution: {integrity: sha512-w0mCL5vICUAZrh1DuHEdOWBjxdO62lvcO++jbzr8UhhYcTbFkpegLH9XX+7MadjTl/y0feoqwQ/zAnzkc/EGog==}
