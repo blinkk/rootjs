@@ -1,5 +1,12 @@
 # @blinkk/root
 
+## 1.0.0-alpha.31
+
+### Patch Changes
+
+- 915029b: feat: add user config for noExternal
+- 2219310: fix: move <Html> to tsx file
+
 ## 1.0.0-alpha.30
 
 ### Patch Changes
