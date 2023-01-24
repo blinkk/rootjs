@@ -1,5 +1,13 @@
 # docs
 
+## 0.0.1-alpha.19
+
+### Patch Changes
+
+- Updated dependencies [915029b]
+- Updated dependencies [2219310]
+  - @blinkk/root@1.0.0-alpha.31
+
 ## 0.0.1-alpha.18
 
 ### Patch Changes
