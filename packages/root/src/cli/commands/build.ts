@@ -15,7 +15,7 @@ import {
   writeFile,
 } from '../../core/fsutils.js';
 import {htmlMinify} from '../../render/html-minify.js';
-import {dim, blue, cyan} from 'kleur/colors';
+import {dim, cyan} from 'kleur/colors';
 import {getVitePlugins} from '../../core/plugin.js';
 import {getElements} from '../../core/elements.js';
 import {htmlPretty} from '../../render/html-pretty.js';
@@ -93,6 +93,15 @@ export async function build(rootProjectDir?: string, options?: BuildOptions) {
 
   // Bundle the render.js file with vite, which is pre-optimized for rendering
   // HTML routes.
+  const noExternalConfig = viteConfig.ssr?.noExternal;
+  const noExternal: Array<string | RegExp> = [];
+  if (noExternalConfig) {
+    if (Array.isArray(noExternalConfig)) {
+      noExternal.push(...noExternalConfig);
+    } else {
+      noExternal.push(noExternalConfig as string | RegExp);
+    }
+  }
   await viteBuild({
     ...baseConfig,
     publicDir: false,
@@ -116,7 +125,8 @@ export async function build(rootProjectDir?: string, options?: BuildOptions) {
       reportCompressedSize: false,
     },
     ssr: {
-      noExternal: ['@blinkk/root'],
+      ...viteConfig.ssr,
+      noExternal: ['@blinkk/root', ...noExternal],
     },
   });
 
