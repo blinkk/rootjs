@@ -114,6 +114,15 @@ async function viteServerMiddleware(options: {
     });
   }
 
+  const noExternalConfig = viteConfig.ssr?.noExternal;
+  const noExternal: Array<string | RegExp> = [];
+  if (noExternalConfig) {
+    if (Array.isArray(noExternalConfig)) {
+      noExternal.push(...noExternalConfig);
+    } else {
+      noExternal.push(noExternalConfig as string | RegExp);
+    }
+  }
   const viteServer = await createViteServer({
     ...viteConfig,
     mode: 'development',
@@ -136,7 +145,7 @@ async function viteServerMiddleware(options: {
     },
     ssr: {
       ...(viteConfig.ssr || {}),
-      noExternal: ['@blinkk/root'],
+      noExternal: ['@blinkk/root', ...noExternal],
     },
     esbuild: {
       ...(viteConfig.esbuild || {}),
