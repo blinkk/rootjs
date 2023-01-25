@@ -1,5 +1,11 @@
 # @blinkk/root
 
+## 1.0.0-alpha.32
+
+### Patch Changes
+
+- dc4d11e: fix: remove noExternal config from dev
+
 ## 1.0.0-alpha.31
 
 ### Patch Changes

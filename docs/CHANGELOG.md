@@ -1,5 +1,12 @@
 # docs
 
+## 0.0.1-alpha.20
+
+### Patch Changes
+
+- Updated dependencies [dc4d11e]
+  - @blinkk/root@1.0.0-alpha.32
+
 ## 0.0.1-alpha.19
 
 ### Patch Changes
