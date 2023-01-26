@@ -84,6 +84,7 @@ export async function build(rootProjectDir?: string, options?: BuildOptions) {
     root: rootDir,
     mode: mode,
     esbuild: {
+      ...viteConfig.esbuild,
       jsx: 'automatic',
       jsxImportSource: 'preact',
       treeShaking: true,
