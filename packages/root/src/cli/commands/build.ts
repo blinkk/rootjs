@@ -106,6 +106,7 @@ export async function build(rootProjectDir?: string, options?: BuildOptions) {
     ...baseConfig,
     publicDir: false,
     build: {
+      ...viteConfig?.build,
       rollupOptions: {
         ...viteConfig?.build?.rollupOptions,
         input: [path.resolve(__dirname, './render.js')],
@@ -135,6 +136,7 @@ export async function build(rootProjectDir?: string, options?: BuildOptions) {
     ...baseConfig,
     publicDir: false,
     build: {
+      ...viteConfig?.build,
       rollupOptions: {
         ...viteConfig?.build?.rollupOptions,
         input: [...routeFiles, ...elements, ...bundleScripts],
