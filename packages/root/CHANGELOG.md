@@ -1,5 +1,12 @@
 # @blinkk/root
 
+## 1.0.0-alpha.33
+
+### Patch Changes
+
+- b537ce9: fix: apply viteConfig.build from root.config.ts
+- 345dbb6: fix esbuild options from root.config.ts
+
 ## 1.0.0-alpha.32
 
 ### Patch Changes
