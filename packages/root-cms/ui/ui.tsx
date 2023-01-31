@@ -22,7 +22,6 @@ function App() {
     <MantineProvider>
       <Router>
         <Route path="/cms" component={ProjectPage} />
-        <Route path="/cms/content" component={CollectionPage} />
         <Route path="/cms/content/:collection?" component={CollectionPage} />
         <Route path="/cms/content/:collection/:slug" component={DocumentPage} />
         <Route default component={NotFoundPage} />

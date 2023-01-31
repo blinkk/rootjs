@@ -1,6 +1,6 @@
 import {ComponentChildren} from 'preact';
 import {Tooltip} from '@mantine/core';
-import {IconDatabase, IconFolder, IconHome, IconLanguage, IconPhoto} from '@tabler/icons-preact';
+import {IconDatabase, IconFolder, IconHome, IconLanguage, IconPhoto, IconSettings} from '@tabler/icons-preact';
 import packageJson from '../../package.json' assert {type: 'json'};
 import './Layout.css';
 import {useRouter} from 'preact-router';
@@ -93,6 +93,17 @@ Layout.Side = (props: LayoutProps) => {
           href="/cms/translations"
         >
           <IconLanguage stroke={ICON_STROKE} />
+        </a>
+      </Tooltip>
+      <Tooltip label="Settings" position="right" withArrow>
+        <a
+          className={joinClassNames(
+            'Layout__side__button',
+            currentUrl.startsWith('/cms/settings') && 'active'
+          )}
+          href="/cms/settings"
+        >
+          <IconSettings stroke={ICON_STROKE} />
         </a>
       </Tooltip>
     </div>
