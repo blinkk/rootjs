@@ -4,12 +4,12 @@ import {defineConfig} from 'tsup';
 
 export default defineConfig({
   entry: {
-    index: 'src/index.ts',
-    plugin: 'src/plugin.ts',
-    schema: 'src/schema.ts',
+    ui: './ui/ui.tsx',
   },
-  sourcemap: true,
+  sourcemap: 'inline',
   target: 'node16',
-  dts: true,
+  platform: 'browser',
+  dts: false,
   format: ['esm'],
+  splitting: false,
 });

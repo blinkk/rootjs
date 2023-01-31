@@ -1,5 +1,4 @@
 import {NextFunction, Request, Response} from '@blinkk/root';
-import axios from 'axios';
 import jsonwebtoken from 'jsonwebtoken';
 
 export interface User {
@@ -17,7 +16,7 @@ export interface MiddlewareOptions {
   loginUrl?: string;
 }
 
-const USER_COOKIE = 'ROOTJS_USER';
+const AUTH_COOKIE = 'ROOTJS_AUTH';
 
 export function usersMiddleware(options: MiddlewareOptions) {
   const clientId = process.env.GOOGLE_CLIENT_ID!;
@@ -78,24 +77,23 @@ export function usersMiddleware(options: MiddlewareOptions) {
     params.set('redirect_uri', getRedirectUrl(req));
     params.set('grant_type', 'authorization_code');
     params.set('code', code);
-    const res = await axios({
+
+    const res = await fetch('https://oauth2.googleapis.com/token', {
       method: 'POST',
-      url: 'https://oauth2.googleapis.com/token',
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded',
       },
-      data: params.toString(),
+      body: params.toString(),
     });
     if (res.status !== 200) {
       console.error(res.status);
       throw new Error('failed to retrieve jwt token');
     }
-    return res.data;
+    return res.json();
   }
 
   async function getUser(req: Request): Promise<User | null> {
-    const cookieValue = req.signedCookies[USER_COOKIE];
-    console.log(cookieValue);
+    const cookieValue = req.signedCookies[AUTH_COOKIE];
     if (cookieValue) {
       try {
         const jwt = JSON.parse(cookieValue);
@@ -126,7 +124,7 @@ export function usersMiddleware(options: MiddlewareOptions) {
       return;
     }
     const exp = jwt.exp || Math.floor(new Date().getTime() / 1000 + 3600);
-    res.cookie(USER_COOKIE, JSON.stringify(jwt), {
+    res.cookie(AUTH_COOKIE, JSON.stringify(jwt), {
       secure: req.hostname !== 'localhost',
       httpOnly: true,
       sameSite: true,
@@ -151,23 +149,27 @@ export function usersMiddleware(options: MiddlewareOptions) {
   }
 
   return async (req: Request, res: Response, next: NextFunction) => {
-    if (req.originalUrl.startsWith(loginUrl)) {
-      await handleLogin(req, res);
-      return;
-    }
-    const user = await getUser(req);
-    if (isLoginRequired(req)) {
-      if (!user) {
-        loginRedirect(req, res);
+    try {
+      if (req.originalUrl.startsWith(loginUrl)) {
+        await handleLogin(req, res);
         return;
       }
-      if (!isUserAuthorized(req, user)) {
-        res.status(403).send('403: Login failed');
-        return;
+      const user = await getUser(req);
+      if (isLoginRequired(req)) {
+        if (!user) {
+          loginRedirect(req, res);
+          return;
+        }
+        if (!isUserAuthorized(req, user)) {
+          res.status(403).send('403: Login failed');
+          return;
+        }
       }
+      const r = req as UserRequest;
+      r.user = user;
+      next();
+    } catch (err) {
+      next(err);
     }
-    const r = req as UserRequest;
-    r.user = user;
-    next();
   };
 }

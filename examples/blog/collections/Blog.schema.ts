@@ -1,12 +1,16 @@
-import * as schema from '@blinkk/root-cms/schema';
+import {schema} from '@blinkk/root-cms';
 import Page from '@/routes/blog/[slug].js';
 
 export default schema.collection({
   name: 'Blog',
-  description: 'Blog.',
-  url: '/blog',
+  description: 'Blog posts.',
+  url: '/blog/[slug]',
   Component: Page,
   fields: [
+    schema.string({
+      id: 'internalDesc',
+      label: 'Internal Description',
+    }),
     schema.object({
       id: 'meta',
       label: 'Meta',

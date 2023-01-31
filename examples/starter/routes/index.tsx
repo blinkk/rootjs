@@ -1,4 +1,4 @@
-import {BaseLayout} from '@/layouts/base';
+import {BaseLayout} from '@/layouts/base.js';
 import {useTranslations} from '@blinkk/root';
 
 export default function Page() {

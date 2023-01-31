@@ -4,7 +4,7 @@
   "author": "s@blinkk.com",
   "license": "MIT",
   "engines": {
-    "node": ">=16.0.0"
+    "node": ">=18.0.0"
   },
   "files": [
     "dist/*"
@@ -14,8 +14,8 @@
   "types": "./dist/index.d.ts",
   "exports": {
     ".": {
-      "types": "./dist/index.d.ts",
-      "import": "./dist/index.js"
+      "types": "./dist/core.d.ts",
+      "import": "./dist/core.js"
     },
     "./*": {
       "types": "./dist/*.d.ts",
@@ -23,29 +23,38 @@
     }
   },
   "scripts": {
-    "build": "rm -rf dist && tsup-node",
-    "dev": "rm -rf dist && tsup-node --watch",
+    "build": "rm -rf dist && concurrently -n \"core,ui\" npm:build:core npm:build:ui",
+    "build:core": "tsup-node --config=./core/tsup.config.ts",
+    "build:ui": "tsup --config=./ui/tsup.config.ts",
+    "dev": "rm -rf dist && concurrently -k -n \"core,ui\" npm:dev:core npm:dev:ui",
+    "dev:core": "tsup-node --config=./core/tsup.config.ts --watch",
+    "dev:ui": "tsup --config=./ui/tsup.config.ts --watch",
     "test": "pnpm build && vitest run",
     "test:watch": "pnpm build && vitest"
   },
   "dependencies": {
-    "@blinkk/root": "workspace:*",
     "@preact/signals": "^1.1.2",
-    "axios": "^1.2.2",
     "cookie-parser": "^1.4.6",
     "dotenv": "^16.0.0",
     "firebase": "^9.13.0",
-    "jsonwebtoken": "^9.0.0"
+    "jsonwebtoken": "^9.0.0",
+    "preact-render-to-string": "^5.2.3"
   },
   "devDependencies": {
+    "@blinkk/root": "workspace:*",
     "@types/cookie-parser": "^1.4.3",
     "@types/jsonwebtoken": "^9.0.1",
     "@types/node": "^18.11.8",
+    "concurrently": "^7.6.0",
     "preact": "*",
+    "preact-router": "^4.1.0",
     "tsup": "^6.3.0",
+    "typescript": "4.9.4",
+    "vite": "*",
     "vitest": "^0.18.1"
   },
   "peerDependencies": {
+    "@blinkk/root": "*",
     "preact": "*"
   }
 }

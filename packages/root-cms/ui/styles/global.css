@@ -1,0 +1,108 @@
+:root {
+  --font-family-default: "Inter", sans-serif;
+  --font-family-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  --color-text-default: #333333;
+  --color-border: #EFEFEF;
+}
+
+html {
+  box-sizing: border-box;
+  overflow-x: hidden;
+  font-size: 16px;
+  line-height: 1.5;
+}
+
+*,
+*:before,
+*:after {
+  box-sizing: inherit;
+}
+
+html,
+body {
+  /* font-family: tokens.$font-family-primary; */
+  font-family: var(--font-family-default);
+  color: var(--color-text-default);
+  height: 100%;
+  margin: 0;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  scroll-behavior: smooth;
+}
+
+img,
+picture,
+figure,
+video,
+canvas,
+svg,
+iframe {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  margin: 0;
+}
+
+a {
+  color: inherit;
+}
+
+select {
+  color-scheme: light;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+p {
+  margin: 0;
+}
+
+body.menu\:open {
+  overflow: hidden;
+}
+
+#root {
+  margin: 0 auto;
+  min-height: 100vh;
+  position: relative;
+}
+
+.bootstrap {
+  font-size: 48px;
+  font-weight: 900;
+  width: 100%;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  padding: 40px;
+  gap: 36px;
+  position: relative;
+}
+
+.bootstrap-error {
+  font-size: 14px;
+  font-weight: 400;
+  position: absolute;
+  bottom: 100px;
+  left: 0;
+  right: 0;
+  text-align: center;
+  animation: 0.5s forwards bootstrap-loading-error;
+  animation-delay: 1s;
+  opacity: 0;
+}
+
+@keyframes bootstrap-loading-error {
+  0% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
+  }
+}

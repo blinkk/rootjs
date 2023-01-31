@@ -21,20 +21,14 @@
     "useUnknownInCatchVariables": false,
     "esModuleInterop": true,
     "resolveJsonModule": true,
-    "moduleResolution": "node",
+    "moduleResolution": "nodenext",
     "jsx": "react-jsx",
     "jsxImportSource": "preact"
   },
   "include": [
-    "src/*.ts",
-    "src/**/*.ts",
-    "src/*.tsx",
-    "src/**/*.tsx",
-  ],
-  "exclude": [
-    "src/*.test.ts",
-    "src/**/*.test.ts",
-    "src/*.test.tsx",
-    "src/**/*.test.tsx",
+    "*.ts",
+    "**/*.ts",
+    "*.tsx",
+    "**/*.tsx",
   ]
 }
