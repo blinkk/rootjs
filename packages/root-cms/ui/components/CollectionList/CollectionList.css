@@ -1,0 +1,15 @@
+.CollectionList__search {
+  margin-bottom: 12px;
+}
+
+.CollectionList__collections {
+  display: flex;
+  flex-direction: column;
+}
+.CollectionList__collection a {
+  display: flex;
+  width: 100%;
+  padding: 8px 0;
+  align-items: center;
+  gap: 8px;
+}

@@ -12,4 +12,7 @@ export default defineConfig({
   dts: false,
   format: ['esm'],
   splitting: false,
+  esbuildOptions(options) {
+    options.tsconfig = './ui/tsconfig.json';
+  },
 });

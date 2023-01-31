@@ -4,12 +4,14 @@ import {CollectionPage} from './pages/CollectionPage/CollectionPage.js';
 import {DocumentPage} from './pages/DocumentPage/DocumentPage.js';
 import {ProjectPage} from './pages/ProjectPage/ProjectPage.js';
 import {Collection} from '../core/schema.js';
+import {MantineProvider} from '@mantine/core';
 import './styles/main.css';
+import {NotFoundPage} from './pages/NotFoundPage/NotFoundPage.js';
 
 declare global {
   interface Window {
     __ROOT_CTX: {
-      user: any;
+      user: {email: string; jwt: any};
       collections: Collection[];
     };
   }
@@ -17,11 +19,15 @@ declare global {
 
 function App() {
   return (
-    <Router>
-      <Route path="/cms" component={ProjectPage} />
-      <Route path="/cms/content/:collection?" component={CollectionPage} />
-      <Route path="/cms/content/:collection/:slug" component={DocumentPage} />
-    </Router>
+    <MantineProvider>
+      <Router>
+        <Route path="/cms" component={ProjectPage} />
+        <Route path="/cms/content" component={CollectionPage} />
+        <Route path="/cms/content/:collection?" component={CollectionPage} />
+        <Route path="/cms/content/:collection/:slug" component={DocumentPage} />
+        <Route default component={NotFoundPage} />
+      </Router>
+    </MantineProvider>
   );
 }
 

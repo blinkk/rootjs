@@ -34,20 +34,56 @@
   font-weight: 700;
   letter-spacing: -0.2px;
   margin-left: 4px;
+  background-color: lightblue;
+  padding: 0 4px;
+  border-radius: 2px;
 }
 
 .Layout__top__logo:hover {
-  background-color: #F5F5F5;
+  background-color: var(--button-background-hover);
 }
 
 .Layout__top__logo:active {
-  background-color: #E5E5E5;
+  background-color: var(--button-background-active);
 }
 
 .Layout__side {
   grid-area: side;
   border-right: 1px solid var(--color-border);
   height: calc(100vh - 48px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.Layout__side a {
+  display: flex;
+  position: relative;
+  width: 100%;
+  height: 48px;
+  justify-content: center;
+  align-items: center;
+  transition: background-color 0.18s ease;
+}
+
+.Layout__side a:hover {
+  background-color: var(--button-background-hover);
+}
+
+.Layout__side a::after {
+  content: '';
+  display: block;
+  position: absolute;
+  left: 0;
+  top: 0;
+  height: 100%;
+  width: 4px;
+  background-color: transparent;
+  transition: background-color 0.18s ease;
+}
+
+.Layout__side a.active::after {
+  background-color: lightblue;
 }
 
 .Layout__main {

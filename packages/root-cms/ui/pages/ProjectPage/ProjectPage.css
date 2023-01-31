@@ -1,3 +1,9 @@
 .ProjectPage {
   padding: 8px;
 }
+
+.ProjectPage__collection {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}

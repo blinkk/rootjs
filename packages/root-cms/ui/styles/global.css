@@ -3,6 +3,8 @@
   --font-family-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   --color-text-default: #333333;
   --color-border: #EFEFEF;
+  --button-background-hover: #F5F5F5;
+  --button-background-active: #E5E5E5;
 }
 
 html {
