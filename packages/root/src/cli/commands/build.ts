@@ -186,7 +186,7 @@ export async function build(rootProjectDir?: string, options?: BuildOptions) {
   // Recursively copy files from `public` to `dist/html`.
   const publicDir = path.join(rootDir, 'public');
   if (fsExtra.existsSync(path.join(rootDir, 'public'))) {
-    fsExtra.copySync(publicDir, buildDir);
+    fsExtra.copySync(publicDir, buildDir, {dereference: true});
   } else {
     makeDir(buildDir);
   }
