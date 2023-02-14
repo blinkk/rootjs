@@ -1,5 +1,11 @@
 # @blinkk/root
 
+## 1.0.0-alpha.34
+
+### Patch Changes
+
+- 97d70b9: fix: deference symlinks during builds
+
 ## 1.0.0-alpha.33
 
 ### Patch Changes
