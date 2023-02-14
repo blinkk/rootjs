@@ -1,4 +1,4 @@
-import {ComponentChild, ComponentChildren, VNode} from 'preact';
+import {ComponentChild, ComponentChildren} from 'preact';
 import {CSSProperties} from 'preact/compat';
 import {useEffect, useRef, useState} from 'preact/hooks';
 import {useLocalStorage} from '@mantine/hooks';

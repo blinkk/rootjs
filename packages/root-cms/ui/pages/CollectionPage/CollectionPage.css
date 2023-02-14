@@ -12,6 +12,7 @@
 .CollectionPage__side__collections {
   display: flex;
   flex-direction: column;
+  padding-top: 8px;
 }
 
 .CollectionPage__side__search input {
@@ -47,6 +48,11 @@
   font-weight: 500;
   text-decoration: none;
   transition: background-color 0.18s ease;
+  position: relative;
+}
+
+.CollectionPage__side__collection.active {
+  color: black;
 }
 
 .CollectionPage__side__collection:hover {
@@ -55,6 +61,12 @@
 
 .CollectionPage__side__collection:active {
   background-color: var(--button-background-active);
+}
+
+.CollectionPage__side__collection__arrow {
+  position: absolute;
+  top: calc(50% - 10px);
+  right: 12px;
 }
 
 .CollectionPage__main__unselected {
@@ -70,4 +82,62 @@
 .CollectionPage__main__unselected__title {
   max-width: 400px;
   font-weight: 500;
+}
+
+.CollectionPage__collection__header {
+  padding: 12px;
+}
+
+.CollectionPage__collection__header__title {
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.CollectionPage__collection__header__description {
+  font-size: 14px;
+  font-weight: 500;
+  margin-top: 4px;
+
+}
+
+.CollectionPage__collection__header__description a {
+  font-weight: 700;
+}
+
+.CollectionPage__collection__header__description a:hover {
+  color: black;
+}
+
+.CollectionPage__collection__tabs [role="tab"] {
+  font-weight: 500;
+}
+
+.CollectionPage__collection__tabs [role="tab"][data-active] {
+  border-color: lightblue;
+}
+
+.CollectionPage__collection__tabs [role="tablist"] {
+  border-color: var(--color-border);
+}
+
+.CollectionPage__collection__docsTab {
+  padding: 12px;
+}
+
+.CollectionPage__collection__docsTab__controls {
+  display: flex;
+  justify-content: flex-end;
+  gap: 16px;
+  align-items: center;
+  font-size: 14px;
+}
+
+.CollectionPage__collection__docsTab__controls__sort {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.CollectionPage__collection__docsTab__controls__sort__label {
+  font-weight: 600;
 }

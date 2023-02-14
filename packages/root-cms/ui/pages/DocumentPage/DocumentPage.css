@@ -1,0 +1,19 @@
+.DocumentPage__side {
+  max-height: calc(100vh - 48px);
+  overflow: auto;
+}
+
+.DocumentPage__side__docId {
+  font-weight: 600;
+  font-size: 12px;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.DocumentPage__side__editor {
+  padding: 8px 12px;
+}
+
+.DocumentPage__main {
+  padding: 12px;
+}

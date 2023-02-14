@@ -66,6 +66,12 @@ export interface RootUserConfig {
   sitemap?: boolean;
 
   /**
+   * Canonical domain the website will serve on. Useful for things like the
+   * sitemap, SEO tags, etc.
+   */
+  domain?: string;
+
+  /**
    * Plugins.
    */
   plugins?: Plugin[];

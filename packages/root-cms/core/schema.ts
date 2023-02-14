@@ -14,6 +14,7 @@ export type StringField = CommonFieldProps & {
   type: 'string';
   default?: string;
   translate?: boolean;
+  variant?: 'input' | 'textarea';
 };
 
 export function string(field: Omit<StringField, 'type'>): StringField {

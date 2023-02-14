@@ -1,6 +1,6 @@
 import {ComponentChildren} from 'preact';
 import {Tooltip} from '@mantine/core';
-import {IconDatabase, IconFolder, IconHome, IconLanguage, IconPhoto, IconSettings} from '@tabler/icons-preact';
+import {IconDatabase, IconFolder, IconHome, IconLanguage, IconPhoto, IconSettings, IconSitemap} from '@tabler/icons-preact';
 import packageJson from '../../package.json' assert {type: 'json'};
 import './Layout.css';
 import {useRouter} from 'preact-router';
@@ -28,7 +28,8 @@ Layout.Top = (props: LayoutProps) => {
   return (
     <div className="Layout__top">
       <a className="Layout__top__logo" href="/cms">
-        Root.js
+        <IconSitemap size={14} />
+        <div>Root.js</div>
       </a>
       <div className="Layout__top__version">v{packageJson.version}</div>
     </div>
