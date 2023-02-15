@@ -1,16 +1,10 @@
 import path from 'node:path';
 import {URL} from 'node:url';
 import {defineConfig} from '@blinkk/root';
-import {cmsPlugin} from '@blinkk/root-cms/plugin';
 
 const rootDir = new URL('.', import.meta.url).pathname;;
 
 export default defineConfig({
-  i18n: {
-    urlFormat: '/{locale}/{path}',
-    locales: ['en', 'ja'],
-    defaultLocale: 'en',
-  },
   vite: {
     resolve: {
       alias: {
@@ -25,5 +19,4 @@ export default defineConfig({
       },
     },
   },
-  plugins: [cmsPlugin()],
 });

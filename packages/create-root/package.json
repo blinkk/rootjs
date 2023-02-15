@@ -1,0 +1,29 @@
+{
+  "name": "create-root",
+  "version": "1.0.0",
+  "description": "",
+  "author": "s@blinkk.com",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/blinkk/rootjs.git",
+    "directory": "packages/create-root"
+  },
+  "files": [
+    "dist/*"
+  ],
+  "type": "module",
+  "bin": {
+    "create-root": "./dist/create-root.js"
+  },
+  "scripts": {
+    "build": "tsup ./src/create-root.ts --format=esm"
+  },
+  "dependencies": {
+    "commander": "^10.0.0",
+    "degit": "^2.8.4"
+  },
+  "devDependencies": {
+    "tsup": "^6.6.3"
+  }
+}

@@ -1,6 +1,6 @@
 import {Head, Script} from '@blinkk/root';
-import {GlobalFooter} from '@/templates/global-footer/global-footer';
-import {GlobalHeader} from '@/templates/global-header/global-header';
+import {GlobalFooter} from '@/templates/global-footer/global-footer.js';
+import {GlobalHeader} from '@/templates/global-header/global-header.js';
 import {ComponentChildren} from 'preact';
 import '@/styles/global.scss';
 
