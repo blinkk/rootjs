@@ -1,5 +1,11 @@
 # @blinkk/create-root
 
+## 1.0.0-alpha.1
+
+### Patch Changes
+
+- e3967b7: fix: update root.js version in create-root
+
 ## 1.0.0-alpha.0
 
 ### Major Changes
