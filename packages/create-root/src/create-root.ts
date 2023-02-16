@@ -6,6 +6,7 @@ import fs from 'node:fs';
 import {fileURLToPath} from 'node:url';
 import {Command} from 'commander';
 import degit from 'degit';
+import {ROOT_VERSION} from './root-version';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const require = createRequire(import.meta.url);
@@ -49,11 +50,16 @@ async function updatePackageJson(packageJsonPath: string) {
   const str = await fs.promises.readFile(packageJsonPath, 'utf-8');
   const packageJson = JSON.parse(str);
   packageJson.name = path.basename(path.dirname(packageJsonPath));
-  packageJson.dependencies['@blinkk/root'] = '*';
-  console.log(packageJson);
+  packageJson.version = '1.0.0';
+  packageJson.dependencies['@blinkk/root'] = `^${ROOT_VERSION}`;
+  await fs.promises.writeFile(
+    packageJsonPath,
+    JSON.stringify(packageJson, null, 2),
+    'utf-8'
+  );
 }
 
-function maybeRelativePath(filePath) {
+function maybeRelativePath(filePath: string): string {
   const cwd = process.cwd();
   const fullPath = path.resolve(filePath);
 

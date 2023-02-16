@@ -17,13 +17,16 @@
     "create-root": "./dist/create-root.js"
   },
   "scripts": {
-    "build": "tsup ./src/create-root.ts --format=esm"
+    "build": "pnpm update-root-version && tsup ./src/create-root.ts --format=esm",
+    "update-root-version": "node ./scripts/update-root-version.mjs"
   },
   "dependencies": {
     "commander": "^10.0.0",
     "degit": "^2.8.4"
   },
   "devDependencies": {
+    "@types/degit": "^2.8.3",
+    "@types/node": "^18.13.0",
     "tsup": "^6.6.3"
   }
 }
