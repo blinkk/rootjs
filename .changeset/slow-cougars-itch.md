@@ -1,5 +1,5 @@
 ---
-'create-root': major
+'@blinkk/create-root': major
 ---
 
-feat: add create-root package
+feat: add @blinkk/create-root package
