@@ -10,7 +10,6 @@
     "preview": "rm -rf dist/ && root build --ssr-only && root preview",
     "deploy": "rm -rf dist/ && pnpm run build && firebase deploy --only=hosting"
   },
-  "keywords": [],
   "author": "s@blinkk.com",
   "license": "MIT",
   "dependencies": {
@@ -21,6 +20,6 @@
     "preact-render-to-string": "^5.2.3"
   },
   "devDependencies": {
-    "vite": "^3.1.4"
+    "vite": "^4.1.2"
   }
 }

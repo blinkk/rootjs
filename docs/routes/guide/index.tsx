@@ -1,4 +1,4 @@
-import {Guide} from '@/layouts/guide';
+import {Guide} from '@/layouts/guide.js';
 
 const PACKAGE_JSON_CODE = `
 {
@@ -47,17 +47,26 @@ export function Page() {
 
       <h2 id="quick-setup">Quick setup</h2>
       <p>
-        More details coming soon! Check out the{' '}
+        <root-code
+          code={JSON.stringify(`yarn create @blinkk/root myproject
+cd myproject
+yarn install
+`)}
+          language="bash"
+        />
+      </p>
+      <p>
+        The command above clones the{' '}
         <a href="https://github.com/blinkk/rootjs/tree/main/examples/starter">
-          starter package
-        </a>
-        in the meantime.
+          starter
+        </a>{' '}
+        package into a folder called <code>myproject</code>.
       </p>
 
       <h2 id="manual-setup">Manual setup</h2>
       <p>Install via NPM:</p>
       <root-code
-        code={JSON.stringify('npm install @blinkk/root')}
+        code={JSON.stringify('yarn add @blinkk/root')}
         language="bash"
       />
 
@@ -72,7 +81,7 @@ export function Page() {
       <root-code code={JSON.stringify(ROUTE_CODE)} language="typescript" />
 
       <p>Start the dev server:</p>
-      <root-code code={JSON.stringify('npm run dev')} language="bash" />
+      <root-code code={JSON.stringify('yarn dev')} language="bash" />
 
       <p>
         The dev server should be running at <code>http://localhost:4007</code>

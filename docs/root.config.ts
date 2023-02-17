@@ -19,4 +19,12 @@ export default defineConfig({
       },
     },
   },
+  prettyHtml: true,
+  prettyHtmlOptions: {
+    indent_size: 0,
+    end_with_newline: true,
+    inline: ['a'],
+    extra_liners: ['img', 'p', 'h2'],
+    unformatted: ['p'],
+  },
 });

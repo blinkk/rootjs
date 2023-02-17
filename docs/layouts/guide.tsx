@@ -1,5 +1,5 @@
 import {Head} from '@blinkk/root';
-import {BaseLayout} from './base';
+import {BaseLayout} from './base.js';
 import {ComponentChildren} from 'preact';
 import styles from './guide.module.scss';
 

@@ -1,4 +1,4 @@
-import {Guide} from '@/layouts/guide';
+import {Guide} from '@/layouts/guide.js';
 
 export function Page() {
   const toc = [{id: 'overview', label: 'Overview'}];
