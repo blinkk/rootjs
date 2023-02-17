@@ -1,3 +1,5 @@
+import {ActionIcon} from '@mantine/core';
+import {IconArrowLeft} from '@tabler/icons-preact';
 import {SplitPanel} from '../../components/SplitPanel/SplitPanel.js';
 import {Layout} from '../../layout/Layout.js';
 import {DocumentEditor} from '../DocumentEditor/DocumentEditor.js';
@@ -26,12 +28,21 @@ export function DocumentPage(props: any) {
     <Layout>
       <SplitPanel className="DocumentPage" localStorageId="DocumentPage">
         <SplitPanel.Item className="DocumentPage__side">
-          <div className="DocumentPage__side__docId">{docId}</div>
+          <div className="DocumentPage__side__header">
+            <a href={`/cms/content/${collectionId}`}>
+              <ActionIcon className="DocumentPage__side__header__back">
+                <IconArrowLeft size={16} />
+              </ActionIcon>
+            </a>
+            <div className="DocumentPage__side__header__docId">{docId}</div>
+          </div>
           <div className="DocumentPage__side__editor">
             <DocumentEditor collection={collection} />
           </div>
         </SplitPanel.Item>
-        <SplitPanel.Item className="DocumentPage__main">TODO: Instant Preview</SplitPanel.Item>
+        <SplitPanel.Item className="DocumentPage__main">
+          TODO: Instant Preview
+        </SplitPanel.Item>
       </SplitPanel>
     </Layout>
   );

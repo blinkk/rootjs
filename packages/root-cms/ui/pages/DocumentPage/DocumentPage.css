@@ -3,11 +3,18 @@
   overflow: auto;
 }
 
-.DocumentPage__side__docId {
+.DocumentPage__side__header {
   font-weight: 600;
   font-size: 12px;
-  padding: 8px 12px;
+  padding: 4px 12px 4px 4px;
   border-bottom: 1px solid var(--color-border);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.DocumentPage__side__header__back {
+  color: var(--color-text-default);
 }
 
 .DocumentPage__side__editor {
