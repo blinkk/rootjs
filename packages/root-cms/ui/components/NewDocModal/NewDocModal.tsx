@@ -50,7 +50,6 @@ export function NewDocModal(props: NewDocModalProps) {
             placeholder="slug"
             autoComplete="off"
             size="xs"
-            color="cyan"
           />
         </div>
 
@@ -60,11 +59,11 @@ export function NewDocModal(props: NewDocModalProps) {
             onClick={() => onClose()}
             type="button"
             size="xs"
-            color="cyan"
+            color="dark"
           >
             Cancel
           </Button>
-          <Button variant="filled" type="submit" size="xs" color="cyan">
+          <Button variant="filled" type="submit" size="xs" color="dark">
             Submit
           </Button>
         </div>

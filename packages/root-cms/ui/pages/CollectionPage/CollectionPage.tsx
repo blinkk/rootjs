@@ -1,4 +1,4 @@
-import {IconFolder, IconNotebook} from '@tabler/icons-preact';
+import {IconCirclePlus, IconFolder, IconNotebook} from '@tabler/icons-preact';
 import {useState} from 'preact/hooks';
 import {Button, Select, Tabs} from '@mantine/core';
 import {Markdown} from '../../components/Markdown/Markdown.js';
@@ -94,11 +94,11 @@ CollectionPage.Collection = (props: CollectionProps) => {
     key: `root::CollectionPage:${props.collection}:sort`,
     defaultValue: 'modifiedAt',
   });
-
   const [newDocModalOpen, setNewDocModalOpen] = useState(false);
 
   const collections = window.__ROOT_CTX.collections || [];
   const collection = collections.find((c) => c.name === props.collection);
+
   if (!collection) {
     return (
       <div className="CollectionPage__collection">
@@ -155,11 +155,12 @@ CollectionPage.Collection = (props: CollectionProps) => {
               </div>
               <div className="CollectionPage__collection__docsTab__controls__newDoc">
                 <Button
-                  color="cyan"
+                  color="dark"
                   size="xs"
+                  leftIcon={<IconCirclePlus size={16} />}
                   onClick={() => setNewDocModalOpen(true)}
                 >
-                  New doc
+                  New
                 </Button>
               </div>
             </div>

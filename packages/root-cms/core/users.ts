@@ -94,17 +94,18 @@ export function usersMiddleware(options: MiddlewareOptions) {
 
   async function getUser(req: Request): Promise<User | null> {
     const cookieValue = req.signedCookies[AUTH_COOKIE];
+    console.log(cookieValue);
     if (cookieValue) {
       try {
-        const jwt = JSON.parse(cookieValue);
-        if (jwt.email) {
+        const jwt = decodeJWT(cookieValue);
+        if (jwt && jwt.email) {
           return {
             email: jwt.email,
             jwt: jwt,
           };
         }
       } catch (e) {
-        console.error(`failed to parse cookie: ${cookieValue}`);
+        console.error(`failed to parse jwt: ${cookieValue}`);
         console.error(e);
       }
     }
@@ -124,7 +125,7 @@ export function usersMiddleware(options: MiddlewareOptions) {
       return;
     }
     const exp = jwt.exp || Math.floor(new Date().getTime() / 1000 + 3600);
-    res.cookie(AUTH_COOKIE, JSON.stringify(jwt), {
+    res.cookie(AUTH_COOKIE, token.id_token, {
       secure: req.hostname !== 'localhost',
       httpOnly: true,
       sameSite: true,

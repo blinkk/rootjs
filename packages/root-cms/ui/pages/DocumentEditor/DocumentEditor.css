@@ -2,6 +2,13 @@
   font-size: 12px;
 }
 
+.DocumentEditor__loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 200px;
+}
+
 .DocumentEditor__fields {
   display: flex;
   flex-direction: column;
@@ -61,7 +68,13 @@
 }
 
 .DocumentEditor__ArrayField__item__header__preview {
+  font-family: var(--font-family-mono);
+  font-weight: 500;
   flex: 1;
+  padding-right: 8px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .DocumentEditor__ArrayField__item__header__controls {
@@ -82,13 +95,19 @@
   padding: 0;
   background: transparent;
   cursor: pointer;
+  transition: transform 0.18s ease;
+}
+
+.DocumentEditor__ArrayField__item__header__controls__arrow:active {
+  transform: translateY(2px);
 }
 
 .DocumentEditor__ArrayField__item__header__controls__dots {
   color: black;
 }
 
-.DocumentEditor__ArrayField__item__header__controls__menu {
+.DocumentEditor__ArrayField__items__empty {
+  font-family: var(--font-family-mono);
 }
 
 .DocumentEditor__ArrayField__item__header__controls__menu [role="menuitem"] {

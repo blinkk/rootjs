@@ -1,6 +1,7 @@
 import {
   ActionIcon,
   Button,
+  Loader,
   Menu,
   Select,
   Textarea,
@@ -8,13 +9,12 @@ import {
 } from '@mantine/core';
 import {useCallback, useState} from 'preact/hooks';
 import {
-  IconArrowDownCircle,
-  IconArrowUpCircle,
-  IconCircleChevronLeft,
-  IconCircleChevronRight,
+  IconCircleArrowDown,
+  IconCircleArrowUp,
   IconCirclePlus,
   IconCopy,
   IconDotsVertical,
+  IconPhotoUp,
   IconRowInsertBottom,
   IconRowInsertTop,
   IconTrash,
@@ -22,24 +22,36 @@ import {
 } from '@tabler/icons-preact';
 import * as schema from '../../../core/schema.js';
 import './DocumentEditor.css';
+import {useDoc} from '../../hooks/useDoc.js';
+import {doc, getDoc, getFirestore, setDoc} from 'firebase/firestore';
 
 interface DocumentEditorProps {
+  docId: string;
   collection: schema.Collection;
 }
 
 export function DocumentEditor(props: DocumentEditorProps) {
   const fields = props.collection.fields || [];
+  const {loading, data} = useDoc(props.docId);
   return (
     <div className="DocumentEditor">
-      <div className="DocumentEditor__fields">
-        {fields.map((field) => (
-          <DocumentEditor.Field
-            key={field.id}
-            collection={props.collection}
-            field={field}
-          />
-        ))}
-      </div>
+      {loading ? (
+        <div className="DocumentEditor__loading">
+          <Loader color="gray" size="xl" />
+        </div>
+      ) : (
+        <div className="DocumentEditor__fields">
+          {fields.map((field) => (
+            <DocumentEditor.Field
+              key={field.id}
+              collection={props.collection}
+              field={field}
+              shallowKey={field.id!}
+              deepKey={field.id!}
+            />
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -49,6 +61,9 @@ interface FieldProps {
   field: schema.Field;
   level?: number;
   hideHeader?: boolean;
+  onChange?: (newValue: any) => void;
+  shallowKey: string;
+  deepKey: string;
 }
 
 DocumentEditor.Field = (props: FieldProps) => {
@@ -59,6 +74,8 @@ DocumentEditor.Field = (props: FieldProps) => {
       className="DocumentEditor__field"
       data-type={field.type}
       data-level={level}
+      data-shallow-key={props.shallowKey}
+      data-deep-key={props.deepKey}
     >
       {!props.hideHeader && (
         <div className="DocumentEditor__field__header">
@@ -73,6 +90,8 @@ DocumentEditor.Field = (props: FieldProps) => {
       <div className="DocumentEditor__field__input">
         {field.type === 'array' ? (
           <DocumentEditor.ArrayField {...props} />
+        ) : field.type === 'image' ? (
+          <DocumentEditor.ImageField {...props} />
         ) : field.type === 'object' ? (
           <DocumentEditor.ObjectField {...props} />
         ) : field.type === 'oneof' ? (
@@ -97,6 +116,34 @@ DocumentEditor.StringField = (props: FieldProps) => {
   return <TextInput size="xs" radius={0} />;
 };
 
+DocumentEditor.ImageField = (props: FieldProps) => {
+  // const field = props.field as schema.ImageField;
+
+  async function onClick() {
+    console.log('onclick');
+    const db = getFirestore(window.firebase.app);
+    const docRef = doc(db, 'Projects/rootjs-dev/Docs/hello');
+    await setDoc(docRef, {foo: 'bar'});
+    console.log('saved Projects/rootjs-dev/Docs/hello');
+  }
+
+  return (
+    <div className="DocumentEditor__ImageField">
+      {/* <Button color="dark" size="xs" leftIcon={<IconPhotoUp size={16} />}>
+        Upload image
+      </Button> */}
+      <Button
+        color="dark"
+        size="xs"
+        leftIcon={<IconPhotoUp size={16} />}
+        onClick={() => onClick()}
+      >
+        Upload image
+      </Button>
+    </div>
+  );
+};
+
 DocumentEditor.ObjectField = (props: FieldProps) => {
   const field = props.field as schema.ObjectField;
   return (
@@ -107,6 +154,8 @@ DocumentEditor.ObjectField = (props: FieldProps) => {
             key={field.id}
             collection={props.collection}
             field={field}
+            shallowKey={field.id!}
+            deepKey={`${props.deepKey}.${field.id}`}
           />
         ))}
       </div>
@@ -196,7 +245,7 @@ DocumentEditor.ArrayField = (props: FieldProps) => {
           >
             <summary className="DocumentEditor__ArrayField__item__header">
               <div className="DocumentEditor__ArrayField__item__header__icon">
-                <IconTriangleFilled size={8} />
+                <IconTriangleFilled size={6} />
               </div>
               <div className="DocumentEditor__ArrayField__item__header__preview">
                 item {i}
@@ -207,13 +256,13 @@ DocumentEditor.ArrayField = (props: FieldProps) => {
                     className="DocumentEditor__ArrayField__item__header__controls__arrow DocumentEditor__ArrayField__item__header__controls__arrows--up"
                     onClick={() => moveUp(i)}
                   >
-                    <IconArrowUpCircle size={20} strokeWidth={1.75} />
+                    <IconCircleArrowUp size={20} strokeWidth={1.75} />
                   </button>
                   <button
                     className="DocumentEditor__ArrayField__item__header__controls__arrow DocumentEditor__ArrayField__item__header__controls__arrows--down"
                     onClick={() => moveDown(i)}
                   >
-                    <IconArrowDownCircle size={20} strokeWidth={1.75} />
+                    <IconCircleArrowDown size={20} strokeWidth={1.75} />
                   </button>
                 </div>
                 <Menu position="bottom-start" width={200}>
@@ -258,6 +307,8 @@ DocumentEditor.ArrayField = (props: FieldProps) => {
               <DocumentEditor.Field
                 collection={props.collection}
                 field={field.of}
+                shallowKey={field.id!}
+                deepKey={`${props.deepKey}.${value._key}`}
                 hideHeader
               />
             </div>
@@ -265,7 +316,12 @@ DocumentEditor.ArrayField = (props: FieldProps) => {
         ))}
       </div>
       <div className="DocumentEditor__ArrayField__add">
-        <Button color="dark" size="xs" onClick={() => add()}>
+        <Button
+          color="dark"
+          size="xs"
+          leftIcon={<IconCirclePlus size={16} />}
+          onClick={() => add()}
+        >
           Add
         </Button>
       </div>
@@ -289,7 +345,7 @@ DocumentEditor.OneOfField = (props: FieldProps) => {
   return (
     <div className="DocumentEditor__OneOfField">
       <div className="DocumentEditor__OneOfField__select">
-        <div className="DocumentEditor__OneOfField__select__label">Select:</div>
+        <div className="DocumentEditor__OneOfField__select__label">Type:</div>
         <Select
           data={dropdownValues}
           size="xs"
@@ -304,6 +360,8 @@ DocumentEditor.OneOfField = (props: FieldProps) => {
               key={field.id}
               collection={props.collection}
               field={field}
+              shallowKey={field.id!}
+              deepKey={`${props.deepKey}.${field.id!}`}
             />
           ))}
         </div>
@@ -327,7 +385,7 @@ function autokey() {
   const chars =
     'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
   const charsLength = chars.length;
-  for (let i = 0; i < 12; i++) {
+  for (let i = 0; i < 6; i++) {
     result.push(chars.charAt(Math.floor(Math.random() * charsLength)));
   }
   return result.join('');

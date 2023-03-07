@@ -10,7 +10,7 @@ interface DocumentPageProps {
   slug: string;
 }
 
-export function DocumentPage(props: any) {
+export function DocumentPage(props: DocumentPageProps) {
   const collectionId = props.collection;
   const slug = props.slug;
   const docId = `${collectionId}/${slug}`;
@@ -37,7 +37,7 @@ export function DocumentPage(props: any) {
             <div className="DocumentPage__side__header__docId">{docId}</div>
           </div>
           <div className="DocumentPage__side__editor">
-            <DocumentEditor collection={collection} />
+            <DocumentEditor collection={collection} docId={docId} />
           </div>
         </SplitPanel.Item>
         <SplitPanel.Item className="DocumentPage__main">
