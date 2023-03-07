@@ -2,7 +2,7 @@ import {Head, Html} from '../../../../dist/core';
 
 export default function Page() {
   return (
-    <Html lang="en-GB">
+    <Html lang="en-GB" dir="ltr">
       <Head>
         <title>Hello world</title>
         <meta content="website" property="og:type" />

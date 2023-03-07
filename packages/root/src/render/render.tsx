@@ -15,9 +15,9 @@ import {RequestContext, REQUEST_CONTEXT} from '../core/request-context';
 import {HtmlContextValue, HTML_CONTEXT} from '../core/components/html';
 
 interface RenderHtmlOptions {
-  mainHtml: string;
-  locale: string;
+  htmlProps?: Record<string, string>;
   headComponents?: ComponentChildren[];
+  bodyHtml: string;
 }
 
 export class Renderer {
@@ -75,7 +75,7 @@ export class Renderer {
     };
     const headComponents: ComponentChildren[] = [];
     const userScripts: ScriptProps[] = [];
-    const htmlContext: HtmlContextValue = {attrs: {}};
+    const htmlContext: HtmlContextValue = {attrs: {lang: locale}};
     const vdom = (
       <REQUEST_CONTEXT.Provider value={ctx}>
         <I18N_CONTEXT.Provider value={{locale, translations}}>
@@ -125,11 +125,11 @@ export class Renderer {
       headComponents.push(<script type="module" src={jsUrls} />);
     });
 
-    const htmlLang = htmlContext.attrs.lang || locale;
+    const htmlProps = htmlContext.attrs || {};
     const html = await this.renderHtml({
-      mainHtml,
-      locale: htmlLang,
-      headComponents,
+      htmlProps: htmlProps,
+      headComponents: headComponents,
+      bodyHtml: mainHtml,
     });
     return {html};
   }
@@ -155,12 +155,12 @@ export class Renderer {
 
   private async renderHtml(options: RenderHtmlOptions) {
     const page = (
-      <html lang={options.locale}>
+      <html {...options.htmlProps}>
         <head>
           <meta charSet="utf-8" />
           {options.headComponents}
         </head>
-        <body dangerouslySetInnerHTML={{__html: options.mainHtml}} />
+        <body dangerouslySetInnerHTML={{__html: options.bodyHtml}} />
       </html>
     );
     const html = `<!doctype html>\n${renderToString(page)}\n`;
@@ -176,7 +176,7 @@ export class Renderer {
 
   async renderError(error: unknown) {
     const mainHtml = renderToString(<ErrorPage error={error} />);
-    const html = await this.renderHtml({mainHtml, locale: 'en'});
+    const html = await this.renderHtml({bodyHtml: mainHtml});
     return {html};
   }
 
@@ -184,8 +184,7 @@ export class Renderer {
     const sitemap = await this.getSitemap();
     const mainHtml = renderToString(<DevNotFoundPage sitemap={sitemap} />);
     const html = await this.renderHtml({
-      mainHtml,
-      locale: 'en',
+      bodyHtml: mainHtml,
       headComponents: [<title>404: Not Found</title>],
     });
     return {html};
