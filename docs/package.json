@@ -1,6 +1,6 @@
 {
   "name": "docs",
-  "version": "0.0.1-alpha.22",
+  "version": "0.0.1-alpha.23",
   "private": true,
   "description": "Documentation site for rootjs.dev",
   "type": "module",

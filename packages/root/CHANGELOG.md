@@ -1,5 +1,11 @@
 # @blinkk/root
 
+## 1.0.0-alpha.35
+
+### Patch Changes
+
+- 90c5fc6: feat: support extra attrs in Html component
+
 ## 1.0.0-alpha.34
 
 ### Patch Changes
