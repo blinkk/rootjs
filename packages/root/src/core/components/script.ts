@@ -1,4 +1,4 @@
-import {createContext} from 'preact';
+import {createContext, FunctionalComponent} from 'preact';
 import {useContext} from 'preact/hooks';
 
 export const SCRIPT_CONTEXT = createContext<ScriptProps[]>([]);
@@ -13,7 +13,7 @@ export interface ScriptProps {
  * the moment, the system only pre-renders and bundles files that are in the
  * `/bundles` folder at the root of the project.
  */
-export function Script(props: ScriptProps) {
+export const Script: FunctionalComponent<ScriptProps> = (props) => {
   let context: ScriptProps[];
   try {
     context = useContext(SCRIPT_CONTEXT);
@@ -25,4 +25,4 @@ export function Script(props: ScriptProps) {
   }
   context.push(props);
   return null;
-}
+};

@@ -1,8 +1,8 @@
-import {ComponentChildren, createContext} from 'preact';
+import {ComponentChildren, createContext, FunctionalComponent} from 'preact';
 import {useContext} from 'preact/hooks';
 
 export interface HtmlContextValue {
-  attrs: Record<string, string>;
+  attrs: preact.JSX.HTMLAttributes<HTMLHtmlElement>;
 }
 
 export const HTML_CONTEXT = createContext<HtmlContextValue>({attrs: {}});
@@ -26,8 +26,8 @@ export type HtmlProps = preact.JSX.HTMLAttributes<HTMLHtmlElement> & {
  *   );
  * }
  */
-export function Html({children, ...attrs}: HtmlProps) {
-  let context: Record<string, any>;
+export const Html: FunctionalComponent<HtmlProps> = ({children, ...attrs}) => {
+  let context: HtmlContextValue;
   try {
     context = useContext(HTML_CONTEXT);
     context.attrs = attrs;
@@ -39,4 +39,4 @@ export function Html({children, ...attrs}: HtmlProps) {
     );
   }
   return <>{children}</>;
-}
+};

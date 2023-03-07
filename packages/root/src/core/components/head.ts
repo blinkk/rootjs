@@ -1,4 +1,4 @@
-import {ComponentChildren, createContext} from 'preact';
+import {ComponentChildren, createContext, FunctionalComponent} from 'preact';
 import {useContext} from 'preact/hooks';
 
 export const HEAD_CONTEXT = createContext<ComponentChildren[]>([]);
@@ -11,7 +11,7 @@ export interface HeadProps {
  * The <Head> component can be used for injecting elements into the HTML head
  * tag from any part of a page.
  */
-export function Head(props: HeadProps) {
+export const Head: FunctionalComponent<HeadProps> = (props) => {
   let context: ComponentChildren[];
   try {
     context = useContext(HEAD_CONTEXT);
@@ -24,4 +24,4 @@ export function Head(props: HeadProps) {
   }
   context.push(props.children);
   return null;
-}
+};

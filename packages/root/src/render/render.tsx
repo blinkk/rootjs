@@ -15,7 +15,7 @@ import {RequestContext, REQUEST_CONTEXT} from '../core/request-context';
 import {HtmlContextValue, HTML_CONTEXT} from '../core/components/html';
 
 interface RenderHtmlOptions {
-  htmlProps?: Record<string, string>;
+  htmlProps?: preact.JSX.HTMLAttributes<HTMLHtmlElement>;
   headComponents?: ComponentChildren[];
   bodyHtml: string;
 }
