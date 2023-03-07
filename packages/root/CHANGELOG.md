@@ -1,5 +1,11 @@
 # @blinkk/root
 
+## 1.0.0-alpha.36
+
+### Patch Changes
+
+- 05a0e06: fix: fix intellisense for Html component
+
 ## 1.0.0-alpha.35
 
 ### Patch Changes
