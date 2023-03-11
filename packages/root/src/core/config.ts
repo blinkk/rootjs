@@ -6,13 +6,25 @@ import {HtmlPrettyOptions} from '../render/html-pretty';
 
 export interface RootUserConfig {
   /**
+   * ID for the Root.js project. This id may be useful for plugins that support
+   * multi-tenancy, e.g. plugins that use a DB may namespace entries based on
+   * this id.
+   */
+  projectId?: string;
+
+  /**
+   * Canonical domain the website will serve on. Useful for things like the
+   * sitemap, SEO tags, etc.
+   */
+  domain?: string;
+
+  /**
    * Config for auto-injecting custom element dependencies.
    */
   elements?: {
     /**
      * A list of directories to use to look for custom elements. The dir path
-     * should be relative to the project dir, e.g. "path/to/elements" or
-     * "node_modules/my-package".
+     * should be relative to the project dir, e.g. "path/to/elements".
      */
     include?: string[];
 
@@ -64,12 +76,6 @@ export interface RootUserConfig {
    * Whether to include a sitemap.xml file to the build output.
    */
   sitemap?: boolean;
-
-  /**
-   * Canonical domain the website will serve on. Useful for things like the
-   * sitemap, SEO tags, etc.
-   */
-  domain?: string;
 
   /**
    * Plugins.

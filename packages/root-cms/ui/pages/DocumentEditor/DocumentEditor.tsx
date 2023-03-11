@@ -2,12 +2,13 @@ import {
   ActionIcon,
   Button,
   Loader,
+  LoadingOverlay,
   Menu,
   Select,
   Textarea,
   TextInput,
 } from '@mantine/core';
-import {useCallback, useState} from 'preact/hooks';
+import {useCallback, useEffect, useState} from 'preact/hooks';
 import {
   IconCircleArrowDown,
   IconCircleArrowUp,
@@ -22,8 +23,8 @@ import {
 } from '@tabler/icons-preact';
 import * as schema from '../../../core/schema.js';
 import './DocumentEditor.css';
-import {useDoc} from '../../hooks/useDoc.js';
-import {doc, getDoc, getFirestore, setDoc} from 'firebase/firestore';
+import {doc, getFirestore, setDoc} from 'firebase/firestore';
+import {DraftController, useDraft} from '../../hooks/useDraft.js';
 
 interface DocumentEditorProps {
   docId: string;
@@ -32,26 +33,27 @@ interface DocumentEditorProps {
 
 export function DocumentEditor(props: DocumentEditorProps) {
   const fields = props.collection.fields || [];
-  const {loading, data} = useDoc(props.docId);
+  const {loading, draft, data} = useDraft(props.docId);
+  const values = data?.fields || {};
   return (
     <div className="DocumentEditor">
-      {loading ? (
-        <div className="DocumentEditor__loading">
-          <Loader color="gray" size="xl" />
-        </div>
-      ) : (
-        <div className="DocumentEditor__fields">
-          {fields.map((field) => (
-            <DocumentEditor.Field
-              key={field.id}
-              collection={props.collection}
-              field={field}
-              shallowKey={field.id!}
-              deepKey={field.id!}
-            />
-          ))}
-        </div>
-      )}
+      <LoadingOverlay
+        visible={loading}
+        loaderProps={{color: 'gray', size: 'xl'}}
+      />
+      <div className="DocumentEditor__fields">
+        {fields.map((field) => (
+          <DocumentEditor.Field
+            key={field.id}
+            collection={props.collection}
+            field={field}
+            shallowKey={field.id!}
+            deepKey={field.id!}
+            data={values[field.id!]}
+            draft={draft}
+          />
+        ))}
+      </div>
     </div>
   );
 }
@@ -64,6 +66,8 @@ interface FieldProps {
   onChange?: (newValue: any) => void;
   shallowKey: string;
   deepKey: string;
+  data: any;
+  draft: DraftController;
 }
 
 DocumentEditor.Field = (props: FieldProps) => {
@@ -110,34 +114,43 @@ DocumentEditor.Field = (props: FieldProps) => {
 
 DocumentEditor.StringField = (props: FieldProps) => {
   const field = props.field as schema.StringField;
-  if (field.variant === 'textarea') {
-    return <Textarea size="xs" radius={0} autosize minRows={2} maxRows={20} />;
+  const data = props.data || '';
+
+  function onChange(newValue: string) {
+    props.draft.updateKey(props.deepKey, newValue);
   }
-  return <TextInput size="xs" radius={0} />;
+
+  if (field.variant === 'textarea') {
+    return (
+      <Textarea
+        size="xs"
+        radius={0}
+        autosize
+        minRows={2}
+        maxRows={20}
+        value={data}
+        onChange={(e) => onChange(e.currentTarget.value)}
+      />
+    );
+  }
+  return (
+    <TextInput
+      size="xs"
+      radius={0}
+      value={data}
+      onChange={(e) => onChange(e.currentTarget.value)}
+    />
+  );
 };
 
 DocumentEditor.ImageField = (props: FieldProps) => {
   // const field = props.field as schema.ImageField;
-
-  async function onClick() {
-    console.log('onclick');
-    const db = getFirestore(window.firebase.app);
-    const docRef = doc(db, 'Projects/rootjs-dev/Docs/hello');
-    await setDoc(docRef, {foo: 'bar'});
-    console.log('saved Projects/rootjs-dev/Docs/hello');
-  }
-
   return (
     <div className="DocumentEditor__ImageField">
       {/* <Button color="dark" size="xs" leftIcon={<IconPhotoUp size={16} />}>
         Upload image
       </Button> */}
-      <Button
-        color="dark"
-        size="xs"
-        leftIcon={<IconPhotoUp size={16} />}
-        onClick={() => onClick()}
-      >
+      <Button color="dark" size="xs" leftIcon={<IconPhotoUp size={16} />}>
         Upload image
       </Button>
     </div>
@@ -146,6 +159,7 @@ DocumentEditor.ImageField = (props: FieldProps) => {
 
 DocumentEditor.ObjectField = (props: FieldProps) => {
   const field = props.field as schema.ObjectField;
+  const data = props.data || {};
   return (
     <div className="DocumentEditor__ObjectField">
       <div className="DocumentEditor__ObjectField__fields">
@@ -156,6 +170,8 @@ DocumentEditor.ObjectField = (props: FieldProps) => {
             field={field}
             shallowKey={field.id!}
             deepKey={`${props.deepKey}.${field.id}`}
+            data={data[field.id!]}
+            draft={props.draft}
           />
         ))}
       </div>
@@ -166,6 +182,10 @@ DocumentEditor.ObjectField = (props: FieldProps) => {
 DocumentEditor.ArrayField = (props: FieldProps) => {
   const field = props.field as schema.ArrayField;
   const [values, setValues] = useState<any[]>([]);
+
+  useEffect(() => {
+    console.log('array changed', values);
+  }, [values]);
 
   const add = useCallback(() => {
     setValues((current) => {
@@ -309,6 +329,8 @@ DocumentEditor.ArrayField = (props: FieldProps) => {
                 field={field.of}
                 shallowKey={field.id!}
                 deepKey={`${props.deepKey}.${value._key}`}
+                data={null}
+                draft={props.draft}
                 hideHeader
               />
             </div>
@@ -362,6 +384,8 @@ DocumentEditor.OneOfField = (props: FieldProps) => {
               field={field}
               shallowKey={field.id!}
               deepKey={`${props.deepKey}.${field.id!}`}
+              draft={props.draft}
+              data={null}
             />
           ))}
         </div>

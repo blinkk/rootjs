@@ -141,3 +141,36 @@
 .CollectionPage__collection__docsTab__controls__sort__label {
   font-weight: 600;
 }
+
+.CollectionPage__collection__docsList__doc {
+  display: flex;
+  align-items: center;
+  padding: 8px 0;
+}
+
+.CollectionPage__collection__docsList__doc__content {
+  display: block;
+  padding: 0 12px;
+  text-decoration: none;
+  flex: 1;
+}
+
+.CollectionPage__collection__docsList__doc__content__header__docId {
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.CollectionPage__collection__docsList__doc__content__title {
+  line-height: 36px;
+  font-size: 24px;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.CollectionPage__collection__docsList__doc__content__url {
+  font-size: 12px;
+  font-weight: 500;
+  color: #ababab;
+}

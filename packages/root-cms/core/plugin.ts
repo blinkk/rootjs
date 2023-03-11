@@ -1,5 +1,4 @@
 import {NextFunction, Plugin, Request, Response} from '@blinkk/root';
-import {User, UserRequest, usersMiddleware} from './users.js';
 import cookieParser from 'cookie-parser';
 import * as dotenv from 'dotenv';
 import path from 'node:path';
@@ -13,9 +12,9 @@ dotenv.config();
 
 const SESSION_COOKIE = '_rootjs_cms';
 
+export type CMSUser = firebase.auth.DecodedIdToken;
+
 export type CMSPluginOptions = {
-  /** The Root.js project ID. */
-  id: string;
   /** Firebase config object, which can be obtained in the Firebase Console by going to "Project Settings" */
   firebaseConfig: {
     [key: string]: string;
@@ -29,7 +28,10 @@ export type CMSPluginOptions = {
   /** Secret value(s) used for signing the user authentication cookie. */
   cookieSecret?: string | string[];
   /** Function called to check if a user should have access to the CMS. */
-  isUserAuthorized?: (req: Request, user: User) => boolean | Promise<boolean>;
+  isUserAuthorized?: (
+    req: Request,
+    user: CMSUser
+  ) => boolean | Promise<boolean>;
 };
 
 function generateSecret(): string {
@@ -56,6 +58,84 @@ export function cmsPlugin(options: CMSPluginOptions): Plugin {
     credential: firebase.credential.applicationDefault(),
   });
   const auth = firebase.auth(app);
+
+  /**
+   * Verifies a new login request for a user. The request body should contain
+   * an idToken, which is verified on prod using Firebase Admin and Identity
+   * Toolkit. If a `isUserAuthorized()` config is set, this function will also
+   * verify via that function. Returns true if the login verification succeeds.
+   */
+  async function verifyUserLogin(req: Request): Promise<boolean> {
+    const idToken = req.body?.idToken;
+    if (!idToken) {
+      return false;
+    }
+
+    // On local dev, simply verify that an idToken is set. The identity toolkit
+    // that verifies id tokens requires a service account, which we want to
+    // avoid having to set up when users are doing local development.
+    // Authentication is still required by the frontend using Firebase Auth,
+    // this just bypasses the initial server check before the ui is rendered.
+    if (process.env.NODE_ENV === 'development') {
+      return Boolean(idToken);
+    }
+
+    try {
+      const jwt = await auth.verifyIdToken(idToken, true);
+      if (isExpired(jwt)) {
+        return false;
+      }
+      if (!jwt.email || !jwt.email_verified) {
+        return false;
+      }
+      if (options.isUserAuthorized) {
+        return await options.isUserAuthorized(req, jwt);
+      }
+    } catch (err) {
+      console.error('failed to verify jwt token');
+      console.error(err);
+      return false;
+    }
+    // TODO(stevenle): decide whether we want to enforce `isUserAuthorized()`.
+    return true;
+  }
+
+  /**
+   * Verifies whether the current user session should be allowed to access the
+   * CMS. Returns true if access is granted.
+   */
+  async function verifyUserSession(req: Request): Promise<boolean> {
+    const sessionCookie = String(req.cookies[SESSION_COOKIE] || '');
+    if (!sessionCookie) {
+      return false;
+    }
+
+    // On local dev, simply verify that an session cookie is set. See note
+    // above in `verifyUserLogin()` for more information.
+    if (process.env.NODE_ENV === 'development') {
+      return Boolean(sessionCookie);
+    }
+
+    try {
+      const jwt = await auth.verifySessionCookie(sessionCookie, true);
+      if (isExpired(jwt)) {
+        return false;
+      }
+      if (!jwt.email || !jwt.email_verified) {
+        return false;
+      }
+      if (options.isUserAuthorized) {
+        return await options.isUserAuthorized(req, jwt);
+      }
+      // TODO(stevenle): decide whether we want to enforce `isUserAuthorized()`.
+      return true;
+    } catch (err) {
+      console.error('failed to verify jwt token');
+      console.error(err);
+      return false;
+    }
+  }
+
   return {
     name: 'root-cms',
     configureServer: (server) => {
@@ -64,37 +144,20 @@ export function cmsPlugin(options: CMSPluginOptions): Plugin {
 
       // Login handler.
       server.use('/cms/login', async (req: Request, res: Response) => {
-        try {
-          if (
-            req.method === 'PUT' &&
-            req.headers['content-type'] === 'application/json'
-          ) {
-            const data = req.body as {idToken: string};
-            const idToken = data.idToken;
-
-            // Verify the idToken.
-            const decodedIdToken = await auth.verifyIdToken(idToken, true);
-            if (isExpired(decodedIdToken)) {
-              res.status(401).json({success: false, error: 'EXPIRED'});
-              return;
-            }
-
-            if (!decodedIdToken.email || !decodedIdToken.email_verified) {
-              res.status(401).json({success: false, error: 'UNAUTHORIZED'});
-              return;
-            }
-
-            const user = {email: decodedIdToken.email, jwt: decodedIdToken};
-            if (
-              options.isUserAuthorized &&
-              !(await options.isUserAuthorized(req, user))
-            ) {
-              res.status(401).json({success: false, error: 'UNAUTHORIZED'});
+        if (
+          req.method === 'PUT' &&
+          req.headers['content-type'] === 'application/json'
+        ) {
+          try {
+            const isAuthorized = await verifyUserLogin(req);
+            if (!isAuthorized) {
+              res.status(401).json({success: false, error: 'NOT_AUTHORIZED'});
               return;
             }
 
             // Set session expiration to 5 days.
             const expiresIn = 60 * 60 * 24 * 5 * 1000;
+            const idToken = req.body.idToken!;
             const sessionCookie = await auth.createSessionCookie(idToken, {
               expiresIn,
             });
@@ -104,11 +167,22 @@ export function cmsPlugin(options: CMSPluginOptions): Plugin {
               secure: true,
             });
             res.json({success: true});
-          } else {
-            const appPath = path.resolve(__dirname, './app.js');
-            const app = await req.viteServer!.ssrLoadModule(appPath);
-            app.renderSignIn(req, res, options);
+          } catch (err) {
+            console.error(err);
+            if (err.stack) {
+              console.error(err.stack);
+            }
+            res
+              .status(500)
+              .json({success: false, error: 'UNKNOWN_SERVER_ERROR'});
           }
+          return;
+        }
+
+        try {
+          const appPath = path.resolve(__dirname, './app.js');
+          const app = await req.viteServer!.ssrLoadModule(appPath);
+          app.renderSignIn(req, res, options);
         } catch (err) {
           console.error(err);
           if (err.stack) {
@@ -127,25 +201,11 @@ export function cmsPlugin(options: CMSPluginOptions): Plugin {
       // Safeguard to verify user login before rendering any CMS page.
       server.use(
         '/cms',
-        async (req: UserRequest, res: Response, next: NextFunction) => {
-          const sessionCookie = req.cookies[SESSION_COOKIE] || '';
-          if (sessionCookie) {
-            try {
-              const decodedClaims = await auth.verifySessionCookie(
-                sessionCookie,
-                true
-              );
-              if (decodedClaims?.email && decodedClaims.email_verified) {
-                req.user = {
-                  email: decodedClaims.email,
-                  jwt: decodedClaims,
-                };
-                next();
-                return;
-              }
-            } catch (err) {
-              console.error('failed to decode session cookie');
-            }
+        async (req: Request, res: Response, next: NextFunction) => {
+          const userIsLoggedIn = await verifyUserSession(req);
+          if (userIsLoggedIn) {
+            next();
+            return;
           }
           const params = new URLSearchParams({
             continue: req.originalUrl,
@@ -155,19 +215,19 @@ export function cmsPlugin(options: CMSPluginOptions): Plugin {
       );
 
       // Render the CMS SPA.
-      server.use(
-        '/cms',
-        async (req: Request, res: Response, next: NextFunction) => {
-          try {
-            const appPath = path.resolve(__dirname, './app.js');
-            const app = await req.viteServer!.ssrLoadModule(appPath);
-            app.renderApp(req, res, options);
-          } catch (err) {
-            console.error(err);
-            next(err);
-          }
+      server.use('/cms', async (req: Request, res: Response) => {
+        try {
+          const appPath = path.resolve(__dirname, './app.js');
+          const app = await req.viteServer!.ssrLoadModule(appPath);
+          await app.renderApp(req, res, {
+            rootConfig: req.rootConfig,
+            firebaseConfig: options.firebaseConfig,
+          });
+        } catch (err) {
+          console.error(err);
+          res.status(500).send('UNKNOWN SERVER ERROR');
         }
-      );
+      });
     },
   };
 }

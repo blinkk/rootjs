@@ -1,16 +1,69 @@
 import {IconCirclePlus, IconFolder, IconNotebook} from '@tabler/icons-preact';
-import {useState} from 'preact/hooks';
-import {Button, Select, Tabs} from '@mantine/core';
+import {useEffect, useState} from 'preact/hooks';
+import {Button, Image, Loader, Select, Tabs} from '@mantine/core';
 import {Markdown} from '../../components/Markdown/Markdown.js';
 import {SplitPanel} from '../../components/SplitPanel/SplitPanel.js';
 import {Layout} from '../../layout/Layout.js';
-import './CollectionPage.css';
 import {joinClassNames} from '../../utils/classes.js';
-import {useLocalStorage} from '@mantine/hooks';
 import {NewDocModal} from '../../components/NewDocModal/NewDocModal.js';
+import {useFirebase} from '../../hooks/useFirebase.js';
+import {route} from 'preact-router';
+import {
+  collection,
+  getDocs,
+  orderBy as queryOrderby,
+  Query,
+  query,
+  documentId,
+} from 'firebase/firestore';
+import './CollectionPage.css';
+import {useLocalStorage} from '../../hooks/useLocalStorage.js';
 
 interface CollectionPageProps {
   collection?: string;
+}
+
+function useDocsList(collectionId: string, options: {orderBy: string}) {
+  const [docs, setDocs] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const firebase = useFirebase();
+  const db = firebase.db;
+
+  const projectId = window.__ROOT_CTX.rootConfig.projectId || 'default';
+
+  const listDocs = async (collectionId: string, orderBy: string) => {
+    const dbCollection = collection(
+      db,
+      'Projects',
+      projectId,
+      'Collections',
+      collectionId,
+      'Drafts'
+    );
+    let dbQuery: Query = dbCollection;
+    if (orderBy === 'modifiedAt') {
+      dbQuery = query(dbCollection, queryOrderby('sys.modifiedAt', 'desc'));
+    } else if (orderBy === 'slug') {
+      dbQuery = query(dbCollection, queryOrderby(documentId()));
+    }
+    console.log('listing docs', collectionId, orderBy);
+    const snapshot = await getDocs(dbQuery);
+    const docs = snapshot.docs.map((d) => ({
+      ...d.data(),
+      id: `${collectionId}/${d.id}`,
+      slug: d.id,
+    }));
+    console.log(collectionId, docs);
+    setDocs(docs);
+    setLoading(false);
+  };
+
+  useEffect(() => {
+    setLoading(true);
+    listDocs(collectionId, options.orderBy);
+  }, [collectionId, options.orderBy]);
+
+  return [loading, docs] as const;
 }
 
 export function CollectionPage(props: CollectionPageProps) {
@@ -90,24 +143,21 @@ interface CollectionProps {
 }
 
 CollectionPage.Collection = (props: CollectionProps) => {
-  const [sortBy, setSortBy] = useLocalStorage<string>({
-    key: `root::CollectionPage:${props.collection}:sort`,
-    defaultValue: 'modifiedAt',
-  });
+  const [orderBy, setOrderBy] = useLocalStorage<string>(
+    `root::CollectionPage:${props.collection}:orderBy`,
+    'modifiedAt'
+  );
   const [newDocModalOpen, setNewDocModalOpen] = useState(false);
 
   const collections = window.__ROOT_CTX.collections || [];
   const collection = collections.find((c) => c.name === props.collection);
-
   if (!collection) {
-    return (
-      <div className="CollectionPage__collection">
-        <div className="CollectionPage__collection__notFound">
-          Could not find collection: {props.collection}
-        </div>
-      </div>
-    );
+    route('/cms/content');
+    return <></>;
   }
+
+  const [loading, docs] = useDocsList(props.collection, {orderBy});
+
   return (
     <>
       <NewDocModal
@@ -145,8 +195,8 @@ CollectionPage.Collection = (props: CollectionProps) => {
                 </div>
                 <Select
                   size="xs"
-                  value={sortBy}
-                  onChange={(value) => setSortBy(value || 'modifiedAt')}
+                  value={orderBy}
+                  onChange={(value) => setOrderBy(value || 'modifiedAt')}
                   data={[
                     {value: 'slug', label: 'A-Z'},
                     {value: 'modifiedAt', label: 'Last modified'},
@@ -164,9 +214,87 @@ CollectionPage.Collection = (props: CollectionProps) => {
                 </Button>
               </div>
             </div>
+            <div className="CollectionPage__collection__docsTab__content">
+              {loading ? (
+                <div className="CollectionPage__collection__docsTab__content__loading">
+                  <Loader color="gray" size="xl" />
+                </div>
+              ) : (
+                <CollectionPage.DocsList
+                  collection={props.collection}
+                  docs={docs}
+                />
+              )}
+            </div>
           </Tabs.Panel>
         </Tabs>
       </div>
     </>
+  );
+};
+
+CollectionPage.DocsList = (props: {collection: string; docs: any[]}) => {
+  const collectionId = props.collection;
+  const collections = window.__ROOT_CTX.collections || [];
+  const rootCollection = collections.find((c) => c.name === collectionId);
+  if (!rootCollection) {
+    throw new Error(`could not find collection: ${collectionId}`);
+  }
+
+  const docs = props.docs || [];
+  if (docs.length === 0) {
+    return (
+      <div className="CollectionPage__collection__docsList CollectionPage__collection__docsList--empty">
+        No documents in this collection yet! Get started by clicking the "New"
+        button above.
+      </div>
+    );
+  }
+
+  function getLiveUrl(slug: string): string {
+    const c = rootCollection!;
+    if (!c.url) {
+      return '';
+    }
+    const domain = window.__ROOT_CTX.rootConfig.domain || 'https://example.com';
+    const urlPath = c.url.replace(/\[.*slug\]/, slug.replaceAll('--', '/'));
+    return `${domain}${urlPath}`;
+  }
+
+  return (
+    <div className="CollectionPage__collection__docsList">
+      {docs.map((doc) => {
+        const cmsUrl = `/cms/content/${collectionId}/${doc.slug}`;
+        const liveUrl = getLiveUrl(doc.slug);
+        return (
+          <div
+            className="CollectionPage__collection__docsList__doc"
+            key={doc.id}
+          >
+            <div className="CollectionPage__collection__docsList__doc__image">
+              <a href={cmsUrl}>
+                <Image width={120} height={90} withPlaceholder />
+              </a>
+            </div>
+            <a
+              className="CollectionPage__collection__docsList__doc__content"
+              href={cmsUrl}
+            >
+              <div className="CollectionPage__collection__docsList__doc__content__header">
+                <div className="CollectionPage__collection__docsList__doc__content__header__docId">
+                  {doc.id}
+                </div>
+              </div>
+              <div className="CollectionPage__collection__docsList__doc__content__title">
+                {doc.fields?.meta?.title || 'Lorem ipsum'}
+              </div>
+              <div className="CollectionPage__collection__docsList__doc__content__url">
+                {liveUrl}
+              </div>
+            </a>
+          </div>
+        );
+      })}
+    </div>
   );
 };

@@ -1,6 +1,14 @@
 import {ComponentChildren} from 'preact';
 import {Tooltip} from '@mantine/core';
-import {IconDatabase, IconFolder, IconHome, IconLanguage, IconPhoto, IconSettings, IconSitemap} from '@tabler/icons-preact';
+import {
+  IconDatabase,
+  IconFolder,
+  IconHome,
+  IconLanguage,
+  IconPhoto,
+  IconSettings,
+  IconSitemap,
+} from '@tabler/icons-preact';
 import packageJson from '../../package.json' assert {type: 'json'};
 import './Layout.css';
 import {useRouter} from 'preact-router';

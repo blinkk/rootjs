@@ -1,15 +1,26 @@
 import {FirebaseApp} from 'firebase/app';
+import {Auth, User} from 'firebase/auth';
+import {Firestore} from 'firebase/firestore';
 import {createContext} from 'preact';
 import {useContext} from 'preact/hooks';
 
-export const FirebaseContext = createContext<FirebaseApp | null>(null);
+export interface FirebaseContextObject {
+  app: FirebaseApp;
+  auth: Auth;
+  db: Firestore;
+  user: User;
+}
 
-export function useFirebase(): FirebaseApp {
-  const app = useContext(FirebaseContext);
-  if (!app) {
+export const FirebaseContext = createContext<FirebaseContextObject | null>(
+  null
+);
+
+export function useFirebase(): FirebaseContextObject {
+  const value = useContext(FirebaseContext);
+  if (!value) {
     throw new Error(
       'useFirebase() should be called within a <FirebaseProvider>'
     );
   }
-  return app;
+  return value;
 }

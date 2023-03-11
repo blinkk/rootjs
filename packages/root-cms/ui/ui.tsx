@@ -1,34 +1,30 @@
 import {render} from 'preact';
 import {Route, Router} from 'preact-router';
 import {MantineProvider} from '@mantine/core';
-import {FirebaseApp, initializeApp} from 'firebase/app';
-import {Auth, getAuth, signInWithCredential} from 'firebase/auth';
+import {initializeApp} from 'firebase/app';
+import {getAuth} from 'firebase/auth';
+import {getFirestore} from 'firebase/firestore';
 import {CollectionPage} from './pages/CollectionPage/CollectionPage.js';
 import {DocumentPage} from './pages/DocumentPage/DocumentPage.js';
 import {ProjectPage} from './pages/ProjectPage/ProjectPage.js';
 import {Collection} from '../core/schema.js';
 import {NotFoundPage} from './pages/NotFoundPage/NotFoundPage.js';
-import {FirebaseContext} from './hooks/useFirebase.js';
+import {FirebaseContext, FirebaseContextObject} from './hooks/useFirebase.js';
 import './styles/global.css';
 
 declare global {
   interface Window {
     __ROOT_CTX: {
-      id: string;
+      rootConfig: {
+        projectId: string;
+        domain: string;
+      };
       firebaseConfig: Record<string, string>;
-      user: {email: string; jwt: any};
       collections: Collection[];
     };
-    firebase: {
-      app: FirebaseApp;
-      auth: Auth;
-    };
+    firebase: FirebaseContextObject;
   }
 }
-
-const app = initializeApp(window.__ROOT_CTX.firebaseConfig);
-const auth = getAuth(app);
-window.firebase = {app, auth};
 
 function App() {
   return (
@@ -38,7 +34,7 @@ function App() {
         fontSizes: {xs: 12, sm: 14, md: 16, lg: 18, xl: 20},
       }}
     >
-      <FirebaseContext.Provider value={app}>
+      <FirebaseContext.Provider value={window.firebase}>
         <Router>
           <Route path="/cms" component={ProjectPage} />
           <Route path="/cms/content/:collection?" component={CollectionPage} />
@@ -53,13 +49,26 @@ function App() {
   );
 }
 
-auth.onAuthStateChanged((user) => {
-  if (user) {
-    console.log('logged in as:');
-    console.log(user);
-  } else {
-    console.log('not logged in');
+function loginRedirect() {
+  let originalUrl = window.location.pathname;
+  if (window.location.search) {
+    originalUrl = `originalUrl?${window.location.search}`;
   }
+  const params = new URLSearchParams({continue: originalUrl});
+  window.location.replace(`/cms/login?${params.toString()}`);
+}
+
+const app = initializeApp(window.__ROOT_CTX.firebaseConfig);
+const db = getFirestore(app);
+const auth = getAuth(app);
+auth.onAuthStateChanged((user) => {
+  if (!user) {
+    loginRedirect();
+    return;
+  }
+  console.log('logged in as:');
+  console.log(user.email);
+  window.firebase = {app, auth, db, user};
   const root = document.getElementById('root')!;
   root.innerHTML = '';
   render(<App />, root);

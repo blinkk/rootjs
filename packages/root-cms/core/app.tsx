@@ -29,6 +29,10 @@ function App(props: AppProps) {
           rel="stylesheet"
           href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;900&display=swap"
         />
+        <link
+          rel="stylesheet"
+          href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@500&display=swap"
+        />
         <link rel="stylesheet" href={`/@fs${uiCssPath}`} />
       </head>
       <body>
@@ -53,20 +57,19 @@ function App(props: AppProps) {
 }
 
 export async function renderApp(req: UserRequest, res: Response, options: any) {
-  if (!req.user || !req.user.jwt) {
-    throw new Error('not logged in');
-  }
-
   const collectionModules = import.meta.glob('/collections/*.schema.ts', {
     eager: true,
   }) as any;
   const collections = Object.values(collectionModules).map(
     (module: any) => module.default as Collection
   );
+  const rootConfig = options.rootConfig || {};
   const ctx = {
-    id: options.id,
+    rootConfig: {
+      projectId: rootConfig.projectId || 'default',
+      domain: rootConfig.domain || 'https://example.com',
+    },
     firebaseConfig: options.firebaseConfig,
-    user: req.user,
     collections: collections,
   };
   const mainHtml = renderToString(<App title="Root.js CMS" ctx={ctx} />);
