@@ -5,13 +5,13 @@ import {defineConfig} from 'tsup';
 export default defineConfig({
   entry: {
     app: './core/app.tsx',
-    core: './core/index.ts',
+    core: './core/core.ts',
     plugin: './core/plugin.ts',
   },
   sourcemap: 'inline',
   target: 'node16',
   dts: {
-    entry: ['./core/index.ts', './core/plugin.ts'],
+    entry: ['./core/core.ts', './core/plugin.ts'],
   },
   format: ['esm'],
   splitting: false,
