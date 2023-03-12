@@ -83,13 +83,20 @@ function useDocsList(collectionId: string, options: {orderBy: string}) {
 export function CollectionPage(props: CollectionPageProps) {
   const [query, setQuery] = useState('');
 
-  const collections = window.__ROOT_CTX.collections || [];
-  const matchedCollections = collections.filter((c) => {
-    if (!query) {
-      return true;
-    }
-    return c.name.toLowerCase().includes(query.toLowerCase());
-  });
+  const collectionIds = Object.keys(window.__ROOT_CTX.collections);
+  const matchedCollections = collectionIds
+    .filter((id) => {
+      if (!query) {
+        return true;
+      }
+      return id.toLowerCase().includes(query.toLowerCase());
+    })
+    .map((id) => {
+      return {
+        ...window.__ROOT_CTX.collections[id],
+        id: id,
+      };
+    });
 
   return (
     <Layout>
@@ -108,16 +115,16 @@ export function CollectionPage(props: CollectionPageProps) {
               <a
                 className={joinClassNames(
                   'CollectionPage__side__collection',
-                  collection.name === props.collection && 'active'
+                  collection.id === props.collection && 'active'
                 )}
-                href={`/cms/content/${collection.name}`}
-                key={collection.name}
+                href={`/cms/content/${collection.id}`}
+                key={collection.id}
               >
                 <div className="CollectionPage__side__collection__icon">
                   <IconFolder size={20} strokeWidth="1.75" />
                 </div>
                 <div className="CollectionPage__side__collection__name">
-                  {collection.name}
+                  {collection.id}
                 </div>
                 {/* {collection.name === props.collection && (
                   <div className="CollectionPage__side__collection__arrow">
@@ -163,8 +170,7 @@ CollectionPage.Collection = (props: CollectionProps) => {
   );
   const [newDocModalOpen, setNewDocModalOpen] = useState(false);
 
-  const collections = window.__ROOT_CTX.collections || [];
-  const collection = collections.find((c) => c.name === props.collection);
+  const collection = window.__ROOT_CTX.collections[props.collection];
   if (!collection) {
     route('/cms/content');
     return <></>;
@@ -244,8 +250,7 @@ CollectionPage.Collection = (props: CollectionProps) => {
 
 CollectionPage.DocsList = (props: {collection: string; docs: any[]}) => {
   const collectionId = props.collection;
-  const collections = window.__ROOT_CTX.collections || [];
-  const rootCollection = collections.find((c) => c.name === collectionId);
+  const rootCollection = window.__ROOT_CTX.collections[props.collection];
   if (!rootCollection) {
     throw new Error(`could not find collection: ${collectionId}`);
   }

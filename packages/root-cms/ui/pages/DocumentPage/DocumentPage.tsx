@@ -14,11 +14,7 @@ export function DocumentPage(props: DocumentPageProps) {
   const collectionId = props.collection;
   const slug = props.slug;
   const docId = `${collectionId}/${slug}`;
-
-  const collections = window.__ROOT_CTX.collections || [];
-  const collection = collections.find((c) => {
-    return c.name === collectionId;
-  });
+  const collection = window.__ROOT_CTX.collections[collectionId];
 
   if (!collection) {
     return <div>Could not find collection.</div>;

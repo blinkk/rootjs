@@ -77,8 +77,7 @@ export function NewDocModal(props: NewDocModalProps) {
     'Drafts'
   );
 
-  const collections = window.__ROOT_CTX.collections || [];
-  const rootCollection = collections.find((c) => c.name === collectionId);
+  const rootCollection = window.__ROOT_CTX.collections[collectionId];
   if (!rootCollection) {
     throw new Error(`collection not found: ${collectionId}`);
   }

@@ -60,9 +60,13 @@ export async function renderApp(req: UserRequest, res: Response, options: any) {
   const collectionModules = import.meta.glob('/collections/*.schema.ts', {
     eager: true,
   }) as any;
-  const collections = Object.values(collectionModules).map(
-    (module: any) => module.default as Collection
-  );
+  const collections: Record<string, Collection> = {};
+  Object.keys(collectionModules).forEach((moduleId: string) => {
+    const collectionId = path.parse(moduleId).base.split('.')[0];
+    const module = collectionModules[moduleId];
+    const collection = module.default as Collection;
+    collections[collectionId] = collection;
+  });
   const rootConfig = options.rootConfig || {};
   const ctx = {
     rootConfig: {

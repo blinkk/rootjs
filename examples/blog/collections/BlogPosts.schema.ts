@@ -2,7 +2,7 @@ import {schema} from '@blinkk/root-cms';
 import Page from '@/routes/blog/[slug].js';
 
 export default schema.collection({
-  name: 'BlogPosts',
+  name: 'The Dopest Blog',
   description:
     "A collection of posts for the blog. If you're new here, check out the [getting started](#todo) guide.",
   url: '/blog/[slug]',

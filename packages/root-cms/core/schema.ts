@@ -177,7 +177,7 @@ export type Collection = Schema & {
   /** URL path where the collection serves from. */
   url?: string;
   /** Page component to render the collection for instant previews */
-  Component: FunctionalComponent;
+  Component?: FunctionalComponent;
   /**
    * Defines the fields to use for document preview. Defaults to "title" and
    * "image". Use dot notation for nested fields, e.g. "meta.title".

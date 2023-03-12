@@ -21,7 +21,7 @@ declare global {
         domain: string;
       };
       firebaseConfig: Record<string, string>;
-      collections: Collection[];
+      collections: Record<string, Collection>;
     };
     firebase: FirebaseContextObject;
   }
