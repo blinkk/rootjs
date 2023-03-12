@@ -2,7 +2,13 @@ import {Button, Modal, TextInput} from '@mantine/core';
 import {useRef, useState} from 'preact/hooks';
 import {route} from 'preact-router';
 import {useFirebase} from '../../hooks/useFirebase.js';
-import {collection, doc, getDoc, setDoc, Timestamp} from 'firebase/firestore';
+import {
+  collection,
+  doc,
+  getDoc,
+  serverTimestamp,
+  setDoc,
+} from 'firebase/firestore';
 import {Collection} from '../../../core/schema.js';
 import './NewDocModal.css';
 
@@ -123,9 +129,9 @@ export function NewDocModal(props: NewDocModalProps) {
         id: docId,
         collection: collectionId,
         slug: slug,
-        createdAt: Timestamp.now(),
+        createdAt: serverTimestamp(),
         createdBy: window.firebase.user.email,
-        modifiedAt: Timestamp.now(),
+        modifiedAt: serverTimestamp(),
         modifiedBy: window.firebase.user.email,
       },
       fields: getDefaultFields(rootCollection!),

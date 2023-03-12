@@ -5,12 +5,15 @@ import {
   Firestore,
   onSnapshot,
   updateDoc,
-  Timestamp,
-  deleteField,
+  serverTimestamp,
 } from 'firebase/firestore';
 import {debounce} from '../utils/debounce.js';
 
 const SAVE_DELAY_MS = 3 * 1000;
+
+type Subscribers = Record<string, Set<SubscriberCallback>>;
+type SubscriberCallback = (newValue: any) => void;
+type UnsubscribeCallback = () => void;
 
 export class DraftController {
   readonly projectId: string;
@@ -19,9 +22,11 @@ export class DraftController {
   private db: Firestore;
   private docRef: DocumentReference;
 
-  private pendingUpdates: Record<string, any> = {};
+  private pendingUpdates = new Map<string, any>();
   private onChangeCallback?: (data: any) => void;
   private dbUnsubscribe?: () => void;
+  private cachedData: any = {};
+  private subscribers: Subscribers = {};
 
   constructor(docId: string) {
     this.projectId = window.__ROOT_CTX.rootConfig.projectId;
@@ -47,16 +52,14 @@ export class DraftController {
     console.log('start()');
     this.dbUnsubscribe = onSnapshot(this.docRef, (snapshot) => {
       const data = snapshot.data();
-      console.log(this.pendingUpdates);
       // Save the user's local changes to the snapshot so that their updates
       // are not overwritten.
-      if (Object.keys(this.pendingUpdates).length > 0) {
-        applyUpdates(data, this.pendingUpdates);
+      if (this.pendingUpdates.size > 0) {
+        applyUpdates(data, Object.fromEntries(this.pendingUpdates));
       }
+      this.cachedData = data;
       console.log('onSnapshot()', data, this.pendingUpdates);
-      if (this.onChangeCallback) {
-        this.onChangeCallback(data);
-      }
+      this.notifySubscribers();
     });
   }
 
@@ -78,11 +81,55 @@ export class DraftController {
   }
 
   /**
-   * Updates a key. The key can be a nested key, e.g. "meta.title".
+   * Subscribes to remote changes for a given key. Returns a callback function
+   * that can be used to unsubscribe.
+   */
+  subscribe(key: string, callback: SubscriberCallback): UnsubscribeCallback {
+    console.log('subscribe()', key);
+    this.subscribers[key] ??= new Set();
+    this.subscribers[key].add(callback);
+    callback(getNestedValue(this.cachedData, key));
+
+    const unsubscribe = () => {
+      this.subscribers[key].delete(callback);
+      if (this.subscribers[key].size === 0) {
+        delete this.subscribers[key];
+      }
+    };
+    return unsubscribe;
+  }
+
+  /**
+   * Notifies subscribers of changes.
+   */
+  notifySubscribers() {
+    console.log('notifySubscribers()');
+    const data = this.cachedData;
+    if (this.onChangeCallback) {
+      this.onChangeCallback(data);
+    }
+    notify(this.subscribers, data);
+  }
+
+  /**
+   * Updates a single key. The key can be a nested key, e.g. "meta.title".
    */
   async updateKey(key: string, newValue: any) {
-    console.log('updateKey()', key, newValue);
-    this.pendingUpdates[`fields.${key}`] = newValue;
+    this.updateKeys({[key]: newValue});
+  }
+
+  /**
+   * Updates a group of keys. The keys can be a nested, e.g. "meta.title".
+   */
+  async updateKeys(updates: Record<string, any>) {
+    console.log('updateKeys()', updates);
+    for (const key in updates) {
+      this.pendingUpdates.set(key, updates[key]);
+    }
+    applyUpdates(this.cachedData, updates);
+    if (this.onChangeCallback) {
+      this.onChangeCallback(this.cachedData);
+    }
     this.queueChanges();
   }
 
@@ -90,7 +137,12 @@ export class DraftController {
    * Removes a key.
    */
   async removeKey(key: string) {
-    this.updateKey(key, deleteField());
+    // this.pendingUpdates[key] = deleteField();
+    applyUpdates(this.cachedData, {[key]: undefined});
+    if (this.onChangeCallback) {
+      this.onChangeCallback({...this.cachedData});
+    }
+    this.queueChanges();
   }
 
   /**
@@ -104,12 +156,35 @@ export class DraftController {
    * Immediately write all queued data to the DB.
    */
   async flush() {
-    const updates = this.pendingUpdates;
-    updates['sys.modifiedAt'] = Timestamp.now();
+    const updates = Object.fromEntries(this.pendingUpdates);
+    updates['sys.modifiedAt'] = serverTimestamp();
     updates['sys.modifiedBy'] = window.firebase.user.email;
     console.log('flush()', updates);
-    this.pendingUpdates = {};
-    await updateDoc(this.docRef, updates);
+
+    // Immediately clear the pending updates so that there's no race condition
+    // with any new updates the user makes while the changes are being saved to
+    // the db. If the db save fails for any reason, re-apply the pending updates
+    // and re-queue the db save.
+    this.pendingUpdates.clear();
+    try {
+      await updateDoc(this.docRef, updates);
+    } catch (err) {
+      console.error('failed to update doc');
+      console.error(err);
+      for (const key in updates) {
+        // Ignore sys updates.
+        if (key.startsWith('sys.')) {
+          continue;
+        }
+        // Ignore keys that have newer values.
+        if (this.pendingUpdates.has(key)) {
+          continue;
+        }
+        this.pendingUpdates.set(key, updates[key]);
+        this.queueChanges();
+        console.log('re-queued updates');
+      }
+    }
   }
 
   /**
@@ -128,9 +203,42 @@ function applyUpdates(data: any, updates: any) {
       data[head] ??= {};
       applyUpdates(data[head], {[tail]: val});
     } else {
-      data[key] = val;
+      if (typeof val === 'undefined') {
+        delete data[key];
+      } else {
+        data[key] = val;
+      }
     }
   }
+}
+
+/**
+ * Recursively walks the data tree and notifies subscribers of the new value.
+ */
+function notify(subscribers: Subscribers, data: any, parentKeys?: string[]) {
+  if (!parentKeys) {
+    parentKeys = [];
+  }
+
+  for (const key in data) {
+    const keys = [...parentKeys, key];
+    const deepKey = keys.join('.');
+    const callbacks = subscribers[deepKey];
+    const newValue = data[key];
+    if (callbacks) {
+      // console.log('notifying', deepKey, newValue, callbacks);
+      Array.from(callbacks).forEach((cb) => {
+        cb(newValue);
+      });
+    }
+    if (isObject(newValue)) {
+      notify(subscribers, newValue, keys);
+    }
+  }
+}
+
+function isObject(val: any): boolean {
+  return typeof val === 'object' && !Array.isArray(val) && val !== null;
 }
 
 function splitKey(key: string) {
@@ -138,6 +246,18 @@ function splitKey(key: string) {
   const head = key.substring(0, index);
   const tail = key.substring(index + 1);
   return [head, tail] as const;
+}
+
+function getNestedValue(data: any, key: string) {
+  const keys = key.split('.');
+  let current = data;
+  for (const segment of keys) {
+    if (!current) {
+      current = {};
+    }
+    current = current[segment];
+  }
+  return current;
 }
 
 export function useDraft(docId: string) {

@@ -1,14 +1,13 @@
 import {
   ActionIcon,
   Button,
-  Loader,
   LoadingOverlay,
   Menu,
   Select,
   Textarea,
   TextInput,
 } from '@mantine/core';
-import {useCallback, useEffect, useState} from 'preact/hooks';
+import {useEffect, useReducer, useState} from 'preact/hooks';
 import {
   IconCircleArrowDown,
   IconCircleArrowUp,
@@ -23,7 +22,6 @@ import {
 } from '@tabler/icons-preact';
 import * as schema from '../../../core/schema.js';
 import './DocumentEditor.css';
-import {doc, getFirestore, setDoc} from 'firebase/firestore';
 import {DraftController, useDraft} from '../../hooks/useDraft.js';
 
 interface DocumentEditorProps {
@@ -35,6 +33,7 @@ export function DocumentEditor(props: DocumentEditorProps) {
   const fields = props.collection.fields || [];
   const {loading, draft, data} = useDraft(props.docId);
   const values = data?.fields || {};
+  console.log('data', data);
   return (
     <div className="DocumentEditor">
       <LoadingOverlay
@@ -48,7 +47,7 @@ export function DocumentEditor(props: DocumentEditorProps) {
             collection={props.collection}
             field={field}
             shallowKey={field.id!}
-            deepKey={field.id!}
+            deepKey={`fields.${field.id!}`}
             data={values[field.id!]}
             draft={draft}
           />
@@ -72,7 +71,7 @@ interface FieldProps {
 
 DocumentEditor.Field = (props: FieldProps) => {
   const field = props.field;
-  const level = props.level || 0;
+  const level = props.level ?? 0;
   return (
     <div
       className="DocumentEditor__field"
@@ -114,11 +113,23 @@ DocumentEditor.Field = (props: FieldProps) => {
 
 DocumentEditor.StringField = (props: FieldProps) => {
   const field = props.field as schema.StringField;
-  const data = props.data || '';
+  const [value, setValue] = useState(props.data ?? '');
 
   function onChange(newValue: string) {
+    setValue(newValue);
     props.draft.updateKey(props.deepKey, newValue);
   }
+
+  useEffect(() => {
+    const unsubscribe = props.draft.subscribe(
+      props.deepKey,
+      (newValue: string) => {
+        console.log('onRemoteChange()', newValue);
+        setValue(newValue);
+      }
+    );
+    return unsubscribe;
+  }, []);
 
   if (field.variant === 'textarea') {
     return (
@@ -128,7 +139,7 @@ DocumentEditor.StringField = (props: FieldProps) => {
         autosize
         minRows={2}
         maxRows={20}
-        value={data}
+        value={value}
         onChange={(e) => onChange(e.currentTarget.value)}
       />
     );
@@ -137,7 +148,7 @@ DocumentEditor.StringField = (props: FieldProps) => {
     <TextInput
       size="xs"
       radius={0}
-      value={data}
+      value={value}
       onChange={(e) => onChange(e.currentTarget.value)}
     />
   );
@@ -159,7 +170,18 @@ DocumentEditor.ImageField = (props: FieldProps) => {
 
 DocumentEditor.ObjectField = (props: FieldProps) => {
   const field = props.field as schema.ObjectField;
-  const data = props.data || {};
+  const [data, setData] = useState(props.data || {});
+
+  useEffect(() => {
+    const unsubscribe = props.draft.subscribe(
+      props.deepKey,
+      (newValue: any) => {
+        setData(newValue || {});
+      }
+    );
+    return unsubscribe;
+  }, []);
+
   return (
     <div className="DocumentEditor__ObjectField">
       <div className="DocumentEditor__ObjectField__fields">
@@ -179,90 +201,284 @@ DocumentEditor.ObjectField = (props: FieldProps) => {
   );
 };
 
+interface ArrayFieldValue {
+  [key: string]: any;
+  _array: string[];
+}
+
+interface ArrayUpdate {
+  type: 'update';
+  newValue: ArrayFieldValue;
+}
+
+interface ArrayAdd {
+  type: 'add';
+  draft: DraftController;
+  deepKey: string;
+}
+
+interface ArrayInsertBefore {
+  type: 'insertBefore';
+  index: number;
+  draft: DraftController;
+  deepKey: string;
+}
+
+interface ArrayInsertAfter {
+  type: 'insertAfter';
+  index: number;
+  draft: DraftController;
+  deepKey: string;
+}
+
+interface ArrayDuplicate {
+  type: 'duplicate';
+  index: number;
+  draft: DraftController;
+  deepKey: string;
+}
+
+interface ArrayMoveUp {
+  type: 'moveUp';
+  index: number;
+  draft: DraftController;
+  deepKey: string;
+}
+
+interface ArrayMoveDown {
+  type: 'moveDown';
+  index: number;
+  draft: DraftController;
+  deepKey: string;
+}
+
+interface ArrayRemoveAt {
+  type: 'removeAt';
+  index: number;
+  draft: DraftController;
+  deepKey: string;
+}
+
+type ArrayAction =
+  | ArrayUpdate
+  | ArrayAdd
+  | ArrayInsertBefore
+  | ArrayInsertAfter
+  | ArrayDuplicate
+  | ArrayMoveUp
+  | ArrayMoveDown
+  | ArrayRemoveAt;
+
+function arrayReducer(state: ArrayFieldValue, action: ArrayAction) {
+  console.log(action);
+  switch (action.type) {
+    case 'update': {
+      return {...action.newValue};
+    }
+    case 'add': {
+      const data = state ?? {};
+      const newKey = autokey();
+      const order = [...(data._array || []), newKey];
+      action.draft.updateKeys({
+        [`${action.deepKey}._array`]: order,
+        [`${action.deepKey}.${newKey}`]: {},
+      });
+      return {
+        ...data,
+        [newKey]: {},
+        _array: order,
+      };
+    }
+    case 'insertBefore': {
+      const data = state ?? {};
+      const order = [...(data._array || [])];
+      const newKey = autokey();
+      order.splice(action.index, 0, newKey);
+      action.draft.updateKeys({
+        [`${action.deepKey}._array`]: order,
+        [`${action.deepKey}.${newKey}`]: {},
+      });
+      return {
+        ...data,
+        [newKey]: {},
+        _array: order,
+      };
+    }
+    case 'insertAfter': {
+      const data = state ?? {};
+      const order = [...(data._array || [])];
+      const newKey = autokey();
+      order.splice(action.index + 1, 0, newKey);
+      action.draft.updateKeys({
+        [`${action.deepKey}._array`]: order,
+        [`${action.deepKey}.${newKey}`]: {},
+      });
+      return {
+        ...data,
+        [newKey]: {},
+        _array: order,
+      };
+    }
+    case 'duplicate': {
+      const data = state ?? {};
+      const order = [...(data._array || [])];
+      const ogKey = order[action.index];
+      const clonedValue = structuredClone(data[ogKey]);
+      const newKey = autokey();
+      order.splice(action.index + 1, 0, newKey);
+      action.draft.updateKeys({
+        [`${action.deepKey}._array`]: order,
+        [`${action.deepKey}.${newKey}`]: clonedValue,
+      });
+      return {
+        ...data,
+        [newKey]: clonedValue,
+        _array: order,
+      };
+    }
+    case 'moveUp': {
+      if (action.index === 0) {
+        return state;
+      }
+      const data = state ?? {};
+      const order = [...(data._array || [])];
+      arraySwap(order, action.index, action.index - 1);
+      action.draft.updateKeys({
+        [`${action.deepKey}._array`]: order,
+      });
+      return {
+        ...data,
+        _array: order,
+      };
+    }
+    case 'moveDown': {
+      const data = state ?? {};
+      const order = [...(data._array || [])];
+      if (action.index >= order.length - 1) {
+        return state;
+      }
+      arraySwap(order, action.index, action.index + 1);
+      action.draft.updateKeys({
+        [`${action.deepKey}._array`]: order,
+      });
+      return {
+        ...data,
+        _array: order,
+      };
+    }
+    case 'removeAt': {
+      const data = {...(state ?? {})};
+      const order = data._array || [];
+      const newOrder = [...order];
+      const oldKey = newOrder[action.index];
+      delete data[oldKey];
+      newOrder.splice(action.index, 1);
+      action.draft.updateKeys({
+        [`${action.deepKey}._array`]: newOrder,
+      });
+      action.draft.removeKey(`${action.deepKey}.${oldKey}`);
+      return {
+        ...data,
+        _array: newOrder,
+      };
+    }
+    default: {
+      console.error('unknown action', action);
+      return state;
+    }
+  }
+}
+
 DocumentEditor.ArrayField = (props: FieldProps) => {
+  const draft = props.draft;
   const field = props.field as schema.ArrayField;
-  const [values, setValues] = useState<any[]>([]);
+  const [value, dispatch] = useReducer(
+    arrayReducer,
+    props.data || {_array: []}
+  );
+
+  const data = value ?? {};
+  const order = data._array || [];
 
   useEffect(() => {
-    console.log('array changed', values);
-  }, [values]);
-
-  const add = useCallback(() => {
-    setValues((current) => {
-      return [...current, {_key: autokey()}];
-    });
-  }, []);
-
-  const insertBefore = useCallback((index: number) => {
-    setValues((current) => {
-      const newItem = {_key: autokey()};
-      const newValue = [...current];
-      newValue.splice(index, 0, newItem);
-      return newValue;
-    });
-  }, []);
-
-  const insertAfter = useCallback((index: number) => {
-    setValues((current) => {
-      const newItem = {_key: autokey()};
-      const newValue = [...current];
-      newValue.splice(index + 1, 0, newItem);
-      return newValue;
-    });
-  }, []);
-
-  const duplicate = useCallback((index: number) => {
-    setValues((current) => {
-      const newItem = structuredClone(current[index]);
-      newItem._key = autokey();
-      const newValue = [...current];
-      newValue.splice(index + 1, 0, newItem);
-      return newValue;
-    });
-  }, []);
-
-  const removeAt = useCallback((index: number) => {
-    setValues((current) => {
-      const newValue = [...current];
-      newValue.splice(index, 1);
-      return newValue;
-    });
-  }, []);
-
-  const moveUp = useCallback((index: number) => {
-    setValues((current) => {
-      if (index === 0) {
-        return current;
+    const unsubscribe = props.draft.subscribe(
+      props.deepKey,
+      (newValue: ArrayFieldValue) => {
+        console.log('onRemoteChange()', newValue);
+        dispatch({type: 'update', newValue});
       }
-      const newValue = [...current];
-      return arraySwap(newValue, index, index - 1);
-    });
+    );
+    return unsubscribe;
   }, []);
 
-  const moveDown = useCallback((index: number) => {
-    setValues((current) => {
-      if (index >= current.length - 1) {
-        return current;
-      }
-      const newValue = [...current];
-      return arraySwap(newValue, index, index + 1);
+  const add = () => {
+    dispatch({type: 'add', draft: draft, deepKey: props.deepKey});
+  };
+
+  const insertBefore = (index: number) => {
+    dispatch({
+      type: 'insertBefore',
+      draft: draft,
+      deepKey: props.deepKey,
+      index: index,
     });
-  }, []);
+  };
+
+  const insertAfter = (index: number) => {
+    dispatch({
+      type: 'insertAfter',
+      draft: draft,
+      deepKey: props.deepKey,
+      index: index,
+    });
+  };
+
+  const duplicate = (index: number) => {
+    dispatch({
+      type: 'duplicate',
+      draft: draft,
+      deepKey: props.deepKey,
+      index: index,
+    });
+  };
+
+  const removeAt = (index: number) => {
+    dispatch({
+      type: 'removeAt',
+      draft: draft,
+      deepKey: props.deepKey,
+      index: index,
+    });
+  };
+
+  const moveUp = (index: number) => {
+    dispatch({
+      type: 'moveUp',
+      draft: draft,
+      deepKey: props.deepKey,
+      index: index,
+    });
+  };
+
+  const moveDown = (index: number) => {
+    dispatch({
+      type: 'moveDown',
+      draft: draft,
+      deepKey: props.deepKey,
+      index: index,
+    });
+  };
 
   return (
     <div className="DocumentEditor__ArrayField">
       <div className="DocumentEditor__ArrayField__items">
-        {values.length === 0 && (
+        {order.length === 0 && (
           <div className="DocumentEditor__ArrayField__items__empty">
             No items
           </div>
         )}
-        {values.map((value, i) => (
-          <details
-            className="DocumentEditor__ArrayField__item"
-            key={value._key}
-            open
-          >
+        {order.map((key: string, i: number) => (
+          <details className="DocumentEditor__ArrayField__item" key={key} open>
             <summary className="DocumentEditor__ArrayField__item__header">
               <div className="DocumentEditor__ArrayField__item__header__icon">
                 <IconTriangleFilled size={6} />
@@ -325,11 +541,12 @@ DocumentEditor.ArrayField = (props: FieldProps) => {
             </summary>
             <div className="DocumentEditor__ArrayField__item__body">
               <DocumentEditor.Field
+                key={`${props.deepKey}.${key}`}
                 collection={props.collection}
                 field={field.of}
                 shallowKey={field.id!}
-                deepKey={`${props.deepKey}.${value._key}`}
-                data={null}
+                deepKey={`${props.deepKey}.${key}`}
+                data={value[key]}
                 draft={props.draft}
                 hideHeader
               />
@@ -352,17 +569,32 @@ DocumentEditor.ArrayField = (props: FieldProps) => {
 };
 
 DocumentEditor.OneOfField = (props: FieldProps) => {
-  const [type, setType] = useState<string | null>(null);
-
   const field = props.field as schema.OneOfField;
+  const [type, setType] = useState(() => {
+    return (props.data || {})._type || '';
+  });
   const typesMap: Record<string, schema.Schema> = {};
   const dropdownValues: Array<{value: string; label: string}> = [];
   field.types.forEach((type) => {
     typesMap[type.name] = type;
     dropdownValues.push({value: type.name, label: type.name});
   });
-
   const selectedType = typesMap[type || ''];
+
+  function onTypeChange(newType: string) {
+    props.draft.updateKey(`${props.deepKey}._type`, newType);
+    setType(newType);
+  }
+
+  useEffect(() => {
+    const unsubscribe = props.draft.subscribe(
+      `${props.deepKey}._type`,
+      (newValue: string) => {
+        setType(newValue || '');
+      }
+    );
+    return unsubscribe;
+  }, []);
 
   return (
     <div className="DocumentEditor__OneOfField">
@@ -372,7 +604,7 @@ DocumentEditor.OneOfField = (props: FieldProps) => {
           data={dropdownValues}
           size="xs"
           value={type}
-          onChange={(e) => setType(e)}
+          onChange={(e) => onTypeChange(e || '')}
         />
       </div>
       {selectedType && (
