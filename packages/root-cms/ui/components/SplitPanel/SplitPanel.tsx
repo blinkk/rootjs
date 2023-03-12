@@ -1,7 +1,7 @@
 import {ComponentChild, ComponentChildren} from 'preact';
 import {CSSProperties} from 'preact/compat';
 import {useEffect, useRef, useState} from 'preact/hooks';
-import {useLocalStorage} from '@mantine/hooks';
+import {useLocalStorage} from '../../hooks/useLocalStorage.js';
 import {joinClassNames} from '../../utils/classes.js';
 import './SplitPanel.css';
 
@@ -13,10 +13,10 @@ export interface SplitPanelProps {
 
 export function SplitPanel(props: SplitPanelProps) {
   const {className, localStorageId, children} = props;
-  const [panelSize, setPanelSize] = useLocalStorage<number>({
-    key: `root::SplitPanel:${localStorageId}`,
-    defaultValue: 350,
-  });
+  const [panelSize, setPanelSize] = useLocalStorage<number>(
+    `root::SplitPanel:${localStorageId}`,
+    350
+  );
   const [isDragging, setIsDragging] = useState(false);
   const [offset, setOffset] = useState(0);
 

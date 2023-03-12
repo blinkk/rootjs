@@ -1,10 +1,11 @@
 import {FunctionalComponent} from 'preact';
 
 export interface CommonFieldProps {
+  type: string;
   id?: string;
   label?: string;
   help?: string;
-  type: string;
+  placeholder?: string;
   default?: any;
   hidden?: boolean;
   deprecated?: boolean;
@@ -60,9 +61,7 @@ export function boolean(field: Omit<BooleanField, 'type'>): BooleanField {
 export type SelectField = CommonFieldProps & {
   type: 'select';
   default?: string;
-  options?: {
-    values?: Array<{value: string; label?: string}>;
-  };
+  options?: Array<{value: string; label?: string}> | string[];
 };
 
 export function select(field: Omit<SelectField, 'type'>): SelectField {
@@ -71,7 +70,8 @@ export function select(field: Omit<SelectField, 'type'>): SelectField {
 
 export type MultiSelectField = Omit<SelectField, 'type'> & {
   type: 'multiselect';
-  default?: string[];
+  /** Set to `true` to allow users to create arbitrary values. */
+  creatable?: boolean;
 };
 
 export function multiselect(
@@ -99,8 +99,22 @@ export function object(field: Omit<ObjectField, 'type'>): ObjectField {
 
 export type ArrayField = CommonFieldProps & {
   type: 'array';
-  default?: Array<any>;
-  preview?: (value: any) => string;
+  default?: any[];
+  /**
+   * String format for the preview line of an item in the array. Placeholder
+   * values should use brackets, e.g. `m{_index:02}: {_type}`.
+   *
+   * Multiple values can be provided, in which case the first preview line with
+   * no missing placeholder values will be used.
+   *
+   * System added placeholder values:
+   *
+   * - _index: The 0-based index.
+   * - _index:02: A left-padded version of _index to 2 digits.
+   * - _index:03: A left-padded version of _index to 3 digits.
+   * - _type: For array of one-of fields, the type of the selected field.
+   */
+  preview?: string | string[];
   // NOTE(stevenle): the array field should only accept object values to keep
   // the schemas future-friendly. For example, if we were to accept primatives
   // (e.g. Array<string>) and the developer decides in the future that they
@@ -109,7 +123,7 @@ export type ArrayField = CommonFieldProps & {
   // update from the old field type to the new field type. But if we enforce
   // objects here, a developer should technically be able to add fields to the
   // nested field definition without breaking any existing db entries.
-  of: ImageField | ObjectField | OneOfField;
+  of: ObjectLikeField;
 };
 
 export function array(field: Omit<ArrayField, 'type'>): ArrayField {
@@ -118,7 +132,7 @@ export function array(field: Omit<ArrayField, 'type'>): ArrayField {
 
 export type OneOfField = CommonFieldProps & {
   type: 'oneof';
-  types: Array<Schema>;
+  types: Schema[];
 };
 
 export function oneOf(field: Omit<OneOfField, 'type'>): OneOfField {
@@ -138,26 +152,36 @@ export type Field =
   | ArrayField
   | OneOfField;
 
+/**
+ * Similar to {@link Field} but with a required `id`.
+ * TODO(stevenle): fix this.
+ */
 export type FieldWithId = Field;
+
+export type ObjectLikeField = ImageField | ObjectField | OneOfField;
 
 export interface Schema {
   name: string;
   description?: string;
-  fields: Array<FieldWithId>;
+  fields: FieldWithId[];
 }
 
 export function defineSchema(schema: Schema): Schema {
   return schema;
 }
 
+/** Defines the schema for a collection or reusable component. */
 export const define = defineSchema;
 
 export type Collection = Schema & {
-  // URL where the collection serves from.
+  /** URL path where the collection serves from. */
   url?: string;
-  // Page component to render for the collection.
+  /** Page component to render the collection for instant previews */
   Component: FunctionalComponent;
-  // Defines the fields to use for document preview.
+  /**
+   * Defines the fields to use for document preview. Defaults to "title" and
+   * "image". Use dot notation for nested fields, e.g. "meta.title".
+   */
   preview?: {
     title?: string;
     image?: string;

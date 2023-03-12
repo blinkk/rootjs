@@ -5,8 +5,16 @@ export default schema.define({
   description: 'Basic hero.',
   fields: [
     schema.string({
-      id: 'internalDesc',
-      label: 'Internal Description',
+      id: 'id',
+      label: 'ID',
+      help: 'Used for deep linking, tracking, etc.'
+    }),
+    schema.multiselect({
+      id: 'options',
+      label: 'Module Options',
+      help: 'Layout and display options.',
+      options: ['text:center', 'size:h2'],
+      creatable: true,
     }),
     schema.string({
       id: 'title',

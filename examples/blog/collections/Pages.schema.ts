@@ -13,6 +13,11 @@ export default schema.collection({
   description: 'A collection of landing pages for the website.',
   url: '/[...slug]',
   Component: Page,
+  preview: {
+    title: 'meta.title',
+    image: 'meta.image',
+  },
+
   fields: [
     schema.string({
       id: 'internalDesc',
@@ -57,9 +62,11 @@ export default schema.collection({
           of: schema.oneOf({
             types: templates,
           }),
-          preview: (value: any) => {
-            return value.internalDesc || value.id || '';
-          },
+          preview: [
+            'm{_index:02}: {_type} ({id})',
+            'm{_index:02}: {_type} (no tracking id)',
+            'm{_index:02}',
+          ],
         }),
       ],
     }),

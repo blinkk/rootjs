@@ -5,10 +5,6 @@ export default schema.define({
   description: 'Embedded YouTube image.',
   fields: [
     schema.string({
-      id: 'internalDesc',
-      label: 'Internal Description',
-    }),
-    schema.string({
       id: 'youtubeUrl',
       label: 'YouTube URL',
     }),

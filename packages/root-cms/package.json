@@ -46,13 +46,14 @@
     "jsonwebtoken": "^9.0.0",
     "preact-render-to-string": "^5.2.3"
   },
+  "// NOTE(stevenle): due to compat issues with mantine and preact, mantine is pinned to v4.2.12": "",
   "devDependencies": {
     "@babel/core": "^7.17.9",
     "@blinkk/root": "workspace:*",
     "@emotion/react": "^11.10.5",
-    "@mantine/core": "^5.10.2",
-    "@mantine/hooks": "^5.10.2",
-    "@mantine/spotlight": "^5.10.2",
+    "@mantine/core": "4.2.12",
+    "@mantine/hooks": "4.2.12",
+    "@mantine/spotlight": "4.2.12",
     "@preact/compat": "^17.1.2",
     "@tabler/icons-preact": "^2.7.0",
     "@types/body-parser": "^1.19.2",

@@ -13,8 +13,9 @@ export default schema.define({
   description: 'Basic 50x50.',
   fields: [
     schema.string({
-      id: 'internalDesc',
-      label: 'Internal Description',
+      id: 'id',
+      label: 'ID',
+      help: 'Used for deep linking, tracking, etc.'
     }),
     schema.string({
       id: 'title',

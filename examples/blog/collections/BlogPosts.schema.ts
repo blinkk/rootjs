@@ -7,6 +7,11 @@ export default schema.collection({
     "A collection of posts for the blog. If you're new here, check out the [getting started](#todo) guide.",
   url: '/blog/[slug]',
   Component: Page,
+  preview: {
+    title: 'meta.title',
+    image: 'meta.image',
+  },
+
   fields: [
     schema.string({
       id: 'internalDesc',
@@ -14,6 +19,7 @@ export default schema.collection({
       help: 'Use this field to leave internal notes, etc.',
       variant: 'textarea',
     }),
+
     schema.object({
       id: 'meta',
       label: 'Meta',
@@ -23,10 +29,23 @@ export default schema.collection({
           label: 'Title',
           translate: true,
         }),
+        schema.string({
+          id: 'description',
+          label: 'Description',
+          help: 'Description for SEO and social shares.',
+          translate: true,
+          variant: 'textarea',
+        }),
         schema.image({
           id: 'image',
           label: 'Image',
           help: 'Meta image for social shares. Recommended size: 1200x600.',
+        }),
+        schema.multiselect({
+          id: 'tags',
+          label: 'Tags',
+          help: 'Category tags for searching and filtering.',
+          creatable: true,
         }),
       ],
     }),

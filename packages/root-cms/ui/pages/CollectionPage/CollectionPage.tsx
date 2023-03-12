@@ -1,4 +1,4 @@
-import {IconCirclePlus, IconFolder, IconNotebook} from '@tabler/icons-preact';
+import {IconCirclePlus, IconFolder} from '@tabler/icons-preact';
 import {useEffect, useState} from 'preact/hooks';
 import {Button, Image, Loader, Select, Tabs} from '@mantine/core';
 import {Markdown} from '../../components/Markdown/Markdown.js';
@@ -18,6 +18,7 @@ import {
 } from 'firebase/firestore';
 import './CollectionPage.css';
 import {useLocalStorage} from '../../hooks/useLocalStorage.js';
+import {getNestedValue} from '../../utils/objects.js';
 
 interface CollectionPageProps {
   collection?: string;
@@ -43,6 +44,10 @@ function useDocsList(collectionId: string, options: {orderBy: string}) {
     let dbQuery: Query = dbCollection;
     if (orderBy === 'modifiedAt') {
       dbQuery = query(dbCollection, queryOrderby('sys.modifiedAt', 'desc'));
+    } else if (orderBy === 'newest') {
+      dbQuery = query(dbCollection, queryOrderby('sys.createdAt', 'desc'));
+    } else if (orderBy === 'oldest') {
+      dbQuery = query(dbCollection, queryOrderby('sys.createdAt'));
     } else if (orderBy === 'slug') {
       dbQuery = query(dbCollection, queryOrderby(documentId()));
     }
@@ -177,56 +182,51 @@ CollectionPage.Collection = (props: CollectionProps) => {
             />
           )}
         </div>
-        <Tabs className="CollectionPage__collection__tabs" value="docs">
-          <Tabs.List>
-            <Tabs.Tab value="docs" icon={<IconNotebook size={18} />}>
-              Docs
-            </Tabs.Tab>
-          </Tabs.List>
-
-          <Tabs.Panel
-            value="docs"
-            className="CollectionPage__collection__docsTab"
-          >
-            <div className="CollectionPage__collection__docsTab__controls">
-              <div className="CollectionPage__collection__docsTab__controls__sort">
-                <div className="CollectionPage__collection__docsTab__controls__sort__label">
-                  Sort:
+        <Tabs className="CollectionPage__collection__tabs" active={1}>
+          <Tabs.Tab label="Docs">
+            <div className="CollectionPage__collection__docsTab">
+              <div className="CollectionPage__collection__docsTab__controls">
+                <div className="CollectionPage__collection__docsTab__controls__sort">
+                  <div className="CollectionPage__collection__docsTab__controls__sort__label">
+                    Sort:
+                  </div>
+                  <Select
+                    size="xs"
+                    value={orderBy}
+                    onChange={(value: any) => setOrderBy(value || 'modifiedAt')}
+                    data={[
+                      {value: 'slug', label: 'A-Z'},
+                      {value: 'newst', label: 'Newest'},
+                      {value: 'oldest', label: 'Oldest'},
+                      {value: 'modifiedAt', label: 'Last modified'},
+                    ]}
+                  />
                 </div>
-                <Select
-                  size="xs"
-                  value={orderBy}
-                  onChange={(value) => setOrderBy(value || 'modifiedAt')}
-                  data={[
-                    {value: 'slug', label: 'A-Z'},
-                    {value: 'modifiedAt', label: 'Last modified'},
-                  ]}
-                />
+                <div className="CollectionPage__collection__docsTab__controls__newDoc">
+                  <Button
+                    color="dark"
+                    size="xs"
+                    leftIcon={<IconCirclePlus size={16} />}
+                    onClick={() => setNewDocModalOpen(true)}
+                  >
+                    New
+                  </Button>
+                </div>
               </div>
-              <div className="CollectionPage__collection__docsTab__controls__newDoc">
-                <Button
-                  color="dark"
-                  size="xs"
-                  leftIcon={<IconCirclePlus size={16} />}
-                  onClick={() => setNewDocModalOpen(true)}
-                >
-                  New
-                </Button>
+              <div className="CollectionPage__collection__docsTab__content">
+                {loading ? (
+                  <div className="CollectionPage__collection__docsTab__content__loading">
+                    <Loader color="gray" size="xl" />
+                  </div>
+                ) : (
+                  <CollectionPage.DocsList
+                    collection={props.collection}
+                    docs={docs}
+                  />
+                )}
               </div>
             </div>
-            <div className="CollectionPage__collection__docsTab__content">
-              {loading ? (
-                <div className="CollectionPage__collection__docsTab__content__loading">
-                  <Loader color="gray" size="xl" />
-                </div>
-              ) : (
-                <CollectionPage.DocsList
-                  collection={props.collection}
-                  docs={docs}
-                />
-              )}
-            </div>
-          </Tabs.Panel>
+          </Tabs.Tab>
         </Tabs>
       </div>
     </>
@@ -266,6 +266,15 @@ CollectionPage.DocsList = (props: {collection: string; docs: any[]}) => {
       {docs.map((doc) => {
         const cmsUrl = `/cms/content/${collectionId}/${doc.slug}`;
         const liveUrl = getLiveUrl(doc.slug);
+        const fields = doc.fields || {};
+        const previewTitle = getNestedValue(
+          fields,
+          rootCollection.preview?.title || 'title'
+        );
+        const previewImage = getNestedValue(
+          fields,
+          rootCollection.preview?.image || 'image'
+        );
         return (
           <div
             className="CollectionPage__collection__docsList__doc"
@@ -286,7 +295,7 @@ CollectionPage.DocsList = (props: {collection: string; docs: any[]}) => {
                 </div>
               </div>
               <div className="CollectionPage__collection__docsList__doc__content__title">
-                {doc.fields?.meta?.title || 'Lorem ipsum'}
+                {previewTitle || '[UNTITLED]'}
               </div>
               <div className="CollectionPage__collection__docsList__doc__content__url">
                 {liveUrl}

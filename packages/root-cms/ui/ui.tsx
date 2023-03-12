@@ -11,6 +11,7 @@ import {Collection} from '../core/schema.js';
 import {NotFoundPage} from './pages/NotFoundPage/NotFoundPage.js';
 import {FirebaseContext, FirebaseContextObject} from './hooks/useFirebase.js';
 import './styles/global.css';
+import './styles/theme.css';
 
 declare global {
   interface Window {

@@ -4,10 +4,6 @@ export default schema.define({
   name: 'ImageAsset',
   description: 'Static image embed.',
   fields: [
-    schema.string({
-      id: 'internalDesc',
-      label: 'Internal Description',
-    }),
     schema.image({
       id: 'image',
       label: 'Image to embed',

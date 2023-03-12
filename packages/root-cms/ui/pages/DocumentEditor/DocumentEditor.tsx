@@ -3,6 +3,7 @@ import {
   Button,
   LoadingOverlay,
   Menu,
+  MultiSelect,
   Select,
   Textarea,
   TextInput,
@@ -22,7 +23,9 @@ import {
 } from '@tabler/icons-preact';
 import * as schema from '../../../core/schema.js';
 import './DocumentEditor.css';
-import {DraftController, useDraft} from '../../hooks/useDraft.js';
+import {DraftController, SaveState, useDraft} from '../../hooks/useDraft.js';
+import {flattenNestedKeys} from '../../utils/objects.js';
+import {getPlaceholderKeys, strFormat} from '../../utils/str-format.js';
 
 interface DocumentEditorProps {
   docId: string;
@@ -31,15 +34,19 @@ interface DocumentEditorProps {
 
 export function DocumentEditor(props: DocumentEditorProps) {
   const fields = props.collection.fields || [];
-  const {loading, draft, data} = useDraft(props.docId);
-  const values = data?.fields || {};
-  console.log('data', data);
+  const {loading, draft, saveState} = useDraft(props.docId);
   return (
     <div className="DocumentEditor">
       <LoadingOverlay
         visible={loading}
         loaderProps={{color: 'gray', size: 'xl'}}
       />
+      <div className="DocumentEditor__saveState">
+        {saveState === SaveState.SAVED && 'saved!'}
+        {saveState === SaveState.SAVING && 'saving...'}
+        {saveState === SaveState.UPDATES_PENDING && 'changes detected...'}
+        {saveState === SaveState.ERROR && 'error saving'}
+      </div>
       <div className="DocumentEditor__fields">
         {fields.map((field) => (
           <DocumentEditor.Field
@@ -48,7 +55,6 @@ export function DocumentEditor(props: DocumentEditorProps) {
             field={field}
             shallowKey={field.id!}
             deepKey={`fields.${field.id!}`}
-            data={values[field.id!]}
             draft={draft}
           />
         ))}
@@ -65,7 +71,6 @@ interface FieldProps {
   onChange?: (newValue: any) => void;
   shallowKey: string;
   deepKey: string;
-  data: any;
   draft: DraftController;
 }
 
@@ -77,8 +82,7 @@ DocumentEditor.Field = (props: FieldProps) => {
       className="DocumentEditor__field"
       data-type={field.type}
       data-level={level}
-      data-shallow-key={props.shallowKey}
-      data-deep-key={props.deepKey}
+      data-key={props.deepKey}
     >
       {!props.hideHeader && (
         <div className="DocumentEditor__field__header">
@@ -95,10 +99,14 @@ DocumentEditor.Field = (props: FieldProps) => {
           <DocumentEditor.ArrayField {...props} />
         ) : field.type === 'image' ? (
           <DocumentEditor.ImageField {...props} />
+        ) : field.type === 'multiselect' ? (
+          <DocumentEditor.MultiSelectField {...props} />
         ) : field.type === 'object' ? (
           <DocumentEditor.ObjectField {...props} />
         ) : field.type === 'oneof' ? (
           <DocumentEditor.OneOfField {...props} />
+        ) : field.type === 'select' ? (
+          <DocumentEditor.SelectField {...props} />
         ) : field.type === 'string' ? (
           <DocumentEditor.StringField {...props} />
         ) : (
@@ -113,7 +121,7 @@ DocumentEditor.Field = (props: FieldProps) => {
 
 DocumentEditor.StringField = (props: FieldProps) => {
   const field = props.field as schema.StringField;
-  const [value, setValue] = useState(props.data ?? '');
+  const [value, setValue] = useState('');
 
   function onChange(newValue: string) {
     setValue(newValue);
@@ -124,7 +132,6 @@ DocumentEditor.StringField = (props: FieldProps) => {
     const unsubscribe = props.draft.subscribe(
       props.deepKey,
       (newValue: string) => {
-        console.log('onRemoteChange()', newValue);
         setValue(newValue);
       }
     );
@@ -155,7 +162,7 @@ DocumentEditor.StringField = (props: FieldProps) => {
 };
 
 DocumentEditor.ImageField = (props: FieldProps) => {
-  // const field = props.field as schema.ImageField;
+  const field = props.field as schema.ImageField;
   return (
     <div className="DocumentEditor__ImageField">
       {/* <Button color="dark" size="xs" leftIcon={<IconPhotoUp size={16} />}>
@@ -170,18 +177,6 @@ DocumentEditor.ImageField = (props: FieldProps) => {
 
 DocumentEditor.ObjectField = (props: FieldProps) => {
   const field = props.field as schema.ObjectField;
-  const [data, setData] = useState(props.data || {});
-
-  useEffect(() => {
-    const unsubscribe = props.draft.subscribe(
-      props.deepKey,
-      (newValue: any) => {
-        setData(newValue || {});
-      }
-    );
-    return unsubscribe;
-  }, []);
-
   return (
     <div className="DocumentEditor__ObjectField">
       <div className="DocumentEditor__ObjectField__fields">
@@ -192,7 +187,6 @@ DocumentEditor.ObjectField = (props: FieldProps) => {
             field={field}
             shallowKey={field.id!}
             deepKey={`${props.deepKey}.${field.id}`}
-            data={data[field.id!]}
             draft={props.draft}
           />
         ))}
@@ -392,10 +386,7 @@ function arrayReducer(state: ArrayFieldValue, action: ArrayAction) {
 DocumentEditor.ArrayField = (props: FieldProps) => {
   const draft = props.draft;
   const field = props.field as schema.ArrayField;
-  const [value, dispatch] = useReducer(
-    arrayReducer,
-    props.data || {_array: []}
-  );
+  const [value, dispatch] = useReducer(arrayReducer, {_array: []});
 
   const data = value ?? {};
   const order = data._array || [];
@@ -484,7 +475,7 @@ DocumentEditor.ArrayField = (props: FieldProps) => {
                 <IconTriangleFilled size={6} />
               </div>
               <div className="DocumentEditor__ArrayField__item__header__preview">
-                item {i}
+                {arrayPreview(field, value[key], i)}
               </div>
               <div className="DocumentEditor__ArrayField__item__header__controls">
                 <div className="DocumentEditor__ArrayField__item__header__controls__arrows">
@@ -501,41 +492,42 @@ DocumentEditor.ArrayField = (props: FieldProps) => {
                     <IconCircleArrowDown size={20} strokeWidth={1.75} />
                   </button>
                 </div>
-                <Menu position="bottom-start" width={200}>
-                  <Menu.Target>
+                <Menu
+                  className="DocumentEditor__ArrayField__item__header__controls__menu"
+                  position="bottom"
+                  control={
                     <ActionIcon className="DocumentEditor__ArrayField__item__header__controls__dots">
                       <IconDotsVertical size={16} />
                     </ActionIcon>
-                  </Menu.Target>
-                  <Menu.Dropdown className="DocumentEditor__ArrayField__item__header__controls__menu">
-                    <Menu.Label>INSERT</Menu.Label>
-                    <Menu.Item
-                      icon={<IconRowInsertTop size={20} />}
-                      onClick={() => insertBefore(i)}
-                    >
-                      Add before
-                    </Menu.Item>
-                    <Menu.Item
-                      icon={<IconRowInsertBottom size={20} />}
-                      onClick={() => insertAfter(i)}
-                    >
-                      Add after
-                    </Menu.Item>
-                    <Menu.Item
-                      icon={<IconCopy size={20} />}
-                      onClick={() => duplicate(i)}
-                    >
-                      Duplicate
-                    </Menu.Item>
+                  }
+                >
+                  <Menu.Label>INSERT</Menu.Label>
+                  <Menu.Item
+                    icon={<IconRowInsertTop size={20} />}
+                    onClick={() => insertBefore(i)}
+                  >
+                    Add before
+                  </Menu.Item>
+                  <Menu.Item
+                    icon={<IconRowInsertBottom size={20} />}
+                    onClick={() => insertAfter(i)}
+                  >
+                    Add after
+                  </Menu.Item>
+                  <Menu.Item
+                    icon={<IconCopy size={20} />}
+                    onClick={() => duplicate(i)}
+                  >
+                    Duplicate
+                  </Menu.Item>
 
-                    <Menu.Label>REMOVE</Menu.Label>
-                    <Menu.Item
-                      icon={<IconTrash size={20} />}
-                      onClick={() => removeAt(i)}
-                    >
-                      Remove
-                    </Menu.Item>
-                  </Menu.Dropdown>
+                  <Menu.Label>REMOVE</Menu.Label>
+                  <Menu.Item
+                    icon={<IconTrash size={20} />}
+                    onClick={() => removeAt(i)}
+                  >
+                    Remove
+                  </Menu.Item>
                 </Menu>
               </div>
             </summary>
@@ -546,7 +538,6 @@ DocumentEditor.ArrayField = (props: FieldProps) => {
                 field={field.of}
                 shallowKey={field.id!}
                 deepKey={`${props.deepKey}.${key}`}
-                data={value[key]}
                 draft={props.draft}
                 hideHeader
               />
@@ -570,11 +561,11 @@ DocumentEditor.ArrayField = (props: FieldProps) => {
 
 DocumentEditor.OneOfField = (props: FieldProps) => {
   const field = props.field as schema.OneOfField;
-  const [type, setType] = useState(() => {
-    return (props.data || {})._type || '';
-  });
+  const [type, setType] = useState('');
   const typesMap: Record<string, schema.Schema> = {};
-  const dropdownValues: Array<{value: string; label: string}> = [];
+  const dropdownValues: Array<{value: string; label: string}> = [
+    {value: '', label: field.placeholder || 'Select type'},
+  ];
   field.types.forEach((type) => {
     typesMap[type.name] = type;
     dropdownValues.push({value: type.name, label: type.name});
@@ -602,9 +593,13 @@ DocumentEditor.OneOfField = (props: FieldProps) => {
         <div className="DocumentEditor__OneOfField__select__label">Type:</div>
         <Select
           data={dropdownValues}
-          size="xs"
           value={type}
-          onChange={(e) => onTypeChange(e || '')}
+          placeholder={field.placeholder}
+          onChange={(e: string) => onTypeChange(e || '')}
+          size="xs"
+          radius={0}
+          // Due to issues with preact/compat, use a div for the dropdown el.
+          dropdownComponent="div"
         />
       </div>
       {selectedType && (
@@ -617,11 +612,105 @@ DocumentEditor.OneOfField = (props: FieldProps) => {
               shallowKey={field.id!}
               deepKey={`${props.deepKey}.${field.id!}`}
               draft={props.draft}
-              data={null}
             />
           ))}
         </div>
       )}
+    </div>
+  );
+};
+
+DocumentEditor.SelectField = (props: FieldProps) => {
+  const field = props.field as schema.SelectField;
+  const [value, setValue] = useState('');
+
+  const options = (field.options || []).map((option) => {
+    // Mantine requires both label and value to be set.
+    if (typeof option === 'string') {
+      return {label: option, value: option};
+    }
+    return {
+      label: option.label ?? option.value ?? '',
+      value: option.value ?? option.label ?? '',
+    };
+  });
+
+  function onChange(newValue: string) {
+    props.draft.updateKey(`${props.deepKey}`, newValue);
+    setValue(newValue || '');
+  }
+
+  useEffect(() => {
+    const unsubscribe = props.draft.subscribe(
+      props.deepKey,
+      (newValue: string) => {
+        setValue(newValue || '');
+      }
+    );
+    return unsubscribe;
+  }, []);
+
+  return (
+    <div className="DocumentEditor__SelectField">
+      <Select
+        data={options}
+        placeholder={field.placeholder}
+        value={value}
+        onChange={(e: string) => onChange(e || '')}
+        size="xs"
+        radius={0}
+        // Due to issues with preact/compat, use a div for the dropdown el.
+        dropdownComponent="div"
+      />
+    </div>
+  );
+};
+
+DocumentEditor.MultiSelectField = (props: FieldProps) => {
+  const field = props.field as schema.MultiSelectField;
+  const [value, setValue] = useState<string[]>([]);
+
+  const options = (field.options || []).map((option) => {
+    // Mantine requires both label and value to be set.
+    if (typeof option === 'string') {
+      return {label: option, value: option};
+    }
+    return {
+      label: option.label ?? option.value ?? '',
+      value: option.value ?? option.label ?? '',
+    };
+  });
+
+  function onChange(newValue: string[]) {
+    props.draft.updateKey(props.deepKey, newValue || []);
+    setValue(newValue);
+  }
+
+  useEffect(() => {
+    const unsubscribe = props.draft.subscribe(
+      props.deepKey,
+      (newValue: string[]) => {
+        setValue(newValue || []);
+      }
+    );
+    return unsubscribe;
+  }, []);
+
+  return (
+    <div className="DocumentEditor__MultiSelectField">
+      <MultiSelect
+        data={options}
+        size="xs"
+        radius={0}
+        placeholder={field.placeholder}
+        value={value}
+        searchable
+        creatable={field.creatable || false}
+        getCreateLabel={(query: string) => `+ Add "${query}"`}
+        onChange={(newValue: string[]) => onChange(newValue)}
+        // Due to issues with preact/compat, use a div for the dropdown el.
+        dropdownComponent="div"
+      />
     </div>
   );
 };
@@ -634,6 +723,34 @@ function arraySwap<T = unknown>(arr: T[], index1: number, index2: number) {
   arr[index1] = arr[index2];
   arr[index2] = tmp;
   return arr;
+}
+
+function arrayPreview(
+  field: schema.ArrayField,
+  data: any,
+  index: number
+): string {
+  if (!field.preview) {
+    return `item ${index}`;
+  }
+
+  const templates = Array.isArray(field.preview)
+    ? [...field.preview]
+    : [field.preview];
+  const placeholders = flattenNestedKeys(data);
+  placeholders._index = String(index);
+  placeholders['_index:02'] = placeholders._index.padStart(2, '0');
+  placeholders['_index:03'] = placeholders._index.padStart(3, '0');
+  console.log(placeholders);
+  while (templates.length > 0) {
+    const template = templates.shift()!;
+    const preview = strFormat(template, placeholders);
+    if (getPlaceholderKeys(preview).length === 0) {
+      return preview;
+    }
+  }
+
+  return `item ${index}`;
 }
 
 function autokey() {

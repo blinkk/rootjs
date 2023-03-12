@@ -49,73 +49,72 @@ Layout.Side = (props: LayoutProps) => {
   const currentUrl = route.url.replace(/\/*$/g, '');
   return (
     <div className="Layout__side">
-      <Tooltip label="Home" position="right" withArrow>
-        <a
-          className={joinClassNames(
-            'Layout__side__button',
-            currentUrl === '/cms' && 'active'
-          )}
-          href="/cms"
-        >
-          <IconHome stroke={ICON_STROKE} />
-        </a>
-      </Tooltip>
-      <Tooltip label="Content" position="right" withArrow>
-        <a
-          className={joinClassNames(
-            'Layout__side__button',
-            currentUrl.startsWith('/cms/content') && 'active'
-          )}
-          href="/cms/content"
-        >
-          <IconFolder stroke={ICON_STROKE} />
-        </a>
-      </Tooltip>
-      <Tooltip label="Data" position="right" withArrow>
-        <a
-          className={joinClassNames(
-            'Layout__side__button',
-            currentUrl.startsWith('/cms/data') && 'active'
-          )}
-          href="/cms/data"
-        >
-          <IconDatabase stroke={ICON_STROKE} />
-        </a>
-      </Tooltip>
-      <Tooltip label="Assets" position="right" withArrow>
-        <a
-          className={joinClassNames(
-            'Layout__side__button',
-            currentUrl.startsWith('/cms/assets') && 'active'
-          )}
-          href="/cms/assets"
-        >
-          <IconPhoto stroke={ICON_STROKE} />
-        </a>
-      </Tooltip>
-      <Tooltip label="Translations" position="right" withArrow>
-        <a
-          className={joinClassNames(
-            'Layout__side__button',
-            currentUrl.startsWith('/cms/translations') && 'active'
-          )}
-          href="/cms/translations"
-        >
-          <IconLanguage stroke={ICON_STROKE} />
-        </a>
-      </Tooltip>
-      <Tooltip label="Settings" position="right" withArrow>
-        <a
-          className={joinClassNames(
-            'Layout__side__button',
-            currentUrl.startsWith('/cms/settings') && 'active'
-          )}
-          href="/cms/settings"
-        >
-          <IconSettings stroke={ICON_STROKE} />
-        </a>
-      </Tooltip>
+      <Layout.SideButton label="Home" url="/cms" active={currentUrl === '/cms'}>
+        <IconHome stroke={ICON_STROKE} />
+      </Layout.SideButton>
+
+      <Layout.SideButton
+        label="Content"
+        url="/cms/content"
+        active={currentUrl.startsWith('/cms/content')}
+      >
+        <IconFolder stroke={ICON_STROKE} />
+      </Layout.SideButton>
+
+      <Layout.SideButton
+        label="Data"
+        url="/cms/data"
+        active={currentUrl.startsWith('/cms/data')}
+      >
+        <IconDatabase stroke={ICON_STROKE} />
+      </Layout.SideButton>
+
+      <Layout.SideButton
+        label="Assets"
+        url="/cms/assets"
+        active={currentUrl.startsWith('/cms/assets')}
+      >
+        <IconPhoto stroke={ICON_STROKE} />
+      </Layout.SideButton>
+
+      <Layout.SideButton
+        label="Translations"
+        url="/cms/translations"
+        active={currentUrl.startsWith('/cms/translations')}
+      >
+        <IconLanguage stroke={ICON_STROKE} />
+      </Layout.SideButton>
+
+      <Layout.SideButton
+        label="Settings"
+        url="/cms/settings"
+        active={currentUrl.startsWith('/cms/settings')}
+      >
+        <IconSettings stroke={ICON_STROKE} />
+      </Layout.SideButton>
     </div>
+  );
+};
+
+interface SideButtonProps {
+  label: string;
+  url: string;
+  active: boolean;
+  children: ComponentChildren;
+}
+
+Layout.SideButton = (props: SideButtonProps) => {
+  return (
+    <Tooltip
+      className="Layout__side__button"
+      label={props.label}
+      position="right"
+      withArrow
+    >
+      <a className={joinClassNames(props.active && 'active')} href={props.url}>
+        {props.children}
+      </a>
+    </Tooltip>
   );
 };
 

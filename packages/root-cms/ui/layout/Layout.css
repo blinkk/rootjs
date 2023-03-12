@@ -57,21 +57,26 @@
   align-items: center;
 }
 
-.Layout__side a {
+.Layout__side__button {
+  width: 100%;
+  height: 48px;
+}
+
+.Layout__side__button a {
   display: flex;
   position: relative;
   width: 100%;
-  height: 48px;
+  height: 100%;
   justify-content: center;
   align-items: center;
   transition: background-color 0.18s ease;
 }
 
-.Layout__side a:hover {
+.Layout__side__button a:hover {
   background-color: var(--button-background-hover);
 }
 
-.Layout__side a::after {
+.Layout__side__button a::after {
   content: '';
   display: block;
   position: absolute;
@@ -83,7 +88,7 @@
   transition: background-color 0.18s ease;
 }
 
-.Layout__side a.active::after {
+.Layout__side__button a.active::after {
   background-color: lightblue;
 }
 

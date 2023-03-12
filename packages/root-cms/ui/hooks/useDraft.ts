@@ -8,8 +8,17 @@ import {
   serverTimestamp,
 } from 'firebase/firestore';
 import {debounce} from '../utils/debounce.js';
+import {getNestedValue, isObject} from '../utils/objects.js';
 
 const SAVE_DELAY_MS = 3 * 1000;
+
+export enum SaveState {
+  NO_CHANGES = 'NO_CHANGES',
+  UPDATES_PENDING = 'UPDATE_PENDING',
+  SAVING = 'SAVING',
+  SAVED = 'SAVED',
+  ERROR = 'ERROR',
+}
 
 type Subscribers = Record<string, Set<SubscriberCallback>>;
 type SubscriberCallback = (newValue: any) => void;
@@ -27,6 +36,8 @@ export class DraftController {
   private dbUnsubscribe?: () => void;
   private cachedData: any = {};
   private subscribers: Subscribers = {};
+  private saveState = SaveState.NO_CHANGES;
+  private onSaveStateChangeCallback?: (saveState: SaveState) => void;
 
   constructor(docId: string) {
     this.projectId = window.__ROOT_CTX.rootConfig.projectId;
@@ -71,13 +82,21 @@ export class DraftController {
     if (this.dbUnsubscribe) {
       this.dbUnsubscribe();
     }
+    this.flush();
   }
 
   /**
-   * Listen for changes.
+   * Adds a listener for change events.
    */
   onChange(callback: (data: any) => void) {
     this.onChangeCallback = callback;
+  }
+
+  /**
+   * Adds a listener for save state change events.
+   */
+  onSaveStateChange(callback: (saveState: SaveState) => void) {
+    this.onSaveStateChangeCallback = callback;
   }
 
   /**
@@ -130,6 +149,7 @@ export class DraftController {
     if (this.onChangeCallback) {
       this.onChangeCallback(this.cachedData);
     }
+    this.setSaveState(SaveState.UPDATES_PENDING);
     this.queueChanges();
   }
 
@@ -142,6 +162,7 @@ export class DraftController {
     if (this.onChangeCallback) {
       this.onChangeCallback({...this.cachedData});
     }
+    this.setSaveState(SaveState.UPDATES_PENDING);
     this.queueChanges();
   }
 
@@ -151,6 +172,29 @@ export class DraftController {
    * update.
    */
   private queueChanges = debounce(() => this.flush(), SAVE_DELAY_MS);
+
+  private setSaveState(newSaveState: SaveState) {
+    const oldSaveState = this.saveState;
+    // When saving data to the db, if any new pending updates come in, keep the
+    // saveState as PENDING.
+    if (newSaveState === SaveState.SAVED && oldSaveState !== SaveState.SAVING) {
+      return;
+    }
+    this.saveState = newSaveState;
+
+    // After N seconds, revert from "SAVED" to "NO_CHANGES".
+    if (newSaveState === SaveState.SAVED) {
+      window.setTimeout(() => {
+        if (this.saveState === SaveState.SAVED) {
+          this.setSaveState(SaveState.NO_CHANGES);
+        }
+      }, SAVE_DELAY_MS);
+    }
+
+    if (this.onSaveStateChangeCallback) {
+      this.onSaveStateChangeCallback(newSaveState);
+    }
+  }
 
   /**
    * Immediately write all queued data to the DB.
@@ -167,10 +211,13 @@ export class DraftController {
     // and re-queue the db save.
     this.pendingUpdates.clear();
     try {
+      this.setSaveState(SaveState.SAVING);
       await updateDoc(this.docRef, updates);
+      this.setSaveState(SaveState.SAVED);
     } catch (err) {
       console.error('failed to update doc');
       console.error(err);
+      this.setSaveState(SaveState.ERROR);
       for (const key in updates) {
         // Ignore sys updates.
         if (key.startsWith('sys.')) {
@@ -190,7 +237,7 @@ export class DraftController {
   /**
    * Stops all listeners and disposes the controller.
    */
-  dispose() {
+  async dispose() {
     this.stop();
   }
 }
@@ -237,10 +284,6 @@ function notify(subscribers: Subscribers, data: any, parentKeys?: string[]) {
   }
 }
 
-function isObject(val: any): boolean {
-  return typeof val === 'object' && !Array.isArray(val) && val !== null;
-}
-
 function splitKey(key: string) {
   const index = key.indexOf('.');
   const head = key.substring(0, index);
@@ -248,31 +291,21 @@ function splitKey(key: string) {
   return [head, tail] as const;
 }
 
-function getNestedValue(data: any, key: string) {
-  const keys = key.split('.');
-  let current = data;
-  for (const segment of keys) {
-    if (!current) {
-      current = {};
-    }
-    current = current[segment];
-  }
-  return current;
-}
-
 export function useDraft(docId: string) {
   const [loading, setLoading] = useState(true);
-  const [data, setData] = useState<any>({});
+  // const [data, setData] = useState<any>({});
   const draft = useMemo(() => new DraftController(docId), []);
+  const [saveState, setSaveState] = useState(SaveState.NO_CHANGES);
 
   useEffect(() => {
     draft.onChange((data: any) => {
-      setData(data);
+      // setData(data);
       setLoading(false);
     });
+    draft.onSaveStateChange((newSaveState) => setSaveState(newSaveState));
     draft.start();
     return () => draft.dispose();
   }, []);
 
-  return {loading, draft, data};
+  return {loading, saveState, draft};
 }
