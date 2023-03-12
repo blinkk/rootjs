@@ -44,7 +44,7 @@ export function DocumentEditor(props: DocumentEditorProps) {
       <div className="DocumentEditor__saveState">
         {saveState === SaveState.SAVED && 'saved!'}
         {saveState === SaveState.SAVING && 'saving...'}
-        {saveState === SaveState.UPDATES_PENDING && 'changes detected...'}
+        {saveState === SaveState.UPDATES_PENDING && 'saving...'}
         {saveState === SaveState.ERROR && 'error saving'}
       </div>
       <div className="DocumentEditor__fields">

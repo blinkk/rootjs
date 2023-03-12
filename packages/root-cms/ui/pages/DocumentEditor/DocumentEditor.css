@@ -11,11 +11,17 @@
 }
 
 .DocumentEditor__saveState {
-  height: 36px;
+  position: fixed;
+  top: 0;
+  right: 0;
+  height: 48px;
+  padding: 0 24px;
   display: flex;
+  align-items: center;
   justify-content: flex-end;
   font-style: italic;
   align-items: center;
+  font-weight: 500;
 }
 
 .DocumentEditor__fields {
