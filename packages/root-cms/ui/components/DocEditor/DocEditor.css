@@ -1,16 +1,16 @@
-.DocumentEditor {
+.DocEditor {
   font-size: 12px;
   position: relative;
 }
 
-.DocumentEditor__loading {
+.DocEditor__loading {
   display: flex;
   align-items: center;
   justify-content: center;
   height: 200px;
 }
 
-.DocumentEditor__saveState {
+.DocEditor__saveState {
   position: fixed;
   top: 0;
   right: 0;
@@ -24,27 +24,27 @@
   font-weight: 500;
 }
 
-.DocumentEditor__fields {
+.DocEditor__fields {
   display: flex;
   flex-direction: column;
   gap: 16px;
 }
 
-.DocumentEditor__field__name {
+.DocEditor__field__name {
   font-weight: 600;
 }
 
-.DocumentEditor__ObjectField__fields {
+.DocEditor__ObjectField__fields {
   display: flex;
   flex-direction: column;
   gap: 24px;
 }
 
-.DocumentEditor__field__header {
+.DocEditor__field__header {
   margin-bottom: 8px;
 }
 
-.DocumentEditor__field[data-type="object"][data-level="0"] > .DocumentEditor__field__header {
+.DocEditor__field[data-type="object"][data-level="0"] > .DocEditor__field__header {
   padding: 4px 12px;
   margin-top: 12px;
   margin-left: -12px;
@@ -53,36 +53,36 @@
   border-bottom: 1px solid var(--color-border);
 }
 
-.DocumentEditor__field[data-type="object"]:not([data-level="0"]) .DocumentEditor__ObjectField__fields {
+.DocEditor__field[data-type="object"]:not([data-level="0"]) .DocEditor__ObjectField__fields {
   padding-left: 12px;
   border-left: 2px solid lightblue;
 }
 
-.DocumentEditor__ArrayField__items {
+.DocEditor__ArrayField__items {
   display: flex;
   flex-direction: column;
   gap: 8px;
 }
 
-.DocumentEditor__ArrayField__item__header {
+.DocEditor__ArrayField__item__header {
   cursor: pointer;
   user-select: none;
   display: flex;
   align-items: center;
 }
 
-.DocumentEditor__ArrayField__item__header__icon {
+.DocEditor__ArrayField__item__header__icon {
   flex-shrink: 0;
   margin-right: 8px;
   transform: rotate(90deg);
 }
 
-.DocumentEditor__ArrayField__item[open] .DocumentEditor__ArrayField__item__header__icon {
+.DocEditor__ArrayField__item[open] .DocEditor__ArrayField__item__header__icon {
   transform: rotate(180deg);
   margin-top: -2px;
 }
 
-.DocumentEditor__ArrayField__item__header__preview {
+.DocEditor__ArrayField__item__header__preview {
   font-family: var(--font-family-mono);
   font-weight: 500;
   flex: 1;
@@ -92,19 +92,19 @@
   text-overflow: ellipsis;
 }
 
-.DocumentEditor__ArrayField__item__header__controls {
+.DocEditor__ArrayField__item__header__controls {
   flex-shrink: 0;
   display: flex;
   align-items: center;
   gap: 4px;
 }
 
-.DocumentEditor__ArrayField__item__header__controls__arrows {
+.DocEditor__ArrayField__item__header__controls__arrows {
   display: flex;
   gap: 8px;
 }
 
-.DocumentEditor__ArrayField__item__header__controls__arrow {
+.DocEditor__ArrayField__item__header__controls__arrow {
   border: none;
   margin: 0;
   padding: 0;
@@ -113,58 +113,58 @@
   transition: transform 0.18s ease;
 }
 
-.DocumentEditor__ArrayField__item__header__controls__arrow:active {
+.DocEditor__ArrayField__item__header__controls__arrow:active {
   transform: translateY(2px);
 }
 
-.DocumentEditor__ArrayField__item__header__controls__dots {
+.DocEditor__ArrayField__item__header__controls__dots {
   color: black;
 }
 
-.DocumentEditor__ArrayField__items__empty {
+.DocEditor__ArrayField__items__empty {
   font-family: var(--font-family-mono);
 }
 
-.DocumentEditor__ArrayField__item__header__controls__menu [role="menuitem"] {
+.DocEditor__ArrayField__item__header__controls__menu [role="menuitem"] {
   padding: 8px 12px;
   font-size: 14px;
 
 }
 
-.DocumentEditor__ArrayField__item__header__controls__menu [role="menuitem"]:hover {
+.DocEditor__ArrayField__item__header__controls__menu [role="menuitem"]:hover {
   background-color: var(--button-background-hover);
 }
 
-.DocumentEditor__ArrayField__item__header__controls__menu [role="menuitem"]:active {
+.DocEditor__ArrayField__item__header__controls__menu [role="menuitem"]:active {
   background-color: var(--button-background-active);
 }
 
-.DocumentEditor__ArrayField__item:not([open]) .DocumentEditor__ArrayField__item__header {
+.DocEditor__ArrayField__item:not([open]) .DocEditor__ArrayField__item__header {
   border-left: 2px solid lightblue;
   padding-left: 8px;
 }
 
-.DocumentEditor__ArrayField__item[open] .DocumentEditor__ArrayField__item__body {
+.DocEditor__ArrayField__item[open] .DocEditor__ArrayField__item__body {
   padding: 8px;
   border: 2px solid lightblue;
 }
 
-.DocumentEditor__ArrayField__add {
+.DocEditor__ArrayField__add {
   margin-top: 16px;
 }
 
-.DocumentEditor__OneOfField__select {
+.DocEditor__OneOfField__select {
   display: flex;
   gap: 8px;
   align-items: center;
   justify-content: flex-end;
 }
 
-.DocumentEditor__OneOfField__select__label {
+.DocEditor__OneOfField__select__label {
   font-weight: 600;
 }
 
-.DocumentEditor__OneOfField__fields {
+.DocEditor__OneOfField__fields {
   margin-top: 16px;
   display: flex;
   flex-direction: column;

@@ -22,36 +22,36 @@ import {
   IconTriangleFilled,
 } from '@tabler/icons-preact';
 import * as schema from '../../../core/schema.js';
-import './DocumentEditor.css';
 import {DraftController, SaveState, useDraft} from '../../hooks/useDraft.js';
 import {flattenNestedKeys} from '../../utils/objects.js';
 import {getPlaceholderKeys, strFormat} from '../../utils/str-format.js';
+import './DocEditor.css';
 
-interface DocumentEditorProps {
+interface DocEditorProps {
   docId: string;
   collection: schema.Collection;
 }
 
-export function DocumentEditor(props: DocumentEditorProps) {
+export function DocEditor(props: DocEditorProps) {
   const fields = props.collection.fields || [];
   const {loading, draft, saveState, data} = useDraft(props.docId);
   return (
-    <div className="DocumentEditor">
+    <div className="DocEditor">
       <LoadingOverlay
         visible={loading}
         loaderProps={{color: 'gray', size: 'xl'}}
       />
-      <div className="DocumentEditor__statusBar">
-        <div className="DocumentEditor__saveState">
+      <div className="DocEditor__statusBar">
+        <div className="DocEditor__saveState">
           {saveState === SaveState.SAVED && 'saved!'}
           {saveState === SaveState.SAVING && 'saving...'}
           {saveState === SaveState.UPDATES_PENDING && 'saving...'}
           {saveState === SaveState.ERROR && 'error saving'}
         </div>
       </div>
-      <div className="DocumentEditor__fields">
+      <div className="DocEditor__fields">
         {fields.map((field) => (
-          <DocumentEditor.Field
+          <DocEditor.Field
             key={field.id}
             collection={props.collection}
             field={field}
@@ -76,43 +76,43 @@ interface FieldProps {
   draft: DraftController;
 }
 
-DocumentEditor.Field = (props: FieldProps) => {
+DocEditor.Field = (props: FieldProps) => {
   const field = props.field;
   const level = props.level ?? 0;
   return (
     <div
-      className="DocumentEditor__field"
+      className="DocEditor__field"
       data-type={field.type}
       data-level={level}
       data-key={props.deepKey}
     >
       {!props.hideHeader && (
-        <div className="DocumentEditor__field__header">
-          <div className="DocumentEditor__field__name">
+        <div className="DocEditor__field__header">
+          <div className="DocEditor__field__name">
             {field.label || field.id}
           </div>
           {field.help && (
-            <div className="DocumentEditor__field__help">{field.help}</div>
+            <div className="DocEditor__field__help">{field.help}</div>
           )}
         </div>
       )}
-      <div className="DocumentEditor__field__input">
+      <div className="DocEditor__field__input">
         {field.type === 'array' ? (
-          <DocumentEditor.ArrayField {...props} />
+          <DocEditor.ArrayField {...props} />
         ) : field.type === 'image' ? (
-          <DocumentEditor.ImageField {...props} />
+          <DocEditor.ImageField {...props} />
         ) : field.type === 'multiselect' ? (
-          <DocumentEditor.MultiSelectField {...props} />
+          <DocEditor.MultiSelectField {...props} />
         ) : field.type === 'object' ? (
-          <DocumentEditor.ObjectField {...props} />
+          <DocEditor.ObjectField {...props} />
         ) : field.type === 'oneof' ? (
-          <DocumentEditor.OneOfField {...props} />
+          <DocEditor.OneOfField {...props} />
         ) : field.type === 'select' ? (
-          <DocumentEditor.SelectField {...props} />
+          <DocEditor.SelectField {...props} />
         ) : field.type === 'string' ? (
-          <DocumentEditor.StringField {...props} />
+          <DocEditor.StringField {...props} />
         ) : (
-          <div className="DocumentEditor__field__input__unknown">
+          <div className="DocEditor__field__input__unknown">
             Unknown field type: {field.type}
           </div>
         )}
@@ -121,7 +121,7 @@ DocumentEditor.Field = (props: FieldProps) => {
   );
 };
 
-DocumentEditor.StringField = (props: FieldProps) => {
+DocEditor.StringField = (props: FieldProps) => {
   const field = props.field as schema.StringField;
   const [value, setValue] = useState('');
 
@@ -163,10 +163,10 @@ DocumentEditor.StringField = (props: FieldProps) => {
   );
 };
 
-DocumentEditor.ImageField = (props: FieldProps) => {
+DocEditor.ImageField = (props: FieldProps) => {
   const field = props.field as schema.ImageField;
   return (
-    <div className="DocumentEditor__ImageField">
+    <div className="DocEditor__ImageField">
       {/* <Button color="dark" size="xs" leftIcon={<IconPhotoUp size={16} />}>
         Upload image
       </Button> */}
@@ -177,13 +177,13 @@ DocumentEditor.ImageField = (props: FieldProps) => {
   );
 };
 
-DocumentEditor.ObjectField = (props: FieldProps) => {
+DocEditor.ObjectField = (props: FieldProps) => {
   const field = props.field as schema.ObjectField;
   return (
-    <div className="DocumentEditor__ObjectField">
-      <div className="DocumentEditor__ObjectField__fields">
+    <div className="DocEditor__ObjectField">
+      <div className="DocEditor__ObjectField__fields">
         {field.fields.map((field) => (
-          <DocumentEditor.Field
+          <DocEditor.Field
             key={field.id}
             collection={props.collection}
             field={field}
@@ -385,7 +385,7 @@ function arrayReducer(state: ArrayFieldValue, action: ArrayAction) {
   }
 }
 
-DocumentEditor.ArrayField = (props: FieldProps) => {
+DocEditor.ArrayField = (props: FieldProps) => {
   const draft = props.draft;
   const field = props.field as schema.ArrayField;
   const [value, dispatch] = useReducer(arrayReducer, {_array: []});
@@ -463,42 +463,42 @@ DocumentEditor.ArrayField = (props: FieldProps) => {
   };
 
   return (
-    <div className="DocumentEditor__ArrayField">
-      <div className="DocumentEditor__ArrayField__items">
+    <div className="DocEditor__ArrayField">
+      <div className="DocEditor__ArrayField__items">
         {order.length === 0 && (
-          <div className="DocumentEditor__ArrayField__items__empty">
+          <div className="DocEditor__ArrayField__items__empty">
             No items
           </div>
         )}
         {order.map((key: string, i: number) => (
-          <details className="DocumentEditor__ArrayField__item" key={key} open>
-            <summary className="DocumentEditor__ArrayField__item__header">
-              <div className="DocumentEditor__ArrayField__item__header__icon">
+          <details className="DocEditor__ArrayField__item" key={key} open>
+            <summary className="DocEditor__ArrayField__item__header">
+              <div className="DocEditor__ArrayField__item__header__icon">
                 <IconTriangleFilled size={6} />
               </div>
-              <div className="DocumentEditor__ArrayField__item__header__preview">
+              <div className="DocEditor__ArrayField__item__header__preview">
                 {arrayPreview(field, value[key], i)}
               </div>
-              <div className="DocumentEditor__ArrayField__item__header__controls">
-                <div className="DocumentEditor__ArrayField__item__header__controls__arrows">
+              <div className="DocEditor__ArrayField__item__header__controls">
+                <div className="DocEditor__ArrayField__item__header__controls__arrows">
                   <button
-                    className="DocumentEditor__ArrayField__item__header__controls__arrow DocumentEditor__ArrayField__item__header__controls__arrows--up"
+                    className="DocEditor__ArrayField__item__header__controls__arrow DocEditor__ArrayField__item__header__controls__arrows--up"
                     onClick={() => moveUp(i)}
                   >
                     <IconCircleArrowUp size={20} strokeWidth={1.75} />
                   </button>
                   <button
-                    className="DocumentEditor__ArrayField__item__header__controls__arrow DocumentEditor__ArrayField__item__header__controls__arrows--down"
+                    className="DocEditor__ArrayField__item__header__controls__arrow DocEditor__ArrayField__item__header__controls__arrows--down"
                     onClick={() => moveDown(i)}
                   >
                     <IconCircleArrowDown size={20} strokeWidth={1.75} />
                   </button>
                 </div>
                 <Menu
-                  className="DocumentEditor__ArrayField__item__header__controls__menu"
+                  className="DocEditor__ArrayField__item__header__controls__menu"
                   position="bottom"
                   control={
-                    <ActionIcon className="DocumentEditor__ArrayField__item__header__controls__dots">
+                    <ActionIcon className="DocEditor__ArrayField__item__header__controls__dots">
                       <IconDotsVertical size={16} />
                     </ActionIcon>
                   }
@@ -533,8 +533,8 @@ DocumentEditor.ArrayField = (props: FieldProps) => {
                 </Menu>
               </div>
             </summary>
-            <div className="DocumentEditor__ArrayField__item__body">
-              <DocumentEditor.Field
+            <div className="DocEditor__ArrayField__item__body">
+              <DocEditor.Field
                 key={`${props.deepKey}.${key}`}
                 collection={props.collection}
                 field={field.of}
@@ -547,7 +547,7 @@ DocumentEditor.ArrayField = (props: FieldProps) => {
           </details>
         ))}
       </div>
-      <div className="DocumentEditor__ArrayField__add">
+      <div className="DocEditor__ArrayField__add">
         <Button
           color="dark"
           size="xs"
@@ -561,7 +561,7 @@ DocumentEditor.ArrayField = (props: FieldProps) => {
   );
 };
 
-DocumentEditor.OneOfField = (props: FieldProps) => {
+DocEditor.OneOfField = (props: FieldProps) => {
   const field = props.field as schema.OneOfField;
   const [type, setType] = useState('');
   const typesMap: Record<string, schema.Schema> = {};
@@ -590,9 +590,9 @@ DocumentEditor.OneOfField = (props: FieldProps) => {
   }, []);
 
   return (
-    <div className="DocumentEditor__OneOfField">
-      <div className="DocumentEditor__OneOfField__select">
-        <div className="DocumentEditor__OneOfField__select__label">Type:</div>
+    <div className="DocEditor__OneOfField">
+      <div className="DocEditor__OneOfField__select">
+        <div className="DocEditor__OneOfField__select__label">Type:</div>
         <Select
           data={dropdownValues}
           value={type}
@@ -605,9 +605,9 @@ DocumentEditor.OneOfField = (props: FieldProps) => {
         />
       </div>
       {selectedType && (
-        <div className="DocumentEditor__OneOfField__fields">
+        <div className="DocEditor__OneOfField__fields">
           {selectedType.fields.map((field) => (
-            <DocumentEditor.Field
+            <DocEditor.Field
               key={field.id}
               collection={props.collection}
               field={field}
@@ -622,7 +622,7 @@ DocumentEditor.OneOfField = (props: FieldProps) => {
   );
 };
 
-DocumentEditor.SelectField = (props: FieldProps) => {
+DocEditor.SelectField = (props: FieldProps) => {
   const field = props.field as schema.SelectField;
   const [value, setValue] = useState('');
 
@@ -653,7 +653,7 @@ DocumentEditor.SelectField = (props: FieldProps) => {
   }, []);
 
   return (
-    <div className="DocumentEditor__SelectField">
+    <div className="DocEditor__SelectField">
       <Select
         data={options}
         placeholder={field.placeholder}
@@ -668,7 +668,7 @@ DocumentEditor.SelectField = (props: FieldProps) => {
   );
 };
 
-DocumentEditor.MultiSelectField = (props: FieldProps) => {
+DocEditor.MultiSelectField = (props: FieldProps) => {
   const field = props.field as schema.MultiSelectField;
   const [value, setValue] = useState<string[]>([]);
 
@@ -699,7 +699,7 @@ DocumentEditor.MultiSelectField = (props: FieldProps) => {
   }, []);
 
   return (
-    <div className="DocumentEditor__MultiSelectField">
+    <div className="DocEditor__MultiSelectField">
       <MultiSelect
         data={options}
         size="xs"

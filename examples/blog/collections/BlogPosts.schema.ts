@@ -1,12 +1,9 @@
 import {schema} from '@blinkk/root-cms';
-import Page from '@/routes/blog/[slug].js';
 
 export default schema.collection({
-  name: 'The Dopest Blog',
-  description:
-    "A collection of posts for the blog. If you're new here, check out the [getting started](#todo) guide.",
+  name: 'BlogPosts',
+  description: 'The dopest blog.',
   url: '/blog/[slug]',
-  Component: Page,
   preview: {
     title: 'meta.title',
     image: 'meta.image',

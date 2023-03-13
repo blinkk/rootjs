@@ -2,20 +2,17 @@ import {ActionIcon, Tooltip} from '@mantine/core';
 import {
   IconArrowLeft,
   IconArrowUpRight,
-  IconCircleArrowUpRight,
   IconDeviceDesktop,
   IconDeviceIpad,
-  IconDeviceLaptop,
   IconDeviceMobile,
   IconReload,
-  IconWindowMaximize,
 } from '@tabler/icons-preact';
-import {useEffect, useReducer, useRef, useState} from 'preact/hooks';
+import {useEffect, useRef, useState} from 'preact/hooks';
+import {DocEditor} from '../../components/DocEditor/DocEditor.js';
 import {SplitPanel} from '../../components/SplitPanel/SplitPanel.js';
 import {Layout} from '../../layout/Layout.js';
 import {joinClassNames} from '../../utils/classes.js';
-import {getDocServingPath, getDocServingUrl} from '../../utils/doc-urls.js';
-import {DocumentEditor} from '../DocumentEditor/DocumentEditor.js';
+import {getDocServingPath} from '../../utils/doc-urls.js';
 import './DocumentPage.css';
 
 interface DocumentPageProps {
@@ -46,7 +43,7 @@ export function DocumentPage(props: DocumentPageProps) {
             <div className="DocumentPage__side__header__docId">{docId}</div>
           </div>
           <div className="DocumentPage__side__editor">
-            <DocumentEditor collection={collection} docId={docId} />
+            <DocEditor collection={collection} docId={docId} />
           </div>
         </SplitPanel.Item>
         <SplitPanel.Item className="DocumentPage__main" fluid>

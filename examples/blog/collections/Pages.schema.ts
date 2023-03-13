@@ -1,5 +1,4 @@
 import {schema} from '@blinkk/root-cms';
-import Page from '@/routes/[...slug].js';
 
 const templateModules = import.meta.glob('@/templates/*/*.schema.ts', {
   eager: true,
@@ -10,9 +9,8 @@ const templates = Object.values(templateModules).map(
 
 export default schema.collection({
   name: 'Pages',
-  description: 'A collection of landing pages for the website.',
+  description: 'Landing pages.',
   url: '/[...slug]',
-  Component: Page,
   preview: {
     title: 'meta.title',
     image: 'meta.image',
