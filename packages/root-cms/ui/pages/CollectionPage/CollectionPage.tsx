@@ -1,14 +1,10 @@
-import {IconCirclePlus, IconFolder} from '@tabler/icons-preact';
-import {useEffect, useState} from 'preact/hooks';
 import {
-  Badge,
-  Button,
-  Image,
-  Loader,
-  Select,
-  Tabs,
-  Tooltip,
-} from '@mantine/core';
+  IconCirclePlus,
+  IconCornerLeftDown,
+  IconFolder,
+} from '@tabler/icons-preact';
+import {useEffect, useState} from 'preact/hooks';
+import {Button, Image, Loader, Select, Tabs} from '@mantine/core';
 import {Markdown} from '../../components/Markdown/Markdown.js';
 import {SplitPanel} from '../../components/SplitPanel/SplitPanel.js';
 import {Layout} from '../../layout/Layout.js';
@@ -23,7 +19,6 @@ import {
   Query,
   query,
   documentId,
-  Timestamp,
 } from 'firebase/firestore';
 import './CollectionPage.css';
 import {useLocalStorage} from '../../hooks/useLocalStorage.js';
@@ -127,11 +122,6 @@ export function CollectionPage(props: CollectionPageProps) {
                 <div className="CollectionPage__side__collection__name">
                   {collection.id}
                 </div>
-                {/* {collection.name === props.collection && (
-                  <div className="CollectionPage__side__collection__arrow">
-                    <IconArrowBigRight strokeWidth={1.5} size={20} />
-                  </div>
-                )} */}
               </a>
             ))}
             {matchedCollections.length === 0 && (
@@ -149,6 +139,7 @@ export function CollectionPage(props: CollectionPageProps) {
             />
           ) : (
             <div className="CollectionPage__main__unselected">
+              <IconCornerLeftDown size={24} strokeWidth={1.75} />
               <div className="CollectionPage__main__unselected__title">
                 Select a collection to get started.
               </div>

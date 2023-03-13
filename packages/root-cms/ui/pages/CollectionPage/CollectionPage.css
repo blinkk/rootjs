@@ -70,17 +70,14 @@
 }
 
 .CollectionPage__main__unselected {
-  display: inline-flex;
-  flex-direction: column;
+  padding: 12px;
+  display: flex;
   align-items: center;
-  justify-content: center;
-  gap: 12px;
-  text-align: center;
-  padding: 48px;
+  gap: 8px;
 }
 
 .CollectionPage__main__unselected__title {
-  max-width: 400px;
+  font-size: 14px;
   font-weight: 500;
 }
 
