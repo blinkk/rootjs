@@ -1,0 +1,81 @@
+// A standard 12-column grid that uses fixed content widths on tablet and on
+// viewports >1440px.
+
+@use 'sass:math';
+@use 'breakpoints';
+@use 'tokens';
+
+@mixin -set-vars($num-columns, $column-gap, $padding, $max-width) {
+  --grid-num-columns: #{$num-columns};
+  --grid-column-gap: #{$column-gap};
+  --grid-padding: max(#{$padding}, 50% - #{0.5 * $max-width});
+  --grid-column-width: calc(
+    (
+        (min(100% - #{2 * $padding}, #{$max-width})) - #{($num-columns - 1) * $column-gap}
+      ) / #{$num-columns}
+  );
+}
+
+@mixin vars() {
+  @include breakpoints.mobile {
+    @include -set-vars(
+      tokens.$grid-mobile-num-columns,
+      tokens.$grid-mobile-column-gap,
+      tokens.$grid-mobile-padding,
+      tokens.$grid-mobile-max-width
+    );
+  }
+  @include breakpoints.tablet {
+    @include -set-vars(
+      tokens.$grid-tablet-num-columns,
+      tokens.$grid-tablet-column-gap,
+      tokens.$grid-tablet-padding,
+      tokens.$grid-tablet-max-width
+    );
+  }
+  @include breakpoints.laptop {
+    @include -set-vars(
+      tokens.$grid-laptop-num-columns,
+      tokens.$grid-laptop-column-gap,
+      tokens.$grid-laptop-padding,
+      tokens.$grid-laptop-max-width
+    );
+  }
+  @include breakpoints.desktop {
+    @include -set-vars(
+      tokens.$grid-desktop-num-columns,
+      tokens.$grid-desktop-column-gap,
+      tokens.$grid-desktop-padding,
+      tokens.$grid-desktop-max-width
+    );
+  }
+  @include breakpoints.site-max {
+    --grid-num-columns: #{tokens.$grid-desktop-num-columns};
+    --grid-column-gap: #{tokens.$grid-desktop-column-gap};
+    --grid-padding: #{0.5 * tokens.$breakpoint-site-max - 0.5 *
+      tokens.$grid-desktop-max-width};
+    --grid-column-width: #{math.div(
+        tokens.$grid-desktop-max-width - (tokens.$grid-desktop-num-columns - 1) *
+          tokens.$grid-desktop-column-gap,
+        tokens.$grid-desktop-num-columns
+      )};
+  }
+}
+
+@mixin container() {
+  @include vars;
+  display: grid;
+  grid-template-columns: repeat(var(--grid-num-columns), 1fr);
+  column-gap: var(--grid-column-gap);
+  padding-left: var(--grid-padding);
+  padding-right: var(--grid-padding);
+}
+
+@mixin range($start, $end) {
+  grid-column-start: #{$start};
+  grid-column-end: span #{$end - $start + 1};
+}
+
+@mixin span($span) {
+  grid-column: span #{$span};
+}

@@ -54,6 +54,7 @@ export class Renderer {
     let props = {};
     if (route.module.getStaticProps) {
       const propsData = await route.module.getStaticProps({
+        rootConfig: this.rootConfig,
         params: routeParams,
       });
       if (propsData.notFound) {

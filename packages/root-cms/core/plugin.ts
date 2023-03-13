@@ -1,4 +1,4 @@
-import {NextFunction, Plugin, Request, Response} from '@blinkk/root';
+import {NextFunction, Plugin, Request, Response, Server} from '@blinkk/root';
 import cookieParser from 'cookie-parser';
 import * as dotenv from 'dotenv';
 import path from 'node:path';
@@ -34,6 +34,10 @@ export type CMSPluginOptions = {
   ) => boolean | Promise<boolean>;
 };
 
+export type CMSPlugin = Plugin & {
+  getConfig: () => CMSPluginOptions;
+}
+
 function generateSecret(): string {
   const result = [];
   const chars =
@@ -50,7 +54,7 @@ function isExpired(decodedIdToken: firebase.auth.DecodedIdToken) {
   return ts - decodedIdToken.auth_time > 5 * 60;
 }
 
-export function cmsPlugin(options: CMSPluginOptions): Plugin {
+export function cmsPlugin(options: CMSPluginOptions): CMSPlugin {
   const firebaseConfig = options.firebaseConfig;
   const cookieSecret = options.cookieSecret || generateSecret();
   const app = firebase.initializeApp({
@@ -58,6 +62,20 @@ export function cmsPlugin(options: CMSPluginOptions): Plugin {
     credential: firebase.credential.applicationDefault(),
   });
   const auth = firebase.auth(app);
+
+  /**
+   * Checks if login is required for the request. Currently returns `true` if
+   * the URL path starts with /cms or if ?preview=true is in the URL.
+   */
+  function loginRequired(req: Request): boolean {
+    if (req.originalUrl.startsWith('/cms')) {
+      return true;
+    }
+    if (String(req.query.preview) === 'true') {
+      return true;
+    }
+    return false;
+  }
 
   /**
    * Verifies a new login request for a user. The request body should contain
@@ -138,9 +156,20 @@ export function cmsPlugin(options: CMSPluginOptions): Plugin {
 
   return {
     name: 'root-cms',
-    configureServer: (server) => {
-      server.use('/cms', cookieParser(cookieSecret));
-      server.use('/cms', bodyParser.json());
+
+    /**
+     * Returns the config options passed to the plugin.
+     */
+    getConfig: () => {
+      return options;
+    },
+
+    /**
+     * Attaches CMS-specific middleware to the Root.js server.
+     */
+    configureServer: (server: Server) => {
+      server.use(cookieParser(cookieSecret));
+      server.use(bodyParser.json());
 
       // Login handler.
       server.use('/cms/login', async (req: Request, res: Response) => {
@@ -199,20 +228,21 @@ export function cmsPlugin(options: CMSPluginOptions): Plugin {
       });
 
       // Safeguard to verify user login before rendering any CMS page.
-      server.use(
-        '/cms',
-        async (req: Request, res: Response, next: NextFunction) => {
-          const userIsLoggedIn = await verifyUserSession(req);
-          if (userIsLoggedIn) {
-            next();
-            return;
-          }
-          const params = new URLSearchParams({
-            continue: req.originalUrl,
-          });
-          res.redirect(`/cms/login?${params.toString()}`);
+      server.use(async (req: Request, res: Response, next: NextFunction) => {
+        if (!loginRequired(req)) {
+          next();
+          return;
         }
-      );
+        const userIsLoggedIn = await verifyUserSession(req);
+        if (userIsLoggedIn) {
+          next();
+          return;
+        }
+        const params = new URLSearchParams({
+          continue: req.originalUrl,
+        });
+        res.redirect(`/cms/login?${params.toString()}`);
+      });
 
       // Render the CMS SPA.
       server.use('/cms', async (req: Request, res: Response) => {

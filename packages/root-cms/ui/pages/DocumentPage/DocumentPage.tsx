@@ -70,6 +70,11 @@ const DeviceResolution = {
 };
 
 DocumentPage.Preview = (props: PreviewProps) => {
+  const domain = window.__ROOT_CTX.rootConfig.domain || 'https://example.com';
+  const servingPath = getDocServingPath(props.docId);
+  const previewPath = `${servingPath}?preview=true`;
+  const servingUrl = `${domain}${servingPath}`;
+  const [iframeUrl, setIframeUrl] = useState(servingUrl);
   const [device, setDevice] = useState<Device>('');
   const [iframeStyle, setIframeStyle] = useState({
     '--iframe-width': '100%',
@@ -78,10 +83,22 @@ DocumentPage.Preview = (props: PreviewProps) => {
   });
   const iframeRef = useRef<HTMLIFrameElement>(null);
 
-  const servingPath = getDocServingPath(props.docId);
-  const previewPath = `${servingPath}?preview=true`;
-  const domain = window.__ROOT_CTX.rootConfig.domain || 'https://example.com';
-  const servingUrl = `${domain}${servingPath}`;
+  useEffect(() => {
+    const iframe = iframeRef.current!;
+    function onIframeLoad() {
+      console.log('iframe load', iframe.contentWindow?.document.title);
+      const iframeWindow = iframe.contentWindow;
+      if (!iframeWindow) {
+        return;
+      }
+      const currentPath = iframeWindow.location.pathname;
+      setIframeUrl(`${domain}${currentPath}`);
+    }
+    iframe.addEventListener('load', onIframeLoad);
+    return () => {
+      iframe.removeEventListener('load', onIframeLoad);
+    };
+  }, []);
 
   function toggleDevice(device: Device) {
     setDevice((current) => {
@@ -183,7 +200,7 @@ DocumentPage.Preview = (props: PreviewProps) => {
         </div>
         <div className="DocumentPage__main__previewBar__navbar">
           <div className="DocumentPage__main__previewBar__navbar__url">
-            {servingUrl}
+            {iframeUrl}
           </div>
         </div>
         <div className="DocumentPage__main__previewBar__buttons">

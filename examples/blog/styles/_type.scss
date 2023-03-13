@@ -1,0 +1,14 @@
+@mixin size($font-size: null, $line-height: null, $font-weight: null, $letter-spacing: null) {
+  @if $font-size {
+    font-size: $font-size;
+  }
+  @if $line-height {
+    line-height: $line-height;
+  }
+  @if $font-weight {
+    font-weight: $font-weight;
+  }
+  @if $letter-spacing {
+    letter-spacing: $letter-spacing;
+  }
+}

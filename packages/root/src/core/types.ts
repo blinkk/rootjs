@@ -9,6 +9,7 @@ import {Renderer} from '../render/render';
 import {RootConfig} from './config';
 
 export type GetStaticProps<T = unknown> = (ctx: {
+  rootConfig: RootConfig;
   params: Record<string, string>;
 }) => Promise<{
   props?: T;

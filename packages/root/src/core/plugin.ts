@@ -13,11 +13,11 @@ export interface ConfigureServerOptions {
 }
 
 export interface Plugin {
+  [key: string]: any;
+  /** The name of the plugin. */
   name?: string;
-
   /** Configures the root.js express server . */
   configureServer?: ConfigureServerHook;
-
   /** Adds vite plugins. */
   vitePlugins?: VitePlugin[];
 }

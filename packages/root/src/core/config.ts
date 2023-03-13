@@ -13,6 +13,12 @@ export interface RootUserConfig {
   projectId?: string;
 
   /**
+   * The GCP project used by this project. Useful for things like logging, db,
+   * GCS storage, etc.
+   */
+  gcpProjectId?: string;
+
+  /**
    * Canonical domain the website will serve on. Useful for things like the
    * sitemap, SEO tags, etc.
    */
