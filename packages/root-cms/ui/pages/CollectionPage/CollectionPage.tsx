@@ -28,6 +28,7 @@ import {
 import './CollectionPage.css';
 import {useLocalStorage} from '../../hooks/useLocalStorage.js';
 import {getNestedValue} from '../../utils/objects.js';
+import {DocStatusBadges} from '../../components/DocStatusBadges/DocStatusBadges.js';
 
 interface CollectionPageProps {
   collection?: string;
@@ -307,7 +308,7 @@ CollectionPage.DocsList = (props: {collection: string; docs: any[]}) => {
                 <div className="CollectionPage__collection__docsList__doc__content__header__docId">
                   {doc.id}
                 </div>
-                <CollectionPage.DocBadges doc={doc} />
+                <DocStatusBadges doc={doc} />
               </div>
               <div className="CollectionPage__collection__docsList__doc__content__title">
                 {previewTitle || '[UNTITLED]'}
@@ -319,126 +320,6 @@ CollectionPage.DocsList = (props: {collection: string; docs: any[]}) => {
           </div>
         );
       })}
-    </div>
-  );
-};
-
-interface DocBadgesProps {
-  doc: {
-    sys: {
-      createdAt: Timestamp;
-      createdBy: string;
-      modifiedAt: Timestamp;
-      modifiedBy: string;
-      publishedAt: Timestamp;
-      publishedBy: string;
-    };
-  };
-}
-
-const TIME_UNITS: Record<string, number> = {
-  // year: 24 * 60 * 60 * 1000 * 365,
-  // month: (24 * 60 * 60 * 1000 * 365) / 12,
-  week: 7 * 24 * 60 * 60 * 1000,
-  day: 24 * 60 * 60 * 1000,
-  hour: 60 * 60 * 1000,
-  minute: 60 * 1000,
-  second: 1000,
-};
-
-function getTimeAgo(ts: Timestamp | null) {
-  // Since we're using server timestamps, firestore doesn't always return the
-  // timestamp right away since the db save is happening asynchronously. In
-  // these cases, assume that the update happened very recently.
-  if (!ts) {
-    return 'just now';
-  }
-  const ts1 = ts.toMillis();
-  const ts2 = new Date().getTime();
-  const elapsed = Math.abs(ts1 - ts2);
-  const rtf = new Intl.RelativeTimeFormat('en', {numeric: 'auto'});
-
-  if (elapsed < TIME_UNITS.second) {
-    return 'just now';
-  }
-  if (elapsed < TIME_UNITS.minute) {
-    return rtf.format(Math.round(-elapsed / TIME_UNITS.second), 'second');
-  }
-  if (elapsed < TIME_UNITS.hour) {
-    return rtf.format(Math.round(-elapsed / TIME_UNITS.minute), 'minute');
-  }
-  if (elapsed < TIME_UNITS.day) {
-    return rtf.format(Math.round(-elapsed / TIME_UNITS.hour), 'hour');
-  }
-  if (elapsed < TIME_UNITS.week) {
-    return rtf.format(Math.round(-elapsed / TIME_UNITS.day), 'day');
-  }
-  const d = new Date(ts1);
-  return d.toLocaleDateString('en', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-  });
-}
-
-CollectionPage.DocBadges = (props: DocBadgesProps) => {
-  const tooltipProps = {
-    position: 'bottom',
-    transition: 'pop',
-  };
-  const sys = props.doc.sys;
-  return (
-    <div className="CollectionPage__collection__docsList__doc__content__header__badges">
-      {(!sys.publishedAt ||
-        !sys.modifiedAt ||
-        sys.modifiedAt > sys.publishedAt) && (
-        <Tooltip
-          {...tooltipProps}
-          label={`Modified ${getTimeAgo(sys.modifiedAt)} by ${sys.modifiedBy}`}
-        >
-          <Badge
-            size="xs"
-            variant="gradient"
-            gradient={{from: 'indigo', to: 'cyan'}}
-          >
-            Draft
-          </Badge>
-        </Tooltip>
-      )}
-      {sys.publishedAt && (
-        <Tooltip
-          {...tooltipProps}
-          label={`Published ${getTimeAgo(sys.publishedAt)} by ${
-            sys.publishedBy
-          }`}
-        >
-          <Badge
-            size="xs"
-            variant="gradient"
-            gradient={{from: 'teal', to: 'lime', deg: 105}}
-          >
-            Published
-          </Badge>
-        </Tooltip>
-      )}
-      {/* {sys.scheduledAt && (
-        <Tooltip
-          {...tooltipProps}
-          label={
-            <TooltipText>
-              {`Scheduled publish ${status.scheduledDeployAt}`}
-            </TooltipText>
-          }
-        >
-          <Badge
-            size="xs"
-            variant="gradient"
-            gradient={{from: 'grape', to: 'pink', deg: 35}}
-          >
-            Scheduled
-          </Badge>
-        </Tooltip>
-      )} */}
     </div>
   );
 };

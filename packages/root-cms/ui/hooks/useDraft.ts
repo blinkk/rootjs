@@ -200,6 +200,9 @@ export class DraftController {
    * Immediately write all queued data to the DB.
    */
   async flush() {
+    if (this.pendingUpdates.size === 0) {
+      return;
+    }
     const updates = Object.fromEntries(this.pendingUpdates);
     updates['sys.modifiedAt'] = serverTimestamp();
     updates['sys.modifiedBy'] = window.firebase.user.email;
@@ -293,13 +296,13 @@ function splitKey(key: string) {
 
 export function useDraft(docId: string) {
   const [loading, setLoading] = useState(true);
-  // const [data, setData] = useState<any>({});
+  const [data, setData] = useState<any>({});
   const draft = useMemo(() => new DraftController(docId), []);
   const [saveState, setSaveState] = useState(SaveState.NO_CHANGES);
 
   useEffect(() => {
     draft.onChange((data: any) => {
-      // setData(data);
+      setData(data);
       setLoading(false);
     });
     draft.onSaveStateChange((newSaveState) => setSaveState(newSaveState));
@@ -307,5 +310,5 @@ export function useDraft(docId: string) {
     return () => draft.dispose();
   }, []);
 
-  return {loading, saveState, draft};
+  return {loading, saveState, draft, data};
 }

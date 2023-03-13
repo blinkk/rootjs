@@ -34,18 +34,20 @@ interface DocumentEditorProps {
 
 export function DocumentEditor(props: DocumentEditorProps) {
   const fields = props.collection.fields || [];
-  const {loading, draft, saveState} = useDraft(props.docId);
+  const {loading, draft, saveState, data} = useDraft(props.docId);
   return (
     <div className="DocumentEditor">
       <LoadingOverlay
         visible={loading}
         loaderProps={{color: 'gray', size: 'xl'}}
       />
-      <div className="DocumentEditor__saveState">
-        {saveState === SaveState.SAVED && 'saved!'}
-        {saveState === SaveState.SAVING && 'saving...'}
-        {saveState === SaveState.UPDATES_PENDING && 'saving...'}
-        {saveState === SaveState.ERROR && 'error saving'}
+      <div className="DocumentEditor__statusBar">
+        <div className="DocumentEditor__saveState">
+          {saveState === SaveState.SAVED && 'saved!'}
+          {saveState === SaveState.SAVING && 'saving...'}
+          {saveState === SaveState.UPDATES_PENDING && 'saving...'}
+          {saveState === SaveState.ERROR && 'error saving'}
+        </div>
       </div>
       <div className="DocumentEditor__fields">
         {fields.map((field) => (
