@@ -1,0 +1,65 @@
+.PublishDocModal .mantine-Modal-title {
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.PublishDocModal__content {
+  font-size: 12px;
+  line-height: 1.5;
+  font-weight: 500;
+}
+
+.PublishDocModal__form__publishOptions__label {
+  margin-bottom: 8px;
+}
+
+.PublishDocModal__form__publishOptions__options {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.PublishDocModal__form__publishOptions__option {
+  border: 1px solid var(--color-border);
+  padding: 12px;
+  border-radius: 4px;
+}
+
+.PublishDocModal__form__publishOptions__option__help {
+  padding-left: 24px;
+  font-size: 10px;
+  font-weight: 400;
+  margin-top: 4px;
+}
+
+.PublishDocModal__form__publishOptions__option__input input {
+  padding-top: 4px;
+}
+
+.PublishDocModal__form__publishOptions__option__input2 {
+  padding-left: 20px;
+}
+
+.PublishDocModal__form__publishOptions__option__input2 input {
+  margin-top: 16px;
+  display: block;
+  width: 100%;
+  border: 1px solid #dedede;
+  padding: 4px 8px;
+  font-family: inherit;
+  font-size: 12px;
+}
+
+.PublishDocModal__form__publishOptions__option__input2__help {
+  font-size: 10px;
+  font-weight: 400;
+  margin-top: 4px;
+  text-align: right;
+}
+
+.PublishDocModal__form__buttons {
+  margin-top: 24px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+}

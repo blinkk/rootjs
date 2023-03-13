@@ -16,6 +16,7 @@ import {
   IconCopy,
   IconDotsVertical,
   IconPhotoUp,
+  IconRocket,
   IconRowInsertBottom,
   IconRowInsertTop,
   IconTrash,
@@ -26,6 +27,8 @@ import {DraftController, SaveState, useDraft} from '../../hooks/useDraft.js';
 import {flattenNestedKeys} from '../../utils/objects.js';
 import {getPlaceholderKeys, strFormat} from '../../utils/str-format.js';
 import './DocEditor.css';
+import {DocStatusBadges} from '../DocStatusBadges/DocStatusBadges.js';
+import {PublishDocModal} from '../PublishDocModal/PublishDocModal.js';
 
 interface DocEditorProps {
   docId: string;
@@ -35,33 +38,56 @@ interface DocEditorProps {
 export function DocEditor(props: DocEditorProps) {
   const fields = props.collection.fields || [];
   const {loading, draft, saveState, data} = useDraft(props.docId);
+  const [publishDocModalOpen, setPublishDocModalOpen] = useState(false);
   return (
-    <div className="DocEditor">
-      <LoadingOverlay
-        visible={loading}
-        loaderProps={{color: 'gray', size: 'xl'}}
+    <>
+      <PublishDocModal
+        docId={props.docId}
+        opened={publishDocModalOpen}
+        onClose={() => setPublishDocModalOpen(false)}
       />
-      <div className="DocEditor__statusBar">
-        <div className="DocEditor__saveState">
-          {saveState === SaveState.SAVED && 'saved!'}
-          {saveState === SaveState.SAVING && 'saving...'}
-          {saveState === SaveState.UPDATES_PENDING && 'saving...'}
-          {saveState === SaveState.ERROR && 'error saving'}
+      <div className="DocEditor">
+        <LoadingOverlay
+          visible={loading}
+          loaderProps={{color: 'gray', size: 'xl'}}
+        />
+        <div className="DocEditor__statusBar">
+          <div className="DocEditor__statusBar__saveState">
+            {saveState === SaveState.SAVED && 'saved!'}
+            {saveState === SaveState.SAVING && 'saving...'}
+            {saveState === SaveState.UPDATES_PENDING && 'saving...'}
+            {saveState === SaveState.ERROR && 'error saving'}
+          </div>
+          {!loading && data?.sys && (
+            <div className="DocEditor__statusBar__statusBadges">
+              <DocStatusBadges doc={data} />
+            </div>
+          )}
+          <div className="DocEditor__statusBar__publishButton">
+            <Button
+              color="dark"
+              size="xs"
+              leftIcon={<IconRocket size={16} />}
+              onClick={() => setPublishDocModalOpen(true)}
+            >
+              Publish
+            </Button>
+          </div>
+        </div>
+        <div className="DocEditor__fields">
+          {fields.map((field) => (
+            <DocEditor.Field
+              key={field.id}
+              collection={props.collection}
+              field={field}
+              shallowKey={field.id!}
+              deepKey={`fields.${field.id!}`}
+              draft={draft}
+            />
+          ))}
         </div>
       </div>
-      <div className="DocEditor__fields">
-        {fields.map((field) => (
-          <DocEditor.Field
-            key={field.id}
-            collection={props.collection}
-            field={field}
-            shallowKey={field.id!}
-            deepKey={`fields.${field.id!}`}
-            draft={draft}
-          />
-        ))}
-      </div>
-    </div>
+    </>
   );
 }
 
@@ -466,9 +492,7 @@ DocEditor.ArrayField = (props: FieldProps) => {
     <div className="DocEditor__ArrayField">
       <div className="DocEditor__ArrayField__items">
         {order.length === 0 && (
-          <div className="DocEditor__ArrayField__items__empty">
-            No items
-          </div>
+          <div className="DocEditor__ArrayField__items__empty">No items</div>
         )}
         {order.map((key: string, i: number) => (
           <details className="DocEditor__ArrayField__item" key={key} open>

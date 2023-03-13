@@ -1,4 +1,4 @@
-import {Button, Modal, TextInput} from '@mantine/core';
+import {Button, Modal, TextInput, useMantineTheme} from '@mantine/core';
 import {useRef, useState} from 'preact/hooks';
 import {route} from 'preact-router';
 import {useFirebase} from '../../hooks/useFirebase.js';
@@ -67,6 +67,8 @@ export function NewDocModal(props: NewDocModalProps) {
   const [loading, setLoading] = useState(false);
   const [slugError, setSlugError] = useState('');
   const firebase = useFirebase();
+  const theme = useMantineTheme();
+
   const projectId = window.__ROOT_CTX.rootConfig.projectId;
   const dbCollection = collection(
     firebase.db,
@@ -124,10 +126,10 @@ export function NewDocModal(props: NewDocModalProps) {
       return;
     }
     await setDoc(docRef, {
+      id: docId,
+      slug: slug,
+      collection: collectionId,
       sys: {
-        id: docId,
-        collection: collectionId,
-        slug: slug,
         createdAt: serverTimestamp(),
         createdBy: window.firebase.user.email,
         modifiedAt: serverTimestamp(),
@@ -145,6 +147,11 @@ export function NewDocModal(props: NewDocModalProps) {
       opened={props.opened || false}
       onClose={() => onClose()}
       title={`${props.collection}: New doc`}
+      overlayColor={
+        theme.colorScheme === 'dark'
+          ? theme.colors.dark[9]
+          : theme.colors.gray[2]
+      }
     >
       <div className="NewDocModal__body">
         Enter a slug for the new doc. The slug is the ID of the page and is
