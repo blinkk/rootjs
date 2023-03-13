@@ -226,6 +226,7 @@ DocEditor.ObjectField = (props: FieldProps) => {
 interface ArrayFieldValue {
   [key: string]: any;
   _array: string[];
+  _new?: string[];
 }
 
 interface ArrayUpdate {
@@ -295,7 +296,8 @@ function arrayReducer(state: ArrayFieldValue, action: ArrayAction) {
   console.log(action);
   switch (action.type) {
     case 'update': {
-      return {...action.newValue};
+      const newlyAdded = state._new || [];
+      return {...action.newValue, _new: newlyAdded};
     }
     case 'add': {
       const data = state ?? {};
@@ -305,10 +307,12 @@ function arrayReducer(state: ArrayFieldValue, action: ArrayAction) {
         [`${action.deepKey}._array`]: order,
         [`${action.deepKey}.${newKey}`]: {},
       });
+      const newlyAdded = state._new || [];
       return {
         ...data,
         [newKey]: {},
         _array: order,
+        _new: [...newlyAdded, newKey],
       };
     }
     case 'insertBefore': {
@@ -320,10 +324,12 @@ function arrayReducer(state: ArrayFieldValue, action: ArrayAction) {
         [`${action.deepKey}._array`]: order,
         [`${action.deepKey}.${newKey}`]: {},
       });
+      const newlyAdded = state._new || [];
       return {
         ...data,
         [newKey]: {},
         _array: order,
+        _new: [...newlyAdded, newKey],
       };
     }
     case 'insertAfter': {
@@ -335,10 +341,12 @@ function arrayReducer(state: ArrayFieldValue, action: ArrayAction) {
         [`${action.deepKey}._array`]: order,
         [`${action.deepKey}.${newKey}`]: {},
       });
+      const newlyAdded = state._new || [];
       return {
         ...data,
         [newKey]: {},
         _array: order,
+        _new: [...newlyAdded, newKey],
       };
     }
     case 'duplicate': {
@@ -352,10 +360,12 @@ function arrayReducer(state: ArrayFieldValue, action: ArrayAction) {
         [`${action.deepKey}._array`]: order,
         [`${action.deepKey}.${newKey}`]: clonedValue,
       });
+      const newlyAdded = state._new || [];
       return {
         ...data,
         [newKey]: clonedValue,
         _array: order,
+        _new: [...newlyAdded, newKey],
       };
     }
     case 'moveUp': {
@@ -418,6 +428,9 @@ DocEditor.ArrayField = (props: FieldProps) => {
 
   const data = value ?? {};
   const order = data._array || [];
+
+  // Keep track of newly-added keys, which should start in the "open" state.
+  const newlyAdded = value._new || [];
 
   useEffect(() => {
     const unsubscribe = props.draft.subscribe(
@@ -495,7 +508,11 @@ DocEditor.ArrayField = (props: FieldProps) => {
           <div className="DocEditor__ArrayField__items__empty">No items</div>
         )}
         {order.map((key: string, i: number) => (
-          <details className="DocEditor__ArrayField__item" key={key} open>
+          <details
+            className="DocEditor__ArrayField__item"
+            key={key}
+            open={newlyAdded.includes(key)}
+          >
             <summary className="DocEditor__ArrayField__item__header">
               <div className="DocEditor__ArrayField__item__header__icon">
                 <IconTriangleFilled size={6} />
