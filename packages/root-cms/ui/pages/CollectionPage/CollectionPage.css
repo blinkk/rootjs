@@ -99,6 +99,7 @@
 
 .CollectionPage__collection__header {
   padding: 12px;
+  display: none;
 }
 
 .CollectionPage__collection__header__title {
@@ -121,6 +122,15 @@
   color: black;
 }
 
+/* Tabs are hidden until there are more than one. */
+.CollectionPage__collection__tabs .mantine-Tabs-tabsListWrapper {
+  display: none;
+}
+
+.CollectionPage__collection__tabs .mantine-Tabs-body {
+  padding-top: 0;
+}
+
 .CollectionPage__collection__tabs [role="tab"] {
   font-weight: 500;
 }
@@ -134,7 +144,18 @@
 }
 
 .CollectionPage__collection__docsTab {
-  padding: 12px;
+  padding: 16px 12px;
+}
+
+.CollectionPage__collection__docsTab__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+}
+
+.CollectionPage__collection__docsTab__header__title {
+  flex: 1;
 }
 
 .CollectionPage__collection__docsTab__controls {
@@ -156,7 +177,7 @@
 }
 
 .CollectionPage__collection__docsList {
-  margin-top: 24px;
+  margin-top: 16px;
   border-bottom: 1px solid var(--color-border);
 }
 

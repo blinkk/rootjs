@@ -35,6 +35,7 @@ import './CollectionPage.css';
 import {useLocalStorage} from '../../hooks/useLocalStorage.js';
 import {getNestedValue} from '../../utils/objects.js';
 import {DocStatusBadges} from '../../components/DocStatusBadges/DocStatusBadges.js';
+import {Heading} from '../../components/Heading/Heading.js';
 
 interface CollectionPageProps {
   collection?: string;
@@ -207,34 +208,39 @@ CollectionPage.Collection = (props: CollectionProps) => {
           <Tabs.Tab label="Docs">
             <div className="CollectionPage__collection__docsTab">
               {!loading && docs.length > 0 && (
-                <div className="CollectionPage__collection__docsTab__controls">
-                  <div className="CollectionPage__collection__docsTab__controls__sort">
-                    <div className="CollectionPage__collection__docsTab__controls__sort__label">
-                      Sort:
+                <div className="CollectionPage__collection__docsTab__header">
+                  <Heading className="CollectionPage__collection__docsTab__header__title">
+                    {collection.name || props.collection}
+                  </Heading>
+                  <div className="CollectionPage__collection__docsTab__controls">
+                    <div className="CollectionPage__collection__docsTab__controls__sort">
+                      <div className="CollectionPage__collection__docsTab__controls__sort__label">
+                        Sort:
+                      </div>
+                      <Select
+                        size="xs"
+                        value={orderBy}
+                        onChange={(value: any) =>
+                          setOrderBy(value || 'modifiedAt')
+                        }
+                        data={[
+                          {value: 'slug', label: 'A-Z'},
+                          {value: 'newst', label: 'Newest'},
+                          {value: 'oldest', label: 'Oldest'},
+                          {value: 'modifiedAt', label: 'Last modified'},
+                        ]}
+                      />
                     </div>
-                    <Select
-                      size="xs"
-                      value={orderBy}
-                      onChange={(value: any) =>
-                        setOrderBy(value || 'modifiedAt')
-                      }
-                      data={[
-                        {value: 'slug', label: 'A-Z'},
-                        {value: 'newst', label: 'Newest'},
-                        {value: 'oldest', label: 'Oldest'},
-                        {value: 'modifiedAt', label: 'Last modified'},
-                      ]}
-                    />
-                  </div>
-                  <div className="CollectionPage__collection__docsTab__controls__newDoc">
-                    <Button
-                      color="dark"
-                      size="xs"
-                      leftIcon={<IconCirclePlus size={16} />}
-                      onClick={() => setNewDocModalOpen(true)}
-                    >
-                      New
-                    </Button>
+                    <div className="CollectionPage__collection__docsTab__controls__newDoc">
+                      <Button
+                        color="dark"
+                        size="xs"
+                        leftIcon={<IconCirclePlus size={16} />}
+                        onClick={() => setNewDocModalOpen(true)}
+                      >
+                        New
+                      </Button>
+                    </div>
                   </div>
                 </div>
               )}
