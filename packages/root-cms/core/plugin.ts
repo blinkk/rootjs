@@ -204,7 +204,7 @@ export function cmsPlugin(options: CMSPluginOptions): CMSPlugin {
             try {
               const appPath = path.resolve(__dirname, './app.js');
               const app = await req.viteServer!.ssrLoadModule(appPath);
-              await app.generateSchemaDts(req.rootConfig);
+              await app.generateSchemaDts(req.rootConfig!.rootDir);
             } catch (err) {
               console.error('failed to generate root-cms.d.ts file.');
               console.error(err);

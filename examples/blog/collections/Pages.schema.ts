@@ -1,6 +1,6 @@
 import {schema} from '@blinkk/root-cms';
 
-const templateModules = import.meta.glob('@/templates/*/*.schema.ts', {
+const templateModules = import.meta.glob('/templates/*/*.schema.ts', {
   eager: true,
 });
 const templates = Object.values(templateModules).map(

@@ -1,7 +1,7 @@
 import {schema} from '@blinkk/root-cms';
 
 const assetModules = import.meta.glob(
-  '@/templates/Template5050/5050assets/*.schema.ts',
+  '/templates/Template5050/5050assets/*.schema.ts',
   {eager: true}
 );
 const assets = Object.values(assetModules).map(

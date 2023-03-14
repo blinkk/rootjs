@@ -174,6 +174,7 @@ importers:
       '@types/node': ^18.11.8
       body-parser: ^1.20.0
       bundle-require: ^4.0.1
+      commander: ^10.0.0
       concurrently: ^7.6.0
       cookie-parser: ^1.4.6
       dotenv: ^16.0.0
@@ -181,6 +182,7 @@ importers:
       esbuild: ^0.17.11
       firebase: ^9.17.2
       firebase-admin: ^10.2.0
+      kleur: ^4.1.5
       marked: ^4.2.12
       preact: '*'
       preact-render-to-string: ^5.2.3
@@ -198,11 +200,13 @@ importers:
       '@preact/signals': 1.1.3_preact@10.11.0
       body-parser: 1.20.0
       bundle-require: 4.0.1_esbuild@0.17.11
+      commander: 10.0.0
       cookie-parser: 1.4.6
       dotenv: 16.0.0
       dts-dom: 3.7.0
       esbuild: 0.17.11
       firebase-admin: 10.2.0_7gruq2nhbidgvya32iwa4x5zt4
+      kleur: 4.1.5
       preact-render-to-string: 5.2.4_preact@10.11.0
       tiny-glob: 0.2.9
     devDependencies:

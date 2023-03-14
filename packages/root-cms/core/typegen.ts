@@ -1,6 +1,5 @@
 import {promises as fs} from 'node:fs';
 import path from 'node:path';
-import {RootConfig} from '@blinkk/root';
 import {Field, Schema} from './schema.js';
 
 // `dts-dom` has issues with vite bundler, work around with createRequire().
@@ -37,8 +36,7 @@ export interface RootCMSDoc<Fields extends {}> {
 /**
  * Generates a root-cms.d.ts file from the .schema.ts files in the project.
  */
-export async function generateSchemaDts(rootConfig: RootConfig) {
-  const rootDir = rootConfig.rootDir;
+export async function generateSchemaDts(rootDir: string) {
   console.log(`generating root-cms.d.ts from ${rootDir}...`);
   const schemaModules = import.meta.glob<{default: Schema}>('/**/*.schema.ts', {
     eager: true,
@@ -53,7 +51,8 @@ export async function generateSchemaDts(rootConfig: RootConfig) {
   const output = results
     .join('\n\n')
     .replaceAll('/**  ', '/** ')
-    .replaceAll('  */', ' */');
+    .replaceAll('  */', ' */')
+    .replace(/\r\n|\r|\n/g, '\n');
   const outputPath = path.resolve(rootDir, 'root-cms.d.ts');
   await fs.writeFile(outputPath, output, 'utf-8');
   console.log('saved root-cms.d.ts');

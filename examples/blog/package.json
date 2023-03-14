@@ -7,11 +7,12 @@
     "node": ">=18.0.0"
   },
   "scripts": {
-    "dev": "root dev",
+    "dev": "pnpm run types && root dev",
     "build": "rm -rf dist/ && root build",
     "preview": "pnpm run build && root preview",
     "start": "root start",
-    "test": "pnpm run build"
+    "test": "pnpm run build",
+    "types": "root-cms generate-types"
   },
   "dependencies": {
     "@blinkk/root": "workspace:*",

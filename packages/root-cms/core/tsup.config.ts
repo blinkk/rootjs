@@ -5,6 +5,7 @@ import {defineConfig} from 'tsup';
 export default defineConfig({
   entry: {
     app: './core/app.tsx',
+    cli: './cli/cli.ts',
     core: './core/core.ts',
     plugin: './core/plugin.ts',
   },
