@@ -136,7 +136,7 @@ DocumentPage.Preview = (props: PreviewProps) => {
     }
 
     const iframe = iframeRef.current!;
-    const container = iframe.parentElement as HTMLElement;
+    const container = iframe.parentElement!.parentElement as HTMLElement;
     const rect = container.getBoundingClientRect();
     const [width, height] = DeviceResolution[device];
     const padding = 20;
@@ -222,13 +222,16 @@ DocumentPage.Preview = (props: PreviewProps) => {
       <div
         className="DocumentPage__main__previewFrame"
         data-device={device || 'full'}
+        style={iframeStyle}
       >
         {device && (
           <div className="DocumentPage__main__previewFrame__deviceLabel">
             {`${device}: ${DeviceResolution[device].join('x')}`}
           </div>
         )}
-        <iframe ref={iframeRef} src={previewPath} style={iframeStyle}></iframe>
+        <div className="DocumentPage__main__previewFrame__iframeWrap">
+          <iframe ref={iframeRef} src={previewPath} />
+        </div>
       </div>
     </div>
   );

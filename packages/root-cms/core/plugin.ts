@@ -230,9 +230,15 @@ export function cmsPlugin(options: CMSPluginOptions): CMSPlugin {
             // Set session expiration to 5 days.
             const expiresIn = 60 * 60 * 24 * 5 * 1000;
             const idToken = req.body.idToken!;
-            const sessionCookie = await auth.createSessionCookie(idToken, {
-              expiresIn,
-            });
+
+            let sessionCookie: string;
+            if (process.env.NODE_ENV === 'development') {
+              sessionCookie = idToken;
+            } else {
+              sessionCookie = await auth.createSessionCookie(idToken, {
+                expiresIn,
+              });
+            }
             res.cookie(SESSION_COOKIE, sessionCookie, {
               maxAge: expiresIn,
               httpOnly: true,

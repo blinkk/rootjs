@@ -2,23 +2,15 @@ import {GetStaticPaths, GetStaticProps} from '@blinkk/root';
 import {getDoc} from '@blinkk/root-cms';
 import {Container} from '@/components/Container/Container.js';
 import {BaseLayout} from '@/layouts/BaseLayout.js';
-
-interface Fields {
-  [key: string]: any;
-  meta?: {
-    title?: string;
-  };
-}
+import {PagesDoc} from '@/root-cms.js';
 
 interface Props {
   slug: string;
-  doc: {
-    fields: Fields,
-  }
+  doc: PagesDoc;
 }
 
 export default function Page(props: Props) {
-  const fields = props.doc?.fields || {};
+  const fields = props.doc.fields || {};
   return (
     <BaseLayout title={fields?.meta?.title || 'Blog'}>
       <Container>
@@ -37,5 +29,8 @@ export const getStaticPaths: GetStaticPaths = async () => {
 export const getStaticProps: GetStaticProps = async (ctx) => {
   const slug = ctx.params.page;
   const doc = await getDoc(ctx.rootConfig, 'Pages', slug, {mode: 'draft'});
+  if (!doc) {
+    return {notFound: true};
+  }
   return {props: {slug, doc}};
 };
