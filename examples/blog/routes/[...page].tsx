@@ -1,8 +1,8 @@
 import {GetStaticPaths, GetStaticProps} from '@blinkk/root';
 import {getDoc} from '@blinkk/root-cms';
-import {Container} from '@/components/Container/Container.js';
 import {BaseLayout} from '@/layouts/BaseLayout.js';
 import {PagesDoc} from '@/root-cms.js';
+import {PageModuleFields, PageModules} from '@/components/PageModules/PageModules.js';
 
 interface Props {
   slug: string;
@@ -11,12 +11,10 @@ interface Props {
 
 export default function Page(props: Props) {
   const fields = props.doc.fields || {};
+  const modules: PageModuleFields[] = fields.content?.modules || [];
   return (
     <BaseLayout title={fields?.meta?.title || 'Blog'}>
-      <Container>
-        <h1>Blog</h1>
-        <code>{JSON.stringify(props, null, 2)}</code>
-      </Container>
+      <PageModules modules={modules} />
     </BaseLayout>
   );
 }
