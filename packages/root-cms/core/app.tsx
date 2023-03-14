@@ -70,9 +70,10 @@ export async function renderApp(req: Request, res: Response, options: any) {
     collections[collectionId] = collection;
   });
   const rootConfig = options.rootConfig || {};
+  const cmsConfig = options.cmsConfig || {};
   const ctx = {
     rootConfig: {
-      projectId: rootConfig.projectId || 'default',
+      projectId: cmsConfig.id || 'default',
       domain: rootConfig.domain || 'https://example.com',
     },
     firebaseConfig: options.firebaseConfig,

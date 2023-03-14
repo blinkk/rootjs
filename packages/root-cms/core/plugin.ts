@@ -294,6 +294,7 @@ export function cmsPlugin(options: CMSPluginOptions): CMSPlugin {
           const app = await req.viteServer!.ssrLoadModule(appPath);
           await app.renderApp(req, res, {
             rootConfig: req.rootConfig,
+            cmsConfig: options,
             firebaseConfig: options.firebaseConfig,
           });
         } catch (err) {
