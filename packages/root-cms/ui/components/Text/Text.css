@@ -1,0 +1,33 @@
+.text {
+  font-size: 14px;
+  line-height: 1.5;
+  font-weight: 400;
+  color: var(--color-text-default);
+}
+
+.text.size\:body-sm {
+  font-size: 12px;
+}
+.text.size\:body {
+  font-size: 14px;
+}
+.text.size\:body-lg {
+  font-size: 16px;
+}
+
+.text.weight\:regular {
+  font-weight: 400;
+}
+.text.weight\:semi-bold {
+  font-weight: 500;
+}
+.text.weight\:bold {
+  font-weight: 700;
+}
+
+.text.color\:gray {
+  color: var(--color-text-gray);
+}
+.text.color\:dark {
+  color: var(--color-text-dark);
+}

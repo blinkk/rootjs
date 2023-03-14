@@ -66,7 +66,7 @@ test('should allow certain users to read/write from a project', async () => {
     .authenticatedContext('victor', {email: 'victor@example.com'})
     .firestore();
 
-  const docPath = 'Projects/foo/Docs/bar';
+  const docPath = 'Projects/foo/Collections/bar/Drafts/baz';
   await assertSucceeds(getDoc(doc(adamDb, docPath)));
   await assertSucceeds(setDoc(doc(adamDb, docPath), {foo: 'bar'}));
   await assertSucceeds(getDoc(doc(edithDb, docPath)));
@@ -76,7 +76,7 @@ test('should allow certain users to read/write from a project', async () => {
 });
 
 test('should allow certain users to list docs from a project', async () => {
-  const collectionPath = 'Projects/foo/Collections/bar/Docs';
+  const collectionPath = 'Projects/foo/Collections/bar/Drafts';
 
   await testEnv.withSecurityRulesDisabled(async (context) => {
     const db = context.firestore();

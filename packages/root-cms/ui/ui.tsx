@@ -12,6 +12,7 @@ import {NotFoundPage} from './pages/NotFoundPage/NotFoundPage.js';
 import {FirebaseContext, FirebaseContextObject} from './hooks/useFirebase.js';
 import './styles/global.css';
 import './styles/theme.css';
+import {SettingsPage} from './pages/SettingsPage/SettingsPage.js';
 
 declare global {
   interface Window {
@@ -43,6 +44,7 @@ function App() {
             path="/cms/content/:collection/:slug"
             component={DocumentPage}
           />
+          <Route path="/cms/settings" component={SettingsPage} />
           <Route default component={NotFoundPage} />
         </Router>
       </FirebaseContext.Provider>

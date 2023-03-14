@@ -30,12 +30,12 @@ export function Container(props: ContainerProps) {
     <Component
       {...attrs}
       className={joinClassNames(
-        props.className,
+        className,
         styles.container,
         size && `container:${size}`
       )}
     >
-      {props.children}
+      {children}
     </Component>
   );
 }

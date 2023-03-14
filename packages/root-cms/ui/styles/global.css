@@ -2,6 +2,8 @@
   --font-family-default: "Inter", sans-serif;
   --font-family-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   --color-text-default: #333333;
+  --color-text-dark: #333333;
+  --color-text-gray: #6b7280;
   --color-border: #EFEFEF;
   --button-background-hover: #F5F5F5;
   --button-background-active: #E5E5E5;

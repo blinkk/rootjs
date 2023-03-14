@@ -49,3 +49,20 @@ export function flattenNestedKeys(data: any) {
 
   return flatData;
 }
+
+/**
+ * Sorts an array of objects by key.
+ */
+export function sortByKey(objs: any[], key: string) {
+  return objs.sort((a: any, b: any) => {
+    const x = a[key];
+    const y = b[key];
+    if (x < y) {
+      return -1;
+    }
+    if (x > y) {
+      return 1;
+    }
+    return 0;
+  });
+}

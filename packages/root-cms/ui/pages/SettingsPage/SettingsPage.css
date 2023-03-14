@@ -1,0 +1,21 @@
+.SettingsPage {
+  padding: 30px;
+}
+
+.SettingsPage__section {
+  display: grid;
+  grid-template-columns: 1fr 2fr;
+}
+
+.SettingsPage__section__left,
+.SettingsPage__section__right {
+  padding: 30px;
+}
+
+.SettingsPage__section__left__title {
+  margin-bottom: 8px;
+}
+
+.SettingsPage__section__right__title {
+  margin-bottom: 12px;
+}
