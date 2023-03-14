@@ -1,10 +1,21 @@
 import {
   IconArrowRoundaboutRight,
   IconCirclePlus,
+  IconCopy,
+  IconDotsVertical,
   IconFolder,
+  IconTrash,
 } from '@tabler/icons-preact';
 import {useEffect, useState} from 'preact/hooks';
-import {Button, Image, Loader, Select, Tabs} from '@mantine/core';
+import {
+  ActionIcon,
+  Button,
+  Image,
+  Loader,
+  Menu,
+  Select,
+  Tabs,
+} from '@mantine/core';
 import {Markdown} from '../../components/Markdown/Markdown.js';
 import {SplitPanel} from '../../components/SplitPanel/SplitPanel.js';
 import {Layout} from '../../layout/Layout.js';
@@ -284,6 +295,10 @@ CollectionPage.DocsList = (props: {collection: string; docs: any[]}) => {
     return `${domain}${urlPath}`;
   }
 
+  function onDeleteDoc(docId: string) {
+    console.log('delete', docId);
+  }
+
   return (
     <div className="CollectionPage__collection__docsList">
       {docs.map((doc) => {
@@ -325,6 +340,25 @@ CollectionPage.DocsList = (props: {collection: string; docs: any[]}) => {
                 {liveUrl}
               </div>
             </a>
+            <div className="CollectionPage__collection__docsList__doc__controls">
+              <Menu
+                className="CollectionPage__collection__docsList__doc__controls__menu"
+                position="bottom"
+                control={
+                  <ActionIcon className="DocEditor__ArrayField__item__header__controls__dots">
+                    <IconDotsVertical size={16} />
+                  </ActionIcon>
+                }
+              >
+                <Menu.Item icon={<IconCopy size={20} />}>Clone</Menu.Item>
+                <Menu.Item
+                  icon={<IconTrash size={20} />}
+                  onClick={() => onDeleteDoc(doc.id)}
+                >
+                  Delete
+                </Menu.Item>
+              </Menu>
+            </div>
           </div>
         );
       })}
