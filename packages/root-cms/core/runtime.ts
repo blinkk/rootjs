@@ -9,32 +9,10 @@ import {createRequire} from 'module';
 const require = createRequire(import.meta.url);
 const admin = require('firebase-admin');
 
-export interface CMSDoc<T> {
-  sys: {
-    createdAt: number;
-    createdBy: string;
-    modifiedAt: number;
-    modifiedBy: string;
-    publishedAt: number;
-    publishedBy: string;
-  };
-  fields: T;
-}
-
-function getFirebase(rootConfig: RootConfig) {
+function getFirebase(gcpProjectId: string) {
   if (admin.apps.length > 0 && admin.apps[0]) {
     return admin.apps[0];
   }
-
-  const plugins = rootConfig.plugins || [];
-  const plugin = plugins.find((plugin) => plugin.name === 'root-cms');
-  if (!plugin) {
-    throw new Error('could not find root-cms plugin config in root.config.ts');
-  }
-
-  const cmsPlugin = plugin as CMSPlugin;
-  const config = cmsPlugin.getConfig();
-  const gcpProjectId = config.firebaseConfig.projectId;
   return admin.initializeApp({
     projectId: gcpProjectId,
     credential: admin.credential.applicationDefault(),
@@ -49,18 +27,23 @@ export async function getDoc<T>(
   collectionId: string,
   slug: string,
   options: {mode: 'draft' | 'published'}
-): Promise<CMSDoc<T> | null> {
-  const projectId = rootConfig.projectId || 'default';
+): Promise<T | null> {
+  const cmsPlugin = getCmsPlugin(rootConfig);
+  const cmsPluginOptions = cmsPlugin.getConfig();
+  const projectId = cmsPluginOptions.id || 'default';
+  const gcpProjectId = cmsPluginOptions.firebaseConfig.projectId;
   const mode = options.mode;
   const modeCollection = mode === 'draft' ? 'Drafts' : 'Published';
-  const app = getFirebase(rootConfig);
+  const app = getFirebase(gcpProjectId);
   const db = admin.firestore(app);
+  // Slugs with slashes are encoded as `--` in the DB.
+  slug = slug.replaceAll('/', '--');
   const dbPath = `Projects/${projectId}/Collections/${collectionId}/${modeCollection}/${slug}`;
   const docRef = db.doc(dbPath);
   const doc = await docRef.get();
   if (doc.exists) {
     const data = doc.data();
-    return normalizeData(data) as CMSDoc<T>;
+    return normalizeData(data) as T;
   }
   console.log(`doc not found: ${dbPath}`);
   return null;
@@ -103,4 +86,13 @@ export function normalizeData(data: any): any {
 
 function isObject(data: any): boolean {
   return typeof data === 'object' && !Array.isArray(data) && data !== null;
+}
+
+export function getCmsPlugin(rootConfig: RootConfig): CMSPlugin {
+  const plugins = rootConfig.plugins || [];
+  const plugin = plugins.find((plugin) => plugin.name === 'root-cms');
+  if (!plugin) {
+    throw new Error('could not find root-cms plugin config in root.config.ts');
+  }
+  return plugin as CMSPlugin;
 }

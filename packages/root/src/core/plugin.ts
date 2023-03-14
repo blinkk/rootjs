@@ -1,4 +1,5 @@
 import {PluginOption as VitePlugin} from 'vite';
+import {RootConfig} from './config';
 import {Server} from './types';
 
 type MaybePromise<T> = T | Promise<T>;
@@ -10,6 +11,7 @@ export type ConfigureServerHook = (
 
 export interface ConfigureServerOptions {
   type: 'dev' | 'preview' | 'prod';
+  rootConfig: RootConfig;
 }
 
 export interface Plugin {

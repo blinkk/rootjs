@@ -63,7 +63,7 @@ async function createServer(options?: {
       server.use(rootDevServer404Middleware());
     },
     plugins,
-    {type: 'dev'}
+    {type: 'dev', rootConfig}
   );
 
   return server;

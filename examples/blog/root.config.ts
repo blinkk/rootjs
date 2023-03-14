@@ -6,7 +6,6 @@ import {cmsPlugin} from '@blinkk/root-cms/plugin';
 const rootDir = new URL('.', import.meta.url).pathname;;
 
 export default defineConfig({
-  projectId: 'examples-blog',
   domain: 'https://rootjs.dev',
   vite: {
     resolve: {
@@ -24,6 +23,8 @@ export default defineConfig({
   },
   plugins: [
     cmsPlugin({
+      id: 'examples-blog',
+      name: 'Examples: Blog',
       firebaseConfig: {
         apiKey: 'AIzaSyDIoi6zECKeyJoCduYEmV5j9PIF-wbpaPo',
         authDomain: 'rootjs-dev.firebaseapp.com',

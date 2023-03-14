@@ -1,4 +1,11 @@
-import {NextFunction, Plugin, Request, Response, Server} from '@blinkk/root';
+import {
+  ConfigureServerOptions,
+  NextFunction,
+  Plugin,
+  Request,
+  Response,
+  Server,
+} from '@blinkk/root';
 import cookieParser from 'cookie-parser';
 import * as dotenv from 'dotenv';
 import path from 'node:path';
@@ -8,14 +15,27 @@ import bodyParser from 'body-parser';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-dotenv.config();
-
 const SESSION_COOKIE = '_rootjs_cms';
 
 export type CMSUser = firebase.auth.DecodedIdToken;
 
 export type CMSPluginOptions = {
-  /** Firebase config object, which can be obtained in the Firebase Console by going to "Project Settings" */
+  /**
+   * The ID of the project. Data will be stored under the namespace
+   * `Projects/${id}` in firestore.
+   */
+  id?: string;
+
+  /**
+   * The name of the project. Used in the header of the CMS to help identify
+   * the project.
+   */
+  name?: string;
+
+  /**
+   * Firebase config object, which can be obtained in the Firebase Console by
+   * going to "Project Settings".
+   */
   firebaseConfig: {
     [key: string]: string;
     apiKey: string;
@@ -25,8 +45,10 @@ export type CMSPluginOptions = {
     messagingSenderId: string;
     appId: string;
   };
+
   /** Secret value(s) used for signing the user authentication cookie. */
   cookieSecret?: string | string[];
+
   /** Function called to check if a user should have access to the CMS. */
   isUserAuthorized?: (
     req: Request,
@@ -35,8 +57,9 @@ export type CMSPluginOptions = {
 };
 
 export type CMSPlugin = Plugin & {
+  name: 'root-cms';
   getConfig: () => CMSPluginOptions;
-}
+};
 
 function generateSecret(): string {
   const result = [];
@@ -55,6 +78,8 @@ function isExpired(decodedIdToken: firebase.auth.DecodedIdToken) {
 }
 
 export function cmsPlugin(options: CMSPluginOptions): CMSPlugin {
+  dotenv.config();
+
   const firebaseConfig = options.firebaseConfig;
   const cookieSecret = options.cookieSecret || generateSecret();
   const app = firebase.initializeApp({
@@ -167,9 +192,27 @@ export function cmsPlugin(options: CMSPluginOptions): CMSPlugin {
     /**
      * Attaches CMS-specific middleware to the Root.js server.
      */
-    configureServer: (server: Server) => {
+    configureServer: async (server: Server) => {
       server.use(cookieParser(cookieSecret));
       server.use(bodyParser.json());
+
+      if (process.env.NODE_ENV === 'development') {
+        let dtsGenerated = false;
+        server.use(async (req: Request, res: Response, next: NextFunction) => {
+          if (!dtsGenerated) {
+            dtsGenerated = true;
+            try {
+              const appPath = path.resolve(__dirname, './app.js');
+              const app = await req.viteServer!.ssrLoadModule(appPath);
+              await app.generateSchemaDts(req.rootConfig);
+            } catch (err) {
+              console.error('failed to generate root-cms.d.ts file.');
+              console.error(err);
+            }
+          }
+          next();
+        });
+      }
 
       // Login handler.
       server.use('/cms/login', async (req: Request, res: Response) => {

@@ -71,6 +71,7 @@ export default schema.collection({
           help: 'Optional CSS to inject into the page.',
           translate: true,
           variant: 'textarea',
+          deprecated: true,
         }),
       ],
     }),

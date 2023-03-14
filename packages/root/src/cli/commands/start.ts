@@ -64,7 +64,7 @@ async function createServer(options: {rootDir: string}): Promise<Server> {
       // TODO(stevenle): handle 404/500 errors.
     },
     plugins,
-    {type: 'prod'}
+    {type: 'prod', rootConfig}
   );
   return server;
 }

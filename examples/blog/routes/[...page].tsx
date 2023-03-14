@@ -37,6 +37,5 @@ export const getStaticPaths: GetStaticPaths = async () => {
 export const getStaticProps: GetStaticProps = async (ctx) => {
   const slug = ctx.params.page;
   const doc = await getDoc(ctx.rootConfig, 'Pages', slug, {mode: 'draft'});
-  // const doc = {};
   return {props: {slug, doc}};
 };

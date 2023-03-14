@@ -55,6 +55,8 @@
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: space-between;
+  padding-bottom: 12px;
 }
 
 .Layout__side__button {
@@ -90,6 +92,10 @@
 
 .Layout__side__button a.active::after {
   background-color: lightblue;
+}
+
+.Layout__side__user .mantine-Tooltip-root {
+  display: block;
 }
 
 .Layout__main {

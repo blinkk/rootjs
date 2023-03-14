@@ -40,11 +40,14 @@
     "@firebase/app-types": "^0.7.0",
     "@preact/signals": "^1.1.2",
     "body-parser": "^1.20.0",
+    "bundle-require": "^4.0.1",
     "cookie-parser": "^1.4.6",
     "dotenv": "^16.0.0",
+    "dts-dom": "^3.7.0",
+    "esbuild": "^0.17.11",
     "firebase-admin": "^10.2.0",
-    "jsonwebtoken": "^9.0.0",
-    "preact-render-to-string": "^5.2.3"
+    "preact-render-to-string": "^5.2.3",
+    "tiny-glob": "^0.2.9"
   },
   "// NOTE(stevenle): due to compat issues with mantine and preact, mantine is pinned to v4.2.12": "",
   "devDependencies": {
@@ -62,7 +65,6 @@
     "@types/marked": "^4.0.8",
     "@types/node": "^18.11.8",
     "concurrently": "^7.6.0",
-    "esbuild": "^0.17.5",
     "firebase": "^9.17.2",
     "marked": "^4.2.12",
     "preact": "*",

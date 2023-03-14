@@ -6,19 +6,6 @@ import {HtmlPrettyOptions} from '../render/html-pretty';
 
 export interface RootUserConfig {
   /**
-   * ID for the Root.js project. This id may be useful for plugins that support
-   * multi-tenancy, e.g. plugins that use a DB may namespace entries based on
-   * this id.
-   */
-  projectId?: string;
-
-  /**
-   * The GCP project used by this project. Useful for things like logging, db,
-   * GCS storage, etc.
-   */
-  gcpProjectId?: string;
-
-  /**
    * Canonical domain the website will serve on. Useful for things like the
    * sitemap, SEO tags, etc.
    */

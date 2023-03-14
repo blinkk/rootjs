@@ -1,5 +1,5 @@
 import {ComponentChildren} from 'preact';
-import {Tooltip} from '@mantine/core';
+import {Avatar, Tooltip} from '@mantine/core';
 import {
   IconDatabase,
   IconFolder,
@@ -47,51 +47,63 @@ Layout.Top = (props: LayoutProps) => {
 Layout.Side = (props: LayoutProps) => {
   const [route] = useRouter();
   const currentUrl = route.url.replace(/\/*$/g, '');
+  const user = window.firebase.user;
   return (
     <div className="Layout__side">
-      <Layout.SideButton label="Home" url="/cms" active={currentUrl === '/cms'}>
-        <IconHome stroke={ICON_STROKE} />
-      </Layout.SideButton>
+      <div className="Layout__side__buttons">
+        <Layout.SideButton
+          label="Home"
+          url="/cms"
+          active={currentUrl === '/cms'}
+        >
+          <IconHome stroke={ICON_STROKE} />
+        </Layout.SideButton>
 
-      <Layout.SideButton
-        label="Content"
-        url="/cms/content"
-        active={currentUrl.startsWith('/cms/content')}
-      >
-        <IconFolder stroke={ICON_STROKE} />
-      </Layout.SideButton>
+        <Layout.SideButton
+          label="Content"
+          url="/cms/content"
+          active={currentUrl.startsWith('/cms/content')}
+        >
+          <IconFolder stroke={ICON_STROKE} />
+        </Layout.SideButton>
 
-      <Layout.SideButton
-        label="Data"
-        url="/cms/data"
-        active={currentUrl.startsWith('/cms/data')}
-      >
-        <IconDatabase stroke={ICON_STROKE} />
-      </Layout.SideButton>
+        <Layout.SideButton
+          label="Data"
+          url="/cms/data"
+          active={currentUrl.startsWith('/cms/data')}
+        >
+          <IconDatabase stroke={ICON_STROKE} />
+        </Layout.SideButton>
 
-      <Layout.SideButton
-        label="Assets"
-        url="/cms/assets"
-        active={currentUrl.startsWith('/cms/assets')}
-      >
-        <IconPhoto stroke={ICON_STROKE} />
-      </Layout.SideButton>
+        <Layout.SideButton
+          label="Assets"
+          url="/cms/assets"
+          active={currentUrl.startsWith('/cms/assets')}
+        >
+          <IconPhoto stroke={ICON_STROKE} />
+        </Layout.SideButton>
 
-      <Layout.SideButton
-        label="Translations"
-        url="/cms/translations"
-        active={currentUrl.startsWith('/cms/translations')}
-      >
-        <IconLanguage stroke={ICON_STROKE} />
-      </Layout.SideButton>
+        <Layout.SideButton
+          label="Translations"
+          url="/cms/translations"
+          active={currentUrl.startsWith('/cms/translations')}
+        >
+          <IconLanguage stroke={ICON_STROKE} />
+        </Layout.SideButton>
 
-      <Layout.SideButton
-        label="Settings"
-        url="/cms/settings"
-        active={currentUrl.startsWith('/cms/settings')}
-      >
-        <IconSettings stroke={ICON_STROKE} />
-      </Layout.SideButton>
+        <Layout.SideButton
+          label="Settings"
+          url="/cms/settings"
+          active={currentUrl.startsWith('/cms/settings')}
+        >
+          <IconSettings stroke={ICON_STROKE} />
+        </Layout.SideButton>
+      </div>
+      <div className="Layout__side__user">
+        <Tooltip label={user.email!} position="right" withArrow>
+          <Avatar src={user.photoURL} alt={user.email!} size={30} radius="xl" />
+        </Tooltip>
+      </div>
     </div>
   );
 };

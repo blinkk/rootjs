@@ -1,9 +1,11 @@
-import {Response} from '@blinkk/root';
+import {Request, Response} from '@blinkk/root';
 import {Collection} from './schema.js';
-import {UserRequest} from './users.js';
 import {render as renderToString} from 'preact-render-to-string';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
+
+/** The generateSchemaDts method needs to be loaded through vite. */
+export {generateSchemaDts} from './typegen.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -56,7 +58,7 @@ function App(props: AppProps) {
   );
 }
 
-export async function renderApp(req: UserRequest, res: Response, options: any) {
+export async function renderApp(req: Request, res: Response, options: any) {
   const collectionModules = import.meta.glob('/collections/*.schema.ts', {
     eager: true,
   }) as any;
@@ -129,11 +131,7 @@ function SignIn(props: SignInProps) {
     </html>
   );
 }
-export async function renderSignIn(
-  req: UserRequest,
-  res: Response,
-  options: any
-) {
+export async function renderSignIn(req: Request, res: Response, options: any) {
   const ctx = {firebaseConfig: options.firebaseConfig};
   const mainHtml = renderToString(<SignIn title="Sign in" ctx={ctx} />);
   const html = await req.viteServer!.transformIndexHtml(
