@@ -1,4 +1,5 @@
 import {GetStaticPaths, GetStaticProps} from '@blinkk/root';
+import {getDoc} from '@blinkk/root-cms';
 import Page from '../blog/[blog-post].js';
 
 export default Page;
@@ -12,8 +13,9 @@ export const getStaticProps: GetStaticProps = async (ctx) => {
     return {notFound: true};
   }
 
-  const slug = ctx.params.slug;
-  // const doc = await getDoc('BlogPostsSandbox', slug);
-  const doc = {};
+  const slug = ctx.params['blog-post-sandbox'];
+  const doc = await getDoc(ctx.rootConfig, 'BlogPostsSandbox', slug, {
+    mode: 'draft',
+  });
   return {props: {slug, doc}};
 };
