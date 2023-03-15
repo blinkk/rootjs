@@ -7,7 +7,6 @@ import {
   BuildAssetManifest,
   BuildAssetMap,
 } from '../../render/asset-map/build-asset-map';
-import {htmlMinify} from '../../render/html-minify';
 import {dim} from 'kleur/colors';
 import {configureServerPlugins} from '../../core/plugin';
 import sirv from 'sirv';
@@ -15,7 +14,6 @@ import compression from 'compression';
 import {Request, Response, NextFunction, Server} from '../../core/types.js';
 import {rootProjectMiddleware} from '../../core/middleware';
 import {RootConfig} from '../../core/config';
-import {htmlPretty} from '../../render/html-pretty';
 
 type RenderModule = typeof import('../../render/render.js');
 
@@ -83,7 +81,7 @@ async function rootProdRendererMiddleware(options: {
   const manifestPath = path.join(distDir, 'client/root-manifest.json');
   if (!(await fileExists(manifestPath))) {
     throw new Error(
-      `could not find ${manifestPath}. run \`root build\` before \`root preview\`.`
+      `could not find ${manifestPath}. run \`root build\` before \`root start\`.`
     );
   }
   const rootManifest = await loadJson<BuildAssetManifest>(manifestPath);
@@ -100,24 +98,9 @@ async function rootProdRendererMiddleware(options: {
  */
 function rootProdServerMiddleware() {
   return async (req: Request, res: Response, next: NextFunction) => {
-    const rootConfig = req.rootConfig!;
     const renderer = req.renderer!;
     try {
-      const url = req.path;
-      const data = await renderer.render(url);
-      if (data.notFound || !data.html) {
-        next();
-        return;
-      }
-      let html = data.html || '';
-      if (rootConfig.prettyHtml !== false) {
-        html = await htmlPretty(html, rootConfig.prettyHtmlOptions);
-      }
-      // HTML minification is `true` by default. Set to `false` to disable.
-      if (rootConfig.minifyHtml !== false) {
-        html = await htmlMinify(html, rootConfig.minifyHtmlOptions);
-      }
-      res.status(200).set({'Content-Type': 'text/html'}).end(html);
+      await renderer.handle(req, res, next);
     } catch (e) {
       try {
         const {html} = await renderer.renderError(e);
