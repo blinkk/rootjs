@@ -323,6 +323,9 @@ export async function build(rootProjectDir?: string, options?: BuildOptions) {
         const data = await renderer.renderRoute(route, {
           routeParams: params,
         });
+        if (data.notFound) {
+          return;
+        }
 
         // The renderer currently assumes that all paths serve HTML.
         // TODO(stevenle): support non-HTML routes using `routes/[name].[ext].ts`.

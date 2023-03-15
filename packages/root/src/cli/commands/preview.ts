@@ -27,7 +27,7 @@ export async function preview(rootProjectDir?: string) {
   console.log();
   console.log(`${dim('┃')} project:  ${rootDir}`);
   console.log(`${dim('┃')} server:   http://localhost:${port}`);
-  console.log(`${dim('┃')} mode:     staging`);
+  console.log(`${dim('┃')} mode:     preview`);
   console.log();
   server.listen(port);
 }
@@ -61,6 +61,7 @@ async function createServer(options: {rootDir: string}): Promise<Server> {
 
       // Add the root.js preview server middlewares.
       server.use(rootPreviewServerMiddleware());
+
       // TODO(stevenle): handle 404/500 errors.
     },
     plugins,

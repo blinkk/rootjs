@@ -204,7 +204,7 @@ export class Renderer {
         params: routeParams,
       });
       if (propsData.notFound) {
-        return this.render404();
+        return {notFound: true};
       }
       if (propsData.props) {
         props = propsData.props;

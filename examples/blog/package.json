@@ -9,7 +9,7 @@
   "scripts": {
     "dev": "pnpm run types && root dev",
     "build": "rm -rf dist/ && root build",
-    "preview": "pnpm run build && root preview",
+    "preview": "rm -rf dist/ && root build --ssr-only && root preview",
     "start": "root start",
     "test": "pnpm run build",
     "types": "root-cms generate-types"
