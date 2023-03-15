@@ -61,6 +61,8 @@
     "@emotion/react": "^11.10.5",
     "@mantine/core": "4.2.12",
     "@mantine/hooks": "4.2.12",
+    "@mantine/modals": "4.2.12",
+    "@mantine/notifications": "4.2.12",
     "@mantine/spotlight": "4.2.12",
     "@preact/compat": "^17.1.2",
     "@tabler/icons-preact": "^2.7.0",

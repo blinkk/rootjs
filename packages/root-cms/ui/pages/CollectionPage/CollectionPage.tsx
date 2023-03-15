@@ -1,21 +1,10 @@
 import {
   IconArrowRoundaboutRight,
   IconCirclePlus,
-  IconCopy,
-  IconDotsVertical,
   IconFolder,
-  IconTrash,
 } from '@tabler/icons-preact';
 import {useEffect, useState} from 'preact/hooks';
-import {
-  ActionIcon,
-  Button,
-  Image,
-  Loader,
-  Menu,
-  Select,
-  Tabs,
-} from '@mantine/core';
+import {Button, Image, Loader, Select, Tabs} from '@mantine/core';
 import {Markdown} from '../../components/Markdown/Markdown.js';
 import {SplitPanel} from '../../components/SplitPanel/SplitPanel.js';
 import {Layout} from '../../layout/Layout.js';
@@ -36,6 +25,7 @@ import {useLocalStorage} from '../../hooks/useLocalStorage.js';
 import {getNestedValue} from '../../utils/objects.js';
 import {DocStatusBadges} from '../../components/DocStatusBadges/DocStatusBadges.js';
 import {Heading} from '../../components/Heading/Heading.js';
+import {DocActionsMenu} from '../../components/DocActionsMenu/DocActionsMenu.js';
 
 interface CollectionPageProps {
   collection?: string;
@@ -49,7 +39,8 @@ function useDocsList(collectionId: string, options: {orderBy: string}) {
 
   const projectId = window.__ROOT_CTX.rootConfig.projectId || 'default';
 
-  const listDocs = async (collectionId: string, orderBy: string) => {
+  const listDocs = async () => {
+    setLoading(true);
     const dbCollection = collection(
       db,
       'Projects',
@@ -59,6 +50,7 @@ function useDocsList(collectionId: string, options: {orderBy: string}) {
       'Drafts'
     );
     let dbQuery: Query = dbCollection;
+    const orderBy = options.orderBy;
     if (orderBy === 'modifiedAt') {
       dbQuery = query(dbCollection, queryOrderby('sys.modifiedAt', 'desc'));
     } else if (orderBy === 'newest') {
@@ -82,10 +74,10 @@ function useDocsList(collectionId: string, options: {orderBy: string}) {
 
   useEffect(() => {
     setLoading(true);
-    listDocs(collectionId, options.orderBy);
-  }, [collectionId, options.orderBy]);
+    listDocs();
+  }, []);
 
-  return [loading, docs] as const;
+  return [loading, listDocs, docs] as const;
 }
 
 export function CollectionPage(props: CollectionPageProps) {
@@ -183,7 +175,7 @@ CollectionPage.Collection = (props: CollectionProps) => {
     return <></>;
   }
 
-  const [loading, docs] = useDocsList(props.collection, {orderBy});
+  const [loading, listDocs, docs] = useDocsList(props.collection, {orderBy});
 
   return (
     <>
@@ -272,6 +264,7 @@ CollectionPage.Collection = (props: CollectionProps) => {
                   <CollectionPage.DocsList
                     collection={props.collection}
                     docs={docs}
+                    reloadDocs={() => listDocs()}
                   />
                 )}
               </div>
@@ -283,7 +276,11 @@ CollectionPage.Collection = (props: CollectionProps) => {
   );
 };
 
-CollectionPage.DocsList = (props: {collection: string; docs: any[]}) => {
+CollectionPage.DocsList = (props: {
+  collection: string;
+  docs: any[];
+  reloadDocs: () => void;
+}) => {
   const collectionId = props.collection;
   const rootCollection = window.__ROOT_CTX.collections[props.collection];
   if (!rootCollection) {
@@ -347,23 +344,10 @@ CollectionPage.DocsList = (props: {collection: string; docs: any[]}) => {
               </div>
             </a>
             <div className="CollectionPage__collection__docsList__doc__controls">
-              <Menu
-                className="CollectionPage__collection__docsList__doc__controls__menu"
-                position="bottom"
-                control={
-                  <ActionIcon className="DocEditor__ArrayField__item__header__controls__dots">
-                    <IconDotsVertical size={16} />
-                  </ActionIcon>
-                }
-              >
-                <Menu.Item icon={<IconCopy size={20} />}>Clone</Menu.Item>
-                <Menu.Item
-                  icon={<IconTrash size={20} />}
-                  onClick={() => onDeleteDoc(doc.id)}
-                >
-                  Delete
-                </Menu.Item>
-              </Menu>
+              <DocActionsMenu
+                docId={doc.id}
+                onDelete={() => props.reloadDocs()}
+              />
             </div>
           </div>
         );

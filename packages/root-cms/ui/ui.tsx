@@ -1,6 +1,8 @@
 import {render} from 'preact';
 import {Route, Router} from 'preact-router';
 import {MantineProvider} from '@mantine/core';
+import {ModalsProvider} from '@mantine/modals';
+import {NotificationsProvider} from '@mantine/notifications';
 import {initializeApp} from 'firebase/app';
 import {getAuth} from 'firebase/auth';
 import {getFirestore} from 'firebase/firestore';
@@ -9,10 +11,10 @@ import {DocumentPage} from './pages/DocumentPage/DocumentPage.js';
 import {ProjectPage} from './pages/ProjectPage/ProjectPage.js';
 import {Collection} from '../core/schema.js';
 import {NotFoundPage} from './pages/NotFoundPage/NotFoundPage.js';
+import {SettingsPage} from './pages/SettingsPage/SettingsPage.js';
 import {FirebaseContext, FirebaseContextObject} from './hooks/useFirebase.js';
 import './styles/global.css';
 import './styles/theme.css';
-import {SettingsPage} from './pages/SettingsPage/SettingsPage.js';
 
 declare global {
   interface Window {
@@ -36,18 +38,25 @@ function App() {
         fontSizes: {xs: 12, sm: 14, md: 16, lg: 18, xl: 20},
       }}
     >
-      <FirebaseContext.Provider value={window.firebase}>
-        <Router>
-          <Route path="/cms" component={ProjectPage} />
-          <Route path="/cms/content/:collection?" component={CollectionPage} />
-          <Route
-            path="/cms/content/:collection/:slug"
-            component={DocumentPage}
-          />
-          <Route path="/cms/settings" component={SettingsPage} />
-          <Route default component={NotFoundPage} />
-        </Router>
-      </FirebaseContext.Provider>
+      <NotificationsProvider>
+        <ModalsProvider>
+          <FirebaseContext.Provider value={window.firebase}>
+            <Router>
+              <Route path="/cms" component={ProjectPage} />
+              <Route
+                path="/cms/content/:collection?"
+                component={CollectionPage}
+              />
+              <Route
+                path="/cms/content/:collection/:slug"
+                component={DocumentPage}
+              />
+              <Route path="/cms/settings" component={SettingsPage} />
+              <Route default component={NotFoundPage} />
+            </Router>
+          </FirebaseContext.Provider>
+        </ModalsProvider>
+      </NotificationsProvider>
     </MantineProvider>
   );
 }

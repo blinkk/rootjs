@@ -15,16 +15,24 @@
   top: 0;
   right: 0;
   height: 48px;
-  padding: 0 20px;
+  padding: 0 10px;
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  gap: 16px;
 }
 
 .DocEditor__statusBar__saveState {
   font-style: italic;
   font-weight: 500;
+}
+
+.DocEditor__statusBar__saveState,
+.DocEditor__statusBar__statusBadges {
+  margin-right: 16px;
+}
+
+.DocEditor__statusBar__actionsMenu {
+  margin-left: 4px;
 }
 
 .DocEditor__fields {

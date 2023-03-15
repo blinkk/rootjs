@@ -29,6 +29,8 @@ import {getPlaceholderKeys, strFormat} from '../../utils/str-format.js';
 import './DocEditor.css';
 import {DocStatusBadges} from '../DocStatusBadges/DocStatusBadges.js';
 import {PublishDocModal} from '../PublishDocModal/PublishDocModal.js';
+import {DocActionsMenu} from '../DocActionsMenu/DocActionsMenu.js';
+import {route} from 'preact-router';
 
 interface DocEditorProps {
   docId: string;
@@ -39,6 +41,12 @@ export function DocEditor(props: DocEditorProps) {
   const fields = props.collection.fields || [];
   const {loading, draft, saveState, data} = useDraft(props.docId);
   const [publishDocModalOpen, setPublishDocModalOpen] = useState(false);
+
+  function goBack() {
+    const collectionId = props.docId.split('/')[0];
+    route(`/cms/content/${collectionId}`);
+  }
+
   return (
     <>
       <PublishDocModal
@@ -72,6 +80,9 @@ export function DocEditor(props: DocEditorProps) {
             >
               Publish
             </Button>
+          </div>
+          <div className="DocEditor__statusBar__actionsMenu">
+            <DocActionsMenu docId={props.docId} onDelete={() => goBack()} />
           </div>
         </div>
         <div className="DocEditor__fields">
