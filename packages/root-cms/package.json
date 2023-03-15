@@ -49,7 +49,7 @@
     "dotenv": "^16.0.0",
     "dts-dom": "^3.7.0",
     "esbuild": "^0.17.11",
-    "firebase-admin": "^10.2.0",
+    "firebase-admin": "^11.5.0",
     "kleur": "^4.1.5",
     "preact-render-to-string": "^5.2.3",
     "tiny-glob": "^0.2.9"

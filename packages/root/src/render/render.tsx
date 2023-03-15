@@ -66,9 +66,7 @@ export class Renderer {
 
     const render = async (props: any) => {
       if (!route.module.default) {
-        console.error(
-          `handler called render() called without a default component exported in route: ${route.src}`
-        );
+        console.error(`no default component exported in route: ${route.src}`);
         render404();
         return;
       }

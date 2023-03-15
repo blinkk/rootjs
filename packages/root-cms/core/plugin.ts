@@ -1,3 +1,6 @@
+import {promises as fs} from 'node:fs';
+import path from 'node:path';
+import {fileURLToPath} from 'node:url';
 import {
   ConfigureServerOptions,
   NextFunction,
@@ -6,18 +9,18 @@ import {
   Response,
   Server,
 } from '@blinkk/root';
-import cookieParser from 'cookie-parser';
-import * as dotenv from 'dotenv';
-import path from 'node:path';
-import {fileURLToPath} from 'node:url';
-import firebase from 'firebase-admin';
 import bodyParser from 'body-parser';
+import cookieParser from 'cookie-parser';
+import {applicationDefault, initializeApp} from 'firebase-admin/app';
+import {getAuth, DecodedIdToken} from 'firebase-admin/auth';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
+type AppModule = typeof import('./app.js');
+
 const SESSION_COOKIE = '_rootjs_cms';
 
-export type CMSUser = firebase.auth.DecodedIdToken;
+export type CMSUser = DecodedIdToken;
 
 export type CMSPluginOptions = {
   /**
@@ -72,21 +75,19 @@ function generateSecret(): string {
   return result.join('');
 }
 
-function isExpired(decodedIdToken: firebase.auth.DecodedIdToken) {
+function isExpired(decodedIdToken: DecodedIdToken) {
   const ts = new Date().getTime() / 1000;
   return ts - decodedIdToken.auth_time > 5 * 60;
 }
 
 export function cmsPlugin(options: CMSPluginOptions): CMSPlugin {
-  dotenv.config();
-
   const firebaseConfig = options.firebaseConfig;
   const cookieSecret = options.cookieSecret || generateSecret();
-  const app = firebase.initializeApp({
+  const app = initializeApp({
     projectId: firebaseConfig.projectId,
-    credential: firebase.credential.applicationDefault(),
+    credential: applicationDefault(),
   });
-  const auth = firebase.auth(app);
+  const auth = getAuth(app);
 
   /**
    * Checks if login is required for the request. Currently returns `true` if
@@ -190,28 +191,42 @@ export function cmsPlugin(options: CMSPluginOptions): CMSPlugin {
     },
 
     /**
+     * A map of ssr files to include when running `root build`.
+     */
+    ssrInput: () => ({
+      cms: path.resolve(__dirname, './app.js'),
+    }),
+
+    /**
      * Attaches CMS-specific middleware to the Root.js server.
      */
-    configureServer: async (server: Server) => {
+    configureServer: async (
+      server: Server,
+      serverOptions: ConfigureServerOptions
+    ) => {
       server.use(cookieParser(cookieSecret));
       server.use(bodyParser.json());
 
-      if (process.env.NODE_ENV === 'development') {
-        let dtsGenerated = false;
-        server.use(async (req: Request, res: Response, next: NextFunction) => {
-          if (!dtsGenerated) {
-            dtsGenerated = true;
-            try {
-              const appPath = path.resolve(__dirname, './app.js');
-              const app = await req.viteServer!.ssrLoadModule(appPath);
-              await app.generateSchemaDts(req.rootConfig!.rootDir);
-            } catch (err) {
-              console.error('failed to generate root-cms.d.ts file.');
-              console.error(err);
-            }
-          }
-          next();
-        });
+      async function getRenderer(req: Request): Promise<AppModule> {
+        if (serverOptions.type === 'dev') {
+          const appFilePath = path.resolve(__dirname, './app.js');
+          const app = (await req.viteServer!.ssrLoadModule(
+            appFilePath
+          )) as AppModule;
+          return app;
+        }
+
+        const appImportPath = path.resolve(
+          req.rootConfig!.rootDir,
+          'dist/server/cms.js'
+        );
+        if (!(await fileExists(appImportPath))) {
+          throw new Error(
+            'dist/server/cms.js not found. run `root build` to create it.'
+          );
+        }
+        const app = (await import(appImportPath)) as AppModule;
+        return app;
       }
 
       // Login handler.
@@ -258,8 +273,7 @@ export function cmsPlugin(options: CMSPluginOptions): CMSPlugin {
         }
 
         try {
-          const appPath = path.resolve(__dirname, './app.js');
-          const app = await req.viteServer!.ssrLoadModule(appPath);
+          const app = await getRenderer(req);
           app.renderSignIn(req, res, options);
         } catch (err) {
           console.error(err);
@@ -296,18 +310,25 @@ export function cmsPlugin(options: CMSPluginOptions): CMSPlugin {
       // Render the CMS SPA.
       server.use('/cms', async (req: Request, res: Response) => {
         try {
-          const appPath = path.resolve(__dirname, './app.js');
-          const app = await req.viteServer!.ssrLoadModule(appPath);
+          const app = await getRenderer(req);
           await app.renderApp(req, res, {
             rootConfig: req.rootConfig,
             cmsConfig: options,
             firebaseConfig: options.firebaseConfig,
           });
         } catch (err) {
+          // TODO(stevenle): render a custom error page.
           console.error(err);
           res.status(500).send('UNKNOWN SERVER ERROR');
         }
       });
     },
   };
+}
+
+function fileExists(filepath: string): Promise<boolean> {
+  return fs
+    .access(filepath)
+    .then(() => true)
+    .catch(() => false);
 }

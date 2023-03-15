@@ -18,8 +18,23 @@ export interface Plugin {
   [key: string]: any;
   /** The name of the plugin. */
   name?: string;
-  /** Configures the root.js express server . */
+  /**
+   * Configures the root.js express server. Any middleware defined by the plugin
+   * will be added to the server first. If a callback fn is returned, it will
+   * be called after the root.js middlewares are added.
+   */
   configureServer?: ConfigureServerHook;
+  /**
+   * Returns a list of deps to bundle for ssr. The files will be compiled and
+   * output to `dist/server/`. The return value should be a map of
+   * `{output filename => input filepath}`.
+   *
+   * E.g. a value of `{foo: 'path/to/bar.js'}` will output `dist/server/foo.js`.
+   *
+   * @experimental This config is subject to change to be incorporated into a
+   * broader config option called "ssr" or "ssrOptions".
+   */
+  ssrInput?: () => {[entryAlias: string]: string};
   /** Adds vite plugins. */
   vitePlugins?: VitePlugin[];
 }

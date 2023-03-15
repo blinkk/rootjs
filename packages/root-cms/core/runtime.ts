@@ -1,21 +1,16 @@
 import {RootConfig} from '@blinkk/root';
+import {initializeApp, getApps, applicationDefault} from 'firebase-admin/app';
+import {getFirestore} from 'firebase-admin/firestore';
 import {CMSPlugin} from './plugin.js';
 
-// NOTE(stevenle): for some reason, the firebase-admin import has issues with
-// vite and es6-style imports, so we use `createRequire()` here to work around
-// those issues.
-// import admin from 'firebase-admin';
-import {createRequire} from 'module';
-const require = createRequire(import.meta.url);
-const admin = require('firebase-admin');
-
-function getFirebase(gcpProjectId: string) {
-  if (admin.apps.length > 0 && admin.apps[0]) {
-    return admin.apps[0];
+function getFirebaseApp(gcpProjectId: string) {
+  const apps = getApps();
+  if (apps.length > 0 && apps[0]) {
+    return apps[0];
   }
-  return admin.initializeApp({
+  return initializeApp({
     projectId: gcpProjectId,
-    credential: admin.credential.applicationDefault(),
+    credential: applicationDefault(),
   });
 }
 
@@ -34,8 +29,8 @@ export async function getDoc<T>(
   const gcpProjectId = cmsPluginOptions.firebaseConfig.projectId;
   const mode = options.mode;
   const modeCollection = mode === 'draft' ? 'Drafts' : 'Published';
-  const app = getFirebase(gcpProjectId);
-  const db = admin.firestore(app);
+  const app = getFirebaseApp(gcpProjectId);
+  const db = getFirestore(app);
   // Slugs with slashes are encoded as `--` in the DB.
   slug = slug.replaceAll('/', '--');
   const dbPath = `Projects/${projectId}/Collections/${collectionId}/${modeCollection}/${slug}`;

@@ -72,11 +72,12 @@ export async function build(rootProjectDir?: string, options?: BuildOptions) {
     });
   }
 
+  const rootPlugins = rootConfig.plugins || [];
   const viteConfig = rootConfig.vite || {};
   const vitePlugins = [
     pluginRoot({rootConfig}),
     ...(viteConfig.plugins || []),
-    ...getVitePlugins(rootConfig.plugins || []),
+    ...getVitePlugins(rootPlugins),
   ];
 
   const baseConfig: UserConfig = {
@@ -92,8 +93,17 @@ export async function build(rootProjectDir?: string, options?: BuildOptions) {
     plugins: vitePlugins,
   };
 
-  // Bundle the render.js file with vite, which is pre-optimized for rendering
-  // HTML routes.
+  // Bundle the render.js file with vite along with any plugins `ssrInput()`
+  // config values. These inputs are bundled through vite and support things
+  // like `input.meta.glob()`.
+  const ssrInput = {
+    render: path.resolve(__dirname, './render.js'),
+  };
+  rootPlugins.forEach((plugin) => {
+    if (plugin.ssrInput) {
+      Object.assign(ssrInput, plugin.ssrInput());
+    }
+  });
   const noExternalConfig = viteConfig.ssr?.noExternal;
   const noExternal: Array<string | RegExp> = [];
   if (noExternalConfig) {
@@ -110,7 +120,7 @@ export async function build(rootProjectDir?: string, options?: BuildOptions) {
       ...viteConfig?.build,
       rollupOptions: {
         ...viteConfig?.build?.rollupOptions,
-        input: [path.resolve(__dirname, './render.js')],
+        input: ssrInput,
         output: {
           format: 'esm',
           chunkFileNames: 'chunks/[name].[hash].min.js',
@@ -128,6 +138,7 @@ export async function build(rootProjectDir?: string, options?: BuildOptions) {
     },
     ssr: {
       ...viteConfig.ssr,
+      target: 'node',
       noExternal: ['@blinkk/root', ...noExternal],
     },
   });
