@@ -2,11 +2,13 @@ import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 import fsExtra from 'fs-extra';
 import glob from 'tiny-glob';
-import {build as viteBuild, Manifest, UserConfig} from 'vite';
+import {build as viteBuild, Manifest, ManifestChunk, UserConfig} from 'vite';
 import {pluginRoot} from '../../render/vite-plugin-root.js';
 import {BuildAssetMap} from '../../render/asset-map/build-asset-map.js';
 import {loadRootConfig} from '../load-config.js';
 import {
+  copyGlob,
+  fileExists,
   isDirectory,
   isJsFile,
   loadJson,
@@ -143,7 +145,7 @@ export async function build(rootProjectDir?: string, options?: BuildOptions) {
     },
   });
 
-  // Pre-render any client scripts and CSS deps.
+  // Pre-render CSS deps from /routes/.
   await viteBuild({
     ...baseConfig,
     publicDir: false,
@@ -151,7 +153,40 @@ export async function build(rootProjectDir?: string, options?: BuildOptions) {
       ...viteConfig?.build,
       rollupOptions: {
         ...viteConfig?.build?.rollupOptions,
-        input: [...routeFiles, ...elements, ...bundleScripts],
+        input: [...routeFiles],
+        output: {
+          format: 'esm',
+          entryFileNames: 'assets/[name].[hash].min.js',
+          chunkFileNames: 'chunks/[name].[hash].min.js',
+          assetFileNames: 'assets/[name].[hash][extname]',
+          ...viteConfig?.build?.rollupOptions?.output,
+        },
+      },
+      outDir: path.join(distDir, 'routes'),
+      ssr: false,
+      ssrManifest: false,
+      manifest: true,
+      cssCodeSplit: true,
+      target: 'esnext',
+      minify: true,
+      polyfillModulePreload: false,
+      reportCompressedSize: false,
+    },
+  });
+
+  // Pre-render /elements/ and /bundles/.
+  await viteBuild({
+    ...baseConfig,
+    publicDir: false,
+    build: {
+      ...viteConfig?.build,
+      rollupOptions: {
+        ...viteConfig?.build?.rollupOptions,
+        input: [
+          // ...routeFiles,
+          ...elements,
+          ...bundleScripts,
+        ],
         output: {
           format: 'esm',
           entryFileNames: 'assets/[name].[hash].min.js',
@@ -172,21 +207,63 @@ export async function build(rootProjectDir?: string, options?: BuildOptions) {
     },
   });
 
-  const viteManifest = await loadJson<Manifest>(
+  // Copy CSS files from dist/routes/assets/*.css to dist/client/assets/ and
+  // flatten the routes manifest to ignore imported modules. Then add the
+  // route assets to the client manifest.
+  await copyGlob(
+    '*.css',
+    path.join(distDir, 'routes/assets'),
+    path.join(distDir, 'client/assets')
+  );
+  const routesManifest = await loadJson<Manifest>(
+    path.join(distDir, 'routes/manifest.json')
+  );
+  const clientManifest = await loadJson<Manifest>(
     path.join(distDir, 'client/manifest.json')
   );
+  function collectRouteCss(
+    asset: ManifestChunk,
+    cssDeps: Set<string>,
+    visited: Set<string>
+  ) {
+    if (!asset || !asset.file || visited.has(asset.file)) {
+      return;
+    }
+    visited.add(asset.file);
+    if (asset.css) {
+      asset.css.forEach((dep) => cssDeps.add(dep));
+    }
+    if (asset.imports) {
+      asset.imports.forEach((manifestKey) => {
+        collectRouteCss(routesManifest[manifestKey], cssDeps, visited);
+      });
+    }
+  }
+  Object.keys(routesManifest).forEach((manifestKey) => {
+    const asset = routesManifest[manifestKey];
+    if (asset.isEntry) {
+      const visited = new Set<string>();
+      const cssDeps = new Set<string>();
+      collectRouteCss(asset, cssDeps, visited);
+      asset.css = Array.from(cssDeps);
+      asset.imports = [];
+      clientManifest[manifestKey] = asset;
+    } else if (asset.file.endsWith('.css')) {
+      clientManifest[manifestKey] = asset;
+    }
+  });
 
   // Use the output of the client build to generate an asset map, which is used
   // by the renderer for automatically injecting dependencies for a page.
   const assetMap = BuildAssetMap.fromViteManifest(
     rootConfig,
-    viteManifest,
+    clientManifest,
     elementsMap
   );
 
   // Save the asset map to `dist/client` for use by the prod SSR server.
   const rootManifest = assetMap.toJson();
-  writeFile(
+  await writeFile(
     path.join(distDir, 'client/root-manifest.json'),
     JSON.stringify(rootManifest, null, 2)
   );
@@ -207,20 +284,28 @@ export async function build(rootProjectDir?: string, options?: BuildOptions) {
   console.log('\njs/css output:');
   makeDir(path.join(buildDir, 'assets'));
   makeDir(path.join(buildDir, 'chunks'));
-  Object.keys(rootManifest).forEach((src) => {
-    // Don't expose route files in the final output. If any client-side code
-    // relies on route dependencies, it should probably be broken out into a
-    // shared component instead.
-    if (isRouteFile(src)) {
-      return;
-    }
-    const assetData = rootManifest[src];
-    const assetRelPath = assetData.assetUrl.slice(1);
-    const assetFrom = path.join(distDir, 'client', assetRelPath);
-    const assetTo = path.join(buildDir, assetRelPath);
-    fsExtra.copySync(assetFrom, assetTo);
-    printFileOutput(fileSize(assetTo), 'dist/html/', assetRelPath);
-  });
+  await Promise.all(
+    Object.keys(rootManifest).map(async (src) => {
+      // Don't expose route files in the final output. If any client-side code
+      // relies on route dependencies, it should probably be broken out into a
+      // shared component instead.
+      if (isRouteFile(src)) {
+        return;
+      }
+      const assetData = rootManifest[src];
+      const assetRelPath = assetData.assetUrl.slice(1);
+      const assetFrom = path.join(distDir, 'client', assetRelPath);
+      const assetTo = path.join(buildDir, assetRelPath);
+      // Ignore assets that don't exist. This is because build artifacts from
+      // the routes/ folder are not copied to dist/client (only css deps are).
+      if (!(await fileExists(assetFrom))) {
+        console.log(`${assetFrom} does not exist`);
+        return;
+      }
+      await fsExtra.copy(assetFrom, assetTo);
+      printFileOutput(fileSize(assetTo), 'dist/html/', assetRelPath);
+    })
+  );
 
   // Pre-render HTML pages (SSG).
   if (!ssrOnly) {

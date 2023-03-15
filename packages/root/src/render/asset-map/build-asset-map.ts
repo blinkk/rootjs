@@ -56,7 +56,7 @@ export class BuildAssetMap implements AssetMap {
 
   static fromViteManifest(
     rootConfig: RootConfig,
-    viteManifest: Manifest,
+    clientManifest: Manifest,
     elementMap: Record<string, ElementModule>
   ) {
     const assetMap = new BuildAssetMap(rootConfig);
@@ -72,9 +72,9 @@ export class BuildAssetMap implements AssetMap {
       }
     });
 
-    Object.keys(viteManifest).forEach((manifestKey) => {
+    Object.keys(clientManifest).forEach((manifestKey) => {
       const src = manifestKey;
-      const manifestChunk = viteManifest[manifestKey];
+      const manifestChunk = clientManifest[manifestKey];
       const isElement = elementFiles.has(src);
       const assetData = {
         src: src,
@@ -85,6 +85,7 @@ export class BuildAssetMap implements AssetMap {
       };
       assetMap.add(new BuildAsset(assetMap, assetData));
     });
+
     return assetMap;
   }
 

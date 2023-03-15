@@ -1,6 +1,7 @@
 import {promises as fs} from 'node:fs';
 import path from 'node:path';
 import fsExtra from 'fs-extra';
+import glob from 'tiny-glob';
 
 export function isJsFile(filename: string) {
   return !!filename.match(/\.(j|t)sx?$/);
@@ -25,6 +26,29 @@ export async function copyDir(srcdir: string, dstdir: string) {
     return;
   }
   fsExtra.copySync(srcdir, dstdir, {recursive: true, overwrite: true});
+}
+
+/**
+ * Copies a glob of files from one directory to another.
+ *
+ * Example:
+ *
+ * ```
+ * await copyGlob('*.css', 'src/styles', 'dist/html/styles');
+ * ```
+ */
+export async function copyGlob(
+  pattern: string,
+  srcdir: string,
+  dstdir: string
+) {
+  const files = await glob(pattern, {cwd: srcdir});
+  if (files.length > 0) {
+    await makeDir(dstdir);
+  }
+  files.forEach((file) => {
+    fsExtra.copySync(path.resolve(srcdir, file), path.resolve(dstdir, file));
+  });
 }
 
 export async function rmDir(dirpath: string) {
