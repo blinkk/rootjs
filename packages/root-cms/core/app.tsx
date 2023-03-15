@@ -4,9 +4,6 @@ import {render as renderToString} from 'preact-render-to-string';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 
-/** The generateSchemaDts method needs to be loaded through vite. */
-export {generateSchemaDts} from './typegen.js';
-
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 interface AppProps {
@@ -15,8 +12,6 @@ interface AppProps {
 }
 
 function App(props: AppProps) {
-  const uiCssPath = path.join(__dirname, 'ui.css');
-  const uiJsPath = path.join(__dirname, 'ui.js');
   return (
     <html>
       <head>
@@ -35,7 +30,7 @@ function App(props: AppProps) {
           rel="stylesheet"
           href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@500&display=swap"
         />
-        <link rel="stylesheet" href={`/@fs${uiCssPath}`} />
+        <link rel="stylesheet" href="{CSS_URL}" />
       </head>
       <body>
         <div id="root">
@@ -52,7 +47,7 @@ function App(props: AppProps) {
             __html: `window.__ROOT_CTX = ${JSON.stringify(props.ctx)}`,
           }}
         />
-        <script type="module" src={`/@fs${uiJsPath}`}></script>
+        <script type="module" src="{JS_URL}"></script>
       </body>
     </html>
   );
@@ -80,10 +75,19 @@ export async function renderApp(req: Request, res: Response, options: any) {
     collections: collections,
   };
   const mainHtml = renderToString(<App title="Root.js CMS" ctx={ctx} />);
-  const html = await req.viteServer!.transformIndexHtml(
-    req.originalUrl,
-    `<!doctype html>\n${mainHtml}`
-  );
+  let html = `<!doctype html>\n${mainHtml}`;
+  if (req.viteServer) {
+    const uiCssPath = path.join(__dirname, 'ui/ui.css');
+    const uiJsPath = path.join(__dirname, 'ui/ui.js');
+    const tpl = html
+      .replace('{CSS_URL}', `/@fs${uiCssPath}`)
+      .replace('{JS_URL}', `/@fs${uiJsPath}`);
+    html = await req.viteServer!.transformIndexHtml(req.originalUrl, tpl);
+  } else {
+    html = html
+      .replace('{CSS_URL}', '/cms/static/ui.css')
+      .replace('{JS_URL}', '/cms/static/ui.js');
+  }
   res.setHeader('Content-Type', 'text/html');
   res.send(html);
 }
@@ -94,8 +98,6 @@ interface SignInProps {
 }
 
 function SignIn(props: SignInProps) {
-  const uiCssPath = path.join(__dirname, 'signin.css');
-  const uiJsPath = path.join(__dirname, 'signin.js');
   return (
     <html>
       <head>
@@ -110,7 +112,7 @@ function SignIn(props: SignInProps) {
           rel="stylesheet"
           href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;900&display=swap"
         />
-        <link rel="stylesheet" href={`/@fs${uiCssPath}`} />
+        <link rel="stylesheet" href="{CSS_URL}" />
       </head>
       <body>
         <div id="root">
@@ -127,7 +129,7 @@ function SignIn(props: SignInProps) {
             __html: `window.__ROOT_CTX = ${JSON.stringify(props.ctx)}`,
           }}
         />
-        <script type="module" src={`/@fs${uiJsPath}`}></script>
+        <script type="module" src="{JS_URL}"></script>
       </body>
     </html>
   );
@@ -135,10 +137,19 @@ function SignIn(props: SignInProps) {
 export async function renderSignIn(req: Request, res: Response, options: any) {
   const ctx = {firebaseConfig: options.firebaseConfig};
   const mainHtml = renderToString(<SignIn title="Sign in" ctx={ctx} />);
-  const html = await req.viteServer!.transformIndexHtml(
-    req.originalUrl,
-    `<!doctype html>\n${mainHtml}`
-  );
+  let html = `<!doctype html>\n${mainHtml}`;
+  if (req.viteServer) {
+    const cssPath = path.join(__dirname, 'ui/signin.css');
+    const jsPath = path.join(__dirname, 'ui/signin.js');
+    const tpl = html
+      .replace('{CSS_URL}', `/@fs${cssPath}`)
+      .replace('{JS_URL}', `/@fs${jsPath}`);
+    html = await req.viteServer!.transformIndexHtml(req.originalUrl, tpl);
+  } else {
+    html = html
+      .replace('{CSS_URL}', '/cms/static/signin.css')
+      .replace('{JS_URL}', '/cms/static/signin.js');
+  }
   res.setHeader('Content-Type', 'text/html');
   res.send(html);
 }

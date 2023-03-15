@@ -146,12 +146,12 @@ export class Renderer {
     const jsDeps = new Set<string>();
     const cssDeps = new Set<string>();
 
-    // Walk the page's dependency tree for CSS dependencies that are added via
+    // Walk the route's dependency tree for CSS dependencies that are added via
     // `import 'foo.scss'` or `import 'foo.module.scss'`.
-    const pageAsset = await this.assetMap.get(route.src);
-    if (pageAsset) {
-      const pageCssDeps = await pageAsset.getCssDeps();
-      pageCssDeps.forEach((dep) => cssDeps.add(dep));
+    const routeAsset = await this.assetMap.get(route.src);
+    if (routeAsset) {
+      const routeCssDeps = await routeAsset.getCssDeps();
+      routeCssDeps.forEach((dep) => cssDeps.add(dep));
     }
 
     // Parse the HTML for custom elements that are found within the project

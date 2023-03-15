@@ -175,37 +175,38 @@ export async function build(rootProjectDir?: string, options?: BuildOptions) {
   });
 
   // Pre-render /elements/ and /bundles/.
-  await viteBuild({
-    ...baseConfig,
-    publicDir: false,
-    build: {
-      ...viteConfig?.build,
-      rollupOptions: {
-        ...viteConfig?.build?.rollupOptions,
-        input: [
-          // ...routeFiles,
-          ...elements,
-          ...bundleScripts,
-        ],
-        output: {
-          format: 'esm',
-          entryFileNames: 'assets/[name].[hash].min.js',
-          chunkFileNames: 'chunks/[name].[hash].min.js',
-          assetFileNames: 'assets/[name].[hash][extname]',
-          ...viteConfig?.build?.rollupOptions?.output,
+  const clientInput = [...elements, ...bundleScripts];
+  if (clientInput.length > 0) {
+    await viteBuild({
+      ...baseConfig,
+      publicDir: false,
+      build: {
+        ...viteConfig?.build,
+        rollupOptions: {
+          ...viteConfig?.build?.rollupOptions,
+          input: [...elements, ...bundleScripts],
+          output: {
+            format: 'esm',
+            entryFileNames: 'assets/[name].[hash].min.js',
+            chunkFileNames: 'chunks/[name].[hash].min.js',
+            assetFileNames: 'assets/[name].[hash][extname]',
+            ...viteConfig?.build?.rollupOptions?.output,
+          },
         },
+        outDir: path.join(distDir, 'client'),
+        ssr: false,
+        ssrManifest: false,
+        manifest: true,
+        cssCodeSplit: true,
+        target: 'esnext',
+        minify: true,
+        polyfillModulePreload: false,
+        reportCompressedSize: false,
       },
-      outDir: path.join(distDir, 'client'),
-      ssr: false,
-      ssrManifest: false,
-      manifest: true,
-      cssCodeSplit: true,
-      target: 'esnext',
-      minify: true,
-      polyfillModulePreload: false,
-      reportCompressedSize: false,
-    },
-  });
+    });
+  } else {
+    await writeFile(path.join(distDir, 'client/manifest.json'), '{}');
+  }
 
   // Copy CSS files from dist/routes/**/*.css to dist/client/ and flatten the
   // routes manifest to ignore imported modules. Then add the route assets to

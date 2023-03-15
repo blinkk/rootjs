@@ -13,6 +13,7 @@ import bodyParser from 'body-parser';
 import cookieParser from 'cookie-parser';
 import {applicationDefault, initializeApp} from 'firebase-admin/app';
 import {getAuth, DecodedIdToken} from 'firebase-admin/auth';
+import sirv from 'sirv';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -228,6 +229,9 @@ export function cmsPlugin(options: CMSPluginOptions): CMSPlugin {
         const app = (await import(appImportPath)) as AppModule;
         return app;
       }
+
+      const staticDir = path.resolve(__dirname, 'ui');
+      server.use('/cms/static', sirv(staticDir, {dev: false}));
 
       // Login handler.
       server.use('/cms/login', async (req: Request, res: Response) => {

@@ -193,7 +193,7 @@ export class BuildAsset {
     if (!asset) {
       return;
     }
-    if (!asset.assetUrl) {
+    if (!asset.src) {
       return;
     }
     if (visited.has(asset.src)) {
