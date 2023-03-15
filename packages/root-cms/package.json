@@ -85,6 +85,7 @@
   },
   "peerDependencies": {
     "@blinkk/root": "*",
+    "firebase-admin": ">=11",
     "preact": "*"
   }
 }

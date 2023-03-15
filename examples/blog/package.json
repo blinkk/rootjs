@@ -17,6 +17,7 @@
   "dependencies": {
     "@blinkk/root": "workspace:*",
     "@blinkk/root-cms": "workspace:*",
+    "firebase-admin": "^11.5.0",
     "preact": "^10.10.6",
     "preact-render-to-string": "^5.2.3",
     "vite": "^3.1.0"
