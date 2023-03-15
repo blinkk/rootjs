@@ -207,9 +207,9 @@ export async function build(rootProjectDir?: string, options?: BuildOptions) {
     },
   });
 
-  // Copy CSS files from dist/routes/assets/*.css to dist/client/assets/ and
-  // flatten the routes manifest to ignore imported modules. Then add the
-  // route assets to the client manifest.
+  // Copy CSS files from dist/routes/**/*.css to dist/client/ and flatten the
+  // routes manifest to ignore imported modules. Then add the route assets to
+  // the client manifest.
   await copyGlob(
     '*.css',
     path.join(distDir, 'routes/assets'),

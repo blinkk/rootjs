@@ -191,7 +191,6 @@ export class Renderer {
     options: {routeParams: Record<string, string>}
   ): Promise<{html?: string; notFound?: boolean}> {
     const routeParams = options.routeParams;
-    const assetMap = this.assetMap;
     const Component = route.module.default;
     if (!Component) {
       throw new Error(
@@ -244,7 +243,7 @@ export class Renderer {
 
     // Walk the page's dependency tree for CSS dependencies that are added via
     // `import 'foo.scss'` or `import 'foo.module.scss'`.
-    const pageAsset = await assetMap.get(route.src);
+    const pageAsset = await this.assetMap.get(route.src);
     if (pageAsset) {
       const pageCssDeps = await pageAsset.getCssDeps();
       pageCssDeps.forEach((dep) => cssDeps.add(dep));
@@ -257,7 +256,7 @@ export class Renderer {
     // Add user defined scripts added via the `<Script>` component.
     await Promise.all(
       userScripts.map(async (scriptDep) => {
-        const scriptAsset = await assetMap.get(scriptDep.src.slice(1));
+        const scriptAsset = await this.assetMap.get(scriptDep.src.slice(1));
         if (scriptAsset) {
           jsDeps.add(scriptAsset.assetUrl);
           const scriptJsDeps = await scriptAsset.getJsDeps();
