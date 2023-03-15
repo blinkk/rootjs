@@ -25,17 +25,17 @@ export const getStaticPaths: GetStaticPaths = async () => {
   return {paths: []};
 }
 
-/** Fetches the Root.js CMS doc for SSG builds. */
+/** Fetches the Root.js CMS doc as props for SSG builds. */
 export const getStaticProps: GetStaticProps = async (ctx) => {
   const slug = ctx.params.page;
-  const doc = await getDoc(ctx.rootConfig, 'Pages', slug, {mode: 'draft'});
+  const doc = await getDoc(ctx.rootConfig, 'Pages', slug, {mode: 'published'});
   if (!doc) {
     return {notFound: true};
   }
   return {props: {slug, doc}};
 };
 
-/** SSR handler for previews. */
+/** SSR handler. */
 export const handle: Handler = async (req: Request) => {
   const ctx = req.handlerContext as HandlerContext<Props>;
   const slug = ctx.params.page;

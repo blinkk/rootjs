@@ -1,7 +1,7 @@
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 import {ComponentChildren, ComponentType} from 'preact';
 import renderToString from 'preact-render-to-string';
-import {getRoutes, Route, getAllPathsForRoute} from './router';
+import {getRoutes, getAllPathsForRoute} from './router';
 import {HEAD_CONTEXT} from '../core/components/head';
 import {ErrorPage} from '../core/components/error-page';
 import {getTranslations, I18N_CONTEXT} from '../core/i18n';
@@ -19,6 +19,7 @@ import {
   NextFunction,
   HandlerContext,
   RouteParams,
+  Route,
 } from '../core/types';
 import {htmlMinify} from './html-minify';
 import {htmlPretty} from './html-pretty';
