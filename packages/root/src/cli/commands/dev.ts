@@ -187,21 +187,21 @@ function rootDevServerMiddleware() {
     const viteServer = req.viteServer!;
     const rootConfig = req.rootConfig!;
     try {
-      const data = await renderer.render(url);
-      if (data.notFound || !data.html) {
-        next();
-        return;
-      }
-      // Inject the Vite HMR client.
-      let html = await viteServer.transformIndexHtml(url, data.html || '');
-      if (rootConfig.prettyHtml !== false) {
-        html = await htmlPretty(html, rootConfig.prettyHtmlOptions);
-      }
-      // HTML minification is `true` by default. Set to `false` to disable.
-      if (rootConfig.minifyHtml !== false) {
-        html = await htmlMinify(html, rootConfig.minifyHtmlOptions);
-      }
-      res.status(200).set({'Content-Type': 'text/html'}).end(html);
+      await renderer.handle(req, res, next);
+      // if (data.notFound || !data.html) {
+      //   next();
+      //   return;
+      // }
+      // // Inject the Vite HMR client.
+      // let html = await viteServer.transformIndexHtml(url, data.html || '');
+      // if (rootConfig.prettyHtml !== false) {
+      //   html = await htmlPretty(html, rootConfig.prettyHtmlOptions);
+      // }
+      // // HTML minification is `true` by default. Set to `false` to disable.
+      // if (rootConfig.minifyHtml !== false) {
+      //   html = await htmlMinify(html, rootConfig.minifyHtmlOptions);
+      // }
+      // res.status(200).set({'Content-Type': 'text/html'}).end(html);
     } catch (e) {
       // If an error is caught, let Vite fix the stack trace so it maps back to
       // your actual source code.

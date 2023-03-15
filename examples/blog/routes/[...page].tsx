@@ -1,4 +1,4 @@
-import {GetStaticPaths, GetStaticProps} from '@blinkk/root';
+import {GetStaticPaths, GetStaticProps, Handler, HandlerContext, Request} from '@blinkk/root';
 import {getDoc} from '@blinkk/root-cms';
 import {BaseLayout} from '@/layouts/BaseLayout.js';
 import {PagesDoc} from '@/root-cms.js';
@@ -19,11 +19,13 @@ export default function Page(props: Props) {
   );
 }
 
+/** Returns a list of routes for the SSG build. */
 export const getStaticPaths: GetStaticPaths = async () => {
   // TODO(stevenle): list paths from db.
   return {paths: []};
 }
 
+/** Fetches the Root.js CMS doc for SSG builds. */
 export const getStaticProps: GetStaticProps = async (ctx) => {
   const slug = ctx.params.page;
   const doc = await getDoc(ctx.rootConfig, 'Pages', slug, {mode: 'draft'});
@@ -31,4 +33,18 @@ export const getStaticProps: GetStaticProps = async (ctx) => {
     return {notFound: true};
   }
   return {props: {slug, doc}};
+};
+
+/** SSR handler for previews. */
+export const handle: Handler = async (req: Request) => {
+  const ctx = req.handlerContext as HandlerContext<Props>;
+  const slug = ctx.params.page;
+  const mode = String(req.query.preview) === 'true' ? 'draft' : 'published';
+  const doc = await getDoc<PagesDoc>(req.rootConfig, 'Pages', slug, {
+    mode,
+  });
+  if (!doc) {
+    return ctx.render404();
+  }
+  return ctx.render({slug, doc});
 };

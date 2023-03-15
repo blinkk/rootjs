@@ -40,4 +40,5 @@ export default defineConfig({
       },
     }),
   ],
+  prettyHtml: true,
 });
