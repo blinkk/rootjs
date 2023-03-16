@@ -59,7 +59,10 @@ async function createServer(options: {rootDir: string}): Promise<Server> {
 
       // Add the root.js preview server middlewares.
       server.use(rootProdServerMiddleware());
-      // TODO(stevenle): handle 404/500 errors.
+
+      // Add error handlers.
+      server.use(rootProdServer404Middleware());
+      server.use(rootProdServer500Middleware());
     },
     plugins,
     {type: 'prod', rootConfig}
@@ -94,7 +97,7 @@ async function rootProdRendererMiddleware(options: {
 }
 
 /**
- * Preview server request handler.
+ * Prod server request handler.
  */
 function rootProdServerMiddleware() {
   return async (req: Request, res: Response, next: NextFunction) => {
@@ -111,5 +114,38 @@ function rootProdServerMiddleware() {
         next(e);
       }
     }
+  };
+}
+
+function rootProdServer404Middleware() {
+  return async (req: Request, res: Response) => {
+    console.error(`❓ 404 ${req.originalUrl}`);
+    const url = req.path;
+    const ext = path.extname(url);
+    const renderer = req.renderer!;
+    if (!ext) {
+      const data = await renderer.render404();
+      const html = data.html || '';
+      res.status(404).set({'Content-Type': 'text/html'}).end(html);
+      return;
+    }
+    res.status(404).set({'Content-Type': 'text/plain'}).end('404');
+  };
+}
+
+function rootProdServer500Middleware() {
+  return async (err: any, req: Request, res: Response, next: NextFunction) => {
+    console.error(`❗ 500 ${req.originalUrl}`);
+    console.error(String(err.stack || err));
+    const url = req.path;
+    const ext = path.extname(url);
+    const renderer = req.renderer!;
+    if (!ext) {
+      const data = await renderer.renderError(err);
+      const html = data.html || '';
+      res.status(500).set({'Content-Type': 'text/html'}).end(html);
+      return;
+    }
+    next(err);
   };
 }

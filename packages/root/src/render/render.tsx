@@ -316,18 +316,27 @@ export class Renderer {
   }
 
   async render404() {
-    return {
-      html: '<!doctype html><html><title>404 Not Found</title><h1>404 Not Found</h1>',
-      notFound: true,
-    };
-  }
-
-  async renderError(error: unknown) {
-    const mainHtml = renderToString(<ErrorPage error={error} />);
+    const mainHtml = renderToString(<ErrorPage code={404} title="Not Found" />);
     const html = await this.renderHtml({
       mainHtml,
       locale: 'en',
-      headComponents: [<title>500: Internal Server Error</title>],
+      headComponents: [<title>404</title>],
+    });
+    return {html};
+  }
+
+  async renderError(err: any) {
+    const mainHtml = renderToString(
+      <ErrorPage
+        code={500}
+        title="Error"
+        message="An unknown error occurred."
+      />
+    );
+    const html = await this.renderHtml({
+      mainHtml,
+      locale: 'en',
+      headComponents: [<title>500</title>],
     });
     return {html};
   }
