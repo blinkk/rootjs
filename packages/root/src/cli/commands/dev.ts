@@ -59,6 +59,7 @@ async function createServer(options?: {
       // Add the root.js dev server middlewares.
       server.use(rootDevServerMiddleware());
       server.use(rootDevServer404Middleware());
+      server.use(rootDevServer500Middleware());
     },
     plugins,
     {type: 'dev', rootConfig}
@@ -184,38 +185,44 @@ function rootDevServerMiddleware() {
     const viteServer = req.viteServer!;
     try {
       await renderer.handle(req, res, next);
-    } catch (e) {
+    } catch (err) {
       // If an error is caught, let Vite fix the stack trace so it maps back to
       // your actual source code.
-      viteServer.ssrFixStacktrace(e);
-      console.error(e);
-      try {
-        if (renderer) {
-          const {html} = await renderer.renderError(e);
-          res.status(500).set({'Content-Type': 'text/html'}).end(html);
-        } else {
-          next(e);
-        }
-      } catch (e2) {
-        console.error('failed to render custom error');
-        console.error(e2);
-        next(e);
-      }
+      viteServer.ssrFixStacktrace(err);
+      next(err);
     }
   };
 }
 
 function rootDevServer404Middleware() {
   return async (req: Request, res: Response) => {
+    console.error(`❓ 404 ${req.originalUrl}`);
     const url = req.path;
     const ext = path.extname(url);
     const renderer = req.renderer!;
     if (!ext) {
-      const data = await renderer.renderDevServer404();
+      const data = await renderer.renderDevServer404(req);
       const html = data.html || '';
       res.status(404).set({'Content-Type': 'text/html'}).end(html);
       return;
     }
     res.status(404).set({'Content-Type': 'text/plain'}).end('404');
+  };
+}
+
+function rootDevServer500Middleware() {
+  return async (err: any, req: Request, res: Response, next: NextFunction) => {
+    console.error(`❗ 500 ${req.originalUrl}`);
+    console.error(String(err.stack || err));
+    const url = req.path;
+    const ext = path.extname(url);
+    const renderer = req.renderer!;
+    if (!ext) {
+      const data = await renderer.renderDevServer500(req, err);
+      const html = data.html || '';
+      res.status(500).set({'Content-Type': 'text/html'}).end(html);
+      return;
+    }
+    next(err);
   };
 }

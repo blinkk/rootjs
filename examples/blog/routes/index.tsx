@@ -18,7 +18,6 @@ export const getStaticProps: GetStaticProps = async (ctx) => {
 
 /** SSR handler. */
 export const handle: Handler = async (req: Request) => {
-  console.log('index.tsx handle()');
   const ctx = req.handlerContext as HandlerContext;
   const slug = 'index';
   const mode = String(req.query.preview) === 'true' ? 'draft' : 'published';

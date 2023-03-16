@@ -1,4 +1,4 @@
-export * from './components/error-page';
+export * from './components/ErrorPage';
 export * from './components/head';
 export * from './components/html';
 export * from './components/script';

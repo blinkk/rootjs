@@ -3,14 +3,14 @@ import {ComponentChildren, ComponentType} from 'preact';
 import renderToString from 'preact-render-to-string';
 import {getRoutes, getAllPathsForRoute} from './router';
 import {HEAD_CONTEXT} from '../core/components/head';
-import {ErrorPage} from '../core/components/error-page';
+import {ErrorPage} from '../core/components/ErrorPage';
 import {getTranslations, I18N_CONTEXT} from '../core/i18n';
 import {ScriptProps, SCRIPT_CONTEXT} from '../core/components/script';
 import {AssetMap} from './asset-map/asset-map';
 import {RootConfig} from '../core/config';
 import {RouteTrie} from './route-trie';
 import {elementsMap} from 'virtual:root-elements';
-import {DevNotFoundPage} from '../core/components/dev-not-found-page';
+import {DevNotFoundPage} from '../core/components/DevNotFoundPage';
 import {RequestContext, REQUEST_CONTEXT} from '../core/request-context';
 import {HtmlContextValue, HTML_CONTEXT} from '../core/components/html';
 import {
@@ -23,11 +23,12 @@ import {
 } from '../core/types';
 import {htmlMinify} from './html-minify';
 import {htmlPretty} from './html-pretty';
+import {DevErrorPage} from '../core/components/DevErrorPage';
 
 interface RenderHtmlOptions {
-  htmlProps?: preact.JSX.HTMLAttributes<HTMLHtmlElement>;
+  mainHtml: string;
+  locale: string;
   headComponents?: ComponentChildren[];
-  bodyHtml: string;
 }
 
 export class Renderer {
@@ -222,7 +223,7 @@ export class Renderer {
     };
     const headComponents: ComponentChildren[] = [];
     const userScripts: ScriptProps[] = [];
-    const htmlContext: HtmlContextValue = {attrs: {lang: locale}};
+    const htmlContext: HtmlContextValue = {attrs: {}};
     const vdom = (
       <REQUEST_CONTEXT.Provider value={ctx}>
         <I18N_CONTEXT.Provider value={{locale, translations}}>
@@ -272,11 +273,11 @@ export class Renderer {
       headComponents.push(<script type="module" src={jsUrls} />);
     });
 
-    const htmlProps = htmlContext.attrs || {};
+    const htmlLang = htmlContext.attrs.lang || locale;
     const html = await this.renderHtml({
-      htmlProps: htmlProps,
-      headComponents: headComponents,
-      bodyHtml: mainHtml,
+      mainHtml,
+      locale: htmlLang,
+      headComponents,
     });
     return {html};
   }
@@ -302,12 +303,12 @@ export class Renderer {
 
   private async renderHtml(options: RenderHtmlOptions) {
     const page = (
-      <html {...options.htmlProps}>
+      <html lang={options.locale}>
         <head>
           <meta charSet="utf-8" />
           {options.headComponents}
         </head>
-        <body dangerouslySetInnerHTML={{__html: options.bodyHtml}} />
+        <body dangerouslySetInnerHTML={{__html: options.mainHtml}} />
       </html>
     );
     const html = `<!doctype html>\n${renderToString(page)}\n`;
@@ -323,16 +324,41 @@ export class Renderer {
 
   async renderError(error: unknown) {
     const mainHtml = renderToString(<ErrorPage error={error} />);
-    const html = await this.renderHtml({bodyHtml: mainHtml});
+    const html = await this.renderHtml({
+      mainHtml,
+      locale: 'en',
+      headComponents: [<title>500: Internal Server Error</title>],
+    });
     return {html};
   }
 
-  async renderDevServer404() {
+  async renderDevServer404(req: Request) {
     const sitemap = await this.getSitemap();
-    const mainHtml = renderToString(<DevNotFoundPage sitemap={sitemap} />);
+    const mainHtml = renderToString(
+      <DevNotFoundPage req={req} sitemap={sitemap} />
+    );
     const html = await this.renderHtml({
-      bodyHtml: mainHtml,
-      headComponents: [<title>404: Not Found</title>],
+      mainHtml,
+      locale: 'en',
+      headComponents: [<title>404 | Root.js</title>],
+    });
+    return {html};
+  }
+
+  async renderDevServer500(req: Request, error: unknown) {
+    const [route, routeParams] = this.routes.get(req.path);
+    const mainHtml = renderToString(
+      <DevErrorPage
+        req={req}
+        route={route}
+        routeParams={routeParams}
+        error={error}
+      />
+    );
+    const html = await this.renderHtml({
+      mainHtml,
+      locale: 'en',
+      headComponents: [<title>500 | Root.js</title>],
     });
     return {html};
   }
