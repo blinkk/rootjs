@@ -12,6 +12,9 @@ import {ProjectPage} from './pages/ProjectPage/ProjectPage.js';
 import {Collection} from '../core/schema.js';
 import {NotFoundPage} from './pages/NotFoundPage/NotFoundPage.js';
 import {SettingsPage} from './pages/SettingsPage/SettingsPage.js';
+import {AssetsPage} from './pages/AssetsPage/AssetsPage.js';
+import {DataPage} from './pages/DataPage/DataPage.js';
+import {TranslationsPage} from './pages/TranslationsPage/TranslationsPage.js';
 import {FirebaseContext, FirebaseContextObject} from './hooks/useFirebase.js';
 import './styles/global.css';
 import './styles/theme.css';
@@ -43,6 +46,7 @@ function App() {
           <FirebaseContext.Provider value={window.firebase}>
             <Router>
               <Route path="/cms" component={ProjectPage} />
+              <Route path="/cms/assets" component={AssetsPage} />
               <Route
                 path="/cms/content/:collection?"
                 component={CollectionPage}
@@ -51,7 +55,9 @@ function App() {
                 path="/cms/content/:collection/:slug"
                 component={DocumentPage}
               />
+              <Route path="/cms/data" component={DataPage} />
               <Route path="/cms/settings" component={SettingsPage} />
+              <Route path="/cms/translations" component={TranslationsPage} />
               <Route default component={NotFoundPage} />
             </Router>
           </FirebaseContext.Provider>

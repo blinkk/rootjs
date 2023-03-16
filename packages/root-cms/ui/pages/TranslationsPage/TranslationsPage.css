@@ -1,0 +1,12 @@
+.TranslationsPage {
+  padding: 60px;
+}
+
+.TranslationsPage h1 {
+  margin-bottom: 24px;
+}
+
+.TranslationsPage p {
+  margin-top: 16px;
+  max-width: 70ch;
+}
