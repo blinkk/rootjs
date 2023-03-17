@@ -1,0 +1,137 @@
+@use 'sass:math';
+@use 'breakpoints';
+@use 'grid';
+@use 'tokens';
+@use 'type';
+
+$color-background-page-overflow: tokens.$color-white;
+$color-background-main: tokens.$color-white;
+
+:root {
+  @include grid.vars();
+
+  --grid-mobile-padding: #{tokens.$grid-mobile-padding};
+  --grid-tablet-padding: #{tokens.$grid-tablet-padding};
+  --grid-laptop-padding: #{tokens.$grid-laptop-padding};
+  --grid-desktop-padding: #{tokens.$grid-desktop-padding};
+
+  --breakpoint-tablet: #{tokens.$breakpoint-tablet};
+  --breakpoint-laptop: #{tokens.$breakpoint-laptop};
+  --breakpoint-desktop: #{tokens.$breakpoint-desktop};
+
+  --font-family-heading: #{tokens.$font-family-heading};
+  --font-family-text: #{tokens.$font-family-primary};
+}
+
+html {
+  box-sizing: border-box;
+  font-size: 16px;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+
+  // Use smooth scrolling by default.
+  scroll-padding-top: var(--navbar-height, 0);
+  scroll-behavior: smooth;
+}
+
+*,
+*:before,
+*:after {
+  box-sizing: inherit;
+}
+
+body {
+  @include type.size(16px, 1.5, tokens.$font-weight-regular);
+  font-family: var(--font-family-text);
+  margin: 0;
+  padding: 0;
+  background: $color-background-page-overflow;
+}
+
+img,
+picture,
+figure,
+video,
+canvas,
+svg {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  margin: 0;
+}
+
+a {
+  color: inherit;
+}
+
+input,
+button,
+textarea,
+select {
+  font: inherit;
+  color: inherit;
+  // https://twitter.com/argyleink/status/1405881231695302659
+  touch-action: manipulation;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+p,
+ul,
+ol {
+  margin-top: 0;
+  margin-bottom: 0;
+}
+
+ol.unstyled,
+ul.unstyled {
+  list-style: none;
+	margin-left: 0;
+	padding-left: 0;
+}
+
+#root {
+  background-color: $color-background-main;
+  color: tokens.$color-text-default;
+  max-width: tokens.$breakpoint-site-max;
+  margin: 0 auto;
+  min-height: 100vh;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+}
+
+code {
+  display: block;
+  border: 1px solid #dedede;
+  background: #f9f9f9;
+  margin-top: 20px;
+  padding: 12px;
+}
+
+main {
+  // When the page is less than 100vh, push the footer to the bottom.
+  flex: 1;
+  padding: 90px 0;
+}
+
+body.menu\:open {
+  overflow-y: hidden;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+// Avoid FUOC with custom elements when not defined.
+*:not(:defined) {
+  visibility: hidden;
+}

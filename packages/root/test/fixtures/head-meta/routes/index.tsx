@@ -1,4 +1,4 @@
-import {Head, Html} from '../../../../dist/core';
+import {Head, Html, Body} from '../../../../dist/core';
 
 export default function Page() {
   return (
@@ -9,7 +9,9 @@ export default function Page() {
         <meta content="summary_large_image" name="twitter:card" />
         <meta content="Hello world" property="og:title" />
       </Head>
-      <h1>Hello world</h1>
+      <Body className="body">
+        <h1>Hello world</h1>
+      </Body>
     </Html>
   );
 }

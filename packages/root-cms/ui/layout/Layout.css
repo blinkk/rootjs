@@ -1,0 +1,107 @@
+.Layout {
+  display: grid;
+  grid-template-areas:
+    'top top'
+    'side main'
+    'bottom bottom';
+  grid-template-columns: 48px 1fr;
+}
+
+.Layout__top {
+  grid-area: top;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  padding: 8px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.Layout__top__logo {
+  font-size: 14px;
+  line-height: 1;
+  font-weight: 700;
+  text-decoration: none;
+  text-transform: uppercase;
+  padding: 8px 12px;
+  display: flex;
+  gap: 4px;
+  transition: background-color 0.18s ease;
+  border-radius: 4px;
+}
+
+.Layout__top__version {
+  font-family: var(--font-family-mono);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: -0.2px;
+  margin-left: 4px;
+  background-color: lightblue;
+  padding: 0 4px;
+  border-radius: 2px;
+}
+
+.Layout__top__logo:hover {
+  background-color: var(--button-background-hover);
+}
+
+.Layout__top__logo:active {
+  background-color: var(--button-background-active);
+}
+
+.Layout__side {
+  grid-area: side;
+  border-right: 1px solid var(--color-border);
+  height: calc(100vh - 48px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 12px;
+}
+
+.Layout__side__button {
+  width: 100%;
+  height: 48px;
+}
+
+.Layout__side__button a {
+  display: flex;
+  position: relative;
+  width: 100%;
+  height: 100%;
+  justify-content: center;
+  align-items: center;
+  transition: background-color 0.18s ease;
+}
+
+.Layout__side__button a:hover {
+  background-color: var(--button-background-hover);
+}
+
+.Layout__side__button a::after {
+  content: '';
+  display: block;
+  position: absolute;
+  left: 0;
+  top: 0;
+  height: 100%;
+  width: 3px;
+  background-color: transparent;
+  transition: background-color 0.18s ease;
+}
+
+.Layout__side__button a.active::after {
+  background-color: lightblue;
+}
+
+.Layout__side__user .mantine-Tooltip-root {
+  display: block;
+}
+
+.Layout__main {
+  grid-area: main;
+}
+
+.Layout__bottom {
+  grid-area: bottom;
+}

@@ -1,0 +1,54 @@
+.SplitPanel {
+  display: flex;
+  height: 100%;
+}
+
+.SplitPanel__divider {
+  flex: 0 0 3px;
+  width: 3px;
+  height: 100%;
+  cursor: col-resize;
+  position: relative;
+}
+
+.SplitPanel__divider::before {
+  content: '';
+  display: block;
+  z-index: 0;
+  position: absolute;
+  top: 0;
+  height: 100%;
+  left: 1px;
+  width: 1px;
+  background-color: var(--color-border);
+}
+
+.SplitPanel__divider::after {
+  content: '';
+  display: block;
+  z-index: 1;
+  position: absolute;
+  top: 0;
+  height: 100%;
+  left: 0;
+  width: 100%;
+  background-color: transparent;
+  transition: background-color 0.18s ease;
+}
+
+.SplitPanel__divider:hover::after {
+  background-color: lightblue;
+}
+
+.SplitPanel__item.static {
+  flex: 0 0 var(--panel-size, 100%);
+}
+
+.SplitPanel__item.fluid {
+  flex: 1;
+}
+
+.SplitPanel.dragging .SplitPanel__item {
+  pointer-events: none;
+  user-select: none;
+}

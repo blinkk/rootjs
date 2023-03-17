@@ -1,42 +1,7 @@
 import path from 'node:path';
-import {ComponentType} from 'preact';
 import {RootConfig} from '../core/config';
-import {GetStaticPaths, GetStaticProps} from '../core/types';
+import {Route, RouteModule} from '../core/types';
 import {RouteTrie} from './route-trie';
-
-export interface RouteModule {
-  default?: ComponentType<unknown>;
-  getStaticPaths?: GetStaticPaths;
-  getStaticProps?: GetStaticProps;
-}
-
-export interface Route {
-  /** The relative path to the route file, e.g. `routes/index.tsx`. */
-  src: string;
-
-  /** The imported route module. */
-  module: RouteModule;
-
-  /** The locale used for the route. */
-  locale: string;
-
-  /**
-   * The mapped URL path for the route, e.g.:
-   *
-   *   routes/index.tsx => `/`.
-   *   routes/events.tsx => `/events`.
-   *   routes/blog/[slug].tsx => `/blog/[slug]`.
-   *
-   * Per the example above, this value may contain placeholder params.
-   */
-  routePath: string;
-
-  /**
-   * The localized URL path for the route, e.g. `/[locale]/blog/[slug]`.
-   * Per the example above, this value contains placeholder params.
-   */
-  localeRoutePath: string;
-}
 
 export function getRoutes(config: RootConfig) {
   const locales = config.i18n?.locales || [];

@@ -6,13 +6,18 @@ import {HtmlPrettyOptions} from '../render/html-pretty';
 
 export interface RootUserConfig {
   /**
+   * Canonical domain the website will serve on. Useful for things like the
+   * sitemap, SEO tags, etc.
+   */
+  domain?: string;
+
+  /**
    * Config for auto-injecting custom element dependencies.
    */
   elements?: {
     /**
      * A list of directories to use to look for custom elements. The dir path
-     * should be relative to the project dir, e.g. "path/to/elements" or
-     * "node_modules/my-package".
+     * should be relative to the project dir, e.g. "path/to/elements".
      */
     include?: string[];
 

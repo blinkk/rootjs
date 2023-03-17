@@ -1,0 +1,9 @@
+.mantine-Tooltip-body {
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.mantine-Tabs-tabControl[aria-selected="true"] {
+  color: var(--color-text-default);
+  border-bottom-color: lightblue;
+}

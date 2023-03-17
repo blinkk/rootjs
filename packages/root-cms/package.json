@@ -1,21 +1,24 @@
 {
   "name": "@blinkk/root-cms",
-  "version": "1.0.0-alpha.29",
+  "version": "1.0.0-alpha.35",
   "author": "s@blinkk.com",
   "license": "MIT",
   "engines": {
-    "node": ">=16.0.0"
+    "node": ">=18.0.0"
   },
   "files": [
     "dist/*"
   ],
+  "bin": {
+    "root-cms": "./bin/root-cms.js"
+  },
   "type": "module",
   "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
     ".": {
-      "types": "./dist/index.d.ts",
-      "import": "./dist/index.js"
+      "types": "./dist/core.d.ts",
+      "import": "./dist/core.js"
     },
     "./*": {
       "types": "./dist/*.d.ts",
@@ -23,17 +26,67 @@
     }
   },
   "scripts": {
-    "build": "rm -rf dist && tsup-node",
+    "build": "rm -rf dist && concurrently -n \"core,ui\" npm:build:core npm:build:signin npm:build:ui",
+    "build:core": "tsup-node --config=./core/tsup.config.ts",
+    "// NOTE: esbuild is used here because tsup doesn't currently support aliases.": "",
+    "build:ui": "esbuild ui/ui.tsx --bundle --alias:react=@preact/compat --alias:react-dom=@preact/compat --tsconfig=ui/tsconfig.json --outdir=dist/ui",
+    "build:signin": "esbuild signin/signin.tsx --bundle --tsconfig=signin/tsconfig.json --outdir=dist/ui",
+    "dev": "rm -rf dist && concurrently -k -n \"core,ui\" npm:dev:core npm:dev:signin npm:dev:ui",
+    "dev:core": "pnpm build:core --watch",
+    "dev:signin": "pnpm build:signin --watch",
+    "dev:ui": "pnpm build:ui --watch",
     "test": "pnpm build && vitest run",
     "test:watch": "pnpm build && vitest"
   },
   "dependencies": {
-    "@blinkk/root": "workspace:*",
-    "firebase": "^9.13.0"
+    "@firebase/app-compat": "^0.1.33",
+    "@firebase/app-types": "^0.7.0",
+    "@preact/signals": "^1.1.2",
+    "body-parser": "^1.20.0",
+    "commander": "^10.0.0",
+    "cookie-parser": "^1.4.6",
+    "dotenv": "^16.0.0",
+    "dts-dom": "^3.7.0",
+    "esbuild": "^0.17.12",
+    "firebase-admin": "^11.5.0",
+    "js-beautify": "^1.14.7",
+    "kleur": "^4.1.5",
+    "preact-render-to-string": "^5.2.3",
+    "sirv": "^2.0.2",
+    "tiny-glob": "^0.2.9"
   },
+  "// NOTE(stevenle): due to compat issues with mantine and preact, mantine is pinned to v4.2.12": "",
   "devDependencies": {
+    "@babel/core": "^7.17.9",
+    "@blinkk/root": "workspace:*",
+    "@emotion/react": "^11.10.5",
+    "@mantine/core": "4.2.12",
+    "@mantine/hooks": "4.2.12",
+    "@mantine/modals": "4.2.12",
+    "@mantine/notifications": "4.2.12",
+    "@mantine/spotlight": "4.2.12",
+    "@preact/compat": "^17.1.2",
+    "@tabler/icons-preact": "^2.7.0",
+    "@types/body-parser": "^1.19.2",
+    "@types/cookie-parser": "^1.4.3",
+    "@types/jsonwebtoken": "^9.0.1",
+    "@types/marked": "^4.0.8",
     "@types/node": "^18.11.8",
+    "concurrently": "^7.6.0",
+    "firebase": "^9.17.2",
+    "marked": "^4.2.12",
+    "preact": "*",
+    "preact-router": "^4.1.0",
+    "react": "npm:@preact/compat@^17.1.2",
+    "react-dom": "npm:@preact/compat@^17.1.2",
     "tsup": "^6.3.0",
+    "typescript": "4.9.4",
+    "vite": "*",
     "vitest": "^0.18.1"
+  },
+  "peerDependencies": {
+    "@blinkk/root": "1.0.0-alpha.35",
+    "firebase-admin": ">=11",
+    "preact": "*"
   }
 }

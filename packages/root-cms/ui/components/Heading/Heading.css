@@ -1,0 +1,34 @@
+.heading {
+  font-size: 18px;
+  line-height: 1.2;
+  font-weight: 700;
+  margin-top: 0;
+  margin-bottom: 0;
+}
+
+.heading.size\:h1 {
+  font-size: 24px;
+}
+.heading.size\:h2 {
+  font-size: 18px;
+}
+.heading.size\:h3 {
+  font-size: 16px;
+}
+
+.heading.weight\:regular {
+  font-weight: 400;
+}
+.heading.weight\:semi-bold {
+  font-weight: 500;
+}
+.heading.weight\:bold {
+  font-weight: 700;
+}
+
+.heading.color\:gray {
+  color: var(--color-text-gray);
+}
+.heading.color\:dark {
+  color: var(--color-text-dark);
+}

@@ -1,7 +1,7 @@
 import path from 'node:path';
 import {ModuleGraph, ModuleNode, searchForWorkspaceRoot} from 'vite';
 import {RootConfig} from '../../core/config';
-import {directoryContains} from '../../core/fsutils';
+import {directoryContains} from '../../utils/fsutils';
 import {Asset, AssetMap} from './asset-map';
 
 export class DevServerAssetMap implements AssetMap {

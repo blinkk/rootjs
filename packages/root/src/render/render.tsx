@@ -1,69 +1,130 @@
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-import {ComponentChildren} from 'preact';
+import {ComponentChildren, ComponentType} from 'preact';
 import renderToString from 'preact-render-to-string';
-import {getRoutes, Route, getAllPathsForRoute} from './router';
-import {HEAD_CONTEXT} from '../core/components/head';
-import {ErrorPage} from '../core/components/error-page';
-import {getTranslations, I18N_CONTEXT} from '../core/i18n';
-import {ScriptProps, SCRIPT_CONTEXT} from '../core/components/script';
+import {getRoutes, getAllPathsForRoute} from './router';
+import {ErrorPage} from '../core/pages/ErrorPage';
 import {AssetMap} from './asset-map/asset-map';
 import {RootConfig} from '../core/config';
 import {RouteTrie} from './route-trie';
-import {elementsMap} from 'virtual:root-elements';
-import {DevNotFoundPage} from '../core/components/dev-not-found-page';
-import {RequestContext, REQUEST_CONTEXT} from '../core/request-context';
-import {HtmlContextValue, HTML_CONTEXT} from '../core/components/html';
+import {DevNotFoundPage} from '../core/pages/DevNotFoundPage';
+import {HtmlContext, HTML_CONTEXT} from '../core/components/Html';
+import {
+  Request,
+  Response,
+  NextFunction,
+  HandlerContext,
+  RouteParams,
+  Route,
+} from '../core/types';
+import {htmlMinify} from './html-minify';
+import {htmlPretty} from './html-pretty';
+import {DevErrorPage} from '../core/pages/DevErrorPage';
+import {RequestContext, REQUEST_CONTEXT} from '../core/hooks/useRequestContext';
+import {getTranslations, I18N_CONTEXT} from '../core/hooks/useI18nContext';
+import type {ElementGraph} from '../core/element-graph';
+import {parseTagNames} from '../utils/elements';
 
 interface RenderHtmlOptions {
-  htmlProps?: preact.JSX.HTMLAttributes<HTMLHtmlElement>;
+  /** Attrs passed to the <html> tag, e.g. `{lang: 'en'}`. */
+  htmlAttrs?: preact.JSX.HTMLAttributes<HTMLHtmlElement>;
+  /** Attrs passed to the <head> tag. */
+  headAttrs?: preact.JSX.HTMLAttributes<HTMLHeadElement>;
+  /** Child components for the <head> tag. */
   headComponents?: ComponentChildren[];
-  bodyHtml: string;
+  /** Attrs passed to the <body> tag. */
+  bodyAttrs?: preact.JSX.HTMLAttributes<HTMLBodyElement>;
 }
 
 export class Renderer {
   private rootConfig: RootConfig;
   private routes: RouteTrie<Route>;
   private assetMap: AssetMap;
+  private elementGraph: ElementGraph;
 
-  constructor(rootConfig: RootConfig, options: {assetMap: AssetMap}) {
+  constructor(
+    rootConfig: RootConfig,
+    options: {assetMap: AssetMap; elementGraph: ElementGraph}
+  ) {
     this.rootConfig = rootConfig;
     this.routes = getRoutes(this.rootConfig);
     this.assetMap = options.assetMap;
+    this.elementGraph = options.elementGraph;
   }
 
-  async render(url: string): Promise<{html?: string; notFound?: boolean}> {
+  // async render(url: string): Promise<{html?: string; notFound?: boolean}> {
+  //   const [route, routeParams] = this.routes.get(url);
+  //   if (route && route.module && route.module.default) {
+  //     return await this.renderRoute(route, {routeParams});
+  //   }
+  //   return {notFound: true};
+  // }
+
+  async handle(req: Request, res: Response, next: NextFunction) {
+    // TODO(stevenle): handle baseUrl config.
+    const url = req.path;
     const [route, routeParams] = this.routes.get(url);
-    if (route && route.module && route.module.default) {
-      return await this.renderRoute(route, {routeParams});
+    if (!route) {
+      next();
+      return;
     }
-    return {notFound: true};
-  }
 
-  async renderRoute(
-    route: Route,
-    options: {routeParams: Record<string, string>}
-  ): Promise<{html?: string; notFound?: boolean}> {
-    const routeParams = options.routeParams;
-    const assetMap = this.assetMap;
-    const Component = route.module.default;
-    if (!Component) {
-      throw new Error(
-        'unable to render route. the route should have a default export that renders a jsx component.'
-      );
+    const render404 = async () => {
+      // Calling next() will allow the dev server or prod server handle the 404
+      // page as appropriate for the env.
+      next();
+    };
+
+    const render = async (props: any) => {
+      if (!route.module.default) {
+        console.error(`no default component exported in route: ${route.src}`);
+        render404();
+        return;
+      }
+      const output = await this.renderComponent(route.module.default, props, {
+        route,
+        routeParams,
+      });
+      let html = output.html;
+      if (this.rootConfig.prettyHtml) {
+        html = await htmlPretty(html, this.rootConfig.prettyHtmlOptions);
+      } else if (this.rootConfig.minifyHtml !== false) {
+        html = await htmlMinify(html, this.rootConfig.minifyHtmlOptions);
+      }
+      res.status(200).set({'Content-Type': 'text/html'}).end(html);
+    };
+
+    if (route.module.handle) {
+      const handlerContext: HandlerContext = {
+        route: route,
+        params: routeParams,
+        render: render,
+        render404: render404,
+      };
+      req.handlerContext = handlerContext;
+      return route.module.handle(req, res, next);
     }
+
     let props = {};
     if (route.module.getStaticProps) {
       const propsData = await route.module.getStaticProps({
+        rootConfig: this.rootConfig,
         params: routeParams,
       });
       if (propsData.notFound) {
-        return this.render404();
+        return render404();
       }
       if (propsData.props) {
         props = propsData.props;
       }
     }
+    await render(props);
+  }
 
+  private async renderComponent(
+    Component: ComponentType,
+    props: any,
+    options: {route: Route; routeParams: RouteParams}
+  ) {
+    const {route, routeParams} = options;
     const locale = route.locale;
     const translations = getTranslations(locale);
     const ctx: RequestContext = {
@@ -73,18 +134,18 @@ export class Renderer {
       locale,
       translations,
     };
-    const headComponents: ComponentChildren[] = [];
-    const userScripts: ScriptProps[] = [];
-    const htmlContext: HtmlContextValue = {attrs: {lang: locale}};
+    const htmlContext: HtmlContext = {
+      htmlAttrs: {},
+      headAttrs: {},
+      headComponents: [],
+      bodyAttrs: {},
+      scriptDeps: [],
+    };
     const vdom = (
       <REQUEST_CONTEXT.Provider value={ctx}>
         <I18N_CONTEXT.Provider value={{locale, translations}}>
           <HTML_CONTEXT.Provider value={htmlContext}>
-            <HEAD_CONTEXT.Provider value={headComponents}>
-              <SCRIPT_CONTEXT.Provider value={userScripts}>
-                <Component {...props} />
-              </SCRIPT_CONTEXT.Provider>
-            </HEAD_CONTEXT.Provider>
+            <Component {...props} />
           </HTML_CONTEXT.Provider>
         </I18N_CONTEXT.Provider>
       </REQUEST_CONTEXT.Provider>
@@ -94,12 +155,12 @@ export class Renderer {
     const jsDeps = new Set<string>();
     const cssDeps = new Set<string>();
 
-    // Walk the page's dependency tree for CSS dependencies that are added via
+    // Walk the route's dependency tree for CSS dependencies that are added via
     // `import 'foo.scss'` or `import 'foo.module.scss'`.
-    const pageAsset = await assetMap.get(route.src);
-    if (pageAsset) {
-      const pageCssDeps = await pageAsset.getCssDeps();
-      pageCssDeps.forEach((dep) => cssDeps.add(dep));
+    const routeAsset = await this.assetMap.get(route.src);
+    if (routeAsset) {
+      const routeCssDeps = await routeAsset.getCssDeps();
+      routeCssDeps.forEach((dep) => cssDeps.add(dep));
     }
 
     // Parse the HTML for custom elements that are found within the project
@@ -108,8 +169,11 @@ export class Renderer {
 
     // Add user defined scripts added via the `<Script>` component.
     await Promise.all(
-      userScripts.map(async (scriptDep) => {
-        const scriptAsset = await assetMap.get(scriptDep.src.slice(1));
+      htmlContext.scriptDeps.map(async (scriptDep) => {
+        if (!scriptDep.src) {
+          return;
+        }
+        const scriptAsset = await this.assetMap.get(scriptDep.src.slice(1));
         if (scriptAsset) {
           jsDeps.add(scriptAsset.assetUrl);
           const scriptJsDeps = await scriptAsset.getJsDeps();
@@ -118,20 +182,52 @@ export class Renderer {
       })
     );
 
-    cssDeps.forEach((cssUrl) => {
-      headComponents.push(<link rel="stylesheet" href={cssUrl} />);
+    const styleTags = Array.from(cssDeps).map((cssUrl) => {
+      return <link rel="stylesheet" href={cssUrl} />;
     });
-    jsDeps.forEach((jsUrls) => {
-      headComponents.push(<script type="module" src={jsUrls} />);
+    const scriptTags = Array.from(jsDeps).map((jsUrls) => {
+      return <script type="module" src={jsUrls} />;
     });
 
-    const htmlProps = htmlContext.attrs || {};
-    const html = await this.renderHtml({
-      htmlProps: htmlProps,
-      headComponents: headComponents,
-      bodyHtml: mainHtml,
+    const html = await this.renderHtml(mainHtml, {
+      htmlAttrs: htmlContext.htmlAttrs,
+      headAttrs: htmlContext.headAttrs,
+      bodyAttrs: htmlContext.bodyAttrs,
+      headComponents: [
+        ...htmlContext.headComponents,
+        ...styleTags,
+        ...scriptTags,
+      ],
     });
     return {html};
+  }
+
+  /** SSG renders a route. */
+  async renderRoute(
+    route: Route,
+    options: {routeParams: Record<string, string>}
+  ): Promise<{html?: string; notFound?: boolean}> {
+    const routeParams = options.routeParams;
+    const Component = route.module.default;
+    if (!Component) {
+      throw new Error(
+        'unable to render route. the route should have a default export that renders a jsx component.'
+      );
+    }
+    let props = {};
+    if (route.module.getStaticProps) {
+      const propsData = await route.module.getStaticProps({
+        rootConfig: this.rootConfig,
+        params: routeParams,
+      });
+      if (propsData.notFound) {
+        return {notFound: true};
+      }
+      if (propsData.props) {
+        props = propsData.props;
+      }
+    }
+    return this.renderComponent(Component, props, {route, routeParams});
   }
 
   async getSitemap(): Promise<
@@ -153,39 +249,67 @@ export class Renderer {
     return sitemap;
   }
 
-  private async renderHtml(options: RenderHtmlOptions) {
+  private async renderHtml(html: string, options?: RenderHtmlOptions) {
+    const htmlAttrs = options?.htmlAttrs || {};
+    const headAttrs = options?.headAttrs || {};
+    const bodyAttrs = options?.bodyAttrs || {};
     const page = (
-      <html {...options.htmlProps}>
-        <head>
+      <html {...htmlAttrs}>
+        <head {...headAttrs}>
           <meta charSet="utf-8" />
-          {options.headComponents}
+          {options?.headComponents}
         </head>
-        <body dangerouslySetInnerHTML={{__html: options.bodyHtml}} />
+        <body {...bodyAttrs} dangerouslySetInnerHTML={{__html: html}} />
       </html>
     );
-    const html = `<!doctype html>\n${renderToString(page)}\n`;
-    return html;
+    return `<!doctype html>\n${renderToString(page)}\n`;
   }
 
   async render404() {
-    return {
-      html: '<!doctype html><html><title>404 Not Found</title><h1>404 Not Found</h1>',
-      notFound: true,
-    };
-  }
-
-  async renderError(error: unknown) {
-    const mainHtml = renderToString(<ErrorPage error={error} />);
-    const html = await this.renderHtml({bodyHtml: mainHtml});
+    const mainHtml = renderToString(<ErrorPage code={404} title="Not Found" />);
+    const html = await this.renderHtml(mainHtml, {
+      headComponents: [<title>404</title>],
+    });
     return {html};
   }
 
-  async renderDevServer404() {
+  async renderError(err: any) {
+    const mainHtml = renderToString(
+      <ErrorPage
+        code={500}
+        title="Error"
+        message="An unknown error occurred."
+      />
+    );
+    const html = await this.renderHtml(mainHtml, {
+      headComponents: [<title>500</title>],
+    });
+    return {html};
+  }
+
+  async renderDevServer404(req: Request) {
     const sitemap = await this.getSitemap();
-    const mainHtml = renderToString(<DevNotFoundPage sitemap={sitemap} />);
-    const html = await this.renderHtml({
-      bodyHtml: mainHtml,
-      headComponents: [<title>404: Not Found</title>],
+    const mainHtml = renderToString(
+      <DevNotFoundPage req={req} sitemap={sitemap} />
+    );
+    const html = await this.renderHtml(mainHtml, {
+      headComponents: [<title>404 | Root.js</title>],
+    });
+    return {html};
+  }
+
+  async renderDevServer500(req: Request, error: unknown) {
+    const [route, routeParams] = this.routes.get(req.path);
+    const mainHtml = renderToString(
+      <DevErrorPage
+        req={req}
+        route={route}
+        routeParams={routeParams}
+        error={error}
+      />
+    );
+    const html = await this.renderHtml(mainHtml, {
+      headComponents: [<title>500 | Root.js</title>],
     });
     return {html};
   }
@@ -199,25 +323,30 @@ export class Renderer {
     jsDeps: Set<string>,
     cssDeps: Set<string>
   ): Promise<{jsDeps: Set<string>; cssDeps: Set<string>}> {
+    const elementsMap = this.elementGraph.sourceFiles;
     const assetMap = this.assetMap;
 
-    const re = /<(\w[\w-]+\w)/g;
-    const matches = Array.from(html.matchAll(re));
-    await Promise.all(
-      matches.map(async (match) => {
-        const tagName = match[1];
-        // Custom elements require a dash.
-        if (tagName && tagName.includes('-') && tagName in elementsMap) {
-          const elementModule = elementsMap[tagName];
-          const asset = await assetMap.get(elementModule.src);
-          if (!asset) {
-            return;
-          }
-          const assetJsDeps = await asset.getJsDeps();
-          assetJsDeps.forEach((dep) => jsDeps.add(dep));
-          const assetCssDeps = await asset.getCssDeps();
-          assetCssDeps.forEach((dep) => cssDeps.add(dep));
+    const tagNames = new Set<string>();
+    for (const tagName of parseTagNames(html)) {
+      if (tagName && tagName in elementsMap) {
+        tagNames.add(tagName);
+        for (const depTagName of this.elementGraph.getDeps(tagName)) {
+          tagNames.add(depTagName);
         }
+      }
+    }
+
+    await Promise.all(
+      Array.from(tagNames).map(async (tagName: string) => {
+        const elementModule = elementsMap[tagName];
+        const asset = await assetMap.get(elementModule.relPath);
+        if (!asset) {
+          return;
+        }
+        const assetJsDeps = await asset.getJsDeps();
+        assetJsDeps.forEach((dep) => jsDeps.add(dep));
+        const assetCssDeps = await asset.getCssDeps();
+        assetCssDeps.forEach((dep) => cssDeps.add(dep));
       })
     );
 

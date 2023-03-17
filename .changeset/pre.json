@@ -1,16 +1,14 @@
 {
   "mode": "pre",
-  "tag": "alpha",
+  "tag": "beta",
   "initialVersions": {
-    "@blinkk/create-root": "0.0.0",
-    "@blinkk/root": "0.0.0",
-    "@blinkk/root-cms": "0.0.0",
+    "docs": "0.0.1-alpha.23",
+    "@examples/blog": "0.0.0",
     "@examples/starter": "0.0.0",
-    "@private/root-core": "0.0.0",
-    "@private/root-db": "0.0.0",
-    "@private/root-form": "0.0.0",
-    "@private/root-webui": "0.0.0",
-    "docs": "0.0.0"
+    "@blinkk/create-root": "1.0.0-alpha.35",
+    "@blinkk/root": "1.0.0-alpha.35",
+    "@blinkk/root-cms": "1.0.0-alpha.35",
+    "@private/root-db": "0.0.0"
   },
   "changesets": [
     "afraid-dots-run",

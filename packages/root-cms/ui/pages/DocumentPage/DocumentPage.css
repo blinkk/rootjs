@@ -1,0 +1,123 @@
+.DocumentPage {
+  --top-bar-height: 36px;
+}
+
+.DocumentPage__side {
+  max-height: calc(100vh - 48px);
+  overflow: auto;
+}
+
+.DocumentPage__side__header {
+  font-weight: 600;
+  font-size: 12px;
+  padding: 0 12px 0 4px;
+  border-bottom: 1px solid var(--color-border);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  height: var(--top-bar-height);
+}
+
+.DocumentPage__side__header__back {
+  color: var(--color-text-default);
+}
+
+.DocumentPage__side__editor {
+  padding: 8px 12px;
+}
+
+.DocumentPage__main {
+  width: 100%;
+}
+
+.DocumentPage__main__preview {
+  height: calc(100% - var(--top-bar-height));
+}
+
+.DocumentPage__main__previewBar {
+  border-bottom: 1px solid var(--color-border);
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  height: var(--top-bar-height);
+  padding: 0 12px;
+}
+
+.DocumentPage__main__previewBar__devices,
+.DocumentPage__main__previewBar__buttons {
+  display: flex;
+  align-items: center;
+}
+
+.DocumentPage__main__previewBar__devices .mantine-Tooltip-root,
+.DocumentPage__main__previewBar__devices .mantine-ActionIcon-hover,
+.DocumentPage__main__previewBar__buttons .mantine-Tooltip-root,
+.DocumentPage__main__previewBar__buttons .mantine-ActionIcon-hover {
+  display: flex;
+}
+
+.DocumentPage__main__previewBar__device.active {
+  background: #f5f5f5;
+  /* box-shadow: inset 0 2px 4px 0 rgb(0 0 0 / 0.05); */
+}
+
+.DocumentPage__main__previewBar__navbar {
+  flex: 1;
+  padding: 2px 24px;
+  border-radius: 30px;
+  border: 1px solid var(--color-border);
+  font-weight: 500;
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.DocumentPage__main__previewFrame {
+  background: #f9f9f9;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+
+.DocumentPage__main__previewFrame__iframeWrap {
+  width: calc(var(--iframe-width, 100%) * var(--iframe-scale, 1));
+  height: calc(var(--iframe-height, 100%) * var(--iframe-scale, 1));
+  position: relative;
+  transform: scale(var(--iframe-scale));
+  transform-origin: 0 0;
+}
+
+.DocumentPage__main__previewFrame iframe {
+  border: none;
+  box-sizing: content-box;
+  width: var(--iframe-width, 100%);
+  height: var(--iframe-height, 100%);
+  max-width: none;
+  border: 1px solid var(--color-border);
+  box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+  background: #ffffff;
+}
+
+.DocumentPage__main__previewFrame[data-device="full"] .DocumentPage__main__previewFrame__iframeWrap {
+  width: 100%;
+  height: 100%;
+}
+
+.DocumentPage__main__previewFrame[data-device="full"] iframe {
+  width: 100%;
+  height: 100%;
+  border: none;
+  box-shadow: none;
+}
+
+.DocumentPage__main__previewFrame__deviceLabel {
+  position: absolute;
+  bottom: 8px;
+  right: 8px;
+  font-size: 12px;
+}

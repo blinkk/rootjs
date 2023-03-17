@@ -2,12 +2,11 @@ import path from 'node:path';
 import {default as express} from 'express';
 import {loadRootConfig} from '../load-config';
 import {Renderer} from '../../render/render.js';
-import {fileExists, loadJson} from '../../core/fsutils';
+import {fileExists, loadJson} from '../../utils/fsutils';
 import {
   BuildAssetManifest,
   BuildAssetMap,
 } from '../../render/asset-map/build-asset-map';
-import {htmlMinify} from '../../render/html-minify';
 import {dim} from 'kleur/colors';
 import {configureServerPlugins} from '../../core/plugin';
 import sirv from 'sirv';
@@ -15,7 +14,7 @@ import compression from 'compression';
 import {Request, Response, NextFunction, Server} from '../../core/types.js';
 import {rootProjectMiddleware} from '../../core/middleware';
 import {RootConfig} from '../../core/config';
-import {htmlPretty} from '../../render/html-pretty';
+import {getElements} from '../../core/element-graph';
 
 type RenderModule = typeof import('../../render/render.js');
 
@@ -61,10 +60,13 @@ async function createServer(options: {rootDir: string}): Promise<Server> {
 
       // Add the root.js preview server middlewares.
       server.use(rootProdServerMiddleware());
-      // TODO(stevenle): handle 404/500 errors.
+
+      // Add error handlers.
+      server.use(rootProdServer404Middleware());
+      server.use(rootProdServer500Middleware());
     },
     plugins,
-    {type: 'prod'}
+    {type: 'prod', rootConfig}
   );
   return server;
 }
@@ -83,12 +85,13 @@ async function rootProdRendererMiddleware(options: {
   const manifestPath = path.join(distDir, 'client/root-manifest.json');
   if (!(await fileExists(manifestPath))) {
     throw new Error(
-      `could not find ${manifestPath}. run \`root build\` before \`root preview\`.`
+      `could not find ${manifestPath}. run \`root build\` before \`root start\`.`
     );
   }
   const rootManifest = await loadJson<BuildAssetManifest>(manifestPath);
   const assetMap = BuildAssetMap.fromRootManifest(rootConfig, rootManifest);
-  const renderer = new render.Renderer(rootConfig, {assetMap}) as Renderer;
+  const elementGraph = await getElements(rootConfig);
+  const renderer = new render.Renderer(rootConfig, {assetMap, elementGraph});
   return async (req: Request, _: Response, next: NextFunction) => {
     req.renderer = renderer;
     next();
@@ -96,28 +99,13 @@ async function rootProdRendererMiddleware(options: {
 }
 
 /**
- * Preview server request handler.
+ * Prod server request handler.
  */
 function rootProdServerMiddleware() {
   return async (req: Request, res: Response, next: NextFunction) => {
-    const rootConfig = req.rootConfig!;
     const renderer = req.renderer!;
     try {
-      const url = req.path;
-      const data = await renderer.render(url);
-      if (data.notFound || !data.html) {
-        next();
-        return;
-      }
-      let html = data.html || '';
-      if (rootConfig.prettyHtml !== false) {
-        html = await htmlPretty(html, rootConfig.prettyHtmlOptions);
-      }
-      // HTML minification is `true` by default. Set to `false` to disable.
-      if (rootConfig.minifyHtml !== false) {
-        html = await htmlMinify(html, rootConfig.minifyHtmlOptions);
-      }
-      res.status(200).set({'Content-Type': 'text/html'}).end(html);
+      await renderer.handle(req, res, next);
     } catch (e) {
       try {
         const {html} = await renderer.renderError(e);
@@ -128,5 +116,42 @@ function rootProdServerMiddleware() {
         next(e);
       }
     }
+  };
+}
+
+function rootProdServer404Middleware() {
+  return async (req: Request, res: Response) => {
+    console.error(`❓ 404 ${req.originalUrl}`);
+    if (req.renderer) {
+      const url = req.path;
+      const ext = path.extname(url);
+      if (!ext) {
+        const renderer = req.renderer;
+        const data = await renderer.render404();
+        const html = data.html || '';
+        res.status(404).set({'Content-Type': 'text/html'}).end(html);
+        return;
+      }
+    }
+    res.status(404).set({'Content-Type': 'text/plain'}).end('404');
+  };
+}
+
+function rootProdServer500Middleware() {
+  return async (err: any, req: Request, res: Response, next: NextFunction) => {
+    console.error(`❗ 500 ${req.originalUrl}`);
+    console.error(String(err.stack || err));
+    if (req.renderer) {
+      const url = req.path;
+      const ext = path.extname(url);
+      if (!ext) {
+        const renderer = req.renderer;
+        const data = await renderer.renderError(err);
+        const html = data.html || '';
+        res.status(500).set({'Content-Type': 'text/html'}).end(html);
+        return;
+      }
+    }
+    next(err);
   };
 }

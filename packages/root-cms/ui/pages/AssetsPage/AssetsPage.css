@@ -1,0 +1,12 @@
+.AssetsPage {
+  padding: 60px;
+}
+
+.AssetsPage h1 {
+  margin-bottom: 24px;
+}
+
+.AssetsPage p {
+  margin-top: 16px;
+  max-width: 70ch;
+}

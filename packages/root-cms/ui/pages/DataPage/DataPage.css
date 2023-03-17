@@ -1,0 +1,12 @@
+.DataPage {
+  padding: 60px;
+}
+
+.DataPage h1 {
+  margin-bottom: 24px;
+}
+
+.DataPage p {
+  margin-top: 16px;
+  max-width: 70ch;
+}

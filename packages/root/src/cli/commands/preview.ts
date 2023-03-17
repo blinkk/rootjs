@@ -3,19 +3,18 @@ import {default as express} from 'express';
 import {Request, Response, NextFunction, Server} from '../../core/types.js';
 import {loadRootConfig} from '../load-config';
 import {Renderer} from '../../render/render.js';
-import {fileExists, loadJson} from '../../core/fsutils';
+import {fileExists, loadJson} from '../../utils/fsutils';
 import {
   BuildAssetManifest,
   BuildAssetMap,
 } from '../../render/asset-map/build-asset-map';
-import {htmlMinify} from '../../render/html-minify';
 import {dim} from 'kleur/colors';
 import {configureServerPlugins} from '../../core/plugin';
 import sirv from 'sirv';
 import compression from 'compression';
 import {rootProjectMiddleware} from '../../core/middleware';
 import {RootConfig} from '../../core/config';
-import {htmlPretty} from '../../render/html-pretty.js';
+import {getElements} from '../../core/element-graph.js';
 
 type RenderModule = typeof import('../../render/render.js');
 
@@ -29,7 +28,7 @@ export async function preview(rootProjectDir?: string) {
   console.log();
   console.log(`${dim('┃')} project:  ${rootDir}`);
   console.log(`${dim('┃')} server:   http://localhost:${port}`);
-  console.log(`${dim('┃')} mode:     staging`);
+  console.log(`${dim('┃')} mode:     preview`);
   console.log();
   server.listen(port);
 }
@@ -63,10 +62,13 @@ async function createServer(options: {rootDir: string}): Promise<Server> {
 
       // Add the root.js preview server middlewares.
       server.use(rootPreviewServerMiddleware());
-      // TODO(stevenle): handle 404/500 errors.
+
+      // Add error handlers.
+      server.use(rootPreviewServer404Middleware());
+      server.use(rootPreviewServer500Middleware());
     },
     plugins,
-    {type: 'preview'}
+    {type: 'preview', rootConfig}
   );
   return server;
 }
@@ -90,7 +92,8 @@ async function rootPreviewRendererMiddleware(options: {
   }
   const rootManifest = await loadJson<BuildAssetManifest>(manifestPath);
   const assetMap = BuildAssetMap.fromRootManifest(rootConfig, rootManifest);
-  const renderer = new render.Renderer(rootConfig, {assetMap}) as Renderer;
+  const elementGraph = await getElements(rootConfig);
+  const renderer = new render.Renderer(rootConfig, {assetMap, elementGraph});
   return async (req: Request, _: Response, next: NextFunction) => {
     req.renderer = renderer;
     next();
@@ -102,24 +105,9 @@ async function rootPreviewRendererMiddleware(options: {
  */
 function rootPreviewServerMiddleware() {
   return async (req: Request, res: Response, next: NextFunction) => {
-    const rootConfig = req.rootConfig!;
     const renderer = req.renderer!;
     try {
-      const url = req.path;
-      const data = await renderer.render(url);
-      if (data.notFound || !data.html) {
-        next();
-        return;
-      }
-      let html = data.html || '';
-      if (rootConfig.prettyHtml !== false) {
-        html = await htmlPretty(html, rootConfig.prettyHtmlOptions);
-      }
-      // HTML minification is `true` by default. Set to `false` to disable.
-      if (rootConfig.minifyHtml !== false) {
-        html = await htmlMinify(html, rootConfig.minifyHtmlOptions);
-      }
-      res.status(200).set({'Content-Type': 'text/html'}).end(html);
+      await renderer.handle(req, res, next);
     } catch (e) {
       try {
         const {html} = await renderer.renderError(e);
@@ -130,5 +118,38 @@ function rootPreviewServerMiddleware() {
         next(e);
       }
     }
+  };
+}
+
+function rootPreviewServer404Middleware() {
+  return async (req: Request, res: Response) => {
+    console.error(`❓ 404 ${req.originalUrl}`);
+    const url = req.path;
+    const ext = path.extname(url);
+    const renderer = req.renderer!;
+    if (!ext) {
+      const data = await renderer.render404();
+      const html = data.html || '';
+      res.status(404).set({'Content-Type': 'text/html'}).end(html);
+      return;
+    }
+    res.status(404).set({'Content-Type': 'text/plain'}).end('404');
+  };
+}
+
+function rootPreviewServer500Middleware() {
+  return async (err: any, req: Request, res: Response, next: NextFunction) => {
+    console.error(`❗ 500 ${req.originalUrl}`);
+    console.error(String(err.stack || err));
+    const url = req.path;
+    const ext = path.extname(url);
+    const renderer = req.renderer!;
+    if (!ext) {
+      const data = await renderer.renderError(err);
+      const html = data.html || '';
+      res.status(500).set({'Content-Type': 'text/html'}).end(html);
+      return;
+    }
+    next(err);
   };
 }

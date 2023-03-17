@@ -1,8 +1,8 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import {ElementModule} from 'virtual:root-elements';
 import {Manifest} from 'vite';
 import {RootConfig} from '../../core/config';
+import {ElementGraph} from '../../core/element-graph';
 import {Asset, AssetMap} from './asset-map';
 
 export type BuildAssetManifest = Record<
@@ -56,35 +56,44 @@ export class BuildAssetMap implements AssetMap {
 
   static fromViteManifest(
     rootConfig: RootConfig,
-    viteManifest: Manifest,
-    elementMap: Record<string, ElementModule>
+    clientManifest: Manifest,
+    elementsGraph: ElementGraph
   ) {
     const assetMap = new BuildAssetMap(rootConfig);
 
     const elementFiles = new Set();
-    Object.values(elementMap).forEach((elementModule) => {
-      elementFiles.add(elementModule.src);
+    Object.values(elementsGraph.sourceFiles).forEach((elementSource) => {
+      elementFiles.add(elementSource.relPath);
       // Vite will resolve symlinks, so we need to follow the src and add the
       // realpath to the element files.
-      const realSrc = realPathRelativeTo(rootConfig.rootDir, elementModule.src);
-      if (realSrc !== elementModule.src) {
+      const realSrc = realPathRelativeTo(
+        rootConfig.rootDir,
+        elementSource.relPath
+      );
+      if (realSrc !== elementSource.filePath) {
         elementFiles.add(realSrc);
       }
     });
 
-    Object.keys(viteManifest).forEach((manifestKey) => {
+    Object.keys(clientManifest).forEach((manifestKey) => {
       const src = manifestKey;
-      const manifestChunk = viteManifest[manifestKey];
+      const manifestChunk = clientManifest[manifestKey];
       const isElement = elementFiles.has(src);
+      // NOTES(stevenle): routes/ files are included in the manifest so for
+      // their CSS deps, but do not have an asset URL.
+      const assetUrl = src.startsWith('routes/')
+        ? ''
+        : `/${manifestChunk.file}`;
       const assetData = {
         src: src,
-        assetUrl: `/${manifestChunk.file}`,
+        assetUrl: assetUrl,
         importedModules: manifestChunk.imports || [],
         importedCss: (manifestChunk.css || []).map((relPath) => `/${relPath}`),
         isElement: isElement,
       };
       assetMap.add(new BuildAsset(assetMap, assetData));
     });
+
     return assetMap;
   }
 
@@ -187,7 +196,7 @@ export class BuildAsset {
     if (!asset) {
       return;
     }
-    if (!asset.assetUrl) {
+    if (!asset.src) {
       return;
     }
     if (visited.has(asset.src)) {

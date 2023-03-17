@@ -1,0 +1,86 @@
+@use 'breakpoints';
+@use 'tokens';
+@use 'type';
+
+.grid {
+  display: block;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right:  0;
+  height: 100%;
+  pointer-events: none;
+  display: none;
+  @include breakpoints.site-max {
+    left: calc(50% - #{0.5 * tokens.$breakpoint-site-max}) !important;
+    right: calc(50% - #{0.5 * tokens.$breakpoint-site-max}) !important;
+  }
+}
+
+// SCSS module files obfuscate classNames used in the file by adding a hash.
+// Since the "visible" className is set via JavaScript, the `:global()` selector
+// is used here to disable the className obfuscation.
+.grid:global(.visible) {
+  display: block;
+}
+
+.columns {
+  width: 100%;
+  height: 100%;
+  display: grid;
+  // These --grid-* vars are set globally in global.scss.
+  grid-template-columns: repeat(var(--grid-num-columns), 1fr);
+  gap: var(--grid-column-gap);
+}
+
+.column {
+  @include type.size(12px, 20px, tokens.$font-weight-bold);
+  display: none;
+  background-color: rgba(orange, 0.125);
+  height: 100%;
+  text-align: center;
+  padding-top: 12px;
+}
+
+.column.all {
+  display: block;
+}
+
+.column.tabletGt {
+  @include breakpoints.tablet-gt {
+    display: block;
+  }
+}
+
+.column.laptopGt {
+  @include breakpoints.laptop-gt {
+    display: block;
+  }
+}
+
+.breakpoint {
+  @include type.size(14px, 24px, tokens.$font-weight-bold);
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  background: tokens.$color-black;
+  color: tokens.$color-white;
+  padding: 4px 20px;
+  &::after {
+    @include breakpoints.mobile {
+      content: 'mobile'
+    }
+    @include breakpoints.tablet {
+      content: 'tablet'
+    }
+    @include breakpoints.laptop {
+      content: 'laptop'
+    }
+    @include breakpoints.desktop {
+      content: 'desktop'
+    }
+    @include breakpoints.site-max {
+      content: 'site-max'
+    }
+  }
+}

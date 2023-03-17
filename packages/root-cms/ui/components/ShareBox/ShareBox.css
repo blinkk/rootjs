@@ -1,0 +1,31 @@
+.ShareBox {
+  position: relative;
+  max-width: 400px;
+  min-height: 120px;
+}
+
+.ShareBox__addUser,
+.ShareBox__user {
+  width: 100%;
+  display: grid;
+  grid-template-columns: 1fr 120px;
+  align-items: center;
+  gap: 8px;
+}
+
+.ShareBox__addUser__email {
+  width: 100%;
+}
+
+.ShareBox__users {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.ShareBox__user__email {
+  padding: 0 11px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}

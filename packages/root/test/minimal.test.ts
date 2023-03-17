@@ -1,7 +1,7 @@
 import {promises as fs} from 'node:fs';
 import path from 'node:path';
 import {assert, beforeEach, test, expect, afterEach} from 'vitest';
-import {fileExists} from '../src/core/fsutils';
+import {fileExists} from '../src/utils/fsutils';
 import {Fixture, loadFixture} from './testutils';
 
 let fixture: Fixture;
@@ -23,7 +23,7 @@ test('build minimal project', async () => {
   const html = await fs.readFile(index, 'utf-8');
   expect(html).toMatchInlineSnapshot(`
     "<!doctype html>
-    <html lang=\\"en\\">
+    <html>
     <head>
     <meta charset=\\"utf-8\\">
     </head>

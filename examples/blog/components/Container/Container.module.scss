@@ -1,0 +1,48 @@
+@use 'breakpoints';
+
+.container {
+  padding-left: var(--grid-padding);
+  padding-right: var(--grid-padding);
+}
+
+.container:global(.container\:fullbleed) {
+  padding-left: 0;
+  padding-right: 0;
+}
+
+.container:global(.container\:wide) {
+  @include breakpoints.laptop-gt {
+    padding-left: calc(
+      var(--grid-padding) + var(--grid-column-width) + var(--grid-column-gap)
+    );
+    padding-right: calc(
+      var(--grid-padding) + var(--grid-column-width) + var(--grid-column-gap)
+    );
+  }
+}
+
+.container:global(.container\:content) {
+  @include breakpoints.laptop-gt {
+    padding-left: calc(
+      var(--grid-padding) + 2 * var(--grid-column-width) + 2 *
+        var(--grid-column-gap)
+    );
+    padding-right: calc(
+      var(--grid-padding) + 2 * var(--grid-column-width) + 2 *
+        var(--grid-column-gap)
+    );
+  }
+}
+
+.container:global(.container\:narrow) {
+  @include breakpoints.laptop-gt {
+    padding-left: calc(
+      var(--grid-padding) + 3 * var(--grid-column-width) + 3 *
+        var(--grid-column-gap)
+    );
+    padding-right: calc(
+      var(--grid-padding) + 3 * var(--grid-column-width) + 3 *
+        var(--grid-column-gap)
+    );
+  }
+}

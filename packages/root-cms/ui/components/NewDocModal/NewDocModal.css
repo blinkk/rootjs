@@ -1,0 +1,16 @@
+.NewDocModal__body {
+  font-size: 12px;
+  line-height: 1.5;
+  font-weight: 500;
+}
+
+.NewDocModal__slug {
+  margin-top: 16px;
+}
+
+.NewDocModal__buttons {
+  margin-top: 24px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+}

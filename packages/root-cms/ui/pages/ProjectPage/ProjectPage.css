@@ -1,0 +1,12 @@
+.ProjectPage {
+  padding: 60px;
+}
+
+.ProjectPage h1 {
+  margin-bottom: 24px;
+}
+
+.ProjectPage p {
+  margin-top: 16px;
+  max-width: 70ch;
+}

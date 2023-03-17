@@ -2,22 +2,23 @@ import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 import fsExtra from 'fs-extra';
 import glob from 'tiny-glob';
-import {build as viteBuild, Manifest, UserConfig} from 'vite';
-import {pluginRoot} from '../../render/vite-plugin-root.js';
+import {build as viteBuild, Manifest, ManifestChunk, UserConfig} from 'vite';
 import {BuildAssetMap} from '../../render/asset-map/build-asset-map.js';
 import {loadRootConfig} from '../load-config.js';
 import {
+  copyGlob,
+  fileExists,
   isDirectory,
   isJsFile,
   loadJson,
   makeDir,
   rmDir,
   writeFile,
-} from '../../core/fsutils.js';
+} from '../../utils/fsutils.js';
 import {htmlMinify} from '../../render/html-minify.js';
 import {dim, cyan} from 'kleur/colors';
 import {getVitePlugins} from '../../core/plugin.js';
-import {getElements} from '../../core/elements.js';
+import {getElements} from '../../core/element-graph.js';
 import {htmlPretty} from '../../render/html-pretty.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -56,10 +57,10 @@ export async function build(rootProjectDir?: string, options?: BuildOptions) {
     });
   }
 
-  const elementsMap = await getElements(rootConfig);
-  const elements = Object.values(elementsMap).map((mod) =>
-    path.resolve(rootDir, mod.src)
-  );
+  const elementGraph = await getElements(rootConfig);
+  const elements = Object.values(elementGraph.sourceFiles).map((sourceFile) => {
+    return sourceFile.filePath;
+  });
 
   const bundleScripts: string[] = [];
   if (await isDirectory(path.join(rootDir, 'bundles'))) {
@@ -72,11 +73,11 @@ export async function build(rootProjectDir?: string, options?: BuildOptions) {
     });
   }
 
+  const rootPlugins = rootConfig.plugins || [];
   const viteConfig = rootConfig.vite || {};
   const vitePlugins = [
-    pluginRoot({rootConfig}),
     ...(viteConfig.plugins || []),
-    ...getVitePlugins(rootConfig.plugins || []),
+    ...getVitePlugins(rootPlugins),
   ];
 
   const baseConfig: UserConfig = {
@@ -92,8 +93,17 @@ export async function build(rootProjectDir?: string, options?: BuildOptions) {
     plugins: vitePlugins,
   };
 
-  // Bundle the render.js file with vite, which is pre-optimized for rendering
-  // HTML routes.
+  // Bundle the render.js file with vite along with any plugins `ssrInput()`
+  // config values. These inputs are bundled through vite and support things
+  // like `input.meta.glob()`.
+  const ssrInput = {
+    render: path.resolve(__dirname, './render.js'),
+  };
+  rootPlugins.forEach((plugin) => {
+    if (plugin.ssrInput) {
+      Object.assign(ssrInput, plugin.ssrInput());
+    }
+  });
   const noExternalConfig = viteConfig.ssr?.noExternal;
   const noExternal: Array<string | RegExp> = [];
   if (noExternalConfig) {
@@ -110,7 +120,7 @@ export async function build(rootProjectDir?: string, options?: BuildOptions) {
       ...viteConfig?.build,
       rollupOptions: {
         ...viteConfig?.build?.rollupOptions,
-        input: [path.resolve(__dirname, './render.js')],
+        input: ssrInput,
         output: {
           format: 'esm',
           chunkFileNames: 'chunks/[name].[hash].min.js',
@@ -123,16 +133,17 @@ export async function build(rootProjectDir?: string, options?: BuildOptions) {
       cssCodeSplit: true,
       target: 'esnext',
       minify: false,
-      polyfillModulePreload: false,
+      modulePreload: {polyfill: false},
       reportCompressedSize: false,
     },
     ssr: {
       ...viteConfig.ssr,
+      target: 'node',
       noExternal: ['@blinkk/root', ...noExternal],
     },
   });
 
-  // Pre-render any client scripts and CSS deps.
+  // Pre-render CSS deps from /routes/.
   await viteBuild({
     ...baseConfig,
     publicDir: false,
@@ -140,7 +151,7 @@ export async function build(rootProjectDir?: string, options?: BuildOptions) {
       ...viteConfig?.build,
       rollupOptions: {
         ...viteConfig?.build?.rollupOptions,
-        input: [...routeFiles, ...elements, ...bundleScripts],
+        input: [...routeFiles],
         output: {
           format: 'esm',
           entryFileNames: 'assets/[name].[hash].min.js',
@@ -149,33 +160,109 @@ export async function build(rootProjectDir?: string, options?: BuildOptions) {
           ...viteConfig?.build?.rollupOptions?.output,
         },
       },
-      outDir: path.join(distDir, 'client'),
+      outDir: path.join(distDir, 'routes'),
       ssr: false,
       ssrManifest: false,
       manifest: true,
       cssCodeSplit: true,
       target: 'esnext',
       minify: true,
-      polyfillModulePreload: false,
+      modulePreload: {polyfill: false},
       reportCompressedSize: false,
     },
   });
 
-  const viteManifest = await loadJson<Manifest>(
+  // Pre-render /elements/ and /bundles/.
+  const clientInput = [...elements, ...bundleScripts];
+  if (clientInput.length > 0) {
+    await viteBuild({
+      ...baseConfig,
+      publicDir: false,
+      build: {
+        ...viteConfig?.build,
+        rollupOptions: {
+          ...viteConfig?.build?.rollupOptions,
+          input: [...elements, ...bundleScripts],
+          output: {
+            format: 'esm',
+            entryFileNames: 'assets/[name].[hash].min.js',
+            chunkFileNames: 'chunks/[name].[hash].min.js',
+            assetFileNames: 'assets/[name].[hash][extname]',
+            ...viteConfig?.build?.rollupOptions?.output,
+          },
+        },
+        outDir: path.join(distDir, 'client'),
+        ssr: false,
+        ssrManifest: false,
+        manifest: true,
+        cssCodeSplit: true,
+        target: 'esnext',
+        minify: true,
+        modulePreload: {polyfill: false},
+        reportCompressedSize: false,
+      },
+    });
+  } else {
+    await writeFile(path.join(distDir, 'client/manifest.json'), '{}');
+  }
+
+  // Copy CSS files from dist/routes/**/*.css to dist/client/ and flatten the
+  // routes manifest to ignore imported modules. Then add the route assets to
+  // the client manifest.
+  await copyGlob(
+    '*.css',
+    path.join(distDir, 'routes/assets'),
+    path.join(distDir, 'client/assets')
+  );
+  const routesManifest = await loadJson<Manifest>(
+    path.join(distDir, 'routes/manifest.json')
+  );
+  const clientManifest = await loadJson<Manifest>(
     path.join(distDir, 'client/manifest.json')
   );
+  function collectRouteCss(
+    asset: ManifestChunk,
+    cssDeps: Set<string>,
+    visited: Set<string>
+  ) {
+    if (!asset || !asset.file || visited.has(asset.file)) {
+      return;
+    }
+    visited.add(asset.file);
+    if (asset.css) {
+      asset.css.forEach((dep) => cssDeps.add(dep));
+    }
+    if (asset.imports) {
+      asset.imports.forEach((manifestKey) => {
+        collectRouteCss(routesManifest[manifestKey], cssDeps, visited);
+      });
+    }
+  }
+  Object.keys(routesManifest).forEach((manifestKey) => {
+    const asset = routesManifest[manifestKey];
+    if (asset.isEntry) {
+      const visited = new Set<string>();
+      const cssDeps = new Set<string>();
+      collectRouteCss(asset, cssDeps, visited);
+      asset.css = Array.from(cssDeps);
+      asset.imports = [];
+      clientManifest[manifestKey] = asset;
+    } else if (asset.file.endsWith('.css')) {
+      clientManifest[manifestKey] = asset;
+    }
+  });
 
   // Use the output of the client build to generate an asset map, which is used
   // by the renderer for automatically injecting dependencies for a page.
   const assetMap = BuildAssetMap.fromViteManifest(
     rootConfig,
-    viteManifest,
-    elementsMap
+    clientManifest,
+    elementGraph
   );
 
   // Save the asset map to `dist/client` for use by the prod SSR server.
   const rootManifest = assetMap.toJson();
-  writeFile(
+  await writeFile(
     path.join(distDir, 'client/root-manifest.json'),
     JSON.stringify(rootManifest, null, 2)
   );
@@ -196,27 +283,35 @@ export async function build(rootProjectDir?: string, options?: BuildOptions) {
   console.log('\njs/css output:');
   makeDir(path.join(buildDir, 'assets'));
   makeDir(path.join(buildDir, 'chunks'));
-  Object.keys(rootManifest).forEach((src) => {
-    // Don't expose route files in the final output. If any client-side code
-    // relies on route dependencies, it should probably be broken out into a
-    // shared component instead.
-    if (isRouteFile(src)) {
-      return;
-    }
-    const assetData = rootManifest[src];
-    const assetRelPath = assetData.assetUrl.slice(1);
-    const assetFrom = path.join(distDir, 'client', assetRelPath);
-    const assetTo = path.join(buildDir, assetRelPath);
-    fsExtra.copySync(assetFrom, assetTo);
-    printFileOutput(fileSize(assetTo), 'dist/html/', assetRelPath);
-  });
+  await Promise.all(
+    Object.keys(rootManifest).map(async (src) => {
+      // Don't expose route files in the final output. If any client-side code
+      // relies on route dependencies, it should probably be broken out into a
+      // shared component instead.
+      if (isRouteFile(src)) {
+        return;
+      }
+      const assetData = rootManifest[src];
+      const assetRelPath = assetData.assetUrl.slice(1);
+      const assetFrom = path.join(distDir, 'client', assetRelPath);
+      const assetTo = path.join(buildDir, assetRelPath);
+      // Ignore assets that don't exist. This is because build artifacts from
+      // the routes/ folder are not copied to dist/client (only css deps are).
+      if (!(await fileExists(assetFrom))) {
+        console.log(`${assetFrom} does not exist`);
+        return;
+      }
+      await fsExtra.copy(assetFrom, assetTo);
+      printFileOutput(fileSize(assetTo), 'dist/html/', assetRelPath);
+    })
+  );
 
   // Pre-render HTML pages (SSG).
   if (!ssrOnly) {
     const render: RenderModule = await import(
       path.join(distDir, 'server/render.js')
     );
-    const renderer = new render.Renderer(rootConfig, {assetMap});
+    const renderer = new render.Renderer(rootConfig, {assetMap, elementGraph});
     const sitemap = await renderer.getSitemap();
 
     console.log('\nhtml output:');
@@ -226,6 +321,9 @@ export async function build(rootProjectDir?: string, options?: BuildOptions) {
         const data = await renderer.renderRoute(route, {
           routeParams: params,
         });
+        if (data.notFound) {
+          return;
+        }
 
         // The renderer currently assumes that all paths serve HTML.
         // TODO(stevenle): support non-HTML routes using `routes/[name].[ext].ts`.

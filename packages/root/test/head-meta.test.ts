@@ -1,7 +1,7 @@
 import {promises as fs} from 'node:fs';
 import path from 'node:path';
 import {assert, beforeEach, test, expect, afterEach} from 'vitest';
-import {fileExists} from '../src/core/fsutils';
+import {fileExists} from '../src/utils/fsutils';
 import {Fixture, loadFixture} from './testutils';
 
 let fixture: Fixture;
@@ -31,7 +31,7 @@ test('inject meta tags into <head>', async () => {
     <meta content=\\"summary_large_image\\" name=\\"twitter:card\\">
     <meta content=\\"Hello world\\" property=\\"og:title\\">
     </head>
-    <body>
+    <body class=\\"body\\">
     <h1>Hello world</h1>
     </body>
     </html>
