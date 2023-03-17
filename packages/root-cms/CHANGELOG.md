@@ -1,5 +1,16 @@
 # @blinkk/root-cms
 
+## 1.0.0-beta.0
+
+### Major Changes
+
+- a5cb6b1: feat: first release of root.js cms
+
+### Patch Changes
+
+- Updated dependencies [a5cb6b1]
+  - @blinkk/root@1.0.0-beta.0
+
 ## 1.0.0-alpha.29
 
 ### Patch Changes
