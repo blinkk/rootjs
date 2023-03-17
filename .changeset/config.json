@@ -3,7 +3,11 @@
   "changelog": "@changesets/cli/changelog",
   "commit": false,
   "fixed": [],
-  "linked": [],
+  "linked": [[
+    "@blinkk/create-root",
+    "@blinkk/root",
+    "@blinkk/root-cms"
+  ]],
   "access": "public",
   "baseBranch": "main",
   "updateInternalDependencies": "patch",
