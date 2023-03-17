@@ -27,7 +27,7 @@ test('add custom element to a page', async () => {
   assert.isTrue(html.includes('assets/root-label'));
   expect(html).toMatchInlineSnapshot(`
     "<!doctype html>
-    <html lang=\\"en\\">
+    <html>
     <head>
     <meta charset=\\"utf-8\\">
     <script type=\\"module\\" src=\\"/assets/root-counter.7759364a.min.js\\"></script>
@@ -49,7 +49,7 @@ test('use custom elements from another directory', async () => {
   assert.isTrue(html.includes('assets/ds-foo'));
   expect(html).toMatchInlineSnapshot(`
     "<!doctype html>
-    <html lang=\\"en\\">
+    <html>
     <head>
     <meta charset=\\"utf-8\\">
     <script type=\\"module\\" src=\\"/assets/ds-foo.5fa7c9e5.min.js\\"></script>
@@ -70,7 +70,7 @@ test('exclude elements matching a certain pattern', async () => {
   const html = await fs.readFile(htmlPath, 'utf-8');
   expect(html).toMatchInlineSnapshot(`
     "<!doctype html>
-    <html lang=\\"en\\">
+    <html>
     <head>
     <meta charset=\\"utf-8\\">
     <script type=\\"module\\" src=\\"/assets/root-counter.7759364a.min.js\\"></script>

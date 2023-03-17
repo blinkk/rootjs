@@ -31,7 +31,7 @@ test('inject meta tags into <head>', async () => {
     <meta content=\\"summary_large_image\\" name=\\"twitter:card\\">
     <meta content=\\"Hello world\\" property=\\"og:title\\">
     </head>
-    <body>
+    <body class=\\"body\\">
     <h1>Hello world</h1>
     </body>
     </html>

@@ -24,9 +24,14 @@ import {RequestContext, REQUEST_CONTEXT} from '../core/hooks/useRequestContext';
 import {getTranslations, I18N_CONTEXT} from '../core/hooks/useI18nContext';
 
 interface RenderHtmlOptions {
-  mainHtml: string;
-  locale: string;
+  /** Attrs passed to the <html> tag, e.g. `{lang: 'en'}`. */
+  htmlAttrs?: preact.JSX.HTMLAttributes<HTMLHtmlElement>;
+  /** Attrs passed to the <head> tag. */
+  headAttrs?: preact.JSX.HTMLAttributes<HTMLHeadElement>;
+  /** Child components for the <head> tag. */
   headComponents?: ComponentChildren[];
+  /** Attrs passed to the <body> tag. */
+  bodyAttrs?: preact.JSX.HTMLAttributes<HTMLBodyElement>;
 }
 
 export class Renderer {
@@ -179,10 +184,10 @@ export class Renderer {
       return <script type="module" src={jsUrls} />;
     });
 
-    const htmlLang = htmlContext.htmlAttrs.lang || locale;
-    const html = await this.renderHtml({
-      mainHtml,
-      locale: htmlLang,
+    const html = await this.renderHtml(mainHtml, {
+      htmlAttrs: htmlContext.htmlAttrs,
+      headAttrs: htmlContext.headAttrs,
+      bodyAttrs: htmlContext.bodyAttrs,
       headComponents: [
         ...htmlContext.headComponents,
         ...styleTags,
@@ -239,25 +244,25 @@ export class Renderer {
     return sitemap;
   }
 
-  private async renderHtml(options: RenderHtmlOptions) {
+  private async renderHtml(html: string, options?: RenderHtmlOptions) {
+    const htmlAttrs = options?.htmlAttrs || {};
+    const headAttrs = options?.headAttrs || {};
+    const bodyAttrs = options?.bodyAttrs || {};
     const page = (
-      <html lang={options.locale}>
-        <head>
+      <html {...htmlAttrs}>
+        <head {...headAttrs}>
           <meta charSet="utf-8" />
-          {options.headComponents}
+          {options?.headComponents}
         </head>
-        <body dangerouslySetInnerHTML={{__html: options.mainHtml}} />
+        <body {...bodyAttrs} dangerouslySetInnerHTML={{__html: html}} />
       </html>
     );
-    const html = `<!doctype html>\n${renderToString(page)}\n`;
-    return html;
+    return `<!doctype html>\n${renderToString(page)}\n`;
   }
 
   async render404() {
     const mainHtml = renderToString(<ErrorPage code={404} title="Not Found" />);
-    const html = await this.renderHtml({
-      mainHtml,
-      locale: 'en',
+    const html = await this.renderHtml(mainHtml, {
       headComponents: [<title>404</title>],
     });
     return {html};
@@ -271,9 +276,7 @@ export class Renderer {
         message="An unknown error occurred."
       />
     );
-    const html = await this.renderHtml({
-      mainHtml,
-      locale: 'en',
+    const html = await this.renderHtml(mainHtml, {
       headComponents: [<title>500</title>],
     });
     return {html};
@@ -284,9 +287,7 @@ export class Renderer {
     const mainHtml = renderToString(
       <DevNotFoundPage req={req} sitemap={sitemap} />
     );
-    const html = await this.renderHtml({
-      mainHtml,
-      locale: 'en',
+    const html = await this.renderHtml(mainHtml, {
       headComponents: [<title>404 | Root.js</title>],
     });
     return {html};
@@ -302,9 +303,7 @@ export class Renderer {
         error={error}
       />
     );
-    const html = await this.renderHtml({
-      mainHtml,
-      locale: 'en',
+    const html = await this.renderHtml(mainHtml, {
       headComponents: [<title>500 | Root.js</title>],
     });
     return {html};

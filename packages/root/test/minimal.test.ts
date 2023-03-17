@@ -23,7 +23,7 @@ test('build minimal project', async () => {
   const html = await fs.readFile(index, 'utf-8');
   expect(html).toMatchInlineSnapshot(`
     "<!doctype html>
-    <html lang=\\"en\\">
+    <html>
     <head>
     <meta charset=\\"utf-8\\">
     </head>
