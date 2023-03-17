@@ -9,19 +9,28 @@ export interface HeadProps {
 
 /**
  * The <Head> component can be used for injecting elements into the HTML head
- * tag from any part of a page.
+ * tag from any part of a page. The <Head> can be added via any component or
+ * sub-component and will automatically be hoisted to the `<head>` element.
+ *
+ * Usage:
+ *
+ * ```tsx
+ * <Head>
+ *   <link rel="preconnect" href="https://fonts.googleapis.com" />
+ * </Head>
+ * ```
  */
 export const Head: FunctionalComponent<HeadProps> = (props) => {
   let context: ComponentChildren[];
   try {
     context = useContext(HEAD_CONTEXT);
+    context.push(props.children);
   } catch (err) {
-    console.log(err);
+    console.error(err.stack || err);
     throw new Error(
-      '<Head> component is not supported in the browser, or during suspense renders.',
+      'HEAD_CONTEXT not found, double-check usage of the <Head> component',
       {cause: err}
     );
   }
-  context.push(props.children);
   return null;
 };
