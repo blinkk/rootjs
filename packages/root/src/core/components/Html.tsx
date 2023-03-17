@@ -1,4 +1,4 @@
-import {ComponentChildren, createContext} from 'preact';
+import {ComponentChildren, FunctionalComponent, createContext} from 'preact';
 import {useContext} from 'preact/hooks';
 
 export interface HtmlContext {
@@ -26,7 +26,7 @@ export type HtmlProps = preact.JSX.HTMLAttributes<HTMLHtmlElement> & {
  * </Html>
  * ```
  */
-export function Html({children, ...attrs}: HtmlProps) {
+export const Html: FunctionalComponent<HtmlProps> = ({children, ...attrs}) => {
   const context = useContext(HTML_CONTEXT);
   if (!context) {
     throw new Error(
@@ -35,4 +35,4 @@ export function Html({children, ...attrs}: HtmlProps) {
   }
   context.htmlAttrs = attrs;
   return <>{children}</>;
-}
+};

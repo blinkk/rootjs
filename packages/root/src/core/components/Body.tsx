@@ -1,4 +1,4 @@
-import {ComponentChildren} from 'preact';
+import {ComponentChildren, FunctionalComponent} from 'preact';
 import {useContext} from 'preact/hooks';
 import {HTML_CONTEXT} from './Html';
 
@@ -24,7 +24,7 @@ export type BodyProps = preact.JSX.HTMLAttributes<HTMLBodyElement> & {
  *   <h1>Hello world</h1>
  * </body>
  */
-export function Body({children, ...attrs}: BodyProps) {
+export const Body: FunctionalComponent<BodyProps> = ({children, ...attrs}) => {
   const context = useContext(HTML_CONTEXT);
   if (!context) {
     throw new Error(
@@ -33,4 +33,4 @@ export function Body({children, ...attrs}: BodyProps) {
   }
   context.bodyAttrs = attrs;
   return <>{children}</>;
-}
+};
