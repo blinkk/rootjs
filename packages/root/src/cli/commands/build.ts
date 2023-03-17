@@ -135,7 +135,7 @@ export async function build(rootProjectDir?: string, options?: BuildOptions) {
       cssCodeSplit: true,
       target: 'esnext',
       minify: false,
-      polyfillModulePreload: false,
+      modulePreload: {polyfill: false},
       reportCompressedSize: false,
     },
     ssr: {
@@ -169,7 +169,7 @@ export async function build(rootProjectDir?: string, options?: BuildOptions) {
       cssCodeSplit: true,
       target: 'esnext',
       minify: true,
-      polyfillModulePreload: false,
+      modulePreload: {polyfill: false},
       reportCompressedSize: false,
     },
   });
@@ -200,7 +200,7 @@ export async function build(rootProjectDir?: string, options?: BuildOptions) {
         cssCodeSplit: true,
         target: 'esnext',
         minify: true,
-        polyfillModulePreload: false,
+        modulePreload: {polyfill: false},
         reportCompressedSize: false,
       },
     });
