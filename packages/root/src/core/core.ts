@@ -1,4 +1,4 @@
-export * from './pages/ErrorPage';
+export * from './config';
 export * from './components/Body';
 export * from './components/Head';
 export * from './components/Html';
@@ -6,6 +6,5 @@ export * from './components/Script';
 export * from './hooks/useI18nContext';
 export * from './hooks/useRequestContext';
 export * from './hooks/useTranslations';
-export * from './config';
 export * from './plugin';
 export * from './types';

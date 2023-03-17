@@ -25,7 +25,7 @@ export interface Plugin {
    */
   configureServer?: ConfigureServerHook;
   /**
-   * Returns a list of deps to bundle for ssr. The files will be compiled and
+   * Returns a list of deps to bundle for ssr. The files will be bundled and
    * output to `dist/server/`. The return value should be a map of
    * `{output filename => input filepath}`.
    *
