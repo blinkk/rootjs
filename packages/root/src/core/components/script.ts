@@ -1,28 +1,27 @@
-import {createContext, FunctionalComponent} from 'preact';
+import {FunctionalComponent} from 'preact';
 import {useContext} from 'preact/hooks';
+import {HTML_CONTEXT} from './Html';
 
-export const SCRIPT_CONTEXT = createContext<ScriptProps[]>([]);
-
-export interface ScriptProps {
-  src: string;
-  type?: string;
-}
+export type ScriptProps = preact.JSX.HTMLAttributes<HTMLScriptElement>;
 
 /**
  * The <Script> component is used for rendering any custom script modules. At
  * the moment, the system only pre-renders and bundles files that are in the
  * `/bundles` folder at the root of the project.
+ *
+ * Usage:
+ *
+ * ```tsx
+ * <Script src="/bundles/main.ts" />
+ * ```
  */
 export const Script: FunctionalComponent<ScriptProps> = (props) => {
-  let context: ScriptProps[];
-  try {
-    context = useContext(SCRIPT_CONTEXT);
-  } catch (err) {
+  const context = useContext(HTML_CONTEXT);
+  if (!context) {
     throw new Error(
-      '<Script> component is not supported in the browser, or during suspense renders.',
-      {cause: err}
+      'HTML_CONTEXT not found, double-check usage of the <Script> component'
     );
   }
-  context.push(props);
+  context.scriptDeps.push(props);
   return null;
 };

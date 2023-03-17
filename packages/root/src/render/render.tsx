@@ -2,17 +2,13 @@
 import {ComponentChildren, ComponentType} from 'preact';
 import renderToString from 'preact-render-to-string';
 import {getRoutes, getAllPathsForRoute} from './router';
-import {HEAD_CONTEXT} from '../core/components/head';
-import {ErrorPage} from '../core/components/ErrorPage';
-import {getTranslations, I18N_CONTEXT} from '../core/i18n';
-import {ScriptProps, SCRIPT_CONTEXT} from '../core/components/script';
+import {ErrorPage} from '../core/pages/ErrorPage';
 import {AssetMap} from './asset-map/asset-map';
 import {RootConfig} from '../core/config';
 import {RouteTrie} from './route-trie';
 import {elementsMap} from 'virtual:root-elements';
-import {DevNotFoundPage} from '../core/components/DevNotFoundPage';
-import {RequestContext, REQUEST_CONTEXT} from '../core/request-context';
-import {HtmlContextValue, HTML_CONTEXT} from '../core/components/html';
+import {DevNotFoundPage} from '../core/pages/DevNotFoundPage';
+import {HtmlContext, HTML_CONTEXT} from '../core/components/Html';
 import {
   Request,
   Response,
@@ -23,7 +19,9 @@ import {
 } from '../core/types';
 import {htmlMinify} from './html-minify';
 import {htmlPretty} from './html-pretty';
-import {DevErrorPage} from '../core/components/DevErrorPage';
+import {DevErrorPage} from '../core/pages/DevErrorPage';
+import {RequestContext, REQUEST_CONTEXT} from '../core/hooks/useRequestContext';
+import {getTranslations, I18N_CONTEXT} from '../core/hooks/useI18nContext';
 
 interface RenderHtmlOptions {
   mainHtml: string;
@@ -126,18 +124,18 @@ export class Renderer {
       locale,
       translations,
     };
-    const headComponents: ComponentChildren[] = [];
-    const userScripts: ScriptProps[] = [];
-    const htmlContext: HtmlContextValue = {attrs: {}};
+    const htmlContext: HtmlContext = {
+      htmlAttrs: {},
+      headAttrs: {},
+      headComponents: [],
+      bodyAttrs: {},
+      scriptDeps: [],
+    };
     const vdom = (
       <REQUEST_CONTEXT.Provider value={ctx}>
         <I18N_CONTEXT.Provider value={{locale, translations}}>
           <HTML_CONTEXT.Provider value={htmlContext}>
-            <HEAD_CONTEXT.Provider value={headComponents}>
-              <SCRIPT_CONTEXT.Provider value={userScripts}>
-                <Component {...props} />
-              </SCRIPT_CONTEXT.Provider>
-            </HEAD_CONTEXT.Provider>
+            <Component {...props} />
           </HTML_CONTEXT.Provider>
         </I18N_CONTEXT.Provider>
       </REQUEST_CONTEXT.Provider>
@@ -161,7 +159,10 @@ export class Renderer {
 
     // Add user defined scripts added via the `<Script>` component.
     await Promise.all(
-      userScripts.map(async (scriptDep) => {
+      htmlContext.scriptDeps.map(async (scriptDep) => {
+        if (!scriptDep.src) {
+          return;
+        }
         const scriptAsset = await this.assetMap.get(scriptDep.src.slice(1));
         if (scriptAsset) {
           jsDeps.add(scriptAsset.assetUrl);
@@ -171,22 +172,27 @@ export class Renderer {
       })
     );
 
-    cssDeps.forEach((cssUrl) => {
-      headComponents.push(<link rel="stylesheet" href={cssUrl} />);
+    const styleTags = Array.from(cssDeps).map((cssUrl) => {
+      return <link rel="stylesheet" href={cssUrl} />;
     });
-    jsDeps.forEach((jsUrls) => {
-      headComponents.push(<script type="module" src={jsUrls} />);
+    const scriptTags = Array.from(jsDeps).map((jsUrls) => {
+      return <script type="module" src={jsUrls} />;
     });
 
-    const htmlLang = htmlContext.attrs.lang || locale;
+    const htmlLang = htmlContext.htmlAttrs.lang || locale;
     const html = await this.renderHtml({
       mainHtml,
       locale: htmlLang,
-      headComponents,
+      headComponents: [
+        ...htmlContext.headComponents,
+        ...styleTags,
+        ...scriptTags,
+      ],
     });
     return {html};
   }
 
+  /** SSG renders a route. */
   async renderRoute(
     route: Route,
     options: {routeParams: Record<string, string>}
@@ -211,75 +217,7 @@ export class Renderer {
         props = propsData.props;
       }
     }
-
-    const locale = route.locale;
-    const translations = getTranslations(locale);
-    const ctx: RequestContext = {
-      route,
-      props,
-      routeParams,
-      locale,
-      translations,
-    };
-    const headComponents: ComponentChildren[] = [];
-    const userScripts: ScriptProps[] = [];
-    const htmlContext: HtmlContextValue = {attrs: {}};
-    const vdom = (
-      <REQUEST_CONTEXT.Provider value={ctx}>
-        <I18N_CONTEXT.Provider value={{locale, translations}}>
-          <HTML_CONTEXT.Provider value={htmlContext}>
-            <HEAD_CONTEXT.Provider value={headComponents}>
-              <SCRIPT_CONTEXT.Provider value={userScripts}>
-                <Component {...props} />
-              </SCRIPT_CONTEXT.Provider>
-            </HEAD_CONTEXT.Provider>
-          </HTML_CONTEXT.Provider>
-        </I18N_CONTEXT.Provider>
-      </REQUEST_CONTEXT.Provider>
-    );
-    const mainHtml = renderToString(vdom);
-
-    const jsDeps = new Set<string>();
-    const cssDeps = new Set<string>();
-
-    // Walk the page's dependency tree for CSS dependencies that are added via
-    // `import 'foo.scss'` or `import 'foo.module.scss'`.
-    const pageAsset = await this.assetMap.get(route.src);
-    if (pageAsset) {
-      const pageCssDeps = await pageAsset.getCssDeps();
-      pageCssDeps.forEach((dep) => cssDeps.add(dep));
-    }
-
-    // Parse the HTML for custom elements that are found within the project
-    // and automatically inject the script deps for them.
-    await this.collectElementDeps(mainHtml, jsDeps, cssDeps);
-
-    // Add user defined scripts added via the `<Script>` component.
-    await Promise.all(
-      userScripts.map(async (scriptDep) => {
-        const scriptAsset = await this.assetMap.get(scriptDep.src.slice(1));
-        if (scriptAsset) {
-          jsDeps.add(scriptAsset.assetUrl);
-          const scriptJsDeps = await scriptAsset.getJsDeps();
-          scriptJsDeps.forEach((dep) => jsDeps.add(dep));
-        }
-      })
-    );
-
-    cssDeps.forEach((cssUrl) => {
-      headComponents.push(<link rel="stylesheet" href={cssUrl} />);
-    });
-    jsDeps.forEach((jsUrls) => {
-      headComponents.push(<script type="module" src={jsUrls} />);
-    });
-
-    const htmlLang = htmlContext.attrs.lang || locale;
-    const html = await this.renderHtml({
-      mainHtml,
-      locale: htmlLang,
-      headComponents,
-    });
-    return {html};
+    return this.renderComponent(Component, props, {route, routeParams});
   }
 
   async getSitemap(): Promise<

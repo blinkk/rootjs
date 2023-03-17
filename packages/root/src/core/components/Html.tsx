@@ -3,15 +3,13 @@ import {useContext} from 'preact/hooks';
 
 export interface HtmlContext {
   htmlAttrs: preact.JSX.HTMLAttributes<HTMLHtmlElement>;
+  headAttrs: preact.JSX.HTMLAttributes<HTMLHeadElement>;
+  headComponents: ComponentChildren[];
   bodyAttrs: preact.JSX.HTMLAttributes<HTMLBodyElement>;
   scriptDeps: Array<preact.JSX.HTMLAttributes<HTMLScriptElement>>;
 }
 
-export const HTML_CONTEXT = createContext<HtmlContext>({
-  htmlAttrs: {},
-  bodyAttrs: {},
-  scriptDeps: [],
-});
+export const HTML_CONTEXT = createContext<HtmlContext | null>(null);
 
 export type HtmlProps = preact.JSX.HTMLAttributes<HTMLHtmlElement> & {
   children?: ComponentChildren;
@@ -29,16 +27,12 @@ export type HtmlProps = preact.JSX.HTMLAttributes<HTMLHtmlElement> & {
  * ```
  */
 export function Html({children, ...attrs}: HtmlProps) {
-  let context: HtmlContext;
-  try {
-    context = useContext(HTML_CONTEXT);
-    context.htmlAttrs = attrs;
-  } catch (err) {
-    console.error(err.stack || err);
+  const context = useContext(HTML_CONTEXT);
+  if (!context) {
     throw new Error(
-      'HTML_CONTEXT not found, double-check usage of the <Html> component',
-      {cause: err}
+      'HTML_CONTEXT not found, double-check usage of the <Html> component'
     );
   }
+  context.htmlAttrs = attrs;
   return <>{children}</>;
 }

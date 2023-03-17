@@ -9,6 +9,18 @@ export interface I18nContext {
   translations: Record<string, string>;
 }
 
+/**
+ * A hook that returns information about the current i18n context, including the
+ * locale for the given route and a map of translations for that locale.
+ */
+export function useI18nContext() {
+  const context = useContext(I18N_CONTEXT);
+  if (!context) {
+    throw new Error('I18N_CONTEXT not found');
+  }
+  return context;
+}
+
 export function getTranslations(locale: string): Record<string, string> {
   const translations: Record<string, Record<string, string>> = {};
   const translationsFiles = import.meta.glob(['/translations/*.json'], {
@@ -23,28 +35,4 @@ export function getTranslations(locale: string): Record<string, string> {
     }
   });
   return translations[locale] || {};
-}
-
-export function useI18nContext() {
-  const context = useContext(I18N_CONTEXT);
-  if (!context) {
-    throw new Error('could not find i18n context');
-  }
-  return context;
-}
-
-export function useTranslations() {
-  const context = useI18nContext();
-  const translations = context.translations || {};
-  const t = (str: string, params?: Record<string, string>) => {
-    let translation = translations[str] || str || '';
-    if (params) {
-      for (const key of Object.keys(params)) {
-        const val = String(params[key] || '');
-        translation = translation.replaceAll(`{${key}}`, val);
-      }
-    }
-    return translation;
-  };
-  return t;
 }

@@ -1,6 +1,6 @@
 import {createContext} from 'preact';
 import {useContext} from 'preact/hooks';
-import {Route} from './types';
+import {Route} from '../types';
 
 export interface RequestContext {
   /** The route file. */
@@ -20,10 +20,21 @@ export interface RequestContext {
 
 export const REQUEST_CONTEXT = createContext<RequestContext | null>(null);
 
+/**
+ * A hook that returns information about the current route.
+ *
+ * Usage:
+ *
+ * ```ts
+ * const ctx = useRequestContext();
+ * ctx.route.src;
+ * // => 'routes/index.tsx'
+ * ```
+ */
 export function useRequestContext() {
   const context = useContext(REQUEST_CONTEXT);
   if (!context) {
-    throw new Error('could not find request context');
+    throw new Error('REQUEST_CONTEXT not found');
   }
   return context;
 }

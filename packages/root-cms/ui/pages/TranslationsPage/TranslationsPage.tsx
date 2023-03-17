@@ -10,7 +10,7 @@ export function TranslationsPage() {
         <Heading size="h1">Translations</Heading>
         <Text as="p">
           This page is currently under construction, but the current idea is to
-          automated translations workflows here, including creating translations
+          automate translations workflows here, including creating translations
           requests by selecting specific docs, or running a batch job to find
           all untranslated jobs in the system.
         </Text>

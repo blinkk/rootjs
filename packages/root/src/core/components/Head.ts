@@ -1,11 +1,10 @@
-import {ComponentChildren, createContext, FunctionalComponent} from 'preact';
+import {ComponentChildren, FunctionalComponent} from 'preact';
 import {useContext} from 'preact/hooks';
+import {HTML_CONTEXT} from './Html';
 
-export const HEAD_CONTEXT = createContext<ComponentChildren[]>([]);
-
-export interface HeadProps {
+export type HeadProps = preact.JSX.HTMLAttributes<HTMLHeadElement> & {
   children?: ComponentChildren;
-}
+};
 
 /**
  * The <Head> component can be used for injecting elements into the HTML head
@@ -20,17 +19,14 @@ export interface HeadProps {
  * </Head>
  * ```
  */
-export const Head: FunctionalComponent<HeadProps> = (props) => {
-  let context: ComponentChildren[];
-  try {
-    context = useContext(HEAD_CONTEXT);
-    context.push(props.children);
-  } catch (err) {
-    console.error(err.stack || err);
+export const Head: FunctionalComponent<HeadProps> = ({children, ...attrs}) => {
+  const context = useContext(HTML_CONTEXT);
+  if (!context) {
     throw new Error(
-      'HEAD_CONTEXT not found, double-check usage of the <Head> component',
-      {cause: err}
+      'HTML_CONTEXT not found, double-check usage of the <Head> component'
     );
   }
+  context.headComponents.push(children);
+  context.headAttrs = attrs;
   return null;
 };
