@@ -60,14 +60,12 @@ function useDocsList(collectionId: string, options: {orderBy: string}) {
     } else if (orderBy === 'slug') {
       dbQuery = query(dbCollection, queryOrderby(documentId()));
     }
-    console.log('listing docs', collectionId, orderBy);
     const snapshot = await getDocs(dbQuery);
     const docs = snapshot.docs.map((d) => ({
       ...d.data(),
       id: `${collectionId}/${d.id}`,
       slug: d.id,
     }));
-    console.log(collectionId, docs);
     setDocs(docs);
     setLoading(false);
   };

@@ -84,8 +84,6 @@ auth.onAuthStateChanged((user) => {
     loginRedirect();
     return;
   }
-  console.log('logged in as:');
-  console.log(user.email);
   window.firebase = {app, auth, db, user};
   const root = document.getElementById('root')!;
   root.innerHTML = '';
