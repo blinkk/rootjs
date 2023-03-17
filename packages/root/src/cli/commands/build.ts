@@ -31,11 +31,13 @@ interface BuildOptions {
 }
 
 export async function build(rootProjectDir?: string, options?: BuildOptions) {
+  const mode = options?.mode || 'production';
+  process.env.NODE_ENV = mode;
+
   const rootDir = path.resolve(rootProjectDir || process.cwd());
   const rootConfig = await loadRootConfig(rootDir);
   const distDir = path.join(rootDir, 'dist');
   const ssrOnly = options?.ssrOnly || false;
-  const mode = options?.mode || 'production';
 
   console.log();
   console.log(`${dim('┃')} project:  ${rootDir}`);
