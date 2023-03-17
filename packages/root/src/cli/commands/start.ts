@@ -2,7 +2,7 @@ import path from 'node:path';
 import {default as express} from 'express';
 import {loadRootConfig} from '../load-config';
 import {Renderer} from '../../render/render.js';
-import {fileExists, loadJson} from '../../core/fsutils';
+import {fileExists, loadJson} from '../../utils/fsutils';
 import {
   BuildAssetManifest,
   BuildAssetMap,
@@ -14,6 +14,7 @@ import compression from 'compression';
 import {Request, Response, NextFunction, Server} from '../../core/types.js';
 import {rootProjectMiddleware} from '../../core/middleware';
 import {RootConfig} from '../../core/config';
+import {getElements} from '../../core/element-graph';
 
 type RenderModule = typeof import('../../render/render.js');
 
@@ -89,7 +90,8 @@ async function rootProdRendererMiddleware(options: {
   }
   const rootManifest = await loadJson<BuildAssetManifest>(manifestPath);
   const assetMap = BuildAssetMap.fromRootManifest(rootConfig, rootManifest);
-  const renderer = new render.Renderer(rootConfig, {assetMap}) as Renderer;
+  const elementGraph = await getElements(rootConfig);
+  const renderer = new render.Renderer(rootConfig, {assetMap, elementGraph});
   return async (req: Request, _: Response, next: NextFunction) => {
     req.renderer = renderer;
     next();
@@ -120,14 +122,16 @@ function rootProdServerMiddleware() {
 function rootProdServer404Middleware() {
   return async (req: Request, res: Response) => {
     console.error(`❓ 404 ${req.originalUrl}`);
-    const url = req.path;
-    const ext = path.extname(url);
-    const renderer = req.renderer!;
-    if (!ext) {
-      const data = await renderer.render404();
-      const html = data.html || '';
-      res.status(404).set({'Content-Type': 'text/html'}).end(html);
-      return;
+    if (req.renderer) {
+      const url = req.path;
+      const ext = path.extname(url);
+      if (!ext) {
+        const renderer = req.renderer;
+        const data = await renderer.render404();
+        const html = data.html || '';
+        res.status(404).set({'Content-Type': 'text/html'}).end(html);
+        return;
+      }
     }
     res.status(404).set({'Content-Type': 'text/plain'}).end('404');
   };
@@ -137,14 +141,16 @@ function rootProdServer500Middleware() {
   return async (err: any, req: Request, res: Response, next: NextFunction) => {
     console.error(`❗ 500 ${req.originalUrl}`);
     console.error(String(err.stack || err));
-    const url = req.path;
-    const ext = path.extname(url);
-    const renderer = req.renderer!;
-    if (!ext) {
-      const data = await renderer.renderError(err);
-      const html = data.html || '';
-      res.status(500).set({'Content-Type': 'text/html'}).end(html);
-      return;
+    if (req.renderer) {
+      const url = req.path;
+      const ext = path.extname(url);
+      if (!ext) {
+        const renderer = req.renderer;
+        const data = await renderer.renderError(err);
+        const html = data.html || '';
+        res.status(500).set({'Content-Type': 'text/html'}).end(html);
+        return;
+      }
     }
     next(err);
   };

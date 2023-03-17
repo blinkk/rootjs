@@ -5,7 +5,6 @@ import {ErrorPage} from '../core/pages/ErrorPage';
 import {AssetMap} from './asset-map/asset-map';
 import {RootConfig} from '../core/config';
 import {RouteTrie} from './route-trie';
-import {elementsMap} from 'virtual:root-elements';
 import {DevNotFoundPage} from '../core/pages/DevNotFoundPage';
 import {HtmlContext, HTML_CONTEXT} from '../core/components/Html';
 import {
@@ -21,6 +20,8 @@ import {htmlPretty} from './html-pretty';
 import {DevErrorPage} from '../core/pages/DevErrorPage';
 import {RequestContext, REQUEST_CONTEXT} from '../core/hooks/useRequestContext';
 import {getTranslations, I18N_CONTEXT} from '../core/hooks/useI18nContext';
+import type {ElementGraph} from '../core/element-graph';
+import {parseTagNames} from '../utils/elements';
 
 interface RenderHtmlOptions {
   /** Attrs passed to the <html> tag, e.g. `{lang: 'en'}`. */
@@ -37,20 +38,25 @@ export class Renderer {
   private rootConfig: RootConfig;
   private routes: RouteTrie<Route>;
   private assetMap: AssetMap;
+  private elementGraph: ElementGraph;
 
-  constructor(rootConfig: RootConfig, options: {assetMap: AssetMap}) {
+  constructor(
+    rootConfig: RootConfig,
+    options: {assetMap: AssetMap; elementGraph: ElementGraph}
+  ) {
     this.rootConfig = rootConfig;
     this.routes = getRoutes(this.rootConfig);
     this.assetMap = options.assetMap;
+    this.elementGraph = options.elementGraph;
   }
 
-  async render(url: string): Promise<{html?: string; notFound?: boolean}> {
-    const [route, routeParams] = this.routes.get(url);
-    if (route && route.module && route.module.default) {
-      return await this.renderRoute(route, {routeParams});
-    }
-    return {notFound: true};
-  }
+  // async render(url: string): Promise<{html?: string; notFound?: boolean}> {
+  //   const [route, routeParams] = this.routes.get(url);
+  //   if (route && route.module && route.module.default) {
+  //     return await this.renderRoute(route, {routeParams});
+  //   }
+  //   return {notFound: true};
+  // }
 
   async handle(req: Request, res: Response, next: NextFunction) {
     // TODO(stevenle): handle baseUrl config.
@@ -317,25 +323,30 @@ export class Renderer {
     jsDeps: Set<string>,
     cssDeps: Set<string>
   ): Promise<{jsDeps: Set<string>; cssDeps: Set<string>}> {
+    const elementsMap = this.elementGraph.sourceFiles;
     const assetMap = this.assetMap;
 
-    const re = /<(\w[\w-]+\w)/g;
-    const matches = Array.from(html.matchAll(re));
-    await Promise.all(
-      matches.map(async (match) => {
-        const tagName = match[1];
-        // Custom elements require a dash.
-        if (tagName && tagName.includes('-') && tagName in elementsMap) {
-          const elementModule = elementsMap[tagName];
-          const asset = await assetMap.get(elementModule.src);
-          if (!asset) {
-            return;
-          }
-          const assetJsDeps = await asset.getJsDeps();
-          assetJsDeps.forEach((dep) => jsDeps.add(dep));
-          const assetCssDeps = await asset.getCssDeps();
-          assetCssDeps.forEach((dep) => cssDeps.add(dep));
+    const tagNames = new Set<string>();
+    for (const tagName of parseTagNames(html)) {
+      if (tagName && tagName in elementsMap) {
+        tagNames.add(tagName);
+        for (const depTagName of this.elementGraph.getDeps(tagName)) {
+          tagNames.add(depTagName);
         }
+      }
+    }
+
+    await Promise.all(
+      Array.from(tagNames).map(async (tagName: string) => {
+        const elementModule = elementsMap[tagName];
+        const asset = await assetMap.get(elementModule.relPath);
+        if (!asset) {
+          return;
+        }
+        const assetJsDeps = await asset.getJsDeps();
+        assetJsDeps.forEach((dep) => jsDeps.add(dep));
+        const assetCssDeps = await asset.getCssDeps();
+        assetCssDeps.forEach((dep) => cssDeps.add(dep));
       })
     );
 

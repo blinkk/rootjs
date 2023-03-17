@@ -3,7 +3,7 @@ import {default as express} from 'express';
 import {Request, Response, NextFunction, Server} from '../../core/types.js';
 import {loadRootConfig} from '../load-config';
 import {Renderer} from '../../render/render.js';
-import {fileExists, loadJson} from '../../core/fsutils';
+import {fileExists, loadJson} from '../../utils/fsutils';
 import {
   BuildAssetManifest,
   BuildAssetMap,
@@ -14,6 +14,7 @@ import sirv from 'sirv';
 import compression from 'compression';
 import {rootProjectMiddleware} from '../../core/middleware';
 import {RootConfig} from '../../core/config';
+import {getElements} from '../../core/element-graph.js';
 
 type RenderModule = typeof import('../../render/render.js');
 
@@ -91,7 +92,8 @@ async function rootPreviewRendererMiddleware(options: {
   }
   const rootManifest = await loadJson<BuildAssetManifest>(manifestPath);
   const assetMap = BuildAssetMap.fromRootManifest(rootConfig, rootManifest);
-  const renderer = new render.Renderer(rootConfig, {assetMap}) as Renderer;
+  const elementGraph = await getElements(rootConfig);
+  const renderer = new render.Renderer(rootConfig, {assetMap, elementGraph});
   return async (req: Request, _: Response, next: NextFunction) => {
     req.renderer = renderer;
     next();

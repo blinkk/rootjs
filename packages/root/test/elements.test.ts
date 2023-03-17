@@ -1,7 +1,7 @@
 import {promises as fs} from 'node:fs';
 import path from 'node:path';
 import {assert, beforeEach, test, expect, afterEach} from 'vitest';
-import {fileExists} from '../src/core/fsutils';
+import {fileExists} from '../src/utils/fsutils';
 import {Fixture, loadFixture} from './testutils';
 
 let fixture: Fixture;
@@ -11,9 +11,9 @@ beforeEach(async () => {
 });
 
 afterEach(async () => {
-  // if (fixture) {
-  //   await fixture.cleanup();
-  // }
+  if (fixture) {
+    await fixture.cleanup();
+  }
 });
 
 test('add custom element to a page', async () => {
@@ -30,8 +30,8 @@ test('add custom element to a page', async () => {
     <html>
     <head>
     <meta charset=\\"utf-8\\">
-    <script type=\\"module\\" src=\\"/assets/root-counter.7759364a.min.js\\"></script>
-    <script type=\\"module\\" src=\\"/assets/root-label.1f2a202c.min.js\\"></script>
+    <script type=\\"module\\" src=\\"/assets/root-counter.731208e1.min.js\\"></script>
+    <script type=\\"module\\" src=\\"/assets/root-label.03a6e7fe.min.js\\"></script>
     </head>
     <body>
     <h1>Counter</h1><root-counter start=\\"3\\"></root-counter>
@@ -52,7 +52,7 @@ test('use custom elements from another directory', async () => {
     <html>
     <head>
     <meta charset=\\"utf-8\\">
-    <script type=\\"module\\" src=\\"/assets/ds-foo.5fa7c9e5.min.js\\"></script>
+    <script type=\\"module\\" src=\\"/assets/ds-foo.117a5a02.min.js\\"></script>
     </head>
     <body><ds-foo name=\\"Alice\\"></ds-foo></body>
     </html>
@@ -73,8 +73,8 @@ test('exclude elements matching a certain pattern', async () => {
     <html>
     <head>
     <meta charset=\\"utf-8\\">
-    <script type=\\"module\\" src=\\"/assets/root-counter.7759364a.min.js\\"></script>
-    <script type=\\"module\\" src=\\"/assets/root-label.1f2a202c.min.js\\"></script>
+    <script type=\\"module\\" src=\\"/assets/root-counter.731208e1.min.js\\"></script>
+    <script type=\\"module\\" src=\\"/assets/root-label.03a6e7fe.min.js\\"></script>
     </head>
     <body>
     <h1>Counter</h1><root-counter start=\\"3\\"></root-counter>

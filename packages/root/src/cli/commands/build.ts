@@ -3,7 +3,6 @@ import {fileURLToPath} from 'node:url';
 import fsExtra from 'fs-extra';
 import glob from 'tiny-glob';
 import {build as viteBuild, Manifest, ManifestChunk, UserConfig} from 'vite';
-import {pluginRoot} from '../../render/vite-plugin-root.js';
 import {BuildAssetMap} from '../../render/asset-map/build-asset-map.js';
 import {loadRootConfig} from '../load-config.js';
 import {
@@ -15,11 +14,11 @@ import {
   makeDir,
   rmDir,
   writeFile,
-} from '../../core/fsutils.js';
+} from '../../utils/fsutils.js';
 import {htmlMinify} from '../../render/html-minify.js';
 import {dim, cyan} from 'kleur/colors';
 import {getVitePlugins} from '../../core/plugin.js';
-import {getElements} from '../../core/elements.js';
+import {getElements} from '../../core/element-graph.js';
 import {htmlPretty} from '../../render/html-pretty.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -58,10 +57,10 @@ export async function build(rootProjectDir?: string, options?: BuildOptions) {
     });
   }
 
-  const elementsMap = await getElements(rootConfig);
-  const elements = Object.values(elementsMap).map((mod) =>
-    path.resolve(rootDir, mod.src)
-  );
+  const elementGraph = await getElements(rootConfig);
+  const elements = Object.values(elementGraph.sourceFiles).map((sourceFile) => {
+    return sourceFile.filePath;
+  });
 
   const bundleScripts: string[] = [];
   if (await isDirectory(path.join(rootDir, 'bundles'))) {
@@ -77,7 +76,6 @@ export async function build(rootProjectDir?: string, options?: BuildOptions) {
   const rootPlugins = rootConfig.plugins || [];
   const viteConfig = rootConfig.vite || {};
   const vitePlugins = [
-    pluginRoot({rootConfig}),
     ...(viteConfig.plugins || []),
     ...getVitePlugins(rootPlugins),
   ];
@@ -259,7 +257,7 @@ export async function build(rootProjectDir?: string, options?: BuildOptions) {
   const assetMap = BuildAssetMap.fromViteManifest(
     rootConfig,
     clientManifest,
-    elementsMap
+    elementGraph
   );
 
   // Save the asset map to `dist/client` for use by the prod SSR server.
@@ -313,7 +311,7 @@ export async function build(rootProjectDir?: string, options?: BuildOptions) {
     const render: RenderModule = await import(
       path.join(distDir, 'server/render.js')
     );
-    const renderer = new render.Renderer(rootConfig, {assetMap});
+    const renderer = new render.Renderer(rootConfig, {assetMap, elementGraph});
     const sitemap = await renderer.getSitemap();
 
     console.log('\nhtml output:');

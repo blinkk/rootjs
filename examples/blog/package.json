@@ -19,10 +19,10 @@
     "@blinkk/root-cms": "workspace:*",
     "firebase-admin": "^11.5.0",
     "preact": "^10.10.6",
-    "preact-render-to-string": "^5.2.3",
-    "vite": "^3.1.0"
+    "preact-render-to-string": "^5.2.3"
   },
   "devDependencies": {
-    "@types/node": "^18.11.18"
+    "@types/node": "^18.11.18",
+    "vite": "^4.1.4"
   }
 }

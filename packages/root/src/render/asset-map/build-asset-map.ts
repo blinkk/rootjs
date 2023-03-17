@@ -1,8 +1,8 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import {ElementModule} from 'virtual:root-elements';
 import {Manifest} from 'vite';
 import {RootConfig} from '../../core/config';
+import {ElementGraph} from '../../core/element-graph';
 import {Asset, AssetMap} from './asset-map';
 
 export type BuildAssetManifest = Record<
@@ -57,17 +57,20 @@ export class BuildAssetMap implements AssetMap {
   static fromViteManifest(
     rootConfig: RootConfig,
     clientManifest: Manifest,
-    elementMap: Record<string, ElementModule>
+    elementsGraph: ElementGraph
   ) {
     const assetMap = new BuildAssetMap(rootConfig);
 
     const elementFiles = new Set();
-    Object.values(elementMap).forEach((elementModule) => {
-      elementFiles.add(elementModule.src);
+    Object.values(elementsGraph.sourceFiles).forEach((elementSource) => {
+      elementFiles.add(elementSource.relPath);
       // Vite will resolve symlinks, so we need to follow the src and add the
       // realpath to the element files.
-      const realSrc = realPathRelativeTo(rootConfig.rootDir, elementModule.src);
-      if (realSrc !== elementModule.src) {
+      const realSrc = realPathRelativeTo(
+        rootConfig.rootDir,
+        elementSource.relPath
+      );
+      if (realSrc !== elementSource.filePath) {
         elementFiles.add(realSrc);
       }
     });

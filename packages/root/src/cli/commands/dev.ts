@@ -2,10 +2,9 @@ import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {default as express} from 'express';
 import {createServer as createViteServer} from 'vite';
-import {pluginRoot} from '../../render/vite-plugin-root.js';
 import {DevServerAssetMap} from '../../render/asset-map/dev-asset-map.js';
 import {loadRootConfig} from '../load-config.js';
-import {isDirectory, isJsFile} from '../../core/fsutils.js';
+import {isDirectory, isJsFile} from '../../utils/fsutils.js';
 import glob from 'tiny-glob';
 import {dim} from 'kleur/colors';
 import {Server, Request, Response, NextFunction} from '../../core/types.js';
@@ -13,7 +12,7 @@ import {configureServerPlugins, getVitePlugins} from '../../core/plugin.js';
 import {RootConfig} from '../../core/config.js';
 import {rootProjectMiddleware} from '../../core/middleware.js';
 import {findOpenPort} from '../ports.js';
-import {getElements} from '../../core/elements.js';
+import {getElements} from '../../core/element-graph.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -45,7 +44,6 @@ async function createServer(options?: {
   // Inject req context vars.
   server.use(rootProjectMiddleware({rootDir, rootConfig}));
   server.use(await viteServerMiddleware({rootDir, rootConfig, port}));
-  server.use(rootDevRendererMiddleware());
 
   const plugins = rootConfig.plugins || [];
   await configureServerPlugins(
@@ -99,8 +97,10 @@ async function viteServerMiddleware(options: {
     });
   }
 
-  const elementsMap = await getElements(rootConfig);
-  const elements = Object.values(elementsMap).map((mod) => mod.src);
+  const elementGraph = await getElements(rootConfig);
+  const elements = Object.values(elementGraph.sourceFiles).map((sourceFile) => {
+    return sourceFile.relPath;
+  });
 
   const bundleScripts: string[] = [];
   if (await isDirectory(path.join(rootDir, 'bundles'))) {
@@ -127,7 +127,7 @@ async function viteServerMiddleware(options: {
     optimizeDeps: {
       ...(viteConfig.optimizeDeps || {}),
       include: [
-        ...routeFiles,
+        // ...routeFiles,
         ...elements,
         ...bundleScripts,
         ...(viteConfig.optimizeDeps?.include || []),
@@ -143,36 +143,28 @@ async function viteServerMiddleware(options: {
       jsxImportSource: 'preact',
     },
     plugins: [
-      await pluginRoot({rootConfig}),
       ...(viteConfig.plugins || []),
       ...getVitePlugins(rootConfig.plugins || []),
     ],
   });
+
   return async (req: Request, res: Response, next: NextFunction) => {
     try {
+      // Add the viteServer to the req.
       req.viteServer = viteServer;
-      viteServer.middlewares(req, res, next);
-    } catch (e) {
-      next(e);
-    }
-  };
-}
-
-function rootDevRendererMiddleware() {
-  const renderModulePath = path.resolve(__dirname, './render.js');
-  return async (req: Request, _: Response, next: NextFunction) => {
-    const rootConfig = req.rootConfig!;
-    const viteServer = req.viteServer!;
-    try {
       // Dynamically import the render.js module using vite's SSR import loader.
+      const renderModulePath = path.resolve(__dirname, './render.js');
       const render = await viteServer.ssrLoadModule(renderModulePath);
       // Create a dev asset map using Vite dev server's module graph.
       const assetMap = new DevServerAssetMap(
         rootConfig,
         viteServer.moduleGraph
       );
-      req.renderer = new render.Renderer(rootConfig, {assetMap});
-      next();
+      // Add a renderer object to the req for plugins and other middleware to
+      // use.
+      req.renderer = new render.Renderer(rootConfig, {assetMap, elementGraph});
+      // Run the viteServer middlewares to handle vite-specific endpoints.
+      viteServer.middlewares(req, res, next);
     } catch (e) {
       next(e);
     }
@@ -197,14 +189,16 @@ function rootDevServerMiddleware() {
 function rootDevServer404Middleware() {
   return async (req: Request, res: Response) => {
     console.error(`❓ 404 ${req.originalUrl}`);
-    const url = req.path;
-    const ext = path.extname(url);
-    const renderer = req.renderer!;
-    if (!ext) {
-      const data = await renderer.renderDevServer404(req);
-      const html = data.html || '';
-      res.status(404).set({'Content-Type': 'text/html'}).end(html);
-      return;
+    if (req.renderer) {
+      const url = req.path;
+      const ext = path.extname(url);
+      if (!ext) {
+        const renderer = req.renderer;
+        const data = await renderer.renderDevServer404(req);
+        const html = data.html || '';
+        res.status(404).set({'Content-Type': 'text/html'}).end(html);
+        return;
+      }
     }
     res.status(404).set({'Content-Type': 'text/plain'}).end('404');
   };
@@ -214,14 +208,16 @@ function rootDevServer500Middleware() {
   return async (err: any, req: Request, res: Response, next: NextFunction) => {
     console.error(`❗ 500 ${req.originalUrl}`);
     console.error(String(err.stack || err));
-    const url = req.path;
-    const ext = path.extname(url);
-    const renderer = req.renderer!;
-    if (!ext) {
-      const data = await renderer.renderDevServer500(req, err);
-      const html = data.html || '';
-      res.status(500).set({'Content-Type': 'text/html'}).end(html);
-      return;
+    if (req.renderer) {
+      const url = req.path;
+      const ext = path.extname(url);
+      if (!ext) {
+        const renderer = req.renderer;
+        const data = await renderer.renderDevServer500(req, err);
+        const html = data.html || '';
+        res.status(500).set({'Content-Type': 'text/html'}).end(html);
+        return;
+      }
     }
     next(err);
   };
