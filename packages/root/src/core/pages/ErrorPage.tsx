@@ -27,13 +27,15 @@ h2 {
 }
 
 .box {
+  font-size: 16px;
+  line-height: 1.5;
   padding: 16px;
   border-radius: 12px;
   background: #ffffff;
 }
 
 pre.box {
-  overflow: scroll;
+  white-space: pre-wrap;
 }
 
 @media (min-width: 500px)  {

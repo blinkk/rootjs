@@ -50,14 +50,6 @@ export class Renderer {
     this.elementGraph = options.elementGraph;
   }
 
-  // async render(url: string): Promise<{html?: string; notFound?: boolean}> {
-  //   const [route, routeParams] = this.routes.get(url);
-  //   if (route && route.module && route.module.default) {
-  //     return await this.renderRoute(route, {routeParams});
-  //   }
-  //   return {notFound: true};
-  // }
-
   async handle(req: Request, res: Response, next: NextFunction) {
     // TODO(stevenle): handle baseUrl config.
     const url = req.path;
@@ -89,7 +81,15 @@ export class Renderer {
       } else if (this.rootConfig.minifyHtml !== false) {
         html = await htmlMinify(html, this.rootConfig.minifyHtmlOptions);
       }
-      res.status(200).set({'Content-Type': 'text/html'}).end(html);
+      // Override the status code for 404 and 500 routes, which are defined at
+      // routes/404.tsx and routes/500.tsx respectively.
+      let statusCode = 200;
+      if (route.src === 'routes/404.tsx') {
+        statusCode = 404;
+      } else if (route.src === 'routes/500.tsx') {
+        statusCode = 500;
+      }
+      res.status(statusCode).set({'Content-Type': 'text/html'}).end(html);
     };
 
     if (route.module.handle) {
@@ -266,6 +266,12 @@ export class Renderer {
   }
 
   async render404() {
+    const [route, routeParams] = this.routes.get('/404');
+    if (route && route.src === 'routes/404.tsx' && route.module.default) {
+      const Component = route.module.default;
+      return this.renderComponent(Component, {}, {route, routeParams});
+    }
+
     const mainHtml = renderToString(<ErrorPage code={404} title="Not Found" />);
     const html = await this.renderHtml(mainHtml, {
       headComponents: [<title>404</title>],
@@ -274,6 +280,16 @@ export class Renderer {
   }
 
   async renderError(err: any) {
+    const [route, routeParams] = this.routes.get('/500');
+    if (route && route.src === 'routes/500.tsx' && route.module.default) {
+      const Component = route.module.default;
+      return this.renderComponent(
+        Component,
+        {error: err},
+        {route, routeParams}
+      );
+    }
+
     const mainHtml = renderToString(
       <ErrorPage
         code={500}

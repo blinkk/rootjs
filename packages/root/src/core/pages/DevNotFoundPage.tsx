@@ -9,17 +9,17 @@ interface DevNotFoundPageProps {
 export function DevNotFoundPage(props: DevNotFoundPageProps) {
   const req = props.req;
   const routesList: Array<{src: string; urlPath: string}> = [];
-  let maxUrlLen = 0;
+  let maxRouteLength = 0;
   Object.keys(props.sitemap).forEach((urlPath) => {
     const route = props.sitemap[urlPath].route;
     routesList.push(Object.assign({}, route, {urlPath}));
-    if (urlPath.length > maxUrlLen) {
-      maxUrlLen = urlPath.length;
+    if (route.src.length > maxRouteLength) {
+      maxRouteLength = route.src.length;
     }
   });
   const routesListString = routesList
     .map((route) => {
-      return `${route.urlPath.padEnd(maxUrlLen, ' ')}  =>  ${route.src}`;
+      return `${route.src.padEnd(maxRouteLength, ' ')}  =>  ${route.urlPath}`;
     })
     .join('\n');
   return (
