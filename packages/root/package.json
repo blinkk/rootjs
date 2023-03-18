@@ -8,7 +8,8 @@
   },
   "files": [
     "bin/*",
-    "dist/**/*"
+    "dist/**/*",
+    "client.d.ts"
   ],
   "bin": {
     "root": "./bin/root.js"
@@ -21,6 +22,7 @@
       "types": "./dist/core.d.ts",
       "import": "./dist/core.js"
     },
+    "./client": "./client.d.ts",
     "./*": {
       "types": "./dist/*.d.ts",
       "import": "./dist/*.js"
