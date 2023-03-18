@@ -6,7 +6,7 @@
   "packageManager": "pnpm@7.11.0",
   "main": "index.js",
   "scripts": {
-    "build": "turbo run build --ignore=\"examples/**/*\" --ignore=\"@private/*\"",
+    "build": "turbo run build --filter=\"@blinkk/*\"",
     "changeset": "changeset",
     "dev": "npm-run-all --parallel dev:server dev:webui",
     "format": "eslint . --ext .ts,.tsx --fix",
@@ -36,7 +36,7 @@
     "npm-run-all": "^4.1.5",
     "prettier": "^2.6.0",
     "release-please": "^13.8.0",
-    "turbo": "^1.2.3",
+    "turbo": "^1.8.3",
     "typescript": "^4.6.2"
   }
 }
