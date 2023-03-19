@@ -1,26 +1,27 @@
-# Root.js
+# 🌱 Root.js
 
-Root.js is a component-focused site building framework and CMS. The project is
-still under development, more details coming soon!
+> Root.js is a component-focused site building framework and CMS. The project is
+> still under development, more details coming soon!
 
-## Development
+- 🛠️ TSX Rendering
+- 🕸️ Web Components
+- 📁 File Routes
+- 🇯🇵 i18n
+- 🔩 CMS
 
-This project uses [PNPM](https://pnpm.io/). Install it running
-`npm install -g pnpm` or for node v16 or later, use run
-`corepack prepare pnpm@latest --activate`.
+Root.js is an opinionated, fully-featured web development tool with a built-in
+CMS.
 
-Initial setup:
+[Read the Docs to Learn More](https://rootjs.dev)
 
-```shell
-git clone git@github.com:blinkk/rootjs.git && cd rootjs
-pnpm install
-```
+## Packages
 
-CD into an examples folder and start the dev server:
+| Package                                         | Version (click for changelogs)                                                                                                    |
+| ----------------------------------------------- | :-------------------------------------------------------------------------------------------------------------------------------- |
+| [@blinkk/root](packages/root)                   | [![root version](https://img.shields.io/npm/v/@blinkk/root.svg?label=%20)](packages/root/CHANGELOG.md)                            |
+| [@blinkk/root-cms](packages/root-cms)           | [![root-cms version](https://img.shields.io/npm/v/@blinkk/root-cms.svg?label=%20)](packages/root-cms/CHANGELOG.md)                |
+| [@blinkk/create-root](packages/create-root)     | [![create-root version](https://img.shields.io/npm/v/@blinkk/create-root.svg?label=%20)](packages/create-root/CHANGELOG.md)       |
 
-```shell
-cd examples/starter
-pnpm dev
-```
+## Contribution
 
-And then visit: http://localhost:4007
+See [Contributing Guide](CONTRIBUTING.md).
