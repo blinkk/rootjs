@@ -38,6 +38,7 @@ export class DraftController {
   private subscribers: Subscribers = {};
   private saveState = SaveState.NO_CHANGES;
   private onSaveStateChangeCallback?: (saveState: SaveState) => void;
+  private started = false;
 
   constructor(docId: string) {
     this.projectId = window.__ROOT_CTX.rootConfig.projectId;
@@ -60,7 +61,11 @@ export class DraftController {
    * Listens for changes on the document.
    */
   async start() {
+    if (this.started) {
+      return;
+    }
     console.log('start()');
+    this.started = true;
     this.dbUnsubscribe = onSnapshot(this.docRef, (snapshot) => {
       const data = snapshot.data();
       // Save the user's local changes to the snapshot so that their updates
@@ -75,14 +80,18 @@ export class DraftController {
   }
 
   /**
-   * Stops listening for changes.
+   * Stops listening for changes and saves any pending data to the db.
    */
   stop() {
+    if (!this.started) {
+      return;
+    }
     console.log('stop()');
     if (this.dbUnsubscribe) {
       this.dbUnsubscribe();
     }
     this.flush();
+    this.started = false;
   }
 
   /**
@@ -307,6 +316,14 @@ export function useDraft(docId: string) {
     });
     draft.onSaveStateChange((newSaveState) => setSaveState(newSaveState));
     draft.start();
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') {
+        setLoading(true);
+        draft.start();
+      } else {
+        draft.stop();
+      }
+    });
     return () => draft.dispose();
   }, []);
 
