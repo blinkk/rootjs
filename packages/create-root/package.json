@@ -4,6 +4,9 @@
   "description": "",
   "author": "s@blinkk.com",
   "license": "MIT",
+  "engines": {
+    "node": ">=16.0.0"
+  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/blinkk/rootjs.git",
