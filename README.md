@@ -7,7 +7,7 @@
 - 🕸️ Web Components
 - 📁 File Routes
 - 🇯🇵 i18n
-- 🔩 CMS
+- 📇 CMS
 
 Root.js is an opinionated, fully-featured web development tool with a built-in
 CMS.
