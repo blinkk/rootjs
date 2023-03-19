@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import {Manifest} from 'vite';
 import {RootConfig} from '../../core/config';
-import {ElementGraph} from '../../core/element-graph';
+import {ElementGraph} from '../../node/element-graph';
 import {Asset, AssetMap} from './asset-map';
 
 export type BuildAssetManifest = Record<

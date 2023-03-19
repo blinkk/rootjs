@@ -20,7 +20,7 @@ import {htmlPretty} from './html-pretty';
 import {DevErrorPage} from '../core/pages/DevErrorPage';
 import {RequestContext, REQUEST_CONTEXT} from '../core/hooks/useRequestContext';
 import {getTranslations, I18N_CONTEXT} from '../core/hooks/useI18nContext';
-import type {ElementGraph} from '../core/element-graph';
+import type {ElementGraph} from '../node/element-graph';
 import {parseTagNames} from '../utils/elements';
 
 interface RenderHtmlOptions {

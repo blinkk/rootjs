@@ -1,4 +1,3 @@
-import * as fs from 'fs';
 import {afterAll, beforeAll, beforeEach, test} from 'vitest';
 import {
   assertFails,
@@ -7,13 +6,14 @@ import {
   RulesTestEnvironment,
 } from '@firebase/rules-unit-testing';
 import {collection, doc, getDoc, getDocs, setDoc} from 'firebase/firestore';
+import {FIRESTORE_RULES} from './security.js';
 
 let testEnv: RulesTestEnvironment;
 
 beforeAll(async () => {
   testEnv = await initializeTestEnvironment({
     projectId: 'rootjs-cms',
-    firestore: {rules: fs.readFileSync('firestore.rules', 'utf8')},
+    firestore: {rules: FIRESTORE_RULES},
   });
 });
 

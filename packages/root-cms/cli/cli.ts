@@ -1,2 +1,2 @@
-export {initFirebase} from './commands/init-firebase';
-export {generateTypes} from './commands/generate-types';
+export {initFirebase} from './commands/init-firebase.js';
+export {generateTypes} from './commands/generate-types.js';

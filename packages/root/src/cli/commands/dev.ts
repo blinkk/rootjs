@@ -1,20 +1,22 @@
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {default as express} from 'express';
-import {createServer as createViteServer} from 'vite';
 import {DevServerAssetMap} from '../../render/asset-map/dev-asset-map.js';
-import {loadRootConfig} from '../load-config.js';
-import {isDirectory, isJsFile} from '../../utils/fsutils.js';
-import glob from 'tiny-glob';
+import {loadRootConfig} from '../../node/load-config.js';
 import {dim} from 'kleur/colors';
 import {Server, Request, Response, NextFunction} from '../../core/types.js';
-import {configureServerPlugins, getVitePlugins} from '../../core/plugin.js';
+import {configureServerPlugins} from '../../core/plugin.js';
 import {RootConfig} from '../../core/config.js';
 import {rootProjectMiddleware} from '../../core/middleware.js';
-import {findOpenPort} from '../ports.js';
-import {getElements} from '../../core/element-graph.js';
+import {findOpenPort} from '../../utils/ports.js';
+import {createViteServer} from '../../node/vite.js';
+import {isDirectory, isJsFile} from '../../utils/fsutils.js';
+import {getElements} from '../../node/element-graph.js';
+import glob from 'tiny-glob';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
+type RenderModule = typeof import('../../render/render.js');
 
 export async function dev(rootProjectDir?: string) {
   process.env.NODE_ENV = 'development';
@@ -35,15 +37,15 @@ async function createServer(options?: {
   port?: number;
 }): Promise<Server> {
   const rootDir = path.resolve(options?.rootDir || process.cwd());
-  const rootConfig = await loadRootConfig(rootDir);
+  const rootConfig = await loadRootConfig(rootDir, {command: 'dev'});
   const port = options?.port;
 
   const server = express();
   server.disable('x-powered-by');
 
   // Inject req context vars.
-  server.use(rootProjectMiddleware({rootDir, rootConfig}));
-  server.use(await viteServerMiddleware({rootDir, rootConfig, port}));
+  server.use(rootProjectMiddleware({rootConfig}));
+  server.use(await viteServerMiddleware({rootConfig, port}));
 
   const plugins = rootConfig.plugins || [];
   await configureServerPlugins(
@@ -71,31 +73,22 @@ async function createServer(options?: {
  * context.
  */
 async function viteServerMiddleware(options: {
-  rootDir: string;
   rootConfig: RootConfig;
   port?: number;
 }) {
-  const rootDir = options.rootDir;
   const rootConfig = options.rootConfig;
-  const viteConfig = rootConfig.vite || {};
+  const rootDir = rootConfig.rootDir;
 
-  let hmrOptions = viteConfig.server?.hmr;
-  if (typeof hmrOptions === 'undefined' && options.port) {
-    // Automatically set the HMR port to `port + 10`. This allows multiple
-    // root.js dev servers to run without conflicts.
-    hmrOptions = {port: options.port + 10};
-  }
-
-  const routeFiles: string[] = [];
-  if (await isDirectory(path.join(rootDir, 'routes'))) {
-    const pageFiles = await glob('routes/**/*', {cwd: rootDir});
-    pageFiles.forEach((file) => {
-      const parts = path.parse(file);
-      if (!parts.name.startsWith('_') && isJsFile(parts.base)) {
-        routeFiles.push(file);
-      }
-    });
-  }
+  // const routeFiles: string[] = [];
+  // if (await isDirectory(path.join(rootDir, 'routes'))) {
+  //   const pageFiles = await glob('routes/**/*', {cwd: rootDir});
+  //   pageFiles.forEach((file) => {
+  //     const parts = path.parse(file);
+  //     if (!parts.name.startsWith('_') && isJsFile(parts.base)) {
+  //       routeFiles.push(file);
+  //     }
+  //   });
+  // }
 
   const elementGraph = await getElements(rootConfig);
   const elements = Object.values(elementGraph.sourceFiles).map((sourceFile) => {
@@ -113,48 +106,20 @@ async function viteServerMiddleware(options: {
     });
   }
 
-  const viteServer = await createViteServer({
-    ...viteConfig,
-    mode: 'development',
-    root: rootDir,
-    publicDir: path.join(rootDir, 'public'),
-    server: {
-      ...(viteConfig.server || {}),
-      middlewareMode: true,
-      hmr: hmrOptions,
-    },
-    appType: 'custom',
-    optimizeDeps: {
-      ...(viteConfig.optimizeDeps || {}),
-      include: [
-        // ...routeFiles,
-        ...elements,
-        ...bundleScripts,
-        ...(viteConfig.optimizeDeps?.include || []),
-      ],
-    },
-    ssr: {
-      ...(viteConfig.ssr || {}),
-      noExternal: ['@blinkk/root'],
-    },
-    esbuild: {
-      ...(viteConfig.esbuild || {}),
-      jsx: 'automatic',
-      jsxImportSource: 'preact',
-    },
-    plugins: [
-      ...(viteConfig.plugins || []),
-      ...getVitePlugins(rootConfig.plugins || []),
-    ],
+  const optimizeDeps = [...elements, ...bundleScripts];
+  const viteServer = await createViteServer(rootConfig, {
+    port: options.port,
+    optimizeDeps: optimizeDeps,
   });
-
   return async (req: Request, res: Response, next: NextFunction) => {
     try {
       // Add the viteServer to the req.
       req.viteServer = viteServer;
       // Dynamically import the render.js module using vite's SSR import loader.
       const renderModulePath = path.resolve(__dirname, './render.js');
-      const render = await viteServer.ssrLoadModule(renderModulePath);
+      const render = (await viteServer.ssrLoadModule(
+        renderModulePath
+      )) as RenderModule;
       // Create a dev asset map using Vite dev server's module graph.
       const assetMap = new DevServerAssetMap(
         rootConfig,
