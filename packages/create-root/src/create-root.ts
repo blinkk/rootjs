@@ -6,13 +6,17 @@ import fs from 'node:fs';
 import {fileURLToPath} from 'node:url';
 import {Command} from 'commander';
 import degit from 'degit';
-import {ROOT_VERSION} from './root-version';
+import {bgGreen, black} from 'kleur/colors';
+import {dim} from 'kleur/colors';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const require = createRequire(import.meta.url);
 const packageJson = require(path.join(__dirname, '../package.json'));
 
+const ROOT_VERSION = packageJson.version;
+
 async function main() {
+  console.log(`🌱 ${bgGreen(black(' root.js '))} v${ROOT_VERSION}`);
   const program = new Command('create-root');
   program.version(packageJson.version);
   program.argument('[dir]', 'output dir');
@@ -30,9 +34,10 @@ async function main() {
     const repo = options.repo || 'blinkk/rootjs/examples';
     const template = options.template || 'starter';
     const githubPath = path.join(repo, template);
-    console.log(githubPath);
-    console.log(`  github path: ${githubPath}`);
-    console.log(`  output dir:  ${maybeRelativePath(outputDir)}`);
+    console.log();
+    console.log(`${dim('┃')} github path: ${githubPath}`);
+    console.log(`${dim('┃')} output dir:  ${maybeRelativePath(outputDir)}`);
+    console.log();
 
     const emitter = degit(githubPath, {
       cache: false,
@@ -52,12 +57,27 @@ async function updatePackageJson(packageJsonPath: string) {
   const packageJson = JSON.parse(str);
   packageJson.name = path.basename(path.dirname(packageJsonPath));
   packageJson.version = '1.0.0';
-  packageJson.dependencies['@blinkk/root'] = `^${ROOT_VERSION}`;
+  updateWorkspaceDeps(packageJson.dependencies);
+  updateWorkspaceDeps(packageJson.peerDependencies);
   await fs.promises.writeFile(
     packageJsonPath,
     JSON.stringify(packageJson, null, 2),
     'utf-8'
   );
+}
+
+/**
+ * Updates any `"workspace:*"` values to ROOT_VERSION.
+ */
+function updateWorkspaceDeps(deps?: Record<string, string> | null) {
+  if (!deps) {
+    return;
+  }
+  for (const key in deps) {
+    if (deps[key] === 'workspace:*') {
+      deps[key] = `^${ROOT_VERSION}`;
+    }
+  }
 }
 
 function maybeRelativePath(filePath: string): string {

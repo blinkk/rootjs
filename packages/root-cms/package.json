@@ -26,9 +26,9 @@
     }
   },
   "scripts": {
-    "build": "rm -rf dist && concurrently -n \"core,ui\" npm:build:core npm:build:signin npm:build:ui",
+    "build": "rm -rf dist && concurrently -n \"core,signin,ui\" npm:build:core npm:build:signin npm:build:ui",
     "build:core": "tsup-node --config=./core/tsup.config.ts",
-    "// NOTE: esbuild is used here because tsup doesn't currently support aliases.": "",
+    "//": "NOTE: esbuild is used here because tsup doesn't currently support aliases.",
     "build:ui": "esbuild ui/ui.tsx --bundle --alias:react=@preact/compat --alias:react-dom=@preact/compat --tsconfig=ui/tsconfig.json --outdir=dist/ui",
     "build:signin": "esbuild signin/signin.tsx --bundle --tsconfig=signin/tsconfig.json --outdir=dist/ui",
     "dev": "rm -rf dist && concurrently -k -n \"core,ui\" npm:dev:core npm:dev:signin npm:dev:ui",
@@ -41,7 +41,6 @@
   "dependencies": {
     "@firebase/app-compat": "^0.1.33",
     "@firebase/app-types": "^0.7.0",
-    "@preact/signals": "^1.1.2",
     "body-parser": "^1.20.0",
     "commander": "^10.0.0",
     "cookie-parser": "^1.4.6",
@@ -55,7 +54,7 @@
     "sirv": "^2.0.2",
     "tiny-glob": "^0.2.9"
   },
-  "// NOTE(stevenle): due to compat issues with mantine and preact, mantine is pinned to v4.2.12": "",
+  "//": "NOTE(stevenle): due to compat issues with mantine and preact, mantine is pinned to v4.2.12",
   "devDependencies": {
     "@babel/core": "^7.17.9",
     "@blinkk/root": "workspace:*",

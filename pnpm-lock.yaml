@@ -77,10 +77,12 @@ importers:
       '@types/node': ^18.13.0
       commander: ^10.0.0
       degit: ^2.8.4
+      kleur: ^4.1.5
       tsup: ^6.6.3
     dependencies:
       commander: 10.0.0
       degit: 2.8.4
+      kleur: 4.1.5
     devDependencies:
       '@types/degit': 2.8.3
       '@types/node': 18.13.0
@@ -162,7 +164,6 @@ importers:
       '@mantine/notifications': 4.2.12
       '@mantine/spotlight': 4.2.12
       '@preact/compat': ^17.1.2
-      '@preact/signals': ^1.1.2
       '@tabler/icons-preact': ^2.7.0
       '@types/body-parser': ^1.19.2
       '@types/cookie-parser': ^1.4.3
@@ -195,7 +196,6 @@ importers:
     dependencies:
       '@firebase/app-compat': 0.1.33
       '@firebase/app-types': 0.7.0
-      '@preact/signals': 1.1.3_preact@10.11.0
       body-parser: 1.20.0
       commander: 10.0.0
       cookie-parser: 1.4.6
@@ -2878,19 +2878,6 @@ packages:
     dependencies:
       preact: 10.11.0
     dev: true
-
-  /@preact/signals-core/1.2.3:
-    resolution: {integrity: sha512-Kui4p7PMcEQevBgsTO0JBo3gyQ88Q3qzEvsVCuSp11t0JcN4DmGCTJcGRVSCq7Bn7lGxJBO+57jNSzDoDJ+QmA==}
-    dev: false
-
-  /@preact/signals/1.1.3_preact@10.11.0:
-    resolution: {integrity: sha512-N09DuAVvc90bBZVRwD+aFhtGyHAmJLhS3IFoawO/bYJRcil4k83nBOchpCEoS0s5+BXBpahgp0Mjf+IOqP57Og==}
-    peerDependencies:
-      preact: 10.x
-    dependencies:
-      '@preact/signals-core': 1.2.3
-      preact: 10.11.0
-    dev: false
 
   /@protobufjs/aspromise/1.1.2:
     resolution: {integrity: sha512-j+gKExEuLmKwvz3OgROXtrJ2UG2x8Ch2YZUxahh+s1F2HZ+wAceUNLkvy6zKCPVRkU++ZWQrdxsUeQXmcg4uoQ==}
