@@ -8,11 +8,12 @@ export default defineConfig({
     cli: './cli/cli.ts',
     core: './core/core.ts',
     plugin: './core/plugin.ts',
+    project: './core/project.ts',
   },
   sourcemap: 'inline',
   target: 'node16',
   dts: {
-    entry: ['./core/core.ts', './core/plugin.ts'],
+    entry: ['./core/core.ts', './core/plugin.ts', './core/project.ts'],
   },
   format: ['esm'],
   splitting: false,

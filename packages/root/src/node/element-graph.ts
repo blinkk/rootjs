@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import {searchForWorkspaceRoot} from 'vite';
-import {RootConfig} from './config';
+import {RootConfig} from '../core/config';
 import {directoryContains, isDirectory, isJsFile} from '../utils/fsutils';
 import glob from 'tiny-glob';
 import {isValidTagName, parseTagNames} from '../utils/elements';

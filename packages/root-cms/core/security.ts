@@ -1,4 +1,7 @@
-rules_version = '2';
+import {getSecurityRules} from 'firebase-admin/security-rules';
+import {getFirebaseApp} from './runtime.js';
+
+export const FIRESTORE_RULES = `rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     match /Projects/{project}/{document=**} {
@@ -23,4 +26,15 @@ service cloud.firestore {
         && get(/databases/$(database)/documents/Projects/$(project)/Collections/$(collection)).data.roles[request.auth.token.email] in ['ADMIN', 'EDITOR', 'VIEWER'];
     }
   }
+}
+`;
+
+/**
+ * Adds the root-cms security rules to a Firebase project.
+ * NOTE: This function will overwrite any existing rules.
+ */
+export async function applySecurityRules(projectId: string) {
+  const app = getFirebaseApp(projectId);
+  const securityRules = getSecurityRules(app);
+  await securityRules.releaseFirestoreRulesetFromSource(FIRESTORE_RULES);
 }

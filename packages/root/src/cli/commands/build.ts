@@ -4,7 +4,7 @@ import fsExtra from 'fs-extra';
 import glob from 'tiny-glob';
 import {build as viteBuild, Manifest, ManifestChunk, UserConfig} from 'vite';
 import {BuildAssetMap} from '../../render/asset-map/build-asset-map.js';
-import {loadRootConfig} from '../load-config.js';
+import {loadRootConfig} from '../../node/load-config.js';
 import {
   copyGlob,
   fileExists,
@@ -18,7 +18,7 @@ import {
 import {htmlMinify} from '../../render/html-minify.js';
 import {dim, cyan} from 'kleur/colors';
 import {getVitePlugins} from '../../core/plugin.js';
-import {getElements} from '../../core/element-graph.js';
+import {getElements} from '../../node/element-graph.js';
 import {htmlPretty} from '../../render/html-pretty.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -35,7 +35,7 @@ export async function build(rootProjectDir?: string, options?: BuildOptions) {
   process.env.NODE_ENV = mode;
 
   const rootDir = path.resolve(rootProjectDir || process.cwd());
-  const rootConfig = await loadRootConfig(rootDir);
+  const rootConfig = await loadRootConfig(rootDir, {command: 'build'});
   const distDir = path.join(rootDir, 'dist');
   const ssrOnly = options?.ssrOnly || false;
 

@@ -1,9 +1,9 @@
-import {RootConfig} from '@blinkk/root';
+import {Plugin, RootConfig} from '@blinkk/root';
 import {initializeApp, getApps, applicationDefault} from 'firebase-admin/app';
 import {getFirestore} from 'firebase-admin/firestore';
 import {CMSPlugin} from './plugin.js';
 
-function getFirebaseApp(gcpProjectId: string) {
+export function getFirebaseApp(gcpProjectId: string) {
   const apps = getApps();
   if (apps.length > 0 && apps[0]) {
     return apps[0];
@@ -84,7 +84,7 @@ function isObject(data: any): boolean {
 }
 
 export function getCmsPlugin(rootConfig: RootConfig): CMSPlugin {
-  const plugins = rootConfig.plugins || [];
+  const plugins: Plugin[] = rootConfig.plugins || [];
   const plugin = plugins.find((plugin) => plugin.name === 'root-cms');
   if (!plugin) {
     throw new Error('could not find root-cms plugin config in root.config.ts');

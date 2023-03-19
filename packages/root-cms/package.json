@@ -40,8 +40,8 @@
     "dev:core": "pnpm build:core --watch",
     "dev:signin": "pnpm build:signin --watch",
     "dev:ui": "pnpm build:ui --watch",
-    "test": "pnpm build && vitest run",
-    "test:watch": "pnpm build && vitest"
+    "test": "pnpm build && firebase emulators:exec 'vitest run'",
+    "test:watch": "pnpm build && firebase emulators:exec 'vitest'"
   },
   "dependencies": {
     "@firebase/app-compat": "^0.1.33",
@@ -64,6 +64,7 @@
     "@babel/core": "^7.17.9",
     "@blinkk/root": "workspace:*",
     "@emotion/react": "^11.10.5",
+    "@firebase/rules-unit-testing": "^2.0.3",
     "@mantine/core": "4.2.12",
     "@mantine/hooks": "4.2.12",
     "@mantine/modals": "4.2.12",
@@ -85,7 +86,7 @@
     "react-dom": "npm:@preact/compat@^17.1.2",
     "tsup": "^6.3.0",
     "typescript": "4.9.4",
-    "vite": "*",
+    "vite": "4.2.0",
     "vitest": "^0.18.1"
   },
   "peerDependencies": {

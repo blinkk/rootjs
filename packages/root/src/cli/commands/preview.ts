@@ -1,8 +1,7 @@
 import path from 'node:path';
 import {default as express} from 'express';
 import {Request, Response, NextFunction, Server} from '../../core/types.js';
-import {loadRootConfig} from '../load-config';
-import {Renderer} from '../../render/render.js';
+import {loadRootConfig} from '../../node/load-config';
 import {fileExists, loadJson} from '../../utils/fsutils';
 import {
   BuildAssetManifest,
@@ -14,7 +13,7 @@ import sirv from 'sirv';
 import compression from 'compression';
 import {rootProjectMiddleware} from '../../core/middleware';
 import {RootConfig} from '../../core/config';
-import {getElements} from '../../core/element-graph.js';
+import {getElements} from '../../node/element-graph.js';
 
 type RenderModule = typeof import('../../render/render.js');
 
@@ -35,7 +34,7 @@ export async function preview(rootProjectDir?: string) {
 
 async function createServer(options: {rootDir: string}): Promise<Server> {
   const rootDir = options.rootDir;
-  const rootConfig = await loadRootConfig(rootDir);
+  const rootConfig = await loadRootConfig(rootDir, {command: 'preview'});
   const distDir = path.join(rootDir, 'dist');
 
   const server = express();
@@ -43,7 +42,7 @@ async function createServer(options: {rootDir: string}): Promise<Server> {
   server.use(compression());
 
   // Inject request context vars.
-  server.use(rootProjectMiddleware({rootDir, rootConfig}));
+  server.use(rootProjectMiddleware({rootConfig}));
   server.use(await rootPreviewRendererMiddleware({rootConfig, distDir}));
 
   const plugins = rootConfig.plugins || [];
