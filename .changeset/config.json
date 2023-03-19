@@ -2,12 +2,12 @@
   "$schema": "https://unpkg.com/@changesets/config@2.1.1/schema.json",
   "changelog": "@changesets/cli/changelog",
   "commit": false,
-  "fixed": [],
-  "linked": [[
+  "fixed": [[
     "@blinkk/create-root",
     "@blinkk/root",
     "@blinkk/root-cms"
   ]],
+  "linked": [],
   "access": "public",
   "baseBranch": "main",
   "updateInternalDependencies": "patch",
