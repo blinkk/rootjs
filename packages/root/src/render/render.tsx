@@ -81,6 +81,9 @@ export class Renderer {
       } else if (this.rootConfig.minifyHtml !== false) {
         html = await htmlMinify(html, this.rootConfig.minifyHtmlOptions);
       }
+      if (req.viteServer) {
+        html = await req.viteServer.transformIndexHtml(req.originalUrl, html);
+      }
       // Override the status code for 404 and 500 routes, which are defined at
       // routes/404.tsx and routes/500.tsx respectively.
       let statusCode = 200;
