@@ -104,6 +104,7 @@ export function ShareBox(props: ShareBoxProps) {
           size="xs"
           radius={0}
           color="dark"
+          type="submit"
         >
           Add user
         </Button>
