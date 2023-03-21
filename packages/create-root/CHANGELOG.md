@@ -1,5 +1,13 @@
 # @blinkk/create-root
 
+## 1.0.0-beta.1
+
+### Patch Changes
+
+- 2ca60f4: feat: add root-cms init-firebase cli command
+- 5e579b3: chore: update node compatibility version
+- 8064122: fix: fix cms package.json version in create-root
+
 ## 1.0.0-beta.0
 
 ### Major Changes

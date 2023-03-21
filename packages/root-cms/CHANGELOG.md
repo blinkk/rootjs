@@ -1,5 +1,20 @@
 # @blinkk/root-cms
 
+## 1.0.0-beta.1
+
+### Patch Changes
+
+- 2ca60f4: feat: add root-cms init-firebase cli command
+- d79782d: feat: start/stop db snapshots on visibility
+- 5e579b3: chore: update node compatibility version
+- 8064122: fix: fix cms package.json version in create-root
+- Updated dependencies [2ca60f4]
+- Updated dependencies [894e2f3]
+- Updated dependencies [6799b64]
+- Updated dependencies [5e579b3]
+- Updated dependencies [8064122]
+  - @blinkk/root@1.0.0-beta.1
+
 ## 1.0.0-beta.0
 
 ### Major Changes
