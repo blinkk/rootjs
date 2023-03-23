@@ -8,7 +8,7 @@ import {
   Textarea,
   TextInput,
 } from '@mantine/core';
-import {useEffect, useReducer, useState} from 'preact/hooks';
+import {useEffect, useReducer, useRef, useState} from 'preact/hooks';
 import {
   IconCircleArrowDown,
   IconCircleArrowUp,
@@ -31,6 +31,7 @@ import {DocStatusBadges} from '../DocStatusBadges/DocStatusBadges.js';
 import {PublishDocModal} from '../PublishDocModal/PublishDocModal.js';
 import {DocActionsMenu} from '../DocActionsMenu/DocActionsMenu.js';
 import {route} from 'preact-router';
+import {ref as storageRef, updateMetadata, uploadBytes} from 'firebase/storage';
 
 interface DocEditorProps {
   docId: string;
@@ -200,16 +201,150 @@ DocEditor.StringField = (props: FieldProps) => {
   );
 };
 
+async function sha256(file: File) {
+  const buffer = await file.arrayBuffer();
+  const hashBuffer = await crypto.subtle.digest('SHA-256', buffer);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  const hashHex = hashArray
+    .map((b) => b.toString(16).padStart(2, '0'))
+    .join('');
+  return hashHex;
+}
+
+async function uploadFileToGCS(file: File) {
+  const projectId = window.__ROOT_CTX.rootConfig.projectId;
+  const hashHex = await sha256(file);
+  const ext = file.name.split('.').at(-1);
+  const filePath = `${projectId}/uploads/${hashHex}.${ext}`;
+  const gcsRef = storageRef(window.firebase.storage, filePath);
+  await uploadBytes(gcsRef, file);
+  console.log(`uploaded ${filePath}`);
+  const meta: Record<string, string> = {};
+  meta.filename = file.name;
+  meta.uploadedBy = window.firebase.user.email || 'unknown';
+  if (ext === 'jpg' || ext === 'png') {
+    const dimens = await getImageDimensions(file);
+    meta.width = String(dimens.width);
+    meta.height = String(dimens.height);
+
+    const gcsPath = `/${gcsRef.bucket}/${gcsRef.fullPath}`;
+    const gciUrl = await getGciUrl(gcsPath);
+    meta.gciUrl = gciUrl;
+  }
+  if (Object.keys(meta).length > 0) {
+    await updateMetadata(gcsRef, {customMetadata: meta});
+    console.log('updated meta data: ', meta);
+  }
+  return {
+    ...meta,
+    src: `https://storage.googleapis.com/${gcsRef.bucket}/${filePath}`,
+  };
+}
+
+async function getGciUrl(gcsPath: string) {
+  console.log(gcsPath);
+  const params = new URLSearchParams({gcs: gcsPath});
+  const url = `https://gci.rootjs.dev/_/serving_url?${params.toString()}`;
+  const res = await window.fetch(url);
+  if (res.status !== 200) {
+    const text = await res.text();
+    console.error(`failed to get gci url: ${url}`);
+    console.error(text);
+    throw new Error('failed to get gci url');
+  }
+  const resData = await res.json();
+  return resData.servingUrl;
+}
+
+async function getImageDimensions(
+  file: File
+): Promise<{width: number; height: number}> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const img = new Image();
+      img.onload = () => {
+        resolve({width: img.width, height: img.height});
+      };
+      img.onerror = reject;
+      img.src = String(reader.result);
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
 DocEditor.ImageField = (props: FieldProps) => {
   const field = props.field as schema.ImageField;
+  const [img, setImg] = useState<any>({});
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    const unsubscribe = props.draft.subscribe(
+      props.deepKey,
+      (newValue: string) => {
+        setImg(newValue);
+      }
+    );
+    return unsubscribe;
+  }, []);
+
+  async function onFileChange(e: Event) {
+    setLoading(true);
+    const inputEl = e.target as HTMLInputElement;
+    const files = inputEl.files || [];
+    const file = files[0];
+    const img = await uploadFileToGCS(file);
+    props.draft.updateKey(props.deepKey, img);
+    setImg(img);
+    setLoading(false);
+
+    // Once the upload is done, reset the input element in case the user wishes
+    // to re-upload the image.
+    if (inputRef.current) {
+      const inputEl = inputRef.current;
+      inputEl.value = '';
+    }
+  }
+
   return (
     <div className="DocEditor__ImageField">
-      {/* <Button color="dark" size="xs" leftIcon={<IconPhotoUp size={16} />}>
+      {img && img.src ? (
+        <div className="DocEditor__ImageField__imagePreview">
+          <div className="DocEditor__ImageField__imagePreview__image">
+            <img src={img.gciUrl} width={img.width} height={img.height} />
+          </div>
+          <TextInput size="xs" radius={0} value={img.gciUrl} disabled={true} />
+        </div>
+      ) : (
+        <div className="DocEditor__ImageField__noImage">No image</div>
+      )}
+      {/* <Button
+        color="dark"
+        size="xs"
+        leftIcon={<IconPhotoUp size={16} />}
+      >
         Upload image
       </Button> */}
-      <Button color="dark" size="xs" leftIcon={<IconPhotoUp size={16} />}>
-        Upload image
-      </Button>
+      <label
+        className="DocEditor__ImageField__uploadButton"
+        role="button"
+        aria-disabled={loading}
+      >
+        <input
+          type="file"
+          accept="image/png, image/jpeg"
+          onChange={onFileChange}
+          ref={inputRef}
+        />
+        <div className="DocEditor__ImageField__uploadButton__icon">
+          <IconPhotoUp size={16} />
+        </div>
+        <div className="DocEditor__ImageField__uploadButton__label">
+          Upload image
+        </div>
+      </label>
     </div>
   );
 };

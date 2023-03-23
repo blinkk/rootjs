@@ -1,6 +1,7 @@
 import {FirebaseApp} from 'firebase/app';
 import {Auth, User} from 'firebase/auth';
 import {Firestore} from 'firebase/firestore';
+import {FirebaseStorage} from 'firebase/storage';
 import {createContext} from 'preact';
 import {useContext} from 'preact/hooks';
 
@@ -8,6 +9,7 @@ export interface FirebaseContextObject {
   app: FirebaseApp;
   auth: Auth;
   db: Firestore;
+  storage: FirebaseStorage;
   user: User;
 }
 
