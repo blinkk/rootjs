@@ -294,6 +294,11 @@ export async function build(rootProjectDir?: string, options?: BuildOptions) {
         return;
       }
       const assetData = rootManifest[src];
+      // Ignore files with no assetUrl, which can sometimes occur if a source
+      // file is empty.
+      if (!assetData.assetUrl) {
+        return;
+      }
       const assetRelPath = assetData.assetUrl.slice(1);
       const assetFrom = path.join(distDir, 'client', assetRelPath);
       const assetTo = path.join(buildDir, assetRelPath);
