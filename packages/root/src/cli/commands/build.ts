@@ -277,14 +277,14 @@ export async function build(rootProjectDir?: string, options?: BuildOptions) {
   if (fsExtra.existsSync(path.join(rootDir, 'public'))) {
     fsExtra.copySync(publicDir, buildDir, {dereference: true});
   } else {
-    makeDir(buildDir);
+    await makeDir(buildDir);
   }
+  await makeDir(path.join(buildDir, 'assets'));
+  await makeDir(path.join(buildDir, 'chunks'));
 
   // Copy files from `dist/client/{assets,chunks}` to `dist/html` using the
   // root manifest. Ignore route files.
   console.log('\njs/css output:');
-  makeDir(path.join(buildDir, 'assets'));
-  makeDir(path.join(buildDir, 'chunks'));
   await Promise.all(
     Object.keys(rootManifest).map(async (src) => {
       // Don't expose route files in the final output. If any client-side code
