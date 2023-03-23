@@ -3,6 +3,7 @@ import path from 'node:path';
 import {Manifest} from 'vite';
 import {RootConfig} from '../../core/config';
 import {ElementGraph} from '../../node/element-graph';
+import {isJsFile} from '../../utils/fsutils';
 import {Asset, AssetMap} from './asset-map';
 
 export type BuildAssetManifest = Record<
@@ -81,9 +82,10 @@ export class BuildAssetMap implements AssetMap {
       const isElement = elementFiles.has(src);
       // NOTES(stevenle): routes/ files are included in the manifest so for
       // their CSS deps, but do not have an asset URL.
-      const assetUrl = src.startsWith('routes/')
-        ? ''
-        : `/${manifestChunk.file}`;
+      const assetUrl =
+        src.startsWith('routes/') && isJsFile(src)
+          ? ''
+          : `/${manifestChunk.file}`;
       const assetData = {
         src: src,
         assetUrl: assetUrl,
