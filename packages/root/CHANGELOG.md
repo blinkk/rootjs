@@ -1,5 +1,11 @@
 # @blinkk/root
 
+## 1.0.0-beta.2
+
+### Patch Changes
+
+- a904e40: fix: fix builds with missing assetUrl
+
 ## 1.0.0-beta.1
 
 ### Patch Changes
