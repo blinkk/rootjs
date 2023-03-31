@@ -6,8 +6,8 @@ The package manager used to install and link dependencies must be [pnpm](https:/
 
 To get started:
 
-1. Run `pnpm i` in the main rootjs workspace folder.
-1. Run `pnpm build` in Vite's root folder.
+1. Run `pnpm i` in the main workspace folder.
+1. Run `pnpm build` in the main workspace folder.
 1. Run `pnpm dev` in any examples folder to start a dev server.
 1. If you are developing a root package, you can go into the package's folder and run `pnpm dev` to automatically rebuild whenever you change its code.
 
