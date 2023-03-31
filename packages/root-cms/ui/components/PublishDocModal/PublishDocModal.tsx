@@ -1,7 +1,8 @@
 import {Button, Modal, useMantineTheme} from '@mantine/core';
 import {useFirebase} from '../../hooks/useFirebase.js';
-import {collection} from 'firebase/firestore';
+import {doc, getDoc, runTransaction, serverTimestamp} from 'firebase/firestore';
 import './PublishDocModal.css';
+import {useState, useRef} from 'preact/hooks';
 
 interface PublishDocModalProps {
   docId: string;
@@ -9,19 +10,35 @@ interface PublishDocModalProps {
   onClose?: () => void;
 }
 
+type PublishType = 'now' | 'scheduled' | '';
+
 export function PublishDocModal(props: PublishDocModalProps) {
   const [collectionId, slug] = props.docId.split('/');
+  const [publishType, setPublishType] = useState<PublishType>('');
+  const [scheduledDate, setScheduledDate] = useState('');
+  const [loading, setLoading] = useState(false);
   const firebase = useFirebase();
   const theme = useMantineTheme();
+  const dateTimeRef = useRef<HTMLInputElement>(null);
 
   const projectId = window.__ROOT_CTX.rootConfig.projectId;
-  const dbCollection = collection(
+  const draftDocRef = doc(
     firebase.db,
     'Projects',
     projectId,
     'Collections',
     collectionId,
-    'Drafts'
+    'Drafts',
+    slug
+  );
+  const publishedDocRef = doc(
+    firebase.db,
+    'Projects',
+    projectId,
+    'Collections',
+    collectionId,
+    'Published',
+    slug
   );
 
   // const rootCollection = window.__ROOT_CTX.collections[collectionId];
@@ -33,6 +50,56 @@ export function PublishDocModal(props: PublishDocModalProps) {
     if (props.onClose) {
       props.onClose();
     }
+  }
+
+  function onPublishClicked() {
+    if (publishType === 'now') {
+      publish();
+    } else if (publishType === 'scheduled') {
+      schedule();
+    }
+  }
+
+  async function publish() {
+    try {
+      setLoading(true);
+      await runTransaction(firebase.db, async (transaction) => {
+        const draftDoc = await getDoc(draftDocRef);
+        if (!draftDoc.exists()) {
+          throw new Error(`${draftDocRef.id} does not exist`);
+        }
+
+        const data = {...draftDoc.data()};
+        const sys = data.sys ?? {};
+        sys.modifiedAt = serverTimestamp();
+        sys.modifiedBy = window.firebase.user.email;
+        sys.publishedAt = serverTimestamp();
+        sys.publishedBy = window.firebase.user.email;
+        // Update the "firstPublishedAt" values only if they don't already exist.
+        sys.firstPublishedAt ??= serverTimestamp();
+        sys.firstPublishedBy ??= window.firebase.user.email;
+
+        // Update the "sys" metadata in the draft doc.
+        transaction.update(draftDocRef, {sys});
+        // Copy the "draft" data to "published" data.
+        transaction.set(publishedDocRef, {...data, sys});
+      });
+      setLoading(false);
+      console.log(`saved ${publishedDocRef.id}`);
+    } catch (err) {
+      console.error(`failed to publish ${publishedDocRef.id}`, err);
+    }
+  }
+
+  async function schedule() {
+    console.log('TODO(stevenle): implement');
+  }
+
+  let disabled = true;
+  if (publishType === 'now') {
+    disabled = false;
+  } else if (publishType === 'scheduled' && scheduledDate) {
+    disabled = false;
   }
 
   return (
@@ -59,7 +126,13 @@ export function PublishDocModal(props: PublishDocModalProps) {
             <div className="PublishDocModal__form__publishOptions__options">
               <label className="PublishDocModal__form__publishOptions__option">
                 <div className="PublishDocModal__form__publishOptions__option__input">
-                  <input type="radio" name="publish-option" value="now" /> Now
+                  <input
+                    type="radio"
+                    name="publish-option"
+                    value="now"
+                    onChange={() => setPublishType('now')}
+                  />{' '}
+                  Now
                 </div>
                 <div className="PublishDocModal__form__publishOptions__option__help">
                   Content will go live immediately.
@@ -67,14 +140,25 @@ export function PublishDocModal(props: PublishDocModalProps) {
               </label>
               <label className="PublishDocModal__form__publishOptions__option">
                 <div className="PublishDocModal__form__publishOptions__option__input">
-                  <input type="radio" name="publish-option" value="scheduled" />{' '}
+                  <input
+                    type="radio"
+                    name="publish-option"
+                    value="scheduled"
+                    onChange={() => setPublishType('scheduled')}
+                  />{' '}
                   Scheduled
                 </div>
                 <div className="PublishDocModal__form__publishOptions__option__help">
                   Content will go live at the date and time specified below.
                 </div>
                 <div className="PublishDocModal__form__publishOptions__option__input2">
-                  <input type="datetime-local" />
+                  <input
+                    ref={dateTimeRef}
+                    type="datetime-local"
+                    disabled={publishType !== 'scheduled'}
+                    value={scheduledDate}
+                    onChange={(e: Event) => setScheduledDate(e.target.value)}
+                  />
                   <div className="PublishDocModal__form__publishOptions__option__input2__help">
                     timezone: {Intl.DateTimeFormat().resolvedOptions().timeZone}
                   </div>
@@ -95,11 +179,11 @@ export function PublishDocModal(props: PublishDocModalProps) {
             </Button>
             <Button
               variant="filled"
-              type="submit"
               size="xs"
               color="dark"
-              disabled
-              // loading={loading}
+              disabled={disabled}
+              loading={loading}
+              onClick={onPublishClicked}
             >
               Publish
             </Button>
