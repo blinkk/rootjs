@@ -6,6 +6,7 @@ import {NotificationsProvider} from '@mantine/notifications';
 import {initializeApp} from 'firebase/app';
 import {getAuth} from 'firebase/auth';
 import {getFirestore} from 'firebase/firestore';
+import {getStorage} from 'firebase/storage';
 import {CollectionPage} from './pages/CollectionPage/CollectionPage.js';
 import {DocumentPage} from './pages/DocumentPage/DocumentPage.js';
 import {ProjectPage} from './pages/ProjectPage/ProjectPage.js';
@@ -79,12 +80,13 @@ function loginRedirect() {
 const app = initializeApp(window.__ROOT_CTX.firebaseConfig);
 const db = getFirestore(app);
 const auth = getAuth(app);
+const storage = getStorage(app);
 auth.onAuthStateChanged((user) => {
   if (!user) {
     loginRedirect();
     return;
   }
-  window.firebase = {app, auth, db, user};
+  window.firebase = {app, auth, db, storage, user};
   const root = document.getElementById('root')!;
   root.innerHTML = '';
   render(<App />, root);
