@@ -20,7 +20,7 @@ type RenderModule = typeof import('../../render/render.js');
 export async function start(rootProjectDir?: string) {
   process.env.NODE_ENV = 'production';
   const rootDir = path.resolve(rootProjectDir || process.cwd());
-  const server = await createServer({rootDir});
+  const server = await createProdServer({rootDir});
   const port = parseInt(process.env.PORT || '4007');
   console.log();
   console.log(`${dim('┃')} project:  ${rootDir}`);
@@ -30,7 +30,9 @@ export async function start(rootProjectDir?: string) {
   server.listen(port);
 }
 
-async function createServer(options: {rootDir: string}): Promise<Server> {
+export async function createProdServer(options: {
+  rootDir: string;
+}): Promise<Server> {
   const rootDir = options.rootDir;
   const rootConfig = await loadRootConfig(rootDir, {command: 'start'});
   const distDir = path.join(rootDir, 'dist');

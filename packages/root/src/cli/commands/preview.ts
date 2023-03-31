@@ -22,7 +22,7 @@ export async function preview(rootProjectDir?: string) {
   // preview command.
   process.env.NODE_ENV = 'development';
   const rootDir = path.resolve(rootProjectDir || process.cwd());
-  const server = await createServer({rootDir});
+  const server = await createPreviewServer({rootDir});
   const port = parseInt(process.env.PORT || '4007');
   console.log();
   console.log(`${dim('┃')} project:  ${rootDir}`);
@@ -32,7 +32,9 @@ export async function preview(rootProjectDir?: string) {
   server.listen(port);
 }
 
-async function createServer(options: {rootDir: string}): Promise<Server> {
+export async function createPreviewServer(options: {
+  rootDir: string;
+}): Promise<Server> {
   const rootDir = options.rootDir;
   const rootConfig = await loadRootConfig(rootDir, {command: 'preview'});
   const distDir = path.join(rootDir, 'dist');

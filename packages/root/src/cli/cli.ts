@@ -1,4 +1,4 @@
-export {dev} from './commands/dev';
 export {build} from './commands/build';
-export {preview} from './commands/preview';
-export {start} from './commands/start';
+export {dev, createDevServer} from './commands/dev';
+export {preview, createPreviewServer} from './commands/preview';
+export {start, createProdServer} from './commands/start';

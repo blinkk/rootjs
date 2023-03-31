@@ -28,11 +28,11 @@ export async function dev(rootProjectDir?: string) {
   console.log(`${dim('┃')} server:   http://localhost:${port}`);
   console.log(`${dim('┃')} mode:     development`);
   console.log();
-  const server = await createServer({rootDir, port});
+  const server = await createDevServer({rootDir, port});
   server.listen(port);
 }
 
-async function createServer(options?: {
+export async function createDevServer(options?: {
   rootDir?: string;
   port?: number;
 }): Promise<Server> {
