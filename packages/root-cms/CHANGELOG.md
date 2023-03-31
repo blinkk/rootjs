@@ -1,5 +1,13 @@
 # @blinkk/root-cms
 
+## 1.0.0-beta.3
+
+### Patch Changes
+
+- 4071fd1: feat: add basic image uploads and gci serving url
+- Updated dependencies [207577d]
+  - @blinkk/root@1.0.0-beta.3
+
 ## 1.0.0-beta.2
 
 ### Patch Changes
