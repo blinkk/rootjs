@@ -1,5 +1,11 @@
 # @blinkk/root
 
+## 1.0.0-beta.3
+
+### Patch Changes
+
+- 207577d: feat: add publishing mechanism
+
 ## 1.0.0-beta.2
 
 ### Patch Changes
