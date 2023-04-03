@@ -25,6 +25,7 @@ declare global {
     __ROOT_CTX: {
       rootConfig: {
         projectId: string;
+        projectName: string;
         domain: string;
       };
       firebaseConfig: Record<string, string>;

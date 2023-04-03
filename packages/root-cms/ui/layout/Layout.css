@@ -40,6 +40,13 @@
   border-radius: 2px;
 }
 
+.Layout__top__project {
+  font-size: 13px;
+  line-height: 1;
+  font-weight: 600;
+  margin-left: 12px;
+}
+
 .Layout__top__logo:hover {
   background-color: var(--button-background-hover);
 }
