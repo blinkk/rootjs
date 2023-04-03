@@ -44,3 +44,36 @@ export function getDocServingPath(
   }
   return servingPath;
 }
+
+export function getDocPreviewPath(docId: string): string;
+export function getDocPreviewPath(docId: string, slug: string): string;
+export function getDocPreviewPath(
+  docIdOrCollection: string,
+  slug?: string | undefined
+): string {
+  let collectionId = docIdOrCollection;
+  if (!slug) {
+    [collectionId, slug] = docIdOrCollection.split('/');
+  }
+  const rootCollection = window.__ROOT_CTX.collections[collectionId];
+  if (!rootCollection) {
+    throw new Error(`collection not found: ${collectionId}`);
+  }
+  let previewPath = '';
+  const previewPathConfig = rootCollection?.previewUrl || rootCollection?.url;
+  if (previewPathConfig) {
+    if (slug) {
+      let urlPath = previewPathConfig
+        .replace(/\[.*slug\]/, slug)
+        .replaceAll('--', '/');
+      // Rename `/index` to `/`.
+      if (urlPath === '/index') {
+        urlPath = '/';
+      }
+      previewPath = `${urlPath}`;
+    } else {
+      previewPath = `${previewPathConfig}`;
+    }
+  }
+  return previewPath;
+}

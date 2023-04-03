@@ -176,6 +176,11 @@ export const define = defineSchema;
 export type Collection = Schema & {
   /** URL path where the collection serves from. */
   url?: string;
+  /**
+   * URL that can be used to render a preview page. Used by the side-by-side
+   * editor to render instant previews. If blank, defaults to the `url` config.
+   */
+  previewUrl?: string;
   /** Page component to render the collection for instant previews */
   Component?: FunctionalComponent;
   /**

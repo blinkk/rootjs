@@ -12,7 +12,7 @@ import {DocEditor} from '../../components/DocEditor/DocEditor.js';
 import {SplitPanel} from '../../components/SplitPanel/SplitPanel.js';
 import {Layout} from '../../layout/Layout.js';
 import {joinClassNames} from '../../utils/classes.js';
-import {getDocServingPath} from '../../utils/doc-urls.js';
+import {getDocPreviewPath, getDocServingPath} from '../../utils/doc-urls.js';
 import './DocumentPage.css';
 
 interface DocumentPageProps {
@@ -69,7 +69,7 @@ const DeviceResolution = {
 DocumentPage.Preview = (props: PreviewProps) => {
   const domain = window.__ROOT_CTX.rootConfig.domain || 'https://example.com';
   const servingPath = getDocServingPath(props.docId);
-  const previewPath = `${servingPath}?preview=true`;
+  const previewPath = `${getDocPreviewPath(props.docId)}?preview=true`;
   const servingUrl = `${domain}${servingPath}`;
   const [iframeUrl, setIframeUrl] = useState(servingUrl);
   const [device, setDevice] = useState<Device>('');
