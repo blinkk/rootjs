@@ -278,7 +278,7 @@ export class Renderer {
     const mainHtml = renderToString(
       <ErrorPage
         code={404}
-        title="Not Found"
+        title="Not found"
         message="Double-check the URL entered and try again."
       />
     );
@@ -330,7 +330,7 @@ export class Renderer {
       <DevNotFoundPage req={req} sitemap={sitemap} />
     );
     const html = await this.renderHtml(mainHtml, {
-      headComponents: [<title>404 | Root.js</title>],
+      headComponents: [<title>404 Not found | Root.js</title>],
     });
     return {html};
   }
@@ -346,7 +346,7 @@ export class Renderer {
       />
     );
     const html = await this.renderHtml(mainHtml, {
-      headComponents: [<title>500 | Root.js</title>],
+      headComponents: [<title>500 Error | Root.js</title>],
     });
     return {html};
   }

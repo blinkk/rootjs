@@ -69,12 +69,16 @@ export async function renderApp(req: Request, res: Response, options: any) {
   const ctx = {
     rootConfig: {
       projectId: cmsConfig.id || 'default',
+      projectName: cmsConfig.name || cmsConfig.id || '',
       domain: rootConfig.domain || 'https://example.com',
     },
     firebaseConfig: options.firebaseConfig,
     collections: collections,
   };
-  const mainHtml = renderToString(<App title="Root.js CMS" ctx={ctx} />);
+  const projectName = cmsConfig.name || cmsConfig.id || '';
+  const title = projectName ? `${projectName} – Root.js CMS` : 'Root.js CMS';
+
+  const mainHtml = renderToString(<App title={title} ctx={ctx} />);
   let html = `<!doctype html>\n${mainHtml}`;
   if (req.viteServer) {
     const uiCssPath = path.join(__dirname, 'ui/ui.css');
@@ -101,8 +105,10 @@ function SignIn(props: SignInProps) {
   return (
     <html>
       <head>
+        <meta charset="utf-8" />
         <title>{props.title}</title>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
         <link
           rel="preconnect"
           href="https://fonts.gstatic.com"

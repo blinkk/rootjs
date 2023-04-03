@@ -33,6 +33,9 @@ export function Layout(props: LayoutProps) {
 }
 
 Layout.Top = (props: LayoutProps) => {
+  const projectName =
+    window.__ROOT_CTX.rootConfig.projectName ||
+    window.__ROOT_CTX.rootConfig.projectId;
   return (
     <div className="Layout__top">
       <a className="Layout__top__logo" href="/cms">
@@ -40,6 +43,7 @@ Layout.Top = (props: LayoutProps) => {
         <div>Root.js</div>
       </a>
       <div className="Layout__top__version">v{packageJson.version}</div>
+      <div className="Layout__top__project">{projectName}</div>
     </div>
   );
 };
