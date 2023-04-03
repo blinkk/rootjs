@@ -29,7 +29,7 @@ export function DevErrorPage(props: DevErrorPageProps) {
     }
   }
   return (
-    <ErrorPage code={500} title="Root.js">
+    <ErrorPage code={500} title="Something went wrong">
       {errMsg && (
         <>
           <h2>Error</h2>

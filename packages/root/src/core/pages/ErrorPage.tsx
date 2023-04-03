@@ -18,12 +18,18 @@ body {
   margin: 0 auto;
 }
 
-h1 {
-  margin-bottom: 40px;
+.root.align-center {
+  text-align: center;
 }
 
-h2 {
-  margin-top: 30px;
+h1.title {
+  margin-top: 0;
+  margin-bottom: 24px;
+}
+
+p.message {
+  margin-top: 0;
+  margin-bottom: 0;
 }
 
 .box {
@@ -60,17 +66,18 @@ export interface ErrorPageProps {
   title?: string;
   message?: string;
   children?: ComponentChildren;
+  align?: 'center';
 }
 
 export function ErrorPage(props: ErrorPageProps) {
   const {code, message} = props;
-  const title = props.title ? `${code} | ${props.title}` : code;
+  const title = props.title || code;
   return (
     <>
       <style dangerouslySetInnerHTML={{__html: STYLES}}></style>
-      <div className="root">
-        <h1>{title}</h1>
-        {message && <p>{message}</p>}
+      <div className={`root align-${props.align || 'left'}`}>
+        <h1 className="title">{title}</h1>
+        {message && <p className="message">{message}</p>}
         {props.children}
       </div>
     </>

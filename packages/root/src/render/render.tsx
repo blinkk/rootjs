@@ -275,9 +275,21 @@ export class Renderer {
       return this.renderComponent(Component, {}, {route, routeParams});
     }
 
-    const mainHtml = renderToString(<ErrorPage code={404} title="Not Found" />);
+    const mainHtml = renderToString(
+      <ErrorPage
+        code={404}
+        title="Not Found"
+        message="Double-check the URL entered and try again."
+      />
+    );
     const html = await this.renderHtml(mainHtml, {
-      headComponents: [<title>404</title>],
+      headComponents: [
+        <title>404 Not Found</title>,
+        <meta
+          name="viewport"
+          content="width=device-width, initial-scale=1.0"
+        />,
+      ],
     });
     return {html};
   }
@@ -296,12 +308,18 @@ export class Renderer {
     const mainHtml = renderToString(
       <ErrorPage
         code={500}
-        title="Error"
+        title="Something went wrong"
         message="An unknown error occurred."
       />
     );
     const html = await this.renderHtml(mainHtml, {
-      headComponents: [<title>500</title>],
+      headComponents: [
+        <title>500 Error</title>,
+        <meta
+          name="viewport"
+          content="width=device-width, initial-scale=1.0"
+        />,
+      ],
     });
     return {html};
   }

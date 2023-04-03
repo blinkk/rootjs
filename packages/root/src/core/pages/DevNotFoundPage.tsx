@@ -23,7 +23,7 @@ export function DevNotFoundPage(props: DevNotFoundPageProps) {
     })
     .join('\n');
   return (
-    <ErrorPage code={404} title="Root.js">
+    <ErrorPage code={404} title="Not found">
       <h2>Routes</h2>
       {routesList.length > 0 ? (
         <pre className="box">
