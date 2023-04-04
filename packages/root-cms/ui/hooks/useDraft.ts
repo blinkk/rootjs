@@ -317,11 +317,11 @@ export function useDraft(docId: string) {
     draft.onSaveStateChange((newSaveState) => setSaveState(newSaveState));
     draft.start();
     document.addEventListener('visibilitychange', () => {
-      if (document.visibilityState === 'visible') {
+      if (document.hidden || document.visibilityState !== 'visible') {
+        draft.stop();
+      } else {
         setLoading(true);
         draft.start();
-      } else {
-        draft.stop();
       }
     });
     return () => draft.dispose();
