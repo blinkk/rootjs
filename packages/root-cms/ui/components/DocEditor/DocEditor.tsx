@@ -32,6 +32,7 @@ import {PublishDocModal} from '../PublishDocModal/PublishDocModal.js';
 import {DocActionsMenu} from '../DocActionsMenu/DocActionsMenu.js';
 import {route} from 'preact-router';
 import {ref as storageRef, updateMetadata, uploadBytes} from 'firebase/storage';
+import {showNotification} from '@mantine/notifications';
 
 interface DocEditorProps {
   docId: string;
@@ -291,17 +292,28 @@ DocEditor.ImageField = (props: FieldProps) => {
   }, []);
 
   async function onFileChange(e: Event) {
-    setLoading(true);
-    const inputEl = e.target as HTMLInputElement;
-    const files = inputEl.files || [];
-    const file = files[0];
-    const img = await uploadFileToGCS(file);
-    props.draft.updateKey(props.deepKey, img);
-    setImg(img);
-    setLoading(false);
+    try {
+      setLoading(true);
+      const inputEl = e.target as HTMLInputElement;
+      const files = inputEl.files || [];
+      const file = files[0];
+      const img = await uploadFileToGCS(file);
+      props.draft.updateKey(props.deepKey, img);
+      setImg(img);
+      setLoading(false);
+    } catch (err) {
+      console.error('image upload failed');
+      console.error(err);
+      setLoading(false);
+      showNotification({
+        title: 'Image upload failed',
+        message: 'Failed to upload image: ' + String(err),
+        color: 'red',
+        autoClose: false,
+      });
+    }
 
-    // Once the upload is done, reset the input element in case the user wishes
-    // to re-upload the image.
+    // Reset the input element in case the user wishes to re-upload the image.
     if (inputRef.current) {
       const inputEl = inputRef.current;
       inputEl.value = '';
