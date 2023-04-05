@@ -20,6 +20,7 @@ afterEach(async () => {
 
 test('build i18n-url-format project', async () => {
   await fixture.build();
+
   const index = path.join(fixture.distDir, 'html/index.html');
   assert.isTrue(await fileExists(index));
   const html = await fs.readFile(index, 'utf-8');
@@ -49,6 +50,38 @@ test('build i18n-url-format project', async () => {
     <body>
     <h1>Bonjour le monde !</h1>
     <p>Current locale: fr</p>
+    </body>
+    </html>
+    "
+  `);
+
+  const fooDefault = path.join(fixture.distDir, 'html/foo/bar/index.html');
+  assert.isTrue(await fileExists(fooDefault));
+  const fooDefaultHtml = await fs.readFile(fooDefault, 'utf-8');
+  expect(fooDefaultHtml).toMatchInlineSnapshot(`
+    "<!doctype html>
+    <html>
+    <head>
+    <meta charset=\\"utf-8\\">
+    </head>
+    <body>
+    <p>Locale from params: en</p>
+    </body>
+    </html>
+    "
+  `);
+
+  const fooFr = path.join(fixture.distDir, 'html/intl/fr/foo/bar/index.html');
+  assert.isTrue(await fileExists(fooFr));
+  const fooFrHtml = await fs.readFile(fooFr, 'utf-8');
+  expect(fooFrHtml).toMatchInlineSnapshot(`
+    "<!doctype html>
+    <html>
+    <head>
+    <meta charset=\\"utf-8\\">
+    </head>
+    <body>
+    <p>Locale from params: fr</p>
     </body>
     </html>
     "
