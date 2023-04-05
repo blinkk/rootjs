@@ -1,5 +1,16 @@
 # @blinkk/root-cms
 
+## 1.0.0-beta.4
+
+### Patch Changes
+
+- e026a45: feat: add project name to cms ui
+- fed22ae: fix: add notification for image upload fail
+- Updated dependencies [e026a45]
+- Updated dependencies [fed22ae]
+- Updated dependencies [40d5693]
+  - @blinkk/root@1.0.0-beta.4
+
 ## 1.0.0-beta.3
 
 ### Patch Changes
