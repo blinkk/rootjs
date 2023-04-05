@@ -58,6 +58,9 @@ export class Renderer {
       next();
       return;
     }
+    if (route.locale) {
+      routeParams.locale = route.locale;
+    }
 
     const render404 = async () => {
       // Calling next() will allow the dev server or prod server handle the 404
@@ -211,6 +214,9 @@ export class Renderer {
     options: {routeParams: Record<string, string>}
   ): Promise<{html?: string; notFound?: boolean}> {
     const routeParams = options.routeParams;
+    if (route.locale) {
+      routeParams.locale = route.locale;
+    }
     const Component = route.module.default;
     if (!Component) {
       throw new Error(
