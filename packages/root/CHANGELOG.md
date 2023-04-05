@@ -1,5 +1,13 @@
 # @blinkk/root
 
+## 1.0.0-beta.4
+
+### Patch Changes
+
+- e026a45: feat: add project name to cms ui
+- fed22ae: fix: add notification for image upload fail
+- 40d5693: fix: inject locale into route params
+
 ## 1.0.0-beta.3
 
 ### Patch Changes
