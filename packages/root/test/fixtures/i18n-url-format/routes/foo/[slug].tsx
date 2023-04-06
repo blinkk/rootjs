@@ -21,7 +21,7 @@ export const getStaticPaths: GetStaticPaths = async () => {
 export const getStaticProps: GetStaticProps<PageProps> = async (ctx) => {
   return {
     props: {
-      localeFromParams: ctx.params.locale || 'default',
+      localeFromParams: ctx.params.$locale || 'default',
     },
   };
 };
