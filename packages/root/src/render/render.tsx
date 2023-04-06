@@ -59,7 +59,7 @@ export class Renderer {
       return;
     }
     if (route.locale) {
-      routeParams.locale = route.locale;
+      routeParams.$locale = route.locale;
     }
 
     const render404 = async () => {
@@ -215,7 +215,7 @@ export class Renderer {
   ): Promise<{html?: string; notFound?: boolean}> {
     const routeParams = options.routeParams;
     if (route.locale) {
-      routeParams.locale = route.locale;
+      routeParams.$locale = route.locale;
     }
     const Component = route.module.default;
     if (!Component) {
