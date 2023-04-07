@@ -1,5 +1,12 @@
 # @blinkk/root-cms
 
+## 1.0.0-beta.9
+
+### Patch Changes
+
+- Updated dependencies [bf9029f]
+  - @blinkk/root@1.0.0-beta.9
+
 ## 1.0.0-beta.8
 
 ### Patch Changes
