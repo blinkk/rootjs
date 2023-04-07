@@ -27,7 +27,7 @@ export async function start(rootProjectDir?: string) {
   console.log(`${dim('┃')} server:   http://localhost:${port}`);
   console.log(`${dim('┃')} mode:     production`);
   console.log();
-  server.listen(port);
+  server.listen(port, '0.0.0.0');
 }
 
 export async function createProdServer(options: {

@@ -29,7 +29,7 @@ export async function preview(rootProjectDir?: string) {
   console.log(`${dim('┃')} server:   http://localhost:${port}`);
   console.log(`${dim('┃')} mode:     preview`);
   console.log();
-  server.listen(port);
+  server.listen(port, '0.0.0.0');
 }
 
 export async function createPreviewServer(options: {

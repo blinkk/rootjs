@@ -29,7 +29,7 @@ export async function dev(rootProjectDir?: string) {
   console.log(`${dim('┃')} mode:     development`);
   console.log();
   const server = await createDevServer({rootDir, port});
-  server.listen(port);
+  server.listen(port, '127.0.0.1');
 }
 
 export async function createDevServer(options?: {
