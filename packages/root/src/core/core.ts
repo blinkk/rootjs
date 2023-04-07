@@ -1,10 +1,14 @@
 export * from './config';
-export * from './components/Body';
-export * from './components/Head';
-export * from './components/Html';
-export * from './components/Script';
-export * from './hooks/useI18nContext';
-export * from './hooks/useRequestContext';
-export * from './hooks/useTranslations';
+export {Body} from './components/Body';
+export {Head} from './components/Head';
+export {Html} from './components/Html';
+export {Script} from './components/Script';
+export {
+  I18nContext,
+  useI18nContext,
+  getTranslations,
+} from './hooks/useI18nContext';
+export {RequestContext, useRequestContext} from './hooks/useRequestContext';
+export {useTranslations} from './hooks/useTranslations';
 export * from './plugin';
 export * from './types';
