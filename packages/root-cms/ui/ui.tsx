@@ -27,6 +27,7 @@ declare global {
         projectId: string;
         projectName: string;
         domain: string;
+        gci: string | boolean;
       };
       firebaseConfig: Record<string, string>;
       collections: Record<string, Collection>;

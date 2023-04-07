@@ -58,6 +58,13 @@ export type CMSPluginOptions = {
     req: Request,
     user: CMSUser
   ) => boolean | Promise<boolean>;
+
+  /**
+   * URL to GCI service for transforming uploaded GCS images to a Google App
+   * Engine Images API serving URL. Defaults to "https://gci.rootjs.dev". To
+   * disable, set this value to `false`.
+   */
+  gci?: string | boolean;
 };
 
 export type CMSPlugin = Plugin & {
