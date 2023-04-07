@@ -1,5 +1,11 @@
 # @blinkk/root
 
+## 1.0.0-beta.10
+
+### Patch Changes
+
+- f587c74: feat: add --host flag to server commands
+
 ## 1.0.0-beta.9
 
 ### Patch Changes
