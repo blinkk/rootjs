@@ -247,9 +247,12 @@ async function uploadFileToGCS(file: File) {
 }
 
 async function getGciUrl(gcsPath: string) {
-  console.log(gcsPath);
+  const gciDomain = window.__ROOT_CTX.rootConfig.gci;
+  if (!gciDomain) {
+    return '';
+  }
   const params = new URLSearchParams({gcs: gcsPath});
-  const url = `https://gci.rootjs.dev/_/serving_url?${params.toString()}`;
+  const url = `${gciDomain}/_/serving_url?${params.toString()}`;
   const res = await window.fetch(url);
   if (res.status !== 200) {
     const text = await res.text();
@@ -329,9 +332,18 @@ DocEditor.ImageField = (props: FieldProps) => {
       {img && img.src ? (
         <div className="DocEditor__ImageField__imagePreview">
           <div className="DocEditor__ImageField__imagePreview__image">
-            <img src={img.gciUrl} width={img.width} height={img.height} />
+            <img
+              src={img.gciUrl || img.src}
+              width={img.width}
+              height={img.height}
+            />
           </div>
-          <TextInput size="xs" radius={0} value={img.gciUrl} disabled={true} />
+          <TextInput
+            size="xs"
+            radius={0}
+            value={img.gciUrl || img.src}
+            disabled={true}
+          />
         </div>
       ) : (
         <div className="DocEditor__ImageField__noImage">No image</div>

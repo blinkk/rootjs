@@ -71,6 +71,7 @@ export async function renderApp(req: Request, res: Response, options: any) {
       projectId: cmsConfig.id || 'default',
       projectName: cmsConfig.name || cmsConfig.id || '',
       domain: rootConfig.domain || 'https://example.com',
+      gci: cmsConfig.gci ?? 'https://gci.rootjs.dev',
     },
     firebaseConfig: options.firebaseConfig,
     collections: collections,
