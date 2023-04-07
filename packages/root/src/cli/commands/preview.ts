@@ -129,6 +129,8 @@ function rootPreviewServerMiddleware() {
       await renderer.handle(req, res, next);
     } catch (e) {
       try {
+        console.error(`error rendering ${req.originalUrl}`);
+        console.error(e.stack || e);
         const {html} = await renderer.renderError(e);
         res.status(500).set({'Content-Type': 'text/html'}).end(html);
       } catch (e2) {
