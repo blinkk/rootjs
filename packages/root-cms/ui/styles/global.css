@@ -47,6 +47,10 @@ iframe {
   margin: 0;
 }
 
+details > div {
+  box-sizing: border-box;
+}
+
 a {
   color: inherit;
 }
