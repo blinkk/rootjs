@@ -1,5 +1,12 @@
 # @blinkk/root-cms
 
+## 1.0.0-beta.7
+
+### Patch Changes
+
+- b9b8968: feat: add image alt text field
+  - @blinkk/root@1.0.0-beta.7
+
 ## 1.0.0-beta.6
 
 ### Patch Changes
