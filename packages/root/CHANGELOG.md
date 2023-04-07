@@ -1,5 +1,11 @@
 # @blinkk/root
 
+## 1.0.0-beta.12
+
+### Patch Changes
+
+- 1930fe1: fix: use the same request context in render.js
+
 ## 1.0.0-beta.11
 
 ### Patch Changes
