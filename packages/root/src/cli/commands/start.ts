@@ -17,17 +17,22 @@ import {ElementGraph} from '../../node/element-graph';
 
 type RenderModule = typeof import('../../render/render.js');
 
-export async function start(rootProjectDir?: string) {
+export interface StartOptions {
+  host?: string;
+}
+
+export async function start(rootProjectDir?: string, options?: StartOptions) {
   process.env.NODE_ENV = 'production';
   const rootDir = path.resolve(rootProjectDir || process.cwd());
   const server = await createProdServer({rootDir});
   const port = parseInt(process.env.PORT || '4007');
+  const host = options?.host || 'localhost';
   console.log();
   console.log(`${dim('┃')} project:  ${rootDir}`);
-  console.log(`${dim('┃')} server:   http://localhost:${port}`);
+  console.log(`${dim('┃')} server:   http://${host}:${port}`);
   console.log(`${dim('┃')} mode:     production`);
   console.log();
-  server.listen(port, '0.0.0.0');
+  server.listen(port, host);
 }
 
 export async function createProdServer(options: {

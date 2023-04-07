@@ -18,18 +18,23 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 type RenderModule = typeof import('../../render/render.js');
 
-export async function dev(rootProjectDir?: string) {
+export interface DevOptions {
+  host?: string;
+}
+
+export async function dev(rootProjectDir?: string, options?: DevOptions) {
   process.env.NODE_ENV = 'development';
   const rootDir = path.resolve(rootProjectDir || process.cwd());
   const defaultPort = parseInt(process.env.PORT || '4007');
+  const host = options?.host || 'localhost';
   const port = await findOpenPort(defaultPort, defaultPort + 10);
   console.log();
   console.log(`${dim('┃')} project:  ${rootDir}`);
-  console.log(`${dim('┃')} server:   http://localhost:${port}`);
+  console.log(`${dim('┃')} server:   http://${host}:${port}`);
   console.log(`${dim('┃')} mode:     development`);
   console.log();
   const server = await createDevServer({rootDir, port});
-  server.listen(port, '127.0.0.1');
+  server.listen(port, host);
 }
 
 export async function createDevServer(options?: {

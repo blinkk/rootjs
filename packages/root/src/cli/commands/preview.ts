@@ -17,19 +17,27 @@ import {ElementGraph} from '../../node/element-graph.js';
 
 type RenderModule = typeof import('../../render/render.js');
 
-export async function preview(rootProjectDir?: string) {
+export interface PreviewOptions {
+  host?: string;
+}
+
+export async function preview(
+  rootProjectDir?: string,
+  options?: PreviewOptions
+) {
   // TODO(stevenle): figure out standard practice for NODE_ENV when using the
   // preview command.
   process.env.NODE_ENV = 'development';
   const rootDir = path.resolve(rootProjectDir || process.cwd());
   const server = await createPreviewServer({rootDir});
   const port = parseInt(process.env.PORT || '4007');
+  const host = options?.host || 'localhost';
   console.log();
   console.log(`${dim('┃')} project:  ${rootDir}`);
-  console.log(`${dim('┃')} server:   http://localhost:${port}`);
+  console.log(`${dim('┃')} server:   http://${host}:${port}`);
   console.log(`${dim('┃')} mode:     preview`);
   console.log();
-  server.listen(port, '0.0.0.0');
+  server.listen(port, host);
 }
 
 export async function createPreviewServer(options: {

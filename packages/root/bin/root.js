@@ -25,14 +25,17 @@ async function main() {
   program
     .command('dev [path]')
     .description('starts the server in development mode')
+    .option('--host <host>', 'network address the server should listen on, e.g. 127.0.0.1')
     .action(dev);
   program
     .command('preview [path]')
     .description('starts the server in preview mode')
+    .option('--host <host>', 'network address the server should listen on, e.g. 127.0.0.1')
     .action(preview);
   program
     .command('start [path]')
     .description('starts the server in production mode')
+    .option('--host <host>', 'network address the server should listen on, e.g. 127.0.0.1')
     .action(start);
   await program.parseAsync(process.argv);
 }
