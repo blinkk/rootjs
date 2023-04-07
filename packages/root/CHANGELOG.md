@@ -1,5 +1,11 @@
 # @blinkk/root
 
+## 1.0.0-beta.9
+
+### Patch Changes
+
+- bf9029f: fix: update host addr for dev and prod servers
+
 ## 1.0.0-beta.8
 
 ### Patch Changes
