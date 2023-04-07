@@ -306,7 +306,10 @@ DocEditor.ImageField = (props: FieldProps) => {
       const file = files[0];
       const img = await uploadFileToGCS(file);
       props.draft.updateKey(props.deepKey, img);
-      setImg(img);
+      setImg((currentImg: any) => {
+        // Preserve the "alt" text when the image changes.
+        return Object.assign({}, img, {alt: currentImg.alt || ''});
+      });
       setLoading(false);
     } catch (err) {
       console.error('image upload failed');
