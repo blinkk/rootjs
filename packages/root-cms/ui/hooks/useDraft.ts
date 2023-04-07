@@ -38,7 +38,7 @@ export class DraftController {
   private subscribers: Subscribers = {};
   private saveState = SaveState.NO_CHANGES;
   private onSaveStateChangeCallback?: (saveState: SaveState) => void;
-  private started = false;
+  started = false;
 
   constructor(docId: string) {
     this.projectId = window.__ROOT_CTX.rootConfig.projectId;
@@ -320,8 +320,10 @@ export function useDraft(docId: string) {
       if (document.hidden || document.visibilityState !== 'visible') {
         draft.stop();
       } else {
-        setLoading(true);
-        draft.start();
+        if (!draft.started) {
+          setLoading(true);
+          draft.start();
+        }
       }
     });
     return () => draft.dispose();
