@@ -1,5 +1,11 @@
 # @blinkk/root
 
+## 1.0.0-beta.6
+
+### Patch Changes
+
+- b36d4e0: fix: normalize nested arrays
+
 ## 1.0.0-beta.5
 
 ### Patch Changes
