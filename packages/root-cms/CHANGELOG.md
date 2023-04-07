@@ -1,5 +1,13 @@
 # @blinkk/root-cms
 
+## 1.0.0-beta.8
+
+### Patch Changes
+
+- 854c67f: fix: preserve image "alt" text
+- Updated dependencies [98c4af7]
+  - @blinkk/root@1.0.0-beta.8
+
 ## 1.0.0-beta.7
 
 ### Patch Changes

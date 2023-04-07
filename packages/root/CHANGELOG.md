@@ -1,5 +1,11 @@
 # @blinkk/root
 
+## 1.0.0-beta.8
+
+### Patch Changes
+
+- 98c4af7: fix: use pre-built element graph in prod ssr
+
 ## 1.0.0-beta.7
 
 ## 1.0.0-beta.6
