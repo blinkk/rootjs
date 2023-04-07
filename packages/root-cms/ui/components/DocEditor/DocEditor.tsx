@@ -327,6 +327,13 @@ DocEditor.ImageField = (props: FieldProps) => {
     }
   }
 
+  async function setAltText(newValue: string) {
+    setImg((currentImg: any) => {
+      return Object.assign({}, currentImg, {alt: newValue});
+    });
+    props.draft.updateKey(`${props.deepKey}.alt`, newValue);
+  }
+
   return (
     <div className="DocEditor__ImageField">
       {img && img.src ? (
@@ -339,10 +346,19 @@ DocEditor.ImageField = (props: FieldProps) => {
             />
           </div>
           <TextInput
+            className="DocEditor__ImageField__imagePreview__image__url"
             size="xs"
             radius={0}
             value={img.gciUrl || img.src}
             disabled={true}
+          />
+          <TextInput
+            className="DocEditor__ImageField__imagePreview__image__alt"
+            size="xs"
+            radius={0}
+            value={img.alt}
+            label="Alt text"
+            onChange={(e) => setAltText(e.target.value)}
           />
         </div>
       ) : (

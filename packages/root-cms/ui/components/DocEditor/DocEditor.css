@@ -204,6 +204,10 @@
   object-position: center;
 }
 
+.DocEditor__ImageField__imagePreview__image__alt {
+  margin-top: 4px;
+}
+
 .DocEditor__ImageField__noImage {
   font-family: var(--font-family-mono);
   margin: 10px 0;
