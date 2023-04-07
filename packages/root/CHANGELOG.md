@@ -1,5 +1,11 @@
 # @blinkk/root
 
+## 1.0.0-beta.5
+
+### Patch Changes
+
+- 210630d: fix: prefix system injected route params with $
+
 ## 1.0.0-beta.4
 
 ### Patch Changes
