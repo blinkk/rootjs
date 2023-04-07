@@ -32,6 +32,22 @@ export class ElementGraph {
     this.sourceFiles = sourceFiles;
   }
 
+  toJson() {
+    for (const tagName in this.sourceFiles) {
+      this.deps[tagName] ??= this.parseDepsFromSource(tagName);
+    }
+    return {
+      sourceFiles: this.sourceFiles,
+      deps: this.deps,
+    };
+  }
+
+  static fromJson(data: {deps: any; sourceFiles: any}) {
+    const graph = new ElementGraph(data.sourceFiles);
+    graph.deps = data.deps;
+    return graph;
+  }
+
   getDeps(tagName: string, visited?: Set<string>): string[] {
     visited ??= new Set();
     if (visited.has(tagName)) {
