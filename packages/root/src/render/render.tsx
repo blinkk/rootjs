@@ -6,7 +6,6 @@ import {AssetMap} from './asset-map/asset-map';
 import {RootConfig} from '../core/config';
 import {RouteTrie} from './route-trie';
 import {DevNotFoundPage} from '../core/pages/DevNotFoundPage';
-import {HtmlContext, HTML_CONTEXT} from '../core/components/Html';
 import {
   Request,
   Response,
@@ -18,8 +17,14 @@ import {
 import {htmlMinify} from './html-minify';
 import {htmlPretty} from './html-pretty';
 import {DevErrorPage} from '../core/pages/DevErrorPage';
-import {RequestContext, REQUEST_CONTEXT} from '../core/hooks/useRequestContext';
-import {getTranslations, I18N_CONTEXT} from '../core/hooks/useI18nContext';
+import {
+  RequestContext,
+  REQUEST_CONTEXT,
+  getTranslations,
+  I18N_CONTEXT,
+  HtmlContext,
+  HTML_CONTEXT,
+} from '../core/core';
 import type {ElementGraph} from '../node/element-graph';
 import {parseTagNames} from '../utils/elements';
 
