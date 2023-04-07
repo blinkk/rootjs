@@ -344,7 +344,12 @@ CollectionPage.DocsList = (props: {
             <div className="CollectionPage__collection__docsList__doc__controls">
               <DocActionsMenu
                 docId={doc.id}
-                onDelete={() => props.reloadDocs()}
+                data={doc}
+                onAction={(e) => {
+                  if (e.action === 'delete' || e.action === 'unpublish') {
+                    props.reloadDocs();
+                  }
+                }}
               />
             </div>
           </div>

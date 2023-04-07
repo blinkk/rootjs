@@ -84,7 +84,11 @@ export function DocEditor(props: DocEditorProps) {
             </Button>
           </div>
           <div className="DocEditor__statusBar__actionsMenu">
-            <DocActionsMenu docId={props.docId} onDelete={() => goBack()} />
+            <DocActionsMenu
+              docId={props.docId}
+              data={data}
+              onDelete={() => goBack()}
+            />
           </div>
         </div>
         <div className="DocEditor__fields">
