@@ -1,5 +1,14 @@
 # @blinkk/root-cms
 
+## 1.0.0-beta.5
+
+### Patch Changes
+
+- 36d3ced: feat: add option for configuring gci
+- d5b28cb: feat: add unpublish doc action
+- Updated dependencies [210630d]
+  - @blinkk/root@1.0.0-beta.5
+
 ## 1.0.0-beta.4
 
 ### Patch Changes
