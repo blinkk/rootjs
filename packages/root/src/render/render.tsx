@@ -286,6 +286,7 @@ export class Renderer {
         code={404}
         title="Not found"
         message="Double-check the URL entered and try again."
+        align="center"
       />
     );
     const html = await this.renderHtml(mainHtml, {
@@ -316,6 +317,7 @@ export class Renderer {
         code={500}
         title="Something went wrong"
         message="An unknown error occurred."
+        align="center"
       />
     );
     const html = await this.renderHtml(mainHtml, {
