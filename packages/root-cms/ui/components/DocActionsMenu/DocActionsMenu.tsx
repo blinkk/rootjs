@@ -1,24 +1,90 @@
 import {ActionIcon, Menu} from '@mantine/core';
 import {useModals} from '@mantine/modals';
 import {showNotification, updateNotification} from '@mantine/notifications';
-import {IconCopy, IconDotsVertical, IconTrash} from '@tabler/icons-preact';
-import {cmsDeleteDoc} from '../../utils/doc.js';
+import {
+  IconCloudOff,
+  IconCopy,
+  IconDotsVertical,
+  IconTrash,
+} from '@tabler/icons-preact';
+import {cmsDeleteDoc, cmsUnpublishDoc} from '../../utils/doc.js';
 import {Text} from '../Text/Text.js';
+
+interface DocData {
+  sys?: {
+    firstPublishedAt?: number;
+    scheduledAt?: number;
+  };
+  fields?: Record<string, any>;
+}
+
+export interface DocActionEvent {
+  action: 'copy' | 'delete' | 'unpublish';
+  newDocId?: string;
+}
 
 export interface DocActionsMenuProps {
   docId: string;
+  data?: DocData;
   onCopy?: () => void;
   onDelete?: () => void;
+  onAction?: (event: DocActionEvent) => void;
 }
 
 export function DocActionsMenu(props: DocActionsMenuProps) {
   const docId = props.docId;
+  const data = props.data || {};
+  const sys = data.sys || {};
   const modals = useModals();
 
   const onCopyDoc = () => {
     if (props.onCopy) {
       props.onCopy();
     }
+    if (props.onAction) {
+      props.onAction({action: 'copy'});
+    }
+  };
+
+  const onUnpublishDoc = () => {
+    const notificationId = `unpublish-doc-${docId}`;
+    const modalId = modals.openConfirmModal({
+      title: 'unpublish doc',
+      centered: true,
+      children: (
+        <Text size="body-sm" weight="semi-bold">
+          Are you sure you want to unpublish <code>{docId}</code>? There is no
+          undo.
+        </Text>
+      ),
+      labels: {confirm: 'Unpublish', cancel: 'Cancel'},
+      confirmProps: {color: 'red'},
+      onCancel: () => console.log('Cancel'),
+      closeOnConfirm: false,
+      onConfirm: async () => {
+        showNotification({
+          id: notificationId,
+          title: 'Unpublishing doc',
+          message: `Requesting unpublish of ${docId}...`,
+          loading: true,
+          autoClose: false,
+        });
+        await cmsUnpublishDoc(docId);
+        updateNotification({
+          id: notificationId,
+          title: 'Unpublished!',
+          message: `Successfully unpublished ${docId}!`,
+          loading: false,
+          autoClose: 5000,
+        });
+        modals.closeModal(modalId);
+        if (props.onAction) {
+          props.onAction({
+            action: 'unpublish',
+          });
+        }
+      },
+    });
   };
 
   const onDeleteDoc = () => {
@@ -56,6 +122,9 @@ export function DocActionsMenu(props: DocActionsMenuProps) {
         if (props.onDelete) {
           props.onDelete();
         }
+        if (props.onAction) {
+          props.onAction({action: 'delete'});
+        }
       },
     });
   };
@@ -73,6 +142,14 @@ export function DocActionsMenu(props: DocActionsMenuProps) {
       <Menu.Item icon={<IconCopy size={20} />} onClick={() => onCopyDoc()}>
         Copy
       </Menu.Item>
+      {sys.firstPublishedAt && (
+        <Menu.Item
+          icon={<IconCloudOff size={20} />}
+          onClick={() => onUnpublishDoc()}
+        >
+          Unpublish
+        </Menu.Item>
+      )}
       <Menu.Item icon={<IconTrash size={20} />} onClick={() => onDeleteDoc()}>
         Delete
       </Menu.Item>
