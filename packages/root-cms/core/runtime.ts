@@ -67,7 +67,7 @@ export function normalizeData(data: any): any {
       if (val.toMillis) {
         result[key] = val.toMillis();
       } else if (Object.hasOwn(val, '_array') && Array.isArray(val._array)) {
-        const arr = val._array.map((k: string) => val[k] || {});
+        const arr = val._array.map((k: string) => normalizeData(val[k] || {}));
         result[key] = arr;
       } else {
         result[key] = normalizeData(val);
