@@ -269,6 +269,13 @@ export async function build(rootProjectDir?: string, options?: BuildOptions) {
     JSON.stringify(rootManifest, null, 2)
   );
 
+  // Save the element graph to `dist/client` for use by the prod SSR server.
+  const elementGraphJson = elementGraph.toJson();
+  await writeFile(
+    path.join(distDir, 'client/root-element-graph.json'),
+    JSON.stringify(elementGraphJson, null, 2)
+  );
+
   // Write SSG output to `dist/html`.
   const buildDir = path.join(distDir, 'html');
 

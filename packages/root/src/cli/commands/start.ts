@@ -13,7 +13,7 @@ import compression from 'compression';
 import {Request, Response, NextFunction, Server} from '../../core/types.js';
 import {rootProjectMiddleware} from '../../core/middleware';
 import {RootConfig} from '../../core/config';
-import {getElements} from '../../node/element-graph';
+import {ElementGraph} from '../../node/element-graph';
 
 type RenderModule = typeof import('../../render/render.js');
 
@@ -89,9 +89,19 @@ async function rootProdRendererMiddleware(options: {
       `could not find ${manifestPath}. run \`root build\` before \`root start\`.`
     );
   }
+  const elementGraphJsonPath = path.join(
+    distDir,
+    'client/root-element-graph.json'
+  );
+  if (!(await fileExists(elementGraphJsonPath))) {
+    throw new Error(
+      `could not find ${elementGraphJsonPath}. run \`root build\` before \`root start\`.`
+    );
+  }
   const rootManifest = await loadJson<BuildAssetManifest>(manifestPath);
   const assetMap = BuildAssetMap.fromRootManifest(rootConfig, rootManifest);
-  const elementGraph = await getElements(rootConfig);
+  const elementGraphJson = await loadJson<any>(elementGraphJsonPath);
+  const elementGraph = ElementGraph.fromJson(elementGraphJson);
   const renderer = new render.Renderer(rootConfig, {assetMap, elementGraph});
   return async (req: Request, _: Response, next: NextFunction) => {
     req.renderer = renderer;
