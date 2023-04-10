@@ -347,6 +347,9 @@ DocEditor.ImageField = (props: FieldProps) => {
               width={img.width}
               height={img.height}
             />
+            <div className="DocEditor__ImageField__imagePreview__dimens">
+              {`${img.width}x${img.height}`}
+            </div>
           </div>
           <TextInput
             className="DocEditor__ImageField__imagePreview__image__url"

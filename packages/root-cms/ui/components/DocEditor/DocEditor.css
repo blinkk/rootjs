@@ -191,9 +191,9 @@
   border: 1px solid #dedede;
   aspect-ratio: 16/9;
   width: 100%;
-  overflow: hidden;
   padding: 10px;
   margin-bottom: 10px;
+  position: relative;
 }
 
 .DocEditor__ImageField__imagePreview__image img {
@@ -202,6 +202,17 @@
   height: 100%;
   object-fit: contain;
   object-position: center;
+}
+
+.DocEditor__ImageField__imagePreview__dimens {
+  position: absolute;
+  top: -1px;
+  right: -1px;
+  padding: 4px 8px;
+  background: black;
+  color: white;
+  font-size: 8px;
+  font-weight: 700;
 }
 
 .DocEditor__ImageField__imagePreview__image__alt {
