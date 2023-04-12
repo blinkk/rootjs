@@ -1,5 +1,14 @@
 # @blinkk/root-cms
 
+## 1.0.0-beta.14
+
+### Patch Changes
+
+- fbadf96: feat: add collection list to home page
+- f93eefa: fix: fix user sessions
+- 30f8f37: feat: add img dimens to preview box
+  - @blinkk/root@1.0.0-beta.14
+
 ## 1.0.0-beta.13
 
 ### Patch Changes

@@ -1,5 +1,11 @@
 # @blinkk/create-root
 
+## 1.0.0-beta.14
+
+### Patch Changes
+
+- 29d86e7: feat: add tsconfig options for lit to starter
+
 ## 1.0.0-beta.13
 
 ## 1.0.0-beta.12
