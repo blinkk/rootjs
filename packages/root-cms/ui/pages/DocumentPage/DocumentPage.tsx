@@ -88,8 +88,10 @@ DocumentPage.Preview = (props: PreviewProps) => {
       if (!iframeWindow) {
         return;
       }
-      const currentPath = iframeWindow.location.pathname;
-      setIframeUrl(`${domain}${currentPath}`);
+      if (!iframeWindow.location.href.startsWith('about:blank')) {
+        const currentPath = iframeWindow.location.pathname;
+        setIframeUrl(`${domain}${currentPath}`);
+      }
     }
     iframe.addEventListener('load', onIframeLoad);
     return () => {
