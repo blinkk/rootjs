@@ -100,7 +100,7 @@ function loginSuccessRedirect() {
   let redirectUrl = params.get('continue');
   if (
     !redirectUrl ||
-    !redirectUrl.startsWith('/cms') ||
+    !redirectUrl.startsWith('/') ||
     redirectUrl.startsWith('/cms/login')
   ) {
     redirectUrl = '/cms';
