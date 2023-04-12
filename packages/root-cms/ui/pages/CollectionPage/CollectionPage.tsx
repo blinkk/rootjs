@@ -100,7 +100,7 @@ export function CollectionPage(props: CollectionPageProps) {
     <Layout>
       <SplitPanel className="CollectionPage" localStorageId="CollectionPage">
         <SplitPanel.Item className="CollectionPage__side">
-          <div className="CollectionPage__side__title">Collections</div>
+          <div className="CollectionPage__side__title">Content</div>
           <div className="CollectionPage__side__search">
             <input
               type="text"
