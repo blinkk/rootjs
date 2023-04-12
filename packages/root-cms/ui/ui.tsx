@@ -4,7 +4,7 @@ import {MantineProvider} from '@mantine/core';
 import {ModalsProvider} from '@mantine/modals';
 import {NotificationsProvider} from '@mantine/notifications';
 import {initializeApp} from 'firebase/app';
-import {getAuth} from 'firebase/auth';
+import {User, getAuth} from 'firebase/auth';
 import {getFirestore} from 'firebase/firestore';
 import {getStorage} from 'firebase/storage';
 import {CollectionPage} from './pages/CollectionPage/CollectionPage.js';
@@ -73,7 +73,7 @@ function App() {
 function loginRedirect() {
   let originalUrl = window.location.pathname;
   if (window.location.search) {
-    originalUrl = `originalUrl?${window.location.search}`;
+    originalUrl = `${originalUrl}?${window.location.search}`;
   }
   const params = new URLSearchParams({continue: originalUrl});
   window.location.replace(`/cms/login?${params.toString()}`);
@@ -92,4 +92,29 @@ auth.onAuthStateChanged((user) => {
   const root = document.getElementById('root')!;
   root.innerHTML = '';
   render(<App />, root);
+
+  updateSession(user);
 });
+
+async function updateSession(user: User) {
+  const idToken = await user.getIdToken();
+  const res = await fetch('/cms/login', {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({idToken}),
+  });
+  if (res.status !== 200) {
+    console.error('login failed');
+    console.log(res);
+    return;
+  }
+  const data = await res.json();
+  if (!data.success) {
+    console.error('login failed');
+    console.log(res);
+    return;
+  }
+  console.log('updated user session');
+}
