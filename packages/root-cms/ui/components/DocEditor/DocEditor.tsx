@@ -308,7 +308,7 @@ DocEditor.ImageField = (props: FieldProps) => {
       props.draft.updateKey(props.deepKey, img);
       setImg((currentImg: any) => {
         // Preserve the "alt" text when the image changes.
-        return Object.assign({}, img, {alt: currentImg.alt || ''});
+        return Object.assign({}, img, {alt: currentImg?.alt || ''});
       });
       setLoading(false);
     } catch (err) {
