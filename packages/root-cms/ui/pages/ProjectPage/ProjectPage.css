@@ -10,3 +10,55 @@
   margin-top: 16px;
   max-width: 70ch;
 }
+
+.ProjectPage__section {
+  margin-top: 60px;
+}
+
+.ProjectPage__section__title {
+  margin-bottom: 20px;
+}
+
+.ProjectPage__collectionList {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  gap: 12px;
+  max-width: 580px;
+}
+
+.ProjectPage__collectionList__collection {
+  display: grid;
+  grid-template-columns: 20px 1fr;
+  align-items: center;
+  padding: 8px 12px;
+  column-gap: 12px;
+  row-gap: 4px;
+  width: 100%;
+  background: transparent;
+  border: 2px solid black;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  text-decoration: none;
+  transition: background-color 0.18s ease;
+  position: relative;
+}
+
+.ProjectPage__collectionList__collection:hover {
+  background-color: var(--button-background-hover);
+}
+
+.ProjectPage__collectionList__collection:active {
+  background-color: var(--button-background-active);
+}
+
+.ProjectPage__collectionList__collection__icon {
+  margin-top: 2px;
+}
+
+.ProjectPage__collectionList__collection__desc {
+  grid-column: 2 / span 1;
+  font-size: 12px;
+}
