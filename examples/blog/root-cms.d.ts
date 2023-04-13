@@ -39,6 +39,8 @@ export interface BlogPostsFields {
             width?: number;
             height?: number;
         };
+        /** Featured?. Check the box to mark the blog post as a featured blog post. */
+        featured?: unknown;
         /** Tags. Category tags for searching and filtering. */
         tags?: string[];
     };
@@ -77,6 +79,8 @@ export interface BlogPostsSandboxFields {
             width?: number;
             height?: number;
         };
+        /** Featured?. Check the box to mark the blog post as a featured blog post. */
+        featured?: unknown;
         /** Tags. Category tags for searching and filtering. */
         tags?: string[];
     };
@@ -175,6 +179,14 @@ export interface Template5050Fields {
     body?: string;
     /** Asset */
     asset?: unknown;
+}
+
+/** Generated from `/templates/TemplateFeaturedBlogPosts/TemplateFeaturedBlogPosts.schema.ts`. */
+export interface TemplateFeaturedBlogPostsFields {
+    /** ID. Used for deep linking, tracking, etc. */
+    id?: string;
+    /** Module Options. Layout and display options. */
+    options?: string[];
 }
 
 /** Generated from `/templates/TemplateHero/TemplateHero.schema.ts`. */

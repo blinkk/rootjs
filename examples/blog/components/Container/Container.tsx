@@ -5,8 +5,6 @@ import styles from './Container.module.scss';
 export type ContainerProps = preact.JSX.HTMLAttributes & {
   /** The element tagName to render, e.g. "div" or "section". */
   as?: preact.JSX.ElementType;
-  /** HTML attrs to pass through to the element. */
-  // attrs?: preact.JSX.HTMLAttributes & preact.JSX.IntrinsicAttributes;
   /**
    * The container width.
    * default: 12 cols

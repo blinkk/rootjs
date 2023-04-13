@@ -3,6 +3,7 @@ import {getDoc} from '@blinkk/root-cms';
 import {BaseLayout} from '@/layouts/BaseLayout.js';
 import {PagesDoc} from '@/root-cms.js';
 import {PageModuleFields, PageModules} from '@/components/PageModules/PageModules.js';
+import {PAGE_CONTEXT} from '@/hooks/usePage.js';
 
 interface Props {
   slug: string;
@@ -14,26 +15,12 @@ export default function Page(props: Props) {
   const modules: PageModuleFields[] = fields.content?.modules || [];
   return (
     <BaseLayout title={fields?.meta?.title || 'Blog'}>
-      <PageModules modules={modules} />
+      <PAGE_CONTEXT.Provider value={props}>
+        <PageModules modules={modules} />
+      </PAGE_CONTEXT.Provider>
     </BaseLayout>
   );
 }
-
-/** Returns a list of routes for the SSG build. */
-export const getStaticPaths: GetStaticPaths = async () => {
-  // TODO(stevenle): list paths from db.
-  return {paths: []};
-}
-
-/** Fetches the Root.js CMS doc as props for SSG builds. */
-export const getStaticProps: GetStaticProps = async (ctx) => {
-  const slug = ctx.params.page;
-  const doc = await getDoc(ctx.rootConfig, 'Pages', slug, {mode: 'published'});
-  if (!doc) {
-    return {notFound: true};
-  }
-  return {props: {slug, doc}};
-};
 
 /** SSR handler. */
 export const handle: Handler = async (req: Request) => {

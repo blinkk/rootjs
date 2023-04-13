@@ -1,0 +1,28 @@
+.featuredPostImage {
+  aspect-ratio: 2/1;
+  background: #333;
+}
+
+.morePosts {
+  margin-top: 60px;
+}
+
+.morePostsTitle {
+  margin-bottom: 24px;
+}
+
+.posts {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+}
+
+.post {
+  display: flex;
+  flex-direction: column;
+}
+
+.postImage {
+  aspect-ratio: 2/1;
+  background: #333;
+}

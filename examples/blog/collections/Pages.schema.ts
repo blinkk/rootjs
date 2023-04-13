@@ -61,8 +61,8 @@ export default schema.collection({
             types: templates,
           }),
           preview: [
-            'm{_index:02}: {_type} ({id})',
-            'm{_index:02}: {_type} (no tracking id)',
+            'm{_index:02}: {_type} (#{id})',
+            'm{_index:02}: {_type}',
             'm{_index:02}',
           ],
         }),

@@ -1,6 +1,6 @@
 import {Plugin, RootConfig} from '@blinkk/root';
 import {initializeApp, getApps, applicationDefault} from 'firebase-admin/app';
-import {getFirestore} from 'firebase-admin/firestore';
+import {Query, getFirestore} from 'firebase-admin/firestore';
 import {CMSPlugin} from './plugin.js';
 
 export function getFirebaseApp(gcpProjectId: string) {
@@ -14,6 +14,10 @@ export function getFirebaseApp(gcpProjectId: string) {
   });
 }
 
+export interface GetDocOptions {
+  mode: 'draft' | 'published';
+}
+
 /**
  * Retrieves a doc from Root.js CMS.
  */
@@ -21,7 +25,7 @@ export async function getDoc<T>(
   rootConfig: RootConfig,
   collectionId: string,
   slug: string,
-  options: {mode: 'draft' | 'published'}
+  options: GetDocOptions
 ): Promise<T | null> {
   const cmsPlugin = getCmsPlugin(rootConfig);
   const cmsPluginOptions = cmsPlugin.getConfig();
@@ -42,6 +46,50 @@ export async function getDoc<T>(
   }
   console.log(`doc not found: ${dbPath}`);
   return null;
+}
+
+export interface ListDocsOptions {
+  mode: 'draft' | 'published';
+  offset?: number;
+  limit?: number;
+  orderBy?: string;
+  // TODO(stevenle): support filters.
+}
+
+/**
+ * Lists docs from a Root.js CMS collection.
+ */
+export async function listDocs<T>(
+  rootConfig: RootConfig,
+  collectionId: string,
+  options: ListDocsOptions
+): Promise<{docs: T[]}> {
+  const cmsPlugin = getCmsPlugin(rootConfig);
+  const cmsPluginOptions = cmsPlugin.getConfig();
+  const projectId = cmsPluginOptions.id || 'default';
+  const gcpProjectId = cmsPluginOptions.firebaseConfig.projectId;
+  const mode = options.mode;
+  const modeCollection = mode === 'draft' ? 'Drafts' : 'Published';
+  const app = getFirebaseApp(gcpProjectId);
+  const db = getFirestore(app);
+  const dbPath = `Projects/${projectId}/Collections/${collectionId}/${modeCollection}`;
+  let query: Query = db.collection(dbPath);
+  if (options.limit) {
+    query = query.limit(options.limit);
+  }
+  if (options.offset) {
+    query = query.offset(options.offset);
+  }
+  if (options.orderBy) {
+    query = query.orderBy(options.orderBy);
+  }
+  const results = await query.get();
+  const docs: T[] = [];
+  results.forEach((result) => {
+    const doc = normalizeData(result.data()) as T;
+    docs.push(doc);
+  });
+  return {docs};
 }
 
 /**
