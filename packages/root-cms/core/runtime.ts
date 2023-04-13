@@ -53,6 +53,7 @@ export interface ListDocsOptions {
   offset?: number;
   limit?: number;
   orderBy?: string;
+  orderByDirection?: 'asc' | 'desc';
   // TODO(stevenle): support filters.
 }
 
@@ -81,7 +82,7 @@ export async function listDocs<T>(
     query = query.offset(options.offset);
   }
   if (options.orderBy) {
-    query = query.orderBy(options.orderBy);
+    query = query.orderBy(options.orderBy, options.orderByDirection);
   }
   const results = await query.get();
   const docs: T[] = [];
