@@ -1,5 +1,16 @@
 # @blinkk/root-cms
 
+## 1.0.0-beta.16
+
+### Minor Changes
+
+- 3e3a8f0: feat: add listDocs to root-cms and add example
+
+### Patch Changes
+
+- Updated dependencies [3e3a8f0]
+  - @blinkk/root@1.0.0-beta.16
+
 ## 1.0.0-beta.15
 
 ### Patch Changes
