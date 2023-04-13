@@ -1,5 +1,15 @@
 # @blinkk/root-cms
 
+## 1.0.0-beta.17
+
+### Minor Changes
+
+- fff594b: feat: add orderByDirection to listDocs()
+
+### Patch Changes
+
+- @blinkk/root@1.0.0-beta.17
+
 ## 1.0.0-beta.16
 
 ### Minor Changes

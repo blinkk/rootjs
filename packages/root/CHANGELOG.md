@@ -1,5 +1,7 @@
 # @blinkk/root
 
+## 1.0.0-beta.17
+
 ## 1.0.0-beta.16
 
 ### Minor Changes
