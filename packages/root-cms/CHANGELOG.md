@@ -1,5 +1,13 @@
 # @blinkk/root-cms
 
+## 1.0.0-beta.15
+
+### Patch Changes
+
+- 34f1200: fix: fix login redirects
+- 8eeeea3: feat: add boolean field to cms ui
+  - @blinkk/root@1.0.0-beta.15
+
 ## 1.0.0-beta.14
 
 ### Patch Changes
