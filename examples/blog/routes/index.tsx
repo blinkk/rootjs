@@ -11,7 +11,12 @@ export const handle: Handler = async (req: Request) => {
   const mode = String(req.query.preview) === 'true' ? 'draft' : 'published';
   const [doc, blogPosts] = await Promise.all([
     getDoc(req.rootConfig, 'Pages', slug, {mode}),
-    listDocs(req.rootConfig, 'BlogPosts', {mode, limit: 3}),
+    listDocs(req.rootConfig, 'BlogPosts', {
+      mode,
+      orderBy: 'sys.firstPublishedAt',
+      orderByDirection: 'desc',
+      limit: 3
+    }),
   ]);
   if (!doc) {
     return ctx.render404();
