@@ -93,6 +93,35 @@ export async function listDocs<T>(
   return {docs};
 }
 
+export interface NumDocsOptions {
+  mode: 'draft' | 'published';
+  // TODO(stevenle): support filters.
+}
+
+/**
+ * Returns the number of docs in a Root.js CMS collection.
+ */
+export async function numDocs(
+  rootConfig: RootConfig,
+  collectionId: string,
+  options: NumDocsOptions
+) {
+  const cmsPlugin = getCmsPlugin(rootConfig);
+  const cmsPluginOptions = cmsPlugin.getConfig();
+  const projectId = cmsPluginOptions.id || 'default';
+  const gcpProjectId = cmsPluginOptions.firebaseConfig.projectId;
+  const mode = options.mode;
+  const modeCollection = mode === 'draft' ? 'Drafts' : 'Published';
+  const app = getFirebaseApp(gcpProjectId);
+  const db = getFirestore(app);
+  const dbPath = `Projects/${projectId}/Collections/${collectionId}/${modeCollection}`;
+  const query: Query = db.collection(dbPath);
+  // TODO(stevenle): support filters here.
+  const results = await query.count().get();
+  const count = results.data().count;
+  return count;
+}
+
 /**
  * Walks the data tree and converts any Timestamp objects to millis and any
  * _array maps to normal arrays.
