@@ -38,6 +38,12 @@ export default schema.collection({
           label: 'Image',
           help: 'Meta image for social shares. Recommended size: 1200x600.',
         }),
+        schema.boolean({
+          id: 'featured',
+          label: 'Featured?',
+          checkboxLabel: 'Featured Blog Post',
+          help: 'Check the box to mark the blog post as a featured blog post.',
+        }),
         schema.multiselect({
           id: 'tags',
           label: 'Tags',

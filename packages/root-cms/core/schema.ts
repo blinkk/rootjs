@@ -52,6 +52,7 @@ export function datetime(field: Omit<DateTimeField, 'type'>): DateTimeField {
 export type BooleanField = CommonFieldProps & {
   type: 'boolean';
   default?: boolean;
+  checkboxLabel?: string;
 };
 
 export function boolean(field: Omit<BooleanField, 'type'>): BooleanField {

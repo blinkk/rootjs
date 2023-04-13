@@ -1,6 +1,7 @@
 import {
   ActionIcon,
   Button,
+  Checkbox,
   LoadingOverlay,
   Menu,
   MultiSelect,
@@ -142,6 +143,8 @@ DocEditor.Field = (props: FieldProps) => {
       <div className="DocEditor__field__input">
         {field.type === 'array' ? (
           <DocEditor.ArrayField {...props} />
+        ) : field.type === 'boolean' ? (
+          <DocEditor.BooleanField {...props} />
         ) : field.type === 'image' ? (
           <DocEditor.ImageField {...props} />
         ) : field.type === 'multiselect' ? (
@@ -949,6 +952,41 @@ DocEditor.MultiSelectField = (props: FieldProps) => {
         onChange={(newValue: string[]) => onChange(newValue)}
         // Due to issues with preact/compat, use a div for the dropdown el.
         dropdownComponent="div"
+      />
+    </div>
+  );
+};
+
+DocEditor.BooleanField = (props: FieldProps) => {
+  const field = props.field as schema.BooleanField;
+  const label = field.checkboxLabel || 'Enabled';
+  const [value, setValue] = useState<boolean>(false);
+
+  function onChange(newValue: boolean) {
+    setValue(newValue);
+    props.draft.updateKey(props.deepKey, newValue);
+  }
+
+  useEffect(() => {
+    const unsubscribe = props.draft.subscribe(
+      props.deepKey,
+      (newValue: boolean) => {
+        setValue(newValue);
+      }
+    );
+    return unsubscribe;
+  }, []);
+
+  return (
+    <div className="DocEditor__BooleanField">
+      <Checkbox
+        label={label}
+        onChange={(e: Event) => {
+          const target = e.currentTarget as HTMLInputElement;
+          onChange(target.checked);
+        }}
+        checked={value}
+        size="xs"
       />
     </div>
   );
