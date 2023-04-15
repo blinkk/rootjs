@@ -1,9 +1,11 @@
 import {promises as fs} from 'node:fs';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
-import {viteSsrLoadModule} from '@blinkk/root/node';
+
 import {RootConfig} from '@blinkk/root';
+import {viteSsrLoadModule} from '@blinkk/root/node';
 import * as dom from 'dts-dom';
+
 import {Field, Schema} from '../../core/schema.js';
 
 type ProjectModule = typeof import('../../core/project.js');

@@ -1,5 +1,3 @@
-import {render} from 'preact';
-import {Route, Router} from 'preact-router';
 import {MantineProvider} from '@mantine/core';
 import {ModalsProvider} from '@mantine/modals';
 import {NotificationsProvider} from '@mantine/notifications';
@@ -7,16 +5,20 @@ import {initializeApp} from 'firebase/app';
 import {User, getAuth} from 'firebase/auth';
 import {getFirestore} from 'firebase/firestore';
 import {getStorage} from 'firebase/storage';
-import {CollectionPage} from './pages/CollectionPage/CollectionPage.js';
-import {DocumentPage} from './pages/DocumentPage/DocumentPage.js';
-import {ProjectPage} from './pages/ProjectPage/ProjectPage.js';
+import {render} from 'preact';
+import {Route, Router} from 'preact-router';
+
 import {Collection} from '../core/schema.js';
-import {NotFoundPage} from './pages/NotFoundPage/NotFoundPage.js';
-import {SettingsPage} from './pages/SettingsPage/SettingsPage.js';
-import {AssetsPage} from './pages/AssetsPage/AssetsPage.js';
-import {DataPage} from './pages/DataPage/DataPage.js';
-import {TranslationsPage} from './pages/TranslationsPage/TranslationsPage.js';
+
 import {FirebaseContext, FirebaseContextObject} from './hooks/useFirebase.js';
+import {AssetsPage} from './pages/AssetsPage/AssetsPage.js';
+import {CollectionPage} from './pages/CollectionPage/CollectionPage.js';
+import {DataPage} from './pages/DataPage/DataPage.js';
+import {DocumentPage} from './pages/DocumentPage/DocumentPage.js';
+import {NotFoundPage} from './pages/NotFoundPage/NotFoundPage.js';
+import {ProjectPage} from './pages/ProjectPage/ProjectPage.js';
+import {SettingsPage} from './pages/SettingsPage/SettingsPage.js';
+import {TranslationsPage} from './pages/TranslationsPage/TranslationsPage.js';
 import './styles/global.css';
 import './styles/theme.css';
 

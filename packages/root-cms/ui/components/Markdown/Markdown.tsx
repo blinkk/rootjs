@@ -1,4 +1,5 @@
 import {marked} from 'marked';
+
 import {joinClassNames} from '../../utils/classes.js';
 
 interface MarkdownProps {

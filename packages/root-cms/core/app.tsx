@@ -1,8 +1,10 @@
-import {Request, Response} from '@blinkk/root';
-import {Collection} from './schema.js';
-import {render as renderToString} from 'preact-render-to-string';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
+
+import {Request, Response} from '@blinkk/root';
+import {render as renderToString} from 'preact-render-to-string';
+
+import {Collection} from './schema.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 

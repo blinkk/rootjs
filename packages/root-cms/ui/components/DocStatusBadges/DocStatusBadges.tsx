@@ -1,5 +1,6 @@
 import {Badge, Tooltip} from '@mantine/core';
 import {Timestamp} from 'firebase/firestore';
+
 import {getTimeAgo} from '../../utils/time.js';
 
 interface DocStatusBadgesProps {

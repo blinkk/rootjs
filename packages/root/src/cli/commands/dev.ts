@@ -1,18 +1,20 @@
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
+
 import {default as express} from 'express';
-import {DevServerAssetMap} from '../../render/asset-map/dev-asset-map.js';
-import {loadRootConfig} from '../../node/load-config.js';
 import {dim} from 'kleur/colors';
-import {Server, Request, Response, NextFunction} from '../../core/types.js';
-import {configureServerPlugins} from '../../core/plugin.js';
+import glob from 'tiny-glob';
+
 import {RootConfig} from '../../core/config.js';
 import {rootProjectMiddleware} from '../../core/middleware.js';
-import {findOpenPort} from '../../utils/ports.js';
-import {createViteServer} from '../../node/vite.js';
-import {isDirectory, isJsFile} from '../../utils/fsutils.js';
+import {configureServerPlugins} from '../../core/plugin.js';
+import {Server, Request, Response, NextFunction} from '../../core/types.js';
 import {getElements} from '../../node/element-graph.js';
-import glob from 'tiny-glob';
+import {loadRootConfig} from '../../node/load-config.js';
+import {createViteServer} from '../../node/vite.js';
+import {DevServerAssetMap} from '../../render/asset-map/dev-asset-map.js';
+import {isDirectory, isJsFile} from '../../utils/fsutils.js';
+import {findOpenPort} from '../../utils/ports.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 

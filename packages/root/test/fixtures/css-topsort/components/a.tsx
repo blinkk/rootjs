@@ -1,5 +1,5 @@
-import {B} from './b';
 import styles from './a.module.scss';
+import {B} from './b';
 
 export function A() {
   return (

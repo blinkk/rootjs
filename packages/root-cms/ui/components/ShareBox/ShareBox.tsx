@@ -1,5 +1,4 @@
 import {Button, LoadingOverlay, Select, TextInput} from '@mantine/core';
-import {useEffect, useState} from 'preact/hooks';
 import {
   doc,
   updateDoc,
@@ -7,10 +6,12 @@ import {
   FieldPath,
   deleteField,
 } from 'firebase/firestore';
+import {useEffect, useState} from 'preact/hooks';
+
 import {joinClassNames} from '../../utils/classes.js';
+import {sortByKey} from '../../utils/objects.js';
 import {Text} from '../Text/Text.js';
 import './ShareBox.css';
-import {sortByKey} from '../../utils/objects.js';
 
 export interface ShareBoxProps {
   className?: string;

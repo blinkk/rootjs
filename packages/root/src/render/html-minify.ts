@@ -1,7 +1,9 @@
 import {createRequire} from 'module';
+
 const require = createRequire(import.meta.url);
-const {minify} = require('html-minifier-terser');
 import type {Options} from 'html-minifier-terser';
+
+const {minify} = require('html-minifier-terser');
 
 export type HtmlMinifyOptions = Options;
 

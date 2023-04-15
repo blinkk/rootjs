@@ -1,4 +1,5 @@
 import {useTranslations} from '@blinkk/root';
+
 import styles from './global-header.module.scss';
 
 export function GlobalHeader() {

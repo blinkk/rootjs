@@ -175,7 +175,10 @@ export default function Page() {
         <code>bundles/</code>
       </h2>
       <p>
-        The "bundles" directory is used for bundling client-side code outside of custom elements. This may be useful for loading 3rd-party libraries and other common global utilities that aren't necessarily encapsulated within a custom element.
+        The "bundles" directory is used for bundling client-side code outside of
+        custom elements. This may be useful for loading 3rd-party libraries and
+        other common global utilities that aren't necessarily encapsulated
+        within a custom element.
       </p>
       <p>
         Since files within "bundles" are compiled together with the files in the

@@ -63,7 +63,7 @@ declare module 'preact-router' {
       invoke: boolean
     ): preact.VNode[];
     routeTo(url: string): boolean;
-    render(props: RouterProps, {}): preact.VNode;
+    render(props: RouterProps): preact.VNode;
   }
 
   type AnyComponent<Props> =

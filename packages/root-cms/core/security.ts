@@ -1,4 +1,5 @@
 import {getSecurityRules} from 'firebase-admin/security-rules';
+
 import {getFirebaseApp} from './runtime.js';
 
 export const FIRESTORE_RULES = `rules_version = '2';

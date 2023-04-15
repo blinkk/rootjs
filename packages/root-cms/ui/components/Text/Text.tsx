@@ -1,4 +1,5 @@
 import {ComponentChildren} from 'preact';
+
 import {joinClassNames} from '../../utils/classes.js';
 import './Text.css';
 

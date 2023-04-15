@@ -1,8 +1,10 @@
-import {Request, Response, NextFunction} from './types';
-import {Plugin} from './plugin';
 import {UserConfig as ViteUserConfig} from 'vite';
+
 import {HtmlMinifyOptions} from '../render/html-minify';
 import {HtmlPrettyOptions} from '../render/html-pretty';
+
+import {Plugin} from './plugin';
+import {Request, Response, NextFunction} from './types';
 
 export interface RootUserConfig {
   /**

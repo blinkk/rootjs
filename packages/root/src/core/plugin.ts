@@ -1,4 +1,5 @@
 import {PluginOption as VitePlugin} from 'vite';
+
 import {RootConfig} from './config';
 import {Server} from './types';
 

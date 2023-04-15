@@ -9,7 +9,7 @@ import {
   Textarea,
   TextInput,
 } from '@mantine/core';
-import {useEffect, useReducer, useRef, useState} from 'preact/hooks';
+import {showNotification} from '@mantine/notifications';
 import {
   IconCircleArrowDown,
   IconCircleArrowUp,
@@ -23,17 +23,18 @@ import {
   IconTrash,
   IconTriangleFilled,
 } from '@tabler/icons-preact';
+import {ref as storageRef, updateMetadata, uploadBytes} from 'firebase/storage';
+import {useEffect, useReducer, useRef, useState} from 'preact/hooks';
+import {route} from 'preact-router';
+
 import * as schema from '../../../core/schema.js';
 import {DraftController, SaveState, useDraft} from '../../hooks/useDraft.js';
 import {flattenNestedKeys} from '../../utils/objects.js';
 import {getPlaceholderKeys, strFormat} from '../../utils/str-format.js';
 import './DocEditor.css';
+import {DocActionsMenu} from '../DocActionsMenu/DocActionsMenu.js';
 import {DocStatusBadges} from '../DocStatusBadges/DocStatusBadges.js';
 import {PublishDocModal} from '../PublishDocModal/PublishDocModal.js';
-import {DocActionsMenu} from '../DocActionsMenu/DocActionsMenu.js';
-import {route} from 'preact-router';
-import {ref as storageRef, updateMetadata, uploadBytes} from 'firebase/storage';
-import {showNotification} from '@mantine/notifications';
 
 interface DocEditorProps {
   docId: string;
@@ -286,7 +287,7 @@ async function getImageDimensions(
 }
 
 DocEditor.ImageField = (props: FieldProps) => {
-  const field = props.field as schema.ImageField;
+  // const field = props.field as schema.ImageField;
   const [img, setImg] = useState<any>({});
   const inputRef = useRef<HTMLInputElement>(null);
   const [loading, setLoading] = useState(false);

@@ -1,10 +1,4 @@
-import {
-  doc,
-  runTransaction,
-  getDoc,
-  deleteField,
-  serverTimestamp,
-} from 'firebase/firestore';
+import {doc, runTransaction, getDoc, serverTimestamp} from 'firebase/firestore';
 
 export async function cmsDeleteDoc(docId: string) {
   const projectId = window.__ROOT_CTX.rootConfig.projectId;

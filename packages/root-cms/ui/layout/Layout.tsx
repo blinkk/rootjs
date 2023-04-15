@@ -1,4 +1,3 @@
-import {ComponentChildren} from 'preact';
 import {Avatar, Tooltip} from '@mantine/core';
 import {
   IconDatabase,
@@ -9,10 +8,12 @@ import {
   IconSettings,
   IconSitemap,
 } from '@tabler/icons-preact';
-import packageJson from '../../package.json' assert {type: 'json'};
-import './Layout.css';
+import {ComponentChildren} from 'preact';
 import {useRouter} from 'preact-router';
+
+import packageJson from '../../package.json' assert {type: 'json'};
 import {joinClassNames} from '../utils/classes.js';
+import './Layout.css';
 
 const ICON_STROKE = '1.5';
 
@@ -24,15 +25,15 @@ interface LayoutProps {
 export function Layout(props: LayoutProps) {
   return (
     <div className="Layout">
-      <Layout.Top {...props} />
-      <Layout.Side {...props} />
+      <Layout.Top />
+      <Layout.Side />
       <Layout.Main {...props}>{props.children}</Layout.Main>
-      <Layout.Bottom {...props} />
+      <Layout.Bottom />
     </div>
   );
 }
 
-Layout.Top = (props: LayoutProps) => {
+Layout.Top = () => {
   const projectName =
     window.__ROOT_CTX.rootConfig.projectName ||
     window.__ROOT_CTX.rootConfig.projectId;
@@ -48,7 +49,7 @@ Layout.Top = (props: LayoutProps) => {
   );
 };
 
-Layout.Side = (props: LayoutProps) => {
+Layout.Side = () => {
   const [route] = useRouter();
   const currentUrl = route.url.replace(/\/*$/g, '');
   const user = window.firebase.user;
@@ -138,6 +139,6 @@ Layout.Main = (props: LayoutProps) => {
   return <div className="Layout__main">{props.children}</div>;
 };
 
-Layout.Bottom = (props: LayoutProps) => {
+Layout.Bottom = () => {
   return <div className="Layout__bottom"></div>;
 };

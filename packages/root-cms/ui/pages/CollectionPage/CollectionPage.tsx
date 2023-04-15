@@ -1,17 +1,9 @@
+import {Button, Image, Loader, Select, Tabs} from '@mantine/core';
 import {
   IconArrowRoundaboutRight,
   IconCirclePlus,
   IconFolder,
 } from '@tabler/icons-preact';
-import {useEffect, useState} from 'preact/hooks';
-import {Button, Image, Loader, Select, Tabs} from '@mantine/core';
-import {Markdown} from '../../components/Markdown/Markdown.js';
-import {SplitPanel} from '../../components/SplitPanel/SplitPanel.js';
-import {Layout} from '../../layout/Layout.js';
-import {joinClassNames} from '../../utils/classes.js';
-import {NewDocModal} from '../../components/NewDocModal/NewDocModal.js';
-import {useFirebase} from '../../hooks/useFirebase.js';
-import {route} from 'preact-router';
 import {
   collection,
   getDocs,
@@ -20,12 +12,21 @@ import {
   query,
   documentId,
 } from 'firebase/firestore';
-import './CollectionPage.css';
-import {useLocalStorage} from '../../hooks/useLocalStorage.js';
-import {getNestedValue} from '../../utils/objects.js';
+import {useEffect, useState} from 'preact/hooks';
+import {route} from 'preact-router';
+
+import {DocActionsMenu} from '../../components/DocActionsMenu/DocActionsMenu.js';
 import {DocStatusBadges} from '../../components/DocStatusBadges/DocStatusBadges.js';
 import {Heading} from '../../components/Heading/Heading.js';
-import {DocActionsMenu} from '../../components/DocActionsMenu/DocActionsMenu.js';
+import {Markdown} from '../../components/Markdown/Markdown.js';
+import {NewDocModal} from '../../components/NewDocModal/NewDocModal.js';
+import {SplitPanel} from '../../components/SplitPanel/SplitPanel.js';
+import {useFirebase} from '../../hooks/useFirebase.js';
+import {useLocalStorage} from '../../hooks/useLocalStorage.js';
+import {Layout} from '../../layout/Layout.js';
+import {joinClassNames} from '../../utils/classes.js';
+import {getNestedValue} from '../../utils/objects.js';
+import './CollectionPage.css';
 
 interface CollectionPageProps {
   collection?: string;
@@ -296,10 +297,6 @@ CollectionPage.DocsList = (props: {
     return `${domain}${urlPath}`;
   }
 
-  function onDeleteDoc(docId: string) {
-    console.log('delete', docId);
-  }
-
   return (
     <div className="CollectionPage__collection__docsList">
       {docs.map((doc) => {
@@ -310,10 +307,10 @@ CollectionPage.DocsList = (props: {
           fields,
           rootCollection.preview?.title || 'title'
         );
-        const previewImage = getNestedValue(
-          fields,
-          rootCollection.preview?.image || 'image'
-        );
+        // const previewImage = getNestedValue(
+        //   fields,
+        //   rootCollection.preview?.image || 'image'
+        // );
         return (
           <div
             className="CollectionPage__collection__docsList__doc"

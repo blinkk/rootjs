@@ -1,7 +1,4 @@
 import {Button, Modal, TextInput, useMantineTheme} from '@mantine/core';
-import {useRef, useState} from 'preact/hooks';
-import {route} from 'preact-router';
-import {useFirebase} from '../../hooks/useFirebase.js';
 import {
   collection,
   doc,
@@ -9,7 +6,11 @@ import {
   serverTimestamp,
   setDoc,
 } from 'firebase/firestore';
+import {useRef, useState} from 'preact/hooks';
+import {route} from 'preact-router';
+
 import {Collection} from '../../../core/schema.js';
+import {useFirebase} from '../../hooks/useFirebase.js';
 import './NewDocModal.css';
 
 interface NewDocModalProps {

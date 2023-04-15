@@ -1,10 +1,17 @@
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
+
 import fsExtra from 'fs-extra';
+import {dim, cyan} from 'kleur/colors';
 import glob from 'tiny-glob';
 import {build as viteBuild, Manifest, ManifestChunk, UserConfig} from 'vite';
-import {BuildAssetMap} from '../../render/asset-map/build-asset-map.js';
+
+import {getVitePlugins} from '../../core/plugin.js';
+import {getElements} from '../../node/element-graph.js';
 import {loadRootConfig} from '../../node/load-config.js';
+import {BuildAssetMap} from '../../render/asset-map/build-asset-map.js';
+import {htmlMinify} from '../../render/html-minify.js';
+import {htmlPretty} from '../../render/html-pretty.js';
 import {
   copyGlob,
   fileExists,
@@ -15,11 +22,6 @@ import {
   rmDir,
   writeFile,
 } from '../../utils/fsutils.js';
-import {htmlMinify} from '../../render/html-minify.js';
-import {dim, cyan} from 'kleur/colors';
-import {getVitePlugins} from '../../core/plugin.js';
-import {getElements} from '../../node/element-graph.js';
-import {htmlPretty} from '../../render/html-pretty.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 

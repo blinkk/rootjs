@@ -1,5 +1,6 @@
 import {FunctionalComponent} from 'preact';
 import {useContext} from 'preact/hooks';
+
 import {HTML_CONTEXT} from './Html';
 
 export type ScriptProps = preact.JSX.HTMLAttributes<HTMLScriptElement>;

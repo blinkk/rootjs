@@ -1,6 +1,7 @@
 import {Plugin, RootConfig} from '@blinkk/root';
 import {initializeApp, getApps, applicationDefault} from 'firebase-admin/app';
 import {Query, getFirestore} from 'firebase-admin/firestore';
+
 import {CMSPlugin} from './plugin.js';
 
 export function getFirebaseApp(gcpProjectId: string) {

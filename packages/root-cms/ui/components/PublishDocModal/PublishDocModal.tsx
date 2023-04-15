@@ -1,8 +1,9 @@
 import {Button, Modal, useMantineTheme} from '@mantine/core';
-import {useFirebase} from '../../hooks/useFirebase.js';
 import {doc, getDoc, runTransaction, serverTimestamp} from 'firebase/firestore';
-import './PublishDocModal.css';
 import {useState, useRef} from 'preact/hooks';
+
+import {useFirebase} from '../../hooks/useFirebase.js';
+import './PublishDocModal.css';
 
 interface PublishDocModalProps {
   docId: string;

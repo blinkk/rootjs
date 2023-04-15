@@ -1,4 +1,3 @@
-import {useEffect, useMemo, useState} from 'preact/hooks';
 import {
   doc,
   DocumentReference,
@@ -7,6 +6,8 @@ import {
   updateDoc,
   serverTimestamp,
 } from 'firebase/firestore';
+import {useEffect, useMemo, useState} from 'preact/hooks';
+
 import {debounce} from '../utils/debounce.js';
 import {getNestedValue, isObject} from '../utils/objects.js';
 

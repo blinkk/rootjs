@@ -1,6 +1,6 @@
+import hljs from 'highlight.js/lib/common';
 import {useEffect, useRef} from 'preact/hooks';
 import register from 'preact-custom-element';
-import hljs from 'highlight.js/lib/common';
 
 declare module 'preact' {
   namespace JSX {

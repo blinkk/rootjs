@@ -1,8 +1,8 @@
-import {GoogleAuthProvider, signInWithPopup} from 'firebase/auth';
-import {render} from 'preact';
-import {FirebaseApp, initializeApp} from 'firebase/app';
-import {Auth, getAuth} from 'firebase/auth';
 import {IconSitemap} from '@tabler/icons-preact';
+import {FirebaseApp, initializeApp} from 'firebase/app';
+import {GoogleAuthProvider, signInWithPopup} from 'firebase/auth';
+import {Auth, getAuth} from 'firebase/auth';
+import {render} from 'preact';
 import './styles/global.css';
 import './styles/signin.css';
 

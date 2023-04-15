@@ -1,4 +1,5 @@
 import {assert, test} from 'vitest';
+
 import {replaceParams} from './router';
 
 test('replace params', () => {

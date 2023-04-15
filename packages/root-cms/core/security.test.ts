@@ -1,4 +1,3 @@
-import {afterAll, beforeAll, beforeEach, test} from 'vitest';
 import {
   assertFails,
   assertSucceeds,
@@ -6,6 +5,8 @@ import {
   RulesTestEnvironment,
 } from '@firebase/rules-unit-testing';
 import {collection, doc, getDoc, getDocs, setDoc} from 'firebase/firestore';
+import {afterAll, beforeAll, beforeEach, test} from 'vitest';
+
 import {FIRESTORE_RULES} from './security.js';
 
 let testEnv: RulesTestEnvironment;

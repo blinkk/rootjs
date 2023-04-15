@@ -2,8 +2,11 @@
 
 import {promises as fs} from 'node:fs';
 import path from 'node:path';
+
 import {assert, beforeEach, test, expect, afterEach} from 'vitest';
+
 import {fileExists} from '../src/utils/fsutils';
+
 import {Fixture, loadFixture} from './testutils';
 
 let fixture: Fixture;

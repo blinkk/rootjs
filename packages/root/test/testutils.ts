@@ -1,4 +1,5 @@
 import path from 'node:path';
+
 import {build} from '../dist/cli.js';
 import {rmDir} from '../src/utils/fsutils.js';
 

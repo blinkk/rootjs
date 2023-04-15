@@ -1,7 +1,8 @@
-import {Head, Script} from '@blinkk/root';
-import {GlobalFooter} from '@/templates/global-footer/global-footer';
-import {GlobalHeader} from '@/templates/global-header/global-header';
+import {Head} from '@blinkk/root';
 import {ComponentChildren} from 'preact';
+
+import {GlobalFooter} from '@/templates/global-footer/global-footer.js';
+import {GlobalHeader} from '@/templates/global-header/global-header.js';
 import '@/styles/global.scss';
 
 interface BaseLayoutProps {
@@ -48,7 +49,6 @@ export function BaseLayout(props: BaseLayoutProps) {
         <main>{props.children}</main>
         <GlobalFooter />
       </div>
-      {/* <Script type="module" src="/bundles/main.ts" /> */}
     </>
   );
 }

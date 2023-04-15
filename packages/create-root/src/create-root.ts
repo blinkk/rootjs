@@ -1,9 +1,10 @@
 #!/usr/bin/env node
 
+import fs from 'node:fs';
 import {createRequire} from 'node:module';
 import path from 'node:path';
-import fs from 'node:fs';
 import {fileURLToPath} from 'node:url';
+
 import {Command} from 'commander';
 import degit from 'degit';
 import {bgGreen, black} from 'kleur/colors';

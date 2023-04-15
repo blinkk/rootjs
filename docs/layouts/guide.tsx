@@ -1,6 +1,7 @@
 import {Head} from '@blinkk/root';
-import {BaseLayout} from './base.js';
 import {ComponentChildren} from 'preact';
+
+import {BaseLayout} from './base.js';
 import styles from './guide.module.scss';
 
 export interface GuideProps {

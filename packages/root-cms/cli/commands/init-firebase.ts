@@ -1,4 +1,5 @@
 import {RootConfig} from '@blinkk/root';
+
 import {getCmsPlugin} from '../../core/runtime.js';
 import {applySecurityRules} from '../../core/security.js';
 

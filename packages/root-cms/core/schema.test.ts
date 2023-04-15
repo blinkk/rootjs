@@ -1,4 +1,5 @@
 import {expect, test} from 'vitest';
+
 import * as schema from './schema.js';
 
 const ResponsiveImage = schema.define({

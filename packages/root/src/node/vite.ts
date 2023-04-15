@@ -1,7 +1,9 @@
 import path from 'node:path';
+
 import {createServer, ViteDevServer} from 'vite';
-import {getVitePlugins} from '../core/plugin.js';
+
 import {RootConfig} from '../core/config.js';
+import {getVitePlugins} from '../core/plugin.js';
 
 export interface CreateViteServerOptions {
   /** Override HMR settings. */

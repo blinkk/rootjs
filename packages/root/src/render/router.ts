@@ -1,6 +1,8 @@
 import path from 'node:path';
+
 import {RootConfig} from '../core/config';
 import {Route, RouteModule} from '../core/types';
+
 import {RouteTrie} from './route-trie';
 
 export function getRoutes(config: RootConfig) {

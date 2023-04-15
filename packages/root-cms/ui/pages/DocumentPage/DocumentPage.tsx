@@ -8,6 +8,7 @@ import {
   IconReload,
 } from '@tabler/icons-preact';
 import {useEffect, useRef, useState} from 'preact/hooks';
+
 import {DocEditor} from '../../components/DocEditor/DocEditor.js';
 import {SplitPanel} from '../../components/SplitPanel/SplitPanel.js';
 import {Layout} from '../../layout/Layout.js';

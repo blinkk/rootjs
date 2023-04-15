@@ -1,12 +1,13 @@
 import {ComponentChildren, ComponentType} from 'preact';
 import renderToString from 'preact-render-to-string';
-import {getRoutes, getAllPathsForRoute} from './router';
-import {ErrorPage} from '../core/pages/ErrorPage';
-import {AssetMap} from './asset-map/asset-map';
-import {RootConfig} from '../core/config';
-import {RouteTrie} from './route-trie';
-import {DevNotFoundPage} from '../core/pages/DevNotFoundPage';
+
 import {HtmlContext, HTML_CONTEXT} from '../core/components/Html';
+import {RootConfig} from '../core/config';
+import {getTranslations, I18N_CONTEXT} from '../core/hooks/useI18nContext';
+import {RequestContext, REQUEST_CONTEXT} from '../core/hooks/useRequestContext';
+import {DevErrorPage} from '../core/pages/DevErrorPage';
+import {DevNotFoundPage} from '../core/pages/DevNotFoundPage';
+import {ErrorPage} from '../core/pages/ErrorPage';
 import {
   Request,
   Response,
@@ -15,13 +16,14 @@ import {
   RouteParams,
   Route,
 } from '../core/types';
-import {htmlMinify} from './html-minify';
-import {htmlPretty} from './html-pretty';
-import {DevErrorPage} from '../core/pages/DevErrorPage';
-import {RequestContext, REQUEST_CONTEXT} from '../core/hooks/useRequestContext';
-import {getTranslations, I18N_CONTEXT} from '../core/hooks/useI18nContext';
 import type {ElementGraph} from '../node/element-graph';
 import {parseTagNames} from '../utils/elements';
+
+import {AssetMap} from './asset-map/asset-map';
+import {htmlMinify} from './html-minify';
+import {htmlPretty} from './html-pretty';
+import {RouteTrie} from './route-trie';
+import {getRoutes, getAllPathsForRoute} from './router';
 
 interface RenderHtmlOptions {
   /** Attrs passed to the <html> tag, e.g. `{lang: 'en'}`. */

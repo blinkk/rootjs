@@ -1,8 +1,8 @@
-import {Layout} from '../../layout/Layout.js';
 import {Heading} from '../../components/Heading/Heading.js';
-import {Text} from '../../components/Text/Text.js';
-import './SettingsPage.css';
 import {ShareBox} from '../../components/ShareBox/ShareBox.js';
+import {Text} from '../../components/Text/Text.js';
+import {Layout} from '../../layout/Layout.js';
+import './SettingsPage.css';
 
 export function SettingsPage() {
   return (

@@ -1,19 +1,21 @@
 import path from 'node:path';
+
+import compression from 'compression';
 import {default as express} from 'express';
+import {dim} from 'kleur/colors';
+import sirv from 'sirv';
+
+import {RootConfig} from '../../core/config';
+import {rootProjectMiddleware} from '../../core/middleware';
+import {configureServerPlugins} from '../../core/plugin';
 import {Request, Response, NextFunction, Server} from '../../core/types.js';
+import {ElementGraph} from '../../node/element-graph.js';
 import {loadRootConfig} from '../../node/load-config';
-import {fileExists, loadJson} from '../../utils/fsutils';
 import {
   BuildAssetManifest,
   BuildAssetMap,
 } from '../../render/asset-map/build-asset-map';
-import {dim} from 'kleur/colors';
-import {configureServerPlugins} from '../../core/plugin';
-import sirv from 'sirv';
-import compression from 'compression';
-import {rootProjectMiddleware} from '../../core/middleware';
-import {RootConfig} from '../../core/config';
-import {ElementGraph} from '../../node/element-graph.js';
+import {fileExists, loadJson} from '../../utils/fsutils';
 
 type RenderModule = typeof import('../../render/render.js');
 

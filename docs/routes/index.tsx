@@ -1,4 +1,5 @@
 import {BaseLayout} from '@/layouts/base.js';
+
 import styles from './index.module.scss';
 
 export function Page() {

@@ -1,5 +1,6 @@
-import {Layout} from '../components/layout';
 import {A} from '../components/a';
+import {Layout} from '../components/layout';
+
 import styles from './index.module.scss';
 
 export default function Page() {

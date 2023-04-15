@@ -1,6 +1,7 @@
 import {ComponentChild, ComponentChildren} from 'preact';
 import {CSSProperties} from 'preact/compat';
 import {useEffect, useRef, useState} from 'preact/hooks';
+
 import {useLocalStorage} from '../../hooks/useLocalStorage.js';
 import {joinClassNames} from '../../utils/classes.js';
 import './SplitPanel.css';

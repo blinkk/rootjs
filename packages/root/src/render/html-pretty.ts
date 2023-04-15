@@ -1,7 +1,9 @@
 import {createRequire} from 'module';
+
 const require = createRequire(import.meta.url);
-const beautify = require('js-beautify');
 import type {HTMLBeautifyOptions} from 'js-beautify';
+
+const beautify = require('js-beautify');
 
 export type HtmlPrettyOptions = HTMLBeautifyOptions;
 
