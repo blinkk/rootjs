@@ -5,12 +5,12 @@
   padding-right: var(--grid-padding);
 }
 
-.container:global(.container\:fullbleed) {
+.size\:fullbleed {
   padding-left: 0;
   padding-right: 0;
 }
 
-.container:global(.container\:wide) {
+.size\:wide {
   @include breakpoints.laptop-gt {
     padding-left: calc(
       var(--grid-padding) + var(--grid-column-width) + var(--grid-column-gap)
@@ -21,7 +21,7 @@
   }
 }
 
-.container:global(.container\:content) {
+.size\:content {
   @include breakpoints.laptop-gt {
     padding-left: calc(
       var(--grid-padding) + 2 * var(--grid-column-width) + 2 *
@@ -34,7 +34,7 @@
   }
 }
 
-.container:global(.container\:narrow) {
+.size\:narrow {
   @include breakpoints.laptop-gt {
     padding-left: calc(
       var(--grid-padding) + 3 * var(--grid-column-width) + 3 *

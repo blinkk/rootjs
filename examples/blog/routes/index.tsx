@@ -1,5 +1,6 @@
-import {GetStaticProps, Handler, HandlerContext, Request} from '@blinkk/root';
+import {Handler, HandlerContext, Request} from '@blinkk/root';
 import {getDoc, listDocs} from '@blinkk/root-cms';
+
 import Page from './[...page].js';
 
 export default Page;
@@ -15,7 +16,7 @@ export const handle: Handler = async (req: Request) => {
       mode,
       orderBy: 'sys.firstPublishedAt',
       orderByDirection: 'desc',
-      limit: 3
+      limit: 3,
     }),
   ]);
   if (!doc) {

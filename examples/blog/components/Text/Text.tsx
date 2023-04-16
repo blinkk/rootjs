@@ -1,11 +1,22 @@
 import {ComponentChildren} from 'preact';
+
 import {joinClassNames} from '@/utils/classes.js';
+
 import styles from './Text.module.scss';
 
-export type TextSize = 'h1' | 'h2' | 'h3' | 'h4' | 'h5' | 'h6' | 'body-sm' | 'body' | 'body-lg';
+export type TextSize =
+  | 'h1'
+  | 'h2'
+  | 'h3'
+  | 'h4'
+  | 'h5'
+  | 'h6'
+  | 'body-sm'
+  | 'body'
+  | 'body-lg';
 export type TextWeight = 'regular' | 'semi-bold' | 'bold';
 
-export interface TextProps {
+export type TextProps = preact.JSX.HTMLAttributes & {
   id?: string;
   className?: string;
   /** HTML tagName to use. */
@@ -13,22 +24,22 @@ export interface TextProps {
   size?: TextSize;
   weight?: TextWeight;
   children?: ComponentChildren;
-}
+};
 
 export function Text(props: TextProps) {
-  const Component = props.as || 'div';
-  const size = props.size || 'md';
+  const {as: tagName, size, weight, children, ...attrs} = props;
+  const Component = tagName || 'div';
   return (
     <Component
-      id={props.id}
+      {...attrs}
       className={joinClassNames(
         props.className,
         styles.text,
-        styles[`size:${size}`],
-        props.weight && styles[`weight:${props.weight}`]
+        styles[`size:${size || 'body'}`],
+        weight && styles[`weight:${weight}`]
       )}
     >
-      {props.children}
+      {children}
     </Component>
   );
 }

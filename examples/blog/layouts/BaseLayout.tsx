@@ -1,6 +1,7 @@
 import {Head} from '@blinkk/root';
-import {GridOverlay} from '@/components/GridOverlay/GridOverlay.js';
 import {ComponentChildren} from 'preact';
+
+import {GridOverlay} from '@/components/GridOverlay/GridOverlay.js';
 import '@/styles/global.scss';
 
 interface BaseLayoutProps {

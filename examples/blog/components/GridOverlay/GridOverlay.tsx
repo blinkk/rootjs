@@ -1,5 +1,6 @@
-import {joinClassNames} from '@/utils/classes.js';
 import {Container} from '@/components/Container/Container.js';
+import {joinClassNames} from '@/utils/classes.js';
+
 import styles from './GridOverlay.module.scss';
 
 export function GridOverlay() {

@@ -1,14 +1,14 @@
 @use 'breakpoints';
 
 .spacer {
-  height: var(--spacer-size, 0);
+  height: var(--spacer, 0);
   @include breakpoints.mobile {
-    height: var(--spacer-size--mobile, var(--spacer-size, 0));
+    height: var(--spacer-mobile, var(--spacer, 0));
   }
   @include breakpoints.tablet {
-    height: var(--spacer-size--tablet, var(--spacer-size, 0));
+    height: var(--spacer-tablet, var(--spacer, 0));
   }
   @include breakpoints.laptop-gt {
-    height: var(--spacer-size--desktop, var(--spacer-size, 0));
+    height: var(--spacer-desktop, var(--spacer, 0));
   }
 }

@@ -1,17 +1,19 @@
 import {CSSProperties} from 'preact/compat';
+
 import {SpacerFields} from '@/root-cms.js';
+
 import styles from './Spacer.module.scss';
 
 export function Spacer(props: SpacerFields) {
   const inlineStyles: CSSProperties = {};
   if (props.mobileHeight) {
-    inlineStyles['--spacer-size--mobile'] = `${props.mobileHeight}px`;
+    inlineStyles['--spacer-mobile'] = `${props.mobileHeight}px`;
   }
   if (props.tabletHeight) {
-    inlineStyles['--spacer-size--tablet'] = `${props.tabletHeight}px`;
+    inlineStyles['--spacer-tablet'] = `${props.tabletHeight}px`;
   }
   if (props.desktopHeight) {
-    inlineStyles['--spacer-size--desktop'] = `${props.desktopHeight}px`;
+    inlineStyles['--spacer-desktop'] = `${props.desktopHeight}px`;
   }
   return (
     <div

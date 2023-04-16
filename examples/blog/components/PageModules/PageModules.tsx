@@ -1,4 +1,5 @@
 import path from 'node:path';
+
 import {FunctionalComponent} from 'preact';
 
 type TemplateComponent = FunctionalComponent<PageModuleFields>;

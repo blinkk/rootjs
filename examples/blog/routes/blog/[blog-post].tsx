@@ -1,5 +1,6 @@
-import {GetStaticPaths, GetStaticProps} from '@blinkk/root';
+import {Handler, HandlerContext, Request} from '@blinkk/root';
 import {getDoc} from '@blinkk/root-cms';
+
 import {Container} from '@/components/Container/Container.js';
 import {BaseLayout} from '@/layouts/BaseLayout.js';
 import {BlogPostsDoc} from '@/root-cms.js';
@@ -21,15 +22,16 @@ export default function Page(props: Props) {
   );
 }
 
-export const getStaticPaths: GetStaticPaths = async () => {
-  return {paths: []};
-}
-
-export const getStaticProps: GetStaticProps<Props> = async (ctx) => {
+/** SSR handler. */
+export const handle: Handler = async (req: Request) => {
+  const ctx = req.handlerContext as HandlerContext<Props>;
   const slug = ctx.params['blog-post'];
-  const doc = await getDoc<BlogPostsDoc>(ctx.rootConfig, 'BlogPosts', slug, {mode: 'draft'});
+  const mode = String(req.query.preview) === 'true' ? 'draft' : 'published';
+  const doc = await getDoc<BlogPostsDoc>(req.rootConfig, 'Pages', slug, {
+    mode,
+  });
   if (!doc) {
-    return {notFound: true};
+    return ctx.render404();
   }
-  return {props: {slug, doc}};
+  return ctx.render({slug, doc});
 };

@@ -1,12 +1,13 @@
 import {GetStaticPaths, GetStaticProps} from '@blinkk/root';
 import {getDoc} from '@blinkk/root-cms';
+
 import Page from '../blog/[blog-post].js';
 
 export default Page;
 
 export const getStaticPaths: GetStaticPaths = async () => {
   return {paths: []};
-}
+};
 
 export const getStaticProps: GetStaticProps = async (ctx) => {
   if (import.meta.env.PROD) {

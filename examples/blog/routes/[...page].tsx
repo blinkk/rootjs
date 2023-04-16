@@ -1,9 +1,13 @@
-import {GetStaticPaths, GetStaticProps, Handler, HandlerContext, Request} from '@blinkk/root';
+import {Handler, HandlerContext, Request} from '@blinkk/root';
 import {getDoc} from '@blinkk/root-cms';
+
+import {
+  PageModuleFields,
+  PageModules,
+} from '@/components/PageModules/PageModules.js';
+import {PAGE_CONTEXT} from '@/hooks/usePage.js';
 import {BaseLayout} from '@/layouts/BaseLayout.js';
 import {PagesDoc} from '@/root-cms.js';
-import {PageModuleFields, PageModules} from '@/components/PageModules/PageModules.js';
-import {PAGE_CONTEXT} from '@/hooks/usePage.js';
 
 interface Props {
   slug: string;

@@ -1,11 +1,15 @@
 import {useTranslations} from '@blinkk/root';
+
 import {Container} from '@/components/Container/Container.js';
+import {Heading} from '@/components/Heading/Heading.js';
 import {usePage} from '@/hooks/usePage.js';
 import {BlogPostsDoc, TemplateFeaturedBlogPostsFields} from '@/root-cms.js';
-import styles from './TemplateFeaturedBlogPosts.module.scss';
-import {Heading} from '@/components/Heading/Heading.js';
 
-export function TemplateFeaturedBlogPosts(props: TemplateFeaturedBlogPostsFields) {
+import styles from './TemplateFeaturedBlogPosts.module.scss';
+
+export function TemplateFeaturedBlogPosts(
+  props: TemplateFeaturedBlogPostsFields
+) {
   const page = usePage();
   const blogPosts: BlogPostsDoc[] = page.blogPosts.docs || [];
   if (blogPosts.length === 0) {
@@ -22,9 +26,7 @@ export function TemplateFeaturedBlogPosts(props: TemplateFeaturedBlogPostsFields
     <Container as="section" id={id} aria-label={t('Featured Posts')}>
       <div className={styles.layout}>
         <FeaturedPost doc={featured} />
-        {morePosts.length > 0 && (
-          <MorePosts docs={morePosts} />
-        )}
+        {morePosts.length > 0 && <MorePosts docs={morePosts} />}
       </div>
     </Container>
   );
@@ -42,7 +44,9 @@ function MorePosts(props: {docs: BlogPostsDoc[]}) {
   const t = useTranslations();
   return (
     <div className={styles.morePosts}>
-      <Heading className={styles.morePostsTitle} level={2}>{t('More posts')}</Heading>
+      <Heading className={styles.morePostsTitle} level={2}>
+        {t('More posts')}
+      </Heading>
       <div className={styles.posts}>
         {props.docs.map((doc) => (
           <div className={styles.post}>

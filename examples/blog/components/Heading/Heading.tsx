@@ -1,6 +1,8 @@
 import {ComponentChildren} from 'preact';
-import {Text, TextSize} from '../Text/Text.js';
+
 import {joinClassNames} from '@/utils/classes.js';
+
+import {Text, TextSize} from '../Text/Text.js';
 
 export type HeadingSize = 1 | 2 | 3 | 4 | 5 | 6;
 type HeadingComponent = 'h1' | 'h2' | 'h3' | 'h4' | 'h5' | 'h6';
@@ -22,9 +24,7 @@ export function Heading(props: HeadingProps) {
     <Text
       as={tagName}
       id={props.id}
-      className={joinClassNames(
-        props.className,
-      )}
+      className={joinClassNames(props.className)}
       size={textSize}
     >
       {props.children}

@@ -1,5 +1,7 @@
 import {ComponentChildren} from 'preact';
+
 import {joinClassNames} from '@/utils/classes.js';
+
 import styles from './Container.module.scss';
 
 export type ContainerProps = preact.JSX.HTMLAttributes & {
@@ -15,7 +17,7 @@ export type ContainerProps = preact.JSX.HTMLAttributes & {
   size?: 'default' | 'wide' | 'content' | 'narrow';
   children?: ComponentChildren;
   className?: string;
-}
+};
 
 /**
  * The <Container> component is responsible for setting the left/right padding
@@ -30,7 +32,7 @@ export function Container(props: ContainerProps) {
       className={joinClassNames(
         className,
         styles.container,
-        size && `container:${size}`
+        size && styles[`size:${size}`]
       )}
     >
       {children}
