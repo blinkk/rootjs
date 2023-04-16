@@ -1,4 +1,6 @@
-import {BaseLayout} from '@/layouts/base.js';
+import {GetStaticProps, GetStaticPaths} from '@blinkk/root';
+
+import {BaseLayout} from '@/layouts/BaseLayout.js';
 
 interface PageProps {
   slug: string;
@@ -12,16 +14,16 @@ export default function Page(props: PageProps) {
   );
 }
 
-export async function getStaticProps(ctx: {params: Record<string, string>}) {
+export const getStaticProps: GetStaticProps = async (ctx) => {
   return {
     props: {
       slug: ctx.params.slug,
     },
   };
-}
+};
 
-export async function getStaticPaths() {
+export const getStaticPaths: GetStaticPaths = async () => {
   return {
     paths: [{params: {slug: 'a'}}, {params: {slug: 'b'}}],
   };
-}
+};

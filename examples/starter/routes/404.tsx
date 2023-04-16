@@ -1,4 +1,4 @@
-import {BaseLayout} from '@/layouts/base.js';
+import {BaseLayout} from '@/layouts/BaseLayout.js';
 
 export default function Page() {
   return (

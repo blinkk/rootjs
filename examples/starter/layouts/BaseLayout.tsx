@@ -1,7 +1,8 @@
 import {Head, Script} from '@blinkk/root';
-import {GlobalFooter} from '@/templates/global-footer/global-footer.js';
-import {GlobalHeader} from '@/templates/global-header/global-header.js';
 import {ComponentChildren} from 'preact';
+
+import {GlobalFooter} from '@/components/GlobalFooter/GlobalFooter.js';
+import {GlobalHeader} from '@/components/GlobalHeader/GlobalHeader.js';
 import '@/styles/global.scss';
 
 interface BaseLayoutProps {
