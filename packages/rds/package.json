@@ -1,0 +1,38 @@
+{
+  "name": "@blinkk/rds",
+  "description": "Root.js Design System",
+  "version": "1.0.0-beta.0",
+  "author": "s@blinkk.com",
+  "license": "MIT",
+  "engines": {
+    "node": ">=16.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/blinkk/rootjs.git",
+    "directory": "packages/rds"
+  },
+  "files": [
+    "dist/**/*"
+  ],
+  "type": "module",
+  "exports": {
+    "./**/*": {
+      "types": "./dist/**/*.d.ts",
+      "import": "./dist/**/*.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc && copyfiles -u 1 src/**/*.scss dist/"
+  },
+  "devDependencies": {
+    "@blinkk/root": "workspace:*",
+    "copyfiles": "^2.4.1",
+    "preact": "*",
+    "typescript": "^5.0.4"
+  },
+  "peerDependencies": {
+    "@blinkk/root": "*",
+    "preact": "*"
+  }
+}

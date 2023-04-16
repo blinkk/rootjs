@@ -1,0 +1,71 @@
+// https://developer.mozilla.org/en-US/docs/Web/CSS/font-weight#common_weight_name_mapping
+$font-weight-thin: 100;
+$font-weight-extra-light: 200;
+$font-weight-light: 300;
+$font-weight-normal: 400;
+$font-weight-regular: $font-weight-normal;
+$font-weight-medium: 500;
+$font-weight-semi-bold: 600;
+$font-weight-bold: 700;
+$font-weight-extra-bold: 800;
+$font-weight-black: 900;
+$font-weights: (
+  'thin': $font-weight-thin,
+  'extra-light': $font-weight-extra-light,
+  'light': $font-weight-light,
+  'normal': $font-weight-normal,
+  'regular': $font-weight-regular,
+  'medium': $font-weight-medium,
+  'semi-bold': $font-weight-semi-bold,
+  'bold': $font-weight-bold,
+  'extra-bold': $font-weight-extra-bold,
+  'black': $font-weight-black,
+);
+
+@if variable-exists(tokens.$text-sizes) {
+  $text-sizes: tokens.$text-sizes;
+} @else {
+  $text-sizes: (
+    'body': (
+      'font-size': 16px,
+      'line-height': 1.5,
+    ),
+  );
+}
+
+/**
+ * The `text()` mixin accepts a config map and outputs the appropriate style
+ * property.
+ *
+ * Example usage:
+ * ```
+ * .my-text {
+ *   @include type.text((
+ *     'font-size': 1rem,
+ *     'line-height': 1.5,
+ *   ));
+ * }
+ * ```
+ *
+ * A more typical usage for the `text()` mixin is in conjunction with a
+ * `$text-sizes` tokens map, e.g.:
+ * ```
+ * // tokens.scss
+ * $text-sizes: (
+ *   'body-lg': (
+ *     'font-size': 18px,
+ *     'line-height': 1.5,
+ *   ),
+ * );
+ *
+ * // my-component.scss
+ * @include type.text(map.get(tokens.$text-sizes, 'body-lg'));
+ * ```
+ */
+@mixin text($config) {
+  font-family: map.get($config, 'font-family');
+  font-size: map.get($config, 'font-size');
+  line-height: map.get($config, 'line-height');
+  font-weight: map.get($config, 'font-weight');
+  letter-spacing: map.get($config, 'letter-spacing');
+}
