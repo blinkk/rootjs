@@ -1,5 +1,16 @@
 # @blinkk/root-cms
 
+## 1.0.0-beta.18
+
+### Minor Changes
+
+- 8a21902: feat: add numDocs() method for getting collection count
+
+### Patch Changes
+
+- Updated dependencies [d602474]
+  - @blinkk/root@1.0.0-beta.18
+
 ## 1.0.0-beta.17
 
 ### Minor Changes

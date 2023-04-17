@@ -1,5 +1,11 @@
 # @blinkk/root
 
+## 1.0.0-beta.18
+
+### Minor Changes
+
+- d602474: feat: export HTML_CONTEXT to core api
+
 ## 1.0.0-beta.17
 
 ## 1.0.0-beta.16
