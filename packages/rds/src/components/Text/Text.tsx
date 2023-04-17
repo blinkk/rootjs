@@ -15,10 +15,32 @@ export type FontWeight =
   | 'extra-bold'
   | 'black';
 
+/**
+ * The text size values are generated from a variable called `$text-sizes` in
+ * `tokens.scss`.
+ *
+ * Example:
+ *
+ * ```
+ * // tokens.scss
+ * $text-sizes: (
+ *   'body': (
+ *     'font-size': 16px,
+ *     'line-height': 1.5,
+ *   ),
+ *   'body-lg': (
+ *     'font-size': 18px,
+ *     'line-height': 1.5,
+ *   ),
+ * )
+ * ```
+ */
+export type TextSize = string;
+
 export type TextProps = preact.JSX.HTMLAttributes & {
   /** HTML tagName to use. */
   as?: preact.JSX.ElementType;
-  size?: string;
+  size?: TextSize;
   weight?: FontWeight;
   children?: ComponentChildren;
 };

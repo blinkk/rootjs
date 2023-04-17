@@ -1,13 +1,32 @@
 import {ComponentChildren} from 'preact';
 
-import {Text, FontWeight} from '../Text/Text.js';
+import {Text, FontWeight, TextSize} from '../Text/Text.js';
 
 export type HeadingLevel = 1 | 2 | 3 | 4 | 5 | 6;
 export type HeadingComponent = 'h1' | 'h2' | 'h3' | 'h4' | 'h5' | 'h6';
 
+/**
+ * The heading size values are generated from a variable called `$text-sizes` in
+ * `tokens.scss`.
+ *
+ * Example:
+ *
+ * ```
+ * // tokens.scss
+ * $text-sizes: (
+ *   'title-lg': (
+ *     'font-size': 32px,
+ *     'line-height': 1.3,
+ *     'font-weight': 700,
+ *   ),
+ * )
+ * ```
+ */
+export type HeadingSize = TextSize;
+
 export type HeadingProps = preact.JSX.HTMLAttributes & {
   level?: HeadingLevel;
-  size?: string;
+  size?: HeadingSize;
   weight?: FontWeight;
   children?: ComponentChildren;
 };
