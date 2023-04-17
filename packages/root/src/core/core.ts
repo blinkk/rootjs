@@ -1,7 +1,7 @@
 export * from './config';
 export {Body} from './components/Body';
 export {Head} from './components/Head';
-export {Html} from './components/Html';
+export {Html, HTML_CONTEXT} from './components/Html';
 export {Script} from './components/Script';
 export {
   I18nContext,

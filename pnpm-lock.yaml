@@ -48,6 +48,7 @@ importers:
 
   examples/blog:
     specifiers:
+      '@blinkk/rds': workspace:*
       '@blinkk/root': workspace:*
       '@blinkk/root-cms': workspace:*
       '@types/node': ^18.11.18
@@ -61,6 +62,7 @@ importers:
       preact: 10.11.0
       preact-render-to-string: 5.2.4_preact@10.11.0
     devDependencies:
+      '@blinkk/rds': link:../../packages/rds
       '@types/node': 18.13.0
 
   examples/starter:
