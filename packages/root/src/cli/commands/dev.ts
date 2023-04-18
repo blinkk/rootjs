@@ -86,17 +86,6 @@ async function viteServerMiddleware(options: {
   const rootConfig = options.rootConfig;
   const rootDir = rootConfig.rootDir;
 
-  // const routeFiles: string[] = [];
-  // if (await isDirectory(path.join(rootDir, 'routes'))) {
-  //   const pageFiles = await glob('routes/**/*', {cwd: rootDir});
-  //   pageFiles.forEach((file) => {
-  //     const parts = path.parse(file);
-  //     if (!parts.name.startsWith('_') && isJsFile(parts.base)) {
-  //       routeFiles.push(file);
-  //     }
-  //   });
-  // }
-
   const elementGraph = await getElements(rootConfig);
   const elements = Object.values(elementGraph.sourceFiles).map((sourceFile) => {
     return sourceFile.relPath;
