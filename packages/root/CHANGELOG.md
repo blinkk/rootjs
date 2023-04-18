@@ -1,5 +1,11 @@
 # @blinkk/root
 
+## 1.0.0-beta.19
+
+### Minor Changes
+
+- fe802b3: feat: use dev error pages in preview mode
+
 ## 1.0.0-beta.18
 
 ### Minor Changes
