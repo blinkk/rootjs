@@ -50,6 +50,7 @@ export async function createViteServer(
         ...(options?.optimizeDeps || []),
         ...(viteConfig.optimizeDeps?.include || []),
       ],
+      extensions: [...(viteConfig.optimizeDeps?.extensions || []), '.tsx'],
     },
     ssr: {
       ...(viteConfig.ssr || {}),
