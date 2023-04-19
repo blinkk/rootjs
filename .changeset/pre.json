@@ -9,7 +9,8 @@
     "@blinkk/root-cms": "0.0.0",
     "@private/docs": "0.0.0",
     "@private/root-db": "0.0.0",
-    "@blinkk/rds": "1.0.0-beta.0"
+    "@blinkk/rds": "1.0.0-beta.0",
+    "@blinkk/eslint-config-root": "1.0.0-beta.0"
   },
   "changesets": [
     "afraid-dots-run",
@@ -30,6 +31,7 @@
     "clever-birds-act",
     "cool-toys-play",
     "dirty-steaks-hammer",
+    "dry-emus-jam",
     "early-hounds-enjoy",
     "few-dolls-lick",
     "fifty-boats-give",
@@ -61,6 +63,7 @@
     "nervous-peas-guess",
     "ninety-ants-appear",
     "ninety-berries-explain",
+    "ninety-nails-punch",
     "odd-doors-buy",
     "odd-hounds-draw",
     "perfect-snakes-give",
