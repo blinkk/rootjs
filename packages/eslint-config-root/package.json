@@ -1,0 +1,40 @@
+{
+  "name": "@blinkk/eslint-config-root",
+  "version": "1.0.0-beta.0",
+  "description": "ESLint config for Root.js projects.",
+  "author": "s@blinkk.com",
+  "license": "MIT",
+  "keywords": [
+    "eslint",
+    "eslintconfig"
+  ],
+  "engines": {
+    "node": ">=16.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/blinkk/rootjs.git",
+    "directory": "packages/eslint-config-root"
+  },
+  "files": [
+    "index.js"
+  ],
+  "dependencies": {
+    "@typescript-eslint/eslint-plugin": "^5.59.0",
+    "@typescript-eslint/parser": "^5.59.0",
+    "eslint-config-prettier": "^8.8.0",
+    "eslint-plugin-import": "^2.27.5",
+    "eslint-plugin-node": "^11.1.0",
+    "eslint-plugin-prettier": "^4.2.1"
+  },
+  "devDependencies": {
+    "eslint": "^8.38.0",
+    "prettier": "^2.8.7",
+    "typescript": "^5.0.4"
+  },
+  "peerDependencies": {
+    "eslint": ">= 8",
+    "prettier": ">= 2",
+    "typescript": ">= 4"
+  }
+}

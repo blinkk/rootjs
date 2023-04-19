@@ -8,8 +8,8 @@
   "scripts": {
     "build": "turbo run build --filter=\"@blinkk/*\"",
     "changeset": "changeset",
-    "format": "eslint . --ext .ts,.tsx --fix",
     "lint": "eslint . --ext .ts,.tsx",
+    "fix": "eslint . --ext .ts,.tsx --fix",
     "version": "changeset version && pnpm install --no-frozen-lockfile",
     "release": "pnpm run build && changeset publish"
   },
@@ -24,18 +24,11 @@
   },
   "homepage": "https://github.com/blinkk/rootjs#readme",
   "devDependencies": {
+    "@blinkk/eslint-config-root": "workspace:*",
     "@changesets/cli": "^2.24.4",
-    "@types/node": "^18.11.18",
-    "@typescript-eslint/eslint-plugin": "^5.15.0",
-    "@typescript-eslint/parser": "^5.15.0",
-    "eslint": "^8.11.0",
-    "eslint-config-prettier": "^8.5.0",
-    "eslint-plugin-import": "^2.27.5",
-    "eslint-plugin-node": "^11.1.0",
-    "eslint-plugin-prettier": "^4.0.0",
-    "prettier": "^2.6.0",
-    "release-please": "^13.8.0",
+    "eslint": "^8.38.0",
+    "prettier": "^2.8.7",
     "turbo": "^1.8.3",
-    "typescript": "^4.6.2"
+    "typescript": "^5.0.4"
   }
 }
