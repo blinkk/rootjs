@@ -1,5 +1,11 @@
 # @blinkk/root
 
+## 1.0.0-beta.20
+
+### Patch Changes
+
+- 0735d64: fix: fix deps opt for .tsx files
+
 ## 1.0.0-beta.19
 
 ### Minor Changes
