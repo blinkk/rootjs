@@ -16,6 +16,7 @@ import {
   IconCirclePlus,
   IconCopy,
   IconDotsVertical,
+  IconFileUpload,
   IconPhotoUp,
   IconRocket,
   IconRowInsertBottom,
@@ -146,6 +147,8 @@ DocEditor.Field = (props: FieldProps) => {
           <DocEditor.ArrayField {...props} />
         ) : field.type === 'boolean' ? (
           <DocEditor.BooleanField {...props} />
+        ) : field.type === 'file' ? (
+          <DocEditor.FileField {...props} />
         ) : field.type === 'image' ? (
           <DocEditor.ImageField {...props} />
         ) : field.type === 'multiselect' ? (
@@ -397,6 +400,93 @@ DocEditor.ImageField = (props: FieldProps) => {
         </div>
         <div className="DocEditor__ImageField__uploadButton__label">
           Upload image
+        </div>
+      </label>
+    </div>
+  );
+};
+
+DocEditor.FileField = (props: FieldProps) => {
+  const field = props.field as schema.FileField;
+  const [file, setFile] = useState<any>({});
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    const unsubscribe = props.draft.subscribe(
+      props.deepKey,
+      (newValue: string) => {
+        setFile(newValue);
+      }
+    );
+    return unsubscribe;
+  }, []);
+
+  async function onFileChange(e: Event) {
+    try {
+      setLoading(true);
+      const inputEl = e.target as HTMLInputElement;
+      const files = inputEl.files || [];
+      const uploadedFile = files[0];
+      const file = await uploadFileToGCS(uploadedFile);
+      props.draft.updateKey(props.deepKey, file);
+      setFile(file);
+      setLoading(false);
+    } catch (err) {
+      console.error('file upload failed');
+      console.error(err);
+      setLoading(false);
+      showNotification({
+        title: 'File upload failed',
+        message: 'Failed to upload file: ' + String(err),
+        color: 'red',
+        autoClose: false,
+      });
+    }
+
+    // Reset the input element in case the user wishes to re-upload a file.
+    if (inputRef.current) {
+      const inputEl = inputRef.current;
+      inputEl.value = '';
+    }
+  }
+
+  let accept: string | undefined = undefined;
+  if (field.exts) {
+    accept = field.exts.join(',');
+  }
+
+  return (
+    <div className="DocEditor__FileField">
+      {file && file.src ? (
+        <div className="DocEditor__FileField__file">
+          <TextInput
+            className="DocEditor__FileField__file__url"
+            size="xs"
+            radius={0}
+            value={file.src}
+            disabled={true}
+          />
+        </div>
+      ) : (
+        <div className="DocEditor__FileField__noFile">No file</div>
+      )}
+      <label
+        className="DocEditor__FileField__uploadButton"
+        role="button"
+        aria-disabled={loading}
+      >
+        <input
+          type="file"
+          accept={accept}
+          onChange={onFileChange}
+          ref={inputRef}
+        />
+        <div className="DocEditor__FileField__uploadButton__icon">
+          <IconFileUpload size={16} />
+        </div>
+        <div className="DocEditor__FileField__uploadButton__label">
+          Upload file
         </div>
       </label>
     </div>

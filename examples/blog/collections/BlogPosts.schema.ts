@@ -79,6 +79,12 @@ export default schema.collection({
           variant: 'textarea',
           deprecated: true,
         }),
+        schema.file({
+          id: 'pdf',
+          label: 'PDF',
+          help: 'PDF version of the post.',
+          exts: ['.pdf'],
+        }),
       ],
     }),
   ],
