@@ -91,6 +91,16 @@ export function image(field: Omit<ImageField, 'type'>): ImageField {
   return {...field, type: 'image'};
 }
 
+export type FileField = CommonFieldProps & {
+  type: 'file';
+  /** List of supported exts, e.g. `['.mp4']`. */
+  exts?: string[];
+};
+
+export function file(field: Omit<FileField, 'type'>): FileField {
+  return {...field, type: 'file'};
+}
+
 export type ObjectField = CommonFieldProps & {
   type: 'object';
   fields: FieldWithId[];
@@ -151,6 +161,7 @@ export type Field =
   | SelectField
   | MultiSelectField
   | ImageField
+  | FileField
   | ObjectField
   | ArrayField
   | OneOfField;
@@ -161,7 +172,7 @@ export type Field =
  */
 export type FieldWithId = Field;
 
-export type ObjectLikeField = ImageField | ObjectField | OneOfField;
+export type ObjectLikeField = ImageField | FileField | ObjectField | OneOfField;
 
 export interface Schema {
   name: string;

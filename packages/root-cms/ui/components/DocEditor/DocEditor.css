@@ -248,3 +248,37 @@
 .DocEditor__ImageField__uploadButton__icon {
   margin-right: 10px;
 }
+
+.DocEditor__FileField__file {
+  margin-bottom: 10px;
+}
+
+.DocEditor__FileField__noFile {
+  font-family: var(--font-family-mono);
+  margin: 10px 0;
+}
+
+.DocEditor__FileField__uploadButton {
+  display: inline-flex;
+  align-items: center;
+  cursor: pointer;
+  background: #25262b;
+  border-radius: 4px;
+  padding: 0 14px;
+  height: 30px;
+  color: #ffffff;
+  font-weight: 600;
+  transition: all 0.3s ease;
+}
+
+.DocEditor__FileField__uploadButton[aria-disabled="true"] {
+  opacity: 0.5;
+}
+
+.DocEditor__FileField__uploadButton input[type="file"] {
+  display: none;
+}
+
+.DocEditor__FileField__uploadButton__icon {
+  margin-right: 10px;
+}
