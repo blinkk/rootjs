@@ -1,5 +1,16 @@
 # @blinkk/root-cms
 
+## 1.0.0-beta.21
+
+### Minor Changes
+
+- 34f7cdc: feat: add file upload field
+
+### Patch Changes
+
+- Updated dependencies [03a1f46]
+  - @blinkk/root@1.0.0-beta.21
+
 ## 1.0.0-beta.20
 
 ### Patch Changes

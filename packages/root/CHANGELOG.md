@@ -1,5 +1,11 @@
 # @blinkk/root
 
+## 1.0.0-beta.21
+
+### Patch Changes
+
+- 03a1f46: feat: add maxRows config to string field
+
 ## 1.0.0-beta.20
 
 ### Patch Changes
