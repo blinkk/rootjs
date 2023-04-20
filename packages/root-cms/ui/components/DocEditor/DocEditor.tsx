@@ -194,7 +194,7 @@ DocEditor.StringField = (props: FieldProps) => {
         radius={0}
         autosize
         minRows={2}
-        maxRows={20}
+        maxRows={field.maxRows || 20}
         value={value}
         onChange={(e) => onChange(e.currentTarget.value)}
       />
