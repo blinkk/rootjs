@@ -1,5 +1,11 @@
 # @blinkk/root
 
+## 1.0.0-beta.22
+
+### Minor Changes
+
+- 90465ff: feat: add i18n fallback locales
+
 ## 1.0.0-beta.21
 
 ### Patch Changes

@@ -1,5 +1,19 @@
 # @blinkk/root-cms
 
+## 1.0.0-beta.22
+
+### Minor Changes
+
+- 8125496: feat: add buttonLabel config to array fields
+- ff17522: feat: add icon to remove image
+- c31304b: feat: save changes before preview reloads
+
+### Patch Changes
+
+- 15ae86f: fix: fix jwt token exp check
+- Updated dependencies [90465ff]
+  - @blinkk/root@1.0.0-beta.22
+
 ## 1.0.0-beta.21
 
 ### Minor Changes
