@@ -38,6 +38,7 @@ export function getRoutes(config: RootConfig) {
       src,
       module: routes[modulePath] as RouteModule,
       locale: defaultLocale,
+      isDefaultLocale: true,
       routePath,
       localeRoutePath,
     });
@@ -52,6 +53,7 @@ export function getRoutes(config: RootConfig) {
           src,
           module: routes[modulePath] as RouteModule,
           locale: locale,
+          isDefaultLocale: false,
           routePath,
           localeRoutePath,
         });
