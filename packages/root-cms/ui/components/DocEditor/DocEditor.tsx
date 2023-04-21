@@ -40,12 +40,19 @@ import {PublishDocModal} from '../PublishDocModal/PublishDocModal.js';
 interface DocEditorProps {
   docId: string;
   collection: schema.Collection;
+  onDraftController?: (draft: DraftController) => void;
 }
 
 export function DocEditor(props: DocEditorProps) {
   const fields = props.collection.fields || [];
   const {loading, draft, saveState, data} = useDraft(props.docId);
   const [publishDocModalOpen, setPublishDocModalOpen] = useState(false);
+
+  useEffect(() => {
+    if (draft && props.onDraftController) {
+      props.onDraftController(draft);
+    }
+  }, [draft]);
 
   function goBack() {
     const collectionId = props.docId.split('/')[0];

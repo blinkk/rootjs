@@ -15,6 +15,7 @@ import {Layout} from '../../layout/Layout.js';
 import {joinClassNames} from '../../utils/classes.js';
 import {getDocPreviewPath, getDocServingPath} from '../../utils/doc-urls.js';
 import './DocumentPage.css';
+import {DraftController} from '../../hooks/useDraft.js';
 
 interface DocumentPageProps {
   collection: string;
@@ -26,6 +27,7 @@ export function DocumentPage(props: DocumentPageProps) {
   const slug = props.slug;
   const docId = `${collectionId}/${slug}`;
   const collection = window.__ROOT_CTX.collections[collectionId];
+  const [draft, setDraft] = useState<DraftController | null>(null);
 
   if (!collection) {
     return <div>Could not find collection.</div>;
@@ -44,11 +46,15 @@ export function DocumentPage(props: DocumentPageProps) {
             <div className="DocumentPage__side__header__docId">{docId}</div>
           </div>
           <div className="DocumentPage__side__editor">
-            <DocEditor collection={collection} docId={docId} />
+            <DocEditor
+              collection={collection}
+              docId={docId}
+              onDraftController={(draft) => setDraft(draft)}
+            />
           </div>
         </SplitPanel.Item>
         <SplitPanel.Item className="DocumentPage__main" fluid>
-          <DocumentPage.Preview docId={docId} />
+          <DocumentPage.Preview docId={docId} draft={draft} />
         </SplitPanel.Item>
       </SplitPanel>
     </Layout>
@@ -57,6 +63,7 @@ export function DocumentPage(props: DocumentPageProps) {
 
 interface PreviewProps {
   docId: string;
+  draft: DraftController | null;
 }
 
 type Device = 'mobile' | 'tablet' | 'desktop' | '';
@@ -110,15 +117,23 @@ DocumentPage.Preview = (props: PreviewProps) => {
   }
 
   function reload() {
-    const iframe = iframeRef.current!;
-    iframe.src = 'about:blank';
-    window.setTimeout(() => {
-      if (iframe.src !== previewPath) {
-        iframe.src = previewPath;
-      } else {
-        iframe.contentWindow!.location.reload();
-      }
-    }, 10);
+    const reloadIframe = () => {
+      const iframe = iframeRef.current!;
+      iframe.src = 'about:blank';
+      window.setTimeout(() => {
+        if (iframe.src !== previewPath) {
+          iframe.src = previewPath;
+        } else {
+          iframe.contentWindow!.location.reload();
+        }
+      }, 20);
+    };
+    // Save any unsaved changes and then reload the iframe.
+    if (props.draft) {
+      props.draft.flush().then(() => reloadIframe());
+    } else {
+      reloadIframe();
+    }
   }
 
   function openNewTab() {
