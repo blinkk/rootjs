@@ -119,6 +119,9 @@ function fieldType(field: Field): dom.Type {
       ),
     ]);
   }
+  if (field.type === 'file') {
+    return dom.create.objectType([dom.create.property('src', dom.type.string)]);
+  }
   if (field.type === 'multiselect') {
     return dom.type.array(dom.type.string);
   }
