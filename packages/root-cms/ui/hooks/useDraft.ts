@@ -5,6 +5,7 @@ import {
   onSnapshot,
   updateDoc,
   serverTimestamp,
+  deleteField,
 } from 'firebase/firestore';
 import {useEffect, useMemo, useState} from 'preact/hooks';
 
@@ -167,7 +168,7 @@ export class DraftController {
    * Removes a key.
    */
   async removeKey(key: string) {
-    // this.pendingUpdates[key] = deleteField();
+    this.pendingUpdates.set(key, deleteField());
     applyUpdates(this.cachedData, {[key]: undefined});
     if (this.onChangeCallback) {
       this.onChangeCallback({...this.cachedData});

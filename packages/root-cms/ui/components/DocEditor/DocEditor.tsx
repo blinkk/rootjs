@@ -8,6 +8,7 @@ import {
   Select,
   Textarea,
   TextInput,
+  Tooltip,
 } from '@mantine/core';
 import {showNotification} from '@mantine/notifications';
 import {
@@ -204,7 +205,7 @@ DocEditor.StringField = (props: FieldProps) => {
         radius={0}
         autosize
         minRows={2}
-        maxRows={field.maxRows || 20}
+        maxRows={field.maxRows || 12}
         value={value}
         onChange={(e) => onChange(e.currentTarget.value)}
       />
@@ -351,10 +352,25 @@ DocEditor.ImageField = (props: FieldProps) => {
     props.draft.updateKey(`${props.deepKey}.alt`, newValue);
   }
 
+  async function removeImage() {
+    setImg({});
+    props.draft.removeKey(props.deepKey);
+  }
+
   return (
     <div className="DocEditor__ImageField">
       {img && img.src ? (
         <div className="DocEditor__ImageField__imagePreview">
+          <div className="DocEditor__ImageField__imagePreview__controls">
+            <Tooltip label="Remove image">
+              <ActionIcon
+                className="DocEditor__ImageField__imagePreview__controls__trash"
+                onClick={() => removeImage()}
+              >
+                <IconTrash size={16} />
+              </ActionIcon>
+            </Tooltip>
+          </div>
           <div className="DocEditor__ImageField__imagePreview__image">
             <img
               src={img.gciUrl || img.src}

@@ -11,11 +11,11 @@ import {useEffect, useRef, useState} from 'preact/hooks';
 
 import {DocEditor} from '../../components/DocEditor/DocEditor.js';
 import {SplitPanel} from '../../components/SplitPanel/SplitPanel.js';
+import {DraftController} from '../../hooks/useDraft.js';
 import {Layout} from '../../layout/Layout.js';
 import {joinClassNames} from '../../utils/classes.js';
 import {getDocPreviewPath, getDocServingPath} from '../../utils/doc-urls.js';
 import './DocumentPage.css';
-import {DraftController} from '../../hooks/useDraft.js';
 
 interface DocumentPageProps {
   collection: string;

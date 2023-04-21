@@ -186,6 +186,12 @@
   margin-bottom: 10px;
 }
 
+.DocEditor__ImageField__imagePreview__controls {
+  display: flex;
+  justify-content: flex-end;
+  gap: 4px;
+}
+
 .DocEditor__ImageField__imagePreview__image {
   background: #f5f5f5;
   border: 1px solid #dedede;
