@@ -56,6 +56,10 @@ export interface BlogPostsFields {
          * @deprecated
         */
         customCss?: string;
+        /** PDF. PDF version of the post. */
+        pdf?: {
+            src: string;
+        };
     };
 }
 
@@ -96,6 +100,10 @@ export interface BlogPostsSandboxFields {
          * @deprecated
         */
         customCss?: string;
+        /** PDF. PDF version of the post. */
+        pdf?: {
+            src: string;
+        };
     };
 }
 
