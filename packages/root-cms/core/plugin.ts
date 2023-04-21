@@ -85,8 +85,8 @@ function generateSecret(): string {
 }
 
 function isExpired(decodedIdToken: DecodedIdToken) {
-  const ts = new Date().getTime() / 1000;
-  return ts - decodedIdToken.auth_time > 5 * 60;
+  const ts = Math.floor(new Date().getTime() / 1000);
+  return ts >= decodedIdToken.exp;
 }
 
 export function cmsPlugin(options: CMSPluginOptions): CMSPlugin {
