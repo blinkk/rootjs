@@ -22,6 +22,7 @@ import {parseTagNames} from '../utils/elements';
 import {AssetMap} from './asset-map/asset-map';
 import {htmlMinify} from './html-minify';
 import {htmlPretty} from './html-pretty';
+import {getFallbackLocales} from './i18n-fallbacks';
 import {RouteTrie} from './route-trie';
 import {getRoutes, getAllPathsForRoute} from './router';
 
@@ -64,6 +65,10 @@ export class Renderer {
       routeParams.$locale = route.locale;
     }
 
+    const fallbackLocales = route.isDefaultLocale
+      ? getFallbackLocales(req)
+      : [route.locale];
+
     const render404 = async () => {
       // Calling next() will allow the dev server or prod server handle the 404
       // page as appropriate for the env.
@@ -104,6 +109,7 @@ export class Renderer {
       const handlerContext: HandlerContext = {
         route: route,
         params: routeParams,
+        i18nFallbackLocales: fallbackLocales,
         render: render,
         render404: render404,
       };

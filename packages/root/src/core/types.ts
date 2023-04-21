@@ -79,6 +79,12 @@ export interface HandlerContext<T = any> {
    * pass `{slug: 'foo'}`.
    */
   params: RouteParams;
+  /**
+   * i18n locales to try for the user's http request. The priority order mimics
+   * the Firebase Hosting i18n fallback logic.
+   * https://firebase.google.com/docs/hosting/i18n-rewrites#priority-order
+   */
+  i18nFallbackLocales: string[];
   /** Renders the default exported component from the route. */
   render: (props: T) => Promise<void>;
   /** Renders a 404 page. */
@@ -113,6 +119,14 @@ export interface Route {
 
   /** The locale used for the route. */
   locale: string;
+
+  /**
+   * Returns `true` if the route is the default locale route mapped without the
+   * i18n url prefix. For example, a route may be mapped to `/foo` and
+   * `/[locale]/foo`. The `/foo` route would have `route.isDefaultLocale` set to
+   * `true` whereas for `/[locale]/foo` it would be `false`.
+   */
+  isDefaultLocale: boolean;
 
   /**
    * The mapped URL path for the route, e.g.:
