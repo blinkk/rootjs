@@ -908,7 +908,7 @@ DocEditor.ArrayField = (props: FieldProps) => {
           leftIcon={<IconCirclePlus size={16} />}
           onClick={() => add()}
         >
-          Add
+          {field.buttonLabel || 'Add'}
         </Button>
       </div>
     </div>

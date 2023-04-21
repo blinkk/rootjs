@@ -137,6 +137,10 @@ export type ArrayField = CommonFieldProps & {
   // objects here, a developer should technically be able to add fields to the
   // nested field definition without breaking any existing db entries.
   of: ObjectLikeField;
+  /**
+   * Label to use for the "add item" button. Defaults to `Add`.
+   */
+  buttonLabel?: string;
 };
 
 export function array(field: Omit<ArrayField, 'type'>): ArrayField {
