@@ -28,6 +28,8 @@ export type GetStaticProps<T = unknown> = (ctx: {
 }) => Promise<{
   /** Props to pass to the component. */
   props?: T;
+  /** The rendered locale. */
+  locale?: string;
   /**  Set to true if the route should result in a 404 page. */
   notFound?: boolean;
 }>;

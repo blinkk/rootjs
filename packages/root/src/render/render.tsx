@@ -75,15 +75,17 @@ export class Renderer {
       next();
     };
 
-    const render = async (props: any) => {
+    const render = async (props: any, options?: {locale?: string}) => {
       if (!route.module.default) {
         console.error(`no default component exported in route: ${route.src}`);
         render404();
         return;
       }
+      const locale = options?.locale || route.locale;
       const output = await this.renderComponent(route.module.default, props, {
         route,
         routeParams,
+        locale,
       });
       let html = output.html;
       if (this.rootConfig.prettyHtml) {
@@ -136,10 +138,10 @@ export class Renderer {
   private async renderComponent(
     Component: ComponentType,
     props: any,
-    options: {route: Route; routeParams: RouteParams}
+    options: {route: Route; routeParams: RouteParams; locale: string}
   ) {
     const {route, routeParams} = options;
-    const locale = route.locale;
+    const locale = options.locale;
     const translations = getTranslations(locale);
     const ctx: RequestContext = {
       route,
@@ -232,6 +234,7 @@ export class Renderer {
       );
     }
     let props = {};
+    let locale = route.locale;
     if (route.module.getStaticProps) {
       const propsData = await route.module.getStaticProps({
         rootConfig: this.rootConfig,
@@ -243,8 +246,11 @@ export class Renderer {
       if (propsData.props) {
         props = propsData.props;
       }
+      if (propsData.locale) {
+        locale = propsData.locale;
+      }
     }
-    return this.renderComponent(Component, props, {route, routeParams});
+    return this.renderComponent(Component, props, {route, routeParams, locale});
   }
 
   async getSitemap(): Promise<
@@ -286,7 +292,11 @@ export class Renderer {
     const [route, routeParams] = this.routes.get('/404');
     if (route && route.src === 'routes/404.tsx' && route.module.default) {
       const Component = route.module.default;
-      return this.renderComponent(Component, {}, {route, routeParams});
+      return this.renderComponent(
+        Component,
+        {},
+        {route, routeParams, locale: 'en'}
+      );
     }
 
     const mainHtml = renderToString(
@@ -316,7 +326,7 @@ export class Renderer {
       return this.renderComponent(
         Component,
         {error: err},
-        {route, routeParams}
+        {route, routeParams, locale: 'en'}
       );
     }
 
