@@ -19,12 +19,12 @@ import {
   IconDotsVertical,
   IconFileUpload,
   IconPhotoUp,
+  IconPlanet,
   IconRocket,
   IconRowInsertBottom,
   IconRowInsertTop,
   IconTrash,
   IconTriangleFilled,
-  IconWorld,
 } from '@tabler/icons-preact';
 import {ref as storageRef, updateMetadata, uploadBytes} from 'firebase/storage';
 import {useEffect, useReducer, useRef, useState} from 'preact/hooks';
@@ -71,6 +71,7 @@ export function DocEditor(props: DocEditorProps) {
         onClose={() => setPublishDocModalOpen(false)}
       />
       <LocalizationModal
+        collection={props.collection}
         docId={props.docId}
         opened={l10nModalOpen}
         onClose={() => setL10nModalOpen(false)}
@@ -102,7 +103,7 @@ export function DocEditor(props: DocEditorProps) {
               variant="default"
               color="dark"
               size="xs"
-              leftIcon={<IconWorld size={16} />}
+              leftIcon={<IconPlanet size={16} />}
               onClick={() => setL10nModalOpen(true)}
             >
               Localization

@@ -65,6 +65,7 @@ export type SelectField = CommonFieldProps & {
   type: 'select';
   default?: string;
   options?: Array<{value: string; label?: string}> | string[];
+  translate?: boolean;
 };
 
 export function select(field: Omit<SelectField, 'type'>): SelectField {
@@ -75,6 +76,7 @@ export type MultiSelectField = Omit<SelectField, 'type'> & {
   type: 'multiselect';
   /** Set to `true` to allow users to create arbitrary values. */
   creatable?: boolean;
+  translate?: boolean;
 };
 
 export function multiselect(
@@ -85,6 +87,7 @@ export function multiselect(
 
 export type ImageField = CommonFieldProps & {
   type: 'image';
+  translate?: boolean;
 };
 
 export function image(field: Omit<ImageField, 'type'>): ImageField {
