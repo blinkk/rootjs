@@ -14,10 +14,12 @@ import {IconLanguage, IconMapPin} from '@tabler/icons-preact';
 import {doc, getDoc} from 'firebase/firestore';
 import {useEffect, useState} from 'preact/hooks';
 import * as schema from '../../../core/schema.js';
+import {DraftController} from '../../hooks/useDraft.js';
 import {Heading} from '../Heading/Heading.js';
 import './LocalizationModal.css';
 
 interface LocalizationModalProps {
+  draft: DraftController;
   collection: schema.Collection;
   docId: string;
   opened?: boolean;
@@ -28,6 +30,7 @@ export function LocalizationModal(props: LocalizationModalProps) {
   const theme = useMantineTheme();
 
   function onClose() {
+    props.draft.flush();
     if (props.onClose) {
       props.onClose();
     }
@@ -48,26 +51,14 @@ export function LocalizationModal(props: LocalizationModalProps) {
       overlayBlur={3}
     >
       <div className="LocalizationModal__layout">
-        <div className="LocalizationModal__locales">
-          <LocalizationModal.ConfigLocales docId={props.docId} />
-        </div>
-        <div className="LocalizationModal__translations">
-          <LocalizationModal.Translations
-            collection={props.collection}
-            docId={props.docId}
-            opened={props.opened}
-          />
-        </div>
+        <LocalizationModal.ConfigLocales {...props} />
+        <LocalizationModal.Translations {...props} />
       </div>
     </Modal>
   );
 }
 
-interface ConfigLocalesProps {
-  docId: string;
-}
-
-LocalizationModal.ConfigLocales = (props: ConfigLocalesProps) => {
+LocalizationModal.ConfigLocales = (props: LocalizationModalProps) => {
   const [enabledLocales, setEnabledLocales] = useState(['en']);
   const i18nConfig = window.__ROOT_CTX.rootConfig.i18n || {};
   const podLocales = i18nConfig.locales || ['en'];
@@ -77,6 +68,12 @@ LocalizationModal.ConfigLocales = (props: ConfigLocalesProps) => {
       locales: podLocales,
     },
   };
+
+  useEffect(() => {
+    if (props.opened) {
+      setEnabledLocales(props.draft.getLocales());
+    }
+  }, [props.opened]);
 
   function enabledLocalesFor(groupId: string) {
     return enabledLocales.filter((l: string) => {
@@ -95,39 +92,48 @@ LocalizationModal.ConfigLocales = (props: ConfigLocalesProps) => {
         localeSet.delete(locale);
       }
     }
+    // Ensure the default locale is always enabled.
+    localeSet.add('en');
     const newLocales = Array.from(localeSet.values()).sort();
+    updateEnabledLocales(newLocales);
+  }
+
+  function updateEnabledLocales(newLocales: string[]) {
     setEnabledLocales(newLocales);
+    props.draft.setLocales(newLocales);
   }
 
   return (
-    <Stack spacing={30}>
-      <Group>
-        <Heading
-          className="LocalizationModal__iconTitle LocalizationModal__locales__title"
-          size="h2"
-        >
-          <IconMapPin strokeWidth={1.5} />
-          <span>Locales</span>
-        </Heading>
-        <LocalizationModal.AllNoneButtons
-          onAllClicked={() => setEnabledLocales(podLocales)}
-          onNoneClicked={() => setEnabledLocales([])}
-        />
-      </Group>
-      <Stack spacing={40}>
-        {Object.keys(localeGroups).map((groupId: string) => {
-          const group = localeGroups[groupId];
-          const enabledLocales = enabledLocalesFor(groupId);
-          return (
-            <LocalizationModal.LocaleGroup
-              group={group}
-              enabledLocales={enabledLocales}
-              onChange={(locales) => setGroupEnabledLocales(groupId, locales)}
-            />
-          );
-        })}
+    <div className="LocalizationModal__locales">
+      <Stack spacing={30}>
+        <Group>
+          <Heading
+            className="LocalizationModal__iconTitle LocalizationModal__locales__title"
+            size="h2"
+          >
+            <IconMapPin strokeWidth={1.5} />
+            <span>Locales</span>
+          </Heading>
+          <LocalizationModal.AllNoneButtons
+            onAllClicked={() => updateEnabledLocales(podLocales)}
+            onNoneClicked={() => updateEnabledLocales([])}
+          />
+        </Group>
+        <Stack spacing={40}>
+          {Object.keys(localeGroups).map((groupId: string) => {
+            const group = localeGroups[groupId];
+            const enabledLocales = enabledLocalesFor(groupId);
+            return (
+              <LocalizationModal.LocaleGroup
+                group={group}
+                enabledLocales={enabledLocales}
+                onChange={(locales) => setGroupEnabledLocales(groupId, locales)}
+              />
+            );
+          })}
+        </Stack>
       </Stack>
-    </Stack>
+    </div>
   );
 };
 
@@ -279,7 +285,7 @@ LocalizationModal.Translations = (props: TranslationsProps) => {
   }
 
   return (
-    <>
+    <div className="LocalizationModal__translations">
       <div className="LocalizationModal__translations__header">
         <Heading
           className="LocalizationModal__translations__title LocalizationModal__iconTitle"
@@ -316,7 +322,7 @@ LocalizationModal.Translations = (props: TranslationsProps) => {
                 size="xs"
                 placeholder="select locale"
                 allowDeselect
-                onChange={(e) => setSelectedLocale(e.value)}
+                onChange={(e: {value: string}) => setSelectedLocale(e.value)}
               />
             </Heading>
           </div>
@@ -356,7 +362,7 @@ LocalizationModal.Translations = (props: TranslationsProps) => {
           </div>
         ))}
       </div>
-    </>
+    </div>
   );
 };
 

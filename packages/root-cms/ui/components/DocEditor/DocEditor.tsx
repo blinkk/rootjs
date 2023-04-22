@@ -71,6 +71,7 @@ export function DocEditor(props: DocEditorProps) {
         onClose={() => setPublishDocModalOpen(false)}
       />
       <LocalizationModal
+        draft={draft}
         collection={props.collection}
         docId={props.docId}
         opened={l10nModalOpen}

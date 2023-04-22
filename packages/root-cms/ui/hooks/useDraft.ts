@@ -248,6 +248,17 @@ export class DraftController {
     }
   }
 
+  getLocales(): string[] {
+    if (this.cachedData && this.cachedData.sys?.locales) {
+      return this.cachedData.sys.locales;
+    }
+    return ['en'];
+  }
+
+  setLocales(locales: string[]) {
+    this.updateKey('sys.locales', locales);
+  }
+
   /**
    * Stops all listeners and disposes the controller.
    */
