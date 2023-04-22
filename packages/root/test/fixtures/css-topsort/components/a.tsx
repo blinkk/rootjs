@@ -1,5 +1,7 @@
-import styles from './a.module.scss';
+/* eslint-disable import/order */
+
 import {B} from './b';
+import styles from './a.module.scss';
 
 export function A() {
   return (

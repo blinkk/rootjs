@@ -1,5 +1,7 @@
-import {A} from '../components/a';
+/* eslint-disable import/order */
+
 import {Layout} from '../components/layout';
+import {A} from '../components/a';
 
 import styles from './index.module.scss';
 
