@@ -31,6 +31,10 @@
   margin-right: 16px;
 }
 
+.DocEditor__statusBar__i18n {
+  margin-right: 8px;
+}
+
 .DocEditor__statusBar__actionsMenu {
   margin-left: 4px;
 }

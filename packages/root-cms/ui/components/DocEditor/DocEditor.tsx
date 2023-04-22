@@ -24,6 +24,7 @@ import {
   IconRowInsertTop,
   IconTrash,
   IconTriangleFilled,
+  IconWorld,
 } from '@tabler/icons-preact';
 import {ref as storageRef, updateMetadata, uploadBytes} from 'firebase/storage';
 import {useEffect, useReducer, useRef, useState} from 'preact/hooks';
@@ -36,6 +37,7 @@ import {getPlaceholderKeys, strFormat} from '../../utils/str-format.js';
 import './DocEditor.css';
 import {DocActionsMenu} from '../DocActionsMenu/DocActionsMenu.js';
 import {DocStatusBadges} from '../DocStatusBadges/DocStatusBadges.js';
+import {LocalizationModal} from '../LocalizationModal/LocalizationModal.js';
 import {PublishDocModal} from '../PublishDocModal/PublishDocModal.js';
 
 interface DocEditorProps {
@@ -48,6 +50,7 @@ export function DocEditor(props: DocEditorProps) {
   const fields = props.collection.fields || [];
   const {loading, draft, saveState, data} = useDraft(props.docId);
   const [publishDocModalOpen, setPublishDocModalOpen] = useState(false);
+  const [l10nModalOpen, setL10nModalOpen] = useState(false);
 
   useEffect(() => {
     if (draft && props.onDraftController) {
@@ -67,6 +70,11 @@ export function DocEditor(props: DocEditorProps) {
         opened={publishDocModalOpen}
         onClose={() => setPublishDocModalOpen(false)}
       />
+      <LocalizationModal
+        docId={props.docId}
+        opened={l10nModalOpen}
+        onClose={() => setL10nModalOpen(false)}
+      />
       <div className="DocEditor">
         <LoadingOverlay
           visible={loading}
@@ -84,6 +92,22 @@ export function DocEditor(props: DocEditorProps) {
               <DocStatusBadges doc={data} />
             </div>
           )}
+          <div className="DocEditor__statusBar__i18n">
+            {/* <Tooltip label="Localization">
+              <ActionIcon>
+                <IconLanguage size={20} strokeWidth={1.75} />
+              </ActionIcon>
+            </Tooltip> */}
+            <Button
+              variant="default"
+              color="dark"
+              size="xs"
+              leftIcon={<IconWorld size={16} />}
+              onClick={() => setL10nModalOpen(true)}
+            >
+              Localization
+            </Button>
+          </div>
           <div className="DocEditor__statusBar__publishButton">
             <Button
               color="dark"

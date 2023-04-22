@@ -6,7 +6,7 @@ import './Heading.css';
 export interface HeadingProps {
   className?: string;
   as?: preact.JSX.ElementType;
-  size?: 'h1' | 'h2' | 'h3';
+  size?: 'h1' | 'h2' | 'h3' | 'h4';
   weight?: 'regular' | 'semi-bold' | 'bold';
   color?: 'gray' | 'dark';
   children?: ComponentChildren;

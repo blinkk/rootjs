@@ -30,6 +30,11 @@ declare global {
         projectName: string;
         domain: string;
         gci: string | boolean;
+        i18n: {
+          locales?: string[];
+          urlFormat?: string;
+          groups?: Record<string, {label?: string; locales: string[]}>;
+        };
       };
       firebaseConfig: Record<string, string>;
       collections: Record<string, Collection>;

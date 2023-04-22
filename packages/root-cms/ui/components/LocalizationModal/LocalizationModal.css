@@ -1,0 +1,27 @@
+.LocalizationModal .mantine-Modal-modal {
+  padding: 30px;
+}
+
+.LocalizationModal__layout {
+  display: grid;
+  grid-template-columns: 420px 1fr;
+  margin-top: -20px;
+  margin-bottom: 20px;
+}
+
+.LocalizationModal__locales,
+.LocalizationModal__translations {
+  height: 100%;
+  min-height: 400px;
+  padding-top: 30px;
+  padding-bottom: 30px;
+}
+
+.LocalizationModal__locales {
+  padding-right: 30px;
+}
+
+.LocalizationModal__translations {
+  border-left: 1px solid var(--color-border);
+  padding-left: 30px;
+}
