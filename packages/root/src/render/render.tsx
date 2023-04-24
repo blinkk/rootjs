@@ -15,6 +15,8 @@ import {
   HandlerContext,
   RouteParams,
   Route,
+  HandlerRenderFn,
+  HandlerRenderOptions,
 } from '../core/types';
 import type {ElementGraph} from '../node/element-graph';
 import {parseTagNames} from '../utils/elements';
@@ -75,17 +77,22 @@ export class Renderer {
       next();
     };
 
-    const render = async (props: any, options?: {locale?: string}) => {
+    const render: HandlerRenderFn = async (
+      props: any,
+      options?: HandlerRenderOptions
+    ) => {
       if (!route.module.default) {
         console.error(`no default component exported in route: ${route.src}`);
         render404();
         return;
       }
       const locale = options?.locale || route.locale;
+      const translations = options?.translations;
       const output = await this.renderComponent(route.module.default, props, {
         route,
         routeParams,
         locale,
+        translations,
       });
       let html = output.html;
       if (this.rootConfig.prettyHtml) {
@@ -138,11 +145,19 @@ export class Renderer {
   private async renderComponent(
     Component: ComponentType,
     props: any,
-    options: {route: Route; routeParams: RouteParams; locale: string}
+    options: {
+      route: Route;
+      routeParams: RouteParams;
+      locale: string;
+      translations?: Record<string, string>;
+    }
   ) {
     const {route, routeParams} = options;
     const locale = options.locale;
-    const translations = getTranslations(locale);
+    const translations = {
+      ...getTranslations(locale),
+      ...(options.translations || {}),
+    };
     const ctx: RequestContext = {
       route,
       props,
@@ -235,6 +250,7 @@ export class Renderer {
     }
     let props = {};
     let locale = route.locale;
+    let translations = undefined;
     if (route.module.getStaticProps) {
       const propsData = await route.module.getStaticProps({
         rootConfig: this.rootConfig,
@@ -249,8 +265,16 @@ export class Renderer {
       if (propsData.locale) {
         locale = propsData.locale;
       }
+      if (propsData.translations) {
+        translations = propsData.translations;
+      }
     }
-    return this.renderComponent(Component, props, {route, routeParams, locale});
+    return this.renderComponent(Component, props, {
+      route,
+      routeParams,
+      locale,
+      translations,
+    });
   }
 
   async getSitemap(): Promise<

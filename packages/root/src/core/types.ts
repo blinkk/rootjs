@@ -30,6 +30,12 @@ export type GetStaticProps<T = unknown> = (ctx: {
   props?: T;
   /** The rendered locale. */
   locale?: string;
+  /**
+   * Translations to pass to `useTranslations()`. If provided, the translations
+   * map passed here will be merged with the translations from
+   * `/translations/{locale}.json`.
+   */
+  translations?: Record<string, string>;
   /**  Set to true if the route should result in a 404 page. */
   notFound?: boolean;
 }>;
@@ -147,3 +153,19 @@ export interface Route {
    */
   localeRoutePath: string;
 }
+
+export interface HandlerRenderOptions {
+  /** The rendered locale. */
+  locale?: string;
+  /**
+   * Translations to pass to `useTranslations()`. If provided, the translations
+   * map passed here will be merged with the translations from
+   * `/translations/{locale}.json`.
+   */
+  translations?: Record<string, string>;
+}
+
+export type HandlerRenderFn = (
+  props: any,
+  options?: HandlerRenderOptions
+) => Promise<void>;
