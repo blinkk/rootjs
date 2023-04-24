@@ -95,24 +95,12 @@ export async function getElements(
   rootConfig: RootConfig
 ): Promise<ElementGraph> {
   const rootDir = rootConfig.rootDir;
-  const workspaceRoot = searchForWorkspaceRoot(rootDir);
 
-  const elementsDirs = [path.join(rootDir, 'elements')];
-  const elementsInclude = rootConfig.elements?.include || [];
+  const elementsDirs = getElementsDirs(rootConfig);
   const excludePatterns = rootConfig.elements?.exclude || [];
   const excludeElement = (moduleId: string) => {
     return excludePatterns.some((pattern) => Boolean(moduleId.match(pattern)));
   };
-
-  for (const dirPath of elementsInclude) {
-    const elementsDir = path.resolve(rootDir, dirPath);
-    if (!directoryContains(rootDir, elementsDir)) {
-      throw new Error(
-        `the elements dir (${dirPath}) should be within the project's workspace (${workspaceRoot})`
-      );
-    }
-    elementsDirs.push(elementsDir);
-  }
 
   const elementFilePaths: {[tagName: string]: ElementSourceFile} = {};
   for (const dirPath of elementsDirs) {
@@ -134,4 +122,27 @@ export async function getElements(
 
   const graph = new ElementGraph(elementFilePaths);
   return graph;
+}
+
+/**
+ * Get all element dirs.
+ */
+export function getElementsDirs(rootConfig: RootConfig) {
+  const rootDir = rootConfig.rootDir;
+  const workspaceRoot = searchForWorkspaceRoot(rootDir);
+
+  const elementsDirs = [path.join(rootDir, 'elements')];
+  const elementsInclude = rootConfig.elements?.include || [];
+
+  for (const dirPath of elementsInclude) {
+    const elementsDir = path.resolve(rootDir, dirPath);
+    if (!directoryContains(rootDir, elementsDir)) {
+      throw new Error(
+        `the elements dir (${dirPath}) should be within the project's workspace (${workspaceRoot})`
+      );
+    }
+    elementsDirs.push(elementsDir);
+  }
+
+  return elementsDirs;
 }

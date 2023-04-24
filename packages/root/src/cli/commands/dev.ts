@@ -9,7 +9,7 @@ import {RootConfig} from '../../core/config.js';
 import {rootProjectMiddleware} from '../../core/middleware.js';
 import {configureServerPlugins} from '../../core/plugin.js';
 import {Server, Request, Response, NextFunction} from '../../core/types.js';
-import {getElements} from '../../node/element-graph.js';
+import {getElements, getElementsDirs} from '../../node/element-graph.js';
 import {loadRootConfig} from '../../node/load-config.js';
 import {createViteServer} from '../../node/vite.js';
 import {DevServerAssetMap} from '../../render/asset-map/dev-asset-map.js';
@@ -86,7 +86,7 @@ async function viteServerMiddleware(options: {
   const rootConfig = options.rootConfig;
   const rootDir = rootConfig.rootDir;
 
-  const elementGraph = await getElements(rootConfig);
+  let elementGraph = await getElements(rootConfig);
   const elements = Object.values(elementGraph.sourceFiles).map((sourceFile) => {
     return sourceFile.relPath;
   });
@@ -107,6 +107,27 @@ async function viteServerMiddleware(options: {
     port: options.port,
     optimizeDeps: optimizeDeps,
   });
+
+  // Watch for file changes and re-generate the elements graph if any elements
+  // are added or deleted.
+  function isInElementsDir(changedFilePath: string) {
+    const filePath = path.resolve(changedFilePath);
+    const elementsDirs = getElementsDirs(rootConfig);
+    return elementsDirs.some((dirPath) => filePath.startsWith(dirPath));
+  }
+  viteServer.watcher.on('add', async (filePath: string) => {
+    if (isInElementsDir(filePath)) {
+      // Re-generate the elements graph.
+      elementGraph = await getElements(rootConfig);
+    }
+  });
+  viteServer.watcher.on('unlink', async (filePath: string) => {
+    if (isInElementsDir(filePath)) {
+      // Re-generate the elements graph.
+      elementGraph = await getElements(rootConfig);
+    }
+  });
+
   return async (req: Request, res: Response, next: NextFunction) => {
     try {
       // Add the viteServer to the req.
