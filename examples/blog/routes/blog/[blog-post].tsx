@@ -27,7 +27,7 @@ export const handle: Handler = async (req: Request) => {
   const ctx = req.handlerContext as HandlerContext<Props>;
   const slug = ctx.params['blog-post'];
   const mode = String(req.query.preview) === 'true' ? 'draft' : 'published';
-  const doc = await getDoc<BlogPostsDoc>(req.rootConfig, 'Pages', slug, {
+  const doc = await getDoc<BlogPostsDoc>(req.rootConfig, 'BlogPosts', slug, {
     mode,
   });
   if (!doc) {

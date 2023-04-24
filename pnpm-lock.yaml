@@ -188,7 +188,7 @@ importers:
       '@mantine/notifications': 4.2.12
       '@mantine/spotlight': 4.2.12
       '@preact/compat': ^17.1.2
-      '@tabler/icons-preact': ^2.7.0
+      '@tabler/icons-preact': ^2.17.0
       '@types/body-parser': ^1.19.2
       '@types/cookie-parser': ^1.4.3
       '@types/jsonwebtoken': ^9.0.1
@@ -242,7 +242,7 @@ importers:
       '@mantine/notifications': 4.2.12_weuwcj7e2xqup6j7fbypmbmgre
       '@mantine/spotlight': 4.2.12_weuwcj7e2xqup6j7fbypmbmgre
       '@preact/compat': 17.1.2_preact@10.11.0
-      '@tabler/icons-preact': 2.7.0_preact@10.11.0
+      '@tabler/icons-preact': 2.17.0_preact@10.11.0
       '@types/body-parser': 1.19.2
       '@types/cookie-parser': 1.4.3
       '@types/jsonwebtoken': 9.0.1
@@ -2211,17 +2211,17 @@ packages:
       react: /@preact/compat/17.1.2_preact@10.11.0
     dev: true
 
-  /@tabler/icons-preact/2.7.0_preact@10.11.0:
-    resolution: {integrity: sha512-rgReqd3LpY36oa54kMmIthPPebySRy11oIo2TibZfpp6tktA+B50yxW8rLKZT7gfLs4t/3jgIShyXQPHcmfcww==}
+  /@tabler/icons-preact/2.17.0_preact@10.11.0:
+    resolution: {integrity: sha512-F9zacF2L1Rdx6FRyEs7gXlqKj/MFaEdEaWSem467AgJluGoz5dE+O+QaxiDmRzFH/HCLeet/0KNg+RMiJlwqPQ==}
     peerDependencies:
       preact: ^10.5.13
     dependencies:
-      '@tabler/icons': 2.7.0
+      '@tabler/icons': 2.17.0
       preact: 10.11.0
     dev: true
 
-  /@tabler/icons/2.7.0:
-    resolution: {integrity: sha512-mSjUKhwN5fJHI9yITqFn9GXGnsJ4gBAyQDWyP4Ev5fk6hD78G7u6cHEF1KARr5FOOdiIKSZWCzNzUzyLhiNPrg==}
+  /@tabler/icons/2.17.0:
+    resolution: {integrity: sha512-UeJaylOGNRhQKyDlgZfrQ3UPSGlfVQuXcmCsTYeXioKKepibW6VZ3H36Lo1jvBTBkQD2e9m+k2NxwkztOTXwrA==}
     dev: true
 
   /@tootallnate/once/2.0.0:

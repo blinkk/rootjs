@@ -1,16 +1,26 @@
 import {
+  ActionIcon,
   Box,
   Button,
   Checkbox,
   Group,
   Loader,
+  Menu,
   Modal,
   Select,
   Stack,
   Text,
+  Tooltip,
   useMantineTheme,
 } from '@mantine/core';
-import {IconLanguage, IconMapPin} from '@tabler/icons-preact';
+import {
+  IconChevronDown,
+  IconFileDownload,
+  IconFileUpload,
+  IconLanguage,
+  IconMapPin,
+  IconTable,
+} from '@tabler/icons-preact';
 import {doc, getDoc} from 'firebase/firestore';
 import {useEffect, useState} from 'preact/hooks';
 import * as schema from '../../../core/schema.js';
@@ -41,7 +51,7 @@ export function LocalizationModal(props: LocalizationModalProps) {
       className="LocalizationModal"
       opened={props.opened || false}
       onClose={() => onClose()}
-      size="min(80%, 1280px)"
+      size="clamp(80%, 1024px, 1280px)"
       overlayColor={
         theme.colorScheme === 'dark'
           ? theme.colors.dark[9]
@@ -294,22 +304,23 @@ LocalizationModal.Translations = (props: TranslationsProps) => {
           <IconLanguage strokeWidth={1.5} /> <span>Translations</span>
         </Heading>
         <div className="LocalizationModal__translations__header__buttons">
-          <Button variant="default" color="dark" size="xs" disabled>
-            Import
-          </Button>
-          <Button variant="default" color="dark" size="xs">
-            Export
-          </Button>
+          <Tooltip label="Link Google Sheet">
+            <ActionIcon>
+              <IconTable size={16} strokeWidth={2.25} />
+            </ActionIcon>
+          </Tooltip>
+          <ImportMenuButton />
+          <ExportMenuButton />
         </div>
       </div>
-      <div className="LocalizationModal__translations__table">
-        <div className="LocalizationModal__translations__table__row LocalizationModal__translations__table__row--header">
-          <div className="LocalizationModal__translations__table__header">
+      <table className="LocalizationModal__translations__table">
+        <tr className="LocalizationModal__translations__table__row LocalizationModal__translations__table__row--header">
+          <th className="LocalizationModal__translations__table__header">
             <Heading size="h4" weight="semi-bold">
               SOURCE STRING
             </Heading>
-          </div>
-          <div className="LocalizationModal__translations__table__header">
+          </th>
+          <th className="LocalizationModal__translations__table__header">
             <Heading
               className="LocalizationModal__translations__localeSelect"
               size="h4"
@@ -318,18 +329,17 @@ LocalizationModal.Translations = (props: TranslationsProps) => {
               <span>LOCALE: </span>{' '}
               <Select
                 data={localeOptions}
-                value={selectedLocale}
                 size="xs"
                 placeholder="select locale"
                 allowDeselect
-                onChange={(e: {value: string}) => setSelectedLocale(e.value)}
+                onChange={(value: string) => setSelectedLocale(value)}
               />
             </Heading>
-          </div>
-        </div>
+          </th>
+        </tr>
         {sourceStrings.map((source, i) => (
-          <div className="LocalizationModal__translations__table__row" key={i}>
-            <div className="LocalizationModal__translations__table__col">
+          <tr className="LocalizationModal__translations__table__row" key={i}>
+            <td className="LocalizationModal__translations__table__col">
               <Box
                 sx={(theme) => ({
                   backgroundColor: theme.colors.gray[0],
@@ -343,8 +353,8 @@ LocalizationModal.Translations = (props: TranslationsProps) => {
                   {source}
                 </Text>
               </Box>
-            </div>
-            <div className="LocalizationModal__translations__table__col">
+            </td>
+            <td className="LocalizationModal__translations__table__col">
               <Box
                 sx={(theme) => ({
                   backgroundColor: theme.colors.gray[0],
@@ -358,10 +368,10 @@ LocalizationModal.Translations = (props: TranslationsProps) => {
                   &nbsp;
                 </Text>
               </Box>
-            </div>
-          </div>
+            </td>
+          </tr>
         ))}
-      </div>
+      </table>
     </div>
   );
 };
@@ -434,6 +444,54 @@ function extractField(
   } else {
     console.log(`extract: ignoring field, id=${field.id}, type=${field.type}`);
   }
+}
+
+function ImportMenuButton(props: any) {
+  return (
+    <Menu
+      className=""
+      position="bottom"
+      placement="end"
+      control={
+        <Button
+          variant="default"
+          color="dark"
+          size="xs"
+          leftIcon={<IconFileUpload size={16} strokeWidth={1.75} />}
+          rightIcon={<IconChevronDown size={16} strokeWidth={1.75} />}
+        >
+          Import
+        </Button>
+      }
+    >
+      <Menu.Item>Upload .csv</Menu.Item>
+    </Menu>
+  );
+}
+
+function ExportMenuButton(props: any) {
+  return (
+    <Menu
+      className=""
+      position="bottom"
+      placement="start"
+      control={
+        <Button
+          variant="default"
+          color="dark"
+          size="xs"
+          leftIcon={<IconFileDownload size={16} strokeWidth={1.75} />}
+          rightIcon={<IconChevronDown size={16} strokeWidth={1.75} />}
+        >
+          Export
+        </Button>
+      }
+    >
+      <Menu.Item disabled>Create Google Sheet</Menu.Item>
+      <Menu.Item disabled>Add tab in Google Sheet</Menu.Item>
+      <Menu.Item>Download .csv</Menu.Item>
+    </Menu>
+  );
 }
 
 function normalizeString(s: string) {

@@ -95,11 +95,6 @@ export function DocEditor(props: DocEditorProps) {
             </div>
           )}
           <div className="DocEditor__statusBar__i18n">
-            {/* <Tooltip label="Localization">
-              <ActionIcon>
-                <IconLanguage size={20} strokeWidth={1.75} />
-              </ActionIcon>
-            </Tooltip> */}
             <Button
               variant="default"
               color="dark"

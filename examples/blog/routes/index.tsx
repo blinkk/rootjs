@@ -10,11 +10,12 @@ export const handle: Handler = async (req: Request) => {
   const ctx = req.handlerContext as HandlerContext;
   const slug = 'index';
   const mode = String(req.query.preview) === 'true' ? 'draft' : 'published';
+  const orderBy = mode === 'draft' ? 'sys.createdAt' : 'sys.firstPublishedAt';
   const [doc, blogPosts] = await Promise.all([
     getDoc(req.rootConfig, 'Pages', slug, {mode}),
     listDocs(req.rootConfig, 'BlogPosts', {
       mode,
-      orderBy: 'sys.firstPublishedAt',
+      orderBy: orderBy,
       orderByDirection: 'desc',
       limit: 3,
     }),
