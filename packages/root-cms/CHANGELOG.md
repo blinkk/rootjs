@@ -1,5 +1,17 @@
 # @blinkk/root-cms
 
+## 1.0.0-beta.23
+
+### Minor Changes
+
+- dc095e3: feat: add localization config modal
+
+### Patch Changes
+
+- Updated dependencies [dc095e3]
+- Updated dependencies [75dffaf]
+  - @blinkk/root@1.0.0-beta.23
+
 ## 1.0.0-beta.22
 
 ### Minor Changes

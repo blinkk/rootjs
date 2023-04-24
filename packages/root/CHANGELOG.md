@@ -1,5 +1,15 @@
 # @blinkk/root
 
+## 1.0.0-beta.23
+
+### Minor Changes
+
+- dc095e3: feat: add custom translations rendering
+
+### Patch Changes
+
+- 75dffaf: fix: re-generate elements graph when files change
+
 ## 1.0.0-beta.22
 
 ### Minor Changes
