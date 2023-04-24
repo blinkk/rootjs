@@ -3,6 +3,7 @@ import {
   Box,
   Button,
   Checkbox,
+  Divider,
   Group,
   Loader,
   Menu,
@@ -286,6 +287,40 @@ LocalizationModal.Translations = (props: TranslationsProps) => {
     });
   }, [props.opened]);
 
+  async function downloadCsv() {
+    const headers = ['source', 'en'];
+    const rows: Array<Record<string, string>> = [];
+    sourceStrings.forEach((source) => {
+      rows.push({
+        source: source,
+        en: source,
+      });
+    });
+    const res = await window.fetch('/cms/api/csv.download', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({headers, rows}),
+    });
+    if (res.status !== 200) {
+      console.error('csv.download failed:');
+      const text = await res.text();
+      console.error(text);
+    }
+    const blob = await res.blob();
+    const file = window.URL.createObjectURL(blob);
+    window.location.assign(file);
+    window.URL.revokeObjectURL(file);
+  }
+
+  function onAction(action: string) {
+    switch (action) {
+      case 'export-download-csv': {
+        downloadCsv();
+        return;
+      }
+    }
+  }
+
   if (loading) {
     return (
       <div className="LocalizationModal__translations__loading">
@@ -309,8 +344,8 @@ LocalizationModal.Translations = (props: TranslationsProps) => {
               <IconTable size={16} strokeWidth={2.25} />
             </ActionIcon>
           </Tooltip>
-          <ImportMenuButton />
-          <ExportMenuButton />
+          <ImportMenuButton onAction={onAction} />
+          <ExportMenuButton onAction={onAction} />
         </div>
       </div>
       <table className="LocalizationModal__translations__table">
@@ -446,7 +481,17 @@ function extractField(
   }
 }
 
-function ImportMenuButton(props: any) {
+interface MenuButtonProps {
+  onAction?: (action: string) => void;
+}
+
+function ImportMenuButton(props: MenuButtonProps) {
+  function dispatch(action: string) {
+    if (props.onAction) {
+      props.onAction(action);
+    }
+  }
+
   return (
     <Menu
       className=""
@@ -464,12 +509,28 @@ function ImportMenuButton(props: any) {
         </Button>
       }
     >
-      <Menu.Item>Upload .csv</Menu.Item>
+      <Menu.Label>Google Sheets</Menu.Label>
+      <Menu.Item disabled onClick={() => dispatch('import-google-sheet')}>
+        Import Google Sheet
+      </Menu.Item>
+      <Divider />
+      <Menu.Label>File</Menu.Label>
+      <Menu.Item onClick={() => dispatch('import-upload-csv')}>
+        Upload .csv
+      </Menu.Item>
     </Menu>
   );
 }
 
-function ExportMenuButton(props: any) {
+
+
+function ExportMenuButton(props: MenuButtonProps) {
+  function dispatch(action: string) {
+    if (props.onAction) {
+      props.onAction(action);
+    }
+  }
+
   return (
     <Menu
       className=""
@@ -487,9 +548,18 @@ function ExportMenuButton(props: any) {
         </Button>
       }
     >
-      <Menu.Item disabled>Create Google Sheet</Menu.Item>
-      <Menu.Item disabled>Add tab in Google Sheet</Menu.Item>
-      <Menu.Item>Download .csv</Menu.Item>
+      <Menu.Label>Google Sheets</Menu.Label>
+      <Menu.Item onClick={() => dispatch('export-google-sheet-create')}>
+        Create Google Sheet
+      </Menu.Item>
+      <Menu.Item onClick={() => dispatch('export-google-sheet-add-tab')}>
+        Add tab in Google Sheet
+      </Menu.Item>
+      <Divider />
+      <Menu.Label>File</Menu.Label>
+      <Menu.Item onClick={() => dispatch('export-download-csv')}>
+        Download .csv
+      </Menu.Item>
     </Menu>
   );
 }

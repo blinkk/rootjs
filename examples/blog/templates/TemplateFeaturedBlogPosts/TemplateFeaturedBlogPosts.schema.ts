@@ -7,7 +7,7 @@ export default schema.define({
     schema.string({
       id: 'id',
       label: 'ID',
-      help: 'Used for deep linking, tracking, etc.'
+      help: 'Used for deep linking, tracking, etc.',
     }),
     schema.multiselect({
       id: 'options',
@@ -15,6 +15,12 @@ export default schema.define({
       help: 'Layout and display options.',
       options: [],
       creatable: true,
+    }),
+    schema.string({
+      id: 'morePostsTitle',
+      label: 'More Posts: Title',
+      help: 'Headline below the featured blog post.',
+      translate: true,
     }),
   ],
 });
