@@ -1,4 +1,11 @@
-import {createObjectCsvStringifier} from 'csv-writer';
+import {createRequire} from 'node:module';
+const require = createRequire(import.meta.url);
+
+// NOTE(stevenle): the csv-writer package has misconfigured "types" so `require`
+// is needed here.
+const createObjectCsvStringifier =
+  require('csv-writer').createObjectCsvStringifier;
+// import type {createObjectCsvStringifier} from 'csv-writer';
 
 export function arrayToCsv(req: {
   headers: string[];
