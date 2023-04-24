@@ -26,7 +26,7 @@ export function TemplateFeaturedBlogPosts(
     <Container as="section" id={id} aria-label={t('Featured Posts')}>
       <div className={styles.layout}>
         <FeaturedPost doc={featured} />
-        {morePosts.length > 0 && <MorePosts docs={morePosts} />}
+        {morePosts.length > 0 && <MorePosts title={props.morePostsTitle} docs={morePosts} />}
       </div>
     </Container>
   );
@@ -40,13 +40,15 @@ function FeaturedPost(props: {doc: BlogPostsDoc}) {
   );
 }
 
-function MorePosts(props: {docs: BlogPostsDoc[]}) {
+function MorePosts(props: {title?: string; docs: BlogPostsDoc[]}) {
   const t = useTranslations();
   return (
     <div className={styles.morePosts}>
-      <Heading className={styles.morePostsTitle} level={2}>
-        {t('More posts')}
-      </Heading>
+      {props.title && (
+        <Heading className={styles.morePostsTitle} level={2}>
+          {t(props.title)}
+        </Heading>
+      )}
       <div className={styles.posts}>
         {props.docs.map((doc) => (
           <div className={styles.post}>

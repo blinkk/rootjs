@@ -8,6 +8,23 @@ const rootDir = new URL('.', import.meta.url).pathname;
 
 export default defineConfig({
   domain: 'https://rootjs.dev',
+  i18n: {
+    locales: ['en', 'es', 'pt_br', 'de', 'fr', 'it', 'ja', 'ko', 'zh'],
+    groups: {
+      americas: {
+        label: 'Americas',
+        locales: ['en', 'es', 'pt_br'],
+      },
+      emea: {
+        label: 'EMEA',
+        locales: ['de', 'fr', 'it'],
+      },
+      japac: {
+        label: 'JAPAC',
+        locales: ['ja', 'ko', 'zh'],
+      },
+    },
+  },
   vite: {
     resolve: {
       alias: {

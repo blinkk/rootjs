@@ -82,6 +82,11 @@ export type RootConfig = RootUserConfig & {
   rootDir: string;
 };
 
+export interface LocaleGroup {
+  label?: string;
+  locales: string[];
+}
+
 export interface RootI18nConfig {
   /**
    * Locales enabled for the site.
@@ -97,6 +102,12 @@ export interface RootI18nConfig {
    * URL format for localized content. Default is `/{locale}/{path}`.
    */
   urlFormat?: string;
+
+  /**
+   * Localization groups, to help UIs (like Root.js CMS) logically group
+   * locales.
+   */
+  groups?: Record<string, LocaleGroup>;
 }
 
 export interface RootServerConfig {

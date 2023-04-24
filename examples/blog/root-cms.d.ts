@@ -195,6 +195,8 @@ export interface TemplateFeaturedBlogPostsFields {
     id?: string;
     /** Module Options. Layout and display options. */
     options?: string[];
+    /** More Posts: Title. Headline below the featured blog post. */
+    morePostsTitle?: string;
 }
 
 /** Generated from `/templates/TemplateHero/TemplateHero.schema.ts`. */

@@ -15,6 +15,9 @@
 .heading.size\:h3 {
   font-size: 16px;
 }
+.heading.size\:h4 {
+  font-size: 14px;
+}
 
 .heading.weight\:regular {
   font-weight: 400;

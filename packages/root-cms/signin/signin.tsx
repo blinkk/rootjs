@@ -23,8 +23,9 @@ function SignIn() {
     <div className="signin">
       <div className="signin__card">
         <div className="signin__card__header">
-          <IconSitemap className="signin__card__header__icon" size={48} />
-          <h1>Root.js CMS</h1>
+          <div className="signin__card__header__icon">
+            <IconSitemap size={80} stroke-width={1.5} />
+          </div>
         </div>
         <SignIn.Button />
       </div>

@@ -15,6 +15,7 @@ import cookieParser from 'cookie-parser';
 import {applicationDefault, initializeApp} from 'firebase-admin/app';
 import {getAuth, DecodedIdToken} from 'firebase-admin/auth';
 import sirv from 'sirv';
+import {api} from './api.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -313,11 +314,18 @@ export function cmsPlugin(options: CMSPluginOptions): CMSPlugin {
           next();
           return;
         }
+        if (req.originalUrl.startsWith('/cms/api')) {
+          res.status(401).json({success: false, error: 'NOT_AUTHORIZED'});
+          return;
+        }
         const params = new URLSearchParams({
           continue: req.originalUrl,
         });
         res.redirect(`/cms/login?${params.toString()}`);
       });
+
+      // Register API handlers.
+      api(server);
 
       // Render the CMS SPA.
       server.use('/cms', async (req: Request, res: Response) => {

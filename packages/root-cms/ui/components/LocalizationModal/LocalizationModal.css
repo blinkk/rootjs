@@ -1,0 +1,80 @@
+.LocalizationModal .mantine-Modal-modal {
+  padding: 30px 40px;
+}
+
+.LocalizationModal__layout {
+  display: grid;
+  grid-template-columns: 400px 1fr;
+  margin-top: -20px;
+  margin-bottom: 20px;
+}
+
+.LocalizationModal__iconTitle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.LocalizationModal__locales,
+.LocalizationModal__translations {
+  height: 100%;
+  min-height: 400px;
+  padding-top: 30px;
+  padding-bottom: 30px;
+}
+
+.LocalizationModal__locales {
+  padding-right: 30px;
+}
+
+.LocalizationModal__translations {
+  border-left: 1px solid var(--color-border);
+  padding-left: 30px;
+  margin-right: -30px;
+  padding-right: 30px;
+  max-height: 80vh;
+  overflow: auto;
+}
+
+.LocalizationModal__translations__header {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 30px;
+}
+
+.LocalizationModal__translations__header__buttons {
+  display: flex;
+  gap: 8px;
+}
+
+.LocalizationModal__translations__table {
+  display: flex;
+  flex-direction: column;
+}
+
+.LocalizationModal__translations__table__row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+}
+
+.LocalizationModal__translations__table__row--header {
+  align-items: center;
+}
+
+.LocalizationModal__translations__table__row + .LocalizationModal__translations__table__row {
+  border-top: 1px solid var(--color-border);
+  padding-top: 12px;
+  margin-top: 12px;
+}
+
+.LocalizationModal__translations__table__header,
+.LocalizationModal__translations__table__col {
+  padding-left: 8px;
+  padding-right: 8px;
+}
+
+.LocalizationModal__translations__localeSelect {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
