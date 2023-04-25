@@ -198,7 +198,7 @@ importers:
       commander: ^10.0.0
       concurrently: ^7.6.0
       cookie-parser: ^1.4.6
-      csv-writer: ^1.6.0
+      csv-stringify: ^6.3.2
       dotenv: ^16.0.0
       dts-dom: ^3.7.0
       esbuild: 0.17.12
@@ -224,7 +224,7 @@ importers:
       body-parser: 1.20.0
       commander: 10.0.0
       cookie-parser: 1.4.6
-      csv-writer: 1.6.0
+      csv-stringify: 6.3.2
       dotenv: 16.0.0
       dts-dom: 3.7.0
       firebase-admin: 11.5.0
@@ -3210,8 +3210,8 @@ packages:
     resolution: {integrity: sha512-PjiQ659aQ+fUTQqSrd1XEDnOr52jh30RBurfzkscaE2tPaFsDH5wOAHJiw8XAHphRknCwMUE9KRayc4K/NbO8A==}
     dev: true
 
-  /csv-writer/1.6.0:
-    resolution: {integrity: sha512-NOx7YDFWEsM/fTRAJjRpPp8t+MKRVvniAg9wQlUKx20MFrPs73WLJhFf5iteqrxNYnsy924K3Iroh3yNHeYd2g==}
+  /csv-stringify/6.3.2:
+    resolution: {integrity: sha512-dD9gfbxNKa5v90NHiE2Qd6F9I52GtJjGTfowwzqiNDZD/+NPW3h19d2Nvv311a8QUW11rYRobco27nvVAnCrLw==}
     dev: false
 
   /csv/5.5.3:
