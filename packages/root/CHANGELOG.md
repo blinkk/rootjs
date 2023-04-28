@@ -1,5 +1,13 @@
 # @blinkk/root
 
+## 1.0.0-beta.24
+
+### Minor Changes
+
+- ea71e3f: feat: add "save" button
+- ea71e3f: feat: add meta image to collection page
+- ea71e3f: feat: use gci url as image src
+
 ## 1.0.0-beta.23
 
 ### Minor Changes
