@@ -1,8 +1,10 @@
-import {ActionIcon, Tooltip} from '@mantine/core';
+import {ActionIcon, Button, Tooltip} from '@mantine/core';
+import {useHotkeys} from '@mantine/hooks';
 import {
   IconArrowLeft,
   IconArrowUpRight,
   IconDeviceDesktop,
+  IconDeviceFloppy,
   IconDeviceIpad,
   IconDeviceMobile,
   IconReload,
@@ -33,17 +35,40 @@ export function DocumentPage(props: DocumentPageProps) {
     return <div>Could not find collection.</div>;
   }
 
+  function saveDraft() {
+    console.log('saveDraft()');
+    if (draft) {
+      draft.flush();
+    }
+  }
+
+  useHotkeys([['mod+S', () => saveDraft()]]);
+
   return (
     <Layout>
       <SplitPanel className="DocumentPage" localStorageId="DocumentPage">
         <SplitPanel.Item className="DocumentPage__side">
           <div className="DocumentPage__side__header">
-            <a href={`/cms/content/${collectionId}`}>
-              <ActionIcon className="DocumentPage__side__header__back">
-                <IconArrowLeft size={16} />
-              </ActionIcon>
-            </a>
-            <div className="DocumentPage__side__header__docId">{docId}</div>
+            <div className="DocumentPage__side__header__nav">
+              <a href={`/cms/content/${collectionId}`}>
+                <ActionIcon className="DocumentPage__side__header__back">
+                  <IconArrowLeft size={16} />
+                </ActionIcon>
+              </a>
+              <div className="DocumentPage__side__header__docId">{docId}</div>
+            </div>
+            <div className="DocumentPage__side__header__buttons">
+              <Button
+                variant="filled"
+                color="dark"
+                size="xs"
+                compact
+                leftIcon={<IconDeviceFloppy size={14} />}
+                onClick={() => saveDraft()}
+              >
+                Save
+              </Button>
+            </div>
           </div>
           <div className="DocumentPage__side__editor">
             <DocEditor
