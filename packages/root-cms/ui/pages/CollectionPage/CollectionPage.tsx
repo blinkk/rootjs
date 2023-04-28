@@ -305,12 +305,12 @@ CollectionPage.DocsList = (props: {
         const fields = doc.fields || {};
         const previewTitle = getNestedValue(
           fields,
-          rootCollection.preview?.title || 'title'
+          rootCollection.preview?.title || 'meta.title'
         );
-        // const previewImage = getNestedValue(
-        //   fields,
-        //   rootCollection.preview?.image || 'image'
-        // );
+        const previewImage = getNestedValue(
+          fields,
+          rootCollection.preview?.image || 'meta.image'
+        );
         return (
           <div
             className="CollectionPage__collection__docsList__doc"
@@ -318,7 +318,12 @@ CollectionPage.DocsList = (props: {
           >
             <div className="CollectionPage__collection__docsList__doc__image">
               <a href={cmsUrl}>
-                <Image width={120} height={90} withPlaceholder />
+                <Image
+                  src={previewImage?.src}
+                  width={120}
+                  height={90}
+                  withPlaceholder={!previewImage?.src}
+                />
               </a>
             </div>
             <a
