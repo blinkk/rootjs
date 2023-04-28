@@ -63,8 +63,19 @@ export type CMSPluginOptions = {
 
   /**
    * URL to GCI service for transforming uploaded GCS images to a Google App
-   * Engine Images API serving URL. Defaults to "https://gci.rootjs.dev". To
-   * disable, set this value to `false`.
+   * Engine Images API serving URL.
+   *
+   * Setting this to `true` uses the default hosted service at
+   * https://gci.rootjs.dev.
+   *
+   * To set up GCI:
+   *
+   * - Create a GCS bucket with fine-grained permissions
+   * - Share owner access to the bucket with the service account returned in
+   *   https://gci.rootjs.dev/_/service_account
+   *
+   * To disable GCI, leave this value empty or set to `false`, which which will
+   * serve images directly from GCS instead.
    */
   gci?: string | boolean;
 };

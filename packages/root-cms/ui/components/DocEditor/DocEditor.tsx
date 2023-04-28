@@ -263,14 +263,19 @@ async function uploadFileToGCS(file: File) {
   const meta: Record<string, string> = {};
   meta.filename = file.name;
   meta.uploadedBy = window.firebase.user.email || 'unknown';
+  meta.uploadedAt = String(Math.floor(new Date().getTime()));
+  const gcsPath = `/${gcsRef.bucket}/${gcsRef.fullPath}`;
+  let imageSrc = `https://storage.googleapis.com${gcsPath}`;
   if (ext === 'jpg' || ext === 'png') {
     const dimens = await getImageDimensions(file);
     meta.width = String(dimens.width);
     meta.height = String(dimens.height);
 
-    const gcsPath = `/${gcsRef.bucket}/${gcsRef.fullPath}`;
     const gciUrl = await getGciUrl(gcsPath);
-    meta.gciUrl = gciUrl;
+    if (gciUrl) {
+      meta.gcsPath = gcsPath;
+      imageSrc = gciUrl;
+    }
   }
   if (Object.keys(meta).length > 0) {
     await updateMetadata(gcsRef, {customMetadata: meta});
@@ -278,7 +283,7 @@ async function uploadFileToGCS(file: File) {
   }
   return {
     ...meta,
-    src: `https://storage.googleapis.com/${gcsRef.bucket}/${filePath}`,
+    src: imageSrc,
   };
 }
 
@@ -340,11 +345,14 @@ DocEditor.ImageField = (props: FieldProps) => {
       const inputEl = e.target as HTMLInputElement;
       const files = inputEl.files || [];
       const file = files[0];
-      const img = await uploadFileToGCS(file);
-      props.draft.updateKey(props.deepKey, img);
+      const uploadedImage = await uploadFileToGCS(file);
       setImg((currentImg: any) => {
         // Preserve the "alt" text when the image changes.
-        return Object.assign({}, img, {alt: currentImg?.alt || ''});
+        const newImage = Object.assign({}, uploadedImage, {
+          alt: currentImg?.alt || '',
+        });
+        props.draft.updateKey(props.deepKey, newImage);
+        return newImage;
       });
       setLoading(false);
     } catch (err) {

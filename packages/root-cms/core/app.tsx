@@ -68,12 +68,16 @@ export async function renderApp(req: Request, res: Response, options: any) {
   });
   const rootConfig = options.rootConfig || {};
   const cmsConfig = options.cmsConfig || {};
+  let gci = cmsConfig.gci;
+  if (gci === true) {
+    gci = 'https://gci.rootjs.dev';
+  }
   const ctx = {
     rootConfig: {
       projectId: cmsConfig.id || 'default',
       projectName: cmsConfig.name || cmsConfig.id || '',
       domain: rootConfig.domain || 'https://example.com',
-      gci: cmsConfig.gci ?? 'https://gci.rootjs.dev',
+      gci: gci,
       i18n: rootConfig.i18n,
     },
     firebaseConfig: options.firebaseConfig,

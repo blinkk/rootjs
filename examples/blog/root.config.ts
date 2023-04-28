@@ -56,6 +56,7 @@ export default defineConfig({
       isUserAuthorized: (req, user) => {
         return String(user?.email).endsWith('@blinkk.com');
       },
+      gci: true,
     }),
   ],
   prettyHtml: true,
