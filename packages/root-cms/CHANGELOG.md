@@ -1,5 +1,14 @@
 # @blinkk/root-cms
 
+## 1.0.0-beta.24
+
+### Patch Changes
+
+- Updated dependencies [ea71e3f]
+- Updated dependencies [ea71e3f]
+- Updated dependencies [ea71e3f]
+  - @blinkk/root@1.0.0-beta.24
+
 ## 1.0.0-beta.23
 
 ### Minor Changes
