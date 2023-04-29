@@ -13,7 +13,7 @@ import {useEffect, useRef, useState} from 'preact/hooks';
 
 import {DocEditor} from '../../components/DocEditor/DocEditor.js';
 import {SplitPanel} from '../../components/SplitPanel/SplitPanel.js';
-import {DraftController} from '../../hooks/useDraft.js';
+import {UseDraftHook, useDraft} from '../../hooks/useDraft.js';
 import {Layout} from '../../layout/Layout.js';
 import {joinClassNames} from '../../utils/classes.js';
 import {getDocPreviewPath, getDocServingPath} from '../../utils/doc-urls.js';
@@ -29,17 +29,14 @@ export function DocumentPage(props: DocumentPageProps) {
   const slug = props.slug;
   const docId = `${collectionId}/${slug}`;
   const collection = window.__ROOT_CTX.collections[collectionId];
-  const [draft, setDraft] = useState<DraftController | null>(null);
+  const draft = useDraft(docId);
 
   if (!collection) {
     return <div>Could not find collection.</div>;
   }
 
   function saveDraft() {
-    console.log('saveDraft()');
-    if (draft) {
-      draft.flush();
-    }
+    draft.controller.flush();
   }
 
   useHotkeys([['mod+S', () => saveDraft()]]);
@@ -71,11 +68,7 @@ export function DocumentPage(props: DocumentPageProps) {
             </div>
           </div>
           <div className="DocumentPage__side__editor">
-            <DocEditor
-              collection={collection}
-              docId={docId}
-              onDraftController={(draft) => setDraft(draft)}
-            />
+            <DocEditor collection={collection} docId={docId} draft={draft} />
           </div>
         </SplitPanel.Item>
         <SplitPanel.Item className="DocumentPage__main" fluid>
@@ -88,7 +81,7 @@ export function DocumentPage(props: DocumentPageProps) {
 
 interface PreviewProps {
   docId: string;
-  draft: DraftController | null;
+  draft: UseDraftHook;
 }
 
 type Device = 'mobile' | 'tablet' | 'desktop' | '';
@@ -113,6 +106,18 @@ DocumentPage.Preview = (props: PreviewProps) => {
   });
   const iframeRef = useRef<HTMLIFrameElement>(null);
 
+  function reloadIframe() {
+    const iframe = iframeRef.current!;
+    iframe.src = 'about:blank';
+    window.setTimeout(() => {
+      if (iframe.src !== previewPath) {
+        iframe.src = previewPath;
+      } else {
+        iframe.contentWindow!.location.reload();
+      }
+    }, 20);
+  }
+
   useEffect(() => {
     const iframe = iframeRef.current!;
     function onIframeLoad() {
@@ -127,7 +132,14 @@ DocumentPage.Preview = (props: PreviewProps) => {
       }
     }
     iframe.addEventListener('load', onIframeLoad);
+
+    const removeOnFlush = props.draft.controller.onFlush(() => {
+      console.log('on flush() -> reloadIframe()');
+      reloadIframe();
+    });
+
     return () => {
+      removeOnFlush();
       iframe.removeEventListener('load', onIframeLoad);
     };
   }, []);
@@ -141,24 +153,9 @@ DocumentPage.Preview = (props: PreviewProps) => {
     });
   }
 
-  function reload() {
-    const reloadIframe = () => {
-      const iframe = iframeRef.current!;
-      iframe.src = 'about:blank';
-      window.setTimeout(() => {
-        if (iframe.src !== previewPath) {
-          iframe.src = previewPath;
-        } else {
-          iframe.contentWindow!.location.reload();
-        }
-      }, 20);
-    };
+  function onReloadClick() {
     // Save any unsaved changes and then reload the iframe.
-    if (props.draft) {
-      props.draft.flush().then(() => reloadIframe());
-    } else {
-      reloadIframe();
-    }
+    props.draft.controller.flush().then(() => reloadIframe());
   }
 
   function openNewTab() {
@@ -247,7 +244,7 @@ DocumentPage.Preview = (props: PreviewProps) => {
           <Tooltip label="Reload">
             <ActionIcon
               className="DocumentPage__main__previewBar__button DocumentPage__main__previewBar__button--reload"
-              onClick={() => reload()}
+              onClick={() => onReloadClick()}
             >
               <IconReload size={16} />
             </ActionIcon>

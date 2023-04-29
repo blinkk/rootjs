@@ -23,4 +23,8 @@ export class EventListener {
     const eventCallbacks = this.events.get(eventName) ?? [];
     eventCallbacks.forEach((callback) => callback(...args));
   }
+
+  dispose() {
+    this.events.clear();
+  }
 }

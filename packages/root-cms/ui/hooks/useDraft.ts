@@ -278,6 +278,7 @@ export class DraftController extends EventListener {
    * Stops all listeners and disposes the controller.
    */
   async dispose() {
+    super.dispose();
     this.stop();
   }
 }
@@ -331,31 +332,38 @@ function splitKey(key: string) {
   return [head, tail] as const;
 }
 
-export function useDraft(docId: string) {
+export interface UseDraftHook {
+  loading: boolean;
+  saveState: SaveState;
+  controller: DraftController;
+  data: any;
+}
+
+export function useDraft(docId: string): UseDraftHook {
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState<any>({});
-  const draft = useMemo(() => new DraftController(docId), []);
+  const controller = useMemo(() => new DraftController(docId), []);
   const [saveState, setSaveState] = useState(SaveState.NO_CHANGES);
 
   useEffect(() => {
-    draft.onChange((data: any) => {
+    controller.onChange((data: any) => {
       setData(data);
       setLoading(false);
     });
-    draft.onSaveStateChange((newSaveState) => setSaveState(newSaveState));
-    draft.start();
+    controller.onSaveStateChange((newSaveState) => setSaveState(newSaveState));
+    controller.start();
     document.addEventListener('visibilitychange', () => {
       if (document.hidden || document.visibilityState !== 'visible') {
-        draft.stop();
+        controller.stop();
       } else {
-        if (!draft.started) {
+        if (!controller.started) {
           setLoading(true);
-          draft.start();
+          controller.start();
         }
       }
     });
-    return () => draft.dispose();
+    return () => controller.dispose();
   }, []);
 
-  return {loading, saveState, draft, data};
+  return {loading, saveState, controller, data};
 }

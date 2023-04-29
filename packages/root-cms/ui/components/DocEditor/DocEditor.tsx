@@ -27,11 +27,16 @@ import {
   IconTriangleFilled,
 } from '@tabler/icons-preact';
 import {ref as storageRef, updateMetadata, uploadBytes} from 'firebase/storage';
+import {ChangeEvent} from 'preact/compat';
 import {useEffect, useReducer, useRef, useState} from 'preact/hooks';
 import {route} from 'preact-router';
 
 import * as schema from '../../../core/schema.js';
-import {DraftController, SaveState, useDraft} from '../../hooks/useDraft.js';
+import {
+  DraftController,
+  SaveState,
+  UseDraftHook,
+} from '../../hooks/useDraft.js';
 import {flattenNestedKeys} from '../../utils/objects.js';
 import {getPlaceholderKeys, strFormat} from '../../utils/str-format.js';
 import './DocEditor.css';
@@ -43,20 +48,14 @@ import {PublishDocModal} from '../PublishDocModal/PublishDocModal.js';
 interface DocEditorProps {
   docId: string;
   collection: schema.Collection;
-  onDraftController?: (draft: DraftController) => void;
+  draft: UseDraftHook;
 }
 
 export function DocEditor(props: DocEditorProps) {
   const fields = props.collection.fields || [];
-  const {loading, draft, saveState, data} = useDraft(props.docId);
+  const {loading, controller, saveState, data} = props.draft;
   const [publishDocModalOpen, setPublishDocModalOpen] = useState(false);
   const [l10nModalOpen, setL10nModalOpen] = useState(false);
-
-  useEffect(() => {
-    if (draft && props.onDraftController) {
-      props.onDraftController(draft);
-    }
-  }, [draft]);
 
   function goBack() {
     const collectionId = props.docId.split('/')[0];
@@ -71,7 +70,7 @@ export function DocEditor(props: DocEditorProps) {
         onClose={() => setPublishDocModalOpen(false)}
       />
       <LocalizationModal
-        draft={draft}
+        draft={controller}
         collection={props.collection}
         docId={props.docId}
         opened={l10nModalOpen}
@@ -131,7 +130,7 @@ export function DocEditor(props: DocEditorProps) {
               field={field}
               shallowKey={field.id!}
               deepKey={`fields.${field.id!}`}
-              draft={draft}
+              draft={controller}
             />
           ))}
         </div>
@@ -228,7 +227,9 @@ DocEditor.StringField = (props: FieldProps) => {
         minRows={2}
         maxRows={field.maxRows || 12}
         value={value}
-        onChange={(e) => onChange(e.currentTarget.value)}
+        onChange={(e: ChangeEvent<HTMLTextAreaElement>) => {
+          onChange(e.currentTarget.value);
+        }}
       />
     );
   }
@@ -237,7 +238,9 @@ DocEditor.StringField = (props: FieldProps) => {
       size="xs"
       radius={0}
       value={value}
-      onChange={(e) => onChange(e.currentTarget.value)}
+      onChange={(e: ChangeEvent<HTMLInputElement>) => {
+        onChange(e.currentTarget.value);
+      }}
     />
   );
 };
@@ -423,7 +426,9 @@ DocEditor.ImageField = (props: FieldProps) => {
             radius={0}
             value={img.alt}
             label="Alt text"
-            onChange={(e) => setAltText(e.target.value)}
+            onChange={(e: ChangeEvent<HTMLInputElement>) => {
+              setAltText(e.currentTarget.value);
+            }}
           />
         </div>
       ) : (

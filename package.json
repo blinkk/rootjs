@@ -11,7 +11,11 @@
     "lint": "eslint . --ext .ts,.tsx",
     "fix": "eslint . --ext .ts,.tsx --fix",
     "version": "changeset version && pnpm install --no-frozen-lockfile",
-    "release": "pnpm run build && changeset publish"
+    "release": "pnpm run build && changeset publish",
+
+    "// workspace aliases": "",
+    "blog": "pnpm run --filter=\"@examples/blog\"",
+    "starter": "pnpm run --filter=\"@examples/starter\""
   },
   "repository": {
     "type": "git",
