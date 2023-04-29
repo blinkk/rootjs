@@ -1,3 +1,4 @@
+import {showNotification} from '@mantine/notifications';
 import {
   doc,
   DocumentReference,
@@ -8,8 +9,8 @@ import {
   deleteField,
 } from 'firebase/firestore';
 import {useEffect, useMemo, useState} from 'preact/hooks';
-
 import {debounce} from '../utils/debounce.js';
+import {EventListener} from '../utils/events.js';
 import {getNestedValue, isObject} from '../utils/objects.js';
 
 const SAVE_DELAY_MS = 3 * 1000;
@@ -22,11 +23,20 @@ export enum SaveState {
   ERROR = 'ERROR',
 }
 
+export enum EventType {
+  /** Changes made to the draft document and are pending a save to the DB. */
+  CHANGE = 'CHANGE',
+  /** The `SaveState` changed. */
+  SAVE_STATE_CHANGE = 'SAVE_STATE_CHANGE',
+  /** Data was saved to the DB. */
+  FLUSH = 'FLUSH',
+}
+
 type Subscribers = Record<string, Set<SubscriberCallback>>;
 type SubscriberCallback = (newValue: any) => void;
 type UnsubscribeCallback = () => void;
 
-export class DraftController {
+export class DraftController extends EventListener {
   readonly projectId: string;
   readonly collectionId: string;
   readonly slug: string;
@@ -34,15 +44,14 @@ export class DraftController {
   private docRef: DocumentReference;
 
   private pendingUpdates = new Map<string, any>();
-  private onChangeCallback?: (data: any) => void;
   private dbUnsubscribe?: () => void;
   private cachedData: any = {};
   private subscribers: Subscribers = {};
   private saveState = SaveState.NO_CHANGES;
-  private onSaveStateChangeCallback?: (saveState: SaveState) => void;
   started = false;
 
   constructor(docId: string) {
+    super();
     this.projectId = window.__ROOT_CTX.rootConfig.projectId;
     const [collectionId, slug] = docId.split('/');
     this.collectionId = collectionId;
@@ -97,17 +106,24 @@ export class DraftController {
   }
 
   /**
-   * Adds a listener for change events.
+   * Adds a listener for data change events.
    */
   onChange(callback: (data: any) => void) {
-    this.onChangeCallback = callback;
+    return this.on(EventType.CHANGE, callback);
   }
 
   /**
    * Adds a listener for save state change events.
    */
   onSaveStateChange(callback: (saveState: SaveState) => void) {
-    this.onSaveStateChangeCallback = callback;
+    return this.on(EventType.SAVE_STATE_CHANGE, callback);
+  }
+
+  /**
+   * Adds a listener for db write events.
+   */
+  onFlush(callback: () => void) {
+    return this.on(EventType.FLUSH, callback);
   }
 
   /**
@@ -135,9 +151,7 @@ export class DraftController {
   notifySubscribers() {
     console.log('notifySubscribers()');
     const data = this.cachedData;
-    if (this.onChangeCallback) {
-      this.onChangeCallback(data);
-    }
+    this.dispatch(EventType.CHANGE, data);
     notify(this.subscribers, data);
   }
 
@@ -157,9 +171,7 @@ export class DraftController {
       this.pendingUpdates.set(key, updates[key]);
     }
     applyUpdates(this.cachedData, updates);
-    if (this.onChangeCallback) {
-      this.onChangeCallback(this.cachedData);
-    }
+    this.dispatch(EventType.CHANGE, this.cachedData);
     this.setSaveState(SaveState.UPDATES_PENDING);
     this.queueChanges();
   }
@@ -170,9 +182,7 @@ export class DraftController {
   async removeKey(key: string) {
     this.pendingUpdates.set(key, deleteField());
     applyUpdates(this.cachedData, {[key]: undefined});
-    if (this.onChangeCallback) {
-      this.onChangeCallback({...this.cachedData});
-    }
+    this.dispatch(EventType.CHANGE, this.cachedData);
     this.setSaveState(SaveState.UPDATES_PENDING);
     this.queueChanges();
   }
@@ -202,9 +212,7 @@ export class DraftController {
       }, SAVE_DELAY_MS);
     }
 
-    if (this.onSaveStateChangeCallback) {
-      this.onSaveStateChangeCallback(newSaveState);
-    }
+    this.dispatch(EventType.SAVE_STATE_CHANGE, newSaveState);
   }
 
   /**
@@ -228,10 +236,17 @@ export class DraftController {
       this.setSaveState(SaveState.SAVING);
       await updateDoc(this.docRef, updates);
       this.setSaveState(SaveState.SAVED);
+      this.dispatch(EventType.FLUSH);
     } catch (err) {
       console.error('failed to update doc');
       console.error(err);
       this.setSaveState(SaveState.ERROR);
+      showNotification({
+        title: 'Failed to save',
+        message: `Failed to save changes to ${this.slug}`,
+        color: 'red',
+        autoClose: false,
+      });
       for (const key in updates) {
         // Ignore sys updates.
         if (key.startsWith('sys.')) {
