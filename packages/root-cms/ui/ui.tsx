@@ -123,5 +123,4 @@ async function updateSession(user: User) {
     console.log(res);
     return;
   }
-  console.log('updated user session');
 }

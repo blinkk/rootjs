@@ -121,7 +121,6 @@ DocumentPage.Preview = (props: PreviewProps) => {
   useEffect(() => {
     const iframe = iframeRef.current!;
     function onIframeLoad() {
-      console.log('iframe load', iframe.contentWindow?.document.title);
       const iframeWindow = iframe.contentWindow;
       if (!iframeWindow) {
         return;
@@ -134,7 +133,6 @@ DocumentPage.Preview = (props: PreviewProps) => {
     iframe.addEventListener('load', onIframeLoad);
 
     const removeOnFlush = props.draft.controller.onFlush(() => {
-      console.log('on flush() -> reloadIframe()');
       reloadIframe();
     });
 

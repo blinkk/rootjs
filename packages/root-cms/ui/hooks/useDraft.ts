@@ -75,7 +75,6 @@ export class DraftController extends EventListener {
     if (this.started) {
       return;
     }
-    console.log('start()');
     this.started = true;
     this.dbUnsubscribe = onSnapshot(this.docRef, (snapshot) => {
       const data = snapshot.data();
@@ -85,7 +84,6 @@ export class DraftController extends EventListener {
         applyUpdates(data, Object.fromEntries(this.pendingUpdates));
       }
       this.cachedData = data;
-      console.log('onSnapshot()', data, this.pendingUpdates);
       this.notifySubscribers();
     });
   }
@@ -97,7 +95,6 @@ export class DraftController extends EventListener {
     if (!this.started) {
       return;
     }
-    console.log('stop()');
     if (this.dbUnsubscribe) {
       this.dbUnsubscribe();
     }
@@ -131,7 +128,6 @@ export class DraftController extends EventListener {
    * that can be used to unsubscribe.
    */
   subscribe(key: string, callback: SubscriberCallback): UnsubscribeCallback {
-    console.log('subscribe()', key);
     this.subscribers[key] ??= new Set();
     this.subscribers[key].add(callback);
     callback(getNestedValue(this.cachedData, key));
@@ -149,7 +145,6 @@ export class DraftController extends EventListener {
    * Notifies subscribers of changes.
    */
   notifySubscribers() {
-    console.log('notifySubscribers()');
     const data = this.cachedData;
     this.dispatch(EventType.CHANGE, data);
     notify(this.subscribers, data);

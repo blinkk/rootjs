@@ -640,7 +640,6 @@ type ArrayAction =
   | ArrayRemoveAt;
 
 function arrayReducer(state: ArrayFieldValue, action: ArrayAction) {
-  console.log(action);
   switch (action.type) {
     case 'update': {
       const newlyAdded = state._new || [];
@@ -783,7 +782,6 @@ DocEditor.ArrayField = (props: FieldProps) => {
     const unsubscribe = props.draft.subscribe(
       props.deepKey,
       (newValue: ArrayFieldValue) => {
-        console.log('onRemoteChange()', newValue);
         dispatch({type: 'update', newValue});
       }
     );
@@ -1166,7 +1164,6 @@ function arrayPreview(
   placeholders._index = String(index);
   placeholders['_index:02'] = placeholders._index.padStart(2, '0');
   placeholders['_index:03'] = placeholders._index.padStart(3, '0');
-  console.log(placeholders);
   while (templates.length > 0) {
     const template = templates.shift()!;
     const preview = strFormat(template, placeholders);
