@@ -258,7 +258,7 @@ async function sha256(file: File) {
 async function uploadFileToGCS(file: File) {
   const projectId = window.__ROOT_CTX.rootConfig.projectId;
   const hashHex = await sha256(file);
-  const ext = file.name.split('.').at(-1);
+  const ext = normalizeExt(file.name.split('.').at(-1) || '');
   const filePath = `${projectId}/uploads/${hashHex}.${ext}`;
   const gcsRef = storageRef(window.firebase.storage, filePath);
   await uploadBytes(gcsRef, file);
@@ -288,6 +288,17 @@ async function uploadFileToGCS(file: File) {
     ...meta,
     src: imageSrc,
   };
+}
+
+/**
+ * Normalizes file extensions like `.PNG` to `.png` and `.JPEG` to `.jpg`.
+ */
+function normalizeExt(ext: string) {
+  let output = String(ext).toLowerCase();
+  if (output === '.jpeg') {
+    output = '.jpg';
+  }
+  return output;
 }
 
 async function getGciUrl(gcsPath: string) {
