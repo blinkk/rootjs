@@ -1,0 +1,17 @@
+.SlugInput__inputs {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.SlugInput__slug {
+  flex: 1;
+}
+
+.SlugInput__urlHelp {
+  margin-top: 8px;
+}
+
+.SlugInput__urlHelp::before {
+  content: 'URL: ';
+}

@@ -1,16 +1,9 @@
-import {Button, Modal, TextInput, useMantineTheme} from '@mantine/core';
-import {
-  collection,
-  doc,
-  getDoc,
-  serverTimestamp,
-  setDoc,
-} from 'firebase/firestore';
-import {useRef, useState} from 'preact/hooks';
+import {Button, Modal, useMantineTheme} from '@mantine/core';
+import {useState} from 'preact/hooks';
 import {route} from 'preact-router';
-
 import {Collection} from '../../../core/schema.js';
-import {useFirebase} from '../../hooks/useFirebase.js';
+import {cmsCreateDoc} from '../../utils/doc.js';
+import {SlugInput} from '../SlugInput/SlugInput.js';
 import './NewDocModal.css';
 
 interface NewDocModalProps {
@@ -40,6 +33,7 @@ function normalizeSlug(slug: string): string {
   return slug
     .replace(/^[\s/]*/g, '')
     .replace(/[\s/]*$/g, '')
+    .replace(/^\/+|\/+$/g, '')
     .toLowerCase()
     .replaceAll('/', '--');
 }
@@ -63,41 +57,14 @@ function getDefaultFields(collection: Collection) {
 
 export function NewDocModal(props: NewDocModalProps) {
   const collectionId = props.collection;
-  const slugRef = useRef<HTMLInputElement>(null);
   const [slug, setSlug] = useState('');
   const [loading, setLoading] = useState(false);
   const [slugError, setSlugError] = useState('');
-  const firebase = useFirebase();
   const theme = useMantineTheme();
-
-  const projectId = window.__ROOT_CTX.rootConfig.projectId;
-  const dbCollection = collection(
-    firebase.db,
-    'Projects',
-    projectId,
-    'Collections',
-    collectionId,
-    'Drafts'
-  );
 
   const rootCollection = window.__ROOT_CTX.collections[collectionId];
   if (!rootCollection) {
     throw new Error(`collection not found: ${collectionId}`);
-  }
-  const domain = window.__ROOT_CTX.rootConfig.domain || 'https://example.com';
-
-  let urlHelp = '';
-  if (rootCollection?.url) {
-    if (slug) {
-      let urlPath = rootCollection.url.replace(/\[.*slug\]/, slug);
-      // Rename `https://example.com/index` to `https://example.com/`.
-      if (urlPath === '/index') {
-        urlPath = '/';
-      }
-      urlHelp = `${domain}${urlPath}`;
-    } else {
-      urlHelp = `${domain}${rootCollection.url}`;
-    }
   }
 
   function onClose() {
@@ -111,35 +78,24 @@ export function NewDocModal(props: NewDocModalProps) {
     setLoading(true);
     setSlugError('');
 
-    const slug = normalizeSlug(String(slugRef.current!.value));
-    if (!isSlugValid(slug)) {
+    const cleanSlug = normalizeSlug(slug);
+    if (!isSlugValid(cleanSlug)) {
       setSlugError('Please enter a valid slug (e.g. "foo-bar-123").');
       setLoading(false);
       return;
     }
 
-    const docId = `${collectionId}/${slug}`;
-    const docRef = doc(dbCollection, slug);
-    const snapshot = await getDoc(docRef);
-    if (await snapshot.exists()) {
-      setSlugError(`${docId} already exists`);
+    const docId = `${collectionId}/${cleanSlug}`;
+    try {
+      const fields = getDefaultFields(rootCollection!);
+      await cmsCreateDoc(docId, {fields});
+    } catch (err) {
+      setSlugError(String(err));
       setLoading(false);
       return;
     }
-    await setDoc(docRef, {
-      id: docId,
-      slug: slug,
-      collection: collectionId,
-      sys: {
-        createdAt: serverTimestamp(),
-        createdBy: window.firebase.user.email,
-        modifiedAt: serverTimestamp(),
-        modifiedBy: window.firebase.user.email,
-      },
-      fields: getDefaultFields(rootCollection!),
-    });
     setLoading(false);
-    route(`/cms/content/${props.collection}/${slug}?new=true`);
+    route(`/cms/content/${props.collection}/${cleanSlug}?new=true`);
   }
 
   return (
@@ -147,7 +103,8 @@ export function NewDocModal(props: NewDocModalProps) {
       className="NewDocModal"
       opened={props.opened || false}
       onClose={() => onClose()}
-      title={`${props.collection}: New doc`}
+      title="New"
+      size="500px"
       overlayColor={
         theme.colorScheme === 'dark'
           ? theme.colors.dark[9]
@@ -160,19 +117,15 @@ export function NewDocModal(props: NewDocModalProps) {
       </div>
 
       <form onSubmit={(e) => onSubmit(e)}>
-        <div className="NewDocModal__slug">
-          <TextInput
-            name="slug"
-            ref={slugRef}
-            value={slug}
-            onChange={(event) => setSlug(event.currentTarget.value)}
-            placeholder="slug"
-            autoComplete="off"
-            size="xs"
-            description={urlHelp}
-            error={slugError}
-          />
-        </div>
+        <SlugInput
+          className="NewDocModal__slug"
+          collectionId={collectionId}
+          onChange={(newValue: {collectionId: string; slug: string}) => {
+            setSlug(newValue.slug);
+          }}
+        />
+
+        {slugError && <div className="NewDocModal__slugError">{slugError}</div>}
 
         <div className="NewDocModal__buttons">
           <Button

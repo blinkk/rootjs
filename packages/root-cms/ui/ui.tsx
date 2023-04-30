@@ -21,6 +21,7 @@ import {SettingsPage} from './pages/SettingsPage/SettingsPage.js';
 import {TranslationsPage} from './pages/TranslationsPage/TranslationsPage.js';
 import './styles/global.css';
 import './styles/theme.css';
+import {CopyDocModal} from './components/CopyDocModal/CopyDocModal.js';
 
 declare global {
   interface Window {
@@ -52,7 +53,7 @@ function App() {
       }}
     >
       <NotificationsProvider>
-        <ModalsProvider>
+        <ModalsProvider modals={{copyDoc: CopyDocModal}}>
           <FirebaseContext.Provider value={window.firebase}>
             <Router>
               <Route path="/cms" component={ProjectPage} />

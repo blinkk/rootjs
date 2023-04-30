@@ -516,7 +516,7 @@ function ImportMenuButton(props: MenuButtonProps) {
       <Divider />
       <Menu.Label>File</Menu.Label>
       <Menu.Item onClick={() => dispatch('import-upload-csv')}>
-        Upload .csv
+        Import .csv
       </Menu.Item>
     </Menu>
   );

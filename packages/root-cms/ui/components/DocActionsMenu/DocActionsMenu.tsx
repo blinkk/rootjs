@@ -1,4 +1,4 @@
-import {ActionIcon, Menu} from '@mantine/core';
+import {ActionIcon, Menu, useMantineTheme} from '@mantine/core';
 import {useModals} from '@mantine/modals';
 import {showNotification, updateNotification} from '@mantine/notifications';
 import {
@@ -27,7 +27,6 @@ export interface DocActionEvent {
 export interface DocActionsMenuProps {
   docId: string;
   data?: DocData;
-  onCopy?: () => void;
   onDelete?: () => void;
   onAction?: (event: DocActionEvent) => void;
 }
@@ -37,14 +36,22 @@ export function DocActionsMenu(props: DocActionsMenuProps) {
   const data = props.data || {};
   const sys = data.sys || {};
   const modals = useModals();
+  const theme = useMantineTheme();
 
   const onCopyDoc = () => {
-    if (props.onCopy) {
-      props.onCopy();
-    }
-    if (props.onAction) {
-      props.onAction({action: 'copy'});
-    }
+    // if (props.onAction) {
+    //   props.onAction({action: 'copy'});
+    // }
+    modals.openContextModal('copyDoc', {
+      title: 'Copy',
+      overlayColor:
+        theme.colorScheme === 'dark'
+          ? theme.colors.dark[9]
+          : theme.colors.gray[2],
+      innerProps: {
+        fromDocId: docId,
+      },
+    });
   };
 
   const onUnpublishDoc = () => {

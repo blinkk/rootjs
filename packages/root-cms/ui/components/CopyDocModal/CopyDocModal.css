@@ -1,0 +1,26 @@
+.CopyDocModal__from__label,
+.CopyDocModal__to__label {
+  margin-bottom: 8px;
+}
+
+.CopyDocModal__from__value code {
+  margin-left: 0;
+}
+
+.CopyDocModal__to {
+  margin-top: 16px;
+}
+
+.CopyDocModal__error {
+  margin: 24px 0;
+  font-size: 14px;
+  color: red;
+  font-weight: 600;
+}
+
+.CopyDocModal__buttons {
+  margin-top: 24px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+}

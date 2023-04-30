@@ -16,7 +16,7 @@ export default function Page(props: Props) {
     <BaseLayout title={fields.meta?.title || 'Blog Post'}>
       <Container>
         <h1>Blog Post</h1>
-        <code>{JSON.stringify(props)}</code>
+        <pre><code>{JSON.stringify(props, null, 2)}</code></pre>
       </Container>
     </BaseLayout>
   );

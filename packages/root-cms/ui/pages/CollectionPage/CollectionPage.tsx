@@ -74,7 +74,7 @@ function useDocsList(collectionId: string, options: {orderBy: string}) {
   useEffect(() => {
     setLoading(true);
     listDocs();
-  }, []);
+  }, [collection, options.orderBy]);
 
   return [loading, listDocs, docs] as const;
 }
