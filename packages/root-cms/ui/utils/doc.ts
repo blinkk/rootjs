@@ -1,4 +1,12 @@
-import {doc, runTransaction, getDoc, serverTimestamp, setDoc} from 'firebase/firestore';
+import {
+  doc,
+  runTransaction,
+  getDoc,
+  serverTimestamp,
+  setDoc,
+  updateDoc,
+} from 'firebase/firestore';
+import {sourceHash} from './l10n.js';
 
 export async function cmsDeleteDoc(docId: string) {
   const projectId = window.__ROOT_CTX.rootConfig.projectId;
@@ -53,7 +61,7 @@ export async function cmsUnpublishDoc(docId: string) {
     slug
   );
   await runTransaction(db, async (transaction) => {
-    const draftDoc = await getDoc(draftDocRef);
+    const draftDoc = await transaction.get(draftDocRef);
     if (!draftDoc.exists()) {
       throw new Error(`${draftDocRef.id} does not exist`);
     }
@@ -108,6 +116,71 @@ export async function cmsCreateDoc(
   await setDoc(docRef, data);
 }
 
+export interface CsvTranslation {
+  [key: string]: string;
+  source: string;
+}
+
+export async function cmsDocImportCsv(
+  docId: string,
+  csvData: CsvTranslation[]
+) {
+  const translationsDocRef = getTranslationsDocRef(docId);
+  const translationsMap: Record<string, CsvTranslation> = {};
+
+  const i18nConfig = window.__ROOT_CTX.rootConfig.i18n || {};
+  const i18nLocales = i18nConfig.locales || ['en'];
+
+  function normalizeStr(str: string) {
+    return String(str).trim();
+  }
+
+  function normalizeLocale(locale: string) {
+    for (const l of i18nLocales) {
+      if (String(l).toLowerCase() === locale.toLowerCase()) {
+        return l;
+      }
+    }
+    return locale;
+  }
+
+  for (const row of csvData) {
+    if (!row.source) {
+      continue;
+    }
+    const translation: CsvTranslation = {
+      source: normalizeStr(row.source),
+    };
+    Object.entries(row).forEach(([column, str]) => {
+      if (column === 'source') {
+        return;
+      }
+      const locale = normalizeLocale(column);
+      translation[locale] = normalizeStr(str || '');
+    });
+
+    const hash = await sourceHash(translation.source);
+    translationsMap[hash] = translation;
+  }
+
+  const db = window.firebase.db;
+  await runTransaction(db, async (transaction) => {
+    const translationsDoc = await transaction.get(translationsDocRef);
+    const currentData = translationsDoc.data() || {};
+    const data = {...currentData};
+    data.sys = {
+      ...(data.sys ?? {}),
+      modifiedAt: serverTimestamp(),
+      modifiedBy: window.firebase.user.email,
+    };
+    data.translations = {
+      ...(data.translations ?? {}),
+      ...translationsMap,
+    };
+    transaction.set(translationsDocRef, data);
+  });
+}
+
 export function getDocRef(docId: string) {
   const projectId = window.__ROOT_CTX.rootConfig.projectId;
   const db = window.firebase.db;
@@ -119,6 +192,21 @@ export function getDocRef(docId: string) {
     'Collections',
     collectionId,
     'Drafts',
+    slug
+  );
+}
+
+export function getTranslationsDocRef(docId: string) {
+  const projectId = window.__ROOT_CTX.rootConfig.projectId;
+  const db = window.firebase.db;
+  const [collectionId, slug] = docId.split('/');
+  return doc(
+    db,
+    'Projects',
+    projectId,
+    'Collections',
+    collectionId,
+    'Translations',
     slug
   );
 }

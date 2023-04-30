@@ -1,3 +1,4 @@
+import {parse as csvParse} from 'csv-parse/sync';
 import {stringify as csvStringify} from 'csv-stringify/sync';
 
 export function arrayToCsv(req: {
@@ -10,4 +11,12 @@ export function arrayToCsv(req: {
     header: true,
     columns: headers,
   });
+}
+
+export function csvToArray(csvString: string) {
+  const rows = csvParse(csvString, {
+    columns: true,
+    skip_empty_lines: true,
+  });
+  return rows;
 }

@@ -71,6 +71,7 @@
 .LocalizationModal__translations__table__col {
   padding-left: 8px;
   padding-right: 8px;
+  text-align: left;
 }
 
 .LocalizationModal__translations__localeSelect {

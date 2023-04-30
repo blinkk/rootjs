@@ -26,8 +26,10 @@ import {doc, getDoc} from 'firebase/firestore';
 import {useEffect, useState} from 'preact/hooks';
 import * as schema from '../../../core/schema.js';
 import {DraftController} from '../../hooks/useDraft.js';
+import {cmsDocImportCsv, getTranslationsDocRef} from '../../utils/doc.js';
 import {Heading} from '../Heading/Heading.js';
 import './LocalizationModal.css';
+import {showNotification} from '@mantine/notifications';
 
 interface LocalizationModalProps {
   draft: DraftController;
@@ -72,11 +74,11 @@ export function LocalizationModal(props: LocalizationModalProps) {
 LocalizationModal.ConfigLocales = (props: LocalizationModalProps) => {
   const [enabledLocales, setEnabledLocales] = useState(['en']);
   const i18nConfig = window.__ROOT_CTX.rootConfig.i18n || {};
-  const podLocales = i18nConfig.locales || ['en'];
+  const i18nLocales = i18nConfig.locales || ['en'];
   const localeGroups: LocaleGroupsConfig = i18nConfig.groups || {
     default: {
       label: '',
-      locales: podLocales,
+      locales: i18nLocales,
     },
   };
 
@@ -126,7 +128,7 @@ LocalizationModal.ConfigLocales = (props: LocalizationModalProps) => {
             <span>Locales</span>
           </Heading>
           <LocalizationModal.AllNoneButtons
-            onAllClicked={() => updateEnabledLocales(podLocales)}
+            onAllClicked={() => updateEnabledLocales(i18nLocales)}
             onNoneClicked={() => updateEnabledLocales([])}
           />
         </Group>
@@ -269,6 +271,9 @@ LocalizationModal.Translations = (props: TranslationsProps) => {
   const [loading, setLoading] = useState(true);
   const [sourceStrings, setSourceStrings] = useState<string[]>([]);
   const [selectedLocale, setSelectedLocale] = useState('');
+  const [localeTranslations, setLocaleTranslations] = useState<
+    Record<string, string>
+  >({});
 
   const locales = window.__ROOT_CTX.rootConfig.i18n.locales || [];
   const localeOptions = locales.map((locale) => ({
@@ -286,6 +291,30 @@ LocalizationModal.Translations = (props: TranslationsProps) => {
       setLoading(false);
     });
   }, [props.opened]);
+
+  useEffect(() => {
+    if (!selectedLocale) {
+      setLocaleTranslations({});
+      return;
+    }
+
+    const translationsRef = getTranslationsDocRef(props.docId);
+    getDoc(translationsRef)
+      .then((translationsDoc) => {
+        const data = translationsDoc.data() || {};
+        return data.translations || {};
+      })
+      .then((translationsMap: Record<string, Record<string, string>>) => {
+        const localeTranslations: Record<string, string> = {};
+        Object.values(translationsMap).forEach(
+          (translation: Record<string, string>) => {
+            localeTranslations[translation.source] =
+              translation[selectedLocale] || '';
+          }
+        );
+        setLocaleTranslations(localeTranslations);
+      });
+  }, [selectedLocale]);
 
   async function downloadCsv() {
     const headers = ['source', 'en'];
@@ -312,10 +341,38 @@ LocalizationModal.Translations = (props: TranslationsProps) => {
     window.URL.revokeObjectURL(file);
   }
 
+  async function importCsv() {
+    const fileInput = document.createElement('input');
+    fileInput.type = 'file';
+    fileInput.accept = '.csv';
+    fileInput.addEventListener('change', async () => {
+      const file = fileInput.files?.[0];
+      if (file) {
+        const formData = new FormData();
+        formData.append('file', file);
+        const res = await fetch('/cms/api/csv.import', {
+          method: 'POST',
+          body: formData,
+        }).then((res) => res.json());
+        await cmsDocImportCsv(props.docId, res.data);
+        showNotification({
+          title: 'Saved!',
+          message: `Successfully imported translations for ${props.docId}.`,
+          autoClose: 5000,
+        });
+      }
+    });
+    fileInput.click();
+  }
+
   function onAction(action: string) {
     switch (action) {
       case 'export-download-csv': {
         downloadCsv();
+        return;
+      }
+      case 'import-csv': {
+        importCsv();
         return;
       }
     }
@@ -400,7 +457,7 @@ LocalizationModal.Translations = (props: TranslationsProps) => {
                 })}
               >
                 <Text size="xs" sx={{whiteSpace: 'pre-wrap'}}>
-                  &nbsp;
+                  {localeTranslations[source] || ' '}
                 </Text>
               </Box>
             </td>
@@ -515,14 +572,10 @@ function ImportMenuButton(props: MenuButtonProps) {
       </Menu.Item>
       <Divider />
       <Menu.Label>File</Menu.Label>
-      <Menu.Item onClick={() => dispatch('import-upload-csv')}>
-        Import .csv
-      </Menu.Item>
+      <Menu.Item onClick={() => dispatch('import-csv')}>Import .csv</Menu.Item>
     </Menu>
   );
 }
-
-
 
 function ExportMenuButton(props: MenuButtonProps) {
   function dispatch(action: string) {
