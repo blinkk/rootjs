@@ -1,5 +1,11 @@
 # @blinkk/rds
 
+## 1.0.0-beta.8
+
+### Patch Changes
+
+- @blinkk/root@1.0.0-beta.25
+
 ## 1.0.0-beta.7
 
 ### Patch Changes
