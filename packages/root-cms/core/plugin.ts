@@ -271,8 +271,10 @@ export function cmsPlugin(options: CMSPluginOptions): CMSPlugin {
             const idToken = req.body.idToken!;
 
             let sessionCookie: string;
+            let secureCookie = true;
             if (process.env.NODE_ENV === 'development') {
               sessionCookie = idToken;
+              secureCookie = false;
             } else {
               sessionCookie = await auth.createSessionCookie(idToken, {
                 expiresIn,
@@ -281,7 +283,7 @@ export function cmsPlugin(options: CMSPluginOptions): CMSPlugin {
             res.cookie(SESSION_COOKIE, sessionCookie, {
               maxAge: expiresIn,
               httpOnly: true,
-              secure: true,
+              secure: secureCookie,
             });
             res.json({success: true});
           } catch (err) {
