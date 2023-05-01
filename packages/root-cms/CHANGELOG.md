@@ -1,5 +1,18 @@
 # @blinkk/root-cms
 
+## 1.0.0-beta.25
+
+### Minor Changes
+
+- 6119500: feat: auto reload iframe when db is saved
+- 35310eb: feat: add import csv translations
+- da0e4ef: feat: add copy doc action menu
+
+### Patch Changes
+
+- a79aebc: fix: set cookie to secure=false on dev
+  - @blinkk/root@1.0.0-beta.25
+
 ## 1.0.0-beta.24
 
 ### Patch Changes
