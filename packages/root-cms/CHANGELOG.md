@@ -1,5 +1,16 @@
 # @blinkk/root-cms
 
+## 1.0.0-beta.28
+
+### Minor Changes
+
+- 0523622: feat: use signed cookies for auth
+
+### Patch Changes
+
+- Updated dependencies [5369f0e]
+  - @blinkk/root@1.0.0-beta.28
+
 ## 1.0.0-beta.27
 
 ### Patch Changes
