@@ -1,5 +1,11 @@
 # @blinkk/root
 
+## 1.0.0-beta.26
+
+### Patch Changes
+
+- cfa193f: fix: allow custom asset url path formats
+
 ## 1.0.0-beta.25
 
 ## 1.0.0-beta.24

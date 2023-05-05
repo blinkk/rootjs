@@ -1,5 +1,12 @@
 # @blinkk/root-cms
 
+## 1.0.0-beta.26
+
+### Patch Changes
+
+- Updated dependencies [cfa193f]
+  - @blinkk/root@1.0.0-beta.26
+
 ## 1.0.0-beta.25
 
 ### Minor Changes
