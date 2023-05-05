@@ -1,3 +1,4 @@
+/* eslint-disable no-control-regex */
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 
@@ -395,10 +396,16 @@ function printFileOutput(
   );
 }
 
-function sanitizeFileName(name: string) {
-  return name
-    .replaceAll('...', '')
-    .replaceAll('_', '')
-    .replaceAll('[', '')
-    .replaceAll(']', '');
+function sanitizeFileName(name: string): string {
+  return (
+    name
+      // Remove placeholder vars from paths like routes/[...var].tsx.
+      .replaceAll('...', '')
+      .replaceAll('_', '')
+      .replaceAll('[', '')
+      .replaceAll(']', '')
+      // Remove non-ascii chars and null bytes.
+      .replace(/[^\x00-\x7F]/g, '')
+      .replace(/\x00/g, '')
+  );
 }
