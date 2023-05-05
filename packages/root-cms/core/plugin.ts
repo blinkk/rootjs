@@ -21,7 +21,9 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 type AppModule = typeof import('./app.js');
 
-const SESSION_COOKIE = '_rootjs_cms';
+// The session cookie name needs to match what's allowed by Firebase Hosting.
+// https://firebase.google.com/docs/hosting/manage-cache#using_cookies
+const SESSION_COOKIE = '__session';
 
 export type CMSUser = DecodedIdToken;
 
