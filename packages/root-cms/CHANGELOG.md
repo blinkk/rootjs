@@ -1,5 +1,12 @@
 # @blinkk/root-cms
 
+## 1.0.0-beta.29
+
+### Patch Changes
+
+- 46f2f59: fix: update session cookie name to match firebase
+  - @blinkk/root@1.0.0-beta.29
+
 ## 1.0.0-beta.28
 
 ### Minor Changes
