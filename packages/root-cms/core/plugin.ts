@@ -133,6 +133,7 @@ export function cmsPlugin(options: CMSPluginOptions): CMSPlugin {
   async function verifyUserLogin(req: Request): Promise<boolean> {
     const idToken = req.body?.idToken;
     if (!idToken) {
+      console.log('login failed: no id token');
       return false;
     }
 
@@ -148,13 +149,19 @@ export function cmsPlugin(options: CMSPluginOptions): CMSPlugin {
     try {
       const jwt = await auth.verifyIdToken(idToken, true);
       if (isExpired(jwt)) {
+        console.log('login failed: id token is expired');
         return false;
       }
       if (!jwt.email || !jwt.email_verified) {
+        console.log('login failed: email unverified');
         return false;
       }
       if (options.isUserAuthorized) {
-        return await options.isUserAuthorized(req, jwt);
+        const authorized = await options.isUserAuthorized(req, jwt);
+        if (!authorized) {
+          console.log('login failed: user is not authorized');
+        }
+        return authorized;
       }
     } catch (err) {
       console.error('failed to verify jwt token');
@@ -170,8 +177,9 @@ export function cmsPlugin(options: CMSPluginOptions): CMSPlugin {
    * CMS. Returns true if access is granted.
    */
   async function verifyUserSession(req: Request): Promise<boolean> {
-    const sessionCookie = String(req.cookies[SESSION_COOKIE] || '');
+    const sessionCookie = String(req.signedCookies[SESSION_COOKIE] || '');
     if (!sessionCookie) {
+      console.log('session failed: no session cookie');
       return false;
     }
 
@@ -184,13 +192,19 @@ export function cmsPlugin(options: CMSPluginOptions): CMSPlugin {
     try {
       const jwt = await auth.verifySessionCookie(sessionCookie, true);
       if (isExpired(jwt)) {
+        console.log('session failed: token is expired');
         return false;
       }
       if (!jwt.email || !jwt.email_verified) {
+        console.log('session failed: email not verified');
         return false;
       }
       if (options.isUserAuthorized) {
-        return await options.isUserAuthorized(req, jwt);
+        const authorized = await options.isUserAuthorized(req, jwt);
+        if (!authorized) {
+          console.log('session failed: not authorized');
+        }
+        return authorized;
       }
       // TODO(stevenle): decide whether we want to enforce `isUserAuthorized()`.
       return true;
@@ -284,6 +298,7 @@ export function cmsPlugin(options: CMSPluginOptions): CMSPlugin {
               maxAge: expiresIn,
               httpOnly: true,
               secure: secureCookie,
+              signed: true,
             });
             res.json({success: true});
           } catch (err) {
@@ -331,6 +346,7 @@ export function cmsPlugin(options: CMSPluginOptions): CMSPlugin {
           res.status(401).json({success: false, error: 'NOT_AUTHORIZED'});
           return;
         }
+        console.log('redirecting to login page');
         const params = new URLSearchParams({
           continue: req.originalUrl,
         });
