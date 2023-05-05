@@ -1,5 +1,11 @@
 # @blinkk/root
 
+## 1.0.0-beta.28
+
+### Patch Changes
+
+- 5369f0e: fix: sanitize filenames with non-ascii chars
+
 ## 1.0.0-beta.27
 
 ### Patch Changes
