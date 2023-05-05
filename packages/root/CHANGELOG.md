@@ -1,5 +1,11 @@
 # @blinkk/root
 
+## 1.0.0-beta.27
+
+### Patch Changes
+
+- dd0926d: feat: sanitize output files by default
+
 ## 1.0.0-beta.26
 
 ### Patch Changes
