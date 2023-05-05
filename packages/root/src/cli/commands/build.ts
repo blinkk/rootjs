@@ -214,9 +214,9 @@ export async function build(rootProjectDir?: string, options?: BuildOptions) {
   // routes manifest to ignore imported modules. Then add the route assets to
   // the client manifest.
   await copyGlob(
-    '*.css',
-    path.join(distDir, 'routes/assets'),
-    path.join(distDir, 'client/assets')
+    '**/*.css',
+    path.join(distDir, 'routes'),
+    path.join(distDir, 'client')
   );
   const routesManifest = await loadJson<Manifest>(
     path.join(distDir, 'routes/manifest.json')
@@ -288,8 +288,6 @@ export async function build(rootProjectDir?: string, options?: BuildOptions) {
   } else {
     await makeDir(buildDir);
   }
-  await makeDir(path.join(buildDir, 'assets'));
-  await makeDir(path.join(buildDir, 'chunks'));
 
   // Copy files from `dist/client/{assets,chunks}` to `dist/html` using the
   // root manifest. Ignore route files.

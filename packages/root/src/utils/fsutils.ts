@@ -91,3 +91,18 @@ export async function directoryContains(
   const rel = path.relative(outer, inner);
   return !rel.startsWith('..');
 }
+
+export async function listFilesRecursive(dirPath: string): Promise<string[]> {
+  const files: string[] = [];
+  const entries = await fs.readdir(dirPath, {withFileTypes: true});
+  for (const entry of entries) {
+    const fullPath = path.join(dirPath, entry.name);
+    if (entry.isDirectory()) {
+      const subFiles = await listFilesRecursive(fullPath);
+      files.push(...subFiles);
+    } else {
+      files.push(fullPath);
+    }
+  }
+  return files;
+}
