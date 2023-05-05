@@ -129,6 +129,7 @@ export async function build(rootProjectDir?: string, options?: BuildOptions) {
           format: 'esm',
           chunkFileNames: 'chunks/[name].[hash].min.js',
           assetFileNames: 'assets/[name].[hash][extname]',
+          sanitizeFileName: sanitizeFileName,
         },
       },
       outDir: path.join(distDir, 'server'),
@@ -161,6 +162,7 @@ export async function build(rootProjectDir?: string, options?: BuildOptions) {
           entryFileNames: 'assets/[name].[hash].min.js',
           chunkFileNames: 'chunks/[name].[hash].min.js',
           assetFileNames: 'assets/[name].[hash][extname]',
+          sanitizeFileName: sanitizeFileName,
           ...viteConfig?.build?.rollupOptions?.output,
         },
       },
@@ -192,6 +194,7 @@ export async function build(rootProjectDir?: string, options?: BuildOptions) {
             entryFileNames: 'assets/[name].[hash].min.js',
             chunkFileNames: 'chunks/[name].[hash].min.js',
             assetFileNames: 'assets/[name].[hash][extname]',
+            sanitizeFileName: sanitizeFileName,
             ...viteConfig?.build?.rollupOptions?.output,
           },
         },
@@ -390,4 +393,12 @@ function printFileOutput(
   console.log(
     `${indent}${dim(paddedSize)}  ${dim(outputDir)}${cyan(outputFile)}`
   );
+}
+
+function sanitizeFileName(name: string) {
+  return name
+    .replaceAll('...', '')
+    .replaceAll('_', '')
+    .replaceAll('[', '')
+    .replaceAll(']', '');
 }
