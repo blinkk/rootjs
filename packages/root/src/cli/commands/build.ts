@@ -407,5 +407,6 @@ function sanitizeFileName(name: string): string {
       // Remove non-ascii chars and null bytes.
       .replace(/[^\x00-\x7F]/g, '')
       .replace(/\x00/g, '')
+      .toLowerCase()
   );
 }
