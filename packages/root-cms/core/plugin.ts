@@ -301,6 +301,7 @@ export function cmsPlugin(options: CMSPluginOptions): CMSPlugin {
               httpOnly: true,
               secure: secureCookie,
               signed: true,
+              sameSite: 'strict',
             });
             res.json({success: true});
           } catch (err) {
