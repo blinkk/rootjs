@@ -1,5 +1,11 @@
 # @blinkk/root
 
+## 1.0.0-beta.30
+
+### Patch Changes
+
+- 5c55dc2: fix: use lowercase output file names
+
 ## 1.0.0-beta.29
 
 ## 1.0.0-beta.28

@@ -1,5 +1,13 @@
 # @blinkk/root-cms
 
+## 1.0.0-beta.30
+
+### Patch Changes
+
+- 5c55dc2: fix: set SameSite cookie attr
+- Updated dependencies [5c55dc2]
+  - @blinkk/root@1.0.0-beta.30
+
 ## 1.0.0-beta.29
 
 ### Patch Changes
