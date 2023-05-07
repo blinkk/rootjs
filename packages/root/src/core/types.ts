@@ -94,7 +94,7 @@ export interface HandlerContext<T = any> {
    */
   i18nFallbackLocales: string[];
   /** Renders the default exported component from the route. */
-  render: (props: T) => Promise<void>;
+  render: HandlerRenderFn;
   /** Renders a 404 page. */
   render404: () => Promise<void>;
 }
