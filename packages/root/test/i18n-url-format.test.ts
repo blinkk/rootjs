@@ -37,6 +37,7 @@ test('build i18n-url-format project', async () => {
     <h1>Hello world!</h1>
     <p>custom translation (en)</p>
     <p>Current locale: en</p>
+    <p>Current path: /</p>
     </body>
     </html>
     "
@@ -55,6 +56,7 @@ test('build i18n-url-format project', async () => {
     <h1>Bonjour le monde !</h1>
     <p>custom translation (fr)</p>
     <p>Current locale: fr</p>
+    <p>Current path: /intl/fr/</p>
     </body>
     </html>
     "
@@ -70,6 +72,7 @@ test('build i18n-url-format project', async () => {
     <meta charset=\\"utf-8\\">
     </head>
     <body>
+    <p>Current path: /foo/bar</p>
     <p>Locale from params: en</p>
     </body>
     </html>
@@ -86,6 +89,7 @@ test('build i18n-url-format project', async () => {
     <meta charset=\\"utf-8\\">
     </head>
     <body>
+    <p>Current path: /intl/fr/foo/bar</p>
     <p>Locale from params: fr</p>
     </body>
     </html>

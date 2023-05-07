@@ -4,6 +4,11 @@ import {useContext} from 'preact/hooks';
 import {Route} from '../types';
 
 export interface RequestContext {
+  /**
+   * The current request path, e.g. `/foo/bar` (default route path) or
+   * `/{locale}/foo/bar` (localized route path).
+   */
+  currentPath: string;
   /** The route file. */
   route: Route;
   /**

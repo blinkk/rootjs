@@ -39,8 +39,8 @@ export function getRoutes(config: RootConfig) {
       module: routes[modulePath] as RouteModule,
       locale: defaultLocale,
       isDefaultLocale: true,
-      routePath,
-      localeRoutePath,
+      routePath: normalizeUrlPath(routePath),
+      localeRoutePath: normalizeUrlPath(localeRoutePath),
     });
 
     // At the moment, all routes are assumed to use the site-wide i18n config.
@@ -85,7 +85,7 @@ export async function getAllPathsForRoute(
             );
           } else {
             urlPaths.push({
-              urlPath: replaceParams(urlPathFormat, pathParams.params),
+              urlPath: normalizeUrlPath(urlPath),
               params: pathParams.params || {},
             });
           }
@@ -97,7 +97,7 @@ export async function getAllPathsForRoute(
       `path contains placeholders: ${urlPathFormat}, did you forget to define getStaticPaths()? more info: https://rootjs.dev/guide/routes#getStaticPaths`
     );
   } else {
-    urlPaths.push({urlPath: urlPathFormat, params: {}});
+    urlPaths.push({urlPath: normalizeUrlPath(urlPathFormat), params: {}});
   }
   return urlPaths;
 }
@@ -116,6 +116,13 @@ export function replaceParams(
       return val;
     }
   );
+  return urlPath;
+}
+
+export function normalizeUrlPath(urlPath: string) {
+  if (urlPath !== '/' && urlPath.endsWith('/')) {
+    urlPath = urlPath.replace(/\/*$/g, '');
+  }
   return urlPath;
 }
 

@@ -12,6 +12,7 @@ export default function Page() {
       <h1>{t('Hello world!')}</h1>
       <p>{t('custom translation')}</p>
       <p>Current locale: {ctx.route.locale}</p>
+      <p>Current path: {ctx.currentPath}</p>
     </>
   );
 }

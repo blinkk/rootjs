@@ -26,7 +26,7 @@ import {htmlMinify} from './html-minify';
 import {htmlPretty} from './html-pretty';
 import {getFallbackLocales} from './i18n-fallbacks';
 import {RouteTrie} from './route-trie';
-import {getRoutes, getAllPathsForRoute} from './router';
+import {getRoutes, getAllPathsForRoute, replaceParams} from './router';
 
 interface RenderHtmlOptions {
   /** Attrs passed to the <html> tag, e.g. `{lang: 'en'}`. */
@@ -86,9 +86,11 @@ export class Renderer {
         render404();
         return;
       }
+      const currentPath = req.path;
       const locale = options?.locale || route.locale;
       const translations = options?.translations;
       const output = await this.renderComponent(route.module.default, props, {
+        currentPath,
         route,
         routeParams,
         locale,
@@ -101,7 +103,7 @@ export class Renderer {
         html = await htmlMinify(html, this.rootConfig.minifyHtmlOptions);
       }
       if (req.viteServer) {
-        html = await req.viteServer.transformIndexHtml(req.originalUrl, html);
+        html = await req.viteServer.transformIndexHtml(currentPath, html);
       }
       // Override the status code for 404 and 500 routes, which are defined at
       // routes/404.tsx and routes/500.tsx respectively.
@@ -146,19 +148,21 @@ export class Renderer {
     Component: ComponentType,
     props: any,
     options: {
+      currentPath: string;
       route: Route;
       routeParams: RouteParams;
       locale: string;
       translations?: Record<string, string>;
     }
   ) {
-    const {route, routeParams} = options;
+    const {currentPath, route, routeParams} = options;
     const locale = options.locale;
     const translations = {
       ...getTranslations(locale),
       ...(options.translations || {}),
     };
     const ctx: RequestContext = {
+      currentPath,
       route,
       props,
       routeParams,
@@ -269,7 +273,15 @@ export class Renderer {
         translations = propsData.translations;
       }
     }
+    const routePath = route.isDefaultLocale
+      ? route.routePath
+      : route.localeRoutePath;
+    const currentPath = replaceParams(routePath, {
+      ...routeParams,
+      locale: locale,
+    });
     return this.renderComponent(Component, props, {
+      currentPath,
       route,
       routeParams,
       locale,
@@ -312,14 +324,15 @@ export class Renderer {
     return `<!doctype html>\n${renderToString(page)}\n`;
   }
 
-  async render404() {
+  async render404(options?: {currentPath?: string}) {
+    const currentPath = options?.currentPath || '/404';
     const [route, routeParams] = this.routes.get('/404');
     if (route && route.src === 'routes/404.tsx' && route.module.default) {
       const Component = route.module.default;
       return this.renderComponent(
         Component,
         {},
-        {route, routeParams, locale: 'en'}
+        {currentPath, route, routeParams, locale: 'en'}
       );
     }
 
@@ -343,14 +356,15 @@ export class Renderer {
     return {html};
   }
 
-  async renderError(err: any) {
+  async renderError(err: any, options?: {currentPath?: string}) {
+    const currentPath = options?.currentPath || '/500';
     const [route, routeParams] = this.routes.get('/500');
     if (route && route.src === 'routes/500.tsx' && route.module.default) {
       const Component = route.module.default;
       return this.renderComponent(
         Component,
         {error: err},
-        {route, routeParams, locale: 'en'}
+        {currentPath, route, routeParams, locale: 'en'}
       );
     }
 

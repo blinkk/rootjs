@@ -1,12 +1,18 @@
-import {GetStaticPaths, GetStaticProps} from '../../../../../dist/core';
+import {
+  GetStaticPaths,
+  GetStaticProps,
+  useRequestContext,
+} from '../../../../../dist/core';
 
 interface PageProps {
   localeFromParams: string;
 }
 
 export default function Page(props: PageProps) {
+  const ctx = useRequestContext();
   return (
     <>
+      <p>Current path: {ctx.currentPath}</p>
       <p>Locale from params: {props.localeFromParams}</p>
     </>
   );
