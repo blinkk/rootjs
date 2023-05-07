@@ -27,10 +27,26 @@
       "types": "./dist/core.d.ts",
       "import": "./dist/core.js"
     },
+    "./cli": {
+      "types": "./dist/cli.d.ts",
+      "import": "./dist/cli.js"
+    },
     "./client": "./client.d.ts",
-    "./*": {
-      "types": "./dist/*.d.ts",
-      "import": "./dist/*.js"
+    "./core": {
+      "types": "./dist/core.d.ts",
+      "import": "./dist/core.js"
+    },
+    "./functions": {
+      "types": "./dist/functions.d.ts",
+      "import": "./dist/functions.js"
+    },
+    "./node": {
+      "types": "./dist/node.d.ts",
+      "import": "./dist/node.js"
+    },
+    "./render": {
+      "types": "./dist/render.d.ts",
+      "import": "./dist/render.js"
     }
   },
   "scripts": {
@@ -55,8 +71,18 @@
     "vite": "4.2.0"
   },
   "peerDependencies": {
+    "firebase-admin": ">=11",
+    "firebase-functions": ">=4",
     "preact": "10.x",
     "preact-render-to-string": "5.x"
+  },
+  "peerDependenciesMeta": {
+    "firebase-functions": {
+      "optional": true
+    },
+    "firebase-admin": {
+      "optional": true
+    }
   },
   "devDependencies": {
     "@types/compression": "^1.7.2",
@@ -66,6 +92,8 @@
     "@types/js-beautify": "^1.13.3",
     "@types/node": "^18.7.14",
     "@types/preact-custom-element": "^4.0.1",
+    "firebase-admin": "^11.5.0",
+    "firebase-functions": "^4.3.1",
     "nodemon": "^2.0.19",
     "preact": "^10.10.6",
     "preact-custom-element": "^4.2.1",

@@ -6,12 +6,16 @@ export default defineConfig({
   entry: {
     cli: 'src/cli/cli.ts',
     core: 'src/core/core.ts',
-    render: 'src/render/render.tsx',
+    functions: 'src/functions/functions.ts',
     node: 'src/node/node.ts',
+    render: 'src/render/render.tsx',
   },
   sourcemap: true,
   target: 'node16',
   dts: true,
   format: ['esm'],
   splitting: true,
+  esbuildOptions: (options) => {
+    options.chunkNames = 'chunks/[hash]';
+  },
 });
