@@ -15,7 +15,4 @@ export default defineConfig({
   dts: true,
   format: ['esm'],
   splitting: true,
-  esbuildOptions: (options) => {
-    options.chunkNames = 'chunks/[hash]';
-  },
 });
