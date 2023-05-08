@@ -1,5 +1,17 @@
 # @blinkk/root
 
+## 1.0.0-beta.31
+
+### Minor Changes
+
+- fd0bf90: feat: add functions subpackage for GCF
+- 06fbcf9: feat: add currentUrl to request context
+
+### Patch Changes
+
+- 5a3fd59: fix: use only hash in chunk filenames
+- 4b0a586: fix: fix handler render type def
+
 ## 1.0.0-beta.30
 
 ### Patch Changes
