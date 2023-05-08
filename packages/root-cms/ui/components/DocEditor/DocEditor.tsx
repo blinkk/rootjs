@@ -245,9 +245,9 @@ DocEditor.StringField = (props: FieldProps) => {
   );
 };
 
-async function sha256(file: File) {
+async function sha1(file: File) {
   const buffer = await file.arrayBuffer();
-  const hashBuffer = await crypto.subtle.digest('SHA-256', buffer);
+  const hashBuffer = await crypto.subtle.digest('SHA-1', buffer);
   const hashArray = Array.from(new Uint8Array(hashBuffer));
   const hashHex = hashArray
     .map((b) => b.toString(16).padStart(2, '0'))
@@ -257,7 +257,7 @@ async function sha256(file: File) {
 
 async function uploadFileToGCS(file: File) {
   const projectId = window.__ROOT_CTX.rootConfig.projectId;
-  const hashHex = await sha256(file);
+  const hashHex = await sha1(file);
   const ext = normalizeExt(file.name.split('.').at(-1) || '');
   const filePath = `${projectId}/uploads/${hashHex}.${ext}`;
   const gcsRef = storageRef(window.firebase.storage, filePath);
@@ -269,15 +269,17 @@ async function uploadFileToGCS(file: File) {
   meta.uploadedAt = String(Math.floor(new Date().getTime()));
   const gcsPath = `/${gcsRef.bucket}/${gcsRef.fullPath}`;
   let imageSrc = `https://storage.googleapis.com${gcsPath}`;
-  if (ext === 'jpg' || ext === 'png') {
+  if (ext === 'jpg' || ext === 'png' || ext === 'svg') {
     const dimens = await getImageDimensions(file);
     meta.width = String(dimens.width);
     meta.height = String(dimens.height);
 
-    const gciUrl = await getGciUrl(gcsPath);
-    if (gciUrl) {
-      meta.gcsPath = gcsPath;
-      imageSrc = gciUrl;
+    if (ext === 'jpg' || ext === 'png') {
+      const gciUrl = await getGciUrl(gcsPath);
+      if (gciUrl) {
+        meta.gcsPath = gcsPath;
+        imageSrc = gciUrl;
+      }
     }
   }
   if (Object.keys(meta).length > 0) {
@@ -338,7 +340,7 @@ async function getImageDimensions(
 }
 
 DocEditor.ImageField = (props: FieldProps) => {
-  // const field = props.field as schema.ImageField;
+  const field = props.field as schema.ImageField;
   const [img, setImg] = useState<any>({});
   const inputRef = useRef<HTMLInputElement>(null);
   const [loading, setLoading] = useState(false);
@@ -352,6 +354,9 @@ DocEditor.ImageField = (props: FieldProps) => {
     );
     return unsubscribe;
   }, []);
+
+  const exts = field.exts ?? ['.png', '.jpg', '.jpeg', '.svg'];
+  const accept = exts.join(', ');
 
   async function onFileChange(e: Event) {
     try {
@@ -459,7 +464,7 @@ DocEditor.ImageField = (props: FieldProps) => {
       >
         <input
           type="file"
-          accept="image/png, image/jpeg"
+          accept={accept}
           onChange={onFileChange}
           ref={inputRef}
         />
