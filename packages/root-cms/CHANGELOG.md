@@ -1,5 +1,19 @@
 # @blinkk/root-cms
 
+## 1.0.0-beta.31
+
+### Minor Changes
+
+- 9afd451: feat: add svg to accept image types
+
+### Patch Changes
+
+- Updated dependencies [5a3fd59]
+- Updated dependencies [4b0a586]
+- Updated dependencies [fd0bf90]
+- Updated dependencies [06fbcf9]
+  - @blinkk/root@1.0.0-beta.31
+
 ## 1.0.0-beta.30
 
 ### Patch Changes
