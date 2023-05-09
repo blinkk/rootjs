@@ -93,6 +93,11 @@ export interface HandlerContext<T = any> {
    * https://firebase.google.com/docs/hosting/i18n-rewrites#priority-order
    */
   i18nFallbackLocales: string[];
+  /**
+   * Iterates through the i18nFallbackLocales and returns the first available
+   * locale.
+   */
+  getPreferredLocale: (availableLocales: string[]) => string;
   /** Renders the default exported component from the route. */
   render: HandlerRenderFn;
   /** Renders a 404 page. */

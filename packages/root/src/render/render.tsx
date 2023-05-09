@@ -70,6 +70,16 @@ export class Renderer {
     const fallbackLocales = route.isDefaultLocale
       ? getFallbackLocales(req)
       : [route.locale];
+    const getPreferredLocale = (availableLocales: string[]) => {
+      const lowerLocales = availableLocales.map((l) => l.toLowerCase());
+      const index = fallbackLocales.findIndex((locale) => {
+        return lowerLocales.includes(locale.toLowerCase());
+      });
+      if (index >= 0) {
+        return availableLocales[index];
+      }
+      return req.rootConfig?.i18n?.defaultLocale || 'en';
+    };
 
     const render404 = async () => {
       // Calling next() will allow the dev server or prod server handle the 404
@@ -121,6 +131,7 @@ export class Renderer {
         route: route,
         params: routeParams,
         i18nFallbackLocales: fallbackLocales,
+        getPreferredLocale: getPreferredLocale,
         render: render,
         render404: render404,
       };
