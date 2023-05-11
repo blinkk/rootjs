@@ -1,5 +1,17 @@
 # @blinkk/root-cms
 
+## 1.0.0-beta.32
+
+### Minor Changes
+
+- 1f06f4e: feat: add revert draft action
+- ab2f82d: feat: add scheduled publishing
+
+### Patch Changes
+
+- Updated dependencies [e5ec123]
+  - @blinkk/root@1.0.0-beta.32
+
 ## 1.0.0-beta.31
 
 ### Minor Changes
