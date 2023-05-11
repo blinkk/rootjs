@@ -1,27 +1,8 @@
 import {Plugin, RootConfig} from '@blinkk/root';
-import {applicationDefault, getApp, initializeApp} from 'firebase-admin/app';
 import {FieldValue, Query, getFirestore} from 'firebase-admin/firestore';
 
 import {CMSPlugin} from './plugin.js';
 
-const APP_NAME = 'root-cms';
-
-export function getFirebaseApp(gcpProjectId: string) {
-  try {
-    return getApp(APP_NAME);
-  } catch (err) {
-    if (err && err.code === 'app/no-app') {
-      return initializeApp(
-        {
-          projectId: gcpProjectId,
-          credential: applicationDefault(),
-        },
-        APP_NAME
-      );
-    }
-    throw err;
-  }
-}
 
 export interface GetDocOptions {
   mode: 'draft' | 'published';
@@ -39,10 +20,9 @@ export async function getDoc<T>(
   const cmsPlugin = getCmsPlugin(rootConfig);
   const cmsPluginOptions = cmsPlugin.getConfig();
   const projectId = cmsPluginOptions.id || 'default';
-  const gcpProjectId = cmsPluginOptions.firebaseConfig.projectId;
   const mode = options.mode;
   const modeCollection = mode === 'draft' ? 'Drafts' : 'Published';
-  const app = getFirebaseApp(gcpProjectId);
+  const app = cmsPlugin.getFirebaseApp();
   const db = getFirestore(app);
   // Slugs with slashes are encoded as `--` in the DB.
   slug = slug.replaceAll('/', '--');
@@ -77,10 +57,9 @@ export async function listDocs<T>(
   const cmsPlugin = getCmsPlugin(rootConfig);
   const cmsPluginOptions = cmsPlugin.getConfig();
   const projectId = cmsPluginOptions.id || 'default';
-  const gcpProjectId = cmsPluginOptions.firebaseConfig.projectId;
   const mode = options.mode;
   const modeCollection = mode === 'draft' ? 'Drafts' : 'Published';
-  const app = getFirebaseApp(gcpProjectId);
+  const app = cmsPlugin.getFirebaseApp();
   const db = getFirestore(app);
   const dbPath = `Projects/${projectId}/Collections/${collectionId}/${modeCollection}`;
   let query: Query = db.collection(dbPath);
@@ -118,10 +97,9 @@ export async function numDocs(
   const cmsPlugin = getCmsPlugin(rootConfig);
   const cmsPluginOptions = cmsPlugin.getConfig();
   const projectId = cmsPluginOptions.id || 'default';
-  const gcpProjectId = cmsPluginOptions.firebaseConfig.projectId;
   const mode = options.mode;
   const modeCollection = mode === 'draft' ? 'Drafts' : 'Published';
-  const app = getFirebaseApp(gcpProjectId);
+  const app = cmsPlugin.getFirebaseApp();
   const db = getFirestore(app);
   const dbPath = `Projects/${projectId}/Collections/${collectionId}/${modeCollection}`;
   const query: Query = db.collection(dbPath);
@@ -138,8 +116,7 @@ export async function publishScheduledDocs(rootConfig: RootConfig) {
   const cmsPlugin = getCmsPlugin(rootConfig);
   const cmsPluginOptions = cmsPlugin.getConfig();
   const projectId = cmsPluginOptions.id || 'default';
-  const gcpProjectId = cmsPluginOptions.firebaseConfig.projectId;
-  const app = getFirebaseApp(gcpProjectId);
+  const app = cmsPlugin.getFirebaseApp();
   const db = getFirestore(app);
 
   const projectCollectionsPath = `Projects/${projectId}/Collections`;

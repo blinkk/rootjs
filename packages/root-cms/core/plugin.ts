@@ -12,7 +12,12 @@ import {
 } from '@blinkk/root';
 import bodyParser from 'body-parser';
 import cookieParser from 'cookie-parser';
-import {applicationDefault, initializeApp} from 'firebase-admin/app';
+import {
+  App,
+  applicationDefault,
+  getApp,
+  initializeApp,
+} from 'firebase-admin/app';
 import {getAuth, DecodedIdToken} from 'firebase-admin/auth';
 import sirv from 'sirv';
 import {api} from './api.js';
@@ -85,6 +90,7 @@ export type CMSPluginOptions = {
 export type CMSPlugin = Plugin & {
   name: 'root-cms';
   getConfig: () => CMSPluginOptions;
+  getFirebaseApp: () => App;
 };
 
 function generateSecret(): string {
@@ -103,13 +109,28 @@ function isExpired(decodedIdToken: DecodedIdToken) {
   return ts >= decodedIdToken.exp;
 }
 
+function getFirebaseApp(gcpProjectId: string): App {
+  const appName = 'root-cms';
+  try {
+    return getApp(appName);
+  } catch (err) {
+    if (err && err.code === 'app/no-app') {
+      return initializeApp(
+        {
+          projectId: gcpProjectId,
+          credential: applicationDefault(),
+        },
+        appName
+      );
+    }
+    throw err;
+  }
+}
+
 export function cmsPlugin(options: CMSPluginOptions): CMSPlugin {
   const firebaseConfig = options.firebaseConfig;
   const cookieSecret = options.cookieSecret || generateSecret();
-  const app = initializeApp({
-    projectId: firebaseConfig.projectId,
-    credential: applicationDefault(),
-  });
+  const app = getFirebaseApp(firebaseConfig.projectId);
   const auth = getAuth(app);
 
   /**
@@ -225,6 +246,13 @@ export function cmsPlugin(options: CMSPluginOptions): CMSPlugin {
      */
     getConfig: () => {
       return options;
+    },
+
+    /**
+     * Returns the Firebase App instance used by the plugin.
+     */
+    getFirebaseApp: () => {
+      return app;
     },
 
     /**
