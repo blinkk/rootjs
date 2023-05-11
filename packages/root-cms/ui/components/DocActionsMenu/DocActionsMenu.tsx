@@ -3,27 +3,35 @@ import {useModals} from '@mantine/modals';
 import {showNotification, updateNotification} from '@mantine/notifications';
 import {
   IconAlarmOff,
+  IconArrowBack,
   IconCloudOff,
   IconCopy,
   IconDotsVertical,
   IconTrash,
 } from '@tabler/icons-preact';
 
-import {cmsDeleteDoc, cmsUnpublishDoc, cmsUnscheduleDoc} from '../../utils/doc.js';
+import {useModalTheme} from '../../hooks/useModalTheme.js';
+import {
+  cmsDeleteDoc,
+  cmsRevertDraft,
+  cmsUnpublishDoc,
+  cmsUnscheduleDoc,
+} from '../../utils/doc.js';
 import {useCopyDocModal} from '../CopyDocModal/CopyDocModal.js';
 import {Text} from '../Text/Text.js';
-import {useModalTheme} from '../../hooks/useModalTheme.js';
 
 interface DocData {
   sys?: {
-    firstPublishedAt?: number;
+    modifiedAt?: number;
     scheduledAt?: number;
+    firstPublishedAt?: number;
+    publishedAt?: number;
   };
   fields?: Record<string, any>;
 }
 
 export interface DocActionEvent {
-  action: 'copy' | 'delete' | 'unpublish' | 'unschedule';
+  action: 'copy' | 'delete' | 'revert-draft' | 'unpublish' | 'unschedule';
   newDocId?: string;
 }
 
@@ -41,6 +49,48 @@ export function DocActionsMenu(props: DocActionsMenuProps) {
   const modals = useModals();
   const copyDocModal = useCopyDocModal({fromDocId: docId});
   const modalTheme = useModalTheme();
+
+  const onRevertDraft = () => {
+    const notificationId = `revert-draft-${docId}`;
+    const modalId = modals.openConfirmModal({
+      ...modalTheme,
+      title: `Revert draft ${docId}`,
+      children: (
+        <Text size="body-sm" weight="semi-bold">
+          Are you sure you want to revert draft changes for <code>{docId}</code>
+          ? The doc data will revert to the published version. There is no undo.
+        </Text>
+      ),
+      labels: {confirm: 'Revert draft', cancel: 'Cancel'},
+      cancelProps: {size: 'xs'},
+      confirmProps: {color: 'red', size: 'xs'},
+      onCancel: () => console.log('Cancel'),
+      closeOnConfirm: false,
+      onConfirm: async () => {
+        showNotification({
+          id: notificationId,
+          title: 'Unpublishing doc',
+          message: `Requesting revert draft of ${docId}...`,
+          loading: true,
+          autoClose: false,
+        });
+        await cmsRevertDraft(docId);
+        updateNotification({
+          id: notificationId,
+          title: 'Reverted draft!',
+          message: `Successfully reverted ${docId}!`,
+          loading: false,
+          autoClose: 5000,
+        });
+        modals.closeModal(modalId);
+        if (props.onAction) {
+          props.onAction({
+            action: 'revert-draft',
+          });
+        }
+      },
+    });
+  };
 
   const onUnpublishDoc = () => {
     const notificationId = `unpublish-doc-${docId}`;
@@ -184,6 +234,16 @@ export function DocActionsMenu(props: DocActionsMenuProps) {
       >
         Copy
       </Menu.Item>
+      {sys.modifiedAt &&
+        sys.publishedAt &&
+        sys.modifiedAt > sys.publishedAt && (
+          <Menu.Item
+            icon={<IconArrowBack size={20} />}
+            onClick={() => onRevertDraft()}
+          >
+            Revert draft
+          </Menu.Item>
+        )}
       {sys.firstPublishedAt && (
         <Menu.Item
           icon={<IconCloudOff size={20} />}

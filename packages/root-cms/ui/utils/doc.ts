@@ -194,6 +194,39 @@ export async function cmsUnpublishDoc(docId: string) {
   console.log(`unpublished ${docId}`);
 }
 
+export async function cmsRevertDraft(docId: string) {
+  const projectId = window.__ROOT_CTX.rootConfig.projectId;
+  const db = window.firebase.db;
+  const [collectionId, slug] = docId.split('/');
+  const draftDocRef = doc(
+    db,
+    'Projects',
+    projectId,
+    'Collections',
+    collectionId,
+    'Drafts',
+    slug
+  );
+  const publishedDocRef = doc(
+    db,
+    'Projects',
+    projectId,
+    'Collections',
+    collectionId,
+    'Published',
+    slug
+  );
+  await runTransaction(db, async (transaction) => {
+    const publishedDoc = await getDoc(publishedDocRef);
+    if (!publishedDoc.exists()) {
+      throw new Error(`${publishedDocRef.id} does not exist`);
+    }
+    const data = publishedDoc.data();
+    transaction.set(draftDocRef, data);
+  });
+  console.log(`reverted draft ${docId}`);
+}
+
 export async function cmsUnscheduleDoc(docId: string) {
   const projectId = window.__ROOT_CTX.rootConfig.projectId;
   const db = window.firebase.db;
