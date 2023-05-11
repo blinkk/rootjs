@@ -1,18 +1,26 @@
 import {Plugin, RootConfig} from '@blinkk/root';
-import {initializeApp, getApps, applicationDefault} from 'firebase-admin/app';
-import {Query, getFirestore, FieldValue} from 'firebase-admin/firestore';
+import {applicationDefault, getApp, initializeApp} from 'firebase-admin/app';
+import {FieldValue, Query, getFirestore} from 'firebase-admin/firestore';
 
 import {CMSPlugin} from './plugin.js';
 
+const APP_NAME = 'root-cms';
+
 export function getFirebaseApp(gcpProjectId: string) {
-  const apps = getApps();
-  if (apps.length > 0 && apps[0]) {
-    return apps[0];
+  try {
+    return getApp(APP_NAME);
+  } catch (err) {
+    if (err && err.code === 'app/no-app') {
+      return initializeApp(
+        {
+          projectId: gcpProjectId,
+          credential: applicationDefault(),
+        },
+        APP_NAME
+      );
+    }
+    throw err;
   }
-  return initializeApp({
-    projectId: gcpProjectId,
-    credential: applicationDefault(),
-  });
 }
 
 export interface GetDocOptions {
