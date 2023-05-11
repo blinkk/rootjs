@@ -10,6 +10,9 @@ import {Route, Router} from 'preact-router';
 
 import {Collection} from '../core/schema.js';
 
+import {CopyDocModal} from './components/CopyDocModal/CopyDocModal.js';
+import {LocalizationModal} from './components/LocalizationModal/LocalizationModal.js';
+import {PublishDocModal} from './components/PublishDocModal/PublishDocModal.js';
 import {FirebaseContext, FirebaseContextObject} from './hooks/useFirebase.js';
 import {AssetsPage} from './pages/AssetsPage/AssetsPage.js';
 import {CollectionPage} from './pages/CollectionPage/CollectionPage.js';
@@ -21,7 +24,6 @@ import {SettingsPage} from './pages/SettingsPage/SettingsPage.js';
 import {TranslationsPage} from './pages/TranslationsPage/TranslationsPage.js';
 import './styles/global.css';
 import './styles/theme.css';
-import {CopyDocModal} from './components/CopyDocModal/CopyDocModal.js';
 
 declare global {
   interface Window {
@@ -53,7 +55,13 @@ function App() {
       }}
     >
       <NotificationsProvider>
-        <ModalsProvider modals={{copyDoc: CopyDocModal}}>
+        <ModalsProvider
+          modals={{
+            [CopyDocModal.id]: CopyDocModal,
+            [PublishDocModal.id]: PublishDocModal,
+            [LocalizationModal.id]: LocalizationModal,
+          }}
+        >
           <FirebaseContext.Provider value={window.firebase}>
             <Router>
               <Route path="/cms" component={ProjectPage} />

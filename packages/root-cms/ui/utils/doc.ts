@@ -4,7 +4,8 @@ import {
   getDoc,
   serverTimestamp,
   setDoc,
-  updateDoc,
+  Timestamp,
+  deleteField,
 } from 'firebase/firestore';
 import {sourceHash} from './l10n.js';
 
@@ -38,6 +39,112 @@ export async function cmsDeleteDoc(docId: string) {
   });
 }
 
+export async function cmsPublishDoc(docId: string) {
+  const projectId = window.__ROOT_CTX.rootConfig.projectId;
+  const db = window.firebase.db;
+  const [collectionId, slug] = docId.split('/');
+  const draftDocRef = doc(
+    db,
+    'Projects',
+    projectId,
+    'Collections',
+    collectionId,
+    'Drafts',
+    slug
+  );
+  const scheduledDocRef = doc(
+    db,
+    'Projects',
+    projectId,
+    'Collections',
+    collectionId,
+    'Scheduled',
+    slug
+  );
+  const publishedDocRef = doc(
+    db,
+    'Projects',
+    projectId,
+    'Collections',
+    collectionId,
+    'Published',
+    slug
+  );
+  await runTransaction(db, async (transaction) => {
+    const draftDoc = await getDoc(draftDocRef);
+    if (!draftDoc.exists()) {
+      throw new Error(`${draftDocRef.id} does not exist`);
+    }
+
+    const data = {...draftDoc.data()};
+    const sys = data.sys ?? {};
+    sys.modifiedAt = serverTimestamp();
+    sys.modifiedBy = window.firebase.user.email;
+    sys.publishedAt = serverTimestamp();
+    sys.publishedBy = window.firebase.user.email;
+    // Update the "firstPublishedAt" values only if they don't already exist.
+    sys.firstPublishedAt ??= serverTimestamp();
+    sys.firstPublishedBy ??= window.firebase.user.email;
+    // Remove the "scheduled" values if they exist.
+    delete sys.scheduledAt;
+    delete sys.scheduledBy;
+
+    // Update the "sys" metadata in the draft doc.
+    transaction.update(draftDocRef, {sys});
+    // Copy the "draft" data to "published" data.
+    transaction.set(publishedDocRef, {...data, sys});
+    // Delete any "scheduled" docs if it exists.
+    transaction.delete(scheduledDocRef);
+  });
+  console.log(`saved ${publishedDocRef.id}`);
+}
+
+/**
+ * Schedules a CMS doc to be published at some time in the future.
+ */
+export async function cmsScheduleDoc(docId: string, millis: number) {
+  const projectId = window.__ROOT_CTX.rootConfig.projectId;
+  const db = window.firebase.db;
+  const [collectionId, slug] = docId.split('/');
+  const draftDocRef = doc(
+    db,
+    'Projects',
+    projectId,
+    'Collections',
+    collectionId,
+    'Drafts',
+    slug
+  );
+  const scheduledDocRef = doc(
+    db,
+    'Projects',
+    projectId,
+    'Collections',
+    collectionId,
+    'Scheduled',
+    slug
+  );
+  await runTransaction(db, async (transaction) => {
+    const draftDoc = await getDoc(draftDocRef);
+    if (!draftDoc.exists()) {
+      throw new Error(`${draftDocRef.id} does not exist`);
+    }
+
+    const data = {...draftDoc.data()};
+    const sys = data.sys ?? {};
+    sys.modifiedAt = serverTimestamp();
+    sys.modifiedBy = window.firebase.user.email;
+    sys.scheduledAt = Timestamp.fromMillis(millis);
+    sys.scheduledBy = window.firebase.user.email;
+
+    // Update the "sys" metadata in the draft doc.
+    transaction.update(draftDocRef, {sys});
+    // Copy the "draft" data to "published" data.
+    transaction.set(scheduledDocRef, {...data, sys});
+  });
+  console.log(`saved ${scheduledDocRef.id}`);
+}
+
 export async function cmsUnpublishDoc(docId: string) {
   const projectId = window.__ROOT_CTX.rootConfig.projectId;
   const db = window.firebase.db;
@@ -51,6 +158,15 @@ export async function cmsUnpublishDoc(docId: string) {
     'Drafts',
     slug
   );
+  const scheduledDocRef = doc(
+    db,
+    'Projects',
+    projectId,
+    'Collections',
+    collectionId,
+    'Scheduled',
+    slug
+  );
   const publishedDocRef = doc(
     db,
     'Projects',
@@ -61,24 +177,57 @@ export async function cmsUnpublishDoc(docId: string) {
     slug
   );
   await runTransaction(db, async (transaction) => {
-    const draftDoc = await transaction.get(draftDocRef);
-    if (!draftDoc.exists()) {
-      throw new Error(`${draftDocRef.id} does not exist`);
-    }
-    const data = {...draftDoc.data()};
-    const sys = data.sys ?? {};
-    sys.modifiedAt = serverTimestamp();
-    sys.modifiedBy = window.firebase.user.email;
-    delete sys.publishedAt;
-    delete sys.publishedBy;
-    delete sys.firstPublishedAt;
-    delete sys.firstPublishedBy;
-
     // Update the "sys" metadata in the draft doc.
-    transaction.update(draftDocRef, {sys});
+    transaction.update(draftDocRef, {
+      'sys.modifiedAt': serverTimestamp(),
+      'sys.modifiedBy': window.firebase.user.email,
+      'sys.publishedAt': deleteField(),
+      'sys.publishedBy': deleteField(),
+      'sys.firstPublishedAt': deleteField(),
+      'sys.firstPublishedBy': deleteField(),
+    });
+    // Delete the "scheduled" doc.
+    transaction.delete(scheduledDocRef);
     // Delete the "published" doc.
     transaction.delete(publishedDocRef);
   });
+  console.log(`unpublished ${docId}`);
+}
+
+export async function cmsUnscheduleDoc(docId: string) {
+  const projectId = window.__ROOT_CTX.rootConfig.projectId;
+  const db = window.firebase.db;
+  const [collectionId, slug] = docId.split('/');
+  const draftDocRef = doc(
+    db,
+    'Projects',
+    projectId,
+    'Collections',
+    collectionId,
+    'Drafts',
+    slug
+  );
+  const scheduledDocRef = doc(
+    db,
+    'Projects',
+    projectId,
+    'Collections',
+    collectionId,
+    'Scheduled',
+    slug
+  );
+  await runTransaction(db, async (transaction) => {
+    // Update the "sys" metadata in the draft doc.
+    transaction.update(draftDocRef, {
+      'sys.modifiedAt': serverTimestamp(),
+      'sys.modifiedBy': window.firebase.user.email,
+      'sys.scheduledAt': deleteField(),
+      'sys.scheduledBy': deleteField(),
+    });
+    // Delete the "scheduled" doc.
+    transaction.delete(scheduledDocRef);
+  });
+  console.log(`unscheduled ${docId}`);
 }
 
 export async function cmsCopyDoc(fromDocId: string, toDocId: string) {

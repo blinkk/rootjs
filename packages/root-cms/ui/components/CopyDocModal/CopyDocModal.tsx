@@ -1,19 +1,36 @@
 import {Button} from '@mantine/core';
-import {ContextModalProps} from '@mantine/modals';
+import {ContextModalProps, useModals} from '@mantine/modals';
 import {showNotification} from '@mantine/notifications';
 import {useState} from 'preact/hooks';
 import {route} from 'preact-router';
+import {useModalTheme} from '../../hooks/useModalTheme.js';
 import {cmsCopyDoc} from '../../utils/doc.js';
 import {isSlugValid, normalizeSlug} from '../../utils/slug.js';
 import {SlugInput} from '../SlugInput/SlugInput.js';
 import {Text} from '../Text/Text.js';
 import './CopyDocModal.css';
 
-export type CopyDocModalProps = ContextModalProps<{
-  fromDocId: string;
-}>;
+const MODAL_ID = 'CopyDocModal';
 
-export function CopyDocModal(modalProps: CopyDocModalProps) {
+export interface CopyDocModalProps {
+  [key: string]: unknown;
+  fromDocId: string;
+}
+
+export function useCopyDocModal(props: CopyDocModalProps) {
+  const modals = useModals();
+  const modalTheme = useModalTheme();
+  return {
+    open: () => {
+      modals.openContextModal(MODAL_ID, {
+        ...modalTheme,
+        innerProps: props,
+      });
+    },
+  };
+}
+
+export function CopyDocModal(modalProps: ContextModalProps<CopyDocModalProps>) {
   const {innerProps: props, context, id} = modalProps;
   const [toCollectionId, setToCollectionId] = useState('');
   const [toSlug, setToSlug] = useState('');
@@ -110,3 +127,5 @@ export function CopyDocModal(modalProps: CopyDocModalProps) {
     </div>
   );
 }
+
+CopyDocModal.id = MODAL_ID;

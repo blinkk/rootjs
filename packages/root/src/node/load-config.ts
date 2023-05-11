@@ -1,7 +1,5 @@
 import path from 'node:path';
-
 import {bundleRequire} from 'bundle-require';
-
 import {RootConfig} from '../core/config';
 import {fileExists} from '../utils/fsutils';
 

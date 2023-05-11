@@ -1,6 +1,6 @@
 import {Plugin, RootConfig} from '@blinkk/root';
 import {initializeApp, getApps, applicationDefault} from 'firebase-admin/app';
-import {Query, getFirestore} from 'firebase-admin/firestore';
+import {Query, getFirestore, FieldValue} from 'firebase-admin/firestore';
 
 import {CMSPlugin} from './plugin.js';
 
@@ -121,6 +121,102 @@ export async function numDocs(
   const results = await query.count().get();
   const count = results.data().count;
   return count;
+}
+
+/**
+ * Publishes scheduled docs.
+ */
+export async function publishScheduledDocs(rootConfig: RootConfig) {
+  const cmsPlugin = getCmsPlugin(rootConfig);
+  const cmsPluginOptions = cmsPlugin.getConfig();
+  const projectId = cmsPluginOptions.id || 'default';
+  const gcpProjectId = cmsPluginOptions.firebaseConfig.projectId;
+  const app = getFirebaseApp(gcpProjectId);
+  const db = getFirestore(app);
+
+  const projectCollectionsPath = `Projects/${projectId}/Collections`;
+
+  const snapshot = await db.collectionGroup('Scheduled').get();
+  const docs = snapshot.docs
+    .filter((d) => d.ref.path.startsWith(projectCollectionsPath))
+    .map((d) => {
+      const dbPath = d.ref.path;
+      const segments = dbPath.split('/');
+      const slug = segments.at(-1);
+      const collection = segments.at(-3);
+      const id = `${collection}/${slug}`;
+      return {
+        data: d.data(),
+        id,
+        collection,
+        slug,
+      };
+    });
+
+  if (docs.length === 0) {
+    console.log('no docs to schedule');
+    return [];
+  }
+
+  // Each transaction or batch can write a max of 500 ops.
+  // https://firebase.google.com/docs/firestore/manage-data/transactions
+  let batchCount = 0;
+  const batch = db.batch();
+  const publishedDocs: any[] = [];
+  for (const doc of docs) {
+    const {id, collection, slug, data} = doc;
+    const draftRef = db.doc(
+      `${projectCollectionsPath}/${collection}/Drafts/${slug}`
+    );
+    const scheduledRef = db.doc(
+      `${projectCollectionsPath}/${collection}/Scheduled/${slug}`
+    );
+    const publishedRef = db.doc(
+      `${projectCollectionsPath}/${collection}/Published/${slug}`
+    );
+    const {scheduledAt, scheduledBy, ...sys} = data.sys || {};
+
+    // Save published doc.
+    batch.set(publishedRef, {
+      id,
+      collection,
+      slug,
+      fields: data.fields || {},
+      sys: {
+        ...sys,
+        // Only update `firstPublished` if it doesn't already exist.
+        firstPublishedAt: sys.firstPublishedAt ?? scheduledAt,
+        firstPublishedBy: sys.firstPublishedBy ?? (scheduledBy || ''),
+        publishedAt: FieldValue.serverTimestamp(),
+        publishedBy: scheduledBy || '',
+      },
+    });
+    batchCount += 1;
+
+    // Remove published doc.
+    batch.delete(scheduledRef);
+    batchCount += 1;
+
+    // Update the draft doc to remove `scheduledAt` and `scheduledBy` fields
+    // and update the `publishedAt` and `publishedBy` fields.
+    batch.update(draftRef, {
+      'sys.scheduledAt': FieldValue.delete(),
+      'sys.scheduledBy': FieldValue.delete(),
+      'sys.publishedAt': FieldValue.serverTimestamp(),
+      'sys.publishedBy': scheduledBy || '',
+    });
+    batchCount += 1;
+
+    publishedDocs.push(doc);
+
+    if (batchCount >= 498) {
+      break;
+    }
+  }
+
+  await batch.commit();
+  console.log(`published ${publishedDocs.length} docs!`);
+  return publishedDocs;
 }
 
 /**
