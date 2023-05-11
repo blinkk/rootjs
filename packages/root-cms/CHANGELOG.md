@@ -1,5 +1,12 @@
 # @blinkk/root-cms
 
+## 1.0.0-beta.35
+
+### Patch Changes
+
+- 2997a1a: fix: filter docs by scheduledAt time
+  - @blinkk/root@1.0.0-beta.35
+
 ## 1.0.0-beta.34
 
 ### Patch Changes
