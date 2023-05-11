@@ -184,6 +184,10 @@ export async function publishScheduledDocs(rootConfig: RootConfig) {
     );
     const {scheduledAt, scheduledBy, ...sys} = data.sys || {};
 
+    // Only update `firstPublished` if it doesn't already exist.
+    const firstPublishedAt = sys.firstPublishedAt ?? scheduledAt;
+    const firstPublishedBy = sys.firstPublishedBy ?? (scheduledBy || '');
+
     // Save published doc.
     batch.set(publishedRef, {
       id,
@@ -192,9 +196,8 @@ export async function publishScheduledDocs(rootConfig: RootConfig) {
       fields: data.fields || {},
       sys: {
         ...sys,
-        // Only update `firstPublished` if it doesn't already exist.
-        firstPublishedAt: sys.firstPublishedAt ?? scheduledAt,
-        firstPublishedBy: sys.firstPublishedBy ?? (scheduledBy || ''),
+        firstPublishedAt: firstPublishedAt,
+        firstPublishedBy: firstPublishedBy,
         publishedAt: FieldValue.serverTimestamp(),
         publishedBy: scheduledBy || '',
       },
@@ -210,6 +213,8 @@ export async function publishScheduledDocs(rootConfig: RootConfig) {
     batch.update(draftRef, {
       'sys.scheduledAt': FieldValue.delete(),
       'sys.scheduledBy': FieldValue.delete(),
+      'sys.firstPublishedAt': firstPublishedAt,
+      'sys.firstPublishedBy': firstPublishedBy,
       'sys.publishedAt': FieldValue.serverTimestamp(),
       'sys.publishedBy': scheduledBy || '',
     });
