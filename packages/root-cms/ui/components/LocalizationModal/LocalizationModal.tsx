@@ -7,13 +7,13 @@ import {
   Group,
   Loader,
   Menu,
-  Modal,
   Select,
   Stack,
   Text,
   Tooltip,
-  useMantineTheme,
 } from '@mantine/core';
+import {ContextModalProps, useModals} from '@mantine/modals';
+import {showNotification} from '@mantine/notifications';
 import {
   IconChevronDown,
   IconFileDownload,
@@ -26,50 +26,52 @@ import {doc, getDoc} from 'firebase/firestore';
 import {useEffect, useState} from 'preact/hooks';
 import * as schema from '../../../core/schema.js';
 import {DraftController} from '../../hooks/useDraft.js';
+import {useModalTheme} from '../../hooks/useModalTheme.js';
 import {cmsDocImportCsv, getTranslationsDocRef} from '../../utils/doc.js';
 import {Heading} from '../Heading/Heading.js';
 import './LocalizationModal.css';
-import {showNotification} from '@mantine/notifications';
 
-interface LocalizationModalProps {
+const MODAL_ID = 'LocalizationModal';
+
+export interface LocalizationModalProps {
+  [key: string]: unknown;
   draft: DraftController;
   collection: schema.Collection;
   docId: string;
-  opened?: boolean;
-  onClose?: () => void;
 }
 
-export function LocalizationModal(props: LocalizationModalProps) {
-  const theme = useMantineTheme();
+export function useLocalizationModal(props: LocalizationModalProps) {
+  const modals = useModals();
+  const modalTheme = useModalTheme();
+  return {
+    open: () => {
+      modals.openContextModal(MODAL_ID, {
+        ...modalTheme,
+        innerProps: props,
+        size: 'clamp(80%, 1024px, 1280px)',
+        onClose: () => {
+          props.draft.flush();
+        },
+      });
+    },
+  };
+}
 
-  function onClose() {
-    props.draft.flush();
-    if (props.onClose) {
-      props.onClose();
-    }
-  }
-
+export function LocalizationModal(
+  modalProps: ContextModalProps<LocalizationModalProps>
+) {
+  const props = modalProps.innerProps;
   return (
-    <Modal
-      className="LocalizationModal"
-      opened={props.opened || false}
-      onClose={() => onClose()}
-      size="clamp(80%, 1024px, 1280px)"
-      overlayColor={
-        theme.colorScheme === 'dark'
-          ? theme.colors.dark[9]
-          : theme.colors.gray[2]
-      }
-      overlayOpacity={0.55}
-      overlayBlur={3}
-    >
+    <div className="LocalizationModal">
       <div className="LocalizationModal__layout">
         <LocalizationModal.ConfigLocales {...props} />
         <LocalizationModal.Translations {...props} />
       </div>
-    </Modal>
+    </div>
   );
 }
+
+LocalizationModal.id = MODAL_ID;
 
 LocalizationModal.ConfigLocales = (props: LocalizationModalProps) => {
   const [enabledLocales, setEnabledLocales] = useState(['en']);
@@ -264,7 +266,6 @@ LocalizationModal.AllNoneButtons = (props: AllNoneButtonsProps) => {
 interface TranslationsProps {
   collection: schema.Collection;
   docId: string;
-  opened?: boolean;
 }
 
 LocalizationModal.Translations = (props: TranslationsProps) => {
@@ -282,15 +283,12 @@ LocalizationModal.Translations = (props: TranslationsProps) => {
   }));
 
   useEffect(() => {
-    if (!props.opened) {
-      return;
-    }
     setLoading(true);
     extractStrings(props.collection, props.docId).then((strings) => {
       setSourceStrings(strings);
       setLoading(false);
     });
-  }, [props.opened]);
+  }, []);
 
   useEffect(() => {
     if (!selectedLocale) {

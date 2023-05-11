@@ -40,10 +40,13 @@ import {
 import {flattenNestedKeys} from '../../utils/objects.js';
 import {getPlaceholderKeys, strFormat} from '../../utils/str-format.js';
 import './DocEditor.css';
-import {DocActionsMenu} from '../DocActionsMenu/DocActionsMenu.js';
+import {
+  DocActionEvent,
+  DocActionsMenu,
+} from '../DocActionsMenu/DocActionsMenu.js';
 import {DocStatusBadges} from '../DocStatusBadges/DocStatusBadges.js';
-import {LocalizationModal} from '../LocalizationModal/LocalizationModal.js';
-import {PublishDocModal} from '../PublishDocModal/PublishDocModal.js';
+import {useLocalizationModal} from '../LocalizationModal/LocalizationModal.js';
+import {usePublishDocModal} from '../PublishDocModal/PublishDocModal.js';
 
 interface DocEditorProps {
   docId: string;
@@ -54,28 +57,27 @@ interface DocEditorProps {
 export function DocEditor(props: DocEditorProps) {
   const fields = props.collection.fields || [];
   const {loading, controller, saveState, data} = props.draft;
-  const [publishDocModalOpen, setPublishDocModalOpen] = useState(false);
-  const [l10nModalOpen, setL10nModalOpen] = useState(false);
 
   function goBack() {
     const collectionId = props.docId.split('/')[0];
     route(`/cms/content/${collectionId}`);
   }
 
+  function onDocAction(event: DocActionEvent) {
+    if (event.action === 'delete') {
+      goBack();
+    }
+  }
+
+  const publishDocModal = usePublishDocModal({docId: props.docId});
+  const localizationModal = useLocalizationModal({
+    docId: props.docId,
+    draft: controller,
+    collection: props.collection,
+  });
+
   return (
     <>
-      <PublishDocModal
-        docId={props.docId}
-        opened={publishDocModalOpen}
-        onClose={() => setPublishDocModalOpen(false)}
-      />
-      <LocalizationModal
-        draft={controller}
-        collection={props.collection}
-        docId={props.docId}
-        opened={l10nModalOpen}
-        onClose={() => setL10nModalOpen(false)}
-      />
       <div className="DocEditor">
         <LoadingOverlay
           visible={loading}
@@ -99,7 +101,7 @@ export function DocEditor(props: DocEditorProps) {
               color="dark"
               size="xs"
               leftIcon={<IconPlanet size={16} />}
-              onClick={() => setL10nModalOpen(true)}
+              onClick={() => localizationModal.open()}
             >
               Localization
             </Button>
@@ -109,7 +111,7 @@ export function DocEditor(props: DocEditorProps) {
               color="dark"
               size="xs"
               leftIcon={<IconRocket size={16} />}
-              onClick={() => setPublishDocModalOpen(true)}
+              onClick={() => publishDocModal.open()}
             >
               Publish
             </Button>
@@ -118,7 +120,7 @@ export function DocEditor(props: DocEditorProps) {
             <DocActionsMenu
               docId={props.docId}
               data={data}
-              onDelete={() => goBack()}
+              onAction={onDocAction}
             />
           </div>
         </div>

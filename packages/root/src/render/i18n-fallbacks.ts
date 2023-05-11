@@ -58,7 +58,8 @@ export function getCountry(req: Request) {
   if (gl) {
     return normalize(gl);
   }
-  const gaeCountry = req.get('x-appengine-country');
+  const gaeCountry =
+    req.get('x-country-code') || req.get('x-appengine-country');
   if (gaeCountry) {
     return normalize(gaeCountry);
   }

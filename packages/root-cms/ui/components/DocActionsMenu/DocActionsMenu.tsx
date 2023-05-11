@@ -2,14 +2,17 @@ import {ActionIcon, Menu, useMantineTheme} from '@mantine/core';
 import {useModals} from '@mantine/modals';
 import {showNotification, updateNotification} from '@mantine/notifications';
 import {
+  IconAlarmOff,
   IconCloudOff,
   IconCopy,
   IconDotsVertical,
   IconTrash,
 } from '@tabler/icons-preact';
 
-import {cmsDeleteDoc, cmsUnpublishDoc} from '../../utils/doc.js';
+import {cmsDeleteDoc, cmsUnpublishDoc, cmsUnscheduleDoc} from '../../utils/doc.js';
+import {useCopyDocModal} from '../CopyDocModal/CopyDocModal.js';
 import {Text} from '../Text/Text.js';
+import {useModalTheme} from '../../hooks/useModalTheme.js';
 
 interface DocData {
   sys?: {
@@ -20,7 +23,7 @@ interface DocData {
 }
 
 export interface DocActionEvent {
-  action: 'copy' | 'delete' | 'unpublish';
+  action: 'copy' | 'delete' | 'unpublish' | 'unschedule';
   newDocId?: string;
 }
 
@@ -36,29 +39,14 @@ export function DocActionsMenu(props: DocActionsMenuProps) {
   const data = props.data || {};
   const sys = data.sys || {};
   const modals = useModals();
-  const theme = useMantineTheme();
-
-  const onCopyDoc = () => {
-    // if (props.onAction) {
-    //   props.onAction({action: 'copy'});
-    // }
-    modals.openContextModal('copyDoc', {
-      title: 'Copy',
-      overlayColor:
-        theme.colorScheme === 'dark'
-          ? theme.colors.dark[9]
-          : theme.colors.gray[2],
-      innerProps: {
-        fromDocId: docId,
-      },
-    });
-  };
+  const copyDocModal = useCopyDocModal({fromDocId: docId});
+  const modalTheme = useModalTheme();
 
   const onUnpublishDoc = () => {
     const notificationId = `unpublish-doc-${docId}`;
     const modalId = modals.openConfirmModal({
-      title: 'unpublish doc',
-      centered: true,
+      ...modalTheme,
+      title: `Unpublish ${docId}`,
       children: (
         <Text size="body-sm" weight="semi-bold">
           Are you sure you want to unpublish <code>{docId}</code>? There is no
@@ -66,7 +54,8 @@ export function DocActionsMenu(props: DocActionsMenuProps) {
         </Text>
       ),
       labels: {confirm: 'Unpublish', cancel: 'Cancel'},
-      confirmProps: {color: 'red'},
+      cancelProps: {size: 'xs'},
+      confirmProps: {color: 'red', size: 'xs'},
       onCancel: () => console.log('Cancel'),
       closeOnConfirm: false,
       onConfirm: async () => {
@@ -95,11 +84,52 @@ export function DocActionsMenu(props: DocActionsMenuProps) {
     });
   };
 
+  const onUnscheduleDoc = () => {
+    const notificationId = `unschedule-doc-${docId}`;
+    const modalId = modals.openConfirmModal({
+      ...modalTheme,
+      title: `Unschedule ${docId}`,
+      children: (
+        <Text size="body-sm" weight="semi-bold">
+          Are you sure you want to unschedule <code>{docId}</code>?
+        </Text>
+      ),
+      labels: {confirm: 'Unschedule', cancel: 'Cancel'},
+      cancelProps: {size: 'xs'},
+      confirmProps: {color: 'red', size: 'xs'},
+      onCancel: () => console.log('Cancel'),
+      closeOnConfirm: false,
+      onConfirm: async () => {
+        showNotification({
+          id: notificationId,
+          title: 'Unschedule doc',
+          message: `Requesting unschedule of ${docId}...`,
+          loading: true,
+          autoClose: false,
+        });
+        await cmsUnscheduleDoc(docId);
+        updateNotification({
+          id: notificationId,
+          title: 'Unscheduled!',
+          message: `Successfully unscheduled ${docId}!`,
+          loading: false,
+          autoClose: 5000,
+        });
+        modals.closeModal(modalId);
+        if (props.onAction) {
+          props.onAction({
+            action: 'unschedule',
+          });
+        }
+      },
+    });
+  };
+
   const onDeleteDoc = () => {
     const notificationId = `delete-doc-${docId}`;
     const modalId = modals.openConfirmModal({
+      ...modalTheme,
       title: 'Delete doc',
-      centered: true,
       children: (
         <Text size="body-sm" weight="semi-bold">
           Are you sure you want to delete <code>{docId}</code>? There is no
@@ -107,7 +137,8 @@ export function DocActionsMenu(props: DocActionsMenuProps) {
         </Text>
       ),
       labels: {confirm: 'Delete', cancel: 'Cancel'},
-      confirmProps: {color: 'red'},
+      cancelProps: {size: 'xs'},
+      confirmProps: {color: 'red', size: 'xs'},
       onCancel: () => console.log('Cancel'),
       closeOnConfirm: false,
       onConfirm: async () => {
@@ -147,7 +178,10 @@ export function DocActionsMenu(props: DocActionsMenuProps) {
         </ActionIcon>
       }
     >
-      <Menu.Item icon={<IconCopy size={20} />} onClick={() => onCopyDoc()}>
+      <Menu.Item
+        icon={<IconCopy size={20} />}
+        onClick={() => copyDocModal.open()}
+      >
         Copy
       </Menu.Item>
       {sys.firstPublishedAt && (
@@ -156,6 +190,14 @@ export function DocActionsMenu(props: DocActionsMenuProps) {
           onClick={() => onUnpublishDoc()}
         >
           Unpublish
+        </Menu.Item>
+      )}
+      {sys.scheduledAt && (
+        <Menu.Item
+          icon={<IconAlarmOff size={20} />}
+          onClick={() => onUnscheduleDoc()}
+        >
+          Unschedule
         </Menu.Item>
       )}
       <Menu.Item icon={<IconTrash size={20} />} onClick={() => onDeleteDoc()}>

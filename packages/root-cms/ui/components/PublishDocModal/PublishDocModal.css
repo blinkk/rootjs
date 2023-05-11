@@ -21,8 +21,23 @@
 
 .PublishDocModal__form__publishOptions__option {
   border: 1px solid var(--color-border);
-  padding: 12px;
+  padding: 24px 16px;
   border-radius: 4px;
+  cursor: pointer;
+  opacity: 1;
+  transition: all 0.3s ease;
+}
+
+.PublishDocModal__form__publishOptions__option--unselected {
+  opacity: 0.4;
+}
+
+.PublishDocModal__form__publishOptions__option--unselected:hover {
+  opacity: 0.6;
+}
+
+.PublishDocModal__form__publishOptions__option--selected {
+  border-color: #339af0;
 }
 
 .PublishDocModal__form__publishOptions__option__help {
@@ -32,9 +47,14 @@
   margin-top: 4px;
 }
 
-.PublishDocModal__form__publishOptions__option__input input {
-  padding-top: 4px;
+.PublishDocModal__form__publishOptions__option__input {
+  display: flex;
+  align-items: center;
+  gap: 4px;
 }
+
+/* .PublishDocModal__form__publishOptions__option__input input {
+} */
 
 .PublishDocModal__form__publishOptions__option__input2 {
   padding-left: 20px;
