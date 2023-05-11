@@ -1,5 +1,11 @@
 # @blinkk/root
 
+## 1.0.0-beta.32
+
+### Patch Changes
+
+- e5ec123: feat: add getPreferredLocale() function to ctx
+
 ## 1.0.0-beta.31
 
 ### Minor Changes
