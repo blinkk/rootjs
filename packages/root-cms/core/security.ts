@@ -1,4 +1,4 @@
-import {initializeApp} from 'firebase-admin';
+import {initializeApp} from 'firebase-admin/app';
 import {getSecurityRules} from 'firebase-admin/security-rules';
 
 export const FIRESTORE_RULES = `rules_version = '2';

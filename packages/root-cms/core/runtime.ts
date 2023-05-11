@@ -1,8 +1,12 @@
 import {Plugin, RootConfig} from '@blinkk/root';
-import {FieldValue, Query, getFirestore} from 'firebase-admin/firestore';
+import {
+  FieldValue,
+  Query,
+  Timestamp,
+  getFirestore,
+} from 'firebase-admin/firestore';
 
 import {CMSPlugin} from './plugin.js';
-
 
 export interface GetDocOptions {
   mode: 'draft' | 'published';
@@ -120,10 +124,24 @@ export async function publishScheduledDocs(rootConfig: RootConfig) {
   const db = getFirestore(app);
 
   const projectCollectionsPath = `Projects/${projectId}/Collections`;
+  const now = Math.ceil(new Date().getTime());
 
   const snapshot = await db.collectionGroup('Scheduled').get();
   const docs = snapshot.docs
-    .filter((d) => d.ref.path.startsWith(projectCollectionsPath))
+    .filter((d) => {
+      // Filter docs by project.
+      if (!d.ref.path.startsWith(projectCollectionsPath)) {
+        return false;
+      }
+      // Filter docs where scheduledAt is in the past.
+      // NOTE(stevenle): the filtering is done manually instead of using a query
+      // to avoid having to create an index in firestore.
+      const data = d.data() || {};
+      const scheduledAt: Timestamp | undefined = data.sys?.scheduledAt;
+      return (
+        scheduledAt && scheduledAt.toMillis && scheduledAt.toMillis() <= now
+      );
+    })
     .map((d) => {
       const dbPath = d.ref.path;
       const segments = dbPath.split('/');
