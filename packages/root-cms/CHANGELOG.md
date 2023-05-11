@@ -1,5 +1,13 @@
 # @blinkk/root-cms
 
+## 1.0.0-beta.34
+
+### Patch Changes
+
+- 08d7cf4: fix: use singleton firebase app instance
+- 60c4bc1: fix: fix firstPublished for scheduled docs
+  - @blinkk/root@1.0.0-beta.34
+
 ## 1.0.0-beta.33
 
 ### Patch Changes
