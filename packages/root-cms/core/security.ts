@@ -1,6 +1,5 @@
+import {initializeApp} from 'firebase-admin';
 import {getSecurityRules} from 'firebase-admin/security-rules';
-
-import {getFirebaseApp} from './runtime.js';
 
 export const FIRESTORE_RULES = `rules_version = '2';
 service cloud.firestore {
@@ -35,7 +34,8 @@ service cloud.firestore {
  * NOTE: This function will overwrite any existing rules.
  */
 export async function applySecurityRules(projectId: string) {
-  const app = getFirebaseApp(projectId);
+  // TODO(stevenle): check if an app exists first before initializing.
+  const app = initializeApp({projectId});
   const securityRules = getSecurityRules(app);
   await securityRules.releaseFirestoreRulesetFromSource(FIRESTORE_RULES);
 }
