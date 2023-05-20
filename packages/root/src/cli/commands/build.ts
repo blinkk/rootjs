@@ -13,6 +13,7 @@ import {loadRootConfig} from '../../node/load-config.js';
 import {BuildAssetMap} from '../../render/asset-map/build-asset-map.js';
 import {htmlMinify} from '../../render/html-minify.js';
 import {htmlPretty} from '../../render/html-pretty.js';
+import {batchAsyncCalls} from '../../utils/batch.js';
 import {
   copyGlob,
   fileExists,
@@ -31,6 +32,7 @@ type RenderModule = typeof import('../../render/render.js');
 interface BuildOptions {
   ssrOnly?: boolean;
   mode?: string;
+  concurrency?: number;
 }
 
 export async function build(rootProjectDir?: string, options?: BuildOptions) {
@@ -333,37 +335,36 @@ export async function build(rootProjectDir?: string, options?: BuildOptions) {
     const sitemap = await renderer.getSitemap();
 
     console.log('\nhtml output:');
-    await Promise.all(
-      Object.keys(sitemap).map(async (urlPath) => {
-        const {route, params} = sitemap[urlPath];
-        const data = await renderer.renderRoute(route, {
-          routeParams: params,
-        });
-        if (data.notFound) {
-          return;
-        }
+    const batchSize = Number(options?.concurrency || 10);
+    await batchAsyncCalls(Object.keys(sitemap), batchSize, async (urlPath) => {
+      const {route, params} = sitemap[urlPath];
+      const data = await renderer.renderRoute(route, {
+        routeParams: params,
+      });
+      if (data.notFound) {
+        return;
+      }
 
-        // The renderer currently assumes that all paths serve HTML.
-        // TODO(stevenle): support non-HTML routes using `routes/[name].[ext].ts`.
-        let outFilePath = path.join(urlPath.slice(1), 'index.html');
-        if (outFilePath.endsWith('404/index.html')) {
-          outFilePath = outFilePath.replace('404/index.html', '404.html');
-        }
-        const outPath = path.join(buildDir, outFilePath);
+      // The renderer currently assumes that all paths serve HTML.
+      // TODO(stevenle): support non-HTML routes using `routes/[name].[ext].ts`.
+      let outFilePath = path.join(urlPath.slice(1), 'index.html');
+      if (outFilePath.endsWith('404/index.html')) {
+        outFilePath = outFilePath.replace('404/index.html', '404.html');
+      }
+      const outPath = path.join(buildDir, outFilePath);
 
-        let html = data.html || '';
-        if (rootConfig.prettyHtml !== false) {
-          html = await htmlPretty(html, rootConfig.prettyHtmlOptions);
-        }
-        // HTML minification is `true` by default. Set to `false` to disable.
-        if (rootConfig.minifyHtml !== false) {
-          html = await htmlMinify(html, rootConfig.minifyHtmlOptions);
-        }
-        await writeFile(outPath, html);
+      let html = data.html || '';
+      if (rootConfig.prettyHtml !== false) {
+        html = await htmlPretty(html, rootConfig.prettyHtmlOptions);
+      }
+      // HTML minification is `true` by default. Set to `false` to disable.
+      if (rootConfig.minifyHtml !== false) {
+        html = await htmlMinify(html, rootConfig.minifyHtmlOptions);
+      }
+      await writeFile(outPath, html);
 
-        printFileOutput(fileSize(outPath), 'dist/html/', outFilePath);
-      })
-    );
+      printFileOutput(fileSize(outPath), 'dist/html/', outFilePath);
+    });
   }
 }
 

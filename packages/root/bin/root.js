@@ -21,6 +21,7 @@ async function main() {
     .description('generates a static build')
     .option('--ssr-only', 'produce a ssr-only build')
     .option('--mode <mode>', 'see: https://vitejs.dev/guide/env-and-mode.html#modes', 'production')
+    .option('-c, --concurrency <num>', 'number of files to build concurrently', 10)
     .action(build);
   program
     .command('dev [path]')
