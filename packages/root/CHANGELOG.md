@@ -1,5 +1,11 @@
 # @blinkk/root
 
+## 1.0.0-beta.36
+
+### Minor Changes
+
+- 8417984: feat: add --concurrency flag to build cmd
+
 ## 1.0.0-beta.35
 
 ## 1.0.0-beta.34

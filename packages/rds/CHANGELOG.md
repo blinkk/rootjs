@@ -1,5 +1,12 @@
 # @blinkk/rds
 
+## 1.0.0-beta.19
+
+### Patch Changes
+
+- Updated dependencies [8417984]
+  - @blinkk/root@1.0.0-beta.36
+
 ## 1.0.0-beta.18
 
 ### Patch Changes
