@@ -186,6 +186,7 @@
   align-items: center;
   padding: 8px 0;
   border-top: 1px solid var(--color-border);
+  overflow: hidden;
 }
 
 .CollectionPage__collection__docsList__doc__content {
@@ -236,8 +237,9 @@
   font-size: 24px;
   font-weight: 600;
   overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 1;
 }
 
 .CollectionPage__collection__docsList__doc__content__url {

@@ -40,6 +40,11 @@
   background-color: lightblue;
 }
 
+.SplitPanel__item {
+  overflow: hidden;
+  position: relative;
+}
+
 .SplitPanel__item.static {
   flex: 0 0 var(--panel-size, 100%);
 }
