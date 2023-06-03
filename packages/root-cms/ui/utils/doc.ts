@@ -6,6 +6,7 @@ import {
   setDoc,
   Timestamp,
   deleteField,
+  updateDoc,
 } from 'firebase/firestore';
 import {sourceHash} from './l10n.js';
 
@@ -264,7 +265,7 @@ export async function cmsUnscheduleDoc(docId: string) {
 }
 
 export async function cmsCopyDoc(fromDocId: string, toDocId: string) {
-  const fromDocRef = getDocRef(fromDocId);
+  const fromDocRef = getDraftDocRef(fromDocId);
   const fromDoc = await getDoc(fromDocRef);
   if (!fromDoc.exists()) {
     throw new Error(`doc ${fromDocId} does not exist`);
@@ -278,7 +279,7 @@ export async function cmsCreateDoc(
   options?: {fields?: Record<string, any>}
 ) {
   const [collectionId, slug] = docId.split('/');
-  const docRef = getDocRef(docId);
+  const docRef = getDraftDocRef(docId);
   const doc = await getDoc(docRef);
   if (doc.exists()) {
     throw new Error(`${docId} already exists`);
@@ -305,9 +306,9 @@ export interface CsvTranslation {
 
 export async function cmsDocImportCsv(
   docId: string,
-  csvData: CsvTranslation[]
+  csvData: CsvTranslation[],
+  options?: {prune?: boolean},
 ) {
-  const translationsDocRef = getTranslationsDocRef(docId);
   const translationsMap: Record<string, CsvTranslation> = {};
 
   const i18nConfig = window.__ROOT_CTX.rootConfig.i18n || {};
@@ -345,25 +346,25 @@ export async function cmsDocImportCsv(
     translationsMap[hash] = translation;
   }
 
-  const db = window.firebase.db;
-  await runTransaction(db, async (transaction) => {
-    const translationsDoc = await transaction.get(translationsDocRef);
-    const currentData = translationsDoc.data() || {};
-    const data = {...currentData};
-    data.sys = {
-      ...(data.sys ?? {}),
-      modifiedAt: serverTimestamp(),
-      modifiedBy: window.firebase.user.email,
-    };
-    data.translations = {
-      ...(data.translations ?? {}),
-      ...translationsMap,
-    };
-    transaction.set(translationsDocRef, data);
-  });
+  const draftDocRef = getDraftDocRef(docId);
+  const updates: any = {
+    'sys.modifiedAt': serverTimestamp(),
+    'sys.modifiedBy': window.firebase.user.email,
+  };
+  if (options?.prune) {
+    // Overwrite the full translations map, only strings in the CSV are saved.
+    updates.translations = translationsMap;
+  } else {
+    // Preserve any strings that were imported previously that may not be
+    // present in the CSV.
+    for (const hash in translationsMap) {
+      updates[`translations.${hash}`] = translationsMap[hash];
+    }
+  }
+  await updateDoc(draftDocRef, updates);
 }
 
-export function getDocRef(docId: string) {
+export function getDraftDocRef(docId: string) {
   const projectId = window.__ROOT_CTX.rootConfig.projectId;
   const db = window.firebase.db;
   const [collectionId, slug] = docId.split('/');

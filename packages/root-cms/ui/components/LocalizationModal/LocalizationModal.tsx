@@ -27,7 +27,7 @@ import {useEffect, useState} from 'preact/hooks';
 import * as schema from '../../../core/schema.js';
 import {DraftController} from '../../hooks/useDraft.js';
 import {useModalTheme} from '../../hooks/useModalTheme.js';
-import {cmsDocImportCsv, getTranslationsDocRef} from '../../utils/doc.js';
+import {cmsDocImportCsv, getDraftDocRef, getTranslationsDocRef} from '../../utils/doc.js';
 import {Heading} from '../Heading/Heading.js';
 import './LocalizationModal.css';
 
@@ -296,10 +296,10 @@ LocalizationModal.Translations = (props: TranslationsProps) => {
       return;
     }
 
-    const translationsRef = getTranslationsDocRef(props.docId);
-    getDoc(translationsRef)
-      .then((translationsDoc) => {
-        const data = translationsDoc.data() || {};
+    const draftDocRef = getDraftDocRef(props.docId);
+    getDoc(draftDocRef)
+      .then((draftDoc) => {
+        const data = draftDoc.data() || {};
         return data.translations || {};
       })
       .then((translationsMap: Record<string, Record<string, string>>) => {
