@@ -45,3 +45,19 @@ test('get parameterized routes from route trie', () => {
   assert.deepEqual(routeTrie.get('/foo/d/bar'), ['d', {slug: 'd'}]);
   assert.deepEqual(routeTrie.get('/foo/dd/bar'), ['d', {slug: 'dd'}]);
 });
+
+test('get nested parametered route from route trie', () => {
+  routeTrie.add('/[slug]', '1');
+  routeTrie.add('/[ref]/[slug]', '2');
+  routeTrie.add('/[ref]/[slug]/foo', '3');
+
+  assert.deepEqual(routeTrie.get('/blog'), ['1', {slug: 'blog'}]);
+  assert.deepEqual(routeTrie.get('/blog/foo'), [
+    '2',
+    {ref: 'blog', slug: 'foo'},
+  ]);
+  assert.deepEqual(routeTrie.get('/blog/bar/foo'), [
+    '3',
+    {ref: 'blog', slug: 'bar'},
+  ]);
+});

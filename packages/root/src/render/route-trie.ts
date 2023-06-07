@@ -4,7 +4,7 @@
  */
 export class RouteTrie<T> {
   private children: Record<string, RouteTrie<T>> = {};
-  private paramChild?: ParamChild<T>;
+  private paramChildren?: {[param: string]: ParamChild<T>};
   private wildcardChild?: WildcardChild<T>;
   private route?: T;
 
@@ -29,11 +29,14 @@ export class RouteTrie<T> {
 
     let nextNode: RouteTrie<T>;
     if (head.startsWith('[') && head.endsWith(']')) {
-      if (!this.paramChild) {
-        const paramName = head.slice(1, -1);
-        this.paramChild = new ParamChild(paramName);
+      if (!this.paramChildren) {
+        this.paramChildren = {};
       }
-      nextNode = this.paramChild.trie;
+      const paramName = head.slice(1, -1);
+      if (!this.paramChildren[paramName]) {
+        this.paramChildren[paramName] = new ParamChild(paramName);
+      }
+      nextNode = this.paramChildren[paramName].trie;
     } else {
       nextNode = this.children[head];
       if (!nextNode) {
@@ -67,11 +70,13 @@ export class RouteTrie<T> {
     if (this.route) {
       addPromise(cb('/', this.route));
     }
-    if (this.paramChild) {
-      const param = `[${this.paramChild.name}]`;
-      this.paramChild.trie.walk((childPath: string, route: T) => {
-        const paramUrlPath = `/${param}${childPath}`;
-        addPromise(cb(paramUrlPath, route));
+    if (this.paramChildren) {
+      Object.values(this.paramChildren).forEach((paramChild) => {
+        const param = `[${paramChild.name}]`;
+        paramChild.trie.walk((childPath: string, route: T) => {
+          const paramUrlPath = `/${param}${childPath}`;
+          addPromise(cb(paramUrlPath, route));
+        });
       });
     }
     if (this.wildcardChild) {
@@ -92,7 +97,7 @@ export class RouteTrie<T> {
    */
   clear() {
     this.children = {};
-    this.paramChild = undefined;
+    this.paramChildren = undefined;
     this.wildcardChild = undefined;
     this.route = undefined;
   }
@@ -116,11 +121,13 @@ export class RouteTrie<T> {
       }
     }
 
-    if (this.paramChild) {
-      const route = this.paramChild.trie.getRoute(tail, params);
-      if (route) {
-        params[this.paramChild.name] = head;
-        return route;
+    if (this.paramChildren) {
+      for (const paramChild of Object.values(this.paramChildren)) {
+        const route = paramChild.trie.getRoute(tail, params);
+        if (route) {
+          params[paramChild.name] = head;
+          return route;
+        }
       }
     }
 
