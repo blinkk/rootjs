@@ -1,5 +1,12 @@
 # @blinkk/root-cms
 
+## 1.0.0-beta.37
+
+### Patch Changes
+
+- Updated dependencies [6319234]
+  - @blinkk/root@1.0.0-beta.37
+
 ## 1.0.0-beta.36
 
 ### Patch Changes

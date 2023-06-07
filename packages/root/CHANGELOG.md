@@ -1,5 +1,11 @@
 # @blinkk/root
 
+## 1.0.0-beta.37
+
+### Patch Changes
+
+- 6319234: fix: support multiple param names in route-trie
+
 ## 1.0.0-beta.36
 
 ### Minor Changes
