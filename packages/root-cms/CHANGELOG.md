@@ -1,5 +1,12 @@
 # @blinkk/root-cms
 
+## 1.0.0-beta.39
+
+### Patch Changes
+
+- 72491bb: fix: fix l10n modal locales checkbox
+  - @blinkk/root@1.0.0-beta.39
+
 ## 1.0.0-beta.38
 
 ### Minor Changes
