@@ -274,3 +274,77 @@ export function getCmsPlugin(rootConfig: RootConfig): CMSPlugin {
   }
   return plugin as CMSPlugin;
 }
+
+export interface Translation {
+  [locale: string]: string;
+  source: string;
+}
+
+export interface TranslationsMap {
+  [hash: string]: Translation;
+}
+
+export interface LocaleTranslations {
+  [source: string]: string;
+}
+
+export interface LoadTranslationsOptions {
+  tags?: string[];
+}
+
+/**
+ * Loads translations saved in the trasnlations collection, optionally filtered
+ * by tag. Returns a map like:
+ * ```
+ * {
+ *   "<hash>": {"source": "Hello", "es": "Hola", "fr": "Bonjour"},
+ * }
+ * ```
+ */
+export async function loadTranslations(
+  rootConfig: RootConfig,
+  options?: LoadTranslationsOptions
+): Promise<TranslationsMap> {
+  const cmsPlugin = getCmsPlugin(rootConfig);
+  const cmsPluginOptions = cmsPlugin.getConfig();
+  const projectId = cmsPluginOptions.id || 'default';
+  const app = cmsPlugin.getFirebaseApp();
+  const db = getFirestore(app);
+
+  const dbPath = `Projects/${projectId}/Translations`;
+  let query: Query = db.collection(dbPath);
+  if (options?.tags) {
+    query = query.where('tags', 'array-contains-any', options.tags);
+  }
+
+  const querySnapshot = await query.get();
+  const translationsMap: TranslationsMap = {};
+  querySnapshot.forEach((doc) => {
+    const hash = doc.id;
+    translationsMap[hash] = doc.data() as Translation;
+  });
+  return translationsMap;
+}
+
+/**
+ * Loads translations for a particular locale. Returns a map like:
+ * ```
+ * {
+ *   "Hello": "Bonjour",
+ * }
+ * ```
+ */
+export async function loadTranslationsForLocale(
+  rootConfig: RootConfig,
+  locale: string,
+  options?: LoadTranslationsOptions
+): Promise<LocaleTranslations> {
+  const translationsMap = await loadTranslations(rootConfig, options);
+  const localeTranslations: LocaleTranslations = {};
+  Object.values(translationsMap).forEach((string) => {
+    const source = string.source;
+    const translation = string[locale] || string.en || string.source;
+    localeTranslations[source] = translation;
+  });
+  return localeTranslations;
+}

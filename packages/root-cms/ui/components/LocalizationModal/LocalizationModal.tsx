@@ -27,9 +27,10 @@ import {useEffect, useState} from 'preact/hooks';
 import * as schema from '../../../core/schema.js';
 import {DraftController} from '../../hooks/useDraft.js';
 import {useModalTheme} from '../../hooks/useModalTheme.js';
-import {cmsDocImportCsv, getDraftDocRef, getTranslationsDocRef} from '../../utils/doc.js';
+import {cmsDocImportCsv, getDraftDocRef} from '../../utils/doc.js';
 import {Heading} from '../Heading/Heading.js';
 import './LocalizationModal.css';
+import {TranslationsMap, loadTranslations, normalizeString} from '../../utils/l10n.js';
 
 const MODAL_ID = 'LocalizationModal';
 
@@ -271,10 +272,11 @@ interface TranslationsProps {
 LocalizationModal.Translations = (props: TranslationsProps) => {
   const [loading, setLoading] = useState(true);
   const [sourceStrings, setSourceStrings] = useState<string[]>([]);
-  const [selectedLocale, setSelectedLocale] = useState('');
+  const [selectedLocale, setSelectedLocale] = useState('en');
   const [localeTranslations, setLocaleTranslations] = useState<
     Record<string, string>
   >({});
+  const [translationsMap, setTranslationsMap] = useState<TranslationsMap>({});
 
   const locales = window.__ROOT_CTX.rootConfig.i18n.locales || [];
   const localeOptions = locales.map((locale) => ({
@@ -284,8 +286,13 @@ LocalizationModal.Translations = (props: TranslationsProps) => {
 
   useEffect(() => {
     setLoading(true);
-    extractStrings(props.collection, props.docId).then((strings) => {
-      setSourceStrings(strings);
+    Promise.all([
+      extractStrings(props.collection, props.docId),
+      loadTranslations(),
+    ]).then(([sourceStrings, translationsMap]) => {
+      setSourceStrings(sourceStrings);
+      setTranslationsMap(translationsMap);
+      console.log('translations map:', translationsMap);
       setLoading(false);
     });
   }, []);
@@ -295,24 +302,15 @@ LocalizationModal.Translations = (props: TranslationsProps) => {
       setLocaleTranslations({});
       return;
     }
-
-    const draftDocRef = getDraftDocRef(props.docId);
-    getDoc(draftDocRef)
-      .then((draftDoc) => {
-        const data = draftDoc.data() || {};
-        return data.translations || {};
-      })
-      .then((translationsMap: Record<string, Record<string, string>>) => {
-        const localeTranslations: Record<string, string> = {};
-        Object.values(translationsMap).forEach(
-          (translation: Record<string, string>) => {
-            localeTranslations[translation.source] =
-              translation[selectedLocale] || '';
-          }
-        );
-        setLocaleTranslations(localeTranslations);
-      });
-  }, [selectedLocale]);
+    const localeTranslations: Record<string, string> = {};
+    Object.values(translationsMap).forEach(
+      (translation: Record<string, string>) => {
+        localeTranslations[translation.source] =
+          translation[selectedLocale] || '';
+      }
+    );
+    setLocaleTranslations(localeTranslations);
+  }, [selectedLocale, translationsMap]);
 
   async function downloadCsv() {
     const headers = ['source', 'en'];
@@ -348,16 +346,32 @@ LocalizationModal.Translations = (props: TranslationsProps) => {
       if (file) {
         const formData = new FormData();
         formData.append('file', file);
-        const res = await fetch('/cms/api/csv.import', {
-          method: 'POST',
-          body: formData,
-        }).then((res) => res.json());
-        await cmsDocImportCsv(props.docId, res.data);
-        showNotification({
-          title: 'Saved!',
-          message: `Successfully imported translations for ${props.docId}.`,
-          autoClose: 5000,
-        });
+        try {
+          const res = await fetch('/cms/api/csv.import', {
+            method: 'POST',
+            body: formData,
+          }).then((res) => res.json());
+          const importedTranslations = await cmsDocImportCsv(
+            props.docId,
+            res.data
+          );
+          setTranslationsMap((currentTranslations) => {
+            return Object.assign({}, currentTranslations, importedTranslations);
+          });
+          showNotification({
+            title: 'Saved!',
+            message: `Successfully imported translations for ${props.docId}.`,
+            autoClose: 5000,
+          });
+        } catch (err) {
+          console.error(err);
+          showNotification({
+            title: 'Failed to import CSV',
+            message: `Error saving CSV: ${err}`,
+            color: 'red',
+            autoClose: false,
+          });
+        }
       }
     });
     fileInput.click();
@@ -422,6 +436,7 @@ LocalizationModal.Translations = (props: TranslationsProps) => {
                 size="xs"
                 placeholder="select locale"
                 allowDeselect
+                value={selectedLocale}
                 onChange={(value: string) => setSelectedLocale(value)}
               />
             </Heading>
@@ -613,8 +628,4 @@ function ExportMenuButton(props: MenuButtonProps) {
       </Menu.Item>
     </Menu>
   );
-}
-
-function normalizeString(s: string) {
-  return String(s).trim();
 }

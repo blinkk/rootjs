@@ -1,4 +1,5 @@
 import {
+  collection,
   doc,
   runTransaction,
   getDoc,
@@ -7,8 +8,14 @@ import {
   Timestamp,
   deleteField,
   updateDoc,
+  writeBatch,
+  arrayUnion,
 } from 'firebase/firestore';
-import {sourceHash} from './l10n.js';
+import {
+  getTranslationsCollection,
+  normalizeString,
+  sourceHash,
+} from './l10n.js';
 
 export async function cmsDeleteDoc(docId: string) {
   const projectId = window.__ROOT_CTX.rootConfig.projectId;
@@ -307,16 +314,10 @@ export interface CsvTranslation {
 export async function cmsDocImportCsv(
   docId: string,
   csvData: CsvTranslation[],
-  options?: {prune?: boolean},
+  options?: {tags?: string[]}
 ) {
-  const translationsMap: Record<string, CsvTranslation> = {};
-
   const i18nConfig = window.__ROOT_CTX.rootConfig.i18n || {};
   const i18nLocales = i18nConfig.locales || ['en'];
-
-  function normalizeStr(str: string) {
-    return String(str).trim();
-  }
 
   function normalizeLocale(locale: string) {
     for (const l of i18nLocales) {
@@ -327,41 +328,65 @@ export async function cmsDocImportCsv(
     return locale;
   }
 
+  const translationsMap: Record<string, CsvTranslation> = {};
   for (const row of csvData) {
     if (!row.source) {
       continue;
     }
     const translation: CsvTranslation = {
-      source: normalizeStr(row.source),
+      source: normalizeString(row.source),
     };
     Object.entries(row).forEach(([column, str]) => {
       if (column === 'source') {
         return;
       }
       const locale = normalizeLocale(column);
-      translation[locale] = normalizeStr(str || '');
+      translation[locale] = normalizeString(str || '');
     });
 
     const hash = await sourceHash(translation.source);
     translationsMap[hash] = translation;
   }
 
-  const draftDocRef = getDraftDocRef(docId);
-  const updates: any = {
-    'sys.modifiedAt': serverTimestamp(),
-    'sys.modifiedBy': window.firebase.user.email,
-  };
-  if (options?.prune) {
-    // Overwrite the full translations map, only strings in the CSV are saved.
-    updates.translations = translationsMap;
-  } else {
-    // Preserve any strings that were imported previously that may not be
-    // present in the CSV.
-    for (const hash in translationsMap) {
-      updates[`translations.${hash}`] = translationsMap[hash];
+  // Tags are stored as key-value pairs so that we can call updateDoc() without
+  // having to read the actual document.
+  const collectionId = docId.split('/')[0];
+  const tags = [collectionId, docId];
+  if (options?.tags) {
+    tags.push(...options.tags);
+  }
+
+  // Save each string to `Projects/<project>/Translations/<hash>` in a batch
+  // request. Note: Firestore batches have limit of 500 writes.
+  const translationsCollection = getTranslationsCollection();
+  const db = window.firebase.db;
+  let batch = writeBatch(db);
+  let count = 0;
+  for (const hash in translationsMap) {
+    const translations = translationsMap[hash];
+    const stringDocRef = doc(translationsCollection, hash);
+    batch.set(
+      stringDocRef,
+      {
+        ...translations,
+        // Use arrayUnion to only add tags that don't already exist.
+        tags: arrayUnion(...tags),
+      },
+      {merge: true}
+    );
+    count += 1;
+    if (count >= 500) {
+      await batch.commit();
+      batch = writeBatch(db);
+      console.log(`saved ${count} strings`);
+      count = 0;
     }
   }
-  await updateDoc(draftDocRef, updates);
+  if (count > 0) {
+    await batch.commit();
+    console.log(`saved ${count} strings`);
+  }
+  return translationsMap;
 }
 
 export function getDraftDocRef(docId: string) {
@@ -375,21 +400,6 @@ export function getDraftDocRef(docId: string) {
     'Collections',
     collectionId,
     'Drafts',
-    slug
-  );
-}
-
-export function getTranslationsDocRef(docId: string) {
-  const projectId = window.__ROOT_CTX.rootConfig.projectId;
-  const db = window.firebase.db;
-  const [collectionId, slug] = docId.split('/');
-  return doc(
-    db,
-    'Projects',
-    projectId,
-    'Collections',
-    collectionId,
-    'Translations',
     slug
   );
 }
