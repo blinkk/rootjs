@@ -1,5 +1,15 @@
 # @blinkk/root-cms
 
+## 1.0.0-beta.38
+
+### Minor Changes
+
+- 1783ab7: feat: import strings to Translations collection
+
+### Patch Changes
+
+- @blinkk/root@1.0.0-beta.38
+
 ## 1.0.0-beta.37
 
 ### Patch Changes
