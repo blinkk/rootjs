@@ -1,5 +1,4 @@
 import {
-  collection,
   doc,
   runTransaction,
   getDoc,
@@ -7,7 +6,6 @@ import {
   setDoc,
   Timestamp,
   deleteField,
-  updateDoc,
   writeBatch,
   arrayUnion,
 } from 'firebase/firestore';

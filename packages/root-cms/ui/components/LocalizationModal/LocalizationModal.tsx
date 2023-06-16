@@ -27,10 +27,14 @@ import {useEffect, useState} from 'preact/hooks';
 import * as schema from '../../../core/schema.js';
 import {DraftController} from '../../hooks/useDraft.js';
 import {useModalTheme} from '../../hooks/useModalTheme.js';
-import {cmsDocImportCsv, getDraftDocRef} from '../../utils/doc.js';
+import {cmsDocImportCsv} from '../../utils/doc.js';
+import {
+  TranslationsMap,
+  loadTranslations,
+  normalizeString,
+} from '../../utils/l10n.js';
 import {Heading} from '../Heading/Heading.js';
 import './LocalizationModal.css';
-import {TranslationsMap, loadTranslations, normalizeString} from '../../utils/l10n.js';
 
 const MODAL_ID = 'LocalizationModal';
 
@@ -75,7 +79,12 @@ export function LocalizationModal(
 LocalizationModal.id = MODAL_ID;
 
 LocalizationModal.ConfigLocales = (props: LocalizationModalProps) => {
-  const [enabledLocales, setEnabledLocales] = useState(['en']);
+  const [enabledLocales, setEnabledLocales] = useState(() => {
+    if (props.draft) {
+      return props.draft.getLocales();
+    }
+    return ['en'];
+  });
   const i18nConfig = window.__ROOT_CTX.rootConfig.i18n || {};
   const i18nLocales = i18nConfig.locales || ['en'];
   const localeGroups: LocaleGroupsConfig = i18nConfig.groups || {
@@ -84,12 +93,6 @@ LocalizationModal.ConfigLocales = (props: LocalizationModalProps) => {
       locales: i18nLocales,
     },
   };
-
-  useEffect(() => {
-    if (props.opened) {
-      setEnabledLocales(props.draft.getLocales());
-    }
-  }, [props.opened]);
 
   function enabledLocalesFor(groupId: string) {
     return enabledLocales.filter((l: string) => {
