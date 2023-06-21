@@ -1,5 +1,11 @@
 # @blinkk/root
 
+## 1.0.0-beta.40
+
+### Patch Changes
+
+- 3ed4621: fix: fix fallback locales
+
 ## 1.0.0-beta.39
 
 ## 1.0.0-beta.38
