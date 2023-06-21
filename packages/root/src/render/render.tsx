@@ -72,11 +72,10 @@ export class Renderer {
       : [route.locale];
     const getPreferredLocale = (availableLocales: string[]) => {
       const lowerLocales = availableLocales.map((l) => l.toLowerCase());
-      const index = fallbackLocales.findIndex((locale) => {
-        return lowerLocales.includes(locale.toLowerCase());
-      });
-      if (index >= 0) {
-        return availableLocales[index];
+      for (const fallbackLocale of fallbackLocales) {
+        if (lowerLocales.includes(fallbackLocale.toLowerCase())) {
+          return fallbackLocale;
+        }
       }
       return req.rootConfig?.i18n?.defaultLocale || 'en';
     };

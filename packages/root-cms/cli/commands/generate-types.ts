@@ -47,6 +47,7 @@ export interface RootCMSDoc<Fields extends {}> {
         firstPublishedBy?: string;
         publishedAt?: number;
         publishedBy?: string;
+        locales?: string[];
     };
     /** User-entered field values from the CMS. */
     fields?: Fields;
