@@ -1,4 +1,4 @@
-import {ActionIcon, Button, Tooltip} from '@mantine/core';
+import {ActionIcon, Button, Select, Tooltip} from '@mantine/core';
 import {useHotkeys} from '@mantine/hooks';
 import {
   IconArrowLeft,
@@ -7,7 +7,9 @@ import {
   IconDeviceFloppy,
   IconDeviceIpad,
   IconDeviceMobile,
+  IconGlobe,
   IconReload,
+  IconWorld,
 } from '@tabler/icons-preact';
 import {useEffect, useRef, useState} from 'preact/hooks';
 
@@ -92,6 +94,24 @@ const DeviceResolution = {
   desktop: [1440, 800],
 };
 
+function getLocaleLabel(locale: string) {
+  const langNames = new Intl.DisplayNames(['en'], {
+    type: 'language',
+  });
+  const parts = locale.split('_');
+  const langCode = parts[0];
+  const langName = langNames.of(langCode) || locale;
+  return `${langName} (${locale})`;
+}
+
+function getLocalizedUrl(urlPath: string, locale: string) {
+  const urlFormat =
+    window.__ROOT_CTX.rootConfig.i18n?.urlFormat || '/{locale}/{path}';
+  return urlFormat
+    .replaceAll('{locale}', locale)
+    .replaceAll('/{path}', urlPath);
+}
+
 DocumentPage.Preview = (props: PreviewProps) => {
   const domain = window.__ROOT_CTX.rootConfig.domain || 'https://example.com';
   const servingPath = getDocServingPath(props.docId);
@@ -104,7 +124,17 @@ DocumentPage.Preview = (props: PreviewProps) => {
     '--iframe-height': '100%',
     '--iframe-scale': '1',
   });
+  const [selectedLocale, setSelectedLocale] = useState('');
   const iframeRef = useRef<HTMLIFrameElement>(null);
+  const locales = props.draft.controller.getLocales();
+
+  const localeOptions = [
+    {value: '', label: 'Select locale'},
+    ...locales.map((locale) => ({
+      value: locale,
+      label: getLocaleLabel(locale),
+    })),
+  ];
 
   function reloadIframe() {
     const iframe = iframeRef.current!;
@@ -141,6 +171,15 @@ DocumentPage.Preview = (props: PreviewProps) => {
       iframe.removeEventListener('load', onIframeLoad);
     };
   }, []);
+
+  useEffect(() => {
+    console.log('locale changed', selectedLocale);
+    const localizedUrl = selectedLocale
+      ? getLocalizedUrl(servingPath, selectedLocale)
+      : servingPath;
+    const iframe = iframeRef.current!;
+    iframe.src = localizedUrl;
+  }, [selectedLocale]);
 
   function toggleDevice(device: Device) {
     setDevice((current) => {
@@ -237,6 +276,20 @@ DocumentPage.Preview = (props: PreviewProps) => {
           <div className="DocumentPage__main__previewBar__navbar__url">
             {iframeUrl}
           </div>
+        </div>
+        <div className="DocumentPage__main__previewBar__locales">
+          <Select
+            data={localeOptions}
+            placeholder="Locale"
+            radius="xl"
+            size="xs"
+            required
+            icon={<IconWorld size={16} strokeWidth={1.5} />}
+            value={selectedLocale}
+            onChange={(newValue: string) => {
+              setSelectedLocale(newValue);
+            }}
+          />
         </div>
         <div className="DocumentPage__main__previewBar__buttons">
           <Tooltip label="Reload">
