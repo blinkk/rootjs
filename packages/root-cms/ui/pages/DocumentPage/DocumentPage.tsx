@@ -139,13 +139,16 @@ DocumentPage.Preview = (props: PreviewProps) => {
   function reloadIframe() {
     const iframe = iframeRef.current!;
     iframe.src = 'about:blank';
+    const localizedUrl = selectedLocale
+      ? getLocalizedUrl(previewPath, selectedLocale)
+      : previewPath;
     window.setTimeout(() => {
-      if (iframe.src !== previewPath) {
-        iframe.src = previewPath;
+      if (iframe.src !== localizedUrl) {
+        iframe.src = localizedUrl;
       } else {
         iframe.contentWindow!.location.reload();
       }
-    }, 20);
+    }, 30);
   }
 
   useEffect(() => {
@@ -173,7 +176,6 @@ DocumentPage.Preview = (props: PreviewProps) => {
   }, []);
 
   useEffect(() => {
-    console.log('locale changed', selectedLocale);
     const localizedUrl = selectedLocale
       ? getLocalizedUrl(previewPath, selectedLocale)
       : previewPath;
