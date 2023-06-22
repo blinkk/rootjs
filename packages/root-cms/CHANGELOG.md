@@ -1,5 +1,12 @@
 # @blinkk/root-cms
 
+## 1.0.0-beta.43
+
+### Patch Changes
+
+- ae16f58: fix: fix reload of iframe url
+  - @blinkk/root@1.0.0-beta.43
+
 ## 1.0.0-beta.42
 
 ### Patch Changes
