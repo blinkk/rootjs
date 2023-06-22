@@ -47,7 +47,7 @@ export interface ListDocsOptions {
   limit?: number;
   orderBy?: string;
   orderByDirection?: 'asc' | 'desc';
-  // TODO(stevenle): support filters.
+  query: (query: Query) => Query;
 }
 
 /**
@@ -75,6 +75,9 @@ export async function listDocs<T>(
   }
   if (options.orderBy) {
     query = query.orderBy(options.orderBy, options.orderByDirection);
+  }
+  if (options.query) {
+    query = options.query(query);
   }
   const results = await query.get();
   const docs: T[] = [];
@@ -294,7 +297,9 @@ export interface LoadTranslationsOptions {
 
 /**
  * Loads translations saved in the trasnlations collection, optionally filtered
- * by tag. Returns a map like:
+ * by tag.
+ *
+ * Returns a map like:
  * ```
  * {
  *   "<hash>": {"source": "Hello", "es": "Hola", "fr": "Bonjour"},
@@ -327,7 +332,9 @@ export async function loadTranslations(
 }
 
 /**
- * Loads translations for a particular locale. Returns a map like:
+ * Loads translations for a particular locale.
+ *
+ * Returns a map like:
  * ```
  * {
  *   "Hello": "Bonjour",
@@ -340,6 +347,24 @@ export async function loadTranslationsForLocale(
   options?: LoadTranslationsOptions
 ): Promise<LocaleTranslations> {
   const translationsMap = await loadTranslations(rootConfig, options);
+  return translationsForLocale(translationsMap, locale);
+}
+
+/**
+ * Converts a translations map from `loadTranslations()` to a map of source to
+ * translated string for a particular locale.
+ *
+ * Returns a map like:
+ * ```
+ * {
+ *   "Hello": "Bonjour",
+ * }
+ * ```
+ */
+export function translationsForLocale(
+  translationsMap: TranslationsMap,
+  locale: string
+) {
   const localeTranslations: LocaleTranslations = {};
   Object.values(translationsMap).forEach((string) => {
     const source = string.source;
