@@ -175,8 +175,8 @@ DocumentPage.Preview = (props: PreviewProps) => {
   useEffect(() => {
     console.log('locale changed', selectedLocale);
     const localizedUrl = selectedLocale
-      ? getLocalizedUrl(servingPath, selectedLocale)
-      : servingPath;
+      ? getLocalizedUrl(previewPath, selectedLocale)
+      : previewPath;
     const iframe = iframeRef.current!;
     iframe.src = localizedUrl;
   }, [selectedLocale]);
