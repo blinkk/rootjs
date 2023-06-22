@@ -1,5 +1,12 @@
 # @blinkk/root-cms
 
+## 1.0.0-beta.42
+
+### Patch Changes
+
+- 83c9caf: fix: fix preview path
+  - @blinkk/root@1.0.0-beta.42
+
 ## 1.0.0-beta.41
 
 ### Patch Changes
