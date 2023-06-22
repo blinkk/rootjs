@@ -1,5 +1,13 @@
 # @blinkk/root-cms
 
+## 1.0.0-beta.41
+
+### Patch Changes
+
+- cf34e66: feat: add custom queries for listing docs
+- 729b313: feat: add locale toggle to preview window
+  - @blinkk/root@1.0.0-beta.41
+
 ## 1.0.0-beta.40
 
 ### Patch Changes
