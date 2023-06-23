@@ -1,5 +1,13 @@
 # @blinkk/root-cms
 
+## 1.0.0-beta.44
+
+### Patch Changes
+
+- e6334a5: feat: add query() option to numDocs()
+- c3b3f08: fix: fix localizedUrl for newTab button
+  - @blinkk/root@1.0.0-beta.44
+
 ## 1.0.0-beta.43
 
 ### Patch Changes
