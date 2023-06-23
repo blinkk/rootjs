@@ -47,7 +47,7 @@ export interface ListDocsOptions {
   limit?: number;
   orderBy?: string;
   orderByDirection?: 'asc' | 'desc';
-  query: (query: Query) => Query;
+  query?: (query: Query) => Query;
 }
 
 /**
@@ -90,7 +90,7 @@ export async function listDocs<T>(
 
 export interface NumDocsOptions {
   mode: 'draft' | 'published';
-  // TODO(stevenle): support filters.
+  query?: (query: Query) => Query;
 }
 
 /**
@@ -109,8 +109,10 @@ export async function numDocs(
   const app = cmsPlugin.getFirebaseApp();
   const db = getFirestore(app);
   const dbPath = `Projects/${projectId}/Collections/${collectionId}/${modeCollection}`;
-  const query: Query = db.collection(dbPath);
-  // TODO(stevenle): support filters here.
+  let query: Query = db.collection(dbPath);
+  if (options.query) {
+    query = options.query(query);
+  }
   const results = await query.count().get();
   const count = results.data().count;
   return count;
