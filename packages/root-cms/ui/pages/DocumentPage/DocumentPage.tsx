@@ -105,6 +105,9 @@ function getLocaleLabel(locale: string) {
 }
 
 function getLocalizedUrl(urlPath: string, locale: string) {
+  if (!locale) {
+    return urlPath;
+  }
   const urlFormat =
     window.__ROOT_CTX.rootConfig.i18n?.urlFormat || '/{locale}/{path}';
   return urlFormat
@@ -115,7 +118,7 @@ function getLocalizedUrl(urlPath: string, locale: string) {
 DocumentPage.Preview = (props: PreviewProps) => {
   const domain = window.__ROOT_CTX.rootConfig.domain || 'https://example.com';
   const servingPath = getDocServingPath(props.docId);
-  const previewPath = `${getDocPreviewPath(props.docId)}?preview=true`;
+
   const servingUrl = `${domain}${servingPath}`;
   const [iframeUrl, setIframeUrl] = useState(servingUrl);
   const [device, setDevice] = useState<Device>('');
@@ -127,6 +130,8 @@ DocumentPage.Preview = (props: PreviewProps) => {
   const [selectedLocale, setSelectedLocale] = useState('');
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const locales = props.draft.controller.getLocales();
+  const previewPath = `${getDocPreviewPath(props.docId)}?preview=true`;
+  const localizedPreviewPath = getLocalizedUrl(previewPath, selectedLocale);
 
   const localeOptions = [
     {value: '', label: 'Select locale'},
@@ -139,12 +144,9 @@ DocumentPage.Preview = (props: PreviewProps) => {
   function reloadIframe() {
     const iframe = iframeRef.current!;
     iframe.src = 'about:blank';
-    const localizedUrl = selectedLocale
-      ? getLocalizedUrl(previewPath, selectedLocale)
-      : previewPath;
     window.setTimeout(() => {
-      if (iframe.src !== localizedUrl) {
-        iframe.src = localizedUrl;
+      if (iframe.src !== localizedPreviewPath) {
+        iframe.src = localizedPreviewPath;
       } else {
         iframe.contentWindow!.location.reload();
       }
@@ -176,11 +178,8 @@ DocumentPage.Preview = (props: PreviewProps) => {
   }, []);
 
   useEffect(() => {
-    const localizedUrl = selectedLocale
-      ? getLocalizedUrl(previewPath, selectedLocale)
-      : previewPath;
     const iframe = iframeRef.current!;
-    iframe.src = localizedUrl;
+    iframe.src = localizedPreviewPath;
   }, [selectedLocale]);
 
   function toggleDevice(device: Device) {
@@ -198,7 +197,7 @@ DocumentPage.Preview = (props: PreviewProps) => {
   }
 
   function openNewTab() {
-    const tab = window.open(previewPath, '_blank');
+    const tab = window.open(localizedPreviewPath, '_blank');
     if (tab) {
       tab.focus();
     }
