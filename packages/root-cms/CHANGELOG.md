@@ -1,5 +1,12 @@
 # @blinkk/root-cms
 
+## 1.0.0-beta.45
+
+### Patch Changes
+
+- 463f398: feat: add edit json modal
+  - @blinkk/root@1.0.0-beta.45
+
 ## 1.0.0-beta.44
 
 ### Patch Changes
