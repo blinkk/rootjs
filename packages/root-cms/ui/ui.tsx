@@ -24,6 +24,7 @@ import {SettingsPage} from './pages/SettingsPage/SettingsPage.js';
 import {TranslationsPage} from './pages/TranslationsPage/TranslationsPage.js';
 import './styles/global.css';
 import './styles/theme.css';
+import {EditJsonModal} from './components/EditJsonModal/EditJsonModal.js';
 
 declare global {
   interface Window {
@@ -58,8 +59,9 @@ function App() {
         <ModalsProvider
           modals={{
             [CopyDocModal.id]: CopyDocModal,
-            [PublishDocModal.id]: PublishDocModal,
+            [EditJsonModal.id]: EditJsonModal,
             [LocalizationModal.id]: LocalizationModal,
+            [PublishDocModal.id]: PublishDocModal,
           }}
         >
           <FirebaseContext.Provider value={window.firebase}>

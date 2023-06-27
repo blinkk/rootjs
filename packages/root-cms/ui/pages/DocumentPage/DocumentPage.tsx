@@ -7,7 +7,6 @@ import {
   IconDeviceFloppy,
   IconDeviceIpad,
   IconDeviceMobile,
-  IconGlobe,
   IconReload,
   IconWorld,
 } from '@tabler/icons-preact';

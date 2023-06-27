@@ -130,7 +130,7 @@ export class DraftController extends EventListener {
   subscribe(key: string, callback: SubscriberCallback): UnsubscribeCallback {
     this.subscribers[key] ??= new Set();
     this.subscribers[key].add(callback);
-    callback(getNestedValue(this.cachedData, key));
+    callback(this.getValue(key));
 
     const unsubscribe = () => {
       this.subscribers[key].delete(callback);
@@ -148,6 +148,10 @@ export class DraftController extends EventListener {
     const data = this.cachedData;
     this.dispatch(EventType.CHANGE, data);
     notify(this.subscribers, data);
+  }
+
+  getValue(key: string): any {
+    return getNestedValue(this.cachedData, key);
   }
 
   /**

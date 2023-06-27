@@ -12,6 +12,7 @@ import {
 } from '@mantine/core';
 import {showNotification} from '@mantine/notifications';
 import {
+  IconBraces,
   IconCircleArrowDown,
   IconCircleArrowUp,
   IconCirclePlus,
@@ -47,6 +48,7 @@ import {
 import {DocStatusBadges} from '../DocStatusBadges/DocStatusBadges.js';
 import {useLocalizationModal} from '../LocalizationModal/LocalizationModal.js';
 import {usePublishDocModal} from '../PublishDocModal/PublishDocModal.js';
+import {useEditJsonModal} from '../EditJsonModal/EditJsonModal.js';
 
 interface DocEditorProps {
   docId: string;
@@ -599,6 +601,14 @@ interface ArrayUpdate {
   newValue: ArrayFieldValue;
 }
 
+interface ArrayUpdateItem {
+  type: 'updateItem';
+  index: number;
+  newValue: ArrayFieldValue;
+  draft: DraftController;
+  deepKey: string;
+}
+
 interface ArrayAdd {
   type: 'add';
   draft: DraftController;
@@ -649,6 +659,7 @@ interface ArrayRemoveAt {
 
 type ArrayAction =
   | ArrayUpdate
+  | ArrayUpdateItem
   | ArrayAdd
   | ArrayInsertBefore
   | ArrayInsertAfter
@@ -662,6 +673,17 @@ function arrayReducer(state: ArrayFieldValue, action: ArrayAction) {
     case 'update': {
       const newlyAdded = state._new || [];
       return {...action.newValue, _new: newlyAdded};
+    }
+    case 'updateItem': {
+      const data = state ?? {};
+      const order = [...(data._array || [])];
+      const key = order[action.index];
+      const newValue = action.newValue ?? {};
+      action.draft.updateKey(`${action.deepKey}.${key}`, newValue);
+      return {
+        ...data,
+        [key]: newValue,
+      };
     }
     case 'add': {
       const data = state ?? {};
@@ -864,6 +886,27 @@ DocEditor.ArrayField = (props: FieldProps) => {
     });
   };
 
+  const editJsonModal = useEditJsonModal();
+
+  const editJson = (index: number) => {
+    const key = order[index];
+    editJsonModal.open({
+      data: value[key],
+      onSave: (newValue) => {
+        console.log('editJson, onSave():', newValue);
+        dispatch({
+          type: 'updateItem',
+          draft,
+          index,
+          newValue,
+          deepKey: props.deepKey,
+        });
+        draft.notifySubscribers();
+        editJsonModal.close();
+      },
+    });
+  };
+
   return (
     <div className="DocEditor__ArrayField">
       <div className="DocEditor__ArrayField__items">
@@ -925,6 +968,14 @@ DocEditor.ArrayField = (props: FieldProps) => {
                     onClick={() => duplicate(i)}
                   >
                     Duplicate
+                  </Menu.Item>
+
+                  <Menu.Label>CODE</Menu.Label>
+                  <Menu.Item
+                    icon={<IconBraces size={20} />}
+                    onClick={() => editJson(i)}
+                  >
+                    Edit JSON
                   </Menu.Item>
 
                   <Menu.Label>REMOVE</Menu.Label>
