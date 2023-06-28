@@ -73,6 +73,9 @@ async function sha1(str: string) {
  * - Removes spaces at the end of any line
  */
 export function normalizeString(str: string) {
-  const regex = /^(.*?)(\s+)?$/gm;
-  return str.replace(regex, '$1').trim();
+  const lines = String(str)
+    .trim()
+    .split('\n')
+    .map((line) => line.trimEnd());
+  return lines.join('\n');
 }
