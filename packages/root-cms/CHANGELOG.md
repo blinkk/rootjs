@@ -1,5 +1,12 @@
 # @blinkk/root-cms
 
+## 1.0.0-beta.46
+
+### Patch Changes
+
+- cb99a12: fix: fix string normalization
+  - @blinkk/root@1.0.0-beta.46
+
 ## 1.0.0-beta.45
 
 ### Patch Changes
