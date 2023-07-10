@@ -1,5 +1,11 @@
 # @blinkk/root
 
+## 1.0.0-beta.47
+
+### Patch Changes
+
+- b3646b7: feat: allow middleware to override public files
+
 ## 1.0.0-beta.46
 
 ## 1.0.0-beta.45
