@@ -15,6 +15,7 @@ import {createViteServer} from '../../node/vite.js';
 import {DevServerAssetMap} from '../../render/asset-map/dev-asset-map.js';
 import {isDirectory, isJsFile} from '../../utils/fsutils.js';
 import {findOpenPort} from '../../utils/ports.js';
+import sirv from 'sirv';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -63,6 +64,11 @@ export async function createDevServer(options?: {
       for (const middleware of userMiddlewares) {
         server.use(middleware);
       }
+
+      // Add static file middleware.
+      const publicDir = path.join(rootDir, 'public');
+      server.use(sirv(publicDir, {dev: false}));
+
       // Add the root.js dev server middlewares.
       server.use(rootDevServerMiddleware());
       server.use(rootDevServer404Middleware());
@@ -119,12 +125,14 @@ async function viteServerMiddleware(options: {
     if (isInElementsDir(filePath)) {
       // Re-generate the elements graph.
       elementGraph = await getElements(rootConfig);
+      console.log(`element added: ${filePath}`);
     }
   });
   viteServer.watcher.on('unlink', async (filePath: string) => {
     if (isInElementsDir(filePath)) {
       // Re-generate the elements graph.
       elementGraph = await getElements(rootConfig);
+      console.log(`element deleted: ${filePath}`);
     }
   });
 

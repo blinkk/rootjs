@@ -49,6 +49,10 @@
   font-weight: 600;
 }
 
+.DocEditor__field__help {
+  margin-top: 2px;
+}
+
 .DocEditor__ObjectField__fields {
   display: flex;
   flex-direction: column;

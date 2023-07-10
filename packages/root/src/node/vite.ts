@@ -37,7 +37,10 @@ export async function createViteServer(
     ...viteConfig,
     mode: 'development',
     root: rootDir,
-    publicDir: path.join(rootDir, 'public'),
+    // publicDir is disabled from the vite dev server since it's handled by the
+    // root dev server directly, which allows user middlewares to override
+    // files in the public dir.
+    publicDir: false,
     server: {
       ...(viteConfig.server || {}),
       middlewareMode: true,
