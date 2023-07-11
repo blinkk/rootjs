@@ -82,6 +82,18 @@ export function fileExists(filepath: string): Promise<boolean> {
     .catch(() => false);
 }
 
+export async function dirExists(dirpath: string): Promise<boolean> {
+  try {
+    const stat = await fs.stat(dirpath);
+    return stat.isDirectory();
+  } catch (error) {
+    if (error.code === 'ENOENT') {
+      return false;
+    }
+    throw error;
+  }
+}
+
 export async function directoryContains(
   dirpath: string,
   subpath: string

@@ -13,7 +13,7 @@ import {getElements, getElementsDirs} from '../../node/element-graph.js';
 import {loadRootConfig} from '../../node/load-config.js';
 import {createViteServer} from '../../node/vite.js';
 import {DevServerAssetMap} from '../../render/asset-map/dev-asset-map.js';
-import {isDirectory, isJsFile} from '../../utils/fsutils.js';
+import {dirExists, isDirectory, isJsFile} from '../../utils/fsutils.js';
 import {findOpenPort} from '../../utils/ports.js';
 import sirv from 'sirv';
 
@@ -67,7 +67,9 @@ export async function createDevServer(options?: {
 
       // Add static file middleware.
       const publicDir = path.join(rootDir, 'public');
-      server.use(sirv(publicDir, {dev: false}));
+      if (await dirExists(publicDir)) {
+        server.use(sirv(publicDir, {dev: false}));
+      }
 
       // Add the root.js dev server middlewares.
       server.use(rootDevServerMiddleware());
