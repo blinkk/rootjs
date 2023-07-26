@@ -1,5 +1,12 @@
 # @blinkk/root
 
+## 1.0.0-beta.48
+
+### Patch Changes
+
+- 8a39d33: feat: add better build error logging
+- 1b6024d: fix: fix non-existant public dir
+
 ## 1.0.0-beta.47
 
 ### Patch Changes
