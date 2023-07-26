@@ -8,6 +8,7 @@ import glob from 'tiny-glob';
 import {build as viteBuild, Manifest, ManifestChunk, UserConfig} from 'vite';
 
 import {getVitePlugins} from '../../core/plugin.js';
+import {Route} from '../../core/types.js';
 import {getElements} from '../../node/element-graph.js';
 import {loadRootConfig} from '../../node/load-config.js';
 import {BuildAssetMap} from '../../render/asset-map/build-asset-map.js';
@@ -338,32 +339,39 @@ export async function build(rootProjectDir?: string, options?: BuildOptions) {
     const batchSize = Number(options?.concurrency || 10);
     await batchAsyncCalls(Object.keys(sitemap), batchSize, async (urlPath) => {
       const {route, params} = sitemap[urlPath];
-      const data = await renderer.renderRoute(route, {
-        routeParams: params,
-      });
-      if (data.notFound) {
-        return;
-      }
+      try {
+        const data = await renderer.renderRoute(route, {
+          routeParams: params,
+        });
+        if (data.notFound) {
+          return;
+        }
 
-      // The renderer currently assumes that all paths serve HTML.
-      // TODO(stevenle): support non-HTML routes using `routes/[name].[ext].ts`.
-      let outFilePath = path.join(urlPath.slice(1), 'index.html');
-      if (outFilePath.endsWith('404/index.html')) {
-        outFilePath = outFilePath.replace('404/index.html', '404.html');
-      }
-      const outPath = path.join(buildDir, outFilePath);
+        // The renderer currently assumes that all paths serve HTML.
+        // TODO(stevenle): support non-HTML routes using `routes/[name].[ext].ts`.
+        let outFilePath = path.join(urlPath.slice(1), 'index.html');
+        if (outFilePath.endsWith('404/index.html')) {
+          outFilePath = outFilePath.replace('404/index.html', '404.html');
+        }
+        const outPath = path.join(buildDir, outFilePath);
 
-      let html = data.html || '';
-      if (rootConfig.prettyHtml !== false) {
-        html = await htmlPretty(html, rootConfig.prettyHtmlOptions);
-      }
-      // HTML minification is `true` by default. Set to `false` to disable.
-      if (rootConfig.minifyHtml !== false) {
-        html = await htmlMinify(html, rootConfig.minifyHtmlOptions);
-      }
-      await writeFile(outPath, html);
+        let html = data.html || '';
+        if (rootConfig.prettyHtml !== false) {
+          html = await htmlPretty(html, rootConfig.prettyHtmlOptions);
+        }
+        // HTML minification is `true` by default. Set to `false` to disable.
+        if (rootConfig.minifyHtml !== false) {
+          html = await htmlMinify(html, rootConfig.minifyHtmlOptions);
+        }
+        await writeFile(outPath, html);
 
-      printFileOutput(fileSize(outPath), 'dist/html/', outFilePath);
+        printFileOutput(fileSize(outPath), 'dist/html/', outFilePath);
+      } catch (e) {
+        logBuildError({route, params, urlPath}, e);
+        throw new Error(
+          `BuildError: ${urlPath} (${route.src}) failed to build.`
+        );
+      }
     });
   }
 }
@@ -410,4 +418,41 @@ function sanitizeFileName(name: string): string {
       .replace(/\x00/g, '')
       .toLowerCase()
   );
+}
+
+interface BuildContext {
+  route: Route;
+  params: Record<string, string>;
+  urlPath: string;
+}
+
+function logBuildError(ctx: BuildContext, e: Error) {
+  const {route, params, urlPath} = ctx;
+  const errorString = String(e.stack || e);
+  console.error();
+  if (Object.keys(params).length > 0) {
+    console.error(
+      `An error occurred building ${urlPath} (${route.src}) with params:
+${formatParams(params)}
+
+The error was:
+  ${errorString}
+  `.trim()
+    );
+  } else {
+    console.error(
+      `An error occurred building ${urlPath} (${route.src})
+
+The error was:
+  ${errorString}`
+    );
+  }
+}
+
+function formatParams(params: Record<string, string>) {
+  return Object.entries(params)
+    .map(([key, value]) => {
+      return `  ${key}: ${value}`;
+    })
+    .join('\n');
 }
