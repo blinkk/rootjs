@@ -2,7 +2,8 @@ import {Server} from '@blinkk/root';
 import multer from 'multer';
 import {arrayToCsv, csvToArray} from './csv.js';
 
-const upload = multer();
+const memoryStorage = multer.memoryStorage();
+const upload = multer({storage: memoryStorage});
 
 /**
  * Registers API middleware handlers.

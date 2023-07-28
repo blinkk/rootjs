@@ -3,6 +3,7 @@ import {fileURLToPath} from 'node:url';
 
 import {default as express} from 'express';
 import {dim} from 'kleur/colors';
+import sirv from 'sirv';
 import glob from 'tiny-glob';
 
 import {RootConfig} from '../../core/config.js';
@@ -15,7 +16,6 @@ import {createViteServer} from '../../node/vite.js';
 import {DevServerAssetMap} from '../../render/asset-map/dev-asset-map.js';
 import {dirExists, isDirectory, isJsFile} from '../../utils/fsutils.js';
 import {findOpenPort} from '../../utils/ports.js';
-import sirv from 'sirv';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
