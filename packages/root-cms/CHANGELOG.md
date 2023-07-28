@@ -1,5 +1,12 @@
 # @blinkk/root-cms
 
+## 1.0.0-beta.49
+
+### Patch Changes
+
+- aa9cab4: fix: use memory storage for multer
+  - @blinkk/root@1.0.0-beta.49
+
 ## 1.0.0-beta.48
 
 ### Patch Changes
