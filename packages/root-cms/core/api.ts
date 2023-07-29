@@ -2,13 +2,17 @@ import {Server} from '@blinkk/root';
 import multer from 'multer';
 import {arrayToCsv, csvToArray} from './csv.js';
 
-const memoryStorage = multer.memoryStorage();
-const upload = multer({storage: memoryStorage});
-
 /**
  * Registers API middleware handlers.
  */
 export function api(server: Server) {
+  const upload = multer({
+    storage: multer.memoryStorage(),
+    limits: {
+      fileSize: 10 * 1024 * 1024, // 10 MB.
+    },
+  });
+
   /**
    * Accepts a JSON object containing {headers: [...], rows: [...]} and sends
    * an HTTP response with a corresponding CSV file as an attachment.
