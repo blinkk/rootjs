@@ -11,6 +11,7 @@ import {Route, Router} from 'preact-router';
 import {Collection} from '../core/schema.js';
 
 import {CopyDocModal} from './components/CopyDocModal/CopyDocModal.js';
+import {EditJsonModal} from './components/EditJsonModal/EditJsonModal.js';
 import {LocalizationModal} from './components/LocalizationModal/LocalizationModal.js';
 import {PublishDocModal} from './components/PublishDocModal/PublishDocModal.js';
 import {FirebaseContext, FirebaseContextObject} from './hooks/useFirebase.js';
@@ -24,7 +25,6 @@ import {SettingsPage} from './pages/SettingsPage/SettingsPage.js';
 import {TranslationsPage} from './pages/TranslationsPage/TranslationsPage.js';
 import './styles/global.css';
 import './styles/theme.css';
-import {EditJsonModal} from './components/EditJsonModal/EditJsonModal.js';
 
 declare global {
   interface Window {

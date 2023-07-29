@@ -97,6 +97,12 @@
   font-weight: 500;
 }
 
+.CollectionPage__collection {
+  height: 100%;
+  max-height: calc(100% - 48px);
+  overflow: auto;
+}
+
 .CollectionPage__collection__header {
   padding: 12px;
   display: none;
