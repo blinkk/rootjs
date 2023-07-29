@@ -353,10 +353,15 @@ LocalizationModal.Translations = (props: TranslationsProps) => {
           const res = await fetch('/cms/api/csv.import', {
             method: 'POST',
             body: formData,
-          }).then((res) => res.json());
+          });
+          if (res.status !== 200) {
+            const errorText = await res.text();
+            throw new Error(`RPCError: ${errorText}`);
+          }
+          const resData = (await res.json()).data;
           const importedTranslations = await cmsDocImportCsv(
             props.docId,
-            res.data
+            resData
           );
           setTranslationsMap((currentTranslations) => {
             return Object.assign({}, currentTranslations, importedTranslations);
@@ -370,7 +375,7 @@ LocalizationModal.Translations = (props: TranslationsProps) => {
           console.error(err);
           showNotification({
             title: 'Failed to import CSV',
-            message: `Error saving CSV: ${err}`,
+            message: String(err),
             color: 'red',
             autoClose: false,
           });
