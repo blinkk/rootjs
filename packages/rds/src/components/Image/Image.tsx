@@ -1,8 +1,6 @@
 import {Head} from '@blinkk/root';
 import {useImageService} from '../../hooks/useImageService.js';
-import {joinClassNames} from '../../utils/classes.js';
 import {ResponsiveType, getResponsiveValue} from '../../utils/responsive.js';
-import styles from './Image.module.scss';
 
 export type ImageFormat = 'jpg' | 'png' | 'webp';
 
@@ -124,12 +122,11 @@ export function Image(props: ImageProps) {
           ))}
         </Head>
       )}
-      <picture className={joinClassNames(className, styles.picture)} {...attrs}>
+      <picture className={className} {...attrs}>
         {sources.map((source) => (
           <source srcSet={source.srcset.join(', ')} media={source.mediaQuery} />
         ))}
         <img
-          className={styles.image}
           src={defaultUrl}
           width={width}
           height={height}
