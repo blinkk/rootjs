@@ -1,0 +1,99 @@
+/**
+ * Default CSS styles. This file is similar to a "reset" stylesheet and
+ * represents base styles for consistency across all RDS components.
+ *
+ * This stylesheet can be imported in two different ways:
+ *
+ * 1) Import within `BaseLayout.tsx`:
+ *
+ * ```
+ * import '@blinkk/rds/styles/default.scss';
+ * ```
+ *
+ * Note: Cannot configure the styles using this method. See (2) if you need to
+ * configure the CSS output.
+ *
+ * 2) Import within a SCSS file, e.g. `global.scss`:
+ *
+ * ```
+ * @use '@blinkk/rds/styles/default.scss';
+ * ```
+ *
+ * To change any configurations, use the `@use ... with` syntax, e.g.:
+ *
+ * ```
+ * @use '@blinkk/rds/styles/default.scss' with (
+ *   $disable-prefers-reduced-motion: true;
+ * );
+ * ```
+ */
+
+$disable-smooth-scroll: false !default;
+$disable-prefers-reduced-motion: false !default;
+
+@layer rds.base {
+  //  Use a more intuitive box-sizing strategy.
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+  }
+
+  // Reset margins.
+  body {
+    margin: 0;
+  }
+
+  // The default `display: inline` property of img and video causes extra
+  // vertical space within a parent container. `display: block` is generally
+  // more intuitive. Also set a max-width and auto height based on the
+  // width and height attributes of the element.
+  img,
+  svg,
+  video {
+    display: block;
+    max-width: 100%;
+    height: auto;
+  }
+
+  // Inherit font for form elements.
+  input,
+  button,
+  textarea,
+  select {
+    font: inherit;
+  }
+
+  // Set smooth scrolling by default. The `:focus-within` helps with cmd+f
+  // functionality.
+  // https://css-tricks.com/fixing-smooth-scrolling-with-find-on-page/
+  @if not($disable-smooth-scroll) {
+    html:focus-within {
+      scroll-behavior: smooth;
+    }
+    html {
+      --scroll-padding-top: var(--header-height, 0px);
+      scroll-padding-top: var(--scroll-padding-top);
+    }
+  }
+}
+
+// Disable animations when user prefers reduced motion.
+// NOTE: this style needs to occur outside of the cascade layer in order for the
+// selectivity to take precedence over all other CSS on the page.
+@if not($disable-prefers-reduced-motion) {
+  @media (prefers-reduced-motion: reduce) {
+    html:focus-within {
+     scroll-behavior: auto;
+    }
+
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+}
