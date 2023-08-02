@@ -118,6 +118,17 @@ export interface RootServerConfig {
   middlewares?: Array<
     (req: Request, res: Response, next: NextFunction) => void | Promise<void>
   >;
+
+  /**
+   * The `trailingSlash` config allows you to control how the server handles
+   * trailing slashes. This config only affects URLs that do not have a file
+   * extension (i.e. HTML paths).
+   *
+   * - When `true`, the server redirects URLs to add a trailing slash
+   * - When `false`, the server redirects URLs to remove a trailing slash
+   * - When unspecified, the server allows URLs with and without trailing slash
+   */
+  trailingSlash?: boolean;
 }
 
 export function defineConfig(config: RootUserConfig): RootUserConfig {

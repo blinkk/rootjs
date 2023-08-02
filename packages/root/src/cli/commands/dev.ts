@@ -7,7 +7,10 @@ import sirv from 'sirv';
 import glob from 'tiny-glob';
 
 import {RootConfig} from '../../core/config.js';
-import {rootProjectMiddleware} from '../../core/middleware.js';
+import {
+  rootProjectMiddleware,
+  trailingSlashMiddleware,
+} from '../../core/middleware.js';
 import {configureServerPlugins} from '../../core/plugin.js';
 import {Server, Request, Response, NextFunction} from '../../core/types.js';
 import {getElements, getElementsDirs} from '../../node/element-graph.js';
@@ -72,6 +75,7 @@ export async function createDevServer(options?: {
       }
 
       // Add the root.js dev server middlewares.
+      server.use(trailingSlashMiddleware({rootConfig}));
       server.use(rootDevServerMiddleware());
       server.use(rootDevServer404Middleware());
       server.use(rootDevServer500Middleware());
