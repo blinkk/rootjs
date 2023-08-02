@@ -32,7 +32,7 @@ $enable-smooth-scroll: true !default;
 $enable-prefers-reduced-motion-overrides: true !default;
 
 // Styles are wrapped in a cascade layer called `rds.base`, which allows them to
-// be easily overrided at the project level. Any styles that are not wrapped in
+// be easily overriden at the project level. Any styles that are not wrapped in
 // a cascade layer will naturally supercede these styles, but if your project
 // also uses cascade layers, make sure to define the cascade order by doing
 // something like:
@@ -45,7 +45,7 @@ $enable-prefers-reduced-motion-overrides: true !default;
 // }
 // ```
 @layer rds.base {
-  //  Use a more intuitive box-sizing strategy.
+  // Use a more intuitive box-sizing strategy.
   *,
   *::before,
   *::after {
