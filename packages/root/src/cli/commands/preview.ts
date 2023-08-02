@@ -152,7 +152,7 @@ function rootPreviewServer404Middleware() {
       const ext = path.extname(url);
       if (!ext) {
         const renderer = req.renderer;
-        const data = await renderer.renderDevServer404(req);
+        const data = await renderer.render404({currentPath: url});
         const html = data.html || '';
         res.status(404).set({'Content-Type': 'text/html'}).end(html);
         return;

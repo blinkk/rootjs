@@ -9,7 +9,7 @@
   "scripts": {
     "build": "rm -rf dist/ && root build",
     "dev": "root dev",
-    "preview": "pnpm run build && root preview",
+    "preview": "rm -rf dist/ && root build --ssr-only && root preview",
     "start": "root start",
     "test": "pnpm run build"
   },
