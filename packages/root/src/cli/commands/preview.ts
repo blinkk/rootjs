@@ -6,7 +6,10 @@ import {dim} from 'kleur/colors';
 import sirv from 'sirv';
 
 import {RootConfig} from '../../core/config';
-import {rootProjectMiddleware} from '../../core/middleware';
+import {
+  rootProjectMiddleware,
+  trailingSlashMiddleware,
+} from '../../core/middleware';
 import {configureServerPlugins} from '../../core/plugin';
 import {Request, Response, NextFunction, Server} from '../../core/types.js';
 import {ElementGraph} from '../../node/element-graph.js';
@@ -72,6 +75,7 @@ export async function createPreviewServer(options: {
       server.use(sirv(publicDir, {dev: false}));
 
       // Add the root.js preview server middlewares.
+      server.use(trailingSlashMiddleware({rootConfig}));
       server.use(rootPreviewServerMiddleware());
 
       // Add error handlers.
