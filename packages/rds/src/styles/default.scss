@@ -23,13 +23,13 @@
  *
  * ```
  * @use '@blinkk/rds/styles/default.scss' with (
- *   $disable-prefers-reduced-motion: true;
+ *   $enable-prefers-reduced-motion-overrides: false;
  * );
  * ```
  */
 
-$disable-smooth-scroll: false !default;
-$disable-prefers-reduced-motion: false !default;
+$enable-smooth-scroll: true !default;
+$enable-prefers-reduced-motion-overrides: true !default;
 
 // Styles are wrapped in a cascade layer called `rds.base`, which allows them to
 // be easily overrided at the project level. Any styles that are not wrapped in
@@ -80,8 +80,7 @@ $disable-prefers-reduced-motion: false !default;
     font: inherit;
   }
 
-  // Enable smooth-scrolling. The `:focus-within` helps with cmd+f.
-  // https://css-tricks.com/fixing-smooth-scrolling-with-find-on-page/
+  // Enable smooth-scrolling.
   //
   // CSS variable configuration options:
   //
@@ -91,8 +90,10 @@ $disable-prefers-reduced-motion: false !default;
   // --scroll-margin-top: This value adds a little bit of extra breathing room
   //   to the target element so that it isn't completely flushed with the top.
   //   Defaults to 2ex (2 times the calculated height of the letter 'x').
-  @if not($disable-smooth-scroll) {
+  @if $enable-smooth-scroll {
     @media (prefers-reduced-motion: no-preference) {
+      // The `:focus-within` selector helps with cmd+f.
+      // https://css-tricks.com/fixing-smooth-scrolling-with-find-on-page/
       html:focus-within {
         scroll-behavior: smooth;
       }
@@ -112,7 +113,7 @@ $disable-prefers-reduced-motion: false !default;
 // Disable animations when user prefers reduced motion.
 // NOTE: this style needs to occur outside of the cascade layer in order for the
 // selectivity to take precedence over all other CSS on the page.
-@if not($disable-prefers-reduced-motion) {
+@if $enable-prefers-reduced-motion-overrides {
   @media (prefers-reduced-motion: reduce) {
     *,
     *::before,
