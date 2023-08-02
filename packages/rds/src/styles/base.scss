@@ -1,13 +1,13 @@
 /**
- * Default CSS styles. This file is similar to a "reset" stylesheet and
- * represents base styles for consistency across all RDS components.
+ * Base CSS styles. This file is similar to a "reset" stylesheet and represents
+ * base styles for consistency across all RDS components.
  *
  * This stylesheet can be imported in two different ways:
  *
  * 1) Import within `BaseLayout.tsx`:
  *
  * ```
- * import '@blinkk/rds/styles/default.scss';
+ * import '@blinkk/rds/styles/base.scss';
  * ```
  *
  * Note: Cannot configure the styles using this method. See (2) if you need to
@@ -16,13 +16,13 @@
  * 2) Import within a SCSS file, e.g. `global.scss`:
  *
  * ```
- * @use '@blinkk/rds/styles/default.scss';
+ * @use '@blinkk/rds/styles/base.scss';
  * ```
  *
  * To change any configurations, use the `@use ... with` syntax, e.g.:
  *
  * ```
- * @use '@blinkk/rds/styles/default.scss' with (
+ * @use '@blinkk/rds/styles/base.scss' with (
  *   $enable-prefers-reduced-motion-overrides: false;
  * );
  * ```
