@@ -1,5 +1,15 @@
 # @blinkk/root-cms
 
+## 1.0.0-beta.50
+
+### Patch Changes
+
+- 19e7bf2: fix: increase multer file size limit
+- 63cb83f: fix: fix collection page overflow
+- Updated dependencies [8b0bafb]
+- Updated dependencies [c1dd173]
+  - @blinkk/root@1.0.0-beta.50
+
 ## 1.0.0-beta.49
 
 ### Patch Changes

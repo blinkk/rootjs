@@ -1,5 +1,12 @@
 # @blinkk/root
 
+## 1.0.0-beta.50
+
+### Patch Changes
+
+- 8b0bafb: fix: update preview server to use project's 404 route
+- c1dd173: feat: add trailingSlash middleware
+
 ## 1.0.0-beta.49
 
 ## 1.0.0-beta.48
