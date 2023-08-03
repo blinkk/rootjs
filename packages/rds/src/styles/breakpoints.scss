@@ -7,7 +7,7 @@
  * @use 'breakpoints';
  * .foo {
  *   color: blue;
- *   @include breakpoints.mobile() {
+ *   @include breakpoints.sm() {
  *     color: red;
  *   }
  * }
@@ -18,7 +18,7 @@
  * ```
  * .foo {
  *   color: blue;
- *   @include breakpoints.tablet-lt() {
+ *   @include breakpoints.md-lt() {
  *     color: red;
  *   }
  * }
@@ -29,7 +29,7 @@
  * ```
  * .foo {
  *   color: blue;
- *   @include breakpoints.laptop-gt() {
+ *   @include breakpoints.lg-gt() {
  *     color: red;
  *   }
  * }
@@ -39,11 +39,11 @@
  *
  * ```
  * $breakpoints: (
- *   'mobile': 0px,
- *   'tablet': 500px,
- *   'laptop': 1024px,
- *   'desktop': 1440px,
- *   'site-max': 2000px
+ *   'sm': 0px,
+ *   'md': 500px,
+ *   'lg': 1024px,
+ *   'xl': 1440px,
+ *   'xxl': 2000px
  * );
  * ```
  */
@@ -59,11 +59,11 @@
   $breakpoints: tokens.$breakpoints;
 } @else {
   $breakpoints: (
-    'mobile': 0px,
-    'tablet': 500px,
-    'laptop': 1024px,
-    'desktop': 1440px,
-    'site-max': 2000px
+    'sm': 0px,
+    'md': 500px,
+    'lg': 1024px,
+    'xl': 1440px,
+    'xxl': 2000px
   );
 }
 
@@ -79,15 +79,15 @@
 // https://www.w3.org/TR/mediaqueries-4/#mq-min-max
 // https://bugs.webkit.org/show_bug.cgi?id=178261
 $-breakpoint-offset-px: 0.02px;
-$breakpoint-mobile-min: get-config-value('mobile');
-$breakpoint-mobile-max: get-config-value('tablet') - $-breakpoint-offset-px;
-$breakpoint-tablet-min: get-config-value('tablet');
-$breakpoint-tablet-max: get-config-value('laptop') - $-breakpoint-offset-px;
-$breakpoint-laptop-min: get-config-value('laptop');
-$breakpoint-laptop-max: get-config-value('desktop') - $-breakpoint-offset-px;
-$breakpoint-desktop-min: get-config-value('desktop');
-$breakpoint-desktop-max: get-config-value('site-max') - $-breakpoint-offset-px;
-$breakpoint-site-max: get-config-value('site-max');
+$breakpoint-sm-min: get-config-value('sm');
+$breakpoint-sm-max: get-config-value('md') - $-breakpoint-offset-px;
+$breakpoint-md-min: get-config-value('md');
+$breakpoint-md-max: get-config-value('lg') - $-breakpoint-offset-px;
+$breakpoint-lg-min: get-config-value('lg');
+$breakpoint-lg-max: get-config-value('xl') - $-breakpoint-offset-px;
+$breakpoint-xl-min: get-config-value('xl');
+$breakpoint-xl-max: get-config-value('xxl') - $-breakpoint-offset-px;
+$breakpoint-xxl: get-config-value('xxl');
 
 @mixin gt($min) {
   @media (min-width: $min) {
@@ -107,78 +107,78 @@ $breakpoint-site-max: get-config-value('site-max');
   }
 }
 
-@mixin mobile() {
-  @include lt($breakpoint-mobile-max) {
+@mixin sm() {
+  @include lt($breakpoint-sm-max) {
     @content;
   }
 }
 
-@mixin mobile-gt() {
+@mixin sm-gt() {
   @content;
 }
 
-@mixin mobile-lt() {
-  @include lt($breakpoint-mobile-max) {
+@mixin sm-lt() {
+  @include lt($breakpoint-sm-max) {
     @content;
   }
 }
 
-@mixin tablet() {
-  @include between($breakpoint-tablet-min, $breakpoint-tablet-max) {
+@mixin md() {
+  @include between($breakpoint-md-min, $breakpoint-md-max) {
     @content;
   }
 }
 
-@mixin tablet-gt() {
-  @include gt($breakpoint-tablet-min) {
+@mixin md-gt() {
+  @include gt($breakpoint-md-min) {
     @content;
   }
 }
 
-@mixin tablet-lt() {
-  @include lt($breakpoint-tablet-max) {
+@mixin md-lt() {
+  @include lt($breakpoint-md-max) {
     @content;
   }
 }
 
-@mixin laptop() {
-  @include between($breakpoint-laptop-min, $breakpoint-laptop-max) {
+@mixin lg() {
+  @include between($breakpoint-lg-min, $breakpoint-lg-max) {
     @content;
   }
 }
 
-@mixin laptop-gt() {
-  @include gt($breakpoint-laptop-min) {
+@mixin lg-gt() {
+  @include gt($breakpoint-lg-min) {
     @content;
   }
 }
 
-@mixin laptop-lt() {
-  @include lt($breakpoint-laptop-max) {
+@mixin lg-lt() {
+  @include lt($breakpoint-lg-max) {
     @content;
   }
 }
 
-@mixin desktop() {
-  @include between($breakpoint-desktop-min, $breakpoint-desktop-max) {
+@mixin xl() {
+  @include between($breakpoint-xl-min, $breakpoint-xl-max) {
     @content;
   }
 }
 
-@mixin desktop-gt() {
-  @include gt($breakpoint-desktop-min) {
+@mixin xl-gt() {
+  @include gt($breakpoint-xl-min) {
     @content;
   }
 }
 
-@mixin desktop-lt() {
-  @include lt($breakpoint-desktop-max) {
+@mixin xl-lt() {
+  @include lt($breakpoint-xl-max) {
     @content;
   }
 }
 
-@mixin site-max() {
-  @include gt($breakpoint-site-max) {
+@mixin xxl() {
+  @include gt($breakpoint-xxl) {
     @content;
   }
 }
