@@ -1,0 +1,184 @@
+/**
+ * Breakpoint mixins.
+ *
+ * Styles for a specific breakpoint:
+ *
+ * ```
+ * @use 'breakpoints';
+ * .foo {
+ *   color: blue;
+ *   @include breakpoints.mobile() {
+ *     color: red;
+ *   }
+ * }
+ * ```
+ *
+ * Styles for a specific breakpoint and smaller:
+ *
+ * ```
+ * .foo {
+ *   color: blue;
+ *   @include breakpoints.tablet-lt() {
+ *     color: red;
+ *   }
+ * }
+ * ```
+ *
+ * Styles for a specific breakpoint and greater:
+ *
+ * ```
+ * .foo {
+ *   color: blue;
+ *   @include breakpoints.laptop-gt() {
+ *     color: red;
+ *   }
+ * }
+ * ```
+ *
+ * Breakpoint widths can be configured in `tokens.scss`:
+ *
+ * ```
+ * $breakpoints: (
+ *   'mobile': 0px,
+ *   'tablet': 500px,
+ *   'laptop': 1024px,
+ *   'desktop': 1440px,
+ *   'site-max': 2000px
+ * );
+ * ```
+ */
+
+@use 'sass:map';
+@use 'sass:meta';
+@use 'tokens';
+
+// The breakpoint map configuration is a key-value pair where the key is the
+// name of the breakpoint and the value is the minimum width for that
+// breakpoint.
+@if meta.variable-exists(tokens.$breakpoints) {
+  $breakpoints: tokens.$breakpoints;
+} @else {
+  $breakpoints: (
+    'mobile': 0px,
+    'tablet': 500px,
+    'laptop': 1024px,
+    'desktop': 1440px,
+    'site-max': 2000px
+  );
+}
+
+// Returns the configuration value for a given breakpoint name.
+@function get-config-value($key) {
+  @return map.get($breakpoints, $key);
+}
+
+// Since `max-width` and `min-width` media queries are equivalent to `<=` and
+// `>=` respectively, the `$-breakpoint-offset-px` value is used so that two
+// different breakpoints do not overlap. `0.02px` is used to avoid a rounding
+// bug in Safari.
+// https://www.w3.org/TR/mediaqueries-4/#mq-min-max
+// https://bugs.webkit.org/show_bug.cgi?id=178261
+$-breakpoint-offset-px: 0.02px;
+$breakpoint-mobile-min: get-config-value('mobile');
+$breakpoint-mobile-max: get-config-value('tablet') - $-breakpoint-offset-px;
+$breakpoint-tablet-min: get-config-value('tablet');
+$breakpoint-tablet-max: get-config-value('laptop') - $-breakpoint-offset-px;
+$breakpoint-laptop-min: get-config-value('laptop');
+$breakpoint-laptop-max: get-config-value('desktop') - $-breakpoint-offset-px;
+$breakpoint-desktop-min: get-config-value('desktop');
+$breakpoint-desktop-max: get-config-value('site-max') - $-breakpoint-offset-px;
+$breakpoint-site-max: get-config-value('site-max');
+
+@mixin gt($min) {
+  @media (min-width: $min) {
+    @content;
+  }
+}
+
+@mixin lt($max) {
+  @media (max-width: #{$max}) {
+    @content;
+  }
+}
+
+@mixin between($min, $max) {
+  @media (min-width: $min) and (max-width: #{$max}) {
+    @content;
+  }
+}
+
+@mixin mobile() {
+  @include lt($breakpoint-mobile-max) {
+    @content;
+  }
+}
+
+@mixin mobile-gt() {
+  @content;
+}
+
+@mixin mobile-lt() {
+  @include lt($breakpoint-mobile-max) {
+    @content;
+  }
+}
+
+@mixin tablet() {
+  @include between($breakpoint-tablet-min, $breakpoint-tablet-max) {
+    @content;
+  }
+}
+
+@mixin tablet-gt() {
+  @include gt($breakpoint-tablet-min) {
+    @content;
+  }
+}
+
+@mixin tablet-lt() {
+  @include lt($breakpoint-tablet-max) {
+    @content;
+  }
+}
+
+@mixin laptop() {
+  @include between($breakpoint-laptop-min, $breakpoint-laptop-max) {
+    @content;
+  }
+}
+
+@mixin laptop-gt() {
+  @include gt($breakpoint-laptop-min) {
+    @content;
+  }
+}
+
+@mixin laptop-lt() {
+  @include lt($breakpoint-laptop-max) {
+    @content;
+  }
+}
+
+@mixin desktop() {
+  @include between($breakpoint-desktop-min, $breakpoint-desktop-max) {
+    @content;
+  }
+}
+
+@mixin desktop-gt() {
+  @include gt($breakpoint-desktop-min) {
+    @content;
+  }
+}
+
+@mixin desktop-lt() {
+  @include lt($breakpoint-desktop-max) {
+    @content;
+  }
+}
+
+@mixin site-max() {
+  @include gt($breakpoint-site-max) {
+    @content;
+  }
+}
