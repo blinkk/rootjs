@@ -23,7 +23,7 @@
     }
   },
   "scripts": {
-    "build": "tsc && copyfiles -u 1 src/**/*.scss dist/"
+    "build": "exit 0"
   },
   "devDependencies": {
     "@blinkk/root": "workspace:*",
