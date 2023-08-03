@@ -1,14 +1,30 @@
-@use 'type';
 @use 'tokens';
+@use 'type';
 
-@each $text-size, $config in type.$text-sizes {
-  .size\:#{$text-size} {
-    @include type.text($config);
+@layer rds.component {
+  @each $text-size, $config in type.$text-sizes {
+    .size\:#{$text-size} {
+      @include type.text($config);
+    }
   }
-}
 
-@each $font-weight-name, $font-weight-value in type.$font-weights {
-  .weight\:#{$font-weight-name} {
-    font-weight: $font-weight-value;
+  @each $font-weight-name, $font-weight-value in type.$font-weights {
+    .weight\:#{$font-weight-name} {
+      font-weight: $font-weight-value;
+    }
+  }
+
+  .markdown {
+    > *:first-child {
+      margin-top: 0;
+    }
+    > *:last-child {
+      margin-bottom: 0;
+    }
+
+    p {
+      margin-top: 20px;
+      margin-bottom: 20px;
+    }
   }
 }

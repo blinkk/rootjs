@@ -34,5 +34,8 @@
   "peerDependencies": {
     "@blinkk/root": "1.0.0-beta.50",
     "preact": "*"
+  },
+  "dependencies": {
+    "marked": "^4.2.12"
   }
 }
