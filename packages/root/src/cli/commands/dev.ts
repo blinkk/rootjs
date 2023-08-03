@@ -77,13 +77,14 @@ export async function createDevServer(options?: {
       // Add the root.js dev server middlewares.
       server.use(trailingSlashMiddleware({rootConfig}));
       server.use(rootDevServerMiddleware());
-      server.use(rootDevServer404Middleware());
-      server.use(rootDevServer500Middleware());
     },
     plugins,
     {type: 'dev', rootConfig}
   );
 
+  // Add error handlers.
+  server.use(rootDevServer404Middleware());
+  server.use(rootDevServer500Middleware());
   return server;
 }
 

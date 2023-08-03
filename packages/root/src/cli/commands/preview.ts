@@ -77,14 +77,14 @@ export async function createPreviewServer(options: {
       // Add the root.js preview server middlewares.
       server.use(trailingSlashMiddleware({rootConfig}));
       server.use(rootPreviewServerMiddleware());
-
-      // Add error handlers.
-      server.use(rootPreviewServer404Middleware());
-      server.use(rootPreviewServer500Middleware());
     },
     plugins,
     {type: 'preview', rootConfig}
   );
+
+  // Add error handlers.
+  server.use(rootPreviewServer404Middleware());
+  server.use(rootPreviewServer500Middleware());
   return server;
 }
 
