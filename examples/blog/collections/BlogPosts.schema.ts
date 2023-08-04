@@ -85,6 +85,11 @@ export default schema.collection({
           help: 'PDF version of the post.',
           exts: ['.pdf'],
         }),
+        schema.datetime({
+          id: 'publishedAtOverride',
+          label: 'Published Date Override',
+          help: 'Override for the "Published" date.'
+        }),
       ],
     }),
   ],

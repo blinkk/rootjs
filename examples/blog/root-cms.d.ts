@@ -61,6 +61,8 @@ export interface BlogPostsFields {
         pdf?: {
             src: string;
         };
+        /** Published Date Override. Override for the "Published" date. */
+        publishedAtOverride?: unknown;
     };
 }
 
@@ -105,6 +107,8 @@ export interface BlogPostsSandboxFields {
         pdf?: {
             src: string;
         };
+        /** Published Date Override. Override for the "Published" date. */
+        publishedAtOverride?: unknown;
     };
 }
 

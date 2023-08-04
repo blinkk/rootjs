@@ -27,6 +27,7 @@ import {
   IconTrash,
   IconTriangleFilled,
 } from '@tabler/icons-preact';
+import {Timestamp} from 'firebase/firestore';
 import {ref as storageRef, updateMetadata, uploadBytes} from 'firebase/storage';
 import {ChangeEvent} from 'preact/compat';
 import {useEffect, useReducer, useRef, useState} from 'preact/hooks';
@@ -46,9 +47,9 @@ import {
   DocActionsMenu,
 } from '../DocActionsMenu/DocActionsMenu.js';
 import {DocStatusBadges} from '../DocStatusBadges/DocStatusBadges.js';
+import {useEditJsonModal} from '../EditJsonModal/EditJsonModal.js';
 import {useLocalizationModal} from '../LocalizationModal/LocalizationModal.js';
 import {usePublishDocModal} from '../PublishDocModal/PublishDocModal.js';
-import {useEditJsonModal} from '../EditJsonModal/EditJsonModal.js';
 
 interface DocEditorProps {
   docId: string;
@@ -179,6 +180,8 @@ DocEditor.Field = (props: FieldProps) => {
           <DocEditor.ArrayField {...props} />
         ) : field.type === 'boolean' ? (
           <DocEditor.BooleanField {...props} />
+        ) : field.type === 'datetime' ? (
+          <DocEditor.DateTimeField {...props} />
         ) : field.type === 'file' ? (
           <DocEditor.FileField {...props} />
         ) : field.type === 'image' ? (
@@ -1202,6 +1205,59 @@ DocEditor.BooleanField = (props: FieldProps) => {
         }}
         checked={value}
         size="xs"
+      />
+    </div>
+  );
+};
+
+DocEditor.DateTimeField = (props: FieldProps) => {
+  // const field = props.field as schema.DateTimeField;
+  const [dateStr, setDateStr] = useState('');
+
+  function onChange(newDateStr: string) {
+    if (newDateStr) {
+      const millis = Math.floor(new Date(newDateStr).getTime());
+      const newValue = Timestamp.fromMillis(millis);
+      setDateStr(toDateStr(newValue));
+      props.draft.updateKey(props.deepKey, newValue);
+    } else {
+      setDateStr('');
+      props.draft.removeKey(props.deepKey);
+    }
+  }
+
+  function toDateStr(ts: Timestamp) {
+    const date = ts.toDate();
+    // Subtract by the timezone offset so that toISOString() returns the local
+    // datetime string.
+    date.setMinutes(date.getMinutes() - date.getTimezoneOffset());
+    return date.toISOString().slice(0, 16);
+  }
+
+  useEffect(() => {
+    const unsubscribe = props.draft.subscribe(
+      props.deepKey,
+      (newValue: Timestamp) => {
+        if (newValue) {
+          setDateStr(toDateStr(newValue));
+        } else {
+          setDateStr('');
+        }
+      }
+    );
+    return unsubscribe;
+  }, []);
+
+  return (
+    <div className="DocEditor__DateTimeField">
+      <input
+        type="datetime-local"
+        value={dateStr}
+        onChange={(e: Event) => {
+          const target = e.target as HTMLInputElement;
+          const newDateStr = target.value;
+          onChange(newDateStr);
+        }}
       />
     </div>
   );
