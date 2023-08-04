@@ -1,5 +1,11 @@
 # @blinkk/root
 
+## 1.0.0-beta.51
+
+### Patch Changes
+
+- 298456f: fix: move root error handlers after user plugins
+
 ## 1.0.0-beta.50
 
 ### Patch Changes

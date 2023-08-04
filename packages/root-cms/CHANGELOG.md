@@ -1,5 +1,16 @@
 # @blinkk/root-cms
 
+## 1.0.0-beta.51
+
+### Minor Changes
+
+- 1f68372: feat: add DateTime field
+
+### Patch Changes
+
+- Updated dependencies [298456f]
+  - @blinkk/root@1.0.0-beta.51
+
 ## 1.0.0-beta.50
 
 ### Patch Changes
