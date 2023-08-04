@@ -72,14 +72,14 @@ export async function createProdServer(options: {
       // Add the root.js preview server middlewares.
       server.use(trailingSlashMiddleware({rootConfig}));
       server.use(rootProdServerMiddleware());
+
+      // Add error handlers.
+      server.use(rootProdServer404Middleware());
+      server.use(rootProdServer500Middleware());
     },
     plugins,
     {type: 'prod', rootConfig}
   );
-
-  // Add error handlers.
-  server.use(rootProdServer404Middleware());
-  server.use(rootProdServer500Middleware());
   return server;
 }
 
