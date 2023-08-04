@@ -296,3 +296,13 @@
 .DocEditor__FileField__uploadButton__icon {
   margin-right: 10px;
 }
+
+.DocEditor__DateTimeField input {
+  margin-top: 16px;
+  display: block;
+  width: 100%;
+  border: 1px solid #dedede;
+  padding: 6px 8px;
+  font-family: inherit;
+  font-size: 12px;
+}
