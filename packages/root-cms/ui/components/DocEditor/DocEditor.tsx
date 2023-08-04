@@ -1259,6 +1259,9 @@ DocEditor.DateTimeField = (props: FieldProps) => {
           onChange(newDateStr);
         }}
       />
+      <div className="DocEditor__DateTimeField__timezone">
+        timezone: {Intl.DateTimeFormat().resolvedOptions().timeZone}
+      </div>
     </div>
   );
 };
