@@ -1,7 +1,6 @@
 import {ComponentChildren} from 'preact';
-
 import {joinClassNames} from '../../utils/classes.js';
-
+import {markdownToHtml} from '../../utils/markdown.js';
 import styles from './Text.module.scss';
 
 export type FontWeight =
@@ -42,6 +41,7 @@ export type TextProps = preact.JSX.HTMLAttributes & {
   as?: preact.JSX.ElementType;
   size?: TextSize;
   weight?: FontWeight;
+  markdown?: boolean;
   children?: ComponentChildren;
 };
 
@@ -69,7 +69,14 @@ export type TextProps = preact.JSX.HTMLAttributes & {
  * ```
  */
 export function Text(props: TextProps) {
-  const {as: tagName, size: sizeProp, weight, children, ...attrs} = props;
+  const {
+    as: tagName,
+    size: sizeProp,
+    weight,
+    markdown,
+    children,
+    ...attrs
+  } = props;
   const Component = tagName || 'div';
   const size = sizeProp || 'body';
   if (import.meta.env.DEV && !styles[`size:${size}`]) {
@@ -81,10 +88,16 @@ export function Text(props: TextProps) {
       className={joinClassNames(
         props.className,
         styles[`size:${size}`],
-        weight && styles[`weight:${weight}`]
+        weight && styles[`weight:${weight}`],
+        markdown && styles.markdown
       )}
+      dangerouslySetInnerHTML={{
+        ...(markdown && {
+          __html: markdownToHtml(String(children)),
+        }),
+      }}
     >
-      {children}
+      {!markdown && children}
     </Component>
   );
 }

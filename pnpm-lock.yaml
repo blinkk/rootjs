@@ -105,8 +105,11 @@ importers:
     specifiers:
       '@blinkk/root': workspace:*
       copyfiles: ^2.4.1
+      marked: ^4.2.12
       preact: '*'
       typescript: ^5.0.4
+    dependencies:
+      marked: 4.2.12
     devDependencies:
       '@blinkk/root': link:../root
       copyfiles: 2.4.1
