@@ -1,5 +1,16 @@
 # @blinkk/root-cms
 
+## 1.0.0-beta.52
+
+### Minor Changes
+
+- 523cd85: feat: add timezone info to datetime field
+
+### Patch Changes
+
+- Updated dependencies [fd20497]
+  - @blinkk/root@1.0.0-beta.52
+
 ## 1.0.0-beta.51
 
 ### Minor Changes
