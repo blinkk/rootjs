@@ -100,22 +100,17 @@ function fieldType(field: Field): dom.Type {
   if (field.type === 'array') {
     return dom.type.array(fieldType(field.of));
   }
+  if (field.type === 'datetime') {
+    return dom.type.number;
+  }
   if (field.type === 'image') {
     return dom.create.objectType([
       dom.create.property('src', dom.type.string),
+      dom.create.property('width', dom.type.number),
+      dom.create.property('height', dom.type.number),
       dom.create.property(
         'alt',
         dom.type.string,
-        dom.DeclarationFlags.Optional
-      ),
-      dom.create.property(
-        'width',
-        dom.type.number,
-        dom.DeclarationFlags.Optional
-      ),
-      dom.create.property(
-        'height',
-        dom.type.number,
         dom.DeclarationFlags.Optional
       ),
     ]);
