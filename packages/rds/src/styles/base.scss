@@ -1,0 +1,126 @@
+/**
+ * Base CSS styles. This file is similar to a "reset" stylesheet and represents
+ * base styles for consistency across all RDS components.
+ *
+ * This stylesheet can be imported in two different ways:
+ *
+ * 1) Import within `BaseLayout.tsx`:
+ *
+ * ```
+ * import '@blinkk/rds/styles/base.scss';
+ * ```
+ *
+ * Note: Cannot configure the styles using this method. See (2) if you need to
+ * configure the CSS output.
+ *
+ * 2) Import within a SCSS file, e.g. `global.scss`:
+ *
+ * ```
+ * @use '@blinkk/rds/styles/base.scss';
+ * ```
+ *
+ * To change any configurations, use the `@use ... with` syntax, e.g.:
+ *
+ * ```
+ * @use '@blinkk/rds/styles/base.scss' with (
+ *   $enable-prefers-reduced-motion-overrides: false;
+ * );
+ * ```
+ */
+
+$enable-smooth-scroll: true !default;
+$enable-prefers-reduced-motion-overrides: true !default;
+
+// Styles are wrapped in a cascade layer called `rds.base`, which allows them to
+// be easily overriden at the project level. Any styles that are not wrapped in
+// a cascade layer will naturally supercede these styles, but if your project
+// also uses cascade layers, make sure to define the cascade order by doing
+// something like:
+//
+// ```
+// /* CSS Cascade layer order (least selective first). */
+// @layer rds.base yourprojectlayer;
+// @layer yourprojectlayer {
+//   /* project specific styles. */
+// }
+// ```
+@layer rds.base {
+  // Use a more intuitive box-sizing strategy.
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+  }
+
+  body {
+    // Prevent iOS text scaling when switching from portrait to landscape.
+    // https://kilianvalkhof.com/2022/css-html/your-css-reset-needs-text-size-adjust-probably/
+    -webkit-text-size-adjust: 100%;
+    // Reset margins.
+    margin: 0;
+  }
+
+  // The default `display: inline` property of img and video causes extra
+  // vertical space within a parent container. `display: block` is generally
+  // more intuitive. Also set a max-width and auto height based on the
+  // width and height attributes of the element.
+  img,
+  svg,
+  video {
+    display: block;
+    max-width: 100%;
+    height: auto;
+  }
+
+  // Inherit font for form elements.
+  input,
+  button,
+  textarea,
+  select {
+    font: inherit;
+  }
+
+  // Enable smooth-scrolling.
+  //
+  // CSS variable configuration options:
+  //
+  // --scroll-padding-top: This value is used to account for any fixed header
+  //   heights, so that the fixed header doesn't overlap the target element.
+  //   Defaults to var(--header-height).
+  // --scroll-margin-top: This value adds a little bit of extra breathing room
+  //   to the target element so that it isn't completely flushed with the top.
+  //   Defaults to 2ex (2 times the calculated height of the letter 'x').
+  @if $enable-smooth-scroll {
+    @media (prefers-reduced-motion: no-preference) {
+      // The `:focus-within` selector helps with cmd+f.
+      // https://css-tricks.com/fixing-smooth-scrolling-with-find-on-page/
+      html:focus-within {
+        scroll-behavior: smooth;
+      }
+      // Offset the smooth by the height of the fixed header, if any.
+      html {
+        scroll-padding-top: var(--scroll-padding-top, var(--header-height, 0px));
+      }
+      // Add extra breathing room when scrolling to a target element.
+      // https://piccalil.li/quick-tip/add-scroll-margin-to-all-elements-which-can-be-targeted/
+      [id] {
+        scroll-margin-top: var(--scroll-margin-top, 2ex);
+      }
+    }
+  }
+}
+
+// Disable animations when user prefers reduced motion.
+// NOTE: this style needs to occur outside of the cascade layer in order for the
+// selectivity to take precedence over all other CSS on the page.
+@if $enable-prefers-reduced-motion-overrides {
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+}
