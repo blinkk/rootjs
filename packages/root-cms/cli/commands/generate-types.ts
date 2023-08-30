@@ -100,6 +100,9 @@ function fieldType(field: Field): dom.Type {
   if (field.type === 'array') {
     return dom.type.array(fieldType(field.of));
   }
+  if (field.type === 'date') {
+    return dom.type.string;
+  }
   if (field.type === 'datetime') {
     return dom.type.number;
   }
