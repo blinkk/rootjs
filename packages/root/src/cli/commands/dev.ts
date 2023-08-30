@@ -7,12 +7,12 @@ import sirv from 'sirv';
 import glob from 'tiny-glob';
 
 import {RootConfig} from '../../core/config.js';
+import {configureServerPlugins} from '../../core/plugin.js';
+import {Server, Request, Response, NextFunction} from '../../core/types.js';
 import {
   rootProjectMiddleware,
   trailingSlashMiddleware,
-} from '../../core/middleware.js';
-import {configureServerPlugins} from '../../core/plugin.js';
-import {Server, Request, Response, NextFunction} from '../../core/types.js';
+} from '../../middleware/middleware.js';
 import {getElements, getElementsDirs} from '../../node/element-graph.js';
 import {loadRootConfig} from '../../node/load-config.js';
 import {createViteServer} from '../../node/vite.js';

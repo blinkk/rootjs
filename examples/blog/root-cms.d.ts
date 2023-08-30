@@ -36,9 +36,9 @@ export interface BlogPostsFields {
         /** Image. Meta image for social shares. Recommended size: 1200x600. */
         image?: {
             src: string;
+            width: number;
+            height: number;
             alt?: string;
-            width?: number;
-            height?: number;
         };
         /** Featured?. Check the box to mark the blog post as a featured blog post. */
         featured?: unknown;
@@ -62,7 +62,7 @@ export interface BlogPostsFields {
             src: string;
         };
         /** Published Date Override. Override for the "Published" date. */
-        publishedAtOverride?: unknown;
+        publishedAtOverride?: number;
     };
 }
 
@@ -82,9 +82,9 @@ export interface BlogPostsSandboxFields {
         /** Image. Meta image for social shares. Recommended size: 1200x600. */
         image?: {
             src: string;
+            width: number;
+            height: number;
             alt?: string;
-            width?: number;
-            height?: number;
         };
         /** Featured?. Check the box to mark the blog post as a featured blog post. */
         featured?: unknown;
@@ -108,7 +108,7 @@ export interface BlogPostsSandboxFields {
             src: string;
         };
         /** Published Date Override. Override for the "Published" date. */
-        publishedAtOverride?: unknown;
+        publishedAtOverride?: number;
     };
 }
 
@@ -128,9 +128,9 @@ export interface PagesFields {
         /** Image. Meta image for social shares. Recommended: 1400x600 JPG. */
         image?: {
             src: string;
+            width: number;
+            height: number;
             alt?: string;
-            width?: number;
-            height?: number;
         };
     };
     /** Content */
@@ -163,9 +163,9 @@ export interface ImageAssetFields {
     /** Image to embed. Optional. If not provided, the default YT thumbnail is used. */
     image?: {
         src: string;
+        width: number;
+        height: number;
         alt?: string;
-        width?: number;
-        height?: number;
     };
 }
 
@@ -176,9 +176,9 @@ export interface YouTubeAssetFields {
     /** Thumbnail image. Optional. If not provided, the default YT thumbnail is used. */
     thumbnail?: {
         src: string;
+        width: number;
+        height: number;
         alt?: string;
-        width?: number;
-        height?: number;
     };
 }
 
@@ -215,8 +215,8 @@ export interface TemplateHeroFields {
     /** Image */
     image?: {
         src: string;
+        width: number;
+        height: number;
         alt?: string;
-        width?: number;
-        height?: number;
     };
 }

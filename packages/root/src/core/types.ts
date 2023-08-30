@@ -49,6 +49,15 @@ export type GetStaticPaths<T = RouteParams> = () => Promise<{
   paths: Array<{params: T}>;
 }>;
 
+/** Multipart file type for the multipartMiddleware(). */
+export interface MultipartFile {
+  fieldname: string;
+  originalName: string;
+  encoding: string;
+  mimetype: string;
+  buffer: Buffer;
+}
+
 /** Root.js express app. */
 export type Server = Express;
 
@@ -60,11 +69,18 @@ export type Request = ExpressRequest & {
   viteServer?: ViteDevServer;
   /** The root.js renderer, to render routes within middleware. */
   renderer?: Renderer;
+
   /**
    * Handler context, provided to route files that export a custom `handler()`
    * function.
    */
   handlerContext?: HandlerContext;
+
+  // Fields for `multipartMiddleware()`.
+  /** Firebase functions uses rawBody for its multipart data. */
+  rawBody?: any;
+  /** Map of field name to file. */
+  files?: {[fieldname: string]: MultipartFile};
 };
 
 /** Root.js express response. */

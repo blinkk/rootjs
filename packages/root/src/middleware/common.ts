@@ -1,6 +1,6 @@
 import path from 'node:path';
-import {RootConfig} from './config';
-import {Request, Response, NextFunction} from './types';
+import {RootConfig} from '../core/config';
+import {Request, Response, NextFunction} from '../core/types';
 
 /**
  * Middleware that injects the root.js project config into the request context.

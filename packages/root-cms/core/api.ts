@@ -1,18 +1,11 @@
-import {Server} from '@blinkk/root';
-import multer from 'multer';
+import {Server, Request, Response} from '@blinkk/root';
+import {multipartMiddleware} from '@blinkk/root/middleware';
 import {arrayToCsv, csvToArray} from './csv.js';
 
 /**
  * Registers API middleware handlers.
  */
 export function api(server: Server) {
-  const upload = multer({
-    storage: multer.memoryStorage(),
-    limits: {
-      fileSize: 10 * 1024 * 1024, // 10 MB.
-    },
-  });
-
   /**
    * Accepts a JSON object containing {headers: [...], rows: [...]} and sends
    * an HTTP response with a corresponding CSV file as an attachment.
@@ -29,7 +22,7 @@ export function api(server: Server) {
    * }
    * ```
    */
-  server.use('/cms/api/csv.download', (req, res) => {
+  server.use('/cms/api/csv.download', (req: Request, res: Response) => {
     if (
       req.method !== 'POST' ||
       !String(req.get('content-type')).startsWith('application/json')
@@ -67,19 +60,24 @@ export function api(server: Server) {
    * }
    * ```
    */
-  server.use('/cms/api/csv.import', upload.single('file'), (req, res) => {
-    if (req.method !== 'POST' || !req.file) {
-      res.status(400).json({success: false, error: 'BAD_REQUEST'});
-    }
+  server.use(
+    '/cms/api/csv.import',
+    multipartMiddleware(),
+    (req: Request, res: Response) => {
+      if (req.method !== 'POST' || !req.files || !req.files.file) {
+        res.status(400).json({success: false, error: 'BAD_REQUEST'});
+        return;
+      }
 
-    try {
-      const file = req.file!;
-      const csvString = file.buffer.toString('utf8');
-      const rows = csvToArray(csvString);
-      res.status(200).json({success: true, data: rows});
-    } catch (err) {
-      console.error(err.stack || err);
-      res.status(500).json({success: false, error: 'UNKNOWN'});
+      try {
+        const file = req.files.file;
+        const csvString = file.buffer.toString('utf8');
+        const rows = csvToArray(csvString);
+        res.status(200).json({success: true, data: rows});
+      } catch (err) {
+        console.error(err.stack || err);
+        res.status(500).json({success: false, error: 'UNKNOWN'});
+      }
     }
-  });
+  );
 }

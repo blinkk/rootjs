@@ -6,12 +6,12 @@ import {dim} from 'kleur/colors';
 import sirv from 'sirv';
 
 import {RootConfig} from '../../core/config';
+import {configureServerPlugins} from '../../core/plugin';
+import {Request, Response, NextFunction, Server} from '../../core/types.js';
 import {
   rootProjectMiddleware,
   trailingSlashMiddleware,
-} from '../../core/middleware';
-import {configureServerPlugins} from '../../core/plugin';
-import {Request, Response, NextFunction, Server} from '../../core/types.js';
+} from '../../middleware/middleware';
 import {ElementGraph} from '../../node/element-graph.js';
 import {loadRootConfig} from '../../node/load-config';
 import {
