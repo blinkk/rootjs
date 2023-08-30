@@ -1,5 +1,18 @@
 # @blinkk/root-cms
 
+## 1.0.0-beta.53
+
+### Minor Changes
+
+- 3ae64e3: feat: add multipartMiddlware
+
+### Patch Changes
+
+- de1f494: feat: add type def for date field
+- 1ad4139: fix: update type gen for image and datetime
+- Updated dependencies [3ae64e3]
+  - @blinkk/root@1.0.0-beta.53
+
 ## 1.0.0-beta.52
 
 ### Minor Changes

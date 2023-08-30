@@ -1,5 +1,11 @@
 # @blinkk/root
 
+## 1.0.0-beta.53
+
+### Minor Changes
+
+- 3ae64e3: feat: add multipartMiddlware
+
 ## 1.0.0-beta.52
 
 ### Patch Changes
