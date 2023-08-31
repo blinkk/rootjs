@@ -1,5 +1,11 @@
 # @blinkk/root
 
+## 1.0.0-beta.55
+
+### Patch Changes
+
+- 29ca06c: fix: fix mimeType typo
+
 ## 1.0.0-beta.54
 
 ### Patch Changes
