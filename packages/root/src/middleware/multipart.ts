@@ -36,10 +36,13 @@ export function multipartMiddleware(options?: {maxFileSize?: number}) {
         (
           fieldname: string,
           file: any,
-          filename: string,
-          encoding: string,
-          mimetype: string
+          meta: {
+            filename: string;
+            encoding: string;
+            mimetype: string;
+          }
         ) => {
+          const {filename, encoding, mimetype} = meta;
           const fileChunks: Uint8Array[] = [];
           let totalBytesRead = 0;
 
@@ -68,8 +71,6 @@ export function multipartMiddleware(options?: {maxFileSize?: number}) {
                 encoding,
                 mimetype,
               };
-
-              console.log('received file: ', fieldname, filename);
             }
           });
         }
