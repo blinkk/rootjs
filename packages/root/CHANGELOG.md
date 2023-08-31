@@ -1,5 +1,11 @@
 # @blinkk/root
 
+## 1.0.0-beta.54
+
+### Patch Changes
+
+- 6adf9d1: fix: fix multipart file metadata
+
 ## 1.0.0-beta.53
 
 ### Minor Changes
