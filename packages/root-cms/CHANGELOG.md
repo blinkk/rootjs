@@ -1,5 +1,13 @@
 # @blinkk/root-cms
 
+## 1.0.0-beta.56
+
+### Patch Changes
+
+- ba53753: fix: add "en" as default locale
+- 85c87d4: fix: update labels for discarding draft edits
+  - @blinkk/root@1.0.0-beta.56
+
 ## 1.0.0-beta.55
 
 ### Patch Changes
