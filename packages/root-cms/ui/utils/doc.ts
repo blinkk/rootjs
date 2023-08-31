@@ -298,6 +298,7 @@ export async function cmsCreateDoc(
       createdBy: window.firebase.user.email,
       modifiedAt: serverTimestamp(),
       modifiedBy: window.firebase.user.email,
+      locales: ['en'],
     },
     fields: options?.fields ?? {},
   };
