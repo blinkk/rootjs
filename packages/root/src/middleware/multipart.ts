@@ -39,10 +39,10 @@ export function multipartMiddleware(options?: {maxFileSize?: number}) {
           meta: {
             filename: string;
             encoding: string;
-            mimetype: string;
+            mimeType: string;
           }
         ) => {
-          const {filename, encoding, mimetype} = meta;
+          const {filename, encoding, mimeType: mimetype} = meta;
           const fileChunks: Uint8Array[] = [];
           let totalBytesRead = 0;
 
