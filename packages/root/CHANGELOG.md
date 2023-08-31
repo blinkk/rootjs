@@ -1,5 +1,7 @@
 # @blinkk/root
 
+## 1.0.0-beta.56
+
 ## 1.0.0-beta.55
 
 ### Patch Changes
