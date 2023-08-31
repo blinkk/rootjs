@@ -54,14 +54,15 @@ export function DocActionsMenu(props: DocActionsMenuProps) {
     const notificationId = `revert-draft-${docId}`;
     const modalId = modals.openConfirmModal({
       ...modalTheme,
-      title: `Revert draft ${docId}`,
+      title: `Discard draft edits for ${docId}`,
       children: (
         <Text size="body-sm" weight="semi-bold">
-          Are you sure you want to revert draft changes for <code>{docId}</code>
-          ? The doc data will revert to the published version. There is no undo.
+          Are you sure you want to discard draft changes for{' '}
+          <code>{docId}</code>? The doc data will revert to the published
+          version. There is no undo.
         </Text>
       ),
-      labels: {confirm: 'Revert draft', cancel: 'Cancel'},
+      labels: {confirm: 'Discard draft edits', cancel: 'Cancel'},
       cancelProps: {size: 'xs'},
       confirmProps: {color: 'red', size: 'xs'},
       onCancel: () => console.log('Cancel'),
@@ -70,15 +71,15 @@ export function DocActionsMenu(props: DocActionsMenuProps) {
         showNotification({
           id: notificationId,
           title: 'Unpublishing doc',
-          message: `Requesting revert draft of ${docId}...`,
+          message: `Discarding draft edits of ${docId}...`,
           loading: true,
           autoClose: false,
         });
         await cmsRevertDraft(docId);
         updateNotification({
           id: notificationId,
-          title: 'Reverted draft!',
-          message: `Successfully reverted ${docId}!`,
+          title: 'Discarded draft edited',
+          message: `Successfully reverted ${docId} back to its published version`,
           loading: false,
           autoClose: 5000,
         });
@@ -241,7 +242,7 @@ export function DocActionsMenu(props: DocActionsMenuProps) {
             icon={<IconArrowBack size={20} />}
             onClick={() => onRevertDraft()}
           >
-            Revert draft
+            Discard draft edits
           </Menu.Item>
         )}
       {sys.firstPublishedAt && (
