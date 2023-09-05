@@ -1,5 +1,12 @@
 # @blinkk/root-cms
 
+## 1.0.0-beta.57
+
+### Patch Changes
+
+- 4960432: feat: allow docs with non-EN locale
+  - @blinkk/root@1.0.0-beta.57
+
 ## 1.0.0-beta.56
 
 ### Patch Changes
