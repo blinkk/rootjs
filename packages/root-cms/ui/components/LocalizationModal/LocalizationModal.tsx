@@ -111,8 +111,6 @@ LocalizationModal.ConfigLocales = (props: LocalizationModalProps) => {
         localeSet.delete(locale);
       }
     }
-    // Ensure the default locale is always enabled.
-    localeSet.add('en');
     const newLocales = Array.from(localeSet.values()).sort();
     updateEnabledLocales(newLocales);
   }
@@ -141,11 +139,12 @@ LocalizationModal.ConfigLocales = (props: LocalizationModalProps) => {
         <Stack spacing={40}>
           {Object.keys(localeGroups).map((groupId: string) => {
             const group = localeGroups[groupId];
-            const enabledLocales = enabledLocalesFor(groupId);
+            const groupEnabledLocales = enabledLocalesFor(groupId);
             return (
               <LocalizationModal.LocaleGroup
                 group={group}
-                enabledLocales={enabledLocales}
+                groupEnabledLocales={groupEnabledLocales}
+                allEnabledLocales={enabledLocales}
                 onChange={(locales) => setGroupEnabledLocales(groupId, locales)}
               />
             );
@@ -165,23 +164,15 @@ type LocaleGroupsConfig = Record<string, LocaleGroup>;
 
 interface LocaleGroupProps {
   group: LocaleGroup;
-  enabledLocales: string[];
+  groupEnabledLocales: string[];
+  allEnabledLocales: string[];
   onChange?: (locales: string[]) => void;
 }
 
-function getLocaleLabel(locale: string) {
-  const langNames = new Intl.DisplayNames(['en'], {
-    type: 'language',
-  });
-  const parts = locale.split('_');
-  const langCode = parts[0];
-  const langName = langNames.of(langCode) || locale;
-  return `${langName} (${locale})`;
-}
-
 LocalizationModal.LocaleGroup = (props: LocaleGroupProps) => {
-  const enabledLocales = props.enabledLocales || [];
+  const enabledLocales = props.groupEnabledLocales || [];
   const groupLocales = props.group.locales || [];
+  const allEnabledLocales = props.allEnabledLocales || [];
 
   function setEnabledLocales(locales: string[]) {
     if (props.onChange) {
@@ -213,16 +204,20 @@ LocalizationModal.LocaleGroup = (props: LocaleGroupProps) => {
         </Group>
       )}
       <Group>
-        {groupLocales.map((locale) => (
-          <Checkbox
-            value={locale}
-            checked={enabledLocales.includes(locale) || locale === 'en'}
-            disabled={locale === 'en'}
-            label={getLocaleLabel(locale)}
-            onChange={() => toggleLocale(locale)}
-            size="xs"
-          />
-        ))}
+        {groupLocales.map((locale) => {
+          const checked = enabledLocales.includes(locale);
+          const disabled = allEnabledLocales.length <= 1 && checked;
+          return (
+            <Checkbox
+              value={locale}
+              checked={checked}
+              disabled={disabled}
+              label={getLocaleLabel(locale)}
+              onChange={() => toggleLocale(locale)}
+              size="xs"
+            />
+          );
+        })}
       </Group>
     </Stack>
   );
@@ -636,4 +631,14 @@ function ExportMenuButton(props: MenuButtonProps) {
       </Menu.Item>
     </Menu>
   );
+}
+
+function getLocaleLabel(locale: string) {
+  const langNames = new Intl.DisplayNames(['en'], {
+    type: 'language',
+  });
+  const parts = locale.split('_');
+  const langCode = parts[0];
+  const langName = langNames.of(langCode) || locale;
+  return `${langName} (${locale})`;
 }
