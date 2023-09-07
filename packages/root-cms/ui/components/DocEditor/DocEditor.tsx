@@ -551,28 +551,27 @@ DocEditor.ImageField = (props: FieldProps) => {
 DocEditor.FileField = (props: FieldProps) => {
   const field = props.field as schema.FileField;
   const [file, setFile] = useState<any>({});
-  const inputRef = useRef<HTMLInputElement>(null);
   const [loading, setLoading] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const ref = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    const unsubscribe = props.draft.subscribe(
-      props.deepKey,
-      (newValue: string) => {
-        setFile(newValue);
-      }
-    );
-    return unsubscribe;
-  }, []);
+  let accept: string | undefined = undefined;
+  if (field.exts) {
+    accept = field.exts.join(',');
+  }
 
-  async function onFileChange(e: Event) {
+  async function removeFile() {
+    setFile({});
+    props.draft.removeKey(props.deepKey);
+  }
+
+  async function uploadFile(file: File) {
+    setLoading(true);
     try {
-      setLoading(true);
-      const inputEl = e.target as HTMLInputElement;
-      const files = inputEl.files || [];
-      const uploadedFile = files[0];
-      const file = await uploadFileToGCS(uploadedFile);
-      props.draft.updateKey(props.deepKey, file);
-      setFile(file);
+      const uploadedFile = await uploadFileToGCS(file);
+      props.draft.updateKey(props.deepKey, uploadedFile);
+      setFile(uploadedFile);
       setLoading(false);
     } catch (err) {
       console.error('file upload failed');
@@ -585,7 +584,6 @@ DocEditor.FileField = (props: FieldProps) => {
         autoClose: false,
       });
     }
-
     // Reset the input element in case the user wishes to re-upload a file.
     if (inputRef.current) {
       const inputEl = inputRef.current;
@@ -593,13 +591,85 @@ DocEditor.FileField = (props: FieldProps) => {
     }
   }
 
-  let accept: string | undefined = undefined;
-  if (field.exts) {
-    accept = field.exts.join(',');
+  function onFileChange(e: Event) {
+    const inputEl = e.target as HTMLInputElement;
+    const files = inputEl.files || [];
+    const file = files[0];
+    if (file) {
+      uploadFile(file);
+    }
   }
 
+  const handleDragEnter = (e: DragEvent) => {
+    e.preventDefault();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e: DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+  };
+
+  const handleDrop = (e: DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+
+    const files = e.dataTransfer?.files || [];
+    const file = files[0];
+    if (file) {
+      console.log(`file dropped ("${props.deepKey}"):`, file);
+      uploadFile(file);
+    }
+  };
+
+  useEffect(() => {
+    const unsubscribe = props.draft.subscribe(
+      props.deepKey,
+      (newValue: string) => {
+        setFile(newValue);
+      }
+    );
+
+    const dropzone = ref.current;
+    document.addEventListener('dragenter', handleDragEnter);
+    document.addEventListener('dragover', handleDragEnter);
+    document.addEventListener('dragleave', handleDragLeave);
+    document.addEventListener('drop', handleDragLeave);
+    if (dropzone) {
+      dropzone.addEventListener('drop', handleDrop);
+    }
+    return () => {
+      unsubscribe();
+      document.removeEventListener('dragenter', handleDragEnter);
+      document.removeEventListener('dragover', handleDragEnter);
+      document.removeEventListener('dragleave', handleDragLeave);
+      document.removeEventListener('drop', handleDragLeave);
+      if (dropzone) {
+        dropzone.removeEventListener('drop', handleDrop);
+      }
+    };
+  }, []);
+
   return (
-    <div className="DocEditor__FileField">
+    <div
+      className={joinClassNames(
+        'DocEditor__FileField',
+        isDragging && 'dragging'
+      )}
+      ref={ref}
+    >
+      {file && file.src && (
+        <div className="DocEditor__FileField__controls">
+          <Tooltip label="Remove file">
+            <ActionIcon
+              className="DocEditor__FileField__controls__trash"
+              onClick={() => removeFile()}
+            >
+              <IconTrash size={16} />
+            </ActionIcon>
+          </Tooltip>
+        </div>
+      )}
       {file && file.src ? (
         <div className="DocEditor__FileField__file">
           <TextInput
@@ -628,7 +698,7 @@ DocEditor.FileField = (props: FieldProps) => {
           <IconFileUpload size={16} />
         </div>
         <div className="DocEditor__FileField__uploadButton__label">
-          Upload file
+          {loading ? 'Uploading...' : 'Upload file'}
         </div>
       </label>
     </div>
