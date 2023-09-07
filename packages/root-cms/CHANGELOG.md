@@ -1,5 +1,16 @@
 # @blinkk/root-cms
 
+## 1.0.0-beta.58
+
+### Minor Changes
+
+- e492dea: feat: add drag/drop to file field
+- 3517454: feat: add image drag/drop
+
+### Patch Changes
+
+- @blinkk/root@1.0.0-beta.58
+
 ## 1.0.0-beta.57
 
 ### Patch Changes
