@@ -50,6 +50,7 @@ import {DocStatusBadges} from '../DocStatusBadges/DocStatusBadges.js';
 import {useEditJsonModal} from '../EditJsonModal/EditJsonModal.js';
 import {useLocalizationModal} from '../LocalizationModal/LocalizationModal.js';
 import {usePublishDocModal} from '../PublishDocModal/PublishDocModal.js';
+import {joinClassNames} from '../../utils/classes.js';
 
 interface DocEditorProps {
   docId: string;
@@ -346,31 +347,27 @@ async function getImageDimensions(
   });
 }
 
+const IMAGE_MIMETYPES = [
+  'image/png',
+  'image/jpeg',
+  'image/svg+xml',
+  'image/webp',
+];
+
 DocEditor.ImageField = (props: FieldProps) => {
   const field = props.field as schema.ImageField;
   const [img, setImg] = useState<any>({});
-  const inputRef = useRef<HTMLInputElement>(null);
   const [loading, setLoading] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const ref = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    const unsubscribe = props.draft.subscribe(
-      props.deepKey,
-      (newValue: string) => {
-        setImg(newValue);
-      }
-    );
-    return unsubscribe;
-  }, []);
-
-  const exts = field.exts ?? ['.png', '.jpg', '.jpeg', '.svg'];
+  const exts = field.exts ?? IMAGE_MIMETYPES;
   const accept = exts.join(', ');
 
-  async function onFileChange(e: Event) {
+  async function uploadFile(file: File) {
+    setLoading(true);
     try {
-      setLoading(true);
-      const inputEl = e.target as HTMLInputElement;
-      const files = inputEl.files || [];
-      const file = files[0];
       const uploadedImage = await uploadFileToGCS(file);
       setImg((currentImg: any) => {
         // Preserve the "alt" text when the image changes.
@@ -400,6 +397,15 @@ DocEditor.ImageField = (props: FieldProps) => {
     }
   }
 
+  function onFileChange(e: Event) {
+    const inputEl = e.target as HTMLInputElement;
+    const files = inputEl.files || [];
+    const file = files[0];
+    if (file) {
+      uploadFile(file);
+    }
+  }
+
   async function setAltText(newValue: string) {
     setImg((currentImg: any) => {
       return Object.assign({}, currentImg, {alt: newValue});
@@ -412,8 +418,64 @@ DocEditor.ImageField = (props: FieldProps) => {
     props.draft.removeKey(props.deepKey);
   }
 
+  const handleDragEnter = (e: DragEvent) => {
+    e.preventDefault();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e: DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+  };
+
+  const handleDrop = (e: DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+
+    const files = e.dataTransfer?.files || [];
+    const file = files[0];
+    if (file) {
+      console.log(`file dropped ("${props.deepKey}"):`, file);
+      uploadFile(file);
+    }
+  };
+
+  useEffect(() => {
+    const unsubscribe = props.draft.subscribe(
+      props.deepKey,
+      (newValue: string) => {
+        setImg(newValue);
+      }
+    );
+
+    const dropzone = ref.current;
+    document.addEventListener('dragenter', handleDragEnter);
+    document.addEventListener('dragover', handleDragEnter);
+    document.addEventListener('dragleave', handleDragLeave);
+    document.addEventListener('drop', handleDragLeave);
+    if (dropzone) {
+      dropzone.addEventListener('drop', handleDrop);
+    }
+    return () => {
+      unsubscribe();
+      document.removeEventListener('dragenter', handleDragEnter);
+      document.removeEventListener('dragover', handleDragEnter);
+      document.removeEventListener('dragleave', handleDragLeave);
+      document.removeEventListener('drop', handleDragLeave);
+      if (dropzone) {
+        dropzone.removeEventListener('drop', handleDrop);
+      }
+    };
+  }, []);
+
   return (
-    <div className="DocEditor__ImageField">
+    <div
+      className={joinClassNames(
+        'DocEditor__ImageField',
+        isDragging && 'dragging'
+      )}
+      ref={ref}
+    >
       {img && img.src ? (
         <div className="DocEditor__ImageField__imagePreview">
           <div className="DocEditor__ImageField__imagePreview__controls">
@@ -479,7 +541,7 @@ DocEditor.ImageField = (props: FieldProps) => {
           <IconPhotoUp size={16} />
         </div>
         <div className="DocEditor__ImageField__uploadButton__label">
-          Upload image
+          {loading ? 'Uploading...' : 'Upload image'}
         </div>
       </label>
     </div>

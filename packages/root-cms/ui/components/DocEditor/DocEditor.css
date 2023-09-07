@@ -190,6 +190,16 @@
   gap: 24px;
 }
 
+.DocEditor__ImageField {
+  /* Use negative margins to increase the drag/drop zone. */
+  padding: 10px;
+  margin: -10px;
+}
+
+.DocEditor__ImageField.dragging {
+  outline: 2px dashed black;
+}
+
 .DocEditor__ImageField__imagePreview {
   margin-bottom: 10px;
 }
