@@ -245,7 +245,7 @@
 
 .DocEditor__ImageField__noImage {
   font-family: var(--font-family-mono);
-  margin: 10px 0;
+  margin-bottom: 10px;
 }
 
 .DocEditor__ImageField__uploadButton {
@@ -273,13 +273,29 @@
   margin-right: 10px;
 }
 
+.DocEditor__FileField {
+  /* Use negative margins to increase the drag/drop zone. */
+  padding: 10px;
+  margin: -10px;
+}
+
+.DocEditor__FileField.dragging {
+  outline: 2px dashed black;
+}
+
+.DocEditor__FileField__controls {
+  display: flex;
+  justify-content: flex-end;
+  gap: 4px;
+}
+
 .DocEditor__FileField__file {
   margin-bottom: 10px;
 }
 
 .DocEditor__FileField__noFile {
   font-family: var(--font-family-mono);
-  margin: 10px 0;
+  margin-bottom: 10px;
 }
 
 .DocEditor__FileField__uploadButton {
