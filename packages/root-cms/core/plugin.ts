@@ -95,17 +95,6 @@ export type CMSPlugin = Plugin & {
   getFirebaseApp: () => App;
 };
 
-function generateSecret(): string {
-  const result = [];
-  const chars =
-    'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-  for (let i = 0; i < 36; i++) {
-    const rand = Math.floor(Math.random() * chars.length);
-    result.push(chars.charAt(rand));
-  }
-  return result.join('');
-}
-
 function isExpired(decodedIdToken: DecodedIdToken) {
   const ts = Math.floor(new Date().getTime() / 1000);
   return ts >= decodedIdToken.exp;
