@@ -120,6 +120,7 @@ importers:
     specifiers:
       '@types/busboy': ^1.5.0
       '@types/compression': ^1.7.2
+      '@types/cookie-parser': ^1.4.3
       '@types/express': ^4.17.13
       '@types/fs-extra': ^9.0.13
       '@types/html-minifier-terser': ^7.0.0
@@ -130,6 +131,7 @@ importers:
       busboy: ^1.6.0
       commander: ^10.0.0
       compression: ^1.7.4
+      cookie-parser: ^1.4.6
       esbuild: 0.17.12
       express: ^4.18.1
       firebase-admin: ^11.5.0
@@ -155,6 +157,7 @@ importers:
       busboy: 1.6.0
       commander: 10.0.0
       compression: 1.7.4
+      cookie-parser: 1.4.6
       esbuild: 0.17.12
       express: 4.18.1
       fs-extra: 10.1.0
@@ -168,6 +171,7 @@ importers:
     devDependencies:
       '@types/busboy': 1.5.0
       '@types/compression': 1.7.2
+      '@types/cookie-parser': 1.4.3
       '@types/express': 4.17.13
       '@types/fs-extra': 9.0.13
       '@types/html-minifier-terser': 7.0.0
@@ -2269,7 +2273,7 @@ packages:
   /@types/cookie-parser/1.4.3:
     resolution: {integrity: sha512-CqSKwFwefj4PzZ5n/iwad/bow2hTCh0FlNAeWLtQM3JA/NX/iYagIpWG2cf1bQKQ2c9gU2log5VUCrn7LDOs0w==}
     dependencies:
-      '@types/express': 4.17.13
+      '@types/express': 4.17.17
     dev: true
 
   /@types/cors/2.8.13:

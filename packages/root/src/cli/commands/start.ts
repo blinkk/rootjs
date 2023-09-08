@@ -1,6 +1,7 @@
 import path from 'node:path';
 
 import compression from 'compression';
+import cookieParser from 'cookie-parser';
 import {default as express} from 'express';
 import {dim} from 'kleur/colors';
 import sirv from 'sirv';
@@ -8,10 +9,12 @@ import sirv from 'sirv';
 import {RootConfig} from '../../core/config';
 import {configureServerPlugins} from '../../core/plugin';
 import {Request, Response, NextFunction, Server} from '../../core/types.js';
+import {hooksMiddleware} from '../../middleware/hooks';
 import {
   rootProjectMiddleware,
   trailingSlashMiddleware,
 } from '../../middleware/middleware';
+import {sessionMiddleware} from '../../middleware/session';
 import {ElementGraph} from '../../node/element-graph';
 import {loadRootConfig} from '../../node/load-config';
 import {
@@ -19,6 +22,7 @@ import {
   BuildAssetMap,
 } from '../../render/asset-map/build-asset-map';
 import {fileExists, loadJson} from '../../utils/fsutils';
+import {randString} from '../../utils/rand';
 
 type RenderModule = typeof import('../../render/render.js');
 
@@ -47,13 +51,20 @@ export async function createProdServer(options: {
   const rootConfig = await loadRootConfig(rootDir, {command: 'start'});
   const distDir = path.join(rootDir, 'dist');
 
-  const server = express();
+  const server: Server = express();
   server.disable('x-powered-by');
   server.use(compression());
 
   // Inject request context vars.
   server.use(rootProjectMiddleware({rootConfig}));
   server.use(await rootProdRendererMiddleware({rootConfig, distDir}));
+  server.use(hooksMiddleware());
+
+  // Session middleware for handling session cookies.
+  const sessionCookieSecret =
+    rootConfig.server?.sessionCookieSecret || randString(36);
+  server.use(cookieParser(sessionCookieSecret));
+  server.use(sessionMiddleware());
 
   const plugins = rootConfig.plugins || [];
   configureServerPlugins(

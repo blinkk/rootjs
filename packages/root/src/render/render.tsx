@@ -122,6 +122,7 @@ export class Renderer {
       } else if (route.src === 'routes/500.tsx') {
         statusCode = 500;
       }
+      req.hooks.trigger('preRender');
       res.status(statusCode).set({'Content-Type': 'text/html'}).end(html);
     };
 

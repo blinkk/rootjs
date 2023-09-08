@@ -11,7 +11,6 @@ import {
   Server,
 } from '@blinkk/root';
 import bodyParser from 'body-parser';
-import cookieParser from 'cookie-parser';
 import {
   App,
   applicationDefault,
@@ -26,9 +25,8 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 type AppModule = typeof import('./app.js');
 
-// The session cookie name needs to match what's allowed by Firebase Hosting.
-// https://firebase.google.com/docs/hosting/manage-cache#using_cookies
-const SESSION_COOKIE = '__session';
+// The session key name used for Root CMS authentication.
+const SESSION_COOKIE_AUTH = 'root-cms-auth';
 
 export type CMSUser = DecodedIdToken;
 
@@ -59,7 +57,11 @@ export type CMSPluginOptions = {
     appId: string;
   };
 
-  /** Secret value(s) used for signing the user authentication cookie. */
+  /**
+   * Secret value(s) used for signing the user authentication cookie.
+   * @deprecated This is now handled directly by root's sessionMiddleware under
+   * `server.sessionCookieSecret` in root.config.ts.
+   */
   cookieSecret?: string | string[];
 
   /** Function called to check if a user should have access to the CMS. */
@@ -129,7 +131,6 @@ function getFirebaseApp(gcpProjectId: string): App {
 
 export function cmsPlugin(options: CMSPluginOptions): CMSPlugin {
   const firebaseConfig = options.firebaseConfig;
-  const cookieSecret = options.cookieSecret || generateSecret();
   const app = getFirebaseApp(firebaseConfig.projectId);
   const auth = getAuth(app);
 
@@ -200,7 +201,7 @@ export function cmsPlugin(options: CMSPluginOptions): CMSPlugin {
    * CMS. Returns true if access is granted.
    */
   async function verifyUserSession(req: Request): Promise<boolean> {
-    const sessionCookie = String(req.signedCookies[SESSION_COOKIE] || '');
+    const sessionCookie = req.session.getItem(SESSION_COOKIE_AUTH);
     if (!sessionCookie) {
       console.log('session failed: no session cookie');
       return false;
@@ -269,7 +270,6 @@ export function cmsPlugin(options: CMSPluginOptions): CMSPlugin {
       server: Server,
       serverOptions: ConfigureServerOptions
     ) => {
-      server.use(cookieParser(cookieSecret));
       server.use(bodyParser.json());
 
       async function getRenderer(req: Request): Promise<AppModule> {
@@ -315,22 +315,15 @@ export function cmsPlugin(options: CMSPluginOptions): CMSPlugin {
             const idToken = req.body.idToken!;
 
             let sessionCookie: string;
-            let secureCookie = true;
             if (process.env.NODE_ENV === 'development') {
               sessionCookie = idToken;
-              secureCookie = false;
             } else {
               sessionCookie = await auth.createSessionCookie(idToken, {
                 expiresIn,
               });
             }
-            res.cookie(SESSION_COOKIE, sessionCookie, {
-              maxAge: expiresIn,
-              httpOnly: true,
-              secure: secureCookie,
-              signed: true,
-              sameSite: 'strict',
-            });
+            res.session.setItem(SESSION_COOKIE_AUTH, sessionCookie);
+            res.saveSession();
             res.json({success: true});
           } catch (err) {
             console.error(err);
@@ -358,7 +351,7 @@ export function cmsPlugin(options: CMSPluginOptions): CMSPlugin {
 
       // Logout handler.
       server.use('/cms/logout', async (req: Request, res: Response) => {
-        res.clearCookie(SESSION_COOKIE);
+        res.session.removeItem(SESSION_COOKIE_AUTH);
         res.redirect('/cms/login');
       });
 

@@ -7,6 +7,8 @@ import {
 import {ComponentType} from 'preact';
 import {ViteDevServer} from 'vite';
 
+import {Hooks} from '../middleware/hooks';
+import {Session} from '../middleware/session';
 import {Renderer} from '../render/render';
 
 import {RootConfig} from './config';
@@ -58,8 +60,17 @@ export interface MultipartFile {
   buffer: Buffer;
 }
 
+export type RequestMiddleware =
+  | ((req: Request, res: Response) => any)
+  | ((req: Request, res: Response, next: NextFunction) => any)
+  | ((err: any, req: Request, res: Response, next: NextFunction) => any);
+
 /** Root.js express app. */
-export type Server = Express;
+export type Server = Express & {
+  use(middleware: RequestMiddleware): any;
+  use(urlPath: string, middleware: RequestMiddleware): any;
+  use(urlPath: string, ...middlewares: RequestMiddleware[]): any;
+};
 
 /** Root.js express request. */
 export type Request = ExpressRequest & {
@@ -76,7 +87,14 @@ export type Request = ExpressRequest & {
    */
   handlerContext?: HandlerContext;
 
-  // Fields for `multipartMiddleware()`.
+  // Fields added by `hooksMiddleware()`.
+  hooks: Hooks;
+
+  // Fields added by `sessionMiddleware()`.
+  /** Gets and sets session data via cookie. */
+  session: Session;
+
+  // Fields added by `multipartMiddleware()`.
   /** Firebase functions uses rawBody for its multipart data. */
   rawBody?: any;
   /** Map of field name to file. */
@@ -84,7 +102,11 @@ export type Request = ExpressRequest & {
 };
 
 /** Root.js express response. */
-export type Response = ExpressResponse;
+export type Response = ExpressResponse & {
+  // Fields added by `sessionMiddleware()`.
+  session: Session;
+  saveSession: () => void;
+};
 
 /** Root.js express next function. */
 export type NextFunction = ExpressNextFunction;
