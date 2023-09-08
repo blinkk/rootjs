@@ -1,5 +1,16 @@
 # @blinkk/root-cms
 
+## 1.0.0-beta.59
+
+### Minor Changes
+
+- 81be985: feat: add session cookie middleware
+
+### Patch Changes
+
+- Updated dependencies [81be985]
+  - @blinkk/root@1.0.0-beta.59
+
 ## 1.0.0-beta.58
 
 ### Minor Changes
