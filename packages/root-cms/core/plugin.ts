@@ -352,6 +352,7 @@ export function cmsPlugin(options: CMSPluginOptions): CMSPlugin {
       // Logout handler.
       server.use('/cms/logout', async (req: Request, res: Response) => {
         res.session.removeItem(SESSION_COOKIE_AUTH);
+        res.saveSession();
         res.redirect('/cms/login');
       });
 
