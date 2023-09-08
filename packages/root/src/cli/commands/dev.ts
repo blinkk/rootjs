@@ -1,6 +1,7 @@
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 
+import cookieParser from 'cookie-parser';
 import {default as express} from 'express';
 import {dim} from 'kleur/colors';
 import sirv from 'sirv';
@@ -9,16 +10,19 @@ import glob from 'tiny-glob';
 import {RootConfig} from '../../core/config.js';
 import {configureServerPlugins} from '../../core/plugin.js';
 import {Server, Request, Response, NextFunction} from '../../core/types.js';
+import {hooksMiddleware} from '../../middleware/hooks.js';
 import {
   rootProjectMiddleware,
   trailingSlashMiddleware,
 } from '../../middleware/middleware.js';
+import {sessionMiddleware} from '../../middleware/session.js';
 import {getElements, getElementsDirs} from '../../node/element-graph.js';
 import {loadRootConfig} from '../../node/load-config.js';
 import {createViteServer} from '../../node/vite.js';
 import {DevServerAssetMap} from '../../render/asset-map/dev-asset-map.js';
 import {dirExists, isDirectory, isJsFile} from '../../utils/fsutils.js';
 import {findOpenPort} from '../../utils/ports.js';
+import {randString} from '../../utils/rand.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -51,12 +55,19 @@ export async function createDevServer(options?: {
   const rootConfig = await loadRootConfig(rootDir, {command: 'dev'});
   const port = options?.port;
 
-  const server = express();
+  const server: Server = express();
   server.disable('x-powered-by');
 
   // Inject req context vars.
   server.use(rootProjectMiddleware({rootConfig}));
   server.use(await viteServerMiddleware({rootConfig, port}));
+  server.use(hooksMiddleware());
+
+  // Session middleware for handling session cookies.
+  const sessionCookieSecret =
+    rootConfig.server?.sessionCookieSecret || randString(36);
+  server.use(cookieParser(sessionCookieSecret));
+  server.use(sessionMiddleware());
 
   const plugins = rootConfig.plugins || [];
   await configureServerPlugins(

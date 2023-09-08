@@ -4,7 +4,7 @@ import {HtmlMinifyOptions} from '../render/html-minify';
 import {HtmlPrettyOptions} from '../render/html-pretty';
 
 import {Plugin} from './plugin';
-import {Request, Response, NextFunction} from './types';
+import {RequestMiddleware} from './types';
 
 export interface RootUserConfig {
   /**
@@ -115,9 +115,7 @@ export interface RootServerConfig {
    * An array of middleware to add to the express server. These middleware are
    * added to the beginning of the express app.
    */
-  middlewares?: Array<
-    (req: Request, res: Response, next: NextFunction) => void | Promise<void>
-  >;
+  middlewares?: RequestMiddleware[];
 
   /**
    * The `trailingSlash` config allows you to control how the server handles
@@ -129,6 +127,11 @@ export interface RootServerConfig {
    * - When unspecified, the server allows URLs with and without trailing slash
    */
   trailingSlash?: boolean;
+
+  /**
+   * Cookie secret for the session middleware.
+   */
+  sessionCookieSecret?: string | string[];
 }
 
 export function defineConfig(config: RootUserConfig): RootUserConfig {

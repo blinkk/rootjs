@@ -39,6 +39,10 @@ export default defineConfig({
       },
     },
   },
+  server: {
+    trailingSlash: false,
+    sessionCookieSecret: 'blog-session-secret-change-me',
+  },
   plugins: [
     cmsPlugin({
       id: 'examples-blog',
@@ -52,7 +56,6 @@ export default defineConfig({
         appId: '1:636169634531:web:7b8fe398f10e5d9c4e7bd6',
         measurementId: 'G-5JTQHSPWBB',
       },
-      cookieSecret: 'blog-secret-change-me',
       isUserAuthorized: (req, user) => {
         return String(user?.email).endsWith('@blinkk.com');
       },
