@@ -1,5 +1,11 @@
 # @blinkk/root
 
+## 1.0.0-beta.59
+
+### Minor Changes
+
+- 81be985: feat: add session cookie middleware
+
 ## 1.0.0-beta.58
 
 ## 1.0.0-beta.57
