@@ -1,5 +1,11 @@
 # @blinkk/root
 
+## 1.0.0-beta.60
+
+### Patch Changes
+
+- 3c9043f: fix: add prefix to encode session cookie value
+
 ## 1.0.0-beta.59
 
 ### Minor Changes
