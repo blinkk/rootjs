@@ -49,14 +49,17 @@ export class Session {
 
   static fromCookieValue(cookieValue: string) {
     const data: Record<string, string> = {};
-    try {
-      const params = new URLSearchParams(base64Decode(cookieValue));
-      for (const [key, value] of params.entries()) {
-        data[key] = value;
+    if (cookieValue.startsWith('b64:')) {
+      try {
+        const encodedStr = cookieValue.slice(4);
+        const params = new URLSearchParams(base64Decode(encodedStr));
+        for (const [key, value] of params.entries()) {
+          data[key] = value;
+        }
+      } catch (err) {
+        console.warn('failed to parse session cookie:', err);
+        return new Session();
       }
-    } catch (err) {
-      console.warn('failed to parse session cookie:', err);
-      return new Session();
     }
     return new Session(data);
   }
@@ -75,7 +78,7 @@ export class Session {
 
   toString(): string {
     const params = new URLSearchParams(this.data);
-    return base64Encode(params.toString());
+    return `b64:${base64Encode(params.toString())}`;
   }
 }
 
