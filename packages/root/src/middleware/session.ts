@@ -9,6 +9,10 @@ export interface SessionMiddlewareOptions {
   maxAge?: number;
 }
 
+export interface SaveSessionOptions {
+  sameSite?: 'strict' | 'lax' | 'none';
+}
+
 /**
  * Middleware for storing session data stored in an http cookie called
  * `__session`. This cookie is compatible with Firebase Hosting:
@@ -21,16 +25,17 @@ export function sessionMiddleware(options?: SessionMiddlewareOptions) {
     const session = Session.fromCookieValue(cookieValue);
     req.session = session;
     res.session = session;
-    res.saveSession = () => {
+    res.saveSession = (saveSessionOptions?: SaveSessionOptions) => {
       // "secure" cookies require https, so disable "secure" when in development.
       const secureCookie = Boolean(process.env.NODE_ENV !== 'development');
       const cookieValue = session.toString();
+      const sameSite = saveSessionOptions?.sameSite || 'strict';
       res.cookie(SESSION_COOKIE, cookieValue, {
         maxAge: maxAge,
         httpOnly: true,
         secure: secureCookie,
         signed: true,
-        sameSite: 'strict',
+        sameSite: sameSite,
       });
     };
     req.hooks.add('beforeRender', () => {
