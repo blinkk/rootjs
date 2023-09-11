@@ -92,7 +92,7 @@ export async function getAllPathsForRoute(
         }
       );
     }
-  } else if (pathContainsPlaceholders(urlPathFormat)) {
+  } else if (pathContainsPlaceholders(urlPathFormat) && !routeModule.handle) {
     console.warn(
       `path contains placeholders: ${urlPathFormat}, did you forget to define getStaticPaths()? more info: https://rootjs.dev/guide/routes#getStaticPaths`
     );
