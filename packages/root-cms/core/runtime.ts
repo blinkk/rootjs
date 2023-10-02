@@ -162,7 +162,6 @@ export async function publishScheduledDocs(rootConfig: RootConfig) {
     });
 
   if (docs.length === 0) {
-    console.log('no docs to schedule');
     return [];
   }
 

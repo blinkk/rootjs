@@ -1,7 +1,7 @@
 import path from 'node:path';
 import {loadRootConfig} from '@blinkk/root/node';
 import {ScheduleOptions, onSchedule} from 'firebase-functions/v2/scheduler';
-import {publishScheduledDocs} from './runtime.js';
+import {runCronJobs} from './cron.js';
 
 export interface CronOptions {
   rootDir?: string;
@@ -19,6 +19,6 @@ export function cron(options?: CronOptions) {
   };
   return onSchedule(scheduleOptions, async () => {
     const rootConfig = await loadRootConfig(rootDir, {command: 'cms-cron'});
-    await publishScheduledDocs(rootConfig);
+    await runCronJobs(rootConfig);
   });
 }
