@@ -1,5 +1,11 @@
 # @blinkk/root
 
+## 1.0.0-beta.61
+
+### Patch Changes
+
+- 33869c5: fix: fix ssr case-sensitive url routes
+
 ## 1.0.0-beta.60
 
 ### Patch Changes
