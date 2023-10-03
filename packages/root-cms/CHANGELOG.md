@@ -1,5 +1,16 @@
 # @blinkk/root-cms
 
+## 1.0.0-beta.62
+
+### Minor Changes
+
+- f083fd9: feat: update cache-control for gcs uploads to 1yr
+- f843250: feat: add version history cron job
+
+### Patch Changes
+
+- @blinkk/root@1.0.0-beta.62
+
 ## 1.0.0-beta.61
 
 ### Patch Changes
