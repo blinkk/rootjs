@@ -290,10 +290,11 @@ async function uploadFileToGCS(file: File) {
       }
     }
   }
-  if (Object.keys(meta).length > 0) {
-    await updateMetadata(gcsRef, {customMetadata: meta});
-    console.log('updated meta data: ', meta);
-  }
+  // Since the files are stored by their hash, we should be able to set a long
+  // cache control header, i.e. 1 year.
+  const cacheControl = 'public, max-age=31536000';
+  await updateMetadata(gcsRef, {cacheControl, customMetadata: meta});
+  console.log('updated meta data: ', meta);
   return {
     ...meta,
     src: imageSrc,
