@@ -3,25 +3,22 @@ import {publishScheduledDocs} from './runtime.js';
 import {VersionsService} from './versions.js';
 
 export async function runCronJobs(rootConfig: RootConfig) {
-  // await Promise.all([
-  //   runCronJob('publishScheduledDocs', runPublishScheduledDocs, rootConfig),
-  //   runCronJob('saveVersions', runSaveVersions, rootConfig),
-  // ]);
-  // await runSaveVersions(rootConfig);
-  await runCronJob('saveVersions', runSaveVersions, rootConfig);
+  await Promise.all([
+    runCronJob('publishScheduledDocs', runPublishScheduledDocs, rootConfig),
+    runCronJob('saveVersions', runSaveVersions, rootConfig),
+  ]);
 }
 
 async function runCronJob(
   name: string,
-  callback: (...args: any[]) => any,
+  fn: (...args: any[]) => any,
   ...args: any[]
 ) {
   try {
-    await callback(...args);
+    await fn(...args);
   } catch (err) {
     console.log(`cron failed: ${name}`);
-    console.error(err);
-    // console.error(String(err.stack || err));
+    console.error(String(err.stack || err));
     throw err;
   }
 }
