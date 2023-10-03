@@ -1,11 +1,25 @@
 import {Server, Request, Response} from '@blinkk/root';
 import {multipartMiddleware} from '@blinkk/root/middleware';
+import {runCronJobs} from './cron.js';
 import {arrayToCsv, csvToArray} from './csv.js';
 
 /**
  * Registers API middleware handlers.
  */
 export function api(server: Server) {
+  /**
+   * Runs CMS cron jobs.
+   */
+  server.use('/cms/api/cron.run', async (req: Request, res: Response) => {
+    try {
+      await runCronJobs(req.rootConfig!);
+      res.status(200).json({success: true});
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({success: false});
+    }
+  });
+
   /**
    * Accepts a JSON object containing {headers: [...], rows: [...]} and sends
    * an HTTP response with a corresponding CSV file as an attachment.
