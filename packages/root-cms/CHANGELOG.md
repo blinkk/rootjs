@@ -1,5 +1,15 @@
 # @blinkk/root-cms
 
+## 1.0.0-beta.63
+
+### Minor Changes
+
+- b01b3b4: feat: add ui for listing and restoring versions
+
+### Patch Changes
+
+- @blinkk/root@1.0.0-beta.63
+
 ## 1.0.0-beta.62
 
 ### Minor Changes
