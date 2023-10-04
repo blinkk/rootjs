@@ -1,0 +1,40 @@
+.VersionHistoryModal {
+  margin-top: -30px;
+  padding: 10px;
+}
+
+.VersionHistoryModal__title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.VersionHistoryModal__docId {
+  margin-top: 8px;
+}
+
+.VersionHistoryModal__docId code {
+  background: #efefef;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 15px;
+  line-height: 1;
+  font-weight: 600;
+  color: #333;
+}
+
+.VersionHistoryModal__versions {
+  margin-top: 20px;
+  margin-left: -10px;
+  margin-right: -10px;
+}
+
+.VersionHistoryModal__versionsEmpty {
+  margin-top: 20px;
+}
+
+.VersionHistoryModal__versionsEmpty__developer {
+  margin-top: 10px;
+  font-style: italic;
+  font-size: 12px;
+}

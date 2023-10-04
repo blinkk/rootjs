@@ -7,6 +7,7 @@ import {
   IconCloudOff,
   IconCopy,
   IconDotsVertical,
+  IconHistory,
   IconTrash,
 } from '@tabler/icons-preact';
 
@@ -19,6 +20,7 @@ import {
 } from '../../utils/doc.js';
 import {useCopyDocModal} from '../CopyDocModal/CopyDocModal.js';
 import {Text} from '../Text/Text.js';
+import {useVersionHistoryModal} from '../VersionHistoryModal/VersionHistoryModal.js';
 
 interface DocData {
   sys?: {
@@ -49,6 +51,7 @@ export function DocActionsMenu(props: DocActionsMenuProps) {
   const modals = useModals();
   const copyDocModal = useCopyDocModal({fromDocId: docId});
   const modalTheme = useModalTheme();
+  const versionHistoryModal = useVersionHistoryModal({docId});
 
   const onRevertDraft = () => {
     const notificationId = `revert-draft-${docId}`;
@@ -229,6 +232,12 @@ export function DocActionsMenu(props: DocActionsMenuProps) {
         </ActionIcon>
       }
     >
+      <Menu.Item
+        icon={<IconHistory size={20} />}
+        onClick={() => versionHistoryModal.open()}
+      >
+        Version history
+      </Menu.Item>
       <Menu.Item
         icon={<IconCopy size={20} />}
         onClick={() => copyDocModal.open()}

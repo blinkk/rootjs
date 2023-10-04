@@ -8,12 +8,32 @@ import {
   deleteField,
   writeBatch,
   arrayUnion,
+  collection,
+  query,
+  orderBy,
+  getDocs,
+  updateDoc,
 } from 'firebase/firestore';
 import {
   getTranslationsCollection,
   normalizeString,
   sourceHash,
 } from './l10n.js';
+
+export interface CMSDoc {
+  id: string;
+  collection: string;
+  slug: string;
+  sys: {
+    createdAt: Timestamp;
+    createdBy: string;
+    modifiedAt: Timestamp;
+    modifiedBy: string;
+  };
+  fields: any;
+}
+
+export type Version = CMSDoc;
 
 export async function cmsDeleteDoc(docId: string) {
   const projectId = window.__ROOT_CTX.rootConfig.projectId;
@@ -401,4 +421,27 @@ export function getDraftDocRef(docId: string) {
     'Drafts',
     slug
   );
+}
+
+export async function cmsListVersions(docId: string) {
+  const db = window.firebase.db;
+  const docRef = getDraftDocRef(docId);
+  const versionsCollection = collection(db, docRef.path, 'Versions');
+  const q = query(versionsCollection, orderBy('sys.modifiedAt', 'desc'));
+  const querySnapshot = await getDocs(q);
+  const versions: Version[] = [];
+  querySnapshot.forEach((doc) => {
+    versions.push(doc.data() as Version);
+  });
+  return versions;
+}
+
+export async function cmsRestoreVersion(docId: string, version: Version) {
+  const docRef = getDraftDocRef(docId);
+  const updates = {
+    'sys.modifiedAt': serverTimestamp(),
+    'sys.modifiedBy': window.firebase.user.email,
+    fields: version.fields || {},
+  };
+  await updateDoc(docRef, updates);
 }

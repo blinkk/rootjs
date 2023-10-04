@@ -25,6 +25,7 @@ import {SettingsPage} from './pages/SettingsPage/SettingsPage.js';
 import {TranslationsPage} from './pages/TranslationsPage/TranslationsPage.js';
 import './styles/global.css';
 import './styles/theme.css';
+import {VersionHistoryModal} from './components/VersionHistoryModal/VersionHistoryModal.js';
 
 declare global {
   interface Window {
@@ -62,6 +63,7 @@ function App() {
             [EditJsonModal.id]: EditJsonModal,
             [LocalizationModal.id]: LocalizationModal,
             [PublishDocModal.id]: PublishDocModal,
+            [VersionHistoryModal.id]: VersionHistoryModal,
           }}
         >
           <FirebaseContext.Provider value={window.firebase}>
