@@ -1,5 +1,12 @@
 # @blinkk/root-cms
 
+## 1.0.0-beta.64
+
+### Patch Changes
+
+- c4613da: fix: extract all locales to csv
+  - @blinkk/root@1.0.0-beta.64
+
 ## 1.0.0-beta.63
 
 ### Minor Changes
