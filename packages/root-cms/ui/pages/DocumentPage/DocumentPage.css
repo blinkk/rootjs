@@ -33,6 +33,10 @@
   color: var(--color-text-default);
 }
 
+.DocumentPage__side__header__docId {
+  white-space: nowrap;
+}
+
 .DocumentPage__side__header__buttons {
   justify-self: flex-end;
 }
