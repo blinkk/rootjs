@@ -23,7 +23,7 @@ import {
   IconTable,
 } from '@tabler/icons-preact';
 import {doc, getDoc} from 'firebase/firestore';
-import {useEffect, useState} from 'preact/hooks';
+import {useEffect, useMemo, useState} from 'preact/hooks';
 import * as schema from '../../../core/schema.js';
 import {DraftController} from '../../hooks/useDraft.js';
 import {useModalTheme} from '../../hooks/useModalTheme.js';
@@ -276,6 +276,14 @@ LocalizationModal.Translations = (props: TranslationsProps) => {
   >({});
   const [translationsMap, setTranslationsMap] = useState<TranslationsMap>({});
 
+  const sourceToTranslationsMap = useMemo(() => {
+    const results: {[source: string]: Record<string, string>} = {};
+    Object.values(translationsMap).forEach((row: Record<string, string>) => {
+      results[row.source] = row;
+    });
+    return results;
+  }, [translationsMap]);
+
   const locales = window.__ROOT_CTX.rootConfig.i18n.locales || [];
   const localeOptions = locales.map((locale) => ({
     value: locale,
@@ -310,14 +318,27 @@ LocalizationModal.Translations = (props: TranslationsProps) => {
     setLocaleTranslations(localeTranslations);
   }, [selectedLocale, translationsMap]);
 
+  function getTranslation(source: string, locale: string): string {
+    const row = sourceToTranslationsMap[source];
+    if (row) {
+      return row[locale] || '';
+    }
+    return '';
+  }
+
   async function downloadCsv() {
-    const headers = ['source', 'en'];
+    const nonEnLocales = locales.filter((l) => l !== 'en');
+    const headers = ['source', 'en', ...nonEnLocales];
     const rows: Array<Record<string, string>> = [];
     sourceStrings.forEach((source) => {
-      rows.push({
+      const row: Record<string, string> = {
         source: source,
-        en: source,
+        en: getTranslation(source, 'en') || source,
+      };
+      nonEnLocales.forEach((l) => {
+        row[l] = getTranslation(source, l);
       });
+      rows.push(row);
     });
     const res = await window.fetch('/cms/api/csv.download', {
       method: 'POST',
