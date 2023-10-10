@@ -1,6 +1,6 @@
 {
   "name": "@blinkk/eslint-config-root",
-  "version": "1.0.0-beta.1",
+  "version": "0.0.0",
   "description": "ESLint config for Root.js projects.",
   "author": "s@blinkk.com",
   "license": "MIT",
