@@ -5,7 +5,7 @@
     "declaration": true,
     "forceConsistentCasingInFileNames": true,
     "lib": ["esnext"],
-    "module": "esnext",
+    "module": "nodenext",
     "noEmitOnError": true,
     "noFallthroughCasesInSwitch": true,
     "noImplicitReturns": true,

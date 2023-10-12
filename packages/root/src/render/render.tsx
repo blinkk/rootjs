@@ -219,7 +219,8 @@ export class Renderer {
         if (!scriptDep.src) {
           return;
         }
-        const scriptAsset = await this.assetMap.get(scriptDep.src.slice(1));
+        const assetId = String(scriptDep.src).slice(1);
+        const scriptAsset = await this.assetMap.get(assetId);
         if (scriptAsset) {
           jsDeps.add(scriptAsset.assetUrl);
           const scriptJsDeps = await scriptAsset.getJsDeps();
