@@ -12,7 +12,6 @@
     "fix": "eslint . --ext .ts,.tsx --fix",
     "version": "changeset version && pnpm install --no-frozen-lockfile",
     "release": "pnpm run build && changeset publish",
-
     "// workspace aliases": "",
     "blog": "pnpm run --filter=\"@examples/blog\"",
     "starter": "pnpm run --filter=\"@examples/starter\""
@@ -29,10 +28,10 @@
   "homepage": "https://github.com/blinkk/rootjs#readme",
   "devDependencies": {
     "@blinkk/eslint-config-root": "workspace:*",
-    "@changesets/cli": "^2.24.4",
-    "eslint": "^8.38.0",
-    "prettier": "^2.8.7",
-    "turbo": "^1.8.3",
-    "typescript": "^5.0.4"
+    "@changesets/cli": "^2.26.2",
+    "eslint": "^8.51.0",
+    "prettier": "^3.0.3",
+    "turbo": "^1.10.15",
+    "typescript": "^5.2.2"
   }
 }
