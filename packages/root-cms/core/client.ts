@@ -1,4 +1,6 @@
+import path from 'node:path';
 import {Plugin, RootConfig} from '@blinkk/root';
+import {viteSsrLoadModule} from '@blinkk/root/node';
 import {App} from 'firebase-admin/app';
 import {
   FieldValue,
@@ -8,13 +10,47 @@ import {
   getFirestore,
 } from 'firebase-admin/firestore';
 import {CMSPlugin} from './plugin.js';
+import {Schema} from './schema.js';
+
+export interface Doc<Fields = any> {
+  /** The id of the doc, e.g. "Pages/foo-bar". */
+  id: string;
+  /** The collection id of the doc, e.g. "Pages". */
+  collectionId: string;
+  /** The slug of the doc, e.g. "foo-bar". */
+  slug: string;
+  sys: {
+    createdAt: number;
+    createdBy: string;
+    modifiedAt: number;
+    modifiedBy: string;
+    firstPublishedAt?: number;
+    firstPublishedBy?: string;
+    publishedAt?: number;
+    publishedBy?: string;
+    locales?: string[];
+  };
+  fields: Fields;
+}
+
+export type DocMode = 'draft' | 'published';
 
 export interface GetDocOptions {
-  mode: 'draft' | 'published';
+  /** Mode, either "draft" or "published". */
+  mode: DocMode;
+}
+
+export interface SetDocOptions {
+  /** Mode, either "draft" or "published". */
+  mode: DocMode;
+  /**
+   * Email of user modifying the doc. If blank, defaults to `root-cms-client`.
+   */
+  modifiedBy?: string;
 }
 
 export interface ListDocsOptions {
-  mode: 'draft' | 'published';
+  mode: DocMode;
   offset?: number;
   limit?: number;
   orderBy?: string;
@@ -23,7 +59,7 @@ export interface ListDocsOptions {
 }
 
 export interface GetCountOptions {
-  mode: 'draft' | 'published';
+  mode: DocMode;
   query?: (query: Query) => Query;
 }
 
@@ -45,12 +81,14 @@ export interface LoadTranslationsOptions {
 }
 
 export class RootCMSClient {
+  private readonly rootConfig: RootConfig;
   private readonly cmsPlugin: CMSPlugin;
   private readonly projectId: string;
   private readonly app: App;
   private readonly db: Firestore;
 
   constructor(rootConfig: RootConfig) {
+    this.rootConfig = rootConfig;
     this.cmsPlugin = getCmsPlugin(rootConfig);
 
     const cmsPluginOptions = this.cmsPlugin.getConfig();
@@ -60,13 +98,29 @@ export class RootCMSClient {
   }
 
   /**
-   * Retrieves a doc from Root.js CMS.
+   * Retrieves doc data from Root.js CMS.
    */
-  async getDocData<T>(
+  async getDoc<Fields = any>(
     collectionId: string,
     slug: string,
     options: GetDocOptions
-  ): Promise<T | null> {
+  ): Promise<Doc<Fields> | null> {
+    const rawData = await this.getRawDoc(collectionId, slug, options);
+    if (rawData) {
+      return unmarshalData(rawData) as Doc<Fields>;
+    }
+    return null;
+  }
+
+  /**
+   * Retrieves raw doc data as stored in the database. Only use this if you know
+   * what you are doing.
+   */
+  async getRawDoc(
+    collectionId: string,
+    slug: string,
+    options: GetDocOptions
+  ): Promise<any | null> {
     const mode = options.mode;
     const modeCollection = mode === 'draft' ? 'Drafts' : 'Published';
     // Slugs with slashes are encoded as `--` in the DB.
@@ -75,11 +129,57 @@ export class RootCMSClient {
     const docRef = this.db.doc(dbPath);
     const doc = await docRef.get();
     if (doc.exists) {
-      const data = doc.data();
-      return unmarshalData(data) as T;
+      return doc.data();
     }
-    console.log(`doc not found: ${dbPath}`);
     return null;
+  }
+
+  /**
+   * Sets data for a doc.
+   */
+  async setDoc(
+    collectionId: string,
+    slug: string,
+    data: Doc,
+    options: SetDocOptions
+  ) {
+    const schema = await this.getSchema(collectionId);
+    if (!schema) {
+      throw new Error(`schema not found for: ${collectionId}`);
+    }
+    const rawData = marshalData(data, schema);
+    const modifiedBy = options.modifiedBy || 'root-cms-client';
+
+    // Update sys created/modified times.
+    if (!rawData.sys) {
+      const currentData = await this.getRawDoc(collectionId, slug, {
+        mode: options.mode,
+      });
+      if (currentData) {
+        rawData.sys = currentData?.sys || {};
+      } else {
+        rawData.sys.createdAt = Timestamp.now();
+        rawData.sys.createdBy = modifiedBy;
+        rawData.sys.locales = ['en'];
+      }
+    }
+    rawData.sys.modifiedAt = Timestamp.now();
+    rawData.sys.modifiedBy = modifiedBy;
+
+    await this.setRawDoc(collectionId, slug, rawData, options);
+  }
+
+  async setRawDoc(
+    collectionId: string,
+    slug: string,
+    data: any,
+    options: SetDocOptions
+  ) {
+    const mode = options.mode;
+    const modeCollection = mode === 'draft' ? 'Drafts' : 'Published';
+    const dbPath = `Projects/${this.projectId}/Collections/${collectionId}/${modeCollection}/${slug}`;
+    const docRef = this.db.doc(dbPath);
+    await docRef.set(data);
   }
 
   /**
@@ -117,7 +217,7 @@ export class RootCMSClient {
   /**
    * Returns the number of docs in a Root.js CMS collection.
    */
-  async getCount(collectionId: string, options: GetCountOptions) {
+  async getDocsCount(collectionId: string, options: GetCountOptions) {
     const mode = options.mode;
     const modeCollection = mode === 'draft' ? 'Drafts' : 'Published';
     const dbPath = `Projects/${this.projectId}/Collections/${collectionId}/${modeCollection}`;
@@ -284,6 +384,15 @@ export class RootCMSClient {
     const translationsMap = await this.loadTranslations(options);
     return translationsForLocale(translationsMap, locale);
   }
+
+  /**
+   * Loads the schema for a given collection.
+   */
+  async getSchema(collectionId: string): Promise<Schema | null> {
+    const schemaFile = path.join('/collections', `${collectionId}.schema.ts`);
+    const schemaModule = await viteSsrLoadModule(this.rootConfig, schemaFile);
+    return schemaModule?.default || null;
+  }
 }
 
 export function getCmsPlugin(rootConfig: RootConfig): CMSPlugin {
@@ -333,6 +442,14 @@ export function unmarshalData(data: any): any {
 /** @deprecated Use `unmarshalData()` instead. */
 export function normalizeData(data: any): any {
   return unmarshalData(data);
+}
+
+/**
+ *
+ */
+export function marshalData(data: any, schema: Schema): any {
+  // TODO(stevenle): impl.
+  return data;
 }
 
 function isObject(data: any): boolean {

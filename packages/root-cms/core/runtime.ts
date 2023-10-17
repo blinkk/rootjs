@@ -89,7 +89,7 @@ export async function listDocs<T>(
 
 /**
  * Returns the number of docs in a Root.js CMS collection.
- * @deprecated Use RootCMSClient.getCount() instead.
+ * @deprecated Use RootCMSClient.getDocsCount() instead.
  */
 export async function numDocs(
   rootConfig: RootConfig,
