@@ -458,7 +458,7 @@ export interface ArrayObject {
 }
 
 /**
- * Serializes an array into an "array object", e.g.:
+ * Serializes an array into an `ArrayObject`, e.g.:
  *
  * ```
  * marshalArray([1, 2, 3])
@@ -468,17 +468,28 @@ export interface ArrayObject {
  * This database storage method makes it easier to update a single field in a
  * deeply nested array object.
  */
-export function marshalArray(arr: Array<any>): ArrayObject {
+export function marshalArray(arr: any[]): ArrayObject {
   if (!Array.isArray(arr)) {
     return arr;
   }
-  const arrayObject: ArrayObject = {_array: []};
+  const arrObject: ArrayObject = {_array: []};
   for (const item of arr) {
     const key = randString(6);
-    arrayObject[key] = item;
-    arrayObject._array.push(key);
+    arrObject[key] = item;
+    arrObject._array.push(key);
   }
-  return arrayObject;
+  return arrObject;
+}
+
+/**
+ * Converts an `ArrayObject` to a normal array.
+ */
+export function unmarshalArray(arrObject: ArrayObject): any[] {
+  if (!Array.isArray(arrObject?._array)) {
+    return [];
+  }
+  const arr = arrObject._array.map((k: string) => arrObject[k]);
+  return arr;
 }
 
 function isObject(data: any): boolean {
