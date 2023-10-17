@@ -445,15 +445,55 @@ export function normalizeData(data: any): any {
 }
 
 /**
- *
+ * Serializes data for storage in the database.
  */
 export function marshalData(data: any, schema: Schema): any {
   // TODO(stevenle): impl.
   return data;
 }
 
+export interface ArrayObject {
+  [key: string]: any;
+  _array: string[];
+}
+
+/**
+ * Serializes an array into an "array object", e.g.:
+ *
+ * ```
+ * marshalArray([1, 2, 3])
+ * // => {a: 1, b: 2, c: 3, _array: ['a', 'b', 'c']}
+ * ```
+ *
+ * This database storage method makes it easier to update a single field in a
+ * deeply nested array object.
+ */
+export function marshalArray(arr: Array<any>): ArrayObject {
+  if (!Array.isArray(arr)) {
+    return arr;
+  }
+  const arrayObject: ArrayObject = {_array: []};
+  for (const item of arr) {
+    const key = randString(6);
+    arrayObject[key] = item;
+    arrayObject._array.push(key);
+  }
+  return arrayObject;
+}
+
 function isObject(data: any): boolean {
   return typeof data === 'object' && !Array.isArray(data) && data !== null;
+}
+
+function randString(len: number): string {
+  const result = [];
+  const chars =
+    'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+  for (let i = 0; i < len; i++) {
+    const rand = Math.floor(Math.random() * chars.length);
+    result.push(chars.charAt(rand));
+  }
+  return result.join('');
 }
 
 /**
