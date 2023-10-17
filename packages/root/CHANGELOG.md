@@ -1,5 +1,11 @@
 # @blinkk/root
 
+## 1.0.0-rc.1
+
+### Patch Changes
+
+- 28e8e64: chore: upgrade deps
+
 ## 1.0.0-rc.0
 
 ### Major Changes

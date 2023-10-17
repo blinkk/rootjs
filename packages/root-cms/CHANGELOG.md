@@ -1,5 +1,19 @@
 # @blinkk/root-cms
 
+## 1.0.0-rc.1
+
+### Minor Changes
+
+- afb0c01: feat: add RootCMSClient class
+
+### Patch Changes
+
+- 883735f: fix: re-indent 4-space generated types to 2
+- 28e8e64: chore: upgrade deps
+- 14e2ba1: fix: ignore schema dts from functions dir
+- Updated dependencies [28e8e64]
+  - @blinkk/root@1.0.0-rc.1
+
 ## 1.0.0-rc.0
 
 ### Major Changes
