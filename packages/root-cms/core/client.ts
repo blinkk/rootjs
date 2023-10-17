@@ -76,7 +76,7 @@ export class RootCMSClient {
     const doc = await docRef.get();
     if (doc.exists) {
       const data = doc.data();
-      return normalizeData(data) as T;
+      return unmarshalData(data) as T;
     }
     console.log(`doc not found: ${dbPath}`);
     return null;
@@ -108,7 +108,7 @@ export class RootCMSClient {
     const results = await query.get();
     const docs: T[] = [];
     results.forEach((result) => {
-      const doc = normalizeData(result.data()) as T;
+      const doc = unmarshalData(result.data()) as T;
       docs.push(doc);
     });
     return {docs};
@@ -310,7 +310,7 @@ export function getCmsPlugin(rootConfig: RootConfig): CMSPlugin {
  * })
  * // => {sys: {modifiedAt: 123}, fields: {foo: [{title: 'hello'}]}}
  */
-export function normalizeData(data: any): any {
+export function unmarshalData(data: any): any {
   const result: any = {};
   for (const key in data) {
     const val = data[key];
@@ -318,16 +318,21 @@ export function normalizeData(data: any): any {
       if (val.toMillis) {
         result[key] = val.toMillis();
       } else if (Object.hasOwn(val, '_array') && Array.isArray(val._array)) {
-        const arr = val._array.map((k: string) => normalizeData(val[k] || {}));
+        const arr = val._array.map((k: string) => unmarshalData(val[k] || {}));
         result[key] = arr;
       } else {
-        result[key] = normalizeData(val);
+        result[key] = unmarshalData(val);
       }
     } else {
       result[key] = val;
     }
   }
   return result;
+}
+
+/** @deprecated Use `unmarshalData()` instead. */
+export function normalizeData(data: any): any {
+  return unmarshalData(data);
 }
 
 function isObject(data: any): boolean {
