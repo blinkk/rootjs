@@ -1,6 +1,6 @@
 import {RootConfig} from '@blinkk/root';
 
-import {getCmsPlugin} from '../../core/runtime.js';
+import {getCmsPlugin} from '../../core/client.js';
 import {applySecurityRules} from '../../core/security.js';
 
 export interface InitFirebaseOptions {

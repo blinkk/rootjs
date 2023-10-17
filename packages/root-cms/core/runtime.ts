@@ -7,7 +7,7 @@ import {
   Timestamp,
   getFirestore,
 } from 'firebase-admin/firestore';
-import {getCmsPlugin, normalizeData} from './client.js';
+import {getCmsPlugin, unmarshalData} from './client.js';
 
 /**
  * Retrieves a doc from Root.js CMS.
@@ -35,7 +35,7 @@ export async function getDoc<T>(
   const doc = await docRef.get();
   if (doc.exists) {
     const data = doc.data();
-    return normalizeData(data) as T;
+    return unmarshalData(data) as T;
   }
   console.log(`doc not found: ${dbPath}`);
   return null;
@@ -81,7 +81,7 @@ export async function listDocs<T>(
   const results = await query.get();
   const docs: T[] = [];
   results.forEach((result) => {
-    const doc = normalizeData(result.data()) as T;
+    const doc = unmarshalData(result.data()) as T;
     docs.push(doc);
   });
   return {docs};

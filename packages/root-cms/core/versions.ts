@@ -27,7 +27,7 @@ import {
   getFirestore,
 } from 'firebase-admin/firestore';
 import glob from 'tiny-glob';
-import {getCmsPlugin} from './runtime.js';
+import {getCmsPlugin} from './client.js';
 
 // To avoid saving "partial" versions (when the user might be in the middle of
 // editing a document), versions only run on documents that haven't been edited
