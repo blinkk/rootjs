@@ -1,25 +1,25 @@
-import {Plugin, RootConfig} from '@blinkk/root';
+/** @deprecated Use client.ts instead. */
+
+import {RootConfig} from '@blinkk/root';
 import {
   FieldValue,
   Query,
   Timestamp,
   getFirestore,
 } from 'firebase-admin/firestore';
-
-import {CMSPlugin} from './plugin.js';
-
-export interface GetDocOptions {
-  mode: 'draft' | 'published';
-}
+import {getCmsPlugin, normalizeData} from './client.js';
 
 /**
  * Retrieves a doc from Root.js CMS.
+ * @deprecated Use RootCMSClient.getDoc() instead.
  */
 export async function getDoc<T>(
   rootConfig: RootConfig,
   collectionId: string,
   slug: string,
-  options: GetDocOptions
+  options: {
+    mode: 'draft' | 'published';
+  }
 ): Promise<T | null> {
   const cmsPlugin = getCmsPlugin(rootConfig);
   const cmsPluginOptions = cmsPlugin.getConfig();
@@ -41,22 +41,21 @@ export async function getDoc<T>(
   return null;
 }
 
-export interface ListDocsOptions {
-  mode: 'draft' | 'published';
-  offset?: number;
-  limit?: number;
-  orderBy?: string;
-  orderByDirection?: 'asc' | 'desc';
-  query?: (query: Query) => Query;
-}
-
 /**
  * Lists docs from a Root.js CMS collection.
+ * @deprecated Use RootCMSClient.listDocs() instead.
  */
 export async function listDocs<T>(
   rootConfig: RootConfig,
   collectionId: string,
-  options: ListDocsOptions
+  options: {
+    mode: 'draft' | 'published';
+    offset?: number;
+    limit?: number;
+    orderBy?: string;
+    orderByDirection?: 'asc' | 'desc';
+    query?: (query: Query) => Query;
+  }
 ): Promise<{docs: T[]}> {
   const cmsPlugin = getCmsPlugin(rootConfig);
   const cmsPluginOptions = cmsPlugin.getConfig();
@@ -88,18 +87,17 @@ export async function listDocs<T>(
   return {docs};
 }
 
-export interface NumDocsOptions {
-  mode: 'draft' | 'published';
-  query?: (query: Query) => Query;
-}
-
 /**
  * Returns the number of docs in a Root.js CMS collection.
+ * @deprecated Use RootCMSClient.getCount() instead.
  */
 export async function numDocs(
   rootConfig: RootConfig,
   collectionId: string,
-  options: NumDocsOptions
+  options: {
+    mode: 'draft' | 'published';
+    query?: (query: Query) => Query;
+  }
 ) {
   const cmsPlugin = getCmsPlugin(rootConfig);
   const cmsPluginOptions = cmsPlugin.getConfig();
@@ -120,6 +118,7 @@ export async function numDocs(
 
 /**
  * Publishes scheduled docs.
+ * @deprecated Use RootCMSClient.publishScheduledDocs() instead.
  */
 export async function publishScheduledDocs(rootConfig: RootConfig) {
   const cmsPlugin = getCmsPlugin(rootConfig);
@@ -229,148 +228,4 @@ export async function publishScheduledDocs(rootConfig: RootConfig) {
   await batch.commit();
   console.log(`published ${publishedDocs.length} docs!`);
   return publishedDocs;
-}
-
-/**
- * Walks the data tree and converts any Timestamp objects to millis and any
- * _array maps to normal arrays.
- *
- * E.g.:
- *
- * normalizeData({
- *   sys: {modifiedAt: Timestamp(123)},
- *   fields: {
- *     _array: ['asdf'],
- *     asdf: {title: 'hello'}
- *   }
- * })
- * // => {sys: {modifiedAt: 123}, fields: {foo: [{title: 'hello'}]}}
- */
-export function normalizeData(data: any): any {
-  const result: any = {};
-  for (const key in data) {
-    const val = data[key];
-    if (isObject(val)) {
-      if (val.toMillis) {
-        result[key] = val.toMillis();
-      } else if (Object.hasOwn(val, '_array') && Array.isArray(val._array)) {
-        const arr = val._array.map((k: string) => normalizeData(val[k] || {}));
-        result[key] = arr;
-      } else {
-        result[key] = normalizeData(val);
-      }
-    } else {
-      result[key] = val;
-    }
-  }
-  return result;
-}
-
-function isObject(data: any): boolean {
-  return typeof data === 'object' && !Array.isArray(data) && data !== null;
-}
-
-export function getCmsPlugin(rootConfig: RootConfig): CMSPlugin {
-  const plugins: Plugin[] = rootConfig.plugins || [];
-  const plugin = plugins.find((plugin) => plugin.name === 'root-cms');
-  if (!plugin) {
-    throw new Error('could not find root-cms plugin config in root.config.ts');
-  }
-  return plugin as CMSPlugin;
-}
-
-export interface Translation {
-  [locale: string]: string;
-  source: string;
-}
-
-export interface TranslationsMap {
-  [hash: string]: Translation;
-}
-
-export interface LocaleTranslations {
-  [source: string]: string;
-}
-
-export interface LoadTranslationsOptions {
-  tags?: string[];
-}
-
-/**
- * Loads translations saved in the trasnlations collection, optionally filtered
- * by tag.
- *
- * Returns a map like:
- * ```
- * {
- *   "<hash>": {"source": "Hello", "es": "Hola", "fr": "Bonjour"},
- * }
- * ```
- */
-export async function loadTranslations(
-  rootConfig: RootConfig,
-  options?: LoadTranslationsOptions
-): Promise<TranslationsMap> {
-  const cmsPlugin = getCmsPlugin(rootConfig);
-  const cmsPluginOptions = cmsPlugin.getConfig();
-  const projectId = cmsPluginOptions.id || 'default';
-  const app = cmsPlugin.getFirebaseApp();
-  const db = getFirestore(app);
-
-  const dbPath = `Projects/${projectId}/Translations`;
-  let query: Query = db.collection(dbPath);
-  if (options?.tags) {
-    query = query.where('tags', 'array-contains-any', options.tags);
-  }
-
-  const querySnapshot = await query.get();
-  const translationsMap: TranslationsMap = {};
-  querySnapshot.forEach((doc) => {
-    const hash = doc.id;
-    translationsMap[hash] = doc.data() as Translation;
-  });
-  return translationsMap;
-}
-
-/**
- * Loads translations for a particular locale.
- *
- * Returns a map like:
- * ```
- * {
- *   "Hello": "Bonjour",
- * }
- * ```
- */
-export async function loadTranslationsForLocale(
-  rootConfig: RootConfig,
-  locale: string,
-  options?: LoadTranslationsOptions
-): Promise<LocaleTranslations> {
-  const translationsMap = await loadTranslations(rootConfig, options);
-  return translationsForLocale(translationsMap, locale);
-}
-
-/**
- * Converts a translations map from `loadTranslations()` to a map of source to
- * translated string for a particular locale.
- *
- * Returns a map like:
- * ```
- * {
- *   "Hello": "Bonjour",
- * }
- * ```
- */
-export function translationsForLocale(
-  translationsMap: TranslationsMap,
-  locale: string
-) {
-  const localeTranslations: LocaleTranslations = {};
-  Object.values(translationsMap).forEach((string) => {
-    const source = string.source;
-    const translation = string[locale] || string.en || string.source;
-    localeTranslations[source] = translation;
-  });
-  return localeTranslations;
 }
