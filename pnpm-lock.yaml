@@ -57,11 +57,11 @@ importers:
         specifier: ^11.5.0
         version: 11.5.0
       preact:
-        specifier: ^10.10.6
-        version: 10.11.0
+        specifier: ^10.18.1
+        version: 10.18.1
       preact-render-to-string:
-        specifier: ^5.2.3
-        version: 5.2.4(preact@10.11.0)
+        specifier: ^6.2.2
+        version: 6.2.2(preact@10.18.1)
     devDependencies:
       '@blinkk/rds':
         specifier: workspace:*
@@ -6043,7 +6043,6 @@ packages:
     dependencies:
       preact: 10.18.1
       pretty-format: 3.8.0
-    dev: true
 
   /preact-router@4.1.2(preact@10.11.0):
     resolution: {integrity: sha512-uICUaUFYh+XQ+6vZtQn1q+X6rSqwq+zorWOCLWPF5FAsQh3EJ+RsDQ9Ee+fjk545YWQHfUxhrBAaemfxEnMOUg==}
@@ -6062,7 +6061,6 @@ packages:
 
   /preact@10.18.1:
     resolution: {integrity: sha512-mKUD7RRkQQM6s7Rkmi7IFkoEHjuFqRQUaXamO61E6Nn7vqF/bo7EZCmSyrUnp2UWHw0O7XjZ2eeXis+m7tf4lg==}
-    dev: true
 
   /preferred-pm@3.0.3:
     resolution: {integrity: sha512-+wZgbxNES/KlJs9q40F/1sfOd/j7f1O9JaHcW5Dsn3aUUOZg3L2bjpVUcKV2jvtElYfoTuQiNeMfQJ4kwUAhCQ==}

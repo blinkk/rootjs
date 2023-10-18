@@ -7,7 +7,15 @@ import {
   Timestamp,
   getFirestore,
 } from 'firebase-admin/firestore';
-import {getCmsPlugin, unmarshalData} from './client.js';
+import {
+  LoadTranslationsOptions,
+  LocaleTranslations,
+  Translation,
+  TranslationsMap,
+  getCmsPlugin,
+  translationsForLocale,
+  unmarshalData,
+} from './client.js';
 
 /**
  * Retrieves a doc from Root.js CMS.
@@ -228,4 +236,44 @@ export async function publishScheduledDocs(rootConfig: RootConfig) {
   await batch.commit();
   console.log(`published ${publishedDocs.length} docs!`);
   return publishedDocs;
+}
+
+/**
+ * @deprecated Use `RootCMSClient.loadTranslations()`.
+ */
+export async function loadTranslations(
+  rootConfig: RootConfig,
+  options?: LoadTranslationsOptions
+): Promise<TranslationsMap> {
+  const cmsPlugin = getCmsPlugin(rootConfig);
+  const cmsPluginOptions = cmsPlugin.getConfig();
+  const projectId = cmsPluginOptions.id || 'default';
+  const app = cmsPlugin.getFirebaseApp();
+  const db = getFirestore(app);
+
+  const dbPath = `Projects/${projectId}/Translations`;
+  let query: Query = db.collection(dbPath);
+  if (options?.tags) {
+    query = query.where('tags', 'array-contains-any', options.tags);
+  }
+
+  const querySnapshot = await query.get();
+  const translationsMap: TranslationsMap = {};
+  querySnapshot.forEach((doc) => {
+    const hash = doc.id;
+    translationsMap[hash] = doc.data() as Translation;
+  });
+  return translationsMap;
+}
+
+/**
+ * @deprecated Use `RootCMSClient.loadTranslationsForLocale()`.
+ */
+export async function loadTranslationsForLocale(
+  rootConfig: RootConfig,
+  locale: string,
+  options?: LoadTranslationsOptions
+): Promise<LocaleTranslations> {
+  const translationsMap = await loadTranslations(rootConfig, options);
+  return translationsForLocale(translationsMap, locale);
 }
