@@ -9,6 +9,7 @@ import './styles/signin.css';
 declare global {
   interface Window {
     __ROOT_CTX: {
+      name: string;
       firebaseConfig: Record<string, string>;
     };
     firebase: {
@@ -19,16 +20,11 @@ declare global {
 }
 
 function SignIn() {
+  const title = window.__ROOT_CTX.name;
   return (
     <div className="signin">
-      <div className="signin__card">
-        <div className="signin__card__header">
-          <div className="signin__card__header__icon">
-            <IconSitemap size={80} stroke-width={1.5} />
-          </div>
-        </div>
-        <SignIn.Button />
-      </div>
+      {title && <h1 className="signin__title">{title}</h1>}
+      <SignIn.Button />
     </div>
   );
 }

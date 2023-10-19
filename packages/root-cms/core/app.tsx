@@ -124,7 +124,7 @@ function SignIn(props: SignInProps) {
         />
         <link
           rel="stylesheet"
-          href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;900&display=swap"
+          href="https://fonts.googleapis.com/css?family=Google+Sans:400,500&display=swap"
         />
         <link rel="stylesheet" href="{CSS_URL}" />
       </head>
@@ -149,7 +149,7 @@ function SignIn(props: SignInProps) {
   );
 }
 export async function renderSignIn(req: Request, res: Response, options: any) {
-  const ctx = {firebaseConfig: options.firebaseConfig};
+  const ctx = {name: options.name, firebaseConfig: options.firebaseConfig};
   const mainHtml = renderToString(<SignIn title="Sign in" ctx={ctx} />);
   let html = `<!doctype html>\n${mainHtml}`;
   if (req.viteServer) {

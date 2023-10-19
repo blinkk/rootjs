@@ -1,47 +1,15 @@
 .signin {
-  background: #F5F5F5;
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-  width: 100%;
-  min-height: 100vh;
-  justify-content: center;
-  align-items: center;
-}
-
-.signin__card {
-  background: #FFFFFF;
-  border-radius: 12px;
-  width: 380px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 48px;
-  padding: 150px 24px;
-}
-
-.signin__card__header {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
+  font-family: 'Google Sans', arial, sans-serif;
   text-align: center;
-  gap: 8px;
+  padding: 48px 20px;
+  color: #3c4043;
 }
 
-.signin__card__header__icon {
-  padding: 12px;
-  border: 4px solid black;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.signin__card__header__icon svg {
-  display: block;
-  margin-top: -6px;
+.signin__title {
+  font-size: 36px;
+  line-height: 48px;
+  font-weight: 500;
+  margin-bottom: 30px;
 }
 
 .signin__button {
@@ -49,26 +17,37 @@
   -webkit-appearance: none;
   -moz-appearance: none;
   appearance: none;
-  background: #1a73e8;
-  border: 0;
-  border-radius: 2px;
-  color: #fff !important;
+  display: inline-flex;
+  align-items: center;
+  text-align: center;
+  gap: 12px;
+  padding: 8px 11px;
+  background: white;
+  border: 1px solid #dadce0;
+  border-radius: 4px;
   cursor: pointer;
-  display: flex;
-  font-family: 'Google Sans', Arial, Helvetica, sans-serif;
-  font-size: 16px;
-  font-weight: 500;
-  letter-spacing: 0.25px;
-  justify-content: center;
-  line-height: 1.625;
-  padding: 8px 48px;
-  text-decoration: none;
-  gap: 16px;
+  font-family: inherit;
+  padding: 0 12px;
+  height: 40px;
+  box-sizing: border-box;
+  transition: all 0.218s ease;
+}
+
+.signin__button:hover {
+  border-color: #d2e3fc;
+  background-color: rgba(66, 133, 244, 0.04);
 }
 
 .signin__button__icon {
-  width: 32px;
-  height: 32px;
+  width: 18px;
+  height: 18px;
   background-color: white;
-  padding: 4px;
+}
+
+.signin__button__label {
+  font-size: 14px;
+  line-height: 1;
+  letter-spacing: .25px;
+  font-weight: 500;
+  color: #3c4043;
 }
