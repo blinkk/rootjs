@@ -1,5 +1,11 @@
 # @blinkk/eslint-config-root
 
+## 0.1.0-rc.1
+
+### Patch Changes
+
+- 0e727f1: chore: update eslint deps
+
 ## 0.1.0-rc.0
 
 ### Minor Changes
