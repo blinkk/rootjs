@@ -1,5 +1,17 @@
 # @blinkk/root
 
+## 1.0.0-rc.2
+
+### Minor Changes
+
+- 2fa06c3: feat: support nextjs-style [[...optcatchall]] routes
+
+### Patch Changes
+
+- 006df38: fix: fix vite warnings for ssr-built files
+- b0df82e: fix: fix deps
+- d05691c: fix: fix build for ssr-only routes
+
 ## 1.0.0-rc.1
 
 ### Patch Changes

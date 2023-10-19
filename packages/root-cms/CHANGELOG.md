@@ -1,5 +1,18 @@
 # @blinkk/root-cms
 
+## 1.0.0-rc.2
+
+### Patch Changes
+
+- 8b56993: fix: remove vite dep from cms client
+- b0b8a3c: fix: minimal signin ui
+- b0df82e: fix: fix deps
+- Updated dependencies [006df38]
+- Updated dependencies [b0df82e]
+- Updated dependencies [d05691c]
+- Updated dependencies [2fa06c3]
+  - @blinkk/root@1.0.0-rc.2
+
 ## 1.0.0-rc.1
 
 ### Minor Changes
