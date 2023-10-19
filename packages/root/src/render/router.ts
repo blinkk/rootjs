@@ -92,13 +92,27 @@ export async function getAllPathsForRoute(
         }
       );
     }
-  } else if (pathContainsPlaceholders(urlPathFormat) && !routeModule.handle) {
-    console.warn(
-      `path contains placeholders: ${urlPathFormat}, did you forget to define getStaticPaths()? more info: https://rootjs.dev/guide/routes#getStaticPaths`
-    );
-  } else {
+  } else if (
+    routeModule.getStaticProps &&
+    !pathContainsPlaceholders(urlPathFormat)
+  ) {
     urlPaths.push({urlPath: normalizeUrlPath(urlPathFormat), params: {}});
+  } else if (!routeModule.handle && !pathContainsPlaceholders(urlPathFormat)) {
+    urlPaths.push({urlPath: normalizeUrlPath(urlPathFormat), params: {}});
+  } else if (
+    pathContainsPlaceholders(urlPathFormat) &&
+    !routeModule.handle &&
+    !routeModule.getStaticPaths
+  ) {
+    console.warn(
+      [
+        `warning: path contains placeholders: ${urlPathFormat}.`,
+        `define either ssg getStaticPaths() or ssr handle() for route: ${route.src}.`,
+        'more info: https://rootjs.dev/guide/routes',
+      ].join('\n')
+    );
   }
+
   return urlPaths;
 }
 
