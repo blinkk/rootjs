@@ -1,6 +1,4 @@
-import path from 'node:path';
 import {Plugin, RootConfig} from '@blinkk/root';
-import {viteSsrLoadModule} from '@blinkk/root/node';
 import {App} from 'firebase-admin/app';
 import {
   FieldValue,
@@ -10,7 +8,6 @@ import {
   getFirestore,
 } from 'firebase-admin/firestore';
 import {CMSPlugin} from './plugin.js';
-import {Schema} from './schema.js';
 
 export interface Doc<Fields = any> {
   /** The id of the doc, e.g. "Pages/foo-bar". */
@@ -132,41 +129,6 @@ export class RootCMSClient {
       return doc.data();
     }
     return null;
-  }
-
-  /**
-   * Sets data for a doc.
-   */
-  async setDoc(
-    collectionId: string,
-    slug: string,
-    data: Doc,
-    options: SetDocOptions
-  ) {
-    const schema = await this.getSchema(collectionId);
-    if (!schema) {
-      throw new Error(`schema not found for: ${collectionId}`);
-    }
-    const rawData = marshalData(data, schema);
-    const modifiedBy = options.modifiedBy || 'root-cms-client';
-
-    // Update sys created/modified times.
-    if (!rawData.sys) {
-      const currentData = await this.getRawDoc(collectionId, slug, {
-        mode: options.mode,
-      });
-      if (currentData) {
-        rawData.sys = currentData?.sys || {};
-      } else {
-        rawData.sys.createdAt = Timestamp.now();
-        rawData.sys.createdBy = modifiedBy;
-        rawData.sys.locales = ['en'];
-      }
-    }
-    rawData.sys.modifiedAt = Timestamp.now();
-    rawData.sys.modifiedBy = modifiedBy;
-
-    await this.setRawDoc(collectionId, slug, rawData, options);
   }
 
   async setRawDoc(
@@ -384,15 +346,6 @@ export class RootCMSClient {
     const translationsMap = await this.loadTranslations(options);
     return translationsForLocale(translationsMap, locale);
   }
-
-  /**
-   * Loads the schema for a given collection.
-   */
-  async getSchema(collectionId: string): Promise<Schema | null> {
-    const schemaFile = path.join('/collections', `${collectionId}.schema.ts`);
-    const schemaModule = await viteSsrLoadModule(this.rootConfig, schemaFile);
-    return schemaModule?.default || null;
-  }
 }
 
 export function getCmsPlugin(rootConfig: RootConfig): CMSPlugin {
@@ -442,14 +395,6 @@ export function unmarshalData(data: any): any {
 /** @deprecated Use `unmarshalData()` instead. */
 export function normalizeData(data: any): any {
   return unmarshalData(data);
-}
-
-/**
- * Serializes data for storage in the database.
- */
-export function marshalData(data: any, schema: Schema): any {
-  // TODO(stevenle): impl.
-  return data;
 }
 
 export interface ArrayObject {
