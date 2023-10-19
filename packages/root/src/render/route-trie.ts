@@ -1,11 +1,12 @@
 /**
- * A trie data structure that stores routes. The trie supports `:param` and
- * `*wildcard` values.
+ * A trie data structure that stores routes. Supports Next-style routing using
+ * [param], [...catchall], and [[...optcatchall]] placeholders.
  */
 export class RouteTrie<T> {
   private children: Record<string, RouteTrie<T>> = {};
-  private paramChildren?: {[param: string]: ParamChild<T>};
-  private wildcardChild?: WildcardChild<T>;
+  private paramNodes?: {[param: string]: ParamNode<T>};
+  private catchAllNodes?: CatchAllNode<T>;
+  private optCatchAllNodes?: CatchAllNode<T>;
   private route?: T;
 
   /**
@@ -21,22 +22,28 @@ export class RouteTrie<T> {
     }
 
     const [head, tail] = this.splitPath(path);
+
+    if (head.startsWith('[[...') && head.endsWith(']]')) {
+      const paramName = head.slice(5, -2);
+      this.optCatchAllNodes = new CatchAllNode(paramName, route);
+      return;
+    }
     if (head.startsWith('[...') && head.endsWith(']')) {
       const paramName = head.slice(4, -1);
-      this.wildcardChild = new WildcardChild(paramName, route);
+      this.catchAllNodes = new CatchAllNode(paramName, route);
       return;
     }
 
     let nextNode: RouteTrie<T>;
     if (head.startsWith('[') && head.endsWith(']')) {
-      if (!this.paramChildren) {
-        this.paramChildren = {};
+      if (!this.paramNodes) {
+        this.paramNodes = {};
       }
       const paramName = head.slice(1, -1);
-      if (!this.paramChildren[paramName]) {
-        this.paramChildren[paramName] = new ParamChild(paramName);
+      if (!this.paramNodes[paramName]) {
+        this.paramNodes[paramName] = new ParamNode(paramName);
       }
-      nextNode = this.paramChildren[paramName].trie;
+      nextNode = this.paramNodes[paramName].trie;
     } else {
       nextNode = this.children[head];
       if (!nextNode) {
@@ -70,8 +77,8 @@ export class RouteTrie<T> {
     if (this.route) {
       addPromise(cb('/', this.route));
     }
-    if (this.paramChildren) {
-      Object.values(this.paramChildren).forEach((paramChild) => {
+    if (this.paramNodes) {
+      Object.values(this.paramNodes).forEach((paramChild) => {
         const param = `[${paramChild.name}]`;
         paramChild.trie.walk((childPath: string, route: T) => {
           const paramUrlPath = `/${param}${childPath}`;
@@ -79,9 +86,13 @@ export class RouteTrie<T> {
         });
       });
     }
-    if (this.wildcardChild) {
-      const wildcardUrlPath = `/[...${this.wildcardChild.name}]`;
-      addPromise(cb(wildcardUrlPath, this.wildcardChild.route));
+    if (this.catchAllNodes) {
+      const wildcardUrlPath = `/[...${this.catchAllNodes.name}]`;
+      addPromise(cb(wildcardUrlPath, this.catchAllNodes.route));
+    }
+    if (this.optCatchAllNodes) {
+      const wildcardUrlPath = `/[[...${this.optCatchAllNodes.name}]]`;
+      addPromise(cb(wildcardUrlPath, this.optCatchAllNodes.route));
     }
     for (const subpath of Object.keys(this.children)) {
       const childTrie = this.children[subpath];
@@ -97,8 +108,9 @@ export class RouteTrie<T> {
    */
   clear() {
     this.children = {};
-    this.paramChildren = undefined;
-    this.wildcardChild = undefined;
+    this.paramNodes = undefined;
+    this.catchAllNodes = undefined;
+    this.optCatchAllNodes = undefined;
     this.route = undefined;
   }
 
@@ -108,7 +120,16 @@ export class RouteTrie<T> {
   ): T | undefined {
     urlPath = this.normalizePath(urlPath);
     if (urlPath === '') {
-      return this.route;
+      if (this.route) {
+        return this.route;
+      }
+      if (this.optCatchAllNodes) {
+        if (urlPath) {
+          params[this.optCatchAllNodes.name] = urlPath;
+        }
+        return this.optCatchAllNodes.route;
+      }
+      return undefined;
     }
 
     const [head, tail] = this.splitPath(urlPath);
@@ -121,8 +142,8 @@ export class RouteTrie<T> {
       }
     }
 
-    if (this.paramChildren) {
-      for (const paramChild of Object.values(this.paramChildren)) {
+    if (this.paramNodes) {
+      for (const paramChild of Object.values(this.paramNodes)) {
         const route = paramChild.trie.getRoute(tail, params);
         if (route) {
           params[paramChild.name] = head;
@@ -131,9 +152,14 @@ export class RouteTrie<T> {
       }
     }
 
-    if (this.wildcardChild) {
-      params[this.wildcardChild.name] = urlPath;
-      return this.wildcardChild.route;
+    if (this.catchAllNodes) {
+      params[this.catchAllNodes.name] = urlPath;
+      return this.catchAllNodes.route;
+    }
+
+    if (this.optCatchAllNodes) {
+      params[this.optCatchAllNodes.name] = urlPath;
+      return this.optCatchAllNodes.route;
     }
 
     return undefined;
@@ -143,8 +169,8 @@ export class RouteTrie<T> {
    * Normalizes a path for inclusion into the route trie.
    */
   private normalizePath(path: string) {
-    // Remove leading slashes.
-    return path.replace(/^\/+/g, '');
+    // Remove leading/trailing slashes.
+    return path.replace(/^\/+/g, '').replace(/\/+$/g, '');
   }
 
   /**
@@ -164,7 +190,7 @@ export class RouteTrie<T> {
 /**
  * A node in the RouteTrie for a :param child.
  */
-class ParamChild<T> {
+class ParamNode<T> {
   readonly name: string;
   readonly trie: RouteTrie<T> = new RouteTrie();
 
@@ -176,7 +202,7 @@ class ParamChild<T> {
 /**
  * A node in the RouteTrie for a *wildcard child.
  */
-class WildcardChild<T> {
+class CatchAllNode<T> {
   readonly name: string;
   readonly route: T;
 

@@ -61,3 +61,41 @@ test('get nested parametered route from route trie', () => {
     {ref: 'blog', slug: 'bar'},
   ]);
 });
+
+test('get catch-all routes', () => {
+  routeTrie.add('/[...slug]', '1');
+
+  assert.deepEqual(routeTrie.get('/'), [undefined, {}]);
+  assert.deepEqual(routeTrie.get('/blog'), ['1', {slug: 'blog'}]);
+  assert.deepEqual(routeTrie.get('/blog/'), ['1', {slug: 'blog'}]);
+  assert.deepEqual(routeTrie.get('/blog/foo'), ['1', {slug: 'blog/foo'}]);
+  assert.deepEqual(routeTrie.get('/blog/foo/'), ['1', {slug: 'blog/foo'}]);
+});
+
+test('get nested catch-all routes', () => {
+  routeTrie.add('/blog/[...slug]', '1');
+
+  assert.deepEqual(routeTrie.get('/'), [undefined, {}]);
+  assert.deepEqual(routeTrie.get('/blog'), [undefined, {}]);
+  assert.deepEqual(routeTrie.get('/blog/'), [undefined, {}]);
+  assert.deepEqual(routeTrie.get('/blog/foo'), ['1', {slug: 'foo'}]);
+  assert.deepEqual(routeTrie.get('/blog/foo/'), ['1', {slug: 'foo'}]);
+  assert.deepEqual(routeTrie.get('/blog/foo/bar'), ['1', {slug: 'foo/bar'}]);
+  assert.deepEqual(routeTrie.get('/blog/foo/bar/'), ['1', {slug: 'foo/bar'}]);
+});
+
+test('get optional catch-all routes', () => {
+  routeTrie.add('/[[...slug]]', '1');
+  routeTrie.add('/foo', '2');
+  routeTrie.add('/foo/bar', '3');
+
+  assert.deepEqual(routeTrie.get('/'), ['1', {}]);
+  assert.deepEqual(routeTrie.get('/blog'), ['1', {slug: 'blog'}]);
+  assert.deepEqual(routeTrie.get('/blog/'), ['1', {slug: 'blog'}]);
+  assert.deepEqual(routeTrie.get('/blog/foo'), ['1', {slug: 'blog/foo'}]);
+  assert.deepEqual(routeTrie.get('/blog/foo/'), ['1', {slug: 'blog/foo'}]);
+  assert.deepEqual(routeTrie.get('/foo'), ['2', {}]);
+  assert.deepEqual(routeTrie.get('/foo/'), ['2', {}]);
+  assert.deepEqual(routeTrie.get('/foo/bar'), ['3', {}]);
+  assert.deepEqual(routeTrie.get('/foo/bar/'), ['3', {}]);
+});
