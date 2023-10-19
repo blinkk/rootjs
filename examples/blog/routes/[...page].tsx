@@ -1,5 +1,5 @@
 import {Handler, HandlerContext, Request} from '@blinkk/root';
-import {getDoc, loadTranslationsForLocale} from '@blinkk/root-cms';
+import {RootCMSClient} from '@blinkk/root-cms';
 
 import {
   PageModuleFields,
@@ -32,9 +32,10 @@ export const handle: Handler = async (req: Request) => {
   const slug = ctx.params.page;
   const mode = String(req.query.preview) === 'true' ? 'draft' : 'published';
   const locale = ctx.params.$locale || req.params.hl || 'en';
+  const cmsClient = new RootCMSClient(req.rootConfig);
   const [doc, translations] = await Promise.all([
-    getDoc<PagesDoc>(req.rootConfig, 'Pages', slug, {mode}),
-    loadTranslationsForLocale(req.rootConfig, locale),
+    cmsClient.getDoc<PagesDoc>('Pages', slug, {mode}),
+    cmsClient.loadTranslationsForLocale(locale),
   ]);
   if (!doc) {
     return ctx.render404();
