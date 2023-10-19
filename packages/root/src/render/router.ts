@@ -121,7 +121,7 @@ export function replaceParams(
   params: Record<string, string>
 ) {
   const urlPath = urlPathFormat.replaceAll(
-    /\[(\.\.\.)?([\w\-_]*)\]/g,
+    /\[\[?(\.\.\.)?([\w\-_]*)\]?\]/g,
     (match: string, _wildcard: string, key: string) => {
       const val = params[key];
       if (!val) {
