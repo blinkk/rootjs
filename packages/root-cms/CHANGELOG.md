@@ -1,5 +1,14 @@
 # @blinkk/root-cms
 
+## 1.0.0-rc.3
+
+### Patch Changes
+
+- 4067634: fix: add experimental fix for large collections
+- 7f8d62f: fix: fix overflow issue
+- 9f85f7c: fix: rename header to root cms
+  - @blinkk/root@1.0.0-rc.3
+
 ## 1.0.0-rc.2
 
 ### Patch Changes
