@@ -1,5 +1,11 @@
 # @blinkk/root
 
+## 1.0.0-rc.5
+
+### Patch Changes
+
+- ddcbe58: fix: fix ?inline css deps injected in dev
+
 ## 1.0.0-rc.4
 
 ## 1.0.0-rc.3
