@@ -74,7 +74,7 @@
     "sass": "^1.69.3",
     "sirv": "^2.0.3",
     "tiny-glob": "^0.2.9",
-    "vite": "4.4.11"
+    "vite": "4.5.0"
   },
   "peerDependencies": {
     "firebase-admin": ">=11",
