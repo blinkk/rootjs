@@ -81,6 +81,11 @@
   right: 12px;
 }
 
+.CollectionPage__main {
+  max-height: calc(100% - 48px);
+  overflow: auto;
+}
+
 .CollectionPage__main__unselected {
   padding: 12px;
   display: flex;
@@ -95,12 +100,6 @@
 .CollectionPage__main__unselected__title {
   font-size: 14px;
   font-weight: 500;
-}
-
-.CollectionPage__collection {
-  height: 100%;
-  max-height: calc(100% - 48px);
-  overflow: auto;
 }
 
 .CollectionPage__collection__header {
