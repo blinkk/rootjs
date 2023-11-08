@@ -1,6 +1,6 @@
 .SplitPanel {
   display: flex;
-  height: 100%;
+  max-height: calc(100vh - 48px);
 }
 
 .SplitPanel__divider {
@@ -41,7 +41,8 @@
 }
 
 .SplitPanel__item {
-  overflow: hidden;
+  max-height: 100%;
+  overflow: auto;
   position: relative;
 }
 
