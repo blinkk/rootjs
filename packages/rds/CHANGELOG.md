@@ -1,5 +1,12 @@
 # @blinkk/rds
 
+## 1.0.0-rc.5
+
+### Patch Changes
+
+- Updated dependencies [ddcbe58]
+  - @blinkk/root@1.0.0-rc.5
+
 ## 1.0.0-rc.4
 
 ### Patch Changes
