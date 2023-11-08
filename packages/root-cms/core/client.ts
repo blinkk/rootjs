@@ -1,3 +1,4 @@
+import crypto from 'node:crypto';
 import {Plugin, RootConfig} from '@blinkk/root';
 import {App} from 'firebase-admin/app';
 import {
@@ -327,6 +328,67 @@ export class RootCMSClient {
       translationsMap[hash] = doc.data() as Translation;
     });
     return translationsMap;
+  }
+
+  /**
+   * Saves a map of translations, e.g.:
+   * ```
+   * await client.saveTranslations({
+   *   "Hello": {"es": "Hola", "fr": "Bonjour"},
+   * });
+   * ```
+   */
+  async saveTranslations(
+    translations: {
+      [source: string]: {[locale: string]: string};
+    },
+    tags?: string[]
+  ) {
+    const translationsPath = `Projects/${this.projectId}/Translations`;
+    const batch = this.db.batch();
+    let batchCount = 0;
+    Object.entries(translations).forEach(([source, sourceTranslations]) => {
+      const hash = this.getTranslationKey(source);
+      const translationRef = this.db.doc(`${translationsPath}/${hash}`);
+      const data: any = {
+        ...sourceTranslations,
+        source: this.normalizeString(source),
+      };
+      if (tags) {
+        data.tags = tags;
+      }
+      batch.update(translationRef, data);
+      batchCount += 1;
+    });
+    if (batchCount > 500) {
+      throw new Error('up to 500 translations can be saved at a time.');
+    }
+    await batch.commit();
+  }
+
+  /**
+   * Returns the "key" used for a translation as stored in the db. Translations
+   * are stored under `Projects/<project id>/Translations/<sha1 hash>`.
+   */
+  getTranslationKey(source: string) {
+    const sha1 = crypto
+      .createHash('sha1')
+      .update(this.normalizeString(source))
+      .digest('hex');
+    return sha1;
+  }
+
+  /**
+   * Cleans a string that's used for translations. Performs the following:
+   * - Removes any leading/trailing whitespace
+   * - Removes spaces at the end of any line
+   */
+  normalizeString(str: string) {
+    const lines = String(str)
+      .trim()
+      .split('\n')
+      .map((line) => line.trimEnd());
+    return lines.join('\n');
   }
 
   /**
