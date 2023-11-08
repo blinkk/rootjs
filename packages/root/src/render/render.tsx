@@ -206,7 +206,13 @@ export class Renderer {
     const routeAsset = await this.assetMap.get(route.src);
     if (routeAsset) {
       const routeCssDeps = await routeAsset.getCssDeps();
-      routeCssDeps.forEach((dep) => cssDeps.add(dep));
+      routeCssDeps.forEach((dep) => {
+        // Ignore ?inline css deps.
+        if (dep.endsWith('?inline')) {
+          return;
+        }
+        cssDeps.add(dep);
+      });
     }
 
     // Parse the HTML for custom elements that are found within the project
@@ -459,7 +465,13 @@ export class Renderer {
         const assetJsDeps = await asset.getJsDeps();
         assetJsDeps.forEach((dep) => jsDeps.add(dep));
         const assetCssDeps = await asset.getCssDeps();
-        assetCssDeps.forEach((dep) => cssDeps.add(dep));
+        assetCssDeps.forEach((dep) => {
+          // Ignore ?inline css deps.
+          if (dep.endsWith('?inline')) {
+            return;
+          }
+          cssDeps.add(dep);
+        });
       })
     );
 
