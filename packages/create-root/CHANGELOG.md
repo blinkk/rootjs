@@ -1,5 +1,7 @@
 # @blinkk/create-root
 
+## 1.0.0-rc.4
+
 ## 1.0.0-rc.3
 
 ## 1.0.0-rc.2
