@@ -41,7 +41,7 @@ Layout.Top = () => {
     <div className="Layout__top">
       <a className="Layout__top__logo" href="/cms">
         <IconSitemap size={14} />
-        <div>Root.js</div>
+        <div>Root CMS</div>
       </a>
       <div className="Layout__top__version">v{packageJson.version}</div>
       <div className="Layout__top__project">{projectName}</div>
