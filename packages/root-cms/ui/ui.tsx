@@ -3,7 +3,7 @@ import {ModalsProvider} from '@mantine/modals';
 import {NotificationsProvider} from '@mantine/notifications';
 import {initializeApp} from 'firebase/app';
 import {User, getAuth} from 'firebase/auth';
-import {getFirestore} from 'firebase/firestore';
+import {getFirestore, initializeFirestore} from 'firebase/firestore';
 import {getStorage} from 'firebase/storage';
 import {render} from 'preact';
 import {Route, Router} from 'preact-router';
@@ -100,7 +100,15 @@ function loginRedirect() {
 }
 
 const app = initializeApp(window.__ROOT_CTX.firebaseConfig);
-const db = getFirestore(app);
+// const db = getFirestore(app);
+// NOTE(stevenle): the firestore web channel rpc sometimes has issues in
+// collections with a large number of docs. Forcing long polling and disabling
+// fetch streams seems to work for some people. This may cause performance
+// issues however.
+const db = initializeFirestore(app, {
+  experimentalForceLongPolling: true,
+  useFetchStreams: false,
+} as any);
 const auth = getAuth(app);
 const storage = getStorage(app);
 auth.onAuthStateChanged((user) => {
