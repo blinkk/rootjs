@@ -1,6 +1,6 @@
 .SplitPanel {
   display: flex;
-  max-height: calc(100vh - 48px);
+  height: calc(100vh - 48px);
 }
 
 .SplitPanel__divider {
