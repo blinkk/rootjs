@@ -6,7 +6,6 @@
 .SplitPanel__divider {
   flex: 0 0 3px;
   width: 3px;
-  height: 100%;
   cursor: col-resize;
   position: relative;
 }
