@@ -1,5 +1,12 @@
 # @blinkk/root-cms
 
+## 1.0.0-rc.6
+
+### Patch Changes
+
+- 5975bf0: fix: fix split panel resizer
+  - @blinkk/root@1.0.0-rc.6
+
 ## 1.0.0-rc.5
 
 ### Patch Changes
