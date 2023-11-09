@@ -81,11 +81,6 @@
   right: 12px;
 }
 
-.CollectionPage__main {
-  max-height: calc(100% - 48px);
-  overflow: auto;
-}
-
 .CollectionPage__main__unselected {
   padding: 12px;
   display: flex;
