@@ -99,6 +99,9 @@ function fieldType(field: Field): dom.Type {
   if (field.type === 'array') {
     return dom.type.array(fieldType(field.of));
   }
+  if (field.type === 'boolean') {
+    return dom.type.boolean;
+  }
   if (field.type === 'date') {
     return dom.type.string;
   }
