@@ -263,11 +263,18 @@ async function sha1(file: File) {
   return hashHex;
 }
 
-async function uploadFileToGCS(file: File) {
+interface UploadFileOptions {
+  preserveFilename?: boolean;
+}
+
+async function uploadFileToGCS(file: File, options?: UploadFileOptions) {
   const projectId = window.__ROOT_CTX.rootConfig.projectId;
   const hashHex = await sha1(file);
   const ext = normalizeExt(file.name.split('.').at(-1) || '');
-  const filePath = `${projectId}/uploads/${hashHex}.${ext}`;
+  const filename = options?.preserveFilename
+    ? `${hashHex}/${file.name}`
+    : `${hashHex}.${ext}`;
+  const filePath = `${projectId}/uploads/${filename}`;
   const gcsRef = storageRef(window.firebase.storage, filePath);
   await uploadBytes(gcsRef, file);
   console.log(`uploaded ${filePath}`);

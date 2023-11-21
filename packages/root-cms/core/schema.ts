@@ -100,6 +100,11 @@ export type FileField = CommonFieldProps & {
   type: 'file';
   /** List of supported exts, e.g. `['.mp4']`. */
   exts?: string[];
+  /**
+   * Whether to preserve the final serving filename when a user uploads a file.
+   * By default, the filename is hashed for obfuscation purposes.
+   */
+  preserveFilename?: boolean;
 };
 
 export function file(field: Omit<FileField, 'type'>): FileField {
