@@ -1,5 +1,15 @@
 # @blinkk/root-cms
 
+## 1.0.0-rc.7
+
+### Minor Changes
+
+- c49b76c: feat: add preserveFilename option to file schema
+
+### Patch Changes
+
+- @blinkk/root@1.0.0-rc.7
+
 ## 1.0.0-rc.6
 
 ### Patch Changes
