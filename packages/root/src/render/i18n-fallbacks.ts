@@ -8,6 +8,27 @@ import {Request} from '../core/types';
 import {parseAcceptLanguage} from './accept-language';
 
 export const UNKNOWN_COUNTRY = 'zz';
+export const ES_419_COUNTRIES = [
+  'ar', // Argentina
+  'bo', // Bolivia
+  'cl', // Chile
+  'co', // Colombia
+  'cr', // Costa Rica
+  'cu', // Cuba
+  'do', // Dominican Republic
+  'ec', // Ecuador
+  'sv', // El Salvador
+  'gt', // Guatemala
+  'hn', // Honduras
+  'mx', // Mexico
+  'ni', // Nicaragua
+  'pa', // Panama
+  'py', // Paraguay
+  'pe', // Peru
+  'pr', // Puerto Rico
+  'uy', // Uruguay
+  've', // Venezuela
+];
 
 export function getFallbackLocales(req: Request): string[] {
   const hl = getFirstQueryParam(req, 'hl');
@@ -43,9 +64,15 @@ export function getFallbackLocales(req: Request): string[] {
   locales.add(`ALL_${countryCode}`);
 
   // Add `{lang}_ALL` and `{lang}` locales.
+  // For Spanish-speaking LATAM countries, also add es-419.
+  const isEs419Country = test419Country(countryCode);
   langs.forEach((langCode) => {
     locales.add(`${langCode}_ALL`);
     locales.add(langCode);
+    if (langCode === 'es' && isEs419Country) {
+      locales.add('es-419_ALL');
+      locales.add('es-419');
+    }
   });
 
   return Array.from(locales) as string[];
@@ -75,6 +102,10 @@ function getFallbackLanguages(req: Request): string[] {
       // For a lang like `en-US`, add both `en-US` and `en`.
       if (lang.region) {
         langs.add(`${lang.code}-${lang.region}`);
+        // For Spanish-speaking LATAM countries, also add es-419.
+        if (lang.code === 'es' && test419Country(lang.region)) {
+          langs.add('es-419');
+        }
       }
       langs.add(lang.code);
     });
@@ -115,4 +146,8 @@ function isWebCrawler(req: Request): boolean {
     userAgent.includes('bingbot') ||
     userAgent.includes('twitterbot')
   );
+}
+
+export function test419Country(countryCode: string) {
+  return ES_419_COUNTRIES.includes(countryCode);
 }
