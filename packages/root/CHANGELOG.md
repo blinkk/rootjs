@@ -1,5 +1,15 @@
 # @blinkk/root
 
+## 1.0.0-rc.8
+
+### Minor Changes
+
+- 27520ed: feat: add es-419 to intl fallbacks
+
+### Patch Changes
+
+- 8476fb3: fix: fix preview server error messages
+
 ## 1.0.0-rc.7
 
 ## 1.0.0-rc.6
