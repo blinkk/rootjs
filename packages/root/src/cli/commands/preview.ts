@@ -148,7 +148,7 @@ function rootPreviewServerMiddleware() {
       try {
         console.error(`error rendering ${req.originalUrl}`);
         console.error(e.stack || e);
-        const {html} = await renderer.renderError(e);
+        const {html} = await renderer.renderDevServer500(req, e);
         res.status(500).set({'Content-Type': 'text/html'}).end(html);
       } catch (e2) {
         console.error('failed to render custom error');
