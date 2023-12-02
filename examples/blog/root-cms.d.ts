@@ -41,7 +41,7 @@ export interface BlogPostsFields {
             alt?: string;
         };
         /** Featured?. Check the box to mark the blog post as a featured blog post. */
-        featured?: unknown;
+        featured?: boolean;
         /** Tags. Category tags for searching and filtering. */
         tags?: string[];
     };
@@ -87,7 +87,7 @@ export interface BlogPostsSandboxFields {
             alt?: string;
         };
         /** Featured?. Check the box to mark the blog post as a featured blog post. */
-        featured?: unknown;
+        featured?: boolean;
         /** Tags. Category tags for searching and filtering. */
         tags?: string[];
     };

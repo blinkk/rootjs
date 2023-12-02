@@ -23,7 +23,12 @@ function SignIn() {
   const title = window.__ROOT_CTX.name;
   return (
     <div className="signin">
-      {title && <h1 className="signin__title">{title}</h1>}
+      <div className="signin__headline">
+        {title && <h1 className="signin__headline__title">{title}</h1>}
+        <p className="signin__headline__body">
+          {title ? `Sign in to continue to ${title}` : 'Sign in to continue'}
+        </p>
+      </div>
       <SignIn.Button />
     </div>
   );
