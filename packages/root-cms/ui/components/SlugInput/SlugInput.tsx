@@ -3,6 +3,7 @@ import {ChangeEvent} from 'preact/compat';
 import {useRef, useState} from 'preact/hooks';
 import {Text} from '../../components/Text/Text.js';
 import {joinClassNames} from '../../utils/classes.js';
+import {getDocServingUrl} from '../../utils/doc-urls.js';
 import {isSlugValid, normalizeSlug} from '../../utils/slug.js';
 import './SlugInput.css';
 
@@ -34,27 +35,23 @@ export function SlugInput(props: SlugInputProps) {
     });
   }
 
-  const domain = window.__ROOT_CTX.rootConfig?.domain || 'https://example.com';
-  const basePath = window.__ROOT_CTX.rootConfig?.basePath || '/';
   let urlHelp = '';
   if (rootCollection?.url) {
     if (slug) {
       const cleanSlug = normalizeSlug(slug);
       if (isSlugValid(cleanSlug)) {
-        const cleanSlugPath = cleanSlug.replaceAll('--', '/');
-        const urlPath = rootCollection.url
-          .replace('[base]', basePath)
-          .replace(/\[.*slug\]/, cleanSlugPath)
-          .replace(/\/+/g, '/');
-        urlHelp = `${domain}${urlPath}`;
+        urlHelp = getDocServingUrl({
+          collectionId: props.collectionId!,
+          slug: cleanSlug,
+        });
       } else {
         urlHelp = 'INVALID SLUG';
       }
     } else {
-      const urlPath = rootCollection.url
-        .replace('[base]', basePath)
-        .replace(/\/+/g, '/');
-      urlHelp = `${domain}${urlPath}`;
+      urlHelp = getDocServingUrl({
+        collectionId: props.collectionId!,
+        slug: '[slug]',
+      });
     }
 
     // Rename `/index`, e.g.:

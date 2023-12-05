@@ -27,6 +27,7 @@ import {Layout} from '../../layout/Layout.js';
 import {joinClassNames} from '../../utils/classes.js';
 import {getNestedValue} from '../../utils/objects.js';
 import './CollectionPage.css';
+import {getDocServingUrl} from '../../utils/doc-urls.js';
 
 interface CollectionPageProps {
   collection?: string;
@@ -288,13 +289,7 @@ CollectionPage.DocsList = (props: {
 
   const docs = props.docs || [];
   function getLiveUrl(slug: string): string {
-    const c = rootCollection!;
-    if (!c.url) {
-      return '';
-    }
-    const domain = window.__ROOT_CTX.rootConfig.domain || 'https://example.com';
-    const urlPath = c.url.replace(/\[.*slug\]/, slug.replaceAll('--', '/'));
-    return `${domain}${urlPath}`;
+    return getDocServingUrl({collectionId, slug});
   }
 
   return (

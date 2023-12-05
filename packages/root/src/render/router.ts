@@ -167,6 +167,10 @@ export function normalizeUrlPath(
   ) {
     urlPath = urlPath.replace(/\/*$/g, '');
   }
+  // Add leading slash if needed.
+  if (!urlPath.startsWith('/')) {
+    urlPath = `/${urlPath}`;
+  }
   return urlPath;
 }
 

@@ -103,45 +103,10 @@ function getLocaleLabel(locale: string) {
   return `${langName} (${locale})`;
 }
 
-function getLocalizedUrl(urlPath: string, locale: string) {
-  if (!locale) {
-    return urlPath;
-  }
-  const basePath = window.__ROOT_CTX.rootConfig.basePath || '/';
-  const urlFormat =
-    window.__ROOT_CTX.rootConfig.i18n?.urlFormat || '/[locale]/[base]/[path]';
-  return normalizeUrlPath(
-    urlFormat
-      .replaceAll('[base]', removeSlashes(basePath))
-      .replaceAll('[locale]', locale)
-      .replaceAll('[path]', removeSlashes(urlPath))
-  );
-}
-
-export function normalizeUrlPath(
-  urlPath: string,
-  options?: {trailingSlash?: boolean}
-) {
-  // Collapse multiple slashes, e.g. `/foo//bar` => `/foo/bar`;
-  urlPath = urlPath.replace(/\/+/g, '/');
-  // Remove trailing slash.
-  if (
-    options?.trailingSlash === false &&
-    urlPath !== '/' &&
-    urlPath.endsWith('/')
-  ) {
-    urlPath = urlPath.replace(/\/*$/g, '');
-  }
-  return urlPath;
-}
-
-function removeSlashes(str: string) {
-  return str.replace(/^\/*/g, '').replace(/\/*$/g, '');
-}
-
 DocumentPage.Preview = (props: PreviewProps) => {
   const domain = window.__ROOT_CTX.rootConfig.domain || 'https://example.com';
-  const servingPath = getDocServingPath(props.docId);
+  const [collectionId, slug] = props.docId.split('/');
+  const servingPath = getDocServingPath({collectionId, slug});
 
   const servingUrl = `${domain}${servingPath}`;
   const [iframeUrl, setIframeUrl] = useState(servingUrl);
@@ -154,8 +119,12 @@ DocumentPage.Preview = (props: PreviewProps) => {
   const [selectedLocale, setSelectedLocale] = useState('');
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const locales = props.draft.controller.getLocales();
-  const previewPath = `${getDocPreviewPath(props.docId)}?preview=true`;
-  const localizedPreviewPath = getLocalizedUrl(previewPath, selectedLocale);
+  const previewPath = `${getDocPreviewPath({collectionId, slug})}?preview=true`;
+  const localizedPreviewPath = `${getDocPreviewPath({
+    collectionId,
+    slug,
+    locale: selectedLocale,
+  })}?preview=true`;
 
   const localeOptions = [
     {value: '', label: 'Select locale'},
