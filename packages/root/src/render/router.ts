@@ -7,7 +7,8 @@ import {RouteTrie} from './route-trie';
 
 export function getRoutes(config: RootConfig) {
   const locales = config.i18n?.locales || [];
-  const i18nUrlFormat = config.i18n?.urlFormat || '/{locale}/{path}';
+  const basePath = config.basePath || '/';
+  const i18nUrlFormat = config.i18n?.urlFormat || '/{locale}/{base}/{path}';
   const defaultLocale = config.i18n?.defaultLocale || 'en';
 
   const routes = import.meta.glob(
@@ -19,28 +20,37 @@ export function getRoutes(config: RootConfig) {
   const trie = new RouteTrie<Route>();
   Object.keys(routes).forEach((modulePath) => {
     const src = modulePath.slice(1);
-    let routePath = modulePath.replace(/^\/routes/, '');
-    const parts = path.parse(routePath);
+    let relativeRoutePath = modulePath.replace(/^\/routes/, '');
+    const parts = path.parse(relativeRoutePath);
     if (parts.name.startsWith('_')) {
       return;
     }
     if (parts.name === 'index') {
-      routePath = parts.dir;
+      relativeRoutePath = parts.dir;
     } else {
-      routePath = path.join(parts.dir, parts.name);
+      relativeRoutePath = path.join(parts.dir, parts.name);
     }
 
-    const localeRoutePath = i18nUrlFormat
-      .replace('{locale}', '[locale]')
-      .replace('{path}', routePath.replace(/^\/*/, ''));
+    const urlFormat = '/{base}/{path}';
+    const routePath = normalizeUrlPath(
+      urlFormat
+        .replace('{base}', removeSlashes(basePath))
+        .replace('{path}', removeSlashes(relativeRoutePath))
+    );
+    const localeRoutePath = normalizeUrlPath(
+      i18nUrlFormat
+        .replace('{locale}', '[locale]')
+        .replace('{base}', removeSlashes(basePath))
+        .replace('{path}', removeSlashes(relativeRoutePath))
+    );
 
     trie.add(routePath, {
       src,
       module: routes[modulePath] as RouteModule,
       locale: defaultLocale,
       isDefaultLocale: true,
-      routePath: normalizeUrlPath(routePath),
-      localeRoutePath: normalizeUrlPath(localeRoutePath),
+      routePath: urlFormat,
+      localeRoutePath: localeRoutePath,
     });
 
     // At the moment, all routes are assumed to use the site-wide i18n config.
@@ -48,7 +58,7 @@ export function getRoutes(config: RootConfig) {
     // i18n serving behavior.
     locales.forEach((locale) => {
       const localePath = localeRoutePath.replace('[locale]', locale);
-      if (localePath !== routePath) {
+      if (localePath !== relativeRoutePath) {
         trie.add(localePath, {
           src,
           module: routes[modulePath] as RouteModule,
@@ -134,6 +144,9 @@ export function replaceParams(
 }
 
 export function normalizeUrlPath(urlPath: string) {
+  // Collapse multiple slashes, e.g. `/foo//bar` => `/foo/bar`;
+  urlPath.replace(/\/+/g, '/');
+  // Remove trailing slash.
   if (urlPath !== '/' && urlPath.endsWith('/')) {
     urlPath = urlPath.replace(/\/*$/g, '');
   }
@@ -145,4 +158,8 @@ function pathContainsPlaceholders(urlPath: string) {
   return segments.some((segment) => {
     return segment.startsWith('[') && segment.endsWith(']');
   });
+}
+
+function removeSlashes(str: string) {
+  return str.replace(/^\/*/g, '').replace(/\/*$/g, '');
 }
