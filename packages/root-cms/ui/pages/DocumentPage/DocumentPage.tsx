@@ -107,11 +107,36 @@ function getLocalizedUrl(urlPath: string, locale: string) {
   if (!locale) {
     return urlPath;
   }
+  const basePath = window.__ROOT_CTX.rootConfig.basePath || '/';
   const urlFormat =
-    window.__ROOT_CTX.rootConfig.i18n?.urlFormat || '/{locale}/{path}';
-  return urlFormat
-    .replaceAll('{locale}', locale)
-    .replaceAll('/{path}', urlPath);
+    window.__ROOT_CTX.rootConfig.i18n?.urlFormat || '/[locale]/[base]/[path]';
+  return normalizeUrlPath(
+    urlFormat
+      .replaceAll('[base]', removeSlashes(basePath))
+      .replaceAll('[locale]', locale)
+      .replaceAll('[path]', removeSlashes(urlPath))
+  );
+}
+
+export function normalizeUrlPath(
+  urlPath: string,
+  options?: {trailingSlash?: boolean}
+) {
+  // Collapse multiple slashes, e.g. `/foo//bar` => `/foo/bar`;
+  urlPath = urlPath.replace(/\/+/g, '/');
+  // Remove trailing slash.
+  if (
+    options?.trailingSlash === false &&
+    urlPath !== '/' &&
+    urlPath.endsWith('/')
+  ) {
+    urlPath = urlPath.replace(/\/*$/g, '');
+  }
+  return urlPath;
+}
+
+function removeSlashes(str: string) {
+  return str.replace(/^\/*/g, '').replace(/\/*$/g, '');
 }
 
 DocumentPage.Preview = (props: PreviewProps) => {
