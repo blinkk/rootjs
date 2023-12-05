@@ -12,6 +12,7 @@
     "fix": "eslint . --ext .ts,.tsx --fix",
     "version": "changeset version && pnpm install --no-frozen-lockfile",
     "release": "pnpm run build && changeset publish",
+    "test": "pnpm run build && turbo run test",
     "// workspace aliases": "",
     "blog": "pnpm run --filter=\"@examples/blog\"",
     "starter": "pnpm run --filter=\"@examples/starter\""

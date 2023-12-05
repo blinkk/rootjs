@@ -46,6 +46,9 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-pnpm-store-
 
+      - name: Unit tests
+        run: pnpm test
+
       - name: Create Release Pull Request or Publish
         id: changesets
         uses: changesets/action@v1
