@@ -1,0 +1,21 @@
+{
+  "name": "@examples/basepath",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "build": "rm -rf dist/ && root build",
+    "dev": "root dev",
+    "preview": "rm -rf dist/ && root build --ssr-only && root preview",
+    "start": "root start",
+    "test": "pnpm run build"
+  },
+  "dependencies": {
+    "@blinkk/root": "workspace:*",
+    "preact": "^10.10.6",
+    "preact-render-to-string": "^5.2.3"
+  }
+}

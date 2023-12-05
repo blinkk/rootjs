@@ -38,12 +38,14 @@ export async function dev(rootProjectDir?: string, options?: DevOptions) {
   const defaultPort = parseInt(process.env.PORT || '4007');
   const host = options?.host || 'localhost';
   const port = await findOpenPort(defaultPort, defaultPort + 10);
+  const server = await createDevServer({rootDir, port});
+  const rootConfig: RootConfig = server.get('rootConfig');
+  const basePath = rootConfig.basePath || '';
   console.log();
   console.log(`${dim('┃')} project:  ${rootDir}`);
-  console.log(`${dim('┃')} server:   http://${host}:${port}`);
+  console.log(`${dim('┃')} server:   http://${host}:${port}${basePath}`);
   console.log(`${dim('┃')} mode:     development`);
   console.log();
-  const server = await createDevServer({rootDir, port});
   server.listen(port, host);
 }
 
@@ -56,6 +58,7 @@ export async function createDevServer(options?: {
   const port = options?.port;
 
   const server: Server = express();
+  server.set('rootConfig', rootConfig);
   server.disable('x-powered-by');
 
   // Inject req context vars.

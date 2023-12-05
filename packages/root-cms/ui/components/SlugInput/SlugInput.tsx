@@ -3,6 +3,7 @@ import {ChangeEvent} from 'preact/compat';
 import {useRef, useState} from 'preact/hooks';
 import {Text} from '../../components/Text/Text.js';
 import {joinClassNames} from '../../utils/classes.js';
+import {getDocServingUrl} from '../../utils/doc-urls.js';
 import {isSlugValid, normalizeSlug} from '../../utils/slug.js';
 import './SlugInput.css';
 
@@ -34,24 +35,32 @@ export function SlugInput(props: SlugInputProps) {
     });
   }
 
-  const domain = window.__ROOT_CTX.rootConfig?.domain || 'https://example.com';
   let urlHelp = '';
   if (rootCollection?.url) {
     if (slug) {
       const cleanSlug = normalizeSlug(slug);
       if (isSlugValid(cleanSlug)) {
-        const cleanSlugPath = cleanSlug.replaceAll('--', '/');
-        let urlPath = rootCollection.url.replace(/\[.*slug\]/, cleanSlugPath);
-        // Rename `https://example.com/index` to `https://example.com/`.
-        if (urlPath === '/index') {
-          urlPath = '/';
-        }
-        urlHelp = `${domain}${urlPath}`;
+        urlHelp = getDocServingUrl({
+          collectionId: props.collectionId!,
+          slug: cleanSlug,
+        });
       } else {
         urlHelp = 'INVALID SLUG';
       }
     } else {
-      urlHelp = `${domain}${rootCollection.url}`;
+      urlHelp = getDocServingUrl({
+        collectionId: props.collectionId!,
+        slug: '[slug]',
+      });
+    }
+
+    // Rename `/index`, e.g.:
+    // ```
+    // https://example.com/index -> https://example.com/
+    // https://example.com/foo/index -> https://example.com/foo/
+    // ```
+    if (urlHelp.endsWith('/index')) {
+      urlHelp = urlHelp.replace(/\/index$/, '/');
     }
   }
 

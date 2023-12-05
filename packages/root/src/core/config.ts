@@ -14,6 +14,11 @@ export interface RootUserConfig {
   domain?: string;
 
   /**
+   * The base url path that the site will serve on. Defaults to `/`;
+   */
+  basePath?: string;
+
+  /**
    * Config for auto-injecting custom element dependencies.
    */
   elements?: {
@@ -99,7 +104,7 @@ export interface RootI18nConfig {
   defaultLocale?: string;
 
   /**
-   * URL format for localized content. Default is `/{locale}/{path}`.
+   * URL format for localized content. Default is `/[locale]/[base]/[path]`.
    */
   urlFormat?: string;
 

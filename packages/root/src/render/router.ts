@@ -5,10 +5,11 @@ import {Route, RouteModule} from '../core/types';
 
 import {RouteTrie} from './route-trie';
 
-export function getRoutes(config: RootConfig) {
-  const locales = config.i18n?.locales || [];
-  const i18nUrlFormat = config.i18n?.urlFormat || '/{locale}/{path}';
-  const defaultLocale = config.i18n?.defaultLocale || 'en';
+export function getRoutes(rootConfig: RootConfig) {
+  const locales = rootConfig.i18n?.locales || [];
+  const basePath = rootConfig.basePath || '/';
+
+  const defaultLocale = rootConfig.i18n?.defaultLocale || 'en';
 
   const routes = import.meta.glob(
     ['/routes/*.ts', '/routes/**/*.ts', '/routes/*.tsx', '/routes/**/*.tsx'],
@@ -19,46 +20,65 @@ export function getRoutes(config: RootConfig) {
   const trie = new RouteTrie<Route>();
   Object.keys(routes).forEach((modulePath) => {
     const src = modulePath.slice(1);
-    let routePath = modulePath.replace(/^\/routes/, '');
-    const parts = path.parse(routePath);
+    let relativeRoutePath = modulePath.replace(/^\/routes/, '');
+    const parts = path.parse(relativeRoutePath);
     if (parts.name.startsWith('_')) {
       return;
     }
     if (parts.name === 'index') {
-      routePath = parts.dir;
+      relativeRoutePath = parts.dir;
     } else {
-      routePath = path.join(parts.dir, parts.name);
+      relativeRoutePath = path.join(parts.dir, parts.name);
     }
 
-    const localeRoutePath = i18nUrlFormat
-      .replace('{locale}', '[locale]')
-      .replace('{path}', routePath.replace(/^\/*/, ''));
+    const urlFormat = '/[base]/[path]';
+    const i18nUrlFormat = toSquareBrackets(
+      rootConfig.i18n?.urlFormat || '/[locale]/[base]/[path]'
+    );
+    const placeholders = {
+      base: removeSlashes(basePath),
+      path: removeSlashes(relativeRoutePath),
+    };
+
+    const formatUrl = (format: string) => {
+      const url = format
+        .replaceAll('[base]', placeholders.base)
+        .replaceAll('[path]', placeholders.path);
+      return normalizeUrlPath(url, {
+        trailingSlash: rootConfig.server?.trailingSlash,
+      });
+    };
+
+    const routePath = formatUrl(urlFormat);
+    const localeRoutePath = formatUrl(i18nUrlFormat);
 
     trie.add(routePath, {
       src,
       module: routes[modulePath] as RouteModule,
       locale: defaultLocale,
       isDefaultLocale: true,
-      routePath: normalizeUrlPath(routePath),
-      localeRoutePath: normalizeUrlPath(localeRoutePath),
+      routePath: routePath,
+      localeRoutePath: localeRoutePath,
     });
 
     // At the moment, all routes are assumed to use the site-wide i18n config.
     // TODO(stevenle): provide routes with a way to override the default
     // i18n serving behavior.
-    locales.forEach((locale) => {
-      const localePath = localeRoutePath.replace('[locale]', locale);
-      if (localePath !== routePath) {
-        trie.add(localePath, {
-          src,
-          module: routes[modulePath] as RouteModule,
-          locale: locale,
-          isDefaultLocale: false,
-          routePath,
-          localeRoutePath,
-        });
-      }
-    });
+    if (i18nUrlFormat.includes('[locale]')) {
+      locales.forEach((locale) => {
+        const localePath = localeRoutePath.replace('[locale]', locale);
+        if (localePath !== relativeRoutePath) {
+          trie.add(localePath, {
+            src,
+            module: routes[modulePath] as RouteModule,
+            locale: locale,
+            isDefaultLocale: false,
+            routePath,
+            localeRoutePath,
+          });
+        }
+      });
+    }
   });
   return trie;
 }
@@ -133,9 +153,23 @@ export function replaceParams(
   return urlPath;
 }
 
-export function normalizeUrlPath(urlPath: string) {
-  if (urlPath !== '/' && urlPath.endsWith('/')) {
+export function normalizeUrlPath(
+  urlPath: string,
+  options?: {trailingSlash?: boolean}
+) {
+  // Collapse multiple slashes, e.g. `/foo//bar` => `/foo/bar`;
+  urlPath = urlPath.replace(/\/+/g, '/');
+  // Remove trailing slash.
+  if (
+    options?.trailingSlash === false &&
+    urlPath !== '/' &&
+    urlPath.endsWith('/')
+  ) {
     urlPath = urlPath.replace(/\/*$/g, '');
+  }
+  // Add leading slash if needed.
+  if (!urlPath.startsWith('/')) {
+    urlPath = `/${urlPath}`;
   }
   return urlPath;
 }
@@ -145,4 +179,21 @@ function pathContainsPlaceholders(urlPath: string) {
   return segments.some((segment) => {
     return segment.startsWith('[') && segment.endsWith(']');
   });
+}
+
+function removeSlashes(str: string) {
+  return str.replace(/^\/*/g, '').replace(/\/*$/g, '');
+}
+
+/**
+ * Older path formats used `/{locale}/{path}` and should be converted to
+ * `/[locale]/[base]/[path]`.
+ */
+function toSquareBrackets(str: string) {
+  if (str.includes('{') || str.includes('}')) {
+    const val = str.replaceAll('{', '[').replaceAll('}', ']');
+    console.warn(`"${str}" is a deprecated format, please switch to "${val}"`);
+    return val;
+  }
+  return str;
 }

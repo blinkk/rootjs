@@ -103,20 +103,10 @@ function getLocaleLabel(locale: string) {
   return `${langName} (${locale})`;
 }
 
-function getLocalizedUrl(urlPath: string, locale: string) {
-  if (!locale) {
-    return urlPath;
-  }
-  const urlFormat =
-    window.__ROOT_CTX.rootConfig.i18n?.urlFormat || '/{locale}/{path}';
-  return urlFormat
-    .replaceAll('{locale}', locale)
-    .replaceAll('/{path}', urlPath);
-}
-
 DocumentPage.Preview = (props: PreviewProps) => {
   const domain = window.__ROOT_CTX.rootConfig.domain || 'https://example.com';
-  const servingPath = getDocServingPath(props.docId);
+  const [collectionId, slug] = props.docId.split('/');
+  const servingPath = getDocServingPath({collectionId, slug});
 
   const servingUrl = `${domain}${servingPath}`;
   const [iframeUrl, setIframeUrl] = useState(servingUrl);
@@ -129,8 +119,12 @@ DocumentPage.Preview = (props: PreviewProps) => {
   const [selectedLocale, setSelectedLocale] = useState('');
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const locales = props.draft.controller.getLocales();
-  const previewPath = `${getDocPreviewPath(props.docId)}?preview=true`;
-  const localizedPreviewPath = getLocalizedUrl(previewPath, selectedLocale);
+  const previewPath = `${getDocPreviewPath({collectionId, slug})}?preview=true`;
+  const localizedPreviewPath = `${getDocPreviewPath({
+    collectionId,
+    slug,
+    locale: selectedLocale,
+  })}?preview=true`;
 
   const localeOptions = [
     {value: '', label: 'Select locale'},
