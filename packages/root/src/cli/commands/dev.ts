@@ -44,6 +44,9 @@ export async function dev(rootProjectDir?: string, options?: DevOptions) {
   console.log();
   console.log(`${dim('┃')} project:  ${rootDir}`);
   console.log(`${dim('┃')} server:   http://${host}:${port}${basePath}`);
+  if (testCmsEnabled(rootConfig)) {
+    console.log(`${dim('┃')} cms:      http://${host}:${port}/cms/`);
+  }
   console.log(`${dim('┃')} mode:     development`);
   console.log();
   server.listen(port, host);
@@ -231,4 +234,9 @@ function rootDevServer500Middleware() {
     }
     next(err);
   };
+}
+
+function testCmsEnabled(rootConfig: RootConfig) {
+  const plugins = rootConfig.plugins || [];
+  return Boolean(plugins.find((plugin) => plugin.name === 'root-cms'));
 }
