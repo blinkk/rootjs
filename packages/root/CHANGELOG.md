@@ -1,5 +1,11 @@
 # @blinkk/root
 
+## 1.0.0-rc.9
+
+### Minor Changes
+
+- 6a77ba6: feat: add `basePath` config
+
 ## 1.0.0-rc.8
 
 ### Minor Changes

@@ -9,7 +9,8 @@
     "@blinkk/eslint-config-root": "0.0.0",
     "@blinkk/rds": "0.0.0",
     "@blinkk/root": "0.0.0",
-    "@blinkk/root-cms": "0.0.0"
+    "@blinkk/root-cms": "0.0.0",
+    "@examples/basepath": "0.0.0"
   },
   "changesets": [
     "afraid-dots-run",
@@ -23,6 +24,7 @@
     "breezy-rockets-rule",
     "bright-geese-drum",
     "bright-panthers-film",
+    "brown-cups-hug",
     "brown-grapes-jog",
     "brown-ladybugs-fix",
     "brown-peas-grow",
