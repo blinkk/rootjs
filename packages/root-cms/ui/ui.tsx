@@ -3,7 +3,7 @@ import {ModalsProvider} from '@mantine/modals';
 import {NotificationsProvider} from '@mantine/notifications';
 import {initializeApp} from 'firebase/app';
 import {User, getAuth} from 'firebase/auth';
-import {getFirestore, initializeFirestore} from 'firebase/firestore';
+import {initializeFirestore} from 'firebase/firestore';
 import {getStorage} from 'firebase/storage';
 import {render} from 'preact';
 import {Route, Router} from 'preact-router';
@@ -14,6 +14,7 @@ import {CopyDocModal} from './components/CopyDocModal/CopyDocModal.js';
 import {EditJsonModal} from './components/EditJsonModal/EditJsonModal.js';
 import {LocalizationModal} from './components/LocalizationModal/LocalizationModal.js';
 import {PublishDocModal} from './components/PublishDocModal/PublishDocModal.js';
+import {VersionHistoryModal} from './components/VersionHistoryModal/VersionHistoryModal.js';
 import {FirebaseContext, FirebaseContextObject} from './hooks/useFirebase.js';
 import {AssetsPage} from './pages/AssetsPage/AssetsPage.js';
 import {CollectionPage} from './pages/CollectionPage/CollectionPage.js';
@@ -25,7 +26,6 @@ import {SettingsPage} from './pages/SettingsPage/SettingsPage.js';
 import {TranslationsPage} from './pages/TranslationsPage/TranslationsPage.js';
 import './styles/global.css';
 import './styles/theme.css';
-import {VersionHistoryModal} from './components/VersionHistoryModal/VersionHistoryModal.js';
 
 declare global {
   interface Window {
@@ -34,6 +34,7 @@ declare global {
         projectId: string;
         projectName: string;
         domain: string;
+        basePath: string;
         gci: string | boolean;
         i18n: {
           locales?: string[];

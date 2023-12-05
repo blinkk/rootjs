@@ -35,23 +35,35 @@ export function SlugInput(props: SlugInputProps) {
   }
 
   const domain = window.__ROOT_CTX.rootConfig?.domain || 'https://example.com';
+  const basePath = window.__ROOT_CTX.rootConfig?.basePath || '/';
   let urlHelp = '';
   if (rootCollection?.url) {
     if (slug) {
       const cleanSlug = normalizeSlug(slug);
       if (isSlugValid(cleanSlug)) {
         const cleanSlugPath = cleanSlug.replaceAll('--', '/');
-        let urlPath = rootCollection.url.replace(/\[.*slug\]/, cleanSlugPath);
-        // Rename `https://example.com/index` to `https://example.com/`.
-        if (urlPath === '/index') {
-          urlPath = '/';
-        }
+        const urlPath = rootCollection.url
+          .replace('[base]', basePath)
+          .replace(/\[.*slug\]/, cleanSlugPath)
+          .replace(/\/+/g, '/');
         urlHelp = `${domain}${urlPath}`;
       } else {
         urlHelp = 'INVALID SLUG';
       }
     } else {
-      urlHelp = `${domain}${rootCollection.url}`;
+      const urlPath = rootCollection.url
+        .replace('[base]', basePath)
+        .replace(/\/+/g, '/');
+      urlHelp = `${domain}${urlPath}`;
+    }
+
+    // Rename `/index`, e.g.:
+    // ```
+    // https://example.com/index -> https://example.com/
+    // https://example.com/foo/index -> https://example.com/foo/
+    // ```
+    if (urlHelp.endsWith('/index')) {
+      urlHelp = urlHelp.replace(/\/index$/, '/');
     }
   }
 

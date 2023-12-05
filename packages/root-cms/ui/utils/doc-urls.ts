@@ -27,12 +27,15 @@ export function getDocServingPath(
   if (!rootCollection) {
     throw new Error(`collection not found: ${collectionId}`);
   }
+  const basePath = window.__ROOT_CTX.rootConfig.basePath;
   let servingPath = '';
   if (rootCollection?.url) {
     if (slug) {
       let urlPath = rootCollection.url
+        .replace(/\[base\]/, basePath)
         .replace(/\[.*slug\]/, slug)
-        .replaceAll('--', '/');
+        .replaceAll('--', '/')
+        .replace(/\/+/g, '/');
       // Rename `/index` to `/`.
       if (urlPath === '/index') {
         urlPath = '/';
@@ -59,13 +62,16 @@ export function getDocPreviewPath(
   if (!rootCollection) {
     throw new Error(`collection not found: ${collectionId}`);
   }
+  const basePath = window.__ROOT_CTX.rootConfig.basePath;
   let previewPath = '';
   const previewPathConfig = rootCollection?.previewUrl || rootCollection?.url;
   if (previewPathConfig) {
     if (slug) {
       let urlPath = previewPathConfig
+        .replace(/\[base\]/, basePath)
         .replace(/\[.*slug\]/, slug)
-        .replaceAll('--', '/');
+        .replaceAll('--', '/')
+        .replace(/\/+/g, '/');
       // Rename `/index` to `/`.
       if (urlPath === '/index') {
         urlPath = '/';
