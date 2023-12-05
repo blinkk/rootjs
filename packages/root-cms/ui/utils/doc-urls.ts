@@ -116,6 +116,10 @@ function normalizeUrlPath(
   ) {
     urlPath = urlPath.replace(/\/*$/g, '');
   }
+  // Convert `/index` to `/`.
+  if (urlPath.endsWith('/index') || urlPath.endsWith('/index/')) {
+    urlPath = urlPath.slice(0, -6);
+  }
   // Add leading slash if needed.
   if (!urlPath.startsWith('/')) {
     urlPath = `/${urlPath}`;
