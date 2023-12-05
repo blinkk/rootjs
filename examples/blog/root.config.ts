@@ -1,6 +1,5 @@
 import path from 'node:path';
 import {URL} from 'node:url';
-
 import {defineConfig} from '@blinkk/root';
 import {cmsPlugin} from '@blinkk/root-cms/plugin';
 

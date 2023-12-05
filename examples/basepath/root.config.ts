@@ -7,7 +7,7 @@ const rootDir = new URL('.', import.meta.url).pathname;;
 export default defineConfig({
   basePath: '/foo/',
   i18n: {
-    urlFormat: '/intl/{locale}/{base}/{path}',
+    urlFormat: '/intl/[locale]/[base]/[path]',
     locales: ['en', 'de'],
   },
   vite: {

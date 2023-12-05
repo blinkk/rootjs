@@ -104,7 +104,7 @@ export interface RootI18nConfig {
   defaultLocale?: string;
 
   /**
-   * URL format for localized content. Default is `/{locale}/{base}/{path}`.
+   * URL format for localized content. Default is `/[locale]/[base]/[path]`.
    */
   urlFormat?: string;
 

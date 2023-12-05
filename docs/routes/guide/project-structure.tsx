@@ -240,7 +240,7 @@ const rootDir = new URL('.', import.meta.url).pathname;
 export default defineConfig({
   i18n: {
     locales: ['en', 'fr'],
-    urlFormat: '/{locale}/{path}',
+    urlFormat: '/[locale]/[path]',
   },
   vite: {
     resolve: {
