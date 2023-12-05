@@ -7,7 +7,7 @@ import {RouteTrie} from './route-trie';
 
 export function getRoutes(rootConfig: RootConfig) {
   const locales = rootConfig.i18n?.locales || [];
-  const basePath = rootConfig.basePath || '/';
+  const basePath = rootConfig.base || '/';
 
   const defaultLocale = rootConfig.i18n?.defaultLocale || 'en';
 

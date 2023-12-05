@@ -40,7 +40,7 @@ export async function dev(rootProjectDir?: string, options?: DevOptions) {
   const port = await findOpenPort(defaultPort, defaultPort + 10);
   const server = await createDevServer({rootDir, port});
   const rootConfig: RootConfig = server.get('rootConfig');
-  const basePath = rootConfig.basePath || '';
+  const basePath = rootConfig.base || '';
   console.log();
   console.log(`${dim('┃')} project:  ${rootDir}`);
   console.log(`${dim('┃')} server:   http://${host}:${port}${basePath}`);

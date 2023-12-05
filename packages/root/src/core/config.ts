@@ -14,9 +14,9 @@ export interface RootUserConfig {
   domain?: string;
 
   /**
-   * The base url path that the site will serve on. Defaults to `/`;
+   * The base URL path that the site will serve on. Defaults to `/`;
    */
-  basePath?: string;
+  base?: string;
 
   /**
    * Config for auto-injecting custom element dependencies.

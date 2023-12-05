@@ -34,7 +34,7 @@ declare global {
         projectId: string;
         projectName: string;
         domain: string;
-        basePath: string;
+        base: string;
         gci: string | boolean;
         i18n: {
           locales?: string[];

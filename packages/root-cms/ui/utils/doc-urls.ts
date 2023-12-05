@@ -19,7 +19,7 @@ export function getDocServingPath(options: DocUrlOptions) {
   }
 
   const rootConfig = window.__ROOT_CTX.rootConfig;
-  const basePath = rootConfig.basePath || '/';
+  const basePath = rootConfig.base || '/';
   let urlFormat = '/[base]/[path]';
   if (locale) {
     urlFormat = rootConfig.i18n.urlFormat || '/[locale]/[base]/[path]';
@@ -60,7 +60,7 @@ export function getDocPreviewPath(options: DocUrlOptions) {
   }
 
   const rootConfig = window.__ROOT_CTX.rootConfig;
-  const basePath = rootConfig.basePath || '/';
+  const basePath = rootConfig.base || '/';
   let urlFormat = '/[base]/[path]';
   if (locale) {
     urlFormat = rootConfig.i18n.urlFormat || '/[locale]/[base]/[path]';

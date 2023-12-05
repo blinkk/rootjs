@@ -77,7 +77,7 @@ export async function renderApp(req: Request, res: Response, options: any) {
       projectId: cmsConfig.id || 'default',
       projectName: cmsConfig.name || cmsConfig.id || '',
       domain: rootConfig.domain || 'https://example.com',
-      basePath: rootConfig.basePath || '/',
+      base: rootConfig.base || '/',
       gci: gci,
       i18n: rootConfig.i18n,
     },
