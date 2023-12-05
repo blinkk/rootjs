@@ -45,6 +45,18 @@ importers:
         specifier: ^5.2.3
         version: 5.2.4(preact@10.11.0)
 
+  examples/basepath:
+    dependencies:
+      '@blinkk/root':
+        specifier: workspace:*
+        version: link:../../packages/root
+      preact:
+        specifier: ^10.10.6
+        version: 10.18.1
+      preact-render-to-string:
+        specifier: ^5.2.3
+        version: 5.2.4(preact@10.18.1)
+
   examples/blog:
     dependencies:
       '@blinkk/root':
@@ -6185,6 +6197,15 @@ packages:
       preact: '>=10'
     dependencies:
       preact: 10.11.0
+      pretty-format: 3.8.0
+    dev: false
+
+  /preact-render-to-string@5.2.4(preact@10.18.1):
+    resolution: {integrity: sha512-iIPHb3BXUQ3Za6KNhkjN/waq11Oh+QWWtAgN3id3LrL+cszH3DYh8TxJPNQ6Aogsbu4JsqdJLBZltwPFpG6N6w==}
+    peerDependencies:
+      preact: '>=10'
+    dependencies:
+      preact: 10.18.1
       pretty-format: 3.8.0
     dev: false
 
