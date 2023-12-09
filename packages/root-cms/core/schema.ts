@@ -166,6 +166,14 @@ export function oneOf(field: Omit<OneOfField, 'type'>): OneOfField {
   return {...field, type: 'oneof'};
 }
 
+export type RichTextField = CommonFieldProps & {
+  translate?: boolean;
+};
+
+export function richtext(field: Omit<RichTextField, 'type'>): RichTextField {
+  return {...field, type: 'richtext'};
+}
+
 export type Field =
   | StringField
   | NumberField
@@ -178,7 +186,8 @@ export type Field =
   | FileField
   | ObjectField
   | ArrayField
-  | OneOfField;
+  | OneOfField
+  | RichTextField;
 
 /**
  * Similar to {@link Field} but with a required `id`.

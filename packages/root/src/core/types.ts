@@ -44,7 +44,7 @@ export type GetStaticProps<T = unknown> = (ctx: {
 
 /**
  * The `getStaticPaths()` is used by the SSG build to determine all of the
- * paths that should exist for a given route. This should be used alongside a
+ * paths that exist for a given route. This should be used alongside a
  * parameterized route, e.g. `/routes/blog/[slug].tsx`.
  */
 export type GetStaticPaths<T = RouteParams> = () => Promise<{
