@@ -1,0 +1,13 @@
+.RichTextEditor {
+  border: 1px solid var(--color-border);
+  padding: 4px 10px;
+}
+
+.RichTextEditor .cdx-list__item {
+  padding-top: 0;
+  padding-bottom: 0;
+}
+
+.RichTextEditor .tc-table {
+  font-size: inherit;
+}

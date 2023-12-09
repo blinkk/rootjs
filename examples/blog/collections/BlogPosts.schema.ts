@@ -57,6 +57,11 @@ export default schema.collection({
       id: 'content',
       label: 'Content',
       fields: [
+        schema.richtext({
+          id: 'richtext',
+          label: 'Blog content',
+          translate: true,
+        }),
         schema.string({
           id: 'body',
           label: 'Body copy',

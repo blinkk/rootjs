@@ -47,6 +47,8 @@ export interface BlogPostsFields {
     };
     /** Content */
     content?: {
+        /** Blog content */
+        richtext?: unknown;
         /** Body copy. Markdown supported. */
         body?: string;
     };
@@ -93,6 +95,8 @@ export interface BlogPostsSandboxFields {
     };
     /** Content */
     content?: {
+        /** Blog content */
+        richtext?: unknown;
         /** Body copy. Markdown supported. */
         body?: string;
     };
