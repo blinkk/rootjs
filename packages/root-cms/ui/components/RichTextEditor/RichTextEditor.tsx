@@ -3,7 +3,7 @@ import Header from '@editorjs/header';
 import ImageTool from '@editorjs/image';
 // import List from '@editorjs/list';
 import NestedList from '@editorjs/nested-list';
-import RawTool from '@editorjs/raw';
+import RawHtmlTool from '@editorjs/raw';
 // import Table from '@editorjs/table';
 import {useEffect, useRef, useState} from 'preact/hooks';
 import {joinClassNames} from '../../utils/classes.js';
@@ -94,7 +94,12 @@ export function RichTextEditor(props: RichTextEditorProps) {
             icon: '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24"><line x1="12" x2="19" y1="7" y2="7" stroke="currentColor" stroke-linecap="round" stroke-width="2"/><line x1="12" x2="19" y1="12" y2="12" stroke="currentColor" stroke-linecap="round" stroke-width="2"/><line x1="12" x2="19" y1="17" y2="17" stroke="currentColor" stroke-linecap="round" stroke-width="2"/><path stroke="currentColor" stroke-linecap="round" stroke-width="2" d="M7.79999 14L7.79999 7.2135C7.79999 7.12872 7.7011 7.0824 7.63597 7.13668L4.79999 9.5"/></svg>',
           },
         },
-        raw: RawTool,
+        html: {
+          class: RawHtmlTool,
+          toolbox: {
+            name: 'HTML',
+          },
+        },
         // TODO(stevenle): issue with Table because firestore doesn't support
         // nested arrays.
         // table: Table,
@@ -201,5 +206,7 @@ function extractBlockStrings(strings: Set<string>, block: any) {
     addString(block.data?.text);
   } else if (block.type === 'orderedList' || block.type === 'unorderedList') {
     extractList(block.data?.items);
+  } else if (block.type === 'html') {
+    addString(block.data?.html);
   }
 }
