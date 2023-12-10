@@ -4,11 +4,12 @@ import ImageTool from '@editorjs/image';
 // import List from '@editorjs/list';
 import NestedList from '@editorjs/nested-list';
 import RawTool from '@editorjs/raw';
-import Table from '@editorjs/table';
+// import Table from '@editorjs/table';
 import {useEffect, useRef, useState} from 'preact/hooks';
 import {joinClassNames} from '../../utils/classes.js';
 import './RichTextEditor.css';
 import {uploadFileToGCS} from '../../utils/gcs.js';
+import {normalizeString} from '../../utils/l10n.js';
 import {isObject} from '../../utils/objects.js';
 
 export interface RichTextEditorProps {
@@ -54,7 +55,7 @@ export function RichTextEditor(props: RichTextEditorProps) {
       placeholder: placeholder,
       inlineToolbar: true,
       tools: {
-        header: {
+        heading: {
           class: Header,
           config: {
             placeholder: 'Enter a header',
@@ -94,7 +95,9 @@ export function RichTextEditor(props: RichTextEditorProps) {
           },
         },
         raw: RawTool,
-        table: Table,
+        // TODO(stevenle): issue with Table because firestore doesn't support
+        // nested arrays.
+        // table: Table,
       },
       onReady: () => {
         setEditor(editor);
@@ -152,4 +155,51 @@ function gcsUploader() {
 
 function isGciUrl(url: string) {
   return url.startsWith('https://lh3.googleusercontent.com/');
+}
+
+export function extractRichTextStrings(
+  strings: Set<string>,
+  data: RichTextData
+) {
+  const blocks = data?.blocks || [];
+  blocks.forEach((block) => {
+    extractBlockStrings(strings, block);
+  });
+}
+
+interface ListItemData {
+  content?: string;
+  items?: ListItemData[];
+}
+
+function extractBlockStrings(strings: Set<string>, block: any) {
+  if (!block?.type) {
+    return;
+  }
+
+  function addString(text?: string) {
+    if (!text) {
+      return;
+    }
+    const str = normalizeString(text);
+    if (str) {
+      strings.add(str);
+    }
+  }
+
+  function extractList(items?: ListItemData[]) {
+    if (!items) {
+      return;
+    }
+    items.forEach((item) => {
+      addString(item.content);
+      extractList(item.items);
+    });
+  }
+
+  if (block.type === 'heading' || block.type === 'paragraph') {
+    addString(block.data?.text);
+  } else if (block.type === 'orderedList' || block.type === 'unorderedList') {
+    extractList(block.data?.items);
+  }
 }

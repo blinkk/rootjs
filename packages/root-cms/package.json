@@ -80,6 +80,7 @@
     "@editorjs/nested-list": "^1.4.2",
     "@editorjs/raw": "^2.5.0",
     "@editorjs/table": "^2.3.0",
+    "@editorjs/underline": "^1.1.0",
     "@emotion/react": "^11.10.5",
     "@firebase/app-compat": "^0.2.19",
     "@firebase/app-types": "^0.9.0",

@@ -323,6 +323,9 @@ importers:
       '@editorjs/table':
         specifier: ^2.3.0
         version: 2.3.0
+      '@editorjs/underline':
+        specifier: ^1.1.0
+        version: 1.1.0
       '@emotion/react':
         specifier: ^11.10.5
         version: 11.10.5(@babel/core@7.17.9)(@preact/compat@17.1.2)
@@ -911,6 +914,12 @@ packages:
 
   /@editorjs/table@2.3.0:
     resolution: {integrity: sha512-/dKE6A5FkukX/FpvIyQGsewwXglZk8YbXpEp9vkB6Ec4ETLeGJMxObCcYqbXqVod+IU/a1tFH+j3lsD8ASD41g==}
+    dependencies:
+      '@codexteam/icons': 0.0.6
+    dev: true
+
+  /@editorjs/underline@1.1.0:
+    resolution: {integrity: sha512-vQj2ROW1KreD31QHlhaPikmDJGWYzRBusN4Zyfwl9nIIQCByt4S8fZQpsrRvH4sct5mkirsHllNT00rJlqHK7Q==}
     dependencies:
       '@codexteam/icons': 0.0.6
     dev: true

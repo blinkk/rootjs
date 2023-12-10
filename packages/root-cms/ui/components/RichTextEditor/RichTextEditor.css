@@ -7,6 +7,14 @@
   padding-bottom: 150px !important;
 }
 
+.RichTextEditor .ce-header {
+  margin-top: 20px;
+}
+
+.RichTextEditor .ce-block:first-of-type .ce-header {
+  margin-top: 0;
+}
+
 .RichTextEditor .cdx-list__item {
   padding-top: 0;
   padding-bottom: 0;
