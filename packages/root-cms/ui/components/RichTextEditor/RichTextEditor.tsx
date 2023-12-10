@@ -1,10 +1,14 @@
 import EditorJS from '@editorjs/editorjs';
 import Header from '@editorjs/header';
-import List from '@editorjs/list';
+import ImageTool from '@editorjs/image';
+// import List from '@editorjs/list';
+import NestedList from '@editorjs/nested-list';
+import RawTool from '@editorjs/raw';
 import Table from '@editorjs/table';
 import {useEffect, useRef, useState} from 'preact/hooks';
 import {joinClassNames} from '../../utils/classes.js';
 import './RichTextEditor.css';
+import {uploadFileToGCS} from '../../utils/gcs.js';
 import {isObject} from '../../utils/objects.js';
 
 export interface RichTextEditorProps {
@@ -23,7 +27,9 @@ export type RichTextData = {
 export function RichTextEditor(props: RichTextEditorProps) {
   const editorRef = useRef<HTMLDivElement>(null);
   const [editor, setEditor] = useState<any>(null);
-  const [currentValue, setCurrentValue] = useState<RichTextData>({});
+  const [currentValue, setCurrentValue] = useState<RichTextData>({
+    blocks: [{type: 'paragraph', data: {}}],
+  });
 
   const placeholder = props.placeholder || 'Start typing...';
 
@@ -34,6 +40,7 @@ export function RichTextEditor(props: RichTextEditorProps) {
       const newValueTime = newValue?.time || 0;
       if (newValueTime > currentTime && validateRichTextData(newValue)) {
         editor.render(newValue);
+        setCurrentValue(newValue);
       }
     }
   }, [props.value]);
@@ -55,13 +62,38 @@ export function RichTextEditor(props: RichTextEditorProps) {
             defaultLevel: 2,
           },
         },
-        list: {
-          class: List,
+        image: {
+          class: ImageTool,
+          config: {
+            uploader: gcsUploader(),
+            captionPlaceholder: 'Alt text',
+          },
+        },
+        unorderedList: {
+          class: NestedList,
           inlineToolbar: true,
           config: {
             defaultStyle: 'unordered',
           },
+          toolbox: {
+            name: 'unorderedList',
+            title: 'Bulleted List',
+            icon: '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24"><line x1="9" x2="19" y1="7" y2="7" stroke="currentColor" stroke-linecap="round" stroke-width="2"/><line x1="9" x2="19" y1="12" y2="12" stroke="currentColor" stroke-linecap="round" stroke-width="2"/><line x1="9" x2="19" y1="17" y2="17" stroke="currentColor" stroke-linecap="round" stroke-width="2"/><path stroke="currentColor" stroke-linecap="round" stroke-width="2" d="M5.00001 17H4.99002"/><path stroke="currentColor" stroke-linecap="round" stroke-width="2" d="M5.00001 12H4.99002"/><path stroke="currentColor" stroke-linecap="round" stroke-width="2" d="M5.00001 7H4.99002"/></svg>',
+          },
         },
+        orderedList: {
+          class: NestedList,
+          inlineToolbar: true,
+          config: {
+            defaultStyle: 'ordered',
+          },
+          toolbox: {
+            name: 'orderedList',
+            title: 'Numbered List',
+            icon: '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24"><line x1="12" x2="19" y1="7" y2="7" stroke="currentColor" stroke-linecap="round" stroke-width="2"/><line x1="12" x2="19" y1="12" y2="12" stroke="currentColor" stroke-linecap="round" stroke-width="2"/><line x1="12" x2="19" y1="17" y2="17" stroke="currentColor" stroke-linecap="round" stroke-width="2"/><path stroke="currentColor" stroke-linecap="round" stroke-width="2" d="M7.79999 14L7.79999 7.2135C7.79999 7.12872 7.7011 7.0824 7.63597 7.13668L4.79999 9.5"/></svg>',
+          },
+        },
+        raw: RawTool,
         table: Table,
       },
       onReady: () => {
@@ -93,5 +125,31 @@ export function RichTextEditor(props: RichTextEditorProps) {
 }
 
 export function validateRichTextData(data: RichTextData) {
-  return isObject(data) && Array.isArray(data.blocks);
+  return isObject(data) && Array.isArray(data.blocks) && data.blocks.length > 0;
+}
+
+function gcsUploader() {
+  return {
+    uploadByFile: async (file: File) => {
+      try {
+        const imageMeta = await uploadFileToGCS(file);
+        let imageUrl = imageMeta.src;
+        if (isGciUrl(imageUrl)) {
+          imageUrl = `${imageUrl}=s0-e365`;
+        }
+        console.log(imageMeta);
+        return {success: 1, file: {...imageMeta, url: imageUrl}};
+      } catch (err) {
+        console.error(err);
+        return {success: 0, error: err};
+      }
+    },
+    uploadByUrl: async (url: string) => {
+      return {success: 0, error: 'upload by url not currently supported'};
+    },
+  };
+}
+
+function isGciUrl(url: string) {
+  return url.startsWith('https://lh3.googleusercontent.com/');
 }
