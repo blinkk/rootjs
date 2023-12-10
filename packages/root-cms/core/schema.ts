@@ -167,6 +167,7 @@ export function oneOf(field: Omit<OneOfField, 'type'>): OneOfField {
 }
 
 export type RichTextField = CommonFieldProps & {
+  type: 'richtext';
   translate?: boolean;
   placeholder?: string;
 };
