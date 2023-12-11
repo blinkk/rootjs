@@ -15,7 +15,8 @@ export async function uploadFileToGCS(file: File, options?: UploadFileOptions) {
   const gcsRef = storageRef(window.firebase.storage, filePath);
   await uploadBytes(gcsRef, file);
   console.log(`uploaded ${filePath}`);
-  const meta: Record<string, string> = {};
+
+  const meta: Record<string, string | number> = {};
   meta.filename = file.name;
   meta.uploadedBy = window.firebase.user.email || 'unknown';
   meta.uploadedAt = String(Math.floor(new Date().getTime()));
@@ -23,9 +24,8 @@ export async function uploadFileToGCS(file: File, options?: UploadFileOptions) {
   let imageSrc = `https://storage.googleapis.com${gcsPath}`;
   if (ext === 'jpg' || ext === 'png' || ext === 'svg') {
     const dimens = await getImageDimensions(file);
-    meta.width = String(dimens.width);
-    meta.height = String(dimens.height);
-
+    meta.width = dimens.width;
+    meta.height = dimens.height;
     if (ext === 'jpg' || ext === 'png') {
       const gciUrl = await getGciUrl(gcsPath);
       if (gciUrl) {
@@ -34,10 +34,14 @@ export async function uploadFileToGCS(file: File, options?: UploadFileOptions) {
       }
     }
   }
+
   // Since the files are stored by their hash, we should be able to set a long
   // cache control header, i.e. 1 year.
   const cacheControl = 'public, max-age=31536000';
-  await updateMetadata(gcsRef, {cacheControl, customMetadata: meta});
+  await updateMetadata(gcsRef, {
+    cacheControl,
+    customMetadata: normalizeGcsMeta(meta),
+  });
   console.log('updated meta data: ', meta);
   return {
     ...meta,
@@ -100,4 +104,13 @@ async function sha1(file: File) {
     .map((b) => b.toString(16).padStart(2, '0'))
     .join('');
   return hashHex;
+}
+
+/** Stringifies all values in a file metadata object. */
+function normalizeGcsMeta(meta: Record<string, any>): Record<string, string> {
+  const result: Record<string, string> = {};
+  Object.entries(meta).forEach(([key, value]) => {
+    meta[key] = String(value).trim();
+  });
+  return result;
 }
