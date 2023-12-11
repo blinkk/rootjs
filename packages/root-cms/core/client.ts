@@ -442,7 +442,12 @@ export function unmarshalData(data: any): any {
       if (val.toMillis) {
         result[key] = val.toMillis();
       } else if (Object.hasOwn(val, '_array') && Array.isArray(val._array)) {
-        const arr = val._array.map((k: string) => unmarshalData(val[k] || {}));
+        const arr = val._array.map((arrayKey: string) => {
+          return {
+            ...unmarshalData(val[arrayKey] || {}),
+            _arrayKey: arrayKey,
+          };
+        });
         result[key] = arr;
       } else {
         result[key] = unmarshalData(val);
