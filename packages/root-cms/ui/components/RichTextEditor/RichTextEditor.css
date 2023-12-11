@@ -7,6 +7,10 @@
   padding-bottom: 150px !important;
 }
 
+.RichTextEditor .ce-inline-toolbar {
+  min-width: 155px;
+}
+
 .RichTextEditor .ce-header {
   margin-top: 20px;
 }
@@ -56,4 +60,8 @@
   margin-bottom: 4px;
   font-size: 10px;
   font-style: italic;
+}
+
+.RichTextEditor .ce-inline-tool[data-tool="superscript"] svg {
+  padding: 2px;
 }

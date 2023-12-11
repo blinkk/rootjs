@@ -11,6 +11,7 @@ import './RichTextEditor.css';
 import {uploadFileToGCS} from '../../utils/gcs.js';
 import {normalizeString} from '../../utils/l10n.js';
 import {isObject} from '../../utils/objects.js';
+import Superscript from './tools/Superscript.js';
 
 export interface RichTextEditorProps {
   className?: string;
@@ -53,15 +54,18 @@ export function RichTextEditor(props: RichTextEditorProps) {
     const editor = new EditorJSClass({
       holder: holder,
       placeholder: placeholder,
-      inlineToolbar: true,
+      inlineToolbar: ['bold', 'italic', 'superscript', 'link'],
       tools: {
         heading: {
           class: Header,
           config: {
             placeholder: 'Enter a header',
-            levels: [2, 3, 4],
+            levels: [2, 3, 4, 5],
             defaultLevel: 2,
           },
+        },
+        superscript: {
+          class: Superscript,
         },
         image: {
           class: ImageTool,
