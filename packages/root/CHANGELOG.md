@@ -1,5 +1,11 @@
 # @blinkk/root
 
+## 1.0.0-rc.10
+
+### Minor Changes
+
+- 66d7e76: feat: add richtext schema field
+
 ## 1.0.0-rc.9
 
 ### Minor Changes

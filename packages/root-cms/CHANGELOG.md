@@ -1,5 +1,16 @@
 # @blinkk/root-cms
 
+## 1.0.0-rc.10
+
+### Minor Changes
+
+- 66d7e76: feat: add richtext schema field
+
+### Patch Changes
+
+- Updated dependencies [66d7e76]
+  - @blinkk/root@1.0.0-rc.10
+
 ## 1.0.0-rc.9
 
 ### Patch Changes
