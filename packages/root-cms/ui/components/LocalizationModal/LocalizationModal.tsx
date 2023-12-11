@@ -35,6 +35,7 @@ import {
 } from '../../utils/l10n.js';
 import {Heading} from '../Heading/Heading.js';
 import './LocalizationModal.css';
+import {extractRichTextStrings} from '../RichTextEditor/RichTextEditor.js';
 
 const MODAL_ID = 'LocalizationModal';
 
@@ -547,6 +548,14 @@ function extractField(
   if (!fieldValue) {
     return;
   }
+
+  function addString(text: string) {
+    const str = normalizeString(text);
+    if (str) {
+      strings.add(str);
+    }
+  }
+
   if (field.type === 'object') {
     extractFields(strings, field.fields || [], fieldValue);
   } else if (field.type === 'array') {
@@ -556,12 +565,12 @@ function extractField(
     }
   } else if (field.type === 'string' || field.type === 'select') {
     if (field.translate) {
-      strings.add(normalizeString(fieldValue));
+      addString(fieldValue);
     }
   } else if (field.type === 'multiselect') {
     if (field.translate && Array.isArray(fieldValue)) {
       for (const value of fieldValue) {
-        strings.add(normalizeString(value));
+        addString(value);
       }
     }
   } else if (field.type === 'oneof') {
@@ -569,6 +578,10 @@ function extractField(
     const fieldValueType = types.find((item) => item.name === fieldValue._type);
     if (fieldValueType) {
       extractFields(strings, fieldValueType.fields || [], fieldValue);
+    }
+  } else if (field.type === 'richtext') {
+    if (field.translate) {
+      extractRichTextStrings(strings, fieldValue);
     }
   } else {
     console.log(`extract: ignoring field, id=${field.id}, type=${field.type}`);
