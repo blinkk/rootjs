@@ -105,16 +105,13 @@ async function rootProdRendererMiddleware(options: {
   const render: RenderModule = await import(
     path.join(distDir, 'server/render.js')
   );
-  const manifestPath = path.join(distDir, 'client/root-manifest.json');
+  const manifestPath = path.join(distDir, '.root/manifest.json');
   if (!(await fileExists(manifestPath))) {
     throw new Error(
       `could not find ${manifestPath}. run \`root build\` before \`root start\`.`
     );
   }
-  const elementGraphJsonPath = path.join(
-    distDir,
-    'client/root-element-graph.json'
-  );
+  const elementGraphJsonPath = path.join(distDir, '.root/elements.json');
   if (!(await fileExists(elementGraphJsonPath))) {
     throw new Error(
       `could not find ${elementGraphJsonPath}. run \`root build\` before \`root start\`.`

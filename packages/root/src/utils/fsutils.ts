@@ -26,7 +26,7 @@ export async function copyDir(srcdir: string, dstdir: string) {
   if (!fsExtra.existsSync(srcdir)) {
     return;
   }
-  fsExtra.copySync(srcdir, dstdir, {recursive: true, overwrite: true});
+  fsExtra.copySync(srcdir, dstdir, {overwrite: true});
 }
 
 /**
