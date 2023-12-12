@@ -1,5 +1,15 @@
 # @blinkk/root
 
+## 1.0.0-rc.12
+
+### Minor Changes
+
+- 2455c96: build: upgrade to vite5 and update deps
+
+### Patch Changes
+
+- 1f3ab3c: feat: pass rootConfig as context to getStaticPaths
+
 ## 1.0.0-rc.11
 
 ### Patch Changes
