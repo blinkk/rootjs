@@ -170,7 +170,7 @@ export async function build(rootProjectDir?: string, options?: BuildOptions) {
           ...viteConfig?.build?.rollupOptions?.output,
         },
       },
-      outDir: path.join(distDir, 'routes'),
+      outDir: path.join(distDir, '.build/routes'),
       ssr: true,
       ssrManifest: false,
       ssrEmitAssets: true,
@@ -203,7 +203,7 @@ export async function build(rootProjectDir?: string, options?: BuildOptions) {
             ...viteConfig?.build?.rollupOptions?.output,
           },
         },
-        outDir: path.join(distDir, 'client'),
+        outDir: path.join(distDir, '.build/client'),
         ssr: false,
         ssrManifest: false,
         manifest: true,
@@ -215,22 +215,25 @@ export async function build(rootProjectDir?: string, options?: BuildOptions) {
       },
     });
   } else {
-    await writeFile(path.join(distDir, 'client/.vite/manifest.json'), '{}');
+    await writeFile(
+      path.join(distDir, '.build/client/.vite/manifest.json'),
+      '{}'
+    );
   }
 
-  // Copy CSS files from dist/routes/**/*.css to dist/client/ and flatten the
-  // routes manifest to ignore imported modules. Then add the route assets to
-  // the client manifest.
+  // Copy CSS files from `dist/.build/routes/**/*.css` to
+  // `dist/.build/client/` and flatten the routes manifest to ignore any
+  // imported modules. Then add the route assets to the client manifest.
   await copyGlob(
     '**/*.css',
-    path.join(distDir, 'routes'),
-    path.join(distDir, 'client')
+    path.join(distDir, '.build/routes'),
+    path.join(distDir, '.build/client')
   );
   const routesManifest = await loadJson<Manifest>(
-    path.join(distDir, 'routes/.vite/manifest.json')
+    path.join(distDir, '.build/routes/.vite/manifest.json')
   );
   const clientManifest = await loadJson<Manifest>(
-    path.join(distDir, 'client/.vite/manifest.json')
+    path.join(distDir, '.build/client/.vite/manifest.json')
   );
   function collectRouteCss(
     asset: ManifestChunk,
@@ -272,14 +275,16 @@ export async function build(rootProjectDir?: string, options?: BuildOptions) {
     elementGraph
   );
 
-  // Save the asset map to `dist/client` for use by the prod SSR server.
+  // Save the root's asset map to `dist/.root/manifest.json` for use by the prod
+  // SSR server.
   const rootManifest = assetMap.toJson();
   await writeFile(
     path.join(distDir, '.root/manifest.json'),
     JSON.stringify(rootManifest, null, 2)
   );
 
-  // Save the element graph to `dist/client` for use by the prod SSR server.
+  // Save the element graph to `dist/.root/elements.json` for use by the prod
+  // SSR server.
   const elementGraphJson = elementGraph.toJson();
   await writeFile(
     path.join(distDir, '.root/elements.json'),
@@ -299,7 +304,7 @@ export async function build(rootProjectDir?: string, options?: BuildOptions) {
 
   async function copyAssetToDistHtml(assetUrl: string) {
     const assetRelPath = assetUrl.slice(1);
-    const assetFrom = path.join(distDir, 'client', assetRelPath);
+    const assetFrom = path.join(distDir, '.build/client', assetRelPath);
     const assetTo = path.join(buildDir, assetRelPath);
     // Ignore assets that don't exist. This is because build artifacts from
     // the routes/ folder are not copied to dist/client (only css deps are).
@@ -307,7 +312,6 @@ export async function build(rootProjectDir?: string, options?: BuildOptions) {
       console.log(`${assetFrom} does not exist`);
       return;
     }
-    console.log(`cp2: ${assetFrom} -> ${assetTo}`);
     await fsExtra.copy(assetFrom, assetTo);
     printFileOutput(fileSize(assetTo), 'dist/html/', assetRelPath);
   }
