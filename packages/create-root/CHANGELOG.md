@@ -1,5 +1,11 @@
 # @blinkk/create-root
 
+## 1.0.0-rc.12
+
+### Minor Changes
+
+- 2455c96: build: upgrade to vite5 and update deps
+
 ## 1.0.0-rc.11
 
 ## 1.0.0-rc.10
