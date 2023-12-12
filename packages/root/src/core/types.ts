@@ -47,7 +47,9 @@ export type GetStaticProps<T = unknown> = (ctx: {
  * paths that exist for a given route. This should be used alongside a
  * parameterized route, e.g. `/routes/blog/[slug].tsx`.
  */
-export type GetStaticPaths<T = RouteParams> = () => Promise<{
+export type GetStaticPaths<T = RouteParams> = (ctx: {
+  rootConfig: RootConfig;
+}) => Promise<{
   paths: Array<{params: T}>;
 }>;
 
@@ -117,7 +119,7 @@ export type NextFunction = ExpressNextFunction;
  * A context variable passed to a route's `handle()` method within the req
  * object.
  */
-export interface HandlerContext<T = any> {
+export interface HandlerContext<Props = any> {
   /**
    * The resolved route.
    */
@@ -139,7 +141,7 @@ export interface HandlerContext<T = any> {
    */
   getPreferredLocale: (availableLocales: string[]) => string;
   /** Renders the default exported component from the route. */
-  render: HandlerRenderFn;
+  render: HandlerRenderFn<Props>;
   /** Renders a 404 page. */
   render404: () => Promise<void>;
 }
@@ -210,7 +212,7 @@ export interface HandlerRenderOptions {
   translations?: Record<string, string>;
 }
 
-export type HandlerRenderFn = (
-  props: any,
+export type HandlerRenderFn<Props = any> = (
+  props: Props,
   options?: HandlerRenderOptions
 ) => Promise<void>;

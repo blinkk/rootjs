@@ -87,7 +87,7 @@ export class RootCMSClient {
 
   constructor(rootConfig: RootConfig) {
     this.rootConfig = rootConfig;
-    this.cmsPlugin = getCmsPlugin(rootConfig);
+    this.cmsPlugin = getCmsPlugin(this.rootConfig);
 
     const cmsPluginOptions = this.cmsPlugin.getConfig();
     this.projectId = cmsPluginOptions.id || 'default';
