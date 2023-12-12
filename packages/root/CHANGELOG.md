@@ -1,5 +1,11 @@
 # @blinkk/root
 
+## 1.0.0-rc.11
+
+### Patch Changes
+
+- 7cbc507: fix: revert route case sensitivity
+
 ## 1.0.0-rc.10
 
 ### Minor Changes
