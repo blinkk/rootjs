@@ -56,8 +56,7 @@ export class Renderer {
   }
 
   async handle(req: Request, res: Response, next: NextFunction) {
-    // TODO(stevenle): handle baseUrl config.
-    const url = req.path.toLowerCase();
+    const url = req.path;
     const [route, routeParams] = this.routes.get(url);
     if (!route) {
       next();
