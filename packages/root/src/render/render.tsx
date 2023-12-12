@@ -25,8 +25,7 @@ import {AssetMap} from './asset-map/asset-map';
 import {htmlMinify} from './html-minify';
 import {htmlPretty} from './html-pretty';
 import {getFallbackLocales} from './i18n-fallbacks';
-import {RouteTrie} from './route-trie';
-import {getRoutes, getAllPathsForRoute, replaceParams} from './router';
+import {replaceParams, Router} from './router';
 
 interface RenderHtmlOptions {
   /** Attrs passed to the <html> tag, e.g. `{lang: 'en'}`. */
@@ -41,23 +40,25 @@ interface RenderHtmlOptions {
 
 export class Renderer {
   private rootConfig: RootConfig;
-  private routes: RouteTrie<Route>;
+  // private routes: RouteTrie<Route>;
   private assetMap: AssetMap;
   private elementGraph: ElementGraph;
+  private router: Router;
 
   constructor(
     rootConfig: RootConfig,
     options: {assetMap: AssetMap; elementGraph: ElementGraph}
   ) {
     this.rootConfig = rootConfig;
-    this.routes = getRoutes(this.rootConfig);
+    // this.routes = getRoutes(this.rootConfig);
     this.assetMap = options.assetMap;
     this.elementGraph = options.elementGraph;
+    this.router = new Router(rootConfig);
   }
 
   async handle(req: Request, res: Response, next: NextFunction) {
     const url = req.path;
-    const [route, routeParams] = this.routes.get(url);
+    const [route, routeParams] = this.router.get(url);
     if (!route) {
       next();
       return;
@@ -313,8 +314,8 @@ export class Renderer {
       string,
       {route: Route; params: Record<string, string>}
     > = {};
-    await this.routes.walk(async (urlPath: string, route: Route) => {
-      const routePaths = await getAllPathsForRoute(urlPath, route);
+    await this.router.walk(async (urlPath: string, route: Route) => {
+      const routePaths = await this.router.getAllPathsForRoute(urlPath, route);
       routePaths.forEach((routePath) => {
         sitemap[routePath.urlPath] = {
           route,
@@ -343,7 +344,7 @@ export class Renderer {
 
   async render404(options?: {currentPath?: string}) {
     const currentPath = options?.currentPath || '/404';
-    const [route, routeParams] = this.routes.get('/404');
+    const [route, routeParams] = this.router.get('/404');
     if (route && route.src === 'routes/404.tsx' && route.module.default) {
       const Component = route.module.default;
       return this.renderComponent(
@@ -375,7 +376,7 @@ export class Renderer {
 
   async renderError(err: any, options?: {currentPath?: string}) {
     const currentPath = options?.currentPath || '/500';
-    const [route, routeParams] = this.routes.get('/500');
+    const [route, routeParams] = this.router.get('/500');
     if (route && route.src === 'routes/500.tsx' && route.module.default) {
       const Component = route.module.default;
       return this.renderComponent(
@@ -417,7 +418,7 @@ export class Renderer {
   }
 
   async renderDevServer500(req: Request, error: unknown) {
-    const [route, routeParams] = this.routes.get(req.path);
+    const [route, routeParams] = this.router.get(req.path);
     const mainHtml = renderToString(
       <DevErrorPage
         req={req}
