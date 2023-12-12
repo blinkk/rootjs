@@ -83,7 +83,7 @@ export class BuildAssetMap implements AssetMap {
       const src = manifestKey;
       const manifestChunk = clientManifest[manifestKey];
       const isElement = elementFiles.has(src);
-      // NOTES(stevenle): routes/ files are included in the manifest so for
+      // NOTES(stevenle): routes/ files are included in the manifest for
       // their CSS deps, but do not have an asset URL.
       const assetUrl =
         src.startsWith('routes/') && isJsFile(src)

@@ -172,7 +172,7 @@ export async function build(rootProjectDir?: string, options?: BuildOptions) {
       },
       outDir: path.join(distDir, 'routes'),
       ssr: true,
-      ssrManifest: true,
+      ssrManifest: false,
       ssrEmitAssets: true,
       manifest: true,
       cssCodeSplit: true,
@@ -215,7 +215,7 @@ export async function build(rootProjectDir?: string, options?: BuildOptions) {
       },
     });
   } else {
-    await writeFile(path.join(distDir, 'client/manifest.json'), '{}');
+    await writeFile(path.join(distDir, 'client/.vite/manifest.json'), '{}');
   }
 
   // Copy CSS files from dist/routes/**/*.css to dist/client/ and flatten the
@@ -227,10 +227,10 @@ export async function build(rootProjectDir?: string, options?: BuildOptions) {
     path.join(distDir, 'client')
   );
   const routesManifest = await loadJson<Manifest>(
-    path.join(distDir, 'routes/manifest.json')
+    path.join(distDir, 'routes/.vite/manifest.json')
   );
   const clientManifest = await loadJson<Manifest>(
-    path.join(distDir, 'client/manifest.json')
+    path.join(distDir, 'client/.vite/manifest.json')
   );
   function collectRouteCss(
     asset: ManifestChunk,
@@ -275,14 +275,14 @@ export async function build(rootProjectDir?: string, options?: BuildOptions) {
   // Save the asset map to `dist/client` for use by the prod SSR server.
   const rootManifest = assetMap.toJson();
   await writeFile(
-    path.join(distDir, 'client/root-manifest.json'),
+    path.join(distDir, '.root/manifest.json'),
     JSON.stringify(rootManifest, null, 2)
   );
 
   // Save the element graph to `dist/client` for use by the prod SSR server.
   const elementGraphJson = elementGraph.toJson();
   await writeFile(
-    path.join(distDir, 'client/root-element-graph.json'),
+    path.join(distDir, '.root/elements.json'),
     JSON.stringify(elementGraphJson, null, 2)
   );
 
@@ -297,34 +297,46 @@ export async function build(rootProjectDir?: string, options?: BuildOptions) {
     await makeDir(buildDir);
   }
 
+  async function copyAssetToDistHtml(assetUrl: string) {
+    const assetRelPath = assetUrl.slice(1);
+    const assetFrom = path.join(distDir, 'client', assetRelPath);
+    const assetTo = path.join(buildDir, assetRelPath);
+    // Ignore assets that don't exist. This is because build artifacts from
+    // the routes/ folder are not copied to dist/client (only css deps are).
+    if (!(await fileExists(assetFrom))) {
+      console.log(`${assetFrom} does not exist`);
+      return;
+    }
+    console.log(`cp2: ${assetFrom} -> ${assetTo}`);
+    await fsExtra.copy(assetFrom, assetTo);
+    printFileOutput(fileSize(assetTo), 'dist/html/', assetRelPath);
+  }
+
   // Copy files from `dist/client/{assets,chunks}` to `dist/html` using the
   // root manifest. Ignore route files.
   console.log('\njs/css output:');
   await Promise.all(
     Object.keys(rootManifest).map(async (src) => {
+      const assetData = rootManifest[src];
+      // Only imported css from routes files should be included in build output.
       // Don't expose route files in the final output. If any client-side code
       // relies on route dependencies, it should probably be broken out into a
       // shared component instead.
       if (isRouteFile(src)) {
+        const importedCss = assetData.importedCss || [];
+        for (const cssAssetUrl of importedCss) {
+          await copyAssetToDistHtml(cssAssetUrl);
+        }
         return;
       }
-      const assetData = rootManifest[src];
+
       // Ignore files with no assetUrl, which can sometimes occur if a source
       // file is empty.
       if (!assetData.assetUrl) {
         return;
       }
-      const assetRelPath = assetData.assetUrl.slice(1);
-      const assetFrom = path.join(distDir, 'client', assetRelPath);
-      const assetTo = path.join(buildDir, assetRelPath);
-      // Ignore assets that don't exist. This is because build artifacts from
-      // the routes/ folder are not copied to dist/client (only css deps are).
-      if (!(await fileExists(assetFrom))) {
-        console.log(`${assetFrom} does not exist`);
-        return;
-      }
-      await fsExtra.copy(assetFrom, assetTo);
-      printFileOutput(fileSize(assetTo), 'dist/html/', assetRelPath);
+
+      await copyAssetToDistHtml(assetData.assetUrl);
     })
   );
 

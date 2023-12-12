@@ -29,7 +29,7 @@ test('build css-topsort', async () => {
     <html>
     <head>
     <meta charset=\\"utf-8\\">
-    <link rel=\\"stylesheet\\" href=\\"/assets/index.e39af414.css\\">
+    <link rel=\\"stylesheet\\" href=\\"/assets/index.whaUV7oh.css\\">
     </head>
     <body>
     <h1>Hello world</h1>
@@ -43,14 +43,16 @@ test('build css-topsort', async () => {
     "
   `);
 
-  const manifestPath = path.join(fixture.distDir, 'client/root-manifest.json');
+  const manifestPath = path.join(fixture.distDir, '.root/manifest.json');
   assert.isTrue(await fileExists(manifestPath));
   const manifestContent = await fs.readFile(manifestPath, 'utf-8');
   const manifest = JSON.parse(manifestContent);
-  assert.isTrue('routes/index.css' in manifest);
-  const assetUrl = manifest['routes/index.css'].assetUrl;
+  assert.isTrue('routes/index.tsx' in manifest);
+  const importedCss = manifest['routes/index.tsx'].importedCss;
+  assert.equal(importedCss.length, 1);
+  const assetUrl = importedCss[0];
   const cssPath = `${fixture.distDir}/html${assetUrl}`;
-  assert.isTrue(await fileExists(cssPath));
+  assert.isTrue(await fileExists(cssPath), `file does not exist: ${cssPath}`);
   const css = await fs.readFile(cssPath, 'utf-8');
 
   // Since the route imports layout and component A, and component A imports

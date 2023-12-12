@@ -26,7 +26,7 @@ export async function copyDir(srcdir: string, dstdir: string) {
   if (!fsExtra.existsSync(srcdir)) {
     return;
   }
-  fsExtra.copySync(srcdir, dstdir, {recursive: true, overwrite: true});
+  fsExtra.copySync(srcdir, dstdir, {overwrite: true});
 }
 
 /**
@@ -44,10 +44,15 @@ export async function copyGlob(
   dstdir: string
 ) {
   const files = await glob(pattern, {cwd: srcdir});
+  console.log(`copying files: ${files}`);
+  console.log('output folder: ', dstdir);
   if (files.length > 0) {
     await makeDir(dstdir);
   }
   files.forEach((file) => {
+    console.log(
+      `cp: ${path.resolve(srcdir, file)} -> ${path.resolve(dstdir, file)}`
+    );
     fsExtra.copySync(path.resolve(srcdir, file), path.resolve(dstdir, file));
   });
 }
