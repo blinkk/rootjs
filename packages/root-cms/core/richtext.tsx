@@ -1,6 +1,15 @@
 import {useTranslations} from '@blinkk/root';
 import {FunctionalComponent} from 'preact';
-import {RichTextData} from './types.js';
+
+export interface RichTextBlock {
+  type: string;
+  data?: any;
+}
+
+export interface RichTextData {
+  [key: string]: any;
+  blocks: any[];
+}
 
 export type RichTextBlockComponent = FunctionalComponent<any>;
 
