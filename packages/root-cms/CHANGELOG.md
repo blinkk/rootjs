@@ -1,5 +1,12 @@
 # @blinkk/root-cms
 
+## 1.0.0-rc.13
+
+### Patch Changes
+
+- 67cc4fc: refactor: move richtext into core folder
+  - @blinkk/root@1.0.0-rc.13
+
 ## 1.0.0-rc.12
 
 ### Minor Changes
