@@ -1,5 +1,11 @@
 # @blinkk/rds
 
+## 1.0.0-rc.13
+
+### Patch Changes
+
+- @blinkk/root@1.0.0-rc.13
+
 ## 1.0.0-rc.12
 
 ### Patch Changes
