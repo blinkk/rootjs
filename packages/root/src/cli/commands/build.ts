@@ -302,7 +302,12 @@ export async function build(rootProjectDir?: string, options?: BuildOptions) {
     await makeDir(buildDir);
   }
 
+  const seenAssets = new Set<string>();
   async function copyAssetToDistHtml(assetUrl: string) {
+    if (seenAssets.has(assetUrl)) {
+      return;
+    }
+    seenAssets.add(assetUrl);
     const assetRelPath = assetUrl.slice(1);
     const assetFrom = path.join(distDir, '.build/client', assetRelPath);
     const assetTo = path.join(buildDir, assetRelPath);
