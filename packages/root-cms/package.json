@@ -44,10 +44,6 @@
     "./project": {
       "types": "./dist/project.d.ts",
       "import": "./dist/project.js"
-    },
-    "./richtext": {
-      "types": "./dist/richtext.d.ts",
-      "import": "./dist/richtext.js"
     }
   },
   "scripts": {
