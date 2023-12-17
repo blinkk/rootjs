@@ -1,7 +1,7 @@
 import {Handler, HandlerContext, Request} from '@blinkk/root';
 import {getDoc} from '@blinkk/root-cms';
-import {RichText} from '@blinkk/root-cms/richtext';
 import {Container} from '@/components/Container/Container.js';
+import {RichText} from '@/components/RichText/RichText.js';
 import {BaseLayout} from '@/layouts/BaseLayout.js';
 import {BlogPostsDoc} from '@/root-cms.js';
 
