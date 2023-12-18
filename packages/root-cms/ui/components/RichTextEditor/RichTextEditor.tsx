@@ -36,23 +36,27 @@ export function RichTextEditor(props: RichTextEditorProps) {
   const placeholder = props.placeholder || 'Start typing...';
 
   useEffect(() => {
+    if (!editor) {
+      return;
+    }
     const newValue = props.value;
     if (currentValue?.time !== newValue?.time) {
       const currentTime = currentValue?.time || 0;
       const newValueTime = newValue?.time || 0;
       if (newValueTime > currentTime && validateRichTextData(newValue)) {
+        const blocks = newValue?.blocks || [];
+        if (blocks.length > 0) {
+          editor.render(newValue);
+        } else {
+          editor.render({
+            ...newValue,
+            blocks: [{type: 'paragraph', data: {text: ''}}],
+          });
+        }
         setCurrentValue(newValue);
       }
     }
-  }, [props.value]);
-
-  useEffect(() => {
-    if (!editor) {
-      return;
-    }
-    console.log('setting data to rich text editor:', currentValue);
-    editor.render(currentValue);
-  }, [editor, currentValue]);
+  }, [editor, props.value]);
 
   useEffect(() => {
     const holder = editorRef.current!;

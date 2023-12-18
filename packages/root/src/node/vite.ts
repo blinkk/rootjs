@@ -57,7 +57,7 @@ export async function createViteServer(
     },
     ssr: {
       ...(viteConfig.ssr || {}),
-      noExternal: ['@blinkk/root'],
+      noExternal: ['@blinkk/root', '@blinkk/root-cms/richtext'],
     },
     esbuild: {
       ...(viteConfig.esbuild || {}),
