@@ -1,5 +1,16 @@
 # @blinkk/root-cms
 
+## 1.0.0-rc.15
+
+### Minor Changes
+
+- ad27525: feat: add richtext component
+
+### Patch Changes
+
+- 9ad44fe: fix: fix initialization of richtext data
+  - @blinkk/root@1.0.0-rc.15
+
 ## 1.0.0-rc.14
 
 ### Patch Changes
