@@ -1,5 +1,6 @@
 import {useTranslations} from '@blinkk/root';
-import {FunctionalComponent} from 'preact';
+import {FunctionalComponent, createContext} from 'preact';
+import {useContext} from 'preact/hooks';
 
 export interface RichTextBlock {
   type: string;
@@ -13,6 +14,16 @@ export interface RichTextData {
 
 export type RichTextBlockComponent = FunctionalComponent<any>;
 
+export interface RichTextContextProps {
+  components?: Record<string, RichTextBlockComponent>;
+}
+
+export const RichTextContext = createContext<RichTextContextProps>({});
+
+export function useRichTextContext(): RichTextContextProps {
+  return useContext(RichTextContext);
+}
+
 export interface RichTextProps {
   data: RichTextData;
   components?: Record<string, RichTextBlockComponent>;
@@ -20,6 +31,7 @@ export interface RichTextProps {
 
 /** Renders data from the "richtext" field. */
 export function RichText(props: RichTextProps) {
+  const richTextContext = useRichTextContext();
   const components: Record<string, RichTextBlockComponent> = {
     heading: RichText.HeadingBlock,
     html: RichText.HtmlBlock,
@@ -27,6 +39,7 @@ export function RichText(props: RichTextProps) {
     orderedList: RichText.ListBlock,
     paragraph: RichText.ParagraphBlock,
     unorderedList: RichText.ListBlock,
+    ...richTextContext.components,
     ...props.components,
   };
   const blocks = (props.data?.blocks || []).filter((block) => {

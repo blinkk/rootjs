@@ -148,7 +148,7 @@ export async function build(rootProjectDir?: string, options?: BuildOptions) {
     ssr: {
       ...viteConfig.ssr,
       target: 'node',
-      noExternal: ['@blinkk/root', ...noExternal],
+      noExternal: ['@blinkk/root', '@blinkk/root-cms/richtext', ...noExternal],
     },
   });
 
