@@ -37,15 +37,22 @@ export function RichTextEditor(props: RichTextEditorProps) {
 
   useEffect(() => {
     const newValue = props.value;
-    if (editor && currentValue?.time !== newValue?.time) {
+    if (currentValue?.time !== newValue?.time) {
       const currentTime = currentValue?.time || 0;
       const newValueTime = newValue?.time || 0;
       if (newValueTime > currentTime && validateRichTextData(newValue)) {
-        editor.render(newValue);
         setCurrentValue(newValue);
       }
     }
   }, [props.value]);
+
+  useEffect(() => {
+    if (!editor) {
+      return;
+    }
+    console.log('setting data to rich text editor:', currentValue);
+    editor.render(currentValue);
+  }, [editor, currentValue]);
 
   useEffect(() => {
     const holder = editorRef.current!;
@@ -156,6 +163,7 @@ function gcsUploader() {
         return {success: 0, error: err};
       }
     },
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     uploadByUrl: async (url: string) => {
       return {success: 0, error: 'upload by url not currently supported'};
     },
