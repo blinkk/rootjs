@@ -10,7 +10,7 @@ import {build as viteBuild, Manifest, ManifestChunk, UserConfig} from 'vite';
 import {getVitePlugins} from '../../core/plugin.js';
 import {Route} from '../../core/types.js';
 import {getElements} from '../../node/element-graph.js';
-import {loadRootConfig} from '../../node/load-config.js';
+import {bundleRootConfig, loadRootConfig} from '../../node/load-config.js';
 import {BuildAssetMap} from '../../render/asset-map/build-asset-map.js';
 import {htmlMinify} from '../../render/html-minify.js';
 import {htmlPretty} from '../../render/html-pretty.js';
@@ -220,6 +220,9 @@ export async function build(rootProjectDir?: string, options?: BuildOptions) {
       '{}'
     );
   }
+
+  // Bundle the root.config.ts file to dist/root.config.js.
+  await bundleRootConfig(rootDir, path.join(distDir, 'root.config.js'));
 
   // Copy CSS files from `dist/.build/routes/**/*.css` to
   // `dist/.build/client/` and flatten the routes manifest to ignore any
