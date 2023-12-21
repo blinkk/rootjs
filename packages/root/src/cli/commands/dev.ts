@@ -15,6 +15,7 @@ import {
   rootProjectMiddleware,
   trailingSlashMiddleware,
 } from '../../middleware/middleware.js';
+import {redirectsMiddleware} from '../../middleware/redirects.js';
 import {sessionMiddleware} from '../../middleware/session.js';
 import {getElements, getElementsDirs} from '../../node/element-graph.js';
 import {loadRootConfig} from '../../node/load-config.js';
@@ -83,6 +84,13 @@ export async function createDevServer(options?: {
       const userMiddlewares = rootConfig.server?.middlewares || [];
       for (const middleware of userMiddlewares) {
         server.use(middleware);
+      }
+
+      // Add redirects middleware.
+      if (rootConfig.server?.redirects) {
+        server.use(
+          redirectsMiddleware({redirects: rootConfig.server.redirects})
+        );
       }
 
       // Add static file middleware.

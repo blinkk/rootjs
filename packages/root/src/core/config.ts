@@ -115,6 +115,12 @@ export interface RootI18nConfig {
   groups?: Record<string, LocaleGroup>;
 }
 
+export interface RootRedirectConfig {
+  source?: string;
+  destination?: string;
+  type?: number;
+}
+
 export interface RootServerConfig {
   /**
    * An array of middleware to add to the express server. These middleware are
@@ -137,6 +143,11 @@ export interface RootServerConfig {
    * Cookie secret for the session middleware.
    */
   sessionCookieSecret?: string | string[];
+
+  /**
+   * List of redirects.
+   */
+  redirects?: RootRedirectConfig[];
 }
 
 export function defineConfig(config: RootUserConfig): RootUserConfig {

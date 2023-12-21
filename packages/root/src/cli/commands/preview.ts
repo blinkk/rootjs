@@ -14,6 +14,7 @@ import {
   rootProjectMiddleware,
   trailingSlashMiddleware,
 } from '../../middleware/middleware';
+import {redirectsMiddleware} from '../../middleware/redirects';
 import {sessionMiddleware} from '../../middleware/session';
 import {ElementGraph} from '../../node/element-graph.js';
 import {loadBundledConfig} from '../../node/load-config';
@@ -80,6 +81,13 @@ export async function createPreviewServer(options: {
       userMiddlewares.forEach((middleware) => {
         server.use(middleware);
       });
+
+      // Add redirects middleware.
+      if (rootConfig.server?.redirects) {
+        server.use(
+          redirectsMiddleware({redirects: rootConfig.server.redirects})
+        );
+      }
 
       // Add static file middleware.
       const publicDir = path.join(distDir, 'html');
