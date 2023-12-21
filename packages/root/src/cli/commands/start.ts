@@ -16,7 +16,7 @@ import {
 } from '../../middleware/middleware';
 import {sessionMiddleware} from '../../middleware/session';
 import {ElementGraph} from '../../node/element-graph';
-import {loadRootConfig} from '../../node/load-config';
+import {loadBundledConfig} from '../../node/load-config';
 import {
   BuildAssetManifest,
   BuildAssetMap,
@@ -48,7 +48,7 @@ export async function createProdServer(options: {
   rootDir: string;
 }): Promise<Server> {
   const rootDir = options.rootDir;
-  const rootConfig = await loadRootConfig(rootDir, {command: 'start'});
+  const rootConfig = await loadBundledConfig(rootDir, {command: 'start'});
   const distDir = path.join(rootDir, 'dist');
 
   const server: Server = express();

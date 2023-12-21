@@ -16,7 +16,7 @@ import {
 } from '../../middleware/middleware';
 import {sessionMiddleware} from '../../middleware/session';
 import {ElementGraph} from '../../node/element-graph.js';
-import {loadRootConfig} from '../../node/load-config';
+import {loadBundledConfig} from '../../node/load-config';
 import {
   BuildAssetManifest,
   BuildAssetMap,
@@ -53,7 +53,7 @@ export async function createPreviewServer(options: {
   rootDir: string;
 }): Promise<Server> {
   const rootDir = options.rootDir;
-  const rootConfig = await loadRootConfig(rootDir, {command: 'preview'});
+  const rootConfig = await loadBundledConfig(rootDir, {command: 'preview'});
   const distDir = path.join(rootDir, 'dist');
 
   const server: Server = express();
