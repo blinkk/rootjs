@@ -1,5 +1,12 @@
 # @blinkk/root
 
+## 1.0.0-rc.16
+
+### Patch Changes
+
+- 7f80435: feat: pre-bundle root.config.ts in root build
+- 9f1803b: feat: add redirects middleware
+
 ## 1.0.0-rc.15
 
 ## 1.0.0-rc.14
