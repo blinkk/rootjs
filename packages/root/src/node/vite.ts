@@ -48,6 +48,19 @@ export async function createViteServer(
     },
     appType: 'custom',
     optimizeDeps: {
+      // As of vite v5 / esbuild v19, experimentalDecorators need to be
+      // explicitly set, and for some reason this option isn't read from the
+      // project's tsconfig.json file by default.
+      // See: https://vitejs.dev/blog/announcing-vite5
+      esbuildOptions: {
+        tsconfigRaw: {
+          compilerOptions: {
+            target: 'esnext',
+            experimentalDecorators: true,
+            useDefineForClassFields: false,
+          },
+        },
+      },
       ...(viteConfig.optimizeDeps || {}),
       include: [
         ...(options?.optimizeDeps || []),
