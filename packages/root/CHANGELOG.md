@@ -1,5 +1,11 @@
 # @blinkk/root
 
+## 1.0.0-rc.17
+
+### Patch Changes
+
+- 40383ef: fix: fix vite5 decorator transformations
+
 ## 1.0.0-rc.16
 
 ### Patch Changes
