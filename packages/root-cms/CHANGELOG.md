@@ -1,5 +1,12 @@
 # @blinkk/root-cms
 
+## 1.0.0-rc.19
+
+### Patch Changes
+
+- 547ef5e: fix: fix sanitizer for underline and strikethrough
+  - @blinkk/root@1.0.0-rc.19
+
 ## 1.0.0-rc.18
 
 ### Minor Changes
