@@ -9,6 +9,10 @@ export class Superscript {
     return '';
   }
 
+  static get shortcut() {
+    return 'CMD+.';
+  }
+
   constructor(options: any) {
     this.api = options.api;
     this.button = document.createElement('button');
