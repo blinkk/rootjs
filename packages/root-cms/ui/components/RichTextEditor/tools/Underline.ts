@@ -1,6 +1,6 @@
-const TAG = 'S';
+const TAG = 'U';
 
-export class Strikethrough {
+export class Underline {
   private api: any;
   private button: HTMLButtonElement;
   private iconClasses: Record<string, string>;
@@ -10,7 +10,7 @@ export class Strikethrough {
   }
 
   static get shortcut() {
-    return 'CMD+SHIFT+X';
+    return 'CMD+U';
   }
 
   constructor(options: any) {
@@ -38,10 +38,7 @@ export class Strikethrough {
       return;
     }
 
-    const termWrapper = this.api.selection.findParentTag(
-      TAG,
-      Strikethrough.CSS
-    );
+    const termWrapper = this.api.selection.findParentTag(TAG, Underline.CSS);
 
     if (termWrapper) {
       this.unwrap(termWrapper);
@@ -69,19 +66,19 @@ export class Strikethrough {
   }
 
   checkState() {
-    const termTag = this.api.selection.findParentTag(TAG, Strikethrough.CSS);
+    const termTag = this.api.selection.findParentTag(TAG, Underline.CSS);
     this.button.classList.toggle(this.iconClasses.active, !!termTag);
   }
 
   get toolboxIcon() {
-    return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="12" height="12"><path d="M17.154 14c.23.516.346 1.09.346 1.72 0 1.342-.524 2.392-1.571 3.147C14.88 19.622 13.433 20 11.586 20c-1.64 0-3.263-.381-4.87-1.144V16.6c1.52.877 3.075 1.316 4.666 1.316 2.551 0 3.83-.732 3.839-2.197a2.21 2.21 0 0 0-.648-1.603l-.12-.117H3v-2h18v2h-3.846zm-4.078-3H7.629a4.086 4.086 0 0 1-.481-.522C6.716 9.92 6.5 9.246 6.5 8.452c0-1.236.466-2.287 1.397-3.153C8.83 4.433 10.271 4 12.222 4c1.471 0 2.879.328 4.222.984v2.152c-1.2-.687-2.515-1.03-3.946-1.03-2.48 0-3.719.782-3.719 2.346 0 .42.218.786.654 1.099.436.313.974.562 1.613.75.62.18 1.297.414 2.03.699z"/></svg>';
+    return '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M9 7.5V11.5C9 12.2956 9.31607 13.0587 9.87868 13.6213C10.4413 14.1839 11.2044 14.5 12 14.5C12.7956 14.5 13.5587 14.1839 14.1213 13.6213C14.6839 13.0587 15 12.2956 15 11.5V7.5" stroke="black" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M7.71429 18H16.2857" stroke="black" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
   }
 
   static get sanitize() {
     return {
-      strikethrough: {},
+      underline: {},
     };
   }
 }
 
-export default Strikethrough;
+export default Underline;

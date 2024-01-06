@@ -5,7 +5,6 @@ import ImageTool from '@editorjs/image';
 import NestedList from '@editorjs/nested-list';
 import RawHtmlTool from '@editorjs/raw';
 // import Table from '@editorjs/table';
-import Underline from '@editorjs/underline';
 import {useEffect, useRef, useState} from 'preact/hooks';
 import {joinClassNames} from '../../utils/classes.js';
 import './RichTextEditor.css';
@@ -14,6 +13,7 @@ import {normalizeString} from '../../utils/l10n.js';
 import {isObject} from '../../utils/objects.js';
 import Strikethrough from './tools/Strikethrough.js';
 import Superscript from './tools/Superscript.js';
+import Underline from './tools/Underline.js';
 
 export interface RichTextEditorProps {
   className?: string;
