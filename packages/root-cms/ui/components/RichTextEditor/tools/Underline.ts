@@ -76,7 +76,7 @@ export class Underline {
 
   static get sanitize() {
     return {
-      underline: {},
+      u: {},
     };
   }
 }

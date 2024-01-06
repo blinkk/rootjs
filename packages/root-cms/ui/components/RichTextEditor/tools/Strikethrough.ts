@@ -79,7 +79,7 @@ export class Strikethrough {
 
   static get sanitize() {
     return {
-      strikethrough: {},
+      s: {},
     };
   }
 }
