@@ -1,5 +1,15 @@
 # @blinkk/root-cms
 
+## 1.0.0-rc.18
+
+### Minor Changes
+
+- 20fadd1: feat: add underline and strikethrough to rich text editor
+
+### Patch Changes
+
+- @blinkk/root@1.0.0-rc.18
+
 ## 1.0.0-rc.17
 
 ### Patch Changes
