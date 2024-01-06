@@ -5,12 +5,14 @@ import ImageTool from '@editorjs/image';
 import NestedList from '@editorjs/nested-list';
 import RawHtmlTool from '@editorjs/raw';
 // import Table from '@editorjs/table';
+import Underline from '@editorjs/underline';
 import {useEffect, useRef, useState} from 'preact/hooks';
 import {joinClassNames} from '../../utils/classes.js';
 import './RichTextEditor.css';
 import {uploadFileToGCS} from '../../utils/gcs.js';
 import {normalizeString} from '../../utils/l10n.js';
 import {isObject} from '../../utils/objects.js';
+import Strikethrough from './tools/Strikethrough.js';
 import Superscript from './tools/Superscript.js';
 
 export interface RichTextEditorProps {
@@ -65,7 +67,14 @@ export function RichTextEditor(props: RichTextEditorProps) {
     const editor = new EditorJSClass({
       holder: holder,
       placeholder: placeholder,
-      inlineToolbar: ['bold', 'italic', 'superscript', 'link'],
+      inlineToolbar: [
+        'bold',
+        'italic',
+        'underline',
+        'strikethrough',
+        'superscript',
+        'link',
+      ],
       tools: {
         heading: {
           class: Header,
@@ -75,8 +84,14 @@ export function RichTextEditor(props: RichTextEditorProps) {
             defaultLevel: 2,
           },
         },
+        strikethrough: {
+          class: Strikethrough,
+        },
         superscript: {
           class: Superscript,
+        },
+        underline: {
+          class: Underline,
         },
         image: {
           class: ImageTool,
