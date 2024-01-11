@@ -119,12 +119,17 @@ DocumentPage.Preview = (props: PreviewProps) => {
   const [selectedLocale, setSelectedLocale] = useState('');
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const locales = props.draft.controller.getLocales();
-  const previewPath = `${getDocPreviewPath({collectionId, slug})}?preview=true`;
+
+  // Pass query params and hash fragments to the preview url, and set `?preview=true`.
+  const searchParams = new URLSearchParams(window.location.search);
+  searchParams.set('preview', 'true');
+  const query = `${searchParams.toString()}${window.location.hash}`;
+  const previewPath = `${getDocPreviewPath({collectionId, slug})}?${query}`;
   const localizedPreviewPath = `${getDocPreviewPath({
     collectionId,
     slug,
     locale: selectedLocale,
-  })}?preview=true`;
+  })}?${query}`;
 
   const localeOptions = [
     {value: '', label: 'Select locale'},
