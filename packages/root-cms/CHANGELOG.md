@@ -1,5 +1,13 @@
 # @blinkk/root-cms
 
+## 1.0.0-rc.20
+
+### Patch Changes
+
+- 4365554: feat: add defaultImage to schema previews
+- 26f7846: feat: pass query params from cms to preview url
+  - @blinkk/root@1.0.0-rc.20
+
 ## 1.0.0-rc.19
 
 ### Patch Changes
