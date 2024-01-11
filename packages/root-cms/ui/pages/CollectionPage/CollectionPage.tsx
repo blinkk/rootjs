@@ -302,10 +302,11 @@ CollectionPage.DocsList = (props: {
           fields,
           rootCollection.preview?.title || 'meta.title'
         );
-        const previewImage = getNestedValue(
-          fields,
-          rootCollection.preview?.image || 'meta.image'
-        );
+        const previewImage =
+          getNestedValue(
+            fields,
+            rootCollection.preview?.image || 'meta.image'
+          ) || rootCollection.preview?.defaultImage;
         return (
           <div
             className="CollectionPage__collection__docsList__doc"

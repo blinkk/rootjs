@@ -229,6 +229,9 @@ export type Collection = Schema & {
   preview?: {
     title?: string;
     image?: string;
+    defaultImage?: {
+      src: string;
+    };
   };
 };
 
