@@ -1,5 +1,12 @@
 # @blinkk/root-cms
 
+## 1.0.0-rc.21
+
+### Patch Changes
+
+- Updated dependencies [c9bf955]
+  - @blinkk/root@1.0.0-rc.21
+
 ## 1.0.0-rc.20
 
 ### Patch Changes
