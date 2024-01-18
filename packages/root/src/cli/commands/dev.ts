@@ -7,6 +7,7 @@ import {dim} from 'kleur/colors';
 import sirv from 'sirv';
 import glob from 'tiny-glob';
 
+import {ViteDevServer} from 'vite';
 import {RootConfig} from '../../core/config.js';
 import {configureServerPlugins} from '../../core/plugin.js';
 import {Server, Request, Response, NextFunction} from '../../core/types.js';
@@ -65,9 +66,15 @@ export async function createDevServer(options?: {
   server.set('rootConfig', rootConfig);
   server.disable('x-powered-by');
 
+  // Create viteServer.
+  const {viteServer, viteMiddleware} = await createViteMiddleware({
+    rootConfig,
+    port,
+  });
+
   // Inject req context vars.
   server.use(rootProjectMiddleware({rootConfig}));
-  server.use(await viteServerMiddleware({rootConfig, port}));
+  server.use(viteMiddleware);
   server.use(hooksMiddleware());
 
   // Session middleware for handling session cookies.
@@ -96,7 +103,7 @@ export async function createDevServer(options?: {
       // Add static file middleware.
       const publicDir = path.join(rootDir, 'public');
       if (await dirExists(publicDir)) {
-        server.use(sirv(publicDir, {dev: false}));
+        server.use(rootPublicDirMiddleware({publicDir, viteServer}));
       }
 
       // Add the root.js dev server middlewares.
@@ -116,7 +123,7 @@ export async function createDevServer(options?: {
  * Middleware that initializes a vite server and injects it into the request
  * context.
  */
-async function viteServerMiddleware(options: {
+async function createViteMiddleware(options: {
   rootConfig: RootConfig;
   port?: number;
 }) {
@@ -167,7 +174,11 @@ async function viteServerMiddleware(options: {
     }
   });
 
-  return async (req: Request, res: Response, next: NextFunction) => {
+  const viteMiddleware = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ) => {
     try {
       // Add the viteServer to the req.
       req.viteServer = viteServer;
@@ -189,6 +200,44 @@ async function viteServerMiddleware(options: {
     } catch (e) {
       next(e);
     }
+  };
+
+  return {viteServer, viteMiddleware};
+}
+
+function rootPublicDirMiddleware(options: {
+  publicDir: string;
+  viteServer: ViteDevServer;
+}) {
+  const publicDir = options.publicDir;
+  // The `{dev: false}` option is used for performance reasons. When dev is set
+  // to `true`, every request will traverse the filesystem to check if a
+  // matching file exists. Setting it to `false` uses a cache, which can be
+  // reloaded whenever a file change is detected in the `public` directory.
+  const sirvOptions = {dev: false};
+  let handler = sirv(publicDir, sirvOptions);
+
+  function reloadPublicDirCache() {
+    handler = sirv(publicDir, sirvOptions);
+  }
+
+  function isInPublicDir(changedFilePath: string) {
+    const filePath = path.resolve(changedFilePath);
+    return filePath.startsWith(publicDir);
+  }
+
+  const watcher = options.viteServer.watcher;
+  watcher.on(
+    'all',
+    debounce((event, filepath) => {
+      if (isInPublicDir(filepath)) {
+        reloadPublicDirCache();
+      }
+    }, 1000)
+  );
+
+  return (req: Request, res: Response, next: NextFunction) => {
+    handler(req, res, next);
   };
 }
 
@@ -247,4 +296,12 @@ function rootDevServer500Middleware() {
 function testCmsEnabled(rootConfig: RootConfig) {
   const plugins = rootConfig.plugins || [];
   return Boolean(plugins.find((plugin) => plugin.name === 'root-cms'));
+}
+
+function debounce(fn: (...args: any[]) => any, timeout: number) {
+  let timer: NodeJS.Timeout;
+  return (...args: any[]) => {
+    clearTimeout(timer);
+    timer = setTimeout(() => fn(...args), timeout);
+  };
 }
