@@ -1,5 +1,11 @@
 # @blinkk/root
 
+## 1.0.0-rc.22
+
+### Patch Changes
+
+- dad8ddc: fix: fix debounce handling of public dir changes
+
 ## 1.0.0-rc.21
 
 ### Patch Changes
