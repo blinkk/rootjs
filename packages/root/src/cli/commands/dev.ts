@@ -210,6 +210,7 @@ function rootPublicDirMiddleware(options: {
   viteServer: ViteDevServer;
 }) {
   const publicDir = options.publicDir;
+
   // The `{dev: false}` option is used for performance reasons. When dev is set
   // to `true`, every request will traverse the filesystem to check if a
   // matching file exists. Setting it to `false` uses a cache, which can be
@@ -217,9 +218,9 @@ function rootPublicDirMiddleware(options: {
   const sirvOptions = {dev: false};
   let handler = sirv(publicDir, sirvOptions);
 
-  function reloadPublicDirCache() {
+  const reloadPublicDirCache = debounce(() => {
     handler = sirv(publicDir, sirvOptions);
-  }
+  }, 1000);
 
   function isInPublicDir(changedFilePath: string) {
     const filePath = path.resolve(changedFilePath);
@@ -227,14 +228,11 @@ function rootPublicDirMiddleware(options: {
   }
 
   const watcher = options.viteServer.watcher;
-  watcher.on(
-    'all',
-    debounce((event, filepath) => {
-      if (isInPublicDir(filepath)) {
-        reloadPublicDirCache();
-      }
-    }, 1000)
-  );
+  watcher.on('all', (event, filepath) => {
+    if (isInPublicDir(filepath)) {
+      reloadPublicDirCache();
+    }
+  });
 
   return (req: Request, res: Response, next: NextFunction) => {
     handler(req, res, next);
