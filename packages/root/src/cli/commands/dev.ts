@@ -231,7 +231,6 @@ function rootPublicDirMiddleware(options: {
     'all',
     debounce((event, filepath) => {
       if (isInPublicDir(filepath)) {
-        console.log(`${filepath} changed, reloading public files`);
         reloadPublicDirCache();
       }
     }, 1000)
