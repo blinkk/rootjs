@@ -1,5 +1,11 @@
 # @blinkk/root
 
+## 1.0.0-rc.21
+
+### Patch Changes
+
+- c9bf955: feat: update public dir cache when files change
+
 ## 1.0.0-rc.20
 
 ## 1.0.0-rc.19
