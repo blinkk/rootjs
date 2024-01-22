@@ -2,6 +2,7 @@ import {FirebaseApp, initializeApp} from 'firebase/app';
 import {GoogleAuthProvider, signInWithPopup} from 'firebase/auth';
 import {Auth, getAuth} from 'firebase/auth';
 import {render} from 'preact';
+import {useState} from 'preact/hooks';
 import './styles/global.css';
 import './styles/signin.css';
 
@@ -19,7 +20,13 @@ declare global {
 }
 
 function SignIn() {
+  const [errorMsg, setErrorMsg] = useState('');
   const title = window.__ROOT_CTX.name;
+
+  function onError(msg: string) {
+    setErrorMsg(msg);
+  }
+
   return (
     <div className="signin">
       <div className="signin__headline">
@@ -28,12 +35,17 @@ function SignIn() {
           {title ? `Sign in to continue to ${title}` : 'Sign in to continue'}
         </p>
       </div>
-      <SignIn.Button />
+      <SignIn.Button onError={onError} />
+      {errorMsg && <p className="signin__error">{errorMsg}</p>}
     </div>
   );
 }
 
-SignIn.Button = () => {
+interface ButtonProps {
+  onError: (msg: string) => void;
+}
+
+SignIn.Button = (props: ButtonProps) => {
   async function signIn() {
     const provider = new GoogleAuthProvider();
     provider.addScope('profile');
@@ -48,7 +60,15 @@ SignIn.Button = () => {
       },
       body: JSON.stringify({idToken}),
     });
+    if (res.status === 401) {
+      const email = user?.email || '(no email)';
+      props.onError(
+        `${email} is not authorized to view this page. If you believe this is a mistake, please contact a developer to help resolve the issue.`
+      );
+      return;
+    }
     if (res.status !== 200) {
+      props.onError('An unknown error has occurred.');
       console.error('login failed');
       console.log(res);
       return;
