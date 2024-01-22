@@ -1,5 +1,12 @@
 # @blinkk/root-cms
 
+## 1.0.0-rc.23
+
+### Patch Changes
+
+- 38902f2: fix: add error message for login failures
+  - @blinkk/root@1.0.0-rc.23
+
 ## 1.0.0-rc.22
 
 ### Patch Changes
