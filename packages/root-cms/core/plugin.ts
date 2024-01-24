@@ -356,6 +356,12 @@ export function cmsPlugin(options: CMSPluginOptions): CMSPlugin {
           next();
           return;
         }
+        // Allow the cron to run unauthenticated. The cron job is responsible
+        // for saving version history.
+        if (req.originalUrl === '/cms/api/cron.run') {
+          next();
+          return;
+        }
         if (req.originalUrl.startsWith('/cms/api')) {
           res.status(401).json({success: false, error: 'NOT_AUTHORIZED'});
           return;
