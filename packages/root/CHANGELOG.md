@@ -1,5 +1,11 @@
 # @blinkk/root
 
+## 1.0.0-rc.24
+
+### Patch Changes
+
+- b6363a2: fix: fix preserveFilename option with file field
+
 ## 1.0.0-rc.23
 
 ## 1.0.0-rc.22

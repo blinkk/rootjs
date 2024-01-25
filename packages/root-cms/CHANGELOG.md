@@ -1,5 +1,13 @@
 # @blinkk/root-cms
 
+## 1.0.0-rc.24
+
+### Patch Changes
+
+- 0be0a8c: fix: disable auth check for cron jobs
+- Updated dependencies [b6363a2]
+  - @blinkk/root@1.0.0-rc.24
+
 ## 1.0.0-rc.23
 
 ### Patch Changes
