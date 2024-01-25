@@ -511,7 +511,9 @@ DocEditor.FileField = (props: FieldProps) => {
   async function uploadFile(file: File) {
     setLoading(true);
     try {
-      const uploadedFile = await uploadFileToGCS(file);
+      const uploadedFile = await uploadFileToGCS(file, {
+        preserveFilename: field.preserveFilename,
+      });
       props.draft.updateKey(props.deepKey, uploadedFile);
       setFile(uploadedFile);
       setLoading(false);
