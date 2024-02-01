@@ -12,6 +12,7 @@ import {ComponentChildren} from 'preact';
 import {useRouter} from 'preact-router';
 
 import packageJson from '../../package.json' assert {type: 'json'};
+import {RootCMSLogo} from '../components/RootCMSLogo/RootCMSLogo.js';
 import {joinClassNames} from '../utils/classes.js';
 import './Layout.css';
 
@@ -40,8 +41,7 @@ Layout.Top = () => {
   return (
     <div className="Layout__top">
       <a className="Layout__top__logo" href="/cms">
-        <IconSitemap size={14} />
-        <div>Root CMS</div>
+        <RootCMSLogo />
       </a>
       <div className="Layout__top__version">v{packageJson.version}</div>
       <div className="Layout__top__project">{projectName}</div>
