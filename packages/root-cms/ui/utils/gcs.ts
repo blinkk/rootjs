@@ -1,5 +1,9 @@
 import {ref as storageRef, updateMetadata, uploadBytes} from 'firebase/storage';
 
+const IMAGE_EXTS = ['jpg', 'png', 'svg', 'webp'];
+
+const GCI_SUPPORTED_EXTS = ['jpg', 'png', 'webp'];
+
 export interface UploadFileOptions {
   preserveFilename?: boolean;
 }
@@ -22,11 +26,11 @@ export async function uploadFileToGCS(file: File, options?: UploadFileOptions) {
   meta.uploadedAt = String(Math.floor(new Date().getTime()));
   const gcsPath = `/${gcsRef.bucket}/${gcsRef.fullPath}`;
   let imageSrc = `https://storage.googleapis.com${gcsPath}`;
-  if (ext === 'jpg' || ext === 'png' || ext === 'svg') {
+  if (IMAGE_EXTS.includes(ext)) {
     const dimens = await getImageDimensions(file);
     meta.width = dimens.width;
     meta.height = dimens.height;
-    if (ext === 'jpg' || ext === 'png') {
+    if (GCI_SUPPORTED_EXTS.includes(ext)) {
       const gciUrl = await getGciUrl(gcsPath);
       if (gciUrl) {
         meta.gcsPath = gcsPath;
