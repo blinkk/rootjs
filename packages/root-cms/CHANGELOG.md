@@ -1,5 +1,12 @@
 # @blinkk/root-cms
 
+## 1.0.0-rc.25
+
+### Patch Changes
+
+- fb23c6a: feat: update root cms logo
+  - @blinkk/root@1.0.0-rc.25
+
 ## 1.0.0-rc.24
 
 ### Patch Changes
