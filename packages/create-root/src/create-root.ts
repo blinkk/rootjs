@@ -48,7 +48,7 @@ async function main() {
     await emitter.clone(outputDir);
     await updatePackageJson(path.join(outputDir, 'package.json'));
     console.log('done!');
-    console.log('next: run `yarn install`');
+    console.log('next: run `pnpm install` or `yarn install`');
   });
   await program.parseAsync(process.argv);
 }
