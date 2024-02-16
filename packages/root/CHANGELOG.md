@@ -1,5 +1,11 @@
 # @blinkk/root
 
+## 1.0.0-rc.26
+
+### Patch Changes
+
+- a8f4d6d: chore: pin js-beautify version
+
 ## 1.0.0-rc.25
 
 ## 1.0.0-rc.24
