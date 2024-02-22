@@ -13,7 +13,7 @@ import {
   IconTrash,
   IconTriangleFilled,
 } from '@tabler/icons-preact';
-import {useEffect, useReducer, useState} from 'preact/hooks';
+import {useEffect, useMemo, useReducer, useState} from 'preact/hooks';
 import {route} from 'preact-router';
 
 import * as schema from '../../../core/schema.js';
@@ -22,6 +22,7 @@ import {
   SaveState,
   UseDraftHook,
 } from '../../hooks/useDraft.js';
+import {getDefaultFieldValue} from '../../utils/fields.js';
 import {flattenNestedKeys} from '../../utils/objects.js';
 import {getPlaceholderKeys, strFormat} from '../../utils/str-format.js';
 import {
@@ -651,16 +652,38 @@ DocEditor.OneOfField = (props: FieldProps) => {
   });
   const selectedType = typesMap[type || ''];
 
-  function onTypeChange(newType: string) {
-    props.draft.updateKey(`${props.deepKey}._type`, newType);
+  const cachedValues = useMemo<any>(() => {
+    return {};
+  }, []);
+
+  async function onTypeChange(newType: string) {
+    const newValue: any = {};
+    if (newType) {
+      if (newType in cachedValues) {
+        // When swapping to a previously selected type, reset to the previous
+        // value.
+        const cachedValue = cachedValues[newType];
+        Object.assign(newValue, cachedValue);
+      } else if (newType in typesMap) {
+        const defaultValue = getDefaultFieldValue(typesMap[newType]);
+        Object.assign(newValue, defaultValue);
+      }
+    }
+    newValue._type = newType;
+
+    await props.draft.updateKey(props.deepKey, newValue);
+    // await props.draft.flush();
     setType(newType);
   }
 
   useEffect(() => {
     const unsubscribe = props.draft.subscribe(
-      `${props.deepKey}._type`,
-      (newValue: string) => {
-        setType(newValue || '');
+      props.deepKey,
+      (newValue: any) => {
+        if (newValue?._type) {
+          setType(newValue._type || '');
+          cachedValues[newValue._type] = newValue;
+        }
       }
     );
     return unsubscribe;
@@ -685,7 +708,7 @@ DocEditor.OneOfField = (props: FieldProps) => {
         <div className="DocEditor__OneOfField__fields">
           {selectedType.fields.map((field) => (
             <DocEditor.Field
-              key={field.id}
+              key={`${type}::${field.id}`}
               collection={props.collection}
               field={field}
               shallowKey={field.id!}

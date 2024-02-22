@@ -20,6 +20,7 @@ export default schema.define({
       id: 'title',
       label: 'Title',
       translate: true,
+      default: 'Hello world',
     }),
     schema.image({
       id: 'image',
