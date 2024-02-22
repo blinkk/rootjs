@@ -176,6 +176,20 @@ export function richtext(field: Omit<RichTextField, 'type'>): RichTextField {
   return {...field, type: 'richtext'};
 }
 
+export type ReferenceField = CommonFieldProps & {
+  type: 'reference';
+  /** List of collection ids the reference can be chosen from. */
+  collections?: string[];
+  /** Initial collection to show when picking a reference. */
+  initialCollection?: string;
+  /** Label for the button. Defaults to "Select". */
+  buttonLabel?: string;
+};
+
+export function reference(field: Omit<ReferenceField, 'type'>): ReferenceField {
+  return {...field, type: 'reference'};
+}
+
 export type Field =
   | StringField
   | NumberField
@@ -189,7 +203,8 @@ export type Field =
   | ObjectField
   | ArrayField
   | OneOfField
-  | RichTextField;
+  | RichTextField
+  | ReferenceField;
 
 /**
  * Similar to {@link Field} but with a required `id`.
@@ -197,7 +212,12 @@ export type Field =
  */
 export type FieldWithId = Field;
 
-export type ObjectLikeField = ImageField | FileField | ObjectField | OneOfField;
+export type ObjectLikeField =
+  | ImageField
+  | FileField
+  | ObjectField
+  | OneOfField
+  | ReferenceField;
 
 export interface Schema {
   name: string;

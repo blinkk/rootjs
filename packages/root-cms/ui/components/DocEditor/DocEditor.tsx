@@ -1,16 +1,4 @@
-import {
-  ActionIcon,
-  Button,
-  Checkbox,
-  LoadingOverlay,
-  Menu,
-  MultiSelect,
-  Select,
-  Textarea,
-  TextInput,
-  Tooltip,
-} from '@mantine/core';
-import {showNotification} from '@mantine/notifications';
+import {ActionIcon, Button, LoadingOverlay, Menu, Select} from '@mantine/core';
 import {
   IconBraces,
   IconCircleArrowDown,
@@ -18,8 +6,6 @@ import {
   IconCirclePlus,
   IconCopy,
   IconDotsVertical,
-  IconFileUpload,
-  IconPhotoUp,
   IconPlanet,
   IconRocket,
   IconRowInsertBottom,
@@ -27,9 +13,7 @@ import {
   IconTrash,
   IconTriangleFilled,
 } from '@tabler/icons-preact';
-import {Timestamp} from 'firebase/firestore';
-import {ChangeEvent} from 'preact/compat';
-import {useEffect, useReducer, useRef, useState} from 'preact/hooks';
+import {useEffect, useReducer, useState} from 'preact/hooks';
 import {route} from 'preact-router';
 
 import * as schema from '../../../core/schema.js';
@@ -38,8 +22,6 @@ import {
   SaveState,
   UseDraftHook,
 } from '../../hooks/useDraft.js';
-import {joinClassNames} from '../../utils/classes.js';
-import {uploadFileToGCS} from '../../utils/gcs.js';
 import {flattenNestedKeys} from '../../utils/objects.js';
 import {getPlaceholderKeys, strFormat} from '../../utils/str-format.js';
 import {
@@ -51,10 +33,16 @@ import {useEditJsonModal} from '../EditJsonModal/EditJsonModal.js';
 import {useLocalizationModal} from '../LocalizationModal/LocalizationModal.js';
 import {usePublishDocModal} from '../PublishDocModal/PublishDocModal.js';
 import './DocEditor.css';
-import {
-  RichTextData,
-  RichTextEditor,
-} from '../RichTextEditor/RichTextEditor.js';
+import {BooleanField} from './fields/BooleanField.js';
+import {DateTimeField} from './fields/DateTimeField.js';
+import {FieldProps} from './fields/FieldProps.js';
+import {FileField} from './fields/FileField.js';
+import {ImageField} from './fields/ImageField.js';
+import {MultiSelectField} from './fields/MultiSelectField.js';
+import {ReferenceField} from './fields/ReferenceField.js';
+import {RichTextField} from './fields/RichTextField.js';
+import {SelectField} from './fields/SelectField.js';
+import {StringField} from './fields/StringField.js';
 
 interface DocEditorProps {
   docId: string;
@@ -149,17 +137,6 @@ export function DocEditor(props: DocEditorProps) {
   );
 }
 
-interface FieldProps {
-  collection: schema.Collection;
-  field: schema.Field;
-  level?: number;
-  hideHeader?: boolean;
-  onChange?: (newValue: any) => void;
-  shallowKey: string;
-  deepKey: string;
-  draft: DraftController;
-}
-
 DocEditor.Field = (props: FieldProps) => {
   const field = props.field;
   const level = props.level ?? 0;
@@ -184,467 +161,33 @@ DocEditor.Field = (props: FieldProps) => {
         {field.type === 'array' ? (
           <DocEditor.ArrayField {...props} />
         ) : field.type === 'boolean' ? (
-          <DocEditor.BooleanField {...props} />
+          <BooleanField {...props} />
         ) : field.type === 'datetime' ? (
-          <DocEditor.DateTimeField {...props} />
+          <DateTimeField {...props} />
         ) : field.type === 'file' ? (
-          <DocEditor.FileField {...props} />
+          <FileField {...props} />
         ) : field.type === 'image' ? (
-          <DocEditor.ImageField {...props} />
+          <ImageField {...props} />
         ) : field.type === 'multiselect' ? (
-          <DocEditor.MultiSelectField {...props} />
+          <MultiSelectField {...props} />
         ) : field.type === 'object' ? (
           <DocEditor.ObjectField {...props} />
         ) : field.type === 'oneof' ? (
           <DocEditor.OneOfField {...props} />
+        ) : field.type === 'reference' ? (
+          <ReferenceField {...props} />
         ) : field.type === 'richtext' ? (
-          <DocEditor.RichTextField {...props} />
+          <RichTextField {...props} />
         ) : field.type === 'select' ? (
-          <DocEditor.SelectField {...props} />
+          <SelectField {...props} />
         ) : field.type === 'string' ? (
-          <DocEditor.StringField {...props} />
+          <StringField {...props} />
         ) : (
           <div className="DocEditor__field__input__unknown">
             Unknown field type: {field.type}
           </div>
         )}
       </div>
-    </div>
-  );
-};
-
-DocEditor.StringField = (props: FieldProps) => {
-  const field = props.field as schema.StringField;
-  const [value, setValue] = useState('');
-
-  function onChange(newValue: string) {
-    setValue(newValue);
-    props.draft.updateKey(props.deepKey, newValue);
-  }
-
-  useEffect(() => {
-    const unsubscribe = props.draft.subscribe(
-      props.deepKey,
-      (newValue: string) => {
-        setValue(newValue);
-      }
-    );
-    return unsubscribe;
-  }, []);
-
-  if (field.variant === 'textarea') {
-    return (
-      <Textarea
-        size="xs"
-        radius={0}
-        autosize
-        minRows={2}
-        maxRows={field.maxRows || 12}
-        value={value}
-        onChange={(e: ChangeEvent<HTMLTextAreaElement>) => {
-          onChange(e.currentTarget.value);
-        }}
-      />
-    );
-  }
-  return (
-    <TextInput
-      size="xs"
-      radius={0}
-      value={value}
-      onChange={(e: ChangeEvent<HTMLInputElement>) => {
-        onChange(e.currentTarget.value);
-      }}
-    />
-  );
-};
-
-DocEditor.RichTextField = (props: FieldProps) => {
-  const field = props.field as schema.RichTextField;
-  const [value, setValue] = useState<RichTextData>({
-    blocks: [{type: 'paragraph', data: {}}],
-  });
-
-  function onChange(newValue: RichTextData) {
-    setValue(newValue);
-    props.draft.updateKey(props.deepKey, newValue);
-  }
-
-  useEffect(() => {
-    const unsubscribe = props.draft.subscribe(
-      props.deepKey,
-      (newValue: RichTextData) => {
-        setValue(newValue);
-      }
-    );
-    return unsubscribe;
-  }, []);
-
-  return (
-    <RichTextEditor
-      value={value}
-      placeholder={field.placeholder}
-      onChange={onChange}
-    />
-  );
-};
-
-const IMAGE_MIMETYPES = [
-  'image/png',
-  'image/jpeg',
-  'image/svg+xml',
-  'image/webp',
-];
-
-DocEditor.ImageField = (props: FieldProps) => {
-  const field = props.field as schema.ImageField;
-  const [img, setImg] = useState<any>({});
-  const [loading, setLoading] = useState(false);
-  const [isDragging, setIsDragging] = useState(false);
-  const inputRef = useRef<HTMLInputElement>(null);
-  const ref = useRef<HTMLDivElement>(null);
-
-  const exts = field.exts ?? IMAGE_MIMETYPES;
-  const accept = exts.join(', ');
-
-  async function uploadFile(file: File) {
-    setLoading(true);
-    try {
-      const uploadedImage = await uploadFileToGCS(file);
-      setImg((currentImg: any) => {
-        // Preserve the "alt" text when the image changes.
-        const newImage = Object.assign({}, uploadedImage, {
-          alt: currentImg?.alt || '',
-        });
-        props.draft.updateKey(props.deepKey, newImage);
-        return newImage;
-      });
-      setLoading(false);
-    } catch (err) {
-      console.error('image upload failed');
-      console.error(err);
-      setLoading(false);
-      showNotification({
-        title: 'Image upload failed',
-        message: 'Failed to upload image: ' + String(err),
-        color: 'red',
-        autoClose: false,
-      });
-    }
-
-    // Reset the input element in case the user wishes to re-upload the image.
-    if (inputRef.current) {
-      const inputEl = inputRef.current;
-      inputEl.value = '';
-    }
-  }
-
-  function onFileChange(e: Event) {
-    const inputEl = e.target as HTMLInputElement;
-    const files = inputEl.files || [];
-    const file = files[0];
-    if (file) {
-      uploadFile(file);
-    }
-  }
-
-  async function setAltText(newValue: string) {
-    setImg((currentImg: any) => {
-      return Object.assign({}, currentImg, {alt: newValue});
-    });
-    props.draft.updateKey(`${props.deepKey}.alt`, newValue);
-  }
-
-  async function removeImage() {
-    setImg({});
-    props.draft.removeKey(props.deepKey);
-  }
-
-  const handleDragEnter = (e: DragEvent) => {
-    e.preventDefault();
-    setIsDragging(true);
-  };
-
-  const handleDragLeave = (e: DragEvent) => {
-    e.preventDefault();
-    setIsDragging(false);
-  };
-
-  const handleDrop = (e: DragEvent) => {
-    e.preventDefault();
-    setIsDragging(false);
-
-    const files = e.dataTransfer?.files || [];
-    const file = files[0];
-    if (file) {
-      console.log(`file dropped ("${props.deepKey}"):`, file);
-      uploadFile(file);
-    }
-  };
-
-  useEffect(() => {
-    const unsubscribe = props.draft.subscribe(
-      props.deepKey,
-      (newValue: string) => {
-        setImg(newValue);
-      }
-    );
-
-    const dropzone = ref.current;
-    document.addEventListener('dragenter', handleDragEnter);
-    document.addEventListener('dragover', handleDragEnter);
-    document.addEventListener('dragleave', handleDragLeave);
-    document.addEventListener('drop', handleDragLeave);
-    if (dropzone) {
-      dropzone.addEventListener('drop', handleDrop);
-    }
-    return () => {
-      unsubscribe();
-      document.removeEventListener('dragenter', handleDragEnter);
-      document.removeEventListener('dragover', handleDragEnter);
-      document.removeEventListener('dragleave', handleDragLeave);
-      document.removeEventListener('drop', handleDragLeave);
-      if (dropzone) {
-        dropzone.removeEventListener('drop', handleDrop);
-      }
-    };
-  }, []);
-
-  return (
-    <div
-      className={joinClassNames(
-        'DocEditor__ImageField',
-        isDragging && 'dragging'
-      )}
-      ref={ref}
-    >
-      {img && img.src ? (
-        <div className="DocEditor__ImageField__imagePreview">
-          <div className="DocEditor__ImageField__imagePreview__controls">
-            <Tooltip label="Remove image">
-              <ActionIcon
-                className="DocEditor__ImageField__imagePreview__controls__trash"
-                onClick={() => removeImage()}
-              >
-                <IconTrash size={16} />
-              </ActionIcon>
-            </Tooltip>
-          </div>
-          <div className="DocEditor__ImageField__imagePreview__image">
-            <img
-              src={img.gciUrl || img.src}
-              width={img.width}
-              height={img.height}
-            />
-            <div className="DocEditor__ImageField__imagePreview__dimens">
-              {`${img.width}x${img.height}`}
-            </div>
-          </div>
-          <TextInput
-            className="DocEditor__ImageField__imagePreview__image__url"
-            size="xs"
-            radius={0}
-            value={img.gciUrl || img.src}
-            disabled={true}
-          />
-          <TextInput
-            className="DocEditor__ImageField__imagePreview__image__alt"
-            size="xs"
-            radius={0}
-            value={img.alt}
-            label="Alt text"
-            onChange={(e: ChangeEvent<HTMLInputElement>) => {
-              setAltText(e.currentTarget.value);
-            }}
-          />
-        </div>
-      ) : (
-        <div className="DocEditor__ImageField__noImage">No image</div>
-      )}
-      {/* <Button
-        color="dark"
-        size="xs"
-        leftIcon={<IconPhotoUp size={16} />}
-      >
-        Upload image
-      </Button> */}
-      <label
-        className="DocEditor__ImageField__uploadButton"
-        role="button"
-        aria-disabled={loading}
-      >
-        <input
-          type="file"
-          accept={accept}
-          onChange={onFileChange}
-          ref={inputRef}
-        />
-        <div className="DocEditor__ImageField__uploadButton__icon">
-          <IconPhotoUp size={16} />
-        </div>
-        <div className="DocEditor__ImageField__uploadButton__label">
-          {loading ? 'Uploading...' : 'Upload image'}
-        </div>
-      </label>
-    </div>
-  );
-};
-
-DocEditor.FileField = (props: FieldProps) => {
-  const field = props.field as schema.FileField;
-  const [file, setFile] = useState<any>({});
-  const [loading, setLoading] = useState(false);
-  const [isDragging, setIsDragging] = useState(false);
-  const inputRef = useRef<HTMLInputElement>(null);
-  const ref = useRef<HTMLDivElement>(null);
-
-  let accept: string | undefined = undefined;
-  if (field.exts) {
-    accept = field.exts.join(',');
-  }
-
-  async function removeFile() {
-    setFile({});
-    props.draft.removeKey(props.deepKey);
-  }
-
-  async function uploadFile(file: File) {
-    setLoading(true);
-    try {
-      const uploadedFile = await uploadFileToGCS(file, {
-        preserveFilename: field.preserveFilename,
-      });
-      props.draft.updateKey(props.deepKey, uploadedFile);
-      setFile(uploadedFile);
-      setLoading(false);
-    } catch (err) {
-      console.error('file upload failed');
-      console.error(err);
-      setLoading(false);
-      showNotification({
-        title: 'File upload failed',
-        message: 'Failed to upload file: ' + String(err),
-        color: 'red',
-        autoClose: false,
-      });
-    }
-    // Reset the input element in case the user wishes to re-upload a file.
-    if (inputRef.current) {
-      const inputEl = inputRef.current;
-      inputEl.value = '';
-    }
-  }
-
-  function onFileChange(e: Event) {
-    const inputEl = e.target as HTMLInputElement;
-    const files = inputEl.files || [];
-    const file = files[0];
-    if (file) {
-      uploadFile(file);
-    }
-  }
-
-  const handleDragEnter = (e: DragEvent) => {
-    e.preventDefault();
-    setIsDragging(true);
-  };
-
-  const handleDragLeave = (e: DragEvent) => {
-    e.preventDefault();
-    setIsDragging(false);
-  };
-
-  const handleDrop = (e: DragEvent) => {
-    e.preventDefault();
-    setIsDragging(false);
-
-    const files = e.dataTransfer?.files || [];
-    const file = files[0];
-    if (file) {
-      console.log(`file dropped ("${props.deepKey}"):`, file);
-      uploadFile(file);
-    }
-  };
-
-  useEffect(() => {
-    const unsubscribe = props.draft.subscribe(
-      props.deepKey,
-      (newValue: string) => {
-        setFile(newValue);
-      }
-    );
-
-    const dropzone = ref.current;
-    document.addEventListener('dragenter', handleDragEnter);
-    document.addEventListener('dragover', handleDragEnter);
-    document.addEventListener('dragleave', handleDragLeave);
-    document.addEventListener('drop', handleDragLeave);
-    if (dropzone) {
-      dropzone.addEventListener('drop', handleDrop);
-    }
-    return () => {
-      unsubscribe();
-      document.removeEventListener('dragenter', handleDragEnter);
-      document.removeEventListener('dragover', handleDragEnter);
-      document.removeEventListener('dragleave', handleDragLeave);
-      document.removeEventListener('drop', handleDragLeave);
-      if (dropzone) {
-        dropzone.removeEventListener('drop', handleDrop);
-      }
-    };
-  }, []);
-
-  return (
-    <div
-      className={joinClassNames(
-        'DocEditor__FileField',
-        isDragging && 'dragging'
-      )}
-      ref={ref}
-    >
-      {file && file.src && (
-        <div className="DocEditor__FileField__controls">
-          <Tooltip label="Remove file">
-            <ActionIcon
-              className="DocEditor__FileField__controls__trash"
-              onClick={() => removeFile()}
-            >
-              <IconTrash size={16} />
-            </ActionIcon>
-          </Tooltip>
-        </div>
-      )}
-      {file && file.src ? (
-        <div className="DocEditor__FileField__file">
-          <TextInput
-            className="DocEditor__FileField__file__url"
-            size="xs"
-            radius={0}
-            value={file.src}
-            disabled={true}
-          />
-        </div>
-      ) : (
-        <div className="DocEditor__FileField__noFile">No file</div>
-      )}
-      <label
-        className="DocEditor__FileField__uploadButton"
-        role="button"
-        aria-disabled={loading}
-      >
-        <input
-          type="file"
-          accept={accept}
-          onChange={onFileChange}
-          ref={inputRef}
-        />
-        <div className="DocEditor__FileField__uploadButton__icon">
-          <IconFileUpload size={16} />
-        </div>
-        <div className="DocEditor__FileField__uploadButton__label">
-          {loading ? 'Uploading...' : 'Upload file'}
-        </div>
-      </label>
     </div>
   );
 };
@@ -1152,192 +695,6 @@ DocEditor.OneOfField = (props: FieldProps) => {
           ))}
         </div>
       )}
-    </div>
-  );
-};
-
-DocEditor.SelectField = (props: FieldProps) => {
-  const field = props.field as schema.SelectField;
-  const [value, setValue] = useState('');
-
-  const options = (field.options || []).map((option) => {
-    // Mantine requires both label and value to be set.
-    if (typeof option === 'string') {
-      return {label: option, value: option};
-    }
-    return {
-      label: option.label ?? option.value ?? '',
-      value: option.value ?? option.label ?? '',
-    };
-  });
-
-  function onChange(newValue: string) {
-    props.draft.updateKey(`${props.deepKey}`, newValue);
-    setValue(newValue || '');
-  }
-
-  useEffect(() => {
-    const unsubscribe = props.draft.subscribe(
-      props.deepKey,
-      (newValue: string) => {
-        setValue(newValue || '');
-      }
-    );
-    return unsubscribe;
-  }, []);
-
-  return (
-    <div className="DocEditor__SelectField">
-      <Select
-        data={options}
-        placeholder={field.placeholder}
-        value={value}
-        onChange={(e: string) => onChange(e || '')}
-        size="xs"
-        radius={0}
-        // Due to issues with preact/compat, use a div for the dropdown el.
-        dropdownComponent="div"
-      />
-    </div>
-  );
-};
-
-DocEditor.MultiSelectField = (props: FieldProps) => {
-  const field = props.field as schema.MultiSelectField;
-  const [value, setValue] = useState<string[]>([]);
-
-  const options = (field.options || []).map((option) => {
-    // Mantine requires both label and value to be set.
-    if (typeof option === 'string') {
-      return {label: option, value: option};
-    }
-    return {
-      label: option.label ?? option.value ?? '',
-      value: option.value ?? option.label ?? '',
-    };
-  });
-
-  function onChange(newValue: string[]) {
-    props.draft.updateKey(props.deepKey, newValue || []);
-    setValue(newValue);
-  }
-
-  useEffect(() => {
-    const unsubscribe = props.draft.subscribe(
-      props.deepKey,
-      (newValue: string[]) => {
-        setValue(newValue || []);
-      }
-    );
-    return unsubscribe;
-  }, []);
-
-  return (
-    <div className="DocEditor__MultiSelectField">
-      <MultiSelect
-        data={options}
-        size="xs"
-        radius={0}
-        placeholder={field.placeholder}
-        value={value}
-        searchable
-        creatable={field.creatable || false}
-        getCreateLabel={(query: string) => `+ Add "${query}"`}
-        onChange={(newValue: string[]) => onChange(newValue)}
-        // Due to issues with preact/compat, use a div for the dropdown el.
-        dropdownComponent="div"
-      />
-    </div>
-  );
-};
-
-DocEditor.BooleanField = (props: FieldProps) => {
-  const field = props.field as schema.BooleanField;
-  const label = field.checkboxLabel || 'Enabled';
-  const [value, setValue] = useState<boolean>(false);
-
-  function onChange(newValue: boolean) {
-    setValue(newValue);
-    props.draft.updateKey(props.deepKey, newValue);
-  }
-
-  useEffect(() => {
-    const unsubscribe = props.draft.subscribe(
-      props.deepKey,
-      (newValue: boolean) => {
-        setValue(newValue);
-      }
-    );
-    return unsubscribe;
-  }, []);
-
-  return (
-    <div className="DocEditor__BooleanField">
-      <Checkbox
-        label={label}
-        onChange={(e: Event) => {
-          const target = e.currentTarget as HTMLInputElement;
-          onChange(target.checked);
-        }}
-        checked={value}
-        size="xs"
-      />
-    </div>
-  );
-};
-
-DocEditor.DateTimeField = (props: FieldProps) => {
-  // const field = props.field as schema.DateTimeField;
-  const [dateStr, setDateStr] = useState('');
-
-  function onChange(newDateStr: string) {
-    if (newDateStr) {
-      const millis = Math.floor(new Date(newDateStr).getTime());
-      const newValue = Timestamp.fromMillis(millis);
-      setDateStr(toDateStr(newValue));
-      props.draft.updateKey(props.deepKey, newValue);
-    } else {
-      setDateStr('');
-      props.draft.removeKey(props.deepKey);
-    }
-  }
-
-  function toDateStr(ts: Timestamp) {
-    const date = ts.toDate();
-    // Subtract by the timezone offset so that toISOString() returns the local
-    // datetime string.
-    date.setMinutes(date.getMinutes() - date.getTimezoneOffset());
-    return date.toISOString().slice(0, 16);
-  }
-
-  useEffect(() => {
-    const unsubscribe = props.draft.subscribe(
-      props.deepKey,
-      (newValue: Timestamp) => {
-        if (newValue) {
-          setDateStr(toDateStr(newValue));
-        } else {
-          setDateStr('');
-        }
-      }
-    );
-    return unsubscribe;
-  }, []);
-
-  return (
-    <div className="DocEditor__DateTimeField">
-      <input
-        type="datetime-local"
-        value={dateStr}
-        onChange={(e: Event) => {
-          const target = e.target as HTMLInputElement;
-          const newDateStr = target.value;
-          onChange(newDateStr);
-        }}
-      />
-      <div className="DocEditor__DateTimeField__timezone">
-        timezone: {Intl.DateTimeFormat().resolvedOptions().timeZone}
-      </div>
     </div>
   );
 };

@@ -95,6 +95,18 @@ export default schema.collection({
           label: 'Published Date Override',
           help: 'Override for the "Published" date.'
         }),
+        schema.reference({
+          id: 'parentPost',
+          label: 'Parent Post',
+          help: 'Optional parent post for breadcrumbs.',
+          collections: ['BlogPosts'],
+        }),
+        schema.array({
+          id: 'relatedPosts',
+          label: 'Related Posts',
+          help: 'Suggest related blog posts to read.',
+          of: schema.reference({collections: ['BlogPosts', 'BlogPostsSandbox']}),
+        }),
       ],
     }),
   ],

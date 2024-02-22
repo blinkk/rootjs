@@ -26,6 +26,7 @@ import {SettingsPage} from './pages/SettingsPage/SettingsPage.js';
 import {TranslationsPage} from './pages/TranslationsPage/TranslationsPage.js';
 import './styles/global.css';
 import './styles/theme.css';
+import {DocPickerModal} from './components/DocPickerModal/DocPickerModal.js';
 
 declare global {
   interface Window {
@@ -58,16 +59,17 @@ function App() {
       }}
     >
       <NotificationsProvider>
-        <ModalsProvider
-          modals={{
-            [CopyDocModal.id]: CopyDocModal,
-            [EditJsonModal.id]: EditJsonModal,
-            [LocalizationModal.id]: LocalizationModal,
-            [PublishDocModal.id]: PublishDocModal,
-            [VersionHistoryModal.id]: VersionHistoryModal,
-          }}
-        >
-          <FirebaseContext.Provider value={window.firebase}>
+        <FirebaseContext.Provider value={window.firebase}>
+          <ModalsProvider
+            modals={{
+              [CopyDocModal.id]: CopyDocModal,
+              [DocPickerModal.id]: DocPickerModal,
+              [EditJsonModal.id]: EditJsonModal,
+              [LocalizationModal.id]: LocalizationModal,
+              [PublishDocModal.id]: PublishDocModal,
+              [VersionHistoryModal.id]: VersionHistoryModal,
+            }}
+          >
             <Router>
               <Route path="/cms" component={ProjectPage} />
               <Route path="/cms/assets" component={AssetsPage} />
@@ -84,8 +86,8 @@ function App() {
               <Route path="/cms/translations" component={TranslationsPage} />
               <Route default component={NotFoundPage} />
             </Router>
-          </FirebaseContext.Provider>
-        </ModalsProvider>
+          </ModalsProvider>
+        </FirebaseContext.Provider>
       </NotificationsProvider>
     </MantineProvider>
   );

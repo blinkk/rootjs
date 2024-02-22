@@ -1,0 +1,63 @@
+.ReferenceField__none {
+  font-family: var(--font-family-mono);
+  margin-bottom: 16px;
+}
+
+.ReferenceField__ref {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 16px;
+}
+
+.ReferenceField__remove {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.ReferenceField__Preview {
+  flex: 1;
+  width: 100%;
+}
+
+.ReferenceField__DocCard {
+  display: flex;
+  align-items: center;
+  padding: 8px;
+  border: 1px solid var(--color-border);
+  overflow: hidden;
+}
+
+.ReferenceField__DocCard__image {
+  border: 1px solid var(--color-border);
+  flex-shrink: 0;
+}
+
+.ReferenceField__DocCard__content {
+  display: block;
+  padding: 0 8px;
+  text-decoration: none;
+  flex: 1;
+}
+
+.ReferenceField__DocCard__content__header__docId {
+  font-size: 12px;
+  line-height: 1.2;
+  font-weight: 500;
+  margin-bottom: 4px;
+}
+
+.ReferenceField__DocCard__content__title {
+  line-height: 1.2;
+  font-size: 22px;
+  font-weight: 600;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 1;
+}
+
+.ReferenceField__DocCard__content__url {
+  font-size: 12px;
+  font-weight: 500;
+  color: #ababab;
+}

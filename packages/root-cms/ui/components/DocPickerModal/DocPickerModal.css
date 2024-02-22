@@ -1,0 +1,58 @@
+.DocPickerModal__collection__select {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.DocPickerModal__collection__select__label {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.DocPickerModal__DocCard {
+  display: flex;
+  align-items: center;
+  padding: 8px 0;
+  border-top: 1px solid var(--color-border);
+  overflow: hidden;
+}
+
+.DocPickerModal__DocCard__image {
+  border: 1px solid var(--color-border);
+  flex-shrink: 0;
+}
+
+.DocPickerModal__DocCard__content {
+  display: block;
+  padding: 0 12px;
+  text-decoration: none;
+  flex: 1;
+}
+
+.DocPickerModal__DocCard__content__header__docId {
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.DocPickerModal__DocCard__content__title {
+  line-height: 36px;
+  font-size: 24px;
+  font-weight: 600;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 1;
+}
+
+.DocPickerModal__DocCard__content__url {
+  font-size: 12px;
+  font-weight: 500;
+  color: #ababab;
+}
+
+.DocPickerModal__DocCard__controls {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}

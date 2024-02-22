@@ -49,11 +49,20 @@ export interface RootCMSRichText {
   blocks: RootCMSRichTextBlock[];
 }
 
+export interface RootCMSReference {
+  /** The id of the doc, e.g. "Pages/foo-bar". */
+  id: string;
+  /** The collection id of the doc, e.g. "Pages". */
+  collection: string;
+  /** The slug of the doc, e.g. "foo-bar". */
+  slug: string;
+}
+
 export interface RootCMSDoc<Fields extends {}> {
   /** The id of the doc, e.g. "Pages/foo-bar". */
   id: string;
   /** The collection id of the doc, e.g. "Pages". */
-  collectionId: string;
+  collection: string;
   /** The slug of the doc, e.g. "foo-bar". */
   slug: string;
   /** System-level metadata. */
@@ -141,6 +150,10 @@ function fieldType(field: Field): dom.Type {
   if (field.type === 'oneof') {
     const oneofType = dom.create.namedTypeReference('RootCMSOneOf');
     return oneofType;
+  }
+  if (field.type === 'reference') {
+    const richtextType = dom.create.namedTypeReference('RootCMSReference');
+    return richtextType;
   }
   if (field.type === 'richtext') {
     const richtextType = dom.create.namedTypeReference('RootCMSRichText');

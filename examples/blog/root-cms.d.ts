@@ -20,11 +20,20 @@ export interface RootCMSRichText {
   blocks: RootCMSRichTextBlock[];
 }
 
+export interface RootCMSReference {
+  /** The id of the doc, e.g. "Pages/foo-bar". */
+  id: string;
+  /** The collection id of the doc, e.g. "Pages". */
+  collection: string;
+  /** The slug of the doc, e.g. "foo-bar". */
+  slug: string;
+}
+
 export interface RootCMSDoc<Fields extends {}> {
   /** The id of the doc, e.g. "Pages/foo-bar". */
   id: string;
   /** The collection id of the doc, e.g. "Pages". */
-  collectionId: string;
+  collection: string;
   /** The slug of the doc, e.g. "foo-bar". */
   slug: string;
   /** System-level metadata. */
@@ -80,6 +89,10 @@ export interface BlogPostsFields {
     };
     /** Published Date Override. Override for the "Published" date. */
     publishedAtOverride?: number;
+    /** Parent Post. Optional parent post for breadcrumbs. */
+    parentPost?: RootCMSReference;
+    /** Related Posts. Suggest related blog posts to read. */
+    relatedPosts?: RootCMSReference[];
   };
 }
 
@@ -123,6 +136,10 @@ export interface BlogPostsSandboxFields {
     };
     /** Published Date Override. Override for the "Published" date. */
     publishedAtOverride?: number;
+    /** Parent Post. Optional parent post for breadcrumbs. */
+    parentPost?: RootCMSReference;
+    /** Related Posts. Suggest related blog posts to read. */
+    relatedPosts?: RootCMSReference[];
   };
 }
 
