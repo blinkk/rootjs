@@ -672,7 +672,6 @@ DocEditor.OneOfField = (props: FieldProps) => {
     newValue._type = newType;
 
     await props.draft.updateKey(props.deepKey, newValue);
-    // await props.draft.flush();
     setType(newType);
   }
 
