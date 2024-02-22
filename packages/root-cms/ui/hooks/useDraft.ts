@@ -158,7 +158,7 @@ export class DraftController extends EventListener {
    * Updates a single key. The key can be a nested key, e.g. "meta.title".
    */
   async updateKey(key: string, newValue: any) {
-    this.updateKeys({[key]: newValue});
+    await this.updateKeys({[key]: newValue});
   }
 
   /**

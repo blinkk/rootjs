@@ -25,6 +25,7 @@ export default schema.collection({
           id: 'title',
           label: 'Title',
           translate: true,
+          default: 'Lorem ipsum',
         }),
         schema.string({
           id: 'description',
