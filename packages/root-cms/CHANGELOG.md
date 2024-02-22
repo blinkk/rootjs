@@ -1,5 +1,16 @@
 # @blinkk/root-cms
 
+## 1.0.0-rc.27
+
+### Minor Changes
+
+- 0a69a62: feat: add default value caching for object fields
+- b0fed8a: feat: add reference field
+
+### Patch Changes
+
+- @blinkk/root@1.0.0-rc.27
+
 ## 1.0.0-rc.26
 
 ### Patch Changes
