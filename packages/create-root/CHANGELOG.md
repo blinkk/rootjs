@@ -1,5 +1,11 @@
 # @blinkk/create-root
 
+## 1.0.0-rc.28
+
+### Patch Changes
+
+- 556082f: chore: pin deps to exact versions
+
 ## 1.0.0-rc.27
 
 ## 1.0.0-rc.26

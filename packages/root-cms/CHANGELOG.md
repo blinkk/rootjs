@@ -1,5 +1,13 @@
 # @blinkk/root-cms
 
+## 1.0.0-rc.28
+
+### Patch Changes
+
+- 556082f: chore: pin deps to exact versions
+- Updated dependencies [556082f]
+  - @blinkk/root@1.0.0-rc.28
+
 ## 1.0.0-rc.27
 
 ### Minor Changes
