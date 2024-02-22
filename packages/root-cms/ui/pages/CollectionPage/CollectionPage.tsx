@@ -4,15 +4,8 @@ import {
   IconCirclePlus,
   IconFolder,
 } from '@tabler/icons-preact';
-import {
-  collection,
-  getDocs,
-  orderBy as queryOrderby,
-  Query,
-  query,
-  documentId,
-} from 'firebase/firestore';
-import {useEffect, useState} from 'preact/hooks';
+
+import {useState} from 'preact/hooks';
 import {route} from 'preact-router';
 
 import {DocActionsMenu} from '../../components/DocActionsMenu/DocActionsMenu.js';
@@ -21,63 +14,16 @@ import {Heading} from '../../components/Heading/Heading.js';
 import {Markdown} from '../../components/Markdown/Markdown.js';
 import {NewDocModal} from '../../components/NewDocModal/NewDocModal.js';
 import {SplitPanel} from '../../components/SplitPanel/SplitPanel.js';
-import {useFirebase} from '../../hooks/useFirebase.js';
+import {useDocsList} from '../../hooks/useDocsList.js';
 import {useLocalStorage} from '../../hooks/useLocalStorage.js';
 import {Layout} from '../../layout/Layout.js';
 import {joinClassNames} from '../../utils/classes.js';
+import {getDocServingUrl} from '../../utils/doc-urls.js';
 import {getNestedValue} from '../../utils/objects.js';
 import './CollectionPage.css';
-import {getDocServingUrl} from '../../utils/doc-urls.js';
 
 interface CollectionPageProps {
   collection?: string;
-}
-
-function useDocsList(collectionId: string, options: {orderBy: string}) {
-  const [docs, setDocs] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-  const firebase = useFirebase();
-  const db = firebase.db;
-
-  const projectId = window.__ROOT_CTX.rootConfig.projectId || 'default';
-
-  const listDocs = async () => {
-    setLoading(true);
-    const dbCollection = collection(
-      db,
-      'Projects',
-      projectId,
-      'Collections',
-      collectionId,
-      'Drafts'
-    );
-    let dbQuery: Query = dbCollection;
-    const orderBy = options.orderBy;
-    if (orderBy === 'modifiedAt') {
-      dbQuery = query(dbCollection, queryOrderby('sys.modifiedAt', 'desc'));
-    } else if (orderBy === 'newest') {
-      dbQuery = query(dbCollection, queryOrderby('sys.createdAt', 'desc'));
-    } else if (orderBy === 'oldest') {
-      dbQuery = query(dbCollection, queryOrderby('sys.createdAt'));
-    } else if (orderBy === 'slug') {
-      dbQuery = query(dbCollection, queryOrderby(documentId()));
-    }
-    const snapshot = await getDocs(dbQuery);
-    const docs = snapshot.docs.map((d) => ({
-      ...d.data(),
-      id: `${collectionId}/${d.id}`,
-      slug: d.id,
-    }));
-    setDocs(docs);
-    setLoading(false);
-  };
-
-  useEffect(() => {
-    setLoading(true);
-    listDocs();
-  }, [collection, options.orderBy]);
-
-  return [loading, listDocs, docs] as const;
 }
 
 export function CollectionPage(props: CollectionPageProps) {

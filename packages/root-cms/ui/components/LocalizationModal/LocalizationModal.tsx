@@ -567,6 +567,10 @@ function extractField(
     if (field.translate) {
       addString(fieldValue);
     }
+  } else if (field.type === 'image') {
+    if (field.translate && fieldValue && fieldValue.alt) {
+      addString(fieldValue.alt);
+    }
   } else if (field.type === 'multiselect') {
     if (field.translate && Array.isArray(fieldValue)) {
       for (const value of fieldValue) {

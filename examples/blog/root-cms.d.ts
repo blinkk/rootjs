@@ -24,7 +24,7 @@ export interface RootCMSDoc<Fields extends {}> {
   /** The id of the doc, e.g. "Pages/foo-bar". */
   id: string;
   /** The collection id of the doc, e.g. "Pages". */
-  collectionId: string;
+  collection: string;
   /** The slug of the doc, e.g. "foo-bar". */
   slug: string;
   /** System-level metadata. */
@@ -80,6 +80,8 @@ export interface BlogPostsFields {
     };
     /** Published Date Override. Override for the "Published" date. */
     publishedAtOverride?: number;
+    /** Related Post. Suggest a "next" blog post to read. */
+    relatedPost?: unknown;
   };
 }
 
@@ -123,6 +125,8 @@ export interface BlogPostsSandboxFields {
     };
     /** Published Date Override. Override for the "Published" date. */
     publishedAtOverride?: number;
+    /** Related Post. Suggest a "next" blog post to read. */
+    relatedPost?: unknown;
   };
 }
 
