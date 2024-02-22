@@ -152,8 +152,8 @@ function fieldType(field: Field): dom.Type {
     return oneofType;
   }
   if (field.type === 'reference') {
-    const richtextType = dom.create.namedTypeReference('RootCMSReference');
-    return richtextType;
+    const referenceType = dom.create.namedTypeReference('RootCMSReference');
+    return referenceType;
   }
   if (field.type === 'richtext') {
     const richtextType = dom.create.namedTypeReference('RootCMSRichText');
