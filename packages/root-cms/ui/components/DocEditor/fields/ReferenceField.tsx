@@ -90,6 +90,7 @@ ReferenceField.Preview = (props: ReferencePreviewProps) => {
   const [previewDoc, setPreviewDoc] = useState<any>(null);
 
   async function fetchDocData() {
+    setLoading(true);
     const docRef = getDraftDocRef(props.id);
     const doc = await getDoc(docRef);
     const docData = doc.data();
@@ -106,7 +107,7 @@ ReferenceField.Preview = (props: ReferencePreviewProps) => {
       return;
     }
     fetchDocData();
-  }, []);
+  }, [props.id]);
 
   return (
     <div className="ReferenceField__Preview">
