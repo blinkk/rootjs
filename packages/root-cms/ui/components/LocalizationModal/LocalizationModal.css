@@ -44,6 +44,7 @@
 
 .LocalizationModal__translations__header__buttons {
   display: flex;
+  align-items: center;
   gap: 8px;
 }
 

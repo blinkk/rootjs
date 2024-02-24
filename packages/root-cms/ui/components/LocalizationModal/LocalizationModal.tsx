@@ -28,8 +28,17 @@ import * as schema from '../../../core/schema.js';
 import {DraftController} from '../../hooks/useDraft.js';
 import {GapiClient, useGapiClient} from '../../hooks/useGapiClient.js';
 import {useModalTheme} from '../../hooks/useModalTheme.js';
-import {cmsDocImportCsv, cmsLinkGoogleSheetL10n} from '../../utils/doc.js';
-import {GSpreadsheet, createSheet} from '../../utils/gsheets.js';
+import {
+  cmsDocImportCsv,
+  cmsGetLinkedGoogleSheetL10n,
+  cmsLinkGoogleSheetL10n,
+} from '../../utils/doc.js';
+import {
+  GSpreadsheet,
+  GoogleSheetId,
+  createSheet,
+  getSpreadsheetUrl,
+} from '../../utils/gsheets.js';
 import {
   TranslationsMap,
   loadTranslations,
@@ -279,6 +288,7 @@ LocalizationModal.Translations = (props: TranslationsProps) => {
   >({});
   const [translationsMap, setTranslationsMap] = useState<TranslationsMap>({});
   const gapiClient = useGapiClient();
+  const [linkedSheet, setLinkedSheet] = useState<GoogleSheetId | null>(null);
 
   const sourceToTranslationsMap = useMemo(() => {
     const results: {[source: string]: Record<string, string>} = {};
@@ -299,13 +309,15 @@ LocalizationModal.Translations = (props: TranslationsProps) => {
     Promise.all([
       extractStrings(props.collection, props.docId),
       loadTranslations(),
-    ]).then(([sourceStrings, translationsMap]) => {
+      cmsGetLinkedGoogleSheetL10n(props.docId),
+    ]).then(([sourceStrings, translationsMap, linkedSheet]) => {
       setSourceStrings(sourceStrings);
       setTranslationsMap(translationsMap);
-      console.log('translations map:', translationsMap);
+      console.log('linked sheet:', linkedSheet);
+      setLinkedSheet(linkedSheet);
       setLoading(false);
     });
-  }, []);
+  }, [props.docId]);
 
   useEffect(() => {
     if (!selectedLocale) {
@@ -441,10 +453,12 @@ LocalizationModal.Translations = (props: TranslationsProps) => {
 
     // Link Google Sheet to CMS doc.
     try {
-      await cmsLinkGoogleSheetL10n(props.docId, {
+      const linkedSheet = {
         spreadsheetId: spreadsheet.spreadsheetId,
         gid: 0,
-      });
+      };
+      await cmsLinkGoogleSheetL10n(props.docId, linkedSheet);
+      setLinkedSheet(linkedSheet);
       showNotification({
         title: 'Linked Google Sheet',
         message: `Successfully linked Google Sheet to ${props.docId}`,
@@ -510,15 +524,30 @@ LocalizationModal.Translations = (props: TranslationsProps) => {
           <IconLanguage strokeWidth={1.5} /> <span>Translations</span>
         </Heading>
         <div className="LocalizationModal__translations__header__buttons">
-          {gapiClient.enabled && (
-            <Tooltip label="Link Google Sheet">
-              <ActionIcon>
+          {gapiClient.enabled && linkedSheet?.spreadsheetId && (
+            <Tooltip label="View Google Sheet">
+              <ActionIcon<'a'>
+                component="a"
+                href={getSpreadsheetUrl(linkedSheet)}
+                target="_blank"
+                variant="filled"
+                color="lime"
+                size="sm"
+              >
                 <IconTable size={16} strokeWidth={2.25} />
               </ActionIcon>
             </Tooltip>
           )}
-          <ImportMenuButton onAction={onAction} gapiClient={gapiClient} />
-          <ExportMenuButton onAction={onAction} gapiClient={gapiClient} />
+          <ImportMenuButton
+            onAction={onAction}
+            gapiClient={gapiClient}
+            linkedSheet={linkedSheet}
+          />
+          <ExportMenuButton
+            onAction={onAction}
+            gapiClient={gapiClient}
+            linkedSheet={linkedSheet}
+          />
         </div>
       </div>
       <table className="LocalizationModal__translations__table">
@@ -673,6 +702,7 @@ function extractField(
 
 interface MenuButtonProps {
   gapiClient: GapiClient;
+  linkedSheet: GoogleSheetId | null;
   onAction?: (action: string) => void;
 }
 
@@ -682,6 +712,8 @@ function ImportMenuButton(props: MenuButtonProps) {
       props.onAction(action);
     }
   }
+
+  const linkedSheet = props.linkedSheet;
 
   return (
     <Menu
@@ -703,7 +735,10 @@ function ImportMenuButton(props: MenuButtonProps) {
       {props.gapiClient.enabled && (
         <>
           <Menu.Label>Google Sheets</Menu.Label>
-          <Menu.Item disabled onClick={() => dispatch('import-google-sheet')}>
+          <Menu.Item
+            disabled={!linkedSheet?.spreadsheetId}
+            onClick={() => dispatch('import-google-sheet')}
+          >
             Import Google Sheet
           </Menu.Item>
           <Divider />
@@ -721,6 +756,9 @@ function ExportMenuButton(props: MenuButtonProps) {
       props.onAction(action);
     }
   }
+
+  const linkedSheet = props.linkedSheet;
+  const hasLinkedSheet = !!linkedSheet?.spreadsheetId;
 
   return (
     <Menu
@@ -742,12 +780,22 @@ function ExportMenuButton(props: MenuButtonProps) {
       {props.gapiClient.enabled && (
         <>
           <Menu.Label>Google Sheets</Menu.Label>
-          <Menu.Item onClick={() => dispatch('export-google-sheet-create')}>
-            Create Google Sheet
-          </Menu.Item>
-          <Menu.Item onClick={() => dispatch('export-google-sheet-add-tab')}>
-            Add tab in Google Sheet
-          </Menu.Item>
+          {hasLinkedSheet ? (
+            <Menu.Item onClick={() => dispatch('export-linked-google-sheet')}>
+              Export to Google Sheet
+            </Menu.Item>
+          ) : (
+            <>
+              <Menu.Item onClick={() => dispatch('export-google-sheet-create')}>
+                Create Google Sheet
+              </Menu.Item>
+              <Menu.Item
+                onClick={() => dispatch('export-google-sheet-add-tab')}
+              >
+                Add tab in Google Sheet
+              </Menu.Item>
+            </>
+          )}
           <Divider />
         </>
       )}

@@ -1,6 +1,6 @@
 export interface GoogleSheetId {
   spreadsheetId: string;
-  gid: number;
+  gid?: number;
 }
 
 export interface GSpreadsheetCreateOptions {
@@ -38,7 +38,7 @@ export class GSpreadsheet {
   }
 
   get spreadsheetUrl() {
-    return `https://docs.google.com/spreadsheets/d/${this.spreadsheetId}/edit`;
+    return getSpreadsheetUrl({spreadsheetId: this.spreadsheetId});
   }
 
   async getSheet(gid: number) {
@@ -85,4 +85,15 @@ export class GSheet {
   setSheet(sheet: gapi.client.sheets.Spreadsheet) {
     this.sheet = sheet;
   }
+}
+
+export function getSpreadsheetUrl(sheetId: GoogleSheetId) {
+  const spreadsheetId = sheetId.spreadsheetId;
+  const segments = [
+    `https://docs.google.com/spreadsheets/d/${spreadsheetId}/edit`,
+  ];
+  if (typeof sheetId.gid === 'number') {
+    segments.push(`#gid=${sheetId.gid}`);
+  }
+  return segments.join('');
 }
