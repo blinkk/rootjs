@@ -1,5 +1,17 @@
 # @blinkk/root-cms
 
+## 1.0.0-rc.29
+
+### Minor Changes
+
+- 48153bc: feat: add publishDocs() to cms client
+
+### Patch Changes
+
+- 4baddc5: re-load doc card when reference changes
+- Updated dependencies [2709009]
+  - @blinkk/root@1.0.0-rc.29
+
 ## 1.0.0-rc.28
 
 ### Patch Changes
