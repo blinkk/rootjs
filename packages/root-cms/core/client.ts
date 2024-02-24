@@ -10,11 +10,16 @@ import {
 } from 'firebase-admin/firestore';
 import {CMSPlugin} from './plugin.js';
 
+/**
+ * Max number of docs that can be published at once by `publishDocs()`.
+ */
+export const PUBLISH_DOCS_BATCH_LIMIT = 100;
+
 export interface Doc<Fields = any> {
   /** The id of the doc, e.g. "Pages/foo-bar". */
   id: string;
   /** The collection id of the doc, e.g. "Pages". */
-  collectionId: string;
+  collection: string;
   /** The slug of the doc, e.g. "foo-bar". */
   slug: string;
   sys: {
@@ -194,6 +199,107 @@ export class RootCMSClient {
   }
 
   /**
+   * Batch publishes a set of docs by id.
+   */
+  async publishDocs(docIds: string[], options?: {publishedBy: string}) {
+    const projectCollectionsPath = `Projects/${this.projectId}/Collections`;
+    const publishedBy = options?.publishedBy || 'root-cms-client';
+
+    // Fetch the current draft data for each doc.
+    const docRefs = docIds.map((docId) => {
+      const [collection, slug] = docId.split('/');
+      if (!collection || !slug) {
+        throw new Error(`invalid doc id: ${docId}`);
+      }
+      const docRef = this.db.doc(
+        `${projectCollectionsPath}/${collection}/Drafts/${slug}`
+      );
+      return docRef;
+    });
+    const docSnapshots = await this.db.getAll(...docRefs);
+    const docs = docSnapshots
+      // Retrieve snapshot data for each doc.
+      .map((snapshot) => snapshot.data() as Doc)
+      // Remove docs that don't exist.
+      .filter((d) => !!d);
+
+    if (docs.length > PUBLISH_DOCS_BATCH_LIMIT) {
+      throw new Error(
+        `publishDocs() has a limit of ${PUBLISH_DOCS_BATCH_LIMIT}`
+      );
+    }
+
+    if (docs.length === 0) {
+      return [];
+    }
+
+    // // Each transaction or batch can write a max of 500 ops.
+    // // https://firebase.google.com/docs/firestore/manage-data/transactions
+    let batchCount = 0;
+    const batch = this.db.batch();
+    const publishedDocs: any[] = [];
+    for (const doc of docs) {
+      const {id, collection, slug, sys, fields} = doc;
+      const draftRef = this.db.doc(
+        `${projectCollectionsPath}/${collection}/Drafts/${slug}`
+      );
+      const scheduledRef = this.db.doc(
+        `${projectCollectionsPath}/${collection}/Scheduled/${slug}`
+      );
+      const publishedRef = this.db.doc(
+        `${projectCollectionsPath}/${collection}/Published/${slug}`
+      );
+
+      // Only update `firstPublished` if it doesn't already exist.
+      const firstPublishedAt =
+        sys.firstPublishedAt ?? FieldValue.serverTimestamp();
+      const firstPublishedBy = sys.firstPublishedBy ?? publishedBy;
+
+      // Save published doc.
+      batch.set(publishedRef, {
+        id,
+        collection,
+        slug,
+        fields: fields || {},
+        sys: {
+          ...sys,
+          firstPublishedAt: firstPublishedAt,
+          firstPublishedBy: firstPublishedBy,
+          publishedAt: FieldValue.serverTimestamp(),
+          publishedBy: publishedBy,
+        },
+      });
+      batchCount += 1;
+
+      // Remove scheduled doc, if any.
+      batch.delete(scheduledRef);
+      batchCount += 1;
+
+      // Update the draft doc to remove `scheduledAt` and `scheduledBy` fields
+      // and update the `publishedAt` and `publishedBy` fields.
+      batch.update(draftRef, {
+        'sys.scheduledAt': FieldValue.delete(),
+        'sys.scheduledBy': FieldValue.delete(),
+        'sys.firstPublishedAt': firstPublishedAt,
+        'sys.firstPublishedBy': firstPublishedBy,
+        'sys.publishedAt': FieldValue.serverTimestamp(),
+        'sys.publishedBy': publishedBy,
+      });
+      batchCount += 1;
+
+      publishedDocs.push(doc);
+
+      if (batchCount >= 498) {
+        break;
+      }
+    }
+
+    await batch.commit();
+    console.log(`published ${publishedDocs.length} docs!`);
+    return publishedDocs;
+  }
+
+  /**
    * Publishes scheduled docs.
    */
   async publishScheduledDocs() {
@@ -255,7 +361,8 @@ export class RootCMSClient {
 
       // Only update `firstPublished` if it doesn't already exist.
       const firstPublishedAt = sys.firstPublishedAt ?? scheduledAt;
-      const firstPublishedBy = sys.firstPublishedBy ?? (scheduledBy || '');
+      const firstPublishedBy =
+        sys.firstPublishedBy ?? (scheduledBy || 'root-cms-client');
 
       // Save published doc.
       batch.set(publishedRef, {
@@ -285,7 +392,7 @@ export class RootCMSClient {
         'sys.firstPublishedAt': firstPublishedAt,
         'sys.firstPublishedBy': firstPublishedBy,
         'sys.publishedAt': FieldValue.serverTimestamp(),
-        'sys.publishedBy': scheduledBy || '',
+        'sys.publishedBy': scheduledBy || 'root-cms-client',
       });
       batchCount += 1;
 
