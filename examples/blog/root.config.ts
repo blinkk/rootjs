@@ -60,6 +60,10 @@ export default defineConfig({
         appId: '1:636169634531:web:7b8fe398f10e5d9c4e7bd6',
         measurementId: 'G-5JTQHSPWBB',
       },
+      gapi: {
+        apiKey: process.env.GAPI_API_KEY,
+        clientId: process.env.GAPI_CLIENT_ID,
+      },
       isUserAuthorized: (req, user) => {
         return String(user?.email).endsWith('@blinkk.com');
       },

@@ -82,6 +82,7 @@ export async function renderApp(req: Request, res: Response, options: any) {
       i18n: rootConfig.i18n,
     },
     firebaseConfig: options.firebaseConfig,
+    gapi: cmsConfig.gapi,
     collections: collections,
   };
   const projectName = cmsConfig.name || cmsConfig.id || '';

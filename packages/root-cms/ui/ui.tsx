@@ -11,6 +11,7 @@ import {Route, Router} from 'preact-router';
 import {Collection} from '../core/schema.js';
 
 import {CopyDocModal} from './components/CopyDocModal/CopyDocModal.js';
+import {DocPickerModal} from './components/DocPickerModal/DocPickerModal.js';
 import {EditJsonModal} from './components/EditJsonModal/EditJsonModal.js';
 import {LocalizationModal} from './components/LocalizationModal/LocalizationModal.js';
 import {PublishDocModal} from './components/PublishDocModal/PublishDocModal.js';
@@ -26,7 +27,6 @@ import {SettingsPage} from './pages/SettingsPage/SettingsPage.js';
 import {TranslationsPage} from './pages/TranslationsPage/TranslationsPage.js';
 import './styles/global.css';
 import './styles/theme.css';
-import {DocPickerModal} from './components/DocPickerModal/DocPickerModal.js';
 
 declare global {
   interface Window {
@@ -44,6 +44,10 @@ declare global {
         };
       };
       firebaseConfig: Record<string, string>;
+      gapi?: {
+        apiKey: string;
+        clientId: string;
+      };
       collections: Record<string, Collection>;
     };
     firebase: FirebaseContextObject;

@@ -26,6 +26,7 @@ import {doc, getDoc} from 'firebase/firestore';
 import {useEffect, useMemo, useState} from 'preact/hooks';
 import * as schema from '../../../core/schema.js';
 import {DraftController} from '../../hooks/useDraft.js';
+import {GapiClient, useGapiClient} from '../../hooks/useGapiClient.js';
 import {useModalTheme} from '../../hooks/useModalTheme.js';
 import {cmsDocImportCsv} from '../../utils/doc.js';
 import {
@@ -276,6 +277,7 @@ LocalizationModal.Translations = (props: TranslationsProps) => {
     Record<string, string>
   >({});
   const [translationsMap, setTranslationsMap] = useState<TranslationsMap>({});
+  const gapiClient = useGapiClient();
 
   const sourceToTranslationsMap = useMemo(() => {
     const results: {[source: string]: Record<string, string>} = {};
@@ -433,13 +435,15 @@ LocalizationModal.Translations = (props: TranslationsProps) => {
           <IconLanguage strokeWidth={1.5} /> <span>Translations</span>
         </Heading>
         <div className="LocalizationModal__translations__header__buttons">
-          <Tooltip label="Link Google Sheet">
-            <ActionIcon>
-              <IconTable size={16} strokeWidth={2.25} />
-            </ActionIcon>
-          </Tooltip>
-          <ImportMenuButton onAction={onAction} />
-          <ExportMenuButton onAction={onAction} />
+          {gapiClient.enabled && (
+            <Tooltip label="Link Google Sheet">
+              <ActionIcon>
+                <IconTable size={16} strokeWidth={2.25} />
+              </ActionIcon>
+            </Tooltip>
+          )}
+          <ImportMenuButton onAction={onAction} gapiClient={gapiClient} />
+          <ExportMenuButton onAction={onAction} gapiClient={gapiClient} />
         </div>
       </div>
       <table className="LocalizationModal__translations__table">
@@ -593,6 +597,7 @@ function extractField(
 }
 
 interface MenuButtonProps {
+  gapiClient: GapiClient;
   onAction?: (action: string) => void;
 }
 
@@ -620,11 +625,15 @@ function ImportMenuButton(props: MenuButtonProps) {
         </Button>
       }
     >
-      <Menu.Label>Google Sheets</Menu.Label>
-      <Menu.Item disabled onClick={() => dispatch('import-google-sheet')}>
-        Import Google Sheet
-      </Menu.Item>
-      <Divider />
+      {props.gapiClient.enabled && (
+        <>
+          <Menu.Label>Google Sheets</Menu.Label>
+          <Menu.Item disabled onClick={() => dispatch('import-google-sheet')}>
+            Import Google Sheet
+          </Menu.Item>
+          <Divider />
+        </>
+      )}
       <Menu.Label>File</Menu.Label>
       <Menu.Item onClick={() => dispatch('import-csv')}>Import .csv</Menu.Item>
     </Menu>
@@ -633,6 +642,10 @@ function ImportMenuButton(props: MenuButtonProps) {
 
 function ExportMenuButton(props: MenuButtonProps) {
   function dispatch(action: string) {
+    console.log(action);
+    if (action === 'export-google-sheet-create') {
+      props.gapiClient.login();
+    }
     if (props.onAction) {
       props.onAction(action);
     }
@@ -655,14 +668,18 @@ function ExportMenuButton(props: MenuButtonProps) {
         </Button>
       }
     >
-      <Menu.Label>Google Sheets</Menu.Label>
-      <Menu.Item onClick={() => dispatch('export-google-sheet-create')}>
-        Create Google Sheet
-      </Menu.Item>
-      <Menu.Item onClick={() => dispatch('export-google-sheet-add-tab')}>
-        Add tab in Google Sheet
-      </Menu.Item>
-      <Divider />
+      {props.gapiClient.enabled && (
+        <>
+          <Menu.Label>Google Sheets</Menu.Label>
+          <Menu.Item onClick={() => dispatch('export-google-sheet-create')}>
+            Create Google Sheet
+          </Menu.Item>
+          <Menu.Item onClick={() => dispatch('export-google-sheet-add-tab')}>
+            Add tab in Google Sheet
+          </Menu.Item>
+          <Divider />
+        </>
+      )}
       <Menu.Label>File</Menu.Label>
       <Menu.Item onClick={() => dispatch('export-download-csv')}>
         Download .csv
