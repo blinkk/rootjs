@@ -1,5 +1,11 @@
 # @blinkk/root
 
+## 1.0.0-rc.29
+
+### Patch Changes
+
+- 2709009: fix: convert /index/index.html paths to /index.html
+
 ## 1.0.0-rc.28
 
 ### Patch Changes
