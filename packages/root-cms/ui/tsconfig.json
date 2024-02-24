@@ -16,6 +16,7 @@
     "outDir": "dist",
     "types": [
       "@types/gapi",
+      "@types/gapi.client.sheets-v4",
       "@types/google.accounts",
       "vite/client"
     ],

@@ -1,4 +1,4 @@
-import {resolve} from 'path';
+import {useLocalStorage} from '@mantine/hooks';
 import {useEffect, useState} from 'preact/hooks';
 
 const SCOPES = [
@@ -13,18 +13,27 @@ const DISCOVERY_DOCS = [
 export interface GapiClient {
   enabled: boolean;
   loading: boolean;
-  isLoggedIn: boolean;
+  isLoggedIn: () => boolean;
   login: () => Promise<void>;
 }
 
+interface GapiUserConsent {
+  clientId?: string;
+  scopes?: string[];
+  at?: number;
+}
+
 export function useGapiClient(): GapiClient {
+  const projectId = window.__ROOT_CTX.rootConfig.projectId;
   const enabled = Boolean(
     window.__ROOT_CTX.gapi?.apiKey && window.__ROOT_CTX.gapi?.clientId
   );
   const [loading, setLoading] = useState(enabled);
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-  // const [accessToken, setAccessToken] =
-  //   useState<google.accounts.oauth2.TokenResponse | null>(null);
+  const [tokenExpiresAt, setTokenExpiresAt] = useState(0);
+  const [userConsent, setUserConsent] = useLocalStorage<GapiUserConsent>({
+    key: `root-cms::${projectId}::gapi-user-consent`,
+    defaultValue: {},
+  });
 
   async function initGapi() {
     await Promise.all([loadGapiScript(), loadGisScript()]);
@@ -39,31 +48,67 @@ export function useGapiClient(): GapiClient {
 
   function login() {
     return new Promise<void>((resolve, reject) => {
+      const clientId = window.__ROOT_CTX.gapi!.clientId!;
       const tokenClient = google.accounts.oauth2.initTokenClient({
-        client_id: window.__ROOT_CTX.gapi!.clientId!,
+        client_id: clientId,
         scope: SCOPES.join(' '),
-        callback: async (tokenResponse) => {
-          console.log('logged in');
-          console.log(tokenResponse);
-          // setAccessToken(tokenResponse);
-
-          setIsLoggedIn(true);
+        callback: async (token) => {
+          // console.log('logged in');
+          // console.log(token);
+          const expiresAt = timestamp() + parseInt(token.expires_in);
+          setTokenExpiresAt(expiresAt);
+          // setCachedToken({token, expiresAt});
+          setUserConsent({
+            at: timestamp(),
+            clientId: clientId,
+            scopes: SCOPES,
+          });
           resolve();
         },
       });
 
-      if (gapi.client.getToken() === null) {
+      // if (gapi.client.getToken() === null) {
+      if (userConsent && verifyUserConsent(userConsent)) {
+        // Skip display of account chooser and consent dialog when user has
+        // previously consented.
+        tokenClient.requestAccessToken({prompt: ''});
+      } else {
         // Prompt the user to select a Google Account and ask for consent to share their data
         // when establishing a new session.
         tokenClient.requestAccessToken({prompt: 'consent'});
-      } else {
-        // Skip display of account chooser and consent dialog for an existing session.
-        tokenClient.requestAccessToken({prompt: ''});
       }
     });
   }
 
+  function isLoggedIn() {
+    return timestamp() < tokenExpiresAt;
+  }
+
   return {enabled, loading, isLoggedIn, login};
+}
+
+function verifyUserConsent(userConsent: GapiUserConsent) {
+  if (!userConsent) {
+    return false;
+  }
+
+  if (!userConsent.at) {
+    return false;
+  }
+
+  // Verify client id matches.
+  const clientId = window.__ROOT_CTX.gapi?.clientId;
+  if (userConsent.clientId !== clientId) {
+    return false;
+  }
+
+  // Verify all scopes.
+  const scopes = userConsent.scopes || [];
+  return SCOPES.every((scope) => scopes.includes(scope));
+}
+
+function timestamp() {
+  return Math.floor(new Date().getTime() / 1000);
 }
 
 let loadGapiScriptPromise: Promise<void> | null = null;
@@ -77,15 +122,14 @@ async function loadGapiScript() {
       script.onload = () => {
         gapi.load('client', async () => {
           try {
-            await gapi.client.init({
-              // clientId: window.__ROOT_CTX.gapi?.clientId,
-              // scope: SCOPES.join(' '),
-              // discoveryDocs: DISCOVERY_DOCS,
-            });
-            gapi.client.load(DISCOVERY_DOCS[0]).then(() => {
-              console.log('gapi.client loaded');
-              resolve();
-            });
+            await gapi.client.init({});
+            await Promise.all(
+              DISCOVERY_DOCS.map((discoveryDoc) =>
+                gapi.client.load(discoveryDoc)
+              )
+            );
+            console.log('gapi loaded');
+            resolve();
           } catch (error) {
             console.error('Error initializing gapi:', error);
             reject(error);

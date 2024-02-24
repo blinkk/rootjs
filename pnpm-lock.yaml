@@ -368,6 +368,9 @@ importers:
       '@types/gapi':
         specifier: 0.0.47
         version: 0.0.47
+      '@types/gapi.client.sheets-v4':
+        specifier: 0.0.4
+        version: 0.0.4
       '@types/google.accounts':
         specifier: 0.0.14
         version: 0.0.14
@@ -2130,6 +2133,20 @@ packages:
       read-yaml-file: 1.1.0
     dev: true
 
+  /@maxim_mazurok/gapi.client.discovery-v1@0.1.20200806:
+    resolution: {integrity: sha512-Wl6UfmZVDdWbY3PUu8E2ULk9RPLjnMqp/iOA4tcK8Ne+U/GmlnWP/e34IaZNGArfl7iXJNOG+/3Rj9L9jQyF9Q==}
+    dependencies:
+      '@types/gapi.client': 1.0.8
+      '@types/gapi.client.discovery-v1': 0.0.4
+    dev: true
+
+  /@maxim_mazurok/gapi.client.sheets-v4@0.0.20240213:
+    resolution: {integrity: sha512-ShvGAHwRclKMTkn05QZeZKNrKMgqVscKLQH5ETZkk1tqvsiB+4VNyd9pJvqxq8Kw13VA7TFLhITQpKDlsFwLnA==}
+    dependencies:
+      '@types/gapi.client': 1.0.8
+      '@types/gapi.client.discovery-v1': 0.0.4
+    dev: true
+
   /@nodelib/fs.scandir@2.1.5:
     resolution: {integrity: sha512-vq24Bq3ym5HEQm2NKCr3yXDwjc7vTsEThRDnkp2DK9p1uqLR+DHurm/NOTo0KG7HYHU7eppKZj3MyqYuMBf62g==}
     engines: {node: '>= 8'}
@@ -2591,6 +2608,22 @@ packages:
     dependencies:
       '@types/jsonfile': 6.1.2
       '@types/node': 20.8.4
+    dev: true
+
+  /@types/gapi.client.discovery-v1@0.0.4:
+    resolution: {integrity: sha512-uevhRumNE65F5mf2gABLaReOmbFSXONuzFZjNR3dYv6BmkHg+wciubHrfBAsp3554zNo3Dcg6dUAlwMqQfpwjQ==}
+    dependencies:
+      '@maxim_mazurok/gapi.client.discovery-v1': 0.1.20200806
+    dev: true
+
+  /@types/gapi.client.sheets-v4@0.0.4:
+    resolution: {integrity: sha512-6kTJ7aDMAElfdQV1XzVJmZWjgbibpa84DMuKuaN8Cwqci/dkglPyHXKvsGrRugmuYvgFYr35AQqwz6j3q8R0dw==}
+    dependencies:
+      '@maxim_mazurok/gapi.client.sheets-v4': 0.0.20240213
+    dev: true
+
+  /@types/gapi.client@1.0.8:
+    resolution: {integrity: sha512-qJQUmmumbYym3Amax0S8CVzuSngcXsC1fJdwRS2zeW5lM63zXkw4wJFP+bG0jzgi0R6EsJKoHnGNVTDbOyG1ng==}
     dev: true
 
   /@types/gapi@0.0.47:

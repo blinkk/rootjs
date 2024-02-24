@@ -14,6 +14,7 @@ import {
   getDocs,
   updateDoc,
 } from 'firebase/firestore';
+import {GoogleSheetId} from './gsheets.js';
 import {
   getTranslationsCollection,
   normalizeString,
@@ -442,6 +443,25 @@ export async function cmsRestoreVersion(docId: string, version: Version) {
     'sys.modifiedAt': serverTimestamp(),
     'sys.modifiedBy': window.firebase.user.email,
     fields: version.fields || {},
+  };
+  await updateDoc(docRef, updates);
+}
+
+/**
+ * Links a Google Sheet to a doc for localization.
+ */
+export async function cmsLinkGoogleSheetL10n(
+  docId: string,
+  sheetId: GoogleSheetId
+) {
+  if (!sheetId?.spreadsheetId) {
+    throw new Error('no spreadsheet id');
+  }
+  const docRef = getDraftDocRef(docId);
+  const updates = {
+    'sys.l10nSheet': sheetId,
+    'sys.l10nSheetLinkedAt': serverTimestamp(),
+    'sys.l10nSheetLinkedBy': window.firebase.user.email,
   };
   await updateDoc(docRef, updates);
 }

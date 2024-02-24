@@ -28,7 +28,8 @@ import * as schema from '../../../core/schema.js';
 import {DraftController} from '../../hooks/useDraft.js';
 import {GapiClient, useGapiClient} from '../../hooks/useGapiClient.js';
 import {useModalTheme} from '../../hooks/useModalTheme.js';
-import {cmsDocImportCsv} from '../../utils/doc.js';
+import {cmsDocImportCsv, cmsLinkGoogleSheetL10n} from '../../utils/doc.js';
+import {GSpreadsheet, createSheet} from '../../utils/gsheets.js';
 import {
   TranslationsMap,
   loadTranslations,
@@ -404,10 +405,84 @@ LocalizationModal.Translations = (props: TranslationsProps) => {
     fileInput.click();
   }
 
+  async function createGoogleSheet() {
+    if (!gapiClient.isLoggedIn()) {
+      await gapiClient.login();
+    }
+
+    // Create Google Sheet.
+    const rootConfig = window.__ROOT_CTX.rootConfig;
+    const project =
+      rootConfig.projectName || rootConfig.projectId || 'Root CMS';
+    let spreadsheet: GSpreadsheet;
+    try {
+      spreadsheet = await GSpreadsheet.create({
+        title: `${project} Localization`,
+      });
+      showNotification({
+        title: 'Created Google Sheet',
+        message: `Created Google Sheet: ${spreadsheet.spreadsheetUrl}`,
+        autoClose: 5000,
+      });
+    } catch (err) {
+      console.error(err);
+      let msg = err;
+      if (typeof err === 'object' && err.body) {
+        msg = String(err.body);
+      }
+      showNotification({
+        title: 'Failed to create Google Sheet',
+        message: String(msg),
+        color: 'red',
+        autoClose: false,
+      });
+      return;
+    }
+
+    // Link Google Sheet to CMS doc.
+    try {
+      await cmsLinkGoogleSheetL10n(props.docId, {
+        spreadsheetId: spreadsheet.spreadsheetId,
+        gid: 0,
+      });
+      showNotification({
+        title: 'Linked Google Sheet',
+        message: `Successfully linked Google Sheet to ${props.docId}`,
+      });
+    } catch (err) {
+      console.error(err);
+      showNotification({
+        title: 'Failed to link Google Sheet',
+        message: String(err),
+        color: 'red',
+        autoClose: false,
+      });
+      return;
+    }
+
+    // Export strings from the doc to the sheet.
+    const sheet = await spreadsheet.getSheet(0);
+    console.log(sheet);
+  }
+
+  async function addTabInGoogleSheet() {
+    // TODO(stevenle): impl.
+  }
+
+  async function exportStringsToLinkedSheet() {}
+
   function onAction(action: string) {
     switch (action) {
       case 'export-download-csv': {
         downloadCsv();
+        return;
+      }
+      case 'export-google-sheet-create': {
+        createGoogleSheet();
+        return;
+      }
+      case 'export-google-sheet-add-tab': {
+        addTabInGoogleSheet();
         return;
       }
       case 'import-csv': {
@@ -641,11 +716,7 @@ function ImportMenuButton(props: MenuButtonProps) {
 }
 
 function ExportMenuButton(props: MenuButtonProps) {
-  function dispatch(action: string) {
-    console.log(action);
-    if (action === 'export-google-sheet-create') {
-      props.gapiClient.login();
-    }
+  async function dispatch(action: string) {
     if (props.onAction) {
       props.onAction(action);
     }
