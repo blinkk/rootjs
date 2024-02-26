@@ -345,7 +345,8 @@ export async function cmsDocImportCsv(
         return l;
       }
     }
-    return locale;
+    // Ignore locales that are not in the root config.
+    return null;
   }
 
   const translationsMap: Record<string, CsvTranslation> = {};
@@ -361,7 +362,9 @@ export async function cmsDocImportCsv(
         return;
       }
       const locale = normalizeLocale(column);
-      translation[locale] = normalizeString(str || '');
+      if (locale) {
+        translation[locale] = normalizeString(str || '');
+      }
     });
 
     const hash = await sourceHash(translation.source);
@@ -465,6 +468,17 @@ export async function cmsLinkGoogleSheetL10n(
       linkedAt: serverTimestamp(),
       linkedBy: window.firebase.user.email,
     },
+  };
+  await updateDoc(docRef, updates);
+}
+
+/**
+ * Unlinks a Google Sheet used for localization.
+ */
+export async function cmsUnlinkGoogleSheetL10n(docId: string) {
+  const docRef = getDraftDocRef(docId);
+  const updates = {
+    'sys.l10nSheet': deleteField(),
   };
   await updateDoc(docRef, updates);
 }

@@ -29,14 +29,16 @@ import {DraftController} from '../../hooks/useDraft.js';
 import {GapiClient, useGapiClient} from '../../hooks/useGapiClient.js';
 import {useModalTheme} from '../../hooks/useModalTheme.js';
 import {
+  CsvTranslation,
   cmsDocImportCsv,
   cmsGetLinkedGoogleSheetL10n,
   cmsLinkGoogleSheetL10n,
+  cmsUnlinkGoogleSheetL10n,
 } from '../../utils/doc.js';
 import {
+  GSheet,
   GSpreadsheet,
   GoogleSheetId,
-  createSheet,
   getSpreadsheetUrl,
 } from '../../utils/gsheets.js';
 import {
@@ -49,6 +51,16 @@ import './LocalizationModal.css';
 import {extractRichTextStrings} from '../RichTextEditor/RichTextEditor.js';
 
 const MODAL_ID = 'LocalizationModal';
+
+enum MenuAction {
+  EXPORT_DOWNLOAD_CSV = 'EXPORT_DOWNLOAD_CSV',
+  EXPORT_GOOGLE_SHEET_CREATE = 'EXPORT_GOOGLE_SHEET_CREATE',
+  EXPORT_GOOGLE_SHEET_ADD_TAB = 'EXPORT_GOOGLE_SHEET_ADD_TAB',
+  EXPORT_GOOGLE_SHEET_LINKED = 'EXPORT_GOOGLE_SHEET_LINKED',
+  IMPORT_CSV = 'IMPORT_CSV',
+  IMPORT_GOOGLE_SHEET_LINKED = 'IMPORT_GOOGLE_SHEET_LINKED',
+  UNLINK_GOOGLE_SHEET = 'UNLINK_GOOGLE_SHEET',
+}
 
 export interface LocalizationModalProps {
   [key: string]: unknown;
@@ -313,7 +325,6 @@ LocalizationModal.Translations = (props: TranslationsProps) => {
     ]).then(([sourceStrings, translationsMap, linkedSheet]) => {
       setSourceStrings(sourceStrings);
       setTranslationsMap(translationsMap);
-      console.log('linked sheet:', linkedSheet);
       setLinkedSheet(linkedSheet);
       setLoading(false);
     });
@@ -342,7 +353,7 @@ LocalizationModal.Translations = (props: TranslationsProps) => {
     return '';
   }
 
-  async function downloadCsv() {
+  function formatCsvData() {
     const nonEnLocales = locales.filter((l) => l !== 'en');
     const headers = ['source', 'en', ...nonEnLocales];
     const rows: Array<Record<string, string>> = [];
@@ -356,6 +367,11 @@ LocalizationModal.Translations = (props: TranslationsProps) => {
       });
       rows.push(row);
     });
+    return {headers, rows};
+  }
+
+  async function downloadCsv() {
+    const {headers, rows} = formatCsvData();
     const res = await window.fetch('/cms/api/csv.download', {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
@@ -400,7 +416,7 @@ LocalizationModal.Translations = (props: TranslationsProps) => {
           });
           showNotification({
             title: 'Saved!',
-            message: `Successfully imported translations for ${props.docId}.`,
+            message: `Imported translations for ${props.docId}.`,
             autoClose: 5000,
           });
         } catch (err) {
@@ -426,14 +442,14 @@ LocalizationModal.Translations = (props: TranslationsProps) => {
     const rootConfig = window.__ROOT_CTX.rootConfig;
     const project =
       rootConfig.projectName || rootConfig.projectId || 'Root CMS';
-    let spreadsheet: GSpreadsheet;
+    let gspreadsheet: GSpreadsheet;
     try {
-      spreadsheet = await GSpreadsheet.create({
+      gspreadsheet = await GSpreadsheet.create({
         title: `${project} Localization`,
       });
       showNotification({
         title: 'Created Google Sheet',
-        message: `Created Google Sheet: ${spreadsheet.spreadsheetUrl}`,
+        message: `Created Google Sheet: ${gspreadsheet.spreadsheetUrl}`,
         autoClose: 5000,
       });
     } catch (err) {
@@ -454,7 +470,7 @@ LocalizationModal.Translations = (props: TranslationsProps) => {
     // Link Google Sheet to CMS doc.
     try {
       const linkedSheet = {
-        spreadsheetId: spreadsheet.spreadsheetId,
+        spreadsheetId: gspreadsheet.spreadsheetId,
         gid: 0,
       };
       await cmsLinkGoogleSheetL10n(props.docId, linkedSheet);
@@ -475,33 +491,137 @@ LocalizationModal.Translations = (props: TranslationsProps) => {
     }
 
     // Export strings from the doc to the sheet.
-    const sheet = await spreadsheet.getSheet(0);
-    console.log(sheet);
+    const gsheet = await gspreadsheet.getSheet(0);
+    if (gsheet) {
+      try {
+        await exportStringsToSheet(gsheet, {isNew: true});
+      } catch (err) {
+        console.error(err);
+        let msg = err;
+        if (typeof err === 'object' && err.body) {
+          msg = String(err.body);
+        }
+        showNotification({
+          title: 'Failed to export strings to Google Sheet',
+          message: msg,
+          color: 'red',
+          autoClose: false,
+        });
+      }
+    }
   }
 
   async function addTabInGoogleSheet() {
-    // TODO(stevenle): impl.
+    // await exportStringsToLinkedSheet({isNew: true});
   }
 
-  async function exportStringsToLinkedSheet() {}
+  async function exportStringsToSheet(
+    gsheet: GSheet,
+    options?: {isNew?: boolean}
+  ) {
+    const isNew = options?.isNew || false;
+    const {headers, rows} = formatCsvData();
+    if (isNew) {
+      // Update sheet data.
+      await gsheet.replaceSheet(headers, rows);
+      // Apply the default styles to the sheet.
+      await gsheet.applyL10nTheme();
+    } else {
+      // Update existing sheet, replacing only cells as needed (keyed by the
+      // "source" column). New rows are added to the end of the sheet.
+      await gsheet.updateRows(rows, 'source');
+    }
+  }
 
-  function onAction(action: string) {
+  async function importGoogleSheet() {
+    if (!gapiClient.isLoggedIn()) {
+      await gapiClient.login();
+    }
+    if (!linkedSheet?.spreadsheetId) {
+      throw new Error('no sheet linked');
+    }
+    const gspreadsheet = new GSpreadsheet(linkedSheet.spreadsheetId);
+    const gsheet = await gspreadsheet.getSheet(linkedSheet.gid ?? 0);
+    if (!gsheet) {
+      throw new Error(`sheet not found: ${JSON.stringify(linkedSheet)}`);
+    }
+
+    console.log('importing google sheet');
+    const values = (await gsheet.getValues()) as CsvTranslation[];
+
+    const importedTranslations = await cmsDocImportCsv(props.docId, values);
+    setTranslationsMap((currentTranslations) => {
+      return Object.assign({}, currentTranslations, importedTranslations);
+    });
+    showNotification({
+      title: 'Saved!',
+      message: `Imported translations for ${props.docId}.`,
+      autoClose: 5000,
+    });
+  }
+
+  async function unlinkGoogleSheet() {
+    await cmsUnlinkGoogleSheetL10n(props.docId);
+    setLinkedSheet(null);
+    showNotification({
+      title: 'Unlinked Google Sheet',
+      message: `${props.docId} is no longer connected to a Google Sheet.`,
+      autoClose: 5000,
+    });
+  }
+
+  /**
+   * Wrapper that calls a function and shows a generic error notification if any
+   * exceptions occur.
+   */
+  async function notifyErrors(fn: () => Promise<void>) {
+    try {
+      await fn();
+    } catch (err) {
+      console.error(err);
+      let msg: string;
+      if (typeof err === 'object' && err.body) {
+        msg = String(err.body);
+      } else {
+        msg = String(err);
+      }
+      showNotification({
+        title: 'Error',
+        message: msg,
+        color: 'red',
+        autoClose: false,
+      });
+    }
+  }
+
+  function onAction(action: MenuAction) {
     switch (action) {
-      case 'export-download-csv': {
-        downloadCsv();
+      case MenuAction.EXPORT_DOWNLOAD_CSV: {
+        notifyErrors(downloadCsv);
         return;
       }
-      case 'export-google-sheet-create': {
-        createGoogleSheet();
+      case MenuAction.EXPORT_GOOGLE_SHEET_CREATE: {
+        notifyErrors(createGoogleSheet);
         return;
       }
-      case 'export-google-sheet-add-tab': {
-        addTabInGoogleSheet();
+      case MenuAction.EXPORT_GOOGLE_SHEET_ADD_TAB: {
+        notifyErrors(addTabInGoogleSheet);
         return;
       }
-      case 'import-csv': {
-        importCsv();
+      case MenuAction.IMPORT_CSV: {
+        notifyErrors(importCsv);
         return;
+      }
+      case MenuAction.IMPORT_GOOGLE_SHEET_LINKED: {
+        notifyErrors(importGoogleSheet);
+        return;
+      }
+      case MenuAction.UNLINK_GOOGLE_SHEET: {
+        notifyErrors(unlinkGoogleSheet);
+        return;
+      }
+      default: {
+        console.log('unhandled action: ' + action);
       }
     }
   }
@@ -531,7 +651,7 @@ LocalizationModal.Translations = (props: TranslationsProps) => {
                 href={getSpreadsheetUrl(linkedSheet)}
                 target="_blank"
                 variant="filled"
-                color="lime"
+                color="green"
                 size="sm"
               >
                 <IconTable size={16} strokeWidth={2.25} />
@@ -703,11 +823,11 @@ function extractField(
 interface MenuButtonProps {
   gapiClient: GapiClient;
   linkedSheet: GoogleSheetId | null;
-  onAction?: (action: string) => void;
+  onAction?: (action: MenuAction) => void;
 }
 
 function ImportMenuButton(props: MenuButtonProps) {
-  function dispatch(action: string) {
+  function dispatch(action: MenuAction) {
     if (props.onAction) {
       props.onAction(action);
     }
@@ -717,7 +837,7 @@ function ImportMenuButton(props: MenuButtonProps) {
 
   return (
     <Menu
-      className=""
+      className="LocalizationModal__translations__menu"
       position="bottom"
       placement="end"
       control={
@@ -736,8 +856,9 @@ function ImportMenuButton(props: MenuButtonProps) {
         <>
           <Menu.Label>Google Sheets</Menu.Label>
           <Menu.Item
+            className="LocalizationModal__translations__menu__item"
             disabled={!linkedSheet?.spreadsheetId}
-            onClick={() => dispatch('import-google-sheet')}
+            onClick={() => dispatch(MenuAction.IMPORT_GOOGLE_SHEET_LINKED)}
           >
             Import Google Sheet
           </Menu.Item>
@@ -745,13 +866,18 @@ function ImportMenuButton(props: MenuButtonProps) {
         </>
       )}
       <Menu.Label>File</Menu.Label>
-      <Menu.Item onClick={() => dispatch('import-csv')}>Import .csv</Menu.Item>
+      <Menu.Item
+        className="LocalizationModal__translations__menu__item"
+        onClick={() => dispatch(MenuAction.IMPORT_CSV)}
+      >
+        Import .csv
+      </Menu.Item>
     </Menu>
   );
 }
 
 function ExportMenuButton(props: MenuButtonProps) {
-  async function dispatch(action: string) {
+  async function dispatch(action: MenuAction) {
     if (props.onAction) {
       props.onAction(action);
     }
@@ -762,7 +888,7 @@ function ExportMenuButton(props: MenuButtonProps) {
 
   return (
     <Menu
-      className=""
+      className="LocalizationModal__translations__menu"
       position="bottom"
       placement="start"
       control={
@@ -781,16 +907,25 @@ function ExportMenuButton(props: MenuButtonProps) {
         <>
           <Menu.Label>Google Sheets</Menu.Label>
           {hasLinkedSheet ? (
-            <Menu.Item onClick={() => dispatch('export-linked-google-sheet')}>
-              Export to Google Sheet
-            </Menu.Item>
+            <>
+              <Menu.Item
+                className="LocalizationModal__translations__menu__item"
+                onClick={() => dispatch(MenuAction.EXPORT_GOOGLE_SHEET_LINKED)}
+              >
+                Export to Google Sheet
+              </Menu.Item>
+            </>
           ) : (
             <>
-              <Menu.Item onClick={() => dispatch('export-google-sheet-create')}>
+              <Menu.Item
+                className="LocalizationModal__translations__menu__item"
+                onClick={() => dispatch(MenuAction.EXPORT_GOOGLE_SHEET_CREATE)}
+              >
                 Create Google Sheet
               </Menu.Item>
               <Menu.Item
-                onClick={() => dispatch('export-google-sheet-add-tab')}
+                className="LocalizationModal__translations__menu__item"
+                onClick={() => dispatch(MenuAction.EXPORT_GOOGLE_SHEET_ADD_TAB)}
               >
                 Add tab in Google Sheet
               </Menu.Item>
@@ -800,9 +935,25 @@ function ExportMenuButton(props: MenuButtonProps) {
         </>
       )}
       <Menu.Label>File</Menu.Label>
-      <Menu.Item onClick={() => dispatch('export-download-csv')}>
+      <Menu.Item
+        className="LocalizationModal__translations__menu__item"
+        onClick={() => dispatch(MenuAction.EXPORT_DOWNLOAD_CSV)}
+      >
         Download .csv
       </Menu.Item>
+      {hasLinkedSheet && (
+        <>
+          <Divider />
+          <Menu.Label>Danger zone</Menu.Label>
+          <Menu.Item
+            className="LocalizationModal__translations__menu__item"
+            onClick={() => dispatch(MenuAction.UNLINK_GOOGLE_SHEET)}
+            color="red"
+          >
+            Unlink Google Sheet
+          </Menu.Item>
+        </>
+      )}
     </Menu>
   );
 }
