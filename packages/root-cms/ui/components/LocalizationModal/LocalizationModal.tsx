@@ -443,14 +443,21 @@ LocalizationModal.Translations = (props: TranslationsProps) => {
     const project =
       rootConfig.projectName || rootConfig.projectId || 'Root CMS';
     let gspreadsheet: GSpreadsheet;
+    let gsheet: GSheet;
     try {
       gspreadsheet = await GSpreadsheet.create({
         title: `${project} Localization`,
       });
+      gsheet = (await gspreadsheet.getSheet(0)) as GSheet;
+      if (!gsheet) {
+        throw new Error('could not find sheet gid=0');
+      }
+      // Update tab name to the doc id.
+      gsheet.setTitle(props.docId);
       showNotification({
         title: 'Created Google Sheet',
-        message: `Created Google Sheet: ${gspreadsheet.spreadsheetUrl}`,
-        autoClose: 5000,
+        message: gspreadsheet.getUrl(),
+        autoClose: false,
       });
     } catch (err) {
       console.error(err);
@@ -491,28 +498,45 @@ LocalizationModal.Translations = (props: TranslationsProps) => {
     }
 
     // Export strings from the doc to the sheet.
-    const gsheet = await gspreadsheet.getSheet(0);
-    if (gsheet) {
-      try {
-        await exportStringsToSheet(gsheet, {isNew: true});
-      } catch (err) {
-        console.error(err);
-        let msg = err;
-        if (typeof err === 'object' && err.body) {
-          msg = String(err.body);
-        }
-        showNotification({
-          title: 'Failed to export strings to Google Sheet',
-          message: msg,
-          color: 'red',
-          autoClose: false,
-        });
+    try {
+      await exportStringsToSheet(gsheet, {isNew: true});
+    } catch (err) {
+      console.error(err);
+      let msg = err;
+      if (typeof err === 'object' && err.body) {
+        msg = String(err.body);
       }
+      showNotification({
+        title: 'Failed to export strings to Google Sheet',
+        message: msg,
+        color: 'red',
+        autoClose: false,
+      });
+    }
+
+    const browserTab = window.open(gsheet.getUrl(), '_blank');
+    if (browserTab) {
+      browserTab.focus();
     }
   }
 
   async function addTabInGoogleSheet() {
     // await exportStringsToLinkedSheet({isNew: true});
+  }
+
+  async function exportToLinkedSheet() {
+    if (!gapiClient.isLoggedIn()) {
+      await gapiClient.login();
+    }
+    if (!linkedSheet?.spreadsheetId) {
+      throw new Error('no sheet linked');
+    }
+    const gspreadsheet = new GSpreadsheet(linkedSheet.spreadsheetId);
+    const gsheet = await gspreadsheet.getSheet(linkedSheet.gid ?? 0);
+    if (!gsheet) {
+      throw new Error(`sheet not found: ${JSON.stringify(linkedSheet)}`);
+    }
+    await exportStringsToSheet(gsheet);
   }
 
   async function exportStringsToSheet(
@@ -529,7 +553,13 @@ LocalizationModal.Translations = (props: TranslationsProps) => {
     } else {
       // Update existing sheet, replacing only cells as needed (keyed by the
       // "source" column). New rows are added to the end of the sheet.
-      await gsheet.updateRows(rows, 'source');
+      await gsheet.updateValuesMap(rows, {
+        keyedBy: 'source',
+        // When exporting strings, avoid overwriting cells where there is an
+        // existing translation. If users want to export translations from the
+        // CMS to the sheet, they should clear those cells first.
+        preserveColumns: locales,
+      });
     }
   }
 
@@ -547,7 +577,7 @@ LocalizationModal.Translations = (props: TranslationsProps) => {
     }
 
     console.log('importing google sheet');
-    const values = (await gsheet.getValues()) as CsvTranslation[];
+    const values = (await gsheet.getValuesMap()) as CsvTranslation[];
 
     const importedTranslations = await cmsDocImportCsv(props.docId, values);
     setTranslationsMap((currentTranslations) => {
@@ -606,6 +636,10 @@ LocalizationModal.Translations = (props: TranslationsProps) => {
       }
       case MenuAction.EXPORT_GOOGLE_SHEET_ADD_TAB: {
         notifyErrors(addTabInGoogleSheet);
+        return;
+      }
+      case MenuAction.EXPORT_GOOGLE_SHEET_LINKED: {
+        notifyErrors(exportToLinkedSheet);
         return;
       }
       case MenuAction.IMPORT_CSV: {

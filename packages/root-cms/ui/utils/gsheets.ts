@@ -40,7 +40,7 @@ export class GSpreadsheet {
     return gspreadsheet;
   }
 
-  get spreadsheetUrl() {
+  getUrl() {
     return getSpreadsheetUrl({spreadsheetId: this.spreadsheetId});
   }
 
@@ -89,7 +89,7 @@ export class GSpreadsheet {
 export class GSheet {
   readonly spreadsheet: GSpreadsheet;
   readonly gid: number;
-  readonly title: string;
+  title: string;
 
   constructor(spreadsheet: GSpreadsheet, gid: number, title: string) {
     this.spreadsheet = spreadsheet;
@@ -112,7 +112,7 @@ export class GSheet {
    * After running:
    *
    * ```
-   * updateRows(
+   * gsheet.updateValuesMap(
    *   [
    *     {key: 'baz', col_a: 'new1', col_b: 'new2'}
    *     {key: 'foo', col_a: 'new3', col_b: 'new4'},
@@ -130,8 +130,140 @@ export class GSheet {
    * baz  |  new1   |  new2
    * ```
    */
-  async updateRows(rows: Array<Record<string, string>>, keyedBy: string) {
-    // TODO(stevenle): implement.
+  async updateValuesMap(
+    valuesMap: Array<Record<string, string>>,
+    options: {
+      /** Column name that identifies each row. */
+      keyedBy: string;
+      /** If provided, these columns will not be overwritten if there is an existing value. */
+      preserveColumns?: string[];
+    }
+  ) {
+    const keyedBy = options.keyedBy;
+    const preserveColumns = options.preserveColumns || [];
+    if (!keyedBy) {
+      throw new Error('missing "keyedBy" argument');
+    }
+
+    // Fetch current sheet values.
+    const [initialHeaders, initialRows] = await this.getValues();
+    const headers = [...initialHeaders];
+
+    // Represent the changes to the sheet as a 2d array, storing whether or not
+    // the cell's value has changed and its text value.
+    const sheetUpdates: Array<Array<{hasChanges: boolean; value: string}>> = [];
+
+    // Add header row.
+    let keyedByColIndex = -1;
+    const preserveColumnsIndexes: Set<number> = new Set();
+    sheetUpdates.push(
+      initialHeaders.map((header, colIndex) => {
+        if (header === keyedBy) {
+          keyedByColIndex = colIndex;
+        }
+        if (preserveColumns.includes(header)) {
+          preserveColumnsIndexes.add(colIndex);
+        }
+        return {hasChanges: false, value: header};
+      })
+    );
+
+    function addHeaderCol(name: string) {
+      sheetUpdates[0].push({hasChanges: true, value: name});
+      headers.push(name);
+    }
+
+    // If the "keyedBy" column doesn't exist, add it.
+    if (keyedByColIndex === -1) {
+      addHeaderCol(keyedBy);
+    }
+
+    // Maintain an index of the "keyedBy" row numbers.
+    const rowIndexMap: Record<string, number> = {};
+
+    // Add initial row values with `{hasChanges: false}`.
+    initialRows.forEach((row, i) => {
+      const rowIndex = i + 1; // Add 1 to account for the header row.
+      sheetUpdates.push(
+        row.map((cellValue, colIndex) => {
+          if (colIndex === keyedByColIndex && cellValue) {
+            if (cellValue in rowIndexMap) {
+              // When there are multiple rows with the same keyedBy value,
+              // only update the first row.
+              console.warn(`multiple rows keyed by "${cellValue}"`);
+            } else {
+              rowIndexMap[cellValue] = rowIndex;
+            }
+          }
+          return {hasChanges: false, value: cellValue};
+        })
+      );
+    });
+
+    /**
+     * Converts a row from a key-value map to an array of strings based on
+     * sheet's column headers.
+     */
+    function mapToArrayValues(row: Record<string, string>) {
+      for (const key in row) {
+        if (!headers.includes(key)) {
+          addHeaderCol(key);
+        }
+      }
+      const values = headers.map((key) => row[key] || null);
+      return values;
+    }
+
+    // Add new values to `sheetUpdates`.
+    valuesMap.forEach((row) => {
+      const values = mapToArrayValues(row);
+      const keyedByValue = row[keyedBy];
+
+      // Get the row index using the "keyedBy" column value. Note that
+      // `rowIndex` should be >0 since the header row is first.
+      const rowIndex = rowIndexMap[keyedByValue];
+      if (rowIndex) {
+        // Update the existing row with new values, marking changes with
+        // `{hasChanges: true}`. When only cells with changes are updated, any
+        // previous formulas used in other cells are preserved without
+        // accidental overwrites.
+        const sheetUpdatesRow = sheetUpdates[rowIndex];
+        values.map((value, colIndex) => {
+          if (colIndex >= sheetUpdatesRow.length) {
+            sheetUpdatesRow.push({
+              hasChanges: true,
+              value: value || '',
+            });
+          } else if (
+            value !== null &&
+            sheetUpdatesRow[colIndex].value !== value
+          ) {
+            // If the column is in the "preserveColumns" list and a value
+            // exists, ignore changes.
+            if (
+              !preserveColumnsIndexes.has(colIndex) ||
+              !sheetUpdatesRow[colIndex].value
+            ) {
+              sheetUpdatesRow[colIndex] = {
+                hasChanges: true,
+                value: value,
+              };
+            }
+          }
+        });
+      } else {
+        // No existing row matching the "keyedBy" column, append values to the
+        // end of the sheet.
+        sheetUpdates.push(
+          values.map((value) => {
+            return {hasChanges: !!value, value: value || ''};
+          })
+        );
+      }
+    });
+
+    console.log(rowIndexMap);
+    console.log(sheetUpdates);
   }
 
   /**
@@ -210,7 +342,11 @@ export class GSheet {
     });
   }
 
-  async getValues(): Promise<Array<Record<string, string>>> {
+  /**
+   * Returns the sheet's column headers and row values as an 2d array of
+   * strings.
+   */
+  async getValues() {
     const res = await gapi.client.sheets.spreadsheets.values.get({
       spreadsheetId: this.spreadsheet.spreadsheetId,
       range: this.title,
@@ -218,15 +354,55 @@ export class GSheet {
     const values = res.result.values as string[][];
     const headers = values[0];
     const rows = values.slice(1);
+    return [headers, rows] as const;
+  }
+
+  /**
+   * Returns the sheet values as an array of objects.
+   */
+  async getValuesMap(): Promise<Array<Record<string, string>>> {
+    const [headers, rows] = await this.getValues();
     const results = rows.map((row) => {
       const data: Record<string, string> = {};
       row.forEach((value, i) => {
         const key = headers[i];
-        data[key] = String(value || '');
+        if (key) {
+          data[key] = String(value || '');
+        }
       });
       return data;
     });
     return results;
+  }
+
+  /**
+   * Updates the tab title of the sheet.
+   */
+  async setTitle(title: string) {
+    await gapi.client.sheets.spreadsheets.batchUpdate({
+      spreadsheetId: this.spreadsheet.spreadsheetId,
+      resource: {
+        requests: [
+          {
+            updateSheetProperties: {
+              properties: {
+                title: title,
+                sheetId: this.gid,
+              },
+              fields: 'title',
+            },
+          },
+        ],
+      },
+    });
+    this.title = title;
+  }
+
+  getUrl() {
+    return getSpreadsheetUrl({
+      spreadsheetId: this.spreadsheet.spreadsheetId,
+      gid: this.gid,
+    });
   }
 
   async applyL10nTheme() {
