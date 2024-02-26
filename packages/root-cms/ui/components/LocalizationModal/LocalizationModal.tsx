@@ -962,12 +962,12 @@ function ExportMenuButton(props: MenuButtonProps) {
               >
                 Create Google Sheet
               </Menu.Item>
-              <Menu.Item
+              {/* <Menu.Item
                 className="LocalizationModal__translations__menu__item"
                 onClick={() => dispatch(MenuAction.EXPORT_GOOGLE_SHEET_ADD_TAB)}
               >
                 Add tab in Google Sheet
-              </Menu.Item>
+              </Menu.Item> */}
             </>
           )}
           <Divider />
