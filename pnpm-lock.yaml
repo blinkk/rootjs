@@ -183,6 +183,9 @@ importers:
       cookie-parser:
         specifier: 1.4.6
         version: 1.4.6
+      dotenv:
+        specifier: 16.4.5
+        version: 16.4.5
       esbuild:
         specifier: 0.19.9
         version: 0.19.9
@@ -362,6 +365,15 @@ importers:
       '@types/body-parser':
         specifier: 1.19.3
         version: 1.19.3
+      '@types/gapi':
+        specifier: 0.0.47
+        version: 0.0.47
+      '@types/gapi.client.sheets-v4':
+        specifier: 0.0.4
+        version: 0.0.4
+      '@types/google.accounts':
+        specifier: 0.0.14
+        version: 0.0.14
       '@types/jsonwebtoken':
         specifier: 9.0.1
         version: 9.0.1
@@ -2121,6 +2133,20 @@ packages:
       read-yaml-file: 1.1.0
     dev: true
 
+  /@maxim_mazurok/gapi.client.discovery-v1@0.1.20200806:
+    resolution: {integrity: sha512-Wl6UfmZVDdWbY3PUu8E2ULk9RPLjnMqp/iOA4tcK8Ne+U/GmlnWP/e34IaZNGArfl7iXJNOG+/3Rj9L9jQyF9Q==}
+    dependencies:
+      '@types/gapi.client': 1.0.8
+      '@types/gapi.client.discovery-v1': 0.0.4
+    dev: true
+
+  /@maxim_mazurok/gapi.client.sheets-v4@0.0.20240213:
+    resolution: {integrity: sha512-ShvGAHwRclKMTkn05QZeZKNrKMgqVscKLQH5ETZkk1tqvsiB+4VNyd9pJvqxq8Kw13VA7TFLhITQpKDlsFwLnA==}
+    dependencies:
+      '@types/gapi.client': 1.0.8
+      '@types/gapi.client.discovery-v1': 0.0.4
+    dev: true
+
   /@nodelib/fs.scandir@2.1.5:
     resolution: {integrity: sha512-vq24Bq3ym5HEQm2NKCr3yXDwjc7vTsEThRDnkp2DK9p1uqLR+DHurm/NOTo0KG7HYHU7eppKZj3MyqYuMBf62g==}
     engines: {node: '>= 8'}
@@ -2584,12 +2610,36 @@ packages:
       '@types/node': 20.8.4
     dev: true
 
+  /@types/gapi.client.discovery-v1@0.0.4:
+    resolution: {integrity: sha512-uevhRumNE65F5mf2gABLaReOmbFSXONuzFZjNR3dYv6BmkHg+wciubHrfBAsp3554zNo3Dcg6dUAlwMqQfpwjQ==}
+    dependencies:
+      '@maxim_mazurok/gapi.client.discovery-v1': 0.1.20200806
+    dev: true
+
+  /@types/gapi.client.sheets-v4@0.0.4:
+    resolution: {integrity: sha512-6kTJ7aDMAElfdQV1XzVJmZWjgbibpa84DMuKuaN8Cwqci/dkglPyHXKvsGrRugmuYvgFYr35AQqwz6j3q8R0dw==}
+    dependencies:
+      '@maxim_mazurok/gapi.client.sheets-v4': 0.0.20240213
+    dev: true
+
+  /@types/gapi.client@1.0.8:
+    resolution: {integrity: sha512-qJQUmmumbYym3Amax0S8CVzuSngcXsC1fJdwRS2zeW5lM63zXkw4wJFP+bG0jzgi0R6EsJKoHnGNVTDbOyG1ng==}
+    dev: true
+
+  /@types/gapi@0.0.47:
+    resolution: {integrity: sha512-/ZsLuq6BffMgbKMtZyDZ8vwQvTyKhKQ1G2K6VyWCgtHHhfSSXbk4+4JwImZiTjWNXfI2q1ZStAwFFHSkNoTkHA==}
+    dev: true
+
   /@types/glob@8.1.0:
     resolution: {integrity: sha512-IO+MJPVhoqz+28h1qLAcBEH2+xHMK6MTyHJc7MTnnYb6wsoLR29POVGJ7LycmVXIqyy/4/2ShP5sUwTXuOwb/w==}
     requiresBuild: true
     dependencies:
       '@types/minimatch': 5.1.2
       '@types/node': 20.8.4
+
+  /@types/google.accounts@0.0.14:
+    resolution: {integrity: sha512-HqIVkVzpiLWhlajhQQd4rIV7czanFvXblJI2J1fSrL+VKQuQwwZ63m35D/mI0flsqKE6p/hNrAG0Yn4FD6JvNA==}
+    dev: true
 
   /@types/html-minifier-terser@7.0.0:
     resolution: {integrity: sha512-hw3bhStrg5e3FQT8qZKCJTrzt/UbEaunU1xRWJ+aNOTmeBMvE3S4Ml2HiiNnZgL8izu0LFVkHUoPFXL1s5QNpQ==}
@@ -4277,6 +4327,11 @@ packages:
     dependencies:
       is-obj: 2.0.0
     dev: true
+
+  /dotenv@16.4.5:
+    resolution: {integrity: sha512-ZmdL2rui+eB2YwhsWzjInR8LldtZHGDoQ1ugH85ppHKwpUHL7j7rN0Ti9NCnGiQbhaZ11FpR+7ao1dNsmduNUg==}
+    engines: {node: '>=12'}
+    dev: false
 
   /dts-dom@3.7.0:
     resolution: {integrity: sha512-WnmiiHfhtcYS+DyGd2Rq3J6QA3ATVBdKtlrhutc/VzQVFoBgNDm+gnYc5gZizsXAI0xQ2frZntT5IJFeB2qQIg==}

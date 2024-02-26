@@ -44,6 +44,7 @@
 
 .LocalizationModal__translations__header__buttons {
   display: flex;
+  align-items: center;
   gap: 8px;
 }
 
@@ -78,4 +79,8 @@
   display: flex;
   gap: 8px;
   align-items: center;
+}
+
+.LocalizationModal__translations__menu__item .mantine-Menu-itemBody {
+  font-size: 13px;
 }

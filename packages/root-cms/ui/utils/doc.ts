@@ -14,6 +14,7 @@ import {
   getDocs,
   updateDoc,
 } from 'firebase/firestore';
+import {GoogleSheetId} from './gsheets.js';
 import {
   getTranslationsCollection,
   normalizeString,
@@ -344,7 +345,8 @@ export async function cmsDocImportCsv(
         return l;
       }
     }
-    return locale;
+    // Ignore locales that are not in the root config.
+    return null;
   }
 
   const translationsMap: Record<string, CsvTranslation> = {};
@@ -360,7 +362,9 @@ export async function cmsDocImportCsv(
         return;
       }
       const locale = normalizeLocale(column);
-      translation[locale] = normalizeString(str || '');
+      if (locale) {
+        translation[locale] = normalizeString(str || '');
+      }
     });
 
     const hash = await sourceHash(translation.source);
@@ -444,4 +448,56 @@ export async function cmsRestoreVersion(docId: string, version: Version) {
     fields: version.fields || {},
   };
   await updateDoc(docRef, updates);
+}
+
+/**
+ * Links a Google Sheet to a doc for localization.
+ */
+export async function cmsLinkGoogleSheetL10n(
+  docId: string,
+  sheetId: GoogleSheetId
+) {
+  if (!sheetId?.spreadsheetId) {
+    throw new Error('no spreadsheet id');
+  }
+  const docRef = getDraftDocRef(docId);
+  const updates = {
+    'sys.l10nSheet': {
+      spreadsheetId: sheetId.spreadsheetId,
+      gid: sheetId.gid || 0,
+      linkedAt: serverTimestamp(),
+      linkedBy: window.firebase.user.email,
+    },
+  };
+  await updateDoc(docRef, updates);
+}
+
+/**
+ * Unlinks a Google Sheet used for localization.
+ */
+export async function cmsUnlinkGoogleSheetL10n(docId: string) {
+  const docRef = getDraftDocRef(docId);
+  const updates = {
+    'sys.l10nSheet': deleteField(),
+  };
+  await updateDoc(docRef, updates);
+}
+
+/**
+ * Returns the linked localization Google Sheet for a doc.
+ */
+export async function cmsGetLinkedGoogleSheetL10n(
+  docId: string
+): Promise<GoogleSheetId | null> {
+  const docRef = getDraftDocRef(docId);
+  const snapshot = await getDoc(docRef);
+  const data = snapshot.data();
+  const l10nSheet = data?.sys?.l10nSheet || {};
+  if (l10nSheet?.spreadsheetId) {
+    return {
+      spreadsheetId: l10nSheet.spreadsheetId,
+      gid: l10nSheet.gid || 0,
+    };
+  }
+  return null;
 }

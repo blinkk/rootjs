@@ -6,6 +6,7 @@ import {fileURLToPath} from 'node:url';
 import {Command} from 'commander';
 import {build, dev, preview, start} from '../dist/cli.js';
 import {bgGreen, black} from 'kleur/colors';
+import 'dotenv/config';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const require = createRequire(import.meta.url);

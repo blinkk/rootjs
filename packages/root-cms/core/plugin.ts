@@ -58,6 +58,17 @@ export type CMSPluginOptions = {
   };
 
   /**
+   * GAPI credentials. Include if using Google Drive and Google Sheets features.
+   * See: https://developers.google.com/sheets/api/quickstart/js
+   */
+  gapi?: {
+    /** https://developers.google.com/sheets/api/quickstart/js#create_an_api_key */
+    apiKey: string;
+    /** https://developers.google.com/sheets/api/quickstart/js#authorize_credentials_for_a_web_application */
+    clientId: string;
+  };
+
+  /**
    * Secret value(s) used for signing the user authentication cookie.
    * @deprecated This is now handled directly by root's sessionMiddleware under
    * `server.sessionCookieSecret` in root.config.ts.
