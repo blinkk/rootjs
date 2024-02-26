@@ -537,6 +537,11 @@ LocalizationModal.Translations = (props: TranslationsProps) => {
       throw new Error(`sheet not found: ${JSON.stringify(linkedSheet)}`);
     }
     await exportStringsToSheet(gsheet);
+    showNotification({
+      title: 'Exported strings to Google Sheet',
+      message: gsheet.getUrl(),
+      autoClose: false,
+    });
   }
 
   async function exportStringsToSheet(

@@ -1,6 +1,3 @@
-// Chars for the column headers used in a sheet.
-const ALPHA = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
-
 export interface GoogleSheetId {
   spreadsheetId: string;
   gid?: number;
@@ -151,12 +148,13 @@ export class GSheet {
 
     // Represent the changes to the sheet as a 2d array, storing whether or not
     // the cell's value has changed and its text value.
-    const sheetUpdates: Array<Array<{hasChanges: boolean; value: string}>> = [];
+    const sheetCellValues: Array<Array<{hasChanges: boolean; value: string}>> =
+      [];
 
     // Add header row.
     let keyedByColIndex = -1;
     const preserveColumnsIndexes: Set<number> = new Set();
-    sheetUpdates.push(
+    sheetCellValues.push(
       initialHeaders.map((header, colIndex) => {
         if (header === keyedBy) {
           keyedByColIndex = colIndex;
@@ -169,7 +167,7 @@ export class GSheet {
     );
 
     function addHeaderCol(name: string) {
-      sheetUpdates[0].push({hasChanges: true, value: name});
+      sheetCellValues[0].push({hasChanges: true, value: name});
       headers.push(name);
     }
 
@@ -184,7 +182,7 @@ export class GSheet {
     // Add initial row values with `{hasChanges: false}`.
     initialRows.forEach((row, i) => {
       const rowIndex = i + 1; // Add 1 to account for the header row.
-      sheetUpdates.push(
+      sheetCellValues.push(
         row.map((cellValue, colIndex) => {
           if (colIndex === keyedByColIndex && cellValue) {
             if (cellValue in rowIndexMap) {
@@ -203,6 +201,10 @@ export class GSheet {
     /**
      * Converts a row from a key-value map to an array of strings based on
      * sheet's column headers.
+     *
+     * NOTE(stevenle): null values are used to distinguish between whether the
+     * cell's original value should be preserved vs. clearing the value of the
+     * cell.
      */
     function mapToArrayValues(row: Record<string, string>) {
       for (const key in row) {
@@ -210,7 +212,7 @@ export class GSheet {
           addHeaderCol(key);
         }
       }
-      const values = headers.map((key) => row[key] || null);
+      const values = headers.map((key) => row[key] ?? null);
       return values;
     }
 
@@ -227,7 +229,7 @@ export class GSheet {
         // `{hasChanges: true}`. When only cells with changes are updated, any
         // previous formulas used in other cells are preserved without
         // accidental overwrites.
-        const sheetUpdatesRow = sheetUpdates[rowIndex];
+        const sheetUpdatesRow = sheetCellValues[rowIndex];
         values.map((value, colIndex) => {
           if (colIndex >= sheetUpdatesRow.length) {
             sheetUpdatesRow.push({
@@ -238,8 +240,8 @@ export class GSheet {
             value !== null &&
             sheetUpdatesRow[colIndex].value !== value
           ) {
-            // If the column is in the "preserveColumns" list and a value
-            // exists, ignore changes.
+            // Only update the cell if the column isn't in `preserveColumns` or
+            // if the cell is empty.
             if (
               !preserveColumnsIndexes.has(colIndex) ||
               !sheetUpdatesRow[colIndex].value
@@ -254,7 +256,7 @@ export class GSheet {
       } else {
         // No existing row matching the "keyedBy" column, append values to the
         // end of the sheet.
-        sheetUpdates.push(
+        sheetCellValues.push(
           values.map((value) => {
             return {hasChanges: !!value, value: value || ''};
           })
@@ -262,8 +264,63 @@ export class GSheet {
       }
     });
 
-    console.log(rowIndexMap);
-    console.log(sheetUpdates);
+    // Resize the spreadsheet if necessary.
+    const numCols = headers.length;
+    const numRows = sheetCellValues.length;
+    const initialColCount = initialHeaders.length;
+    const initialRowCount = initialRows.length + 1;
+    if (numCols > initialColCount || numRows > initialRowCount) {
+      await this.resizeSheet({numCols: numCols + 2, numRows: numRows + 20});
+    }
+
+    // Update all changed cells.
+    const gapiSheetUpdates: gapi.client.sheets.ValueRange[] = [];
+
+    sheetCellValues.forEach((row, rowIndex) => {
+      // Remove all cells at the end of rows that do not have changes.
+      while (row.length > 0 && row.at(-1)?.hasChanges === false) {
+        row.pop();
+      }
+      if (row.length === 0) {
+        return;
+      }
+
+      // If all the cells in the row has been changed, update the row in a
+      // single batch.
+      if (row.every((cell) => cell.hasChanges)) {
+        gapiSheetUpdates.push({
+          range: `${this.title}!A${rowIndex + 1}`,
+          majorDimension: 'ROWS',
+          values: [row.map((cell) => cell.value || '')],
+        });
+        return;
+      }
+
+      // When the row has a mix of changed and unchanged cells, each cell
+      // should be updated one-by-one.
+      row.forEach((cell, colIndex) => {
+        if (cell.hasChanges) {
+          const colLetter = getColumnLetter(colIndex);
+          gapiSheetUpdates.push({
+            range: `${this.title}!${colLetter}${rowIndex + 1}`,
+            majorDimension: 'ROWS',
+            values: [[cell.value || '']],
+          });
+        }
+      });
+    });
+
+    // TODO(stevenle): for massive spreadsheets, we may need to split these
+    // requests into multiple chunks to avoid limits.
+    if (gapiSheetUpdates.length > 0) {
+      await gapi.client.sheets.spreadsheets.values.batchUpdate({
+        spreadsheetId: this.spreadsheet.spreadsheetId,
+        resource: {
+          data: gapiSheetUpdates,
+          valueInputOption: 'RAW',
+        },
+      });
+    }
   }
 
   /**
@@ -307,29 +364,11 @@ export class GSheet {
     );
 
     // Resize the sheet.
-    console.log('resizing sheet');
-    await gapi.client.sheets.spreadsheets.batchUpdate({
-      spreadsheetId: this.spreadsheet.spreadsheetId,
-      resource: {
-        requests: [
-          {
-            updateSheetProperties: {
-              properties: {
-                gridProperties: {
-                  columnCount: numCols + 2,
-                  rowCount: numRows + 20,
-                },
-              },
-              fields: 'gridProperties',
-            },
-          },
-        ],
-      },
-    });
+    await this.resizeSheet({numCols: numCols + 2, numRows: numRows + 20});
 
     // Update cell values.
     console.log('updating cell values');
-    const endCol = ALPHA[numCols - 1];
+    const endCol = getColumnLetter(numCols - 1);
     await gapi.client.sheets.spreadsheets.values.update({
       spreadsheetId: this.spreadsheet.spreadsheetId,
       range: `${this.title}!A1:${endCol}${numRows}`,
@@ -338,6 +377,32 @@ export class GSheet {
         range: `${this.title}!A1:${endCol}${numRows}`,
         majorDimension: 'ROWS',
         values: cells,
+      },
+    });
+  }
+
+  async resizeSheet(options: {numCols?: number; numRows?: number}) {
+    console.log('resizing sheet');
+    const gridProperties: gapi.client.sheets.GridProperties = {};
+    if (options.numCols) {
+      gridProperties.columnCount = options.numCols;
+    }
+    if (options.numRows) {
+      gridProperties.rowCount = options.numRows;
+    }
+    await gapi.client.sheets.spreadsheets.batchUpdate({
+      spreadsheetId: this.spreadsheet.spreadsheetId,
+      resource: {
+        requests: [
+          {
+            updateSheetProperties: {
+              properties: {
+                gridProperties: gridProperties,
+              },
+              fields: 'gridProperties',
+            },
+          },
+        ],
       },
     });
   }
@@ -555,4 +620,18 @@ export function parseSpreadsheetUrl(url: string): GoogleSheetId {
     gid = parseInt(gidMatch[1]);
   }
   return {spreadsheetId: spreadsheetId, gid: gid};
+}
+
+/**
+ * Converts a 0-indexed number to a column letter, e.g. `A`, `B`, etc. After
+ * `Z`, the letters loop back around to `AA`, `AB`, etc.
+ */
+function getColumnLetter(index: number) {
+  const letters = [];
+  while (index >= 0) {
+    const current = index % 26;
+    letters.push(String.fromCharCode(current + 65));
+    index = (index - current - 1) / 26;
+  }
+  return letters.reverse().join('');
 }
