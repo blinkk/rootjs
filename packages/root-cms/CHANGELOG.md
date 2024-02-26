@@ -1,5 +1,15 @@
 # @blinkk/root-cms
 
+## 1.0.0-rc.30
+
+### Minor Changes
+
+- 3b1a6e8: feat: google sheets localization
+
+### Patch Changes
+
+- @blinkk/root@1.0.0-rc.30
+
 ## 1.0.0-rc.29
 
 ### Minor Changes
