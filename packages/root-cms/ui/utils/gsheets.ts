@@ -382,29 +382,34 @@ export class GSheet {
   }
 
   async resizeSheet(options: {numCols?: number; numRows?: number}) {
-    console.log('resizing sheet');
-    const gridProperties: gapi.client.sheets.GridProperties = {};
+    const requests: gapi.client.sheets.Request[] = [];
     if (options.numCols) {
-      gridProperties.columnCount = options.numCols;
+      requests.push({
+        updateSheetProperties: {
+          properties: {
+            gridProperties: {columnCount: options.numCols},
+          },
+          fields: 'gridProperties.columnCount',
+        },
+      });
     }
     if (options.numRows) {
-      gridProperties.rowCount = options.numRows;
-    }
-    await gapi.client.sheets.spreadsheets.batchUpdate({
-      spreadsheetId: this.spreadsheet.spreadsheetId,
-      resource: {
-        requests: [
-          {
-            updateSheetProperties: {
-              properties: {
-                gridProperties: gridProperties,
-              },
-              fields: 'gridProperties',
-            },
+      requests.push({
+        updateSheetProperties: {
+          properties: {
+            gridProperties: {rowCount: options.numRows},
           },
-        ],
-      },
-    });
+          fields: 'gridProperties.rowCount',
+        },
+      });
+    }
+    if (requests.length > 0) {
+      console.log('resizing sheet');
+      await gapi.client.sheets.spreadsheets.batchUpdate({
+        spreadsheetId: this.spreadsheet.spreadsheetId,
+        resource: {requests: requests},
+      });
+    }
   }
 
   /**
@@ -417,6 +422,9 @@ export class GSheet {
       range: this.title,
     });
     const values = res.result.values as string[][];
+    if (!values || values.length === 0) {
+      return [[] as string[], [] as string[][]] as const;
+    }
     const headers = values[0];
     const rows = values.slice(1);
     return [headers, rows] as const;

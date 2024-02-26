@@ -482,10 +482,6 @@ LocalizationModal.Translations = (props: TranslationsProps) => {
       };
       await cmsLinkGoogleSheetL10n(props.docId, linkedSheet);
       setLinkedSheet(linkedSheet);
-      showNotification({
-        title: 'Linked Google Sheet',
-        message: `Successfully linked Google Sheet to ${props.docId}`,
-      });
     } catch (err) {
       console.error(err);
       showNotification({
