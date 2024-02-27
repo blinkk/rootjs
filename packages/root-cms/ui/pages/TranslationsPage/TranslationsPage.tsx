@@ -73,14 +73,18 @@ TranslationsPage.TranslationsTable = () => {
           </tr>
         </thead>
         <tbody>
-          {tableData.map((cells, i) => (
+          {tableData.map((cells) => (
             <tr key={cells[0]}>
-              {cells.map((cell, i) => (
+              {cells.map((cell, colIndex) => (
                 <td
-                  data-col={headers[i]}
-                  data-string-cell={![0, headers.length - 1].includes(i)}
+                  data-col={headers[colIndex]}
+                  data-string-cell={![0, headers.length - 1].includes(colIndex)}
                 >
-                  {cell}
+                  {colIndex === 0 ? (
+                    <a href={`/cms/translations/${cell}`}>{cell}</a>
+                  ) : (
+                    cell
+                  )}
                 </td>
               ))}
             </tr>

@@ -1,7 +1,8 @@
 .TranslationsPage {
   padding: 60px;
   width: calc(100vw - 48px);
-  overflow: hidden;
+  height: calc(100vh - 48px);
+  overflow: auto;
 }
 
 .TranslationsPage__header {

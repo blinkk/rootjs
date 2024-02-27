@@ -1,4 +1,12 @@
-import {collection, getDocs, query, where} from 'firebase/firestore';
+import {
+  collection,
+  doc,
+  getDoc,
+  getDocs,
+  query,
+  updateDoc,
+  where,
+} from 'firebase/firestore';
 
 export interface Translation {
   [locale: string]: string;
@@ -53,6 +61,40 @@ export async function loadTranslations(options?: {
   return translationsMap;
 }
 
+/**
+ * Fetches translations by hash.
+ */
+export async function getTranslationByHash(hash: string) {
+  const projectId = window.__ROOT_CTX.rootConfig.projectId;
+  const db = window.firebase.db;
+  const docRef = doc(db, 'Projects', projectId, 'Translations', hash);
+  const snapshot = await getDoc(docRef);
+  return snapshot.data() as Translation;
+}
+
+/**
+ * Updates translations for a given hash.
+ */
+export async function updateTranslationByHash(
+  hash: string,
+  translations: Record<string, string>
+) {
+  const projectId = window.__ROOT_CTX.rootConfig.projectId;
+  const db = window.firebase.db;
+  const docRef = doc(db, 'Projects', projectId, 'Translations', hash);
+
+  const updates: Record<string, string> = {};
+  for (const key in translations) {
+    const locale = normalizeLocale(key);
+    if (locale) {
+      updates[locale] = translations[key];
+    }
+  }
+  console.log('updating translations: ', updates);
+
+  await updateDoc(docRef, updates);
+}
+
 /** Returns the sha1 hash for a source string. */
 export async function sourceHash(str: string) {
   return sha1(normalizeString(str));
@@ -78,4 +120,16 @@ export function normalizeString(str: string) {
     .split('\n')
     .map((line) => line.trimEnd());
   return lines.join('\n');
+}
+
+export function normalizeLocale(locale: string) {
+  const i18nConfig = window.__ROOT_CTX.rootConfig.i18n || {};
+  const i18nLocales = i18nConfig.locales || ['en'];
+  for (const l of i18nLocales) {
+    if (String(l).toLowerCase() === locale.toLowerCase()) {
+      return l;
+    }
+  }
+  // Ignore locales that are not in the root config.
+  return null;
 }
