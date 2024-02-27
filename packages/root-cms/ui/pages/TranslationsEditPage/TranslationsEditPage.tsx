@@ -59,15 +59,6 @@ export function TranslationsEditPage(props: TranslationsEditPageProps) {
     <Layout>
       <div className="TranslationsEditPage">
         <div className="TranslationsEditPage__header">
-          {/* <Button
-            component="a"
-            href="/cms/translations"
-            leftIcon={<IconArrowLeft size={16} />}
-            size="xs"
-            variant="subtle"
-          >
-            Back
-          </Button> */}
           <Breadcrumbs className="TranslationsEditPage__header__breadcrumbs">
             <a href="/cms/translations">Translations</a>
             <div>{props.hash}</div>

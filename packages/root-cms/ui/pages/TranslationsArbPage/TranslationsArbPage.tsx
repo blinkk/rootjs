@@ -1,4 +1,4 @@
-import {Button, Textarea} from '@mantine/core';
+import {Breadcrumbs, Button, Textarea} from '@mantine/core';
 import {ChangeEvent, useState} from 'preact/compat';
 import {Heading} from '../../components/Heading/Heading.js';
 import {Text} from '../../components/Text/Text.js';
@@ -14,6 +14,10 @@ export function TranslationsArbPage() {
     <Layout>
       <div className="TranslationsArbPage">
         <div className="TranslationsArbPage__header">
+          <Breadcrumbs className="TranslationsArbPage__header__breadcrumbs">
+            <a href="/cms/translations">Translations</a>
+            <div>ARB</div>
+          </Breadcrumbs>
           <Heading size="h1">ARB Translations</Heading>
           <Text as="p">
             Enter doc ids below (separated by newlines) to include in an ARB
