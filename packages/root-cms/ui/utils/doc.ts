@@ -13,7 +13,6 @@ import {
   orderBy,
   getDocs,
   updateDoc,
-  FieldPath,
   documentId,
   where,
 } from 'firebase/firestore';

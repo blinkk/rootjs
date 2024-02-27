@@ -16,8 +16,8 @@ export function TranslationsArbPage() {
         <div className="TranslationsArbPage__header">
           <Heading size="h1">ARB Translations</Heading>
           <Text as="p">
-            Enter doc ids below (separated by newlines) to create a batch
-            translations request in a single ARB file.
+            Enter doc ids below (separated by newlines) to include in an ARB
+            file.
           </Text>
         </div>
         <TranslationsArbPage.RequestForm />
@@ -110,6 +110,7 @@ TranslationsArbPage.RequestForm = () => {
         minRows={8}
         maxRows={20}
         value={docIdsText}
+        placeholder="Pages/index"
         onChange={(e: ChangeEvent<HTMLTextAreaElement>) => {
           setDocIdsText(e.currentTarget.value || '');
         }}
