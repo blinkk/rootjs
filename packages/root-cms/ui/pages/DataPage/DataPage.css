@@ -1,12 +1,19 @@
 .DataPage {
   padding: 60px;
+  width: calc(100vw - 48px);
+  height: calc(100vh - 48px);
+  overflow: auto;
 }
 
-.DataPage h1 {
-  margin-bottom: 24px;
+.DataPage__header {
+  margin-bottom: 40px;
 }
 
 .DataPage p {
-  margin-top: 16px;
+  margin-top: 8px;
   max-width: 70ch;
+}
+
+.DataPage__header__buttons {
+  margin-top: 20px;
 }

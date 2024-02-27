@@ -29,6 +29,7 @@ import {TranslationsEditPage} from './pages/TranslationsEditPage/TranslationsEdi
 import {TranslationsPage} from './pages/TranslationsPage/TranslationsPage.js';
 import './styles/global.css';
 import './styles/theme.css';
+import {DataNewPage} from './pages/DataNewPage/DataNewPage.js';
 
 declare global {
   interface Window {
@@ -88,6 +89,7 @@ function App() {
                 component={DocumentPage}
               />
               <Route path="/cms/data" component={DataPage} />
+              <Route path="/cms/data/new" component={DataNewPage} />
               <Route path="/cms/settings" component={SettingsPage} />
               <Route path="/cms/translations" component={TranslationsPage} />
               <Route
