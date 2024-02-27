@@ -17,3 +17,9 @@
 .DataPage__header__buttons {
   margin-top: 20px;
 }
+
+.DataPage__DataSourcesTable__colWithButtons {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
