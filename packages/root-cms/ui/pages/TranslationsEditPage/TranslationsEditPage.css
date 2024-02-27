@@ -1,0 +1,38 @@
+.TranslationsEditPage {
+  padding: 60px;
+  padding-top: 48px;
+  width: calc(100vw - 48px);
+  height: calc(100vh - 48px);
+  overflow: auto;
+}
+
+.TranslationsEditPage__header {
+  margin-bottom: 30px;
+}
+
+.TranslationsEditPage__header__breadcrumbs {
+  font-size: 12px;
+  margin-bottom: 12px;
+}
+
+.TranslationsEditPage__header__breadcrumbs a {
+  font-weight: 500;
+  text-underline-offset: 4px;
+}
+
+.TranslationsEditPage__Form {
+  max-width: 650px;
+}
+
+.TranslationsEditPage__Form__input {
+  margin-top: 16px;
+}
+
+.TranslationsEditPage__Form__input__submit {
+  margin-top: 24px;
+}
+
+.TranslationsEditPage__notFound {
+  font-size: 14px;
+  font-weight: 500;
+}

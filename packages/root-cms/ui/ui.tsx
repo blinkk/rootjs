@@ -25,6 +25,7 @@ import {NotFoundPage} from './pages/NotFoundPage/NotFoundPage.js';
 import {ProjectPage} from './pages/ProjectPage/ProjectPage.js';
 import {SettingsPage} from './pages/SettingsPage/SettingsPage.js';
 import {TranslationsArbPage} from './pages/TranslationsArbPage/TranslationsArbPage.js';
+import {TranslationsEditPage} from './pages/TranslationsEditPage/TranslationsEditPage.js';
 import {TranslationsPage} from './pages/TranslationsPage/TranslationsPage.js';
 import './styles/global.css';
 import './styles/theme.css';
@@ -92,6 +93,10 @@ function App() {
               <Route
                 path="/cms/translations/arb"
                 component={TranslationsArbPage}
+              />
+              <Route
+                path="/cms/translations/:hash"
+                component={TranslationsEditPage}
               />
               <Route default component={NotFoundPage} />
             </Router>
