@@ -1,0 +1,24 @@
+.TranslationsArbPage {
+  padding: 60px;
+}
+
+.TranslationsArbPage__header {
+  max-width: 600px;
+}
+
+.TranslationsArbPage__header p {
+  margin-top: 4px;
+}
+
+.TranslationsArbPage__RequestForm {
+  margin-top: 20px;
+  max-width: 600px;
+}
+
+.TranslationsArbPage__RequestForm__submit {
+  margin-top: 16px;
+}
+
+.TranslationsArbPage__RequestForm__error {
+  color: red;
+}

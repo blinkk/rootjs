@@ -1,12 +1,38 @@
 .TranslationsPage {
   padding: 60px;
+  width: calc(100vw - 48px);
+  overflow: hidden;
 }
 
-.TranslationsPage h1 {
-  margin-bottom: 24px;
+.TranslationsPage__header {
+  margin-bottom: 40px;
 }
 
-.TranslationsPage p {
-  margin-top: 16px;
-  max-width: 70ch;
+.TranslationsPage__header__buttons {
+  margin-top: 12px;
+}
+
+.TranslationsPage__TranslationsTable {
+  width: 100%;
+  overflow: auto;
+}
+
+.TranslationsPage__TranslationsTable table {
+  font-family: monospace;
+  border: 1px solid #dee2e6;
+}
+
+.TranslationsPage__TranslationsTable th:not(:first-child),
+.TranslationsPage__TranslationsTable td:not(:first-child) {
+  border-left: 1px solid #dee2e6;
+}
+
+.TranslationsPage__TranslationsTable td[data-col="hash"] {
+  max-width: 80px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.TranslationsPage__TranslationsTable td[data-string-cell="true"] {
+  min-width: 250px;
 }
