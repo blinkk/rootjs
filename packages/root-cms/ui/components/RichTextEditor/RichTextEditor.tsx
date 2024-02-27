@@ -9,7 +9,6 @@ import {useEffect, useRef, useState} from 'preact/hooks';
 import {joinClassNames} from '../../utils/classes.js';
 import './RichTextEditor.css';
 import {uploadFileToGCS} from '../../utils/gcs.js';
-import {normalizeString} from '../../utils/l10n.js';
 import {isObject} from '../../utils/objects.js';
 import Strikethrough from './tools/Strikethrough.js';
 import Superscript from './tools/Superscript.js';
@@ -191,53 +190,4 @@ function gcsUploader() {
 
 function isGciUrl(url: string) {
   return url.startsWith('https://lh3.googleusercontent.com/');
-}
-
-export function extractRichTextStrings(
-  strings: Set<string>,
-  data: RichTextData
-) {
-  const blocks = data?.blocks || [];
-  blocks.forEach((block) => {
-    extractBlockStrings(strings, block);
-  });
-}
-
-interface ListItemData {
-  content?: string;
-  items?: ListItemData[];
-}
-
-function extractBlockStrings(strings: Set<string>, block: any) {
-  if (!block?.type) {
-    return;
-  }
-
-  function addString(text?: string) {
-    if (!text) {
-      return;
-    }
-    const str = normalizeString(text);
-    if (str) {
-      strings.add(str);
-    }
-  }
-
-  function extractList(items?: ListItemData[]) {
-    if (!items) {
-      return;
-    }
-    items.forEach((item) => {
-      addString(item.content);
-      extractList(item.items);
-    });
-  }
-
-  if (block.type === 'heading' || block.type === 'paragraph') {
-    addString(block.data?.text);
-  } else if (block.type === 'orderedList' || block.type === 'unorderedList') {
-    extractList(block.data?.items);
-  } else if (block.type === 'html') {
-    addString(block.data?.html);
-  }
 }

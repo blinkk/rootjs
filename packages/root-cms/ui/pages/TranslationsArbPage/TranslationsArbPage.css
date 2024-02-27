@@ -18,3 +18,7 @@
 .TranslationsArbPage__RequestForm__submit {
   margin-top: 16px;
 }
+
+.TranslationsArbPage__RequestForm__error {
+  color: red;
+}

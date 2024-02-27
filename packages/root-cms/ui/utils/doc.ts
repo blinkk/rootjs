@@ -13,6 +13,9 @@ import {
   orderBy,
   getDocs,
   updateDoc,
+  FieldPath,
+  documentId,
+  where,
 } from 'firebase/firestore';
 import {GoogleSheetId} from './gsheets.js';
 import {
@@ -425,6 +428,40 @@ export function getDraftDocRef(docId: string) {
     'Drafts',
     slug
   );
+}
+
+export async function getDraftDocs(docIds: string[]) {
+  const projectId = window.__ROOT_CTX.rootConfig.projectId;
+  const db = window.firebase.db;
+  const collectionSlugs: Record<string, string[]> = {};
+  docIds.forEach((docId) => {
+    const [collectionId, slug] = docId.split('/');
+    if (collectionId in collectionSlugs) {
+      collectionSlugs[collectionId].push(slug);
+    } else {
+      collectionSlugs[collectionId] = [slug];
+    }
+  });
+  const drafts: Record<string, CMSDoc> = {};
+  await Promise.all(
+    Object.entries(collectionSlugs).map(async ([collectionId, slugs]) => {
+      const dbCollection = collection(
+        db,
+        'Projects',
+        projectId,
+        'Collections',
+        collectionId,
+        'Drafts'
+      );
+      const q = query(dbCollection, where(documentId(), 'in', slugs));
+      const res = await getDocs(q);
+      res.forEach((doc) => {
+        const docId = `${collectionId}/${doc.id}`;
+        drafts[docId] = doc.data() as CMSDoc;
+      });
+    })
+  );
+  return drafts;
 }
 
 export async function cmsListVersions(docId: string) {

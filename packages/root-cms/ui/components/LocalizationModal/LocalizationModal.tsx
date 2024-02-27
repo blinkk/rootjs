@@ -35,20 +35,16 @@ import {
   cmsLinkGoogleSheetL10n,
   cmsUnlinkGoogleSheetL10n,
 } from '../../utils/doc.js';
+import {extractFields} from '../../utils/extract.js';
 import {
   GSheet,
   GSpreadsheet,
   GoogleSheetId,
   getSpreadsheetUrl,
 } from '../../utils/gsheets.js';
-import {
-  TranslationsMap,
-  loadTranslations,
-  normalizeString,
-} from '../../utils/l10n.js';
+import {TranslationsMap, loadTranslations} from '../../utils/l10n.js';
 import {Heading} from '../Heading/Heading.js';
 import './LocalizationModal.css';
-import {extractRichTextStrings} from '../RichTextEditor/RichTextEditor.js';
 
 const MODAL_ID = 'LocalizationModal';
 
@@ -787,72 +783,6 @@ async function extractStrings(collection: schema.Collection, docId: string) {
   const strings = new Set<string>();
   extractFields(strings, collection.fields, data.fields || {});
   return Array.from(strings);
-}
-
-function extractFields(
-  strings: Set<string>,
-  fields: schema.Field[],
-  data: Record<string, any>
-) {
-  fields.forEach((field) => {
-    if (!field.id) {
-      return;
-    }
-    const fieldValue = data[field.id];
-    extractField(strings, field, fieldValue);
-  });
-}
-
-function extractField(
-  strings: Set<string>,
-  field: schema.Field,
-  fieldValue: any
-) {
-  if (!fieldValue) {
-    return;
-  }
-
-  function addString(text: string) {
-    const str = normalizeString(text);
-    if (str) {
-      strings.add(str);
-    }
-  }
-
-  if (field.type === 'object') {
-    extractFields(strings, field.fields || [], fieldValue);
-  } else if (field.type === 'array') {
-    const arrayKeys = fieldValue._array || [];
-    for (const arrayKey of arrayKeys) {
-      extractField(strings, field.of, fieldValue[arrayKey]);
-    }
-  } else if (field.type === 'string' || field.type === 'select') {
-    if (field.translate) {
-      addString(fieldValue);
-    }
-  } else if (field.type === 'image') {
-    if (field.translate && fieldValue && fieldValue.alt) {
-      addString(fieldValue.alt);
-    }
-  } else if (field.type === 'multiselect') {
-    if (field.translate && Array.isArray(fieldValue)) {
-      for (const value of fieldValue) {
-        addString(value);
-      }
-    }
-  } else if (field.type === 'oneof') {
-    const types = field.types || [];
-    const fieldValueType = types.find((item) => item.name === fieldValue._type);
-    if (fieldValueType) {
-      extractFields(strings, fieldValueType.fields || [], fieldValue);
-    }
-  } else if (field.type === 'richtext') {
-    if (field.translate) {
-      extractRichTextStrings(strings, fieldValue);
-    }
-  } else {
-    console.log(`extract: ignoring field, id=${field.id}, type=${field.type}`);
-  }
 }
 
 interface MenuButtonProps {
