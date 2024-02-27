@@ -24,6 +24,7 @@ import {DocumentPage} from './pages/DocumentPage/DocumentPage.js';
 import {NotFoundPage} from './pages/NotFoundPage/NotFoundPage.js';
 import {ProjectPage} from './pages/ProjectPage/ProjectPage.js';
 import {SettingsPage} from './pages/SettingsPage/SettingsPage.js';
+import {TranslationsArbPage} from './pages/TranslationsArbPage/TranslationsArbPage.js';
 import {TranslationsPage} from './pages/TranslationsPage/TranslationsPage.js';
 import './styles/global.css';
 import './styles/theme.css';
@@ -88,6 +89,10 @@ function App() {
               <Route path="/cms/data" component={DataPage} />
               <Route path="/cms/settings" component={SettingsPage} />
               <Route path="/cms/translations" component={TranslationsPage} />
+              <Route
+                path="/cms/translations/arb"
+                component={TranslationsArbPage}
+              />
               <Route default component={NotFoundPage} />
             </Router>
           </ModalsProvider>
