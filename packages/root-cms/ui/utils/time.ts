@@ -8,13 +8,17 @@ export const TIME_UNITS: Record<string, number> = {
   second: 1000,
 };
 
-export function getTimeAgo(millis: number) {
+export function getTimeAgo(
+  millis: number,
+  options?: Intl.RelativeTimeFormatOptions
+) {
   const elapsed = Math.abs(millis - new Date().getTime());
   if (elapsed < TIME_UNITS.second) {
     return 'just now';
   }
 
-  const rtf = new Intl.RelativeTimeFormat('en', {numeric: 'auto'});
+  const rtfOptions = options || {numeric: 'auto'};
+  const rtf = new Intl.RelativeTimeFormat('en', rtfOptions);
   if (elapsed < TIME_UNITS.minute) {
     return rtf.format(Math.round(-elapsed / TIME_UNITS.second), 'second');
   }
