@@ -44,8 +44,7 @@
   display: flex;
 }
 
-.DataSourcePage__SyncStatus h2,
-.DataSourcePage__DataTable h2 {
+.DataSourcePage__SyncStatus h2 {
   margin-bottom: 16px;
 }
 
@@ -55,6 +54,14 @@
 
 .DataSourcePage__DataTable {
   margin-top: 40px;
+}
+
+.DataSourcePage__DataTable__header {
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
 }
 
 .DataSourcePage__DataTable__table td {

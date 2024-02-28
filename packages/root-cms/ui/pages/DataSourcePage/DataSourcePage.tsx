@@ -1,6 +1,6 @@
 import {ActionIcon, Breadcrumbs, Loader, Table, Tooltip} from '@mantine/core';
 import {showNotification} from '@mantine/notifications';
-import {IconSettings} from '@tabler/icons-preact';
+import {IconArrowUpRight, IconSettings, IconTable} from '@tabler/icons-preact';
 import {useEffect, useState} from 'preact/hooks';
 import {DataSourceStatusButton} from '../../components/DataSourceStatusButton/DataSourceStatusButton.js';
 import {Heading} from '../../components/Heading/Heading.js';
@@ -144,7 +144,24 @@ DataSourcePage.DataTable = (props: {dataSource: DataSource; data: Data}) => {
 
   return (
     <div className="DataSourcePage__DataTable">
-      <Heading size="h2">Data</Heading>
+      <div className="DataSourcePage__DataTable__header">
+        <Heading size="h2">Data</Heading>
+        {dataSource.url?.startsWith(
+          'https://docs.google.com/spreadsheets/'
+        ) && (
+          <Tooltip label="Open spreadsheet">
+            <ActionIcon<'a'>
+              component="a"
+              href={dataSource.url}
+              target="_blank"
+              variant="filled"
+              color="green"
+            >
+              <IconTable size={16} stroke="2.25" />
+            </ActionIcon>
+          </Tooltip>
+        )}
+      </div>
       <Table
         className="DataSourcePage__DataTable__table"
         verticalSpacing="xs"
