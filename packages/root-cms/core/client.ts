@@ -556,7 +556,7 @@ export class RootCMSClient {
       throw new Error(`invalid data source id: ${dataSourceId}`);
     }
 
-    const dbPath = `Projects/${this.projectId}/DataSource/${dataSourceId}/Data/${mode}`;
+    const dbPath = `Projects/${this.projectId}/DataSources/${dataSourceId}/Data/${mode}`;
     const docRef = this.db.doc(dbPath);
     const doc = await docRef.get();
     if (doc.exists) {
