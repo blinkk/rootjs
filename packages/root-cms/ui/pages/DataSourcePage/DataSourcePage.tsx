@@ -1,23 +1,33 @@
 import {ActionIcon, Breadcrumbs, Loader, Table, Tooltip} from '@mantine/core';
+import {showNotification} from '@mantine/notifications';
 import {IconSettings} from '@tabler/icons-preact';
 import {useEffect, useState} from 'preact/hooks';
 import {DataSourceStatusButton} from '../../components/DataSourceStatusButton/DataSourceStatusButton.js';
 import {Heading} from '../../components/Heading/Heading.js';
 import {Text} from '../../components/Text/Text.js';
 import {Layout} from '../../layout/Layout.js';
-import {DataSource, getDataSource} from '../../utils/data-source.js';
+import {
+  Data,
+  DataSource,
+  getData,
+  getDataSource,
+} from '../../utils/data-source.js';
 import './DataSourcePage.css';
-import {showNotification} from '@mantine/notifications';
 
 export function DataSourcePage(props: {id: string}) {
   const [loading, setLoading] = useState(true);
   const [dataSource, setDataSource] = useState<DataSource | null>(null);
+  const [data, setData] = useState<any>(null);
   const id = props.id;
 
   async function init() {
     const dataSource = await getDataSource(id);
-    console.log(dataSource);
     setDataSource(dataSource);
+    if (dataSource) {
+      const data = await getData(id, {mode: 'draft'});
+      console.log(data);
+      setData(data);
+    }
     setLoading(false);
   }
 
@@ -53,7 +63,7 @@ export function DataSourcePage(props: {id: string}) {
         {loading ? (
           <Loader color="gray" size="xl" />
         ) : dataSource ? (
-          <DataSourcePage.DataTable />
+          <DataSourcePage.DataTable dataSource={dataSource} data={data} />
         ) : (
           <div className="DataSourcePage__notFound">Not Found</div>
         )}
@@ -109,10 +119,56 @@ DataSourcePage.SyncStatus = (props: {dataSource: DataSource}) => {
   );
 };
 
-DataSourcePage.DataTable = () => {
+DataSourcePage.DataTable = (props: {dataSource: DataSource; data: Data}) => {
+  const {data, dataSource} = props.data;
+
+  if (!data) {
+    return null;
+  }
+
+  // TODO(stevenle): support other data formats.
+  const dataFormat = dataSource.dataFormat || 'map';
+  if (dataSource.type !== 'gsheet' || dataFormat !== 'map') {
+    return null;
+  }
+
+  const headers = new Set<string>();
+  const rows = data as any[];
+  rows.forEach((row) => {
+    for (const key in row) {
+      if (key) {
+        headers.add(key);
+      }
+    }
+  });
+
   return (
     <div className="DataSourcePage__DataTable">
       <Heading size="h2">Data</Heading>
+      <Table
+        className="DataSourcePage__DataTable__table"
+        verticalSpacing="xs"
+        striped
+        highlightOnHover
+        fontSize="xs"
+      >
+        <thead>
+          <tr>
+            {Array.from(headers).map((header) => (
+              <th key={header}>{header}</th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((row) => (
+            <tr>
+              {Array.from(headers).map((header) => (
+                <td>{row[header] || ''}</td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </Table>
     </div>
   );
 };

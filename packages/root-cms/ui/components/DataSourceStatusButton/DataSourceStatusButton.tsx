@@ -1,6 +1,6 @@
 import {Button, Tooltip} from '@mantine/core';
 import {Timestamp} from 'firebase/firestore';
-import {useState} from 'preact/hooks';
+import {useEffect, useState} from 'preact/hooks';
 import {useGapiClient} from '../../hooks/useGapiClient.js';
 import {
   DataSource,
@@ -84,9 +84,21 @@ interface TimeSinceProps {
 }
 
 function TimeSince(props: TimeSinceProps) {
+  const [label, setLabel] = useState(
+    props.timestamp ? getTimeAgo(props.timestamp, {style: 'short'}) : 'never'
+  );
+
   if (!props.timestamp) {
-    return <div>never</div>;
+    return <div>{label}</div>;
   }
+
+  useEffect(() => {
+    const interval = window.setInterval(() => {
+      setLabel(getTimeAgo(props.timestamp!, {style: 'short'}));
+    }, 60000);
+    return () => window.clearInterval(interval);
+  }, []);
+
   return (
     <Tooltip
       transition="pop"

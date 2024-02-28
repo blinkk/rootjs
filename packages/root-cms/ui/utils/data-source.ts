@@ -32,6 +32,11 @@ export interface DataSource {
   publishedBy?: string;
 }
 
+export interface Data<T = any> {
+  dataSource: DataSource;
+  data: T;
+}
+
 export async function addDataSource(
   dataSource: Omit<DataSource, 'createdAt' | 'createdBy'>
 ) {
@@ -67,6 +72,29 @@ export async function getDataSource(id: string) {
     return null;
   }
   return snapshot.data() as DataSource;
+}
+
+export async function getData<T = any>(
+  id: string,
+  options?: {mode?: 'draft' | 'published'}
+): Promise<T | null> {
+  const mode = options?.mode || 'draft';
+  const projectId = window.__ROOT_CTX.rootConfig.projectId;
+  const db = window.firebase.db;
+  const dataDocRef = doc(
+    db,
+    'Projects',
+    projectId,
+    'DataSources',
+    id,
+    'Data',
+    mode
+  );
+  const snapshot = await getDoc(dataDocRef);
+  if (snapshot.exists()) {
+    return snapshot.data() as T;
+  }
+  return null;
 }
 
 export async function updateDataSource(
