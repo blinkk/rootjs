@@ -38,6 +38,31 @@ export interface Doc<Fields = any> {
 
 export type DocMode = 'draft' | 'published';
 
+export interface DataSource {
+  id: string;
+  description?: string;
+  type: 'http' | 'gsheet';
+  url: string;
+  /**
+   * Currently only used by gsheet. `array` returns the sheet as an array of
+   * arrays, `map` returns the sheet as an array of objects.
+   */
+  dataFormat?: 'array' | 'map';
+  createdAt: Timestamp;
+  createdBy: string;
+  syncedAt?: Timestamp;
+  syncedBy?: string;
+  publishedAt?: Timestamp;
+  publishedBy?: string;
+}
+
+export interface DataSourceData<T = any> {
+  dataSource: DataSource;
+  data: T;
+}
+
+export type DataSourceMode = 'draft' | 'published';
+
 export interface GetDocOptions {
   /** Mode, either "draft" or "published". */
   mode: DocMode;
@@ -514,6 +539,30 @@ export class RootCMSClient {
   ): Promise<LocaleTranslations> {
     const translationsMap = await this.loadTranslations(options);
     return translationsForLocale(translationsMap, locale);
+  }
+
+  /**
+   * Fetches data from a data source.
+   */
+  async getFromDataSource<T = any>(
+    dataSourceId: string,
+    options?: {mode?: 'draft' | 'published'}
+  ): Promise<DataSourceData<T> | null> {
+    const mode = options?.mode || 'published';
+    if (!(mode === 'draft' || mode === 'published')) {
+      throw new Error(`invalid mode: ${mode}`);
+    }
+    if (!dataSourceId || dataSourceId.includes('/')) {
+      throw new Error(`invalid data source id: ${dataSourceId}`);
+    }
+
+    const dbPath = `Projects/${this.projectId}/DataSource/${dataSourceId}/Data/${mode}`;
+    const docRef = this.db.doc(dbPath);
+    const doc = await docRef.get();
+    if (doc.exists) {
+      return doc.data() as DataSourceData<T>;
+    }
+    return null;
   }
 }
 

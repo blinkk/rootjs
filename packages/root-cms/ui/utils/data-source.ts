@@ -32,7 +32,7 @@ export interface DataSource {
   publishedBy?: string;
 }
 
-export interface Data<T = any> {
+export interface DataSourceData<T = any> {
   dataSource: DataSource;
   data: T;
 }
@@ -63,6 +63,9 @@ export async function listDataSources(): Promise<DataSource[]> {
   return res;
 }
 
+/**
+ * Retrieves data source configuration object.
+ */
 export async function getDataSource(id: string) {
   const projectId = window.__ROOT_CTX.rootConfig.projectId;
   const db = window.firebase.db;
@@ -74,10 +77,13 @@ export async function getDataSource(id: string) {
   return snapshot.data() as DataSource;
 }
 
-export async function getData<T = any>(
+/**
+ * Retrieves data synced from a data source.
+ */
+export async function getFromDataSource<T = any>(
   id: string,
   options?: {mode?: 'draft' | 'published'}
-): Promise<Data<T> | null> {
+): Promise<DataSourceData<T> | null> {
   const mode = options?.mode || 'draft';
   const projectId = window.__ROOT_CTX.rootConfig.projectId;
   const db = window.firebase.db;
@@ -92,7 +98,7 @@ export async function getData<T = any>(
   );
   const snapshot = await getDoc(dataDocRef);
   if (snapshot.exists()) {
-    return snapshot.data() as Data<T>;
+    return snapshot.data() as DataSourceData<T>;
   }
   return null;
 }
@@ -177,7 +183,7 @@ export async function publishDataSource(id: string) {
     'published'
   );
 
-  const dataRes = await getData(id, {mode: 'draft'});
+  const dataRes = await getFromDataSource(id, {mode: 'draft'});
 
   const updatedDataSource: DataSource = {
     ...dataSource,

@@ -7,9 +7,9 @@ import {Heading} from '../../components/Heading/Heading.js';
 import {Text} from '../../components/Text/Text.js';
 import {Layout} from '../../layout/Layout.js';
 import {
-  Data,
+  DataSourceData,
   DataSource,
-  getData,
+  getFromDataSource,
   getDataSource,
 } from '../../utils/data-source.js';
 import './DataSourcePage.css';
@@ -24,7 +24,7 @@ export function DataSourcePage(props: {id: string}) {
     const dataSource = await getDataSource(id);
     setDataSource(dataSource);
     if (dataSource) {
-      const data = await getData(id, {mode: 'draft'});
+      const data = await getFromDataSource(id, {mode: 'draft'});
       console.log(data);
       setData(data);
     }
@@ -119,7 +119,7 @@ DataSourcePage.SyncStatus = (props: {dataSource: DataSource}) => {
   );
 };
 
-DataSourcePage.DataTable = (props: {dataSource: DataSource; data: Data}) => {
+DataSourcePage.DataTable = (props: {dataSource: DataSource; data: DataSourceData}) => {
   const {data, dataSource} = props.data;
 
   if (!data) {
