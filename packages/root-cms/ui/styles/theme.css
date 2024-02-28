@@ -13,3 +13,12 @@
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 3;
 }
+
+.mantine-Table-root {
+  border: 1px solid #dee2e6;
+}
+
+.mantine-Table-root th:not(:first-child),
+.mantine-Table-root td:not(:first-child) {
+  border-left: 1px solid #dee2e6;
+}

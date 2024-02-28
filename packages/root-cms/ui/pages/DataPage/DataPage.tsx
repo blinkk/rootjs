@@ -1,26 +1,104 @@
+import {Button, Loader, Table} from '@mantine/core';
+import {useEffect, useState} from 'preact/hooks';
+import {DataSourceStatusButton} from '../../components/DataSourceStatusButton/DataSourceStatusButton.js';
 import {Heading} from '../../components/Heading/Heading.js';
 import {Text} from '../../components/Text/Text.js';
 import {Layout} from '../../layout/Layout.js';
+import {DataSource, listDataSources} from '../../utils/data-source.js';
 import './DataPage.css';
+import {showNotification} from '@mantine/notifications';
 
 export function DataPage() {
   return (
     <Layout>
       <div className="DataPage">
-        <Heading size="h1">Data</Heading>
-        <Text as="p">
-          This page is currently under construction, but the current idea is to
-          have this page be used to synchronize large batches of data that may
-          not fit in a normal CMS doc, such as a large number of pins for a map.
-        </Text>
-        <Text as="p">
-          The first iteration of this page will only support syncing data from
-          Google Sheets. As time goes on, we may add other data providers in
-          either a columnar layout or JSON-style data. An API would be available
-          to developers, either using a JSON-RPC style endpoint or something
-          like GraphQL.
-        </Text>
+        <div className="DataPage__header">
+          <Heading size="h1">Data Sources</Heading>
+          <Text as="p">
+            Add data sources to sync data from external services, like Google
+            Sheets.
+          </Text>
+          <div className="DataPage__header__buttons">
+            <Button component="a" color="blue" size="xs" href="/cms/data/new">
+              Add data source
+            </Button>
+          </div>
+        </div>
+        <DataPage.DataSourcesTable />
       </div>
     </Layout>
   );
 }
+
+DataPage.DataSourcesTable = () => {
+  const [loading, setLoading] = useState(true);
+  const [tableData, setTableData] = useState<DataSource[]>([]);
+
+  async function init() {
+    const dataSources = await listDataSources();
+    setTableData(dataSources);
+    setLoading(false);
+  }
+
+  useEffect(() => {
+    init();
+  }, []);
+
+  return (
+    <div className="DataPage__DataSourcesTable">
+      {loading && <Loader color="gray" size="xl" />}
+      {tableData.length > 0 && (
+        <Table verticalSpacing="xs" striped highlightOnHover fontSize="xs">
+          <thead>
+            <tr>
+              <th>id</th>
+              <th>description</th>
+              <th>type</th>
+              <th>url</th>
+              <th>last synced</th>
+              <th>last published</th>
+            </tr>
+          </thead>
+          <tbody>
+            {tableData.map((dataSource) => (
+              <tr key={dataSource.id}>
+                <td>
+                  <a href={`/cms/data/${dataSource.id}`}>{dataSource.id}</a>
+                </td>
+                <td>{dataSource.description || ''}</td>
+                <td>{dataSource.type}</td>
+                <td>{dataSource.url}</td>
+                <td>
+                  <DataSourceStatusButton
+                    dataSource={dataSource}
+                    action="sync"
+                    onAction={() => {
+                      showNotification({
+                        title: 'Data synced',
+                        message: `Synced ${dataSource.id} to draft data.`,
+                        autoClose: 5000,
+                      });
+                    }}
+                  />
+                </td>
+                <td>
+                  <DataSourceStatusButton
+                    dataSource={dataSource}
+                    action="publish"
+                    onAction={() => {
+                      showNotification({
+                        title: 'Data published',
+                        message: `Published ${dataSource.id}.`,
+                        autoClose: 5000,
+                      });
+                    }}
+                  />
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </Table>
+      )}
+    </div>
+  );
+};

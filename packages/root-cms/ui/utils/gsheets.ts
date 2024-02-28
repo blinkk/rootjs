@@ -615,10 +615,13 @@ export function getSpreadsheetUrl(sheetId: GoogleSheetId) {
 /**
  * Parses a Google Sheets URL and returns its component ids.
  */
-export function parseSpreadsheetUrl(url: string): GoogleSheetId {
+export function parseSpreadsheetUrl(url: string): GoogleSheetId | null {
   // For now, do a naive parsing where we assume the format of the url is
   // something like:
   // https://docs.google.com/spreadsheets/d/<spreadsheetId>/edit#gid=<gid>
+  if (!url.startsWith('https://docs.google.com/spreadsheets/d/')) {
+    return null;
+  }
   const parts = url.split('/');
   const spreadsheetId = parts[parts.length - 2];
   const hash = url.slice(url.indexOf('#'));

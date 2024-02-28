@@ -18,16 +18,6 @@
   overflow: auto;
 }
 
-.TranslationsPage__TranslationsTable table {
-  font-family: monospace;
-  border: 1px solid #dee2e6;
-}
-
-.TranslationsPage__TranslationsTable th:not(:first-child),
-.TranslationsPage__TranslationsTable td:not(:first-child) {
-  border-left: 1px solid #dee2e6;
-}
-
 .TranslationsPage__TranslationsTable td[data-col="hash"] {
   max-width: 80px;
   overflow: hidden;
