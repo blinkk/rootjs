@@ -1,17 +1,12 @@
-import {Button, Loader, Table, Tooltip} from '@mantine/core';
-import {Timestamp} from 'firebase/firestore';
+import {Button, Loader, Table} from '@mantine/core';
 import {useEffect, useState} from 'preact/hooks';
+import {DataSourceStatusButton} from '../../components/DataSourceStatusButton/DataSourceStatusButton.js';
 import {Heading} from '../../components/Heading/Heading.js';
 import {Text} from '../../components/Text/Text.js';
 import {Layout} from '../../layout/Layout.js';
-import {
-  DataSource,
-  listDataSources,
-  publishDataSource,
-  syncDataSource,
-} from '../../utils/data-source.js';
-import {getTimeAgo} from '../../utils/time.js';
+import {DataSource, listDataSources} from '../../utils/data-source.js';
 import './DataPage.css';
+import {showNotification} from '@mantine/notifications';
 
 export function DataPage() {
   return (
@@ -74,19 +69,29 @@ DataPage.DataSourcesTable = () => {
                 <td>{dataSource.type}</td>
                 <td>{dataSource.url}</td>
                 <td>
-                  <DataPage.StatusButton
-                    id={dataSource.id}
-                    timestamp={dataSource.syncedAt}
-                    email={dataSource.syncedBy}
+                  <DataSourceStatusButton
+                    dataSource={dataSource}
                     action="sync"
+                    onAction={() => {
+                      showNotification({
+                        title: 'Data synced',
+                        message: `Synced ${dataSource.id} to draft data.`,
+                        autoClose: 5000,
+                      });
+                    }}
                   />
                 </td>
                 <td>
-                  <DataPage.StatusButton
-                    id={dataSource.id}
-                    timestamp={dataSource.publishedAt}
-                    email={dataSource.publishedBy}
+                  <DataSourceStatusButton
+                    dataSource={dataSource}
                     action="publish"
+                    onAction={() => {
+                      showNotification({
+                        title: 'Data published',
+                        message: `Published ${dataSource.id}.`,
+                        autoClose: 5000,
+                      });
+                    }}
                   />
                 </td>
               </tr>
@@ -94,98 +99,6 @@ DataPage.DataSourcesTable = () => {
           </tbody>
         </Table>
       )}
-    </div>
-  );
-};
-
-function timestampToMillis(ts?: Timestamp) {
-  if (!ts) {
-    return 0;
-  }
-  return ts.toMillis();
-}
-
-interface TimeSinceProps {
-  timestamp?: number;
-  email?: string;
-}
-
-function TimeSince(props: TimeSinceProps) {
-  if (!props.timestamp) {
-    return <div>never</div>;
-  }
-  return (
-    <Tooltip
-      transition="pop"
-      label={`${formatDateTime(props.timestamp)} by ${props.email}`}
-    >
-      {getTimeAgo(props.timestamp, {style: 'short'})}
-    </Tooltip>
-  );
-}
-
-function formatDateTime(timestamp: number) {
-  const date = new Date(timestamp);
-  return date.toLocaleDateString('en', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
-}
-
-interface StatusButtonProps {
-  id: string;
-  timestamp?: Timestamp;
-  email?: string;
-  action: 'sync' | 'publish';
-}
-
-DataPage.StatusButton = (props: StatusButtonProps) => {
-  const [loading, setLoading] = useState(false);
-  const [timestamp, setTimestamp] = useState(props.timestamp);
-  const [email, setEmail] = useState(props.email);
-
-  async function onClick() {
-    setLoading(true);
-    if (props.action === 'sync') {
-      await syncDataSource(props.id);
-    } else if (props.action === 'publish') {
-      await publishDataSource(props.id);
-    }
-    setTimestamp(Timestamp.now());
-    setEmail(window.firebase.user.email!);
-    setLoading(false);
-  }
-
-  let buttonTooltip = '';
-  if (props.action === 'sync') {
-    buttonTooltip = 'Sync data to a draft state';
-  } else if (props.action === 'publish') {
-    buttonTooltip = 'Publish synced data to prod';
-  }
-
-  return (
-    <div className="DataPage__DataSourcesTable__colWithButtons">
-      <div className="DataPage__DataSourcesTable__colWithButtons__label">
-        {!loading && (
-          <TimeSince timestamp={timestampToMillis(timestamp)} email={email} />
-        )}
-      </div>
-      <div className="DataPage__DataSourcesTable__colWithButtons__buttons">
-        <Tooltip transition="pop" label={buttonTooltip}>
-          <Button
-            variant="default"
-            size="xs"
-            compact
-            onClick={() => onClick()}
-            loading={loading}
-          >
-            {props.action}
-          </Button>
-        </Tooltip>
-      </div>
     </div>
   );
 };

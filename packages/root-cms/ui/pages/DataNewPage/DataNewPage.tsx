@@ -3,9 +3,14 @@ import {showNotification} from '@mantine/notifications';
 import {useRef, useState} from 'preact/hooks';
 import {route} from 'preact-router';
 import {Heading} from '../../components/Heading/Heading.js';
+import {Text} from '../../components/Text/Text.js';
 import {Layout} from '../../layout/Layout.js';
 import './DataNewPage.css';
-import {DataSourceType, addDataSource} from '../../utils/data-source.js';
+import {
+  DataSource,
+  DataSourceType,
+  addDataSource,
+} from '../../utils/data-source.js';
 import {parseSpreadsheetUrl} from '../../utils/gsheets.js';
 import {isSlugValid} from '../../utils/slug.js';
 
@@ -35,6 +40,7 @@ DataNewPage.Form = () => {
   const [submitting, setSubmitting] = useState(false);
   const [dataSourceType, setDataSourceType] =
     useState<DataSourceType>('gsheet');
+  const [dataFormat, setDataFormat] = useState('map');
   const [error, setError] = useState('');
 
   let urlHelp = '';
@@ -87,12 +93,16 @@ DataNewPage.Form = () => {
 
     try {
       setSubmitting(true);
-      await addDataSource({
+      const dataSource: DataSource = {
         id: id,
         description: getValue('description'),
         type: dataSourceType,
         url: url,
-      });
+      };
+      if (dataSourceType === 'gsheet') {
+        dataSource.dataFormat = (dataFormat || 'map') as any;
+      }
+      await addDataSource(dataSource);
       showNotification({
         title: 'Added data source',
         message: `Successfully added ${id}`,
@@ -116,7 +126,7 @@ DataNewPage.Form = () => {
         onSubmit();
       }}
     >
-      <div className="DataNewPage__form__type">
+      <div className="DataNewPage__form__input">
         <Select
           name="type"
           label="Type"
@@ -157,6 +167,38 @@ DataNewPage.Form = () => {
         size="xs"
         radius={0}
       />
+      {dataSourceType === 'gsheet' && (
+        <div className="DataNewPage__form__input">
+          <Select
+            name="type"
+            label="Type"
+            data={[
+              {value: 'array', label: 'array'},
+              {value: 'map', label: 'map'},
+            ]}
+            value={dataFormat}
+            onChange={(e: string) => setDataFormat(e)}
+            size="xs"
+            radius={0}
+            // Due to issues with preact/compat, use a div for the dropdown el.
+            dropdownComponent="div"
+          />
+          {dataFormat === 'array' && (
+            <div className="DataNewPage__form__input__example">
+              Data is stored as an array of arrays, e.g.
+              <code>[[header1, header2], [foo, bar]]</code>
+            </div>
+          )}
+          {dataFormat === 'map' && (
+            <div className="DataNewPage__form__input__example">
+              Data is stored as an array of maps, e.g.
+              <code>
+                [{'{'}header1: foo, header2: bar{'}'}]
+              </code>
+            </div>
+          )}
+        </div>
+      )}
       <Button
         className="DataNewPage__form__submit"
         color="blue"

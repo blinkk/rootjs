@@ -1,0 +1,58 @@
+.DataSourcePage {
+  padding: 60px;
+  padding-top: 48px;
+  width: calc(100vw - 48px);
+  height: calc(100vh - 48px);
+  overflow: auto;
+}
+
+.DataSourcePage__header {
+  margin-bottom: 30px;
+}
+
+.DataSourcePage__header__breadcrumbs {
+  font-size: 12px;
+  margin-bottom: 12px;
+}
+
+.DataSourcePage__header__breadcrumbs a {
+  font-weight: 500;
+  text-underline-offset: 4px;
+}
+
+.DataSourcePage__header__titleWrap {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.DataSourcePage__header p {
+  margin-top: 4px;
+}
+
+.DataSourcePage__header__controls {
+  display: flex;
+  align-items: center;
+}
+
+.DataSourcePage__header__controls .mantine-Tooltip-root {
+  width: 28px;
+  height: 28px;
+}
+
+.DataSourcePage__header__controls a {
+  display: flex;
+}
+
+.DataSourcePage__SyncStatus h2,
+.DataSourcePage__DataTable h2 {
+  margin-bottom: 16px;
+}
+
+.DataSourcePage__SyncStatus table {
+  max-width: 400px;
+}
+
+.DataSourcePage__DataTable {
+  margin-top: 40px;
+}

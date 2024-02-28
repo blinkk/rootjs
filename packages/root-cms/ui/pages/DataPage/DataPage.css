@@ -18,8 +18,11 @@
   margin-top: 20px;
 }
 
-.DataPage__DataSourcesTable__colWithButtons {
-  display: flex;
-  align-items: center;
-  gap: 8px;
+.DataPage__DataSourcesTable table {
+  border: 1px solid #dee2e6;
+}
+
+.DataPage__DataSourcesTable th:not(:first-child),
+.DataPage__DataSourcesTable td:not(:first-child) {
+  border-left: 1px solid #dee2e6;
 }

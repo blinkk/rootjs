@@ -30,6 +30,7 @@ import {TranslationsPage} from './pages/TranslationsPage/TranslationsPage.js';
 import './styles/global.css';
 import './styles/theme.css';
 import {DataNewPage} from './pages/DataNewPage/DataNewPage.js';
+import {DataSourcePage} from './pages/DataSourcePage/DataSourcePage.js';
 
 declare global {
   interface Window {
@@ -90,6 +91,7 @@ function App() {
               />
               <Route path="/cms/data" component={DataPage} />
               <Route path="/cms/data/new" component={DataNewPage} />
+              <Route path="/cms/data/:id" component={DataSourcePage} />
               <Route path="/cms/settings" component={SettingsPage} />
               <Route path="/cms/translations" component={TranslationsPage} />
               <Route
