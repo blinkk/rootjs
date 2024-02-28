@@ -30,11 +30,12 @@ export function DataSourceStatusButton(props: DataSourceStatusButtonProps) {
   async function onClick() {
     setLoading(true);
 
-    if (dataSource.type === 'gsheet' && !gapiClient.isLoggedIn()) {
-      await gapiClient.login();
-    }
-
     if (props.action === 'sync') {
+      // The gsheet "sync" action requires a gapi access token, so ensure the
+      // user has a token before syncing.
+      if (dataSource.type === 'gsheet' && !gapiClient.isLoggedIn()) {
+        await gapiClient.login();
+      }
       await syncDataSource(dataSource.id);
     } else if (props.action === 'publish') {
       await publishDataSource(dataSource.id);

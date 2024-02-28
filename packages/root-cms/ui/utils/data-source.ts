@@ -77,7 +77,7 @@ export async function getDataSource(id: string) {
 export async function getData<T = any>(
   id: string,
   options?: {mode?: 'draft' | 'published'}
-): Promise<T | null> {
+): Promise<Data<T> | null> {
   const mode = options?.mode || 'draft';
   const projectId = window.__ROOT_CTX.rootConfig.projectId;
   const db = window.firebase.db;
@@ -92,7 +92,7 @@ export async function getData<T = any>(
   );
   const snapshot = await getDoc(dataDocRef);
   if (snapshot.exists()) {
-    return snapshot.data() as T;
+    return snapshot.data() as Data<T>;
   }
   return null;
 }
@@ -145,11 +145,19 @@ export async function syncDataSource(id: string) {
       syncedBy: window.firebase.user.email!,
     });
   });
+
+  console.log(`synced data ${id}`);
 }
 
 export async function publishDataSource(id: string) {
+  const dataSource = await getDataSource(id);
+  if (!dataSource) {
+    throw new Error(`data source not found: ${id}`);
+  }
+
   const projectId = window.__ROOT_CTX.rootConfig.projectId;
   const db = window.firebase.db;
+  const dataSourceDocRef = doc(db, 'Projects', projectId, 'DataSources', id);
   const dataDocRefDraft = doc(
     db,
     'Projects',
@@ -169,10 +177,29 @@ export async function publishDataSource(id: string) {
     'published'
   );
 
-  await updateDataSource(id, {
+  const dataRes = await getData(id, {mode: 'draft'});
+
+  const updatedDataSource: DataSource = {
+    ...dataSource,
     publishedAt: Timestamp.now(),
     publishedBy: window.firebase.user.email!,
+  };
+
+  await runTransaction(db, async (transaction) => {
+    transaction.set(dataDocRefPublished, {
+      dataSource: updatedDataSource,
+      data: dataRes?.data || null,
+    });
+    transaction.update(dataDocRefDraft, {
+      dataSource: updatedDataSource,
+    });
+    transaction.update(dataSourceDocRef, {
+      publishedAt: Timestamp.now(),
+      publishedBy: window.firebase.user.email!,
+    });
   });
+
+  console.log(`published data ${id}`);
 }
 
 async function fetchData(dataSource: DataSource) {
