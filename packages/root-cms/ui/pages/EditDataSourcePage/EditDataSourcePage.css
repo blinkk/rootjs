@@ -25,3 +25,23 @@
   font-weight: 500;
   text-underline-offset: 4px;
 }
+
+.EditDataSourcePage__header__titleWrap {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.EditDataSourcePage__header__controls {
+  display: flex;
+  align-items: center;
+}
+
+.EditDataSourcePage__header__controls .mantine-Tooltip-root {
+  width: 28px;
+  height: 28px;
+}
+
+.EditDataSourcePage__header__controls a {
+  display: flex;
+}

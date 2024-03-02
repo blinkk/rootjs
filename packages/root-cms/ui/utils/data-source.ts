@@ -243,6 +243,36 @@ export async function publishDataSource(id: string) {
   console.log(`published data ${id}`);
 }
 
+export async function deleteDataSource(id: string) {
+  const projectId = window.__ROOT_CTX.rootConfig.projectId;
+  const db = window.firebase.db;
+  const dataSourceDocRef = doc(db, 'Projects', projectId, 'DataSources', id);
+  const dataDocRefDraft = doc(
+    db,
+    'Projects',
+    projectId,
+    'DataSources',
+    id,
+    'Data',
+    'draft'
+  );
+  const dataDocRefPublished = doc(
+    db,
+    'Projects',
+    projectId,
+    'DataSources',
+    id,
+    'Data',
+    'published'
+  );
+  await runTransaction(db, async (transaction) => {
+    transaction.delete(dataDocRefDraft);
+    transaction.delete(dataDocRefPublished);
+    transaction.delete(dataSourceDocRef);
+  });
+  console.log(`deleted data source ${id}`);
+}
+
 async function fetchData(dataSource: DataSource) {
   if (dataSource.type === 'http') {
     return await fetchHttpData(dataSource);

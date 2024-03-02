@@ -259,7 +259,8 @@ export function DataSourceForm(props: DataSourceFormProps) {
             name="dataFormat"
             label="Data Format"
             data={[
-              {value: 'array', label: 'array'},
+              // NOTE(stevenle): firestore doesn't support nested arrays.
+              // {value: 'array', label: 'array'},
               {value: 'map', label: 'map'},
             ]}
             value={dataFormat}
