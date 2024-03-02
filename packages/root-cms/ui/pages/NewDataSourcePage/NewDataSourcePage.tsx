@@ -13,7 +13,7 @@ export function NewDataSourcePage() {
             <a href="/cms/data">Data Sources</a>
             <div>New</div>
           </Breadcrumbs>
-          <Heading size="h1">Add data source</Heading>
+          <Heading size="h1">Add Data Source</Heading>
         </div>
         <DataSourceForm buttonLabel="Add data source" />
       </div>

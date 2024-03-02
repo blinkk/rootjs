@@ -14,7 +14,7 @@ export function EditDataSourcePage(props: {id: string}) {
             <a href={`/cms/data/${props.id}`}>{props.id}</a>
             <div>Edit</div>
           </Breadcrumbs>
-          <Heading size="h1">Edit data source: {props.id}</Heading>
+          <Heading size="h1">Edit Data Source: {props.id}</Heading>
         </div>
         <DataSourceForm dataSourceId={props.id} />
       </div>

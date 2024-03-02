@@ -11,6 +11,8 @@ import {route} from 'preact-router';
 import {
   DataSource,
   DataSourceType,
+  GsheetDataFormat,
+  HttpMethod,
   addDataSource,
   getDataSource,
   updateDataSource,
@@ -34,7 +36,8 @@ export function DataSourceForm(props: DataSourceFormProps) {
   const [submitting, setSubmitting] = useState(false);
   const [dataSourceType, setDataSourceType] =
     useState<DataSourceType>('gsheet');
-  const [dataFormat, setDataFormat] = useState('map');
+  const [dataFormat, setDataFormat] = useState<GsheetDataFormat>('map');
+  const [httpMethod, setHttpMethod] = useState<HttpMethod>('GET');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(!!props.dataSourceId);
   const [dataSource, setDataSource] = useState<DataSource | null>(null);
@@ -49,6 +52,7 @@ export function DataSourceForm(props: DataSourceFormProps) {
   async function fetchDataSource(id: string) {
     const dataSource = await getDataSource(id);
     setDataSource(dataSource);
+    setDataSourceType(dataSource?.type || 'http');
     setDataFormat(dataSource?.dataFormat || 'map');
     setLoading(false);
   }
@@ -73,12 +77,12 @@ export function DataSourceForm(props: DataSourceFormProps) {
       return '';
     }
 
-    const id = props.dataSourceId || getValue('id');
-    if (!id) {
+    const dataSourceId = props.dataSourceId || getValue('id');
+    if (!dataSourceId) {
       setError('missing id');
       return;
     }
-    if (!isSlugValid(id)) {
+    if (!isSlugValid(dataSourceId)) {
       setError('id is invalid (alphanumeric characters and dashes only)');
       return;
     }
@@ -89,10 +93,30 @@ export function DataSourceForm(props: DataSourceFormProps) {
       return;
     }
 
+    const dataSource: Partial<DataSource> = {
+      description: getValue('description'),
+      type: dataSourceType,
+      url: url,
+    };
+
     if (dataSourceType === 'http') {
       if (!testValidUrl(url)) {
         setError('invalid url');
         return;
+      }
+
+      dataSource.httpOptions = {
+        method: httpMethod,
+      };
+      const httpHeadersInput = getValue('httpHeaders');
+      if (httpHeadersInput) {
+        dataSource.httpOptions.headers = parseHttpHeaders(httpHeadersInput);
+      }
+      if (httpMethod === 'POST') {
+        const httpBody = getValue('httpBody');
+        if (httpBody) {
+          dataSource.httpOptions.body = httpBody;
+        }
       }
     } else if (dataSourceType === 'gsheet') {
       const gsheetId = parseSpreadsheetUrl(url);
@@ -100,35 +124,29 @@ export function DataSourceForm(props: DataSourceFormProps) {
         setError('failed to parse spreadsheet url');
         return;
       }
+
+      dataSource.dataFormat = (dataFormat || 'map') as any;
     }
 
     try {
       setSubmitting(true);
-      const dataSource: Partial<DataSource> = {
-        description: getValue('description'),
-        type: dataSourceType,
-        url: url,
-      };
-      if (dataSourceType === 'gsheet') {
-        dataSource.dataFormat = (dataFormat || 'map') as any;
-      }
       if (props.dataSourceId) {
         await updateDataSource(props.dataSourceId, dataSource);
         showNotification({
           title: 'Saved data source',
-          message: `Successfully updated ${id}`,
+          message: `Successfully updated ${dataSourceId}`,
           autoClose: 5000,
         });
         setSubmitting(false);
       } else {
-        await addDataSource(id, dataSource);
+        await addDataSource(dataSourceId, dataSource);
         showNotification({
           title: 'Added data source',
-          message: `Successfully added ${id}`,
+          message: `Successfully added ${dataSourceId}`,
           autoClose: 5000,
         });
         setSubmitting(false);
-        route(`/cms/data/${id}`);
+        route(`/cms/data/${dataSourceId}`);
       }
     } catch (err) {
       console.error(err);
@@ -151,8 +169,7 @@ export function DataSourceForm(props: DataSourceFormProps) {
           name="type"
           label="Type"
           data={[
-            // TODO(stevenle): support http urls.
-            // {value: 'http', label: 'HTTP'},
+            {value: 'http', label: 'HTTP'},
             {value: 'gsheet', label: 'Google Sheet'},
           ]}
           value={dataSourceType}
@@ -191,17 +208,54 @@ export function DataSourceForm(props: DataSourceFormProps) {
         radius={0}
         value={dataSource?.url}
       />
+      {dataSourceType === 'http' && (
+        <>
+          <div className="DataSourceForm__input">
+            <Select
+              name="httpMethod"
+              label="HTTP Request Method"
+              data={[
+                {value: 'GET', label: 'GET'},
+                {value: 'POST', label: 'POST'},
+              ]}
+              value={httpMethod}
+              onChange={(e: HttpMethod) => setHttpMethod(e)}
+              size="xs"
+              radius={0}
+              // Due to issues with preact/compat, use a div for the dropdown el.
+              dropdownComponent="div"
+            />
+          </div>
+          <Textarea
+            className="DataSourceForm__input"
+            name="httpHeaders"
+            label="HTTP Request Headers"
+            description="Format as `HeaderName: Value`, each value on its own line."
+            size="xs"
+            radius={0}
+          />
+          {httpMethod === 'POST' && (
+            <Textarea
+              className="DataSourceForm__input"
+              name="httpRequestBody"
+              label="HTTP Request Body"
+              size="xs"
+              radius={0}
+            />
+          )}
+        </>
+      )}
       {dataSourceType === 'gsheet' && (
         <div className="DataSourceForm__input">
           <Select
-            name="type"
-            label="Type"
+            name="dataFormat"
+            label="Data Format"
             data={[
               {value: 'array', label: 'array'},
               {value: 'map', label: 'map'},
             ]}
             value={dataFormat}
-            onChange={(e: string) => setDataFormat(e)}
+            onChange={(e: GsheetDataFormat) => setDataFormat(e)}
             size="xs"
             radius={0}
             // Due to issues with preact/compat, use a div for the dropdown el.
@@ -247,4 +301,22 @@ function testValidUrl(str: string) {
     return false;
   }
   return url.protocol === 'http:' || url.protocol === 'https:';
+}
+
+function parseHttpHeaders(text: string) {
+  const headers: Array<[string, string]> = [];
+  const lines = text.split('\n');
+  lines.forEach((line) => {
+    const index = line.indexOf(':');
+    if (index === -1) {
+      return;
+    }
+
+    const key = line.slice(0, index).trim();
+    const value = line.slice(index + 1).trim();
+    if (key && value) {
+      headers.push([key, value]);
+    }
+  });
+  return headers;
 }

@@ -86,29 +86,12 @@ DataSourcePage.SyncStatus = (props: {dataSource: DataSource}) => {
         <tbody>
           <tr>
             <td>
-              <DataSourceStatusButton
-                dataSource={dataSource}
-                action="sync"
-                onAction={() => {
-                  showNotification({
-                    title: 'Data synced',
-                    message: `Synced ${dataSource.id} to draft data.`,
-                    autoClose: 5000,
-                  });
-                }}
-              />
+              <DataSourceStatusButton dataSource={dataSource} action="sync" />
             </td>
             <td>
               <DataSourceStatusButton
                 dataSource={dataSource}
                 action="publish"
-                onAction={() => {
-                  showNotification({
-                    title: 'Data published',
-                    message: `Published ${dataSource.id}.`,
-                    autoClose: 5000,
-                  });
-                }}
               />
             </td>
           </tr>

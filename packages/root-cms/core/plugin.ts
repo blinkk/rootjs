@@ -230,6 +230,8 @@ export function cmsPlugin(options: CMSPluginOptions): CMSPlugin {
         }
         return authorized;
       }
+      // Add the user object to `req.user`.
+      req.user = {email: jwt.email};
       // TODO(stevenle): decide whether we want to enforce `isUserAuthorized()`.
       return true;
     } catch (err) {

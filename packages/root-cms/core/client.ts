@@ -38,6 +38,8 @@ export interface Doc<Fields = any> {
 
 export type DocMode = 'draft' | 'published';
 
+export type HttpMethod = 'GET' | 'POST';
+
 export interface DataSource {
   id: string;
   description?: string;
@@ -48,6 +50,14 @@ export interface DataSource {
    * arrays, `map` returns the sheet as an array of objects.
    */
   dataFormat?: 'array' | 'map';
+  /**
+   * Options for HTTP requests.
+   */
+  httpOptions?: {
+    method: HttpMethod;
+    headers?: Array<[string, string]>;
+    body?: string;
+  };
   createdAt: Timestamp;
   createdBy: string;
   syncedAt?: Timestamp;
@@ -539,6 +549,141 @@ export class RootCMSClient {
   ): Promise<LocaleTranslations> {
     const translationsMap = await this.loadTranslations(options);
     return translationsForLocale(translationsMap, locale);
+  }
+
+  /**
+   * Returns a data source configuration object.
+   */
+  async getDataSource(dataSourceId: string) {
+    const dbPath = `Projects/${this.projectId}/DataSources/${dataSourceId}`;
+    const docRef = this.db.doc(dbPath);
+    const doc = await docRef.get();
+    if (doc.exists) {
+      return doc.data() as DataSource;
+    }
+    return null;
+  }
+
+  /**
+   * Syncs a data source to draft state.
+   */
+  async syncDataSource(dataSourceId: string, options?: {syncedBy?: string}) {
+    const dataSource = await this.getDataSource(dataSourceId);
+    if (!dataSource) {
+      throw new Error(`data source not found: ${dataSourceId}`);
+    }
+
+    const data = await this.fetchData(dataSource);
+
+    const dataSourceDocRef = this.db.doc(
+      `Projects/${this.projectId}/DataSources/${dataSourceId}`
+    );
+    const dataDocRef = this.db.doc(
+      `Projects/${this.projectId}/DataSources/${dataSourceId}/Data/draft`
+    );
+    const syncedBy = options?.syncedBy || 'root-cms-client';
+
+    const updatedDataSource: DataSource = {
+      ...dataSource,
+      syncedAt: Timestamp.now(),
+      syncedBy: syncedBy,
+    };
+
+    await this.db.runTransaction(async (t) => {
+      t.set(dataDocRef, {
+        dataSource: updatedDataSource,
+        data: data,
+      });
+      t.update(dataSourceDocRef, {
+        syncedAt: Timestamp.now(),
+        syncedBy: syncedBy,
+      });
+    });
+
+    console.log(`synced data source: ${dataSourceId}`);
+    console.log(`synced by: ${syncedBy}`);
+  }
+
+  async publishDataSource(
+    dataSourceId: string,
+    options?: {publishedBy?: string}
+  ) {
+    const dataSource = await this.getDataSource(dataSourceId);
+    if (!dataSource) {
+      throw new Error(`data source not found: ${dataSourceId}`);
+    }
+
+    const dataSourceDocRef = this.db.doc(
+      `Projects/${this.projectId}/DataSources/${dataSourceId}`
+    );
+    const dataDocRefDraft = this.db.doc(
+      `Projects/${this.projectId}/DataSources/${dataSourceId}/draft`
+    );
+    const dataDocRefPublished = this.db.doc(
+      `Projects/${this.projectId}/DataSources/${dataSourceId}/published`
+    );
+
+    const dataRes = await this.getFromDataSource(dataSourceId, {mode: 'draft'});
+
+    const publishedBy = options?.publishedBy || 'root-cms-client';
+
+    const updatedDataSource: DataSource = {
+      ...dataSource,
+      publishedAt: Timestamp.now(),
+      publishedBy: publishedBy,
+    };
+
+    await this.db.runTransaction(async (t) => {
+      t.set(dataDocRefPublished, {
+        dataSource: updatedDataSource,
+        data: dataRes?.data || null,
+      });
+      t.update(dataDocRefDraft, {
+        dataSource: updatedDataSource,
+      });
+      t.update(dataSourceDocRef, {
+        publishedAt: Timestamp.now(),
+        publishedBy: publishedBy,
+      });
+    });
+
+    console.log(`published data ${dataSourceId}`);
+    console.log(`published by: ${publishedBy}`);
+  }
+
+  private async fetchData(dataSource: DataSource) {
+    if (dataSource.type === 'http') {
+      return await this.fetchHttpData(dataSource);
+    }
+    // TODO(stevenle): impl.
+    // if (dataSource.type === 'gsheet') {
+    //   return await fetchGsheetData(dataSource);
+    // }
+    throw new Error(`unsupported data source: ${dataSource.type}`);
+  }
+
+  private async fetchHttpData(dataSource: DataSource) {
+    const url = dataSource.url || '';
+    if (!url.startsWith('https://')) {
+      throw new Error(`url not supported: ${url}`);
+    }
+
+    const res = await fetch(url, {
+      method: dataSource.httpOptions?.method || 'GET',
+      headers: dataSource.httpOptions?.headers || [],
+      body: dataSource.httpOptions?.body || undefined,
+    });
+
+    if (res.status !== 200) {
+      const err = await res.text();
+      throw new Error(`req failed: ${err}`);
+    }
+
+    const contentType = res.headers.get('content-type');
+    if (contentType === 'application/json') {
+      return await res.json();
+    }
+    return res.text();
   }
 
   /**

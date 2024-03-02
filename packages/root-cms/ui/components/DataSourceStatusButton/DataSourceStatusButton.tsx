@@ -1,4 +1,5 @@
 import {Button, Tooltip} from '@mantine/core';
+import {showNotification, updateNotification} from '@mantine/notifications';
 import {Timestamp} from 'firebase/firestore';
 import {useEffect, useState} from 'preact/hooks';
 import {useGapiClient} from '../../hooks/useGapiClient.js';
@@ -30,21 +31,53 @@ export function DataSourceStatusButton(props: DataSourceStatusButtonProps) {
   async function onClick() {
     setLoading(true);
 
-    if (props.action === 'sync') {
-      // The gsheet "sync" action requires a gapi access token, so ensure the
-      // user has a token before syncing.
-      if (dataSource.type === 'gsheet' && !gapiClient.isLoggedIn()) {
-        await gapiClient.login();
+    const notificationId = `data-source-${props.action}-${dataSource.id}`;
+
+    showNotification({
+      id: notificationId,
+      loading: true,
+      title: `Running Data Source ${props.action}`,
+      message: `Updating ${dataSource.id}...`,
+      autoClose: false,
+      disallowClose: true,
+    });
+    try {
+      if (props.action === 'sync') {
+        // The gsheet "sync" action requires a gapi access token, so ensure the
+        // user has a token before syncing.
+        if (dataSource.type === 'gsheet' && !gapiClient.isLoggedIn()) {
+          await gapiClient.login();
+        }
+        await syncDataSource(dataSource.id);
+      } else if (props.action === 'publish') {
+        await publishDataSource(dataSource.id);
       }
-      await syncDataSource(dataSource.id);
-    } else if (props.action === 'publish') {
-      await publishDataSource(dataSource.id);
-    }
-    setTimestamp(Timestamp.now());
-    setEmail(window.firebase.user.email!);
-    setLoading(false);
-    if (props.onAction) {
-      props.onAction();
+      setTimestamp(Timestamp.now());
+      setEmail(window.firebase.user.email!);
+      setLoading(false);
+      if (props.onAction) {
+        props.onAction();
+      }
+      updateNotification({
+        id: notificationId,
+        title: 'Success',
+        message: `Updated Data Source ${dataSource.id}`,
+        autoClose: false,
+      });
+    } catch (err) {
+      console.error(err);
+      let msg = err;
+      if (typeof err === 'object' && err.body) {
+        msg = String(err.body);
+      }
+      setLoading(false);
+      updateNotification({
+        id: notificationId,
+        title: `Data Source ${props.action} failed`,
+        message: String(msg),
+        color: 'red',
+        autoClose: false,
+      });
     }
   }
 
