@@ -414,14 +414,14 @@ export function cmsPlugin(options: CMSPluginOptions): CMSPlugin {
         // If no user and login is required for the given path, redirect to the
         // login page.
         if (!user && loginRequired(req)) {
-          const params = new URLSearchParams({
-            continue: req.originalUrl,
-          });
           if (req.originalUrl.startsWith('/cms/api')) {
             res.status(401).json({success: false, error: 'NOT_AUTHORIZED'});
             return;
           }
           console.log('redirecting to login page');
+          const params = new URLSearchParams({
+            continue: req.originalUrl,
+          });
           res.redirect(`/cms/login?${params.toString()}`);
           return;
         }
