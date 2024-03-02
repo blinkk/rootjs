@@ -8,6 +8,7 @@ import {
 import {showNotification} from '@mantine/notifications';
 import {useEffect, useRef, useState} from 'preact/hooks';
 import {route} from 'preact-router';
+import {useGapiClient} from '../../hooks/useGapiClient.js';
 import {
   DataSource,
   DataSourceType,
@@ -33,9 +34,11 @@ export interface DataSourceFormProps {
 
 export function DataSourceForm(props: DataSourceFormProps) {
   const formRef = useRef<HTMLFormElement>(null);
+  const gapiClient = useGapiClient();
   const [submitting, setSubmitting] = useState(false);
-  const [dataSourceType, setDataSourceType] =
-    useState<DataSourceType>('gsheet');
+  const [dataSourceType, setDataSourceType] = useState<DataSourceType>(
+    gapiClient.enabled ? 'gsheet' : 'http'
+  );
   const [dataFormat, setDataFormat] = useState<GsheetDataFormat>('map');
   const [httpMethod, setHttpMethod] = useState<HttpMethod>('GET');
   const [error, setError] = useState('');
@@ -154,6 +157,12 @@ export function DataSourceForm(props: DataSourceFormProps) {
     }
   }
 
+  // Only show the "gsheet" option if gapi is enabled.
+  const typeSelectOptions = [{value: 'http', label: 'HTTP'}];
+  if (gapiClient.enabled || dataSourceType === 'gsheet') {
+    typeSelectOptions.push({value: 'gsheet', label: 'Google Sheet'});
+  }
+
   return (
     <form
       className="DataSourceForm"
@@ -168,10 +177,7 @@ export function DataSourceForm(props: DataSourceFormProps) {
         <Select
           name="type"
           label="Type"
-          data={[
-            {value: 'http', label: 'HTTP'},
-            {value: 'gsheet', label: 'Google Sheet'},
-          ]}
+          data={typeSelectOptions}
           value={dataSourceType}
           onChange={(e: DataSourceType) => setDataSourceType(e)}
           size="xs"
