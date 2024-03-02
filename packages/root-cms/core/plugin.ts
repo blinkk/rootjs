@@ -18,6 +18,7 @@ import {
   initializeApp,
 } from 'firebase-admin/app';
 import {getAuth, DecodedIdToken} from 'firebase-admin/auth';
+import * as jsonwebtoken from 'jsonwebtoken';
 import sirv from 'sirv';
 import {api} from './api.js';
 
@@ -28,7 +29,9 @@ type AppModule = typeof import('./app.js');
 // The session key name used for Root CMS authentication.
 const SESSION_COOKIE_AUTH = 'root-cms-auth';
 
-export type CMSUser = DecodedIdToken;
+export interface CMSUser {
+  email: string;
+}
 
 export type CMSPluginOptions = {
   /**
@@ -80,6 +83,11 @@ export type CMSPluginOptions = {
     req: Request,
     user: CMSUser
   ) => boolean | Promise<boolean>;
+
+  /**
+   * Function to call to check if login is required for a particular request.
+   */
+  isLoginRequired?: (req: Request) => boolean;
 
   /**
    * URL to GCI service for transforming uploaded GCS images to a Google App
@@ -139,10 +147,21 @@ export function cmsPlugin(options: CMSPluginOptions): CMSPlugin {
    * the URL path starts with /cms or if ?preview=true is in the URL.
    */
   function loginRequired(req: Request): boolean {
+    // Allow the cron to run unauthenticated. The cron job is responsible
+    // for saving version history.
+    if (req.originalUrl === '/cms/api/cron.run') {
+      return false;
+    }
+    // Require login on all `/cms/` paths.
     if (req.originalUrl.startsWith('/cms')) {
       return true;
     }
+    // Require login on all paths that have `?preview=true`, which is used by
+    // the preview iframe to render the preview for a page.
     if (String(req.query.preview) === 'true') {
+      return true;
+    }
+    if (options.isLoginRequired && options.isLoginRequired(req)) {
       return true;
     }
     return false;
@@ -161,13 +180,27 @@ export function cmsPlugin(options: CMSPluginOptions): CMSPlugin {
       return false;
     }
 
-    // On local dev, simply verify that an idToken is set. The identity toolkit
-    // that verifies id tokens requires a service account, which we want to
-    // avoid having to set up when users are doing local development.
+    // On local dev, simply verify the decoded idToken's email is set. The
+    // identity toolkit that verifies id tokens requires a service account,
+    // which we want to avoid having to set up when users are doing local dev.
     // Authentication is still required by the frontend using Firebase Auth,
     // this just bypasses the initial server check before the ui is rendered.
     if (process.env.NODE_ENV === 'development') {
-      return Boolean(idToken);
+      const jwt = jsonwebtoken.decode(idToken) as jsonwebtoken.JwtPayload;
+      if (!jwt.email || !jwt.email_verified) {
+        console.log('login failed: email unverified');
+        return false;
+      }
+      if (options.isUserAuthorized) {
+        const authorized = await options.isUserAuthorized(req, {
+          email: jwt.email,
+        });
+        if (!authorized) {
+          console.log('login failed: user is not authorized');
+        }
+        return authorized;
+      }
+      return true;
     }
 
     try {
@@ -181,7 +214,9 @@ export function cmsPlugin(options: CMSPluginOptions): CMSPlugin {
         return false;
       }
       if (options.isUserAuthorized) {
-        const authorized = await options.isUserAuthorized(req, jwt);
+        const authorized = await options.isUserAuthorized(req, {
+          email: jwt.email,
+        });
         if (!authorized) {
           console.log('login failed: user is not authorized');
         }
@@ -192,52 +227,62 @@ export function cmsPlugin(options: CMSPluginOptions): CMSPlugin {
       console.error(err);
       return false;
     }
-    // TODO(stevenle): decide whether we want to enforce `isUserAuthorized()`.
     return true;
   }
 
-  /**
-   * Verifies whether the current user session should be allowed to access the
-   * CMS. Returns true if access is granted.
-   */
-  async function verifyUserSession(req: Request): Promise<boolean> {
+  async function getCurrentUser(req: Request): Promise<CMSUser | null> {
     const sessionCookie = req.session.getItem(SESSION_COOKIE_AUTH);
     if (!sessionCookie) {
-      console.log('session failed: no session cookie');
-      return false;
+      return null;
     }
 
-    // On local dev, simply verify that an session cookie is set. See note
-    // above in `verifyUserLogin()` for more information.
+    // On local dev, verify the decoded idToken has a valid email. The firebase
+    // auth verification otherwise would require a service account.
     if (process.env.NODE_ENV === 'development') {
-      return Boolean(sessionCookie);
+      const jwt = jsonwebtoken.decode(sessionCookie) as jsonwebtoken.JwtPayload;
+      if (!jwt?.email || !jwt?.email_verified) {
+        return null;
+      }
+      // Check whether user is authorized.
+      if (options.isUserAuthorized) {
+        const authorized = await options.isUserAuthorized(req, {
+          email: jwt.email,
+        });
+        if (!authorized) {
+          console.log('session failed: not authorized');
+          return null;
+        }
+      }
+      return {email: jwt.email};
     }
 
     try {
+      // Verify the idToken using firebase auth, checking for token revocations.
       const jwt = await auth.verifySessionCookie(sessionCookie, true);
       if (isExpired(jwt)) {
         console.log('session failed: token is expired');
-        return false;
+        return null;
       }
+      // Verify user's email is verified.
       if (!jwt.email || !jwt.email_verified) {
         console.log('session failed: email not verified');
-        return false;
+        return null;
       }
+      // Check whether user is authorized.
       if (options.isUserAuthorized) {
-        const authorized = await options.isUserAuthorized(req, jwt);
+        const authorized = await options.isUserAuthorized(req, {
+          email: jwt.email!,
+        });
         if (!authorized) {
           console.log('session failed: not authorized');
+          return null;
         }
-        return authorized;
       }
-      // Add the user object to `req.user`.
-      req.user = {email: jwt.email};
-      // TODO(stevenle): decide whether we want to enforce `isUserAuthorized()`.
-      return true;
+      return {email: jwt.email!};
     } catch (err) {
       console.error('failed to verify jwt token');
       console.error(err);
-      return false;
+      return null;
     }
   }
 
@@ -358,32 +403,30 @@ export function cmsPlugin(options: CMSPluginOptions): CMSPlugin {
         res.redirect('/cms/login');
       });
 
-      // Safeguard to verify user login before rendering any CMS page.
+      // Inject the current user into the req object and check if login is
+      // required, sending unauthenticated users to the login page.
       server.use(async (req: Request, res: Response, next: NextFunction) => {
-        if (!loginRequired(req)) {
-          next();
+        const user = await getCurrentUser(req);
+        if (user) {
+          req.user = user;
+        }
+
+        // If no user and login is required for the given path, redirect to the
+        // login page.
+        if (!user && loginRequired(req)) {
+          const params = new URLSearchParams({
+            continue: req.originalUrl,
+          });
+          if (req.originalUrl.startsWith('/cms/api')) {
+            res.status(401).json({success: false, error: 'NOT_AUTHORIZED'});
+            return;
+          }
+          console.log('redirecting to login page');
+          res.redirect(`/cms/login?${params.toString()}`);
           return;
         }
-        const userIsLoggedIn = await verifyUserSession(req);
-        if (userIsLoggedIn) {
-          next();
-          return;
-        }
-        // Allow the cron to run unauthenticated. The cron job is responsible
-        // for saving version history.
-        if (req.originalUrl === '/cms/api/cron.run') {
-          next();
-          return;
-        }
-        if (req.originalUrl.startsWith('/cms/api')) {
-          res.status(401).json({success: false, error: 'NOT_AUTHORIZED'});
-          return;
-        }
-        console.log('redirecting to login page');
-        const params = new URLSearchParams({
-          continue: req.originalUrl,
-        });
-        res.redirect(`/cms/login?${params.toString()}`);
+
+        next();
       });
 
       // Register API handlers.
