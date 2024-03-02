@@ -84,6 +84,8 @@ export type Request = ExpressRequest & {
   viteServer?: ViteDevServer;
   /** The root.js renderer, to render routes within middleware. */
   renderer?: Renderer;
+  /** Logged in user for the request. */
+  user?: {email: string};
 
   /**
    * Handler context, provided to route files that export a custom `handler()`

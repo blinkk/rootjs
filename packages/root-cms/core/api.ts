@@ -1,5 +1,6 @@
 import {Server, Request, Response} from '@blinkk/root';
 import {multipartMiddleware} from '@blinkk/root/middleware';
+import {RootCMSClient} from './client.js';
 import {runCronJobs} from './cron.js';
 import {arrayToCsv, csvToArray} from './csv.js';
 
@@ -42,6 +43,7 @@ export function api(server: Server) {
       !String(req.get('content-type')).startsWith('application/json')
     ) {
       res.status(400).json({success: false, error: 'BAD_REQUEST'});
+      return;
     }
 
     try {
@@ -94,4 +96,36 @@ export function api(server: Server) {
       }
     }
   );
+
+  /**
+   * Runs a data source sync.
+   */
+  server.use('/cms/api/data.sync', async (req: Request, res: Response) => {
+    if (
+      req.method !== 'POST' ||
+      !String(req.get('content-type')).startsWith('application/json')
+    ) {
+      res.status(400).json({success: false, error: 'BAD_REQUEST'});
+      return;
+    }
+
+    if (!req.user?.email) {
+      res.status(401).json({success: false, error: 'UNAUTHORIZED'});
+    }
+
+    const reqBody = req.body || {};
+    const dataSourceId = reqBody.id;
+    if (!dataSourceId) {
+      res.status(400).json({success: false, error: 'MISSING_ID'});
+      return;
+    }
+    const cmsClient = new RootCMSClient(req.rootConfig);
+    try {
+      await cmsClient.syncDataSource(dataSourceId, {syncedBy: req.user.email});
+      res.status(200).json({success: true, id: dataSourceId});
+    } catch (err) {
+      console.error(err.stack || err);
+      res.status(500).json({success: false, error: 'UNKNOWN'});
+    }
+  });
 }

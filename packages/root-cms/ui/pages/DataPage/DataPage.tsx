@@ -6,7 +6,6 @@ import {Text} from '../../components/Text/Text.js';
 import {Layout} from '../../layout/Layout.js';
 import {DataSource, listDataSources} from '../../utils/data-source.js';
 import './DataPage.css';
-import {showNotification} from '@mantine/notifications';
 
 export function DataPage() {
   return (
@@ -72,26 +71,12 @@ DataPage.DataSourcesTable = () => {
                   <DataSourceStatusButton
                     dataSource={dataSource}
                     action="sync"
-                    onAction={() => {
-                      showNotification({
-                        title: 'Data synced',
-                        message: `Synced ${dataSource.id} to draft data.`,
-                        autoClose: 5000,
-                      });
-                    }}
                   />
                 </td>
                 <td>
                   <DataSourceStatusButton
                     dataSource={dataSource}
                     action="publish"
-                    onAction={() => {
-                      showNotification({
-                        title: 'Data published',
-                        message: `Published ${dataSource.id}.`,
-                        autoClose: 5000,
-                      });
-                    }}
                   />
                 </td>
               </tr>

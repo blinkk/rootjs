@@ -14,6 +14,10 @@ import {GSpreadsheet, parseSpreadsheetUrl} from './gsheets.js';
 
 export type DataSourceType = 'http' | 'gsheet';
 
+export type HttpMethod = 'GET' | 'POST';
+
+export type GsheetDataFormat = 'array' | 'map';
+
 export interface DataSource {
   id: string;
   description?: string;
@@ -23,7 +27,15 @@ export interface DataSource {
    * Currently only used by gsheet. `array` returns the sheet as an array of
    * arrays, `map` returns the sheet as an array of objects.
    */
-  dataFormat?: 'array' | 'map';
+  dataFormat?: GsheetDataFormat;
+  /**
+   * Options for HTTP requests.
+   */
+  httpOptions?: {
+    method: HttpMethod;
+    headers?: Record<string, string>;
+    body?: string;
+  };
   createdAt: Timestamp;
   createdBy: string;
   syncedAt?: Timestamp;
@@ -41,7 +53,7 @@ export async function addDataSource(
   id: string,
   dataSource: Partial<DataSource>
 ) {
-  if (id) {
+  if (!id) {
     throw new Error('missing data source id');
   }
   const projectId = window.__ROOT_CTX.rootConfig.projectId;
@@ -124,40 +136,58 @@ export async function syncDataSource(id: string) {
     throw new Error(`data source not found: ${id}`);
   }
 
-  const data = await fetchData(dataSource);
-
-  const projectId = window.__ROOT_CTX.rootConfig.projectId;
-  const db = window.firebase.db;
-
-  const dataSourceDocRef = doc(db, 'Projects', projectId, 'DataSources', id);
-  const dataDocRef = doc(
-    db,
-    'Projects',
-    projectId,
-    'DataSources',
-    id,
-    'Data',
-    'draft'
-  );
-
-  const updatedDataSource: DataSource = {
-    ...dataSource,
-    syncedAt: Timestamp.now(),
-    syncedBy: window.firebase.user.email!,
-  };
-
-  await runTransaction(db, async (transaction) => {
-    transaction.set(dataDocRef, {
-      dataSource: updatedDataSource,
-      data: data,
+  // To avoid CORS issues, non-relative HTTP fetches are handled on the server.
+  // This may change in the future.
+  if (
+    dataSource.type === 'http' &&
+    dataSource.url &&
+    !isRelativeUrl(dataSource.url)
+  ) {
+    const res = await fetch('/cms/api/data.sync', {
+      method: 'POST',
+      headers: {'content-type': 'application/json'},
+      body: JSON.stringify({id: dataSource.id}),
     });
-    transaction.update(dataSourceDocRef, {
+    if (res.status !== 200) {
+      const err = await res.text();
+      throw new Error(`sync failed: ${err}`);
+    }
+  } else {
+    const data = await fetchData(dataSource);
+
+    const projectId = window.__ROOT_CTX.rootConfig.projectId;
+    const db = window.firebase.db;
+
+    const dataSourceDocRef = doc(db, 'Projects', projectId, 'DataSources', id);
+    const dataDocRef = doc(
+      db,
+      'Projects',
+      projectId,
+      'DataSources',
+      id,
+      'Data',
+      'draft'
+    );
+
+    const updatedDataSource: DataSource = {
+      ...dataSource,
       syncedAt: Timestamp.now(),
       syncedBy: window.firebase.user.email!,
-    });
-  });
+    };
 
-  console.log(`synced data ${id}`);
+    await runTransaction(db, async (transaction) => {
+      transaction.set(dataDocRef, {
+        dataSource: updatedDataSource,
+        data: data,
+      });
+      transaction.update(dataSourceDocRef, {
+        syncedAt: Timestamp.now(),
+        syncedBy: window.firebase.user.email!,
+      });
+    });
+  }
+
+  console.log(`synced data source: ${id}`);
 }
 
 export async function publishDataSource(id: string) {
@@ -213,7 +243,40 @@ export async function publishDataSource(id: string) {
   console.log(`published data ${id}`);
 }
 
+export async function deleteDataSource(id: string) {
+  const projectId = window.__ROOT_CTX.rootConfig.projectId;
+  const db = window.firebase.db;
+  const dataSourceDocRef = doc(db, 'Projects', projectId, 'DataSources', id);
+  const dataDocRefDraft = doc(
+    db,
+    'Projects',
+    projectId,
+    'DataSources',
+    id,
+    'Data',
+    'draft'
+  );
+  const dataDocRefPublished = doc(
+    db,
+    'Projects',
+    projectId,
+    'DataSources',
+    id,
+    'Data',
+    'published'
+  );
+  await runTransaction(db, async (transaction) => {
+    transaction.delete(dataDocRefDraft);
+    transaction.delete(dataDocRefPublished);
+    transaction.delete(dataSourceDocRef);
+  });
+  console.log(`deleted data source ${id}`);
+}
+
 async function fetchData(dataSource: DataSource) {
+  if (dataSource.type === 'http') {
+    return await fetchHttpData(dataSource);
+  }
   if (dataSource.type === 'gsheet') {
     return await fetchGsheetData(dataSource);
   }
@@ -237,4 +300,32 @@ async function fetchGsheetData(dataSource: DataSource) {
     return await gsheet.getValues();
   }
   return await gsheet.getValuesMap();
+}
+
+async function fetchHttpData(dataSource: DataSource) {
+  // Only relative URLs are supported with this method.
+  if (!isRelativeUrl(dataSource.url)) {
+    throw new Error(`unsupported url: ${dataSource.url}`);
+  }
+
+  const res = await fetch(dataSource.url, {
+    method: dataSource.httpOptions?.method || 'GET',
+    headers: dataSource.httpOptions?.headers || [],
+    body: dataSource.httpOptions?.body || undefined,
+  });
+
+  if (res.status !== 200) {
+    const err = await res.text();
+    throw new Error(`req failed: ${err}`);
+  }
+
+  const contentType = String(res.headers.get('content-type'));
+  if (contentType.includes('application/json')) {
+    return await res.json();
+  }
+  return res.text();
+}
+
+function isRelativeUrl(url: string) {
+  return url && url.startsWith('/');
 }

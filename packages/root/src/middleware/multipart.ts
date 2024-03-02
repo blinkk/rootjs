@@ -1,4 +1,5 @@
 import busboy from 'busboy';
+import {RequestHandler} from 'express';
 import {Request, Response, NextFunction, MultipartFile} from '../core/types';
 
 const DEFAULT_MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
@@ -10,10 +11,11 @@ const DEFAULT_MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
  * Context:
  * https://stackoverflow.com/questions/47242340/how-to-perform-an-http-file-upload-using-express-on-cloud-functions-for-firebase
  */
-export function multipartMiddleware(options?: {maxFileSize?: number}) {
+export function multipartMiddleware(options?: {
+  maxFileSize?: number;
+}): RequestHandler {
   const maxFileSize = options?.maxFileSize || DEFAULT_MAX_FILE_SIZE;
-
-  return (req: Request, res: Response, next: NextFunction) => {
+  const handler: any = (req: Request, res: Response, next: NextFunction) => {
     const contentType = String(req.headers['content-type'] || '');
     if (
       req.method === 'POST' &&
@@ -95,4 +97,5 @@ export function multipartMiddleware(options?: {maxFileSize?: number}) {
       next();
     }
   };
+  return handler;
 }
