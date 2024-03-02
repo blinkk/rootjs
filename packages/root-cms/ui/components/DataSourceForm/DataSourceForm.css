@@ -1,0 +1,43 @@
+.DataSourceForm {
+  font-size: 14px;
+  max-width: 650px;
+  position: relative;
+}
+
+.DataSourceForm__type {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.DataSourceForm__type__label {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.DataSourceForm__input {
+  margin-top: 16px;
+}
+
+.DataSourceForm__input__example {
+  font-size: 12px;
+  margin-top: 12px;
+}
+
+.DataSourceForm__input__example code {
+  background: #efefef;
+  padding: 4px;
+  margin-left: 4px;
+  font-weight: 500;
+}
+
+.DataSourceForm__submit {
+  margin-top: 30px;
+}
+
+.DataSourceForm__error {
+  margin-top: 30px;
+  font-size: 14px;
+  font-weight: 500;
+  color: red;
+}

@@ -25,7 +25,6 @@ export function DataSourcePage(props: {id: string}) {
     setDataSource(dataSource);
     if (dataSource) {
       const data = await getFromDataSource(id, {mode: 'draft'});
-      console.log(data);
       setData(data);
     }
     setLoading(false);
@@ -119,8 +118,11 @@ DataSourcePage.SyncStatus = (props: {dataSource: DataSource}) => {
   );
 };
 
-DataSourcePage.DataTable = (props: {dataSource: DataSource; data: DataSourceData}) => {
-  const {data, dataSource} = props.data;
+DataSourcePage.DataTable = (props: {
+  dataSource: DataSource;
+  data: DataSourceData;
+}) => {
+  const {data, dataSource} = props.data || {};
 
   if (!data) {
     return null;

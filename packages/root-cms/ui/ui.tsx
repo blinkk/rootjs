@@ -19,10 +19,10 @@ import {VersionHistoryModal} from './components/VersionHistoryModal/VersionHisto
 import {FirebaseContext, FirebaseContextObject} from './hooks/useFirebase.js';
 import {AssetsPage} from './pages/AssetsPage/AssetsPage.js';
 import {CollectionPage} from './pages/CollectionPage/CollectionPage.js';
-import {DataNewPage} from './pages/DataNewPage/DataNewPage.js';
 import {DataPage} from './pages/DataPage/DataPage.js';
 import {DataSourcePage} from './pages/DataSourcePage/DataSourcePage.js';
 import {DocumentPage} from './pages/DocumentPage/DocumentPage.js';
+import {NewDataSourcePage} from './pages/NewDataSourcePage/NewDataSourcePage.js';
 import {NotFoundPage} from './pages/NotFoundPage/NotFoundPage.js';
 import {ProjectPage} from './pages/ProjectPage/ProjectPage.js';
 import {SettingsPage} from './pages/SettingsPage/SettingsPage.js';
@@ -31,6 +31,7 @@ import {TranslationsEditPage} from './pages/TranslationsEditPage/TranslationsEdi
 import {TranslationsPage} from './pages/TranslationsPage/TranslationsPage.js';
 import './styles/global.css';
 import './styles/theme.css';
+import {EditDataSourcePage} from './pages/EditDataSourcePage/EditDataSourcePage.js';
 
 declare global {
   interface Window {
@@ -90,8 +91,9 @@ function App() {
                 component={DocumentPage}
               />
               <Route path="/cms/data" component={DataPage} />
-              <Route path="/cms/data/new" component={DataNewPage} />
+              <Route path="/cms/data/new" component={NewDataSourcePage} />
               <Route path="/cms/data/:id" component={DataSourcePage} />
+              <Route path="/cms/data/:id/edit" component={EditDataSourcePage} />
               <Route path="/cms/settings" component={SettingsPage} />
               <Route path="/cms/translations" component={TranslationsPage} />
               <Route

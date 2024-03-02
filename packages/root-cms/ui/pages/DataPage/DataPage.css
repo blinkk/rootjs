@@ -26,3 +26,10 @@
 .DataPage__DataSourcesTable td:not(:first-child) {
   border-left: 1px solid #dee2e6;
 }
+
+.DataPage__DataSourcesTable th,
+.DataPage__DataSourcesTable td {
+  max-width: 350px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}

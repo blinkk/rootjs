@@ -1,0 +1,27 @@
+.NewDataSourcePage {
+  padding: 60px;
+  padding-top: 48px;
+  width: calc(100vw - 48px);
+  height: calc(100vh - 48px);
+  overflow: auto;
+}
+
+.NewDataSourcePage__header {
+  max-width: 600px;
+  margin-bottom: 20px;
+}
+
+.NewDataSourcePage__header p {
+  margin-top: 8px;
+  max-width: 70ch;
+}
+
+.NewDataSourcePage__header__breadcrumbs {
+  font-size: 12px;
+  margin-bottom: 12px;
+}
+
+.NewDataSourcePage__header__breadcrumbs a {
+  font-weight: 500;
+  text-underline-offset: 4px;
+}

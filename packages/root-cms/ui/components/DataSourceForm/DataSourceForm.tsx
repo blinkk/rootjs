@@ -1,47 +1,43 @@
-import {Breadcrumbs, Button, Select, TextInput, Textarea} from '@mantine/core';
+import {
+  Button,
+  LoadingOverlay,
+  Select,
+  TextInput,
+  Textarea,
+} from '@mantine/core';
 import {showNotification} from '@mantine/notifications';
-import {useRef, useState} from 'preact/hooks';
+import {useEffect, useRef, useState} from 'preact/hooks';
 import {route} from 'preact-router';
-import {Heading} from '../../components/Heading/Heading.js';
-import {Text} from '../../components/Text/Text.js';
-import {Layout} from '../../layout/Layout.js';
-import './DataNewPage.css';
 import {
   DataSource,
   DataSourceType,
   addDataSource,
+  getDataSource,
+  updateDataSource,
 } from '../../utils/data-source.js';
 import {parseSpreadsheetUrl} from '../../utils/gsheets.js';
 import {isSlugValid} from '../../utils/slug.js';
+import './DataSourceForm.css';
 
 const HTTP_URL_HELP = 'Enter the URL to make the HTTP request.';
 const GSHEET_URL_HELP =
   'Enter the URL of the Google Sheet, e.g. https://docs.google.com/spreadsheets/d/SPREADSHEET_ID/edit#gid=SHEET_ID';
 
-export function DataNewPage() {
-  return (
-    <Layout>
-      <div className="DataNewPage">
-        <div className="DataNewPage__header">
-          <Breadcrumbs className="DataNewPage__header__breadcrumbs">
-            <a href="/cms/data">Data Sources</a>
-            <div>New</div>
-          </Breadcrumbs>
-          <Heading size="h1">Add data source</Heading>
-        </div>
-        <DataNewPage.Form />
-      </div>
-    </Layout>
-  );
+export interface DataSourceFormProps {
+  className?: string;
+  dataSourceId?: string;
+  buttonLabel?: string;
 }
 
-DataNewPage.Form = () => {
+export function DataSourceForm(props: DataSourceFormProps) {
   const formRef = useRef<HTMLFormElement>(null);
   const [submitting, setSubmitting] = useState(false);
   const [dataSourceType, setDataSourceType] =
     useState<DataSourceType>('gsheet');
   const [dataFormat, setDataFormat] = useState('map');
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(!!props.dataSourceId);
+  const [dataSource, setDataSource] = useState<DataSource | null>(null);
 
   let urlHelp = '';
   if (dataSourceType === 'http') {
@@ -49,6 +45,21 @@ DataNewPage.Form = () => {
   } else if (dataSourceType === 'gsheet') {
     urlHelp = GSHEET_URL_HELP;
   }
+
+  async function fetchDataSource(id: string) {
+    const dataSource = await getDataSource(id);
+    setDataSource(dataSource);
+    setDataFormat(dataSource?.dataFormat || 'map');
+    setLoading(false);
+  }
+
+  useEffect(() => {
+    if (!props.dataSourceId) {
+      return;
+    }
+    setLoading(true);
+    fetchDataSource(props.dataSourceId);
+  }, [props.dataSourceId]);
 
   async function onSubmit() {
     setError('');
@@ -62,7 +73,7 @@ DataNewPage.Form = () => {
       return '';
     }
 
-    const id = getValue('id');
+    const id = props.dataSourceId || getValue('id');
     if (!id) {
       setError('missing id');
       return;
@@ -102,15 +113,24 @@ DataNewPage.Form = () => {
       if (dataSourceType === 'gsheet') {
         dataSource.dataFormat = (dataFormat || 'map') as any;
       }
-      await addDataSource(dataSource);
-      showNotification({
-        title: 'Added data source',
-        message: `Successfully added ${id}`,
-        autoClose: 5000,
-      });
-      setSubmitting(false);
-      // route(`/cms/data/${id}`);
-      route('/cms/data/');
+      if (props.dataSourceId) {
+        await updateDataSource(props.dataSourceId, dataSource);
+        showNotification({
+          title: 'Saved data source',
+          message: `Successfully updated ${id}`,
+          autoClose: 5000,
+        });
+        setSubmitting(false);
+      } else {
+        await addDataSource(dataSource);
+        showNotification({
+          title: 'Added data source',
+          message: `Successfully added ${id}`,
+          autoClose: 5000,
+        });
+        setSubmitting(false);
+        route(`/cms/data/${id}`);
+      }
     } catch (err) {
       console.error(err);
       setSubmitting(false);
@@ -119,14 +139,15 @@ DataNewPage.Form = () => {
 
   return (
     <form
-      className="DataNewPage__form"
+      className="DataSourceForm"
       ref={formRef}
       onSubmit={(e) => {
         e.preventDefault();
         onSubmit();
       }}
     >
-      <div className="DataNewPage__form__input">
+      <LoadingOverlay visible={loading} />
+      <div className="DataSourceForm__input">
         <Select
           name="type"
           label="Type"
@@ -144,31 +165,35 @@ DataNewPage.Form = () => {
         />
       </div>
       <TextInput
-        className="DataNewPage__form__input"
+        className="DataSourceForm__input"
         name="id"
         label="ID"
         description="Unique identifier for the data source. Use alphanumeric characters and dashes only, e.g. grogus-favorite-meals"
         size="xs"
         radius={0}
+        value={props.dataSourceId}
+        disabled={!!props.dataSourceId}
       />
       <Textarea
-        className="DataNewPage__form__input"
+        className="DataSourceForm__input"
         name="description"
         label="Description"
         description="Optional."
         size="xs"
         radius={0}
+        value={dataSource?.description}
       />
       <TextInput
-        className="DataNewPage__form__input"
+        className="DataSourceForm__input"
         name="url"
         label="URL"
         description={urlHelp}
         size="xs"
         radius={0}
+        value={dataSource?.url}
       />
       {dataSourceType === 'gsheet' && (
-        <div className="DataNewPage__form__input">
+        <div className="DataSourceForm__input">
           <Select
             name="type"
             label="Type"
@@ -184,13 +209,13 @@ DataNewPage.Form = () => {
             dropdownComponent="div"
           />
           {dataFormat === 'array' && (
-            <div className="DataNewPage__form__input__example">
+            <div className="DataSourceForm__input__example">
               Data is stored as an array of arrays, e.g.
               <code>[[header1, header2], [foo, bar]]</code>
             </div>
           )}
           {dataFormat === 'map' && (
-            <div className="DataNewPage__form__input__example">
+            <div className="DataSourceForm__input__example">
               Data is stored as an array of maps, e.g.
               <code>
                 [{'{'}header1: foo, header2: bar{'}'}]
@@ -200,18 +225,18 @@ DataNewPage.Form = () => {
         </div>
       )}
       <Button
-        className="DataNewPage__form__submit"
+        className="DataSourceForm__submit"
         color="blue"
         size="xs"
         type="submit"
         loading={submitting}
       >
-        Add data source
+        {props.buttonLabel || 'Save'}
       </Button>
-      {error && <div className="DataNewPage__form__error">Error: {error}</div>}
+      {error && <div className="DataSourceForm__error">Error: {error}</div>}
     </form>
   );
-};
+}
 
 function testValidUrl(str: string) {
   let url;
