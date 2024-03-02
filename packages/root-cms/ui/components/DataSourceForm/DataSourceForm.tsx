@@ -239,6 +239,7 @@ export function DataSourceForm(props: DataSourceFormProps) {
             description="Format as `HeaderName: Value`, each value on its own line."
             size="xs"
             radius={0}
+            value={headersToString(dataSource?.httpOptions?.headers || {})}
           />
           {httpMethod === 'POST' && (
             <Textarea
@@ -247,6 +248,7 @@ export function DataSourceForm(props: DataSourceFormProps) {
               label="HTTP Request Body"
               size="xs"
               radius={0}
+              value={dataSource?.httpOptions?.body}
             />
           )}
         </>
@@ -310,7 +312,7 @@ function testValidUrl(str: string) {
 }
 
 function parseHttpHeaders(text: string) {
-  const headers: Array<[string, string]> = [];
+  const headers: Record<string, string> = {};
   const lines = text.split('\n');
   lines.forEach((line) => {
     const index = line.indexOf(':');
@@ -321,8 +323,17 @@ function parseHttpHeaders(text: string) {
     const key = line.slice(0, index).trim();
     const value = line.slice(index + 1).trim();
     if (key && value) {
-      headers.push([key, value]);
+      headers[key] = value;
     }
   });
   return headers;
+}
+
+function headersToString(headers: Record<string, string>) {
+  const lines: string[] = [];
+  for (const key in headers) {
+    const val = headers[key];
+    lines.push(`${key}: ${val}`);
+  }
+  return lines.join('\n');
 }

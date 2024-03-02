@@ -33,7 +33,7 @@ export interface DataSource {
    */
   httpOptions?: {
     method: HttpMethod;
-    headers?: Array<[string, string]>;
+    headers?: Record<string, string>;
     body?: string;
   };
   createdAt: Timestamp;
