@@ -104,8 +104,7 @@ export function DataSourceForm(props: DataSourceFormProps) {
 
     try {
       setSubmitting(true);
-      const dataSource: DataSource = {
-        id: id,
+      const dataSource: Partial<DataSource> = {
         description: getValue('description'),
         type: dataSourceType,
         url: url,
@@ -122,7 +121,7 @@ export function DataSourceForm(props: DataSourceFormProps) {
         });
         setSubmitting(false);
       } else {
-        await addDataSource(dataSource);
+        await addDataSource(id, dataSource);
         showNotification({
           title: 'Added data source',
           message: `Successfully added ${id}`,

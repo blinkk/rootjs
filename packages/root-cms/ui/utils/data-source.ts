@@ -38,13 +38,18 @@ export interface DataSourceData<T = any> {
 }
 
 export async function addDataSource(
-  dataSource: Omit<DataSource, 'createdAt' | 'createdBy'>
+  id: string,
+  dataSource: Partial<DataSource>
 ) {
+  if (id) {
+    throw new Error('missing data source id');
+  }
   const projectId = window.__ROOT_CTX.rootConfig.projectId;
   const db = window.firebase.db;
-  const docRef = doc(db, 'Projects', projectId, 'DataSources', dataSource.id);
+  const docRef = doc(db, 'Projects', projectId, 'DataSources', id);
   await setDoc(docRef, {
     ...dataSource,
+    id: id,
     createdAt: serverTimestamp(),
     createdBy: window.firebase.user.email,
   });
