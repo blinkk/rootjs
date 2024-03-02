@@ -13,7 +13,7 @@ import {
   Tooltip,
 } from '@mantine/core';
 import {ContextModalProps, useModals} from '@mantine/modals';
-import {showNotification} from '@mantine/notifications';
+import {showNotification, updateNotification} from '@mantine/notifications';
 import {
   IconChevronDown,
   IconFileDownload,
@@ -440,7 +440,16 @@ LocalizationModal.Translations = (props: TranslationsProps) => {
       rootConfig.projectName || rootConfig.projectId || 'Root CMS';
     let gspreadsheet: GSpreadsheet;
     let gsheet: GSheet;
+    const notificationId = 'create-google-sheet';
     try {
+      showNotification({
+        id: notificationId,
+        loading: true,
+        title: 'Creating Google Sheet...',
+        message: 'Creating Google Sheet for localization.',
+        autoClose: false,
+        disallowClose: true,
+      });
       gspreadsheet = await GSpreadsheet.create({
         title: `${project} Localization`,
       });
@@ -450,18 +459,14 @@ LocalizationModal.Translations = (props: TranslationsProps) => {
       }
       // Update tab name to the doc id.
       gsheet.setTitle(props.docId);
-      showNotification({
-        title: 'Created Google Sheet',
-        message: gspreadsheet.getUrl(),
-        autoClose: false,
-      });
     } catch (err) {
       console.error(err);
       let msg = err;
       if (typeof err === 'object' && err.body) {
         msg = String(err.body);
       }
-      showNotification({
+      updateNotification({
+        id: notificationId,
         title: 'Failed to create Google Sheet',
         message: String(msg),
         color: 'red',
@@ -472,6 +477,14 @@ LocalizationModal.Translations = (props: TranslationsProps) => {
 
     // Link Google Sheet to CMS doc.
     try {
+      updateNotification({
+        id: notificationId,
+        loading: true,
+        title: 'Created Google Sheet!',
+        message: `Linking sheet to ${props.docId}...`,
+        autoClose: false,
+        disallowClose: true,
+      });
       const linkedSheet = {
         spreadsheetId: gspreadsheet.spreadsheetId,
         gid: 0,
@@ -480,7 +493,8 @@ LocalizationModal.Translations = (props: TranslationsProps) => {
       setLinkedSheet(linkedSheet);
     } catch (err) {
       console.error(err);
-      showNotification({
+      updateNotification({
+        id: notificationId,
         title: 'Failed to link Google Sheet',
         message: String(err),
         color: 'red',
@@ -491,6 +505,14 @@ LocalizationModal.Translations = (props: TranslationsProps) => {
 
     // Export strings from the doc to the sheet.
     try {
+      updateNotification({
+        id: notificationId,
+        loading: true,
+        title: 'Linked Google Sheet!',
+        message: 'Exporting strings to sheet...',
+        autoClose: false,
+        disallowClose: true,
+      });
       await exportStringsToSheet(gsheet, {isNew: true});
     } catch (err) {
       console.error(err);
@@ -498,13 +520,21 @@ LocalizationModal.Translations = (props: TranslationsProps) => {
       if (typeof err === 'object' && err.body) {
         msg = String(err.body);
       }
-      showNotification({
+      updateNotification({
+        id: notificationId,
         title: 'Failed to export strings to Google Sheet',
         message: msg,
         color: 'red',
         autoClose: false,
       });
     }
+
+    updateNotification({
+      id: notificationId,
+      title: 'Done! Created Google Sheet.',
+      message: gspreadsheet.getUrl(),
+      autoClose: false,
+    });
 
     const browserTab = window.open(gsheet.getUrl(), '_blank');
     if (browserTab) {
