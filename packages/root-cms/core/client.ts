@@ -679,8 +679,8 @@ export class RootCMSClient {
       throw new Error(`req failed: ${err}`);
     }
 
-    const contentType = res.headers.get('content-type');
-    if (contentType === 'application/json') {
+    const contentType = String(res.headers.get('content-type'));
+    if (contentType.includes('application/json')) {
       return await res.json();
     }
     return res.text();

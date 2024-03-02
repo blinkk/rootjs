@@ -52,11 +52,11 @@
   max-width: 400px;
 }
 
-.DataSourcePage__DataTable {
+.DataSourcePage__DataSection {
   margin-top: 40px;
 }
 
-.DataSourcePage__DataTable__header {
+.DataSourcePage__DataSection__header {
   margin-bottom: 16px;
   display: flex;
   align-items: center;
