@@ -21,6 +21,7 @@ import {getAuth, DecodedIdToken} from 'firebase-admin/auth';
 import * as jsonwebtoken from 'jsonwebtoken';
 import sirv from 'sirv';
 import {api} from './api.js';
+import {RootCMSClient} from './client.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -173,61 +174,68 @@ export function cmsPlugin(options: CMSPluginOptions): CMSPlugin {
    * Toolkit. If a `isUserAuthorized()` config is set, this function will also
    * verify via that function. Returns true if the login verification succeeds.
    */
-  async function verifyUserLogin(req: Request): Promise<boolean> {
+  async function verifyUserLogin(
+    req: Request
+  ): Promise<{authorized: boolean; reason?: string}> {
     const idToken = req.body?.idToken;
     if (!idToken) {
       console.log('login failed: no id token');
-      return false;
+      return {authorized: false, reason: 'no token'};
     }
+
+    let user: CMSUser;
 
     // On local dev, simply verify the decoded idToken's email is set. The
     // identity toolkit that verifies id tokens requires a service account,
     // which we want to avoid having to set up when users are doing local dev.
     // Authentication is still required by the frontend using Firebase Auth,
     // this just bypasses the initial server check before the ui is rendered.
-    if (process.env.NODE_ENV === 'development') {
-      const jwt = jsonwebtoken.decode(idToken) as jsonwebtoken.JwtPayload;
-      if (!jwt.email || !jwt.email_verified) {
-        console.log('login failed: email unverified');
-        return false;
-      }
-      if (options.isUserAuthorized) {
-        const authorized = await options.isUserAuthorized(req, {
-          email: jwt.email,
-        });
-        if (!authorized) {
-          console.log('login failed: user is not authorized');
-        }
-        return authorized;
-      }
-      return true;
-    }
-
     try {
-      const jwt = await auth.verifyIdToken(idToken, true);
-      if (isExpired(jwt)) {
-        console.log('login failed: id token is expired');
-        return false;
+      if (process.env.NODE_ENV === 'development') {
+        const jwt = jsonwebtoken.decode(idToken) as jsonwebtoken.JwtPayload;
+        if (!jwt.email || !jwt.email_verified) {
+          console.log('login failed: email unverified');
+          return {authorized: false, reason: 'login failed'};
+        }
+        user = {email: jwt.email};
+      } else {
+        const jwt = await auth.verifyIdToken(idToken, true);
+        if (isExpired(jwt)) {
+          console.log('login failed: id token is expired');
+          return {authorized: false, reason: 'login failed'};
+        }
+        if (!jwt.email || !jwt.email_verified) {
+          console.log('login failed: email unverified');
+          return {authorized: false, reason: 'login failed'};
+        }
+        user = {email: jwt.email};
       }
-      if (!jwt.email || !jwt.email_verified) {
-        console.log('login failed: email unverified');
-        return false;
-      }
+
+      // Verify the project's `isUserAuthorized()` config option.
       if (options.isUserAuthorized) {
         const authorized = await options.isUserAuthorized(req, {
-          email: jwt.email,
+          email: user.email,
         });
         if (!authorized) {
           console.log('login failed: user is not authorized');
+          return {authorized: false, reason: 'not authorized'};
         }
-        return authorized;
+      }
+
+      // Verify the user exists in the DB's ACL list.
+      const cmsClient = new RootCMSClient(req.rootConfig!);
+      const userHasAccess = await cmsClient.userExistsInAcl(user.email);
+      if (!userHasAccess) {
+        console.log('login failed: user is not in the firestore acl list');
+        return {authorized: false, reason: 'not authorized'};
       }
     } catch (err) {
       console.error('failed to verify jwt token');
       console.error(err);
-      return false;
+      return {authorized: false, reason: 'unknown error'};
     }
-    return true;
+
+    return {authorized: true};
   }
 
   async function getCurrentUser(req: Request): Promise<CMSUser | null> {
@@ -351,9 +359,11 @@ export function cmsPlugin(options: CMSPluginOptions): CMSPlugin {
           req.headers['content-type'] === 'application/json'
         ) {
           try {
-            const isAuthorized = await verifyUserLogin(req);
-            if (!isAuthorized) {
-              res.status(401).json({success: false, error: 'NOT_AUTHORIZED'});
+            const {authorized, reason} = await verifyUserLogin(req);
+            if (!authorized) {
+              res
+                .status(401)
+                .json({success: false, error: 'NOT_AUTHORIZED', reason});
               return;
             }
 

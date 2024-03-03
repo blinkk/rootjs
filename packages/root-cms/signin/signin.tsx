@@ -46,6 +46,15 @@ interface ButtonProps {
 }
 
 SignIn.Button = (props: ButtonProps) => {
+  async function getResData(res: Response): Promise<any> {
+    try {
+      return await res.json();
+    } catch (err) {
+      console.error(err);
+    }
+    return {};
+  }
+
   async function signIn() {
     const provider = new GoogleAuthProvider();
     provider.addScope('profile');
@@ -60,23 +69,35 @@ SignIn.Button = (props: ButtonProps) => {
       },
       body: JSON.stringify({idToken}),
     });
+    const data = await getResData(res);
+
     if (res.status === 401) {
       const email = user?.email || '(no email)';
-      props.onError(
-        `${email} is not authorized to view this page. If you believe this is a mistake, please contact a developer to help resolve the issue.`
-      );
+      if (data.reason) {
+        props.onError(
+          `${email} is not authorized to view this page. Reason: ${data.reason}. If you believe this is a mistake, please contact a developer to help resolve the issue.`
+        );
+      } else {
+        props.onError(
+          `${email} is not authorized to view this page. If you believe this is a mistake, please contact a developer to help resolve the issue.`
+        );
+      }
       return;
     }
     if (res.status !== 200) {
-      props.onError('An unknown error has occurred.');
       console.error('login failed');
-      console.log(res);
+      console.log(res.status, data);
+      props.onError('An unknown error has occurred.');
       return;
     }
-    const data = await res.json();
     if (!data.success) {
       console.error('login failed');
-      console.log(res);
+      console.log(res.status, data);
+      if (data.reason) {
+        props.onError(`Login failed. Reason: ${data.reason}`);
+      } else {
+        props.onError('Login failed.');
+      }
       return;
     }
     loginSuccessRedirect();

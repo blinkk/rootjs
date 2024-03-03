@@ -709,6 +709,20 @@ export class RootCMSClient {
     }
     return null;
   }
+
+  /**
+   * Verifies user exists in the ACL list.
+   */
+  async userExistsInAcl(email: string): Promise<boolean> {
+    if (!email) {
+      return false;
+    }
+    const docRef = this.db.doc(`Projects/${this.projectId}`);
+    const snapshot = await docRef.get();
+    const data = snapshot.data() || {};
+    const acl = data.roles || {};
+    return email in acl;
+  }
 }
 
 export function getCmsPlugin(rootConfig: RootConfig): CMSPlugin {
