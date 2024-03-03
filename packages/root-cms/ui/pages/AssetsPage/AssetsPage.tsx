@@ -1,3 +1,4 @@
+import {AssetUploader} from '../../components/AssetUploader/AssetUploader.js';
 import {Heading} from '../../components/Heading/Heading.js';
 import {Text} from '../../components/Text/Text.js';
 import {Layout} from '../../layout/Layout.js';
@@ -7,14 +8,11 @@ export function AssetsPage() {
   return (
     <Layout>
       <div className="AssetsPage">
-        <Heading size="h1">Assets</Heading>
-        <Text as="p">
-          This page is currently under construction, but the current idea is to
-          have this page be used to synchronize image assets from places like
-          Figma and Drive and store them in a GCS bucket, organized by folders.
-          A content editor can then choose from an image within the asset
-          manager or uploading new images when editing image fields in the CMS.
-        </Text>
+        <div className="AssetsPage__header">
+          <Heading size="h1">Assets</Heading>
+          <Text as="p">Upload assets to the project's GCS bucket.</Text>
+        </div>
+        <AssetUploader />
       </div>
     </Layout>
   );

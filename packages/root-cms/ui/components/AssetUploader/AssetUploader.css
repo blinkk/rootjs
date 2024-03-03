@@ -1,0 +1,88 @@
+.AssetUploader {
+  /* Use negative margins to increase the drag/drop zone. */
+  padding: 10px;
+  margin: -10px;
+}
+
+.AssetUploader.dragging {
+  outline: 2px dashed black;
+}
+
+.AssetUploader__ImagePreview {
+  margin-bottom: 10px;
+}
+
+.AssetUploader__ImagePreview__controls {
+  display: flex;
+  justify-content: flex-end;
+  gap: 4px;
+}
+
+.AssetUploader__ImagePreview__image {
+  background: #f5f5f5;
+  border: 1px solid #dedede;
+  aspect-ratio: 16/9;
+  width: 100%;
+  padding: 10px;
+  margin-bottom: 10px;
+  position: relative;
+}
+
+.AssetUploader__ImagePreview__image img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  object-position: center;
+}
+
+.AssetUploader__ImagePreview__dimens {
+  position: absolute;
+  top: -1px;
+  right: -1px;
+  padding: 4px 8px;
+  background: black;
+  color: white;
+  font-size: 8px;
+  font-weight: 700;
+}
+
+.AssetUploader__ImagePreview__image__alt {
+  margin-top: 4px;
+}
+
+.AssetUploader__noImage {
+  font-family: var(--font-family-mono);
+}
+
+.AssetUploader__uploadButton {
+  display: inline-flex;
+  align-items: center;
+  cursor: pointer;
+  background: #25262b;
+  border-radius: 4px;
+  padding: 0 14px;
+  height: 30px;
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: 600;
+  transition: all 0.3s ease;
+  margin-top: 16px;
+}
+
+.AssetUploader__uploadButton[aria-disabled="true"] {
+  opacity: 0.5;
+}
+
+.AssetUploader__uploadButton input[type="file"] {
+  display: none;
+}
+
+.AssetUploader__uploadButton__icon {
+  margin-right: 10px;
+}
+
+.AssetUploader__FilePreview,
+.AssetUploader__ImagePreview {
+  max-width: 700px;
+}
