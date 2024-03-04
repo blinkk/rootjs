@@ -97,6 +97,7 @@ export function DataSourceForm(props: DataSourceFormProps) {
     }
 
     const dataSource: Partial<DataSource> = {
+      id: dataSourceId,
       description: getValue('description'),
       type: dataSourceType,
       url: url,
@@ -132,6 +133,7 @@ export function DataSourceForm(props: DataSourceFormProps) {
     }
 
     try {
+      setDataSource(dataSource as DataSource);
       setSubmitting(true);
       if (props.dataSourceId) {
         await updateDataSource(props.dataSourceId, dataSource);

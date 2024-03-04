@@ -1,7 +1,7 @@
 import {ActionIcon, Breadcrumbs, Tooltip} from '@mantine/core';
 import {useModals} from '@mantine/modals';
 import {showNotification, updateNotification} from '@mantine/notifications';
-import {IconTrash} from '@tabler/icons-preact';
+import {IconTrash, IconTrashFilled} from '@tabler/icons-preact';
 import {route} from 'preact-router';
 import {DataSourceForm} from '../../components/DataSourceForm/DataSourceForm.js';
 import {Heading} from '../../components/Heading/Heading.js';
@@ -67,7 +67,7 @@ export function EditDataSourcePage(props: {id: string}) {
             <div className="EditDataSourcePage__header__controls">
               <Tooltip label="Delete">
                 <ActionIcon onClick={onDeleteClicked}>
-                  <IconTrash size={24} stroke="1.5" color="#C92A2A" />
+                  <IconTrashFilled size={20} stroke="1.5" />
                 </ActionIcon>
               </Tooltip>
             </div>
