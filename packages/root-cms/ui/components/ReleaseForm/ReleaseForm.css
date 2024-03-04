@@ -31,8 +31,12 @@
   font-weight: 500;
 }
 
+.ReleaseForm__docSelectButton {
+  margin-top: 10px;
+}
+
 .ReleaseForm__submit__buttons {
-  margin-top: 30px;
+  margin-top: 60px;
   display: flex;
   gap: 12px;
 }

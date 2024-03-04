@@ -10,6 +10,8 @@ import {useEffect, useRef, useState} from 'preact/hooks';
 import {route} from 'preact-router';
 import {Release, addRelease, updateRelease} from '../../utils/release.js';
 import {isSlugValid} from '../../utils/slug.js';
+import {DocPreviewCard} from '../DocPreviewCard/DocPreviewCard.js';
+import {useDocSelectModal} from '../DocSelectModal/DocSelectModal.js';
 import './ReleaseForm.css';
 
 export interface ReleaseFormProps {
@@ -24,6 +26,8 @@ export function ReleaseForm(props: ReleaseFormProps) {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(!!props.releaseId);
   const [release, setRelease] = useState<Release | null>(null);
+  const [docIds, setDocIds] = useState<string[]>([]);
+  const docSelectModal = useDocSelectModal();
 
   async function fetchRelease(releaseId: string) {
     console.log(releaseId);
@@ -59,16 +63,10 @@ export function ReleaseForm(props: ReleaseFormProps) {
       return;
     }
 
-    const url = getValue('url');
-    if (!url) {
-      setError('missing url');
-      return;
-    }
-
     const release: Release = {
       id: releaseId,
       description: getValue('description'),
-      // docIds: docIds,
+      docIds: docIds,
     };
 
     try {
@@ -96,6 +94,27 @@ export function ReleaseForm(props: ReleaseFormProps) {
       console.error(err);
       setSubmitting(false);
     }
+  }
+
+  function openDocSelectModal() {
+    docSelectModal.open({
+      selectedDocIds: docIds,
+      onChange: (docId: string, selected: boolean) => {
+        setDocIds((oldValue) => {
+          const newValue = [...oldValue];
+          if (selected) {
+            newValue.push(docId);
+          } else {
+            const i = newValue.findIndex((id) => id === docId);
+            if (i > -1) {
+              newValue.splice(i, 1);
+            }
+          }
+          console.log(newValue);
+          return newValue.sort();
+        });
+      },
+    });
   }
 
   return (
@@ -132,7 +151,17 @@ export function ReleaseForm(props: ReleaseFormProps) {
         label="Docs"
         description="Select one or more docs to add to the release. Note: you can add or edit this list at a later time, if needed."
         size="xs"
-      ></InputWrapper>
+      >
+        {docIds.length > 0 && <ReleaseForm.DocPreviewCards docIds={docIds!} />}
+        <Button
+          className="ReleaseForm__docSelectButton"
+          color="dark"
+          size="xs"
+          onClick={() => openDocSelectModal()}
+        >
+          {'Select'}
+        </Button>
+      </InputWrapper>
       <div className="ReleaseForm__submit__buttons">
         <Button
           className="ReleaseForm__submit"
@@ -148,3 +177,13 @@ export function ReleaseForm(props: ReleaseFormProps) {
     </form>
   );
 }
+
+ReleaseForm.DocPreviewCards = (props: {docIds: string[]}) => {
+  return (
+    <div className="ReleaseForm__DocPreviewCards">
+      {props.docIds.map((docId) => (
+        <DocPreviewCard docId={docId} />
+      ))}
+    </div>
+  );
+};

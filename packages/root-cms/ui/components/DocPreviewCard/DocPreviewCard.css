@@ -1,0 +1,65 @@
+.DocPreviewCard {
+  display: flex;
+  align-items: center;
+  padding: 8px 0;
+  overflow: hidden;
+}
+
+.DocPreviewCard__image {
+  border: 1px solid var(--color-border);
+  flex-shrink: 0;
+}
+
+.DocPreviewCard__content {
+  display: block;
+  padding: 0 12px;
+  text-decoration: none;
+  flex: 1;
+}
+
+.DocPreviewCard__content__header__docId {
+  font-size: 14px;
+  line-height: 1.2;
+  font-weight: 500;
+  margin-bottom: 4px;
+}
+
+.DocPreviewCard__content__title {
+  line-height: 36px;
+  font-size: 24px;
+  font-weight: 600;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 1;
+}
+
+.DocPreviewCard__content__url {
+  font-size: 12px;
+  font-weight: 500;
+  color: #ababab;
+}
+
+.DocPreviewCard__controls {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.DocPreviewCard--compact .ReferenceField__DocCard__content {
+  padding: 0 8px;
+}
+
+.DocPreviewCard--compact .DocPreviewCard__content__header__docId {
+  font-size: 12px;
+}
+
+.DocPreviewCard--compact .ReferenceField__DocCard__content__title {
+  font-size: 22px;
+  line-height: 1.2;
+  font-weight: 600;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 1;
+}

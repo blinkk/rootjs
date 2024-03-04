@@ -15,7 +15,7 @@ export function NewReleasePage() {
           </Breadcrumbs>
           <Heading size="h1">Add Release</Heading>
         </div>
-        <ReleaseForm buttonLabel="Add release" />
+        <ReleaseForm buttonLabel="Create release" />
       </div>
     </Layout>
   );

@@ -12,6 +12,7 @@ import {Collection} from '../core/schema.js';
 
 import {CopyDocModal} from './components/CopyDocModal/CopyDocModal.js';
 import {DocPickerModal} from './components/DocPickerModal/DocPickerModal.js';
+import {DocSelectModal} from './components/DocSelectModal/DocSelectModal.js';
 import {EditJsonModal} from './components/EditJsonModal/EditJsonModal.js';
 import {LocalizationModal} from './components/LocalizationModal/LocalizationModal.js';
 import {PublishDocModal} from './components/PublishDocModal/PublishDocModal.js';
@@ -75,6 +76,7 @@ function App() {
             modals={{
               [CopyDocModal.id]: CopyDocModal,
               [DocPickerModal.id]: DocPickerModal,
+              [DocSelectModal.id]: DocSelectModal,
               [EditJsonModal.id]: EditJsonModal,
               [LocalizationModal.id]: LocalizationModal,
               [PublishDocModal.id]: PublishDocModal,

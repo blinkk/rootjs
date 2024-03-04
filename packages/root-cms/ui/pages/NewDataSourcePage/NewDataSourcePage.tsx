@@ -15,7 +15,7 @@ export function NewDataSourcePage() {
           </Breadcrumbs>
           <Heading size="h1">Add Data Source</Heading>
         </div>
-        <DataSourceForm buttonLabel="Add data source" />
+        <DataSourceForm buttonLabel="Create data source" />
       </div>
     </Layout>
   );

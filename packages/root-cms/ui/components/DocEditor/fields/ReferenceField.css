@@ -47,8 +47,8 @@
 }
 
 .ReferenceField__DocCard__content__title {
-  line-height: 1.2;
   font-size: 22px;
+  line-height: 1.2;
   font-weight: 600;
   overflow: hidden;
   display: -webkit-box;
