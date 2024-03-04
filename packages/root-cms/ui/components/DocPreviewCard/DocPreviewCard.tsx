@@ -77,6 +77,7 @@ export function DocPreviewCard(props: DocPreviewCardProps) {
   return (
     <div
       className={joinClassNames(
+        props.className,
         'DocPreviewCard',
         props.variant && `DocPreviewCard--${props.variant}`
       )}

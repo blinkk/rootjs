@@ -4,9 +4,10 @@ import {
   doc,
   getDoc,
   getDocs,
+  orderBy,
   query,
+  runTransaction,
   serverTimestamp,
-  setDoc,
   updateDoc,
 } from 'firebase/firestore';
 
@@ -31,11 +32,17 @@ export async function addRelease(id: string, release: Partial<Release>) {
   const projectId = window.__ROOT_CTX.rootConfig.projectId;
   const db = window.firebase.db;
   const docRef = doc(db, 'Projects', projectId, COLLECTION_ID, id);
-  await setDoc(docRef, {
-    ...release,
-    id: id,
-    createdAt: serverTimestamp(),
-    createdBy: window.firebase.user.email,
+  await runTransaction(db, async (t) => {
+    const snapshot = await t.get(docRef);
+    if (snapshot.exists()) {
+      throw new Error(`release exists: ${id}`);
+    }
+    await t.set(docRef, {
+      ...release,
+      id: id,
+      createdAt: serverTimestamp(),
+      createdBy: window.firebase.user.email,
+    });
   });
 }
 
@@ -43,7 +50,7 @@ export async function listReleases(): Promise<Release[]> {
   const projectId = window.__ROOT_CTX.rootConfig.projectId;
   const db = window.firebase.db;
   const colRef = collection(db, 'Projects', projectId, COLLECTION_ID);
-  const q = query(colRef);
+  const q = query(colRef, orderBy('createdAt', 'desc'));
   const querySnapshot = await getDocs(q);
   const res: Release[] = [];
   querySnapshot.forEach((doc) => {

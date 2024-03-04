@@ -47,3 +47,27 @@
   font-weight: 500;
   color: red;
 }
+
+.ReleaseForm__DocPreviewCards {
+  margin: 20px 0;
+}
+
+.ReleaseForm__DocPreviewCards__card {
+  display: flex;
+  gap: 12px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.ReleaseForm__DocPreviewCards__card:first-child {
+  border-top: 1px solid var(--color-border);
+}
+
+.ReleaseForm__DocPreviewCards__card__preview {
+  flex: 1;
+}
+
+.ReleaseForm__DocPreviewCards__card__controls {
+  display: flex;
+  gap: 2px;
+  padding-top: 8px;
+}

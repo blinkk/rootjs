@@ -1,9 +1,11 @@
 import {
+  ActionIcon,
   Button,
   InputWrapper,
   LoadingOverlay,
   TextInput,
   Textarea,
+  Tooltip,
 } from '@mantine/core';
 import {showNotification} from '@mantine/notifications';
 import {useEffect, useRef, useState} from 'preact/hooks';
@@ -13,6 +15,7 @@ import {isSlugValid} from '../../utils/slug.js';
 import {DocPreviewCard} from '../DocPreviewCard/DocPreviewCard.js';
 import {useDocSelectModal} from '../DocSelectModal/DocSelectModal.js';
 import './ReleaseForm.css';
+import {IconArrowUpRight, IconTrash} from '@tabler/icons-preact';
 
 export interface ReleaseFormProps {
   className?: string;
@@ -92,6 +95,12 @@ export function ReleaseForm(props: ReleaseFormProps) {
       }
     } catch (err) {
       console.error(err);
+      showNotification({
+        title: 'Failed to save release',
+        message: String(err),
+        color: 'red',
+        autoClose: false,
+      });
       setSubmitting(false);
     }
   }
@@ -182,7 +191,36 @@ ReleaseForm.DocPreviewCards = (props: {docIds: string[]}) => {
   return (
     <div className="ReleaseForm__DocPreviewCards">
       {props.docIds.map((docId) => (
-        <DocPreviewCard docId={docId} />
+        <div key={docId} className="ReleaseForm__DocPreviewCards__card">
+          <DocPreviewCard
+            className="ReleaseForm__DocPreviewCards__card__preview"
+            docId={docId}
+          />
+          <div className="ReleaseForm__DocPreviewCards__card__controls">
+            <div className="ReleaseForm__DocPreviewCards__card__controls__remove">
+              <Tooltip label="Remove">
+                <ActionIcon
+                  className="ReleaseForm__DocPreviewCards__card__controls__remove__icon"
+                  // onClick={() => removeDoc()}
+                >
+                  <IconTrash size={16} />
+                </ActionIcon>
+              </Tooltip>
+            </div>
+            <div className="ReleaseForm__DocPreviewCards__card__controls__open">
+              <Tooltip label="Open">
+                <ActionIcon<'a'>
+                  component="a"
+                  className="ReleaseForm__DocPreviewCards__card__controls__open__icon"
+                  href={`/cms/content/${docId}`}
+                  target="_blank"
+                >
+                  <IconArrowUpRight size={16} />
+                </ActionIcon>
+              </Tooltip>
+            </div>
+          </div>
+        </div>
       ))}
     </div>
   );

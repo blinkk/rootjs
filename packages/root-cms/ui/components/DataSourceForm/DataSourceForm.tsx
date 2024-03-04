@@ -155,6 +155,12 @@ export function DataSourceForm(props: DataSourceFormProps) {
       }
     } catch (err) {
       console.error(err);
+      showNotification({
+        title: 'Failed to save data source',
+        message: String(err),
+        color: 'red',
+        autoClose: false,
+      });
       setSubmitting(false);
     }
   }
