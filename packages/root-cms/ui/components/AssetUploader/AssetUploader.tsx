@@ -4,7 +4,7 @@ import {IconFileUpload, IconTrash} from '@tabler/icons-preact';
 import {useEffect, useRef, useState} from 'preact/hooks';
 import {Text} from '../../components/Text/Text.js';
 import {joinClassNames} from '../../utils/classes.js';
-import {uploadFileToGCS} from '../../utils/gcs.js';
+import {UploadFileOptions, uploadFileToGCS} from '../../utils/gcs.js';
 import './AssetUploader.css';
 
 export const IMAGE_MIMETYPES = [
@@ -16,6 +16,7 @@ export const IMAGE_MIMETYPES = [
 
 export interface AssetUploaderProps {
   accept?: string[];
+  uploadOptions?: UploadFileOptions;
 }
 
 export function AssetUploader(props: AssetUploaderProps) {

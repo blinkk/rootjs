@@ -32,6 +32,11 @@ function App(props: AppProps) {
           rel="stylesheet"
           href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@500&display=swap"
         />
+        <link
+          rel="icon"
+          href="https://lh3.googleusercontent.com/ijK50TfQlV_yJw3i-CMlnD6osH4PboZBILZrJcWhoNMEmoyCD5e1bAxXbaOPe5w4gG_Scf37EXrmZ6p8sP2lue5fLZ419m5JyLMs=e385-w256"
+          type="image/png"
+        />
         <link rel="stylesheet" href="{CSS_URL}" />
       </head>
       <body>
@@ -127,6 +132,11 @@ function SignIn(props: SignInProps) {
         <link
           rel="stylesheet"
           href="https://fonts.googleapis.com/css?family=Google+Sans:400,500&display=swap"
+        />
+        <link
+          rel="icon"
+          href="https://lh3.googleusercontent.com/ijK50TfQlV_yJw3i-CMlnD6osH4PboZBILZrJcWhoNMEmoyCD5e1bAxXbaOPe5w4gG_Scf37EXrmZ6p8sP2lue5fLZ419m5JyLMs=e385-w256"
+          type="image/png"
         />
         <link rel="stylesheet" href="{CSS_URL}" />
       </head>
