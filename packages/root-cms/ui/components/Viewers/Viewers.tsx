@@ -69,7 +69,6 @@ class ViewersController extends EventListener {
   }
 
   private onData(data: Record<string, Viewer>) {
-    console.log('onData()', data);
     const user = window.firebase.user;
     const viewers: Viewer[] = Object.values(data).filter((viewer) => {
       // Ignore current user.
