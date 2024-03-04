@@ -64,9 +64,6 @@ export default defineConfig({
         apiKey: process.env.GAPI_API_KEY,
         clientId: process.env.GAPI_CLIENT_ID,
       },
-      isUserAuthorized: (req, user) => {
-        return String(user?.email).endsWith('@blinkk.com');
-      },
       gci: true,
     }),
   ],

@@ -69,6 +69,7 @@ class ViewersController extends EventListener {
   }
 
   private onData(data: Record<string, Viewer>) {
+    console.log('onData()', data);
     const user = window.firebase.user;
     const viewers: Viewer[] = Object.values(data).filter((viewer) => {
       // Ignore current user.
@@ -80,9 +81,11 @@ class ViewersController extends EventListener {
         return false;
       }
       // Ignore viewers that haven't checked in within `IDLE_TIMEOUT`.
-      if (viewer.lastViewedAt.toMillis() > IDLE_TIMEOUT) {
-        return false;
-      }
+      // TODO(stevenle): fix.
+      // const now = Math.floor(new Date().getTime());
+      // if (now - viewer.lastViewedAt.toMillis() > IDLE_TIMEOUT) {
+      //   return false;
+      // }
       return true;
     });
     this.dispatch('change', viewers);
@@ -179,7 +182,7 @@ export function Viewers(props: ViewersProps) {
   }
 
   return (
-    <AvatarsGroup className="Viewers" limit={3}>
+    <AvatarsGroup className="Viewers" limit={3} size={30}>
       {viewers.map((viewer) => {
         if (!viewer.photoURL) {
           const initial = viewer.email[0].toUpperCase();
