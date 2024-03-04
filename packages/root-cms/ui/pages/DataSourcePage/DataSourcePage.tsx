@@ -7,8 +7,7 @@ import {
   Textarea,
   Tooltip,
 } from '@mantine/core';
-import {showNotification} from '@mantine/notifications';
-import {IconArrowUpRight, IconSettings, IconTable} from '@tabler/icons-preact';
+import {IconSettings, IconTable} from '@tabler/icons-preact';
 import {ComponentChildren} from 'preact';
 import {useEffect, useState} from 'preact/hooks';
 import {DataSourceStatusButton} from '../../components/DataSourceStatusButton/DataSourceStatusButton.js';
@@ -43,6 +42,13 @@ export function DataSourcePage(props: {id: string}) {
     init();
   }, []);
 
+  function onAction(action: string) {
+    if (action === 'sync') {
+      // When data is synced, re-fetch data from the data source.
+      init();
+    }
+  }
+
   return (
     <Layout>
       <div className="DataSourcePage">
@@ -66,7 +72,12 @@ export function DataSourcePage(props: {id: string}) {
           )}
         </div>
 
-        {dataSource && <DataSourcePage.SyncStatus dataSource={dataSource} />}
+        {dataSource && (
+          <DataSourcePage.SyncStatus
+            dataSource={dataSource}
+            onAction={onAction}
+          />
+        )}
 
         {loading ? (
           <Loader color="gray" size="xl" />
@@ -80,7 +91,10 @@ export function DataSourcePage(props: {id: string}) {
   );
 }
 
-DataSourcePage.SyncStatus = (props: {dataSource: DataSource}) => {
+DataSourcePage.SyncStatus = (props: {
+  dataSource: DataSource;
+  onAction?: (action: string) => void;
+}) => {
   const dataSource = props.dataSource;
   return (
     <div className="DataSourcePage__SyncStatus">
@@ -95,7 +109,15 @@ DataSourcePage.SyncStatus = (props: {dataSource: DataSource}) => {
         <tbody>
           <tr>
             <td>
-              <DataSourceStatusButton dataSource={dataSource} action="sync" />
+              <DataSourceStatusButton
+                dataSource={dataSource}
+                action="sync"
+                onAction={() => {
+                  if (props.onAction) {
+                    props.onAction('sync');
+                  }
+                }}
+              />
             </td>
             <td>
               <DataSourceStatusButton
