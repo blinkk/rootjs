@@ -15,6 +15,7 @@ import {useEffect, useRef, useState} from 'preact/hooks';
 import {DocEditor} from '../../components/DocEditor/DocEditor.js';
 import {SplitPanel} from '../../components/SplitPanel/SplitPanel.js';
 import {UseDraftHook, useDraft} from '../../hooks/useDraft.js';
+import {useLocalStorage} from '../../hooks/useLocalStorage.js';
 import {Layout} from '../../layout/Layout.js';
 import {joinClassNames} from '../../utils/classes.js';
 import {getDocPreviewPath, getDocServingPath} from '../../utils/doc-urls.js';
@@ -110,7 +111,10 @@ DocumentPage.Preview = (props: PreviewProps) => {
 
   const servingUrl = `${domain}${servingPath}`;
   const [iframeUrl, setIframeUrl] = useState(servingUrl);
-  const [device, setDevice] = useState<Device>('');
+  const [device, setDevice] = useLocalStorage<Device>(
+    'root::DocumentPage::preview::device',
+    ''
+  );
   const [iframeStyle, setIframeStyle] = useState({
     '--iframe-width': '100%',
     '--iframe-height': '100%',
