@@ -22,6 +22,7 @@ import {
   SaveState,
   UseDraftHook,
 } from '../../hooks/useDraft.js';
+import {joinClassNames} from '../../utils/classes.js';
 import {getDefaultFieldValue} from '../../utils/fields.js';
 import {flattenNestedKeys} from '../../utils/objects.js';
 import {getPlaceholderKeys, strFormat} from '../../utils/str-format.js';
@@ -147,16 +148,25 @@ DocEditor.Field = (props: FieldProps) => {
   const level = props.level ?? 0;
   return (
     <div
-      className="DocEditor__field"
+      className={joinClassNames(
+        'DocEditor__field',
+        field.deprecated && 'DocEditor__field--deprecated'
+      )}
       data-type={field.type}
       data-level={level}
       data-key={props.deepKey}
     >
       {!props.hideHeader && (
         <div className="DocEditor__field__header">
-          <div className="DocEditor__field__name">
-            {field.label || field.id}
-          </div>
+          {field.deprecated ? (
+            <div className="DocEditor__field__name">
+              DEPRECATED: {field.label || field.id}
+            </div>
+          ) : (
+            <div className="DocEditor__field__name">
+              {field.label || field.id}
+            </div>
+          )}
           {field.help && (
             <div className="DocEditor__field__help">{field.help}</div>
           )}

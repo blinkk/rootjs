@@ -45,6 +45,10 @@
   gap: 16px;
 }
 
+.DocEditor__field--deprecated {
+  opacity: 0.5;
+}
+
 .DocEditor__field__name {
   font-weight: 600;
 }
