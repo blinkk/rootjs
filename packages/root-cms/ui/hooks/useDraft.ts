@@ -351,7 +351,8 @@ export function useDraft(docId: string): UseDraftHook {
     });
     controller.onSaveStateChange((newSaveState) => setSaveState(newSaveState));
     controller.start();
-    document.addEventListener('visibilitychange', () => {
+
+    const onVisibilityChange = () => {
       if (document.hidden || document.visibilityState !== 'visible') {
         controller.stop();
       } else {
@@ -360,8 +361,12 @@ export function useDraft(docId: string): UseDraftHook {
           controller.start();
         }
       }
-    });
-    return () => controller.dispose();
+    };
+    document.addEventListener('visibilitychange', onVisibilityChange);
+    return () => {
+      controller.dispose();
+      document.removeEventListener('visibilitychange', onVisibilityChange);
+    };
   }, []);
 
   return {loading, saveState, controller, data};

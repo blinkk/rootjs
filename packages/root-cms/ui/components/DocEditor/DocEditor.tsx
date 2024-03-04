@@ -34,6 +34,7 @@ import {useEditJsonModal} from '../EditJsonModal/EditJsonModal.js';
 import {useLocalizationModal} from '../LocalizationModal/LocalizationModal.js';
 import {usePublishDocModal} from '../PublishDocModal/PublishDocModal.js';
 import './DocEditor.css';
+import {Viewers} from '../Viewers/Viewers.js';
 import {BooleanField} from './fields/BooleanField.js';
 import {DateTimeField} from './fields/DateTimeField.js';
 import {FieldProps} from './fields/FieldProps.js';
@@ -81,6 +82,9 @@ export function DocEditor(props: DocEditorProps) {
           loaderProps={{color: 'gray', size: 'xl'}}
         />
         <div className="DocEditor__statusBar">
+          <div className="DocEditor__statusBar__viewers">
+            <Viewers id={`doc/${props.docId}`} />
+          </div>
           <div className="DocEditor__statusBar__saveState">
             {saveState === SaveState.SAVED && 'saved!'}
             {saveState === SaveState.SAVING && 'saving...'}

@@ -1,4 +1,4 @@
-export const TIME_UNITS: Record<string, number> = {
+export const TIME_UNITS = {
   year: 24 * 60 * 60 * 1000 * 365,
   month: (24 * 60 * 60 * 1000 * 365) / 12,
   week: 7 * 24 * 60 * 60 * 1000,
