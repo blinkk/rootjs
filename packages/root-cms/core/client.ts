@@ -589,16 +589,16 @@ export class RootCMSClient {
       syncedBy: syncedBy,
     };
 
-    await this.db.runTransaction(async (t) => {
-      t.set(dataDocRef, {
-        dataSource: updatedDataSource,
-        data: data,
-      });
-      t.update(dataSourceDocRef, {
-        syncedAt: Timestamp.now(),
-        syncedBy: syncedBy,
-      });
+    const batch = this.db.batch();
+    batch.set(dataDocRef, {
+      dataSource: updatedDataSource,
+      data: data,
     });
+    batch.update(dataSourceDocRef, {
+      syncedAt: Timestamp.now(),
+      syncedBy: syncedBy,
+    });
+    await batch.commit();
 
     console.log(`synced data source: ${dataSourceId}`);
     console.log(`synced by: ${syncedBy}`);
@@ -633,19 +633,19 @@ export class RootCMSClient {
       publishedBy: publishedBy,
     };
 
-    await this.db.runTransaction(async (t) => {
-      t.set(dataDocRefPublished, {
-        dataSource: updatedDataSource,
-        data: dataRes?.data || null,
-      });
-      t.update(dataDocRefDraft, {
-        dataSource: updatedDataSource,
-      });
-      t.update(dataSourceDocRef, {
-        publishedAt: Timestamp.now(),
-        publishedBy: publishedBy,
-      });
+    const batch = this.db.batch();
+    batch.set(dataDocRefPublished, {
+      dataSource: updatedDataSource,
+      data: dataRes?.data || null,
     });
+    batch.update(dataDocRefDraft, {
+      dataSource: updatedDataSource,
+    });
+    batch.update(dataSourceDocRef, {
+      publishedAt: Timestamp.now(),
+      publishedBy: publishedBy,
+    });
+    await batch.commit();
 
     console.log(`published data ${dataSourceId}`);
     console.log(`published by: ${publishedBy}`);

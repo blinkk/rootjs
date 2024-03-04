@@ -5,10 +5,10 @@ import {
   getDoc,
   getDocs,
   query,
-  runTransaction,
   serverTimestamp,
   setDoc,
   updateDoc,
+  writeBatch,
 } from 'firebase/firestore';
 import {GSpreadsheet, parseSpreadsheetUrl} from './gsheets.js';
 
@@ -175,16 +175,16 @@ export async function syncDataSource(id: string) {
       syncedBy: window.firebase.user.email!,
     };
 
-    await runTransaction(db, async (transaction) => {
-      transaction.set(dataDocRef, {
-        dataSource: updatedDataSource,
-        data: data,
-      });
-      transaction.update(dataSourceDocRef, {
-        syncedAt: Timestamp.now(),
-        syncedBy: window.firebase.user.email!,
-      });
+    const batch = writeBatch(db);
+    batch.set(dataDocRef, {
+      dataSource: updatedDataSource,
+      data: data,
     });
+    batch.update(dataSourceDocRef, {
+      syncedAt: Timestamp.now(),
+      syncedBy: window.firebase.user.email!,
+    });
+    await batch.commit();
   }
 
   console.log(`synced data source: ${id}`);
@@ -226,19 +226,19 @@ export async function publishDataSource(id: string) {
     publishedBy: window.firebase.user.email!,
   };
 
-  await runTransaction(db, async (transaction) => {
-    transaction.set(dataDocRefPublished, {
-      dataSource: updatedDataSource,
-      data: dataRes?.data || null,
-    });
-    transaction.update(dataDocRefDraft, {
-      dataSource: updatedDataSource,
-    });
-    transaction.update(dataSourceDocRef, {
-      publishedAt: Timestamp.now(),
-      publishedBy: window.firebase.user.email!,
-    });
+  const batch = writeBatch(db);
+  batch.set(dataDocRefPublished, {
+    dataSource: updatedDataSource,
+    data: dataRes?.data || null,
   });
+  batch.update(dataDocRefDraft, {
+    dataSource: updatedDataSource,
+  });
+  batch.update(dataSourceDocRef, {
+    publishedAt: Timestamp.now(),
+    publishedBy: window.firebase.user.email!,
+  });
+  await batch.commit();
 
   console.log(`published data ${id}`);
 }
@@ -265,11 +265,10 @@ export async function deleteDataSource(id: string) {
     'Data',
     'published'
   );
-  await runTransaction(db, async (transaction) => {
-    transaction.delete(dataDocRefDraft);
-    transaction.delete(dataDocRefPublished);
-    transaction.delete(dataSourceDocRef);
-  });
+  const batch = writeBatch(db);
+  batch.delete(dataDocRefDraft);
+  batch.delete(dataDocRefPublished);
+  batch.delete(dataSourceDocRef);
   console.log(`deleted data source ${id}`);
 }
 

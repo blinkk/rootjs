@@ -60,12 +60,24 @@ export async function cmsDeleteDoc(docId: string) {
     'Published',
     slug
   );
-  await runTransaction(db, async (transaction) => {
-    // Delete the draft doc.
-    transaction.delete(draftDocRef);
-    // Delete the published doc.
-    transaction.delete(publishedDocRef);
-  });
+  const scheduledDocRef = doc(
+    db,
+    'Projects',
+    projectId,
+    'Collections',
+    collectionId,
+    'Scheduled',
+    slug
+  );
+
+  const batch = writeBatch(db);
+  // Delete the draft doc.
+  batch.delete(draftDocRef);
+  // Delete the published doc.
+  batch.delete(publishedDocRef);
+  // Delete any scheduled doc.
+  batch.delete(scheduledDocRef);
+  await batch.commit();
 }
 
 export async function cmsPublishDoc(docId: string) {
@@ -99,8 +111,9 @@ export async function cmsPublishDoc(docId: string) {
     'Published',
     slug
   );
+
   await runTransaction(db, async (transaction) => {
-    const draftDoc = await getDoc(draftDocRef);
+    const draftDoc = await transaction.get(draftDocRef);
     if (!draftDoc.exists()) {
       throw new Error(`${draftDocRef.id} does not exist`);
     }
@@ -154,7 +167,7 @@ export async function cmsScheduleDoc(docId: string, millis: number) {
     slug
   );
   await runTransaction(db, async (transaction) => {
-    const draftDoc = await getDoc(draftDocRef);
+    const draftDoc = await transaction.get(draftDocRef);
     if (!draftDoc.exists()) {
       throw new Error(`${draftDocRef.id} does not exist`);
     }
@@ -205,21 +218,21 @@ export async function cmsUnpublishDoc(docId: string) {
     'Published',
     slug
   );
-  await runTransaction(db, async (transaction) => {
-    // Update the "sys" metadata in the draft doc.
-    transaction.update(draftDocRef, {
-      'sys.modifiedAt': serverTimestamp(),
-      'sys.modifiedBy': window.firebase.user.email,
-      'sys.publishedAt': deleteField(),
-      'sys.publishedBy': deleteField(),
-      'sys.firstPublishedAt': deleteField(),
-      'sys.firstPublishedBy': deleteField(),
-    });
-    // Delete the "scheduled" doc.
-    transaction.delete(scheduledDocRef);
-    // Delete the "published" doc.
-    transaction.delete(publishedDocRef);
+  const batch = writeBatch(db);
+  // Update the "sys" metadata in the draft doc.
+  batch.update(draftDocRef, {
+    'sys.modifiedAt': serverTimestamp(),
+    'sys.modifiedBy': window.firebase.user.email,
+    'sys.publishedAt': deleteField(),
+    'sys.publishedBy': deleteField(),
+    'sys.firstPublishedAt': deleteField(),
+    'sys.firstPublishedBy': deleteField(),
   });
+  // Delete the "scheduled" doc.
+  batch.delete(scheduledDocRef);
+  // Delete the "published" doc.
+  batch.delete(publishedDocRef);
+  await batch.commit();
   console.log(`unpublished ${docId}`);
 }
 
@@ -246,7 +259,7 @@ export async function cmsRevertDraft(docId: string) {
     slug
   );
   await runTransaction(db, async (transaction) => {
-    const publishedDoc = await getDoc(publishedDocRef);
+    const publishedDoc = await transaction.get(publishedDocRef);
     if (!publishedDoc.exists()) {
       throw new Error(`${publishedDocRef.id} does not exist`);
     }
@@ -278,17 +291,17 @@ export async function cmsUnscheduleDoc(docId: string) {
     'Scheduled',
     slug
   );
-  await runTransaction(db, async (transaction) => {
-    // Update the "sys" metadata in the draft doc.
-    transaction.update(draftDocRef, {
-      'sys.modifiedAt': serverTimestamp(),
-      'sys.modifiedBy': window.firebase.user.email,
-      'sys.scheduledAt': deleteField(),
-      'sys.scheduledBy': deleteField(),
-    });
-    // Delete the "scheduled" doc.
-    transaction.delete(scheduledDocRef);
+  const batch = writeBatch(db);
+  // Update the "sys" metadata in the draft doc.
+  batch.update(draftDocRef, {
+    'sys.modifiedAt': serverTimestamp(),
+    'sys.modifiedBy': window.firebase.user.email,
+    'sys.scheduledAt': deleteField(),
+    'sys.scheduledBy': deleteField(),
   });
+  // Delete the "scheduled" doc.
+  batch.delete(scheduledDocRef);
+  await batch.commit();
   console.log(`unscheduled ${docId}`);
 }
 
