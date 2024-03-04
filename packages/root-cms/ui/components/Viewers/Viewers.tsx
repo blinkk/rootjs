@@ -191,6 +191,7 @@ export function Viewers(props: ViewersProps) {
         }
         return (
           <Avatar
+            key={viewer.email}
             src={viewer.photoURL}
             alt={viewer.email}
             size={24}
