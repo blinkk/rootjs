@@ -269,6 +269,7 @@ export async function deleteDataSource(id: string) {
   batch.delete(dataDocRefDraft);
   batch.delete(dataDocRefPublished);
   batch.delete(dataSourceDocRef);
+  await batch.commit();
   console.log(`deleted data source ${id}`);
 }
 
