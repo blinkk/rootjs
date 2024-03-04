@@ -12,7 +12,7 @@ export function AssetsPage() {
           <Heading size="h1">Assets</Heading>
           <Text as="p">Upload assets to the project's GCS bucket.</Text>
         </div>
-        <AssetUploader />
+        <AssetUploader uploadOptions={{preserveFilename: true}} />
       </div>
     </Layout>
   );
