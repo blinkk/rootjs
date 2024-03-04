@@ -1,0 +1,45 @@
+.ReleaseForm {
+  font-size: 14px;
+  max-width: 650px;
+  position: relative;
+}
+
+.ReleaseForm__type {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.ReleaseForm__type__label {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.ReleaseForm__input {
+  margin-top: 16px;
+}
+
+.ReleaseForm__input__example {
+  font-size: 12px;
+  margin-top: 12px;
+}
+
+.ReleaseForm__input__example code {
+  background: #efefef;
+  padding: 4px;
+  margin-left: 4px;
+  font-weight: 500;
+}
+
+.ReleaseForm__submit__buttons {
+  margin-top: 30px;
+  display: flex;
+  gap: 12px;
+}
+
+.ReleaseForm__error {
+  margin-top: 30px;
+  font-size: 14px;
+  font-weight: 500;
+  color: red;
+}

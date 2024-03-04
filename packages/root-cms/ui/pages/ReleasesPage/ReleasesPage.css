@@ -1,0 +1,19 @@
+.ReleasesPage {
+  padding: 60px;
+  width: calc(100vw - 48px);
+  height: calc(100vh - 48px);
+  overflow: auto;
+}
+
+.ReleasesPage__header {
+  margin-bottom: 40px;
+}
+
+.ReleasesPage p {
+  margin-top: 8px;
+  max-width: 70ch;
+}
+
+.ReleasesPage__header__buttons {
+  margin-top: 20px;
+}
