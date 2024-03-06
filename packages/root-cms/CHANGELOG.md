@@ -1,5 +1,24 @@
 # @blinkk/root-cms
 
+## 1.0.0-rc.31
+
+### Minor Changes
+
+- c67881c: feat: basic arb download ui
+- 2145120: feat: add edit translations page
+- b40576d: feat: display avatars viewing current doc
+- ae7c4f3: feat: add gcs file uploader button
+- 356b357: feat: add data sources
+- 5fe279c: feat: add edit data source page
+- 7061ff6: feat: add http data sources
+
+### Patch Changes
+
+- 2366529: chore: preserve device state when navigating
+- 6e4332e: chore: better error messages for login failures
+- d8a207d: chore: add favicon to root cms
+  - @blinkk/root@1.0.0-rc.31
+
 ## 1.0.0-rc.30
 
 ### Minor Changes
