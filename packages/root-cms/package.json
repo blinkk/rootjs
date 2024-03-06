@@ -69,7 +69,7 @@
     "csv-parse": "5.5.2",
     "csv-stringify": "6.4.4",
     "dts-dom": "3.7.0",
-    "jsonwebtoken": "^9.0.2",
+    "jsonwebtoken": "9.0.2",
     "kleur": "4.1.5",
     "sirv": "2.0.3",
     "tiny-glob": "0.2.9"
