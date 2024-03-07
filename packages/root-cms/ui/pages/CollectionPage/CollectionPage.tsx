@@ -5,7 +5,7 @@ import {
   IconFolder,
 } from '@tabler/icons-preact';
 
-import {useState} from 'preact/hooks';
+import {useEffect, useState} from 'preact/hooks';
 import {route} from 'preact-router';
 
 import {DocActionsMenu} from '../../components/DocActionsMenu/DocActionsMenu.js';
@@ -28,6 +28,36 @@ interface CollectionPageProps {
 
 export function CollectionPage(props: CollectionPageProps) {
   const [query, setQuery] = useState('');
+
+  // If no collection is selected, select one by default.
+  useEffect(() => {
+    const projectId = window.__ROOT_CTX.rootConfig.projectId;
+    const collections = window.__ROOT_CTX.collections;
+    const localStorageKey = `root-cms::${projectId}::last_collection`;
+    if (props.collection) {
+      // Store the current collection in local storage.
+      window.localStorage.setItem(localStorageKey, props.collection);
+    } else {
+      // Route to the last visited collection.
+      const lastVisited = window.localStorage.getItem(localStorageKey);
+      if (lastVisited && collections[lastVisited]) {
+        route(`/cms/content/${lastVisited}`);
+        return;
+      }
+      // Default to a collection called "Pages" if it exists.
+      if (window.__ROOT_CTX.collections['Pages']) {
+        route('/cms/content/Pages');
+        return;
+      }
+      const collectionIds = Object.keys(window.__ROOT_CTX.collections) || [];
+      if (collectionIds.length > 0) {
+        const firstCollectionId = collectionIds[0];
+        route(`/cms/content/${firstCollectionId}`);
+        return;
+      }
+      console.warn('no collections');
+    }
+  }, [props.collection]);
 
   const collectionIds = Object.keys(window.__ROOT_CTX.collections);
   const matchedCollections = collectionIds
