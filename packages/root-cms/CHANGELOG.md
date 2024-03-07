@@ -1,5 +1,13 @@
 # @blinkk/root-cms
 
+## 1.0.0-rc.32
+
+### Patch Changes
+
+- 073cdaa: chore: select a collection by default
+- 243afcc: fix: sort translations by source string
+  - @blinkk/root@1.0.0-rc.32
+
 ## 1.0.0-rc.31
 
 ### Minor Changes
