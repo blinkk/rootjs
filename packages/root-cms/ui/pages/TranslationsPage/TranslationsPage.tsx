@@ -50,6 +50,16 @@ TranslationsPage.TranslationsTable = () => {
         ((translations.tags as any as string[]) || []).join('\n'),
       ]);
     });
+    // Sort by the source string.
+    tableData.sort((a: string[], b: string[]) => {
+      if (a[1].toLowerCase() < b[1].toLowerCase()) {
+        return -1;
+      }
+      if (a[1].toLowerCase() > b[1].toLowerCase()) {
+        return 1;
+      }
+      return 0;
+    });
     setTableData(tableData);
     setLoading(false);
   }
