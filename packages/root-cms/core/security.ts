@@ -4,26 +4,51 @@ import {getSecurityRules} from 'firebase-admin/security-rules';
 export const FIRESTORE_RULES = `rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    match /Projects/{project}/{document=**} {
-      allow write:
-        if request.auth != null
-        && exists(/databases/$(database)/documents/Projects/$(project))
-        && get(/databases/$(database)/documents/Projects/$(project)).data.roles[request.auth.token.email] in ['ADMIN', 'EDITOR'];
-      allow read:
-        if request.auth != null
-        && exists(/databases/$(database)/documents/Projects/$(project))
-        && get(/databases/$(database)/documents/Projects/$(project)).data.roles[request.auth.token.email] in ['ADMIN', 'EDITOR', 'VIEWER'];
+    match /{document=**} {
+      allow read, write: if false;
     }
 
-    match /Projects/{project}/Collections/{collection}/{document=**} {
+    match /Projects/{project} {
       allow write:
-        if request.auth != null
-        && exists(/databases/$(database)/documents/Projects/$(project)/Collections/$(collection))
-        && get(/databases/$(database)/documents/Projects/$(project)/Collections/$(collection)).data.roles[request.auth.token.email] in ['ADMIN', 'EDITOR'];
+        if isSignedIn() && userIsAdmin();
       allow read:
-        if request.auth != null
-        && exists(/databases/$(database)/documents/Projects/$(project)/Collections/$(collection))
-        && get(/databases/$(database)/documents/Projects/$(project)/Collections/$(collection)).data.roles[request.auth.token.email] in ['ADMIN', 'EDITOR', 'VIEWER'];
+        if isSignedIn() && userCanRead();
+
+      match /{collection}/{document=**} {
+        allow write:
+          if isSignedIn() && userCanWrite();
+        allow read:
+          if isSignedIn() && userCanRead();
+      }
+
+      function isSignedIn() {
+        return request.auth != null;
+      }
+
+      function getRoles() {
+        return get(/databases/$(database)/documents/Projects/$(project)).data.roles;
+      }
+
+      function userCanRead() {
+        let roles = getRoles();
+        let email = request.auth.token.email;
+        let domain = '*@' + email.split('@')[1];
+        return (roles[email] in ['ADMIN', 'EDITOR', 'VIEWER']) || (roles[domain] in ['ADMIN', 'EDITOR', 'VIEWER']);
+      }
+
+      function userCanWrite() {
+        let roles = getRoles();
+        let email = request.auth.token.email;
+        let domain = '*@' + email.split('@')[1];
+        return (roles[email] in ['ADMIN', 'EDITOR']) || (roles[domain] in ['ADMIN', 'EDITOR']);
+      }
+
+      function userIsAdmin() {
+        let roles = getRoles();
+        let email = request.auth.token.email;
+        let domain = '*@' + email.split('@')[1];
+        return (roles[email] == 'ADMIN') || (roles[domain] == 'ADMIN');
+      }
     }
   }
 }
