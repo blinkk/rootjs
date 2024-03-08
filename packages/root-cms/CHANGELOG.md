@@ -1,5 +1,19 @@
 # @blinkk/root-cms
 
+## 1.0.0-rc.33
+
+### Minor Changes
+
+- c39c39e: feat: update security rules so only admins can edit project settings
+- c39c39e: feat: add support for wildcard domain ACLS, e.g. `*@example.com`
+- c39c39e: chore: validate ACL membership for every authenticated request
+- df4fc27: feat: update security rules so only ADMIN can change project settings
+
+### Patch Changes
+
+- a6fddb8: chore: update ACL check until full-domain ACLs are supported
+  - @blinkk/root@1.0.0-rc.33
+
 ## 1.0.0-rc.32
 
 ### Patch Changes
