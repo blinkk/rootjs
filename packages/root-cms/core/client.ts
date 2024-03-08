@@ -721,7 +721,20 @@ export class RootCMSClient {
     const snapshot = await docRef.get();
     const data = snapshot.data() || {};
     const acl = data.roles || {};
-    return email in acl;
+    if (email in acl) {
+      return true;
+    }
+
+    // Check wildcard domains, e.g. `*@example.com`.
+    if (!email.includes('@')) {
+      console.warn(`invalid email: ${email}`);
+      return false;
+    }
+    const domain = email.split('@').at(-1);
+    if (domain && `*@${domain}` in acl) {
+      return true;
+    }
+    return false;
   }
 }
 

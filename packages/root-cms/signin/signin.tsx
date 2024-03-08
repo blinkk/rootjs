@@ -75,11 +75,11 @@ SignIn.Button = (props: ButtonProps) => {
       const email = user?.email || '(no email)';
       if (data.reason) {
         props.onError(
-          `${email} is not authorized to view this page. Reason: ${data.reason}. If you believe this is a mistake, please contact a developer to help resolve the issue.`
+          `Login failed for: ${email}. Reason: ${data.reason}. If you believe this is a mistake, please contact a developer to help resolve the issue.`
         );
       } else {
         props.onError(
-          `${email} is not authorized to view this page. If you believe this is a mistake, please contact a developer to help resolve the issue.`
+          `Login failed for: ${email}. If you believe this is a mistake, please contact a developer to help resolve the issue.`
         );
       }
       return;

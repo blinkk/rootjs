@@ -12,6 +12,8 @@ import {joinClassNames} from '../../utils/classes.js';
 import {sortByKey} from '../../utils/objects.js';
 import {Text} from '../Text/Text.js';
 import './ShareBox.css';
+import {showNotification} from '@mantine/notifications';
+import {notifyErrors} from '../../utils/notifications.js';
 
 export interface ShareBoxProps {
   className?: string;
@@ -37,34 +39,38 @@ export function ShareBox(props: ShareBoxProps) {
 
   async function updateUserRole(email: string, role: UserRole | 'REMOVE') {
     setLoading(true);
-    if (role === 'REMOVE') {
-      await updateDoc(docRef, new FieldPath('roles', email), deleteField());
-      setRoles((current) => {
-        const newValue = {...current};
-        delete newValue[email];
-        return newValue;
-      });
-    } else {
-      await updateDoc(docRef, new FieldPath('roles', email), role);
-      setRoles((current) => {
-        return {
-          ...current,
-          [email]: role,
-        };
-      });
-    }
+    await notifyErrors(async () => {
+      if (role === 'REMOVE') {
+        await updateDoc(docRef, new FieldPath('roles', email), deleteField());
+        setRoles((current) => {
+          const newValue = {...current};
+          delete newValue[email];
+          return newValue;
+        });
+      } else {
+        await updateDoc(docRef, new FieldPath('roles', email), role);
+        setRoles((current) => {
+          return {
+            ...current,
+            [email]: role,
+          };
+        });
+      }
+    });
     setLoading(false);
   }
 
   async function addUser(email: string) {
     setEmailInput('');
     setLoading(true);
-    await updateDoc(docRef, new FieldPath('roles', email), 'EDITOR');
-    setRoles((current) => {
-      return {
-        ...current,
-        [email]: 'EDITOR',
-      };
+    await notifyErrors(async () => {
+      await updateDoc(docRef, new FieldPath('roles', email), 'EDITOR');
+      setRoles((current) => {
+        return {
+          ...current,
+          [email]: 'EDITOR',
+        };
+      });
     });
     setLoading(false);
   }

@@ -19,7 +19,10 @@ export function SettingsPage() {
               weight="semi-bold"
               color="gray"
             >
-              <p>Share access to the CMS.</p>
+              <p>
+                Share access to the CMS. To share with everyone in a domain, use
+                *@example.com.
+              </p>
               <ul>
                 <li>VIEWER: view docs but not edit</li>
                 <li>EDITOR: view and edit docs</li>
