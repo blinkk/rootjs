@@ -221,14 +221,6 @@ export function cmsPlugin(options: CMSPluginOptions): CMSPlugin {
           return {authorized: false, reason: 'not authorized'};
         }
       }
-
-      // Verify the user exists in the DB's ACL list.
-      const cmsClient = new RootCMSClient(req.rootConfig!);
-      const userHasAccess = await cmsClient.userExistsInAcl(user.email);
-      if (!userHasAccess) {
-        console.log('login failed: user is not in the firestore acl list');
-        return {authorized: false, reason: 'not authorized'};
-      }
     } catch (err) {
       console.error('failed to verify jwt token');
       console.error(err);
