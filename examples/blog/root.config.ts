@@ -40,7 +40,7 @@ export default defineConfig({
   },
   server: {
     trailingSlash: false,
-    sessionCookieSecret: 'blog-session-secret-change-me',
+    sessionCookieSecret: 'blog-session-secret-change-me!',
     redirects: [
       {source: '/news', destination: '/blog'},
       {source: '/news/[slug]', destination: '/blog/[slug]'},

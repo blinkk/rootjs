@@ -4,7 +4,14 @@ import {
   initializeTestEnvironment,
   RulesTestEnvironment,
 } from '@firebase/rules-unit-testing';
-import {collection, doc, getDoc, getDocs, setDoc} from 'firebase/firestore';
+import {
+  collection,
+  doc,
+  getDoc,
+  getDocs,
+  setDoc,
+  updateDoc,
+} from 'firebase/firestore';
 import {afterAll, beforeAll, beforeEach, test} from 'vitest';
 
 import {FIRESTORE_RULES} from './security.js';
@@ -18,12 +25,14 @@ beforeAll(async () => {
   });
 });
 
-afterAll(async () => {
-  await testEnv.cleanup();
-});
-
 beforeEach(async () => {
   await testEnv.clearFirestore();
+});
+
+afterAll(async () => {
+  if (testEnv) {
+    await testEnv.cleanup();
+  }
 });
 
 test('should not allow arbitrary users to read/write', async () => {
@@ -114,4 +123,77 @@ test('should allow certain users to list docs from a project', async () => {
   await assertSucceeds(getDocs(collection(victorDb, collectionPath)));
   await assertFails(getDocs(collection(hackerDb, collectionPath)));
   await assertFails(getDocs(collection(unauthedDb, collectionPath)));
+});
+
+test('should allow users in an email domain to read/write from a project', async () => {
+  await testEnv.withSecurityRulesDisabled(async (context) => {
+    await setDoc(doc(context.firestore(), 'Projects/foo'), {
+      roles: {
+        '*@domain-admins.com': 'ADMIN',
+        '*@domain-viewers.com': 'VIEWER',
+      },
+    });
+  });
+
+  const adamDb = testEnv
+    .authenticatedContext('adam', {email: 'adam@domain-admins.com'})
+    .firestore();
+  const victorDb = testEnv
+    .authenticatedContext('edith', {email: 'victor@domain-viewers.com'})
+    .firestore();
+  const externalUserDb = testEnv
+    .authenticatedContext('victor', {email: 'user@external-domain.com'})
+    .firestore();
+
+  const docPath = 'Projects/foo/Collections/bar/Drafts/baz';
+  // Admins can read/write.
+  await assertSucceeds(getDoc(doc(adamDb, docPath)));
+  await assertSucceeds(setDoc(doc(adamDb, docPath), {foo: 'bar'}));
+  // Viewers can only read.
+  await assertSucceeds(getDoc(doc(victorDb, docPath)));
+  await assertFails(setDoc(doc(victorDb, docPath), {foo: 'bar'}));
+  // External users can't read/write.
+  await assertFails(getDoc(doc(externalUserDb, docPath)));
+  await assertFails(setDoc(doc(externalUserDb, docPath), {foo: 'bar'}));
+});
+
+test('should only allow admins to configure a project', async () => {
+  await testEnv.withSecurityRulesDisabled(async (context) => {
+    await setDoc(doc(context.firestore(), 'Projects/foo'), {
+      roles: {
+        'adam@example.com': 'ADMIN',
+        'edith@example.com': 'EDITOR',
+        'victor@example.com': 'VIEWER',
+      },
+    });
+  });
+
+  const unauthedDb = testEnv.unauthenticatedContext().firestore();
+  const adamDb = testEnv
+    .authenticatedContext('adam', {email: 'adam@example.com'})
+    .firestore();
+  const edithDb = testEnv
+    .authenticatedContext('edith', {email: 'edith@example.com'})
+    .firestore();
+  const victorDb = testEnv
+    .authenticatedContext('victor', {email: 'victor@example.com'})
+    .firestore();
+  const hackerDb = testEnv
+    .authenticatedContext('hacker', {email: 'hacker@example.com'})
+    .firestore();
+
+  const docPath = 'Projects/foo';
+  // Unauthed/external users can't read/write.
+  await assertFails(getDoc(doc(unauthedDb, docPath)));
+  await assertFails(updateDoc(doc(unauthedDb, docPath), {foo: 'bar'}));
+  await assertFails(getDoc(doc(hackerDb, docPath)));
+  await assertFails(updateDoc(doc(hackerDb, docPath), {foo: 'bar'}));
+  // Editors/viewers can only read.
+  await assertSucceeds(getDoc(doc(edithDb, docPath)));
+  await assertFails(updateDoc(doc(edithDb, docPath), {foo: 'bar'}));
+  await assertSucceeds(getDoc(doc(victorDb, docPath)));
+  await assertFails(updateDoc(doc(victorDb, docPath), {foo: 'bar'}));
+  // Admins can read/write.
+  await assertSucceeds(getDoc(doc(adamDb, docPath)));
+  await assertSucceeds(updateDoc(doc(adamDb, docPath), {foo: 'bar'}));
 });
