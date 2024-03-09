@@ -17,3 +17,7 @@
 .ReleasesPage__header__buttons {
   margin-top: 20px;
 }
+
+.ReleasesPae__ReleasesTable {
+  max-width: 1000px;
+}

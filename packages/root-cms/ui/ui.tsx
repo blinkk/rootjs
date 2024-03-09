@@ -35,6 +35,7 @@ import {TranslationsEditPage} from './pages/TranslationsEditPage/TranslationsEdi
 import {TranslationsPage} from './pages/TranslationsPage/TranslationsPage.js';
 import './styles/global.css';
 import './styles/theme.css';
+import {ReleasePage} from './pages/ReleasePage/ReleasePage.js';
 
 declare global {
   interface Window {
@@ -100,6 +101,7 @@ function App() {
               <Route path="/cms/data/:id/edit" component={EditDataSourcePage} />
               <Route path="/cms/releases" component={ReleasesPage} />
               <Route path="/cms/releases/new" component={NewReleasePage} />
+              <Route path="/cms/releases/:id" component={ReleasePage} />
               <Route path="/cms/settings" component={SettingsPage} />
               <Route path="/cms/translations" component={TranslationsPage} />
               <Route

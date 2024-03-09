@@ -17,11 +17,17 @@
   flex: 1;
 }
 
+.DocPreviewCard__content__header {
+  display: flex;
+  gap: 12px;
+  align-items: flex-end;
+  margin-bottom: 4px;
+}
+
 .DocPreviewCard__content__header__docId {
   font-size: 14px;
-  line-height: 1.2;
+  line-height: 1;
   font-weight: 500;
-  margin-bottom: 4px;
 }
 
 .DocPreviewCard__content__title {

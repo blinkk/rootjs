@@ -47,7 +47,7 @@ ReleasesPage.ReleasesTable = () => {
   }, []);
 
   return (
-    <div className="DataPage__DataSourcesTable">
+    <div className="ReleasesPae__ReleasesTable">
       {loading && <Loader color="gray" size="xl" />}
       {tableData.length > 0 && (
         <Table verticalSpacing="xs" striped highlightOnHover fontSize="xs">
@@ -55,7 +55,6 @@ ReleasesPage.ReleasesTable = () => {
             <tr>
               <th>id</th>
               <th>description</th>
-              <th>scheduled?</th>
               <th>published?</th>
             </tr>
           </thead>
@@ -66,7 +65,6 @@ ReleasesPage.ReleasesTable = () => {
                   <a href={`/cms/releases/${release.id}`}>{release.id}</a>
                 </td>
                 <td>{release.description || ''}</td>
-                <td></td>
                 <td></td>
               </tr>
             ))}

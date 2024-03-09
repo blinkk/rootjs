@@ -6,6 +6,7 @@ import {getDocServingUrl} from '../../utils/doc-urls.js';
 import {getDraftDocRef} from '../../utils/doc.js';
 import {getNestedValue} from '../../utils/objects.js';
 import './DocPreviewCard.css';
+import {DocStatusBadges} from '../DocStatusBadges/DocStatusBadges.js';
 
 const DOC_PREVIEW_CACHE: Record<string, any> = {};
 
@@ -14,6 +15,7 @@ export interface DocPreviewCardProps {
   variant?: 'default' | 'compact';
   docId: string;
   doc?: any;
+  statusBadges?: boolean;
 }
 
 export function DocPreviewCard(props: DocPreviewCardProps) {
@@ -93,6 +95,7 @@ export function DocPreviewCard(props: DocPreviewCardProps) {
       <div className="DocPreviewCard__content">
         <div className="DocPreviewCard__content__header">
           <div className="DocPreviewCard__content__header__docId">{doc.id}</div>
+          {props.statusBadges && doc && <DocStatusBadges doc={doc} />}
         </div>
         <div className="DocPreviewCard__content__title">
           {previewTitle || '[UNTITLED]'}

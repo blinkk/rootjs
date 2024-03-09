@@ -8,6 +8,7 @@ import {
   Tooltip,
 } from '@mantine/core';
 import {showNotification} from '@mantine/notifications';
+import {IconArrowUpRight, IconTrash} from '@tabler/icons-preact';
 import {useEffect, useRef, useState} from 'preact/hooks';
 import {route} from 'preact-router';
 import {Release, addRelease, updateRelease} from '../../utils/release.js';
@@ -15,7 +16,6 @@ import {isSlugValid} from '../../utils/slug.js';
 import {DocPreviewCard} from '../DocPreviewCard/DocPreviewCard.js';
 import {useDocSelectModal} from '../DocSelectModal/DocSelectModal.js';
 import './ReleaseForm.css';
-import {IconArrowUpRight, IconTrash} from '@tabler/icons-preact';
 
 export interface ReleaseFormProps {
   className?: string;
@@ -126,6 +126,19 @@ export function ReleaseForm(props: ReleaseFormProps) {
     });
   }
 
+  function onRemoveDoc(docId: string) {
+    console.log('onRemoveDoc()', docId);
+    setDocIds((current) => {
+      const newDocIds = [...current];
+      const index = newDocIds.indexOf(docId);
+      if (index !== -1) {
+        newDocIds.splice(index, 1);
+      }
+      console.log(newDocIds);
+      return newDocIds;
+    });
+  }
+
   return (
     <form
       className="ReleaseForm"
@@ -161,7 +174,12 @@ export function ReleaseForm(props: ReleaseFormProps) {
         description="Select one or more docs to add to the release. Note: you can add or edit this list at a later time, if needed."
         size="xs"
       >
-        {docIds.length > 0 && <ReleaseForm.DocPreviewCards docIds={docIds!} />}
+        {docIds.length > 0 && (
+          <ReleaseForm.DocPreviewCards
+            docIds={docIds!}
+            onRemoveDoc={onRemoveDoc}
+          />
+        )}
         <Button
           className="ReleaseForm__docSelectButton"
           color="dark"
@@ -187,7 +205,10 @@ export function ReleaseForm(props: ReleaseFormProps) {
   );
 }
 
-ReleaseForm.DocPreviewCards = (props: {docIds: string[]}) => {
+ReleaseForm.DocPreviewCards = (props: {
+  docIds: string[];
+  onRemoveDoc: (docId: string) => void;
+}) => {
   return (
     <div className="ReleaseForm__DocPreviewCards">
       {props.docIds.map((docId) => (
@@ -201,7 +222,7 @@ ReleaseForm.DocPreviewCards = (props: {docIds: string[]}) => {
               <Tooltip label="Remove">
                 <ActionIcon
                   className="ReleaseForm__DocPreviewCards__card__controls__remove__icon"
-                  // onClick={() => removeDoc()}
+                  onClick={() => props.onRemoveDoc(docId)}
                 >
                   <IconTrash size={16} />
                 </ActionIcon>
