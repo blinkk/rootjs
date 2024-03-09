@@ -13,13 +13,13 @@ import {useEffect, useState} from 'preact/hooks';
 import {DocPreviewCard} from '../../components/DocPreviewCard/DocPreviewCard.js';
 import {Heading} from '../../components/Heading/Heading.js';
 import {Text} from '../../components/Text/Text.js';
+import {TimeSinceActionTooltip} from '../../components/TimeSinceActionTooltip/TimeSinceActionTooltip.js';
 import {useModalTheme} from '../../hooks/useModalTheme.js';
 import {Layout} from '../../layout/Layout.js';
-import './ReleasePage.css';
-import {cmsPublishDocs} from '../../utils/doc.js';
 import {notifyErrors} from '../../utils/notifications.js';
-import {Release, getRelease} from '../../utils/release.js';
+import {Release, getRelease, publishRelease} from '../../utils/release.js';
 import {timestamp} from '../../utils/time.js';
+import './ReleasePage.css';
 
 export function ReleasePage(props: {id: string}) {
   const [loading, setLoading] = useState(true);
@@ -130,12 +130,12 @@ ReleasePage.PublishStatus = (props: {
       onCancel: () => console.log('Cancel'),
       closeOnConfirm: true,
       onConfirm: () => {
-        publishRelease();
+        publish();
       },
     });
   }
 
-  async function publishRelease() {
+  async function publish() {
     setPublishLoading(true);
     await notifyErrors(async () => {
       const notificationId = `publish-release-${release.id}`;
@@ -147,7 +147,8 @@ ReleasePage.PublishStatus = (props: {
         loading: true,
         autoClose: false,
       });
-      await cmsPublishDocs(release.docIds || []);
+      // await cmsPublishDocs(release.docIds || []);
+      await publishRelease(release.id);
       updateNotification({
         id: notificationId,
         title: 'Published release!',
@@ -174,7 +175,12 @@ ReleasePage.PublishStatus = (props: {
         </thead>
         <tbody>
           <tr>
-            <td>never</td>
+            <td>
+              <TimeSinceActionTooltip
+                timestamp={release.publishedAt}
+                email={release.publishedBy}
+              />
+            </td>
             <td>
               <div className="ReleasePage__PublishStatus__actions">
                 <Tooltip

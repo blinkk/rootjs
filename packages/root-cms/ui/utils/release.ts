@@ -10,7 +10,9 @@ import {
   runTransaction,
   serverTimestamp,
   updateDoc,
+  writeBatch,
 } from 'firebase/firestore';
+import {cmsPublishDocs} from './doc.js';
 
 export interface Release {
   id: string;
@@ -84,4 +86,30 @@ export async function deleteRelease(id: string) {
   const docRef = doc(db, 'Projects', projectId, COLLECTION_ID, id);
   await deleteDoc(docRef);
   console.log(`deleted release ${id}`);
+}
+
+export async function publishRelease(id: string) {
+  const release = await getRelease(id);
+  if (!release) {
+    throw new Error(`release not found: ${id}`);
+  }
+  const docIds = release.docIds || [];
+  if (docIds.length === 0) {
+    throw new Error(`no docs to publish for release: ${id}`);
+  }
+
+  const projectId = window.__ROOT_CTX.rootConfig.projectId;
+  const db = window.firebase.db;
+  const docRef = doc(db, 'Projects', projectId, COLLECTION_ID, id);
+
+  // Create a batch request and publish docs and update the release in an
+  // atomic write to firestore.
+  const batch = writeBatch(db);
+  // Update the release's publishedAt.
+  batch.update(docRef, {
+    publishedAt: serverTimestamp(),
+    publishedBy: window.firebase.user.email,
+  });
+  await cmsPublishDocs(docIds, {batch});
+  console.log(`published release: ${id}`);
 }

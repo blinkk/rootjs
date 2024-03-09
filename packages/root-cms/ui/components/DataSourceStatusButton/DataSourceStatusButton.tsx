@@ -10,6 +10,7 @@ import {
 } from '../../utils/data-source.js';
 import {getTimeAgo} from '../../utils/time.js';
 import './DataSourceStatusButton.css';
+import {TimeSinceActionTooltip} from '../TimeSinceActionTooltip/TimeSinceActionTooltip.js';
 
 export interface DataSourceStatusButtonProps {
   dataSource: DataSource;
@@ -92,7 +93,7 @@ export function DataSourceStatusButton(props: DataSourceStatusButtonProps) {
     <div className="DataSourceStatusButton">
       <div className="DataSourceStatusButton__label">
         {!loading && (
-          <TimeSince timestamp={timestampToMillis(timestamp)} email={email} />
+          <TimeSinceActionTooltip timestamp={timestamp} email={email} />
         )}
       </div>
       <div className="DataSourceStatusButton__button">
@@ -110,53 +111,4 @@ export function DataSourceStatusButton(props: DataSourceStatusButtonProps) {
       </div>
     </div>
   );
-}
-
-interface TimeSinceProps {
-  timestamp?: number;
-  email?: string;
-}
-
-function TimeSince(props: TimeSinceProps) {
-  const [label, setLabel] = useState(
-    props.timestamp ? getTimeAgo(props.timestamp, {style: 'short'}) : 'never'
-  );
-
-  if (!props.timestamp) {
-    return <div>{label}</div>;
-  }
-
-  useEffect(() => {
-    const interval = window.setInterval(() => {
-      setLabel(getTimeAgo(props.timestamp!, {style: 'short'}));
-    }, 60000);
-    return () => window.clearInterval(interval);
-  }, []);
-
-  return (
-    <Tooltip
-      transition="pop"
-      label={`${formatDateTime(props.timestamp)} by ${props.email}`}
-    >
-      {getTimeAgo(props.timestamp, {style: 'short'})}
-    </Tooltip>
-  );
-}
-
-function formatDateTime(timestamp: number) {
-  const date = new Date(timestamp);
-  return date.toLocaleDateString('en', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
-}
-
-function timestampToMillis(ts?: Timestamp) {
-  if (!ts) {
-    return 0;
-  }
-  return ts.toMillis();
 }

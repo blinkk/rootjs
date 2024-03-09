@@ -89,7 +89,10 @@ export async function cmsPublishDoc(docId: string) {
 /**
  * Batch publishes a group of docs.
  */
-export async function cmsPublishDocs(docIds: string[]) {
+export async function cmsPublishDocs(
+  docIds: string[],
+  options?: {batch?: WriteBatch}
+) {
   if (docIds.length === 0) {
     console.log('no docs to publish');
     return;
@@ -104,7 +107,7 @@ export async function cmsPublishDocs(docIds: string[]) {
   }
 
   const draftDocs = await getDraftDocs(docIds);
-  const batch = writeBatch(db);
+  const batch = options?.batch || writeBatch(db);
   docIds.forEach((docId) => {
     const draftData = draftDocs[docId];
     if (!draftData) {

@@ -5,6 +5,7 @@ import {Text} from '../../components/Text/Text.js';
 import {Layout} from '../../layout/Layout.js';
 import {Release, listReleases} from '../../utils/release.js';
 import './ReleasesPage.css';
+import {TimeSinceActionTooltip} from '../../components/TimeSinceActionTooltip/TimeSinceActionTooltip.js';
 
 export function ReleasesPage() {
   return (
@@ -65,7 +66,12 @@ ReleasesPage.ReleasesTable = () => {
                   <a href={`/cms/releases/${release.id}`}>{release.id}</a>
                 </td>
                 <td>{release.description || ''}</td>
-                <td></td>
+                <td>
+                  <TimeSinceActionTooltip
+                    timestamp={release.publishedAt}
+                    email={release.publishedBy}
+                  />
+                </td>
               </tr>
             ))}
           </tbody>
