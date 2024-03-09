@@ -11,7 +11,13 @@ import {showNotification} from '@mantine/notifications';
 import {IconArrowUpRight, IconTrash} from '@tabler/icons-preact';
 import {useEffect, useRef, useState} from 'preact/hooks';
 import {route} from 'preact-router';
-import {Release, addRelease, updateRelease} from '../../utils/release.js';
+import {notifyErrors} from '../../utils/notifications.js';
+import {
+  Release,
+  addRelease,
+  getRelease,
+  updateRelease,
+} from '../../utils/release.js';
 import {isSlugValid} from '../../utils/slug.js';
 import {DocPreviewCard} from '../DocPreviewCard/DocPreviewCard.js';
 import {useDocSelectModal} from '../DocSelectModal/DocSelectModal.js';
@@ -19,7 +25,7 @@ import './ReleaseForm.css';
 
 export interface ReleaseFormProps {
   className?: string;
-  releaseId?: string;
+  releaseId: string;
   buttonLabel?: string;
 }
 
@@ -34,6 +40,12 @@ export function ReleaseForm(props: ReleaseFormProps) {
 
   async function fetchRelease(releaseId: string) {
     console.log(releaseId);
+    await notifyErrors(async () => {
+      const release = await getRelease(releaseId);
+      setRelease(release);
+      setDocIds(release?.docIds || []);
+    });
+    setLoading(false);
   }
 
   useEffect(() => {
@@ -79,7 +91,7 @@ export function ReleaseForm(props: ReleaseFormProps) {
         await updateRelease(props.releaseId, release);
         showNotification({
           title: 'Saved release',
-          message: `Successfully updated ${releaseId}`,
+          message: `Updated ${releaseId}`,
           autoClose: 5000,
         });
         setSubmitting(false);

@@ -24,10 +24,12 @@ import {DataPage} from './pages/DataPage/DataPage.js';
 import {DataSourcePage} from './pages/DataSourcePage/DataSourcePage.js';
 import {DocumentPage} from './pages/DocumentPage/DocumentPage.js';
 import {EditDataSourcePage} from './pages/EditDataSourcePage/EditDataSourcePage.js';
+import {EditReleasePage} from './pages/EditReleasePage/EditReleasePage.js';
 import {NewDataSourcePage} from './pages/NewDataSourcePage/NewDataSourcePage.js';
 import {NewReleasePage} from './pages/NewReleasePage/NewReleasePage.js';
 import {NotFoundPage} from './pages/NotFoundPage/NotFoundPage.js';
 import {ProjectPage} from './pages/ProjectPage/ProjectPage.js';
+import {ReleasePage} from './pages/ReleasePage/ReleasePage.js';
 import {ReleasesPage} from './pages/ReleasesPage/ReleasesPage.js';
 import {SettingsPage} from './pages/SettingsPage/SettingsPage.js';
 import {TranslationsArbPage} from './pages/TranslationsArbPage/TranslationsArbPage.js';
@@ -35,7 +37,6 @@ import {TranslationsEditPage} from './pages/TranslationsEditPage/TranslationsEdi
 import {TranslationsPage} from './pages/TranslationsPage/TranslationsPage.js';
 import './styles/global.css';
 import './styles/theme.css';
-import {ReleasePage} from './pages/ReleasePage/ReleasePage.js';
 
 declare global {
   interface Window {
@@ -102,6 +103,10 @@ function App() {
               <Route path="/cms/releases" component={ReleasesPage} />
               <Route path="/cms/releases/new" component={NewReleasePage} />
               <Route path="/cms/releases/:id" component={ReleasePage} />
+              <Route
+                path="/cms/releases/:id/edit"
+                component={EditReleasePage}
+              />
               <Route path="/cms/settings" component={SettingsPage} />
               <Route path="/cms/translations" component={TranslationsPage} />
               <Route

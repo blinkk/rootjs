@@ -40,13 +40,16 @@ export function ReleasePage(props: {id: string}) {
           </Breadcrumbs>
           <div className="ReleasePage__header__titleWrap">
             <Heading size="h1">Release: {id}</Heading>
-            {/* <div className="ReleasePage__header__controls">
+            <div className="ReleasePage__header__controls">
               <Tooltip label="Configure">
-                <ActionIcon component="a" href={`/cms/data/${props.id}/edit`}>
+                <ActionIcon
+                  component="a"
+                  href={`/cms/releases/${props.id}/edit`}
+                >
                   <IconSettings size={24} stroke="1.5" />
                 </ActionIcon>
               </Tooltip>
-            </div> */}
+            </div>
           </div>
           {release?.description && <Text as="p">{release.description}</Text>}
         </div>
@@ -97,7 +100,18 @@ ReleasePage.DocsList = (props: {release: Release}) => {
   const docIds = release.docIds || [];
   return (
     <div className="ReleasePage__DocsList">
-      <Heading size="h2">Docs</Heading>
+      <div className="ReleasePage__DocsList__header">
+        <Heading size="h2">Docs</Heading>
+        <Button
+          component="a"
+          variant="default"
+          size="xs"
+          compact
+          href={`/cms/releases/${release.id}/edit`}
+        >
+          Edit
+        </Button>
+      </div>
       <div className="ReleasePage__DocsList__cards">
         {docIds.map((docId) => (
           <div className="ReleasePage__DocsList__card">

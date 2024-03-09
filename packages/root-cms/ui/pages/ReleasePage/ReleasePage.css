@@ -62,7 +62,10 @@
   max-width: 800px;
 }
 
-.ReleasePage__DocsList h2 {
+.ReleasePage__DocsList__header {
+  display: flex;
+  gap: 16px;
+  align-items: center;
   margin-bottom: 20px;
 }
 
