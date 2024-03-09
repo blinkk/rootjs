@@ -15,6 +15,7 @@ import {
   updateDoc,
   documentId,
   where,
+  WriteBatch,
 } from 'firebase/firestore';
 import {GoogleSheetId} from './gsheets.js';
 import {
@@ -81,6 +82,55 @@ export async function cmsDeleteDoc(docId: string) {
 }
 
 export async function cmsPublishDoc(docId: string) {
+  await cmsPublishDocs([docId]);
+}
+
+/**
+ * Batch publishes a group of docs.
+ */
+export async function cmsPublishDocs(docIds: string[]) {
+  if (docIds.length === 0) {
+    console.log('no docs to publish');
+    return;
+  }
+
+  const db = window.firebase.db;
+
+  if (docIds.length > 100) {
+    throw new Error(
+      'publish docs exceeds limit of 100 docs. break up your request into multiple calls.'
+    );
+  }
+
+  const draftDocs = await getDraftDocs(docIds);
+  const batch = writeBatch(db);
+  docIds.forEach((docId) => {
+    const draftData = draftDocs[docId];
+    if (!draftData) {
+      throw new Error(`doc does not exist: ${docId}`);
+    }
+    updatePublishedDocDataInBatch(batch, docId, draftData);
+  });
+  await batch.commit();
+
+  if (docIds.length === 1) {
+    console.log(`published ${docIds[0]}`);
+  } else {
+    console.log(`published ${docIds.length} docs: ${docIds.join(', ')}`);
+  }
+}
+
+/**
+ * Adds published doc writes to a batch request. This method does the following:
+ * - Updates the "sys" meta data on the draft doc
+ * - Removes any previously scheduled docs
+ * - Copies the "draft" data to "published" data
+ */
+function updatePublishedDocDataInBatch(
+  batch: WriteBatch,
+  docId: string,
+  draftData: CMSDoc
+) {
   const projectId = window.__ROOT_CTX.rootConfig.projectId;
   const db = window.firebase.db;
   const [collectionId, slug] = docId.split('/');
@@ -112,33 +162,25 @@ export async function cmsPublishDoc(docId: string) {
     slug
   );
 
-  await runTransaction(db, async (transaction) => {
-    const draftDoc = await transaction.get(draftDocRef);
-    if (!draftDoc.exists()) {
-      throw new Error(`${draftDocRef.id} does not exist`);
-    }
+  const data = {...draftData};
+  const sys: any = data.sys ?? {};
+  sys.modifiedAt = serverTimestamp();
+  sys.modifiedBy = window.firebase.user.email;
+  sys.publishedAt = serverTimestamp();
+  sys.publishedBy = window.firebase.user.email;
+  // Update the "firstPublishedAt" values only if they don't already exist.
+  sys.firstPublishedAt ??= serverTimestamp();
+  sys.firstPublishedBy ??= window.firebase.user.email;
+  // Remove the "scheduled" values if they exist.
+  delete sys.scheduledAt;
+  delete sys.scheduledBy;
 
-    const data = {...draftDoc.data()};
-    const sys = data.sys ?? {};
-    sys.modifiedAt = serverTimestamp();
-    sys.modifiedBy = window.firebase.user.email;
-    sys.publishedAt = serverTimestamp();
-    sys.publishedBy = window.firebase.user.email;
-    // Update the "firstPublishedAt" values only if they don't already exist.
-    sys.firstPublishedAt ??= serverTimestamp();
-    sys.firstPublishedBy ??= window.firebase.user.email;
-    // Remove the "scheduled" values if they exist.
-    delete sys.scheduledAt;
-    delete sys.scheduledBy;
-
-    // Update the "sys" metadata in the draft doc.
-    transaction.update(draftDocRef, {sys});
-    // Copy the "draft" data to "published" data.
-    transaction.set(publishedDocRef, {...data, sys});
-    // Delete any "scheduled" docs if it exists.
-    transaction.delete(scheduledDocRef);
-  });
-  console.log(`saved ${publishedDocRef.id}`);
+  // Update the "sys" metadata in the draft doc.
+  batch.update(draftDocRef, {sys});
+  // Copy the "draft" data to "published" data.
+  batch.set(publishedDocRef, {...data, sys});
+  // Delete any "scheduled" docs if it exists.
+  batch.delete(scheduledDocRef);
 }
 
 /**
@@ -442,7 +484,9 @@ export function getDraftDocRef(docId: string) {
   );
 }
 
-export async function getDraftDocs(docIds: string[]) {
+export async function getDraftDocs(
+  docIds: string[]
+): Promise<Record<string, CMSDoc>> {
   const projectId = window.__ROOT_CTX.rootConfig.projectId;
   const db = window.firebase.db;
   const collectionSlugs: Record<string, string[]> = {};

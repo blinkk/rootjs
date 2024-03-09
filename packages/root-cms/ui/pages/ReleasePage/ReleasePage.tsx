@@ -80,12 +80,26 @@ ReleasePage.PublishStatus = (props: {release: Release}) => {
             <td>never</td>
             <td>
               <div className="ReleasePage__PublishStatus__actions">
-                <Button variant="default" size="xs" compact>
-                  Publish
-                </Button>
-                <Button variant="default" size="xs" compact>
-                  Schedule
-                </Button>
+                <Tooltip
+                  label="Publish the release immediately"
+                  position="bottom"
+                  withArrow
+                >
+                  <Button variant="default" size="xs" compact>
+                    Publish
+                  </Button>
+                </Tooltip>
+                <Tooltip
+                  label="Schedule the release to be published at a future date"
+                  position="bottom"
+                  withArrow
+                  wrapLines
+                  width={180}
+                >
+                  <Button variant="default" size="xs" compact>
+                    Schedule
+                  </Button>
+                </Tooltip>
               </div>
             </td>
           </tr>
