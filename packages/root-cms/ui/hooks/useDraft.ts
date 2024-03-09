@@ -10,6 +10,7 @@ import {
 } from 'firebase/firestore';
 import {useEffect, useMemo, useState} from 'preact/hooks';
 import {debounce} from '../utils/debounce.js';
+import {setDocToCache} from '../utils/doc-cache.js';
 import {EventListener} from '../utils/events.js';
 import {getNestedValue, isObject} from '../utils/objects.js';
 
@@ -38,6 +39,7 @@ type UnsubscribeCallback = () => void;
 
 export class DraftController extends EventListener {
   readonly projectId: string;
+  readonly docId: string;
   readonly collectionId: string;
   readonly slug: string;
   private db: Firestore;
@@ -54,6 +56,7 @@ export class DraftController extends EventListener {
     super();
     this.projectId = window.__ROOT_CTX.rootConfig.projectId;
     const [collectionId, slug] = docId.split('/');
+    this.docId = docId;
     this.collectionId = collectionId;
     this.slug = slug;
     this.db = window.firebase.db;
@@ -348,6 +351,7 @@ export function useDraft(docId: string): UseDraftHook {
     controller.onChange((data: any) => {
       setData(data);
       setLoading(false);
+      setDocToCache(docId, data);
     });
     controller.onSaveStateChange((newSaveState) => setSaveState(newSaveState));
     controller.start();
