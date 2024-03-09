@@ -17,6 +17,7 @@ import {
   where,
   WriteBatch,
 } from 'firebase/firestore';
+import {removeDocFromCache, removeDocsFromCache} from './doc-cache.js';
 import {GoogleSheetId} from './gsheets.js';
 import {
   getTranslationsCollection,
@@ -118,6 +119,9 @@ export async function cmsPublishDocs(docIds: string[]) {
   } else {
     console.log(`published ${docIds.length} docs: ${docIds.join(', ')}`);
   }
+
+  // Reset doc cache for published docs.
+  removeDocsFromCache(docIds);
 }
 
 /**
@@ -276,6 +280,7 @@ export async function cmsUnpublishDoc(docId: string) {
   batch.delete(publishedDocRef);
   await batch.commit();
   console.log(`unpublished ${docId}`);
+  removeDocFromCache(docId);
 }
 
 export async function cmsRevertDraft(docId: string) {

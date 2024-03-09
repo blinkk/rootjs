@@ -6,29 +6,45 @@ import {
   Table,
   Tooltip,
 } from '@mantine/core';
+import {useModals} from '@mantine/modals';
+import {showNotification, updateNotification} from '@mantine/notifications';
 import {IconSettings} from '@tabler/icons-preact';
 import {useEffect, useState} from 'preact/hooks';
+import {DocPreviewCard} from '../../components/DocPreviewCard/DocPreviewCard.js';
 import {Heading} from '../../components/Heading/Heading.js';
 import {Text} from '../../components/Text/Text.js';
+import {useModalTheme} from '../../hooks/useModalTheme.js';
 import {Layout} from '../../layout/Layout.js';
 import './ReleasePage.css';
+import {cmsPublishDocs} from '../../utils/doc.js';
+import {notifyErrors} from '../../utils/notifications.js';
 import {Release, getRelease} from '../../utils/release.js';
-import {DocPreviewCard} from '../../components/DocPreviewCard/DocPreviewCard.js';
+import {timestamp} from '../../utils/time.js';
 
 export function ReleasePage(props: {id: string}) {
   const [loading, setLoading] = useState(true);
   const [release, setRelease] = useState<Release | null>(null);
+  const [updated, setUpdated] = useState(0);
   const id = props.id;
 
   async function init() {
-    const release = await getRelease(id);
-    setRelease(release);
+    setLoading(true);
+    await notifyErrors(async () => {
+      const release = await getRelease(id);
+      setRelease(release);
+      setUpdated(timestamp());
+    });
     setLoading(false);
   }
 
   useEffect(() => {
     init();
   }, []);
+
+  function onAction(action: string) {
+    console.log('onAction()', action);
+    init();
+  }
 
   return (
     <Layout>
@@ -54,17 +70,98 @@ export function ReleasePage(props: {id: string}) {
           {release?.description && <Text as="p">{release.description}</Text>}
         </div>
 
-        {release && <ReleasePage.PublishStatus release={release} />}
-        {release && release.docIds && release.docIds.length > 0 && (
-          <ReleasePage.DocsList release={release} />
+        {loading ? (
+          <Loader color="gray" size="xl" />
+        ) : (
+          <>
+            {release && (
+              <ReleasePage.PublishStatus
+                release={release}
+                onAction={onAction}
+              />
+            )}
+            {release && release.docIds && release.docIds.length > 0 && (
+              <ReleasePage.DocsList
+                release={release}
+                key={`docs-list-${updated}`}
+              />
+            )}
+          </>
         )}
       </div>
     </Layout>
   );
 }
 
-ReleasePage.PublishStatus = (props: {release: Release}) => {
+ReleasePage.PublishStatus = (props: {
+  release: Release;
+  onAction: (action: string) => void;
+}) => {
   const release = props.release;
+  const modals = useModals();
+  const modalTheme = useModalTheme();
+
+  const [publishLoading, setPublishLoading] = useState(false);
+
+  function onPublishClicked() {
+    const docIds = release.docIds || [];
+    if (docIds.length === 0) {
+      showNotification({
+        title: 'Cannot publish release',
+        message: 'Error: no docs in the release to publish.',
+        color: 'red',
+        autoClose: false,
+      });
+      return;
+    }
+
+    modals.openConfirmModal({
+      ...modalTheme,
+      title: `Publish release: ${release.id}`,
+      children: (
+        <Text size="body-sm" weight="semi-bold">
+          Are you sure you want to publish this release? The {docIds.length}{' '}
+          docs in the release will go live immediately.
+        </Text>
+      ),
+      labels: {confirm: 'Publish', cancel: 'Cancel'},
+      cancelProps: {size: 'xs'},
+      confirmProps: {color: 'dark', size: 'xs'},
+      onCancel: () => console.log('Cancel'),
+      closeOnConfirm: true,
+      onConfirm: () => {
+        publishRelease();
+      },
+    });
+  }
+
+  async function publishRelease() {
+    setPublishLoading(true);
+    await notifyErrors(async () => {
+      const notificationId = `publish-release-${release.id}`;
+      const numDocs = release.docIds?.length || 0;
+      showNotification({
+        id: notificationId,
+        title: 'Publishing release',
+        message: `Publishing ${numDocs} docs...`,
+        loading: true,
+        autoClose: false,
+      });
+      await cmsPublishDocs(release.docIds || []);
+      updateNotification({
+        id: notificationId,
+        title: 'Published release!',
+        message: `Successfully published ${numDocs} docs!`,
+        loading: false,
+        autoClose: 5000,
+      });
+      if (props.onAction) {
+        props.onAction('publish');
+      }
+    });
+    setPublishLoading(false);
+  }
+
   return (
     <div className="ReleasePage__PublishStatus">
       <Heading size="h2">Status</Heading>
@@ -85,7 +182,13 @@ ReleasePage.PublishStatus = (props: {release: Release}) => {
                   position="bottom"
                   withArrow
                 >
-                  <Button variant="default" size="xs" compact>
+                  <Button
+                    variant="default"
+                    size="xs"
+                    compact
+                    onClick={() => onPublishClicked()}
+                    loading={publishLoading}
+                  >
                     Publish
                   </Button>
                 </Tooltip>

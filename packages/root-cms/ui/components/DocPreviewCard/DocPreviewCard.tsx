@@ -1,14 +1,12 @@
 import {Image, Loader} from '@mantine/core';
-import {getDoc} from 'firebase/firestore';
 import {useEffect, useState} from 'preact/hooks';
 import {joinClassNames} from '../../utils/classes.js';
+import {getDocFromCacheOrFetch} from '../../utils/doc-cache.js';
 import {getDocServingUrl} from '../../utils/doc-urls.js';
-import {getDraftDocRef} from '../../utils/doc.js';
+import {notifyErrors} from '../../utils/notifications.js';
 import {getNestedValue} from '../../utils/objects.js';
-import './DocPreviewCard.css';
 import {DocStatusBadges} from '../DocStatusBadges/DocStatusBadges.js';
-
-const DOC_PREVIEW_CACHE: Record<string, any> = {};
+import './DocPreviewCard.css';
 
 export interface DocPreviewCardProps {
   className?: string;
@@ -25,21 +23,14 @@ export function DocPreviewCard(props: DocPreviewCardProps) {
 
   async function fetchDocData() {
     setLoading(true);
-    const docRef = getDraftDocRef(docId);
-    const snapshot = await getDoc(docRef);
-    const data = snapshot.data();
-    DOC_PREVIEW_CACHE[docId] = data;
-    setDoc(data);
+    await notifyErrors(async () => {
+      const data = await getDocFromCacheOrFetch(docId);
+      setDoc(data);
+    });
     setLoading(false);
   }
 
   useEffect(() => {
-    const cachedValue = DOC_PREVIEW_CACHE[docId];
-    if (cachedValue) {
-      setDoc(cachedValue);
-      setLoading(false);
-      return;
-    }
     fetchDocData();
   }, [docId]);
 

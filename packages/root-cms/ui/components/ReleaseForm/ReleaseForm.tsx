@@ -103,8 +103,8 @@ export function ReleaseForm(props: ReleaseFormProps) {
           autoClose: 5000,
         });
         setSubmitting(false);
-        route(`/cms/releases/${releaseId}`);
       }
+      route(`/cms/releases/${releaseId}`);
     } catch (err) {
       console.error(err);
       showNotification({
