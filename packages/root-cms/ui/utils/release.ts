@@ -1,6 +1,7 @@
 import {
   Timestamp,
   collection,
+  deleteDoc,
   doc,
   getDoc,
   getDocs,
@@ -75,4 +76,12 @@ export async function updateRelease(id: string, dataSource: Partial<Release>) {
   const db = window.firebase.db;
   const docRef = doc(db, 'Projects', projectId, COLLECTION_ID, id);
   await updateDoc(docRef, dataSource);
+}
+
+export async function deleteRelease(id: string) {
+  const projectId = window.__ROOT_CTX.rootConfig.projectId;
+  const db = window.firebase.db;
+  const docRef = doc(db, 'Projects', projectId, COLLECTION_ID, id);
+  await deleteDoc(docRef);
+  console.log(`deleted release ${id}`);
 }
