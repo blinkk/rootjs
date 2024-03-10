@@ -11,6 +11,7 @@ import {configureServerPlugins} from '../../core/plugin';
 import {Request, Response, NextFunction, Server} from '../../core/types.js';
 import {hooksMiddleware} from '../../middleware/hooks';
 import {
+  headersMiddleware,
   rootProjectMiddleware,
   trailingSlashMiddleware,
 } from '../../middleware/middleware';
@@ -88,13 +89,18 @@ export async function createPreviewServer(options: {
           redirectsMiddleware({redirects: rootConfig.server.redirects})
         );
       }
+      server.use(trailingSlashMiddleware({rootConfig}));
+
+      // Add http headers middleware.
+      if (rootConfig.server?.headers) {
+        server.use(headersMiddleware({rootConfig: rootConfig}));
+      }
 
       // Add static file middleware.
       const publicDir = path.join(distDir, 'html');
       server.use(sirv(publicDir, {dev: false}));
 
       // Add the root.js preview server middlewares.
-      server.use(trailingSlashMiddleware({rootConfig}));
       server.use(rootPreviewServerMiddleware());
 
       // Add error handlers.

@@ -13,6 +13,7 @@ import {configureServerPlugins} from '../../core/plugin.js';
 import {Server, Request, Response, NextFunction} from '../../core/types.js';
 import {hooksMiddleware} from '../../middleware/hooks.js';
 import {
+  headersMiddleware,
   rootProjectMiddleware,
   trailingSlashMiddleware,
 } from '../../middleware/middleware.js';
@@ -93,11 +94,17 @@ export async function createDevServer(options?: {
         server.use(middleware);
       }
 
-      // Add redirects middleware.
+      // Add redirects middlewares.
       if (rootConfig.server?.redirects) {
         server.use(
           redirectsMiddleware({redirects: rootConfig.server.redirects})
         );
+      }
+      server.use(trailingSlashMiddleware({rootConfig}));
+
+      // Add http headers middleware.
+      if (rootConfig.server?.headers) {
+        server.use(headersMiddleware({rootConfig: rootConfig}));
       }
 
       // Add static file middleware.
@@ -107,7 +114,6 @@ export async function createDevServer(options?: {
       }
 
       // Add the root.js dev server middlewares.
-      server.use(trailingSlashMiddleware({rootConfig}));
       server.use(rootDevServerMiddleware());
       server.use(rootDevServer404Middleware());
       server.use(rootDevServer500Middleware());

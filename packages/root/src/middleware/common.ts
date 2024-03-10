@@ -1,4 +1,5 @@
 import path from 'node:path';
+import micromatch from 'micromatch';
 import {RootConfig} from '../core/config';
 import {Request, Response, NextFunction} from '../core/types';
 
@@ -8,6 +9,34 @@ import {Request, Response, NextFunction} from '../core/types';
 export function rootProjectMiddleware(options: {rootConfig: RootConfig}) {
   return (req: Request, _: Response, next: NextFunction) => {
     req.rootConfig = options.rootConfig;
+    next();
+  };
+}
+
+/**
+ * Middleware that injects HTTP headers from the `server.headers` config in
+ * root.config.ts.
+ */
+export function headersMiddleware(options: {rootConfig: RootConfig}) {
+  const headersUserConfig = options.rootConfig.server?.headers || [];
+  // Filter header config values that are invalid.
+  const headersConfig = headersUserConfig.filter((headerConfig) => {
+    return (
+      headerConfig.source &&
+      headerConfig.headers &&
+      headerConfig.headers.length > 0
+    );
+  });
+  return (req: Request, res: Response, next: NextFunction) => {
+    headersConfig.forEach((headerConfig) => {
+      if (micromatch.isMatch(req.path, headerConfig.source)) {
+        headerConfig.headers.forEach((header) => {
+          if (header.key) {
+            res.setHeader(String(header.key), String(header.value));
+          }
+        });
+      }
+    });
     next();
   };
 }

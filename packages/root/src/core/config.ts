@@ -116,9 +116,18 @@ export interface RootI18nConfig {
 }
 
 export interface RootRedirectConfig {
-  source?: string;
-  destination?: string;
+  source: string;
+  destination: string;
   type?: number;
+}
+
+export interface RootHeaderConfig {
+  /** A glob pattern match (regex not supported yet). */
+  source: string;
+  headers: Array<{
+    key: string;
+    value: string;
+  }>;
 }
 
 export interface RootServerConfig {
@@ -148,6 +157,11 @@ export interface RootServerConfig {
    * List of redirects.
    */
   redirects?: RootRedirectConfig[];
+
+  /**
+   * HTTP headers to add to a response.
+   */
+  headers?: RootHeaderConfig[];
 }
 
 export function defineConfig(config: RootUserConfig): RootUserConfig {
