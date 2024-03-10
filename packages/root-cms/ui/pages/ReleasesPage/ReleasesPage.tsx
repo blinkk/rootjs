@@ -6,6 +6,7 @@ import {Layout} from '../../layout/Layout.js';
 import {Release, listReleases} from '../../utils/release.js';
 import './ReleasesPage.css';
 import {TimeSinceActionTooltip} from '../../components/TimeSinceActionTooltip/TimeSinceActionTooltip.js';
+import {IconSquareRoundedCheckFilled} from '@tabler/icons-preact';
 
 export function ReleasesPage() {
   return (
@@ -48,7 +49,7 @@ ReleasesPage.ReleasesTable = () => {
   }, []);
 
   return (
-    <div className="ReleasesPae__ReleasesTable">
+    <div className="ReleasesPage__ReleasesTable">
       {loading && <Loader color="gray" size="xl" />}
       {tableData.length > 0 && (
         <Table verticalSpacing="xs" striped highlightOnHover fontSize="xs">
@@ -67,10 +68,15 @@ ReleasesPage.ReleasesTable = () => {
                 </td>
                 <td>{release.description || ''}</td>
                 <td>
-                  <TimeSinceActionTooltip
-                    timestamp={release.publishedAt}
-                    email={release.publishedBy}
-                  />
+                  <div className="ReleasesPage__ReleasesTable__publishStatus">
+                    {release.publishedAt && (
+                      <IconSquareRoundedCheckFilled className="ReleasesPage__ReleasesTable__publishStatus__icon" />
+                    )}
+                    <TimeSinceActionTooltip
+                      timestamp={release.publishedAt}
+                      email={release.publishedBy}
+                    />
+                  </div>
                 </td>
               </tr>
             ))}

@@ -21,3 +21,13 @@
 .ReleasesPae__ReleasesTable {
   max-width: 1000px;
 }
+
+.ReleasesPage__ReleasesTable__publishStatus {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.ReleasesPage__ReleasesTable__publishStatus__icon {
+  color: #12b886;
+}
