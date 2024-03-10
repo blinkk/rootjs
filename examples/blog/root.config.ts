@@ -46,6 +46,9 @@ export default defineConfig({
       {source: '/news/[slug]', destination: '/blog/[slug]'},
       {source: '/restricted/[...path]', destination: '/unauthorized'},
     ],
+    headers: [
+      {source: '/test-json.txt', headers: [{key: 'content-type', value: 'application/json'}]},
+    ],
   },
   plugins: [
     cmsPlugin({
