@@ -2,8 +2,9 @@ import {Button, Loader, Table} from '@mantine/core';
 import {useEffect, useState} from 'preact/hooks';
 import {Heading} from '../../components/Heading/Heading.js';
 import {Layout} from '../../layout/Layout.js';
-import './TranslationsPage.css';
 import {loadTranslations} from '../../utils/l10n.js';
+import {notifyErrors} from '../../utils/notifications.js';
+import './TranslationsPage.css';
 
 export function TranslationsPage() {
   return (
@@ -29,38 +30,41 @@ export function TranslationsPage() {
 }
 
 TranslationsPage.TranslationsTable = () => {
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [tableData, setTableData] = useState<string[][]>([]);
   const locales = window.__ROOT_CTX.rootConfig.i18n.locales || [];
   const nonEnLocales = locales.filter((l) => l !== 'en');
   const headers = ['hash', 'source', 'en', ...nonEnLocales, 'tags'];
 
   async function init() {
-    const translationsMap = await loadTranslations();
-    const tableData: any[] = [];
-    Object.entries(translationsMap).forEach(([hash, translations]) => {
-      const nonEnValues = nonEnLocales.map(
-        (locale) => translations[locale] || ''
-      );
-      tableData.push([
-        hash,
-        translations.source,
-        translations.en,
-        ...nonEnValues,
-        ((translations.tags as any as string[]) || []).join('\n'),
-      ]);
+    setLoading(true);
+    await notifyErrors(async () => {
+      const translationsMap = await loadTranslations();
+      const tableData: any[] = [];
+      Object.entries(translationsMap).forEach(([hash, translations]) => {
+        const nonEnValues = nonEnLocales.map(
+          (locale) => translations[locale] || ''
+        );
+        tableData.push([
+          hash,
+          translations.source,
+          translations.en,
+          ...nonEnValues,
+          ((translations.tags as any as string[]) || []).join('\n'),
+        ]);
+      });
+      // Sort by the source string.
+      tableData.sort((a: string[], b: string[]) => {
+        if (a[1].toLowerCase() < b[1].toLowerCase()) {
+          return -1;
+        }
+        if (a[1].toLowerCase() > b[1].toLowerCase()) {
+          return 1;
+        }
+        return 0;
+      });
+      setTableData(tableData);
     });
-    // Sort by the source string.
-    tableData.sort((a: string[], b: string[]) => {
-      if (a[1].toLowerCase() < b[1].toLowerCase()) {
-        return -1;
-      }
-      if (a[1].toLowerCase() > b[1].toLowerCase()) {
-        return 1;
-      }
-      return 0;
-    });
-    setTableData(tableData);
     setLoading(false);
   }
 
@@ -70,6 +74,16 @@ TranslationsPage.TranslationsTable = () => {
 
   if (loading) {
     return <Loader color="gray" size="xl" />;
+  }
+
+  if (tableData.length === 0) {
+    return (
+      <div className="TranslationsPage__TranslationsTable">
+        <div className="TranslationsPage__TranslationsTable__empty">
+          No translations in the system yet.
+        </div>
+      </div>
+    );
   }
 
   return (
