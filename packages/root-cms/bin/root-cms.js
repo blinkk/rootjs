@@ -13,7 +13,7 @@ const require = createRequire(import.meta.url);
 const packageJson = require(path.join(__dirname, '../package.json'));
 
 async function main() {
-  console.log(`🌱 ${bgGreen(black(' root.js cms '))} v${packageJson.version}`);
+  console.log(`🥕 ${bgGreen(black(' root-cms '))} v${packageJson.version}`);
 
   const rootDir = process.cwd();
   const rootConfig = await loadRootConfig(rootDir, {command: 'root-cms'});

@@ -13,7 +13,7 @@ const require = createRequire(import.meta.url);
 const packageJson = require(path.join(__dirname, '../package.json'));
 
 async function main() {
-  console.log(`🌱 ${bgGreen(black(' root.js '))} v${packageJson.version}`);
+  console.log(`🥕 ${bgGreen(black(' root.js '))} v${packageJson.version}`);
 
   const program = new Command('root');
   program.version(packageJson.version);

@@ -6,17 +6,30 @@ export interface PasswordProtectedRoute {
    * URL glob pattern to match (regex not supported yet).
    */
   source: string;
-  /**
-   * A hash of the password. Note: a plain-text password should never be stored
-   * in code. Consider storing this value in a `.env` file for extra security.
-   * Generate this with: `root-password-protect generate-hash "MY_PASSWORD"`.
-   */
-  passwordHash: string;
-  /**
-   * A random string used to generate the passwordHash.
-   * Generate this with: `root-password-protect generate-hash "MY_PASSWORD"`.
-   */
-  salt: string;
+
+  password: {
+    /**
+     * A hash of the password. Note: a plain-text password should never be
+     * stored in code. Consider storing this value in a `.env` file for extra
+     * security.
+     *
+     * Generate this by running:
+     * ```
+     * root-password-protect generate-hash "MY_PASSWORD"
+     * ````
+     */
+    hash: string;
+
+    /**
+     * A random string used to generate the password hash.
+     *
+     * Generate this by running:
+     * ```
+     * root-password-protect generate-hash "MY_PASSWORD"
+     * ````
+     */
+    salt: string;
+  };
 }
 
 export interface PasswordProtectPluginOptions {
@@ -30,8 +43,9 @@ export function passwordProtectPlugin(
   const protectedRoutes = protectedRoutesUserConfig.filter((protectedRoute) => {
     return Boolean(
       protectedRoute.source &&
-        protectedRoute.passwordHash &&
-        protectedRoute.salt
+        protectedRoute.password &&
+        protectedRoute.password.hash &&
+        protectedRoute.password.salt
     );
   });
 
