@@ -5,7 +5,8 @@
   "fixed": [[
     "@blinkk/create-root",
     "@blinkk/root",
-    "@blinkk/root-cms"
+    "@blinkk/root-cms",
+    "@blinkk/root-password-protect"
   ]],
   "linked": [],
   "access": "public",
