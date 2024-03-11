@@ -10,7 +10,8 @@
     "@blinkk/rds": "0.0.0",
     "@blinkk/root": "0.0.0",
     "@blinkk/root-cms": "0.0.0",
-    "@examples/basepath": "0.0.0"
+    "@examples/basepath": "0.0.0",
+    "@blinkk/root-password-protect": "1.0.0-rc.33"
   },
   "changesets": [
     "afraid-dots-run",
@@ -51,6 +52,7 @@
     "dry-dodos-scream",
     "dry-emus-jam",
     "early-hounds-enjoy",
+    "early-plums-fly",
     "eight-carrots-punch",
     "eighty-tips-mate",
     "eleven-needles-mix",
@@ -77,6 +79,7 @@
     "fuzzy-llamas-compare",
     "fuzzy-poems-suffer",
     "fuzzy-shoes-shop",
+    "gentle-comics-arrive",
     "gentle-walls-confess",
     "giant-balloons-cross",
     "gold-penguins-draw",
@@ -167,6 +170,7 @@
     "selfish-dragons-lick",
     "selfish-lizards-juggle",
     "selfish-plums-cheat",
+    "serious-jeans-grab",
     "serious-ligers-flow",
     "serious-lobsters-attack",
     "serious-planets-knock",
