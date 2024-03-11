@@ -1,12 +1,11 @@
 import {Button, Loader, Table} from '@mantine/core';
 import {useEffect, useState} from 'preact/hooks';
 import {Heading} from '../../components/Heading/Heading.js';
+import {ReleaseStatusBadge} from '../../components/ReleaseStatusBadge/ReleaseStatusBadge.js';
 import {Text} from '../../components/Text/Text.js';
 import {Layout} from '../../layout/Layout.js';
 import {Release, listReleases} from '../../utils/release.js';
 import './ReleasesPage.css';
-import {TimeSinceActionTooltip} from '../../components/TimeSinceActionTooltip/TimeSinceActionTooltip.js';
-import {IconSquareRoundedCheckFilled} from '@tabler/icons-preact';
 
 export function ReleasesPage() {
   return (
@@ -57,7 +56,7 @@ ReleasesPage.ReleasesTable = () => {
             <tr>
               <th>id</th>
               <th>description</th>
-              <th>published?</th>
+              <th>status</th>
             </tr>
           </thead>
           <tbody>
@@ -69,13 +68,7 @@ ReleasesPage.ReleasesTable = () => {
                 <td>{release.description || ''}</td>
                 <td>
                   <div className="ReleasesPage__ReleasesTable__publishStatus">
-                    {release.publishedAt && (
-                      <IconSquareRoundedCheckFilled className="ReleasesPage__ReleasesTable__publishStatus__icon" />
-                    )}
-                    <TimeSinceActionTooltip
-                      timestamp={release.publishedAt}
-                      email={release.publishedBy}
-                    />
+                    <ReleaseStatusBadge release={release} />
                   </div>
                 </td>
               </tr>

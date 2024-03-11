@@ -2,6 +2,7 @@ import {
   Timestamp,
   collection,
   deleteDoc,
+  deleteField,
   doc,
   getDoc,
   getDocs,
@@ -109,7 +110,48 @@ export async function publishRelease(id: string) {
   batch.update(docRef, {
     publishedAt: serverTimestamp(),
     publishedBy: window.firebase.user.email,
+    scheduledAt: deleteField(),
+    scheduledBy: deleteField(),
   });
   await cmsPublishDocs(docIds, {batch});
   console.log(`published release: ${id}`);
+}
+
+export async function scheduleRelease(
+  id: string,
+  timestamp: Timestamp | number
+) {
+  const release = await getRelease(id);
+  if (!release) {
+    throw new Error(`release not found: ${id}`);
+  }
+
+  if (typeof timestamp === 'number') {
+    timestamp = Timestamp.fromMillis(timestamp);
+  }
+
+  const projectId = window.__ROOT_CTX.rootConfig.projectId;
+  const db = window.firebase.db;
+  const docRef = doc(db, 'Projects', projectId, COLLECTION_ID, id);
+
+  await updateDoc(docRef, {
+    scheduledAt: timestamp,
+    scheduledBy: window.firebase.user.email,
+  });
+}
+
+export async function cancelScheduledRelease(id: string) {
+  const release = await getRelease(id);
+  if (!release) {
+    throw new Error(`release not found: ${id}`);
+  }
+
+  const projectId = window.__ROOT_CTX.rootConfig.projectId;
+  const db = window.firebase.db;
+  const docRef = doc(db, 'Projects', projectId, COLLECTION_ID, id);
+
+  await updateDoc(docRef, {
+    scheduledAt: deleteField(),
+    scheduledBy: deleteField(),
+  });
 }

@@ -16,6 +16,7 @@ import {DocSelectModal} from './components/DocSelectModal/DocSelectModal.js';
 import {EditJsonModal} from './components/EditJsonModal/EditJsonModal.js';
 import {LocalizationModal} from './components/LocalizationModal/LocalizationModal.js';
 import {PublishDocModal} from './components/PublishDocModal/PublishDocModal.js';
+import {ScheduleReleaseModal} from './components/ScheduleReleaseModal/ScheduleReleaseModal.js';
 import {VersionHistoryModal} from './components/VersionHistoryModal/VersionHistoryModal.js';
 import {FirebaseContext, FirebaseContextObject} from './hooks/useFirebase.js';
 import {AssetsPage} from './pages/AssetsPage/AssetsPage.js';
@@ -82,6 +83,7 @@ function App() {
               [EditJsonModal.id]: EditJsonModal,
               [LocalizationModal.id]: LocalizationModal,
               [PublishDocModal.id]: PublishDocModal,
+              [ScheduleReleaseModal.id]: ScheduleReleaseModal,
               [VersionHistoryModal.id]: VersionHistoryModal,
             }}
           >

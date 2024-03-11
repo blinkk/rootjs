@@ -12,12 +12,18 @@ import {IconSettings} from '@tabler/icons-preact';
 import {useEffect, useState} from 'preact/hooks';
 import {DocPreviewCard} from '../../components/DocPreviewCard/DocPreviewCard.js';
 import {Heading} from '../../components/Heading/Heading.js';
+import {ReleaseStatusBadge} from '../../components/ReleaseStatusBadge/ReleaseStatusBadge.js';
+import {useScheduleReleaseModal} from '../../components/ScheduleReleaseModal/ScheduleReleaseModal.js';
 import {Text} from '../../components/Text/Text.js';
-import {TimeSinceActionTooltip} from '../../components/TimeSinceActionTooltip/TimeSinceActionTooltip.js';
 import {useModalTheme} from '../../hooks/useModalTheme.js';
 import {Layout} from '../../layout/Layout.js';
 import {notifyErrors} from '../../utils/notifications.js';
-import {Release, getRelease, publishRelease} from '../../utils/release.js';
+import {
+  Release,
+  cancelScheduledRelease,
+  getRelease,
+  publishRelease,
+} from '../../utils/release.js';
 import {timestamp} from '../../utils/time.js';
 import './ReleasePage.css';
 
@@ -98,10 +104,16 @@ ReleasePage.PublishStatus = (props: {
   onAction: (action: string) => void;
 }) => {
   const release = props.release;
+  const [publishLoading, setPublishLoading] = useState(false);
+
   const modals = useModals();
   const modalTheme = useModalTheme();
-
-  const [publishLoading, setPublishLoading] = useState(false);
+  const scheduleReleaseModal = useScheduleReleaseModal({
+    releaseId: release.id,
+    onScheduled: () => {
+      props.onAction('scheduled');
+    },
+  });
 
   function onPublishClicked() {
     const docIds = release.docIds || [];
@@ -163,23 +175,29 @@ ReleasePage.PublishStatus = (props: {
     setPublishLoading(false);
   }
 
+  function onScheduleClicked() {
+    scheduleReleaseModal.open();
+  }
+
+  async function onCancelScheduleClicked() {
+    await cancelScheduledRelease(release.id);
+    props.onAction('cancel-schedule');
+  }
+
   return (
     <div className="ReleasePage__PublishStatus">
       <Heading size="h2">Status</Heading>
       <Table verticalSpacing="xs" striped fontSize="xs">
         <thead>
           <tr>
-            <th>published?</th>
+            <th>status</th>
             <th>actions</th>
           </tr>
         </thead>
         <tbody>
           <tr>
             <td>
-              <TimeSinceActionTooltip
-                timestamp={release.publishedAt}
-                email={release.publishedBy}
-              />
+              <ReleaseStatusBadge release={release} />
             </td>
             <td>
               <div className="ReleasePage__PublishStatus__actions">
@@ -198,17 +216,39 @@ ReleasePage.PublishStatus = (props: {
                     Publish
                   </Button>
                 </Tooltip>
-                <Tooltip
-                  label="Schedule the release to be published at a future date"
-                  position="bottom"
-                  withArrow
-                  wrapLines
-                  width={180}
-                >
-                  <Button variant="default" size="xs" compact>
-                    Schedule
-                  </Button>
-                </Tooltip>
+                {release.scheduledAt ? (
+                  <Tooltip
+                    label="Cancel the scheduled release"
+                    position="bottom"
+                    withArrow
+                  >
+                    <Button
+                      variant="default"
+                      size="xs"
+                      compact
+                      onClick={() => onCancelScheduleClicked()}
+                    >
+                      Cancel Schedule
+                    </Button>
+                  </Tooltip>
+                ) : (
+                  <Tooltip
+                    label="Schedule the release to be published at a future date"
+                    position="bottom"
+                    withArrow
+                    wrapLines
+                    width={180}
+                  >
+                    <Button
+                      variant="default"
+                      size="xs"
+                      compact
+                      onClick={() => onScheduleClicked()}
+                    >
+                      Schedule
+                    </Button>
+                  </Tooltip>
+                )}
               </div>
             </td>
           </tr>

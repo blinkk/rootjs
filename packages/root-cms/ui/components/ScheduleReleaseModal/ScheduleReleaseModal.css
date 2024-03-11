@@ -1,0 +1,71 @@
+.ScheduleReleaseModal .mantine-Modal-title {
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.ScheduleReleaseModal__content {
+  font-size: 12px;
+  line-height: 1.5;
+  font-weight: 500;
+}
+
+.ScheduleReleaseModal__form__publishOptions__label {
+  margin-bottom: 8px;
+}
+
+.ScheduleReleaseModal__form__publishOptions__options {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.ScheduleReleaseModal__form__publishOptions__option {
+  border: 1px solid var(--color-border);
+  padding: 24px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  opacity: 1;
+  transition: all 0.3s ease;
+}
+
+.ScheduleReleaseModal__form__publishOptions__option--unselected {
+  opacity: 0.4;
+}
+
+.ScheduleReleaseModal__form__publishOptions__option--unselected:hover {
+  opacity: 0.6;
+}
+
+.ScheduleReleaseModal__form__publishOptions__option--selected {
+  border-color: #339af0;
+}
+
+.ScheduleReleaseModal__form__description {
+  font-size: 12px;
+  font-weight: 400;
+  margin-top: 4px;
+}
+
+.ScheduleReleaseModal__form__dateInput input {
+  margin-top: 16px;
+  display: block;
+  width: 100%;
+  border: 1px solid #dedede;
+  padding: 6px 8px;
+  font-family: inherit;
+  font-size: 12px;
+}
+
+.ScheduleReleaseModal__form__dateInput__help {
+  font-size: 10px;
+  font-weight: 400;
+  margin-top: 4px;
+  text-align: right;
+}
+
+.ScheduleReleaseModal__form__buttons {
+  margin-top: 24px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+}
