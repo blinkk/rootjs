@@ -25,6 +25,7 @@ import {
 import {joinClassNames} from '../../utils/classes.js';
 import {getDefaultFieldValue} from '../../utils/fields.js';
 import {flattenNestedKeys} from '../../utils/objects.js';
+import {autokey} from '../../utils/rand.js';
 import {getPlaceholderKeys, strFormat} from '../../utils/str-format.js';
 import {
   DocActionEvent,
@@ -770,15 +771,4 @@ function arrayPreview(
   }
 
   return `item ${index}`;
-}
-
-function autokey() {
-  const result = [];
-  const chars =
-    'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-  const charsLength = chars.length;
-  for (let i = 0; i < 6; i++) {
-    result.push(chars.charAt(Math.floor(Math.random() * charsLength)));
-  }
-  return result.join('');
 }

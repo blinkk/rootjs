@@ -38,3 +38,7 @@ export function getTimeAgo(
     day: 'numeric',
   });
 }
+
+export function timestamp(): number {
+  return Math.floor(new Date().getTime());
+}

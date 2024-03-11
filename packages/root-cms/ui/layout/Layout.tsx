@@ -5,6 +5,7 @@ import {
   IconHome,
   IconLanguage,
   IconPhoto,
+  IconRocket,
   IconSettings,
   IconSitemap,
 } from '@tabler/icons-preact';
@@ -70,6 +71,14 @@ Layout.Side = () => {
           active={currentUrl.startsWith('/cms/content')}
         >
           <IconFolder stroke={ICON_STROKE} />
+        </Layout.SideButton>
+
+        <Layout.SideButton
+          label="Releases"
+          url="/cms/releases"
+          active={currentUrl.startsWith('/cms/releases')}
+        >
+          <IconRocket stroke={ICON_STROKE} />
         </Layout.SideButton>
 
         <Layout.SideButton

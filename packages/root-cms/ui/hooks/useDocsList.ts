@@ -7,6 +7,8 @@ import {
   documentId,
 } from 'firebase/firestore';
 import {useEffect, useState} from 'preact/hooks';
+import {setDocToCache} from '../utils/doc-cache.js';
+import {notifyErrors} from '../utils/notifications.js';
 import {useFirebase} from './useFirebase.js';
 
 export function useDocsList(collectionId: string, options: {orderBy: string}) {
@@ -38,13 +40,23 @@ export function useDocsList(collectionId: string, options: {orderBy: string}) {
     } else if (orderBy === 'slug') {
       dbQuery = query(dbCollection, queryOrderby(documentId()));
     }
-    const snapshot = await getDocs(dbQuery);
-    const docs = snapshot.docs.map((d) => ({
-      ...d.data(),
-      id: `${collectionId}/${d.id}`,
-      slug: d.id,
-    }));
-    setDocs(docs);
+    await notifyErrors(async () => {
+      const snapshot = await getDocs(dbQuery);
+      const docs: any[] = [];
+      snapshot.docs.forEach((d) => {
+        const data = d.data();
+        const slug = d.id;
+        const docId = `${collectionId}/${slug}`;
+        const docData = {
+          ...data,
+          id: docId,
+          slug: slug,
+        };
+        docs.push(docData);
+        setDocToCache(docId, docData);
+      });
+      setDocs(docs);
+    });
     setLoading(false);
   };
 

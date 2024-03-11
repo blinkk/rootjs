@@ -1,9 +1,9 @@
 import {ActionIcon, Button, Image, Loader, Tooltip} from '@mantine/core';
 import {IconTrash} from '@tabler/icons-preact';
-import {getDoc} from 'firebase/firestore';
 import {useEffect, useState} from 'preact/hooks';
 import * as schema from '../../../../core/schema.js';
-import {getDraftDocRef} from '../../../utils/doc.js';
+import {getDocFromCacheOrFetch} from '../../../utils/doc-cache.js';
+import {notifyErrors} from '../../../utils/notifications.js';
 import {getNestedValue} from '../../../utils/objects.js';
 import {useDocPickerModal} from '../../DocPickerModal/DocPickerModal.js';
 import {FieldProps} from './FieldProps.js';
@@ -79,8 +79,6 @@ export function ReferenceField(props: FieldProps) {
   );
 }
 
-const REF_PREVIEW_CACHE: Record<string, any> = {};
-
 interface ReferencePreviewProps {
   id: string;
 }
@@ -91,21 +89,14 @@ ReferenceField.Preview = (props: ReferencePreviewProps) => {
 
   async function fetchDocData() {
     setLoading(true);
-    const docRef = getDraftDocRef(props.id);
-    const doc = await getDoc(docRef);
-    const docData = doc.data();
-    REF_PREVIEW_CACHE[props.id] = docData;
-    setPreviewDoc(docData);
+    await notifyErrors(async () => {
+      const docData = await getDocFromCacheOrFetch(props.id);
+      setPreviewDoc(docData);
+    });
     setLoading(false);
   }
 
   useEffect(() => {
-    const cachedValue = REF_PREVIEW_CACHE[props.id];
-    if (cachedValue) {
-      setPreviewDoc(cachedValue);
-      setLoading(false);
-      return;
-    }
     fetchDocData();
   }, [props.id]);
 

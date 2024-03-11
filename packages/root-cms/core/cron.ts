@@ -1,5 +1,5 @@
 import {RootConfig} from '@blinkk/root';
-import {publishScheduledDocs} from './runtime.js';
+import {RootCMSClient} from './client.js';
 import {VersionsService} from './versions.js';
 
 export async function runCronJobs(rootConfig: RootConfig) {
@@ -24,7 +24,9 @@ async function runCronJob(
 }
 
 async function runPublishScheduledDocs(rootConfig: RootConfig) {
-  await publishScheduledDocs(rootConfig);
+  const cmsClient = new RootCMSClient(rootConfig);
+  await cmsClient.publishScheduledDocs();
+  await cmsClient.publishScheduledReleases();
 }
 
 async function runSaveVersions(rootConfig: RootConfig) {

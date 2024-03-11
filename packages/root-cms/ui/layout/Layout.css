@@ -35,9 +35,9 @@
   font-weight: 700;
   letter-spacing: -0.2px;
   margin-left: 6px;
-  background-color: lightblue;
-  padding: 0 4px;
-  border-radius: 2px;
+  background-color: #efefef;
+  padding: 0 8px;
+  border-radius: 20px;
 }
 
 .Layout__top__project {

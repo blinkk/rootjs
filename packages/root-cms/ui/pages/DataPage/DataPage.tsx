@@ -19,7 +19,7 @@ export function DataPage() {
           </Text>
           <div className="DataPage__header__buttons">
             <Button component="a" color="blue" size="xs" href="/cms/data/new">
-              Add data source
+              New data source
             </Button>
           </div>
         </div>

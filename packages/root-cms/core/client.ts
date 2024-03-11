@@ -6,14 +6,10 @@ import {
   Firestore,
   Query,
   Timestamp,
+  WriteBatch,
   getFirestore,
 } from 'firebase-admin/firestore';
 import {CMSPlugin} from './plugin.js';
-
-/**
- * Max number of docs that can be published at once by `publishDocs()`.
- */
-export const PUBLISH_DOCS_BATCH_LIMIT = 100;
 
 export interface Doc<Fields = any> {
   /** The id of the doc, e.g. "Pages/foo-bar". */
@@ -116,6 +112,18 @@ export interface LocaleTranslations {
 
 export interface LoadTranslationsOptions {
   tags?: string[];
+}
+
+export interface Release {
+  id: string;
+  description?: string;
+  docIds?: string[];
+  createdAt?: Timestamp;
+  createdBy?: string;
+  scheduledAt?: Timestamp;
+  scheduledBy?: string;
+  publishedAt?: Timestamp;
+  publishedBy?: string;
 }
 
 export class RootCMSClient {
@@ -236,7 +244,10 @@ export class RootCMSClient {
   /**
    * Batch publishes a set of docs by id.
    */
-  async publishDocs(docIds: string[], options?: {publishedBy: string}) {
+  async publishDocs(
+    docIds: string[],
+    options?: {publishedBy: string; batch?: WriteBatch}
+  ) {
     const projectCollectionsPath = `Projects/${this.projectId}/Collections`;
     const publishedBy = options?.publishedBy || 'root-cms-client';
 
@@ -258,20 +269,15 @@ export class RootCMSClient {
       // Remove docs that don't exist.
       .filter((d) => !!d);
 
-    if (docs.length > PUBLISH_DOCS_BATCH_LIMIT) {
-      throw new Error(
-        `publishDocs() has a limit of ${PUBLISH_DOCS_BATCH_LIMIT}`
-      );
-    }
-
     if (docs.length === 0) {
+      console.log('no docs to publish');
       return [];
     }
 
     // // Each transaction or batch can write a max of 500 ops.
     // // https://firebase.google.com/docs/firestore/manage-data/transactions
     let batchCount = 0;
-    const batch = this.db.batch();
+    const batch = options?.batch || this.db.batch();
     const publishedDocs: any[] = [];
     for (const doc of docs) {
       const {id, collection, slug, sys, fields} = doc;
@@ -324,12 +330,15 @@ export class RootCMSClient {
 
       publishedDocs.push(doc);
 
-      if (batchCount >= 498) {
-        break;
+      if (batchCount >= 400) {
+        await batch.commit();
+        batchCount = 0;
       }
     }
 
-    await batch.commit();
+    if (batchCount > 0) {
+      await batch.commit();
+    }
     console.log(`published ${publishedDocs.length} docs!`);
     return publishedDocs;
   }
@@ -433,14 +442,43 @@ export class RootCMSClient {
 
       publishedDocs.push(doc);
 
-      if (batchCount >= 498) {
-        break;
+      if (batchCount >= 400) {
+        await batch.commit();
+        batchCount = 0;
+        continue;
       }
     }
 
-    await batch.commit();
+    if (batchCount > 0) {
+      await batch.commit();
+    }
     console.log(`published ${publishedDocs.length} docs!`);
     return publishedDocs;
+  }
+
+  /**
+   * Publishes docs in scheduled releases.
+   */
+  async publishScheduledReleases() {
+    const releasesPath = `Projects/${this.projectId}/Releases`;
+    const now = Math.ceil(new Date().getTime());
+    const query: Query = this.db
+      .collection(releasesPath)
+      .where('scheduledAt', '<=', Timestamp.fromMillis(now));
+    const querySnapshot = await query.get();
+
+    for (const snapshot of querySnapshot.docs) {
+      const release = snapshot.data() as Release;
+      const batch = this.db.batch();
+      const publishedBy = release.scheduledBy || 'root-cms-client';
+      batch.update(snapshot.ref, {
+        publishedAt: Timestamp.now(),
+        publishedBy: publishedBy,
+        scheduledAt: FieldValue.delete(),
+        scheduledBy: FieldValue.delete(),
+      });
+      await this.publishDocs(release.docIds || [], {publishedBy, batch});
+    }
   }
 
   /**

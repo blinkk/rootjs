@@ -12,9 +12,11 @@ import {Collection} from '../core/schema.js';
 
 import {CopyDocModal} from './components/CopyDocModal/CopyDocModal.js';
 import {DocPickerModal} from './components/DocPickerModal/DocPickerModal.js';
+import {DocSelectModal} from './components/DocSelectModal/DocSelectModal.js';
 import {EditJsonModal} from './components/EditJsonModal/EditJsonModal.js';
 import {LocalizationModal} from './components/LocalizationModal/LocalizationModal.js';
 import {PublishDocModal} from './components/PublishDocModal/PublishDocModal.js';
+import {ScheduleReleaseModal} from './components/ScheduleReleaseModal/ScheduleReleaseModal.js';
 import {VersionHistoryModal} from './components/VersionHistoryModal/VersionHistoryModal.js';
 import {FirebaseContext, FirebaseContextObject} from './hooks/useFirebase.js';
 import {AssetsPage} from './pages/AssetsPage/AssetsPage.js';
@@ -22,16 +24,20 @@ import {CollectionPage} from './pages/CollectionPage/CollectionPage.js';
 import {DataPage} from './pages/DataPage/DataPage.js';
 import {DataSourcePage} from './pages/DataSourcePage/DataSourcePage.js';
 import {DocumentPage} from './pages/DocumentPage/DocumentPage.js';
+import {EditDataSourcePage} from './pages/EditDataSourcePage/EditDataSourcePage.js';
+import {EditReleasePage} from './pages/EditReleasePage/EditReleasePage.js';
 import {NewDataSourcePage} from './pages/NewDataSourcePage/NewDataSourcePage.js';
+import {NewReleasePage} from './pages/NewReleasePage/NewReleasePage.js';
 import {NotFoundPage} from './pages/NotFoundPage/NotFoundPage.js';
 import {ProjectPage} from './pages/ProjectPage/ProjectPage.js';
+import {ReleasePage} from './pages/ReleasePage/ReleasePage.js';
+import {ReleasesPage} from './pages/ReleasesPage/ReleasesPage.js';
 import {SettingsPage} from './pages/SettingsPage/SettingsPage.js';
 import {TranslationsArbPage} from './pages/TranslationsArbPage/TranslationsArbPage.js';
 import {TranslationsEditPage} from './pages/TranslationsEditPage/TranslationsEditPage.js';
 import {TranslationsPage} from './pages/TranslationsPage/TranslationsPage.js';
 import './styles/global.css';
 import './styles/theme.css';
-import {EditDataSourcePage} from './pages/EditDataSourcePage/EditDataSourcePage.js';
 
 declare global {
   interface Window {
@@ -73,9 +79,11 @@ function App() {
             modals={{
               [CopyDocModal.id]: CopyDocModal,
               [DocPickerModal.id]: DocPickerModal,
+              [DocSelectModal.id]: DocSelectModal,
               [EditJsonModal.id]: EditJsonModal,
               [LocalizationModal.id]: LocalizationModal,
               [PublishDocModal.id]: PublishDocModal,
+              [ScheduleReleaseModal.id]: ScheduleReleaseModal,
               [VersionHistoryModal.id]: VersionHistoryModal,
             }}
           >
@@ -94,6 +102,13 @@ function App() {
               <Route path="/cms/data/new" component={NewDataSourcePage} />
               <Route path="/cms/data/:id" component={DataSourcePage} />
               <Route path="/cms/data/:id/edit" component={EditDataSourcePage} />
+              <Route path="/cms/releases" component={ReleasesPage} />
+              <Route path="/cms/releases/new" component={NewReleasePage} />
+              <Route path="/cms/releases/:id" component={ReleasePage} />
+              <Route
+                path="/cms/releases/:id/edit"
+                component={EditReleasePage}
+              />
               <Route path="/cms/settings" component={SettingsPage} />
               <Route path="/cms/translations" component={TranslationsPage} />
               <Route

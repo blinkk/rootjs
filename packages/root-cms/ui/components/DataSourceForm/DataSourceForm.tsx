@@ -19,6 +19,7 @@ import {
   updateDataSource,
 } from '../../utils/data-source.js';
 import {parseSpreadsheetUrl} from '../../utils/gsheets.js';
+import {notifyErrors} from '../../utils/notifications.js';
 import {isSlugValid} from '../../utils/slug.js';
 import './DataSourceForm.css';
 
@@ -53,10 +54,12 @@ export function DataSourceForm(props: DataSourceFormProps) {
   }
 
   async function fetchDataSource(id: string) {
-    const dataSource = await getDataSource(id);
-    setDataSource(dataSource);
-    setDataSourceType(dataSource?.type || 'http');
-    setDataFormat(dataSource?.dataFormat || 'map');
+    await notifyErrors(async () => {
+      const dataSource = await getDataSource(id);
+      setDataSource(dataSource);
+      setDataSourceType(dataSource?.type || 'http');
+      setDataFormat(dataSource?.dataFormat || 'map');
+    });
     setLoading(false);
   }
 
@@ -155,6 +158,12 @@ export function DataSourceForm(props: DataSourceFormProps) {
       }
     } catch (err) {
       console.error(err);
+      showNotification({
+        title: 'Failed to save data source',
+        message: String(err),
+        color: 'red',
+        autoClose: false,
+      });
       setSubmitting(false);
     }
   }
