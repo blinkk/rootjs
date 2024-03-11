@@ -1,6 +1,8 @@
 import {Request, Response, NextFunction, Plugin, Server} from '@blinkk/root';
+import bodyParser from 'body-parser';
 import micromatch from 'micromatch';
 import {renderPasswordPage} from './password-page.js';
+import {hashPassword, verifyPassword} from './password.js';
 
 export interface PasswordProtectedRoute {
   /**
@@ -70,10 +72,11 @@ export function passwordProtectPlugin(
       if (protectedRoutes.length === 0) {
         return;
       }
-      server.use((req: Request, res: Response, next: NextFunction) => {
+      server.use(bodyParser.urlencoded({extended: true}));
+      server.use(async (req: Request, res: Response, next: NextFunction) => {
         const protectedRoute = getProtectedRouteConfig(req);
         if (protectedRoute) {
-          handleProtectedRoute(protectedRoute, req, res, next);
+          await handleProtectedRoute(protectedRoute, req, res, next);
           return;
         }
         next();
@@ -89,9 +92,68 @@ async function handleProtectedRoute(
   next: NextFunction
 ) {
   if (req.method === 'POST') {
-    // TODO(stevenle): Verify password and set cookie.
+    // Verify password and if valid set a session cookie.
+    if (
+      req.get('content-type') !== 'application/x-www-form-urlencoded' ||
+      !req.body ||
+      !req.body.password
+    ) {
+      res.status(400);
+      renderPasswordPage(req, res, {error: 'Bad request (no password).'});
+      return;
+    }
+
+    const password = req.body.password as string;
+    const isValid = await verifyPassword(
+      password,
+      protectedRoute.password.hash,
+      protectedRoute.password.salt
+    );
+    if (!isValid) {
+      renderPasswordPage(req, res, {error: 'Incorrect password.'});
+      return;
+    }
+    // Set a session cookie value to verify subsequent requests.
+    await setSessionCookie(protectedRoute, res);
+    next();
+    return;
+  }
+
+  // If previously logged in, check the session cookie against the current
+  // password hash.
+  const isValid = await verifySessionCookie(protectedRoute, req);
+  if (isValid) {
+    next();
     return;
   }
 
   renderPasswordPage(req, res);
+}
+
+/**
+ * Saves a verification token to the session cookie for subsequent requests.
+ */
+async function setSessionCookie(
+  protectedRoute: PasswordProtectedRoute,
+  res: Response
+) {
+  const {hash, salt} = await hashPassword(protectedRoute.password.hash);
+  res.session.setItem('password_protect.hash', hash);
+  res.session.setItem('password_protect.salt', salt);
+  res.saveSession();
+}
+
+/**
+ * Verifies the session cookie value is valid.
+ */
+async function verifySessionCookie(
+  protectedRoute: PasswordProtectedRoute,
+  req: Request
+) {
+  const hash = req.session.getItem('password_protect.hash');
+  const salt = req.session.getItem('password_protect.salt');
+  if (!hash || !salt) {
+    return false;
+  }
+  return await verifyPassword(protectedRoute.password.hash, hash, salt);
 }

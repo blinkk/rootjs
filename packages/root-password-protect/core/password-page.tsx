@@ -148,6 +148,7 @@ function PasswordPage(props: PasswordPageProps) {
               <input
                 id="password"
                 className="signin__form__password"
+                name="password"
                 type="password"
                 placeholder="Password"
               />
