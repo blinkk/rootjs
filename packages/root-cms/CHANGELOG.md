@@ -1,5 +1,12 @@
 # @blinkk/root-cms
 
+## 1.0.0-rc.35
+
+### Patch Changes
+
+- Updated dependencies [da95b72]
+  - @blinkk/root@1.0.0-rc.35
+
 ## 1.0.0-rc.34
 
 ### Minor Changes
