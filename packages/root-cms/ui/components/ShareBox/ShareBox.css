@@ -24,10 +24,11 @@
   margin-top: 12px;
   max-height: 500px;
   overflow: auto;
+  padding: 20px;
+  border: 1px solid var(--color-border);
 }
 
 .ShareBox__user__email {
-  padding: 0 11px;
   overflow: hidden;
   text-overflow: ellipsis;
 }

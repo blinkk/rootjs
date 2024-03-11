@@ -9,11 +9,10 @@ import {
 import {useEffect, useState} from 'preact/hooks';
 
 import {joinClassNames} from '../../utils/classes.js';
+import {notifyErrors} from '../../utils/notifications.js';
 import {sortByKey} from '../../utils/objects.js';
 import {Text} from '../Text/Text.js';
 import './ShareBox.css';
-import {showNotification} from '@mantine/notifications';
-import {notifyErrors} from '../../utils/notifications.js';
 
 export interface ShareBoxProps {
   className?: string;
@@ -68,7 +67,7 @@ export function ShareBox(props: ShareBoxProps) {
       setRoles((current) => {
         return {
           ...current,
-          [email]: 'EDITOR',
+          [email]: 'VIEWER',
         };
       });
     });
