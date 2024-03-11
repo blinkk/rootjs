@@ -1,5 +1,11 @@
 # @blinkk/root
 
+## 1.0.0-rc.34
+
+### Minor Changes
+
+- 4ce147d: feat: add `server.headers` config to root.config.ts
+
 ## 1.0.0-rc.33
 
 ## 1.0.0-rc.32

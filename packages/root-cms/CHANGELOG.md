@@ -1,5 +1,16 @@
 # @blinkk/root-cms
 
+## 1.0.0-rc.34
+
+### Minor Changes
+
+- 159f8b2: feat: add releases page
+
+### Patch Changes
+
+- Updated dependencies [4ce147d]
+  - @blinkk/root@1.0.0-rc.34
+
 ## 1.0.0-rc.33
 
 ### Minor Changes
