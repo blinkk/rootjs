@@ -201,21 +201,23 @@ ReleasePage.PublishStatus = (props: {
             </td>
             <td>
               <div className="ReleasePage__PublishStatus__actions">
-                <Tooltip
-                  label="Publish the release immediately"
-                  position="bottom"
-                  withArrow
-                >
-                  <Button
-                    variant="default"
-                    size="xs"
-                    compact
-                    onClick={() => onPublishClicked()}
-                    loading={publishLoading}
+                {!release.scheduledAt && (
+                  <Tooltip
+                    label="Publish the release immediately"
+                    position="bottom"
+                    withArrow
                   >
-                    Publish
-                  </Button>
-                </Tooltip>
+                    <Button
+                      variant="default"
+                      size="xs"
+                      compact
+                      onClick={() => onPublishClicked()}
+                      loading={publishLoading}
+                    >
+                      {release.publishedAt ? 'Re-publish' : 'Publish'}
+                    </Button>
+                  </Tooltip>
+                )}
                 {release.scheduledAt ? (
                   <Tooltip
                     label="Cancel the scheduled release"
