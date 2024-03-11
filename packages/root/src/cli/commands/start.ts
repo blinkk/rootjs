@@ -84,7 +84,6 @@ export async function createProdServer(options: {
           redirectsMiddleware({redirects: rootConfig.server.redirects})
         );
       }
-      server.use(trailingSlashMiddleware({rootConfig}));
 
       // Add http headers middleware.
       if (rootConfig.server?.headers) {
@@ -94,6 +93,10 @@ export async function createProdServer(options: {
       // Add static file middleware.
       const publicDir = path.join(distDir, 'html');
       server.use(sirv(publicDir, {dev: false}));
+
+      // NOTE: The trailing slash middleware needs to come after public files so
+      // that slashes are not appended to public file routes.
+      server.use(trailingSlashMiddleware({rootConfig}));
 
       // Add the root.js preview server middlewares.
       server.use(rootProdServerMiddleware());

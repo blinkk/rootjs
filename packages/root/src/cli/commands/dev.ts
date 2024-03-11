@@ -100,7 +100,6 @@ export async function createDevServer(options?: {
           redirectsMiddleware({redirects: rootConfig.server.redirects})
         );
       }
-      server.use(trailingSlashMiddleware({rootConfig}));
 
       // Add http headers middleware.
       if (rootConfig.server?.headers) {
@@ -112,6 +111,10 @@ export async function createDevServer(options?: {
       if (await dirExists(publicDir)) {
         server.use(rootPublicDirMiddleware({publicDir, viteServer}));
       }
+
+      // NOTE: The trailing slash middleware needs to come after public files so
+      // that slashes are not appended to public file routes.
+      server.use(trailingSlashMiddleware({rootConfig}));
 
       // Add the root.js dev server middlewares.
       server.use(rootDevServerMiddleware());
