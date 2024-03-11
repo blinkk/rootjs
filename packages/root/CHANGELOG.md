@@ -1,5 +1,11 @@
 # @blinkk/root
 
+## 1.0.0-rc.35
+
+### Patch Changes
+
+- da95b72: fix: fix trailing slash middleware
+
 ## 1.0.0-rc.34
 
 ### Minor Changes

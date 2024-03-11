@@ -1,6 +1,6 @@
 {
   "name": "@blinkk/root-password-protect",
-  "version": "1.0.0-rc.34",
+  "version": "1.0.0-rc.35",
   "author": "s@blinkk.com",
   "license": "MIT",
   "engines": {
@@ -43,7 +43,7 @@
     "micromatch": "4.0.5"
   },
   "peerDependencies": {
-    "@blinkk/root": "1.0.0-rc.34",
+    "@blinkk/root": "1.0.0-rc.35",
     "firebase-admin": ">=11",
     "firebase-functions": ">=4",
     "preact": ">=10",
