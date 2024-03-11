@@ -14,7 +14,7 @@ export function ReleasesPage() {
         <div className="ReleasesPage__header">
           <Heading size="h1">Releases</Heading>
           <Text as="p">
-            Create a release for publishing a group of docs together in a batch.
+            Create a release for publishing content in a batch.
           </Text>
           <div className="ReleasesPage__header__buttons">
             <Button
