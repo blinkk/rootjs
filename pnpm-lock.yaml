@@ -65,6 +65,9 @@ importers:
       '@blinkk/root-cms':
         specifier: workspace:*
         version: link:../../packages/root-cms
+      '@blinkk/root-password-protect':
+        specifier: workspace:*
+        version: link:../../packages/root-password-protect
       firebase-admin:
         specifier: ^11.11.1
         version: 11.11.1
@@ -459,6 +462,12 @@ importers:
       '@types/node':
         specifier: 20.11.25
         version: 20.11.25
+      preact:
+        specifier: 10.19.3
+        version: 10.19.3
+      preact-render-to-string:
+        specifier: 6.3.1
+        version: 6.3.1(preact@10.19.3)
       tsup:
         specifier: 8.0.1
         version: 8.0.1(typescript@5.2.2)

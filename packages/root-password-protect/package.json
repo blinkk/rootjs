@@ -14,6 +14,9 @@
   "files": [
     "dist/**/*"
   ],
+  "bin": {
+    "root-password-protect": "./bin/root-password-protect.js"
+  },
   "type": "module",
   "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -28,17 +31,9 @@
     }
   },
   "scripts": {
-    "build": "rm -rf dist && concurrently -n \"core,signin,ui\" npm:build:core npm:build:signin npm:build:ui",
-    "build:core": "tsup-node --config=./core/tsup.config.ts",
-    "//": "NOTE: esbuild is used here because tsup doesn't currently support aliases.",
-    "build:ui": "esbuild ui/ui.tsx --bundle --alias:react=@preact/compat --alias:react-dom=@preact/compat --tsconfig=ui/tsconfig.json --sourcemap=inline --outdir=dist/ui",
-    "build:signin": "esbuild signin/signin.tsx --bundle --tsconfig=signin/tsconfig.json --sourcemap=inline --outdir=dist/ui",
-    "dev": "rm -rf dist && concurrently -k -n \"core,ui\" npm:dev:core npm:dev:signin npm:dev:ui",
-    "dev:core": "pnpm build:core --watch",
-    "dev:signin": "pnpm build:signin --watch",
-    "dev:ui": "pnpm build:ui --watch",
-    "test": "pnpm build && firebase emulators:exec 'vitest run'",
-    "test:watch": "pnpm build && firebase emulators:exec 'vitest'"
+    "build": "tsup-node --config=./core/tsup.config.ts",
+    "dev": "pnpm build:core --watch",
+    "test": "pnpm build"
   },
   "dependencies": {
     "@types/micromatch": "4.0.6",
@@ -56,6 +51,8 @@
   "devDependencies": {
     "@blinkk/root": "workspace:*",
     "@types/node": "20.11.25",
+    "preact": "10.19.3",
+    "preact-render-to-string": "6.3.1",
     "tsup": "8.0.1",
     "vite": "5.0.8"
   }

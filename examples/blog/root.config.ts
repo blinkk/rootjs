@@ -2,6 +2,7 @@ import path from 'node:path';
 import {URL} from 'node:url';
 import {defineConfig} from '@blinkk/root';
 import {cmsPlugin} from '@blinkk/root-cms/plugin';
+import {passwordProtectPlugin} from '@blinkk/root-password-protect/plugin';
 
 const rootDir = new URL('.', import.meta.url).pathname;
 
@@ -68,6 +69,17 @@ export default defineConfig({
         clientId: process.env.GAPI_CLIENT_ID,
       },
       gci: true,
+    }),
+    passwordProtectPlugin({
+      protectedRoutes: [
+        {
+          source: '/protected/**',
+          password: {
+            hash: '5bf26990606155160f737b95686a7301990ddc4f07648fd762ce08f3d5438125f13f90f8c1bc801f669e570202a52bc0623d1988c56909b7c4de6a646653a4ca',
+            salt: '29a0f4cb8d70f2cbf3eb71d876cd48da',
+          },
+        },
+      ],
     }),
   ],
   prettyHtml: true,

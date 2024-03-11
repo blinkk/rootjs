@@ -1,5 +1,6 @@
 import {Request, Response, NextFunction, Plugin, Server} from '@blinkk/root';
 import micromatch from 'micromatch';
+import {renderPasswordPage} from './password-page.js';
 
 export interface PasswordProtectedRoute {
   /**
@@ -81,7 +82,7 @@ export function passwordProtectPlugin(
   };
 }
 
-function handleProtectedRoute(
+async function handleProtectedRoute(
   protectedRoute: PasswordProtectedRoute,
   req: Request,
   res: Response,
@@ -91,4 +92,6 @@ function handleProtectedRoute(
     // TODO(stevenle): Verify password and set cookie.
     return;
   }
+
+  renderPasswordPage(req, res);
 }
