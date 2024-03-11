@@ -9,7 +9,7 @@ export interface InitFirebaseOptions {
 }
 
 export function initFirebase(rootConfig: RootConfig) {
-  return (options: InitFirebaseOptions) => {
+  return async (options: InitFirebaseOptions) => {
     let gcpProjectId: string;
     if (options.project) {
       gcpProjectId = options.project;
@@ -24,7 +24,7 @@ export function initFirebase(rootConfig: RootConfig) {
 
     console.log(`gcp project: ${gcpProjectId}`);
     console.log('👮 updating security rules...');
-    applySecurityRules(gcpProjectId);
+    await applySecurityRules(gcpProjectId);
     console.log('done initializing firebase project!');
   };
 }
