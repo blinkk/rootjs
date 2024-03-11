@@ -438,6 +438,15 @@ importers:
         specifier: 0.34.6
         version: 0.34.6(sass@1.69.3)
 
+  packages/root-password-protect:
+    dependencies:
+      '@types/micromatch':
+        specifier: 4.0.6
+        version: 4.0.6
+      micromatch:
+        specifier: 4.0.5
+        version: 4.0.5
+
 packages:
 
   /@aashutoshrathi/word-wrap@1.2.6:
