@@ -56,6 +56,7 @@ ReleasesPage.ReleasesTable = () => {
             <tr>
               <th>id</th>
               <th>description</th>
+              <th>content</th>
               <th>status</th>
             </tr>
           </thead>
@@ -66,6 +67,13 @@ ReleasesPage.ReleasesTable = () => {
                   <a href={`/cms/releases/${release.id}`}>{release.id}</a>
                 </td>
                 <td>{release.description || ''}</td>
+                <td>
+                  {(release.docIds || []).map((docId) => (
+                    <div>
+                      <a href={`/cms/content/${docId}`}>{docId}</a>
+                    </div>
+                  ))}
+                </td>
                 <td>
                   <div className="ReleasesPage__ReleasesTable__publishStatus">
                     <ReleaseStatusBadge release={release} />
