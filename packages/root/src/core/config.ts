@@ -130,6 +130,52 @@ export interface RootHeaderConfig {
   }>;
 }
 
+export interface ContentSecurityPolicyConfig {
+  directives?: Record<string, string[]>;
+  reportOnly?: boolean;
+}
+
+export interface XFrameOptionsConfig {
+  action: 'DENY' | 'SAMEORIGIN';
+}
+
+export interface RootSecurityConfig {
+  /**
+   * Content-Security-Policy config. If enabled, a nonce is auto-generated
+   * for every request and appended to script and stylesheet tags. You can
+   * validate your CSP headers using a tool like {@link https://csp-evaluator.withgoogle.com/}.
+   *
+   * @see {@link https://developer.mozilla.org/en-US/docs/Web/HTTP/CSP}
+   */
+  contentSecurityPolicy?: ContentSecurityPolicyConfig | boolean;
+
+  /**
+   * Strict-Transport-Security config. When enabled, the header value is set
+   * to `Strict-Transport-Security: max-age=63072000; includeSubDomains; preload`.
+   */
+  strictTransportSecurity?: boolean;
+
+  /**
+   * X-Content-Type-Options config. When enabled, the header value is set to
+   * `X-Content-Type-Options: nosniff`.
+   */
+  xContentTypeOptions?: boolean;
+
+  /**
+   * X-Frame-Options config. Setting this value to `true` will default the
+   * header value to `X-Frame-Options: SAMEORIGIN`.
+   *
+   * @see {@link https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/X-Frame-Options}
+   */
+  xFrameOptions?: 'DENY' | 'SAMEORIGIN' | boolean;
+
+  /**
+   * X-XSS-Protection config. When enabled, the header value is set to
+   * `X-XSS-Protection: 1; mode=block`.
+   */
+  xXssProtection?: boolean;
+}
+
 export interface RootServerConfig {
   /**
    * An array of middleware to add to the express server. These middleware are
@@ -164,9 +210,10 @@ export interface RootServerConfig {
   headers?: RootHeaderConfig[];
 
   /**
-   * Whether to automatically add CSP headers and nonce values.
+   * HTTP security settings. By default, all security settings are enabled with
+   * commonly used default values.
    */
-  csp?: boolean;
+  security?: RootSecurityConfig;
 }
 
 export function defineConfig(config: RootUserConfig): RootUserConfig {

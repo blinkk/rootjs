@@ -2,7 +2,7 @@ import crypto from 'node:crypto';
 import {ComponentChildren, ComponentType} from 'preact';
 import renderToString from 'preact-render-to-string';
 import {HtmlContext, HTML_CONTEXT} from '../core/components/Html';
-import {RootConfig} from '../core/config';
+import {RootConfig, RootSecurityConfig} from '../core/config';
 import {getTranslations, I18N_CONTEXT} from '../core/hooks/useI18nContext';
 import {RequestContext, REQUEST_CONTEXT} from '../core/hooks/useRequestContext';
 import {DevErrorPage} from '../core/pages/DevErrorPage';
@@ -94,12 +94,12 @@ export class Renderer {
         render404();
         return;
       }
+      const securityConfig = this.getSecurityConfig();
+      const cspEnabled = !!securityConfig.contentSecurityPolicy;
       const currentPath = req.path;
       const locale = options?.locale || route.locale;
       const translations = options?.translations;
-      const nonce = this.rootConfig.server?.csp
-        ? this.generateNonce()
-        : undefined;
+      const nonce = cspEnabled ? this.generateNonce() : undefined;
       const output = await this.renderComponent(route.module.default, props, {
         currentPath,
         route,
@@ -128,9 +128,10 @@ export class Renderer {
       req.hooks.trigger('preRender');
       res.status(statusCode);
       res.set({'Content-Type': 'text/html'});
-      if (this.rootConfig.server?.csp) {
-        this.setCspHeaders(res, {nonce: nonce!});
-      }
+      this.setSecurityHeaders(res, {
+        securityConfig: securityConfig,
+        nonce: nonce,
+      });
       res.end(html);
     };
 
@@ -494,6 +495,42 @@ export class Renderer {
   }
 
   /**
+   * Returns the `security` config value with default values inserted wherever
+   * a user config value is blank or set to `true`.
+   */
+  private getSecurityConfig() {
+    const userConfig: Partial<RootSecurityConfig> =
+      this.rootConfig.server?.security || {};
+    const securityConfig: Partial<RootSecurityConfig> = {};
+
+    if (isTrueOrUndefined(userConfig.contentSecurityPolicy)) {
+      securityConfig.contentSecurityPolicy = {
+        directives: {
+          'base-uri': ["'none'"],
+          'object-src': ["'none'"],
+          'script-src': ["'self'"],
+        },
+        reportOnly: true,
+      };
+    } else {
+      securityConfig.contentSecurityPolicy = userConfig.contentSecurityPolicy;
+    }
+
+    if (isTrueOrUndefined(userConfig.xFrameOptions)) {
+      securityConfig.xFrameOptions = 'SAMEORIGIN';
+    } else {
+      securityConfig.xFrameOptions = userConfig.xFrameOptions;
+    }
+
+    securityConfig.strictTransportSecurity =
+      userConfig.strictTransportSecurity ?? true;
+    securityConfig.xContentTypeOptions = userConfig.xContentTypeOptions ?? true;
+    securityConfig.xXssProtection = userConfig.xXssProtection ?? true;
+
+    return securityConfig as Required<RootSecurityConfig>;
+  }
+
+  /**
    * Generates a random string that can be used as the "nonce" value for CSP.
    */
   private generateNonce() {
@@ -501,10 +538,61 @@ export class Renderer {
   }
 
   /**
-   * Sets CSP headers.
+   * Sets security-related HTTP headers.
    */
-  private setCspHeaders(res: Response, options: {nonce: string}) {
-    const nonce = options.nonce;
-    // TODO(stevenle): impl.
+  private setSecurityHeaders(
+    res: Response,
+    options: {securityConfig: Required<RootSecurityConfig>; nonce?: string}
+  ) {
+    const securityConfig = options.securityConfig;
+
+    // Content-Security-Policy.
+    const contentSecurityPolicy = securityConfig.contentSecurityPolicy;
+    if (typeof contentSecurityPolicy === 'object') {
+      const directives = contentSecurityPolicy.directives || {};
+      if (options.nonce) {
+        if (!directives['script-src']) {
+          directives['script-src'] = ["'self'"];
+        }
+        directives['script-src'].push(`'nonce-${options.nonce}'`);
+      }
+      const headerSegments: string[] = [];
+      Object.entries(directives).forEach(([key, values]) => {
+        headerSegments.push([key, ...values].join(' '));
+      });
+      const csp = headerSegments.join('; ');
+      if (contentSecurityPolicy.reportOnly === false) {
+        res.setHeader('content-security-policy', csp);
+      } else {
+        res.setHeader('content-security-policy-report-only', csp);
+      }
+    }
+
+    // X-Frame-Options.
+    if (typeof securityConfig.xFrameOptions === 'string') {
+      res.setHeader('x-frame-options', securityConfig.xFrameOptions);
+    }
+
+    // Strict-Transport-Security.
+    if (securityConfig.strictTransportSecurity) {
+      res.setHeader(
+        'strict-transport-security',
+        'max-age=63072000; includeSubdomains; preload'
+      );
+    }
+
+    // X-Content-Type-Options.
+    if (securityConfig.xContentTypeOptions) {
+      res.setHeader('x-content-type-options', 'nosniff');
+    }
+
+    // X-XSS-Protection.
+    if (securityConfig.xXssProtection) {
+      res.setHeader('x-xss-protection', '1; mode=block');
+    }
   }
+}
+
+function isTrueOrUndefined(value: any) {
+  return value === true || value === undefined;
 }

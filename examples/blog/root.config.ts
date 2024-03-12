@@ -50,7 +50,6 @@ export default defineConfig({
     headers: [
       {source: '/test-json.txt', headers: [{key: 'content-type', value: 'application/json'}]},
     ],
-    csp: true,
   },
   plugins: [
     cmsPlugin({
