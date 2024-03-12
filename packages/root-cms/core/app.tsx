@@ -208,7 +208,7 @@ function setSecurityHeaders(res: Response, nonce: string) {
   const directives = [
     "base-uri 'none'",
     "object-src 'none'",
-    `script-src 'self' 'unsafe-eval' 'nonce-${nonce}'`,
+    `script-src 'self' 'unsafe-eval' 'nonce-${nonce}' *.google.com`,
   ];
   res.setHeader('content-security-policy-report-only', directives.join(';'));
 }
