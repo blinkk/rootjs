@@ -246,16 +246,11 @@ export class Renderer {
       })
     );
 
-    const nonceAttr: Record<string, string> = {};
-    if (nonce) {
-      nonceAttr.nonce = nonce;
-    }
-
     const styleTags = Array.from(cssDeps).map((cssUrl) => {
-      return <link rel="stylesheet" href={cssUrl} {...nonceAttr} />;
+      return <link rel="stylesheet" href={cssUrl} nonce={nonce} />;
     });
     const scriptTags = Array.from(jsDeps).map((jsUrls) => {
-      return <script type="module" src={jsUrls} {...nonceAttr} />;
+      return <script type="module" src={jsUrls} nonce={nonce} />;
     });
 
     const html = await this.renderHtml(mainHtml, {
