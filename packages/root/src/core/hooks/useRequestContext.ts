@@ -22,6 +22,8 @@ export interface RequestContext {
   locale: string;
   /** Translations map for the current locale. */
   translations: Record<string, string>;
+  /** CSP nonce value. */
+  nonce?: string;
 }
 
 export const REQUEST_CONTEXT = createContext<RequestContext | null>(null);

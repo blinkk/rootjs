@@ -162,6 +162,11 @@ export interface RootServerConfig {
    * HTTP headers to add to a response.
    */
   headers?: RootHeaderConfig[];
+
+  /**
+   * Whether to automatically add CSP headers and nonce values.
+   */
+  csp?: boolean;
 }
 
 export function defineConfig(config: RootUserConfig): RootUserConfig {

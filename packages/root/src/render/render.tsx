@@ -1,6 +1,6 @@
+import crypto from 'node:crypto';
 import {ComponentChildren, ComponentType} from 'preact';
 import renderToString from 'preact-render-to-string';
-
 import {HtmlContext, HTML_CONTEXT} from '../core/components/Html';
 import {RootConfig} from '../core/config';
 import {getTranslations, I18N_CONTEXT} from '../core/hooks/useI18nContext';
@@ -20,7 +20,6 @@ import {
 } from '../core/types';
 import type {ElementGraph} from '../node/element-graph';
 import {parseTagNames} from '../utils/elements';
-
 import {AssetMap} from './asset-map/asset-map';
 import {htmlMinify} from './html-minify';
 import {htmlPretty} from './html-pretty';
@@ -98,12 +97,16 @@ export class Renderer {
       const currentPath = req.path;
       const locale = options?.locale || route.locale;
       const translations = options?.translations;
+      const nonce = this.rootConfig.server?.csp
+        ? this.generateNonce()
+        : undefined;
       const output = await this.renderComponent(route.module.default, props, {
         currentPath,
         route,
         routeParams,
         locale,
         translations,
+        nonce,
       });
       let html = output.html;
       if (this.rootConfig.prettyHtml) {
@@ -123,7 +126,12 @@ export class Renderer {
         statusCode = 500;
       }
       req.hooks.trigger('preRender');
-      res.status(statusCode).set({'Content-Type': 'text/html'}).end(html);
+      res.status(statusCode);
+      res.set({'Content-Type': 'text/html'});
+      if (this.rootConfig.server?.csp) {
+        this.setCspHeaders(res, {nonce: nonce!});
+      }
+      res.end(html);
     };
 
     if (route.module.handle) {
@@ -164,9 +172,10 @@ export class Renderer {
       routeParams: RouteParams;
       locale: string;
       translations?: Record<string, string>;
+      nonce?: string;
     }
   ) {
-    const {currentPath, route, routeParams} = options;
+    const {currentPath, route, routeParams, nonce} = options;
     const locale = options.locale;
     const translations = {
       ...getTranslations(locale),
@@ -179,6 +188,7 @@ export class Renderer {
       routeParams,
       locale,
       translations,
+      nonce,
     };
     const htmlContext: HtmlContext = {
       htmlAttrs: {},
@@ -235,11 +245,16 @@ export class Renderer {
       })
     );
 
+    const nonceAttr: Record<string, string> = {};
+    if (nonce) {
+      nonceAttr.nonce = nonce;
+    }
+
     const styleTags = Array.from(cssDeps).map((cssUrl) => {
-      return <link rel="stylesheet" href={cssUrl} />;
+      return <link rel="stylesheet" href={cssUrl} {...nonceAttr} />;
     });
     const scriptTags = Array.from(jsDeps).map((jsUrls) => {
-      return <script type="module" src={jsUrls} />;
+      return <script type="module" src={jsUrls} {...nonceAttr} />;
     });
 
     const html = await this.renderHtml(mainHtml, {
@@ -476,5 +491,20 @@ export class Renderer {
     );
 
     return {jsDeps, cssDeps};
+  }
+
+  /**
+   * Generates a random string that can be used as the "nonce" value for CSP.
+   */
+  private generateNonce() {
+    return crypto.randomBytes(16).toString('base64');
+  }
+
+  /**
+   * Sets CSP headers.
+   */
+  private setCspHeaders(res: Response, options: {nonce: string}) {
+    const nonce = options.nonce;
+    // TODO(stevenle): impl.
   }
 }
