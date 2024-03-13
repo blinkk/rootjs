@@ -1,5 +1,10 @@
 import crypto from 'node:crypto';
-import {ComponentChildren, ComponentType} from 'preact';
+import {
+  ComponentChildren,
+  ComponentType,
+  VNode,
+  options as preactOptions,
+} from 'preact';
 import renderToString from 'preact-render-to-string';
 import {HtmlContext, HTML_CONTEXT} from '../core/components/Html';
 import {RootConfig, RootSecurityConfig} from '../core/config';
@@ -207,7 +212,36 @@ export class Renderer {
         </I18N_CONTEXT.Provider>
       </REQUEST_CONTEXT.Provider>
     );
-    const mainHtml = renderToString(vdom);
+
+    // Create a hook to auto-inject nonce values.
+    // https://preactjs.com/guide/v10/options/
+    const preactHook = preactOptions.vnode;
+    let mainHtml: string;
+    try {
+      preactOptions.vnode = (vnode: VNode<any>) => {
+        // Inject nonce to `<script>` tags.
+        if (vnode && vnode.type === 'script') {
+          vnode.props.nonce = nonce;
+        }
+        // Inject nonce to `<link rel="stylesheet">` tags.
+        if (
+          vnode &&
+          vnode.type === 'link' &&
+          vnode.props.rel === 'stylesheet'
+        ) {
+          vnode.props.nonce = nonce;
+        }
+        // Call the normal preact hook.
+        if (preactHook) {
+          preactHook(vnode);
+        }
+      };
+      mainHtml = renderToString(vdom);
+      preactOptions.vnode = preactHook;
+    } catch (err) {
+      preactOptions.vnode = preactHook;
+      throw err;
+    }
 
     const jsDeps = new Set<string>();
     const cssDeps = new Set<string>();

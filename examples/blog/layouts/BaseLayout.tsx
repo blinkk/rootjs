@@ -29,6 +29,10 @@ export function BaseLayout(props: BaseLayoutProps) {
         <meta content={title} name="twitter:title" />
         <meta name="description" content={description} />
         <meta name="og:description" content={description} />
+        <link
+          rel="stylesheet"
+          href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;900&display=swap"
+        />
         {image && <meta content={image} property="og:image" />}
         {image && <meta content={image} name="twitter:image" />}
         {image && <meta content="summary_large_image" name="twitter:card" />}
@@ -36,6 +40,7 @@ export function BaseLayout(props: BaseLayoutProps) {
       </Head>
       <div id="root">
         <main id="main">{props.children}</main>
+        <script>console.log('hello world');</script>
       </div>
       <GridOverlay />
     </>
