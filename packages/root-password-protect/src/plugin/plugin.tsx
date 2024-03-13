@@ -1,8 +1,16 @@
 import {Request, Response, NextFunction, Plugin, Server} from '@blinkk/root';
 import bodyParser from 'body-parser';
 import micromatch from 'micromatch';
-import {renderPasswordPage} from './password-page.js';
-import {hashPassword, verifyPassword} from './password.js';
+import renderToString from 'preact-render-to-string';
+import {
+  PasswordPage,
+  PasswordPageProps,
+} from '../components/PasswordPage/PasswordPage.js';
+import {generateNonce, setSecurityHeaders} from '../core/csp.js';
+import {hashPassword, verifyPassword} from '../core/password.js';
+
+const SESSION_COOKIE_HASH = 'password_protect.hash';
+const SESSION_COOKIE_SALT = 'password_protect.hash';
 
 export interface PasswordProtectedRoute {
   /**
@@ -138,8 +146,8 @@ async function setSessionCookie(
   res: Response
 ) {
   const {hash, salt} = await hashPassword(protectedRoute.password.hash);
-  res.session.setItem('password_protect.hash', hash);
-  res.session.setItem('password_protect.salt', salt);
+  res.session.setItem(SESSION_COOKIE_HASH, hash);
+  res.session.setItem(SESSION_COOKIE_SALT, salt);
   res.saveSession();
 }
 
@@ -150,10 +158,26 @@ async function verifySessionCookie(
   protectedRoute: PasswordProtectedRoute,
   req: Request
 ) {
-  const hash = req.session.getItem('password_protect.hash');
-  const salt = req.session.getItem('password_protect.salt');
+  const hash = req.session.getItem(SESSION_COOKIE_HASH);
+  const salt = req.session.getItem(SESSION_COOKIE_SALT);
   if (!hash || !salt) {
     return false;
   }
   return await verifyPassword(protectedRoute.password.hash, hash, salt);
+}
+
+/**
+ * Renders the login page to a response.
+ */
+export async function renderPasswordPage(
+  req: Request,
+  res: Response,
+  props?: Omit<PasswordPageProps, 'nonce'>
+) {
+  const nonce = generateNonce();
+  const mainHtml = renderToString(<PasswordPage {...props} nonce={nonce} />);
+  const html = `<!doctype html>\n${mainHtml}`;
+  res.setHeader('content-type', 'text/html');
+  setSecurityHeaders(res, nonce);
+  res.send(html);
 }

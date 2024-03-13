@@ -443,9 +443,6 @@ importers:
 
   packages/root-password-protect:
     dependencies:
-      '@types/micromatch':
-        specifier: 4.0.6
-        version: 4.0.6
       body-parser:
         specifier: 1.20.2
         version: 1.20.2
@@ -465,6 +462,9 @@ importers:
       '@types/body-parser':
         specifier: 1.19.3
         version: 1.19.3
+      '@types/micromatch':
+        specifier: 4.0.6
+        version: 4.0.6
       '@types/node':
         specifier: 20.11.25
         version: 20.11.25
@@ -477,9 +477,6 @@ importers:
       tsup:
         specifier: 8.0.1
         version: 8.0.1(typescript@5.2.2)
-      vite:
-        specifier: 5.0.8
-        version: 5.0.8(@types/node@20.11.25)
 
 packages:
 
@@ -2192,8 +2189,8 @@ packages:
       '@types/gapi.client.discovery-v1': 0.0.4
     dev: true
 
-  /@maxim_mazurok/gapi.client.sheets-v4@0.0.20240229:
-    resolution: {integrity: sha512-O+RAuXIWQfW5IrbVYwIb0Adg3fC9f/F92/v02a6rSsWVcDHKI3MOzR/DxUGkhKB4eQENLVuTH0KOy/7r9uOSPg==}
+  /@maxim_mazurok/gapi.client.sheets-v4@0.0.20240305:
+    resolution: {integrity: sha512-zV9vUH2YKkzLPxU/qbKqXgyvR//wxOCis3UprVIqd57YNWd1lnpk+oy4JYUOkK39kr3eFtoN/bpwHg/PFi5zrA==}
     dependencies:
       '@types/gapi.client': 1.0.8
       '@types/gapi.client.discovery-v1': 0.0.4
@@ -2576,7 +2573,6 @@ packages:
 
   /@types/braces@3.0.4:
     resolution: {integrity: sha512-0WR3b8eaISjEW7RpZnclONaLFDf7buaowRHdqLp4vLj54AsSAYWfh3DRbfiYJY9XDxMgx1B4sE1Afw2PGpuHOA==}
-    dev: false
 
   /@types/busboy@1.5.0:
     resolution: {integrity: sha512-ncOOhwmyFDW76c/Tuvv9MA9VGYUCn8blzyWmzYELcNGDb0WXWLSmFi7hJq25YdRBYJrmMBB5jZZwUjlJe9HCjQ==}
@@ -2675,7 +2671,7 @@ packages:
   /@types/gapi.client.sheets-v4@0.0.4:
     resolution: {integrity: sha512-6kTJ7aDMAElfdQV1XzVJmZWjgbibpa84DMuKuaN8Cwqci/dkglPyHXKvsGrRugmuYvgFYr35AQqwz6j3q8R0dw==}
     dependencies:
-      '@maxim_mazurok/gapi.client.sheets-v4': 0.0.20240229
+      '@maxim_mazurok/gapi.client.sheets-v4': 0.0.20240305
     dev: true
 
   /@types/gapi.client@1.0.8:
@@ -2752,7 +2748,6 @@ packages:
     resolution: {integrity: sha512-2eulCHWqjEpk9/vyic4tBhI8a9qQEl6DaK2n/sF7TweX9YESlypgKyhXMDGt4DAOy/jhLPvVrZc8pTDAMsplJA==}
     dependencies:
       '@types/braces': 3.0.4
-    dev: false
 
   /@types/mime@1.3.2:
     resolution: {integrity: sha512-YATxVxgRqNH6nHEIsvg6k2Boc1JHI9ZbH5iWFFv/MTkchz3b1ieGDa5T0a9RznNdI0KhVbdbWSN+KWWrQZRxTw==}
@@ -9987,42 +9982,6 @@ packages:
         optional: true
     dependencies:
       '@types/node': 18.11.8
-      esbuild: 0.19.9
-      postcss: 8.4.32
-      rollup: 4.8.0
-    optionalDependencies:
-      fsevents: 2.3.3
-    dev: true
-
-  /vite@5.0.8(@types/node@20.11.25):
-    resolution: {integrity: sha512-jYMALd8aeqR3yS9xlHd0OzQJndS9fH5ylVgWdB+pxTwxLKdO1pgC5Dlb398BUxpfaBxa4M9oT7j1g503Gaj5IQ==}
-    engines: {node: ^18.0.0 || >=20.0.0}
-    hasBin: true
-    peerDependencies:
-      '@types/node': ^18.0.0 || >=20.0.0
-      less: '*'
-      lightningcss: ^1.21.0
-      sass: '*'
-      stylus: '*'
-      sugarss: '*'
-      terser: ^5.4.0
-    peerDependenciesMeta:
-      '@types/node':
-        optional: true
-      less:
-        optional: true
-      lightningcss:
-        optional: true
-      sass:
-        optional: true
-      stylus:
-        optional: true
-      sugarss:
-        optional: true
-      terser:
-        optional: true
-    dependencies:
-      '@types/node': 20.11.25
       esbuild: 0.19.9
       postcss: 8.4.32
       rollup: 4.8.0

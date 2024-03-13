@@ -4,19 +4,22 @@ import {defineConfig} from 'tsup';
 
 export default defineConfig({
   entry: {
-    cli: './cli/cli.ts',
-    core: './core/core.ts',
-    plugin: './core/plugin.ts',
+    cli: './src/cli/cli.ts',
+    core: './src/core/core.ts',
+    plugin: './src/plugin/plugin.tsx',
   },
   sourcemap: 'inline',
-  target: 'node16',
+  target: 'node18',
   dts: {
-    entry: ['./core/core.ts', './core/plugin.ts'],
+    entry: {
+      core: './src/core/core.ts',
+      plugin: './src/plugin/plugin.tsx',
+    },
   },
   format: ['esm'],
   splitting: false,
   platform: 'node',
   esbuildOptions(options) {
-    options.tsconfig = './core/tsconfig.json';
+    options.tsconfig = './tsconfig.json';
   },
 });

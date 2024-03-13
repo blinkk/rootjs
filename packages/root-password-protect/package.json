@@ -4,7 +4,7 @@
   "author": "s@blinkk.com",
   "license": "MIT",
   "engines": {
-    "node": ">=16.0.0"
+    "node": ">=18.0.0"
   },
   "repository": {
     "type": "git",
@@ -12,14 +12,14 @@
     "directory": "packages/root-password-protect"
   },
   "files": [
-    "dist/**/*"
+    "dist/*"
   ],
   "bin": {
     "root-password-protect": "./bin/root-password-protect.js"
   },
   "type": "module",
-  "module": "./dist/index.js",
-  "types": "./dist/index.d.ts",
+  "module": "./dist/core.js",
+  "types": "./dist/core.d.ts",
   "exports": {
     ".": {
       "types": "./dist/core.d.ts",
@@ -31,12 +31,11 @@
     }
   },
   "scripts": {
-    "build": "tsup-node --config=./core/tsup.config.ts",
+    "build": "rm -rf dist && tsup-node",
     "dev": "pnpm build --watch",
     "test": "pnpm build"
   },
   "dependencies": {
-    "@types/micromatch": "4.0.6",
     "body-parser": "1.20.2",
     "commander": "11.0.0",
     "kleur": "4.1.5",
@@ -44,18 +43,16 @@
   },
   "peerDependencies": {
     "@blinkk/root": "1.0.0-rc.35",
-    "firebase-admin": ">=11",
-    "firebase-functions": ">=4",
     "preact": ">=10",
     "preact-render-to-string": ">=5"
   },
   "devDependencies": {
     "@blinkk/root": "workspace:*",
     "@types/body-parser": "1.19.3",
+    "@types/micromatch": "4.0.6",
     "@types/node": "20.11.25",
     "preact": "10.19.3",
     "preact-render-to-string": "6.3.1",
-    "tsup": "8.0.1",
-    "vite": "5.0.8"
+    "tsup": "8.0.1"
   }
 }

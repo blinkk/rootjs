@@ -21,7 +21,7 @@ export async function verifyPassword(
   return hash === generatedHash;
 }
 
-function generateHash(password: string, salt: string): Promise<string> {
+export function generateHash(password: string, salt: string): Promise<string> {
   return new Promise((resolve, reject) => {
     crypto.pbkdf2(
       password,

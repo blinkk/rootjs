@@ -5,7 +5,7 @@
     "declaration": true,
     "forceConsistentCasingInFileNames": true,
     "lib": ["esnext"],
-    "module": "nodenext",
+    "module": "esnext",
     "noEmitOnError": true,
     "noFallthroughCasesInSwitch": true,
     "noImplicitReturns": true,
@@ -15,20 +15,17 @@
     "target": "es2020",
     "outDir": "dist",
     "types": [
-      "node",
-      "vite/client"
+      "node"
     ],
     "useUnknownInCatchVariables": false,
     "esModuleInterop": true,
     "resolveJsonModule": true,
-    "moduleResolution": "nodenext",
+    "moduleResolution": "bundler",
     "jsx": "react-jsx",
     "jsxImportSource": "preact"
   },
   "include": [
-    "*.ts",
-    "**/*.ts",
-    "*.tsx",
-    "**/*.tsx",
+    "src/**/*.ts",
+    "src/**/*.tsx",
   ]
 }
