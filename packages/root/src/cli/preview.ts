@@ -6,27 +6,27 @@ import {default as express} from 'express';
 import {dim} from 'kleur/colors';
 import sirv from 'sirv';
 
-import {RootConfig} from '../../core/config';
-import {configureServerPlugins} from '../../core/plugin';
-import {Request, Response, NextFunction, Server} from '../../core/types.js';
-import {hooksMiddleware} from '../../middleware/hooks';
+import {RootConfig} from '../core/config';
+import {configureServerPlugins} from '../core/plugin';
+import {Request, Response, NextFunction, Server} from '../core/types.js';
+import {hooksMiddleware} from '../middleware/hooks';
 import {
   headersMiddleware,
   rootProjectMiddleware,
   trailingSlashMiddleware,
-} from '../../middleware/middleware';
-import {redirectsMiddleware} from '../../middleware/redirects';
-import {sessionMiddleware} from '../../middleware/session';
-import {ElementGraph} from '../../node/element-graph.js';
-import {loadBundledConfig} from '../../node/load-config';
+} from '../middleware/middleware';
+import {redirectsMiddleware} from '../middleware/redirects';
+import {sessionMiddleware} from '../middleware/session';
+import {ElementGraph} from '../node/element-graph.js';
+import {loadBundledConfig} from '../node/load-config';
 import {
   BuildAssetManifest,
   BuildAssetMap,
-} from '../../render/asset-map/build-asset-map';
-import {fileExists, loadJson} from '../../utils/fsutils';
-import {randString} from '../../utils/rand';
+} from '../render/asset-map/build-asset-map';
+import {fileExists, loadJson} from '../utils/fsutils';
+import {randString} from '../utils/rand';
 
-type RenderModule = typeof import('../../render/render.js');
+type RenderModule = typeof import('../render/render.js');
 
 export interface PreviewOptions {
   host?: string;

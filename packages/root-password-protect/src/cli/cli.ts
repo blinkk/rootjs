@@ -12,7 +12,7 @@ export class CliRunner {
   }
 
   async run(argv: string[]) {
-    const program = new Command('root-password-protect');
+    const program = new Command(this.name);
     program.version(this.version);
     program.option('-q, --quiet', 'quiet');
     program.hook('preAction', (cmd) => {

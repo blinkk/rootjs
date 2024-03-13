@@ -21,7 +21,7 @@
     "useUnknownInCatchVariables": false,
     "esModuleInterop": true,
     "resolveJsonModule": true,
-    "moduleResolution": "node",
+    "moduleResolution": "bundler",
     "jsx": "react-jsx",
     "jsxImportSource": "preact"
   },

@@ -8,28 +8,28 @@ import sirv from 'sirv';
 import glob from 'tiny-glob';
 
 import {ViteDevServer} from 'vite';
-import {RootConfig} from '../../core/config.js';
-import {configureServerPlugins} from '../../core/plugin.js';
-import {Server, Request, Response, NextFunction} from '../../core/types.js';
-import {hooksMiddleware} from '../../middleware/hooks.js';
+import {RootConfig} from '../core/config.js';
+import {configureServerPlugins} from '../core/plugin.js';
+import {Server, Request, Response, NextFunction} from '../core/types.js';
+import {hooksMiddleware} from '../middleware/hooks.js';
 import {
   headersMiddleware,
   rootProjectMiddleware,
   trailingSlashMiddleware,
-} from '../../middleware/middleware.js';
-import {redirectsMiddleware} from '../../middleware/redirects.js';
-import {sessionMiddleware} from '../../middleware/session.js';
-import {getElements, getElementsDirs} from '../../node/element-graph.js';
-import {loadRootConfig} from '../../node/load-config.js';
-import {createViteServer} from '../../node/vite.js';
-import {DevServerAssetMap} from '../../render/asset-map/dev-asset-map.js';
-import {dirExists, isDirectory, isJsFile} from '../../utils/fsutils.js';
-import {findOpenPort} from '../../utils/ports.js';
-import {randString} from '../../utils/rand.js';
+} from '../middleware/middleware.js';
+import {redirectsMiddleware} from '../middleware/redirects.js';
+import {sessionMiddleware} from '../middleware/session.js';
+import {getElements, getElementsDirs} from '../node/element-graph.js';
+import {loadRootConfig} from '../node/load-config.js';
+import {createViteServer} from '../node/vite.js';
+import {DevServerAssetMap} from '../render/asset-map/dev-asset-map.js';
+import {dirExists, isDirectory, isJsFile} from '../utils/fsutils.js';
+import {findOpenPort} from '../utils/ports.js';
+import {randString} from '../utils/rand.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-type RenderModule = typeof import('../../render/render.js');
+type RenderModule = typeof import('../render/render.js');
 
 export interface DevOptions {
   host?: string;

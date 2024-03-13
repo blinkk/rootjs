@@ -7,14 +7,14 @@ import {dim, cyan} from 'kleur/colors';
 import glob from 'tiny-glob';
 import {build as viteBuild, Manifest, ManifestChunk, UserConfig} from 'vite';
 
-import {getVitePlugins} from '../../core/plugin.js';
-import {Route} from '../../core/types.js';
-import {getElements} from '../../node/element-graph.js';
-import {bundleRootConfig, loadRootConfig} from '../../node/load-config.js';
-import {BuildAssetMap} from '../../render/asset-map/build-asset-map.js';
-import {htmlMinify} from '../../render/html-minify.js';
-import {htmlPretty} from '../../render/html-pretty.js';
-import {batchAsyncCalls} from '../../utils/batch.js';
+import {getVitePlugins} from '../core/plugin.js';
+import {Route} from '../core/types.js';
+import {getElements} from '../node/element-graph.js';
+import {bundleRootConfig, loadRootConfig} from '../node/load-config.js';
+import {BuildAssetMap} from '../render/asset-map/build-asset-map.js';
+import {htmlMinify} from '../render/html-minify.js';
+import {htmlPretty} from '../render/html-pretty.js';
+import {batchAsyncCalls} from '../utils/batch.js';
 import {
   copyGlob,
   fileExists,
@@ -24,16 +24,16 @@ import {
   makeDir,
   rmDir,
   writeFile,
-} from '../../utils/fsutils.js';
+} from '../utils/fsutils.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-type RenderModule = typeof import('../../render/render.js');
+type RenderModule = typeof import('../render/render.js');
 
 interface BuildOptions {
   ssrOnly?: boolean;
   mode?: string;
-  concurrency?: number;
+  concurrency?: string | number;
 }
 
 export async function build(rootProjectDir?: string, options?: BuildOptions) {

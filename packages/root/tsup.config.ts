@@ -12,7 +12,7 @@ export default defineConfig({
     render: 'src/render/render.tsx',
   },
   sourcemap: true,
-  target: 'node16',
+  target: 'node18',
   dts: true,
   format: ['esm'],
   splitting: true,
