@@ -38,6 +38,7 @@ import {TranslationsEditPage} from './pages/TranslationsEditPage/TranslationsEdi
 import {TranslationsPage} from './pages/TranslationsPage/TranslationsPage.js';
 import './styles/global.css';
 import './styles/theme.css';
+import {ExportSheetModal} from './components/ExportSheetModal/ExportSheetModal.js';
 
 declare global {
   interface Window {
@@ -81,6 +82,7 @@ function App() {
               [DocPickerModal.id]: DocPickerModal,
               [DocSelectModal.id]: DocSelectModal,
               [EditJsonModal.id]: EditJsonModal,
+              [ExportSheetModal.id]: ExportSheetModal,
               [LocalizationModal.id]: LocalizationModal,
               [PublishDocModal.id]: PublishDocModal,
               [ScheduleReleaseModal.id]: ScheduleReleaseModal,

@@ -1,0 +1,30 @@
+.ExportSheetModal .mantine-Modal-title {
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.ExportSheetModal__content__body {
+  font-size: 14px;
+}
+
+.ExportSheetModal__form__section {
+  margin-top: 20px;
+}
+
+.ExportSheetModal__form__description {
+  font-size: 12px;
+  line-height: 1.5;
+  font-weight: 500;
+  margin-bottom: 4px;
+}
+
+.ExportSheetModal__form__buttons {
+  margin-top: 40px;
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+}
+
+.ExportSheetModal__SelectItem {
+  padding: 8px;
+}

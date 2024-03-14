@@ -55,6 +55,26 @@ export class GSpreadsheet {
     return null;
   }
 
+  async createSheet(options: {title: string}) {
+    console.log(this.spreadsheetId);
+    const res = await gapi.client.sheets.spreadsheets.batchUpdate({
+      spreadsheetId: this.spreadsheetId,
+      resource: {
+        requests: [{addSheet: {properties: {title: options.title}}}],
+      },
+    });
+
+    const replies = res.result.replies || [];
+    if (replies && replies.length > 0) {
+      const gid = replies[0].addSheet?.properties?.sheetId;
+      if (typeof gid === 'number') {
+        return new GSheet(this, gid, options.title);
+      }
+    }
+    console.error(res);
+    throw new Error('failed to get gid of new tab');
+  }
+
   private async fetchSheets() {
     const res = await gapi.client.sheets.spreadsheets.get({
       spreadsheetId: this.spreadsheetId,

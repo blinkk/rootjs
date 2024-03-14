@@ -13,7 +13,7 @@ import {
   Tooltip,
 } from '@mantine/core';
 import {ContextModalProps, useModals} from '@mantine/modals';
-import {showNotification, updateNotification} from '@mantine/notifications';
+import {showNotification} from '@mantine/notifications';
 import {
   IconChevronDown,
   IconFileDownload,
@@ -32,7 +32,6 @@ import {
   CsvTranslation,
   cmsDocImportCsv,
   cmsGetLinkedGoogleSheetL10n,
-  cmsLinkGoogleSheetL10n,
   cmsUnlinkGoogleSheetL10n,
 } from '../../utils/doc.js';
 import {extractFields} from '../../utils/extract.js';
@@ -43,6 +42,7 @@ import {
   getSpreadsheetUrl,
 } from '../../utils/gsheets.js';
 import {TranslationsMap, loadTranslations} from '../../utils/l10n.js';
+import {useExportSheetModal} from '../ExportSheetModal/ExportSheetModal.js';
 import {Heading} from '../Heading/Heading.js';
 import './LocalizationModal.css';
 
@@ -53,6 +53,7 @@ enum MenuAction {
   EXPORT_GOOGLE_SHEET_CREATE = 'EXPORT_GOOGLE_SHEET_CREATE',
   EXPORT_GOOGLE_SHEET_ADD_TAB = 'EXPORT_GOOGLE_SHEET_ADD_TAB',
   EXPORT_GOOGLE_SHEET_LINKED = 'EXPORT_GOOGLE_SHEET_LINKED',
+  EXPORT_GOOGLE_SHEET_SHOW_OPTIONS = 'EXPORT_GOOGLE_SHEET_SHOW_OPTIONS',
   IMPORT_CSV = 'IMPORT_CSV',
   IMPORT_GOOGLE_SHEET_LINKED = 'IMPORT_GOOGLE_SHEET_LINKED',
   UNLINK_GOOGLE_SHEET = 'UNLINK_GOOGLE_SHEET',
@@ -297,6 +298,7 @@ LocalizationModal.Translations = (props: TranslationsProps) => {
   const [translationsMap, setTranslationsMap] = useState<TranslationsMap>({});
   const gapiClient = useGapiClient();
   const [linkedSheet, setLinkedSheet] = useState<GoogleSheetId | null>(null);
+  const exportSheetModal = useExportSheetModal();
 
   const sourceToTranslationsMap = useMemo(() => {
     const results: {[source: string]: Record<string, string>} = {};
@@ -429,123 +431,6 @@ LocalizationModal.Translations = (props: TranslationsProps) => {
     fileInput.click();
   }
 
-  async function createGoogleSheet() {
-    if (!gapiClient.isLoggedIn()) {
-      await gapiClient.login();
-    }
-
-    // Create Google Sheet.
-    const rootConfig = window.__ROOT_CTX.rootConfig;
-    const project =
-      rootConfig.projectName || rootConfig.projectId || 'Root CMS';
-    let gspreadsheet: GSpreadsheet;
-    let gsheet: GSheet;
-    const notificationId = 'create-google-sheet';
-    try {
-      showNotification({
-        id: notificationId,
-        loading: true,
-        title: 'Creating Google Sheet...',
-        message: 'Creating Google Sheet for localization.',
-        autoClose: false,
-        disallowClose: true,
-      });
-      gspreadsheet = await GSpreadsheet.create({
-        title: `${project} Localization`,
-      });
-      gsheet = (await gspreadsheet.getSheet(0)) as GSheet;
-      if (!gsheet) {
-        throw new Error('could not find sheet gid=0');
-      }
-      // Update tab name to the doc id.
-      gsheet.setTitle(props.docId);
-    } catch (err) {
-      console.error(err);
-      let msg = err;
-      if (typeof err === 'object' && err.body) {
-        msg = String(err.body);
-      }
-      updateNotification({
-        id: notificationId,
-        title: 'Failed to create Google Sheet',
-        message: String(msg),
-        color: 'red',
-        autoClose: false,
-      });
-      return;
-    }
-
-    // Link Google Sheet to CMS doc.
-    try {
-      updateNotification({
-        id: notificationId,
-        loading: true,
-        title: 'Created Google Sheet!',
-        message: `Linking sheet to ${props.docId}...`,
-        autoClose: false,
-        disallowClose: true,
-      });
-      const linkedSheet = {
-        spreadsheetId: gspreadsheet.spreadsheetId,
-        gid: 0,
-      };
-      await cmsLinkGoogleSheetL10n(props.docId, linkedSheet);
-      setLinkedSheet(linkedSheet);
-    } catch (err) {
-      console.error(err);
-      updateNotification({
-        id: notificationId,
-        title: 'Failed to link Google Sheet',
-        message: String(err),
-        color: 'red',
-        autoClose: false,
-      });
-      return;
-    }
-
-    // Export strings from the doc to the sheet.
-    try {
-      updateNotification({
-        id: notificationId,
-        loading: true,
-        title: 'Linked Google Sheet!',
-        message: 'Exporting strings to sheet...',
-        autoClose: false,
-        disallowClose: true,
-      });
-      await exportStringsToSheet(gsheet, {isNew: true});
-    } catch (err) {
-      console.error(err);
-      let msg = err;
-      if (typeof err === 'object' && err.body) {
-        msg = String(err.body);
-      }
-      updateNotification({
-        id: notificationId,
-        title: 'Failed to export strings to Google Sheet',
-        message: msg,
-        color: 'red',
-        autoClose: false,
-      });
-    }
-
-    updateNotification({
-      id: notificationId,
-      title: 'Done! Created Google Sheet.',
-      message: gspreadsheet.getUrl(),
-      autoClose: false,
-    });
-
-    const browserTab = window.open(gsheet.getUrl(), '_blank');
-    if (browserTab) {
-      browserTab.focus();
-    }
-  }
-
-  async function addTabInGoogleSheet() {
-    // await exportStringsToLinkedSheet({isNew: true});
-  }
-
   async function exportToLinkedSheet() {
     if (!gapiClient.isLoggedIn()) {
       await gapiClient.login();
@@ -657,16 +542,16 @@ LocalizationModal.Translations = (props: TranslationsProps) => {
         notifyErrors(downloadCsv);
         return;
       }
-      case MenuAction.EXPORT_GOOGLE_SHEET_CREATE: {
-        notifyErrors(createGoogleSheet);
-        return;
-      }
-      case MenuAction.EXPORT_GOOGLE_SHEET_ADD_TAB: {
-        notifyErrors(addTabInGoogleSheet);
-        return;
-      }
       case MenuAction.EXPORT_GOOGLE_SHEET_LINKED: {
         notifyErrors(exportToLinkedSheet);
+        return;
+      }
+      case MenuAction.EXPORT_GOOGLE_SHEET_SHOW_OPTIONS: {
+        exportSheetModal.open({
+          docId: props.docId,
+          csvData: formatCsvData(),
+          locales: locales,
+        });
         return;
       }
       case MenuAction.IMPORT_CSV: {
@@ -914,9 +799,11 @@ function ExportMenuButton(props: MenuButtonProps) {
             <>
               <Menu.Item
                 className="LocalizationModal__translations__menu__item"
-                onClick={() => dispatch(MenuAction.EXPORT_GOOGLE_SHEET_CREATE)}
+                onClick={() =>
+                  dispatch(MenuAction.EXPORT_GOOGLE_SHEET_SHOW_OPTIONS)
+                }
               >
-                Create Google Sheet
+                Export to Google Sheet
               </Menu.Item>
               {/* <Menu.Item
                 className="LocalizationModal__translations__menu__item"
