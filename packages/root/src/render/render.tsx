@@ -580,8 +580,21 @@ export class Renderer {
     if (typeof contentSecurityPolicy === 'object') {
       const directives = contentSecurityPolicy.directives || {};
       if (options.nonce) {
+        // CSP default values from:
+        // https://csp.withgoogle.com/docs/strict-csp.html
+        if (!directives['object-src']) {
+          directives['object-src'] = ["'none'"];
+        }
+        if (!directives['base-uri']) {
+          directives['base-uri'] = ["'none'"];
+        }
         if (!directives['script-src']) {
-          directives['script-src'] = ["'self'"];
+          directives['script-src'] = [
+            "'self'",
+            "'unsafe-inline'",
+            "'unsafe-eval'",
+            "'strict-dynamic' https: http:",
+          ];
         }
         directives['script-src'].push(`'nonce-${options.nonce}'`);
       }
