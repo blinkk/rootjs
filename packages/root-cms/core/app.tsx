@@ -106,6 +106,10 @@ export async function renderApp(req: Request, res: Response, options: any) {
       .replace('{JS_URL}', `/@fs${uiJsPath}`)
       .replaceAll('{NONCE}', nonce);
     html = await req.viteServer!.transformIndexHtml(req.originalUrl, tpl);
+    html = html.replace(
+      '<script type="module" src="/@vite/client"></script>',
+      `<script type="module" src="/@vite/client" nonce="${nonce}"></script>`
+    );
   } else {
     html = html
       .replace('{CSS_URL}', '/cms/static/ui.css')
@@ -181,6 +185,10 @@ export async function renderSignIn(req: Request, res: Response, options: any) {
       .replace('{JS_URL}', `/@fs${jsPath}`)
       .replaceAll('{NONCE}', nonce);
     html = await req.viteServer!.transformIndexHtml(req.originalUrl, tpl);
+    html = html.replace(
+      '<script type="module" src="/@vite/client"></script>',
+      `<script type="module" src="/@vite/client" nonce="${nonce}"></script>`
+    );
   } else {
     html = html
       .replace('{CSS_URL}', '/cms/static/signin.css')

@@ -121,6 +121,12 @@ export class Renderer {
       }
       if (req.viteServer) {
         html = await req.viteServer.transformIndexHtml(currentPath, html);
+        if (nonce) {
+          html = html.replace(
+            '<script type="module" src="/@vite/client"></script>',
+            `<script type="module" src="/@vite/client" nonce="${nonce}"></script>`
+          );
+        }
       }
       // Override the status code for 404 and 500 routes, which are defined at
       // routes/404.tsx and routes/500.tsx respectively.
