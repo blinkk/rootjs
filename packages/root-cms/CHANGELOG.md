@@ -1,5 +1,16 @@
 # @blinkk/root-cms
 
+## 1.0.0-rc.36
+
+### Minor Changes
+
+- 8549176: feat: add options for linking to existing google sheets
+
+### Patch Changes
+
+- Updated dependencies [63d8af3]
+  - @blinkk/root@1.0.0-rc.36
+
 ## 1.0.0-rc.35
 
 ### Patch Changes
