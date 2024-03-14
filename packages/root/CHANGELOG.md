@@ -1,5 +1,11 @@
 # @blinkk/root
 
+## 1.0.0-rc.36
+
+### Minor Changes
+
+- 63d8af3: feat: add server csp config options
+
 ## 1.0.0-rc.35
 
 ### Patch Changes
