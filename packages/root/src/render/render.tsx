@@ -533,11 +533,18 @@ export class Renderer {
     const securityConfig: Partial<RootSecurityConfig> = {};
 
     if (isTrueOrUndefined(userConfig.contentSecurityPolicy)) {
+      // CSP default values from:
+      // https://csp.withgoogle.com/docs/strict-csp.html
       securityConfig.contentSecurityPolicy = {
         directives: {
           'base-uri': ["'none'"],
           'object-src': ["'none'"],
-          'script-src': ["'self'"],
+          // NOTE: nonce is automatically added to this list.
+          'script-src': [
+            "'unsafe-inline'",
+            "'unsafe-eval'",
+            "'strict-dynamic' https: http:",
+          ],
         },
         reportOnly: true,
       };
@@ -580,17 +587,8 @@ export class Renderer {
     if (typeof contentSecurityPolicy === 'object') {
       const directives = contentSecurityPolicy.directives || {};
       if (options.nonce) {
-        // CSP default values from:
-        // https://csp.withgoogle.com/docs/strict-csp.html
-        if (!directives['object-src']) {
-          directives['object-src'] = ["'none'"];
-        }
-        if (!directives['base-uri']) {
-          directives['base-uri'] = ["'none'"];
-        }
         if (!directives['script-src']) {
           directives['script-src'] = [
-            "'self'",
             "'unsafe-inline'",
             "'unsafe-eval'",
             "'strict-dynamic' https: http:",
