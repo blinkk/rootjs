@@ -1,5 +1,11 @@
 # @blinkk/root
 
+## 1.0.0-rc.37
+
+### Patch Changes
+
+- f3e63b3: chore: update csp default values
+
 ## 1.0.0-rc.36
 
 ### Minor Changes
