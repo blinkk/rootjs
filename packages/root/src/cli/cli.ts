@@ -1,6 +1,7 @@
 import {Command} from 'commander';
 import {bgGreen, black} from 'kleur/colors';
 import {build} from './build';
+import {createPackage} from './create-package';
 import {dev, createDevServer} from './dev';
 import {preview, createPreviewServer} from './preview';
 import {start, createProdServer} from './start';
@@ -41,6 +42,15 @@ class CliRunner {
       )
       .action(build);
     program
+      .command('create-package [path]')
+      .description(
+        'creates a standalone npm package for deployment to various hosting services'
+      )
+      .option('--target <target>', 'hosting target, i.e. appengine or firebase')
+      .option('--out <outdir>', 'output dir')
+      .option('--mode <mode>', 'deployment mode, i.e. production or preview')
+      .action(createPackage);
+    program
       .command('dev [path]')
       .description('starts the server in development mode')
       .option(
@@ -71,6 +81,7 @@ class CliRunner {
 export {
   CliRunner,
   build,
+  createPackage,
   dev,
   createDevServer,
   preview,
