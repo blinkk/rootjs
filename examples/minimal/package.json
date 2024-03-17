@@ -1,0 +1,24 @@
+{
+  "name": "@examples/minimal",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "scripts": {
+    "dev": "root dev",
+    "build": "rm -rf dist/ && root build",
+    "preview": "rm -rf dist/ out/ && root build --ssr-only && root preview",
+    "start": "root start",
+    "test": "pnpm run build"
+  },
+  "dependencies": {
+    "@blinkk/root": "workspace:*",
+    "preact": "10.19.3",
+    "preact-render-to-string": "6.3.1"
+  },
+  "devDependencies": {
+    "@types/node": "18.11.18"
+  }
+}
