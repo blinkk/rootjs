@@ -69,7 +69,7 @@ importers:
         specifier: workspace:*
         version: link:../../packages/root-password-protect
       firebase-admin:
-        specifier: ^11.11.1
+        specifier: 11.11.1
         version: 11.11.1
       preact:
         specifier: 10.19.3
@@ -82,8 +82,8 @@ importers:
         specifier: workspace:*
         version: link:../../packages/rds
       '@types/node':
-        specifier: ^18.11.18
-        version: 18.13.0
+        specifier: 18.11.18
+        version: 18.11.18
 
   examples/cms:
     dependencies:
@@ -93,6 +93,9 @@ importers:
       '@blinkk/root-cms':
         specifier: workspace:*
         version: link:../../packages/root-cms
+      firebase-admin:
+        specifier: 11.11.1
+        version: 11.11.1
       preact:
         specifier: 10.19.3
         version: 10.19.3
@@ -2805,10 +2808,6 @@ packages:
 
   /@types/node@18.11.8:
     resolution: {integrity: sha512-uGwPWlE0Hj972KkHtCDVwZ8O39GmyjfMane1Z3GUBGGnkZ2USDq7SxLpVIiIHpweY9DS0QTDH0Nw7RNBsAAZ5A==}
-    dev: true
-
-  /@types/node@18.13.0:
-    resolution: {integrity: sha512-gC3TazRzGoOnoKAhUx+Q0t8S9Tzs74z7m0ipwGpSqQrleP14hKxP4/JUeEQcD3W1/aIpnWl8pHowI7WokuZpXg==}
     dev: true
 
   /@types/node@20.11.25:
