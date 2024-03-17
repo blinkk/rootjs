@@ -1,14 +1,16 @@
+import {promises as fs} from 'node:fs';
 import path from 'node:path';
-import {loadRootConfig} from '../node/load-config';
+import {build as esbuild} from 'esbuild';
 import {
   copyDir,
+  dirExists,
   fileExists,
   loadJson,
   makeDir,
   rmDir,
   writeJson,
 } from '../utils/fsutils';
-import {build} from './build';
+import {build as rootBuild} from './build';
 
 type DeployTarget = 'appengine' | 'firebase';
 
@@ -45,21 +47,28 @@ export async function createPackage(
   const outDir = path.resolve(options?.out || target || 'out');
 
   // Build the site in ssr-only mode.
-  await build(rootProjectDir, {ssrOnly: true, mode: mode});
+  await rootBuild(rootProjectDir, {ssrOnly: true, mode: mode});
 
   // Create `outDir` and copy the generated `distDir` files to it.
   await rmDir(outDir);
   await makeDir(outDir);
   await copyDir(distDir, path.resolve(outDir, 'dist'));
 
+  // Copy the "collections" dir if it exists.
+  const collectionsDir = path.resolve(rootDir, 'collections');
+  if (await dirExists(collectionsDir)) {
+    await copyDir(collectionsDir, path.join(outDir, 'collections'));
+  }
+
   // Create package.json.
   const packageJson = await generatePackageJson(rootDir);
 
-  // TODO(stevenle): update files specific to the deploy target.
-
-  // if (target === 'appengine') {
-  // } else if (target === 'firebase') {
-  // }
+  // Run target-specific updates to the output.
+  if (target === 'appengine') {
+    await onAppEngine({rootDir, packageJson, outDir});
+  } else if (target === 'firebase') {
+    await onFirebase({rootDir, packageJson, outDir});
+  }
 
   // Save `outDir/package.json`.
   await writeJson(path.resolve(outDir, 'package.json'), packageJson);
@@ -178,4 +187,72 @@ function getRequiredPeerDeps(packageJson: PackageJson) {
     }
   }
   return requiredPeerDeps;
+}
+
+/**
+ * Called for App Engine targets.
+ */
+async function onAppEngine(options: {
+  rootDir: string;
+  packageJson: PackageJson;
+  outDir: string;
+}) {
+  const {rootDir, outDir} = options;
+  const configPath = path.resolve(rootDir, 'app.yaml');
+  if (await fileExists(configPath)) {
+    await fs.copyFile(configPath, path.resolve(outDir, 'app.yaml'));
+  }
+}
+
+/**
+ * Called for Firebase Hosting targets.
+ */
+async function onFirebase(options: {
+  rootDir: string;
+  packageJson: PackageJson;
+  outDir: string;
+}) {
+  const {rootDir, outDir} = options;
+
+  // If the outDir is called `functions/` and an index.ts file exists in the
+  // root project dir, automatically compile it through esbuild.
+  const outBasename = path.basename(outDir);
+  if (outBasename === 'functions') {
+    const indexTsFile = path.resolve(rootDir, 'index.ts');
+    if (await fileExists(indexTsFile)) {
+      await bundleTsFile(indexTsFile, path.resolve(outDir, 'index.js'));
+    }
+  }
+}
+
+/**
+ * Compiles a root.config.ts file to root.config.js.
+ */
+export async function bundleTsFile(srcPath: string, outPath: string) {
+  await esbuild({
+    entryPoints: [srcPath],
+    bundle: true,
+    minify: true,
+    platform: 'node',
+    outfile: outPath,
+    sourcemap: 'inline',
+    metafile: true,
+    format: 'esm',
+    plugins: [
+      {
+        name: 'externalize-deps',
+        setup(build: any) {
+          build.onResolve({filter: /.*/}, (args: any) => {
+            const id = args.path;
+            if (id[0] !== '.' && !path.isAbsolute(id)) {
+              return {
+                external: true,
+              };
+            }
+            return null;
+          });
+        },
+      },
+    ],
+  });
 }
