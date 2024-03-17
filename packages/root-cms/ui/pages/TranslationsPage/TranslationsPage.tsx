@@ -32,7 +32,7 @@ export function TranslationsPage() {
 TranslationsPage.TranslationsTable = () => {
   const [loading, setLoading] = useState(true);
   const [tableData, setTableData] = useState<string[][]>([]);
-  const locales = window.__ROOT_CTX.rootConfig.i18n.locales || [];
+  const locales = window.__ROOT_CTX.rootConfig.i18n?.locales || [];
   const nonEnLocales = locales.filter((l) => l !== 'en');
   const headers = ['hash', 'source', 'en', ...nonEnLocales, 'tags'];
 

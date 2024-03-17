@@ -1,6 +1,6 @@
 {
-  "name": "@examples/minimal",
-  "description": "Minimal Root.js project.",
+  "name": "@examples/cms",
+  "description": "Minimal Root CMS project.",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -12,10 +12,12 @@
     "build": "rm -rf dist/ && root build",
     "preview": "rm -rf dist/ out/ && root build --ssr-only && root preview",
     "start": "root start",
-    "test": "pnpm run build"
+    "test": "pnpm run build",
+    "types": "root-cms generate-types"
   },
   "dependencies": {
     "@blinkk/root": "workspace:*",
+    "@blinkk/root-cms": "workspace:*",
     "preact": "10.19.3",
     "preact-render-to-string": "6.3.1"
   },
