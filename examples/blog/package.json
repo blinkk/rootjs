@@ -11,6 +11,7 @@
     "build": "rm -rf dist/ && root build",
     "preview": "rm -rf dist/ && root build --ssr-only && root preview",
     "start": "root start",
+    "create-package": "root create-package",
     "test": "pnpm run build",
     "types": "root-cms generate-types"
   },

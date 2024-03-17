@@ -61,6 +61,11 @@ export async function loadJson<T = unknown>(filepath: string): Promise<T> {
   return JSON.parse(content);
 }
 
+export async function writeJson(filepath: string, data: any) {
+  const content = JSON.stringify(data, null, 2);
+  await writeFile(filepath, content);
+}
+
 export async function isDirectory(dirpath: string) {
   return fs
     .stat(dirpath)
