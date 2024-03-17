@@ -43,6 +43,7 @@ class CliRunner {
       .action(build);
     program
       .command('create-package [path]')
+      .alias('package')
       .description(
         'creates a standalone npm package for deployment to various hosting services'
       )
