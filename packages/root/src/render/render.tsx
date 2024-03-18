@@ -229,6 +229,10 @@ export class Renderer {
         if (vnode && vnode.type === 'script') {
           vnode.props.nonce = nonce;
         }
+        // Inject nonce to `<style>` tags.
+        if (vnode && vnode.type === 'style') {
+          vnode.props.nonce = nonce;
+        }
         // Inject nonce to `<link rel="stylesheet">` tags.
         if (
           vnode &&
