@@ -25,11 +25,13 @@ class CliRunner {
     });
     program
       .command('init-firebase')
-      .description('inits the firebase project with proper security rules')
+      .description('inits the firebase project proper security rules')
       .option('--project <project>', 'gcp project id')
+      .option('--admin <email>', 'adds an admin to the project')
       .action(initFirebase);
     program
       .command('generate-types')
+      .alias('types')
       .description(
         'generates root-cms.d.ts from *.schema.ts files in the project'
       )

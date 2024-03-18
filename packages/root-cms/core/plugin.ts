@@ -57,8 +57,6 @@ export type CMSPluginOptions = {
     authDomain: string;
     projectId: string;
     storageBucket: string;
-    messagingSenderId: string;
-    appId: string;
   };
 
   /**
