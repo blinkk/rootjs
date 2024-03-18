@@ -1,7 +1,7 @@
 import {loadRootConfig} from '@blinkk/root/node';
+import {Firestore, getFirestore} from 'firebase-admin/firestore';
 import {getCmsPlugin} from '../core/client.js';
 import {applySecurityRules} from '../core/security.js';
-import {Firestore, getFirestore} from 'firebase-admin/firestore';
 
 export interface InitFirebaseOptions {
   /** GCP project id. */
@@ -17,7 +17,6 @@ export async function initFirebase(options: InitFirebaseOptions) {
   const cmsPluginOptions = cmsPlugin.getConfig();
   const gcpProjectId =
     options.project || cmsPluginOptions.firebaseConfig.projectId;
-
 
   if (!gcpProjectId) {
     throw new Error('firebaseConfig.projectId not set in cms plugin options');
@@ -51,5 +50,5 @@ async function addAdmin(db: Firestore, projectId: string, email: string) {
   roles[email] = 'ADMIN';
   data.roles = roles;
   await docRef.set(data);
-  console.log(`added admin ${email} to project ${projectId}`
+  console.log(`added admin ${email} to project ${projectId}`);
 }
