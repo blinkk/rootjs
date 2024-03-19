@@ -1,4 +1,4 @@
-import {useI18nContext} from './useI18nContext';
+import {I18nContext, useI18nContext} from './useI18nContext';
 
 /**
  * A hook that returns a function that can be used to translate a string, and
@@ -13,7 +13,13 @@ import {useI18nContext} from './useI18nContext';
  * // => 'Bounjour Bob'
  */
 export function useTranslations() {
-  const i18nContext = useI18nContext();
+  // Ignore I18nContext not found error when used with client-side rehydration.
+  let i18nContext: I18nContext | null = null;
+  try {
+    i18nContext = useI18nContext();
+  } catch (err) {
+    console.warn('I18nContext not found');
+  }
   const translations = i18nContext?.translations || {};
   const t = (str: string, params?: Record<string, string | number>) => {
     const key = normalizeString(str);
