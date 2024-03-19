@@ -11,7 +11,9 @@
     "@blinkk/root": "0.0.0",
     "@blinkk/root-cms": "0.0.0",
     "@examples/basepath": "0.0.0",
-    "@blinkk/root-password-protect": "1.0.0-rc.33"
+    "@blinkk/root-password-protect": "1.0.0-rc.33",
+    "@examples/cms": "0.0.0",
+    "@examples/minimal": "0.0.0"
   },
   "changesets": [
     "afraid-dots-run",
@@ -21,6 +23,7 @@
     "big-icons-leave",
     "big-news-clean",
     "blue-crews-happen",
+    "blue-walls-cover",
     "brave-cherries-sparkle",
     "brave-stingrays-yawn",
     "breezy-mice-sin",
@@ -184,8 +187,10 @@
     "shaggy-masks-jog",
     "sharp-lamps-brush",
     "shy-apples-tan",
+    "shy-cars-argue",
     "shy-cups-fold",
     "silent-bees-look",
+    "silent-lobsters-peel",
     "silent-moose-tease",
     "silent-olives-prove",
     "silly-bats-sit",
@@ -195,6 +200,7 @@
     "silver-files-fail",
     "silver-walls-care",
     "six-mangos-talk",
+    "sixty-news-give",
     "slimy-turkeys-doubt",
     "slow-cougars-itch",
     "slow-melons-leave",
