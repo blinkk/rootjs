@@ -10,11 +10,13 @@ import {
   updateDoc,
 } from 'firebase/firestore';
 import {useEffect, useState} from 'preact/hooks';
+import {joinClassNames} from '../../utils/classes.js';
 import {EventListener} from '../../utils/events.js';
 import {normalizeSlug} from '../../utils/slug.js';
 import {throttle} from '../../utils/throttle.js';
 import {TIME_UNITS} from '../../utils/time.js';
 import {Timer} from '../../utils/timer.js';
+import './Viewers.css';
 
 // Frequency to update.
 const UPDATE_INTERVAL = 30 * TIME_UNITS.second;
@@ -70,21 +72,19 @@ class ViewersController extends EventListener {
 
   private onData(data: Record<string, Viewer>) {
     const user = window.firebase.user;
+    const now = Timestamp.now();
     const viewers: Viewer[] = Object.values(data).filter((viewer) => {
       // Ignore current user.
       if (viewer.email === user.email) {
         return false;
       }
-      // Ignore viewers that have already disconnected.
-      if (viewer.disconnectedAt > viewer.lastViewedAt) {
+
+      // Ignore viewers that haven't checked in within `IDLE_TIMEOUT`.
+      const lastViewedDiff = now.toMillis() - viewer.lastViewedAt.toMillis();
+      if (lastViewedDiff > IDLE_TIMEOUT) {
         return false;
       }
-      // Ignore viewers that haven't checked in within `IDLE_TIMEOUT`.
-      // TODO(stevenle): fix.
-      // const now = Math.floor(new Date().getTime());
-      // if (now - viewer.lastViewedAt.toMillis() > IDLE_TIMEOUT) {
-      //   return false;
-      // }
+
       return true;
     });
     this.dispatch('change', viewers);
@@ -180,6 +180,13 @@ export function Viewers(props: ViewersProps) {
     return null;
   }
 
+  function isViewerDisconnected(viewer: Viewer) {
+    if (!viewer.disconnectedAt) {
+      return false;
+    }
+    return viewer.disconnectedAt > viewer.lastViewedAt;
+  }
+
   return (
     <AvatarsGroup className="Viewers" limit={3} size={30}>
       {viewers.map((viewer) => {
@@ -193,6 +200,10 @@ export function Viewers(props: ViewersProps) {
         }
         return (
           <Avatar
+            className={joinClassNames(
+              'Viewers__viewer',
+              isViewerDisconnected(viewer) && 'Viewers__viewer--disconnected'
+            )}
             key={viewer.email}
             src={viewer.photoURL}
             alt={viewer.email}

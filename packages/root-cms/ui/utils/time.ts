@@ -1,3 +1,6 @@
+/**
+ * Converts a time unit to millis.
+ */
 export const TIME_UNITS = {
   year: 24 * 60 * 60 * 1000 * 365,
   month: (24 * 60 * 60 * 1000 * 365) / 12,
