@@ -1,5 +1,15 @@
 # @blinkk/root
 
+## 1.0.0-rc.39
+
+### Minor Changes
+
+- cf20297: feat: add root create-package cli command
+
+### Patch Changes
+
+- 6091bb6: fix: update useTranslations to work in a rehydrated context
+
 ## 1.0.0-rc.38
 
 ## 1.0.0-rc.37

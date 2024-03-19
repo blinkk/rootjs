@@ -1,5 +1,15 @@
 # @blinkk/root-cms
 
+## 1.0.0-rc.39
+
+### Patch Changes
+
+- f475f90: feat: add `--admin=<email>` flag to `init-firebase` cli
+- 480d890: chore: update viewer disconnect logic and styles
+- Updated dependencies [6091bb6]
+- Updated dependencies [cf20297]
+  - @blinkk/root@1.0.0-rc.39
+
 ## 1.0.0-rc.38
 
 ### Patch Changes
