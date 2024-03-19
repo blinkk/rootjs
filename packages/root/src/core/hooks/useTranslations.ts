@@ -13,8 +13,8 @@ import {useI18nContext} from './useI18nContext';
  * // => 'Bounjour Bob'
  */
 export function useTranslations() {
-  const context = useI18nContext();
-  const translations = context.translations || {};
+  const i18nContext = useI18nContext();
+  const translations = i18nContext?.translations || {};
   const t = (str: string, params?: Record<string, string | number>) => {
     const key = normalizeString(str);
     let translation = translations[key] ?? key ?? '';
