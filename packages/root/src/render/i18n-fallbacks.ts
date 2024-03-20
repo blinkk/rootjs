@@ -64,15 +64,15 @@ export function getFallbackLocales(req: Request): string[] {
   locales.add(`ALL_${countryCode}`);
 
   // Add `{lang}_ALL` and `{lang}` locales.
-  // For Spanish-speaking LATAM countries, also add es-419.
   const isEs419Country = test419Country(countryCode);
   langs.forEach((langCode) => {
-    locales.add(`${langCode}_ALL`);
-    locales.add(langCode);
+    // For Spanish-speaking LATAM countries, also add es-419.
     if (langCode === 'es' && isEs419Country) {
       locales.add('es-419_ALL');
       locales.add('es-419');
     }
+    locales.add(`${langCode}_ALL`);
+    locales.add(langCode);
   });
 
   return Array.from(locales) as string[];
