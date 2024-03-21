@@ -1,5 +1,16 @@
 # @blinkk/root-cms
 
+## 1.0.0-rc.40
+
+### Minor Changes
+
+- 12f69ee: feat: automatically share gsheets with editors
+
+### Patch Changes
+
+- Updated dependencies [8d0191a]
+  - @blinkk/root@1.0.0-rc.40
+
 ## 1.0.0-rc.39
 
 ### Patch Changes
