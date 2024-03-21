@@ -418,6 +418,9 @@ importers:
       '@types/gapi':
         specifier: 0.0.47
         version: 0.0.47
+      '@types/gapi.client.drive-v3':
+        specifier: 0.0.4
+        version: 0.0.4
       '@types/gapi.client.sheets-v4':
         specifier: 0.0.4
         version: 0.0.4
@@ -2227,8 +2230,15 @@ packages:
       '@types/gapi.client.discovery-v1': 0.0.4
     dev: true
 
-  /@maxim_mazurok/gapi.client.sheets-v4@0.0.20240305:
-    resolution: {integrity: sha512-zV9vUH2YKkzLPxU/qbKqXgyvR//wxOCis3UprVIqd57YNWd1lnpk+oy4JYUOkK39kr3eFtoN/bpwHg/PFi5zrA==}
+  /@maxim_mazurok/gapi.client.drive-v3@0.0.20240314:
+    resolution: {integrity: sha512-pfECiEHEzexghj71X2twDIFUgl7j5m5myOttOA3yIbF0ho2NehauFpO+dBOA5ZNMsyrAHBWK+iV0WgZhi6eGoA==}
+    dependencies:
+      '@types/gapi.client': 1.0.8
+      '@types/gapi.client.discovery-v1': 0.0.4
+    dev: true
+
+  /@maxim_mazurok/gapi.client.sheets-v4@0.0.20240318:
+    resolution: {integrity: sha512-Yf2t7YyYZ/Sdfwqihci44bf3UzthwaMmZP3v5eh+ST0W52WQtYwtit7RnM0SjjwI0LCk4B/r6aBAlYhstE59Hg==}
     dependencies:
       '@types/gapi.client': 1.0.8
       '@types/gapi.client.discovery-v1': 0.0.4
@@ -2706,10 +2716,16 @@ packages:
       '@maxim_mazurok/gapi.client.discovery-v1': 0.1.20200806
     dev: true
 
+  /@types/gapi.client.drive-v3@0.0.4:
+    resolution: {integrity: sha512-jE37dJ0EzAdY0aJPFOp20xmec/aO0P4HtUIA9k07RMPyedFDOcuMlSac1r0PklwQdgXF7BHaMoObNHNAnwSQUQ==}
+    dependencies:
+      '@maxim_mazurok/gapi.client.drive-v3': 0.0.20240314
+    dev: true
+
   /@types/gapi.client.sheets-v4@0.0.4:
     resolution: {integrity: sha512-6kTJ7aDMAElfdQV1XzVJmZWjgbibpa84DMuKuaN8Cwqci/dkglPyHXKvsGrRugmuYvgFYr35AQqwz6j3q8R0dw==}
     dependencies:
-      '@maxim_mazurok/gapi.client.sheets-v4': 0.0.20240305
+      '@maxim_mazurok/gapi.client.sheets-v4': 0.0.20240318
     dev: true
 
   /@types/gapi.client@1.0.8:
@@ -6184,6 +6200,7 @@ packages:
   /indent-string@4.0.0:
     resolution: {integrity: sha512-EdDDZu4A2OyIK7Lr/2zG+w5jmbuk1DVBnEwREQvBzspBJkCEbRa8GxU1lghYcaGJCnRWibjDXlq779X1/y5xwg==}
     engines: {node: '>=8'}
+    requiresBuild: true
     dev: true
 
   /inflight@1.0.6:
@@ -7258,6 +7275,7 @@ packages:
   /minimatch@9.0.1:
     resolution: {integrity: sha512-0jWhJpD/MdhPXwPuiRkCbfYfSKp2qnn2eOc279qI7f+osl/l+prKSrvhg157zSYvx/1nmgn2NqdT6k2Z7zSH9w==}
     engines: {node: '>=16 || 14 >=14.17'}
+    requiresBuild: true
     dependencies:
       brace-expansion: 2.0.1
 

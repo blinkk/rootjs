@@ -99,6 +99,7 @@
     "@tabler/icons-preact": "2.39.0",
     "@types/body-parser": "1.19.3",
     "@types/gapi": "0.0.47",
+    "@types/gapi.client.drive-v3": "0.0.4",
     "@types/gapi.client.sheets-v4": "0.0.4",
     "@types/google.accounts": "0.0.14",
     "@types/jsonwebtoken": "9.0.1",

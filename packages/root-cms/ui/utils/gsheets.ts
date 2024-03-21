@@ -1,3 +1,5 @@
+import {getAllEditors} from './users.js';
+
 export interface GoogleSheetId {
   spreadsheetId: string;
   gid?: number;
@@ -34,6 +36,11 @@ export class GSpreadsheet {
     const spreadsheet = res.result;
     const gspreadsheet = new GSpreadsheet(spreadsheet.spreadsheetId!);
     gspreadsheet.setSpreadsheet(spreadsheet);
+
+    // Give all admins and editors "write" access.
+    const editors = await getAllEditors();
+    await gspreadsheet.share(editors, 'writer');
+
     return gspreadsheet;
   }
 
@@ -100,6 +107,34 @@ export class GSpreadsheet {
       gsheets.push(gsheet);
     });
     this.sheets = gsheets;
+  }
+
+  private async share(users: string[], role: 'reader' | 'writer') {
+    await Promise.all(
+      users.map(async (user) => {
+        let permission: any;
+        if (user.startsWith('*@')) {
+          const domain = user.slice(2);
+          permission = {
+            type: 'domain',
+            domain: domain,
+            role: role,
+          };
+        } else {
+          permission = {
+            type: 'user',
+            emailAddress: user,
+            role: role,
+          };
+        }
+        await gapi.client.drive.permissions.create({
+          fileId: this.spreadsheetId,
+          resource: permission,
+          sendNotificationEmail: false,
+          fields: 'id',
+        });
+      })
+    );
   }
 }
 
