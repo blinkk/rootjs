@@ -1,5 +1,11 @@
 # @blinkk/root
 
+## 1.0.0-rc.40
+
+### Patch Changes
+
+- 8d0191a: fix: give higher precedence to es-419 lang code
+
 ## 1.0.0-rc.39
 
 ### Minor Changes
