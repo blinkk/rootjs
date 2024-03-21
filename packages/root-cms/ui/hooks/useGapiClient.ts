@@ -7,6 +7,7 @@ const SCOPES = [
 ];
 
 const DISCOVERY_DOCS = [
+  'https://www.googleapis.com/discovery/v1/apis/drive/v3/rest',
   'https://sheets.googleapis.com/$discovery/rest?version=v4',
 ];
 

@@ -109,21 +109,32 @@ export class GSpreadsheet {
     this.sheets = gsheets;
   }
 
-  private share(users: string[], role: 'reader' | 'writer') {
-    const batch = gapi.client.newBatch();
-
-    users.forEach((user) => {
-      const req = gapi.client.drive.permissions.create({
-        fileId: this.spreadsheetId,
-        resource: {
-          type: 'user',
-          role: role,
-          emailAddress: user,
-        },
-        fields: 'id',
-      });
-      batch.add(req);
-    });
+  private async share(users: string[], role: 'reader' | 'writer') {
+    await Promise.all(
+      users.map(async (user) => {
+        let permission: any;
+        if (user.startsWith('*@')) {
+          const domain = user.slice(2);
+          permission = {
+            type: 'domain',
+            domain: domain,
+            role: role,
+          };
+        } else {
+          permission = {
+            type: 'user',
+            emailAddress: user,
+            role: role,
+          };
+        }
+        await gapi.client.drive.permissions.create({
+          fileId: this.spreadsheetId,
+          resource: permission,
+          sendNotificationEmail: false,
+          fields: 'id',
+        });
+      })
+    );
   }
 }
 
