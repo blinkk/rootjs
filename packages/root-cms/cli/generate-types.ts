@@ -35,7 +35,7 @@ export interface RootCMSImage {
 
 export type RootCMSOneOf<T = any> = T & {
   _type: string;
-}
+};
 
 export interface RootCMSRichTextBlock {
   type: string;

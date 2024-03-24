@@ -1,5 +1,6 @@
 import {useEffect, useState} from 'preact/hooks';
 import * as schema from '../../../../core/schema.js';
+import {deepEqual} from '../../../utils/objects.js';
 import {
   RichTextData,
   RichTextEditor,
@@ -13,8 +14,14 @@ export function RichTextField(props: FieldProps) {
   });
 
   function onChange(newValue: RichTextData) {
-    setValue(newValue);
-    props.draft.updateKey(props.deepKey, newValue);
+    setValue((currentValue) => {
+      if (
+        !deepEqual({blocks: currentValue?.blocks}, {blocks: newValue?.blocks})
+      ) {
+        props.draft.updateKey(props.deepKey, newValue);
+      }
+      return newValue;
+    });
   }
 
   useEffect(() => {
