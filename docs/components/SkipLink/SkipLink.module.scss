@@ -1,0 +1,25 @@
+.skipLink {
+  position: absolute;
+  top: -40px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 10px;
+  background-color: #fff;
+  color: #000;
+  z-index: 9999;
+}
+
+.skipLink:focus,
+.skipLink:hover {
+  top: 0;
+}
+
+.skipLink:not(:focus):not(:active) {
+  clip: rect(1px, 1px, 1px, 1px);
+  clip-path: inset(50%);
+  height: 1px;
+  overflow: hidden;
+  position: absolute;
+  white-space: nowrap;
+  width: 1px;
+}

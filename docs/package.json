@@ -4,19 +4,26 @@
   "private": true,
   "description": "Documentation site for rootjs.dev",
   "type": "module",
+  "main": "dist/index.js",
+  "module": "dist/index.js",
+  "engines": {
+    "node": "18"
+  },
   "scripts": {
     "dev": "root dev",
-    "build": "root build",
+    "build": "root package --target=firebase --out=functions",
     "preview": "rm -rf dist/ && root build --ssr-only && root preview",
-    "deploy": "rm -rf dist/ && pnpm run build && firebase deploy --only=hosting"
+    "deploy": "rm -rf dist/ && pnpm run build && firebase deploy --only=hosting",
+    "types": "root-cms types"
   },
   "author": "s@blinkk.com",
   "license": "MIT",
   "dependencies": {
     "@blinkk/root": "workspace:*",
-    "highlight.js": "^11.6.0",
-    "preact": "^10.10.6",
-    "preact-custom-element": "^4.2.1",
-    "preact-render-to-string": "^5.2.3"
+    "@blinkk/root-cms": "workspace:*",
+    "@tabler/icons-preact": "2.39.0",
+    "highlight.js": "11.6.0",
+    "preact": "10.19.3",
+    "preact-render-to-string": "6.3.1"
   }
 }

@@ -1,0 +1,8 @@
+@use 'breakpoints';
+
+@layer component {
+  .container {
+    padding-left: var(--grid-padding);
+    padding-right: var(--grid-padding);
+  }
+}

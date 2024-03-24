@@ -1,0 +1,13 @@
+@use 'breakpoints';
+
+.helpTag {
+  background: black;
+  color: white;
+  font-size: 14px;
+  line-height: 1;
+  font-weight: 500;
+  padding: 6px 16px;
+  position: absolute;
+  z-index: 500;
+  left: 0;
+}

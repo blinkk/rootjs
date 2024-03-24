@@ -1,0 +1,19 @@
+@layer component {
+  .headline {
+    text-align: center;
+  }
+
+  .eyebrow {
+    margin-bottom: 10px;
+  }
+
+  .title,
+  .body {
+    text-wrap: pretty;
+  }
+
+  .body {
+    max-width: 75ch;
+    margin: 20px auto 0;
+  }
+}
