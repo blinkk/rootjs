@@ -1,0 +1,155 @@
+/**
+ * Grid system.
+ *
+ * To configure, define a `$grid` configuration map in tokens.scss.
+ *
+ * Example:
+ *
+ * ```scss
+ * $grid: (
+ *   'sm': (
+ *     'columns': 4,
+ *     'gap': 16px,
+ *     'padding': 16px,
+ *     'max-width': 500px,
+ *   ),
+ *   'md': (
+ *     'columns': 6,
+ *     'gap': 24px,
+ *     'padding': 40px,
+ *     'max-width': 800px,
+ *   ),
+ * );
+ * ```
+ *
+ * The configuration keys are as follows:
+ *
+ * - columns: The number of columns.
+ * - gap: The spacing between columns.
+ * - padding: The spacing on the left/right edges of the grid.
+ * - max-width: The max content width of the grid.
+ */
+
+ @use 'sass:map';
+ @use 'sass:math';
+ @use 'sass:meta';
+ @use 'breakpoints';
+ @use 'tokens';
+
+ @function -get-token-value($key, $default) {
+   $tokens-map: meta.module-variables('tokens');
+   @if map.has-key($tokens-map, $key) {
+     @return map.get($tokens-map, $key);
+   }
+   @return $default;
+ }
+
+ @mixin -set-css-vars($columns, $gap, $padding, $max-width) {
+   --grid-columns: #{$columns};
+   --grid-gap: #{$gap};
+   --grid-padding: max(#{$padding}, 50% - #{0.5 * $max-width});
+   --grid-max-width: #{$max-width};
+   --grid-column-width: calc(((min(100% - #{2 * $padding}, #{$max-width})) - #{($columns - 1) * $gap}) / #{$columns});
+ }
+
+ $-default-grid: (
+   'sm': (
+     'columns': 4,
+     'gap': 24px,
+     'padding': 16px,
+     'max-width': 500px,
+   ),
+   'md': (
+     'columns': 6,
+     'gap': 24px,
+     'padding': 48px,
+     'max-width': 1024px,
+   ),
+   'lg': (
+     'columns': 12,
+     'gap': 24px,
+     'padding': 60px,
+     'max-width': 1296px,
+   ),
+   'xl': (
+     'columns': 12,
+     'gap': 24px,
+     'padding': 60px,
+     'max-width': 1296px,
+   ),
+ );
+ $grid: -get-token-value('grid', $-default-grid);
+
+ /**
+  * The `grid.vars()` mixin outputs CSS vars for the grid system at each
+  * breakpoint.
+  *
+  * Sample usage:
+  *
+  * ```scss
+  * @use 'grid';
+  * :root {
+  *   @include grid.vars();
+  * }
+  */
+ @mixin vars($enable-site-max-width: true) {
+   @include breakpoints.sm() {
+     @include -set-css-vars(
+       $columns: map.get($grid, 'sm', 'columns'),
+       $gap: map.get($grid, 'sm', 'gap'),
+       $padding: map.get($grid, 'sm', 'padding'),
+       $max-width: map.get($grid, 'sm', 'max-width')
+     );
+   }
+   @include breakpoints.md() {
+     @include -set-css-vars(
+       $columns: map.get($grid, 'md', 'columns'),
+       $gap: map.get($grid, 'md', 'gap'),
+       $padding: map.get($grid, 'md', 'padding'),
+       $max-width: map.get($grid, 'md', 'max-width')
+     );
+   }
+   @include breakpoints.lg() {
+     @include -set-css-vars(
+       $columns: map.get($grid, 'lg', 'columns'),
+       $gap: map.get($grid, 'lg', 'gap'),
+       $padding: map.get($grid, 'lg', 'padding'),
+       $max-width: map.get($grid, 'lg', 'max-width')
+     );
+   }
+   @include breakpoints.xl() {
+     @include -set-css-vars(
+       $columns: map.get($grid, 'xl', 'columns'),
+       $gap: map.get($grid, 'xl', 'gap'),
+       $padding: map.get($grid, 'xl', 'padding'),
+       $max-width: map.get($grid, 'xl', 'max-width')
+     );
+   }
+   @include breakpoints.xxl() {
+     @if $enable-site-max-width {
+       $columns: map.get($grid, 'xl', 'columns');
+       $gap: map.get($grid, 'xl', 'gap');
+       $site-max-width: breakpoints.$breakpoint-xxl;
+       $grid-max-width: map.get($grid, 'xl', 'max-width');
+       --grid-columns: #{$columns};
+       --grid-gap: #{$gap};
+       --grid-padding: #{0.5 * $site-max-width - 0.5 * $grid-max-width};
+       --grid-column-width: #{math.div($grid-max-width - ($columns - 1) * $gap, $columns)};
+     } @else {
+       @include -set-css-vars(
+         $columns: map.get($grid, 'xl', 'columns'),
+         $gap: map.get($grid, 'xl', 'gap'),
+         $padding: map.get($grid, 'xl', 'padding'),
+         $max-width: map.get($grid, 'xl', 'max-width')
+       );
+     }
+   }
+ }
+
+ @mixin container() {
+   display: grid;
+   grid-template-columns: repeat(var(--grid-columns), 1fr);
+   column-gap: var(--grid-gap);
+   padding-left: var(--grid-padding);
+   padding-right: var(--grid-padding);
+ }

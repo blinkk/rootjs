@@ -1,0 +1,43 @@
+@layer template {
+  .headline {
+    text-align: center;
+  }
+
+  .title,
+  .body {
+    text-wrap: pretty;
+  }
+
+  .body {
+    max-width: 60ch;
+    margin: 0 auto;
+  }
+
+  .logos {
+    display: flex;
+    gap: 20px;
+    align-items: center;
+    justify-content: center;
+    margin: 20px 0;
+  }
+
+  .logo {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    padding: 0;
+    margin: 0;
+  }
+
+  .logoImage img {
+    width: 48px;
+    height: 48px;
+    object-fit: contain;
+    object-position: center;
+  }
+
+  .logoDivider {
+    font-size: 36px;
+    font-weight: 500;
+  }
+}

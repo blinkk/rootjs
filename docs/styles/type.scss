@@ -1,21 +1,107 @@
-@use 'tokens';
+@use 'sass:list';
+@use 'sass:map';
+@use 'sass:meta';
 @use 'breakpoints';
+@use 'tokens';
 
-@mixin font(
-  $font-size: null,
-  $line-height: null,
-  $font-weight: null,
-  $letter-spacing: null
-) {
-  font-size: $font-size;
-  font-weight: weight($font-weight);
-  line-height: $line-height;
-  letter-spacing: $letter-spacing;
+@function -get-token-value($key, $default) {
+  $tokens-map: meta.module-variables('tokens');
+  @if map.has-key($tokens-map, $key) {
+    @return map.get($tokens-map, $key);
+  }
+  @return $default;
 }
 
-@function weight($name) {
-  @if map-has-key(tokens.$font-weight-map, $name) {
-    @return map-get(tokens.$font-weight-map, $name);
+// https://developer.mozilla.org/en-US/docs/Web/CSS/font-weight#common_weight_name_mapping
+$font-weight-thin: 100;
+$font-weight-extra-light: 200;
+$font-weight-light: 300;
+$font-weight-normal: 400;
+$font-weight-regular: $font-weight-normal;
+$font-weight-medium: 500;
+$font-weight-semi-bold: 600;
+$font-weight-bold: 700;
+$font-weight-extra-bold: 800;
+$font-weight-black: 900;
+$font-weights: (
+  'thin': $font-weight-thin,
+  'extra-light': $font-weight-extra-light,
+  'light': $font-weight-light,
+  'normal': $font-weight-normal,
+  'regular': $font-weight-regular,
+  'medium': $font-weight-medium,
+  'semi-bold': $font-weight-semi-bold,
+  'bold': $font-weight-bold,
+  'extra-bold': $font-weight-extra-bold,
+  'black': $font-weight-black,
+);
+
+$-default-typescale: (
+  'body': (
+    'font-size': 16px,
+    'line-height': 1.5,
+  ),
+);
+$typescale: -get-token-value('typescale', $-default-typescale);
+
+/**
+ * Returns the typescale configuration map for a given identifier.
+ */
+@function -get-typescale-config($name) {
+  @if not map.has-key($typescale, $name) {
+    @error 'typescale "#{$name}" is not configured, add it to tokens.$typescale';
   }
-  @return $name;
+  @return map.get($typescale, $name);
+}
+
+/**
+ * The `text-styles()` mixin accepts a configuration map and outputs the
+ * appropriate style properties.
+ *
+ * Example usage:
+ *
+ * ```scss
+ * .my-text {
+ *   @include type.text-styles((
+ *     'font-size': 1rem,
+ *     'line-height': 1.5,
+ *     'breakpoints': (
+ *       'sm': (
+ *         'font-size': 0.8rem,
+ *       )
+ *     ),
+ *   ));
+ * }
+ * ```
+ */
+@mixin text-styles($config) {
+  font-family: map.get($config, 'font-family');
+  font-size: map.get($config, 'font-size');
+  line-height: map.get($config, 'line-height');
+  font-weight: map.get($config, 'font-weight');
+  letter-spacing: map.get($config, 'letter-spacing');
+  text-transform: map.get($config, 'text-transform');
+
+  @if map.has-key($config, 'breakpoints') {
+    @each $breakpoint, $breakpoint-config in map.get($config, 'breakpoints') {
+      @include breakpoints.render($breakpoint) {
+        @include text-styles($breakpoint-config);
+      }
+    }
+  }
+}
+
+/**
+ * The `typescale-styles()` mixin accepts a typescale name (configured in
+ * `tokens.$typescale`) and outputs the cooresponding text styles.
+ *
+ * ```scss
+ * .title {
+ *   @include type.typescale-styles('heading-lg');
+ * }
+ * ```
+ */
+@mixin typescale-styles($name) {
+  $config: -get-typescale-config($name);
+  @include text-styles($config);
 }

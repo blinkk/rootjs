@@ -1,0 +1,99 @@
+@use 'sass:map';
+@use 'sass:math';
+@use 'breakpoints';
+@use 'grid';
+
+$-site-max-width: breakpoints.$breakpoint-xxl;
+$-max-columns: 12;
+
+.gridOverlay {
+  display: none;
+  font-family: var(--font-family-default, -apple-system);
+  height: 100vh;
+  left: 0;
+  pointer-events: none;
+  position: fixed;
+  top: 0;
+  width: 100%;
+  z-index: 2000;
+  @include breakpoints.xxl() {
+    left: calc(max(0px, 50% - #{math.div($-site-max-width, 2)}));
+    max-width: $-site-max-width;
+  }
+}
+
+.gridOverlay.enabled {
+  display: block;
+}
+
+.grid {
+  @include grid.container();
+  height: 100%;
+}
+
+.gridColumn {
+  grid-column-start: span 1;
+  background-color: rgba(orange, 0.125);
+  box-shadow: none !important;
+  color: black;
+  font-size: 12px;
+  font-weight: 800;
+  height: 100%;
+  padding-top: 12px;
+  text-align: center;
+}
+
+// .gridColumn.md-gt {
+//   @include breakpoints.sm() {
+//     display: none;
+//   }
+// }
+
+// .gridColumn.lg-gt {
+//   @include breakpoints.md-lt() {
+//     display: none;
+//   }
+// }
+
+.breakpoint {
+  background: #000;
+  color: #fff;
+  padding: 10px 40px;
+  position: absolute;
+  font-weight: 700;
+  bottom: 0;
+  right: 0;
+}
+
+// Breakpoint label.
+.breakpoint::after {
+  @include breakpoints.sm() {
+    content: 'sm';
+  }
+  @include breakpoints.md() {
+    content: 'md';
+  }
+  @include breakpoints.lg() {
+    content: 'lg';
+  }
+  @include breakpoints.xl() {
+    content: 'xl';
+  }
+  @include breakpoints.xxl() {
+    content: 'xxl';
+  }
+}
+
+// Hide columns.
+@each $breakpoint, $grid-config in grid.$grid {
+  $columns: map.get($grid-config, 'columns');
+  @if $columns < $-max-columns {
+    @include breakpoints.render($breakpoint) {
+      @for $i from $columns + 1 through $-max-columns {
+        .gridColumn:nth-child(#{$i}) {
+          display: none;
+        }
+      }
+    }
+  }
+}

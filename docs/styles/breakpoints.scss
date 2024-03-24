@@ -1,9 +1,98 @@
-// Device-style breakpoint mixins. The naming convention is:
-//   tablet: Only the "tablet" breakpoint.
-//   tablet-gt: The "tablet" breakpoint and everything greater.
-//   tablet-lt: The "tablet" breakpoint and everything lower.
+/**
+ * Breakpoint mixins.
+ *
+ * Styles for a specific breakpoint:
+ *
+ * ```
+ * .foo {
+ *   color: blue;
+ *   @include breakpoints.sm() {
+ *     color: red;
+ *   }
+ * }
+ * ```
+ *
+ * Styles for a specific breakpoint and smaller:
+ *
+ * ```
+ * .foo {
+ *   color: blue;
+ *   @include breakpoints.md-lt() {
+ *     color: red;
+ *   }
+ * }
+ * ```
+ *
+ * Styles for a specific breakpoint and greater:
+ *
+ * ```
+ * .foo {
+ *   color: blue;
+ *   @include breakpoints.lg-gt() {
+ *     color: red;
+ *   }
+ * }
+ * ```
+ *
+ * Breakpoint widths can be configured in `tokens.scss`:
+ *
+ * ```
+ * $breakpoints: (
+ *   'sm': 0px,
+ *   'md': 500px,
+ *   'lg': 1024px,
+ *   'xl': 1440px,
+ *   'xxl': 2000px
+ * );
+ * ```
+ */
 
-@use 'tokens';
+ @use 'sass:map';
+ @use 'sass:meta';
+ @use 'tokens';
+
+@function -get-token-value($key, $default) {
+  $tokens-map: meta.module-variables('tokens');
+  @if map.has-key($tokens-map, $key) {
+    @return map.get($tokens-map, $key);
+  }
+  @return $default;
+}
+
+ // The breakpoint map configuration is a key-value pair where the key is the
+ // name of the breakpoint and the value is the minimum width for that
+ // breakpoint.
+$-default-breakpoints: (
+  'sm': 0px,
+  'md': 600px,
+  'lg': 1024px,
+  'xl': 1440px,
+  'xxl': 2460px
+);
+$breakpoints: -get-token-value('breakpoints', $-default-breakpoints);
+
+ // Returns the configuration value for a given breakpoint name.
+ @function get-config-value($key) {
+   @return map.get($breakpoints, $key);
+ }
+
+ // Since `max-width` and `min-width` media queries are equivalent to `<=` and
+ // `>=` respectively, the `$-breakpoint-offset-px` value is used so that two
+ // different breakpoints do not overlap. `0.02px` is used to avoid a rounding
+ // bug in Safari.
+ // https://www.w3.org/TR/mediaqueries-4/#mq-min-max
+ // https://bugs.webkit.org/show_bug.cgi?id=178261
+ $-breakpoint-offset-px: 0.02px;
+ $breakpoint-sm-min: get-config-value('sm');
+ $breakpoint-sm-max: get-config-value('md') - $-breakpoint-offset-px;
+ $breakpoint-md-min: get-config-value('md');
+ $breakpoint-md-max: get-config-value('lg') - $-breakpoint-offset-px;
+ $breakpoint-lg-min: get-config-value('lg');
+ $breakpoint-lg-max: get-config-value('xl') - $-breakpoint-offset-px;
+ $breakpoint-xl-min: get-config-value('xl');
+ $breakpoint-xl-max: get-config-value('xxl') - $-breakpoint-offset-px;
+ $breakpoint-xxl: get-config-value('xxl');
+ $site-max-width: $breakpoint-xxl;
 
 @mixin gt($min) {
   @media (min-width: $min) {
@@ -23,84 +112,150 @@
   }
 }
 
-@mixin mobile {
-  @include lt(tokens.$breakpoint-tablet - 1px) {
+@mixin sm() {
+  @include lt($breakpoint-sm-max) {
     @content;
   }
 }
 
-@mixin mobile-gt {
+@mixin sm-gt() {
   @content;
 }
 
-@mixin mobile-lt {
-  @include lt(tokens.$breakpoint-tablet - 1px) {
+@mixin sm-lt() {
+  @include lt($breakpoint-sm-max) {
     @content;
   }
 }
 
-@mixin tablet {
-  @include between(tokens.$breakpoint-tablet, tokens.$breakpoint-laptop - 1px) {
+@mixin md() {
+  @include between($breakpoint-md-min, $breakpoint-md-max) {
     @content;
   }
 }
 
-@mixin tablet-gt {
-  @include gt(tokens.$breakpoint-tablet) {
+@mixin md-gt() {
+  @include gt($breakpoint-md-min) {
     @content;
   }
 }
 
-@mixin tablet-lt {
-  @include lt(tokens.$breakpoint-laptop - 1px) {
+@mixin md-lt() {
+  @include lt($breakpoint-md-max) {
     @content;
   }
 }
 
-@mixin laptop {
-  @include between(
-    tokens.$breakpoint-laptop,
-    tokens.$breakpoint-desktop - 1px
-  ) {
+@mixin lg() {
+  @include between($breakpoint-lg-min, $breakpoint-lg-max) {
     @content;
   }
 }
 
-@mixin laptop-gt {
-  @include gt(tokens.$breakpoint-laptop) {
+@mixin lg-gt() {
+  @include gt($breakpoint-lg-min) {
     @content;
   }
 }
 
-@mixin laptop-lt {
-  @include lt(tokens.$breakpoint-desktop - 1px) {
+@mixin lg-lt() {
+  @include lt($breakpoint-lg-max) {
     @content;
   }
 }
 
-@mixin desktop {
-  @include between(
-    tokens.$breakpoint-desktop,
-    tokens.$breakpoint-site-max - 1px
-  ) {
+@mixin xl() {
+  @include between($breakpoint-xl-min, $breakpoint-xl-max) {
     @content;
   }
 }
 
-@mixin desktop-gt {
-  @include gt(tokens.$breakpoint-desktop) {
+@mixin xl-gt() {
+  @include gt($breakpoint-xl-min) {
     @content;
   }
 }
 
-@mixin desktop-lt {
-  @include lt(tokens.$breakpoint-site-max - 1px) {
+@mixin xl-lt() {
+  @include lt($breakpoint-xl-max) {
     @content;
   }
 }
 
-@mixin site-max {
-  @include gt(tokens.$breakpoint-site-max) {
+@mixin xxl() {
+  @include gt($breakpoint-xxl) {
     @content;
+  }
+}
+
+/**
+ * Renders the breakpoint for a given name. Intended to be used by tokens
+ * renderers and for-loops that dynamically render breakpoints using scss vars.
+ *
+ * ```scss
+ * .mystyles {
+ *   @include breakpoints.render('md-gt') {
+ *     font-size: 16px;
+ *   }
+ * }
+ * ```
+ */
+@mixin render($breakpoint) {
+  // NOTE(stevenle): for whatever reason, `meta.apply(meta.get-mixin($breakpoint))`
+  // doesn't seem to work correctly so we need to manually enumerate each mixin.
+  @if $breakpoint == 'sm' {
+    @include sm() {
+      @content;
+    }
+  } @else if $breakpoint == 'sm-gt' {
+    @include sm-gt() {
+      @content;
+    }
+  } @else if $breakpoint == 'sm-lt' {
+    @include sm-lt() {
+      @content;
+    }
+  } @else if $breakpoint == 'md' {
+    @include md() {
+      @content;
+    }
+  } @else if $breakpoint == 'md-gt' {
+    @include md-gt() {
+      @content;
+    }
+  } @else if $breakpoint == 'md-lt' {
+    @include md-lt() {
+      @content;
+    }
+  } @else if $breakpoint == 'lg' {
+    @include lg() {
+      @content;
+    }
+  } @else if $breakpoint == 'lg-gt' {
+    @include lg-gt() {
+      @content;
+    }
+  } @else if $breakpoint == 'lg-lt' {
+    @include lg-lt() {
+      @content;
+    }
+  } @else if $breakpoint == 'xl' {
+    @include xl() {
+      @content;
+    }
+  } @else if $breakpoint == 'xl-gt' {
+    @include xl-gt() {
+      @content;
+    }
+  } @else if $breakpoint == 'xl-lt' {
+    @include xl-lt() {
+      @content;
+    }
+  } @else if $breakpoint == 'xxl' {
+    @include xxl() {
+      @content;
+    }
+  } @else {
+    @warn 'unknown breakpoint "#{$breakpoint}"';
   }
 }

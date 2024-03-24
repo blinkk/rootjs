@@ -1,0 +1,12 @@
+@layer template {
+  // The <Jumplinks> component uses `position: sticky` which requires
+  // `display: contents` to be used here.
+  .jumplinksModule {
+    display: contents;
+  }
+
+  .headline {
+    text-align: center;
+    margin-bottom: 30px;
+  }
+}
