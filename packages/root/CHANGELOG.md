@@ -1,5 +1,7 @@
 # @blinkk/root
 
+## 1.0.0-rc.41
+
 ## 1.0.0-rc.40
 
 ### Patch Changes
