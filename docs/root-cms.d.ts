@@ -9,7 +9,7 @@ export interface RootCMSImage {
 
 export type RootCMSOneOf<T = any> = T & {
   _type: string;
-}
+};
 
 export interface RootCMSRichTextBlock {
   type: string;
@@ -52,6 +52,23 @@ export interface RootCMSDoc<Fields extends {}> {
   fields?: Fields;
 }
 
+/** Generated from `/blocks/ButtonsBlock/ButtonsBlock.schema.ts`. */
+export interface ButtonsBlockFields {
+  /** Block Options */
+  options?: string[];
+  /** Buttons */
+  buttons?: {
+    /** Button Options */
+    options?: string[];
+    /** Button: Label */
+    label?: string;
+    /** Button: ARIA Label. Optional accessibility label. */
+    ariaLabel?: string;
+    /** Button: URL */
+    href?: string;
+  }[];
+}
+
 /** Generated from `/blocks/CodeBlock/CodeBlock.schema.ts`. */
 export interface CodeBlockFields {
   /** ID. Used for deep linking, tracking, etc. */
@@ -88,6 +105,42 @@ export interface ImageBlockFields {
   image?: RootCMSImage;
 }
 
+/** Generated from `/collections/Guide.schema.ts`. */
+export interface GuideFields {
+  /** Meta */
+  meta?: {
+    /** Title */
+    title?: string;
+    /** Description. Description for SEO and social shares. */
+    description?: string;
+    /** Image. Meta image for social shares. Recommended size: 1200x600. */
+    image?: RootCMSImage;
+    /** Category */
+    category?: string;
+  };
+  /** Content */
+  content?: {
+    /** Content title. Top content title. */
+    title?: string;
+    /** Content body. Top content body. */
+    body?: RootCMSRichText;
+    /** Sections. Each section is added to the Table of Contents. */
+    sections?: {
+      /** Section: ID. Section ID (for deeplinking). */
+      id?: string;
+      /** Section: Title. Title for the section. */
+      title?: string;
+      /** Section: Content body. Main content body for the section. */
+      body?: RootCMSRichText;
+      /** Section: Blocks. Add blocks to embed various content types to the section. */
+      blocks?: RootCMSOneOf[];
+    }[];
+  };
+}
+
+/** Generated from `/collections/Guide.schema.ts`. */
+export type GuideDoc = RootCMSDoc<GuideFields>;
+
 /** Generated from `/collections/Pages.schema.ts`. */
 export interface PagesFields {
   /** Meta */
@@ -108,6 +161,18 @@ export interface PagesFields {
 
 /** Generated from `/collections/Pages.schema.ts`. */
 export type PagesDoc = RootCMSDoc<PagesFields>;
+
+/** Generated from `/components/Button/Button.schema.ts`. */
+export interface ButtonFields {
+  /** Button Options */
+  options?: string[];
+  /** Button: Label */
+  label?: string;
+  /** Button: ARIA Label. Optional accessibility label. */
+  ariaLabel?: string;
+  /** Button: URL */
+  href?: string;
+}
 
 /** Generated from `/templates/Divider/Divider.schema.ts`. */
 export interface DividerFields {
@@ -172,6 +237,17 @@ export interface TemplateHeadlineFields {
   title?: string;
   /** Body copy. Headline body copy. */
   body?: RootCMSRichText;
+  /** Buttons */
+  buttons?: {
+    /** Button Options */
+    options?: string[];
+    /** Button: Label */
+    label?: string;
+    /** Button: ARIA Label. Optional accessibility label. */
+    ariaLabel?: string;
+    /** Button: URL */
+    href?: string;
+  }[];
 }
 
 /** Generated from `/templates/TemplateImage/TemplateImage.schema.ts`. */

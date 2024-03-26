@@ -8,9 +8,8 @@ export function GlobalFooter(props: GlobalFooterProps) {
   return (
     <Container as="footer" id="footer" className={styles.footer}>
       <Text className={styles.builtBy} size="small">
-        Built with care and devotion by the team at{' '}
-        <a href="https://blinkk.com/">Blinkk</a>. Released under the MIT
-        License.
+        Built by the team at <a href="https://blinkk.com/">Blinkk</a>. Released
+        under the MIT License.
       </Text>
       <Text className={styles.copyright} size="small">
         Copyright ©2023-present Blinkk.

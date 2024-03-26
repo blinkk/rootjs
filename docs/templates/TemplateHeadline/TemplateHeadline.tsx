@@ -1,4 +1,5 @@
 import {useTranslations} from '@blinkk/root';
+import {ButtonsBlock} from '@/blocks/ButtonsBlock/ButtonsBlock';
 import {Container} from '@/components/Container/Container';
 import {RichText} from '@/components/RichText/RichText';
 import {Text} from '@/components/Text/Text';
@@ -37,6 +38,13 @@ export function TemplateHeadline(props: TemplateHeadlineProps) {
         <Text className={styles.body} size="p">
           <RichText data={props.body} />
         </Text>
+      )}
+      {props.buttons && (
+        <ButtonsBlock
+          className={styles.buttons}
+          options={['align:center']}
+          buttons={props.buttons}
+        />
       )}
     </Container>
   );

@@ -1,11 +1,4 @@
-import {
-  Body,
-  Head,
-  Html,
-  Script,
-  useRequestContext,
-  useTranslations,
-} from '@blinkk/root';
+import {Body, Head, Html, Script, useTranslations} from '@blinkk/root';
 import {ComponentChildren} from 'preact';
 import {GlobalFooter} from '@/components/GlobalFooter/GlobalFooter';
 import {GlobalHeader} from '@/components/GlobalHeader/GlobalHeader';
@@ -17,6 +10,7 @@ export interface BaseLayoutProps {
   description?: string;
   image?: string;
   noindex?: boolean;
+  hideFooter?: boolean;
   children?: ComponentChildren;
 }
 
@@ -67,7 +61,7 @@ export function BaseLayout(props: BaseLayoutProps) {
         <div id="root">
           <GlobalHeader />
           <main id="main">{props.children}</main>
-          <GlobalFooter />
+          {!props.hideFooter && <GlobalFooter />}
           <GridOverlay />
           <Script src="/bundles/main.ts" />
         </div>

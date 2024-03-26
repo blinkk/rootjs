@@ -30,6 +30,11 @@
     border-color: tokens.$color-grey-300;
   }
 
+  .headerGuide {
+    background: tokens.$color-white;
+    border-color: tokens.$color-grey-300;
+  }
+
   .content {
     max-width: 1440px;
     margin: 0 auto;
@@ -39,30 +44,6 @@
     justify-content: space-between;
     @include breakpoints.sm() {
       gap: 8px;
-    }
-  }
-
-  .logo {
-    display: block;
-    padding: 4px 10px;
-    border-radius: 8px;
-    transition: all 0.18s ease;
-  }
-
-  .logo:hover {
-    background-color: tokens.$color-grey-100;
-  }
-
-  .logo:active {
-    background-color: tokens.$color-grey-200;
-  }
-
-  .logo svg {
-    width: auto;
-    height: 30px;
-
-    @include breakpoints.sm() {
-      height: 26px;
     }
   }
 

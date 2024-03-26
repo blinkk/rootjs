@@ -9,11 +9,14 @@ const templates = Object.values(templateModules).map(
 
 export default schema.collection({
   name: 'Pages',
-  description: 'Landing pages.',
+  description: 'Landing Pages',
   url: '/[...slug]',
   preview: {
     title: 'meta.title',
     image: 'meta.image',
+    defaultImage: {
+      src: 'https://lh3.googleusercontent.com/c2ECbvhJtxf3xbPIjaXCSpmvAsJkkhzJwG98T9RPvWy4s30jZKClom8pvWTnupRYOnyI3qGhNXPOwqoN6sqljkDO62LIKRtR988',
+    },
   },
 
   fields: [

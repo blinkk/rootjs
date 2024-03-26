@@ -10,7 +10,7 @@
   border-radius: 8px;
   border: 1px solid tokens.$color-grey-300;
   background: tokens.$color-grey-50;
-  font-family: ui-monospace, "SFMono-Regular", "SF Mono", Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  font-family: var(--font-family-mono);
   font-size: 14px;
   line-height: 1.4;
   margin: 0;

@@ -18,7 +18,13 @@ export default schema.define({
     schema.select({
       id: 'language',
       label: 'Language',
-      options: [{value: 'html'}, {value: 'ts'}, {value: 'tsx'}],
+      options: [
+        {value: 'bash'},
+        {value: 'html'},
+        {value: 'json'},
+        {value: 'ts'},
+        {value: 'tsx'},
+      ],
     }),
     // schema.string({
     //   id: 'filename',
