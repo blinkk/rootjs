@@ -18,6 +18,7 @@ class RootCode extends HTMLElement {
     if (language) {
       pre.classList.add(`language-${language}`);
     }
+    hljs.configure({ignoreUnescapedHTML: true});
     hljs.highlightElement(pre);
   }
 }

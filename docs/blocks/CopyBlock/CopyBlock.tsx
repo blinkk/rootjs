@@ -1,14 +1,17 @@
-import {useTranslations} from '@blinkk/root';
+import {useRequestContext, useTranslations} from '@blinkk/root';
 import {RichText} from '@/components/RichText/RichText';
-import {Text} from '@/components/Text/Text';
+import {Text, TextSize} from '@/components/Text/Text';
 import {CopyBlockFields} from '@/root-cms';
 import styles from './CopyBlock.module.scss';
 
-export type CopyBlockProps = CopyBlockFields;
+export type CopyBlockProps = CopyBlockFields & {
+  bodySize?: TextSize;
+};
 
 export function CopyBlock(props: CopyBlockProps) {
   const options = props.options || [];
   const t = useTranslations();
+  const bodySize = props.bodySize || 'p';
   return (
     <div className={styles.copyBlock}>
       {props.eyebrow && (
@@ -22,7 +25,7 @@ export function CopyBlock(props: CopyBlockProps) {
         </Text>
       )}
       {props.body && (
-        <Text className={styles.body} size="p">
+        <Text className={styles.body} size={bodySize}>
           <RichText data={props.body} />
         </Text>
       )}

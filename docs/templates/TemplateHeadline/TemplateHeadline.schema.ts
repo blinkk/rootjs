@@ -1,4 +1,5 @@
 import {schema} from '@blinkk/root-cms';
+import ButtonSchema from '@/components/Button/Button.schema';
 
 export default schema.define({
   name: 'TemplateHeadline',
@@ -34,6 +35,12 @@ export default schema.define({
       label: 'Body copy',
       help: 'Headline body copy.',
       translate: true,
+    }),
+    schema.array({
+      id: 'buttons',
+      label: 'Buttons',
+      preview: ['{label}'],
+      of: schema.object({fields: ButtonSchema.fields}),
     }),
   ],
 });

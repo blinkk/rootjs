@@ -1,27 +1,21 @@
 import {RequestContext, useRequestContext, useTranslations} from '@blinkk/root';
 import {IconBrandGithubFilled, IconMenu} from '@tabler/icons-preact';
 import {SkipLink} from '@/components/SkipLink/SkipLink';
+import {LogoToggle} from '@/islands/LogoToggle/LogoToggle';
 import {joinClassNames} from '@/utils/classes';
-import {RootCmsWordmark} from '../RootCmsWordmark/RootCmsWordmark';
-import {RootJsWordmark} from '../RootJsWordmark/RootJsWordmark';
 import {UnstyledList} from '../UnstyledList/UnstyledList';
 import styles from './GlobalHeader.module.scss';
 
 const LINKS = [
   {
     label: 'CMS',
-    url: '/features/cms',
-    active: (ctx: RequestContext) => ctx.currentPath === '/features/cms',
+    url: '/products/cms',
+    active: (ctx: RequestContext) => ctx.currentPath === '/products/cms',
   },
   {
-    label: 'Blog',
-    url: '/blog',
-    active: (ctx: RequestContext) => ctx.currentPath.startsWith('/blog'),
-  },
-  {
-    label: 'Docs',
-    url: '/docs',
-    active: (ctx: RequestContext) => ctx.currentPath.startsWith('/docs'),
+    label: 'Guide',
+    url: '/guide',
+    active: (ctx: RequestContext) => ctx.currentPath.startsWith('/guide'),
   },
 ];
 
@@ -40,26 +34,34 @@ export interface GlobalHeaderProps {
 export function GlobalHeader(props: GlobalHeaderProps) {
   const t = useTranslations();
   const ctx = useRequestContext();
-  const logoUrl = ctx.currentPath === '/' ? '#top' : '/';
+  // const logoUrl = ctx.currentPath === '/' ? '#top' : '/';
   let wordmarkType = 'root.js';
-  if (ctx.currentPath === '/features/cms') {
+  if (ctx.currentPath === '/products/cms') {
     wordmarkType = 'root cms';
   }
+  const isGuide = ctx.currentPath.startsWith('/guide');
   return (
     <root-header
       id="header"
-      className={joinClassNames(props.className, styles.header, 'y:top')}
+      className={joinClassNames(
+        props.className,
+        styles.header,
+        isGuide && styles.headerGuide,
+        'y:top'
+      )}
       role="banner"
     >
       <SkipLink />
       <div className={styles.content}>
-        <a className={styles.logo} href={logoUrl}>
+        {/* <a className={styles.logo} href={logoUrl}>
+          LogoToggle
           {wordmarkType === 'root cms' ? (
             <RootCmsWordmark />
           ) : (
             <RootJsWordmark />
           )}
-        </a>
+        </a> */}
+        <LogoToggle className={styles.logo} logo={wordmarkType} />
 
         <button
           className={styles.burger}

@@ -1,4 +1,5 @@
 @use 'base';
+@use 'buttons';
 @use 'grid';
 @use 'tokens';
 @use 'type';
@@ -7,6 +8,7 @@
 
 :root {
   --font-family-default: #{tokens.$font-family-default};
+  --font-family-mono: #{tokens.$font-family-mono};
   @include grid.vars();
 }
 
@@ -23,6 +25,16 @@
   root-island {
     display: contents;
   }
+}
+
+#root {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+#main {
+  flex: 1;
 }
 
 .sr-only {
@@ -43,4 +55,24 @@
   align-items: center;
   justify-content: center;
   margin-top: 40px;
+}
+
+.root-counter-example {
+  @include buttons.base-styles(
+    $selectors: (
+      'button': 'button',
+    )
+  );
+  @include buttons.variant-styles(
+    $variant: 'outline',
+    $selectors: (
+      'button': 'button',
+    )
+  );
+}
+
+.root-counter-example .value {
+  font-family: var(--font-family-mono);
+  font-size: 16px;
+  line-height: 1.2;
 }
