@@ -1,0 +1,35 @@
+@use 'breakpoints';
+@use 'buttons.scss';
+@use 'tokens';
+
+@layer component {
+  @include buttons.base-styles(
+    $selectors: (
+      'button': '.button',
+      'button__leftIcon': '.leftIcon',
+      'button__label': '.label',
+      'button__rightIcon': '.rightIcon',
+    )
+  );
+
+  @include buttons.variant-styles(
+    $variant: 'primary',
+    $selectors: (
+      'button': '.variant\\:primary',
+    )
+  );
+
+  @include buttons.variant-styles(
+    $variant: 'secondary',
+    $selectors: (
+      'button': '.variant\\:secondary',
+    )
+  );
+
+  @include buttons.variant-styles(
+    $variant: 'outline',
+    $selectors: (
+      'button': '.variant\\:outline',
+    )
+  );
+}

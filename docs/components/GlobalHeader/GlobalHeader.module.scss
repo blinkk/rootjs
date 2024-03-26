@@ -1,0 +1,193 @@
+@use 'breakpoints';
+@use 'tokens';
+
+:root {
+  --header-height: 64px;
+  @include breakpoints.sm() {
+    --header-height: 54px;
+  }
+}
+
+@layer component {
+  .header {
+    display: block;
+    height: var(--header-height);
+    border-bottom: 1px solid transparent;
+    transition: all 0.3s ease;
+    position: sticky;
+    top: 0;
+    padding-left: 40px;
+    padding-right: 40px;
+    z-index: 1000;
+    @include breakpoints.sm() {
+      padding-left: 16px;
+      padding-right: 16px;
+    }
+  }
+
+  .header:not(:global(.y\:top)) {
+    background: tokens.$color-white;
+    border-color: tokens.$color-grey-300;
+  }
+
+  .headerGuide {
+    background: tokens.$color-white;
+    border-color: tokens.$color-grey-300;
+  }
+
+  .content {
+    max-width: 1440px;
+    margin: 0 auto;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    @include breakpoints.sm() {
+      gap: 8px;
+    }
+  }
+
+  .burger {
+    width: 32px;
+    height: 32px;
+    background-color: transparent;
+    border: none;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.18s ease;
+    border-radius: 4px;
+
+    @include breakpoints.md-gt() {
+      display: none;
+    }
+  }
+
+  .burger:active {
+    background-color: tokens.$color-grey-200;
+  }
+
+  .burger svg {
+    width: 20px;
+    height: 20px;
+  }
+
+  .nav {
+    display: flex;
+    align-items: center;
+    @include breakpoints.sm() {
+      display: none;
+    }
+  }
+
+  :global(.menu\:open) .nav {
+    @include breakpoints.sm() {
+      display: flex;
+      position: absolute;
+      top: var(--header-height);
+      left: 0;
+      right: 0;
+      z-index: 1000;
+      flex-direction: column;
+      background: tokens.$color-white;
+      height: calc(100vh - var(--header-height));
+    }
+  }
+
+  .links {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+
+    @include breakpoints.sm() {
+      flex-direction: column;
+      gap: 0;
+      align-items: flex-start;
+      width: 100%;
+      padding: 20px 40px;
+    }
+  }
+
+  .links li {
+    @include breakpoints.sm() {
+      border-bottom: 1px solid tokens.$color-grey-300;
+      width: 100%;
+    }
+  }
+
+  .link {
+    display: flex;
+    align-items: center;
+    padding: 4px 10px;
+    border-radius: 8px;
+    text-decoration: none;
+    font-size: 14px;
+    line-height: 1;
+    font-weight: 500;
+    height: 32px;
+    white-space: nowrap;
+    transition: all 0.18s ease;
+
+    @include breakpoints.sm() {
+      height: auto;
+      padding: 20px 0;
+      border-radius: 0;
+    }
+  }
+
+  .linkActive {
+    text-decoration: underline;
+    text-decoration-thickness: 2px;
+    text-underline-offset: 8px;
+  }
+
+  .link:hover {
+    background-color: tokens.$color-grey-100;
+    @include breakpoints.sm() {
+      background-color: transparent;
+      color: tokens.$color-blue-700;
+    }
+  }
+
+  .link:active {
+    background-color: tokens.$color-grey-200;
+    @include breakpoints.sm() {
+      background-color: transparent;
+      color: tokens.$color-blue-900;
+    }
+  }
+
+  .icons {
+    @include breakpoints.sm() {
+      margin-top: 40px;
+    }
+    @include breakpoints.md-gt() {
+      border-left: 1px solid tokens.$color-grey-300;
+      padding-left: 24px;
+      margin-left: 20px;
+    }
+  }
+
+  .icon {
+    display: block;
+    padding: 6px;
+    border-radius: 8px;
+    transition: all 0.18s ease;
+  }
+
+  .icon svg {
+    width: 20px;
+    height: 20px;
+    object-fit: contain;
+    object-position: center;
+  }
+
+  .icon:hover {
+    background-color: tokens.$color-grey-100;
+  }
+
+  .icon:active {
+    background-color: tokens.$color-grey-200;
+  }
+}

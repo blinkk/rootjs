@@ -1,0 +1,90 @@
+@use 'breakpoints';
+@use 'tokens';
+
+@layer component {
+  .logoToggle {
+    --logo-height: 28px;
+    position: relative;
+
+    @include breakpoints.sm() {
+      --logo-height: 24px;
+    }
+  }
+
+  .selectedLogo {
+    display: flex;
+    align-items: center;
+    padding: 4px 10px;
+    border-radius: 8px;
+    transition: all 0.18s ease;
+  }
+
+  .selectedLogo:hover {
+    background-color: tokens.$color-grey-100;
+  }
+
+  .menuOpen .selectedLogo {
+    background-color: tokens.$color-grey-100;
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
+  }
+
+  .menuToggleButton {
+    background: transparent;
+    border: none;
+    padding: 0;
+    padding-left: 8px;
+    width: 24px;
+    height: 100%;
+    cursor: pointer;
+  }
+
+  .menuToggleButton svg {
+    width: 16px;
+    height: 16px;
+    transform: rotate(0deg);
+    transition: transform 0.18s ease;
+  }
+
+  .menuOpen .menuToggleButton svg {
+    transform: rotate(-180deg);
+  }
+
+  .menu {
+    position: absolute;
+    left: 0;
+    width: 100%;
+    border-top: 1px solid tokens.$color-grey-300;
+    background: tokens.$color-grey-100;
+    border-bottom-left-radius: 8px;
+    border-bottom-right-radius: 8px;
+    transition: opacity 0.18s ease, transform 0.18s ease;
+    opacity: 0;
+    pointer-events: none;
+    transform: translateY(-10px);
+    z-index: 1001;
+    overflow: hidden;
+  }
+
+  .menu a {
+    display: block;
+    padding: 4px 10px;
+    background: tokens.$color-grey-100;
+    transition: background-color 0.18s ease;
+  }
+
+  .menu a:hover {
+    background: tokens.$color-grey-200;
+  }
+
+  .menuOpen .menu {
+    opacity: 1;
+    transform: translateY(0);
+    pointer-events: auto;
+  }
+
+  .logoSvg {
+    width: auto;
+    height: var(--logo-height);
+  }
+}

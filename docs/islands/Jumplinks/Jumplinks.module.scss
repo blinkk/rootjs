@@ -1,0 +1,182 @@
+@use 'breakpoints';
+@use 'tokens';
+@use 'type';
+
+$jumplink-text-color: tokens.$color-text-default;
+
+@layer component {
+  // :host {
+  //   display: block;
+  //   text-align: center;
+  // }
+
+  .jumplinksNav {
+    display: block;
+    position: sticky;
+    top: calc(var(--header-height) + 10px);
+    text-align: center;
+    padding-left: var(--grid-padding);
+    padding-right: var(--grid-padding);
+    z-index: 900;
+
+    @include breakpoints.md() {
+      padding-left: 40px;
+      padding-right: 40px;
+    }
+  }
+
+  .jumplinks {
+    display: inline-block;
+    text-align: center;
+    padding: 4px;
+    background-color: var(--bg-color, white);
+    border-radius: 30px;
+    overflow: hidden;
+    position: relative;
+    transition: all 0.18s ease;
+    max-width: 100%;
+    border: 1px solid tokens.$color-grey-300;
+    border-radius: 100px;
+  }
+
+  .links {
+    display: inline-flex;
+    justify-content: center;
+    background-color: var(--bg-color, white);
+    transition: all 0.3s ease;
+    max-width: 100%;
+    overflow: auto;
+    scrollbar-width: none;
+    &::-webkit-scrollbar {
+      display: none;
+    }
+    @include breakpoints.md-lt() {
+      column-gap: 8px;
+    }
+    @include breakpoints.lg-gt() {
+      column-gap: 24px;
+    }
+  }
+
+  .jumplinks.stickyTop,
+  .jumplinks.stickyAfter,
+  .jumplinks.isScrolled,
+  .jumplinks.overflowing:not(.stickyBefore) {
+    box-shadow: 0px 1px 2px rgba(60, 64, 67, 0.3),
+      0px 1px 4px rgba(60, 64, 67, 0.25);
+  }
+
+  // .jumplinks.stickyTop,
+  // .jumplinks.stickyAfter {
+  //   @include breakpoints.mobile-landscape {
+  //     box-shadow: none;
+  //     border-radius: 0;
+  //   }
+  // }
+
+  .jumplinks.overflowing .links {
+    display: flex;
+    justify-content: flex-start;
+    // padding-left: 24px;
+    // padding-right: 24px;
+  }
+
+  .link {
+    font-size: 14px;
+    line-height: 1;
+    font-weight: 500;
+    font-family: var(--font-family-default);
+    color: $jumplink-text-color;
+    text-decoration: none;
+    border-radius: 100px;
+    border: 2px solid transparent;
+    transition: all 0.3s ease;
+    white-space: nowrap;
+    flex-shrink: 0;
+    outline: none;
+
+    &:focus-visible {
+      border-color: tokens.$color-grey-900;
+    }
+
+    @include breakpoints.sm() {
+      padding: 12px 16px;
+    }
+    @include breakpoints.md-gt() {
+      font-size: 16px;
+      padding: 14px 20px;
+    }
+  }
+
+  .link:hover {
+    color: var(--text-hover-color);
+    background-color: tokens.$color-grey-100;
+  }
+
+  .link:active {
+    background-color: tokens.$color-grey-200;
+  }
+
+  .link.active {
+    color: tokens.$color-grey-900;
+    background: tokens.$color-grey-100 !important;
+  }
+
+  .jumplinks.stickyAfter {
+    opacity: 0;
+    pointer-events: none;
+    // @include breakpoints.mobile-landscape {
+    //   opacity: 1;
+    //   pointer-events: auto;
+    // }
+  }
+
+  .scrollButton {
+    --icon-svg-color: #{tokens.$color-text-default};
+    width: 48px;
+    height: 100%;
+    border-radius: 50%;
+    border: none;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+    // box-shadow: 0px 1px 2px rgba(60, 64, 67, 0.3), 0px 1px 4px rgba(60, 64, 67, 0.25);
+    opacity: 0;
+    transition: opacity 0.18s ease;
+  }
+
+  .scrollButton.visible {
+    opacity: 1;
+  }
+
+  .scrollButton svg {
+    flex-shrink: 0;
+  }
+
+  .scrollLeft {
+    background: linear-gradient(
+      to right,
+      #{tokens.$color-white} 0%,
+      #{tokens.$color-white} 50%,
+      transparent 100%
+    );
+    position: absolute;
+    top: 0;
+    height: 100%;
+    left: 0;
+  }
+
+  .scrollRight {
+    background: linear-gradient(
+      to left,
+      #{tokens.$color-white} 0%,
+      #{tokens.$color-white} 50%,
+      transparent 100%
+    );
+    position: absolute;
+    top: 0;
+    height: 100%;
+    right: 0;
+  }
+}

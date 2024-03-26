@@ -1,50 +1,218 @@
-// Breakpoints.
-$breakpoint-tablet: 500px;
-$breakpoint-laptop: 1024px;
-$breakpoint-desktop: 1440px;
-$breakpoint-site-max: 2200px;
+/**
+ * Design token configurations for the site.
+ */
 
-$font-family-primary: Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
-  'Helvetica Neue', Arial, 'Noto Sans', sans-serif, 'Apple Color Emoji',
-  'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
-// Headline.
-$font-family-headline: Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
-  'Helvetica Neue', Arial, 'Noto Sans', sans-serif, 'Apple Color Emoji',
-  'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
-$font-family-mono: Menlo, Monaco, 'Cascadia Mono', 'Segoe UI Mono',
-  'Roboto Mono', 'Oxygen Mono', 'Ubuntu Monospace', 'Source Code Pro',
-  'Fira Mono', 'Droid Sans Mono', 'Courier New', monospace;
+ @use 'sass:math';
 
-// https://developer.mozilla.org/en-US/docs/Web/CSS/font-weight#common_weight_name_mapping
-$font-weight-thin: 100;
-$font-weight-extra-light: 200;
-$font-weight-light: 300;
-$font-weight-normal: 400;
-$font-weight-regular: $font-weight-normal;
-$font-weight-medium: 500;
-$font-weight-semi-bold: 600;
-$font-weight-bold: 700;
-$font-weight-extra-bold: 800;
-$font-weight-black: 900;
-$font-weight-map: (
-  'thin': $font-weight-thin,
-  'extra-light': $font-weight-extra-light,
-  'light': $font-weight-light,
-  'normal': $font-weight-normal,
-  'regular': $font-weight-regular,
-  'medium': $font-weight-medium,
-  'semi-bold': $font-weight-semi-bold,
-  'bold': $font-weight-bold,
-  'extra-bold': $font-weight-extra-bold,
-  'black': $font-weight-black,
+$breakpoints: (
+  'sm': 0px,
+  'md': 600px,
+  'lg': 1024px,
+  'xl': 1440px,
+  'xxl': 2460px
 );
 
-$color-text-default: #333333;
+$grid: (
+  'sm': (
+    'columns': 4,
+    'gap': 24px,
+    'padding': 16px,
+    'max-width': 500px,
+  ),
+  'md': (
+    'columns': 4,
+    'gap': 24px,
+    'padding': 48px,
+    'max-width': 540px,
+  ),
+  'lg': (
+    'columns': 12,
+    'gap': 24px,
+    'padding': 60px,
+    'max-width': 1296px,
+  ),
+  'xl': (
+    'columns': 12,
+    'gap': 24px,
+    'padding': 60px,
+    'max-width': 1296px,
+  ),
+);
 
-$content-max-width: 1152px;
-$content-padding-mobile: 24px;
-$content-padding-tablet: 40px;
-$content-padding-laptop-gt: 64px;
+$typescale: (
+  'h1': (
+    'font-family': var(--font-family-default),
+    'font-size': 61.04px,
+    'font-weight': 700,
+    'line-height': 1.2,
+    'breakpoints': (
+      'sm': (
+        'font-size': 32.44px,
+      ),
+      'md': (
+        'font-size': 47.78px,
+      ),
+    ),
+  ),
+  'h2': (
+    'font-family': var(--font-family-default),
+    'font-size': 48.83px,
+    'font-weight': 700,
+    'line-height': 1.2,
+    'breakpoints': (
+      'sm': (
+        'font-size': 28.83px,
+      ),
+      'md': (
+        'font-size': 39.81px,
+      ),
+    ),
+  ),
+  'h3': (
+    'font-family': var(--font-family-default),
+    'font-size': 39.06px,
+    'font-weight': 700,
+    'line-height': 1.2,
+    'breakpoints': (
+      'sm': (
+        'font-size': 25.63px,
+      ),
+      'md': (
+        'font-size': 33.18px,
+      ),
+    ),
+  ),
+  'h4': (
+    'font-family': var(--font-family-default),
+    'font-size': 31.25px,
+    'font-weight': 500,
+    'line-height': 1.2,
+    'breakpoints': (
+      'sm': (
+        'font-size': 22.78px,
+      ),
+      'md': (
+        'font-size': 27.65px,
+      ),
+    ),
+  ),
+  'h5': (
+    'font-family': var(--font-family-default),
+    'font-size': 25px,
+    'font-weight': 500,
+    'line-height': 1.2,
+    'breakpoints': (
+      'sm': (
+        'font-size': 20.25px,
+      ),
+      'md': (
+        'font-size': 23.04px,
+      ),
+    ),
+  ),
+  'h6': (
+    'font-family': var(--font-family-default),
+    'font-size': 20px,
+    'font-weight': 500,
+    'line-height': 1.2,
+    'breakpoints': (
+      'sm': (
+        'font-size': 17.32px,
+      ),
+      'md': (
+        'font-size': 19.2px,
+      ),
+    ),
+  ),
+  'p-large': (
+    'font-family': var(--font-family-default),
+    'font-size': 18px,
+    'font-weight': 400,
+    'line-height': 1.6,
+    'breakpoints': (
+      'sm': (
+        'font-size': 16px,
+      ),
+    ),
+  ),
+  'p': (
+    'font-family': var(--font-family-default),
+    'font-size': 16px,
+    'font-weight': 400,
+    'line-height': 1.6,
+    'breakpoints': (
+      'sm': (
+        'font-size': 14px,
+      ),
+    ),
+  ),
+  'small': (
+    'font-family': var(--font-family-default),
+    'font-size': 14px,
+    'font-weight': 400,
+    'line-height': 1.6,
+  ),
+);
 
-$header-height: 72px;
-$header-z-index: 1000;
+$font-family-default: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Ubuntu', 'Helvetica Neue', sans-serif;
+$font-family-mono: ui-monospace, 'SFMono-Regular', 'SF Mono', Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
+
+$color-white: #FFFFFF;
+$color-black: #000000;
+
+$color-grey-900: #202124;
+$color-grey-800: #3C4043;
+$color-grey-700: #5F6368;
+$color-grey-600: #80868B;
+$color-grey-500: #9AA0A6;
+$color-grey-400: #BDC1C6;
+$color-grey-300: #DADCE0;
+$color-grey-200: #E8EAED;
+$color-grey-100: #F1F3F4;
+$color-grey-50: #F8F9FA;
+
+$color-blue-900: #174EA6;
+$color-blue-800: #185ABC;
+$color-blue-700: #1967D2;
+$color-blue-600: #1A73E8;
+$color-blue-500: #4285F4;
+$color-blue-400: #669DF6;
+$color-blue-300: #8AB4F8;
+$color-blue-200: #AECBFA;
+$color-blue-100: #D2E3FC;
+$color-blue-50: #E8F0FE;
+
+$color-red-900: #A50E0E;
+$color-red-800: #B31412;
+$color-red-700: #C5221F;
+$color-red-600: #D93025;
+$color-red-500: #EA4335;
+$color-red-400: #EE675C;
+$color-red-300: #F28B82;
+$color-red-200: #F6AEA9;
+$color-red-100: #FAD2CF;
+$color-red-50: #FCE8E6;
+
+$color-yellow-900: #E37400;
+$color-yellow-800: #EA8600;
+$color-yellow-700: #F29900;
+$color-yellow-600: #F9AB00;
+$color-yellow-500: #FBBC04;
+$color-yellow-400: #FCC924;
+$color-yellow-300: #FDD663;
+$color-yellow-200: #FDE293;
+$color-yellow-100: #FEEFC3;
+$color-yellow-50: #FEF7E0;
+
+$color-green-900: #0D652D;
+$color-green-800: #137333;
+$color-green-700: #188038;
+$color-green-600: #1E8E3E;
+$color-green-500: #34A853;
+$color-green-400: #5BB974;
+$color-green-300: #81C995;
+$color-green-200: #A8DAB5;
+$color-green-100: #CEEAD6;
+$color-green-50: #E6F4EA;
+
+$color-text-default: $color-grey-900;

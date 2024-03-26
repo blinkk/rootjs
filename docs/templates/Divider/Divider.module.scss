@@ -1,0 +1,18 @@
+@use 'breakpoints';
+
+.divider {
+  @include breakpoints.sm() {
+    padding: var(--spacer-size--mobile, 0) 0;
+  }
+  @include breakpoints.md() {
+    padding: var(--spacer-size--tablet, 0) 0;
+  }
+  @include breakpoints.lg-gt() {
+    padding: var(--spacer-size--desktop, 0) 0;
+  }
+}
+
+.container {
+  display: flex;
+  justify-content: center;
+}

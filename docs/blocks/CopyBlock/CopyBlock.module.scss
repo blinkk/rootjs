@@ -1,0 +1,14 @@
+@layer component {
+  .headline {
+    text-align: center;
+  }
+
+  .eyebrow {
+    margin-bottom: 10px;
+  }
+
+  .title,
+  .body {
+    text-wrap: pretty;
+  }
+}
