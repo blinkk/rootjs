@@ -1,5 +1,11 @@
 # @blinkk/root
 
+## 1.0.0-rc.42
+
+### Patch Changes
+
+- 95e98a6: fix: fix externalize-deps
+
 ## 1.0.0-rc.41
 
 ### Patch Changes
