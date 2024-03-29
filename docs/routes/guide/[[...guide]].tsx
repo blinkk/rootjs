@@ -12,14 +12,14 @@ import styles from './[[...guide]].module.scss';
 
 const GUIDE_LINKS = [
   {
-    label: 'Getting started',
+    label: 'Getting Started',
     href: '/guide',
     isActive: (ctx: RequestContext) => {
       return ctx.currentPath === '/guide';
     },
   },
   {
-    label: 'Project structure',
+    label: 'Project Structure',
     href: '/guide/project-structure',
     isActive: (ctx: RequestContext) => {
       return ctx.currentPath === '/guide/project-structure';
@@ -33,10 +33,24 @@ const GUIDE_LINKS = [
     },
   },
   {
+    label: 'Interactive Islands',
+    href: '/guide/islands',
+    isActive: (ctx: RequestContext) => {
+      return ctx.currentPath === '/guide/islands';
+    },
+  },
+  {
     label: 'Localization',
     href: '/guide/localization',
     isActive: (ctx: RequestContext) => {
       return ctx.currentPath === '/guide/localization';
+    },
+  },
+  {
+    label: 'Plugins',
+    href: '/guide/plugins',
+    isActive: (ctx: RequestContext) => {
+      return ctx.currentPath === '/guide/plugins';
     },
   },
   {
@@ -50,31 +64,38 @@ const GUIDE_LINKS = [
 
 const CMS_LINKS = [
   {
-    label: 'CMS setup',
-    href: '/guide/cms-setup',
+    label: 'Root CMS Setup',
+    href: '/guide/cms',
     isActive: (ctx: RequestContext) => {
-      return ctx.currentPath === '/guide/cms-setup';
+      return ctx.currentPath === '/guide/cms';
     },
   },
   {
     label: 'Schemas',
-    href: '/guide/schemas',
+    href: '/guide/cms/schemas',
     isActive: (ctx: RequestContext) => {
-      return ctx.currentPath === '/guide/schemas';
+      return ctx.currentPath === '/guide/cms/schemas';
+    },
+  },
+  {
+    label: 'Data Fetching',
+    href: '/guide/cms/data-fetching',
+    isActive: (ctx: RequestContext) => {
+      return ctx.currentPath === '/guide/cms/data-fetching';
     },
   },
 ];
 
 const API_LINKS = [
   {
-    label: 'API reference',
+    label: 'API Reference',
     href: '/guide/api',
     isActive: (ctx: RequestContext) => {
       return ctx.currentPath === '/guide/api';
     },
   },
   {
-    label: 'CLI reference',
+    label: 'CLI Reference',
     href: '/guide/cli',
     isActive: (ctx: RequestContext) => {
       return ctx.currentPath === '/guide/cli';
@@ -271,7 +292,7 @@ function TableOfContents(props: PageProps) {
                 className={styles.tocLink}
                 as="a"
                 size="small"
-                href={`#${section.id}`}
+                href={`#${section.id || ''}`}
               >
                 {t(section.title)}
               </Text>

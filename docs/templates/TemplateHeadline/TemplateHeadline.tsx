@@ -35,7 +35,7 @@ export function TemplateHeadline(props: TemplateHeadlineProps) {
         </Text>
       )}
       {props.body && (
-        <Text className={styles.body} size="p">
+        <Text className={styles.body} size="p-large">
           <RichText data={props.body} />
         </Text>
       )}

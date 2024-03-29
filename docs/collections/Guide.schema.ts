@@ -47,6 +47,7 @@ export default schema.collection({
           help: '',
           options: [
             {value: 'guide', label: 'Guide'},
+            {value: 'cms', label: 'CMS'},
             {value: 'api', label: 'API'},
           ],
         }),

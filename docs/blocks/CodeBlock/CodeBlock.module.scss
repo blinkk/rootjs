@@ -17,6 +17,10 @@
   padding: 16px;
   height: 100%;
   white-space: pre-wrap;
+  overflow: auto;
+  @include breakpoints.sm() {
+    font-size: 12px;
+  }
 }
 
 .language {

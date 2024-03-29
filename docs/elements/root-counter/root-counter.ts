@@ -1,3 +1,11 @@
+declare module 'preact' {
+  namespace JSX {
+    interface IntrinsicElements {
+      'root-counter': preact.JSX.HTMLAttributes;
+    }
+  }
+}
+
 class RootCounter extends HTMLElement {
   value = 0;
 

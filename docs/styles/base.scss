@@ -131,13 +131,9 @@
      //   Defaults to 2ex (2 times the calculated height of the letter 'x').
      @if $enable-smooth-scroll {
        @media (prefers-reduced-motion: no-preference) {
-         // The `:focus-within` selector helps with cmd+f.
-         // https://css-tricks.com/fixing-smooth-scrolling-with-find-on-page/
-         html:focus-within {
+        // Offset the smooth by the height of the fixed header, if any.
+        html {
            scroll-behavior: smooth;
-         }
-         // Offset the smooth by the height of the fixed header, if any.
-         html {
            scroll-padding-top: var(--scroll-padding-top, var(--header-height, 0px));
          }
          // Add extra breathing room when scrolling to a target element.

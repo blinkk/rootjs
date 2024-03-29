@@ -4,6 +4,7 @@ import {GlobalFooter} from '@/components/GlobalFooter/GlobalFooter';
 import {GlobalHeader} from '@/components/GlobalHeader/GlobalHeader';
 import {GridOverlay} from '@/islands/GridOverlay/GridOverlay';
 import '@/styles/global.scss';
+import {useImageService} from '@/hooks/useImageService';
 
 export interface BaseLayoutProps {
   title?: string;
@@ -17,12 +18,20 @@ export interface BaseLayoutProps {
 const Meta = {
   SITE_NAME: 'Root.js',
   DOMAIN: 'https://rootjs.dev',
+  IMAGE:
+    'https://lh3.googleusercontent.com/c2ECbvhJtxf3xbPIjaXCSpmvAsJkkhzJwG98T9RPvWy4s30jZKClom8pvWTnupRYOnyI3qGhNXPOwqoN6sqljkDO62LIKRtR988',
 };
 
 export function BaseLayout(props: BaseLayoutProps) {
   const t = useTranslations();
   const title = props.title || '';
   const description = props.description || '';
+  const image = props.image || Meta.IMAGE;
+  const imageService = useImageService();
+  const metaImage = imageService.transform(image, {
+    width: 1200,
+    jpg: true,
+  });
 
   return (
     <Html>
@@ -37,6 +46,13 @@ export function BaseLayout(props: BaseLayoutProps) {
           <>
             <meta name="description" content={t(description)} />
             <meta name="og:description" content={t(description)} />
+          </>
+        )}
+        {metaImage && (
+          <>
+            {metaImage && <meta content={metaImage} property="og:image" />}
+            {metaImage && <meta content={metaImage} name="twitter:image" />}
+            <meta content="summary_large_image" name="twitter:card" />
           </>
         )}
         {props.noindex && <meta name="robots" content="noindex" />}
