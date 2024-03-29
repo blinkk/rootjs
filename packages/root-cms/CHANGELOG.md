@@ -1,5 +1,14 @@
 # @blinkk/root-cms
 
+## 1.0.0-rc.41
+
+### Patch Changes
+
+- 2a7f2bf: fix: fix richtext reload issue
+- Updated dependencies [2d8800f]
+- Updated dependencies [8010ef8]
+  - @blinkk/root@1.0.0-rc.41
+
 ## 1.0.0-rc.40
 
 ### Minor Changes

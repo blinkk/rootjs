@@ -1,5 +1,12 @@
 # @blinkk/root
 
+## 1.0.0-rc.41
+
+### Patch Changes
+
+- 2d8800f: fix: avoid externalizing packages starting with "@"
+- 8010ef8: chore: add inline sourcemap to render.js output
+
 ## 1.0.0-rc.40
 
 ### Patch Changes
