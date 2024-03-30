@@ -38,11 +38,7 @@ export async function bundleRootConfig(rootDir: string, outPath: string) {
   }
 
   const packageJsonPath = path.resolve(rootDir, 'package.json');
-  const packageJsonExists = await fileExists(packageJsonPath);
-  if (!packageJsonExists) {
-    throw new Error(`${packageJsonExists} does not exist`);
-  }
-  const packageJson = await loadJson<any>(packageJsonPath);
+  const packageJson = await loadPackageJson(packageJsonPath);
   const allDeps = {
     ...packageJson.peerDependencies,
     ...packageJson.dependencies,
@@ -111,4 +107,13 @@ export async function loadBundledConfig(
     config = (await config(options)) || {};
   }
   return Object.assign({}, config, {rootDir});
+}
+
+export async function loadPackageJson(filepath: string): Promise<any> {
+  try {
+    const packageJson = await loadJson(filepath);
+    return packageJson || {};
+  } catch (err) {
+    return {};
+  }
 }
