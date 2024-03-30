@@ -308,7 +308,7 @@ LocalizationModal.Translations = (props: TranslationsProps) => {
     return results;
   }, [translationsMap]);
 
-  const locales = window.__ROOT_CTX.rootConfig.i18n.locales || [];
+  const locales = window.__ROOT_CTX.rootConfig.i18n?.locales || [];
   const localeOptions = locales.map((locale) => ({
     value: locale,
     label: getLocaleLabel(locale),

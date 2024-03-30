@@ -17,6 +17,11 @@ const LINKS = [
     url: '/guide',
     active: (ctx: RequestContext) => ctx.currentPath.startsWith('/guide'),
   },
+  {
+    label: 'Blog',
+    url: '/blog',
+    active: (ctx: RequestContext) => ctx.currentPath.startsWith('/blog'),
+  },
 ];
 
 const ICONS = [

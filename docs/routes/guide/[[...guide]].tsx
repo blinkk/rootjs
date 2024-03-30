@@ -279,6 +279,9 @@ function TableOfContents(props: PageProps) {
   const content = fields.content || {};
   const sections = content.sections || [];
   const t = useTranslations();
+  if (sections.length === 0) {
+    return null;
+  }
   return (
     <div className={styles.toc}>
       <div className={styles.tocContent}>

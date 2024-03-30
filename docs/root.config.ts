@@ -7,6 +7,9 @@ const rootDir = new URL('.', import.meta.url).pathname;
 
 export default defineConfig({
   domain: 'https://rootjs.dev',
+  i18n: {
+    locales: ['en'],
+  },
   vite: {
     resolve: {
       alias: {
