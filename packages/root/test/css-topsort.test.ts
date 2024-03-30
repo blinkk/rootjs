@@ -29,7 +29,7 @@ test('build css-topsort', async () => {
     <html>
     <head>
     <meta charset=\\"utf-8\\">
-    <link rel=\\"stylesheet\\" href=\\"/assets/index.whaUV7oh.css\\">
+    <link rel=\\"stylesheet\\" href=\\"/assets/whaUV7oh.css\\">
     </head>
     <body>
     <h1>Hello world</h1>

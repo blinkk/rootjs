@@ -33,8 +33,8 @@ test('add custom element to a page', async () => {
     <html>
     <head>
     <meta charset=\\"utf-8\\">
-    <script type=\\"module\\" src=\\"/assets/root-counter.4thSVuYn.min.js\\"></script>
-    <script type=\\"module\\" src=\\"/assets/root-label.7r1ysB2p.min.js\\"></script>
+    <script type=\\"module\\" src=\\"/assets/root-counter.min.js\\"></script>
+    <script type=\\"module\\" src=\\"/assets/root-label.min.js\\"></script>
     </head>
     <body>
     <h1>Counter</h1><root-counter start=\\"3\\"></root-counter>
@@ -55,7 +55,7 @@ test('use custom elements from another directory', async () => {
     <html>
     <head>
     <meta charset=\\"utf-8\\">
-    <script type=\\"module\\" src=\\"/assets/ds-foo.JKDhGeDh.min.js\\"></script>
+    <script type=\\"module\\" src=\\"/assets/ds-foo.min.js\\"></script>
     </head>
     <body><ds-foo name=\\"Alice\\"></ds-foo></body>
     </html>
@@ -76,8 +76,8 @@ test('exclude elements matching a certain pattern', async () => {
     <html>
     <head>
     <meta charset=\\"utf-8\\">
-    <script type=\\"module\\" src=\\"/assets/root-counter.4thSVuYn.min.js\\"></script>
-    <script type=\\"module\\" src=\\"/assets/root-label.7r1ysB2p.min.js\\"></script>
+    <script type=\\"module\\" src=\\"/assets/root-counter.min.js\\"></script>
+    <script type=\\"module\\" src=\\"/assets/root-label.min.js\\"></script>
     </head>
     <body>
     <h1>Counter</h1><root-counter start=\\"3\\"></root-counter>
