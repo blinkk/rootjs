@@ -1,5 +1,12 @@
 # @blinkk/root
 
+## 1.0.0-rc.43
+
+### Patch Changes
+
+- 3941e85: chore: switch to [hash] only for assets/chunks
+- 1aab112: fix: externalize deps in package.json
+
 ## 1.0.0-rc.42
 
 ### Patch Changes
