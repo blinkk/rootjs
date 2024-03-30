@@ -2,7 +2,7 @@ import path from 'node:path';
 import {bundleRequire} from 'bundle-require';
 import {build} from 'esbuild';
 import {RootConfig} from '../core/config';
-import {fileExists} from '../utils/fsutils';
+import {fileExists, loadJson} from '../utils/fsutils';
 
 export interface ConfigOptions {
   command: string;
@@ -32,10 +32,35 @@ export async function loadRootConfig(
  */
 export async function bundleRootConfig(rootDir: string, outPath: string) {
   const configPath = path.resolve(rootDir, 'root.config.ts');
-  const exists = await fileExists(configPath);
-  if (!exists) {
+  const configExists = await fileExists(configPath);
+  if (!configExists) {
     throw new Error(`${configPath} does not exist`);
   }
+
+  const packageJsonPath = path.resolve(rootDir, 'package.json');
+  const packageJsonExists = await fileExists(packageJsonPath);
+  if (!packageJsonExists) {
+    throw new Error(`${packageJsonExists} does not exist`);
+  }
+  const packageJson = await loadJson<any>(packageJsonPath);
+  const allDeps = {
+    ...packageJson.peerDependencies,
+    ...packageJson.dependencies,
+  };
+
+  function getPackageName(id: string): string {
+    const segments = id.split('/');
+    if (segments.length > 1) {
+      // Check if package is an org path like `@blinkk/root`.
+      if (segments[0].startsWith('@') && segments[0].length > 1) {
+        return `${segments[0]}/${segments[1]}`;
+      }
+      // For imports like `my-package/subpackage`, return `my-package`.
+      return segments[0];
+    }
+    return id;
+  }
+
   await build({
     entryPoints: [configPath],
     bundle: true,
@@ -46,15 +71,19 @@ export async function bundleRootConfig(rootDir: string, outPath: string) {
     metafile: true,
     format: 'esm',
     plugins: [
+      // Externalizes deps that are in package.json.
       {
-        name: 'externalize-deps',
+        name: 'externalize-package-json-deps',
         setup(build) {
           build.onResolve({filter: /.*/}, (args) => {
             const id = args.path;
-            if (id[0] !== '.' && !path.isAbsolute(id)) {
-              return {
-                external: true,
-              };
+            if (id[0] !== '.' && !id.startsWith('@/')) {
+              const packageName = getPackageName(id);
+              if (packageName in allDeps) {
+                return {
+                  external: true,
+                };
+              }
             }
             return null;
           });
