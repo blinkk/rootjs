@@ -132,7 +132,7 @@ export async function build(rootProjectDir?: string, options?: BuildOptions) {
         output: {
           format: 'esm',
           chunkFileNames: 'chunks/[hash].min.js',
-          assetFileNames: 'assets/[name].[hash][extname]',
+          assetFileNames: 'assets/[hash][extname]',
           sanitizeFileName: sanitizeFileName,
         },
       },
@@ -164,8 +164,8 @@ export async function build(rootProjectDir?: string, options?: BuildOptions) {
         input: [...routeFiles],
         output: {
           format: 'esm',
-          entryFileNames: 'assets/[name].[hash].min.js',
-          assetFileNames: 'assets/[name].[hash][extname]',
+          entryFileNames: 'assets/[hash].min.js',
+          assetFileNames: 'assets/[hash][extname]',
           chunkFileNames: 'chunks/[hash].min.js',
           sanitizeFileName: sanitizeFileName,
           ...viteConfig?.build?.rollupOptions?.output,
@@ -197,8 +197,8 @@ export async function build(rootProjectDir?: string, options?: BuildOptions) {
           input: [...elements, ...bundleScripts],
           output: {
             format: 'esm',
-            entryFileNames: 'assets/[name].[hash].min.js',
-            assetFileNames: 'assets/[name].[hash][extname]',
+            entryFileNames: 'assets/[hash].min.js',
+            assetFileNames: 'assets/[hash][extname]',
             chunkFileNames: 'chunks/[hash].min.js',
             sanitizeFileName: sanitizeFileName,
             ...viteConfig?.build?.rollupOptions?.output,
