@@ -1,40 +1,102 @@
 @use 'breakpoints';
+@use 'buttons';
 @use 'tokens';
 
 $guide-max-width: 1440px;
-$guide-sidebar-width: 200px;
+$guide-sidebar-width: 180px;
 $guide-toc-width: 216px;
 
 .guideLayout {
   --layout-padding: max(40px, 50vw - #{0.5 * $guide-max-width});
-  display: flex;
+
   @include breakpoints.sm() {
     --layout-padding: 16px;
   }
   @include breakpoints.md() {
     --layout-padding: 40px;
   }
+  @include breakpoints.lg-gt() {
+    display: flex;
+  }
 }
 
 .sidebar {
-  padding: 0 40px 0 var(--layout-padding);
-  flex-shrink: 0;
-  background: tokens.$color-grey-100;
-  position: fixed;
-  left: 0;
-  top: 0;
-  bottom: 0;
-  z-index: 2000;
+  @include breakpoints.lg-gt() {
+    padding: 0 40px 0 var(--layout-padding);
+    flex-shrink: 0;
+    background: tokens.$color-grey-100;
+    position: fixed;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    z-index: 2000;
+  }
+}
 
-  @include breakpoints.md-lt() {
+.sidebarMobileSubnav {
+  display: block;
+  padding: 8px 16px;
+  border-bottom: 1px solid tokens.$color-grey-300;
+  @include breakpoints.md() {
+    padding: 8px 40px;
+  }
+  @include breakpoints.lg-gt() {
     display: none;
   }
+}
+
+@include buttons.base-styles(
+  $selectors: (
+    'button': '.sidebarMobileSubnavTrigger',
+    'button__leftIcon': '.sidebarMobileSubnavTriggerIcon',
+    'button__label': '.sidebarMobileSubnavTriggerIconLabel',
+    'button__rightIcon': '.sidebarMobileSubnavTriggerIcon',
+  )
+);
+
+.sidebarMobileSubnavTrigger {
+  background: transparent;
+  border-color: transparent;
+  padding: 4px 10px;
+  border-radius: 8px;
+}
+
+.sidebarMobileSubnavTrigger:hover {
+  background-color: tokens.$color-grey-100;
+}
+
+.sidebarMobileSubnavTrigger:active {
+  background-color: tokens.$color-grey-200;
 }
 
 .sidebarContent {
   width: $guide-sidebar-width;
   border-top: 1px solid tokens.$color-grey-300;
   // padding-top: 40px;
+
+  @include breakpoints.md-lt() {
+    transform: translateX(-100%);
+    transition: all 0.3s ease;
+    position: fixed;
+    left: 0;
+    top: -1px;
+    bottom: 0;
+    width: calc(100% - 60px);
+    max-width: 300px;
+    z-index: 2000;
+    background: tokens.$color-grey-100;
+    padding-left: var(--layout-padding);
+    border-right: 1px solid tokens.$color-grey-300;
+  }
+  @include breakpoints.sm() {
+    padding-left: 30px;
+  }
+}
+
+.sidebarContent:global(.expanded) {
+  @include breakpoints.md-lt() {
+    transform: translateX(0);
+  }
 }
 
 .sidebarLogo {

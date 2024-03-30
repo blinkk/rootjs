@@ -1,4 +1,5 @@
 import {RequestContext, useRequestContext, useTranslations} from '@blinkk/root';
+import {IconLayoutSidebarLeftExpand} from '@tabler/icons-preact';
 import Block from '@/components/Block/Block';
 import {RichText} from '@/components/RichText/RichText';
 import {Text} from '@/components/Text/Text';
@@ -134,7 +135,24 @@ function Sidebar(props: PageProps) {
 
   return (
     <aside id="sidebar" className={styles.sidebar}>
-      <nav className={styles.sidebarContent} aria-label="Guide navigation">
+      <root-drawer className={styles.sidebarMobileSubnav}>
+        <button
+          className={styles.sidebarMobileSubnavTrigger}
+          data-slot="drawer-trigger"
+          aria-controls="guide-sidebar"
+          aria-expanded="false"
+        >
+          <div className={styles.sidebarMobileSubnavTriggerIcon}>
+            <IconLayoutSidebarLeftExpand />
+          </div>
+          <div className={styles.sidebarMobileSubnavTriggerLabel}>Guide</div>
+        </button>
+      </root-drawer>
+      <nav
+        id="guide-sidebar"
+        className={styles.sidebarContent}
+        aria-label="Guide navigation"
+      >
         <div className={styles.sidebarLogo}>
           <LogoToggle />
         </div>

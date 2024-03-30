@@ -39,7 +39,7 @@
 @use 'sass:map';
 @use 'tokens';
 
-@mixin base-styles($variant: 'primary', $selectors: ()) {
+@mixin base-styles($selectors: ()) {
   $button: map.get($selectors, 'button');
   $button__leftIcon: map.get($selectors, 'button__leftIcon');
   $button__label: map.get($selectors, 'button__label');
