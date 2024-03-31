@@ -12,12 +12,18 @@ export default schema.define({
       id: 'options',
       label: 'Module Options',
       help: 'Layout and display options.',
-      options: [{value: 'title:h1'}],
+      options: [{value: 'bordered'}, {value: 'open-in-new-tab'}],
       creatable: true,
     }),
     schema.image({
       id: 'image',
       label: 'Image',
+    }),
+    schema.string({
+      id: 'caption',
+      label: 'Caption',
+      help: 'Optional caption that displays below the image.',
+      translate: true,
     }),
   ],
 });

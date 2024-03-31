@@ -29,6 +29,18 @@ export default schema.define({
       translate: true,
       variant: 'textarea',
     }),
+    schema.select({
+      id: 'titleSize',
+      label: 'Title Size',
+      options: [
+        {value: 'h1'},
+        {value: 'h2'},
+        {value: 'h3'},
+        {value: 'h4'},
+        {value: 'h5'},
+        {value: 'h6'},
+      ],
+    }),
     schema.richtext({
       id: 'body',
       label: 'Body copy',

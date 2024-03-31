@@ -91,6 +91,8 @@ export interface CopyBlockFields {
   eyebrow?: string;
   /** Title. Main headline title. */
   title?: string;
+  /** Title Size */
+  titleSize?: string;
   /** Body copy. Headline body copy. */
   body?: RootCMSRichText;
 }
@@ -103,7 +105,32 @@ export interface ImageBlockFields {
   options?: string[];
   /** Image */
   image?: RootCMSImage;
+  /** Caption. Optional caption that displays below the image. */
+  caption?: string;
 }
+
+/** Generated from `/collections/BlogPosts.schema.ts`. */
+export interface BlogPostsFields {
+  /** Meta */
+  meta?: {
+    /** Title */
+    title?: string;
+    /** Description. Description for SEO and social shares. */
+    description?: string;
+    /** Image. Meta image for social shares. Recommended size: 1200x600. */
+    image?: RootCMSImage;
+  };
+  /** Content */
+  content?: {
+    /** Main content body. Top content body. */
+    body?: RootCMSRichText;
+    /** Content blocks. Add blocks to embed various content types to the blog. */
+    blocks?: RootCMSOneOf[];
+  };
+}
+
+/** Generated from `/collections/BlogPosts.schema.ts`. */
+export type BlogPostsDoc = RootCMSDoc<BlogPostsFields>;
 
 /** Generated from `/collections/Guide.schema.ts`. */
 export interface GuideFields {

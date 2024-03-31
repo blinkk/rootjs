@@ -11,6 +11,7 @@ export type CopyBlockProps = CopyBlockFields & {
 export function CopyBlock(props: CopyBlockProps) {
   const options = props.options || [];
   const t = useTranslations();
+  const titleSize = (props.titleSize || 'h2') as TextSize;
   const bodySize = props.bodySize || 'p';
   return (
     <div className={styles.copyBlock}>
@@ -20,7 +21,7 @@ export function CopyBlock(props: CopyBlockProps) {
         </Text>
       )}
       {props.title && (
-        <Text as="h2" className={styles.title} size="h2">
+        <Text as="h2" className={styles.title} size={titleSize}>
           {t(props.title)}
         </Text>
       )}
