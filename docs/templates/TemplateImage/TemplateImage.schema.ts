@@ -13,6 +13,7 @@ export default schema.define({
       label: 'Module Options',
       help: 'Layout and display options.',
       creatable: true,
+      options: [{value: 'max-w-1000'}],
     }),
     schema.image({
       id: 'image',

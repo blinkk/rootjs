@@ -22,6 +22,13 @@ const Meta = {
     'https://lh3.googleusercontent.com/c2ECbvhJtxf3xbPIjaXCSpmvAsJkkhzJwG98T9RPvWy4s30jZKClom8pvWTnupRYOnyI3qGhNXPOwqoN6sqljkDO62LIKRtR988',
 };
 
+const ANALYTICS = `
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', 'G-5JTQHSPWBB');
+`;
+
 export function BaseLayout(props: BaseLayoutProps) {
   const t = useTranslations();
   const title = props.title || '';
@@ -72,6 +79,11 @@ export function BaseLayout(props: BaseLayoutProps) {
           rel="stylesheet"
           href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.6.0/styles/atom-one-light.min.css"
         />
+        <script
+          async
+          src="https://www.googletagmanager.com/gtag/js?id=G-5JTQHSPWBB"
+        ></script>
+        <script dangerouslySetInnerHTML={{__html: ANALYTICS}} />
       </Head>
       <Body>
         <div id="root">

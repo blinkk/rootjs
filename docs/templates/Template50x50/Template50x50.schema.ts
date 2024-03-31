@@ -30,6 +30,7 @@ export default schema.define({
       label: 'Module Options',
       help: 'Layout and display options.',
       options: [
+        {value: 'layout:align-center'},
         {value: 'layout:mobile-reverse'},
         {value: 'CopyBlock:mobile-text-center'},
       ],

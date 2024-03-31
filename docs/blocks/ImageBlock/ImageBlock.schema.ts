@@ -12,7 +12,11 @@ export default schema.define({
       id: 'options',
       label: 'Module Options',
       help: 'Layout and display options.',
-      options: [{value: 'bordered'}, {value: 'open-in-new-tab'}],
+      options: [
+        {value: 'bordered'},
+        {value: 'max-w-1000'},
+        {value: 'open-in-new-tab'},
+      ],
       creatable: true,
     }),
     schema.image({

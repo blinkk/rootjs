@@ -200,6 +200,7 @@ $guide-toc-width: 216px;
 
   a {
     text-underline-offset: 4px;
+    transition: all 0.18s ease;
   }
 
   a:hover {

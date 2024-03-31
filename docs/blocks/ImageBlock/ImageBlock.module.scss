@@ -19,4 +19,13 @@
     padding: 20px;
     border-radius: 8px;
   }
+
+  .max-w-1000 img {
+    max-width: 1000px;
+    margin: 0 auto;
+  }
+
+  .pad-0 img {
+    padding: 0;
+  }
 }
