@@ -39,10 +39,10 @@ importers:
         specifier: 2.39.0
         version: 2.39.0(preact@10.19.3)
       firebase-admin:
-        specifier: ^12.0.0
+        specifier: 12.0.0
         version: 12.0.0
       firebase-functions:
-        specifier: ^4.8.2
+        specifier: 4.8.2
         version: 4.8.2(firebase-admin@12.0.0)
       highlight.js:
         specifier: 11.6.0
@@ -1635,6 +1635,7 @@ packages:
     dependencies:
       '@firebase/app-types': 0.9.0
       '@firebase/util': 1.9.3
+    dev: true
 
   /@firebase/database-types@1.0.2:
     resolution: {integrity: sha512-JRigr5JNLEHqOkI99tAGHDZF47469/cJz1tRAgGs8Feh+3ZmQy/vVChSqwMp2DuVUGp9PlmGsNSlpINJ/hDuIA==}
@@ -1980,7 +1981,7 @@ packages:
       fast-deep-equal: 3.1.3
       functional-red-black-tree: 1.0.1
       google-gax: 3.6.1
-      protobufjs: 7.2.5
+      protobufjs: 7.2.6
     transitivePeerDependencies:
       - encoding
       - supports-color
@@ -1994,7 +1995,7 @@ packages:
       fast-deep-equal: 3.1.3
       functional-red-black-tree: 1.0.1
       google-gax: 4.3.2
-      protobufjs: 7.2.5
+      protobufjs: 7.2.6
     transitivePeerDependencies:
       - encoding
       - supports-color
@@ -2177,7 +2178,7 @@ packages:
     dependencies:
       lodash.camelcase: 4.3.0
       long: 5.2.1
-      protobufjs: 7.2.5
+      protobufjs: 7.2.6
       yargs: 17.7.2
 
   /@humanwhocodes/config-array@0.11.11:
@@ -5509,12 +5510,12 @@ packages:
     dependencies:
       '@fastify/busboy': 1.2.1
       '@firebase/database-compat': 1.0.4
-      '@firebase/database-types': 1.0.0
+      '@firebase/database-types': 1.0.2
       '@types/node': 20.11.25
       jsonwebtoken: 9.0.2
       jwks-rsa: 3.0.1
       node-forge: 1.3.1
-      uuid: 9.0.0
+      uuid: 9.0.1
     optionalDependencies:
       '@google-cloud/firestore': 7.5.0
       '@google-cloud/storage': 7.9.0
@@ -5573,7 +5574,7 @@ packages:
       cors: 2.8.5
       express: 4.18.2
       firebase-admin: 12.0.0
-      protobufjs: 7.2.5
+      protobufjs: 7.2.6
     transitivePeerDependencies:
       - supports-color
     dev: false
@@ -6188,7 +6189,7 @@ packages:
       '@grpc/proto-loader': 0.7.10
       '@types/long': 4.0.2
       abort-controller: 3.0.0
-      duplexify: 4.1.2
+      duplexify: 4.1.3
       google-auth-library: 9.7.0
       node-fetch: 2.7.0
       object-hash: 3.0.0
@@ -8481,7 +8482,7 @@ packages:
     engines: {node: '>=12.0.0'}
     requiresBuild: true
     dependencies:
-      protobufjs: 7.2.5
+      protobufjs: 7.2.6
 
   /proto3-json-serializer@2.0.1:
     resolution: {integrity: sha512-8awBvjO+FwkMd6gNoGFZyqkHZXCFd54CIYTb6De7dPaufGJ2XNW+QUNqbMr8MaAocMdb+KpsD4rxEOaTBDCffA==}
@@ -8547,6 +8548,7 @@ packages:
       '@protobufjs/utf8': 1.1.0
       '@types/node': 20.11.25
       long: 5.2.1
+    dev: true
 
   /protobufjs@7.2.6:
     resolution: {integrity: sha512-dgJaEDDL6x8ASUZ1YqWciTRrdOuYNzoOf27oHNfdyvKqHr5i0FV7FSLU+aIeFjyFgVxrpTOtQUi0BLLBymZaBw==}
@@ -8565,8 +8567,6 @@ packages:
       '@protobufjs/utf8': 1.1.0
       '@types/node': 20.11.25
       long: 5.2.1
-    dev: false
-    optional: true
 
   /proxy-addr@2.0.7:
     resolution: {integrity: sha512-llQsMLSUDUPT44jdrU/O37qlnifitDP+ZwrmmZcoSKyLKvtZxpyV0n2/bD/N4tBAAZ/gJEdZU7KMraoK1+XYAg==}
@@ -9725,7 +9725,7 @@ packages:
       https-proxy-agent: 5.0.1
       node-fetch: 2.7.0
       stream-events: 1.0.5
-      uuid: 9.0.0
+      uuid: 9.0.1
     transitivePeerDependencies:
       - encoding
       - supports-color
@@ -10325,7 +10325,6 @@ packages:
     hasBin: true
     requiresBuild: true
     dev: false
-    optional: true
 
   /valid-url@1.0.9:
     resolution: {integrity: sha512-QQDsV8OnSf5Uc30CKSwG9lnhMPe6exHtTXLRYX8uMwKENy640pU+2BgBL0LRbDh/eYRahNCS7aewCx0wf3NYVA==}
