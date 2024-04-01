@@ -1,5 +1,11 @@
 # @blinkk/root
 
+## 1.0.1
+
+### Patch Changes
+
+- debd50b: chore: bump version
+
 ## 1.0.0
 
 ### Major Changes
