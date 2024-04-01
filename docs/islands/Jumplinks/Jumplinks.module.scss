@@ -13,7 +13,7 @@ $jumplink-text-color: tokens.$color-text-default;
   .jumplinksNav {
     display: block;
     position: sticky;
-    top: calc(var(--header-height) + 10px);
+    top: calc(var(--header-height) + 6px);
     text-align: center;
     padding-left: var(--grid-padding);
     padding-right: var(--grid-padding);
@@ -23,6 +23,10 @@ $jumplink-text-color: tokens.$color-text-default;
       padding-left: 40px;
       padding-right: 40px;
     }
+    @include breakpoints.lg-gt() {
+      top: calc(var(--header-height) + 10px);
+    }
+
   }
 
   .jumplinks {
@@ -100,7 +104,7 @@ $jumplink-text-color: tokens.$color-text-default;
     }
 
     @include breakpoints.sm() {
-      padding: 12px 16px;
+      padding: 10px 14px;
     }
     @include breakpoints.md-gt() {
       font-size: 16px;

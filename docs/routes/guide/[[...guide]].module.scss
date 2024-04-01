@@ -181,7 +181,7 @@ $guide-toc-width: 216px;
 
 .mainContent {
   flex: 1;
-  padding: 40px var(--grid-padding);
+  padding: 40px var(--grid-padding) 120px;
   @include breakpoints.lg() {
     padding: 60px 20px 60px 60px;
   }
