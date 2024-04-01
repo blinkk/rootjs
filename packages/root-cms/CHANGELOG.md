@@ -1,5 +1,13 @@
 # @blinkk/root-cms
 
+## 1.0.1
+
+### Patch Changes
+
+- debd50b: chore: bump version
+- Updated dependencies [debd50b]
+  - @blinkk/root@1.0.1
+
 ## 1.0.0
 
 ### Major Changes
