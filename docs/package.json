@@ -11,9 +11,9 @@
   },
   "scripts": {
     "dev": "root dev",
-    "build": "root package --target=firebase --out=functions",
+    "build": "root package --target=firebase --out=functions && touch .env && cp .env functions",
     "preview": "rm -rf dist/ && root build --ssr-only && root preview",
-    "deploy": "rm -rf dist/ && pnpm run build && firebase deploy --only=hosting",
+    "deploy": "rm -rf dist/ && pnpm run build && firebase deploy",
     "types": "root-cms types"
   },
   "author": "s@blinkk.com",

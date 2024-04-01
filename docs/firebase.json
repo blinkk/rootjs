@@ -10,6 +10,16 @@
     "i18n": {
       "root": "/"
     },
-    "trailingSlash": false
+    "trailingSlash": false,
+    "rewrites": [
+      {
+        "source": "**",
+        "function": "www-server",
+        "pinTag": true
+      }
+    ],
+    "functions": {
+      "codebase": "www"
+    }
   }
 }
