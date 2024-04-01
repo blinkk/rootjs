@@ -1,5 +1,26 @@
 # @blinkk/create-root
 
+## 1.0.0
+
+### Major Changes
+
+- a5cb6b1: feat: first release of root.js cms
+- 5491e5d: feat: add @blinkk/create-root package
+
+### Minor Changes
+
+- 2455c96: build: upgrade to vite5 and update deps
+
+### Patch Changes
+
+- 556082f: chore: pin deps to exact versions
+- 2ca60f4: feat: add root-cms init-firebase cli command
+- 28e8e64: chore: upgrade deps
+- 5e579b3: chore: update node compatibility version
+- 29d86e7: feat: add tsconfig options for lit to starter
+- 8064122: fix: fix cms package.json version in create-root
+- e3967b7: fix: update root.js version in create-root
+
 ## 1.0.0-rc.43
 
 ## 1.0.0-rc.42

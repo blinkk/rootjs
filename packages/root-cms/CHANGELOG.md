@@ -1,5 +1,289 @@
 # @blinkk/root-cms
 
+## 1.0.0
+
+### Major Changes
+
+- a5cb6b1: feat: first release of root.js cms
+
+### Minor Changes
+
+- 6119500: feat: auto reload iframe when db is saved
+- f083fd9: feat: update cache-control for gcs uploads to 1yr
+- e492dea: feat: add drag/drop to file field
+- c39c39e: feat: update security rules so only admins can edit project settings
+- 12f69ee: feat: automatically share gsheets with editors
+- c67881c: feat: basic arb download ui
+- 0523622: feat: use signed cookies for auth
+- 34f7cdc: feat: add file upload field
+- 8125496: feat: add buttonLabel config to array fields
+- ff17522: feat: add icon to remove image
+- 2145120: feat: add edit translations page
+- 159f8b2: feat: add releases page
+- 3e3a8f0: feat: add listDocs to root-cms and add example
+- 35310eb: feat: add import csv translations
+- da0e4ef: feat: add copy doc action menu
+- 8549176: feat: add options for linking to existing google sheets
+- b40576d: feat: display avatars viewing current doc
+- afb0c01: feat: add RootCMSClient class
+- ad27525: feat: add richtext component
+- 1f06f4e: feat: add revert draft action
+- ae7c4f3: feat: add gcs file uploader button
+- 2455c96: build: upgrade to vite5 and update deps
+- fff594b: feat: add orderByDirection to listDocs()
+- c31304b: feat: save changes before preview reloads
+- c39c39e: feat: add support for wildcard domain ACLS, e.g. `*@example.com`
+- c39c39e: chore: validate ACL membership for every authenticated request
+- f843250: feat: add version history cron job
+- b01b3b4: feat: add ui for listing and restoring versions
+- 8a21902: feat: add numDocs() method for getting collection count
+- dc095e3: feat: add localization config modal
+- 48153bc: feat: add publishDocs() to cms client
+- c49b76c: feat: add preserveFilename option to file schema
+- 356b357: feat: add data sources
+- df4fc27: feat: update security rules so only ADMIN can change project settings
+- 1783ab7: feat: import strings to Translations collection
+- 9afd451: feat: add svg to accept image types
+- 523cd85: feat: add timezone info to datetime field
+- ab2f82d: feat: add scheduled publishing
+- 20fadd1: feat: add underline and strikethrough to rich text editor
+- 66d7e76: feat: add richtext schema field
+- 3b1a6e8: feat: google sheets localization
+- 3517454: feat: add image drag/drop
+- 5fe279c: feat: add edit data source page
+- 3ae64e3: feat: add multipartMiddlware
+- 81be985: feat: add session cookie middleware
+- 0a69a62: feat: add default value caching for object fields
+- b0fed8a: feat: add reference field
+- 7061ff6: feat: add http data sources
+- 1f68372: feat: add DateTime field
+- 93c49d7: feat: add saveTranslations method to cms client
+
+### Patch Changes
+
+- e6334a5: feat: add query() option to numDocs()
+- 2366529: chore: preserve device state when navigating
+- 8b56993: fix: remove vite dep from cms client
+- 4365554: feat: add defaultImage to schema previews
+- e026a45: feat: add project name to cms ui
+- 4071fd1: feat: add basic image uploads and gci serving url
+- b212258: fix: fix root-cms dist
+- 83c9caf: fix: fix preview path
+- de1f494: feat: add type def for date field
+- 72491bb: fix: fix l10n modal locales checkbox
+- 19e7bf2: fix: increase multer file size limit
+- b36d4e0: fix: normalize nested arrays
+- 70a1633: fix: use bundled config for gcf cron jobs
+- 1ad4139: fix: update type gen for image and datetime
+- ee240c9: build: fix root-cms packaging
+- fb23c6a: feat: update root cms logo
+- 556082f: chore: pin deps to exact versions
+- 08d7cf4: fix: use singleton firebase app instance
+- b9b8968: feat: add image alt text field
+- 6347c59: build: remove richtext subpackage from root-cms
+- 36d3ced: feat: add option for configuring gci
+- ba53753: fix: add "en" as default locale
+- 5975bf0: fix: fix split panel resizer
+- 63cb83f: fix: fix collection page overflow
+- a79aebc: fix: set cookie to secure=false on dev
+- 4067634: fix: add experimental fix for large collections
+- b0b8a3c: fix: minimal signin ui
+- 46f2f59: fix: update session cookie name to match firebase
+- 7f8d62f: fix: fix overflow issue
+- 6e4332e: chore: better error messages for login failures
+- 4960432: feat: allow docs with non-EN locale
+- 9ad44fe: fix: fix initialization of richtext data
+- fbadf96: feat: add collection list to home page
+- cf34e66: feat: add custom queries for listing docs
+- ae16f58: fix: fix reload of iframe url
+- 883735f: fix: re-indent 4-space generated types to 2
+- c4613da: fix: extract all locales to csv
+- 2ca60f4: feat: add root-cms init-firebase cli command
+- b0df82e: fix: fix deps
+- 26f7846: feat: pass query params from cms to preview url
+- cb99a12: fix: fix string normalization
+- 073cdaa: chore: select a collection by default
+- 243afcc: fix: sort translations by source string
+- 38902f2: fix: add error message for login failures
+- fed22ae: fix: add notification for image upload fail
+- aa9cab4: fix: use memory storage for multer
+- a6fddb8: chore: update ACL check until full-domain ACLs are supported
+- ef5a450: fix: fix content overflow
+- 729b313: feat: add locale toggle to preview window
+- 9f85f7c: fix: rename header to root cms
+- 4baddc5: re-load doc card when reference changes
+- 28e8e64: chore: upgrade deps
+- 596fd46: build: fix root-cms ci build
+- 463f398: feat: add edit json modal
+- d79782d: feat: start/stop db snapshots on visibility
+- a36c2c6: feat: add server config to inject middleware
+- f93eefa: fix: fix user sessions
+- f475f90: feat: add `--admin=<email>` flag to `init-firebase` cli
+- 0be0a8c: fix: disable auth check for cron jobs
+- 5e579b3: chore: update node compatibility version
+- 480d890: chore: update viewer disconnect logic and styles
+- 2997a1a: fix: filter docs by scheduledAt time
+- d5b28cb: feat: add unpublish doc action
+- d8a207d: chore: add favicon to root cms
+- 14e2ba1: fix: ignore schema dts from functions dir
+- 8064122: fix: fix cms package.json version in create-root
+- 0b1ae54: fix: add app name to firebase getApp
+- 193269e: feat: add root-cms package and schema definitions
+- 67cc4fc: refactor: move richtext into core folder
+- 547ef5e: fix: fix sanitizer for underline and strikethrough
+- 15ae86f: fix: fix jwt token exp check
+- 854c67f: fix: preserve image "alt" text
+- 30f8f37: feat: add img dimens to preview box
+- 85c87d4: fix: update labels for discarding draft edits
+- 4f14b3c: feat: inject context vars to dev server requests
+- 2a7f2bf: fix: fix richtext reload issue
+- 60c4bc1: fix: fix firstPublished for scheduled docs
+- 5c55dc2: fix: set SameSite cookie attr
+- c3b3f08: fix: fix localizedUrl for newTab button
+- 34f1200: fix: fix login redirects
+- 8eeeea3: feat: add boolean field to cms ui
+- Updated dependencies [1884ecc]
+- Updated dependencies [53b316e]
+- Updated dependencies [b92cf04]
+- Updated dependencies [95e98a6]
+- Updated dependencies [d6e961c]
+- Updated dependencies [6091bb6]
+- Updated dependencies [46a35e2]
+- Updated dependencies [e026a45]
+- Updated dependencies [e1da510]
+- Updated dependencies [6a77ba6]
+- Updated dependencies [a904e40]
+- Updated dependencies [c1d7940]
+- Updated dependencies [dc095e3]
+- Updated dependencies [b2f6ff8]
+- Updated dependencies [b537ce9]
+- Updated dependencies [b36d4e0]
+- Updated dependencies [7828b62]
+- Updated dependencies [5a3fd59]
+- Updated dependencies [8a39d33]
+- Updated dependencies [31723f2]
+- Updated dependencies [c9bf955]
+- Updated dependencies [915029b]
+- Updated dependencies [4ce147d]
+- Updated dependencies [ddcbe58]
+- Updated dependencies [556082f]
+- Updated dependencies [a8f4d6d]
+- Updated dependencies [8b0bafb]
+- Updated dependencies [1a60d4e]
+- Updated dependencies [4f14b3c]
+- Updated dependencies [fd20497]
+- Updated dependencies [006df38]
+- Updated dependencies [2219310]
+- Updated dependencies [97d70b9]
+- Updated dependencies [5169439]
+- Updated dependencies [3e3a8f0]
+- Updated dependencies [b3646b7]
+- Updated dependencies [2709009]
+- Updated dependencies [4f14b3c]
+- Updated dependencies [98c4af7]
+- Updated dependencies [bf9029f]
+- Updated dependencies [79f8f13]
+- Updated dependencies [38b6b6f]
+- Updated dependencies [8476fb3]
+- Updated dependencies [a5cb6b1]
+- Updated dependencies [93f37a2]
+- Updated dependencies [4f14b3c]
+- Updated dependencies [f3e63b3]
+- Updated dependencies [90465ff]
+- Updated dependencies [042309b]
+- Updated dependencies [2ca60f4]
+- Updated dependencies [b0df82e]
+- Updated dependencies [7b5530a]
+- Updated dependencies [207577d]
+- Updated dependencies [7f80435]
+- Updated dependencies [4b0a586]
+- Updated dependencies [c1dd173]
+- Updated dependencies [29ca06c]
+- Updated dependencies [894e2f3]
+- Updated dependencies [f587c74]
+- Updated dependencies [6799b64]
+- Updated dependencies [fd0bf90]
+- Updated dependencies [cfa193f]
+- Updated dependencies [17b7e51]
+- Updated dependencies [1b6024d]
+- Updated dependencies [03d468e]
+- Updated dependencies [2747d11]
+- Updated dependencies [e8ba905]
+- Updated dependencies [2455c96]
+- Updated dependencies [c0245ca]
+- Updated dependencies [0735d64]
+- Updated dependencies [980ad39]
+- Updated dependencies [fed22ae]
+- Updated dependencies [90c5fc6]
+- Updated dependencies [b6363a2]
+- Updated dependencies [08c7b17]
+- Updated dependencies [5369f0e]
+- Updated dependencies [8d0191a]
+- Updated dependencies [6c9cf6f]
+- Updated dependencies [67c9731]
+- Updated dependencies [298456f]
+- Updated dependencies [28e8e64]
+- Updated dependencies [2ef1d63]
+- Updated dependencies [f80b585]
+- Updated dependencies [d05691c]
+- Updated dependencies [2d8800f]
+- Updated dependencies [e0eb4d1]
+- Updated dependencies [345dbb6]
+- Updated dependencies [a36c2c6]
+- Updated dependencies [3c9043f]
+- Updated dependencies [cf20297]
+- Updated dependencies [33869c5]
+- Updated dependencies [81c367e]
+- Updated dependencies [8417984]
+- Updated dependencies [05a0e06]
+- Updated dependencies [27520ed]
+- Updated dependencies [5e579b3]
+- Updated dependencies [210630d]
+- Updated dependencies [7cbc507]
+- Updated dependencies [da95b72]
+- Updated dependencies [ea71e3f]
+- Updated dependencies [3ed4621]
+- Updated dependencies [3941e85]
+- Updated dependencies [75dffaf]
+- Updated dependencies [6adf9d1]
+- Updated dependencies [e5ec123]
+- Updated dependencies [9f1803b]
+- Updated dependencies [03a1f46]
+- Updated dependencies [6319234]
+- Updated dependencies [8d3c8c2]
+- Updated dependencies [66d7e76]
+- Updated dependencies [8064122]
+- Updated dependencies [f1bdaf6]
+- Updated dependencies [c8a7250]
+- Updated dependencies [ed1bcf8]
+- Updated dependencies [63d6b6c]
+- Updated dependencies [40d5693]
+- Updated dependencies [63d8af3]
+- Updated dependencies [f9e00d2]
+- Updated dependencies [3ae64e3]
+- Updated dependencies [6d4b8a7]
+- Updated dependencies [81be985]
+- Updated dependencies [e4eded3]
+- Updated dependencies [40383ef]
+- Updated dependencies [fe802b3]
+- Updated dependencies [e696c9b]
+- Updated dependencies [2fa06c3]
+- Updated dependencies [ea71e3f]
+- Updated dependencies [f264412]
+- Updated dependencies [1aab112]
+- Updated dependencies [5c55dc2]
+- Updated dependencies [4f14b3c]
+- Updated dependencies [8010ef8]
+- Updated dependencies [dc4d11e]
+- Updated dependencies [d602474]
+- Updated dependencies [1f3ab3c]
+- Updated dependencies [06fbcf9]
+- Updated dependencies [b9838fd]
+- Updated dependencies [dd0926d]
+- Updated dependencies [dad8ddc]
+- Updated dependencies [ea71e3f]
+  - @blinkk/root@1.0.0
+
 ## 1.0.0-rc.43
 
 ### Patch Changes
