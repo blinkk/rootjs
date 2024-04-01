@@ -1,7 +1,7 @@
 {
   "hosting": {
     "site": "rootjs-dev",
-    "public": "dist/html",
+    "public": "functions/dist/html",
     "ignore": [
       "firebase.json",
       "**/.*",

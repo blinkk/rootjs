@@ -349,7 +349,12 @@ export async function build(rootProjectDir?: string, options?: BuildOptions) {
         return;
       }
 
+      // Copy assets and any imported css files.
       await copyAssetToDistHtml(assetData.assetUrl);
+      const importedCss = assetData.importedCss || [];
+      for (const cssAssetUrl of importedCss) {
+        await copyAssetToDistHtml(cssAssetUrl);
+      }
     })
   );
 

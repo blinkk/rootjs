@@ -1,4 +1,3 @@
-import {useRequestContext} from '@blinkk/root';
 import {IconChevronDown} from '@tabler/icons-preact';
 import {useCallback, useEffect, useRef, useState} from 'preact/hooks';
 import {RootCmsWordmark} from '@/components/RootCmsWordmark/RootCmsWordmark';

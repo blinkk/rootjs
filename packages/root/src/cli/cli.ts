@@ -50,7 +50,10 @@ class CliRunner {
       .option('--target <target>', 'hosting target, i.e. appengine or firebase')
       .option('--out <outdir>', 'output dir')
       .option('--mode <mode>', 'deployment mode, i.e. production or preview')
-      .action(createPackage);
+      .action((rootPackageDir, options) => {
+        options.version = this.version;
+        createPackage(rootPackageDir, options);
+      });
     program
       .command('dev [path]')
       .description('starts the server in development mode')

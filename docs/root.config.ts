@@ -24,13 +24,7 @@ export default defineConfig({
       },
     },
     build: {
-      rollupOptions: {
-        output: {
-          entryFileNames: 'assets/[hash].min.js',
-          chunkFileNames: 'chunks/[hash].min.js',
-          assetFileNames: 'assets/[hash][extname]',
-        },
-      },
+      modulePreload: false,
     },
   },
   server: {

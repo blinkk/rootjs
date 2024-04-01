@@ -18,6 +18,7 @@ interface CreatePackageOptions {
   mode?: string;
   out?: string;
   target?: DeployTarget;
+  version?: string;
 }
 
 interface PeerDependencyMeta {
@@ -62,6 +63,20 @@ export async function createPackage(
 
   // Create package.json.
   const packageJson = await generatePackageJson(rootDir);
+
+  // Set root.js versions.
+  if (options?.version && packageJson.dependencies) {
+    if (packageJson.dependencies['@blinkk/root']) {
+      packageJson.dependencies['@blinkk/root'] = options.version;
+    }
+    if (packageJson.dependencies['@blinkk/root-cms']) {
+      packageJson.dependencies['@blinkk/root-cms'] = options.version;
+    }
+    if (packageJson.dependencies['@blinkk/root-password-protect']) {
+      packageJson.dependencies['@blinkk/root-password-protect'] =
+        options.version;
+    }
+  }
 
   // Run target-specific updates to the output.
   if (target === 'appengine') {
