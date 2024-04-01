@@ -19,8 +19,8 @@
   "author": "s@blinkk.com",
   "license": "MIT",
   "dependencies": {
-    "@blinkk/root": "1.0.1",
-    "@blinkk/root-cms": "1.0.1",
+    "@blinkk/root": "workspace:*",
+    "@blinkk/root-cms": "workspace:*",
     "@tabler/icons-preact": "2.39.0",
     "firebase-admin": "12.0.0",
     "firebase-functions": "4.8.2",
