@@ -1,0 +1,14 @@
+@use 'breakpoints';
+
+.spacer {
+  height: var(--spacer-height, 0);
+  @include breakpoints.sm() {
+    height: var(--spacer-height--sm, var(--spacer-height, 0));
+  }
+  @include breakpoints.md() {
+    height: var(--spacer-height--md, var(--spacer-height, 0));
+  }
+  @include breakpoints.lg-gt() {
+    height: var(--spacer-height--lg-gt, var(--spacer-height, 0));
+  }
+}

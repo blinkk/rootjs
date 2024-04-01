@@ -1,8 +1,6 @@
 # 🌱 Root.js
 
-> Root.js is an opinionated, fully-featured web development tool with a built-in
-> CMS. The project is still under development an is currently in internal beta,
-> more details coming soon!
+> Root.js is a full-featured web development tool with a built-in CMS.
 
 - 🛠️ TSX Rendering
 - 🕸️ Web Components

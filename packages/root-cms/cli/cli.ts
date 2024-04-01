@@ -25,6 +25,7 @@ class CliRunner {
     });
     program
       .command('init-firebase')
+      .alias('init')
       .description('inits the firebase project proper security rules')
       .option('--project <project>', 'gcp project id')
       .option('--admin <email>', 'adds an admin to the project')

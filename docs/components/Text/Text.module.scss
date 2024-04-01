@@ -1,0 +1,35 @@
+@use 'sass:meta';
+@use 'type';
+
+@layer component {
+  @each $text-size, $config in type.$typescale {
+    .size\:#{$text-size} {
+      --annotation-text-size: '#{$text-size}';
+      @include type.text-styles($config);
+    }
+  }
+
+  @each $font-weight-name, $font-weight-value in type.$font-weights {
+    .weight\:#{$font-weight-name} {
+      font-weight: $font-weight-value;
+    }
+  }
+
+  .markdown {
+    p {
+      margin: 20px 0;
+    }
+
+    >*:first-child {
+      margin-top: 0;
+    }
+
+    >*:last-child {
+      margin-bottom: 0;
+    }
+  }
+
+  .uppercase {
+    text-transform: uppercase;
+  }
+}

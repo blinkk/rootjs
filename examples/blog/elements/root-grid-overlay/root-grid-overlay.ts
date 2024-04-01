@@ -1,6 +1,9 @@
 declare module 'preact' {
   namespace JSX {
     interface IntrinsicElements {
+      /**
+       * Grid overlay, toggle via ctrl+g.
+       */
       'root-grid-overlay': preact.JSX.HTMLAttributes;
     }
   }

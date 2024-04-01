@@ -1,0 +1,42 @@
+@use 'tokens';
+
+@layer component {
+  .headline {
+    text-align: center;
+  }
+
+  .eyebrow {
+    margin-bottom: 10px;
+  }
+
+  .title,
+  .body {
+    text-wrap: pretty;
+  }
+
+  .title + .body {
+    margin-top: 20px;
+  }
+
+  .body {
+    p {
+      margin-top: 20px;
+    }
+
+    a {
+      text-underline-offset: 4px;
+    }
+
+    a:hover {
+      color: tokens.$color-blue-700;
+    }
+
+    > *:first-child {
+      margin-top: 0 !important;
+    }
+
+    > *:last-child {
+      margin-bottom: 0 !important;
+    }
+  }
+}

@@ -1,0 +1,10 @@
+@layer component {
+  .buttonsBlock {
+    display: flex;
+    gap: 12px;
+  }
+}
+
+.buttonsBlock.align\:center {
+  justify-content: center;
+}

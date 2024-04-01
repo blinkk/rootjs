@@ -1,0 +1,36 @@
+@use 'breakpoints';
+
+@layer template {
+  .layout {
+    @include breakpoints.md-lt() {
+      display: flex;
+      flex-direction: column;
+      gap: 40px;
+    }
+    @include breakpoints.lg-gt() {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 60px;
+    }
+  }
+
+  .layoutSection[data-type="CodeBlock"] > * {
+    height: 100%;
+  }
+}
+
+.layout\:align-center .layout {
+  align-items: center;
+}
+
+.layout\:mobile-reverse .layout {
+  @include breakpoints.md-lt() {
+    flex-direction: column-reverse;
+  }
+}
+
+.CopyBlock\:mobile-text-center .layoutSection[data-type="CopyBlock"] {
+  @include breakpoints.md-lt() {
+    text-align: center;
+  }
+}

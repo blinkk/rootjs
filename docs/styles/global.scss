@@ -1,81 +1,78 @@
-@use 'breakpoints';
+@use 'base';
+@use 'buttons';
+@use 'grid';
 @use 'tokens';
+@use 'type';
+
+@include base.styles();
 
 :root {
-  --content-max-width: #{tokens.$content-max-width};
-  --content-padding: #{tokens.$content-padding-mobile};
-  --header-height: #{tokens.$header-height};
-  @include breakpoints.tablet {
-    --content-padding: #{tokens.$content-padding-tablet};
+  --font-family-default: #{tokens.$font-family-default};
+  --font-family-mono: #{tokens.$font-family-mono};
+  @include grid.vars();
+}
+
+@layer base {
+  body {
+    @include type.typescale-styles('p');
+    color: tokens.$color-text-default;
+    font-optical-sizing: auto;
+    font-style: normal;
+    font-variation-settings:
+      "slnt" 0;
   }
-  @include breakpoints.laptop-gt {
-    --content-padding: #{tokens.$content-padding-laptop-gt};
+
+  root-island {
+    display: contents;
   }
 }
 
-html {
-  box-sizing: border-box;
-  scroll-behavior: smooth;
-  scroll-margin-top: var(--header-height);
+#root {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
 }
 
-*,
-*:before,
-*:after {
-  box-sizing: inherit;
+#main {
+  flex: 1;
 }
 
-body {
-  font-family: tokens.$font-family-primary;
-  margin: 0;
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
   padding: 0;
-  color: tokens.$color-text-default;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
 }
 
-h1,
-h2,
-h3,
-h4,
-h5,
-h6,
-*[role="heading"] {
-  font-family: tokens.$font-family-headline;
+.root-counter-example {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  justify-content: center;
+  margin-top: 40px;
 }
 
-img,
-picture,
-figure,
-video,
-canvas,
-svg {
-  display: block;
-  max-width: 100%;
-  height: auto;
-  margin: 0;
+.root-counter-example {
+  @include buttons.base-styles(
+    $selectors: (
+      'button': 'button',
+    )
+  );
+  @include buttons.variant-styles(
+    $variant: 'outline',
+    $selectors: (
+      'button': 'button',
+    )
+  );
 }
 
-.container {
-  max-width: var(--content-max-width);
-  margin: 0 auto;
-}
-
-*:not(:defined) {
-  visibility: hidden;
-}
-
-.hljs {
-  border-radius: 8px;
-  padding: 20px;
-  font-family: tokens.$font-family-mono;
-  font-size: 13px;
-  line-height: 20px;
-  font-weight: 600;
-}
-
-code {
-  display: inline-block;
-  font-family: tokens.$font-family-mono;
-  font-size: 0.9em;
-  background: #f9f9f9;
-  padding: 4px 8px;
+.root-counter-example .value {
+  font-family: var(--font-family-mono);
+  font-size: 16px;
+  line-height: 1.2;
 }

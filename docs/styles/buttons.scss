@@ -1,0 +1,300 @@
+// Mixins for rendering buttons.
+//
+// There are two mixins that need to be applied to the component:
+//
+// (1) base-styles() - Styles that apply to all buttons, regardless of variant
+// (2) variant-styles() - Variant-specific styles
+//
+// Example usage:
+//
+// HTML:
+//
+// ```
+// <button class="mybutton">
+//   <div class="mybutton-leftIcon"><svg /></div>
+//   <div class="mybutton-label">Learn more</div>
+//   <div class="mybutton-rightIcon"><svg /></div>
+// </button>
+// ```
+//
+// SCSS:
+//
+// ```
+// @use 'mws/styles/buttons.scss';
+//
+// $selectors: (
+//   'button': '.mybutton',
+//   'button__leftIcon': '.mybutton-leftIcon'
+//   'button__label': '.mybutton-label',
+//   'button__rightIcon': '.mybutton-rightIcon',
+// );
+//
+// @include buttons.base-styles($selectors: $selectors);
+// @include buttons.variant-styles(
+//   $variant: 'primary',
+//   $selectors: $selectors
+// );
+// ```
+
+@use 'sass:map';
+@use 'tokens';
+
+@mixin base-styles($selectors: ()) {
+  $button: map.get($selectors, 'button');
+  $button__leftIcon: map.get($selectors, 'button__leftIcon');
+  $button__label: map.get($selectors, 'button__label');
+  $button__rightIcon: map.get($selectors, 'button__rightIcon');
+
+  @include -render-selector($button) {
+    @include -button-styles-base();
+  }
+
+  @include -render-selectors($button__leftIcon, $button__rightIcon) {
+    --button-icon-size: 18px;
+    img,
+    svg {
+      display: block;
+      width: var(--button-icon-size);
+      height: var(--button-icon-size);
+      object-fit: contain;
+      object-position: center;
+    }
+  }
+}
+
+@mixin variant-styles($variant: 'primary', $selectors: ()) {
+  $button: map.get($selectors, 'button');
+  $button__leftIcon: map.get($selectors, 'button__leftIcon');
+  $button__label: map.get($selectors, 'button__label');
+  $button__rightIcon: map.get($selectors, 'button__rightIcon');
+
+  @include -render-selector($button) {
+    @if $variant == 'primary' {
+      @include -button-styles-primary();
+    } @else if $variant == 'secondary' {
+      @include -button-styles-secondary();
+    } @else if $variant == 'outline' {
+      @include -button-styles-outline();
+    }
+  }
+}
+
+/** Base styles for all buttons. */
+@mixin -button-styles-base() {
+  display: inline-flex;
+  gap: 8px;
+  align-items: center;
+  justify-content: center;
+  white-space: nowrap;
+  cursor: pointer;
+  text-decoration: none;
+  transition: all 0.3s ease;
+  position: relative;
+  font-size: 14px;
+  line-height: 1.43;
+  font-weight: 500;
+
+  &:disabled {
+    cursor: default;
+  }
+
+  &:focus {
+    outline: none;
+  }
+}
+
+/** Base styles for pill-style buttons buttons. */
+@mixin -button-styles-base-pill($padding: 8px 16px) {
+  padding: $padding;
+  border: 1px solid transparent;
+  // height: 48px;
+  border-radius: 6px;
+
+  // Focus outline. A pseudo element is used so that the button doesn't change
+  // size when focus state is triggered.
+  &::before {
+    content: '';
+    display: block;
+    position: absolute;
+    left: -1px;
+    right: -1px;
+    top: -1px;
+    bottom: -1px;
+    pointer-events: none;
+    border-radius: 6px;
+    border: 1px solid transparent;
+    transition: all 0.3s ease;
+  }
+}
+
+/** Variant styles for primary buttons. */
+@mixin -button-styles-primary() {
+  @include -button-styles-base-pill();
+  background: tokens.$color-blue-600;
+  color: tokens.$color-white;
+  border: 1px solid tokens.$color-blue-600;
+
+  &:active,
+  &:hover {
+    background: tokens.$color-blue-800;
+    box-shadow: 0px 1px 4px 0px rgba(tokens.$color-grey-800, 0.25);
+  }
+
+  &:focus-visible {
+    background: tokens.$color-blue-800;
+  }
+
+  &::before {
+    left: -4px;
+    right: -4px;
+    top: -4px;
+    bottom: -4px;
+  }
+
+  &:focus-visible::before {
+    border-color: tokens.$color-blue-800;
+  }
+}
+
+/** Variant styles for outline buttons. */
+@mixin -button-styles-outline() {
+  @include -button-styles-base-pill();
+  background: tokens.$color-white;
+  color: tokens.$color-grey-800;
+  border: 1px solid tokens.$color-grey-300;
+
+  &:hover {
+    background: rgba(tokens.$color-grey-600, 0.04);
+    border: 1px solid tokens.$color-grey-400;
+  }
+
+  &:active {
+    background: rgba(tokens.$color-grey-600, 0.12);
+    color: tokens.$color-grey-900;
+    border: 1px solid tokens.$color-grey-400;
+  }
+
+  &:focus-visible::before {
+    background: rgba(tokens.$color-grey-600, 0.04);
+    border: 1px solid tokens.$color-grey-400;
+  }
+}
+
+/** Variant styles for low-emphasis buttons. */
+@mixin -button-styles-low-emphasis() {
+  @include -button-styles-base-pill($padding: 12px);
+  color: tokens.$color-blue-600;
+  background: transparent;
+
+  &:hover {
+    color: tokens.$color-blue-900;
+    background: rgba(tokens.$color-blue-600, 0.04);
+  }
+
+  &:active {
+    color: tokens.$color-blue-900;
+    background: rgba(tokens.$color-blue-600, 0.12);
+  }
+
+  &:focus-visible {
+    color: tokens.$color-blue-900;
+    background: rgba(tokens.$color-blue-600, 0.12);
+  }
+
+  &:focus-visible::before {
+    border-color: tokens.$color-blue-600;
+  }
+}
+
+/** Variant styles for secondary buttons. */
+@mixin -button-styles-secondary() {
+  @include -button-styles-base-pill();
+  color: tokens.$color-blue-700;
+  background: #e8f0fe;
+
+  &:active,
+  &:hover {
+    color: tokens.$color-blue-900;
+    box-shadow: 0px 1px 4px 0px rgba(tokens.$color-grey-800, 0.25);
+  }
+
+  &:active {
+    color: tokens.$color-blue-900;
+    background: rgba(tokens.$color-blue-600, 0.12);
+  }
+
+  &:focus-visible {
+    color: tokens.$color-blue-900;
+    background: rgba(tokens.$color-blue-600, 0.12);
+  }
+
+  &:focus-visible::before {
+    border-color: tokens.$color-blue-600;
+  }
+}
+
+/** Variant styles for links. */
+@mixin -button-styles-link() {
+  color: tokens.$color-blue-600;
+  font-weight: 400;
+  text-decoration: underline;
+  background: transparent;
+  border-radius: 2px;
+
+  &:active,
+  &:hover {
+    color: tokens.$color-blue-900;
+  }
+
+  &:active {
+    color: tokens.$color-blue-900;
+  }
+
+  &:focus-visible {
+    color: tokens.$color-blue-900;
+    outline: 2px solid tokens.$color-blue-600;
+  }
+}
+
+/**
+ * Dynamically renders styles for a selector.
+ *
+ * E.g.:
+ *
+ * ```
+ * @include -render-selector('.foo') {
+ *   color: blue;
+ * }
+ * =>
+ * .foo { color: blue }
+ * ```
+ */
+@mixin -render-selector($selector) {
+  @if $selector {
+    #{$selector} {
+      @content;
+    }
+  }
+}
+
+/**
+ * Dynamically renders styles for multiple selectors.
+ *
+ * E.g.:
+ *
+ * ```
+ * @include -render-selectors('.foo', '.bar') {
+ *   color: blue;
+ * }
+ * =>
+ * .foo, .bar { color: blue }
+ * ```
+ */
+@mixin -render-selectors($selector1, $selector2) {
+  @if $selector1 and $selector2 {
+    #{$selector1},
+    #{$selector2} {
+      @content;
+    }
+  }
+}

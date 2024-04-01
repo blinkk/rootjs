@@ -1,0 +1,31 @@
+@use 'breakpoints';
+@use 'tokens';
+
+@layer component {
+  .imageBlock {
+    display: block;
+    margin: 0;
+    padding: 0;
+  }
+
+  .caption {
+    text-align: center;
+    margin-top: 20px;
+    padding: 0 10px;
+  }
+
+  .bordered img {
+    border: 1px solid tokens.$color-grey-300;
+    padding: 20px;
+    border-radius: 8px;
+  }
+
+  .max-w-1000 img {
+    max-width: 1000px;
+    margin: 0 auto;
+  }
+
+  .pad-0 img {
+    padding: 0;
+  }
+}

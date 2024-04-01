@@ -1,0 +1,40 @@
+@use 'tokens';
+
+@layer template {
+  .headline {
+    text-align: center;
+  }
+
+  .eyebrow {
+    margin-bottom: 10px;
+  }
+
+  .title,
+  .body {
+    text-wrap: pretty;
+  }
+
+  .body {
+    max-width: 75ch;
+    margin: 20px auto 0;
+
+    a {
+      text-underline-offset: 4px;
+      transition: all 0.18s ease;
+    }
+
+    a:hover {
+      color: tokens.$color-blue-700;
+    }
+  }
+
+  .buttons {
+    margin-top: 30px;
+  }
+}
+
+.title\:text-wrap-balance {
+  .title {
+    text-wrap: balance;
+  }
+}
