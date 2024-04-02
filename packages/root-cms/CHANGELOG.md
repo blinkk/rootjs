@@ -1,5 +1,14 @@
 # @blinkk/root-cms
 
+## 1.0.2
+
+### Patch Changes
+
+- 9434215: feat: auto generate .d.ts types when .schema.ts files change
+- Updated dependencies [8496db8]
+- Updated dependencies [9434215]
+  - @blinkk/root@1.0.2
+
 ## 1.0.1
 
 ### Patch Changes
