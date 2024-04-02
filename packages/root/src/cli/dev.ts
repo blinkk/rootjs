@@ -72,6 +72,7 @@ export async function createDevServer(options?: {
     rootConfig,
     port,
   });
+  server.set('viteServer', viteServer);
 
   // Inject req context vars.
   server.use(rootProjectMiddleware({rootConfig}));

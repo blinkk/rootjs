@@ -20,6 +20,7 @@ import {
 import {getAuth, DecodedIdToken} from 'firebase-admin/auth';
 import * as jsonwebtoken from 'jsonwebtoken';
 import sirv from 'sirv';
+import {generateTypes} from '../cli/generate-types.js';
 import {api} from './api.js';
 import {RootCMSClient} from './client.js';
 
@@ -307,7 +308,7 @@ export function cmsPlugin(options: CMSPluginOptions): CMSPlugin {
     }
   }
 
-  return {
+  const plugin: CMSPlugin = {
     name: 'root-cms',
 
     /**
@@ -330,6 +331,18 @@ export function cmsPlugin(options: CMSPluginOptions): CMSPlugin {
     ssrInput: () => ({
       cms: path.resolve(__dirname, './app.js'),
     }),
+
+    /**
+     * Watches for .schema.ts file changes and generates a root-cms.d.ts file.
+     */
+    onFileChange: (
+      eventName: 'add' | 'addDir' | 'change' | 'unlink' | 'unlinkDir',
+      filepath: string
+    ) => {
+      if (filepath.endsWith('.schema.ts')) {
+        generateTypes();
+      }
+    },
 
     /**
      * Attaches CMS-specific middleware to the Root.js server.
@@ -472,6 +485,8 @@ export function cmsPlugin(options: CMSPluginOptions): CMSPlugin {
       });
     },
   };
+
+  return plugin;
 }
 
 function fileExists(filepath: string): Promise<boolean> {

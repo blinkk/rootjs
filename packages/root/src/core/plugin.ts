@@ -1,4 +1,4 @@
-import {PluginOption as VitePlugin} from 'vite';
+import {ViteDevServer, PluginOption as VitePlugin} from 'vite';
 
 import {RootConfig} from './config';
 import {Server} from './types';
@@ -26,6 +26,13 @@ export interface Plugin {
    */
   configureServer?: ConfigureServerHook;
   /**
+   * Hook for file changes.
+   */
+  onFileChange?: (
+    eventName: 'add' | 'addDir' | 'change' | 'unlink' | 'unlinkDir',
+    path: string
+  ) => void;
+  /**
    * Returns a list of deps to bundle for ssr. The files will be bundled and
    * output to `dist/server/`. The return value should be a map of
    * `{output filename => input filepath}`.
@@ -52,6 +59,7 @@ export async function configureServerPlugins(
   options: ConfigureServerOptions
 ) {
   const postHooks: Array<() => void> = [];
+  const viteServer = server.get('viteServer') as ViteDevServer;
 
   // Call the `configureServer()` method for each plugin.
   for (const plugin of plugins) {
@@ -60,6 +68,10 @@ export async function configureServerPlugins(
       if (postHook) {
         postHooks.push(postHook);
       }
+    }
+
+    if (plugin.onFileChange) {
+      viteServer.watcher.on('all', plugin.onFileChange);
     }
   }
 
