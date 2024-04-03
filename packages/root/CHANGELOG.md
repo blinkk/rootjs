@@ -1,5 +1,12 @@
 # @blinkk/root
 
+## 1.0.2
+
+### Patch Changes
+
+- 8496db8: fix: add missing css output to build
+- 9434215: feat: auto generate .d.ts types when .schema.ts files change
+
 ## 1.0.1
 
 ### Patch Changes
