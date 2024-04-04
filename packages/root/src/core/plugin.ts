@@ -70,7 +70,7 @@ export async function configureServerPlugins(
       }
     }
 
-    if (plugin.onFileChange) {
+    if (viteServer && plugin.onFileChange) {
       viteServer.watcher.on('all', plugin.onFileChange);
     }
   }
