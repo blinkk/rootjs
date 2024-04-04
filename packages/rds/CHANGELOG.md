@@ -1,5 +1,12 @@
 # @blinkk/rds
 
+## 1.0.3
+
+### Patch Changes
+
+- Updated dependencies [2c66a10]
+  - @blinkk/root@1.0.3
+
 ## 1.0.2
 
 ### Patch Changes
