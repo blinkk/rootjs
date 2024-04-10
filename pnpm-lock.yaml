@@ -270,6 +270,9 @@ importers:
       sirv:
         specifier: 2.0.3
         version: 2.0.3
+      source-map-support:
+        specifier: 0.5.21
+        version: 0.5.21
       tiny-glob:
         specifier: 0.2.9
         version: 0.2.9
@@ -2387,15 +2390,15 @@ packages:
       '@types/gapi.client.discovery-v1': 0.0.4
     dev: true
 
-  /@maxim_mazurok/gapi.client.drive-v3@0.0.20240327:
-    resolution: {integrity: sha512-W4GiS7q7V2RKsg4+uRwU4UY1uIJ7kNixZKnQg6RKry2FFjbNpN2fuqq84Akxcj7imv99tZ/qAw8txJlPMpbcbg==}
+  /@maxim_mazurok/gapi.client.drive-v3@0.0.20240405:
+    resolution: {integrity: sha512-cBH363MBUWHwAMuyZ9T6nYKkPk3qNqImn2p8TaeJjXmdVFws9c/n5bGh/+zzMDw6dFWexLKHWn/Wz1D+yEaO6w==}
     dependencies:
       '@types/gapi.client': 1.0.8
       '@types/gapi.client.discovery-v1': 0.0.4
     dev: true
 
-  /@maxim_mazurok/gapi.client.sheets-v4@0.0.20240319:
-    resolution: {integrity: sha512-+2V1K5xReD3JeyuIpoATrJQLtnvLCcafvHY6jWfrzfBcKVNGiomedki/cAV43AYB+6yF9cF9LHBORvpssYCoEA==}
+  /@maxim_mazurok/gapi.client.sheets-v4@0.0.20240326:
+    resolution: {integrity: sha512-FzxXOHEv0i+j4VnfRIuu56BqgoTsrU8w9Y/gXcscRr1JuoVhloFNkbrM2OVmHd4FL/vVDwyTWd4hT5FTGDGLbw==}
     dependencies:
       '@types/gapi.client': 1.0.8
       '@types/gapi.client.discovery-v1': 0.0.4
@@ -2878,13 +2881,13 @@ packages:
   /@types/gapi.client.drive-v3@0.0.4:
     resolution: {integrity: sha512-jE37dJ0EzAdY0aJPFOp20xmec/aO0P4HtUIA9k07RMPyedFDOcuMlSac1r0PklwQdgXF7BHaMoObNHNAnwSQUQ==}
     dependencies:
-      '@maxim_mazurok/gapi.client.drive-v3': 0.0.20240327
+      '@maxim_mazurok/gapi.client.drive-v3': 0.0.20240405
     dev: true
 
   /@types/gapi.client.sheets-v4@0.0.4:
     resolution: {integrity: sha512-6kTJ7aDMAElfdQV1XzVJmZWjgbibpa84DMuKuaN8Cwqci/dkglPyHXKvsGrRugmuYvgFYr35AQqwz6j3q8R0dw==}
     dependencies:
-      '@maxim_mazurok/gapi.client.sheets-v4': 0.0.20240319
+      '@maxim_mazurok/gapi.client.sheets-v4': 0.0.20240326
     dev: true
 
   /@types/gapi.client@1.0.8:
