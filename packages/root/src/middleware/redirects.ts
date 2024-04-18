@@ -1,6 +1,6 @@
-import {RootRedirectConfig} from '../core/config';
-import {NextFunction, Request, Response} from '../core/types';
-import {RouteTrie} from '../render/route-trie';
+import {RootRedirectConfig} from '../core/config.js';
+import {NextFunction, Request, Response} from '../core/types.js';
+import {RouteTrie} from '../render/route-trie.js';
 
 export interface RedirectsMiddlewareOptions {
   redirects: RootRedirectConfig[];

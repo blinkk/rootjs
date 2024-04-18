@@ -9,8 +9,8 @@ import {
   makeDir,
   rmDir,
   writeJson,
-} from '../utils/fsutils';
-import {build as rootBuild} from './build';
+} from '../utils/fsutils.js';
+import {build as rootBuild} from './build.js';
 
 type DeployTarget = 'appengine' | 'firebase';
 

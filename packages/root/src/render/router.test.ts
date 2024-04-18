@@ -1,6 +1,6 @@
 import {assert, test} from 'vitest';
 
-import {replaceParams} from './router';
+import {replaceParams} from './router.js';
 
 test('replace params', () => {
   assert.equal(replaceParams('/foo', {foo: 'bar'}), '/foo');

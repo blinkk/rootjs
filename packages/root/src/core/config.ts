@@ -1,10 +1,8 @@
 import {UserConfig as ViteUserConfig} from 'vite';
-
-import {HtmlMinifyOptions} from '../render/html-minify';
-import {HtmlPrettyOptions} from '../render/html-pretty';
-
-import {Plugin} from './plugin';
-import {RequestMiddleware} from './types';
+import {HtmlMinifyOptions} from '../render/html-minify.js';
+import {HtmlPrettyOptions} from '../render/html-pretty.js';
+import {Plugin} from './plugin.js';
+import {RequestMiddleware} from './types.js';
 
 export interface RootUserConfig {
   /**

@@ -1,4 +1,4 @@
-import {Request, Response, NextFunction} from '../core/types';
+import {Request, Response, NextFunction} from '../core/types.js';
 
 export function hooksMiddleware() {
   return (req: Request, res: Response, next: NextFunction) => {

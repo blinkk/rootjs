@@ -1,5 +1,4 @@
 import path from 'node:path';
-
 import {createContext} from 'preact';
 import {useContext} from 'preact/hooks';
 

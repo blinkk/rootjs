@@ -1,4 +1,4 @@
-import {I18nContext, useI18nContext} from './useI18nContext';
+import {I18nContext, useI18nContext} from './useI18nContext.js';
 
 /**
  * A hook that returns a function that can be used to translate a string, and

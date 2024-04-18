@@ -1,7 +1,7 @@
 import {Request, Response, NextFunction, Plugin, Server} from '@blinkk/root';
 import bodyParser from 'body-parser';
 import micromatch from 'micromatch';
-import renderToString from 'preact-render-to-string';
+import {renderToString} from 'preact-render-to-string';
 import {
   PasswordPage,
   PasswordPageProps,

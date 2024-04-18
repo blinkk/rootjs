@@ -1,7 +1,7 @@
 import path from 'node:path';
 import micromatch from 'micromatch';
-import {RootConfig} from '../core/config';
-import {Request, Response, NextFunction} from '../core/types';
+import {RootConfig} from '../core/config.js';
+import {Request, Response, NextFunction} from '../core/types.js';
 
 /**
  * Middleware that injects the root.js project config into the request context.

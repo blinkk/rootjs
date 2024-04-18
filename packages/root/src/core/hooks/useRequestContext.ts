@@ -1,7 +1,6 @@
 import {createContext} from 'preact';
 import {useContext} from 'preact/hooks';
-
-import {Route} from '../types';
+import {Route} from '../types.js';
 
 export interface RequestContext {
   /**

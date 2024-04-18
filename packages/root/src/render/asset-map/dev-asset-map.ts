@@ -1,11 +1,8 @@
 import path from 'node:path';
-
 import {ModuleGraph, ModuleNode, searchForWorkspaceRoot} from 'vite';
-
-import {RootConfig} from '../../core/config';
-import {directoryContains} from '../../utils/fsutils';
-
-import {Asset, AssetMap} from './asset-map';
+import {RootConfig} from '../../core/config.js';
+import {directoryContains} from '../../utils/fsutils.js';
+import {Asset, AssetMap} from './asset-map.js';
 
 export class DevServerAssetMap implements AssetMap {
   private rootConfig: RootConfig;

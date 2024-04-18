@@ -1,13 +1,10 @@
 import fs from 'node:fs';
 import path from 'node:path';
-
 import {Manifest} from 'vite';
-
-import {RootConfig} from '../../core/config';
-import {ElementGraph} from '../../node/element-graph';
-import {isJsFile} from '../../utils/fsutils';
-
-import {Asset, AssetMap} from './asset-map';
+import {RootConfig} from '../../core/config.js';
+import {ElementGraph} from '../../node/element-graph.js';
+import {isJsFile} from '../../utils/fsutils.js';
+import {Asset, AssetMap} from './asset-map.js';
 
 export type BuildAssetManifest = Record<
   string,

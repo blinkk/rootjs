@@ -4,8 +4,8 @@
  * https://firebase.google.com/docs/hosting/i18n-rewrites
  */
 
-import {Request} from '../core/types';
-import {parseAcceptLanguage} from './accept-language';
+import {Request} from '../core/types.js';
+import {parseAcceptLanguage} from './accept-language.js';
 
 export const UNKNOWN_COUNTRY = 'zz';
 export const ES_419_COUNTRIES = [

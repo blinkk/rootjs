@@ -1,4 +1,4 @@
-import {NextFunction, Request, Response} from '../core/types';
+import {NextFunction, Request, Response} from '../core/types.js';
 
 export const SESSION_COOKIE = '__session';
 

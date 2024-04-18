@@ -1,6 +1,5 @@
 import {assert, afterEach, beforeEach, test} from 'vitest';
-
-import {RouteTrie} from './route-trie';
+import {RouteTrie} from './route-trie.js';
 
 let routeTrie: RouteTrie<string>;
 

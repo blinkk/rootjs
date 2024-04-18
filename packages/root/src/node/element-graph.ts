@@ -1,12 +1,10 @@
 import fs from 'node:fs';
 import path from 'node:path';
-
 import glob from 'tiny-glob';
 import {searchForWorkspaceRoot} from 'vite';
-
-import {RootConfig} from '../core/config';
-import {isValidTagName, parseTagNames} from '../utils/elements';
-import {directoryContains, isDirectory, isJsFile} from '../utils/fsutils';
+import {RootConfig} from '../core/config.js';
+import {isValidTagName, parseTagNames} from '../utils/elements.js';
+import {directoryContains, isDirectory, isJsFile} from '../utils/fsutils.js';
 
 interface ElementSourceFile {
   /** Full file path. */

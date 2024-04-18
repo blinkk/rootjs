@@ -1,10 +1,10 @@
 import {Command} from 'commander';
 import {bgGreen, black} from 'kleur/colors';
-import {build} from './build';
-import {createPackage} from './create-package';
-import {dev, createDevServer} from './dev';
-import {preview, createPreviewServer} from './preview';
-import {start, createProdServer} from './start';
+import {build} from './build.js';
+import {createPackage} from './create-package.js';
+import {dev, createDevServer} from './dev.js';
+import {preview, createPreviewServer} from './preview.js';
+import {start, createProdServer} from './start.js';
 
 class CliRunner {
   private name: string;

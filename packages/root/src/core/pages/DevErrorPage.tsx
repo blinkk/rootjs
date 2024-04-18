@@ -1,6 +1,5 @@
-import {Request, Route, RouteParams} from '../types';
-
-import {ErrorPage} from './ErrorPage';
+import {Request, Route, RouteParams} from '../types.js';
+import {ErrorPage} from './ErrorPage.js';
 
 interface DevErrorPageProps {
   req: Request;

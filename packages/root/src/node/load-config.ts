@@ -1,8 +1,8 @@
 import path from 'node:path';
 import {bundleRequire} from 'bundle-require';
 import {build} from 'esbuild';
-import {RootConfig} from '../core/config';
-import {fileExists, loadJson} from '../utils/fsutils';
+import {RootConfig} from '../core/config.js';
+import {fileExists, loadJson} from '../utils/fsutils.js';
 
 export interface ConfigOptions {
   command: string;

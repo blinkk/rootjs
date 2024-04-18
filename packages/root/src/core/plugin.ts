@@ -1,7 +1,6 @@
 import {ViteDevServer, PluginOption as VitePlugin} from 'vite';
-
-import {RootConfig} from './config';
-import {Server} from './types';
+import {RootConfig} from './config.js';
+import {Server} from './types.js';
 
 type MaybePromise<T> = T | Promise<T>;
 

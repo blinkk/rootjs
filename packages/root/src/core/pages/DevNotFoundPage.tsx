@@ -1,6 +1,5 @@
-import {Request, Route} from '../types';
-
-import {ErrorPage} from './ErrorPage';
+import {Request, Route} from '../types.js';
+import {ErrorPage} from './ErrorPage.js';
 
 interface DevNotFoundPageProps {
   req: Request;

@@ -1,4 +1,4 @@
-import {CSS} from './PasswordPage.css';
+import {CSS} from './PasswordPage.css.js';
 
 export interface PasswordPageProps {
   nonce: string;

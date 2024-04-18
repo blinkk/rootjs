@@ -1,6 +1,5 @@
 import {expect, test} from 'vitest';
-
-import {htmlMinify} from './html-minify';
+import {htmlMinify} from './html-minify.js';
 
 test('minify html', async () => {
   const input = `

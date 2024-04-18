@@ -1,2 +1,2 @@
-export * from './load-config';
-export * from './vite';
+export * from './load-config.js';
+export * from './vite.js';

@@ -1,7 +1,6 @@
 import {ComponentChildren, FunctionalComponent} from 'preact';
 import {useContext} from 'preact/hooks';
-
-import {HTML_CONTEXT} from './Html';
+import {HTML_CONTEXT} from './Html.js';
 
 export type BodyProps = preact.JSX.HTMLAttributes<HTMLBodyElement> & {
   children?: ComponentChildren;

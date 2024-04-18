@@ -5,14 +5,17 @@ import {
   VNode,
   options as preactOptions,
 } from 'preact';
-import renderToString from 'preact-render-to-string';
-import {HtmlContext, HTML_CONTEXT} from '../core/components/Html';
-import {RootConfig, RootSecurityConfig} from '../core/config';
-import {getTranslations, I18N_CONTEXT} from '../core/hooks/useI18nContext';
-import {RequestContext, REQUEST_CONTEXT} from '../core/hooks/useRequestContext';
-import {DevErrorPage} from '../core/pages/DevErrorPage';
-import {DevNotFoundPage} from '../core/pages/DevNotFoundPage';
-import {ErrorPage} from '../core/pages/ErrorPage';
+import {renderToString} from 'preact-render-to-string';
+import {HtmlContext, HTML_CONTEXT} from '../core/components/Html.js';
+import {RootConfig, RootSecurityConfig} from '../core/config.js';
+import {getTranslations, I18N_CONTEXT} from '../core/hooks/useI18nContext.js';
+import {
+  RequestContext,
+  REQUEST_CONTEXT,
+} from '../core/hooks/useRequestContext.js';
+import {DevErrorPage} from '../core/pages/DevErrorPage.js';
+import {DevNotFoundPage} from '../core/pages/DevNotFoundPage.js';
+import {ErrorPage} from '../core/pages/ErrorPage.js';
 import {
   Request,
   Response,
@@ -22,14 +25,14 @@ import {
   Route,
   HandlerRenderFn,
   HandlerRenderOptions,
-} from '../core/types';
-import type {ElementGraph} from '../node/element-graph';
-import {parseTagNames} from '../utils/elements';
-import {AssetMap} from './asset-map/asset-map';
-import {htmlMinify} from './html-minify';
-import {htmlPretty} from './html-pretty';
-import {getFallbackLocales} from './i18n-fallbacks';
-import {replaceParams, Router} from './router';
+} from '../core/types.js';
+import type {ElementGraph} from '../node/element-graph.js';
+import {parseTagNames} from '../utils/elements.js';
+import {AssetMap} from './asset-map/asset-map.js';
+import {htmlMinify} from './html-minify.js';
+import {htmlPretty} from './html-pretty.js';
+import {getFallbackLocales} from './i18n-fallbacks.js';
+import {replaceParams, Router} from './router.js';
 
 interface RenderHtmlOptions {
   /** Attrs passed to the <html> tag, e.g. `{lang: 'en'}`. */

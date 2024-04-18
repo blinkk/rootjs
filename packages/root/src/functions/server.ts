@@ -1,7 +1,7 @@
 import path from 'node:path';
 import {HttpsOptions, onRequest} from 'firebase-functions/v2/https';
-import {createPreviewServer, createProdServer} from '../cli/cli';
-import {Server} from '../core/types';
+import {createPreviewServer, createProdServer} from '../cli/cli.js';
+import {Server} from '../core/types.js';
 
 export interface ProdServerOptions {
   rootDir?: string;

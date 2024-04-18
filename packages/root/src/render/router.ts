@@ -1,7 +1,7 @@
 import path from 'node:path';
-import {RootConfig} from '../core/config';
-import {Route, RouteModule} from '../core/types';
-import {RouteTrie} from './route-trie';
+import {RootConfig} from '../core/config.js';
+import {Route, RouteModule} from '../core/types.js';
+import {RouteTrie} from './route-trie.js';
 
 const ROUTES_FILES = import.meta.glob<RouteModule>(
   ['/routes/*.ts', '/routes/**/*.ts', '/routes/*.tsx', '/routes/**/*.tsx'],

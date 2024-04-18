@@ -1,6 +1,6 @@
 import busboy from 'busboy';
 import {RequestHandler} from 'express';
-import {Request, Response, NextFunction, MultipartFile} from '../core/types';
+import {Request, Response, NextFunction, MultipartFile} from '../core/types.js';
 
 const DEFAULT_MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 

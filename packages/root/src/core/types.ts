@@ -6,12 +6,10 @@ import {
 } from 'express';
 import {ComponentType} from 'preact';
 import {ViteDevServer} from 'vite';
-
-import {Hooks} from '../middleware/hooks';
-import {Session} from '../middleware/session';
-import {Renderer} from '../render/render';
-
-import {RootConfig} from './config';
+import {Hooks} from '../middleware/hooks.js';
+import {Session} from '../middleware/session.js';
+import {Renderer} from '../render/render.js';
+import {RootConfig} from './config.js';
 
 /**
  * Param values from the route, e.g. a route like `/route/[slug].tsx` will pass
