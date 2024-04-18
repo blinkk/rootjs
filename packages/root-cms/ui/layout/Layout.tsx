@@ -7,11 +7,9 @@ import {
   IconPhoto,
   IconRocket,
   IconSettings,
-  IconSitemap,
 } from '@tabler/icons-preact';
 import {ComponentChildren} from 'preact';
 import {useRouter} from 'preact-router';
-
 import packageJson from '../../package.json' assert {type: 'json'};
 import {RootCMSLogo} from '../components/RootCMSLogo/RootCMSLogo.js';
 import {joinClassNames} from '../utils/classes.js';

@@ -1,10 +1,10 @@
 import {Body, Head, Html, Script, useTranslations} from '@blinkk/root';
 import {ComponentChildren} from 'preact';
-import {GlobalFooter} from '@/components/GlobalFooter/GlobalFooter';
-import {GlobalHeader} from '@/components/GlobalHeader/GlobalHeader';
-import {GridOverlay} from '@/islands/GridOverlay/GridOverlay';
+import {GlobalFooter} from '@/components/GlobalFooter/GlobalFooter.js';
+import {GlobalHeader} from '@/components/GlobalHeader/GlobalHeader.js';
+import {useImageService} from '@/hooks/useImageService.js';
+import {GridOverlay} from '@/islands/GridOverlay/GridOverlay.js';
 import '@/styles/global.scss';
-import {useImageService} from '@/hooks/useImageService';
 
 export interface BaseLayoutProps {
   title?: string;

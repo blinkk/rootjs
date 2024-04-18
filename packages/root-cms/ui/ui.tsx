@@ -7,13 +7,12 @@ import {initializeFirestore} from 'firebase/firestore';
 import {getStorage} from 'firebase/storage';
 import {render} from 'preact';
 import {Route, Router} from 'preact-router';
-
 import {Collection} from '../core/schema.js';
-
 import {CopyDocModal} from './components/CopyDocModal/CopyDocModal.js';
 import {DocPickerModal} from './components/DocPickerModal/DocPickerModal.js';
 import {DocSelectModal} from './components/DocSelectModal/DocSelectModal.js';
 import {EditJsonModal} from './components/EditJsonModal/EditJsonModal.js';
+import {ExportSheetModal} from './components/ExportSheetModal/ExportSheetModal.js';
 import {LocalizationModal} from './components/LocalizationModal/LocalizationModal.js';
 import {PublishDocModal} from './components/PublishDocModal/PublishDocModal.js';
 import {ScheduleReleaseModal} from './components/ScheduleReleaseModal/ScheduleReleaseModal.js';
@@ -38,7 +37,6 @@ import {TranslationsEditPage} from './pages/TranslationsEditPage/TranslationsEdi
 import {TranslationsPage} from './pages/TranslationsPage/TranslationsPage.js';
 import './styles/global.css';
 import './styles/theme.css';
-import {ExportSheetModal} from './components/ExportSheetModal/ExportSheetModal.js';
 
 declare global {
   interface Window {

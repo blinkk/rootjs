@@ -1,15 +1,15 @@
 import {ActionIcon, Breadcrumbs, Tooltip} from '@mantine/core';
 import {useModals} from '@mantine/modals';
 import {showNotification, updateNotification} from '@mantine/notifications';
-import {IconTrash, IconTrashFilled} from '@tabler/icons-preact';
+import {IconTrashFilled} from '@tabler/icons-preact';
 import {route} from 'preact-router';
 import {DataSourceForm} from '../../components/DataSourceForm/DataSourceForm.js';
 import {Heading} from '../../components/Heading/Heading.js';
 import {Text} from '../../components/Text/Text.js';
 import {useModalTheme} from '../../hooks/useModalTheme.js';
 import {Layout} from '../../layout/Layout.js';
-import './EditDataSourcePage.css';
 import {deleteDataSource} from '../../utils/data-source.js';
+import './EditDataSourcePage.css';
 
 export function EditDataSourcePage(props: {id: string}) {
   const modals = useModals();

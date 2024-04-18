@@ -1,9 +1,8 @@
 import {Button, Select, TextInput} from '@mantine/core';
 import {ContextModalProps, useModals} from '@mantine/modals';
 import {showNotification, updateNotification} from '@mantine/notifications';
-import {Timestamp} from 'firebase/firestore';
 import {ChangeEvent, forwardRef} from 'preact/compat';
-import {useState, useRef} from 'preact/hooks';
+import {useState} from 'preact/hooks';
 import {useGapiClient} from '../../hooks/useGapiClient.js';
 import {useModalTheme} from '../../hooks/useModalTheme.js';
 import {cmsLinkGoogleSheetL10n} from '../../utils/doc.js';

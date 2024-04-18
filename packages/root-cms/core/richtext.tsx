@@ -122,7 +122,6 @@ RichText.ListBlock = (props: RichTextListBlockProps) => {
   }
   const Component = style === 'ordered' ? 'ol' : 'ul';
   const items = props.data.items;
-  const t = useTranslations();
   return (
     <Component>
       {items.map((item) => {

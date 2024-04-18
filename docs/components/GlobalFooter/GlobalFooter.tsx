@@ -1,10 +1,8 @@
-import {Container} from '@/components/Container/Container';
-import {Text} from '../Text/Text';
+import {Container} from '@/components/Container/Container.js';
+import {Text} from '@/components/Text/Text.js';
 import styles from './GlobalFooter.module.scss';
 
-export interface GlobalFooterProps {}
-
-export function GlobalFooter(props: GlobalFooterProps) {
+export function GlobalFooter() {
   return (
     <Container as="footer" id="footer" className={styles.footer}>
       <Text className={styles.builtBy} size="small">

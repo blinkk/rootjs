@@ -34,7 +34,7 @@ export function useVersionHistoryModal(props: VersionHistoryModalProps) {
 export function VersionHistoryModal(
   modalProps: ContextModalProps<VersionHistoryModalProps>
 ) {
-  const {innerProps: props, context, id} = modalProps;
+  const {innerProps: props} = modalProps;
   const docId = props.docId;
   const [loading, setLoading] = useState(true);
   const [versions, setVersions] = useState<Version[]>([]);

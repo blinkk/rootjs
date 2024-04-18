@@ -1,7 +1,4 @@
-import path from 'node:path';
-
 import {createServer, ViteDevServer} from 'vite';
-
 import {RootConfig} from '../core/config.js';
 import {getVitePlugins} from '../core/plugin.js';
 

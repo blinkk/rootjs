@@ -1,9 +1,9 @@
 import {IconChevronDown} from '@tabler/icons-preact';
 import {useCallback, useEffect, useRef, useState} from 'preact/hooks';
-import {RootCmsWordmark} from '@/components/RootCmsWordmark/RootCmsWordmark';
-import {RootJsWordmark} from '@/components/RootJsWordmark/RootJsWordmark';
-import {UnstyledList} from '@/components/UnstyledList/UnstyledList';
-import {joinClassNames} from '@/utils/classes';
+import {RootCmsWordmark} from '@/components/RootCmsWordmark/RootCmsWordmark.js';
+import {RootJsWordmark} from '@/components/RootJsWordmark/RootJsWordmark.js';
+import {UnstyledList} from '@/components/UnstyledList/UnstyledList.js';
+import {joinClassNames} from '@/utils/classes.js';
 import styles from './LogoToggle.module.scss';
 
 export interface LogoToggleProps {
@@ -34,9 +34,10 @@ export function LogoToggle(props: LogoToggleProps) {
 
 LogoToggle.Component = (props: LogoToggleProps) => {
   const logoId = props.logo || 'root.js';
-  const [selectedLogo, setSelectedLogo] = useState(() => {
-    return LOGOS.find((logo) => logo.id === logoId) || LOGOS[0];
-  });
+  // const [selectedLogo, setSelectedLogo] = useState(() => {
+  //   return LOGOS.find((logo) => logo.id === logoId) || LOGOS[0];
+  // });
+  const selectedLogo = LOGOS.find((logo) => logo.id === logoId) || LOGOS[0];
   const [menuOpen, setMenuOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 

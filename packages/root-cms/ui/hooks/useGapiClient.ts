@@ -48,7 +48,7 @@ export function useGapiClient(): GapiClient {
   }, []);
 
   function login() {
-    return new Promise<void>((resolve, reject) => {
+    return new Promise<void>((resolve) => {
       const clientId = window.__ROOT_CTX.gapi!.clientId!;
       const tokenClient = google.accounts.oauth2.initTokenClient({
         client_id: clientId,

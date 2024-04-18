@@ -1,7 +1,7 @@
-import {useRequestContext, useTranslations} from '@blinkk/root';
-import {RichText} from '@/components/RichText/RichText';
-import {Text, TextSize} from '@/components/Text/Text';
-import {CopyBlockFields} from '@/root-cms';
+import {useTranslations} from '@blinkk/root';
+import {RichText} from '@/components/RichText/RichText.js';
+import {Text, TextSize} from '@/components/Text/Text.js';
+import {CopyBlockFields} from '@/root-cms.js';
 import styles from './CopyBlock.module.scss';
 
 export type CopyBlockProps = CopyBlockFields & {
@@ -9,7 +9,6 @@ export type CopyBlockProps = CopyBlockFields & {
 };
 
 export function CopyBlock(props: CopyBlockProps) {
-  const options = props.options || [];
   const t = useTranslations();
   const titleSize = (props.titleSize || 'h2') as TextSize;
   const bodySize = props.bodySize || 'p';

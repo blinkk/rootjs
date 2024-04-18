@@ -32,7 +32,7 @@ declare module 'preact-router' {
     RouteParams extends Record<string, string | undefined> | null = Record<
       string,
       string | undefined
-    > | null
+    > | null,
   > {
     router: Router;
     url: string;
@@ -47,7 +47,7 @@ declare module 'preact-router' {
     RouteParams extends Record<string, string | undefined> | null = Record<
       string,
       string | undefined
-    > | null
+    > | null,
   > extends RoutableProps {
     history?: CustomHistory;
     static?: boolean;
@@ -86,13 +86,13 @@ declare module 'preact-router' {
     RouteParams extends Record<string, string | undefined> | null = Record<
       string,
       string | undefined
-    > | null
+    > | null,
   >(): [
     RouterOnChangeArgs<RouteParams>,
     (
       urlOrOptions: string | {url: string; replace?: boolean},
       replace?: boolean
-    ) => boolean
+    ) => boolean,
   ];
 
   export default Router;

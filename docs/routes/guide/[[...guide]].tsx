@@ -1,14 +1,14 @@
 import {RequestContext, useRequestContext, useTranslations} from '@blinkk/root';
 import {IconLayoutSidebarLeftExpand} from '@tabler/icons-preact';
-import Block from '@/components/Block/Block';
-import {RichText} from '@/components/RichText/RichText';
-import {Text} from '@/components/Text/Text';
-import {UnstyledList} from '@/components/UnstyledList/UnstyledList';
-import {LogoToggle} from '@/islands/LogoToggle/LogoToggle';
-import {BaseLayout} from '@/layouts/BaseLayout';
-import {GuideDoc} from '@/root-cms';
-import {joinClassNames} from '@/utils/classes';
-import {cmsRoute} from '@/utils/cms-route';
+import Block from '@/components/Block/Block.js';
+import {RichText} from '@/components/RichText/RichText.js';
+import {Text} from '@/components/Text/Text.js';
+import {UnstyledList} from '@/components/UnstyledList/UnstyledList.js';
+import {LogoToggle} from '@/islands/LogoToggle/LogoToggle.js';
+import {BaseLayout} from '@/layouts/BaseLayout.js';
+import {GuideDoc} from '@/root-cms.js';
+import {joinClassNames} from '@/utils/classes.js';
+import {cmsRoute} from '@/utils/cms-route.js';
 import styles from './[[...guide]].module.scss';
 
 const GUIDE_LINKS = [
@@ -122,14 +122,14 @@ export default function Page(props: PageProps) {
       hideFooter
     >
       <div className={styles.guideLayout}>
-        <Sidebar {...props} />
+        <Sidebar />
         <Main {...props} />
       </div>
     </BaseLayout>
   );
 }
 
-function Sidebar(props: PageProps) {
+function Sidebar() {
   const t = useTranslations();
   const ctx = useRequestContext();
 

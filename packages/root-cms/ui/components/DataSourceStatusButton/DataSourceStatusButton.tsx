@@ -1,16 +1,15 @@
 import {Button, Tooltip} from '@mantine/core';
 import {showNotification, updateNotification} from '@mantine/notifications';
 import {Timestamp} from 'firebase/firestore';
-import {useEffect, useState} from 'preact/hooks';
+import {useState} from 'preact/hooks';
 import {useGapiClient} from '../../hooks/useGapiClient.js';
 import {
   DataSource,
   publishDataSource,
   syncDataSource,
 } from '../../utils/data-source.js';
-import {getTimeAgo} from '../../utils/time.js';
-import './DataSourceStatusButton.css';
 import {TimeSinceActionTooltip} from '../TimeSinceActionTooltip/TimeSinceActionTooltip.js';
+import './DataSourceStatusButton.css';
 
 export interface DataSourceStatusButtonProps {
   dataSource: DataSource;

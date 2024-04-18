@@ -1,6 +1,6 @@
-import {ActionIcon, TextInput, Tooltip} from '@mantine/core';
+import {TextInput} from '@mantine/core';
 import {showNotification} from '@mantine/notifications';
-import {IconFileUpload, IconTrash} from '@tabler/icons-preact';
+import {IconFileUpload} from '@tabler/icons-preact';
 import {useEffect, useRef, useState} from 'preact/hooks';
 import {Text} from '../../components/Text/Text.js';
 import {joinClassNames} from '../../utils/classes.js';

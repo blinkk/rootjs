@@ -1,11 +1,10 @@
 import {useTranslations} from '@blinkk/root';
-import {Container} from '@/components/Container/Container';
-import {Image, ImageProps} from '@/components/Image/Image';
-import {RichText} from '@/components/RichText/RichText';
-import {Text} from '@/components/Text/Text';
-import {UnstyledList} from '@/components/UnstyledList/UnstyledList';
-import {TemplatePoweredByFields} from '@/root-cms';
-import {joinClassNames} from '@/utils/classes';
+import {Container} from '@/components/Container/Container.js';
+import {Image, ImageProps} from '@/components/Image/Image.js';
+import {RichText} from '@/components/RichText/RichText.js';
+import {Text} from '@/components/Text/Text.js';
+import {TemplatePoweredByFields} from '@/root-cms.js';
+import {joinClassNames} from '@/utils/classes.js';
 import styles from './TemplatePoweredBy.module.scss';
 
 export type TemplatePoweredByProps = TemplatePoweredByFields & {

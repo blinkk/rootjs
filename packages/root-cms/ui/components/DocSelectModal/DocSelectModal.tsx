@@ -3,9 +3,9 @@ import {ContextModalProps, useModals} from '@mantine/modals';
 import {useState} from 'preact/hooks';
 import {useDocsList} from '../../hooks/useDocsList.js';
 import {useModalTheme} from '../../hooks/useModalTheme.js';
-import './DocSelectModal.css';
 import {getDocServingUrl} from '../../utils/doc-urls.js';
 import {getNestedValue} from '../../utils/objects.js';
+import './DocSelectModal.css';
 
 const MODAL_ID = 'DocSelectModal';
 
@@ -38,7 +38,7 @@ export function useDocSelectModal() {
 export function DocSelectModal(
   modalProps: ContextModalProps<DocSelectModalProps>
 ) {
-  const {innerProps: props, context, id} = modalProps;
+  const {innerProps: props} = modalProps;
   let collections = Object.keys(window.__ROOT_CTX.collections);
   if (props.collections?.length) {
     collections = collections.filter(
