@@ -14,8 +14,11 @@ export function isValidTagName(tagName: string) {
  * values may be included.
  */
 export function parseTagNames(src: string): string[] {
+  if (!src) {
+    return [];
+  }
   const tagNames = new Set<string>();
-  const matches = Array.from(src.matchAll(HTML_ELEMENTS_REGEX));
+  const matches = Array.from(String(src).matchAll(HTML_ELEMENTS_REGEX));
   for (const match of matches) {
     const tagName = match[1];
     tagNames.add(tagName);

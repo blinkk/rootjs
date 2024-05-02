@@ -225,7 +225,7 @@ export class Renderer {
     // Create a hook to auto-inject nonce values.
     // https://preactjs.com/guide/v10/options/
     const preactHook = preactOptions.vnode;
-    let mainHtml: string;
+    let mainHtml = '';
     try {
       preactOptions.vnode = (vnode: VNode<any>) => {
         // Inject nonce to `<script>` tags.
