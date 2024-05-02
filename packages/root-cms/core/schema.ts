@@ -9,6 +9,8 @@ export interface CommonFieldProps {
   default?: any;
   hidden?: boolean;
   deprecated?: boolean;
+  /** Hides the field label in the CMS UI. */
+  hideLabel?: boolean;
 }
 
 export type StringField = CommonFieldProps & {

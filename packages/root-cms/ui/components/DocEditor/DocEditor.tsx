@@ -157,7 +157,7 @@ DocEditor.Field = (props: FieldProps) => {
       data-level={level}
       data-key={props.deepKey}
     >
-      {!props.hideHeader && (
+      {!props.hideHeader && !field.hideLabel && (
         <div className="DocEditor__field__header">
           {field.deprecated ? (
             <div className="DocEditor__field__name">
