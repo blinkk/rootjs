@@ -1,5 +1,12 @@
 # @blinkk/root
 
+## 1.0.4
+
+### Patch Changes
+
+- 4648ec3: feat: add hideLabel to schema fields (#312)
+- e05026c: fix: fix sourcemaps in render-time errors
+
 ## 1.0.3
 
 ### Patch Changes
