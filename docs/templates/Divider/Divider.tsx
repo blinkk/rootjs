@@ -1,7 +1,7 @@
 import {CSSProperties} from 'preact/compat';
-import {Container} from '@/components/Container/Container';
+import {Container} from '@/components/Container/Container.js';
 import {DividerFields} from '@/root-cms.js';
-import {joinClassNames} from '@/utils/classes';
+import {joinClassNames} from '@/utils/classes.js';
 import styles from './Divider.module.scss';
 
 export function Divider(props: DividerFields) {

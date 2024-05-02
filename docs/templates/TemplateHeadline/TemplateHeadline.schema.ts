@@ -1,5 +1,5 @@
 import {schema} from '@blinkk/root-cms';
-import ButtonSchema from '@/components/Button/Button.schema';
+import ButtonSchema from '@/components/Button/Button.schema.js';
 
 export default schema.define({
   name: 'TemplateHeadline',

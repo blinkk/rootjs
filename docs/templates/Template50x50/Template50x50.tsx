@@ -1,7 +1,7 @@
-import Block from '@/components/Block/Block';
-import {Container} from '@/components/Container/Container';
-import {Template50x50Fields} from '@/root-cms';
-import {joinClassNames} from '@/utils/classes';
+import Block from '@/components/Block/Block.js';
+import {Container} from '@/components/Container/Container.js';
+import {Template50x50Fields} from '@/root-cms.js';
+import {joinClassNames} from '@/utils/classes.js';
 import styles from './Template50x50.module.scss';
 
 export type Template50x50Props = Template50x50Fields & {

@@ -1,7 +1,7 @@
-import {Container} from '@/components/Container/Container';
-import {Image, ImageProps} from '@/components/Image/Image';
-import {TemplateImageFields} from '@/root-cms';
-import {joinClassNames} from '@/utils/classes';
+import {Container} from '@/components/Container/Container.js';
+import {Image, ImageProps} from '@/components/Image/Image.js';
+import {TemplateImageFields} from '@/root-cms.js';
+import {joinClassNames} from '@/utils/classes.js';
 import styles from './TemplateImage.module.scss';
 
 export type TemplateImageProps = TemplateImageFields & {

@@ -1,8 +1,8 @@
 import {useTranslations} from '@blinkk/root';
-import {Container} from '@/components/Container/Container';
-import {Text} from '@/components/Text/Text';
-import {Jumplink, Jumplinks} from '@/islands/Jumplinks/Jumplinks';
-import {TemplateJumplinksFields} from '@/root-cms';
+import {Container} from '@/components/Container/Container.js';
+import {Text} from '@/components/Text/Text.js';
+import {Jumplink, Jumplinks} from '@/islands/Jumplinks/Jumplinks.js';
+import {TemplateJumplinksFields} from '@/root-cms.js';
 import styles from './TemplateJumplinks.module.scss';
 
 export function TemplateJumplinks(props: TemplateJumplinksFields) {

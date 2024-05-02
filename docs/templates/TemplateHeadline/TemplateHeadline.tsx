@@ -1,10 +1,10 @@
 import {useTranslations} from '@blinkk/root';
-import {ButtonsBlock} from '@/blocks/ButtonsBlock/ButtonsBlock';
-import {Container} from '@/components/Container/Container';
-import {RichText} from '@/components/RichText/RichText';
-import {Text} from '@/components/Text/Text';
-import {TemplateHeadlineFields} from '@/root-cms';
-import {joinClassNames} from '@/utils/classes';
+import {ButtonsBlock} from '@/blocks/ButtonsBlock/ButtonsBlock.js';
+import {Container} from '@/components/Container/Container.js';
+import {RichText} from '@/components/RichText/RichText.js';
+import {Text} from '@/components/Text/Text.js';
+import {TemplateHeadlineFields} from '@/root-cms.js';
+import {joinClassNames} from '@/utils/classes.js';
 import styles from './TemplateHeadline.module.scss';
 
 export type TemplateHeadlineProps = TemplateHeadlineFields & {
