@@ -6,6 +6,7 @@ const GCI_SUPPORTED_EXTS = ['jpg', 'png', 'webp'];
 
 export interface UploadFileOptions {
   preserveFilename?: boolean;
+  cacheControl?: string;
 }
 
 export async function uploadFileToGCS(file: File, options?: UploadFileOptions) {
@@ -39,9 +40,8 @@ export async function uploadFileToGCS(file: File, options?: UploadFileOptions) {
     }
   }
 
-  // Since the files are stored by their hash, we should be able to set a long
-  // cache control header, i.e. 1 year.
-  const cacheControl = 'public, max-age=31536000';
+  // By default, set the cache-control to 1hr.
+  const cacheControl = options?.cacheControl || 'public, max-age=3600';
   await updateMetadata(gcsRef, {
     cacheControl,
     customMetadata: normalizeGcsMeta(meta),

@@ -29,7 +29,9 @@ export function ImageField(props: FieldProps) {
   async function uploadFile(file: File) {
     setLoading(true);
     try {
-      const uploadedImage = await uploadFileToGCS(file);
+      const uploadedImage = await uploadFileToGCS(file, {
+        cacheControl: field.cacheControl,
+      });
       setImg((currentImg: any) => {
         // Preserve the "alt" text when the image changes.
         const newImage = Object.assign({}, uploadedImage, {
