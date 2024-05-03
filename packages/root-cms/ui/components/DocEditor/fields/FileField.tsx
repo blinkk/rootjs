@@ -29,6 +29,7 @@ export function FileField(props: FieldProps) {
     setLoading(true);
     try {
       const uploadedFile = await uploadFileToGCS(file, {
+        cacheControl: field.cacheControl,
         preserveFilename: field.preserveFilename,
       });
       props.draft.updateKey(props.deepKey, uploadedFile);

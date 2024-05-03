@@ -92,6 +92,10 @@ export type ImageField = CommonFieldProps & {
   translate?: boolean;
   /** List of supported exts, e.g. `['.mp4']`. */
   exts?: string[];
+  /**
+   * Cache-control header to set on the GCS object.
+   */
+  cacheControl?: string;
 };
 
 export function image(field: Omit<ImageField, 'type'>): ImageField {
@@ -107,6 +111,10 @@ export type FileField = CommonFieldProps & {
    * By default, the filename is hashed for obfuscation purposes.
    */
   preserveFilename?: boolean;
+  /**
+   * Cache-control header to set on the GCS object.
+   */
+  cacheControl?: string;
 };
 
 export function file(field: Omit<FileField, 'type'>): FileField {
