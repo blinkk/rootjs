@@ -1,6 +1,7 @@
 import {
   ActionIcon,
   Breadcrumbs,
+  Button,
   JsonInput,
   Loader,
   Table,
@@ -136,7 +137,8 @@ DataSourcePage.DataSection = (props: {
   dataSource: DataSource;
   data: DataSourceData;
 }) => {
-  const {data, dataSource} = props.data || {};
+  const {data} = props.data || {};
+  const dataSource = props.dataSource;
 
   if (!data) {
     return null;
@@ -191,21 +193,32 @@ DataSourcePage.DataSectionWrap = (props: {
     <div className="DataSourcePage__DataSection">
       <div className="DataSourcePage__DataSection__header">
         <Heading size="h2">Data</Heading>
-        {props.dataSource.url?.startsWith(
-          'https://docs.google.com/spreadsheets/'
-        ) && (
-          <Tooltip label="Open spreadsheet">
-            <ActionIcon<'a'>
-              component="a"
-              href={props.dataSource.url}
-              target="_blank"
-              variant="filled"
-              color="green"
+        <div className="DataSourcePage__DataSection__header__actions">
+          {props.dataSource.url?.startsWith(
+            'https://docs.google.com/spreadsheets/'
+          ) && (
+            <Tooltip label="Open spreadsheet">
+              <ActionIcon<'a'>
+                component="a"
+                href={props.dataSource.url}
+                target="_blank"
+                variant="filled"
+                color="green"
+              >
+                <IconTable size={16} stroke="2.25" />
+              </ActionIcon>
+            </Tooltip>
+          )}
+          {props.dataSource.previewUrl && (
+            <Button
+              variant="default"
+              size="xs"
+              href={props.dataSource.previewUrl}
             >
-              <IconTable size={16} stroke="2.25" />
-            </ActionIcon>
-          </Tooltip>
-        )}
+              Preview
+            </Button>
+          )}
+        </div>
       </div>
       {props.children}
     </div>

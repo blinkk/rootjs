@@ -104,6 +104,7 @@ export function DataSourceForm(props: DataSourceFormProps) {
       description: getValue('description'),
       type: dataSourceType,
       url: url,
+      previewUrl: getValue('previewUrl'),
     };
 
     if (dataSourceType === 'http') {
@@ -297,6 +298,15 @@ export function DataSourceForm(props: DataSourceFormProps) {
           )}
         </div>
       )}
+      <TextInput
+        className="DataSourceForm__input"
+        name="previewUrl"
+        label="Preview URL"
+        description="URL where users can preview the data source."
+        size="xs"
+        radius={0}
+        value={dataSource?.previewUrl}
+      />
       <Button
         className="DataSourceForm__submit"
         color="blue"

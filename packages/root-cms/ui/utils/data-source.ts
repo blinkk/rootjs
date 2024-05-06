@@ -36,6 +36,7 @@ export interface DataSource {
     headers?: Record<string, string>;
     body?: string;
   };
+  previewUrl?: string;
   createdAt: Timestamp;
   createdBy: string;
   syncedAt?: Timestamp;
