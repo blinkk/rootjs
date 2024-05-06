@@ -760,6 +760,8 @@ function arrayPreview(
     : [field.preview];
   const placeholders = flattenNestedKeys(data);
   placeholders._index = String(index);
+  placeholders._index0 = String(index);
+  placeholders._index1 = String(index + 1);
   placeholders['_index:02'] = placeholders._index.padStart(2, '0');
   placeholders['_index:03'] = placeholders._index.padStart(3, '0');
   while (templates.length > 0) {
