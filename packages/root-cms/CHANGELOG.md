@@ -1,5 +1,14 @@
 # @blinkk/root-cms
 
+## 1.0.5
+
+### Patch Changes
+
+- 04abf4f: feat: add "preview" button to data sources
+- 7f17523: feat: add cacheControl options to file and image fields
+- 6aa2fc4: feat: add index0 and index1 placeholders to array fields
+  - @blinkk/root@1.0.5
+
 ## 1.0.4
 
 ### Patch Changes
