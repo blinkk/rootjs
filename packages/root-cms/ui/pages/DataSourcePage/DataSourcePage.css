@@ -64,6 +64,12 @@
   gap: 12px;
 }
 
+.DataSourcePage__DataSection__header__actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
 .DataSourcePage__DataTable__table td {
   max-width: 400px;
   overflow: hidden;
