@@ -211,9 +211,11 @@ DataSourcePage.DataSectionWrap = (props: {
           )}
           {props.dataSource.previewUrl && (
             <Button
+              component="a"
               variant="default"
               size="xs"
               href={props.dataSource.previewUrl}
+              target="_blank"
             >
               Preview
             </Button>
