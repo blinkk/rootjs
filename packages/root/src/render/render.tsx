@@ -32,7 +32,7 @@ import {AssetMap} from './asset-map/asset-map.js';
 import {htmlMinify} from './html-minify.js';
 import {htmlPretty} from './html-pretty.js';
 import {getFallbackLocales} from './i18n-fallbacks.js';
-import {replaceParams, Router} from './router.js';
+import {normalizeUrlPath, replaceParams, Router} from './router.js';
 
 interface RenderHtmlOptions {
   /** Attrs passed to the <html> tag, e.g. `{lang: 'en'}`. */
@@ -401,8 +401,10 @@ export class Renderer {
   }
 
   async render404(options?: {currentPath?: string}) {
-    const currentPath = options?.currentPath || '/404';
-    const [route, routeParams] = this.router.get('/404');
+    const basePath = this.rootConfig.base || '/';
+    const notFoundPath = normalizeUrlPath(`${basePath}/404`);
+    const currentPath = options?.currentPath || notFoundPath;
+    const [route, routeParams] = this.router.get(notFoundPath);
     if (route && route.src === 'routes/404.tsx' && route.module.default) {
       const Component = route.module.default;
       return this.renderComponent(
