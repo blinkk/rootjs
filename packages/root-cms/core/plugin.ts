@@ -141,6 +141,12 @@ function getFirebaseApp(gcpProjectId: string): App {
 }
 
 export function cmsPlugin(options: CMSPluginOptions): CMSPlugin {
+  if (!options.firebaseConfig) {
+    throw new Error(
+      'missing firebaseConfig. create a new app in the firebase admin console and copy the firebase config object to root.config.ts'
+    );
+  }
+
   const firebaseConfig = options.firebaseConfig || {};
   const app = getFirebaseApp(firebaseConfig.projectId);
   const auth = getAuth(app);

@@ -1,5 +1,5 @@
 import {loadRootConfig} from '@blinkk/root/node';
-import {Firestore, getFirestore} from 'firebase-admin/firestore';
+import {Firestore} from 'firebase-admin/firestore';
 import {getCmsPlugin} from '../core/client.js';
 import {applySecurityRules} from '../core/security.js';
 
