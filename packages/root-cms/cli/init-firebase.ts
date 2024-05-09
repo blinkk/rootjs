@@ -27,8 +27,7 @@ export async function initFirebase(options: InitFirebaseOptions) {
   await applySecurityRules(gcpProjectId);
 
   if (options.admin) {
-    const app = cmsPlugin.getFirebaseApp();
-    const db = getFirestore(app);
+    const db = cmsPlugin.getFirestore();
     const rootProjectId = cmsPluginOptions.id || 'default';
     await addAdmin(db, rootProjectId, options.admin);
   }

@@ -140,7 +140,7 @@ export class RootCMSClient {
     const cmsPluginOptions = this.cmsPlugin.getConfig();
     this.projectId = cmsPluginOptions.id || 'default';
     this.app = this.cmsPlugin.getFirebaseApp();
-    this.db = getFirestore(this.app);
+    this.db = this.cmsPlugin.getFirestore();
   }
 
   /**

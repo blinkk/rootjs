@@ -20,12 +20,7 @@
 
 import path from 'node:path';
 import {RootConfig} from '@blinkk/root';
-import {
-  Firestore,
-  Query,
-  Timestamp,
-  getFirestore,
-} from 'firebase-admin/firestore';
+import {Firestore, Query, Timestamp} from 'firebase-admin/firestore';
 import glob from 'tiny-glob';
 import {getCmsPlugin} from './client.js';
 
@@ -56,8 +51,7 @@ export class VersionsService {
     const cmsPluginOptions = cmsPlugin.getConfig();
     const projectId = cmsPluginOptions.id || 'default';
     this.projectId = projectId;
-    const app = cmsPlugin.getFirebaseApp();
-    this.db = getFirestore(app);
+    this.db = cmsPlugin.getFirestore();
   }
 
   /**

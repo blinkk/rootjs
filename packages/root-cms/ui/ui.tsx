@@ -138,15 +138,20 @@ function loginRedirect() {
 }
 
 const app = initializeApp(window.__ROOT_CTX.firebaseConfig);
+const databaseId = window.__ROOT_CTX.firebaseConfig.databaseId || '(default)';
 // const db = getFirestore(app);
 // NOTE(stevenle): the firestore web channel rpc sometimes has issues in
 // collections with a large number of docs. Forcing long polling and disabling
 // fetch streams seems to work for some people. This may cause performance
 // issues however.
-const db = initializeFirestore(app, {
-  experimentalForceLongPolling: true,
-  useFetchStreams: false,
-} as any);
+const db = initializeFirestore(
+  app,
+  {
+    experimentalForceLongPolling: true,
+    useFetchStreams: false,
+  } as any,
+  databaseId
+);
 const auth = getAuth(app);
 const storage = getStorage(app);
 auth.onAuthStateChanged((user) => {
