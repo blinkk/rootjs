@@ -1,12 +1,7 @@
 /** @deprecated Use client.ts instead. */
 
 import {RootConfig} from '@blinkk/root';
-import {
-  FieldValue,
-  Query,
-  Timestamp,
-  getFirestore,
-} from 'firebase-admin/firestore';
+import {FieldValue, Query, Timestamp} from 'firebase-admin/firestore';
 import {
   LoadTranslationsOptions,
   LocaleTranslations,
@@ -34,8 +29,7 @@ export async function getDoc<T>(
   const projectId = cmsPluginOptions.id || 'default';
   const mode = options.mode;
   const modeCollection = mode === 'draft' ? 'Drafts' : 'Published';
-  const app = cmsPlugin.getFirebaseApp();
-  const db = getFirestore(app);
+  const db = cmsPlugin.getFirestore();
   // Slugs with slashes are encoded as `--` in the DB.
   slug = slug.replaceAll('/', '--');
   const dbPath = `Projects/${projectId}/Collections/${collectionId}/${modeCollection}/${slug}`;
@@ -70,8 +64,7 @@ export async function listDocs<T>(
   const projectId = cmsPluginOptions.id || 'default';
   const mode = options.mode;
   const modeCollection = mode === 'draft' ? 'Drafts' : 'Published';
-  const app = cmsPlugin.getFirebaseApp();
-  const db = getFirestore(app);
+  const db = cmsPlugin.getFirestore();
   const dbPath = `Projects/${projectId}/Collections/${collectionId}/${modeCollection}`;
   let query: Query = db.collection(dbPath);
   if (options.limit) {
@@ -112,8 +105,7 @@ export async function numDocs(
   const projectId = cmsPluginOptions.id || 'default';
   const mode = options.mode;
   const modeCollection = mode === 'draft' ? 'Drafts' : 'Published';
-  const app = cmsPlugin.getFirebaseApp();
-  const db = getFirestore(app);
+  const db = cmsPlugin.getFirestore();
   const dbPath = `Projects/${projectId}/Collections/${collectionId}/${modeCollection}`;
   let query: Query = db.collection(dbPath);
   if (options.query) {
@@ -132,8 +124,7 @@ export async function publishScheduledDocs(rootConfig: RootConfig) {
   const cmsPlugin = getCmsPlugin(rootConfig);
   const cmsPluginOptions = cmsPlugin.getConfig();
   const projectId = cmsPluginOptions.id || 'default';
-  const app = cmsPlugin.getFirebaseApp();
-  const db = getFirestore(app);
+  const db = cmsPlugin.getFirestore();
 
   const projectCollectionsPath = `Projects/${projectId}/Collections`;
   const now = Math.ceil(new Date().getTime());
@@ -248,8 +239,7 @@ export async function loadTranslations(
   const cmsPlugin = getCmsPlugin(rootConfig);
   const cmsPluginOptions = cmsPlugin.getConfig();
   const projectId = cmsPluginOptions.id || 'default';
-  const app = cmsPlugin.getFirebaseApp();
-  const db = getFirestore(app);
+  const db = cmsPlugin.getFirestore();
 
   const dbPath = `Projects/${projectId}/Translations`;
   let query: Query = db.collection(dbPath);

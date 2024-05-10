@@ -1,5 +1,5 @@
 import {loadRootConfig} from '@blinkk/root/node';
-import {Firestore, getFirestore} from 'firebase-admin/firestore';
+import {Firestore} from 'firebase-admin/firestore';
 import {getCmsPlugin} from '../core/client.js';
 import {applySecurityRules} from '../core/security.js';
 
@@ -27,8 +27,7 @@ export async function initFirebase(options: InitFirebaseOptions) {
   await applySecurityRules(gcpProjectId);
 
   if (options.admin) {
-    const app = cmsPlugin.getFirebaseApp();
-    const db = getFirestore(app);
+    const db = cmsPlugin.getFirestore();
     const rootProjectId = cmsPluginOptions.id || 'default';
     await addAdmin(db, rootProjectId, options.admin);
   }

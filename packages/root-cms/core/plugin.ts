@@ -18,6 +18,7 @@ import {
   initializeApp,
 } from 'firebase-admin/app';
 import {getAuth, DecodedIdToken} from 'firebase-admin/auth';
+import {Firestore, getFirestore} from 'firebase-admin/firestore';
 import * as jsonwebtoken from 'jsonwebtoken';
 import sirv from 'sirv';
 import {generateTypes} from '../cli/generate-types.js';
@@ -53,11 +54,12 @@ export type CMSPluginOptions = {
    * going to "Project Settings".
    */
   firebaseConfig: {
-    [key: string]: string;
+    [key: string]: string | undefined;
     apiKey: string;
     authDomain: string;
     projectId: string;
     storageBucket: string;
+    databaseId?: string;
   };
 
   /**
@@ -112,6 +114,7 @@ export type CMSPlugin = Plugin & {
   name: 'root-cms';
   getConfig: () => CMSPluginOptions;
   getFirebaseApp: () => App;
+  getFirestore: () => Firestore;
 };
 
 function isExpired(decodedIdToken: DecodedIdToken) {
@@ -138,7 +141,13 @@ function getFirebaseApp(gcpProjectId: string): App {
 }
 
 export function cmsPlugin(options: CMSPluginOptions): CMSPlugin {
-  const firebaseConfig = options.firebaseConfig;
+  if (!options.firebaseConfig) {
+    throw new Error(
+      'missing firebaseConfig. create a new app in the firebase admin console and copy the firebase config object to root.config.ts'
+    );
+  }
+
+  const firebaseConfig = options.firebaseConfig || {};
   const app = getFirebaseApp(firebaseConfig.projectId);
   const auth = getAuth(app);
 
@@ -323,6 +332,14 @@ export function cmsPlugin(options: CMSPluginOptions): CMSPlugin {
      */
     getFirebaseApp: () => {
       return app;
+    },
+
+    /**
+     * Returns the Firestore instance used by the plugin.
+     */
+    getFirestore: () => {
+      const databaseId = firebaseConfig.databaseId || '(default)';
+      return getFirestore(app, databaseId);
     },
 
     /**
