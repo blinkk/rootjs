@@ -212,10 +212,17 @@ async function onAppEngine(options: {
   packageJson: PackageJson;
   outDir: string;
 }) {
-  const {rootDir, outDir} = options;
+  const {rootDir, outDir, packageJson} = options;
   const configPath = path.resolve(rootDir, 'app.yaml');
   if (await fileExists(configPath)) {
     await fs.copyFile(configPath, path.resolve(outDir, 'app.yaml'));
+  }
+
+  // Only include the "start" script.
+  if (packageJson.scripts?.start) {
+    packageJson.scripts = {start: packageJson.scripts.start};
+  } else {
+    packageJson.scripts = {start: 'root start --host=0.0.0.0'};
   }
 }
 
@@ -227,7 +234,7 @@ async function onFirebase(options: {
   packageJson: PackageJson;
   outDir: string;
 }) {
-  const {rootDir, outDir} = options;
+  const {rootDir, outDir, packageJson} = options;
 
   // If the outDir is called `functions/` and an index.ts file exists in the
   // root project dir, automatically compile it through esbuild.
@@ -237,6 +244,13 @@ async function onFirebase(options: {
     if (await fileExists(indexTsFile)) {
       await bundleTsFile(indexTsFile, path.resolve(outDir, 'index.js'));
     }
+  }
+
+  // Only include the "start" script.
+  if (packageJson.scripts?.start) {
+    packageJson.scripts = {start: packageJson.scripts.start};
+  } else {
+    packageJson.scripts = {start: 'root start --host=0.0.0.0'};
   }
 }
 
