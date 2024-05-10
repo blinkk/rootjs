@@ -1,5 +1,17 @@
 # @blinkk/root-cms
 
+## 1.0.6
+
+### Patch Changes
+
+- 9515de6: feat: add support for non-default firestore databases
+- 53c3d41: fix: fix preview button on data sources page
+- d779e87: feat: add custom cms sidebar tools (#326)
+- c76e578: feat: add option to overwrite when copying doc (#327)
+- Updated dependencies [b3411f2]
+- Updated dependencies [41a3e50]
+  - @blinkk/root@1.0.6
+
 ## 1.0.5
 
 ### Patch Changes
