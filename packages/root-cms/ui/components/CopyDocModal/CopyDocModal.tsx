@@ -35,6 +35,7 @@ export function CopyDocModal(modalProps: ContextModalProps<CopyDocModalProps>) {
   const [toCollectionId, setToCollectionId] = useState('');
   const [toSlug, setToSlug] = useState('');
   const [error, setError] = useState('');
+  const [confirmOverwrite, setConfirmOverwrite] = useState(false);
   const [loading, setLoading] = useState(false);
 
   const fromDocId = props.fromDocId;
@@ -59,7 +60,7 @@ export function CopyDocModal(modalProps: ContextModalProps<CopyDocModalProps>) {
 
     const toDocId = `${toCollectionId}/${cleanSlug}`;
     try {
-      await cmsCopyDoc(fromDocId, toDocId);
+      await cmsCopyDoc(fromDocId, toDocId, {overwrite: confirmOverwrite});
       context.closeModal(id);
       showNotification({
         title: 'Copied!',
@@ -67,7 +68,15 @@ export function CopyDocModal(modalProps: ContextModalProps<CopyDocModalProps>) {
         autoClose: 5000,
       });
     } catch (err) {
-      setError(String(err));
+      const errMsg = String(err);
+      setError(errMsg);
+
+      // If doc exists on the given path, allow the option to overwrite the
+      // existing path.
+      if (errMsg.includes('already exists')) {
+        setConfirmOverwrite(true);
+      }
+
       setLoading(false);
       return;
     }
@@ -120,7 +129,7 @@ export function CopyDocModal(modalProps: ContextModalProps<CopyDocModalProps>) {
             color="dark"
             loading={loading}
           >
-            Submit
+            {confirmOverwrite ? 'Overwrite?' : 'Submit'}
           </Button>
         </div>
       </form>

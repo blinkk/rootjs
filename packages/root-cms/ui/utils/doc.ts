@@ -355,24 +355,28 @@ export async function cmsUnscheduleDoc(docId: string) {
   console.log(`unscheduled ${docId}`);
 }
 
-export async function cmsCopyDoc(fromDocId: string, toDocId: string) {
+export async function cmsCopyDoc(
+  fromDocId: string,
+  toDocId: string,
+  options?: {overwrite?: boolean}
+) {
   const fromDocRef = getDraftDocRef(fromDocId);
   const fromDoc = await getDoc(fromDocRef);
   if (!fromDoc.exists()) {
     throw new Error(`doc ${fromDocId} does not exist`);
   }
   const fields = fromDoc.data().fields ?? {};
-  await cmsCreateDoc(toDocId, {fields});
+  await cmsCreateDoc(toDocId, {fields, overwrite: options?.overwrite});
 }
 
 export async function cmsCreateDoc(
   docId: string,
-  options?: {fields?: Record<string, any>}
+  options?: {fields?: Record<string, any>; overwrite?: boolean}
 ) {
   const [collectionId, slug] = docId.split('/');
   const docRef = getDraftDocRef(docId);
   const doc = await getDoc(docRef);
-  if (doc.exists()) {
+  if (doc.exists() && !options?.overwrite) {
     throw new Error(`${docId} already exists`);
   }
   const data = {
