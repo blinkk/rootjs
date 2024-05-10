@@ -37,6 +37,7 @@ import {TranslationsEditPage} from './pages/TranslationsEditPage/TranslationsEdi
 import {TranslationsPage} from './pages/TranslationsPage/TranslationsPage.js';
 import './styles/global.css';
 import './styles/theme.css';
+import {SidebarToolsPage} from './pages/SidebarToolsPage/SidebarToolsPage.js';
 
 declare global {
   interface Window {
@@ -59,6 +60,12 @@ declare global {
         clientId: string;
       };
       collections: Record<string, Collection>;
+      sidebar?: {
+        tools?: Record<
+          string,
+          {icon?: string; label?: string; iframeUrl?: string}
+        >;
+      };
     };
     firebase: FirebaseContextObject;
   }
@@ -110,6 +117,7 @@ function App() {
                 component={EditReleasePage}
               />
               <Route path="/cms/settings" component={SettingsPage} />
+              <Route path="/cms/tools/:id" component={SidebarToolsPage} />
               <Route path="/cms/translations" component={TranslationsPage} />
               <Route
                 path="/cms/translations/arb"

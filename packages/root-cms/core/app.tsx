@@ -91,6 +91,7 @@ export async function renderApp(req: Request, res: Response, options: any) {
     firebaseConfig: options.firebaseConfig,
     gapi: cmsConfig.gapi,
     collections: collections,
+    sidebar: cmsConfig.sidebar,
   };
   const projectName = cmsConfig.name || cmsConfig.id || '';
   const title = projectName ? `${projectName} – Root.js CMS` : 'Root.js CMS';
