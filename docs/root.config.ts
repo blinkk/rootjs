@@ -46,6 +46,11 @@ export default defineConfig({
         clientId: process.env.GAPI_CLIENT_ID,
       },
       gci: true,
+      sidebar: {
+        tools: {
+          design: {label: 'Design System', iframeUrl: '/design'},
+        },
+      },
     }),
   ],
   prettyHtml: true,

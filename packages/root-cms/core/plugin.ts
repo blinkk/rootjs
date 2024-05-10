@@ -36,6 +36,15 @@ export interface CMSUser {
   email: string;
 }
 
+export interface CMSSidebarTool {
+  /** URL for the sidebar icon image. */
+  icon?: string;
+  /** Label. */
+  label?: string;
+  /** Iframe URL to render for the tool. */
+  iframeUrl?: string;
+}
+
 export type CMSPluginOptions = {
   /**
    * The ID of the project. Data will be stored under the namespace
@@ -108,6 +117,18 @@ export type CMSPluginOptions = {
    * serve images directly from GCS instead.
    */
   gci?: string | boolean;
+
+  /**
+   * Customization options for the CMS sidebar.
+   */
+  sidebar?: {
+    /**
+     * Sidebar tools, a map of the sidebar id to config options. The sidebar
+     * tool is url-mapped to `/cms/tools/:id` and displays the tool in an
+     * iframe.
+     */
+    tools?: Record<string, CMSSidebarTool>;
+  };
 };
 
 export type CMSPlugin = Plugin & {

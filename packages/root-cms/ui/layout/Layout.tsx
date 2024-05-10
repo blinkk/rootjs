@@ -1,5 +1,6 @@
 import {Avatar, Tooltip} from '@mantine/core';
 import {
+  IconCarrot,
   IconDatabase,
   IconFolder,
   IconHome,
@@ -52,6 +53,7 @@ Layout.Side = () => {
   const [route] = useRouter();
   const currentUrl = route.url.replace(/\/*$/g, '');
   const user = window.firebase.user;
+  const sidebarTools = window.__ROOT_CTX.sidebar?.tools;
   return (
     <div className="Layout__side">
       <div className="Layout__side__buttons">
@@ -103,6 +105,31 @@ Layout.Side = () => {
           <IconLanguage stroke={ICON_STROKE} />
         </Layout.SideButton>
 
+        {sidebarTools && (
+          <>
+            <div className="Layout__side__divider" />
+            {Object.entries(sidebarTools).map(([id, tool]) => (
+              <Layout.SideButton
+                className="Layout__side__tool"
+                label={tool.label || ''}
+                url={`/cms/tools/${id}`}
+                active={currentUrl.startsWith(`/cms/tools/${id}`)}
+              >
+                {tool.icon ? (
+                  <img
+                    className="Layout__side__tool__icon"
+                    src={tool.icon}
+                    alt={tool.label || ''}
+                  />
+                ) : (
+                  <IconCarrot stroke={ICON_STROKE} />
+                )}
+              </Layout.SideButton>
+            ))}
+            <div className="Layout__side__divider" />
+          </>
+        )}
+
         <Layout.SideButton
           label="Settings"
           url="/cms/settings"
@@ -121,6 +148,7 @@ Layout.Side = () => {
 };
 
 interface SideButtonProps {
+  className?: string;
   label: string;
   url: string;
   active: boolean;
@@ -130,7 +158,7 @@ interface SideButtonProps {
 Layout.SideButton = (props: SideButtonProps) => {
   return (
     <Tooltip
-      className="Layout__side__button"
+      className={joinClassNames('Layout__side__button', props.className)}
       label={props.label}
       position="right"
       withArrow
