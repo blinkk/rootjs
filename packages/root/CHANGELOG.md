@@ -1,5 +1,12 @@
 # @blinkk/root
 
+## 1.0.6
+
+### Patch Changes
+
+- b3411f2: fix: only include "start" script in release package
+- 41a3e50: fix: fix 404 routes with base path
+
 ## 1.0.5
 
 ## 1.0.4
