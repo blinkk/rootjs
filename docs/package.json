@@ -14,7 +14,8 @@
     "build": "rm -rf dist/ && root package --target=firebase --out=functions && touch .env && cp .env functions",
     "preview": "rm -rf dist/ && root build --ssr-only && root preview",
     "deploy": "pnpm run build && firebase deploy",
-    "types": "root-cms types"
+    "types": "root-cms types",
+    "add-element": "root codegen element"
   },
   "author": "s@blinkk.com",
   "license": "MIT",

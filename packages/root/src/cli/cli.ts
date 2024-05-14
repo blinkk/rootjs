@@ -1,6 +1,7 @@
 import {Command} from 'commander';
 import {bgGreen, black} from 'kleur/colors';
 import {build} from './build.js';
+import {codegen} from './codegen.js';
 import {createPackage} from './create-package.js';
 import {dev, createDevServer} from './dev.js';
 import {preview, createPreviewServer} from './preview.js';
@@ -41,6 +42,11 @@ class CliRunner {
         '10'
       )
       .action(build);
+    program
+      .command('codegen [type] [name]')
+      .description('generates boilerplate code')
+      .option('--out <outdir>', 'output dir')
+      .action(codegen);
     program
       .command('create-package [path]')
       .alias('package')
