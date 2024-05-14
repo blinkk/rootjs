@@ -139,7 +139,19 @@ export class Renderer {
       } else if (route.src === 'routes/500.tsx') {
         statusCode = 500;
       }
+
+      // Trigger preRender hooks.
       req.hooks.trigger('preRender');
+      const plugins = this.rootConfig.plugins || [];
+      for (const plugin of plugins) {
+        if (plugin.hooks?.preRender) {
+          const newHtml = await plugin.hooks.preRender(html);
+          if (newHtml && typeof newHtml === 'string') {
+            html = newHtml;
+          }
+        }
+      }
+
       res.status(statusCode);
       res.set({'Content-Type': 'text/html'});
       this.setSecurityHeaders(res, {

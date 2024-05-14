@@ -38,7 +38,7 @@ export function sessionMiddleware(options?: SessionMiddlewareOptions) {
         sameSite: sameSite,
       });
     };
-    req.hooks.add('beforeRender', () => {
+    req.hooks.add('preRender', () => {
       res.saveSession();
     });
     next();

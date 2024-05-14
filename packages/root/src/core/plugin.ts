@@ -14,6 +14,15 @@ export interface ConfigureServerOptions {
   rootConfig: RootConfig;
 }
 
+export interface PluginHooks {
+  /**
+   * Post-render hook that's called before the HTML is rendered to the response
+   * object. If a string is returned from this hook, it will replace the
+   * rendered HTML.
+   */
+  preRender: (html: string) => void | string | Promise<string>;
+}
+
 export interface Plugin {
   [key: string]: any;
   /** The name of the plugin. */
@@ -44,6 +53,8 @@ export interface Plugin {
   ssrInput?: () => {[entryAlias: string]: string};
   /** Adds vite plugins. */
   vitePlugins?: VitePlugin[];
+  /** Plugin lifecycle callback hooks. */
+  hooks?: PluginHooks;
 }
 
 /**
