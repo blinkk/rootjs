@@ -1,18 +1,21 @@
-import {ActionIcon, Button, Select, Tooltip} from '@mantine/core';
+import {ActionIcon, Button, Menu, Select, Tooltip} from '@mantine/core';
 import {useHotkeys} from '@mantine/hooks';
 import {
   IconArrowLeft,
   IconArrowUpRight,
+  IconBraces,
   IconDeviceDesktop,
   IconDeviceFloppy,
   IconDeviceIpad,
   IconDeviceMobile,
+  IconDotsVertical,
   IconReload,
   IconWorld,
 } from '@tabler/icons-preact';
 import {useEffect, useRef, useState} from 'preact/hooks';
 
 import {DocEditor} from '../../components/DocEditor/DocEditor.js';
+import {useEditJsonModal} from '../../components/EditJsonModal/EditJsonModal.js';
 import {SplitPanel} from '../../components/SplitPanel/SplitPanel.js';
 import {UseDraftHook, useDraft} from '../../hooks/useDraft.js';
 import {useLocalStorage} from '../../hooks/useLocalStorage.js';
@@ -41,6 +44,21 @@ export function DocumentPage(props: DocumentPageProps) {
     draft.controller.flush();
   }
 
+  const editJsonModal = useEditJsonModal();
+
+  const editJson = () => {
+    editJsonModal.open({
+      data: draft.data?.fields || {},
+      onSave: (newValue) => {
+        if (newValue && typeof newValue === 'object') {
+          draft.controller.updateKey('fields', newValue);
+          draft.controller.flush();
+        }
+        editJsonModal.close();
+      },
+    });
+  };
+
   useHotkeys([['mod+S', () => saveDraft()]]);
 
   return (
@@ -67,6 +85,22 @@ export function DocumentPage(props: DocumentPageProps) {
               >
                 Save
               </Button>
+              <Menu
+                className="DocumentPage__side__header__menu"
+                position="bottom"
+                control={
+                  <ActionIcon className="DocumentPage__side__header__menu__dots">
+                    <IconDotsVertical size={16} />
+                  </ActionIcon>
+                }
+              >
+                <Menu.Item
+                  icon={<IconBraces size={20} />}
+                  onClick={() => editJson()}
+                >
+                  Edit JSON
+                </Menu.Item>
+              </Menu>
             </div>
           </div>
           <div className="DocumentPage__side__editor">
