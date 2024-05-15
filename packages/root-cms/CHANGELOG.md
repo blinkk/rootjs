@@ -1,5 +1,14 @@
 # @blinkk/root-cms
 
+## 1.0.7
+
+### Patch Changes
+
+- 0f1de84: feat: add "edit json" on full doc
+- Updated dependencies [7820665]
+- Updated dependencies [9d4c662]
+  - @blinkk/root@1.0.7
+
 ## 1.0.6
 
 ### Patch Changes

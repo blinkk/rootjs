@@ -1,5 +1,12 @@
 # @blinkk/root
 
+## 1.0.7
+
+### Patch Changes
+
+- 7820665: feat: add preRender hook to plugins
+- 9d4c662: feat: add codegen cli
+
 ## 1.0.6
 
 ### Patch Changes
