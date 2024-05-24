@@ -10,6 +10,7 @@ import {
   updateDoc,
   writeBatch,
 } from 'firebase/firestore';
+import {logAction} from './actions.js';
 import {GSpreadsheet, parseSpreadsheetUrl} from './gsheets.js';
 
 export type DataSourceType = 'http' | 'gsheet';
@@ -66,6 +67,7 @@ export async function addDataSource(
     createdAt: serverTimestamp(),
     createdBy: window.firebase.user.email,
   });
+  logAction('datasource.create', {metadata: {datasourceId: id}});
 }
 
 export async function listDataSources(): Promise<DataSource[]> {
@@ -129,6 +131,7 @@ export async function updateDataSource(
   const db = window.firebase.db;
   const docRef = doc(db, 'Projects', projectId, 'DataSources', id);
   await updateDoc(docRef, dataSource);
+  logAction('datasource.save', {metadata: {datasourceId: id}});
 }
 
 export async function syncDataSource(id: string) {
@@ -189,6 +192,7 @@ export async function syncDataSource(id: string) {
   }
 
   console.log(`synced data source: ${id}`);
+  logAction('datasource.sync', {metadata: {datasourceId: id}});
 }
 
 export async function publishDataSource(id: string) {
@@ -242,6 +246,7 @@ export async function publishDataSource(id: string) {
   await batch.commit();
 
   console.log(`published data ${id}`);
+  logAction('datasource.publish', {metadata: {datasourceId: id}});
 }
 
 export async function deleteDataSource(id: string) {
@@ -272,6 +277,7 @@ export async function deleteDataSource(id: string) {
   batch.delete(dataSourceDocRef);
   await batch.commit();
   console.log(`deleted data source ${id}`);
+  logAction('datasource.delete', {metadata: {datasourceId: id}});
 }
 
 async function fetchData(dataSource: DataSource) {
