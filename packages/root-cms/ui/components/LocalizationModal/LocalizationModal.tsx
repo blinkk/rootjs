@@ -28,6 +28,7 @@ import * as schema from '../../../core/schema.js';
 import {DraftController} from '../../hooks/useDraft.js';
 import {GapiClient, useGapiClient} from '../../hooks/useGapiClient.js';
 import {useModalTheme} from '../../hooks/useModalTheme.js';
+import {logAction} from '../../utils/actions.js';
 import {
   CsvTranslation,
   cmsDocImportTranslations,
@@ -45,7 +46,6 @@ import {TranslationsMap, loadTranslations} from '../../utils/l10n.js';
 import {useExportSheetModal} from '../ExportSheetModal/ExportSheetModal.js';
 import {Heading} from '../Heading/Heading.js';
 import './LocalizationModal.css';
-import {logAction} from '../../utils/actions.js';
 
 const MODAL_ID = 'LocalizationModal';
 

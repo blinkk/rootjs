@@ -25,6 +25,7 @@ import {DataSourcePage} from './pages/DataSourcePage/DataSourcePage.js';
 import {DocumentPage} from './pages/DocumentPage/DocumentPage.js';
 import {EditDataSourcePage} from './pages/EditDataSourcePage/EditDataSourcePage.js';
 import {EditReleasePage} from './pages/EditReleasePage/EditReleasePage.js';
+import {LogsPage} from './pages/LogsPage/LogsPage.js';
 import {NewDataSourcePage} from './pages/NewDataSourcePage/NewDataSourcePage.js';
 import {NewReleasePage} from './pages/NewReleasePage/NewReleasePage.js';
 import {NotFoundPage} from './pages/NotFoundPage/NotFoundPage.js';
@@ -32,12 +33,12 @@ import {ProjectPage} from './pages/ProjectPage/ProjectPage.js';
 import {ReleasePage} from './pages/ReleasePage/ReleasePage.js';
 import {ReleasesPage} from './pages/ReleasesPage/ReleasesPage.js';
 import {SettingsPage} from './pages/SettingsPage/SettingsPage.js';
+import {SidebarToolsPage} from './pages/SidebarToolsPage/SidebarToolsPage.js';
 import {TranslationsArbPage} from './pages/TranslationsArbPage/TranslationsArbPage.js';
 import {TranslationsEditPage} from './pages/TranslationsEditPage/TranslationsEditPage.js';
 import {TranslationsPage} from './pages/TranslationsPage/TranslationsPage.js';
 import './styles/global.css';
 import './styles/theme.css';
-import {SidebarToolsPage} from './pages/SidebarToolsPage/SidebarToolsPage.js';
 
 declare global {
   interface Window {
@@ -109,6 +110,7 @@ function App() {
               <Route path="/cms/data/new" component={NewDataSourcePage} />
               <Route path="/cms/data/:id" component={DataSourcePage} />
               <Route path="/cms/data/:id/edit" component={EditDataSourcePage} />
+              <Route path="/cms/logs" component={LogsPage} />
               <Route path="/cms/releases" component={ReleasesPage} />
               <Route path="/cms/releases/new" component={NewReleasePage} />
               <Route path="/cms/releases/:id" component={ReleasePage} />

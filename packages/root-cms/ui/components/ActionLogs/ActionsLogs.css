@@ -1,0 +1,26 @@
+.ActionsLog__table {
+  font-family: var(--font-family-mono);
+}
+
+.ActionsLogs__table__row + .ActionsLogs__table__row {
+  border-top: 1px solid var(--color-border);
+  padding-top: 12px;
+  margin-top: 12px;
+}
+
+.ActionsLogs__table__header,
+.ActionsLogs__table__col {
+  padding-left: 8px;
+  padding-right: 8px;
+  text-align: left;
+}
+
+.ActionsLogs__table__col--nowrap {
+  white-space: nowrap;
+}
+
+.ActionsLogs__table__buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}

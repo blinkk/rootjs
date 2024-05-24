@@ -1,7 +1,23 @@
+import {
+  Timestamp,
+  collection,
+  getDocs,
+  limit,
+  orderBy,
+  query,
+} from 'firebase/firestore';
+import {DataSource} from './data-source.js';
 import {timestamp} from './time.js';
 
 /** A map of when an action was last called. */
 const ACTION_TIMESTAMPS: Record<string, number> = {};
+
+export interface Action {
+  action: string;
+  metadata: any;
+  timestamp: Timestamp;
+  by: string;
+}
 
 export async function logAction(
   action: string,
@@ -30,6 +46,27 @@ export async function logAction(
 
   // Save a timestamp of when the action was last called.
   ACTION_TIMESTAMPS[actionKey] = timestamp();
+}
+
+export interface ListActionsOptions {
+  limit?: number;
+}
+
+export async function listActions(options: ListActionsOptions) {
+  const projectId = window.__ROOT_CTX.rootConfig.projectId;
+  const db = window.firebase.db;
+  const colRef = collection(db, 'Projects', projectId, 'ActionLogs');
+  const q = query(
+    colRef,
+    orderBy('timestamp', 'desc'),
+    limit(options?.limit || 20)
+  );
+  const querySnapshot = await getDocs(q);
+  const res: Action[] = [];
+  querySnapshot.forEach((doc) => {
+    res.push(doc.data() as Action);
+  });
+  return res;
 }
 
 function isThrottled(actionKey: string, millis: number): boolean {
