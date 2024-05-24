@@ -1,5 +1,12 @@
 # @blinkk/root-cms
 
+## 1.0.8
+
+### Patch Changes
+
+- 7b10a32: feat: add action logs
+  - @blinkk/root@1.0.8
+
 ## 1.0.7
 
 ### Patch Changes
