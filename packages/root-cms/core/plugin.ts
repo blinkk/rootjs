@@ -23,7 +23,7 @@ import * as jsonwebtoken from 'jsonwebtoken';
 import sirv from 'sirv';
 import {generateTypes} from '../cli/generate-types.js';
 import {api} from './api.js';
-import {RootCMSClient} from './client.js';
+import {Action, RootCMSClient} from './client.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -129,6 +129,11 @@ export type CMSPluginOptions = {
      */
     tools?: Record<string, CMSSidebarTool>;
   };
+
+  /**
+   * Callback when an action occurs.
+   */
+  onAction?: (action: Action) => any;
 };
 
 export type CMSPlugin = Plugin & {

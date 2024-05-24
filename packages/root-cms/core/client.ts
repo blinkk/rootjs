@@ -824,6 +824,16 @@ export class RootCMSClient {
 
     const metaStr = options?.metadata ? stringifyObj(options.metadata) : '';
     console.log(`[${data.timestamp.toMillis()}] action: ${action} ${metaStr}`);
+
+    // Call the `onAction()` callback from cmsPlugin().
+    const cmsPluginConfig = this.cmsPlugin.getConfig();
+    if (cmsPluginConfig.onAction) {
+      try {
+        cmsPluginConfig.onAction(data);
+      } catch (err) {
+        console.error(err);
+      }
+    }
   }
 }
 
