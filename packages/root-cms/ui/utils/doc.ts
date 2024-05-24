@@ -17,6 +17,7 @@ import {
   where,
   WriteBatch,
 } from 'firebase/firestore';
+import {logAction} from './actions.js';
 import {removeDocFromCache, removeDocsFromCache} from './doc-cache.js';
 import {GoogleSheetId} from './gsheets.js';
 import {
@@ -80,6 +81,8 @@ export async function cmsDeleteDoc(docId: string) {
   // Delete any scheduled doc.
   batch.delete(scheduledDocRef);
   await batch.commit();
+  console.log(`deleted doc: ${docId}`);
+  logAction('doc.delete', {metadata: {docId}});
 }
 
 export async function cmsPublishDoc(docId: string) {
@@ -121,6 +124,10 @@ export async function cmsPublishDocs(
     console.log(`published ${docIds[0]}`);
   } else {
     console.log(`published ${docIds.length} docs: ${docIds.join(', ')}`);
+  }
+
+  for (const docId of docIds) {
+    logAction('doc.publish', {metadata: {docId}});
   }
 
   // Reset doc cache for published docs.
@@ -234,6 +241,8 @@ export async function cmsScheduleDoc(docId: string, millis: number) {
     transaction.set(scheduledDocRef, {...data, sys});
   });
   console.log(`saved ${scheduledDocRef.id}`);
+
+  logAction('doc.schedule', {metadata: {docId, scheduledAt: millis}});
 }
 
 export async function cmsUnpublishDoc(docId: string) {
@@ -283,6 +292,7 @@ export async function cmsUnpublishDoc(docId: string) {
   batch.delete(publishedDocRef);
   await batch.commit();
   console.log(`unpublished ${docId}`);
+  logAction('doc.unpublish', {metadata: {docId}});
   removeDocFromCache(docId);
 }
 
@@ -317,6 +327,7 @@ export async function cmsRevertDraft(docId: string) {
     transaction.set(draftDocRef, data);
   });
   console.log(`reverted draft ${docId}`);
+  logAction('doc.revert', {metadata: {docId}});
 }
 
 export async function cmsUnscheduleDoc(docId: string) {
@@ -353,6 +364,7 @@ export async function cmsUnscheduleDoc(docId: string) {
   batch.delete(scheduledDocRef);
   await batch.commit();
   console.log(`unscheduled ${docId}`);
+  logAction('doc.unschedule', {metadata: {docId}});
 }
 
 export async function cmsCopyDoc(
@@ -393,6 +405,7 @@ export async function cmsCreateDoc(
     fields: options?.fields ?? {},
   };
   await setDoc(docRef, data);
+  logAction('doc.create', {metadata: {docId}});
 }
 
 export interface CsvTranslation {
@@ -400,7 +413,7 @@ export interface CsvTranslation {
   source: string;
 }
 
-export async function cmsDocImportCsv(
+export async function cmsDocImportTranslations(
   docId: string,
   csvData: CsvTranslation[],
   options?: {tags?: string[]}
@@ -478,6 +491,7 @@ export async function cmsDocImportCsv(
     await batch.commit();
     console.log(`saved ${count} strings`);
   }
+  logAction('doc.import_translations', {metadata: {docId}});
   return translationsMap;
 }
 
@@ -553,6 +567,13 @@ export async function cmsRestoreVersion(docId: string, version: Version) {
     fields: version.fields || {},
   };
   await updateDoc(docRef, updates);
+  logAction('doc.restore_version', {
+    metadata: {
+      docId,
+      versionModifiedAt: version.sys?.modifiedAt,
+      versionModifiedBy: version.sys?.modifiedBy,
+    },
+  });
 }
 
 /**
@@ -575,6 +596,7 @@ export async function cmsLinkGoogleSheetL10n(
     },
   };
   await updateDoc(docRef, updates);
+  logAction('doc.link_sheet', {metadata: {docId: docId, sheetId: sheetId}});
 }
 
 /**
@@ -586,6 +608,7 @@ export async function cmsUnlinkGoogleSheetL10n(docId: string) {
     'sys.l10nSheet': deleteField(),
   };
   await updateDoc(docRef, updates);
+  logAction('doc.unlink_sheet', {metadata: {docId}});
 }
 
 /**

@@ -9,12 +9,15 @@ import {
   deleteField,
 } from 'firebase/firestore';
 import {useEffect, useMemo, useState} from 'preact/hooks';
+import {logAction} from '../utils/actions.js';
 import {debounce} from '../utils/debounce.js';
 import {setDocToCache} from '../utils/doc-cache.js';
 import {EventListener} from '../utils/events.js';
 import {getNestedValue, isObject} from '../utils/objects.js';
+import {TIME_UNITS} from '../utils/time.js';
 
-const SAVE_DELAY_MS = 3 * 1000;
+const SAVE_DELAY = 3 * TIME_UNITS.second;
+const SAVE_ACTION_LOG_THROTTLE = 5 * TIME_UNITS.minute;
 
 export enum SaveState {
   NO_CHANGES = 'NO_CHANGES',
@@ -194,7 +197,7 @@ export class DraftController extends EventListener {
    * number of times, and the write will go through N seconds after the last
    * update.
    */
-  private queueChanges = debounce(() => this.flush(), SAVE_DELAY_MS);
+  private queueChanges = debounce(() => this.flush(), SAVE_DELAY);
 
   private setSaveState(newSaveState: SaveState) {
     const oldSaveState = this.saveState;
@@ -211,7 +214,7 @@ export class DraftController extends EventListener {
         if (this.saveState === SaveState.SAVED) {
           this.setSaveState(SaveState.NO_CHANGES);
         }
-      }, SAVE_DELAY_MS);
+      }, SAVE_DELAY);
     }
 
     this.dispatch(EventType.SAVE_STATE_CHANGE, newSaveState);
@@ -239,6 +242,11 @@ export class DraftController extends EventListener {
       await updateDoc(this.docRef, updates);
       this.setSaveState(SaveState.SAVED);
       this.dispatch(EventType.FLUSH);
+      logAction('doc.save', {
+        metadata: {docId: this.docId},
+        throttle: SAVE_ACTION_LOG_THROTTLE,
+        throttleId: this.docId,
+      });
     } catch (err) {
       console.error('failed to update doc');
       console.error(err);
@@ -344,7 +352,7 @@ export interface UseDraftHook {
 export function useDraft(docId: string): UseDraftHook {
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState<any>({});
-  const controller = useMemo(() => new DraftController(docId), []);
+  const controller = useMemo(() => new DraftController(docId), [docId]);
   const [saveState, setSaveState] = useState(SaveState.NO_CHANGES);
 
   useEffect(() => {
@@ -371,7 +379,7 @@ export function useDraft(docId: string): UseDraftHook {
       controller.dispose();
       document.removeEventListener('visibilitychange', onVisibilityChange);
     };
-  }, []);
+  }, [docId]);
 
   return {loading, saveState, controller, data};
 }

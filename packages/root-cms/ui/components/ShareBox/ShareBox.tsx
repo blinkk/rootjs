@@ -13,6 +13,7 @@ import {notifyErrors} from '../../utils/notifications.js';
 import {sortByKey} from '../../utils/objects.js';
 import {Text} from '../Text/Text.js';
 import './ShareBox.css';
+import {logAction} from '../../utils/actions.js';
 
 export interface ShareBoxProps {
   className?: string;
@@ -46,6 +47,7 @@ export function ShareBox(props: ShareBoxProps) {
           delete newValue[email];
           return newValue;
         });
+        logAction('acls.remove_user', {metadata: {user: email}});
       } else {
         await updateDoc(docRef, new FieldPath('roles', email), role);
         setRoles((current) => {
@@ -54,6 +56,7 @@ export function ShareBox(props: ShareBoxProps) {
             [email]: role,
           };
         });
+        logAction('acls.update_user', {metadata: {user: email, role}});
       }
     });
     setLoading(false);
@@ -71,6 +74,7 @@ export function ShareBox(props: ShareBoxProps) {
         };
       });
     });
+    logAction('acls.add_user', {metadata: {user: email, role: 'VIEWER'}});
     setLoading(false);
   }
 

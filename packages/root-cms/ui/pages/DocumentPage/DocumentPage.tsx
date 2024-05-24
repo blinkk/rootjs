@@ -104,11 +104,16 @@ export function DocumentPage(props: DocumentPageProps) {
             </div>
           </div>
           <div className="DocumentPage__side__editor">
-            <DocEditor collection={collection} docId={docId} draft={draft} />
+            <DocEditor
+              key={docId}
+              collection={collection}
+              docId={docId}
+              draft={draft}
+            />
           </div>
         </SplitPanel.Item>
         <SplitPanel.Item className="DocumentPage__main" fluid>
-          <DocumentPage.Preview docId={docId} draft={draft} />
+          <DocumentPage.Preview key={docId} docId={docId} draft={draft} />
         </SplitPanel.Item>
       </SplitPanel>
     </Layout>

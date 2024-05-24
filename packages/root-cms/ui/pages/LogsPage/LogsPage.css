@@ -1,0 +1,12 @@
+.LogsPage {
+  padding: 60px;
+}
+
+.LogsPage__header {
+  margin-bottom: 30px;
+}
+
+.LogsPage p {
+  margin-top: 16px;
+  max-width: 600px;
+}

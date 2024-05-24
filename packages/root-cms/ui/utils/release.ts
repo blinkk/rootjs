@@ -13,6 +13,7 @@ import {
   updateDoc,
   writeBatch,
 } from 'firebase/firestore';
+import {logAction} from './actions.js';
 import {cmsPublishDocs} from './doc.js';
 
 export interface Release {
@@ -48,6 +49,7 @@ export async function addRelease(id: string, release: Partial<Release>) {
       createdBy: window.firebase.user.email,
     });
   });
+  logAction('release.create', {metadata: {releaseId: id}});
 }
 
 export async function listReleases(): Promise<Release[]> {
@@ -79,6 +81,7 @@ export async function updateRelease(id: string, dataSource: Partial<Release>) {
   const db = window.firebase.db;
   const docRef = doc(db, 'Projects', projectId, COLLECTION_ID, id);
   await updateDoc(docRef, dataSource);
+  logAction('release.save', {metadata: {releaseId: id}});
 }
 
 export async function deleteRelease(id: string) {
@@ -87,6 +90,7 @@ export async function deleteRelease(id: string) {
   const docRef = doc(db, 'Projects', projectId, COLLECTION_ID, id);
   await deleteDoc(docRef);
   console.log(`deleted release ${id}`);
+  logAction('release.delete', {metadata: {releaseId: id}});
 }
 
 export async function publishRelease(id: string) {
@@ -115,6 +119,7 @@ export async function publishRelease(id: string) {
   });
   await cmsPublishDocs(docIds, {batch});
   console.log(`published release: ${id}`);
+  logAction('release.publish', {metadata: {releaseId: id, docIds: docIds}});
 }
 
 export async function scheduleRelease(
@@ -138,6 +143,9 @@ export async function scheduleRelease(
     scheduledAt: timestamp,
     scheduledBy: window.firebase.user.email,
   });
+  logAction('release.publish', {
+    metadata: {releaseId: id, scheduledAt: timestamp.toMillis()},
+  });
 }
 
 export async function cancelScheduledRelease(id: string) {
@@ -154,4 +162,5 @@ export async function cancelScheduledRelease(id: string) {
     scheduledAt: deleteField(),
     scheduledBy: deleteField(),
   });
+  logAction('release.unschedule', {metadata: {releaseId: id}});
 }

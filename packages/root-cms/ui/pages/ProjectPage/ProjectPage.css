@@ -2,21 +2,27 @@
   padding: 60px;
 }
 
-.ProjectPage h1 {
-  margin-bottom: 24px;
+.ProjectPage__headline {
+  margin-bottom: 60px;
 }
 
-.ProjectPage p {
+.ProjectPage__body {
   margin-top: 16px;
   max-width: 70ch;
 }
 
-.ProjectPage__section {
-  margin-top: 40px;
+.ProjectPage__section + .ProjectPage__section {
+  margin-top: 80px;
 }
 
 .ProjectPage__section__title {
   margin-bottom: 20px;
+}
+
+.ProjectPage__section__title--flex {
+  display: flex;
+  align-items: center;
+  gap: 12px;
 }
 
 .ProjectPage__collectionList {
