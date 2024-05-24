@@ -41,7 +41,7 @@ export function ActionLogs(props: ActionLogsProps) {
             <th className="ActionsLogs__table__header">timestamp</th>
             <th className="ActionsLogs__table__header">user</th>
             <th className="ActionsLogs__table__header">action</th>
-            <th className="ActionsLogs__table__header">quicklinks</th>
+            <th className="ActionsLogs__table__header">quick links</th>
           </tr>
         </thead>
         <tbody>
@@ -113,6 +113,17 @@ export function ActionLogs(props: ActionLogsProps) {
                       target="_blank"
                     >
                       Open sheet
+                    </Button>
+                  )}
+                  {action.action.startsWith('acls.') && (
+                    <Button
+                      component="a"
+                      variant="default"
+                      size="xs"
+                      compact
+                      href="/cms/settings"
+                    >
+                      Open settings
                     </Button>
                   )}
                 </div>
