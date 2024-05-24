@@ -413,7 +413,7 @@ export interface CsvTranslation {
   source: string;
 }
 
-export async function cmsDocImportCsv(
+export async function cmsDocImportTranslations(
   docId: string,
   csvData: CsvTranslation[],
   options?: {tags?: string[]}
@@ -491,6 +491,7 @@ export async function cmsDocImportCsv(
     await batch.commit();
     console.log(`saved ${count} strings`);
   }
+  logAction('doc.import_translations', {metadata: {docId}});
   return translationsMap;
 }
 
@@ -566,6 +567,13 @@ export async function cmsRestoreVersion(docId: string, version: Version) {
     fields: version.fields || {},
   };
   await updateDoc(docRef, updates);
+  logAction('doc.restore_version', {
+    metadata: {
+      docId,
+      versionModifiedAt: version.sys?.modifiedAt,
+      versionModifiedBy: version.sys?.modifiedBy,
+    },
+  });
 }
 
 /**
@@ -588,6 +596,7 @@ export async function cmsLinkGoogleSheetL10n(
     },
   };
   await updateDoc(docRef, updates);
+  logAction('doc.link_sheet', {metadata: {docId: docId, sheetId: sheetId}});
 }
 
 /**
@@ -599,6 +608,7 @@ export async function cmsUnlinkGoogleSheetL10n(docId: string) {
     'sys.l10nSheet': deleteField(),
   };
   await updateDoc(docRef, updates);
+  logAction('doc.unlink_sheet', {metadata: {docId}});
 }
 
 /**

@@ -30,7 +30,7 @@ import {GapiClient, useGapiClient} from '../../hooks/useGapiClient.js';
 import {useModalTheme} from '../../hooks/useModalTheme.js';
 import {
   CsvTranslation,
-  cmsDocImportCsv,
+  cmsDocImportTranslations,
   cmsGetLinkedGoogleSheetL10n,
   cmsUnlinkGoogleSheetL10n,
 } from '../../utils/doc.js';
@@ -45,6 +45,7 @@ import {TranslationsMap, loadTranslations} from '../../utils/l10n.js';
 import {useExportSheetModal} from '../ExportSheetModal/ExportSheetModal.js';
 import {Heading} from '../Heading/Heading.js';
 import './LocalizationModal.css';
+import {logAction} from '../../utils/actions.js';
 
 const MODAL_ID = 'LocalizationModal';
 
@@ -405,7 +406,7 @@ LocalizationModal.Translations = (props: TranslationsProps) => {
             throw new Error(`RPCError: ${errorText}`);
           }
           const resData = (await res.json()).data;
-          const importedTranslations = await cmsDocImportCsv(
+          const importedTranslations = await cmsDocImportTranslations(
             props.docId,
             resData
           );
@@ -473,6 +474,15 @@ LocalizationModal.Translations = (props: TranslationsProps) => {
         preserveColumns: locales,
       });
     }
+    logAction('doc.export_to_sheet', {
+      metadata: {
+        docId: props.docId,
+        sheetId: {
+          spreadsheetId: gsheet.spreadsheet.spreadsheetId,
+          gid: gsheet.gid,
+        },
+      },
+    });
   }
 
   async function importGoogleSheet() {
@@ -491,7 +501,10 @@ LocalizationModal.Translations = (props: TranslationsProps) => {
     console.log('importing google sheet');
     const values = (await gsheet.getValuesMap()) as CsvTranslation[];
 
-    const importedTranslations = await cmsDocImportCsv(props.docId, values);
+    const importedTranslations = await cmsDocImportTranslations(
+      props.docId,
+      values
+    );
     setTranslationsMap((currentTranslations) => {
       return Object.assign({}, currentTranslations, importedTranslations);
     });

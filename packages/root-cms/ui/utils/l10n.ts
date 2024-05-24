@@ -7,6 +7,8 @@ import {
   updateDoc,
   where,
 } from 'firebase/firestore';
+import {logAction} from './actions.js';
+import {TIME_UNITS} from './time.js';
 
 export interface Translation {
   [locale: string]: string;
@@ -93,6 +95,11 @@ export async function updateTranslationByHash(
   console.log('updating translations: ', updates);
 
   await updateDoc(docRef, updates);
+  logAction('translations.save', {
+    metadata: {hash},
+    throttle: 5 * TIME_UNITS.minute,
+    throttleId: hash,
+  });
 }
 
 /** Returns the sha1 hash for a source string. */
