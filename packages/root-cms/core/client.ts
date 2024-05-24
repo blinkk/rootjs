@@ -126,6 +126,40 @@ export interface Release {
   publishedBy?: string;
 }
 
+export interface Action<T = any> {
+  /**
+   * The name of the action.
+   */
+  action: string;
+  /**
+   * The user's email that performed the action (or "system").
+   */
+  by?: string;
+  /**
+   * Timestamp when the action occurred.
+   */
+  timestamp: Timestamp;
+  /**
+   * Metadata for the action.
+   */
+  metadata?: T;
+}
+
+export interface ListActionsOptions {
+  /**
+   * Filter by a specific action. Defaults to all actions.
+   */
+  action?: string;
+  /**
+   * Filter by a specific user. Defaults to all users.
+   */
+  by?: string;
+  /**
+   * Max number of actions to return. Defaults to 100.
+   */
+  limit?: number;
+}
+
 export class RootCMSClient {
   private readonly rootConfig: RootConfig;
   private readonly cmsPlugin: CMSPlugin;
@@ -773,6 +807,21 @@ export class RootCMSClient {
       return true;
     }
     return false;
+  }
+
+  async logAction(action: string, options?: {by?: string; metadata?: any}) {
+    if (!action) {
+      throw new Error('missing required: "action"');
+    }
+    const data = {
+      action: action,
+      timestamp: Timestamp.now(),
+      by: options?.by || 'system',
+      metadata: options?.metadata || {},
+    };
+    const colRef = this.db.collection(`Projects/${this.projectId}/ActionLogs`);
+    await colRef.add(data);
+    console.log(`[${data.timestamp.toMillis()}] logged action: ${action}`);
   }
 }
 

@@ -119,10 +119,50 @@ export function api(server: Server) {
       res.status(400).json({success: false, error: 'MISSING_ID'});
       return;
     }
-    const cmsClient = new RootCMSClient(req.rootConfig);
+    const cmsClient = new RootCMSClient(req.rootConfig!);
     try {
       await cmsClient.syncDataSource(dataSourceId, {syncedBy: req.user.email});
       res.status(200).json({success: true, id: dataSourceId});
+    } catch (err) {
+      console.error(err.stack || err);
+      res.status(500).json({success: false, error: 'UNKNOWN'});
+    }
+  });
+
+  /**
+   * Logs an action.
+   */
+  server.use('/cms/api/actions.log', async (req: Request, res: Response) => {
+    if (
+      req.method !== 'POST' ||
+      !String(req.get('content-type')).startsWith('application/json')
+    ) {
+      res.status(400).json({success: false, error: 'BAD_REQUEST'});
+      return;
+    }
+
+    if (!req.user?.email) {
+      res.status(401).json({success: false, error: 'UNAUTHORIZED'});
+    }
+
+    const reqBody = req.body || {};
+    const action = reqBody.action;
+    if (!action) {
+      res.status(400).json({
+        success: false,
+        error: 'MISSING_REQUIRED_FIELD',
+        field: 'action',
+      });
+    }
+    const metadata = reqBody.metadata || {};
+
+    const cmsClient = new RootCMSClient(req.rootConfig!);
+    try {
+      await cmsClient.logAction(action, {
+        by: req.user?.email,
+        metadata: metadata,
+      });
+      res.status(200).json({success: true});
     } catch (err) {
       console.error(err.stack || err);
       res.status(500).json({success: false, error: 'UNKNOWN'});
