@@ -5,6 +5,7 @@ import {cmsCreateDoc} from '../../utils/doc.js';
 import {getDefaultFieldValue} from '../../utils/fields.js';
 import {SlugInput} from '../SlugInput/SlugInput.js';
 import './NewDocModal.css';
+import {logAction} from '../../utils/actions.js';
 
 interface NewDocModalProps {
   collection: string;

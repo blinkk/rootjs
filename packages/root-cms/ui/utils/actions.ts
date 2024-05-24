@@ -1,3 +1,5 @@
+import {timestamp} from './time.js';
+
 /** A map of when an action was last called. */
 const ACTION_TIMESTAMPS: Record<string, number> = {};
 
@@ -18,11 +20,12 @@ export async function logAction(
   const res = await fetch('/cms/api/actions.log', {
     method: 'POST',
     headers: {'content-type': 'application/json'},
-    body: JSON.stringify({action: action}),
+    body: JSON.stringify({action: action, metadata: options?.metadata || {}}),
   });
   if (res.status !== 200) {
     const err = await res.text();
-    throw new Error(`sync failed: ${err}`);
+    console.error(`failed to log action "${action}":`, err);
+    return;
   }
 
   // Save a timestamp of when the action was last called.
@@ -40,9 +43,5 @@ function isThrottled(actionKey: string, millis: number): boolean {
   }
 
   const now = timestamp();
-  return now - lastCalled >= millis;
-}
-
-function timestamp() {
-  return Math.floor(new Date().getTime());
+  return now - lastCalled < millis;
 }
