@@ -571,7 +571,7 @@ export class RootCMSClient {
       if (tags) {
         data.tags = tags;
       }
-      batch.update(translationRef, data);
+      batch.set(translationRef, data, {merge: true});
       batchCount += 1;
     });
     if (batchCount > 500) {
