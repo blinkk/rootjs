@@ -1,5 +1,12 @@
 # @blinkk/root-cms
 
+## 1.0.9
+
+### Patch Changes
+
+- c207662: fix: fix new translations uploads
+  - @blinkk/root@1.0.9
+
 ## 1.0.8
 
 ### Patch Changes
