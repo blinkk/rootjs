@@ -10,7 +10,7 @@ import {generateNonce, setSecurityHeaders} from '../core/csp.js';
 import {hashPassword, verifyPassword} from '../core/password.js';
 
 const SESSION_COOKIE_HASH = 'password_protect.hash';
-const SESSION_COOKIE_SALT = 'password_protect.hash';
+const SESSION_COOKIE_SALT = 'password_protect.salt';
 
 export interface PasswordProtectedRoute {
   /**
