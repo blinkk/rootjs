@@ -2,4 +2,4 @@
 '@blinkk/root': patch
 ---
 
-feat: add GlobalParamsProvider for injecting values to strings
+feat: add StringParamsProvider for injecting values to strings
