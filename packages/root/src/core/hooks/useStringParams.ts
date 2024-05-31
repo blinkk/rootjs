@@ -20,15 +20,15 @@ export const StringParamsProvider = STRING_PARAMS_CONTEXT.Provider;
  * ```
  * export default function Page() {
  *   return (
- *     <StringParamsProvider value={{nameOfUser: 'Alice'}}>
- *       <ItemPrice />
+ *     <StringParamsProvider value={{name: 'Alice'}}>
+ *       <SayHello />
  *     </StringParamsProvider>
  *   );
  * }
  *
- * function ItemPrice() {
+ * function SayHello() {
  *   const t = useTranslations();
- *   return <h1>{t('Hello, {nameOfUser}!')}</h1>;
+ *   return <h1>{t('Hello, {name}!')}</h1>;
  * }
  * ```
  *
