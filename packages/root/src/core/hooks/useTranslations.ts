@@ -1,4 +1,5 @@
 import {I18nContext, useI18nContext} from './useI18nContext.js';
+import {useStringParams} from './useStringParams.js';
 
 /**
  * A hook that returns a function that can be used to translate a string, and
@@ -21,14 +22,14 @@ export function useTranslations() {
     console.warn('I18nContext not found');
   }
   const translations = i18nContext?.translations || {};
+  const stringParams = useStringParams();
   const t = (str: string, params?: Record<string, string | number>) => {
     const key = normalizeString(str);
     let translation = translations[key] ?? key ?? '';
-    if (params) {
-      for (const param of Object.keys(params)) {
-        const val = String(params[param] ?? '');
-        translation = translation.replaceAll(`{${param}}`, val);
-      }
+    const allParams = {...stringParams, ...params};
+    for (const paramName of Object.keys(allParams)) {
+      const paramValue = String(allParams[paramName] ?? '');
+      translation = translation.replaceAll(`{${paramName}}`, paramValue);
     }
     return translation;
   };
