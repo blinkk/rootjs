@@ -4,10 +4,10 @@ export {Head} from './components/Head.js';
 export {Html, HTML_CONTEXT} from './components/Html.js';
 export {Script} from './components/Script.js';
 export {
-  GlobalParamsContext,
-  GlobalParamsProvider,
-  useGlobalParams,
-} from './hooks/useGlobalParams.js';
+  StringParamsContext,
+  StringParamsProvider,
+  useStringParams,
+} from './hooks/useStringParams.js';
 export {
   I18nContext,
   useI18nContext,
