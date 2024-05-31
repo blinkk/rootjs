@@ -1,3 +1,4 @@
+import {useGlobalParams} from './useGlobalParams.js';
 import {I18nContext, useI18nContext} from './useI18nContext.js';
 
 /**
@@ -21,14 +22,14 @@ export function useTranslations() {
     console.warn('I18nContext not found');
   }
   const translations = i18nContext?.translations || {};
+  const globalParams = useGlobalParams();
   const t = (str: string, params?: Record<string, string | number>) => {
     const key = normalizeString(str);
     let translation = translations[key] ?? key ?? '';
-    if (params) {
-      for (const param of Object.keys(params)) {
-        const val = String(params[param] ?? '');
-        translation = translation.replaceAll(`{${param}}`, val);
-      }
+    const allParams = {...globalParams, ...params};
+    for (const param of Object.keys(allParams)) {
+      const val = String(allParams[param] ?? '');
+      translation = translation.replaceAll(`{${param}}`, val);
     }
     return translation;
   };
