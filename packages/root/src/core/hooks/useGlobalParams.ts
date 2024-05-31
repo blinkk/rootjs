@@ -19,16 +19,20 @@ export const GlobalParamsProvider = GLOBAL_PARAMS_CONTEXT.Provider;
  *
  * ```
  * export default function Page() {
- *   const t = useTranslations();
  *   return (
  *     <GlobalParamsProvider value={{priceOfFoo: '$10'}}>
- *       {t('The price is {priceOfFoo}.')}
+ *       <ItemPrice />
  *     </GlobalParamsProvider>
  *   );
  * }
+ *
+ * function ItemPrice() {
+ *   const t = useTranslations();
+ *   return <h1>{t('The price is {priceOfFoo}.')}</h1>;
+ * }
  * ```
  *
- * This should render "The price is $10".
+ * This should render `<h1>The price is $10</h1>`.
  */
 export function useGlobalParams() {
   const globalParams = useContext(GLOBAL_PARAMS_CONTEXT) || {};
