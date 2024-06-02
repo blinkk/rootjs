@@ -403,7 +403,13 @@ export class Renderer {
       });
     });
 
-    return sitemap;
+    const orderedSitemap: Sitemap = {};
+    Object.keys(sitemap)
+      .sort()
+      .forEach((key: string) => {
+        orderedSitemap[key] = sitemap[key];
+      });
+    return orderedSitemap;
   }
 
   private async renderHtml(html: string, options?: RenderHtmlOptions) {
