@@ -403,11 +403,22 @@ export class Renderer {
       });
     });
 
+    // Sort the sitemap by the urlPath and the hreflang alts by locale
+    // (with x-default coming first).
     const orderedSitemap: Sitemap = {};
     Object.keys(sitemap)
       .sort()
-      .forEach((key: string) => {
-        orderedSitemap[key] = sitemap[key];
+      .forEach((urlPath: string) => {
+        // console.log(urlPath);
+        const sitemapItem = sitemap[urlPath];
+        const orderedAlts: Record<string, string> = {};
+        Object.keys(sitemapItem.alts)
+          .sort(sortLocales)
+          .forEach((locale) => {
+            orderedAlts[locale] = sitemapItem.alts[locale];
+          });
+        sitemapItem.alts = orderedAlts;
+        orderedSitemap[urlPath] = sitemapItem;
       });
     return orderedSitemap;
   }
@@ -678,4 +689,14 @@ export class Renderer {
 
 function isTrueOrUndefined(value: any) {
   return value === true || value === undefined;
+}
+
+function sortLocales(a: string, b: string) {
+  if (a === 'x-default') {
+    return -1;
+  }
+  if (b === 'x-default') {
+    return 1;
+  }
+  return a.localeCompare(b);
 }
