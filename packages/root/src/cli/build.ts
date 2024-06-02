@@ -404,16 +404,18 @@ export async function build(rootProjectDir?: string, options?: BuildOptions) {
         }
         await writeFile(outPath, html);
 
-        // Save the url to sitemap.xml. Ignore error files.
+        // Save the url to sitemap.xml. Ignore error files (e.g. 404.html).
         if (rootConfig.sitemap && outFilePath.endsWith('index.html')) {
           sitemapXmlItems.push('<url>');
           sitemapXmlItems.push(`  <loc>${domain}${urlPath}</loc>`);
           if (sitemapItem.alts) {
             Object.entries(sitemapItem.alts).forEach(
-              ([altLocale, altSitemapItem]) => {
-                sitemapXmlItems.push(
-                  `  <xhtml:link rel="alternate" hreflang="${altLocale}" href="${domain}${altSitemapItem.urlPath}" />`
-                );
+              ([altLocale, altUrlPath]) => {
+                if (sitemapItem.locale !== altLocale) {
+                  sitemapXmlItems.push(
+                    `  <xhtml:link rel="alternate" hreflang="${altLocale}" href="${domain}${altUrlPath}" />`
+                  );
+                }
               }
             );
           }

@@ -230,9 +230,9 @@ export interface SitemapItem {
   urlPath: string;
   route: Route;
   params: Record<string, string>;
+  locale: string;
   /**
-   * Hreflang alts. Only available when for routes where `route.isDefaultLocale`
-   * is true.
+   * Hreflang alts.
    */
-  alts?: Record<string, SitemapItem>;
+  alts: Record<string, string>;
 }
