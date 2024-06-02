@@ -25,6 +25,8 @@ import {
   Route,
   HandlerRenderFn,
   HandlerRenderOptions,
+  SitemapItem,
+  Sitemap,
 } from '../core/types.js';
 import type {ElementGraph} from '../node/element-graph.js';
 import {parseTagNames} from '../utils/elements.js';
@@ -377,22 +379,32 @@ export class Renderer {
     });
   }
 
-  async getSitemap(): Promise<
-    Record<string, {route: Route; params: Record<string, string>}>
-  > {
-    const sitemap: Record<
-      string,
-      {route: Route; params: Record<string, string>}
-    > = {};
+  async getSitemap(): Promise<Sitemap> {
+    const sitemap: Sitemap = {};
+    const sitemapDefaultPaths: Record<string, SitemapItem> = {};
+
     await this.router.walk(async (urlPath: string, route: Route) => {
       const routePaths = await this.router.getAllPathsForRoute(urlPath, route);
       routePaths.forEach((routePath) => {
-        sitemap[routePath.urlPath] = {
+        const sitemapItem: SitemapItem = {
+          urlPath: routePath.urlPath,
           route,
           params: routePath.params,
         };
+        sitemap[routePath.urlPath] = sitemapItem;
+        const defaultUrlPath = replaceParams(route.routePath, routePath.params);
+        if (route.isDefaultLocale) {
+          sitemapItem.alts = {};
+          sitemapDefaultPaths[defaultUrlPath] = sitemapItem;
+        } else {
+          const sitemapItemDefaultLocale = sitemapDefaultPaths[defaultUrlPath];
+          if (sitemapItemDefaultLocale?.alts) {
+            sitemapItemDefaultLocale.alts[route.locale] = sitemapItem;
+          }
+        }
       });
     });
+
     return sitemap;
   }
 

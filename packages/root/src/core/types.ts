@@ -216,3 +216,23 @@ export type HandlerRenderFn<Props = any> = (
   props: Props,
   options?: HandlerRenderOptions
 ) => Promise<void>;
+
+/**
+ * Sitemap is a map of URL path -> route info.
+ */
+export type Sitemap = Record<string, SitemapItem>;
+
+/**
+ * Sitemap route info. The "default locale" route provides "alts" that can be
+ * used for outputting the localized url paths.
+ */
+export interface SitemapItem {
+  urlPath: string;
+  route: Route;
+  params: Record<string, string>;
+  /**
+   * Hreflang alts. Only available when for routes where `route.isDefaultLocale`
+   * is true.
+   */
+  alts?: Record<string, SitemapItem>;
+}
