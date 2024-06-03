@@ -1,5 +1,12 @@
 # @blinkk/root
 
+## 1.0.10
+
+### Patch Changes
+
+- 4057024: feat: add StringParamsProvider for injecting values to strings
+- 376a118: feat: impl sitemap.xml output for ssg builds
+
 ## 1.0.9
 
 ## 1.0.8
