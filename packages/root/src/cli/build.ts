@@ -366,13 +366,22 @@ export async function build(rootProjectDir?: string, options?: BuildOptions) {
     const renderer = new render.Renderer(rootConfig, {assetMap, elementGraph});
     const sitemap = await renderer.getSitemap();
 
+    const sitemapXmlItems: string[] = [];
+    if (rootConfig.sitemap && !rootConfig.domain) {
+      throw new Error(
+        'missing "domain" in root.config.ts, required when using {sitemap: true}'
+      );
+    }
+    const domain = rootConfig.domain!;
+
     console.log('\nhtml output:');
     const batchSize = Number(options?.concurrency || 10);
     await batchAsyncCalls(Object.keys(sitemap), batchSize, async (urlPath) => {
-      const {route, params} = sitemap[urlPath];
+      console.log('a: ' + urlPath);
+      const sitemapItem = sitemap[urlPath];
       try {
-        const data = await renderer.renderRoute(route, {
-          routeParams: params,
+        const data = await renderer.renderRoute(sitemapItem.route, {
+          routeParams: sitemapItem.params,
         });
         if (data.notFound) {
           return;
@@ -386,6 +395,25 @@ export async function build(rootProjectDir?: string, options?: BuildOptions) {
         }
         const outPath = path.join(buildDir, outFilePath);
 
+        // Save the url to sitemap.xml. Ignore error files (e.g. 404.html).
+        if (rootConfig.sitemap && outFilePath.endsWith('index.html')) {
+          sitemapXmlItems.push('<url>');
+          sitemapXmlItems.push(`  <loc>${domain}${urlPath}</loc>`);
+          if (sitemapItem.alts) {
+            Object.entries(sitemapItem.alts).forEach(
+              ([altLocale, altUrlPath]) => {
+                if (sitemapItem.locale !== altLocale) {
+                  sitemapXmlItems.push(
+                    `  <xhtml:link rel="alternate" hreflang="${altLocale}" href="${domain}${altUrlPath}" />`
+                  );
+                }
+              }
+            );
+          }
+          sitemapXmlItems.push('</url>');
+        }
+
+        // Render html and save the file to dist/html.
         let html = data.html || '';
         if (rootConfig.prettyHtml !== false) {
           html = await htmlPretty(html, rootConfig.prettyHtmlOptions);
@@ -398,12 +426,29 @@ export async function build(rootProjectDir?: string, options?: BuildOptions) {
 
         printFileOutput(fileSize(outPath), 'dist/html/', outFilePath);
       } catch (e) {
-        logBuildError({route, params, urlPath}, e);
+        logBuildError(
+          {route: sitemapItem.route, params: sitemapItem.params, urlPath},
+          e
+        );
         throw new Error(
-          `BuildError: ${urlPath} (${route.src}) failed to build.`
+          `BuildError: ${urlPath} (${sitemapItem.route.src}) failed to build.`
         );
       }
     });
+
+    // Generate sitemap.xml.
+    if (rootConfig.sitemap) {
+      const sitemapXmlLines = [
+        '<?xml version="1.0" encoding="UTF-8"?>',
+        '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.sitemaps.org/schemas/sitemap/0.9 http://www.sitemaps.org/schemas/sitemap/0.9/sitemap.xsd">',
+        ...sitemapXmlItems,
+        '</urlset>',
+      ];
+      const sitemapXml = sitemapXmlLines.join('\n');
+      const outPath = path.join(buildDir, 'sitemap.xml');
+      await writeFile(outPath, sitemapXml);
+      printFileOutput(fileSize(outPath), 'dist/html/', 'sitemap.xml');
+    }
   }
 }
 

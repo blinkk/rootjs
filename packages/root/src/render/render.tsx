@@ -25,6 +25,8 @@ import {
   Route,
   HandlerRenderFn,
   HandlerRenderOptions,
+  SitemapItem,
+  Sitemap,
 } from '../core/types.js';
 import type {ElementGraph} from '../node/element-graph.js';
 import {parseTagNames} from '../utils/elements.js';
@@ -377,23 +379,48 @@ export class Renderer {
     });
   }
 
-  async getSitemap(): Promise<
-    Record<string, {route: Route; params: Record<string, string>}>
-  > {
-    const sitemap: Record<
-      string,
-      {route: Route; params: Record<string, string>}
-    > = {};
+  async getSitemap(): Promise<Sitemap> {
+    const sitemap: Sitemap = {};
+    const sitemapItemAlts: Record<string, Record<string, string>> = {};
+
     await this.router.walk(async (urlPath: string, route: Route) => {
       const routePaths = await this.router.getAllPathsForRoute(urlPath, route);
       routePaths.forEach((routePath) => {
-        sitemap[routePath.urlPath] = {
+        const routeLocale = route.isDefaultLocale ? 'x-default' : route.locale;
+        const defaultUrlPath = replaceParams(route.routePath, routePath.params);
+        if (!sitemapItemAlts[defaultUrlPath]) {
+          sitemapItemAlts[defaultUrlPath] = {};
+        }
+        sitemapItemAlts[defaultUrlPath][routeLocale] = urlPath;
+        const sitemapItem: SitemapItem = {
+          urlPath: routePath.urlPath,
           route,
           params: routePath.params,
+          locale: routeLocale,
+          alts: sitemapItemAlts[defaultUrlPath],
         };
+        sitemap[routePath.urlPath] = sitemapItem;
       });
     });
-    return sitemap;
+
+    // Sort the sitemap by the urlPath and the hreflang alts by locale
+    // (with x-default coming first).
+    const orderedSitemap: Sitemap = {};
+    Object.keys(sitemap)
+      .sort()
+      .forEach((urlPath: string) => {
+        // console.log(urlPath);
+        const sitemapItem = sitemap[urlPath];
+        const orderedAlts: Record<string, string> = {};
+        Object.keys(sitemapItem.alts)
+          .sort(sortLocales)
+          .forEach((locale) => {
+            orderedAlts[locale] = sitemapItem.alts[locale];
+          });
+        sitemapItem.alts = orderedAlts;
+        orderedSitemap[urlPath] = sitemapItem;
+      });
+    return orderedSitemap;
   }
 
   private async renderHtml(html: string, options?: RenderHtmlOptions) {
@@ -662,4 +689,14 @@ export class Renderer {
 
 function isTrueOrUndefined(value: any) {
   return value === true || value === undefined;
+}
+
+function sortLocales(a: string, b: string) {
+  if (a === 'x-default') {
+    return -1;
+  }
+  if (b === 'x-default') {
+    return 1;
+  }
+  return a.localeCompare(b);
 }
