@@ -170,7 +170,7 @@ function fieldType(field: Field): dom.Type {
 
 function renderSchema(fileId: string, schema: Schema): string {
   const jsdoc = `Generated from \`${fileId}\`.`;
-  const id = path.parse(fileId).name.split('.')[0];
+  const id = alphanumeric(path.parse(fileId).name.split('.')[0]);
   const fieldsInterface = `${id}Fields`;
   const fields = dom.create.interface(
     fieldsInterface,
@@ -216,4 +216,11 @@ function reindent(input: string): string {
     results.push(convertedLine);
   }
   return results.join('\n');
+}
+
+/**
+ * Removes non-alphanumeric chars from a string.
+ */
+function alphanumeric(input: string): string {
+  return input.replace(/[^a-zA-Z0-9]/g, '');
 }
