@@ -5,8 +5,16 @@ interface DocUrlOptions {
 }
 
 export function getDocServingUrl(options: DocUrlOptions) {
+  const collections = window.__ROOT_CTX.collections;
+  const rootCollection = collections[options.collectionId];
+  if (!rootCollection) {
+    throw new Error(`collection not found: ${options.collectionId}`);
+  }
+  const domain =
+    rootCollection.domain ||
+    window.__ROOT_CTX.rootConfig.domain ||
+    'https://example.com';
   const urlPath = getDocServingPath(options);
-  const domain = window.__ROOT_CTX.rootConfig.domain || 'https://example.com';
   return `${domain}${urlPath}`;
 }
 

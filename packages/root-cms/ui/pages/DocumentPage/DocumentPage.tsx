@@ -144,8 +144,16 @@ function getLocaleLabel(locale: string) {
 }
 
 DocumentPage.Preview = (props: PreviewProps) => {
-  const domain = window.__ROOT_CTX.rootConfig.domain || 'https://example.com';
   const [collectionId, slug] = props.docId.split('/');
+  const collections = window.__ROOT_CTX.collections;
+  const rootCollection = collections[collectionId];
+  if (!rootCollection) {
+    throw new Error(`collection not found: ${collectionId}`);
+  }
+  const domain =
+    rootCollection.domain ||
+    window.__ROOT_CTX.rootConfig.domain ||
+    'https://example.com';
   const servingPath = getDocServingPath({collectionId, slug});
 
   const servingUrl = `${domain}${servingPath}`;

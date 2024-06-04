@@ -243,7 +243,15 @@ export function defineSchema(schema: Schema): Schema {
 export const define = defineSchema;
 
 export type Collection = Schema & {
-  /** URL path where the collection serves from. */
+  /**
+   * Domain where the collection serves from. Used for multi-domain sites,
+   * defaults to the "domain" value `from root.config.ts`.
+   */
+  domain?: string;
+  /**
+   * URL path where the collection serves from. This is what's displayed in the
+   * preview pane in the CMS.
+   */
   url?: string;
   /**
    * URL that can be used to render a preview page. Used by the side-by-side
