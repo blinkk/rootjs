@@ -8,29 +8,23 @@ import {
   IconCopy,
   IconDotsVertical,
   IconHistory,
+  IconLock,
+  IconLockOpen,
   IconTrash,
 } from '@tabler/icons-preact';
-
 import {useModalTheme} from '../../hooks/useModalTheme.js';
 import {
+  CMSDoc,
   cmsDeleteDoc,
   cmsRevertDraft,
   cmsUnpublishDoc,
   cmsUnscheduleDoc,
+  testPublishingLocked,
 } from '../../utils/doc.js';
 import {useCopyDocModal} from '../CopyDocModal/CopyDocModal.js';
+import {useLockPublishingModal} from '../LockPublishingModal/LockPublishingModal.js';
 import {Text} from '../Text/Text.js';
 import {useVersionHistoryModal} from '../VersionHistoryModal/VersionHistoryModal.js';
-
-interface DocData {
-  sys?: {
-    modifiedAt?: number;
-    scheduledAt?: number;
-    firstPublishedAt?: number;
-    publishedAt?: number;
-  };
-  fields?: Record<string, any>;
-}
 
 export interface DocActionEvent {
   action: 'copy' | 'delete' | 'revert-draft' | 'unpublish' | 'unschedule';
@@ -39,19 +33,20 @@ export interface DocActionEvent {
 
 export interface DocActionsMenuProps {
   docId: string;
-  data?: DocData;
+  data?: CMSDoc;
   onDelete?: () => void;
   onAction?: (event: DocActionEvent) => void;
 }
 
 export function DocActionsMenu(props: DocActionsMenuProps) {
   const docId = props.docId;
-  const data = props.data || {};
+  const data = (props.data || {}) as CMSDoc;
   const sys = data.sys || {};
   const modals = useModals();
   const copyDocModal = useCopyDocModal({fromDocId: docId});
   const modalTheme = useModalTheme();
   const versionHistoryModal = useVersionHistoryModal({docId});
+  const disablePublishModal = useLockPublishingModal({docId});
 
   const onRevertDraft = () => {
     const notificationId = `revert-draft-${docId}`;
@@ -268,6 +263,21 @@ export function DocActionsMenu(props: DocActionsMenuProps) {
           onClick={() => onUnscheduleDoc()}
         >
           Unschedule
+        </Menu.Item>
+      )}
+      {testPublishingLocked(data) ? (
+        <Menu.Item
+          icon={<IconLockOpen size={20} />}
+          onClick={() => disablePublishModal.open({unlock: true})}
+        >
+          Unlock publishing
+        </Menu.Item>
+      ) : (
+        <Menu.Item
+          icon={<IconLock size={20} />}
+          onClick={() => disablePublishModal.open()}
+        >
+          Lock publishing
         </Menu.Item>
       )}
       <Menu.Item icon={<IconTrash size={20} />} onClick={() => onDeleteDoc()}>

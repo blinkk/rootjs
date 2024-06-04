@@ -35,6 +35,18 @@ export interface CMSDoc {
     createdBy: string;
     modifiedAt: Timestamp;
     modifiedBy: string;
+    scheduledAt: Timestamp;
+    scheduledBy: string;
+    firstPublishedAt: Timestamp;
+    firstPublishedBy: string;
+    publishedAt: Timestamp;
+    publishedBy: string;
+    publishingLocked: {
+      lockedAt: string;
+      lockedBy: string;
+      reason: string;
+      until?: Timestamp;
+    };
   };
   fields: any;
 }
@@ -365,6 +377,52 @@ export async function cmsUnscheduleDoc(docId: string) {
   await batch.commit();
   console.log(`unscheduled ${docId}`);
   logAction('doc.unschedule', {metadata: {docId}});
+}
+
+export async function cmsLockPublishing(
+  docId: string,
+  options: {reason: string; until?: number}
+) {
+  const publishingLocked: any = {
+    lockedAt: serverTimestamp(),
+    lockedBy: window.firebase.user.email,
+    reason: options.reason || `Locked by ${window.firebase.user.email}.`,
+  };
+  if (options.until) {
+    publishingLocked.until = Timestamp.fromMillis(options.until);
+  }
+
+  const docRef = getDraftDocRef(docId);
+  const updates = {
+    'sys.publishingLocked': publishingLocked,
+  };
+  await updateDoc(docRef, updates);
+  const metadata: any = {docId, reason: options.reason};
+  if (options.until) {
+    metadata.until = options.until;
+  }
+  logAction('doc.lock_publishing', {metadata});
+}
+
+export async function cmsUnlockPublishing(docId: string) {
+  const docRef = getDraftDocRef(docId);
+  const updates = {
+    'sys.publishingLocked': deleteField(),
+  };
+  await updateDoc(docRef, updates);
+  logAction('doc.unlock_publishing', {metadata: {docId}});
+}
+
+export function testPublishingLocked(docData: CMSDoc) {
+  if (docData.sys?.publishingLocked) {
+    if (docData.sys.publishingLocked.until) {
+      const now = Timestamp.now().toMillis();
+      const until = docData.sys.publishingLocked.until.toMillis();
+      return now < until;
+    }
+    return true;
+  }
+  return false;
 }
 
 export async function cmsCopyDoc(
