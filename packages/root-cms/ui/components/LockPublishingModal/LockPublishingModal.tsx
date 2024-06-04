@@ -23,7 +23,8 @@ export function useLockPublishingModal(props: LockPublishingModalProps) {
   const modalTheme = useModalTheme();
   return {
     open: (options?: Partial<LockPublishingModalProps>) => {
-      const title = props.unlock
+      const modalProps = {...props, ...options};
+      const title = modalProps.unlock
         ? `Unlock publishing for ${props.docId}`
         : `Lock publishing for ${props.docId}`;
       modals.openContextModal(MODAL_ID, {
