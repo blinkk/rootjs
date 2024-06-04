@@ -157,6 +157,10 @@ function updatePublishedDocDataInBatch(
   docId: string,
   draftData: CMSDoc
 ) {
+  if (testPublishingLocked(draftData)) {
+    throw new Error(`publishing is locked for doc: ${draftData.id}`);
+  }
+
   const projectId = window.__ROOT_CTX.rootConfig.projectId;
   const db = window.firebase.db;
   const [collectionId, slug] = docId.split('/');
