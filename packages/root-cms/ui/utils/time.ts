@@ -45,3 +45,14 @@ export function getTimeAgo(
 export function timestamp(): number {
   return Math.floor(new Date().getTime());
 }
+
+export function formatDateTime(ts: Timestamp) {
+  const date = new Date(ts.toMillis());
+  return date.toLocaleDateString('en', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+}

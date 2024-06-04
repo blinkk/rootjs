@@ -14,6 +14,7 @@ import {DocSelectModal} from './components/DocSelectModal/DocSelectModal.js';
 import {EditJsonModal} from './components/EditJsonModal/EditJsonModal.js';
 import {ExportSheetModal} from './components/ExportSheetModal/ExportSheetModal.js';
 import {LocalizationModal} from './components/LocalizationModal/LocalizationModal.js';
+import {LockPublishingModal} from './components/LockPublishingModal/LockPublishingModal.js';
 import {PublishDocModal} from './components/PublishDocModal/PublishDocModal.js';
 import {ScheduleReleaseModal} from './components/ScheduleReleaseModal/ScheduleReleaseModal.js';
 import {VersionHistoryModal} from './components/VersionHistoryModal/VersionHistoryModal.js';
@@ -85,6 +86,7 @@ function App() {
           <ModalsProvider
             modals={{
               [CopyDocModal.id]: CopyDocModal,
+              [LockPublishingModal.id]: LockPublishingModal,
               [DocPickerModal.id]: DocPickerModal,
               [DocSelectModal.id]: DocSelectModal,
               [EditJsonModal.id]: EditJsonModal,

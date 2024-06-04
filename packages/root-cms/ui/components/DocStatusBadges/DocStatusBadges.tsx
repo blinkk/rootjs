@@ -1,7 +1,7 @@
 import {Badge, Tooltip} from '@mantine/core';
 import {Timestamp} from 'firebase/firestore';
 
-import {getTimeAgo} from '../../utils/time.js';
+import {formatDateTime, getTimeAgo} from '../../utils/time.js';
 
 interface DocStatusBadgesProps {
   doc: {
@@ -85,15 +85,4 @@ function timeDiff(ts: Timestamp | null) {
     return getTimeAgo(new Date().getTime());
   }
   return getTimeAgo(ts.toMillis());
-}
-
-function formatDateTime(ts: Timestamp) {
-  const date = new Date(ts.toMillis());
-  return date.toLocaleDateString('en', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
 }

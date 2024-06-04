@@ -1,0 +1,10 @@
+.LockPublishingModal__form__section {
+  margin-top: 16px;
+}
+
+.LockPublishingModal__buttons {
+  margin-top: 20px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+}

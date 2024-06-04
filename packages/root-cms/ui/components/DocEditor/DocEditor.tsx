@@ -1,4 +1,11 @@
-import {ActionIcon, Button, LoadingOverlay, Menu, Select} from '@mantine/core';
+import {
+  ActionIcon,
+  Button,
+  LoadingOverlay,
+  Menu,
+  Select,
+  Tooltip,
+} from '@mantine/core';
 import {
   IconBraces,
   IconCircleArrowDown,
@@ -6,6 +13,7 @@ import {
   IconCirclePlus,
   IconCopy,
   IconDotsVertical,
+  IconLock,
   IconPlanet,
   IconRocket,
   IconRowInsertBottom,
@@ -23,10 +31,12 @@ import {
   UseDraftHook,
 } from '../../hooks/useDraft.js';
 import {joinClassNames} from '../../utils/classes.js';
+import {testIsScheduled, testPublishingLocked} from '../../utils/doc.js';
 import {getDefaultFieldValue} from '../../utils/fields.js';
 import {flattenNestedKeys} from '../../utils/objects.js';
 import {autokey} from '../../utils/rand.js';
 import {getPlaceholderKeys, strFormat} from '../../utils/str-format.js';
+import {formatDateTime} from '../../utils/time.js';
 import {
   DocActionEvent,
   DocActionsMenu,
@@ -110,14 +120,56 @@ export function DocEditor(props: DocEditorProps) {
             </Button>
           </div>
           <div className="DocEditor__statusBar__publishButton">
-            <Button
-              color="dark"
-              size="xs"
-              leftIcon={<IconRocket size={16} />}
-              onClick={() => publishDocModal.open()}
-            >
-              Publish
-            </Button>
+            {loading ? (
+              <Button
+                color="dark"
+                size="xs"
+                onClick={() => publishDocModal.open()}
+                loading
+                disabled
+              >
+                Publish
+              </Button>
+            ) : testIsScheduled(data) ? (
+              <Tooltip
+                label={`Scheduled ${formatDateTime(data.sys.scheduledAt)} by ${
+                  data.sys.scheduledBy
+                }`}
+                transition="pop"
+              >
+                <Button
+                  color="dark"
+                  size="xs"
+                  leftIcon={<IconRocket size={16} />}
+                  disabled
+                >
+                  Publish
+                </Button>
+              </Tooltip>
+            ) : testPublishingLocked(data) ? (
+              <Tooltip
+                label={`Locked by ${data.sys.publishingLocked.lockedBy}: "${data.sys.publishingLocked.reason}"`}
+                transition="pop"
+              >
+                <Button
+                  color="dark"
+                  size="xs"
+                  leftIcon={<IconLock size={16} />}
+                  disabled
+                >
+                  Publish
+                </Button>
+              </Tooltip>
+            ) : (
+              <Button
+                color="dark"
+                size="xs"
+                leftIcon={<IconRocket size={16} />}
+                onClick={() => publishDocModal.open()}
+              >
+                Publish
+              </Button>
+            )}
           </div>
           <div className="DocEditor__statusBar__actionsMenu">
             <DocActionsMenu

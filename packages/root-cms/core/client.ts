@@ -7,7 +7,6 @@ import {
   Query,
   Timestamp,
   WriteBatch,
-  getFirestore,
 } from 'firebase-admin/firestore';
 import {CMSPlugin} from './plugin.js';
 
@@ -27,6 +26,12 @@ export interface Doc<Fields = any> {
     firstPublishedBy?: string;
     publishedAt?: number;
     publishedBy?: string;
+    publishingLocked: {
+      lockedAt: string;
+      lockedBy: string;
+      reason: string;
+      until?: Timestamp;
+    };
     locales?: string[];
   };
   fields: Fields;
@@ -308,6 +313,13 @@ export class RootCMSClient {
       return [];
     }
 
+    // Verify there are no publishing locks on any docs.
+    for (const doc of docs) {
+      if (this.testPublishingLocked(doc)) {
+        throw new Error(`publishing is locked for doc: ${doc.id}`);
+      }
+    }
+
     // // Each transaction or batch can write a max of 500 ops.
     // // https://firebase.google.com/docs/firestore/manage-data/transactions
     let batchCount = 0;
@@ -513,6 +525,21 @@ export class RootCMSClient {
       });
       await this.publishDocs(release.docIds || [], {publishedBy, batch});
     }
+  }
+
+  /**
+   * Checks if a doc is currently "locked" for publishing.
+   */
+  testPublishingLocked(doc: Doc) {
+    if (doc.sys?.publishingLocked) {
+      if (doc.sys.publishingLocked.until) {
+        const now = Timestamp.now().toMillis();
+        const until = doc.sys.publishingLocked.until.toMillis();
+        return now < until;
+      }
+      return true;
+    }
+    return false;
   }
 
   /**
