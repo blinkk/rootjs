@@ -31,7 +31,7 @@ import {
   UseDraftHook,
 } from '../../hooks/useDraft.js';
 import {joinClassNames} from '../../utils/classes.js';
-import {testPublishingLocked} from '../../utils/doc.js';
+import {testIsScheduled, testPublishingLocked} from '../../utils/doc.js';
 import {getDefaultFieldValue} from '../../utils/fields.js';
 import {flattenNestedKeys} from '../../utils/objects.js';
 import {autokey} from '../../utils/rand.js';
@@ -56,6 +56,7 @@ import {ReferenceField} from './fields/ReferenceField.js';
 import {RichTextField} from './fields/RichTextField.js';
 import {SelectField} from './fields/SelectField.js';
 import {StringField} from './fields/StringField.js';
+import {formatDateTime} from '../../utils/time.js';
 
 interface DocEditorProps {
   docId: string;
@@ -129,6 +130,22 @@ export function DocEditor(props: DocEditorProps) {
               >
                 Publish
               </Button>
+            ) : testIsScheduled(data) ? (
+              <Tooltip
+                label={`Scheduled ${formatDateTime(data.sys.scheduledAt)} by ${
+                  data.sys.scheduledBy
+                }`}
+                transition="pop"
+              >
+                <Button
+                  color="dark"
+                  size="xs"
+                  leftIcon={<IconRocket size={16} />}
+                  disabled
+                >
+                  Publish
+                </Button>
+              </Tooltip>
             ) : testPublishingLocked(data) ? (
               <Tooltip
                 label={`Locked by ${data.sys.publishingLocked.lockedBy}: "${data.sys.publishingLocked.reason}"`}

@@ -1,4 +1,4 @@
-import {ActionIcon, Menu} from '@mantine/core';
+import {ActionIcon, Menu, Tooltip} from '@mantine/core';
 import {useModals} from '@mantine/modals';
 import {showNotification, updateNotification} from '@mantine/notifications';
 import {
@@ -8,6 +8,7 @@ import {
   IconCopy,
   IconDotsVertical,
   IconHistory,
+  IconInfoCircle,
   IconLock,
   IconLockOpen,
   IconTrash,
@@ -19,6 +20,7 @@ import {
   cmsRevertDraft,
   cmsUnpublishDoc,
   cmsUnscheduleDoc,
+  testIsScheduled,
   testPublishingLocked,
 } from '../../utils/doc.js';
 import {useCopyDocModal} from '../CopyDocModal/CopyDocModal.js';
@@ -276,6 +278,9 @@ export function DocActionsMenu(props: DocActionsMenuProps) {
         <Menu.Item
           icon={<IconLock size={20} />}
           onClick={() => disablePublishModal.open()}
+          // Prevent "publishing lock" if the doc has an existing scheduled
+          // publish.
+          disabled={testIsScheduled(data)}
         >
           Lock publishing
         </Menu.Item>

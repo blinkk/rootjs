@@ -417,6 +417,18 @@ export async function cmsUnlockPublishing(docId: string) {
   logAction('doc.unlock_publishing', {metadata: {docId}});
 }
 
+/**
+ * Checks if a doc has a pending scheduled publish.
+ */
+export function testIsScheduled(docData: CMSDoc) {
+  const now = Timestamp.now().toMillis();
+  const scheduledAt = docData.sys?.scheduledAt?.toMillis() || 0;
+  return scheduledAt > now;
+}
+
+/**
+ * Checks if a doc has a publishing lock.
+ */
 export function testPublishingLocked(docData: CMSDoc) {
   if (docData.sys?.publishingLocked) {
     if (docData.sys.publishingLocked.until) {
