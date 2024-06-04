@@ -36,6 +36,7 @@ import {getDefaultFieldValue} from '../../utils/fields.js';
 import {flattenNestedKeys} from '../../utils/objects.js';
 import {autokey} from '../../utils/rand.js';
 import {getPlaceholderKeys, strFormat} from '../../utils/str-format.js';
+import {formatDateTime} from '../../utils/time.js';
 import {
   DocActionEvent,
   DocActionsMenu,
@@ -56,7 +57,6 @@ import {ReferenceField} from './fields/ReferenceField.js';
 import {RichTextField} from './fields/RichTextField.js';
 import {SelectField} from './fields/SelectField.js';
 import {StringField} from './fields/StringField.js';
-import {formatDateTime} from '../../utils/time.js';
 
 interface DocEditorProps {
   docId: string;

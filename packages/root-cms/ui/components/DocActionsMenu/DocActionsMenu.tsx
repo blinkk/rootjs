@@ -1,4 +1,4 @@
-import {ActionIcon, Menu, Tooltip} from '@mantine/core';
+import {ActionIcon, Menu} from '@mantine/core';
 import {useModals} from '@mantine/modals';
 import {showNotification, updateNotification} from '@mantine/notifications';
 import {
@@ -8,7 +8,6 @@ import {
   IconCopy,
   IconDotsVertical,
   IconHistory,
-  IconInfoCircle,
   IconLock,
   IconLockOpen,
   IconTrash,
