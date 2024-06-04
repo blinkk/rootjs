@@ -47,7 +47,7 @@ export function DocActionsMenu(props: DocActionsMenuProps) {
   const copyDocModal = useCopyDocModal({fromDocId: docId});
   const modalTheme = useModalTheme();
   const versionHistoryModal = useVersionHistoryModal({docId});
-  const disablePublishModal = useLockPublishingModal({docId});
+  const lockPublishingModal = useLockPublishingModal({docId});
 
   const onRevertDraft = () => {
     const notificationId = `revert-draft-${docId}`;
@@ -269,14 +269,14 @@ export function DocActionsMenu(props: DocActionsMenuProps) {
       {testPublishingLocked(data) ? (
         <Menu.Item
           icon={<IconLockOpen size={20} />}
-          onClick={() => disablePublishModal.open({unlock: true})}
+          onClick={() => lockPublishingModal.open({unlock: true})}
         >
           Unlock publishing
         </Menu.Item>
       ) : (
         <Menu.Item
           icon={<IconLock size={20} />}
-          onClick={() => disablePublishModal.open()}
+          onClick={() => lockPublishingModal.open()}
           // Prevent "publishing lock" if the doc has an existing scheduled
           // publish.
           disabled={testIsScheduled(data)}
