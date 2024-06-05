@@ -777,7 +777,10 @@ export interface ArrayObject {
  * })
  * // => {sys: {modifiedAt: 123}, fields: {foo: [{title: 'hello'}]}}
  */
-export function unmarshalData(data: any): any {
+export function unmarshalData(
+  data: any,
+  options?: {removeArrayKey: boolean}
+): any {
   const result: any = {};
   for (const key in data) {
     const val = data[key];
@@ -786,14 +789,18 @@ export function unmarshalData(data: any): any {
         result[key] = val.toMillis();
       } else if (Object.hasOwn(val, '_array') && Array.isArray(val._array)) {
         const arr = val._array.map((arrayKey: string) => {
-          return {
-            ...unmarshalData(val[arrayKey] || {}),
+          const obj = {
+            ...unmarshalData(val[arrayKey] || {}, options),
             _arrayKey: arrayKey,
           };
+          if (options?.removeArrayKey) {
+            delete obj._arrayKey;
+          }
+          return obj;
         });
         result[key] = arr;
       } else {
-        result[key] = unmarshalData(val);
+        result[key] = unmarshalData(val, options);
       }
     } else {
       result[key] = val;

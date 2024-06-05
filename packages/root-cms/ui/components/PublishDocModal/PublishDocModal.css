@@ -89,7 +89,7 @@
 }
 
 .PublishDocModal__ShowChanges .mantine-Accordion-control[aria-expanded="true"] {
-  background: #f8f9fa;
+  background: #fff;
 }
 
 .PublishDocModal__ShowChanges .mantine-Accordion-item {

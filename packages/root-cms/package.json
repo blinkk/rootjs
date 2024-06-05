@@ -110,6 +110,7 @@
     "firebase-admin": "11.11.1",
     "firebase-functions": "4.8.0",
     "firebase-tools": "12.9.1",
+    "json-diff-kit": "1.0.29",
     "marked": "9.1.1",
     "preact": "10.19.3",
     "preact-render-to-string": "6.3.1",

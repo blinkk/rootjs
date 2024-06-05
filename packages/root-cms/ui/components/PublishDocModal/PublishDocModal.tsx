@@ -27,7 +27,7 @@ export function usePublishDocModal(props: PublishDocModalProps) {
         ...modalTheme,
         title: `Publish ${props.docId}`,
         innerProps: props,
-        size: '800px',
+        size: '850px',
       });
     },
   };

@@ -1,8 +1,12 @@
 import {Loader} from '@mantine/core';
+import {Differ, Viewer as JsonDiffViewer} from 'json-diff-kit';
 import {useEffect, useState} from 'preact/hooks';
-import ReactJsonViewCompare from 'react-json-view-compare';
 import {CMSDoc, cmsReadDocVersion, unmarshalData} from '../../utils/doc.js';
+
+import 'json-diff-kit/dist/viewer.css';
+import 'json-diff-kit/dist/viewer-monokai.css';
 import './DocDiffViewer.css';
+import {getTimeAgo} from '../../utils/time.js';
 
 export interface DocVersionId {
   /** Doc id, e.g. `Pages/foo`. */
@@ -24,8 +28,11 @@ export function DocDiffViewer(props: DocDiffViewerProps) {
   const [leftDoc, setLeftDoc] = useState<CMSDoc | null>(null);
   const [rightDoc, setRightDoc] = useState<CMSDoc | null>(null);
 
-  const leftData = unmarshalData(leftDoc?.fields || {});
-  const rightData = unmarshalData(rightDoc?.fields || {});
+  const leftData = cleanData(leftDoc?.fields || {});
+  const rightData = cleanData(rightDoc?.fields || {});
+
+  const differ = new Differ({});
+  const diff = differ.diff(leftData, rightData);
 
   async function init() {
     setLoading(true);
@@ -48,7 +55,38 @@ export function DocDiffViewer(props: DocDiffViewerProps) {
 
   return (
     <div className="DocDiffViewer">
-      <ReactJsonViewCompare oldData={leftData} newData={rightData} />
+      <div className="DocDiffViewer__header">
+        <div className="DocDiffViewer__header__label">
+          {props.left.docId}@{props.left.versionId} - modified{' '}
+          {getModifiedString(leftDoc)}
+        </div>
+        <div className="DocDiffViewer__header__label">
+          {props.right.docId}@{props.right.versionId} - modified{' '}
+          {getModifiedString(rightDoc)}
+        </div>
+      </div>
+      <JsonDiffViewer
+        diff={diff}
+        syntaxHighlight={{theme: 'root-cms'}}
+        lineNumbers={true}
+        highlightInlineDiff={true}
+        hideUnchangedLines={true}
+        inlineDiffOptions={{
+          mode: 'word',
+          wordSeparator: ' ',
+        }}
+      />
     </div>
   );
+}
+
+function getModifiedString(doc: CMSDoc | null) {
+  if (!doc?.sys?.modifiedAt) {
+    return 'never';
+  }
+  return getTimeAgo(doc.sys.modifiedAt.toMillis());
+}
+
+function cleanData(data: any) {
+  return unmarshalData(data, {removeArrayKey: true});
 }
