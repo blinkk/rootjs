@@ -485,6 +485,9 @@ importers:
       react-dom:
         specifier: npm:@preact/compat@^17.1.2
         version: /@preact/compat@17.1.2(preact@10.19.3)
+      react-json-view-compare:
+        specifier: 2.0.2
+        version: 2.0.2(@preact/compat@17.1.2)(@preact/compat@17.1.2)
       tsup:
         specifier: 8.0.1
         version: 8.0.1(typescript@5.2.2)
@@ -2390,15 +2393,15 @@ packages:
       '@types/gapi.client.discovery-v1': 0.0.4
     dev: true
 
-  /@maxim_mazurok/gapi.client.drive-v3@0.0.20240405:
-    resolution: {integrity: sha512-cBH363MBUWHwAMuyZ9T6nYKkPk3qNqImn2p8TaeJjXmdVFws9c/n5bGh/+zzMDw6dFWexLKHWn/Wz1D+yEaO6w==}
+  /@maxim_mazurok/gapi.client.drive-v3@0.0.20240522:
+    resolution: {integrity: sha512-ZwrT3GzVQCJX9aTBZC/Lr4t/InOuPff6cal/zIKLaYfQGmXVDESlCCHY0yxY0gGu5c1t3Y5xfZ8zc3OQwcHDSA==}
     dependencies:
       '@types/gapi.client': 1.0.8
       '@types/gapi.client.discovery-v1': 0.0.4
     dev: true
 
-  /@maxim_mazurok/gapi.client.sheets-v4@0.0.20240326:
-    resolution: {integrity: sha512-FzxXOHEv0i+j4VnfRIuu56BqgoTsrU8w9Y/gXcscRr1JuoVhloFNkbrM2OVmHd4FL/vVDwyTWd4hT5FTGDGLbw==}
+  /@maxim_mazurok/gapi.client.sheets-v4@0.0.20240528:
+    resolution: {integrity: sha512-LZfMEbxfZzSwUSXz25aVMhZfbgU5taq3a3lSb9cJJDeu5L9sdJ6lPUBB0H+hRJCgK8vdRjxurGu1wr6EAzXFNg==}
     dependencies:
       '@types/gapi.client': 1.0.8
       '@types/gapi.client.discovery-v1': 0.0.4
@@ -2881,13 +2884,13 @@ packages:
   /@types/gapi.client.drive-v3@0.0.4:
     resolution: {integrity: sha512-jE37dJ0EzAdY0aJPFOp20xmec/aO0P4HtUIA9k07RMPyedFDOcuMlSac1r0PklwQdgXF7BHaMoObNHNAnwSQUQ==}
     dependencies:
-      '@maxim_mazurok/gapi.client.drive-v3': 0.0.20240405
+      '@maxim_mazurok/gapi.client.drive-v3': 0.0.20240522
     dev: true
 
   /@types/gapi.client.sheets-v4@0.0.4:
     resolution: {integrity: sha512-6kTJ7aDMAElfdQV1XzVJmZWjgbibpa84DMuKuaN8Cwqci/dkglPyHXKvsGrRugmuYvgFYr35AQqwz6j3q8R0dw==}
     dependencies:
-      '@maxim_mazurok/gapi.client.sheets-v4': 0.0.20240326
+      '@maxim_mazurok/gapi.client.sheets-v4': 0.0.20240528
     dev: true
 
   /@types/gapi.client@1.0.8:
@@ -8704,6 +8707,27 @@ packages:
 
   /react-is@18.2.0:
     resolution: {integrity: sha512-xWGDIW6x921xtzPkhiULtthJHoJvBbF3q26fzloPCK0hsvxtPVelvftw3zjbHWSkR2km9Z+4uxbDDK/6Zw9B8w==}
+    dev: true
+
+  /react-json-view-compare@2.0.2(@preact/compat@17.1.2)(@preact/compat@17.1.2):
+    resolution: {integrity: sha512-we+OMLFR2FGqHeoqfubQnMhY5V4jLK15/cOnh7cj+v6v7XpizdJu4oSfbEwRWxvTzywSTqpBw/xL0kPZ2YkLIg==}
+    peerDependencies:
+      react: ^16.14.0  || ^17.0.0 || ^18.0.0
+      react-dom: ^16.14.0 || ^17.0.0 || ^18.0.0
+    dependencies:
+      react: /@preact/compat@17.1.2(preact@10.19.3)
+      react-dom: /@preact/compat@17.1.2(preact@10.19.3)
+      react-json-viewer-cool: 2.0.0(@preact/compat@17.1.2)(@preact/compat@17.1.2)
+    dev: true
+
+  /react-json-viewer-cool@2.0.0(@preact/compat@17.1.2)(@preact/compat@17.1.2):
+    resolution: {integrity: sha512-2bCC9szMbh9PEK5WmAv2253MwjWdK/58RCleqIqvtVjoFFCtWRPXKbe+uK6cxxGRrtCPFLJE+4H1+T+pUQltLQ==}
+    peerDependencies:
+      react: ^16.14.0  || ^17.0.0
+      react-dom: ^16.14.0 || ^17.0.0
+    dependencies:
+      react: /@preact/compat@17.1.2(preact@10.19.3)
+      react-dom: /@preact/compat@17.1.2(preact@10.19.3)
     dev: true
 
   /react-popper@2.2.5(@popperjs/core@2.11.4)(@preact/compat@17.1.2):

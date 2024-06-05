@@ -1,0 +1,22 @@
+.DocDiffViewer .c-json-view {
+  font-family: var(--font-family-mono);
+  background-color: #fff;
+  margin: 0;
+}
+
+.DocDiffViewer .c-json-key,
+.DocDiffViewer .c-json-content {
+  font-size: 12px;
+}
+
+.DocDiffViewer .c-json-key {
+  color: #0550ae;
+}
+
+.DocDiffViewer .c-json-string {
+  color: #24292f;
+}
+
+.DocDiffViewer .c-json-pt {
+  color: #1f2328;
+}

@@ -116,6 +116,7 @@
     "preact-router": "4.1.2",
     "react": "npm:@preact/compat@^17.1.2",
     "react-dom": "npm:@preact/compat@^17.1.2",
+    "react-json-view-compare": "2.0.2",
     "tsup": "8.0.1",
     "typescript": "5.2.2",
     "vite": "5.0.8",

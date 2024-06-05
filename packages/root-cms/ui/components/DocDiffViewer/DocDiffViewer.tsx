@@ -1,6 +1,8 @@
 import {Loader} from '@mantine/core';
 import {useEffect, useState} from 'preact/hooks';
-import {cmsReadDocVersion, unmarshalData} from '../../utils/doc.js';
+import ReactJsonViewCompare from 'react-json-view-compare';
+import {CMSDoc, cmsReadDocVersion, unmarshalData} from '../../utils/doc.js';
+import './DocDiffViewer.css';
 
 export interface DocVersionId {
   /** Doc id, e.g. `Pages/foo`. */
@@ -19,8 +21,11 @@ export function DocDiffViewer(props: DocDiffViewerProps) {
   const left = props.left;
   const right = props.right;
   const [loading, setLoading] = useState(false);
-  const [leftData, setLeftData] = useState({});
-  const [rightData, setRightData] = useState({});
+  const [leftDoc, setLeftDoc] = useState<CMSDoc | null>(null);
+  const [rightDoc, setRightDoc] = useState<CMSDoc | null>(null);
+
+  const leftData = unmarshalData(leftDoc?.fields || {});
+  const rightData = unmarshalData(rightDoc?.fields || {});
 
   async function init() {
     setLoading(true);
@@ -28,8 +33,8 @@ export function DocDiffViewer(props: DocDiffViewerProps) {
       cmsReadDocVersion(left.docId, left.versionId),
       cmsReadDocVersion(right.docId, right.versionId),
     ]);
-    setLeftData(unmarshalData(leftDoc?.fields || {}));
-    setRightData(unmarshalData(rightDoc?.fields || {}));
+    setLeftDoc(leftDoc);
+    setRightDoc(rightDoc);
     setLoading(false);
   }
 
@@ -42,9 +47,8 @@ export function DocDiffViewer(props: DocDiffViewerProps) {
   }
 
   return (
-    <div>
-      <div>{JSON.stringify(leftData)}</div>
-      <div>{JSON.stringify(rightData)}</div>
+    <div className="DocDiffViewer">
+      <ReactJsonViewCompare oldData={leftData} newData={rightData} />
     </div>
   );
 }
