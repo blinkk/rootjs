@@ -5,9 +5,9 @@ import {useState, useRef} from 'preact/hooks';
 import {useModalTheme} from '../../hooks/useModalTheme.js';
 import {joinClassNames} from '../../utils/classes.js';
 import {cmsPublishDoc, cmsScheduleDoc} from '../../utils/doc.js';
+import {DocDiffViewer} from '../DocDiffViewer/DocDiffViewer.js';
 import {Text} from '../Text/Text.js';
 import './PublishDocModal.css';
-import {DocDiffViewer} from '../DocDiffViewer/DocDiffViewer.js';
 
 const MODAL_ID = 'PublishDocModal';
 
@@ -219,7 +219,7 @@ export function PublishDocModal(
           </div>
         </form>
 
-        <ShowChanges />
+        <ShowChanges docId={props.docId} />
       </div>
     </div>
   );
@@ -228,24 +228,19 @@ export function PublishDocModal(
 function ShowChanges(props: {docId: string}) {
   const docId = props.docId;
   const [toggled, setToggled] = useState(false);
-  const [expanded, setExpanded] = useState(false);
 
   function toggle() {
     setToggled(true);
-    setExpanded((current) => !current);
   }
 
   return (
     <div className="PublishDocModal__ShowChanges">
-      {/* <button className="" onClick={() => toggle()}>
-        <div className="">Show changes</div>
-      </button> */}
       <Accordion iconPosition="right" onChange={() => toggle()}>
         <Accordion.Item label="Show changes">
           {toggled ? (
             <DocDiffViewer
-              left={{docId, version: 'published'}}
-              right={{docId, version: 'draft'}}
+              left={{docId, versionId: 'published'}}
+              right={{docId, versionId: 'draft'}}
             />
           ) : (
             <Loader />

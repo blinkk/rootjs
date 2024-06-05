@@ -16,6 +16,7 @@ import {
   documentId,
   where,
   WriteBatch,
+  DocumentReference,
 } from 'firebase/firestore';
 import {logAction} from './actions.js';
 import {removeDocFromCache, removeDocsFromCache} from './doc-cache.js';
@@ -584,6 +585,38 @@ export function getDraftDocRef(docId: string) {
   );
 }
 
+export function getPublishedDocRef(docId: string) {
+  const projectId = window.__ROOT_CTX.rootConfig.projectId;
+  const db = window.firebase.db;
+  const [collectionId, slug] = docId.split('/');
+  return doc(
+    db,
+    'Projects',
+    projectId,
+    'Collections',
+    collectionId,
+    'Published',
+    slug
+  );
+}
+
+export function getVersionDocRef(docId: string, versionId: string) {
+  const projectId = window.__ROOT_CTX.rootConfig.projectId;
+  const db = window.firebase.db;
+  const [collectionId, slug] = docId.split('/');
+  return doc(
+    db,
+    'Projects',
+    projectId,
+    'Collections',
+    collectionId,
+    'Drafts',
+    slug,
+    'Versions',
+    versionId
+  );
+}
+
 export async function getDraftDocs(
   docIds: string[]
 ): Promise<Record<string, CMSDoc>> {
@@ -650,6 +683,26 @@ export async function cmsRestoreVersion(docId: string, version: Version) {
   });
 }
 
+export async function cmsReadDocVersion(
+  docId: string,
+  versionId: string | 'draft' | 'published'
+): Promise<CMSDoc | null> {
+  let docRef: DocumentReference;
+  if (versionId === 'draft') {
+    docRef = getDraftDocRef(docId);
+  } else if (versionId === 'published') {
+    docRef = getPublishedDocRef(docId);
+  } else {
+    docRef = getVersionDocRef(docId, versionId);
+  }
+
+  const snapshot = await getDoc(docRef);
+  if (snapshot.exists()) {
+    return snapshot.data() as CMSDoc;
+  }
+  return null;
+}
+
 /**
  * Links a Google Sheet to a doc for localization.
  */
@@ -702,4 +755,99 @@ export async function cmsGetLinkedGoogleSheetL10n(
     };
   }
   return null;
+}
+
+export interface ArrayObject {
+  [key: string]: any;
+  _array: string[];
+}
+
+/**
+ * Walks the data tree and converts any Timestamp objects to millis and any
+ * _array maps to normal arrays.
+ *
+ * E.g.:
+ *
+ * normalizeData({
+ *   sys: {modifiedAt: Timestamp(123)},
+ *   fields: {
+ *     _array: ['asdf'],
+ *     asdf: {title: 'hello'}
+ *   }
+ * })
+ * // => {sys: {modifiedAt: 123}, fields: {foo: [{title: 'hello'}]}}
+ */
+export function unmarshalData(data: any): any {
+  const result: any = {};
+  for (const key in data) {
+    const val = data[key];
+    if (isObject(val)) {
+      if (val.toMillis) {
+        result[key] = val.toMillis();
+      } else if (Object.hasOwn(val, '_array') && Array.isArray(val._array)) {
+        const arr = val._array.map((arrayKey: string) => {
+          return {
+            ...unmarshalData(val[arrayKey] || {}),
+            _arrayKey: arrayKey,
+          };
+        });
+        result[key] = arr;
+      } else {
+        result[key] = unmarshalData(val);
+      }
+    } else {
+      result[key] = val;
+    }
+  }
+  return result;
+}
+
+/**
+ * Serializes an array into an `ArrayObject`, e.g.:
+ *
+ * ```
+ * marshalArray([1, 2, 3])
+ * // => {a: 1, b: 2, c: 3, _array: ['a', 'b', 'c']}
+ * ```
+ *
+ * This database storage method makes it easier to update a single field in a
+ * deeply nested array object.
+ */
+export function marshalArray(arr: any[]): ArrayObject {
+  if (!Array.isArray(arr)) {
+    return arr;
+  }
+  const arrObject: ArrayObject = {_array: []};
+  for (const item of arr) {
+    const key = randString(6);
+    arrObject[key] = item;
+    arrObject._array.push(key);
+  }
+  return arrObject;
+}
+
+/**
+ * Converts an `ArrayObject` to a normal array.
+ */
+export function unmarshalArray(arrObject: ArrayObject): any[] {
+  if (!Array.isArray(arrObject?._array)) {
+    return [];
+  }
+  const arr = arrObject._array.map((k: string) => arrObject[k]);
+  return arr;
+}
+
+function isObject(data: any): boolean {
+  return typeof data === 'object' && !Array.isArray(data) && data !== null;
+}
+
+function randString(len: number): string {
+  const result = [];
+  const chars =
+    'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+  for (let i = 0; i < len; i++) {
+    const rand = Math.floor(Math.random() * chars.length);
+    result.push(chars.charAt(rand));
+  }
+  return result.join('');
 }
