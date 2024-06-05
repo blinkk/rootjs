@@ -241,6 +241,7 @@ function ShowChanges(props: {docId: string}) {
             <DocDiffViewer
               left={{docId, versionId: 'published'}}
               right={{docId, versionId: 'draft'}}
+              showExpandButton={true}
             />
           ) : (
             <Loader />

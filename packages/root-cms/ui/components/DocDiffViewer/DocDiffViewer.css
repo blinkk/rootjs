@@ -32,6 +32,13 @@
   font-family: var(--font-family-mono);
 }
 
+.DocDiffViewer__expand {
+  padding: 4px 8px;
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 4px;
+}
+
 .DocDiffViewer__header {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -125,4 +132,9 @@
 
 .DocDiffViewer .json-diff-viewer-theme-root-cms td.has-lines-before button {
   color: #000;
+}
+
+.DocDiffViewer .json-diff-viewer-theme-root-cms .message-line {
+  border-color: var(--color-border);
+  border-bottom: none;
 }

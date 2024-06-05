@@ -1,4 +1,4 @@
-import {Loader} from '@mantine/core';
+import {Button, Loader} from '@mantine/core';
 import {Differ, Viewer as JsonDiffViewer} from 'json-diff-kit';
 import {useEffect, useState} from 'preact/hooks';
 import {CMSDoc, cmsReadDocVersion, unmarshalData} from '../../utils/doc.js';
@@ -7,6 +7,7 @@ import 'json-diff-kit/dist/viewer.css';
 import 'json-diff-kit/dist/viewer-monokai.css';
 import './DocDiffViewer.css';
 import {getTimeAgo} from '../../utils/time.js';
+import {joinClassNames} from '../../utils/classes.js';
 
 export interface DocVersionId {
   /** Doc id, e.g. `Pages/foo`. */
@@ -19,6 +20,8 @@ export interface DocDiffViewerProps {
   className?: string;
   left: DocVersionId;
   right: DocVersionId;
+  /** Whether to show the "expand" button which opens diff in a new tab. */
+  showExpandButton?: boolean;
 }
 
 export function DocDiffViewer(props: DocDiffViewerProps) {
@@ -33,6 +36,10 @@ export function DocDiffViewer(props: DocDiffViewerProps) {
 
   const differ = new Differ({});
   const diff = differ.diff(leftData, rightData);
+
+  const expandUrl = `/cms/compare?left=${toUrlParam(left)}&right=${toUrlParam(
+    right
+  )}`;
 
   async function init() {
     setLoading(true);
@@ -54,7 +61,21 @@ export function DocDiffViewer(props: DocDiffViewerProps) {
   }
 
   return (
-    <div className="DocDiffViewer">
+    <div className={joinClassNames(props.className, 'DocDiffViewer')}>
+      {props.showExpandButton && (
+        <div className="DocDiffViewer__expand">
+          <Button
+            component="a"
+            variant="default"
+            size="xs"
+            compact
+            href={expandUrl}
+            target="_blank"
+          >
+            Open in new tab
+          </Button>
+        </div>
+      )}
       <div className="DocDiffViewer__header">
         <div className="DocDiffViewer__header__label">
           {props.left.docId}@{props.left.versionId} - modified{' '}
@@ -89,4 +110,10 @@ function getModifiedString(doc: CMSDoc | null) {
 
 function cleanData(data: any) {
   return unmarshalData(data, {removeArrayKey: true});
+}
+
+function toUrlParam(docVersionId: DocVersionId): string {
+  return encodeURIComponent(`${docVersionId.docId}@${docVersionId.versionId}`)
+    .replaceAll('%2F', '/')
+    .replaceAll('%40', '@');
 }

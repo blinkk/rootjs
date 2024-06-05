@@ -21,6 +21,7 @@ import {VersionHistoryModal} from './components/VersionHistoryModal/VersionHisto
 import {FirebaseContext, FirebaseContextObject} from './hooks/useFirebase.js';
 import {AssetsPage} from './pages/AssetsPage/AssetsPage.js';
 import {CollectionPage} from './pages/CollectionPage/CollectionPage.js';
+import {ComparePage} from './pages/ComparePage/ComparePage.js';
 import {DataPage} from './pages/DataPage/DataPage.js';
 import {DataSourcePage} from './pages/DataSourcePage/DataSourcePage.js';
 import {DocumentPage} from './pages/DocumentPage/DocumentPage.js';
@@ -100,6 +101,7 @@ function App() {
             <Router>
               <Route path="/cms" component={ProjectPage} />
               <Route path="/cms/assets" component={AssetsPage} />
+              <Route path="/cms/compare" component={ComparePage} />
               <Route
                 path="/cms/content/:collection?"
                 component={CollectionPage}

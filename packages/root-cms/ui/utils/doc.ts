@@ -52,7 +52,9 @@ export interface CMSDoc {
   fields: any;
 }
 
-export type Version = CMSDoc;
+export type Version = CMSDoc & {
+  _versionId: string;
+};
 
 export async function cmsDeleteDoc(docId: string) {
   const projectId = window.__ROOT_CTX.rootConfig.projectId;
@@ -661,7 +663,11 @@ export async function cmsListVersions(docId: string) {
   const querySnapshot = await getDocs(q);
   const versions: Version[] = [];
   querySnapshot.forEach((doc) => {
-    versions.push(doc.data() as Version);
+    const version = {
+      ...(doc.data() as Version),
+      _versionId: doc.id,
+    };
+    versions.push(version);
   });
   return versions;
 }
