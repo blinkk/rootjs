@@ -17,14 +17,10 @@ export function ComparePage() {
 
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
-    console.log(urlParams);
-    console.log(urlParams.get('left'));
-    console.log(urlParams.get('right'));
     const leftId = parseParam(urlParams.get('left') || '');
     const rightId = parseParam(urlParams.get('right') || '');
     setLeftVersionId(leftId);
     setRightVersionId(rightId);
-    console.log(leftId, rightId);
     setLoading(false);
   }, []);
 
