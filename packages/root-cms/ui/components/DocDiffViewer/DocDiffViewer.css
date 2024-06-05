@@ -1,0 +1,140 @@
+/* .DocDiffViewer .c-json-view {
+  font-family: var(--font-family-mono);
+  background-color: #fff;
+  margin: 0;
+}
+
+.DocDiffViewer .c-json-key,
+.DocDiffViewer .c-json-content {
+  font-size: 12px;
+}
+
+.DocDiffViewer .c-json-key {
+  color: #0550ae;
+}
+
+.DocDiffViewer .c-json-string {
+  color: #24292f;
+}
+
+.DocDiffViewer .c-json-pt {
+  color: #1f2328;
+} */
+
+.DocDiffViewer {
+  --color-green: #dafbe1;
+  --color-green-line-no: #d1f8d9;
+  --color-green-highlight: #aceebb;
+  --color-red: #ffebe9;
+  --color-red-line-no: #ffcecb;
+  --color-red-highlight: #ff818266;
+  --color-json-key: #0550ae;
+  font-family: var(--font-family-mono);
+}
+
+.DocDiffViewer__expand {
+  padding: 4px 8px;
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 4px;
+}
+
+.DocDiffViewer__header {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  background-color: #f8f9fa;
+  border-top: 1px solid var(--color-border);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.DocDiffViewer__header__label {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 8px;
+}
+
+.DocDiffViewer__header__label:last-child {
+  border-left: 1px solid var(--color-border);
+}
+
+.DocDiffViewer .json-diff-viewer-theme-root-cms td {
+  font-size: 12px;
+  border: none;
+  position: relative;
+}
+
+.DocDiffViewer .json-diff-viewer-theme-root-cms td.line-number {
+  color: #636c76;
+  white-space: nowrap;
+}
+
+.DocDiffViewer .json-diff-viewer-theme-root-cms td:nth-child(3) {
+  border-left: 1px solid var(--color-border);
+  border-right: none;
+}
+
+.DocDiffViewer .json-diff-viewer-theme-root-cms td.line-add,
+.DocDiffViewer .json-diff-viewer-theme-root-cms td.line-modify:nth-child(4) {
+  background: var(--color-green);
+}
+
+.DocDiffViewer .json-diff-viewer-theme-root-cms td.line-add.line-number,
+.DocDiffViewer .json-diff-viewer-theme-root-cms td.line-modify.line-number:nth-child(3) {
+  background: var(--color-green-line-no);
+}
+
+.DocDiffViewer .json-diff-viewer-theme-root-cms td.line-remove,
+.DocDiffViewer .json-diff-viewer-theme-root-cms td.line-modify:nth-child(2) {
+  background: var(--color-red);
+}
+
+.DocDiffViewer .json-diff-viewer-theme-root-cms td.line-remove.line-number,
+.DocDiffViewer .json-diff-viewer-theme-root-cms td.line-modify.line-number:nth-child(1) {
+  background: var(--color-red-line-no);
+}
+
+.DocDiffViewer .json-diff-viewer-theme-root-cms .token.key {
+  color: var(--color-json-key);
+}
+
+.DocDiffViewer .json-diff-viewer-theme-root-cms td.line-modify:nth-child(4) .inline-diff-add {
+  background: var(--color-green-highlight);
+  text-decoration: none;
+}
+
+.DocDiffViewer .json-diff-viewer-theme-root-cms td.line-modify:nth-child(2) .inline-diff-remove {
+  background: var(--color-red-highlight);
+  text-decoration: none;
+}
+
+.DocDiffViewer .json-diff-viewer-theme-root-cms td.line-remove:nth-child(2)::before,
+.DocDiffViewer .json-diff-viewer-theme-root-cms td.line-modify:nth-child(2)::before {
+  content: '-';
+  position: absolute;
+  top: -1px;
+  left: 8px;
+}
+
+.DocDiffViewer .json-diff-viewer-theme-root-cms td.line-add:nth-child(4)::before,
+.DocDiffViewer .json-diff-viewer-theme-root-cms td.line-modify:nth-child(4)::before {
+  content: '+';
+  position: absolute;
+  top: -1px;
+  left: 8px;
+}
+
+.DocDiffViewer .json-diff-viewer-theme-root-cms td.has-lines-before {
+  border-color: var(--color-border);
+  background-color: #fff8c5;
+  text-align: right;
+  padding-right: 8px;
+}
+
+.DocDiffViewer .json-diff-viewer-theme-root-cms td.has-lines-before button {
+  color: #000;
+}
+
+.DocDiffViewer .json-diff-viewer-theme-root-cms .message-line {
+  border-color: var(--color-border);
+  border-bottom: none;
+}

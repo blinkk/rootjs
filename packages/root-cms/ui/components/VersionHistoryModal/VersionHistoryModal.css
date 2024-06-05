@@ -38,3 +38,13 @@
   font-style: italic;
   font-size: 12px;
 }
+
+.VersionHistoryModal__versions__buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.VersionHistoryModal__versions__buttons__compare .mantine-Button-icon {
+  margin-left: 4px;
+}

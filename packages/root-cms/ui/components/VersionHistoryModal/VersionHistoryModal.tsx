@@ -1,7 +1,7 @@
 import {Button, Loader, Table} from '@mantine/core';
 import {ContextModalProps, useModals} from '@mantine/modals';
 import {showNotification} from '@mantine/notifications';
-import {IconHistory} from '@tabler/icons-preact';
+import {IconArrowUpRight, IconHistory} from '@tabler/icons-preact';
 import {useEffect, useState} from 'preact/hooks';
 import {useModalTheme} from '../../hooks/useModalTheme.js';
 import {Version, cmsListVersions, cmsRestoreVersion} from '../../utils/doc.js';
@@ -68,6 +68,12 @@ export function VersionHistoryModal(
     }
   }
 
+  function getCompareUrl(version: Version) {
+    const left = toUrlParam(docId, version._versionId);
+    const right = toUrlParam(docId, 'draft');
+    return `/cms/compare?left=${left}&right=${right}`;
+  }
+
   useEffect(() => {
     fetchVersions();
   }, []);
@@ -102,7 +108,7 @@ export function VersionHistoryModal(
             </tr>
           </thead>
           <tbody>
-            {versions.map((version) => (
+            {versions.map((version, i) => (
               <tr>
                 <td>
                   <Text size="body-sm">
@@ -113,9 +119,28 @@ export function VersionHistoryModal(
                   <Text size="body-sm">{version.sys.modifiedBy}</Text>
                 </td>
                 <td>
-                  <Button size="xs" compact onClick={() => restore(version)}>
-                    restore
-                  </Button>
+                  <div className="VersionHistoryModal__versions__buttons">
+                    <Button
+                      variant="default"
+                      size="xs"
+                      compact
+                      onClick={() => restore(version)}
+                    >
+                      restore
+                    </Button>
+                    <Button
+                      className="VersionHistoryModal__versions__buttons__compare"
+                      component="a"
+                      variant="default"
+                      size="xs"
+                      compact
+                      href={getCompareUrl(version)}
+                      target="_blank"
+                      rightIcon={<IconArrowUpRight size={12} />}
+                    >
+                      compare
+                    </Button>
+                  </div>
                 </td>
               </tr>
             ))}
@@ -124,6 +149,12 @@ export function VersionHistoryModal(
       )}
     </div>
   );
+}
+
+function toUrlParam(docId: string, versionId: string): string {
+  return encodeURIComponent(`${docId}@${versionId}`)
+    .replaceAll('%2F', '/')
+    .replaceAll('%40', '@');
 }
 
 VersionHistoryModal.id = MODAL_ID;

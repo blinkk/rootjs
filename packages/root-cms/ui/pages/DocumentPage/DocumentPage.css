@@ -95,9 +95,19 @@
   justify-content: space-between;
 }
 
+.DocumentPage__main__previewBar__navbar__url {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 /* .DocumentPage__main__previewBar__locales .mantine-Select-icon {
   color: #495057;
 } */
+
+.DocumentPage__main__previewBar__locales {
+  flex-shrink: 0;
+}
 
 .DocumentPage__main__previewBar__locales .mantine-Select-input {
   border: 1px solid var(--color-border);

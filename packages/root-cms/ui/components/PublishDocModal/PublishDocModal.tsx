@@ -1,10 +1,11 @@
-import {Button} from '@mantine/core';
+import {Accordion, Button, Loader} from '@mantine/core';
 import {ContextModalProps, useModals} from '@mantine/modals';
 import {showNotification} from '@mantine/notifications';
 import {useState, useRef} from 'preact/hooks';
 import {useModalTheme} from '../../hooks/useModalTheme.js';
 import {joinClassNames} from '../../utils/classes.js';
 import {cmsPublishDoc, cmsScheduleDoc} from '../../utils/doc.js';
+import {DocDiffViewer} from '../DocDiffViewer/DocDiffViewer.js';
 import {Text} from '../Text/Text.js';
 import './PublishDocModal.css';
 
@@ -26,7 +27,7 @@ export function usePublishDocModal(props: PublishDocModalProps) {
         ...modalTheme,
         title: `Publish ${props.docId}`,
         innerProps: props,
-        size: '680px',
+        size: '850px',
       });
     },
   };
@@ -217,7 +218,36 @@ export function PublishDocModal(
             </Button>
           </div>
         </form>
+
+        <ShowChanges docId={props.docId} />
       </div>
+    </div>
+  );
+}
+
+function ShowChanges(props: {docId: string}) {
+  const docId = props.docId;
+  const [toggled, setToggled] = useState(false);
+
+  function toggle() {
+    setToggled(true);
+  }
+
+  return (
+    <div className="PublishDocModal__ShowChanges">
+      <Accordion iconPosition="right" onChange={() => toggle()}>
+        <Accordion.Item label="Show changes">
+          {toggled ? (
+            <DocDiffViewer
+              left={{docId, versionId: 'published'}}
+              right={{docId, versionId: 'draft'}}
+              showExpandButton={true}
+            />
+          ) : (
+            <Loader />
+          )}
+        </Accordion.Item>
+      </Accordion>
     </div>
   );
 }
