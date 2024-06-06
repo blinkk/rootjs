@@ -1,5 +1,16 @@
 # @blinkk/root-cms
 
+## 1.1.1
+
+### Patch Changes
+
+- c94ad71: fix: remove non-alphanumeric chars from type gen
+- 2cfea11: feat: add publishing lock
+- 82a6373: feat: add "drawer" variant to object field
+- d129560: feat: add diff viewer to publishing flow
+- 4d2064a: feat: add "domain" to collection config
+  - @blinkk/root@1.1.1
+
 ## 1.0.10
 
 ### Patch Changes
