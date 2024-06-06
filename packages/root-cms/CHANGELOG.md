@@ -1,5 +1,14 @@
 # @blinkk/root-cms
 
+## 1.1.3
+
+### Patch Changes
+
+- 7544d93: fix: update drawer to details based component
+- d5ad5ce: feat: add status badge for locked docs
+- 39d3d57: feat: add cms field deeplinking
+  - @blinkk/root@1.1.3
+
 ## 1.1.2
 
 ### Patch Changes
