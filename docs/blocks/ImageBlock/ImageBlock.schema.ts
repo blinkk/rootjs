@@ -29,5 +29,23 @@ export default schema.define({
       help: 'Optional caption that displays below the image.',
       translate: true,
     }),
+    schema.object({
+      id: 'advanced',
+      label: 'Advanced',
+      help: 'These fields are optional.',
+      fields: [
+        schema.string({
+          id: 'maxWidth',
+          label: 'Max Width',
+          help: 'e.g. 300px',
+        }),
+        schema.boolean({
+          id: 'bordered',
+          label: 'Bordered?',
+        }),
+      ],
+      variant: 'drawer',
+      drawerOptions: {collapsed: true, inline: true},
+    }),
   ],
 });

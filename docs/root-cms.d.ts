@@ -107,6 +107,13 @@ export interface ImageBlockFields {
   image?: RootCMSImage;
   /** Caption. Optional caption that displays below the image. */
   caption?: string;
+  /** Advanced. These fields are optional. */
+  advanced?: {
+    /** Max Width. e.g. 300px */
+    maxWidth?: string;
+    /** Bordered? */
+    bordered?: boolean;
+  };
 }
 
 /** Generated from `/collections/BlogPosts.schema.ts`. */

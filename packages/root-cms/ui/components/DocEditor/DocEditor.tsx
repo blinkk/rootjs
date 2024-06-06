@@ -315,9 +315,16 @@ DocEditor.ObjectField = (props: FieldProps) => {
 DocEditor.ObjectFieldDrawer = (props: FieldProps) => {
   const field = props.field as schema.ObjectField;
   const collapsed = field.drawerOptions?.collapsed || false;
+  const inline = field.drawerOptions?.inline || false;
+  const iconPosition = inline ? 'left' : 'right';
   return (
-    <div className="DocEditor__ObjectFieldDrawer">
-      <Accordion iconPosition="right" initialItem={collapsed ? -1 : 0}>
+    <div
+      className={joinClassNames(
+        'DocEditor__ObjectFieldDrawer',
+        inline && 'DocEditor__ObjectFieldDrawer--inline'
+      )}
+    >
+      <Accordion iconPosition={iconPosition} initialItem={collapsed ? -1 : 0}>
         <Accordion.Item
           label={
             <DocEditor.FieldHeader
