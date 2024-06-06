@@ -9,6 +9,7 @@ import {
 } from '@mantine/core';
 import {
   IconBraces,
+  IconChevronDown,
   IconCircleArrowDown,
   IconCircleArrowUp,
   IconCirclePlus,
@@ -304,6 +305,7 @@ DocEditor.Field = (props: FieldProps) => {
 };
 
 DocEditor.FieldHeader = (props: {
+  className?: string;
   deepKey?: string;
   label?: string;
   help?: string;
@@ -315,7 +317,7 @@ DocEditor.FieldHeader = (props: {
     return url.toString();
   }
   return (
-    <div className="DocEditor__FieldHeader">
+    <div className={joinClassNames(props.className, 'DocEditor__FieldHeader')}>
       {props.deprecated ? (
         <div className="DocEditor__FieldHeader__label">
           DEPRECATED: {props.label}
@@ -373,6 +375,10 @@ DocEditor.ObjectFieldDrawer = (props: FieldProps) => {
   const collapsed = field.drawerOptions?.collapsed || false;
   const inline = field.drawerOptions?.inline || false;
   const iconPosition = inline ? 'left' : 'right';
+
+  const deeplink = useDeeplink() || '';
+  const initialOpen = !collapsed || deeplink.includes(props.deepKey);
+
   return (
     <div
       className={joinClassNames(
@@ -380,31 +386,39 @@ DocEditor.ObjectFieldDrawer = (props: FieldProps) => {
         inline && 'DocEditor__ObjectFieldDrawer--inline'
       )}
     >
-      <Accordion iconPosition={iconPosition} initialItem={collapsed ? -1 : 0}>
-        <Accordion.Item
-          label={
-            <DocEditor.FieldHeader
-              deepKey={props.deepKey}
-              label={field.label || field.id}
-              help={field.help}
-            />
-          }
-          opened={!field.drawerOptions?.collapsed}
+      <details
+        className="DocEditor__ObjectFieldDrawer__drawer"
+        open={initialOpen}
+      >
+        <summary
+          className={joinClassNames(
+            'DocEditor__ObjectFieldDrawer__drawer__toggle',
+            `DocEditor__ObjectFieldDrawer__drawer__toggle--icon-${iconPosition}`
+          )}
         >
-          <div className="DocEditor__ObjectFieldDrawer__fields">
-            {field.fields.map((field) => (
-              <DocEditor.Field
-                key={field.id}
-                collection={props.collection}
-                field={field}
-                shallowKey={field.id!}
-                deepKey={`${props.deepKey}.${field.id}`}
-                draft={props.draft}
-              />
-            ))}
+          <DocEditor.FieldHeader
+            className="DocEditor__ObjectFieldDrawer__drawer__toggle__header"
+            deepKey={props.deepKey}
+            label={field.label || field.id}
+            help={field.help}
+          />
+          <div className="DocEditor__ObjectFieldDrawer__drawer__toggle__icon">
+            <IconChevronDown size={16} />
           </div>
-        </Accordion.Item>
-      </Accordion>
+        </summary>
+        <div className="DocEditor__ObjectFieldDrawer__drawer__content DocEditor__ObjectFieldDrawer__fields">
+          {field.fields.map((field) => (
+            <DocEditor.Field
+              key={field.id}
+              collection={props.collection}
+              field={field}
+              shallowKey={field.id!}
+              deepKey={`${props.deepKey}.${field.id}`}
+              draft={props.draft}
+            />
+          ))}
+        </div>
+      </details>
     </div>
   );
 };
