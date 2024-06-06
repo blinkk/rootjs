@@ -49,9 +49,34 @@
   opacity: 0.5;
 }
 
+.DocEditor__field.deeplink-target {
+  padding: 16px;
+  background: linear-gradient(rgb(255, 248, 197), rgb(255, 248, 197));
+  border: 1px solid rgba(212, 167, 44, 0.4);
+  border-radius: 4px;
+}
+
 .DocEditor__FieldHeader__label {
   font-size: 12px;
   font-weight: 600;
+  display: flex;
+  gap: 8px;
+}
+
+.DocEditor__FieldHeader__label__deeplink {
+  color: #CED4DA;
+  text-decoration: none;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.DocEditor__FieldHeader__label:hover .DocEditor__FieldHeader__label__deeplink {
+  opacity: 1;
+}
+
+.DocEditor__FieldHeader__label__deeplink:hover {
+  text-decoration: underline;
+  text-underline-offset: 2px;
 }
 
 .DocEditor__FieldHeader__help {
@@ -120,7 +145,7 @@
 
 .DocEditor__ObjectFieldDrawer .mantine-Accordion-contentInner {
   border: none;
-  padding: 12px 16px;
+  padding: 16px;
 }
 
 .DocEditor__ArrayField__items {
@@ -210,7 +235,7 @@
 }
 
 .DocEditor__ArrayField__item[open] .DocEditor__ArrayField__item__body {
-  padding: 12px;
+  padding: 16px;
   border: 2px solid lightblue;
 }
 

@@ -22,6 +22,8 @@ export default schema.define({
       label: 'Spacer',
       help: 'Optional. Vertical spacing above and below the divider.',
       fields: Spacer.fields,
+      variant: 'drawer',
+      drawerOptions: {collapsed: true, inline: true},
     }),
   ],
 });
