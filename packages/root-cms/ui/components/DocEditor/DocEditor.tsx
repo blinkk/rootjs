@@ -22,7 +22,7 @@ import {
   IconTrash,
   IconTriangleFilled,
 } from '@tabler/icons-preact';
-import {useEffect, useMemo, useReducer, useState} from 'preact/hooks';
+import {useEffect, useMemo, useReducer, useRef, useState} from 'preact/hooks';
 import {route} from 'preact-router';
 
 import * as schema from '../../../core/schema.js';
@@ -68,6 +68,7 @@ interface DocEditorProps {
 export function DocEditor(props: DocEditorProps) {
   const fields = props.collection.fields || [];
   const {loading, controller, saveState, data} = props.draft;
+  const ref = useRef<HTMLDivElement>(null);
 
   function goBack() {
     const collectionId = props.docId.split('/')[0];
@@ -87,9 +88,27 @@ export function DocEditor(props: DocEditorProps) {
     collection: props.collection,
   });
 
+  useEffect(() => {
+    if (loading) {
+      return;
+    }
+    const url = new URL(window.location.href);
+    const deeplink = url.searchParams.get('deeplink');
+    if (deeplink) {
+      window.requestAnimationFrame(() => {
+        // The "scrollable" element is actually two steps above.
+        const scrollEl = ref.current!.parentElement?.parentElement;
+        const deeplinkEl = document.getElementById(deeplink);
+        if (scrollEl && deeplinkEl) {
+          scrollToDeeplink(scrollEl, deeplinkEl);
+        }
+      });
+    }
+  }, [loading]);
+
   return (
     <>
-      <div className="DocEditor">
+      <div className="DocEditor" ref={ref}>
         <LoadingOverlay
           visible={loading}
           loaderProps={{color: 'gray', size: 'xl'}}
@@ -198,6 +217,7 @@ export function DocEditor(props: DocEditorProps) {
 }
 
 DocEditor.Field = (props: FieldProps) => {
+  const [targeted, setTargeted] = useState(false);
   const field = props.field;
   const level = props.level ?? 0;
 
@@ -211,18 +231,27 @@ DocEditor.Field = (props: FieldProps) => {
     }
   }
 
+  useEffect(() => {
+    const url = new URL(window.location.href);
+    if (url.searchParams.get('deeplink') === props.deepKey) {
+      setTargeted(true);
+    }
+  }, []);
+
   return (
     <div
       className={joinClassNames(
         'DocEditor__field',
-        field.deprecated && 'DocEditor__field--deprecated'
+        field.deprecated && 'DocEditor__field--deprecated',
+        targeted && 'deeplink-target'
       )}
       data-type={field.type}
       data-level={level}
-      data-key={props.deepKey}
+      id={props.deepKey}
     >
       {showFieldHeader && (
         <DocEditor.FieldHeader
+          deepKey={props.deepKey}
           label={field.label || field.id}
           help={field.help}
           deprecated={field.deprecated}
@@ -264,10 +293,16 @@ DocEditor.Field = (props: FieldProps) => {
 };
 
 DocEditor.FieldHeader = (props: {
+  deepKey?: string;
   label?: string;
   help?: string;
   deprecated?: boolean;
 }) => {
+  function deeplinkUrl() {
+    const url = new URL(window.location.href);
+    url.searchParams.set('deeplink', props.deepKey!);
+    return url.toString();
+  }
   return (
     <div className="DocEditor__FieldHeader">
       {props.deprecated ? (
@@ -275,7 +310,17 @@ DocEditor.FieldHeader = (props: {
           DEPRECATED: {props.label}
         </div>
       ) : (
-        <div className="DocEditor__FieldHeader__label">{props.label}</div>
+        <div className="DocEditor__FieldHeader__label">
+          <span>{props.label}</span>
+          {props.deepKey && (
+            <a
+              className="DocEditor__FieldHeader__label__deeplink"
+              href={deeplinkUrl()}
+            >
+              #
+            </a>
+          )}
+        </div>
       )}
       {props.help && (
         <div className="DocEditor__FieldHeader__help">{props.help}</div>
@@ -328,6 +373,7 @@ DocEditor.ObjectFieldDrawer = (props: FieldProps) => {
         <Accordion.Item
           label={
             <DocEditor.FieldHeader
+              deepKey={props.deepKey}
               label={field.label || field.id}
               help={field.help}
             />
@@ -897,4 +943,17 @@ function arrayPreview(
   }
 
   return `item ${index}`;
+}
+
+function scrollToDeeplink(parent: HTMLElement, deeplinkEl: HTMLElement) {
+  let current = deeplinkEl.parentElement;
+  const offsetTop = deeplinkEl.offsetTop;
+  while (current && current !== parent) {
+    if (String(current.tagName).toLowerCase() === 'details') {
+      const detailsEl = current as HTMLDetailsElement;
+      detailsEl.open = true;
+    }
+    current = current.parentElement;
+  }
+  parent.scroll({top: offsetTop, behavior: 'smooth'});
 }
