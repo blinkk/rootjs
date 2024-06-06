@@ -49,25 +49,29 @@
   opacity: 0.5;
 }
 
-.DocEditor__field__name {
+.DocEditor__FieldHeader__label {
+  font-size: 12px;
   font-weight: 600;
 }
 
-.DocEditor__field__help {
+.DocEditor__FieldHeader__help {
+  font-size: 12px;
+  font-weight: 400;
   margin-top: 2px;
 }
 
-.DocEditor__ObjectField__fields {
+.DocEditor__ObjectField__fields,
+.DocEditor__ObjectFieldDrawer__fields {
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: 16px;
 }
 
-.DocEditor__field__header {
+.DocEditor__FieldHeader {
   margin-bottom: 8px;
 }
 
-.DocEditor__field[data-type="object"][data-level="0"] > .DocEditor__field__header {
+.DocEditor__field[data-type="object"][data-level="0"] > .DocEditor__FieldHeader {
   padding: 4px 12px;
   margin-top: 12px;
   margin-left: -12px;
@@ -79,6 +83,31 @@
 .DocEditor__field[data-type="object"]:not([data-level="0"]) .DocEditor__ObjectField__fields {
   padding-left: 12px;
   border-left: 2px solid lightblue;
+}
+
+.DocEditor__ObjectFieldDrawer .mantine-Accordion-label > .DocEditor__FieldHeader {
+  margin-bottom: 0;
+}
+
+.DocEditor__ObjectFieldDrawer {
+  margin-left: -12px;
+  margin-right: -12px;
+}
+
+.DocEditor__ObjectFieldDrawer .mantine-Accordion-item {
+  border: none;
+}
+
+.DocEditor__ObjectFieldDrawer .mantine-Accordion-control {
+  padding-top: 8px;
+  padding-bottom: 8px;
+  border-top: 1px solid var(--color-border);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.DocEditor__ObjectFieldDrawer .mantine-Accordion-contentInner {
+  border: none;
+  padding: 12px 16px;
 }
 
 .DocEditor__ArrayField__items {
@@ -100,7 +129,7 @@
   transform: rotate(90deg);
 }
 
-.DocEditor__ArrayField__item[open] .DocEditor__ArrayField__item__header__icon {
+.DocEditor__ArrayField__item[open] > summary > .DocEditor__ArrayField__item__header__icon {
   transform: rotate(180deg);
   margin-top: -2px;
 }
