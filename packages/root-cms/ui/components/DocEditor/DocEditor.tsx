@@ -1,4 +1,5 @@
 import {
+  Accordion,
   ActionIcon,
   Button,
   LoadingOverlay,
@@ -199,6 +200,17 @@ export function DocEditor(props: DocEditorProps) {
 DocEditor.Field = (props: FieldProps) => {
   const field = props.field;
   const level = props.level ?? 0;
+
+  let showFieldHeader = !props.hideHeader && !field.hideLabel;
+  // The "drawer" variant shows the header within the accordion button.
+  if (field.type === 'object') {
+    // Default to the "drawer" variant.
+    const variant = field.variant || 'drawer';
+    if (variant === 'drawer') {
+      showFieldHeader = false;
+    }
+  }
+
   return (
     <div
       className={joinClassNames(
@@ -209,21 +221,12 @@ DocEditor.Field = (props: FieldProps) => {
       data-level={level}
       data-key={props.deepKey}
     >
-      {!props.hideHeader && !field.hideLabel && (
-        <div className="DocEditor__field__header">
-          {field.deprecated ? (
-            <div className="DocEditor__field__name">
-              DEPRECATED: {field.label || field.id}
-            </div>
-          ) : (
-            <div className="DocEditor__field__name">
-              {field.label || field.id}
-            </div>
-          )}
-          {field.help && (
-            <div className="DocEditor__field__help">{field.help}</div>
-          )}
-        </div>
+      {showFieldHeader && (
+        <DocEditor.FieldHeader
+          label={field.label || field.id}
+          help={field.help}
+          deprecated={field.deprecated}
+        />
       )}
       <div className="DocEditor__field__input">
         {field.type === 'array' ? (
@@ -260,8 +263,37 @@ DocEditor.Field = (props: FieldProps) => {
   );
 };
 
+DocEditor.FieldHeader = (props: {
+  label?: string;
+  help?: string;
+  deprecated?: boolean;
+}) => {
+  return (
+    <div className="DocEditor__FieldHeader">
+      {props.deprecated ? (
+        <div className="DocEditor__FieldHeader__label">
+          DEPRECATED: {props.label}
+        </div>
+      ) : (
+        <div className="DocEditor__FieldHeader__label">{props.label}</div>
+      )}
+      {props.help && (
+        <div className="DocEditor__FieldHeader__help">{props.help}</div>
+      )}
+    </div>
+  );
+};
+
 DocEditor.ObjectField = (props: FieldProps) => {
   const field = props.field as schema.ObjectField;
+  // Default to the "drawer" variant.
+  const variant = field.variant || 'drawer';
+  if (variant === 'drawer') {
+    return <DocEditor.ObjectFieldDrawer {...props} />;
+  }
+  // NOTE(stevenle): this is the old object field preserved here in case we
+  // need to roll back for any reason. All new objects should be defaulting to
+  // the "drawer" variant.
   return (
     <div className="DocEditor__ObjectField">
       <div className="DocEditor__ObjectField__fields">
@@ -276,6 +308,39 @@ DocEditor.ObjectField = (props: FieldProps) => {
           />
         ))}
       </div>
+    </div>
+  );
+};
+
+DocEditor.ObjectFieldDrawer = (props: FieldProps) => {
+  const field = props.field as schema.ObjectField;
+  const collapsed = field.drawerOptions?.collapsed || false;
+  return (
+    <div className="DocEditor__ObjectFieldDrawer">
+      <Accordion iconPosition="right" initialItem={collapsed ? -1 : 0}>
+        <Accordion.Item
+          label={
+            <DocEditor.FieldHeader
+              label={field.label || field.id}
+              help={field.help}
+            />
+          }
+          opened={!field.drawerOptions?.collapsed}
+        >
+          <div className="DocEditor__ObjectFieldDrawer__fields">
+            {field.fields.map((field) => (
+              <DocEditor.Field
+                key={field.id}
+                collection={props.collection}
+                field={field}
+                shallowKey={field.id!}
+                deepKey={`${props.deepKey}.${field.id}`}
+                draft={props.draft}
+              />
+            ))}
+          </div>
+        </Accordion.Item>
+      </Accordion>
     </div>
   );
 };

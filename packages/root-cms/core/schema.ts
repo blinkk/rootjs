@@ -124,6 +124,12 @@ export function file(field: Omit<FileField, 'type'>): FileField {
 export type ObjectField = CommonFieldProps & {
   type: 'object';
   fields: FieldWithId[];
+  /** Defaults to "drawer". */
+  variant?: 'drawer';
+  /** Options for the "drawer" variant. */
+  drawerOptions?: {
+    collapsed?: boolean;
+  };
 };
 
 export function object(field: Omit<ObjectField, 'type'>): ObjectField {
