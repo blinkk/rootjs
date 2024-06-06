@@ -128,7 +128,13 @@ export type ObjectField = CommonFieldProps & {
   variant?: 'drawer';
   /** Options for the "drawer" variant. */
   drawerOptions?: {
+    /** Whether the drawer should initialize to the "collapsed" state. */
     collapsed?: boolean;
+    /**
+     * Whether to render the drawer "inline" (this removes borders from the
+     * toggle button).
+     */
+    inline?: boolean;
   };
 };
 
