@@ -103,8 +103,8 @@ export async function renderApp(req: Request, res: Response, options: any) {
     const uiCssPath = path.join(__dirname, 'ui/ui.css');
     const uiJsPath = path.join(__dirname, 'ui/ui.js');
     const tpl = html
-      .replace('{CSS_URL}', `/@fs${uiCssPath}`)
-      .replace('{JS_URL}', `/@fs${uiJsPath}`)
+      .replace('{CSS_URL}', cachebust(`/@fs${uiCssPath}`))
+      .replace('{JS_URL}', cachebust(`/@fs${uiJsPath}`))
       .replaceAll('{NONCE}', nonce);
     html = await req.viteServer!.transformIndexHtml(req.originalUrl, tpl);
     html = html.replace(
@@ -113,8 +113,8 @@ export async function renderApp(req: Request, res: Response, options: any) {
     );
   } else {
     html = html
-      .replace('{CSS_URL}', '/cms/static/ui.css')
-      .replace('{JS_URL}', '/cms/static/ui.js')
+      .replace('{CSS_URL}', cachebust('/cms/static/ui.css'))
+      .replace('{JS_URL}', cachebust('/cms/static/ui.js'))
       .replaceAll('{NONCE}', nonce);
   }
   res.setHeader('Content-Type', 'text/html');
@@ -182,8 +182,8 @@ export async function renderSignIn(req: Request, res: Response, options: any) {
     const cssPath = path.join(__dirname, 'ui/signin.css');
     const jsPath = path.join(__dirname, 'ui/signin.js');
     const tpl = html
-      .replace('{CSS_URL}', `/@fs${cssPath}`)
-      .replace('{JS_URL}', `/@fs${jsPath}`)
+      .replace('{CSS_URL}', cachebust(`/@fs${cssPath}`))
+      .replace('{JS_URL}', cachebust(`/@fs${jsPath}`))
       .replaceAll('{NONCE}', nonce);
     html = await req.viteServer!.transformIndexHtml(req.originalUrl, tpl);
     html = html.replace(
@@ -192,8 +192,8 @@ export async function renderSignIn(req: Request, res: Response, options: any) {
     );
   } else {
     html = html
-      .replace('{CSS_URL}', '/cms/static/signin.css')
-      .replace('{JS_URL}', '/cms/static/signin.js')
+      .replace('{CSS_URL}', cachebust('/cms/static/signin.css'))
+      .replace('{JS_URL}', cachebust('/cms/static/signin.js'))
       .replaceAll('{NONCE}', nonce);
   }
   res.setHeader('Content-Type', 'text/html');
@@ -221,4 +221,9 @@ function setSecurityHeaders(res: Response, nonce: string) {
     `script-src 'nonce-${nonce}' 'unsafe-inline' 'unsafe-eval' 'strict-dynamic' https: http:`,
   ];
   res.setHeader('content-security-policy-report-only', directives.join(';'));
+}
+
+function cachebust(url: string) {
+  const ts = Math.floor(new Date().getTime() / 1000);
+  return `${url}?c=${ts}`;
 }
