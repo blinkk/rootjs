@@ -1,5 +1,8 @@
 .ProjectPage {
   padding: 60px;
+  width: calc(100vw - 48px);
+  height: calc(100vh - 48px);
+  overflow: auto;
 }
 
 .ProjectPage__headline {

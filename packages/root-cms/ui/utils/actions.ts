@@ -7,7 +7,7 @@ import {
   query,
 } from 'firebase/firestore';
 import {DataSource} from './data-source.js';
-import {timestamp} from './time.js';
+import {TIME_UNITS, timestamp} from './time.js';
 
 /** A map of when an action was last called. */
 const ACTION_TIMESTAMPS: Record<string, number> = {};
@@ -56,17 +56,40 @@ export async function listActions(options: ListActionsOptions) {
   const projectId = window.__ROOT_CTX.rootConfig.projectId;
   const db = window.firebase.db;
   const colRef = collection(db, 'Projects', projectId, 'ActionLogs');
-  const q = query(
-    colRef,
-    orderBy('timestamp', 'desc'),
-    limit(options?.limit || 20)
-  );
+  const numActions = options?.limit || 40;
+  // Request 1.5x the number of actions since we may be filtering some.
+  const queryLimit = Math.ceil(numActions * 1.5);
+  const q = query(colRef, orderBy('timestamp', 'desc'), limit(queryLimit));
   const querySnapshot = await getDocs(q);
-  const res: Action[] = [];
-  querySnapshot.forEach((doc) => {
-    res.push(doc.data() as Action);
-  });
-  return res;
+  const actions: Action[] = [];
+  function shouldSkipAction(action: Action) {
+    if (actions.length === 0) {
+      return false;
+    }
+    // Skip multiple "doc.save" actions that occur within 60 mins.
+    const prevAction = actions.at(-1)!;
+    return (
+      action.action === 'doc.save' &&
+      prevAction.action === 'doc.save' &&
+      action.by === prevAction.by &&
+      action.metadata.docId === prevAction.metadata.docId &&
+      action.timestamp.toMillis() - prevAction.timestamp.toMillis() <
+        60 * TIME_UNITS.minute
+    );
+  }
+  let count = 0;
+  for (const doc of querySnapshot.docs) {
+    if (count >= numActions) {
+      break;
+    }
+    const action = doc.data() as Action;
+    if (shouldSkipAction(action)) {
+      continue;
+    }
+    actions.push(action);
+    count += 1;
+  }
+  return actions;
 }
 
 function isThrottled(actionKey: string, millis: number): boolean {

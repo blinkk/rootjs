@@ -4,7 +4,7 @@ import {Text} from '../../components/Text/Text.js';
 import {Layout} from '../../layout/Layout.js';
 import './LogsPage.css';
 
-const LIMIT = 100;
+const LIMIT = 250;
 
 export function LogsPage() {
   return (

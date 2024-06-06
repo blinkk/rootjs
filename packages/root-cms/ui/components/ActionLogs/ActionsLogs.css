@@ -10,8 +10,8 @@
 
 .ActionsLogs__table__header,
 .ActionsLogs__table__col {
-  padding-left: 8px;
-  padding-right: 8px;
+  font-size: 13px !important;
+  padding: 4px 10px !important;
   text-align: left;
 }
 

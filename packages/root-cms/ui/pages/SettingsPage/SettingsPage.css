@@ -1,15 +1,14 @@
 .SettingsPage {
-  padding: 30px;
+  padding: 60px;
+  width: calc(100vw - 48px);
+  height: calc(100vh - 48px);
+  overflow: auto;
 }
 
 .SettingsPage__section {
   display: grid;
   grid-template-columns: 1fr 2fr;
-}
-
-.SettingsPage__section__left,
-.SettingsPage__section__right {
-  padding: 30px;
+  gap: 60px;
 }
 
 .SettingsPage__section__left__title {
