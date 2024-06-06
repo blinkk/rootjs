@@ -51,8 +51,9 @@
 
 .DocEditor__field.deeplink-target {
   padding: 16px;
-  margin: -16px;
-  background: #FFF9DB;
+  background: linear-gradient(rgb(255, 248, 197), rgb(255, 248, 197));
+  border: 1px solid rgba(212, 167, 44, 0.4);
+  border-radius: 4px;
 }
 
 .DocEditor__FieldHeader__label {

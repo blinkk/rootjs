@@ -22,7 +22,14 @@ import {
   IconTrash,
   IconTriangleFilled,
 } from '@tabler/icons-preact';
-import {useEffect, useMemo, useReducer, useRef, useState} from 'preact/hooks';
+import {
+  useContext,
+  useEffect,
+  useMemo,
+  useReducer,
+  useRef,
+  useState,
+} from 'preact/hooks';
 import {route} from 'preact-router';
 
 import * as schema from '../../../core/schema.js';
@@ -58,6 +65,7 @@ import {ReferenceField} from './fields/ReferenceField.js';
 import {RichTextField} from './fields/RichTextField.js';
 import {SelectField} from './fields/SelectField.js';
 import {StringField} from './fields/StringField.js';
+import {createContext} from 'preact';
 
 interface DocEditorProps {
   docId: string;
@@ -65,10 +73,17 @@ interface DocEditorProps {
   draft: UseDraftHook;
 }
 
+const DEEPLINK_CONTEXT = createContext('');
+
+function useDeeplink(): string {
+  return useContext(DEEPLINK_CONTEXT);
+}
+
 export function DocEditor(props: DocEditorProps) {
   const fields = props.collection.fields || [];
   const {loading, controller, saveState, data} = props.draft;
   const ref = useRef<HTMLDivElement>(null);
+  const [deeplink, setDeeplink] = useState('');
 
   function goBack() {
     const collectionId = props.docId.split('/')[0];
@@ -95,19 +110,12 @@ export function DocEditor(props: DocEditorProps) {
     const url = new URL(window.location.href);
     const deeplink = url.searchParams.get('deeplink');
     if (deeplink) {
-      window.requestAnimationFrame(() => {
-        // The "scrollable" element is actually two steps above.
-        const scrollEl = ref.current!.parentElement?.parentElement;
-        const deeplinkEl = document.getElementById(deeplink);
-        if (scrollEl && deeplinkEl) {
-          scrollToDeeplink(scrollEl, deeplinkEl);
-        }
-      });
+      setDeeplink(deeplink);
     }
   }, [loading]);
 
   return (
-    <>
+    <DEEPLINK_CONTEXT.Provider value={deeplink}>
       <div className="DocEditor" ref={ref}>
         <LoadingOverlay
           visible={loading}
@@ -212,14 +220,17 @@ export function DocEditor(props: DocEditorProps) {
           ))}
         </div>
       </div>
-    </>
+    </DEEPLINK_CONTEXT.Provider>
   );
 }
 
 DocEditor.Field = (props: FieldProps) => {
-  const [targeted, setTargeted] = useState(false);
+  // const [targeted, setTargeted] = useState(false);
   const field = props.field;
   const level = props.level ?? 0;
+  const deeplink = useDeeplink();
+  const targeted = deeplink === props.deepKey;
+  const ref = useRef<HTMLDivElement>(null);
 
   let showFieldHeader = !props.hideHeader && !field.hideLabel;
   // The "drawer" variant shows the header within the accordion button.
@@ -232,11 +243,10 @@ DocEditor.Field = (props: FieldProps) => {
   }
 
   useEffect(() => {
-    const url = new URL(window.location.href);
-    if (url.searchParams.get('deeplink') === props.deepKey) {
-      setTargeted(true);
+    if (targeted) {
+      scrollToDeeplink(ref.current!);
     }
-  }, []);
+  }, [targeted]);
 
   return (
     <div
@@ -248,6 +258,7 @@ DocEditor.Field = (props: FieldProps) => {
       data-type={field.type}
       data-level={level}
       id={props.deepKey}
+      ref={ref}
     >
       {showFieldHeader && (
         <DocEditor.FieldHeader
@@ -619,6 +630,7 @@ DocEditor.ArrayField = (props: FieldProps) => {
   const draft = props.draft;
   const field = props.field as schema.ArrayField;
   const [value, dispatch] = useReducer(arrayReducer, {_array: []});
+  const deeplink = useDeeplink();
 
   const data = value ?? {};
   const order = data._array || [];
@@ -715,6 +727,12 @@ DocEditor.ArrayField = (props: FieldProps) => {
     });
   };
 
+  function itemInDeeplink(itemKey: string) {
+    return Boolean(
+      deeplink && deeplink.startsWith(`${props.deepKey}.${itemKey}`)
+    );
+  }
+
   return (
     <div className="DocEditor__ArrayField">
       <div className="DocEditor__ArrayField__items">
@@ -725,7 +743,7 @@ DocEditor.ArrayField = (props: FieldProps) => {
           <details
             className="DocEditor__ArrayField__item"
             key={key}
-            open={newlyAdded.includes(key)}
+            open={newlyAdded.includes(key) || itemInDeeplink(key)}
           >
             <summary className="DocEditor__ArrayField__item__header">
               <div className="DocEditor__ArrayField__item__header__icon">
@@ -945,15 +963,10 @@ function arrayPreview(
   return `item ${index}`;
 }
 
-function scrollToDeeplink(parent: HTMLElement, deeplinkEl: HTMLElement) {
-  let current = deeplinkEl.parentElement;
-  const offsetTop = deeplinkEl.offsetTop;
-  while (current && current !== parent) {
-    if (String(current.tagName).toLowerCase() === 'details') {
-      const detailsEl = current as HTMLDetailsElement;
-      detailsEl.open = true;
-    }
-    current = current.parentElement;
+function scrollToDeeplink(deeplinkEl: HTMLElement) {
+  const parent = document.querySelector('.DocumentPage__side');
+  if (parent) {
+    const offsetTop = deeplinkEl.offsetTop;
+    parent.scroll({top: offsetTop, behavior: 'smooth'});
   }
-  parent.scroll({top: offsetTop, behavior: 'smooth'});
 }
