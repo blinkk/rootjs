@@ -1,21 +1,10 @@
 import {Badge, Tooltip} from '@mantine/core';
 import {Timestamp} from 'firebase/firestore';
-
+import {CMSDoc, testPublishingLocked} from '../../utils/doc.js';
 import {formatDateTime, getTimeAgo} from '../../utils/time.js';
 
 interface DocStatusBadgesProps {
-  doc: {
-    sys: {
-      createdAt: Timestamp;
-      createdBy: string;
-      modifiedAt: Timestamp;
-      modifiedBy: string;
-      publishedAt?: Timestamp;
-      publishedBy?: string;
-      scheduledAt?: Timestamp;
-      scheduledBy?: string;
-    };
-  };
+  doc: CMSDoc;
   tooltipPosition?: 'bottom' | 'top';
 }
 
@@ -24,7 +13,8 @@ export function DocStatusBadges(props: DocStatusBadgesProps) {
     // position: props.tooltipPosition || 'bottom',
     transition: 'pop',
   };
-  const sys = props.doc.sys;
+  const doc = props.doc;
+  const sys = doc.sys;
   return (
     <div className="CollectionPage__collection__docsList__doc__content__header__badges">
       {(!sys.publishedAt ||
@@ -70,6 +60,20 @@ export function DocStatusBadges(props: DocStatusBadgesProps) {
             gradient={{from: 'grape', to: 'pink', deg: 35}}
           >
             Scheduled
+          </Badge>
+        </Tooltip>
+      )}
+      {testPublishingLocked(doc) && (
+        <Tooltip
+          {...tooltipProps}
+          label={`Locked by ${doc.sys.publishingLocked.lockedBy}: "${doc.sys.publishingLocked.reason}"`}
+        >
+          <Badge
+            size="xs"
+            variant="gradient"
+            gradient={{from: 'orange', to: 'red'}}
+          >
+            Locked
           </Badge>
         </Tooltip>
       )}
