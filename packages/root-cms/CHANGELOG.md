@@ -1,5 +1,13 @@
 # @blinkk/root-cms
 
+## 1.1.2
+
+### Patch Changes
+
+- f4099cf: feat: add "inline" option to object drawers
+- defb389: chore: group sequential doc.save actions
+  - @blinkk/root@1.1.2
+
 ## 1.1.1
 
 ### Patch Changes
