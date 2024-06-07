@@ -7,6 +7,7 @@ const GCI_SUPPORTED_EXTS = ['jpg', 'png', 'webp'];
 export interface UploadFileOptions {
   preserveFilename?: boolean;
   cacheControl?: string;
+  disableGci?: boolean;
 }
 
 export async function uploadFileToGCS(file: File, options?: UploadFileOptions) {
@@ -31,7 +32,7 @@ export async function uploadFileToGCS(file: File, options?: UploadFileOptions) {
     const dimens = await getImageDimensions(file);
     meta.width = dimens.width;
     meta.height = dimens.height;
-    if (GCI_SUPPORTED_EXTS.includes(ext)) {
+    if (!options?.disableGci && GCI_SUPPORTED_EXTS.includes(ext)) {
       const gciUrl = await getGciUrl(gcsPath);
       if (gciUrl) {
         meta.gcsPath = gcsPath;

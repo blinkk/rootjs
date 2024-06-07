@@ -92,6 +92,7 @@ export async function renderApp(req: Request, res: Response, options: any) {
     gapi: cmsConfig.gapi,
     collections: collections,
     sidebar: cmsConfig.sidebar,
+    experiments: cmsConfig.experiments,
   };
   const projectName = cmsConfig.name || cmsConfig.id || '';
   const title = projectName ? `${projectName} – Root CMS` : 'Root CMS';

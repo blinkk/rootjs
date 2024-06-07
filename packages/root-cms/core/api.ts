@@ -1,5 +1,6 @@
 import {Server, Request, Response} from '@blinkk/root';
 import {multipartMiddleware} from '@blinkk/root/middleware';
+import {Chat, ChatClient} from './ai.js';
 import {RootCMSClient} from './client.js';
 import {runCronJobs} from './cron.js';
 import {arrayToCsv, csvToArray} from './csv.js';
@@ -163,6 +164,47 @@ export function api(server: Server) {
         metadata: metadata,
       });
       res.status(200).json({success: true});
+    } catch (err) {
+      console.error(err.stack || err);
+      res.status(500).json({success: false, error: 'UNKNOWN'});
+    }
+  });
+
+  /**
+   * AI chatbot.
+   */
+  server.use('/cms/api/ai.chat', async (req: Request, res: Response) => {
+    if (
+      req.method !== 'POST' ||
+      !String(req.get('content-type')).startsWith('application/json')
+    ) {
+      res.status(400).json({success: false, error: 'BAD_REQUEST'});
+      return;
+    }
+    if (!req.user?.email) {
+      res.status(401).json({success: false, error: 'UNAUTHORIZED'});
+      return;
+    }
+    const reqBody = req.body || {};
+    if (!reqBody.prompt) {
+      res.status(400).json({success: false, error: 'MISSING_PROMPT'});
+      return;
+    }
+    const prompt = reqBody.prompt;
+
+    try {
+      const cmsClient = new RootCMSClient(req.rootConfig!);
+      const chatClient = new ChatClient(cmsClient, req.user.email);
+      let chat: Chat;
+      if (reqBody.chatId) {
+        chat = await chatClient.getChat(reqBody.chatId);
+      } else {
+        chat = await chatClient.createChat();
+      }
+      const chatResponse = await chat.sendPrompt(prompt);
+      res
+        .status(200)
+        .json({success: true, chatId: chat.id, response: chatResponse});
     } catch (err) {
       console.error(err.stack || err);
       res.status(500).json({success: false, error: 'UNKNOWN'});

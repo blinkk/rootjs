@@ -36,6 +36,11 @@ export interface CMSUser {
   email: string;
 }
 
+export interface CMSAIConfig {
+  /** Custom API endpoint for chat prompts. */
+  endpoint?: string;
+}
+
 export interface CMSSidebarTool {
   /** URL for the sidebar icon image. */
   icon?: string;
@@ -134,6 +139,13 @@ export type CMSPluginOptions = {
    * Callback when an action occurs.
    */
   onAction?: (action: Action) => any;
+
+  /**
+   * Experimental config options. Note: these are subject to change at any time.
+   */
+  experiments?: {
+    ai?: boolean | CMSAIConfig;
+  };
 };
 
 export type CMSPlugin = Plugin & {

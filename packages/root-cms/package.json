@@ -64,6 +64,10 @@
     "test:watch": "pnpm build && firebase emulators:exec 'vitest'"
   },
   "dependencies": {
+    "@genkit-ai/ai": "0.5.2",
+    "@genkit-ai/core": "0.5.2",
+    "@genkit-ai/firebase": "0.5.2",
+    "@genkit-ai/vertexai": "0.5.2",
     "body-parser": "1.20.2",
     "commander": "11.0.0",
     "csv-parse": "5.5.2",

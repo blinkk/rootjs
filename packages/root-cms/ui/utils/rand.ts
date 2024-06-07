@@ -11,3 +11,7 @@ export function autokey(len?: number) {
   }
   return result.join('');
 }
+
+export function numBetween(min: number, max: number) {
+  return Math.random() * (max - min) + min;
+}

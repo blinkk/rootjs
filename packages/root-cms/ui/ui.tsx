@@ -41,6 +41,7 @@ import {TranslationsEditPage} from './pages/TranslationsEditPage/TranslationsEdi
 import {TranslationsPage} from './pages/TranslationsPage/TranslationsPage.js';
 import './styles/global.css';
 import './styles/theme.css';
+import {AIPage} from './pages/AIPage/AIPage.js';
 
 declare global {
   interface Window {
@@ -68,6 +69,9 @@ declare global {
           string,
           {icon?: string; label?: string; iframeUrl?: string}
         >;
+      };
+      experiments?: {
+        ai?: boolean | {endpoint?: string};
       };
     };
     firebase: FirebaseContextObject;
@@ -100,6 +104,7 @@ function App() {
           >
             <Router>
               <Route path="/cms" component={ProjectPage} />
+              <Route path="/cms/ai" component={AIPage} />
               <Route path="/cms/assets" component={AssetsPage} />
               <Route path="/cms/compare" component={ComparePage} />
               <Route
