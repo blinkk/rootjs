@@ -1,9 +1,5 @@
 .ComparePage {
   padding: 60px;
-  padding-top: 48px;
-  width: calc(100vw - 48px);
-  height: calc(100vh - 48px);
-  overflow: auto;
 }
 
 .ComparePage__diff {

@@ -130,6 +130,12 @@
   grid-area: main;
 }
 
+.Layout__main > *:first-child {
+  width: calc(100vw - 48px);
+  height: calc(100vh - 48px);
+  overflow: auto;
+}
+
 .Layout__bottom {
   grid-area: bottom;
 }
