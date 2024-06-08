@@ -94,7 +94,7 @@ export async function renderApp(req: Request, res: Response, options: any) {
     sidebar: cmsConfig.sidebar,
   };
   const projectName = cmsConfig.name || cmsConfig.id || '';
-  const title = projectName ? `${projectName} – Root.js CMS` : 'Root.js CMS';
+  const title = projectName ? `${projectName} – Root CMS` : 'Root CMS';
 
   const mainHtml = renderToString(<App title={title} ctx={ctx} />);
   let html = `<!doctype html>\n${mainHtml}`;
