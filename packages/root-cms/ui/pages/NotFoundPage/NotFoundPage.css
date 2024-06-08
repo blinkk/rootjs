@@ -9,7 +9,14 @@
   text-align: center;
 }
 
+.NotFoundPage__title {
+  font-size: 28px;
+  line-height: 1.2;
+  font-weight: 700;
+}
+
 .NotFoundPage__body {
+  font-size: 16px;
   max-width: 400px;
-  font-weight: 500;
+  font-weight: 400;
 }
