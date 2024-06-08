@@ -96,7 +96,7 @@
     "@mantine/notifications": "4.2.12",
     "@mantine/spotlight": "4.2.12",
     "@preact/compat": "17.1.2",
-    "@tabler/icons-preact": "2.39.0",
+    "@tabler/icons-preact": "2.47.0",
     "@types/body-parser": "1.19.3",
     "@types/gapi": "0.0.47",
     "@types/gapi.client.drive-v3": "0.0.4",
