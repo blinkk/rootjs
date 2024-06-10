@@ -1,5 +1,12 @@
 # @blinkk/root-cms
 
+## 1.2.1
+
+### Patch Changes
+
+- c4db613: feat: add experimental ai framework (#357)
+  - @blinkk/root@1.2.1
+
 ## 1.1.3
 
 ### Patch Changes
