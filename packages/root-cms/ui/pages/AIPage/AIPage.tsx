@@ -11,14 +11,55 @@ import {uploadFileToGCS} from '../../utils/gcs.js';
 import {autokey, numBetween} from '../../utils/rand.js';
 import './AIPage.css';
 
-const TEST_STRING = `Lorem ipsum 🥕 dolor sit amet, **consectetur adipiscing elit**, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco.
+const USE_DEBUG_STRING = true;
+const DEBUG_STRING = `Lorem ipsum 🥕 dolor sit amet, **consectetur adipiscing elit**, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco.
 
 - foo
 - **bar**
 - baz
 
-\`\`\`javascript
-console.log('say hello');
+\`\`\`jsx
+import React, { useState, useEffect } from 'react';
+
+const Typewriter = ({ text, speed = 150 }) => {
+  const [displayedText, setDisplayedText] = useState('');
+  const [index, setIndex] = useState(0);
+
+  useEffect(() => {
+    if (index < text.length) {
+      const timeout = setTimeout(() => {
+        setDisplayedText(displayedText + text[index]);
+        setIndex(index + 1);
+      }, speed);
+      return () => clearTimeout(timeout);
+    }
+  }, [index, displayedText, text, speed]);
+
+  return (
+    <div style={{ fontFamily: 'monospace', whiteSpace: 'pre' }}>
+      {displayedText}
+    </div>
+  );
+};
+
+export default Typewriter;
+\`\`\`
+
+
+\`\`\`jsx
+import React from 'react';
+import Typewriter from './Typewriter';
+
+const App = () => {
+  return (
+    <div>
+      <h1>Typewriter Animation</h1>
+      <Typewriter text="Hello, world!" speed={100} />
+    </div>
+  );
+};
+
+export default App;
 \`\`\`
 
 [learn more](https://www.example.com)
@@ -227,6 +268,7 @@ function ChatMessageBlocks(props: {message: Message; animated: boolean}) {
               key={key}
               block={block}
               animated={props.animated}
+              onAnimationComplete={() => addNextBlock()}
             />
           );
         }
@@ -236,6 +278,7 @@ function ChatMessageBlocks(props: {message: Message; animated: boolean}) {
               key={key}
               block={block}
               animated={props.animated}
+              onAnimationComplete={() => addNextBlock()}
             />
           );
         }
@@ -359,7 +402,7 @@ function MarkdownNode(props: {
     return (
       <BlockNode
         as="a"
-        attrs={{href: node.url}}
+        attrs={{href: node.url, target: '_blank'}}
         nodes={node.children}
         animated={props.animated}
         onAnimationComplete={props.onAnimationComplete}
@@ -427,7 +470,7 @@ function BlockNode(props: {
   animated: boolean;
   onAnimationComplete: () => void;
 }) {
-  const {nodes, complete, next} = useAnimatedNodes({
+  const {nodes, next} = useAnimatedNodes({
     nodes: props.nodes,
     animated: props.animated,
     onAnimationComplete: props.onAnimationComplete,
@@ -443,7 +486,6 @@ function BlockNode(props: {
           onAnimationComplete={() => next()}
         />
       ))}
-      {/* {complete && <div>BlockNode: complete</div>} */}
     </Component>
   );
 }
@@ -493,22 +535,43 @@ function CodeBlockNode(props: {
   animated: boolean;
   onAnimationComplete: () => void;
 }) {
+  const sep = '\n';
+  const allNodes = useMemo(() => props.text.split(sep), [props.text]);
+  const [nodes, setNodes] = useState<string[]>(props.animated ? [] : allNodes);
+  const complete = nodes.length >= allNodes.length;
+
   const preRef = useRef<HTMLPreElement>(null);
+
+  const appendNext = () => {
+    setNodes((current) => {
+      if (current.length >= allNodes.length) {
+        const pre = preRef.current!;
+        hljs.highlightElement(pre);
+        console.log('highlight:', pre);
+        props.onAnimationComplete();
+        return allNodes;
+      }
+      const newChars = [...current, allNodes[current.length]];
+      window.setTimeout(() => appendNext(), typewriterDelay());
+      return newChars;
+    });
+  };
+
   useEffect(() => {
-    if (props.animated && props.onAnimationComplete) {
-      props.onAnimationComplete();
+    if (!props.animated) {
+      return;
     }
-    const pre = preRef.current!;
-    hljs.highlightElement(pre);
-    console.log('highlight:', pre);
+    appendNext();
   }, []);
+
   return (
     <div className="AIPage__CodeBlockNode">
       {props.language && (
         <div className="AIPage__CodeBlockNode__language">{props.language}</div>
       )}
       <pre ref={preRef} class={`language-${props.language || 'unknown'}`}>
-        <code>{props.text}</code>
+        <code>{nodes.join(sep)}</code>
+        {!complete && <CursorDot />}
       </pre>
     </div>
   );
@@ -517,7 +580,13 @@ function CodeBlockNode(props: {
 function ChatMessagePendingBlock(props: {
   block: PendingMessageBlock;
   animated: boolean;
+  onAnimationComplete: () => void;
 }) {
+  useEffect(() => {
+    if (props.animated) {
+      props.onAnimationComplete();
+    }
+  }, []);
   return (
     <div className="AIPage__PendingMessageBlock">
       <CursorDot />
@@ -532,8 +601,14 @@ function CursorDot() {
 function ChatMessageImageBlock(props: {
   block: ImageMessageBlock;
   animated: boolean;
+  onAnimationComplete: () => void;
 }) {
   const image = props.block.image;
+  useEffect(() => {
+    if (props.animated) {
+      props.onAnimationComplete();
+    }
+  }, []);
   return (
     <div className="AIPage__ImageMessageBlock">
       <img
@@ -587,67 +662,68 @@ function ChatBar(props: {chat: ChatController}) {
     setImage(null);
     updateTextareaHeight();
 
-    // TODO(stevenle): send request to api then update pending message.
-    const prompt: any[] = [{text: textPrompt}];
-    if (image) {
-      prompt.push({
-        media: {
-          url: image.src,
-          contentType: guessImageMimetype(image.filename),
-        },
-      });
-    }
-
-    // Allow users to provide a custom api endpoint via the
-    // `{ai: {endpoint: '/api/...}}` config.
-    let endpoint = '/cms/api/ai.chat';
-    if (typeof window.__ROOT_CTX.experiments?.ai === 'object') {
-      if (window.__ROOT_CTX.experiments.ai.endpoint) {
-        endpoint = window.__ROOT_CTX.experiments.ai.endpoint;
+    if (USE_DEBUG_STRING) {
+      window.setTimeout(() => {
+        props.chat.updateMessage(pendingMessageId, {
+          sender: 'bot',
+          blocks: [
+            {
+              type: 'text',
+              text: DEBUG_STRING,
+            },
+          ],
+        });
+      }, 1500);
+    } else {
+      const prompt: any[] = [{text: textPrompt}];
+      if (image) {
+        prompt.push({
+          media: {
+            url: image.src,
+            contentType: guessImageMimetype(image.filename),
+          },
+        });
       }
-    }
 
-    const res = await fetch(endpoint, {
-      method: 'POST',
-      headers: {'content-type': 'application/json'},
-      body: JSON.stringify({prompt: prompt}),
-    });
-    if (res.status !== 200) {
-      const err = await res.text();
-      console.error('chat failed', err);
+      // Allow users to provide a custom api endpoint via the
+      // `{ai: {endpoint: '/api/...}}` config.
+      let endpoint = '/cms/api/ai.chat';
+      if (typeof window.__ROOT_CTX.experiments?.ai === 'object') {
+        if (window.__ROOT_CTX.experiments.ai.endpoint) {
+          endpoint = window.__ROOT_CTX.experiments.ai.endpoint;
+        }
+      }
+
+      const res = await fetch(endpoint, {
+        method: 'POST',
+        headers: {'content-type': 'application/json'},
+        body: JSON.stringify({prompt: prompt}),
+      });
+      if (res.status !== 200) {
+        const err = await res.text();
+        console.error('chat failed', err);
+        props.chat.updateMessage(pendingMessageId, {
+          sender: 'bot',
+          blocks: [
+            {
+              type: 'text',
+              text: `Something went wrong: ${err}`,
+            },
+          ],
+        });
+        return;
+      }
+      const resData = await res.json();
       props.chat.updateMessage(pendingMessageId, {
         sender: 'bot',
         blocks: [
           {
             type: 'text',
-            text: `Something went wrong: ${err}`,
+            text: resData.response || '',
           },
         ],
       });
-      return;
     }
-    const resData = await res.json();
-    props.chat.updateMessage(pendingMessageId, {
-      sender: 'bot',
-      blocks: [
-        {
-          type: 'text',
-          text: resData.response || '',
-        },
-      ],
-    });
-
-    //   window.setTimeout(() => {
-    //     props.chat.updateMessage(pendingMessageId, {
-    //       sender: 'bot',
-    //       blocks: [
-    //         {
-    //           type: 'text',
-    //           text: TEST_STRING,
-    //         },
-    //       ],
-    //     });
-    //   }, 1500);
   }
 
   function updateTextareaHeight() {

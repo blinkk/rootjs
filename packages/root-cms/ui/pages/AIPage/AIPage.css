@@ -92,6 +92,15 @@
 .AIPage__ChatMessageTextBlock a {
   font-weight: 600;
   text-underline-offset: 4px;
+  transition: all .18s ease;
+}
+
+.AIPage__ChatMessageTextBlock a:hover {
+  color: #1967d2;
+}
+
+.AIPage__ChatMessageTextBlock b {
+  font-weight: 600;
 }
 
 .AIPage__ChatMessageTextBlock p {
