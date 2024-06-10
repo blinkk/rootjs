@@ -1,12 +1,29 @@
 import {ActionIcon, Avatar, Loader, Tooltip} from '@mantine/core';
 import {IconPaperclip, IconRobot, IconSend2, IconX} from '@tabler/icons-preact';
-import {useEffect, useRef, useState} from 'preact/hooks';
-import {Markdown} from '../../components/Markdown/Markdown.js';
+import {fromMarkdown} from 'mdast-util-from-markdown';
+import {gfmFromMarkdown, gfmToMarkdown} from 'mdast-util-gfm';
+import {gfm} from 'micromark-extension-gfm';
+import {useEffect, useMemo, useRef, useState} from 'preact/hooks';
 import {Layout} from '../../layout/Layout.js';
 import {joinClassNames} from '../../utils/classes.js';
 import {uploadFileToGCS} from '../../utils/gcs.js';
 import {autokey, numBetween} from '../../utils/rand.js';
 import './AIPage.css';
+
+const TEST_STRING = `Lorem ipsum 🥕 dolor sit amet, **consectetur adipiscing elit**, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco.
+
+- foo
+- **bar**
+- baz
+
+\`\`\`javascript
+console.log('say hello');
+\`\`\`
+
+[learn more](https://www.example.com)
+`;
+
+const TYPEWRITER_ANIM_DELAY = [20, 40] as const;
 
 interface Message {
   sender: 'user' | 'bot';
@@ -38,6 +55,10 @@ interface TextMessageBlock {
 }
 
 type MessageBlock = ImageMessageBlock | PendingMessageBlock | TextMessageBlock;
+
+function typewriterDelay() {
+  return numBetween(...TYPEWRITER_ANIM_DELAY);
+}
 
 interface ChatController {
   messages: Message[];
@@ -231,47 +252,253 @@ function ChatMessageBlocks(props: {message: Message; animated: boolean}) {
   );
 }
 
+function useAnimatedNodes<T = any>(props: {
+  nodes: T[];
+  animated?: boolean;
+  onAnimationComplete?: () => void;
+}) {
+  const [nodes, setNodes] = useState(props.animated ? [] : props.nodes);
+  const complete = nodes.length >= props.nodes.length;
+
+  const appendNextNode = () => {
+    setNodes((current) => {
+      if (current.length >= props.nodes.length) {
+        return props.nodes;
+      }
+      return [...current, props.nodes[current.length]];
+    });
+  };
+
+  const next = () => {
+    if (nodes.length >= props.nodes.length) {
+      if (props.onAnimationComplete) {
+        props.onAnimationComplete();
+      }
+      return;
+    }
+    window.setTimeout(() => appendNextNode(), typewriterDelay());
+  };
+
+  useEffect(() => {
+    if (props.animated) {
+      appendNextNode();
+    }
+  }, []);
+
+  return {
+    nodes,
+    next,
+    complete,
+  };
+}
+
 function ChatMessageTextBlock(props: {
   block: TextMessageBlock;
   animated: boolean;
   onAnimationComplete: () => void;
 }) {
-  const fullText = props.block.text;
-  const [text, setText] = useState(props.animated ? '' : fullText);
-  const complete = text.length >= fullText.length;
+  const markdownTree = useMemo(() => {
+    const tree = fromMarkdown(props.block.text, {
+      extensions: [gfm()],
+      mdastExtensions: [gfmFromMarkdown()],
+    });
+    console.log(tree);
+    return tree;
+  }, [props.block.text]);
 
-  function appendNextChar() {
-    // setText((current) => {
-    //   if (current.length >= fullText.length) {
-    //     return fullText;
-    //   }
-    //   return `${current}${fullText[current.length]}`;
-    // });
-  }
-
-  useEffect(() => {
-    if (props.animated) {
-      appendNextChar();
-    }
-  }, []);
-
-  useEffect(() => {
-    props.onAnimationComplete();
-    // if (text.length >= fullText.length) {
-    //   props.onAnimationComplete();
-    //   return;
-    // }
-    // const delay = numBetween(10, 35);
-    // setTimeout(() => appendNextChar(), delay);
-  }, [text]);
+  const {nodes, next} = useAnimatedNodes({
+    nodes: markdownTree.children,
+    animated: props.animated,
+    onAnimationComplete: props.onAnimationComplete,
+  });
 
   return (
     <div className="AIPage__ChatMessageTextBlock">
-      {/* TODO(stevenle): convert the markdown text to "blocks" and animate each block. */}
-      <Markdown code={fullText} />
-      {/* <span>{text}</span> */}
-      {/* {!complete && <CursorDot />} */}
+      {nodes.map((node, i) => (
+        <MarkdownNode
+          key={i}
+          node={node}
+          animated={props.animated}
+          onAnimationComplete={next}
+        />
+      ))}
     </div>
+  );
+}
+
+function MarkdownNode(props: {
+  node: any;
+  animated: boolean;
+  onAnimationComplete: () => void;
+}) {
+  const node = props.node;
+  if (node.type === 'code') {
+    return (
+      <CodeBlockNode
+        text={node.value}
+        language={node.language}
+        animated={props.animated}
+        onAnimationComplete={props.onAnimationComplete}
+      />
+    );
+  }
+  if (node.type === 'inlineCode') {
+    return (
+      <BlockNode
+        as="code"
+        nodes={[{type: 'text', value: node.value}]}
+        animated={props.animated}
+        onAnimationComplete={props.onAnimationComplete}
+      />
+    );
+  }
+  if (node.type === 'link') {
+    return (
+      <BlockNode
+        as="a"
+        attrs={{href: node.url}}
+        nodes={node.children}
+        animated={props.animated}
+        onAnimationComplete={props.onAnimationComplete}
+      />
+    );
+  }
+  if (node.type === 'list') {
+    const tagName = node.ordered ? 'ol' : 'ul';
+    return (
+      <BlockNode
+        as={tagName}
+        nodes={node.children}
+        animated={props.animated}
+        onAnimationComplete={props.onAnimationComplete}
+      />
+    );
+  }
+  if (node.type === 'listItem') {
+    return (
+      <BlockNode
+        as="li"
+        nodes={node.children}
+        animated={props.animated}
+        onAnimationComplete={props.onAnimationComplete}
+      />
+    );
+  }
+  if (node.type === 'paragraph') {
+    return (
+      <BlockNode
+        as="p"
+        nodes={node.children}
+        animated={props.animated}
+        onAnimationComplete={props.onAnimationComplete}
+      />
+    );
+  }
+  if (node.type === 'strong') {
+    return (
+      <BlockNode
+        as="b"
+        nodes={node.children}
+        animated={props.animated}
+        onAnimationComplete={props.onAnimationComplete}
+      />
+    );
+  }
+  if (node.type === 'text') {
+    return (
+      <TextNode
+        text={node.value}
+        animated={props.animated}
+        onAnimationComplete={props.onAnimationComplete}
+      />
+    );
+  }
+
+  return <div>{JSON.stringify(props.node)}</div>;
+}
+
+function BlockNode(props: {
+  as: preact.JSX.ElementType;
+  attrs?: Record<string, any>;
+  nodes: any[];
+  animated: boolean;
+  onAnimationComplete: () => void;
+}) {
+  const {nodes, complete, next} = useAnimatedNodes({
+    nodes: props.nodes,
+    animated: props.animated,
+    onAnimationComplete: props.onAnimationComplete,
+  });
+  const Component = props.as;
+  return (
+    <Component {...props.attrs}>
+      {nodes.map((node, i) => (
+        <MarkdownNode
+          key={i}
+          node={node}
+          animated={props.animated}
+          onAnimationComplete={() => next()}
+        />
+      ))}
+      {/* {complete && <div>BlockNode: complete</div>} */}
+    </Component>
+  );
+}
+
+function TextNode(props: {
+  text: string;
+  animated: boolean;
+  onAnimationComplete: () => void;
+}) {
+  const sep = ' ';
+  const allNodes = useMemo(() => props.text.split(sep), [props.text]);
+  const [nodes, setNodes] = useState<string[]>(props.animated ? [] : allNodes);
+  const complete = nodes.length >= allNodes.length;
+
+  const appendNext = () => {
+    setNodes((current) => {
+      if (current.length >= allNodes.length) {
+        if (props.onAnimationComplete) {
+          props.onAnimationComplete();
+        }
+        return allNodes;
+      }
+      const newChars = [...current, allNodes[current.length]];
+      window.setTimeout(() => appendNext(), typewriterDelay());
+      return newChars;
+    });
+  };
+
+  useEffect(() => {
+    if (!props.animated) {
+      return;
+    }
+    appendNext();
+  }, []);
+
+  return (
+    <>
+      {nodes.join(sep)}
+      {!complete && <CursorDot />}
+    </>
+  );
+}
+
+function CodeBlockNode(props: {
+  text: string;
+  language: string;
+  animated: boolean;
+  onAnimationComplete: () => void;
+}) {
+  useEffect(() => {
+    if (props.animated && props.onAnimationComplete) {
+      props.onAnimationComplete();
+    }
+  }, []);
+  return (
+    <pre class={`language-${props.language || 'unknown'}`}>
+      <code>{props.text}</code>
+    </pre>
   );
 }
 
@@ -397,6 +624,18 @@ function ChatBar(props: {chat: ChatController}) {
         },
       ],
     });
+
+    //   window.setTimeout(() => {
+    //     props.chat.updateMessage(pendingMessageId, {
+    //       sender: 'bot',
+    //       blocks: [
+    //         {
+    //           type: 'text',
+    //           text: TEST_STRING,
+    //         },
+    //       ],
+    //     });
+    //   }, 1500);
   }
 
   function updateTextareaHeight() {

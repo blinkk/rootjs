@@ -94,6 +94,38 @@
   white-space: pre-wrap;
 }
 
+.AIPage__ChatMessageTextBlock a {
+  font-weight: 600;
+  text-underline-offset: 4px;
+}
+
+.AIPage__ChatMessageTextBlock p {
+  white-space: pre;
+  margin-top: 20px;
+}
+
+.AIPage__ChatMessageTextBlock p:first-child {
+  margin-top: 0;
+}
+
+.AIPage__ChatMessageTextBlock li + li {
+  margin-top: 10px;
+}
+
+.AIPage__ChatMessageTextBlock pre:has(code) {
+  border-radius: 8px;
+  border: 1px solid #DADCE0;
+  background: #f8f9fa;
+  font-family: var(--font-family-mono);
+  font-size: 14px;
+  line-height: 1.4;
+  margin: 0;
+  padding: 16px;
+  height: 100%;
+  white-space: pre-wrap;
+  overflow: auto;
+}
+
 .AIPage__ImageMessageBlock img {
   display: block;
   max-width: 100%;
@@ -101,7 +133,7 @@
 
 .AIPage__CursorDot {
   --dot-size: 12px;
-  width: var(--dot-size);
+  width: calc(var(--dot-size) + 8px);
   height: 24px;
   position: relative;
   display: inline-block;
@@ -112,7 +144,7 @@
   content: '';
   display: block;
   position: absolute;
-  left: 0;
+  left: calc(50% - 0.5 * var(--dot-size));
   top: calc(50% - 0.5 * var(--dot-size) - 1px);
   width: var(--dot-size);
   height: var(--dot-size);

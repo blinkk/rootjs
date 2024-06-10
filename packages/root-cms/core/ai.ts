@@ -2,7 +2,7 @@ import crypto from 'node:crypto';
 import {generate} from '@genkit-ai/ai';
 import {configureGenkit} from '@genkit-ai/core';
 import {vertexAI} from '@genkit-ai/vertexai';
-import {gemini15ProPreview} from '@genkit-ai/vertexai';
+import {gemini15ProPreview, gemini15FlashPreview} from '@genkit-ai/vertexai';
 import {RootCMSClient} from './client.js';
 
 let genkitIsConfigured = false;
@@ -44,7 +44,8 @@ export class Chat {
 
     console.log(prompt);
     const res = await generate({
-      model: gemini15ProPreview,
+      // model: gemini15ProPreview,
+      model: gemini15FlashPreview,
       prompt: prompt as any,
     });
     console.log(res);
