@@ -18,7 +18,7 @@ import {uploadFileToGCS} from '../../utils/gcs.js';
 import {autokey, numBetween} from '../../utils/rand.js';
 import './AIPage.css';
 
-const USE_DEBUG_STRING = true;
+const USE_DEBUG_STRING = false;
 const DEBUG_STRING = `Lorem ipsum 🥕 dolor sit amet.
 
 \`\`\`jsx
@@ -64,8 +64,6 @@ const App = () => {
 
 export default App;
 \`\`\`
-
-[learn more](https://www.example.com)
 `;
 
 const TYPEWRITER_ANIM_DELAY = [20, 40] as const;
@@ -502,12 +500,11 @@ function TextNode(props: {
 }) {
   const sep = props.sep || ' ';
   const tokens = useMemo(() => props.text.split(sep), [props.text]);
-  const [index, setIndex] = useState(0);
+  const [index, setIndex] = useState(props.animated ? 0 : tokens.length);
   const complete = index >= tokens.length;
 
   useEffect(() => {
     if (!props.animated) {
-      setIndex(tokens.length);
       return;
     }
     if (index >= tokens.length) {
