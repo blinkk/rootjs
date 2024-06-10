@@ -1,7 +1,8 @@
 import {ActionIcon, Avatar, Loader, Tooltip} from '@mantine/core';
 import {IconPaperclip, IconRobot, IconSend2, IconX} from '@tabler/icons-preact';
+import hljs from 'highlight.js/lib/common';
 import {fromMarkdown} from 'mdast-util-from-markdown';
-import {gfmFromMarkdown, gfmToMarkdown} from 'mdast-util-gfm';
+import {gfmFromMarkdown} from 'mdast-util-gfm';
 import {gfm} from 'micromark-extension-gfm';
 import {useEffect, useMemo, useRef, useState} from 'preact/hooks';
 import {Layout} from '../../layout/Layout.js';
@@ -24,6 +25,8 @@ console.log('say hello');
 `;
 
 const TYPEWRITER_ANIM_DELAY = [20, 40] as const;
+
+hljs.configure({ignoreUnescapedHTML: true});
 
 interface Message {
   sender: 'user' | 'bot';
@@ -336,7 +339,7 @@ function MarkdownNode(props: {
     return (
       <CodeBlockNode
         text={node.value}
-        language={node.language}
+        language={node.lang}
         animated={props.animated}
         onAnimationComplete={props.onAnimationComplete}
       />
@@ -490,15 +493,24 @@ function CodeBlockNode(props: {
   animated: boolean;
   onAnimationComplete: () => void;
 }) {
+  const preRef = useRef<HTMLPreElement>(null);
   useEffect(() => {
     if (props.animated && props.onAnimationComplete) {
       props.onAnimationComplete();
     }
+    const pre = preRef.current!;
+    hljs.highlightElement(pre);
+    console.log('highlight:', pre);
   }, []);
   return (
-    <pre class={`language-${props.language || 'unknown'}`}>
-      <code>{props.text}</code>
-    </pre>
+    <div className="AIPage__CodeBlockNode">
+      {props.language && (
+        <div className="AIPage__CodeBlockNode__language">{props.language}</div>
+      )}
+      <pre ref={preRef} class={`language-${props.language || 'unknown'}`}>
+        <code>{props.text}</code>
+      </pre>
+    </div>
   );
 }
 

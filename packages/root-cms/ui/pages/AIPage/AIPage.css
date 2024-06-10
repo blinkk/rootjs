@@ -89,11 +89,6 @@
   }
 }
 
-.AIPage__ChatMessageTextBlock span {
-  margin-right: 8px;
-  white-space: pre-wrap;
-}
-
 .AIPage__ChatMessageTextBlock a {
   font-weight: 600;
   text-underline-offset: 4px;
@@ -108,11 +103,38 @@
   margin-top: 0;
 }
 
-.AIPage__ChatMessageTextBlock li + li {
-  margin-top: 10px;
+.AIPage__ChatMessageTextBlock p code {
+  font-family: var(--font-family-mono);
+  font-size: 14px;
+  font-weight: 600;
+  display: inline-block;
+  padding: 0 4px;
+  border-radius: 2px;
+  border: 1px solid #DADCE0;
+  background: #f8f9fa;
+  color: #000;
 }
 
-.AIPage__ChatMessageTextBlock pre:has(code) {
+.AIPage__ChatMessageTextBlock li + li {
+  margin-top: 4px;
+}
+
+.AIPage__CodeBlockNode {
+  display: block;
+  position: relative;
+  margin: 20px 0;
+}
+
+.AIPage__CodeBlockNode__language {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  font-size: 12px;
+  line-height: 1;
+  color: #80868b;
+}
+
+.AIPage__CodeBlockNode pre {
   border-radius: 8px;
   border: 1px solid #DADCE0;
   background: #f8f9fa;

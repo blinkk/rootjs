@@ -343,9 +343,6 @@ importers:
       '@genkit-ai/core':
         specifier: 0.5.2
         version: 0.5.2
-      '@genkit-ai/firebase':
-        specifier: 0.5.2
-        version: 0.5.2(firebase-admin@11.11.1)(firebase-functions@4.8.0)
       '@genkit-ai/vertexai':
         specifier: 0.5.2
         version: 0.5.2
@@ -479,6 +476,9 @@ importers:
       firebase-tools:
         specifier: 12.9.1
         version: 12.9.1
+      highlight.js:
+        specifier: 11.6.0
+        version: 11.6.0
       json-diff-kit:
         specifier: 1.0.29
         version: 1.0.29
@@ -2076,26 +2076,6 @@ packages:
       zod: 3.23.8
       zod-to-json-schema: 3.23.0(zod@3.23.8)
     transitivePeerDependencies:
-      - supports-color
-    dev: false
-
-  /@genkit-ai/firebase@0.5.2(firebase-admin@11.11.1)(firebase-functions@4.8.0):
-    resolution: {integrity: sha512-vaySgh2C5eWiN7ceS70cDyec0NOEhyn58/+BDZLq+8qHlQX0MVAeOBuSk+R0FpjC35TTLmQphuZg982qH+CXxg==}
-    peerDependencies:
-      '@google-cloud/firestore': ^7.6.0
-      firebase-admin: ^12.1.0
-      firebase-functions: ^4.8.0 || ^5.0.0
-    dependencies:
-      '@genkit-ai/ai': 0.5.2
-      '@genkit-ai/core': 0.5.2
-      '@genkit-ai/flow': 0.5.2
-      express: 4.19.2
-      firebase-admin: 11.11.1
-      firebase-functions: 4.8.0(firebase-admin@11.11.1)
-      google-auth-library: 9.7.0
-      zod: 3.23.8
-    transitivePeerDependencies:
-      - encoding
       - supports-color
     dev: false
 
@@ -6293,6 +6273,7 @@ packages:
     transitivePeerDependencies:
       - encoding
       - supports-color
+    dev: true
 
   /firebase-functions@4.8.0(firebase-admin@12.1.1):
     resolution: {integrity: sha512-8+Tgofl/w7reVVzJ1CSVPYwSRwmOMV8fACDdUkytoEP//wKb9olloMptKg2GahUbs6jHAIbT+B/jeMch4ouHQQ==}
@@ -7108,7 +7089,6 @@ packages:
   /highlight.js@11.6.0:
     resolution: {integrity: sha512-ig1eqDzJaB0pqEvlPVIpSSyMaO92bH1N2rJpLMN/nX396wTpDA4Eq0uK+7I/2XG17pFaaKE0kjV/XPeGt7Evjw==}
     engines: {node: '>=12.0.0'}
-    dev: false
 
   /hoist-non-react-statics@3.3.2:
     resolution: {integrity: sha512-/gGivxi8JPKWNm/W0jSmzcMPpfpPLc3dY/6GxhX2hQ9iGj3aDfklV4ET7NjKpSinLpJ5vafa9iiGIEZg10SfBw==}
