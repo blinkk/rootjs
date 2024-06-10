@@ -38,6 +38,11 @@ function App(props: AppProps) {
           href="https://lh3.googleusercontent.com/ijK50TfQlV_yJw3i-CMlnD6osH4PboZBILZrJcWhoNMEmoyCD5e1bAxXbaOPe5w4gG_Scf37EXrmZ6p8sP2lue5fLZ419m5JyLMs=e385-w256"
           type="image/png"
         />
+        <link
+          rel="stylesheet"
+          href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.6.0/styles/atom-one-light.min.css"
+          nonce="{NONCE}"
+        />
         <link rel="stylesheet" href="{CSS_URL}" nonce="{NONCE}" />
       </head>
       <body>
@@ -92,6 +97,7 @@ export async function renderApp(req: Request, res: Response, options: any) {
     gapi: cmsConfig.gapi,
     collections: collections,
     sidebar: cmsConfig.sidebar,
+    experiments: cmsConfig.experiments,
   };
   const projectName = cmsConfig.name || cmsConfig.id || '';
   const title = projectName ? `${projectName} – Root CMS` : 'Root CMS';

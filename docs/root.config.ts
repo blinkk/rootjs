@@ -51,6 +51,9 @@ export default defineConfig({
           design: {label: 'Design System', iframeUrl: '/design'},
         },
       },
+      experiments: {
+        ai: true,
+      },
     }),
   ],
   prettyHtml: true,

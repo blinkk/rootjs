@@ -6,6 +6,7 @@ import {
   IconHome,
   IconLanguage,
   IconPhoto,
+  IconRobot,
   IconRocket,
   IconSettings,
 } from '@tabler/icons-preact';
@@ -54,6 +55,7 @@ Layout.Side = () => {
   const currentUrl = route.url.replace(/\/*$/g, '');
   const user = window.firebase.user;
   const sidebarTools = window.__ROOT_CTX.sidebar?.tools;
+  const experiments = window.__ROOT_CTX.experiments || {};
   return (
     <div className="Layout__side">
       <div className="Layout__side__buttons">
@@ -104,6 +106,16 @@ Layout.Side = () => {
         >
           <IconLanguage stroke={ICON_STROKE} />
         </Layout.SideButton>
+
+        {experiments.ai && (
+          <Layout.SideButton
+            label="Root AI (experimental)"
+            url="/cms/ai"
+            active={currentUrl.startsWith('/cms/ai')}
+          >
+            <IconRobot stroke={ICON_STROKE} />
+          </Layout.SideButton>
+        )}
 
         {sidebarTools && (
           <>

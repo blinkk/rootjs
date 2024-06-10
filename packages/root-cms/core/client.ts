@@ -166,11 +166,11 @@ export interface ListActionsOptions {
 }
 
 export class RootCMSClient {
-  private readonly rootConfig: RootConfig;
-  private readonly cmsPlugin: CMSPlugin;
-  private readonly projectId: string;
-  private readonly app: App;
-  private readonly db: Firestore;
+  readonly rootConfig: RootConfig;
+  readonly cmsPlugin: CMSPlugin;
+  readonly projectId: string;
+  readonly app: App;
+  readonly db: Firestore;
 
   constructor(rootConfig: RootConfig) {
     this.rootConfig = rootConfig;
