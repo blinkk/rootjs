@@ -1,5 +1,12 @@
 import {ActionIcon, Avatar, Loader, Tooltip} from '@mantine/core';
-import {IconPaperclip, IconRobot, IconSend2, IconX} from '@tabler/icons-preact';
+import {
+  IconClipboard,
+  IconClipboardCheck,
+  IconPaperclip,
+  IconRobot,
+  IconSend2,
+  IconX,
+} from '@tabler/icons-preact';
 import hljs from 'highlight.js/lib/common';
 import {fromMarkdown} from 'mdast-util-from-markdown';
 import {gfmFromMarkdown} from 'mdast-util-gfm';
@@ -12,11 +19,7 @@ import {autokey, numBetween} from '../../utils/rand.js';
 import './AIPage.css';
 
 const USE_DEBUG_STRING = true;
-const DEBUG_STRING = `Lorem ipsum 🥕 dolor sit amet, **consectetur adipiscing elit**, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco.
-
-- foo
-- **bar**
-- baz
+const DEBUG_STRING = `Lorem ipsum 🥕 dolor sit amet.
 
 \`\`\`jsx
 import React, { useState, useEffect } from 'react';
@@ -66,6 +69,7 @@ export default App;
 `;
 
 const TYPEWRITER_ANIM_DELAY = [20, 40] as const;
+// const TYPEWRITER_ANIM_DELAY = [200, 400] as const;
 
 hljs.configure({ignoreUnescapedHTML: true});
 
@@ -390,7 +394,7 @@ function MarkdownNode(props: {
   }
   if (node.type === 'inlineCode') {
     return (
-      <BlockNode
+      <ElementNode
         as="code"
         nodes={[{type: 'text', value: node.value}]}
         animated={props.animated}
@@ -400,7 +404,7 @@ function MarkdownNode(props: {
   }
   if (node.type === 'link') {
     return (
-      <BlockNode
+      <ElementNode
         as="a"
         attrs={{href: node.url, target: '_blank'}}
         nodes={node.children}
@@ -412,7 +416,7 @@ function MarkdownNode(props: {
   if (node.type === 'list') {
     const tagName = node.ordered ? 'ol' : 'ul';
     return (
-      <BlockNode
+      <ElementNode
         as={tagName}
         nodes={node.children}
         animated={props.animated}
@@ -422,7 +426,7 @@ function MarkdownNode(props: {
   }
   if (node.type === 'listItem') {
     return (
-      <BlockNode
+      <ElementNode
         as="li"
         nodes={node.children}
         animated={props.animated}
@@ -432,7 +436,7 @@ function MarkdownNode(props: {
   }
   if (node.type === 'paragraph') {
     return (
-      <BlockNode
+      <ElementNode
         as="p"
         nodes={node.children}
         animated={props.animated}
@@ -442,7 +446,7 @@ function MarkdownNode(props: {
   }
   if (node.type === 'strong') {
     return (
-      <BlockNode
+      <ElementNode
         as="b"
         nodes={node.children}
         animated={props.animated}
@@ -463,7 +467,7 @@ function MarkdownNode(props: {
   return <div>{JSON.stringify(props.node)}</div>;
 }
 
-function BlockNode(props: {
+function ElementNode(props: {
   as: preact.JSX.ElementType;
   attrs?: Record<string, any>;
   nodes: any[];
@@ -494,36 +498,36 @@ function TextNode(props: {
   text: string;
   animated: boolean;
   onAnimationComplete: () => void;
+  sep?: string;
 }) {
-  const sep = ' ';
-  const allNodes = useMemo(() => props.text.split(sep), [props.text]);
-  const [nodes, setNodes] = useState<string[]>(props.animated ? [] : allNodes);
-  const complete = nodes.length >= allNodes.length;
-
-  const appendNext = () => {
-    setNodes((current) => {
-      if (current.length >= allNodes.length) {
-        if (props.onAnimationComplete) {
-          props.onAnimationComplete();
-        }
-        return allNodes;
-      }
-      const newChars = [...current, allNodes[current.length]];
-      window.setTimeout(() => appendNext(), typewriterDelay());
-      return newChars;
-    });
-  };
+  const sep = props.sep || ' ';
+  const tokens = useMemo(() => props.text.split(sep), [props.text]);
+  const [index, setIndex] = useState(0);
+  const complete = index >= tokens.length;
 
   useEffect(() => {
     if (!props.animated) {
+      setIndex(tokens.length);
       return;
     }
-    appendNext();
-  }, []);
+    if (index >= tokens.length) {
+      return;
+    }
+    const timeout = window.setTimeout(() => {
+      setIndex(index + 1);
+    }, typewriterDelay());
+    return () => window.clearTimeout(timeout);
+  }, [props.text, index]);
+
+  useEffect(() => {
+    if (complete && props.animated) {
+      props.onAnimationComplete();
+    }
+  }, [complete]);
 
   return (
     <>
-      {nodes.join(sep)}
+      {tokens.slice(0, index).join(sep)}
       {!complete && <CursorDot />}
     </>
   );
@@ -535,43 +539,67 @@ function CodeBlockNode(props: {
   animated: boolean;
   onAnimationComplete: () => void;
 }) {
-  const sep = '\n';
-  const allNodes = useMemo(() => props.text.split(sep), [props.text]);
-  const [nodes, setNodes] = useState<string[]>(props.animated ? [] : allNodes);
-  const complete = nodes.length >= allNodes.length;
-
   const preRef = useRef<HTMLPreElement>(null);
+  const [copied, setCopied] = useState(false);
 
-  const appendNext = () => {
-    setNodes((current) => {
-      if (current.length >= allNodes.length) {
-        const pre = preRef.current!;
-        hljs.highlightElement(pre);
-        console.log('highlight:', pre);
-        props.onAnimationComplete();
-        return allNodes;
-      }
-      const newChars = [...current, allNodes[current.length]];
-      window.setTimeout(() => appendNext(), typewriterDelay());
-      return newChars;
-    });
-  };
+  function highlightCode() {
+    const pre = preRef.current!;
+    hljs.highlightElement(pre);
+    console.log('highlight:', pre);
+  }
+
+  async function copyToClipboard() {
+    try {
+      await navigator.clipboard.writeText(props.text);
+      setCopied(true);
+      window.setTimeout(() => {
+        setCopied(false);
+      }, 2000);
+    } catch (err) {
+      console.error('failed to copy to clipboard:', err);
+    }
+  }
+
+  function onAnimationComplete() {
+    highlightCode();
+    props.onAnimationComplete();
+  }
 
   useEffect(() => {
     if (!props.animated) {
-      return;
+      highlightCode();
     }
-    appendNext();
-  }, []);
+  }, [props.animated]);
 
   return (
     <div className="AIPage__CodeBlockNode">
-      {props.language && (
-        <div className="AIPage__CodeBlockNode__language">{props.language}</div>
-      )}
+      <div className="AIPage__CodeBlockNode__header">
+        {props.language && (
+          <div className="AIPage__CodeBlockNode__language">
+            {props.language}
+          </div>
+        )}
+        <Tooltip label="Copy code" position="bottom" transition="pop">
+          <ActionIcon onClick={() => copyToClipboard()} size="xs">
+            {copied ? (
+              <IconClipboardCheck
+                color="#80868b"
+                stroke-width={1.5}
+                size={16}
+              />
+            ) : (
+              <IconClipboard color="#80868b" stroke-width={1.5} size={16} />
+            )}
+          </ActionIcon>
+        </Tooltip>
+      </div>
       <pre ref={preRef} class={`language-${props.language || 'unknown'}`}>
-        <code>{nodes.join(sep)}</code>
-        {!complete && <CursorDot />}
+        <TextNode
+          text={props.text}
+          sep={'\n'}
+          animated={props.animated}
+          onAnimationComplete={onAnimationComplete}
+        />
       </pre>
     </div>
   );

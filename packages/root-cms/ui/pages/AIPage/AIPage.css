@@ -134,13 +134,19 @@
   margin: 20px 0;
 }
 
-.AIPage__CodeBlockNode__language {
+.AIPage__CodeBlockNode__header {
   position: absolute;
   top: 8px;
   right: 8px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: #80868b;
+}
+
+.AIPage__CodeBlockNode__language {
   font-size: 12px;
   line-height: 1;
-  color: #80868b;
 }
 
 .AIPage__CodeBlockNode pre {
