@@ -100,7 +100,7 @@
 }
 
 .AIPage__ChatMessageTextBlock p {
-  white-space: pre;
+  white-space: pre-wrap;
   margin-top: 20px;
 }
 
