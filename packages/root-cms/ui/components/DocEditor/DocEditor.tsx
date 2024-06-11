@@ -68,6 +68,7 @@ import {RichTextField} from './fields/RichTextField.js';
 import {SelectField} from './fields/SelectField.js';
 import {StringField} from './fields/StringField.js';
 import {createContext} from 'preact';
+import {useEditTranslationsModal} from '../EditTranslationsModal/EditTranslationsModal.js';
 
 interface DocEditorProps {
   docId: string;
@@ -234,6 +235,7 @@ DocEditor.Field = (props: FieldProps) => {
   const targeted = deeplink === props.deepKey;
   const ref = useRef<HTMLDivElement>(null);
   const [value, setValue] = useState(null);
+  const [translateStrings, setTranslateStrings] = useState<string[]>([]);
 
   let showFieldHeader = !props.hideHeader && !field.hideLabel;
   // The "drawer" variant shows the header within the accordion button.
@@ -245,20 +247,6 @@ DocEditor.Field = (props: FieldProps) => {
     }
   }
 
-  function testTranslationsEnabled() {
-    const translate = (field as any).translate;
-    if (!translate) {
-      return false;
-    }
-    // Enable the "show translations" button if the field has extracted strings.
-    if (!value) {
-      return false;
-    }
-    const strings = new Set<string>();
-    extractField(strings, field, value);
-    return strings.size > 0;
-  }
-
   useEffect(() => {
     const unsubscribe = props.draft.subscribe(
       props.deepKey,
@@ -268,6 +256,19 @@ DocEditor.Field = (props: FieldProps) => {
     );
     return unsubscribe;
   }, []);
+
+  useEffect(() => {
+    const translate = (field as any).translate;
+    if (!translate) {
+      return;
+    }
+    if (!value) {
+      return;
+    }
+    const strings = new Set<string>();
+    extractField(strings, field, value);
+    setTranslateStrings(Array.from(strings));
+  }, [value]);
 
   useEffect(() => {
     if (targeted) {
@@ -294,7 +295,7 @@ DocEditor.Field = (props: FieldProps) => {
           help={field.help}
           deprecated={field.deprecated}
           translate={(field as any).translate}
-          translateDisabled={!testTranslationsEnabled()}
+          translateStrings={translateStrings}
         />
       )}
       <div className="DocEditor__field__input">
@@ -339,13 +340,18 @@ DocEditor.FieldHeader = (props: {
   help?: string;
   deprecated?: boolean;
   translate?: boolean;
-  translateDisabled?: boolean;
+  translateStrings?: string[];
 }) => {
   function deeplinkUrl() {
     const url = new URL(window.location.href);
     url.searchParams.set('deeplink', props.deepKey!);
     return url.toString();
   }
+
+  const editTranslationsModal = useEditTranslationsModal();
+  const translateStrings = (props.translate && props.translateStrings) || [];
+  const translateDisabled = translateStrings.length === 0;
+
   return (
     <div className={joinClassNames(props.className, 'DocEditor__FieldHeader')}>
       {props.deprecated ? (
@@ -370,13 +376,18 @@ DocEditor.FieldHeader = (props: {
       )}
       {props.translate && (
         <div className="DocEditor__FieldHeader__translate">
-          {props.translateDisabled ? (
+          {translateDisabled ? (
             <div className="DocEditor__FieldHeader__translate__iconDisabled">
               <IconLanguage size={16} />
             </div>
           ) : (
             <Tooltip label="Show translations">
-              <ActionIcon size="xs" disabled={props.translateDisabled}>
+              <ActionIcon
+                size="xs"
+                onClick={() =>
+                  editTranslationsModal.open({strings: translateStrings})
+                }
+              >
                 <IconLanguage size={16} />
               </ActionIcon>
             </Tooltip>

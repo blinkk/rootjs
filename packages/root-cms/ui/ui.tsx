@@ -12,6 +12,7 @@ import {CopyDocModal} from './components/CopyDocModal/CopyDocModal.js';
 import {DocPickerModal} from './components/DocPickerModal/DocPickerModal.js';
 import {DocSelectModal} from './components/DocSelectModal/DocSelectModal.js';
 import {EditJsonModal} from './components/EditJsonModal/EditJsonModal.js';
+import {EditTranslationsModal} from './components/EditTranslationsModal/EditTranslationsModal.js';
 import {ExportSheetModal} from './components/ExportSheetModal/ExportSheetModal.js';
 import {LocalizationModal} from './components/LocalizationModal/LocalizationModal.js';
 import {LockPublishingModal} from './components/LockPublishingModal/LockPublishingModal.js';
@@ -91,12 +92,13 @@ function App() {
           <ModalsProvider
             modals={{
               [CopyDocModal.id]: CopyDocModal,
-              [LockPublishingModal.id]: LockPublishingModal,
               [DocPickerModal.id]: DocPickerModal,
               [DocSelectModal.id]: DocSelectModal,
               [EditJsonModal.id]: EditJsonModal,
+              [EditTranslationsModal.id]: EditTranslationsModal,
               [ExportSheetModal.id]: ExportSheetModal,
               [LocalizationModal.id]: LocalizationModal,
+              [LockPublishingModal.id]: LockPublishingModal,
               [PublishDocModal.id]: PublishDocModal,
               [ScheduleReleaseModal.id]: ScheduleReleaseModal,
               [VersionHistoryModal.id]: VersionHistoryModal,
