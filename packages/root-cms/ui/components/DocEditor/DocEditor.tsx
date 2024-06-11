@@ -41,6 +41,7 @@ import {
 } from '../../hooks/useDraft.js';
 import {joinClassNames} from '../../utils/classes.js';
 import {testIsScheduled, testPublishingLocked} from '../../utils/doc.js';
+import {extractField} from '../../utils/extract.js';
 import {getDefaultFieldValue} from '../../utils/fields.js';
 import {flattenNestedKeys} from '../../utils/objects.js';
 import {autokey} from '../../utils/rand.js';
@@ -232,6 +233,7 @@ DocEditor.Field = (props: FieldProps) => {
   const deeplink = useDeeplink();
   const targeted = deeplink === props.deepKey;
   const ref = useRef<HTMLDivElement>(null);
+  const [value, setValue] = useState(null);
 
   let showFieldHeader = !props.hideHeader && !field.hideLabel;
   // The "drawer" variant shows the header within the accordion button.
@@ -242,6 +244,30 @@ DocEditor.Field = (props: FieldProps) => {
       showFieldHeader = false;
     }
   }
+
+  function testTranslationsEnabled() {
+    const translate = (field as any).translate;
+    if (!translate) {
+      return false;
+    }
+    // Enable the "show translations" button if the field has extracted strings.
+    if (!value) {
+      return false;
+    }
+    const strings = new Set<string>();
+    extractField(strings, field, value);
+    return strings.size > 0;
+  }
+
+  useEffect(() => {
+    const unsubscribe = props.draft.subscribe(
+      props.deepKey,
+      (newValue: any) => {
+        setValue(newValue);
+      }
+    );
+    return unsubscribe;
+  }, []);
 
   useEffect(() => {
     if (targeted) {
@@ -268,6 +294,7 @@ DocEditor.Field = (props: FieldProps) => {
           help={field.help}
           deprecated={field.deprecated}
           translate={(field as any).translate}
+          translateDisabled={!testTranslationsEnabled()}
         />
       )}
       <div className="DocEditor__field__input">
@@ -312,6 +339,7 @@ DocEditor.FieldHeader = (props: {
   help?: string;
   deprecated?: boolean;
   translate?: boolean;
+  translateDisabled?: boolean;
 }) => {
   function deeplinkUrl() {
     const url = new URL(window.location.href);
@@ -342,11 +370,17 @@ DocEditor.FieldHeader = (props: {
       )}
       {props.translate && (
         <div className="DocEditor__FieldHeader__translate">
-          <Tooltip label="Show translations">
-            <ActionIcon size="xs">
+          {props.translateDisabled ? (
+            <div className="DocEditor__FieldHeader__translate__iconDisabled">
               <IconLanguage size={16} />
-            </ActionIcon>
-          </Tooltip>
+            </div>
+          ) : (
+            <Tooltip label="Show translations">
+              <ActionIcon size="xs" disabled={props.translateDisabled}>
+                <IconLanguage size={16} />
+              </ActionIcon>
+            </Tooltip>
+          )}
         </div>
       )}
     </div>

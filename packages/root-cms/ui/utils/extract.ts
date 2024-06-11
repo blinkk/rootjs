@@ -16,7 +16,7 @@ export function extractFields(
   });
 }
 
-function extractField(
+export function extractField(
   strings: Set<string>,
   field: schema.Field,
   fieldValue: any
