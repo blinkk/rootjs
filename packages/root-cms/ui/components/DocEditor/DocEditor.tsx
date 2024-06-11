@@ -1,5 +1,4 @@
 import {
-  Accordion,
   ActionIcon,
   Button,
   LoadingOverlay,
@@ -15,6 +14,7 @@ import {
   IconCirclePlus,
   IconCopy,
   IconDotsVertical,
+  IconLanguage,
   IconLock,
   IconPlanet,
   IconRocket,
@@ -267,6 +267,7 @@ DocEditor.Field = (props: FieldProps) => {
           label={field.label || field.id}
           help={field.help}
           deprecated={field.deprecated}
+          translate={(field as any).translate}
         />
       )}
       <div className="DocEditor__field__input">
@@ -310,6 +311,7 @@ DocEditor.FieldHeader = (props: {
   label?: string;
   help?: string;
   deprecated?: boolean;
+  translate?: boolean;
 }) => {
   function deeplinkUrl() {
     const url = new URL(window.location.href);
@@ -337,6 +339,15 @@ DocEditor.FieldHeader = (props: {
       )}
       {props.help && (
         <div className="DocEditor__FieldHeader__help">{props.help}</div>
+      )}
+      {props.translate && (
+        <div className="DocEditor__FieldHeader__translate">
+          <Tooltip label="Show translations">
+            <ActionIcon size="xs">
+              <IconLanguage size={16} />
+            </ActionIcon>
+          </Tooltip>
+        </div>
       )}
     </div>
   );

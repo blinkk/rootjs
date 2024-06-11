@@ -56,6 +56,11 @@
   border-radius: 4px;
 }
 
+.DocEditor__FieldHeader {
+  position: relative;
+  padding-right: 30px;
+}
+
 .DocEditor__FieldHeader__label {
   font-size: 12px;
   font-weight: 600;
@@ -83,6 +88,12 @@
   font-size: 12px;
   font-weight: 400;
   margin-top: 2px;
+}
+
+.DocEditor__FieldHeader__translate {
+  position: absolute;
+  top: 0;
+  right: 0;
 }
 
 .DocEditor__ObjectField__fields,
