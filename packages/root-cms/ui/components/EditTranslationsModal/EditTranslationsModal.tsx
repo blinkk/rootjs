@@ -60,7 +60,7 @@ export function EditTranslationsModal(
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    loadTranslations().then((res) => {
+    loadTranslations({tags: [props.docId]}).then((res) => {
       const translationsMap: Record<string, Record<string, string>> = {};
       Object.values(res).forEach((row) => {
         translationsMap[row.source] = row;
