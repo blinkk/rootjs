@@ -115,6 +115,18 @@ export function EditTranslationsModal(
 
   return (
     <div className="EditTranslationsModal">
+      <div className="EditTranslationsModal__header">
+        <Button
+          component="a"
+          href={`/cms/translations/${props.docId}`}
+          target="_blank"
+          variant="default"
+          size="xs"
+        >
+          Open Translations Editor
+        </Button>
+      </div>
+
       {loading ? (
         <Loader />
       ) : (
@@ -158,13 +170,13 @@ export function EditTranslationsModal(
       <div className="EditTranslationsModal__footer">
         {props.l10nSheet && (
           <div className="EditTranslationsModal__footer__gsheet">
-            <strong>NOTE:</strong> Translations for this doc are managed via a{' '}
+            <strong>NOTE:</strong> Translations for this doc are managed in{' '}
             <a
               href={getSpreadsheetUrl(props.l10nSheet)}
               target="_blank"
               rel="noopener noreferrer"
             >
-              Google Sheet
+              Google Sheets
             </a>
           </div>
         )}

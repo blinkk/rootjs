@@ -22,7 +22,6 @@ import {
   IconMapPin,
   IconTable,
 } from '@tabler/icons-preact';
-import {doc, getDoc} from 'firebase/firestore';
 import {useEffect, useMemo, useState} from 'preact/hooks';
 import * as schema from '../../../core/schema.js';
 import {DraftController} from '../../hooks/useDraft.js';
@@ -35,7 +34,7 @@ import {
   cmsGetLinkedGoogleSheetL10n,
   cmsUnlinkGoogleSheetL10n,
 } from '../../utils/doc.js';
-import {extractFields} from '../../utils/extract.js';
+import {extractStringsForDoc} from '../../utils/extract.js';
 import {
   GSheet,
   GSpreadsheet,
@@ -318,7 +317,7 @@ LocalizationModal.Translations = (props: TranslationsProps) => {
   useEffect(() => {
     setLoading(true);
     Promise.all([
-      extractStrings(props.collection, props.docId),
+      extractStringsForDoc(props.docId),
       loadTranslations(),
       cmsGetLinkedGoogleSheetL10n(props.docId),
     ]).then(([sourceStrings, translationsMap, linkedSheet]) => {
@@ -596,15 +595,26 @@ LocalizationModal.Translations = (props: TranslationsProps) => {
   return (
     <div className="LocalizationModal__translations">
       <div className="LocalizationModal__translations__header">
-        <Heading
-          className="LocalizationModal__translations__title LocalizationModal__iconTitle"
-          size="h2"
-        >
-          <IconLanguage strokeWidth={1.5} /> <span>Translations</span>
-        </Heading>
+        <div className="LocalizationModal__translations__titleWrap">
+          <Heading
+            className="LocalizationModal__translations__title LocalizationModal__iconTitle"
+            size="h2"
+          >
+            <IconLanguage strokeWidth={1.5} /> <span>Translations</span>
+          </Heading>
+          <Button
+            component="a"
+            href={`/cms/translations/${props.docId}`}
+            target="_blank"
+            variant="default"
+            size="xs"
+          >
+            Open Translations Editor
+          </Button>
+        </div>
         <div className="LocalizationModal__translations__header__buttons">
           {gapiClient.enabled && linkedSheet?.spreadsheetId && (
-            <Tooltip label="View Google Sheet">
+            <Tooltip label="Open Google Sheet">
               <ActionIcon<'a'>
                 component="a"
                 href={getSpreadsheetUrl(linkedSheet)}
@@ -692,26 +702,6 @@ LocalizationModal.Translations = (props: TranslationsProps) => {
     </div>
   );
 };
-
-async function extractStrings(collection: schema.Collection, docId: string) {
-  const db = window.firebase.db;
-  const projectId = window.__ROOT_CTX.rootConfig.projectId;
-  const [collectionId, slug] = docId.split('/', 2);
-  const docRef = doc(
-    db,
-    'Projects',
-    projectId,
-    'Collections',
-    collectionId,
-    'Drafts',
-    slug
-  );
-  const snapshot = await getDoc(docRef);
-  const data = snapshot.data() || {};
-  const strings = new Set<string>();
-  extractFields(strings, collection.fields, data.fields || {});
-  return Array.from(strings);
-}
 
 interface MenuButtonProps {
   gapiClient: GapiClient;

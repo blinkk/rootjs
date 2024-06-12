@@ -1,0 +1,152 @@
+.DocTranslationsPage {
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  height: calc(100vh - 48px - 60px) !important;
+}
+
+.DocTranslationsPage__header {
+  padding: 48px 60px 30px;
+  position: sticky;
+  left: 0;
+}
+
+.DocTranslationsPage__header__breadcrumbs {
+  font-size: 12px;
+  margin-bottom: 12px;
+}
+
+.DocTranslationsPage__header__breadcrumbs a {
+  font-weight: 500;
+  text-underline-offset: 4px;
+}
+
+.DocTranslationsPage__header__titleWrap {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.DocTranslationsPage__header p {
+  margin-top: 4px;
+}
+
+.DocTranslationsPage__header__linkedSheet {
+  margin-top: 10px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.DocTranslationsPage__header__linkedSheet__label {
+  font-size: 14px;
+}
+
+.DocTranslationsPage__header__linkedSheet__controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.DocTranslationsPage__content {
+  flex: 1;
+}
+
+.DocTranslationsPage__content--loading {
+  padding: 0 60px;
+}
+
+.DocTranslationsPage__Table {
+  table-layout: fixed;
+  font-size: 13px;
+  min-width: 100%;
+  border-collapse: collapse;
+  border-spacing: 0;
+}
+
+.DocTranslationsPage__Table thead {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.DocTranslationsPage__Table tr {
+  /* This is some weird hack for setting the cell height to 100%. */
+  height: 1px;
+}
+
+.DocTranslationsPage__Table th {
+  border: 1px solid var(--color-border);
+  background: #F8F9FA;
+  padding: 4px 10px;
+  text-align: left;
+}
+
+.DocTranslationsPage__Table th:last-child {
+  border-right: none;
+}
+
+.DocTranslationsPage__Table td {
+  min-width: 450px;
+  border: 1px solid var(--color-border);
+  /* vertical-align: top; */
+  padding: 0;
+  margin: 0;
+  height: inherit;
+  box-sizing: border-box;
+}
+
+.DocTranslationsPage__Table__sourceCellWrap {
+  background: #F8F9FA;
+}
+
+.DocTranslationsPage__Table__sourceCell {
+  white-space: pre-wrap;
+}
+
+.DocTranslationsPage__Table__sourceCell,
+.DocTranslationsPage__Textarea {
+  padding: 6px 10px;
+  height: 100%;
+}
+
+.DocTranslationsPage__Textarea {
+  display: block;
+  font-size: inherit;
+  font-family: inherit;
+  border: none;
+  resize: none;
+  background: transparent;
+  width: 100%;
+  border: 1px solid transparent;
+  border-radius: 0;
+  min-height: 100%;
+}
+
+.DocTranslationsPage__Table td:has(.DocTranslationsPage__Textarea--hasChanges) {
+  background-color: #FFF9DB;
+}
+
+.DocTranslationsPage__Textarea:focus {
+  outline: none;
+  border: 1px solid #1C7ED6;
+}
+
+/* .DocTranslationsPage__Table td:has(.DocTranslationsPage__Textarea:focus) {
+  border-color: blue;
+} */
+
+.DocTranslationsPage__footer {
+  display: flex;
+  justify-content: flex-end;
+  height: 60px;
+  align-items: center;
+  padding: 0 30px;
+  border-top: 1px solid var(--color-border);
+  position: fixed;
+  bottom: 0;
+  left: 48px;
+  right: 0;
+  z-index: 10;
+  background-color: #fff;
+}

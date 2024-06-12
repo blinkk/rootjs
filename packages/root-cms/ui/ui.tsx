@@ -20,11 +20,13 @@ import {PublishDocModal} from './components/PublishDocModal/PublishDocModal.js';
 import {ScheduleReleaseModal} from './components/ScheduleReleaseModal/ScheduleReleaseModal.js';
 import {VersionHistoryModal} from './components/VersionHistoryModal/VersionHistoryModal.js';
 import {FirebaseContext, FirebaseContextObject} from './hooks/useFirebase.js';
+import {AIPage} from './pages/AIPage/AIPage.js';
 import {AssetsPage} from './pages/AssetsPage/AssetsPage.js';
 import {CollectionPage} from './pages/CollectionPage/CollectionPage.js';
 import {ComparePage} from './pages/ComparePage/ComparePage.js';
 import {DataPage} from './pages/DataPage/DataPage.js';
 import {DataSourcePage} from './pages/DataSourcePage/DataSourcePage.js';
+import {DocTranslationsPage} from './pages/DocTranslationsPage/DocTranslationsPage.js';
 import {DocumentPage} from './pages/DocumentPage/DocumentPage.js';
 import {EditDataSourcePage} from './pages/EditDataSourcePage/EditDataSourcePage.js';
 import {EditReleasePage} from './pages/EditReleasePage/EditReleasePage.js';
@@ -42,7 +44,6 @@ import {TranslationsEditPage} from './pages/TranslationsEditPage/TranslationsEdi
 import {TranslationsPage} from './pages/TranslationsPage/TranslationsPage.js';
 import './styles/global.css';
 import './styles/theme.css';
-import {AIPage} from './pages/AIPage/AIPage.js';
 
 declare global {
   interface Window {
@@ -139,6 +140,10 @@ function App() {
               <Route
                 path="/cms/translations/:hash"
                 component={TranslationsEditPage}
+              />
+              <Route
+                path="/cms/translations/:collection/:slug"
+                component={DocTranslationsPage}
               />
               <Route default component={NotFoundPage} />
             </Router>
