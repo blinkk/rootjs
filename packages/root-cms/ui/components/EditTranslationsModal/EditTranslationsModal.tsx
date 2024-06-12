@@ -4,6 +4,7 @@ import {ChangeEvent} from 'preact/compat';
 import {useEffect, useState} from 'preact/hooks';
 import {useModalTheme} from '../../hooks/useModalTheme.js';
 import {joinClassNames} from '../../utils/classes.js';
+import {GoogleSheetId, getSpreadsheetUrl} from '../../utils/gsheets.js';
 import {Heading} from '../Heading/Heading.js';
 import './EditTranslationsModal.css';
 
@@ -11,7 +12,10 @@ const MODAL_ID = 'EditTranslationsModal';
 
 export interface EditTranslationsModalProps {
   [key: string]: unknown;
+  /** The strings to show. */
   strings: string[];
+  /** A linked Google Sheet associated with the doc, if any. */
+  l10nSheet?: GoogleSheetId;
 }
 
 export function useEditTranslationsModal() {
@@ -97,25 +101,39 @@ export function EditTranslationsModal(
         </tbody>
       </table>
 
-      <div className="EditTranslationsModal__buttons">
-        <Button
-          variant="default"
-          size="xs"
-          color="dark"
-          type="button"
-          onClick={() => context.closeModal(id)}
-        >
-          Cancel
-        </Button>
-        <Button
-          variant="filled"
-          size="xs"
-          color="dark"
-          onClick={onSave}
-          disabled={!hasChanges}
-        >
-          Save
-        </Button>
+      <div className="EditTranslationsModal__footer">
+        {props.l10nSheet && (
+          <div className="EditTranslationsModal__footer__gsheet">
+            <strong>NOTE:</strong> Translations for this doc are managed via a{' '}
+            <a
+              href={getSpreadsheetUrl(props.l10nSheet)}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              Google Sheet
+            </a>
+          </div>
+        )}
+        <div className="EditTranslationsModal__footer__buttons">
+          <Button
+            variant="default"
+            size="xs"
+            color="dark"
+            type="button"
+            onClick={() => context.closeModal(id)}
+          >
+            Cancel
+          </Button>
+          <Button
+            variant="filled"
+            size="xs"
+            color="dark"
+            onClick={onSave}
+            disabled={!hasChanges}
+          >
+            Save
+          </Button>
+        </div>
       </div>
     </div>
   );

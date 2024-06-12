@@ -40,7 +40,11 @@ import {
   UseDraftHook,
 } from '../../hooks/useDraft.js';
 import {joinClassNames} from '../../utils/classes.js';
-import {testIsScheduled, testPublishingLocked} from '../../utils/doc.js';
+import {
+  CMSDoc,
+  testIsScheduled,
+  testPublishingLocked,
+} from '../../utils/doc.js';
 import {extractField} from '../../utils/extract.js';
 import {getDefaultFieldValue} from '../../utils/fields.js';
 import {flattenNestedKeys} from '../../utils/objects.js';
@@ -77,9 +81,14 @@ interface DocEditorProps {
 }
 
 const DEEPLINK_CONTEXT = createContext('');
+const DOC_DATA_CONTEXT = createContext(null);
 
 function useDeeplink(): string {
   return useContext(DEEPLINK_CONTEXT);
+}
+
+function useDocData(): CMSDoc {
+  return useContext(DOC_DATA_CONTEXT)!;
 }
 
 export function DocEditor(props: DocEditorProps) {
@@ -118,112 +127,114 @@ export function DocEditor(props: DocEditorProps) {
   }, [loading]);
 
   return (
-    <DEEPLINK_CONTEXT.Provider value={deeplink}>
-      <div className="DocEditor" ref={ref}>
-        <LoadingOverlay
-          visible={loading}
-          loaderProps={{color: 'gray', size: 'xl'}}
-        />
-        <div className="DocEditor__statusBar">
-          <div className="DocEditor__statusBar__viewers">
-            <Viewers id={`doc/${props.docId}`} />
-          </div>
-          <div className="DocEditor__statusBar__saveState">
-            {saveState === SaveState.SAVED && 'saved!'}
-            {saveState === SaveState.SAVING && 'saving...'}
-            {saveState === SaveState.UPDATES_PENDING && 'saving...'}
-            {saveState === SaveState.ERROR && 'error saving'}
-          </div>
-          {!loading && data?.sys && (
-            <div className="DocEditor__statusBar__statusBadges">
-              <DocStatusBadges doc={data} />
+    <DOC_DATA_CONTEXT.Provider value={data}>
+      <DEEPLINK_CONTEXT.Provider value={deeplink}>
+        <div className="DocEditor" ref={ref}>
+          <LoadingOverlay
+            visible={loading}
+            loaderProps={{color: 'gray', size: 'xl'}}
+          />
+          <div className="DocEditor__statusBar">
+            <div className="DocEditor__statusBar__viewers">
+              <Viewers id={`doc/${props.docId}`} />
             </div>
-          )}
-          <div className="DocEditor__statusBar__i18n">
-            <Button
-              variant="default"
-              color="dark"
-              size="xs"
-              leftIcon={<IconPlanet size={16} />}
-              onClick={() => localizationModal.open()}
-            >
-              Localization
-            </Button>
-          </div>
-          <div className="DocEditor__statusBar__publishButton">
-            {loading ? (
+            <div className="DocEditor__statusBar__saveState">
+              {saveState === SaveState.SAVED && 'saved!'}
+              {saveState === SaveState.SAVING && 'saving...'}
+              {saveState === SaveState.UPDATES_PENDING && 'saving...'}
+              {saveState === SaveState.ERROR && 'error saving'}
+            </div>
+            {!loading && data?.sys && (
+              <div className="DocEditor__statusBar__statusBadges">
+                <DocStatusBadges doc={data} />
+              </div>
+            )}
+            <div className="DocEditor__statusBar__i18n">
               <Button
+                variant="default"
                 color="dark"
                 size="xs"
-                onClick={() => publishDocModal.open()}
-                loading
-                disabled
+                leftIcon={<IconPlanet size={16} />}
+                onClick={() => localizationModal.open()}
               >
-                Publish
+                Localization
               </Button>
-            ) : testIsScheduled(data) ? (
-              <Tooltip
-                label={`Scheduled ${formatDateTime(data.sys.scheduledAt)} by ${
-                  data.sys.scheduledBy
-                }`}
-                transition="pop"
-              >
+            </div>
+            <div className="DocEditor__statusBar__publishButton">
+              {loading ? (
+                <Button
+                  color="dark"
+                  size="xs"
+                  onClick={() => publishDocModal.open()}
+                  loading
+                  disabled
+                >
+                  Publish
+                </Button>
+              ) : testIsScheduled(data) ? (
+                <Tooltip
+                  label={`Scheduled ${formatDateTime(
+                    data.sys.scheduledAt
+                  )} by ${data.sys.scheduledBy}`}
+                  transition="pop"
+                >
+                  <Button
+                    color="dark"
+                    size="xs"
+                    leftIcon={<IconRocket size={16} />}
+                    disabled
+                  >
+                    Publish
+                  </Button>
+                </Tooltip>
+              ) : testPublishingLocked(data) ? (
+                <Tooltip
+                  label={`Locked by ${data.sys.publishingLocked.lockedBy}: "${data.sys.publishingLocked.reason}"`}
+                  transition="pop"
+                >
+                  <Button
+                    color="dark"
+                    size="xs"
+                    leftIcon={<IconLock size={16} />}
+                    disabled
+                  >
+                    Publish
+                  </Button>
+                </Tooltip>
+              ) : (
                 <Button
                   color="dark"
                   size="xs"
                   leftIcon={<IconRocket size={16} />}
-                  disabled
+                  onClick={() => publishDocModal.open()}
                 >
                   Publish
                 </Button>
-              </Tooltip>
-            ) : testPublishingLocked(data) ? (
-              <Tooltip
-                label={`Locked by ${data.sys.publishingLocked.lockedBy}: "${data.sys.publishingLocked.reason}"`}
-                transition="pop"
-              >
-                <Button
-                  color="dark"
-                  size="xs"
-                  leftIcon={<IconLock size={16} />}
-                  disabled
-                >
-                  Publish
-                </Button>
-              </Tooltip>
-            ) : (
-              <Button
-                color="dark"
-                size="xs"
-                leftIcon={<IconRocket size={16} />}
-                onClick={() => publishDocModal.open()}
-              >
-                Publish
-              </Button>
-            )}
+              )}
+            </div>
+            <div className="DocEditor__statusBar__actionsMenu">
+              <DocActionsMenu
+                docId={props.docId}
+                data={data}
+                onAction={onDocAction}
+              />
+            </div>
           </div>
-          <div className="DocEditor__statusBar__actionsMenu">
-            <DocActionsMenu
-              docId={props.docId}
-              data={data}
-              onAction={onDocAction}
-            />
+          <div className="DocEditor__fields">
+            {fields.map((field) => (
+              <DocEditor.Field
+                key={field.id}
+                collection={props.collection}
+                field={field}
+                shallowKey={field.id!}
+                deepKey={`fields.${field.id!}`}
+                draft={controller}
+              />
+            ))}
           </div>
         </div>
-        <div className="DocEditor__fields">
-          {fields.map((field) => (
-            <DocEditor.Field
-              key={field.id}
-              collection={props.collection}
-              field={field}
-              shallowKey={field.id!}
-              deepKey={`fields.${field.id!}`}
-              draft={controller}
-            />
-          ))}
-        </div>
-      </div>
-    </DEEPLINK_CONTEXT.Provider>
+      </DEEPLINK_CONTEXT.Provider>
+    </DOC_DATA_CONTEXT.Provider>
   );
 }
 
@@ -348,6 +359,9 @@ DocEditor.FieldHeader = (props: {
     return url.toString();
   }
 
+  const docData = useDocData() || {};
+  const l10nSheet = docData.sys?.l10nSheet;
+
   const i18nConfig = window.__ROOT_CTX.rootConfig.i18n || {};
   const i18nLocales = i18nConfig.locales || ['en'];
   const editTranslationsModal = useEditTranslationsModal();
@@ -387,7 +401,10 @@ DocEditor.FieldHeader = (props: {
               <ActionIcon
                 size="xs"
                 onClick={() =>
-                  editTranslationsModal.open({strings: translateStrings})
+                  editTranslationsModal.open({
+                    strings: translateStrings,
+                    l10nSheet,
+                  })
                 }
               >
                 <IconLanguage size={16} />
