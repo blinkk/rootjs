@@ -48,6 +48,12 @@
   gap: 8px;
 }
 
+.LocalizationModal__translations__titleWrap {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
 .LocalizationModal__translations__table {
   display: flex;
   flex-direction: column;
