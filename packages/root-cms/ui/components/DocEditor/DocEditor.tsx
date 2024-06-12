@@ -348,6 +348,8 @@ DocEditor.FieldHeader = (props: {
     return url.toString();
   }
 
+  const i18nConfig = window.__ROOT_CTX.rootConfig.i18n || {};
+  const i18nLocales = i18nConfig.locales || ['en'];
   const editTranslationsModal = useEditTranslationsModal();
   const translateStrings = (props.translate && props.translateStrings) || [];
   const translateDisabled = translateStrings.length === 0;
@@ -374,7 +376,7 @@ DocEditor.FieldHeader = (props: {
       {props.help && (
         <div className="DocEditor__FieldHeader__help">{props.help}</div>
       )}
-      {props.translate && (
+      {i18nLocales.length > 1 && props.translate && (
         <div className="DocEditor__FieldHeader__translate">
           {translateDisabled ? (
             <div className="DocEditor__FieldHeader__translate__iconDisabled">

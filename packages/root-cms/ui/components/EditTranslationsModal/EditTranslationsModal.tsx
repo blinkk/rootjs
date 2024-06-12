@@ -1,4 +1,4 @@
-import {Box, Button, Textarea} from '@mantine/core';
+import {Button, Textarea} from '@mantine/core';
 import {ContextModalProps, useModals} from '@mantine/modals';
 import {ChangeEvent} from 'preact/compat';
 import {useEffect, useState} from 'preact/hooks';
