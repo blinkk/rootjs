@@ -408,15 +408,28 @@ export function ExportSheetModal(
           </div>
           <div className="ExportSheetModal__form__buttons">
             {done ? (
-              <Button
-                variant="filled"
-                onClick={() => context.closeModal(id)}
-                type="button"
-                size="xs"
-                color="primary"
-              >
-                Done
-              </Button>
+              <>
+                <Button
+                  component="a"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  href={sheetUrl}
+                  variant="default"
+                  size="xs"
+                  color="dark"
+                >
+                  Open Google Sheet
+                </Button>
+                <Button
+                  variant="filled"
+                  onClick={() => context.closeModal(id)}
+                  type="button"
+                  size="xs"
+                  color="primary"
+                >
+                  Done
+                </Button>
+              </>
             ) : (
               <>
                 <Button
