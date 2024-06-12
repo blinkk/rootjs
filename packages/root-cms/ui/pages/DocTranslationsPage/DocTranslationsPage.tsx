@@ -1,20 +1,29 @@
 import {ActionIcon, Breadcrumbs, Button, Loader, Tooltip} from '@mantine/core';
-import {useEffect, useMemo, useRef, useState} from 'preact/hooks';
-import {Heading} from '../../components/Heading/Heading.js';
-import {Layout} from '../../layout/Layout.js';
-import {joinClassNames} from '../../utils/classes.js';
-import {DataSource} from '../../utils/data-source.js';
-import './DocTranslationsPage.css';
-import {cmsGetLinkedGoogleSheetL10n} from '../../utils/doc.js';
-import {extractStringsForDoc} from '../../utils/extract.js';
+import {showNotification, updateNotification} from '@mantine/notifications';
 import {
   IconFileDownload,
   IconFileUpload,
   IconMoodLookDown,
   IconTable,
 } from '@tabler/icons-preact';
+import {useEffect, useMemo, useRef, useState} from 'preact/hooks';
+import {Heading} from '../../components/Heading/Heading.js';
+import {Layout} from '../../layout/Layout.js';
+import {joinClassNames} from '../../utils/classes.js';
+import {
+  CsvTranslation,
+  cmsDocImportTranslations,
+  cmsGetLinkedGoogleSheetL10n,
+} from '../../utils/doc.js';
+import {extractStringsForDoc} from '../../utils/extract.js';
 import {GoogleSheetId, getSpreadsheetUrl} from '../../utils/gsheets.js';
-import {TranslationsMap, loadTranslations} from '../../utils/l10n.js';
+import {
+  Translation,
+  TranslationsMap,
+  loadTranslations,
+} from '../../utils/l10n.js';
+import {notifyErrors} from '../../utils/notifications.js';
+import './DocTranslationsPage.css';
 
 interface DocTranslationsPageProps {
   collection: string;
@@ -23,13 +32,13 @@ interface DocTranslationsPageProps {
 
 export function DocTranslationsPage(props: DocTranslationsPageProps) {
   const [loading, setLoading] = useState(true);
-  const [dataSource, setDataSource] = useState<DataSource | null>(null);
-  const [data, setData] = useState<any>(null);
   const [notFound, setNotFound] = useState(false);
   const [sourceStrings, setSourceStrings] = useState<string[]>([]);
   const [translationsMap, setTranslationsMap] = useState<TranslationsMap>({});
   const [linkedSheet, setLinkedSheet] = useState<GoogleSheetId | null>(null);
   const [hasChanges, setHasChanges] = useState(false);
+  const [changesMap, setChangesMap] = useState<Record<string, Translation>>({});
+  const [saving, setSaving] = useState(false);
   const collection = props.collection;
   const slug = props.slug;
   const docId = `${collection}/${slug}`;
@@ -64,11 +73,43 @@ export function DocTranslationsPage(props: DocTranslationsPageProps) {
   }
 
   function onChange(source: string, locale: string, translation: string) {
-    console.log('onChange()');
-    console.log('source: ', source);
-    console.log('locale: ', locale);
-    console.log('translation: ', translation);
     setHasChanges(true);
+    setChangesMap((current) => {
+      const newValue = {...current};
+      const translations = newValue[source] ?? {};
+      translations.source = source;
+      translations[locale] = translation;
+      newValue[source] = translations;
+      return newValue;
+    });
+  }
+
+  async function onSave() {
+    setSaving(true);
+    await notifyErrors(async () => {
+      console.log('EditTranslationsModal.onSave()');
+      const notificationId = `edit-translations-${docId}`;
+      showNotification({
+        id: notificationId,
+        loading: true,
+        title: 'Saving translations',
+        message: `Updating for ${docId}...`,
+        autoClose: false,
+        disallowClose: true,
+      });
+      const changes: CsvTranslation[] = Object.values(changesMap);
+      console.log(changes);
+      await cmsDocImportTranslations(docId, changes);
+      updateNotification({
+        id: notificationId,
+        title: 'Saved translations',
+        message: `Updated translations for ${docId}!`,
+        autoClose: true,
+      });
+      setChangesMap({});
+      setHasChanges(false);
+    });
+    setSaving(false);
   }
 
   return (
@@ -135,13 +176,20 @@ export function DocTranslationsPage(props: DocTranslationsPageProps) {
               sourceStrings={sourceStrings}
               translationsMap={translationsMap}
               onChange={onChange}
+              changesMap={changesMap}
             />
           )}
         </div>
 
         <div className="DocTranslationsPage__footer">
           <div className="DocTranslationsPage__footer__buttons">
-            <Button variant="filled" color="dark" disabled={!hasChanges}>
+            <Button
+              variant="filled"
+              color="dark"
+              disabled={!hasChanges}
+              loading={saving}
+              onClick={() => onSave()}
+            >
               Save
             </Button>
           </div>
@@ -173,6 +221,7 @@ interface DocTranslationsPageTableProps {
   sourceStrings: string[];
   translationsMap: TranslationsMap;
   onChange: (source: string, locale: string, translation: string) => void;
+  changesMap: Record<string, Translation>;
 }
 
 DocTranslationsPage.Table = (props: DocTranslationsPageTableProps) => {
@@ -223,6 +272,7 @@ DocTranslationsPage.Table = (props: DocTranslationsPageTableProps) => {
                       locale={locale}
                       value={data.translation}
                       onChange={props.onChange}
+                      changesMap={props.changesMap}
                     />
                   </td>
                 );
@@ -240,10 +290,15 @@ DocTranslationsPage.Textarea = (props: {
   source: string;
   locale: string;
   onChange: (source: string, locale: string, translation: string) => void;
+  changesMap: Record<string, Translation>;
 }) => {
   const textInputRef = useRef<HTMLTextAreaElement>(null);
   const [value, setValue] = useState(props.value);
-  const hasChanges = value !== props.value;
+  let changedValue = null;
+  if (props.locale in (props.changesMap[props.source] || {})) {
+    changedValue = props.changesMap[props.source][props.locale];
+  }
+  const hasChanges = changedValue !== null && changedValue !== props.value;
 
   function updateTextareaHeight() {
     window.requestAnimationFrame(() => {
@@ -265,7 +320,8 @@ DocTranslationsPage.Textarea = (props: {
       ref={textInputRef}
       className={joinClassNames(
         'DocTranslationsPage__Textarea',
-        hasChanges && 'DocTranslationsPage__Textarea--hasChanges'
+        hasChanges && 'DocTranslationsPage__Textarea--hasChanges',
+        !value && 'DocTranslationsPage__Textarea--empty'
       )}
       onFocus={() => updateTextareaHeight()}
       rows={1}

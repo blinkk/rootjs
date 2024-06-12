@@ -115,6 +115,18 @@ export function EditTranslationsModal(
 
   return (
     <div className="EditTranslationsModal">
+      <div className="EditTranslationsModal__header">
+        <Button
+          component="a"
+          href={`/cms/translations/${props.docId}`}
+          target="_blank"
+          variant="default"
+          size="xs"
+        >
+          Open Translations Editor
+        </Button>
+      </div>
+
       {loading ? (
         <Loader />
       ) : (

@@ -9,6 +9,10 @@
   padding-left: 10px;
 }
 
+.EditTranslationsModal__header {
+  margin-bottom: 20px;
+}
+
 .EditTranslationsModal__table {
   width: 100%;
 }

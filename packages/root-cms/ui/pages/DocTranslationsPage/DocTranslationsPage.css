@@ -100,6 +100,10 @@
   background: #F8F9FA;
 }
 
+.DocTranslationsPage__Table__sourceCell {
+  white-space: pre-wrap;
+}
+
 .DocTranslationsPage__Table__sourceCell,
 .DocTranslationsPage__Textarea {
   padding: 6px 10px;
