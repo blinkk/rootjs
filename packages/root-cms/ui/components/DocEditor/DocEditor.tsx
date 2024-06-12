@@ -402,6 +402,7 @@ DocEditor.FieldHeader = (props: {
                 size="xs"
                 onClick={() =>
                   editTranslationsModal.open({
+                    docId: docData.id,
                     strings: translateStrings,
                     l10nSheet,
                   })

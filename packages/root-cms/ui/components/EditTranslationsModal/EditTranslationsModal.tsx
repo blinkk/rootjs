@@ -1,10 +1,14 @@
-import {Button, Textarea} from '@mantine/core';
+import {Button, Loader, Textarea} from '@mantine/core';
 import {ContextModalProps, useModals} from '@mantine/modals';
+import {showNotification, updateNotification} from '@mantine/notifications';
 import {ChangeEvent} from 'preact/compat';
 import {useEffect, useState} from 'preact/hooks';
 import {useModalTheme} from '../../hooks/useModalTheme.js';
 import {joinClassNames} from '../../utils/classes.js';
+import {CsvTranslation, cmsDocImportTranslations} from '../../utils/doc.js';
 import {GoogleSheetId, getSpreadsheetUrl} from '../../utils/gsheets.js';
+import {loadTranslations} from '../../utils/l10n.js';
+import {notifyErrors} from '../../utils/notifications.js';
 import {Heading} from '../Heading/Heading.js';
 import './EditTranslationsModal.css';
 
@@ -12,6 +16,8 @@ const MODAL_ID = 'EditTranslationsModal';
 
 export interface EditTranslationsModalProps {
   [key: string]: unknown;
+  /** Doc associated with the translations. */
+  docId: string;
   /** The strings to show. */
   strings: string[];
   /** A linked Google Sheet associated with the doc, if any. */
@@ -48,10 +54,49 @@ export function EditTranslationsModal(
   const [translationsMap, setTranslationsMap] = useState<
     Record<string, Record<string, string>>
   >({});
+  const [changedKeys, setChangedKeys] = useState<string[]>([]);
   const [hasChanges, setHasChanges] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [loading, setLoading] = useState(true);
 
-  function onSave() {
-    console.log('EditTranslationsModal.onSave()');
+  useEffect(() => {
+    loadTranslations().then((res) => {
+      const translationsMap: Record<string, Record<string, string>> = {};
+      Object.values(res).forEach((row) => {
+        translationsMap[row.source] = row;
+      });
+      setTranslationsMap(translationsMap);
+      setLoading(false);
+    });
+  }, [props.docId]);
+
+  async function onSave() {
+    setSaving(true);
+    await notifyErrors(async () => {
+      console.log('EditTranslationsModal.onSave()');
+      const notificationId = `edit-translations-${props.docId}`;
+      showNotification({
+        id: notificationId,
+        loading: true,
+        title: 'Saving translations',
+        message: `Updating for ${props.docId}...`,
+        autoClose: false,
+        disallowClose: true,
+      });
+      const changes: CsvTranslation[] = [];
+      changedKeys.forEach((changedKey) => {
+        const row = translationsMap[changedKey] as CsvTranslation;
+        changes.push(row);
+      });
+      await cmsDocImportTranslations(props.docId, changes);
+      updateNotification({
+        id: notificationId,
+        title: 'Saved translations',
+        message: `Updated translations for ${props.docId}!`,
+        autoClose: false,
+      });
+    });
+    setSaving(false);
   }
 
   function onChange(row: Record<string, string>) {
@@ -60,46 +105,55 @@ export function EditTranslationsModal(
       newValue[row.source] = row;
       return newValue;
     });
+    setChangedKeys((current) => {
+      const newValue = new Set(current);
+      newValue.add(row.source);
+      return Array.from(newValue);
+    });
     setHasChanges(true);
   }
 
   return (
     <div className="EditTranslationsModal">
-      <table className="EditTranslationsModal__table">
-        <thead>
-          <tr>
-            <th>
-              <Heading size="h4" weight="semi-bold">
-                SOURCE
-              </Heading>
-            </th>
-            <th>
-              <Heading size="h4" weight="semi-bold">
-                TRANSLATIONS
-              </Heading>
-            </th>
-          </tr>
-        </thead>
-        <tbody>
-          {strings.map((source) => (
+      {loading ? (
+        <Loader />
+      ) : (
+        <table className="EditTranslationsModal__table">
+          <thead>
             <tr>
-              <td>
-                <div className="EditTranslationsModal__table__source">
-                  {source}
-                </div>
-              </td>
-              <td>
-                <EditTranslationsModal.StringsEditor
-                  source={source}
-                  locales={i18nLocales}
-                  translations={translationsMap[source] || {}}
-                  onChange={onChange}
-                />
-              </td>
+              <th>
+                <Heading size="h4" weight="semi-bold">
+                  SOURCE
+                </Heading>
+              </th>
+              <th>
+                <Heading size="h4" weight="semi-bold">
+                  TRANSLATIONS
+                </Heading>
+              </th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {strings.map((source) => (
+              <tr>
+                <td>
+                  <div className="EditTranslationsModal__table__source">
+                    {source}
+                  </div>
+                </td>
+                <td>
+                  <EditTranslationsModal.StringsEditor
+                    source={source}
+                    locales={i18nLocales}
+                    translations={translationsMap[source] || {}}
+                    onChange={onChange}
+                  />
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
 
       <div className="EditTranslationsModal__footer">
         {props.l10nSheet && (
@@ -128,8 +182,9 @@ export function EditTranslationsModal(
             variant="filled"
             size="xs"
             color="dark"
-            onClick={onSave}
+            onClick={() => onSave()}
             disabled={!hasChanges}
+            loading={saving}
           >
             Save
           </Button>
@@ -190,7 +245,7 @@ EditTranslationsModal.StringsEditor = (props: {
               maxRows={10}
               value={translations[locale]}
               onChange={(e: ChangeEvent<HTMLTextAreaElement>) => {
-                updateTranslation(locale, String(e.currentTarget.value).trim());
+                updateTranslation(locale, e.currentTarget.value);
               }}
             />
           </div>
