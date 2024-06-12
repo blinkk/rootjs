@@ -1,0 +1,102 @@
+.EditTranslationsModalWrap .mantine-Paper-root {
+  padding-top: 30px;
+  padding-bottom: 30px;
+}
+
+.EditTranslationsModalWrap .mantine-Modal-header .mantine-Text-root {
+  font-size: 18px;
+  font-weight: 700;
+  padding-left: 10px;
+}
+
+.EditTranslationsModal__table {
+  width: 100%;
+}
+
+.EditTranslationsModal__table th {
+  text-align: left;
+}
+
+.EditTranslationsModal__table th,
+.EditTranslationsModal__table td {
+  padding: 20px 10px 20px 40px;
+}
+
+.EditTranslationsModal__table th:first-child,
+.EditTranslationsModal__table td:first-child {
+  width: 350px;
+  padding-left: 10px;
+}
+
+.EditTranslationsModal__table tbody td {
+  border-top: 1px solid #dedede;
+}
+
+.EditTranslationsModal__table__source {
+  font-size: 12px;
+  line-height: 1.5;
+  background-color: #f8f9fa;
+  border: 1px solid #dee2e6;
+  padding: 10px;
+  border-radius: 4px;
+  height: 100%;
+  white-space: pre-wrap;
+  width: 100%;
+}
+
+.EditTranslationsModal__StringsEditor {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.EditTranslationsModal__StringsEditor__row {
+  display: grid;
+  grid-template-columns: minmax(50px, auto) 1fr;
+  gap: 20px;
+}
+
+.EditTranslationsModal__StringsEditor__row__locale {
+  font-size: 13px;
+  line-height: 40px;
+  font-weight: 600;
+  text-align: right;
+}
+
+.EditTranslationsModal__StringsEditor__row__translation textarea {
+  border: 1px solid #dee2e6;
+  border-radius: 4px;
+}
+
+.EditTranslationsModal__StringsEditor__row__translation.empty textarea {
+  background: #FFF5F5;
+}
+
+.EditTranslationsModal__footer {
+  display: flex;
+  justify-content: space-between;
+  gap: 20px;
+  margin-top: 20px;
+  position: sticky;
+  bottom: 0;
+  padding: 20px 10px 0;
+  background: #fff;
+  border-top: 1px solid #dee2e6;
+  z-index: 10;
+}
+
+.EditTranslationsModal__footer__gsheet {
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.EditTranslationsModal__footer__buttons {
+  flex-shrink: 0;
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+.EditTranslationsModal__footer__buttons:first-child {
+  width: 100%;
+}

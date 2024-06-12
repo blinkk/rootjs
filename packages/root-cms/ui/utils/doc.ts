@@ -48,6 +48,13 @@ export interface CMSDoc {
       reason: string;
       until?: Timestamp;
     };
+    /** Google Sheet linked for translations. */
+    l10nSheet?: {
+      spreadsheetId: string;
+      gid: number;
+      linkedAt: Timestamp;
+      linkedBy: string;
+    };
   };
   fields: any;
 }
