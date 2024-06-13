@@ -59,7 +59,6 @@
 .DocTranslationsPage__Table {
   table-layout: fixed;
   font-size: 13px;
-  min-width: 100%;
   border-collapse: collapse;
   border-spacing: 0;
 }
@@ -82,12 +81,8 @@
   text-align: left;
 }
 
-.DocTranslationsPage__Table th:last-child {
-  border-right: none;
-}
-
 .DocTranslationsPage__Table td {
-  min-width: 450px;
+  width: 450px;
   border: 1px solid var(--color-border);
   /* vertical-align: top; */
   padding: 0;
