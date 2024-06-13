@@ -1,5 +1,13 @@
 # @blinkk/root-cms
 
+## 1.2.2
+
+### Patch Changes
+
+- aa93beb: feat: add show translations icon to translateable fields
+- ae179f0: feat: add per-doc translations editor
+  - @blinkk/root@1.2.2
+
 ## 1.2.1
 
 ### Patch Changes
