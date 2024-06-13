@@ -39,6 +39,8 @@ export interface Doc<Fields = any> {
 
 export type DocMode = 'draft' | 'published';
 
+export type UserRole = 'ADMIN' | 'EDITOR' | 'VIEWER';
+
 export type HttpMethod = 'GET' | 'POST';
 
 export interface DataSource {
@@ -805,6 +807,34 @@ export class RootCMSClient {
     const doc = await docRef.get();
     if (doc.exists) {
       return doc.data() as DataSourceData<T>;
+    }
+    return null;
+  }
+
+  /**
+   * Gets the user's role from the project's ACL.
+   */
+  async getUserRole(email: string): Promise<UserRole | null> {
+    if (!email) {
+      return null;
+    }
+    const docRef = this.db.doc(`Projects/${this.projectId}`);
+    const snapshot = await docRef.get();
+    const data = snapshot.data() || {};
+    const acl = data.roles || {};
+
+    if (email in acl) {
+      return acl[email];
+    }
+
+    // Check wildcard domains, e.g. `*@example.com`.
+    if (!email.includes('@')) {
+      console.warn(`invalid email: ${email}`);
+      return null;
+    }
+    const domain = email.split('@').at(-1);
+    if (domain && `*@${domain}` in acl) {
+      return acl[`*@${domain}`];
     }
     return null;
   }
