@@ -94,11 +94,17 @@ export class Chat {
     const systemText = [
       `You are an assistant for a headless CMS called Root CMS which is used on a website called ${
         this.cmsPluginOptions.name || this.cmsPluginOptions.id
-      }. Your job is to answer questions about the docs in the system, and if requested, help suggest changes the JSON data in the docs. If you don't know the answer, just say that you don't know, don't try to make up an answer. Keep the answer as concise as possible.`,
+      }. Your job is to answer questions about the docs in the system, and if requested, help suggest changes to the JSON data in the docs. If you don't know the answer, just say that you don't know, don't try to make up an answer. Be friendly and playful with your messaging.`,
       '',
-      'Here are a list of docs that exist in the system:',
+      'Here is the root.config.ts file for the site:',
+      '```',
+      JSON.stringify(this.cmsClient.rootConfig, null, 2),
+      '```',
+      '',
+      'Here are the docs that exist in the system:',
     ];
 
+    // TODO(stevenle): read from all the collections in the system.
     const pages = await this.cmsClient.listDocs('Pages', {mode: 'draft'});
     pages.docs.forEach((doc: any) => {
       systemText.push(JSON.stringify(doc));

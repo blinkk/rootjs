@@ -446,6 +446,17 @@ function MarkdownNode(props: {
       />
     );
   }
+  if (node.type === 'heading') {
+    const tagName = `h${node.depth || 2}` as preact.JSX.ElementType;
+    return (
+      <ElementNode
+        as={tagName}
+        nodes={node.children}
+        animated={props.animated}
+        onAnimationComplete={props.onAnimationComplete}
+      />
+    );
+  }
   if (node.type === 'inlineCode') {
     return (
       <ElementNode
