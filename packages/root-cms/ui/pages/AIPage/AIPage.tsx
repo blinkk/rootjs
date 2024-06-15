@@ -167,12 +167,15 @@ function useChat(): ChatController {
     if (res.status !== 200) {
       const err = await res.text();
       console.error('chat failed', err);
+      const errorMessage = ['Something went wrong:', '```', err, '```'].join(
+        '\n'
+      );
       updateMessage(messageId, {
         sender: 'bot',
         blocks: [
           {
             type: 'text',
-            text: `Something went wrong: ${err}`,
+            text: errorMessage,
           },
         ],
       });

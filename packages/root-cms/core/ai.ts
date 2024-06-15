@@ -65,6 +65,11 @@ export class Chat {
       model = gemini15ProPreview;
     }
 
+    if (!this.history) {
+      // Seed the AI with information.
+      await this.initHistory();
+    }
+
     // console.log('prompt:', prompt);
     // if (this.history) {
     //   console.log('history:', this.history);
@@ -83,6 +88,24 @@ export class Chat {
 
   dbDoc() {
     return this.chatClient.dbCollection().doc(this.id);
+  }
+
+  async initHistory() {
+    const systemText = [
+      `You are an assistant for a headless CMS called Root CMS which is used on a website called ${
+        this.cmsPluginOptions.name || this.cmsPluginOptions.id
+      }. Your job is to answer questions about the docs in the system, and if requested, help suggest changes the JSON data in the docs. If you don't know the answer, just say that you don't know, don't try to make up an answer. Keep the answer as concise as possible.`,
+      '',
+      'Here are a list of docs that exist in the system:',
+    ];
+
+    const pages = await this.cmsClient.listDocs('Pages', {mode: 'draft'});
+    pages.docs.forEach((doc: any) => {
+      systemText.push(JSON.stringify(doc));
+    });
+
+    this.history = [{role: 'system', content: [{text: systemText.join('\n')}]}];
+    console.log(this.history);
   }
 }
 
