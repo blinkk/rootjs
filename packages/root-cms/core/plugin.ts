@@ -39,6 +39,8 @@ export interface CMSUser {
 export interface CMSAIConfig {
   /** Custom API endpoint for chat prompts. */
   endpoint?: string;
+  /** Gen AI model to use. Defaults to 'gemini-1.5-flash'. */
+  model?: 'gemini-1.5-flash' | 'gemini-1.5-pro';
 }
 
 export interface CMSSidebarTool {
