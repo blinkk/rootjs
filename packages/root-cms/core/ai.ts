@@ -23,13 +23,26 @@ export class Chat {
   cmsPluginOptions: CMSPluginOptions;
   id: string;
   history?: any;
+  model?: string;
 
-  constructor(chatClient: ChatClient, id: string, options?: {history?: any}) {
+  constructor(
+    chatClient: ChatClient,
+    id: string,
+    options?: {history?: any; model?: string}
+  ) {
     this.chatClient = chatClient;
     this.cmsClient = chatClient.cmsClient;
     this.cmsPluginOptions = this.cmsClient.cmsPlugin.getConfig();
     this.id = id;
     this.history = options?.history;
+    this.model = options?.model;
+    if (!this.model) {
+      if (typeof this.cmsPluginOptions.experiments?.ai === 'object') {
+        if (this.cmsPluginOptions.experiments.ai.model) {
+          this.model = this.cmsPluginOptions.experiments.ai.model;
+        }
+      }
+    }
   }
 
   async sendPrompt(prompt: string | ChatPrompt | ChatPrompt[]): Promise<any> {
@@ -48,16 +61,14 @@ export class Chat {
     }
 
     let model = gemini15FlashPreview;
-    if (typeof this.cmsPluginOptions.experiments?.ai === 'object') {
-      if (this.cmsPluginOptions.experiments?.ai.model === 'gemini-1.5-pro') {
-        model = gemini15ProPreview;
-      }
+    if (this.model === 'gemini-1.5-pro') {
+      model = gemini15ProPreview;
     }
 
-    console.log('prompt:', prompt);
-    if (this.history) {
-      console.log('history:', this.history);
-    }
+    // console.log('prompt:', prompt);
+    // if (this.history) {
+    //   console.log('history:', this.history);
+    // }
     const res = await generate({
       model: model,
       prompt: prompt as any,
@@ -84,30 +95,33 @@ export class ChatClient {
     this.user = user;
   }
 
-  async createChat(): Promise<Chat> {
+  async createChat(options?: {model?: string}): Promise<Chat> {
     const chatId = crypto.randomUUID();
-    // TODO(stevenle): save chat to db so that user has a chat history and can
-    // enable "sharing" with others.
-    // TODO(stevenle): remember to store the model used in the chat metadata.
+    // Save chat to db so that user has a chat history and can enable "sharing"
+    // with others. Store the model used with the metadata.
     const docRef = this.dbCollection().doc(chatId);
     await docRef.set({
       id: chatId,
       createdBy: this.user,
       createdAt: Timestamp.now(),
       modifiedAt: Timestamp.now(),
+      model: options?.model || 'gemini-1.5-flash',
     });
     return new Chat(this, chatId);
   }
 
   async getChat(chatId: string): Promise<Chat> {
-    // TODO(stevenle): fetch chat from db.
+    // Fetch chat from db to preserve the conversation's history.
     const docRef = this.dbCollection().doc(chatId);
     const chatDoc = await docRef.get();
     if (!chatDoc.exists) {
       throw new Error(`${chatId} does not exist`);
     }
     const chatData = chatDoc.data() || {};
-    return new Chat(this, chatId, {history: chatData.history});
+    return new Chat(this, chatId, {
+      history: chatData.history,
+      model: chatData.model,
+    });
   }
 
   async listChats(options?: {limit?: number}): Promise<any[]> {

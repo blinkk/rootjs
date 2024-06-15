@@ -210,4 +210,30 @@ export function api(server: Server) {
       res.status(500).json({success: false, error: 'UNKNOWN'});
     }
   });
+
+  server.use('/cms/api/ai.list_chats', async (req: Request, res: Response) => {
+    if (
+      req.method !== 'POST' ||
+      !String(req.get('content-type')).startsWith('application/json')
+    ) {
+      res.status(400).json({success: false, error: 'BAD_REQUEST'});
+      return;
+    }
+    if (!req.user?.email) {
+      res.status(401).json({success: false, error: 'UNAUTHORIZED'});
+      return;
+    }
+    const reqBody = req.body || {};
+    const limit = reqBody.limit;
+
+    try {
+      const cmsClient = new RootCMSClient(req.rootConfig!);
+      const chatClient = new ChatClient(cmsClient, req.user.email);
+      const chats = await chatClient.listChats({limit});
+      res.status(200).json({success: true, chats});
+    } catch (err) {
+      console.error(err.stack || err);
+      res.status(500).json({success: false, error: 'UNKNOWN'});
+    }
+  });
 }
