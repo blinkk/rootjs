@@ -7,7 +7,7 @@ import {
 import {ComponentType} from 'preact';
 import {ViteDevServer} from 'vite';
 import {Hooks} from '../middleware/hooks.js';
-import {Session} from '../middleware/session.js';
+import {SaveSessionOptions, Session} from '../middleware/session.js';
 import {Renderer} from '../render/render.js';
 import {RootConfig} from './config.js';
 
@@ -109,7 +109,7 @@ export type Request = ExpressRequest & {
 export type Response = ExpressResponse & {
   // Fields added by `sessionMiddleware()`.
   session: Session;
-  saveSession: () => void;
+  saveSession: (options?: SaveSessionOptions) => void;
 };
 
 /** Root.js express next function. */

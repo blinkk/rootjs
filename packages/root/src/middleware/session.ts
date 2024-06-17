@@ -29,7 +29,14 @@ export function sessionMiddleware(options?: SessionMiddlewareOptions) {
       // "secure" cookies require https, so disable "secure" when in development.
       const secureCookie = Boolean(process.env.NODE_ENV !== 'development');
       const cookieValue = session.toString();
-      const sameSite = saveSessionOptions?.sameSite || 'strict';
+      let sameSite = saveSessionOptions?.sameSite;
+      if (!sameSite) {
+        // Default the sameSite setting to "none", which allows it to be used in
+        // multi-site contexts.
+        // "Cookies with SameSite=None must also specify Secure, meaning they require a secure context."
+        // https://web.dev/articles/samesite-cookies-explained#samesite_cookie_recipes
+        sameSite = secureCookie ? 'none' : 'strict';
+      }
       res.cookie(SESSION_COOKIE, cookieValue, {
         maxAge: maxAge,
         httpOnly: true,

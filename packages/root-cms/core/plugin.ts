@@ -298,6 +298,7 @@ export function cmsPlugin(options: CMSPluginOptions): CMSPlugin {
   async function getCurrentUser(req: Request): Promise<CMSUser | null> {
     const sessionCookie = req.session.getItem(SESSION_COOKIE_AUTH);
     if (!sessionCookie) {
+      console.log('no login session cookie');
       return null;
     }
 
