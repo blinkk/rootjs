@@ -106,6 +106,12 @@ export type CMSPluginOptions = {
   isLoginRequired?: (req: Request) => boolean;
 
   /**
+   * By default, iframing the CMS is disallowed. Setting this value will allow
+   * iframes from the specified origins.
+   */
+  allowedIframeOrigins?: string[];
+
+  /**
    * URL to GCI service for transforming uploaded GCS images to a Google App
    * Engine Images API serving URL.
    *
@@ -477,7 +483,10 @@ export function cmsPlugin(options: CMSPluginOptions): CMSPlugin {
 
         try {
           const app = await getRenderer(req);
-          app.renderSignIn(req, res, options);
+          app.renderSignIn(req, res, {
+            rootConfig: req.rootConfig!,
+            cmsConfig: options,
+          });
         } catch (err) {
           console.error(err);
           if (err.stack) {
@@ -528,9 +537,8 @@ export function cmsPlugin(options: CMSPluginOptions): CMSPlugin {
         try {
           const app = await getRenderer(req);
           await app.renderApp(req, res, {
-            rootConfig: req.rootConfig,
+            rootConfig: req.rootConfig!,
             cmsConfig: options,
-            firebaseConfig: options.firebaseConfig,
           });
         } catch (err) {
           // TODO(stevenle): render a custom error page.
