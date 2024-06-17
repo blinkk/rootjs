@@ -3,7 +3,9 @@ import {generate} from '@genkit-ai/ai';
 import {configureGenkit} from '@genkit-ai/core';
 import {vertexAI} from '@genkit-ai/vertexai';
 import {gemini15ProPreview, gemini15FlashPreview} from '@genkit-ai/vertexai';
+import {Timestamp} from 'firebase-admin/firestore';
 import {RootCMSClient} from './client.js';
+import {CMSPluginOptions} from './plugin.js';
 
 let genkitIsConfigured = false;
 
@@ -18,18 +20,34 @@ interface ChatPrompt {
 export class Chat {
   chatClient: ChatClient;
   cmsClient: RootCMSClient;
+  cmsPluginOptions: CMSPluginOptions;
   id: string;
+  history?: any;
+  model?: string;
 
-  constructor(chatClient: ChatClient, id: string) {
+  constructor(
+    chatClient: ChatClient,
+    id: string,
+    options?: {history?: any; model?: string}
+  ) {
     this.chatClient = chatClient;
     this.cmsClient = chatClient.cmsClient;
+    this.cmsPluginOptions = this.cmsClient.cmsPlugin.getConfig();
     this.id = id;
+    this.history = options?.history;
+    this.model = options?.model;
+    if (!this.model) {
+      if (typeof this.cmsPluginOptions.experiments?.ai === 'object') {
+        if (this.cmsPluginOptions.experiments.ai.model) {
+          this.model = this.cmsPluginOptions.experiments.ai.model;
+        }
+      }
+    }
   }
 
   async sendPrompt(prompt: string | ChatPrompt | ChatPrompt[]): Promise<any> {
     if (!genkitIsConfigured) {
-      const cmsConfig = this.cmsClient.cmsPlugin.getConfig();
-      const firebaseConfig = cmsConfig.firebaseConfig;
+      const firebaseConfig = this.cmsPluginOptions.firebaseConfig;
       configureGenkit({
         plugins: [
           vertexAI({
@@ -42,14 +60,58 @@ export class Chat {
       genkitIsConfigured = true;
     }
 
-    console.log(prompt);
+    let model = gemini15FlashPreview;
+    if (this.model === 'gemini-1.5-pro') {
+      model = gemini15ProPreview;
+    }
+
+    if (!this.history) {
+      // Seed the AI with information.
+      await this.initHistory();
+    }
+
+    // console.log('prompt:', prompt);
+    // if (this.history) {
+    //   console.log('history:', this.history);
+    // }
     const res = await generate({
-      // model: gemini15ProPreview,
-      model: gemini15FlashPreview,
+      model: model,
       prompt: prompt as any,
+      history: this.history,
     });
-    console.log(res);
+    console.log(res.text());
+    const history = res.toHistory();
+    this.history = history;
+    await this.dbDoc().update({history, modifiedAt: Timestamp.now()});
     return res.text();
+  }
+
+  dbDoc() {
+    return this.chatClient.dbCollection().doc(this.id);
+  }
+
+  async initHistory() {
+    const systemText = [
+      `You are an assistant for a headless CMS called Root CMS which is used on a website called ${
+        this.cmsPluginOptions.name || this.cmsPluginOptions.id
+      }. Your job is to answer questions about the docs in the system, and if requested, help suggest changes to the JSON data in the docs. If you don't know the answer, just say that you don't know, don't try to make up an answer. Be friendly and playful with your messaging.`,
+      '',
+      'Here is the root.config.ts file for the site:',
+      '```',
+      JSON.stringify(this.cmsClient.rootConfig, null, 2),
+      '```',
+      '',
+      'Here are the docs that exist in the system:',
+    ];
+
+    // TODO(stevenle): read from all the collections in the system.
+    const pages = await this.cmsClient.listDocs('Pages', {mode: 'draft'});
+    pages.docs.forEach((doc: any) => {
+      systemText.push(JSON.stringify(doc));
+    });
+
+    this.history = [{role: 'system', content: [{text: systemText.join('\n')}]}];
+    console.log(this.history);
   }
 }
 
@@ -62,16 +124,48 @@ export class ChatClient {
     this.user = user;
   }
 
-  async createChat(): Promise<Chat> {
+  async createChat(options?: {model?: string}): Promise<Chat> {
     const chatId = crypto.randomUUID();
-    // TODO(stevenle): save chat to db so that user has a chat history and can
-    // enable "sharing" with others.
-    // TODO(stevenle): remember to store the model used in the chat metadata.
+    // Save chat to db so that user has a chat history and can enable "sharing"
+    // with others. Store the model used with the metadata.
+    const docRef = this.dbCollection().doc(chatId);
+    await docRef.set({
+      id: chatId,
+      createdBy: this.user,
+      createdAt: Timestamp.now(),
+      modifiedAt: Timestamp.now(),
+      model: options?.model || 'gemini-1.5-flash',
+    });
     return new Chat(this, chatId);
   }
 
   async getChat(chatId: string): Promise<Chat> {
-    // TODO(stevenle): fetch chat from db.
-    return new Chat(this, chatId);
+    // Fetch chat from db to preserve the conversation's history.
+    const docRef = this.dbCollection().doc(chatId);
+    const chatDoc = await docRef.get();
+    if (!chatDoc.exists) {
+      throw new Error(`${chatId} does not exist`);
+    }
+    const chatData = chatDoc.data() || {};
+    return new Chat(this, chatId, {
+      history: chatData.history,
+      model: chatData.model,
+    });
+  }
+
+  async listChats(options?: {limit?: number}): Promise<any[]> {
+    const limit = options?.limit || 20;
+    const query = this.dbCollection()
+      .where('createdBy', '==', this.user)
+      .limit(limit)
+      .orderBy('createdAt', 'desc');
+    const res = await query.get();
+    return res.docs.map((doc) => doc.data());
+  }
+
+  dbCollection() {
+    return this.cmsClient.db.collection(
+      `Projects/${this.cmsClient.projectId}/Experiments/ai/Chat`
+    );
   }
 }

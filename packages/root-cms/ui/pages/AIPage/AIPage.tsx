@@ -107,16 +107,19 @@ function typewriterDelay() {
 }
 
 interface ChatController {
+  chatId?: string;
   messages: Message[];
   addMessage: (message: Message) => number;
-  updateMessage: (id: number, message: Message) => void;
+  updateMessage: (messageId: number, message: Message) => void;
+  sendPrompt: (messageId: number, prompt: any[]) => Promise<void>;
 }
 
 function useChat(): ChatController {
   const [messages, setMessages] = useState<Message[]>([]);
+  const [chatId, setChatId] = useState('');
 
   const addMessage = (message: Message) => {
-    let pendingMessageId = 0;
+    let messageId = 0;
     setMessages((current) => {
       const pendingMessage: Message = {
         sender: 'bot',
@@ -128,24 +131,77 @@ function useChat(): ChatController {
         {...message, key: autokey()},
         pendingMessage,
       ];
-      pendingMessageId = newMessages.length - 1;
+      messageId = newMessages.length - 1;
       return newMessages;
     });
-    return pendingMessageId;
+    return messageId;
   };
 
-  const updateMessage = (id: number, message: Message) => {
+  const updateMessage = (messageId: number, message: Message) => {
     setMessages((current) => {
       const newMessages = [...current];
-      newMessages[id] = {...message, key: autokey()};
+      newMessages[messageId] = {...message, key: autokey()};
       return newMessages;
     });
+  };
+
+  const sendPrompt = async (messageId: number, prompt: any[]) => {
+    // Allow users to provide a custom api endpoint via the
+    // `{ai: {endpoint: '/api/...}}` config.
+    let endpoint = '/cms/api/ai.chat';
+    if (typeof window.__ROOT_CTX.experiments?.ai === 'object') {
+      if (window.__ROOT_CTX.experiments.ai.endpoint) {
+        endpoint = window.__ROOT_CTX.experiments.ai.endpoint;
+      }
+    }
+
+    const req: any = {prompt};
+    if (chatId) {
+      req.chatId = chatId;
+    }
+    const res = await window.fetch(endpoint, {
+      method: 'POST',
+      headers: {'content-type': 'application/json'},
+      body: JSON.stringify(req),
+    });
+    if (res.status !== 200) {
+      const err = await res.text();
+      console.error('chat failed', err);
+      const errorMessage = ['Something went wrong:', '```', err, '```'].join(
+        '\n'
+      );
+      updateMessage(messageId, {
+        sender: 'bot',
+        blocks: [
+          {
+            type: 'text',
+            text: errorMessage,
+          },
+        ],
+      });
+      return;
+    }
+    const resData = await res.json();
+    if (resData.success && resData.chatId) {
+      setChatId(resData.chatId);
+      updateMessage(messageId, {
+        sender: 'bot',
+        blocks: [
+          {
+            type: 'text',
+            text: resData.response || '',
+          },
+        ],
+      });
+    }
   };
 
   return {
+    chatId,
     messages,
     addMessage,
     updateMessage,
+    sendPrompt,
   };
 }
 
@@ -385,6 +441,17 @@ function MarkdownNode(props: {
       <CodeBlockNode
         text={node.value}
         language={node.lang}
+        animated={props.animated}
+        onAnimationComplete={props.onAnimationComplete}
+      />
+    );
+  }
+  if (node.type === 'heading') {
+    const tagName = `h${node.depth || 2}` as preact.JSX.ElementType;
+    return (
+      <ElementNode
+        as={tagName}
+        nodes={node.children}
         animated={props.animated}
         onAnimationComplete={props.onAnimationComplete}
       />
@@ -709,45 +776,7 @@ function ChatBar(props: {chat: ChatController}) {
           },
         });
       }
-
-      // Allow users to provide a custom api endpoint via the
-      // `{ai: {endpoint: '/api/...}}` config.
-      let endpoint = '/cms/api/ai.chat';
-      if (typeof window.__ROOT_CTX.experiments?.ai === 'object') {
-        if (window.__ROOT_CTX.experiments.ai.endpoint) {
-          endpoint = window.__ROOT_CTX.experiments.ai.endpoint;
-        }
-      }
-
-      const res = await fetch(endpoint, {
-        method: 'POST',
-        headers: {'content-type': 'application/json'},
-        body: JSON.stringify({prompt: prompt}),
-      });
-      if (res.status !== 200) {
-        const err = await res.text();
-        console.error('chat failed', err);
-        props.chat.updateMessage(pendingMessageId, {
-          sender: 'bot',
-          blocks: [
-            {
-              type: 'text',
-              text: `Something went wrong: ${err}`,
-            },
-          ],
-        });
-        return;
-      }
-      const resData = await res.json();
-      props.chat.updateMessage(pendingMessageId, {
-        sender: 'bot',
-        blocks: [
-          {
-            type: 'text',
-            text: resData.response || '',
-          },
-        ],
-      });
+      await props.chat.sendPrompt(pendingMessageId, prompt);
     }
   }
 
