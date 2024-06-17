@@ -1,8 +1,9 @@
 import crypto from 'node:crypto';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
-import {Request, Response} from '@blinkk/root';
+import {Request, Response, RootConfig} from '@blinkk/root';
 import {render as renderToString} from 'preact-render-to-string';
+import {CMSPluginOptions} from './plugin.js';
 import {Collection} from './schema.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -67,7 +68,16 @@ function App(props: AppProps) {
   );
 }
 
-export async function renderApp(req: Request, res: Response, options: any) {
+interface RenderOptions {
+  rootConfig: RootConfig;
+  cmsConfig: CMSPluginOptions;
+}
+
+export async function renderApp(
+  req: Request,
+  res: Response,
+  options: RenderOptions
+) {
   const collectionModules = import.meta.glob('/collections/*.schema.ts', {
     eager: true,
   }) as any;
@@ -93,7 +103,7 @@ export async function renderApp(req: Request, res: Response, options: any) {
       gci: gci,
       i18n: rootConfig.i18n,
     },
-    firebaseConfig: options.firebaseConfig,
+    firebaseConfig: cmsConfig.firebaseConfig,
     gapi: cmsConfig.gapi,
     collections: collections,
     sidebar: cmsConfig.sidebar,
@@ -124,7 +134,7 @@ export async function renderApp(req: Request, res: Response, options: any) {
       .replaceAll('{NONCE}', nonce);
   }
   res.setHeader('Content-Type', 'text/html');
-  setSecurityHeaders(res, nonce);
+  setSecurityHeaders(options, req, res, nonce);
   res.send(html);
 }
 
@@ -179,8 +189,15 @@ function SignIn(props: SignInProps) {
     </html>
   );
 }
-export async function renderSignIn(req: Request, res: Response, options: any) {
-  const ctx = {name: options.name, firebaseConfig: options.firebaseConfig};
+export async function renderSignIn(
+  req: Request,
+  res: Response,
+  options: RenderOptions
+) {
+  const ctx = {
+    name: options.cmsConfig.name || options.cmsConfig.id || '',
+    firebaseConfig: options.cmsConfig.firebaseConfig,
+  };
   const mainHtml = renderToString(<SignIn title="Sign in" ctx={ctx} />);
   let html = `<!doctype html>\n${mainHtml}`;
   const nonce = generateNonce();
@@ -203,7 +220,7 @@ export async function renderSignIn(req: Request, res: Response, options: any) {
       .replaceAll('{NONCE}', nonce);
   }
   res.setHeader('Content-Type', 'text/html');
-  setSecurityHeaders(res, nonce);
+  setSecurityHeaders(options, req, res, nonce);
   res.send(html);
 }
 
@@ -211,8 +228,12 @@ function generateNonce() {
   return crypto.randomBytes(16).toString('base64');
 }
 
-function setSecurityHeaders(res: Response, nonce: string) {
-  res.setHeader('x-frame-options', 'SAMEORIGIN');
+function setSecurityHeaders(
+  options: RenderOptions,
+  req: Request,
+  res: Response,
+  nonce: string
+) {
   res.setHeader(
     'strict-transport-security',
     'max-age=63072000; includeSubdomains; preload'
@@ -220,13 +241,33 @@ function setSecurityHeaders(res: Response, nonce: string) {
   res.setHeader('x-content-type-options', 'nosniff');
   res.setHeader('x-xss-protection', '1; mode=block');
 
+  const frameAncestors = ["'self'"];
+  const allowedIframeOrigins = options.cmsConfig.allowedIframeOrigins;
+  if (allowedIframeOrigins && allowedIframeOrigins.length > 0) {
+    const refererOrigin = getRefererOrigin(req);
+    if (allowedIframeOrigins.includes(refererOrigin)) {
+      frameAncestors.push(refererOrigin);
+    }
+  }
+
   // https://csp.withgoogle.com/docs/strict-csp.html
   const directives = [
     "base-uri 'none'",
     "object-src 'none'",
     `script-src 'nonce-${nonce}' 'unsafe-inline' 'unsafe-eval' 'strict-dynamic' https: http:`,
+    `frame-ancestors ${frameAncestors.join(' ')}`,
   ];
-  res.setHeader('content-security-policy-report-only', directives.join(';'));
+  res.setHeader('content-security-policy-report-only', directives.join('; '));
+}
+
+function getRefererOrigin(req: Request): string {
+  const refererUrl = req.headers.referer;
+  if (!refererUrl) {
+    return '';
+  }
+  const parsedReferer = new URL(refererUrl);
+  const refererOrigin = `${parsedReferer.protocol}//${parsedReferer.hostname}`;
+  return refererOrigin;
 }
 
 function cachebust(url: string) {
