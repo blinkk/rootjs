@@ -1,5 +1,15 @@
 # @blinkk/root-cms
 
+## 1.2.3
+
+### Patch Changes
+
+- cbd5c63: feat: add ai chat context awareness
+- 4ec274e: feat: add getUserRole() to cms client
+- cbd5c63: feat: root ai chat history
+- 4c9a20f: feat: add allowedIframeOrigins to cms plugin options
+  - @blinkk/root@1.2.3
+
 ## 1.2.2
 
 ### Patch Changes
