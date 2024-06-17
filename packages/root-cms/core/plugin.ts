@@ -107,7 +107,10 @@ export type CMSPluginOptions = {
 
   /**
    * By default, iframing the CMS is disallowed. Setting this value will allow
-   * iframes from the specified origins.
+   * iframes from the specified origins. Example:
+   * ```
+   * allowedIframeOrigins: ['https://app.example.com']
+   * ```
    */
   allowedIframeOrigins?: string[];
 
