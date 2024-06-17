@@ -1,5 +1,11 @@
 # @blinkk/root
 
+## 1.2.4
+
+### Patch Changes
+
+- 372bc0e: fix: default session cookies to SameSite=None
+
 ## 1.2.3
 
 ## 1.2.2
