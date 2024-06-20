@@ -844,11 +844,22 @@ function ExportMenuButton(props: MenuButtonProps) {
 }
 
 function getLocaleLabel(locale: string) {
+  const parts = locale.split('_');
+  const langCode = parts[0];
+
+  // For locales like `ALL_de`, display the country name.
+  if (langCode === 'ALL') {
+    const countryCode = String(parts[1]).toUpperCase();
+    const countryNames = new Intl.DisplayNames(['en'], {
+      type: 'region',
+    });
+    const countryName = countryNames.of(countryCode) || locale;
+    return `${countryName} (${locale})`;
+  }
+
   const langNames = new Intl.DisplayNames(['en'], {
     type: 'language',
   });
-  const parts = locale.split('_');
-  const langCode = parts[0];
   const langName = langNames.of(langCode) || locale;
   return `${langName} (${locale})`;
 }
