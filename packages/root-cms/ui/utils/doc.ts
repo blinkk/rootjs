@@ -432,7 +432,7 @@ export async function cmsUnlockPublishing(docId: string) {
  */
 export function testIsScheduled(docData: CMSDoc) {
   const now = Timestamp.now().toMillis();
-  const scheduledAt = docData.sys?.scheduledAt?.toMillis() || 0;
+  const scheduledAt = docData?.sys?.scheduledAt?.toMillis() || 0;
   return scheduledAt > now;
 }
 
