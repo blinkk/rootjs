@@ -377,7 +377,6 @@ export async function build(rootProjectDir?: string, options?: BuildOptions) {
     console.log('\nhtml output:');
     const batchSize = Number(options?.concurrency || 10);
     await batchAsyncCalls(Object.keys(sitemap), batchSize, async (urlPath) => {
-      console.log('a: ' + urlPath);
       const sitemapItem = sitemap[urlPath];
       try {
         const data = await renderer.renderRoute(sitemapItem.route, {
