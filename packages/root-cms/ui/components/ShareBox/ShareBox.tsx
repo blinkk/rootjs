@@ -7,19 +7,38 @@ import {
   deleteField,
 } from 'firebase/firestore';
 import {useEffect, useState} from 'preact/hooks';
-
+import {logAction} from '../../utils/actions.js';
 import {joinClassNames} from '../../utils/classes.js';
 import {notifyErrors} from '../../utils/notifications.js';
 import {sortByKey} from '../../utils/objects.js';
 import {Text} from '../Text/Text.js';
 import './ShareBox.css';
-import {logAction} from '../../utils/actions.js';
 
 export interface ShareBoxProps {
   className?: string;
 }
 
 type UserRole = 'ADMIN' | 'EDITOR' | 'VIEWER' | 'REMOVE';
+
+function getCurrentUserRole(roles: Record<string, UserRole>) {
+  const currentUser = window.firebase.user.email;
+  if (!currentUser) {
+    return null;
+  }
+  if (currentUser in roles) {
+    return roles[currentUser];
+  }
+  const userDomain = currentUser.split('@').at(-1);
+  const domainEmail = `*@${userDomain}`;
+  if (domainEmail in roles) {
+    return roles[domainEmail];
+  }
+  return null;
+}
+
+function testCurrentUserIsAdmin(roles: Record<string, UserRole>) {
+  return getCurrentUserRole(roles) === 'ADMIN';
+}
 
 export function ShareBox(props: ShareBoxProps) {
   const [loading, setLoading] = useState(true);
@@ -28,6 +47,8 @@ export function ShareBox(props: ShareBoxProps) {
   const db = window.firebase.db;
   const projectId = window.__ROOT_CTX.rootConfig.projectId || 'default';
   const docRef = doc(db, 'Projects', projectId);
+
+  const currentUserIsAdmin = testCurrentUserIsAdmin(roles);
 
   useEffect(() => {
     getDoc(docRef).then((snapshot) => {
@@ -115,13 +136,19 @@ export function ShareBox(props: ShareBoxProps) {
           radius={0}
           color="dark"
           type="submit"
+          disabled={!currentUserIsAdmin}
         >
           Add user
         </Button>
       </form>
       <div className="ShareBox__users">
         {users.map((user) => (
-          <ShareBox.User key={user.email} {...user} onChange={updateUserRole} />
+          <ShareBox.User
+            key={user.email}
+            {...user}
+            currentUserIsAdmin={currentUserIsAdmin}
+            onChange={updateUserRole}
+          />
         ))}
       </div>
     </div>
@@ -131,6 +158,7 @@ export function ShareBox(props: ShareBoxProps) {
 export interface ShareBoxUserProps {
   email: string;
   role: UserRole;
+  currentUserIsAdmin: boolean;
   onChange: (email: string, newRole: UserRole) => void;
 }
 
@@ -158,7 +186,7 @@ ShareBox.User = (props: ShareBoxUserProps) => {
           value={props.role}
           radius={0}
           size="xs"
-          disabled={isCurrentUser}
+          disabled={isCurrentUser || !props.currentUserIsAdmin}
           onChange={(role: string) => {
             props.onChange(props.email, role as UserRole | 'REMOVE');
           }}
