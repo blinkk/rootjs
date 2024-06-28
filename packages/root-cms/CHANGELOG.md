@@ -1,5 +1,13 @@
 # @blinkk/root-cms
 
+## 1.2.5
+
+### Patch Changes
+
+- 840fb57: feat: use country display name for `ALL_xx` locales
+- a86624c: feat: disable sharebox for non-admin users
+  - @blinkk/root@1.2.5
+
 ## 1.2.4
 
 ### Patch Changes
