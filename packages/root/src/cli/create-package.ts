@@ -255,7 +255,7 @@ async function onFirebase(options: {
 }
 
 /**
- * Compiles a root.config.ts file to root.config.js.
+ * Compiles a `.ts` file to `.js`.
  */
 export async function bundleTsFile(srcPath: string, outPath: string) {
   await esbuild({

@@ -440,7 +440,7 @@ export function testIsScheduled(docData: CMSDoc) {
  * Checks if a doc has a publishing lock.
  */
 export function testPublishingLocked(docData: CMSDoc) {
-  if (docData.sys?.publishingLocked) {
+  if (docData?.sys?.publishingLocked) {
     if (docData.sys.publishingLocked.until) {
       const now = Timestamp.now().toMillis();
       const until = docData.sys.publishingLocked.until.toMillis();
