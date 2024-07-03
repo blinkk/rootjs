@@ -50,7 +50,9 @@ export function ActionLogs(props: ActionLogsProps) {
               <td className="ActionsLogs__table__col ActionsLogs__table__col--nowrap">
                 {formatDate(action.timestamp)}
               </td>
-              <td className="ActionsLogs__table__col">{action.by}</td>
+              <td className="ActionsLogs__table__col ActionsLogs__table__col--nowrap">
+                {action.by}
+              </td>
               <td className="ActionsLogs__table__col">
                 {action.action} {stringifyObj(action.metadata)}
               </td>
