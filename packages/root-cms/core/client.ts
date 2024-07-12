@@ -84,6 +84,14 @@ export interface GetDocOptions {
 export interface SetDocOptions {
   /** Mode, either "draft" or "published". */
   mode: DocMode;
+}
+
+export interface SaveDraftOptions {
+  /**
+   * Locales to enable.
+   */
+  locales?: string[];
+
   /**
    * Email of user modifying the doc. If blank, defaults to `root-cms-client`.
    */
@@ -221,6 +229,44 @@ export class RootCMSClient {
     return null;
   }
 
+  /**
+   * Saves draft data to a doc.
+   *
+   * Note: this saves data to the "fields" attr of the draft doc. If you need to
+   * modify the sys-level attributes of the doc, use `setRawDoc()`.
+   */
+  async saveDraftData(
+    docId: string,
+    fieldsData: any,
+    options?: SaveDraftOptions
+  ) {
+    const {collection, slug} = parseDocId(docId);
+    const draftDoc =
+      (await this.getRawDoc(collection, slug, {mode: 'draft'})) || {};
+    const draftSys = draftDoc.sys || {};
+    const modifiedBy = options?.modifiedBy || 'root-cms-client';
+    const fields = marshalData(fieldsData || {});
+    const data = {
+      id: docId,
+      collection,
+      slug,
+      sys: {
+        ...draftSys,
+        createdAt: draftSys.createdAt ?? Timestamp.now(),
+        createdBy: draftSys.createdBy ?? modifiedBy,
+        modifiedAt: Timestamp.now(),
+        modifiedBy,
+        locales: options?.locales ?? draftSys.locales ?? ['en'],
+      },
+      fields,
+    };
+    await this.setRawDoc(collection, slug, data, {mode: 'draft'});
+  }
+
+  /**
+   * Prefer `saveDraftData('Pages/foo', data)`. Only use this if you know what
+   * you're doing.
+   */
   async setRawDoc(
     collectionId: string,
     slug: string,
@@ -904,6 +950,35 @@ export function getCmsPlugin(rootConfig: RootConfig): CMSPlugin {
 }
 
 /**
+ * Walks the data tree and converts any array of objects into "array objects"
+ * for storage in firestore.
+ */
+export function marshalData(data: any): any {
+  const result: any = {};
+  for (const key in data) {
+    const val = data[key];
+    if (isObject(val)) {
+      result[key] = marshalData(val);
+    } else if (Array.isArray(val)) {
+      if (val.length > 0 && val.some((item) => isObject(item))) {
+        const items = val.map((item) => {
+          if (isObject(item)) {
+            return marshalData(item);
+          }
+          return item;
+        });
+        result[key] = toArrayObject(items);
+      } else {
+        result[key] = val;
+      }
+    } else {
+      result[key] = val;
+    }
+  }
+  return result;
+}
+
+/**
  * Walks the data tree and converts any Timestamp objects to millis and any
  * _array maps to normal arrays.
  *
@@ -964,7 +1039,7 @@ export interface ArrayObject {
  * This database storage method makes it easier to update a single field in a
  * deeply nested array object.
  */
-export function marshalArray(arr: any[]): ArrayObject {
+export function toArrayObject(arr: any[]): ArrayObject {
   if (!Array.isArray(arr)) {
     return arr;
   }
@@ -976,6 +1051,8 @@ export function marshalArray(arr: any[]): ArrayObject {
   }
   return arrObject;
 }
+
+export const marshalArray = toArrayObject;
 
 /**
  * Converts an `ArrayObject` to a normal array.
@@ -1051,4 +1128,20 @@ function stringifyObj(obj: any) {
     return `{${entries.join(', ')}}`;
   }
   return format(obj);
+}
+
+/**
+ * Parses a docId (e.g. `Pages/foo`) and returns the `collection` and `slug`.
+ */
+export function parseDocId(docId: string) {
+  const sepIndex = docId.indexOf('/');
+  if (sepIndex <= 0) {
+    throw new Error(`invalid doc id: ${docId}`);
+  }
+  const collection = docId.slice(0, sepIndex);
+  const slug = docId.slice(sepIndex + 1).replaceAll('/', '--');
+  if (!collection || !slug) {
+    throw new Error(`invalid doc id: ${docId}`);
+  }
+  return {collection, slug};
 }
