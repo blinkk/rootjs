@@ -1140,5 +1140,8 @@ export function parseDocId(docId: string) {
   }
   const collection = docId.slice(0, sepIndex);
   const slug = docId.slice(sepIndex + 1).replaceAll('/', '--');
+  if (!collection || !slug) {
+    throw new Error(`invalid doc id: ${docId}`);
+  }
   return {collection, slug};
 }
