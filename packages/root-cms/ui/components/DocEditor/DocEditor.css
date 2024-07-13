@@ -430,6 +430,28 @@
   margin-right: 10px;
 }
 
+.DocEditor__FileField__VideoPreview {
+  position: relative;
+  border: 1px solid #dedede;
+  margin-bottom: 10px;
+}
+
+.DocEditor__FileField__VideoPreview__video {
+  aspect-ratio: var(--video-aspect-ratio, auto);
+  object-fit: contain;
+}
+
+.DocEditor__FileField__VideoPreview__dimens {
+  position: absolute;
+  top: -1px;
+  right: -1px;
+  padding: 4px 8px;
+  background: black;
+  color: white;
+  font-size: 8px;
+  font-weight: 700;
+}
+
 .DocEditor__DateTimeField input {
   display: block;
   width: 100%;

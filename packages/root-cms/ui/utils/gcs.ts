@@ -1,8 +1,8 @@
 import {ref as storageRef, updateMetadata, uploadBytes} from 'firebase/storage';
 
-const IMAGE_EXTS = ['jpg', 'png', 'svg', 'webp'];
-
-const GCI_SUPPORTED_EXTS = ['jpg', 'png', 'webp'];
+export const IMAGE_EXTS = ['jpg', 'png', 'svg', 'webp'];
+export const GCI_SUPPORTED_EXTS = ['jpg', 'png', 'webp'];
+export const VIDEO_EXTS = ['mp4', 'webm'];
 
 export interface UploadFileOptions {
   preserveFilename?: boolean;
@@ -13,7 +13,7 @@ export interface UploadFileOptions {
 export async function uploadFileToGCS(file: File, options?: UploadFileOptions) {
   const projectId = window.__ROOT_CTX.rootConfig.projectId;
   const hashHex = await sha1(file);
-  const ext = normalizeExt(file.name.split('.').at(-1) || '');
+  const ext = getFileExt(file.name);
   const filename = options?.preserveFilename
     ? `${hashHex}/${file.name}`
     : `${hashHex}.${ext}`;
@@ -27,7 +27,7 @@ export async function uploadFileToGCS(file: File, options?: UploadFileOptions) {
   meta.uploadedBy = window.firebase.user.email || 'unknown';
   meta.uploadedAt = String(Math.floor(new Date().getTime()));
   const gcsPath = `/${gcsRef.bucket}/${gcsRef.fullPath}`;
-  let imageSrc = `https://storage.googleapis.com${gcsPath}`;
+  let fileUrl = `https://storage.googleapis.com${gcsPath}`;
   if (IMAGE_EXTS.includes(ext)) {
     const dimens = await getImageDimensions(file);
     meta.width = dimens.width;
@@ -36,9 +36,14 @@ export async function uploadFileToGCS(file: File, options?: UploadFileOptions) {
       const gciUrl = await getGciUrl(gcsPath);
       if (gciUrl) {
         meta.gcsPath = gcsPath;
-        imageSrc = gciUrl;
+        fileUrl = gciUrl;
       }
     }
+  } else if (VIDEO_EXTS.includes(ext)) {
+    const dimens = await getVideoDimensions(fileUrl);
+    meta.width = dimens.width;
+    meta.height = dimens.height;
+    console.log('video dimensions:', dimens);
   }
 
   // By default, set the cache-control to 1hr.
@@ -50,8 +55,12 @@ export async function uploadFileToGCS(file: File, options?: UploadFileOptions) {
   console.log('updated meta data: ', meta);
   return {
     ...meta,
-    src: imageSrc,
+    src: fileUrl,
   };
+}
+
+export function getFileExt(filename: string) {
+  return normalizeExt(filename.split('.').at(-1) || '');
 }
 
 /**
@@ -98,6 +107,41 @@ async function getImageDimensions(
     };
     reader.onerror = reject;
     reader.readAsDataURL(file);
+  });
+}
+
+async function getVideoDimensions(
+  url: string
+): Promise<{width: number; height: number}> {
+  return new Promise((resolve, reject) => {
+    const video = document.createElement('video');
+
+    video.addEventListener(
+      'loadedmetadata',
+      () => {
+        const dimensions = {
+          width: video.videoWidth,
+          height: video.videoHeight,
+        };
+        resolve(dimensions);
+        document.body.removeChild(video);
+      },
+      false
+    );
+
+    video.addEventListener(
+      'error',
+      () => {
+        reject(new Error('Failed to load video metadata'));
+        document.body.removeChild(video);
+      },
+      false
+    );
+
+    video.className = 'sr-only';
+    video.src = url;
+    video.preload = 'metadata';
+    document.body.appendChild(video);
   });
 }
 
