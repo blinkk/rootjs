@@ -4,7 +4,7 @@ import {IconFileUpload, IconTrash} from '@tabler/icons-preact';
 import {useEffect, useRef, useState} from 'preact/hooks';
 import * as schema from '../../../../core/schema.js';
 import {joinClassNames} from '../../../utils/classes.js';
-import {uploadFileToGCS} from '../../../utils/gcs.js';
+import {VIDEO_EXTS, getFileExt, uploadFileToGCS} from '../../../utils/gcs.js';
 import {FieldProps} from './FieldProps.js';
 
 export function FileField(props: FieldProps) {
@@ -132,6 +132,9 @@ export function FileField(props: FieldProps) {
           </Tooltip>
         </div>
       )}
+      {file && file.src && isVideoFile(file.src) && (
+        <VideoPreview key={file.src} {...file} />
+      )}
       {file && file.src ? (
         <div className="DocEditor__FileField__file">
           <TextInput
@@ -165,4 +168,35 @@ export function FileField(props: FieldProps) {
       </label>
     </div>
   );
+}
+
+function VideoPreview(props: {src: string; width?: number; height?: number}) {
+  const style: any = {};
+  if (props.width && props.height) {
+    style['--video-aspect-ratio'] = `${props.width} / ${props.height}`;
+  }
+  return (
+    <div className="DocEditor__FileField__VideoPreview" style={style}>
+      <video
+        className="DocEditor__FileField__VideoPreview__video"
+        controls
+        preload="metadata"
+      >
+        <source src={props.src} type={`video/${getFileExt(props.src)}`} />
+      </video>
+      {props.width && props.height && (
+        <div className="DocEditor__FileField__VideoPreview__dimens">
+          {`${props.width}x${props.height}`}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function isVideoFile(src: string) {
+  if (!src) {
+    return false;
+  }
+  const ext = getFileExt(src);
+  return VIDEO_EXTS.includes(ext);
 }
