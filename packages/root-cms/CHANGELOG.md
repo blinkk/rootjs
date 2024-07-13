@@ -1,5 +1,14 @@
 # @blinkk/root-cms
 
+## 1.2.6
+
+### Patch Changes
+
+- df9bcdf: feat: add video width/height to uploaded files
+- ab483bb: feat: add saveDraftData() to cms client
+- 1fd83dd: fix: fix doc deletes
+  - @blinkk/root@1.2.6
+
 ## 1.2.5
 
 ### Patch Changes
