@@ -155,8 +155,9 @@ DocumentPage.Preview = (props: PreviewProps) => {
     window.__ROOT_CTX.rootConfig.domain ||
     'https://example.com';
   const servingPath = getDocServingPath({collectionId, slug});
-
+  const basePreviewPath = getDocPreviewPath({collectionId, slug});
   const servingUrl = `${domain}${servingPath}`;
+
   const [iframeUrl, setIframeUrl] = useState(servingUrl);
   const [device, setDevice] = useLocalStorage<Device>(
     'root::DocumentPage::preview::device',
@@ -175,8 +176,8 @@ DocumentPage.Preview = (props: PreviewProps) => {
   const searchParams = new URLSearchParams(window.location.search);
   searchParams.set('preview', 'true');
   const query = `${searchParams.toString()}${window.location.hash}`;
-  const previewPath = `${getDocPreviewPath({collectionId, slug})}?${query}`;
-  const localizedPreviewPath = `${getDocPreviewPath({
+  const previewUrl = `${basePreviewPath}?${query}`;
+  const localizedPreviewUrl = `${getDocPreviewPath({
     collectionId,
     slug,
     locale: selectedLocale,
@@ -194,8 +195,8 @@ DocumentPage.Preview = (props: PreviewProps) => {
     const iframe = iframeRef.current!;
     iframe.src = 'about:blank';
     window.setTimeout(() => {
-      if (iframe.src !== localizedPreviewPath) {
-        iframe.src = localizedPreviewPath;
+      if (iframe.src !== localizedPreviewUrl) {
+        iframe.src = localizedPreviewUrl;
       } else {
         iframe.contentWindow!.location.reload();
       }
@@ -209,8 +210,16 @@ DocumentPage.Preview = (props: PreviewProps) => {
       if (!iframeWindow) {
         return;
       }
-      if (!iframeWindow.location.href.startsWith('about:blank')) {
+      // Whenever the iframe url changes (e.g. user navigates to a different
+      // page), update the iframe url bar. Note that if the preview path is
+      // different than the serving path, then the serving path will always be
+      // displayed regardless of the iframe url changes.
+      if (
+        basePreviewPath === servingPath &&
+        !iframeWindow.location.href.startsWith('about:blank')
+      ) {
         const currentPath = iframeWindow.location.pathname;
+        console.log(`iframe url change: ${currentPath}`);
         setIframeUrl(`${domain}${currentPath}`);
       }
     }
@@ -228,7 +237,7 @@ DocumentPage.Preview = (props: PreviewProps) => {
 
   useEffect(() => {
     const iframe = iframeRef.current!;
-    iframe.src = localizedPreviewPath;
+    iframe.src = localizedPreviewUrl;
   }, [selectedLocale]);
 
   function toggleDevice(device: Device) {
@@ -246,7 +255,7 @@ DocumentPage.Preview = (props: PreviewProps) => {
   }
 
   function openNewTab() {
-    const tab = window.open(localizedPreviewPath, '_blank');
+    const tab = window.open(localizedPreviewUrl, '_blank');
     if (tab) {
       tab.focus();
     }
@@ -371,7 +380,7 @@ DocumentPage.Preview = (props: PreviewProps) => {
           </div>
         )}
         <div className="DocumentPage__main__previewFrame__iframeWrap">
-          <iframe ref={iframeRef} src={previewPath} />
+          <iframe ref={iframeRef} src={previewUrl} />
         </div>
       </div>
     </div>

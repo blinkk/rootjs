@@ -102,6 +102,9 @@ export async function renderApp(
       base: rootConfig.base || '/',
       gci: gci,
       i18n: rootConfig.i18n,
+      server: {
+        trailingSlash: rootConfig.server?.trailingSlash,
+      },
     },
     firebaseConfig: cmsConfig.firebaseConfig,
     gapi: cmsConfig.gapi,
