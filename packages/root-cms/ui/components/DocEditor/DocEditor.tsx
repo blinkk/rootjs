@@ -421,13 +421,18 @@ DocEditor.FieldHeader = (props: {
 DocEditor.ObjectField = (props: FieldProps) => {
   const field = props.field as schema.ObjectField;
   // Default to the "drawer" variant.
-  const variant = field.variant || 'drawer';
+  let variant = field.variant;
+  if (!variant) {
+    if (props.isArrayChild) {
+      variant = 'inline';
+    } else {
+      variant = 'drawer';
+    }
+  }
   if (variant === 'drawer') {
     return <DocEditor.ObjectFieldDrawer {...props} />;
   }
-  // NOTE(stevenle): this is the old object field preserved here in case we
-  // need to roll back for any reason. All new objects should be defaulting to
-  // the "drawer" variant.
+  // Inline variant, used by the ArrayField.
   return (
     <div className="DocEditor__ObjectField">
       <div className="DocEditor__ObjectField__fields">
@@ -913,6 +918,7 @@ DocEditor.ArrayField = (props: FieldProps) => {
                 deepKey={`${props.deepKey}.${key}`}
                 draft={props.draft}
                 hideHeader
+                isArrayChild
               />
             </div>
           </details>

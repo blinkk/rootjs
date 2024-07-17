@@ -10,4 +10,5 @@ export interface FieldProps {
   shallowKey: string;
   deepKey: string;
   draft: DraftController;
+  isArrayChild?: boolean;
 }

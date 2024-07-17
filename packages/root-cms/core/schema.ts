@@ -125,7 +125,7 @@ export type ObjectField = CommonFieldProps & {
   type: 'object';
   fields: FieldWithId[];
   /** Defaults to "drawer". */
-  variant?: 'drawer';
+  variant?: 'drawer' | 'inline';
   /** Options for the "drawer" variant. */
   drawerOptions?: {
     /** Whether the drawer should initialize to the "collapsed" state. */
