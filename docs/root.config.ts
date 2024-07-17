@@ -29,7 +29,7 @@ export default defineConfig({
     },
   },
   server: {
-    trailingSlash: false,
+    trailingSlash: true,
     sessionCookieSecret: process.env.COOKIE_SECRET,
   },
   plugins: [

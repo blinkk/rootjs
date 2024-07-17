@@ -59,6 +59,9 @@ declare global {
           urlFormat?: string;
           groups?: Record<string, {label?: string; locales: string[]}>;
         };
+        server: {
+          trailingSlash?: boolean;
+        };
       };
       firebaseConfig: Record<string, string>;
       gapi?: {

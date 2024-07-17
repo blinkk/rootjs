@@ -107,7 +107,9 @@ function formatUrlPath(urlFormat: string, params: Record<string, string>) {
       return params[key] ?? match;
     }
   );
-  return normalizeUrlPath(urlPath);
+  return normalizeUrlPath(urlPath, {
+    trailingSlash: window.__ROOT_CTX.rootConfig.server.trailingSlash,
+  });
 }
 
 function normalizeUrlPath(
@@ -131,6 +133,10 @@ function normalizeUrlPath(
   // Add leading slash if needed.
   if (!urlPath.startsWith('/')) {
     urlPath = `/${urlPath}`;
+  }
+  // Add trailing slash if needed.
+  if (options?.trailingSlash && !urlPath.endsWith('/')) {
+    urlPath = `${urlPath}/`;
   }
   return urlPath;
 }
