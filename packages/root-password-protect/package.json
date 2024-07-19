@@ -1,6 +1,6 @@
 {
   "name": "@blinkk/root-password-protect",
-  "version": "1.2.6",
+  "version": "1.2.7",
   "author": "s@blinkk.com",
   "license": "MIT",
   "engines": {
@@ -42,7 +42,7 @@
     "micromatch": "4.0.5"
   },
   "peerDependencies": {
-    "@blinkk/root": "1.2.6",
+    "@blinkk/root": "1.2.7",
     "preact": ">=10",
     "preact-render-to-string": ">=5"
   },

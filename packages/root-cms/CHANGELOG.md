@@ -1,5 +1,12 @@
 # @blinkk/root-cms
 
+## 1.2.7
+
+### Patch Changes
+
+- 344e5a0: fix: normalize iframe preview urls
+  - @blinkk/root@1.2.7
+
 ## 1.2.6
 
 ### Patch Changes
