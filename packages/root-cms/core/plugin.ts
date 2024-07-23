@@ -157,6 +157,11 @@ export type CMSPluginOptions = {
   experiments?: {
     ai?: boolean | CMSAIConfig;
   };
+
+  /**
+   * Adjust console output verbosity. Default is `'info'`.
+   */
+  logLevel?: 'info' | 'warn' | 'error' | 'silent' | 'debug';
 };
 
 export type CMSPlugin = Plugin & {
@@ -190,6 +195,8 @@ function getFirebaseApp(gcpProjectId: string): App {
 }
 
 export function cmsPlugin(options: CMSPluginOptions): CMSPlugin {
+  const logLevel = options.logLevel || 'info';
+
   if (!options.firebaseConfig) {
     throw new Error(
       'missing firebaseConfig. create a new app in the firebase admin console and copy the firebase config object to root.config.ts'
@@ -298,7 +305,9 @@ export function cmsPlugin(options: CMSPluginOptions): CMSPlugin {
   async function getCurrentUser(req: Request): Promise<CMSUser | null> {
     const sessionCookie = req.session.getItem(SESSION_COOKIE_AUTH);
     if (!sessionCookie) {
-      console.log('no login session cookie');
+      if (logLevel === 'debug') {
+        console.log('no login session cookie');
+      }
       return null;
     }
 
