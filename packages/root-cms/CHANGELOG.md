@@ -1,5 +1,13 @@
 # @blinkk/root-cms
 
+## 1.2.8
+
+### Patch Changes
+
+- 955e35b: fix: avoid excessive logging, add logLevel config
+- Updated dependencies [3c78136]
+  - @blinkk/root@1.2.8
+
 ## 1.2.7
 
 ### Patch Changes
