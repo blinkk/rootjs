@@ -1,5 +1,11 @@
 # @blinkk/root
 
+## 1.2.8
+
+### Patch Changes
+
+- 3c78136: feat: add enableScriptAsync to render script tags async
+
 ## 1.2.7
 
 ## 1.2.6
