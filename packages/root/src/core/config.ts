@@ -79,6 +79,14 @@ export interface RootUserConfig {
    * Plugins.
    */
   plugins?: Plugin[];
+
+  /**
+   * Experimental config options. Note: these are subject to change at any time.
+   */
+  experiments?: {
+    /** Whether to render `<script>` tags with `async`. */
+    enableScriptAsync?: boolean;
+  };
 }
 
 export type RootConfig = RootUserConfig & {
