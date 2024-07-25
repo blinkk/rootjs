@@ -63,4 +63,7 @@ export default defineConfig({
     end_with_newline: true,
     extra_liners: ['img', 'root-header', 'root-island'],
   },
+  experiments: {
+    enableScriptAsync: true,
+  },
 });

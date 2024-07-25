@@ -311,6 +311,11 @@ export class Renderer {
       return <link rel="stylesheet" href={cssUrl} nonce={nonce} />;
     });
     const scriptTags = Array.from(jsDeps).map((jsUrls) => {
+      // TODO(stevenle): after verifying this doesn't cause any negative side
+      // effects, make async the default.
+      if (this.rootConfig.experiments?.enableScriptAsync) {
+        return <script type="module" src={jsUrls} nonce={nonce} async />;
+      }
       return <script type="module" src={jsUrls} nonce={nonce} />;
     });
 
