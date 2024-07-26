@@ -940,6 +940,22 @@ export class RootCMSClient {
   }
 }
 
+/**
+ * Returns true if the `data` is a rich text data object.
+ */
+export function isRichTextData(data: any) {
+  // The RichTextEditor uses editorjs under the hood, the data format is
+  // something like:
+  //  {
+  //   "time": 1721761211720,
+  //   "version": "2.28.2",
+  //   "blocks": [...]
+  // }
+  return Boolean(
+    isObject(data) && Array.isArray(data.blocks) && data.time && data.version
+  );
+}
+
 export function getCmsPlugin(rootConfig: RootConfig): CMSPlugin {
   const plugins: Plugin[] = rootConfig.plugins || [];
   const plugin = plugins.find((plugin) => plugin.name === 'root-cms');
@@ -954,6 +970,11 @@ export function getCmsPlugin(rootConfig: RootConfig): CMSPlugin {
  * for storage in firestore.
  */
 export function marshalData(data: any): any {
+  // Avoid changing the format of rich text data.
+  if (isRichTextData(data)) {
+    return data;
+  }
+
   const result: any = {};
   for (const key in data) {
     const val = data[key];
