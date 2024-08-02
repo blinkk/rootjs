@@ -1,5 +1,15 @@
 # @blinkk/root-cms
 
+## 1.3.1
+
+### Patch Changes
+
+- a5a6ae6: fix: prevent unauthorized users from accessing cms ui
+- c29d741: fix: avoid marshalling rich text data
+- afef97c: chore: bump root package versions
+- Updated dependencies [afef97c]
+  - @blinkk/root@1.3.1
+
 ## 1.2.8
 
 ### Patch Changes

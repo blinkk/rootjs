@@ -1,5 +1,11 @@
 # @blinkk/root
 
+## 1.3.1
+
+### Patch Changes
+
+- afef97c: chore: bump root package versions
+
 ## 1.2.8
 
 ### Patch Changes
