@@ -212,7 +212,7 @@ export function cmsPlugin(options: CMSPluginOptions): CMSPlugin {
    * the URL path starts with /cms or if ?preview=true is in the URL.
    */
   function loginRequired(req: Request): boolean {
-    const urlPath = String(req.originalUrl).toLowerCase();
+    const urlPath = String(req.originalUrl).split('?')[0].toLowerCase();
     // Allow the cron to run unauthenticated. The cron job is responsible
     // for saving version history.
     if (urlPath === '/cms/api/cron.run') {
