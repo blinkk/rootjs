@@ -1,5 +1,12 @@
 # @blinkk/root-cms
 
+## 1.3.2
+
+### Patch Changes
+
+- 750bfce: fix: remove query params from url path check
+  - @blinkk/root@1.3.2
+
 ## 1.3.1
 
 ### Patch Changes
