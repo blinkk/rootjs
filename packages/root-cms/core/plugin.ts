@@ -567,7 +567,9 @@ export function cmsPlugin(options: CMSPluginOptions): CMSPlugin {
       // Render the CMS SPA.
       server.use('/cms', async (req: Request, res: Response) => {
         try {
-          // If user is not logged in and authorized, redirect to the login page.
+          // Enforce login for all CMS paths. The `req.user` would only be
+          // populated if the firebase auth token is valid and the user has
+          // access via the Root CMS sharebox.
           if (!req.user) {
             redirectToLogin(req, res);
             return;
