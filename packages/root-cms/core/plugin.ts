@@ -212,13 +212,21 @@ export function cmsPlugin(options: CMSPluginOptions): CMSPlugin {
    * the URL path starts with /cms or if ?preview=true is in the URL.
    */
   function loginRequired(req: Request): boolean {
+    const urlPath = String(req.originalUrl).toLowerCase();
     // Allow the cron to run unauthenticated. The cron job is responsible
     // for saving version history.
-    if (req.originalUrl === '/cms/api/cron.run') {
+    if (urlPath === '/cms/api/cron.run') {
+      return false;
+    }
+    // Allow the signin.css and signin.js files to be rendered without auth.
+    if (
+      urlPath === '/cms/static/signin.css' ||
+      urlPath === '/cms/static/signin.js'
+    ) {
       return false;
     }
     // Require login on all `/cms/` paths.
-    if (req.originalUrl.startsWith('/cms')) {
+    if (urlPath.startsWith('/cms')) {
       return true;
     }
     // Require login on all paths that have `?preview=true`, which is used by
@@ -302,6 +310,11 @@ export function cmsPlugin(options: CMSPluginOptions): CMSPlugin {
     return {authorized: true};
   }
 
+  /**
+   * Returns the current user based on the request's session cookie. The
+   * session cookie is checked for validity through Firebase Auth and the user's
+   * email is verified to have access to Root CMS, otherwise returns `null`.
+   */
   async function getCurrentUser(req: Request): Promise<CMSUser | null> {
     const sessionCookie = req.session.getItem(SESSION_COOKIE_AUTH);
     if (!sessionCookie) {
@@ -374,6 +387,18 @@ export function cmsPlugin(options: CMSPluginOptions): CMSPlugin {
       console.error(err);
       return null;
     }
+  }
+
+  function redirectToLogin(req: Request, res: Response) {
+    if (String(req.originalUrl).toLowerCase().startsWith('/cms/api')) {
+      res.status(401).json({success: false, error: 'NOT_AUTHORIZED'});
+      return;
+    }
+    console.log('redirecting to login page');
+    const params = new URLSearchParams({
+      continue: req.originalUrl,
+    });
+    res.redirect(`/cms/login?${params.toString()}`);
   }
 
   const plugin: CMSPlugin = {
@@ -451,9 +476,6 @@ export function cmsPlugin(options: CMSPluginOptions): CMSPlugin {
         return app;
       }
 
-      const staticDir = path.resolve(__dirname, 'ui');
-      server.use('/cms/static', sirv(staticDir, {dev: false}));
-
       // Login handler.
       server.use('/cms/login', async (req: Request, res: Response) => {
         if (
@@ -529,20 +551,15 @@ export function cmsPlugin(options: CMSPluginOptions): CMSPlugin {
         // If no user and login is required for the given path, redirect to the
         // login page.
         if (!user && loginRequired(req)) {
-          if (req.originalUrl.startsWith('/cms/api')) {
-            res.status(401).json({success: false, error: 'NOT_AUTHORIZED'});
-            return;
-          }
-          console.log('redirecting to login page');
-          const params = new URLSearchParams({
-            continue: req.originalUrl,
-          });
-          res.redirect(`/cms/login?${params.toString()}`);
+          redirectToLogin(req, res);
           return;
         }
 
         next();
       });
+
+      const staticDir = path.resolve(__dirname, 'ui');
+      server.use('/cms/static', sirv(staticDir, {dev: false}));
 
       // Register API handlers.
       api(server);
@@ -550,6 +567,11 @@ export function cmsPlugin(options: CMSPluginOptions): CMSPlugin {
       // Render the CMS SPA.
       server.use('/cms', async (req: Request, res: Response) => {
         try {
+          // If user is not logged in and authorized, redirect to the login page.
+          if (!req.user) {
+            redirectToLogin(req, res);
+            return;
+          }
           const app = await getRenderer(req);
           await app.renderApp(req, res, {
             rootConfig: req.rootConfig!,
