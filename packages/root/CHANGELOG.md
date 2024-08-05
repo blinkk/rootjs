@@ -1,5 +1,11 @@
 # @blinkk/root
 
+## 1.3.3
+
+### Patch Changes
+
+- dd78a18: fix: fix sitemap.xml url path generation
+
 ## 1.3.2
 
 ## 1.3.1
