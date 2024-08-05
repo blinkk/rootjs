@@ -69,9 +69,11 @@ ProjectPage.CollectionList = () => {
           <div className="ProjectPage__collectionList__collection__name">
             {collection.name || collection.id}
           </div>
-          <div className="ProjectPage__collectionList__collection__desc">
-            {collection.description || ''}
-          </div>
+          {collection.description && (
+            <div className="ProjectPage__collectionList__collection__desc">
+              {collection.description}
+            </div>
+          )}
         </a>
       ))}
       {collections.length === 0 && (

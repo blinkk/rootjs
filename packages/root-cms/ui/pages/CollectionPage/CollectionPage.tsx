@@ -102,9 +102,11 @@ export function CollectionPage(props: CollectionPageProps) {
                 <div className="CollectionPage__side__collection__name">
                   {collection.name || collection.id}
                 </div>
-                <div className="CollectionPage__side__collection__desc">
-                  {collection.description || ''}
-                </div>
+                {collection.description && (
+                  <div className="CollectionPage__side__collection__desc">
+                    {collection.description}
+                  </div>
+                )}
               </a>
             ))}
             {matchedCollections.length === 0 && (
