@@ -387,16 +387,23 @@ export class Renderer {
   async getSitemap(): Promise<Sitemap> {
     const sitemap: Sitemap = {};
     const sitemapItemAlts: Record<string, Record<string, string>> = {};
+    const trailingSlash = this.rootConfig.server?.trailingSlash || false;
 
     await this.router.walk(async (urlPath: string, route: Route) => {
       const routePaths = await this.router.getAllPathsForRoute(urlPath, route);
       routePaths.forEach((routePath) => {
         const routeLocale = route.isDefaultLocale ? 'x-default' : route.locale;
-        const defaultUrlPath = replaceParams(route.routePath, routePath.params);
+        const defaultUrlPath = normalizeUrlPath(
+          replaceParams(route.routePath, routePath.params),
+          {trailingSlash: trailingSlash}
+        );
         if (!sitemapItemAlts[defaultUrlPath]) {
           sitemapItemAlts[defaultUrlPath] = {};
         }
-        sitemapItemAlts[defaultUrlPath][routeLocale] = urlPath;
+        sitemapItemAlts[defaultUrlPath][routeLocale] = normalizeUrlPath(
+          replaceParams(urlPath, routePath.params),
+          {trailingSlash: trailingSlash}
+        );
         const sitemapItem: SitemapItem = {
           urlPath: routePath.urlPath,
           route,
