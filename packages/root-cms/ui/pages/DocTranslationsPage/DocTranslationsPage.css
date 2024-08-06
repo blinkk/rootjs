@@ -83,6 +83,8 @@
 
 .DocTranslationsPage__Table td {
   width: 450px;
+  max-width: 450px;
+  min-width: 450px;
   border: 1px solid var(--color-border);
   /* vertical-align: top; */
   padding: 0;
@@ -116,6 +118,10 @@
   border: 1px solid transparent;
   border-radius: 0;
   min-height: 100%;
+}
+
+.DocTranslationsPage__Textarea--empty {
+  background-color: #FFF5F5;
 }
 
 .DocTranslationsPage__Table td:has(.DocTranslationsPage__Textarea--hasChanges) {
