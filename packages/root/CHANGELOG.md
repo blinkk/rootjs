@@ -1,5 +1,12 @@
 # @blinkk/root
 
+## 1.3.6
+
+### Patch Changes
+
+- 43d6f94: fix: update sitemap hreflang format to iso-639
+- 1843988: chore: remove trailing nbsp from rich text lines
+
 ## 1.3.5
 
 ### Patch Changes
