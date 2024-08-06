@@ -1,5 +1,11 @@
 # @blinkk/root
 
+## 1.3.5
+
+### Patch Changes
+
+- c04e1ac: fix: fix sitemap trailing slash (with tests)
+
 ## 1.3.4
 
 ### Patch Changes
