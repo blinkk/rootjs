@@ -1,5 +1,11 @@
 # @blinkk/root
 
+## 1.3.4
+
+### Patch Changes
+
+- eb03a32: fix: fix trailing slashes used in sitemap
+
 ## 1.3.3
 
 ### Patch Changes
