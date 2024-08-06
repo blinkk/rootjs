@@ -125,8 +125,14 @@ export function normalizeString(str: string) {
   const lines = String(str)
     .trim()
     .split('\n')
-    .map((line) => line.trimEnd());
+    .map((line) => removeTrailingWhitespace(line));
   return lines.join('\n');
+}
+
+function removeTrailingWhitespace(str: string) {
+  return String(str)
+    .trimEnd()
+    .replace(/&nbsp;$/, '');
 }
 
 export function normalizeLocale(locale: string) {
