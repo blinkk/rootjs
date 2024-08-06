@@ -3,4 +3,4 @@
 '@blinkk/root-cms': patch
 ---
 
-chore: remove trailing &nbsp; from rich text lines
+chore: remove trailing nbsp from rich text lines
