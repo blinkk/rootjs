@@ -198,6 +198,10 @@ export function normalizeUrlPath(
   if (!urlPath.startsWith('/')) {
     urlPath = `/${urlPath}`;
   }
+  // Add trailing slash if needed.
+  if (options?.trailingSlash && !urlPath.endsWith('/')) {
+    urlPath = `${urlPath}/`;
+  }
   return urlPath;
 }
 
