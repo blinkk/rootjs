@@ -30,6 +30,7 @@ import {
 } from '../core/types.js';
 import type {ElementGraph} from '../node/element-graph.js';
 import {parseTagNames} from '../utils/elements.js';
+import {toHrefLang} from '../utils/i18n.js';
 import {AssetMap} from './asset-map/asset-map.js';
 import {htmlMinify} from './html-minify.js';
 import {htmlPretty} from './html-pretty.js';
@@ -386,13 +387,19 @@ export class Renderer {
 
   async getSitemap(): Promise<Sitemap> {
     const sitemap: Sitemap = {};
-    const sitemapItemAlts: Record<string, Record<string, string>> = {};
+    const sitemapItemAlts: Record<
+      string,
+      Record<string, {hrefLang: string; urlPath: string}>
+    > = {};
     const trailingSlash = this.rootConfig.server?.trailingSlash || false;
 
     await this.router.walk(async (urlPath: string, route: Route) => {
       const routePaths = await this.router.getAllPathsForRoute(urlPath, route);
       routePaths.forEach((routePath) => {
         const routeLocale = route.isDefaultLocale ? 'x-default' : route.locale;
+        const hrefLang = route.isDefaultLocale
+          ? 'x-default'
+          : toHrefLang(route.locale);
         const defaultUrlPath = normalizeUrlPath(
           replaceParams(route.routePath, routePath.params),
           {trailingSlash: trailingSlash}
@@ -400,15 +407,18 @@ export class Renderer {
         if (!sitemapItemAlts[defaultUrlPath]) {
           sitemapItemAlts[defaultUrlPath] = {};
         }
-        sitemapItemAlts[defaultUrlPath][routeLocale] = normalizeUrlPath(
-          replaceParams(urlPath, routePath.params),
-          {trailingSlash: trailingSlash}
-        );
+        sitemapItemAlts[defaultUrlPath][routeLocale] = {
+          hrefLang: hrefLang,
+          urlPath: normalizeUrlPath(replaceParams(urlPath, routePath.params), {
+            trailingSlash: trailingSlash,
+          }),
+        };
         const sitemapItem: SitemapItem = {
           urlPath: routePath.urlPath,
           route,
           params: routePath.params,
           locale: routeLocale,
+          hrefLang: hrefLang,
           alts: sitemapItemAlts[defaultUrlPath],
         };
         sitemap[routePath.urlPath] = sitemapItem;
@@ -423,7 +433,8 @@ export class Renderer {
       .forEach((urlPath: string) => {
         // console.log(urlPath);
         const sitemapItem = sitemap[urlPath];
-        const orderedAlts: Record<string, string> = {};
+        const orderedAlts: Record<string, {hrefLang: string; urlPath: string}> =
+          {};
         Object.keys(sitemapItem.alts)
           .sort(sortLocales)
           .forEach((locale) => {

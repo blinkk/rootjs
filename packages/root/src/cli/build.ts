@@ -399,15 +399,13 @@ export async function build(rootProjectDir?: string, options?: BuildOptions) {
           sitemapXmlItems.push('<url>');
           sitemapXmlItems.push(`  <loc>${domain}${urlPath}</loc>`);
           if (sitemapItem.alts) {
-            Object.entries(sitemapItem.alts).forEach(
-              ([altLocale, altUrlPath]) => {
-                if (sitemapItem.locale !== altLocale) {
-                  sitemapXmlItems.push(
-                    `  <xhtml:link rel="alternate" hreflang="${altLocale}" href="${domain}${altUrlPath}" />`
-                  );
-                }
+            Object.entries(sitemapItem.alts).forEach(([altLocale, item]) => {
+              if (sitemapItem.locale !== altLocale) {
+                sitemapXmlItems.push(
+                  `  <xhtml:link rel="alternate" hreflang="${item.hrefLang}" href="${domain}${item.urlPath}" />`
+                );
               }
-            );
+            });
           }
           sitemapXmlItems.push('</url>');
         }

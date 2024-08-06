@@ -231,8 +231,9 @@ export interface SitemapItem {
   route: Route;
   params: Record<string, string>;
   locale: string;
+  hrefLang: string;
   /**
    * Hreflang alts.
    */
-  alts: Record<string, string>;
+  alts: Record<string, {hrefLang: string; urlPath: string}>;
 }
