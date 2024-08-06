@@ -105,6 +105,8 @@ export class Router {
       return [];
     }
 
+    const trailingSlash = this.rootConfig.server?.trailingSlash;
+
     const urlPaths: Array<{urlPath: string; params: Record<string, string>}> =
       [];
     if (routeModule.getStaticPaths) {
@@ -124,7 +126,7 @@ export class Router {
               );
             } else {
               urlPaths.push({
-                urlPath: normalizeUrlPath(urlPath),
+                urlPath: normalizeUrlPath(urlPath, {trailingSlash}),
                 params: pathParams.params || {},
               });
             }

@@ -1,7 +1,7 @@
 import path from 'node:path';
 import {beforeEach, test, expect, afterEach} from 'vitest';
-import {listFilesRecursive} from '../src/utils/fsutils';
-import {Fixture, loadFixture} from './testutils';
+import {listFilesRecursive} from '../src/utils/fsutils.js';
+import {Fixture, loadFixture} from './testutils.js';
 
 let fixture: Fixture;
 
