@@ -488,6 +488,17 @@ export async function cmsCreateDoc(
     },
     fields: options?.fields ?? {},
   };
+
+  // Preserve "sys" values when copying and overwriting a doc.
+  if (doc.exists() && !options?.overwrite) {
+    const oldData = doc.data();
+    data.sys = {
+      ...oldData.sys,
+      modifiedAt: serverTimestamp(),
+      modifiedBy: window.firebase.user.email,
+    };
+  }
+
   await setDoc(docRef, data);
   logAction('doc.create', {metadata: {docId}});
 }
