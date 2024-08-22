@@ -227,6 +227,7 @@ export async function renderSignIn(
   }
   res.setHeader('Content-Type', 'text/html');
   setSecurityHeaders(options, req, res, nonce);
+  res.status(403);
   res.send(html);
 }
 
