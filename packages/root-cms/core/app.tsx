@@ -17,7 +17,9 @@ function App(props: AppProps) {
   return (
     <html>
       <head>
+        <meta charset="utf-8" />
         <title>{props.title}</title>
+        <meta name="robots" content="noindex" />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link
           rel="preconnect"
@@ -152,6 +154,7 @@ function SignIn(props: SignInProps) {
       <head>
         <meta charset="utf-8" />
         <title>{props.title}</title>
+        <meta name="robots" content="noindex" />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
         <link
