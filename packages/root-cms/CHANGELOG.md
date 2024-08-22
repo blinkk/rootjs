@@ -1,5 +1,12 @@
 # @blinkk/root-cms
 
+## 1.3.7
+
+### Patch Changes
+
+- e56a367: fix: preserve sys when copying a doc
+  - @blinkk/root@1.3.7
+
 ## 1.3.6
 
 ### Patch Changes
