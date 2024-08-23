@@ -135,6 +135,13 @@ export async function createDevServer(options?: {
     {type: 'dev', rootConfig}
   );
 
+  // Run any "startup" hooks.
+  for (const plugin of plugins) {
+    if (typeof plugin.hooks?.startup === 'function') {
+      await plugin.hooks.startup({command: 'dev', rootConfig});
+    }
+  }
+
   return server;
 }
 
