@@ -113,6 +113,14 @@ export async function createPreviewServer(options: {
     plugins,
     {type: 'preview', rootConfig}
   );
+
+  // Run any "startup" hooks.
+  for (const plugin of plugins) {
+    if (typeof plugin.hooks?.startup === 'function') {
+      await plugin.hooks.startup({command: 'preview', rootConfig});
+    }
+  }
+
   return server;
 }
 
