@@ -2,4 +2,4 @@
 '@blinkk/root': patch
 ---
 
-feat: add "startup" hook to plugins
+feat: [v2] add "startup" hook to plugins
