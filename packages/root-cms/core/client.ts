@@ -1,5 +1,5 @@
 import crypto from 'node:crypto';
-import {Plugin, RootConfig} from '@blinkk/root';
+import {RootConfig} from '@blinkk/root';
 import {App} from 'firebase-admin/app';
 import {
   FieldValue,
@@ -8,7 +8,7 @@ import {
   Timestamp,
   WriteBatch,
 } from 'firebase-admin/firestore';
-import {CMSPlugin} from './plugin.js';
+import {CMSPlugin, getCmsPlugin} from './plugin.js';
 
 export interface Doc<Fields = any> {
   /** The id of the doc, e.g. "Pages/foo-bar". */
@@ -956,15 +956,6 @@ export function isRichTextData(data: any) {
   );
 }
 
-export function getCmsPlugin(rootConfig: RootConfig): CMSPlugin {
-  const plugins: Plugin[] = rootConfig.plugins || [];
-  const plugin = plugins.find((plugin) => plugin.name === 'root-cms');
-  if (!plugin) {
-    throw new Error('could not find root-cms plugin config in root.config.ts');
-  }
-  return plugin as CMSPlugin;
-}
-
 /**
  * Walks the data tree and converts any array of objects into "array objects"
  * for storage in firestore.
@@ -1166,3 +1157,5 @@ export function parseDocId(docId: string) {
   }
   return {collection, slug};
 }
+
+export {getCmsPlugin};
