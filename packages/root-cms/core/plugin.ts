@@ -8,6 +8,7 @@ import {
   Plugin,
   Request,
   Response,
+  RootConfig,
   Server,
 } from '@blinkk/root';
 import bodyParser from 'body-parser';
@@ -21,9 +22,9 @@ import {getAuth, DecodedIdToken} from 'firebase-admin/auth';
 import {Firestore, getFirestore} from 'firebase-admin/firestore';
 import * as jsonwebtoken from 'jsonwebtoken';
 import sirv from 'sirv';
-import {generateTypes} from '../cli/generate-types.js';
 import {api} from './api.js';
 import {Action, RootCMSClient} from './client.js';
+import {runCompatibilityChecks} from './compatibility.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -439,6 +440,19 @@ export function cmsPlugin(options: CMSPluginOptions): CMSPlugin {
       cms: path.resolve(__dirname, './app.js'),
     }),
 
+    hooks: {
+      /**
+       * Startup hook. On `dev` and `build` commands, the plugin does
+       * compatibility checks.
+       */
+      startup: async ({command, rootConfig}) => {
+        if (command === 'dev' || command === 'build') {
+          const cmsPlugin = getCmsPlugin(rootConfig);
+          await runCompatibilityChecks(rootConfig, cmsPlugin);
+        }
+      },
+    },
+
     /**
      * Attaches CMS-specific middleware to the Root.js server.
      */
@@ -606,4 +620,13 @@ function fileExists(filepath: string): Promise<boolean> {
     .access(filepath)
     .then(() => true)
     .catch(() => false);
+}
+
+export function getCmsPlugin(rootConfig: RootConfig): CMSPlugin {
+  const plugins: Plugin[] = rootConfig.plugins || [];
+  const plugin = plugins.find((plugin) => plugin.name === 'root-cms');
+  if (!plugin) {
+    throw new Error('could not find root-cms plugin config in root.config.ts');
+  }
+  return plugin as CMSPlugin;
 }
