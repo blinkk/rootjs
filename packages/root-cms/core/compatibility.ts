@@ -2,12 +2,39 @@ import {RootConfig} from '@blinkk/root';
 import {FieldValue} from 'firebase-admin/firestore';
 import type {CMSPlugin} from './plugin.js';
 
+/**
+ * Runs compatibility checks to ensure the current version of root supports
+ * any backwards-incompatible db changes.
+ *
+ * Compatibility versions are stored in the db in Projects/<projectId> under
+ * the "compatibility" key. If the compatibility version is less than the
+ * latest version, a backwards-friendly "migration" is done to ensure
+ * compatibility on both the old and new versions.
+ */
 export async function runCompatibilityChecks(
   rootConfig: RootConfig,
   cmsPlugin: CMSPlugin
 ) {
-  console.log('[root cms] running v2 compatibility checks');
-  await migrateTranslationsToV2(rootConfig, cmsPlugin);
+  const projectId = cmsPlugin.getConfig().id || 'default';
+  const db = cmsPlugin.getFirestore();
+  const projectConfigDocRef = db.doc(`Projects/${projectId}`);
+  const projectConfigDoc = await projectConfigDocRef.get();
+  const projectConfig = projectConfigDoc.data() || {};
+
+  const compatibilityVersions = projectConfig.compatibility || {};
+  let versionsChanged = false;
+
+  const translationsVersion = compatibilityVersions.translations || 0;
+  if (translationsVersion < 2) {
+    await migrateTranslationsToV2(rootConfig, cmsPlugin);
+    compatibilityVersions.translations = 2;
+    versionsChanged = true;
+  }
+
+  if (versionsChanged) {
+    await projectConfigDocRef.update({compatibility: compatibilityVersions});
+    console.log('[root cms] updated db compatibility');
+  }
 }
 
 /**
@@ -30,7 +57,7 @@ async function migrateTranslationsToV2(
     return;
   }
 
-  console.log('[root cms] migrating Translations to TranslationsMemory');
+  console.log('[root cms] updating translations v2 compatibility');
   const translationsMemories: Record<string, Record<string, any>> = {};
   querySnapshot.forEach((doc) => {
     const hash = doc.id;
