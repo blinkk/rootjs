@@ -490,7 +490,7 @@ export async function cmsCreateDoc(
   };
 
   // Preserve "sys" values when copying and overwriting a doc.
-  if (doc.exists() && !options?.overwrite) {
+  if (doc.exists() && options?.overwrite) {
     const oldData = doc.data();
     data.sys = {
       ...oldData.sys,
