@@ -1,5 +1,12 @@
 # @blinkk/root-cms
 
+## 1.3.8
+
+### Patch Changes
+
+- 494fef6: fix: fix sys overwrite when copying files
+  - @blinkk/root@1.3.8
+
 ## 1.3.7
 
 ### Patch Changes
