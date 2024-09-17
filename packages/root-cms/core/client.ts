@@ -938,7 +938,69 @@ export class RootCMSClient {
       }
     }
   }
+
+  createBatchRequest(options: {mode: 'draft' | 'published'}): BatchRequest {
+    return new BatchRequest(this, options);
+  }
 }
+
+export class BatchRequest {
+  cmsClient: RootCMSClient;
+  private options: {mode: 'draft' | 'published'};
+  private docIds: string[] = [];
+  private dataSourceIds: string[] = [];
+  private queries: any[] = [];
+  private translationsIds: string[] = [];
+
+  constructor(
+    cmsClient: RootCMSClient,
+    options: {mode: 'draft' | 'published'}
+  ) {
+    this.cmsClient = cmsClient;
+    this.options = options;
+  }
+
+  /**
+   * Adds a doc to the batch request.
+   */
+  addDoc(docId: string) {
+    this.docIds.push(docId);
+  }
+
+  /**
+   * Adds a data source to the batch request.
+   */
+  addDataSource(dataSourceId: string) {
+    this.dataSourceIds.push(dataSourceId);
+  }
+
+  /**
+   * Adds a query to the batch request.
+   */
+  addQuery(queryId: string, collectionId: string) {
+    this.queries.push({
+      queryId: queryId,
+      collectionId: collectionId,
+    });
+  }
+
+  /**
+   * Adds a translation file to the request.
+   */
+  addTranslations(translationsId: string) {
+    this.translationsIds.push(translationsId);
+  }
+
+  /**
+   * Fetches data from the DB.
+   */
+  async fetch(): Promise<BatchRequestResponse> {
+    const res = new BatchRequestResponse();
+    return res;
+  }
+}
+
+export class BatchRequestResponse {}
 
 /**
  * Returns true if the `data` is a rich text data object.
