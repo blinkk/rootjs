@@ -225,9 +225,8 @@ export class RootCMSClient {
     return null;
   }
 
-  dbDocPath(
+  dbCollectionDocsPath(
     collectionId: string,
-    slug: string,
     options: {mode: 'draft' | 'published'}
   ) {
     let modeCollection = '';
@@ -238,9 +237,18 @@ export class RootCMSClient {
     } else {
       throw new Error(`unknown mode: ${options.mode}`);
     }
+    return `Projects/${this.projectId}/Collections/${collectionId}/${modeCollection}`;
+  }
+
+  dbDocPath(
+    collectionId: string,
+    slug: string,
+    options: {mode: 'draft' | 'published'}
+  ) {
+    const collectionDocsPath = this.dbCollectionDocsPath(collectionId, options);
     // Slugs with slashes are encoded as `--` in the DB.
     const normalizedSlug = slug.replaceAll('/', '--');
-    return `Projects/${this.projectId}/Collections/${collectionId}/${modeCollection}/${normalizedSlug}`;
+    return `${collectionDocsPath}/${normalizedSlug}`;
   }
 
   dbDocRef(
@@ -1108,7 +1116,40 @@ export class BatchRequest {
     if (this.queries.length === 0) {
       return;
     }
-    // TODO(stevenle): impl.
+    const mode = this.options.mode;
+
+    const handleQuery = async (queryItem: BatchRequestQuery) => {
+      const docsPath = this.cmsClient.dbCollectionDocsPath(
+        queryItem.collectionId,
+        {mode}
+      );
+      const queryOptions = queryItem.queryOptions || {};
+      let query: Query = this.db.collection(docsPath);
+      if (queryOptions.limit) {
+        query = query.limit(queryOptions.limit);
+      }
+      if (queryOptions.offset) {
+        query = query.offset(queryOptions.offset);
+      }
+      if (queryOptions.orderBy) {
+        query = query.orderBy(
+          queryOptions.orderBy,
+          queryOptions.orderByDirection
+        );
+      }
+      if (queryOptions.query) {
+        query = queryOptions.query(query);
+      }
+      const results = await query.get();
+      const docs: Doc[] = [];
+      results.forEach((result) => {
+        const doc = unmarshalData(result.data()) as Doc;
+        docs.push(doc);
+      });
+      res.queries[queryItem.queryId] = docs;
+    };
+
+    await Promise.all(this.queries.map((queryItem) => handleQuery(queryItem)));
   }
 
   private async fetchDataSources(res: BatchResponse) {
