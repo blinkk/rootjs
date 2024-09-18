@@ -1,5 +1,13 @@
 # @blinkk/root-cms
 
+## 1.3.9
+
+### Patch Changes
+
+- 2b27a86: fix: fix reference field when doc is deleted
+- Updated dependencies [f1293f1]
+  - @blinkk/root@1.3.9
+
 ## 1.3.8
 
 ### Patch Changes

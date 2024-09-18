@@ -1,5 +1,11 @@
 # @blinkk/root
 
+## 1.3.9
+
+### Patch Changes
+
+- f1293f1: fix: only update session cookie when changed
+
 ## 1.3.8
 
 ## 1.3.7
