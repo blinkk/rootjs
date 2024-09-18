@@ -106,8 +106,13 @@ ReferenceField.Preview = (props: ReferencePreviewProps) => {
         <div className="ReferenceField__Preview__loading">
           <Loader color="gray" size="sm" />
         </div>
-      ) : (
+      ) : previewDoc ? (
         <ReferenceField.DocCard doc={previewDoc} />
+      ) : (
+        <div className="ReferenceField__Preview__notfound">
+          Doc Not found: "{props.id}" (was it deleted?). Select a new doc or
+          remove using the trash icon to the right.
+        </div>
       )}
     </div>
   );
