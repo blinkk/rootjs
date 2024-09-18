@@ -939,24 +939,39 @@ export class RootCMSClient {
     }
   }
 
-  createBatchRequest(options: {mode: 'draft' | 'published'}): BatchRequest {
+  createBatchRequest(options: BatchRequestOptions): BatchRequest {
     return new BatchRequest(this, options);
   }
 }
 
+export interface BatchRequestOptions {
+  mode: 'draft' | 'published';
+  /**
+   * Whether to automatically fetch translations for the docs in the request.
+   */
+  translate?: boolean;
+}
+
+export interface QueryOptions {
+  offset?: number;
+  limit?: number;
+  orderBy?: string;
+  orderByDirection?: 'asc' | 'desc';
+  query?: (query: Query) => Query;
+}
+
 export class BatchRequest {
   cmsClient: RootCMSClient;
-  private options: {mode: 'draft' | 'published'};
+  private options: BatchRequestOptions;
+  private db: Firestore;
   private docIds: string[] = [];
   private dataSourceIds: string[] = [];
   private queries: any[] = [];
   private translationsIds: string[] = [];
 
-  constructor(
-    cmsClient: RootCMSClient,
-    options: {mode: 'draft' | 'published'}
-  ) {
+  constructor(cmsClient: RootCMSClient, options: BatchRequestOptions) {
     this.cmsClient = cmsClient;
+    this.db = cmsClient.db;
     this.options = options;
   }
 
@@ -977,10 +992,11 @@ export class BatchRequest {
   /**
    * Adds a query to the batch request.
    */
-  addQuery(queryId: string, collectionId: string) {
+  addQuery(queryId: string, collectionId: string, queryOptions?: QueryOptions) {
     this.queries.push({
       queryId: queryId,
       collectionId: collectionId,
+      queryOptions: queryOptions,
     });
   }
 
@@ -994,13 +1010,91 @@ export class BatchRequest {
   /**
    * Fetches data from the DB.
    */
-  async fetch(): Promise<BatchRequestResponse> {
-    const res = new BatchRequestResponse();
+  async fetch(): Promise<BatchResponse> {
+    const res = new BatchResponse();
+
+    await Promise.all([
+      this.fetchDocs(res),
+      this.fetchQueries(res),
+      this.fetchDataSources(res),
+    ]);
+
+    // If `options.translate` is enabled, the fetchX() methods will
+    // automatically add each doc's translations id to the request, so
+    // translations should be fetched after all the other data is fetched.
+    if (this.translationsIds.length > 0) {
+      await this.fetchTranslations(res);
+    }
+
     return res;
+  }
+
+  private async fetchDocs(res: BatchResponse) {
+    if (this.docIds.length === 0) {
+      return;
+    }
+    const mode = this.options.mode;
+    const modeFolder = mode === 'draft' ? 'Drafts' : 'Published';
+    const docRefs = this.docIds.map((docId) => {
+      const [collectionId, slug] = docId.split('/');
+      return this.db.doc(
+        `Projects/${this.cmsClient.projectId}/Collections/${collectionId}/${modeFolder}/${slug}`
+      );
+    });
+    const docs = await this.db.getAll(...docRefs);
+    this.docIds.forEach((docId, i) => {
+      const doc = docs[i];
+      if (!doc.exists) {
+        console.warn(`"${docId}" does not exist`);
+        return;
+      }
+      const docData = unmarshalData(doc.data()) as Doc;
+      res.docs[docId] = docData;
+
+      if (this.options.translate) {
+        this.addTranslations(docId);
+      }
+    });
+  }
+
+  private async fetchQueries(res: BatchResponse) {
+    if (this.queries.length === 0) {
+      return;
+    }
+    // TODO(stevenle): impl.
+  }
+
+  private async fetchDataSources(res: BatchResponse) {
+    if (this.dataSourceIds.length === 0) {
+      return;
+    }
+    // TODO(stevenle): impl.
+  }
+
+  private async fetchTranslations(res: BatchResponse) {
+    if (this.translationsIds.length === 0) {
+      return;
+    }
+    // TODO(stevenle): impl.
   }
 }
 
-export class BatchRequestResponse {}
+export class BatchResponse {
+  docs: Record<string, Doc> = {};
+  queries: Record<string, Doc[]> = {};
+  dataSources: Record<string, any> = {};
+  translations: Record<string, any> = {};
+
+  /**
+   * Returns a map of translations, represented by a map of source strings to
+   * translated string. The input is a set of "fallback locales", e.g.
+   * ['en-CA', 'en-GB', 'en'].
+   */
+  getTranslationsMap(fallbackLocales: string[]): Record<string, string> {
+    const translations: Record<string, string> = {};
+    return translations;
+  }
+}
 
 /**
  * Returns true if the `data` is a rich text data object.
