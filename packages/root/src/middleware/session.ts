@@ -26,6 +26,9 @@ export function sessionMiddleware(options?: SessionMiddlewareOptions) {
     req.session = session;
     res.session = session;
     res.saveSession = (saveSessionOptions?: SaveSessionOptions) => {
+      if (!session.hasChanges) {
+        return;
+      }
       // "secure" cookies require https, so disable "secure" when in development.
       const secureCookie = Boolean(process.env.NODE_ENV !== 'development');
       const cookieValue = session.toString();
@@ -54,6 +57,7 @@ export function sessionMiddleware(options?: SessionMiddlewareOptions) {
 
 export class Session {
   private data: Record<string, string> = {};
+  hasChanges = false;
 
   constructor(data?: Record<string, string>) {
     this.data = data || {};
@@ -82,10 +86,12 @@ export class Session {
 
   setItem(key: string, value: string) {
     this.data[key] = value;
+    this.hasChanges = true;
   }
 
   removeItem(key: string) {
     delete this.data[key];
+    this.hasChanges = true;
   }
 
   toString(): string {
