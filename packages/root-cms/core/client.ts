@@ -217,16 +217,39 @@ export class RootCMSClient {
     options: GetDocOptions
   ): Promise<any | null> {
     const mode = options.mode;
-    const modeCollection = mode === 'draft' ? 'Drafts' : 'Published';
-    // Slugs with slashes are encoded as `--` in the DB.
-    slug = slug.replaceAll('/', '--');
-    const dbPath = `Projects/${this.projectId}/Collections/${collectionId}/${modeCollection}/${slug}`;
-    const docRef = this.db.doc(dbPath);
+    const docRef = this.dbDocRef(collectionId, slug, {mode});
     const doc = await docRef.get();
     if (doc.exists) {
       return doc.data();
     }
     return null;
+  }
+
+  dbDocPath(
+    collectionId: string,
+    slug: string,
+    options: {mode: 'draft' | 'published'}
+  ) {
+    let modeCollection = '';
+    if (options.mode === 'draft') {
+      modeCollection = 'Drafts';
+    } else if (options.mode === 'published') {
+      modeCollection = 'Published';
+    } else {
+      throw new Error(`unknown mode: ${options.mode}`);
+    }
+    // Slugs with slashes are encoded as `--` in the DB.
+    const normalizedSlug = slug.replaceAll('/', '--');
+    return `Projects/${this.projectId}/Collections/${collectionId}/${modeCollection}/${normalizedSlug}`;
+  }
+
+  dbDocRef(
+    collectionId: string,
+    slug: string,
+    options: {mode: 'draft' | 'published'}
+  ) {
+    const docPath = this.dbDocPath(collectionId, slug, options);
+    return this.db.doc(docPath);
   }
 
   /**
@@ -841,20 +864,36 @@ export class RootCMSClient {
     options?: {mode?: 'draft' | 'published'}
   ): Promise<DataSourceData<T> | null> {
     const mode = options?.mode || 'published';
-    if (!(mode === 'draft' || mode === 'published')) {
-      throw new Error(`invalid mode: ${mode}`);
-    }
-    if (!dataSourceId || dataSourceId.includes('/')) {
-      throw new Error(`invalid data source id: ${dataSourceId}`);
-    }
 
-    const dbPath = `Projects/${this.projectId}/DataSources/${dataSourceId}/Data/${mode}`;
-    const docRef = this.db.doc(dbPath);
+    const docRef = this.dbDataSourceDataRef(dataSourceId, {mode});
     const doc = await docRef.get();
     if (doc.exists) {
       return doc.data() as DataSourceData<T>;
     }
     return null;
+  }
+
+  dbDataSourceDataPath(
+    dataSourceId: string,
+    options: {mode: 'draft' | 'published'}
+  ) {
+    if (!dataSourceId || dataSourceId.includes('/')) {
+      throw new Error(`invalid data source id: ${dataSourceId}`);
+    }
+    const mode = options.mode;
+    if (!(mode === 'draft' || mode === 'published')) {
+      throw new Error(`invalid mode: ${mode}`);
+    }
+    const dbPath = `Projects/${this.projectId}/DataSources/${dataSourceId}/Data/${mode}`;
+    return dbPath;
+  }
+
+  dbDataSourceDataRef(
+    dataSourceId: string,
+    options: {mode: 'draft' | 'published'}
+  ) {
+    const docPath = this.dbDataSourceDataPath(dataSourceId, options);
+    return this.db.doc(docPath);
   }
 
   /**
@@ -952,7 +991,13 @@ export interface BatchRequestOptions {
   translate?: boolean;
 }
 
-export interface QueryOptions {
+export interface BatchRequestQuery {
+  queryId: string;
+  collectionId: string;
+  queryOptions?: BatchRequestQueryOptions;
+}
+
+export interface BatchRequestQueryOptions {
   offset?: number;
   limit?: number;
   orderBy?: string;
@@ -966,7 +1011,7 @@ export class BatchRequest {
   private db: Firestore;
   private docIds: string[] = [];
   private dataSourceIds: string[] = [];
-  private queries: any[] = [];
+  private queries: BatchRequestQuery[] = [];
   private translationsIds: string[] = [];
 
   constructor(cmsClient: RootCMSClient, options: BatchRequestOptions) {
@@ -992,7 +1037,11 @@ export class BatchRequest {
   /**
    * Adds a query to the batch request.
    */
-  addQuery(queryId: string, collectionId: string, queryOptions?: QueryOptions) {
+  addQuery(
+    queryId: string,
+    collectionId: string,
+    queryOptions?: BatchRequestQueryOptions
+  ) {
     this.queries.push({
       queryId: queryId,
       collectionId: collectionId,
@@ -1033,19 +1082,17 @@ export class BatchRequest {
     if (this.docIds.length === 0) {
       return;
     }
-    const mode = this.options.mode;
-    const modeFolder = mode === 'draft' ? 'Drafts' : 'Published';
     const docRefs = this.docIds.map((docId) => {
       const [collectionId, slug] = docId.split('/');
-      return this.db.doc(
-        `Projects/${this.cmsClient.projectId}/Collections/${collectionId}/${modeFolder}/${slug}`
-      );
+      return this.cmsClient.dbDocRef(collectionId, slug, {
+        mode: this.options.mode,
+      });
     });
     const docs = await this.db.getAll(...docRefs);
     this.docIds.forEach((docId, i) => {
       const doc = docs[i];
       if (!doc.exists) {
-        console.warn(`"${docId}" does not exist`);
+        console.warn(`doc "${docId}" does not exist`);
         return;
       }
       const docData = unmarshalData(doc.data()) as Doc;
@@ -1068,7 +1115,20 @@ export class BatchRequest {
     if (this.dataSourceIds.length === 0) {
       return;
     }
-    // TODO(stevenle): impl.
+    const docRefs = this.dataSourceIds.map((dataSourceId) => {
+      return this.cmsClient.dbDataSourceDataRef(dataSourceId, {
+        mode: this.options.mode,
+      });
+    });
+    const docs = await this.db.getAll(...docRefs);
+    this.dataSourceIds.forEach((dataSourceId, i) => {
+      const doc = docs[i];
+      if (!doc.exists) {
+        console.warn(`"data source "${dataSourceId}" does not exist`);
+        return;
+      }
+      res.dataSources[dataSourceId] = doc.data() as DataSourceData;
+    });
   }
 
   private async fetchTranslations(res: BatchResponse) {
