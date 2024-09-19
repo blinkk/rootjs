@@ -920,7 +920,8 @@ export class RootCMSClient {
     if (!(mode === 'draft' || mode === 'published')) {
       throw new Error(`invalid mode: ${mode}`);
     }
-    const dbPath = `Projects/${this.projectId}/TranslationsMemory/${mode}/Translations/${translationsId}`;
+    const slug = translationsId.replaceAll('/', '--');
+    const dbPath = `Projects/${this.projectId}/TranslationsMemory/${mode}/Translations/${slug}`;
     return dbPath;
   }
 
