@@ -37,6 +37,14 @@ export interface Doc<Fields = any> {
   fields: Fields;
 }
 
+export interface TranslationsDoc {
+  sys: {
+    modifiedAt: Timestamp;
+    modifiedBy: string;
+  };
+  strings: Record<string, Record<string, string>>;
+}
+
 export type DocMode = 'draft' | 'published';
 
 export type UserRole = 'ADMIN' | 'EDITOR' | 'VIEWER';
@@ -900,8 +908,28 @@ export class RootCMSClient {
     dataSourceId: string,
     options: {mode: 'draft' | 'published'}
   ) {
-    const docPath = this.dbDataSourceDataPath(dataSourceId, options);
-    return this.db.doc(docPath);
+    const dbPath = this.dbDataSourceDataPath(dataSourceId, options);
+    return this.db.doc(dbPath);
+  }
+
+  dbTranslationsPath(
+    translationsId: string,
+    options: {mode: 'draft' | 'published'}
+  ) {
+    const mode = options.mode;
+    if (!(mode === 'draft' || mode === 'published')) {
+      throw new Error(`invalid mode: ${mode}`);
+    }
+    const dbPath = `Projects/${this.projectId}/TranslationsMemory/${mode}/Translations/${translationsId}`;
+    return dbPath;
+  }
+
+  dbTranslationsRef(
+    translationsId: string,
+    options: {mode: 'draft' | 'published'}
+  ) {
+    const dbPath = this.dbTranslationsPath(translationsId, options);
+    return this.db.doc(dbPath);
   }
 
   /**
@@ -1176,15 +1204,29 @@ export class BatchRequest {
     if (this.translationsIds.length === 0) {
       return;
     }
-    // TODO(stevenle): impl.
+
+    const docRefs = this.translationsIds.map((translationsId) => {
+      return this.cmsClient.dbTranslationsRef(translationsId, {
+        mode: this.options.mode,
+      });
+    });
+    const docs = await this.db.getAll(...docRefs);
+    this.translationsIds.forEach((translationsId, i) => {
+      const doc = docs[i];
+      if (!doc.exists) {
+        console.warn(`"translations "${translationsId}" does not exist`);
+        return;
+      }
+      res.translations[translationsId] = doc.data() as TranslationsDoc;
+    });
   }
 }
 
 export class BatchResponse {
   docs: Record<string, Doc> = {};
   queries: Record<string, Doc[]> = {};
-  dataSources: Record<string, any> = {};
-  translations: Record<string, any> = {};
+  dataSources: Record<string, DataSourceData> = {};
+  translations: Record<string, TranslationsDoc> = {};
 
   /**
    * Returns a map of translations, represented by a map of source strings to
