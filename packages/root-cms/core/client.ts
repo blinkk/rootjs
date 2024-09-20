@@ -38,11 +38,12 @@ export interface Doc<Fields = any> {
 }
 
 export interface TranslationsDoc {
+  id: string;
   sys: {
     modifiedAt: Timestamp;
     modifiedBy: string;
   };
-  strings: Record<string, Record<string, string>>;
+  strings: TranslationsMap;
 }
 
 export type DocMode = 'draft' | 'published';
@@ -921,7 +922,7 @@ export class RootCMSClient {
       throw new Error(`invalid mode: ${mode}`);
     }
     const slug = translationsId.replaceAll('/', '--');
-    const dbPath = `Projects/${this.projectId}/TranslationsMemory/${mode}/Translations/${slug}`;
+    const dbPath = `Projects/${this.projectId}/TranslationsManager/${mode}/Translations/${slug}`;
     return dbPath;
   }
 
@@ -1023,7 +1024,8 @@ export class RootCMSClient {
 export interface BatchRequestOptions {
   mode: 'draft' | 'published';
   /**
-   * Whether to automatically fetch translations for the docs in the request.
+   * Whether to automatically fetch translations for the docs retrieved in the
+   * request.
    */
   translate?: boolean;
 }
@@ -1072,7 +1074,7 @@ export class BatchRequest {
   }
 
   /**
-   * Adds a query to the batch request.
+   * Adds a collection-based query to the batch request.
    */
   addQuery(
     queryId: string,
@@ -1099,15 +1101,22 @@ export class BatchRequest {
   async fetch(): Promise<BatchResponse> {
     const res = new BatchResponse();
 
-    await Promise.all([
+    const promises = [
       this.fetchDocs(res),
       this.fetchQueries(res),
       this.fetchDataSources(res),
-    ]);
+    ];
+    // If `options.translate` is disabled and translations are requested,
+    // fetch the translations in parallel with the other docs.
+    if (!this.options.translate && this.translationsIds.length > 0) {
+      promises.push(this.fetchTranslations(res));
+    }
+
+    await Promise.all(promises);
 
     // If `options.translate` is enabled, the fetchX() methods will
     // automatically add each doc's translations id to the request, so
-    // translations should be fetched after all the other data is fetched.
+    // translations should be fetched after all the other docs are fetched.
     if (this.translationsIds.length > 0) {
       await this.fetchTranslations(res);
     }
@@ -1230,13 +1239,51 @@ export class BatchResponse {
   translations: Record<string, TranslationsDoc> = {};
 
   /**
-   * Returns a map of translations, represented by a map of source strings to
-   * translated string. The input is a set of "fallback locales", e.g.
-   * ['en-CA', 'en-GB', 'en'].
+   * Returns a map of translations for a given locale or locale fallbacks.
+   *
+   * The input is either a single locale (e.g. "de") or an array of locales
+   * representing the fallback tree, e.g. ["en-CA", "en-GB", "en"].
+   *
+   * The returned value is a flat map of source string to translated string,
+   * e.g.:
+   * {"<source>": "<translation>"}
    */
-  getTranslationsMap(fallbackLocales: string[]): Record<string, string> {
-    const translations: Record<string, string> = {};
+  getTranslations(locale: string | string[]): LocaleTranslations {
+    const translationsMap = this.getTranslationsMap();
+    const translations = translationsForLocale(translationsMap, locale);
     return translations;
+  }
+
+  /**
+   * Merges the strings from all translations files retrieved in the request.
+   * The returned value is a map of string to translations, e.g.:
+   *
+   * {"<hash>": {"source": "<source>", "<locale>": "<translation>"}}
+   */
+  private getTranslationsMap(): TranslationsMap {
+    // Load translations in the following order:
+    // - generic translations (e.g. "global")
+    // - docs returned from queries (e.g. "list all blog posts")
+    // - specific docs (e.g. "Pages/index")
+    const translationsDocs = Object.values(this.translations).reverse();
+
+    // Consolidate the strings from all of the translations files.
+    // {"<hash>": {"source": "<source>", "<locale>": "<translation>"}}
+    const translationsMap: TranslationsMap = {};
+    for (const translationsDoc of translationsDocs) {
+      const strings = translationsDoc.strings || {};
+      for (const hash in strings) {
+        const translations = strings[hash];
+        translationsMap[hash] ??= {source: translations.source};
+        for (const locale in translations) {
+          if (locale !== 'source' && translations[locale]) {
+            translationsMap[hash][locale] = translations[locale];
+          }
+        }
+      }
+    }
+
+    return translationsMap;
   }
 }
 
@@ -1405,12 +1452,23 @@ function randString(len: number): string {
  */
 export function translationsForLocale(
   translationsMap: TranslationsMap,
-  locale: string
+  locale: string | string[]
 ) {
   const localeTranslations: LocaleTranslations = {};
+
+  const fallbackLocales = Array.isArray(locale) ? locale : [locale];
+  if (!fallbackLocales.includes('en')) {
+    fallbackLocales.push('en');
+  }
+
   Object.values(translationsMap).forEach((string) => {
     const source = string.source;
-    const translation = string[locale] || string.en || string.source;
+    let translation = source;
+    for (const fallbackLocale of fallbackLocales) {
+      if (string[fallbackLocale]) {
+        translation = string[fallbackLocale];
+      }
+    }
     localeTranslations[source] = translation;
   });
   return localeTranslations;

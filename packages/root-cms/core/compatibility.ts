@@ -58,7 +58,7 @@ async function migrateTranslationsToV2(
   }
 
   console.log('[root cms] updating translations v2 compatibility');
-  const translationsMemories: Record<string, Record<string, any>> = {};
+  const translationsFiles: Record<string, Record<string, any>> = {};
   querySnapshot.forEach((doc) => {
     const hash = doc.id;
     const translation = doc.data();
@@ -66,37 +66,34 @@ async function migrateTranslationsToV2(
     delete translation.tags;
     for (const tag of tags) {
       if (tag.includes('/')) {
-        const translationsMemoryId = tag.replaceAll('/', '--');
-        translationsMemories[translationsMemoryId] ??= {};
-        translationsMemories[translationsMemoryId][hash] = translation;
+        const translationsId = tag.replaceAll('/', '--');
+        translationsFiles[translationsId] ??= {};
+        translationsFiles[translationsId][hash] = translation;
       }
     }
   });
 
   const batch = db.batch();
-  Object.entries(translationsMemories).forEach(
-    ([translationsMemoryId, strings]) => {
-      const updates = {
-        sys: {
-          modifiedAt: FieldValue.serverTimestamp(),
-          modifiedBy: 'root-cms-client',
-        },
-        strings: strings,
-      };
-      const draftRef = db.doc(
-        `Projects/${projectId}/TranslationsMemory/draft/Translations/${translationsMemoryId}`
-      );
-      const publishedRef = db.doc(
-        `Projects/${projectId}/TranslationsMemory/published/Translations/${translationsMemoryId}`
-      );
-      batch.set(draftRef, updates, {merge: true});
-      batch.set(publishedRef, updates, {merge: true});
-      const len = Object.keys(strings).length;
-      console.log(
-        `[root cms] saving ${len} string(s) to ${translationsMemoryId}...`
-      );
-    }
-  );
+  Object.entries(translationsFiles).forEach(([translationsId, strings]) => {
+    const updates = {
+      id: translationsId.replaceAll('--', '/'),
+      sys: {
+        modifiedAt: FieldValue.serverTimestamp(),
+        modifiedBy: 'root-cms-client',
+      },
+      strings: strings,
+    };
+    const draftRef = db.doc(
+      `Projects/${projectId}/TranslationsManager/draft/Translations/${translationsId}`
+    );
+    const publishedRef = db.doc(
+      `Projects/${projectId}/TranslationsManager/published/Translations/${translationsId}`
+    );
+    batch.set(draftRef, updates, {merge: true});
+    batch.set(publishedRef, updates, {merge: true});
+    const len = Object.keys(strings).length;
+    console.log(`[root cms] saving ${len} string(s) to ${translationsId}...`);
+  });
   await batch.commit();
   console.log('[root cms] done migrating translations to v2');
 }

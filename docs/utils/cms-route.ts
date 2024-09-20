@@ -180,22 +180,22 @@ export function cmsRoute(options: CMSRouteOptions) {
         res.setHeader('cache-control', 'private');
         return ctx.render404();
       }
+      const primaryDocId = `${options.collection}/${slug}`;
       const mode = String(req.query.preview) === 'true' ? 'draft' : 'published';
       const routeContext: CMSRouteContext = {req, slug, mode, cmsClient};
 
-      const translationsTags = ['common', `${options.collection}/${slug}`];
-      if (options.translations) {
-        const tags = options.translations(routeContext)?.tags || [];
-        translationsTags.push(...tags);
-      }
+      const batchRequest = cmsClient.createBatchRequest({
+        mode,
+        translate: true,
+      });
+      batchRequest.addDoc(primaryDocId);
+      batchRequest.addTranslations('common');
 
-      const [doc, translationsMap, data] = await Promise.all([
-        cmsClient.getDoc<CMSDoc>(options.collection, slug, {
-          mode,
-        }),
-        cmsClient.loadTranslations({tags: translationsTags}),
-        fetchData(routeContext),
-      ]);
+      const batchRes = await batchRequest.fetch();
+      const doc = batchRes.docs[primaryDocId];
+      // TODO(stevenle): add data fetching to batch request.
+      // fetchData(routeContext)
+
       if (!doc) {
         res.setHeader('cache-control', 'private');
         return ctx.render404();
@@ -215,8 +215,18 @@ export function cmsRoute(options: CMSRouteOptions) {
         req.get('x-country-code') ||
         req.get('x-appengine-country') ||
         null;
-      const translations = translationsForLocale(translationsMap, locale);
-      let props: any = {...data, req, locale, mode, slug, doc, country};
+
+      // TODO(stevenle): configure locale fallback patterns.
+      const translations = batchRes.getTranslations(locale);
+      let props: any = {
+        // ...data,
+        req,
+        locale,
+        mode,
+        slug,
+        doc,
+        country,
+      };
       if (options.preRenderHook) {
         props = await options.preRenderHook(props, routeContext);
       }
