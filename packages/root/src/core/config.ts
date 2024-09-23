@@ -121,6 +121,19 @@ export interface RootI18nConfig {
    * locales.
    */
   groups?: Record<string, LocaleGroup>;
+
+  /**
+   * Fallback locales. When a translation doesn't exist for the requested
+   * locale, it will fall back to the locales as configured, e.g.:
+   *
+   * ```
+   * {
+   *   "en-CA": ["en-GB", "en"],
+   *   "es-MX": ["es-419", "es"]
+   * }
+   * ```
+   */
+  fallbacks?: Record<string, string[]>;
 }
 
 export interface RootRedirectConfig {
