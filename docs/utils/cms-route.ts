@@ -190,10 +190,11 @@ export function cmsRoute(options: CMSRouteOptions) {
       });
       batchRequest.addDoc(primaryDocId);
 
-      const batchRes = await batchRequest.fetch();
+      const [batchRes, data] = await Promise.all([
+        batchRequest.fetch(),
+        fetchData(routeContext),
+      ]);
       const doc = batchRes.docs[primaryDocId];
-      // TODO(stevenle): add data fetching to batch request.
-      // fetchData(routeContext)
 
       if (!doc) {
         res.setHeader('cache-control', 'private');
@@ -215,12 +216,11 @@ export function cmsRoute(options: CMSRouteOptions) {
         req.get('x-appengine-country') ||
         null;
 
-      // TODO(stevenle): configure locale fallback patterns.
       const i18nFallbacks = req.rootConfig.i18n?.fallbacks || {};
       const translationFallbackLocales = i18nFallbacks[locale] || [locale];
       const translations = batchRes.getTranslations(translationFallbackLocales);
       let props: any = {
-        // ...data,
+        ...data,
         req,
         locale,
         mode,
