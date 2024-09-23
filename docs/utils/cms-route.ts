@@ -85,7 +85,7 @@ export function cmsRoute(options: CMSRouteOptions) {
       return options.slug;
     }
     const slugParam = options.slugParam || 'slug';
-    return params[slugParam] || 'index';
+    return (params[slugParam] || 'index').replaceAll('/', '--');
   }
 
   async function fetchData(
@@ -189,7 +189,6 @@ export function cmsRoute(options: CMSRouteOptions) {
         translate: true,
       });
       batchRequest.addDoc(primaryDocId);
-      batchRequest.addTranslations('common');
 
       const batchRes = await batchRequest.fetch();
       const doc = batchRes.docs[primaryDocId];
@@ -217,7 +216,9 @@ export function cmsRoute(options: CMSRouteOptions) {
         null;
 
       // TODO(stevenle): configure locale fallback patterns.
-      const translations = batchRes.getTranslations(locale);
+      const i18nFallbacks = req.rootConfig.i18n?.fallbacks || {};
+      const translationFallbackLocales = i18nFallbacks[locale] || [locale];
+      const translations = batchRes.getTranslations(translationFallbackLocales);
       let props: any = {
         // ...data,
         req,

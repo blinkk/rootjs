@@ -1224,7 +1224,7 @@ export class BatchRequest {
     this.translationsIds.forEach((translationsId, i) => {
       const doc = docs[i];
       if (!doc.exists) {
-        console.warn(`"translations "${translationsId}" does not exist`);
+        // console.warn(`translations "${translationsId}" does not exist`);
         return;
       }
       res.translations[translationsId] = doc.data() as TranslationsDoc;
