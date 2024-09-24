@@ -1,6 +1,6 @@
 import {ViteDevServer, PluginOption as VitePlugin} from 'vite';
 import {RootConfig} from './config.js';
-import {Server} from './types.js';
+import {NextFunction, Request, Response, Server} from './types.js';
 
 type MaybePromise<T> = T | Promise<T>;
 
@@ -55,6 +55,12 @@ export interface Plugin {
   vitePlugins?: VitePlugin[];
   /** Plugin lifecycle callback hooks. */
   hooks?: PluginHooks;
+  /** Custom 404 handler. */
+  handle404?: (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ) => void | Promise<void>;
 }
 
 /**

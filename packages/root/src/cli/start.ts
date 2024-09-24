@@ -101,6 +101,13 @@ export async function createProdServer(options: {
       // Add the root.js preview server middlewares.
       server.use(rootProdServerMiddleware());
 
+      // Add any custom plugin 404 handlers.
+      plugins.forEach((plugin) => {
+        if (plugin.handle404) {
+          server.use(plugin.handle404);
+        }
+      });
+
       // Add error handlers.
       server.use(rootProdServer404Middleware());
       server.use(rootProdServer500Middleware());

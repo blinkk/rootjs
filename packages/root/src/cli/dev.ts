@@ -119,6 +119,15 @@ export async function createDevServer(options?: {
 
       // Add the root.js dev server middlewares.
       server.use(rootDevServerMiddleware());
+
+      // Add any custom plugin 404 handlers.
+      plugins.forEach((plugin) => {
+        if (plugin.handle404) {
+          server.use(plugin.handle404);
+        }
+      });
+
+      // Add error handlers.
       server.use(rootDevServer404Middleware());
       server.use(rootDevServer500Middleware());
     },
