@@ -1,5 +1,11 @@
 # @blinkk/root
 
+## 1.3.10
+
+### Patch Changes
+
+- ec66e26: feat: add plugin handle404 middleware
+
 ## 1.3.9
 
 ### Patch Changes
