@@ -106,6 +106,13 @@ export async function createPreviewServer(options: {
       // Add the root.js preview server middlewares.
       server.use(rootPreviewServerMiddleware());
 
+      // Add any custom plugin 404 handlers.
+      plugins.forEach((plugin) => {
+        if (plugin.handle404) {
+          server.use(plugin.handle404);
+        }
+      });
+
       // Add error handlers.
       server.use(rootPreviewServer404Middleware());
       server.use(rootPreviewServer500Middleware());
