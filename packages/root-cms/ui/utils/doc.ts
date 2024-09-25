@@ -7,7 +7,6 @@ import {
   Timestamp,
   deleteField,
   writeBatch,
-  arrayUnion,
   collection,
   query,
   orderBy,
@@ -21,12 +20,7 @@ import {
 import {logAction} from './actions.js';
 import {removeDocFromCache, removeDocsFromCache} from './doc-cache.js';
 import {GoogleSheetId} from './gsheets.js';
-import {
-  getTranslationsCollection,
-  normalizeString,
-  sourceHash,
-  TranslationsMap,
-} from './l10n.js';
+import {normalizeString, sourceHash, TranslationsMap} from './l10n.js';
 
 export interface CMSDoc {
   id: string;
@@ -140,6 +134,7 @@ export async function cmsPublishDocs(
       throw new Error(`doc does not exist: ${docId}`);
     }
     updatePublishedDocDataInBatch(batch, docId, draftData);
+    cmsPublishTranslations(docId, {batch});
   });
   await batch.commit();
 
@@ -618,6 +613,62 @@ export async function cmsGetTranslations(
     strings: {},
   };
   return data.strings || {};
+}
+
+/**
+ * Publishes translations to `/Projects/<project>/TranslationsManager/published/<translationsId>`.
+ */
+export async function cmsPublishTranslations(
+  translationsId: string,
+  options?: {batch?: WriteBatch}
+) {
+  const projectId = window.__ROOT_CTX.rootConfig.projectId;
+  const db = window.firebase.db;
+  const docSlug = translationsId.replaceAll('/', '--');
+  const draftRef = doc(
+    db,
+    'Projects',
+    projectId,
+    'TranslationsManager',
+    'draft',
+    'Translations',
+    docSlug
+  );
+  const snapshot = await getDoc(draftRef);
+  if (!snapshot.exists()) {
+    throw new Error(`translations doc ${translationsId} does not exist`);
+  }
+
+  // If the translations publishing is tied to another batch request (e.g. doc
+  // publishing), the batch request will be committed upstream.
+  const commitBatch = !options?.batch;
+
+  const batch = options?.batch || writeBatch(db);
+  batch.update(draftRef, {
+    'sys.publishedAt': serverTimestamp(),
+    'sys.publishedBy': window.firebase.user.email,
+  });
+
+  const publishedRef = doc(
+    db,
+    'Projects',
+    projectId,
+    'TranslationsManager',
+    'published',
+    'Translations',
+    docSlug
+  );
+  const data = {...snapshot.data()};
+  if (!data.sys) {
+    data.sys = {};
+  }
+  data.sys.publishedAt = serverTimestamp();
+  data.sys.publishedBy = window.firebase.user.email;
+  batch.set(publishedRef, data);
+  if (commitBatch) {
+    await setDoc(publishedRef, data);
+    logAction('translations.publish', {metadata: {translationsId}});
+  }
 }
 
 export function getDraftDocRef(docId: string) {
