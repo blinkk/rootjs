@@ -14,6 +14,7 @@ import {
   CsvTranslation,
   cmsDocImportTranslations,
   cmsGetLinkedGoogleSheetL10n,
+  cmsGetTranslations,
 } from '../../utils/doc.js';
 import {extractStringsForDoc} from '../../utils/extract.js';
 import {GoogleSheetId, getSpreadsheetUrl} from '../../utils/gsheets.js';
@@ -50,7 +51,7 @@ export function DocTranslationsPage(props: DocTranslationsPageProps) {
     try {
       const [sourceStrings, translationsMap, linkedSheet] = await Promise.all([
         extractStringsForDoc(docId),
-        loadTranslations(),
+        cmsGetTranslations(docId),
         cmsGetLinkedGoogleSheetL10n(docId),
       ]);
       setSourceStrings(sourceStrings);

@@ -25,6 +25,7 @@ import {
   getTranslationsCollection,
   normalizeString,
   sourceHash,
+  TranslationsMap,
 } from './l10n.js';
 
 export interface CMSDoc {
@@ -510,8 +511,7 @@ export interface CsvTranslation {
 
 export async function cmsDocImportTranslations(
   docId: string,
-  csvData: CsvTranslation[],
-  options?: {tags?: string[]}
+  csvData: CsvTranslation[]
 ) {
   const i18nConfig = window.__ROOT_CTX.rootConfig.i18n || {};
   const i18nLocales = i18nConfig.locales || ['en'];
@@ -548,46 +548,76 @@ export async function cmsDocImportTranslations(
     translationsMap[hash] = translation;
   }
 
-  // Tags are stored as key-value pairs so that we can call updateDoc() without
-  // having to read the actual document.
-  const collectionId = docId.split('/')[0];
-  const tags = [collectionId, docId];
-  if (options?.tags) {
-    tags.push(...options.tags);
-  }
-
-  // Save each string to `Projects/<project>/Translations/<hash>` in a batch
-  // request. Note: Firestore batches have limit of 500 writes.
-  const translationsCollection = getTranslationsCollection();
-  const db = window.firebase.db;
-  let batch = writeBatch(db);
-  let count = 0;
-  for (const hash in translationsMap) {
-    const translations = translationsMap[hash];
-    const stringDocRef = doc(translationsCollection, hash);
-    batch.set(
-      stringDocRef,
-      {
-        ...translations,
-        // Use arrayUnion to only add tags that don't already exist.
-        tags: arrayUnion(...tags),
-      },
-      {merge: true}
-    );
-    count += 1;
-    if (count >= 500) {
-      await batch.commit();
-      batch = writeBatch(db);
-      console.log(`saved ${count} strings`);
-      count = 0;
-    }
-  }
-  if (count > 0) {
-    await batch.commit();
-    console.log(`saved ${count} strings`);
-  }
-  logAction('doc.import_translations', {metadata: {docId}});
+  const translationsId = docId;
+  await cmsSaveTranslations(translationsId, translationsMap);
   return translationsMap;
+}
+
+/**
+ * Saves translations to `/Projects/<project>/TranslationsManager/draft/<translationsId>`
+ * where the translations map is in the following format:
+ *
+ * {
+ *   "<hash>": {"source": "...", "<locale>": "<translation>"}
+ * }
+ */
+export async function cmsSaveTranslations(
+  translationsId: string,
+  translationsMap: TranslationsMap
+) {
+  const projectId = window.__ROOT_CTX.rootConfig.projectId;
+  const db = window.firebase.db;
+  const docRef = doc(
+    db,
+    'Projects',
+    projectId,
+    'TranslationsManager',
+    'draft',
+    'Translations',
+    translationsId.replaceAll('/', '--')
+  );
+  const snapshot = await getDoc(docRef);
+  const data = snapshot.data() || {
+    id: translationsId.replaceAll('--', '/'),
+    sys: {},
+    strings: {},
+  };
+  data.sys.modifiedAt = serverTimestamp();
+  data.sys.modifiedBy = window.firebase.user.email;
+
+  const strings = data.strings || {};
+  Object.entries(translationsMap).forEach(([hash, translations]) => {
+    strings[hash] = {...strings[hash], ...translations};
+  });
+  data.strings = strings;
+  await setDoc(docRef, data);
+  logAction('translations.save', {metadata: {translationsId}});
+}
+
+/**
+ * Gets translations from `/Projects/<project>/TranslationsManager/draft/<translationsId>`.
+ */
+export async function cmsGetTranslations(
+  translationsId: string
+): Promise<TranslationsMap> {
+  const projectId = window.__ROOT_CTX.rootConfig.projectId;
+  const db = window.firebase.db;
+  const docRef = doc(
+    db,
+    'Projects',
+    projectId,
+    'TranslationsManager',
+    'draft',
+    'Translations',
+    translationsId.replaceAll('/', '--')
+  );
+  const snapshot = await getDoc(docRef);
+  const data = snapshot.data() || {
+    id: translationsId.replaceAll('--', '/'),
+    sys: {},
+    strings: {},
+  };
+  return data.strings || {};
 }
 
 export function getDraftDocRef(docId: string) {
