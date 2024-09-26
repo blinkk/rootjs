@@ -5,9 +5,12 @@ import {ChangeEvent} from 'preact/compat';
 import {useEffect, useState} from 'preact/hooks';
 import {useModalTheme} from '../../hooks/useModalTheme.js';
 import {joinClassNames} from '../../utils/classes.js';
-import {CsvTranslation, cmsDocImportTranslations} from '../../utils/doc.js';
+import {
+  CsvTranslation,
+  cmsDocImportTranslations,
+  cmsGetTranslations,
+} from '../../utils/doc.js';
 import {GoogleSheetId, getSpreadsheetUrl} from '../../utils/gsheets.js';
-import {loadTranslations} from '../../utils/l10n.js';
 import {notifyErrors} from '../../utils/notifications.js';
 import {Heading} from '../Heading/Heading.js';
 import './EditTranslationsModal.css';
@@ -60,7 +63,7 @@ export function EditTranslationsModal(
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    loadTranslations({tags: [props.docId]}).then((res) => {
+    cmsGetTranslations(props.docId).then((res) => {
       const translationsMap: Record<string, Record<string, string>> = {};
       Object.values(res).forEach((row) => {
         translationsMap[row.source] = row;

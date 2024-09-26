@@ -686,7 +686,7 @@ export interface TranslationsDoc {
 }
 
 /**
- * Lists translation ids in the TranslationsManager.
+ * Lists translation docs in the TranslationsManager.
  */
 export async function cmsListTranslationsDocs(): Promise<TranslationsDoc[]> {
   const projectId = window.__ROOT_CTX.rootConfig.projectId;

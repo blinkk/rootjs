@@ -32,6 +32,7 @@ import {
   CsvTranslation,
   cmsDocImportTranslations,
   cmsGetLinkedGoogleSheetL10n,
+  cmsGetTranslations,
   cmsUnlinkGoogleSheetL10n,
 } from '../../utils/doc.js';
 import {extractStringsForDoc} from '../../utils/extract.js';
@@ -318,7 +319,7 @@ LocalizationModal.Translations = (props: TranslationsProps) => {
     setLoading(true);
     Promise.all([
       extractStringsForDoc(props.docId),
-      loadTranslations(),
+      cmsGetTranslations(props.docId),
       cmsGetLinkedGoogleSheetL10n(props.docId),
     ]).then(([sourceStrings, translationsMap, linkedSheet]) => {
       setSourceStrings(sourceStrings);
