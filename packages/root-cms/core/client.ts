@@ -708,7 +708,8 @@ export class RootCMSClient {
 
   async saveDraftTranslations(
     translationsId: string,
-    translations: {[source: string]: {[locale: string]: string}}
+    translations: {[source: string]: {[locale: string]: string}},
+    options?: {modifiedby?: string}
   ) {
     const docSlug = translationsId.replaceAll('/', '--');
     const docPath = `Projects/${this.projectId}/TranslationsManager/draft/${docSlug}`;
@@ -721,7 +722,7 @@ export class RootCMSClient {
       strings: {},
     };
     data.sys.modifiedAt = Timestamp.now();
-    data.sys.modifiedBy = '';
+    data.sys.modifiedBy = options?.modifiedby || 'root-cms-client';
 
     const strings = data.strings || {};
     Object.entries(translations).forEach(([source, row]) => {

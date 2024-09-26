@@ -671,6 +671,43 @@ export async function cmsPublishTranslations(
   }
 }
 
+export interface TranslationsDoc {
+  id: string;
+  sys: {
+    modifiedAt: Timestamp;
+    modifiedBy: string;
+  };
+  strings: {
+    [hash: string]: {
+      [locale: string]: string;
+      source: string;
+    };
+  };
+}
+
+/**
+ * Lists translation ids in the TranslationsManager.
+ */
+export async function cmsListTranslationsDocs(): Promise<TranslationsDoc[]> {
+  const projectId = window.__ROOT_CTX.rootConfig.projectId;
+  const db = window.firebase.db;
+  const versionsCollection = collection(
+    db,
+    'Projects',
+    projectId,
+    'TranslationsManager',
+    'draft',
+    'Translations'
+  );
+  const q = query(versionsCollection);
+  const querySnapshot = await getDocs(q);
+  const translationDocs: TranslationsDoc[] = [];
+  querySnapshot.forEach((doc) => {
+    translationDocs.push(doc.data() as TranslationsDoc);
+  });
+  return translationDocs;
+}
+
 export function getDraftDocRef(docId: string) {
   const projectId = window.__ROOT_CTX.rootConfig.projectId;
   const db = window.firebase.db;

@@ -18,11 +18,7 @@ import {
 } from '../../utils/doc.js';
 import {extractStringsForDoc} from '../../utils/extract.js';
 import {GoogleSheetId, getSpreadsheetUrl} from '../../utils/gsheets.js';
-import {
-  Translation,
-  TranslationsMap,
-  loadTranslations,
-} from '../../utils/l10n.js';
+import {Translation, TranslationsMap} from '../../utils/l10n.js';
 import {notifyErrors} from '../../utils/notifications.js';
 import './DocTranslationsPage.css';
 
@@ -118,9 +114,10 @@ export function DocTranslationsPage(props: DocTranslationsPageProps) {
       <div className="DocTranslationsPage">
         <div className="DocTranslationsPage__header">
           <Breadcrumbs className="DocTranslationsPage__header__breadcrumbs">
-            <a href={`/cms/content/${collection}`}>{collection}</a>
-            <a href={`/cms/content/${collection}/${slug}`}>{slug}</a>
-            <div>translations</div>
+            <a href={'/cms/translations'}>Translations</a>
+            <a href={`/cms/content/${collection}/${slug}`}>
+              {collection}/{slug}
+            </a>
           </Breadcrumbs>
           <div className="DocTranslationsPage__header__titleWrap">
             <Heading size="h1">Translations: {docId}</Heading>

@@ -2,9 +2,10 @@ import {Button, Loader, Table} from '@mantine/core';
 import {useEffect, useState} from 'preact/hooks';
 import {Heading} from '../../components/Heading/Heading.js';
 import {Layout} from '../../layout/Layout.js';
-import {loadTranslations} from '../../utils/l10n.js';
+import {cmsListTranslationsDocs} from '../../utils/doc.js';
 import {notifyErrors} from '../../utils/notifications.js';
 import './TranslationsPage.css';
+import {IconFile} from '@tabler/icons-preact';
 
 export function TranslationsPage() {
   return (
@@ -32,36 +33,14 @@ export function TranslationsPage() {
 TranslationsPage.TranslationsTable = () => {
   const [loading, setLoading] = useState(true);
   const [tableData, setTableData] = useState<string[][]>([]);
-  const locales = window.__ROOT_CTX.rootConfig.i18n?.locales || [];
-  const nonEnLocales = locales.filter((l) => l !== 'en');
-  const headers = ['hash', 'source', 'en', ...nonEnLocales, 'tags'];
+  const headers = ['id', 'modified'];
 
   async function init() {
     setLoading(true);
     await notifyErrors(async () => {
-      const translationsMap = await loadTranslations();
-      const tableData: any[] = [];
-      Object.entries(translationsMap).forEach(([hash, translations]) => {
-        const nonEnValues = nonEnLocales.map(
-          (locale) => translations[locale] || ''
-        );
-        tableData.push([
-          hash,
-          translations.source,
-          translations.en,
-          ...nonEnValues,
-          ((translations.tags as any as string[]) || []).join('\n'),
-        ]);
-      });
-      // Sort by the source string.
-      tableData.sort((a: string[], b: string[]) => {
-        if (a[1].toLowerCase() < b[1].toLowerCase()) {
-          return -1;
-        }
-        if (a[1].toLowerCase() > b[1].toLowerCase()) {
-          return 1;
-        }
-        return 0;
+      const translationsDocs = await cmsListTranslationsDocs();
+      translationsDocs.forEach((translationsDoc) => {
+        tableData.push([translationsDoc.id, translationsDoc.sys.modifiedBy]);
       });
       setTableData(tableData);
     });
@@ -105,7 +84,10 @@ TranslationsPage.TranslationsTable = () => {
                   data-string-cell={![0, headers.length - 1].includes(colIndex)}
                 >
                   {colIndex === 0 ? (
-                    <a href={`/cms/translations/${cell}`}>{cell}</a>
+                    <div className="TranslationsPage__TranslationsTable__idCell">
+                      <IconFile width={20} strokeWidth={1.5} />
+                      <a href={`/cms/translations/${cell}`}>{cell}</a>
+                    </div>
                   ) : (
                     cell
                   )}
