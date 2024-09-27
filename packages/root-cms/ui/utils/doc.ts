@@ -676,6 +676,8 @@ export interface TranslationsDoc {
   sys: {
     modifiedAt: Timestamp;
     modifiedBy: string;
+    publishedAt?: Timestamp;
+    publishedBy?: string;
   };
   strings: {
     [hash: string]: {

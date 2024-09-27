@@ -1,11 +1,13 @@
 import {Button, Loader, Table} from '@mantine/core';
+import {IconFile} from '@tabler/icons-preact';
 import {useEffect, useState} from 'preact/hooks';
 import {Heading} from '../../components/Heading/Heading.js';
+import {TranslationsStatusBadges} from '../../components/TranslationsStatusBadges/TranslationsStatusBadges.js';
 import {Layout} from '../../layout/Layout.js';
-import {cmsListTranslationsDocs} from '../../utils/doc.js';
+import {TranslationsDoc, cmsListTranslationsDocs} from '../../utils/doc.js';
 import {notifyErrors} from '../../utils/notifications.js';
+import {timeDiff} from '../../utils/time.js';
 import './TranslationsPage.css';
-import {IconFile} from '@tabler/icons-preact';
 
 export function TranslationsPage() {
   return (
@@ -32,17 +34,16 @@ export function TranslationsPage() {
 
 TranslationsPage.TranslationsTable = () => {
   const [loading, setLoading] = useState(true);
-  const [tableData, setTableData] = useState<string[][]>([]);
-  const headers = ['id', 'modified'];
+  const [translationsDocs, setTranslationsDocs] = useState<TranslationsDoc[]>(
+    []
+  );
+  const headers = ['id', 'status', 'last update'];
 
   async function init() {
     setLoading(true);
     await notifyErrors(async () => {
       const translationsDocs = await cmsListTranslationsDocs();
-      translationsDocs.forEach((translationsDoc) => {
-        tableData.push([translationsDoc.id, translationsDoc.sys.modifiedBy]);
-      });
-      setTableData(tableData);
+      setTranslationsDocs(translationsDocs);
     });
     setLoading(false);
   }
@@ -55,7 +56,7 @@ TranslationsPage.TranslationsTable = () => {
     return <Loader color="gray" size="xl" />;
   }
 
-  if (tableData.length === 0) {
+  if (translationsDocs.length === 0) {
     return (
       <div className="TranslationsPage__TranslationsTable">
         <div className="TranslationsPage__TranslationsTable__empty">
@@ -63,6 +64,17 @@ TranslationsPage.TranslationsTable = () => {
         </div>
       </div>
     );
+  }
+
+  function modifiedAtString(translationsDoc: TranslationsDoc) {
+    const sys = translationsDoc.sys;
+    if (
+      sys.publishedAt &&
+      sys.publishedAt.toMillis() >= sys.modifiedAt.toMillis()
+    ) {
+      return `published ${timeDiff(sys.publishedAt)} by ${sys.publishedBy}`;
+    }
+    return `updated ${timeDiff(sys.modifiedAt)} by ${sys.modifiedBy}`;
   }
 
   return (
@@ -76,23 +88,20 @@ TranslationsPage.TranslationsTable = () => {
           </tr>
         </thead>
         <tbody>
-          {tableData.map((cells) => (
-            <tr key={cells[0]}>
-              {cells.map((cell, colIndex) => (
-                <td
-                  data-col={headers[colIndex]}
-                  data-string-cell={![0, headers.length - 1].includes(colIndex)}
-                >
-                  {colIndex === 0 ? (
-                    <div className="TranslationsPage__TranslationsTable__idCell">
-                      <IconFile width={20} strokeWidth={1.5} />
-                      <a href={`/cms/translations/${cell}`}>{cell}</a>
-                    </div>
-                  ) : (
-                    cell
-                  )}
-                </td>
-              ))}
+          {translationsDocs.map((translationsDoc) => (
+            <tr key={translationsDoc.id}>
+              <td>
+                <div className="TranslationsPage__TranslationsTable__idCell">
+                  <IconFile width={20} strokeWidth={1.5} />
+                  <a href={`/cms/translations/${translationsDoc.id}`}>
+                    {translationsDoc.id}
+                  </a>
+                </div>
+              </td>
+              <td>
+                <TranslationsStatusBadges translationsDoc={translationsDoc} />
+              </td>
+              <td>{modifiedAtString(translationsDoc)}</td>
             </tr>
           ))}
         </tbody>
