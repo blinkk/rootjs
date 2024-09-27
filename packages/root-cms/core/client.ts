@@ -1507,6 +1507,7 @@ export function translationsForLocale(
     for (const fallbackLocale of fallbackLocales) {
       if (string[fallbackLocale]) {
         translation = string[fallbackLocale];
+        break;
       }
     }
     localeTranslations[source] = translation;
