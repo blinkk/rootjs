@@ -42,6 +42,14 @@ export interface TranslationsDoc {
   sys: {
     modifiedAt: Timestamp;
     modifiedBy: string;
+    publishedAt?: Timestamp;
+    publishedBy?: string;
+    linkedSheet?: {
+      spreadsheetId: string;
+      gid: number;
+      linkedAt: Timestamp;
+      linkedBy: string;
+    };
   };
   strings: TranslationsMap;
 }

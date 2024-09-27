@@ -590,11 +590,11 @@ export async function cmsSaveTranslations(
 }
 
 /**
- * Gets translations from `/Projects/<project>/TranslationsManager/draft/<translationsId>`.
+ * Fetches the translations doc from `/Projects/<project>/TranslationsManager/draft/<translationsId>`.
  */
-export async function cmsGetTranslations(
+export async function cmsGetTranslationsDoc(
   translationsId: string
-): Promise<TranslationsMap> {
+): Promise<TranslationsDoc | null> {
   const projectId = window.__ROOT_CTX.rootConfig.projectId;
   const db = window.firebase.db;
   const docRef = doc(
@@ -607,12 +607,20 @@ export async function cmsGetTranslations(
     translationsId.replaceAll('/', '--')
   );
   const snapshot = await getDoc(docRef);
-  const data = snapshot.data() || {
-    id: translationsId.replaceAll('--', '/'),
-    sys: {},
-    strings: {},
-  };
-  return data.strings || {};
+  if (!snapshot.exists()) {
+    return null;
+  }
+  return snapshot.data() as TranslationsDoc;
+}
+
+/**
+ * Gets translations from `/Projects/<project>/TranslationsManager/draft/<translationsId>`.
+ */
+export async function cmsGetTranslations(
+  translationsId: string
+): Promise<TranslationsMap> {
+  const translationsDoc = await cmsGetTranslationsDoc(translationsId);
+  return translationsDoc?.strings || {};
 }
 
 /**
