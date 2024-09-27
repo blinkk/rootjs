@@ -134,7 +134,7 @@ export async function cmsPublishDocs(
       throw new Error(`doc does not exist: ${docId}`);
     }
     updatePublishedDocDataInBatch(batch, docId, draftData);
-    cmsPublishTranslations(docId, {batch});
+    cmsPublishTranslationsDoc(docId, {batch});
   });
   await batch.commit();
 
@@ -618,7 +618,7 @@ export async function cmsGetTranslations(
 /**
  * Publishes translations to `/Projects/<project>/TranslationsManager/published/<translationsId>`.
  */
-export async function cmsPublishTranslations(
+export async function cmsPublishTranslationsDoc(
   translationsId: string,
   options?: {batch?: WriteBatch}
 ) {

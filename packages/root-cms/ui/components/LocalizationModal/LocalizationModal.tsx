@@ -284,15 +284,26 @@ LocalizationModal.AllNoneButtons = (props: AllNoneButtonsProps) => {
   );
 };
 
-interface TranslationsProps {
-  collection: schema.Collection;
-  docId: string;
-}
-
-LocalizationModal.Translations = (props: TranslationsProps) => {
+LocalizationModal.Translations = (props: LocalizationModalProps) => {
   const [loading, setLoading] = useState(true);
   const [sourceStrings, setSourceStrings] = useState<string[]>([]);
-  const [selectedLocale, setSelectedLocale] = useState('en');
+  const [selectedLocale, setSelectedLocale] = useState(() => {
+    // Initialize with the first non-EN locale.
+    if (props.draft) {
+      const locales = props.draft.getLocales();
+      if (locales.length === 1) {
+        return locales[0];
+      }
+      if (locales.length > 1) {
+        for (const l of locales) {
+          if (l !== 'en') {
+            return l;
+          }
+        }
+      }
+    }
+    return 'en';
+  });
   const [localeTranslations, setLocaleTranslations] = useState<
     Record<string, string>
   >({});
