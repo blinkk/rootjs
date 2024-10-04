@@ -3,8 +3,11 @@ import {IconFile} from '@tabler/icons-preact';
 import {useEffect, useState} from 'preact/hooks';
 import {Heading} from '../../components/Heading/Heading.js';
 import {TranslationsStatusBadges} from '../../components/TranslationsStatusBadges/TranslationsStatusBadges.js';
+import {
+  dbListTranslationsDocs,
+  TranslationsDoc,
+} from '../../db/translations.js';
 import {Layout} from '../../layout/Layout.js';
-import {TranslationsDoc, cmsListTranslationsDocs} from '../../utils/doc.js';
 import {notifyErrors} from '../../utils/notifications.js';
 import {timeDiff} from '../../utils/time.js';
 import './TranslationsPage.css';
@@ -42,7 +45,7 @@ TranslationsPage.TranslationsTable = () => {
   async function init() {
     setLoading(true);
     await notifyErrors(async () => {
-      const translationsDocs = await cmsListTranslationsDocs();
+      const translationsDocs = await dbListTranslationsDocs();
       setTranslationsDocs(translationsDocs);
     });
     setLoading(false);

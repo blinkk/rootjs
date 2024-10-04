@@ -27,6 +27,7 @@ import * as schema from '../../../core/schema.js';
 import {DraftController} from '../../hooks/useDraft.js';
 import {GapiClient, useGapiClient} from '../../hooks/useGapiClient.js';
 import {useModalTheme} from '../../hooks/useModalTheme.js';
+import {useTranslationsDoc} from '../../hooks/useTranslationsDoc.js';
 import {logAction} from '../../utils/actions.js';
 import {
   CsvTranslation,
@@ -309,7 +310,7 @@ LocalizationModal.Translations = (props: LocalizationModalProps) => {
   >({});
   const [translationsMap, setTranslationsMap] = useState<TranslationsMap>({});
   const gapiClient = useGapiClient();
-  const [linkedSheet, setLinkedSheet] = useState<GoogleSheetId | null>(null);
+  // const [linkedSheet, setLinkedSheet] = useState<GoogleSheetId | null>(null);
   const exportSheetModal = useExportSheetModal();
 
   const sourceToTranslationsMap = useMemo(() => {
@@ -326,19 +327,25 @@ LocalizationModal.Translations = (props: LocalizationModalProps) => {
     label: getLocaleLabel(locale),
   }));
 
-  useEffect(() => {
+  const translationsDoc = useTranslationsDoc(props.docId);
+  const linkedSheet = translationsDoc.linkedSheet;
+
+  async function init() {
     setLoading(true);
-    Promise.all([
-      extractStringsForDoc(props.docId),
-      cmsGetTranslations(props.docId),
-      cmsGetLinkedGoogleSheetL10n(props.docId),
-    ]).then(([sourceStrings, translationsMap, linkedSheet]) => {
-      setSourceStrings(sourceStrings);
-      setTranslationsMap(translationsMap);
-      setLinkedSheet(linkedSheet);
-      setLoading(false);
+    const docStrings = await extractStringsForDoc(props.docId);
+    const translationsMap = translationsDoc?.strings || {};
+    const sourceStringsSet: Set<string> = new Set(docStrings);
+    Object.values(translationsMap).forEach((translation) => {
+      sourceStringsSet.add(translation.source);
     });
-  }, [props.docId]);
+    setSourceStrings(Array.from(sourceStringsSet));
+    setTranslationsMap(translationsMap);
+    setLoading(false);
+  }
+
+  useEffect(() => {
+    init();
+  }, [props.docId, translationsDoc.loading]);
 
   useEffect(() => {
     if (!selectedLocale) {
@@ -527,8 +534,7 @@ LocalizationModal.Translations = (props: LocalizationModalProps) => {
   }
 
   async function unlinkGoogleSheet() {
-    await cmsUnlinkGoogleSheetL10n(props.docId);
-    setLinkedSheet(null);
+    await translationsDoc.unlinkSheet();
     showNotification({
       title: 'Unlinked Google Sheet',
       message: `${props.docId} is no longer connected to a Google Sheet.`,

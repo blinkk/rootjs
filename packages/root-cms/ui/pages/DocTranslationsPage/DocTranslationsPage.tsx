@@ -8,17 +8,12 @@ import {
 } from '@tabler/icons-preact';
 import {useEffect, useMemo, useRef, useState} from 'preact/hooks';
 import {Heading} from '../../components/Heading/Heading.js';
+import {TranslationsMap} from '../../db/translations.js';
+import {useTranslationsDoc} from '../../hooks/useTranslationsDoc.js';
 import {Layout} from '../../layout/Layout.js';
 import {joinClassNames} from '../../utils/classes.js';
-import {
-  CsvTranslation,
-  cmsDocImportTranslations,
-  cmsGetLinkedGoogleSheetL10n,
-  cmsGetTranslations,
-} from '../../utils/doc.js';
 import {extractStringsForDoc} from '../../utils/extract.js';
-import {GoogleSheetId, getSpreadsheetUrl} from '../../utils/gsheets.js';
-import {Translation, TranslationsMap} from '../../utils/l10n.js';
+import {getSpreadsheetUrl} from '../../utils/gsheets.js';
 import {notifyErrors} from '../../utils/notifications.js';
 import './DocTranslationsPage.css';
 
@@ -32,9 +27,6 @@ export function DocTranslationsPage(props: DocTranslationsPageProps) {
   const [notFound, setNotFound] = useState(false);
   const [sourceStrings, setSourceStrings] = useState<string[]>([]);
   const [translationsMap, setTranslationsMap] = useState<TranslationsMap>({});
-  const [linkedSheet, setLinkedSheet] = useState<GoogleSheetId | null>(null);
-  const [hasChanges, setHasChanges] = useState(false);
-  const [changesMap, setChangesMap] = useState<Record<string, Translation>>({});
   const [saving, setSaving] = useState(false);
   const collection = props.collection;
   const slug = props.slug;
@@ -43,16 +35,22 @@ export function DocTranslationsPage(props: DocTranslationsPageProps) {
   const i18nConfig = window.__ROOT_CTX.rootConfig.i18n || {};
   const i18nLocales = i18nConfig.locales || ['en'];
 
+  const translationsDoc = useTranslationsDoc(docId);
+  const linkedSheet = translationsDoc.linkedSheet;
+
   async function init() {
+    if (translationsDoc.loading) {
+      return;
+    }
     try {
-      const [sourceStrings, translationsMap, linkedSheet] = await Promise.all([
-        extractStringsForDoc(docId),
-        cmsGetTranslations(docId),
-        cmsGetLinkedGoogleSheetL10n(docId),
-      ]);
-      setSourceStrings(sourceStrings);
+      const docStrings = await extractStringsForDoc(docId);
+      const translationsMap = translationsDoc?.strings || {};
+      const sourceStringsSet: Set<string> = new Set(docStrings);
+      Object.values(translationsMap).forEach((translation) => {
+        sourceStringsSet.add(translation.source);
+      });
+      setSourceStrings(Array.from(sourceStringsSet));
       setTranslationsMap(translationsMap);
-      setLinkedSheet(linkedSheet);
       setLoading(false);
     } catch (err) {
       console.error(err);
@@ -63,22 +61,14 @@ export function DocTranslationsPage(props: DocTranslationsPageProps) {
 
   useEffect(() => {
     init();
-  }, []);
+  }, [translationsDoc.loading]);
 
   if (notFound) {
     return <DocTranslationsPage.NotFound docId={docId} />;
   }
 
-  function onChange(source: string, locale: string, translation: string) {
-    setHasChanges(true);
-    setChangesMap((current) => {
-      const newValue = {...current};
-      const translations = newValue[source] ?? {};
-      translations.source = source;
-      translations[locale] = translation;
-      newValue[source] = translations;
-      return newValue;
-    });
+  function onChange(locale: string, source: string, translation: string) {
+    translationsDoc.setTranslation(locale, source, translation);
   }
 
   async function onSave() {
@@ -94,17 +84,13 @@ export function DocTranslationsPage(props: DocTranslationsPageProps) {
         autoClose: false,
         disallowClose: true,
       });
-      const changes: CsvTranslation[] = Object.values(changesMap);
-      console.log(changes);
-      await cmsDocImportTranslations(docId, changes);
+      await translationsDoc.saveTranslations();
       updateNotification({
         id: notificationId,
         title: 'Saved translations',
         message: `Updated translations for ${docId}!`,
         autoClose: true,
       });
-      setChangesMap({});
-      setHasChanges(false);
     });
     setSaving(false);
   }
@@ -174,7 +160,7 @@ export function DocTranslationsPage(props: DocTranslationsPageProps) {
               sourceStrings={sourceStrings}
               translationsMap={translationsMap}
               onChange={onChange}
-              changesMap={changesMap}
+              pendingChanges={translationsDoc.pendingChanges}
             />
           )}
         </div>
@@ -184,7 +170,7 @@ export function DocTranslationsPage(props: DocTranslationsPageProps) {
             <Button
               variant="filled"
               color="dark"
-              disabled={!hasChanges}
+              disabled={!translationsDoc.hasPendingChanges}
               loading={saving}
               onClick={() => onSave()}
             >
@@ -218,18 +204,16 @@ interface DocTranslationsPageTableProps {
   locales: string[];
   sourceStrings: string[];
   translationsMap: TranslationsMap;
-  onChange: (source: string, locale: string, translation: string) => void;
-  changesMap: Record<string, Translation>;
+  onChange: (locale: string, source: string, translation: string) => void;
+  pendingChanges: TranslationsMap;
 }
 
 DocTranslationsPage.Table = (props: DocTranslationsPageTableProps) => {
   const sourceToTranslationsMap = useMemo(() => {
     const results: {[source: string]: Record<string, string>} = {};
-    Object.values(props.translationsMap).forEach(
-      (row: Record<string, string>) => {
-        results[row.source] = row;
-      }
-    );
+    Object.entries(props.translationsMap).forEach(([hash, row]) => {
+      results[row.source] = {...row, hash};
+    });
     return results;
   }, [props.translationsMap]);
 
@@ -237,6 +221,7 @@ DocTranslationsPage.Table = (props: DocTranslationsPageTableProps) => {
     const sourceTranslations = sourceToTranslationsMap[source] || {};
     const translation = sourceTranslations[locale] || '';
     return {
+      hash: sourceTranslations.hash,
       translation: translation,
       hasChanges: false,
     };
@@ -270,7 +255,7 @@ DocTranslationsPage.Table = (props: DocTranslationsPageTableProps) => {
                       locale={locale}
                       value={data.translation}
                       onChange={props.onChange}
-                      changesMap={props.changesMap}
+                      changesMap={props.pendingChanges}
                     />
                   </td>
                 );
@@ -287,8 +272,8 @@ DocTranslationsPage.Textarea = (props: {
   value: string;
   source: string;
   locale: string;
-  onChange: (source: string, locale: string, translation: string) => void;
-  changesMap: Record<string, Translation>;
+  onChange: (locale: string, source: string, translation: string) => void;
+  changesMap: TranslationsMap;
 }) => {
   const textInputRef = useRef<HTMLTextAreaElement>(null);
   const [value, setValue] = useState(props.value);
@@ -326,7 +311,7 @@ DocTranslationsPage.Textarea = (props: {
       onChange={(e) => {
         const newValue = (e.target as HTMLTextAreaElement).value;
         setValue(newValue);
-        props.onChange(props.source, props.locale, newValue);
+        props.onChange(props.locale, props.source, newValue);
       }}
       value={value}
     ></textarea>

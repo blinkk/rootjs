@@ -4,12 +4,8 @@ import {showNotification, updateNotification} from '@mantine/notifications';
 import {ChangeEvent} from 'preact/compat';
 import {useEffect, useState} from 'preact/hooks';
 import {useModalTheme} from '../../hooks/useModalTheme.js';
+import {useTranslationsDoc} from '../../hooks/useTranslationsDoc.js';
 import {joinClassNames} from '../../utils/classes.js';
-import {
-  CsvTranslation,
-  cmsDocImportTranslations,
-  cmsGetTranslations,
-} from '../../utils/doc.js';
 import {GoogleSheetId, getSpreadsheetUrl} from '../../utils/gsheets.js';
 import {notifyErrors} from '../../utils/notifications.js';
 import {Heading} from '../Heading/Heading.js';
@@ -57,21 +53,22 @@ export function EditTranslationsModal(
   const [translationsMap, setTranslationsMap] = useState<
     Record<string, Record<string, string>>
   >({});
-  const [changedKeys, setChangedKeys] = useState<string[]>([]);
-  const [hasChanges, setHasChanges] = useState(false);
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
 
+  const translationsDoc = useTranslationsDoc(props.docId);
+
   useEffect(() => {
-    cmsGetTranslations(props.docId).then((res) => {
-      const translationsMap: Record<string, Record<string, string>> = {};
-      Object.values(res).forEach((row) => {
-        translationsMap[row.source] = row;
-      });
-      setTranslationsMap(translationsMap);
-      setLoading(false);
+    if (translationsDoc.loading) {
+      return;
+    }
+    const translationsMap: Record<string, Record<string, string>> = {};
+    Object.entries(translationsDoc.strings).forEach(([hash, row]) => {
+      translationsMap[row.source] = {...row, hash};
     });
-  }, [props.docId]);
+    setTranslationsMap(translationsMap);
+    setLoading(false);
+  }, [translationsDoc.loading]);
 
   async function onSave() {
     setSaving(true);
@@ -86,12 +83,7 @@ export function EditTranslationsModal(
         autoClose: false,
         disallowClose: true,
       });
-      const changes: CsvTranslation[] = [];
-      changedKeys.forEach((changedKey) => {
-        const row = translationsMap[changedKey] as CsvTranslation;
-        changes.push(row);
-      });
-      await cmsDocImportTranslations(props.docId, changes);
+      await translationsDoc.saveTranslations();
       updateNotification({
         id: notificationId,
         title: 'Saved translations',
@@ -102,18 +94,8 @@ export function EditTranslationsModal(
     setSaving(false);
   }
 
-  function onChange(row: Record<string, string>) {
-    setTranslationsMap((current) => {
-      const newValue = {...current};
-      newValue[row.source] = row;
-      return newValue;
-    });
-    setChangedKeys((current) => {
-      const newValue = new Set(current);
-      newValue.add(row.source);
-      return Array.from(newValue);
-    });
-    setHasChanges(true);
+  function onChange(locale: string, source: string, translation: string) {
+    translationsDoc.setTranslation(locale, source, translation);
   }
 
   return (
@@ -198,7 +180,7 @@ export function EditTranslationsModal(
             size="xs"
             color="dark"
             onClick={() => onSave()}
-            disabled={!hasChanges}
+            disabled={!translationsDoc.hasPendingChanges}
             loading={saving}
           >
             Save
@@ -213,31 +195,20 @@ EditTranslationsModal.StringsEditor = (props: {
   source: string;
   locales: string[];
   translations: Record<string, string>;
-  onChange: (row: Record<string, string>) => void;
+  onChange: (locale: string, source: string, translation: string) => void;
 }) => {
   const locales = props.locales;
   const [translations, setTranslations] = useState<Record<string, string>>(
     props.translations || {}
   );
-  const [hasChanges, setHasChanges] = useState(false);
 
-  function updateTranslation(locale: string, value: string) {
-    setHasChanges(true);
-    setTranslations((current) => {
-      const newTranslations: Record<string, string> = {
-        ...current,
-        source: props.source,
-      };
-      newTranslations[locale] = value;
-      return newTranslations;
+  function updateTranslation(locale: string, translation: string) {
+    setTranslations((translations) => {
+      translations[locale] = translation;
+      return translations;
     });
+    props.onChange(locale, props.source, translation);
   }
-
-  useEffect(() => {
-    if (hasChanges) {
-      props.onChange(translations);
-    }
-  }, [hasChanges, translations]);
 
   return (
     <div className="EditTranslationsModal__StringsEditor">
