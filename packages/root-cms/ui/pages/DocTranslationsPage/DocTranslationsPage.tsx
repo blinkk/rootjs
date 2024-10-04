@@ -12,7 +12,6 @@ import {TranslationsMap} from '../../db/translations.js';
 import {useTranslationsDoc} from '../../hooks/useTranslationsDoc.js';
 import {Layout} from '../../layout/Layout.js';
 import {joinClassNames} from '../../utils/classes.js';
-import {extractStringsForDoc} from '../../utils/extract.js';
 import {getSpreadsheetUrl} from '../../utils/gsheets.js';
 import {notifyErrors} from '../../utils/notifications.js';
 import './DocTranslationsPage.css';
@@ -43,13 +42,11 @@ export function DocTranslationsPage(props: DocTranslationsPageProps) {
       return;
     }
     try {
-      const docStrings = await extractStringsForDoc(docId);
       const translationsMap = translationsDoc?.strings || {};
-      const sourceStringsSet: Set<string> = new Set(docStrings);
-      Object.values(translationsMap).forEach((translation) => {
-        sourceStringsSet.add(translation.source);
-      });
-      setSourceStrings(Array.from(sourceStringsSet));
+      const sourceStrings = Object.values(translationsMap)
+        .map((item) => item.source)
+        .filter((item) => !!item);
+      setSourceStrings(Array.from(sourceStrings));
       setTranslationsMap(translationsMap);
       setLoading(false);
     } catch (err) {

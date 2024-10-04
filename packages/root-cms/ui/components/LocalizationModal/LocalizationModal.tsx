@@ -24,6 +24,7 @@ import {
 } from '@tabler/icons-preact';
 import {useEffect, useMemo, useState} from 'preact/hooks';
 import * as schema from '../../../core/schema.js';
+import {TranslationsMap} from '../../db/translations.js';
 import {DraftController} from '../../hooks/useDraft.js';
 import {GapiClient, useGapiClient} from '../../hooks/useGapiClient.js';
 import {useModalTheme} from '../../hooks/useModalTheme.js';
@@ -36,14 +37,12 @@ import {
   cmsGetTranslations,
   cmsUnlinkGoogleSheetL10n,
 } from '../../utils/doc.js';
-import {extractStringsForDoc} from '../../utils/extract.js';
 import {
   GSheet,
   GSpreadsheet,
   GoogleSheetId,
   getSpreadsheetUrl,
 } from '../../utils/gsheets.js';
-import {TranslationsMap, loadTranslations} from '../../utils/l10n.js';
 import {useExportSheetModal} from '../ExportSheetModal/ExportSheetModal.js';
 import {Heading} from '../Heading/Heading.js';
 import './LocalizationModal.css';
@@ -332,13 +331,11 @@ LocalizationModal.Translations = (props: LocalizationModalProps) => {
 
   async function init() {
     setLoading(true);
-    const docStrings = await extractStringsForDoc(props.docId);
     const translationsMap = translationsDoc?.strings || {};
-    const sourceStringsSet: Set<string> = new Set(docStrings);
-    Object.values(translationsMap).forEach((translation) => {
-      sourceStringsSet.add(translation.source);
-    });
-    setSourceStrings(Array.from(sourceStringsSet));
+    const sourceStrings = Object.values(translationsMap)
+      .map((item) => item.source)
+      .filter((item) => !!item);
+    setSourceStrings(Array.from(sourceStrings));
     setTranslationsMap(translationsMap);
     setLoading(false);
   }

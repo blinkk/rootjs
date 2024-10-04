@@ -6,6 +6,7 @@ import {
   dbGetTranslationsDoc,
   dbSaveTranslations,
 } from '../db/translations.js';
+import {extractStringsForDoc} from '../utils/extract.js';
 import {normalizeString, sourceHash} from '../utils/l10n.js';
 
 export interface TranslationsDocController {
@@ -42,9 +43,16 @@ export function useTranslationsDoc(
 
   async function init() {
     setLoading(true);
-    const translationsDoc = await dbGetTranslationsDoc(translationsId);
+    const [docStrings, translationsDoc] = await Promise.all([
+      getTranslationsMapForDoc(translationsId),
+      dbGetTranslationsDoc(translationsId),
+    ]);
     setTranslationsDoc(translationsDoc);
-    setStrings(translationsDoc?.strings || {});
+    const strings = mergeTranslationsMaps(
+      docStrings,
+      translationsDoc?.strings || {}
+    );
+    setStrings(strings);
     setLoading(false);
   }
 
@@ -100,4 +108,41 @@ export function useTranslationsDoc(
     pendingChanges,
     saveTranslations,
   };
+}
+
+async function getTranslationsMapForDoc(
+  docId: string
+): Promise<TranslationsMap> {
+  if (!docId.includes('/') && docId.includes('--')) {
+    // Replace only the first instance of '--' to '/'.
+    docId = docId.replace('--', '/');
+  }
+  if (!docId.includes('/')) {
+    return {};
+  }
+  const collectionId = docId.split('/')[0];
+  if (!window.__ROOT_CTX.collections[collectionId]) {
+    return {};
+  }
+  const docStrings = await extractStringsForDoc(docId);
+  const translationsMap: TranslationsMap = {};
+  for (const source of docStrings) {
+    const hash = await sourceHash(source);
+    translationsMap[hash] = {source, en: source};
+  }
+  return translationsMap;
+}
+
+function mergeTranslationsMaps(
+  a: TranslationsMap,
+  b: TranslationsMap
+): TranslationsMap {
+  const merged: TranslationsMap = {};
+  Object.entries(a).forEach(([hash, translations]) => {
+    merged[hash] = {...translations};
+  });
+  Object.entries(b).forEach(([hash, translations]) => {
+    merged[hash] = {...merged[hash], ...translations};
+  });
+  return merged;
 }
