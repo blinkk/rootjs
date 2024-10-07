@@ -105,6 +105,11 @@ export interface ListDocsOptions {
   orderBy?: string;
   orderByDirection?: 'asc' | 'desc';
   query?: (query: Query) => Query;
+  /**
+   * Whether to fetch the "raw" version of the doc (for use in conjunction with
+   * `setRawDoc()`).
+   */
+  raw?: boolean;
 }
 
 export interface GetCountOptions {
@@ -306,8 +311,15 @@ export class RootCMSClient {
     const results = await query.get();
     const docs: T[] = [];
     results.forEach((result) => {
-      const doc = unmarshalData(result.data()) as T;
-      docs.push(doc);
+      if (options.raw) {
+        // For callers that wish to modify the raw doc via `setRawDoc()`,
+        // return the unmodified doc as returned from firestore.
+        const rawDoc = result.data() as T;
+        docs.push(rawDoc);
+      } else {
+        const doc = unmarshalData(result.data()) as T;
+        docs.push(doc);
+      }
     });
     return {docs};
   }
