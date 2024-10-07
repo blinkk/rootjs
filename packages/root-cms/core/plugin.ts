@@ -162,6 +162,12 @@ export type CMSPluginOptions = {
    * Adjust console output verbosity. Default is `'info'`.
    */
   logLevel?: 'info' | 'warn' | 'error' | 'silent' | 'debug';
+
+  /**
+   * Whether to enable/disable file watching in dev (e.g. for generating
+   * `root-cms.d.ts`). Defaults to `true`.
+   */
+  watch?: boolean;
 };
 
 export type CMSPlugin = Plugin & {
@@ -434,18 +440,6 @@ export function cmsPlugin(options: CMSPluginOptions): CMSPlugin {
     }),
 
     /**
-     * Watches for .schema.ts file changes and generates a root-cms.d.ts file.
-     */
-    onFileChange: (
-      eventName: 'add' | 'addDir' | 'change' | 'unlink' | 'unlinkDir',
-      filepath: string
-    ) => {
-      if (filepath.endsWith('.schema.ts')) {
-        generateTypes();
-      }
-    },
-
-    /**
      * Attaches CMS-specific middleware to the Root.js server.
      */
     configureServer: async (
@@ -587,6 +581,22 @@ export function cmsPlugin(options: CMSPluginOptions): CMSPlugin {
       });
     },
   };
+
+  if (options.watch !== false) {
+    plugin.onFileChange = (
+      eventName: 'add' | 'addDir' | 'change' | 'unlink' | 'unlinkDir',
+      filepath: string
+    ) => {
+      if (filepath.endsWith('.schema.ts')) {
+        // Avoid loading the `generate-types.js` module if it is not needed.
+        // See: https://github.com/blinkk/rootjs/issues/426
+        import('../cli/generate-types.js').then((generateTypesModule) => {
+          const generateTypes = generateTypesModule.generateTypes;
+          generateTypes();
+        });
+      }
+    };
+  }
 
   return plugin;
 }
