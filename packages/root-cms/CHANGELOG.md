@@ -1,5 +1,13 @@
 # @blinkk/root-cms
 
+## 1.3.12
+
+### Patch Changes
+
+- e217aea: feat: add option for listing raw docs
+- Updated dependencies [e12001c]
+  - @blinkk/root@1.3.12
+
 ## 1.3.11
 
 ### Patch Changes

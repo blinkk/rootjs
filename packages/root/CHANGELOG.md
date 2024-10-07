@@ -1,5 +1,11 @@
 # @blinkk/root
 
+## 1.3.12
+
+### Patch Changes
+
+- e12001c: fix: fix sitemap ordering
+
 ## 1.3.11
 
 ## 1.3.10
