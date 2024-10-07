@@ -1,5 +1,12 @@
 # @blinkk/root-cms
 
+## 1.3.11
+
+### Patch Changes
+
+- 9fe5fb9: feat: add "watch" option to cms config
+  - @blinkk/root@1.3.11
+
 ## 1.3.10
 
 ### Patch Changes
