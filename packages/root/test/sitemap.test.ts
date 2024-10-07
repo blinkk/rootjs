@@ -34,33 +34,6 @@ test('build sitemap project', async () => {
       <xhtml:link rel=\\"alternate\\" hreflang=\\"fr-CA\\" href=\\"https://www.example.com/fr_ca/\\" />
     </url>
     <url>
-      <loc>https://www.example.com/de/</loc>
-      <xhtml:link rel=\\"alternate\\" hreflang=\\"x-default\\" href=\\"https://www.example.com/\\" />
-      <xhtml:link rel=\\"alternate\\" hreflang=\\"en\\" href=\\"https://www.example.com/en/\\" />
-      <xhtml:link rel=\\"alternate\\" hreflang=\\"en-CA\\" href=\\"https://www.example.com/en_ca/\\" />
-      <xhtml:link rel=\\"alternate\\" hreflang=\\"en-GB\\" href=\\"https://www.example.com/en_gb/\\" />
-      <xhtml:link rel=\\"alternate\\" hreflang=\\"fr\\" href=\\"https://www.example.com/fr/\\" />
-      <xhtml:link rel=\\"alternate\\" hreflang=\\"fr-CA\\" href=\\"https://www.example.com/fr_ca/\\" />
-    </url>
-    <url>
-      <loc>https://www.example.com/de/foo/</loc>
-      <xhtml:link rel=\\"alternate\\" hreflang=\\"x-default\\" href=\\"https://www.example.com/foo/\\" />
-      <xhtml:link rel=\\"alternate\\" hreflang=\\"en\\" href=\\"https://www.example.com/en/foo/\\" />
-      <xhtml:link rel=\\"alternate\\" hreflang=\\"en-CA\\" href=\\"https://www.example.com/en_ca/foo/\\" />
-      <xhtml:link rel=\\"alternate\\" hreflang=\\"en-GB\\" href=\\"https://www.example.com/en_gb/foo/\\" />
-      <xhtml:link rel=\\"alternate\\" hreflang=\\"fr\\" href=\\"https://www.example.com/fr/foo/\\" />
-      <xhtml:link rel=\\"alternate\\" hreflang=\\"fr-CA\\" href=\\"https://www.example.com/fr_ca/foo/\\" />
-    </url>
-    <url>
-      <loc>https://www.example.com/en/</loc>
-      <xhtml:link rel=\\"alternate\\" hreflang=\\"x-default\\" href=\\"https://www.example.com/\\" />
-      <xhtml:link rel=\\"alternate\\" hreflang=\\"de\\" href=\\"https://www.example.com/de/\\" />
-      <xhtml:link rel=\\"alternate\\" hreflang=\\"en-CA\\" href=\\"https://www.example.com/en_ca/\\" />
-      <xhtml:link rel=\\"alternate\\" hreflang=\\"en-GB\\" href=\\"https://www.example.com/en_gb/\\" />
-      <xhtml:link rel=\\"alternate\\" hreflang=\\"fr\\" href=\\"https://www.example.com/fr/\\" />
-      <xhtml:link rel=\\"alternate\\" hreflang=\\"fr-CA\\" href=\\"https://www.example.com/fr_ca/\\" />
-    </url>
-    <url>
       <loc>https://www.example.com/bar/</loc>
       <xhtml:link rel=\\"alternate\\" hreflang=\\"de\\" href=\\"https://www.example.com/de/bar/\\" />
       <xhtml:link rel=\\"alternate\\" hreflang=\\"en\\" href=\\"https://www.example.com/en/bar/\\" />
@@ -79,103 +52,148 @@ test('build sitemap project', async () => {
       <xhtml:link rel=\\"alternate\\" hreflang=\\"fr-CA\\" href=\\"https://www.example.com/fr_ca/baz/\\" />
     </url>
     <url>
+      <loc>https://www.example.com/de/</loc>
+      <xhtml:link rel=\\"alternate\\" hreflang=\\"en\\" href=\\"https://www.example.com/en/\\" />
+      <xhtml:link rel=\\"alternate\\" hreflang=\\"en-CA\\" href=\\"https://www.example.com/en_ca/\\" />
+      <xhtml:link rel=\\"alternate\\" hreflang=\\"en-GB\\" href=\\"https://www.example.com/en_gb/\\" />
+      <xhtml:link rel=\\"alternate\\" hreflang=\\"fr\\" href=\\"https://www.example.com/fr/\\" />
+      <xhtml:link rel=\\"alternate\\" hreflang=\\"fr-CA\\" href=\\"https://www.example.com/fr_ca/\\" />
+      <xhtml:link rel=\\"alternate\\" hreflang=\\"x-default\\" href=\\"https://www.example.com/\\" />
+    </url>
+    <url>
       <loc>https://www.example.com/de/bar/</loc>
-      <xhtml:link rel=\\"alternate\\" hreflang=\\"x-default\\" href=\\"https://www.example.com/bar/\\" />
       <xhtml:link rel=\\"alternate\\" hreflang=\\"en\\" href=\\"https://www.example.com/en/bar/\\" />
       <xhtml:link rel=\\"alternate\\" hreflang=\\"en-CA\\" href=\\"https://www.example.com/en_ca/bar/\\" />
       <xhtml:link rel=\\"alternate\\" hreflang=\\"en-GB\\" href=\\"https://www.example.com/en_gb/bar/\\" />
       <xhtml:link rel=\\"alternate\\" hreflang=\\"fr\\" href=\\"https://www.example.com/fr/bar/\\" />
       <xhtml:link rel=\\"alternate\\" hreflang=\\"fr-CA\\" href=\\"https://www.example.com/fr_ca/bar/\\" />
+      <xhtml:link rel=\\"alternate\\" hreflang=\\"x-default\\" href=\\"https://www.example.com/bar/\\" />
     </url>
     <url>
       <loc>https://www.example.com/de/baz/</loc>
-      <xhtml:link rel=\\"alternate\\" hreflang=\\"x-default\\" href=\\"https://www.example.com/baz/\\" />
       <xhtml:link rel=\\"alternate\\" hreflang=\\"en\\" href=\\"https://www.example.com/en/baz/\\" />
       <xhtml:link rel=\\"alternate\\" hreflang=\\"en-CA\\" href=\\"https://www.example.com/en_ca/baz/\\" />
       <xhtml:link rel=\\"alternate\\" hreflang=\\"en-GB\\" href=\\"https://www.example.com/en_gb/baz/\\" />
       <xhtml:link rel=\\"alternate\\" hreflang=\\"fr\\" href=\\"https://www.example.com/fr/baz/\\" />
       <xhtml:link rel=\\"alternate\\" hreflang=\\"fr-CA\\" href=\\"https://www.example.com/fr_ca/baz/\\" />
+      <xhtml:link rel=\\"alternate\\" hreflang=\\"x-default\\" href=\\"https://www.example.com/baz/\\" />
     </url>
     <url>
-      <loc>https://www.example.com/en/foo/</loc>
-      <xhtml:link rel=\\"alternate\\" hreflang=\\"x-default\\" href=\\"https://www.example.com/foo/\\" />
-      <xhtml:link rel=\\"alternate\\" hreflang=\\"de\\" href=\\"https://www.example.com/de/foo/\\" />
+      <loc>https://www.example.com/de/foo/</loc>
+      <xhtml:link rel=\\"alternate\\" hreflang=\\"en\\" href=\\"https://www.example.com/en/foo/\\" />
       <xhtml:link rel=\\"alternate\\" hreflang=\\"en-CA\\" href=\\"https://www.example.com/en_ca/foo/\\" />
       <xhtml:link rel=\\"alternate\\" hreflang=\\"en-GB\\" href=\\"https://www.example.com/en_gb/foo/\\" />
       <xhtml:link rel=\\"alternate\\" hreflang=\\"fr\\" href=\\"https://www.example.com/fr/foo/\\" />
       <xhtml:link rel=\\"alternate\\" hreflang=\\"fr-CA\\" href=\\"https://www.example.com/fr_ca/foo/\\" />
+      <xhtml:link rel=\\"alternate\\" hreflang=\\"x-default\\" href=\\"https://www.example.com/foo/\\" />
     </url>
     <url>
       <loc>https://www.example.com/en_ca/</loc>
-      <xhtml:link rel=\\"alternate\\" hreflang=\\"x-default\\" href=\\"https://www.example.com/\\" />
       <xhtml:link rel=\\"alternate\\" hreflang=\\"de\\" href=\\"https://www.example.com/de/\\" />
       <xhtml:link rel=\\"alternate\\" hreflang=\\"en\\" href=\\"https://www.example.com/en/\\" />
       <xhtml:link rel=\\"alternate\\" hreflang=\\"en-GB\\" href=\\"https://www.example.com/en_gb/\\" />
       <xhtml:link rel=\\"alternate\\" hreflang=\\"fr\\" href=\\"https://www.example.com/fr/\\" />
       <xhtml:link rel=\\"alternate\\" hreflang=\\"fr-CA\\" href=\\"https://www.example.com/fr_ca/\\" />
-    </url>
-    <url>
-      <loc>https://www.example.com/en_ca/foo/</loc>
-      <xhtml:link rel=\\"alternate\\" hreflang=\\"x-default\\" href=\\"https://www.example.com/foo/\\" />
-      <xhtml:link rel=\\"alternate\\" hreflang=\\"de\\" href=\\"https://www.example.com/de/foo/\\" />
-      <xhtml:link rel=\\"alternate\\" hreflang=\\"en\\" href=\\"https://www.example.com/en/foo/\\" />
-      <xhtml:link rel=\\"alternate\\" hreflang=\\"en-GB\\" href=\\"https://www.example.com/en_gb/foo/\\" />
-      <xhtml:link rel=\\"alternate\\" hreflang=\\"fr\\" href=\\"https://www.example.com/fr/foo/\\" />
-      <xhtml:link rel=\\"alternate\\" hreflang=\\"fr-CA\\" href=\\"https://www.example.com/fr_ca/foo/\\" />
-    </url>
-    <url>
-      <loc>https://www.example.com/en_gb/</loc>
       <xhtml:link rel=\\"alternate\\" hreflang=\\"x-default\\" href=\\"https://www.example.com/\\" />
-      <xhtml:link rel=\\"alternate\\" hreflang=\\"de\\" href=\\"https://www.example.com/de/\\" />
-      <xhtml:link rel=\\"alternate\\" hreflang=\\"en\\" href=\\"https://www.example.com/en/\\" />
-      <xhtml:link rel=\\"alternate\\" hreflang=\\"en-CA\\" href=\\"https://www.example.com/en_ca/\\" />
-      <xhtml:link rel=\\"alternate\\" hreflang=\\"fr\\" href=\\"https://www.example.com/fr/\\" />
-      <xhtml:link rel=\\"alternate\\" hreflang=\\"fr-CA\\" href=\\"https://www.example.com/fr_ca/\\" />
-    </url>
-    <url>
-      <loc>https://www.example.com/en/bar/</loc>
-      <xhtml:link rel=\\"alternate\\" hreflang=\\"x-default\\" href=\\"https://www.example.com/bar/\\" />
-      <xhtml:link rel=\\"alternate\\" hreflang=\\"de\\" href=\\"https://www.example.com/de/bar/\\" />
-      <xhtml:link rel=\\"alternate\\" hreflang=\\"en-CA\\" href=\\"https://www.example.com/en_ca/bar/\\" />
-      <xhtml:link rel=\\"alternate\\" hreflang=\\"en-GB\\" href=\\"https://www.example.com/en_gb/bar/\\" />
-      <xhtml:link rel=\\"alternate\\" hreflang=\\"fr\\" href=\\"https://www.example.com/fr/bar/\\" />
-      <xhtml:link rel=\\"alternate\\" hreflang=\\"fr-CA\\" href=\\"https://www.example.com/fr_ca/bar/\\" />
-    </url>
-    <url>
-      <loc>https://www.example.com/en/baz/</loc>
-      <xhtml:link rel=\\"alternate\\" hreflang=\\"x-default\\" href=\\"https://www.example.com/baz/\\" />
-      <xhtml:link rel=\\"alternate\\" hreflang=\\"de\\" href=\\"https://www.example.com/de/baz/\\" />
-      <xhtml:link rel=\\"alternate\\" hreflang=\\"en-CA\\" href=\\"https://www.example.com/en_ca/baz/\\" />
-      <xhtml:link rel=\\"alternate\\" hreflang=\\"en-GB\\" href=\\"https://www.example.com/en_gb/baz/\\" />
-      <xhtml:link rel=\\"alternate\\" hreflang=\\"fr\\" href=\\"https://www.example.com/fr/baz/\\" />
-      <xhtml:link rel=\\"alternate\\" hreflang=\\"fr-CA\\" href=\\"https://www.example.com/fr_ca/baz/\\" />
     </url>
     <url>
       <loc>https://www.example.com/en_ca/bar/</loc>
-      <xhtml:link rel=\\"alternate\\" hreflang=\\"x-default\\" href=\\"https://www.example.com/bar/\\" />
       <xhtml:link rel=\\"alternate\\" hreflang=\\"de\\" href=\\"https://www.example.com/de/bar/\\" />
       <xhtml:link rel=\\"alternate\\" hreflang=\\"en\\" href=\\"https://www.example.com/en/bar/\\" />
       <xhtml:link rel=\\"alternate\\" hreflang=\\"en-GB\\" href=\\"https://www.example.com/en_gb/bar/\\" />
       <xhtml:link rel=\\"alternate\\" hreflang=\\"fr\\" href=\\"https://www.example.com/fr/bar/\\" />
       <xhtml:link rel=\\"alternate\\" hreflang=\\"fr-CA\\" href=\\"https://www.example.com/fr_ca/bar/\\" />
+      <xhtml:link rel=\\"alternate\\" hreflang=\\"x-default\\" href=\\"https://www.example.com/bar/\\" />
     </url>
     <url>
       <loc>https://www.example.com/en_ca/baz/</loc>
-      <xhtml:link rel=\\"alternate\\" hreflang=\\"x-default\\" href=\\"https://www.example.com/baz/\\" />
       <xhtml:link rel=\\"alternate\\" hreflang=\\"de\\" href=\\"https://www.example.com/de/baz/\\" />
       <xhtml:link rel=\\"alternate\\" hreflang=\\"en\\" href=\\"https://www.example.com/en/baz/\\" />
       <xhtml:link rel=\\"alternate\\" hreflang=\\"en-GB\\" href=\\"https://www.example.com/en_gb/baz/\\" />
       <xhtml:link rel=\\"alternate\\" hreflang=\\"fr\\" href=\\"https://www.example.com/fr/baz/\\" />
       <xhtml:link rel=\\"alternate\\" hreflang=\\"fr-CA\\" href=\\"https://www.example.com/fr_ca/baz/\\" />
+      <xhtml:link rel=\\"alternate\\" hreflang=\\"x-default\\" href=\\"https://www.example.com/baz/\\" />
+    </url>
+    <url>
+      <loc>https://www.example.com/en_ca/foo/</loc>
+      <xhtml:link rel=\\"alternate\\" hreflang=\\"de\\" href=\\"https://www.example.com/de/foo/\\" />
+      <xhtml:link rel=\\"alternate\\" hreflang=\\"en\\" href=\\"https://www.example.com/en/foo/\\" />
+      <xhtml:link rel=\\"alternate\\" hreflang=\\"en-GB\\" href=\\"https://www.example.com/en_gb/foo/\\" />
+      <xhtml:link rel=\\"alternate\\" hreflang=\\"fr\\" href=\\"https://www.example.com/fr/foo/\\" />
+      <xhtml:link rel=\\"alternate\\" hreflang=\\"fr-CA\\" href=\\"https://www.example.com/fr_ca/foo/\\" />
+      <xhtml:link rel=\\"alternate\\" hreflang=\\"x-default\\" href=\\"https://www.example.com/foo/\\" />
+    </url>
+    <url>
+      <loc>https://www.example.com/en_gb/</loc>
+      <xhtml:link rel=\\"alternate\\" hreflang=\\"de\\" href=\\"https://www.example.com/de/\\" />
+      <xhtml:link rel=\\"alternate\\" hreflang=\\"en\\" href=\\"https://www.example.com/en/\\" />
+      <xhtml:link rel=\\"alternate\\" hreflang=\\"en-CA\\" href=\\"https://www.example.com/en_ca/\\" />
+      <xhtml:link rel=\\"alternate\\" hreflang=\\"fr\\" href=\\"https://www.example.com/fr/\\" />
+      <xhtml:link rel=\\"alternate\\" hreflang=\\"fr-CA\\" href=\\"https://www.example.com/fr_ca/\\" />
+      <xhtml:link rel=\\"alternate\\" hreflang=\\"x-default\\" href=\\"https://www.example.com/\\" />
+    </url>
+    <url>
+      <loc>https://www.example.com/en_gb/bar/</loc>
+      <xhtml:link rel=\\"alternate\\" hreflang=\\"de\\" href=\\"https://www.example.com/de/bar/\\" />
+      <xhtml:link rel=\\"alternate\\" hreflang=\\"en\\" href=\\"https://www.example.com/en/bar/\\" />
+      <xhtml:link rel=\\"alternate\\" hreflang=\\"en-CA\\" href=\\"https://www.example.com/en_ca/bar/\\" />
+      <xhtml:link rel=\\"alternate\\" hreflang=\\"fr\\" href=\\"https://www.example.com/fr/bar/\\" />
+      <xhtml:link rel=\\"alternate\\" hreflang=\\"fr-CA\\" href=\\"https://www.example.com/fr_ca/bar/\\" />
+      <xhtml:link rel=\\"alternate\\" hreflang=\\"x-default\\" href=\\"https://www.example.com/bar/\\" />
+    </url>
+    <url>
+      <loc>https://www.example.com/en_gb/baz/</loc>
+      <xhtml:link rel=\\"alternate\\" hreflang=\\"de\\" href=\\"https://www.example.com/de/baz/\\" />
+      <xhtml:link rel=\\"alternate\\" hreflang=\\"en\\" href=\\"https://www.example.com/en/baz/\\" />
+      <xhtml:link rel=\\"alternate\\" hreflang=\\"en-CA\\" href=\\"https://www.example.com/en_ca/baz/\\" />
+      <xhtml:link rel=\\"alternate\\" hreflang=\\"fr\\" href=\\"https://www.example.com/fr/baz/\\" />
+      <xhtml:link rel=\\"alternate\\" hreflang=\\"fr-CA\\" href=\\"https://www.example.com/fr_ca/baz/\\" />
+      <xhtml:link rel=\\"alternate\\" hreflang=\\"x-default\\" href=\\"https://www.example.com/baz/\\" />
     </url>
     <url>
       <loc>https://www.example.com/en_gb/foo/</loc>
-      <xhtml:link rel=\\"alternate\\" hreflang=\\"x-default\\" href=\\"https://www.example.com/foo/\\" />
       <xhtml:link rel=\\"alternate\\" hreflang=\\"de\\" href=\\"https://www.example.com/de/foo/\\" />
       <xhtml:link rel=\\"alternate\\" hreflang=\\"en\\" href=\\"https://www.example.com/en/foo/\\" />
       <xhtml:link rel=\\"alternate\\" hreflang=\\"en-CA\\" href=\\"https://www.example.com/en_ca/foo/\\" />
       <xhtml:link rel=\\"alternate\\" hreflang=\\"fr\\" href=\\"https://www.example.com/fr/foo/\\" />
       <xhtml:link rel=\\"alternate\\" hreflang=\\"fr-CA\\" href=\\"https://www.example.com/fr_ca/foo/\\" />
+      <xhtml:link rel=\\"alternate\\" hreflang=\\"x-default\\" href=\\"https://www.example.com/foo/\\" />
+    </url>
+    <url>
+      <loc>https://www.example.com/en/</loc>
+      <xhtml:link rel=\\"alternate\\" hreflang=\\"de\\" href=\\"https://www.example.com/de/\\" />
+      <xhtml:link rel=\\"alternate\\" hreflang=\\"en-CA\\" href=\\"https://www.example.com/en_ca/\\" />
+      <xhtml:link rel=\\"alternate\\" hreflang=\\"en-GB\\" href=\\"https://www.example.com/en_gb/\\" />
+      <xhtml:link rel=\\"alternate\\" hreflang=\\"fr\\" href=\\"https://www.example.com/fr/\\" />
+      <xhtml:link rel=\\"alternate\\" hreflang=\\"fr-CA\\" href=\\"https://www.example.com/fr_ca/\\" />
+      <xhtml:link rel=\\"alternate\\" hreflang=\\"x-default\\" href=\\"https://www.example.com/\\" />
+    </url>
+    <url>
+      <loc>https://www.example.com/en/bar/</loc>
+      <xhtml:link rel=\\"alternate\\" hreflang=\\"de\\" href=\\"https://www.example.com/de/bar/\\" />
+      <xhtml:link rel=\\"alternate\\" hreflang=\\"en-CA\\" href=\\"https://www.example.com/en_ca/bar/\\" />
+      <xhtml:link rel=\\"alternate\\" hreflang=\\"en-GB\\" href=\\"https://www.example.com/en_gb/bar/\\" />
+      <xhtml:link rel=\\"alternate\\" hreflang=\\"fr\\" href=\\"https://www.example.com/fr/bar/\\" />
+      <xhtml:link rel=\\"alternate\\" hreflang=\\"fr-CA\\" href=\\"https://www.example.com/fr_ca/bar/\\" />
+      <xhtml:link rel=\\"alternate\\" hreflang=\\"x-default\\" href=\\"https://www.example.com/bar/\\" />
+    </url>
+    <url>
+      <loc>https://www.example.com/en/baz/</loc>
+      <xhtml:link rel=\\"alternate\\" hreflang=\\"de\\" href=\\"https://www.example.com/de/baz/\\" />
+      <xhtml:link rel=\\"alternate\\" hreflang=\\"en-CA\\" href=\\"https://www.example.com/en_ca/baz/\\" />
+      <xhtml:link rel=\\"alternate\\" hreflang=\\"en-GB\\" href=\\"https://www.example.com/en_gb/baz/\\" />
+      <xhtml:link rel=\\"alternate\\" hreflang=\\"fr\\" href=\\"https://www.example.com/fr/baz/\\" />
+      <xhtml:link rel=\\"alternate\\" hreflang=\\"fr-CA\\" href=\\"https://www.example.com/fr_ca/baz/\\" />
+      <xhtml:link rel=\\"alternate\\" hreflang=\\"x-default\\" href=\\"https://www.example.com/baz/\\" />
+    </url>
+    <url>
+      <loc>https://www.example.com/en/foo/</loc>
+      <xhtml:link rel=\\"alternate\\" hreflang=\\"de\\" href=\\"https://www.example.com/de/foo/\\" />
+      <xhtml:link rel=\\"alternate\\" hreflang=\\"en-CA\\" href=\\"https://www.example.com/en_ca/foo/\\" />
+      <xhtml:link rel=\\"alternate\\" hreflang=\\"en-GB\\" href=\\"https://www.example.com/en_gb/foo/\\" />
+      <xhtml:link rel=\\"alternate\\" hreflang=\\"fr\\" href=\\"https://www.example.com/fr/foo/\\" />
+      <xhtml:link rel=\\"alternate\\" hreflang=\\"fr-CA\\" href=\\"https://www.example.com/fr_ca/foo/\\" />
+      <xhtml:link rel=\\"alternate\\" hreflang=\\"x-default\\" href=\\"https://www.example.com/foo/\\" />
     </url>
     <url>
       <loc>https://www.example.com/foo/</loc>
@@ -187,94 +205,76 @@ test('build sitemap project', async () => {
       <xhtml:link rel=\\"alternate\\" hreflang=\\"fr-CA\\" href=\\"https://www.example.com/fr_ca/foo/\\" />
     </url>
     <url>
-      <loc>https://www.example.com/fr/</loc>
-      <xhtml:link rel=\\"alternate\\" hreflang=\\"x-default\\" href=\\"https://www.example.com/\\" />
-      <xhtml:link rel=\\"alternate\\" hreflang=\\"de\\" href=\\"https://www.example.com/de/\\" />
-      <xhtml:link rel=\\"alternate\\" hreflang=\\"en\\" href=\\"https://www.example.com/en/\\" />
-      <xhtml:link rel=\\"alternate\\" hreflang=\\"en-CA\\" href=\\"https://www.example.com/en_ca/\\" />
-      <xhtml:link rel=\\"alternate\\" hreflang=\\"en-GB\\" href=\\"https://www.example.com/en_gb/\\" />
-      <xhtml:link rel=\\"alternate\\" hreflang=\\"fr-CA\\" href=\\"https://www.example.com/fr_ca/\\" />
-    </url>
-    <url>
-      <loc>https://www.example.com/fr/foo/</loc>
-      <xhtml:link rel=\\"alternate\\" hreflang=\\"x-default\\" href=\\"https://www.example.com/foo/\\" />
-      <xhtml:link rel=\\"alternate\\" hreflang=\\"de\\" href=\\"https://www.example.com/de/foo/\\" />
-      <xhtml:link rel=\\"alternate\\" hreflang=\\"en\\" href=\\"https://www.example.com/en/foo/\\" />
-      <xhtml:link rel=\\"alternate\\" hreflang=\\"en-CA\\" href=\\"https://www.example.com/en_ca/foo/\\" />
-      <xhtml:link rel=\\"alternate\\" hreflang=\\"en-GB\\" href=\\"https://www.example.com/en_gb/foo/\\" />
-      <xhtml:link rel=\\"alternate\\" hreflang=\\"fr-CA\\" href=\\"https://www.example.com/fr_ca/foo/\\" />
-    </url>
-    <url>
-      <loc>https://www.example.com/en_gb/bar/</loc>
-      <xhtml:link rel=\\"alternate\\" hreflang=\\"x-default\\" href=\\"https://www.example.com/bar/\\" />
-      <xhtml:link rel=\\"alternate\\" hreflang=\\"de\\" href=\\"https://www.example.com/de/bar/\\" />
-      <xhtml:link rel=\\"alternate\\" hreflang=\\"en\\" href=\\"https://www.example.com/en/bar/\\" />
-      <xhtml:link rel=\\"alternate\\" hreflang=\\"en-CA\\" href=\\"https://www.example.com/en_ca/bar/\\" />
-      <xhtml:link rel=\\"alternate\\" hreflang=\\"fr\\" href=\\"https://www.example.com/fr/bar/\\" />
-      <xhtml:link rel=\\"alternate\\" hreflang=\\"fr-CA\\" href=\\"https://www.example.com/fr_ca/bar/\\" />
-    </url>
-    <url>
-      <loc>https://www.example.com/en_gb/baz/</loc>
-      <xhtml:link rel=\\"alternate\\" hreflang=\\"x-default\\" href=\\"https://www.example.com/baz/\\" />
-      <xhtml:link rel=\\"alternate\\" hreflang=\\"de\\" href=\\"https://www.example.com/de/baz/\\" />
-      <xhtml:link rel=\\"alternate\\" hreflang=\\"en\\" href=\\"https://www.example.com/en/baz/\\" />
-      <xhtml:link rel=\\"alternate\\" hreflang=\\"en-CA\\" href=\\"https://www.example.com/en_ca/baz/\\" />
-      <xhtml:link rel=\\"alternate\\" hreflang=\\"fr\\" href=\\"https://www.example.com/fr/baz/\\" />
-      <xhtml:link rel=\\"alternate\\" hreflang=\\"fr-CA\\" href=\\"https://www.example.com/fr_ca/baz/\\" />
-    </url>
-    <url>
-      <loc>https://www.example.com/fr/bar/</loc>
-      <xhtml:link rel=\\"alternate\\" hreflang=\\"x-default\\" href=\\"https://www.example.com/bar/\\" />
-      <xhtml:link rel=\\"alternate\\" hreflang=\\"de\\" href=\\"https://www.example.com/de/bar/\\" />
-      <xhtml:link rel=\\"alternate\\" hreflang=\\"en\\" href=\\"https://www.example.com/en/bar/\\" />
-      <xhtml:link rel=\\"alternate\\" hreflang=\\"en-CA\\" href=\\"https://www.example.com/en_ca/bar/\\" />
-      <xhtml:link rel=\\"alternate\\" hreflang=\\"en-GB\\" href=\\"https://www.example.com/en_gb/bar/\\" />
-      <xhtml:link rel=\\"alternate\\" hreflang=\\"fr-CA\\" href=\\"https://www.example.com/fr_ca/bar/\\" />
-    </url>
-    <url>
-      <loc>https://www.example.com/fr/baz/</loc>
-      <xhtml:link rel=\\"alternate\\" hreflang=\\"x-default\\" href=\\"https://www.example.com/baz/\\" />
-      <xhtml:link rel=\\"alternate\\" hreflang=\\"de\\" href=\\"https://www.example.com/de/baz/\\" />
-      <xhtml:link rel=\\"alternate\\" hreflang=\\"en\\" href=\\"https://www.example.com/en/baz/\\" />
-      <xhtml:link rel=\\"alternate\\" hreflang=\\"en-CA\\" href=\\"https://www.example.com/en_ca/baz/\\" />
-      <xhtml:link rel=\\"alternate\\" hreflang=\\"en-GB\\" href=\\"https://www.example.com/en_gb/baz/\\" />
-      <xhtml:link rel=\\"alternate\\" hreflang=\\"fr-CA\\" href=\\"https://www.example.com/fr_ca/baz/\\" />
-    </url>
-    <url>
       <loc>https://www.example.com/fr_ca/</loc>
-      <xhtml:link rel=\\"alternate\\" hreflang=\\"x-default\\" href=\\"https://www.example.com/\\" />
       <xhtml:link rel=\\"alternate\\" hreflang=\\"de\\" href=\\"https://www.example.com/de/\\" />
       <xhtml:link rel=\\"alternate\\" hreflang=\\"en\\" href=\\"https://www.example.com/en/\\" />
       <xhtml:link rel=\\"alternate\\" hreflang=\\"en-CA\\" href=\\"https://www.example.com/en_ca/\\" />
       <xhtml:link rel=\\"alternate\\" hreflang=\\"en-GB\\" href=\\"https://www.example.com/en_gb/\\" />
       <xhtml:link rel=\\"alternate\\" hreflang=\\"fr\\" href=\\"https://www.example.com/fr/\\" />
-    </url>
-    <url>
-      <loc>https://www.example.com/fr_ca/foo/</loc>
-      <xhtml:link rel=\\"alternate\\" hreflang=\\"x-default\\" href=\\"https://www.example.com/foo/\\" />
-      <xhtml:link rel=\\"alternate\\" hreflang=\\"de\\" href=\\"https://www.example.com/de/foo/\\" />
-      <xhtml:link rel=\\"alternate\\" hreflang=\\"en\\" href=\\"https://www.example.com/en/foo/\\" />
-      <xhtml:link rel=\\"alternate\\" hreflang=\\"en-CA\\" href=\\"https://www.example.com/en_ca/foo/\\" />
-      <xhtml:link rel=\\"alternate\\" hreflang=\\"en-GB\\" href=\\"https://www.example.com/en_gb/foo/\\" />
-      <xhtml:link rel=\\"alternate\\" hreflang=\\"fr\\" href=\\"https://www.example.com/fr/foo/\\" />
+      <xhtml:link rel=\\"alternate\\" hreflang=\\"x-default\\" href=\\"https://www.example.com/\\" />
     </url>
     <url>
       <loc>https://www.example.com/fr_ca/bar/</loc>
-      <xhtml:link rel=\\"alternate\\" hreflang=\\"x-default\\" href=\\"https://www.example.com/bar/\\" />
       <xhtml:link rel=\\"alternate\\" hreflang=\\"de\\" href=\\"https://www.example.com/de/bar/\\" />
       <xhtml:link rel=\\"alternate\\" hreflang=\\"en\\" href=\\"https://www.example.com/en/bar/\\" />
       <xhtml:link rel=\\"alternate\\" hreflang=\\"en-CA\\" href=\\"https://www.example.com/en_ca/bar/\\" />
       <xhtml:link rel=\\"alternate\\" hreflang=\\"en-GB\\" href=\\"https://www.example.com/en_gb/bar/\\" />
       <xhtml:link rel=\\"alternate\\" hreflang=\\"fr\\" href=\\"https://www.example.com/fr/bar/\\" />
+      <xhtml:link rel=\\"alternate\\" hreflang=\\"x-default\\" href=\\"https://www.example.com/bar/\\" />
     </url>
     <url>
       <loc>https://www.example.com/fr_ca/baz/</loc>
-      <xhtml:link rel=\\"alternate\\" hreflang=\\"x-default\\" href=\\"https://www.example.com/baz/\\" />
       <xhtml:link rel=\\"alternate\\" hreflang=\\"de\\" href=\\"https://www.example.com/de/baz/\\" />
       <xhtml:link rel=\\"alternate\\" hreflang=\\"en\\" href=\\"https://www.example.com/en/baz/\\" />
       <xhtml:link rel=\\"alternate\\" hreflang=\\"en-CA\\" href=\\"https://www.example.com/en_ca/baz/\\" />
       <xhtml:link rel=\\"alternate\\" hreflang=\\"en-GB\\" href=\\"https://www.example.com/en_gb/baz/\\" />
       <xhtml:link rel=\\"alternate\\" hreflang=\\"fr\\" href=\\"https://www.example.com/fr/baz/\\" />
+      <xhtml:link rel=\\"alternate\\" hreflang=\\"x-default\\" href=\\"https://www.example.com/baz/\\" />
+    </url>
+    <url>
+      <loc>https://www.example.com/fr_ca/foo/</loc>
+      <xhtml:link rel=\\"alternate\\" hreflang=\\"de\\" href=\\"https://www.example.com/de/foo/\\" />
+      <xhtml:link rel=\\"alternate\\" hreflang=\\"en\\" href=\\"https://www.example.com/en/foo/\\" />
+      <xhtml:link rel=\\"alternate\\" hreflang=\\"en-CA\\" href=\\"https://www.example.com/en_ca/foo/\\" />
+      <xhtml:link rel=\\"alternate\\" hreflang=\\"en-GB\\" href=\\"https://www.example.com/en_gb/foo/\\" />
+      <xhtml:link rel=\\"alternate\\" hreflang=\\"fr\\" href=\\"https://www.example.com/fr/foo/\\" />
+      <xhtml:link rel=\\"alternate\\" hreflang=\\"x-default\\" href=\\"https://www.example.com/foo/\\" />
+    </url>
+    <url>
+      <loc>https://www.example.com/fr/</loc>
+      <xhtml:link rel=\\"alternate\\" hreflang=\\"de\\" href=\\"https://www.example.com/de/\\" />
+      <xhtml:link rel=\\"alternate\\" hreflang=\\"en\\" href=\\"https://www.example.com/en/\\" />
+      <xhtml:link rel=\\"alternate\\" hreflang=\\"en-CA\\" href=\\"https://www.example.com/en_ca/\\" />
+      <xhtml:link rel=\\"alternate\\" hreflang=\\"en-GB\\" href=\\"https://www.example.com/en_gb/\\" />
+      <xhtml:link rel=\\"alternate\\" hreflang=\\"fr-CA\\" href=\\"https://www.example.com/fr_ca/\\" />
+      <xhtml:link rel=\\"alternate\\" hreflang=\\"x-default\\" href=\\"https://www.example.com/\\" />
+    </url>
+    <url>
+      <loc>https://www.example.com/fr/bar/</loc>
+      <xhtml:link rel=\\"alternate\\" hreflang=\\"de\\" href=\\"https://www.example.com/de/bar/\\" />
+      <xhtml:link rel=\\"alternate\\" hreflang=\\"en\\" href=\\"https://www.example.com/en/bar/\\" />
+      <xhtml:link rel=\\"alternate\\" hreflang=\\"en-CA\\" href=\\"https://www.example.com/en_ca/bar/\\" />
+      <xhtml:link rel=\\"alternate\\" hreflang=\\"en-GB\\" href=\\"https://www.example.com/en_gb/bar/\\" />
+      <xhtml:link rel=\\"alternate\\" hreflang=\\"fr-CA\\" href=\\"https://www.example.com/fr_ca/bar/\\" />
+      <xhtml:link rel=\\"alternate\\" hreflang=\\"x-default\\" href=\\"https://www.example.com/bar/\\" />
+    </url>
+    <url>
+      <loc>https://www.example.com/fr/baz/</loc>
+      <xhtml:link rel=\\"alternate\\" hreflang=\\"de\\" href=\\"https://www.example.com/de/baz/\\" />
+      <xhtml:link rel=\\"alternate\\" hreflang=\\"en\\" href=\\"https://www.example.com/en/baz/\\" />
+      <xhtml:link rel=\\"alternate\\" hreflang=\\"en-CA\\" href=\\"https://www.example.com/en_ca/baz/\\" />
+      <xhtml:link rel=\\"alternate\\" hreflang=\\"en-GB\\" href=\\"https://www.example.com/en_gb/baz/\\" />
+      <xhtml:link rel=\\"alternate\\" hreflang=\\"fr-CA\\" href=\\"https://www.example.com/fr_ca/baz/\\" />
+      <xhtml:link rel=\\"alternate\\" hreflang=\\"x-default\\" href=\\"https://www.example.com/baz/\\" />
+    </url>
+    <url>
+      <loc>https://www.example.com/fr/foo/</loc>
+      <xhtml:link rel=\\"alternate\\" hreflang=\\"de\\" href=\\"https://www.example.com/de/foo/\\" />
+      <xhtml:link rel=\\"alternate\\" hreflang=\\"en\\" href=\\"https://www.example.com/en/foo/\\" />
+      <xhtml:link rel=\\"alternate\\" hreflang=\\"en-CA\\" href=\\"https://www.example.com/en_ca/foo/\\" />
+      <xhtml:link rel=\\"alternate\\" hreflang=\\"en-GB\\" href=\\"https://www.example.com/en_gb/foo/\\" />
+      <xhtml:link rel=\\"alternate\\" hreflang=\\"fr-CA\\" href=\\"https://www.example.com/fr_ca/foo/\\" />
+      <xhtml:link rel=\\"alternate\\" hreflang=\\"x-default\\" href=\\"https://www.example.com/foo/\\" />
     </url>
     </urlset>"
   `);
