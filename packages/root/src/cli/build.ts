@@ -366,7 +366,11 @@ export async function build(rootProjectDir?: string, options?: BuildOptions) {
     const renderer = new render.Renderer(rootConfig, {assetMap, elementGraph});
     const sitemap = await renderer.getSitemap();
 
-    const sitemapXmlItems: string[] = [];
+    const sitemapXmlItems: Array<{
+      url: string;
+      locale: string;
+      alts: Array<{locale: string; hreflang: string; url: string}>;
+    }> = [];
     if (rootConfig.sitemap && !rootConfig.domain) {
       throw new Error(
         'missing "domain" in root.config.ts, required when using {sitemap: true}'
@@ -396,18 +400,25 @@ export async function build(rootProjectDir?: string, options?: BuildOptions) {
 
         // Save the url to sitemap.xml. Ignore error files (e.g. 404.html).
         if (rootConfig.sitemap && outFilePath.endsWith('index.html')) {
-          sitemapXmlItems.push('<url>');
-          sitemapXmlItems.push(`  <loc>${domain}${urlPath}</loc>`);
+          const sitemapXmlItem: {
+            url: string;
+            locale: string;
+            alts: Array<{locale: string; hreflang: string; url: string}>;
+          } = {
+            url: `${domain}${urlPath}`,
+            locale: sitemapItem.locale,
+            alts: [],
+          };
+          sitemapXmlItems.push(sitemapXmlItem);
           if (sitemapItem.alts) {
             Object.entries(sitemapItem.alts).forEach(([altLocale, item]) => {
-              if (sitemapItem.locale !== altLocale) {
-                sitemapXmlItems.push(
-                  `  <xhtml:link rel="alternate" hreflang="${item.hrefLang}" href="${domain}${item.urlPath}" />`
-                );
-              }
+              sitemapXmlItem.alts.push({
+                url: `${domain}${item.urlPath}`,
+                locale: altLocale,
+                hreflang: item.hrefLang,
+              });
             });
           }
-          sitemapXmlItems.push('</url>');
         }
 
         // Render html and save the file to dist/html.
@@ -435,10 +446,28 @@ export async function build(rootProjectDir?: string, options?: BuildOptions) {
 
     // Generate sitemap.xml.
     if (rootConfig.sitemap) {
+      const sitemapXmlBuilder: string[] = [];
+      sitemapXmlItems.sort((a, b) => a.url.localeCompare(b.url));
+      sitemapXmlItems.forEach((item) => {
+        sitemapXmlBuilder.push('<url>');
+        sitemapXmlBuilder.push(`  <loc>${item.url}</loc>`);
+        if (item.alts.length > 0) {
+          item.alts.sort((a, b) => a.hreflang.localeCompare(b.hreflang));
+          item.alts.forEach((alt) => {
+            if (item.locale !== alt.locale) {
+              sitemapXmlBuilder.push(
+                `  <xhtml:link rel="alternate" hreflang="${alt.hreflang}" href="${alt.url}" />`
+              );
+            }
+          });
+        }
+        sitemapXmlBuilder.push('</url>');
+      });
+
       const sitemapXmlLines = [
         '<?xml version="1.0" encoding="UTF-8"?>',
         '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.sitemaps.org/schemas/sitemap/0.9 http://www.sitemaps.org/schemas/sitemap/0.9/sitemap.xsd">',
-        ...sitemapXmlItems,
+        ...sitemapXmlBuilder,
         '</urlset>',
       ];
       const sitemapXml = sitemapXmlLines.join('\n');
