@@ -1,13 +1,9 @@
-import {ActionIcon, Breadcrumbs, Button, Loader, Tooltip} from '@mantine/core';
+import {Breadcrumbs, Button, Loader} from '@mantine/core';
 import {showNotification, updateNotification} from '@mantine/notifications';
-import {
-  IconFileDownload,
-  IconFileUpload,
-  IconMoodLookDown,
-  IconTable,
-} from '@tabler/icons-preact';
+import {IconMoodLookDown} from '@tabler/icons-preact';
 import {useEffect, useMemo, useRef, useState} from 'preact/hooks';
 import {Heading} from '../../components/Heading/Heading.js';
+import {TranslationsImportExportButtons} from '../../components/TranslationsImportExportButtons/TranslationsImportExportButtons.js';
 import {TranslationsMap} from '../../db/translations.js';
 import {useTranslationsDoc} from '../../hooks/useTranslationsDoc.js';
 import {Layout} from '../../layout/Layout.js';
@@ -96,51 +92,31 @@ export function DocTranslationsPage(props: DocTranslationsPageProps) {
     <Layout>
       <div className="DocTranslationsPage">
         <div className="DocTranslationsPage__header">
-          <Breadcrumbs className="DocTranslationsPage__header__breadcrumbs">
-            <a href={'/cms/translations'}>Translations</a>
-            <a href={`/cms/content/${collection}/${slug}`}>
-              {collection}/{slug}
-            </a>
-          </Breadcrumbs>
-          <div className="DocTranslationsPage__header__titleWrap">
-            <Heading size="h1">Translations: {docId}</Heading>
-          </div>
-          {linkedSheet && (
-            <div className="DocTranslationsPage__header__linkedSheet">
-              <div className="DocTranslationsPage__header__linkedSheet__label">
-                <strong>NOTE:</strong> Translations for this doc are managed in
-                Google Sheets.
-              </div>
-              <div className="DocTranslationsPage__header__linkedSheet__controls">
-                <Tooltip label="Open Google Sheet">
-                  <ActionIcon<'a'>
-                    component="a"
-                    href={getSpreadsheetUrl(linkedSheet)}
-                    target="_blank"
-                    variant="filled"
-                    color="green"
-                    size="sm"
-                  >
-                    <IconTable size={16} strokeWidth={2.25} />
-                  </ActionIcon>
-                </Tooltip>
-                <Button
-                  variant="default"
-                  size="xs"
-                  leftIcon={<IconFileUpload size={16} strokeWidth={1.75} />}
-                >
-                  Import from Sheet
-                </Button>
-                <Button
-                  variant="default"
-                  size="xs"
-                  leftIcon={<IconFileDownload size={16} strokeWidth={1.75} />}
-                >
-                  Export to Sheet
-                </Button>
-              </div>
+          <div className="DocTranslationsPage__header__content">
+            <Breadcrumbs className="DocTranslationsPage__header__breadcrumbs">
+              <a href={'/cms/translations'}>Translations</a>
+              <a href={`/cms/content/${collection}/${slug}`}>
+                {collection}/{slug}
+              </a>
+            </Breadcrumbs>
+            <div className="DocTranslationsPage__header__titleWrap">
+              <Heading size="h2">Translations: {docId}</Heading>
             </div>
-          )}
+            {linkedSheet && (
+              <div className="DocTranslationsPage__header__linkedSheet">
+                <strong>NOTE:</strong> Translations for this doc are managed in{' '}
+                <a href={getSpreadsheetUrl(linkedSheet)} target="_blank">
+                  Google Sheets
+                </a>
+                .
+              </div>
+            )}
+          </div>
+          <div className="DocTranslationsPage__header__controls">
+            <TranslationsImportExportButtons
+              translationsDoc={translationsDoc}
+            />
+          </div>
         </div>
 
         <div

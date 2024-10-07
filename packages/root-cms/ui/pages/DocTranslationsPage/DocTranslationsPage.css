@@ -6,10 +6,15 @@
 }
 
 .DocTranslationsPage__header {
-  padding: 48px 60px 30px;
+  padding: 30px;
   position: sticky;
   left: 0;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 10px 40px;
 }
+
 
 .DocTranslationsPage__header__breadcrumbs {
   font-size: 12px;
@@ -33,12 +38,6 @@
 
 .DocTranslationsPage__header__linkedSheet {
   margin-top: 10px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.DocTranslationsPage__header__linkedSheet__label {
   font-size: 14px;
 }
 

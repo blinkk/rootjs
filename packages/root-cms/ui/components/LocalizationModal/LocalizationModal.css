@@ -86,7 +86,3 @@
   gap: 8px;
   align-items: center;
 }
-
-.LocalizationModal__translations__menu__item .mantine-Menu-itemBody {
-  font-size: 13px;
-}

@@ -19,6 +19,7 @@ export interface TranslationsDocController {
     source: string,
     translation: string
   ) => Promise<void>;
+  importTranslations: (strings: TranslationsMap) => void;
   hasPendingChanges: boolean;
   pendingChanges: TranslationsMap;
   saveTranslations: () => Promise<void>;
@@ -62,20 +63,34 @@ export function useTranslationsDoc(
     translation: string
   ) {
     const hash = await sourceHash(source);
+    const strings: TranslationsMap = {
+      [hash]: {
+        source: normalizeString(source),
+        [locale]: normalizeString(translation),
+      },
+    };
+    importTranslations(strings);
+  }
+
+  async function importTranslations(strings: TranslationsMap) {
     setPendingChanges((oldValue) => {
       const newValue = {...oldValue};
-      if (!newValue[hash]) {
-        newValue[hash] = {source: normalizeString(source)};
-      }
-      newValue[hash][locale] = normalizeString(translation);
+      Object.entries(strings).forEach(([hash, translations]) => {
+        newValue[hash] = {
+          ...oldValue[hash],
+          ...translations,
+        };
+      });
       return newValue;
     });
     setStrings((oldValue) => {
       const newValue = {...oldValue};
-      if (!newValue[hash]) {
-        newValue[hash] = {source: normalizeString(source)};
-      }
-      newValue[hash][locale] = normalizeString(translation);
+      Object.entries(strings).forEach(([hash, translations]) => {
+        newValue[hash] = {
+          ...oldValue[hash],
+          ...translations,
+        };
+      });
       return newValue;
     });
   }
@@ -104,6 +119,7 @@ export function useTranslationsDoc(
     linkedSheet,
     unlinkSheet,
     setTranslation,
+    importTranslations,
     hasPendingChanges,
     pendingChanges,
     saveTranslations,

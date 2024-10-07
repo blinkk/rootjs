@@ -15,6 +15,7 @@ import {
   WriteBatch,
 } from 'firebase/firestore';
 import {logAction} from '../utils/actions.js';
+import {normalizeString, sourceHash} from '../utils/l10n.js';
 
 export interface Translations {
   [locale: string]: string;
@@ -199,4 +200,40 @@ export async function dbListTranslationsDocs(): Promise<TranslationsDoc[]> {
     translationDocs.push(doc.data() as TranslationsDoc);
   });
   return translationDocs;
+}
+
+/**
+ * Converts a translations id (e.g. `Pages--foo--bar`) to a doc id (e.g.
+ * `Pages/foo--bar`).
+ */
+export function translationsIdToDocId(translationsId: string): string {
+  let docId = translationsId;
+  if (!docId.includes('/') && translationsId.includes('--')) {
+    docId = translationsId.replace('--', '/');
+  }
+  return docId;
+}
+
+/**
+ * Converts an array of CSV data to a TranslationsMap.
+ */
+export async function csvToTranslationsMap(
+  rows: Translations[]
+): Promise<TranslationsMap> {
+  const i18nConfig = window.__ROOT_CTX.rootConfig.i18n || {};
+  const i18nLocales = i18nConfig.locales || ['en'];
+  const strings: TranslationsMap = {};
+  for (const row of rows) {
+    if (row.source) {
+      const hash = await sourceHash(row.source);
+      const cleanRows: Translations = {source: normalizeString(row.source)};
+      for (const locale of i18nLocales) {
+        if (row[locale]) {
+          cleanRows[locale] = normalizeString(row[locale]);
+        }
+      }
+      strings[hash] = cleanRows;
+    }
+  }
+  return strings;
 }
