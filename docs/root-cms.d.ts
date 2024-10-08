@@ -196,6 +196,27 @@ export interface PagesFields {
 /** Generated from `/collections/Pages.schema.ts`. */
 export type PagesDoc = RootCMSDoc<PagesFields>;
 
+/** Generated from `/collections/PagesSandbox.schema.ts`. */
+export interface PagesSandboxFields {
+  /** Meta */
+  meta?: {
+    /** Title. Page title. */
+    title?: string;
+    /** Description. Description for SEO and social shares. */
+    description?: string;
+    /** Image. Meta image for social shares. Recommended: 1400x600 JPG. */
+    image?: RootCMSImage;
+  };
+  /** Content */
+  content?: {
+    /** Modules. Compose the page by adding one or more modules. */
+    modules?: RootCMSOneOf[];
+  };
+}
+
+/** Generated from `/collections/PagesSandbox.schema.ts`. */
+export type PagesSandboxDoc = RootCMSDoc<PagesSandboxFields>;
+
 /** Generated from `/components/Button/Button.schema.ts`. */
 export interface ButtonFields {
   /** Button Options */
