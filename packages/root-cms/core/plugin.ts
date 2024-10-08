@@ -447,8 +447,7 @@ export function cmsPlugin(options: CMSPluginOptions): CMSPlugin {
        */
       startup: async ({command, rootConfig}) => {
         if (command === 'dev' || command === 'build') {
-          const cmsPlugin = getCmsPlugin(rootConfig);
-          await runCompatibilityChecks(rootConfig, cmsPlugin);
+          await runCompatibilityChecks(rootConfig);
         }
       },
     },

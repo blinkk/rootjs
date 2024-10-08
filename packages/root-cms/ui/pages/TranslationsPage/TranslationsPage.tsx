@@ -1,9 +1,15 @@
 import {Button, Loader, Table} from '@mantine/core';
+import {IconFile} from '@tabler/icons-preact';
 import {useEffect, useState} from 'preact/hooks';
 import {Heading} from '../../components/Heading/Heading.js';
+import {TranslationsStatusBadges} from '../../components/TranslationsStatusBadges/TranslationsStatusBadges.js';
+import {
+  dbListTranslationsDocs,
+  TranslationsDoc,
+} from '../../db/translations.js';
 import {Layout} from '../../layout/Layout.js';
-import {loadTranslations} from '../../utils/l10n.js';
 import {notifyErrors} from '../../utils/notifications.js';
+import {timeDiff} from '../../utils/time.js';
 import './TranslationsPage.css';
 
 export function TranslationsPage() {
@@ -31,39 +37,16 @@ export function TranslationsPage() {
 
 TranslationsPage.TranslationsTable = () => {
   const [loading, setLoading] = useState(true);
-  const [tableData, setTableData] = useState<string[][]>([]);
-  const locales = window.__ROOT_CTX.rootConfig.i18n?.locales || [];
-  const nonEnLocales = locales.filter((l) => l !== 'en');
-  const headers = ['hash', 'source', 'en', ...nonEnLocales, 'tags'];
+  const [translationsDocs, setTranslationsDocs] = useState<TranslationsDoc[]>(
+    []
+  );
+  const headers = ['id', 'status', 'last update'];
 
   async function init() {
     setLoading(true);
     await notifyErrors(async () => {
-      const translationsMap = await loadTranslations();
-      const tableData: any[] = [];
-      Object.entries(translationsMap).forEach(([hash, translations]) => {
-        const nonEnValues = nonEnLocales.map(
-          (locale) => translations[locale] || ''
-        );
-        tableData.push([
-          hash,
-          translations.source,
-          translations.en,
-          ...nonEnValues,
-          ((translations.tags as any as string[]) || []).join('\n'),
-        ]);
-      });
-      // Sort by the source string.
-      tableData.sort((a: string[], b: string[]) => {
-        if (a[1].toLowerCase() < b[1].toLowerCase()) {
-          return -1;
-        }
-        if (a[1].toLowerCase() > b[1].toLowerCase()) {
-          return 1;
-        }
-        return 0;
-      });
-      setTableData(tableData);
+      const translationsDocs = await dbListTranslationsDocs();
+      setTranslationsDocs(translationsDocs);
     });
     setLoading(false);
   }
@@ -76,7 +59,7 @@ TranslationsPage.TranslationsTable = () => {
     return <Loader color="gray" size="xl" />;
   }
 
-  if (tableData.length === 0) {
+  if (translationsDocs.length === 0) {
     return (
       <div className="TranslationsPage__TranslationsTable">
         <div className="TranslationsPage__TranslationsTable__empty">
@@ -84,6 +67,17 @@ TranslationsPage.TranslationsTable = () => {
         </div>
       </div>
     );
+  }
+
+  function modifiedAtString(translationsDoc: TranslationsDoc) {
+    const sys = translationsDoc.sys;
+    if (
+      sys.publishedAt &&
+      sys.publishedAt.toMillis() >= sys.modifiedAt.toMillis()
+    ) {
+      return `published ${timeDiff(sys.publishedAt)} by ${sys.publishedBy}`;
+    }
+    return `updated ${timeDiff(sys.modifiedAt)} by ${sys.modifiedBy}`;
   }
 
   return (
@@ -97,20 +91,20 @@ TranslationsPage.TranslationsTable = () => {
           </tr>
         </thead>
         <tbody>
-          {tableData.map((cells) => (
-            <tr key={cells[0]}>
-              {cells.map((cell, colIndex) => (
-                <td
-                  data-col={headers[colIndex]}
-                  data-string-cell={![0, headers.length - 1].includes(colIndex)}
-                >
-                  {colIndex === 0 ? (
-                    <a href={`/cms/translations/${cell}`}>{cell}</a>
-                  ) : (
-                    cell
-                  )}
-                </td>
-              ))}
+          {translationsDocs.map((translationsDoc) => (
+            <tr key={translationsDoc.id}>
+              <td>
+                <div className="TranslationsPage__TranslationsTable__idCell">
+                  <IconFile width={20} strokeWidth={1.5} />
+                  <a href={`/cms/translations/${translationsDoc.id}`}>
+                    {translationsDoc.id}
+                  </a>
+                </div>
+              </td>
+              <td>
+                <TranslationsStatusBadges translationsDoc={translationsDoc} />
+              </td>
+              <td>{modifiedAtString(translationsDoc)}</td>
             </tr>
           ))}
         </tbody>

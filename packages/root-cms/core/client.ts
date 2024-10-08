@@ -42,6 +42,14 @@ export interface TranslationsDoc {
   sys: {
     modifiedAt: Timestamp;
     modifiedBy: string;
+    publishedAt?: Timestamp;
+    publishedBy?: string;
+    linkedSheet?: {
+      spreadsheetId: string;
+      gid: number;
+      linkedAt: Timestamp;
+      linkedBy: string;
+    };
   };
   strings: TranslationsMap;
 }
@@ -643,31 +651,39 @@ export class RootCMSClient {
   }
 
   /**
-   * Loads translations saved in the translations collection, optionally
-   * filtered by tag.
+   * Loads all published strings in the db.
    *
-   * Returns a map like:
    * ```
    * {
    *   "<hash>": {"source": "Hello", "es": "Hola", "fr": "Bonjour"},
    * }
    * ```
+   *
+   * @deprecated Use `createBatchRequest()` to fetch draft/published translations.
    */
   async loadTranslations(
     options?: LoadTranslationsOptions
   ): Promise<TranslationsMap> {
-    const dbPath = `Projects/${this.projectId}/Translations`;
-    let query: Query = this.db.collection(dbPath);
-    if (options?.tags) {
-      query = query.where('tags', 'array-contains-any', options.tags);
-    }
-
-    const querySnapshot = await query.get();
+    const dbPath = `Projects/${this.projectId}/TranslationsManager/published/Translations`;
+    const query: Query = this.db.collection(dbPath);
+    const snapshot = await query.get();
     const translationsMap: TranslationsMap = {};
-    querySnapshot.forEach((doc) => {
-      const hash = doc.id;
-      translationsMap[hash] = doc.data() as Translation;
+
+    const addTranslations = (hash: string, translations: Translation) => {
+      translationsMap[hash] = Object.assign(
+        translationsMap[hash] || {},
+        translations
+      );
+    };
+
+    snapshot.forEach((doc) => {
+      const data = doc.data();
+      const strings = (data.strings || {}) as Record<string, Translation>;
+      Object.entries(strings).forEach(([hash, translations]) => {
+        addTranslations(hash, translations);
+      });
     });
+
     return translationsMap;
   }
 
@@ -678,6 +694,9 @@ export class RootCMSClient {
    *   "Hello": {"es": "Hola", "fr": "Bonjour"},
    * });
    * ```
+   *
+   * @deprecated Use `saveDraftTranslations()` and `publishTranslations()`
+   * instead.
    */
   async saveTranslations(
     translations: {
@@ -705,6 +724,35 @@ export class RootCMSClient {
       throw new Error('up to 500 translations can be saved at a time.');
     }
     await batch.commit();
+  }
+
+  async saveDraftTranslations(
+    translationsId: string,
+    translations: {[source: string]: {[locale: string]: string}},
+    options?: {modifiedby?: string}
+  ) {
+    const docSlug = translationsId.replaceAll('/', '--');
+    const docPath = `Projects/${this.projectId}/TranslationsManager/draft/${docSlug}`;
+    const docRef = this.db.doc(docPath);
+
+    const snapshot = await docRef.get();
+    const data = snapshot.data() || {
+      id: translationsId.replaceAll('--', '/'),
+      sys: {},
+      strings: {},
+    };
+    data.sys.modifiedAt = Timestamp.now();
+    data.sys.modifiedBy = options?.modifiedby || 'root-cms-client';
+
+    const strings = data.strings || {};
+    Object.entries(translations).forEach(([source, row]) => {
+      const normalizedSource = this.normalizeString(source);
+      const hash = this.getTranslationKey(normalizedSource);
+      strings[hash] = {...strings[hash], ...row, source: normalizedSource};
+    });
+    data.strings = strings;
+    await docRef.set(data);
+    this.logAction('translations.save', {metadata: {translationsId}});
   }
 
   /**
@@ -1479,6 +1527,7 @@ export function translationsForLocale(
     for (const fallbackLocale of fallbackLocales) {
       if (string[fallbackLocale]) {
         translation = string[fallbackLocale];
+        break;
       }
     }
     localeTranslations[source] = translation;
