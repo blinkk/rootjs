@@ -85,7 +85,7 @@ export function cmsRoute(options: CMSRouteOptions) {
       return options.slug;
     }
     const slugParam = options.slugParam || 'slug';
-    return params[slugParam] || 'index';
+    return (params[slugParam] || 'index').replaceAll('/', '--');
   }
 
   async function fetchData(
@@ -180,22 +180,22 @@ export function cmsRoute(options: CMSRouteOptions) {
         res.setHeader('cache-control', 'private');
         return ctx.render404();
       }
+      const primaryDocId = `${options.collection}/${slug}`;
       const mode = String(req.query.preview) === 'true' ? 'draft' : 'published';
       const routeContext: CMSRouteContext = {req, slug, mode, cmsClient};
 
-      const translationsTags = ['common', `${options.collection}/${slug}`];
-      if (options.translations) {
-        const tags = options.translations(routeContext)?.tags || [];
-        translationsTags.push(...tags);
-      }
+      const batchRequest = cmsClient.createBatchRequest({
+        mode,
+        translate: true,
+      });
+      batchRequest.addDoc(primaryDocId);
 
-      const [doc, translationsMap, data] = await Promise.all([
-        cmsClient.getDoc<CMSDoc>(options.collection, slug, {
-          mode,
-        }),
-        cmsClient.loadTranslations({tags: translationsTags}),
+      const [batchRes, data] = await Promise.all([
+        batchRequest.fetch(),
         fetchData(routeContext),
       ]);
+      const doc = batchRes.docs[primaryDocId];
+
       if (!doc) {
         res.setHeader('cache-control', 'private');
         return ctx.render404();
@@ -215,8 +215,19 @@ export function cmsRoute(options: CMSRouteOptions) {
         req.get('x-country-code') ||
         req.get('x-appengine-country') ||
         null;
-      const translations = translationsForLocale(translationsMap, locale);
-      let props: any = {...data, req, locale, mode, slug, doc, country};
+
+      const i18nFallbacks = req.rootConfig.i18n?.fallbacks || {};
+      const translationFallbackLocales = i18nFallbacks[locale] || [locale];
+      const translations = batchRes.getTranslations(translationFallbackLocales);
+      let props: any = {
+        ...data,
+        req,
+        locale,
+        mode,
+        slug,
+        doc,
+        country,
+      };
       if (options.preRenderHook) {
         props = await options.preRenderHook(props, routeContext);
       }

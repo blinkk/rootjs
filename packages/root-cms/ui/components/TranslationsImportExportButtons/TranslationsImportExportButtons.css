@@ -1,0 +1,9 @@
+.TranslationsImportExportButtons {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.TranslationsImportExportButtons__Menu__item .mantine-Menu-itemBody {
+  font-size: 13px;
+}

@@ -24,27 +24,29 @@ import {
 } from '@tabler/icons-preact';
 import {useEffect, useMemo, useState} from 'preact/hooks';
 import * as schema from '../../../core/schema.js';
+import {TranslationsMap} from '../../db/translations.js';
 import {DraftController} from '../../hooks/useDraft.js';
 import {GapiClient, useGapiClient} from '../../hooks/useGapiClient.js';
 import {useModalTheme} from '../../hooks/useModalTheme.js';
+import {useTranslationsDoc} from '../../hooks/useTranslationsDoc.js';
 import {logAction} from '../../utils/actions.js';
 import {
   CsvTranslation,
   cmsDocImportTranslations,
   cmsGetLinkedGoogleSheetL10n,
+  cmsGetTranslations,
   cmsUnlinkGoogleSheetL10n,
 } from '../../utils/doc.js';
-import {extractStringsForDoc} from '../../utils/extract.js';
 import {
   GSheet,
   GSpreadsheet,
   GoogleSheetId,
   getSpreadsheetUrl,
 } from '../../utils/gsheets.js';
-import {TranslationsMap, loadTranslations} from '../../utils/l10n.js';
 import {useExportSheetModal} from '../ExportSheetModal/ExportSheetModal.js';
 import {Heading} from '../Heading/Heading.js';
 import './LocalizationModal.css';
+import {TranslationsImportExportButtons} from '../TranslationsImportExportButtons/TranslationsImportExportButtons.js';
 
 const MODAL_ID = 'LocalizationModal';
 
@@ -283,21 +285,32 @@ LocalizationModal.AllNoneButtons = (props: AllNoneButtonsProps) => {
   );
 };
 
-interface TranslationsProps {
-  collection: schema.Collection;
-  docId: string;
-}
-
-LocalizationModal.Translations = (props: TranslationsProps) => {
+LocalizationModal.Translations = (props: LocalizationModalProps) => {
   const [loading, setLoading] = useState(true);
   const [sourceStrings, setSourceStrings] = useState<string[]>([]);
-  const [selectedLocale, setSelectedLocale] = useState('en');
+  const [selectedLocale, setSelectedLocale] = useState(() => {
+    // Initialize with the first non-EN locale.
+    if (props.draft) {
+      const locales = props.draft.getLocales();
+      if (locales.length === 1) {
+        return locales[0];
+      }
+      if (locales.length > 1) {
+        for (const l of locales) {
+          if (l !== 'en') {
+            return l;
+          }
+        }
+      }
+    }
+    return 'en';
+  });
   const [localeTranslations, setLocaleTranslations] = useState<
     Record<string, string>
   >({});
   const [translationsMap, setTranslationsMap] = useState<TranslationsMap>({});
   const gapiClient = useGapiClient();
-  const [linkedSheet, setLinkedSheet] = useState<GoogleSheetId | null>(null);
+  // const [linkedSheet, setLinkedSheet] = useState<GoogleSheetId | null>(null);
   const exportSheetModal = useExportSheetModal();
 
   const sourceToTranslationsMap = useMemo(() => {
@@ -314,19 +327,23 @@ LocalizationModal.Translations = (props: TranslationsProps) => {
     label: getLocaleLabel(locale),
   }));
 
-  useEffect(() => {
+  const translationsDoc = useTranslationsDoc(props.docId);
+  const linkedSheet = translationsDoc.linkedSheet;
+
+  async function init() {
     setLoading(true);
-    Promise.all([
-      extractStringsForDoc(props.docId),
-      loadTranslations(),
-      cmsGetLinkedGoogleSheetL10n(props.docId),
-    ]).then(([sourceStrings, translationsMap, linkedSheet]) => {
-      setSourceStrings(sourceStrings);
-      setTranslationsMap(translationsMap);
-      setLinkedSheet(linkedSheet);
-      setLoading(false);
-    });
-  }, [props.docId]);
+    const translationsMap = translationsDoc?.strings || {};
+    const sourceStrings = Object.values(translationsMap)
+      .map((item) => item.source)
+      .filter((item) => !!item);
+    setSourceStrings(Array.from(sourceStrings));
+    setTranslationsMap(translationsMap);
+    setLoading(false);
+  }
+
+  useEffect(() => {
+    init();
+  }, [props.docId, translationsDoc.loading]);
 
   useEffect(() => {
     if (!selectedLocale) {
@@ -515,8 +532,7 @@ LocalizationModal.Translations = (props: TranslationsProps) => {
   }
 
   async function unlinkGoogleSheet() {
-    await cmsUnlinkGoogleSheetL10n(props.docId);
-    setLinkedSheet(null);
+    await translationsDoc.unlinkSheet();
     showNotification({
       title: 'Unlinked Google Sheet',
       message: `${props.docId} is no longer connected to a Google Sheet.`,
@@ -612,32 +628,10 @@ LocalizationModal.Translations = (props: TranslationsProps) => {
             Open Translations Editor
           </Button>
         </div>
-        <div className="LocalizationModal__translations__header__buttons">
-          {gapiClient.enabled && linkedSheet?.spreadsheetId && (
-            <Tooltip label="Open Google Sheet">
-              <ActionIcon<'a'>
-                component="a"
-                href={getSpreadsheetUrl(linkedSheet)}
-                target="_blank"
-                variant="filled"
-                color="green"
-                size="sm"
-              >
-                <IconTable size={16} strokeWidth={2.25} />
-              </ActionIcon>
-            </Tooltip>
-          )}
-          <ImportMenuButton
-            onAction={onAction}
-            gapiClient={gapiClient}
-            linkedSheet={linkedSheet}
-          />
-          <ExportMenuButton
-            onAction={onAction}
-            gapiClient={gapiClient}
-            linkedSheet={linkedSheet}
-          />
-        </div>
+        <TranslationsImportExportButtons
+          className="LocalizationModal__translations__header__buttons"
+          translationsDoc={translationsDoc}
+        />
       </div>
       <table className="LocalizationModal__translations__table">
         <tr className="LocalizationModal__translations__table__row LocalizationModal__translations__table__row--header">
@@ -702,146 +696,6 @@ LocalizationModal.Translations = (props: TranslationsProps) => {
     </div>
   );
 };
-
-interface MenuButtonProps {
-  gapiClient: GapiClient;
-  linkedSheet: GoogleSheetId | null;
-  onAction?: (action: MenuAction) => void;
-}
-
-function ImportMenuButton(props: MenuButtonProps) {
-  function dispatch(action: MenuAction) {
-    if (props.onAction) {
-      props.onAction(action);
-    }
-  }
-
-  const linkedSheet = props.linkedSheet;
-
-  return (
-    <Menu
-      className="LocalizationModal__translations__menu"
-      position="bottom"
-      placement="end"
-      control={
-        <Button
-          variant="default"
-          color="dark"
-          size="xs"
-          leftIcon={<IconFileUpload size={16} strokeWidth={1.75} />}
-          rightIcon={<IconChevronDown size={16} strokeWidth={1.75} />}
-        >
-          Import
-        </Button>
-      }
-    >
-      {props.gapiClient.enabled && (
-        <>
-          <Menu.Label>Google Sheets</Menu.Label>
-          <Menu.Item
-            className="LocalizationModal__translations__menu__item"
-            disabled={!linkedSheet?.spreadsheetId}
-            onClick={() => dispatch(MenuAction.IMPORT_GOOGLE_SHEET_LINKED)}
-          >
-            Import Google Sheet
-          </Menu.Item>
-          <Divider />
-        </>
-      )}
-      <Menu.Label>File</Menu.Label>
-      <Menu.Item
-        className="LocalizationModal__translations__menu__item"
-        onClick={() => dispatch(MenuAction.IMPORT_CSV)}
-      >
-        Import .csv
-      </Menu.Item>
-    </Menu>
-  );
-}
-
-function ExportMenuButton(props: MenuButtonProps) {
-  async function dispatch(action: MenuAction) {
-    if (props.onAction) {
-      props.onAction(action);
-    }
-  }
-
-  const linkedSheet = props.linkedSheet;
-  const hasLinkedSheet = !!linkedSheet?.spreadsheetId;
-
-  return (
-    <Menu
-      className="LocalizationModal__translations__menu"
-      position="bottom"
-      placement="start"
-      control={
-        <Button
-          variant="default"
-          color="dark"
-          size="xs"
-          leftIcon={<IconFileDownload size={16} strokeWidth={1.75} />}
-          rightIcon={<IconChevronDown size={16} strokeWidth={1.75} />}
-        >
-          Export
-        </Button>
-      }
-    >
-      {props.gapiClient.enabled && (
-        <>
-          <Menu.Label>Google Sheets</Menu.Label>
-          {hasLinkedSheet ? (
-            <>
-              <Menu.Item
-                className="LocalizationModal__translations__menu__item"
-                onClick={() => dispatch(MenuAction.EXPORT_GOOGLE_SHEET_LINKED)}
-              >
-                Export to Google Sheet
-              </Menu.Item>
-            </>
-          ) : (
-            <>
-              <Menu.Item
-                className="LocalizationModal__translations__menu__item"
-                onClick={() =>
-                  dispatch(MenuAction.EXPORT_GOOGLE_SHEET_SHOW_OPTIONS)
-                }
-              >
-                Export to Google Sheet
-              </Menu.Item>
-              {/* <Menu.Item
-                className="LocalizationModal__translations__menu__item"
-                onClick={() => dispatch(MenuAction.EXPORT_GOOGLE_SHEET_ADD_TAB)}
-              >
-                Add tab in Google Sheet
-              </Menu.Item> */}
-            </>
-          )}
-          <Divider />
-        </>
-      )}
-      <Menu.Label>File</Menu.Label>
-      <Menu.Item
-        className="LocalizationModal__translations__menu__item"
-        onClick={() => dispatch(MenuAction.EXPORT_DOWNLOAD_CSV)}
-      >
-        Download .csv
-      </Menu.Item>
-      {hasLinkedSheet && (
-        <>
-          <Divider />
-          <Menu.Label>Danger zone</Menu.Label>
-          <Menu.Item
-            className="LocalizationModal__translations__menu__item"
-            onClick={() => dispatch(MenuAction.UNLINK_GOOGLE_SHEET)}
-            color="red"
-          >
-            Unlink Google Sheet
-          </Menu.Item>
-        </>
-      )}
-    </Menu>
-  );
-}
 
 function getLocaleLabel(locale: string) {
   const parts = locale.split('_');

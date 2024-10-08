@@ -63,9 +63,13 @@ export function getFallbackLocales(req: Request): string[] {
   // Add ALL_{country} locale.
   locales.add(`ALL_${countryCode}`);
 
-  // Add `{lang}_ALL` and `{lang}` locales.
+  // Add `{locale}-{country}`, `{lang}_ALL`, and `{lang}` locales.
   const isEs419Country = test419Country(countryCode);
   langs.forEach((langCode) => {
+    if (!langCode.includes('-')) {
+      locales.add(`${langCode}-${countryCode}_ALL`);
+      locales.add(`${langCode}-${countryCode}`);
+    }
     // For Spanish-speaking LATAM countries, also add es-419.
     if (langCode === 'es' && isEs419Country) {
       locales.add('es-419_ALL');
