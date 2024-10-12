@@ -17,11 +17,10 @@ import {
   WriteBatch,
   DocumentReference,
 } from 'firebase/firestore';
+import {dbPublishTranslationsDoc} from '../db/translations.js';
 import {logAction} from './actions.js';
 import {removeDocFromCache, removeDocsFromCache} from './doc-cache.js';
 import {GoogleSheetId} from './gsheets.js';
-import {normalizeString, sourceHash, TranslationsMap} from './l10n.js';
-import {TranslationsDoc} from './translations.js';
 
 export interface CMSDoc {
   id: string;
@@ -135,7 +134,7 @@ export async function cmsPublishDocs(
       throw new Error(`doc does not exist: ${docId}`);
     }
     updatePublishedDocDataInBatch(batch, docId, draftData);
-    cmsPublishTranslationsDoc(docId, {batch});
+    dbPublishTranslationsDoc(docId, {batch});
   });
   await batch.commit();
 
@@ -498,55 +497,6 @@ export async function cmsCreateDoc(
 
   await setDoc(docRef, data);
   logAction('doc.create', {metadata: {docId}});
-}
-
-export interface CsvTranslation {
-  [key: string]: string;
-  source: string;
-}
-
-export async function cmsDocImportTranslations(
-  docId: string,
-  csvData: CsvTranslation[]
-) {
-  const i18nConfig = window.__ROOT_CTX.rootConfig.i18n || {};
-  const i18nLocales = i18nConfig.locales || ['en'];
-
-  function normalizeLocale(locale: string) {
-    for (const l of i18nLocales) {
-      if (String(l).toLowerCase() === locale.toLowerCase()) {
-        return l;
-      }
-    }
-    // Ignore locales that are not in the root config.
-    return null;
-  }
-
-  const translationsMap: Record<string, CsvTranslation> = {};
-  for (const row of csvData) {
-    if (!row.source) {
-      continue;
-    }
-    const translation: CsvTranslation = {
-      source: normalizeString(row.source),
-    };
-    Object.entries(row).forEach(([column, str]) => {
-      if (column === 'source') {
-        return;
-      }
-      const locale = normalizeLocale(column);
-      if (locale) {
-        translation[locale] = normalizeString(str || '');
-      }
-    });
-
-    const hash = await sourceHash(translation.source);
-    translationsMap[hash] = translation;
-  }
-
-  const translationsId = docId;
-  await cmsSaveTranslations(translationsId, translationsMap);
-  return translationsMap;
 }
 
 export function getDraftDocRef(docId: string) {
