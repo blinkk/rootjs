@@ -143,8 +143,11 @@ export async function dbPublishTranslationsDoc(
     docSlug
   );
   const snapshot = await getDoc(draftRef);
+
   if (!snapshot.exists()) {
-    throw new Error(`translations doc ${translationsId} does not exist`);
+    // Ignore missing translations.
+    console.warn(`translations ${translationsId} does not exist`);
+    return;
   }
 
   // If the translations publishing is tied to another batch request (e.g. doc
@@ -174,7 +177,7 @@ export async function dbPublishTranslationsDoc(
   data.sys.publishedBy = window.firebase.user.email;
   batch.set(publishedRef, data);
   if (commitBatch) {
-    await setDoc(publishedRef, data);
+    await batch.commit();
     logAction('translations.publish', {metadata: {translationsId}});
   }
 }
