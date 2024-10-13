@@ -8,7 +8,6 @@ import {
 import {showNotification} from '@mantine/notifications';
 import {useEffect, useRef, useState} from 'preact/hooks';
 import {route} from 'preact-router';
-import {useGapiClient} from '../../hooks/useGapiClient.js';
 import {
   DataSource,
   DataSourceType,
@@ -17,10 +16,11 @@ import {
   addDataSource,
   getDataSource,
   updateDataSource,
-} from '../../utils/data-source.js';
-import {parseSpreadsheetUrl} from '../../utils/gsheets.js';
-import {notifyErrors} from '../../utils/notifications.js';
-import {isSlugValid} from '../../utils/slug.js';
+} from '@/db/data-sources.js';
+import {useGapiClient} from '@/hooks/useGapiClient.js';
+import {parseSpreadsheetUrl} from '@/utils/gsheets.js';
+import {notifyErrors} from '@/utils/notifications.js';
+import {isSlugValid} from '@/utils/slug.js';
 import './DataSourceForm.css';
 
 const HTTP_URL_HELP = 'Enter the URL to make the HTTP request.';

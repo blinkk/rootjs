@@ -2,7 +2,7 @@ import {Button, JsonInput} from '@mantine/core';
 import {ContextModalProps, useModals} from '@mantine/modals';
 import {IconClipboard, IconDeviceFloppy} from '@tabler/icons-preact';
 import {useState} from 'preact/hooks';
-import {useModalTheme} from '../../hooks/useModalTheme.js';
+import {useModalTheme} from '@/hooks/useModalTheme.js';
 import './EditJsonModal.css';
 
 const MODAL_ID = 'EditJsonModal';

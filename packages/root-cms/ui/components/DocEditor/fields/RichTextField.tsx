@@ -1,11 +1,11 @@
 import {useEffect, useState} from 'preact/hooks';
-import * as schema from '../../../../core/schema.js';
-import {deepEqual} from '../../../utils/objects.js';
 import {
   RichTextData,
   RichTextEditor,
-} from '../../RichTextEditor/RichTextEditor.js';
+} from '@/components/RichTextEditor/RichTextEditor.js';
+import {deepEqual} from '@/utils/objects.js';
 import {FieldProps} from './FieldProps.js';
+import * as schema from '@/../core/schema.js';
 
 export function RichTextField(props: FieldProps) {
   const field = props.field as schema.RichTextField;

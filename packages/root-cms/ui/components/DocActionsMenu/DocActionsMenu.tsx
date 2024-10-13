@@ -12,20 +12,20 @@ import {
   IconLockOpen,
   IconTrash,
 } from '@tabler/icons-preact';
-import {useModalTheme} from '../../hooks/useModalTheme.js';
+import {useCopyDocModal} from '@/components/CopyDocModal/CopyDocModal.js';
+import {useLockPublishingModal} from '@/components/LockPublishingModal/LockPublishingModal.js';
+import {Text} from '@/components/Text/Text.js';
+import {useVersionHistoryModal} from '@/components/VersionHistoryModal/VersionHistoryModal.js';
 import {
   CMSDoc,
-  cmsDeleteDoc,
-  cmsRevertDraft,
-  cmsUnpublishDoc,
-  cmsUnscheduleDoc,
+  dbDeleteDoc,
+  dbRevertDraft,
+  dbUnpublishDoc,
+  dbUnscheduleDoc,
   testIsScheduled,
   testPublishingLocked,
-} from '../../utils/doc.js';
-import {useCopyDocModal} from '../CopyDocModal/CopyDocModal.js';
-import {useLockPublishingModal} from '../LockPublishingModal/LockPublishingModal.js';
-import {Text} from '../Text/Text.js';
-import {useVersionHistoryModal} from '../VersionHistoryModal/VersionHistoryModal.js';
+} from '@/db/docs.js';
+import {useModalTheme} from '@/hooks/useModalTheme.js';
 
 export interface DocActionEvent {
   action: 'copy' | 'delete' | 'revert-draft' | 'unpublish' | 'unschedule';
@@ -74,7 +74,7 @@ export function DocActionsMenu(props: DocActionsMenuProps) {
           loading: true,
           autoClose: false,
         });
-        await cmsRevertDraft(docId);
+        await dbRevertDraft(docId);
         updateNotification({
           id: notificationId,
           title: 'Discarded draft edited',
@@ -116,7 +116,7 @@ export function DocActionsMenu(props: DocActionsMenuProps) {
           loading: true,
           autoClose: false,
         });
-        await cmsUnpublishDoc(docId);
+        await dbUnpublishDoc(docId);
         updateNotification({
           id: notificationId,
           title: 'Unpublished!',
@@ -157,7 +157,7 @@ export function DocActionsMenu(props: DocActionsMenuProps) {
           loading: true,
           autoClose: false,
         });
-        await cmsUnscheduleDoc(docId);
+        await dbUnscheduleDoc(docId);
         updateNotification({
           id: notificationId,
           title: 'Unscheduled!',
@@ -199,7 +199,7 @@ export function DocActionsMenu(props: DocActionsMenuProps) {
           loading: true,
           autoClose: false,
         });
-        await cmsDeleteDoc(docId);
+        await dbDeleteDoc(docId);
         updateNotification({
           id: notificationId,
           title: 'Deleted!',

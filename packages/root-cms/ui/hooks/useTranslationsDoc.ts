@@ -1,13 +1,12 @@
 import {useEffect, useState} from 'preact/hooks';
 import {
-  TranslationsDoc,
   TranslationsLinkedSheet,
   TranslationsMap,
   dbGetTranslationsDoc,
   dbSaveTranslations,
-} from '../db/translations.js';
-import {extractStringsForDoc} from '../utils/extract.js';
-import {normalizeString, sourceHash} from '../utils/l10n.js';
+} from '@/db/translations.js';
+import {extractStringsForDoc} from '@/utils/extract.js';
+import {normalizeString, sourceHash} from '@/utils/l10n.js';
 
 export interface TranslationsDocController {
   id: string;
@@ -34,8 +33,6 @@ export function useTranslationsDoc(
   translationsId: string
 ): TranslationsDocController {
   const [loading, setLoading] = useState(true);
-  const [translationsDoc, setTranslationsDoc] =
-    useState<TranslationsDoc | null>(null);
   const [strings, setStrings] = useState<TranslationsMap>({});
   const [linkedSheet, setLinkedSheet] =
     useState<TranslationsLinkedSheet | null>(null);
@@ -48,7 +45,6 @@ export function useTranslationsDoc(
       getTranslationsMapForDoc(translationsId),
       dbGetTranslationsDoc(translationsId),
     ]);
-    setTranslationsDoc(translationsDoc);
     const strings = mergeTranslationsMaps(
       docStrings,
       translationsDoc?.strings || {}

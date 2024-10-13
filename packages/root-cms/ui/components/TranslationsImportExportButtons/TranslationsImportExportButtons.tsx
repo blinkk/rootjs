@@ -6,23 +6,23 @@ import {
   IconFileUpload,
   IconTable,
 } from '@tabler/icons-preact';
+import {useExportSheetModal} from '@/components/ExportSheetModal/ExportSheetModal.js';
+import {logAction} from '@/db/actions.js';
 import {
   csvToTranslationsMap,
   Translations,
   translationsIdToDocId,
-} from '../../db/translations.js';
-import {GapiClient, useGapiClient} from '../../hooks/useGapiClient.js';
-import {TranslationsDocController} from '../../hooks/useTranslationsDoc.js';
-import {logAction} from '../../utils/actions.js';
-import {joinClassNames} from '../../utils/classes.js';
+} from '@/db/translations.js';
+import {GapiClient, useGapiClient} from '@/hooks/useGapiClient.js';
+import {TranslationsDocController} from '@/hooks/useTranslationsDoc.js';
+import {joinClassNames} from '@/utils/classes.js';
 import {
   getSpreadsheetUrl,
   GoogleSheetId,
   GSheet,
   GSpreadsheet,
-} from '../../utils/gsheets.js';
-import {useExportSheetModal} from '../ExportSheetModal/ExportSheetModal.js';
-
+} from '@/utils/gsheets.js';
+import {notifyErrors} from '@/utils/notifications.js';
 import './TranslationsImportExportButtons.css';
 
 enum MenuAction {
@@ -224,30 +224,6 @@ export function TranslationsImportExportButtons(
     });
   }
 
-  /**
-   * Wrapper that calls a function and shows a generic error notification if any
-   * exceptions occur.
-   */
-  async function notifyErrors(fn: () => Promise<void>) {
-    try {
-      await fn();
-    } catch (err) {
-      console.error(err);
-      let msg: string;
-      if (typeof err === 'object' && err.body) {
-        msg = String(err.body);
-      } else {
-        msg = String(err);
-      }
-      showNotification({
-        title: 'Error',
-        message: msg,
-        color: 'red',
-        autoClose: false,
-      });
-    }
-  }
-
   function onAction(action: MenuAction) {
     switch (action) {
       case MenuAction.EXPORT_DOWNLOAD_CSV: {
@@ -260,7 +236,7 @@ export function TranslationsImportExportButtons(
       }
       case MenuAction.EXPORT_GOOGLE_SHEET_SHOW_OPTIONS: {
         exportSheetModal.open({
-          docId: translationsId,
+          translationsId: translationsId,
           csvData: formatCsvData(),
           locales: locales,
         });

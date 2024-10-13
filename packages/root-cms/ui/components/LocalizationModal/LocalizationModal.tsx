@@ -11,26 +11,16 @@ import {
 import {ContextModalProps, useModals} from '@mantine/modals';
 import {IconLanguage, IconMapPin} from '@tabler/icons-preact';
 import {useEffect, useState} from 'preact/hooks';
-import * as schema from '../../../core/schema.js';
-import {DraftController} from '../../hooks/useDraft.js';
-import {useModalTheme} from '../../hooks/useModalTheme.js';
-import {useTranslationsDoc} from '../../hooks/useTranslationsDoc.js';
-import {Heading} from '../Heading/Heading.js';
+import {Heading} from '@/components/Heading/Heading.js';
+import {TranslationsImportExportButtons} from '@/components/TranslationsImportExportButtons/TranslationsImportExportButtons.js';
+import {DraftController} from '@/hooks/useDraft.js';
+import {useModalTheme} from '@/hooks/useModalTheme.js';
+import {useTranslationsDoc} from '@/hooks/useTranslationsDoc.js';
+import * as schema from '@/../core/schema.js';
+
 import './LocalizationModal.css';
-import {TranslationsImportExportButtons} from '../TranslationsImportExportButtons/TranslationsImportExportButtons.js';
 
 const MODAL_ID = 'LocalizationModal';
-
-enum MenuAction {
-  EXPORT_DOWNLOAD_CSV = 'EXPORT_DOWNLOAD_CSV',
-  EXPORT_GOOGLE_SHEET_CREATE = 'EXPORT_GOOGLE_SHEET_CREATE',
-  EXPORT_GOOGLE_SHEET_ADD_TAB = 'EXPORT_GOOGLE_SHEET_ADD_TAB',
-  EXPORT_GOOGLE_SHEET_LINKED = 'EXPORT_GOOGLE_SHEET_LINKED',
-  EXPORT_GOOGLE_SHEET_SHOW_OPTIONS = 'EXPORT_GOOGLE_SHEET_SHOW_OPTIONS',
-  IMPORT_CSV = 'IMPORT_CSV',
-  IMPORT_GOOGLE_SHEET_LINKED = 'IMPORT_GOOGLE_SHEET_LINKED',
-  UNLINK_GOOGLE_SHEET = 'UNLINK_GOOGLE_SHEET',
-}
 
 export interface LocalizationModalProps {
   [key: string]: unknown;

@@ -1,4 +1,4 @@
-import {getAllEditors} from './users.js';
+import {getAllEditors} from '@/db/users.js';
 
 export interface GoogleSheetId {
   spreadsheetId: string;

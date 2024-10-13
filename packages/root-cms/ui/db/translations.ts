@@ -11,11 +11,14 @@ import {
   serverTimestamp,
   setDoc,
   Timestamp,
+  updateDoc,
   writeBatch,
   WriteBatch,
 } from 'firebase/firestore';
-import {logAction} from '../utils/actions.js';
-import {normalizeString, sourceHash} from '../utils/l10n.js';
+import {GoogleSheetId} from '@/utils/gsheets.js';
+import {normalizeString, sourceHash} from '@/utils/l10n.js';
+import {logAction} from './actions.js';
+import {getDraftDocRef} from './docs.js';
 
 export interface Translations {
   [locale: string]: string;
@@ -239,4 +242,39 @@ export async function csvToTranslationsMap(
     }
   }
   return strings;
+}
+
+/**
+ * Links a Google Sheet to a doc for localization.
+ */
+export async function dbTranslationsLinkGoogleSheet(
+  translationsId: string,
+  sheetId: GoogleSheetId
+) {
+  if (!sheetId?.spreadsheetId) {
+    throw new Error('no spreadsheet id');
+  }
+  const projectId = window.__ROOT_CTX.rootConfig.projectId;
+  const db = window.firebase.db;
+  const docRef = doc(
+    db,
+    'Projects',
+    projectId,
+    'TranslationsManager',
+    'draft',
+    'Translations',
+    translationsId.replaceAll('/', '--')
+  );
+  const updates = {
+    'sys.linkedSheet': {
+      spreadsheetId: sheetId.spreadsheetId,
+      gid: sheetId.gid || 0,
+      linkedAt: serverTimestamp(),
+      linkedBy: window.firebase.user.email,
+    },
+  };
+  await updateDoc(docRef, updates);
+  logAction('translations.link_sheet', {
+    metadata: {translationsId: translationsId, sheetId: sheetId},
+  });
 }

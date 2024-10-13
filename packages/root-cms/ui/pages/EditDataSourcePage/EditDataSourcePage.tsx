@@ -6,9 +6,9 @@ import {route} from 'preact-router';
 import {DataSourceForm} from '../../components/DataSourceForm/DataSourceForm.js';
 import {Heading} from '../../components/Heading/Heading.js';
 import {Text} from '../../components/Text/Text.js';
+import {deleteDataSource} from '../../db/data-sources.js';
 import {useModalTheme} from '../../hooks/useModalTheme.js';
 import {Layout} from '../../layout/Layout.js';
-import {deleteDataSource} from '../../utils/data-source.js';
 import './EditDataSourcePage.css';
 
 export function EditDataSourcePage(props: {id: string}) {

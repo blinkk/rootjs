@@ -1,6 +1,6 @@
 import {Badge, Tooltip} from '@mantine/core';
-import {TranslationsDoc} from '../../utils/doc.js';
-import {timeDiff} from '../../utils/time.js';
+import {TranslationsDoc} from '@/db/translations.js';
+import {timeDiff} from '@/utils/time.js';
 
 interface TranslationsStatusBadgesProps {
   translationsDoc: TranslationsDoc;
