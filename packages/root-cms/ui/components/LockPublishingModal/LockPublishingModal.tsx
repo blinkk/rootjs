@@ -1,13 +1,13 @@
-import {Button, InputWrapper, TextInput, Textarea} from '@mantine/core';
+import {Button, InputWrapper, TextInput} from '@mantine/core';
 import {ContextModalProps, useModals} from '@mantine/modals';
 import {showNotification} from '@mantine/notifications';
 import {IconLock, IconLockOpen} from '@tabler/icons-preact';
 import {ChangeEvent} from 'preact/compat';
 import {useState} from 'preact/hooks';
-import {useModalTheme} from '../../hooks/useModalTheme.js';
-import {cmsLockPublishing, cmsUnlockPublishing} from '../../utils/doc.js';
-import {notifyErrors} from '../../utils/notifications.js';
-import {Text} from '../Text/Text.js';
+import {Text} from '@/components/Text/Text.js';
+import {dbLockPublishing, dbUnlockPublishing} from '@/db/docs.js';
+import {useModalTheme} from '@/hooks/useModalTheme.js';
+import {notifyErrors} from '@/utils/notifications.js';
 import './LockPublishingModal.css';
 
 const MODAL_ID = 'LockPublishingModal';
@@ -68,7 +68,7 @@ LockPublishingModal.Lock = (
     e.preventDefault();
     setLoading(true);
     await notifyErrors(async () => {
-      await cmsLockPublishing(props.docId, {reason, until});
+      await dbLockPublishing(props.docId, {reason, until});
       showNotification({
         title: 'Locked!',
         message: `Publishing is locked for ${props.docId}.`,
@@ -157,7 +157,7 @@ LockPublishingModal.Unlock = (
   async function onSubmit() {
     setLoading(true);
     await notifyErrors(async () => {
-      await cmsUnlockPublishing(props.docId);
+      await dbUnlockPublishing(props.docId);
       showNotification({
         title: 'Unlocked!',
         message: `Publishing is unlocked for ${props.docId}.`,

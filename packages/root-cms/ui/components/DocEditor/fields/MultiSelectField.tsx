@@ -1,7 +1,7 @@
 import {MultiSelect} from '@mantine/core';
 import {useEffect, useState} from 'preact/hooks';
-import * as schema from '../../../../core/schema.js';
 import {FieldProps} from './FieldProps.js';
+import * as schema from '@/../core/schema.js';
 
 export function MultiSelectField(props: FieldProps) {
   const field = props.field as schema.MultiSelectField;

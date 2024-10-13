@@ -1,9 +1,10 @@
 import {Button, Loader, Table, Tooltip} from '@mantine/core';
 import {Timestamp} from 'firebase/firestore';
 import {useEffect, useState} from 'preact/hooks';
-import {Action, listActions} from '../../utils/actions.js';
+import {Action, listActions} from '@/db/actions.js';
+import {getSpreadsheetUrl} from '@/utils/gsheets.js';
+import {stringifyObj} from '@/utils/objects.js';
 import './ActionsLogs.css';
-import {getSpreadsheetUrl} from '../../utils/gsheets.js';
 
 export interface ActionLogsProps {
   className?: string;
@@ -144,30 +145,4 @@ function formatDate(timestamp: Timestamp) {
     dateStyle: 'short',
     timeStyle: 'medium',
   });
-}
-
-/** A pretty printer for JavaScript objects. */
-function stringifyObj(obj: any) {
-  function format(obj: any): string {
-    if (obj === null) {
-      return 'null';
-    }
-    if (typeof obj === 'undefined') {
-      return 'undefined';
-    }
-    if (typeof obj === 'string') {
-      return `"${obj.replaceAll('"', '\\"')}"`;
-    }
-    if (typeof obj !== 'object') {
-      return String(obj);
-    }
-    if (Array.isArray(obj)) {
-      return `[${obj.map(format).join(', ')}]`;
-    }
-    const entries: string[] = Object.entries(obj).map(([key, value]) => {
-      return `${key}: ${format(value)}`;
-    });
-    return `{${entries.join(', ')}}`;
-  }
-  return format(obj);
 }

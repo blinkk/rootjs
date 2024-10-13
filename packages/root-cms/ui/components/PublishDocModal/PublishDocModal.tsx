@@ -2,11 +2,11 @@ import {Accordion, Button, Loader} from '@mantine/core';
 import {ContextModalProps, useModals} from '@mantine/modals';
 import {showNotification} from '@mantine/notifications';
 import {useState, useRef} from 'preact/hooks';
-import {useModalTheme} from '../../hooks/useModalTheme.js';
-import {joinClassNames} from '../../utils/classes.js';
-import {cmsPublishDoc, cmsScheduleDoc} from '../../utils/doc.js';
-import {DocDiffViewer} from '../DocDiffViewer/DocDiffViewer.js';
-import {Text} from '../Text/Text.js';
+import {DocDiffViewer} from '@/components/DocDiffViewer/DocDiffViewer.js';
+import {Text} from '@/components/Text/Text.js';
+import {dbPublishDoc, dbScheduleDoc} from '@/db/docs.js';
+import {useModalTheme} from '@/hooks/useModalTheme.js';
+import {joinClassNames} from '@/utils/classes.js';
 import './PublishDocModal.css';
 
 const MODAL_ID = 'PublishDocModal';
@@ -49,7 +49,7 @@ export function PublishDocModal(
   async function publish() {
     try {
       setLoading(true);
-      await cmsPublishDoc(props.docId);
+      await dbPublishDoc(props.docId);
       setLoading(false);
       showNotification({
         title: 'Published!',
@@ -72,7 +72,7 @@ export function PublishDocModal(
     try {
       setLoading(true);
       const millis = Math.floor(new Date(scheduledDate).getTime());
-      await cmsScheduleDoc(props.docId, millis);
+      await dbScheduleDoc(props.docId, millis);
       setLoading(false);
       showNotification({
         title: 'Scheduled!',

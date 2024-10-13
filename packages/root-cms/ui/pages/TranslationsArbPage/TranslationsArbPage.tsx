@@ -1,13 +1,13 @@
 import {Breadcrumbs, Button, Textarea} from '@mantine/core';
 import {ChangeEvent, useState} from 'preact/compat';
-import {Heading} from '../../components/Heading/Heading.js';
-import {Text} from '../../components/Text/Text.js';
-import {Layout} from '../../layout/Layout.js';
+import {Heading} from '@/components/Heading/Heading.js';
+import {Text} from '@/components/Text/Text.js';
+import {getDraftDocs} from '@/db/docs.js';
+import {Layout} from '@/layout/Layout.js';
+import {Arb} from '@/utils/arb.js';
+import {extractFields} from '@/utils/extract.js';
+import {sourceHash} from '@/utils/l10n.js';
 import './TranslationsArbPage.css';
-import {Arb} from '../../utils/arb.js';
-import {getDraftDocs} from '../../utils/doc.js';
-import {extractFields} from '../../utils/extract.js';
-import {sourceHash} from '../../utils/l10n.js';
 
 export function TranslationsArbPage() {
   return (

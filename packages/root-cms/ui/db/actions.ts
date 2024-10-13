@@ -6,8 +6,7 @@ import {
   orderBy,
   query,
 } from 'firebase/firestore';
-import {DataSource} from './data-source.js';
-import {TIME_UNITS, timestamp} from './time.js';
+import {TIME_UNITS, timestamp} from '@/utils/time.js';
 
 /** A map of when an action was last called. */
 const ACTION_TIMESTAMPS: Record<string, number> = {};
