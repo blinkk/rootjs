@@ -1,6 +1,5 @@
 import {marked} from 'marked';
-
-import {joinClassNames} from '../../utils/classes.js';
+import {joinClassNames} from '@/utils/classes.js';
 
 interface MarkdownProps {
   className?: string;
@@ -15,7 +14,7 @@ export function Markdown(props: MarkdownProps) {
   return (
     <div
       className={joinClassNames('Markdown', props.className)}
-      dangerouslySetInnerHTML={{__html: html}}
+      dangerouslySetInnerHTML={{__html: html as string}}
     />
   );
 }

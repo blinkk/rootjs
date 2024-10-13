@@ -3,12 +3,12 @@ import {ContextModalProps, useModals} from '@mantine/modals';
 import {showNotification, updateNotification} from '@mantine/notifications';
 import {ChangeEvent} from 'preact/compat';
 import {useEffect, useState} from 'preact/hooks';
-import {useModalTheme} from '../../hooks/useModalTheme.js';
-import {useTranslationsDoc} from '../../hooks/useTranslationsDoc.js';
-import {joinClassNames} from '../../utils/classes.js';
-import {GoogleSheetId, getSpreadsheetUrl} from '../../utils/gsheets.js';
-import {notifyErrors} from '../../utils/notifications.js';
-import {Heading} from '../Heading/Heading.js';
+import {Heading} from '@/components/Heading/Heading.js';
+import {useModalTheme} from '@/hooks/useModalTheme.js';
+import {useTranslationsDoc} from '@/hooks/useTranslationsDoc.js';
+import {joinClassNames} from '@/utils/classes.js';
+import {GoogleSheetId, getSpreadsheetUrl} from '@/utils/gsheets.js';
+import {notifyErrors} from '@/utils/notifications.js';
 import './EditTranslationsModal.css';
 
 const MODAL_ID = 'EditTranslationsModal';

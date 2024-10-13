@@ -3,17 +3,17 @@ import {ContextModalProps, useModals} from '@mantine/modals';
 import {showNotification, updateNotification} from '@mantine/notifications';
 import {ChangeEvent, forwardRef} from 'preact/compat';
 import {useState} from 'preact/hooks';
-import {useGapiClient} from '../../hooks/useGapiClient.js';
-import {useModalTheme} from '../../hooks/useModalTheme.js';
-import {cmsLinkGoogleSheetL10n} from '../../utils/doc.js';
+import {Text} from '@/components/Text/Text.js';
+import {dbTranslationsLinkGoogleSheet} from '@/db/translations.js';
+import {useGapiClient} from '@/hooks/useGapiClient.js';
+import {useModalTheme} from '@/hooks/useModalTheme.js';
 import {
   GSheet,
   GSpreadsheet,
   getSpreadsheetUrl,
   parseSpreadsheetUrl,
-} from '../../utils/gsheets.js';
-import {notifyErrors} from '../../utils/notifications.js';
-import {Text} from '../Text/Text.js';
+} from '@/utils/gsheets.js';
+import {notifyErrors} from '@/utils/notifications.js';
 import './ExportSheetModal.css';
 
 const MODAL_ID = 'ExportSheetModal';
@@ -22,7 +22,7 @@ export type Action = 'new-sheet' | 'add-tab' | 'link-sheet';
 
 export interface ExportSheetModalProps {
   [key: string]: unknown;
-  docId: string;
+  translationsId: string;
   csvData: {headers: string[]; rows: Record<string, string>[]};
   locales: string[];
 }
@@ -133,8 +133,8 @@ export function ExportSheetModal(
       if (!gsheet) {
         throw new Error('could not find sheet gid=0');
       }
-      // Update tab name to the doc id.
-      gsheet.setTitle(props.docId);
+      // Update tab name to the translationsId.
+      gsheet.setTitle(props.translationsId);
     } catch (err) {
       console.error(err);
       let msg = err;
@@ -165,7 +165,7 @@ export function ExportSheetModal(
         spreadsheetId: gspreadsheet.spreadsheetId,
         gid: 0,
       };
-      await cmsLinkGoogleSheetL10n(props.docId, linkedSheet);
+      await dbTranslationsLinkGoogleSheet(props.translationsId, linkedSheet);
       setSheetUrl(gsheet.getUrl());
     } catch (err) {
       console.error(err);
@@ -238,7 +238,7 @@ export function ExportSheetModal(
         autoClose: false,
         disallowClose: true,
       });
-      gsheet = await gspreadsheet.createSheet({title: props.docId});
+      gsheet = await gspreadsheet.createSheet({title: props.translationsId});
     } catch (err) {
       console.error(err);
       let msg = err;
@@ -269,7 +269,7 @@ export function ExportSheetModal(
         spreadsheetId: gspreadsheet.spreadsheetId,
         gid: gsheet.gid,
       };
-      await cmsLinkGoogleSheetL10n(props.docId, linkedSheet);
+      await dbTranslationsLinkGoogleSheet(props.translationsId, linkedSheet);
     } catch (err) {
       console.error(err);
       updateNotification({
@@ -334,7 +334,7 @@ export function ExportSheetModal(
         autoClose: false,
         disallowClose: true,
       });
-      await cmsLinkGoogleSheetL10n(props.docId, gsheetId);
+      await dbTranslationsLinkGoogleSheet(props.translationsId, gsheetId);
     } catch (err) {
       console.error(err);
       updateNotification({
@@ -385,7 +385,7 @@ export function ExportSheetModal(
             <Select
               itemComponent={ExportSheetModal.SelectItem}
               data={selectItems}
-              onChange={(e) => {
+              onChange={(e: Action) => {
                 setAction(e);
                 if (e === 'new-sheet') {
                   setSheetUrl('');

@@ -1,10 +1,10 @@
 import {Button, Image, Loader, Select} from '@mantine/core';
 import {ContextModalProps, useModals} from '@mantine/modals';
 import {useState} from 'preact/hooks';
-import {useDocsList} from '../../hooks/useDocsList.js';
-import {useModalTheme} from '../../hooks/useModalTheme.js';
-import {getDocServingUrl} from '../../utils/doc-urls.js';
-import {getNestedValue} from '../../utils/objects.js';
+import {useDocsList} from '@/hooks/useDocsList.js';
+import {useModalTheme} from '@/hooks/useModalTheme.js';
+import {getDocServingUrl} from '@/utils/doc-urls.js';
+import {getNestedValue} from '@/utils/objects.js';
 import './DocSelectModal.css';
 
 const MODAL_ID = 'DocSelectModal';

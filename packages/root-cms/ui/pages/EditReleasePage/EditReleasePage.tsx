@@ -6,10 +6,10 @@ import {route} from 'preact-router';
 import {Heading} from '../../components/Heading/Heading.js';
 import {ReleaseForm} from '../../components/ReleaseForm/ReleaseForm.js';
 import {Text} from '../../components/Text/Text.js';
+import {deleteRelease} from '../../db/releases.js';
 import {useModalTheme} from '../../hooks/useModalTheme.js';
 import {Layout} from '../../layout/Layout.js';
 import './EditReleasePage.css';
-import {deleteRelease} from '../../utils/release.js';
 
 export function EditReleasePage(props: {id: string}) {
   const modals = useModals();

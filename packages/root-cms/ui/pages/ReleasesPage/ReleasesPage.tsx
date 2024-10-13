@@ -3,8 +3,8 @@ import {useEffect, useState} from 'preact/hooks';
 import {Heading} from '../../components/Heading/Heading.js';
 import {ReleaseStatusBadge} from '../../components/ReleaseStatusBadge/ReleaseStatusBadge.js';
 import {Text} from '../../components/Text/Text.js';
+import {Release, listReleases} from '../../db/releases.js';
 import {Layout} from '../../layout/Layout.js';
-import {Release, listReleases} from '../../utils/release.js';
 import './ReleasesPage.css';
 
 export function ReleasesPage() {

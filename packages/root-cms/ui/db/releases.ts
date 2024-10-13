@@ -14,7 +14,7 @@ import {
   writeBatch,
 } from 'firebase/firestore';
 import {logAction} from './actions.js';
-import {cmsPublishDocs} from './doc.js';
+import {dbPublishDocs} from './docs.js';
 
 export interface Release {
   id: string;
@@ -117,7 +117,7 @@ export async function publishRelease(id: string) {
     scheduledAt: deleteField(),
     scheduledBy: deleteField(),
   });
-  await cmsPublishDocs(docIds, {batch});
+  await dbPublishDocs(docIds, {batch});
   console.log(`published release: ${id}`);
   logAction('release.publish', {metadata: {releaseId: id, docIds: docIds}});
 }

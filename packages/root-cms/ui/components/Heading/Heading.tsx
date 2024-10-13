@@ -1,6 +1,5 @@
 import {ComponentChildren} from 'preact';
-
-import {joinClassNames} from '../../utils/classes.js';
+import {joinClassNames} from '@/utils/classes.js';
 import './Heading.css';
 
 export interface HeadingProps {

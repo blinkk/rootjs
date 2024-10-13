@@ -1,12 +1,12 @@
 import {ActionIcon, Button, Image, Loader, Tooltip} from '@mantine/core';
 import {IconTrash} from '@tabler/icons-preact';
 import {useEffect, useState} from 'preact/hooks';
-import * as schema from '../../../../core/schema.js';
-import {getDocFromCacheOrFetch} from '../../../utils/doc-cache.js';
-import {notifyErrors} from '../../../utils/notifications.js';
-import {getNestedValue} from '../../../utils/objects.js';
-import {useDocPickerModal} from '../../DocPickerModal/DocPickerModal.js';
+import {useDocPickerModal} from '@/components/DocPickerModal/DocPickerModal.js';
+import {getDocFromCacheOrFetch} from '@/utils/doc-cache.js';
+import {notifyErrors} from '@/utils/notifications.js';
+import {getNestedValue} from '@/utils/objects.js';
 import {FieldProps} from './FieldProps.js';
+import * as schema from '@/../core/schema.js';
 import './ReferenceField.css';
 
 export function ReferenceField(props: FieldProps) {

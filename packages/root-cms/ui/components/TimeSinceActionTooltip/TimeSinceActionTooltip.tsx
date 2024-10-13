@@ -1,7 +1,7 @@
 import {Tooltip} from '@mantine/core';
 import {Timestamp} from 'firebase/firestore';
 import {useEffect, useState} from 'preact/hooks';
-import {getTimeAgo} from '../../utils/time.js';
+import {getTimeAgo} from '@/utils/time.js';
 
 export interface TimeSinceTooltipActionProps {
   timestamp?: number | Timestamp;

@@ -1,11 +1,11 @@
 import {Image, Loader} from '@mantine/core';
 import {useEffect, useState} from 'preact/hooks';
-import {joinClassNames} from '../../utils/classes.js';
-import {getDocFromCacheOrFetch} from '../../utils/doc-cache.js';
-import {getDocServingUrl} from '../../utils/doc-urls.js';
-import {notifyErrors} from '../../utils/notifications.js';
-import {getNestedValue} from '../../utils/objects.js';
-import {DocStatusBadges} from '../DocStatusBadges/DocStatusBadges.js';
+import {DocStatusBadges} from '@/components/DocStatusBadges/DocStatusBadges.js';
+import {joinClassNames} from '@/utils/classes.js';
+import {getDocFromCacheOrFetch} from '@/utils/doc-cache.js';
+import {getDocServingUrl} from '@/utils/doc-urls.js';
+import {notifyErrors} from '@/utils/notifications.js';
+import {getNestedValue} from '@/utils/objects.js';
 import './DocPreviewCard.css';
 
 export interface DocPreviewCardProps {

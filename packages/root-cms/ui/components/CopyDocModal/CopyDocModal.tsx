@@ -3,11 +3,12 @@ import {ContextModalProps, useModals} from '@mantine/modals';
 import {showNotification} from '@mantine/notifications';
 import {useState} from 'preact/hooks';
 import {route} from 'preact-router';
-import {useModalTheme} from '../../hooks/useModalTheme.js';
-import {cmsCopyDoc} from '../../utils/doc.js';
-import {isSlugValid, normalizeSlug} from '../../utils/slug.js';
-import {SlugInput} from '../SlugInput/SlugInput.js';
-import {Text} from '../Text/Text.js';
+import {SlugInput} from '@/components/SlugInput/SlugInput.js';
+import {Text} from '@/components/Text/Text.js';
+import {dbCopyDoc} from '@/db/docs.js';
+import {useModalTheme} from '@/hooks/useModalTheme.js';
+import {isSlugValid, normalizeSlug} from '@/utils/slug.js';
+
 import './CopyDocModal.css';
 
 const MODAL_ID = 'CopyDocModal';
@@ -60,7 +61,7 @@ export function CopyDocModal(modalProps: ContextModalProps<CopyDocModalProps>) {
 
     const toDocId = `${toCollectionId}/${cleanSlug}`;
     try {
-      await cmsCopyDoc(fromDocId, toDocId, {overwrite: confirmOverwrite});
+      await dbCopyDoc(fromDocId, toDocId, {overwrite: confirmOverwrite});
       context.closeModal(id);
       showNotification({
         title: 'Copied!',
