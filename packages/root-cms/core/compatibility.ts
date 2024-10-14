@@ -61,7 +61,7 @@ async function migrateTranslationsToV2(
   querySnapshot.forEach((doc) => {
     const hash = doc.id;
     const translation = doc.data() as Translation;
-    const tags = translation.tags || [];
+    const tags = (translation.tags || []) as string[];
     delete translation.tags;
     for (const tag of tags) {
       if (tag.includes('/')) {
@@ -73,6 +73,7 @@ async function migrateTranslationsToV2(
             modifiedBy: 'root-cms-client',
             publishedAt: Timestamp.now(),
             publishedBy: 'root-cms-client',
+            tags: tags,
           },
           strings: {},
         };
