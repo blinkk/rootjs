@@ -18,7 +18,6 @@ import {
 import {GoogleSheetId} from '@/utils/gsheets.js';
 import {normalizeString, sourceHash} from '@/utils/l10n.js';
 import {logAction} from './actions.js';
-import {getDraftDocRef} from './docs.js';
 
 export interface Translations {
   [locale: string]: string;

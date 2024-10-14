@@ -50,6 +50,7 @@ export interface TranslationsDoc {
       linkedAt: Timestamp;
       linkedBy: string;
     };
+    tags?: string[];
   };
   strings: TranslationsMap;
 }
@@ -482,6 +483,9 @@ export class RootCMSClient {
       });
       batchCount += 1;
 
+      this.publishTranslationsDoc(doc.id, {batch});
+      batchCount += 2;
+
       publishedDocs.push(doc);
 
       if (batchCount >= 400) {
@@ -594,6 +598,9 @@ export class RootCMSClient {
       });
       batchCount += 1;
 
+      this.publishTranslationsDoc(doc.id, {batch});
+      batchCount += 2;
+
       publishedDocs.push(doc);
 
       if (batchCount >= 400) {
@@ -635,6 +642,48 @@ export class RootCMSClient {
     }
   }
 
+  async publishTranslationsDoc(
+    translationsId: string,
+    options?: {batch?: WriteBatch; publishedBy?: string}
+  ) {
+    const docSlug = translationsId.replaceAll('/', '--');
+    const draftRef = this.db.doc(
+      `Projects/${this.projectId}/TranslationsManager/draft/Translations/${docSlug}`
+    );
+    const snapshot = await draftRef.get();
+
+    if (!snapshot.exists) {
+      // Ignore missing translations.
+      console.warn(`translations ${translationsId} does not exist`);
+      return;
+    }
+
+    // If the translations publishing is tied to another batch request (e.g. doc
+    // publishing), the batch request will be committed upstream.
+    const commitBatch = !options?.batch;
+
+    const batch = options?.batch || this.db.batch();
+    batch.update(draftRef, {
+      'sys.publishedAt': Timestamp.now(),
+      'sys.publishedBy': options?.publishedBy || 'root-cms-client',
+    });
+
+    const publishedRef = this.db.doc(
+      `Projects/${this.projectId}/TranslationsManager/published/Translations/${docSlug}`
+    );
+    const data = {...snapshot.data()};
+    if (!data.sys) {
+      data.sys = {};
+    }
+    data.sys.publishedAt = Timestamp.now();
+    data.sys.publishedBy = options?.publishedBy || 'root-cms-client';
+    batch.set(publishedRef, data);
+    if (commitBatch) {
+      await batch.commit();
+      this.logAction('translations.publish', {metadata: {translationsId}});
+    }
+  }
+
   /**
    * Checks if a doc is currently "locked" for publishing.
    */
@@ -665,8 +714,6 @@ export class RootCMSClient {
     options?: LoadTranslationsOptions
   ): Promise<TranslationsMap> {
     const dbPath = `Projects/${this.projectId}/TranslationsManager/published/Translations`;
-    const query: Query = this.db.collection(dbPath);
-    const snapshot = await query.get();
     const translationsMap: TranslationsMap = {};
 
     const addTranslations = (hash: string, translations: Translation) => {
@@ -676,6 +723,11 @@ export class RootCMSClient {
       );
     };
 
+    let query: Query = this.db.collection(dbPath);
+    if (options?.tags && options.tags.length > 0) {
+      query = query.where('sys.tags', 'array-contains-any', options.tags);
+    }
+    const snapshot = await query.get();
     snapshot.forEach((doc) => {
       const data = doc.data();
       const strings = (data.strings || {}) as Record<string, Translation>;
