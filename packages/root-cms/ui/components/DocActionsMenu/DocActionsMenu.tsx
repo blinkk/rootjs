@@ -238,7 +238,7 @@ export function DocActionsMenu(props: DocActionsMenuProps) {
         icon={<IconCopy size={20} />}
         onClick={() => copyDocModal.open()}
       >
-        Copy
+        Copy to...
       </Menu.Item>
       {sys.modifiedAt &&
         sys.publishedAt &&
