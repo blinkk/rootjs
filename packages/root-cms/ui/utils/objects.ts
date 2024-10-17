@@ -110,3 +110,29 @@ export function deepEqual(obj1: any, obj2: any) {
 
   return true;
 }
+
+/** A pretty printer for JavaScript objects. */
+export function stringifyObj(obj: any) {
+  function format(obj: any): string {
+    if (obj === null) {
+      return 'null';
+    }
+    if (typeof obj === 'undefined') {
+      return 'undefined';
+    }
+    if (typeof obj === 'string') {
+      return `"${obj.replaceAll('"', '\\"')}"`;
+    }
+    if (typeof obj !== 'object') {
+      return String(obj);
+    }
+    if (Array.isArray(obj)) {
+      return `[${obj.map(format).join(', ')}]`;
+    }
+    const entries: string[] = Object.entries(obj).map(([key, value]) => {
+      return `${key}: ${format(value)}`;
+    });
+    return `{${entries.join(', ')}}`;
+  }
+  return format(obj);
+}

@@ -7,7 +7,7 @@ import {
   updateDoc,
   where,
 } from 'firebase/firestore';
-import {logAction} from './actions.js';
+import {logAction} from '@/db/actions.js';
 import {TIME_UNITS} from './time.js';
 
 export interface Translation {

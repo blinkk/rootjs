@@ -1,12 +1,12 @@
 import {Accordion, Button, Loader} from '@mantine/core';
 import {ContextModalProps, useModals} from '@mantine/modals';
 import {showNotification} from '@mantine/notifications';
-import {useState, useRef} from 'preact/hooks';
-import {useModalTheme} from '../../hooks/useModalTheme.js';
-import {joinClassNames} from '../../utils/classes.js';
-import {cmsPublishDoc, cmsScheduleDoc} from '../../utils/doc.js';
-import {DocDiffViewer} from '../DocDiffViewer/DocDiffViewer.js';
-import {Text} from '../Text/Text.js';
+import {useState, useRef, useEffect} from 'preact/hooks';
+import {DocDiffViewer} from '@/components/DocDiffViewer/DocDiffViewer.js';
+import {Text} from '@/components/Text/Text.js';
+import {dbPublishDoc, dbScheduleDoc} from '@/db/docs.js';
+import {useModalTheme} from '@/hooks/useModalTheme.js';
+import {joinClassNames} from '@/utils/classes.js';
 import './PublishDocModal.css';
 
 const MODAL_ID = 'PublishDocModal';
@@ -44,12 +44,25 @@ export function PublishDocModal(
   const modals = useModals();
   const modalTheme = useModalTheme();
 
+  const [currentDateTime, setCurrentDateTime] = useState('');
+
+  // This will update the current date and time every time the component renders.
+  useEffect(() => {
+    const now = new Date();
+    const localISOTime = new Date(
+      now.getTime() - now.getTimezoneOffset() * 60000
+    )
+      .toISOString()
+      .slice(0, 16); // Format to "YYYY-MM-DDTHH:mm"
+    setCurrentDateTime(localISOTime);
+  }, []);
+
   const buttonLabel = publishType === 'scheduled' ? 'Schedule' : 'Publish';
 
   async function publish() {
     try {
       setLoading(true);
-      await cmsPublishDoc(props.docId);
+      await dbPublishDoc(props.docId);
       setLoading(false);
       showNotification({
         title: 'Published!',
@@ -70,9 +83,19 @@ export function PublishDocModal(
 
   async function schedule() {
     try {
-      setLoading(true);
       const millis = Math.floor(new Date(scheduledDate).getTime());
-      await cmsScheduleDoc(props.docId, millis);
+      const now = Math.floor(new Date().getTime());
+      if (millis <= now) {
+        showNotification({
+          title: 'Schedule failed',
+          message: `Failed to schedule ${props.docId}. Please choose a date/time in the future when using the scheduled publishing.`,
+          color: 'red',
+          autoClose: false,
+        });
+        return;
+      }
+      setLoading(true);
+      await dbScheduleDoc(props.docId, millis);
       setLoading(false);
       showNotification({
         title: 'Scheduled!',
@@ -182,6 +205,7 @@ export function PublishDocModal(
                     ref={dateTimeRef}
                     type="datetime-local"
                     disabled={publishType !== 'scheduled'}
+                    min={currentDateTime}
                     value={scheduledDate}
                     onChange={(e: Event) => {
                       const target = e.target as HTMLInputElement;

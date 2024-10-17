@@ -16,11 +16,19 @@ export interface ConfigureServerOptions {
 
 export interface PluginHooks {
   /**
+   * Startup hook called when root is initialized.
+   */
+  startup?: (options: {
+    command: string;
+    rootConfig: RootConfig;
+  }) => void | Promise<void>;
+
+  /**
    * Post-render hook that's called before the HTML is rendered to the response
    * object. If a string is returned from this hook, it will replace the
    * rendered HTML.
    */
-  preRender: (html: string) => void | string | Promise<string>;
+  preRender?: (html: string) => void | string | Promise<string>;
 }
 
 export interface Plugin {

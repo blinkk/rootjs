@@ -14,13 +14,13 @@ import {useEffect, useState} from 'preact/hooks';
 import {DataSourceStatusButton} from '../../components/DataSourceStatusButton/DataSourceStatusButton.js';
 import {Heading} from '../../components/Heading/Heading.js';
 import {Text} from '../../components/Text/Text.js';
-import {Layout} from '../../layout/Layout.js';
 import {
   DataSourceData,
   DataSource,
   getFromDataSource,
   getDataSource,
-} from '../../utils/data-source.js';
+} from '../../db/data-sources.js';
+import {Layout} from '../../layout/Layout.js';
 import './DataSourcePage.css';
 
 export function DataSourcePage(props: {id: string}) {

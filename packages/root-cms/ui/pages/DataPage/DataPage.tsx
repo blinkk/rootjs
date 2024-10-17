@@ -3,8 +3,8 @@ import {useEffect, useState} from 'preact/hooks';
 import {DataSourceStatusButton} from '../../components/DataSourceStatusButton/DataSourceStatusButton.js';
 import {Heading} from '../../components/Heading/Heading.js';
 import {Text} from '../../components/Text/Text.js';
+import {DataSource, listDataSources} from '../../db/data-sources.js';
 import {Layout} from '../../layout/Layout.js';
-import {DataSource, listDataSources} from '../../utils/data-source.js';
 import './DataPage.css';
 
 export function DataPage() {

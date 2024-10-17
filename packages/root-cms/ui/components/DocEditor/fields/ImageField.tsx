@@ -3,10 +3,10 @@ import {showNotification} from '@mantine/notifications';
 import {IconPhotoUp, IconTrash} from '@tabler/icons-preact';
 import {ChangeEvent} from 'preact/compat';
 import {useEffect, useRef, useState} from 'preact/hooks';
-import * as schema from '../../../../core/schema.js';
-import {joinClassNames} from '../../../utils/classes.js';
-import {uploadFileToGCS} from '../../../utils/gcs.js';
+import {joinClassNames} from '@/utils/classes.js';
+import {uploadFileToGCS} from '@/utils/gcs.js';
 import {FieldProps} from './FieldProps.js';
+import * as schema from '@/../core/schema.js';
 
 export const IMAGE_MIMETYPES = [
   'image/png',

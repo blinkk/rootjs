@@ -1,3 +1,5 @@
+import {Timestamp} from 'firebase/firestore';
+
 /**
  * Converts a time unit to millis.
  */
@@ -55,4 +57,14 @@ export function formatDateTime(ts: Timestamp) {
     hour: '2-digit',
     minute: '2-digit',
   });
+}
+
+export function timeDiff(ts: Timestamp | null) {
+  // Since we're using server timestamps, firestore doesn't always return the
+  // timestamp right away since the db save is happening asynchronously. In
+  // these cases, assume that the update happened very recently.
+  if (!ts) {
+    return getTimeAgo(new Date().getTime());
+  }
+  return getTimeAgo(ts.toMillis());
 }

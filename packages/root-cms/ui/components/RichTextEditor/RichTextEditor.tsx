@@ -6,13 +6,13 @@ import NestedList from '@editorjs/nested-list';
 import RawHtmlTool from '@editorjs/raw';
 // import Table from '@editorjs/table';
 import {useEffect, useRef, useState} from 'preact/hooks';
-import {joinClassNames} from '../../utils/classes.js';
-import './RichTextEditor.css';
-import {uploadFileToGCS} from '../../utils/gcs.js';
-import {isObject} from '../../utils/objects.js';
+import {joinClassNames} from '@/utils/classes.js';
+import {uploadFileToGCS} from '@/utils/gcs.js';
+import {isObject} from '@/utils/objects.js';
 import Strikethrough from './tools/Strikethrough.js';
 import Superscript from './tools/Superscript.js';
 import Underline from './tools/Underline.js';
+import './RichTextEditor.css';
 
 export interface RichTextEditorProps {
   className?: string;

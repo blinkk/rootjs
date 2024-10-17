@@ -6,10 +6,15 @@
 }
 
 .DocTranslationsPage__header {
-  padding: 48px 60px 30px;
+  padding: 30px;
   position: sticky;
   left: 0;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 10px 40px;
 }
+
 
 .DocTranslationsPage__header__breadcrumbs {
   font-size: 12px;
@@ -33,12 +38,6 @@
 
 .DocTranslationsPage__header__linkedSheet {
   margin-top: 10px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.DocTranslationsPage__header__linkedSheet__label {
   font-size: 14px;
 }
 
@@ -99,12 +98,12 @@
 
 .DocTranslationsPage__Table__sourceCell {
   white-space: pre-wrap;
+  overflow: auto;
 }
 
 .DocTranslationsPage__Table__sourceCell,
 .DocTranslationsPage__Textarea {
   padding: 6px 10px;
-  height: 100%;
 }
 
 .DocTranslationsPage__Textarea {
@@ -117,11 +116,16 @@
   width: 100%;
   border: 1px solid transparent;
   border-radius: 0;
+  height: 100%;
   min-height: 100%;
 }
 
 .DocTranslationsPage__Textarea--empty {
   background-color: #FFF5F5;
+}
+
+.DocTranslationsPage__Textarea--empty:focus {
+  background-color: transparent;
 }
 
 .DocTranslationsPage__Table td:has(.DocTranslationsPage__Textarea--hasChanges) {

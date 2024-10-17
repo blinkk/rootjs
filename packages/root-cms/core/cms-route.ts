@@ -6,7 +6,7 @@ import {
   Response,
   RouteParams,
 } from '@blinkk/root';
-import {RootCMSClient, translationsForLocale} from '@blinkk/root-cms/client';
+import {BatchRequest, RootCMSClient} from './client.js';
 
 export type CMSRequest = Request & {
   cmsClient: RootCMSClient;
@@ -38,6 +38,16 @@ export interface CMSRouteOptions {
   slug?: string;
 
   /**
+   * Hook that allows callers to modify the Root CMS `BatchRequest` object. If a
+   * new `BatchRequest` is returned, it will replace the default one created by
+   * `cmsRoute()`.
+   */
+  preRequestHook?: (
+    batchRequest: BatchRequest,
+    context: CMSRouteContext
+  ) => void | BatchRequest;
+
+  /**
    * Callback function that returns a map of Promises that contain fetched data.
    * Once the promise is resolved, the values are injected into page's props
    * for rendering.
@@ -56,11 +66,6 @@ export interface CMSRouteOptions {
   setResponseHeaders?: (req: Request, res: Response) => void;
 
   /**
-   * Translations configuration.
-   */
-  translations?: (context: CMSRouteContext) => {tags?: string[]};
-
-  /**
    * Sets Cache-Control header to `private`.
    */
   disableCacheControl?: boolean;
@@ -72,20 +77,25 @@ export interface CMSRouteOptions {
 }
 
 export interface CMSDoc {
+  id: string;
+  slug: string;
   sys?: {
     locales?: string[];
   };
 }
 
+/**
+ * Utility for generating SSR and SSG handlers in a Root route file.
+ */
 export function cmsRoute(options: CMSRouteOptions) {
-  let cmsClient: RootCMSClient = null;
+  let cmsClient: RootCMSClient | null = null;
 
   function getSlug(params: RouteParams) {
     if (options.slug) {
       return options.slug;
     }
     const slugParam = options.slugParam || 'slug';
-    return params[slugParam] || 'index';
+    return (params[slugParam] || 'index').replaceAll('/', '--');
   }
 
   async function fetchData(
@@ -98,27 +108,73 @@ export function cmsRoute(options: CMSRouteOptions) {
     return resolvePromisesMap(promisesMap);
   }
 
-  async function generateProps(routeContext: CMSRouteContext, locale: string) {
+  async function generateProps(
+    routeContext: CMSRouteContext,
+    preferredLocale: string | ((doc: CMSDoc) => string)
+  ) {
     const {slug, mode} = routeContext;
-    const translationsTags = ['common', `${options.collection}/${slug}`];
-    if (options.translations) {
-      const tags = options.translations(routeContext)?.tags || [];
-      translationsTags.push(...tags);
+
+    const primaryDocId = `${options.collection}/${slug}`;
+    let batchRequest = routeContext.cmsClient.createBatchRequest({
+      mode,
+      translate: true,
+    });
+    batchRequest.addDoc(primaryDocId);
+
+    // Call the pre-request hook to allow users to modify the batch request.
+    if (options.preRequestHook) {
+      const overridedBatchRequest = options.preRequestHook(
+        batchRequest,
+        routeContext
+      );
+      if (overridedBatchRequest) {
+        batchRequest = overridedBatchRequest;
+      }
     }
 
-    const [doc, translationsMap, data] = await Promise.all([
-      cmsClient.getDoc<CMSDoc>(options.collection, slug, {
-        mode,
-      }),
-      cmsClient.loadTranslations({tags: translationsTags}),
+    // Fetch the Root CMS BatchRequest in parallel with any other data the
+    // caller needs to fetch to render the route.
+    const [batchRes, data] = await Promise.all([
+      batchRequest.fetch(),
       fetchData(routeContext),
     ]);
+    const doc = batchRes.docs[primaryDocId];
     if (!doc) {
       return {notFound: true};
     }
 
-    const translations = translationsForLocale(translationsMap, locale);
+    // Determine the preferred locale to render.
+    let locale: string;
+    if (typeof preferredLocale === 'string') {
+      locale = preferredLocale;
+    } else {
+      locale = preferredLocale(doc);
+    }
+    const docLocales = doc.sys?.locales || ['en'];
+    if (!locale || !docLocales.includes(locale)) {
+      return {notFound: true};
+    }
+
+    // From the preferred locale, generate a translations map.
+    const i18nFallbacks =
+      routeContext.cmsClient.rootConfig.i18n?.fallbacks || {};
+    const translationFallbackLocales = i18nFallbacks[locale] || [locale];
+    const translations = batchRes.getTranslations(translationFallbackLocales);
+
     let props: any = {...data, locale, mode, slug, doc};
+
+    // For SSR handlers, inject the user's country of origin to props.
+    if (routeContext.req) {
+      const country =
+        getFirstQueryParam(routeContext.req, 'gl') ||
+        routeContext.req.get('x-country-code') ||
+        routeContext.req.get('x-appengine-country') ||
+        null;
+      props.country = country;
+    }
+
+    // Call the pre-render hook which allows a caller to modify props before
+    // it is passed to the route component.
     if (options.preRenderHook) {
       props = await options.preRenderHook(props, routeContext);
     }
@@ -127,8 +183,8 @@ export function cmsRoute(options: CMSRouteOptions) {
   }
 
   // SSG handlers are disabled by default. Pass `{enableSSG: true}` to enable.
-  let getStaticPaths: GetStaticPaths = null;
-  let getStaticProps: GetStaticProps = null;
+  let getStaticPaths: GetStaticPaths | null = null;
+  let getStaticProps: GetStaticProps | null = null;
 
   if (options.enableSSG) {
     getStaticPaths = async (ctx) => {
@@ -138,13 +194,12 @@ export function cmsRoute(options: CMSRouteOptions) {
       if (!cmsClient) {
         cmsClient = new RootCMSClient(ctx.rootConfig);
       }
-      // TODO(stevenle): Add support for mode.
       const mode = 'published';
-      const res = await cmsClient.listDocs(options.collection, {mode});
-      const ssgPaths = [];
-      res.docs.forEach((doc: {slug: string}) => {
+      const res = await cmsClient.listDocs<CMSDoc>(options.collection, {mode});
+      const ssgPaths: Array<{params: Record<string, string>}> = [];
+      res.docs.forEach((doc) => {
         const params: Record<string, string> = {};
-        params[options.slugParam] = doc.slug;
+        params[options.slugParam!] = doc.slug;
         ssgPaths.push({params});
       });
       return {paths: ssgPaths};
@@ -155,10 +210,8 @@ export function cmsRoute(options: CMSRouteOptions) {
         cmsClient = new RootCMSClient(ctx.rootConfig);
       }
       const slug = getSlug(ctx.params);
-      // TODO(stevenle): Add support for mode.
       const mode = 'published';
-      const routeContext: CMSRouteContext = {req: null, slug, mode, cmsClient};
-
+      const routeContext: CMSRouteContext = {slug, mode, cmsClient};
       return generateProps(routeContext, ctx.params.$locale);
     };
   }
@@ -169,9 +222,9 @@ export function cmsRoute(options: CMSRouteOptions) {
     getStaticProps: getStaticProps,
 
     // SSR handler.
-    handle: async (req, res) => {
+    handle: async (req: CMSRequest, res: Response) => {
       if (!cmsClient) {
-        cmsClient = new RootCMSClient(req.rootConfig);
+        cmsClient = new RootCMSClient(req.rootConfig!);
       }
       req.cmsClient = cmsClient;
       const ctx = req.handlerContext as HandlerContext;
@@ -183,43 +236,25 @@ export function cmsRoute(options: CMSRouteOptions) {
       const mode = String(req.query.preview) === 'true' ? 'draft' : 'published';
       const routeContext: CMSRouteContext = {req, slug, mode, cmsClient};
 
-      const translationsTags = ['common', `${options.collection}/${slug}`];
-      if (options.translations) {
-        const tags = options.translations(routeContext)?.tags || [];
-        translationsTags.push(...tags);
+      function getLocale(doc: CMSDoc) {
+        const docLocales = doc.sys?.locales || ['en'];
+        let locale = ctx.route.locale;
+        if (ctx.route.isDefaultLocale) {
+          locale = ctx.getPreferredLocale(docLocales);
+          if (docLocales.length > 0 && !docLocales.includes(locale)) {
+            locale = docLocales[0];
+          }
+        }
+        return locale;
       }
 
-      const [doc, translationsMap, data] = await Promise.all([
-        cmsClient.getDoc<CMSDoc>(options.collection, slug, {
-          mode,
-        }),
-        cmsClient.loadTranslations({tags: translationsTags}),
-        fetchData(routeContext),
-      ]);
-      if (!doc) {
+      const resData = await generateProps(routeContext, getLocale);
+      if (resData.notFound) {
         res.setHeader('cache-control', 'private');
         return ctx.render404();
       }
 
-      const sys = doc.sys;
-      const docLocales = sys.locales || ['en'];
-      let locale = ctx.route.locale;
-      if (ctx.route.isDefaultLocale) {
-        locale = ctx.getPreferredLocale(docLocales);
-        if (docLocales.length > 0 && !docLocales.includes(locale)) {
-          locale = docLocales[0];
-        }
-      }
-      const country =
-        getFirstQueryParam(req, 'gl') ||
-        req.get('x-country-code') ||
-        req.get('x-appengine-country') ||
-        null;
-      const translations = translationsForLocale(translationsMap, locale);
-      let props: any = {...data, req, locale, mode, slug, doc, country};
-      if (options.preRenderHook) {
-        props = await options.preRenderHook(props, routeContext);
-      }
+      const {props, locale, translations} = resData;
 
       if (props.$redirect) {
         const redirectCode = props.$redirectCode || 302;

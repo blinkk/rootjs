@@ -23,6 +23,7 @@ import {
   IconTrash,
   IconTriangleFilled,
 } from '@tabler/icons-preact';
+import {createContext} from 'preact';
 import {
   useContext,
   useEffect,
@@ -32,35 +33,25 @@ import {
   useState,
 } from 'preact/hooks';
 import {route} from 'preact-router';
-
-import * as schema from '../../../core/schema.js';
-import {
-  DraftController,
-  SaveState,
-  UseDraftHook,
-} from '../../hooks/useDraft.js';
-import {joinClassNames} from '../../utils/classes.js';
-import {
-  CMSDoc,
-  testIsScheduled,
-  testPublishingLocked,
-} from '../../utils/doc.js';
-import {extractField} from '../../utils/extract.js';
-import {getDefaultFieldValue} from '../../utils/fields.js';
-import {flattenNestedKeys} from '../../utils/objects.js';
-import {autokey} from '../../utils/rand.js';
-import {getPlaceholderKeys, strFormat} from '../../utils/str-format.js';
-import {formatDateTime} from '../../utils/time.js';
 import {
   DocActionEvent,
   DocActionsMenu,
-} from '../DocActionsMenu/DocActionsMenu.js';
-import {DocStatusBadges} from '../DocStatusBadges/DocStatusBadges.js';
-import {useEditJsonModal} from '../EditJsonModal/EditJsonModal.js';
-import {useLocalizationModal} from '../LocalizationModal/LocalizationModal.js';
-import {usePublishDocModal} from '../PublishDocModal/PublishDocModal.js';
-import './DocEditor.css';
-import {Viewers} from '../Viewers/Viewers.js';
+} from '@/components/DocActionsMenu/DocActionsMenu.js';
+import {DocStatusBadges} from '@/components/DocStatusBadges/DocStatusBadges.js';
+import {useEditJsonModal} from '@/components/EditJsonModal/EditJsonModal.js';
+import {useEditTranslationsModal} from '@/components/EditTranslationsModal/EditTranslationsModal.js';
+import {useLocalizationModal} from '@/components/LocalizationModal/LocalizationModal.js';
+import {usePublishDocModal} from '@/components/PublishDocModal/PublishDocModal.js';
+import {Viewers} from '@/components/Viewers/Viewers.js';
+import {CMSDoc, testIsScheduled, testPublishingLocked} from '@/db/docs.js';
+import {DraftController, SaveState, UseDraftHook} from '@/hooks/useDraft.js';
+import {joinClassNames} from '@/utils/classes.js';
+import {extractField} from '@/utils/extract.js';
+import {getDefaultFieldValue} from '@/utils/fields.js';
+import {flattenNestedKeys} from '@/utils/objects.js';
+import {autokey} from '@/utils/rand.js';
+import {getPlaceholderKeys, strFormat} from '@/utils/str-format.js';
+import {formatDateTime} from '@/utils/time.js';
 import {BooleanField} from './fields/BooleanField.js';
 import {DateTimeField} from './fields/DateTimeField.js';
 import {FieldProps} from './fields/FieldProps.js';
@@ -71,8 +62,8 @@ import {ReferenceField} from './fields/ReferenceField.js';
 import {RichTextField} from './fields/RichTextField.js';
 import {SelectField} from './fields/SelectField.js';
 import {StringField} from './fields/StringField.js';
-import {createContext} from 'preact';
-import {useEditTranslationsModal} from '../EditTranslationsModal/EditTranslationsModal.js';
+import * as schema from '@/../core/schema.js';
+import './DocEditor.css';
 
 interface DocEditorProps {
   docId: string;

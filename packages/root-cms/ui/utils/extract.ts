@@ -1,7 +1,7 @@
 import {doc, getDoc} from 'firebase/firestore';
-import * as schema from '../../core/schema.js';
-import {RichTextData} from '../components/RichTextEditor/RichTextEditor.js';
+import {RichTextData} from '@/components/RichTextEditor/RichTextEditor.js';
 import {normalizeString} from './l10n.js';
+import * as schema from '@/../core/schema.js';
 
 export async function extractStringsForDoc(docId: string) {
   const db = window.firebase.db;

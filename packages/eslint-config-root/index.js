@@ -57,14 +57,26 @@ module.exports = {
               'parent',
               'sibling',
               'index',
+              'unknown',
             ],
             pathGroups: [
               {
                 pattern: '@/**',
                 group: 'internal',
               },
+              {
+                pattern: '**/*.{css,scss}',
+                group: 'unknown',
+              },
+              {
+                pattern: '*.{css,scss}',
+                group: 'unknown',
+                patternOptions: {matchBase: true},
+                position: 'after',
+              },
             ],
             pathGroupsExcludedImportTypes: ['builtin'],
+            warnOnUnassignedImports: true,
             'newlines-between': 'ignore',
             alphabetize: {
               order: 'asc',

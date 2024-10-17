@@ -15,15 +15,15 @@ import {Heading} from '../../components/Heading/Heading.js';
 import {ReleaseStatusBadge} from '../../components/ReleaseStatusBadge/ReleaseStatusBadge.js';
 import {useScheduleReleaseModal} from '../../components/ScheduleReleaseModal/ScheduleReleaseModal.js';
 import {Text} from '../../components/Text/Text.js';
-import {useModalTheme} from '../../hooks/useModalTheme.js';
-import {Layout} from '../../layout/Layout.js';
-import {notifyErrors} from '../../utils/notifications.js';
 import {
   Release,
   cancelScheduledRelease,
   getRelease,
   publishRelease,
-} from '../../utils/release.js';
+} from '../../db/releases.js';
+import {useModalTheme} from '../../hooks/useModalTheme.js';
+import {Layout} from '../../layout/Layout.js';
+import {notifyErrors} from '../../utils/notifications.js';
 import {timestamp} from '../../utils/time.js';
 import './ReleasePage.css';
 

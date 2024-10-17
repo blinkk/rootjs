@@ -3,9 +3,9 @@ import {ContextModalProps, useModals} from '@mantine/modals';
 import {showNotification} from '@mantine/notifications';
 import {Timestamp} from 'firebase/firestore';
 import {useState, useRef} from 'preact/hooks';
-import {useModalTheme} from '../../hooks/useModalTheme.js';
-import {notifyErrors} from '../../utils/notifications.js';
-import {scheduleRelease} from '../../utils/release.js';
+import {scheduleRelease} from '@/db/releases.js';
+import {useModalTheme} from '@/hooks/useModalTheme.js';
+import {notifyErrors} from '@/utils/notifications.js';
 import './ScheduleReleaseModal.css';
 
 const MODAL_ID = 'ScheduleReleaseModal';

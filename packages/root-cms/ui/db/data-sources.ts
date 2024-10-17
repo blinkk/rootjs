@@ -10,8 +10,8 @@ import {
   updateDoc,
   writeBatch,
 } from 'firebase/firestore';
+import {GSpreadsheet, parseSpreadsheetUrl} from '@/utils/gsheets.js';
 import {logAction} from './actions.js';
-import {GSpreadsheet, parseSpreadsheetUrl} from './gsheets.js';
 
 export type DataSourceType = 'http' | 'gsheet';
 

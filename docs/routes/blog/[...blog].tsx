@@ -1,10 +1,10 @@
-import {CopyBlock} from '@/blocks/CopyBlock/CopyBlock';
-import Block from '@/components/Block/Block';
-import {Container} from '@/components/Container/Container';
-import {Text} from '@/components/Text/Text';
-import {BaseLayout} from '@/layouts/BaseLayout';
-import {BlogPostsDoc} from '@/root-cms';
-import {cmsRoute} from '@/utils/cms-route';
+import {cmsRoute} from '@blinkk/root-cms';
+import {CopyBlock} from '@/blocks/CopyBlock/CopyBlock.js';
+import Block from '@/components/Block/Block.js';
+import {Container} from '@/components/Container/Container.js';
+import {Text} from '@/components/Text/Text.js';
+import {BaseLayout} from '@/layouts/BaseLayout.js';
+import {BlogPostsDoc} from '@/root-cms.js';
 import styles from './[...blog].module.scss';
 
 export interface PageProps {

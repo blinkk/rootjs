@@ -82,6 +82,14 @@ export async function build(rootProjectDir?: string, options?: BuildOptions) {
   }
 
   const rootPlugins = rootConfig.plugins || [];
+
+  // Run any "startup" hooks.
+  for (const plugin of rootPlugins) {
+    if (typeof plugin.hooks?.startup === 'function') {
+      await plugin.hooks.startup({command: 'build', rootConfig});
+    }
+  }
+
   const viteConfig = rootConfig.vite || {};
   const vitePlugins = [
     ...(viteConfig.plugins || []),

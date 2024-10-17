@@ -7,8 +7,8 @@ import {
   documentId,
 } from 'firebase/firestore';
 import {useEffect, useState} from 'preact/hooks';
-import {setDocToCache} from '../utils/doc-cache.js';
-import {notifyErrors} from '../utils/notifications.js';
+import {setDocToCache} from '@/utils/doc-cache.js';
+import {notifyErrors} from '@/utils/notifications.js';
 import {useFirebase} from './useFirebase.js';
 
 export function useDocsList(collectionId: string, options: {orderBy: string}) {

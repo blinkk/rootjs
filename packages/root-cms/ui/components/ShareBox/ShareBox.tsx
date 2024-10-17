@@ -7,11 +7,11 @@ import {
   deleteField,
 } from 'firebase/firestore';
 import {useEffect, useState} from 'preact/hooks';
-import {logAction} from '../../utils/actions.js';
-import {joinClassNames} from '../../utils/classes.js';
-import {notifyErrors} from '../../utils/notifications.js';
-import {sortByKey} from '../../utils/objects.js';
-import {Text} from '../Text/Text.js';
+import {Text} from '@/components/Text/Text.js';
+import {logAction} from '@/db/actions.js';
+import {joinClassNames} from '@/utils/classes.js';
+import {notifyErrors} from '@/utils/notifications.js';
+import {sortByKey} from '@/utils/objects.js';
 import './ShareBox.css';
 
 export interface ShareBoxProps {

@@ -1,13 +1,13 @@
 import {Button, Loader} from '@mantine/core';
 import {Differ, Viewer as JsonDiffViewer} from 'json-diff-kit';
 import {useEffect, useState} from 'preact/hooks';
-import {CMSDoc, cmsReadDocVersion, unmarshalData} from '../../utils/doc.js';
-
-import 'json-diff-kit/dist/viewer.css';
+import {CMSDoc, unmarshalData} from '@/db/docs.js';
+import {dbGetDocVersion} from '@/db/versions.js';
+import {joinClassNames} from '@/utils/classes.js';
+import {getTimeAgo} from '@/utils/time.js';
 import 'json-diff-kit/dist/viewer-monokai.css';
+import 'json-diff-kit/dist/viewer.css';
 import './DocDiffViewer.css';
-import {getTimeAgo} from '../../utils/time.js';
-import {joinClassNames} from '../../utils/classes.js';
 
 export interface DocVersionId {
   /** Doc id, e.g. `Pages/foo`. */
@@ -44,8 +44,8 @@ export function DocDiffViewer(props: DocDiffViewerProps) {
   async function init() {
     setLoading(true);
     const [leftDoc, rightDoc] = await Promise.all([
-      cmsReadDocVersion(left.docId, left.versionId),
-      cmsReadDocVersion(right.docId, right.versionId),
+      dbGetDocVersion(left.docId, left.versionId),
+      dbGetDocVersion(right.docId, right.versionId),
     ]);
     setLeftDoc(leftDoc);
     setRightDoc(rightDoc);

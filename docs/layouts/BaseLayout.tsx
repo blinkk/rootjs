@@ -1,4 +1,11 @@
-import {Body, Head, Html, Script, useTranslations} from '@blinkk/root';
+import {
+  Body,
+  Head,
+  Html,
+  Script,
+  useRequestContext,
+  useTranslations,
+} from '@blinkk/root';
 import {ComponentChildren} from 'preact';
 import {GlobalFooter} from '@/components/GlobalFooter/GlobalFooter.js';
 import {GlobalHeader} from '@/components/GlobalHeader/GlobalHeader.js';
@@ -39,9 +46,10 @@ export function BaseLayout(props: BaseLayoutProps) {
     width: 1200,
     jpg: true,
   });
+  const ctx = useRequestContext();
 
   return (
-    <Html>
+    <Html lang={ctx.locale}>
       <Head>
         <title>{t(title)}</title>
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />

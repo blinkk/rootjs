@@ -1,8 +1,8 @@
 import {TextInput, Textarea} from '@mantine/core';
 import {ChangeEvent} from 'preact/compat';
 import {useEffect, useState} from 'preact/hooks';
-import * as schema from '../../../../core/schema.js';
 import {FieldProps} from './FieldProps.js';
+import * as schema from '@/../core/schema.js';
 
 export function StringField(props: FieldProps) {
   const field = props.field as schema.StringField;

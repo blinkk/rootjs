@@ -1,10 +1,10 @@
 import {Select, TextInput} from '@mantine/core';
 import {ChangeEvent} from 'preact/compat';
 import {useRef, useState} from 'preact/hooks';
-import {Text} from '../../components/Text/Text.js';
-import {joinClassNames} from '../../utils/classes.js';
-import {getDocServingUrl} from '../../utils/doc-urls.js';
-import {isSlugValid, normalizeSlug} from '../../utils/slug.js';
+import {Text} from '@/components/Text/Text.js';
+import {joinClassNames} from '@/utils/classes.js';
+import {getDocServingUrl} from '@/utils/doc-urls.js';
+import {isSlugValid, normalizeSlug} from '@/utils/slug.js';
 import './SlugInput.css';
 
 export interface SlugInputProps {

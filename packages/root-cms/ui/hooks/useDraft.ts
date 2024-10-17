@@ -9,12 +9,12 @@ import {
   deleteField,
 } from 'firebase/firestore';
 import {useEffect, useMemo, useState} from 'preact/hooks';
-import {logAction} from '../utils/actions.js';
-import {debounce} from '../utils/debounce.js';
-import {setDocToCache} from '../utils/doc-cache.js';
-import {EventListener} from '../utils/events.js';
-import {getNestedValue, isObject} from '../utils/objects.js';
-import {TIME_UNITS} from '../utils/time.js';
+import {logAction} from '@/db/actions.js';
+import {debounce} from '@/utils/debounce.js';
+import {setDocToCache} from '@/utils/doc-cache.js';
+import {EventListener} from '@/utils/events.js';
+import {getNestedValue, isObject} from '@/utils/objects.js';
+import {TIME_UNITS} from '@/utils/time.js';
 
 const SAVE_DELAY = 3 * TIME_UNITS.second;
 const SAVE_ACTION_LOG_THROTTLE = 5 * TIME_UNITS.minute;

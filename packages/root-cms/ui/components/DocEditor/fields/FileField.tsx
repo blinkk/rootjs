@@ -2,10 +2,10 @@ import {ActionIcon, TextInput, Tooltip} from '@mantine/core';
 import {showNotification} from '@mantine/notifications';
 import {IconFileUpload, IconTrash} from '@tabler/icons-preact';
 import {useEffect, useRef, useState} from 'preact/hooks';
-import * as schema from '../../../../core/schema.js';
-import {joinClassNames} from '../../../utils/classes.js';
-import {VIDEO_EXTS, getFileExt, uploadFileToGCS} from '../../../utils/gcs.js';
+import {joinClassNames} from '@/utils/classes.js';
+import {VIDEO_EXTS, getFileExt, uploadFileToGCS} from '@/utils/gcs.js';
 import {FieldProps} from './FieldProps.js';
+import * as schema from '@/../core/schema.js';
 
 export function FileField(props: FieldProps) {
   const field = props.field as schema.FileField;

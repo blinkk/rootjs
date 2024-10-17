@@ -1,5 +1,5 @@
-import * as schema from '../../../../core/schema.js';
-import {DraftController} from '../../../hooks/useDraft.js';
+import {DraftController} from '@/hooks/useDraft.js';
+import * as schema from '@/../core/schema.js';
 
 export interface FieldProps {
   collection: schema.Collection;

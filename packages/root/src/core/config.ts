@@ -4,6 +4,11 @@ import {HtmlPrettyOptions} from '../render/html-pretty.js';
 import {Plugin} from './plugin.js';
 import {RequestMiddleware} from './types.js';
 
+export interface RootExperimentsConfig {
+  [name: string]: boolean | undefined;
+  enableScriptAsync?: boolean;
+}
+
 export interface RootUserConfig {
   /**
    * Canonical domain the website will serve on. Useful for things like the
@@ -83,10 +88,7 @@ export interface RootUserConfig {
   /**
    * Experimental config options. Note: these are subject to change at any time.
    */
-  experiments?: {
-    /** Whether to render `<script>` tags with `async`. */
-    enableScriptAsync?: boolean;
-  };
+  experiments?: RootExperimentsConfig;
 }
 
 export type RootConfig = RootUserConfig & {
@@ -119,6 +121,19 @@ export interface RootI18nConfig {
    * locales.
    */
   groups?: Record<string, LocaleGroup>;
+
+  /**
+   * Fallback locales. When a translation doesn't exist for the requested
+   * locale, it will fall back to the locales as configured, e.g.:
+   *
+   * ```
+   * {
+   *   "en-CA": ["en-GB", "en"],
+   *   "es-MX": ["es-419", "es"]
+   * }
+   * ```
+   */
+  fallbacks?: Record<string, string[]>;
 }
 
 export interface RootRedirectConfig {

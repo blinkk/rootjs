@@ -1,7 +1,7 @@
 import {Badge, Tooltip} from '@mantine/core';
 import {Timestamp} from 'firebase/firestore';
-import {Release} from '../../utils/release.js';
-import {getTimeAgo} from '../../utils/time.js';
+import {Release} from '@/db/releases.js';
+import {getTimeAgo} from '@/utils/time.js';
 
 const TOOLTIP_PROPS = {
   transition: 'pop',

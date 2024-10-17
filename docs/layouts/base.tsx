@@ -1,6 +1,7 @@
+/* eslint-disable import/order */
+
 import {Head} from '@blinkk/root';
 import {ComponentChildren} from 'preact';
-
 import {GlobalFooter} from '@/templates/global-footer/global-footer.js';
 import {GlobalHeader} from '@/templates/global-header/global-header.js';
 import '@/styles/global.scss';
