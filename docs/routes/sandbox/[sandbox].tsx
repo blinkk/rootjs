@@ -1,4 +1,4 @@
-import {cmsRoute} from '@/utils/cms-route.js';
+import {cmsRoute} from '@blinkk/root-cms';
 import Page from '../[[...page]].js';
 
 export default Page;

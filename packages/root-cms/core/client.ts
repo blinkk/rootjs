@@ -1,5 +1,5 @@
 import crypto from 'node:crypto';
-import {RootConfig} from '@blinkk/root';
+import type {RootConfig} from '@blinkk/root';
 import {App} from 'firebase-admin/app';
 import {
   FieldValue,

@@ -1,10 +1,10 @@
+import {cmsRoute} from '@blinkk/root-cms';
 import {
   PageModuleFields,
   PageModules,
-} from '@/components/PageModules/PageModules';
-import {BaseLayout} from '@/layouts/BaseLayout';
-import {PagesDoc} from '@/root-cms';
-import {cmsRoute} from '@/utils/cms-route';
+} from '@/components/PageModules/PageModules.js';
+import {BaseLayout} from '@/layouts/BaseLayout.js';
+import {PagesDoc} from '@/root-cms.js';
 
 export interface PageProps {
   doc: PagesDoc;

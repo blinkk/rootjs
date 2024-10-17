@@ -1,4 +1,5 @@
 import {RequestContext, useRequestContext, useTranslations} from '@blinkk/root';
+import {cmsRoute} from '@blinkk/root-cms';
 import {IconLayoutSidebarLeftExpand} from '@tabler/icons-preact';
 import Block from '@/components/Block/Block.js';
 import {RichText} from '@/components/RichText/RichText.js';
@@ -8,7 +9,6 @@ import {LogoToggle} from '@/islands/LogoToggle/LogoToggle.js';
 import {BaseLayout} from '@/layouts/BaseLayout.js';
 import {GuideDoc} from '@/root-cms.js';
 import {joinClassNames} from '@/utils/classes.js';
-import {cmsRoute} from '@/utils/cms-route.js';
 import styles from './[[...guide]].module.scss';
 
 const GUIDE_LINKS = [
