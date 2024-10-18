@@ -65,7 +65,7 @@ async function migrateTranslationsToV2(
     delete translation.tags;
     for (const tag of tags) {
       if (tag.includes('/')) {
-        const translationsId = tag;
+        const translationsId = tag.replaceAll('/', '--');
         translationsDocs[translationsId] ??= {
           id: translationsId,
           sys: {

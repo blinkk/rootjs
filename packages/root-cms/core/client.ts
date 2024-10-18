@@ -739,45 +739,6 @@ export class RootCMSClient {
     return translationsMap;
   }
 
-  /**
-   * Saves a map of translations, e.g.:
-   * ```
-   * await client.saveTranslations({
-   *   "Hello": {"es": "Hola", "fr": "Bonjour"},
-   * });
-   * ```
-   *
-   * @deprecated Use `saveDraftTranslations()` and `publishTranslations()`
-   * instead.
-   */
-  async saveTranslations(
-    translations: {
-      [source: string]: {[locale: string]: string};
-    },
-    tags?: string[]
-  ) {
-    const translationsPath = `Projects/${this.projectId}/Translations`;
-    const batch = this.db.batch();
-    let batchCount = 0;
-    Object.entries(translations).forEach(([source, sourceTranslations]) => {
-      const hash = this.getTranslationKey(source);
-      const translationRef = this.db.doc(`${translationsPath}/${hash}`);
-      const data: any = {
-        ...sourceTranslations,
-        source: this.normalizeString(source),
-      };
-      if (tags) {
-        data.tags = tags;
-      }
-      batch.set(translationRef, data, {merge: true});
-      batchCount += 1;
-    });
-    if (batchCount > 500) {
-      throw new Error('up to 500 translations can be saved at a time.');
-    }
-    await batch.commit();
-  }
-
   async saveDraftTranslations(
     translationsId: string,
     translations: {[source: string]: {[locale: string]: string}},
