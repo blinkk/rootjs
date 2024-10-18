@@ -3,10 +3,10 @@ import {ContextModalProps, useModals} from '@mantine/modals';
 import {showNotification} from '@mantine/notifications';
 import {IconArrowUpRight, IconHistory} from '@tabler/icons-preact';
 import {useEffect, useState} from 'preact/hooks';
-import {useModalTheme} from '../../hooks/useModalTheme.js';
-import {Version, cmsListVersions, cmsRestoreVersion} from '../../utils/doc.js';
-import {Heading} from '../Heading/Heading.js';
-import {Text} from '../Text/Text.js';
+import {Heading} from '@/components/Heading/Heading.js';
+import {Text} from '@/components/Text/Text.js';
+import {VersionDoc, dbListVersions, dbRestoreVersion} from '@/db/versions.js';
+import {useModalTheme} from '@/hooks/useModalTheme.js';
 import './VersionHistoryModal.css';
 
 const MODAL_ID = 'VersionHistoryModal';
@@ -14,7 +14,7 @@ const MODAL_ID = 'VersionHistoryModal';
 export interface VersionHistoryModalProps {
   [key: string]: unknown;
   docId: string;
-  onRestore?: (data: {version: Version}) => any;
+  onRestore?: (data: {version: VersionDoc}) => any;
 }
 
 export function useVersionHistoryModal(props: VersionHistoryModalProps) {
@@ -37,7 +37,7 @@ export function VersionHistoryModal(
   const {innerProps: props} = modalProps;
   const docId = props.docId;
   const [loading, setLoading] = useState(true);
-  const [versions, setVersions] = useState<Version[]>([]);
+  const [versions, setVersions] = useState<VersionDoc[]>([]);
 
   const dateFormat = new Intl.DateTimeFormat('en-US', {
     year: 'numeric',
@@ -49,13 +49,13 @@ export function VersionHistoryModal(
 
   async function fetchVersions() {
     setLoading(true);
-    const versions = await cmsListVersions(docId);
+    const versions = await dbListVersions(docId);
     setLoading(false);
     setVersions(versions);
   }
 
-  async function restore(version: Version) {
-    await cmsRestoreVersion(docId, version);
+  async function restore(version: VersionDoc) {
+    await dbRestoreVersion(docId, version);
     showNotification({
       title: 'Saved!',
       message: `Restored ${docId} to ${dateFormat.format(
@@ -68,7 +68,7 @@ export function VersionHistoryModal(
     }
   }
 
-  function getCompareUrl(version: Version) {
+  function getCompareUrl(version: VersionDoc) {
     const left = toUrlParam(docId, version._versionId);
     const right = toUrlParam(docId, 'draft');
     return `/cms/compare?left=${left}&right=${right}`;
@@ -109,7 +109,7 @@ export function VersionHistoryModal(
           </thead>
           <tbody>
             {versions.map((version, i) => (
-              <tr>
+              <tr key={i}>
                 <td>
                   <Text size="body-sm">
                     {dateFormat.format(version.sys.modifiedAt.toDate())}

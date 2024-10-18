@@ -1,7 +1,7 @@
 import {Badge, Tooltip} from '@mantine/core';
 import {Timestamp} from 'firebase/firestore';
-import {CMSDoc, testPublishingLocked} from '../../utils/doc.js';
-import {formatDateTime, getTimeAgo} from '../../utils/time.js';
+import {CMSDoc, testPublishingLocked} from '@/db/docs.js';
+import {formatDateTime, getTimeAgo} from '@/utils/time.js';
 
 interface DocStatusBadgesProps {
   doc: CMSDoc;

@@ -7,25 +7,18 @@ import {
   Timestamp,
   deleteField,
   writeBatch,
-  arrayUnion,
   collection,
   query,
-  orderBy,
   getDocs,
   updateDoc,
   documentId,
   where,
   WriteBatch,
-  DocumentReference,
 } from 'firebase/firestore';
+import {dbPublishTranslationsDoc} from '@/db/translations.js';
+import {removeDocFromCache, removeDocsFromCache} from '@/utils/doc-cache.js';
+import {GoogleSheetId} from '@/utils/gsheets.js';
 import {logAction} from './actions.js';
-import {removeDocFromCache, removeDocsFromCache} from './doc-cache.js';
-import {GoogleSheetId} from './gsheets.js';
-import {
-  getTranslationsCollection,
-  normalizeString,
-  sourceHash,
-} from './l10n.js';
 
 export interface CMSDoc {
   id: string;
@@ -59,11 +52,7 @@ export interface CMSDoc {
   fields: any;
 }
 
-export type Version = CMSDoc & {
-  _versionId: string;
-};
-
-export async function cmsDeleteDoc(docId: string) {
+export async function dbDeleteDoc(docId: string) {
   const projectId = window.__ROOT_CTX.rootConfig.projectId;
   const db = window.firebase.db;
   const [collectionId, slug] = docId.split('/');
@@ -107,14 +96,14 @@ export async function cmsDeleteDoc(docId: string) {
   logAction('doc.delete', {metadata: {docId}});
 }
 
-export async function cmsPublishDoc(docId: string) {
-  await cmsPublishDocs([docId]);
+export async function dbPublishDoc(docId: string) {
+  await dbPublishDocs([docId]);
 }
 
 /**
  * Batch publishes a group of docs.
  */
-export async function cmsPublishDocs(
+export async function dbPublishDocs(
   docIds: string[],
   options?: {batch?: WriteBatch}
 ) {
@@ -139,6 +128,7 @@ export async function cmsPublishDocs(
       throw new Error(`doc does not exist: ${docId}`);
     }
     updatePublishedDocDataInBatch(batch, docId, draftData);
+    dbPublishTranslationsDoc(docId, {batch});
   });
   await batch.commit();
 
@@ -226,7 +216,7 @@ function updatePublishedDocDataInBatch(
 /**
  * Schedules a CMS doc to be published at some time in the future.
  */
-export async function cmsScheduleDoc(docId: string, millis: number) {
+export async function dbScheduleDoc(docId: string, millis: number) {
   const projectId = window.__ROOT_CTX.rootConfig.projectId;
   const db = window.firebase.db;
   const [collectionId, slug] = docId.split('/');
@@ -271,7 +261,7 @@ export async function cmsScheduleDoc(docId: string, millis: number) {
   logAction('doc.schedule', {metadata: {docId, scheduledAt: millis}});
 }
 
-export async function cmsUnpublishDoc(docId: string) {
+export async function dbUnpublishDoc(docId: string) {
   const projectId = window.__ROOT_CTX.rootConfig.projectId;
   const db = window.firebase.db;
   const [collectionId, slug] = docId.split('/');
@@ -322,7 +312,10 @@ export async function cmsUnpublishDoc(docId: string) {
   removeDocFromCache(docId);
 }
 
-export async function cmsRevertDraft(docId: string) {
+/**
+ * Reverts a doc to its published state.
+ */
+export async function dbRevertDraft(docId: string) {
   const projectId = window.__ROOT_CTX.rootConfig.projectId;
   const db = window.firebase.db;
   const [collectionId, slug] = docId.split('/');
@@ -356,7 +349,10 @@ export async function cmsRevertDraft(docId: string) {
   logAction('doc.revert', {metadata: {docId}});
 }
 
-export async function cmsUnscheduleDoc(docId: string) {
+/**
+ * Unschedules a previously scheduled doc.
+ */
+export async function dbUnscheduleDoc(docId: string) {
   const projectId = window.__ROOT_CTX.rootConfig.projectId;
   const db = window.firebase.db;
   const [collectionId, slug] = docId.split('/');
@@ -393,7 +389,10 @@ export async function cmsUnscheduleDoc(docId: string) {
   logAction('doc.unschedule', {metadata: {docId}});
 }
 
-export async function cmsLockPublishing(
+/**
+ * Adds a lock to disable a doc from being published.
+ */
+export async function dbLockPublishing(
   docId: string,
   options: {reason: string; until?: number}
 ) {
@@ -418,7 +417,10 @@ export async function cmsLockPublishing(
   logAction('doc.lock_publishing', {metadata});
 }
 
-export async function cmsUnlockPublishing(docId: string) {
+/**
+ * Removes a lock to allow a doc from being published.
+ */
+export async function dbUnlockPublishing(docId: string) {
   const docRef = getDraftDocRef(docId);
   const updates = {
     'sys.publishingLocked': deleteField(),
@@ -451,7 +453,10 @@ export function testPublishingLocked(docData: CMSDoc) {
   return false;
 }
 
-export async function cmsCopyDoc(
+/**
+ * Copies a doc from one id to another.
+ */
+export async function dbCopyDoc(
   fromDocId: string,
   toDocId: string,
   options?: {overwrite?: boolean}
@@ -462,10 +467,13 @@ export async function cmsCopyDoc(
     throw new Error(`doc ${fromDocId} does not exist`);
   }
   const fields = fromDoc.data().fields ?? {};
-  await cmsCreateDoc(toDocId, {fields, overwrite: options?.overwrite});
+  await dbCreateDoc(toDocId, {fields, overwrite: options?.overwrite});
 }
 
-export async function cmsCreateDoc(
+/**
+ * Adds a new doc.
+ */
+export async function dbCreateDoc(
   docId: string,
   options?: {fields?: Record<string, any>; overwrite?: boolean}
 ) {
@@ -503,93 +511,9 @@ export async function cmsCreateDoc(
   logAction('doc.create', {metadata: {docId}});
 }
 
-export interface CsvTranslation {
-  [key: string]: string;
-  source: string;
-}
-
-export async function cmsDocImportTranslations(
-  docId: string,
-  csvData: CsvTranslation[],
-  options?: {tags?: string[]}
-) {
-  const i18nConfig = window.__ROOT_CTX.rootConfig.i18n || {};
-  const i18nLocales = i18nConfig.locales || ['en'];
-
-  function normalizeLocale(locale: string) {
-    for (const l of i18nLocales) {
-      if (String(l).toLowerCase() === locale.toLowerCase()) {
-        return l;
-      }
-    }
-    // Ignore locales that are not in the root config.
-    return null;
-  }
-
-  const translationsMap: Record<string, CsvTranslation> = {};
-  for (const row of csvData) {
-    if (!row.source) {
-      continue;
-    }
-    const translation: CsvTranslation = {
-      source: normalizeString(row.source),
-    };
-    Object.entries(row).forEach(([column, str]) => {
-      if (column === 'source') {
-        return;
-      }
-      const locale = normalizeLocale(column);
-      if (locale) {
-        translation[locale] = normalizeString(str || '');
-      }
-    });
-
-    const hash = await sourceHash(translation.source);
-    translationsMap[hash] = translation;
-  }
-
-  // Tags are stored as key-value pairs so that we can call updateDoc() without
-  // having to read the actual document.
-  const collectionId = docId.split('/')[0];
-  const tags = [collectionId, docId];
-  if (options?.tags) {
-    tags.push(...options.tags);
-  }
-
-  // Save each string to `Projects/<project>/Translations/<hash>` in a batch
-  // request. Note: Firestore batches have limit of 500 writes.
-  const translationsCollection = getTranslationsCollection();
-  const db = window.firebase.db;
-  let batch = writeBatch(db);
-  let count = 0;
-  for (const hash in translationsMap) {
-    const translations = translationsMap[hash];
-    const stringDocRef = doc(translationsCollection, hash);
-    batch.set(
-      stringDocRef,
-      {
-        ...translations,
-        // Use arrayUnion to only add tags that don't already exist.
-        tags: arrayUnion(...tags),
-      },
-      {merge: true}
-    );
-    count += 1;
-    if (count >= 500) {
-      await batch.commit();
-      batch = writeBatch(db);
-      console.log(`saved ${count} strings`);
-      count = 0;
-    }
-  }
-  if (count > 0) {
-    await batch.commit();
-    console.log(`saved ${count} strings`);
-  }
-  logAction('doc.import_translations', {metadata: {docId}});
-  return translationsMap;
-}
-
+/**
+ * Returns the "draft" firestore doc ref for a CMS doc.
+ */
 export function getDraftDocRef(docId: string) {
   const projectId = window.__ROOT_CTX.rootConfig.projectId;
   const db = window.firebase.db;
@@ -605,6 +529,9 @@ export function getDraftDocRef(docId: string) {
   );
 }
 
+/**
+ * Returns the "published" firestore doc ref for a CMS doc.
+ */
 export function getPublishedDocRef(docId: string) {
   const projectId = window.__ROOT_CTX.rootConfig.projectId;
   const db = window.firebase.db;
@@ -617,23 +544,6 @@ export function getPublishedDocRef(docId: string) {
     collectionId,
     'Published',
     slug
-  );
-}
-
-export function getVersionDocRef(docId: string, versionId: string) {
-  const projectId = window.__ROOT_CTX.rootConfig.projectId;
-  const db = window.firebase.db;
-  const [collectionId, slug] = docId.split('/');
-  return doc(
-    db,
-    'Projects',
-    projectId,
-    'Collections',
-    collectionId,
-    'Drafts',
-    slug,
-    'Versions',
-    versionId
   );
 }
 
@@ -671,60 +581,6 @@ export async function getDraftDocs(
     })
   );
   return drafts;
-}
-
-export async function cmsListVersions(docId: string) {
-  const db = window.firebase.db;
-  const docRef = getDraftDocRef(docId);
-  const versionsCollection = collection(db, docRef.path, 'Versions');
-  const q = query(versionsCollection, orderBy('sys.modifiedAt', 'desc'));
-  const querySnapshot = await getDocs(q);
-  const versions: Version[] = [];
-  querySnapshot.forEach((doc) => {
-    const version = {
-      ...(doc.data() as Version),
-      _versionId: doc.id,
-    };
-    versions.push(version);
-  });
-  return versions;
-}
-
-export async function cmsRestoreVersion(docId: string, version: Version) {
-  const docRef = getDraftDocRef(docId);
-  const updates = {
-    'sys.modifiedAt': serverTimestamp(),
-    'sys.modifiedBy': window.firebase.user.email,
-    fields: version.fields || {},
-  };
-  await updateDoc(docRef, updates);
-  logAction('doc.restore_version', {
-    metadata: {
-      docId,
-      versionModifiedAt: version.sys?.modifiedAt,
-      versionModifiedBy: version.sys?.modifiedBy,
-    },
-  });
-}
-
-export async function cmsReadDocVersion(
-  docId: string,
-  versionId: string | 'draft' | 'published'
-): Promise<CMSDoc | null> {
-  let docRef: DocumentReference;
-  if (versionId === 'draft') {
-    docRef = getDraftDocRef(docId);
-  } else if (versionId === 'published') {
-    docRef = getPublishedDocRef(docId);
-  } else {
-    docRef = getVersionDocRef(docId, versionId);
-  }
-
-  const snapshot = await getDoc(docRef);
-  if (snapshot.exists()) {
-    return snapshot.data() as CMSDoc;
-  }
-  return null;
 }
 
 /**

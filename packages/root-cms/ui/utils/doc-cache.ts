@@ -1,5 +1,5 @@
 import {getDoc} from 'firebase/firestore';
-import {getDraftDocRef} from './doc.js';
+import {getDraftDocRef} from '@/db/docs.js';
 
 const DOC_CACHE: Map<string, any> = new Map();
 

@@ -1,11 +1,10 @@
 import {Button, Modal, useMantineTheme} from '@mantine/core';
 import {useState} from 'preact/hooks';
 import {route} from 'preact-router';
-import {cmsCreateDoc} from '../../utils/doc.js';
-import {getDefaultFieldValue} from '../../utils/fields.js';
-import {SlugInput} from '../SlugInput/SlugInput.js';
+import {SlugInput} from '@/components/SlugInput/SlugInput.js';
+import {dbCreateDoc} from '@/db/docs.js';
+import {getDefaultFieldValue} from '@/utils/fields.js';
 import './NewDocModal.css';
-import {logAction} from '../../utils/actions.js';
 
 interface NewDocModalProps {
   collection: string;
@@ -72,7 +71,7 @@ export function NewDocModal(props: NewDocModalProps) {
     const docId = `${collectionId}/${cleanSlug}`;
     try {
       const defaultValue = getDefaultFieldValue(rootCollection);
-      await cmsCreateDoc(docId, {fields: defaultValue});
+      await dbCreateDoc(docId, {fields: defaultValue});
     } catch (err) {
       setSlugError(String(err));
       setLoading(false);

@@ -2,9 +2,9 @@ import {TextInput} from '@mantine/core';
 import {showNotification} from '@mantine/notifications';
 import {IconFileUpload} from '@tabler/icons-preact';
 import {useEffect, useRef, useState} from 'preact/hooks';
-import {Text} from '../../components/Text/Text.js';
-import {joinClassNames} from '../../utils/classes.js';
-import {UploadFileOptions, uploadFileToGCS} from '../../utils/gcs.js';
+import {Text} from '@/components/Text/Text.js';
+import {joinClassNames} from '@/utils/classes.js';
+import {UploadFileOptions, uploadFileToGCS} from '@/utils/gcs.js';
 import './AssetUploader.css';
 
 export const IMAGE_MIMETYPES = [
@@ -62,30 +62,29 @@ export function AssetUploader(props: AssetUploaderProps) {
     }
   }
 
-  const handleDragEnter = (e: DragEvent) => {
-    e.preventDefault();
-    setIsDragging(true);
-  };
-
-  const handleDragLeave = (e: DragEvent) => {
-    e.preventDefault();
-    setIsDragging(false);
-  };
-
-  const handleDrop = (e: DragEvent) => {
-    e.preventDefault();
-    setIsDragging(false);
-
-    const files = e.dataTransfer?.files || [];
-    const file = files[0];
-    if (file) {
-      console.log('file dropped:', file);
-      uploadFile(file);
-    }
-  };
-
   useEffect(() => {
     const dropzone = ref.current;
+    const handleDragEnter = (e: DragEvent) => {
+      e.preventDefault();
+      setIsDragging(true);
+    };
+
+    const handleDragLeave = (e: DragEvent) => {
+      e.preventDefault();
+      setIsDragging(false);
+    };
+
+    const handleDrop = (e: DragEvent) => {
+      e.preventDefault();
+      setIsDragging(false);
+
+      const files = e.dataTransfer?.files || [];
+      const file = files[0];
+      if (file) {
+        console.log('file dropped:', file);
+        uploadFile(file);
+      }
+    };
     document.addEventListener('dragenter', handleDragEnter);
     document.addEventListener('dragover', handleDragEnter);
     document.addEventListener('dragleave', handleDragLeave);
@@ -160,7 +159,6 @@ AssetUploader.FilePreview = (props: {asset: any}) => {
 
 AssetUploader.ImagePreview = (props: {asset: any}) => {
   const asset = props.asset;
-  console.log(asset);
   return (
     <div className="AssetUploader__ImagePreview">
       <div className="AssetUploader__ImagePreview__image">
