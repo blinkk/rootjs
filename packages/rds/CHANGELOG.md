@@ -1,5 +1,18 @@
 # @blinkk/rds
 
+## 2.0.0-rc.0
+
+### Major Changes
+
+- 1dfa6dd: chore: [v2] bump version to v2
+
+### Patch Changes
+
+- Updated dependencies [1dfa6dd]
+- Updated dependencies [f5bd041]
+- Updated dependencies [053bb1c]
+  - @blinkk/root@2.0.0-rc.0
+
 ## 1.3.12
 
 ### Patch Changes

@@ -1,5 +1,11 @@
 # @blinkk/eslint-config-root
 
+## 1.0.0-rc.0
+
+### Major Changes
+
+- 1dfa6dd: chore: [v2] bump version to v2
+
 ## 0.1.0
 
 ### Minor Changes

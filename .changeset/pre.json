@@ -15,5 +15,10 @@
     "@blinkk/root-cms": "1.3.11",
     "@blinkk/root-password-protect": "1.3.11"
   },
-  "changesets": []
+  "changesets": [
+    "kind-pans-check",
+    "moody-worms-draw",
+    "strong-planes-float",
+    "twelve-months-explain"
+  ]
 }
