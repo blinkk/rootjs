@@ -1,10 +1,5 @@
-import {
-  FieldPath,
-  FieldValue,
-  Query,
-  Timestamp,
-} from 'firebase-admin/firestore';
-import {murmurHash} from 'ohash';
+import * as farmhash from 'farmhash-modern';
+import {FieldValue, Query, Timestamp} from 'firebase-admin/firestore';
 import type {RootCMSClient} from './client.js';
 
 export type Locale = string;
@@ -390,10 +385,12 @@ function getTranslationsLocaleDocDbPath(
  *
  * Note that this hash function is meant to be fast and for collision avoidance
  * for use in a hash map, but is not intended for cryptographic purposes. For
- * these reasons murmurhash3 is used here.
+ * these reasons farmhash is used here.
+ *
+ * @see https://www.npmjs.com/package/farmhash-modern
  */
 export function getSourceHash(source: string): string {
-  return String(murmurHash(normalizeString(source)));
+  return String(farmhash.fingerprint32(normalizeString(source)));
 }
 
 /**
