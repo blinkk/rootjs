@@ -22,7 +22,8 @@ export async function runCompatibilityChecks(rootConfig: RootConfig) {
   const compatibilityVersions = projectConfig.compatibility || {};
   let versionsChanged = false;
 
-  const translationsVersion = compatibilityVersions.translations || 0;
+  // const translationsVersion = compatibilityVersions.translations || 0;
+  const translationsVersion = 1;
   if (translationsVersion < 2) {
     await migrateTranslationsToV2(rootConfig, cmsClient);
     compatibilityVersions.translations = 2;
@@ -57,27 +58,22 @@ async function migrateTranslationsToV2(
 
   console.log('[root cms] updating translations v2 compatibility');
 
-  const translationsDocs: Record<string, TranslationsDoc> = {};
+  const translationsDocs: Record<string, any> = {};
   querySnapshot.forEach((doc) => {
-    const hash = doc.id;
-    const translation = doc.data() as Translation;
+    const translation = doc.data();
+    const source = cmsClient.normalizeString(translation.source);
+    delete translation.source;
     const tags = (translation.tags || []) as string[];
     delete translation.tags;
     for (const tag of tags) {
       if (tag.includes('/')) {
-        const translationsId = tag.replaceAll('/', '--');
+        const translationsId = tag;
         translationsDocs[translationsId] ??= {
           id: translationsId,
-          sys: {
-            modifiedAt: Timestamp.now(),
-            modifiedBy: 'root-cms-client',
-            publishedAt: Timestamp.now(),
-            publishedBy: 'root-cms-client',
-            tags: tags,
-          },
+          tags: tags,
           strings: {},
         };
-        translationsDocs[translationsId].strings[hash] = translation;
+        translationsDocs[translationsId].strings[source] = translation;
       }
     }
   });
@@ -88,34 +84,27 @@ async function migrateTranslationsToV2(
   }
 
   // Move the doc's "l10nSheet" to the translations doc's "linkedSheet".
+  // for (const docId in translationsDocs) {
+  //   const [collection, slug] = docId.split('/');
+  //   if (collection && slug) {
+  //     const doc: any = await cmsClient.getDoc(collection, slug, {
+  //       mode: 'draft',
+  //     });
+  //     const linkedSheet = doc?.sys?.l10nSheet;
+  //     if (linkedSheet) {
+  //       translationsDocs[docId].sys.linkedSheet = linkedSheet;
+  //     }
+  //   }
+  // }
 
-  for (const docId in translationsDocs) {
-    const [collection, slug] = docId.split('/');
-    if (collection && slug) {
-      const doc: any = await cmsClient.getDoc(collection, slug, {
-        mode: 'draft',
-      });
-      const linkedSheet = doc?.sys?.l10nSheet;
-      if (linkedSheet) {
-        translationsDocs[docId].sys.linkedSheet = linkedSheet;
-      }
-    }
-  }
-
-  const batch = db.batch();
+  const tm = cmsClient.getTranslationsManager();
   Object.entries(translationsDocs).forEach(([translationsId, data]) => {
-    const draftRef = db.doc(
-      `Projects/${projectId}/TranslationsManager/draft/Translations/${translationsId}`
-    );
-    const publishedRef = db.doc(
-      `Projects/${projectId}/TranslationsManager/published/Translations/${translationsId}`
-    );
-    batch.set(draftRef, data, {merge: true});
-    batch.set(publishedRef, data, {merge: true});
     const len = Object.keys(data.strings).length;
     console.log(`[root cms] saving ${len} string(s) to ${translationsId}...`);
+    tm.saveTranslations(translationsId, data.strings, {
+      tags: data.tags || [translationsId],
+    });
   });
-  await batch.commit();
 
   console.log('[root cms] done migrating translations to v2');
 }

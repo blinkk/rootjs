@@ -367,6 +367,9 @@ importers:
       kleur:
         specifier: 4.1.5
         version: 4.1.5
+      ohash:
+        specifier: 1.1.4
+        version: 1.1.4
       sirv:
         specifier: 2.0.3
         version: 2.0.3
@@ -2536,15 +2539,15 @@ packages:
       '@types/gapi.client.discovery-v1': 0.0.4
     dev: true
 
-  /@maxim_mazurok/gapi.client.drive-v3@0.0.20240604:
-    resolution: {integrity: sha512-omuTEdpzapMZ+zxm0tJgX03ZMOuv3BWDEUnTbC1PuJ4AulZzYWjifKCZ3Qn9AqOHw6z+r9+Je0cw/1xntzgz2g==}
+  /@maxim_mazurok/gapi.client.drive-v3@0.0.20241020:
+    resolution: {integrity: sha512-u3cFTtRj6MC7+ILddrwIXO4EUCqiAstCOabqB+WpntZiXMSk7/PduUAtIBQlDn75rYpLOa9aw/0/roif87qnyQ==}
     dependencies:
       '@types/gapi.client': 1.0.8
       '@types/gapi.client.discovery-v1': 0.0.4
     dev: true
 
-  /@maxim_mazurok/gapi.client.sheets-v4@0.0.20240528:
-    resolution: {integrity: sha512-LZfMEbxfZzSwUSXz25aVMhZfbgU5taq3a3lSb9cJJDeu5L9sdJ6lPUBB0H+hRJCgK8vdRjxurGu1wr6EAzXFNg==}
+  /@maxim_mazurok/gapi.client.sheets-v4@0.0.20241015:
+    resolution: {integrity: sha512-dFQL1ovGZks0i3hJMLAHixeVSsv5x5aeEJmwrRK0/rGBz9LJHFq8AY+RGQl+Da4H7kJaAa8LBJTEhDYC2hs0YQ==}
     dependencies:
       '@types/gapi.client': 1.0.8
       '@types/gapi.client.discovery-v1': 0.0.4
@@ -3372,13 +3375,13 @@ packages:
   /@types/gapi.client.drive-v3@0.0.4:
     resolution: {integrity: sha512-jE37dJ0EzAdY0aJPFOp20xmec/aO0P4HtUIA9k07RMPyedFDOcuMlSac1r0PklwQdgXF7BHaMoObNHNAnwSQUQ==}
     dependencies:
-      '@maxim_mazurok/gapi.client.drive-v3': 0.0.20240604
+      '@maxim_mazurok/gapi.client.drive-v3': 0.0.20241020
     dev: true
 
   /@types/gapi.client.sheets-v4@0.0.4:
     resolution: {integrity: sha512-6kTJ7aDMAElfdQV1XzVJmZWjgbibpa84DMuKuaN8Cwqci/dkglPyHXKvsGrRugmuYvgFYr35AQqwz6j3q8R0dw==}
     dependencies:
-      '@maxim_mazurok/gapi.client.sheets-v4': 0.0.20240528
+      '@maxim_mazurok/gapi.client.sheets-v4': 0.0.20241015
     dev: true
 
   /@types/gapi.client@1.0.8:
@@ -9243,6 +9246,10 @@ packages:
       call-bind: 1.0.2
       define-properties: 1.1.4
       es-abstract: 1.21.2
+    dev: false
+
+  /ohash@1.1.4:
+    resolution: {integrity: sha512-FlDryZAahJmEF3VR3w1KogSEdWX3WhA5GPakFx4J81kEAiHyLMpdLLElS8n8dfNadMgAne/MywcvmogzscVt4g==}
     dev: false
 
   /omggif@1.0.10:

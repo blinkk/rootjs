@@ -9,6 +9,7 @@ import {
   WriteBatch,
 } from 'firebase-admin/firestore';
 import {CMSPlugin, getCmsPlugin} from './plugin.js';
+import {TranslationsManager} from './translations-manager.js';
 
 export interface Doc<Fields = any> {
   /** The id of the doc, e.g. "Pages/foo-bar". */
@@ -640,6 +641,19 @@ export class RootCMSClient {
       });
       await this.publishDocs(release.docIds || [], {publishedBy, batch});
     }
+  }
+
+  /**
+   * Returns a `TranslationsManager` object for managing translations.
+   *
+   * To get translations:
+   * ```
+   * await tm.loadTranslations({ids: ['Global/strings', 'Pages/index'], locales: ['es']})
+   *
+   * ```
+   */
+  getTranslationsManager(): TranslationsManager {
+    return new TranslationsManager(this);
   }
 
   async publishTranslationsDoc(
