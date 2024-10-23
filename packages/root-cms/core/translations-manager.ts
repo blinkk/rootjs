@@ -1,5 +1,10 @@
-import * as farmhash from 'farmhash-modern';
-import {FieldValue, Query, Timestamp} from 'firebase-admin/firestore';
+import {
+  FieldValue,
+  Query,
+  Timestamp,
+  WriteBatch,
+} from 'firebase-admin/firestore';
+import {hashStr} from '../shared/strings.js';
 import type {RootCMSClient} from './client.js';
 
 export type Locale = string;
@@ -174,7 +179,46 @@ export class TranslationsManager {
   /**
    * Publishes a translations doc id.
    */
-  async publishTranslations(id: string) {}
+  async publishTranslations(
+    id: string,
+    options?: {batch?: WriteBatch; publishedBy?: string}
+  ) {
+    const db = this.cmsClient.db;
+    const project = this.cmsClient.projectId;
+    const draftPath = getTranslationsDbPath({project, mode: 'draft'});
+    const query = db.collection(draftPath).where('id', '==', id);
+    const res = await query.get();
+    if (res.size === 0) {
+      console.warn(`no translations to publish for ${id}`);
+      return;
+    }
+
+    const batch = options?.batch || db.batch();
+    res.docs.forEach((doc) => {
+      const translationsLocaleDoc = doc.data() as TranslationsLocaleDoc;
+      const sys = {
+        ...translationsLocaleDoc.sys,
+        publishedAt: Timestamp.now(),
+        publishedBy: options?.publishedBy || 'root-cms-client',
+      };
+      batch.update(doc.ref, {sys});
+      const publishedDocPath = getTranslationsLocaleDocDbPath({
+        project,
+        mode: 'published',
+        id: translationsLocaleDoc.id,
+        locale: translationsLocaleDoc.locale,
+      });
+      const publishedDocRef = db.doc(publishedDocPath);
+      batch.set(publishedDocRef, {...translationsLocaleDoc, sys});
+    });
+
+    // If a batch was provided, assume that the caller is responsible for
+    // calling `batch.commit()`.
+    const shouldCommitBatch = !options?.batch;
+    if (shouldCommitBatch) {
+      await batch.commit();
+    }
+  }
 
   /**
    * Fetches translations from one or more translations docs in the translations
@@ -339,7 +383,7 @@ export class TranslationsManager {
     Object.entries(multiLocaleStrings).forEach(([source, translations]) => {
       const translation = translations[locale];
       if (translation) {
-        const hash = getSourceHash(source);
+        const hash = hashStr(source);
         hashMap[hash] = {source, translation};
       }
     });
@@ -378,30 +422,4 @@ function getTranslationsLocaleDocDbPath(
     .replace('{mode}', options.mode)
     .replace('{id}', options.id.replaceAll('/', '--'))
     .replace('{locale}', options.locale);
-}
-
-/**
- * Returns a hash fingerprint for a string.
- *
- * Note that this hash function is meant to be fast and for collision avoidance
- * for use in a hash map, but is not intended for cryptographic purposes. For
- * these reasons farmhash is used here.
- *
- * @see https://www.npmjs.com/package/farmhash-modern
- */
-export function getSourceHash(source: string): string {
-  return String(farmhash.fingerprint32(normalizeString(source)));
-}
-
-/**
- * Cleans a source string for use in translations. Performs the following:
- * - Removes any leading/trailing whitespace
- * - Removes spaces at the end of any line
- */
-export function normalizeString(source: string): string {
-  const lines = String(source)
-    .trim()
-    .split('\n')
-    .map((line) => line.trimEnd());
-  return lines.join('\n');
 }

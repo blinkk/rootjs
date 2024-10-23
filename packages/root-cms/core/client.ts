@@ -8,6 +8,7 @@ import {
   Timestamp,
   WriteBatch,
 } from 'firebase-admin/firestore';
+import {hashStr, normalizeStr} from '../shared/strings.js';
 import {CMSPlugin, getCmsPlugin} from './plugin.js';
 import {TranslationsManager} from './translations-manager.js';
 
@@ -783,15 +784,10 @@ export class RootCMSClient {
   }
 
   /**
-   * Returns the "key" used for a translation as stored in the db. Translations
-   * are stored under `Projects/<project id>/Translations/<sha1 hash>`.
+   * Returns the hash "key" used for a translation as stored in the db.
    */
-  getTranslationKey(source: string) {
-    const sha1 = crypto
-      .createHash('sha1')
-      .update(this.normalizeString(source))
-      .digest('hex');
-    return sha1;
+  getTranslationKey(str: string) {
+    return hashStr(str);
   }
 
   /**
@@ -800,11 +796,7 @@ export class RootCMSClient {
    * - Removes spaces at the end of any line
    */
   normalizeString(str: string) {
-    const lines = String(str)
-      .trim()
-      .split('\n')
-      .map((line) => line.trimEnd());
-    return lines.join('\n');
+    return normalizeStr(str);
   }
 
   /**
