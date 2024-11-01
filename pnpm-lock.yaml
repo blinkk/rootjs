@@ -246,6 +246,9 @@ importers:
       esbuild:
         specifier: 0.19.9
         version: 0.19.9
+      esbuild-node-externals:
+        specifier: ^1.15.0
+        version: 1.15.0(esbuild@0.19.9)
       express:
         specifier: 4.18.2
         version: 4.18.2
@@ -2536,15 +2539,15 @@ packages:
       '@types/gapi.client.discovery-v1': 0.0.4
     dev: true
 
-  /@maxim_mazurok/gapi.client.drive-v3@0.0.20240604:
-    resolution: {integrity: sha512-omuTEdpzapMZ+zxm0tJgX03ZMOuv3BWDEUnTbC1PuJ4AulZzYWjifKCZ3Qn9AqOHw6z+r9+Je0cw/1xntzgz2g==}
+  /@maxim_mazurok/gapi.client.drive-v3@0.0.20241029:
+    resolution: {integrity: sha512-v3J25QFfsmVTfYjIPOkVUJRyDunr7GGoax5b+aHsyUANEMisLV0t8EFtSyVVwtu6s1U6VUBk/HMKU7W7v76gGw==}
     dependencies:
       '@types/gapi.client': 1.0.8
       '@types/gapi.client.discovery-v1': 0.0.4
     dev: true
 
-  /@maxim_mazurok/gapi.client.sheets-v4@0.0.20240528:
-    resolution: {integrity: sha512-LZfMEbxfZzSwUSXz25aVMhZfbgU5taq3a3lSb9cJJDeu5L9sdJ6lPUBB0H+hRJCgK8vdRjxurGu1wr6EAzXFNg==}
+  /@maxim_mazurok/gapi.client.sheets-v4@0.0.20241028:
+    resolution: {integrity: sha512-xV1EOs5n5/zF3MjWwjkMR8CU18O6Nf5D+Dsbr5sn7U1zDNpjce7WL0bu9TQXHoL8l35Vm1oJadLR/Hfovt8FpQ==}
     dependencies:
       '@types/gapi.client': 1.0.8
       '@types/gapi.client.discovery-v1': 0.0.4
@@ -3372,13 +3375,13 @@ packages:
   /@types/gapi.client.drive-v3@0.0.4:
     resolution: {integrity: sha512-jE37dJ0EzAdY0aJPFOp20xmec/aO0P4HtUIA9k07RMPyedFDOcuMlSac1r0PklwQdgXF7BHaMoObNHNAnwSQUQ==}
     dependencies:
-      '@maxim_mazurok/gapi.client.drive-v3': 0.0.20240604
+      '@maxim_mazurok/gapi.client.drive-v3': 0.0.20241029
     dev: true
 
   /@types/gapi.client.sheets-v4@0.0.4:
     resolution: {integrity: sha512-6kTJ7aDMAElfdQV1XzVJmZWjgbibpa84DMuKuaN8Cwqci/dkglPyHXKvsGrRugmuYvgFYr35AQqwz6j3q8R0dw==}
     dependencies:
-      '@maxim_mazurok/gapi.client.sheets-v4': 0.0.20240528
+      '@maxim_mazurok/gapi.client.sheets-v4': 0.0.20241028
     dev: true
 
   /@types/gapi.client@1.0.8:
@@ -5475,6 +5478,17 @@ packages:
       is-callable: 1.2.7
       is-date-object: 1.0.5
       is-symbol: 1.0.4
+
+  /esbuild-node-externals@1.15.0(esbuild@0.19.9):
+    resolution: {integrity: sha512-lM5f3CQL9Ctv6mBwwYAEMcphK2qrjVRnemT1mufECpFaidZvFVvQDPcuno/MQfLVk4utVuSVxm1RHLyg/ONQ/A==}
+    engines: {node: '>=12'}
+    peerDependencies:
+      esbuild: 0.12 - 0.24
+    dependencies:
+      esbuild: 0.19.9
+      find-up: 5.0.0
+      tslib: 2.6.2
+    dev: false
 
   /esbuild@0.19.9:
     resolution: {integrity: sha512-U9CHtKSy+EpPsEBa+/A2gMs/h3ylBC0H0KSqIg7tpztHerLi6nrrcoUJAkNCEPumx8yJ+Byic4BVwHgRbN0TBg==}
