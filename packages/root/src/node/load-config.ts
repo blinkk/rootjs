@@ -1,8 +1,9 @@
 import path from 'node:path';
 import {bundleRequire} from 'bundle-require';
-import {build} from 'esbuild';
+import {build, Plugin as EsbuildPlugin} from 'esbuild';
 import {RootConfig} from '../core/config.js';
-import {fileExists, loadJson} from '../utils/fsutils.js';
+import {fileExists} from '../utils/fsutils.js';
+import {flattenPackageDepsFromMonorepo} from './monorepo.js';
 
 export interface ConfigOptions {
   command: string;
@@ -19,6 +20,7 @@ export async function loadRootConfig(
   }
   const configBundle = await bundleRequire({
     filepath: configPath,
+    esbuildOptions: {plugins: [esbuildExternalsPlugin({rootDir})]},
   });
   let config = configBundle.mod.default || {};
   if (typeof config === 'function') {
@@ -36,27 +38,6 @@ export async function bundleRootConfig(rootDir: string, outPath: string) {
   if (!configExists) {
     throw new Error(`${configPath} does not exist`);
   }
-
-  const packageJsonPath = path.resolve(rootDir, 'package.json');
-  const packageJson = await loadPackageJson(packageJsonPath);
-  const allDeps = {
-    ...packageJson.peerDependencies,
-    ...packageJson.dependencies,
-  };
-
-  function getPackageName(id: string): string {
-    const segments = id.split('/');
-    if (segments.length > 1) {
-      // Check if package is an org path like `@blinkk/root`.
-      if (segments[0].startsWith('@') && segments[0].length > 1) {
-        return `${segments[0]}/${segments[1]}`;
-      }
-      // For imports like `my-package/subpackage`, return `my-package`.
-      return segments[0];
-    }
-    return id;
-  }
-
   await build({
     entryPoints: [configPath],
     bundle: true,
@@ -66,26 +47,7 @@ export async function bundleRootConfig(rootDir: string, outPath: string) {
     sourcemap: 'inline',
     metafile: true,
     format: 'esm',
-    plugins: [
-      // Externalizes deps that are in package.json.
-      {
-        name: 'externalize-package-json-deps',
-        setup(build) {
-          build.onResolve({filter: /.*/}, (args) => {
-            const id = args.path;
-            if (id[0] !== '.' && !id.startsWith('@/')) {
-              const packageName = getPackageName(id);
-              if (packageName in allDeps) {
-                return {
-                  external: true,
-                };
-              }
-            }
-            return null;
-          });
-        },
-      },
-    ],
+    plugins: [esbuildExternalsPlugin({rootDir})],
   });
 }
 
@@ -109,11 +71,43 @@ export async function loadBundledConfig(
   return Object.assign({}, config, {rootDir});
 }
 
-export async function loadPackageJson(filepath: string): Promise<any> {
-  try {
-    const packageJson = await loadJson(filepath);
-    return packageJson || {};
-  } catch (err) {
-    return {};
+/**
+ * Externalizes node_modules deps from the package and any dependent packages
+ * from the monorepo.
+ */
+function esbuildExternalsPlugin(options: {rootDir: string}): EsbuildPlugin {
+  const rootDir = options.rootDir;
+  const allDeps = flattenPackageDepsFromMonorepo(rootDir);
+
+  function getPackageName(id: string): string {
+    const segments = id.split('/');
+    if (segments.length > 1) {
+      // Check if package is an org path like `@blinkk/root`.
+      if (segments[0].startsWith('@') && segments[0].length > 1) {
+        return `${segments[0]}/${segments[1]}`;
+      }
+      // For imports like `my-package/subpackage`, return `my-package`.
+      return segments[0];
+    }
+    return id;
   }
+
+  return {
+    name: 'root-externals-plugin',
+    setup(build) {
+      build.onResolve({filter: /.*/}, (args) => {
+        const id = args.path;
+        if (id[0] !== '.' && !id.startsWith('@/')) {
+          const packageName = getPackageName(id);
+          if (packageName in allDeps) {
+            console.log(`marking external: ${packageName}`);
+            return {
+              external: true,
+            };
+          }
+        }
+        return null;
+      });
+    },
+  };
 }
