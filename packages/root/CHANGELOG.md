@@ -1,5 +1,11 @@
 # @blinkk/root
 
+## 1.3.13-debug.0
+
+### Patch Changes
+
+- 84ff15d: fix: fix workspace deps when loading root.config.ts
+
 ## 1.3.12
 
 ### Patch Changes

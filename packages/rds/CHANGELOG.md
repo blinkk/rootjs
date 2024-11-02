@@ -1,5 +1,12 @@
 # @blinkk/rds
 
+## 1.3.13-debug.0
+
+### Patch Changes
+
+- Updated dependencies [84ff15d]
+  - @blinkk/root@1.3.13-debug.0
+
 ## 1.3.12
 
 ### Patch Changes
