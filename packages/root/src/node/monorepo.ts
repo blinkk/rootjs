@@ -27,9 +27,6 @@ function getMonorepoPackages(
   const workspaces = getWorkspaces(monorepoRoot);
   const packages: Record<string, WorkspacePackage> = {};
   workspaces.forEach((workspaceInfo) => {
-    if (workspaceInfo.packageJson?.private) {
-      return;
-    }
     packages[workspaceInfo.name] = workspaceInfo;
   });
   return packages;
@@ -56,7 +53,15 @@ export function flattenPackageDepsFromMonorepo(
   Object.entries(projectDeps).forEach(([depName, depVersion]) => {
     // For internal packages within the workspace, recursively collect the deps
     // from those packages.
-    if (depVersion.startsWith('workspace:')) {
+    if (
+      depName.startsWith('@blinkk/root') &&
+      depVersion.startsWith('workspace:')
+    ) {
+      const packageInfo = workspacePackages[depName];
+      if (packageInfo) {
+        allDeps[depName] = packageInfo.packageJson.version;
+      }
+    } else if (depVersion.startsWith('workspace:')) {
       // Avoid circular deps.
       if (ignore.has(depName)) {
         return;

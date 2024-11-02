@@ -100,7 +100,6 @@ function esbuildExternalsPlugin(options: {rootDir: string}): EsbuildPlugin {
         if (id[0] !== '.' && !id.startsWith('@/')) {
           const packageName = getPackageName(id);
           if (packageName in allDeps) {
-            console.log(`marking external: ${packageName}`);
             return {
               external: true,
             };
