@@ -1,7 +1,6 @@
 import path from 'node:path';
 import {bundleRequire} from 'bundle-require';
 import {build} from 'esbuild';
-import {nodeExternalsPlugin} from 'esbuild-node-externals';
 import {RootConfig} from '../core/config.js';
 import {fileExists, loadJson} from '../utils/fsutils.js';
 
@@ -20,10 +19,6 @@ export async function loadRootConfig(
   }
   const configBundle = await bundleRequire({
     filepath: configPath,
-    // Externalize all dependencies.
-    esbuildOptions: {
-      plugins: [nodeExternalsPlugin()],
-    },
   });
   let config = configBundle.mod.default || {};
   if (typeof config === 'function') {
@@ -42,6 +37,26 @@ export async function bundleRootConfig(rootDir: string, outPath: string) {
     throw new Error(`${configPath} does not exist`);
   }
 
+  const packageJsonPath = path.resolve(rootDir, 'package.json');
+  const packageJson = await loadPackageJson(packageJsonPath);
+  const allDeps = {
+    ...packageJson.peerDependencies,
+    ...packageJson.dependencies,
+  };
+
+  function getPackageName(id: string): string {
+    const segments = id.split('/');
+    if (segments.length > 1) {
+      // Check if package is an org path like `@blinkk/root`.
+      if (segments[0].startsWith('@') && segments[0].length > 1) {
+        return `${segments[0]}/${segments[1]}`;
+      }
+      // For imports like `my-package/subpackage`, return `my-package`.
+      return segments[0];
+    }
+    return id;
+  }
+
   await build({
     entryPoints: [configPath],
     bundle: true,
@@ -51,8 +66,26 @@ export async function bundleRootConfig(rootDir: string, outPath: string) {
     sourcemap: 'inline',
     metafile: true,
     format: 'esm',
-    // Externalize all dependencies.
-    plugins: [nodeExternalsPlugin()],
+    plugins: [
+      // Externalizes deps that are in package.json.
+      {
+        name: 'externalize-package-json-deps',
+        setup(build) {
+          build.onResolve({filter: /.*/}, (args) => {
+            const id = args.path;
+            if (id[0] !== '.' && !id.startsWith('@/')) {
+              const packageName = getPackageName(id);
+              if (packageName in allDeps) {
+                return {
+                  external: true,
+                };
+              }
+            }
+            return null;
+          });
+        },
+      },
+    ],
   });
 }
 
