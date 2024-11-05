@@ -115,7 +115,8 @@ async function generatePackageJson(rootDir: string): Promise<PackageJson> {
     path.resolve(rootDir, 'package.json')
   );
 
-  // Flatten any deps from the monorepo, and remove peerDependencies.
+  // Flatten any deps from the monorepo, and remove peerDependencies and
+  // devDependencies.
   const allDeps = flattenPackageDepsFromMonorepo(rootDir);
   packageJson.dependencies ??= {};
   for (const depName in allDeps) {
@@ -123,9 +124,11 @@ async function generatePackageJson(rootDir: string): Promise<PackageJson> {
       packageJson.dependencies[depName] = allDeps[depName];
     }
   }
-
   if (packageJson.peerDependencies) {
     delete packageJson.peerDependencies;
+  }
+  if (packageJson.devDependencies) {
+    delete packageJson.devDependencies;
   }
 
   return packageJson;
