@@ -1,5 +1,12 @@
 # @blinkk/root
 
+## 1.3.13
+
+### Patch Changes
+
+- 8022259: fix: fix workspace deps when loading root.config.ts
+- 8022259: chore: remove devDependencies from prod package.json
+
 ## 1.3.13-debug.3
 
 ### Patch Changes
