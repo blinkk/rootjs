@@ -10,12 +10,13 @@
     "build": "rm -rf dist/ && root build",
     "dev": "root dev",
     "preview": "rm -rf dist/ && root build --ssr-only && root preview",
+    "deploy": "root create-package --target=appengine --out=gae",
     "start": "root start",
     "test": "pnpm run build"
   },
   "dependencies": {
     "@blinkk/root": "workspace:*",
-    "preact": "^10.10.6",
-    "preact-render-to-string": "^5.2.3"
+    "preact": "10.19.3",
+    "preact-render-to-string": "6.3.1"
   }
 }

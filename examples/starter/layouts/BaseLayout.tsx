@@ -1,6 +1,5 @@
-import {Head, Script} from '@blinkk/root';
+import {Head, Html, Script} from '@blinkk/root';
 import {ComponentChildren} from 'preact';
-
 import {GlobalFooter} from '@/components/GlobalFooter/GlobalFooter.js';
 import {GlobalHeader} from '@/components/GlobalHeader/GlobalHeader.js';
 import '@/styles/global.scss';
@@ -19,7 +18,7 @@ export function BaseLayout(props: BaseLayoutProps) {
   const image = props.image || '';
   const noindex = props.noindex || false;
   return (
-    <>
+    <Html>
       <Head>
         <title>{title}</title>
         <meta content="website" property="og:type" />
@@ -40,6 +39,6 @@ export function BaseLayout(props: BaseLayoutProps) {
         <GlobalFooter />
       </div>
       <Script type="module" src="/bundles/main.ts" />
-    </>
+    </Html>
   );
 }
