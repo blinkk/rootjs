@@ -111,7 +111,14 @@ export function flattenPackageDepsFromMonorepo(
       allDeps[depName] = depVersion;
     }
   });
-  console.log(`flattened deps for ${rootDir}/package.json:`);
-  console.log(allDeps);
-  return allDeps;
+  return sortDeps(allDeps);
+}
+
+function sortDeps(deps: Record<string, string>): Record<string, string> {
+  const keys = Object.keys(deps).sort();
+  const sortedDeps: Record<string, string> = {};
+  for (const key of keys) {
+    sortedDeps[key] = deps[key];
+  }
+  return sortedDeps;
 }
