@@ -1,5 +1,11 @@
 # @blinkk/root
 
+## 1.3.13-debug.2
+
+### Patch Changes
+
+- 30adc8c: chore: remove devDependencies from prod package.json
+
 ## 1.3.13-debug.1
 
 ### Patch Changes
