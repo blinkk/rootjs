@@ -280,7 +280,7 @@ importers:
         specifier: 5.0.8
         version: 5.0.8(@types/node@20.8.4)(sass@1.69.3)
       workspace-tools:
-        specifier: ^0.37.0
+        specifier: 0.37.0
         version: 0.37.0
     devDependencies:
       '@types/busboy':
@@ -2547,8 +2547,8 @@ packages:
       '@types/gapi.client.discovery-v1': 0.0.4
     dev: true
 
-  /@maxim_mazurok/gapi.client.sheets-v4@0.0.20241028:
-    resolution: {integrity: sha512-xV1EOs5n5/zF3MjWwjkMR8CU18O6Nf5D+Dsbr5sn7U1zDNpjce7WL0bu9TQXHoL8l35Vm1oJadLR/Hfovt8FpQ==}
+  /@maxim_mazurok/gapi.client.sheets-v4@0.0.20241101:
+    resolution: {integrity: sha512-MO8FmqA/CmTF9RV+v7HKx+QaWgtZyU9jPuoHXx058NZY4dVPF5gMwafbZ3A6D3dkplS55T2WLn/RZOAibdn19Q==}
     dependencies:
       '@types/gapi.client': 1.0.8
       '@types/gapi.client.discovery-v1': 0.0.4
@@ -3382,7 +3382,7 @@ packages:
   /@types/gapi.client.sheets-v4@0.0.4:
     resolution: {integrity: sha512-6kTJ7aDMAElfdQV1XzVJmZWjgbibpa84DMuKuaN8Cwqci/dkglPyHXKvsGrRugmuYvgFYr35AQqwz6j3q8R0dw==}
     dependencies:
-      '@maxim_mazurok/gapi.client.sheets-v4': 0.0.20241028
+      '@maxim_mazurok/gapi.client.sheets-v4': 0.0.20241101
     dev: true
 
   /@types/gapi.client@1.0.8:

@@ -33,6 +33,22 @@ function getMonorepoPackages(
 }
 
 /**
+ * Returns the top-level monorepo package's deps, if any.
+ */
+export function getMonorepoPackageDeps(
+  rootDir: string
+): Record<string, string> {
+  const monorepoRoot = getWorkspaceRoot(rootDir);
+  if (!monorepoRoot) {
+    return {};
+  }
+
+  const packageJsonPath = path.join(monorepoRoot, 'package.json');
+  const packageJson = loadPackageJson(packageJsonPath);
+  return packageJson?.dependencies || {};
+}
+
+/**
  * Flattens package.json deps from the root project dir, taking into account any
  * deps from the monorepo root as well as any `workspace:` deps from within the
  * monorepo.
@@ -43,10 +59,22 @@ export function flattenPackageDepsFromMonorepo(
 ): Record<string, string> {
   const packageJsonPath = path.resolve(rootDir, 'package.json');
   const packageJson = loadPackageJson(packageJsonPath);
+
+  // Flatten `peerDependencies` and `dependencies`.
   const projectDeps = {
     ...packageJson.peerDependencies,
     ...packageJson.dependencies,
   };
+
+  // For any dependencies using a wildcard version `*`, if the top-level
+  // package.json has the depdenency defined, overwrite the version.
+  const monorepoDeps = getMonorepoPackageDeps(rootDir);
+  for (const depName in projectDeps) {
+    if (projectDeps[depName] === '*' && monorepoDeps[depName]) {
+      projectDeps[depName] = monorepoDeps[depName];
+    }
+  }
+
   const allDeps: Record<string, string> = {};
   const workspacePackages = getMonorepoPackages(rootDir);
   const ignore = options?.ignore || new Set();
@@ -74,7 +102,14 @@ export function flattenPackageDepsFromMonorepo(
           ignore: ignore,
         });
         for (const key in deps) {
-          allDeps[key] ??= deps[key];
+          const currentValue = allDeps[key];
+          if (
+            deps[key] &&
+            deps[key] !== '*' &&
+            (!currentValue || currentValue === '*')
+          ) {
+            allDeps[key] = deps[key];
+          }
         }
       }
     } else {
