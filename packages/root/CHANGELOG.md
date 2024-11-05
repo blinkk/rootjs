@@ -1,5 +1,11 @@
 # @blinkk/root
 
+## 1.3.13-debug.3
+
+### Patch Changes
+
+- cf9b8c2: chore: add debug statements
+
 ## 1.3.13-debug.2
 
 ### Patch Changes

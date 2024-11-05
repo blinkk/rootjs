@@ -59,6 +59,7 @@ export function flattenPackageDepsFromMonorepo(
 ): Record<string, string> {
   const packageJsonPath = path.resolve(rootDir, 'package.json');
   const packageJson = loadPackageJson(packageJsonPath);
+  const monorepoDeps = getMonorepoPackageDeps(rootDir);
 
   // Flatten `peerDependencies` and `dependencies`.
   const projectDeps = {
@@ -66,21 +67,10 @@ export function flattenPackageDepsFromMonorepo(
     ...packageJson.dependencies,
   };
 
-  // For any dependencies using a wildcard version `*`, if the top-level
-  // package.json has the depdenency defined, overwrite the version.
-  const monorepoDeps = getMonorepoPackageDeps(rootDir);
-  for (const depName in projectDeps) {
-    if (projectDeps[depName] === '*' && monorepoDeps[depName]) {
-      projectDeps[depName] = monorepoDeps[depName];
-    }
-  }
-
   const allDeps: Record<string, string> = {};
   const workspacePackages = getMonorepoPackages(rootDir);
   const ignore = options?.ignore || new Set();
   Object.entries(projectDeps).forEach(([depName, depVersion]) => {
-    // For internal packages within the workspace, recursively collect the deps
-    // from those packages.
     if (
       depName.startsWith('@blinkk/root') &&
       depVersion.startsWith('workspace:')
@@ -90,7 +80,8 @@ export function flattenPackageDepsFromMonorepo(
         allDeps[depName] = packageInfo.packageJson.version;
       }
     } else if (depVersion.startsWith('workspace:')) {
-      // Avoid circular deps.
+      // For internal packages within the workspace, recursively collect the
+      // deps from those packages.
       if (ignore.has(depName)) {
         return;
       }
@@ -112,9 +103,15 @@ export function flattenPackageDepsFromMonorepo(
           }
         }
       }
+    } else if (depVersion === '*' && monorepoDeps[depName]) {
+      // For any dependencies using a wildcard version `*`, if the top-level
+      // package.json has the depdenency defined, overwrite the version.
+      allDeps[depName] = monorepoDeps[depName];
     } else {
       allDeps[depName] = depVersion;
     }
   });
+  console.log(`flattened deps for ${rootDir}/package.json:`);
+  console.log(allDeps);
   return allDeps;
 }

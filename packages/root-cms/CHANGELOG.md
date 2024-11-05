@@ -1,5 +1,12 @@
 # @blinkk/root-cms
 
+## 1.3.13-debug.3
+
+### Patch Changes
+
+- Updated dependencies [cf9b8c2]
+  - @blinkk/root@1.3.13-debug.3
+
 ## 1.3.13-debug.2
 
 ### Patch Changes
