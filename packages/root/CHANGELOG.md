@@ -1,5 +1,11 @@
 # @blinkk/root
 
+## 1.3.13-debug.1
+
+### Patch Changes
+
+- edada31: chore: update wildcard deps from top-level package
+
 ## 1.3.13-debug.0
 
 ### Patch Changes

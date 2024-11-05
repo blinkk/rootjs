@@ -1,5 +1,12 @@
 # @blinkk/root-password-protect
 
+## 1.3.13-debug.1
+
+### Patch Changes
+
+- Updated dependencies [edada31]
+  - @blinkk/root@1.3.13-debug.1
+
 ## 1.3.13-debug.0
 
 ### Patch Changes
