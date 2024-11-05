@@ -1,6 +1,6 @@
 import path from 'node:path';
 import {getWorkspaces, getWorkspaceRoot, PackageInfo} from 'workspace-tools';
-import {loadJsonSync} from '../utils/fsutils.js';
+import {fileExistsSync, loadJsonSync} from '../utils/fsutils.js';
 
 interface WorkspacePackage {
   name: string;
@@ -8,7 +8,10 @@ interface WorkspacePackage {
   packageJson: PackageInfo;
 }
 
-export function loadPackageJson(filepath: string): PackageInfo {
+export function loadPackageJson(filepath: string): PackageInfo | null {
+  if (!fileExistsSync(filepath)) {
+    return null;
+  }
   return loadJsonSync(filepath);
 }
 
@@ -63,8 +66,8 @@ export function flattenPackageDepsFromMonorepo(
 
   // Flatten `peerDependencies` and `dependencies`.
   const projectDeps = {
-    ...packageJson.peerDependencies,
-    ...packageJson.dependencies,
+    ...packageJson?.peerDependencies,
+    ...packageJson?.dependencies,
   };
 
   const allDeps: Record<string, string> = {};
