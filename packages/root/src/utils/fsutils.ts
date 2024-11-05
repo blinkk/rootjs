@@ -1,4 +1,4 @@
-import {promises as fs} from 'node:fs';
+import fs from 'node:fs';
 import path from 'node:path';
 
 import fsExtra from 'fs-extra';
@@ -11,14 +11,14 @@ export function isJsFile(filename: string) {
 export async function writeFile(filepath: string, content: string) {
   const dirPath = path.dirname(filepath);
   await makeDir(dirPath);
-  await fs.writeFile(filepath, content);
+  await fs.promises.writeFile(filepath, content);
 }
 
 export async function makeDir(dirpath: string) {
   try {
-    await fs.access(dirpath);
+    await fs.promises.access(dirpath);
   } catch (e) {
-    await fs.mkdir(dirpath, {recursive: true});
+    await fs.promises.mkdir(dirpath, {recursive: true});
   }
 }
 
@@ -53,11 +53,16 @@ export async function copyGlob(
 }
 
 export async function rmDir(dirpath: string) {
-  await fs.rm(dirpath, {recursive: true, force: true});
+  await fs.promises.rm(dirpath, {recursive: true, force: true});
 }
 
 export async function loadJson<T = unknown>(filepath: string): Promise<T> {
-  const content = await fs.readFile(filepath, 'utf-8');
+  const content = await fs.promises.readFile(filepath, 'utf-8');
+  return JSON.parse(content);
+}
+
+export function loadJsonSync<T = unknown>(filepath: string): T {
+  const content = fs.readFileSync(filepath, 'utf-8');
   return JSON.parse(content);
 }
 
@@ -67,7 +72,7 @@ export async function writeJson(filepath: string, data: any) {
 }
 
 export async function isDirectory(dirpath: string) {
-  return fs
+  return fs.promises
     .stat(dirpath)
     .then((fsStat) => {
       return fsStat.isDirectory();
@@ -81,15 +86,24 @@ export async function isDirectory(dirpath: string) {
 }
 
 export function fileExists(filepath: string): Promise<boolean> {
-  return fs
+  return fs.promises
     .access(filepath)
     .then(() => true)
     .catch(() => false);
 }
 
+export function fileExistsSync(filepath: string): boolean {
+  try {
+    fs.accessSync(filepath);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export async function dirExists(dirpath: string): Promise<boolean> {
   try {
-    const stat = await fs.stat(dirpath);
+    const stat = await fs.promises.stat(dirpath);
     return stat.isDirectory();
   } catch (error) {
     if (error.code === 'ENOENT') {
@@ -103,15 +117,15 @@ export async function directoryContains(
   dirpath: string,
   subpath: string
 ): Promise<boolean> {
-  const outer = await fs.realpath(dirpath);
-  const inner = await fs.realpath(subpath);
+  const outer = await fs.promises.realpath(dirpath);
+  const inner = await fs.promises.realpath(subpath);
   const rel = path.relative(outer, inner);
   return !rel.startsWith('..');
 }
 
 export async function listFilesRecursive(dirPath: string): Promise<string[]> {
   const files: string[] = [];
-  const entries = await fs.readdir(dirPath, {withFileTypes: true});
+  const entries = await fs.promises.readdir(dirPath, {withFileTypes: true});
   for (const entry of entries) {
     const fullPath = path.join(dirPath, entry.name);
     if (entry.isDirectory()) {

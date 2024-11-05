@@ -1,5 +1,29 @@
 # @blinkk/root
 
+## 1.3.13-debug.3
+
+### Patch Changes
+
+- cf9b8c2: chore: add debug statements
+
+## 1.3.13-debug.2
+
+### Patch Changes
+
+- 30adc8c: chore: remove devDependencies from prod package.json
+
+## 1.3.13-debug.1
+
+### Patch Changes
+
+- edada31: chore: update wildcard deps from top-level package
+
+## 1.3.13-debug.0
+
+### Patch Changes
+
+- 84ff15d: fix: fix workspace deps when loading root.config.ts
+
 ## 1.3.12
 
 ### Patch Changes

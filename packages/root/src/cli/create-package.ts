@@ -1,6 +1,7 @@
 import {promises as fs} from 'node:fs';
 import path from 'node:path';
 import {build as esbuild} from 'esbuild';
+import {flattenPackageDepsFromMonorepo} from '../node/monorepo.js';
 import {
   copyDir,
   dirExists,
@@ -114,94 +115,23 @@ async function generatePackageJson(rootDir: string): Promise<PackageJson> {
     path.resolve(rootDir, 'package.json')
   );
 
-  // If the package.json has any peer deps, check the workspace root for any
-  // matching versions and move the peer deps to prod deps.
+  // Flatten any deps from the monorepo, and remove peerDependencies and
+  // devDependencies.
+  const allDeps = flattenPackageDepsFromMonorepo(rootDir);
+  packageJson.dependencies ??= {};
+  for (const depName in allDeps) {
+    if (!packageJson.dependencies[depName]) {
+      packageJson.dependencies[depName] = allDeps[depName];
+    }
+  }
   if (packageJson.peerDependencies) {
-    await updatePeerDepsFromWorkspace(rootDir, packageJson);
+    delete packageJson.peerDependencies;
+  }
+  if (packageJson.devDependencies) {
+    delete packageJson.devDependencies;
   }
 
   return packageJson;
-}
-
-async function updatePeerDepsFromWorkspace(
-  rootDir: string,
-  packageJson: PackageJson
-) {
-  const requiredPeerDeps = getRequiredPeerDeps(packageJson);
-  if (requiredPeerDeps.length === 0) {
-    return;
-  }
-
-  const workspaceRoot = await findWorkspaceRoot(rootDir);
-  if (!workspaceRoot) {
-    return;
-  }
-
-  const workspacePackageJsonPath = path.resolve(workspaceRoot, 'package.json');
-  const workspacePackageJson = await loadJson<PackageJson>(
-    workspacePackageJsonPath
-  );
-  const workspaceDeps = workspacePackageJson.dependencies || {};
-
-  function setDep(name: string, value: string) {
-    if (!packageJson.dependencies) {
-      packageJson.dependencies = {};
-    }
-    packageJson.dependencies[name] = value;
-  }
-
-  for (const peerDep of requiredPeerDeps) {
-    const workspaceDepVersion = workspaceDeps[peerDep];
-    if (workspaceDepVersion) {
-      setDep(peerDep, workspaceDepVersion);
-    } else {
-      console.warn(
-        `could not find peer dep "${peerDep}" in workspace "${workspacePackageJsonPath}"`
-      );
-    }
-  }
-}
-
-async function findWorkspaceRoot(rootDir: string): Promise<string | null> {
-  const parentDir = path.dirname(rootDir);
-
-  if (parentDir === '/') {
-    return null;
-  }
-
-  // PNPM uses `pnpm-workspace.yaml` for its workspace root.
-  const pnpmWorkspaceFile = path.resolve(parentDir, 'pnpm-workspace.yaml');
-  if (await fileExists(pnpmWorkspaceFile)) {
-    return parentDir;
-  }
-
-  // YARN uses the "workspaces" key in package.json.
-  const packageJsonPath = path.resolve(parentDir, 'package.json');
-  if (await fileExists(packageJsonPath)) {
-    const parentPackageJson = await loadJson<PackageJson>(packageJsonPath);
-    if (parentPackageJson && parentPackageJson.workspaces) {
-      return parentDir;
-    }
-  }
-
-  return findWorkspaceRoot(parentDir);
-}
-
-/**
- * Returns all the `peerDependencies` that are not marked as
- * `{"optional": true}` in `peerDependenciesMeta`.
- */
-function getRequiredPeerDeps(packageJson: PackageJson) {
-  const requiredPeerDeps: string[] = [];
-  const peerDeps = packageJson.peerDependencies || {};
-  const peerDepsMeta = packageJson.peerDependenciesMeta || {};
-  for (const key in peerDeps) {
-    const meta = peerDepsMeta[key];
-    if (!meta?.optional) {
-      requiredPeerDeps.push(key);
-    }
-  }
-  return requiredPeerDeps;
 }
 
 /**
