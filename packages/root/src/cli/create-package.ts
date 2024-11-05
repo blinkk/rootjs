@@ -111,19 +111,25 @@ async function getDefaultTarget(rootDir: string): Promise<DeployTarget | null> {
 
 async function generatePackageJson(rootDir: string): Promise<PackageJson> {
   // Read the package.json.
-  const packageJson = await loadJson<any>(
+  const packageJson: PackageJson = await loadJson<any>(
     path.resolve(rootDir, 'package.json')
   );
 
   // Flatten any deps from the monorepo, and remove peerDependencies and
   // devDependencies.
   const allDeps = flattenPackageDepsFromMonorepo(rootDir);
-  packageJson.dependencies ??= {};
+  packageJson.dependencies ??= {} as Record<string, string>;
   for (const depName in allDeps) {
     if (!packageJson.dependencies[depName]) {
       packageJson.dependencies[depName] = allDeps[depName];
     }
   }
+  // Remove `workspace:` deps.
+  Object.entries(packageJson.dependencies).forEach(([depName, depVersion]) => {
+    if (depVersion.startsWith('workspace:')) {
+      delete packageJson.dependencies![depName];
+    }
+  });
   if (packageJson.peerDependencies) {
     delete packageJson.peerDependencies;
   }
