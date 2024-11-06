@@ -1,5 +1,13 @@
 # @blinkk/root
 
+## 1.3.14
+
+### Patch Changes
+
+- 3829c8d: feat: add --app-yaml flag to `root create-package`
+- 3b0e340: feat: add `root gae-deploy` cli command
+- 6e75e30: fix: remove `workspace:` packages in root create-package
+
 ## 1.3.13
 
 ### Patch Changes
