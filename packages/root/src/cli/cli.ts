@@ -70,7 +70,7 @@ class CliRunner {
       )
       .action(dev);
     program
-      .command('gae-deploy <app dir>')
+      .command('gae-deploy <appdir>')
       .description(
         'appengine deploy utility that can optionally run healthchecks before diverting traffic to the new version and clean up old versions'
       )

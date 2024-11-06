@@ -65,7 +65,7 @@ export async function gaeDeploy(appDir: string, options?: GaeDeployOptions) {
 
   console.log('[gae-deploy] 🚀 starting deployment...');
 
-  // If the env_variables has placeholders like `MY_SECRET_TOKEN: {MY_SECRET_TOKEN}`,
+  // If the env_variables has placeholders like `MY_SECRET_TOKEN: '{MY_SECRET_TOKEN}'`,
   // replace with the current env value.
   const appYamlHasPlaceholders = testHasEnvPlaceholders(appYaml);
   let backupAppYaml = '';
@@ -179,7 +179,7 @@ function getVersionsURL(project: string, service: string) {
  * Example:
  * ```yaml
  * env_variables:
- *   MY_SECRET_TOKEN: {MY_SECRET_TOKEN}
+ *   MY_SECRET_TOKEN: '{MY_SECRET_TOKEN}'
  * ```
  */
 function testHasEnvPlaceholders(appYaml: AppYaml) {
@@ -192,8 +192,11 @@ function testHasEnvPlaceholders(appYaml: AppYaml) {
   });
 }
 
-function testIsEnvPlaceholder(envValue: string) {
-  return envValue.startsWith('{') && envValue.endsWith('}');
+function testIsEnvPlaceholder(envValue: any) {
+  if (typeof envValue === 'string') {
+    return envValue.startsWith('{') && envValue.endsWith('}');
+  }
+  return false;
 }
 
 /** Updates any placeholders used in environment variables with their values. */
@@ -203,7 +206,7 @@ function updateAppYamlEnv(appYamlPath: string, appYaml: AppYaml) {
   fs.copyFileSync(appYamlPath, backupAppYaml);
   let content = fs.readFileSync(appYamlPath, 'utf8');
 
-  // Replace env_variables placeholders like `MY_SECRET_TOKEN: {MY_SECRET_TOKEN}`.
+  // Replace env_variables placeholders like `MY_SECRET_TOKEN: '{MY_SECRET_TOKEN}'`.
   const envVars: Record<string, string> = appYaml.env_variables;
   Object.entries(envVars).forEach(([envVar, envValue]) => {
     if (testIsEnvPlaceholder(envValue)) {
