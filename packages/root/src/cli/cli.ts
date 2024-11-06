@@ -1,9 +1,10 @@
-import {Command} from 'commander';
+import {Command, InvalidArgumentError} from 'commander';
 import {bgGreen, black} from 'kleur/colors';
 import {build} from './build.js';
 import {codegen} from './codegen.js';
 import {createPackage} from './create-package.js';
 import {dev, createDevServer} from './dev.js';
+import {gaeDeploy} from './gae-deploy.js';
 import {preview, createPreviewServer} from './preview.js';
 import {start, createProdServer} from './start.js';
 
@@ -69,6 +70,27 @@ class CliRunner {
       )
       .action(dev);
     program
+      .command('gae-deploy [path]')
+      .description(
+        'appengine deploy utility that can optionally run healthchecks before diverting traffic to the new version and clean up old versions'
+      )
+      .option('--project <project>', 'GCP project id')
+      .option('--prefix <prefix>', 'prefix to append the version')
+      .option(
+        '--promote',
+        'whether to promote the version (if healthchecks pass)'
+      )
+      .option(
+        '--healthcheck-url <url>',
+        'healthcheck url path (e.g. "/healthcheck") which should return a 200 status with the text "OK"'
+      )
+      .option(
+        '--max-versions <num>',
+        'the max number of versions to keep',
+        numberFlag
+      )
+      .action(gaeDeploy);
+    program
       .command('preview [path]')
       .description('starts the server in preview mode')
       .option(
@@ -86,6 +108,14 @@ class CliRunner {
       .action(start);
     await program.parseAsync(argv);
   }
+}
+
+function numberFlag(value: string) {
+  const num = parseInt(value);
+  if (isNaN(num)) {
+    throw new InvalidArgumentError(`not a number: ${value}`);
+  }
+  return num;
 }
 
 export {

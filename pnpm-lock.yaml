@@ -222,6 +222,9 @@ importers:
 
   packages/root:
     dependencies:
+      '@types/js-yaml':
+        specifier: 4.0.9
+        version: 4.0.9
       '@types/micromatch':
         specifier: 4.0.6
         version: 4.0.6
@@ -258,6 +261,9 @@ importers:
       js-beautify:
         specifier: 1.14.9
         version: 1.14.9
+      js-yaml:
+        specifier: 4.1.0
+        version: 4.1.0
       kleur:
         specifier: 4.1.5
         version: 4.1.5
@@ -3417,6 +3423,10 @@ packages:
   /@types/js-beautify@1.14.1:
     resolution: {integrity: sha512-pjbakQH0LywQL0wUFIWbxr5GZTnnqMD5wavqOpf61xz83V3V1uyhyPSWWNSoXZ153TF3XBgRTa07W1XDgFNYfw==}
     dev: true
+
+  /@types/js-yaml@4.0.9:
+    resolution: {integrity: sha512-k4MGaQl5TGo/iipqb2UDG2UwjXziSWkh0uysQelTlJpX1qGlpUZYm8PnO4DxG1qBomtJUdYJ6qR6xdIah10JLg==}
+    dev: false
 
   /@types/json-schema@7.0.14:
     resolution: {integrity: sha512-U3PUjAudAdJBeC2pgN8uTIKgxrb4nlDF3SF0++EldXQvQBGkpFZMSnwQiIoDU77tv45VgNkl/L4ouD+rEomujw==}
