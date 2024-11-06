@@ -142,11 +142,11 @@ importers:
         specifier: workspace:*
         version: link:../../packages/root
       preact:
-        specifier: ^10.10.6
-        version: 10.10.6
+        specifier: 10.19.3
+        version: 10.19.3
       preact-render-to-string:
-        specifier: ^5.2.3
-        version: 5.2.3(preact@10.10.6)
+        specifier: 6.3.1
+        version: 6.3.1(preact@10.19.3)
 
   packages/create-root:
     dependencies:
@@ -9684,15 +9684,6 @@ packages:
       preact: 10.19.3
     dev: true
 
-  /preact-render-to-string@5.2.3(preact@10.10.6):
-    resolution: {integrity: sha512-aPDxUn5o3GhWdtJtW0svRC2SS/l8D9MAgo2+AWml+BhDImb27ALf04Q2d+AHqUUOc6RdSXFIBVa2gxzgMKgtZA==}
-    peerDependencies:
-      preact: '>=10'
-    dependencies:
-      preact: 10.10.6
-      pretty-format: 3.8.0
-    dev: false
-
   /preact-render-to-string@5.2.4(preact@10.18.1):
     resolution: {integrity: sha512-iIPHb3BXUQ3Za6KNhkjN/waq11Oh+QWWtAgN3id3LrL+cszH3DYh8TxJPNQ6Aogsbu4JsqdJLBZltwPFpG6N6w==}
     peerDependencies:
@@ -9717,10 +9708,6 @@ packages:
     dependencies:
       preact: 10.19.3
     dev: true
-
-  /preact@10.10.6:
-    resolution: {integrity: sha512-w0mCL5vICUAZrh1DuHEdOWBjxdO62lvcO++jbzr8UhhYcTbFkpegLH9XX+7MadjTl/y0feoqwQ/zAnzkc/EGog==}
-    dev: false
 
   /preact@10.11.0:
     resolution: {integrity: sha512-Fk6+vB2kb6mSJfDgODq0YDhMfl0HNtK5+Uc9QqECO4nlyPAQwCI+BKyWO//idA7ikV7o+0Fm6LQmNuQi1wXI1w==}
