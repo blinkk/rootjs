@@ -42,7 +42,7 @@ export async function gaeDeploy(appDir: string, options?: GaeDeployOptions) {
   process.chdir(appDir);
 
   // Read the service from `app.yaml` and deploy it.
-  const appYaml = yaml.load(fs.readFileSync('app.yaml')) as AppYaml;
+  const appYaml = yaml.load(fs.readFileSync('app.yaml', 'utf8')) as AppYaml;
   const service = appYaml.service;
   if (!service) {
     throw new Error(
@@ -237,7 +237,10 @@ export async function testHealth(
   version: string,
   healthcheckUrl: string
 ) {
-  const url = `https://${version}-dot-${service}-dot-${project}.appspot.com/${healthcheckUrl}`;
+  if (!healthcheckUrl.startsWith('/')) {
+    healthcheckUrl = `/${healthcheckUrl}`;
+  }
+  const url = `https://${version}-dot-${service}-dot-${project}.appspot.com${healthcheckUrl}`;
   const response = await fetch(url);
   return response.status === 200;
 }
