@@ -57,6 +57,10 @@ class CliRunner {
       .option('--target <target>', 'hosting target, i.e. appengine or firebase')
       .option('--out <outdir>', 'output dir')
       .option('--mode <mode>', 'deployment mode, i.e. production or preview')
+      .option(
+        '--app-yaml <path>',
+        'for appengine targets, path to app.yaml (defaults to "app.yaml")'
+      )
       .action((rootPackageDir, options) => {
         options.version = this.version;
         createPackage(rootPackageDir, options);

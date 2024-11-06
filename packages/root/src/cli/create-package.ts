@@ -20,6 +20,7 @@ interface CreatePackageOptions {
   out?: string;
   target?: DeployTarget;
   version?: string;
+  appYaml?: string;
 }
 
 interface PeerDependencyMeta {
@@ -81,7 +82,8 @@ export async function createPackage(
 
   // Run target-specific updates to the output.
   if (target === 'appengine') {
-    await onAppEngine({rootDir, packageJson, outDir});
+    const appYamlPath = options?.appYaml || path.join(rootDir, 'app.yaml');
+    await onAppEngine({packageJson, outDir, appYamlPath});
   } else if (target === 'firebase') {
     await onFirebase({rootDir, packageJson, outDir});
   }
@@ -144,14 +146,13 @@ async function generatePackageJson(rootDir: string): Promise<PackageJson> {
  * Called for App Engine targets.
  */
 async function onAppEngine(options: {
-  rootDir: string;
   packageJson: PackageJson;
   outDir: string;
+  appYamlPath: string;
 }) {
-  const {rootDir, outDir, packageJson} = options;
-  const configPath = path.resolve(rootDir, 'app.yaml');
-  if (await fileExists(configPath)) {
-    await fs.copyFile(configPath, path.resolve(outDir, 'app.yaml'));
+  const {outDir, packageJson, appYamlPath} = options;
+  if (await fileExists(appYamlPath)) {
+    await fs.copyFile(appYamlPath, path.resolve(outDir, 'app.yaml'));
   }
 
   // Only include the "start" script.

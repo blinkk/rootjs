@@ -10,8 +10,9 @@
     "build": "rm -rf dist/ && root build",
     "dev": "root dev",
     "preview": "rm -rf dist/ && root build --ssr-only && root preview",
-    "deploy": "root create-package --target=appengine --out=gae",
-    "start": "root start",
+    "stage": "root create-package --target=appengine --out=gae-staging --app-yaml=app.staging.yaml && root gae-deploy --project=example-project --promote --max-versions=10 gae-staging/",
+    "deploy": "root create-package --target=appengine --out=gae-prod --app-yaml=app.prod.yaml && root gae-deploy --project=example-project --promote --max-versions=10 gae-prod/",
+    "start": "root start --host=0.0.0.0",
     "test": "pnpm run build"
   },
   "dependencies": {

@@ -1,0 +1,16 @@
+{
+  "name": "@examples/starter",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "start": "root start --host=0.0.0.0"
+  },
+  "dependencies": {
+    "preact": "10.19.3",
+    "preact-render-to-string": "6.3.1"
+  }
+}
