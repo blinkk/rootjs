@@ -28,8 +28,12 @@ interface AppVersionInfo {
 }
 
 export async function gaeDeploy(appDir: string, options?: GaeDeployOptions) {
-  console.log(appDir);
-  console.log(options);
+  if (!appDir) {
+    throw new Error(
+      '[gae-deplopy] Missing app dir, e.g. `root gae-deploy <app dir>`'
+    );
+  }
+
   const project = options?.project;
   if (!project) {
     throw new Error('[gae-deplopy] Missing: --project');
