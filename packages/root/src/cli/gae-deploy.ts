@@ -39,14 +39,16 @@ export async function gaeDeploy(appDir: string, options?: GaeDeployOptions) {
     throw new Error('[gae-deplopy] Missing: --project');
   }
 
-  const appYamlPath = path.join(appDir, 'app.yaml');
+  // Change cwd to the app dir.
+  process.chdir(appDir);
+
+  const appYamlPath = 'app.yaml';
   if (!fs.existsSync(appYamlPath)) {
     throw new Error(`[gae-deplopy] Missing: ${appYamlPath}`);
   }
-  process.chdir(appDir);
 
   // Read the service from `app.yaml` and deploy it.
-  const appYaml = yaml.load(fs.readFileSync('app.yaml', 'utf8')) as AppYaml;
+  const appYaml = yaml.load(fs.readFileSync(appYamlPath, 'utf8')) as AppYaml;
   const service = appYaml.service;
   if (!service) {
     throw new Error(
@@ -212,7 +214,8 @@ function updateAppYamlEnv(appYamlPath: string, appYaml: AppYaml) {
     if (testIsEnvPlaceholder(envValue)) {
       const value = process.env[envVar];
       if (!value && content.includes(`{${envVar}}`)) {
-        throw new Error(`[gae-deploy] Missing environment variable: ${envVar}`);
+        console.warn(`[gae-deploy] Missing environment variable: ${envVar}`);
+        content = content.replaceAll(`{${envVar}}`, '');
       } else if (value && content.includes(`{${envVar}}`)) {
         content = content.replaceAll(`{${envVar}}`, value);
       }
