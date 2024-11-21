@@ -1,5 +1,11 @@
 # @blinkk/root
 
+## 1.3.15
+
+### Patch Changes
+
+- 24d25f6: fix: handle unicode url paths in ssr routing
+
 ## 1.3.14
 
 ### Patch Changes
