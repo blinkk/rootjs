@@ -670,7 +670,8 @@ export class Renderer {
     // Content-Security-Policy.
     const contentSecurityPolicy = securityConfig.contentSecurityPolicy;
     if (typeof contentSecurityPolicy === 'object') {
-      const directives = contentSecurityPolicy.directives || {};
+      // Copy the "directives" config and append a `nonce-`.
+      const directives = {...contentSecurityPolicy.directives};
       if (options.nonce) {
         if (!directives['script-src']) {
           directives['script-src'] = [
