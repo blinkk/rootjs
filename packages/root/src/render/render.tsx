@@ -670,17 +670,18 @@ export class Renderer {
     // Content-Security-Policy.
     const contentSecurityPolicy = securityConfig.contentSecurityPolicy;
     if (typeof contentSecurityPolicy === 'object') {
-      // Copy the "directives" config and append a `nonce-`.
+      // Copy the CSP `directives` value since the `script-src` value will be
+      // updated with a `nonce-` value..
       const directives = {...contentSecurityPolicy.directives};
       if (options.nonce) {
-        if (!directives['script-src']) {
-          directives['script-src'] = [
-            "'unsafe-inline'",
-            "'unsafe-eval'",
-            "'strict-dynamic' https: http:",
-          ];
-        }
-        directives['script-src'].push(`'nonce-${options.nonce}'`);
+        // Create a new array for `script-src` and append a `nonce-` value.
+        const scriptSrc = directives['script-src'] || [
+          "'unsafe-inline'",
+          "'unsafe-eval'",
+          "'strict-dynamic' https: http:",
+        ];
+        const scriptSrcWithNonce = [...scriptSrc, `nonce-${options.nonce}`];
+        directives['script-src'] = scriptSrcWithNonce;
       }
       const headerSegments: string[] = [];
       Object.entries(directives).forEach(([key, values]) => {
