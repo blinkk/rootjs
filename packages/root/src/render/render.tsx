@@ -70,7 +70,11 @@ export class Renderer {
     let url = req.path;
     // Decode unicode paths.
     if (url.includes('%')) {
-      url = decodeURI(url);
+      try {
+        url = decodeURI(url);
+      } catch (e) {
+        // Intentionally ignored.
+      }
     }
     const [route, routeParams] = this.router.get(url);
     if (!route) {
