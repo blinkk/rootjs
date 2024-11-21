@@ -1,5 +1,11 @@
 # @blinkk/root
 
+## 1.3.17
+
+### Patch Changes
+
+- e73c1cc: fix: fix csp array push issue
+
 ## 1.3.16
 
 ### Patch Changes
