@@ -680,7 +680,7 @@ export class Renderer {
           "'unsafe-eval'",
           "'strict-dynamic' https: http:",
         ];
-        const scriptSrcWithNonce = [...scriptSrc, `nonce-${options.nonce}`];
+        const scriptSrcWithNonce = [...scriptSrc, `'nonce-${options.nonce}'`];
         directives['script-src'] = scriptSrcWithNonce;
       }
       const headerSegments: string[] = [];
