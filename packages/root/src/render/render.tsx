@@ -67,7 +67,11 @@ export class Renderer {
   }
 
   async handle(req: Request, res: Response, next: NextFunction) {
-    const url = req.path;
+    let url = req.path;
+    // Decode unicode paths.
+    if (url.includes('%')) {
+      url = decodeURI(url);
+    }
     const [route, routeParams] = this.router.get(url);
     if (!route) {
       next();
