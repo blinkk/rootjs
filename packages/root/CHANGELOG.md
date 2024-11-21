@@ -1,5 +1,11 @@
 # @blinkk/root
 
+## 1.3.16
+
+### Patch Changes
+
+- 0ad25d9: fix: fix csp pass-by-reference issue
+
 ## 1.3.15
 
 ### Patch Changes
