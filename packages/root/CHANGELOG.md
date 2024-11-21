@@ -1,5 +1,11 @@
 # @blinkk/root
 
+## 1.3.18
+
+### Patch Changes
+
+- e56685c: fix: add quotes around csp nonce
+
 ## 1.3.17
 
 ### Patch Changes
