@@ -1,5 +1,12 @@
 # @blinkk/root-cms
 
+## 1.3.20
+
+### Patch Changes
+
+- Updated dependencies [efb90a3]
+  - @blinkk/root@1.3.20
+
 ## 1.3.19
 
 ### Patch Changes

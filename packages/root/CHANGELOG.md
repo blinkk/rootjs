@@ -1,5 +1,11 @@
 # @blinkk/root
 
+## 1.3.20
+
+### Patch Changes
+
+- efb90a3: fix: fix country code casing
+
 ## 1.3.19
 
 ### Patch Changes
