@@ -1,5 +1,11 @@
 # @blinkk/root
 
+## 1.3.19
+
+### Patch Changes
+
+- dcd8ac7: feat: add country de-facto lang fallbacks
+
 ## 1.3.18
 
 ### Patch Changes
