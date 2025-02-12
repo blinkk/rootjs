@@ -17,8 +17,9 @@ interface Language {
 export function getCountryLanguageData(
   countryCode: string
 ): CountryLanguages | null {
+  const countryCodeUpper = countryCode.toUpperCase();
   for (const country of DATA.countries) {
-    if (country.code_2 === countryCode) {
+    if (country.code_2 === countryCodeUpper) {
       const langCodes = country.languages || [];
       const languages: Language[] = [];
       langCodes.forEach((langCode: string) => {

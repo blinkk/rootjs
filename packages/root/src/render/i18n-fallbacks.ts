@@ -124,13 +124,13 @@ function getFallbackLanguages(req: Request): string[] {
 
 function getCountryLanguages(countryCode: string): string[] {
   // Special overrides for Chinese-speaking countries.
-  if (countryCode === 'CN') {
+  if (countryCode === 'cn') {
     return ['zh-CN', 'zh-Hans', 'zh-Hant', 'zh'];
   }
-  if (countryCode === 'HK') {
+  if (countryCode === 'hk') {
     return ['zh-HK', 'zh-Hant', 'zh'];
   }
-  if (countryCode === 'TW') {
+  if (countryCode === 'tw') {
     return ['zh-TW', 'zh-Hant', 'zh'];
   }
 
