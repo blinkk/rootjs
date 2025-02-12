@@ -6,6 +6,7 @@
 
 import {Request} from '../core/types.js';
 import {parseAcceptLanguage} from './accept-language.js';
+import {getCountryLanguageData} from './countrie-language.js';
 
 export const UNKNOWN_COUNTRY = 'zz';
 export const ES_419_COUNTRIES = [
@@ -95,6 +96,7 @@ export function getCountry(req: Request) {
 
 function getFallbackLanguages(req: Request): string[] {
   const langs = new Set<string>();
+
   // Add languages from the Accept-Language header.
   const acceptLangHeader = req.get('accept-language') || '';
   if (acceptLangHeader) {
@@ -110,9 +112,47 @@ function getFallbackLanguages(req: Request): string[] {
       langs.add(lang.code);
     });
   }
+
+  // Add languages from the user's country.
+  const countryCode = getCountry(req);
+  getCountryLanguages(countryCode).forEach((lang) => langs.add(lang));
+
   // Fall back to "en" as a last resort.
   langs.add('en');
   return Array.from(langs);
+}
+
+function getCountryLanguages(countryCode: string): string[] {
+  // Special overrides for Chinese-speaking countries.
+  if (countryCode === 'CN') {
+    return ['zh-CN', 'zh-Hans', 'zh-Hant', 'zh'];
+  }
+  if (countryCode === 'HK') {
+    return ['zh-HK', 'zh-Hant', 'zh'];
+  }
+  if (countryCode === 'TW') {
+    return ['zh-TW', 'zh-Hant', 'zh'];
+  }
+
+  const country = getCountryLanguageData(countryCode);
+  // The `getCountry` function returns an error string if the country code is
+  // invalid.
+  if (!country) {
+    return [];
+  }
+
+  const langs = new Set();
+  // E.g. "en-CA", "fr-CA"
+  if (country.langCultureMs && country.langCultureMs.length) {
+    country.langCultureMs.forEach((langCulture) => {
+      langs.add(langCulture.langCultureName);
+    });
+  }
+  // E.g. "en", "fr"
+  if (country.languages && country.languages.length) {
+    country.languages.forEach((lang) => langs.add(lang.iso639_1));
+  }
+  return Array.from(langs) as string[];
 }
 
 /**
