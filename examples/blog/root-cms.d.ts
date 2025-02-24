@@ -162,7 +162,7 @@ export interface PagesFields {
   /** Content */
   content?: {
     /** Modules. Compose the page by adding one or more modules. */
-    modules?: RootCMSOneOf[];
+    modules?: RootCMSOneOf<SpacerFields | Template5050Fields | TemplateFeaturedBlogPostsFields | TemplateHeroFields>[];
   };
   /** Advanced */
   advanced?: {
@@ -207,7 +207,7 @@ export interface Template5050Fields {
   /** Body */
   body?: string;
   /** Asset */
-  asset?: RootCMSOneOf;
+  asset?: RootCMSOneOf<ImageAssetFields | YouTubeAssetFields>;
 }
 
 /** Generated from `/templates/TemplateFeaturedBlogPosts/TemplateFeaturedBlogPosts.schema.ts`. */

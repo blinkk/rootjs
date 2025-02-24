@@ -145,6 +145,22 @@ function fieldType(field: Field): dom.Type {
   }
   if (field.type === 'oneof') {
     const oneofType = dom.create.namedTypeReference('RootCMSOneOf');
+    if (field.types && Array.isArray(field.types)) {
+      const unionTypes = field.types.map((schema: Schema) => {
+        // For named schemas, emit a reference to the generated interface.
+        if (schema.name) {
+          const id = alphanumeric(schema.name);
+          return dom.create.namedTypeReference(`${id}Fields`);
+        }
+        // Otherwise, inline the fields for the generated union type.
+        const fields = schema.fields || [];
+        const properties = fields.map((f: Field) => fieldProperty(f));
+        return dom.create.objectType(properties);
+      });
+      if (unionTypes.length > 0) {
+        oneofType.typeArguments = [dom.create.union(unionTypes)];
+      }
+    }
     return oneofType;
   }
   if (field.type === 'reference') {

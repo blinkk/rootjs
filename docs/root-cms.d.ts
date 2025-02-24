@@ -132,7 +132,7 @@ export interface BlogPostsFields {
     /** Main content body. Top content body. */
     body?: RootCMSRichText;
     /** Content blocks. Add blocks to embed various content types to the blog. */
-    blocks?: RootCMSOneOf[];
+    blocks?: RootCMSOneOf<ButtonsBlockFields | CodeBlockFields | CopyBlockFields | ImageBlockFields>[];
   };
 }
 
@@ -167,7 +167,7 @@ export interface GuideFields {
       /** Section: Content body. Main content body for the section. */
       body?: RootCMSRichText;
       /** Section: Blocks. Add blocks to embed various content types to the section. */
-      blocks?: RootCMSOneOf[];
+      blocks?: RootCMSOneOf<ButtonsBlockFields | CodeBlockFields | CopyBlockFields | ImageBlockFields>[];
     }[];
   };
 }
@@ -189,7 +189,7 @@ export interface PagesFields {
   /** Content */
   content?: {
     /** Modules. Compose the page by adding one or more modules. */
-    modules?: RootCMSOneOf[];
+    modules?: RootCMSOneOf<DividerFields | SectionFields | SpacerFields | Template50x50Fields | TemplateHeadlineFields | TemplateImageFields | TemplateJumplinksFields | TemplatePoweredByFields>[];
   };
 }
 
@@ -234,7 +234,7 @@ export interface SectionFields {
   /** Module Options. Layout and display options. */
   options?: string[];
   /** Modules */
-  modules?: RootCMSOneOf[];
+  modules?: RootCMSOneOf<DividerFields | SpacerFields | Template50x50Fields | TemplateHeadlineFields | TemplateImageFields | TemplateJumplinksFields | TemplatePoweredByFields>[];
 }
 
 /** Generated from `/templates/Spacer/Spacer.schema.ts`. */
@@ -254,9 +254,9 @@ export interface Template50x50Fields {
   /** Module Options. Layout and display options. */
   options?: string[];
   /** Left Section */
-  leftSection?: RootCMSOneOf;
+  leftSection?: RootCMSOneOf<ButtonsBlockFields | CodeBlockFields | CopyBlockFields | ImageBlockFields>;
   /** Right Section */
-  rightSection?: RootCMSOneOf;
+  rightSection?: RootCMSOneOf<ButtonsBlockFields | CodeBlockFields | CopyBlockFields | ImageBlockFields>;
 }
 
 /** Generated from `/templates/TemplateHeadline/TemplateHeadline.schema.ts`. */
