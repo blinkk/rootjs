@@ -12,6 +12,7 @@ import {
   IconCircleArrowDown,
   IconCircleArrowUp,
   IconCirclePlus,
+  IconClipboardCopy,
   IconCopy,
   IconDotsVertical,
   IconLanguage,
@@ -80,8 +81,17 @@ interface DocEditorProps {
   draft: UseDraftHook;
 }
 
+interface VirtualClipboard {
+  /** The current value stored in the virtual clipboard. */
+  value: any;
+}
+
 const DEEPLINK_CONTEXT = createContext('');
 const DOC_DATA_CONTEXT = createContext(null);
+const VIRTUAL_CLIPBOARD_CONTEXT = createContext<{
+  value: any;
+  setValue: (value: any) => void;
+}>({value: null, setValue: () => {}});
 
 function useDeeplink(): string {
   return useContext(DEEPLINK_CONTEXT);
@@ -91,11 +101,16 @@ function useDocData(): CMSDoc {
   return useContext(DOC_DATA_CONTEXT)!;
 }
 
+function useVirtualClipboard() {
+  return useContext(VIRTUAL_CLIPBOARD_CONTEXT);
+}
+
 export function DocEditor(props: DocEditorProps) {
   const fields = props.collection.fields || [];
   const {loading, controller, saveState, data} = props.draft;
   const ref = useRef<HTMLDivElement>(null);
   const [deeplink, setDeeplink] = useState('');
+  const [clipboardValue, setClipboardValue] = useState(null);
 
   function goBack() {
     const collectionId = props.docId.split('/')[0];
@@ -127,114 +142,118 @@ export function DocEditor(props: DocEditorProps) {
   }, [loading]);
 
   return (
-    <DOC_DATA_CONTEXT.Provider value={data}>
-      <DEEPLINK_CONTEXT.Provider value={deeplink}>
-        <div className="DocEditor" ref={ref}>
-          <LoadingOverlay
-            visible={loading}
-            loaderProps={{color: 'gray', size: 'xl'}}
-          />
-          <div className="DocEditor__statusBar">
-            <div className="DocEditor__statusBar__viewers">
-              <Viewers id={`doc/${props.docId}`} />
-            </div>
-            <div className="DocEditor__statusBar__saveState">
-              {saveState === SaveState.SAVED && 'saved!'}
-              {saveState === SaveState.SAVING && 'saving...'}
-              {saveState === SaveState.UPDATES_PENDING && 'saving...'}
-              {saveState === SaveState.ERROR && 'error saving'}
-            </div>
-            {!loading && data?.sys && (
-              <div className="DocEditor__statusBar__statusBadges">
-                <DocStatusBadges doc={data} />
+    <VIRTUAL_CLIPBOARD_CONTEXT.Provider
+      value={{value: clipboardValue, setValue: setClipboardValue}}
+    >
+      <DOC_DATA_CONTEXT.Provider value={data}>
+        <DEEPLINK_CONTEXT.Provider value={deeplink}>
+          <div className="DocEditor" ref={ref}>
+            <LoadingOverlay
+              visible={loading}
+              loaderProps={{color: 'gray', size: 'xl'}}
+            />
+            <div className="DocEditor__statusBar">
+              <div className="DocEditor__statusBar__viewers">
+                <Viewers id={`doc/${props.docId}`} />
               </div>
-            )}
-            <div className="DocEditor__statusBar__i18n">
-              <Button
-                variant="default"
-                color="dark"
-                size="xs"
-                leftIcon={<IconPlanet size={16} />}
-                onClick={() => localizationModal.open()}
-              >
-                Localization
-              </Button>
-            </div>
-            <div className="DocEditor__statusBar__publishButton">
-              {loading ? (
+              <div className="DocEditor__statusBar__saveState">
+                {saveState === SaveState.SAVED && 'saved!'}
+                {saveState === SaveState.SAVING && 'saving...'}
+                {saveState === SaveState.UPDATES_PENDING && 'saving...'}
+                {saveState === SaveState.ERROR && 'error saving'}
+              </div>
+              {!loading && data?.sys && (
+                <div className="DocEditor__statusBar__statusBadges">
+                  <DocStatusBadges doc={data} />
+                </div>
+              )}
+              <div className="DocEditor__statusBar__i18n">
                 <Button
+                  variant="default"
                   color="dark"
                   size="xs"
-                  onClick={() => publishDocModal.open()}
-                  loading
-                  disabled
+                  leftIcon={<IconPlanet size={16} />}
+                  onClick={() => localizationModal.open()}
                 >
-                  Publish
+                  Localization
                 </Button>
-              ) : testIsScheduled(data) ? (
-                <Tooltip
-                  label={`Scheduled ${formatDateTime(
-                    data.sys.scheduledAt
-                  )} by ${data.sys.scheduledBy}`}
-                  transition="pop"
-                >
+              </div>
+              <div className="DocEditor__statusBar__publishButton">
+                {loading ? (
+                  <Button
+                    color="dark"
+                    size="xs"
+                    onClick={() => publishDocModal.open()}
+                    loading
+                    disabled
+                  >
+                    Publish
+                  </Button>
+                ) : testIsScheduled(data) ? (
+                  <Tooltip
+                    label={`Scheduled ${formatDateTime(
+                      data.sys.scheduledAt
+                    )} by ${data.sys.scheduledBy}`}
+                    transition="pop"
+                  >
+                    <Button
+                      color="dark"
+                      size="xs"
+                      leftIcon={<IconRocket size={16} />}
+                      disabled
+                    >
+                      Publish
+                    </Button>
+                  </Tooltip>
+                ) : testPublishingLocked(data) ? (
+                  <Tooltip
+                    label={`Locked by ${data.sys.publishingLocked.lockedBy}: "${data.sys.publishingLocked.reason}"`}
+                    transition="pop"
+                  >
+                    <Button
+                      color="dark"
+                      size="xs"
+                      leftIcon={<IconLock size={16} />}
+                      disabled
+                    >
+                      Publish
+                    </Button>
+                  </Tooltip>
+                ) : (
                   <Button
                     color="dark"
                     size="xs"
                     leftIcon={<IconRocket size={16} />}
-                    disabled
+                    onClick={() => publishDocModal.open()}
                   >
                     Publish
                   </Button>
-                </Tooltip>
-              ) : testPublishingLocked(data) ? (
-                <Tooltip
-                  label={`Locked by ${data.sys.publishingLocked.lockedBy}: "${data.sys.publishingLocked.reason}"`}
-                  transition="pop"
-                >
-                  <Button
-                    color="dark"
-                    size="xs"
-                    leftIcon={<IconLock size={16} />}
-                    disabled
-                  >
-                    Publish
-                  </Button>
-                </Tooltip>
-              ) : (
-                <Button
-                  color="dark"
-                  size="xs"
-                  leftIcon={<IconRocket size={16} />}
-                  onClick={() => publishDocModal.open()}
-                >
-                  Publish
-                </Button>
-              )}
+                )}
+              </div>
+              <div className="DocEditor__statusBar__actionsMenu">
+                <DocActionsMenu
+                  docId={props.docId}
+                  data={data}
+                  onAction={onDocAction}
+                />
+              </div>
             </div>
-            <div className="DocEditor__statusBar__actionsMenu">
-              <DocActionsMenu
-                docId={props.docId}
-                data={data}
-                onAction={onDocAction}
-              />
+            <div className="DocEditor__fields">
+              {fields.map((field) => (
+                <DocEditor.Field
+                  key={field.id}
+                  collection={props.collection}
+                  field={field}
+                  shallowKey={field.id!}
+                  deepKey={`fields.${field.id!}`}
+                  draft={controller}
+                />
+              ))}
             </div>
           </div>
-          <div className="DocEditor__fields">
-            {fields.map((field) => (
-              <DocEditor.Field
-                key={field.id}
-                collection={props.collection}
-                field={field}
-                shallowKey={field.id!}
-                deepKey={`fields.${field.id!}`}
-                draft={controller}
-              />
-            ))}
-          </div>
-        </div>
-      </DEEPLINK_CONTEXT.Provider>
-    </DOC_DATA_CONTEXT.Provider>
+        </DEEPLINK_CONTEXT.Provider>
+      </DOC_DATA_CONTEXT.Provider>
+    </VIRTUAL_CLIPBOARD_CONTEXT.Provider>
   );
 }
 
@@ -571,16 +590,34 @@ interface ArrayRemoveAt {
   deepKey: string;
 }
 
+interface ArrayPasteAfter {
+  type: 'pasteAfter';
+  index: number;
+  draft: DraftController;
+  deepKey: string;
+  virtualClipboard: VirtualClipboard;
+}
+
+interface ArrayPasteBefore {
+  type: 'pasteBefore';
+  index: number;
+  draft: DraftController;
+  deepKey: string;
+  virtualClipboard: VirtualClipboard;
+}
+
 type ArrayAction =
-  | ArrayUpdate
-  | ArrayUpdateItem
   | ArrayAdd
-  | ArrayInsertBefore
-  | ArrayInsertAfter
   | ArrayDuplicate
-  | ArrayMoveUp
+  | ArrayInsertAfter
+  | ArrayInsertBefore
   | ArrayMoveDown
-  | ArrayRemoveAt;
+  | ArrayMoveUp
+  | ArrayPasteAfter
+  | ArrayPasteBefore
+  | ArrayRemoveAt
+  | ArrayUpdate
+  | ArrayUpdateItem;
 
 function arrayReducer(state: ArrayFieldValue, action: ArrayAction) {
   switch (action.type) {
@@ -714,6 +751,42 @@ function arrayReducer(state: ArrayFieldValue, action: ArrayAction) {
         _array: newOrder,
       };
     }
+    case 'pasteAfter': {
+      const data = state ?? {};
+      const order = [...(data._array || [])];
+      const newKey = autokey();
+      const newData = action.virtualClipboard.value;
+      order.splice(action.index + 1, 0, newKey);
+      action.draft.updateKeys({
+        [`${action.deepKey}._array`]: order,
+        [`${action.deepKey}.${newKey}`]: newData,
+      });
+      const newlyAdded = state._new || [];
+      return {
+        ...data,
+        [newKey]: newData,
+        _array: order,
+        _new: [...newlyAdded, newKey],
+      };
+    }
+    case 'pasteBefore': {
+      const data = state ?? {};
+      const order = [...(data._array || [])];
+      const newKey = autokey();
+      const newData = action.virtualClipboard.value;
+      order.splice(action.index, 0, newKey);
+      action.draft.updateKeys({
+        [`${action.deepKey}._array`]: order,
+        [`${action.deepKey}.${newKey}`]: newData,
+      });
+      const newlyAdded = state._new || [];
+      return {
+        ...data,
+        [newKey]: newData,
+        _array: order,
+        _new: [...newlyAdded, newKey],
+      };
+    }
     default: {
       console.error('unknown action', action);
       return state;
@@ -726,6 +799,7 @@ DocEditor.ArrayField = (props: FieldProps) => {
   const field = props.field as schema.ArrayField;
   const [value, dispatch] = useReducer(arrayReducer, {_array: []});
   const deeplink = useDeeplink();
+  const virtualClipboard = useVirtualClipboard();
 
   const data = value ?? {};
   const order = data._array || [];
@@ -745,6 +819,26 @@ DocEditor.ArrayField = (props: FieldProps) => {
 
   const add = () => {
     dispatch({type: 'add', draft: draft, deepKey: props.deepKey});
+  };
+
+  const pasteBefore = (index: number) => {
+    dispatch({
+      type: 'pasteBefore',
+      draft: draft,
+      deepKey: props.deepKey,
+      index: index,
+      virtualClipboard: virtualClipboard,
+    });
+  };
+
+  const pasteAfter = (index: number) => {
+    dispatch({
+      type: 'pasteAfter',
+      draft: draft,
+      deepKey: props.deepKey,
+      index: index,
+      virtualClipboard: virtualClipboard,
+    });
   };
 
   const insertBefore = (index: number) => {
@@ -799,6 +893,13 @@ DocEditor.ArrayField = (props: FieldProps) => {
       deepKey: props.deepKey,
       index: index,
     });
+  };
+
+  /** Copies the item data to the state so it can be "pasted" via the context menu later. */
+  const copyToVirtualClipboard = (index: number) => {
+    const key = order[index];
+    const item = value[key];
+    virtualClipboard.setValue(item);
   };
 
   const editJsonModal = useEditJsonModal();
@@ -890,7 +991,33 @@ DocEditor.ArrayField = (props: FieldProps) => {
                   >
                     Duplicate
                   </Menu.Item>
-
+                  <Menu.Label>CLIPBOARD</Menu.Label>
+                  <Menu.Item
+                    icon={<IconClipboardCopy size={20} />}
+                    // Allow the menu to close before updating the virtual clipboard (avoids layout shift)
+                    // in the menu that may be distracting.
+                    onClick={() =>
+                      setTimeout(() => copyToVirtualClipboard(i), 500)
+                    }
+                  >
+                    Copy
+                  </Menu.Item>
+                  {virtualClipboard.value && (
+                    <>
+                      <Menu.Item
+                        icon={<IconRowInsertTop size={20} />}
+                        onClick={() => pasteBefore(i)}
+                      >
+                        Paste before
+                      </Menu.Item>
+                      <Menu.Item
+                        icon={<IconRowInsertBottom size={20} />}
+                        onClick={() => pasteAfter(i)}
+                      >
+                        Paste after
+                      </Menu.Item>
+                    </>
+                  )}
                   <Menu.Label>CODE</Menu.Label>
                   <Menu.Item
                     icon={<IconBraces size={20} />}
