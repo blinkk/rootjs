@@ -24,6 +24,7 @@ import {
   IconTrash,
   IconTriangleFilled,
 } from '@tabler/icons-preact';
+import {createContext} from 'preact';
 import {
   useContext,
   useEffect,
@@ -33,7 +34,6 @@ import {
   useState,
 } from 'preact/hooks';
 import {route} from 'preact-router';
-
 import * as schema from '../../../core/schema.js';
 import {
   DraftController,
@@ -53,11 +53,16 @@ import {autokey} from '../../utils/rand.js';
 import {getPlaceholderKeys, strFormat} from '../../utils/str-format.js';
 import {formatDateTime} from '../../utils/time.js';
 import {
+  useVirtualClipboard,
+  VirtualClipboard,
+} from '../../utils/virtual-clipboard.js';
+import {
   DocActionEvent,
   DocActionsMenu,
 } from '../DocActionsMenu/DocActionsMenu.js';
 import {DocStatusBadges} from '../DocStatusBadges/DocStatusBadges.js';
 import {useEditJsonModal} from '../EditJsonModal/EditJsonModal.js';
+import {useEditTranslationsModal} from '../EditTranslationsModal/EditTranslationsModal.js';
 import {useLocalizationModal} from '../LocalizationModal/LocalizationModal.js';
 import {usePublishDocModal} from '../PublishDocModal/PublishDocModal.js';
 import './DocEditor.css';
@@ -72,18 +77,11 @@ import {ReferenceField} from './fields/ReferenceField.js';
 import {RichTextField} from './fields/RichTextField.js';
 import {SelectField} from './fields/SelectField.js';
 import {StringField} from './fields/StringField.js';
-import {createContext} from 'preact';
-import {useEditTranslationsModal} from '../EditTranslationsModal/EditTranslationsModal.js';
 
 interface DocEditorProps {
   docId: string;
   collection: schema.Collection;
   draft: UseDraftHook;
-}
-
-interface VirtualClipboard {
-  /** The current value stored in the virtual clipboard. */
-  value: any;
 }
 
 const DEEPLINK_CONTEXT = createContext('');
@@ -99,10 +97,6 @@ function useDeeplink(): string {
 
 function useDocData(): CMSDoc {
   return useContext(DOC_DATA_CONTEXT)!;
-}
-
-function useVirtualClipboard() {
-  return useContext(VIRTUAL_CLIPBOARD_CONTEXT);
 }
 
 export function DocEditor(props: DocEditorProps) {
@@ -899,7 +893,7 @@ DocEditor.ArrayField = (props: FieldProps) => {
   const copyToVirtualClipboard = (index: number) => {
     const key = order[index];
     const item = value[key];
-    virtualClipboard.setValue(item);
+    virtualClipboard.set(item);
   };
 
   const editJsonModal = useEditJsonModal();
