@@ -1,5 +1,15 @@
 # @blinkk/root-cms
 
+## 1.3.21
+
+### Patch Changes
+
+- ede0a94: fix: output correct types for oneOf field
+- c8d8450: feat: add hotkey support to array items in doc editor
+- ed1e402: feat: add preliminary virtual clipboard
+- 9eec99e: feat: allow array copy/paste between content docs
+  - @blinkk/root@1.3.21
+
 ## 1.3.20
 
 ### Patch Changes
