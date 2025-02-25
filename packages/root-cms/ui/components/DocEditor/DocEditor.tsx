@@ -520,6 +520,8 @@ DocEditor.ObjectFieldDrawer = (props: FieldProps) => {
 interface ArrayFieldValue {
   [key: string]: any;
   _array: string[];
+  /** Tracks the last-moved array item. */
+  _moved?: string;
   _new?: string[];
 }
 
@@ -712,6 +714,7 @@ function arrayReducer(state: ArrayFieldValue, action: ArrayAction) {
       return {
         ...data,
         _array: order,
+        _moved: order[action.index - 1],
       };
     }
     case 'moveDown': {
@@ -727,6 +730,7 @@ function arrayReducer(state: ArrayFieldValue, action: ArrayAction) {
       return {
         ...data,
         _array: order,
+        _moved: order[action.index + 1],
       };
     }
     case 'removeAt': {
@@ -811,6 +815,13 @@ DocEditor.ArrayField = (props: FieldProps) => {
     return unsubscribe;
   }, []);
 
+  // Focus the field that was just moved (for hotkey support).
+  useEffect(() => {
+    if (value._moved) {
+      focusFieldHeader(props.deepKey, order.indexOf(value._moved));
+    }
+  }, [value]);
+
   const add = () => {
     dispatch({type: 'add', draft: draft, deepKey: props.deepKey});
   };
@@ -871,22 +882,31 @@ DocEditor.ArrayField = (props: FieldProps) => {
     });
   };
 
+  /** Focus the field header (the clickable "summary" part). */
+  const focusFieldHeader = (deepKey: string, index: number) => {
+    document.getElementById(`summary-for-${deepKey}.${order[index]}`)?.focus();
+  };
+
   const moveUp = (index: number) => {
-    dispatch({
-      type: 'moveUp',
-      draft: draft,
-      deepKey: props.deepKey,
-      index: index,
-    });
+    if (index > 0) {
+      dispatch({
+        type: 'moveUp',
+        draft: draft,
+        deepKey: props.deepKey,
+        index: index,
+      });
+    }
   };
 
   const moveDown = (index: number) => {
-    dispatch({
-      type: 'moveDown',
-      draft: draft,
-      deepKey: props.deepKey,
-      index: index,
-    });
+    if (index < order.length - 1) {
+      dispatch({
+        type: 'moveDown',
+        draft: draft,
+        deepKey: props.deepKey,
+        index: index,
+      });
+    }
   };
 
   /** Copies the item data to the state so it can be "pasted" via the context menu later. */
@@ -923,6 +943,26 @@ DocEditor.ArrayField = (props: FieldProps) => {
     );
   }
 
+  /** Handler for using the arrow keys when the array item's header is focused.  */
+  function handleKeyDown(e: KeyboardEvent, arrayKey: string) {
+    if (!e.target) {
+      return;
+    }
+    // Move the items up and down using the up/down arrow keys.
+    // Collapse and expand the item using the left/right arrow keys.
+    if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      moveUp(order.indexOf(arrayKey));
+    } else if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      moveDown(order.indexOf(arrayKey));
+    } else if (e.key === 'ArrowLeft') {
+      (e.target as HTMLElement).closest('details')!.open = false;
+    } else if (e.key === 'ArrowRight') {
+      (e.target as HTMLElement).closest('details')!.open = true;
+    }
+  }
+
   return (
     <div className="DocEditor__ArrayField">
       <div className="DocEditor__ArrayField__items">
@@ -935,7 +975,12 @@ DocEditor.ArrayField = (props: FieldProps) => {
             key={key}
             open={newlyAdded.includes(key) || itemInDeeplink(key)}
           >
-            <summary className="DocEditor__ArrayField__item__header">
+            <summary
+              id={`summary-for-${props.deepKey}.${order[i]}`}
+              className="DocEditor__ArrayField__item__header"
+              onKeyDown={(e: KeyboardEvent) => handleKeyDown(e, key)}
+              tabIndex={0}
+            >
               <div className="DocEditor__ArrayField__item__header__icon">
                 <IconTriangleFilled size={6} />
               </div>

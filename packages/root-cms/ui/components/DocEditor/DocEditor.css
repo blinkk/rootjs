@@ -275,6 +275,14 @@
   border: 2px solid lightblue;
 }
 
+.DocEditor__ArrayField__item__header:focus:not(:focus-visible) .DocEditor__ArrayField__item__header__preview {
+  text-decoration: underline;
+}
+
+.DocEditor__ArrayField__item__header:focus-visible {
+  outline: -webkit-focus-ring-color auto 1px;
+}
+
 .DocEditor__ArrayField__add {
   margin-top: 16px;
 }
