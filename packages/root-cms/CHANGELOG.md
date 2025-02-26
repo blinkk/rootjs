@@ -1,5 +1,12 @@
 # @blinkk/root-cms
 
+## 1.3.22
+
+### Patch Changes
+
+- 5563d26: fix: update handling of oneOf type defs
+  - @blinkk/root@1.3.22
+
 ## 1.3.21
 
 ### Patch Changes
