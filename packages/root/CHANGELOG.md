@@ -1,5 +1,11 @@
 # @blinkk/root
 
+## 1.3.23
+
+### Patch Changes
+
+- f68d307: fix: subtle race condition in createProdServer
+
 ## 1.3.22
 
 ## 1.3.21
