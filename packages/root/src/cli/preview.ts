@@ -74,7 +74,7 @@ export async function createPreviewServer(options: {
   server.use(sessionMiddleware());
 
   const plugins = rootConfig.plugins || [];
-  configureServerPlugins(
+  await configureServerPlugins(
     server,
     async () => {
       // Add user-configured middlewares from `root.config.ts`.
