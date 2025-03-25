@@ -3,6 +3,7 @@ import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {Request, Response, RootConfig} from '@blinkk/root';
 import {render as renderToString} from 'preact-render-to-string';
+import packageJson from '../package.json' assert {type: 'json'};
 import {CMSPluginOptions} from './plugin.js';
 import {Collection} from './schema.js';
 
@@ -124,8 +125,8 @@ export async function renderApp(
     const uiCssPath = path.join(__dirname, 'ui/ui.css');
     const uiJsPath = path.join(__dirname, 'ui/ui.js');
     const tpl = html
-      .replace('{CSS_URL}', cachebust(`/@fs${uiCssPath}`))
-      .replace('{JS_URL}', cachebust(`/@fs${uiJsPath}`))
+      .replace('{CSS_URL}', cachebust(req, `/@fs${uiCssPath}`))
+      .replace('{JS_URL}', cachebust(req, `/@fs${uiJsPath}`))
       .replaceAll('{NONCE}', nonce);
     html = await req.viteServer!.transformIndexHtml(req.originalUrl, tpl);
     html = html.replace(
@@ -134,8 +135,8 @@ export async function renderApp(
     );
   } else {
     html = html
-      .replace('{CSS_URL}', cachebust('/cms/static/ui.css'))
-      .replace('{JS_URL}', cachebust('/cms/static/ui.js'))
+      .replace('{CSS_URL}', cachebust(req, '/cms/static/ui.css'))
+      .replace('{JS_URL}', cachebust(req, '/cms/static/ui.js'))
       .replaceAll('{NONCE}', nonce);
   }
   res.setHeader('Content-Type', 'text/html');
@@ -211,8 +212,8 @@ export async function renderSignIn(
     const cssPath = path.join(__dirname, 'ui/signin.css');
     const jsPath = path.join(__dirname, 'ui/signin.js');
     const tpl = html
-      .replace('{CSS_URL}', cachebust(`/@fs${cssPath}`))
-      .replace('{JS_URL}', cachebust(`/@fs${jsPath}`))
+      .replace('{CSS_URL}', cachebust(req, `/@fs${cssPath}`))
+      .replace('{JS_URL}', cachebust(req, `/@fs${jsPath}`))
       .replaceAll('{NONCE}', nonce);
     html = await req.viteServer!.transformIndexHtml(req.originalUrl, tpl);
     html = html.replace(
@@ -221,8 +222,8 @@ export async function renderSignIn(
     );
   } else {
     html = html
-      .replace('{CSS_URL}', cachebust('/cms/static/signin.css'))
-      .replace('{JS_URL}', cachebust('/cms/static/signin.js'))
+      .replace('{CSS_URL}', cachebust(req, '/cms/static/signin.css'))
+      .replace('{JS_URL}', cachebust(req, '/cms/static/signin.js'))
       .replaceAll('{NONCE}', nonce);
   }
   res.setHeader('Content-Type', 'text/html');
@@ -277,7 +278,13 @@ function getRefererOrigin(req: Request): string {
   return refererOrigin;
 }
 
-function cachebust(url: string) {
-  const ts = Math.floor(new Date().getTime() / 1000);
-  return `${url}?c=${ts}`;
+/** Modify the given URL to bust the cache. */
+function cachebust(req: Request, url: string) {
+  // In local dev, use the the timestamp to cachebust.
+  // In non-local mode, use the package version.
+  const value =
+    req.hostname === 'localhost'
+      ? Math.floor(new Date().getTime() / 1000)
+      : packageJson.version;
+  return `${url}?c=${value}`;
 }
