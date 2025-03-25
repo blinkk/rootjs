@@ -1,5 +1,12 @@
 # @blinkk/root-cms
 
+## 1.3.24
+
+### Patch Changes
+
+- 0ef8abc: fix: remove sourcemap from cms static files
+  - @blinkk/root@1.3.24
+
 ## 1.3.23
 
 ### Patch Changes
