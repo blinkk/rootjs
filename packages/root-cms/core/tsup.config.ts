@@ -13,7 +13,6 @@ export default defineConfig({
     project: './core/project.ts',
     richtext: './core/richtext.tsx',
   },
-  sourcemap: 'inline',
   target: 'node16',
   dts: {
     entry: [

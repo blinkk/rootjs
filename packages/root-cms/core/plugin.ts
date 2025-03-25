@@ -21,7 +21,6 @@ import {getAuth, DecodedIdToken} from 'firebase-admin/auth';
 import {Firestore, getFirestore} from 'firebase-admin/firestore';
 import * as jsonwebtoken from 'jsonwebtoken';
 import sirv from 'sirv';
-import {generateTypes} from '../cli/generate-types.js';
 import {api} from './api.js';
 import {Action, RootCMSClient} from './client.js';
 
@@ -31,6 +30,14 @@ type AppModule = typeof import('./app.js');
 
 // The session key name used for Root CMS authentication.
 const SESSION_COOKIE_AUTH = 'root-cms-auth';
+
+/** Paths to non-confidential static files. These files won't require authentication. */
+const NONCONF_STATIC_PATHS = [
+  '/cms/static/signin.css',
+  '/cms/static/signin.js',
+  '/cms/static/ui.css',
+  '/cms/static/ui.js',
+];
 
 export interface CMSUser {
   email: string;
@@ -224,11 +231,8 @@ export function cmsPlugin(options: CMSPluginOptions): CMSPlugin {
     if (urlPath === '/cms/api/cron.run') {
       return false;
     }
-    // Allow the signin.css and signin.js files to be rendered without auth.
-    if (
-      urlPath === '/cms/static/signin.css' ||
-      urlPath === '/cms/static/signin.js'
-    ) {
+    // Allow non-confidential static files to be rendered without auth.
+    if (NONCONF_STATIC_PATHS.includes(urlPath)) {
       return false;
     }
     // Require login on all `/cms/` paths.
