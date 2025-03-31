@@ -1,5 +1,12 @@
 # @blinkk/root-cms
 
+## 1.3.25
+
+### Patch Changes
+
+- e6de711: feat: add gif support
+  - @blinkk/root@1.3.25
+
 ## 1.3.24
 
 ### Patch Changes
