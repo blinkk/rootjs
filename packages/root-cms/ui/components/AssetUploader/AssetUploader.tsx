@@ -7,13 +7,6 @@ import {joinClassNames} from '../../utils/classes.js';
 import {UploadFileOptions, uploadFileToGCS} from '../../utils/gcs.js';
 import './AssetUploader.css';
 
-export const IMAGE_MIMETYPES = [
-  'image/png',
-  'image/jpeg',
-  'image/svg+xml',
-  'image/webp',
-];
-
 export interface AssetUploaderProps {
   accept?: string[];
   uploadOptions?: UploadFileOptions;
@@ -168,6 +161,7 @@ AssetUploader.ImagePreview = (props: {asset: any}) => {
           src={formatImageSrc(asset.src)}
           width={asset.width}
           height={asset.height}
+          alt={asset.alt || ''}
         />
         <div className="AssetUploader__ImagePreview__dimens">
           {`${asset.width}x${asset.height}`}
