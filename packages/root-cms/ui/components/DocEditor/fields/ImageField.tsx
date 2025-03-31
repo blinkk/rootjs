@@ -8,12 +8,19 @@ import {joinClassNames} from '../../../utils/classes.js';
 import {uploadFileToGCS} from '../../../utils/gcs.js';
 import {FieldProps} from './FieldProps.js';
 
-export const IMAGE_MIMETYPES = [
-  'image/png',
+/** Mimetypes accepted by the image input field. */
+const IMAGE_MIMETYPES = [
+  'image/gif',
   'image/jpeg',
+  'image/png',
   'image/svg+xml',
   'image/webp',
 ];
+
+/** Builds the `accept` attribute for the `input` field.*/
+function buildAcceptAttribute(exts?: string[]) {
+  return (exts ?? IMAGE_MIMETYPES).join(', ');
+}
 
 export function ImageField(props: FieldProps) {
   const field = props.field as schema.ImageField;
@@ -23,8 +30,7 @@ export function ImageField(props: FieldProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const ref = useRef<HTMLDivElement>(null);
 
-  const exts = field.exts ?? IMAGE_MIMETYPES;
-  const accept = exts.join(', ');
+  const accept = buildAcceptAttribute(field.exts);
 
   async function uploadFile(file: File) {
     setLoading(true);

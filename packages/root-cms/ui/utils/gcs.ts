@@ -1,7 +1,23 @@
 import {ref as storageRef, updateMetadata, uploadBytes} from 'firebase/storage';
 
-export const IMAGE_EXTS = ['jpg', 'png', 'svg', 'webp'];
-export const GCI_SUPPORTED_EXTS = ['jpg', 'png', 'webp'];
+/**
+ * Extensions supported by the Google Image Service.
+ * @see {@link https://cloud.google.com/appengine/docs/standard/services/images?tab=go#image-formats}
+ */
+export const GCI_SUPPORTED_EXTS = [
+  'bmp',
+  'gif',
+  'ico',
+  'jpeg',
+  'jpg',
+  'png',
+  'tiff',
+  'webp',
+];
+
+/** Extensions compatible with the image field. */
+export const IMAGE_EXTS = [...GCI_SUPPORTED_EXTS, 'svg'];
+
 export const VIDEO_EXTS = ['mp4', 'webm'];
 
 export interface UploadFileOptions {
