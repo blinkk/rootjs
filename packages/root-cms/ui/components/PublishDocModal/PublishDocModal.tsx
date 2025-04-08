@@ -183,6 +183,7 @@ export function PublishDocModal(
                     type="datetime-local"
                     disabled={publishType !== 'scheduled'}
                     value={scheduledDate}
+                    min={new Date().toISOString().slice(0, 16)}
                     onChange={(e: Event) => {
                       const target = e.target as HTMLInputElement;
                       setScheduledDate(target.value);
