@@ -1,5 +1,13 @@
 # @blinkk/root-cms
 
+## 1.3.26
+
+### Patch Changes
+
+- 04d78b7: chore: update editorjs deps
+- 19b6032: fix: disallow scheduling in the past
+  - @blinkk/root@1.3.26
+
 ## 1.3.25
 
 ### Patch Changes
