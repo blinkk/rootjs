@@ -390,29 +390,29 @@ importers:
         specifier: workspace:*
         version: link:../root
       '@editorjs/editorjs':
-        specifier: 2.28.2
-        version: 2.28.2
+        specifier: 2.30.8
+        version: 2.30.8
       '@editorjs/header':
-        specifier: 2.8.1
-        version: 2.8.1
+        specifier: 2.8.8
+        version: 2.8.8
       '@editorjs/image':
-        specifier: 2.9.0
-        version: 2.9.0
+        specifier: 2.10.2
+        version: 2.10.2
       '@editorjs/list':
-        specifier: 1.9.0
-        version: 1.9.0
+        specifier: 2.0.6
+        version: 2.0.6
       '@editorjs/nested-list':
-        specifier: 1.4.2
-        version: 1.4.2
+        specifier: 1.4.3
+        version: 1.4.3
       '@editorjs/raw':
-        specifier: 2.5.0
-        version: 2.5.0
+        specifier: 2.5.1
+        version: 2.5.1
       '@editorjs/table':
-        specifier: 2.3.0
-        version: 2.3.0
+        specifier: 2.4.4
+        version: 2.4.4
       '@editorjs/underline':
-        specifier: 1.1.0
-        version: 1.1.0
+        specifier: 1.2.1
+        version: 1.2.1
       '@emotion/react':
         specifier: 11.10.5
         version: 11.10.5(@babel/core@7.17.9)(@preact/compat@17.1.2)
@@ -1029,6 +1029,10 @@ packages:
     resolution: {integrity: sha512-L7Q5PET8PjKcBT5wp7VR+FCjwCi5PUp7rd/XjsgQ0CI5FJz0DphyHGRILMuDUdCW2MQT9NHbVr4QP31vwAkS/A==}
     dev: true
 
+  /@codexteam/icons@0.3.3:
+    resolution: {integrity: sha512-cp7mkZPgmBuSxigTm3Vb+DtVHYeX7qXfQd7o05vcLD8Ag5WvRlol2QSn5P10k0CDAJwmkH9nQGQLBycErS9lsQ==}
+    dev: true
+
   /@colors/colors@1.5.0:
     resolution: {integrity: sha512-ooWCrlZP11i8GImSjTHYHLkvFDP48nS4+204nGb1RiX/WXYHmJA2III9/e2DWVabCESdW7hBAEzHRqUn9OUVvQ==}
     engines: {node: '>=0.1.90'}
@@ -1062,50 +1066,51 @@ packages:
       kuler: 2.0.0
     dev: true
 
-  /@editorjs/editorjs@2.28.2:
-    resolution: {integrity: sha512-g6V0Nd3W9IIWMpvxDNTssQ6e4kxBp1Y0W4GIf8cXRlmcBp3TUjrgCYJQmNy3l2a6ZzhyBAoVSe8krJEq4g7PQw==}
+  /@editorjs/editorjs@2.30.8:
+    resolution: {integrity: sha512-ClFuxI1qZTfXPJTacQfsJtOUP6bKoIe6BQNdAvGsDTDVwMnZEzoaSOwvUpdZEE56xppVfQueNK/1MElV9SJKHg==}
     dev: true
 
-  /@editorjs/header@2.8.1:
-    resolution: {integrity: sha512-y0HVXRP7m2W617CWo3fsb5HhXmSLaRpb9GzFx0Vkp/HEm9Dz5YO1s8tC7R8JD3MskwoYh7V0hRFQt39io/r6hA==}
+  /@editorjs/header@2.8.8:
+    resolution: {integrity: sha512-bsMSs34u2hoi0UBuRoc5EGWXIFzJiwYgkFUYQGVm63y5FU+s8zPBmVx5Ip2sw1xgs0fqfDROqmteMvvmbCy62w==}
     dependencies:
       '@codexteam/icons': 0.0.5
+      '@editorjs/editorjs': 2.30.8
     dev: true
 
-  /@editorjs/image@2.9.0:
-    resolution: {integrity: sha512-xItihKJFiWJ06SMtLWQZvzHv4LRPNAFZYaHAXesBFzXvWwUrtVaVMcNSf0eNnw3InrPO3Po1vZRRgpsT+Ya3Bg==}
+  /@editorjs/image@2.10.2:
+    resolution: {integrity: sha512-SU0nP9NhqwA7+Jlco/E7zjYjtRUrVGSOW8bsrrEnH8my588UW7mPGa1zwAHFs/UMB0x8LXKOb1iq40db+2iC6A==}
     dependencies:
-      '@codexteam/icons': 0.0.6
+      '@codexteam/icons': 0.3.3
     dev: true
 
-  /@editorjs/list@1.9.0:
-    resolution: {integrity: sha512-BQEvZW4vi0O0dBvGNljiKxiE89vMSHoM2Tu2OzKUndoj7pY9AxqpgCh1qvwIVsJAlG4Lbt/vBFQilnoStMmI6A==}
+  /@editorjs/list@2.0.6:
+    resolution: {integrity: sha512-QmmRAMtIBlO9k8LxfiqhWM+CjrA9r1F5th3cI9UFhDMC78YqFdFNg+dWrH57bAW4063HJfS1ygbGoH/LfHBkww==}
     dependencies:
-      '@codexteam/icons': 0.0.4
+      '@codexteam/icons': 0.3.3
     dev: true
 
-  /@editorjs/nested-list@1.4.2:
-    resolution: {integrity: sha512-qb1dAoJ+bihqmlR3822TC2GuIxEjTCLTZsZVWNces3uJIZ+W4019G3IJKBt/MOOgz4Evzad/RvUEKwPCPe6YOQ==}
+  /@editorjs/nested-list@1.4.3:
+    resolution: {integrity: sha512-3jTJd6H2Zwe8SeiI9li9AolkCxFVitEnCpJjDI6+la/HslSJC827fHivc9hue6JmC8esA4yri0KCMyp8N4ykww==}
     dependencies:
       '@codexteam/icons': 0.0.2
     dev: true
 
-  /@editorjs/raw@2.5.0:
-    resolution: {integrity: sha512-ZOYKgR/sutOXHQ4uaWg8KzZ6yFJZCMTndezlN257GGsQ3Sa3ERcK9wZHKgAMNXaDhdKx9fDuojxRRcYvz6l9aQ==}
+  /@editorjs/raw@2.5.1:
+    resolution: {integrity: sha512-h7CjXtfSTe4Bj1CL84ch5NW0q0CdrlWsLzQ/kbaFTgx914CzKz4Ug+xgdvytVO1dd1QzB5/HCW0ic1VxtgkhMQ==}
     dependencies:
       '@codexteam/icons': 0.0.4
     dev: true
 
-  /@editorjs/table@2.3.0:
-    resolution: {integrity: sha512-/dKE6A5FkukX/FpvIyQGsewwXglZk8YbXpEp9vkB6Ec4ETLeGJMxObCcYqbXqVod+IU/a1tFH+j3lsD8ASD41g==}
+  /@editorjs/table@2.4.4:
+    resolution: {integrity: sha512-2wWjxk48C9Z7uaBZIS5dML81c2VsD47Va9J4RDd2UboxcnYV8OZ4oYxKafH5RJIGPj8ykGaROIzyDVR1N4e7Cg==}
     dependencies:
       '@codexteam/icons': 0.0.6
     dev: true
 
-  /@editorjs/underline@1.1.0:
-    resolution: {integrity: sha512-vQj2ROW1KreD31QHlhaPikmDJGWYzRBusN4Zyfwl9nIIQCByt4S8fZQpsrRvH4sct5mkirsHllNT00rJlqHK7Q==}
+  /@editorjs/underline@1.2.1:
+    resolution: {integrity: sha512-LjJ01ia6Pj0Z/elifycp9+T1bQs0eXNnIcEYKOlk0sGHLy88DPcBOh9oz1i+uWarZ4AjGsvSMaptpWe+yQNsjQ==}
     dependencies:
-      '@codexteam/icons': 0.0.6
+      '@codexteam/icons': 0.3.3
     dev: true
 
   /@electric-sql/pglite@0.2.17:
@@ -2592,15 +2597,15 @@ packages:
       '@types/gapi.client.discovery-v1': 0.0.4
     dev: true
 
-  /@maxim_mazurok/gapi.client.drive-v3@0.0.20250323:
-    resolution: {integrity: sha512-7T3pfTCn01a+PFN7My+rdT/SMOQ9fe5B3AVlgTR26brUMFSFIka9bVDCdK2vuNeOfdFhZ9Gze3EEWPtDLwT+rg==}
+  /@maxim_mazurok/gapi.client.drive-v3@0.0.20250401:
+    resolution: {integrity: sha512-yAdKB89VS1mHLoUSxptE4X77dqu1w7goZpN26PMladlkgycOG81sIUZNzomObEOeQdtnJ+8FG4Ae4YJbYFidTg==}
     dependencies:
       '@types/gapi.client': 1.0.8
       '@types/gapi.client.discovery-v1': 0.0.4
     dev: true
 
-  /@maxim_mazurok/gapi.client.sheets-v4@0.0.20250318:
-    resolution: {integrity: sha512-VbBZBMj80hC3mVsk4ILVSxMTn2oUvI3V1b6QEsiZaw5LJC7jgTMEW7BM2rl5bzAIWwVMjyHEkU9fBrlvL/IoNQ==}
+  /@maxim_mazurok/gapi.client.sheets-v4@0.0.20250401:
+    resolution: {integrity: sha512-LmUNEkO7m4bLPBOfH5J66BLxYkpISWitwpYCfk75RZFcZ0kKAIotZhQ5uf5scmB5ntBIIUvU2lQSA1BArwtaaA==}
     dependencies:
       '@types/gapi.client': 1.0.8
       '@types/gapi.client.discovery-v1': 0.0.4
@@ -3452,13 +3457,13 @@ packages:
   /@types/gapi.client.drive-v3@0.0.4:
     resolution: {integrity: sha512-jE37dJ0EzAdY0aJPFOp20xmec/aO0P4HtUIA9k07RMPyedFDOcuMlSac1r0PklwQdgXF7BHaMoObNHNAnwSQUQ==}
     dependencies:
-      '@maxim_mazurok/gapi.client.drive-v3': 0.0.20250323
+      '@maxim_mazurok/gapi.client.drive-v3': 0.0.20250401
     dev: true
 
   /@types/gapi.client.sheets-v4@0.0.4:
     resolution: {integrity: sha512-6kTJ7aDMAElfdQV1XzVJmZWjgbibpa84DMuKuaN8Cwqci/dkglPyHXKvsGrRugmuYvgFYr35AQqwz6j3q8R0dw==}
     dependencies:
-      '@maxim_mazurok/gapi.client.sheets-v4': 0.0.20250318
+      '@maxim_mazurok/gapi.client.sheets-v4': 0.0.20250401
     dev: true
 
   /@types/gapi.client@1.0.8:
@@ -3936,9 +3941,6 @@ packages:
 
   /ajv-formats@3.0.1:
     resolution: {integrity: sha512-8iUql50EUR+uUcdRQ3HDqa6EVyo3docL8g5WJ3FNcWmu62IbkGUue/pEyLBW8VGKKucTPgqeks4fIU1DA4yowQ==}
-    peerDependenciesMeta:
-      ajv:
-        optional: true
     dependencies:
       ajv: 8.17.1
 
