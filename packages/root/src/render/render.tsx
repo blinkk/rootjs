@@ -393,6 +393,14 @@ export class Renderer {
     });
   }
 
+  /**
+   * Constructs and returns the project's sitemap.
+   *
+   * The sitemap is used to:
+   * - determine all paths to build in SSG mode
+   * - display links on the dev server's 404 page
+   * - construct alternates for localized URL paths
+   */
   async getSitemap(): Promise<Sitemap> {
     const sitemap: Sitemap = {};
     const sitemapItemAlts: Record<
@@ -429,6 +437,11 @@ export class Renderer {
           hrefLang: hrefLang,
           alts: sitemapItemAlts[defaultUrlPath],
         };
+        if (sitemap[routePath.urlPath]) {
+          console.warn(
+            `multiple routes generate the same path: ${routePath.urlPath}. ensure each route generates a unique path.`
+          );
+        }
         sitemap[routePath.urlPath] = sitemapItem;
       });
     });
