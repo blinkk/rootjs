@@ -30,6 +30,7 @@
 .EditTranslationsModal__table td:first-child {
   width: 350px;
   padding-left: 10px;
+  vertical-align: top;
 }
 
 .EditTranslationsModal__table tbody td {
@@ -42,6 +43,8 @@
   background-color: #f8f9fa;
   border: 1px solid #dee2e6;
   padding: 10px;
+  position: sticky;
+  top: 0;
   border-radius: 4px;
   height: 100%;
   white-space: pre-wrap;
