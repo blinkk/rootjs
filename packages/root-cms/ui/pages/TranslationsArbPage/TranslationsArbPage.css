@@ -22,14 +22,30 @@
 }
 
 .TranslationsArbPage__RequestForm {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
   margin-top: 20px;
+}
+
+.TranslationsArbPage__RequestForm__textareaWrapper {
   max-width: 600px;
 }
 
 .TranslationsArbPage__RequestForm__submit {
-  margin-top: 16px;
+  background-color: white;
+  display: flex;
+  flex-direction: row;
+  gap: 10px;
+  position: sticky;
+  top: -48px; /* Same as page padding. */
+  padding: 8px 0;
 }
 
 .TranslationsArbPage__RequestForm__error {
   color: red;
+}
+
+.TranslationsArbPage__Preview__table__row {
+  border-top: 1px solid var(--color-border);
 }

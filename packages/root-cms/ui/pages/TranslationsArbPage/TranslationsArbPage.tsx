@@ -1,13 +1,15 @@
-import {Breadcrumbs, Button, Textarea} from '@mantine/core';
+import {Breadcrumbs, Button, Table, Textarea} from '@mantine/core';
+import {IconFileDownload} from '@tabler/icons-preact';
 import {ChangeEvent, useState} from 'preact/compat';
 import {Heading} from '../../components/Heading/Heading.js';
 import {Text} from '../../components/Text/Text.js';
 import {Layout} from '../../layout/Layout.js';
-import './TranslationsArbPage.css';
 import {Arb} from '../../utils/arb.js';
 import {getDraftDocs} from '../../utils/doc.js';
 import {extractFields} from '../../utils/extract.js';
 import {sourceHash} from '../../utils/l10n.js';
+
+import './TranslationsArbPage.css';
 
 export function TranslationsArbPage() {
   return (
@@ -34,69 +36,86 @@ TranslationsArbPage.RequestForm = () => {
   const [docIdsText, setDocIdsText] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [preview, setPreview] = useState(null as Arb | null);
+
+  async function buildArbFile(docIds: string[]) {
+    const drafts = await getDraftDocs(docIds);
+    const arb = new Arb();
+
+    const rootConfig = window.__ROOT_CTX.rootConfig;
+    const websiteUrlParts = [rootConfig.domain];
+    if (rootConfig.base && rootConfig.base !== '/') {
+      websiteUrlParts.push(rootConfig.base);
+    }
+    const websiteUrl = websiteUrlParts.join('');
+
+    arb.setMeta({
+      locale: 'en',
+      context: websiteUrl,
+      last_modified: new Date().toISOString(),
+    });
+    console.log(drafts);
+
+    await Promise.all(
+      Object.entries(drafts).map(async ([docId, draft]) => {
+        const strings = new Set<string>();
+        const collectionId = docId.split('/')[0];
+        const collection = window.__ROOT_CTX.collections[collectionId];
+        if (!collection) {
+          console.log(`not found: ${collectionId}`);
+          return;
+        }
+        extractFields(strings, collection.fields, draft.fields || {});
+
+        for (const source of strings) {
+          const hash = await sourceHash(source);
+          let meta = arb.get(hash)?.meta;
+          if (meta) {
+            const contextIds = meta.context!.split(', ');
+            contextIds.push(docId);
+            contextIds.sort();
+            meta.context = contextIds.join(', ');
+          } else {
+            meta = {
+              context: docId,
+            };
+          }
+          arb.add(hash, source, meta);
+        }
+      })
+    );
+    return arb;
+  }
+
+  async function onPreview() {
+    try {
+      const docIds = parseDocIds(docIdsText);
+      const arb = await buildArbFile(docIds);
+      setPreview(arb);
+    } catch (err) {
+      console.error(err);
+      setError(`failed to preview arb: ${err}`);
+    }
+  }
 
   async function onDownloadArb() {
     try {
       setLoading(true);
       console.log('download arb');
       const docIds = parseDocIds(docIdsText);
-      const drafts = await getDraftDocs(docIds);
-      const arb = new Arb();
-
-      const rootConfig = window.__ROOT_CTX.rootConfig;
-      const websiteUrlParts = [rootConfig.domain];
-      if (rootConfig.base && rootConfig.base !== '/') {
-        websiteUrlParts.push(rootConfig.base);
-      }
-      const websiteUrl = websiteUrlParts.join('');
-
-      arb.setMeta({
-        locale: 'en',
-        context: websiteUrl,
-        last_modified: new Date().toISOString(),
-      });
-      console.log(drafts);
-
-      await Promise.all(
-        Object.entries(drafts).map(async ([docId, draft]) => {
-          const strings = new Set<string>();
-          const collectionId = docId.split('/')[0];
-          const collection = window.__ROOT_CTX.collections[collectionId];
-          if (!collection) {
-            console.log(`not found: ${collectionId}`);
-            return;
-          }
-          extractFields(strings, collection.fields, draft.fields || {});
-
-          for (const source of strings) {
-            const hash = await sourceHash(source);
-            let meta = arb.get(hash)?.meta;
-            if (meta) {
-              const contextIds = meta.context!.split(', ');
-              contextIds.push(docId);
-              contextIds.sort();
-              meta.context = contextIds.join(', ');
-            } else {
-              meta = {
-                context: docId,
-              };
-            }
-            arb.add(hash, source, meta);
-          }
-        })
-      );
+      const arb = await buildArbFile(docIds);
 
       const arbContent = arb.toString();
       const res = new Response(arbContent);
       const blob = await res.blob();
-      const file = window.URL.createObjectURL(blob);
 
-      const windowTab = window.open(file, '_blank');
-      if (windowTab) {
-        windowTab.focus();
-      }
-      // window.location.assign(file);
-      window.URL.revokeObjectURL(file);
+      const link = document.createElement('a');
+      link.href = window.URL.createObjectURL(blob);
+      link.download = buildArbFilename(docIds);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(link.href);
 
       setLoading(false);
     } catch (err) {
@@ -106,35 +125,75 @@ TranslationsArbPage.RequestForm = () => {
   }
 
   return (
-    <form className="TranslationsArbPage__RequestForm">
-      <Textarea
-        size="xs"
-        radius={0}
-        autosize
-        minRows={8}
-        maxRows={20}
-        value={docIdsText}
-        placeholder="Pages/index"
-        onChange={(e: ChangeEvent<HTMLTextAreaElement>) => {
-          setDocIdsText(e.currentTarget.value || '');
-        }}
-      />
-      <Button
-        className="TranslationsArbPage__RequestForm__submit"
-        color="blue"
-        size="xs"
-        loading={loading}
-        onClick={() => onDownloadArb()}
-      >
-        Download ARB
-      </Button>
-
+    <form
+      className="TranslationsArbPage__RequestForm"
+      onSubmit={(e) => {
+        e.preventDefault();
+        onDownloadArb();
+      }}
+    >
+      <div className="TranslationsArbPage__RequestForm__textareaWrapper">
+        <Textarea
+          required={true}
+          size="xs"
+          radius={0}
+          autosize
+          minRows={8}
+          maxRows={20}
+          value={docIdsText}
+          placeholder="Pages/index"
+          onChange={(e: ChangeEvent<HTMLTextAreaElement>) => {
+            setDocIdsText(e.currentTarget.value || '');
+          }}
+        />
+      </div>
+      <div className="TranslationsArbPage__RequestForm__submit">
+        <Button variant="default" color="dark" size="xs" onClick={onPreview}>
+          Preview
+        </Button>
+        <Button
+          color="blue"
+          size="xs"
+          loading={loading}
+          type="submit"
+          leftIcon={<IconFileDownload size={16} strokeWidth={1.75} />}
+        >
+          Download ARB
+        </Button>
+      </div>
       {error && (
         <Text as="p" className="TranslationsArbPage__RequestForm__error">
           {error}
         </Text>
       )}
+      {preview && <TranslationsArbPage.Preview arb={preview} />}
     </form>
+  );
+};
+
+TranslationsArbPage.Preview = (props: {arb: Arb}) => {
+  const values = props.arb.list().filter((item) => !!item.meta);
+  console.log(values);
+  return (
+    <Table verticalSpacing="xs" highlightOnHover fontSize="xs">
+      <thead>
+        <tr>
+          <th>source</th>
+          <th>context</th>
+        </tr>
+      </thead>
+      <tbody>
+        {values.map((item) => (
+          <tr class="TranslationsArbPage__Preview__Table__row">
+            <td>{item.source}</td>
+            <td>
+              {item.meta?.context}
+              {item.meta?.description && <>/ {item.meta.description}</>}
+            </td>
+          </tr>
+        ))}
+      </tbody>
+    </Table>
   );
 };
 
@@ -147,4 +206,32 @@ function parseDocIds(docIdsText: string): string[] {
 
 function testValidDocId(docId: string): boolean {
   return !!docId && docId.includes('/') && docId.split('/').length === 2;
+}
+
+/**
+ * Builds a filename for the generated ARB file. The format is `<project>_<docId>_<timestamp>.arb`.
+ */
+function buildArbFilename(docIds: string[]) {
+  // Format date as `YYYYMMDDtHHMM`.
+  const now = new Date();
+  const pad = (n: number) => n.toString().padStart(2, '0');
+  const timestamp = `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(
+    now.getDate()
+  )}t${pad(now.getHours())}${pad(now.getMinutes())}`;
+  const projectName =
+    window.__ROOT_CTX.rootConfig.projectName ||
+    window.__ROOT_CTX.rootConfig.projectId;
+  const parts = [slugify(projectName)];
+  if (docIds.length === 1) {
+    parts.push(slugify(docIds[0]));
+  }
+  parts.push(timestamp);
+  return `${parts.join('_')}.arb`;
+}
+
+function slugify(str: string): string {
+  return str
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-|-$/g, '');
 }

@@ -36,6 +36,19 @@ export class Arb {
     return {source, meta: this.data[`@${key}`]};
   }
 
+  list(): {key: string; source: string; meta?: ArbSourceMeta}[] {
+    const result: {key: string; source: string; meta?: ArbSourceMeta}[] = [];
+    Object.entries(this.data).forEach(([key]) => {
+      if (key.startsWith('@@')) {
+        return;
+      }
+      const source = this.data[key];
+      const meta = this.data[`@${key}`];
+      result.push({key, source, meta});
+    });
+    return result;
+  }
+
   toJson() {
     return {...this.data};
   }
