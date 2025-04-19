@@ -1,5 +1,12 @@
 # @blinkk/root-cms
 
+## 1.3.27
+
+### Patch Changes
+
+- 72aabac: fix: improve arb download feature
+  - @blinkk/root@1.3.27
+
 ## 1.3.26
 
 ### Patch Changes
