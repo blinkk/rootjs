@@ -5,8 +5,10 @@ import {useState, useRef} from 'preact/hooks';
 import {useModalTheme} from '../../hooks/useModalTheme.js';
 import {joinClassNames} from '../../utils/classes.js';
 import {cmsPublishDoc, cmsScheduleDoc} from '../../utils/doc.js';
+import {getLocalISOString} from '../../utils/time.js';
 import {DocDiffViewer} from '../DocDiffViewer/DocDiffViewer.js';
 import {Text} from '../Text/Text.js';
+
 import './PublishDocModal.css';
 
 const MODAL_ID = 'PublishDocModal';
@@ -126,7 +128,13 @@ export function PublishDocModal(
   return (
     <div className="PublishDocModal">
       <div className="PublishDocModal__content">
-        <form className="PublishDocModal__form">
+        <form
+          className="PublishDocModal__form"
+          onSubmit={(e) => {
+            e.preventDefault();
+            onSubmit();
+          }}
+        >
           <div className="PublishDocModal__form__publishOptions">
             <div className="PublishDocModal__form__publishOptions__options">
               <label
@@ -183,7 +191,7 @@ export function PublishDocModal(
                     type="datetime-local"
                     disabled={publishType !== 'scheduled'}
                     value={scheduledDate}
-                    min={new Date().toISOString().slice(0, 16)}
+                    min={getLocalISOString()}
                     onChange={(e: Event) => {
                       const target = e.target as HTMLInputElement;
                       setScheduledDate(target.value);
@@ -213,7 +221,7 @@ export function PublishDocModal(
               color="dark"
               disabled={disabled}
               loading={loading}
-              onClick={onSubmit}
+              type="submit"
             >
               {buttonLabel}
             </Button>

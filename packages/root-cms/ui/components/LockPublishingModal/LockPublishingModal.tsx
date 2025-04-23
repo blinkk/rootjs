@@ -7,7 +7,9 @@ import {useState} from 'preact/hooks';
 import {useModalTheme} from '../../hooks/useModalTheme.js';
 import {cmsLockPublishing, cmsUnlockPublishing} from '../../utils/doc.js';
 import {notifyErrors} from '../../utils/notifications.js';
+import {getLocalISOString} from '../../utils/time.js';
 import {Text} from '../Text/Text.js';
+
 import './LockPublishingModal.css';
 
 const MODAL_ID = 'LockPublishingModal';
@@ -108,6 +110,7 @@ LockPublishingModal.Lock = (
               <input
                 name="until"
                 type="datetime-local"
+                min={getLocalISOString()}
                 onChange={(e: Event) => {
                   const target = e.target as HTMLInputElement;
                   const datestr = target.value;
