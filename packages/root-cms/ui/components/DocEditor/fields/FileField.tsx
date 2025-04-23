@@ -209,6 +209,7 @@ function ImagePreview(props: {src: string; width?: number; height?: number}) {
         src={props.src}
         width={props.width}
         height={props.height}
+        loading="lazy"
       />
       {props.width && props.height && (
         <div className="DocEditor__FileField__ImagePreview__dimens">

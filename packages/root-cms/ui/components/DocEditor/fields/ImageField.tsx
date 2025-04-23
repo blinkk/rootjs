@@ -75,14 +75,14 @@ export function ImageField(props: FieldProps) {
     }
   }
 
-  async function setAltText(newValue: string) {
+  function setAltText(newValue: string) {
     setImg((currentImg: any) => {
       return Object.assign({}, currentImg, {alt: newValue});
     });
     props.draft.updateKey(`${props.deepKey}.alt`, newValue);
   }
 
-  async function removeImage() {
+  function removeImage() {
     setImg({});
     props.draft.removeKey(props.deepKey);
   }
@@ -162,6 +162,7 @@ export function ImageField(props: FieldProps) {
               src={img.gciUrl || img.src}
               width={img.width}
               height={img.height}
+              loading="lazy"
             />
             <div className="DocEditor__ImageField__imagePreview__dimens">
               {`${img.width}x${img.height}`}
