@@ -4,8 +4,9 @@ import {IconFileUpload, IconTrash} from '@tabler/icons-preact';
 import {useEffect, useRef, useState} from 'preact/hooks';
 import * as schema from '../../../../core/schema.js';
 import {joinClassNames} from '../../../utils/classes.js';
-import {VIDEO_EXTS, getFileExt, uploadFileToGCS} from '../../../utils/gcs.js';
+import {GCI_URL_PREFIX, IMAGE_EXTS, VIDEO_EXTS, getFileExt, uploadFileToGCS} from '../../../utils/gcs.js';
 import {FieldProps} from './FieldProps.js';
+import {ChangeEvent} from 'preact/compat';
 
 export function FileField(props: FieldProps) {
   const field = props.field as schema.FileField;
@@ -32,8 +33,15 @@ export function FileField(props: FieldProps) {
         cacheControl: field.cacheControl,
         preserveFilename: field.preserveFilename,
       });
-      props.draft.updateKey(props.deepKey, uploadedFile);
-      setFile(uploadedFile);
+      setFile((currentFile: any) => {
+        let newFile: any = {...uploadedFile};
+        if (currentFile?.src && testShouldHaveAltText(currentFile.src)) {
+          // Preserve the "alt" text when the file changes.
+          newFile.alt = currentFile?.alt || '';
+        }
+        props.draft.updateKey(props.deepKey, newFile);
+        return newFile;
+      });
       setLoading(false);
     } catch (err) {
       console.error('file upload failed');
@@ -60,6 +68,13 @@ export function FileField(props: FieldProps) {
     if (file) {
       uploadFile(file);
     }
+  }
+
+  function setAltText(newValue: string) {
+    setFile((currentFile: any) => {
+      return Object.assign({}, currentFile, {alt: newValue});
+    });
+    props.draft.updateKey(`${props.deepKey}.alt`, newValue);
   }
 
   const handleDragEnter = (e: DragEvent) => {
@@ -132,19 +147,36 @@ export function FileField(props: FieldProps) {
           </Tooltip>
         </div>
       )}
-      {file && file.src && isVideoFile(file.src) && (
+      {file && file.src && testIsImageFile(file.src) && (
+        <ImagePreview key={file.src} {...file} />
+      )}
+      {file && file.src && testIsVideoFile(file.src) && (
         <VideoPreview key={file.src} {...file} />
       )}
       {file && file.src ? (
-        <div className="DocEditor__FileField__file">
-          <TextInput
-            className="DocEditor__FileField__file__url"
-            size="xs"
-            radius={0}
-            value={file.src}
-            disabled={true}
-          />
-        </div>
+        <>
+          <div className="DocEditor__FileField__file">
+            <TextInput
+              className="DocEditor__FileField__file__url"
+              size="xs"
+              radius={0}
+              value={file.src}
+              disabled={true}
+            />
+          </div>
+          {testShouldHaveAltText(file.src) && (
+            <TextInput
+              className="DocEditor__FileField__file__alt"
+              size="xs"
+              radius={0}
+              value={file.alt || ''}
+              onChange={(e: ChangeEvent<HTMLInputElement>) => {
+                setAltText(e.currentTarget.value);
+              }}
+              label="Alt text"
+            />
+          )}
+        </>
       ) : (
         <div className="DocEditor__FileField__noFile">No file</div>
       )}
@@ -166,6 +198,23 @@ export function FileField(props: FieldProps) {
           {loading ? 'Uploading...' : 'Upload file'}
         </div>
       </label>
+    </div>
+  );
+}
+
+function ImagePreview(props: {src: string; width?: number; height?: number}) {
+  return (
+    <div className="DocEditor__FileField__ImagePreview">
+      <img
+        src={props.src}
+        width={props.width}
+        height={props.height}
+      />
+      {props.width && props.height && (
+        <div className="DocEditor__FileField__ImagePreview__dimens">
+          {`${props.width}x${props.height}`}
+        </div>
+      )}
     </div>
   );
 }
@@ -193,10 +242,25 @@ function VideoPreview(props: {src: string; width?: number; height?: number}) {
   );
 }
 
-function isVideoFile(src: string) {
+function testIsImageFile(src: string) {
+  if (!src) {
+    return false;
+  }
+  if (src.startsWith(GCI_URL_PREFIX)) {
+    return true;
+  }
+  const ext = getFileExt(src);
+  return IMAGE_EXTS.includes(ext);
+}
+
+function testIsVideoFile(src: string) {
   if (!src) {
     return false;
   }
   const ext = getFileExt(src);
   return VIDEO_EXTS.includes(ext);
+}
+
+function testShouldHaveAltText(src: string) {
+  return testIsImageFile(src) || testIsVideoFile(src);
 }

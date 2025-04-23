@@ -20,6 +20,8 @@ export const IMAGE_EXTS = [...GCI_SUPPORTED_EXTS, 'svg'];
 
 export const VIDEO_EXTS = ['mp4', 'webm'];
 
+export const GCI_URL_PREFIX = 'https://lh3.googleusercontent.com/';
+
 export interface UploadFileOptions {
   preserveFilename?: boolean;
   cacheControl?: string;
