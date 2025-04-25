@@ -5,6 +5,7 @@ import {Heading} from '../../components/Heading/Heading.js';
 import {Text} from '../../components/Text/Text.js';
 import {Layout} from '../../layout/Layout.js';
 import {Arb} from '../../utils/arb.js';
+import {fetchCollectionSchema} from '../../utils/collection.js';
 import {getDraftDocs} from '../../utils/doc.js';
 import {extractFields} from '../../utils/extract.js';
 import {sourceHash} from '../../utils/l10n.js';
@@ -56,34 +57,30 @@ TranslationsArbPage.RequestForm = () => {
     });
     console.log(drafts);
 
-    await Promise.all(
-      Object.entries(drafts).map(async ([docId, draft]) => {
-        const strings = new Set<string>();
-        const collectionId = docId.split('/')[0];
-        const collection = window.__ROOT_CTX.collections[collectionId];
-        if (!collection) {
-          console.log(`not found: ${collectionId}`);
-          return;
-        }
-        extractFields(strings, collection.fields, draft.fields || {});
+    for (const docId in drafts) {
+      const draft = drafts[docId];
+      const strings = new Set<string>();
+      const collectionId = docId.split('/')[0];
+      const schema = await fetchCollectionSchema(collectionId);
+      extractFields(strings, schema.fields, draft.fields || {});
 
-        for (const source of strings) {
-          const hash = await sourceHash(source);
-          let meta = arb.get(hash)?.meta;
-          if (meta) {
-            const contextIds = meta.context!.split(', ');
-            contextIds.push(docId);
-            contextIds.sort();
-            meta.context = contextIds.join(', ');
-          } else {
-            meta = {
-              context: docId,
-            };
-          }
-          arb.add(hash, source, meta);
+      for (const source of strings) {
+        const hash = await sourceHash(source);
+        let meta = arb.get(hash)?.meta;
+        if (meta) {
+          const contextIds = meta.context!.split(', ');
+          contextIds.push(docId);
+          contextIds.sort();
+          meta.context = contextIds.join(', ');
+        } else {
+          meta = {
+            context: docId,
+          };
         }
-      })
-    );
+        arb.add(hash, source, meta);
+      }
+    }
+
     return arb;
   }
 

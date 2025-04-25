@@ -560,7 +560,7 @@ export function cmsPlugin(options: CMSPluginOptions): CMSPlugin {
       server.use('/cms/static', sirv(staticDir, {dev: false}));
 
       // Register API handlers.
-      api(server);
+      api(server, {getRenderer});
 
       // Render the CMS SPA.
       server.use('/cms', async (req: Request, res: Response) => {

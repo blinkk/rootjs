@@ -5,10 +5,65 @@ import {RootCMSClient} from './client.js';
 import {runCronJobs} from './cron.js';
 import {arrayToCsv, csvToArray} from './csv.js';
 
+type AppModule = typeof import('./app.js');
+
+export interface ApiOptions {
+  getRenderer: (req: Request) => Promise<AppModule>;
+}
+
 /**
  * Registers API middleware handlers.
  */
-export function api(server: Server) {
+export function api(server: Server, options: ApiOptions) {
+  /**
+   * Returns the schema for a collection.
+   *
+   * Example:
+   *
+   * ```
+   * POST /cms/api/collection.get
+   * {"name": "BlogPosts"}
+   * ```
+   *
+   * =>
+   *
+   * ```
+   * {
+   *   "success": true,
+   *   "data": {"name": "BlogPosts", "description": "...", "fields": [...]}
+   * }
+   * ```
+   */
+  server.use('/cms/api/collection.get', async (req: Request, res: Response) => {
+    if (
+      req.method !== 'POST' ||
+      !String(req.get('content-type')).startsWith('application/json')
+    ) {
+      res.status(400).json({success: false, error: 'BAD_REQUEST'});
+      return;
+    }
+
+    const reqBody = req.body || {};
+    if (!reqBody.collectionId) {
+      res.status(400).json({success: false, error: 'MISSING_COLLECTION_ID'});
+      return;
+    }
+
+    try {
+      const app = await options.getRenderer(req);
+      const collections = app.getCollections();
+      const collection = collections[reqBody.collectionId];
+      if (!collection) {
+        res.status(404).json({success: false, error: 'NOT_FOUND'});
+        return;
+      }
+      res.status(200).json({success: true, data: collection});
+    } catch (err) {
+      console.error(err.stack || err);
+      res.status(500).json({success: false, error: 'UNKNOWN'});
+    }
+  });
+
   /**
    * Runs CMS cron jobs.
    */
@@ -122,7 +177,7 @@ export function api(server: Server) {
     }
     const cmsClient = new RootCMSClient(req.rootConfig!);
     try {
-      await cmsClient.syncDataSource(dataSourceId, {syncedBy: req.user.email});
+      await cmsClient.syncDataSource(dataSourceId, {syncedBy: req.user!.email});
       res.status(200).json({success: true, id: dataSourceId});
     } catch (err) {
       console.error(err.stack || err);

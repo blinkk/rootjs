@@ -1,16 +1,14 @@
 import {doc, getDoc} from 'firebase/firestore';
 import * as schema from '../../core/schema.js';
 import {RichTextData} from '../components/RichTextEditor/RichTextEditor.js';
+import {fetchCollectionSchema} from './collection.js';
 import {normalizeString} from './l10n.js';
 
 export async function extractStringsForDoc(docId: string) {
   const db = window.firebase.db;
   const projectId = window.__ROOT_CTX.rootConfig.projectId;
   const [collectionId, slug] = docId.split('/', 2);
-  const rootCollection = window.__ROOT_CTX.collections[collectionId];
-  if (!rootCollection) {
-    throw new Error(`collection not found: ${collectionId}`);
-  }
+  const schema = await fetchCollectionSchema(collectionId);
   const docRef = doc(
     db,
     'Projects',
@@ -23,7 +21,7 @@ export async function extractStringsForDoc(docId: string) {
   const snapshot = await getDoc(docRef);
   const data = snapshot.data() || {};
   const strings = new Set<string>();
-  extractFields(strings, rootCollection.fields, data.fields || {});
+  extractFields(strings, schema.fields, data.fields || {});
   return Array.from(strings);
 }
 
