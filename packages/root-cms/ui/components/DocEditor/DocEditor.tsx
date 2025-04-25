@@ -35,6 +35,7 @@ import {
 } from 'preact/hooks';
 import {route} from 'preact-router';
 import * as schema from '../../../core/schema.js';
+import {useCollectionSchema} from '../../hooks/useCollectionSchema.js';
 import {
   DraftController,
   SaveState,
@@ -100,11 +101,15 @@ function useDocData(): CMSDoc {
 }
 
 export function DocEditor(props: DocEditorProps) {
-  const fields = props.collection.fields || [];
-  const {loading, controller, saveState, data} = props.draft;
+  // Load the full collection schema.
+  const collection = useCollectionSchema(props.collection.name);
+  const draft = props.draft;
+  const {controller, saveState, data} = draft;
   const ref = useRef<HTMLDivElement>(null);
   const [deeplink, setDeeplink] = useState('');
   const [clipboardValue, setClipboardValue] = useState(null);
+  const loading = collection.loading || draft.loading;
+  const fields = collection.schema?.fields || [];
 
   function goBack() {
     const collectionId = props.docId.split('/')[0];

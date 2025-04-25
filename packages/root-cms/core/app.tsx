@@ -5,6 +5,7 @@ import {Request, Response, RootConfig} from '@blinkk/root';
 import {render as renderToString} from 'preact-render-to-string';
 import packageJson from '../package.json' assert {type: 'json'};
 import {CMSPluginOptions} from './plugin.js';
+import {getProjectSchemas} from './project.js';
 import {Collection} from './schema.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -81,15 +82,10 @@ export async function renderApp(
   res: Response,
   options: RenderOptions
 ) {
-  const collectionModules = import.meta.glob('/collections/*.schema.ts', {
-    eager: true,
-  }) as any;
-  const collections: Record<string, Collection> = {};
-  Object.keys(collectionModules).forEach((moduleId: string) => {
-    const collectionId = path.parse(moduleId).base.split('.')[0];
-    const module = collectionModules[moduleId];
-    const collection = module.default as Collection;
-    collections[collectionId] = collection;
+  // Exclude "fields" from the serialized collections to reduce payload size.
+  const collections: Record<string, Partial<Collection>> = {};
+  Object.entries(getCollections()).forEach(([collectionId, collection]) => {
+    collections[collectionId] = serializeCollection(collection);
   });
   const rootConfig = options.rootConfig || {};
   const cmsConfig = options.cmsConfig || {};
@@ -142,6 +138,22 @@ export async function renderApp(
   res.setHeader('Content-Type', 'text/html');
   setSecurityHeaders(options, req, res, nonce);
   res.send(html);
+}
+
+/**
+ * Returns a collection object that can be serialized to JSON.
+ * NOTE: The collection's schema "fields" are excluded to avoid large JSON
+ * outputs.
+ */
+function serializeCollection(collection: Collection): Partial<Collection> {
+  return {
+    name: collection.name,
+    description: collection.description,
+    domain: collection.domain,
+    url: collection.url,
+    previewUrl: collection.previewUrl,
+    preview: collection.preview,
+  };
 }
 
 interface SignInProps {
@@ -230,6 +242,17 @@ export async function renderSignIn(
   setSecurityHeaders(options, req, res, nonce);
   res.status(403);
   res.send(html);
+}
+
+export function getCollections(): Record<string, Collection> {
+  const collections: Record<string, Collection> = {};
+  const schemas = getProjectSchemas();
+  Object.entries(schemas).forEach(([fileId, schema]) => {
+    if (fileId.startsWith('/collections/')) {
+      collections[schema.name] = schema as Collection;
+    }
+  });
+  return collections;
 }
 
 function generateNonce() {
