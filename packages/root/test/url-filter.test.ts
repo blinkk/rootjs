@@ -1,5 +1,5 @@
 import path from 'node:path';
-import {assert, beforeEach, test} from 'vitest';
+import {afterEach, assert, beforeEach, test} from 'vitest';
 import {fileExists} from '../src/utils/fsutils.js';
 import {Fixture, loadFixture} from './testutils.js';
 
@@ -9,11 +9,11 @@ beforeEach(async () => {
   fixture = await loadFixture('./fixtures/url-filter');
 });
 
-// afterEach(async () => {
-//   if (fixture) {
-//     await fixture.cleanup();
-//   }
-// });
+afterEach(async () => {
+  if (fixture) {
+    await fixture.cleanup();
+  }
+});
 
 test('build with --filter="/foo/.*"', async () => {
   await fixture.build({filter: '/foo/.*'});
