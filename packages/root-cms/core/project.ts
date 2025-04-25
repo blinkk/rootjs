@@ -7,6 +7,11 @@
 
 import {Schema} from './schema.js';
 
+/**
+ * Ignore folders for common deploy targets.
+ */
+const IGNORED_SCHEMA_FOLDERS = ['/appengine/', '/functions/', '/gae/'];
+
 export interface SchemaModule {
   default: Schema;
 }
@@ -18,9 +23,7 @@ const SCHEMA_MODULES = import.meta.glob<SchemaModule>('/**/*.schema.ts', {
 export function getProjectSchemas(): Record<string, Schema> {
   const schemas: Record<string, Schema> = {};
   for (const fileId in SCHEMA_MODULES) {
-    // Ignore the /functions/ folder, which is typically used for GCF deploys.
-    // TODO(stevenle): figure out a better way to handle this.
-    if (fileId.startsWith('/functions/')) {
+    if (IGNORED_SCHEMA_FOLDERS.some((prefix) => fileId.startsWith(prefix))) {
       continue;
     }
     const schemaModule = SCHEMA_MODULES[fileId];
