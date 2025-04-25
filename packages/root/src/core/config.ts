@@ -44,6 +44,11 @@ export interface RootUserConfig {
   server?: RootServerConfig;
 
   /**
+   * Build options for the `root build` command.
+   */
+  build?: RootBuildConfig;
+
+  /**
    * Vite config.
    * @see {@link https://vitejs.dev/config/} for more information.
    */
@@ -119,6 +124,13 @@ export interface RootI18nConfig {
    * locales.
    */
   groups?: Record<string, LocaleGroup>;
+}
+
+export interface RootBuildConfig {
+  /**
+   * Excludes the `/intl/{defaultLocale}/...` path from the SSG build.
+   */
+  excludeDefaultLocaleFromIntlPaths?: boolean;
 }
 
 export interface RootRedirectConfig {
