@@ -9,7 +9,7 @@ import {Fixture, loadFixture} from './testutils.js';
 let fixture: Fixture;
 
 beforeEach(async () => {
-  fixture = await loadFixture('./fixtures/i18n-url-format');
+  fixture = await loadFixture('./fixtures/exclude-intl-default-locale');
 });
 
 afterEach(async () => {
@@ -18,7 +18,7 @@ afterEach(async () => {
   }
 });
 
-test('build i18n-url-format project', async () => {
+test('build exclude-intl-default-locale project', async () => {
   await fixture.build();
 
   const index = path.join(fixture.distDir, 'html/index.html');
@@ -40,24 +40,9 @@ test('build i18n-url-format project', async () => {
     "
   `);
 
+  // The intl/en/ path should not exist.
   const enIndex = path.join(fixture.distDir, 'html/intl/en/index.html');
-  assert.isTrue(await fileExists(enIndex));
-  const enHtml = await fs.readFile(enIndex, 'utf-8');
-  expect(enHtml).toMatchInlineSnapshot(`
-    "<!doctype html>
-    <html>
-    <head>
-    <meta charset=\\"utf-8\\">
-    </head>
-    <body>
-    <h1>Hello world!</h1>
-    <p>custom translation (en)</p>
-    <p>Current locale: en</p>
-    <p>Current path: /intl/en/</p>
-    </body>
-    </html>
-    "
-  `);
+  assert.isFalse(await fileExists(enIndex));
 
   const frIndex = path.join(fixture.distDir, 'html/intl/fr/index.html');
   assert.isTrue(await fileExists(frIndex));
@@ -111,4 +96,8 @@ test('build i18n-url-format project', async () => {
     </html>
     "
   `);
+
+  // The intl/en/foo/bar/ path should not exist.
+  const fooEn = path.join(fixture.distDir, 'html/intl/en/foo/bar/index.html');
+  assert.isFalse(await fileExists(fooEn));
 });

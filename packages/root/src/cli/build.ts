@@ -382,6 +382,16 @@ export async function build(rootProjectDir?: string, options?: BuildOptions) {
     const batchSize = Number(options?.concurrency || 10);
     await batchAsyncCalls(Object.keys(sitemap), batchSize, async (urlPath) => {
       const sitemapItem = sitemap[urlPath];
+
+      // If "excludeDefaultLocaleFromIntlPaths" is true, ignore /intl/en/... in
+      // the SSG build and exclude it from sitemap.xml.
+      if (rootConfig.build?.excludeDefaultLocaleFromIntlPaths) {
+        const defaultLocale = rootConfig.i18n?.defaultLocale || 'en';
+        if (sitemapItem.locale === defaultLocale) {
+          return;
+        }
+      }
+
       try {
         const data = await renderer.renderRoute(sitemapItem.route, {
           routeParams: sitemapItem.params,
