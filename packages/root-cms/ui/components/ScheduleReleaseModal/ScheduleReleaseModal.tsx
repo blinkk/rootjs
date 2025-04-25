@@ -6,6 +6,8 @@ import {useState, useRef} from 'preact/hooks';
 import {useModalTheme} from '../../hooks/useModalTheme.js';
 import {notifyErrors} from '../../utils/notifications.js';
 import {scheduleRelease} from '../../utils/release.js';
+import {getLocalISOString} from '../../utils/time.js';
+
 import './ScheduleReleaseModal.css';
 
 const MODAL_ID = 'ScheduleReleaseModal';
@@ -67,7 +69,13 @@ export function ScheduleReleaseModal(
   return (
     <div className="ScheduleReleaseModal">
       <div className="ScheduleReleaseModal__content">
-        <form className="ScheduleReleaseModal__form">
+        <form
+          className="ScheduleReleaseModal__form"
+          onSubmit={(e) => {
+            e.preventDefault();
+            schedule();
+          }}
+        >
           <div className="ScheduleReleaseModal__form__description">
             Content in the release will go live at the datetime specified below.
           </div>
@@ -101,7 +109,7 @@ export function ScheduleReleaseModal(
               size="xs"
               color="dark"
               loading={loading}
-              onClick={() => schedule()}
+              type="submit"
             >
               Schedule
             </Button>
@@ -110,19 +118,6 @@ export function ScheduleReleaseModal(
       </div>
     </div>
   );
-}
-
-function getLocalISOString() {
-  const pad = (n: number) => (n < 10 ? '0' + n : n);
-
-  const now = new Date();
-  const year = now.getFullYear();
-  const month = pad(now.getMonth() + 1);
-  const day = pad(now.getDate());
-  const hours = pad(now.getHours());
-  const minutes = pad(now.getMinutes());
-
-  return `${year}-${month}-${day}T${hours}:${minutes}`;
 }
 
 ScheduleReleaseModal.id = MODAL_ID;

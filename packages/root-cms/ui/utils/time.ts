@@ -1,3 +1,5 @@
+import type {Timestamp} from 'firebase/firestore';
+
 /**
  * Converts a time unit to millis.
  */
@@ -55,4 +57,17 @@ export function formatDateTime(ts: Timestamp) {
     hour: '2-digit',
     minute: '2-digit',
   });
+}
+
+export function getLocalISOString() {
+  const pad = (n: number) => (n < 10 ? '0' + n : n);
+
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = pad(now.getMonth() + 1);
+  const day = pad(now.getDate());
+  const hours = pad(now.getHours());
+  const minutes = pad(now.getMinutes());
+
+  return `${year}-${month}-${day}T${hours}:${minutes}`;
 }
