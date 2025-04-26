@@ -1,6 +1,6 @@
 import {Command, InvalidArgumentError} from 'commander';
 import {bgGreen, black} from 'kleur/colors';
-import {build} from './build.js';
+import {build, BuildOptions} from './build.js';
 import {codegen} from './codegen.js';
 import {createPackage} from './create-package.js';
 import {dev, createDevServer} from './dev.js';
@@ -41,6 +41,11 @@ class CliRunner {
         '-c, --concurrency <num>',
         'number of files to build concurrently',
         '10'
+      )
+      .option(
+        '--filter <urlPathRegex>',
+        'builds the url paths that match the given regex, e.g. "/products/.*"',
+        ''
       )
       .action(build);
     program
@@ -125,6 +130,7 @@ function numberFlag(value: string) {
 export {
   CliRunner,
   build,
+  BuildOptions,
   createPackage,
   dev,
   createDevServer,

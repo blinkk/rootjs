@@ -8,7 +8,7 @@ import glob from 'tiny-glob';
 import {build as viteBuild, Manifest, ManifestChunk, UserConfig} from 'vite';
 
 import {getVitePlugins} from '../core/plugin.js';
-import {Route} from '../core/types.js';
+import {Route, Sitemap} from '../core/types.js';
 import {getElements} from '../node/element-graph.js';
 import {bundleRootConfig, loadRootConfig} from '../node/load-config.js';
 import {BuildAssetMap} from '../render/asset-map/build-asset-map.js';
@@ -30,10 +30,11 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 type RenderModule = typeof import('../render/render.js');
 
-interface BuildOptions {
+export interface BuildOptions {
   ssrOnly?: boolean;
   mode?: string;
   concurrency?: string | number;
+  filter?: string;
 }
 
 export async function build(rootProjectDir?: string, options?: BuildOptions) {
@@ -364,7 +365,20 @@ export async function build(rootProjectDir?: string, options?: BuildOptions) {
       path.join(distDir, 'server/render.js')
     );
     const renderer = new render.Renderer(rootConfig, {assetMap, elementGraph});
-    const sitemap = await renderer.getSitemap();
+    let sitemap = await renderer.getSitemap();
+
+    // If the `--filter` flag is passed, build only the paths that match the
+    // given regex.
+    if (options?.filter) {
+      const filterRegex = new RegExp(`^${options.filter}`);
+      const filteredSitemap: Sitemap = {};
+      Object.entries(sitemap).forEach(([urlPath, sitemapItem]) => {
+        if (urlPath.match(filterRegex)) {
+          filteredSitemap[urlPath] = sitemapItem;
+        }
+      });
+      sitemap = filteredSitemap;
+    }
 
     const sitemapXmlItems: Array<{
       url: string;
@@ -380,79 +394,82 @@ export async function build(rootProjectDir?: string, options?: BuildOptions) {
 
     console.log('\nhtml output:');
     const batchSize = Number(options?.concurrency || 10);
-    await batchAsyncCalls(Object.keys(sitemap), batchSize, async (urlPath) => {
-      const sitemapItem = sitemap[urlPath];
 
-      // If "excludeDefaultLocaleFromIntlPaths" is true, ignore /intl/en/... in
-      // the SSG build and exclude it from sitemap.xml.
-      if (rootConfig.build?.excludeDefaultLocaleFromIntlPaths) {
-        const defaultLocale = rootConfig.i18n?.defaultLocale || 'en';
-        if (sitemapItem.locale === defaultLocale) {
-          return;
-        }
-      }
-
-      try {
-        const data = await renderer.renderRoute(sitemapItem.route, {
-          routeParams: sitemapItem.params,
-        });
-        if (data.notFound) {
-          return;
-        }
-
-        // The renderer currently assumes that all paths serve HTML.
-        // TODO(stevenle): support non-HTML routes using `routes/[name].[ext].ts`.
-        let outFilePath = path.join(urlPath.slice(1), 'index.html');
-        if (outFilePath.endsWith('404/index.html')) {
-          outFilePath = outFilePath.replace('404/index.html', '404.html');
-        }
-        const outPath = path.join(buildDir, outFilePath);
-
-        // Save the url to sitemap.xml. Ignore error files (e.g. 404.html).
-        if (rootConfig.sitemap && outFilePath.endsWith('index.html')) {
-          const sitemapXmlItem: {
-            url: string;
-            locale: string;
-            alts: Array<{locale: string; hreflang: string; url: string}>;
-          } = {
-            url: `${domain}${urlPath}`,
-            locale: sitemapItem.locale,
-            alts: [],
-          };
-          sitemapXmlItems.push(sitemapXmlItem);
-          if (sitemapItem.alts) {
-            Object.entries(sitemapItem.alts).forEach(([altLocale, item]) => {
-              sitemapXmlItem.alts.push({
-                url: `${domain}${item.urlPath}`,
-                locale: altLocale,
-                hreflang: item.hrefLang,
-              });
-            });
+    await batchAsyncCalls(
+      Object.entries(sitemap),
+      batchSize,
+      async ([urlPath, sitemapItem]) => {
+        // If "excludeDefaultLocaleFromIntlPaths" is true, ignore /intl/en/... in
+        // the SSG build and exclude it from sitemap.xml.
+        if (rootConfig.build?.excludeDefaultLocaleFromIntlPaths) {
+          const defaultLocale = rootConfig.i18n?.defaultLocale || 'en';
+          if (sitemapItem.locale === defaultLocale) {
+            return;
           }
         }
 
-        // Render html and save the file to dist/html.
-        let html = data.html || '';
-        if (rootConfig.prettyHtml !== false) {
-          html = await htmlPretty(html, rootConfig.prettyHtmlOptions);
-        }
-        // HTML minification is `true` by default. Set to `false` to disable.
-        if (rootConfig.minifyHtml !== false) {
-          html = await htmlMinify(html, rootConfig.minifyHtmlOptions);
-        }
-        await writeFile(outPath, html);
+        try {
+          const data = await renderer.renderRoute(sitemapItem.route, {
+            routeParams: sitemapItem.params,
+          });
+          if (data.notFound) {
+            return;
+          }
 
-        printFileOutput(fileSize(outPath), 'dist/html/', outFilePath);
-      } catch (e) {
-        logBuildError(
-          {route: sitemapItem.route, params: sitemapItem.params, urlPath},
-          e
-        );
-        throw new Error(
-          `BuildError: ${urlPath} (${sitemapItem.route.src}) failed to build.`
-        );
+          // The renderer currently assumes that all paths serve HTML.
+          // TODO(stevenle): support non-HTML routes using `routes/[name].[ext].ts`.
+          let outFilePath = path.join(urlPath.slice(1), 'index.html');
+          if (outFilePath.endsWith('404/index.html')) {
+            outFilePath = outFilePath.replace('404/index.html', '404.html');
+          }
+          const outPath = path.join(buildDir, outFilePath);
+
+          // Save the url to sitemap.xml. Ignore error files (e.g. 404.html).
+          if (rootConfig.sitemap && outFilePath.endsWith('index.html')) {
+            const sitemapXmlItem: {
+              url: string;
+              locale: string;
+              alts: Array<{locale: string; hreflang: string; url: string}>;
+            } = {
+              url: `${domain}${urlPath}`,
+              locale: sitemapItem.locale,
+              alts: [],
+            };
+            sitemapXmlItems.push(sitemapXmlItem);
+            if (sitemapItem.alts) {
+              Object.entries(sitemapItem.alts).forEach(([altLocale, item]) => {
+                sitemapXmlItem.alts.push({
+                  url: `${domain}${item.urlPath}`,
+                  locale: altLocale,
+                  hreflang: item.hrefLang,
+                });
+              });
+            }
+          }
+
+          // Render html and save the file to dist/html.
+          let html = data.html || '';
+          if (rootConfig.prettyHtml !== false) {
+            html = await htmlPretty(html, rootConfig.prettyHtmlOptions);
+          }
+          // HTML minification is `true` by default. Set to `false` to disable.
+          if (rootConfig.minifyHtml !== false) {
+            html = await htmlMinify(html, rootConfig.minifyHtmlOptions);
+          }
+          await writeFile(outPath, html);
+
+          printFileOutput(fileSize(outPath), 'dist/html/', outFilePath);
+        } catch (e) {
+          logBuildError(
+            {route: sitemapItem.route, params: sitemapItem.params, urlPath},
+            e
+          );
+          throw new Error(
+            `BuildError: ${urlPath} (${sitemapItem.route.src}) failed to build.`
+          );
+        }
       }
-    });
+    );
 
     // Generate sitemap.xml.
     if (rootConfig.sitemap) {

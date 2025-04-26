@@ -1,5 +1,5 @@
 import path from 'node:path';
-import {build} from '../dist/cli.js';
+import {build, BuildOptions} from '../dist/cli.js';
 import {rmDir} from '../src/utils/fsutils.js';
 
 export class Fixture {
@@ -11,8 +11,8 @@ export class Fixture {
     this.distDir = path.join(this.rootDir, 'dist');
   }
 
-  async build() {
-    await build(this.rootDir);
+  async build(options?: BuildOptions) {
+    await build(this.rootDir, options);
   }
 
   async cleanup() {

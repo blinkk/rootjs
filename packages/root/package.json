@@ -56,7 +56,7 @@
   "scripts": {
     "build": "rm -rf dist && tsup-node",
     "dev": "nodemon --watch src -e ts,tsx --exec pnpm build",
-    "test": "pnpm build && vitest run",
+    "test": "pnpm build && vitest run --test-timeout=30000",
     "test:watch": "pnpm build && vitest"
   },
   "dependencies": {
