@@ -367,7 +367,7 @@ export async function build(rootProjectDir?: string, options?: BuildOptions) {
     const renderer = new render.Renderer(rootConfig, {assetMap, elementGraph});
     let sitemap = await renderer.getSitemap();
 
-    // If the `--filter` flag is passed, filter only the paths that match the
+    // If the `--filter` flag is passed, build only the paths that match the
     // given regex.
     if (options?.filter) {
       const filterRegex = new RegExp(`^${options.filter}`);
