@@ -1,5 +1,11 @@
 # @blinkk/create-root
 
+## 1.4.1
+
+### Patch Changes
+
+- 9d2bdaa: chore: manually bump versions to 1.4.0
+
 ## 1.3.27
 
 ## 1.3.26

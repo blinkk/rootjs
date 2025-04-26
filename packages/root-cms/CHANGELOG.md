@@ -1,5 +1,22 @@
 # @blinkk/root-cms
 
+## 1.4.1
+
+### Patch Changes
+
+- 4949ba4: refactor: de-dupe schema.define() types in root-cms.d.ts #504
+- 7525e3d: refactor: remove schema fields from ROOT_CTX #509
+- 20629af: feat: add alt text to video files
+- 04e9b83: fix: restrict scheduling to the future
+
+  - this wasn't working previously
+  - tidy up use of datetime-local across cms views
+
+- 9d2bdaa: chore: manually bump versions to 1.4.0
+- Updated dependencies [5a0248c]
+- Updated dependencies [9d2bdaa]
+  - @blinkk/root@1.4.1
+
 ## 1.3.27
 
 ### Patch Changes
