@@ -1,5 +1,14 @@
 # @blinkk/root-password-protect
 
+## 1.4.1
+
+### Patch Changes
+
+- 9d2bdaa: chore: manually bump versions to 1.4.0
+- Updated dependencies [5a0248c]
+- Updated dependencies [9d2bdaa]
+  - @blinkk/root@1.4.1
+
 ## 1.3.27
 
 ### Patch Changes
