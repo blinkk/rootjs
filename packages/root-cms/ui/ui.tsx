@@ -45,6 +45,8 @@ import {TranslationsPage} from './pages/TranslationsPage/TranslationsPage.js';
 import './styles/global.css';
 import './styles/theme.css';
 
+type CollectionMeta = Omit<Collection, 'fields'>;
+
 declare global {
   interface Window {
     __ROOT_CTX: {
@@ -68,7 +70,7 @@ declare global {
         apiKey: string;
         clientId: string;
       };
-      collections: Record<string, Collection>;
+      collections: Record<string, CollectionMeta>;
       sidebar?: {
         tools?: Record<
           string,
