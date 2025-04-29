@@ -1,5 +1,13 @@
 # @blinkk/root-cms
 
+## 1.4.2
+
+### Patch Changes
+
+- b932dbc: fix: fix new doc creation
+- b8fb390: fix: add id to serialized collection data #514
+  - @blinkk/root@1.4.2
+
 ## 1.4.1
 
 ### Patch Changes
