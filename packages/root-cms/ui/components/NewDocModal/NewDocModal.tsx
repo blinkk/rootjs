@@ -6,6 +6,7 @@ import {getDefaultFieldValue} from '../../utils/fields.js';
 import {SlugInput} from '../SlugInput/SlugInput.js';
 import './NewDocModal.css';
 import {logAction} from '../../utils/actions.js';
+import {useCollectionSchema} from '../../hooks/useCollectionSchema.js';
 
 interface NewDocModalProps {
   collection: string;
@@ -40,16 +41,16 @@ function normalizeSlug(slug: string): string {
 }
 
 export function NewDocModal(props: NewDocModalProps) {
-  const collectionId = props.collection;
   const [slug, setSlug] = useState('');
-  const [loading, setLoading] = useState(false);
+  const [rpcLoading, setRpcLoading] = useState(false);
   const [slugError, setSlugError] = useState('');
   const theme = useMantineTheme();
-
+  const collectionId = props.collection;
   const rootCollection = window.__ROOT_CTX.collections[collectionId];
   if (!rootCollection) {
     throw new Error(`collection not found: ${collectionId}`);
   }
+  const collection = useCollectionSchema(collectionId);
 
   function onClose() {
     if (props.onClose) {
@@ -59,26 +60,31 @@ export function NewDocModal(props: NewDocModalProps) {
 
   async function onSubmit(e: Event) {
     e.preventDefault();
-    setLoading(true);
+    setRpcLoading(true);
     setSlugError('');
 
     const cleanSlug = normalizeSlug(slug);
     if (!isSlugValid(cleanSlug)) {
       setSlugError('Please enter a valid slug (e.g. "foo-bar-123").');
-      setLoading(false);
+      setRpcLoading(false);
       return;
     }
 
     const docId = `${collectionId}/${cleanSlug}`;
     try {
-      const defaultValue = getDefaultFieldValue(rootCollection);
+      // Save the doc using the default value defined in the collection's
+      // schema.
+      let defaultValue = {};
+      if (!collection.loading && collection.schema) {
+        defaultValue = await getDefaultFieldValue(collection.schema);
+      }
       await cmsCreateDoc(docId, {fields: defaultValue});
     } catch (err) {
       setSlugError(String(err));
-      setLoading(false);
+      setRpcLoading(false);
       return;
     }
-    setLoading(false);
+    setRpcLoading(false);
     route(`/cms/content/${props.collection}/${cleanSlug}?new=true`);
   }
 
@@ -126,7 +132,7 @@ export function NewDocModal(props: NewDocModalProps) {
             type="submit"
             size="xs"
             color="dark"
-            loading={loading}
+            loading={collection.loading || rpcLoading}
           >
             Submit
           </Button>
