@@ -102,7 +102,7 @@ function useDocData(): CMSDoc {
 
 export function DocEditor(props: DocEditorProps) {
   // Load the full collection schema.
-  const collection = useCollectionSchema(props.collection.name);
+  const collection = useCollectionSchema(props.collection.id);
   const draft = props.draft;
   const {controller, saveState, data} = draft;
   const ref = useRef<HTMLDivElement>(null);

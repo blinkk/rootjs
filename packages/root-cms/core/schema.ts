@@ -256,6 +256,11 @@ export const define = defineSchema;
 
 export type Collection = Schema & {
   /**
+   * The ID of the collection. This comes from the schema filename, e.g
+   * `<id>.schema.ts`.
+   */
+  id: string;
+  /**
    * Domain where the collection serves from. Used for multi-domain sites,
    * defaults to the "domain" value `from root.config.ts`.
    */

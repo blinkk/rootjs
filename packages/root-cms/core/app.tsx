@@ -147,7 +147,8 @@ export async function renderApp(
  */
 function serializeCollection(collection: Collection): Partial<Collection> {
   return {
-    name: collection.name,
+    id: collection.id,
+    name: collection.name ?? collection.id,
     description: collection.description,
     domain: collection.domain,
     url: collection.url,
@@ -249,10 +250,18 @@ export function getCollections(): Record<string, Collection> {
   const schemas = getProjectSchemas();
   Object.entries(schemas).forEach(([fileId, schema]) => {
     if (fileId.startsWith('/collections/')) {
-      collections[schema.name] = schema as Collection;
+      const collectionId = parseCollectionId(fileId);
+      collections[collectionId] = {...schema, id: collectionId} as Collection;
     }
   });
   return collections;
+}
+
+/**
+ * Converts a fileId path like "/collections/Foo.schema.ts" and returns "Foo".
+ */
+function parseCollectionId(fileId: string) {
+  return path.basename(fileId).split('.')[0];
 }
 
 function generateNonce() {
