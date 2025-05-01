@@ -290,7 +290,9 @@ export type Collection = Schema & {
   };
 };
 
-export function defineCollection(collection: Collection): Collection {
+export function defineCollection(
+  collection: Omit<Collection, 'id'>
+): Omit<Collection, 'id'> {
   return collection;
 }
 
