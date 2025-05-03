@@ -2,7 +2,11 @@ import {FunctionalComponent} from 'preact';
 import {useContext} from 'preact/hooks';
 import {HTML_CONTEXT} from './Html.js';
 
-export type ScriptProps = preact.JSX.HTMLAttributes<HTMLScriptElement>;
+export type ScriptProps = preact.JSX.HTMLAttributes<HTMLScriptElement> & {
+  // Cast the "src" attr to string. See:
+  // https://github.com/blinkk/rootjs/issues/519
+  src?: string;
+};
 
 /**
  * The <Script> component is used for rendering any custom script modules. At
