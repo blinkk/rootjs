@@ -1,5 +1,12 @@
 # @blinkk/root-cms
 
+## 1.4.3
+
+### Patch Changes
+
+- c7c2a2c: feat: add NumberField
+  - @blinkk/root@1.4.3
+
 ## 1.4.2
 
 ### Patch Changes
