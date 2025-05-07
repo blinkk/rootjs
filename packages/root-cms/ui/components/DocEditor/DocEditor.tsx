@@ -78,6 +78,7 @@ import {ReferenceField} from './fields/ReferenceField.js';
 import {RichTextField} from './fields/RichTextField.js';
 import {SelectField} from './fields/SelectField.js';
 import {StringField} from './fields/StringField.js';
+import {NumberField} from './fields/NumberField.js';
 
 interface DocEditorProps {
   docId: string;
@@ -340,6 +341,8 @@ DocEditor.Field = (props: FieldProps) => {
           <ImageField {...props} />
         ) : field.type === 'multiselect' ? (
           <MultiSelectField {...props} />
+        ) : field.type === 'number' ? (
+          <NumberField {...props} />
         ) : field.type === 'object' ? (
           <DocEditor.ObjectField {...props} />
         ) : field.type === 'oneof' ? (
