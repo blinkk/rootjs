@@ -656,7 +656,8 @@ export class RootCMSClient {
         source: this.normalizeString(source),
       };
       if (tags) {
-        data.tags = tags;
+        // Use arrayUnion() to append tags to any existing values.
+        data.tags = FieldValue.arrayUnion(...tags);
       }
       batch.set(translationRef, data, {merge: true});
       batchCount += 1;
