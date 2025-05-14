@@ -1,5 +1,14 @@
 # @blinkk/root-cms
 
+## 1.4.4
+
+### Patch Changes
+
+- c777571: fix: fix race condition in richtext editor (#529)
+- a9cb97d: fix: preserve tags when saving translations (#526)
+- d95163c: fix: fix richtext editor destroy error (#528)
+  - @blinkk/root@1.4.4
+
 ## 1.4.3
 
 ### Patch Changes
