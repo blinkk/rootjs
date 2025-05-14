@@ -150,7 +150,13 @@ export function RichTextEditor(props: RichTextEditorProps) {
           });
       },
     });
-    return () => editor.destroy();
+    return () => {
+      // Ensure `.destroy()` exists.
+      // https://github.com/blinkk/rootjs/issues/525
+      if (editor && typeof editor.destroy === 'function') {
+        editor.destroy();
+      }
+    };
   }, []);
 
   return (
