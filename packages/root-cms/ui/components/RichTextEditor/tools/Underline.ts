@@ -27,6 +27,12 @@ export class Underline {
   }
 
   render() {
+    // Avoid a race condition where the component is destroyed before the
+    // render() function is called.
+    // https://github.com/blinkk/rootjs/issues/482
+    if (!this.button) {
+      return null;
+    }
     this.button.type = 'button';
     this.button.classList.add(this.iconClasses.base);
     this.button.innerHTML = this.toolboxIcon;
