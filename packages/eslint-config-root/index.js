@@ -1,6 +1,6 @@
 module.exports = {
-  extends: ['eslint:recommended', 'plugin:node/recommended', 'prettier'],
-  plugins: ['node', 'prettier', 'import'],
+  extends: ['eslint:recommended', 'plugin:n/recommended', 'prettier'],
+  plugins: ['n', 'prettier', 'import'],
   rules: {
     'prettier/prettier': 'error',
     'block-scoped-var': 'error',
@@ -40,11 +40,11 @@ module.exports = {
         '@typescript-eslint/explicit-module-boundary-types': 'off',
         '@typescript-eslint/ban-types': 'off',
         '@typescript-eslint/camelcase': 'off',
-        'node/no-missing-import': 'off',
-        'node/no-empty-function': 'off',
-        'node/no-unsupported-features/es-syntax': 'off',
-        'node/no-missing-require': 'off',
-        'node/shebang': 'off',
+        'n/no-missing-import': 'off',
+        'n/no-empty-function': 'off',
+        'n/no-unsupported-features/es-syntax': 'off',
+        'n/no-missing-require': 'off',
+        'n/shebang': 'off',
         'no-dupe-class-members': 'off',
         'require-atomic-updates': 'off',
         'import/order': [

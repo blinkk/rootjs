@@ -9,14 +9,18 @@ yarn add eslint prettier typescript
 yarn add -D @blinkk/eslint-config-root
 ```
 
-Add eslint config file `.eslintrc.json`:
+Add eslint config file `eslint.config.js`:
 
-```json
-{
-  "extends": [
-    "@blinkk/root"
-  ]
-}
+```js
+const {FlatCompat} = require('@eslint/eslintrc');
+
+const compat = new FlatCompat({
+  baseDirectory: __dirname,
+});
+
+module.exports = compat.config({
+  extends: ['@blinkk/root'],
+});
 ```
 
 Add `.eslintignore`:
@@ -37,3 +41,4 @@ Add scripts to `package.json`:
   }
 }
 ```
+

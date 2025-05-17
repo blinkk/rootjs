@@ -1,6 +1,0 @@
-{
-  "extends": ["@blinkk/root"],
-  "parserOptions": {
-    "sourceType": "module"
-  }
-}
