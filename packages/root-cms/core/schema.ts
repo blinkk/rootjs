@@ -293,6 +293,12 @@ export type Collection = Schema & {
    * string so it can be serialized to the CMS UI.
    */
   slugRegex?: string;
+  /**
+   * Automatically add a publishing lock whenever the doc is edited.
+   */
+  autolock?: boolean;
+  /** Reason for the automatic publishing lock. */
+  autolockReason?: string;
 };
 
 export function defineCollection(

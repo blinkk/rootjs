@@ -53,6 +53,9 @@ export class DraftController extends EventListener {
   private cachedData: any = {};
   private subscribers: Subscribers = {};
   private saveState = SaveState.NO_CHANGES;
+  private autolock = false;
+  private autolockReason = 'autolock';
+  private autolockApplied = false;
   started = false;
 
   constructor(docId: string) {
@@ -72,6 +75,13 @@ export class DraftController extends EventListener {
       'Drafts',
       slug
     );
+    const collection = window.__ROOT_CTX.collections[collectionId];
+    if (collection) {
+      this.autolock = !!collection.autolock;
+      if (collection.autolockReason) {
+        this.autolockReason = collection.autolockReason;
+      }
+    }
   }
 
   /**
@@ -171,7 +181,6 @@ export class DraftController extends EventListener {
    * Updates a group of keys. The keys can be a nested, e.g. "meta.title".
    */
   async updateKeys(updates: Record<string, any>) {
-    console.log('updateKeys()', updates);
     for (const key in updates) {
       this.pendingUpdates.set(key, updates[key]);
     }
@@ -230,7 +239,21 @@ export class DraftController extends EventListener {
     const updates = Object.fromEntries(this.pendingUpdates);
     updates['sys.modifiedAt'] = serverTimestamp();
     updates['sys.modifiedBy'] = window.firebase.user.email;
-    console.log('flush()', updates);
+
+    // If autolock is enabled on the collection, add a publishing lock if one
+    // doesn't already exist on the doc.
+    if (
+      this.autolock &&
+      !this.autolockApplied &&
+      !this.cachedData?.sys?.publishingLocked
+    ) {
+      this.autolockApplied = true;
+      updates['sys.publishingLocked'] = {
+        lockedAt: serverTimestamp(),
+        lockedBy: window.firebase.user.email,
+        reason: this.autolockReason,
+      };
+    }
 
     // Immediately clear the pending updates so that there's no race condition
     // with any new updates the user makes while the changes are being saved to
