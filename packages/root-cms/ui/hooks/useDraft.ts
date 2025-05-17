@@ -14,6 +14,7 @@ import {debounce} from '../utils/debounce.js';
 import {setDocToCache} from '../utils/doc-cache.js';
 import {EventListener} from '../utils/events.js';
 import {getNestedValue, isObject} from '../utils/objects.js';
+import {cmsLockPublishing} from '../utils/doc.js';
 import {TIME_UNITS} from '../utils/time.js';
 
 const SAVE_DELAY = 3 * TIME_UNITS.second;
@@ -53,6 +54,9 @@ export class DraftController extends EventListener {
   private cachedData: any = {};
   private subscribers: Subscribers = {};
   private saveState = SaveState.NO_CHANGES;
+  private autolock = false;
+  private autolockReason = 'Automatically locked on edit.';
+  private autolockApplied = false;
   started = false;
 
   constructor(docId: string) {
@@ -72,6 +76,13 @@ export class DraftController extends EventListener {
       'Drafts',
       slug
     );
+    const collection = window.__ROOT_CTX.collections[collectionId];
+    if (collection) {
+      this.autolock = !!collection.autolock;
+      if (collection.autolockReason) {
+        this.autolockReason = collection.autolockReason;
+      }
+    }
   }
 
   /**
@@ -172,6 +183,16 @@ export class DraftController extends EventListener {
    */
   async updateKeys(updates: Record<string, any>) {
     console.log('updateKeys()', updates);
+    if (
+      this.autolock &&
+      !this.autolockApplied &&
+      !this.cachedData?.sys?.publishingLocked
+    ) {
+      this.autolockApplied = true;
+      cmsLockPublishing(this.docId, {reason: this.autolockReason}).catch(
+        (err) => console.error('failed to autolock', err)
+      );
+    }
     for (const key in updates) {
       this.pendingUpdates.set(key, updates[key]);
     }

@@ -18,6 +18,8 @@ export default schema.collection({
       src: 'https://lh3.googleusercontent.com/c2ECbvhJtxf3xbPIjaXCSpmvAsJkkhzJwG98T9RPvWy4s30jZKClom8pvWTnupRYOnyI3qGhNXPOwqoN6sqljkDO62LIKRtR988',
     },
   },
+  autolock: true,
+  autolockReason: 'Requires approval before publishing.',
 
   fields: [
     schema.object({
