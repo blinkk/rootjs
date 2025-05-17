@@ -162,7 +162,15 @@ export type CMSPluginOptions = {
    * Experimental config options. Note: these are subject to change at any time.
    */
   experiments?: {
+    /**
+     * Enables the Root CMS AI page.
+     */
     ai?: boolean | CMSAIConfig;
+
+    /**
+     * Enables the v2 `TranslationsManager`.
+     */
+    v2TranslationsManager?: boolean;
   };
 
   /**
