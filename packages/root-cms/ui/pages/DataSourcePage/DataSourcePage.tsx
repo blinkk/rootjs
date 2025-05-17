@@ -250,8 +250,8 @@ DataSourcePage.DataTable = (props: {headers?: string[]; rows?: string[][]}) => {
           </thead>
         )}
         <tbody>
-          {rows.map((row) => (
-            <tr>
+          {rows.map((row, rowIndex) => (
+            <tr key={rowIndex}>
               {row.map((cell, i) => (
                 <td key={i}>{cell}</td>
               ))}

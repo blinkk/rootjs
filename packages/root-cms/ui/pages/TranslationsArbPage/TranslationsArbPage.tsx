@@ -181,7 +181,7 @@ TranslationsArbPage.Preview = (props: {arb: Arb}) => {
       </thead>
       <tbody>
         {values.map((item) => (
-          <tr class="TranslationsArbPage__Preview__Table__row">
+          <tr key={item.source} class="TranslationsArbPage__Preview__Table__row">
             <td>{item.source}</td>
             <td>
               {item.meta?.context}
