@@ -1,10 +1,10 @@
 import {Button, Modal, useMantineTheme} from '@mantine/core';
 import {useState} from 'preact/hooks';
 import {route} from 'preact-router';
+import {isSlugValid, normalizeSlug} from '../../../shared/slug.js';
 import {useCollectionSchema} from '../../hooks/useCollectionSchema.js';
 import {cmsCreateDoc} from '../../utils/doc.js';
 import {getDefaultFieldValue} from '../../utils/fields.js';
-import {isSlugValid, normalizeSlug} from '../../utils/slug.js';
 import {SlugInput} from '../SlugInput/SlugInput.js';
 import './NewDocModal.css';
 

@@ -1,4 +1,4 @@
-const DEFAULT_SLUG_PATTERN = /^[a-z0-9]+(?:--?[a-z0-9]+)*$/;
+const DEFAULT_SLUG_PATTERN = /^[a-z0-9_]+(?:--?[a-z0-9_]+)*$/;
 
 export function isSlugValid(slug: string, pattern?: string | RegExp): boolean {
   if (!pattern) {
@@ -18,7 +18,6 @@ export function isSlugValid(slug: string, pattern?: string | RegExp): boolean {
  * Transformations include:
  *   Remove leading and trailing space
  *   Remove leading and trailing slash
- *   Lower case
  *   Replace '/' with '--', e.g. 'foo/bar' -> 'foo--bar'
  */
 export function normalizeSlug(slug: string): string {
