@@ -2,7 +2,7 @@
  * Shared utility functions for handling strings.
  */
 
-import * as farmhash from 'farmhash-modern';
+import fnv from 'fnv-plus';
 
 /**
  * Cleans a source string for use in translations. Performs the following:
@@ -24,12 +24,20 @@ function removeTrailingWhitespace(str: string) {
 /**
  * Returns a hash fingerprint for a string.
  *
- * Note that this hash function is meant to be fast and for collision avoidance
- * for use in a hash map, but is not intended for cryptographic purposes. For
- * these reasons farmhash is used here.
+ * Note that this hash function is meant to be fast and collision-free for use
+ * in a hash map, but is not intended for cryptographic purposes. For these
+ * reasons `FNV-1a` is used here.
  *
- * @see https://www.npmjs.com/package/farmhash-modern
+ * NOTE: farmhash-modern was previously tested here, but had issues with
+ * cjs/esm imports. A purejs implementation should be used here that can run on
+ * the server and in the browser.
+ *
+ * @see https://www.npmjs.com/package/fnv-plus
  */
 export function hashStr(str: string): string {
-  return String(farmhash.fingerprint32(normalizeStr(str)));
+  // Avoid hashing empty strings and invalid types.
+  if (!str || typeof str !== 'string') {
+    throw new Error('input string is invalid');
+  }
+  return fnv.fast1a52hex(normalizeStr(str));
 }
