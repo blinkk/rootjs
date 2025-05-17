@@ -2,4 +2,4 @@
 "@blinkk/root-cms": patch
 ---
 
-feat: add autolock option to automatically lock publishing when a doc is edited (#540)
+feat: add autolock on edit (#540)
