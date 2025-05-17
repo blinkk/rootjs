@@ -98,3 +98,29 @@ test('get optional catch-all routes', () => {
   assert.deepEqual(routeTrie.get('/foo/bar'), ['3', {}]);
   assert.deepEqual(routeTrie.get('/foo/bar/'), ['3', {}]);
 });
+
+test('walk all routes', async () => {
+  routeTrie.add('/', 'root');
+  routeTrie.add('/foo', 'foo');
+  routeTrie.add('/bar', 'bar');
+  routeTrie.add('/foo/[id]', 'param');
+  routeTrie.add('/[...rest]', 'wild');
+
+  const visited: Array<[string, string]> = [];
+  await routeTrie.walk((urlPath, route) => {
+    visited.push([urlPath, route]);
+  });
+
+  const expected = [
+    ['/', 'root'],
+    ['/foo/', 'foo'],
+    ['/foo/[id]/', 'param'],
+    ['/bar/', 'bar'],
+    ['/[...rest]', 'wild'],
+  ];
+
+  assert.deepEqual(
+    visited.sort((a, b) => a[0].localeCompare(b[0])),
+    expected.sort((a, b) => a[0].localeCompare(b[0]))
+  );
+});
