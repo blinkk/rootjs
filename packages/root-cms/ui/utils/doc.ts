@@ -15,6 +15,7 @@ import {
   updateDoc,
   documentId,
   where,
+  Query,
   WriteBatch,
   DocumentReference,
 } from 'firebase/firestore';
@@ -61,6 +62,7 @@ export interface CMSDoc {
 
 export type Version = CMSDoc & {
   _versionId: string;
+  tags?: string[];
 };
 
 export async function cmsDeleteDoc(docId: string) {
@@ -116,7 +118,7 @@ export async function cmsPublishDoc(docId: string) {
  */
 export async function cmsPublishDocs(
   docIds: string[],
-  options?: {batch?: WriteBatch}
+  options?: {batch?: WriteBatch; releaseId?: string}
 ) {
   if (docIds.length === 0) {
     console.log('no docs to publish');
@@ -133,12 +135,16 @@ export async function cmsPublishDocs(
 
   const draftDocs = await getDraftDocs(docIds);
   const batch = options?.batch || writeBatch(db);
+  const versionTags = ['published'];
+  if (options?.releaseId) {
+    versionTags.push(`release:${options.releaseId}`);
+  }
   docIds.forEach((docId) => {
     const draftData = draftDocs[docId];
     if (!draftData) {
       throw new Error(`doc does not exist: ${docId}`);
     }
-    updatePublishedDocDataInBatch(batch, docId, draftData);
+    updatePublishedDocDataInBatch(batch, docId, draftData, versionTags);
   });
   await batch.commit();
 
@@ -165,7 +171,8 @@ export async function cmsPublishDocs(
 function updatePublishedDocDataInBatch(
   batch: WriteBatch,
   docId: string,
-  draftData: CMSDoc
+  draftData: CMSDoc,
+  versionTags: string[]
 ) {
   if (testPublishingLocked(draftData)) {
     throw new Error(`publishing is locked for doc: ${draftData.id}`);
@@ -221,6 +228,23 @@ function updatePublishedDocDataInBatch(
   batch.set(publishedDocRef, {...data, sys});
   // Delete any "scheduled" docs if it exists.
   batch.delete(scheduledDocRef);
+  // Save a version snapshot of the published doc.
+  const versionRef = doc(
+    db,
+    'Projects',
+    projectId,
+    'Collections',
+    collectionId,
+    'Drafts',
+    slug,
+    'Versions',
+    String(Date.now())
+  );
+  const versionData: any = {id: docId, collection: collectionId, slug, fields: data.fields || {}, sys};
+  if (versionTags?.length) {
+    versionData.tags = versionTags;
+  }
+  batch.set(versionRef, versionData);
 }
 
 /**
@@ -673,11 +697,17 @@ export async function getDraftDocs(
   return drafts;
 }
 
-export async function cmsListVersions(docId: string) {
+export async function cmsListVersions(
+  docId: string,
+  options?: {tags?: string[]}
+) {
   const db = window.firebase.db;
   const docRef = getDraftDocRef(docId);
   const versionsCollection = collection(db, docRef.path, 'Versions');
-  const q = query(versionsCollection, orderBy('sys.modifiedAt', 'desc'));
+  let q: Query = query(versionsCollection, orderBy('sys.modifiedAt', 'desc'));
+  if (options?.tags) {
+    q = query(q, where('tags', 'array-contains-any', options.tags));
+  }
   const querySnapshot = await getDocs(q);
   const versions: Version[] = [];
   querySnapshot.forEach((doc) => {
