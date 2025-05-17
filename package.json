@@ -5,6 +5,9 @@
   "description": "Root.js is a developer-focused CMS that writes directly to Firestore.",
   "packageManager": "pnpm@8.9.0",
   "main": "index.js",
+  "engines": {
+    "node": ">=18.0.0"
+  },
   "scripts": {
     "build": "turbo run build --filter=\"@blinkk/*\"",
     "changeset": "changeset",
