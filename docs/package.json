@@ -7,7 +7,7 @@
   "main": "index.js",
   "module": "index.js",
   "engines": {
-    "node": "18"
+    "node": ">=18.0.0"
   },
   "scripts": {
     "dev": "root dev",
