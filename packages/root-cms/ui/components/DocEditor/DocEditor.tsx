@@ -32,6 +32,7 @@ import {
   useReducer,
   useRef,
   useState,
+  useCallback,
 } from 'preact/hooks';
 import {route} from 'preact-router';
 import * as schema from '../../../core/schema.js';
@@ -106,22 +107,24 @@ export function DocEditor(props: DocEditorProps) {
   const collection = useCollectionSchema(props.collection.id);
   const draft = props.draft;
   const {controller, saveState, data} = draft;
-  const ref = useRef<HTMLDivElement>(null);
   const [deeplink, setDeeplink] = useState('');
   const [clipboardValue, setClipboardValue] = useState(null);
   const loading = collection.loading || draft.loading;
   const fields = collection.schema?.fields || [];
 
-  function goBack() {
+  const goBack = useCallback(() => {
     const collectionId = props.docId.split('/')[0];
     route(`/cms/content/${collectionId}`);
-  }
+  }, [props.docId]);
 
-  function onDocAction(event: DocActionEvent) {
-    if (event.action === 'delete') {
-      goBack();
-    }
-  }
+  const onDocAction = useCallback(
+    (event: DocActionEvent) => {
+      if (event.action === 'delete') {
+        goBack();
+      }
+    },
+    [goBack]
+  );
 
   const publishDocModal = usePublishDocModal({docId: props.docId});
   const localizationModal = useLocalizationModal({
@@ -147,7 +150,7 @@ export function DocEditor(props: DocEditorProps) {
     >
       <DOC_DATA_CONTEXT.Provider value={data}>
         <DEEPLINK_CONTEXT.Provider value={deeplink}>
-          <div className="DocEditor" ref={ref}>
+          <div className="DocEditor">
             <LoadingOverlay
               visible={loading}
               loaderProps={{color: 'gray', size: 'xl'}}
@@ -285,7 +288,7 @@ DocEditor.Field = (props: FieldProps) => {
       }
     );
     return unsubscribe;
-  }, []);
+  }, [props.draft, props.deepKey]);
 
   useEffect(() => {
     const translate = (field as any).translate;
@@ -821,7 +824,7 @@ DocEditor.ArrayField = (props: FieldProps) => {
       }
     );
     return unsubscribe;
-  }, []);
+  }, [props.draft, props.deepKey]);
 
   // Focus the field that was just moved (for hotkey support).
   useEffect(() => {
@@ -1159,7 +1162,7 @@ DocEditor.OneOfField = (props: FieldProps) => {
       }
     );
     return unsubscribe;
-  }, []);
+  }, [props.draft, props.deepKey]);
 
   return (
     <div className="DocEditor__OneOfField">
