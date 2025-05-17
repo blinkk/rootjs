@@ -154,6 +154,7 @@ function serializeCollection(collection: Collection): Partial<Collection> {
     url: collection.url,
     previewUrl: collection.previewUrl,
     preview: collection.preview,
+    slugRegex: collection.slugRegex,
   };
 }
 

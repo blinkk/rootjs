@@ -11,6 +11,7 @@ import {showNotification} from '@mantine/notifications';
 import {IconArrowUpRight, IconTrash} from '@tabler/icons-preact';
 import {useEffect, useRef, useState} from 'preact/hooks';
 import {route} from 'preact-router';
+import {isSlugValid} from '../../../shared/slug.js';
 import {notifyErrors} from '../../utils/notifications.js';
 import {
   Release,
@@ -18,7 +19,6 @@ import {
   getRelease,
   updateRelease,
 } from '../../utils/release.js';
-import {isSlugValid} from '../../utils/slug.js';
 import {DocPreviewCard} from '../DocPreviewCard/DocPreviewCard.js';
 import {useDocSelectModal} from '../DocSelectModal/DocSelectModal.js';
 import './ReleaseForm.css';

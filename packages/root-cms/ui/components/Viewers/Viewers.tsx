@@ -10,9 +10,9 @@ import {
   updateDoc,
 } from 'firebase/firestore';
 import {useEffect, useState} from 'preact/hooks';
+import {normalizeSlug} from '../../../shared/slug.js';
 import {joinClassNames} from '../../utils/classes.js';
 import {EventListener} from '../../utils/events.js';
-import {normalizeSlug} from '../../utils/slug.js';
 import {throttle} from '../../utils/throttle.js';
 import {TIME_UNITS} from '../../utils/time.js';
 import {Timer} from '../../utils/timer.js';
