@@ -181,7 +181,6 @@ export class DraftController extends EventListener {
    * Updates a group of keys. The keys can be a nested, e.g. "meta.title".
    */
   async updateKeys(updates: Record<string, any>) {
-    // console.log('updateKeys()', updates);
     for (const key in updates) {
       this.pendingUpdates.set(key, updates[key]);
     }
@@ -255,8 +254,6 @@ export class DraftController extends EventListener {
         reason: this.autolockReason,
       };
     }
-
-    // console.log('flush()', updates);
 
     // Immediately clear the pending updates so that there's no race condition
     // with any new updates the user makes while the changes are being saved to
