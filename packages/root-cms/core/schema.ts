@@ -288,6 +288,11 @@ export type Collection = Schema & {
       src: string;
     };
   };
+  /**
+   * Regular expression used to validate document slugs. Should be provided as a
+   * string so it can be serialized to the CMS UI.
+   */
+  slugRegex?: string;
 };
 
 export function defineCollection(

@@ -1,5 +1,9 @@
-export function isSlugValid(slug: string): boolean {
-  return Boolean(slug && slug.match(/^[a-z0-9]+(?:--?[a-z0-9]+)*$/));
+export function isSlugValid(
+  slug: string,
+  pattern: string | RegExp = /^[a-z0-9]+(?:--?[a-z0-9]+)*$/
+): boolean {
+  const regex = typeof pattern === 'string' ? new RegExp(pattern) : pattern;
+  return Boolean(slug && regex.test(slug));
 }
 
 /**

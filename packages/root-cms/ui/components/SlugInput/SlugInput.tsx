@@ -39,7 +39,8 @@ export function SlugInput(props: SlugInputProps) {
   if (rootCollection?.url) {
     if (slug) {
       const cleanSlug = normalizeSlug(slug);
-      if (isSlugValid(cleanSlug)) {
+      const pattern = rootCollection?.slugRegex;
+      if (isSlugValid(cleanSlug, pattern)) {
         urlHelp = getDocServingUrl({
           collectionId: props.collectionId!,
           slug: cleanSlug,

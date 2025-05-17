@@ -7,6 +7,7 @@ import {SlugInput} from '../SlugInput/SlugInput.js';
 import './NewDocModal.css';
 import {logAction} from '../../utils/actions.js';
 import {useCollectionSchema} from '../../hooks/useCollectionSchema.js';
+import {isSlugValid, normalizeSlug} from '../../utils/slug.js';
 
 interface NewDocModalProps {
   collection: string;
@@ -14,31 +15,6 @@ interface NewDocModalProps {
   onClose?: () => void;
 }
 
-function isSlugValid(slug: string): boolean {
-  return Boolean(slug && slug.match(/^[a-z0-9]+(?:--?[a-z0-9]+)*$/));
-}
-
-/**
- * Normalizes a user-entered slug value into one appropriate for the CMS.
- *
- * In order to keep the slugs "flat" within firestore, nested paths use a double
- * dash separator. For example, a URL like "/about/foo" should have a slug like
- * "about--foo".
- *
- * Transformations include:
- *   Remove leading and trailing space
- *   Remove leading and trailing slash
- *   Lower case
- *   Replace '/' with '--', e.g. 'foo/bar' -> 'foo--bar'
- */
-function normalizeSlug(slug: string): string {
-  return slug
-    .replace(/^[\s/]*/g, '')
-    .replace(/[\s/]*$/g, '')
-    .replace(/^\/+|\/+$/g, '')
-    .toLowerCase()
-    .replaceAll('/', '--');
-}
 
 export function NewDocModal(props: NewDocModalProps) {
   const [slug, setSlug] = useState('');
@@ -64,7 +40,8 @@ export function NewDocModal(props: NewDocModalProps) {
     setSlugError('');
 
     const cleanSlug = normalizeSlug(slug);
-    if (!isSlugValid(cleanSlug)) {
+    const pattern = rootCollection.slugRegex;
+    if (!isSlugValid(cleanSlug, pattern)) {
       setSlugError('Please enter a valid slug (e.g. "foo-bar-123").');
       setRpcLoading(false);
       return;
