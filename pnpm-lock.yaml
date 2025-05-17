@@ -361,6 +361,9 @@ importers:
       dts-dom:
         specifier: 3.7.0
         version: 3.7.0
+      farmhash-modern:
+        specifier: 1.1.0
+        version: 1.1.0
       jsonwebtoken:
         specifier: 9.0.2
         version: 9.0.2
@@ -2536,15 +2539,15 @@ packages:
       '@types/gapi.client.discovery-v1': 0.0.4
     dev: true
 
-  /@maxim_mazurok/gapi.client.drive-v3@0.0.20240604:
-    resolution: {integrity: sha512-omuTEdpzapMZ+zxm0tJgX03ZMOuv3BWDEUnTbC1PuJ4AulZzYWjifKCZ3Qn9AqOHw6z+r9+Je0cw/1xntzgz2g==}
+  /@maxim_mazurok/gapi.client.drive-v3@0.0.20241020:
+    resolution: {integrity: sha512-u3cFTtRj6MC7+ILddrwIXO4EUCqiAstCOabqB+WpntZiXMSk7/PduUAtIBQlDn75rYpLOa9aw/0/roif87qnyQ==}
     dependencies:
       '@types/gapi.client': 1.0.8
       '@types/gapi.client.discovery-v1': 0.0.4
     dev: true
 
-  /@maxim_mazurok/gapi.client.sheets-v4@0.0.20240528:
-    resolution: {integrity: sha512-LZfMEbxfZzSwUSXz25aVMhZfbgU5taq3a3lSb9cJJDeu5L9sdJ6lPUBB0H+hRJCgK8vdRjxurGu1wr6EAzXFNg==}
+  /@maxim_mazurok/gapi.client.sheets-v4@0.0.20241015:
+    resolution: {integrity: sha512-dFQL1ovGZks0i3hJMLAHixeVSsv5x5aeEJmwrRK0/rGBz9LJHFq8AY+RGQl+Da4H7kJaAa8LBJTEhDYC2hs0YQ==}
     dependencies:
       '@types/gapi.client': 1.0.8
       '@types/gapi.client.discovery-v1': 0.0.4
@@ -3372,13 +3375,13 @@ packages:
   /@types/gapi.client.drive-v3@0.0.4:
     resolution: {integrity: sha512-jE37dJ0EzAdY0aJPFOp20xmec/aO0P4HtUIA9k07RMPyedFDOcuMlSac1r0PklwQdgXF7BHaMoObNHNAnwSQUQ==}
     dependencies:
-      '@maxim_mazurok/gapi.client.drive-v3': 0.0.20240604
+      '@maxim_mazurok/gapi.client.drive-v3': 0.0.20241020
     dev: true
 
   /@types/gapi.client.sheets-v4@0.0.4:
     resolution: {integrity: sha512-6kTJ7aDMAElfdQV1XzVJmZWjgbibpa84DMuKuaN8Cwqci/dkglPyHXKvsGrRugmuYvgFYr35AQqwz6j3q8R0dw==}
     dependencies:
-      '@maxim_mazurok/gapi.client.sheets-v4': 0.0.20240528
+      '@maxim_mazurok/gapi.client.sheets-v4': 0.0.20241015
     dev: true
 
   /@types/gapi.client@1.0.8:
@@ -5986,6 +5989,11 @@ packages:
     resolution: {integrity: sha512-11Ndz7Nv+mvAC1j0ktTa7fAb0vLyGGX+rMHNBYQviQDGU0Hw7lhctJANqbPhu9nV9/izT/IntTgZ7Im/9LJs9g==}
     engines: {'0': node >=0.6.0}
     dev: true
+
+  /farmhash-modern@1.1.0:
+    resolution: {integrity: sha512-6ypT4XfgqJk/F3Yuv4SX26I3doUjt0GTG4a+JgWxXQpxXzTBq8fPUeGHfcYMMDPHJHm3yPOSjaeBwBGAHWXCdA==}
+    engines: {node: '>=18.0.0'}
+    dev: false
 
   /farmhash@3.3.1:
     resolution: {integrity: sha512-XUizHanzlr/v7suBr/o85HSakOoWh6HKXZjFYl5C2+Gj0f0rkw+XTUZzrd9odDsgI9G5tRUcF4wSbKaX04T0DQ==}

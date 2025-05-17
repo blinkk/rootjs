@@ -37,12 +37,12 @@ export function useTranslations() {
 }
 
 /**
- * Cleans a string that's used for translations. Performs the following:
+ * Cleans a source string for use in translations. Performs the following:
  * - Removes any leading/trailing whitespace
- * - Removes spaces at the end of any line
+ * - Removes spaces at the end of any line (including &nbsp;)
  */
-export function normalizeString(str: string) {
-  const lines = String(str)
+export function normalizeString(str: string): string {
+  const lines = str
     .trim()
     .split('\n')
     .map((line) => removeTrailingWhitespace(line));
@@ -50,7 +50,5 @@ export function normalizeString(str: string) {
 }
 
 function removeTrailingWhitespace(str: string) {
-  return String(str)
-    .trimEnd()
-    .replace(/&nbsp;$/, '');
+  return str.trimEnd().replace(/&nbsp;$/, '');
 }
