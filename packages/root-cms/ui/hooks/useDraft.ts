@@ -14,7 +14,6 @@ import {debounce} from '../utils/debounce.js';
 import {setDocToCache} from '../utils/doc-cache.js';
 import {EventListener} from '../utils/events.js';
 import {getNestedValue, isObject} from '../utils/objects.js';
-import {cmsLockPublishing} from '../utils/doc.js';
 import {TIME_UNITS} from '../utils/time.js';
 
 const SAVE_DELAY = 3 * TIME_UNITS.second;
@@ -55,7 +54,7 @@ export class DraftController extends EventListener {
   private subscribers: Subscribers = {};
   private saveState = SaveState.NO_CHANGES;
   private autolock = false;
-  private autolockReason = 'Automatically locked on edit.';
+  private autolockReason = 'autolock';
   private autolockApplied = false;
   started = false;
 
@@ -182,17 +181,7 @@ export class DraftController extends EventListener {
    * Updates a group of keys. The keys can be a nested, e.g. "meta.title".
    */
   async updateKeys(updates: Record<string, any>) {
-    console.log('updateKeys()', updates);
-    if (
-      this.autolock &&
-      !this.autolockApplied &&
-      !this.cachedData?.sys?.publishingLocked
-    ) {
-      this.autolockApplied = true;
-      cmsLockPublishing(this.docId, {reason: this.autolockReason}).catch(
-        (err) => console.error('failed to autolock', err)
-      );
-    }
+    // console.log('updateKeys()', updates);
     for (const key in updates) {
       this.pendingUpdates.set(key, updates[key]);
     }
@@ -251,7 +240,23 @@ export class DraftController extends EventListener {
     const updates = Object.fromEntries(this.pendingUpdates);
     updates['sys.modifiedAt'] = serverTimestamp();
     updates['sys.modifiedBy'] = window.firebase.user.email;
-    console.log('flush()', updates);
+
+    // If autolock is enabled on the collection, add a publishing lock if one
+    // doesn't already exist on the doc.
+    if (
+      this.autolock &&
+      !this.autolockApplied &&
+      !this.cachedData?.sys?.publishingLocked
+    ) {
+      this.autolockApplied = true;
+      updates['sys.publishingLocked'] = {
+        lockedAt: serverTimestamp(),
+        lockedBy: window.firebase.user.email,
+        reason: this.autolockReason,
+      };
+    }
+
+    // console.log('flush()', updates);
 
     // Immediately clear the pending updates so that there's no race condition
     // with any new updates the user makes while the changes are being saved to

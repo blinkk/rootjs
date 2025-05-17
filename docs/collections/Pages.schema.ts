@@ -19,7 +19,6 @@ export default schema.collection({
     },
   },
   autolock: true,
-  autolockReason: 'Requires approval before publishing.',
 
   fields: [
     schema.object({
