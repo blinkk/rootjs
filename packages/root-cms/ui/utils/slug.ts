@@ -1,9 +1,11 @@
-export function isSlugValid(
-  slug: string,
-  pattern: string | RegExp = /^[a-z0-9]+(?:--?[a-z0-9]+)*$/
-): boolean {
-  const regex = typeof pattern === 'string' ? new RegExp(pattern) : pattern;
-  return Boolean(slug && regex.test(slug));
+const DEFAULT_SLUG_PATTERN = /^[a-z0-9]+(?:--?[a-z0-9]+)*$/;
+
+export function isSlugValid(slug: string, pattern?: string | RegExp): boolean {
+  if (!pattern) {
+    pattern = DEFAULT_SLUG_PATTERN;
+  }
+  const re = typeof pattern === 'string' ? new RegExp(pattern) : pattern;
+  return Boolean(slug && re.test(slug));
 }
 
 /**
@@ -24,6 +26,5 @@ export function normalizeSlug(slug: string): string {
     .replace(/^[\s/]*/g, '')
     .replace(/[\s/]*$/g, '')
     .replace(/^\/+|\/+$/g, '')
-    .toLowerCase()
     .replaceAll('/', '--');
 }

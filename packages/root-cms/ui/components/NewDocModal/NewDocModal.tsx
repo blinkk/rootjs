@@ -1,20 +1,18 @@
 import {Button, Modal, useMantineTheme} from '@mantine/core';
 import {useState} from 'preact/hooks';
 import {route} from 'preact-router';
+import {useCollectionSchema} from '../../hooks/useCollectionSchema.js';
 import {cmsCreateDoc} from '../../utils/doc.js';
 import {getDefaultFieldValue} from '../../utils/fields.js';
+import {isSlugValid, normalizeSlug} from '../../utils/slug.js';
 import {SlugInput} from '../SlugInput/SlugInput.js';
 import './NewDocModal.css';
-import {logAction} from '../../utils/actions.js';
-import {useCollectionSchema} from '../../hooks/useCollectionSchema.js';
-import {isSlugValid, normalizeSlug} from '../../utils/slug.js';
 
 interface NewDocModalProps {
   collection: string;
   opened?: boolean;
   onClose?: () => void;
 }
-
 
 export function NewDocModal(props: NewDocModalProps) {
   const [slug, setSlug] = useState('');
@@ -40,8 +38,8 @@ export function NewDocModal(props: NewDocModalProps) {
     setSlugError('');
 
     const cleanSlug = normalizeSlug(slug);
-    const pattern = rootCollection.slugRegex;
-    if (!isSlugValid(cleanSlug, pattern)) {
+    const slugRegex = rootCollection.slugRegex;
+    if (!isSlugValid(cleanSlug, slugRegex)) {
       setSlugError('Please enter a valid slug (e.g. "foo-bar-123").');
       setRpcLoading(false);
       return;

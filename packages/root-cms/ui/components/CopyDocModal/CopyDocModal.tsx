@@ -52,8 +52,8 @@ export function CopyDocModal(modalProps: ContextModalProps<CopyDocModalProps>) {
       return;
     }
     const cleanSlug = normalizeSlug(toSlug);
-    const pattern = window.__ROOT_CTX.collections[toCollectionId]?.slugRegex;
-    if (!isSlugValid(cleanSlug, pattern)) {
+    const slugRegex = window.__ROOT_CTX.collections[toCollectionId]?.slugRegex;
+    if (!isSlugValid(cleanSlug, slugRegex)) {
       setError('Please enter a valid slug (e.g. "foo-bar-123").');
       setLoading(false);
       return;

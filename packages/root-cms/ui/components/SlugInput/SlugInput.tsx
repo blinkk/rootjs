@@ -39,10 +39,10 @@ export function SlugInput(props: SlugInputProps) {
   if (rootCollection?.url) {
     if (slug) {
       const cleanSlug = normalizeSlug(slug);
-      const pattern = rootCollection?.slugRegex;
-      if (isSlugValid(cleanSlug, pattern)) {
+      const slugRegex = rootCollection?.slugRegex;
+      if (isSlugValid(cleanSlug, slugRegex)) {
         urlHelp = getDocServingUrl({
-          collectionId: props.collectionId!,
+          collectionId: collectionId,
           slug: cleanSlug,
         });
       } else {
@@ -50,7 +50,7 @@ export function SlugInput(props: SlugInputProps) {
       }
     } else {
       urlHelp = getDocServingUrl({
-        collectionId: props.collectionId!,
+        collectionId: collectionId,
         slug: '[slug]',
       });
     }
