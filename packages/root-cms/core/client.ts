@@ -9,6 +9,7 @@ import {
   WriteBatch,
 } from 'firebase-admin/firestore';
 import {CMSPlugin} from './plugin.js';
+import {TranslationsManager} from './translations-manager.js';
 
 export interface Doc<Fields = any> {
   /** The id of the doc, e.g. "Pages/foo-bar". */
@@ -600,6 +601,30 @@ export class RootCMSClient {
       return true;
     }
     return false;
+  }
+
+  /**
+   * Returns a `TranslationsManager` object for managing translations.
+   *
+   * To get translations:
+   * ```
+   * await tm.loadTranslations({
+   *   ids: ['Global/strings', 'Pages/index'],
+   *   locales: ['es'],
+   * });
+   * ```
+   *
+   * NOTE: The `TranslationsManager` is a v2 feature that will eventually
+   * replace the v1 translations system.
+   */
+  getTranslationsManager(): TranslationsManager {
+    const cmsPluginOptions = this.cmsPlugin.getConfig();
+    if (cmsPluginOptions.experiments?.v2TranslationsManager) {
+      throw new Error(
+        '`v2TranslationsManager` is not enabled. update root.config.ts and add: `{experiments: {v2TranslationsManager: true}}`'
+      );
+    }
+    return new TranslationsManager(this);
   }
 
   /**

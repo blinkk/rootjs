@@ -370,6 +370,9 @@ importers:
       dts-dom:
         specifier: 3.7.0
         version: 3.7.0
+      farmhash-modern:
+        specifier: 1.1.0
+        version: 1.1.0
       jsonwebtoken:
         specifier: 9.0.2
         version: 9.0.2
@@ -2597,15 +2600,15 @@ packages:
       '@types/gapi.client.discovery-v1': 0.0.4
     dev: true
 
-  /@maxim_mazurok/gapi.client.drive-v3@0.0.20250401:
-    resolution: {integrity: sha512-yAdKB89VS1mHLoUSxptE4X77dqu1w7goZpN26PMladlkgycOG81sIUZNzomObEOeQdtnJ+8FG4Ae4YJbYFidTg==}
+  /@maxim_mazurok/gapi.client.drive-v3@0.0.20250513:
+    resolution: {integrity: sha512-ek5uSGoh6FwJpH9btFxufierppnBmmtlLfLyOfzTUfe3VLtahUJct8PHLE83mgyfraPkN+3WdxKTWysKUMIpAA==}
     dependencies:
       '@types/gapi.client': 1.0.8
       '@types/gapi.client.discovery-v1': 0.0.4
     dev: true
 
-  /@maxim_mazurok/gapi.client.sheets-v4@0.0.20250401:
-    resolution: {integrity: sha512-LmUNEkO7m4bLPBOfH5J66BLxYkpISWitwpYCfk75RZFcZ0kKAIotZhQ5uf5scmB5ntBIIUvU2lQSA1BArwtaaA==}
+  /@maxim_mazurok/gapi.client.sheets-v4@0.0.20250509:
+    resolution: {integrity: sha512-4BzFb79MybDVbI/NFxHPvXe2wogAg0k0ejTXHBVlQSfKBgTDlKt0NXNeaNrCjJOaPcCqMGPFBsUNKVUyXRx72w==}
     dependencies:
       '@types/gapi.client': 1.0.8
       '@types/gapi.client.discovery-v1': 0.0.4
@@ -3457,13 +3460,13 @@ packages:
   /@types/gapi.client.drive-v3@0.0.4:
     resolution: {integrity: sha512-jE37dJ0EzAdY0aJPFOp20xmec/aO0P4HtUIA9k07RMPyedFDOcuMlSac1r0PklwQdgXF7BHaMoObNHNAnwSQUQ==}
     dependencies:
-      '@maxim_mazurok/gapi.client.drive-v3': 0.0.20250401
+      '@maxim_mazurok/gapi.client.drive-v3': 0.0.20250513
     dev: true
 
   /@types/gapi.client.sheets-v4@0.0.4:
     resolution: {integrity: sha512-6kTJ7aDMAElfdQV1XzVJmZWjgbibpa84DMuKuaN8Cwqci/dkglPyHXKvsGrRugmuYvgFYr35AQqwz6j3q8R0dw==}
     dependencies:
-      '@maxim_mazurok/gapi.client.sheets-v4': 0.0.20250401
+      '@maxim_mazurok/gapi.client.sheets-v4': 0.0.20250509
     dev: true
 
   /@types/gapi.client@1.0.8:
@@ -3941,6 +3944,9 @@ packages:
 
   /ajv-formats@3.0.1:
     resolution: {integrity: sha512-8iUql50EUR+uUcdRQ3HDqa6EVyo3docL8g5WJ3FNcWmu62IbkGUue/pEyLBW8VGKKucTPgqeks4fIU1DA4yowQ==}
+    peerDependenciesMeta:
+      ajv:
+        optional: true
     dependencies:
       ajv: 8.17.1
 
@@ -6413,6 +6419,11 @@ packages:
     resolution: {integrity: sha512-11Ndz7Nv+mvAC1j0ktTa7fAb0vLyGGX+rMHNBYQviQDGU0Hw7lhctJANqbPhu9nV9/izT/IntTgZ7Im/9LJs9g==}
     engines: {'0': node >=0.6.0}
     dev: true
+
+  /farmhash-modern@1.1.0:
+    resolution: {integrity: sha512-6ypT4XfgqJk/F3Yuv4SX26I3doUjt0GTG4a+JgWxXQpxXzTBq8fPUeGHfcYMMDPHJHm3yPOSjaeBwBGAHWXCdA==}
+    engines: {node: '>=18.0.0'}
+    dev: false
 
   /farmhash@3.3.1:
     resolution: {integrity: sha512-XUizHanzlr/v7suBr/o85HSakOoWh6HKXZjFYl5C2+Gj0f0rkw+XTUZzrd9odDsgI9G5tRUcF4wSbKaX04T0DQ==}

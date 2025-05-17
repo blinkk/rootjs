@@ -7,3 +7,4 @@ out/
 *.log
 .env
 .turbo/
+*.code-workspace
