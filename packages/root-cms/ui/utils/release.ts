@@ -117,7 +117,7 @@ export async function publishRelease(id: string) {
     scheduledAt: deleteField(),
     scheduledBy: deleteField(),
   });
-  await cmsPublishDocs(docIds, {batch});
+  await cmsPublishDocs(docIds, {batch, releaseId: id});
   console.log(`published release: ${id}`);
   logAction('release.publish', {metadata: {releaseId: id, docIds: docIds}});
 }
