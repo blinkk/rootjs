@@ -279,7 +279,7 @@ ReleasePage.DocsList = (props: {release: Release}) => {
       </div>
       <div className="ReleasePage__DocsList__cards">
         {docIds.map((docId) => (
-          <div className="ReleasePage__DocsList__card">
+          <div key={docId} className="ReleasePage__DocsList__card">
             <a href={`/cms/content/${docId}`}>
               <DocPreviewCard docId={docId} statusBadges />
             </a>
