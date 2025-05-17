@@ -1,5 +1,14 @@
 # @blinkk/root-cms
 
+## 1.4.5
+
+### Patch Changes
+
+- 66886f4: feat: add TranslationsManager from `v2` branch (#541)
+- 51c7269: feat: add slugRegex config option for collections (#538)
+- 808857b: feat: add autolock on edit (#540)
+  - @blinkk/root@1.4.5
+
 ## 1.4.4
 
 ### Patch Changes
