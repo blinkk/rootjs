@@ -2,4 +2,4 @@
 '@blinkk/root-cms': patch
 ---
 
-fix resize sheet
+fix: resize sheet request
