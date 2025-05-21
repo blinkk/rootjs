@@ -26,30 +26,29 @@ export function useTranslations() {
   const stringParams = useStringParams();
   const middleware = useTranslationMiddleware();
   const t = (str: string, params?: Record<string, string | number>) => {
-    let input = str;
+    let input = normalizeString(str);
     middleware.beforeTranslateFns.forEach((fn) => {
       input = fn(input);
     });
-    const key = normalizeString(input);
-    let translation = translations[key] ?? key ?? '';
+    let translation = translations[input] ?? input ?? '';
     middleware.afterTranslateFns.forEach((fn) => {
-      translation = fn(input);
-    });
-    middleware.beforeReplaceParamsFns.forEach((fn) => {
       translation = fn(translation);
     });
 
     // Replace string params, e.g. "Hello, {name}".
-    if (translation.includes('{') && translation.includes('}')) {
+    middleware.beforeReplaceParamsFns.forEach((fn) => {
+      translation = fn(translation);
+    });
+    if (testHasStringParams(translation)) {
       translation = replaceStringParams(translation, {
         ...stringParams,
         ...params,
       });
     }
-
     middleware.afterReplaceParamsFns.forEach((fn) => {
       translation = fn(translation);
     });
+
     return translation;
   };
   return t;
@@ -72,6 +71,10 @@ function removeTrailingWhitespace(str: string) {
   return String(str)
     .trimEnd()
     .replace(/&nbsp;$/, '');
+}
+
+function testHasStringParams(str: string) {
+  return str.includes('{') && str.includes('}');
 }
 
 /**
