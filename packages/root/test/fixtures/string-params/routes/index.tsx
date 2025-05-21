@@ -1,12 +1,18 @@
 import {StringParamsProvider, useTranslations} from '../../../../dist/core';
 
 export default function Page() {
-  const t = useTranslations();
   return (
     <StringParamsProvider value={{foo: 'foovalue'}}>
       <StringParamsProvider value={{bar: 'barvalue'}}>
-        <p>{t('{foo} / {bar}')}</p>
+        <MyComponent />
       </StringParamsProvider>
     </StringParamsProvider>
+  );
+}
+
+function MyComponent() {
+  const t = useTranslations();
+  return (
+    <p>{t('{foo} / {bar}')}</p>
   );
 }
