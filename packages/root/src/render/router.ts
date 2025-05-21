@@ -109,8 +109,8 @@ export class Router {
 
     const urlPaths: Array<{urlPath: string; params: Record<string, string>}> =
       [];
-    const hasPlaceholders = pathContainsPlaceholders(urlPathFormat);
-    if (routeModule.getStaticPaths && hasPlaceholders) {
+    const pathHasParams = testPathHasParams(urlPathFormat);
+    if (pathHasParams && routeModule.getStaticPaths) {
       const staticPaths = await routeModule.getStaticPaths({
         rootConfig: this.rootConfig,
       });
@@ -121,9 +121,9 @@ export class Router {
               urlPathFormat,
               pathParams.params || {}
             );
-            if (pathContainsPlaceholders(urlPath)) {
+            if (testPathHasParams(urlPath)) {
               console.warn(
-                `path contains placeholders: ${urlPathFormat}, double check getStaticPaths() and ensure all params are returned. more info: https://rootjs.dev/guide/routes#getStaticPaths`
+                `path contains params: ${urlPathFormat}, double check getStaticPaths() and ensure all params are returned. more info: https://rootjs.dev/guide/routes#getStaticPaths`
               );
             } else {
               urlPaths.push({
@@ -136,22 +136,22 @@ export class Router {
       }
     } else if (
       routeModule.getStaticProps &&
-      !hasPlaceholders
+      !pathHasParams
     ) {
       urlPaths.push({urlPath: normalizeUrlPath(urlPathFormat), params: {}});
     } else if (
       !routeModule.handle &&
-      !hasPlaceholders
+      !pathHasParams
     ) {
       urlPaths.push({urlPath: normalizeUrlPath(urlPathFormat), params: {}});
     } else if (
-      hasPlaceholders &&
+      pathHasParams &&
       !routeModule.handle &&
       !routeModule.getStaticPaths
     ) {
       console.warn(
         [
-          `warning: path contains placeholders: ${urlPathFormat}.`,
+          `warning: path contains params: ${urlPathFormat}.`,
           `define either ssg getStaticPaths() or ssr handle() for route: ${route.src}.`,
           'more info: https://rootjs.dev/guide/routes',
         ].join('\n')
@@ -208,7 +208,7 @@ export function normalizeUrlPath(
   return urlPath;
 }
 
-function pathContainsPlaceholders(urlPath: string) {
+function testPathHasParams(urlPath: string) {
   const segments = urlPath.split('/');
   return segments.some((segment) => {
     return segment.startsWith('[') && segment.endsWith(']');
