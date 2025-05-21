@@ -12,14 +12,13 @@ export interface StringParamsProviderProps {
   children?: ComponentChildren;
 }
 
-export const StringParamsProvider: FunctionalComponent<
-  StringParamsProviderProps
-> = ({value = {}, children}) => {
+export const StringParamsProvider: FunctionalComponent<StringParamsProviderProps> = (props) => {
+  // Allow for nested param values from parent content providers.
   const parent = useContext(STRING_PARAMS_CONTEXT) || {};
-  const merged = {...parent, ...value};
+  const merged = {...parent, ...props.value};
   return (
     <STRING_PARAMS_CONTEXT.Provider value={merged}>
-      {children}
+      {props.children}
     </STRING_PARAMS_CONTEXT.Provider>
   );
 };
