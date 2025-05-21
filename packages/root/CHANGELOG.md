@@ -1,5 +1,12 @@
 # @blinkk/root
 
+## 1.4.5
+
+### Patch Changes
+
+- c877834: feat: add middleware for useTranslations() (#551)
+- 501ab72: fix: merge params from nested StringParamsProvider
+
 ## 1.4.4
 
 ## 1.4.3
