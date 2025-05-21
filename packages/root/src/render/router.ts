@@ -109,7 +109,8 @@ export class Router {
 
     const urlPaths: Array<{urlPath: string; params: Record<string, string>}> =
       [];
-    if (routeModule.getStaticPaths) {
+    const hasPlaceholders = pathContainsPlaceholders(urlPathFormat);
+    if (routeModule.getStaticPaths && hasPlaceholders) {
       const staticPaths = await routeModule.getStaticPaths({
         rootConfig: this.rootConfig,
       });
@@ -135,16 +136,16 @@ export class Router {
       }
     } else if (
       routeModule.getStaticProps &&
-      !pathContainsPlaceholders(urlPathFormat)
+      !hasPlaceholders
     ) {
       urlPaths.push({urlPath: normalizeUrlPath(urlPathFormat), params: {}});
     } else if (
       !routeModule.handle &&
-      !pathContainsPlaceholders(urlPathFormat)
+      !hasPlaceholders
     ) {
       urlPaths.push({urlPath: normalizeUrlPath(urlPathFormat), params: {}});
     } else if (
-      pathContainsPlaceholders(urlPathFormat) &&
+      hasPlaceholders &&
       !routeModule.handle &&
       !routeModule.getStaticPaths
     ) {
