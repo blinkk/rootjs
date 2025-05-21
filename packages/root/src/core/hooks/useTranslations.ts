@@ -1,5 +1,6 @@
 import {I18nContext, useI18nContext} from './useI18nContext.js';
 import {useStringParams} from './useStringParams.js';
+import {useTranslationMiddleware} from './useTranslationsMiddleware.js';
 
 /**
  * A hook that returns a function that can be used to translate a string, and
@@ -23,14 +24,32 @@ export function useTranslations() {
   }
   const translations = i18nContext?.translations || {};
   const stringParams = useStringParams();
+  const middleware = useTranslationMiddleware();
   const t = (str: string, params?: Record<string, string | number>) => {
-    const key = normalizeString(str);
+    let input = str;
+    middleware.beforeTranslateFns.forEach((fn) => {
+      input = fn(input);
+    });
+    const key = normalizeString(input);
     let translation = translations[key] ?? key ?? '';
-    const allParams = {...stringParams, ...params};
-    for (const paramName of Object.keys(allParams)) {
-      const paramValue = String(allParams[paramName] ?? '');
-      translation = translation.replaceAll(`{${paramName}}`, paramValue);
+    middleware.afterTranslateFns.forEach((fn) => {
+      translation = fn(input);
+    });
+    middleware.beforeReplaceParamsFns.forEach((fn) => {
+      translation = fn(translation);
+    });
+
+    // Replace string params, e.g. "Hello, {name}".
+    if (translation.includes('{') && translation.includes('}')) {
+      translation = replaceStringParams(translation, {
+        ...stringParams,
+        ...params,
+      });
     }
+
+    middleware.afterReplaceParamsFns.forEach((fn) => {
+      translation = fn(translation);
+    });
     return translation;
   };
   return t;
@@ -53,4 +72,24 @@ function removeTrailingWhitespace(str: string) {
   return String(str)
     .trimEnd()
     .replace(/&nbsp;$/, '');
+}
+
+/**
+ * Replaces string placeholder params, e.g.
+ *
+ * ```
+ * replaceStringParams('Hello, {name}!', {name: 'Joe'})
+ * // => 'Hello, Joe!'
+ * ```
+ */
+function replaceStringParams(
+  str: string,
+  params: Record<string, string | number>
+): string {
+  return str.replace(/{([^}]+)}/g, (match, key) => {
+    if (key in params) {
+      return String(params[key]);
+    }
+    return match;
+  });
 }

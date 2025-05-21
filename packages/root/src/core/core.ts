@@ -9,6 +9,10 @@ export {
   useStringParams,
 } from './hooks/useStringParams.js';
 export {
+  TranslationMiddlewareProvider,
+  useTranslationMiddleware,
+} from './hooks/useTranslationsMiddleware.js';
+export {
   I18nContext,
   useI18nContext,
   getTranslations,
