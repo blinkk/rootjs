@@ -63,7 +63,7 @@ export class GSpreadsheet {
   }
 
   async createSheet(options: {title: string}) {
-    console.log(this.spreadsheetId);
+    console.log('createSheet', this.spreadsheetId);
     const res = await gapi.client.sheets.spreadsheets.batchUpdate({
       spreadsheetId: this.spreadsheetId,
       resource: {
@@ -442,6 +442,7 @@ export class GSheet {
       requests.push({
         updateSheetProperties: {
           properties: {
+            sheetId: this.gid,
             gridProperties: {columnCount: options.numCols},
           },
           fields: 'gridProperties.columnCount',
@@ -452,6 +453,7 @@ export class GSheet {
       requests.push({
         updateSheetProperties: {
           properties: {
+            sheetId: this.gid,
             gridProperties: {rowCount: options.numRows},
           },
           fields: 'gridProperties.rowCount',
