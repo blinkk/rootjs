@@ -1,4 +1,4 @@
-import {createContext} from 'preact';
+import {ComponentChildren, FunctionalComponent, createContext} from 'preact';
 import {useContext} from 'preact/hooks';
 
 export type StringParamsContext = Record<string, string>;
@@ -7,7 +7,21 @@ export const STRING_PARAMS_CONTEXT = createContext<StringParamsContext | null>(
   null
 );
 
-export const StringParamsProvider = STRING_PARAMS_CONTEXT.Provider;
+export interface StringParamsProviderProps {
+  value?: StringParamsContext;
+  children?: ComponentChildren;
+}
+
+export const StringParamsProvider: FunctionalComponent<StringParamsProviderProps> = (props) => {
+  // Allow for nested param values from parent content providers.
+  const parent = useContext(STRING_PARAMS_CONTEXT) || {};
+  const merged = {...parent, ...props.value};
+  return (
+    <STRING_PARAMS_CONTEXT.Provider value={merged}>
+      {props.children}
+    </STRING_PARAMS_CONTEXT.Provider>
+  );
+};
 
 /**
  * A hook that returns a map of string params, configured via the
