@@ -1,5 +1,17 @@
 # @blinkk/root-cms
 
+## 1.4.5
+
+### Patch Changes
+
+- 66886f4: feat: add TranslationsManager from `v2` branch (#541)
+- 51c7269: feat: add slugRegex config option for collections (#538)
+- 4d1caab: fix: resize sheet request
+- 808857b: feat: add autolock on edit (#540)
+- Updated dependencies [c877834]
+- Updated dependencies [501ab72]
+  - @blinkk/root@1.4.5
+
 ## 1.4.4
 
 ### Patch Changes
