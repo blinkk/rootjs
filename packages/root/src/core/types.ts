@@ -237,3 +237,26 @@ export interface SitemapItem {
    */
   alts: Record<string, {hrefLang: string; urlPath: string}>;
 }
+
+/**
+ * A function that is called before a string is translated.
+ *
+ * @param str The string to be translated.
+ * @param locale The locale of the string.
+ * @returns The processed string.
+ */
+export type PreTranslationFunc = (str: string, locale: string) => string;
+
+/**
+ * A function that is called after a string is translated.
+ *
+ * @param translatedStr The translated string.
+ * @param params The parameters used for translation.
+ * @param locale The locale of the string.
+ * @returns The processed string.
+ */
+export type PostTranslationFunc = (
+  translatedStr: string,
+  params: Record<string, string | number> | undefined,
+  locale: string
+) => string;
