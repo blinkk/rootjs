@@ -1,13 +1,15 @@
+/** @jsxImportSource preact */
 import {Accordion, Button, Loader} from '@mantine/core';
 import {ContextModalProps, useModals} from '@mantine/modals';
 import {showNotification} from '@mantine/notifications';
-import {useState, useRef} from 'preact/hooks';
+import {useState, useRef, useEffect} from 'preact/hooks';
 import {useModalTheme} from '../../hooks/useModalTheme.js';
 import {joinClassNames} from '../../utils/classes.js';
-import {cmsPublishDoc, cmsScheduleDoc} from '../../utils/doc.js';
+import {cmsPublishDoc, cmsScheduleDoc, cmsReadDocVersion, getDraftDocs, cmsPublishDocs} from '../../utils/doc.js';
 import {getLocalISOString} from '../../utils/time.js';
 import {DocDiffViewer} from '../DocDiffViewer/DocDiffViewer.js';
 import {Text} from '../Text/Text.js';
+import {useCollectionSchema} from '../../hooks/useCollectionSchema.js';
 
 import './PublishDocModal.css';
 
@@ -45,17 +47,103 @@ export function PublishDocModal(
   const dateTimeRef = useRef<HTMLInputElement>(null);
   const modals = useModals();
   const modalTheme = useModalTheme();
+  const [draftRefs, setDraftRefs] = useState<string[]>([]);
+  const [selectedRefs, setSelectedRefs] = useState<string[]>([]);
+  const [refsLoading, setRefsLoading] = useState(true);
+  const {schema: collectionSchema, loading: schemaLoading} = useCollectionSchema(props.docId.split('/')[0]);
 
   const buttonLabel = publishType === 'scheduled' ? 'Schedule' : 'Publish';
+
+  // Helper: Recursively find all reference fields in the doc fields
+  function findReferenceDocIds(fields: any, schemaFields?: any[]): string[] {
+    if (!fields || typeof fields !== 'object') return [];
+    let refs: string[] = [];
+    if (schemaFields) {
+      for (const field of schemaFields) {
+        if (field.type === 'reference') {
+          const ref = fields[field.id];
+          if (ref && ref.id) refs.push(ref.id);
+        } else if (field.type === 'object' && fields[field.id]) {
+          refs = refs.concat(findReferenceDocIds(fields[field.id], field.fields));
+        } else if (field.type === 'array' && Array.isArray(fields[field.id]?._array)) {
+          const arr = fields[field.id];
+          for (const key of arr._array) {
+            refs = refs.concat(findReferenceDocIds(arr[key], field.of.fields));
+          }
+        } else if (field.type === 'oneof' && fields[field.id]) {
+          const oneOfType = fields[field.id]._type;
+          const oneOfSchema = field.types.find((t: any) => t.name === oneOfType);
+          if (oneOfSchema) {
+            refs = refs.concat(findReferenceDocIds(fields[field.id], oneOfSchema.fields));
+          }
+        }
+      }
+    } else {
+      for (const key in fields) {
+        if (fields[key] && typeof fields[key] === 'object') {
+          if (fields[key].id && typeof fields[key].id === 'string') {
+            refs.push(fields[key].id);
+          } else {
+            refs = refs.concat(findReferenceDocIds(fields[key]));
+          }
+        }
+      }
+    }
+    return refs;
+  }
+
+  // Load draft doc and find referenced docs that are still in draft
+  useEffect(() => {
+    let mounted = true;
+    async function loadRefs() {
+      setRefsLoading(true);
+      if (!collectionSchema) {
+        setDraftRefs([]);
+        setSelectedRefs([]);
+        setRefsLoading(false);
+        return;
+      }
+      const draftDoc = await cmsReadDocVersion(props.docId, 'draft');
+      if (!draftDoc) {
+        setDraftRefs([]);
+        setSelectedRefs([]);
+        setRefsLoading(false);
+        return;
+      }
+      const refs = findReferenceDocIds(draftDoc.fields, collectionSchema.fields);
+      const uniqueRefs = Array.from(new Set(refs));
+      if (uniqueRefs.length === 0) {
+        setDraftRefs([]);
+        setSelectedRefs([]);
+        setRefsLoading(false);
+        return;
+      }
+      const draftStates = await Promise.all(
+        uniqueRefs.map(async (refId: string) => {
+          const published = await cmsReadDocVersion(refId, 'published');
+          return published ? null : refId;
+        })
+      );
+      const draftOnlyRefs = draftStates.filter(Boolean) as string[];
+      setDraftRefs(draftOnlyRefs);
+      setSelectedRefs(draftOnlyRefs); // default: select all
+      setRefsLoading(false);
+    }
+    loadRefs();
+    return () => {
+      mounted = false;
+    };
+  }, [props.docId, collectionSchema]);
 
   async function publish() {
     try {
       setLoading(true);
-      await cmsPublishDoc(props.docId);
+      const docIds = [props.docId, ...selectedRefs.filter((id: string) => id !== props.docId)];
+      await cmsPublishDocs(docIds);
       setLoading(false);
       showNotification({
         title: 'Published!',
-        message: `Succesfully published ${props.docId}.`,
+        message: `Succesfully published ${docIds.join(', ')}.`,
         autoClose: 10000,
       });
       modals.closeAll();
@@ -128,9 +216,40 @@ export function PublishDocModal(
   return (
     <div className="PublishDocModal">
       <div className="PublishDocModal__content">
+        {/* Draft references warning and checkboxes */}
+        {refsLoading || schemaLoading ? (
+          <Loader />
+        ) : draftRefs.length > 0 && (
+          <div className="PublishDocModal__draftRefsWarning" style={{marginBottom: 16}}>
+            <div style={{color: '#d97706', fontWeight: 600, marginBottom: 8}}>Draft documents</div>
+            <div style={{marginBottom: 8}}>
+              The following referenced documents are still in draft. Select which to publish with this document:
+            </div>
+            <div style={{marginBottom: 8}}>
+              {draftRefs.map((refId: string) => (
+                <label key={refId} style={{display: 'block', fontWeight: 400}}>
+                  <input
+                    type="checkbox"
+                    checked={selectedRefs.includes(refId)}
+                    onChange={(e: Event) => {
+                      const target = e.currentTarget as HTMLInputElement;
+                      if (target.checked) {
+                        setSelectedRefs([...selectedRefs, refId]);
+                      } else {
+                        setSelectedRefs(selectedRefs.filter((id: string) => id !== refId));
+                      }
+                    }}
+                  />{' '}
+                  {refId}
+                </label>
+              ))}
+            </div>
+          </div>
+        )}
+
         <form
           className="PublishDocModal__form"
-          onSubmit={(e) => {
+          onSubmit={(e: Event) => {
             e.preventDefault();
             onSubmit();
           }}
