@@ -1,18 +1,14 @@
-import EditorJS from '@editorjs/editorjs';
-import Header from '@editorjs/header';
-import ImageTool from '@editorjs/image';
-// import List from '@editorjs/list';
-import NestedList from '@editorjs/nested-list';
-import RawHtmlTool from '@editorjs/raw';
-// import Table from '@editorjs/table';
+// NOTE: The previous editor implementation used EditorJS. This file attempts
+// to migrate the editor to Lexical using the vanilla (non React) APIs. Lexical
+// is imported directly from the `lexical` npm package. The implementation here
+// is a lightweight wrapper so that the rest of the CMS can continue to use the
+// same Preact based component interface.
 import {useEffect, useRef, useState} from 'preact/hooks';
 import {joinClassNames} from '../../utils/classes.js';
 import './RichTextEditor.css';
 import {uploadFileToGCS} from '../../utils/gcs.js';
 import {isObject} from '../../utils/objects.js';
-import Strikethrough from './tools/Strikethrough.js';
-import Superscript from './tools/Superscript.js';
-import Underline from './tools/Underline.js';
+import {createEditor} from 'lexical';
 
 export interface RichTextEditorProps {
   className?: string;
@@ -37,124 +33,35 @@ export function RichTextEditor(props: RichTextEditorProps) {
   const placeholder = props.placeholder || 'Start typing...';
 
   useEffect(() => {
-    if (!editor) {
+    const newValue = props.value;
+    if (!newValue || !validateRichTextData(newValue)) {
       return;
     }
-    const newValue = props.value;
-    if (currentValue?.time !== newValue?.time) {
-      const currentTime = currentValue?.time || 0;
-      const newValueTime = newValue?.time || 0;
-      if (newValueTime > currentTime && validateRichTextData(newValue)) {
-        const blocks = newValue?.blocks || [];
-        if (blocks.length > 0) {
-          editor.render(newValue);
-        } else {
-          editor.render({
-            ...newValue,
-            blocks: [{type: 'paragraph', data: {text: ''}}],
-          });
-        }
-        setCurrentValue(newValue);
-      }
+    if (currentValue?.time !== newValue?.time && editorRef.current) {
+      editorRef.current.innerHTML = richTextToHtml(newValue);
+      setCurrentValue(newValue);
     }
-  }, [editor, props.value]);
+  }, [props.value]);
 
   useEffect(() => {
     const holder = editorRef.current!;
-    // TODO(stevenle): fix type issues.
-    const EditorJSClass = EditorJS as any;
-    const editor = new EditorJSClass({
-      holder: holder,
-      placeholder: placeholder,
-      inlineToolbar: [
-        'bold',
-        'italic',
-        'underline',
-        'strikethrough',
-        'superscript',
-        'link',
-      ],
-      tools: {
-        heading: {
-          class: Header,
-          config: {
-            placeholder: 'Enter a header',
-            levels: [2, 3, 4, 5],
-            defaultLevel: 2,
-          },
-        },
-        strikethrough: {
-          class: Strikethrough,
-        },
-        superscript: {
-          class: Superscript,
-        },
-        underline: {
-          class: Underline,
-        },
-        image: {
-          class: ImageTool,
-          config: {
-            uploader: gcsUploader(),
-            captionPlaceholder: 'Alt text',
-          },
-        },
-        unorderedList: {
-          class: NestedList,
-          inlineToolbar: true,
-          config: {
-            defaultStyle: 'unordered',
-          },
-          toolbox: {
-            name: 'unorderedList',
-            title: 'Bulleted List',
-            icon: '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24"><line x1="9" x2="19" y1="7" y2="7" stroke="currentColor" stroke-linecap="round" stroke-width="2"/><line x1="9" x2="19" y1="12" y2="12" stroke="currentColor" stroke-linecap="round" stroke-width="2"/><line x1="9" x2="19" y1="17" y2="17" stroke="currentColor" stroke-linecap="round" stroke-width="2"/><path stroke="currentColor" stroke-linecap="round" stroke-width="2" d="M5.00001 17H4.99002"/><path stroke="currentColor" stroke-linecap="round" stroke-width="2" d="M5.00001 12H4.99002"/><path stroke="currentColor" stroke-linecap="round" stroke-width="2" d="M5.00001 7H4.99002"/></svg>',
-          },
-        },
-        orderedList: {
-          class: NestedList,
-          inlineToolbar: true,
-          config: {
-            defaultStyle: 'ordered',
-          },
-          toolbox: {
-            name: 'orderedList',
-            title: 'Numbered List',
-            icon: '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24"><line x1="12" x2="19" y1="7" y2="7" stroke="currentColor" stroke-linecap="round" stroke-width="2"/><line x1="12" x2="19" y1="12" y2="12" stroke="currentColor" stroke-linecap="round" stroke-width="2"/><line x1="12" x2="19" y1="17" y2="17" stroke="currentColor" stroke-linecap="round" stroke-width="2"/><path stroke="currentColor" stroke-linecap="round" stroke-width="2" d="M7.79999 14L7.79999 7.2135C7.79999 7.12872 7.7011 7.0824 7.63597 7.13668L4.79999 9.5"/></svg>',
-          },
-        },
-        html: {
-          class: RawHtmlTool,
-          toolbox: {
-            name: 'HTML',
-          },
-        },
-        // TODO(stevenle): issue with Table because firestore doesn't support
-        // nested arrays.
-        // table: Table,
-      },
-      onReady: () => {
-        setEditor(editor);
-      },
-      onChange: () => {
-        editor
-          .save()
-          .then((richTextData: RichTextData) => {
-            setCurrentValue(richTextData);
-            if (props.onChange) {
-              props.onChange(richTextData);
-            }
-          })
-          .catch((err: any) => {
-            console.error('richtext error: ', err);
-          });
-      },
+
+    const editorInstance = createEditor();
+    editorInstance.setRootElement(holder);
+    holder.innerHTML = richTextToHtml(currentValue);
+
+    const unregister = editorInstance.registerUpdateListener(({editorState}: any) => {
+      const json = editorState.toJSON();
+      const data = lexicalStateToRichText(json);
+      setCurrentValue(data);
+      props.onChange?.(data);
     });
+
+    setEditor(editorInstance);
     return () => {
-      // Ensure `.destroy()` exists.
-      // https://github.com/blinkk/rootjs/issues/525
-      if (editor && typeof editor.destroy === 'function') {
-        editor.destroy();
+      unregister();
+      if (editorInstance.destroy) {
+        editorInstance.destroy();
       }
     };
   }, []);
@@ -196,4 +103,72 @@ function gcsUploader() {
 
 function isGciUrl(url: string) {
   return url.startsWith('https://lh3.googleusercontent.com/');
+}
+
+// Converts rich text data (editorjs style) to a simple HTML representation.
+function richTextToHtml(data: RichTextData): string {
+  const blocks = data?.blocks || [];
+  return blocks
+    .map((block) => {
+      if (block.type === 'heading') {
+        const level = block.data?.level || 2;
+        return `<h${level}>${block.data?.text || ''}</h${level}>`;
+      }
+      if (block.type === 'image') {
+        const url = block.data?.file?.url || '';
+        const alt = block.data?.file?.alt || '';
+        return `<img src="${url}" alt="${alt}">`;
+      }
+      return `<p>${block.data?.text || ''}</p>`;
+    })
+    .join('');
+}
+
+// Converts a HTML string into the simplified rich text format used throughout
+// the CMS. This is a very naive implementation and only supports paragraphs and
+// basic headings.
+function htmlToRichText(html: string): RichTextData {
+  const container = document.createElement('div');
+  container.innerHTML = html;
+  const blocks: any[] = [];
+  container.childNodes.forEach((node) => {
+    if (node.nodeType !== 1) return;
+    const el = node as HTMLElement;
+    if (el.tagName.toLowerCase().match(/^h[1-6]$/)) {
+      const level = parseInt(el.tagName.substring(1), 10);
+      blocks.push({type: 'heading', data: {level, text: el.innerHTML}});
+    } else if (el.tagName.toLowerCase() === 'img') {
+      blocks.push({
+        type: 'image',
+        data: {file: {url: el.getAttribute('src') || '', alt: el.getAttribute('alt') || ''}},
+      });
+    } else {
+      blocks.push({type: 'paragraph', data: {text: el.innerHTML}});
+    }
+  });
+  return {blocks, time: Date.now()};
+}
+
+// Attempts to convert a Lexical editor state JSON into the simplified rich text
+// structure. Only a subset of node types are supported.
+function lexicalStateToRichText(state: any): RichTextData {
+  const blocks: any[] = [];
+  const children = state?.root?.children || [];
+  for (const node of children) {
+    if (node.type === 'heading') {
+      blocks.push({type: 'heading', data: {level: node.tag, text: collectText(node)}});
+    } else if (node.type === 'text') {
+      blocks.push({type: 'paragraph', data: {text: node.text}});
+    } else if (node.type === 'paragraph') {
+      blocks.push({type: 'paragraph', data: {text: collectText(node)}});
+    }
+  }
+  return {blocks, time: Date.now()};
+}
+
+function collectText(node: any): string {
+  if (!node.children) {
+    return node.text || '';
+  }
+  return node.children.map((n: any) => collectText(n)).join('');
 }

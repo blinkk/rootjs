@@ -392,30 +392,9 @@ importers:
       '@blinkk/root':
         specifier: workspace:*
         version: link:../root
-      '@editorjs/editorjs':
-        specifier: 2.30.8
-        version: 2.30.8
-      '@editorjs/header':
-        specifier: 2.8.8
-        version: 2.8.8
-      '@editorjs/image':
-        specifier: 2.10.2
-        version: 2.10.2
-      '@editorjs/list':
-        specifier: 2.0.6
-        version: 2.0.6
-      '@editorjs/nested-list':
-        specifier: 1.4.3
-        version: 1.4.3
-      '@editorjs/raw':
-        specifier: 2.5.1
-        version: 2.5.1
-      '@editorjs/table':
-        specifier: 2.4.4
-        version: 2.4.4
-      '@editorjs/underline':
-        specifier: 1.2.1
-        version: 1.2.1
+      lexical:
+        specifier: 0.13.1
+        version: 0.13.1
       '@emotion/react':
         specifier: 11.10.5
         version: 11.10.5(@babel/core@7.17.9)(@preact/compat@17.1.2)
@@ -1072,51 +1051,9 @@ packages:
       kuler: 2.0.0
     dev: true
 
-  /@editorjs/editorjs@2.30.8:
-    resolution: {integrity: sha512-ClFuxI1qZTfXPJTacQfsJtOUP6bKoIe6BQNdAvGsDTDVwMnZEzoaSOwvUpdZEE56xppVfQueNK/1MElV9SJKHg==}
-    dev: true
 
-  /@editorjs/header@2.8.8:
-    resolution: {integrity: sha512-bsMSs34u2hoi0UBuRoc5EGWXIFzJiwYgkFUYQGVm63y5FU+s8zPBmVx5Ip2sw1xgs0fqfDROqmteMvvmbCy62w==}
-    dependencies:
-      '@codexteam/icons': 0.0.5
-      '@editorjs/editorjs': 2.30.8
-    dev: true
-
-  /@editorjs/image@2.10.2:
-    resolution: {integrity: sha512-SU0nP9NhqwA7+Jlco/E7zjYjtRUrVGSOW8bsrrEnH8my588UW7mPGa1zwAHFs/UMB0x8LXKOb1iq40db+2iC6A==}
-    dependencies:
-      '@codexteam/icons': 0.3.3
-    dev: true
-
-  /@editorjs/list@2.0.6:
-    resolution: {integrity: sha512-QmmRAMtIBlO9k8LxfiqhWM+CjrA9r1F5th3cI9UFhDMC78YqFdFNg+dWrH57bAW4063HJfS1ygbGoH/LfHBkww==}
-    dependencies:
-      '@codexteam/icons': 0.3.3
-    dev: true
-
-  /@editorjs/nested-list@1.4.3:
-    resolution: {integrity: sha512-3jTJd6H2Zwe8SeiI9li9AolkCxFVitEnCpJjDI6+la/HslSJC827fHivc9hue6JmC8esA4yri0KCMyp8N4ykww==}
-    dependencies:
-      '@codexteam/icons': 0.0.2
-    dev: true
-
-  /@editorjs/raw@2.5.1:
-    resolution: {integrity: sha512-h7CjXtfSTe4Bj1CL84ch5NW0q0CdrlWsLzQ/kbaFTgx914CzKz4Ug+xgdvytVO1dd1QzB5/HCW0ic1VxtgkhMQ==}
-    dependencies:
-      '@codexteam/icons': 0.0.4
-    dev: true
-
-  /@editorjs/table@2.4.4:
-    resolution: {integrity: sha512-2wWjxk48C9Z7uaBZIS5dML81c2VsD47Va9J4RDd2UboxcnYV8OZ4oYxKafH5RJIGPj8ykGaROIzyDVR1N4e7Cg==}
-    dependencies:
-      '@codexteam/icons': 0.0.6
-    dev: true
-
-  /@editorjs/underline@1.2.1:
-    resolution: {integrity: sha512-LjJ01ia6Pj0Z/elifycp9+T1bQs0eXNnIcEYKOlk0sGHLy88DPcBOh9oz1i+uWarZ4AjGsvSMaptpWe+yQNsjQ==}
-    dependencies:
-      '@codexteam/icons': 0.3.3
+  /lexical@0.13.1:
+    resolution: {integrity: sha512-000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000}
     dev: true
 
   /@electric-sql/pglite@0.2.17:
