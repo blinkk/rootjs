@@ -982,16 +982,7 @@ export class RootCMSClient {
  * Returns true if the `data` is a rich text data object.
  */
 export function isRichTextData(data: any) {
-  // The RichTextEditor uses editorjs under the hood, the data format is
-  // something like:
-  //  {
-  //   "time": 1721761211720,
-  //   "version": "2.28.2",
-  //   "blocks": [...]
-  // }
-  return Boolean(
-    isObject(data) && Array.isArray(data.blocks) && data.time && data.version
-  );
+  return typeof data === 'string';
 }
 
 export function getCmsPlugin(rootConfig: RootConfig): CMSPlugin {

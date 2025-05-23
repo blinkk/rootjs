@@ -1,23 +1,15 @@
 import {useEffect, useState} from 'preact/hooks';
 import * as schema from '../../../../core/schema.js';
-import {deepEqual} from '../../../utils/objects.js';
-import {
-  RichTextData,
-  RichTextEditor,
-} from '../../RichTextEditor/RichTextEditor.js';
+import {RichTextEditor} from '../../RichTextEditor/RichTextEditor.js';
 import {FieldProps} from './FieldProps.js';
 
 export function RichTextField(props: FieldProps) {
   const field = props.field as schema.RichTextField;
-  const [value, setValue] = useState<RichTextData>({
-    blocks: [{type: 'paragraph', data: {}}],
-  });
+  const [value, setValue] = useState<string>('');
 
-  function onChange(newValue: RichTextData) {
+  function onChange(newValue: string) {
     setValue((currentValue) => {
-      if (
-        !deepEqual({blocks: currentValue?.blocks}, {blocks: newValue?.blocks})
-      ) {
+      if (currentValue !== newValue) {
         props.draft.updateKey(props.deepKey, newValue);
       }
       return newValue;
@@ -25,12 +17,9 @@ export function RichTextField(props: FieldProps) {
   }
 
   useEffect(() => {
-    const unsubscribe = props.draft.subscribe(
-      props.deepKey,
-      (newValue: RichTextData) => {
-        setValue(newValue);
-      }
-    );
+    const unsubscribe = props.draft.subscribe(props.deepKey, (newValue: string) => {
+      setValue(newValue);
+    });
     return unsubscribe;
   }, []);
 
