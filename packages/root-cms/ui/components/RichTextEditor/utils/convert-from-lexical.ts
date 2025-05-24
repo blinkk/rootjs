@@ -1,0 +1,124 @@
+import {RichTextBlock, RichTextData, RichTextHeadingBlock, RichTextListBlock, RichTextListItem, RichTextParagraphBlock} from '../../../../shared/richtext.js';
+import {
+  $getRoot,
+  $isParagraphNode,
+  $isTextNode,
+  LexicalNode,
+  ElementNode,
+  $isLineBreakNode,
+} from 'lexical';
+import {$isHeadingNode} from '@lexical/rich-text';
+import {$isListItemNode, $isListNode, ListItemNode, ListNode} from '@lexical/list';
+
+function extractTextNode(node: ElementNode) {
+  const texts = node.getChildren().map(extractTextChild);
+  return texts.join('');
+}
+
+function extractTextChild(node: LexicalNode) {
+  if ($isLineBreakNode(node)) {
+    return '<br>';
+  }
+  if (!$isTextNode(node)) {
+    return '';
+  }
+  let text = node.getTextContent();
+  if (!text) {
+    return '';
+  }
+  const formatTags = {
+    s: node.hasFormat('strikethrough'),
+    u: node.hasFormat('underline'),
+    i: node.hasFormat('italic'),
+    b: node.hasFormat('bold'),
+    sup: node.hasFormat('superscript'),
+  };
+  Object.entries(formatTags).forEach(([tag, enabled]) => {
+    if (enabled) {
+      text = `<${tag}>${text}</${tag}>`;
+    }
+  });
+  return text;
+}
+
+function extractListItems(node: ListNode): RichTextListItem[] {
+  const items: RichTextListItem[] = [];
+  node.getChildren().forEach((child) => {
+    if ($isListItemNode(child)) {
+      items.push(extractListItem(child));
+    }
+  });
+  return items;
+}
+
+function extractListItem(node: ListItemNode): RichTextListItem {
+  // Handle list item with nested lists.
+  const firstChild = node.getFirstChild();
+  if (firstChild && $isListNode(firstChild)) {
+    const tag = firstChild.getTag();
+    return {
+      itemsType: tag === 'ol' ? 'orderedList' : 'unorderedList',
+      items: extractListItems(firstChild),
+    };
+  }
+
+  // Handle list item with text content.
+  return {content: extractTextNode(node)};
+}
+
+/**
+ * Converts from lexical to rich text data.
+ * NOTE: this function must be called within a `editor.read()` callback.
+ */
+export function convertToRichTextData(): RichTextData | null {
+  const blocks: RichTextBlock[] = [];
+
+  const root = $getRoot();
+  const children = root.getChildren();
+
+  children.forEach((node) => {
+    if ($isParagraphNode(node)) {
+      const block: RichTextParagraphBlock = {
+        type: 'paragraph',
+        data: {text: extractTextNode(node)},
+      };
+      blocks.push(block);
+    } else if ($isHeadingNode(node)) {
+      const level = node.getTag().slice(1);
+      const block: RichTextHeadingBlock = {
+        type: 'heading',
+        data: {
+          text: extractTextNode(node),
+          level: parseInt(level),
+        },
+      };
+      blocks.push(block);
+    } else if ($isListNode(node)) {
+      const tag = node.getTag();
+      const block: RichTextListBlock = {
+        type: tag === 'ol' ? 'orderedList' : 'unorderedList',
+        data: {
+          style: tag === 'ol' ? 'ordered' : 'unordered',
+          items: extractListItems(node),
+        },
+      };
+      blocks.push(block);
+    }
+  });
+
+  // If the last block is an empty paragraph, remove it.
+  const lastBlock = blocks.length > 0 && blocks.at(-1);
+  if (lastBlock && lastBlock.type === 'paragraph' && !lastBlock.data?.text) {
+    blocks.pop();
+  }
+
+  if (blocks.length === 0) {
+    return null;
+  }
+
+  return {
+    time: Date.now(),
+    blocks,
+    version: 'lexical-0.31.2',
+  };
+}
