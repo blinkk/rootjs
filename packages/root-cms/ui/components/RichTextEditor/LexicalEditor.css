@@ -1,0 +1,61 @@
+.LexicalEditor__root {
+  position: relative;
+}
+
+.LexicalEditor__toolbar {
+  position: relative;
+  display: flex;
+  border: 1px solid #ced4da;
+  border-bottom: none;
+  padding: 6px 10px;
+}
+
+.LexicalEditor__toolbar__group {
+  display: flex;
+}
+
+.LexicalEditor__toolbar__group .LexicalEditor__toolbar__actionIcon {
+  border-radius: 0;
+}
+
+.LexicalEditor__toolbar__group .LexicalEditor__toolbar__actionIcon + .LexicalEditor__toolbar__actionIcon {
+  border-left: none;
+}
+
+.LexicalEditor__toolbar__group .LexicalEditor__toolbar__actionIcon:first-of-type {
+  border-top-left-radius: 4px;
+  border-bottom-left-radius: 4px;
+}
+
+.LexicalEditor__toolbar__group .LexicalEditor__toolbar__actionIcon:last-of-type {
+  border-top-right-radius: 4px;
+  border-bottom-right-radius: 4px;
+}
+
+.LexicalEditor__toolbar__actionIcon--active {
+  background-color: rgb(231, 245, 255);
+  color: rgb(28, 126, 214);
+}
+
+.LexicalEditor__editor {
+  border: 1px solid #ced4da;
+  background: #fff;
+  padding: 10px 10px;
+  padding-bottom: 100px;
+  position: relative;
+  font-family: var(--font-family-default);
+  font-size: 12px;
+}
+
+.LexicalEditor__editor:focus {
+  outline: none;
+  border-color: rgb(51, 154, 240);
+}
+
+.LexicalEditor__placeholder {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  color: #666;
+  pointer-events: none;
+}
