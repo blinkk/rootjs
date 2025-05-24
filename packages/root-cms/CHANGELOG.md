@@ -1,5 +1,11 @@
 # @blinkk/root-cms
 
+## 1.4.6
+
+### Patch Changes
+
+- feat: open reference field preview cards in new tab
+
 ## 1.4.5
 
 ### Patch Changes
