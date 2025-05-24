@@ -51,6 +51,12 @@ export default schema.collection({
             {value: 'api', label: 'API'},
           ],
         }),
+        schema.reference({
+          id: 'nextGuide',
+          label: 'Next Guide',
+          help: 'Suggested reading next guide.',
+          collections: ['Guide'],
+        }),
       ],
     }),
 
