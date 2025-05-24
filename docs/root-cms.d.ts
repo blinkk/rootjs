@@ -157,6 +157,8 @@ export interface GuideFields {
     image?: RootCMSImage;
     /** Category */
     category?: string;
+    /** Next Guide. Suggested reading next guide. */
+    nextGuide?: RootCMSReference;
   };
   /** Content */
   content?: {

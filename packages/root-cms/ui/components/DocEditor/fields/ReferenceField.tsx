@@ -144,7 +144,11 @@ ReferenceField.DocCard = (props: {doc: any}) => {
     rootCollection.preview?.defaultImage;
 
   return (
-    <div className="ReferenceField__DocCard">
+    <a
+      className="ReferenceField__DocCard"
+      href={`/cms/content/${docId}`}
+      target="_blank"
+    >
       <div className="ReferenceField__DocCard__image">
         <Image
           src={previewImage?.src}
@@ -163,6 +167,6 @@ ReferenceField.DocCard = (props: {doc: any}) => {
           {previewTitle || '[UNTITLED]'}
         </div>
       </div>
-    </div>
+    </a>
   );
 };
