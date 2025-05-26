@@ -56,8 +56,9 @@ export interface RichTextCustomBlock<TypeName = string, DataType = any> {
 }
 
 export interface RichTextData {
-  [key: string]: any;
   blocks: RichTextBlock[];
+  time: number;
+  version: string;
 }
 
 export function testValidRichTextData(data: RichTextData) {

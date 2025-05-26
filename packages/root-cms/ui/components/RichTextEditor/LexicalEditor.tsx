@@ -71,7 +71,7 @@ export function LexicalEditor(props: LexicalEditorProps) {
 
 interface EditorProps {
   placeholder?: string;
-  value?: RichTextData;
+  value?: RichTextData | null;
   onChange?: (value: RichTextData | null) => void;
 }
 

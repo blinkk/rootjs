@@ -25,24 +25,20 @@
   padding-left: 16px;
 }
 .LexicalTheme__h1 {
-  font-size: 20px;
-  font-weight: 600;
-  margin: 0;
+  font-size: 18px;
 }
 .LexicalTheme__h2 {
   font-size: 16px;
-  font-weight: 600;
-  margin: 0;
 }
 .LexicalTheme__h3 {
   font-size: 14px;
-  font-weight: 600;
-  margin: 0;
 }
 .LexicalTheme__h1,
 .LexicalTheme__h2,
 .LexicalTheme__h3 {
+  margin: 0;
   margin-top: 8px;
+  font-weight: 500;
 }
 .LexicalTheme__h1:first-child,
 .LexicalTheme__h2:first-child,
@@ -462,7 +458,7 @@
   margin-top: 0;
 }
 .LexicalTheme__listItem {
-  margin: 4px 20px;
+  margin: 2px 20px;
 }
 .LexicalTheme__listItem::marker {
   color: var(--listitem-marker-color);

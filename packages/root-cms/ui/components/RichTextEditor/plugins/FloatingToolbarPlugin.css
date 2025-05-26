@@ -16,6 +16,10 @@
   will-change: transform;
 }
 
+.LexicalEditor__floatingToolbar .LexicalEditor__toolbar__actionIcon button {
+  color: black;
+}
+
 .LexicalEditor__floatingToolbar .LexicalEditor__toolbar__actionIcon--active button {
   border: 1px solid rgb(206, 212, 218)
 }

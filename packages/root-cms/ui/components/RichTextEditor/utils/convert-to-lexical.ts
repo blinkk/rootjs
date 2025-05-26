@@ -1,6 +1,6 @@
 import {$applyNodeReplacement, $createParagraphNode, $createTextNode, $getRoot} from 'lexical';
 import {RichTextData, RichTextListItem, RichTextListItemNestedList, RichTextListItemText} from '../../../../shared/richtext.js';
-import {$createHeadingNode} from '@lexical/rich-text';
+import {$createHeadingNode, HeadingTagType} from '@lexical/rich-text';
 import {$createLinkNode} from '@lexical/link';
 import {$createListItemNode, $createListNode, ListItemNode} from '@lexical/list';
 
@@ -23,7 +23,8 @@ export function convertToLexical(data?: RichTextData | null) {
       }
       root.append(paragraphNode);
     } else if (block.type === 'heading') {
-      const headingNode = $createHeadingNode();
+      const tagName = `h${block.data?.level || 2}` as HeadingTagType;
+      const headingNode = $createHeadingNode(tagName);
       if (block.data.text) {
         const children = createNodesFromHTML(block.data.text);
         headingNode.append(...children);
@@ -54,29 +55,34 @@ function createNodesFromHTML(htmlString: string) {
 
     if (domNode.nodeType === Node.ELEMENT_NODE) {
       const el = domNode as HTMLElement;
-      const children = Array.from(el.childNodes).map(parseNode).filter(Boolean);
+      const children = Array.from(el.childNodes).map(parseNode).filter(Boolean).flat();
 
       switch (el.tagName.toLowerCase()) {
         case 'b':
         case 'strong':
-          return children.map(child => {
-            child.setFormat('bold');
+          return children.map((child) => {
+            child.toggleFormat('bold');
             return child;
           });
         case 'i':
         case 'em':
-          return children.map(child => {
-            child.setFormat('italic');
+          return children.map((child) => {
+            child.toggleFormat('italic');
             return child;
           });
         case 'u':
-          return children.map(child => {
-            child.setFormat('underline');
+          return children.map((child) => {
+            child.toggleFormat('underline');
+            return child;
+          });
+        case 's':
+          return children.map((child) => {
+            child.toggleFormat('strikethrough');
             return child;
           });
         case 'sup':
-          return children.map(child => {
-            child.setFormat('superscript');
+          return children.map((child) => {
+            child.toggleFormat('superscript');
             return child;
           });
         case 'a':
@@ -86,6 +92,8 @@ function createNodesFromHTML(htmlString: string) {
             ),
           ];
         default:
+          console.log('unhandled tag: ' + el.tagName);
+          console.log(children);
           return children;
       }
     }
