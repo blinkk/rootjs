@@ -9,17 +9,26 @@ import {
 } from 'lexical';
 import {$isHeadingNode} from '@lexical/rich-text';
 import {$isListItemNode, $isListNode, ListItemNode, ListNode} from '@lexical/list';
+import {$isLinkNode} from '@lexical/link';
 
 function extractTextNode(node: ElementNode) {
   const texts = node.getChildren().map(extractTextChild);
   return texts.join('');
 }
 
-function extractTextChild(node: LexicalNode) {
+function extractTextChild(node: LexicalNode): string {
   if ($isLineBreakNode(node)) {
     return '<br>';
   }
+  if ($isLinkNode(node)) {
+    console.log(node);
+    console.log('TODO handle link node');
+    const href = node.getURL();
+    return `<a href="${href}">${extractTextNode(node)}</a>`;
+  }
   if (!$isTextNode(node)) {
+    console.log('unhandled node');
+    console.log(node);
     return '';
   }
   let text = node.getTextContent();
@@ -33,12 +42,23 @@ function extractTextChild(node: LexicalNode) {
     b: node.hasFormat('bold'),
     sup: node.hasFormat('superscript'),
   };
+  return formatTextNode(text, formatTags);
+}
+
+function formatTextNode(text: string, formatTags: Record<string, boolean>) {
+  const segments: string[] = [];
   Object.entries(formatTags).forEach(([tag, enabled]) => {
     if (enabled) {
-      text = `<${tag}>${text}</${tag}>`;
+      segments.push(`<${tag}>`);
     }
   });
-  return text;
+  segments.push(escapeHTML(text));
+  Object.entries(formatTags).forEach(([tag, enabled]) => {
+    if (enabled) {
+      segments.push(`</${tag}>`);
+    }
+  });
+  return segments.join('');
 }
 
 function extractListItems(node: ListNode): RichTextListItem[] {
@@ -132,4 +152,13 @@ function testLastBlockIsEmpty(blocks: RichTextBlock[]) {
     return true;
   }
   return false;
+}
+
+function escapeHTML(html: string) {
+  return html
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
 }

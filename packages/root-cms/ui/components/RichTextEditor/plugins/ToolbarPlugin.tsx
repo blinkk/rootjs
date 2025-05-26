@@ -378,8 +378,6 @@ export function ToolbarPlugin(props: ToolbarPluginProps) {
     }
   }, [activeEditor, setIsLinkEditMode, toolbarState.isLink]);
 
-  const canViewerSeeInsertDropdown = !toolbarState.isImageCaption;
-
   return (
     <div className="LexicalEditor__toolbar">
       {toolbarState.blockType in TOOLBAR_BLOCK_LABELS &&

@@ -6,6 +6,7 @@ import {InitialConfigType, LexicalComposer} from '@lexical/react/LexicalComposer
 import {useLexicalComposerContext} from '@lexical/react/LexicalComposerContext';
 import {ContentEditable} from '@lexical/react/LexicalContentEditable';
 import {LexicalErrorBoundary} from '@lexical/react/LexicalErrorBoundary';
+import {LinkPlugin} from '@lexical/react/LexicalLinkPlugin';
 import {ListPlugin} from '@lexical/react/LexicalListPlugin';
 import {HeadingNode} from '@lexical/rich-text';
 import {joinClassNames} from '../../utils/classes.js';
@@ -22,6 +23,7 @@ import {LexicalTheme} from './LexicalTheme.js';
 import {FloatingToolbarPlugin} from './plugins/FloatingToolbarPlugin.js';
 import {OnChangePlugin} from './plugins/OnChangePlugin.js';
 import {RichTextData} from '../../../shared/richtext.js';
+import {FloatingLinkEditorPlugin} from './plugins/FloatingLinkEditorPlugin.js';
 
 const INITIAL_CONFIG: InitialConfigType = {
   namespace: 'RootCMS',
@@ -91,6 +93,7 @@ function Editor(props: EditorProps) {
 
   return (
     <>
+      <OnChangePlugin value={props.value} onChange={props.onChange} />
       <ToolbarPlugin
         editor={editor}
         activeEditor={activeEditor}
@@ -115,14 +118,23 @@ function Editor(props: EditorProps) {
         }
         ErrorBoundary={LexicalErrorBoundary}
       />
+      <LinkPlugin />
       <ListPlugin />
       <TabIndentationPlugin maxIndent={7} />
       <MarkdownTransformPlugin />
-      <FloatingToolbarPlugin
-        anchorElem={floatingAnchorElem!}
-        setIsLinkEditMode={setIsLinkEditMode}
-      />
-      <OnChangePlugin value={props.value} onChange={props.onChange} />
+      {floatingAnchorElem && (
+        <>
+          <FloatingToolbarPlugin
+            anchorElem={floatingAnchorElem}
+            setIsLinkEditMode={setIsLinkEditMode}
+          />
+          <FloatingLinkEditorPlugin
+            anchorElem={floatingAnchorElem}
+            isLinkEditMode={isLinkEditMode}
+            setIsLinkEditMode={setIsLinkEditMode}
+          />
+        </>
+      )}
     </>
   );
 }
