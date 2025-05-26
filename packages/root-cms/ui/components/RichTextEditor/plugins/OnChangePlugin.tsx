@@ -5,6 +5,7 @@ import {convertToRichTextData} from '../utils/convert-from-lexical.js';
 import {convertToLexical} from '../utils/convert-to-lexical.js';
 import {OnChangePlugin as LexicalOnChangePlugin} from '@lexical/react/LexicalOnChangePlugin';
 import {EditorState} from 'lexical';
+import {debounce} from '../../../utils/debounce.js';
 
 export interface OnChangePluginProps {
   value?: RichTextData | null;
@@ -28,23 +29,22 @@ export function OnChangePlugin(props: OnChangePluginProps) {
     }
   }, [editor, props.value]);
 
-  function onChange(editorState: EditorState) {
+  // The tree conversion from lexical data to rich text data can be expensive,
+  // so debounce the updates after a short duration.
+  const onChange = debounce((editorState: EditorState) => {
     if (isUpdating) {
       setIsUpdating(false);
       return;
     }
     editorState.read(() => {
-      const richTextData = toRichTextData();
+      const richTextData = convertToRichTextData();
+      console.log(richTextData);
       setTimeSaved(richTextData?.time || 0);
       if (props.onChange) {
         props.onChange(richTextData);
       }
     });
-  }
+  }, 500);
 
   return <LexicalOnChangePlugin onChange={onChange} ignoreSelectionChange />;
-}
-
-function toRichTextData(): RichTextData | null {
-  return convertToRichTextData();
 }
