@@ -106,19 +106,30 @@ export function convertToRichTextData(): RichTextData | null {
     }
   });
 
-  // If the last block is an empty paragraph, remove it.
-  const lastBlock = blocks.length > 0 && blocks.at(-1);
-  if (lastBlock && lastBlock.type === 'paragraph' && !lastBlock.data?.text) {
+  // If the last block is empty, remove it.
+  while (testLastBlockIsEmpty(blocks)) {
     blocks.pop();
   }
 
+  // Use `null` when the RTE is empty, which allows components to use boolean
+  // expressions to determine whether to render the RTE field.
   if (blocks.length === 0) {
     return null;
   }
 
+  // NOTE(stevenle): The RTE was originally implemented with EditorJS, the data
+  // format is preserved for backward compatibility.
   return {
     time: Date.now(),
     blocks,
     version: 'lexical-0.31.2',
   };
+}
+
+function testLastBlockIsEmpty(blocks: RichTextBlock[]) {
+  const lastBlock = blocks.length > 0 && blocks.at(-1);
+  if (lastBlock && lastBlock.type === 'paragraph' && !lastBlock.data?.text) {
+    return true;
+  }
+  return false;
 }

@@ -21,7 +21,7 @@ export function RichTextEditor(props: RichTextEditorProps) {
       className={props.className}
       placeholder={props.placeholder}
       value={props.value}
-      // onChange={props.onChange}
+      onChange={props.onChange}
     />
   );
 }

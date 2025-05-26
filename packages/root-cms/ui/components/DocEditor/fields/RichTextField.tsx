@@ -11,8 +11,12 @@ export function RichTextField(props: FieldProps) {
   const [value, setValue] = useState<RichTextData | null>(null);
 
   function onChange(newValue: RichTextData | null) {
-    props.draft.updateKey(props.deepKey, newValue);
-    setValue(newValue);
+    setValue((oldValue) => {
+      if (oldValue?.time !== newValue?.time) {
+        props.draft.updateKey(props.deepKey, newValue);
+      }
+      return newValue;
+    });
   }
 
   useEffect(() => {
