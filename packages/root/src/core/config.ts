@@ -134,9 +134,30 @@ export interface RootBuildConfig {
 }
 
 export interface RootRedirectConfig {
+  /**
+   * The source path to redirect. Accepts placeholders in the format
+   * `[key]` or `[...key]`. Use `[key]` for single segments and
+   * `[...key]` for multi-segment wildcards.
+   * @example "/old-path/[id]" or "/old-path/[...wildcard]"
+   */
   source: string;
+
+  /**
+   * The destination to redirect to. Placeholders from the source can
+   * optionally be inserted into the destination using the same
+   * placeholder format.
+   * @example "/new-path/[id]" or "/new-path/[...wildcard]"
+   */
   destination: string;
-  type?: number;
+
+  /**
+   * The redirect type. If unspecified, defaults to `302` (temporary
+   * redirect).
+   *
+   * @see {@link
+   * https://developer.mozilla.org/en-US/docs/Web/HTTP/Status#redirection_messages}
+   */
+  type?: 300 | 301 | 302 | 303 | 307 | 308;
 }
 
 export interface RootHeaderConfig {
