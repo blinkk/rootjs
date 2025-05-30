@@ -44,6 +44,13 @@ function verifyRedirectConfig(redirect: RootRedirectConfig) {
   return true;
 }
 
+/**
+ * Replaces placeholders in a URL path format string with actual values.
+ *
+ * @param urlPathFormat The URL path format string containing parameter placeholders in the format `[key]` or `[...key]`.
+ * @param params A map of parameter names to their corresponding values.
+ * @returns The URL path with all parameter placeholders replaced by their corresponding values.
+ */
 function replaceParams(urlPathFormat: string, params: Record<string, string>) {
   const urlPath = urlPathFormat.replaceAll(
     /\[\[?(\.\.\.)?([\w\-_]*)\]?\]/g,
