@@ -101,7 +101,7 @@ export class Router {
     route: Route
   ): Promise<Array<{urlPath: string; params: Record<string, string>}>> {
     const routeModule = route.module;
-    if (!routeModule.default) {
+    if (!routeModule.default && !routeModule.getStaticContent) {
       return [];
     }
 

@@ -158,11 +158,26 @@ export type Handler = (
   next: NextFunction
 ) => void | Promise<void>;
 
+export interface StaticContentResult {
+  body: string | Buffer;
+  contentType?: string;
+}
+
+export type GetStaticContent = (ctx: {
+  rootConfig: RootConfig;
+  params: RouteParams;
+}) =>
+  | Promise<StaticContentResult | string | Buffer>
+  | StaticContentResult
+  | string
+  | Buffer;
+
 export interface RouteModule {
   default?: ComponentType<unknown>;
   getStaticPaths?: GetStaticPaths;
   getStaticProps?: GetStaticProps;
   handle?: Handler;
+  getStaticContent?: GetStaticContent;
 }
 
 export interface Route {

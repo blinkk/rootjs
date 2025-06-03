@@ -1,4 +1,5 @@
 import crypto from 'node:crypto';
+import path from 'node:path';
 import {
   ComponentChildren,
   ComponentType,
@@ -171,6 +172,29 @@ export class Renderer {
       });
       res.end(html);
     };
+
+    if (route.module.getStaticContent) {
+      const result = await route.module.getStaticContent({
+        rootConfig: this.rootConfig,
+        params: routeParams,
+      });
+      let body: string | Buffer;
+      let contentType: string | undefined;
+      if (typeof result === 'string' || Buffer.isBuffer(result)) {
+        body = result;
+      } else if (result && typeof result === 'object') {
+        body = result.body;
+        contentType = result.contentType;
+      } else {
+        body = '';
+      }
+      res.status(200);
+      const ext = path.extname(route.routePath);
+      res.set({
+        'Content-Type': contentType || guessContentType(ext),
+      });
+      return res.end(body);
+    }
 
     if (route.module.handle) {
       const handlerContext: HandlerContext = {
@@ -745,4 +769,14 @@ function sortLocales(a: string, b: string) {
     return 1;
   }
   return a.localeCompare(b);
+}
+
+function guessContentType(ext: string) {
+  if (ext === '.xml') {
+    return 'application/xml';
+  }
+  if (ext === '.json') {
+    return 'application/json';
+  }
+  return 'text/plain';
 }

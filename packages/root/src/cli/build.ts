@@ -409,6 +409,27 @@ export async function build(rootProjectDir?: string, options?: BuildOptions) {
         }
 
         try {
+          if (sitemapItem.route.module.getStaticContent) {
+            const result = await sitemapItem.route.module.getStaticContent({
+              rootConfig,
+              params: sitemapItem.params,
+            });
+            let body: string | Buffer;
+            if (typeof result === 'string' || Buffer.isBuffer(result)) {
+              body = result;
+            } else if (result && typeof result === 'object') {
+              body = result.body;
+            } else {
+              body = '';
+            }
+            const outFilePath = urlPath.slice(1);
+            const outPath = path.join(buildDir, outFilePath);
+            await makeDir(path.dirname(outPath));
+            await writeFile(outPath, body);
+            printFileOutput(fileSize(outPath), 'dist/html/', outFilePath);
+            return;
+          }
+
           const data = await renderer.renderRoute(sitemapItem.route, {
             routeParams: sitemapItem.params,
           });
@@ -416,8 +437,6 @@ export async function build(rootProjectDir?: string, options?: BuildOptions) {
             return;
           }
 
-          // The renderer currently assumes that all paths serve HTML.
-          // TODO(stevenle): support non-HTML routes using `routes/[name].[ext].ts`.
           let outFilePath = path.join(urlPath.slice(1), 'index.html');
           if (outFilePath.endsWith('404/index.html')) {
             outFilePath = outFilePath.replace('404/index.html', '404.html');
