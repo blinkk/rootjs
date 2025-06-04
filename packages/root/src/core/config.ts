@@ -134,9 +134,27 @@ export interface RootBuildConfig {
 }
 
 export interface RootRedirectConfig {
+  /**
+   * The source path to redirect. Accepts placeholders in the format
+   * `[key]` or `[...key]`. Use `[key]` for single segments and
+   * `[...key]` for multi-segment wildcards.
+   * @example "/old-path/[id]" or "/old-path/[...wildcard]"
+   */
   source: string;
+
+  /**
+   * The destination to redirect to. Placeholders from the source can
+   * optionally be inserted into the destination using the same
+   * placeholder format.
+   * @example "/new-path/[id]" or "/new-path/[...wildcard]"
+   */
   destination: string;
-  type?: number;
+
+  /**
+   * The redirect type (`301` = permanent, `302` = temporary). If unspecified,
+   * defaults to `302` (temporary).
+   */
+  type?: 301 | 302;
 }
 
 export interface RootHeaderConfig {
@@ -218,7 +236,22 @@ export interface RootServerConfig {
   sessionCookieSecret?: string | string[];
 
   /**
-   * List of redirects.
+   * List of redirects. Supports optional wildcards.
+   *
+   * @example
+   * ```ts
+   * redirects: [
+   *   {
+   *     source: '/old-path/[id]',
+   *     destination: '/new-path/[id]',
+   *     type: 301,
+   *   },
+   *   {
+   *     source: '/old-path/[...wildcard]',
+   *     destination: '/new-path/[...wildcard]',
+   *   },
+   * ]
+   * ```
    */
   redirects?: RootRedirectConfig[];
 
