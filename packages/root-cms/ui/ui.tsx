@@ -44,6 +44,7 @@ import {TranslationsEditPage} from './pages/TranslationsEditPage/TranslationsEdi
 import {TranslationsPage} from './pages/TranslationsPage/TranslationsPage.js';
 import './styles/global.css';
 import './styles/theme.css';
+import {EmbedModal} from './components/RichTextEditor/components/EmbedModal/EmbedModal.js';
 
 type CollectionMeta = Omit<Collection, 'fields'>;
 
@@ -101,6 +102,7 @@ function App() {
               [DocPickerModal.id]: DocPickerModal,
               [DocSelectModal.id]: DocSelectModal,
               [EditJsonModal.id]: EditJsonModal,
+              [EmbedModal.id]: EmbedModal,
               [EditTranslationsModal.id]: EditTranslationsModal,
               [ExportSheetModal.id]: ExportSheetModal,
               [LocalizationModal.id]: LocalizationModal,

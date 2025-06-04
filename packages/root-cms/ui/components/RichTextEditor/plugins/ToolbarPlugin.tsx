@@ -45,6 +45,7 @@ import {
   SELECTION_CHANGE_COMMAND,
 } from 'lexical';
 import {Dispatch, useCallback, useEffect, useState} from 'preact/compat';
+import * as schema from '../../../../core/schema.js';
 
 // import useModal from '../../hooks/useModal';
 // import DropDown, {DropDownItem} from '../../ui/DropDown';
@@ -65,6 +66,7 @@ import {SHORTCUTS} from '../utils/shortcuts.js';
 import {TOOLBAR_BLOCK_LABELS, ToolbarBlockType, useToolbar} from '../hooks/useToolbar.js';
 import {joinClassNames} from '../../../utils/classes.js';
 import {ComponentChildren} from 'preact';
+import {useEmbedModal} from '../components/EmbedModal/EmbedModal.js';
 
 const rootTypeToRootName = {
   root: 'Root',
@@ -167,6 +169,8 @@ function BlockFormatDropDown(props: BlockFormatDropDownProps) {
 }
 
 function InsertDropdown() {
+  const embedModal = useEmbedModal();
+
   return (
     <Menu
       control={
@@ -180,7 +184,19 @@ function InsertDropdown() {
         </Button>
       }
     >
-      <Menu.Item icon={<IconCode size={16} />}>
+      <Menu.Item
+        icon={<IconCode size={16} />}
+        onClick={() => {
+          embedModal.open({
+            title: 'Embed: HTML',
+            schema: INSERT_HTML_SCHEMA,
+            onSave: (value) => {
+              console.log('onSave()');
+              console.log(value);
+            },
+          });
+        }}
+      >
         HTML Code
       </Menu.Item>
       <Menu.Item icon={<IconPhoto size={16} />}>
@@ -195,6 +211,18 @@ function InsertDropdown() {
     </Menu>
   );
 }
+
+const INSERT_HTML_SCHEMA = schema.define({
+  name: 'InsertHTML',
+  fields: [
+    schema.string({
+      id: 'html',
+      label: 'HTML',
+      help: 'HTML code to embed. Please use caution when embedding HTML.',
+      variant: 'textarea',
+    }),
+  ],
+});
 
 function Divider() {
   return <div className="divider" />;

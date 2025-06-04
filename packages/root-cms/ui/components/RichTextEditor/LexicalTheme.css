@@ -145,6 +145,7 @@
 }
 .LexicalTheme__link {
   color: rgb(33, 111, 219);
+  font-weight: 500;
   text-decoration: none;
 }
 .LexicalTheme__link:hover {
