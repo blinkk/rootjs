@@ -1,5 +1,11 @@
 # @blinkk/root
 
+## 1.4.6
+
+### Patch Changes
+
+- 01d33c6: feat: add support for non-html ssg routes
+
 ## 1.4.5
 
 ### Patch Changes
