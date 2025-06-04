@@ -38,6 +38,32 @@ import {htmlPretty} from './html-pretty.js';
 import {getFallbackLocales} from './i18n-fallbacks.js';
 import {normalizeUrlPath, replaceParams, Router} from './router.js';
 
+const CONTENT_TYPES: Record<string, string> = {
+  'html': 'text/html',
+  'htm': 'text/html',
+  'css': 'text/css',
+  'js': 'application/javascript',
+  'json': 'application/json',
+  'png': 'image/png',
+  'jpg': 'image/jpeg',
+  'jpeg': 'image/jpeg',
+  'gif': 'image/gif',
+  'svg': 'image/svg+xml',
+  'txt': 'text/plain',
+  'xml': 'application/xml',
+  'pdf': 'application/pdf',
+  'zip': 'application/zip',
+  'mp4': 'video/mp4',
+  'webm': 'video/webm',
+  'mp3': 'audio/mpeg',
+  'wav': 'audio/wav',
+  'woff': 'font/woff',
+  'woff2': 'font/woff2',
+  'ttf': 'font/ttf',
+  'otf': 'font/otf',
+  'wasm': 'application/wasm',
+};
+
 interface RenderHtmlOptions {
   /** Attrs passed to the <html> tag, e.g. `{lang: 'en'}`. */
   htmlAttrs?: preact.JSX.HTMLAttributes<HTMLHtmlElement>;
@@ -776,12 +802,7 @@ function sortLocales(a: string, b: string) {
   return a.localeCompare(b);
 }
 
-function guessContentType(ext: string) {
-  if (ext === '.xml') {
-    return 'application/xml';
-  }
-  if (ext === '.json') {
-    return 'application/json';
-  }
-  return 'text/plain';
+function guessContentType(ext: string): string {
+  const normalized = ext.trim().toLowerCase().replace(/^\./, '');
+  return CONTENT_TYPES[normalized] || 'application/octet-stream';
 }
