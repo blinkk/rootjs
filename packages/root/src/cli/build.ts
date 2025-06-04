@@ -409,13 +409,20 @@ export async function build(rootProjectDir?: string, options?: BuildOptions) {
         }
 
         try {
-          if (sitemapItem.route.module.getStaticContent) {
-            const result = await sitemapItem.route.module.getStaticContent({
-              rootConfig,
-              params: sitemapItem.params,
-            });
-            let body: string | Buffer;
-            if (typeof result === 'string' || Buffer.isBuffer(result)) {
+          const routeModule = sitemapItem.route.module;
+          if (routeModule.getStaticContent) {
+            let props: any;
+            if (routeModule.getStaticProps) {
+              props = await routeModule.getStaticProps({
+                rootConfig, params:
+                sitemapItem.params,
+              });
+            } else {
+              props = {rootConfig, params: sitemapItem.params};
+            }
+            const result = await routeModule.getStaticContent(props);
+            let body: string;
+            if (typeof result === 'string') {
               body = result;
             } else if (result && typeof result === 'object') {
               body = result.body;

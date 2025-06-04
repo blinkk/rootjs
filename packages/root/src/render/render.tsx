@@ -174,10 +174,16 @@ export class Renderer {
     };
 
     if (route.module.getStaticContent) {
-      const result = await route.module.getStaticContent({
-        rootConfig: this.rootConfig,
-        params: routeParams,
-      });
+      let props: any;
+      if (route.module.getStaticProps) {
+        props = await route.module.getStaticProps({
+          rootConfig: this.rootConfig,
+          params: routeParams,
+        });
+      } else {
+        props = {rootConfig: this.rootConfig, params: routeParams};
+      }
+      const result = await route.module.getStaticContent(props);
       let body: string | Buffer;
       let contentType: string | undefined;
       if (typeof result === 'string' || Buffer.isBuffer(result)) {
@@ -476,7 +482,6 @@ export class Renderer {
     Object.keys(sitemap)
       .sort()
       .forEach((urlPath: string) => {
-        // console.log(urlPath);
         const sitemapItem = sitemap[urlPath];
         const orderedAlts: Record<string, {hrefLang: string; urlPath: string}> =
           {};

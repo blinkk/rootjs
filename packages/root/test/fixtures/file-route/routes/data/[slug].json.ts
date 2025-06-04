@@ -1,7 +1,17 @@
 export async function getStaticPaths() {
-  return {paths: [{params: {slug: 'foo'}}, {params: {slug: 'bar'}}]};
+  return {
+    paths: [
+      {params: {slug: 'foo'}},
+      {params: {slug: 'bar'}},
+    ],
+  };
 }
 
-export async function getStaticContent({params}: {params: {slug: string}}) {
+interface Props {
+  params: {slug: string};
+}
+
+export async function getStaticContent(props: Props) {
+  const params = props.params;
   return JSON.stringify({slug: params.slug});
 }
