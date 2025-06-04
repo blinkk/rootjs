@@ -1,4 +1,5 @@
 import crypto from 'node:crypto';
+import path from 'node:path';
 import {
   ComponentChildren,
   ComponentType,
@@ -36,6 +37,32 @@ import {htmlMinify} from './html-minify.js';
 import {htmlPretty} from './html-pretty.js';
 import {getFallbackLocales} from './i18n-fallbacks.js';
 import {normalizeUrlPath, replaceParams, Router} from './router.js';
+
+const CONTENT_TYPES: Record<string, string> = {
+  'html': 'text/html',
+  'htm': 'text/html',
+  'css': 'text/css',
+  'js': 'application/javascript',
+  'json': 'application/json',
+  'png': 'image/png',
+  'jpg': 'image/jpeg',
+  'jpeg': 'image/jpeg',
+  'gif': 'image/gif',
+  'svg': 'image/svg+xml',
+  'txt': 'text/plain',
+  'xml': 'application/xml',
+  'pdf': 'application/pdf',
+  'zip': 'application/zip',
+  'mp4': 'video/mp4',
+  'webm': 'video/webm',
+  'mp3': 'audio/mpeg',
+  'wav': 'audio/wav',
+  'woff': 'font/woff',
+  'woff2': 'font/woff2',
+  'ttf': 'font/ttf',
+  'otf': 'font/otf',
+  'wasm': 'application/wasm',
+};
 
 interface RenderHtmlOptions {
   /** Attrs passed to the <html> tag, e.g. `{lang: 'en'}`. */
@@ -171,6 +198,35 @@ export class Renderer {
       });
       res.end(html);
     };
+
+    if (route.module.getStaticContent) {
+      let props: any;
+      if (route.module.getStaticProps) {
+        props = await route.module.getStaticProps({
+          rootConfig: this.rootConfig,
+          params: routeParams,
+        });
+      } else {
+        props = {rootConfig: this.rootConfig, params: routeParams};
+      }
+      const result = await route.module.getStaticContent(props);
+      let body: string | Buffer;
+      let contentType: string | undefined;
+      if (typeof result === 'string' || Buffer.isBuffer(result)) {
+        body = result;
+      } else if (result && typeof result === 'object') {
+        body = result.body;
+        contentType = result.contentType;
+      } else {
+        body = '';
+      }
+      res.status(200);
+      const ext = path.extname(route.routePath);
+      res.set({
+        'Content-Type': contentType || guessContentType(ext),
+      });
+      return res.end(body);
+    }
 
     if (route.module.handle) {
       const handlerContext: HandlerContext = {
@@ -452,7 +508,6 @@ export class Renderer {
     Object.keys(sitemap)
       .sort()
       .forEach((urlPath: string) => {
-        // console.log(urlPath);
         const sitemapItem = sitemap[urlPath];
         const orderedAlts: Record<string, {hrefLang: string; urlPath: string}> =
           {};
@@ -745,4 +800,9 @@ function sortLocales(a: string, b: string) {
     return 1;
   }
   return a.localeCompare(b);
+}
+
+function guessContentType(ext: string): string {
+  const normalized = ext.trim().toLowerCase().replace(/^\./, '');
+  return CONTENT_TYPES[normalized] || 'application/octet-stream';
 }

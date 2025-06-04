@@ -158,11 +158,30 @@ export type Handler = (
   next: NextFunction
 ) => void | Promise<void>;
 
+export interface StaticContentResult {
+  body: string;
+  contentType?: string;
+}
+
+/**
+ * The `getStaticContent()` function is a SSG handler function for non-HTML
+ * routes, e.g. `routes/sitemap.xml.ts`.
+ *
+ * If the route exports a `getStaticProps()` function, the props returned from
+ * that function is passed to `getStaticContent()`. Otherwise a default props
+ * value is passed which includes the `rootConfig` and route param values.
+ */
+export type GetStaticContent = (props: any) =>
+  | Promise<StaticContentResult | string>
+  | StaticContentResult
+  | string;
+
 export interface RouteModule {
   default?: ComponentType<unknown>;
   getStaticPaths?: GetStaticPaths;
   getStaticProps?: GetStaticProps;
   handle?: Handler;
+  getStaticContent?: GetStaticContent;
 }
 
 export interface Route {

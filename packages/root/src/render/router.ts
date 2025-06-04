@@ -101,7 +101,7 @@ export class Router {
     route: Route
   ): Promise<Array<{urlPath: string; params: Record<string, string>}>> {
     const routeModule = route.module;
-    if (!routeModule.default) {
+    if (!routeModule.default && !routeModule.getStaticContent) {
       return [];
     }
 
@@ -187,11 +187,14 @@ export function normalizeUrlPath(
   urlPath = urlPath.replace(/\/+/g, '/');
   // Remove trailing slash.
   if (
-    options?.trailingSlash === false &&
-    urlPath !== '/' &&
-    urlPath.endsWith('/')
+    testPathHasFileExt(urlPath) ||
+    (
+      options?.trailingSlash === false &&
+      urlPath !== '/' &&
+      urlPath.endsWith('/')
+    )
   ) {
-    urlPath = urlPath.replace(/\/*$/g, '');
+    urlPath = removeTrailingSlash(urlPath);
   }
   // Convert `/index` to `/`.
   if (urlPath.endsWith('/index')) {
@@ -202,7 +205,11 @@ export function normalizeUrlPath(
     urlPath = `/${urlPath}`;
   }
   // Add trailing slash if needed.
-  if (options?.trailingSlash && !urlPath.endsWith('/')) {
+  if (
+    options?.trailingSlash &&
+    !testPathHasFileExt(urlPath) &&
+    !urlPath.endsWith('/')
+  ) {
     urlPath = `${urlPath}/`;
   }
   return urlPath;
@@ -211,12 +218,25 @@ export function normalizeUrlPath(
 function testPathHasParams(urlPath: string) {
   const segments = urlPath.split('/');
   return segments.some((segment) => {
-    return segment.startsWith('[') && segment.endsWith(']');
+    return segment.startsWith('[') && segment.includes(']');
   });
 }
 
+function testPathHasFileExt(urlPath: string) {
+  const basename = path.basename(removeTrailingSlash(urlPath));
+  return basename.includes('.');
+}
+
 function removeSlashes(str: string) {
-  return str.replace(/^\/*/g, '').replace(/\/*$/g, '');
+  return removeTrailingSlash(removeLeadingSlash(str));
+}
+
+function removeLeadingSlash(str: string) {
+  return str.replace(/^\/*/g, '');
+}
+
+function removeTrailingSlash(str: string) {
+  return str.replace(/\/*$/g, '');
 }
 
 /**
