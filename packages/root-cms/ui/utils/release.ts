@@ -15,11 +15,13 @@ import {
 } from 'firebase/firestore';
 import {logAction} from './actions.js';
 import {cmsPublishDocs} from './doc.js';
+import {cmsPublishDataSources} from './data-source.js';
 
 export interface Release {
   id: string;
   description?: string;
   docIds?: string[];
+  dataSourceIds?: string[];
   createdAt?: Timestamp;
   createdBy?: string;
   scheduledAt?: Timestamp;
@@ -99,8 +101,9 @@ export async function publishRelease(id: string) {
     throw new Error(`release not found: ${id}`);
   }
   const docIds = release.docIds || [];
-  if (docIds.length === 0) {
-    throw new Error(`no docs to publish for release: ${id}`);
+  const dataSourceIds = release.dataSourceIds || [];
+  if (docIds.length === 0 && dataSourceIds.length === 0) {
+    throw new Error(`no docs or data sources to publish for release: ${id}`);
   }
 
   const projectId = window.__ROOT_CTX.rootConfig.projectId;
@@ -118,8 +121,13 @@ export async function publishRelease(id: string) {
     scheduledBy: deleteField(),
   });
   await cmsPublishDocs(docIds, {batch, releaseId: id});
+  if (dataSourceIds.length > 0) {
+    await cmsPublishDataSources(dataSourceIds, {batch});
+  }
   console.log(`published release: ${id}`);
-  logAction('release.publish', {metadata: {releaseId: id, docIds: docIds}});
+  logAction('release.publish', {
+    metadata: {releaseId: id, docIds, dataSourceIds},
+  });
 }
 
 export async function scheduleRelease(
