@@ -1,5 +1,12 @@
 # @blinkk/root-cms
 
+## 1.4.7
+
+### Patch Changes
+
+- 4f8c519: fix: preserve column headers in data sources (#574)
+  - @blinkk/root@1.4.7
+
 ## 1.4.6
 
 ### Patch Changes
