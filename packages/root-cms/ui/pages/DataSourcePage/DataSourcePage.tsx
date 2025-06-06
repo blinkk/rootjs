@@ -137,7 +137,7 @@ DataSourcePage.DataSection = (props: {
   dataSource: DataSource;
   data: DataSourceData;
 }) => {
-  const {data} = props.data || {};
+  const {data, headers: storedHeaders} = props.data || {};
   const dataSource = props.dataSource;
 
   if (!data) {
@@ -146,22 +146,25 @@ DataSourcePage.DataSection = (props: {
 
   const dataFormat = dataSource.dataFormat || 'map';
   if (dataSource.type === 'gsheet') {
-    let headers: string[] | undefined = undefined;
+    let headers: string[] | undefined = storedHeaders;
     let rows: any[] = [];
     if (dataFormat === 'array') {
       rows = data as string[][];
     } else if (dataFormat === 'map') {
-      // Reformat Array<Record<string, string>> to string[][].
-      const headersSet = new Set<string>();
       const items = data as any[];
-      items.forEach((item) => {
-        for (const key in item) {
-          if (key) {
-            headersSet.add(key);
+      if (!headers) {
+        // Reformat Array<Record<string, string>> to string[][]. Preserve key order
+        // by iterating through object keys as encountered.
+        const headersSet = new Set<string>();
+        items.forEach((item) => {
+          for (const key in item) {
+            if (key) {
+              headersSet.add(key);
+            }
           }
-        }
-      });
-      headers = Array.from(headersSet);
+        });
+        headers = Array.from(headersSet);
+      }
       items.forEach((item) => {
         rows.push(headers!.map((header) => item[header] || ''));
       });

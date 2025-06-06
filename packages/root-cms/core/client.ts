@@ -73,6 +73,8 @@ export interface DataSource {
 export interface DataSourceData<T = any> {
   dataSource: DataSource;
   data: T;
+  /** Optional list of column headers (for gsheet sources). */
+  headers?: string[];
 }
 
 export type DataSourceMode = 'draft' | 'published';
@@ -822,6 +824,7 @@ export class RootCMSClient {
     batch.set(dataDocRefPublished, {
       dataSource: updatedDataSource,
       data: dataRes?.data || null,
+      ...(dataRes?.headers ? {headers: dataRes.headers} : {}),
     });
     batch.update(dataDocRefDraft, {
       dataSource: updatedDataSource,

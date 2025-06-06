@@ -49,6 +49,8 @@ export interface DataSource {
 export interface DataSourceData<T = any> {
   dataSource: DataSource;
   data: T;
+  /** Optional list of column headers (for gsheet sources). */
+  headers?: string[];
 }
 
 export async function addDataSource(
@@ -157,7 +159,7 @@ export async function syncDataSource(id: string) {
       throw new Error(`sync failed: ${err}`);
     }
   } else {
-    const data = await fetchData(dataSource);
+    const {data, headers} = await fetchData(dataSource);
 
     const projectId = window.__ROOT_CTX.rootConfig.projectId;
     const db = window.firebase.db;
@@ -183,6 +185,7 @@ export async function syncDataSource(id: string) {
     batch.set(dataDocRef, {
       dataSource: updatedDataSource,
       data: data,
+      ...(headers ? {headers} : {}),
     });
     batch.update(dataSourceDocRef, {
       syncedAt: Timestamp.now(),
@@ -235,6 +238,7 @@ export async function publishDataSource(id: string) {
   batch.set(dataDocRefPublished, {
     dataSource: updatedDataSource,
     data: dataRes?.data || null,
+    ...(dataRes?.headers ? {headers: dataRes.headers} : {}),
   });
   batch.update(dataDocRefDraft, {
     dataSource: updatedDataSource,
@@ -280,9 +284,15 @@ export async function deleteDataSource(id: string) {
   logAction('datasource.delete', {metadata: {datasourceId: id}});
 }
 
-async function fetchData(dataSource: DataSource) {
+interface FetchedData {
+  data: any;
+  headers?: string[];
+}
+
+async function fetchData(dataSource: DataSource): Promise<FetchedData> {
   if (dataSource.type === 'http') {
-    return await fetchHttpData(dataSource);
+    const data = await fetchHttpData(dataSource);
+    return {data};
   }
   if (dataSource.type === 'gsheet') {
     return await fetchGsheetData(dataSource);
@@ -290,7 +300,7 @@ async function fetchData(dataSource: DataSource) {
   throw new Error(`unsupported data source: ${dataSource.type}`);
 }
 
-async function fetchGsheetData(dataSource: DataSource) {
+async function fetchGsheetData(dataSource: DataSource): Promise<FetchedData> {
   const gsheetId = parseSpreadsheetUrl(dataSource.url);
   if (!gsheetId?.spreadsheetId) {
     throw new Error(`failed to parse google sheet url: ${dataSource.url}`);
@@ -303,10 +313,21 @@ async function fetchGsheetData(dataSource: DataSource) {
   }
 
   const dataFormat = dataSource.dataFormat || 'map';
+  const [headers, rows] = await gsheet.getValues();
   if (dataFormat === 'array') {
-    return await gsheet.getValues();
+    return {data: [headers, rows], headers};
   }
-  return await gsheet.getValuesMap();
+  const mapData = rows.map((row) => {
+    const item: Record<string, string> = {};
+    row.forEach((val, i) => {
+      const key = headers[i];
+      if (key) {
+        item[key] = String(val || '');
+      }
+    });
+    return item;
+  });
+  return {data: mapData, headers};
 }
 
 async function fetchHttpData(dataSource: DataSource) {
