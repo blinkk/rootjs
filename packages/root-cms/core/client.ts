@@ -238,6 +238,50 @@ export class RootCMSClient {
   }
 
   /**
+   * Firestore path for a collection.
+   */
+  dbCollectionDocsPath(
+    collectionId: string,
+    options: {mode: 'draft' | 'published'}
+  ) {
+    let modeCollection = '';
+    if (options.mode === 'draft') {
+      modeCollection = 'Drafts';
+    } else if (options.mode === 'published') {
+      modeCollection = 'Published';
+    } else {
+      throw new Error(`unknown mode: ${options.mode}`);
+    }
+    return `Projects/${this.projectId}/Collections/${collectionId}/${modeCollection}`;
+  }
+
+  /**
+   * Firestore path for a content doc.
+   */
+  dbDocPath(
+    collectionId: string,
+    slug: string,
+    options: {mode: 'draft' | 'published'}
+  ) {
+    const collectionDocsPath = this.dbCollectionDocsPath(collectionId, options);
+    // Slugs with slashes are encoded as `--` in the DB.
+    const normalizedSlug = slug.replaceAll('/', '--');
+    return `${collectionDocsPath}/${normalizedSlug}`;
+  }
+
+  /**
+   * Firestore doc ref for a content doc.
+   */
+  dbDocRef(
+    collectionId: string,
+    slug: string,
+    options: {mode: 'draft' | 'published'}
+  ) {
+    const docPath = this.dbDocPath(collectionId, slug, options);
+    return this.db.doc(docPath);
+  }
+
+  /**
    * Saves draft data to a doc.
    *
    * Note: this saves data to the "fields" attr of the draft doc. If you need to
@@ -739,6 +783,33 @@ export class RootCMSClient {
   }
 
   /**
+   * Firestore path for a translations file.
+   */
+  dbTranslationsPath(
+    translationsId: string,
+    options: {mode: 'draft' | 'published'}
+  ) {
+    const mode = options.mode;
+    if (!(mode === 'draft' || mode === 'published')) {
+      throw new Error(`invalid mode: ${mode}`);
+    }
+    const slug = translationsId.replaceAll('/', '--');
+    const dbPath = `Projects/${this.projectId}/TranslationsManager/${mode}/Translations/${slug}`;
+    return dbPath;
+  }
+
+  /**
+   * Firestore doc ref for a translations file.
+   */
+  dbTranslationsRef(
+    translationsId: string,
+    options: {mode: 'draft' | 'published'}
+  ) {
+    const dbPath = this.dbTranslationsPath(translationsId, options);
+    return this.db.doc(dbPath);
+  }
+
+  /**
    * Returns a data source configuration object.
    */
   async getDataSource(dataSourceId: string) {
@@ -889,13 +960,41 @@ export class RootCMSClient {
       throw new Error(`invalid data source id: ${dataSourceId}`);
     }
 
-    const dbPath = `Projects/${this.projectId}/DataSources/${dataSourceId}/Data/${mode}`;
-    const docRef = this.db.doc(dbPath);
+    const docRef = this.dbDataSourceDataRef(dataSourceId, {mode});
     const doc = await docRef.get();
     if (doc.exists) {
       return doc.data() as DataSourceData<T>;
     }
     return null;
+  }
+
+  /**
+   * Firestore path for a datasource data.
+   */
+  dbDataSourceDataPath(
+    dataSourceId: string,
+    options: {mode: 'draft' | 'published'}
+  ) {
+    if (!dataSourceId || dataSourceId.includes('/')) {
+      throw new Error(`invalid data source id: ${dataSourceId}`);
+    }
+    const mode = options.mode;
+    if (!(mode === 'draft' || mode === 'published')) {
+      throw new Error(`invalid mode: ${mode}`);
+    }
+    const dbPath = `Projects/${this.projectId}/DataSources/${dataSourceId}/Data/${mode}`;
+    return dbPath;
+  }
+
+  /**
+   * Firestore doc ref for a datasource data.
+   */
+  dbDataSourceDataRef(
+    dataSourceId: string,
+    options: {mode: 'draft' | 'published'}
+  ) {
+    const dbPath = this.dbDataSourceDataPath(dataSourceId, options);
+    return this.db.doc(dbPath);
   }
 
   /**
@@ -978,6 +1077,14 @@ export class RootCMSClient {
         console.error(err);
       }
     }
+  }
+
+  /**
+   * Creates a batch request that is capable of fetching one or more docs,
+   * corresponding translations, and dataSources.
+   */
+  createBatchRequest(options: BatchRequestOptions): BatchRequest {
+    return new BatchRequest(this, options);
   }
 }
 
@@ -1206,4 +1313,290 @@ export function parseDocId(docId: string) {
     throw new Error(`invalid doc id: ${docId}`);
   }
   return {collection, slug};
+}
+
+export interface BatchRequestOptions {
+  mode: 'draft' | 'published';
+  /**
+   * Whether to automatically fetch translations for the docs retrieved in the
+   * request.
+   */
+  translate?: boolean;
+}
+
+export interface BatchRequestQuery {
+  queryId: string;
+  collectionId: string;
+  queryOptions?: BatchRequestQueryOptions;
+}
+
+export interface BatchRequestQueryOptions {
+  offset?: number;
+  limit?: number;
+  orderBy?: string;
+  orderByDirection?: 'asc' | 'desc';
+  query?: (query: Query) => Query;
+}
+
+export interface TranslationsDoc {
+  id: string;
+  sys: {
+    modifiedAt: Timestamp;
+    modifiedBy: string;
+    publishedAt?: Timestamp;
+    publishedBy?: string;
+    linkedSheet?: {
+      spreadsheetId: string;
+      gid: number;
+      linkedAt: Timestamp;
+      linkedBy: string;
+    };
+    tags?: string[];
+  };
+  strings: TranslationsMap;
+}
+
+export class BatchRequest {
+  cmsClient: RootCMSClient;
+  private options: BatchRequestOptions;
+  private db: Firestore;
+  private docIds: string[] = [];
+  private dataSourceIds: string[] = [];
+  private queries: BatchRequestQuery[] = [];
+  private translationsIds: string[] = [];
+
+  constructor(cmsClient: RootCMSClient, options: BatchRequestOptions) {
+    this.cmsClient = cmsClient;
+    this.db = cmsClient.db;
+    this.options = options;
+  }
+
+  /**
+   * Adds a doc to the batch request.
+   */
+  addDoc(docId: string) {
+    this.docIds.push(docId);
+  }
+
+  /**
+   * Adds a data source to the batch request.
+   */
+  addDataSource(dataSourceId: string) {
+    this.dataSourceIds.push(dataSourceId);
+  }
+
+  /**
+   * Adds a collection-based query to the batch request.
+   */
+  addQuery(
+    queryId: string,
+    collectionId: string,
+    queryOptions?: BatchRequestQueryOptions
+  ) {
+    this.queries.push({
+      queryId: queryId,
+      collectionId: collectionId,
+      queryOptions: queryOptions,
+    });
+  }
+
+  /**
+   * Adds a translation file to the request.
+   */
+  addTranslations(translationsId: string) {
+    this.translationsIds.push(translationsId);
+  }
+
+  /**
+   * Fetches data from the DB.
+   */
+  async fetch(): Promise<BatchResponse> {
+    const res = new BatchResponse();
+
+    const promises = [
+      this.fetchDocs(res),
+      this.fetchQueries(res),
+      this.fetchDataSources(res),
+    ];
+    // If `options.translate` is disabled and translations are requested,
+    // fetch the translations in parallel with the other docs.
+    if (!this.options.translate && this.translationsIds.length > 0) {
+      promises.push(this.fetchTranslations(res));
+    }
+
+    await Promise.all(promises);
+
+    // If `options.translate` is enabled, the fetchX() methods will
+    // automatically add each doc's translations id to the request, so
+    // translations should be fetched after all the other docs are fetched.
+    if (this.translationsIds.length > 0) {
+      await this.fetchTranslations(res);
+    }
+
+    return res;
+  }
+
+  private async fetchDocs(res: BatchResponse) {
+    if (this.docIds.length === 0) {
+      return;
+    }
+    const docRefs = this.docIds.map((docId) => {
+      const [collectionId, slug] = docId.split('/');
+      return this.cmsClient.dbDocRef(collectionId, slug, {
+        mode: this.options.mode,
+      });
+    });
+    const docs = await this.db.getAll(...docRefs);
+    this.docIds.forEach((docId, i) => {
+      const doc = docs[i];
+      if (!doc.exists) {
+        console.warn(`doc "${docId}" does not exist`);
+        return;
+      }
+      const docData = unmarshalData(doc.data()) as Doc;
+      res.docs[docId] = docData;
+
+      if (this.options.translate) {
+        this.addTranslations(docId);
+      }
+    });
+  }
+
+  private async fetchQueries(res: BatchResponse) {
+    if (this.queries.length === 0) {
+      return;
+    }
+    const mode = this.options.mode;
+
+    const handleQuery = async (queryItem: BatchRequestQuery) => {
+      const docsPath = this.cmsClient.dbCollectionDocsPath(
+        queryItem.collectionId,
+        {mode}
+      );
+      const queryOptions = queryItem.queryOptions || {};
+      let query: Query = this.db.collection(docsPath);
+      if (queryOptions.limit) {
+        query = query.limit(queryOptions.limit);
+      }
+      if (queryOptions.offset) {
+        query = query.offset(queryOptions.offset);
+      }
+      if (queryOptions.orderBy) {
+        query = query.orderBy(
+          queryOptions.orderBy,
+          queryOptions.orderByDirection
+        );
+      }
+      if (queryOptions.query) {
+        query = queryOptions.query(query);
+      }
+      const results = await query.get();
+      const docs: Doc[] = [];
+      results.forEach((result) => {
+        const doc = unmarshalData(result.data()) as Doc;
+        docs.push(doc);
+      });
+      res.queries[queryItem.queryId] = docs;
+    };
+
+    await Promise.all(this.queries.map((queryItem) => handleQuery(queryItem)));
+  }
+
+  private async fetchDataSources(res: BatchResponse) {
+    if (this.dataSourceIds.length === 0) {
+      return;
+    }
+    const docRefs = this.dataSourceIds.map((dataSourceId) => {
+      return this.cmsClient.dbDataSourceDataRef(dataSourceId, {
+        mode: this.options.mode,
+      });
+    });
+    const docs = await this.db.getAll(...docRefs);
+    this.dataSourceIds.forEach((dataSourceId, i) => {
+      const doc = docs[i];
+      if (!doc.exists) {
+        console.warn(`"data source "${dataSourceId}" does not exist`);
+        return;
+      }
+      res.dataSources[dataSourceId] = doc.data() as DataSourceData;
+    });
+  }
+
+  private async fetchTranslations(res: BatchResponse) {
+    if (this.translationsIds.length === 0) {
+      return;
+    }
+
+    const docRefs = this.translationsIds.map((translationsId) => {
+      return this.cmsClient.dbTranslationsRef(translationsId, {
+        mode: this.options.mode,
+      });
+    });
+    const docs = await this.db.getAll(...docRefs);
+    this.translationsIds.forEach((translationsId, i) => {
+      const doc = docs[i];
+      if (!doc.exists) {
+        // console.warn(`translations "${translationsId}" does not exist`);
+        return;
+      }
+      res.translations[translationsId] = doc.data() as TranslationsDoc;
+    });
+  }
+}
+
+export class BatchResponse {
+  docs: Record<string, Doc> = {};
+  queries: Record<string, Doc[]> = {};
+  dataSources: Record<string, DataSourceData> = {};
+  translations: Record<string, TranslationsDoc> = {};
+
+  /**
+   * Returns a map of translations for a given locale or locale fallbacks.
+   *
+   * The input is either a single locale (e.g. "de") or an array of locales
+   * representing the fallback tree, e.g. ["en-CA", "en-GB", "en"].
+   *
+   * TODO(stevenle): support the locale fallback tree.
+   *
+   * The returned value is a flat map of source string to translated string,
+   * e.g.:
+   * {"<source>": "<translation>"}
+   */
+  getTranslations(locale: string): LocaleTranslations {
+    const translationsMap = this.getTranslationsMap();
+    const translations = translationsForLocale(translationsMap, locale);
+    return translations;
+  }
+
+  /**
+   * Merges the strings from all translations files retrieved in the request.
+   * The returned value is a map of string to translations, e.g.:
+   *
+   * {"<hash>": {"source": "<source>", "<locale>": "<translation>"}}
+   */
+  private getTranslationsMap(): TranslationsMap {
+    // Load translations in the following order:
+    // - generic translations (e.g. "global")
+    // - docs returned from queries (e.g. "list all blog posts")
+    // - specific docs (e.g. "Pages/index")
+    const translationsDocs = Object.values(this.translations).reverse();
+
+    // Consolidate the strings from all of the translations files.
+    // {"<hash>": {"source": "<source>", "<locale>": "<translation>"}}
+    const translationsMap: TranslationsMap = {};
+    for (const translationsDoc of translationsDocs) {
+      const strings = translationsDoc.strings || {};
+      for (const hash in strings) {
+        const translations = strings[hash];
+        translationsMap[hash] ??= {source: translations.source};
+        for (const locale in translations) {
+          if (locale !== 'source' && translations[locale]) {
+            translationsMap[hash][locale] = translations[locale];
+          }
+        }
+      }
+    }
+
+    return translationsMap;
+  }
 }
