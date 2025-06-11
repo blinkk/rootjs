@@ -1,0 +1,18 @@
+.FieldEditor__FieldHeader {
+  position: relative;
+  padding-right: 30px;
+  margin-bottom: 8px;
+}
+
+.FieldEditor__FieldHeader__label {
+  font-size: 12px;
+  font-weight: 600;
+  display: flex;
+  gap: 8px;
+}
+
+.FieldEditor__FieldHeader__help {
+  font-size: 12px;
+  font-weight: 400;
+  margin-top: 2px;
+}
