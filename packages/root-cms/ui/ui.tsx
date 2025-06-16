@@ -45,6 +45,58 @@ import {TranslationsPage} from './pages/TranslationsPage/TranslationsPage.js';
 import './styles/global.css';
 import './styles/theme.css';
 
+const SCROLL_KEY = 'root::cms::scroll';
+const OPEN_KEY = 'root::cms::open';
+
+/*
+ * Save the scroll position and open field editors prior to reloading the page.
+ */
+function saveUiState() {
+  const side = document.querySelector('.DocumentPage__side') as HTMLElement | null;
+  if (side) {
+    sessionStorage.setItem(SCROLL_KEY, String(side.scrollTop));
+  }
+  const openSummaries = Array.from(
+    document.querySelectorAll('.DocEditor__ObjectFieldDrawer__drawer[open], .DocEditor__ArrayField__item[open] summary')
+  ).map((el) => el.id).filter(Boolean);
+  if (openSummaries.length > 0) {
+    sessionStorage.setItem(OPEN_KEY, JSON.stringify(openSummaries));
+  }
+}
+
+/*
+ * Restore the scroll position and open field editors when page is loaded.
+ */
+function restoreUiState() {
+  const side = document.querySelector('.DocumentPage__side') as HTMLElement | null;
+  const scroll = sessionStorage.getItem(SCROLL_KEY);
+  if (side && scroll) {
+    side.scrollTop = parseInt(scroll, 10);
+  }
+  const open = sessionStorage.getItem(OPEN_KEY);
+  if (open) {
+    try {
+      const ids = JSON.parse(open) as string[];
+      ids.forEach((id) => {
+        const summary = document.getElementById(id);
+        if (summary) {
+          const details = summary.closest('details');
+          if (details) {
+            details.open = true;
+          }
+        }
+      });
+    } catch {
+      /* ignore */
+    }
+  }
+}
+
+if (import.meta.hot) {
+  import.meta.hot.on('vite:beforeUpdate', saveUiState);
+}
+window.addEventListener('beforeunload', saveUiState);
+
 type CollectionMeta = Omit<Collection, 'fields'>;
 
 declare global {
@@ -195,6 +247,7 @@ auth.onAuthStateChanged((user) => {
   root.innerHTML = '';
   render(<App />, root);
 
+  restoreUiState();
   updateSession(user);
 });
 
