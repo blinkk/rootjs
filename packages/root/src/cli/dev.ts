@@ -44,9 +44,10 @@ export async function dev(rootProjectDir?: string, options?: DevOptions) {
   const server = await createDevServer({rootDir, port});
   const rootConfig: RootConfig = server.get('rootConfig');
   const basePath = rootConfig.base || '';
+  const homePagePath = rootConfig.server?.homePagePath || basePath;
   console.log();
   console.log(`${dim('┃')} project:  ${rootDir}`);
-  console.log(`${dim('┃')} server:   http://${host}:${port}${basePath}`);
+  console.log(`${dim('┃')} server:   http://${host}:${port}${homePagePath}`);
   if (testCmsEnabled(rootConfig)) {
     console.log(`${dim('┃')} cms:      http://${host}:${port}/cms/`);
   }

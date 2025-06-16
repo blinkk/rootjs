@@ -265,6 +265,11 @@ export interface RootServerConfig {
    * commonly used default values.
    */
   security?: RootSecurityConfig;
+
+  /**
+   * Home page URL path, which is printed when the dev server starts.
+   */
+  homePagePath?: string;
 }
 
 export function defineConfig(config: RootUserConfig): RootUserConfig {
