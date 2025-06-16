@@ -96,6 +96,8 @@ export type ImageField = CommonFieldProps & {
    * Cache-control header to set on the GCS object.
    */
   cacheControl?: string;
+  /** Set to `false` to disable the alt text input. */
+  alt?: boolean;
 };
 
 export function image(field: Omit<ImageField, 'type'>): ImageField {
@@ -115,6 +117,8 @@ export type FileField = CommonFieldProps & {
    * Cache-control header to set on the GCS object.
    */
   cacheControl?: string;
+  /** Set to `false` to disable the alt text input. */
+  alt?: boolean;
 };
 
 export function file(field: Omit<FileField, 'type'>): FileField {

@@ -137,6 +137,7 @@ export function ImageField(props: FieldProps) {
     };
   }, []);
 
+  const showAlt = field.alt !== false;
   return (
     <div
       className={joinClassNames(
@@ -175,16 +176,18 @@ export function ImageField(props: FieldProps) {
             value={img.gciUrl || img.src}
             disabled={true}
           />
-          <TextInput
-            className="DocEditor__ImageField__imagePreview__image__alt"
-            size="xs"
-            radius={0}
-            value={img.alt}
-            label="Alt text"
-            onChange={(e: ChangeEvent<HTMLInputElement>) => {
-              setAltText(e.currentTarget.value);
-            }}
-          />
+          {showAlt && (
+            <TextInput
+              className="DocEditor__ImageField__imagePreview__image__alt"
+              size="xs"
+              radius={0}
+              value={img.alt}
+              label="Alt text"
+              onChange={(e: ChangeEvent<HTMLInputElement>) => {
+                setAltText(e.currentTarget.value);
+              }}
+            />
+          )}
         </div>
       ) : (
         <div className="DocEditor__ImageField__noImage">No image</div>

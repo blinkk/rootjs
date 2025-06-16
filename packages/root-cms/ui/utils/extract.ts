@@ -67,7 +67,7 @@ export function extractField(
       addString(fieldValue);
     }
   } else if (field.type === 'image') {
-    if (field.translate && fieldValue && fieldValue.alt) {
+    if (field.translate && fieldValue && fieldValue.alt && field.alt !== false) {
       addString(fieldValue.alt);
     }
   } else if (field.type === 'multiselect') {
