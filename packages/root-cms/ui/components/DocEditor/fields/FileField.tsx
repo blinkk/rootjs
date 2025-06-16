@@ -16,6 +16,7 @@ export function FileField(props: FieldProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const ref = useRef<HTMLDivElement>(null);
 
+  const showAlt = field.alt !== false;
   let accept: string | undefined = undefined;
   if (field.exts) {
     accept = field.exts.join(',');
@@ -164,18 +165,19 @@ export function FileField(props: FieldProps) {
               disabled={true}
             />
           </div>
-          {testShouldHaveAltText(file.src) && (
-            <TextInput
-              className="DocEditor__FileField__file__alt"
-              size="xs"
-              radius={0}
-              value={file.alt || ''}
-              onChange={(e: ChangeEvent<HTMLInputElement>) => {
-                setAltText(e.currentTarget.value);
-              }}
-              label="Alt text"
-            />
-          )}
+          {showAlt &&
+            testShouldHaveAltText(file.src) && (
+              <TextInput
+                className="DocEditor__FileField__file__alt"
+                size="xs"
+                radius={0}
+                value={file.alt || ''}
+                onChange={(e: ChangeEvent<HTMLInputElement>) => {
+                  setAltText(e.currentTarget.value);
+                }}
+                label="Alt text"
+              />
+            )}
         </>
       ) : (
         <div className="DocEditor__FileField__noFile">No file</div>
