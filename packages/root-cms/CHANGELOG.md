@@ -1,5 +1,14 @@
 # @blinkk/root-cms
 
+## 1.4.8
+
+### Patch Changes
+
+- 9b2f49a: feat: add option to disable alt text (#579)
+- 0c05ca6: feat: add v2 BatchRequest to v1 branch (#577)
+- Updated dependencies [2b66318]
+  - @blinkk/root@1.4.8
+
 ## 1.4.7
 
 ### Patch Changes

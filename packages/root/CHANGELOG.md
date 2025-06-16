@@ -1,5 +1,11 @@
 # @blinkk/root
 
+## 1.4.8
+
+### Patch Changes
+
+- 2b66318: feat: add homePagePath option for dev server console log (#580)
+
 ## 1.4.7
 
 ## 1.4.6
