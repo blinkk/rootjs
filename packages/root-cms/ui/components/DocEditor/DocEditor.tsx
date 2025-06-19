@@ -80,6 +80,7 @@ import {RichTextField} from './fields/RichTextField.js';
 import {SelectField} from './fields/SelectField.js';
 import {StringField} from './fields/StringField.js';
 import {NumberField} from './fields/NumberField.js';
+import {testFieldEmpty} from '../../utils/test-field-empty.js';
 
 interface DocEditorProps {
   docId: string;
@@ -308,6 +309,10 @@ DocEditor.Field = (props: FieldProps) => {
       scrollToDeeplink(ref.current!);
     }
   }, [targeted]);
+
+  if (field.deprecated && testFieldEmpty(field, value)) {
+    return null;
+  }
 
   return (
     <div
