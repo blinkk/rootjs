@@ -42,7 +42,7 @@ export function SelectField(props: FieldProps) {
         onChange={(e: string) => onChange(e || '')}
         size="xs"
         radius={0}
-        searchable
+        searchable={field.searchable ?? true}
         // Due to issues with preact/compat, use a div for the dropdown el.
         dropdownComponent="div"
       />

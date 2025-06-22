@@ -68,6 +68,7 @@ export type SelectField = CommonFieldProps & {
   default?: string;
   options?: Array<{value: string; label?: string}> | string[];
   translate?: boolean;
+  searchable?: boolean;
 };
 
 export function select(field: Omit<SelectField, 'type'>): SelectField {
