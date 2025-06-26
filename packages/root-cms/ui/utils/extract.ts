@@ -1,6 +1,5 @@
 import {doc, getDoc} from 'firebase/firestore';
 import * as schema from '../../core/schema.js';
-import {RichTextData} from '../components/RichTextEditor/RichTextEditor.js';
 import {fetchCollectionSchema} from './collection.js';
 import {normalizeString} from './l10n.js';
 
@@ -91,51 +90,14 @@ export function extractField(
   }
 }
 
-export function extractRichTextStrings(
-  strings: Set<string>,
-  data: RichTextData
-) {
-  const blocks = data?.blocks || [];
-  blocks.forEach((block) => {
-    extractBlockStrings(strings, block);
-  });
-}
-
-interface ListItemData {
-  content?: string;
-  items?: ListItemData[];
-}
-
-function extractBlockStrings(strings: Set<string>, block: any) {
-  if (!block?.type) {
+export function extractRichTextStrings(strings: Set<string>, data: string) {
+  if (!data) {
     return;
   }
-
-  function addString(text?: string) {
-    if (!text) {
-      return;
-    }
-    const str = normalizeString(text);
-    if (str) {
-      strings.add(str);
-    }
-  }
-
-  function extractList(items?: ListItemData[]) {
-    if (!items) {
-      return;
-    }
-    items.forEach((item) => {
-      addString(item.content);
-      extractList(item.items);
-    });
-  }
-
-  if (block.type === 'heading' || block.type === 'paragraph') {
-    addString(block.data?.text);
-  } else if (block.type === 'orderedList' || block.type === 'unorderedList') {
-    extractList(block.data?.items);
-  } else if (block.type === 'html') {
-    addString(block.data?.html);
-  }
+  const text = data.replace(/<[^>]+>/g, ' ');
+  text
+    .split(/\s+/)
+    .map((str) => normalizeString(str))
+    .filter(Boolean)
+    .forEach((str) => strings.add(str!));
 }
