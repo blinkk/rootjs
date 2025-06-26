@@ -21,6 +21,9 @@ import {
 } from '../../utils/release.js';
 import {DocPreviewCard} from '../DocPreviewCard/DocPreviewCard.js';
 import {useDocSelectModal} from '../DocSelectModal/DocSelectModal.js';
+import {
+  useDataSourceSelectModal,
+} from '../DataSourceSelectModal/DataSourceSelectModal.js';
 import './ReleaseForm.css';
 
 export interface ReleaseFormProps {
@@ -36,7 +39,9 @@ export function ReleaseForm(props: ReleaseFormProps) {
   const [loading, setLoading] = useState(!!props.releaseId);
   const [release, setRelease] = useState<Release | null>(null);
   const [docIds, setDocIds] = useState<string[]>([]);
+  const [dataSourceIds, setDataSourceIds] = useState<string[]>([]);
   const docSelectModal = useDocSelectModal();
+  const dataSourceSelectModal = useDataSourceSelectModal();
 
   async function fetchRelease(releaseId: string) {
     console.log(releaseId);
@@ -44,6 +49,7 @@ export function ReleaseForm(props: ReleaseFormProps) {
       const release = await getRelease(releaseId);
       setRelease(release);
       setDocIds(release?.docIds || []);
+      setDataSourceIds(release?.dataSourceIds || []);
     });
     setLoading(false);
   }
@@ -82,6 +88,7 @@ export function ReleaseForm(props: ReleaseFormProps) {
       id: releaseId,
       description: getValue('description'),
       docIds: docIds,
+      dataSourceIds: dataSourceIds,
     };
 
     try {
@@ -138,6 +145,26 @@ export function ReleaseForm(props: ReleaseFormProps) {
     });
   }
 
+  function openDataSourceSelectModal() {
+    dataSourceSelectModal.open({
+      selectedDataSourceIds: dataSourceIds,
+      onChange: (id: string, selected: boolean) => {
+        setDataSourceIds((old) => {
+          const next = [...old];
+          if (selected) {
+            next.push(id);
+          } else {
+            const i = next.indexOf(id);
+            if (i > -1) {
+              next.splice(i, 1);
+            }
+          }
+          return next.sort();
+        });
+      },
+    });
+  }
+
   function onRemoveDoc(docId: string) {
     console.log('onRemoveDoc()', docId);
     setDocIds((current) => {
@@ -148,6 +175,17 @@ export function ReleaseForm(props: ReleaseFormProps) {
       }
       console.log(newDocIds);
       return newDocIds;
+    });
+  }
+
+  function onRemoveDataSource(id: string) {
+    setDataSourceIds((current) => {
+      const newIds = [...current];
+      const index = newIds.indexOf(id);
+      if (index !== -1) {
+        newIds.splice(index, 1);
+      }
+      return newIds;
     });
   }
 
@@ -197,6 +235,27 @@ export function ReleaseForm(props: ReleaseFormProps) {
           color="dark"
           size="xs"
           onClick={() => openDocSelectModal()}
+        >
+          {'Select'}
+        </Button>
+      </InputWrapper>
+      <InputWrapper
+        className="ReleaseForm__input"
+        label="Data Sources"
+        description="Optional. Data sources to publish with the release."
+        size="xs"
+      >
+        {dataSourceIds.length > 0 && (
+          <ReleaseForm.DataSourceIds
+            ids={dataSourceIds}
+            onRemove={onRemoveDataSource}
+          />
+        )}
+        <Button
+          className="ReleaseForm__docSelectButton"
+          color="dark"
+          size="xs"
+          onClick={() => openDataSourceSelectModal()}
         >
           {'Select'}
         </Button>
@@ -253,6 +312,27 @@ ReleaseForm.DocPreviewCards = (props: {
               </Tooltip>
             </div>
           </div>
+        </div>
+      ))}
+    </div>
+  );
+};
+
+ReleaseForm.DataSourceIds = (props: {
+  ids: string[];
+  onRemove: (id: string) => void;
+}) => {
+  return (
+    <div className="ReleaseForm__DataSourceIds">
+      {props.ids.map((id) => (
+        <div key={id} className="ReleaseForm__DataSourceIds__item">
+          <span className="ReleaseForm__DataSourceIds__item__id">{id}</span>
+          <ActionIcon
+            className="ReleaseForm__DataSourceIds__item__remove"
+            onClick={() => props.onRemove(id)}
+          >
+            <IconTrash size={16} />
+          </ActionIcon>
         </div>
       ))}
     </div>
