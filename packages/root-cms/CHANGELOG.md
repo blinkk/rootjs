@@ -1,5 +1,12 @@
 # @blinkk/root-cms
 
+## 1.4.9
+
+### Patch Changes
+
+- 7d95baf: chore: suppress deprecated fields that are empty
+  - @blinkk/root@1.4.9
+
 ## 1.4.8
 
 ### Patch Changes
