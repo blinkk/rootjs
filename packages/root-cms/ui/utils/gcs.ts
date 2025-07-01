@@ -64,7 +64,7 @@ export async function uploadFileToGCS(file: File, options?: UploadFileOptions) {
     console.log('video dimensions:', dimens);
   }
 
-  // By default, set the cache-control to 1hr.
+  // By default, set the cache-control to 365 days.
   const cacheControl = options?.cacheControl || 'public, max-age=31536000';
   await updateMetadata(gcsRef, {
     cacheControl,
