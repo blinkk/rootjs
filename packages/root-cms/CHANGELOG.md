@@ -1,5 +1,14 @@
 # @blinkk/root-cms
 
+## 1.4.10
+
+### Patch Changes
+
+- 8704000: feat: improve local hmr experience
+- 70fea5d: chore: increase default cache-control max-age
+- Updated dependencies [8704000]
+  - @blinkk/root@1.4.10
+
 ## 1.4.9
 
 ### Patch Changes
