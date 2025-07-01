@@ -1,5 +1,11 @@
 # @blinkk/root
 
+## 1.4.10
+
+### Patch Changes
+
+- 8704000: feat: improve local hmr experience
+
 ## 1.4.9
 
 ## 1.4.8
