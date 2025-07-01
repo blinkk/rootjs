@@ -65,7 +65,7 @@ export async function uploadFileToGCS(file: File, options?: UploadFileOptions) {
   }
 
   // By default, set the cache-control to 1hr.
-  const cacheControl = options?.cacheControl || 'public, max-age=3600';
+  const cacheControl = options?.cacheControl || 'public, max-age=31536000';
   await updateMetadata(gcsRef, {
     cacheControl,
     customMetadata: normalizeGcsMeta(meta),
