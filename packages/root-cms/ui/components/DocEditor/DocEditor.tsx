@@ -43,6 +43,7 @@ import {
   UseDraftHook,
 } from '../../hooks/useDraft.js';
 import {joinClassNames} from '../../utils/classes.js';
+import {preserveUiState} from '../../utils/doc-ui-state.js';
 import {
   CMSDoc,
   testIsScheduled,
@@ -53,6 +54,7 @@ import {getDefaultFieldValue} from '../../utils/fields.js';
 import {flattenNestedKeys} from '../../utils/objects.js';
 import {autokey} from '../../utils/rand.js';
 import {getPlaceholderKeys, strFormat} from '../../utils/str-format.js';
+import {testFieldEmpty} from '../../utils/test-field-empty.js';
 import {formatDateTime} from '../../utils/time.js';
 import {
   useVirtualClipboard,
@@ -67,7 +69,6 @@ import {useEditJsonModal} from '../EditJsonModal/EditJsonModal.js';
 import {useEditTranslationsModal} from '../EditTranslationsModal/EditTranslationsModal.js';
 import {useLocalizationModal} from '../LocalizationModal/LocalizationModal.js';
 import {usePublishDocModal} from '../PublishDocModal/PublishDocModal.js';
-import './DocEditor.css';
 import {Viewers} from '../Viewers/Viewers.js';
 import {BooleanField} from './fields/BooleanField.js';
 import {DateTimeField} from './fields/DateTimeField.js';
@@ -75,12 +76,13 @@ import {FieldProps} from './fields/FieldProps.js';
 import {FileField} from './fields/FileField.js';
 import {ImageField} from './fields/ImageField.js';
 import {MultiSelectField} from './fields/MultiSelectField.js';
+import {NumberField} from './fields/NumberField.js';
 import {ReferenceField} from './fields/ReferenceField.js';
 import {RichTextField} from './fields/RichTextField.js';
 import {SelectField} from './fields/SelectField.js';
 import {StringField} from './fields/StringField.js';
-import {NumberField} from './fields/NumberField.js';
-import {testFieldEmpty} from '../../utils/test-field-empty.js';
+
+import './DocEditor.css';
 
 interface DocEditorProps {
   docId: string;
@@ -143,6 +145,10 @@ export function DocEditor(props: DocEditorProps) {
     if (deeplink) {
       setDeeplink(deeplink);
     }
+    const callback = preserveUiState();
+    return () => {
+      callback();
+    };
   }, [loading]);
 
   return (
