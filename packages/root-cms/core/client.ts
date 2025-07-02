@@ -392,7 +392,7 @@ export class RootCMSClient {
    */
   async publishDocs(
     docIds: string[],
-    options?: {publishedBy: string; batch?: WriteBatch}
+    options?: {publishedBy: string; batch?: WriteBatch; releaseId?: string}
   ) {
     const projectCollectionsPath = `Projects/${this.projectId}/Collections`;
     const publishedBy = options?.publishedBy || 'root-cms-client';
@@ -431,6 +431,10 @@ export class RootCMSClient {
     // // https://firebase.google.com/docs/firestore/manage-data/transactions
     let batchCount = 0;
     const batch = options?.batch || this.db.batch();
+    const versionTags = ['published'];
+    if (options?.releaseId) {
+      versionTags.push(`release:${options.releaseId}`);
+    }
     const publishedDocs: any[] = [];
     for (const doc of docs) {
       const {id, collection, slug, sys, fields} = doc;
@@ -463,6 +467,29 @@ export class RootCMSClient {
           publishedBy: publishedBy,
         },
       });
+      batchCount += 1;
+
+      // Save a version snapshot of the published doc.
+      const versionRef = this.db.doc(
+        `${projectCollectionsPath}/${collection}/Drafts/${slug}/Versions/${Date.now()}`
+      );
+      const versionData: any = {
+        id,
+        collection,
+        slug,
+        fields: fields || {},
+        sys: {
+          ...sys,
+          firstPublishedAt: firstPublishedAt,
+          firstPublishedBy: firstPublishedBy,
+          publishedAt: FieldValue.serverTimestamp(),
+          publishedBy: publishedBy,
+        },
+      };
+      if (versionTags.length) {
+        versionData.tags = versionTags;
+      }
+      batch.set(versionRef, versionData);
       batchCount += 1;
 
       // Remove scheduled doc, if any.
@@ -542,6 +569,7 @@ export class RootCMSClient {
     // https://firebase.google.com/docs/firestore/manage-data/transactions
     let batchCount = 0;
     const batch = this.db.batch();
+    const versionTags = ['published'];
     const publishedDocs: any[] = [];
     for (const doc of docs) {
       const {id, collection, slug, data} = doc;
@@ -575,6 +603,27 @@ export class RootCMSClient {
           publishedBy: scheduledBy || '',
         },
       });
+      batchCount += 1;
+
+      // Save a version snapshot of the published doc.
+      const versionRef = this.db.doc(
+        `${projectCollectionsPath}/${collection}/Drafts/${slug}/Versions/${Date.now()}`
+      );
+      const versionData: any = {
+        id,
+        collection,
+        slug,
+        fields: data.fields || {},
+        sys: {
+          ...sys,
+          firstPublishedAt: firstPublishedAt,
+          firstPublishedBy: firstPublishedBy,
+          publishedAt: FieldValue.serverTimestamp(),
+          publishedBy: scheduledBy || '',
+        },
+        tags: versionTags,
+      };
+      batch.set(versionRef, versionData);
       batchCount += 1;
 
       // Remove published doc.
@@ -630,7 +679,11 @@ export class RootCMSClient {
         scheduledAt: FieldValue.delete(),
         scheduledBy: FieldValue.delete(),
       });
-      await this.publishDocs(release.docIds || [], {publishedBy, batch});
+      await this.publishDocs(release.docIds || [], {
+        publishedBy,
+        batch,
+        releaseId: release.id,
+      });
     }
   }
 
