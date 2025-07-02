@@ -59,6 +59,15 @@ export interface CMSSidebarTool {
   iframeUrl?: string;
 }
 
+export interface CMSFirebaseConfig {
+  [key: string]: string | undefined;
+  apiKey: string;
+  authDomain: string;
+  projectId: string;
+  storageBucket: string;
+  databaseId?: string;
+}
+
 export type CMSPluginOptions = {
   /**
    * The ID of the project. Data will be stored under the namespace
@@ -76,14 +85,13 @@ export type CMSPluginOptions = {
    * Firebase config object, which can be obtained in the Firebase Console by
    * going to "Project Settings".
    */
-  firebaseConfig: {
-    [key: string]: string | undefined;
-    apiKey: string;
-    authDomain: string;
-    projectId: string;
-    storageBucket: string;
-    databaseId?: string;
-  };
+  firebaseConfig: CMSFirebaseConfig;
+
+  /**
+   * Optional Firebase config used for interacting with a storage bucket that
+   * exists in a different Firebase project.
+   */
+  storageConfig?: CMSFirebaseConfig;
 
   /**
    * GAPI credentials. Include if using Google Drive and Google Sheets features.

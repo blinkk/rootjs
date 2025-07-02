@@ -106,6 +106,7 @@ export async function renderApp(
       },
     },
     firebaseConfig: cmsConfig.firebaseConfig,
+    storageConfig: cmsConfig.storageConfig,
     gapi: cmsConfig.gapi,
     collections: collections,
     sidebar: cmsConfig.sidebar,
@@ -220,6 +221,7 @@ export async function renderSignIn(
   const ctx = {
     name: options.cmsConfig.name || options.cmsConfig.id || '',
     firebaseConfig: options.cmsConfig.firebaseConfig,
+    storageConfig: options.cmsConfig.storageConfig,
   };
   const mainHtml = renderToString(<SignIn title="Sign in" ctx={ctx} />);
   let html = `<!doctype html>\n${mainHtml}`;

@@ -11,6 +11,7 @@ declare global {
     __ROOT_CTX: {
       name: string;
       firebaseConfig: Record<string, string>;
+      storageConfig?: Record<string, string>;
     };
     firebase: {
       app: FirebaseApp;
