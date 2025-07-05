@@ -44,6 +44,7 @@ function restoreUiState() {
     } catch {
       /* ignore */
     }
+    sessionStorage.removeItem(OPEN_KEY);
   }
   // Restore scroll position.
   const side = document.querySelector(
@@ -52,6 +53,7 @@ function restoreUiState() {
   const scroll = sessionStorage.getItem(SCROLL_KEY);
   if (side && scroll) {
     side.scrollTop = parseInt(scroll, 10);
+    sessionStorage.removeItem(SCROLL_KEY);
   }
 }
 
