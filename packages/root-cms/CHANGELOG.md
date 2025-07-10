@@ -1,5 +1,12 @@
 # @blinkk/root-cms
 
+## 1.4.11
+
+### Patch Changes
+
+- 07038b1: revert: improve local hmr experience
+  - @blinkk/root@1.4.11
+
 ## 1.4.10
 
 ### Patch Changes
