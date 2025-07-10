@@ -1,5 +1,3 @@
-import fs from 'node:fs';
-import path from 'node:path';
 import {createServer, ViteDevServer} from 'vite';
 import {RootConfig} from '../core/config.js';
 import {getVitePlugins} from '../core/plugin.js';
@@ -23,23 +21,6 @@ export async function createViteServer(
   const rootDir = rootConfig.rootDir;
   const viteConfig = rootConfig.vite || {};
 
-  /** Ignore paths from .gitignore when hot reloading. */
-  const gitignorePath = path.join(rootDir, '.gitignore');
-  let ignored: Array<string | RegExp> = ['**/dist/**'];
-  if (fs.existsSync(gitignorePath)) {
-    try {
-      const contents = fs.readFileSync(gitignorePath, 'utf8');
-      const patterns = contents
-        .split(/\r?\n/)
-        .map((l) => l.trim())
-        .filter((l) => l && !l.startsWith('#'))
-        .map((p) => (p.endsWith('/') ? `${p}**` : p));
-      ignored = [...ignored, ...patterns];
-    } catch {
-      /** ignore errors reading gitignore */
-    }
-  }
-
   let hmrOptions = viteConfig.server?.hmr;
   if (options?.hmr === false) {
     hmrOptions = false;
@@ -61,10 +42,6 @@ export async function createViteServer(
       ...(viteConfig.server || {}),
       middlewareMode: true,
       hmr: hmrOptions,
-      watch: {
-        ...(viteConfig.server?.watch || {}),
-        ignored,
-      },
     },
     appType: 'custom',
     optimizeDeps: {
