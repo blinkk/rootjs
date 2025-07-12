@@ -1,3 +1,5 @@
+import './DocEditor.css';
+
 import {
   ActionIcon,
   Button,
@@ -42,6 +44,7 @@ import {
   SaveState,
   UseDraftHook,
 } from '../../hooks/useDraft.js';
+import {useVirtualClipboard, VirtualClipboard} from '../../hooks/useVirtualClipboard.js';
 import {joinClassNames} from '../../utils/classes.js';
 import {
   CMSDoc,
@@ -55,10 +58,6 @@ import {autokey} from '../../utils/rand.js';
 import {getPlaceholderKeys, strFormat} from '../../utils/str-format.js';
 import {formatDateTime} from '../../utils/time.js';
 import {
-  useVirtualClipboard,
-  VirtualClipboard,
-} from '../../utils/virtual-clipboard.js';
-import {
   DocActionEvent,
   DocActionsMenu,
 } from '../DocActionsMenu/DocActionsMenu.js';
@@ -67,7 +66,6 @@ import {useEditJsonModal} from '../EditJsonModal/EditJsonModal.js';
 import {useEditTranslationsModal} from '../EditTranslationsModal/EditTranslationsModal.js';
 import {useLocalizationModal} from '../LocalizationModal/LocalizationModal.js';
 import {usePublishDocModal} from '../PublishDocModal/PublishDocModal.js';
-import './DocEditor.css';
 import {Viewers} from '../Viewers/Viewers.js';
 import {BooleanField} from './fields/BooleanField.js';
 import {DateTimeField} from './fields/DateTimeField.js';
