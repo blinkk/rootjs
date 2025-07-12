@@ -1,5 +1,14 @@
 # @blinkk/root-cms
 
+## 1.4.12
+
+### Patch Changes
+
+- a9e7564: fix: fix virtual clipboard
+- 236b1df: feat: tag version when publishing docs
+- 0f6b9c5: feat: add data source publishing to releases
+  - @blinkk/root@1.4.12
+
 ## 1.4.11
 
 ### Patch Changes
