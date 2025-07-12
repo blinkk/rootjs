@@ -1,5 +1,6 @@
 import {
   Timestamp,
+  WriteBatch,
   collection,
   doc,
   getDoc,
@@ -255,7 +256,7 @@ export async function publishDataSource(id: string) {
 
 export async function cmsPublishDataSources(
   ids: string[],
-  options?: {batch?: WriteBatch}
+  options?: {batch?: WriteBatch; commitBatch?: boolean}
 ) {
   if (ids.length === 0) {
     return;
@@ -288,7 +289,7 @@ export async function cmsPublishDataSources(
       'Data',
       'published'
     );
-    const updatedDataSource: DataSource = {
+    const updatedDataSource = {
       ...dataSource,
       publishedAt: serverTimestamp(),
       publishedBy: window.firebase.user.email!,
@@ -305,7 +306,7 @@ export async function cmsPublishDataSources(
     });
     logAction('datasource.publish', {metadata: {datasourceId: id}});
   }
-  if (!options?.batch) {
+  if (!options?.batch || options?.commitBatch) {
     await batch.commit();
   }
 }

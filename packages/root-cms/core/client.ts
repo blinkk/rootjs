@@ -680,11 +680,14 @@ export class RootCMSClient {
         scheduledAt: FieldValue.delete(),
         scheduledBy: FieldValue.delete(),
       });
-      await this.publishDataSources(release.dataSourceIds || [], {
-        publishedBy,
-        batch,
-        commitBatch: false,
-      });
+      const dataSourceIds = release.dataSourceIds || [];
+      if (dataSourceIds.length > 0) {
+        await this.publishDataSources(dataSourceIds, {
+          publishedBy,
+          batch,
+          commitBatch: false,
+        });
+      }
       await this.publishDocs(release.docIds || [], {
         publishedBy,
         batch,
