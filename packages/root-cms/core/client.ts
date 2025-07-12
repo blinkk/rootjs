@@ -989,7 +989,7 @@ export class RootCMSClient {
         `Projects/${this.projectId}/DataSources/${id}/published`
       );
       const dataRes = await this.getFromDataSource(id, {mode: 'draft'});
-      const updatedDataSource: DataSource = {
+      const updatedDataSource = {
         ...dataSource,
         publishedAt: FieldValue.serverTimestamp(),
         publishedBy,
