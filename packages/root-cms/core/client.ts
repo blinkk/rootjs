@@ -680,14 +680,15 @@ export class RootCMSClient {
         scheduledAt: FieldValue.delete(),
         scheduledBy: FieldValue.delete(),
       });
+      await this.publishDataSources(release.dataSourceIds || [], {
+        publishedBy,
+        batch,
+        commitBatch: false,
+      });
       await this.publishDocs(release.docIds || [], {
         publishedBy,
         batch,
         releaseId: release.id,
-      });
-      await this.publishDataSources(release.dataSourceIds || [], {
-        publishedBy,
-        batch,
       });
     }
   }
@@ -970,7 +971,7 @@ export class RootCMSClient {
 
   async publishDataSources(
     dataSourceIds: string[],
-    options?: {publishedBy: string; batch?: WriteBatch}
+    options?: {publishedBy: string; batch?: WriteBatch, commitBatch?: boolean}
   ) {
     const publishedBy = options?.publishedBy || 'root-cms-client';
     const batch = options?.batch || this.db.batch();
@@ -1005,7 +1006,7 @@ export class RootCMSClient {
         publishedBy,
       });
     }
-    if (!options?.batch) {
+    if (!options?.batch || options?.commitBatch) {
       await batch.commit();
     }
   }
