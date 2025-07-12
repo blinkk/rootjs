@@ -1,5 +1,6 @@
 import {
   Timestamp,
+  WriteBatch,
   collection,
   doc,
   getDoc,
@@ -251,6 +252,63 @@ export async function publishDataSource(id: string) {
 
   console.log(`published data ${id}`);
   logAction('datasource.publish', {metadata: {datasourceId: id}});
+}
+
+export async function cmsPublishDataSources(
+  ids: string[],
+  options?: {batch?: WriteBatch; commitBatch?: boolean}
+) {
+  if (ids.length === 0) {
+    return;
+  }
+  const db = window.firebase.db;
+  const projectId = window.__ROOT_CTX.rootConfig.projectId;
+  const batch = options?.batch || writeBatch(db);
+  for (const id of ids) {
+    const dataSource = await getDataSource(id);
+    if (!dataSource) {
+      throw new Error(`data source not found: ${id}`);
+    }
+    const dataRes = await getFromDataSource(id, {mode: 'draft'});
+    const dataSourceDocRef = doc(db, 'Projects', projectId, 'DataSources', id);
+    const dataDocRefDraft = doc(
+      db,
+      'Projects',
+      projectId,
+      'DataSources',
+      id,
+      'Data',
+      'draft'
+    );
+    const dataDocRefPublished = doc(
+      db,
+      'Projects',
+      projectId,
+      'DataSources',
+      id,
+      'Data',
+      'published'
+    );
+    const updatedDataSource = {
+      ...dataSource,
+      publishedAt: serverTimestamp(),
+      publishedBy: window.firebase.user.email!,
+    };
+    batch.set(dataDocRefPublished, {
+      dataSource: updatedDataSource,
+      data: dataRes?.data || null,
+      ...(dataRes?.headers ? {headers: dataRes.headers} : {}),
+    });
+    batch.update(dataDocRefDraft, {dataSource: updatedDataSource});
+    batch.update(dataSourceDocRef, {
+      publishedAt: serverTimestamp(),
+      publishedBy: window.firebase.user.email!,
+    });
+    logAction('datasource.publish', {metadata: {datasourceId: id}});
+  }
+  if (!options?.batch || options?.commitBatch) {
+    await batch.commit();
+  }
 }
 
 export async function deleteDataSource(id: string) {

@@ -92,6 +92,14 @@ export function ReleasePage(props: {id: string}) {
                 key={`docs-list-${updated}`}
               />
             )}
+            {release &&
+              release.dataSourceIds &&
+              release.dataSourceIds.length > 0 && (
+                <ReleasePage.DataSourcesList
+                  release={release}
+                  key={`data-sources-${updated}`}
+                />
+              )}
           </>
         )}
       </div>
@@ -117,10 +125,12 @@ ReleasePage.PublishStatus = (props: {
 
   function onPublishClicked() {
     const docIds = release.docIds || [];
-    if (docIds.length === 0) {
+    const dataSourceIds = release.dataSourceIds || [];
+    const total = docIds.length + dataSourceIds.length;
+    if (total === 0) {
       showNotification({
         title: 'Cannot publish release',
-        message: 'Error: no docs in the release to publish.',
+        message: 'Error: nothing in the release to publish.',
         color: 'red',
         autoClose: false,
       });
@@ -132,8 +142,8 @@ ReleasePage.PublishStatus = (props: {
       title: `Publish release: ${release.id}`,
       children: (
         <Text size="body-sm" weight="semi-bold">
-          Are you sure you want to publish this release? The {docIds.length}{' '}
-          docs in the release will go live immediately.
+          Are you sure you want to publish this release? The {total} items in
+          the release will go live immediately.
         </Text>
       ),
       labels: {confirm: 'Publish', cancel: 'Cancel'},
@@ -152,10 +162,12 @@ ReleasePage.PublishStatus = (props: {
     await notifyErrors(async () => {
       const notificationId = `publish-release-${release.id}`;
       const numDocs = release.docIds?.length || 0;
+      const numDataSources = release.dataSourceIds?.length || 0;
+      const total = numDocs + numDataSources;
       showNotification({
         id: notificationId,
         title: 'Publishing release',
-        message: `Publishing ${numDocs} docs...`,
+        message: `Publishing ${total} items...`,
         loading: true,
         autoClose: false,
       });
@@ -164,7 +176,7 @@ ReleasePage.PublishStatus = (props: {
       updateNotification({
         id: notificationId,
         title: 'Published release!',
-        message: `Successfully published ${numDocs} docs!`,
+        message: `Successfully published ${total} items!`,
         loading: false,
         autoClose: 5000,
       });
@@ -283,6 +295,34 @@ ReleasePage.DocsList = (props: {release: Release}) => {
             <a href={`/cms/content/${docId}`}>
               <DocPreviewCard docId={docId} statusBadges />
             </a>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+ReleasePage.DataSourcesList = (props: {release: Release}) => {
+  const release = props.release;
+  const ids = release.dataSourceIds || [];
+  return (
+    <div className="ReleasePage__DataSourcesList">
+      <div className="ReleasePage__DataSourcesList__header">
+        <Heading size="h2">Data Sources</Heading>
+        <Button
+          component="a"
+          variant="default"
+          size="xs"
+          compact
+          href={`/cms/releases/${release.id}/edit`}
+        >
+          Edit
+        </Button>
+      </div>
+      <div className="ReleasePage__DataSourcesList__items">
+        {ids.map((id) => (
+          <div key={id} className="ReleasePage__DataSourcesList__item">
+            <a href={`/cms/data/${id}`}>{id}</a>
           </div>
         ))}
       </div>

@@ -141,6 +141,7 @@ export interface Release {
   id: string;
   description?: string;
   docIds?: string[];
+  dataSourceIds?: string[];
   createdAt?: Timestamp;
   createdBy?: string;
   scheduledAt?: Timestamp;
@@ -679,6 +680,14 @@ export class RootCMSClient {
         scheduledAt: FieldValue.delete(),
         scheduledBy: FieldValue.delete(),
       });
+      const dataSourceIds = release.dataSourceIds || [];
+      if (dataSourceIds.length > 0) {
+        await this.publishDataSources(dataSourceIds, {
+          publishedBy,
+          batch,
+          commitBatch: false,
+        });
+      }
       await this.publishDocs(release.docIds || [], {
         publishedBy,
         batch,
@@ -961,6 +970,48 @@ export class RootCMSClient {
 
     console.log(`published data ${dataSourceId}`);
     console.log(`published by: ${publishedBy}`);
+  }
+
+  async publishDataSources(
+    dataSourceIds: string[],
+    options?: {publishedBy: string; batch?: WriteBatch, commitBatch?: boolean}
+  ) {
+    const publishedBy = options?.publishedBy || 'root-cms-client';
+    const batch = options?.batch || this.db.batch();
+    for (const id of dataSourceIds) {
+      const dataSource = await this.getDataSource(id);
+      if (!dataSource) {
+        throw new Error(`data source not found: ${id}`);
+      }
+      const dataSourceDocRef = this.db.doc(
+        `Projects/${this.projectId}/DataSources/${id}`
+      );
+      const dataDocRefDraft = this.db.doc(
+        `Projects/${this.projectId}/DataSources/${id}/draft`
+      );
+      const dataDocRefPublished = this.db.doc(
+        `Projects/${this.projectId}/DataSources/${id}/published`
+      );
+      const dataRes = await this.getFromDataSource(id, {mode: 'draft'});
+      const updatedDataSource = {
+        ...dataSource,
+        publishedAt: FieldValue.serverTimestamp(),
+        publishedBy,
+      };
+      batch.set(dataDocRefPublished, {
+        dataSource: updatedDataSource,
+        data: dataRes?.data || null,
+        ...(dataRes?.headers ? {headers: dataRes.headers} : {}),
+      });
+      batch.update(dataDocRefDraft, {dataSource: updatedDataSource});
+      batch.update(dataSourceDocRef, {
+        publishedAt: FieldValue.serverTimestamp(),
+        publishedBy,
+      });
+    }
+    if (!options?.batch || options?.commitBatch) {
+      await batch.commit();
+    }
   }
 
   private async fetchData(dataSource: DataSource) {
