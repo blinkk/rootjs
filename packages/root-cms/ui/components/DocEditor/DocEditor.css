@@ -506,6 +506,15 @@
   font-size: 12px;
 }
 
+.DocEditor__DateField input {
+  display: block;
+  width: 100%;
+  border: 1px solid #dedede;
+  padding: 6px 8px;
+  font-family: inherit;
+  font-size: 12px;
+}
+
 .DocEditor__DateTimeField__timezone {
   font-size: 10px;
   font-weight: 400;

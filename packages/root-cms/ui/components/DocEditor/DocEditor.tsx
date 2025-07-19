@@ -69,6 +69,7 @@ import {usePublishDocModal} from '../PublishDocModal/PublishDocModal.js';
 import {Viewers} from '../Viewers/Viewers.js';
 import {BooleanField} from './fields/BooleanField.js';
 import {DateTimeField} from './fields/DateTimeField.js';
+import {DateField} from './fields/DateField.js';
 import {FieldProps} from './fields/FieldProps.js';
 import {FileField} from './fields/FileField.js';
 import {ImageField} from './fields/ImageField.js';
@@ -339,6 +340,8 @@ DocEditor.Field = (props: FieldProps) => {
           <DocEditor.ArrayField {...props} />
         ) : field.type === 'boolean' ? (
           <BooleanField {...props} />
+        ) : field.type === 'date' ? (
+          <DateField {...props} />
         ) : field.type === 'datetime' ? (
           <DateTimeField {...props} />
         ) : field.type === 'file' ? (

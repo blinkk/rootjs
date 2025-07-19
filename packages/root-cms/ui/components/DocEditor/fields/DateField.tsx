@@ -1,0 +1,42 @@
+import {useEffect, useState} from 'preact/hooks';
+import * as schema from '../../../../core/schema.js';
+import {FieldProps} from './FieldProps.js';
+
+export function DateField(props: FieldProps) {
+  const field = props.field as schema.DateField;
+  const [value, setValue] = useState(field.default || '');
+
+  function onChange(newValue: string) {
+    if (newValue) {
+      // Value is stored in DB as YYYY-MM-DD string
+      props.draft.updateKey(props.deepKey, newValue);
+      setValue(newValue);
+    } else {
+      setValue('');
+      props.draft.removeKey(props.deepKey);
+    }
+    if (props.onChange) {
+      props.onChange(newValue);
+    }
+  }
+
+  useEffect(() => {
+    const unsubscribe = props.draft.subscribe(props.deepKey, (newVal: string) => {
+      setValue(newVal || '');
+    });
+    return unsubscribe;
+  }, []);
+
+  return (
+    <div className="DocEditor__DateField">
+      <input
+        type="date"
+        value={value}
+        onChange={(e: Event) => {
+          const target = e.currentTarget as HTMLInputElement;
+          onChange(target.value);
+        }}
+      />
+    </div>
+  );
+}
