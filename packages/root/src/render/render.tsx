@@ -103,14 +103,21 @@ export class Renderer {
         // Intentionally ignored.
       }
     }
-    const [route, routeParams] = this.router.get(url);
-    if (!route) {
-      next();
-      return;
-    }
-    if (route.locale) {
-      routeParams.$locale = route.locale;
-    }
+
+    const matches = this.router.matchAll(url);
+    let matchIndex = 0;
+
+    const processNextMatch = async (): Promise<void> => {
+      const match = matches[matchIndex++];
+      if (!match) {
+        next();
+        return;
+      }
+
+      const [route, routeParams] = match;
+      if (route.locale) {
+        routeParams.$locale = route.locale;
+      }
 
     const fallbackLocales = route.isDefaultLocale
       ? getFallbackLocales(req)
@@ -125,9 +132,14 @@ export class Renderer {
       return req.rootConfig?.i18n?.defaultLocale || 'en';
     };
 
-    const render404 = async () => {
+    const render404 = async (options?: {nextRoute?: boolean}) => {
       // Calling next() will allow the dev server or prod server handle the 404
-      // page as appropriate for the env.
+      // page as appropriate for the env. When nextRoute is true, attempt to
+      // handle the request with the next matching route instead.
+      if (options?.nextRoute) {
+        await processNextMatch();
+        return;
+      }
       next();
     };
 
@@ -255,6 +267,10 @@ export class Renderer {
       }
     }
     await render(props);
+    return;
+  };
+
+    await processNextMatch();
   }
 
   private async renderComponent(
