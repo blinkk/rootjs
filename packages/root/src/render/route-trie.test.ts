@@ -124,3 +124,15 @@ test('walk all routes', async () => {
     expected.sort((a, b) => a[0].localeCompare(b[0]))
   );
 });
+
+test('match all matching routes', () => {
+  routeTrie.add('/[[...slug]]', 'a');
+  routeTrie.add('/foo/[id]', 'b');
+  routeTrie.add('/foo/bar', 'c');
+
+  assert.deepEqual(routeTrie.matchAll('/foo/bar'), [
+    ['c', {}],
+    ['b', {id: 'bar'}],
+    ['a', {slug: 'foo/bar'}],
+  ]);
+});

@@ -21,6 +21,10 @@ export class Router {
     return this.routeTrie.get(url);
   }
 
+  matchAll(url: string) {
+    return this.routeTrie.matchAll(url);
+  }
+
   async walk(cb: (urlPath: string, route: Route) => void | Promise<void>) {
     await this.routeTrie.walk(cb);
   }

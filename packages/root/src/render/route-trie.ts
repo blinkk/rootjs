@@ -65,6 +65,15 @@ export class RouteTrie<T> {
   }
 
   /**
+   * Returns all routes that match the given path and their parameter values.
+   */
+  matchAll(path: string): Array<[T, Record<string, string>]> {
+    const matches: Array<[T, Record<string, string>]> = [];
+    this.collectRoutes(path, {}, matches);
+    return matches;
+  }
+
+  /**
    * Walks the route trie and calls a callback function for each route.
    */
   walk(cb: (urlPath: string, route: T) => Promise<void> | void): Promise<void> {
@@ -163,6 +172,54 @@ export class RouteTrie<T> {
     }
 
     return undefined;
+  }
+
+  private collectRoutes(
+    urlPath: string,
+    params: Record<string, string>,
+    results: Array<[T, Record<string, string>]>
+  ) {
+    urlPath = this.normalizePath(urlPath);
+    if (urlPath === '') {
+      if (this.route) {
+        results.push([this.route, {...params}]);
+      }
+      if (this.optCatchAllNodes) {
+        const optParams = {...params};
+        if (urlPath) {
+          optParams[this.optCatchAllNodes.name] = urlPath;
+        }
+        results.push([this.optCatchAllNodes.route, optParams]);
+      }
+      return;
+    }
+
+    const [head, tail] = this.splitPath(urlPath);
+
+    const child = this.children[head];
+    if (child) {
+      child.collectRoutes(tail, {...params}, results);
+    }
+
+    if (this.paramNodes) {
+      for (const paramChild of Object.values(this.paramNodes)) {
+        const paramParams = {...params, [paramChild.name]: head};
+        paramChild.trie.collectRoutes(tail, paramParams, results);
+      }
+    }
+
+    if (this.catchAllNodes) {
+      const caParams = {...params, [this.catchAllNodes.name]: urlPath};
+      results.push([this.catchAllNodes.route, caParams]);
+    }
+
+    if (this.optCatchAllNodes) {
+      const ocParams = {...params};
+      if (urlPath) {
+        ocParams[this.optCatchAllNodes.name] = urlPath;
+      }
+      results.push([this.optCatchAllNodes.route, ocParams]);
+    }
   }
 
   /**
