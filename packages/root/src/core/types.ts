@@ -142,8 +142,11 @@ export interface HandlerContext<Props = any> {
   getPreferredLocale: (availableLocales: string[]) => string;
   /** Renders the default exported component from the route. */
   render: HandlerRenderFn<Props>;
-  /** Renders a 404 page. */
-  render404: () => Promise<void>;
+  /**
+   * Renders a 404 page. When `nextRoute` is true, the next matching route
+   * handler will be invoked instead of rendering the default 404 page.
+   */
+  render404: (options?: {nextRoute?: boolean}) => Promise<void>;
 }
 
 /**
