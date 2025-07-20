@@ -119,156 +119,157 @@ export class Renderer {
         routeParams.$locale = route.locale;
       }
 
-    const fallbackLocales = route.isDefaultLocale
-      ? getFallbackLocales(req)
-      : [route.locale];
-    const getPreferredLocale = (availableLocales: string[]) => {
-      const lowerLocales = availableLocales.map((l) => l.toLowerCase());
-      for (const fallbackLocale of fallbackLocales) {
-        if (lowerLocales.includes(fallbackLocale.toLowerCase())) {
-          return fallbackLocale;
-        }
-      }
-      return req.rootConfig?.i18n?.defaultLocale || 'en';
-    };
-
-    const render404 = async (options?: {nextRoute?: boolean}) => {
-      // Calling next() will allow the dev server or prod server handle the 404
-      // page as appropriate for the env. When nextRoute is true, attempt to
-      // handle the request with the next matching route instead.
-      if (options?.nextRoute) {
-        await processNextMatch();
-        return;
-      }
-      next();
-    };
-
-    const render: HandlerRenderFn = async (
-      props: any,
-      options?: HandlerRenderOptions
-    ) => {
-      if (!route.module.default) {
-        console.error(`no default component exported in route: ${route.src}`);
-        render404();
-        return;
-      }
-      const securityConfig = this.getSecurityConfig();
-      const cspEnabled = !!securityConfig.contentSecurityPolicy;
-      const currentPath = req.path;
-      const locale = options?.locale || route.locale;
-      const translations = options?.translations;
-      const nonce = cspEnabled ? this.generateNonce() : undefined;
-      const output = await this.renderComponent(route.module.default, props, {
-        currentPath,
-        route,
-        routeParams,
-        locale,
-        translations,
-        nonce,
-      });
-      let html = output.html;
-      if (this.rootConfig.prettyHtml) {
-        html = await htmlPretty(html, this.rootConfig.prettyHtmlOptions);
-      } else if (this.rootConfig.minifyHtml !== false) {
-        html = await htmlMinify(html, this.rootConfig.minifyHtmlOptions);
-      }
-      if (req.viteServer) {
-        html = await req.viteServer.transformIndexHtml(currentPath, html);
-        if (nonce) {
-          html = html.replace(
-            '<script type="module" src="/@vite/client"></script>',
-            `<script type="module" src="/@vite/client" nonce="${nonce}"></script>`
-          );
-        }
-      }
-      // Override the status code for 404 and 500 routes, which are defined at
-      // routes/404.tsx and routes/500.tsx respectively.
-      let statusCode = 200;
-      if (route.src === 'routes/404.tsx') {
-        statusCode = 404;
-      } else if (route.src === 'routes/500.tsx') {
-        statusCode = 500;
-      }
-
-      // Trigger preRender hooks.
-      req.hooks.trigger('preRender');
-      const plugins = this.rootConfig.plugins || [];
-      for (const plugin of plugins) {
-        if (plugin.hooks?.preRender) {
-          const newHtml = await plugin.hooks.preRender(html);
-          if (newHtml && typeof newHtml === 'string') {
-            html = newHtml;
+      const fallbackLocales = route.isDefaultLocale
+        ? getFallbackLocales(req)
+        : [route.locale];
+      const getPreferredLocale = (availableLocales: string[]) => {
+        const lowerLocales = availableLocales.map((l) => l.toLowerCase());
+        for (const fallbackLocale of fallbackLocales) {
+          if (lowerLocales.includes(fallbackLocale.toLowerCase())) {
+            return fallbackLocale;
           }
         }
+        return req.rootConfig?.i18n?.defaultLocale || 'en';
+      };
+
+      const render404 = async (options?: {nextRoute?: boolean}) => {
+        // Calling next() will allow the dev server or prod server handle the 404
+        // page as appropriate for the env. When nextRoute is true, attempt to
+        // handle the request with the next matching route instead.
+        if (options?.nextRoute) {
+          await processNextMatch();
+          return;
+        }
+        next();
+      };
+
+      const render: HandlerRenderFn = async (
+        props: any,
+        options?: HandlerRenderOptions
+      ) => {
+        if (!route.module.default) {
+          console.error(`no default component exported in route: ${route.src}`);
+          render404();
+          return;
+        }
+        const securityConfig = this.getSecurityConfig();
+        const cspEnabled = !!securityConfig.contentSecurityPolicy;
+        const currentPath = req.path;
+        const locale = options?.locale || route.locale;
+        const translations = options?.translations;
+        const nonce = cspEnabled ? this.generateNonce() : undefined;
+        const output = await this.renderComponent(route.module.default, props, {
+          currentPath,
+          route,
+          routeParams,
+          locale,
+          translations,
+          nonce,
+        });
+        let html = output.html;
+        if (this.rootConfig.prettyHtml) {
+          html = await htmlPretty(html, this.rootConfig.prettyHtmlOptions);
+        } else if (this.rootConfig.minifyHtml !== false) {
+          html = await htmlMinify(html, this.rootConfig.minifyHtmlOptions);
+        }
+        if (req.viteServer) {
+          html = await req.viteServer.transformIndexHtml(currentPath, html);
+          if (nonce) {
+            html = html.replace(
+              '<script type="module" src="/@vite/client"></script>',
+              `<script type="module" src="/@vite/client" nonce="${nonce}"></script>`
+            );
+          }
+        }
+        // Override the status code for 404 and 500 routes, which are defined at
+        // routes/404.tsx and routes/500.tsx respectively.
+        let statusCode = 200;
+        if (route.src === 'routes/404.tsx') {
+          statusCode = 404;
+        } else if (route.src === 'routes/500.tsx') {
+          statusCode = 500;
+        }
+
+        // Trigger preRender hooks.
+        req.hooks.trigger('preRender');
+        const plugins = this.rootConfig.plugins || [];
+        for (const plugin of plugins) {
+          if (plugin.hooks?.preRender) {
+            const newHtml = await plugin.hooks.preRender(html);
+            if (newHtml && typeof newHtml === 'string') {
+              html = newHtml;
+            }
+          }
+        }
+
+        res.status(statusCode);
+        res.set({'Content-Type': 'text/html'});
+        this.setSecurityHeaders(res, {
+          securityConfig: securityConfig,
+          nonce: nonce,
+        });
+        res.end(html);
+      };
+
+      if (route.module.getStaticContent) {
+        let props: any;
+        if (route.module.getStaticProps) {
+          props = await route.module.getStaticProps({
+            rootConfig: this.rootConfig,
+            params: routeParams,
+          });
+        } else {
+          props = {rootConfig: this.rootConfig, params: routeParams};
+        }
+        const result = await route.module.getStaticContent(props);
+        let body: string | Buffer;
+        let contentType: string | undefined;
+        if (typeof result === 'string' || Buffer.isBuffer(result)) {
+          body = result;
+        } else if (result && typeof result === 'object') {
+          body = result.body;
+          contentType = result.contentType;
+        } else {
+          body = '';
+        }
+        res.status(200);
+        const ext = path.extname(route.routePath);
+        res.set({
+          'Content-Type': contentType || guessContentType(ext),
+        });
+        res.end(body);
+        return;
       }
 
-      res.status(statusCode);
-      res.set({'Content-Type': 'text/html'});
-      this.setSecurityHeaders(res, {
-        securityConfig: securityConfig,
-        nonce: nonce,
-      });
-      res.end(html);
-    };
+      if (route.module.handle) {
+        const handlerContext: HandlerContext = {
+          route: route,
+          params: routeParams,
+          i18nFallbackLocales: fallbackLocales,
+          getPreferredLocale: getPreferredLocale,
+          render: render,
+          render404: render404,
+        };
+        req.handlerContext = handlerContext;
+        return route.module.handle(req, res, next);
+      }
 
-    if (route.module.getStaticContent) {
-      let props: any;
+      let props = {};
       if (route.module.getStaticProps) {
-        props = await route.module.getStaticProps({
+        const propsData = await route.module.getStaticProps({
           rootConfig: this.rootConfig,
           params: routeParams,
         });
-      } else {
-        props = {rootConfig: this.rootConfig, params: routeParams};
+        if (propsData.notFound) {
+          return render404();
+        }
+        if (propsData.props) {
+          props = propsData.props;
+        }
       }
-      const result = await route.module.getStaticContent(props);
-      let body: string | Buffer;
-      let contentType: string | undefined;
-      if (typeof result === 'string' || Buffer.isBuffer(result)) {
-        body = result;
-      } else if (result && typeof result === 'object') {
-        body = result.body;
-        contentType = result.contentType;
-      } else {
-        body = '';
-      }
-      res.status(200);
-      const ext = path.extname(route.routePath);
-      res.set({
-        'Content-Type': contentType || guessContentType(ext),
-      });
-      return res.end(body);
-    }
-
-    if (route.module.handle) {
-      const handlerContext: HandlerContext = {
-        route: route,
-        params: routeParams,
-        i18nFallbackLocales: fallbackLocales,
-        getPreferredLocale: getPreferredLocale,
-        render: render,
-        render404: render404,
-      };
-      req.handlerContext = handlerContext;
-      return route.module.handle(req, res, next);
-    }
-
-    let props = {};
-    if (route.module.getStaticProps) {
-      const propsData = await route.module.getStaticProps({
-        rootConfig: this.rootConfig,
-        params: routeParams,
-      });
-      if (propsData.notFound) {
-        return render404();
-      }
-      if (propsData.props) {
-        props = propsData.props;
-      }
-    }
-    await render(props);
-    return;
-  };
+      await render(props);
+      return;
+    };
 
     await processNextMatch();
   }
