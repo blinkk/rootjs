@@ -218,6 +218,9 @@ export class Renderer {
             rootConfig: this.rootConfig,
             params: routeParams,
           });
+          if (props?.notFound) {
+            return render404();
+          }
         } else {
           props = {rootConfig: this.rootConfig, params: routeParams};
         }
