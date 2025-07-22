@@ -37,7 +37,13 @@ function verifyRedirectConfig(redirect: RootRedirectConfig) {
   if (!redirect.source) {
     return false;
   }
+  if (!redirect.source.startsWith('/')) {
+    return false;
+  }
   if (!redirect.destination) {
+    return false;
+  }
+  if (!testIsRedirectValid(redirect.destination)) {
     return false;
   }
   // TODO(stevenle): verify all destination params exist within source.
@@ -63,4 +69,17 @@ function replaceParams(urlPathFormat: string, params: Record<string, string>) {
     }
   );
   return urlPath;
+}
+
+/**
+ * Only support full urls (e.g. https://...) and relative paths (e.g. /foo/...).
+ */
+function testIsRedirectValid(url: string) {
+  if (url.startsWith('/')) {
+    return true;
+  }
+  if (url.match(/^https?:\/\//)) {
+    return true;
+  }
+  return false;
 }
