@@ -414,8 +414,8 @@ export async function build(rootProjectDir?: string, options?: BuildOptions) {
             let props: any;
             if (routeModule.getStaticProps) {
               props = await routeModule.getStaticProps({
-                rootConfig, params:
-                sitemapItem.params,
+                rootConfig,
+                params: sitemapItem.params,
               });
             } else {
               props = {rootConfig, params: sitemapItem.params};
@@ -474,12 +474,11 @@ export async function build(rootProjectDir?: string, options?: BuildOptions) {
           }
 
           // Render html and save the file to dist/html.
+          // TODO(stevenle): consolidate post-build html transformation logic.
           let html = data.html || '';
-          if (rootConfig.prettyHtml !== false) {
+          if (rootConfig.prettyHtml) {
             html = await htmlPretty(html, rootConfig.prettyHtmlOptions);
-          }
-          // HTML minification is `true` by default. Set to `false` to disable.
-          if (rootConfig.minifyHtml !== false) {
+          } else if (rootConfig.minifyHtml) {
             html = await htmlMinify(html, rootConfig.minifyHtmlOptions);
           }
           await writeFile(outPath, html);
