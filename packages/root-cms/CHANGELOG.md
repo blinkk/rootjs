@@ -1,5 +1,15 @@
 # @blinkk/root-cms
 
+## 1.4.13
+
+### Patch Changes
+
+- eb41e5c: feat: add date field to doc editor
+- Updated dependencies [7c0ccde]
+- Updated dependencies [1860e81]
+- Updated dependencies [714357b]
+  - @blinkk/root@1.4.13
+
 ## 1.4.12
 
 ### Patch Changes
