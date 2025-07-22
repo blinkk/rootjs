@@ -1,5 +1,13 @@
 # @blinkk/root
 
+## 1.4.13
+
+### Patch Changes
+
+- 7c0ccde: fix: fix ssg build inconsistency with html minification
+- 1860e81: feat: add route fallback option
+- 714357b: feat: add router.matchAll for multiple matches
+
 ## 1.4.12
 
 ## 1.4.11
