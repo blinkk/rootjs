@@ -417,6 +417,9 @@ export async function build(rootProjectDir?: string, options?: BuildOptions) {
                 rootConfig,
                 params: sitemapItem.params,
               });
+              if (props?.notFound) {
+                return;
+              }
             } else {
               props = {rootConfig, params: sitemapItem.params};
             }
