@@ -8,4 +8,5 @@ export default defineConfig({
   build: {
     excludeDefaultLocaleFromIntlPaths: true,
   },
+  prettyHtml: true,
 });
