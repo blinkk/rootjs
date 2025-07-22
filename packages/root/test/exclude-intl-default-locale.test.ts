@@ -28,7 +28,7 @@ test('build exclude-intl-default-locale project', async () => {
     "<!doctype html>
     <html>
     <head>
-    <meta charset=\\"utf-8\\">
+    <meta charset=\\"utf-8\\" />
     </head>
     <body>
     <h1>Hello world!</h1>
@@ -51,7 +51,7 @@ test('build exclude-intl-default-locale project', async () => {
     "<!doctype html>
     <html>
     <head>
-    <meta charset=\\"utf-8\\">
+    <meta charset=\\"utf-8\\" />
     </head>
     <body>
     <h1>Bonjour le monde !</h1>
@@ -70,7 +70,7 @@ test('build exclude-intl-default-locale project', async () => {
     "<!doctype html>
     <html>
     <head>
-    <meta charset=\\"utf-8\\">
+    <meta charset=\\"utf-8\\" />
     </head>
     <body>
     <p>Current path: /foo/bar</p>
@@ -87,7 +87,7 @@ test('build exclude-intl-default-locale project', async () => {
     "<!doctype html>
     <html>
     <head>
-    <meta charset=\\"utf-8\\">
+    <meta charset=\\"utf-8\\" />
     </head>
     <body>
     <p>Current path: /intl/fr/foo/bar</p>

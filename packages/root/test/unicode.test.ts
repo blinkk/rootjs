@@ -25,7 +25,7 @@ test('build unicode routes', async () => {
     "<!doctype html>
     <html>
     <head>
-    <meta charset=\\"utf-8\\">
+    <meta charset=\\"utf-8\\" />
     </head>
     <body>
     <h1>こんにちは</h1>
@@ -41,7 +41,7 @@ test('build unicode routes', async () => {
     "<!doctype html>
     <html>
     <head>
-    <meta charset=\\"utf-8\\">
+    <meta charset=\\"utf-8\\" />
     </head>
     <body>
     <h1>世界</h1>
