@@ -39,6 +39,18 @@
   margin-left: 4px;
 }
 
+.DocEditor__statusBar__previewControls {
+  margin-left: 4px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.DocEditor__statusBar__previewControls__openNewTab,
+.DocEditor__statusBar__previewControls__toggle {
+  color: var(--color-text-default);
+}
+
 .DocEditor__fields {
   display: flex;
   flex-direction: column;

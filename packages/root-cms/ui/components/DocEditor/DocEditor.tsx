@@ -25,6 +25,9 @@ import {
   IconRowInsertTop,
   IconTrash,
   IconTriangleFilled,
+  IconArrowUpRight,
+  IconLayoutSidebarRightCollapse,
+  IconLayoutSidebarRightExpand,
 } from '@tabler/icons-preact';
 import {createContext} from 'preact';
 import {
@@ -85,6 +88,10 @@ interface DocEditorProps {
   docId: string;
   collection: schema.Collection;
   draft: UseDraftHook;
+  isPreviewVisible?: boolean;
+  onTogglePreviewVisibility?: () => void;
+  onOpenPreviewInNewTab?: () => void;
+  onFieldsRendered?: () => void;
 }
 
 const DEEPLINK_CONTEXT = createContext('');
@@ -143,6 +150,17 @@ export function DocEditor(props: DocEditorProps) {
       setDeeplink(deeplink);
     }
   }, [loading]);
+
+  // Notify parent when fields are rendered (for deferred iframe loading)
+  useEffect(() => {
+    if (!loading && props.onFieldsRendered) {
+      // Use a small delay to ensure fields are actually rendered in DOM
+      const timer = setTimeout(() => {
+        props.onFieldsRendered();
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [loading, props.onFieldsRendered]);
 
   return (
     <VIRTUAL_CLIPBOARD_CONTEXT.Provider
@@ -240,6 +258,32 @@ export function DocEditor(props: DocEditorProps) {
                   onAction={onDocAction}
                 />
               </div>
+              {props.onTogglePreviewVisibility && (
+                <div className="DocEditor__statusBar__previewControls">
+                  {!props.isPreviewVisible && props.onOpenPreviewInNewTab && (
+                    <Tooltip label="Open preview in new tab">
+                      <ActionIcon
+                        className="DocEditor__statusBar__previewControls__openNewTab"
+                        onClick={props.onOpenPreviewInNewTab}
+                      >
+                        <IconArrowUpRight size={16} />
+                      </ActionIcon>
+                    </Tooltip>
+                  )}
+                  <Tooltip label={props.isPreviewVisible ? "Hide preview" : "Show preview"}>
+                    <ActionIcon
+                      className="DocEditor__statusBar__previewControls__toggle"
+                      onClick={props.onTogglePreviewVisibility}
+                    >
+                      {props.isPreviewVisible ? (
+                        <IconLayoutSidebarRightCollapse size={16} />
+                      ) : (
+                        <IconLayoutSidebarRightExpand size={16} />
+                      )}
+                    </ActionIcon>
+                  </Tooltip>
+                </div>
+              )}
             </div>
             <div className="DocEditor__fields">
               {fields.map((field) => (

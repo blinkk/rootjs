@@ -9,9 +9,6 @@ import {
   IconDeviceIpad,
   IconDeviceMobile,
   IconDotsVertical,
-  IconEyeOff,
-  IconLayoutSidebarRightCollapse,
-  IconLayoutSidebarRightExpand,
   IconReload,
   IconWorld,
 } from '@tabler/icons-preact';
@@ -39,11 +36,45 @@ export function DocumentPage(props: DocumentPageProps) {
   const collection = window.__ROOT_CTX.collections[collectionId];
   const draft = useDraft(docId);
   
+  // State to track when fields have been rendered 
+  const [fieldsRendered, setFieldsRendered] = useState(false);
+  
   // Local storage for preview panel visibility per collection
   const [isPreviewVisible, setIsPreviewVisible] = useLocalStorage<boolean>(
     `root::DocumentPage::previewVisible::${collectionId}`,
     true
   );
+
+  if (!collection) {
+    return <div>Could not find collection.</div>;
+  }
+
+  // Helper function to generate preview URL for a document
+  function getPreviewUrl(selectedLocale = '') {
+    const basePreviewPath = getDocPreviewPath({collectionId, slug});
+    const searchParams = new URLSearchParams(window.location.search);
+    searchParams.set('preview', 'true');
+    const query = `${searchParams.toString()}${window.location.hash}`;
+    
+    if (selectedLocale) {
+      const localizedPreviewPath = getDocPreviewPath({
+        collectionId,
+        slug,
+        locale: selectedLocale,
+      });
+      return `${localizedPreviewPath}?${query}`;
+    }
+    
+    return `${basePreviewPath}?${query}`;
+  }
+
+  function openPreviewInNewTab() {
+    const previewUrl = getPreviewUrl();
+    const tab = window.open(previewUrl, '_blank');
+    if (tab) {
+      tab.focus();
+    }
+  }
 
   if (!collection) {
     return <div>Could not find collection.</div>;
@@ -97,16 +128,6 @@ export function DocumentPage(props: DocumentPageProps) {
               >
                 Save
               </Button>
-              {!isPreviewVisible && (
-                <Tooltip label="Show preview">
-                  <ActionIcon 
-                    className="DocumentPage__side__header__showPreview"
-                    onClick={() => setIsPreviewVisible(true)}
-                  >
-                    <IconLayoutSidebarRightExpand size={16} />
-                  </ActionIcon>
-                </Tooltip>
-              )}
               <Menu
                 className="DocumentPage__side__header__menu"
                 position="bottom"
@@ -134,6 +155,10 @@ export function DocumentPage(props: DocumentPageProps) {
               collection={collection}
               docId={docId}
               draft={draft}
+              isPreviewVisible={isPreviewVisible}
+              onTogglePreviewVisibility={() => setIsPreviewVisible(!isPreviewVisible)}
+              onOpenPreviewInNewTab={openPreviewInNewTab}
+              onFieldsRendered={() => setFieldsRendered(true)}
             />
           </div>
         </SplitPanel.Item>
@@ -151,6 +176,8 @@ export function DocumentPage(props: DocumentPageProps) {
               draft={draft} 
               isVisible={isPreviewVisible}
               onToggleVisibility={() => setIsPreviewVisible(!isPreviewVisible)}
+              getPreviewUrl={getPreviewUrl}
+              shouldLoadIframe={fieldsRendered}
             />
           )}
         </SplitPanel.Item>
@@ -164,6 +191,8 @@ interface PreviewProps {
   draft: UseDraftHook;
   isVisible: boolean;
   onToggleVisibility: () => void;
+  getPreviewUrl: (selectedLocale?: string) => string;
+  shouldLoadIframe: boolean;
 }
 
 type Device = 'mobile' | 'tablet' | 'desktop' | '';
@@ -233,6 +262,9 @@ DocumentPage.Preview = (props: PreviewProps) => {
   ];
 
   function reloadIframe() {
+    if (!props.shouldLoadIframe) {
+      return;
+    }
     const iframe = iframeRef.current!;
     iframe.src = 'about:blank';
     window.setTimeout(() => {
@@ -277,9 +309,22 @@ DocumentPage.Preview = (props: PreviewProps) => {
   }, []);
 
   useEffect(() => {
+    if (!props.shouldLoadIframe) {
+      return;
+    }
     const iframe = iframeRef.current!;
     iframe.src = localizedPreviewUrl;
-  }, [selectedLocale]);
+  }, [selectedLocale, props.shouldLoadIframe]);
+
+  // Initial iframe load when shouldLoadIframe becomes true
+  useEffect(() => {
+    if (props.shouldLoadIframe) {
+      const iframe = iframeRef.current!;
+      if (!iframe.src || iframe.src === 'about:blank') {
+        iframe.src = localizedPreviewUrl;
+      }
+    }
+  }, [props.shouldLoadIframe, localizedPreviewUrl]);
 
   function toggleDevice(device: Device) {
     setDevice((current) => {
@@ -296,7 +341,8 @@ DocumentPage.Preview = (props: PreviewProps) => {
   }
 
   function openNewTab() {
-    const tab = window.open(localizedPreviewUrl, '_blank');
+    const previewUrl = props.getPreviewUrl(selectedLocale);
+    const tab = window.open(previewUrl, '_blank');
     if (tab) {
       tab.focus();
     }
@@ -406,14 +452,6 @@ DocumentPage.Preview = (props: PreviewProps) => {
               onClick={() => openNewTab()}
             >
               <IconArrowUpRight size={16} />
-            </ActionIcon>
-          </Tooltip>
-          <Tooltip label="Hide preview">
-            <ActionIcon
-              className="DocumentPage__main__previewBar__button DocumentPage__main__previewBar__button--toggle"
-              onClick={() => props.onToggleVisibility()}
-            >
-              <IconLayoutSidebarRightCollapse size={16} />
             </ActionIcon>
           </Tooltip>
         </div>
