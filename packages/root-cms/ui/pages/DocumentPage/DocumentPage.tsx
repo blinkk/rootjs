@@ -11,6 +11,8 @@ import {
   IconDotsVertical,
   IconReload,
   IconWorld,
+  IconLayoutSidebarRightCollapse,
+  IconLayoutSidebarRightExpand,
 } from '@tabler/icons-preact';
 import {useEffect, useRef, useState} from 'preact/hooks';
 
@@ -118,6 +120,14 @@ export function DocumentPage(props: DocumentPageProps) {
               <div className="DocumentPage__side__header__docId">{docId}</div>
             </div>
             <div className="DocumentPage__side__header__buttons">
+              <Tooltip label="Edit JSON">
+                <ActionIcon
+                  className="DocumentPage__side__header__editJson"
+                  onClick={() => editJson()}
+                >
+                  <IconBraces size={16} />
+                </ActionIcon>
+              </Tooltip>
               <Button
                 variant="filled"
                 color="dark"
@@ -128,32 +138,26 @@ export function DocumentPage(props: DocumentPageProps) {
               >
                 Save
               </Button>
-              <Menu
-                className="DocumentPage__side__header__menu"
-                position="bottom"
-                control={
-                  <ActionIcon className="DocumentPage__side__header__menu__dots">
-                    <IconDotsVertical size={16} />
-                  </ActionIcon>
-                }
-              >
-                <Menu.Item
-                  icon={<IconBraces size={20} />}
-                  onClick={() => editJson()}
+              <Tooltip label={isPreviewVisible ? "Hide preview" : "Show preview"}>
+                <ActionIcon
+                  className="DocumentPage__side__header__previewToggle"
+                  onClick={() => setIsPreviewVisible(!isPreviewVisible)}
                 >
-                  Edit JSON
-                </Menu.Item>
-              </Menu>
-              {!isPreviewVisible && (
-                <Tooltip label="Open preview in new tab">
-                  <ActionIcon
-                    className="DocumentPage__side__header__openNewTab"
-                    onClick={openPreviewInNewTab}
-                  >
-                    <IconArrowUpRight size={16} />
-                  </ActionIcon>
-                </Tooltip>
-              )}
+                  {isPreviewVisible ? (
+                    <IconLayoutSidebarRightCollapse size={16} />
+                  ) : (
+                    <IconLayoutSidebarRightExpand size={16} />
+                  )}
+                </ActionIcon>
+              </Tooltip>
+              <Tooltip label="Open preview in new tab">
+                <ActionIcon
+                  className="DocumentPage__side__header__openNewTab"
+                  onClick={openPreviewInNewTab}
+                >
+                  <IconArrowUpRight size={16} />
+                </ActionIcon>
+              </Tooltip>
             </div>
           </div>
           <div className={joinClassNames(
@@ -165,8 +169,6 @@ export function DocumentPage(props: DocumentPageProps) {
               collection={collection}
               docId={docId}
               draft={draft}
-              isPreviewVisible={isPreviewVisible}
-              onTogglePreviewVisibility={() => setIsPreviewVisible(!isPreviewVisible)}
               onFieldsRendered={() => setFieldsRendered(true)}
             />
           </div>

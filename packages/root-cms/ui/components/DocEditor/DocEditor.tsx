@@ -25,9 +25,6 @@ import {
   IconRowInsertTop,
   IconTrash,
   IconTriangleFilled,
-  IconArrowUpRight,
-  IconLayoutSidebarRightCollapse,
-  IconLayoutSidebarRightExpand,
 } from '@tabler/icons-preact';
 import {createContext} from 'preact';
 import {
@@ -88,8 +85,6 @@ interface DocEditorProps {
   docId: string;
   collection: schema.Collection;
   draft: UseDraftHook;
-  isPreviewVisible?: boolean;
-  onTogglePreviewVisibility?: () => void;
   onFieldsRendered?: () => void;
 }
 
@@ -257,22 +252,6 @@ export function DocEditor(props: DocEditorProps) {
                   onAction={onDocAction}
                 />
               </div>
-              {props.onTogglePreviewVisibility && (
-                <div className="DocEditor__statusBar__previewControls">
-                  <Tooltip label={props.isPreviewVisible ? "Hide preview" : "Show preview"}>
-                    <ActionIcon
-                      className="DocEditor__statusBar__previewControls__toggle"
-                      onClick={props.onTogglePreviewVisibility}
-                    >
-                      {props.isPreviewVisible ? (
-                        <IconLayoutSidebarRightCollapse size={16} />
-                      ) : (
-                        <IconLayoutSidebarRightExpand size={16} />
-                      )}
-                    </ActionIcon>
-                  </Tooltip>
-                </div>
-              )}
             </div>
             <div className="DocEditor__fields">
               {fields.map((field) => (
