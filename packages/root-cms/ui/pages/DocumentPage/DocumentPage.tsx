@@ -144,6 +144,16 @@ export function DocumentPage(props: DocumentPageProps) {
                   Edit JSON
                 </Menu.Item>
               </Menu>
+              {!isPreviewVisible && (
+                <Tooltip label="Open preview in new tab">
+                  <ActionIcon
+                    className="DocumentPage__side__header__openNewTab"
+                    onClick={openPreviewInNewTab}
+                  >
+                    <IconArrowUpRight size={16} />
+                  </ActionIcon>
+                </Tooltip>
+              )}
             </div>
           </div>
           <div className={joinClassNames(
@@ -157,7 +167,6 @@ export function DocumentPage(props: DocumentPageProps) {
               draft={draft}
               isPreviewVisible={isPreviewVisible}
               onTogglePreviewVisibility={() => setIsPreviewVisible(!isPreviewVisible)}
-              onOpenPreviewInNewTab={openPreviewInNewTab}
               onFieldsRendered={() => setFieldsRendered(true)}
             />
           </div>

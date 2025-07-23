@@ -90,7 +90,6 @@ interface DocEditorProps {
   draft: UseDraftHook;
   isPreviewVisible?: boolean;
   onTogglePreviewVisibility?: () => void;
-  onOpenPreviewInNewTab?: () => void;
   onFieldsRendered?: () => void;
 }
 
@@ -260,16 +259,6 @@ export function DocEditor(props: DocEditorProps) {
               </div>
               {props.onTogglePreviewVisibility && (
                 <div className="DocEditor__statusBar__previewControls">
-                  {!props.isPreviewVisible && props.onOpenPreviewInNewTab && (
-                    <Tooltip label="Open preview in new tab">
-                      <ActionIcon
-                        className="DocEditor__statusBar__previewControls__openNewTab"
-                        onClick={props.onOpenPreviewInNewTab}
-                      >
-                        <IconArrowUpRight size={16} />
-                      </ActionIcon>
-                    </Tooltip>
-                  )}
                   <Tooltip label={props.isPreviewVisible ? "Hide preview" : "Show preview"}>
                     <ActionIcon
                       className="DocEditor__statusBar__previewControls__toggle"
