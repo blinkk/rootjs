@@ -9,6 +9,9 @@ import {
   IconDeviceIpad,
   IconDeviceMobile,
   IconDotsVertical,
+  IconEyeOff,
+  IconLayoutSidebarRightCollapse,
+  IconLayoutSidebarRightExpand,
   IconReload,
   IconWorld,
 } from '@tabler/icons-preact';
@@ -35,6 +38,12 @@ export function DocumentPage(props: DocumentPageProps) {
   const docId = `${collectionId}/${slug}`;
   const collection = window.__ROOT_CTX.collections[collectionId];
   const draft = useDraft(docId);
+  
+  // Local storage for preview panel visibility per collection
+  const [isPreviewVisible, setIsPreviewVisible] = useLocalStorage<boolean>(
+    `root::DocumentPage::previewVisible::${collectionId}`,
+    true
+  );
 
   if (!collection) {
     return <div>Could not find collection.</div>;
@@ -64,7 +73,10 @@ export function DocumentPage(props: DocumentPageProps) {
   return (
     <Layout>
       <SplitPanel className="DocumentPage" localStorageId="DocumentPage">
-        <SplitPanel.Item className="DocumentPage__side">
+        <SplitPanel.Item className={joinClassNames(
+          'DocumentPage__side',
+          !isPreviewVisible && 'DocumentPage__side--expanded'
+        )}>
           <div className="DocumentPage__side__header">
             <div className="DocumentPage__side__header__nav">
               <a href={`/cms/content/${collectionId}`}>
@@ -85,6 +97,16 @@ export function DocumentPage(props: DocumentPageProps) {
               >
                 Save
               </Button>
+              {!isPreviewVisible && (
+                <Tooltip label="Show preview">
+                  <ActionIcon 
+                    className="DocumentPage__side__header__showPreview"
+                    onClick={() => setIsPreviewVisible(true)}
+                  >
+                    <IconLayoutSidebarRightExpand size={16} />
+                  </ActionIcon>
+                </Tooltip>
+              )}
               <Menu
                 className="DocumentPage__side__header__menu"
                 position="bottom"
@@ -103,7 +125,10 @@ export function DocumentPage(props: DocumentPageProps) {
               </Menu>
             </div>
           </div>
-          <div className="DocumentPage__side__editor">
+          <div className={joinClassNames(
+            'DocumentPage__side__editor',
+            !isPreviewVisible && 'DocumentPage__side__editor--centered'
+          )}>
             <DocEditor
               key={docId}
               collection={collection}
@@ -112,8 +137,22 @@ export function DocumentPage(props: DocumentPageProps) {
             />
           </div>
         </SplitPanel.Item>
-        <SplitPanel.Item className="DocumentPage__main" fluid>
-          <DocumentPage.Preview key={docId} docId={docId} draft={draft} />
+        <SplitPanel.Item 
+          className={joinClassNames(
+            'DocumentPage__main',
+            !isPreviewVisible && 'DocumentPage__main--hidden'
+          )} 
+          fluid
+        >
+          {isPreviewVisible && (
+            <DocumentPage.Preview 
+              key={docId} 
+              docId={docId} 
+              draft={draft} 
+              isVisible={isPreviewVisible}
+              onToggleVisibility={() => setIsPreviewVisible(!isPreviewVisible)}
+            />
+          )}
         </SplitPanel.Item>
       </SplitPanel>
     </Layout>
@@ -123,6 +162,8 @@ export function DocumentPage(props: DocumentPageProps) {
 interface PreviewProps {
   docId: string;
   draft: UseDraftHook;
+  isVisible: boolean;
+  onToggleVisibility: () => void;
 }
 
 type Device = 'mobile' | 'tablet' | 'desktop' | '';
@@ -365,6 +406,14 @@ DocumentPage.Preview = (props: PreviewProps) => {
               onClick={() => openNewTab()}
             >
               <IconArrowUpRight size={16} />
+            </ActionIcon>
+          </Tooltip>
+          <Tooltip label="Hide preview">
+            <ActionIcon
+              className="DocumentPage__main__previewBar__button DocumentPage__main__previewBar__button--toggle"
+              onClick={() => props.onToggleVisibility()}
+            >
+              <IconLayoutSidebarRightCollapse size={16} />
             </ActionIcon>
           </Tooltip>
         </div>
