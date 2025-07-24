@@ -317,6 +317,19 @@
 
 .DocEditor__ImageField__imagePreview {
   margin-bottom: 10px;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: outline 0.2s ease;
+}
+
+.DocEditor__ImageField__imagePreview:focus {
+  outline: 2px solid #228be6;
+  outline-offset: 2px;
+}
+
+.DocEditor__ImageField__imagePreview.focused {
+  outline: 2px solid #228be6;
+  outline-offset: 2px;
 }
 
 .DocEditor__ImageField__imagePreview__controls {
@@ -406,6 +419,22 @@
 
 .DocEditor__FileField__file {
   margin-bottom: 10px;
+}
+
+.DocEditor__FileField__filePreview {
+  cursor: pointer;
+  border-radius: 4px;
+  transition: outline 0.2s ease;
+}
+
+.DocEditor__FileField__filePreview:focus {
+  outline: 2px solid #228be6;
+  outline-offset: 2px;
+}
+
+.DocEditor__FileField__filePreview.focused {
+  outline: 2px solid #228be6;
+  outline-offset: 2px;
 }
 
 .DocEditor__FileField__noFile {

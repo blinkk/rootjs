@@ -13,8 +13,10 @@ export function FileField(props: FieldProps) {
   const [file, setFile] = useState<any>({});
   const [loading, setLoading] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
+  const [isFocused, setIsFocused] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const ref = useRef<HTMLDivElement>(null);
+  const previewRef = useRef<HTMLDivElement>(null);
 
   const showAlt = field.alt !== false;
   let accept: string | undefined = undefined;
@@ -100,6 +102,51 @@ export function FileField(props: FieldProps) {
     }
   };
 
+  const handleFocus = () => {
+    setIsFocused(true);
+  };
+
+  const handleBlur = () => {
+    setIsFocused(false);
+  };
+
+  const handleClick = () => {
+    if (previewRef.current) {
+      previewRef.current.focus();
+    }
+  };
+
+  const handleKeyDown = (e: KeyboardEvent) => {
+    // Handle paste with Ctrl+V (or Cmd+V on Mac)
+    if ((e.ctrlKey || e.metaKey) && e.key === 'v') {
+      e.preventDefault();
+      handlePaste();
+    }
+  };
+
+  const handlePaste = async () => {
+    try {
+      const clipboardItems = await navigator.clipboard.read();
+      for (const clipboardItem of clipboardItems) {
+        for (const type of clipboardItem.types) {
+          // Accept any file type since this is a general file field
+          if (type.startsWith('image/') || type.startsWith('video/') || type.startsWith('audio/') || type.startsWith('application/') || type.startsWith('text/')) {
+            const blob = await clipboardItem.getType(type);
+            // Convert blob to File object
+            const extension = type.split('/')[1] || 'bin';
+            const file = new File([blob], 'pasted-file.' + extension, { type });
+            console.log(`file pasted ("${props.deepKey}"):`, file);
+            uploadFile(file);
+            return;
+          }
+        }
+      }
+    } catch (err) {
+      console.warn('Failed to read from clipboard:', err);
+      // Fallback: listen for paste event to get files from event
+    }
+  };
+
   useEffect(() => {
     const unsubscribe = props.draft.subscribe(
       props.deepKey,
@@ -155,7 +202,18 @@ export function FileField(props: FieldProps) {
         <VideoPreview key={file.src} {...file} />
       )}
       {file && file.src ? (
-        <>
+        <div 
+          className={joinClassNames(
+            'DocEditor__FileField__filePreview',
+            isFocused && 'focused'
+          )}
+          ref={previewRef}
+          tabIndex={0}
+          onClick={handleClick}
+          onFocus={handleFocus}
+          onBlur={handleBlur}
+          onKeyDown={handleKeyDown}
+        >
           <div className="DocEditor__FileField__file">
             <TextInput
               className="DocEditor__FileField__file__url"
@@ -178,7 +236,7 @@ export function FileField(props: FieldProps) {
                 label="Alt text"
               />
             )}
-        </>
+        </div>
       ) : (
         <div className="DocEditor__FileField__noFile">No file</div>
       )}

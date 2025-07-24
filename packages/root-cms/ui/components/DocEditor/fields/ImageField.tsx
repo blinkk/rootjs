@@ -27,8 +27,10 @@ export function ImageField(props: FieldProps) {
   const [img, setImg] = useState<any>({});
   const [loading, setLoading] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
+  const [isFocused, setIsFocused] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const ref = useRef<HTMLDivElement>(null);
+  const previewRef = useRef<HTMLDivElement>(null);
 
   const accept = buildAcceptAttribute(field.exts);
 
@@ -109,6 +111,49 @@ export function ImageField(props: FieldProps) {
     }
   };
 
+  const handleFocus = () => {
+    setIsFocused(true);
+  };
+
+  const handleBlur = () => {
+    setIsFocused(false);
+  };
+
+  const handleClick = () => {
+    if (previewRef.current) {
+      previewRef.current.focus();
+    }
+  };
+
+  const handleKeyDown = (e: KeyboardEvent) => {
+    // Handle paste with Ctrl+V (or Cmd+V on Mac)
+    if ((e.ctrlKey || e.metaKey) && e.key === 'v') {
+      e.preventDefault();
+      handlePaste();
+    }
+  };
+
+  const handlePaste = async () => {
+    try {
+      const clipboardItems = await navigator.clipboard.read();
+      for (const clipboardItem of clipboardItems) {
+        for (const type of clipboardItem.types) {
+          if (type.startsWith('image/')) {
+            const blob = await clipboardItem.getType(type);
+            // Convert blob to File object
+            const file = new File([blob], 'pasted-image.' + type.split('/')[1], { type });
+            console.log(`file pasted ("${props.deepKey}"):`, file);
+            uploadFile(file);
+            return;
+          }
+        }
+      }
+    } catch (err) {
+      console.warn('Failed to read from clipboard:', err);
+      // Fallback: listen for paste event to get files from event
+    }
+  };
+
   useEffect(() => {
     const unsubscribe = props.draft.subscribe(
       props.deepKey,
@@ -147,7 +192,18 @@ export function ImageField(props: FieldProps) {
       ref={ref}
     >
       {img && img.src ? (
-        <div className="DocEditor__ImageField__imagePreview">
+        <div 
+          className={joinClassNames(
+            'DocEditor__ImageField__imagePreview',
+            isFocused && 'focused'
+          )}
+          ref={previewRef}
+          tabIndex={0}
+          onClick={handleClick}
+          onFocus={handleFocus}
+          onBlur={handleBlur}
+          onKeyDown={handleKeyDown}
+        >
           <div className="DocEditor__ImageField__imagePreview__controls">
             <Tooltip label="Remove image">
               <ActionIcon
