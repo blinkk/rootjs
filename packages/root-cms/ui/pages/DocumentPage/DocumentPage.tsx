@@ -37,10 +37,10 @@ export function DocumentPage(props: DocumentPageProps) {
   const docId = `${collectionId}/${slug}`;
   const collection = window.__ROOT_CTX.collections[collectionId];
   const draft = useDraft(docId);
-  
-  // State to track when fields have been rendered 
+
+  // State to track when fields have been rendered
   const [fieldsRendered, setFieldsRendered] = useState(false);
-  
+
   // Local storage for preview panel visibility per collection
   const [isPreviewVisible, setIsPreviewVisible] = useLocalStorage<boolean>(
     `root::DocumentPage::previewVisible::${collectionId}`,
@@ -57,7 +57,7 @@ export function DocumentPage(props: DocumentPageProps) {
     const searchParams = new URLSearchParams(window.location.search);
     searchParams.set('preview', 'true');
     const query = `${searchParams.toString()}${window.location.hash}`;
-    
+
     if (selectedLocale) {
       const localizedPreviewPath = getDocPreviewPath({
         collectionId,
@@ -66,7 +66,7 @@ export function DocumentPage(props: DocumentPageProps) {
       });
       return `${localizedPreviewPath}?${query}`;
     }
-    
+
     return `${basePreviewPath}?${query}`;
   }
 
@@ -106,10 +106,12 @@ export function DocumentPage(props: DocumentPageProps) {
   return (
     <Layout>
       <SplitPanel className="DocumentPage" localStorageId="DocumentPage">
-        <SplitPanel.Item className={joinClassNames(
-          'DocumentPage__side',
-          !isPreviewVisible && 'DocumentPage__side--expanded'
-        )}>
+        <SplitPanel.Item
+          className={joinClassNames(
+            'DocumentPage__side',
+            !isPreviewVisible && 'DocumentPage__side--expanded'
+          )}
+        >
           <div className="DocumentPage__side__header">
             <div className="DocumentPage__side__header__nav">
               <a href={`/cms/content/${collectionId}`}>
@@ -122,10 +124,11 @@ export function DocumentPage(props: DocumentPageProps) {
             <div className="DocumentPage__side__header__buttons">
               <Tooltip label="Edit JSON">
                 <ActionIcon
-                  className="DocumentPage__side__header__editJson"
                   onClick={() => editJson()}
+                  variant="default"
+                  size="sm"
                 >
-                  <IconBraces size={16} />
+                  <IconBraces size={14} />
                 </ActionIcon>
               </Tooltip>
               <Button
@@ -133,12 +136,15 @@ export function DocumentPage(props: DocumentPageProps) {
                 color="dark"
                 size="xs"
                 compact
-                leftIcon={<IconDeviceFloppy size={14} />}
+                leftIcon={<IconDeviceFloppy size={16} />}
                 onClick={() => saveDraft()}
               >
                 Save
               </Button>
-              <Tooltip label={isPreviewVisible ? "Hide preview" : "Show preview"}>
+
+              <Tooltip
+                label={isPreviewVisible ? 'Hide preview' : 'Show preview'}
+              >
                 <ActionIcon
                   className="DocumentPage__side__header__previewToggle"
                   onClick={() => setIsPreviewVisible(!isPreviewVisible)}
@@ -150,20 +156,24 @@ export function DocumentPage(props: DocumentPageProps) {
                   )}
                 </ActionIcon>
               </Tooltip>
-              <Tooltip label="Open preview in new tab">
-                <ActionIcon
-                  className="DocumentPage__side__header__openNewTab"
-                  onClick={openPreviewInNewTab}
-                >
-                  <IconArrowUpRight size={16} />
-                </ActionIcon>
-              </Tooltip>
+              {!isPreviewVisible && (
+                <Tooltip label="Open preview in new tab">
+                  <ActionIcon
+                    className="DocumentPage__side__header__openNewTab"
+                    onClick={openPreviewInNewTab}
+                  >
+                    <IconArrowUpRight size={16} />
+                  </ActionIcon>
+                </Tooltip>
+              )}
             </div>
           </div>
-          <div className={joinClassNames(
-            'DocumentPage__side__editor',
-            !isPreviewVisible && 'DocumentPage__side__editor--centered'
-          )}>
+          <div
+            className={joinClassNames(
+              'DocumentPage__side__editor',
+              !isPreviewVisible && 'DocumentPage__side__editor--centered'
+            )}
+          >
             <DocEditor
               key={docId}
               collection={collection}
@@ -173,18 +183,18 @@ export function DocumentPage(props: DocumentPageProps) {
             />
           </div>
         </SplitPanel.Item>
-        <SplitPanel.Item 
+        <SplitPanel.Item
           className={joinClassNames(
             'DocumentPage__main',
             !isPreviewVisible && 'DocumentPage__main--hidden'
-          )} 
+          )}
           fluid
         >
           {isPreviewVisible && (
-            <DocumentPage.Preview 
-              key={docId} 
-              docId={docId} 
-              draft={draft} 
+            <DocumentPage.Preview
+              key={docId}
+              docId={docId}
+              draft={draft}
               isVisible={isPreviewVisible}
               onToggleVisibility={() => setIsPreviewVisible(!isPreviewVisible)}
               getPreviewUrl={getPreviewUrl}
