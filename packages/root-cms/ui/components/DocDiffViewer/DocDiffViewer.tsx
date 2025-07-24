@@ -1,13 +1,13 @@
 import {Button, Loader} from '@mantine/core';
 import {Differ, Viewer as JsonDiffViewer} from 'json-diff-kit';
 import {useEffect, useState} from 'preact/hooks';
+import {joinClassNames} from '../../utils/classes.js';
 import {CMSDoc, cmsReadDocVersion, unmarshalData} from '../../utils/doc.js';
+import {getTimeAgo} from '../../utils/time.js';
 
 import 'json-diff-kit/dist/viewer.css';
 import 'json-diff-kit/dist/viewer-monokai.css';
 import './DocDiffViewer.css';
-import {getTimeAgo} from '../../utils/time.js';
-import {joinClassNames} from '../../utils/classes.js';
 
 export interface DocVersionId {
   /** Doc id, e.g. `Pages/foo`. */

@@ -44,7 +44,10 @@ import {
   SaveState,
   UseDraftHook,
 } from '../../hooks/useDraft.js';
-import {useVirtualClipboard, VirtualClipboard} from '../../hooks/useVirtualClipboard.js';
+import {
+  useVirtualClipboard,
+  VirtualClipboard,
+} from '../../hooks/useVirtualClipboard.js';
 import {joinClassNames} from '../../utils/classes.js';
 import {
   CMSDoc,
@@ -56,6 +59,7 @@ import {getDefaultFieldValue} from '../../utils/fields.js';
 import {flattenNestedKeys} from '../../utils/objects.js';
 import {autokey} from '../../utils/rand.js';
 import {getPlaceholderKeys, strFormat} from '../../utils/str-format.js';
+import {testFieldEmpty} from '../../utils/test-field-empty.js';
 import {formatDateTime} from '../../utils/time.js';
 import {
   DocActionEvent,
@@ -68,23 +72,23 @@ import {useLocalizationModal} from '../LocalizationModal/LocalizationModal.js';
 import {usePublishDocModal} from '../PublishDocModal/PublishDocModal.js';
 import {Viewers} from '../Viewers/Viewers.js';
 import {BooleanField} from './fields/BooleanField.js';
-import {DateTimeField} from './fields/DateTimeField.js';
 import {DateField} from './fields/DateField.js';
+import {DateTimeField} from './fields/DateTimeField.js';
 import {FieldProps} from './fields/FieldProps.js';
 import {FileField} from './fields/FileField.js';
 import {ImageField} from './fields/ImageField.js';
 import {MultiSelectField} from './fields/MultiSelectField.js';
+import {NumberField} from './fields/NumberField.js';
 import {ReferenceField} from './fields/ReferenceField.js';
 import {RichTextField} from './fields/RichTextField.js';
 import {SelectField} from './fields/SelectField.js';
 import {StringField} from './fields/StringField.js';
-import {NumberField} from './fields/NumberField.js';
-import {testFieldEmpty} from '../../utils/test-field-empty.js';
 
 interface DocEditorProps {
   docId: string;
   collection: schema.Collection;
   draft: UseDraftHook;
+  onFieldsRendered?: () => void;
 }
 
 const DEEPLINK_CONTEXT = createContext('');
@@ -143,6 +147,17 @@ export function DocEditor(props: DocEditorProps) {
       setDeeplink(deeplink);
     }
   }, [loading]);
+
+  // Notify parent when fields are rendered (for deferred iframe loading)
+  useEffect(() => {
+    if (!loading && props.onFieldsRendered) {
+      // Use a small delay to ensure fields are actually rendered in DOM
+      const timer = setTimeout(() => {
+        props.onFieldsRendered();
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [loading, props.onFieldsRendered]);
 
   return (
     <VIRTUAL_CLIPBOARD_CONTEXT.Provider

@@ -11,6 +11,8 @@ import {
   IconDotsVertical,
   IconReload,
   IconWorld,
+  IconLayoutSidebarRightCollapse,
+  IconLayoutSidebarRightExpand,
 } from '@tabler/icons-preact';
 import {useEffect, useRef, useState} from 'preact/hooks';
 
@@ -35,6 +37,46 @@ export function DocumentPage(props: DocumentPageProps) {
   const docId = `${collectionId}/${slug}`;
   const collection = window.__ROOT_CTX.collections[collectionId];
   const draft = useDraft(docId);
+
+  // State to track when fields have been rendered
+  const [fieldsRendered, setFieldsRendered] = useState(false);
+
+  // Local storage for preview panel visibility per collection
+  const [isPreviewVisible, setIsPreviewVisible] = useLocalStorage<boolean>(
+    `root::DocumentPage::previewVisible::${collectionId}`,
+    true
+  );
+
+  if (!collection) {
+    return <div>Could not find collection.</div>;
+  }
+
+  // Helper function to generate preview URL for a document
+  function getPreviewUrl(selectedLocale = '') {
+    const basePreviewPath = getDocPreviewPath({collectionId, slug});
+    const searchParams = new URLSearchParams(window.location.search);
+    searchParams.set('preview', 'true');
+    const query = `${searchParams.toString()}${window.location.hash}`;
+
+    if (selectedLocale) {
+      const localizedPreviewPath = getDocPreviewPath({
+        collectionId,
+        slug,
+        locale: selectedLocale,
+      });
+      return `${localizedPreviewPath}?${query}`;
+    }
+
+    return `${basePreviewPath}?${query}`;
+  }
+
+  function openPreviewInNewTab() {
+    const previewUrl = getPreviewUrl();
+    const tab = window.open(previewUrl, '_blank');
+    if (tab) {
+      tab.focus();
+    }
+  }
 
   if (!collection) {
     return <div>Could not find collection.</div>;
@@ -64,7 +106,12 @@ export function DocumentPage(props: DocumentPageProps) {
   return (
     <Layout>
       <SplitPanel className="DocumentPage" localStorageId="DocumentPage">
-        <SplitPanel.Item className="DocumentPage__side">
+        <SplitPanel.Item
+          className={joinClassNames(
+            'DocumentPage__side',
+            !isPreviewVisible && 'DocumentPage__side--expanded'
+          )}
+        >
           <div className="DocumentPage__side__header">
             <div className="DocumentPage__side__header__nav">
               <a href={`/cms/content/${collectionId}`}>
@@ -75,45 +122,85 @@ export function DocumentPage(props: DocumentPageProps) {
               <div className="DocumentPage__side__header__docId">{docId}</div>
             </div>
             <div className="DocumentPage__side__header__buttons">
+              <Tooltip label="Edit JSON">
+                <ActionIcon
+                  onClick={() => editJson()}
+                  variant="default"
+                  size="sm"
+                >
+                  <IconBraces size={14} />
+                </ActionIcon>
+              </Tooltip>
               <Button
                 variant="filled"
                 color="dark"
                 size="xs"
                 compact
-                leftIcon={<IconDeviceFloppy size={14} />}
+                leftIcon={<IconDeviceFloppy size={16} />}
                 onClick={() => saveDraft()}
               >
                 Save
               </Button>
-              <Menu
-                className="DocumentPage__side__header__menu"
-                position="bottom"
-                control={
-                  <ActionIcon className="DocumentPage__side__header__menu__dots">
-                    <IconDotsVertical size={16} />
-                  </ActionIcon>
-                }
+
+              <Tooltip
+                label={isPreviewVisible ? 'Hide preview' : 'Show preview'}
               >
-                <Menu.Item
-                  icon={<IconBraces size={20} />}
-                  onClick={() => editJson()}
+                <ActionIcon
+                  className="DocumentPage__side__header__previewToggle"
+                  onClick={() => setIsPreviewVisible(!isPreviewVisible)}
                 >
-                  Edit JSON
-                </Menu.Item>
-              </Menu>
+                  {isPreviewVisible ? (
+                    <IconLayoutSidebarRightCollapse size={16} />
+                  ) : (
+                    <IconLayoutSidebarRightExpand size={16} />
+                  )}
+                </ActionIcon>
+              </Tooltip>
+              {!isPreviewVisible && (
+                <Tooltip label="Open preview in new tab">
+                  <ActionIcon
+                    className="DocumentPage__side__header__openNewTab"
+                    onClick={openPreviewInNewTab}
+                  >
+                    <IconArrowUpRight size={16} />
+                  </ActionIcon>
+                </Tooltip>
+              )}
             </div>
           </div>
-          <div className="DocumentPage__side__editor">
+          <div
+            className={joinClassNames(
+              'DocumentPage__side__editor',
+              !isPreviewVisible && 'DocumentPage__side__editor--centered'
+            )}
+          >
             <DocEditor
               key={docId}
               collection={collection}
               docId={docId}
               draft={draft}
+              onFieldsRendered={() => setFieldsRendered(true)}
             />
           </div>
         </SplitPanel.Item>
-        <SplitPanel.Item className="DocumentPage__main" fluid>
-          <DocumentPage.Preview key={docId} docId={docId} draft={draft} />
+        <SplitPanel.Item
+          className={joinClassNames(
+            'DocumentPage__main',
+            !isPreviewVisible && 'DocumentPage__main--hidden'
+          )}
+          fluid
+        >
+          {isPreviewVisible && (
+            <DocumentPage.Preview
+              key={docId}
+              docId={docId}
+              draft={draft}
+              isVisible={isPreviewVisible}
+              onToggleVisibility={() => setIsPreviewVisible(!isPreviewVisible)}
+              getPreviewUrl={getPreviewUrl}
+              shouldLoadIframe={fieldsRendered}
+            />
+          )}
         </SplitPanel.Item>
       </SplitPanel>
     </Layout>
@@ -123,6 +210,10 @@ export function DocumentPage(props: DocumentPageProps) {
 interface PreviewProps {
   docId: string;
   draft: UseDraftHook;
+  isVisible: boolean;
+  onToggleVisibility: () => void;
+  getPreviewUrl: (selectedLocale?: string) => string;
+  shouldLoadIframe: boolean;
 }
 
 type Device = 'mobile' | 'tablet' | 'desktop' | '';
@@ -192,6 +283,9 @@ DocumentPage.Preview = (props: PreviewProps) => {
   ];
 
   function reloadIframe() {
+    if (!props.shouldLoadIframe) {
+      return;
+    }
     const iframe = iframeRef.current!;
     iframe.src = 'about:blank';
     window.setTimeout(() => {
@@ -236,9 +330,22 @@ DocumentPage.Preview = (props: PreviewProps) => {
   }, []);
 
   useEffect(() => {
+    if (!props.shouldLoadIframe) {
+      return;
+    }
     const iframe = iframeRef.current!;
     iframe.src = localizedPreviewUrl;
-  }, [selectedLocale]);
+  }, [selectedLocale, props.shouldLoadIframe]);
+
+  // Initial iframe load when shouldLoadIframe becomes true
+  useEffect(() => {
+    if (props.shouldLoadIframe) {
+      const iframe = iframeRef.current!;
+      if (!iframe.src || iframe.src === 'about:blank') {
+        iframe.src = localizedPreviewUrl;
+      }
+    }
+  }, [props.shouldLoadIframe, localizedPreviewUrl]);
 
   function toggleDevice(device: Device) {
     setDevice((current) => {
@@ -255,7 +362,8 @@ DocumentPage.Preview = (props: PreviewProps) => {
   }
 
   function openNewTab() {
-    const tab = window.open(localizedPreviewUrl, '_blank');
+    const previewUrl = props.getPreviewUrl(selectedLocale);
+    const tab = window.open(previewUrl, '_blank');
     if (tab) {
       tab.focus();
     }
