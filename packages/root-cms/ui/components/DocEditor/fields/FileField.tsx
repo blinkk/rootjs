@@ -1,12 +1,18 @@
 import {ActionIcon, TextInput, Tooltip} from '@mantine/core';
 import {showNotification} from '@mantine/notifications';
 import {IconFileUpload, IconTrash} from '@tabler/icons-preact';
+import {ChangeEvent} from 'preact/compat';
 import {useEffect, useRef, useState} from 'preact/hooks';
 import * as schema from '../../../../core/schema.js';
 import {joinClassNames} from '../../../utils/classes.js';
-import {GCI_URL_PREFIX, IMAGE_EXTS, VIDEO_EXTS, getFileExt, uploadFileToGCS} from '../../../utils/gcs.js';
+import {
+  GCI_URL_PREFIX,
+  IMAGE_EXTS,
+  VIDEO_EXTS,
+  getFileExt,
+  uploadFileToGCS,
+} from '../../../utils/gcs.js';
 import {FieldProps} from './FieldProps.js';
-import {ChangeEvent} from 'preact/compat';
 
 export function FileField(props: FieldProps) {
   const field = props.field as schema.FileField;
@@ -37,7 +43,7 @@ export function FileField(props: FieldProps) {
         preserveFilename: field.preserveFilename,
       });
       setFile((currentFile: any) => {
-        let newFile: any = {...uploadedFile};
+        const newFile: any = {...uploadedFile};
         if (currentFile?.src && testShouldHaveAltText(currentFile.src)) {
           // Preserve the "alt" text when the file changes.
           newFile.alt = currentFile?.alt || '';
@@ -130,11 +136,17 @@ export function FileField(props: FieldProps) {
       for (const clipboardItem of clipboardItems) {
         for (const type of clipboardItem.types) {
           // Accept any file type since this is a general file field
-          if (type.startsWith('image/') || type.startsWith('video/') || type.startsWith('audio/') || type.startsWith('application/') || type.startsWith('text/')) {
+          if (
+            type.startsWith('image/') ||
+            type.startsWith('video/') ||
+            type.startsWith('audio/') ||
+            type.startsWith('application/') ||
+            type.startsWith('text/')
+          ) {
             const blob = await clipboardItem.getType(type);
             // Convert blob to File object
             const extension = type.split('/')[1] || 'bin';
-            const file = new File([blob], 'pasted-file.' + extension, { type });
+            const file = new File([blob], 'pasted-file.' + extension, {type});
             console.log(`file pasted ("${props.deepKey}"):`, file);
             uploadFile(file);
             return;
@@ -202,7 +214,7 @@ export function FileField(props: FieldProps) {
         <VideoPreview key={file.src} {...file} />
       )}
       {file && file.src ? (
-        <div 
+        <div
           className={joinClassNames(
             'DocEditor__FileField__filePreview',
             isFocused && 'focused'
@@ -223,19 +235,18 @@ export function FileField(props: FieldProps) {
               disabled={true}
             />
           </div>
-          {showAlt &&
-            testShouldHaveAltText(file.src) && (
-              <TextInput
-                className="DocEditor__FileField__file__alt"
-                size="xs"
-                radius={0}
-                value={file.alt || ''}
-                onChange={(e: ChangeEvent<HTMLInputElement>) => {
-                  setAltText(e.currentTarget.value);
-                }}
-                label="Alt text"
-              />
-            )}
+          {showAlt && testShouldHaveAltText(file.src) && (
+            <TextInput
+              className="DocEditor__FileField__file__alt"
+              size="xs"
+              radius={0}
+              value={file.alt || ''}
+              onChange={(e: ChangeEvent<HTMLInputElement>) => {
+                setAltText(e.currentTarget.value);
+              }}
+              label="Alt text"
+            />
+          )}
         </div>
       ) : (
         <div className="DocEditor__FileField__noFile">No file</div>

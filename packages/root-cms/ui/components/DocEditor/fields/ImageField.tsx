@@ -141,7 +141,11 @@ export function ImageField(props: FieldProps) {
           if (type.startsWith('image/')) {
             const blob = await clipboardItem.getType(type);
             // Convert blob to File object
-            const file = new File([blob], 'pasted-image.' + type.split('/')[1], { type });
+            const file = new File(
+              [blob],
+              'pasted-image.' + type.split('/')[1],
+              {type}
+            );
             console.log(`file pasted ("${props.deepKey}"):`, file);
             uploadFile(file);
             return;
@@ -192,7 +196,7 @@ export function ImageField(props: FieldProps) {
       ref={ref}
     >
       {img && img.src ? (
-        <div 
+        <div
           className={joinClassNames(
             'DocEditor__ImageField__imagePreview',
             isFocused && 'focused'
