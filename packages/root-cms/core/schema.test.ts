@@ -416,3 +416,36 @@ test('define schema', () => {
     }
   `);
 });
+
+test('define schema with label', () => {
+  const schemaWithLabel = schema.define({
+    name: 'TemplateHomepageHero',
+    label: 'Home Hero',
+    description: 'Homepage hero section',
+    fields: []
+  });
+
+  expect(schemaWithLabel).toEqual({
+    name: 'TemplateHomepageHero',
+    label: 'Home Hero',
+    description: 'Homepage hero section',
+    fields: []
+  });
+});
+
+test('define schema without label', () => {
+  const schemaWithoutLabel = schema.define({
+    name: 'TemplateBasic',
+    description: 'Basic template',
+    fields: []
+  });
+
+  expect(schemaWithoutLabel).toEqual({
+    name: 'TemplateBasic',
+    description: 'Basic template',
+    fields: []
+  });
+  
+  // Verify that label is undefined (backward compatibility)
+  expect(schemaWithoutLabel.label).toBeUndefined();
+});
