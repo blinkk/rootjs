@@ -19,10 +19,8 @@ export function FileField(props: FieldProps) {
   const [file, setFile] = useState<any>({});
   const [loading, setLoading] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
-  const [isFocused, setIsFocused] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const ref = useRef<HTMLDivElement>(null);
-  const previewRef = useRef<HTMLDivElement>(null);
 
   const showAlt = field.alt !== false;
   let accept: string | undefined = undefined;
@@ -108,54 +106,14 @@ export function FileField(props: FieldProps) {
     }
   };
 
-  const handleFocus = () => {
-    setIsFocused(true);
-  };
-
-  const handleBlur = () => {
-    setIsFocused(false);
-  };
-
-  const handleClick = () => {
-    if (previewRef.current) {
-      previewRef.current.focus();
-    }
-  };
-
-  const handleKeyDown = (e: KeyboardEvent) => {
-    // Handle paste with Ctrl+V (or Cmd+V on Mac)
-    if ((e.ctrlKey || e.metaKey) && e.key === 'v') {
-      e.preventDefault();
-      handlePaste();
-    }
-  };
-
-  const handlePaste = async () => {
-    try {
-      const clipboardItems = await navigator.clipboard.read();
-      for (const clipboardItem of clipboardItems) {
-        for (const type of clipboardItem.types) {
-          // Accept any file type since this is a general file field
-          if (
-            type.startsWith('image/') ||
-            type.startsWith('video/') ||
-            type.startsWith('audio/') ||
-            type.startsWith('application/') ||
-            type.startsWith('text/')
-          ) {
-            const blob = await clipboardItem.getType(type);
-            // Convert blob to File object
-            const extension = type.split('/')[1] || 'bin';
-            const file = new File([blob], 'pasted-file.' + extension, {type});
-            console.log(`file pasted ("${props.deepKey}"):`, file);
-            uploadFile(file);
-            return;
-          }
-        }
+  const handlePaste = async (e: ClipboardEvent) => {
+    const clipboardItems = e.clipboardData?.items || [];
+    for (const clipboardItem of clipboardItems) {
+      const file = clipboardItem.getAsFile();
+      if (file) {
+        uploadFile(file);
+        return;
       }
-    } catch (err) {
-      console.warn('Failed to read from clipboard:', err);
-      // Fallback: listen for paste event to get files from event
     }
   };
 
@@ -187,6 +145,8 @@ export function FileField(props: FieldProps) {
     };
   }, []);
 
+  const fileUploaded = file && file.src ? file : null;
+
   return (
     <div
       className={joinClassNames(
@@ -195,7 +155,7 @@ export function FileField(props: FieldProps) {
       )}
       ref={ref}
     >
-      {file && file.src && (
+      {fileUploaded && (
         <div className="DocEditor__FileField__controls">
           <Tooltip label="Remove file">
             <ActionIcon
@@ -207,25 +167,14 @@ export function FileField(props: FieldProps) {
           </Tooltip>
         </div>
       )}
-      {file && file.src && testIsImageFile(file.src) && (
+      {fileUploaded && testIsImageFile(file.src) && (
         <ImagePreview key={file.src} {...file} />
       )}
-      {file && file.src && testIsVideoFile(file.src) && (
+      {fileUploaded && testIsVideoFile(file.src) && (
         <VideoPreview key={file.src} {...file} />
       )}
-      {file && file.src ? (
-        <div
-          className={joinClassNames(
-            'DocEditor__FileField__filePreview',
-            isFocused && 'focused'
-          )}
-          ref={previewRef}
-          tabIndex={0}
-          onClick={handleClick}
-          onFocus={handleFocus}
-          onBlur={handleBlur}
-          onKeyDown={handleKeyDown}
-        >
+      {fileUploaded ? (
+        <div className="DocEditor__FileField__filePreview">
           <div className="DocEditor__FileField__file">
             <TextInput
               className="DocEditor__FileField__file__url"
@@ -249,7 +198,15 @@ export function FileField(props: FieldProps) {
           )}
         </div>
       ) : (
-        <div className="DocEditor__FileField__noFile">No file</div>
+        <div>
+          <div
+            className="DocEditor__FileField__noFile"
+            tabIndex={0}
+            onPaste={handlePaste}
+          >
+            No file
+          </div>
+        </div>
       )}
       <label
         className="DocEditor__FileField__uploadButton"
@@ -266,7 +223,7 @@ export function FileField(props: FieldProps) {
           <IconFileUpload size={16} />
         </div>
         <div className="DocEditor__FileField__uploadButton__label">
-          {loading ? 'Uploading...' : 'Upload file'}
+          {loading ? 'Uploading...' : 'Paste, drop, or click to upload'}
         </div>
       </label>
     </div>
@@ -281,6 +238,7 @@ function ImagePreview(props: {src: string; width?: number; height?: number}) {
         width={props.width}
         height={props.height}
         loading="lazy"
+        alt=""
       />
       {props.width && props.height && (
         <div className="DocEditor__FileField__ImagePreview__dimens">

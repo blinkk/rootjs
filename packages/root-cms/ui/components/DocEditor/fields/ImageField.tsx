@@ -151,7 +151,7 @@ export function ImageField(props: FieldProps) {
   }, []);
 
   const showAlt = field.alt !== false;
-  const imageFilled = img && img.src && img.src.length > 0;
+  const imageUploaded = img && img.src && img.src.length > 0;
 
   return (
     <div
@@ -161,7 +161,7 @@ export function ImageField(props: FieldProps) {
       )}
       ref={ref}
     >
-      {imageFilled ? (
+      {imageUploaded ? (
         <div className={'DocEditor__ImageField__imagePreview'}>
           <div className="DocEditor__ImageField__imagePreview__controls">
             <Tooltip label="Remove image">
@@ -212,7 +212,7 @@ export function ImageField(props: FieldProps) {
       ) : (
         <div>
           <div
-            className={'DocEditor__ImageField__noImage'}
+            className="DocEditor__ImageField__noImage"
             tabIndex={0}
             onPaste={handlePaste}
           >
@@ -231,6 +231,7 @@ export function ImageField(props: FieldProps) {
         className="DocEditor__ImageField__uploadButton"
         role="button"
         aria-disabled={loading}
+        onPaste={handlePaste}
       >
         <input
           type="file"
@@ -242,7 +243,7 @@ export function ImageField(props: FieldProps) {
           <IconPhotoUp size={16} />
         </div>
         <div className="DocEditor__ImageField__uploadButton__label">
-          {loading ? 'Uploading...' : 'Upload image'}
+          {loading ? 'Uploading...' : 'Paste, drop, or click to upload'}
         </div>
       </label>
     </div>
