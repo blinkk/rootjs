@@ -216,7 +216,13 @@ export function ImageField(props: FieldProps) {
             tabIndex={0}
             onPaste={handlePaste}
           >
-            No image
+            <div style={{textAlign: 'center'}}>
+              <div style={{marginBottom: '8px', fontSize: '16px'}}>📷</div>
+              <div>No image</div>
+              <div style={{fontSize: '10px', opacity: 0.7, marginTop: '4px'}}>
+                Click below to upload or paste an image here
+              </div>
+            </div>
           </div>
         </div>
       )}
@@ -243,7 +249,7 @@ export function ImageField(props: FieldProps) {
           <IconPhotoUp size={16} />
         </div>
         <div className="DocEditor__ImageField__uploadButton__label">
-          {loading ? 'Uploading...' : 'Paste, drop, or click to upload'}
+          {loading ? 'Uploading...' : 'Paste, drop, or click to upload image'}
         </div>
       </label>
     </div>

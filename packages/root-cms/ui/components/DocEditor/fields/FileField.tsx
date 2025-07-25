@@ -204,7 +204,13 @@ export function FileField(props: FieldProps) {
             tabIndex={0}
             onPaste={handlePaste}
           >
-            No file
+            <div style={{textAlign: 'center'}}>
+              <div style={{marginBottom: '8px', fontSize: '16px'}}>📄</div>
+              <div>No file</div>
+              <div style={{fontSize: '10px', opacity: 0.7, marginTop: '4px'}}>
+                Click below to upload or paste a file here
+              </div>
+            </div>
           </div>
         </div>
       )}
@@ -223,7 +229,7 @@ export function FileField(props: FieldProps) {
           <IconFileUpload size={16} />
         </div>
         <div className="DocEditor__FileField__uploadButton__label">
-          {loading ? 'Uploading...' : 'Paste, drop, or click to upload'}
+          {loading ? 'Uploading...' : 'Paste, drop, or click to upload file'}
         </div>
       </label>
     </div>

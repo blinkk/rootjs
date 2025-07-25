@@ -367,35 +367,51 @@
 }
 
 .DocEditor__ImageField__noImage {
+  background: #f5f5f5;
+  border: 2px dashed #dedede;
   border-radius: 4px;
-  border: 1px solid #dedede;
   cursor: default;
-  display: inline-flex;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   font-family: var(--font-family-mono);
+  font-size: 11px;
+  color: #666;
   margin-bottom: 10px;
-  padding: 0px 5px;
+  aspect-ratio: 16/9;
+  width: 100%;
+  padding: 10px;
+  min-height: 120px;
 }
 
 .DocEditor__ImageField__noImage:focus {
   border-color: #228be6;
-  border-width: 1px;
+  outline: none;
 }
 
 .DocEditor__ImageField__uploadButton {
   display: inline-flex;
   align-items: center;
   cursor: pointer;
-  background: #25262b;
+  background: rgba(255, 255, 255, 0.8);
+  border: 1px solid #d1d9e0;
   border-radius: 4px;
   padding: 0 14px;
   height: 30px;
-  color: #ffffff;
-  font-weight: 600;
-  transition: all 0.3s ease;
+  color: #24292f;
+  font-weight: 500;
+  font-size: 12px;
+  transition: all 0.2s ease;
+}
+
+.DocEditor__ImageField__uploadButton:hover {
+  background: rgba(255, 255, 255, 0.9);
+  border-color: #bbb;
 }
 
 .DocEditor__ImageField__uploadButton[aria-disabled="true"] {
   opacity: 0.5;
+  cursor: not-allowed;
 }
 
 .DocEditor__ImageField__uploadButton input[type="file"] {
@@ -433,35 +449,50 @@
 }
 
 .DocEditor__FileField__noFile {
+  background: #f5f5f5;
+  border: 2px dashed #dedede;
   border-radius: 4px;
-  border: 1px solid #dedede;
   cursor: default;
-  display: inline-flex;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   font-family: var(--font-family-mono);
+  font-size: 11px;
+  color: #666;
   margin-bottom: 10px;
-  padding: 0px 5px;
+  width: 100%;
+  padding: 20px 10px;
+  min-height: 60px;
 }
 
 .DocEditor__FileField__noFile:focus {
   border-color: #228be6;
-  border-width: 1px;
+  outline: none;
 }
 
 .DocEditor__FileField__uploadButton {
   display: inline-flex;
   align-items: center;
   cursor: pointer;
-  background: #25262b;
+  background: rgba(255, 255, 255, 0.8);
+  border: 1px solid #d1d9e0;
   border-radius: 4px;
   padding: 0 14px;
   height: 30px;
-  color: #ffffff;
-  font-weight: 600;
-  transition: all 0.3s ease;
+  color: #24292f;
+  font-weight: 500;
+  font-size: 12px;
+  transition: all 0.2s ease;
+}
+
+.DocEditor__FileField__uploadButton:hover {
+  background: rgba(255, 255, 255, 0.9);
+  border-color: #bbb;
 }
 
 .DocEditor__FileField__uploadButton[aria-disabled="true"] {
   opacity: 0.5;
+  cursor: not-allowed;
 }
 
 .DocEditor__FileField__uploadButton input[type="file"] {
