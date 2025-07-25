@@ -10,6 +10,7 @@ const assets = Object.values(assetModules).map(
 
 export default schema.define({
   name: 'Template5050',
+  label: 'Two Column Layout',
   description: 'Basic 50x50.',
   fields: [
     schema.string({

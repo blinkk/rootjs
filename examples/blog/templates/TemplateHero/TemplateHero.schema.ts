@@ -2,6 +2,7 @@ import {schema} from '@blinkk/root-cms';
 
 export default schema.define({
   name: 'TemplateHero',
+  label: 'Hero Section',
   description: 'Basic hero.',
   fields: [
     schema.string({

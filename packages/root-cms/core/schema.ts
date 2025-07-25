@@ -248,6 +248,7 @@ export type ObjectLikeField =
 
 export interface Schema {
   name: string;
+  label?: string;
   description?: string;
   fields: FieldWithId[];
 }

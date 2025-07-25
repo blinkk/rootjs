@@ -1130,7 +1130,7 @@ DocEditor.OneOfField = (props: FieldProps) => {
   ];
   field.types.forEach((type) => {
     typesMap[type.name] = type;
-    dropdownValues.push({value: type.name, label: type.name});
+    dropdownValues.push({value: type.name, label: type.label || type.name});
   });
   const selectedType = typesMap[type || ''];
 
