@@ -250,6 +250,13 @@ export interface Schema {
   name: string;
   description?: string;
   fields: FieldWithId[];
+  /**
+   * Preview template for this schema when used in array items.
+   * When a schema is used within a `schema.oneOf` field inside an array,
+   * this preview will take precedence over the array's preview setting.
+   * Uses the same placeholder format as ArrayField preview.
+   */
+  preview?: string;
 }
 
 export function defineSchema(schema: Schema): Schema {
