@@ -1,12 +1,18 @@
 import {ActionIcon, TextInput, Tooltip} from '@mantine/core';
 import {showNotification} from '@mantine/notifications';
 import {IconFileUpload, IconTrash} from '@tabler/icons-preact';
+import {ChangeEvent} from 'preact/compat';
 import {useEffect, useRef, useState} from 'preact/hooks';
 import * as schema from '../../../../core/schema.js';
 import {joinClassNames} from '../../../utils/classes.js';
-import {GCI_URL_PREFIX, IMAGE_EXTS, VIDEO_EXTS, getFileExt, uploadFileToGCS} from '../../../utils/gcs.js';
+import {
+  GCI_URL_PREFIX,
+  IMAGE_EXTS,
+  VIDEO_EXTS,
+  getFileExt,
+  uploadFileToGCS,
+} from '../../../utils/gcs.js';
 import {FieldProps} from './FieldProps.js';
-import {ChangeEvent} from 'preact/compat';
 
 export function FileField(props: FieldProps) {
   const field = props.field as schema.FileField;
@@ -35,7 +41,7 @@ export function FileField(props: FieldProps) {
         preserveFilename: field.preserveFilename,
       });
       setFile((currentFile: any) => {
-        let newFile: any = {...uploadedFile};
+        const newFile: any = {...uploadedFile};
         if (currentFile?.src && testShouldHaveAltText(currentFile.src)) {
           // Preserve the "alt" text when the file changes.
           newFile.alt = currentFile?.alt || '';
@@ -100,6 +106,17 @@ export function FileField(props: FieldProps) {
     }
   };
 
+  const handlePaste = async (e: ClipboardEvent) => {
+    const clipboardItems = e.clipboardData?.items || [];
+    for (const clipboardItem of clipboardItems) {
+      const file = clipboardItem.getAsFile();
+      if (file) {
+        uploadFile(file);
+        return;
+      }
+    }
+  };
+
   useEffect(() => {
     const unsubscribe = props.draft.subscribe(
       props.deepKey,
@@ -128,6 +145,8 @@ export function FileField(props: FieldProps) {
     };
   }, []);
 
+  const fileUploaded = file && file.src ? file : null;
+
   return (
     <div
       className={joinClassNames(
@@ -136,7 +155,7 @@ export function FileField(props: FieldProps) {
       )}
       ref={ref}
     >
-      {file && file.src && (
+      {fileUploaded && (
         <div className="DocEditor__FileField__controls">
           <Tooltip label="Remove file">
             <ActionIcon
@@ -148,14 +167,14 @@ export function FileField(props: FieldProps) {
           </Tooltip>
         </div>
       )}
-      {file && file.src && testIsImageFile(file.src) && (
+      {fileUploaded && testIsImageFile(file.src) && (
         <ImagePreview key={file.src} {...file} />
       )}
-      {file && file.src && testIsVideoFile(file.src) && (
+      {fileUploaded && testIsVideoFile(file.src) && (
         <VideoPreview key={file.src} {...file} />
       )}
-      {file && file.src ? (
-        <>
+      {fileUploaded ? (
+        <div className="DocEditor__FileField__filePreview">
           <div className="DocEditor__FileField__file">
             <TextInput
               className="DocEditor__FileField__file__url"
@@ -165,22 +184,35 @@ export function FileField(props: FieldProps) {
               disabled={true}
             />
           </div>
-          {showAlt &&
-            testShouldHaveAltText(file.src) && (
-              <TextInput
-                className="DocEditor__FileField__file__alt"
-                size="xs"
-                radius={0}
-                value={file.alt || ''}
-                onChange={(e: ChangeEvent<HTMLInputElement>) => {
-                  setAltText(e.currentTarget.value);
-                }}
-                label="Alt text"
-              />
-            )}
-        </>
+          {showAlt && testShouldHaveAltText(file.src) && (
+            <TextInput
+              className="DocEditor__FileField__file__alt"
+              size="xs"
+              radius={0}
+              value={file.alt || ''}
+              onChange={(e: ChangeEvent<HTMLInputElement>) => {
+                setAltText(e.currentTarget.value);
+              }}
+              label="Alt text"
+            />
+          )}
+        </div>
       ) : (
-        <div className="DocEditor__FileField__noFile">No file</div>
+        <div>
+          <div
+            className="DocEditor__FileField__noFile"
+            tabIndex={0}
+            onPaste={handlePaste}
+          >
+            <div style={{textAlign: 'center'}}>
+              <div style={{marginBottom: '8px', fontSize: '16px'}}>📄</div>
+              <div>No file</div>
+              <div style={{fontSize: '10px', opacity: 0.7, marginTop: '4px'}}>
+                Click below to upload or paste a file here
+              </div>
+            </div>
+          </div>
+        </div>
       )}
       <label
         className="DocEditor__FileField__uploadButton"
@@ -197,7 +229,7 @@ export function FileField(props: FieldProps) {
           <IconFileUpload size={16} />
         </div>
         <div className="DocEditor__FileField__uploadButton__label">
-          {loading ? 'Uploading...' : 'Upload file'}
+          {loading ? 'Uploading...' : 'Paste, drop, or click to upload file'}
         </div>
       </label>
     </div>
@@ -212,6 +244,7 @@ function ImagePreview(props: {src: string; width?: number; height?: number}) {
         width={props.width}
         height={props.height}
         loading="lazy"
+        alt=""
       />
       {props.width && props.height && (
         <div className="DocEditor__FileField__ImagePreview__dimens">

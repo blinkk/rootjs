@@ -109,6 +109,19 @@ export function ImageField(props: FieldProps) {
     }
   };
 
+  const handlePaste = async (e: ClipboardEvent) => {
+    const clipboardItems = e.clipboardData?.items || [];
+    for (const clipboardItem of clipboardItems) {
+      if (clipboardItem.type.startsWith('image/')) {
+        const file = clipboardItem.getAsFile();
+        if (file && IMAGE_MIMETYPES.includes(file.type)) {
+          uploadFile(file);
+          return;
+        }
+      }
+    }
+  };
+
   useEffect(() => {
     const unsubscribe = props.draft.subscribe(
       props.deepKey,
@@ -138,6 +151,8 @@ export function ImageField(props: FieldProps) {
   }, []);
 
   const showAlt = field.alt !== false;
+  const imageUploaded = img && img.src && img.src.length > 0;
+
   return (
     <div
       className={joinClassNames(
@@ -146,8 +161,8 @@ export function ImageField(props: FieldProps) {
       )}
       ref={ref}
     >
-      {img && img.src ? (
-        <div className="DocEditor__ImageField__imagePreview">
+      {imageUploaded ? (
+        <div className={'DocEditor__ImageField__imagePreview'}>
           <div className="DocEditor__ImageField__imagePreview__controls">
             <Tooltip label="Remove image">
               <ActionIcon
@@ -158,12 +173,17 @@ export function ImageField(props: FieldProps) {
               </ActionIcon>
             </Tooltip>
           </div>
-          <div className="DocEditor__ImageField__imagePreview__image">
+          <div
+            className={'DocEditor__ImageField__imagePreview__image'}
+            tabIndex={0}
+            onPaste={handlePaste}
+          >
             <img
               src={img.gciUrl || img.src}
               width={img.width}
               height={img.height}
               loading="lazy"
+              alt=""
             />
             <div className="DocEditor__ImageField__imagePreview__dimens">
               {`${img.width}x${img.height}`}
@@ -190,7 +210,21 @@ export function ImageField(props: FieldProps) {
           )}
         </div>
       ) : (
-        <div className="DocEditor__ImageField__noImage">No image</div>
+        <div>
+          <div
+            className="DocEditor__ImageField__noImage"
+            tabIndex={0}
+            onPaste={handlePaste}
+          >
+            <div style={{textAlign: 'center'}}>
+              <div style={{marginBottom: '8px', fontSize: '16px'}}>📷</div>
+              <div>No image</div>
+              <div style={{fontSize: '10px', opacity: 0.7, marginTop: '4px'}}>
+                Click below to upload or paste an image here
+              </div>
+            </div>
+          </div>
+        </div>
       )}
       {/* <Button
         color="dark"
@@ -203,6 +237,7 @@ export function ImageField(props: FieldProps) {
         className="DocEditor__ImageField__uploadButton"
         role="button"
         aria-disabled={loading}
+        onPaste={handlePaste}
       >
         <input
           type="file"
@@ -214,7 +249,7 @@ export function ImageField(props: FieldProps) {
           <IconPhotoUp size={16} />
         </div>
         <div className="DocEditor__ImageField__uploadButton__label">
-          {loading ? 'Uploading...' : 'Upload image'}
+          {loading ? 'Uploading...' : 'Paste, drop, or click to upload image'}
         </div>
       </label>
     </div>
