@@ -217,6 +217,19 @@ export function reference(field: Omit<ReferenceField, 'type'>): ReferenceField {
   return {...field, type: 'reference'};
 }
 
+export type UidField = CommonFieldProps & {
+  type: 'uid';
+  default?: string;
+  /** Optional tag/category to group UIDs by purpose. */
+  tag?: string;
+  /** Button label for generating a new UID. Defaults to "Generate UID". */
+  buttonLabel?: string;
+};
+
+export function uid(field: Omit<UidField, 'type'>): UidField {
+  return {...field, type: 'uid'};
+}
+
 export type Field =
   | StringField
   | NumberField
@@ -231,7 +244,8 @@ export type Field =
   | ArrayField
   | OneOfField
   | RichTextField
-  | ReferenceField;
+  | ReferenceField
+  | UidField;
 
 /**
  * Similar to {@link Field} but with a required `id`.
