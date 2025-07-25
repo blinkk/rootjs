@@ -8,6 +8,7 @@ import {FieldProps} from './FieldProps.js';
 export function UidField(props: FieldProps) {
   const field = props.field as schema.UidField;
   const [value, setValue] = useState('');
+  const [docData, setDocData] = useState<any>(null);
 
   function onChange(newValue: string) {
     setValue(newValue);
@@ -32,18 +33,25 @@ export function UidField(props: FieldProps) {
     return unsubscribe;
   }, []);
 
+  // Subscribe to document changes for duplicate detection
+  useEffect(() => {
+    const unsubscribe = props.draft.onChange((data: any) => {
+      setDocData(data);
+    });
+    return unsubscribe;
+  }, []);
+
   // Check for duplicate UIDs in the document
   const duplicateWarning = useMemo(() => {
-    if (!value) return null;
+    if (!value || !docData) return null;
     
-    const docData = props.draft.getData();
     const duplicates = findDuplicateUids(docData, value, props.deepKey);
     
     if (duplicates.length > 0) {
       return `Duplicate UID found in field(s): ${duplicates.join(', ')}`;
     }
     return null;
-  }, [value, props.draft.getData(), props.deepKey]);
+  }, [value, docData, props.deepKey]);
 
   return (
     <div>
