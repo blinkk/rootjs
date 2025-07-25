@@ -417,35 +417,43 @@ test('define schema', () => {
   `);
 });
 
-test('define schema with label', () => {
-  const schemaWithLabel = schema.define({
+test('define schema with metadata', () => {
+  const schemaWithMetadata = schema.define({
     name: 'TemplateHomepageHero',
-    label: 'Home Hero',
+    metadata: {
+      title: 'Home Hero',
+      description: 'A prominent hero section for the homepage',
+      image: '/images/hero-thumbnail.jpg'
+    },
     description: 'Homepage hero section',
     fields: []
   });
 
-  expect(schemaWithLabel).toEqual({
+  expect(schemaWithMetadata).toEqual({
     name: 'TemplateHomepageHero',
-    label: 'Home Hero',
+    metadata: {
+      title: 'Home Hero',
+      description: 'A prominent hero section for the homepage',
+      image: '/images/hero-thumbnail.jpg'
+    },
     description: 'Homepage hero section',
     fields: []
   });
 });
 
-test('define schema without label', () => {
-  const schemaWithoutLabel = schema.define({
+test('define schema without metadata', () => {
+  const schemaWithoutMetadata = schema.define({
     name: 'TemplateBasic',
     description: 'Basic template',
     fields: []
   });
 
-  expect(schemaWithoutLabel).toEqual({
+  expect(schemaWithoutMetadata).toEqual({
     name: 'TemplateBasic',
     description: 'Basic template',
     fields: []
   });
   
-  // Verify that label is undefined (backward compatibility)
-  expect(schemaWithoutLabel.label).toBeUndefined();
+  // Verify that metadata is undefined (backward compatibility)
+  expect(schemaWithoutMetadata.metadata).toBeUndefined();
 });

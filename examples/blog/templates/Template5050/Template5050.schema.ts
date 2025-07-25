@@ -10,7 +10,11 @@ const assets = Object.values(assetModules).map(
 
 export default schema.define({
   name: 'Template5050',
-  label: 'Two Column Layout',
+  metadata: {
+    title: 'Two Column Layout',
+    description: 'A balanced two-column layout with customizable content and assets',
+    image: 'https://images.unsplash.com/photo-1586953208448-b95a79798f07?w=300&h=200&fit=crop&auto=format&q=80'
+  },
   description: 'Basic 50x50.',
   fields: [
     schema.string({

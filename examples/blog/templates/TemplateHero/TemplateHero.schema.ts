@@ -2,7 +2,11 @@ import {schema} from '@blinkk/root-cms';
 
 export default schema.define({
   name: 'TemplateHero',
-  label: 'Hero Section',
+  metadata: {
+    title: 'Hero Section',
+    description: 'A prominent hero section with customizable content and image',
+    image: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=300&h=200&fit=crop&auto=format&q=80'
+  },
   description: 'Basic hero.',
   fields: [
     schema.string({
