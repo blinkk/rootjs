@@ -5,6 +5,7 @@ import {
   Button,
   LoadingOverlay,
   Menu,
+  Modal,
   Select,
   Tooltip,
 } from '@mantine/core';
@@ -17,6 +18,7 @@ import {
   IconClipboardCopy,
   IconCopy,
   IconDotsVertical,
+  IconGridDots,
   IconLanguage,
   IconLock,
   IconPlanet,
@@ -1124,13 +1126,17 @@ DocEditor.ArrayField = (props: FieldProps) => {
 DocEditor.OneOfField = (props: FieldProps) => {
   const field = props.field as schema.OneOfField;
   const [type, setType] = useState('');
+  const [modalOpen, setModalOpen] = useState(false);
   const typesMap: Record<string, schema.Schema> = {};
   const dropdownValues: Array<{value: string; label: string}> = [
     {value: '', label: field.placeholder || 'Select type'},
   ];
   field.types.forEach((type) => {
     typesMap[type.name] = type;
-    dropdownValues.push({value: type.name, label: type.name});
+    dropdownValues.push({
+      value: type.name, 
+      label: type.metadata?.title || type.name
+    });
   });
   const selectedType = typesMap[type || ''];
 
@@ -1174,18 +1180,100 @@ DocEditor.OneOfField = (props: FieldProps) => {
     <div className="DocEditor__OneOfField">
       <div className="DocEditor__OneOfField__select">
         <div className="DocEditor__OneOfField__select__label">Type:</div>
-        <Select
-          data={dropdownValues}
-          value={type}
-          placeholder={field.placeholder}
-          onChange={(e: string) => onTypeChange(e || '')}
-          size="xs"
-          radius={0}
-          searchable
-          // Due to issues with preact/compat, use a div for the dropdown el.
-          dropdownComponent="div"
-        />
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <Select
+            data={dropdownValues}
+            value={type}
+            placeholder={field.placeholder}
+            onChange={(e: string) => onTypeChange(e || '')}
+            size="xs"
+            radius={0}
+            searchable
+            // Due to issues with preact/compat, use a div for the dropdown el.
+            dropdownComponent="div"
+          />
+          <Tooltip label="Browse templates">
+            <ActionIcon
+              size="xs"
+              variant="default"
+              onClick={() => setModalOpen(true)}
+            >
+              <IconGridDots size={16} />
+            </ActionIcon>
+          </Tooltip>
+        </div>
       </div>
+      
+      <Modal
+        opened={modalOpen}
+        onClose={() => setModalOpen(false)}
+        title="Select Template"
+        size="lg"
+      >
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+          {field.types.map((schemaType) => (
+            <div
+              key={schemaType.name}
+              style={{
+                border: type === schemaType.name ? '2px solid #228be6' : '1px solid #e9ecef',
+                borderRadius: '8px',
+                padding: '16px',
+                cursor: 'pointer',
+                backgroundColor: type === schemaType.name ? '#f0f8ff' : 'white',
+              }}
+              onClick={() => {
+                onTypeChange(schemaType.name);
+                setModalOpen(false);
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
+                {schemaType.metadata?.image && (
+                  <img
+                    src={schemaType.metadata.image}
+                    alt={schemaType.metadata.title || schemaType.name}
+                    style={{
+                      width: '60px',
+                      height: '60px',
+                      objectFit: 'cover',
+                      borderRadius: '4px',
+                      flexShrink: 0,
+                    }}
+                  />
+                )}
+                <div style={{ flex: 1 }}>
+                  <div style={{ 
+                    fontWeight: 'bold', 
+                    fontSize: '14px',
+                    marginBottom: '4px',
+                    color: '#212529'
+                  }}>
+                    {schemaType.metadata?.title || schemaType.name}
+                  </div>
+                  {schemaType.metadata?.description && (
+                    <div style={{ 
+                      fontSize: '12px', 
+                      color: '#6c757d',
+                      lineHeight: '1.4'
+                    }}>
+                      {schemaType.metadata.description}
+                    </div>
+                  )}
+                  {!schemaType.metadata?.description && schemaType.description && (
+                    <div style={{ 
+                      fontSize: '12px', 
+                      color: '#6c757d',
+                      lineHeight: '1.4'
+                    }}>
+                      {schemaType.description}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </Modal>
+
       {selectedType && (
         <div className="DocEditor__OneOfField__fields">
           {selectedType.fields.map((field) => (

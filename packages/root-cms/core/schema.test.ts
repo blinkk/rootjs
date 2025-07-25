@@ -416,3 +416,44 @@ test('define schema', () => {
     }
   `);
 });
+
+test('define schema with metadata', () => {
+  const schemaWithMetadata = schema.define({
+    name: 'TemplateHomepageHero',
+    metadata: {
+      title: 'Home Hero',
+      description: 'A prominent hero section for the homepage',
+      image: '/images/hero-thumbnail.jpg'
+    },
+    description: 'Homepage hero section',
+    fields: []
+  });
+
+  expect(schemaWithMetadata).toEqual({
+    name: 'TemplateHomepageHero',
+    metadata: {
+      title: 'Home Hero',
+      description: 'A prominent hero section for the homepage',
+      image: '/images/hero-thumbnail.jpg'
+    },
+    description: 'Homepage hero section',
+    fields: []
+  });
+});
+
+test('define schema without metadata', () => {
+  const schemaWithoutMetadata = schema.define({
+    name: 'TemplateBasic',
+    description: 'Basic template',
+    fields: []
+  });
+
+  expect(schemaWithoutMetadata).toEqual({
+    name: 'TemplateBasic',
+    description: 'Basic template',
+    fields: []
+  });
+  
+  // Verify that metadata is undefined (backward compatibility)
+  expect(schemaWithoutMetadata.metadata).toBeUndefined();
+});
