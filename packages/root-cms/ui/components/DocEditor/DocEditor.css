@@ -75,6 +75,7 @@
   transition: opacity 0.3s ease;
 }
 
+.DocEditor__FieldHeader__label:focus-within .DocEditor__FieldHeader__label__deeplink,
 .DocEditor__FieldHeader__label:hover .DocEditor__FieldHeader__label__deeplink {
   opacity: 1;
 }
@@ -311,25 +312,25 @@
   margin: -10px;
 }
 
+.DocEditor__ImageField__imagePreview__image:focus {
+  border-color: #228be6;
+  border-width: 1px;
+}
+
+.DocEditor__ImageField:has(.DocEditor__ImageField__imagePreview__image) .DocEditor__ImageField__imagePreview__image {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
 .DocEditor__ImageField.dragging {
   outline: 2px dashed black;
 }
 
 .DocEditor__ImageField__imagePreview {
   margin-bottom: 10px;
-  cursor: pointer;
   border-radius: 4px;
   transition: outline 0.2s ease;
-}
-
-.DocEditor__ImageField__imagePreview:focus {
-  outline: 2px solid #228be6;
-  outline-offset: 2px;
-}
-
-.DocEditor__ImageField__imagePreview.focused {
-  outline: 2px solid #228be6;
-  outline-offset: 2px;
 }
 
 .DocEditor__ImageField__imagePreview__controls {
@@ -372,8 +373,18 @@
 }
 
 .DocEditor__ImageField__noImage {
+  border-radius: 4px;
+  border: 1px solid #dedede;
+  cursor: default;
+  display: inline-flex;
   font-family: var(--font-family-mono);
   margin-bottom: 10px;
+  padding: 0px 5px;
+}
+
+.DocEditor__ImageField__noImage:focus {
+  border-color: #228be6;
+  border-width: 1px;
 }
 
 .DocEditor__ImageField__uploadButton {
@@ -425,16 +436,6 @@
   cursor: pointer;
   border-radius: 4px;
   transition: outline 0.2s ease;
-}
-
-.DocEditor__FileField__filePreview:focus {
-  outline: 2px solid #228be6;
-  outline-offset: 2px;
-}
-
-.DocEditor__FileField__filePreview.focused {
-  outline: 2px solid #228be6;
-  outline-offset: 2px;
 }
 
 .DocEditor__FileField__noFile {

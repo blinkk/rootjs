@@ -27,10 +27,8 @@ export function ImageField(props: FieldProps) {
   const [img, setImg] = useState<any>({});
   const [loading, setLoading] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
-  const [isFocused, setIsFocused] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const ref = useRef<HTMLDivElement>(null);
-  const previewRef = useRef<HTMLDivElement>(null);
 
   const accept = buildAcceptAttribute(field.exts);
 
@@ -111,50 +109,16 @@ export function ImageField(props: FieldProps) {
     }
   };
 
-  const handleFocus = () => {
-    setIsFocused(true);
-  };
-
-  const handleBlur = () => {
-    setIsFocused(false);
-  };
-
-  const handleClick = () => {
-    if (previewRef.current) {
-      previewRef.current.focus();
-    }
-  };
-
-  const handleKeyDown = (e: KeyboardEvent) => {
-    // Handle paste with Ctrl+V (or Cmd+V on Mac)
-    if ((e.ctrlKey || e.metaKey) && e.key === 'v') {
-      e.preventDefault();
-      handlePaste();
-    }
-  };
-
-  const handlePaste = async () => {
-    try {
-      const clipboardItems = await navigator.clipboard.read();
-      for (const clipboardItem of clipboardItems) {
-        for (const type of clipboardItem.types) {
-          if (type.startsWith('image/')) {
-            const blob = await clipboardItem.getType(type);
-            // Convert blob to File object
-            const file = new File(
-              [blob],
-              'pasted-image.' + type.split('/')[1],
-              {type}
-            );
-            console.log(`file pasted ("${props.deepKey}"):`, file);
-            uploadFile(file);
-            return;
-          }
+  const handlePaste = async (e: ClipboardEvent) => {
+    const clipboardItems = e.clipboardData?.items || [];
+    for (const clipboardItem of clipboardItems) {
+      if (clipboardItem.type.startsWith('image/')) {
+        const file = clipboardItem.getAsFile();
+        if (file && IMAGE_MIMETYPES.includes(file.type)) {
+          uploadFile(file);
+          return;
         }
       }
-    } catch (err) {
-      console.warn('Failed to read from clipboard:', err);
-      // Fallback: listen for paste event to get files from event
     }
   };
 
@@ -187,6 +151,8 @@ export function ImageField(props: FieldProps) {
   }, []);
 
   const showAlt = field.alt !== false;
+  const imageFilled = img && img.src && img.src.length > 0;
+
   return (
     <div
       className={joinClassNames(
@@ -195,19 +161,8 @@ export function ImageField(props: FieldProps) {
       )}
       ref={ref}
     >
-      {img && img.src ? (
-        <div
-          className={joinClassNames(
-            'DocEditor__ImageField__imagePreview',
-            isFocused && 'focused'
-          )}
-          ref={previewRef}
-          tabIndex={0}
-          onClick={handleClick}
-          onFocus={handleFocus}
-          onBlur={handleBlur}
-          onKeyDown={handleKeyDown}
-        >
+      {imageFilled ? (
+        <div className={'DocEditor__ImageField__imagePreview'}>
           <div className="DocEditor__ImageField__imagePreview__controls">
             <Tooltip label="Remove image">
               <ActionIcon
@@ -218,12 +173,17 @@ export function ImageField(props: FieldProps) {
               </ActionIcon>
             </Tooltip>
           </div>
-          <div className="DocEditor__ImageField__imagePreview__image">
+          <div
+            className={'DocEditor__ImageField__imagePreview__image'}
+            tabIndex={0}
+            onPaste={handlePaste}
+          >
             <img
               src={img.gciUrl || img.src}
               width={img.width}
               height={img.height}
               loading="lazy"
+              alt=""
             />
             <div className="DocEditor__ImageField__imagePreview__dimens">
               {`${img.width}x${img.height}`}
@@ -250,7 +210,15 @@ export function ImageField(props: FieldProps) {
           )}
         </div>
       ) : (
-        <div className="DocEditor__ImageField__noImage">No image</div>
+        <div>
+          <div
+            className={'DocEditor__ImageField__noImage'}
+            tabIndex={0}
+            onPaste={handlePaste}
+          >
+            No image
+          </div>
+        </div>
       )}
       {/* <Button
         color="dark"
