@@ -2,6 +2,7 @@ import {schema} from '@blinkk/root-cms';
 
 export default schema.define({
   name: 'CodeBlock',
+  preview: 'Code: {language || "text"}',
   fields: [
     schema.string({
       id: 'id',
