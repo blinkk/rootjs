@@ -2,6 +2,7 @@ import {schema} from '@blinkk/root-cms';
 
 export default schema.define({
   name: 'ImageBlock',
+  preview: 'ImageBlock: {id}',
   fields: [
     schema.string({
       id: 'id',

@@ -48,6 +48,22 @@ const YouTubeEmbed = schema.define({
   ],
 });
 
+const ImageBlock = schema.define({
+  name: 'ImageBlock',
+  preview: 'ImageBlock: {id}',
+  fields: [
+    schema.string({
+      id: 'id',
+      label: 'ID',
+      help: 'Used for deep linking, tracking, etc.',
+    }),
+    schema.image({
+      id: 'image',
+      label: 'Image',
+    }),
+  ],
+});
+
 const TextBlock = schema.define({
   name: 'TextBlock',
   fields: [
@@ -332,48 +348,19 @@ test('define schema', () => {
                   {
                     "fields": [
                       {
+                        "help": "Used for deep linking, tracking, etc.",
+                        "id": "id",
+                        "label": "ID",
+                        "type": "string",
+                      },
+                      {
                         "id": "image",
-                        "of": {
-                          "fields": [
-                            {
-                              "id": "image",
-                              "type": "image",
-                            },
-                            {
-                              "id": "breakpoint",
-                              "options": {
-                                "values": [
-                                  {
-                                    "label": "mobile only",
-                                    "value": "mobile",
-                                  },
-                                  {
-                                    "label": "mobile and tablet",
-                                    "value": "tablet-lt",
-                                  },
-                                  {
-                                    "label": "tablet only",
-                                    "value": "tablet",
-                                  },
-                                  {
-                                    "label": "tablet and desktop",
-                                    "value": "tablet-gt",
-                                  },
-                                  {
-                                    "label": "desktop only",
-                                    "value": "laptop-gt",
-                                  },
-                                ],
-                              },
-                              "type": "select",
-                            },
-                          ],
-                          "type": "object",
-                        },
-                        "type": "array",
+                        "label": "Image",
+                        "type": "image",
                       },
                     ],
                     "name": "ImageBlock",
+                    "preview": "ImageBlock: {id}",
                   },
                   {
                     "fields": [
@@ -415,4 +402,29 @@ test('define schema', () => {
       "name": "TestBlogSchema",
     }
   `);
+});
+
+test('schema with preview property', () => {
+  const schemaWithPreview = schema.define({
+    name: 'TestBlock',
+    preview: 'Test: {title}',
+    fields: [
+      schema.string({
+        id: 'title',
+        label: 'Title',
+      }),
+    ],
+  });
+
+  expect(schemaWithPreview).toEqual({
+    name: 'TestBlock',
+    preview: 'Test: {title}',
+    fields: [
+      {
+        id: 'title',
+        label: 'Title',
+        type: 'string',
+      },
+    ],
+  });
 });

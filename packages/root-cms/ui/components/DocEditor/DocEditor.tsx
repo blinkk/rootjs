@@ -1214,11 +1214,44 @@ function arraySwap<T = unknown>(arr: T[], index1: number, index2: number) {
   return arr;
 }
 
+function getItemSchemaPreview(
+  arrayOfField: schema.ObjectLikeField,
+  data: any
+): string | null {
+  if (arrayOfField.type === 'oneof') {
+    const oneOfField = arrayOfField as schema.OneOfField;
+    const selectedTypeName = data?._type;
+    if (selectedTypeName) {
+      const selectedSchema = oneOfField.types.find(
+        (schema) => schema.name === selectedTypeName
+      );
+      return selectedSchema?.preview || null;
+    }
+  }
+  return null;
+}
+
 function arrayPreview(
   field: schema.ArrayField,
   data: any,
   index: number
 ): string {
+  // First check if the item has a schema-specific preview
+  const itemSchemaPreview = getItemSchemaPreview(field.of, data);
+  if (itemSchemaPreview) {
+    const placeholders = flattenNestedKeys(data);
+    placeholders._index = String(index);
+    placeholders._index0 = String(index);
+    placeholders._index1 = String(index + 1);
+    placeholders['_index:02'] = placeholders._index.padStart(2, '0');
+    placeholders['_index:03'] = placeholders._index.padStart(3, '0');
+    const preview = strFormat(itemSchemaPreview, placeholders);
+    if (getPlaceholderKeys(preview).length === 0) {
+      return preview;
+    }
+  }
+
+  // Fall back to array-level preview
   if (!field.preview) {
     return `item ${index}`;
   }
