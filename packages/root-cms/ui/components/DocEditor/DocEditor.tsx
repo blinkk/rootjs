@@ -79,6 +79,7 @@ import {RichTextField} from './fields/RichTextField.js';
 import {SelectField} from './fields/SelectField.js';
 import {StringField} from './fields/StringField.js';
 import {NumberField} from './fields/NumberField.js';
+import {UidField} from './fields/UidField.js';
 import {testFieldEmpty} from '../../utils/test-field-empty.js';
 
 interface DocEditorProps {
@@ -364,6 +365,8 @@ DocEditor.Field = (props: FieldProps) => {
           <SelectField {...props} />
         ) : field.type === 'string' ? (
           <StringField {...props} />
+        ) : field.type === 'uid' ? (
+          <UidField {...props} />
         ) : (
           <div className="DocEditor__field__input__unknown">
             Unknown field type: {field.type}

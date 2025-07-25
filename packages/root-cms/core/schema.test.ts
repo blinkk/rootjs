@@ -416,3 +416,43 @@ test('define schema', () => {
     }
   `);
 });
+
+test('uid field', () => {
+  expect(
+    schema.uid({
+      id: 'testUid',
+      label: 'Test UID',
+      tag: 'element',
+    })
+  ).toMatchInlineSnapshot(`
+    {
+      "id": "testUid",
+      "label": "Test UID",
+      "tag": "element",
+      "type": "uid",
+    }
+  `);
+});
+
+test('uid field with all options', () => {
+  expect(
+    schema.uid({
+      id: 'pageUid',
+      label: 'Page Element UID',
+      help: 'Unique identifier for page elements',
+      tag: 'page-element',
+      buttonLabel: 'Generate ID',
+      default: 'default-uid-123',
+    })
+  ).toMatchInlineSnapshot(`
+    {
+      "buttonLabel": "Generate ID",
+      "default": "default-uid-123",
+      "help": "Unique identifier for page elements",
+      "id": "pageUid",
+      "label": "Page Element UID",
+      "tag": "page-element",
+      "type": "uid",
+    }
+  `);
+});
