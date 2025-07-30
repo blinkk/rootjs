@@ -158,7 +158,7 @@ export function DocEditor(props: DocEditorProps) {
       const timer = requestIdleCallbackPolyfill(() => {
         props.onFieldsRendered && props.onFieldsRendered();
       });
-      return () => cancelIdleCallbackPolyfill(timer as number);
+      return () => cancelIdleCallbackPolyfill(timer);
     }
     return () => {};
   }, [loading, props.onFieldsRendered]);

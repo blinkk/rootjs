@@ -81,10 +81,6 @@ export function DocumentPage(props: DocumentPageProps) {
     }
   }
 
-  if (!collection) {
-    return <div>Could not find collection.</div>;
-  }
-
   function saveDraft() {
     draft.controller.flush();
   }
@@ -205,7 +201,6 @@ export function DocumentPage(props: DocumentPageProps) {
               docId={docId}
               draft={draft}
               isVisible={isPreviewVisible}
-              onToggleVisibility={() => setIsPreviewVisible(!isPreviewVisible)}
               allowIframePreview={fieldsRendered}
             />
           )}
@@ -219,7 +214,6 @@ interface PreviewProps {
   docId: string;
   draft: UseDraftHook;
   isVisible: boolean;
-  onToggleVisibility: () => void;
   allowIframePreview: boolean;
 }
 
@@ -312,7 +306,7 @@ DocumentPage.Preview = (props: PreviewProps) => {
         !iframeWindow.location.href.startsWith('about:blank')
       ) {
         const currentPath = iframeWindow.location.pathname;
-        if (currentPath === iframeUrl) {
+        if (currentPath === new URL(iframeUrl, document.baseURI).pathname) {
           return; // No change in URL
         }
         console.log(`iframe url change: ${currentPath}`);

@@ -16,6 +16,6 @@ export const requestIdleCallbackPolyfill =
 export const cancelIdleCallbackPolyfill =
   typeof window !== 'undefined' && window.cancelIdleCallback
     ? window.cancelIdleCallback
-    : function (id: number) {
+    : function (id: number | NodeJS.Timeout) {
         clearTimeout(id);
       };
