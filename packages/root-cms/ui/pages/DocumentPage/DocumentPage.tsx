@@ -32,6 +32,27 @@ interface DocumentPageProps {
   slug: string;
 }
 
+/** Builds the preview URL for a document. */
+function getPreviewUrl(
+  collectionId: string,
+  slug: string,
+  selectedLocale = ''
+) {
+  const basePreviewPath = getDocPreviewPath({collectionId, slug});
+  const searchParams = new URLSearchParams(window.location.search);
+  searchParams.set('preview', 'true');
+  const query = `${searchParams.toString()}${window.location.hash}`;
+  if (selectedLocale) {
+    const localizedPreviewPath = getDocPreviewPath({
+      collectionId,
+      slug,
+      locale: selectedLocale,
+    });
+    return `${localizedPreviewPath}?${query}`;
+  }
+  return `${basePreviewPath}?${query}`;
+}
+
 export function DocumentPage(props: DocumentPageProps) {
   const collectionId = props.collection;
   const slug = props.slug;
@@ -52,27 +73,8 @@ export function DocumentPage(props: DocumentPageProps) {
     return <div>Could not find collection.</div>;
   }
 
-  // Helper function to generate preview URL for a document
-  function getPreviewUrl(selectedLocale = '') {
-    const basePreviewPath = getDocPreviewPath({collectionId, slug});
-    const searchParams = new URLSearchParams(window.location.search);
-    searchParams.set('preview', 'true');
-    const query = `${searchParams.toString()}${window.location.hash}`;
-
-    if (selectedLocale) {
-      const localizedPreviewPath = getDocPreviewPath({
-        collectionId,
-        slug,
-        locale: selectedLocale,
-      });
-      return `${localizedPreviewPath}?${query}`;
-    }
-
-    return `${basePreviewPath}?${query}`;
-  }
-
   function openPreviewInNewTab() {
-    const previewUrl = getPreviewUrl();
+    const previewUrl = getPreviewUrl(collectionId, slug);
     const tab = window.open(previewUrl, '_blank');
     if (tab) {
       tab.focus();
@@ -204,7 +206,6 @@ export function DocumentPage(props: DocumentPageProps) {
               draft={draft}
               isVisible={isPreviewVisible}
               onToggleVisibility={() => setIsPreviewVisible(!isPreviewVisible)}
-              getPreviewUrl={getPreviewUrl}
               allowIframePreview={fieldsRendered}
             />
           )}
@@ -219,7 +220,6 @@ interface PreviewProps {
   draft: UseDraftHook;
   isVisible: boolean;
   onToggleVisibility: () => void;
-  getPreviewUrl: (selectedLocale?: string) => string;
   allowIframePreview: boolean;
 }
 
@@ -270,16 +270,8 @@ DocumentPage.Preview = (props: PreviewProps) => {
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const locales = props.draft.controller.getLocales();
 
-  // Pass query params and hash fragments to the preview url, and set `?preview=true`.
-  const searchParams = new URLSearchParams(window.location.search);
-  searchParams.set('preview', 'true');
-  const query = `${searchParams.toString()}${window.location.hash}`;
-  const previewUrl = `${basePreviewPath}?${query}`;
-  const localizedPreviewUrl = `${getDocPreviewPath({
-    collectionId,
-    slug,
-    locale: selectedLocale,
-  })}?${query}`;
+  const previewUrl = getPreviewUrl(collectionId, slug);
+  const localizedPreviewUrl = getPreviewUrl(collectionId, slug, selectedLocale);
 
   const localeOptions = [
     {value: '', label: 'Select locale'},
@@ -378,7 +370,7 @@ DocumentPage.Preview = (props: PreviewProps) => {
   }
 
   function openNewTab() {
-    const previewUrl = props.getPreviewUrl(selectedLocale);
+    const previewUrl = getPreviewUrl(collectionId, slug, selectedLocale);
     const tab = window.open(previewUrl, '_blank');
     if (tab) {
       tab.focus();
