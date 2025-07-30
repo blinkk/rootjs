@@ -1,16 +1,30 @@
 import {FunctionalComponent} from 'preact';
 
 export interface CommonFieldProps {
+  /** The type that defines the structure of the field and its UI component. */
   type: string;
+  /** The ID provides a key for the field in the data. */
   id?: string;
+  /** The label that appears in the CMS UI. */
   label?: string;
+  /** The help text that appears below the field in the CMS UI. */
   help?: string;
+  /** The placeholder text that appears in the field input. */
   placeholder?: string;
   default?: any;
+  /** Hides the entire field in the CMS UI. */
   hidden?: boolean;
+  /** Deprecates the field. Deprecated fields are suppressed when empty in the CMS UI, and are flagged as deprecated in the field's type definition. */
   deprecated?: boolean;
-  /** Hides the field label in the CMS UI. */
+  /** Hides just the field label in the CMS UI. */
   hideLabel?: boolean;
+  /** Metadata that describes the preview for the field. */
+  preview?: {
+    /** The human-readable title of the content type. Appears in CMS menus. */
+    title?: string;
+    /** The URL to an image representing the content type. Appears in CMS menus. */
+    image?: string;
+  };
 }
 
 export type StringField = CommonFieldProps & {
@@ -247,8 +261,11 @@ export type ObjectLikeField =
   | ReferenceField;
 
 export interface Schema {
+  /** The name of the content type. Used as the field key. */
   name: string;
+  /** The description of the content type. Appears in CMS menus. */
   description?: string;
+  /** Fields describe the structure of the content. */
   fields: FieldWithId[];
 }
 
@@ -287,8 +304,11 @@ export type Collection = Schema & {
    * "image". Use dot notation for nested fields, e.g. "meta.title".
    */
   preview?: {
+    /** The field that provides the document title. */
     title?: string;
+    /** The field that provides the document image. */
     image?: string;
+    /** A fallback image to display when the document image field is empty. */
     defaultImage?: {
       src: string;
     };
