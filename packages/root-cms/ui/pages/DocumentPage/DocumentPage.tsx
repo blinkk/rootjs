@@ -25,6 +25,7 @@ import {Layout} from '../../layout/Layout.js';
 import {joinClassNames} from '../../utils/classes.js';
 import {getDocPreviewPath, getDocServingPath} from '../../utils/doc-urls.js';
 import './DocumentPage.css';
+import {requestIdleCallbackPolyfill} from '../../utils/request-idle-callback.js';
 
 interface DocumentPageProps {
   collection: string;
@@ -294,13 +295,13 @@ DocumentPage.Preview = (props: PreviewProps) => {
     }
     const iframe = iframeRef.current!;
     iframe.src = 'about:blank';
-    window.setTimeout(() => {
+    requestIdleCallbackPolyfill(() => {
       if (iframe.src !== localizedPreviewUrl) {
         iframe.src = localizedPreviewUrl;
       } else {
         iframe.contentWindow!.location.reload();
       }
-    }, 30);
+    });
   }
 
   useEffect(() => {
@@ -503,7 +504,11 @@ DocumentPage.Preview = (props: PreviewProps) => {
           </div>
         )}
         <div className="DocumentPage__main__previewFrame__iframeWrap">
-          <iframe ref={iframeRef} src={previewUrl} title="iframe preview" />
+          <iframe
+            ref={iframeRef}
+            src={props.allowIframePreview ? previewUrl : undefined}
+            title="iframe preview"
+          />
         </div>
       </div>
     </div>
