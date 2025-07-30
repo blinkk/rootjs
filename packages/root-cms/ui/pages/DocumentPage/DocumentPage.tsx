@@ -25,7 +25,6 @@ import {Layout} from '../../layout/Layout.js';
 import {joinClassNames} from '../../utils/classes.js';
 import {getDocPreviewPath, getDocServingPath} from '../../utils/doc-urls.js';
 import './DocumentPage.css';
-import {requestIdleCallbackPolyfill} from '../../utils/request-idle-callback.js';
 
 interface DocumentPageProps {
   collection: string;
@@ -59,9 +58,6 @@ export function DocumentPage(props: DocumentPageProps) {
   const docId = `${collectionId}/${slug}`;
   const collection = window.__ROOT_CTX.collections[collectionId];
   const draft = useDraft(docId);
-
-  // State to track when fields have been rendered
-  const [fieldsRendered, setFieldsRendered] = useState(false);
 
   // Local storage for preview panel visibility per collection
   const [isPreviewVisible, setIsPreviewVisible] = useLocalStorage<boolean>(
@@ -184,7 +180,6 @@ export function DocumentPage(props: DocumentPageProps) {
               collection={collection}
               docId={docId}
               draft={draft}
-              onFieldsRendered={() => setFieldsRendered(true)}
             />
           </div>
         </SplitPanel.Item>
@@ -201,7 +196,6 @@ export function DocumentPage(props: DocumentPageProps) {
               docId={docId}
               draft={draft}
               isVisible={isPreviewVisible}
-              allowIframePreview={fieldsRendered}
             />
           )}
         </SplitPanel.Item>
@@ -214,7 +208,6 @@ interface PreviewProps {
   docId: string;
   draft: UseDraftHook;
   isVisible: boolean;
-  allowIframePreview: boolean;
 }
 
 type Device = 'mobile' | 'tablet' | 'desktop' | '';
@@ -276,18 +269,13 @@ DocumentPage.Preview = (props: PreviewProps) => {
   ];
 
   function reloadIframe() {
-    if (!props.allowIframePreview) {
-      return;
-    }
     const iframe = iframeRef.current!;
     iframe.src = 'about:blank';
-    requestIdleCallbackPolyfill(() => {
-      if (iframe.src !== localizedPreviewUrl) {
-        iframe.src = localizedPreviewUrl;
-      } else {
-        iframe.contentWindow!.location.reload();
-      }
-    });
+    if (iframe.src !== localizedPreviewUrl) {
+      iframe.src = localizedPreviewUrl;
+    } else {
+      iframe.contentWindow!.location.reload();
+    }
   }
 
   useEffect(() => {
@@ -326,9 +314,6 @@ DocumentPage.Preview = (props: PreviewProps) => {
   }, []);
 
   useEffect(() => {
-    if (!props.allowIframePreview) {
-      return;
-    }
     const iframe = iframeRef.current!;
     if (
       new URL(iframe.src, document.baseURI).href ===
@@ -337,17 +322,7 @@ DocumentPage.Preview = (props: PreviewProps) => {
       return;
     }
     iframe.src = localizedPreviewUrl;
-  }, [selectedLocale, props.allowIframePreview]);
-
-  // Initial iframe load when allowIframePreview becomes true
-  useEffect(() => {
-    if (props.allowIframePreview) {
-      const iframe = iframeRef.current!;
-      if (!iframe.src || iframe.src === 'about:blank') {
-        iframe.src = localizedPreviewUrl;
-      }
-    }
-  }, [props.allowIframePreview, localizedPreviewUrl]);
+  }, [selectedLocale]);
 
   function toggleDevice(device: Device) {
     setDevice((current) => {
@@ -490,11 +465,7 @@ DocumentPage.Preview = (props: PreviewProps) => {
           </div>
         )}
         <div className="DocumentPage__main__previewFrame__iframeWrap">
-          <iframe
-            ref={iframeRef}
-            src={props.allowIframePreview ? previewUrl : undefined}
-            title="iframe preview"
-          />
+          <iframe ref={iframeRef} src={previewUrl} title="iframe preview" />
         </div>
       </div>
     </div>

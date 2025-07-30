@@ -92,7 +92,6 @@ interface DocEditorProps {
   docId: string;
   collection: schema.Collection;
   draft: UseDraftHook;
-  onFieldsRendered?: () => void;
 }
 
 const DEEPLINK_CONTEXT = createContext('');
@@ -151,17 +150,6 @@ export function DocEditor(props: DocEditorProps) {
       setDeeplink(deeplink);
     }
   }, [loading]);
-
-  // Notify parent when fields are rendered (for deferred iframe loading)
-  useEffect(() => {
-    if (!loading && props.onFieldsRendered) {
-      const timer = requestIdleCallbackPolyfill(() => {
-        props.onFieldsRendered && props.onFieldsRendered();
-      });
-      return () => cancelIdleCallbackPolyfill(timer);
-    }
-    return () => {};
-  }, [loading, props.onFieldsRendered]);
 
   return (
     <VIRTUAL_CLIPBOARD_CONTEXT.Provider
