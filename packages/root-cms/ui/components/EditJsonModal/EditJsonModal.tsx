@@ -9,6 +9,7 @@ const MODAL_ID = 'EditJsonModal';
 
 export interface EditJsonModalProps {
   [key: string]: unknown;
+  title?: string;
   data?: any;
   onSave: (data: any) => void;
 }
@@ -20,6 +21,7 @@ export function useEditJsonModal() {
     open: (props: EditJsonModalProps) => {
       modals.openContextModal(MODAL_ID, {
         ...modalTheme,
+        title: props.title || 'Edit JSON',
         innerProps: props,
         size: '680px',
       });
@@ -62,7 +64,6 @@ export function EditJsonModal(
 
   return (
     <div className="EditJsonModal">
-      <h3>EditJsonModal</h3>
       <JsonInput
         value={value}
         onChange={onChange}
@@ -71,7 +72,6 @@ export function EditJsonModal(
         minRows={4}
         maxRows={25}
       />
-
       <div className="EditJsonModal__buttons">
         <Button
           variant="default"
