@@ -204,7 +204,7 @@ export function DocumentPage(props: DocumentPageProps) {
               isVisible={isPreviewVisible}
               onToggleVisibility={() => setIsPreviewVisible(!isPreviewVisible)}
               getPreviewUrl={getPreviewUrl}
-              shouldLoadIframe={fieldsRendered}
+              allowIframePreview={fieldsRendered}
             />
           )}
         </SplitPanel.Item>
@@ -219,7 +219,7 @@ interface PreviewProps {
   isVisible: boolean;
   onToggleVisibility: () => void;
   getPreviewUrl: (selectedLocale?: string) => string;
-  shouldLoadIframe: boolean;
+  allowIframePreview: boolean;
 }
 
 type Device = 'mobile' | 'tablet' | 'desktop' | '';
@@ -289,7 +289,7 @@ DocumentPage.Preview = (props: PreviewProps) => {
   ];
 
   function reloadIframe() {
-    if (!props.shouldLoadIframe) {
+    if (!props.allowIframePreview) {
       return;
     }
     const iframe = iframeRef.current!;
@@ -339,7 +339,7 @@ DocumentPage.Preview = (props: PreviewProps) => {
   }, []);
 
   useEffect(() => {
-    if (!props.shouldLoadIframe) {
+    if (!props.allowIframePreview) {
       return;
     }
     const iframe = iframeRef.current!;
@@ -350,17 +350,17 @@ DocumentPage.Preview = (props: PreviewProps) => {
       return;
     }
     iframe.src = localizedPreviewUrl;
-  }, [selectedLocale, props.shouldLoadIframe]);
+  }, [selectedLocale, props.allowIframePreview]);
 
-  // Initial iframe load when shouldLoadIframe becomes true
+  // Initial iframe load when allowIframePreview becomes true
   useEffect(() => {
-    if (props.shouldLoadIframe) {
+    if (props.allowIframePreview) {
       const iframe = iframeRef.current!;
       if (!iframe.src || iframe.src === 'about:blank') {
         iframe.src = localizedPreviewUrl;
       }
     }
-  }, [props.shouldLoadIframe, localizedPreviewUrl]);
+  }, [props.allowIframePreview, localizedPreviewUrl]);
 
   function toggleDevice(device: Device) {
     setDevice((current) => {
