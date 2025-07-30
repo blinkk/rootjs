@@ -209,6 +209,26 @@
 }
 
 .DocEditor__ArrayField__item__header__preview {
+  align-items: center;
+  display: flex;
+  flex: 1;
+  gap: 10px;
+}
+
+.DocEditor__ArrayField__item__header__preview__image {
+  align-items: center;
+  display: flex;
+  height: 32px;
+  justify-content: center;
+  width: 32px;
+}
+
+.DocEditor__ArrayField__item__header__preview__image__img {
+  height: auto;
+  width: 100%;
+}
+
+.DocEditor__ArrayField__item__header__preview__title {
   font-family: var(--font-family-mono);
   font-weight: 500;
   flex: 1;

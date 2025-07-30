@@ -18,13 +18,6 @@ export interface CommonFieldProps {
   deprecated?: boolean;
   /** Hides just the field label in the CMS UI. */
   hideLabel?: boolean;
-  /** Metadata that describes the preview for the field. */
-  preview?: {
-    /** The human-readable title of the content type. Appears in CMS menus. */
-    title?: string;
-    /** The URL to an image representing the content type. Appears in CMS menus. */
-    image?: string;
-  };
 }
 
 export type StringField = CommonFieldProps & {
@@ -171,12 +164,11 @@ export type ArrayField = CommonFieldProps & {
    * Multiple values can be provided, in which case the first preview line with
    * no missing placeholder values will be used.
    *
-   * System added placeholder values:
-   *
-   * - _index: The 0-based index.
-   * - _index:02: A left-padded version of _index to 2 digits.
-   * - _index:03: A left-padded version of _index to 3 digits.
-   * - _type: For array of one-of fields, the type of the selected field.
+   * Built-in placeholder values:
+   * - {_index}: The 0-based index.
+   * - {_index:02}: A left-padded version of _index to 2 digits.
+   * - {_index:03}: A left-padded version of _index to 3 digits.
+   * - {_type}: For array of one-of fields, the type of the selected field.
    */
   preview?: string | string[];
   // NOTE(stevenle): the array field should only accept object values to keep
@@ -267,6 +259,31 @@ export interface Schema {
   description?: string;
   /** Fields describe the structure of the content. */
   fields: FieldWithId[];
+  /** Defines the preview displayed within the CMS UI. Overrides the `preview` definition for the `array` field. */
+  preview?: {
+    /**
+     * Provides the title for the content in the CMS UI.
+     *
+     * For example, to show the schema's type and the value of its "id" field, use `{_type}: {id}`.
+     *
+     * Multiple values can be provided, in which case the first preview line with
+     * no missing placeholder values will be used.
+     *
+     * Built-in placeholder values:
+     * - {_index}: The 0-based index.
+     * - {_index:02}: A left-padded version of _index to 2 digits.
+     * - {_index:03}: A left-padded version of _index to 3 digits.
+     * - {_type}: For array of one-of fields, the type of the selected field.
+     * */
+    title?: string | string[];
+
+    /**
+     * Provides the thumbnail image for content in the CMS UI.
+     *
+     * For example, to show the content's "image" field, use `{image.src}`.
+     */
+    image?: string | string[];
+  };
 }
 
 export function defineSchema(schema: Schema): Schema {

@@ -44,7 +44,10 @@ import {
   SaveState,
   UseDraftHook,
 } from '../../hooks/useDraft.js';
-import {useVirtualClipboard, VirtualClipboard} from '../../hooks/useVirtualClipboard.js';
+import {
+  useVirtualClipboard,
+  VirtualClipboard,
+} from '../../hooks/useVirtualClipboard.js';
 import {joinClassNames} from '../../utils/classes.js';
 import {
   CMSDoc,
@@ -56,6 +59,7 @@ import {getDefaultFieldValue} from '../../utils/fields.js';
 import {flattenNestedKeys} from '../../utils/objects.js';
 import {autokey} from '../../utils/rand.js';
 import {getPlaceholderKeys, strFormat} from '../../utils/str-format.js';
+import {testFieldEmpty} from '../../utils/test-field-empty.js';
 import {formatDateTime} from '../../utils/time.js';
 import {
   DocActionEvent,
@@ -68,18 +72,17 @@ import {useLocalizationModal} from '../LocalizationModal/LocalizationModal.js';
 import {usePublishDocModal} from '../PublishDocModal/PublishDocModal.js';
 import {Viewers} from '../Viewers/Viewers.js';
 import {BooleanField} from './fields/BooleanField.js';
-import {DateTimeField} from './fields/DateTimeField.js';
 import {DateField} from './fields/DateField.js';
+import {DateTimeField} from './fields/DateTimeField.js';
 import {FieldProps} from './fields/FieldProps.js';
 import {FileField} from './fields/FileField.js';
 import {ImageField} from './fields/ImageField.js';
 import {MultiSelectField} from './fields/MultiSelectField.js';
+import {NumberField} from './fields/NumberField.js';
 import {ReferenceField} from './fields/ReferenceField.js';
 import {RichTextField} from './fields/RichTextField.js';
 import {SelectField} from './fields/SelectField.js';
 import {StringField} from './fields/StringField.js';
-import {NumberField} from './fields/NumberField.js';
-import {testFieldEmpty} from '../../utils/test-field-empty.js';
 
 interface DocEditorProps {
   docId: string;
@@ -986,126 +989,141 @@ DocEditor.ArrayField = (props: FieldProps) => {
         {order.length === 0 && (
           <div className="DocEditor__ArrayField__items__empty">No items</div>
         )}
-        {order.map((key: string, i: number) => (
-          <details
-            className="DocEditor__ArrayField__item"
-            key={key}
-            open={newlyAdded.includes(key) || itemInDeeplink(key)}
-          >
-            <summary
-              id={`summary-for-${props.deepKey}.${order[i]}`}
-              className="DocEditor__ArrayField__item__header"
-              onKeyDown={(e: KeyboardEvent) => handleKeyDown(e, key)}
-              tabIndex={0}
+        {order.map((key: string, i: number) => {
+          const previewImage = arrayPreviewImage(field, value[key]);
+          return (
+            <details
+              className="DocEditor__ArrayField__item"
+              key={key}
+              open={newlyAdded.includes(key) || itemInDeeplink(key)}
             >
-              <div className="DocEditor__ArrayField__item__header__icon">
-                <IconTriangleFilled size={6} />
-              </div>
-              <div className="DocEditor__ArrayField__item__header__preview">
-                {arrayPreview(field, value[key], i)}
-              </div>
-              <div className="DocEditor__ArrayField__item__header__controls">
-                <div className="DocEditor__ArrayField__item__header__controls__arrows">
-                  <button
-                    className="DocEditor__ArrayField__item__header__controls__arrow DocEditor__ArrayField__item__header__controls__arrows--up"
-                    onClick={() => moveUp(i)}
-                  >
-                    <IconCircleArrowUp size={20} strokeWidth={1.75} />
-                  </button>
-                  <button
-                    className="DocEditor__ArrayField__item__header__controls__arrow DocEditor__ArrayField__item__header__controls__arrows--down"
-                    onClick={() => moveDown(i)}
-                  >
-                    <IconCircleArrowDown size={20} strokeWidth={1.75} />
-                  </button>
+              <summary
+                id={`summary-for-${props.deepKey}.${order[i]}`}
+                className="DocEditor__ArrayField__item__header"
+                onKeyDown={(e: KeyboardEvent) => handleKeyDown(e, key)}
+                tabIndex={0}
+              >
+                <div className="DocEditor__ArrayField__item__header__icon">
+                  <IconTriangleFilled size={6} />
                 </div>
-                <Menu
-                  className="DocEditor__ArrayField__item__header__controls__menu"
-                  position="bottom"
-                  control={
-                    <ActionIcon className="DocEditor__ArrayField__item__header__controls__dots">
-                      <IconDotsVertical size={16} />
-                    </ActionIcon>
-                  }
-                >
-                  <Menu.Label>INSERT</Menu.Label>
-                  <Menu.Item
-                    icon={<IconRowInsertTop size={20} />}
-                    onClick={() => insertBefore(i)}
-                  >
-                    Add before
-                  </Menu.Item>
-                  <Menu.Item
-                    icon={<IconRowInsertBottom size={20} />}
-                    onClick={() => insertAfter(i)}
-                  >
-                    Add after
-                  </Menu.Item>
-                  <Menu.Item
-                    icon={<IconCopy size={20} />}
-                    onClick={() => duplicate(i)}
-                  >
-                    Duplicate
-                  </Menu.Item>
-                  <Menu.Label>CLIPBOARD</Menu.Label>
-                  <Menu.Item
-                    icon={<IconClipboardCopy size={20} />}
-                    // Allow the menu to close before updating the virtual clipboard (avoids layout shift)
-                    // in the menu that may be distracting.
-                    onClick={() =>
-                      setTimeout(() => copyToVirtualClipboard(i), 500)
+                <div className="DocEditor__ArrayField__item__header__preview">
+                  {previewImage && (
+                    <div className="DocEditor__ArrayField__item__header__preview__image">
+                      <img
+                        src={previewImage}
+                        alt=""
+                        className="DocEditor__ArrayField__item__header__preview__image__img"
+                        loading="lazy"
+                      />
+                    </div>
+                  )}
+                  <div className="DocEditor__ArrayField__item__header__preview__title">
+                    {arrayPreview(field, value[key], i)}
+                  </div>
+                </div>
+                <div className="DocEditor__ArrayField__item__header__controls">
+                  <div className="DocEditor__ArrayField__item__header__controls__arrows">
+                    <button
+                      className="DocEditor__ArrayField__item__header__controls__arrow DocEditor__ArrayField__item__header__controls__arrows--up"
+                      onClick={() => moveUp(i)}
+                    >
+                      <IconCircleArrowUp size={20} strokeWidth={1.75} />
+                    </button>
+                    <button
+                      className="DocEditor__ArrayField__item__header__controls__arrow DocEditor__ArrayField__item__header__controls__arrows--down"
+                      onClick={() => moveDown(i)}
+                    >
+                      <IconCircleArrowDown size={20} strokeWidth={1.75} />
+                    </button>
+                  </div>
+                  <Menu
+                    className="DocEditor__ArrayField__item__header__controls__menu"
+                    position="bottom"
+                    control={
+                      <ActionIcon className="DocEditor__ArrayField__item__header__controls__dots">
+                        <IconDotsVertical size={16} />
+                      </ActionIcon>
                     }
                   >
-                    Copy
-                  </Menu.Item>
-                  {virtualClipboard.value && (
-                    <>
-                      <Menu.Item
-                        icon={<IconRowInsertTop size={20} />}
-                        onClick={() => pasteBefore(i)}
-                      >
-                        Paste before
-                      </Menu.Item>
-                      <Menu.Item
-                        icon={<IconRowInsertBottom size={20} />}
-                        onClick={() => pasteAfter(i)}
-                      >
-                        Paste after
-                      </Menu.Item>
-                    </>
-                  )}
-                  <Menu.Label>CODE</Menu.Label>
-                  <Menu.Item
-                    icon={<IconBraces size={20} />}
-                    onClick={() => editJson(i)}
-                  >
-                    Edit JSON
-                  </Menu.Item>
+                    <Menu.Label>INSERT</Menu.Label>
+                    <Menu.Item
+                      icon={<IconRowInsertTop size={20} />}
+                      onClick={() => insertBefore(i)}
+                    >
+                      Add before
+                    </Menu.Item>
+                    <Menu.Item
+                      icon={<IconRowInsertBottom size={20} />}
+                      onClick={() => insertAfter(i)}
+                    >
+                      Add after
+                    </Menu.Item>
+                    <Menu.Item
+                      icon={<IconCopy size={20} />}
+                      onClick={() => duplicate(i)}
+                    >
+                      Duplicate
+                    </Menu.Item>
+                    <Menu.Label>CLIPBOARD</Menu.Label>
+                    <Menu.Item
+                      icon={<IconClipboardCopy size={20} />}
+                      // Allow the menu to close before updating the virtual clipboard (avoids layout shift)
+                      // in the menu that may be distracting.
+                      onClick={() =>
+                        setTimeout(() => copyToVirtualClipboard(i), 500)
+                      }
+                    >
+                      Copy
+                    </Menu.Item>
+                    {virtualClipboard.value && (
+                      <>
+                        <Menu.Item
+                          icon={<IconRowInsertTop size={20} />}
+                          onClick={() => pasteBefore(i)}
+                        >
+                          Paste before
+                        </Menu.Item>
+                        <Menu.Item
+                          icon={<IconRowInsertBottom size={20} />}
+                          onClick={() => pasteAfter(i)}
+                        >
+                          Paste after
+                        </Menu.Item>
+                      </>
+                    )}
+                    <Menu.Label>CODE</Menu.Label>
+                    <Menu.Item
+                      icon={<IconBraces size={20} />}
+                      onClick={() => editJson(i)}
+                    >
+                      Edit JSON
+                    </Menu.Item>
 
-                  <Menu.Label>REMOVE</Menu.Label>
-                  <Menu.Item
-                    icon={<IconTrash size={20} />}
-                    onClick={() => removeAt(i)}
-                  >
-                    Remove
-                  </Menu.Item>
-                </Menu>
+                    <Menu.Label>REMOVE</Menu.Label>
+                    <Menu.Item
+                      icon={<IconTrash size={20} />}
+                      onClick={() => removeAt(i)}
+                    >
+                      Remove
+                    </Menu.Item>
+                  </Menu>
+                </div>
+              </summary>
+              <div className="DocEditor__ArrayField__item__body">
+                <DocEditor.Field
+                  key={`${props.deepKey}.${key}`}
+                  collection={props.collection}
+                  field={field.of}
+                  shallowKey={field.id!}
+                  deepKey={`${props.deepKey}.${key}`}
+                  draft={props.draft}
+                  hideHeader
+                  isArrayChild
+                />
               </div>
-            </summary>
-            <div className="DocEditor__ArrayField__item__body">
-              <DocEditor.Field
-                key={`${props.deepKey}.${key}`}
-                collection={props.collection}
-                field={field.of}
-                shallowKey={field.id!}
-                deepKey={`${props.deepKey}.${key}`}
-                draft={props.draft}
-                hideHeader
-                isArrayChild
-              />
-            </div>
-          </details>
-        ))}
+            </details>
+          );
+        })}
       </div>
       <div className="DocEditor__ArrayField__add">
         <Button
@@ -1214,24 +1232,43 @@ function arraySwap<T = unknown>(arr: T[], index1: number, index2: number) {
   return arr;
 }
 
-function arrayPreview(
-  field: schema.ArrayField,
+/** Returns the string templates for field previews from the schema-level data. */
+function getSchemaPreviewTemplates(
+  arrayOfField: schema.ObjectLikeField,
   data: any,
-  index: number
-): string {
-  if (!field.preview) {
-    return `item ${index}`;
+  key: 'title' | 'image' = 'title'
+): string | string[] | null {
+  if (arrayOfField.type === 'oneof') {
+    const oneOfField = arrayOfField as schema.OneOfField;
+    const selectedTypeName = data?._type;
+    if (selectedTypeName) {
+      const selectedSchema = oneOfField.types.find(
+        (schema) => schema.name === selectedTypeName
+      );
+      return selectedSchema?.preview?.[key] || null;
+    }
   }
+  return null;
+}
 
-  const templates = Array.isArray(field.preview)
-    ? [...field.preview]
-    : [field.preview];
+/** Builds the value to display given a set of string templates to use for previews. */
+function buildPreviewValue(
+  /** The string template (or templates) used to construct the preview. */
+  previews: string | string[],
+  /** The CMS data. */
+  data: any,
+  /** The position of the item within the array of the CMS UI. */
+  index?: number
+): string | undefined {
+  const templates = Array.isArray(previews) ? [...previews] : [previews];
   const placeholders = flattenNestedKeys(data);
-  placeholders._index = String(index);
-  placeholders._index0 = String(index);
-  placeholders._index1 = String(index + 1);
-  placeholders['_index:02'] = placeholders._index.padStart(2, '0');
-  placeholders['_index:03'] = placeholders._index.padStart(3, '0');
+  if (index !== undefined) {
+    placeholders._index = String(index);
+    placeholders._index0 = String(index);
+    placeholders._index1 = String(index + 1);
+    placeholders['_index:02'] = placeholders._index.padStart(2, '0');
+    placeholders['_index:03'] = placeholders._index.padStart(3, '0');
+  }
   while (templates.length > 0) {
     const template = templates.shift()!;
     const preview = strFormat(template, placeholders);
@@ -1239,8 +1276,48 @@ function arrayPreview(
       return preview;
     }
   }
+  return undefined;
+}
 
-  return `item ${index}`;
+/** Builds the preview image for an array item. */
+function arrayPreviewImage(
+  field: schema.ArrayField,
+  data: any
+): string | undefined {
+  const schemaLevelTemplates = getSchemaPreviewTemplates(
+    field.of,
+    data,
+    'image'
+  );
+  if (!schemaLevelTemplates) {
+    return undefined;
+  }
+  return buildPreviewValue(schemaLevelTemplates, data);
+}
+
+/** Builds the preview for an array item. */
+function arrayPreview(
+  field: schema.ArrayField,
+  data: any,
+  index: number
+): string {
+  // First, check if the item has a preview defined at the schema level.
+  const schemaLevelTemplates = getSchemaPreviewTemplates(
+    field.of,
+    data,
+    'title'
+  );
+  if (schemaLevelTemplates) {
+    const result = buildPreviewValue(schemaLevelTemplates, data, index);
+    if (result) {
+      return result;
+    }
+  }
+  // Fall back to array-level preview.
+  if (!field.preview) {
+    return `item ${index}`;
+  }
+  return buildPreviewValue(field.preview, data, index) ?? `item ${index}`;
 }
 
 function scrollToDeeplink(deeplinkEl: HTMLElement) {
