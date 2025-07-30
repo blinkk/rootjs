@@ -197,6 +197,30 @@
   align-items: center;
 }
 
+.DocEditor__ArrayField__item__header__dragHandle {
+  flex-shrink: 0;
+  margin-right: 8px;
+  cursor: grab;
+  color: #666;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 3px;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.DocEditor__ArrayField__item__header__dragHandle:hover {
+  background-color: #f0f0f0;
+  color: #333;
+}
+
+.DocEditor__ArrayField__item__header__dragHandle:active {
+  cursor: grabbing;
+  background-color: #e0e0e0;
+}
+
 .DocEditor__ArrayField__item__header__icon {
   flex-shrink: 0;
   margin-right: 8px;
@@ -285,6 +309,17 @@
 
 .DocEditor__ArrayField__add {
   margin-top: 16px;
+}
+
+.DocEditor__ArrayField__item--dragging {
+  opacity: 0.5;
+}
+
+.DocEditor__ArrayField__dropLine {
+  height: 2px;
+  background-color: #000;
+  margin: 4px 0;
+  border-radius: 1px;
 }
 
 .DocEditor__OneOfField__select {
