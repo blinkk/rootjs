@@ -122,15 +122,6 @@ export function DocumentPage(props: DocumentPageProps) {
               <div className="DocumentPage__side__header__docId">{docId}</div>
             </div>
             <div className="DocumentPage__side__header__buttons">
-              <Tooltip label="Edit JSON">
-                <ActionIcon
-                  onClick={() => editJson()}
-                  variant="default"
-                  size="sm"
-                >
-                  <IconBraces size={14} />
-                </ActionIcon>
-              </Tooltip>
               <Button
                 variant="filled"
                 color="dark"
@@ -141,7 +132,22 @@ export function DocumentPage(props: DocumentPageProps) {
               >
                 Save
               </Button>
-
+              <Menu
+                className="DocumentPage__side__header__menu"
+                position="bottom"
+                control={
+                  <ActionIcon className="DocumentPage__side__header__menu__dots">
+                    <IconDotsVertical size={16} />
+                  </ActionIcon>
+                }
+              >
+                <Menu.Item
+                  icon={<IconBraces size={20} />}
+                  onClick={() => editJson()}
+                >
+                  Edit JSON
+                </Menu.Item>
+              </Menu>
               <Tooltip
                 label={isPreviewVisible ? 'Hide preview' : 'Show preview'}
               >
@@ -313,6 +319,9 @@ DocumentPage.Preview = (props: PreviewProps) => {
         !iframeWindow.location.href.startsWith('about:blank')
       ) {
         const currentPath = iframeWindow.location.pathname;
+        if (currentPath === iframeUrl) {
+          return; // No change in URL
+        }
         console.log(`iframe url change: ${currentPath}`);
         setIframeUrl(`${domain}${currentPath}`);
       }
@@ -334,6 +343,12 @@ DocumentPage.Preview = (props: PreviewProps) => {
       return;
     }
     const iframe = iframeRef.current!;
+    if (
+      new URL(iframe.src, document.baseURI).href ===
+      new URL(localizedPreviewUrl, document.baseURI).href
+    ) {
+      return;
+    }
     iframe.src = localizedPreviewUrl;
   }, [selectedLocale, props.shouldLoadIframe]);
 
@@ -488,7 +503,7 @@ DocumentPage.Preview = (props: PreviewProps) => {
           </div>
         )}
         <div className="DocumentPage__main__previewFrame__iframeWrap">
-          <iframe ref={iframeRef} src={previewUrl} />
+          <iframe ref={iframeRef} src={previewUrl} title="iframe preview" />
         </div>
       </div>
     </div>
