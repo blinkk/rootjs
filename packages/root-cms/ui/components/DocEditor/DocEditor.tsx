@@ -58,10 +58,6 @@ import {extractField} from '../../utils/extract.js';
 import {getDefaultFieldValue} from '../../utils/fields.js';
 import {flattenNestedKeys} from '../../utils/objects.js';
 import {autokey} from '../../utils/rand.js';
-import {
-  cancelIdleCallbackPolyfill,
-  requestIdleCallbackPolyfill,
-} from '../../utils/request-idle-callback.js';
 import {getPlaceholderKeys, strFormat} from '../../utils/str-format.js';
 import {testFieldEmpty} from '../../utils/test-field-empty.js';
 import {formatDateTime} from '../../utils/time.js';

@@ -58,8 +58,6 @@ export function DocumentPage(props: DocumentPageProps) {
   const docId = `${collectionId}/${slug}`;
   const collection = window.__ROOT_CTX.collections[collectionId];
   const draft = useDraft(docId);
-
-  // Local storage for preview panel visibility per collection
   const [isPreviewVisible, setIsPreviewVisible] = useLocalStorage<boolean>(
     `root::DocumentPage::previewVisible::${collectionId}`,
     true
@@ -191,12 +189,7 @@ export function DocumentPage(props: DocumentPageProps) {
           fluid
         >
           {isPreviewVisible && (
-            <DocumentPage.Preview
-              key={docId}
-              docId={docId}
-              draft={draft}
-              isVisible={isPreviewVisible}
-            />
+            <DocumentPage.Preview key={docId} docId={docId} draft={draft} />
           )}
         </SplitPanel.Item>
       </SplitPanel>
@@ -207,7 +200,6 @@ export function DocumentPage(props: DocumentPageProps) {
 interface PreviewProps {
   docId: string;
   draft: UseDraftHook;
-  isVisible: boolean;
 }
 
 type Device = 'mobile' | 'tablet' | 'desktop' | '';
@@ -271,11 +263,13 @@ DocumentPage.Preview = (props: PreviewProps) => {
   function reloadIframe() {
     const iframe = iframeRef.current!;
     iframe.src = 'about:blank';
-    if (iframe.src !== localizedPreviewUrl) {
-      iframe.src = localizedPreviewUrl;
-    } else {
-      iframe.contentWindow!.location.reload();
-    }
+    window.setTimeout(() => {
+      if (iframe.src !== localizedPreviewUrl) {
+        iframe.src = localizedPreviewUrl;
+      } else {
+        iframe.contentWindow!.location.reload();
+      }
+    }, 30);
   }
 
   useEffect(() => {
@@ -294,9 +288,6 @@ DocumentPage.Preview = (props: PreviewProps) => {
         !iframeWindow.location.href.startsWith('about:blank')
       ) {
         const currentPath = iframeWindow.location.pathname;
-        if (currentPath === new URL(iframeUrl, document.baseURI).pathname) {
-          return; // No change in URL
-        }
         console.log(`iframe url change: ${currentPath}`);
         setIframeUrl(`${domain}${currentPath}`);
       }
@@ -315,12 +306,6 @@ DocumentPage.Preview = (props: PreviewProps) => {
 
   useEffect(() => {
     const iframe = iframeRef.current!;
-    if (
-      new URL(iframe.src, document.baseURI).href ===
-      new URL(localizedPreviewUrl, document.baseURI).href
-    ) {
-      return;
-    }
     iframe.src = localizedPreviewUrl;
   }, [selectedLocale]);
 
