@@ -16,6 +16,9 @@ const heightOptions = [
 export default schema.define({
   name: 'Spacer',
   description: 'Adds vertical spacing between modules.',
+  preview: {
+    title: ['m{_index:02}: Spacer: {desktopHeight}', 'm{_index:02}: Spacer'],
+  },
   fields: [
     schema.select({
       id: 'desktopHeight',

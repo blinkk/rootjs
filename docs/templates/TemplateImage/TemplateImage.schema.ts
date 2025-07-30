@@ -2,6 +2,9 @@ import {schema} from '@blinkk/root-cms';
 
 export default schema.define({
   name: 'TemplateImage',
+  preview: {
+    image: '{image.src}',
+  },
   fields: [
     schema.string({
       id: 'id',

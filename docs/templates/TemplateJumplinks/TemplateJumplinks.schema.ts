@@ -2,6 +2,12 @@ import {schema} from '@blinkk/root-cms';
 
 export default schema.define({
   name: 'TemplateJumplinks',
+  preview: {
+    title: [
+      'm{_index:02}: Jumplinks: {id}',
+      'm{_index:02}: Jumplinks: {title}',
+    ],
+  },
   fields: [
     schema.string({
       id: 'id',

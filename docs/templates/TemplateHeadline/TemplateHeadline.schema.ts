@@ -3,6 +3,9 @@ import ButtonSchema from '@/components/Button/Button.schema.js';
 
 export default schema.define({
   name: 'TemplateHeadline',
+  preview: {
+    title: ['m{_index:02}: {title}'],
+  },
   fields: [
     schema.string({
       id: 'id',
