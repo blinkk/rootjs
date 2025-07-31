@@ -195,6 +195,7 @@ CollectionPage.Collection = (props: CollectionProps) => {
                         }
                         data={[
                           {value: 'slug', label: 'A-Z'},
+                          {value: 'slugDesc', label: 'Z-A'},
                           {value: 'newest', label: 'Newest'},
                           {value: 'oldest', label: 'Oldest'},
                           {value: 'modifiedAt', label: 'Last modified'},
