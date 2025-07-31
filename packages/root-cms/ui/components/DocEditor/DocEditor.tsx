@@ -98,19 +98,32 @@ interface DocEditorProps {
   draft: UseDraftHook;
 }
 
-const DEEPLINK_CONTEXT = createContext('');
 const DOC_DATA_CONTEXT = createContext(null);
+
+const DEEPLINK_CONTEXT = createContext<{
+  value: string;
+  setValue: (value: string) => void;
+}>({
+  value: getDeeplink(),
+  setValue: () => {},
+});
+
 const VIRTUAL_CLIPBOARD_CONTEXT = createContext<{
   value: any;
   setValue: (value: any) => void;
 }>({value: null, setValue: () => {}});
 
-function useDeeplink(): string {
+function useDocData(): CMSDoc {
+  return useContext(DOC_DATA_CONTEXT)!;
+}
+
+function useDeeplink() {
   return useContext(DEEPLINK_CONTEXT);
 }
 
-function useDocData(): CMSDoc {
-  return useContext(DOC_DATA_CONTEXT)!;
+export function getDeeplink() {
+  const url = new URL(window.location.href);
+  return url.searchParams.get('deeplink') || '';
 }
 
 export function DocEditor(props: DocEditorProps) {
@@ -118,8 +131,8 @@ export function DocEditor(props: DocEditorProps) {
   const collection = useCollectionSchema(props.collection.id);
   const draft = props.draft;
   const {controller, saveState, data} = draft;
-  const [deeplink, setDeeplink] = useState('');
   const [clipboardValue, setClipboardValue] = useState(null);
+  const [deepLinkTarget, setDeepLinkTarget] = useState(getDeeplink());
   const loading = collection.loading || draft.loading;
   const fields = collection.schema?.fields || [];
 
@@ -151,7 +164,7 @@ export function DocEditor(props: DocEditorProps) {
     const url = new URL(window.location.href);
     const deeplink = url.searchParams.get('deeplink');
     if (deeplink) {
-      setDeeplink(deeplink);
+      setDeepLinkTarget(deeplink);
     }
   }, [loading]);
 
@@ -160,7 +173,9 @@ export function DocEditor(props: DocEditorProps) {
       value={{value: clipboardValue, setValue: setClipboardValue}}
     >
       <DOC_DATA_CONTEXT.Provider value={data}>
-        <DEEPLINK_CONTEXT.Provider value={deeplink}>
+        <DEEPLINK_CONTEXT.Provider
+          value={{value: deepLinkTarget, setValue: setDeepLinkTarget}}
+        >
           <div className="DocEditor">
             <LoadingOverlay
               visible={loading}
@@ -272,11 +287,10 @@ export function DocEditor(props: DocEditorProps) {
 }
 
 DocEditor.Field = (props: FieldProps) => {
-  // const [targeted, setTargeted] = useState(false);
   const field = props.field;
   const level = props.level ?? 0;
   const deeplink = useDeeplink();
-  const targeted = deeplink === props.deepKey;
+  const targeted = deeplink.value === props.deepKey;
   const ref = useRef<HTMLDivElement>(null);
   const [value, setValue] = useState(null);
   const [translateStrings, setTranslateStrings] = useState<string[]>([]);
@@ -394,12 +408,13 @@ DocEditor.FieldHeader = (props: {
   translate?: boolean;
   translateStrings?: string[];
 }) => {
-  function deeplinkUrl() {
+  function buildDeeplinkUrl() {
     const url = new URL(window.location.href);
     url.searchParams.set('deeplink', props.deepKey!);
     return url.toString();
   }
 
+  const deeplink = useDeeplink();
   const docData = useDocData() || {};
   const l10nSheet = docData.sys?.l10nSheet;
 
@@ -421,7 +436,13 @@ DocEditor.FieldHeader = (props: {
           {props.deepKey && (
             <a
               className="DocEditor__FieldHeader__label__deeplink"
-              href={deeplinkUrl()}
+              href={buildDeeplinkUrl()}
+              title="Link to field"
+              onClick={(e) => {
+                e.preventDefault();
+                window.history.replaceState({}, '', buildDeeplinkUrl());
+                deeplink.setValue(props.deepKey!);
+              }}
             >
               #
             </a>
@@ -498,8 +519,8 @@ DocEditor.ObjectFieldDrawer = (props: FieldProps) => {
   const inline = field.drawerOptions?.inline || false;
   const iconPosition = inline ? 'left' : 'right';
 
-  const deeplink = useDeeplink() || '';
-  const initialOpen = !collapsed || deeplink.includes(props.deepKey);
+  const deeplink = useDeeplink();
+  const initialOpen = !collapsed || deeplink.value.includes(props.deepKey);
 
   return (
     <div
@@ -998,9 +1019,7 @@ DocEditor.ArrayField = (props: FieldProps) => {
   };
 
   function itemInDeeplink(itemKey: string) {
-    return Boolean(
-      deeplink && deeplink.startsWith(`${props.deepKey}.${itemKey}`)
-    );
+    return Boolean(deeplink.value.startsWith(`${props.deepKey}.${itemKey}`));
   }
 
   /** Handler for using the arrow keys when the array item's header is focused.  */
@@ -1431,7 +1450,14 @@ function arrayPreview(
 function scrollToDeeplink(deeplinkEl: HTMLElement) {
   const parent = document.querySelector('.DocumentPage__side');
   if (parent) {
-    const offsetTop = deeplinkEl.offsetTop;
-    parent.scroll({top: offsetTop, behavior: 'smooth'});
+    // If the user has already scrolled anywhere, don't scroll to the deeplink.
+    if (parent.scrollTop > 0) {
+      return;
+    }
+    // Use a brief timeout to ensure the DOM is at rest before scrolling.
+    requestAnimationFrame(() => {
+      const offsetTop = deeplinkEl.offsetTop;
+      parent.scroll({top: offsetTop, behavior: 'auto'});
+    });
   }
 }
