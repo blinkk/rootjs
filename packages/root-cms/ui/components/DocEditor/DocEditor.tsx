@@ -1089,7 +1089,7 @@ DocEditor.ArrayField = (props: FieldProps) => {
                           className="DocEditor__ArrayField__item__handle"
                           {...provided.dragHandleProps}
                         >
-                          <IconGripVertical size={18} stroke={1.5} />
+                          <IconGripVertical size={18} stroke={'1.5'} />
                         </div>
                         <details
                           className="DocEditor__ArrayField__item"
