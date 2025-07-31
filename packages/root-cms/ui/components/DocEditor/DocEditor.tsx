@@ -44,6 +44,7 @@ import {
   SaveState,
   UseDraftHook,
 } from '../../hooks/useDraft.js';
+import {useStuckObserver} from '../../hooks/useStuckObserver.js';
 import {
   useVirtualClipboard,
   VirtualClipboard,
@@ -818,6 +819,7 @@ DocEditor.ArrayField = (props: FieldProps) => {
   const [value, dispatch] = useReducer(arrayReducer, {_array: []});
   const deeplink = useDeeplink();
   const virtualClipboard = useVirtualClipboard();
+  const arrayFieldRef = useRef<HTMLDivElement>(null);
 
   const data = value ?? {};
   const order = data._array || [];
@@ -983,58 +985,29 @@ DocEditor.ArrayField = (props: FieldProps) => {
     }
   }
 
-  function createObserverForStuckHeader(summaryEl: HTMLElement) {
-    // Resolve the "stuck" height as the top bar, the sidebar header, and the height of the element itself.
-    const topBarHeight =
-      document.querySelector<HTMLElement>('.Layout__top')?.offsetHeight || 48;
-    const sideHeaderHeight =
-      getComputedStyle(summaryEl)
-        .getPropertyValue('--top-bar-height')
-        .trim()
-        .replace('px', '') || '36';
-    const elementHeight = summaryEl.offsetHeight;
-    const totalHeight =
-      parseFloat(sideHeaderHeight) + topBarHeight + elementHeight;
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        summaryEl.classList.toggle(
-          'DocEditor__ArrayField__item__header--stuck',
-          !entry.isIntersecting
-        );
-      },
-      {
-        threshold: 0,
-        rootMargin: `-${totalHeight + 2}px 0px 0px 0px`,
-      }
-    );
-    observer.observe(summaryEl);
-    return observer;
-  }
-
   return (
-    <div className="DocEditor__ArrayField">
+    <div className="DocEditor__ArrayField" ref={arrayFieldRef}>
       <div className="DocEditor__ArrayField__items">
         {order.length === 0 && (
           <div className="DocEditor__ArrayField__items__empty">No items</div>
         )}
         {order.map((key: string, i: number) => {
           const previewImage = arrayPreviewImage(field, value[key]);
-          const summaryRef = useRef<HTMLElement>(null);
-
-          useEffect(() => {
-            const summaryEl = summaryRef.current;
-            if (!summaryEl) {
-              return;
-            }
-            // If the summary element is not sticky, skip observing it.
-            // Nested array elements don't get the sticky behavior.
-            if (getComputedStyle(summaryEl).position === 'relative') {
-              return;
-            }
-            const observer = createObserverForStuckHeader(summaryEl);
-            return () => observer.disconnect();
-          }, []);
-
+          const {ref: summaryRef, isIntersecting} = useStuckObserver({
+            offsetHeight: () => {
+              // Combine the height of the top bar and the side header to determine the position when the item is "stuck".
+              const topBarHeight =
+                document.querySelector<HTMLElement>('.Layout__top')
+                  ?.offsetHeight || 48;
+              const sideHeaderHeight = arrayFieldRef.current
+                ? getComputedStyle(arrayFieldRef.current)
+                    .getPropertyValue('--top-bar-height')
+                    .trim()
+                    .replace('px', '')
+                : '36';
+              return parseFloat(sideHeaderHeight) + topBarHeight;
+            },
+          });
           return (
             <details
               className="DocEditor__ArrayField__item"
@@ -1044,7 +1017,11 @@ DocEditor.ArrayField = (props: FieldProps) => {
               <summary
                 ref={summaryRef}
                 id={`summary-for-${props.deepKey}.${order[i]}`}
-                className="DocEditor__ArrayField__item__header"
+                className={joinClassNames(
+                  'DocEditor__ArrayField__item__header',
+                  !isIntersecting &&
+                    'DocEditor__ArrayField__item__header--stuck'
+                )}
                 onKeyDown={(e: KeyboardEvent) => handleKeyDown(e, key)}
                 tabIndex={0}
               >
