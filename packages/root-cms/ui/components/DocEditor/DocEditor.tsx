@@ -1455,9 +1455,9 @@ function scrollToDeeplink(deeplinkEl: HTMLElement) {
       return;
     }
     // Use a brief timeout to ensure the DOM is at rest before scrolling.
-    window.setTimeout(() => {
+    requestAnimationFrame(() => {
       const offsetTop = deeplinkEl.offsetTop;
       parent.scroll({top: offsetTop, behavior: 'auto'});
-    }, 100);
+    });
   }
 }
