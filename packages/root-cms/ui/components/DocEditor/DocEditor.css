@@ -184,10 +184,36 @@
   padding-left: 48px;
 }
 
-.DocEditor__ArrayField__items {
+.DocEditor__ArrayField__item__wrapper {
   display: flex;
-  flex-direction: column;
-  gap: 8px;
+  flex-direction: row;
+  gap: 2px;
+  width: 100%;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.DocEditor__ArrayField__item__wrapper:has(> .DocEditor__ArrayField__item[open]) > .DocEditor__ArrayField__item__handle {
+  /** Suppress the drag handle when the item is open. */
+  visibility: hidden;
+}
+
+.DocEditor__ArrayField__item__wrapper--dragging {
+  background-color: white;
+  border-radius: 2px;
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05), rgba(0, 0, 0, 0.05) 0 10px 15px -5px, rgba(0, 0, 0, 0.04) 0 7px 7px -5px;
+}
+
+.DocEditor__ArrayField__item {
+  flex: 1;
+}
+
+.DocEditor__ArrayField__item__handle {
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .DocEditor__ArrayField__item__header {

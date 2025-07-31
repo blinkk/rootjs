@@ -1,6 +1,13 @@
 import './DocEditor.css';
 
 import {
+  DragDropContext,
+  Draggable,
+  Droppable,
+  DroppableProvided,
+  DropResult,
+} from '@hello-pangea/dnd';
+import {
   ActionIcon,
   Button,
   LoadingOverlay,
@@ -15,6 +22,7 @@ import {
   IconCircleArrowUp,
   IconCirclePlus,
   IconClipboardCopy,
+  IconGripVertical,
   IconCopy,
   IconDotsVertical,
   IconLanguage,
@@ -599,6 +607,14 @@ interface ArrayMoveDown {
   deepKey: string;
 }
 
+interface ArrayMoveTo {
+  type: 'moveTo';
+  fromIndex: number;
+  toIndex: number;
+  draft: DraftController;
+  deepKey: string;
+}
+
 interface ArrayRemoveAt {
   type: 'removeAt';
   index: number;
@@ -629,6 +645,7 @@ type ArrayAction =
   | ArrayInsertBefore
   | ArrayMoveDown
   | ArrayMoveUp
+  | ArrayMoveTo
   | ArrayPasteAfter
   | ArrayPasteBefore
   | ArrayRemoveAt
@@ -751,6 +768,29 @@ function arrayReducer(state: ArrayFieldValue, action: ArrayAction) {
         ...data,
         _array: order,
         _moved: order[action.index + 1],
+      };
+    }
+    case 'moveTo': {
+      const data = state ?? {};
+      const order = [...(data._array || [])];
+      if (
+        action.fromIndex < 0 ||
+        action.fromIndex >= order.length ||
+        action.toIndex < 0 ||
+        action.toIndex >= order.length
+      ) {
+        console.error('Invalid moveTo index', action);
+        return state;
+      }
+      const itemKey = order[action.fromIndex];
+      arraySwap(order, action.fromIndex, action.toIndex);
+      action.draft.updateKeys({
+        [`${action.deepKey}._array`]: order,
+      });
+      return {
+        ...data,
+        _array: order,
+        _moved: itemKey,
       };
     }
     case 'removeAt': {
@@ -983,158 +1023,226 @@ DocEditor.ArrayField = (props: FieldProps) => {
     }
   }
 
+  const addButtonRow = (
+    <div className="DocEditor__ArrayField__add">
+      <Button
+        color="dark"
+        size="xs"
+        leftIcon={<IconCirclePlus size={16} />}
+        onClick={() => add()}
+      >
+        {field.buttonLabel || 'Add'}
+      </Button>
+    </div>
+  );
+
+  if (order.length === 0 && !value._new) {
+    return (
+      <div className="DocEditor__ArrayField">
+        <div className="DocEditor__ArrayField__items">
+          <div className="DocEditor__ArrayField__items__empty">No items</div>
+        </div>
+        {addButtonRow}
+      </div>
+    );
+  }
+
   return (
     <div className="DocEditor__ArrayField">
-      <div className="DocEditor__ArrayField__items">
-        {order.length === 0 && (
-          <div className="DocEditor__ArrayField__items__empty">No items</div>
-        )}
-        {order.map((key: string, i: number) => {
-          const previewImage = arrayPreviewImage(field, value[key]);
-          return (
-            <details
-              className="DocEditor__ArrayField__item"
-              key={key}
-              open={newlyAdded.includes(key) || itemInDeeplink(key)}
+      <DragDropContext
+        onDragEnd={(result: DropResult) => {
+          const {source, destination} = result;
+          if (!destination) {
+            return;
+          }
+          dispatch({
+            type: 'moveTo',
+            fromIndex: source.index,
+            toIndex: destination.index,
+            draft,
+            deepKey: props.deepKey,
+          });
+        }}
+      >
+        <Droppable droppableId="dnd-list" direction="vertical">
+          {(provided: DroppableProvided) => (
+            <div
+              {...provided.droppableProps}
+              ref={provided.innerRef}
+              className="DocEditor__ArrayField__items"
             >
-              <summary
-                id={`summary-for-${props.deepKey}.${order[i]}`}
-                className="DocEditor__ArrayField__item__header"
-                onKeyDown={(e: KeyboardEvent) => handleKeyDown(e, key)}
-                tabIndex={0}
-              >
-                <div className="DocEditor__ArrayField__item__header__icon">
-                  <IconTriangleFilled size={6} />
-                </div>
-                <div className="DocEditor__ArrayField__item__header__preview">
-                  {previewImage && (
-                    <div className="DocEditor__ArrayField__item__header__preview__image">
-                      <img
-                        src={previewImage}
-                        alt=""
-                        className="DocEditor__ArrayField__item__header__preview__image__img"
-                        loading="lazy"
-                      />
-                    </div>
-                  )}
-                  <div className="DocEditor__ArrayField__item__header__preview__title">
-                    {arrayPreview(field, value[key], i)}
-                  </div>
-                </div>
-                <div className="DocEditor__ArrayField__item__header__controls">
-                  <div className="DocEditor__ArrayField__item__header__controls__arrows">
-                    <button
-                      className="DocEditor__ArrayField__item__header__controls__arrow DocEditor__ArrayField__item__header__controls__arrows--up"
-                      onClick={() => moveUp(i)}
-                    >
-                      <IconCircleArrowUp size={20} strokeWidth={1.75} />
-                    </button>
-                    <button
-                      className="DocEditor__ArrayField__item__header__controls__arrow DocEditor__ArrayField__item__header__controls__arrows--down"
-                      onClick={() => moveDown(i)}
-                    >
-                      <IconCircleArrowDown size={20} strokeWidth={1.75} />
-                    </button>
-                  </div>
-                  <Menu
-                    className="DocEditor__ArrayField__item__header__controls__menu"
-                    position="bottom"
-                    control={
-                      <ActionIcon className="DocEditor__ArrayField__item__header__controls__dots">
-                        <IconDotsVertical size={16} />
-                      </ActionIcon>
-                    }
-                  >
-                    <Menu.Label>INSERT</Menu.Label>
-                    <Menu.Item
-                      icon={<IconRowInsertTop size={20} />}
-                      onClick={() => insertBefore(i)}
-                    >
-                      Add before
-                    </Menu.Item>
-                    <Menu.Item
-                      icon={<IconRowInsertBottom size={20} />}
-                      onClick={() => insertAfter(i)}
-                    >
-                      Add after
-                    </Menu.Item>
-                    <Menu.Item
-                      icon={<IconCopy size={20} />}
-                      onClick={() => duplicate(i)}
-                    >
-                      Duplicate
-                    </Menu.Item>
-                    <Menu.Label>CLIPBOARD</Menu.Label>
-                    <Menu.Item
-                      icon={<IconClipboardCopy size={20} />}
-                      // Allow the menu to close before updating the virtual clipboard (avoids layout shift)
-                      // in the menu that may be distracting.
-                      onClick={() =>
-                        setTimeout(() => copyToVirtualClipboard(i), 500)
-                      }
-                    >
-                      Copy
-                    </Menu.Item>
-                    {virtualClipboard.value && (
-                      <>
-                        <Menu.Item
-                          icon={<IconRowInsertTop size={20} />}
-                          onClick={() => pasteBefore(i)}
+              {order.map((key: string, i: number) => {
+                const previewImage = arrayPreviewImage(field, value[key]);
+                return (
+                  <Draggable key={key} index={i} draggableId={key}>
+                    {(provided, snapshot) => (
+                      <div
+                        ref={provided.innerRef}
+                        {...provided.draggableProps}
+                        className={joinClassNames(
+                          'DocEditor__ArrayField__item__wrapper',
+                          snapshot.isDragging &&
+                            'DocEditor__ArrayField__item__wrapper--dragging'
+                        )}
+                      >
+                        <div
+                          className="DocEditor__ArrayField__item__handle"
+                          {...provided.dragHandleProps}
                         >
-                          Paste before
-                        </Menu.Item>
-                        <Menu.Item
-                          icon={<IconRowInsertBottom size={20} />}
-                          onClick={() => pasteAfter(i)}
+                          <IconGripVertical size={18} stroke={1.5} />
+                        </div>
+                        <details
+                          className="DocEditor__ArrayField__item"
+                          key={key}
+                          open={newlyAdded.includes(key) || itemInDeeplink(key)}
                         >
-                          Paste after
-                        </Menu.Item>
-                      </>
-                    )}
-                    <Menu.Label>CODE</Menu.Label>
-                    <Menu.Item
-                      icon={<IconBraces size={20} />}
-                      onClick={() => editJson(i)}
-                    >
-                      Edit JSON
-                    </Menu.Item>
+                          <summary
+                            id={`summary-for-${props.deepKey}.${order[i]}`}
+                            className="DocEditor__ArrayField__item__header"
+                            onKeyDown={(e: KeyboardEvent) =>
+                              handleKeyDown(e, key)
+                            }
+                            tabIndex={0}
+                          >
+                            <div className="DocEditor__ArrayField__item__header__icon">
+                              <IconTriangleFilled size={6} />
+                            </div>
+                            <div className="DocEditor__ArrayField__item__header__preview">
+                              {previewImage && (
+                                <div className="DocEditor__ArrayField__item__header__preview__image">
+                                  <img
+                                    src={previewImage}
+                                    alt=""
+                                    className="DocEditor__ArrayField__item__header__preview__image__img"
+                                    loading="lazy"
+                                  />
+                                </div>
+                              )}
+                              <div className="DocEditor__ArrayField__item__header__preview__title">
+                                {arrayPreview(field, value[key], i)}
+                              </div>
+                            </div>
+                            <div className="DocEditor__ArrayField__item__header__controls">
+                              <div className="DocEditor__ArrayField__item__header__controls__arrows">
+                                <button
+                                  className="DocEditor__ArrayField__item__header__controls__arrow DocEditor__ArrayField__item__header__controls__arrows--up"
+                                  onClick={() => moveUp(i)}
+                                >
+                                  <IconCircleArrowUp
+                                    size={20}
+                                    strokeWidth={1.75}
+                                  />
+                                </button>
+                                <button
+                                  className="DocEditor__ArrayField__item__header__controls__arrow DocEditor__ArrayField__item__header__controls__arrows--down"
+                                  onClick={() => moveDown(i)}
+                                >
+                                  <IconCircleArrowDown
+                                    size={20}
+                                    strokeWidth={1.75}
+                                  />
+                                </button>
+                              </div>
+                              <Menu
+                                className="DocEditor__ArrayField__item__header__controls__menu"
+                                position="bottom"
+                                control={
+                                  <ActionIcon className="DocEditor__ArrayField__item__header__controls__dots">
+                                    <IconDotsVertical size={16} />
+                                  </ActionIcon>
+                                }
+                              >
+                                <Menu.Label>INSERT</Menu.Label>
+                                <Menu.Item
+                                  icon={<IconRowInsertTop size={20} />}
+                                  onClick={() => insertBefore(i)}
+                                >
+                                  Add before
+                                </Menu.Item>
+                                <Menu.Item
+                                  icon={<IconRowInsertBottom size={20} />}
+                                  onClick={() => insertAfter(i)}
+                                >
+                                  Add after
+                                </Menu.Item>
+                                <Menu.Item
+                                  icon={<IconCopy size={20} />}
+                                  onClick={() => duplicate(i)}
+                                >
+                                  Duplicate
+                                </Menu.Item>
+                                <Menu.Label>CLIPBOARD</Menu.Label>
+                                <Menu.Item
+                                  icon={<IconClipboardCopy size={20} />}
+                                  // Allow the menu to close before updating the virtual clipboard (avoids layout shift)
+                                  // in the menu that may be distracting.
+                                  onClick={() =>
+                                    setTimeout(
+                                      () => copyToVirtualClipboard(i),
+                                      500
+                                    )
+                                  }
+                                >
+                                  Copy
+                                </Menu.Item>
+                                {virtualClipboard.value && (
+                                  <>
+                                    <Menu.Item
+                                      icon={<IconRowInsertTop size={20} />}
+                                      onClick={() => pasteBefore(i)}
+                                    >
+                                      Paste before
+                                    </Menu.Item>
+                                    <Menu.Item
+                                      icon={<IconRowInsertBottom size={20} />}
+                                      onClick={() => pasteAfter(i)}
+                                    >
+                                      Paste after
+                                    </Menu.Item>
+                                  </>
+                                )}
+                                <Menu.Label>CODE</Menu.Label>
+                                <Menu.Item
+                                  icon={<IconBraces size={20} />}
+                                  onClick={() => editJson(i)}
+                                >
+                                  Edit JSON
+                                </Menu.Item>
 
-                    <Menu.Label>REMOVE</Menu.Label>
-                    <Menu.Item
-                      icon={<IconTrash size={20} />}
-                      onClick={() => removeAt(i)}
-                    >
-                      Remove
-                    </Menu.Item>
-                  </Menu>
-                </div>
-              </summary>
-              <div className="DocEditor__ArrayField__item__body">
-                <DocEditor.Field
-                  key={`${props.deepKey}.${key}`}
-                  collection={props.collection}
-                  field={field.of}
-                  shallowKey={field.id!}
-                  deepKey={`${props.deepKey}.${key}`}
-                  draft={props.draft}
-                  hideHeader
-                  isArrayChild
-                />
-              </div>
-            </details>
-          );
-        })}
-      </div>
-      <div className="DocEditor__ArrayField__add">
-        <Button
-          color="dark"
-          size="xs"
-          leftIcon={<IconCirclePlus size={16} />}
-          onClick={() => add()}
-        >
-          {field.buttonLabel || 'Add'}
-        </Button>
-      </div>
+                                <Menu.Label>REMOVE</Menu.Label>
+                                <Menu.Item
+                                  icon={<IconTrash size={20} />}
+                                  onClick={() => removeAt(i)}
+                                >
+                                  Remove
+                                </Menu.Item>
+                              </Menu>
+                            </div>
+                          </summary>
+                          <div className="DocEditor__ArrayField__item__body">
+                            <DocEditor.Field
+                              key={`${props.deepKey}.${key}`}
+                              collection={props.collection}
+                              field={field.of}
+                              shallowKey={field.id!}
+                              deepKey={`${props.deepKey}.${key}`}
+                              draft={props.draft}
+                              hideHeader
+                              isArrayChild
+                            />
+                          </div>
+                        </details>
+                      </div>
+                    )}
+                  </Draggable>
+                );
+              })}
+              {provided.placeholder}
+            </div>
+          )}
+        </Droppable>
+      </DragDropContext>
+      {addButtonRow}
     </div>
   );
 };
