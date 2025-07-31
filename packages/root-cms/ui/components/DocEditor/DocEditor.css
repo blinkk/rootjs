@@ -191,10 +191,29 @@
 }
 
 .DocEditor__ArrayField__item__header {
-  cursor: pointer;
-  user-select: none;
-  display: flex;
   align-items: center;
+  background: white;
+  cursor: pointer;
+  display: flex;
+  position: sticky;
+  top: var(--top-bar-height);
+  user-select: none;
+  z-index: 9;
+}
+
+/** Nested array fields don't get the sticky behavior. */
+.DocEditor__ArrayField .DocEditor__ArrayField .DocEditor__ArrayField__item__header {
+  position: static;
+}
+
+.DocEditor__ArrayField__item[open] .DocEditor__ArrayField__item__header--stuck {
+  border-bottom: 1px solid var(--color-border);
+}
+
+/** Suppress the arrow controls when the header is stuck. */
+ .DocEditor__ArrayField__item[open] .DocEditor__ArrayField__item__header--stuck .DocEditor__ArrayField__item__header__controls__arrows {
+  visibility: hidden;
+  opacity: 0;
 }
 
 .DocEditor__ArrayField__item__header__icon {
@@ -248,6 +267,7 @@
 .DocEditor__ArrayField__item__header__controls__arrows {
   display: flex;
   gap: 8px;
+  transition: opacity 0.18s ease, visibility 0.18s ease;
 }
 
 .DocEditor__ArrayField__item__header__controls__arrow {

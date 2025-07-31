@@ -983,6 +983,34 @@ DocEditor.ArrayField = (props: FieldProps) => {
     }
   }
 
+  function createObserverForStuckHeader(summaryEl: HTMLElement) {
+    // Resolve the "stuck" height as the top bar, the sidebar header, and the height of the element itself.
+    const topBarHeight =
+      document.querySelector<HTMLElement>('.Layout__top')?.offsetHeight || 48;
+    const sideHeaderHeight =
+      getComputedStyle(summaryEl)
+        .getPropertyValue('--top-bar-height')
+        .trim()
+        .replace('px', '') || '36';
+    const elementHeight = summaryEl.offsetHeight;
+    const totalHeight =
+      parseFloat(sideHeaderHeight) + topBarHeight + elementHeight;
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        summaryEl.classList.toggle(
+          'DocEditor__ArrayField__item__header--stuck',
+          !entry.isIntersecting
+        );
+      },
+      {
+        threshold: 0,
+        rootMargin: `-${totalHeight + 2}px 0px 0px 0px`,
+      }
+    );
+    observer.observe(summaryEl);
+    return observer;
+  }
+
   return (
     <div className="DocEditor__ArrayField">
       <div className="DocEditor__ArrayField__items">
@@ -991,6 +1019,22 @@ DocEditor.ArrayField = (props: FieldProps) => {
         )}
         {order.map((key: string, i: number) => {
           const previewImage = arrayPreviewImage(field, value[key]);
+          const summaryRef = useRef<HTMLElement>(null);
+
+          useEffect(() => {
+            const summaryEl = summaryRef.current;
+            if (!summaryEl) {
+              return;
+            }
+            // If the summary element is not sticky, skip observing it.
+            // Nested array elements don't get the sticky behavior.
+            if (getComputedStyle(summaryEl).position === 'relative') {
+              return;
+            }
+            const observer = createObserverForStuckHeader(summaryEl);
+            return () => observer.disconnect();
+          }, []);
+
           return (
             <details
               className="DocEditor__ArrayField__item"
@@ -998,6 +1042,7 @@ DocEditor.ArrayField = (props: FieldProps) => {
               open={newlyAdded.includes(key) || itemInDeeplink(key)}
             >
               <summary
+                ref={summaryRef}
                 id={`summary-for-${props.deepKey}.${order[i]}`}
                 className="DocEditor__ArrayField__item__header"
                 onKeyDown={(e: KeyboardEvent) => handleKeyDown(e, key)}
