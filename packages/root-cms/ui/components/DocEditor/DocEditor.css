@@ -200,9 +200,14 @@
 
 .DocEditor__ArrayField__item__wrapper--dragging {
   background-color: white;
+  border: 1px solid #dedede;
   border-radius: 2px;
   overflow: hidden;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05), rgba(0, 0, 0, 0.05) 0 10px 15px -5px, rgba(0, 0, 0, 0.04) 0 7px 7px -5px;
+}
+
+.DocEditor__ArrayField__item__wrapper--dragging .DocEditor__ArrayField__item__header {
+  outline: none !important;
 }
 
 .DocEditor__ArrayField__item {

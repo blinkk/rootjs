@@ -356,7 +356,7 @@ importers:
         specifier: 0.5.2
         version: 0.5.2
       '@hello-pangea/dnd':
-        specifier: ^18.0.1
+        specifier: 18.0.1
         version: 18.0.1(@preact/compat@17.1.2)(@preact/compat@17.1.2)
       body-parser:
         specifier: 1.20.2
@@ -2635,8 +2635,8 @@ packages:
       '@types/gapi.client.discovery-v1': 0.0.4
     dev: true
 
-  /@maxim_mazurok/gapi.client.sheets-v4@0.0.20250723:
-    resolution: {integrity: sha512-req24PdBpDcFmaZIalUJs5fo3NTPnA2AuWoc+NNkXFHi8/mNq05e6+g8PXbz9M/CT73gza1rLph3hIEKNahERQ==}
+  /@maxim_mazurok/gapi.client.sheets-v4@0.0.20250729:
+    resolution: {integrity: sha512-NcV5e17CENfjDWXuFujPFeHWjGZbqxIGBuhQhyLkoQt3Ho+uhE4AGSaiZMCzeoS1tCRWgROLz6aFyjlcHEz8yw==}
     dependencies:
       '@types/gapi.client': 1.0.8
       '@types/gapi.client.discovery-v1': 0.0.4
@@ -3497,7 +3497,7 @@ packages:
   /@types/gapi.client.sheets-v4@0.0.4:
     resolution: {integrity: sha512-6kTJ7aDMAElfdQV1XzVJmZWjgbibpa84DMuKuaN8Cwqci/dkglPyHXKvsGrRugmuYvgFYr35AQqwz6j3q8R0dw==}
     dependencies:
-      '@maxim_mazurok/gapi.client.sheets-v4': 0.0.20250723
+      '@maxim_mazurok/gapi.client.sheets-v4': 0.0.20250729
     dev: true
 
   /@types/gapi.client@1.0.8:
