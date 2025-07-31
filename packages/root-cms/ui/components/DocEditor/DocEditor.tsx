@@ -52,7 +52,6 @@ import {
   SaveState,
   UseDraftHook,
 } from '../../hooks/useDraft.js';
-import {useStuckObserver} from '../../hooks/useStuckObserver.js';
 import {
   useVirtualClipboard,
   VirtualClipboard,
@@ -880,7 +879,6 @@ DocEditor.ArrayField = (props: FieldProps) => {
   const [value, dispatch] = useReducer(arrayReducer, {_array: []});
   const deeplink = useDeeplink();
   const virtualClipboard = useVirtualClipboard();
-  const arrayFieldRef = useRef<HTMLDivElement>(null);
 
   const data = value ?? {};
   const order = data._array || [];
@@ -1094,21 +1092,6 @@ DocEditor.ArrayField = (props: FieldProps) => {
             >
               {order.map((key: string, i: number) => {
                 const previewImage = arrayPreviewImage(field, value[key]);
-                const {ref: summaryRef, isIntersecting} = useStuckObserver({
-                  offsetHeight: () => {
-                    // Combine the height of the top bar and the side header to determine the position when the item is "stuck".
-                    const topBarHeight =
-                      document.querySelector<HTMLElement>('.Layout__top')
-                        ?.offsetHeight || 48;
-                    const sideHeaderHeight = arrayFieldRef.current
-                      ? getComputedStyle(arrayFieldRef.current)
-                          .getPropertyValue('--top-bar-height')
-                          .trim()
-                          .replace('px', '')
-                      : '36';
-                    return parseFloat(sideHeaderHeight) + topBarHeight;
-                  },
-                });
                 return (
                   <Draggable key={key} index={i} draggableId={key}>
                     {(provided, snapshot) => (
@@ -1133,13 +1116,8 @@ DocEditor.ArrayField = (props: FieldProps) => {
                           open={newlyAdded.includes(key) || itemInDeeplink(key)}
                         >
                           <summary
-                            ref={summaryRef}
                             id={`summary-for-${props.deepKey}.${order[i]}`}
-                            className={joinClassNames(
-                              'DocEditor__ArrayField__item__header',
-                              !isIntersecting &&
-                                'DocEditor__ArrayField__item__header--stuck'
-                            )}
+                            className="DocEditor__ArrayField__item__header"
                             onKeyDown={(e: KeyboardEvent) =>
                               handleKeyDown(e, key)
                             }
