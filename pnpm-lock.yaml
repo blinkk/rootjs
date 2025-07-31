@@ -355,6 +355,9 @@ importers:
       '@genkit-ai/vertexai':
         specifier: 0.5.2
         version: 0.5.2
+      '@hello-pangea/dnd':
+        specifier: 18.0.1
+        version: 18.0.1(@preact/compat@17.1.2)(@preact/compat@17.1.2)
       body-parser:
         specifier: 1.20.2
         version: 1.20.2
@@ -799,6 +802,11 @@ packages:
     dependencies:
       regenerator-runtime: 0.13.11
     dev: true
+
+  /@babel/runtime@7.28.2:
+    resolution: {integrity: sha512-KHp2IflsnGywDjBWDkR9iEqiWSpc8GIi0lgTT3mOElT0PP1tG26P4tmFI2YvAdzgq9RGyoHZQEIEdZy6Ec5xCA==}
+    engines: {node: '>=6.9.0'}
+    dev: false
 
   /@babel/template@7.16.7:
     resolution: {integrity: sha512-I8j/x8kHUrbYRTUxXrrMbfCa7jxkE7tZre39x3kjr9hvI82cK1FfqLygotcWN5kdPGWcLdWMHpSBavse5tWw3w==}
@@ -2400,6 +2408,23 @@ packages:
       protobufjs: 7.3.0
       yargs: 17.7.2
 
+  /@hello-pangea/dnd@18.0.1(@preact/compat@17.1.2)(@preact/compat@17.1.2):
+    resolution: {integrity: sha512-xojVWG8s/TGrKT1fC8K2tIWeejJYTAeJuj36zM//yEm/ZrnZUSFGS15BpO+jGZT1ybWvyXmeDJwPYb4dhWlbZQ==}
+    peerDependencies:
+      react: ^18.0.0 || ^19.0.0
+      react-dom: ^18.0.0 || ^19.0.0
+    dependencies:
+      '@babel/runtime': 7.28.2
+      css-box-model: 1.2.1
+      raf-schd: 4.0.3
+      react: /@preact/compat@17.1.2(preact@10.19.3)
+      react-dom: /@preact/compat@17.1.2(preact@10.19.3)
+      react-redux: 9.2.0(@preact/compat@17.1.2)(redux@5.0.1)
+      redux: 5.0.1
+    transitivePeerDependencies:
+      - '@types/react'
+    dev: false
+
   /@humanwhocodes/config-array@0.11.11:
     resolution: {integrity: sha512-N2brEuAadi0CcdeMXUkhbZB84eskAc8MEX1By6qEchoVywSgXPIjou4rYsl0V3Hj0ZnuGycGCjdNgockbzeWNA==}
     engines: {node: '>=10.10.0'}
@@ -2603,15 +2628,15 @@ packages:
       '@types/gapi.client.discovery-v1': 0.0.4
     dev: true
 
-  /@maxim_mazurok/gapi.client.drive-v3@0.0.20250513:
-    resolution: {integrity: sha512-ek5uSGoh6FwJpH9btFxufierppnBmmtlLfLyOfzTUfe3VLtahUJct8PHLE83mgyfraPkN+3WdxKTWysKUMIpAA==}
+  /@maxim_mazurok/gapi.client.drive-v3@0.0.20250727:
+    resolution: {integrity: sha512-DoVJTW3CjKyYyUXI0ggcCyaqT0beR7saa2ajuUDLqbSTUUl0lZ9gv+W7omrYCFHB0Sal5JptbVE3uGHJdIhq1g==}
     dependencies:
       '@types/gapi.client': 1.0.8
       '@types/gapi.client.discovery-v1': 0.0.4
     dev: true
 
-  /@maxim_mazurok/gapi.client.sheets-v4@0.0.20250509:
-    resolution: {integrity: sha512-4BzFb79MybDVbI/NFxHPvXe2wogAg0k0ejTXHBVlQSfKBgTDlKt0NXNeaNrCjJOaPcCqMGPFBsUNKVUyXRx72w==}
+  /@maxim_mazurok/gapi.client.sheets-v4@0.0.20250729:
+    resolution: {integrity: sha512-NcV5e17CENfjDWXuFujPFeHWjGZbqxIGBuhQhyLkoQt3Ho+uhE4AGSaiZMCzeoS1tCRWgROLz6aFyjlcHEz8yw==}
     dependencies:
       '@types/gapi.client': 1.0.8
       '@types/gapi.client.discovery-v1': 0.0.4
@@ -3057,7 +3082,6 @@ packages:
       preact: '*'
     dependencies:
       preact: 10.19.3
-    dev: true
 
   /@protobufjs/aspromise@1.1.2:
     resolution: {integrity: sha512-j+gKExEuLmKwvz3OgROXtrJ2UG2x8Ch2YZUxahh+s1F2HZ+wAceUNLkvy6zKCPVRkU++ZWQrdxsUeQXmcg4uoQ==}
@@ -3467,13 +3491,13 @@ packages:
   /@types/gapi.client.drive-v3@0.0.4:
     resolution: {integrity: sha512-jE37dJ0EzAdY0aJPFOp20xmec/aO0P4HtUIA9k07RMPyedFDOcuMlSac1r0PklwQdgXF7BHaMoObNHNAnwSQUQ==}
     dependencies:
-      '@maxim_mazurok/gapi.client.drive-v3': 0.0.20250513
+      '@maxim_mazurok/gapi.client.drive-v3': 0.0.20250727
     dev: true
 
   /@types/gapi.client.sheets-v4@0.0.4:
     resolution: {integrity: sha512-6kTJ7aDMAElfdQV1XzVJmZWjgbibpa84DMuKuaN8Cwqci/dkglPyHXKvsGrRugmuYvgFYr35AQqwz6j3q8R0dw==}
     dependencies:
-      '@maxim_mazurok/gapi.client.sheets-v4': 0.0.20250509
+      '@maxim_mazurok/gapi.client.sheets-v4': 0.0.20250729
     dev: true
 
   /@types/gapi.client@1.0.8:
@@ -3669,6 +3693,10 @@ packages:
   /@types/unist@3.0.2:
     resolution: {integrity: sha512-dqId9J8K/vGi5Zr7oo212BGii5m3q5Hxlkwy3WpYuKPklmBEvsbMYYyLxAQpSffdLl/gdW0XUpKWFvYmyoWCoQ==}
     dev: true
+
+  /@types/use-sync-external-store@0.0.6:
+    resolution: {integrity: sha512-zFDAD+tlpf2r4asuHEj0XH6pY6i0g5NeAHPn+15wk3BV6JA69eERFXC1gyGThDkVa1zCyKr5jox1+2LbV/AMLg==}
+    dev: false
 
   /@typescript-eslint/eslint-plugin@6.8.0(@typescript-eslint/parser@6.8.0)(eslint@8.51.0)(typescript@5.2.2):
     resolution: {integrity: sha512-GosF4238Tkes2SHPQ1i8f6rMtG6zlKwMEB0abqSJ3Npvos+doIlc/ATG+vX1G9coDF3Ex78zM3heXHLyWEwLUw==}
@@ -5248,6 +5276,12 @@ packages:
     resolution: {integrity: sha512-v1plID3y9r/lPhviJ1wrXpLeyUIGAZ2SHNYTEapm7/8A9nLPoyvVp3RK/EPFqn5kEznyWgYZNsRtYYIWbuG8KA==}
     engines: {node: '>=8'}
     dev: true
+
+  /css-box-model@1.2.1:
+    resolution: {integrity: sha512-a7Vr4Q/kd/aw96bnJG332W9V9LkJO69JRcaCYDUqjp6/z0w6VcZjgAcTbgFxEPfBgdnAwlh3iwu+hLopa+flJw==}
+    dependencies:
+      tiny-invariant: 1.3.3
+    dev: false
 
   /csstype@3.0.11:
     resolution: {integrity: sha512-sa6P2wJ+CAbgyy4KFssIb/JNMLxFvKF1pCYCSXS8ZMuqZnMsrxqI2E5sPyoTpxoPU/gVZMzr2zjOfg8GIZOMsw==}
@@ -10908,6 +10942,10 @@ packages:
     engines: {node: '>=8'}
     dev: true
 
+  /raf-schd@4.0.3:
+    resolution: {integrity: sha512-tQkJl2GRWh83ui2DiPTJz9wEiMN20syf+5oKfB03yYP7ioZcJwsIK8FjrtLwH1m7C7e+Tt2yYBlrOpdT+dyeIQ==}
+    dev: false
+
   /railroad-diagrams@1.0.0:
     resolution: {integrity: sha512-cz93DjNeLY0idrCNOH6PviZGRN9GJhsdm9hpn1YCS879fj4W+x5IFJhhkRZcwVgMmFF7R82UA/7Oh+R8lLZg6A==}
     dev: true
@@ -11007,6 +11045,24 @@ packages:
       react-fast-compare: 3.2.0
       warning: 4.0.3
     dev: true
+
+  /react-redux@9.2.0(@preact/compat@17.1.2)(redux@5.0.1):
+    resolution: {integrity: sha512-ROY9fvHhwOD9ySfrF0wmvu//bKCQ6AeZZq1nJNtbDC+kk5DuSuNX/n6YWYF/SYy7bSba4D4FSz8DJeKY/S/r+g==}
+    peerDependencies:
+      '@types/react': ^18.2.25 || ^19
+      react: ^18.0 || ^19
+      redux: ^5.0.0
+    peerDependenciesMeta:
+      '@types/react':
+        optional: true
+      redux:
+        optional: true
+    dependencies:
+      '@types/use-sync-external-store': 0.0.6
+      react: /@preact/compat@17.1.2(preact@10.19.3)
+      redux: 5.0.1
+      use-sync-external-store: 1.5.0(@preact/compat@17.1.2)
+    dev: false
 
   /react-textarea-autosize@8.3.4(@preact/compat@17.1.2):
     resolution: {integrity: sha512-CdtmP8Dc19xL8/R6sWvtknD/eCXkQr30dtvC4VmGInhRsfF8X/ihXCq6+9l9qbxmKRiq407/7z5fxE7cVWQNgQ==}
@@ -11131,6 +11187,10 @@ packages:
     dependencies:
       esprima: 4.0.1
     dev: true
+
+  /redux@5.0.1:
+    resolution: {integrity: sha512-M9/ELqF6fy8FwmkpnF0S3YKOqMyoWJ4+CS5Efg2ct3oY9daQvd/Pc71FpGZsVsbl3Cpb+IIcjBDUnnyBdQbq4w==}
+    dev: false
 
   /regenerator-runtime@0.13.11:
     resolution: {integrity: sha512-kY1AZVr2Ra+t+piVaJ4gxaFaReZVH40AKNo7UCX6W+dEwBo/2oZJzqfuN1qLq1oL45o56cPaTXELwrTh8Fpggg==}
@@ -12322,6 +12382,10 @@ packages:
       globrex: 0.1.2
     dev: false
 
+  /tiny-invariant@1.3.3:
+    resolution: {integrity: sha512-+FbBPE1o9QAYvviau/qC5SE3caw21q3xkvWKBtja5vgqOWIHHJ3ioaq1VPfn/Szqctz2bU/oYeKd9/z5BL+PVg==}
+    dev: false
+
   /tinybench@2.5.1:
     resolution: {integrity: sha512-65NKvSuAVDP/n4CqH+a9w2kTlLReS9vhsAP06MWx+/89nMinJyB2icyl58RIcqCmIggpojIGeuJGhjU1aGMBSg==}
     dev: true
@@ -12887,6 +12951,14 @@ packages:
       react: /@preact/compat@17.1.2(preact@10.19.3)
       use-isomorphic-layout-effect: 1.1.1(@preact/compat@17.1.2)
     dev: true
+
+  /use-sync-external-store@1.5.0(@preact/compat@17.1.2):
+    resolution: {integrity: sha512-Rb46I4cGGVBmjamjphe8L/UnvJD+uPPtTkNvX5mZgqdbavhI4EbgIWJiIHXJ8bc/i9EQGPRh4DwEURJ552Do0A==}
+    peerDependencies:
+      react: ^16.8.0 || ^17.0.0 || ^18.0.0 || ^19.0.0
+    dependencies:
+      react: /@preact/compat@17.1.2(preact@10.19.3)
+    dev: false
 
   /util-deprecate@1.0.2:
     resolution: {integrity: sha512-EPD5q1uXyFxJpCrLnCc1nHnq3gOa6DZBocAIiI2TaSCA7VCJ1UJDMagCzIkXNsUYfD1daK//LTEQ8xiIbrHtcw==}
