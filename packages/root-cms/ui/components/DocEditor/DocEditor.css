@@ -200,7 +200,7 @@
 }
 
 .DocEditor__ArrayField__item__wrapper--dragging {
-  background-color: #f5f5f5;
+  background-color: #f8f9fa;
   border: 1px solid #dedede;
   border-radius: 2px;
   overflow: hidden;
@@ -336,7 +336,7 @@
 }
 
 .DocEditor__ArrayField__item__header:focus  {
-  background-color: #f5f5f5;
+  background-color: #f8f9fa;
   border-radius: 2px;
 }
 
