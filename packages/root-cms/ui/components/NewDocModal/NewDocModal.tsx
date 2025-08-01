@@ -60,7 +60,7 @@ export function NewDocModal(props: NewDocModalProps) {
       return;
     }
     setRpcLoading(false);
-    route(`/cms/content/${props.collection}/${cleanSlug}?new=true`);
+    route(`/cms/content/${props.collection}/${cleanSlug}`);
   }
 
   return (
