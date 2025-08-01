@@ -6,6 +6,7 @@ import {useEffect, useRef, useState} from 'preact/hooks';
 import * as schema from '../../../../core/schema.js';
 import {joinClassNames} from '../../../utils/classes.js';
 import {uploadFileToGCS} from '../../../utils/gcs.js';
+import {FileUploadField} from '../../FileUploadField/FileUploadField.js';
 import {FieldProps} from './FieldProps.js';
 
 /** Mimetypes accepted by the image input field. */
@@ -153,6 +154,7 @@ export function ImageField(props: FieldProps) {
   const showAlt = field.alt !== false;
   const imageUploaded = img && img.src && img.src.length > 0;
 
+  return <FileUploadField variant="file"></FileUploadField>;
   return (
     <div
       className={joinClassNames(

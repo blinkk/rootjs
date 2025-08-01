@@ -1,0 +1,84 @@
+.FileUploadField {
+}
+
+.FileUploadField__Empty {
+  display: flex;
+  flex-direction: column;
+  padding: 10px;
+  gap: 4px;
+  position: relative;
+}
+
+.FileUploadField__Dropzone {
+  appearance: none;
+  border: 0;
+  background: rgb(241, 243, 245);
+  border: 1px solid #ced4da;
+
+  padding: 0;
+  position: absolute;
+  inset: 0;
+}
+
+.FileUploadField__Dropzone:focus {
+  outline: 1px solid -webkit-focus-ring-color;
+}
+
+.FileUploadField__Dropzone--dragging {
+  background-color: #f8f9fa;
+  border: 1px dotted black;
+}
+
+.FileUploadField__Empty:dragover {
+  background-color: #f8f9fa;
+  border-color: #adb5bd;
+}
+
+.FileUploadField__Empty:focus {
+  outline: 1px solid -webkit-focus-ring-color;
+}
+
+.FileUploadField__Empty__Label {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.FileUploadField__Empty__Label__Text {
+  display: inline-flex;
+  background-color: white;
+  border: 1px solid #ced4da;
+  flex-direction: row;
+  font-size: 12px;
+  gap: 8px;
+  align-items: center;
+  position: relative;
+  cursor: pointer;
+  padding: 4px 10px;
+  border-radius: 2px;
+  z-index: 1;
+}
+
+.FileUploadField__Empty__Label__Text:hover {
+  background-color: #efefef;
+}
+
+.FileUploadField__Empty__Label__Text__Input {
+  appearance: none;
+  visibility: hidden;
+  opacity: 0;
+  position: absolute;
+  inset: 0;
+}
+
+.FileUploadField__Empty__Label__Text__Title {
+  font-weight: 600;
+}
+
+.FileUploadField__Empty__AcceptTypes {
+  font-size: 10px;
+  display: inline;
+  position: relative;
+  z-index: 1;
+}
+
