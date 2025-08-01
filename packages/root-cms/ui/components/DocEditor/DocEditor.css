@@ -213,6 +213,7 @@
 
 .DocEditor__ArrayField__item {
   flex: 1;
+  width: 100%;
 }
 
 .DocEditor__ArrayField__item__handle {
@@ -220,17 +221,20 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  flex-shrink: 0;
 }
 
 .DocEditor__ArrayField__item__header {
   align-items: center;
   background: white;
+  box-sizing: border-box;
   cursor: pointer;
   display: flex;
   position: sticky;
   top: var(--top-bar-height);
   user-select: none;
   z-index: 9;
+  width: 100%;
 }
 
 /** Nested array fields don't get the sticky behavior. */
@@ -264,6 +268,9 @@
   display: flex;
   flex: 1;
   gap: 10px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  width: 1em; /** Facilitates truncating the text preview. */
 }
 
 .DocEditor__ArrayField__item__header__preview__image {
