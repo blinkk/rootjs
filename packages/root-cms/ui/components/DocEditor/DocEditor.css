@@ -223,10 +223,29 @@
 }
 
 .DocEditor__ArrayField__item__header {
-  cursor: pointer;
-  user-select: none;
-  display: flex;
   align-items: center;
+  background: white;
+  cursor: pointer;
+  display: flex;
+  position: sticky;
+  top: var(--top-bar-height);
+  user-select: none;
+  z-index: 9;
+}
+
+/** Nested array fields don't get the sticky behavior. */
+.DocEditor__ArrayField .DocEditor__ArrayField .DocEditor__ArrayField__item__header {
+  border-bottom: unset;
+  position: static;
+}
+
+.DocEditor__ArrayField__item[open] > .DocEditor__ArrayField__item__header {
+  border-bottom: 2px solid lightblue;
+  border-radius: 0;
+}
+
+.DocEditor__ArrayField__item[open] > .DocEditor__ArrayField__item__header + .DocEditor__ArrayField__item__body {
+  border-top: 0;
 }
 
 .DocEditor__ArrayField__item__header__icon {
