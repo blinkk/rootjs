@@ -224,6 +224,16 @@ FileUploadField.Dropzone = () => {
         'FileUploadField__Dropzone',
         dragging && 'FileUploadField__Dropzone--dragging'
       )}
+      onKeyDown={(e) => {
+        console.log('Key down in dropzone:', e);
+        if (
+          ((e.metaKey || e.ctrlKey) && e.key === 'Backspace') ||
+          e.key === 'Delete'
+        ) {
+          e.preventDefault();
+          context?.removeFile();
+        }
+      }}
       onDragOver={(e) => {
         e.preventDefault();
         setDragging(true);
