@@ -119,7 +119,14 @@ ImageField.FileUpload = (props: {
       file={uploadedFile}
       onFileChange={(file) => {
         console.log('File uploaded:', file);
-        props.draft.updateKey(props.deepKey, file);
+        if (file) {
+          props.draft.updateKey(props.deepKey, file);
+          if (file.alt) {
+            props.draft.updateKey(`${props.deepKey}.alt`, file.alt);
+          }
+        } else {
+          props.draft.removeKey(props.deepKey);
+        }
         setUploadedFile(file);
       }}
     />

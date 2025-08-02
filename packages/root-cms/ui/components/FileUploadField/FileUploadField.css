@@ -113,6 +113,10 @@
   z-index: 1;
 }
 
+.FileUploadField__FileUploadButton:has([disabled]) {
+  cursor: default;
+}
+
 .FileUploadField__FileUploadButton:hover {
   background-color: #efefef;
 }

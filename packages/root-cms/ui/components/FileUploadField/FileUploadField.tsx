@@ -1,4 +1,4 @@
-import {ActionIcon, TextInput, Tooltip} from '@mantine/core';
+import {ActionIcon, Loader, TextInput, Tooltip} from '@mantine/core';
 import {showNotification} from '@mantine/notifications';
 import {IconPhotoUp, IconTrash} from '@tabler/icons-preact';
 import {createContext} from 'preact';
@@ -24,6 +24,8 @@ interface FileUploader {
 interface FileUploadContextValue {
   fileUpload: FileUploader | null;
   handleFile: (file: File) => void;
+  removeFile: () => void;
+  setAltText: (altText: string) => void;
 }
 
 export const FileUploadFileContext =
@@ -48,7 +50,10 @@ export function FileUploadField(props: FileUploadFieldProps) {
       const uploadedFile = await uploadFileToGCS(file, {
         // cacheControl: field.cacheControl,
       });
-      props.onFileChange?.(uploadedFile);
+      props.onFileChange?.({
+        ...uploadedFile,
+        alt: fileUploader.uploadedFile?.alt || '',
+      });
       setFileUploader((prev) => ({
         ...prev,
         uploadedFile: uploadedFile,
@@ -82,11 +87,40 @@ export function FileUploadField(props: FileUploadFieldProps) {
       value={{
         fileUpload: fileUploader,
         handleFile: handleFile,
+        setAltText: (altText) => {
+          setFileUploader((prev) => {
+            if (!prev.uploadedFile) {
+              return prev;
+            }
+            return {
+              ...prev,
+              uploadedFile: {
+                ...prev.uploadedFile,
+                alt: altText || '',
+              },
+            };
+          });
+          props.onFileChange?.({
+            ...fileUploader.uploadedFile,
+            alt: altText || '',
+          } as UploadedFile);
+        },
+        removeFile: () => {
+          setFileUploader((prev) => ({
+            ...prev,
+            uploadedFile: null,
+          }));
+          props.onFileChange?.(null);
+        },
       }}
     >
       <div className="FileUploadField">
-        {props.file ? <FileUploadField.Preview /> : <FileUploadField.Empty />}
         <FileUploadField.Dropzone />
+        {fileUploader.uploadedFile?.src ? (
+          <FileUploadField.Preview />
+        ) : (
+          <FileUploadField.Empty />
+        )}
       </div>
     </FileUploadFileContext.Provider>
   );
@@ -115,14 +149,14 @@ FileUploadField.Preview = () => {
         value={uploadedFile.alt}
         label="Alt text"
         onChange={(e: ChangeEvent<HTMLInputElement>) => {
-          // setAltText(e.currentTarget.value);
+          ctx?.setAltText(e.currentTarget.value);
         }}
       />
       <div className="FileUploadField__Preview__Actions">
         <FileUploadField.UploadButton />
         <div className="FileUploadField__Preview__Actions__Trash">
           <Tooltip label="Remove file">
-            <ActionIcon onClick={() => removeFile()}>
+            <ActionIcon onClick={() => ctx.removeFile()}>
               <IconTrash size={16} />
             </ActionIcon>
           </Tooltip>
@@ -137,6 +171,7 @@ FileUploadField.UploadButton = () => {
   return (
     <label className="FileUploadField__FileUploadButton" tabIndex={0}>
       <input
+        disabled={context?.fileUpload?.state === 'uploading'}
         type="file"
         accept="image/*,video/*"
         className="FileUploadField__FileUploadButton__Input"
@@ -147,8 +182,11 @@ FileUploadField.UploadButton = () => {
           }
         }}
       />
-      {/* <IconFile size={16} /> */}
-      <IconPhotoUp size={16} />
+      {context?.fileUpload?.state === 'uploading' ? (
+        <Loader size={16} />
+      ) : (
+        <IconPhotoUp size={16} />
+      )}
       <div className="FileUploadField__FileUploadButton__Title">
         {context?.fileUpload?.state === 'uploading'
           ? 'Uploading...'
