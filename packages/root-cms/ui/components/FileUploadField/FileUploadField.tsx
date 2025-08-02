@@ -3,6 +3,9 @@ import {
   Box,
   Divider,
   Loader,
+  LoadingOverlay,
+  Table,
+  Textarea,
   TextInput,
   Tooltip,
 } from '@mantine/core';
@@ -11,12 +14,13 @@ import {showNotification} from '@mantine/notifications';
 import {
   IconCopy,
   IconDownload,
+  IconInfoCircle,
   IconPhotoUp,
   IconTrash,
 } from '@tabler/icons-preact';
 import {IconDotsVertical} from '@tabler/icons-preact';
 import {createContext} from 'preact';
-import {ChangeEvent, forwardRef, Ref} from 'preact/compat';
+import {ChangeEvent, forwardRef} from 'preact/compat';
 import {useContext, useEffect, useRef, useState} from 'preact/hooks';
 import {joinClassNames} from '../../utils/classes.js';
 import {UploadedFile, uploadFileToGCS} from '../../utils/gcs.js';
@@ -41,6 +45,8 @@ interface FileUploadContextValue {
   removeFile: () => void;
   setAltText: (altText: string) => void;
   focusDropZone: () => void;
+  requestFileUpload: () => void;
+  requestFileDownload: () => void;
 }
 
 export const FileUploadFileContext =
@@ -102,10 +108,31 @@ export function FileUploadField(props: FileUploadFieldProps) {
     dropZoneRef.current?.focus();
   }
 
-  function requestFileUpload() {
-    if (dropZoneRef.current) {
-      dropZoneRef.current.click();
+  function requestFileDownload() {
+    if (!fileUploader.uploadedFile) {
+      return;
     }
+    const link = document.createElement('a');
+    link.href = buildDownloadURL(fileUploader.uploadedFile.src);
+    if (fileUploader.uploadedFile.filename) {
+      link.download = fileUploader.uploadedFile.filename;
+    }
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  }
+
+  function requestFileUpload() {
+    const inputEl = document.createElement('input');
+    inputEl.type = 'file';
+    inputEl.accept = 'image/*,video/*';
+    inputEl.onchange = (e) => {
+      const target = e.target as HTMLInputElement;
+      if (target.files && target.files.length > 0) {
+        handleFile(target.files[0]);
+      }
+    };
+    inputEl.click();
   }
 
   return (
@@ -114,6 +141,8 @@ export function FileUploadField(props: FileUploadFieldProps) {
         fileUpload: fileUploader,
         handleFile: handleFile,
         focusDropZone: focusDropZone,
+        requestFileUpload: requestFileUpload,
+        requestFileDownload: requestFileDownload,
         setAltText: (altText) => {
           setFileUploader((prev) => {
             if (!prev.uploadedFile) {
@@ -153,9 +182,17 @@ export function FileUploadField(props: FileUploadFieldProps) {
   );
 }
 
+function buildDownloadURL(src: string) {
+  if (src.startsWith('https://lh3.googleusercontent.com/')) {
+    return src.split('=')[0] + '=s0-d';
+  }
+  return src;
+}
+
 FileUploadField.Preview = () => {
   const ctx = useContext(FileUploadFileContext);
-  const uploadButtonRef = useRef<HTMLLabelElement>(null);
+  const [infoOpened, setInfoOpened] = useState(false);
+  const [copied, setCopied] = useState(false);
   const fileUpload = ctx?.fileUpload;
   if (!fileUpload || !fileUpload.uploadedFile) {
     return null;
@@ -163,74 +200,172 @@ FileUploadField.Preview = () => {
   const {uploadedFile} = fileUpload;
   return (
     <div className="FileUploadField__Preview">
-      <Menu
-        className="FileUploadField__Preview__Menu"
-        shadow="sm"
-        withArrow={true}
-        withinPortal={true}
-        control={
+      <div className="FileUploadField__Preview__InfoButton">
+        <Tooltip label="Toggle file info" position="top" withArrow>
           <ActionIcon
-            variant="outline"
+            onClick={() => setInfoOpened((o) => !o)}
             size="sm"
-            radius="sm"
-            c="black"
-            className="FileUploadField__Preview__Menu__Control"
+            variant="outline"
+            className="FileUploadField__Preview__InfoButton__Icon"
           >
-            <IconDotsVertical size={16} />
+            <IconInfoCircle size={16} />
           </ActionIcon>
-        }
-      >
-        <Menu.Label size="sm">REPLACE</Menu.Label>
-        <Menu.Item icon={<IconPhotoUp size={16} />}>Upload</Menu.Item>
-        <Divider />
-        <Menu.Item icon={<IconDownload size={16} />}>Download file</Menu.Item>
-        <Menu.Item icon={<IconCopy size={16} />}>Copy URL</Menu.Item>
-        <Divider />
-        <Menu.Item
-          color="red"
-          onClick={() => {
-            ctx?.removeFile();
-            uploadButtonRef.current?.focus();
-          }}
-          icon={<IconTrash size={16} />}
+        </Tooltip>
+        <Menu
+          className="FileUploadField__Preview__Menu"
+          shadow="sm"
+          withinPortal={true}
+          closeOnItemClick={false}
+          control={
+            <ActionIcon
+              variant="outline"
+              size="sm"
+              radius="sm"
+              c="black"
+              className="FileUploadField__Preview__InfoButton__Icon"
+            >
+              <IconDotsVertical size={16} />
+            </ActionIcon>
+          }
         >
-          Remove file
-        </Menu.Item>
-      </Menu>
-      <div className="FileUploadField__Canvas">
-        <Box radius="sm" className="FileUploadField__Preview__Info">
-          {uploadedFile.width}x{uploadedFile.height}
-        </Box>
-        <img
-          onClick={() => {
-            console.log('Image clicked, focusing drop zone');
-            ctx?.focusDropZone();
+          <Menu.Label size="sm">REPLACE</Menu.Label>
+          <Menu.Item
+            icon={<IconPhotoUp size={16} />}
+            onClick={() => {
+              ctx.requestFileUpload();
+            }}
+          >
+            Upload
+          </Menu.Item>
+          <Divider />
+          <Menu.Item
+            onClick={() => {
+              ctx?.requestFileDownload();
+            }}
+            icon={<IconDownload size={16} />}
+          >
+            Download file
+          </Menu.Item>
+          <Menu.Item
+            closeOnItemClick={false}
+            icon={<IconCopy size={16} />}
+            onClick={() => {
+              setCopied(false);
+              navigator.clipboard
+                .writeText(uploadedFile.src)
+                .then(() => setCopied(true))
+                .finally(() =>
+                  setTimeout(() => {
+                    setCopied(false);
+                  }, 2000)
+                );
+            }}
+          >
+            {copied ? 'Copied!' : 'Copy URL'}
+          </Menu.Item>
+          <Divider />
+          <Menu.Item
+            color="red"
+            onClick={() => {
+              ctx?.removeFile();
+            }}
+            icon={<IconTrash size={16} />}
+          >
+            Remove file
+          </Menu.Item>
+        </Menu>
+      </div>
+      <div
+        className={joinClassNames(
+          'FileUploadField__Canvas',
+          infoOpened && 'FileUploadField__Canvas--infoOpened'
+        )}
+      >
+        <LoadingOverlay visible={ctx.fileUpload?.state === 'uploading'} />
+        {infoOpened ? (
+          <div className="FileUploadField__Canvas__Info">
+            <Table
+              className="FileUploadField__Canvas__InfoTable"
+              verticalSpacing="xs"
+              fontSize="xs"
+            >
+              <tbody>
+                {uploadedFile.uploadedAt && (
+                  <tr>
+                    <td>
+                      <b>Uploaded</b>
+                    </td>
+                    <td>
+                      {new Date(
+                        parseInt(uploadedFile.uploadedAt as string, 10)
+                      ).toLocaleString()}
+                      {uploadedFile.uploadedBy && (
+                        <> by {uploadedFile.uploadedBy}</>
+                      )}
+                    </td>
+                  </tr>
+                )}
+                <tr>
+                  <td>
+                    <b>Name</b>
+                  </td>
+                  <td>{uploadedFile.filename}</td>
+                </tr>
+                <tr>
+                  <td>
+                    <b>Dimensions</b>
+                  </td>
+                  <td>
+                    {uploadedFile.width}x{uploadedFile.height}
+                  </td>
+                </tr>
+                <tr>
+                  <td>
+                    <b>URL</b>
+                  </td>
+                  <td>
+                    <Textarea
+                      readOnly
+                      value={uploadedFile.src}
+                      size="xs"
+                      autosize
+                      radius={0}
+                    />
+                  </td>
+                </tr>
+              </tbody>
+            </Table>
+          </div>
+        ) : (
+          <>
+            <Box radius="sm" className="FileUploadField__Preview__Info">
+              {uploadedFile.width}x{uploadedFile.height}
+            </Box>
+            <img
+              onClick={() => {
+                console.log('Image clicked, focusing drop zone');
+                ctx?.focusDropZone();
+              }}
+              src={uploadedFile.src}
+              alt={uploadedFile.alt || 'Uploaded file preview'}
+              className="FileUploadField__Preview__Image"
+            />
+          </>
+        )}
+      </div>
+      <div className="DocEditor__ImageField__imagePreview__Image__Alt">
+        <Textarea
+          radius={0}
+          className="DocEditor__ImageField__imagePreview__Image__Alt__Textarea"
+          value={uploadedFile.alt}
+          placeholder="Alt text"
+          size="xs"
+          autosize
+          onChange={(e: ChangeEvent<HTMLInputElement>) => {
+            ctx?.setAltText(e.currentTarget.value);
           }}
-          src={uploadedFile.src}
-          alt={uploadedFile.alt || 'Uploaded file preview'}
-          className="FileUploadField__Preview__Image"
         />
       </div>
-      <TextInput
-        className="DocEditor__ImageField__imagePreview__Image__Alt"
-        size="xs"
-        radius={0}
-        value={uploadedFile.alt}
-        placeholder="Alt text"
-        onChange={(e: ChangeEvent<HTMLInputElement>) => {
-          ctx?.setAltText(e.currentTarget.value);
-        }}
-      />
-      {/* <div className="FileUploadField__Preview__Actions">
-        <FileUploadField.UploadButton ref={uploadButtonRef} />
-        <div className="FileUploadField__Preview__Actions__Trash">
-          {/* <Tooltip label="Remove file">
-            <ActionIcon onClick={() => ctx.removeFile()}>
-              <IconTrash size={16} />
-            </ActionIcon>
-          </Tooltip>
-        </div>
-      </div> */}
     </div>
   );
 };

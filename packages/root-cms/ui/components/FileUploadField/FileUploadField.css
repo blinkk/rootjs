@@ -25,19 +25,22 @@
   z-index: 1;
 }
 
-.FileUploadField__Preview__Menu {
+.FileUploadField__Preview__InfoButton {
   pointer-events: all;
   position: absolute;
   top: 10px;
   right: 10px;
-  z-index: 1;
+  z-index: 2;
+  display: flex;
+  flex-direction: row;
+  gap: 4px;
 }
 
-.FileUploadField__Preview__Menu__Control {
+.FileUploadField__Preview__InfoButton__Icon {
   background-color: white;
 }
 
-.FileUploadField__Preview__Menu__Control:hover {
+.FileUploadField__Preview__InfoButton__Icon:hover {
   background-color: #efefef;
 }
 
@@ -49,8 +52,12 @@
   padding: 10px;
 }
 
-.DocEditor__ImageField__imagePreview__Image__Alt input {
+.DocEditor__ImageField__imagePreview__Image__Alt__Textarea {
   pointer-events: all;
+}
+
+.DocEditor__ImageField__imagePreview__Image__Alt__Textarea textarea {
+  padding: 10px;
 }
 
 .FileUploadField__Preview__Info {
@@ -71,6 +78,22 @@
   pointer-events: all;
 }
 
+.FileUploadField__Canvas__Info {
+  pointer-events: all;
+  background-color: #ededed;
+  padding: 40px 10px 10px;
+  height: 100%;
+}
+
+.FileUploadField__Canvas__InfoTable {
+  border-radius: 2px;
+  background-color: white;
+}
+
+.FileUploadField__Canvas__InfoTable td {
+  vertical-align: top;
+}
+
 .FileUploadField__Canvas {
   aspect-ratio: 16 / 9;
   max-height: 280px;
@@ -82,7 +105,11 @@
   background-size: 20px 20px; /* Adjust the size of the squares */
   background-position: 0 0, 10px 10px; /* Adjust the position to offset the second gradient */
   background-color: #fff; /* A solid color to serve as the second color of the checkerboard */
+}
 
+.FileUploadField__Canvas--infoOpened {
+  max-height: unset;
+  aspect-ratio: unset;
 }
 
 .FileUploadField__Preview__Image {
