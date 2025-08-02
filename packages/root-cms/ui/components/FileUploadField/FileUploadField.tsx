@@ -190,6 +190,8 @@ FileUploadField.UploadButton = () => {
       <div className="FileUploadField__FileUploadButton__Title">
         {context?.fileUpload?.state === 'uploading'
           ? 'Uploading...'
+          : context?.fileUpload?.uploadedFile?.src
+          ? 'Upload'
           : 'Paste, drop, or click to upload'}
       </div>
     </label>
