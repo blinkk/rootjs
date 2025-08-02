@@ -1,19 +1,78 @@
 .FileUploadField {
+  border: 1px solid #ced4da;
+  padding: 10px;
+  position: relative;
+}
+
+.FileUploadField:has(.FileUploadField__Dropzone--dragging) {
+  border: 1px solid #eebefa;
+}
+
+.FileUploadField:has(.FileUploadField__Canvas) {
+  padding: 0;
 }
 
 .FileUploadField__Empty {
   display: flex;
   flex-direction: column;
-  padding: 10px;
   gap: 4px;
+}
+
+.FileUploadField__Preview {
+  padding: 10px;
+  pointer-events: none;
   position: relative;
+  z-index: 1;
+}
+
+.FileUploadField__Preview:has(.FileUploadField__Canvas) {
+  padding: 0;
+}
+
+.DocEditor__ImageField__imagePreview__Image__Alt {
+  padding: 10px;
+  padding-bottom: 0;
+}
+
+.DocEditor__ImageField__imagePreview__Image__Alt input {
+  pointer-events: all;
+}
+
+.FileUploadField__Preview__Actions__Trash {
+  pointer-events: all;
+}
+
+.FileUploadField__Canvas {
+  aspect-ratio: 16 / 9;
+  max-height: 280px;
+  width: 100%;
+  border-bottom: 1px solid #ced4da;
+  background-image: linear-gradient(45deg, #ccc 25%, transparent 25%, transparent 75%, #ccc 75%, #ccc),
+                    linear-gradient(45deg, #ccc 25%, transparent 25%, transparent 75%, #ccc 75%, #ccc);
+  background-size: 20px 20px; /* Adjust the size of the squares */
+  background-position: 0 0, 10px 10px; /* Adjust the position to offset the second gradient */
+  background-color: #fff; /* A solid color to serve as the second color of the checkerboard */
+
+}
+
+.FileUploadField__Preview__Image {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  object-position: center;
+  pointer-events: all;
+}
+
+.FileUploadField__Preview__Actions {
+  display: flex;
+  padding: 10px;
+  justify-content: space-between;
 }
 
 .FileUploadField__Dropzone {
   appearance: none;
   border: 0;
   background: rgb(241, 243, 245);
-  border: 1px solid #ced4da;
 
   padding: 0;
   position: absolute;
@@ -25,13 +84,7 @@
 }
 
 .FileUploadField__Dropzone--dragging {
-  background-color: #f8f9fa;
-  border: 1px dotted black;
-}
-
-.FileUploadField__Empty:dragover {
-  background-color: #f8f9fa;
-  border-color: #adb5bd;
+  background-color: #f3d9fa;
 }
 
 .FileUploadField__Empty:focus {
@@ -44,26 +97,27 @@
   gap: 8px;
 }
 
-.FileUploadField__Empty__Label__Text {
-  display: inline-flex;
+.FileUploadField__FileUploadButton {
+  align-items: center;
   background-color: white;
+  border-radius: 2px;
   border: 1px solid #ced4da;
+  cursor: pointer;
+  display: inline-flex;
   flex-direction: row;
   font-size: 12px;
   gap: 8px;
-  align-items: center;
-  position: relative;
-  cursor: pointer;
   padding: 4px 10px;
-  border-radius: 2px;
+  pointer-events: all;
+  position: relative;
   z-index: 1;
 }
 
-.FileUploadField__Empty__Label__Text:hover {
+.FileUploadField__FileUploadButton:hover {
   background-color: #efefef;
 }
 
-.FileUploadField__Empty__Label__Text__Input {
+.FileUploadField__FileUploadButton__Input {
   appearance: none;
   visibility: hidden;
   opacity: 0;
@@ -71,7 +125,7 @@
   inset: 0;
 }
 
-.FileUploadField__Empty__Label__Text__Title {
+.FileUploadField__FileUploadButton__Title {
   font-weight: 600;
 }
 

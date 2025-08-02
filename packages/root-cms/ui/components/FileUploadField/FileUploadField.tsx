@@ -1,37 +1,169 @@
-import {IconFile} from '@tabler/icons-preact';
-import './FileUploadField.css';
-import {useState} from 'preact/hooks';
+import {ActionIcon, TextInput, Tooltip} from '@mantine/core';
+import {showNotification} from '@mantine/notifications';
+import {IconPhotoUp, IconTrash} from '@tabler/icons-preact';
+import {createContext} from 'preact';
+import {ChangeEvent} from 'preact/compat';
+import {useContext, useEffect, useState} from 'preact/hooks';
 import {joinClassNames} from '../../utils/classes.js';
+import {UploadedFile, uploadFileToGCS} from '../../utils/gcs.js';
+
+import './FileUploadField.css';
 
 interface FileUploadFieldProps {
-  icon: 'file' | 'image';
+  children?: preact.ComponentChildren;
+  file?: UploadedFile | null;
+  onFileChange?: (file: UploadedFile | null) => void;
 }
 
-export function FileUploadField() {
+interface FileUploader {
+  uploadedFile?: UploadedFile | null;
+  state?: 'uploading' | 'finished' | 'error';
+  file?: File;
+}
+
+interface FileUploadContextValue {
+  fileUpload: FileUploader | null;
+  handleFile: (file: File) => void;
+}
+
+export const FileUploadFileContext =
+  createContext<FileUploadContextValue | null>(null);
+
+export function FileUploadField(props: FileUploadFieldProps) {
+  const [fileUploader, setFileUploader] = useState<FileUploader>({
+    uploadedFile: props.file,
+  });
+
+  useEffect(() => {
+    setFileUploader((prev) => ({...prev, uploadedFile: props.file}));
+  }, [props.file]);
+
+  async function uploadFile(file: File) {
+    try {
+      setFileUploader((prev) => ({
+        ...prev,
+        state: 'uploading',
+        file,
+      }));
+      const uploadedFile = await uploadFileToGCS(file, {
+        // cacheControl: field.cacheControl,
+      });
+      props.onFileChange?.(uploadedFile);
+      setFileUploader((prev) => ({
+        ...prev,
+        uploadedFile: uploadedFile,
+        state: 'finished',
+      }));
+    } catch (err) {
+      console.error('image upload failed');
+      console.error(err);
+      setFileUploader((prev) => ({
+        ...prev,
+        state: 'error',
+      }));
+      showNotification({
+        title: 'Image upload failed',
+        message: 'Failed to upload image: ' + String(err),
+        color: 'red',
+        autoClose: false,
+      });
+    }
+  }
+
+  function handleFile(file: File) {
+    if (!file) {
+      return;
+    }
+    uploadFile(file);
+  }
+
   return (
-    <div className="FileUploadField">
-      <FileUploadField.Empty />
-    </div>
+    <FileUploadFileContext.Provider
+      value={{
+        fileUpload: fileUploader,
+        handleFile: handleFile,
+      }}
+    >
+      <div className="FileUploadField">
+        {props.file ? <FileUploadField.Preview /> : <FileUploadField.Empty />}
+        <FileUploadField.Dropzone />
+      </div>
+    </FileUploadFileContext.Provider>
   );
 }
 
-FileUploadField.Empty = (props: {icon?: 'file' | 'image'}) => {
+FileUploadField.Preview = () => {
+  const ctx = useContext(FileUploadFileContext);
+  const fileUpload = ctx?.fileUpload;
+  if (!fileUpload || !fileUpload.uploadedFile) {
+    return null;
+  }
+  const {uploadedFile} = fileUpload;
+  return (
+    <div className="FileUploadField__Preview">
+      <div className="FileUploadField__Canvas">
+        <img
+          src={uploadedFile.src}
+          alt={uploadedFile.alt || 'Uploaded file preview'}
+          className="FileUploadField__Preview__Image"
+        />
+      </div>
+      <TextInput
+        className="DocEditor__ImageField__imagePreview__Image__Alt"
+        size="xs"
+        radius={0}
+        value={uploadedFile.alt}
+        label="Alt text"
+        onChange={(e: ChangeEvent<HTMLInputElement>) => {
+          // setAltText(e.currentTarget.value);
+        }}
+      />
+      <div className="FileUploadField__Preview__Actions">
+        <FileUploadField.UploadButton />
+        <div className="FileUploadField__Preview__Actions__Trash">
+          <Tooltip label="Remove file">
+            <ActionIcon onClick={() => removeFile()}>
+              <IconTrash size={16} />
+            </ActionIcon>
+          </Tooltip>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+FileUploadField.UploadButton = () => {
+  const context = useContext(FileUploadFileContext);
+  return (
+    <label className="FileUploadField__FileUploadButton" tabIndex={0}>
+      <input
+        type="file"
+        accept="image/*,video/*"
+        className="FileUploadField__FileUploadButton__Input"
+        onChange={(e) => {
+          const target = e.target as HTMLInputElement;
+          if (target.files && context) {
+            context.handleFile(target.files[0]);
+          }
+        }}
+      />
+      {/* <IconFile size={16} /> */}
+      <IconPhotoUp size={16} />
+      <div className="FileUploadField__FileUploadButton__Title">
+        {context?.fileUpload?.state === 'uploading'
+          ? 'Uploading...'
+          : 'Paste, drop, or click to upload'}
+      </div>
+    </label>
+  );
+};
+
+FileUploadField.Empty = () => {
   return (
     <div className="FileUploadField__Empty">
-      <FileUploadField.Dropzone />
       <div className="FileUploadField__Empty__Label">
         <div>
-          <label className="FileUploadField__Empty__Label__Text" tabindex={0}>
-            <input
-              type="file"
-              accept="image/*,video/*"
-              className="FileUploadField__Empty__Label__Text__Input"
-            />
-            <IconFile size={16} />
-            <div className="FileUploadField__Empty__Label__Text__Title">
-              Paste, drop, or click to upload
-            </div>
-          </label>
+          <FileUploadField.UploadButton />
         </div>
       </div>
       <div>
@@ -45,6 +177,7 @@ FileUploadField.Empty = (props: {icon?: 'file' | 'image'}) => {
 
 FileUploadField.Dropzone = () => {
   const [dragging, setDragging] = useState(false);
+  const context = useContext(FileUploadFileContext);
   return (
     <button
       className={joinClassNames(
@@ -52,27 +185,27 @@ FileUploadField.Dropzone = () => {
         dragging && 'FileUploadField__Dropzone--dragging'
       )}
       onDragOver={(e) => {
-        console.log('Drag over');
         e.preventDefault();
         setDragging(true);
       }}
       onDragLeave={(e) => {
-        console.log('Drag leave');
         e.preventDefault();
         setDragging(false);
       }}
       onDrop={(e) => {
-        console.log('File dropped:', e.dataTransfer.files);
         e.preventDefault();
         setDragging(false);
-        // Handle file upload logic here
+        console.log(e);
+        const file = e.dataTransfer?.files[0];
+        if (file && context) {
+          context.handleFile(file);
+        }
       }}
       onPaste={(e) => {
         e.preventDefault();
-        const file = e.clipboardData.files[0];
-        if (file) {
-          console.log('File pasted:', file);
-          // Handle file upload logic here
+        const file = e.clipboardData?.files[0];
+        if (file && context) {
+          context.handleFile(file);
         }
       }}
       title="Drop or paste to upload a file"

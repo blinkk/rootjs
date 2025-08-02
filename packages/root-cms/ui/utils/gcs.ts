@@ -28,7 +28,21 @@ export interface UploadFileOptions {
   disableGci?: boolean;
 }
 
-export async function uploadFileToGCS(file: File, options?: UploadFileOptions) {
+export interface UploadedFile {
+  src: string;
+  filename?: string;
+  gcsPath?: string;
+  width?: number;
+  height?: number;
+  alt?: string;
+  uploadedBy?: string;
+  uploadedAt?: string | number;
+}
+
+export async function uploadFileToGCS(
+  file: File,
+  options?: UploadFileOptions
+): Promise<UploadedFile> {
   const projectId = window.__ROOT_CTX.rootConfig.projectId;
   const hashHex = await sha1(file);
   const ext = getFileExt(file.name);
