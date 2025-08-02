@@ -1,9 +1,23 @@
-import {ActionIcon, Loader, TextInput, Tooltip} from '@mantine/core';
+import {
+  ActionIcon,
+  Box,
+  Divider,
+  Loader,
+  TextInput,
+  Tooltip,
+} from '@mantine/core';
+import {Menu} from '@mantine/core';
 import {showNotification} from '@mantine/notifications';
-import {IconPhotoUp, IconTrash} from '@tabler/icons-preact';
+import {
+  IconCopy,
+  IconDownload,
+  IconPhotoUp,
+  IconTrash,
+} from '@tabler/icons-preact';
+import {IconDotsVertical} from '@tabler/icons-preact';
 import {createContext} from 'preact';
-import {ChangeEvent} from 'preact/compat';
-import {useContext, useEffect, useState} from 'preact/hooks';
+import {ChangeEvent, forwardRef, Ref} from 'preact/compat';
+import {useContext, useEffect, useRef, useState} from 'preact/hooks';
 import {joinClassNames} from '../../utils/classes.js';
 import {UploadedFile, uploadFileToGCS} from '../../utils/gcs.js';
 
@@ -26,12 +40,14 @@ interface FileUploadContextValue {
   handleFile: (file: File) => void;
   removeFile: () => void;
   setAltText: (altText: string) => void;
+  focusDropZone: () => void;
 }
 
 export const FileUploadFileContext =
   createContext<FileUploadContextValue | null>(null);
 
 export function FileUploadField(props: FileUploadFieldProps) {
+  const dropZoneRef = useRef<HTMLButtonElement>(null);
   const [fileUploader, setFileUploader] = useState<FileUploader>({
     uploadedFile: props.file,
   });
@@ -82,11 +98,22 @@ export function FileUploadField(props: FileUploadFieldProps) {
     uploadFile(file);
   }
 
+  function focusDropZone() {
+    dropZoneRef.current?.focus();
+  }
+
+  function requestFileUpload() {
+    if (dropZoneRef.current) {
+      dropZoneRef.current.click();
+    }
+  }
+
   return (
     <FileUploadFileContext.Provider
       value={{
         fileUpload: fileUploader,
         handleFile: handleFile,
+        focusDropZone: focusDropZone,
         setAltText: (altText) => {
           setFileUploader((prev) => {
             if (!prev.uploadedFile) {
@@ -115,7 +142,7 @@ export function FileUploadField(props: FileUploadFieldProps) {
       }}
     >
       <div className="FileUploadField">
-        <FileUploadField.Dropzone />
+        <FileUploadField.Dropzone ref={dropZoneRef} />
         {fileUploader.uploadedFile?.src ? (
           <FileUploadField.Preview />
         ) : (
@@ -128,6 +155,7 @@ export function FileUploadField(props: FileUploadFieldProps) {
 
 FileUploadField.Preview = () => {
   const ctx = useContext(FileUploadFileContext);
+  const uploadButtonRef = useRef<HTMLLabelElement>(null);
   const fileUpload = ctx?.fileUpload;
   if (!fileUpload || !fileUpload.uploadedFile) {
     return null;
@@ -135,8 +163,49 @@ FileUploadField.Preview = () => {
   const {uploadedFile} = fileUpload;
   return (
     <div className="FileUploadField__Preview">
+      <Menu
+        className="FileUploadField__Preview__Menu"
+        shadow="sm"
+        withArrow={true}
+        withinPortal={true}
+        control={
+          <ActionIcon
+            variant="outline"
+            size="sm"
+            radius="sm"
+            c="black"
+            className="FileUploadField__Preview__Menu__Control"
+          >
+            <IconDotsVertical size={16} />
+          </ActionIcon>
+        }
+      >
+        <Menu.Label size="sm">REPLACE</Menu.Label>
+        <Menu.Item icon={<IconPhotoUp size={16} />}>Upload</Menu.Item>
+        <Divider />
+        <Menu.Item icon={<IconDownload size={16} />}>Download file</Menu.Item>
+        <Menu.Item icon={<IconCopy size={16} />}>Copy URL</Menu.Item>
+        <Divider />
+        <Menu.Item
+          color="red"
+          onClick={() => {
+            ctx?.removeFile();
+            uploadButtonRef.current?.focus();
+          }}
+          icon={<IconTrash size={16} />}
+        >
+          Remove file
+        </Menu.Item>
+      </Menu>
       <div className="FileUploadField__Canvas">
+        <Box radius="sm" className="FileUploadField__Preview__Info">
+          {uploadedFile.width}x{uploadedFile.height}
+        </Box>
         <img
+          onClick={() => {
+            console.log('Image clicked, focusing drop zone');
+            ctx?.focusDropZone();
+          }}
           src={uploadedFile.src}
           alt={uploadedFile.alt || 'Uploaded file preview'}
           className="FileUploadField__Preview__Image"
@@ -147,56 +216,61 @@ FileUploadField.Preview = () => {
         size="xs"
         radius={0}
         value={uploadedFile.alt}
-        label="Alt text"
+        placeholder="Alt text"
         onChange={(e: ChangeEvent<HTMLInputElement>) => {
           ctx?.setAltText(e.currentTarget.value);
         }}
       />
-      <div className="FileUploadField__Preview__Actions">
-        <FileUploadField.UploadButton />
+      {/* <div className="FileUploadField__Preview__Actions">
+        <FileUploadField.UploadButton ref={uploadButtonRef} />
         <div className="FileUploadField__Preview__Actions__Trash">
-          <Tooltip label="Remove file">
+          {/* <Tooltip label="Remove file">
             <ActionIcon onClick={() => ctx.removeFile()}>
               <IconTrash size={16} />
             </ActionIcon>
           </Tooltip>
         </div>
-      </div>
+      </div> */}
     </div>
   );
 };
 
-FileUploadField.UploadButton = () => {
-  const context = useContext(FileUploadFileContext);
-  return (
-    <label className="FileUploadField__FileUploadButton" tabIndex={0}>
-      <input
-        disabled={context?.fileUpload?.state === 'uploading'}
-        type="file"
-        accept="image/*,video/*"
-        className="FileUploadField__FileUploadButton__Input"
-        onChange={(e) => {
-          const target = e.target as HTMLInputElement;
-          if (target.files && context) {
-            context.handleFile(target.files[0]);
-          }
-        }}
-      />
-      {context?.fileUpload?.state === 'uploading' ? (
-        <Loader size={16} />
-      ) : (
-        <IconPhotoUp size={16} />
-      )}
-      <div className="FileUploadField__FileUploadButton__Title">
-        {context?.fileUpload?.state === 'uploading'
-          ? 'Uploading...'
-          : context?.fileUpload?.uploadedFile?.src
-          ? 'Upload'
-          : 'Paste, drop, or click to upload'}
-      </div>
-    </label>
-  );
-};
+FileUploadField.UploadButton = forwardRef<HTMLLabelElement, {}>(
+  (props, ref) => {
+    const context = useContext(FileUploadFileContext);
+    const uploading = context?.fileUpload?.state === 'uploading';
+
+    return (
+      <label
+        {...props}
+        ref={ref}
+        className="FileUploadField__FileUploadButton"
+        tabIndex={0}
+      >
+        <input
+          disabled={uploading}
+          type="file"
+          accept="image/*,video/*"
+          className="FileUploadField__FileUploadButton__Input"
+          onChange={(e) => {
+            const target = e.target as HTMLInputElement;
+            if (target.files && context) {
+              context.handleFile(target.files[0]);
+            }
+          }}
+        />
+        {uploading ? <Loader size={16} /> : <IconPhotoUp size={16} />}
+        <div className="FileUploadField__FileUploadButton__Title">
+          {uploading
+            ? 'Uploading...'
+            : context?.fileUpload?.uploadedFile?.src
+            ? 'Upload'
+            : 'Paste, drop, or click to upload'}
+        </div>
+      </label>
+    );
+  }
+);
 
 FileUploadField.Empty = () => {
   return (
@@ -215,11 +289,12 @@ FileUploadField.Empty = () => {
   );
 };
 
-FileUploadField.Dropzone = () => {
+FileUploadField.Dropzone = forwardRef<HTMLButtonElement, {}>((props, ref) => {
   const [dragging, setDragging] = useState(false);
   const context = useContext(FileUploadFileContext);
   return (
     <button
+      ref={ref}
       className={joinClassNames(
         'FileUploadField__Dropzone',
         dragging && 'FileUploadField__Dropzone--dragging'
@@ -231,7 +306,7 @@ FileUploadField.Dropzone = () => {
           e.key === 'Delete'
         ) {
           e.preventDefault();
-          context?.removeFile();
+          context?.fileUpload?.uploadedFile && context?.removeFile();
         }
       }}
       onDragOver={(e) => {
@@ -261,4 +336,4 @@ FileUploadField.Dropzone = () => {
       title="Drop or paste to upload a file"
     ></button>
   );
-};
+});

@@ -25,17 +25,46 @@
   z-index: 1;
 }
 
+.FileUploadField__Preview__Menu {
+  pointer-events: all;
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 1;
+}
+
+.FileUploadField__Preview__Menu__Control {
+  background-color: white;
+}
+
+.FileUploadField__Preview__Menu__Control:hover {
+  background-color: #efefef;
+}
+
 .FileUploadField__Preview:has(.FileUploadField__Canvas) {
   padding: 0;
 }
 
 .DocEditor__ImageField__imagePreview__Image__Alt {
   padding: 10px;
-  padding-bottom: 0;
 }
 
 .DocEditor__ImageField__imagePreview__Image__Alt input {
   pointer-events: all;
+}
+
+.FileUploadField__Preview__Info {
+  position: absolute;
+  border-radius: 2px;
+  bottom: 10px;
+  right: 10px;
+  background: #000;
+  color: #fff;
+  font-size: 8px;
+  font-weight: 700;
+  padding: 2px 5px;
+  pointer-events: all;
+  z-index: 1;
 }
 
 .FileUploadField__Preview__Actions__Trash {
@@ -46,6 +75,7 @@
   aspect-ratio: 16 / 9;
   max-height: 280px;
   width: 100%;
+  position: relative;
   border-bottom: 1px solid #ced4da;
   background-image: linear-gradient(45deg, #ccc 25%, transparent 25%, transparent 75%, #ccc 75%, #ccc),
                     linear-gradient(45deg, #ccc 25%, transparent 25%, transparent 75%, #ccc 75%, #ccc);
