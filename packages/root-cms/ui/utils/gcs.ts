@@ -203,6 +203,9 @@ export function testIsImageFile(src: string) {
   if (testIsGoogleCloudImageFile(src)) {
     return true;
   }
+  if (src.startsWith('data:image/')) {
+    return true;
+  }
   const ext = getFileExt(src);
   return IMAGE_EXTS.includes(ext);
 }

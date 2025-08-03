@@ -1,12 +1,18 @@
 import {
   ActionIcon,
   Box,
+  Button,
+  ColorInput,
   Divider,
   Loader,
   LoadingOverlay,
+  Modal,
+  Stack,
   Table,
   Textarea,
+  TextInput,
   Tooltip,
+  useMantineTheme,
 } from '@mantine/core';
 import {Menu} from '@mantine/core';
 import {showNotification} from '@mantine/notifications';
@@ -14,6 +20,7 @@ import {
   IconCopy,
   IconDownload,
   IconInfoCircle,
+  IconPhotoStar,
   IconPhotoUp,
   IconTrash,
 } from '@tabler/icons-preact';
@@ -33,6 +40,23 @@ import {
 } from '../../utils/gcs.js';
 
 import './FileUploadField.css';
+
+const PLACEHOLDER_COLORS = [
+  '#25262b',
+  '#868e96',
+  '#fa5252',
+  '#e64980',
+  '#be4bdb',
+  '#7950f2',
+  '#4c6ef5',
+  '#228be6',
+  '#15aabf',
+  '#12b886',
+  '#40c057',
+  '#82c91e',
+  '#fab005',
+  '#fd7e14',
+];
 
 interface FileUploadFieldProps {
   children?: preact.ComponentChildren;
@@ -54,6 +78,7 @@ interface FileUploadContextValue {
   focusDropZone: () => void;
   requestFileUpload: () => void;
   requestFileDownload: () => void;
+  requestPlaceholderModal: () => void;
   setFileData: (uploadedFile: UploadedFile) => void;
 }
 
@@ -61,7 +86,9 @@ export const FileUploadFileContext =
   createContext<FileUploadContextValue | null>(null);
 
 export function FileUploadField(props: FileUploadFieldProps) {
+  const theme = useMantineTheme();
   const dropZoneRef = useRef<HTMLButtonElement>(null);
+  const [placeholderModalOpened, setPlaceholderModalOpened] = useState(false);
   const [fileUploader, setFileUploader] = useState<FileUploader>({
     uploadedFile: props.file,
   });
@@ -159,6 +186,10 @@ export function FileUploadField(props: FileUploadFieldProps) {
     inputEl.click();
   }
 
+  function requestPlaceholderModal() {
+    setPlaceholderModalOpened(true);
+  }
+
   return (
     <FileUploadFileContext.Provider
       value={{
@@ -167,6 +198,7 @@ export function FileUploadField(props: FileUploadFieldProps) {
         focusDropZone: focusDropZone,
         requestFileUpload: requestFileUpload,
         requestFileDownload: requestFileDownload,
+        requestPlaceholderModal: requestPlaceholderModal,
         setFileData: setFileData,
         setAltText: (altText) => {
           setFileUploader((prev) => {
@@ -195,6 +227,94 @@ export function FileUploadField(props: FileUploadFieldProps) {
         },
       }}
     >
+      <Modal
+        size="sm"
+        opened={placeholderModalOpened}
+        onClose={() => setPlaceholderModalOpened(false)}
+        title="Placeholder"
+        centered
+        overlayColor={
+          theme.colorScheme === 'dark'
+            ? theme.colors.dark[9]
+            : theme.colors.gray[2]
+        }
+      >
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            const formData = new FormData(e.currentTarget);
+            const width = parseInt(formData.get('width') as string, 10);
+            const height = parseInt(formData.get('height') as string, 10);
+            const backgroundColor = formData.get('backgroundColor') as string;
+            const label =
+              (formData.get('label') as string) || `${width}x${height}`;
+
+            let svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}"><rect width="${width}" height="${height}" fill="${backgroundColor}" />`;
+
+            if (label) {
+              const maxTextWidthRatio = 0.5;
+              const estimatedCharWidth = 0.6;
+              const fontSize =
+                (width * maxTextWidthRatio) /
+                (label.length * estimatedCharWidth);
+
+              svg += `<text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" font-family="sans-serif" font-size="${fontSize}" fill="#fff">${label}</text>`;
+            }
+
+            svg += '</svg>';
+
+            const encoder = new TextEncoder();
+            const uint8Array = encoder.encode(svg);
+            const src = `data:image/svg+xml;base64,${btoa(
+              String.fromCharCode(...uint8Array)
+            )}`;
+            const placeholderFile: UploadedFile = {
+              src: src,
+              filename: 'placeholder.svg',
+              width: width,
+              height: height,
+              alt: '',
+            };
+            setFileData(placeholderFile);
+            setPlaceholderModalOpened(false);
+          }}
+        >
+          <Stack gap="xs">
+            <TextInput
+              label="Width"
+              name="width"
+              type="number"
+              defaultValue={1600}
+              data-autofocus
+            />
+            <TextInput
+              label="Height"
+              name="height"
+              type="number"
+              defaultValue={900}
+            />
+            <TextInput name="label" label="Label" defaultValue="" autofocus />
+            <ColorInput
+              name="backgroundColor"
+              label="Background color"
+              format="hex"
+              defaultValue="#868e96"
+              swatches={PLACEHOLDER_COLORS}
+            />
+          </Stack>
+          <div
+            style={{
+              display: 'flex',
+              justifyContent: 'flex-end',
+              marginTop: '1rem',
+            }}
+          >
+            <Button variant="filled" type="submit">
+              Create
+            </Button>
+          </div>
+        </form>
+      </Modal>
       <div className="FileUploadField">
         <FileUploadField.Dropzone ref={dropZoneRef} />
         {fileUploader.uploadedFile?.src ? (
@@ -233,7 +353,7 @@ FileUploadField.Preview = () => {
         <Menu
           className="FileUploadField__Preview__Menu"
           shadow="sm"
-          withinPortal={true}
+          withinPortal={false}
           closeOnItemClick={false}
           control={
             <ActionIcon
@@ -256,8 +376,18 @@ FileUploadField.Preview = () => {
           >
             Upload
           </Menu.Item>
+          <Menu.Item
+            disabled={!uploadedFile.src}
+            icon={<IconPhotoStar size={16} />}
+            onClick={() => {
+              ctx.requestPlaceholderModal();
+            }}
+          >
+            Placeholder
+          </Menu.Item>
           <Divider />
           <Menu.Item
+            disabled={uploadedFile.src.startsWith('data:')}
             onClick={() => {
               ctx?.requestFileDownload();
             }}
