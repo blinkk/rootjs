@@ -231,7 +231,7 @@ export function FileUploadField(props: FileUploadFieldProps) {
         size="sm"
         opened={placeholderModalOpened}
         onClose={() => setPlaceholderModalOpened(false)}
-        title="Placeholder"
+        title="Placeholder image"
         centered
         overlayColor={
           theme.colorScheme === 'dark'
@@ -374,7 +374,7 @@ FileUploadField.Preview = () => {
               ctx.requestFileUpload();
             }}
           >
-            Upload
+            Upload image
           </Menu.Item>
           <Menu.Item
             disabled={!uploadedFile.src}
@@ -383,7 +383,7 @@ FileUploadField.Preview = () => {
               ctx.requestPlaceholderModal();
             }}
           >
-            Placeholder
+            Placeholder image
           </Menu.Item>
           <Divider />
           <Menu.Item
