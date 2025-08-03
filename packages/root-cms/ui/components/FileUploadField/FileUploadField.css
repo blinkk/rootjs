@@ -4,8 +4,14 @@
   position: relative;
 }
 
+.FileUploadField:has(.FileUploadField__Canvas--dragging),
 .FileUploadField:has(.FileUploadField__Dropzone--dragging) {
   border: 1px solid #eebefa;
+}
+
+.FileUploadField:has(.FileUploadField__Canvas--dragging) .FileUploadField__Dropzone,
+.FileUploadField:has(.FileUploadField__Dropzone--dragging) .FileUploadField__Canvas {
+  background-color: #f3d9fa;
 }
 
 .FileUploadField:has(.FileUploadField__Canvas) {
@@ -91,7 +97,12 @@
 }
 
 .FileUploadField__Canvas__InfoTable td {
+  padding: 5px;
   vertical-align: top;
+}
+
+.FileUploadField__Canvas__InfoTable textarea {
+  padding: 5px;
 }
 
 .FileUploadField__Canvas {
@@ -110,6 +121,10 @@
 .FileUploadField__Canvas--infoOpened {
   max-height: unset;
   aspect-ratio: unset;
+}
+
+.FileUploadField__Canvas--dragging {
+  background-color: #f3d9fa;
 }
 
 .FileUploadField__Preview__Image {

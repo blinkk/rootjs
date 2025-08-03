@@ -192,6 +192,7 @@ function buildDownloadURL(src: string) {
 FileUploadField.Preview = () => {
   const ctx = useContext(FileUploadFileContext);
   const [infoOpened, setInfoOpened] = useState(false);
+  const [dragging, setDragging] = useState(false);
   const [copied, setCopied] = useState(false);
   const fileUpload = ctx?.fileUpload;
   if (!fileUpload || !fileUpload.uploadedFile) {
@@ -278,8 +279,32 @@ FileUploadField.Preview = () => {
       <div
         className={joinClassNames(
           'FileUploadField__Canvas',
-          infoOpened && 'FileUploadField__Canvas--infoOpened'
+          infoOpened && 'FileUploadField__Canvas--infoOpened',
+          dragging && 'FileUploadField__Canvas--dragging'
         )}
+        onDragOver={(e) => {
+          e.preventDefault();
+          setDragging(true);
+        }}
+        onDragLeave={(e) => {
+          e.preventDefault();
+          setDragging(false);
+        }}
+        onDrop={(e) => {
+          e.preventDefault();
+          setDragging(false);
+          const file = e.dataTransfer?.files[0];
+          if (file && ctx) {
+            ctx.handleFile(file);
+          }
+        }}
+        onPaste={(e) => {
+          e.preventDefault();
+          const file = e.clipboardData?.files[0];
+          if (file && ctx) {
+            ctx.handleFile(file);
+          }
+        }}
       >
         <LoadingOverlay visible={ctx.fileUpload?.state === 'uploading'} />
         {infoOpened ? (
@@ -455,7 +480,6 @@ FileUploadField.Dropzone = forwardRef<HTMLButtonElement, {}>((props, ref) => {
       onDrop={(e) => {
         e.preventDefault();
         setDragging(false);
-        console.log(e);
         const file = e.dataTransfer?.files[0];
         if (file && context) {
           context.handleFile(file);
