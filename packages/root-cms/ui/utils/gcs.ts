@@ -195,3 +195,36 @@ function normalizeGcsMeta(meta: Record<string, any>): Record<string, string> {
   });
   return result;
 }
+
+export function testIsImageFile(src: string) {
+  if (!src) {
+    return false;
+  }
+  if (testIsGoogleCloudImageFile(src)) {
+    return true;
+  }
+  const ext = getFileExt(src);
+  return IMAGE_EXTS.includes(ext);
+}
+
+export function testIsGoogleCloudImageFile(src: string) {
+  if (!src) {
+    return false;
+  }
+  return src.startsWith(GCI_URL_PREFIX);
+}
+
+export function testIsVideoFile(src: string) {
+  if (!src) {
+    return false;
+  }
+  const ext = getFileExt(src);
+  return VIDEO_EXTS.includes(ext);
+}
+
+export function buildDownloadURL(src: string) {
+  if (testIsGoogleCloudImageFile(src)) {
+    return src.split('=')[0] + '=s0-d';
+  }
+  return src;
+}

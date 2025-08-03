@@ -6,7 +6,6 @@ import {
   LoadingOverlay,
   Table,
   Textarea,
-  TextInput,
   Tooltip,
 } from '@mantine/core';
 import {Menu} from '@mantine/core';
@@ -23,7 +22,15 @@ import {createContext} from 'preact';
 import {ChangeEvent, forwardRef} from 'preact/compat';
 import {useContext, useEffect, useRef, useState} from 'preact/hooks';
 import {joinClassNames} from '../../utils/classes.js';
-import {UploadedFile, uploadFileToGCS} from '../../utils/gcs.js';
+import {
+  buildDownloadURL,
+  getFileExt,
+  testIsGoogleCloudImageFile,
+  testIsImageFile,
+  testIsVideoFile,
+  UploadedFile,
+  uploadFileToGCS,
+} from '../../utils/gcs.js';
 
 import './FileUploadField.css';
 
@@ -47,6 +54,7 @@ interface FileUploadContextValue {
   focusDropZone: () => void;
   requestFileUpload: () => void;
   requestFileDownload: () => void;
+  setFileData: (uploadedFile: UploadedFile) => void;
 }
 
 export const FileUploadFileContext =
@@ -70,17 +78,10 @@ export function FileUploadField(props: FileUploadFieldProps) {
         file,
       }));
       const uploadedFile = await uploadFileToGCS(file, {
+        // TODO: Implement cache control in the UI.
         // cacheControl: field.cacheControl,
       });
-      props.onFileChange?.({
-        ...uploadedFile,
-        alt: fileUploader.uploadedFile?.alt || '',
-      });
-      setFileUploader((prev) => ({
-        ...prev,
-        uploadedFile: uploadedFile,
-        state: 'finished',
-      }));
+      setFileData(uploadedFile);
     } catch (err) {
       console.error('image upload failed');
       console.error(err);
@@ -95,6 +96,22 @@ export function FileUploadField(props: FileUploadFieldProps) {
         autoClose: false,
       });
     }
+  }
+
+  function setFileData(uploadedFile: UploadedFile) {
+    setFileUploader((prev) => ({
+      ...prev,
+      uploadedFile: {
+        ...prev.uploadedFile,
+        ...uploadedFile,
+      },
+    }));
+    props.onFileChange?.(uploadedFile);
+    setFileUploader((prev) => ({
+      ...prev,
+      uploadedFile: uploadedFile,
+      state: 'finished',
+    }));
   }
 
   function handleFile(file: File) {
@@ -112,14 +129,21 @@ export function FileUploadField(props: FileUploadFieldProps) {
     if (!fileUploader.uploadedFile) {
       return;
     }
-    const link = document.createElement('a');
-    link.href = buildDownloadURL(fileUploader.uploadedFile.src);
-    if (fileUploader.uploadedFile.filename) {
-      link.download = fileUploader.uploadedFile.filename;
+    // Google Cloud Images can be forced to download as attachments by
+    // using their download URL.
+    if (testIsGoogleCloudImageFile(fileUploader.uploadedFile.src)) {
+      const link = document.createElement('a');
+      link.href = buildDownloadURL(fileUploader.uploadedFile.src);
+      if (fileUploader.uploadedFile.filename) {
+        link.download = fileUploader.uploadedFile.filename;
+      }
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } else {
+      // Other files may not download as attachments so just open them in a new tab.
+      window.open(fileUploader.uploadedFile.src, '_blank');
     }
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
   }
 
   function requestFileUpload() {
@@ -143,6 +167,7 @@ export function FileUploadField(props: FileUploadFieldProps) {
         focusDropZone: focusDropZone,
         requestFileUpload: requestFileUpload,
         requestFileDownload: requestFileDownload,
+        setFileData: setFileData,
         setAltText: (altText) => {
           setFileUploader((prev) => {
             if (!prev.uploadedFile) {
@@ -180,13 +205,6 @@ export function FileUploadField(props: FileUploadFieldProps) {
       </div>
     </FileUploadFileContext.Provider>
   );
-}
-
-function buildDownloadURL(src: string) {
-  if (src.startsWith('https://lh3.googleusercontent.com/')) {
-    return src.split('=')[0] + '=s0-d';
-  }
-  return src;
 }
 
 FileUploadField.Preview = () => {
@@ -366,15 +384,32 @@ FileUploadField.Preview = () => {
             <Box radius="sm" className="FileUploadField__Preview__Info">
               {uploadedFile.width}x{uploadedFile.height}
             </Box>
-            <img
-              onClick={() => {
-                console.log('Image clicked, focusing drop zone');
-                ctx?.focusDropZone();
-              }}
-              src={uploadedFile.src}
-              alt={uploadedFile.alt || 'Uploaded file preview'}
-              className="FileUploadField__Preview__Image"
-            />
+            {testIsImageFile(uploadedFile.src) && (
+              <img
+                onClick={() => {
+                  console.log('Image clicked, focusing drop zone');
+                  ctx?.focusDropZone();
+                }}
+                src={uploadedFile.src}
+                alt={uploadedFile.alt || 'Uploaded file preview'}
+                className="FileUploadField__Preview__Image"
+              />
+            )}
+            {testIsVideoFile(uploadedFile.src) && (
+              <>
+                <video
+                  className="FileUploadField__Preview__Image"
+                  controls
+                  muted
+                  preload="metadata"
+                >
+                  <source
+                    src={uploadedFile.src}
+                    type={`video/${getFileExt(uploadedFile.src)}`}
+                  />
+                </video>
+              </>
+            )}
           </>
         )}
       </div>
@@ -386,6 +421,7 @@ FileUploadField.Preview = () => {
           placeholder="Alt text"
           size="xs"
           autosize
+          disabled={ctx.fileUpload?.state === 'uploading'}
           onChange={(e: ChangeEvent<HTMLInputElement>) => {
             ctx?.setAltText(e.currentTarget.value);
           }}
@@ -459,8 +495,21 @@ FileUploadField.Dropzone = forwardRef<HTMLButtonElement, {}>((props, ref) => {
         'FileUploadField__Dropzone',
         dragging && 'FileUploadField__Dropzone--dragging'
       )}
+      onCopy={(e) => {
+        if (!context?.fileUpload?.uploadedFile) {
+          return;
+        }
+        e.preventDefault();
+        e.clipboardData?.setData(
+          'text/plain',
+          context.fileUpload.uploadedFile.src
+        );
+        e.clipboardData?.setData(
+          'application/json',
+          JSON.stringify(context.fileUpload.uploadedFile)
+        );
+      }}
       onKeyDown={(e) => {
-        console.log('Key down in dropzone:', e);
         if (
           ((e.metaKey || e.ctrlKey) && e.key === 'Backspace') ||
           e.key === 'Delete'
@@ -486,6 +535,26 @@ FileUploadField.Dropzone = forwardRef<HTMLButtonElement, {}>((props, ref) => {
         }
       }}
       onPaste={(e) => {
+        console.log('Paste event in dropzone:', e.clipboardData);
+        // // Handle JSON paste directly.
+        const json = e.clipboardData?.getData('application/json');
+        if (json) {
+          try {
+            const uploadedFile = JSON.parse(json);
+            if (
+              uploadedFile &&
+              uploadedFile.src &&
+              uploadedFile.filename &&
+              context
+            ) {
+              console.log('Parsed JSON file:', uploadedFile);
+              context.setFileData(uploadedFile);
+              return;
+            }
+          } catch (err) {
+            console.error('error parsing json', err);
+          }
+        }
         e.preventDefault();
         const file = e.clipboardData?.files[0];
         if (file && context) {
@@ -496,3 +565,7 @@ FileUploadField.Dropzone = forwardRef<HTMLButtonElement, {}>((props, ref) => {
     ></button>
   );
 });
+
+function testShouldHaveAltText(src: string) {
+  return testIsImageFile(src) || testIsVideoFile(src);
+}
