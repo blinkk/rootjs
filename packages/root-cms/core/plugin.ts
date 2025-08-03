@@ -21,6 +21,7 @@ import {getAuth, DecodedIdToken} from 'firebase-admin/auth';
 import {Firestore, getFirestore} from 'firebase-admin/firestore';
 import * as jsonwebtoken from 'jsonwebtoken';
 import sirv from 'sirv';
+import {type RootAiModel} from './ai.js';
 import {api} from './api.js';
 import {Action, RootCMSClient} from './client.js';
 
@@ -46,8 +47,8 @@ export interface CMSUser {
 export interface CMSAIConfig {
   /** Custom API endpoint for chat prompts. */
   endpoint?: string;
-  /** Gen AI model to use. Defaults to 'gemini-1.5-flash'. */
-  model?: 'gemini-1.5-flash' | 'gemini-1.5-pro';
+  /** Gen AI model to use. */
+  model?: RootAiModel;
 }
 
 export interface CMSSidebarTool {
