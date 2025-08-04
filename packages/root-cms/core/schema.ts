@@ -1,15 +1,22 @@
 import {FunctionalComponent} from 'preact';
 
 export interface CommonFieldProps {
+  /** The type that defines the structure of the field and its UI component. */
   type: string;
+  /** The ID provides a key for the field in the data. */
   id?: string;
+  /** The label that appears in the CMS UI. */
   label?: string;
+  /** The help text that appears below the field in the CMS UI. */
   help?: string;
+  /** The placeholder text that appears in the field input. */
   placeholder?: string;
   default?: any;
+  /** Hides the entire field in the CMS UI. */
   hidden?: boolean;
+  /** Deprecates the field. Deprecated fields are suppressed when empty in the CMS UI, and are flagged as deprecated in the field's type definition. */
   deprecated?: boolean;
-  /** Hides the field label in the CMS UI. */
+  /** Hides just the field label in the CMS UI. */
   hideLabel?: boolean;
 }
 
@@ -157,12 +164,11 @@ export type ArrayField = CommonFieldProps & {
    * Multiple values can be provided, in which case the first preview line with
    * no missing placeholder values will be used.
    *
-   * System added placeholder values:
-   *
-   * - _index: The 0-based index.
-   * - _index:02: A left-padded version of _index to 2 digits.
-   * - _index:03: A left-padded version of _index to 3 digits.
-   * - _type: For array of one-of fields, the type of the selected field.
+   * Built-in placeholder values:
+   * - {_index}: The 0-based index.
+   * - {_index:02}: A left-padded version of _index to 2 digits.
+   * - {_index:03}: A left-padded version of _index to 3 digits.
+   * - {_type}: For array of one-of fields, the type of the selected field.
    */
   preview?: string | string[];
   // NOTE(stevenle): the array field should only accept object values to keep
@@ -247,9 +253,37 @@ export type ObjectLikeField =
   | ReferenceField;
 
 export interface Schema {
+  /** The name of the content type. Used as the field key. */
   name: string;
+  /** The description of the content type. Appears in CMS menus. */
   description?: string;
+  /** Fields describe the structure of the content. */
   fields: FieldWithId[];
+  /** Defines the preview displayed within the CMS UI. Overrides the `preview` definition for the `array` field. */
+  preview?: {
+    /**
+     * Provides the title for the content in the CMS UI.
+     *
+     * For example, to show the schema's type and the value of its "id" field, use `{_type}: {id}`.
+     *
+     * Multiple values can be provided, in which case the first preview line with
+     * no missing placeholder values will be used.
+     *
+     * Built-in placeholder values:
+     * - {_index}: The 0-based index.
+     * - {_index:02}: A left-padded version of _index to 2 digits.
+     * - {_index:03}: A left-padded version of _index to 3 digits.
+     * - {_type}: For array of one-of fields, the type of the selected field.
+     * */
+    title?: string | string[];
+
+    /**
+     * Provides the thumbnail image for content in the CMS UI.
+     *
+     * For example, to show the content's "image" field, use `{image.src}`.
+     */
+    image?: string | string[];
+  };
 }
 
 export function defineSchema(schema: Schema): Schema {
@@ -287,8 +321,11 @@ export type Collection = Schema & {
    * "image". Use dot notation for nested fields, e.g. "meta.title".
    */
   preview?: {
+    /** The field that provides the document title. */
     title?: string;
+    /** The field that provides the document image. */
     image?: string;
+    /** A fallback image to display when the document image field is empty. */
     defaultImage?: {
       src: string;
     };

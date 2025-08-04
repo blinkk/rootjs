@@ -1,6 +1,6 @@
 {
   "name": "@blinkk/root-cms",
-  "version": "1.4.13",
+  "version": "1.4.14",
   "author": "s@blinkk.com",
   "license": "MIT",
   "engines": {
@@ -67,6 +67,7 @@
     "@genkit-ai/ai": "0.5.2",
     "@genkit-ai/core": "0.5.2",
     "@genkit-ai/vertexai": "0.5.2",
+    "@hello-pangea/dnd": "18.0.1",
     "body-parser": "1.20.2",
     "commander": "11.0.0",
     "csv-parse": "5.5.2",
@@ -133,7 +134,7 @@
     "vitest": "0.34.6"
   },
   "peerDependencies": {
-    "@blinkk/root": "1.4.13",
+    "@blinkk/root": "1.4.14",
     "firebase-admin": ">=11",
     "firebase-functions": ">=4",
     "preact": ">=10",

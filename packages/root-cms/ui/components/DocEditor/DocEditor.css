@@ -185,17 +185,68 @@
   padding-left: 48px;
 }
 
-.DocEditor__ArrayField__items {
+.DocEditor__ArrayField__item__wrapper {
   display: flex;
-  flex-direction: column;
-  gap: 8px;
+  flex-direction: row;
+  gap: 2px;
+  width: 100%;
+  align-items: center;
+  margin-bottom: 8px;
+  transition: box-shadow 0.36s ease, background-color 0.36s ease, border 0.36s ease;
+}
+
+.DocEditor__ArrayField__item__wrapper:has(> .DocEditor__ArrayField__item[open]) > .DocEditor__ArrayField__item__handle {
+  /** Suppress the drag handle when the item is open. */
+  visibility: hidden;
+}
+
+.DocEditor__ArrayField__item__wrapper--dragging {
+  background-color: #f8f9fa;
+  border: 1px solid #dedede;
+  border-radius: 2px;
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05), rgba(0, 0, 0, 0.05) 0 10px 15px -5px, rgba(0, 0, 0, 0.04) 0 7px 7px -5px;
+}
+
+.DocEditor__ArrayField__item__wrapper--dragging .DocEditor__ArrayField__item__header {
+  outline: none !important;
+}
+
+.DocEditor__ArrayField__item {
+  flex: 1;
+}
+
+.DocEditor__ArrayField__item__handle {
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .DocEditor__ArrayField__item__header {
-  cursor: pointer;
-  user-select: none;
-  display: flex;
   align-items: center;
+  background: white;
+  cursor: pointer;
+  display: flex;
+  position: sticky;
+  top: var(--top-bar-height);
+  user-select: none;
+  z-index: 9;
+}
+
+/** Nested array fields don't get the sticky behavior. */
+.DocEditor__ArrayField .DocEditor__ArrayField .DocEditor__ArrayField__item__header {
+  border-bottom: unset;
+  position: static;
+}
+
+.DocEditor__ArrayField__item[open] > .DocEditor__ArrayField__item__header {
+  border-bottom: 2px solid lightblue;
+  border-radius: 0;
+}
+
+.DocEditor__ArrayField__item[open] > .DocEditor__ArrayField__item__header + .DocEditor__ArrayField__item__body {
+  border-top: 0;
 }
 
 .DocEditor__ArrayField__item__header__icon {
@@ -210,6 +261,26 @@
 }
 
 .DocEditor__ArrayField__item__header__preview {
+  align-items: center;
+  display: flex;
+  flex: 1;
+  gap: 10px;
+}
+
+.DocEditor__ArrayField__item__header__preview__image {
+  align-items: center;
+  display: flex;
+  height: 32px;
+  justify-content: center;
+  width: 32px;
+}
+
+.DocEditor__ArrayField__item__header__preview__image__img {
+  height: auto;
+  width: 100%;
+}
+
+.DocEditor__ArrayField__item__header__preview__title {
   font-family: var(--font-family-mono);
   font-weight: 500;
   flex: 1;
@@ -276,12 +347,17 @@
   border: 2px solid lightblue;
 }
 
-.DocEditor__ArrayField__item__header:focus:not(:focus-visible) .DocEditor__ArrayField__item__header__preview {
-  text-decoration: underline;
+.DocEditor__ArrayField__item__header:focus {
+  outline: none;
 }
 
-.DocEditor__ArrayField__item__header:focus-visible {
-  outline: -webkit-focus-ring-color auto 1px;
+.DocEditor__ArrayField__item[open] .DocEditor__ArrayField__item__header:focus  {
+  padding-left: 10px;
+}
+
+.DocEditor__ArrayField__item__header:focus  {
+  background-color: #f8f9fa;
+  border-radius: 2px;
 }
 
 .DocEditor__ArrayField__add {

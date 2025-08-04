@@ -39,6 +39,8 @@ export function useDocsList(collectionId: string, options: {orderBy: string}) {
       dbQuery = query(dbCollection, queryOrderby('sys.createdAt'));
     } else if (orderBy === 'slug') {
       dbQuery = query(dbCollection, queryOrderby(documentId()));
+    } else if (orderBy === 'slugDesc') {
+      dbQuery = query(dbCollection, queryOrderby(documentId(), 'desc'));
     }
     await notifyErrors(async () => {
       const snapshot = await getDocs(dbQuery);

@@ -1,5 +1,17 @@
 # @blinkk/root-cms
 
+## 1.4.14
+
+### Patch Changes
+
+- 0aead2a: feat: make array headers sticky when scrolling
+- 63f923e: feat: add Z-A sort option
+- 1f5a4e9: feat: add support for schema-level previews (and images)
+- 5e5f615: feat: add drag and drop for arrays
+- 0af870f: fix: polish deeplink behavior
+- 3decc30: feat: add expand/collapse for cms preview
+  - @blinkk/root@1.4.14
+
 ## 1.4.13
 
 ### Patch Changes

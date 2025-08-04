@@ -7,6 +7,19 @@
   overflow: auto;
 }
 
+.DocumentPage__side--expanded {
+  flex: 1 !important;
+  max-width: none !important;
+}
+
+.DocumentPage__side--expanded + .SplitPanel__divider {
+  display: none !important;
+}
+
+.DocumentPage__side--expanded + .SplitPanel__divider + .DocumentPage__main--hidden {
+  display: none !important;
+}
+
 .DocumentPage__side__header {
   font-weight: 600;
   font-size: 12px;
@@ -48,8 +61,23 @@
   padding: 16px 16px 400px;
 }
 
+.DocumentPage__side__editor--centered {
+  display: flex;
+  justify-content: center;
+  padding: 16px;
+}
+
+.DocumentPage__side__editor--centered > * {
+  width: 100%;
+  max-width: 800px;
+}
+
 .DocumentPage__main {
   width: 100%;
+}
+
+.DocumentPage__main--hidden {
+  display: none;
 }
 
 .DocumentPage__main__preview {
