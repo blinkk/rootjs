@@ -12,6 +12,7 @@ import {fromMarkdown} from 'mdast-util-from-markdown';
 import {gfmFromMarkdown} from 'mdast-util-gfm';
 import {gfm} from 'micromark-extension-gfm';
 import {useEffect, useMemo, useRef, useState} from 'preact/hooks';
+import type {ChatPrompt} from '../../../core/ai.js';
 import {Layout} from '../../layout/Layout.js';
 import {joinClassNames} from '../../utils/classes.js';
 import {uploadFileToGCS} from '../../utils/gcs.js';
@@ -111,7 +112,7 @@ interface ChatController {
   messages: Message[];
   addMessage: (message: Message) => number;
   updateMessage: (messageId: number, message: Message) => void;
-  sendPrompt: (messageId: number, prompt: any[]) => Promise<void>;
+  sendPrompt: (messageId: number, prompt: ChatPrompt[]) => Promise<void>;
 }
 
 function useChat(): ChatController {
@@ -145,7 +146,7 @@ function useChat(): ChatController {
     });
   };
 
-  const sendPrompt = async (messageId: number, prompt: any[]) => {
+  const sendPrompt = async (messageId: number, prompt: ChatPrompt[]) => {
     // Allow users to provide a custom api endpoint via the
     // `{ai: {endpoint: '/api/...}}` config.
     let endpoint = '/cms/api/ai.chat';
@@ -767,7 +768,7 @@ function ChatBar(props: {chat: ChatController}) {
         });
       }, 1500);
     } else {
-      const prompt: any[] = [{text: textPrompt}];
+      const prompt: ChatPrompt[] = [{text: textPrompt}];
       if (image) {
         prompt.push({
           media: {

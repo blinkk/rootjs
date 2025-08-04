@@ -1,96 +1,90 @@
 import crypto from 'node:crypto';
-import {generate} from '@genkit-ai/ai';
-import {configureGenkit} from '@genkit-ai/core';
 import {vertexAI} from '@genkit-ai/vertexai';
-import {gemini15ProPreview, gemini15FlashPreview} from '@genkit-ai/vertexai';
 import {Timestamp} from 'firebase-admin/firestore';
+import {Genkit, genkit, MessageData, Part} from 'genkit';
 import {RootCMSClient} from './client.js';
 import {CMSPluginOptions} from './plugin.js';
 
-let genkitIsConfigured = false;
+export type ChatPrompt = Part[];
 
-interface ChatPrompt {
-  text?: string;
-  media?: {
-    url: string;
-    contentType: string;
-  };
-}
+type HistoryItem = MessageData;
+
+/** Supported Root AI models. Defaults to 'vertexai/gemini-2.5-flash'. */
+export type RootAiModel =
+  | 'vertexai/gemini-2.5-flash'
+  | 'vertexai/gemini-2.0-pro'
+  | 'vertexai/gemini-1.5-flash'
+  | 'vertexai/gemini-1.5-pro';
+
+const DEFAULT_MODEL: RootAiModel = 'vertexai/gemini-2.5-flash';
 
 export class Chat {
   chatClient: ChatClient;
   cmsClient: RootCMSClient;
   cmsPluginOptions: CMSPluginOptions;
   id: string;
-  history?: any;
-  model?: string;
+  history: HistoryItem[];
+  model: string;
+  ai: Genkit;
 
   constructor(
     chatClient: ChatClient,
     id: string,
-    options?: {history?: any; model?: string}
+    options?: {history?: HistoryItem[]; model?: string}
   ) {
     this.chatClient = chatClient;
     this.cmsClient = chatClient.cmsClient;
     this.cmsPluginOptions = this.cmsClient.cmsPlugin.getConfig();
     this.id = id;
-    this.history = options?.history;
-    this.model = options?.model;
-    if (!this.model) {
-      if (typeof this.cmsPluginOptions.experiments?.ai === 'object') {
-        if (this.cmsPluginOptions.experiments.ai.model) {
-          this.model = this.cmsPluginOptions.experiments.ai.model;
-        }
-      }
-    }
+    this.history = options?.history ?? [];
+    this.model =
+      options?.model ||
+      (typeof this.cmsPluginOptions.experiments?.ai === 'object'
+        ? this.cmsPluginOptions.experiments.ai.model
+        : undefined) ||
+      DEFAULT_MODEL;
+    const firebaseConfig = this.cmsPluginOptions.firebaseConfig;
+    this.ai = genkit({
+      plugins: [
+        vertexAI({
+          projectId: firebaseConfig.projectId,
+          location: firebaseConfig.location || 'us-central1',
+        }),
+      ],
+    });
   }
 
-  async sendPrompt(prompt: string | ChatPrompt | ChatPrompt[]): Promise<any> {
-    if (!genkitIsConfigured) {
-      const firebaseConfig = this.cmsPluginOptions.firebaseConfig;
-      configureGenkit({
-        plugins: [
-          vertexAI({
-            projectId: firebaseConfig.projectId,
-            // TODO(stevenle): figure out where to get this.
-            location: firebaseConfig.location || 'us-central1',
-          }),
-        ],
+  /** Builds the messages for the AI request. */
+  private async buildMessages(): Promise<MessageData[]> {
+    const messages = this.history;
+    if (messages.length === 0) {
+      messages.push({
+        role: 'system',
+        content: [{text: await this.buildSystemPrompt()}],
       });
-      genkitIsConfigured = true;
     }
+    return messages;
+  }
 
-    let model = gemini15FlashPreview;
-    if (this.model === 'gemini-1.5-pro') {
-      model = gemini15ProPreview;
-    }
-
-    if (!this.history) {
-      // Seed the AI with information.
-      await this.initHistory();
-    }
-
-    // console.log('prompt:', prompt);
-    // if (this.history) {
-    //   console.log('history:', this.history);
-    // }
-    const res = await generate({
-      model: model,
-      prompt: prompt as any,
-      history: this.history,
+  async sendPrompt(prompt: ChatPrompt): Promise<string> {
+    const res = await this.ai.generate({
+      messages: await this.buildMessages(),
+      model: this.model,
+      prompt: prompt,
     });
-    console.log(res.text());
-    const history = res.toHistory();
-    this.history = history;
-    await this.dbDoc().update({history, modifiedAt: Timestamp.now()});
-    return res.text();
+    this.history = res.messages;
+    await this.dbDoc().update({
+      history: this.history,
+      modifiedAt: Timestamp.now(),
+    });
+    return res.text;
   }
 
   dbDoc() {
     return this.chatClient.dbCollection().doc(this.id);
   }
 
-  async initHistory() {
+  private async buildSystemPrompt() {
     const systemText = [
       `You are an assistant for a headless CMS called Root CMS which is used on a website called ${
         this.cmsPluginOptions.name || this.cmsPluginOptions.id
@@ -103,15 +97,11 @@ export class Chat {
       '',
       'Here are the docs that exist in the system:',
     ];
-
-    // TODO(stevenle): read from all the collections in the system.
     const pages = await this.cmsClient.listDocs('Pages', {mode: 'draft'});
     pages.docs.forEach((doc: any) => {
       systemText.push(JSON.stringify(doc));
     });
-
-    this.history = [{role: 'system', content: [{text: systemText.join('\n')}]}];
-    console.log(this.history);
+    return systemText.join('\n');
   }
 }
 
@@ -124,19 +114,20 @@ export class ChatClient {
     this.user = user;
   }
 
-  async createChat(options?: {model?: string}): Promise<Chat> {
+  async createChat(): Promise<Chat> {
     const chatId = crypto.randomUUID();
     // Save chat to db so that user has a chat history and can enable "sharing"
     // with others. Store the model used with the metadata.
     const docRef = this.dbCollection().doc(chatId);
+    const chat = new Chat(this, chatId);
     await docRef.set({
       id: chatId,
       createdBy: this.user,
       createdAt: Timestamp.now(),
       modifiedAt: Timestamp.now(),
-      model: options?.model || 'gemini-1.5-flash',
+      model: chat.model,
     });
-    return new Chat(this, chatId);
+    return chat;
   }
 
   async getChat(chatId: string): Promise<Chat> {
