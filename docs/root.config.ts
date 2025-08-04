@@ -36,6 +36,7 @@ export default defineConfig({
     cmsPlugin({
       id: 'www',
       name: 'Root.js',
+      favicon: 'https://rootjs.dev/favicon.png',
       firebaseConfig: {
         apiKey: 'AIzaSyDIoi6zECKeyJoCduYEmV5j9PIF-wbpaPo',
         authDomain: 'rootjs-dev.firebaseapp.com',
