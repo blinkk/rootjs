@@ -28,7 +28,21 @@ export interface UploadFileOptions {
   disableGci?: boolean;
 }
 
-export async function uploadFileToGCS(file: File, options?: UploadFileOptions) {
+export interface UploadedFile {
+  src: string;
+  filename?: string;
+  gcsPath?: string;
+  width?: number;
+  height?: number;
+  alt?: string;
+  uploadedBy?: string;
+  uploadedAt?: string | number;
+}
+
+export async function uploadFileToGCS(
+  file: File,
+  options?: UploadFileOptions
+): Promise<UploadedFile> {
   const projectId = window.__ROOT_CTX.rootConfig.projectId;
   const hashHex = await sha1(file);
   const ext = getFileExt(file.name);
@@ -180,4 +194,40 @@ function normalizeGcsMeta(meta: Record<string, any>): Record<string, string> {
     meta[key] = String(value).trim();
   });
   return result;
+}
+
+export function testIsImageFile(src: string) {
+  if (!src) {
+    return false;
+  }
+  if (testIsGoogleCloudImageFile(src)) {
+    return true;
+  }
+  if (src.startsWith('data:image/')) {
+    return true;
+  }
+  const ext = getFileExt(src);
+  return IMAGE_EXTS.includes(ext);
+}
+
+export function testIsGoogleCloudImageFile(src: string) {
+  if (!src) {
+    return false;
+  }
+  return src.startsWith(GCI_URL_PREFIX);
+}
+
+export function testIsVideoFile(src: string) {
+  if (!src) {
+    return false;
+  }
+  const ext = getFileExt(src);
+  return VIDEO_EXTS.includes(ext);
+}
+
+export function buildDownloadURL(src: string) {
+  if (testIsGoogleCloudImageFile(src)) {
+    return src.split('=')[0] + '=s0-d';
+  }
+  return src;
 }

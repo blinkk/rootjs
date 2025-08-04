@@ -12,9 +12,9 @@ import {render} from 'preact';
 import {Route, Router} from 'preact-router';
 import {Collection} from '../core/schema.js';
 import {CopyDocModal} from './components/CopyDocModal/CopyDocModal.js';
+import {DataSourceSelectModal} from './components/DataSourceSelectModal/DataSourceSelectModal.js';
 import {DocPickerModal} from './components/DocPickerModal/DocPickerModal.js';
 import {DocSelectModal} from './components/DocSelectModal/DocSelectModal.js';
-import {DataSourceSelectModal} from './components/DataSourceSelectModal/DataSourceSelectModal.js';
 import {EditJsonModal} from './components/EditJsonModal/EditJsonModal.js';
 import {EditTranslationsModal} from './components/EditTranslationsModal/EditTranslationsModal.js';
 import {ExportSheetModal} from './components/ExportSheetModal/ExportSheetModal.js';
@@ -131,7 +131,10 @@ function App() {
                 <Route path="/cms/data" component={DataPage} />
                 <Route path="/cms/data/new" component={NewDataSourcePage} />
                 <Route path="/cms/data/:id" component={DataSourcePage} />
-                <Route path="/cms/data/:id/edit" component={EditDataSourcePage} />
+                <Route
+                  path="/cms/data/:id/edit"
+                  component={EditDataSourcePage}
+                />
                 <Route path="/cms/logs" component={LogsPage} />
                 <Route path="/cms/releases" component={ReleasesPage} />
                 <Route path="/cms/releases/new" component={NewReleasePage} />

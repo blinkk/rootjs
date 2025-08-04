@@ -213,7 +213,7 @@ export interface PagesFields {
   /** Content */
   content?: {
     /** Modules. Compose the page by adding one or more modules. */
-    modules?: RootCMSOneOf<RootCMSOneOfOption<'Divider', DividerFields> | RootCMSOneOfOption<'Section', SectionFields> | RootCMSOneOfOption<'Spacer', SpacerFields> | RootCMSOneOfOption<'Template50x50', Template50x50Fields> | RootCMSOneOfOption<'TemplateHeadline', TemplateHeadlineFields> | RootCMSOneOfOption<'TemplateImage', TemplateImageFields> | RootCMSOneOfOption<'TemplateJumplinks', TemplateJumplinksFields> | RootCMSOneOfOption<'TemplatePoweredBy', TemplatePoweredByFields>>[];
+    modules?: RootCMSOneOf<RootCMSOneOfOption<'Divider', DividerFields> | RootCMSOneOfOption<'Section', SectionFields> | RootCMSOneOfOption<'Spacer', SpacerFields> | RootCMSOneOfOption<'Template50x50', Template50x50Fields> | RootCMSOneOfOption<'TemplateHeadline', TemplateHeadlineFields> | RootCMSOneOfOption<'TemplateImage', TemplateImageFields> | RootCMSOneOfOption<'TemplateJumplinks', TemplateJumplinksFields> | RootCMSOneOfOption<'TemplatePoweredBy', TemplatePoweredByFields> | RootCMSOneOfOption<'TemplateSandbox', TemplateSandboxFields>>[];
   };
 }
 
@@ -229,7 +229,7 @@ export interface SectionFields {
   /** Module Options. Layout and display options. */
   options?: string[];
   /** Modules */
-  modules?: RootCMSOneOf<RootCMSOneOfOption<'Divider', DividerFields> | RootCMSOneOfOption<'Spacer', SpacerFields> | RootCMSOneOfOption<'Template50x50', Template50x50Fields> | RootCMSOneOfOption<'TemplateHeadline', TemplateHeadlineFields> | RootCMSOneOfOption<'TemplateImage', TemplateImageFields> | RootCMSOneOfOption<'TemplateJumplinks', TemplateJumplinksFields> | RootCMSOneOfOption<'TemplatePoweredBy', TemplatePoweredByFields>>[];
+  modules?: RootCMSOneOf<RootCMSOneOfOption<'Divider', DividerFields> | RootCMSOneOfOption<'Spacer', SpacerFields> | RootCMSOneOfOption<'Template50x50', Template50x50Fields> | RootCMSOneOfOption<'TemplateHeadline', TemplateHeadlineFields> | RootCMSOneOfOption<'TemplateImage', TemplateImageFields> | RootCMSOneOfOption<'TemplateJumplinks', TemplateJumplinksFields> | RootCMSOneOfOption<'TemplatePoweredBy', TemplatePoweredByFields> | RootCMSOneOfOption<'TemplateSandbox', TemplateSandboxFields>>[];
 }
 
 /** Generated from `/templates/Spacer/Spacer.schema.ts`. */
@@ -324,4 +324,14 @@ export interface TemplatePoweredByFields {
   }[];
   /** Body copy */
   body?: RootCMSRichText;
+}
+
+/** Generated from `/templates/TemplateSandbox/TemplateSandbox.schema.ts`. */
+export interface TemplateSandboxFields {
+  /** ImageField */
+  image?: RootCMSImage;
+  /** FileField */
+  file?: RootCMSFile;
+  /** FileField (.txt only) */
+  fileTxtOnly?: RootCMSFile;
 }
