@@ -456,15 +456,17 @@ FileUploadField.Preview = () => {
           >
             Upload {ctx.variant === 'image' ? 'image' : 'file'}
           </Menu.Item>
-          <Menu.Item
-            disabled={!uploadedFile.src}
-            icon={<IconPhotoStar size={16} />}
-            onClick={() => {
-              ctx.requestPlaceholderModalOpen();
-            }}
-          >
-            Placeholder image
-          </Menu.Item>
+          {testSupportsCreatePlaceholder(ctx.acceptedFileTypes) && (
+            <Menu.Item
+              disabled={!uploadedFile.src}
+              icon={<IconPhotoStar size={16} />}
+              onClick={() => {
+                ctx.requestPlaceholderModalOpen();
+              }}
+            >
+              Placeholder image
+            </Menu.Item>
+          )}
           <Divider />
           <Menu.Item
             disabled={uploadedFile.src.startsWith('data:')}
@@ -722,6 +724,21 @@ FileUploadField.Empty = () => {
         <div>
           <FileUploadField.UploadButton />
         </div>
+        {testSupportsCreatePlaceholder(context.acceptedFileTypes) && (
+          <div>
+            <Tooltip label="Create placeholder image">
+              <ActionIcon
+                className="FileUploadField__Empty__Label__PlaceholderButton"
+                onClick={() => {
+                  context.requestPlaceholderModalOpen();
+                }}
+                title="Create placeholder image"
+              >
+                <IconPhotoStar size={16} />
+              </ActionIcon>
+            </Tooltip>
+          </div>
+        )}
       </div>
       {context.acceptedFileTypes.length > 0 && (
         <div>
@@ -820,4 +837,11 @@ function testShouldHaveAltText(filename: string | undefined): boolean {
     return false;
   }
   return testIsImageFile(filename) || testIsVideoFile(filename);
+}
+
+function testSupportsCreatePlaceholder(acceptedFileTypes: string[]) {
+  return (
+    acceptedFileTypes.some((type) => type.startsWith('image/')) ||
+    acceptedFileTypes.length === 0
+  );
 }

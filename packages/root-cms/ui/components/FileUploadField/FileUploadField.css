@@ -171,7 +171,8 @@
 
 .FileUploadField__Empty__Label {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
+  justify-content: space-between;
   gap: 8px;
 }
 
