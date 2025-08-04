@@ -424,6 +424,20 @@ FileUploadField.Preview = () => {
             </ActionIcon>
           </Tooltip>
         )}
+        <Tooltip label="Upload" position="top" withArrow>
+          <ActionIcon
+            onClick={() => ctx.requestFileUpload()}
+            size="sm"
+            variant="outline"
+            className="FileUploadField__Preview__InfoButton__Icon"
+          >
+            {ctx.variant === 'image' ? (
+              <IconPhotoUp size={16} />
+            ) : (
+              <IconFileUpload size={16} />
+            )}
+          </ActionIcon>
+        </Tooltip>
         <Menu
           className="FileUploadField__Preview__Menu"
           shadow="sm"
@@ -450,9 +464,7 @@ FileUploadField.Preview = () => {
                 <IconFileUpload size={16} />
               )
             }
-            onClick={() => {
-              ctx.requestFileUpload();
-            }}
+            onClick={() => ctx.requestFileUpload()}
           >
             Upload {ctx.variant === 'image' ? 'image' : 'file'}
           </Menu.Item>
@@ -512,6 +524,13 @@ FileUploadField.Preview = () => {
           infoOpened && 'FileUploadField__Canvas--infoOpened',
           dragging && 'FileUploadField__Canvas--dragging'
         )}
+        style={
+          uploadedFile.width !== undefined && uploadedFile.height !== undefined
+            ? {
+                '--canvas-aspect-ratio': `${uploadedFile.width} / ${uploadedFile.height}`,
+              }
+            : {}
+        }
         onDragOver={(e) => {
           e.preventDefault();
           setDragging(true);
@@ -612,6 +631,9 @@ FileUploadField.Preview = () => {
               <img
                 onClick={() => {
                   ctx?.focusDropZone();
+                }}
+                onDblClick={() => {
+                  ctx?.requestFileUpload();
                 }}
                 src={uploadedFile.src}
                 alt={uploadedFile.alt || 'Uploaded file preview'}
@@ -761,6 +783,9 @@ FileUploadField.Dropzone = forwardRef<HTMLButtonElement, {}>((props, ref) => {
         'FileUploadField__Dropzone',
         dragging && 'FileUploadField__Dropzone--dragging'
       )}
+      onDblClick={() => {
+        context?.requestFileUpload();
+      }}
       onCopy={(e) => {
         if (!context?.fileUpload?.uploadedFile) {
           return;

@@ -64,7 +64,7 @@
 }
 
 .DocEditor__ImageField__imagePreview__Image__Alt__Textarea textarea {
-  padding: 10px;
+  padding: 4px 10px;
 }
 
 .FileUploadField__Preview__Info {
@@ -113,7 +113,7 @@
 }
 
 .FileUploadField__Canvas {
-  aspect-ratio: 16 / 9;
+  aspect-ratio: var(--canvas-aspect-ratio, 16 / 9);
   max-height: 280px;
   width: 100%;
   position: relative;
