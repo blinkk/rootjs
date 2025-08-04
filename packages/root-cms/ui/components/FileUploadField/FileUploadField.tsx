@@ -128,7 +128,6 @@ export function FileUploadField(props: FileUploadFieldProps) {
   const [fileUploader, setFileUploader] = useState<FileUploader>({
     uploadedFile: props.file,
   });
-
   const acceptedFileTypes =
     props.exts ?? (props.variant === 'image' ? IMAGE_MIMETYPES : []);
 
@@ -136,6 +135,7 @@ export function FileUploadField(props: FileUploadFieldProps) {
     setFileUploader((prev) => ({...prev, uploadedFile: props.file}));
   }, [props.file]);
 
+  /** Uploads file data to GCS. */
   async function uploadFile(file: File) {
     try {
       setFileUploader((prev) => ({
@@ -164,6 +164,7 @@ export function FileUploadField(props: FileUploadFieldProps) {
     }
   }
 
+  /** Updates the uploaded file data in the state and invokes the callback (so the JSON data can be saved in the document that references the field). */
   function setFileData(uploadedFile: UploadedFile) {
     setFileUploader((prev) => ({
       ...prev,
@@ -180,6 +181,7 @@ export function FileUploadField(props: FileUploadFieldProps) {
     }));
   }
 
+  /** Validates incoming file data and if it passes validation, uploads it. */
   function handleFile(file: File) {
     if (!file) {
       return;
@@ -210,6 +212,7 @@ export function FileUploadField(props: FileUploadFieldProps) {
     dropZoneRef.current?.focus();
   }
 
+  /** Downloads the file. */
   function requestFileDownload() {
     if (!fileUploader.uploadedFile) {
       return;
@@ -231,6 +234,7 @@ export function FileUploadField(props: FileUploadFieldProps) {
     }
   }
 
+  /** Starts the file upload flow by opening a file picker dialog. */
   function requestFileUpload() {
     const inputEl = document.createElement('input');
     inputEl.type = 'file';
@@ -244,8 +248,10 @@ export function FileUploadField(props: FileUploadFieldProps) {
       }
     };
     inputEl.click();
+    inputEl.remove();
   }
 
+  /** Opens the "create placeholder" modal. */
   function requestPlaceholderModalOpen() {
     setPlaceholderModalOpened(true);
   }
@@ -808,6 +814,7 @@ FileUploadField.Dropzone = forwardRef<HTMLButtonElement, {}>((props, ref) => {
   );
 });
 
+/** Returns whether a file should display the alt text field (based on its filename). */
 function testShouldHaveAltText(filename: string | undefined): boolean {
   if (!filename) {
     return false;
