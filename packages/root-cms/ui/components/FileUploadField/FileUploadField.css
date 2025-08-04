@@ -56,6 +56,7 @@
 
 .DocEditor__ImageField__imagePreview__Image__Alt {
   padding: 10px;
+  border-top: 1px solid #ced4da;
 }
 
 .DocEditor__ImageField__imagePreview__Image__Alt__Textarea {
@@ -68,7 +69,6 @@
 
 .FileUploadField__Preview__Info {
   position: absolute;
-  border-radius: 2px;
   bottom: 0px;
   right: 0px;
   background: #000;
@@ -86,10 +86,16 @@
 
 .FileUploadField__Canvas__Info {
   pointer-events: all;
-  background-color: #ededed;
+  background-color: #f1f3f5;
   padding: 40px 10px 10px;
   height: 100%;
   overflow: auto;
+}
+
+.FileUploadField__Canvas__Info__Icon {
+  position: absolute;
+  top: 10px;
+  left: 10px;
 }
 
 .FileUploadField__Canvas__InfoTable {
@@ -111,7 +117,6 @@
   max-height: 280px;
   width: 100%;
   position: relative;
-  border-bottom: 1px solid #ced4da;
   background-image: linear-gradient(45deg, #ccc 25%, transparent 25%, transparent 75%, #ccc 75%, #ccc),
                     linear-gradient(45deg, #ccc 25%, transparent 25%, transparent 75%, #ccc 75%, #ccc);
   background-size: 20px 20px; /* Adjust the size of the squares */

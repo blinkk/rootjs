@@ -21,6 +21,7 @@ import {
   IconDownload,
   IconFileUpload,
   IconInfoCircle,
+  IconPaperclip,
   IconPhotoStar,
   IconPhotoUp,
   IconTrash,
@@ -387,27 +388,36 @@ export function FileUploadField(props: FileUploadFieldProps) {
 
 FileUploadField.Preview = () => {
   const ctx = useContext(FileUploadFileContext);
-  const [infoOpened, setInfoOpened] = useState(false);
+
   const [dragging, setDragging] = useState(false);
   const [copied, setCopied] = useState(false);
   const fileUpload = ctx?.fileUpload;
   if (!fileUpload || !fileUpload.uploadedFile) {
     return null;
   }
+  // Videos and images are the only files that get the canvas preview.
+  // Other types just show the info panel.
+  const supportsCanvasPreview = testShouldHaveAltText(
+    ctx?.fileUpload?.uploadedFile?.filename
+  );
+  const [infoOpened, setInfoOpened] = useState(!supportsCanvasPreview);
+
   const {uploadedFile} = fileUpload;
   return (
     <div className="FileUploadField__Preview">
       <div className="FileUploadField__Preview__InfoButton">
-        <Tooltip label="Toggle file info" position="top" withArrow>
-          <ActionIcon
-            onClick={() => setInfoOpened((o) => !o)}
-            size="sm"
-            variant="outline"
-            className="FileUploadField__Preview__InfoButton__Icon"
-          >
-            <IconInfoCircle size={16} />
-          </ActionIcon>
-        </Tooltip>
+        {supportsCanvasPreview && (
+          <Tooltip label="Toggle file info" position="top" withArrow>
+            <ActionIcon
+              onClick={() => setInfoOpened((o) => !o)}
+              size="sm"
+              variant="outline"
+              className="FileUploadField__Preview__InfoButton__Icon"
+            >
+              <IconInfoCircle size={16} />
+            </ActionIcon>
+          </Tooltip>
+        )}
         <Menu
           className="FileUploadField__Preview__Menu"
           shadow="sm"
@@ -521,12 +531,24 @@ FileUploadField.Preview = () => {
         <LoadingOverlay visible={ctx.fileUpload?.state === 'uploading'} />
         {infoOpened ? (
           <div className="FileUploadField__Canvas__Info">
+            <IconPaperclip
+              size={20}
+              className="FileUploadField__Canvas__Info__Icon"
+            />
             <Table
               className="FileUploadField__Canvas__InfoTable"
               verticalSpacing="xs"
               fontSize="xs"
             >
               <tbody>
+                {uploadedFile.filename && (
+                  <tr>
+                    <td>
+                      <b>Name</b>
+                    </td>
+                    <td>{uploadedFile.filename}</td>
+                  </tr>
+                )}
                 {uploadedFile.uploadedAt && (
                   <tr>
                     <td>
@@ -540,14 +562,6 @@ FileUploadField.Preview = () => {
                         <> by {uploadedFile.uploadedBy}</>
                       )}
                     </td>
-                  </tr>
-                )}
-                {uploadedFile.filename && (
-                  <tr>
-                    <td>
-                      <b>Name</b>
-                    </td>
-                    <td>{uploadedFile.filename}</td>
                   </tr>
                 )}
                 {uploadedFile.width !== undefined &&
