@@ -424,7 +424,7 @@ FileUploadField.Preview = () => {
             </ActionIcon>
           </Tooltip>
         )}
-        <Tooltip label="Upload" position="top" withArrow>
+        <Tooltip label="Replace file" position="top" withArrow>
           <ActionIcon
             onClick={() => ctx.requestFileUpload()}
             size="sm"
