@@ -33,6 +33,7 @@ import {
   IconRowInsertTop,
   IconTrash,
   IconTriangleFilled,
+  IconSparkles,
 } from '@tabler/icons-preact';
 import {createContext} from 'preact';
 import {
@@ -69,6 +70,7 @@ import {autokey} from '../../utils/rand.js';
 import {getPlaceholderKeys, strFormat} from '../../utils/str-format.js';
 import {testFieldEmpty} from '../../utils/test-field-empty.js';
 import {formatDateTime} from '../../utils/time.js';
+import {useAiEditModal} from '../AiEditModal/AiEditModal.js';
 import {
   DocActionEvent,
   DocActionsMenu,
@@ -879,6 +881,7 @@ DocEditor.ArrayField = (props: FieldProps) => {
   const [value, dispatch] = useReducer(arrayReducer, {_array: []});
   const deeplink = useDeeplink();
   const virtualClipboard = useVirtualClipboard();
+  const experiments = window.__ROOT_CTX.experiments || {};
 
   const data = value ?? {};
   const order = data._array || [];
@@ -998,6 +1001,7 @@ DocEditor.ArrayField = (props: FieldProps) => {
   };
 
   const editJsonModal = useEditJsonModal();
+  const aiEditModal = useAiEditModal();
 
   const editJson = (index: number) => {
     const key = order[index];
@@ -1014,6 +1018,25 @@ DocEditor.ArrayField = (props: FieldProps) => {
         });
         draft.notifySubscribers();
         editJsonModal.close();
+      },
+    });
+  };
+
+  const aiEdit = (index: number) => {
+    const key = order[index];
+    aiEditModal.open({
+      data: value[key],
+      onSave: (newValue) => {
+        console.log('aiEdit, onSave():', newValue);
+        dispatch({
+          type: 'updateItem',
+          draft,
+          index,
+          newValue,
+          deepKey: props.deepKey,
+        });
+        draft.notifySubscribers();
+        aiEditModal.close();
       },
     });
   };
@@ -1227,7 +1250,14 @@ DocEditor.ArrayField = (props: FieldProps) => {
                                 >
                                   Edit JSON
                                 </Menu.Item>
-
+                                {experiments.ai && (
+                                  <Menu.Item
+                                    icon={<IconSparkles size={20} />}
+                                    onClick={() => aiEdit(i)}
+                                  >
+                                    Edit with AI
+                                  </Menu.Item>
+                                )}
                                 <Menu.Label>REMOVE</Menu.Label>
                                 <Menu.Item
                                   icon={<IconTrash size={20} />}

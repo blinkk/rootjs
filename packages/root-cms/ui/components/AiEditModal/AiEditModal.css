@@ -1,0 +1,31 @@
+.AiEditModal__buttons {
+  margin-top: 24px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+.AiEditModal__JsonInput,
+.AiEditModal__JsonInput .mantine-JsonInput-wrapper,
+.AiEditModal__JsonInput .mantine-JsonInput-input {
+  height: 100%;
+}
+
+.AiEditModal__SplitPanel {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+}
+
+.AiEditModal__SplitPanel__JsonPanel {
+  height: 100%;
+  overflow: auto;
+}
+
+.AiEditModal__SplitPanel__ChatPanel {
+  height: 100%;
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  height: calc(max(100vh - 300px, 400px));
+}

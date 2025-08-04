@@ -12,7 +12,12 @@ import {fromMarkdown} from 'mdast-util-from-markdown';
 import {gfmFromMarkdown} from 'mdast-util-gfm';
 import {gfm} from 'micromark-extension-gfm';
 import {useEffect, useMemo, useRef, useState} from 'preact/hooks';
-import type {ChatPrompt} from '../../../core/ai.js';
+import type {
+  ChatMode,
+  ChatPrompt,
+  SendPromptOptions,
+} from '../../../core/ai.js';
+import {ChatApiRequest} from '../../../core/api.js';
 import {Layout} from '../../layout/Layout.js';
 import {joinClassNames} from '../../utils/classes.js';
 import {uploadFileToGCS} from '../../utils/gcs.js';
@@ -76,6 +81,7 @@ interface Message {
   sender: 'user' | 'bot';
   blocks: MessageBlock[];
   key?: string;
+  data?: Record<string, any>;
 }
 
 interface ImageMessageBlock {
@@ -112,10 +118,14 @@ interface ChatController {
   messages: Message[];
   addMessage: (message: Message) => number;
   updateMessage: (messageId: number, message: Message) => void;
-  sendPrompt: (messageId: number, prompt: ChatPrompt[]) => Promise<void>;
+  sendPrompt: (
+    messageId: number,
+    prompt: ChatPrompt,
+    options?: SendPromptOptions
+  ) => Promise<ParsedChatResponse | undefined>;
 }
 
-function useChat(): ChatController {
+export function useChat(): ChatController {
   const [messages, setMessages] = useState<Message[]>([]);
   const [chatId, setChatId] = useState('');
 
@@ -146,7 +156,11 @@ function useChat(): ChatController {
     });
   };
 
-  const sendPrompt = async (messageId: number, prompt: ChatPrompt[]) => {
+  const sendPrompt = async (
+    messageId: number,
+    prompt: ChatPrompt,
+    options?: SendPromptOptions
+  ): Promise<ParsedChatResponse | undefined> => {
     // Allow users to provide a custom api endpoint via the
     // `{ai: {endpoint: '/api/...}}` config.
     let endpoint = '/cms/api/ai.chat';
@@ -156,10 +170,11 @@ function useChat(): ChatController {
       }
     }
 
-    const req: any = {prompt};
-    if (chatId) {
-      req.chatId = chatId;
-    }
+    const req: ChatApiRequest = {
+      prompt,
+      chatId,
+      options,
+    };
     const res = await window.fetch(endpoint, {
       method: 'POST',
       headers: {'content-type': 'application/json'},
@@ -180,21 +195,27 @@ function useChat(): ChatController {
           },
         ],
       });
-      return;
+      return undefined;
     }
     const resData = await res.json();
     if (resData.success && resData.chatId) {
+      const response = resData.response;
       setChatId(resData.chatId);
+      console.log('ai chat response', response);
+      const parsedResponse = parseResponse(response, options?.mode);
       updateMessage(messageId, {
         sender: 'bot',
+        data: parsedResponse.data,
         blocks: [
           {
             type: 'text',
-            text: resData.response || '',
+            text: parsedResponse.message || '',
           },
         ],
       });
+      return parsedResponse;
     }
+    return undefined;
   };
 
   return {
@@ -204,6 +225,23 @@ function useChat(): ChatController {
     updateMessage,
     sendPrompt,
   };
+}
+
+export interface ParsedChatResponse {
+  message: string;
+  data: Record<string, any> | undefined;
+}
+
+function parseResponse(response: string, mode?: ChatMode): ParsedChatResponse {
+  if (mode === 'edit') {
+    const jsonMatch = response.match(/^```json\n?(.*?)\n?```$/s);
+    const responseAsJson = JSON.parse(jsonMatch ? jsonMatch[1] : response);
+    return {
+      message: responseAsJson.message,
+      data: responseAsJson.data,
+    };
+  }
+  return {message: response, data: undefined};
 }
 
 export function AIPage() {
@@ -234,7 +272,7 @@ export function AIPage() {
   );
 }
 
-function ChatWindow(props: {chat: ChatController}) {
+export function ChatWindow(props: {chat: ChatController}) {
   const messages = props.chat.messages;
   return (
     <div className="AIPage__ChatWindow">
@@ -714,7 +752,11 @@ function ChatMessageImageBlock(props: {
   );
 }
 
-function ChatBar(props: {chat: ChatController}) {
+export function ChatBar(props: {
+  chat: ChatController;
+  options?: SendPromptOptions;
+  onData?: (data: any) => void;
+}) {
   const [textPrompt, setTextPrompt] = useState('');
   const textInputRef = useRef<HTMLTextAreaElement>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
@@ -777,7 +819,12 @@ function ChatBar(props: {chat: ChatController}) {
           },
         });
       }
-      await props.chat.sendPrompt(pendingMessageId, prompt);
+      const response = await props.chat.sendPrompt(
+        pendingMessageId,
+        prompt,
+        props.options
+      );
+      props.onData?.(response);
     }
   }
 

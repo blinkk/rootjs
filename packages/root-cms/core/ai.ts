@@ -18,6 +18,14 @@ export type RootAiModel =
 
 const DEFAULT_MODEL: RootAiModel = 'vertexai/gemini-2.5-flash';
 
+export type ChatMode = 'chat' | 'edit';
+
+export interface SendPromptOptions {
+  mode?: ChatMode;
+  /** Data sent for edit mode requests. */
+  editData?: Record<string, any>;
+}
+
 export class Chat {
   chatClient: ChatClient;
   cmsClient: RootCMSClient;
@@ -55,23 +63,58 @@ export class Chat {
   }
 
   /** Builds the messages for the AI request. */
-  private async buildMessages(): Promise<MessageData[]> {
+  private async buildMessages(
+    options: SendPromptOptions
+  ): Promise<MessageData[]> {
     const messages = this.history;
     if (messages.length === 0) {
       messages.push({
         role: 'system',
-        content: [{text: await this.buildSystemPrompt()}],
+        content: [{text: await this.buildSystemPrompt(options)}],
+      });
+    }
+    if (options.mode === 'edit') {
+      messages.push({
+        role: 'user',
+        content: [
+          {
+            text: [
+              'The JSON  you must edit is:',
+              '',
+              JSON.stringify(options.editData || {}, null, 2),
+            ].join(''),
+          },
+        ],
       });
     }
     return messages;
   }
 
-  async sendPrompt(prompt: ChatPrompt): Promise<string> {
-    const res = await this.ai.generate({
-      messages: await this.buildMessages(),
+  private async buildChatRequest(
+    prompt: ChatPrompt,
+    options: SendPromptOptions
+  ) {
+    if (options.mode === 'edit') {
+      return {
+        messages: await this.buildMessages(options),
+        model: this.model,
+        prompt: prompt,
+      };
+    }
+    return {
+      messages: await this.buildMessages(options),
       model: this.model,
       prompt: prompt,
-    });
+    };
+  }
+
+  async sendPrompt(
+    prompt: ChatPrompt,
+    options: SendPromptOptions = {}
+  ): Promise<string> {
+    const res = await this.ai.generate(
+      await this.buildChatRequest(prompt, options)
+    );
     this.history = res.messages;
     await this.dbDoc().update({
       history: this.history,
@@ -84,7 +127,10 @@ export class Chat {
     return this.chatClient.dbCollection().doc(this.id);
   }
 
-  private async buildSystemPrompt() {
+  private async buildSystemPrompt(options: SendPromptOptions): Promise<string> {
+    if (options.mode === 'edit') {
+      return (await import('./ai/prompts/edit.txt')).default;
+    }
     const systemText = [
       `You are an assistant for a headless CMS called Root CMS which is used on a website called ${
         this.cmsPluginOptions.name || this.cmsPluginOptions.id
