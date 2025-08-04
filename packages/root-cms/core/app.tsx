@@ -10,9 +10,13 @@ import {Collection} from './schema.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
+const DEFAULT_FAVICON_URL =
+  'https://lh3.googleusercontent.com/ijK50TfQlV_yJw3i-CMlnD6osH4PboZBILZrJcWhoNMEmoyCD5e1bAxXbaOPe5w4gG_Scf37EXrmZ6p8sP2lue5fLZ419m5JyLMs=e385-w256';
+
 interface AppProps {
   title: string;
   ctx: any;
+  favicon?: string;
 }
 
 function App(props: AppProps) {
@@ -40,7 +44,7 @@ function App(props: AppProps) {
         />
         <link
           rel="icon"
-          href="https://lh3.googleusercontent.com/ijK50TfQlV_yJw3i-CMlnD6osH4PboZBILZrJcWhoNMEmoyCD5e1bAxXbaOPe5w4gG_Scf37EXrmZ6p8sP2lue5fLZ419m5JyLMs=e385-w256"
+          href={props.favicon || DEFAULT_FAVICON_URL}
           type="image/png"
         />
         <link
@@ -114,7 +118,9 @@ export async function renderApp(
   const projectName = cmsConfig.name || cmsConfig.id || '';
   const title = projectName ? `${projectName} – Root CMS` : 'Root CMS';
 
-  const mainHtml = renderToString(<App title={title} ctx={ctx} />);
+  const mainHtml = renderToString(
+    <App title={title} ctx={ctx} favicon={cmsConfig.favicon} />
+  );
   let html = `<!doctype html>\n${mainHtml}`;
   const nonce = generateNonce();
   if (req.viteServer) {
@@ -163,6 +169,7 @@ function serializeCollection(collection: Collection): Partial<Collection> {
 interface SignInProps {
   title: string;
   ctx: any;
+  favicon?: string;
 }
 
 function SignIn(props: SignInProps) {
@@ -186,7 +193,7 @@ function SignIn(props: SignInProps) {
         />
         <link
           rel="icon"
-          href="https://lh3.googleusercontent.com/ijK50TfQlV_yJw3i-CMlnD6osH4PboZBILZrJcWhoNMEmoyCD5e1bAxXbaOPe5w4gG_Scf37EXrmZ6p8sP2lue5fLZ419m5JyLMs=e385-w256"
+          href={props.favicon || DEFAULT_FAVICON_URL}
           type="image/png"
         />
         <link rel="stylesheet" href="{CSS_URL}" nonce="{NONCE}" />
@@ -221,7 +228,13 @@ export async function renderSignIn(
     name: options.cmsConfig.name || options.cmsConfig.id || '',
     firebaseConfig: options.cmsConfig.firebaseConfig,
   };
-  const mainHtml = renderToString(<SignIn title="Sign in" ctx={ctx} />);
+  const mainHtml = renderToString(
+    <SignIn
+      title="Sign in"
+      ctx={ctx}
+      favicon={options.cmsConfig.favicon}
+    />
+  );
   let html = `<!doctype html>\n${mainHtml}`;
   const nonce = generateNonce();
   if (req.viteServer) {

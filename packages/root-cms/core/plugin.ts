@@ -155,6 +155,11 @@ export type CMSPluginOptions = {
   };
 
   /**
+   * URL for a custom favicon used by the CMS UI.
+   */
+  favicon?: string;
+
+  /**
    * Callback when an action occurs.
    */
   onAction?: (action: Action) => any;
