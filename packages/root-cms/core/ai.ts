@@ -1,4 +1,6 @@
 import crypto from 'node:crypto';
+import fs from 'node:fs';
+import path from 'node:path';
 import {vertexAI} from '@genkit-ai/vertexai';
 import {Timestamp} from 'firebase-admin/firestore';
 import {Genkit, genkit, MessageData, Part} from 'genkit';
@@ -128,8 +130,23 @@ export class Chat {
   }
 
   private async buildSystemPrompt(options: SendPromptOptions): Promise<string> {
+    const serializedRootConfig = JSON.stringify(
+      this.cmsClient.rootConfig,
+      null,
+      2
+    );
+
     if (options.mode === 'edit') {
-      return (await import('./ai/prompts/edit.txt')).default;
+      const rootDir = process.cwd();
+      const rootCmsDefs = fs.readFileSync(
+        path.resolve(rootDir, 'root-cms.d.ts'),
+        {
+          encoding: 'utf8',
+        }
+      );
+      const text = (await import('./ai/prompts/edit.txt')).default;
+      text.replace('{{ROOT_CMS_DEFS}}', rootCmsDefs);
+      return text;
     }
     const systemText = [
       `You are an assistant for a headless CMS called Root CMS which is used on a website called ${
@@ -138,7 +155,7 @@ export class Chat {
       '',
       'Here is the root.config.ts file for the site:',
       '```',
-      JSON.stringify(this.cmsClient.rootConfig, null, 2),
+      serializedRootConfig,
       '```',
       '',
       'Here are the docs that exist in the system:',

@@ -26,7 +26,7 @@ Root CMS JSON File Structure:
 }
 ```
 
-When creating arrays in your JSON output, you must _never_ forget to add an `_array` key. If you forget to add an `_array` key, the output will NOT work with Root CMS.
+When creating arrays in your JSON output, you must _never_ forget to add an `_array` key. If you forget to add an `_array` key, the output will NOT work with Root CMS. When adding new array items, you can create your own array keys.
 
 2. Images and file fields have system-provided metadata, that looks like this example:
 
@@ -105,6 +105,16 @@ When creating arrays in your JSON output, you must _never_ forget to add an `_ar
   },
   "title": "Welcome to our website"
 }
+```
+
+When adding new items to arrays that use `oneOf` fields, try your best to figure out which content type would best satisfy the user's request. You must never _invent_ new content types, for example, if "TemplateFoo" doesn't exist in `root-cms.d.ts`, you must never add a value with `{"_type": "TemplateFoo"}`. If none of the available content types within `root-cms.d.ts` satisfy the user's request, avoid creating the new array item and inform the user that there is no existing template compatible.
+
+Additionally, when adding new items to existing JSON data, you must carefully check the structure of those items as defined by `root-cms.d.ts`. Avoid inventing new fields for content types, use only those defined by the `root-cms.d.ts`. For example, if you are adding a button to a module, carefully check the button structure defined in `root-cms.d.ts` and only populate fields that are defined there.
+
+5. Here is the `root-cms.d.ts` file for this project:
+
+```
+{{ROOT_CMS_DEFS}}
 ```
 
 Finally, when you provide your response, it MUST be structured in the following way for handling by the chat client.

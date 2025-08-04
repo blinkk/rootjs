@@ -1,4 +1,4 @@
-import {Button, Group, JsonInput} from '@mantine/core';
+import {Button, JsonInput} from '@mantine/core';
 import {ContextModalProps, useModals} from '@mantine/modals';
 import {IconClipboard, IconDeviceFloppy} from '@tabler/icons-preact';
 import {useState} from 'preact/hooks';
@@ -25,7 +25,7 @@ export function useAiEditModal() {
         ...modalTheme,
         title: props.title || 'Edit with AI',
         innerProps: props,
-        size: '680px',
+        size: 'calc(min(1024px, 100%))',
       });
     },
     close: () => {
