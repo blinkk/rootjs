@@ -52,6 +52,7 @@ const IMAGE_MIMETYPES = [
   'image/webp',
 ];
 
+/** Default placeholder colors (from https://v4.mantine.dev/core/color-picker/#with-swatches). */
 const PLACEHOLDER_COLORS = [
   '#25262b',
   '#868e96',
@@ -388,7 +389,6 @@ export function FileUploadField(props: FileUploadFieldProps) {
 
 FileUploadField.Preview = () => {
   const ctx = useContext(FileUploadFileContext);
-
   const [dragging, setDragging] = useState(false);
   const [copied, setCopied] = useState(false);
   const fileUpload = ctx?.fileUpload;
@@ -603,7 +603,6 @@ FileUploadField.Preview = () => {
             {testIsImageFile(uploadedFile.src) && (
               <img
                 onClick={() => {
-                  console.log('Image clicked, focusing drop zone');
                   ctx?.focusDropZone();
                 }}
                 src={uploadedFile.src}
@@ -779,8 +778,7 @@ FileUploadField.Dropzone = forwardRef<HTMLButtonElement, {}>((props, ref) => {
         }
       }}
       onPaste={(e) => {
-        console.log('Paste event in dropzone:', e.clipboardData);
-        // // Handle JSON paste directly.
+        // Handle pasting from one field to another.
         const json = e.clipboardData?.getData('application/json');
         if (json) {
           try {
