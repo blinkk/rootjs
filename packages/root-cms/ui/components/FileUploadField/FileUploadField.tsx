@@ -82,6 +82,15 @@ interface FileUploadFieldProps {
    * @see https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Attributes/accept#unique_file_type_specifiers
    */
   exts?: string[];
+  /**
+   * Cache-control header to set on the GCS object.
+   */
+  cacheControl?: string;
+  /**
+   * Whether to preserve the final serving filename when a user uploads a file.
+   * By default, the filename is hashed for obfuscation purposes.
+   */
+  preserveFilename?: boolean;
 }
 
 interface FileUploader {
@@ -133,8 +142,8 @@ export function FileUploadField(props: FileUploadFieldProps) {
         file,
       }));
       const uploadedFile = await uploadFileToGCS(file, {
-        // TODO: Implement cache control in the UI.
-        // cacheControl: field.cacheControl,
+        preserveFilename: props.preserveFilename,
+        cacheControl: props.cacheControl,
       });
       setFileData(uploadedFile);
     } catch (err) {
@@ -188,6 +197,7 @@ export function FileUploadField(props: FileUploadFieldProps) {
         title: 'Invalid file type',
         message: `File type ${ext} is not allowed.`,
         color: 'red',
+        autoClose: true,
       });
       return;
     }

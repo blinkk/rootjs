@@ -5,7 +5,7 @@ import {FileUploadField} from '../../FileUploadField/FileUploadField.js';
 import {FieldProps} from './FieldProps.js';
 
 export function FileField(props: FieldProps) {
-  const field = props.field as schema.ImageField;
+  const field = props.field as schema.FileField;
   const [uploadedFile, setUploadedFile] = useState<UploadedFile | null>(null);
   useEffect(() => {
     const unsubscribe = props.draft.subscribe(
@@ -25,6 +25,8 @@ export function FileField(props: FieldProps) {
       variant="file"
       alt={field.alt}
       exts={field.exts}
+      preserveFilename={field.preserveFilename}
+      cacheControl={field.cacheControl}
       onFileChange={(file) => {
         if (file) {
           props.draft.updateKey(props.deepKey, file);
