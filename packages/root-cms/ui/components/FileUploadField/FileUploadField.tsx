@@ -19,6 +19,7 @@ import {showNotification} from '@mantine/notifications';
 import {
   IconCopy,
   IconDownload,
+  IconFileUpload,
   IconInfoCircle,
   IconPhotoStar,
   IconPhotoUp,
@@ -41,6 +42,15 @@ import {
 
 import './FileUploadField.css';
 
+/** Mimetypes accepted by the image input field. */
+const IMAGE_MIMETYPES = [
+  'image/gif',
+  'image/jpeg',
+  'image/png',
+  'image/svg+xml',
+  'image/webp',
+];
+
 const PLACEHOLDER_COLORS = [
   '#25262b',
   '#868e96',
@@ -58,10 +68,20 @@ const PLACEHOLDER_COLORS = [
   '#fd7e14',
 ];
 
+type FileUploadFieldVariant = 'file' | 'image';
+
 interface FileUploadFieldProps {
   children?: preact.ComponentChildren;
   file?: UploadedFile | null;
+  variant?: FileUploadFieldVariant;
   onFileChange?: (file: UploadedFile | null) => void;
+  /** Set to false to disable alt text input. */
+  alt?: boolean;
+  /**
+   * Limit the accepted file extensions. The value may be any unique file type specifier.
+   * @see https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Attributes/accept#unique_file_type_specifiers
+   */
+  exts?: string[];
 }
 
 interface FileUploader {
@@ -72,14 +92,19 @@ interface FileUploader {
 
 interface FileUploadContextValue {
   fileUpload: FileUploader | null;
+  variant?: FileUploadFieldVariant;
+  /** Set to false to disable alt text input. */
+  alt?: boolean;
+  /** Accepted file types. If empty, accepts all file types. */
+  acceptedFileTypes: string[];
+  focusDropZone: () => void;
   handleFile: (file: File) => void;
   removeFile: () => void;
-  setAltText: (altText: string) => void;
-  focusDropZone: () => void;
   requestFileUpload: () => void;
   requestFileDownload: () => void;
-  requestPlaceholderModal: () => void;
+  requestPlaceholderModalOpen: () => void;
   setFileData: (uploadedFile: UploadedFile) => void;
+  setAltText: (altText: string) => void;
 }
 
 export const FileUploadFileContext =
@@ -92,6 +117,9 @@ export function FileUploadField(props: FileUploadFieldProps) {
   const [fileUploader, setFileUploader] = useState<FileUploader>({
     uploadedFile: props.file,
   });
+
+  const acceptedFileTypes =
+    props.exts ?? (props.variant === 'image' ? IMAGE_MIMETYPES : []);
 
   useEffect(() => {
     setFileUploader((prev) => ({...prev, uploadedFile: props.file}));
@@ -110,15 +138,15 @@ export function FileUploadField(props: FileUploadFieldProps) {
       });
       setFileData(uploadedFile);
     } catch (err) {
-      console.error('image upload failed');
+      console.error('upload failed');
       console.error(err);
       setFileUploader((prev) => ({
         ...prev,
         state: 'error',
       }));
       showNotification({
-        title: 'Image upload failed',
-        message: 'Failed to upload image: ' + String(err),
+        title: 'Upload failed',
+        message: 'Failed to upload: ' + String(err),
         color: 'red',
         autoClose: false,
       });
@@ -143,6 +171,24 @@ export function FileUploadField(props: FileUploadFieldProps) {
 
   function handleFile(file: File) {
     if (!file) {
+      return;
+    }
+    const ext = getFileExt(file.name);
+    if (
+      acceptedFileTypes.length > 0 &&
+      !acceptedFileTypes.some(
+        (type) =>
+          type.endsWith(ext) ||
+          type === `*/${ext}` ||
+          type === '*/*' ||
+          type === file.type
+      )
+    ) {
+      showNotification({
+        title: 'Invalid file type',
+        message: `File type ${ext} is not allowed.`,
+        color: 'red',
+      });
       return;
     }
     uploadFile(file);
@@ -176,7 +222,9 @@ export function FileUploadField(props: FileUploadFieldProps) {
   function requestFileUpload() {
     const inputEl = document.createElement('input');
     inputEl.type = 'file';
-    inputEl.accept = 'image/*,video/*';
+    if (acceptedFileTypes.length > 0) {
+      inputEl.accept = acceptedFileTypes.join(',');
+    }
     inputEl.onchange = (e) => {
       const target = e.target as HTMLInputElement;
       if (target.files && target.files.length > 0) {
@@ -186,7 +234,7 @@ export function FileUploadField(props: FileUploadFieldProps) {
     inputEl.click();
   }
 
-  function requestPlaceholderModal() {
+  function requestPlaceholderModalOpen() {
     setPlaceholderModalOpened(true);
   }
 
@@ -194,11 +242,14 @@ export function FileUploadField(props: FileUploadFieldProps) {
     <FileUploadFileContext.Provider
       value={{
         fileUpload: fileUploader,
+        variant: props.variant,
+        alt: props.alt,
+        acceptedFileTypes: acceptedFileTypes,
         handleFile: handleFile,
         focusDropZone: focusDropZone,
         requestFileUpload: requestFileUpload,
         requestFileDownload: requestFileDownload,
-        requestPlaceholderModal: requestPlaceholderModal,
+        requestPlaceholderModalOpen: requestPlaceholderModalOpen,
         setFileData: setFileData,
         setAltText: (altText) => {
           setFileUploader((prev) => {
@@ -250,17 +301,14 @@ export function FileUploadField(props: FileUploadFieldProps) {
               (formData.get('label') as string) || `${width}x${height}`;
 
             let svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}"><rect width="${width}" height="${height}" fill="${backgroundColor}" />`;
-
             if (label) {
               const maxTextWidthRatio = 0.5;
               const estimatedCharWidth = 0.6;
               const fontSize =
                 (width * maxTextWidthRatio) /
                 (label.length * estimatedCharWidth);
-
               svg += `<text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" font-family="sans-serif" font-size="${fontSize}" fill="#fff">${label}</text>`;
             }
-
             svg += '</svg>';
 
             const encoder = new TextEncoder();
@@ -369,18 +417,24 @@ FileUploadField.Preview = () => {
         >
           <Menu.Label size="sm">REPLACE</Menu.Label>
           <Menu.Item
-            icon={<IconPhotoUp size={16} />}
+            icon={
+              ctx.variant === 'image' ? (
+                <IconPhotoUp size={16} />
+              ) : (
+                <IconFileUpload size={16} />
+              )
+            }
             onClick={() => {
               ctx.requestFileUpload();
             }}
           >
-            Upload image
+            Upload {ctx.variant === 'image' ? 'image' : 'file'}
           </Menu.Item>
           <Menu.Item
             disabled={!uploadedFile.src}
             icon={<IconPhotoStar size={16} />}
             onClick={() => {
-              ctx.requestPlaceholderModal();
+              ctx.requestPlaceholderModalOpen();
             }}
           >
             Placeholder image
@@ -478,20 +532,25 @@ FileUploadField.Preview = () => {
                     </td>
                   </tr>
                 )}
-                <tr>
-                  <td>
-                    <b>Name</b>
-                  </td>
-                  <td>{uploadedFile.filename}</td>
-                </tr>
-                <tr>
-                  <td>
-                    <b>Dimensions</b>
-                  </td>
-                  <td>
-                    {uploadedFile.width}x{uploadedFile.height}
-                  </td>
-                </tr>
+                {uploadedFile.filename && (
+                  <tr>
+                    <td>
+                      <b>Name</b>
+                    </td>
+                    <td>{uploadedFile.filename}</td>
+                  </tr>
+                )}
+                {uploadedFile.width !== undefined &&
+                  uploadedFile.height !== undefined && (
+                    <tr>
+                      <td>
+                        <b>Dimensions</b>
+                      </td>
+                      <td>
+                        {uploadedFile.width}x{uploadedFile.height}
+                      </td>
+                    </tr>
+                  )}
                 <tr>
                   <td>
                     <b>URL</b>
@@ -511,9 +570,12 @@ FileUploadField.Preview = () => {
           </div>
         ) : (
           <>
-            <Box radius="sm" className="FileUploadField__Preview__Info">
-              {uploadedFile.width}x{uploadedFile.height}
-            </Box>
+            {uploadedFile.width !== undefined &&
+              uploadedFile.height !== undefined && (
+                <Box radius="sm" className="FileUploadField__Preview__Info">
+                  {uploadedFile.width}x{uploadedFile.height}
+                </Box>
+              )}
             {testIsImageFile(uploadedFile.src) && (
               <img
                 onClick={() => {
@@ -543,20 +605,25 @@ FileUploadField.Preview = () => {
           </>
         )}
       </div>
-      <div className="DocEditor__ImageField__imagePreview__Image__Alt">
-        <Textarea
-          radius={0}
-          className="DocEditor__ImageField__imagePreview__Image__Alt__Textarea"
-          value={uploadedFile.alt}
-          placeholder="Alt text"
-          size="xs"
-          autosize
-          disabled={ctx.fileUpload?.state === 'uploading'}
-          onChange={(e: ChangeEvent<HTMLInputElement>) => {
-            ctx?.setAltText(e.currentTarget.value);
-          }}
-        />
-      </div>
+      {ctx.alt !== false &&
+        (uploadedFile.alt ||
+          testShouldHaveAltText(uploadedFile.filename) ||
+          ctx.variant === 'image') && (
+          <div className="DocEditor__ImageField__imagePreview__Image__Alt">
+            <Textarea
+              radius={0}
+              className="DocEditor__ImageField__imagePreview__Image__Alt__Textarea"
+              value={uploadedFile.alt}
+              placeholder="Alt text"
+              size="xs"
+              autosize
+              disabled={ctx.fileUpload?.state === 'uploading'}
+              onChange={(e: ChangeEvent<HTMLInputElement>) => {
+                ctx?.setAltText(e.currentTarget.value);
+              }}
+            />
+          </div>
+        )}
     </div>
   );
 };
@@ -565,7 +632,9 @@ FileUploadField.UploadButton = forwardRef<HTMLLabelElement, {}>(
   (props, ref) => {
     const context = useContext(FileUploadFileContext);
     const uploading = context?.fileUpload?.state === 'uploading';
-
+    if (!context) {
+      return null;
+    }
     return (
       <label
         {...props}
@@ -576,7 +645,11 @@ FileUploadField.UploadButton = forwardRef<HTMLLabelElement, {}>(
         <input
           disabled={uploading}
           type="file"
-          accept="image/*,video/*"
+          accept={
+            context.acceptedFileTypes.length > 0
+              ? context.acceptedFileTypes.join(',')
+              : undefined
+          }
           className="FileUploadField__FileUploadButton__Input"
           onChange={(e) => {
             const target = e.target as HTMLInputElement;
@@ -585,7 +658,13 @@ FileUploadField.UploadButton = forwardRef<HTMLLabelElement, {}>(
             }
           }}
         />
-        {uploading ? <Loader size={16} /> : <IconPhotoUp size={16} />}
+        {uploading ? (
+          <Loader size={16} />
+        ) : context?.variant === 'image' ? (
+          <IconPhotoUp size={16} />
+        ) : (
+          <IconFileUpload size={16} />
+        )}
         <div className="FileUploadField__FileUploadButton__Title">
           {uploading
             ? 'Uploading...'
@@ -599,6 +678,15 @@ FileUploadField.UploadButton = forwardRef<HTMLLabelElement, {}>(
 );
 
 FileUploadField.Empty = () => {
+  const context = useContext(FileUploadFileContext);
+  if (!context) {
+    return null;
+  }
+  const acceptsLabel = context.acceptedFileTypes
+    .map((mimeType) =>
+      mimeType.split('/').pop()!.split('+')[0].replaceAll('.', '')
+    )
+    .sort();
   return (
     <div className="FileUploadField__Empty">
       <div className="FileUploadField__Empty__Label">
@@ -606,11 +694,13 @@ FileUploadField.Empty = () => {
           <FileUploadField.UploadButton />
         </div>
       </div>
-      <div>
-        <div className="FileUploadField__Empty__AcceptTypes">
-          Accepts mp4, jpg, png
+      {context.acceptedFileTypes.length > 0 && (
+        <div>
+          <div className="FileUploadField__Empty__AcceptTypes">
+            Allowed file types: {acceptsLabel.join(',  ')}
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 };
@@ -696,6 +786,9 @@ FileUploadField.Dropzone = forwardRef<HTMLButtonElement, {}>((props, ref) => {
   );
 });
 
-function testShouldHaveAltText(src: string) {
-  return testIsImageFile(src) || testIsVideoFile(src);
+function testShouldHaveAltText(filename: string | undefined): boolean {
+  if (!filename) {
+    return false;
+  }
+  return testIsImageFile(filename) || testIsVideoFile(filename);
 }
