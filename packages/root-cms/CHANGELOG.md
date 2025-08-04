@@ -1,5 +1,20 @@
 # @blinkk/root-cms
 
+## 2.0.0
+
+### Minor Changes
+
+- 6cb8708: feat: allow configuring custom CMS favicon
+
+### Patch Changes
+
+- d040a4b: fix: array header sizing
+- d040a4b: fix: array header preview sizing
+- 67ade33: fix: save file/image drafts immediately on change"
+- 690c057: refactor: use new file upload field
+- 0cd68df: fix: upgrade genkit to fix ai features
+  - @blinkk/root@2.0.0
+
 ## 1.4.14
 
 ### Patch Changes
