@@ -4,9 +4,13 @@ import path from 'node:path';
 import {vertexAI} from '@genkit-ai/vertexai';
 import {Timestamp} from 'firebase-admin/firestore';
 import {Genkit, genkit, MessageData} from 'genkit';
+import {logger} from 'genkit/logging';
 import {ChatPrompt, SendPromptOptions} from './ai/prompts.js';
 import {RootCMSClient} from './client.js';
 import {CMSPluginOptions} from './plugin.js';
+
+// Suppress the "Shutting down all Genkit servers..." message.
+logger.setLogLevel('warn');
 
 type HistoryItem = MessageData;
 
