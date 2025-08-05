@@ -38,3 +38,11 @@
     text-wrap: balance;
   }
 }
+
+.headline.text-left {
+  text-align: start;
+}
+.headline.text-left .body {
+  margin-inline-start: 0;
+  margin-inline-end: 0;
+}
