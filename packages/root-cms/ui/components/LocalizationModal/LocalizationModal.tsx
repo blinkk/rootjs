@@ -291,7 +291,9 @@ interface TranslationsProps {
 LocalizationModal.Translations = (props: TranslationsProps) => {
   const [loading, setLoading] = useState(true);
   const [sourceStrings, setSourceStrings] = useState<string[]>([]);
-  const [selectedLocale, setSelectedLocale] = useState('en');
+  const locales = window.__ROOT_CTX.rootConfig.i18n?.locales || [];
+  const defaultLocale = locales.find((l) => l !== 'en') || 'en';
+  const [selectedLocale, setSelectedLocale] = useState(defaultLocale);
   const [localeTranslations, setLocaleTranslations] = useState<
     Record<string, string>
   >({});
@@ -308,7 +310,6 @@ LocalizationModal.Translations = (props: TranslationsProps) => {
     return results;
   }, [translationsMap]);
 
-  const locales = window.__ROOT_CTX.rootConfig.i18n?.locales || [];
   const localeOptions = locales.map((locale) => ({
     value: locale,
     label: getLocaleLabel(locale),
