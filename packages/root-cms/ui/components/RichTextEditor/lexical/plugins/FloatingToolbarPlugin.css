@@ -1,0 +1,25 @@
+.LexicalEditor__floatingToolbar {
+  display: flex;
+  gap: 2px;
+  background: #fff;
+  padding: 4px;
+  vertical-align: middle;
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 10;
+  opacity: 0;
+  border: 1px solid rgb(233, 236, 239);
+  box-shadow: rgba(0, 0, 0, 0.05) 0px 1px 3px, rgba(0, 0, 0, 0.05) 0px 20px 25px -5px, rgba(0, 0, 0, 0.04) 0px 10px 10px -5px;
+  border-radius: 8px;
+  transition: opacity 0.5s;
+  will-change: transform;
+}
+
+.LexicalEditor__floatingToolbar .LexicalEditor__toolbar__actionIcon button {
+  color: black;
+}
+
+.LexicalEditor__floatingToolbar .LexicalEditor__toolbar__actionIcon--active button {
+  border: 1px solid rgb(206, 212, 218)
+}

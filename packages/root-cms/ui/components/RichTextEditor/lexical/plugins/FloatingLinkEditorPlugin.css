@@ -1,0 +1,85 @@
+.LexicalEditor__linkEditor {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 10;
+  max-width: 400px;
+  width: 100%;
+  opacity: 0;
+  background-color: #fff;
+  padding: 8px;
+  border: 1px solid rgb(233, 236, 239);
+  box-shadow: rgba(0, 0, 0, 0.05) 0px 1px 3px, rgba(0, 0, 0, 0.05) 0px 20px 25px -5px, rgba(0, 0, 0, 0.04) 0px 10px 10px -5px;
+  border-radius: 8px;
+  transition: opacity 0.5s;
+  will-change: transform;
+}
+
+.LexicalEditor__link__input,
+.LexicalEditor__link__preview {
+  flex: 1;
+  display: block;
+  border: 1px solid #dedede;
+  position: relative;
+  padding: 4px 8px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  font-family: var(--font-family-default);
+  font-size: 12px;
+  line-height: 1;
+}
+
+.LexicalEditor__link__input:focus {
+  outline: none;
+  border-color: #339af0;
+}
+
+.LexicalEditor__link__preview {
+  overflow: auto;
+  padding-right: 20px;
+}
+
+.LexicalEditor__link__preview a {
+  color: #216fdb;
+  text-underline-offset: 2px;
+}
+
+.LexicalEditor__link__preview svg {
+  position: absolute;
+  right: 8px;
+  top: calc(50% - 8px);
+}
+
+.LexicalEditor__link__controls {
+  display: flex;
+  gap: 4px;
+}
+
+.LexicalEditor__link-editor .button {
+  width: 20px;
+  height: 20px;
+  display: inline-block;
+  padding: 6px;
+  border-radius: 8px;
+  cursor: pointer;
+  margin: 0 2px;
+}
+
+.LexicalEditor__link-editor .button.hovered {
+  width: 20px;
+  height: 20px;
+  display: inline-block;
+  background-color: #eee;
+}
+
+.LexicalEditor__link-editor .button i {
+  background-size: contain;
+  display: inline-block;
+  height: 20px;
+  width: 20px;
+  vertical-align: -0.25em;
+}

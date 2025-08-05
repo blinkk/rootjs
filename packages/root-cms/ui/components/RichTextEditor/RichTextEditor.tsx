@@ -1,18 +1,19 @@
+import {RichTextData} from '../../../shared/richtext.js';
+import {useUserPreferences} from '../../hooks/useUserPreferences.js';
 import {EditorJSEditor} from './editorjs/EditorJSEditor.js';
+import {LexicalEditor} from './lexical/LexicalEditor.js';
 
 export interface RichTextEditorProps {
   className?: string;
   placeholder?: string;
-  value?: any;
-  onChange?: (data: any) => void;
+  value?: RichTextData;
+  onChange?: (data: RichTextData) => void;
 }
 
-export type RichTextData = {
-  [key: string]: any;
-  blocks: any[];
-  time?: number;
-};
-
 export function RichTextEditor(props: RichTextEditorProps) {
+  const userPrefs = useUserPreferences();
+  if (userPrefs.preferences.EnableLexicalEditor) {
+    return <LexicalEditor {...props} />;
+  }
   return <EditorJSEditor {...props} />;
 }
