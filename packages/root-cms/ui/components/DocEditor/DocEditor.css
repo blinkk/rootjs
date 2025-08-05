@@ -75,6 +75,7 @@
   transition: opacity 0.3s ease;
 }
 
+.DocEditor__FieldHeader__label:focus-within .DocEditor__FieldHeader__label__deeplink,
 .DocEditor__FieldHeader__label:hover .DocEditor__FieldHeader__label__deeplink {
   opacity: 1;
 }
@@ -213,6 +214,7 @@
 
 .DocEditor__ArrayField__item {
   flex: 1;
+  width: 100%;
 }
 
 .DocEditor__ArrayField__item__handle {
@@ -220,17 +222,20 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  flex-shrink: 0;
 }
 
 .DocEditor__ArrayField__item__header {
   align-items: center;
   background: white;
+  box-sizing: border-box;
   cursor: pointer;
   display: flex;
   position: sticky;
   top: var(--top-bar-height);
   user-select: none;
   z-index: 9;
+  width: 100%;
 }
 
 /** Nested array fields don't get the sticky behavior. */
@@ -264,6 +269,9 @@
   display: flex;
   flex: 1;
   gap: 10px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  width: 1em; /** Facilitates truncating the text preview. */
 }
 
 .DocEditor__ArrayField__item__header__preview__image {
@@ -325,7 +333,6 @@
 .DocEditor__ArrayField__item__header__controls__menu [role="menuitem"] {
   padding: 8px 12px;
   font-size: 14px;
-
 }
 
 .DocEditor__ArrayField__item__header__controls__menu [role="menuitem"]:hover {
@@ -379,198 +386,6 @@
   display: flex;
   flex-direction: column;
   gap: 24px;
-}
-
-.DocEditor__ImageField {
-  /* Use negative margins to increase the drag/drop zone. */
-  padding: 10px;
-  margin: -10px;
-}
-
-.DocEditor__ImageField.dragging {
-  outline: 2px dashed black;
-}
-
-.DocEditor__ImageField__imagePreview {
-  margin-bottom: 10px;
-}
-
-.DocEditor__ImageField__imagePreview__controls {
-  display: flex;
-  justify-content: flex-end;
-  gap: 4px;
-}
-
-.DocEditor__ImageField__imagePreview__image {
-  background: #f5f5f5;
-  border: 1px solid #dedede;
-  aspect-ratio: 16/9;
-  width: 100%;
-  padding: 10px;
-  margin-bottom: 10px;
-  position: relative;
-}
-
-.DocEditor__ImageField__imagePreview__image img {
-  display: block;
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
-  object-position: center;
-}
-
-.DocEditor__ImageField__imagePreview__dimens {
-  position: absolute;
-  top: -1px;
-  right: -1px;
-  padding: 4px 8px;
-  background: black;
-  color: white;
-  font-size: 8px;
-  font-weight: 700;
-}
-
-.DocEditor__ImageField__imagePreview__image__alt {
-  margin-top: 4px;
-}
-
-.DocEditor__ImageField__noImage {
-  font-family: var(--font-family-mono);
-  margin-bottom: 10px;
-}
-
-.DocEditor__ImageField__uploadButton {
-  display: inline-flex;
-  align-items: center;
-  cursor: pointer;
-  background: #25262b;
-  border-radius: 4px;
-  padding: 0 14px;
-  height: 30px;
-  color: #ffffff;
-  font-weight: 600;
-  transition: all 0.3s ease;
-}
-
-.DocEditor__ImageField__uploadButton[aria-disabled="true"] {
-  opacity: 0.5;
-}
-
-.DocEditor__ImageField__uploadButton input[type="file"] {
-  display: none;
-}
-
-.DocEditor__ImageField__uploadButton__icon {
-  margin-right: 10px;
-}
-
-.DocEditor__FileField {
-  /* Use negative margins to increase the drag/drop zone. */
-  padding: 10px;
-  margin: -10px;
-}
-
-.DocEditor__FileField.dragging {
-  outline: 2px dashed black;
-}
-
-.DocEditor__FileField__controls {
-  display: flex;
-  justify-content: flex-end;
-  gap: 4px;
-}
-
-.DocEditor__FileField__file {
-  margin-bottom: 10px;
-}
-
-.DocEditor__FileField__noFile {
-  font-family: var(--font-family-mono);
-  margin-bottom: 10px;
-}
-
-.DocEditor__FileField__uploadButton {
-  display: inline-flex;
-  align-items: center;
-  cursor: pointer;
-  background: #25262b;
-  border-radius: 4px;
-  padding: 0 14px;
-  height: 30px;
-  color: #ffffff;
-  font-weight: 600;
-  transition: all 0.3s ease;
-}
-
-.DocEditor__FileField__uploadButton[aria-disabled="true"] {
-  opacity: 0.5;
-}
-
-.DocEditor__FileField__uploadButton input[type="file"] {
-  display: none;
-}
-
-.DocEditor__FileField__uploadButton__icon {
-  margin-right: 10px;
-}
-
-.DocEditor__FileField__ImagePreview {
-  background: #f5f5f5;
-  border: 1px solid #dedede;
-  aspect-ratio: 16/9;
-  width: 100%;
-  padding: 10px;
-  margin-bottom: 10px;
-  position: relative;
-}
-
-.DocEditor__FileField__ImagePreview img {
-  display: block;
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
-  object-position: center;
-}
-
-.DocEditor__FileField__ImagePreview__dimens {
-  position: absolute;
-  top: -1px;
-  right: -1px;
-  padding: 4px 8px;
-  background: black;
-  color: white;
-  font-size: 8px;
-  font-weight: 700;
-}
-
-.DocEditor__FileField__file__alt {
-  margin-top: 4px;
-  margin-bottom: 12px;
-}
-
-.DocEditor__FileField__VideoPreview {
-  position: relative;
-  background: #f5f5f5;
-  border: 1px solid #dedede;
-  margin-bottom: 10px;
-}
-
-.DocEditor__FileField__VideoPreview__video {
-  aspect-ratio: var(--video-aspect-ratio, auto);
-  max-height: 400px;
-  margin: 0 auto;
-  object-fit: contain;
-}
-
-.DocEditor__FileField__VideoPreview__dimens {
-  position: absolute;
-  top: -1px;
-  right: -1px;
-  padding: 4px 8px;
-  background: black;
-  color: white;
-  font-size: 8px;
-  font-weight: 700;
 }
 
 .DocEditor__DateTimeField input {
