@@ -1,11 +1,13 @@
+import './SettingsPage.css';
 import {Switch} from '@mantine/core';
 import {Heading} from '../../components/Heading/Heading.js';
 import {ShareBox} from '../../components/ShareBox/ShareBox.js';
 import {Text} from '../../components/Text/Text.js';
+import {useUserPreferences} from '../../hooks/useUserPreferences.js';
 import {Layout} from '../../layout/Layout.js';
-import './SettingsPage.css';
 
 export function SettingsPage() {
+  const userPrefs = useUserPreferences();
   return (
     <Layout>
       <div className="SettingsPage">
@@ -91,7 +93,15 @@ export function SettingsPage() {
                 </Text>
               </div>
               <div className="SettingsPage__section__userPref__input">
-                <Switch color="dark" />
+                <Switch
+                  color="dark"
+                  checked={userPrefs.preferences.EnableLexicalEditor}
+                  onChange={(e: Event) => {
+                    const enabled = (e.currentTarget as HTMLInputElement)
+                      .checked;
+                    userPrefs.setPreference('EnableLexicalEditor', enabled);
+                  }}
+                />
               </div>
             </div>
           </div>
