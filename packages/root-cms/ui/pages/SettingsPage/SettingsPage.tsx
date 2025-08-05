@@ -1,3 +1,4 @@
+import {Switch} from '@mantine/core';
 import {Heading} from '../../components/Heading/Heading.js';
 import {ShareBox} from '../../components/ShareBox/ShareBox.js';
 import {Text} from '../../components/Text/Text.js';
@@ -35,6 +36,64 @@ export function SettingsPage() {
               Users
             </Heading>
             <ShareBox className="SettingsPage__section__users__sharebox" />
+          </div>
+        </div>
+        <div className="SettingsPage__section">
+          <div className="SettingsPage__section__left">
+            <Heading className="SettingsPage__section__left__title">
+              User Preferences
+            </Heading>
+            <Text
+              className="SettingsPage__section__body"
+              size="body-sm"
+              weight="semi-bold"
+              color="gray"
+            >
+              <p>These settings are for you only.</p>
+            </Text>
+          </div>
+          <div className="SettingsPage__section__right">
+            <div className="SettingsPage__section__userPref">
+              <div className="SettingsPage__section__userPref__description">
+                <Text
+                  className="SettingsPage__section__userPref__description__title"
+                  size="body"
+                  weight="semi-bold"
+                >
+                  Enable Lexical Editor (experimental)
+                </Text>
+                <Text
+                  className="SettingsPage__section__userPref__description__body"
+                  size="body-sm"
+                  weight="semi-bold"
+                  color="gray"
+                >
+                  <p>
+                    Replaces the{' '}
+                    <a
+                      href="https://editorjs.io/"
+                      target="_blank"
+                      rel="noopener noreferrer nofollow"
+                    >
+                      EditorJS
+                    </a>{' '}
+                    rich text editor with the{' '}
+                    <a
+                      href="https://lexical.dev/"
+                      target="_blank"
+                      rel="noopener noreferrer nofollow"
+                    >
+                      Lexical
+                    </a>{' '}
+                    version. The data saved by the Lexical version is backwards
+                    compatible but the editor may be missing a few features.
+                  </p>
+                </Text>
+              </div>
+              <div className="SettingsPage__section__userPref__input">
+                <Switch color="dark" />
+              </div>
+            </div>
           </div>
         </div>
       </div>
