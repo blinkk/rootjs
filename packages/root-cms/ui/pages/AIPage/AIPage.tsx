@@ -900,22 +900,36 @@ export function ChatBar(props: {
             onChange={onImageFileChange}
             ref={imageInputRef}
           />
-          <ActionIcon
-            // Using a <div> instead of a <button> allows the <label> parent to
-            // trigger the file input.
-            component="div"
-            className="AIPage__ChatBar__prompt__imageUpload__icon"
-            radius="xl"
-          >
-            <IconPaperclip size={18} />
-          </ActionIcon>
+          <Tooltip label="Upload image">
+            <ActionIcon
+              // Using a <div> instead of a <button> allows the <label> parent to
+              // trigger the file input.
+              component="div"
+              className="AIPage__ChatBar__prompt__imageUpload__icon"
+              radius="xl"
+            >
+              <IconPaperclip size={18} />
+            </ActionIcon>
+          </Tooltip>
         </label>
         <textarea
           className="AIPage__ChatBar__prompt__textInput"
           ref={textInputRef}
-          placeholder="Enter prompt here..."
+          placeholder="Enter prompt..."
           rows={1}
           onKeyDown={onKeyDown}
+          onPaste={(e) => {
+            // If the user pastes an image, upload it.
+            const items = e.clipboardData?.items || [];
+            for (const item of items) {
+              if (item.kind === 'file' && item.type.startsWith('image/')) {
+                const file = item.getAsFile();
+                if (file) {
+                  uploadImage(file);
+                }
+              }
+            }
+          }}
           onChange={(e) => {
             setTextPrompt((e.target as HTMLTextAreaElement).value);
           }}
