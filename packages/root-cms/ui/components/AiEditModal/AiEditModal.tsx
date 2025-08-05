@@ -23,7 +23,7 @@ export function useAiEditModal() {
     open: (props: AiEditModalProps) => {
       modals.openContextModal(MODAL_ID, {
         ...modalTheme,
-        title: props.title || 'Edit with AI',
+        title: props.title || 'Edit with AI (Experimental)',
         innerProps: props,
         size: 'calc(min(1024px, 100%))',
       });
@@ -80,7 +80,17 @@ export function AiEditModal(modalProps: ContextModalProps<AiEditModalProps>) {
             onEditModeResponse={(resp: ParsedChatResponse) =>
               setValue(JSON.stringify(resp.data, null, 2))
             }
-          />
+          >
+            <p>
+              Tell me what you want to change. I can make simple text edits,
+              replace content within a module, or answer questions about the
+              content.
+            </p>
+            <p>
+              Just enter simple instructions, or attach a screenshot and ask me
+              to use it as reference.
+            </p>
+          </ChatPanel>
         </div>
       </div>
       <div className="AiEditModal__buttons">

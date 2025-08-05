@@ -12,11 +12,12 @@ import {fromMarkdown} from 'mdast-util-from-markdown';
 import {gfmFromMarkdown} from 'mdast-util-gfm';
 import {gfm} from 'micromark-extension-gfm';
 import {useEffect, useMemo, useRef, useState} from 'preact/hooks';
-import type {
-  ChatMode,
+import {
   ChatPrompt,
+  ParsedChatResponse,
+  parseResponse,
   SendPromptOptions,
-} from '../../../core/ai.js';
+} from '../../../core/ai/prompts.js';
 import {ChatApiRequest} from '../../../core/api.js';
 import {Layout} from '../../layout/Layout.js';
 import {joinClassNames} from '../../utils/classes.js';
@@ -120,9 +121,9 @@ interface ChatController {
   updateMessage: (messageId: number, message: Message) => void;
   sendPrompt: (
     messageId: number,
-    prompt: ChatPrompt,
+    prompt: ChatPrompt | ChatPrompt[],
     options?: SendPromptOptions
-  ) => Promise<ParsedChatResponse | undefined>;
+  ) => Promise<ParsedChatResponse>;
 }
 
 export function useChat(): ChatController {
@@ -158,9 +159,9 @@ export function useChat(): ChatController {
 
   const sendPrompt = async (
     messageId: number,
-    prompt: ChatPrompt,
+    prompt: ChatPrompt | ChatPrompt[],
     options?: SendPromptOptions
-  ): Promise<ParsedChatResponse | undefined> => {
+  ): Promise<ParsedChatResponse> => {
     // Allow users to provide a custom api endpoint via the
     // `{ai: {endpoint: '/api/...}}` config.
     let endpoint = '/cms/api/ai.chat';
@@ -195,13 +196,12 @@ export function useChat(): ChatController {
           },
         ],
       });
-      return undefined;
+      return {message: errorMessage, data: {}};
     }
     const resData = await res.json();
     if (resData.success && resData.chatId) {
       const response = resData.response;
       setChatId(resData.chatId);
-      console.log('ai chat response', response);
       const parsedResponse = parseResponse(response, options?.mode);
       updateMessage(messageId, {
         sender: 'bot',
@@ -215,7 +215,10 @@ export function useChat(): ChatController {
       });
       return parsedResponse;
     }
-    return undefined;
+    return {
+      message: 'Sorry. Something went wrong. An unknown error occurred.',
+      data: {},
+    };
   };
 
   return {
@@ -225,23 +228,6 @@ export function useChat(): ChatController {
     updateMessage,
     sendPrompt,
   };
-}
-
-export interface ParsedChatResponse {
-  message: string;
-  data: Record<string, any> | undefined;
-}
-
-function parseResponse(response: string, mode?: ChatMode): ParsedChatResponse {
-  if (mode === 'edit') {
-    const jsonMatch = response.match(/^```json\n?(.*?)\n?```$/s);
-    const responseAsJson = JSON.parse(jsonMatch ? jsonMatch[1] : response);
-    return {
-      message: responseAsJson.message,
-      data: responseAsJson.data,
-    };
-  }
-  return {message: response, data: undefined};
 }
 
 export function AIPage() {
@@ -254,7 +240,12 @@ export function AIPage() {
       <div className="AIPage">
         {isEnabled ? (
           <>
-            <ChatWindow chat={chat} />
+            <ChatWindow chat={chat}>
+              <p>
+                Chat with me about your website. Ask questions about the content
+                and I can tell you about it.
+              </p>
+            </ChatWindow>
             <ChatBar chat={chat} />
           </>
         ) : (
@@ -272,7 +263,10 @@ export function AIPage() {
   );
 }
 
-export function ChatWindow(props: {chat: ChatController}) {
+export function ChatWindow(props: {
+  chat: ChatController;
+  children?: preact.ComponentChildren;
+}) {
   const messages = props.chat.messages;
   return (
     <div className="AIPage__ChatWindow">
@@ -288,8 +282,13 @@ export function ChatWindow(props: {chat: ChatController}) {
             <IconRobot size={36} />
           </div>
           <div className="AIPage__ChatWindow__welcome__title">
-            Welcome to Root AI
+            Root AI is ready
           </div>
+          {props.children && (
+            <div className="AIPage__ChatWindow__welcome__body">
+              {props.children}
+            </div>
+          )}
         </div>
       )}
     </div>
@@ -389,7 +388,7 @@ function ChatMessageBlocks(props: {message: Message; animated: boolean}) {
             />
           );
         }
-        return <div>unknown block type: {block.type}</div>;
+        return <div>unknown block type: {(block as any).type}</div>;
       })}
     </div>
   );
@@ -755,7 +754,7 @@ function ChatMessageImageBlock(props: {
 export function ChatBar(props: {
   chat: ChatController;
   options?: SendPromptOptions;
-  onData?: (data: any) => void;
+  onData?: (data: ParsedChatResponse) => void;
 }) {
   const [textPrompt, setTextPrompt] = useState('');
   const textInputRef = useRef<HTMLTextAreaElement>(null);
@@ -893,7 +892,7 @@ export function ChatBar(props: {
           (imageUploading || image) && 'AIPage__ChatBar__prompt--hasImage'
         )}
       >
-        <label className="AIPage__ChatBar__prompt__imageUpload" role="button">
+        <label className="AIPage__ChatBar__prompt__imageUpload">
           <input
             className="AIPage__ChatBar__prompt__imageUpload__input"
             type="file"
@@ -941,6 +940,7 @@ export function ChatBar(props: {
                     src={image.src}
                     width={image.width}
                     height={image.height}
+                    alt="attachment"
                   />
                   <div className="AIPage__ChatBar__prompt__imagePreview__closeButton__icon">
                     <IconX size={24} color="white" />

@@ -3,11 +3,10 @@ import fs from 'node:fs';
 import path from 'node:path';
 import {vertexAI} from '@genkit-ai/vertexai';
 import {Timestamp} from 'firebase-admin/firestore';
-import {Genkit, genkit, MessageData, Part} from 'genkit';
+import {Genkit, genkit, MessageData} from 'genkit';
+import {ChatPrompt, SendPromptOptions} from './ai/prompts.js';
 import {RootCMSClient} from './client.js';
 import {CMSPluginOptions} from './plugin.js';
-
-export type ChatPrompt = Part[];
 
 type HistoryItem = MessageData;
 
@@ -19,14 +18,6 @@ export type RootAiModel =
   | 'vertexai/gemini-1.5-pro';
 
 const DEFAULT_MODEL: RootAiModel = 'vertexai/gemini-2.5-flash';
-
-export type ChatMode = 'chat' | 'edit';
-
-export interface SendPromptOptions {
-  mode?: ChatMode;
-  /** Data sent for edit mode requests. */
-  editData?: Record<string, any>;
-}
 
 export class Chat {
   chatClient: ChatClient;
@@ -75,6 +66,7 @@ export class Chat {
         content: [{text: await this.buildSystemPrompt(options)}],
       });
     }
+    // Additional data sent for "edit" mode requests.
     if (options.mode === 'edit') {
       messages.push({
         role: 'user',
@@ -92,8 +84,9 @@ export class Chat {
     return messages;
   }
 
+  /** Builds the request sent to the AI based on the `ChatMode`. */
   private async buildChatRequest(
-    prompt: ChatPrompt,
+    prompt: ChatPrompt | ChatPrompt[],
     options: SendPromptOptions
   ) {
     if (options.mode === 'edit') {
@@ -110,13 +103,17 @@ export class Chat {
     };
   }
 
+  /** Sends the request to the AI and stores the history in the session and the database. */
   async sendPrompt(
-    prompt: ChatPrompt,
+    prompt: ChatPrompt | ChatPrompt[],
     options: SendPromptOptions = {}
   ): Promise<string> {
-    const res = await this.ai.generate(
-      await this.buildChatRequest(prompt, options)
-    );
+    const chatRequest = await this.buildChatRequest(prompt, options);
+    const res = await this.ai.generate({
+      model: chatRequest.model,
+      messages: chatRequest.messages,
+      prompt: Array.isArray(prompt) ? prompt.flat() : prompt,
+    });
     this.history = res.messages;
     await this.dbDoc().update({
       history: this.history,
@@ -129,6 +126,11 @@ export class Chat {
     return this.chatClient.dbCollection().doc(this.id);
   }
 
+  /**
+   * Builds the system prompt sent to the AI, based on the `ChatMode` and
+   * supplied `SendPromptOptions`. `SendPromptOptions` may contain data or
+   * references to information needed to construct the prompt.
+   */
   private async buildSystemPrompt(options: SendPromptOptions): Promise<string> {
     const serializedRootConfig = JSON.stringify(
       this.cmsClient.rootConfig,
@@ -136,6 +138,7 @@ export class Chat {
       2
     );
 
+    // Edit mode prompts.
     if (options.mode === 'edit') {
       const rootDir = process.cwd();
       const rootCmsDefs = fs.readFileSync(
@@ -148,6 +151,8 @@ export class Chat {
       text.replace('{{ROOT_CMS_DEFS}}', rootCmsDefs);
       return text;
     }
+
+    // Chat mode (default) prompts.
     const systemText = [
       `You are an assistant for a headless CMS called Root CMS which is used on a website called ${
         this.cmsPluginOptions.name || this.cmsPluginOptions.id

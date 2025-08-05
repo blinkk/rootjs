@@ -13,7 +13,7 @@ export default defineConfig({
     project: './core/project.ts',
     richtext: './core/richtext.tsx',
   },
-  target: 'node16',
+  target: 'node22',
   dts: {
     entry: [
       './core/client.ts',

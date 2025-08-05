@@ -1,13 +1,7 @@
 import {Server, Request, Response} from '@blinkk/root';
 import {multipartMiddleware} from '@blinkk/root/middleware';
-import {
-  Chat,
-  ChatClient,
-  ChatMode,
-  ChatPrompt,
-  RootAiModel,
-  SendPromptOptions,
-} from './ai.js';
+import {ChatPrompt, SendPromptOptions} from './ai/prompts.js';
+import {Chat, ChatClient, RootAiModel} from './ai.js';
 import {RootCMSClient} from './client.js';
 import {runCronJobs} from './cron.js';
 import {arrayToCsv, csvToArray} from './csv.js';
@@ -16,7 +10,7 @@ type AppModule = typeof import('./app.js');
 
 export interface ChatApiRequest {
   chatId: string;
-  prompt: ChatPrompt;
+  prompt: ChatPrompt | ChatPrompt[];
   model?: RootAiModel;
   options?: SendPromptOptions;
 }
