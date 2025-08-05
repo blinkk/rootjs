@@ -1,5 +1,5 @@
 import * as schema from '../../core/schema.js';
-import {validateRichTextData} from '../components/RichTextEditor/RichTextEditor.js';
+import {testValidRichTextData} from '../../shared/richtext.js';
 import {isObject} from './objects.js';
 
 /**
@@ -31,7 +31,7 @@ export function testFieldEmpty(field: schema.Field, value: any): boolean {
     case 'reference':
       return !value || !value.id;
     case 'richtext':
-      return !validateRichTextData(value);
+      return !testValidRichTextData(value);
     case 'object':
       if (!isObject(value) || Object.keys(value).length === 0) {
         return true;
