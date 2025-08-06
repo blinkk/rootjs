@@ -10,6 +10,8 @@ import {
   $createParagraphNode,
   $createTextNode,
   $getRoot,
+  LexicalNode,
+  TextNode,
 } from 'lexical';
 import {
   RichTextData,
@@ -58,52 +60,59 @@ function createNodesFromHTML(htmlString: string) {
   template.innerHTML = htmlString;
   const fragment = template.content;
 
-  const nodes: any[] = [];
+  const nodes: LexicalNode[] = [];
 
-  function parseNode(domNode: Node): any {
+  function parseNode(domNode: Node): LexicalNode | Array<LexicalNode> | null {
     if (domNode.nodeType === Node.TEXT_NODE) {
       return $createTextNode(domNode.textContent || '');
     }
 
     if (domNode.nodeType === Node.ELEMENT_NODE) {
       const el = domNode as HTMLElement;
-      const children = Array.from(el.childNodes)
+      const children: LexicalNode[] = Array.from(el.childNodes)
         .map(parseNode)
-        .filter(Boolean)
+        .filter((node) => !!node)
         .flat();
 
       switch (el.tagName.toLowerCase()) {
         case 'b':
         case 'strong':
-          return children.map((child) => {
-            child.toggleFormat('bold');
+          return children.map((child: LexicalNode) => {
+            const textNode = child as TextNode;
+            textNode.toggleFormat('bold');
             return child;
           });
         case 'i':
         case 'em':
-          return children.map((child) => {
-            child.toggleFormat('italic');
+          return children.map((child: LexicalNode) => {
+            const textNode = child as TextNode;
+            textNode.toggleFormat('italic');
             return child;
           });
         case 'u':
-          return children.map((child) => {
-            child.toggleFormat('underline');
+          return children.map((child: LexicalNode) => {
+            const textNode = child as TextNode;
+            textNode.toggleFormat('underline');
             return child;
           });
         case 's':
-          return children.map((child) => {
-            child.toggleFormat('strikethrough');
+          return children.map((child: LexicalNode) => {
+            const textNode = child as TextNode;
+            textNode.toggleFormat('strikethrough');
             return child;
           });
         case 'sup':
-          return children.map((child) => {
-            child.toggleFormat('superscript');
+          return children.map((child: LexicalNode) => {
+            const textNode = child as TextNode;
+            textNode.toggleFormat('superscript');
             return child;
           });
         case 'a':
           return [
             $applyNodeReplacement(
-              $createLinkNode(el.getAttribute('href') || '').append(...children)
+              $createLinkNode(el.getAttribute('href') || '').append(
+                ...(children as LexicalNode[])
+              )
             ),
           ];
         default:
