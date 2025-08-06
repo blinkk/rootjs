@@ -5,7 +5,7 @@ import {vertexAI} from '@genkit-ai/vertexai';
 import {Timestamp} from 'firebase-admin/firestore';
 import {Genkit, genkit, MessageData} from 'genkit';
 import {logger} from 'genkit/logging';
-import {ChatPrompt, SendPromptOptions} from './ai/prompts.js';
+import {ChatPrompt, SendPromptOptions} from '../shared/ai/prompts.js';
 import {RootCMSClient} from './client.js';
 import {CMSPluginOptions} from './plugin.js';
 
@@ -153,7 +153,7 @@ export class Chat {
           encoding: 'utf8',
         }
       );
-      const text = (await import('./ai/prompts/edit.txt')).default;
+      const text = (await import('../shared/ai/prompts/edit.txt')).default;
       text.replace('{{ROOT_CMS_DEFS}}', rootCmsDefs);
       return text;
     }

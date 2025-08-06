@@ -1,10 +1,11 @@
+import './AiEditModal.css';
+
 import {Button, JsonInput} from '@mantine/core';
 import {ContextModalProps, useModals} from '@mantine/modals';
 import {IconClipboard, IconDeviceFloppy} from '@tabler/icons-preact';
 import {useState} from 'preact/hooks';
+import {ParsedChatResponse} from '../../../shared/ai/prompts.js';
 import {useModalTheme} from '../../hooks/useModalTheme.js';
-import './AiEditModal.css';
-import {ParsedChatResponse} from '../../pages/AIPage/AIPage.js';
 import {ChatPanel} from './ChatPanel.js';
 
 const MODAL_ID = 'AiEditModal';
@@ -77,9 +78,9 @@ export function AiEditModal(modalProps: ContextModalProps<AiEditModalProps>) {
         <div className="AiEditModal__SplitPanel__ChatPanel">
           <ChatPanel
             editModeData={JSON.parse(value)}
-            onEditModeResponse={(resp: ParsedChatResponse) =>
-              setValue(JSON.stringify(resp.data, null, 2))
-            }
+            onEditModeResponse={(resp: ParsedChatResponse) => {
+              setValue(JSON.stringify(resp.data, null, 2));
+            }}
           >
             <p>
               Tell me what you want to change. I can make simple text edits,

@@ -15,3 +15,22 @@
 .SettingsPage__section__right__title {
   margin-bottom: 12px;
 }
+
+.SettingsPage__section + .SettingsPage__section {
+  margin-top: 100px;
+}
+
+.SettingsPage__section__userPref {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 20px;
+  max-width: 420px;
+}
+
+.SettingsPage__section__userPref__description__body {
+  margin-top: 8px;
+}
+
+.SettingsPage__section__userPref__description__body a {
+  text-underline-offset: 3px;
+}

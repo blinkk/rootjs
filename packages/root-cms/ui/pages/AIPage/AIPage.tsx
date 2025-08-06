@@ -12,13 +12,13 @@ import {fromMarkdown} from 'mdast-util-from-markdown';
 import {gfmFromMarkdown} from 'mdast-util-gfm';
 import {gfm} from 'micromark-extension-gfm';
 import {useEffect, useMemo, useRef, useState} from 'preact/hooks';
+import {ChatApiRequest} from '../../../core/api.js';
 import {
   ChatPrompt,
   ParsedChatResponse,
   parseResponse,
   SendPromptOptions,
-} from '../../../core/ai/prompts.js';
-import {ChatApiRequest} from '../../../core/api.js';
+} from '../../../shared/ai/prompts.js';
 import {Layout} from '../../layout/Layout.js';
 import {joinClassNames} from '../../utils/classes.js';
 import {uploadFileToGCS} from '../../utils/gcs.js';

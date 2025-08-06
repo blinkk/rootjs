@@ -1,6 +1,6 @@
 import {Server, Request, Response} from '@blinkk/root';
 import {multipartMiddleware} from '@blinkk/root/middleware';
-import {ChatPrompt, SendPromptOptions} from './ai/prompts.js';
+import {ChatPrompt, SendPromptOptions} from '../shared/ai/prompts.js';
 import {Chat, ChatClient, RootAiModel} from './ai.js';
 import {RootCMSClient} from './client.js';
 import {runCronJobs} from './cron.js';

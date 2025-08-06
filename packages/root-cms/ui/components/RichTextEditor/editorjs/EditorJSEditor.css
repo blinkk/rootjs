@@ -1,35 +1,35 @@
-.RichTextEditor {
+.EditorJSEditor {
   border: 1px solid #ced4da;
   background: #fff;
   padding: 4px 10px;
 }
 
-.RichTextEditor .codex-editor__redactor {
+.EditorJSEditor .codex-editor__redactor {
   padding-bottom: 150px !important;
 }
 
-.RichTextEditor .ce-inline-toolbar {
+.EditorJSEditor .ce-inline-toolbar {
   min-width: 200px;
 }
 
-.RichTextEditor .ce-header {
+.EditorJSEditor .ce-header {
   margin-top: 20px;
 }
 
-.RichTextEditor .ce-block:first-of-type .ce-header {
+.EditorJSEditor .ce-block:first-of-type .ce-header {
   margin-top: 0;
 }
 
-.RichTextEditor .cdx-list__item {
+.EditorJSEditor .cdx-list__item {
   padding-top: 0;
   padding-bottom: 0;
 }
 
-.RichTextEditor .image-tool__image {
+.EditorJSEditor .image-tool__image {
   margin-bottom: 0;
 }
 
-.RichTextEditor .image-tool__image-picture {
+.EditorJSEditor .image-tool__image-picture {
   background: #f5f5f5;
   border: 1px solid #dedede;
   aspect-ratio: 16/9;
@@ -39,21 +39,21 @@
   object-position: center;
 }
 
-.RichTextEditor .image-tool__image::after {
+.EditorJSEditor .image-tool__image::after {
   content: 'Image alt text';
   display: block;
   margin-top: 6px;
   font-weight: 500;
 }
 
-.RichTextEditor .image-tool__caption {
+.EditorJSEditor .image-tool__caption {
   font-family: inherit;
   border: 1px solid #ced4da;
   padding: 8px 10px;
   margin-top: 4px;
 }
 
-.RichTextEditor .ce-rawtool::before {
+.EditorJSEditor .ce-rawtool::before {
   content: 'WARNING: Use raw HTML with caution.';
   display: block;
   color: red;
@@ -63,10 +63,10 @@
   font-style: italic;
 }
 
-.RichTextEditor .ce-inline-tool[data-tool="strikethrough"] svg {
+.EditorJSEditor .ce-inline-tool[data-tool="strikethrough"] svg {
   padding: 3px;
 }
 
-.RichTextEditor .ce-inline-tool[data-tool="superscript"] svg {
+.EditorJSEditor .ce-inline-tool[data-tool="superscript"] svg {
   padding: 2px;
 }
