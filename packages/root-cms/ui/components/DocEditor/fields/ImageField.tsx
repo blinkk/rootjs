@@ -34,8 +34,6 @@ export function ImageField(props: FieldProps) {
         } else {
           props.draft.removeKey(props.deepKey);
         }
-        // Save the draft immediately.
-        props.draft.flush();
         setUploadedFile(file);
       }}
     />

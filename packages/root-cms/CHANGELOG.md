@@ -1,5 +1,12 @@
 # @blinkk/root-cms
 
+## 2.0.1
+
+### Patch Changes
+
+- 7532310: fix: remove race condition with alt text changes
+  - @blinkk/root@2.0.1
+
 ## 2.0.0
 
 ### Minor Changes
