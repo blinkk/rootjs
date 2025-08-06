@@ -20,10 +20,11 @@ export function OnChangePlugin(props: OnChangePluginProps) {
 
   useEffect(() => {
     const time = props.value?.time || 0;
-    if (timeSaved !== time) {
+    if (time > timeSaved) {
       editor.update(() => {
         console.log('lexical update, props.value changed:', props.value);
         setIsUpdating(true);
+        setTimeSaved(time);
         convertToLexical(props.value);
       });
     }

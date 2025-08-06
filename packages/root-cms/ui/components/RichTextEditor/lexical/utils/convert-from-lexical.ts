@@ -33,8 +33,6 @@ function extractTextChild(node: LexicalNode): string {
     return '<br>';
   }
   if ($isLinkNode(node)) {
-    console.log(node);
-    console.log('TODO handle link node');
     const href = node.getURL();
     return `<a href="${href}">${extractTextNode(node)}</a>`;
   }
