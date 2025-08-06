@@ -22,7 +22,6 @@ export function OnChangePlugin(props: OnChangePluginProps) {
     const time = props.value?.time || 0;
     if (time > timeSaved) {
       editor.update(() => {
-        console.log('lexical update, props.value changed:', props.value);
         setIsUpdating(true);
         setTimeSaved(time);
         convertToLexical(props.value);
@@ -39,7 +38,6 @@ export function OnChangePlugin(props: OnChangePluginProps) {
     }
     editorState.read(() => {
       const richTextData = convertToRichTextData();
-      console.log(richTextData);
       setTimeSaved(richTextData?.time || 0);
       if (props.onChange) {
         props.onChange(richTextData);
