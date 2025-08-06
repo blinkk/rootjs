@@ -1,8 +1,16 @@
 import './AiEditModal.css';
+import 'json-diff-kit/dist/viewer.css';
+import 'json-diff-kit/dist/viewer-monokai.css';
 
-import {Button, JsonInput} from '@mantine/core';
+import {Button, JsonInput, Tabs} from '@mantine/core';
 import {ContextModalProps, useModals} from '@mantine/modals';
-import {IconClipboard, IconDeviceFloppy} from '@tabler/icons-preact';
+import {
+  IconClipboard,
+  IconDeviceFloppy,
+  IconFileDiff,
+  IconJson,
+} from '@tabler/icons-preact';
+import {Differ, Viewer as JsonDiffViewer} from 'json-diff-kit';
 import {useState} from 'preact/hooks';
 import {ParsedChatResponse} from '../../../shared/ai/prompts.js';
 import {useModalTheme} from '../../hooks/useModalTheme.js';
@@ -40,6 +48,9 @@ export function AiEditModal(modalProps: ContextModalProps<AiEditModalProps>) {
   const [value, setValue] = useState(JSON.stringify(props.data || {}, null, 2));
   const [valid, setValid] = useState(true);
   const [copied, setCopied] = useState(false);
+  const initialValue = props.data || {};
+  const differ = new Differ({});
+  const diff = differ.diff(initialValue, JSON.parse(value));
 
   function onChange(s: string) {
     setValue(s);
@@ -67,13 +78,34 @@ export function AiEditModal(modalProps: ContextModalProps<AiEditModalProps>) {
     <div className="AiEditModal">
       <div className="AiEditModal__SplitPanel">
         <div className="AiEditModal__SplitPanel__JsonPanel">
-          <JsonInput
-            value={value}
-            onChange={onChange}
-            formatOnBlur
-            height="100%"
-            className="AiEditModal__JsonInput"
-          />
+          <Tabs className="AiEditModal__Tabs" grow>
+            <Tabs.Tab label="JSON" icon={<IconJson size={14} />}>
+              <div className="AiEditModal__JsonEditor">
+                <JsonInput
+                  value={value}
+                  onChange={onChange}
+                  formatOnBlur
+                  height="100%"
+                  className="AiEditModal__JsonInput"
+                />
+              </div>
+            </Tabs.Tab>
+            <Tabs.Tab label="Diff" icon={<IconFileDiff size={14} />}>
+              <div className="AiEditModal__JsonDiffViewer">
+                <JsonDiffViewer
+                  diff={diff}
+                  syntaxHighlight={{theme: 'root-cms'}}
+                  lineNumbers={true}
+                  highlightInlineDiff={true}
+                  hideUnchangedLines={true}
+                  inlineDiffOptions={{
+                    mode: 'word',
+                    wordSeparator: ' ',
+                  }}
+                />
+              </div>
+            </Tabs.Tab>
+          </Tabs>
         </div>
         <div className="AiEditModal__SplitPanel__ChatPanel">
           <ChatPanel

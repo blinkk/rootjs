@@ -17,7 +17,7 @@
   gap: 24px;
 }
 
-.AiEditModal__SplitPanel__JsonPanel {
+.AiEditModal__JsonEditor {
   height: 100%;
   overflow: auto;
 }
@@ -28,4 +28,16 @@
   display: flex;
   flex-direction: column;
   height: calc(max(100vh - 300px, 400px));
+}
+
+.AiEditModal__Tabs,
+.AiEditModal__Tabs .mantine-Tabs-root, 
+.AiEditModal__Tabs .mantine-Tabs-body {
+  height: 100%;
+}
+
+.AiEditModal__JsonDiffViewer {
+  border: 1px solid rgb(206, 212, 218);
+  max-height: calc(max(100vh - 300px, 400px));
+  overflow: auto;
 }
