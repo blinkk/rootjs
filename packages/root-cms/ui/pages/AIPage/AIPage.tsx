@@ -12,7 +12,13 @@ import {fromMarkdown} from 'mdast-util-from-markdown';
 import {gfmFromMarkdown} from 'mdast-util-gfm';
 import {gfm} from 'micromark-extension-gfm';
 import {useEffect, useMemo, useRef, useState} from 'preact/hooks';
-import type {ChatPrompt} from '../../../core/ai.js';
+import {ChatApiRequest} from '../../../core/api.js';
+import {
+  ChatPrompt,
+  ParsedChatResponse,
+  parseResponse,
+  SendPromptOptions,
+} from '../../../shared/ai/prompts.js';
 import {Layout} from '../../layout/Layout.js';
 import {joinClassNames} from '../../utils/classes.js';
 import {uploadFileToGCS} from '../../utils/gcs.js';
@@ -76,6 +82,7 @@ interface Message {
   sender: 'user' | 'bot';
   blocks: MessageBlock[];
   key?: string;
+  data?: Record<string, any>;
 }
 
 interface ImageMessageBlock {
@@ -112,10 +119,14 @@ interface ChatController {
   messages: Message[];
   addMessage: (message: Message) => number;
   updateMessage: (messageId: number, message: Message) => void;
-  sendPrompt: (messageId: number, prompt: ChatPrompt[]) => Promise<void>;
+  sendPrompt: (
+    messageId: number,
+    prompt: ChatPrompt | ChatPrompt[],
+    options?: SendPromptOptions
+  ) => Promise<ParsedChatResponse>;
 }
 
-function useChat(): ChatController {
+export function useChat(): ChatController {
   const [messages, setMessages] = useState<Message[]>([]);
   const [chatId, setChatId] = useState('');
 
@@ -146,7 +157,11 @@ function useChat(): ChatController {
     });
   };
 
-  const sendPrompt = async (messageId: number, prompt: ChatPrompt[]) => {
+  const sendPrompt = async (
+    messageId: number,
+    prompt: ChatPrompt | ChatPrompt[],
+    options?: SendPromptOptions
+  ): Promise<ParsedChatResponse> => {
     // Allow users to provide a custom api endpoint via the
     // `{ai: {endpoint: '/api/...}}` config.
     let endpoint = '/cms/api/ai.chat';
@@ -156,10 +171,11 @@ function useChat(): ChatController {
       }
     }
 
-    const req: any = {prompt};
-    if (chatId) {
-      req.chatId = chatId;
-    }
+    const req: ChatApiRequest = {
+      prompt,
+      chatId,
+      options,
+    };
     const res = await window.fetch(endpoint, {
       method: 'POST',
       headers: {'content-type': 'application/json'},
@@ -180,21 +196,29 @@ function useChat(): ChatController {
           },
         ],
       });
-      return;
+      return {message: errorMessage, data: {}};
     }
     const resData = await res.json();
     if (resData.success && resData.chatId) {
+      const response = resData.response;
       setChatId(resData.chatId);
+      const parsedResponse = parseResponse(response, options?.mode);
       updateMessage(messageId, {
         sender: 'bot',
+        data: parsedResponse.data,
         blocks: [
           {
             type: 'text',
-            text: resData.response || '',
+            text: parsedResponse.message || '',
           },
         ],
       });
+      return parsedResponse;
     }
+    return {
+      message: 'Sorry. Something went wrong. An unknown error occurred.',
+      data: {},
+    };
   };
 
   return {
@@ -216,7 +240,12 @@ export function AIPage() {
       <div className="AIPage">
         {isEnabled ? (
           <>
-            <ChatWindow chat={chat} />
+            <ChatWindow chat={chat}>
+              <p>
+                Chat with me about your website. Ask questions about the content
+                and I can tell you about it.
+              </p>
+            </ChatWindow>
             <ChatBar chat={chat} />
           </>
         ) : (
@@ -234,7 +263,10 @@ export function AIPage() {
   );
 }
 
-function ChatWindow(props: {chat: ChatController}) {
+export function ChatWindow(props: {
+  chat: ChatController;
+  children?: preact.ComponentChildren;
+}) {
   const messages = props.chat.messages;
   return (
     <div className="AIPage__ChatWindow">
@@ -250,8 +282,13 @@ function ChatWindow(props: {chat: ChatController}) {
             <IconRobot size={36} />
           </div>
           <div className="AIPage__ChatWindow__welcome__title">
-            Welcome to Root AI
+            Root AI is ready
           </div>
+          {props.children && (
+            <div className="AIPage__ChatWindow__welcome__body">
+              {props.children}
+            </div>
+          )}
         </div>
       )}
     </div>
@@ -351,7 +388,7 @@ function ChatMessageBlocks(props: {message: Message; animated: boolean}) {
             />
           );
         }
-        return <div>unknown block type: {block.type}</div>;
+        return <div>unknown block type: {(block as any).type}</div>;
       })}
     </div>
   );
@@ -714,7 +751,11 @@ function ChatMessageImageBlock(props: {
   );
 }
 
-function ChatBar(props: {chat: ChatController}) {
+export function ChatBar(props: {
+  chat: ChatController;
+  options?: SendPromptOptions;
+  onData?: (data: ParsedChatResponse) => void;
+}) {
   const [textPrompt, setTextPrompt] = useState('');
   const textInputRef = useRef<HTMLTextAreaElement>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
@@ -777,7 +818,12 @@ function ChatBar(props: {chat: ChatController}) {
           },
         });
       }
-      await props.chat.sendPrompt(pendingMessageId, prompt);
+      const response = await props.chat.sendPrompt(
+        pendingMessageId,
+        prompt,
+        props.options
+      );
+      props.onData?.(response);
     }
   }
 
@@ -846,7 +892,7 @@ function ChatBar(props: {chat: ChatController}) {
           (imageUploading || image) && 'AIPage__ChatBar__prompt--hasImage'
         )}
       >
-        <label className="AIPage__ChatBar__prompt__imageUpload" role="button">
+        <label className="AIPage__ChatBar__prompt__imageUpload">
           <input
             className="AIPage__ChatBar__prompt__imageUpload__input"
             type="file"
@@ -854,26 +900,41 @@ function ChatBar(props: {chat: ChatController}) {
             onChange={onImageFileChange}
             ref={imageInputRef}
           />
-          <ActionIcon
-            // Using a <div> instead of a <button> allows the <label> parent to
-            // trigger the file input.
-            component="div"
-            className="AIPage__ChatBar__prompt__imageUpload__icon"
-            radius="xl"
-          >
-            <IconPaperclip size={18} />
-          </ActionIcon>
+          <Tooltip label="Upload image">
+            <ActionIcon
+              // Using a <div> instead of a <button> allows the <label> parent to
+              // trigger the file input.
+              component="div"
+              className="AIPage__ChatBar__prompt__imageUpload__icon"
+              radius="xl"
+            >
+              <IconPaperclip size={18} />
+            </ActionIcon>
+          </Tooltip>
         </label>
         <textarea
           className="AIPage__ChatBar__prompt__textInput"
           ref={textInputRef}
-          placeholder="Enter prompt here..."
+          placeholder="Enter prompt..."
           rows={1}
           onKeyDown={onKeyDown}
+          onPaste={(e) => {
+            // If the user pastes an image, upload it.
+            const items = e.clipboardData?.items || [];
+            for (const item of items) {
+              if (item.kind === 'file' && item.type.startsWith('image/')) {
+                const file = item.getAsFile();
+                if (file) {
+                  uploadImage(file);
+                }
+              }
+            }
+          }}
           onChange={(e) => {
             setTextPrompt((e.target as HTMLTextAreaElement).value);
           }}
           value={textPrompt}
+          autofocus={true}
         />
         {(imageUploading || image) && (
           <div className="AIPage__ChatBar__prompt__imagePreview">
@@ -894,6 +955,7 @@ function ChatBar(props: {chat: ChatController}) {
                     src={image.src}
                     width={image.width}
                     height={image.height}
+                    alt="attachment"
                   />
                   <div className="AIPage__ChatBar__prompt__imagePreview__closeButton__icon">
                     <IconX size={24} color="white" />

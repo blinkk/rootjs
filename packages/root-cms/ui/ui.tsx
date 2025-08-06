@@ -11,6 +11,7 @@ import {getStorage} from 'firebase/storage';
 import {render} from 'preact';
 import {Route, Router} from 'preact-router';
 import {Collection} from '../core/schema.js';
+import {AiEditModal} from './components/AiEditModal/AiEditModal.js';
 import {CopyDocModal} from './components/CopyDocModal/CopyDocModal.js';
 import {DataSourceSelectModal} from './components/DataSourceSelectModal/DataSourceSelectModal.js';
 import {DocPickerModal} from './components/DocPickerModal/DocPickerModal.js';
@@ -103,6 +104,7 @@ function App() {
             <UserPreferencesProvider>
               <ModalsProvider
                 modals={{
+                  [AiEditModal.id]: AiEditModal,
                   [CopyDocModal.id]: CopyDocModal,
                   [DocPickerModal.id]: DocPickerModal,
                   [DocSelectModal.id]: DocSelectModal,

@@ -1,11 +1,19 @@
 import {Server, Request, Response} from '@blinkk/root';
 import {multipartMiddleware} from '@blinkk/root/middleware';
-import {Chat, ChatClient} from './ai.js';
+import {ChatPrompt, SendPromptOptions} from '../shared/ai/prompts.js';
+import {Chat, ChatClient, RootAiModel} from './ai.js';
 import {RootCMSClient} from './client.js';
 import {runCronJobs} from './cron.js';
 import {arrayToCsv, csvToArray} from './csv.js';
 
 type AppModule = typeof import('./app.js');
+
+export interface ChatApiRequest {
+  chatId: string;
+  prompt: ChatPrompt | ChatPrompt[];
+  model?: RootAiModel;
+  options?: SendPromptOptions;
+}
 
 export interface ApiOptions {
   getRenderer: (req: Request) => Promise<AppModule>;
@@ -240,7 +248,7 @@ export function api(server: Server, options: ApiOptions) {
       res.status(401).json({success: false, error: 'UNAUTHORIZED'});
       return;
     }
-    const reqBody = req.body || {};
+    const reqBody: ChatApiRequest = req.body || {};
     if (!reqBody.prompt) {
       res.status(400).json({success: false, error: 'MISSING_PROMPT'});
       return;
@@ -256,7 +264,10 @@ export function api(server: Server, options: ApiOptions) {
       } else {
         chat = await chatClient.createChat();
       }
-      const chatResponse = await chat.sendPrompt(prompt);
+      const chatResponse = await chat.sendPrompt(prompt, {
+        mode: reqBody.options?.mode || 'chat',
+        editData: reqBody.options?.editData,
+      });
       res
         .status(200)
         .json({success: true, chatId: chat.id, response: chatResponse});

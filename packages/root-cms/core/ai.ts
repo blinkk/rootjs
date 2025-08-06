@@ -1,11 +1,16 @@
 import crypto from 'node:crypto';
+import fs from 'node:fs';
+import path from 'node:path';
 import {vertexAI} from '@genkit-ai/vertexai';
 import {Timestamp} from 'firebase-admin/firestore';
-import {Genkit, genkit, MessageData, Part} from 'genkit';
+import {Genkit, genkit, MessageData} from 'genkit';
+import {logger} from 'genkit/logging';
+import {ChatPrompt, SendPromptOptions} from '../shared/ai/prompts.js';
 import {RootCMSClient} from './client.js';
 import {CMSPluginOptions} from './plugin.js';
 
-export type ChatPrompt = Part[];
+// Suppress the "Shutting down all Genkit servers..." message.
+logger.setLogLevel('warn');
 
 type HistoryItem = MessageData;
 
@@ -55,22 +60,65 @@ export class Chat {
   }
 
   /** Builds the messages for the AI request. */
-  private async buildMessages(): Promise<MessageData[]> {
+  private async buildMessages(
+    options: SendPromptOptions
+  ): Promise<MessageData[]> {
     const messages = this.history;
     if (messages.length === 0) {
       messages.push({
         role: 'system',
-        content: [{text: await this.buildSystemPrompt()}],
+        content: [{text: await this.buildSystemPrompt(options)}],
+      });
+    }
+    // Additional data sent for "edit" mode requests.
+    if (options.mode === 'edit') {
+      messages.push({
+        role: 'user',
+        content: [
+          {
+            text: [
+              'The JSON you must edit is:',
+              '',
+              JSON.stringify(options.editData || {}, null, 2),
+            ].join(''),
+          },
+        ],
       });
     }
     return messages;
   }
 
-  async sendPrompt(prompt: ChatPrompt): Promise<string> {
-    const res = await this.ai.generate({
-      messages: await this.buildMessages(),
+  /** Builds the request sent to the AI based on the `ChatMode`. */
+  private async buildChatRequest(
+    prompt: ChatPrompt | ChatPrompt[],
+    options: SendPromptOptions
+  ) {
+    if (options.mode === 'edit') {
+      return {
+        messages: await this.buildMessages(options),
+        model: this.model,
+        prompt: prompt,
+      };
+    }
+    return {
+      messages: await this.buildMessages(options),
       model: this.model,
       prompt: prompt,
+    };
+  }
+
+  /** Sends the request to the AI and stores the history in the session and the database. */
+  async sendPrompt(
+    prompt: ChatPrompt | ChatPrompt[],
+    options: SendPromptOptions = {}
+  ): Promise<string> {
+    const chatRequest = await this.buildChatRequest(prompt, options);
+    // TODO: Use streaming responses per https://genkit.dev/docs/models/#streaming
+    // to improve UI performance.
+    const res = await this.ai.generate({
+      model: chatRequest.model,
+      messages: chatRequest.messages,
+      prompt: Array.isArray(prompt) ? prompt.flat() : prompt,
     });
     this.history = res.messages;
     await this.dbDoc().update({
@@ -84,7 +132,33 @@ export class Chat {
     return this.chatClient.dbCollection().doc(this.id);
   }
 
-  private async buildSystemPrompt() {
+  /**
+   * Builds the system prompt sent to the AI, based on the `ChatMode` and
+   * supplied `SendPromptOptions`. `SendPromptOptions` may contain data or
+   * references to information needed to construct the prompt.
+   */
+  private async buildSystemPrompt(options: SendPromptOptions): Promise<string> {
+    const serializedRootConfig = JSON.stringify(
+      this.cmsClient.rootConfig,
+      null,
+      2
+    );
+
+    // Edit mode prompts.
+    if (options.mode === 'edit') {
+      const rootDir = process.cwd();
+      const rootCmsDefs = fs.readFileSync(
+        path.resolve(rootDir, 'root-cms.d.ts'),
+        {
+          encoding: 'utf8',
+        }
+      );
+      const text = (await import('../shared/ai/prompts/edit.txt')).default;
+      text.replace('{{ROOT_CMS_DEFS}}', rootCmsDefs);
+      return text;
+    }
+
+    // Chat mode (default) prompts.
     const systemText = [
       `You are an assistant for a headless CMS called Root CMS which is used on a website called ${
         this.cmsPluginOptions.name || this.cmsPluginOptions.id
@@ -92,7 +166,7 @@ export class Chat {
       '',
       'Here is the root.config.ts file for the site:',
       '```',
-      JSON.stringify(this.cmsClient.rootConfig, null, 2),
+      serializedRootConfig,
       '```',
       '',
       'Here are the docs that exist in the system:',
