@@ -1,5 +1,14 @@
 # @blinkk/root-cms
 
+## 2.0.2
+
+### Patch Changes
+
+- aa567c9: fix: default localization modal to non-EN locale
+- fef188b: feat: add "edit with ai" modal
+- 3b5a0e7: feat: add experiment for enabling lexical editor
+  - @blinkk/root@2.0.2
+
 ## 2.0.1
 
 ### Patch Changes
