@@ -77,7 +77,7 @@ export class Chat {
         content: [
           {
             text: [
-              'The JSON  you must edit is:',
+              'The JSON you must edit is:',
               '',
               JSON.stringify(options.editData || {}, null, 2),
             ].join(''),
@@ -113,6 +113,8 @@ export class Chat {
     options: SendPromptOptions = {}
   ): Promise<string> {
     const chatRequest = await this.buildChatRequest(prompt, options);
+    // TODO: Use streaming responses per https://genkit.dev/docs/models/#streaming
+    // to improve UI performance.
     const res = await this.ai.generate({
       model: chatRequest.model,
       messages: chatRequest.messages,

@@ -42,6 +42,8 @@ export function parseResponse(
 ): ParsedChatResponse {
   // TODO(jeremydw): Research whether we can require the AI or genkit to respond in structured
   // JSON format, so that we don't have to parse the response ourselves.
+  // Use https://genkit.dev/docs/models/#structured-output to enforce structured output
+  // instead of parsing the response.
   if (mode === 'edit') {
     const jsonMatch = response.match(/^```json\n?(.*?)\n?```$/s);
     const responseAsJson = JSON.parse(jsonMatch ? jsonMatch[1] : response);
