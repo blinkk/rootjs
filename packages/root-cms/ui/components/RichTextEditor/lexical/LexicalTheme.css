@@ -119,9 +119,10 @@
   font-size: 0.8em;
   vertical-align: sub !important;
 }
-.LexicalTheme__textSuperscript {
+sup:has(.LexicalTheme__textSuperscript) {
   font-size: 0.8em;
-  vertical-align: middle;
+  vertical-align: super;
+  line-height: 0;
 }
 .LexicalTheme__textCode {
   background-color: rgb(240, 242, 245);
