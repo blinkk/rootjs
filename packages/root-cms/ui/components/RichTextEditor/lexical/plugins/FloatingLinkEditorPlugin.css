@@ -18,6 +18,10 @@
   will-change: transform;
 }
 
+.LexicalEditor__linkEditor--hidden {
+  display: none;
+}
+
 .LexicalEditor__link__input,
 .LexicalEditor__link__preview {
   flex: 1;
@@ -44,8 +48,12 @@
 }
 
 .LexicalEditor__link__preview a {
+  text-decoration: none;
+}
+.LexicalEditor__link__preview a:hover {
   color: #216fdb;
-  text-underline-offset: 2px;
+  text-decoration: underline;
+  text-underline-offset: 3px;
 }
 
 .LexicalEditor__link__preview svg {

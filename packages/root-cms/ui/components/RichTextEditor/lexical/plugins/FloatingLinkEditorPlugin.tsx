@@ -36,6 +36,7 @@ import {ComponentChildren} from 'preact';
 import {createPortal} from 'preact/compat';
 import {Dispatch, useCallback, useEffect, useRef, useState} from 'preact/hooks';
 
+import {joinClassNames} from '../../../../utils/classes.js';
 import {getSelectedNode} from '../utils/selection.js';
 import {sanitizeUrl} from '../utils/url.js';
 
@@ -251,13 +252,15 @@ function FloatingLinkEditor(props: FloatingLinkEditorProps) {
     }
   };
 
-  if (!isLink) {
-    return null;
-  }
-
   return (
-    <div ref={editorRef} className="LexicalEditor__linkEditor">
-      {isLinkEditMode ? (
+    <div
+      ref={editorRef}
+      className={joinClassNames(
+        'LexicalEditor__linkEditor',
+        !isLink && 'LexicalEditor__linkEditor--hidden'
+      )}
+    >
+      {!isLink ? null : isLinkEditMode ? (
         <>
           <input
             ref={inputRef}
