@@ -33,6 +33,8 @@ import {
   IconMovie,
   IconStrikethrough,
   IconCode,
+  IconH4,
+  IconH5,
 } from '@tabler/icons-preact';
 import {
   $getSelection,
@@ -101,6 +103,12 @@ function BlockTypeIcon(props: BlockTypeIconProps) {
   if (blockType === 'h3') {
     return <IconH3 size={16} />;
   }
+  if (blockType === 'h4') {
+    return <IconH4 size={16} />;
+  }
+  if (blockType === 'h5') {
+    return <IconH5 size={16} />;
+  }
   if (blockType === 'number') {
     return <IconListNumbers size={16} />;
   }
@@ -137,6 +145,27 @@ function BlockFormatDropDown(props: BlockFormatDropDownProps) {
       }
     >
       <Menu.Item
+        icon={<BlockTypeIcon blockType="paragraph" />}
+        className={dropDownActiveClass(blockType === 'paragraph')}
+        onClick={() => formatParagraph(editor)}
+      >
+        Normal
+      </Menu.Item>
+      <Menu.Item
+        icon={<BlockTypeIcon blockType="bullet" />}
+        className={dropDownActiveClass(blockType === 'bullet')}
+        onClick={() => formatBulletList(editor, blockType)}
+      >
+        Bullet List
+      </Menu.Item>
+      <Menu.Item
+        icon={<BlockTypeIcon blockType="number" />}
+        className={dropDownActiveClass(blockType === 'number')}
+        onClick={() => formatNumberedList(editor, blockType)}
+      >
+        Numbered List
+      </Menu.Item>
+      <Menu.Item
         icon={<BlockTypeIcon blockType="h1" />}
         className={dropDownActiveClass(blockType === 'h1')}
         onClick={() => formatHeading(editor, blockType, 'h1')}
@@ -158,25 +187,18 @@ function BlockFormatDropDown(props: BlockFormatDropDownProps) {
         Heading 3
       </Menu.Item>
       <Menu.Item
-        icon={<BlockTypeIcon blockType="paragraph" />}
-        className={dropDownActiveClass(blockType === 'paragraph')}
-        onClick={() => formatParagraph(editor)}
+        icon={<BlockTypeIcon blockType="h4" />}
+        className={dropDownActiveClass(blockType === 'h4')}
+        onClick={() => formatHeading(editor, blockType, 'h4')}
       >
-        Normal
+        Heading 4
       </Menu.Item>
       <Menu.Item
-        icon={<BlockTypeIcon blockType="bullet" />}
-        className={dropDownActiveClass(blockType === 'bullet')}
-        onClick={() => formatBulletList(editor, blockType)}
+        icon={<BlockTypeIcon blockType="h5" />}
+        className={dropDownActiveClass(blockType === 'h5')}
+        onClick={() => formatHeading(editor, blockType, 'h5')}
       >
-        Bullet List
-      </Menu.Item>
-      <Menu.Item
-        icon={<BlockTypeIcon blockType="number" />}
-        className={dropDownActiveClass(blockType === 'number')}
-        onClick={() => formatNumberedList(editor, blockType)}
-      >
-        Numbered List
+        Heading 5
       </Menu.Item>
     </Menu>
   );
