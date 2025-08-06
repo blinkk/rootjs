@@ -9,14 +9,7 @@ import {
 import {useLexicalComposerContext} from '@lexical/react/LexicalComposerContext';
 import {$findMatchingParent, mergeRegister} from '@lexical/utils';
 import {ActionIcon, Tooltip} from '@mantine/core';
-import {
-  IconArrowUpRight,
-  IconCheck,
-  IconEdit,
-  IconPencil,
-  IconTrash,
-  IconX,
-} from '@tabler/icons-preact';
+import {IconCheck, IconPencil, IconTrash, IconX} from '@tabler/icons-preact';
 import {
   $getSelection,
   $isLineBreakNode,
@@ -225,7 +218,10 @@ function FloatingLinkEditor(props: FloatingLinkEditorProps) {
     }
   };
 
-  const handleLinkSubmission = () => {
+  const handleLinkSubmission = (e?: KeyboardEvent | MouseEvent) => {
+    if (e) {
+      e.preventDefault();
+    }
     if (lastSelection !== null) {
       if (linkUrl !== '') {
         editor.update(() => {
