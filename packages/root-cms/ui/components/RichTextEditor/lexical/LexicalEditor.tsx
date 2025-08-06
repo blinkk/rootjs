@@ -96,14 +96,6 @@ function Editor(props: EditorProps) {
   const onRef: any = (el: HTMLDivElement) => {
     if (el) {
       setFloatingAnchorElem(el);
-      // Prevent mouse clicks on link nodes from redirecting the browser tab.
-      el.addEventListener('click', (event) => {
-        const target = event.target as HTMLElement;
-        if (target.closest('.LexicalTheme__link')) {
-          event.preventDefault();
-          event.stopPropagation();
-        }
-      });
     }
   };
 

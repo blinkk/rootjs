@@ -425,8 +425,15 @@ function useFloatingLinkEditorToolbar(
           if ($isRangeSelection(selection)) {
             const node = getSelectedNode(selection);
             const linkNode = $findMatchingParent(node, $isLinkNode);
-            if ($isLinkNode(linkNode) && (payload.metaKey || payload.ctrlKey)) {
-              window.open(linkNode.getURL(), '_blank');
+            // Prevent the browser from opening the link unless the meta key is
+            // pressed.
+            if (linkNode) {
+              if (payload.metaKey || payload.ctrlKey) {
+                window.open(linkNode.getURL(), '_blank');
+                return true;
+              }
+              payload.preventDefault();
+              payload.stopPropagation();
               return true;
             }
           }
