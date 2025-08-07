@@ -28,7 +28,7 @@ import {
 } from '@tabler/icons-preact';
 import {IconDotsVertical} from '@tabler/icons-preact';
 import {createContext} from 'preact';
-import {ChangeEvent, forwardRef} from 'preact/compat';
+import {ChangeEvent, CSSProperties, forwardRef} from 'preact/compat';
 import {useContext, useEffect, useRef, useState} from 'preact/hooks';
 import {joinClassNames} from '../../utils/classes.js';
 import {
@@ -511,13 +511,7 @@ FileUploadField.Preview = () => {
           infoOpened && 'FileUploadField__Canvas--infoOpened',
           dragging && 'FileUploadField__Canvas--dragging'
         )}
-        style={
-          uploadedFile.width !== undefined && uploadedFile.height !== undefined
-            ? {
-                '--canvas-aspect-ratio': `${uploadedFile.width} / ${uploadedFile.height}`,
-              }
-            : {}
-        }
+        style={canvasPreviewInlineStyles(uploadedFile)}
         onDragOver={(e) => {
           e.preventDefault();
           setDragging(true);
@@ -868,4 +862,20 @@ function testSupportsCreatePlaceholder(acceptedFileTypes: string[]) {
     acceptedFileTypes.some((type) => type.startsWith('image/')) ||
     acceptedFileTypes.length === 0
   );
+}
+
+function canvasPreviewInlineStyles(uploadedFile: UploadedFile) {
+  const inlineStyles: CSSProperties = {};
+  if (uploadedFile.width && uploadedFile.height) {
+    inlineStyles[
+      '--canvas-aspect-ratio'
+    ] = `${uploadedFile.width} / ${uploadedFile.height}`;
+
+    let maxHeight = Math.min(uploadedFile.height, 280);
+    if (maxHeight < 80) {
+      maxHeight = 80;
+    }
+    inlineStyles['--canvas-max-height'] = `${maxHeight}px`;
+  }
+  return inlineStyles;
 }
