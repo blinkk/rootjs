@@ -6,7 +6,7 @@
 #   ./deploy.sh [options]
 #
 # OPTIONS:
-#   --project      The GCP project (default: rootjs-gci)
+#   --project      The GCP project
 #
 # EXAMPLES:
 #   ./deploy.sh
@@ -14,7 +14,7 @@
 
 set -e
 
-PROJECT="rootjs-gci"
+PROJECT=""
 
 while [[ $# -gt 0 ]]; do
   case $1 in
@@ -28,6 +28,11 @@ while [[ $# -gt 0 ]]; do
       ;;
   esac
 done
+
+if [ -z "$PROJECT" ]; then
+  echo "Error: --project is required"
+  exit 1
+fi
 
 gcloud app deploy --project="$PROJECT" --version=prod --promote -q app.yaml
 
