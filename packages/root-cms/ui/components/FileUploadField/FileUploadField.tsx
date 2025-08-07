@@ -424,7 +424,7 @@ FileUploadField.Preview = () => {
             </ActionIcon>
           </Tooltip>
         )}
-        <Tooltip label="Replace file" position="top" withArrow>
+        {/* <Tooltip label="Replace file" position="top" withArrow>
           <ActionIcon
             onClick={() => ctx.requestFileUpload()}
             size="sm"
@@ -437,7 +437,7 @@ FileUploadField.Preview = () => {
               <IconFileUpload size={16} />
             )}
           </ActionIcon>
-        </Tooltip>
+        </Tooltip> */}
         <Menu
           className="FileUploadField__Preview__Menu"
           shadow="sm"
@@ -518,6 +518,7 @@ FileUploadField.Preview = () => {
           </Menu.Item>
         </Menu>
       </div>
+
       <div
         className={joinClassNames(
           'FileUploadField__Canvas',
@@ -559,7 +560,7 @@ FileUploadField.Preview = () => {
         {infoOpened ? (
           <div className="FileUploadField__Canvas__Info">
             <IconPaperclip
-              size={20}
+              size={16}
               className="FileUploadField__Canvas__Info__Icon"
             />
             <Table
@@ -657,6 +658,12 @@ FileUploadField.Preview = () => {
             )}
           </>
         )}
+        <div className="FileUploadField__reupload">
+          <FileUploadField.UploadButton
+            className="FileUploadField__reupload__button"
+            compact
+          />
+        </div>
       </div>
       {ctx.alt !== false &&
         (uploadedFile.alt ||
@@ -681,54 +688,60 @@ FileUploadField.Preview = () => {
   );
 };
 
-FileUploadField.UploadButton = forwardRef<HTMLLabelElement, {}>(
-  (props, ref) => {
-    const context = useContext(FileUploadFileContext);
-    const uploading = context?.fileUpload?.state === 'uploading';
-    if (!context) {
-      return null;
-    }
-    return (
-      <label
-        {...props}
-        ref={ref}
-        className="FileUploadField__FileUploadButton"
-        tabIndex={0}
-      >
-        <input
-          disabled={uploading}
-          type="file"
-          accept={
-            context.acceptedFileTypes.length > 0
-              ? context.acceptedFileTypes.join(',')
-              : undefined
-          }
-          className="FileUploadField__FileUploadButton__Input"
-          onChange={(e) => {
-            const target = e.target as HTMLInputElement;
-            if (target.files && context) {
-              context.handleFile(target.files[0]);
-            }
-          }}
-        />
-        {uploading ? (
-          <Loader size={16} />
-        ) : context?.variant === 'image' ? (
-          <IconPhotoUp size={16} />
-        ) : (
-          <IconFileUpload size={16} />
-        )}
-        <div className="FileUploadField__FileUploadButton__Title">
-          {uploading
-            ? 'Uploading...'
-            : context?.fileUpload?.uploadedFile?.src
-            ? 'Upload'
-            : 'Paste, drop, or click to upload'}
-        </div>
-      </label>
-    );
+FileUploadField.UploadButton = (props: {
+  className?: string;
+  compact?: boolean;
+}) => {
+  const context = useContext(FileUploadFileContext);
+  const uploading = context?.fileUpload?.state === 'uploading';
+  if (!context) {
+    return null;
   }
-);
+  const iconSize = props.compact ? 14 : 16;
+  return (
+    <label
+      {...props}
+      className={joinClassNames(
+        'FileUploadField__FileUploadButton',
+        props.compact && 'FileUploadField__FileUploadButton--compact',
+        props.className
+      )}
+      tabIndex={0}
+    >
+      <input
+        disabled={uploading}
+        type="file"
+        accept={
+          context.acceptedFileTypes.length > 0
+            ? context.acceptedFileTypes.join(',')
+            : undefined
+        }
+        className="FileUploadField__FileUploadButton__Input"
+        onChange={(e) => {
+          const target = e.target as HTMLInputElement;
+          if (target.files && context) {
+            context.handleFile(target.files[0]);
+          }
+        }}
+      />
+
+      {uploading ? (
+        <Loader size={iconSize} />
+      ) : context?.variant === 'image' ? (
+        <IconPhotoUp size={iconSize} />
+      ) : (
+        <IconFileUpload size={iconSize} />
+      )}
+      <div className="FileUploadField__FileUploadButton__Title">
+        {uploading
+          ? 'Uploading...'
+          : context?.fileUpload?.uploadedFile?.src
+          ? 'Upload'
+          : 'Paste, drop, or click to upload'}
+      </div>
+    </label>
+  );
+};
 
 FileUploadField.Empty = () => {
   const context = useContext(FileUploadFileContext);
