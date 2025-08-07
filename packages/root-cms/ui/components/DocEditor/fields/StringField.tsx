@@ -2,7 +2,10 @@ import {TextInput, Textarea} from '@mantine/core';
 import {ChangeEvent} from 'preact/compat';
 import {useEffect, useState} from 'preact/hooks';
 import * as schema from '../../../../core/schema.js';
+import {testHasExperimentParam} from '../../../utils/url-params.js';
 import {FieldProps} from './FieldProps.js';
+
+const DISABLE_AUTOSIZE = testHasExperimentParam('DisableTextareaAutosize');
 
 export function StringField(props: FieldProps) {
   const field = props.field as schema.StringField;
@@ -28,8 +31,8 @@ export function StringField(props: FieldProps) {
       <Textarea
         size="xs"
         radius={0}
-        autosize
-        minRows={2}
+        autosize={!DISABLE_AUTOSIZE}
+        minRows={DISABLE_AUTOSIZE ? 4 : 2}
         maxRows={field.maxRows || 12}
         value={value}
         onChange={(e: ChangeEvent<HTMLTextAreaElement>) => {
