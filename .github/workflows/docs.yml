@@ -53,6 +53,9 @@ jobs:
         with:
           project_id: rootjs-dev
 
+      - name: Build root
+        run: pnpm run build
+
       - name: Build and deploy rootjs.dev
         working-directory: docs
         run: pnpm run deploy
