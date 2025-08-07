@@ -126,16 +126,11 @@
 }
 
 .FileUploadField__Canvas {
-  --checkered-bg-color: #e5e5e5;
   aspect-ratio: var(--canvas-aspect-ratio, 16 / 9);
   max-height: var(--canvas-max-height, 280px);
   width: 100%;
   position: relative;
-  background-image: linear-gradient(45deg, var(--checkered-bg-color) 25%, transparent 25%, transparent 75%, var(--checkered-bg-color) 75%, var(--checkered-bg-color)),
-                    linear-gradient(45deg, var(--checkered-bg-color) 25%, transparent 25%, transparent 75%, var(--checkered-bg-color) 75%, var(--checkered-bg-color));
-  background-size: 20px 20px; /* Adjust the size of the squares */
-  background-position: 0 0, 10px 10px; /* Adjust the position to offset the second gradient */
-  background-color: #fff; /* A solid color to serve as the second color of the checkerboard */
+  background-color: var(--canvas-bg-color, #fff);
 }
 
 .FileUploadField__Canvas--infoOpened {

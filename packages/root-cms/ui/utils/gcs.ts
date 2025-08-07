@@ -37,6 +37,7 @@ export interface UploadedFile {
   alt?: string;
   uploadedBy?: string;
   uploadedAt?: string | number;
+  canvasBgColor?: 'light' | 'dark';
 }
 
 export async function uploadFileToGCS(
@@ -64,6 +65,7 @@ export async function uploadFileToGCS(
     const dimens = await getImageDimensions(file);
     meta.width = dimens.width;
     meta.height = dimens.height;
+
     if (!options?.disableGci && GCI_SUPPORTED_EXTS.includes(ext)) {
       const gciUrl = await getGciUrl(gcsPath);
       if (gciUrl) {
@@ -71,6 +73,10 @@ export async function uploadFileToGCS(
         fileUrl = gciUrl;
       }
     }
+
+    // Calculate the bg color to use for previews based on the image's avg
+    // luminosity. This is an expensive calculation, so only do it on upload.
+    meta.canvasBgColor = (await shouldImageUseDarkBg(file)) ? 'dark' : 'light';
   } else if (VIDEO_EXTS.includes(ext)) {
     const dimens = await getVideoDimensions(fileUrl);
     meta.width = dimens.width;
@@ -230,4 +236,44 @@ export function buildDownloadURL(src: string) {
     return src.split('=')[0] + '=s0-d';
   }
   return src;
+}
+
+function shouldImageUseDarkBg(file: File) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    const reader = new FileReader();
+
+    reader.onload = () => {
+      img.src = reader.result as string;
+    };
+
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d')!;
+      canvas.width = img.width;
+      canvas.height = img.height;
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+      const {data} = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      let r = 0,
+        g = 0,
+        b = 0,
+        count = 0;
+
+      for (let i = 0; i < data.length; i += 4 * 100) {
+        r += data[i];
+        g += data[i + 1];
+        b += data[i + 2];
+        count++;
+      }
+
+      const avgLuminance =
+        0.299 * (r / count) + 0.587 * (g / count) + 0.114 * (b / count);
+      resolve(avgLuminance < 128); // true = use dark bg
+    };
+
+    img.onerror = reject;
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
 }

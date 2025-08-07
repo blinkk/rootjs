@@ -878,5 +878,9 @@ function canvasPreviewInlineStyles(uploadedFile: UploadedFile) {
     }
     inlineStyles['--canvas-max-height'] = `${maxHeight}px`;
   }
+
+  if (uploadedFile.canvasBgColor === 'dark') {
+    inlineStyles['--canvas-bg-color'] = '#000';
+  }
   return inlineStyles;
 }
