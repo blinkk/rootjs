@@ -59,6 +59,9 @@ func getServingURL(gcsPath string) (string, error) {
 	url, err := image.ServingURL(ctx, blobkey, &image.ServingURLOptions{Secure: true})
 	if err != nil {
 		log.Printf("failed to get image serving url: %v", err)
+		if strings.Contains(err.Error(), "UNSPECIFIED_ERROR") {
+			log.Printf("ensure the bucket's access control policy is set to fine-grained. see: https://cloud.google.com/appengine/docs/standard/services/images")
+		}
 		if !strings.Contains(gcsPath, ".copy") {
 			copyGcsPath, err := cloneGCSFile(gcsPath)
 			if err != nil {
