@@ -42,6 +42,7 @@ import {
 } from '../../utils/gcs.js';
 
 import './FileUploadField.css';
+import {testHasExperimentParam} from '../../utils/url-params.js';
 
 /** Mimetypes accepted by the image input field. */
 const IMAGE_MIMETYPES = [
@@ -71,6 +72,8 @@ const PLACEHOLDER_COLORS = [
 ];
 
 type FileUploadFieldVariant = 'file' | 'image';
+
+const DISABLE_AUTOSIZE = testHasExperimentParam('DisableTextareaAutosize');
 
 interface FileUploadFieldProps {
   children?: preact.ComponentChildren;
@@ -611,7 +614,7 @@ FileUploadField.Preview = () => {
                       readOnly
                       value={uploadedFile.src}
                       size="xs"
-                      autosize
+                      autosize={!DISABLE_AUTOSIZE}
                       radius={0}
                     />
                   </td>
