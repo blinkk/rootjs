@@ -424,20 +424,6 @@ FileUploadField.Preview = () => {
             </ActionIcon>
           </Tooltip>
         )}
-        {/* <Tooltip label="Replace file" position="top" withArrow>
-          <ActionIcon
-            onClick={() => ctx.requestFileUpload()}
-            size="sm"
-            variant="outline"
-            className="FileUploadField__Preview__InfoButton__Icon"
-          >
-            {ctx.variant === 'image' ? (
-              <IconPhotoUp size={16} />
-            ) : (
-              <IconFileUpload size={16} />
-            )}
-          </ActionIcon>
-        </Tooltip> */}
         <Menu
           className="FileUploadField__Preview__Menu"
           shadow="sm"
