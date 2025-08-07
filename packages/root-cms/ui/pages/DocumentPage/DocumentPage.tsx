@@ -13,6 +13,7 @@ import {
   IconWorld,
   IconLayoutSidebarRightCollapse,
   IconLayoutSidebarRightExpand,
+  IconJson,
 } from '@tabler/icons-preact';
 import {useEffect, useRef, useState} from 'preact/hooks';
 
@@ -116,6 +117,7 @@ export function DocumentPage(props: DocumentPageProps) {
             </div>
             <div className="DocumentPage__side__header__buttons">
               <Button
+                className="DocumentPage__side__header__saveButton"
                 variant="filled"
                 color="dark"
                 size="xs"
@@ -125,7 +127,15 @@ export function DocumentPage(props: DocumentPageProps) {
               >
                 Save
               </Button>
-              <Menu
+              <Tooltip label="Edit JSON">
+                <ActionIcon
+                  className="DocumentPage__side__header__editJson"
+                  onClick={() => editJson()}
+                >
+                  <IconBraces size={14} />
+                </ActionIcon>
+              </Tooltip>
+              {/* <Menu
                 className="DocumentPage__side__header__menu"
                 position="bottom"
                 control={
@@ -140,7 +150,7 @@ export function DocumentPage(props: DocumentPageProps) {
                 >
                   Edit JSON
                 </Menu.Item>
-              </Menu>
+              </Menu> */}
               <Tooltip
                 label={isPreviewVisible ? 'Hide preview' : 'Show preview'}
               >
