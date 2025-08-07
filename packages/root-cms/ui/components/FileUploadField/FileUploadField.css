@@ -149,6 +149,7 @@
 
 .FileUploadField__Preview__Image {
   margin: 0 auto;
+  width: var(--canvas-asset-width, 100%);
   max-width: 100%;
   height: 100%;
   object-fit: contain;

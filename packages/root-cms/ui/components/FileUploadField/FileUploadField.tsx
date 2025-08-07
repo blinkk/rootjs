@@ -871,6 +871,7 @@ function canvasPreviewInlineStyles(uploadedFile: UploadedFile) {
       '--canvas-aspect-ratio'
     ] = `${uploadedFile.width} / ${uploadedFile.height}`;
 
+    inlineStyles['--canvas-asset-width'] = `${uploadedFile.width}px`;
     let maxHeight = Math.min(uploadedFile.height, 280);
     if (maxHeight < 80) {
       maxHeight = 80;
