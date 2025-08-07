@@ -704,6 +704,8 @@ FileUploadField.UploadButton = (props: {
           const target = e.target as HTMLInputElement;
           if (target.files && context) {
             context.handleFile(target.files[0]);
+            // Clear the input value to allow re-uploading the same file.
+            target.value = '';
           }
         }}
       />
