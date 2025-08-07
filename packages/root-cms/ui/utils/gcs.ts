@@ -89,6 +89,7 @@ export async function uploadFileToGCS(
         reject(error);
       },
       () => {
+        console.log(`uploaded ${filePath}`);
         clearInterval(progressTimeout);
         resolve(task.snapshot);
       }
