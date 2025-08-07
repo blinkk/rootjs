@@ -133,6 +133,10 @@
   background-color: var(--canvas-bg-color, #fff);
 }
 
+.FileUploadField__Canvas:has(video) {
+  background-color: var(--canvas-bg-color, #000);
+}
+
 .FileUploadField__Canvas--infoOpened {
   max-height: unset;
   aspect-ratio: unset;
