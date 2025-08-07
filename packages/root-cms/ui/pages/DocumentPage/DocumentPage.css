@@ -54,7 +54,10 @@
   justify-self: flex-end;
   display: flex;
   align-items: center;
-  gap: 4px;
+}
+
+.DocumentPage__side__header__saveButton {
+  margin-right: 8px;
 }
 
 .DocumentPage__side__editor {
