@@ -1,4 +1,8 @@
-import {ref as storageRef, updateMetadata, uploadBytes} from 'firebase/storage';
+import {
+  ref as storageRef,
+  updateMetadata,
+  uploadBytesResumable,
+} from 'firebase/storage';
 
 /**
  * Extensions supported by the Google Image Service.
@@ -40,6 +44,7 @@ export interface UploadedFile {
   canvasBgColor?: 'light' | 'dark';
 }
 
+/** Uploads a File object to GCS. */
 export async function uploadFileToGCS(
   file: File,
   options?: UploadFileOptions
@@ -52,9 +57,52 @@ export async function uploadFileToGCS(
     : `${hashHex}.${ext}`;
   const filePath = `${projectId}/uploads/${filename}`;
   const gcsRef = storageRef(window.firebase.storage, filePath);
-  await uploadBytes(gcsRef, file);
-  console.log(`uploaded ${filePath}`);
+  const task = uploadBytesResumable(gcsRef, file);
 
+  // Throw if the file upload stalls for more than 10 seconds.
+  // This can happen if the GCS bucket doesn't exist or if a CORS error occurs
+  // before the upload even begins. `uploadBytesResumable` doesn't seem to handle this.
+  let lastBytesTransferred = -1;
+  let lastProgressTime = Date.now();
+
+  await new Promise((resolve, reject) => {
+    const progressTimeout = setInterval(() => {
+      const currentTime = Date.now();
+      if (currentTime - lastProgressTime > 10000) {
+        clearInterval(progressTimeout);
+        reject(new Error('Upload stalled: no progress for 10 seconds'));
+      }
+    }, 1000);
+    task.on(
+      'state_changed',
+      (snapshot) => {
+        console.log(
+          `uploading ${file.name}: ${snapshot.bytesTransferred} / ${snapshot.totalBytes} bytes`
+        );
+        if (snapshot.bytesTransferred !== lastBytesTransferred) {
+          lastBytesTransferred = snapshot.bytesTransferred;
+          lastProgressTime = Date.now();
+        }
+      },
+      (error) => {
+        clearInterval(progressTimeout);
+        reject(error);
+      },
+      () => {
+        clearInterval(progressTimeout);
+        resolve(task.snapshot);
+      }
+    );
+  });
+  return finalizeUpload(gcsRef, file, ext, options);
+}
+
+async function finalizeUpload(
+  gcsRef: ReturnType<typeof storageRef>,
+  file: File,
+  ext: string,
+  options?: UploadFileOptions
+): Promise<UploadedFile> {
   const meta: Record<string, string | number> = {};
   meta.filename = file.name;
   meta.uploadedBy = window.firebase.user.email || 'unknown';
