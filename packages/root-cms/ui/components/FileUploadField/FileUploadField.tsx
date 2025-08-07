@@ -28,7 +28,7 @@ import {
 } from '@tabler/icons-preact';
 import {IconDotsVertical} from '@tabler/icons-preact';
 import {createContext} from 'preact';
-import {ChangeEvent, forwardRef} from 'preact/compat';
+import {ChangeEvent, CSSProperties, forwardRef} from 'preact/compat';
 import {useContext, useEffect, useRef, useState} from 'preact/hooks';
 import {joinClassNames} from '../../utils/classes.js';
 import {
@@ -427,20 +427,6 @@ FileUploadField.Preview = () => {
             </ActionIcon>
           </Tooltip>
         )}
-        <Tooltip label="Replace file" position="top" withArrow>
-          <ActionIcon
-            onClick={() => ctx.requestFileUpload()}
-            size="sm"
-            variant="outline"
-            className="FileUploadField__Preview__InfoButton__Icon"
-          >
-            {ctx.variant === 'image' ? (
-              <IconPhotoUp size={16} />
-            ) : (
-              <IconFileUpload size={16} />
-            )}
-          </ActionIcon>
-        </Tooltip>
         <Menu
           className="FileUploadField__Preview__Menu"
           shadow="sm"
@@ -521,19 +507,14 @@ FileUploadField.Preview = () => {
           </Menu.Item>
         </Menu>
       </div>
+
       <div
         className={joinClassNames(
           'FileUploadField__Canvas',
           infoOpened && 'FileUploadField__Canvas--infoOpened',
           dragging && 'FileUploadField__Canvas--dragging'
         )}
-        style={
-          uploadedFile.width !== undefined && uploadedFile.height !== undefined
-            ? {
-                '--canvas-aspect-ratio': `${uploadedFile.width} / ${uploadedFile.height}`,
-              }
-            : {}
-        }
+        style={canvasPreviewInlineStyles(uploadedFile)}
         onDragOver={(e) => {
           e.preventDefault();
           setDragging(true);
@@ -562,7 +543,7 @@ FileUploadField.Preview = () => {
         {infoOpened ? (
           <div className="FileUploadField__Canvas__Info">
             <IconPaperclip
-              size={20}
+              size={16}
               className="FileUploadField__Canvas__Info__Icon"
             />
             <Table
@@ -660,6 +641,12 @@ FileUploadField.Preview = () => {
             )}
           </>
         )}
+        <div className="FileUploadField__reupload">
+          <FileUploadField.UploadButton
+            className="FileUploadField__reupload__button"
+            compact
+          />
+        </div>
       </div>
       {ctx.alt !== false &&
         (uploadedFile.alt ||
@@ -684,54 +671,60 @@ FileUploadField.Preview = () => {
   );
 };
 
-FileUploadField.UploadButton = forwardRef<HTMLLabelElement, {}>(
-  (props, ref) => {
-    const context = useContext(FileUploadFileContext);
-    const uploading = context?.fileUpload?.state === 'uploading';
-    if (!context) {
-      return null;
-    }
-    return (
-      <label
-        {...props}
-        ref={ref}
-        className="FileUploadField__FileUploadButton"
-        tabIndex={0}
-      >
-        <input
-          disabled={uploading}
-          type="file"
-          accept={
-            context.acceptedFileTypes.length > 0
-              ? context.acceptedFileTypes.join(',')
-              : undefined
-          }
-          className="FileUploadField__FileUploadButton__Input"
-          onChange={(e) => {
-            const target = e.target as HTMLInputElement;
-            if (target.files && context) {
-              context.handleFile(target.files[0]);
-            }
-          }}
-        />
-        {uploading ? (
-          <Loader size={16} />
-        ) : context?.variant === 'image' ? (
-          <IconPhotoUp size={16} />
-        ) : (
-          <IconFileUpload size={16} />
-        )}
-        <div className="FileUploadField__FileUploadButton__Title">
-          {uploading
-            ? 'Uploading...'
-            : context?.fileUpload?.uploadedFile?.src
-            ? 'Upload'
-            : 'Paste, drop, or click to upload'}
-        </div>
-      </label>
-    );
+FileUploadField.UploadButton = (props: {
+  className?: string;
+  compact?: boolean;
+}) => {
+  const context = useContext(FileUploadFileContext);
+  const uploading = context?.fileUpload?.state === 'uploading';
+  if (!context) {
+    return null;
   }
-);
+  const iconSize = props.compact ? 14 : 16;
+  return (
+    <label
+      {...props}
+      className={joinClassNames(
+        'FileUploadField__FileUploadButton',
+        props.compact && 'FileUploadField__FileUploadButton--compact',
+        props.className
+      )}
+      tabIndex={0}
+    >
+      <input
+        disabled={uploading}
+        type="file"
+        accept={
+          context.acceptedFileTypes.length > 0
+            ? context.acceptedFileTypes.join(',')
+            : undefined
+        }
+        className="FileUploadField__FileUploadButton__Input"
+        onChange={(e) => {
+          const target = e.target as HTMLInputElement;
+          if (target.files && context) {
+            context.handleFile(target.files[0]);
+          }
+        }}
+      />
+
+      {uploading ? (
+        <Loader size={iconSize} />
+      ) : context?.variant === 'image' ? (
+        <IconPhotoUp size={iconSize} />
+      ) : (
+        <IconFileUpload size={iconSize} />
+      )}
+      <div className="FileUploadField__FileUploadButton__Title">
+        {uploading
+          ? 'Uploading...'
+          : context?.fileUpload?.uploadedFile?.src
+          ? 'Upload'
+          : 'Paste, drop, or click to upload'}
+      </div>
+    </label>
+  );
+};
 
 FileUploadField.Empty = () => {
   const context = useContext(FileUploadFileContext);
@@ -872,4 +865,25 @@ function testSupportsCreatePlaceholder(acceptedFileTypes: string[]) {
     acceptedFileTypes.some((type) => type.startsWith('image/')) ||
     acceptedFileTypes.length === 0
   );
+}
+
+function canvasPreviewInlineStyles(uploadedFile: UploadedFile) {
+  const inlineStyles: CSSProperties = {};
+  if (uploadedFile.width && uploadedFile.height) {
+    inlineStyles[
+      '--canvas-aspect-ratio'
+    ] = `${uploadedFile.width} / ${uploadedFile.height}`;
+
+    inlineStyles['--canvas-asset-width'] = `${uploadedFile.width}px`;
+    let maxHeight = Math.min(uploadedFile.height, 280);
+    if (maxHeight < 80) {
+      maxHeight = 80;
+    }
+    inlineStyles['--canvas-max-height'] = `${maxHeight}px`;
+  }
+
+  if (uploadedFile.canvasBgColor === 'dark') {
+    inlineStyles['--canvas-bg-color'] = '#000';
+  }
+  return inlineStyles;
 }
