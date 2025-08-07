@@ -1,5 +1,13 @@
 # @blinkk/root-cms
 
+## 2.0.3
+
+### Patch Changes
+
+- 898cd14: chore: small style updates to file field
+- 479316a: feat: add json diff viewer inside the ai editor
+  - @blinkk/root@2.0.3
+
 ## 2.0.2
 
 ### Patch Changes
