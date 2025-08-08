@@ -76,6 +76,10 @@ export async function uploadFileToGCS(
     task.on(
       'state_changed',
       (snapshot) => {
+        // The upload has actually started, so we can clear the timeout that was checking for a stall.
+        if (snapshot.bytesTransferred > 0) {
+          clearInterval(progressTimeout);
+        }
         console.log(
           `uploading ${file.name}: ${snapshot.bytesTransferred} / ${snapshot.totalBytes} bytes`
         );
