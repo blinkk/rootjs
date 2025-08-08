@@ -5,11 +5,13 @@ import {ChangeEvent, forwardRef} from 'preact/compat';
 import {useState} from 'preact/hooks';
 import {useGapiClient} from '../../hooks/useGapiClient.js';
 import {useModalTheme} from '../../hooks/useModalTheme.js';
+import {useSiteSettings} from '../../hooks/useSiteSettings.js';
 import {cmsLinkGoogleSheetL10n} from '../../utils/doc.js';
 import {
   GSheet,
   GSpreadsheet,
   getSpreadsheetUrl,
+  parseGoogleDriveFolder,
   parseSpreadsheetUrl,
 } from '../../utils/gsheets.js';
 import {notifyErrors} from '../../utils/notifications.js';
@@ -51,6 +53,7 @@ export function ExportSheetModal(
   const [sheetUrl, setSheetUrl] = useState('');
   const [done, setDone] = useState(false);
   const gapiClient = useGapiClient();
+  const siteSettings = useSiteSettings();
 
   const selectItems = [
     {
@@ -128,6 +131,7 @@ export function ExportSheetModal(
       });
       gspreadsheet = await GSpreadsheet.create({
         title: `${project} Localization`,
+        parent: parseGoogleDriveFolder(siteSettings.settings.googleDriveFolder),
       });
       gsheet = (await gspreadsheet.getSheet(0)) as GSheet;
       if (!gsheet) {
@@ -398,13 +402,24 @@ export function ExportSheetModal(
             <div className="ExportSheetModal__form__description">
               Google Sheet URL:
             </div>
-            <TextInput
-              disabled={action === 'new-sheet'}
-              value={sheetUrl}
-              onChange={(e: ChangeEvent<HTMLInputElement>) =>
-                setSheetUrl(e.currentTarget.value)
-              }
-            />
+            {action === 'new-sheet' ? (
+              <TextInput
+                disabled={true}
+                placeholder={
+                  siteSettings.settings.googleDriveFolder
+                    ? "A new Google Sheet will be created in the project's Google Drive folder."
+                    : 'A new Google Sheet will be created in your "My Drive" folder.'
+                }
+              />
+            ) : (
+              <TextInput
+                placeholder="https://docs.google.com/spreadsheets/d/..."
+                value={sheetUrl}
+                onChange={(e: ChangeEvent<HTMLInputElement>) =>
+                  setSheetUrl(e.currentTarget.value)
+                }
+              />
+            )}
           </div>
           <div className="ExportSheetModal__form__buttons">
             {done ? (
