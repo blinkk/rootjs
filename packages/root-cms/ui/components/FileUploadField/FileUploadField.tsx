@@ -29,7 +29,7 @@ import {
 import {IconDotsVertical} from '@tabler/icons-preact';
 import {createContext} from 'preact';
 import {ChangeEvent, CSSProperties, forwardRef} from 'preact/compat';
-import {useContext, useEffect, useRef, useState} from 'preact/hooks';
+import {useContext, useRef, useState} from 'preact/hooks';
 import {joinClassNames} from '../../utils/classes.js';
 import {
   buildDownloadURL,
@@ -134,10 +134,6 @@ export function FileUploadField(props: FileUploadFieldProps) {
   const acceptedFileTypes =
     props.exts ?? (props.variant === 'image' ? IMAGE_MIMETYPES : []);
 
-  useEffect(() => {
-    setFileUploader((prev) => ({...prev, uploadedFile: props.file}));
-  }, [props.file]);
-
   /** Uploads file data to GCS. */
   async function uploadFile(file: File) {
     try {
@@ -174,12 +170,13 @@ export function FileUploadField(props: FileUploadFieldProps) {
       uploadedFile: {
         ...prev.uploadedFile,
         ...uploadedFile,
+        // Preserve alt text when replacing the file.
+        alt: uploadedFile.alt || prev.uploadedFile?.alt || '',
       },
     }));
     props.onFileChange?.(uploadedFile);
     setFileUploader((prev) => ({
       ...prev,
-      uploadedFile: uploadedFile,
       state: 'finished',
     }));
   }
@@ -273,6 +270,7 @@ export function FileUploadField(props: FileUploadFieldProps) {
         requestPlaceholderModalOpen: requestPlaceholderModalOpen,
         setFileData: setFileData,
         setAltText: (altText) => {
+          const alt = altText || '';
           setFileUploader((prev) => {
             if (!prev.uploadedFile) {
               return prev;
@@ -281,13 +279,13 @@ export function FileUploadField(props: FileUploadFieldProps) {
               ...prev,
               uploadedFile: {
                 ...prev.uploadedFile,
-                alt: altText || '',
+                alt,
               },
             };
           });
           props.onFileChange?.({
             ...fileUploader.uploadedFile,
-            alt: altText || '',
+            alt,
           } as UploadedFile);
         },
         removeFile: () => {
