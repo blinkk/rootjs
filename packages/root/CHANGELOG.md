@@ -1,5 +1,11 @@
 # @blinkk/root
 
+## 2.0.4
+
+### Patch Changes
+
+- f137e61: fix: pin root version when running `root package`
+
 ## 2.0.3
 
 ## 2.0.2
