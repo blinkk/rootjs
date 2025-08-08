@@ -6,6 +6,7 @@
   "packageManager": "pnpm@8.9.0",
   "main": "index.js",
   "scripts": {
+    "cms:dev": "./scripts/dev_cms.sh",
     "build": "turbo run build --filter=\"@blinkk/*\"",
     "changeset": "changeset",
     "lint": "eslint . --ext .ts,.tsx",
