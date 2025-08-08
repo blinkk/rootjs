@@ -6,6 +6,7 @@ import {
   Divider,
   Loader,
   LoadingOverlay,
+  MantineSize,
   Modal,
   Stack,
   Table,
@@ -387,7 +388,9 @@ export function FileUploadField(props: FileUploadFieldProps) {
         {fileUploader.uploadedFile?.src ? (
           <FileUploadField.Preview />
         ) : (
-          <FileUploadField.Empty />
+          <FileUploadField.InvisibleDropzone>
+            <FileUploadField.Empty />
+          </FileUploadField.InvisibleDropzone>
         )}
       </div>
     </FileUploadFileContext.Provider>
@@ -510,7 +513,7 @@ FileUploadField.Preview = () => {
         className={joinClassNames(
           'FileUploadField__Canvas',
           infoOpened && 'FileUploadField__Canvas--infoOpened',
-          dragging && 'FileUploadField__Canvas--dragging'
+          dragging && 'dragging'
         )}
         style={canvasPreviewInlineStyles(uploadedFile)}
         onDragOver={(e) => {
@@ -680,49 +683,75 @@ FileUploadField.UploadButton = (props: {
   }
   const iconSize = props.compact ? 14 : 16;
   return (
-    <label
-      {...props}
+    <Button
+      color="black"
+      variant="default"
+      disabled={uploading}
+      size={(props.compact ? 'compact-xs' : 'compact-md') as MantineSize}
       className={joinClassNames(
         'FileUploadField__FileUploadButton',
-        props.compact && 'FileUploadField__FileUploadButton--compact',
-        props.className
+        props.compact && 'FileUploadField__FileUploadButton--compact'
       )}
-      tabIndex={0}
+      onClick={() => {
+        context.requestFileUpload();
+      }}
+      leftIcon={
+        <>
+          {uploading && !props.compact ? (
+            <Loader size={iconSize} />
+          ) : context?.variant === 'image' ? (
+            <IconPhotoUp size={iconSize} />
+          ) : (
+            <IconFileUpload size={iconSize} />
+          )}
+        </>
+      }
     >
-      <input
-        disabled={uploading}
-        type="file"
-        accept={
-          context.acceptedFileTypes.length > 0
-            ? context.acceptedFileTypes.join(',')
-            : undefined
-        }
-        className="FileUploadField__FileUploadButton__Input"
-        onChange={(e) => {
-          const target = e.target as HTMLInputElement;
-          if (target.files && context) {
-            context.handleFile(target.files[0]);
-            // Clear the input value to allow re-uploading the same file.
-            target.value = '';
-          }
-        }}
-      />
+      {uploading && !props.compact
+        ? 'Uploading...'
+        : context?.fileUpload?.uploadedFile?.src
+        ? 'Upload'
+        : 'Paste, drop, or click to upload'}
+    </Button>
+  );
+};
 
-      {uploading ? (
-        <Loader size={iconSize} />
-      ) : context?.variant === 'image' ? (
-        <IconPhotoUp size={iconSize} />
-      ) : (
-        <IconFileUpload size={iconSize} />
+FileUploadField.InvisibleDropzone = (props: {
+  children: preact.ComponentChildren;
+}) => {
+  const [dragging, setDragging] = useState(false);
+  const context = useContext(FileUploadFileContext);
+  if (!context) {
+    return null;
+  }
+  return (
+    <div
+      className={joinClassNames(
+        'FileUploadField__InvisibleDropzone',
+        dragging && 'dragging'
       )}
-      <div className="FileUploadField__FileUploadButton__Title">
-        {uploading
-          ? 'Uploading...'
-          : context?.fileUpload?.uploadedFile?.src
-          ? 'Upload'
-          : 'Paste, drop, or click to upload'}
-      </div>
-    </label>
+      onDragOver={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setDragging(true);
+      }}
+      onDragLeave={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setDragging(false);
+      }}
+      onDrop={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setDragging(false);
+        const file = e.dataTransfer?.files[0];
+        if (file) {
+          context.handleFile(file);
+        }
+      }}
+    >
+      {props.children}
+    </div>
   );
 };
 
@@ -739,9 +768,7 @@ FileUploadField.Empty = () => {
   return (
     <div className="FileUploadField__Empty">
       <div className="FileUploadField__Empty__Label">
-        <div>
-          <FileUploadField.UploadButton />
-        </div>
+        <FileUploadField.UploadButton />
         {testSupportsCreatePlaceholder(context.acceptedFileTypes) && (
           <div>
             <Tooltip label="Create placeholder image">
@@ -777,7 +804,7 @@ FileUploadField.Dropzone = forwardRef<HTMLButtonElement, {}>((props, ref) => {
       ref={ref}
       className={joinClassNames(
         'FileUploadField__Dropzone',
-        dragging && 'FileUploadField__Dropzone--dragging'
+        dragging && 'dragging'
       )}
       onDblClick={() => {
         context?.requestFileUpload();

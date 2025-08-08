@@ -4,13 +4,12 @@
   position: relative;
 }
 
-.FileUploadField:has(.FileUploadField__Canvas--dragging),
-.FileUploadField:has(.FileUploadField__Dropzone--dragging) {
+.FileUploadField:has(.dragging) {
   border: 1px solid #eebefa;
 }
 
-.FileUploadField:has(.FileUploadField__Canvas--dragging) .FileUploadField__Dropzone,
-.FileUploadField:has(.FileUploadField__Dropzone--dragging) .FileUploadField__Canvas {
+.FileUploadField:has(.dragging) .FileUploadField__Dropzone,
+.FileUploadField:has(.dragging) .FileUploadField__Canvas {
   background-color: #f3d9fa;
 }
 
@@ -53,6 +52,7 @@
 }
 
 .FileUploadField__reupload {
+  pointer-events: all;
   position: absolute;
   bottom: 8px;
   right: 8px;
@@ -142,7 +142,7 @@
   aspect-ratio: unset;
 }
 
-.FileUploadField__Canvas--dragging {
+.FileUploadField__Canvas.dragging {
   background-color: #f3d9fa;
 }
 
@@ -171,11 +171,15 @@
   inset: 0;
 }
 
+.FileUploadField__InvisibleDropzone {
+  display: contents;
+}
+
 .FileUploadField__Dropzone:focus {
   outline: 1px solid -webkit-focus-ring-color;
 }
 
-.FileUploadField__Dropzone--dragging {
+.FileUploadField__Dropzone.dragging {
   background-color: #f3d9fa;
 }
 
@@ -191,45 +195,17 @@
 }
 
 .FileUploadField__FileUploadButton {
-  align-items: center;
-  background-color: white;
-  border-radius: 2px;
-  border: 1px solid #ced4da;
-  cursor: pointer;
-  display: inline-flex;
-  flex-direction: row;
   font-size: 12px;
-  gap: 8px;
-  padding: 4px 10px;
-  pointer-events: all;
-  position: relative;
-  z-index: 1;
-}
-
-.FileUploadField__FileUploadButton:has([disabled]) {
-  cursor: default;
-}
-
-.FileUploadField__FileUploadButton:hover {
-  background-color: #efefef;
-}
-
-.FileUploadField__FileUploadButton__Input {
-  appearance: none;
-  visibility: hidden;
-  opacity: 0;
-  position: absolute;
-  inset: 0;
-}
-
-.FileUploadField__FileUploadButton__Title {
-  font-weight: 600;
 }
 
 .FileUploadField__FileUploadButton--compact {
   padding: 2px 6px;
   gap: 6px;
   font-size: 12px;
+}
+
+.FileUploadField__FileUploadButton--compact .mantine-Button-leftIcon {
+  margin-right: 6px;
 }
 
 .FileUploadField__Empty__AcceptTypes {
