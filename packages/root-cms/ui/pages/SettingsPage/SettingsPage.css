@@ -20,6 +20,13 @@
   margin-top: 100px;
 }
 
+.SettingsPage__section__setting {
+  max-width: 420px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
 .SettingsPage__section__userPref {
   display: grid;
   grid-template-columns: 1fr auto;
