@@ -64,7 +64,7 @@ export async function createPackage(
   }
 
   // Create package.json.
-  const packageJson = await generatePackageJson(rootDir);
+  const packageJson = await generatePackageJson(rootDir, options);
 
   // Set root.js versions.
   if (options?.version && packageJson.dependencies) {
@@ -111,7 +111,10 @@ async function getDefaultTarget(rootDir: string): Promise<DeployTarget | null> {
   return null;
 }
 
-async function generatePackageJson(rootDir: string): Promise<PackageJson> {
+async function generatePackageJson(
+  rootDir: string,
+  options?: CreatePackageOptions
+): Promise<PackageJson> {
   // Read the package.json.
   const packageJson: PackageJson = await loadJson<any>(
     path.resolve(rootDir, 'package.json')
@@ -126,9 +129,13 @@ async function generatePackageJson(rootDir: string): Promise<PackageJson> {
       packageJson.dependencies[depName] = allDeps[depName];
     }
   }
-  // Remove `workspace:` deps.
+
   Object.entries(packageJson.dependencies).forEach(([depName, depVersion]) => {
-    if (depVersion.startsWith('workspace:')) {
+    if (depName.startsWith('@blinkk/root') && options?.version) {
+      // Replace root version with the current version.
+      packageJson.dependencies![depName] = options.version;
+    } else if (depVersion.startsWith('workspace:')) {
+      // Remove `workspace:` deps.
       delete packageJson.dependencies![depName];
     }
   });
