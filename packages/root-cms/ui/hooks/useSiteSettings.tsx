@@ -6,14 +6,18 @@ import {useContext, useEffect, useCallback, useState} from 'preact/hooks';
 import {buildGoogleDriveFolderUrl} from '../utils/gsheets.js';
 import {useFirebase} from './useFirebase.js';
 
+/** Project level settings. Keys are stored in the database. */
 interface SiteSettings {
   /** The Google Drive folder where files created by Root CMS are stored. If unspecified, files will be created in your "My Drive". */
   googleDriveFolder?: string;
 }
 
 interface Setting {
+  /** The name of the setting (appears in the CMS UI). */
   name: string;
+  /** The key of the setting stored in the database. */
   key: keyof SiteSettings;
+  /** A description of the setting (appears in the CMS UI). */
   description: string;
   placeholder?: string;
   /** Additional UI to show adjacent to the settings field. */
