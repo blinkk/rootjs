@@ -12,7 +12,7 @@ import {
 } from '@tabler/icons-preact';
 import {Differ, Viewer as JsonDiffViewer} from 'json-diff-kit';
 import {useState} from 'preact/hooks';
-import {ParsedChatResponse} from '../../../shared/ai/prompts.js';
+import {AiResponse} from '../../../shared/ai/prompts.js';
 import {useModalTheme} from '../../hooks/useModalTheme.js';
 import {ChatPanel} from './ChatPanel.js';
 
@@ -110,7 +110,7 @@ export function AiEditModal(modalProps: ContextModalProps<AiEditModalProps>) {
         <div className="AiEditModal__SplitPanel__ChatPanel">
           <ChatPanel
             editModeData={JSON.parse(value)}
-            onEditModeResponse={(resp: ParsedChatResponse) => {
+            onEditModeResponse={(resp: AiResponse) => {
               setValue(JSON.stringify(resp.data, null, 2));
             }}
           >

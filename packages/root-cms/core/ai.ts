@@ -7,8 +7,7 @@ import {Genkit, genkit, MessageData} from 'genkit';
 import {logger} from 'genkit/logging';
 import {
   ChatPrompt,
-  ChatResponse,
-  ChatResponseSchema,
+  AiResponse,
   SendPromptOptions,
 } from '../shared/ai/prompts.js';
 import {RootCMSClient} from './client.js';
@@ -94,10 +93,14 @@ export class Chat {
   }
 
   /** Builds the request sent to the AI based on the `ChatMode`. */
-  private async buildChatRequest(
+  private async buildGenerateRequest(
     prompt: ChatPrompt | ChatPrompt[],
     options: SendPromptOptions
-  ) {
+  ): Promise<{
+    messages: MessageData[];
+    model: string;
+    prompt: ChatPrompt | ChatPrompt[];
+  }> {
     if (options.mode === 'edit') {
       return {
         messages: await this.buildMessages(options),
@@ -116,22 +119,24 @@ export class Chat {
   async sendPrompt(
     prompt: ChatPrompt | ChatPrompt[],
     options: SendPromptOptions = {}
-  ): Promise<ChatResponse | null> {
-    const chatRequest = await this.buildChatRequest(prompt, options);
+  ): Promise<AiResponse> {
+    const chatRequest = await this.buildGenerateRequest(prompt, options);
     // TODO: Use streaming responses per https://genkit.dev/docs/models/#streaming
     // to improve UI performance.
     const res = await this.ai.generate({
       model: chatRequest.model,
       messages: chatRequest.messages,
       prompt: Array.isArray(prompt) ? prompt.flat() : prompt,
-      output: {schema: ChatResponseSchema},
     });
     this.history = res.messages;
     await this.dbDoc().update({
       history: this.history,
       modifiedAt: Timestamp.now(),
     });
-    return res.output;
+    if (options.mode === 'edit') {
+      return res.output as AiResponse & {editData?: any};
+    }
+    return {message: res.text, data: null};
   }
 
   dbDoc() {

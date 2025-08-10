@@ -14,7 +14,7 @@ import {useEffect, useMemo, useRef, useState} from 'preact/hooks';
 import {ChatApiRequest, ChatApiResponse} from '../../../core/api.js';
 import {
   ChatPrompt,
-  ChatResponse,
+  AiResponse,
   SendPromptOptions,
 } from '../../../shared/ai/prompts.js';
 import {
@@ -45,7 +45,7 @@ export interface ChatController {
     messageId: number,
     prompt: ChatPrompt | ChatPrompt[],
     options?: SendPromptOptions
-  ) => Promise<ChatResponse | null>;
+  ) => Promise<AiResponse | null>;
 }
 
 export function useChat(): ChatController {
@@ -83,7 +83,7 @@ export function useChat(): ChatController {
     messageId: number,
     prompt: ChatPrompt | ChatPrompt[],
     options?: SendPromptOptions
-  ): Promise<ChatResponse | null> => {
+  ): Promise<AiResponse> => {
     // Allow users to provide a custom api endpoint via the
     // `{ai: {endpoint: '/api/...}}` config.
     let endpoint = '/cms/api/ai.chat';
@@ -364,7 +364,6 @@ function ChatMessageTextBlock(props: {
       extensions: [gfm()],
       mdastExtensions: [gfmFromMarkdown()],
     });
-    console.log(tree);
     return tree;
   }, [props.block.text]);
 

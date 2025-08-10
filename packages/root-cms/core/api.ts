@@ -2,7 +2,7 @@ import {Server, Request, Response} from '@blinkk/root';
 import {multipartMiddleware} from '@blinkk/root/middleware';
 import {
   ChatPrompt,
-  ChatResponse,
+  AiResponse,
   SendPromptOptions,
 } from '../shared/ai/prompts.js';
 import {ChatClient, RootAiModel} from './ai.js';
@@ -22,7 +22,7 @@ export interface ChatApiRequest {
 export interface ChatApiResponse {
   success: boolean;
   chatId: string;
-  response: ChatResponse | null;
+  response: AiResponse;
   error?: string;
 }
 

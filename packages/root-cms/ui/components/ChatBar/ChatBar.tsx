@@ -3,7 +3,7 @@ import {IconPaperclip, IconSend2, IconX} from '@tabler/icons-preact';
 import {useEffect, useRef, useState} from 'preact/hooks';
 import {
   ChatPrompt,
-  ChatResponse,
+  AiResponse,
   SendPromptOptions,
 } from '../../../shared/ai/prompts.js';
 import {ChatController} from '../../pages/AIPage/AIPage.js';
@@ -96,7 +96,7 @@ export default App;
 export function ChatBar(props: {
   chat: ChatController;
   options?: SendPromptOptions;
-  onData?: (data: ChatResponse | null) => void;
+  onData?: (data: AiResponse | null) => void;
 }) {
   const [textPrompt, setTextPrompt] = useState('');
   const textInputRef = useRef<HTMLTextAreaElement>(null);
