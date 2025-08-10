@@ -5,7 +5,12 @@ import {vertexAI} from '@genkit-ai/vertexai';
 import {Timestamp} from 'firebase-admin/firestore';
 import {Genkit, genkit, MessageData} from 'genkit';
 import {logger} from 'genkit/logging';
-import {ChatPrompt, SendPromptOptions} from '../shared/ai/prompts.js';
+import {
+  ChatPrompt,
+  ChatResponse,
+  ChatResponseSchema,
+  SendPromptOptions,
+} from '../shared/ai/prompts.js';
 import {RootCMSClient} from './client.js';
 import {CMSPluginOptions} from './plugin.js';
 
@@ -111,7 +116,7 @@ export class Chat {
   async sendPrompt(
     prompt: ChatPrompt | ChatPrompt[],
     options: SendPromptOptions = {}
-  ): Promise<string> {
+  ): Promise<ChatResponse | null> {
     const chatRequest = await this.buildChatRequest(prompt, options);
     // TODO: Use streaming responses per https://genkit.dev/docs/models/#streaming
     // to improve UI performance.
@@ -119,13 +124,14 @@ export class Chat {
       model: chatRequest.model,
       messages: chatRequest.messages,
       prompt: Array.isArray(prompt) ? prompt.flat() : prompt,
+      output: {schema: ChatResponseSchema},
     });
     this.history = res.messages;
     await this.dbDoc().update({
       history: this.history,
       modifiedAt: Timestamp.now(),
     });
-    return res.text;
+    return res.output;
   }
 
   dbDoc() {
@@ -188,7 +194,7 @@ export class ChatClient {
     this.user = user;
   }
 
-  async createChat(): Promise<Chat> {
+  private async createChat(): Promise<Chat> {
     const chatId = crypto.randomUUID();
     // Save chat to db so that user has a chat history and can enable "sharing"
     // with others. Store the model used with the metadata.
@@ -204,7 +210,11 @@ export class ChatClient {
     return chat;
   }
 
-  async getChat(chatId: string): Promise<Chat> {
+  async getOrCreateChat(chatId?: string): Promise<Chat> {
+    return chatId ? this.getChat(chatId) : this.createChat();
+  }
+
+  private async getChat(chatId: string): Promise<Chat> {
     // Fetch chat from db to preserve the conversation's history.
     const docRef = this.dbCollection().doc(chatId);
     const chatDoc = await docRef.get();
