@@ -68,7 +68,10 @@ export class Chat {
     options: SendPromptOptions
   ): Promise<MessageData[]> {
     const messages = this.history;
-    if (messages.length === 0) {
+    const hasSystemPrompt = messages.some(
+      (msg) => msg.role === 'system' && msg.content.length > 0
+    );
+    if (!hasSystemPrompt) {
       messages.push({
         role: 'system',
         content: [{text: await this.buildSystemPrompt(options)}],
@@ -133,6 +136,7 @@ export class Chat {
       history: this.history,
       modifiedAt: Timestamp.now(),
     });
+    // Using the `output` property provides both data and text responses.
     if (options.mode === 'edit') {
       return res.output as AiResponse & {editData?: any};
     }
@@ -167,6 +171,10 @@ export class Chat {
       const text = (await import('../shared/ai/prompts/edit.txt')).default;
       text.replace('{{ROOT_CMS_DEFS}}', rootCmsDefs);
       return text;
+    }
+
+    if (options.mode === 'altText') {
+      return (await import('../shared/ai/prompts/altText.txt')).default;
     }
 
     // Chat mode (default) prompts.

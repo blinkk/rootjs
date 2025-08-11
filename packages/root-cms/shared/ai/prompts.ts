@@ -9,7 +9,7 @@ export type ChatPrompt = Part | Part[];
  * - chat: Used in the "Chat with Root AI" sidebar tool.
  * - edit: Used in the "Edit with AI" modal dialog for editing JSON files.
  */
-export type ChatMode = 'chat' | 'edit';
+export type ChatMode = 'chat' | 'edit' | 'altText';
 
 export interface AiResponse {
   message: string;

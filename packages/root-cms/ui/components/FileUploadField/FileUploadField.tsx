@@ -25,12 +25,14 @@ import {
   IconPaperclip,
   IconPhotoStar,
   IconPhotoUp,
+  IconSparkles,
   IconTrash,
 } from '@tabler/icons-preact';
 import {IconDotsVertical} from '@tabler/icons-preact';
 import {createContext} from 'preact';
 import {ChangeEvent, CSSProperties, forwardRef} from 'preact/compat';
 import {useContext, useEffect, useRef, useState} from 'preact/hooks';
+import {ChatController, useChat} from '../../pages/AIPage/AIPage.js';
 import {joinClassNames} from '../../utils/classes.js';
 import {
   buildDownloadURL,
@@ -44,6 +46,7 @@ import {
 
 import './FileUploadField.css';
 import {testHasExperimentParam} from '../../utils/url-params.js';
+import {MessageBlock} from '../ChatBar/ChatBar.js';
 
 /** Mimetypes accepted by the image input field. */
 const IMAGE_MIMETYPES = [
@@ -117,6 +120,7 @@ interface FileUploadContextValue {
   removeFile: () => void;
   requestFileUpload: () => void;
   requestFileDownload: () => void;
+  requestGenerateAltText: (chat: ChatController) => void;
   requestPlaceholderModalOpen: () => void;
   setFileData: (uploadedFile: UploadedFile) => void;
   setAltText: (altText: string) => void;
@@ -261,6 +265,78 @@ export function FileUploadField(props: FileUploadFieldProps) {
     setPlaceholderModalOpened(true);
   }
 
+  function setAltText(altText: string) {
+    const alt = altText || '';
+    setFileUploader((prev) => {
+      if (!prev.uploadedFile) {
+        return prev;
+      }
+      return {
+        ...prev,
+        uploadedFile: {
+          ...prev.uploadedFile,
+          alt,
+        },
+      };
+    });
+    props.onFileChange?.({
+      ...fileUploader.uploadedFile,
+      alt,
+    } as UploadedFile);
+  }
+
+  /** Requests generation of the alt text associated with the uploaded file. */
+  async function requestGenerateAltText(chat: ChatController) {
+    const uploadedFile = fileUploader?.uploadedFile;
+    if (!uploadedFile?.src || !chat) {
+      return;
+    }
+    setFileUploader((prev) => ({
+      ...prev,
+      state: 'uploading',
+    }));
+    const resp = await chat.sendPrompt(
+      chat.addMessage({
+        sender: 'user',
+        blocks: [
+          {
+            type: 'image',
+            image: {
+              src: uploadedFile.src,
+            },
+          },
+        ],
+      }),
+      [
+        {
+          text: 'Generate alt text for the image above.',
+        },
+        {
+          media: {
+            url: uploadedFile.src,
+          },
+        },
+      ],
+      {
+        mode: 'altText',
+      }
+    );
+    if (resp?.message) {
+      setAltText(resp.message);
+    } else {
+      showNotification({
+        title: 'Sorry, something went wrong.',
+        message: 'Failed to generate alt text.',
+        color: 'red',
+        autoClose: true,
+      });
+    }
+    setFileUploader((prev) => ({
+      ...prev,
+      state: 'finished',
+    }));
+  }
+
   return (
     <FileUploadFileContext.Provider
       value={{
@@ -270,29 +346,12 @@ export function FileUploadField(props: FileUploadFieldProps) {
         acceptedFileTypes: acceptedFileTypes,
         handleFile: handleFile,
         focusDropZone: focusDropZone,
+        requestGenerateAltText: requestGenerateAltText,
         requestFileUpload: requestFileUpload,
         requestFileDownload: requestFileDownload,
         requestPlaceholderModalOpen: requestPlaceholderModalOpen,
         setFileData: setFileData,
-        setAltText: (altText) => {
-          const alt = altText || '';
-          setFileUploader((prev) => {
-            if (!prev.uploadedFile) {
-              return prev;
-            }
-            return {
-              ...prev,
-              uploadedFile: {
-                ...prev.uploadedFile,
-                alt,
-              },
-            };
-          });
-          props.onFileChange?.({
-            ...fileUploader.uploadedFile,
-            alt,
-          } as UploadedFile);
-        },
+        setAltText: setAltText,
         removeFile: () => {
           setFileUploader((prev) => ({
             ...prev,
@@ -406,6 +465,8 @@ FileUploadField.Preview = () => {
   const [dragging, setDragging] = useState(false);
   const [copied, setCopied] = useState(false);
   const fileUpload = ctx?.fileUpload;
+  const chat = useChat();
+  const experiments = window.__ROOT_CTX.experiments || {};
   if (!fileUpload || !fileUpload.uploadedFile) {
     return null;
   }
@@ -670,6 +731,23 @@ FileUploadField.Preview = () => {
                 ctx?.setAltText(e.currentTarget.value);
               }}
             />
+            {experiments.ai && !uploadedFile.alt && (
+              <Tooltip
+                label="Generate alt text with AI"
+                position="top"
+                withArrow
+              >
+                <ActionIcon
+                  className="DocEditor__ImageField__imagePreview__Image__Alt__AiButton"
+                  onClick={() => {
+                    ctx.requestGenerateAltText(chat);
+                  }}
+                  disabled={ctx.fileUpload?.state === 'uploading'}
+                >
+                  <IconSparkles size={20} stroke="1.5" />
+                </ActionIcon>
+              </Tooltip>
+            )}
           </div>
         )}
     </div>

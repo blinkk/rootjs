@@ -21,9 +21,9 @@ export interface ImageMessageBlock {
   type: 'image';
   image: {
     src: string;
-    width: number;
-    height: number;
-    alt: string;
+    width?: number;
+    height?: number;
+    alt?: string;
   };
 }
 
