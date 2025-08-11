@@ -321,15 +321,15 @@ export function FileUploadField(props: FileUploadFieldProps) {
         mode: 'altText',
       }
     );
-    if (resp?.message) {
-      setAltText(resp.message);
-    } else {
+    if (resp?.error) {
       showNotification({
         title: 'Sorry, something went wrong.',
-        message: 'Failed to generate alt text.',
+        message: resp.error,
         color: 'red',
         autoClose: true,
       });
+    } else if (resp?.message) {
+      setAltText(resp.message);
     }
     setFileUploader((prev) => ({
       ...prev,
@@ -731,23 +731,25 @@ FileUploadField.Preview = () => {
                 ctx?.setAltText(e.currentTarget.value);
               }}
             />
-            {experiments.ai && !uploadedFile.alt && (
-              <Tooltip
-                label="Generate alt text with AI"
-                position="top"
-                withArrow
-              >
-                <ActionIcon
-                  className="DocEditor__ImageField__imagePreview__Image__Alt__AiButton"
-                  onClick={() => {
-                    ctx.requestGenerateAltText(chat);
-                  }}
-                  disabled={ctx.fileUpload?.state === 'uploading'}
+            {experiments.ai &&
+              !uploadedFile.alt &&
+              uploadedFile.src?.startsWith('http') && (
+                <Tooltip
+                  label="Generate alt text with AI"
+                  position="top"
+                  withArrow
                 >
-                  <IconSparkles size={20} stroke="1.5" />
-                </ActionIcon>
-              </Tooltip>
-            )}
+                  <ActionIcon
+                    className="DocEditor__ImageField__imagePreview__Image__Alt__AiButton"
+                    onClick={() => {
+                      ctx.requestGenerateAltText(chat);
+                    }}
+                    disabled={ctx.fileUpload?.state === 'uploading'}
+                  >
+                    <IconSparkles size={20} stroke="1.5" />
+                  </ActionIcon>
+                </Tooltip>
+              )}
           </div>
         )}
     </div>

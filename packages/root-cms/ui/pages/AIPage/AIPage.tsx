@@ -118,7 +118,7 @@ export function useChat(): ChatController {
           },
         ],
       });
-      return {message: errorMessage, data: {}};
+      return {message: errorMessage, data: {}, error: err};
     }
     const resData = (await res.json()) as ChatApiResponse;
     if (resData.success && resData.chatId) {
@@ -138,6 +138,7 @@ export function useChat(): ChatController {
     return {
       message: 'Sorry. Something went wrong. An unknown error occurred.',
       data: {},
+      error: 'Unknown error',
     };
   };
 

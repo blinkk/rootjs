@@ -14,6 +14,7 @@ export type ChatMode = 'chat' | 'edit' | 'altText';
 export interface AiResponse {
   message: string;
   data: Record<string, any> | null;
+  error?: string;
 }
 
 /**
