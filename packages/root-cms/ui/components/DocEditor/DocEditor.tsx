@@ -806,7 +806,7 @@ function arrayReducer(state: ArrayFieldValue, action: ArrayAction) {
         return state;
       }
       const itemKey = order[action.fromIndex];
-      arraySwap(order, action.fromIndex, action.toIndex);
+      arrayMove(order, action.fromIndex, action.toIndex);
       action.draft.updateKeys({
         [`${action.deepKey}._array`]: order,
       });
@@ -1379,6 +1379,15 @@ DocEditor.OneOfField = (props: FieldProps) => {
   );
 };
 
+/**
+ * Swaps two elements in an array at the specified indices.
+ *
+ * @example
+ * ```typescript
+ * const numbers = [1, 2, 3, 4];
+ * arraySwap(numbers, 0, 2); // Returns [3, 2, 1, 4]
+ * ```
+ */
 function arraySwap<T = unknown>(arr: T[], index1: number, index2: number) {
   if (arr.length <= 1) {
     return arr;
@@ -1387,6 +1396,20 @@ function arraySwap<T = unknown>(arr: T[], index1: number, index2: number) {
   arr[index1] = arr[index2];
   arr[index2] = tmp;
   return arr;
+}
+
+/**
+ * Moves an element in an array from one index to another.
+ *
+ * @example
+ * ```typescript
+ * const numbers = [1, 2, 3, 4];
+ * arrayMove(numbers, 0, 2); // Returns [2, 3, 1, 4]
+ * ```
+ */
+function arrayMove<T = unknown>(arr: T[], fromIndex: number, toIndex: number) {
+  const [movedElement] = arr.splice(fromIndex, 1);
+  arr.splice(toIndex, 0, movedElement);
 }
 
 /** Returns the string templates for field previews from the schema-level data. */
