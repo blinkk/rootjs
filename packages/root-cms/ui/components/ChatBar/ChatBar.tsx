@@ -45,54 +45,6 @@ export type MessageBlock =
   | PendingMessageBlock
   | TextMessageBlock;
 
-const USE_DEBUG_STRING = false;
-const DEBUG_STRING = `Lorem ipsum 🥕 dolor sit amet.
-
-\`\`\`jsx
-import React, { useState, useEffect } from 'react';
-
-const Typewriter = ({ text, speed = 150 }) => {
-  const [displayedText, setDisplayedText] = useState('');
-  const [index, setIndex] = useState(0);
-
-  useEffect(() => {
-    if (index < text.length) {
-      const timeout = setTimeout(() => {
-        setDisplayedText(displayedText + text[index]);
-        setIndex(index + 1);
-      }, speed);
-      return () => clearTimeout(timeout);
-    }
-  }, [index, displayedText, text, speed]);
-
-  return (
-    <div style={{ fontFamily: 'monospace', whiteSpace: 'pre' }}>
-      {displayedText}
-    </div>
-  );
-};
-
-export default Typewriter;
-\`\`\`
-
-
-\`\`\`jsx
-import React from 'react';
-import Typewriter from './Typewriter';
-
-const App = () => {
-  return (
-    <div>
-      <h1>Typewriter Animation</h1>
-      <Typewriter text="Hello, world!" speed={100} />
-    </div>
-  );
-};
-
-export default App;
-\`\`\`
-`;
-
 export function ChatBar(props: {
   chat: ChatController;
   options?: SendPromptOptions;
@@ -138,35 +90,21 @@ export function ChatBar(props: {
     setImage(null);
     updateTextareaHeight();
 
-    if (USE_DEBUG_STRING) {
-      window.setTimeout(() => {
-        props.chat.updateMessage(pendingMessageId, {
-          sender: 'bot',
-          blocks: [
-            {
-              type: 'text',
-              text: DEBUG_STRING,
-            },
-          ],
-        });
-      }, 1500);
-    } else {
-      const prompt: ChatPrompt[] = [{text: textPrompt}];
-      if (image) {
-        prompt.push({
-          media: {
-            url: image.src,
-            contentType: guessImageMimetype(image.filename),
-          },
-        });
-      }
-      const response = await props.chat.sendPrompt(
-        pendingMessageId,
-        prompt,
-        props.options
-      );
-      props.onData?.(response);
+    const prompt: ChatPrompt[] = [{text: textPrompt}];
+    if (image) {
+      prompt.push({
+        media: {
+          url: image.src,
+          contentType: guessImageMimetype(image.filename),
+        },
+      });
     }
+    const response = await props.chat.sendPrompt(
+      pendingMessageId,
+      prompt,
+      props.options
+    );
+    props.onData?.(response);
   }
 
   function updateTextareaHeight() {

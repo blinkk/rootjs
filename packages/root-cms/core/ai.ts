@@ -162,15 +162,24 @@ export class Chat {
     // Edit mode prompts.
     if (options.mode === 'edit') {
       const rootDir = process.cwd();
-      const rootCmsDefs = fs.readFileSync(
-        path.resolve(rootDir, 'root-cms.d.ts'),
-        {
-          encoding: 'utf8',
-        }
-      );
-      const text = (await import('../shared/ai/prompts/edit.txt')).default;
-      text.replace('{{ROOT_CMS_DEFS}}', rootCmsDefs);
-      return text;
+      // The `root-cms.d.ts` file may not be bundled with the server code,
+      // so check whether it exists first before attempting to add it to the prompt.
+      const rootCmsDefsPath = path.resolve(rootDir, 'root-cms.d.ts');
+      const rootCmsDefs = fs.existsSync(rootCmsDefsPath)
+        ? fs.readFileSync(rootCmsDefsPath, {
+            encoding: 'utf8',
+          })
+        : null;
+      const text = [(await import('../shared/ai/prompts/edit.txt')).default];
+      if (rootCmsDefs) {
+        text.push(
+          'Here is the `root-cms.d.ts` file for this project:',
+          '```',
+          rootCmsDefs,
+          '```'
+        );
+      }
+      return text.join('\n');
     }
 
     if (options.mode === 'altText') {

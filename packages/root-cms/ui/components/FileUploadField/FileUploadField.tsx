@@ -25,7 +25,7 @@ import {
   IconPaperclip,
   IconPhotoStar,
   IconPhotoUp,
-  IconSparkles,
+  IconRobot,
   IconTrash,
 } from '@tabler/icons-preact';
 import {IconDotsVertical} from '@tabler/icons-preact';
@@ -746,7 +746,7 @@ FileUploadField.Preview = () => {
                     }}
                     disabled={ctx.fileUpload?.state === 'uploading'}
                   >
-                    <IconSparkles size={20} stroke="1.5" />
+                    <IconRobot size={20} stroke="1.5" />
                   </ActionIcon>
                 </Tooltip>
               )}

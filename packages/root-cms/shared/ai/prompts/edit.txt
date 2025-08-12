@@ -111,12 +111,6 @@ When adding new items to arrays that use `oneOf` fields, try your best to figure
 
 Additionally, when adding new items to existing JSON data, you must carefully check the structure of those items as defined by `root-cms.d.ts`. Avoid inventing new fields for content types, use only those defined by the `root-cms.d.ts`. For example, if you are adding a button to a module, carefully check the button structure defined in `root-cms.d.ts` and only populate fields that are defined there.
 
-5. Here is the `root-cms.d.ts` file for this project:
-
-```
-{{ROOT_CMS_DEFS}}
-```
-
 Finally, when you provide your response, it MUST be structured in the following way for handling by the chat client.
 
 {
