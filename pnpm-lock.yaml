@@ -370,6 +370,9 @@ importers:
       csv-stringify:
         specifier: 6.4.4
         version: 6.4.4
+      diff:
+        specifier: 8.0.2
+        version: 8.0.2
       dts-dom:
         specifier: 3.7.0
         version: 3.7.0
@@ -3021,7 +3024,7 @@ packages:
   /@manypkg/find-root@1.1.0:
     resolution: {integrity: sha512-mki5uBvhHzO8kYYix/WRy2WX8S3B5wdVSc9D6KcU5lQNglP2yt58/VfLuAK49glRXChosY8ap2oJ1qgma3GUVA==}
     dependencies:
-      '@babel/runtime': 7.20.13
+      '@babel/runtime': 7.28.2
       '@types/node': 12.20.55
       find-up: 4.1.0
       fs-extra: 8.1.0
@@ -3045,15 +3048,15 @@ packages:
       '@types/gapi.client.discovery-v1': 0.0.4
     dev: true
 
-  /@maxim_mazurok/gapi.client.drive-v3@0.0.20250802:
-    resolution: {integrity: sha512-Rbmw56syUyE/VPjjtHefYgsp7O3/1nuVi90nqES/uxaKBe+nsvEYyiiQkYhzjOPtGl+Kw+0HlaGWte0F7lvZNQ==}
+  /@maxim_mazurok/gapi.client.drive-v3@0.0.20250807:
+    resolution: {integrity: sha512-5GG3nlWWInestUh1e8bUsFZMeRzVyVuq17xQdrzUdJBQVSF/KIBv8X3mjmwUkkQryYRFW/Qa2CEAtktjLFxK6w==}
     dependencies:
       '@types/gapi.client': 1.0.8
       '@types/gapi.client.discovery-v1': 0.0.4
     dev: true
 
-  /@maxim_mazurok/gapi.client.sheets-v4@0.0.20250801:
-    resolution: {integrity: sha512-VZAMw59J461O883tWIrmgEF6q9Ah/WoNRsat9hQ6iywmyxqWv65msk9vrcLtVUt+ZI7nRF+t/+FJZYUPq5c0vg==}
+  /@maxim_mazurok/gapi.client.sheets-v4@0.0.20250804:
+    resolution: {integrity: sha512-I/DUTkZAje2n/sY5m9WT+Q4N45qPR7eQdCd53SXQrIUrHzV9aXwrhyV/Y4OJmFU9FZp/qED84bPeMYixNhvElA==}
     dependencies:
       '@types/gapi.client': 1.0.8
       '@types/gapi.client.discovery-v1': 0.0.4
@@ -3542,7 +3545,7 @@ packages:
     peerDependencies:
       react: ^16.8 || ^17.0
     dependencies:
-      '@babel/runtime': 7.20.13
+      '@babel/runtime': 7.28.2
       '@radix-ui/react-compose-refs': 0.1.0(@preact/compat@17.1.2)
       react: /@preact/compat@17.1.2(preact@10.19.3)
     dev: true
@@ -3844,13 +3847,13 @@ packages:
   /@types/gapi.client.drive-v3@0.0.4:
     resolution: {integrity: sha512-jE37dJ0EzAdY0aJPFOp20xmec/aO0P4HtUIA9k07RMPyedFDOcuMlSac1r0PklwQdgXF7BHaMoObNHNAnwSQUQ==}
     dependencies:
-      '@maxim_mazurok/gapi.client.drive-v3': 0.0.20250802
+      '@maxim_mazurok/gapi.client.drive-v3': 0.0.20250807
     dev: true
 
   /@types/gapi.client.sheets-v4@0.0.4:
     resolution: {integrity: sha512-6kTJ7aDMAElfdQV1XzVJmZWjgbibpa84DMuKuaN8Cwqci/dkglPyHXKvsGrRugmuYvgFYr35AQqwz6j3q8R0dw==}
     dependencies:
-      '@maxim_mazurok/gapi.client.sheets-v4': 0.0.20250801
+      '@maxim_mazurok/gapi.client.sheets-v4': 0.0.20250804
     dev: true
 
   /@types/gapi.client@1.0.8:
@@ -4700,7 +4703,7 @@ packages:
     resolution: {integrity: sha512-Cg7TFGpIr01vOQNODXOOaGz2NpCU5gl8x1qJFbb6hbZxR7XrcE2vtbAsTAbJ7/xwJtUuJEw8K8Zr/AE0LHlesg==}
     engines: {node: '>=10', npm: '>=6'}
     dependencies:
-      '@babel/runtime': 7.20.13
+      '@babel/runtime': 7.28.2
       cosmiconfig: 7.1.0
       resolve: 1.22.1
     dev: true
@@ -5899,6 +5902,11 @@ packages:
     resolution: {integrity: sha512-EjePK1srD3P08o2j4f0ExnylqRs5B9tJjcp9t1krH2qRi8CCdsYfwe9JgSLurFBWwq4uOlipzfk5fHNvwFKr8Q==}
     engines: {node: ^14.15.0 || ^16.10.0 || >=18.0.0}
     dev: true
+
+  /diff@8.0.2:
+    resolution: {integrity: sha512-sSuxWU5j5SR9QQji/o2qMvqRNYRDOcBTgsJ/DeCf4iSN4gW+gNMXM7wFIP+fdXZxoNiAnHUTGjCr+TSWXdRDKg==}
+    engines: {node: '>=0.3.1'}
+    dev: false
 
   /dir-glob@3.0.1:
     resolution: {integrity: sha512-WkrWp9GR4KXfKGYzOLmTuGVi1UWFfws377n9cc55/tb6DuqyF6pcQ5AbiHEshaDpY9v6oaSr2XCDidGmMwdzIA==}
@@ -8419,7 +8427,7 @@ packages:
       is-typed-array: 1.1.10
 
   /is-arrayish@0.2.1:
-    resolution: {integrity: sha1-d8mYQFJ6qOyxqLppe4BkWnqSap0=}
+    resolution: {integrity: sha512-zz06S8t0ozoDXMG+ube26zeCTNXcKIPJZJi8hBrF4idCLms4CG9QtK7qBl1boi5ODzFpjswb5JPmHCbMpjaYzg==}
     dev: true
 
   /is-arrayish@0.3.2:
@@ -10527,7 +10535,7 @@ packages:
   /openapi3-ts@3.2.0:
     resolution: {integrity: sha512-/ykNWRV5Qs0Nwq7Pc0nJ78fgILvOT/60OxEmB3v7yQ8a8Bwcm43D4diaYazG/KBn6czA+52XYy931WFLMCUeSg==}
     dependencies:
-      yaml: 2.3.2
+      yaml: 2.7.0
     dev: true
 
   /optionator@0.8.3:

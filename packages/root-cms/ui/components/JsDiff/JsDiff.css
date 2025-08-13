@@ -1,0 +1,52 @@
+.JsDiff__container {
+  background-color: #f8f9fa;
+  overflow: auto;
+}
+
+.JsDiff__content {
+  height: 100%;
+  padding: 10px 12px;
+}
+
+.JsDiff__diffLine {
+  display: flex;
+  padding: 0 8px 0 0;
+  border-left: 3px solid transparent;
+  white-space: pre-wrap;
+}
+
+.JsDiff__diffLine--added {
+  background-color: #d4edda;
+  color: #155724;
+  border-left-color: #28a745;
+}
+
+.JsDiff__diffLine--removed {
+  background-color: #f8d7da;
+  color: #721c24;
+  border-left-color: #dc3545;
+}
+
+.JsDiff__diffLine--unchanged {
+  background-color: transparent;
+  color: #333;
+}
+
+.JsDiff__lineNumber {
+  color: #6c757d;
+  font-size: 0.875rem;
+  padding-right: 1rem;
+  user-select: none;
+  width: 3rem;
+  text-align: right;
+  min-width: 3rem;
+}
+
+.JsDiff__lineContent {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  font-size: 0.875rem;
+}
+
+.JsDiff__sign {
+  padding-right: 0.5rem;
+}

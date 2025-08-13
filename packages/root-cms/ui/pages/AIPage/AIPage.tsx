@@ -935,6 +935,7 @@ export function ChatBar(props: {
           }}
           value={textPrompt}
           autofocus={true}
+          data-autofocus="true"
         />
         {(imageUploading || image) && (
           <div className="AIPage__ChatBar__prompt__imagePreview">
