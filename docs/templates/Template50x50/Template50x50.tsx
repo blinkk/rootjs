@@ -23,13 +23,17 @@ export function Template50x50(props: Template50x50Props) {
           className={styles.layoutSection}
           data-type={props.leftSection?._type}
         >
-          {props.leftSection?._type && <Block {...props.leftSection} />}
+          {props.leftSection?._type && (
+            <Block {...props.leftSection} fieldKey="leftSection" />
+          )}
         </div>
         <div
           className={styles.layoutSection}
           data-type={props.rightSection?._type}
         >
-          {props.rightSection?._type && <Block {...props.rightSection} />}
+          {props.rightSection?._type && (
+            <Block {...props.rightSection} fieldKey="rightSection" />
+          )}
         </div>
       </div>
     </Container>

@@ -1,6 +1,8 @@
 import {createContext} from 'preact';
 import {useContext} from 'preact/hooks';
 
+type ConditionalString = string | false | null | undefined;
+
 export interface ModuleInfo {
   /** A UUID associated with the module instance. */
   uuid: string;
@@ -42,9 +44,16 @@ function buildDeepKey(
   fieldKey: string
 ) {
   if (parent) {
-    return `${parent.deepKey}.${fieldKey}.${moduleFields._arrayKey}`;
+    return joinDeepKey(parent.deepKey, fieldKey, moduleFields._arrayKey);
   }
-  return `${fieldKey}.${moduleFields._arrayKey}`;
+  return joinDeepKey(fieldKey, moduleFields._arrayKey);
+}
+
+/**
+ * Utility method for joining the parts of a deepKey together.
+ */
+export function joinDeepKey(...classNames: ConditionalString[]) {
+  return classNames.filter((c) => !!c).join('.');
 }
 
 /** Builds the `ModuleInfo` data for a module. */

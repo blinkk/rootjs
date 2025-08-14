@@ -11,10 +11,6 @@ class RootNodeEditor extends HTMLElement {
   buttonElement: HTMLButtonElement;
 
   connectedCallback() {
-    // Do nothing if the page isn't in an iframe.
-    if (window.self === window.top) {
-      return;
-    }
     this.deepKey = this.getAttribute('data-deep-key');
     this.buttonElement = this.getSlotElement('button');
     this.buttonElement.addEventListener('click', () =>
@@ -27,7 +23,8 @@ class RootNodeEditor extends HTMLElement {
   }
 
   requestDeepLinkScroll() {
-    // Send a message to the
+    // Send a message to the CMS DocPage requesting the field be focused.
+    // TODO: This should be bundled into the CMS package so that sites can consume it.
     window.parent.postMessage(
       {
         scrollToDeeplink: {

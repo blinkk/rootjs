@@ -1,4 +1,4 @@
-import {ActionIcon, Button, Menu, Select, Tooltip} from '@mantine/core';
+import {ActionIcon, Button, Select, Tooltip} from '@mantine/core';
 import {useHotkeys} from '@mantine/hooks';
 import {
   IconArrowLeft,
@@ -8,12 +8,10 @@ import {
   IconDeviceFloppy,
   IconDeviceIpad,
   IconDeviceMobile,
-  IconDotsVertical,
   IconReload,
   IconWorld,
   IconLayoutSidebarRightCollapse,
   IconLayoutSidebarRightExpand,
-  IconJson,
 } from '@tabler/icons-preact';
 import {useEffect, useRef, useState} from 'preact/hooks';
 
@@ -36,10 +34,14 @@ interface DocumentPageProps {
 function getPreviewUrl(
   collectionId: string,
   slug: string,
-  selectedLocale = ''
+  selectedLocale = '',
+  embed = true
 ) {
   const basePreviewPath = getDocPreviewPath({collectionId, slug});
   const searchParams = new URLSearchParams(window.location.search);
+  if (embed) {
+    searchParams.set('embed', 'true');
+  }
   searchParams.set('preview', 'true');
   const query = `${searchParams.toString()}${window.location.hash}`;
   if (selectedLocale) {
@@ -334,7 +336,7 @@ DocumentPage.Preview = (props: PreviewProps) => {
   }
 
   function openNewTab() {
-    const previewUrl = getPreviewUrl(collectionId, slug, selectedLocale);
+    const previewUrl = getPreviewUrl(collectionId, slug, selectedLocale, false);
     const tab = window.open(previewUrl, '_blank');
     if (tab) {
       tab.focus();

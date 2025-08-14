@@ -66,8 +66,9 @@ PageModules.Module = (props: {fields: PageModuleFields; fieldKey: string}) => {
   }
   return (
     <ModuleInfoContext.Provider value={buildModuleInfo(fields, fieldKey)}>
-      <NodeEditor />
-      <Template {...fields} />
+      <NodeEditor.Overlay>
+        <Template {...fields} />
+      </NodeEditor.Overlay>
     </ModuleInfoContext.Provider>
   );
 };
