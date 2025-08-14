@@ -32,7 +32,8 @@ export function useAiEditModal() {
         ...modalTheme,
         title: props.title || 'Edit with AI (Experimental)',
         innerProps: props,
-        size: 'calc(min(1920px, 100%))',
+        size: 'calc(min(1920px, calc(100% - 96px)))',
+        centered: true,
       });
     },
     close: () => {
@@ -72,7 +73,7 @@ export function AiEditModal(modalProps: ContextModalProps<AiEditModalProps>) {
       <div className="AiEditModal__SplitPanel">
         <div className="AiEditModal__SplitPanel__JsonPanel">
           <Tabs className="AiEditModal__Tabs" grow>
-            <Tabs.Tab label="JSON" icon={<IconJson size={14} />}>
+            <Tabs.Tab label="JSON" icon={<IconJson size={20} />}>
               <div className="AiEditModal__JsonEditor">
                 <JsonInput
                   value={value}
@@ -86,7 +87,7 @@ export function AiEditModal(modalProps: ContextModalProps<AiEditModalProps>) {
             <Tabs.Tab
               ref={diffTabRef}
               label="Diff"
-              icon={<IconFileDiff size={14} />}
+              icon={<IconFileDiff size={20} />}
             >
               <div className="AiEditModal__JsonDiffViewer">
                 {props.data && value && (

@@ -33,7 +33,7 @@ import {
   IconRowInsertTop,
   IconTrash,
   IconTriangleFilled,
-  IconRobot,
+  IconSparkles,
 } from '@tabler/icons-preact';
 import {createContext} from 'preact';
 import {
@@ -1252,7 +1252,9 @@ DocEditor.ArrayField = (props: FieldProps) => {
                                 </Menu.Item>
                                 {experiments.ai && (
                                   <Menu.Item
-                                    icon={<IconRobot size={20} />}
+                                    icon={
+                                      <IconSparkles size={20} stroke="1.75" />
+                                    }
                                     onClick={() => aiEdit(i)}
                                   >
                                     Edit with AI

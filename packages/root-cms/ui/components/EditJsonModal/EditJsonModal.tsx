@@ -1,6 +1,10 @@
 import {Button, JsonInput} from '@mantine/core';
 import {ContextModalProps, useModals} from '@mantine/modals';
-import {IconClipboard, IconDeviceFloppy} from '@tabler/icons-preact';
+import {
+  IconArrowBackUp,
+  IconClipboard,
+  IconDeviceFloppy,
+} from '@tabler/icons-preact';
 import {useState} from 'preact/hooks';
 import {useModalTheme} from '../../hooks/useModalTheme.js';
 import './EditJsonModal.css';
@@ -24,6 +28,7 @@ export function useEditJsonModal() {
         title: props.title || 'Edit JSON',
         innerProps: props,
         size: '680px',
+        centered: true,
       });
     },
     close: () => {
@@ -36,9 +41,11 @@ export function EditJsonModal(
   modalProps: ContextModalProps<EditJsonModalProps>
 ) {
   const {innerProps: props, context, id} = modalProps;
-  const [value, setValue] = useState(JSON.stringify(props.data || {}, null, 2));
+  const initialValue = JSON.stringify(props.data || {}, null, 2);
+  const [value, setValue] = useState(initialValue);
   const [valid, setValid] = useState(true);
   const [copied, setCopied] = useState(false);
+  const [changed, setChanged] = useState(false);
 
   function onChange(s: string) {
     setValue(s);
@@ -49,6 +56,7 @@ export function EditJsonModal(
     } catch (e) {
       setValid(false);
     }
+    setChanged(s !== initialValue);
   }
 
   function copyToClipboard() {
@@ -94,11 +102,25 @@ export function EditJsonModal(
           {copied ? 'Copied!' : 'Copy'}
         </Button>
         <Button
+          variant="default"
+          size="xs"
+          type="button"
+          leftIcon={<IconArrowBackUp size={16} />}
+          disabled={!changed}
+          onClick={() => {
+            setValue(initialValue);
+            setValid(true);
+            setChanged(false);
+          }}
+        >
+          Reset
+        </Button>
+        <Button
           leftIcon={<IconDeviceFloppy size={16} />}
           variant="filled"
           size="xs"
           color="blue"
-          disabled={!valid}
+          disabled={!valid || !changed}
           onClick={onSave}
         >
           Save
