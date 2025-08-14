@@ -1,120 +1,42 @@
-import {ActionIcon, Avatar, Loader, Tooltip} from '@mantine/core';
+import './AIPage.css';
+
+import {ActionIcon, Avatar, Tooltip} from '@mantine/core';
 import {
   IconClipboard,
   IconClipboardCheck,
-  IconPaperclip,
   IconRobot,
-  IconSend2,
-  IconX,
 } from '@tabler/icons-preact';
 import hljs from 'highlight.js/lib/common';
 import {fromMarkdown} from 'mdast-util-from-markdown';
 import {gfmFromMarkdown} from 'mdast-util-gfm';
 import {gfm} from 'micromark-extension-gfm';
 import {useEffect, useMemo, useRef, useState} from 'preact/hooks';
-import {ChatApiRequest} from '../../../core/api.js';
+import {ChatApiRequest, ChatApiResponse} from '../../../core/api.js';
 import {
   ChatPrompt,
-  ParsedChatResponse,
-  parseResponse,
+  AiResponse,
   SendPromptOptions,
 } from '../../../shared/ai/prompts.js';
+import {
+  ChatBar,
+  ImageMessageBlock,
+  Message,
+  MessageBlock,
+  PendingMessageBlock,
+  TextMessageBlock,
+} from '../../components/ChatBar/ChatBar.js';
 import {Layout} from '../../layout/Layout.js';
-import {joinClassNames} from '../../utils/classes.js';
-import {uploadFileToGCS} from '../../utils/gcs.js';
 import {autokey, numBetween} from '../../utils/rand.js';
-import './AIPage.css';
-
-const USE_DEBUG_STRING = false;
-const DEBUG_STRING = `Lorem ipsum 🥕 dolor sit amet.
-
-\`\`\`jsx
-import React, { useState, useEffect } from 'react';
-
-const Typewriter = ({ text, speed = 150 }) => {
-  const [displayedText, setDisplayedText] = useState('');
-  const [index, setIndex] = useState(0);
-
-  useEffect(() => {
-    if (index < text.length) {
-      const timeout = setTimeout(() => {
-        setDisplayedText(displayedText + text[index]);
-        setIndex(index + 1);
-      }, speed);
-      return () => clearTimeout(timeout);
-    }
-  }, [index, displayedText, text, speed]);
-
-  return (
-    <div style={{ fontFamily: 'monospace', whiteSpace: 'pre' }}>
-      {displayedText}
-    </div>
-  );
-};
-
-export default Typewriter;
-\`\`\`
-
-
-\`\`\`jsx
-import React from 'react';
-import Typewriter from './Typewriter';
-
-const App = () => {
-  return (
-    <div>
-      <h1>Typewriter Animation</h1>
-      <Typewriter text="Hello, world!" speed={100} />
-    </div>
-  );
-};
-
-export default App;
-\`\`\`
-`;
 
 const TYPEWRITER_ANIM_DELAY = [20, 40] as const;
-// const TYPEWRITER_ANIM_DELAY = [200, 400] as const;
 
 hljs.configure({ignoreUnescapedHTML: true});
-
-interface Message {
-  sender: 'user' | 'bot';
-  blocks: MessageBlock[];
-  key?: string;
-  data?: Record<string, any>;
-}
-
-interface ImageMessageBlock {
-  type: 'image';
-  image: {
-    src: string;
-    width: number;
-    height: number;
-    alt: string;
-  };
-}
-
-/**
- * Pending message, which shows a loading state when waiting for a response from
- * the server.
- */
-interface PendingMessageBlock {
-  type: 'pending';
-}
-
-interface TextMessageBlock {
-  type: 'text';
-  text: string;
-}
-
-type MessageBlock = ImageMessageBlock | PendingMessageBlock | TextMessageBlock;
 
 function typewriterDelay() {
   return numBetween(...TYPEWRITER_ANIM_DELAY);
 }
 
-interface ChatController {
+export interface ChatController {
   chatId?: string;
   messages: Message[];
   addMessage: (message: Message) => number;
@@ -123,7 +45,7 @@ interface ChatController {
     messageId: number,
     prompt: ChatPrompt | ChatPrompt[],
     options?: SendPromptOptions
-  ) => Promise<ParsedChatResponse>;
+  ) => Promise<AiResponse | null>;
 }
 
 export function useChat(): ChatController {
@@ -161,7 +83,7 @@ export function useChat(): ChatController {
     messageId: number,
     prompt: ChatPrompt | ChatPrompt[],
     options?: SendPromptOptions
-  ): Promise<ParsedChatResponse> => {
+  ): Promise<AiResponse> => {
     // Allow users to provide a custom api endpoint via the
     // `{ai: {endpoint: '/api/...}}` config.
     let endpoint = '/cms/api/ai.chat';
@@ -196,28 +118,27 @@ export function useChat(): ChatController {
           },
         ],
       });
-      return {message: errorMessage, data: {}};
+      return {message: errorMessage, data: {}, error: err};
     }
-    const resData = await res.json();
+    const resData = (await res.json()) as ChatApiResponse;
     if (resData.success && resData.chatId) {
-      const response = resData.response;
       setChatId(resData.chatId);
-      const parsedResponse = parseResponse(response, options?.mode);
       updateMessage(messageId, {
         sender: 'bot',
-        data: parsedResponse.data,
+        data: resData.response?.data || {},
         blocks: [
           {
             type: 'text',
-            text: parsedResponse.message || '',
+            text: resData.response?.message || '',
           },
         ],
       });
-      return parsedResponse;
+      return resData.response;
     }
     return {
       message: 'Sorry. Something went wrong. An unknown error occurred.',
       data: {},
+      error: 'Unknown error',
     };
   };
 
@@ -444,7 +365,6 @@ function ChatMessageTextBlock(props: {
       extensions: [gfm()],
       mdastExtensions: [gfmFromMarkdown()],
     });
-    console.log(tree);
     return tree;
   }, [props.block.text]);
 
@@ -747,239 +667,6 @@ function ChatMessageImageBlock(props: {
         height={image.height}
         alt={image.alt}
       />
-    </div>
-  );
-}
-
-export function ChatBar(props: {
-  chat: ChatController;
-  options?: SendPromptOptions;
-  onData?: (data: ParsedChatResponse) => void;
-}) {
-  const [textPrompt, setTextPrompt] = useState('');
-  const textInputRef = useRef<HTMLTextAreaElement>(null);
-  const imageInputRef = useRef<HTMLInputElement>(null);
-  const [image, setImage] = useState<any>(null);
-  const [imageUploading, setImageUploading] = useState(false);
-
-  const formDisabled = !textPrompt;
-
-  /** Naively guesses image mimetype. */
-  function guessImageMimetype(filename: string) {
-    if (filename.endsWith('.jpg')) {
-      return 'image/jpeg';
-    }
-    return 'image/png';
-  }
-
-  async function onSubmit() {
-    if (!textPrompt) {
-      return;
-    }
-    const messageBlocks: MessageBlock[] = [{type: 'text', text: textPrompt}];
-    if (image) {
-      messageBlocks.push({
-        type: 'image',
-        image: {
-          src: image.src,
-          width: image.width,
-          height: image.height,
-          alt: image.filename,
-        },
-      });
-    }
-    const pendingMessageId = props.chat.addMessage({
-      sender: 'user',
-      blocks: messageBlocks,
-    });
-    setTextPrompt('');
-    setImage(null);
-    updateTextareaHeight();
-
-    if (USE_DEBUG_STRING) {
-      window.setTimeout(() => {
-        props.chat.updateMessage(pendingMessageId, {
-          sender: 'bot',
-          blocks: [
-            {
-              type: 'text',
-              text: DEBUG_STRING,
-            },
-          ],
-        });
-      }, 1500);
-    } else {
-      const prompt: ChatPrompt[] = [{text: textPrompt}];
-      if (image) {
-        prompt.push({
-          media: {
-            url: image.src,
-            contentType: guessImageMimetype(image.filename),
-          },
-        });
-      }
-      const response = await props.chat.sendPrompt(
-        pendingMessageId,
-        prompt,
-        props.options
-      );
-      props.onData?.(response);
-    }
-  }
-
-  function updateTextareaHeight() {
-    window.requestAnimationFrame(() => {
-      const textarea = textInputRef.current!;
-      textarea.style.height = 'auto';
-      textarea.style.height = `${textarea.scrollHeight}px`;
-    });
-  }
-
-  function onKeyDown(e: KeyboardEvent) {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      onSubmit();
-      return;
-    }
-  }
-
-  async function uploadImage(file: File) {
-    try {
-      setImageUploading(true);
-      updateTextareaHeight();
-      const data: any = await uploadFileToGCS(file, {disableGci: true});
-      setImage({
-        src: data.src,
-        width: data.width,
-        height: data.height,
-        filename: data.filename,
-      });
-      setImageUploading(false);
-    } catch (err) {
-      setImageUploading(false);
-    }
-    // Reset the input element in case the user wishes to re-upload the image.
-    if (imageInputRef.current) {
-      const imageInputEl = imageInputRef.current;
-      imageInputEl.value = '';
-    }
-  }
-
-  function onImageFileChange(e: Event) {
-    const inputEl = e.target as HTMLInputElement;
-    const files = inputEl.files || [];
-    const file = files[0];
-    if (file) {
-      uploadImage(file);
-    }
-  }
-
-  function removeImage() {
-    setImage(null);
-    updateTextareaHeight();
-  }
-
-  // Whenever the text prompt changes, update the <textarea> height.
-  useEffect(() => {
-    updateTextareaHeight();
-  }, [textPrompt]);
-
-  return (
-    <div className="AIPage__ChatBar">
-      <div
-        className={joinClassNames(
-          'AIPage__ChatBar__prompt',
-          (imageUploading || image) && 'AIPage__ChatBar__prompt--hasImage'
-        )}
-      >
-        <label className="AIPage__ChatBar__prompt__imageUpload">
-          <input
-            className="AIPage__ChatBar__prompt__imageUpload__input"
-            type="file"
-            accept="image/png, image/jpeg, image/webp"
-            onChange={onImageFileChange}
-            ref={imageInputRef}
-          />
-          <Tooltip label="Upload image">
-            <ActionIcon
-              // Using a <div> instead of a <button> allows the <label> parent to
-              // trigger the file input.
-              component="div"
-              className="AIPage__ChatBar__prompt__imageUpload__icon"
-              radius="xl"
-            >
-              <IconPaperclip size={18} />
-            </ActionIcon>
-          </Tooltip>
-        </label>
-        <textarea
-          className="AIPage__ChatBar__prompt__textInput"
-          ref={textInputRef}
-          placeholder="Enter prompt..."
-          rows={1}
-          onKeyDown={onKeyDown}
-          onPaste={(e) => {
-            // If the user pastes an image, upload it.
-            const items = e.clipboardData?.items || [];
-            for (const item of items) {
-              if (item.kind === 'file' && item.type.startsWith('image/')) {
-                const file = item.getAsFile();
-                if (file) {
-                  uploadImage(file);
-                }
-              }
-            }
-          }}
-          onChange={(e) => {
-            setTextPrompt((e.target as HTMLTextAreaElement).value);
-          }}
-          value={textPrompt}
-          autofocus={true}
-          data-autofocus="true"
-        />
-        {(imageUploading || image) && (
-          <div className="AIPage__ChatBar__prompt__imagePreview">
-            {imageUploading ? (
-              <Loader size="sm" />
-            ) : (
-              <Tooltip
-                label={image.filename}
-                transition="pop"
-                position="right"
-                withArrow
-              >
-                <button
-                  className="AIPage__ChatBar__prompt__imagePreview__closeButton"
-                  onClick={() => removeImage()}
-                >
-                  <img
-                    src={image.src}
-                    width={image.width}
-                    height={image.height}
-                    alt="attachment"
-                  />
-                  <div className="AIPage__ChatBar__prompt__imagePreview__closeButton__icon">
-                    <IconX size={24} color="white" />
-                  </div>
-                </button>
-              </Tooltip>
-            )}
-          </div>
-        )}
-        <ActionIcon
-          className="AIPage__ChatBar__prompt__submit"
-          variant="filled"
-          color="dark"
-          radius="xl"
-          onClick={() => onSubmit()}
-          disabled={formDisabled}
-        >
-          <IconSend2 size={18} />
-        </ActionIcon>
-      </div>
-      <div className="AIPage__ChatBar__disclaimer">
-        Root AI is experimental and makes mistakes. Check all info.
-      </div>
     </div>
   );
 }

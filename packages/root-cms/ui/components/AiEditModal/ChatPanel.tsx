@@ -1,4 +1,5 @@
-import {ChatBar, ChatWindow, useChat} from '../../pages/AIPage/AIPage.js';
+import {ChatWindow, useChat} from '../../pages/AIPage/AIPage.js';
+import {ChatBar} from '../ChatBar/ChatBar.js';
 
 interface ChatPanelProps {
   children?: preact.ComponentChildren;

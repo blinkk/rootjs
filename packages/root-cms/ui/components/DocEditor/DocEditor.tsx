@@ -1252,7 +1252,9 @@ DocEditor.ArrayField = (props: FieldProps) => {
                                 </Menu.Item>
                                 {experiments.ai && (
                                   <Menu.Item
-                                    icon={<IconSparkles size={20} />}
+                                    icon={
+                                      <IconSparkles size={20} stroke="1.75" />
+                                    }
                                     onClick={() => aiEdit(i)}
                                   >
                                     Edit with AI
