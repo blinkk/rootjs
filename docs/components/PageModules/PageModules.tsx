@@ -1,7 +1,8 @@
 import path from 'node:path';
-import {useRequestContext} from '@blinkk/root';
 import {FunctionalComponent} from 'preact';
-import styles from './PageModules.module.scss';
+import {buildModuleInfo, ModuleInfoContext} from '@/hooks/useModuleInfo.js';
+import {testPreviewMode} from '@/utils/mode.js';
+import {NodeEditor} from '../NodeEditor/NodeEditor.js';
 
 type TemplateComponent = FunctionalComponent<PageModuleFields>;
 
@@ -34,6 +35,8 @@ export type PageModuleFields<T = {[key: string]: any}> = T & {
 export interface PageModulesProps {
   className?: string;
   modules: PageModuleFields;
+  /** Key to identify the module instance's CMS fields. */
+  fieldKey?: string;
 }
 
 export function PageModules(props: PageModulesProps) {
@@ -41,30 +44,30 @@ export function PageModules(props: PageModulesProps) {
   return (
     <>
       {modules.map((moduleFields) => (
-        <PageModules.Module {...moduleFields} />
+        <PageModules.Module fields={moduleFields} fieldKey={props.fieldKey} />
       ))}
     </>
   );
 }
 
-PageModules.Module = (props: PageModuleFields) => {
-  const page = useRequestContext().props;
-  const help = page.req?.query?.help === 'true';
-  const Template = templates[props._type];
-  if (!props._type) {
+PageModules.Module = (props: {fields: PageModuleFields; fieldKey: string}) => {
+  const {fields, fieldKey} = props;
+  if (!fields) {
+    return null;
+  }
+  const Template = templates[fields._type];
+  if (!fields._type) {
     return null;
   }
   if (!Template) {
-    return <div>Unknown template {props._type}</div>;
+    return testPreviewMode() ? (
+      <div>Unknown template {fields._type}</div>
+    ) : null;
   }
-  if (help && props._type !== 'Section') {
-    const helpTag = props.id ? `${props._type} (#${props.id})` : props._type;
-    return (
-      <>
-        <div className={styles.helpTag}>{helpTag}</div>
-        <Template {...props} />
-      </>
-    );
-  }
-  return <Template {...props} />;
+  return (
+    <ModuleInfoContext.Provider value={buildModuleInfo(fields, fieldKey)}>
+      <NodeEditor />
+      <Template {...fields} />
+    </ModuleInfoContext.Provider>
+  );
 };
