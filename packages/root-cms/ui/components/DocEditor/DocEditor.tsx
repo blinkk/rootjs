@@ -881,6 +881,9 @@ DocEditor.ArrayField = (props: FieldProps) => {
   const [value, dispatch] = useReducer(arrayReducer, {_array: []});
   const deeplink = useDeeplink();
   const virtualClipboard = useVirtualClipboard();
+  const [selectedItems, setSelectedItems] = useState<Map<string, boolean>>(
+    new Map()
+  );
   const experiments = window.__ROOT_CTX.experiments || {};
 
   const data = value ?? {};
@@ -1065,6 +1068,29 @@ DocEditor.ArrayField = (props: FieldProps) => {
     }
   }
 
+  function toggleSelected(key: string) {
+    const isSelected = selectedItems.get(key) || false;
+    const newSelectedItems = new Map(selectedItems);
+    if (isSelected) {
+      newSelectedItems.delete(key);
+    } else {
+      newSelectedItems.set(key, true);
+    }
+    setSelectedItems(newSelectedItems);
+  }
+
+  function setSelected(key: string) {
+    // Regular click: set as only selection, or unselect if already selected
+    const isCurrentlySelected = selectedItems.get(key) || false;
+    if (isCurrentlySelected && selectedItems.size === 1) {
+      // If this is the only selected item, unselect it
+      setSelectedItems(new Map());
+    } else {
+      // Otherwise, make this the only selected item
+      setSelectedItems(new Map([[key, true]]));
+    }
+  }
+
   const addButtonRow = (
     <div className="DocEditor__ArrayField__add">
       <Button
@@ -1123,9 +1149,19 @@ DocEditor.ArrayField = (props: FieldProps) => {
                         {...provided.draggableProps}
                         className={joinClassNames(
                           'DocEditor__ArrayField__item__wrapper',
+                          selectedItems.get(key) &&
+                            'DocEditor__ArrayField__item__wrapper--selected',
                           snapshot.isDragging &&
                             'DocEditor__ArrayField__item__wrapper--dragging'
                         )}
+                        onMouseDown={(e) => {
+                          if (e.metaKey || e.ctrlKey) {
+                            // Cmd/Ctrl+click: toggle selection without affecting others
+                            toggleSelected(key);
+                          } else {
+                            setSelected(key);
+                          }
+                        }}
                       >
                         <div
                           className="DocEditor__ArrayField__item__handle"

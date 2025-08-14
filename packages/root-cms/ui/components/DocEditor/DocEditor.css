@@ -200,6 +200,10 @@
   visibility: hidden;
 }
 
+.DocEditor__ArrayField__item__wrapper--selected .DocEditor__ArrayField__item__header {
+  background-color: #E5F4FF !important;
+}
+
 .DocEditor__ArrayField__item__wrapper--dragging {
   background-color: #f8f9fa;
   border: 1px solid #dedede;
