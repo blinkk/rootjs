@@ -342,35 +342,48 @@ DocumentPage.Preview = (props: PreviewProps) => {
   }
 
   useEffect(() => {
-    if (device === '') {
+    function updateIframeStyle() {
+      if (device === '') {
+        setIframeStyle({
+          '--iframe-width': '100%',
+          '--iframe-height': '100%',
+          '--iframe-scale': '1',
+        });
+        return;
+      }
+
+      const iframe = iframeRef.current!;
+      const container = iframe.parentElement!.parentElement as HTMLElement;
+      const rect = container.getBoundingClientRect();
+      const [width, height] = DeviceResolution[device];
+      const padding = 20;
+      let scale = 1;
+      if (
+        width > rect.width - 2 * padding ||
+        height > rect.height - 2 * padding
+      ) {
+        scale = Math.min(
+          (rect.width - 2 * padding) / width,
+          (rect.height - 2 * padding) / height
+        );
+      }
       setIframeStyle({
-        '--iframe-width': '100%',
-        '--iframe-height': '100%',
-        '--iframe-scale': '1',
+        '--iframe-width': `${width}px`,
+        '--iframe-height': `${height}px`,
+        '--iframe-scale': String(scale),
       });
-      return;
     }
 
-    const iframe = iframeRef.current!;
-    const container = iframe.parentElement!.parentElement as HTMLElement;
-    const rect = container.getBoundingClientRect();
-    const [width, height] = DeviceResolution[device];
-    const padding = 20;
-    let scale = 1;
-    if (
-      width > rect.width - 2 * padding ||
-      height > rect.height - 2 * padding
-    ) {
-      scale = Math.min(
-        (rect.width - 2 * padding) / width,
-        (rect.height - 2 * padding) / height
-      );
-    }
-    setIframeStyle({
-      '--iframe-width': `${width}px`,
-      '--iframe-height': `${height}px`,
-      '--iframe-scale': String(scale),
-    });
+    updateIframeStyle();
+
+    // Maintain the aspect ratio when the window is resized.
+    // Without this, the iframe gets cut off.
+    const handleResize = () => updateIframeStyle();
+    window.addEventListener('resize', handleResize);
+
+    return () => {
+      window.removeEventListener('resize', handleResize);
+    };
   }, [device]);
 
   return (
