@@ -1,15 +1,18 @@
-import {Button, Select, TextInput} from '@mantine/core';
+import {Button, Checkbox, Select, TextInput, Tooltip} from '@mantine/core';
 import {ContextModalProps, useModals} from '@mantine/modals';
 import {showNotification, updateNotification} from '@mantine/notifications';
+import {IconExternalLink} from '@tabler/icons-preact';
 import {ChangeEvent, forwardRef} from 'preact/compat';
-import {useState} from 'preact/hooks';
+import {useRef, useState} from 'preact/hooks';
 import {useGapiClient} from '../../hooks/useGapiClient.js';
 import {useModalTheme} from '../../hooks/useModalTheme.js';
+import {useSiteSettings} from '../../hooks/useSiteSettings.js';
 import {cmsLinkGoogleSheetL10n} from '../../utils/doc.js';
 import {
   GSheet,
   GSpreadsheet,
   getSpreadsheetUrl,
+  parseGoogleDriveFolder,
   parseSpreadsheetUrl,
 } from '../../utils/gsheets.js';
 import {notifyErrors} from '../../utils/notifications.js';
@@ -51,6 +54,12 @@ export function ExportSheetModal(
   const [sheetUrl, setSheetUrl] = useState('');
   const [done, setDone] = useState(false);
   const gapiClient = useGapiClient();
+  const siteSettings = useSiteSettings();
+  const shareCheckboxRef = useRef<HTMLInputElement>();
+
+  const googleDriveFolder = parseGoogleDriveFolder(
+    siteSettings.settings.googleDriveFolder
+  );
 
   const selectItems = [
     {
@@ -128,6 +137,8 @@ export function ExportSheetModal(
       });
       gspreadsheet = await GSpreadsheet.create({
         title: `${project} Localization`,
+        parent: googleDriveFolder,
+        share: shareCheckboxRef.current?.checked,
       });
       gsheet = (await gspreadsheet.getSheet(0)) as GSheet;
       if (!gsheet) {
@@ -166,7 +177,6 @@ export function ExportSheetModal(
         gid: 0,
       };
       await cmsLinkGoogleSheetL10n(props.docId, linkedSheet);
-      setSheetUrl(gsheet.getUrl());
     } catch (err) {
       console.error(err);
       updateNotification({
@@ -206,6 +216,7 @@ export function ExportSheetModal(
       return;
     }
 
+    setSheetUrl(gsheet.getUrl());
     setDone(true);
     updateNotification({
       id: notificationId,
@@ -383,6 +394,7 @@ export function ExportSheetModal(
               Export options:
             </div>
             <Select
+              disabled={done || loading}
               itemComponent={ExportSheetModal.SelectItem}
               data={selectItems}
               onChange={(e) => {
@@ -398,14 +410,46 @@ export function ExportSheetModal(
             <div className="ExportSheetModal__form__description">
               Google Sheet URL:
             </div>
-            <TextInput
-              disabled={action === 'new-sheet'}
-              value={sheetUrl}
-              onChange={(e: ChangeEvent<HTMLInputElement>) =>
-                setSheetUrl(e.currentTarget.value)
-              }
-            />
+            {action === 'new-sheet' ? (
+              <TextInput
+                disabled={true}
+                placeholder={
+                  siteSettings.settings.googleDriveFolder
+                    ? "A new Google Sheet will be created in the project's Google Drive folder."
+                    : 'A new Google Sheet will be created in your "My Drive" folder.'
+                }
+              />
+            ) : (
+              <TextInput
+                placeholder="https://docs.google.com/spreadsheets/d/..."
+                value={sheetUrl}
+                disabled={done || loading}
+                onChange={(e: ChangeEvent<HTMLInputElement>) =>
+                  setSheetUrl(e.currentTarget.value)
+                }
+              />
+            )}
           </div>
+          {action === 'new-sheet' && (
+            <div className="ExportSheetModal__form__section">
+              <Tooltip
+                label="Whether to share the Google Sheet with Admins and Editors upon creation. If your site has a Google Drive folder configured, the sheet will be created within it and inherit its permissions."
+                wrapLines
+                width={320}
+                withArrow
+                position="bottom"
+              >
+                <Checkbox
+                  disabled={done || loading}
+                  ref={shareCheckboxRef}
+                  name="share"
+                  value="true"
+                  label="Share Google Sheet with collaborators"
+                  checked={googleDriveFolder ? false : true}
+                />
+              </Tooltip>
+            </div>
+          )}
           <div className="ExportSheetModal__form__buttons">
             {done ? (
               <>
@@ -417,6 +461,7 @@ export function ExportSheetModal(
                   variant="default"
                   size="xs"
                   color="dark"
+                  rightIcon={<IconExternalLink size={16} />}
                 >
                   Open Google Sheet
                 </Button>
