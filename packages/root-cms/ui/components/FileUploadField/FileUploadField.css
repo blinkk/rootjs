@@ -139,10 +139,11 @@
 
 .FileUploadField__Canvas {
   aspect-ratio: var(--canvas-aspect-ratio, 16 / 9);
-  max-height: var(--canvas-max-height, 280px);
-  width: 100%;
-  position: relative;
   background-color: var(--canvas-bg-color, #fff);
+  max-height: var(--canvas-max-height, 280px);
+  min-height: 80px;
+  position: relative;
+  width: 100%;
 }
 
 .FileUploadField__Canvas:has(video) {

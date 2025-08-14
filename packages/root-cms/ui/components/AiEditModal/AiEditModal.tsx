@@ -1,19 +1,17 @@
 import './AiEditModal.css';
-import 'json-diff-kit/dist/viewer.css';
-import 'json-diff-kit/dist/viewer-monokai.css';
 
 import {Button, JsonInput, Tabs} from '@mantine/core';
 import {ContextModalProps, useModals} from '@mantine/modals';
 import {
-  IconClipboard,
-  IconDeviceFloppy,
+  IconArrowBackUp,
+  IconCheck,
   IconFileDiff,
   IconJson,
 } from '@tabler/icons-preact';
-import {Differ, Viewer as JsonDiffViewer} from 'json-diff-kit';
-import {useState} from 'preact/hooks';
+import {useRef, useState} from 'preact/hooks';
 import {AiResponse} from '../../../shared/ai/prompts.js';
 import {useModalTheme} from '../../hooks/useModalTheme.js';
+import {JsDiff} from '../JsDiff/JsDiff.js';
 import {ChatPanel} from './ChatPanel.js';
 
 const MODAL_ID = 'AiEditModal';
@@ -34,7 +32,7 @@ export function useAiEditModal() {
         ...modalTheme,
         title: props.title || 'Edit with AI (Experimental)',
         innerProps: props,
-        size: 'calc(min(1024px, 100%))',
+        size: 'calc(min(1920px, 100%))',
       });
     },
     close: () => {
@@ -45,26 +43,21 @@ export function useAiEditModal() {
 
 export function AiEditModal(modalProps: ContextModalProps<AiEditModalProps>) {
   const {innerProps: props, context, id} = modalProps;
-  const [value, setValue] = useState(JSON.stringify(props.data || {}, null, 2));
+  const diffTabRef = useRef<HTMLButtonElement | null>(null);
+  const originalValue = JSON.stringify(props.data || {}, null, 2);
+  const [value, setValue] = useState(originalValue);
   const [valid, setValid] = useState(true);
-  const [copied, setCopied] = useState(false);
-  const initialValue = props.data || {};
-  const differ = new Differ({});
-  const diff = differ.diff(initialValue, JSON.parse(value));
+  const [changed, setChanged] = useState(false);
 
   function onChange(s: string) {
     setValue(s);
-    setCopied(false);
     try {
       JSON.parse(s);
       setValid(true);
     } catch (e) {
       setValid(false);
     }
-  }
-
-  function copyToClipboard() {
-    navigator.clipboard.writeText(value).then(() => setCopied(true));
+    setChanged(s !== originalValue);
   }
 
   function onSave() {
@@ -90,19 +83,18 @@ export function AiEditModal(modalProps: ContextModalProps<AiEditModalProps>) {
                 />
               </div>
             </Tabs.Tab>
-            <Tabs.Tab label="Diff" icon={<IconFileDiff size={14} />}>
+            <Tabs.Tab
+              ref={diffTabRef}
+              label="Diff"
+              icon={<IconFileDiff size={14} />}
+            >
               <div className="AiEditModal__JsonDiffViewer">
-                <JsonDiffViewer
-                  diff={diff}
-                  syntaxHighlight={{theme: 'root-cms'}}
-                  lineNumbers={true}
-                  highlightInlineDiff={true}
-                  hideUnchangedLines={true}
-                  inlineDiffOptions={{
-                    mode: 'word',
-                    wordSeparator: ' ',
-                  }}
-                />
+                {props.data && value && (
+                  <JsDiff
+                    oldCode={JSON.stringify(props.data, null, 2)}
+                    newCode={value}
+                  />
+                )}
               </div>
             </Tabs.Tab>
           </Tabs>
@@ -111,7 +103,13 @@ export function AiEditModal(modalProps: ContextModalProps<AiEditModalProps>) {
           <ChatPanel
             editModeData={JSON.parse(value)}
             onEditModeResponse={(resp: AiResponse) => {
-              setValue(JSON.stringify(resp.data, null, 2));
+              const newValue = JSON.stringify(resp.data, null, 2);
+              setValue(newValue);
+              setChanged(newValue !== originalValue);
+              // Show the diff automatically when the AI is done editing.
+              if (diffTabRef.current) {
+                diffTabRef.current.click();
+              }
             }}
           >
             <p>
@@ -137,25 +135,28 @@ export function AiEditModal(modalProps: ContextModalProps<AiEditModalProps>) {
           Cancel
         </Button>
         <Button
-          leftIcon={<IconClipboard size={16} />}
-          variant="filled"
+          variant="default"
           size="xs"
-          color="dark"
-          disabled={!valid}
           type="button"
-          onClick={copyToClipboard}
+          leftIcon={<IconArrowBackUp size={16} />}
+          disabled={!changed}
+          onClick={() => {
+            setValue(originalValue);
+            setValid(true);
+            setChanged(false);
+          }}
         >
-          {copied ? 'Copied!' : 'Copy'}
+          Reset
         </Button>
         <Button
-          leftIcon={<IconDeviceFloppy size={16} />}
+          leftIcon={<IconCheck size={16} />}
           variant="filled"
           size="xs"
-          color="blue"
-          disabled={!valid}
+          color="green"
+          disabled={!valid || !changed}
           onClick={onSave}
         >
-          Save
+          Accept changes
         </Button>
       </div>
     </div>
