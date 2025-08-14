@@ -20,7 +20,7 @@ export function OnChangePlugin(props: OnChangePluginProps) {
 
   useEffect(() => {
     const time = props.value?.time || 0;
-    if (time > timeSaved) {
+    if (time >= timeSaved) {
       editor.update(() => {
         setIsUpdating(true);
         setTimeSaved(time);
