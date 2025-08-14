@@ -9,6 +9,8 @@ export interface GSpreadsheetCreateOptions {
   title?: string;
   /** Google Drive folder ID to place the spreadsheet in. */
   parent?: string;
+  /** Whether to share the spreadsheet with collaborators upon creation. */
+  share?: boolean;
 }
 
 export class GSpreadsheet {
@@ -24,6 +26,7 @@ export class GSpreadsheet {
    * Creates a new Google Spreadsheet.
    */
   static async create(options: GSpreadsheetCreateOptions) {
+    const share = options.share ?? false;
     const req: any = {
       fields: 'spreadsheetId',
     };
@@ -50,10 +53,13 @@ export class GSpreadsheet {
       });
     }
 
+    if (!share) {
+      return gspreadsheet;
+    }
+
     // Give all admins and editors "write" access.
     const editors = await getAllEditors();
     await gspreadsheet.share(editors, 'writer');
-
     return gspreadsheet;
   }
 
