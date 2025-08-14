@@ -30,7 +30,7 @@ import {
 import {IconDotsVertical} from '@tabler/icons-preact';
 import {createContext} from 'preact';
 import {ChangeEvent, CSSProperties, forwardRef} from 'preact/compat';
-import {useContext, useRef, useState} from 'preact/hooks';
+import {useContext, useEffect, useRef, useState} from 'preact/hooks';
 import {joinClassNames} from '../../utils/classes.js';
 import {
   buildDownloadURL,
@@ -134,6 +134,10 @@ export function FileUploadField(props: FileUploadFieldProps) {
   });
   const acceptedFileTypes =
     props.exts ?? (props.variant === 'image' ? IMAGE_MIMETYPES : []);
+
+  useEffect(() => {
+    setFileUploader((prev) => ({...prev, uploadedFile: props.file}));
+  }, [props.file]);
 
   /** Uploads file data to GCS. */
   async function uploadFile(file: File) {

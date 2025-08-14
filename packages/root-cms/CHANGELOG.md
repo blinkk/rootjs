@@ -1,5 +1,16 @@
 # @blinkk/root-cms
 
+## 2.0.4
+
+### Patch Changes
+
+- 5a7c257: fix: preserve alt text when replacing a file
+- 176482e: fix: handle stalled gcs uploads
+- 8bece22: fix: fix image non-empty state on load
+- fbee89d: fix: enable dropping over the file upload button
+- Updated dependencies [f137e61]
+  - @blinkk/root@2.0.4
+
 ## 2.0.3
 
 ### Patch Changes

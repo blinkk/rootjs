@@ -28,9 +28,6 @@ export function ImageField(props: FieldProps) {
       onFileChange={(file) => {
         if (file) {
           props.draft.updateKey(props.deepKey, file);
-          if (file.alt) {
-            props.draft.updateKey(`${props.deepKey}.alt`, file.alt);
-          }
         } else {
           props.draft.removeKey(props.deepKey);
         }
