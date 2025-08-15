@@ -1,5 +1,20 @@
 # @blinkk/root-cms
 
+## 2.0.5
+
+### Patch Changes
+
+- e440869: fix: enable textarea autosize only on focus (#676)
+- bdee3bd: feat: add ability to request deeplinks from the iframe
+- 1777b4c: fix: resize iframe when window resizes
+- 7077f9e: feat: add site settings and google drive root folder
+- d62461b: feat: add ai alt text generation
+- 4c86827: fix: select input text for oneof dropdown on focus (#675)
+- 51ae3e9: fix: improve usability of ai diff flow
+- 840e252: fix: fix perf issue with translate modal (#673)
+- a7cfe57: fix: use arrayMove for relocating array items with drag and drop
+  - @blinkk/root@2.0.5
+
 ## 2.0.4
 
 ### Patch Changes
