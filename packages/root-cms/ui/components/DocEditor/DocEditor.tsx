@@ -274,15 +274,17 @@ DocEditor.Field = (props: FieldProps) => {
     }
   }
 
+  const subscriptionCallback = useCallback((newValue: any) => {
+    setValue(newValue);
+  }, []);
+
   useEffect(() => {
     const unsubscribe = props.draft.subscribe(
       props.deepKey,
-      (newValue: any) => {
-        setValue(newValue);
-      }
+      subscriptionCallback
     );
     return unsubscribe;
-  }, [props.draft, props.deepKey]);
+  }, [props.draft, props.deepKey, subscriptionCallback]);
 
   useEffect(() => {
     if (targeted) {
@@ -852,15 +854,17 @@ DocEditor.ArrayField = (props: FieldProps) => {
   // Keep track of newly-added keys, which should start in the "open" state.
   const newlyAdded = value._new || [];
 
+  const arraySubscriptionCallback = useCallback((newValue: ArrayFieldValue) => {
+    dispatch({type: 'update', newValue});
+  }, []);
+
   useEffect(() => {
     const unsubscribe = props.draft.subscribe(
       props.deepKey,
-      (newValue: ArrayFieldValue) => {
-        dispatch({type: 'update', newValue});
-      }
+      arraySubscriptionCallback
     );
     return unsubscribe;
-  }, [props.draft, props.deepKey]);
+  }, [props.draft, props.deepKey, arraySubscriptionCallback]);
 
   // Focus the field that was just moved (for hotkey support).
   useEffect(() => {
@@ -869,11 +873,11 @@ DocEditor.ArrayField = (props: FieldProps) => {
     }
   }, [value]);
 
-  const add = () => {
+  const add = useCallback(() => {
     dispatch({type: 'add', draft: draft, deepKey: props.deepKey});
-  };
+  }, [draft, props.deepKey]);
 
-  const pasteBefore = (index: number) => {
+  const pasteBefore = useCallback((index: number) => {
     dispatch({
       type: 'pasteBefore',
       draft: draft,
@@ -881,9 +885,9 @@ DocEditor.ArrayField = (props: FieldProps) => {
       index: index,
       virtualClipboard: virtualClipboard,
     });
-  };
+  }, [draft, props.deepKey, virtualClipboard]);
 
-  const pasteAfter = (index: number) => {
+  const pasteAfter = useCallback((index: number) => {
     dispatch({
       type: 'pasteAfter',
       draft: draft,
@@ -891,50 +895,50 @@ DocEditor.ArrayField = (props: FieldProps) => {
       index: index,
       virtualClipboard: virtualClipboard,
     });
-  };
+  }, [draft, props.deepKey, virtualClipboard]);
 
-  const insertBefore = (index: number) => {
+  const insertBefore = useCallback((index: number) => {
     dispatch({
       type: 'insertBefore',
       draft: draft,
       deepKey: props.deepKey,
       index: index,
     });
-  };
+  }, [draft, props.deepKey]);
 
-  const insertAfter = (index: number) => {
+  const insertAfter = useCallback((index: number) => {
     dispatch({
       type: 'insertAfter',
       draft: draft,
       deepKey: props.deepKey,
       index: index,
     });
-  };
+  }, [draft, props.deepKey]);
 
-  const duplicate = (index: number) => {
+  const duplicate = useCallback((index: number) => {
     dispatch({
       type: 'duplicate',
       draft: draft,
       deepKey: props.deepKey,
       index: index,
     });
-  };
+  }, [draft, props.deepKey]);
 
-  const removeAt = (index: number) => {
+  const removeAt = useCallback((index: number) => {
     dispatch({
       type: 'removeAt',
       draft: draft,
       deepKey: props.deepKey,
       index: index,
     });
-  };
+  }, [draft, props.deepKey]);
 
   /** Focus the field header (the clickable "summary" part). */
-  const focusFieldHeader = (deepKey: string, index: number) => {
+  const focusFieldHeader = useCallback((deepKey: string, index: number) => {
     document.getElementById(`summary-for-${deepKey}.${order[index]}`)?.focus();
-  };
+  }, [order]);
 
-  const moveUp = (index: number) => {
+  const moveUp = useCallback((index: number) => {
     if (index > 0) {
       dispatch({
         type: 'moveUp',
@@ -943,9 +947,9 @@ DocEditor.ArrayField = (props: FieldProps) => {
         index: index,
       });
     }
-  };
+  }, [draft, props.deepKey]);
 
-  const moveDown = (index: number) => {
+  const moveDown = useCallback((index: number) => {
     if (index < order.length - 1) {
       dispatch({
         type: 'moveDown',
@@ -954,19 +958,24 @@ DocEditor.ArrayField = (props: FieldProps) => {
         index: index,
       });
     }
-  };
+  }, [draft, props.deepKey, order.length]);
 
   /** Copies the item data to the state so it can be "pasted" via the context menu later. */
-  const copyToVirtualClipboard = (index: number) => {
+  const copyToVirtualClipboard = useCallback((index: number) => {
     const key = order[index];
     const item = value[key];
     virtualClipboard.set(item);
-  };
+  }, [order, value, virtualClipboard]);
+
+  // Use a separate function to handle the setTimeout to avoid creating closures on every render
+  const copyToVirtualClipboardDelayed = useCallback((index: number) => {
+    setTimeout(() => copyToVirtualClipboard(index), 500);
+  }, [copyToVirtualClipboard]);
 
   const editJsonModal = useEditJsonModal();
   const aiEditModal = useAiEditModal();
 
-  const editJson = (index: number) => {
+  const editJson = useCallback((index: number) => {
     const key = order[index];
     editJsonModal.open({
       data: value[key],
@@ -983,9 +992,9 @@ DocEditor.ArrayField = (props: FieldProps) => {
         editJsonModal.close();
       },
     });
-  };
+  }, [order, value, editJsonModal, draft, props.deepKey]);
 
-  const aiEdit = (index: number) => {
+  const aiEdit = useCallback((index: number) => {
     const key = order[index];
     aiEditModal.open({
       data: value[key],
@@ -1002,14 +1011,14 @@ DocEditor.ArrayField = (props: FieldProps) => {
         aiEditModal.close();
       },
     });
-  };
+  }, [order, value, aiEditModal, draft, props.deepKey]);
 
-  function itemInDeeplink(itemKey: string) {
+  const itemInDeeplink = useCallback((itemKey: string) => {
     return Boolean(deeplink.value.startsWith(`${props.deepKey}.${itemKey}`));
-  }
+  }, [deeplink.value, props.deepKey]);
 
   /** Handler for using the arrow keys when the array item's header is focused.  */
-  function handleKeyDown(e: KeyboardEvent, arrayKey: string) {
+  const handleKeyDown = useCallback((e: KeyboardEvent, arrayKey: string) => {
     if (!e.target) {
       return;
     }
@@ -1026,7 +1035,32 @@ DocEditor.ArrayField = (props: FieldProps) => {
     } else if (e.key === 'ArrowRight') {
       (e.target as HTMLElement).closest('details')!.open = true;
     }
-  }
+  }, [moveUp, moveDown, order]);
+
+  const onDragEnd = useCallback((result: DropResult) => {
+    const {source, destination} = result;
+    if (!destination) {
+      return;
+    }
+    dispatch({
+      type: 'moveTo',
+      fromIndex: source.index,
+      toIndex: destination.index,
+      draft,
+      deepKey: props.deepKey,
+    });
+  }, [draft, props.deepKey]);
+
+  // Memoize expensive preview calculations to prevent unnecessary re-computation
+  const previewData = useMemo(() => {
+    return order.reduce((acc, key, i) => {
+      acc[key] = {
+        image: arrayPreviewImage(field, value[key]),
+        title: arrayPreview(field, value[key], i)
+      };
+      return acc;
+    }, {} as Record<string, {image: string | undefined, title: string}>);
+  }, [field, value, order]);
 
   const addButtonRow = (
     <div className="DocEditor__ArrayField__add">
@@ -1054,20 +1088,7 @@ DocEditor.ArrayField = (props: FieldProps) => {
 
   return (
     <div className="DocEditor__ArrayField">
-      <DragDropContext
-        onDragEnd={(result: DropResult) => {
-          const {source, destination} = result;
-          if (!destination) {
-            return;
-          }
-          dispatch({
-            type: 'moveTo',
-            fromIndex: source.index,
-            toIndex: destination.index,
-            draft,
-            deepKey: props.deepKey,
-          });
-        }}
+      <DragDropContext onDragEnd={onDragEnd}>
       >
         <Droppable droppableId="dnd-list" direction="vertical">
           {(provided: DroppableProvided) => (
@@ -1077,7 +1098,9 @@ DocEditor.ArrayField = (props: FieldProps) => {
               className="DocEditor__ArrayField__items"
             >
               {order.map((key: string, i: number) => {
-                const previewImage = arrayPreviewImage(field, value[key]);
+                const previewImage = previewData[key]?.image;
+                const previewTitle = previewData[key]?.title;
+                
                 return (
                   <Draggable key={key} index={i} draggableId={key}>
                     {(provided, snapshot) => (
@@ -1124,7 +1147,7 @@ DocEditor.ArrayField = (props: FieldProps) => {
                                 </div>
                               )}
                               <div className="DocEditor__ArrayField__item__header__preview__title">
-                                {arrayPreview(field, value[key], i)}
+                                {previewTitle}
                               </div>
                             </div>
                             <div className="DocEditor__ArrayField__item__header__controls">
@@ -1181,12 +1204,7 @@ DocEditor.ArrayField = (props: FieldProps) => {
                                   icon={<IconClipboardCopy size={20} />}
                                   // Allow the menu to close before updating the virtual clipboard (avoids layout shift)
                                   // in the menu that may be distracting.
-                                  onClick={() =>
-                                    setTimeout(
-                                      () => copyToVirtualClipboard(i),
-                                      500
-                                    )
-                                  }
+                                  onClick={() => copyToVirtualClipboardDelayed(i)}
                                 >
                                   Copy
                                 </Menu.Item>
@@ -1278,7 +1296,7 @@ DocEditor.OneOfField = (props: FieldProps) => {
     return {};
   }, []);
 
-  async function onTypeChange(newType: string) {
+  const onTypeChange = useCallback(async (newType: string) => {
     const newValue: any = {};
     if (newType) {
       if (newType in cachedValues) {
@@ -1295,29 +1313,31 @@ DocEditor.OneOfField = (props: FieldProps) => {
 
     await props.draft.updateKey(props.deepKey, newValue);
     setType(newType);
-  }
+  }, [cachedValues, typesMap, props.draft, props.deepKey]);
+
+  const subscriptionCallback = useCallback((newValue: any) => {
+    if (newValue?._type) {
+      setType(newValue._type || '');
+      cachedValues[newValue._type] = newValue;
+    }
+  }, [cachedValues]);
 
   useEffect(() => {
     const unsubscribe = props.draft.subscribe(
       props.deepKey,
-      (newValue: any) => {
-        if (newValue?._type) {
-          setType(newValue._type || '');
-          cachedValues[newValue._type] = newValue;
-        }
-      }
+      subscriptionCallback
     );
     return unsubscribe;
-  }, [props.draft, props.deepKey]);
+  }, [props.draft, props.deepKey, subscriptionCallback]);
 
   // When the dropdown receives focus, highlight the <input> text so that it can
   // be easily searched.
-  function onDropdownFocus(e: FocusEvent) {
+  const onDropdownFocus = useCallback((e: FocusEvent) => {
     const target = e.target as HTMLInputElement;
     if (target && target.select) {
       target.select();
     }
-  }
+  }, []);
 
   return (
     <div className="DocEditor__OneOfField">
