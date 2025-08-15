@@ -1588,15 +1588,12 @@ function scrollToDeeplink(
       if (!parent) {
         return;
       }
-
       // If the user has already scrolled anywhere, don't scroll to the deeplink.
       if (parent.scrollTop > 0 && !options.force) {
         return;
       }
-
       // First, ensure all ancestor details elements are open so the element can be scrolled to.
       setAncestorsOpen(deeplinkEl);
-
       // Build an offset (the array item headers) so the deeplink is not obscured by the header.
       const ancestors = getArrayItemHeaderAncestors(deeplinkEl);
       const modifier = ancestors.reduce((acc, el) => acc + el.offsetHeight, 0);
