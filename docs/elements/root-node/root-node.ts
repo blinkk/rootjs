@@ -1,12 +1,13 @@
 declare module 'preact' {
   namespace JSX {
     interface IntrinsicElements {
-      'root-node-editor': preact.JSX.HTMLAttributes;
+      'root-node': preact.JSX.HTMLAttributes;
     }
   }
 }
 
-class RootNodeEditor extends HTMLElement {
+/** An element that represents actions associated with a CMS field. */
+class RootNode extends HTMLElement {
   private deepKey: string;
   buttonElement: HTMLButtonElement;
 
@@ -18,12 +19,12 @@ class RootNodeEditor extends HTMLElement {
     );
   }
 
-  getSlotElement<T = HTMLElement>(name: string): T {
+  private getSlotElement<T = HTMLElement>(name: string): T {
     return this.querySelector(`[data-slot="${name}"]`) as T;
   }
 
+  /** Sends a message to the CMS requesting that the field associated with this node be focused. */
   requestDeepLinkScroll() {
-    // Send a message to the CMS DocPage requesting the field be focused.
     // TODO: This should be bundled into the CMS package so that sites can consume it.
     window.parent.postMessage(
       {
@@ -36,6 +37,6 @@ class RootNodeEditor extends HTMLElement {
   }
 }
 
-if (!customElements.get('root-node-editor')) {
-  customElements.define('root-node-editor', RootNodeEditor);
+if (!customElements.get('root-node')) {
+  customElements.define('root-node', RootNode);
 }

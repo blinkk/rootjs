@@ -2,7 +2,7 @@ import path from 'node:path';
 import {FunctionalComponent} from 'preact';
 import {buildModuleInfo, ModuleInfoContext} from '@/hooks/useModuleInfo.js';
 import {testPreviewMode} from '@/utils/mode.js';
-import {NodeEditor} from '../NodeEditor/NodeEditor.js';
+import {RootNode} from '../RootNode/RootNode.js';
 
 type TemplateComponent = FunctionalComponent<PageModuleFields>;
 
@@ -66,9 +66,9 @@ PageModules.Module = (props: {fields: PageModuleFields; fieldKey: string}) => {
   }
   return (
     <ModuleInfoContext.Provider value={buildModuleInfo(fields, fieldKey)}>
-      <NodeEditor.Overlay>
+      <RootNode>
         <Template {...fields} />
-      </NodeEditor.Overlay>
+      </RootNode>
     </ModuleInfoContext.Provider>
   );
 };

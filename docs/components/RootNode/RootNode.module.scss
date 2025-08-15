@@ -1,8 +1,8 @@
-.overlay {
+.node {
   position: relative;
 }
 
-.overlayButton {
+.nodeButton {
   appearance: none;
   background: none;
   border: none;
@@ -12,7 +12,7 @@
   user-select: none;
 }
 
-.overlayButton:hover {
+.nodeButton:hover {
   background-color: #e7f6ff;
   mix-blend-mode: darken;
 }

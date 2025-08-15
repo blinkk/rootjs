@@ -1,7 +1,7 @@
 import path from 'node:path';
 import {FunctionalComponent} from 'preact';
 import {buildModuleInfo, ModuleInfoContext} from '@/hooks/useModuleInfo.js';
-import {NodeEditor} from '../NodeEditor/NodeEditor.js';
+import {RootNode} from '../RootNode/RootNode.js';
 
 const blockModules = import.meta.glob('/blocks/*/*.tsx', {
   eager: true,
@@ -33,9 +33,9 @@ export default function Block(props: BlockProps & {fieldKey?: string}) {
   }
   return (
     <ModuleInfoContext.Provider value={buildModuleInfo(props, props.fieldKey)}>
-      <NodeEditor.Overlay>
+      <RootNode>
         <Component {...(props as any)} />
-      </NodeEditor.Overlay>
+      </RootNode>
     </ModuleInfoContext.Provider>
   );
 }
