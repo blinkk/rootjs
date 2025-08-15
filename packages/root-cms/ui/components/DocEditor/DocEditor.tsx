@@ -1062,6 +1062,31 @@ DocEditor.ArrayField = (props: FieldProps) => {
     }, {} as Record<string, {image: string | undefined, title: string}>);
   }, [field, value, order]);
 
+  // Create memoized click handlers for array item buttons to prevent inline function creation
+  const createClickHandler = useCallback((fn: (index: number) => void, index: number) => {
+    return () => fn(index);
+  }, []);
+
+  // Memoize all click handlers for array items
+  const clickHandlers = useMemo(() => {
+    return order.reduce((acc, key, i) => {
+      acc[key] = {
+        moveUp: () => moveUp(i),
+        moveDown: () => moveDown(i),
+        insertBefore: () => insertBefore(i),
+        insertAfter: () => insertAfter(i),
+        duplicate: () => duplicate(i),
+        copyToVirtualClipboard: () => copyToVirtualClipboardDelayed(i),
+        pasteBefore: () => pasteBefore(i),
+        pasteAfter: () => pasteAfter(i),
+        editJson: () => editJson(i),
+        aiEdit: () => aiEdit(i),
+        removeAt: () => removeAt(i),
+      };
+      return acc;
+    }, {} as Record<string, Record<string, () => void>>);
+  }, [order, moveUp, moveDown, insertBefore, insertAfter, duplicate, copyToVirtualClipboardDelayed, pasteBefore, pasteAfter, editJson, aiEdit, removeAt]);
+
   const addButtonRow = (
     <div className="DocEditor__ArrayField__add">
       <Button
@@ -1154,7 +1179,7 @@ DocEditor.ArrayField = (props: FieldProps) => {
                               <div className="DocEditor__ArrayField__item__header__controls__arrows">
                                 <button
                                   className="DocEditor__ArrayField__item__header__controls__arrow DocEditor__ArrayField__item__header__controls__arrows--up"
-                                  onClick={() => moveUp(i)}
+                                  onClick={clickHandlers[key]?.moveUp}
                                 >
                                   <IconCircleArrowUp
                                     size={20}
@@ -1163,7 +1188,7 @@ DocEditor.ArrayField = (props: FieldProps) => {
                                 </button>
                                 <button
                                   className="DocEditor__ArrayField__item__header__controls__arrow DocEditor__ArrayField__item__header__controls__arrows--down"
-                                  onClick={() => moveDown(i)}
+                                  onClick={clickHandlers[key]?.moveDown}
                                 >
                                   <IconCircleArrowDown
                                     size={20}
@@ -1183,19 +1208,19 @@ DocEditor.ArrayField = (props: FieldProps) => {
                                 <Menu.Label>INSERT</Menu.Label>
                                 <Menu.Item
                                   icon={<IconRowInsertTop size={20} />}
-                                  onClick={() => insertBefore(i)}
+                                  onClick={clickHandlers[key]?.insertBefore}
                                 >
                                   Add before
                                 </Menu.Item>
                                 <Menu.Item
                                   icon={<IconRowInsertBottom size={20} />}
-                                  onClick={() => insertAfter(i)}
+                                  onClick={clickHandlers[key]?.insertAfter}
                                 >
                                   Add after
                                 </Menu.Item>
                                 <Menu.Item
                                   icon={<IconCopy size={20} />}
-                                  onClick={() => duplicate(i)}
+                                  onClick={clickHandlers[key]?.duplicate}
                                 >
                                   Duplicate
                                 </Menu.Item>
@@ -1204,7 +1229,7 @@ DocEditor.ArrayField = (props: FieldProps) => {
                                   icon={<IconClipboardCopy size={20} />}
                                   // Allow the menu to close before updating the virtual clipboard (avoids layout shift)
                                   // in the menu that may be distracting.
-                                  onClick={() => copyToVirtualClipboardDelayed(i)}
+                                  onClick={clickHandlers[key]?.copyToVirtualClipboard}
                                 >
                                   Copy
                                 </Menu.Item>
@@ -1212,13 +1237,13 @@ DocEditor.ArrayField = (props: FieldProps) => {
                                   <>
                                     <Menu.Item
                                       icon={<IconRowInsertTop size={20} />}
-                                      onClick={() => pasteBefore(i)}
+                                      onClick={clickHandlers[key]?.pasteBefore}
                                     >
                                       Paste before
                                     </Menu.Item>
                                     <Menu.Item
                                       icon={<IconRowInsertBottom size={20} />}
-                                      onClick={() => pasteAfter(i)}
+                                      onClick={clickHandlers[key]?.pasteAfter}
                                     >
                                       Paste after
                                     </Menu.Item>
@@ -1227,7 +1252,7 @@ DocEditor.ArrayField = (props: FieldProps) => {
                                 <Menu.Label>CODE</Menu.Label>
                                 <Menu.Item
                                   icon={<IconBraces size={20} />}
-                                  onClick={() => editJson(i)}
+                                  onClick={clickHandlers[key]?.editJson}
                                 >
                                   Edit JSON
                                 </Menu.Item>
@@ -1236,7 +1261,7 @@ DocEditor.ArrayField = (props: FieldProps) => {
                                     icon={
                                       <IconSparkles size={20} stroke="1.75" />
                                     }
-                                    onClick={() => aiEdit(i)}
+                                    onClick={clickHandlers[key]?.aiEdit}
                                   >
                                     Edit with AI
                                   </Menu.Item>
@@ -1244,7 +1269,7 @@ DocEditor.ArrayField = (props: FieldProps) => {
                                 <Menu.Label>REMOVE</Menu.Label>
                                 <Menu.Item
                                   icon={<IconTrash size={20} />}
-                                  onClick={() => removeAt(i)}
+                                  onClick={clickHandlers[key]?.removeAt}
                                 >
                                   Remove
                                 </Menu.Item>
