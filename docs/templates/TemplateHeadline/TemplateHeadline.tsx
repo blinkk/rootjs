@@ -2,6 +2,7 @@ import {useTranslations} from '@blinkk/root';
 import {ButtonsBlock} from '@/blocks/ButtonsBlock/ButtonsBlock.js';
 import {Container} from '@/components/Container/Container.js';
 import {RichText} from '@/components/RichText/RichText.js';
+import {node} from '@/components/RootNode/RootNode.js';
 import {Text} from '@/components/Text/Text.js';
 import {TemplateHeadlineFields} from '@/root-cms.js';
 import {joinClassNames} from '@/utils/classes.js';
@@ -26,17 +27,17 @@ export function TemplateHeadline(props: TemplateHeadlineProps) {
     >
       {props.eyebrow && (
         <Text className={styles.eyebrow} size="h6">
-          {t(props.eyebrow)}
+          {node('eyebrow', t(props.eyebrow))}
         </Text>
       )}
       {props.title && (
         <Text as={titleSize} className={styles.title} size={titleSize}>
-          {t(props.title)}
+          {node('title', t(props.title))}
         </Text>
       )}
       {props.body && (
         <Text className={styles.body} size="p-large">
-          <RichText data={props.body} />
+          {node('body', <RichText data={props.body} />)}
         </Text>
       )}
       {props.buttons && (

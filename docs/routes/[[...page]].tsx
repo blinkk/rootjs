@@ -18,7 +18,7 @@ export default function Page(props: PageProps) {
   const modules: PageModuleFields[] = fields.content?.modules || [];
   return (
     <BaseLayout title={title} description={description} image={image}>
-      <PageModules modules={modules} />
+      <PageModules modules={modules} fieldKey="fields.content.modules" />
     </BaseLayout>
   );
 }

@@ -67,7 +67,8 @@ export function DocumentPage(props: DocumentPageProps) {
 
   function openPreviewInNewTab() {
     const previewUrl = getPreviewUrl(collectionId, slug);
-    const tab = window.open(previewUrl, '_blank');
+    // `noopener,noreferrer` used for `testEmbedMode()`.
+    const tab = window.open(previewUrl, '_blank', 'noopener,noreferrer');
     if (tab) {
       tab.focus();
     }
@@ -332,7 +333,8 @@ DocumentPage.Preview = (props: PreviewProps) => {
 
   function openNewTab() {
     const previewUrl = getPreviewUrl(collectionId, slug, selectedLocale);
-    const tab = window.open(previewUrl, '_blank');
+    // `noopener,noreferrer` used for `testEmbedMode()`.
+    const tab = window.open(previewUrl, '_blank', 'noopener,noreferrer');
     if (tab) {
       tab.focus();
     }
