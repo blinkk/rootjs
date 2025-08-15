@@ -1347,6 +1347,15 @@ DocEditor.OneOfField = (props: FieldProps) => {
     return unsubscribe;
   }, [props.draft, props.deepKey]);
 
+  // When the dropdown receives focus, highlight the <input> text so that it can
+  // be easily searched.
+  function onDropdownFocus(e: FocusEvent) {
+    const target = e.target as HTMLInputElement;
+    if (target && target.select) {
+      target.select();
+    }
+  }
+
   return (
     <div className="DocEditor__OneOfField">
       <div className="DocEditor__OneOfField__select">
@@ -1356,6 +1365,7 @@ DocEditor.OneOfField = (props: FieldProps) => {
           value={type}
           placeholder={field.placeholder}
           onChange={(e: string) => onTypeChange(e || '')}
+          onFocus={onDropdownFocus}
           size="xs"
           radius={0}
           searchable
