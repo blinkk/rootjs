@@ -138,6 +138,6 @@ export function scrollToDeeplink(
     },
     // If the deeplink is being forced, no timeout is needed as the document is already at rest.
     // If the deeplink isn't being forced, wait a bit to ensure the document is at rest before scrolling.
-    options.force ? 0 : 100
+    options.force ? 0 : 300
   );
 }

@@ -17,6 +17,11 @@ export function RootNode(props: {fieldKey?: string; children: any}) {
     return props.children;
   }
   const moduleInfo = useModuleInfo();
+  // No module info was provided by `ModuleInfoProvider`, so we can't render
+  // the `RootNode` component.
+  if (!moduleInfo) {
+    return props.children;
+  }
   return (
     <root-node data-deep-key={joinDeepKey(moduleInfo.deepKey, props?.fieldKey)}>
       <div className={styles.node}>
