@@ -22,7 +22,6 @@ import {UseDraftHook, useDraft} from '../../hooks/useDraft.js';
 import {useLocalStorage} from '../../hooks/useLocalStorage.js';
 import {Layout} from '../../layout/Layout.js';
 import {joinClassNames} from '../../utils/classes.js';
-import {debounce} from '../../utils/debounce.js';
 import {getDocPreviewPath, getDocServingPath} from '../../utils/doc-urls.js';
 
 interface DocumentPageProps {
@@ -349,7 +348,6 @@ DocumentPage.Preview = (props: PreviewProps) => {
         });
         return;
       }
-
       const iframe = iframeRef.current!;
       const container = iframe.parentElement!.parentElement as HTMLElement;
       const rect = container.getBoundingClientRect();
@@ -371,16 +369,12 @@ DocumentPage.Preview = (props: PreviewProps) => {
         '--iframe-scale': String(scale),
       });
     }
-
     updateIframeStyle();
-
     // Maintain the aspect ratio when the window is resized.
     // Without this, the iframe gets cut off.
-    const handleResize = debounce(() => updateIframeStyle(), 50);
-    window.addEventListener('resize', handleResize);
-
+    window.addEventListener('resize', updateIframeStyle);
     return () => {
-      window.removeEventListener('resize', handleResize);
+      window.removeEventListener('resize', updateIframeStyle);
     };
   }, [device]);
 
