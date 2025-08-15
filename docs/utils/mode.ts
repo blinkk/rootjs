@@ -22,6 +22,11 @@ export function testEmbedMode() {
   if (!referer) {
     return false;
   }
-  const url = new URL(referer);
-  return url.pathname.startsWith('/cms/content/');
+  try {
+    const url = new URL(referer);
+    return url.pathname.startsWith('/cms/content/');
+  } catch (e) {
+    console.error('Invalid referer URL:', referer, e);
+    return false;
+  }
 }
