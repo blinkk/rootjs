@@ -5,7 +5,11 @@ import {vertexAI} from '@genkit-ai/vertexai';
 import {Timestamp} from 'firebase-admin/firestore';
 import {Genkit, genkit, MessageData} from 'genkit';
 import {logger} from 'genkit/logging';
-import {ChatPrompt, SendPromptOptions} from '../shared/ai/prompts.js';
+import {
+  ChatPrompt,
+  AiResponse,
+  SendPromptOptions,
+} from '../shared/ai/prompts.js';
 import {RootCMSClient} from './client.js';
 import {CMSPluginOptions} from './plugin.js';
 
@@ -64,7 +68,10 @@ export class Chat {
     options: SendPromptOptions
   ): Promise<MessageData[]> {
     const messages = this.history;
-    if (messages.length === 0) {
+    const hasSystemPrompt = messages.some(
+      (msg) => msg.role === 'system' && msg.content.length > 0
+    );
+    if (!hasSystemPrompt) {
       messages.push({
         role: 'system',
         content: [{text: await this.buildSystemPrompt(options)}],
@@ -89,10 +96,14 @@ export class Chat {
   }
 
   /** Builds the request sent to the AI based on the `ChatMode`. */
-  private async buildChatRequest(
+  private async buildGenerateRequest(
     prompt: ChatPrompt | ChatPrompt[],
     options: SendPromptOptions
-  ) {
+  ): Promise<{
+    messages: MessageData[];
+    model: string;
+    prompt: ChatPrompt | ChatPrompt[];
+  }> {
     if (options.mode === 'edit') {
       return {
         messages: await this.buildMessages(options),
@@ -111,8 +122,8 @@ export class Chat {
   async sendPrompt(
     prompt: ChatPrompt | ChatPrompt[],
     options: SendPromptOptions = {}
-  ): Promise<string> {
-    const chatRequest = await this.buildChatRequest(prompt, options);
+  ): Promise<AiResponse> {
+    const chatRequest = await this.buildGenerateRequest(prompt, options);
     // TODO: Use streaming responses per https://genkit.dev/docs/models/#streaming
     // to improve UI performance.
     const res = await this.ai.generate({
@@ -125,7 +136,11 @@ export class Chat {
       history: this.history,
       modifiedAt: Timestamp.now(),
     });
-    return res.text;
+    // Using the `output` property provides both data and text responses.
+    if (options.mode === 'edit') {
+      return res.output as AiResponse & {editData?: any};
+    }
+    return {message: res.text, data: null};
   }
 
   dbDoc() {
@@ -147,15 +162,28 @@ export class Chat {
     // Edit mode prompts.
     if (options.mode === 'edit') {
       const rootDir = process.cwd();
-      const rootCmsDefs = fs.readFileSync(
-        path.resolve(rootDir, 'root-cms.d.ts'),
-        {
-          encoding: 'utf8',
-        }
-      );
-      const text = (await import('../shared/ai/prompts/edit.txt')).default;
-      text.replace('{{ROOT_CMS_DEFS}}', rootCmsDefs);
-      return text;
+      // The `root-cms.d.ts` file may not be bundled with the server code,
+      // so check whether it exists first before attempting to add it to the prompt.
+      const rootCmsDefsPath = path.resolve(rootDir, 'root-cms.d.ts');
+      const rootCmsDefs = fs.existsSync(rootCmsDefsPath)
+        ? fs.readFileSync(rootCmsDefsPath, {
+            encoding: 'utf8',
+          })
+        : null;
+      const text = [(await import('../shared/ai/prompts/edit.txt')).default];
+      if (rootCmsDefs) {
+        text.push(
+          'Here is the `root-cms.d.ts` file for this project:',
+          '```',
+          rootCmsDefs,
+          '```'
+        );
+      }
+      return text.join('\n');
+    }
+
+    if (options.mode === 'altText') {
+      return (await import('../shared/ai/prompts/altText.txt')).default;
     }
 
     // Chat mode (default) prompts.
@@ -188,7 +216,7 @@ export class ChatClient {
     this.user = user;
   }
 
-  async createChat(): Promise<Chat> {
+  private async createChat(): Promise<Chat> {
     const chatId = crypto.randomUUID();
     // Save chat to db so that user has a chat history and can enable "sharing"
     // with others. Store the model used with the metadata.
@@ -204,7 +232,11 @@ export class ChatClient {
     return chat;
   }
 
-  async getChat(chatId: string): Promise<Chat> {
+  async getOrCreateChat(chatId?: string): Promise<Chat> {
+    return chatId ? this.getChat(chatId) : this.createChat();
+  }
+
+  private async getChat(chatId: string): Promise<Chat> {
     // Fetch chat from db to preserve the conversation's history.
     const docRef = this.dbCollection().doc(chatId);
     const chatDoc = await docRef.get();

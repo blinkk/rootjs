@@ -229,11 +229,7 @@ export async function renderSignIn(
     firebaseConfig: options.cmsConfig.firebaseConfig,
   };
   const mainHtml = renderToString(
-    <SignIn
-      title="Sign in"
-      ctx={ctx}
-      favicon={options.cmsConfig.favicon}
-    />
+    <SignIn title="Sign in" ctx={ctx} favicon={options.cmsConfig.favicon} />
   );
   let html = `<!doctype html>\n${mainHtml}`;
   const nonce = generateNonce();

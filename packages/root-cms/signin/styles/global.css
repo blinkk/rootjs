@@ -90,6 +90,7 @@ body.menu\:open {
 .bootstrap-error {
   font-size: 14px;
   font-weight: 400;
+  line-height: 20px;
   position: absolute;
   bottom: 100px;
   left: 0;
@@ -98,6 +99,7 @@ body.menu\:open {
   animation: 0.5s forwards bootstrap-loading-error;
   animation-delay: 1s;
   opacity: 0;
+  padding: 0 24px;
 }
 
 @keyframes bootstrap-loading-error {

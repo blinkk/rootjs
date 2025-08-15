@@ -7,6 +7,10 @@ export interface GoogleSheetId {
 
 export interface GSpreadsheetCreateOptions {
   title?: string;
+  /** Google Drive folder ID to place the spreadsheet in. */
+  parent?: string;
+  /** Whether to share the spreadsheet with collaborators upon creation. */
+  share?: boolean;
 }
 
 export class GSpreadsheet {
@@ -22,6 +26,7 @@ export class GSpreadsheet {
    * Creates a new Google Spreadsheet.
    */
   static async create(options: GSpreadsheetCreateOptions) {
+    const share = options.share ?? false;
     const req: any = {
       fields: 'spreadsheetId',
     };
@@ -37,10 +42,24 @@ export class GSpreadsheet {
     const gspreadsheet = new GSpreadsheet(spreadsheet.spreadsheetId!);
     gspreadsheet.setSpreadsheet(spreadsheet);
 
+    // If a parent folder is specified, move the spreadsheet to that folder.
+    if (options?.parent) {
+      await gapi.client.drive.files.update({
+        fileId: gspreadsheet.spreadsheetId,
+        addParents: options.parent,
+        removeParents: 'root',
+        fields: 'id, parents',
+        resource: {},
+      });
+    }
+
+    if (!share) {
+      return gspreadsheet;
+    }
+
     // Give all admins and editors "write" access.
     const editors = await getAllEditors();
     await gspreadsheet.share(editors, 'writer');
-
     return gspreadsheet;
   }
 
@@ -702,4 +721,35 @@ function getColumnLetter(index: number) {
     index = (index - current - 1) / 26;
   }
   return letters.reverse().join('');
+}
+
+/** Parses a Google Drive folder ID from a URL or ID string. */
+export function parseGoogleDriveFolder(
+  test: string | undefined
+): string | undefined {
+  if (!test) {
+    return undefined;
+  }
+  // For now, do a naive parsing where we assume the format of the url is
+  // something like:
+  // https://drive.google.com/drive/folders/<folderId>
+  if (!test.startsWith('https://drive.google.com/drive/folders/')) {
+    const val = test.trim();
+    if (val.length === 33 && /^[a-zA-Z0-9_-]+$/.test(val)) {
+      // If the string is exactly 33 characters long and alphanumeric with dashes/underscores, assume it's a folder ID.
+      return val;
+    }
+  }
+  const parts = test.trim().split('/');
+  const folderId = parts[parts.length - 1];
+  return folderId || undefined;
+}
+
+/** Builds the URL to open a folder in Google Drive. */
+export function buildGoogleDriveFolderUrl(folderId: string) {
+  const value = parseGoogleDriveFolder(folderId);
+  if (!value) {
+    return 'https://drive.google.com/drive';
+  }
+  return `https://drive.google.com/drive/folders/${value}`;
 }

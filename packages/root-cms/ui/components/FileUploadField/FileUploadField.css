@@ -70,14 +70,26 @@
 .DocEditor__ImageField__imagePreview__Image__Alt {
   padding: 8px;
   border-top: 1px solid #ced4da;
+  display: flex;
+  flex-direction: row;
+  gap: 8px;
+  align-items: center;
 }
 
 .DocEditor__ImageField__imagePreview__Image__Alt__Textarea {
   pointer-events: all;
+  flex: 1;
 }
 
 .DocEditor__ImageField__imagePreview__Image__Alt__Textarea textarea {
   padding: 4px 10px;
+}
+
+
+.DocEditor__ImageField__imagePreview__Image__Alt__AiButton {
+  pointer-events: all;
+  position: relative;
+  z-index: 2;
 }
 
 .FileUploadField__Preview__Info {

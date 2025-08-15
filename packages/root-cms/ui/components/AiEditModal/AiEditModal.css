@@ -5,12 +5,6 @@
   gap: 12px;
 }
 
-.AiEditModal__JsonInput,
-.AiEditModal__JsonInput .mantine-JsonInput-wrapper,
-.AiEditModal__JsonInput .mantine-JsonInput-input {
-  height: 100%;
-}
-
 .AiEditModal__JsonInput .mantine-JsonInput-input {
   font-size: 0.875rem;
   line-height: 1.5;
@@ -18,13 +12,27 @@
 
 .AiEditModal__SplitPanel {
   display: grid;
-  grid-template-columns: 50% 50%;
+  grid-template-columns: 1fr 1fr;
   gap: 24px;
+  height: 680px;
+  max-height: calc(100vh - 280px);
+}
+
+.AiEditModal__SplitPanel__JsonPanel {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
 }
 
 .AiEditModal__JsonEditor {
   height: 100%;
-  overflow: auto;
+  width: 100%;
+}
+
+.AiEditModal__JsonInput,
+.AiEditModal__JsonInput .mantine-JsonInput-wrapper,
+.AiEditModal__JsonInput .mantine-JsonInput-input {
+  height: 100%;
 }
 
 .AiEditModal__SplitPanel__ChatPanel {
@@ -32,21 +40,27 @@
   overflow: auto;
   display: flex;
   flex-direction: column;
-  height: calc(max(100vh - 300px, 400px));
 }
 
-.AiEditModal__Tabs,
-.AiEditModal__Tabs .mantine-Tabs-root, 
+.AiEditModal__Tabs {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+}
+
 .AiEditModal__Tabs .mantine-Tabs-body {
+  display: flex;
+  flex: 1 1 0;
   height: 100%;
+  min-height: 0;
 }
 
 .AiEditModal__JsonDiffViewer {
-  border: 1px solid rgb(206, 212, 218);
   border-radius: 4px;
+  border: 1px solid rgb(206, 212, 218);
   height: 100%;
-  max-height: calc(max(100vh - 300px, 400px));
   overflow: auto;
+  width: 100%;
 }
 
 .AiEditModal__JsonDiffViewer .JsDiff__container {

@@ -1,13 +1,15 @@
 import './SettingsPage.css';
-import {Switch} from '@mantine/core';
+import {Switch, Textarea} from '@mantine/core';
 import {Heading} from '../../components/Heading/Heading.js';
 import {ShareBox} from '../../components/ShareBox/ShareBox.js';
 import {Text} from '../../components/Text/Text.js';
+import {SITE_SETTINGS, useSiteSettings} from '../../hooks/useSiteSettings.js';
 import {useUserPreferences} from '../../hooks/useUserPreferences.js';
 import {Layout} from '../../layout/Layout.js';
 
 export function SettingsPage() {
   const userPrefs = useUserPreferences();
+  const siteSettings = useSiteSettings();
   return (
     <Layout>
       <div className="SettingsPage">
@@ -38,6 +40,52 @@ export function SettingsPage() {
               Users
             </Heading>
             <ShareBox className="SettingsPage__section__users__sharebox" />
+          </div>
+        </div>
+        <div className="SettingsPage__section">
+          <div className="SettingsPage__section__left">
+            <Heading className="SettingsPage__section__left__title">
+              Site Settings
+            </Heading>
+            <Text
+              className="SettingsPage__section__body"
+              size="body-sm"
+              weight="semi-bold"
+              color="gray"
+            >
+              <p>
+                These settings apply to the project. Only admins can change
+                them.
+              </p>
+            </Text>
+          </div>
+          <div className="SettingsPage__section__right">
+            {SITE_SETTINGS.map((setting) => (
+              <div className="SettingsPage__section__setting" key={setting.key}>
+                <Text size="body" weight="semi-bold">
+                  {setting.name}
+                </Text>
+                <Text size="body-sm" weight="semi-bold" color="gray">
+                  <p>{setting.description}</p>
+                </Text>
+                <Textarea
+                  autosize
+                  minRows={2}
+                  maxRows={4}
+                  value={siteSettings.settings[setting.key] || ''}
+                  placeholder={setting.placeholder}
+                  onChange={(e: Event) =>
+                    siteSettings.setSettings(
+                      setting.key,
+                      (e.currentTarget as HTMLTextAreaElement).value
+                    )
+                  }
+                />
+                {setting.ui && (
+                  <div>{setting.ui(siteSettings.settings[setting.key])}</div>
+                )}
+              </div>
+            ))}
           </div>
         </div>
         <div className="SettingsPage__section">

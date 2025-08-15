@@ -1,0 +1,5 @@
+Create a descriptive and concise alt text for the attached image.
+
+- The alt text should be a brief but comprehensive description of the image, including key subjects, the setting, and any relevant details or actions.
+- The alt text should not exceed 125 characters.
+- Only provide one generation, and include only that data in the response. No surrounding text, clarifications, etc. Just the alt text.

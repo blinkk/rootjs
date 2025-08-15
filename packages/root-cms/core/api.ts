@@ -1,7 +1,11 @@
 import {Server, Request, Response} from '@blinkk/root';
 import {multipartMiddleware} from '@blinkk/root/middleware';
-import {ChatPrompt, SendPromptOptions} from '../shared/ai/prompts.js';
-import {Chat, ChatClient, RootAiModel} from './ai.js';
+import {
+  ChatPrompt,
+  AiResponse,
+  SendPromptOptions,
+} from '../shared/ai/prompts.js';
+import {ChatClient, RootAiModel} from './ai.js';
 import {RootCMSClient} from './client.js';
 import {runCronJobs} from './cron.js';
 import {arrayToCsv, csvToArray} from './csv.js';
@@ -13,6 +17,13 @@ export interface ChatApiRequest {
   prompt: ChatPrompt | ChatPrompt[];
   model?: RootAiModel;
   options?: SendPromptOptions;
+}
+
+export interface ChatApiResponse {
+  success: boolean;
+  chatId: string;
+  response: AiResponse;
+  error?: string;
 }
 
 export interface ApiOptions {
@@ -258,19 +269,16 @@ export function api(server: Server, options: ApiOptions) {
     try {
       const cmsClient = new RootCMSClient(req.rootConfig!);
       const chatClient = new ChatClient(cmsClient, req.user.email);
-      let chat: Chat;
-      if (reqBody.chatId) {
-        chat = await chatClient.getChat(reqBody.chatId);
-      } else {
-        chat = await chatClient.createChat();
-      }
-      const chatResponse = await chat.sendPrompt(prompt, {
-        mode: reqBody.options?.mode || 'chat',
-        editData: reqBody.options?.editData,
-      });
-      res
-        .status(200)
-        .json({success: true, chatId: chat.id, response: chatResponse});
+      const chat = await chatClient.getOrCreateChat(reqBody.chatId);
+      const apiResponse: ChatApiResponse = {
+        success: true,
+        chatId: chat.id,
+        response: await chat.sendPrompt(prompt, {
+          mode: reqBody.options?.mode || 'chat',
+          editData: reqBody.options?.editData,
+        }),
+      };
+      res.status(200).json(apiResponse);
     } catch (err) {
       console.error(err.stack || err);
       res.status(500).json({success: false, error: 'UNKNOWN'});
