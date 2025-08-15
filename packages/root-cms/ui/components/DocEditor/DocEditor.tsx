@@ -75,6 +75,7 @@ import {autokey} from '../../utils/rand.js';
 import {getPlaceholderKeys, strFormat} from '../../utils/str-format.js';
 import {testFieldEmpty} from '../../utils/test-field-empty.js';
 import {formatDateTime} from '../../utils/time.js';
+import {testHasExperimentParam} from '../../utils/url-params.js';
 import {useAiEditModal} from '../AiEditModal/AiEditModal.js';
 import {
   DocActionEvent,
@@ -106,6 +107,11 @@ interface DocEditorProps {
 }
 
 const DOC_DATA_CONTEXT = createContext(null);
+
+const DISABLE_SCHEMA_LEVEL_ARRAY_PREVIEW = testHasExperimentParam(
+  'DisableSchemaLevelArrayPreview'
+);
+console.log(DISABLE_SCHEMA_LEVEL_ARRAY_PREVIEW);
 
 function useDocData(): CMSDoc {
   return useContext(DOC_DATA_CONTEXT)!;
@@ -1439,6 +1445,9 @@ function arrayPreviewImage(
   field: schema.ArrayField,
   data: any
 ): string | undefined {
+  if (DISABLE_SCHEMA_LEVEL_ARRAY_PREVIEW) {
+    return undefined;
+  }
   const schemaLevelTemplates = getSchemaPreviewTemplates(
     field.of,
     data,
@@ -1456,16 +1465,18 @@ function arrayPreview(
   data: any,
   index: number
 ): string {
-  // First, check if the item has a preview defined at the schema level.
-  const schemaLevelTemplates = getSchemaPreviewTemplates(
-    field.of,
-    data,
-    'title'
-  );
-  if (schemaLevelTemplates) {
-    const result = buildPreviewValue(schemaLevelTemplates, data, index);
-    if (result) {
-      return result;
+  if (!DISABLE_SCHEMA_LEVEL_ARRAY_PREVIEW) {
+    // First, check if the item has a preview defined at the schema level.
+    const schemaLevelTemplates = getSchemaPreviewTemplates(
+      field.of,
+      data,
+      'title'
+    );
+    if (schemaLevelTemplates) {
+      const result = buildPreviewValue(schemaLevelTemplates, data, index);
+      if (result) {
+        return result;
+      }
     }
   }
   // Fall back to array-level preview.
