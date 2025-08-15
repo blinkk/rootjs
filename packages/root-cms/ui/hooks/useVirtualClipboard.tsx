@@ -8,7 +8,9 @@ export interface VirtualClipboard {
 
 const VirtualClipboardContext = createContext<VirtualClipboard | null>(null);
 
-export function VirtualClipboardProvider(props: {children?: ComponentChildren}) {
+export function VirtualClipboardProvider(props: {
+  children?: ComponentChildren;
+}) {
   const [clipboardValue, setClipboardValue] = useState('');
   const virtualClipboard: VirtualClipboard = {
     value: clipboardValue,
@@ -24,7 +26,9 @@ export function VirtualClipboardProvider(props: {children?: ComponentChildren}) 
 export function useVirtualClipboard(): VirtualClipboard {
   const virtualClipboard = useContext(VirtualClipboardContext);
   if (!virtualClipboard) {
-    throw new Error(`virtualClipboard is null, make sure to add <VirtualClipboardProvider>`);
+    throw new Error(
+      'virtualClipboard is null, make sure to add <VirtualClipboardProvider>'
+    );
   }
   return virtualClipboard;
 }
