@@ -4,6 +4,7 @@ import {EditorState} from 'lexical';
 import {useEffect, useState} from 'preact/hooks';
 import {RichTextData} from '../../../../../shared/richtext.js';
 import {debounce} from '../../../../utils/debounce.js';
+import {deepEqual} from '../../../../utils/objects.js';
 import {convertToRichTextData} from '../utils/convert-from-lexical.js';
 import {convertToLexical} from '../utils/convert-to-lexical.js';
 
@@ -14,16 +15,13 @@ export interface OnChangePluginProps {
 
 export function OnChangePlugin(props: OnChangePluginProps) {
   const [editor] = useLexicalComposerContext();
-
-  const [timeSaved, setTimeSaved] = useState(0);
   const [isUpdating, setIsUpdating] = useState(false);
+  const [value, setValue] = useState<RichTextData | null>(null);
 
   useEffect(() => {
-    const time = props.value?.time || 0;
-    if (time >= timeSaved) {
+    if (!deepEqual(props.value, value)) {
       editor.update(() => {
         setIsUpdating(true);
-        setTimeSaved(time);
         convertToLexical(props.value);
       });
     }
@@ -38,9 +36,11 @@ export function OnChangePlugin(props: OnChangePluginProps) {
     }
     editorState.read(() => {
       const richTextData = convertToRichTextData();
-      setTimeSaved(richTextData?.time || 0);
-      if (props.onChange) {
-        props.onChange(richTextData);
+      if (!deepEqual(value, richTextData)) {
+        setValue(richTextData);
+        if (props.onChange) {
+          props.onChange(richTextData);
+        }
       }
     });
   }, 500);
