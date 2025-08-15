@@ -1,4 +1,5 @@
-import {ActionIcon, Button, Menu, Select, Tooltip} from '@mantine/core';
+import './DocumentPage.css';
+import {ActionIcon, Button, Select, Tooltip} from '@mantine/core';
 import {useHotkeys} from '@mantine/hooks';
 import {
   IconArrowLeft,
@@ -8,15 +9,12 @@ import {
   IconDeviceFloppy,
   IconDeviceIpad,
   IconDeviceMobile,
-  IconDotsVertical,
   IconReload,
   IconWorld,
   IconLayoutSidebarRightCollapse,
   IconLayoutSidebarRightExpand,
-  IconJson,
 } from '@tabler/icons-preact';
 import {useEffect, useRef, useState} from 'preact/hooks';
-
 import {DocEditor} from '../../components/DocEditor/DocEditor.js';
 import {useEditJsonModal} from '../../components/EditJsonModal/EditJsonModal.js';
 import {SplitPanel} from '../../components/SplitPanel/SplitPanel.js';
@@ -24,8 +22,8 @@ import {UseDraftHook, useDraft} from '../../hooks/useDraft.js';
 import {useLocalStorage} from '../../hooks/useLocalStorage.js';
 import {Layout} from '../../layout/Layout.js';
 import {joinClassNames} from '../../utils/classes.js';
+import {debounce} from '../../utils/debounce.js';
 import {getDocPreviewPath, getDocServingPath} from '../../utils/doc-urls.js';
-import './DocumentPage.css';
 
 interface DocumentPageProps {
   collection: string;
@@ -378,7 +376,7 @@ DocumentPage.Preview = (props: PreviewProps) => {
 
     // Maintain the aspect ratio when the window is resized.
     // Without this, the iframe gets cut off.
-    const handleResize = () => updateIframeStyle();
+    const handleResize = debounce(() => updateIframeStyle(), 50);
     window.addEventListener('resize', handleResize);
 
     return () => {
