@@ -7,7 +7,6 @@ import {FieldProps} from './FieldProps.js';
 export function StringField(props: FieldProps) {
   const field = props.field as schema.StringField;
   const [value, setValue] = useState('');
-  const [autosize, setAutosize] = useState(false);
 
   function onChange(newValue: string) {
     setValue(newValue);
@@ -29,17 +28,12 @@ export function StringField(props: FieldProps) {
       <Textarea
         size="xs"
         radius={0}
-        autosize={autosize}
-        minRows={3}
+        autosize={false}
+        minRows={4}
         maxRows={field.maxRows || 12}
         value={value}
         onChange={(e: ChangeEvent<HTMLTextAreaElement>) => {
           onChange(e.currentTarget.value);
-        }}
-        onFocus={() => {
-          if (!autosize) {
-            setAutosize(true);
-          }
         }}
       />
     );
