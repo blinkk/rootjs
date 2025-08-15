@@ -1,4 +1,5 @@
-import {ActionIcon, Button, Menu, Select, Tooltip} from '@mantine/core';
+import './DocumentPage.css';
+import {ActionIcon, Button, Select, Tooltip} from '@mantine/core';
 import {useHotkeys} from '@mantine/hooks';
 import {
   IconArrowLeft,
@@ -8,15 +9,12 @@ import {
   IconDeviceFloppy,
   IconDeviceIpad,
   IconDeviceMobile,
-  IconDotsVertical,
   IconReload,
   IconWorld,
   IconLayoutSidebarRightCollapse,
   IconLayoutSidebarRightExpand,
-  IconJson,
 } from '@tabler/icons-preact';
 import {useEffect, useRef, useState} from 'preact/hooks';
-
 import {DocEditor} from '../../components/DocEditor/DocEditor.js';
 import {useEditJsonModal} from '../../components/EditJsonModal/EditJsonModal.js';
 import {SplitPanel} from '../../components/SplitPanel/SplitPanel.js';
@@ -25,7 +23,6 @@ import {useLocalStorage} from '../../hooks/useLocalStorage.js';
 import {Layout} from '../../layout/Layout.js';
 import {joinClassNames} from '../../utils/classes.js';
 import {getDocPreviewPath, getDocServingPath} from '../../utils/doc-urls.js';
-import './DocumentPage.css';
 
 interface DocumentPageProps {
   collection: string;
@@ -342,35 +339,43 @@ DocumentPage.Preview = (props: PreviewProps) => {
   }
 
   useEffect(() => {
-    if (device === '') {
+    function updateIframeStyle() {
+      if (device === '') {
+        setIframeStyle({
+          '--iframe-width': '100%',
+          '--iframe-height': '100%',
+          '--iframe-scale': '1',
+        });
+        return;
+      }
+      const iframe = iframeRef.current!;
+      const container = iframe.parentElement!.parentElement as HTMLElement;
+      const rect = container.getBoundingClientRect();
+      const [width, height] = DeviceResolution[device];
+      const padding = 20;
+      let scale = 1;
+      if (
+        width > rect.width - 2 * padding ||
+        height > rect.height - 2 * padding
+      ) {
+        scale = Math.min(
+          (rect.width - 2 * padding) / width,
+          (rect.height - 2 * padding) / height
+        );
+      }
       setIframeStyle({
-        '--iframe-width': '100%',
-        '--iframe-height': '100%',
-        '--iframe-scale': '1',
+        '--iframe-width': `${width}px`,
+        '--iframe-height': `${height}px`,
+        '--iframe-scale': String(scale),
       });
-      return;
     }
-
-    const iframe = iframeRef.current!;
-    const container = iframe.parentElement!.parentElement as HTMLElement;
-    const rect = container.getBoundingClientRect();
-    const [width, height] = DeviceResolution[device];
-    const padding = 20;
-    let scale = 1;
-    if (
-      width > rect.width - 2 * padding ||
-      height > rect.height - 2 * padding
-    ) {
-      scale = Math.min(
-        (rect.width - 2 * padding) / width,
-        (rect.height - 2 * padding) / height
-      );
-    }
-    setIframeStyle({
-      '--iframe-width': `${width}px`,
-      '--iframe-height': `${height}px`,
-      '--iframe-scale': String(scale),
-    });
+    updateIframeStyle();
+    // Maintain the aspect ratio when the window is resized.
+    // Without this, the iframe gets cut off.
+    window.addEventListener('resize', updateIframeStyle);
+    return () => {
+      window.removeEventListener('resize', updateIframeStyle);
+    };
   }, [device]);
 
   return (
