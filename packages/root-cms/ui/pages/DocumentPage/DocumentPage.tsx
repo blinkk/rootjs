@@ -33,14 +33,10 @@ interface DocumentPageProps {
 function getPreviewUrl(
   collectionId: string,
   slug: string,
-  selectedLocale = '',
-  embed = true
+  selectedLocale = ''
 ) {
   const basePreviewPath = getDocPreviewPath({collectionId, slug});
   const searchParams = new URLSearchParams(window.location.search);
-  if (embed) {
-    searchParams.set('embed', 'true');
-  }
   searchParams.set('preview', 'true');
   const query = `${searchParams.toString()}${window.location.hash}`;
   if (selectedLocale) {
@@ -335,8 +331,8 @@ DocumentPage.Preview = (props: PreviewProps) => {
   }
 
   function openNewTab() {
-    const previewUrl = getPreviewUrl(collectionId, slug, selectedLocale, false);
-    const tab = window.open(previewUrl, '_blank');
+    const previewUrl = getPreviewUrl(collectionId, slug, selectedLocale);
+    const tab = window.open(previewUrl, '_blank', 'noopener,noreferrer');
     if (tab) {
       tab.focus();
     }

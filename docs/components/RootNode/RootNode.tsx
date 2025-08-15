@@ -1,6 +1,6 @@
 import {ComponentChildren} from 'preact';
 import {joinDeepKey, useModuleInfo} from '@/hooks/useModuleInfo.js';
-import {testPreviewMode, getQueryParam} from '@/utils/mode.js';
+import {testEmbedMode} from '@/utils/mode.js';
 import styles from './RootNode.module.scss';
 
 /**
@@ -13,7 +13,7 @@ import styles from './RootNode.module.scss';
  */
 export function RootNode(props: {fieldKey?: string; children: any}) {
   // Do nothing outside of the embedded CMS preview.
-  if (!testPreviewMode() || !getQueryParam('embed')) {
+  if (!testEmbedMode()) {
     return props.children;
   }
   const moduleInfo = useModuleInfo();
