@@ -15,6 +15,9 @@ export function isObject(data: any): boolean {
  * If the value does not exist, `undefined` is returned.
  */
 export function getNestedValue(data: any, key: string) {
+  if (!key.includes('.')) {
+    return (data || {})[key];
+  }
   const keys = key.split('.');
   let current = data;
   for (const segment of keys) {
