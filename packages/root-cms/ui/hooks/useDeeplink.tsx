@@ -141,3 +141,9 @@ export function scrollToDeeplink(
     options.force ? 0 : 300
   );
 }
+
+export function buildDeeplinkUrl(deepKey: string) {
+  const url = new URL(window.location.href);
+  url.searchParams.set('deeplink', deepKey!);
+  return url.toString();
+}

@@ -1,6 +1,6 @@
 import {ActionIcon, Button, Image, Loader, Tooltip} from '@mantine/core';
 import {IconTrash} from '@tabler/icons-preact';
-import {useEffect, useState} from 'preact/hooks';
+import {useCallback, useEffect, useState} from 'preact/hooks';
 import * as schema from '../../../../core/schema.js';
 import {getDocFromCacheOrFetch} from '../../../utils/doc-cache.js';
 import {notifyErrors} from '../../../utils/notifications.js';
@@ -13,15 +13,18 @@ export function ReferenceField(props: FieldProps) {
   const field = props.field as schema.ReferenceField;
   const [refId, setRefId] = useState('');
 
-  function onChange(newRefId: string) {
-    if (newRefId) {
-      const [collection, slug] = newRefId.split('/');
-      props.draft.updateKey(props.deepKey, {id: newRefId, collection, slug});
-    } else {
-      props.draft.removeKey(props.deepKey);
-    }
-    setRefId(newRefId);
-  }
+  const onChange = useCallback(
+    (newRefId: string) => {
+      if (newRefId) {
+        const [collection, slug] = newRefId.split('/');
+        props.draft.updateKey(props.deepKey, {id: newRefId, collection, slug});
+      } else {
+        props.draft.removeKey(props.deepKey);
+      }
+      setRefId(newRefId);
+    },
+    [props.deepKey]
+  );
 
   useEffect(() => {
     const unsubscribe = props.draft.subscribe(

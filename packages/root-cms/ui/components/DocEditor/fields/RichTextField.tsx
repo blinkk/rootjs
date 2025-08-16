@@ -1,4 +1,4 @@
-import {useEffect, useState} from 'preact/hooks';
+import {useCallback, useEffect, useState} from 'preact/hooks';
 import * as schema from '../../../../core/schema.js';
 import {RichTextData} from '../../../../shared/richtext.js';
 import {RichTextEditor} from '../../RichTextEditor/RichTextEditor.js';
@@ -8,14 +8,17 @@ export function RichTextField(props: FieldProps) {
   const field = props.field as schema.RichTextField;
   const [value, setValue] = useState<RichTextData | null>(null);
 
-  function onChange(newValue: RichTextData) {
-    setValue((oldValue: RichTextData) => {
-      if (oldValue?.time !== newValue?.time) {
-        props.draft.updateKey(props.deepKey, newValue);
-      }
-      return newValue;
-    });
-  }
+  const onChange = useCallback(
+    (newValue: RichTextData) => {
+      setValue((oldValue: RichTextData | null) => {
+        if (oldValue?.time !== newValue?.time) {
+          props.draft.updateKey(props.deepKey, newValue);
+        }
+        return newValue;
+      });
+    },
+    [props.deepKey]
+  );
 
   useEffect(() => {
     const unsubscribe = props.draft.subscribe(

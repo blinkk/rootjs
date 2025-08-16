@@ -19,7 +19,7 @@ import {Timer} from '../../utils/timer.js';
 import './Viewers.css';
 
 // Frequency to update.
-const UPDATE_INTERVAL = 30 * TIME_UNITS.second;
+const UPDATE_INTERVAL = 60 * TIME_UNITS.second;
 
 // Idle timeout for when no user interaction is detected.
 const IDLE_TIMEOUT = 5 * TIME_UNITS.minute;
