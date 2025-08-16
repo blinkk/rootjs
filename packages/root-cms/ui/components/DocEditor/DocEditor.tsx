@@ -111,7 +111,6 @@ const DOC_DATA_CONTEXT = createContext(null);
 const DISABLE_SCHEMA_LEVEL_ARRAY_PREVIEW = testHasExperimentParam(
   'DisableSchemaLevelArrayPreview'
 );
-console.log(DISABLE_SCHEMA_LEVEL_ARRAY_PREVIEW);
 
 function useDocData(): CMSDoc {
   return useContext(DOC_DATA_CONTEXT)!;
