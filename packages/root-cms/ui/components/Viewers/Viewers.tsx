@@ -96,7 +96,7 @@ class ViewersController extends EventListener {
       console.log('no user email:', user);
       return;
     }
-    console.log(`updating lastViewedAt for ${user.email}`);
+    // console.log(`updating lastViewedAt for ${user.email}`);
     await setDoc(
       this.docRef,
       {
