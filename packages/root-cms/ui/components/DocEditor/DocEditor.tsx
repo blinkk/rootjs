@@ -101,6 +101,22 @@ import {RichTextField} from './fields/RichTextField.js';
 import {SelectField} from './fields/SelectField.js';
 import {StringField} from './fields/StringField.js';
 
+const PLACEHOLDER_CACHE = new WeakMap<
+  object,
+  {json: string; placeholders: Record<string, any>}
+>();
+
+function getCachedPlaceholders(data: any): Record<string, any> {
+  const json = JSON.stringify(data);
+  const cached = PLACEHOLDER_CACHE.get(data);
+  if (cached && cached.json === json) {
+    return cached.placeholders;
+  }
+  const placeholders = flattenNestedKeys(data);
+  PLACEHOLDER_CACHE.set(data, {json, placeholders});
+  return placeholders;
+}
+
 interface DocEditorProps {
   docId: string;
   collection: schema.Collection;
@@ -1440,7 +1456,7 @@ function getSchemaPreviewTemplates(
 }
 
 /** Builds the value to display given a set of string templates to use for previews. */
-function buildPreviewValue(
+export function buildPreviewValue(
   /** The string template (or templates) used to construct the preview. */
   previews: string | string[],
   /** The CMS data. */
@@ -1449,7 +1465,7 @@ function buildPreviewValue(
   index?: number
 ): string | undefined {
   const templates = Array.isArray(previews) ? [...previews] : [previews];
-  const placeholders = flattenNestedKeys(data);
+  const placeholders = {...getCachedPlaceholders(data)};
   if (index !== undefined) {
     placeholders._index = String(index);
     placeholders._index0 = String(index);
