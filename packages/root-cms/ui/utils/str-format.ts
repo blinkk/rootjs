@@ -21,16 +21,15 @@ export function strFormat(
  */
 export function strFormatFn(
   template: string,
-  fn: (key: string) => unknown
+  fn: (key: string) => string | null | undefined
 ): string {
-  const keys = getPlaceholderKeys(template);
-  for (const key of keys) {
+  return template.replace(/\{(.+?)\}/g, (match: string, key: string) => {
     const val = fn(key);
-    if (val !== undefined && val !== null) {
-      template = template.replaceAll(`{${key}}`, String(val));
+    if (val === undefined || val === null) {
+      return match;
     }
-  }
-  return template;
+    return val;
+  });
 }
 
 export function getPlaceholderKeys(template: string): string[] {

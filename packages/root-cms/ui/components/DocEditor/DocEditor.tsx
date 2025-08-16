@@ -1441,13 +1441,13 @@ function getSchemaPreviewTemplates(
 
 class PlaceholderNotFoundError extends Error {}
 
-/** Builds the value to display given a set of string templates to use for previews. */
+/**
+ * Builds the value to display given a set of string templates to use for
+ * previews.
+ */
 function buildPreviewValue(
-  /** The string template (or templates) used to construct the preview. */
   previews: string | string[],
-  /** The CMS data. */
   data: any,
-  /** The position of the item within the array of the CMS UI. */
   index?: number
 ): string | undefined {
   const templates = Array.isArray(previews) ? previews : [previews];
