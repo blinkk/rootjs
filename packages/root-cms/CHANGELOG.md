@@ -1,5 +1,14 @@
 # @blinkk/root-cms
 
+## 2.0.6
+
+### Patch Changes
+
+- f700f76: fix: fix issue with textarea focus requiring 2 clicks
+- 91849a9: feat: add flag for disabling schema-level array previews
+- 25790c9: fix: add visibility timeout for db watcher (#679)
+  - @blinkk/root@2.0.6
+
 ## 2.0.5
 
 ### Patch Changes
