@@ -1,5 +1,12 @@
 # @blinkk/root-cms
 
+## 2.0.8
+
+### Patch Changes
+
+- a6c3f4a: fix: optimize lookup of array preview values (#687)
+  - @blinkk/root@2.0.8
+
 ## 2.0.7
 
 ### Patch Changes
