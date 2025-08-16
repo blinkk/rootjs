@@ -11,7 +11,7 @@ import './ReferenceField.css';
 
 export function ReferenceField(props: FieldProps) {
   const field = props.field as schema.ReferenceField;
-  const [refId, setRefId] = useState('');
+  const [refId, setRefId] = useState(props.value?.id || '');
 
   const onChange = useCallback(
     (newRefId: string) => {
@@ -27,14 +27,8 @@ export function ReferenceField(props: FieldProps) {
   );
 
   useEffect(() => {
-    const unsubscribe = props.draft.subscribe(
-      props.deepKey,
-      (newValue?: {id: string}) => {
-        setRefId(newValue?.id || '');
-      }
-    );
-    return unsubscribe;
-  }, []);
+    setRefId(props.value?.id || '');
+  }, [props.value]);
 
   const docPickerModal = useDocPickerModal();
 

@@ -6,7 +6,7 @@ import {FieldProps} from './FieldProps.js';
 
 export function RichTextField(props: FieldProps) {
   const field = props.field as schema.RichTextField;
-  const [value, setValue] = useState<RichTextData | null>(null);
+  const [value, setValue] = useState<RichTextData | null>(props.value || null);
 
   const onChange = useCallback(
     (newValue: RichTextData) => {
@@ -21,14 +21,8 @@ export function RichTextField(props: FieldProps) {
   );
 
   useEffect(() => {
-    const unsubscribe = props.draft.subscribe(
-      props.deepKey,
-      (newValue: RichTextData) => {
-        setValue(newValue);
-      }
-    );
-    return unsubscribe;
-  }, []);
+    setValue(props.value || null);
+  }, [props.value]);
 
   return (
     <RichTextEditor

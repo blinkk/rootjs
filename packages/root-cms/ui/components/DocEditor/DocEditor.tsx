@@ -267,9 +267,16 @@ DocEditor.Field = (props: FieldProps) => {
   const deeplink = useDeeplink();
   const targeted = deeplink.value === props.deepKey;
   const ref = useRef<HTMLDivElement>(null);
-  const [value, setValue] = useState(null);
+  const docData = useDocData() || {};
+  const value = useMemo(
+    () => getNestedValue(docData, props.deepKey),
+    [docData, props.deepKey]
+  );
 
-  const fieldValueEmpty = useMemo(() => testFieldEmpty(field, value), [value]);
+  const fieldValueEmpty = useMemo(
+    () => testFieldEmpty(field, value),
+    [field, value]
+  );
   const showTranslateIcon =
     (field.type === 'string' || field.type === 'richtext') && field.translate;
 
@@ -282,16 +289,6 @@ DocEditor.Field = (props: FieldProps) => {
       }
     }
     return !props.hideHeader && !field.hideLabel;
-  }, [props.deepKey]);
-
-  useEffect(() => {
-    const unsubscribe = props.draft.subscribe(
-      props.deepKey,
-      (newValue: any) => {
-        setValue(newValue);
-      }
-    );
-    return unsubscribe;
   }, [props.deepKey]);
 
   useEffect(() => {
@@ -331,33 +328,33 @@ DocEditor.Field = (props: FieldProps) => {
       )}
       <div className="DocEditor__field__input">
         {field.type === 'array' ? (
-          <DocEditor.ArrayField {...props} />
+          <DocEditor.ArrayField {...props} value={value} />
         ) : field.type === 'boolean' ? (
-          <BooleanField {...props} />
+          <BooleanField {...props} value={value} />
         ) : field.type === 'date' ? (
-          <DateField {...props} />
+          <DateField {...props} value={value} />
         ) : field.type === 'datetime' ? (
-          <DateTimeField {...props} />
+          <DateTimeField {...props} value={value} />
         ) : field.type === 'file' ? (
-          <FileField {...props} />
+          <FileField {...props} value={value} />
         ) : field.type === 'image' ? (
-          <ImageField {...props} />
+          <ImageField {...props} value={value} />
         ) : field.type === 'multiselect' ? (
-          <MultiSelectField {...props} />
+          <MultiSelectField {...props} value={value} />
         ) : field.type === 'number' ? (
-          <NumberField {...props} />
+          <NumberField {...props} value={value} />
         ) : field.type === 'object' ? (
           <DocEditor.ObjectField {...props} />
         ) : field.type === 'oneof' ? (
-          <DocEditor.OneOfField {...props} />
+          <DocEditor.OneOfField {...props} value={value} />
         ) : field.type === 'reference' ? (
-          <ReferenceField {...props} />
+          <ReferenceField {...props} value={value} />
         ) : field.type === 'richtext' ? (
-          <RichTextField {...props} />
+          <RichTextField {...props} value={value} />
         ) : field.type === 'select' ? (
-          <SelectField {...props} />
+          <SelectField {...props} value={value} />
         ) : field.type === 'string' ? (
-          <StringField {...props} />
+          <StringField {...props} value={value} />
         ) : (
           <div className="DocEditor__field__input__unknown">
             Unknown field type: {(field as any).type}
@@ -866,7 +863,10 @@ function arrayReducer(state: ArrayFieldValue, action: ArrayAction) {
 DocEditor.ArrayField = (props: FieldProps) => {
   const draft = props.draft;
   const field = props.field as schema.ArrayField;
-  const [value, dispatch] = useReducer(arrayReducer, {_array: []});
+  const [value, dispatch] = useReducer(
+    arrayReducer,
+    props.value || {_array: []}
+  );
   const deeplink = useDeeplink();
   const virtualClipboard = useVirtualClipboard();
   const experiments = window.__ROOT_CTX.experiments || {};
@@ -878,14 +878,8 @@ DocEditor.ArrayField = (props: FieldProps) => {
   const newlyAdded = value._new || [];
 
   useEffect(() => {
-    const unsubscribe = props.draft.subscribe(
-      props.deepKey,
-      (newValue: ArrayFieldValue) => {
-        dispatch({type: 'update', newValue});
-      }
-    );
-    return unsubscribe;
-  }, [props.deepKey]);
+    dispatch({type: 'update', newValue: props.value || {_array: []}});
+  }, [props.value]);
 
   // Focus the field that was just moved (for hotkey support).
   useEffect(() => {
@@ -1028,7 +1022,6 @@ DocEditor.ArrayField = (props: FieldProps) => {
           newValue: updateRichTextDataTime(newValue) as ArrayFieldValue,
           deepKey: props.deepKey,
         });
-        draft.notifySubscribers();
         editJsonModal.close();
       },
     });
@@ -1047,7 +1040,6 @@ DocEditor.ArrayField = (props: FieldProps) => {
           newValue: updateRichTextDataTime(newValue) as ArrayFieldValue,
           deepKey: props.deepKey,
         });
-        draft.notifySubscribers();
         aiEditModal.close();
       },
     });
@@ -1325,6 +1317,7 @@ DocEditor.ArrayField = (props: FieldProps) => {
                               onBlur={() => {
                                 requestHighlightNode(null);
                               }}
+                              value={value[key]}
                             />
                           </div>
                         </details>
@@ -1345,7 +1338,7 @@ DocEditor.ArrayField = (props: FieldProps) => {
 
 DocEditor.OneOfField = (props: FieldProps) => {
   const field = props.field as schema.OneOfField;
-  const [type, setType] = useState('');
+  const [type, setType] = useState(props.value?._type || '');
   const typesMap: Record<string, schema.Schema> = {};
   const dropdownValues: Array<{value: string; label: string}> = [
     {value: '', label: field.placeholder || 'Select type'},
@@ -1380,17 +1373,13 @@ DocEditor.OneOfField = (props: FieldProps) => {
   }
 
   useEffect(() => {
-    const unsubscribe = props.draft.subscribe(
-      props.deepKey,
-      (newValue: any) => {
-        if (newValue?._type) {
-          setType(newValue._type || '');
-          cachedValues[newValue._type] = newValue;
-        }
-      }
-    );
-    return unsubscribe;
-  }, [props.deepKey]);
+    if (props.value?._type) {
+      setType(props.value._type || '');
+      cachedValues[props.value._type] = props.value;
+    } else {
+      setType('');
+    }
+  }, [props.value]);
 
   // When the dropdown receives focus, highlight the <input> text so that it can
   // be easily searched.

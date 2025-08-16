@@ -5,7 +5,7 @@ import {FieldProps} from './FieldProps.js';
 
 export function SelectField(props: FieldProps) {
   const field = props.field as schema.SelectField;
-  const [value, setValue] = useState('');
+  const [value, setValue] = useState(props.value || '');
 
   const options = (field.options || []).map((option) => {
     // Mantine requires both label and value to be set.
@@ -27,14 +27,8 @@ export function SelectField(props: FieldProps) {
   );
 
   useEffect(() => {
-    const unsubscribe = props.draft.subscribe(
-      props.deepKey,
-      (newValue: string) => {
-        setValue(newValue || '');
-      }
-    );
-    return unsubscribe;
-  }, []);
+    setValue(props.value || '');
+  }, [props.value]);
 
   return (
     <div className="DocEditor__SelectField">

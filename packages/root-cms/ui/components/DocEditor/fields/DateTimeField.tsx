@@ -4,7 +4,9 @@ import {FieldProps} from './FieldProps.js';
 
 export function DateTimeField(props: FieldProps) {
   // const field = props.field as schema.DateTimeField;
-  const [dateStr, setDateStr] = useState('');
+  const [dateStr, setDateStr] = useState(() =>
+    props.value ? toDateStr(props.value as Timestamp) : ''
+  );
 
   const onChange = useCallback(
     (newDateStr: string) => {
@@ -22,18 +24,12 @@ export function DateTimeField(props: FieldProps) {
   );
 
   useEffect(() => {
-    const unsubscribe = props.draft.subscribe(
-      props.deepKey,
-      (newValue: Timestamp) => {
-        if (newValue) {
-          setDateStr(toDateStr(newValue));
-        } else {
-          setDateStr('');
-        }
-      }
-    );
-    return unsubscribe;
-  }, []);
+    if (props.value) {
+      setDateStr(toDateStr(props.value as Timestamp));
+    } else {
+      setDateStr('');
+    }
+  }, [props.value]);
 
   return (
     <div className="DocEditor__DateTimeField">

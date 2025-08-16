@@ -13,7 +13,6 @@ import {logAction} from '../utils/actions.js';
 import {debounce} from '../utils/debounce.js';
 import {setDocToCache} from '../utils/doc-cache.js';
 import {EventListener} from '../utils/events.js';
-import {getNestedValue, isObject} from '../utils/objects.js';
 import {TIME_UNITS} from '../utils/time.js';
 
 const SAVE_DELAY = 3 * TIME_UNITS.second;
@@ -36,10 +35,6 @@ export enum EventType {
   FLUSH = 'FLUSH',
 }
 
-type Subscribers = Record<string, Set<SubscriberCallback>>;
-type SubscriberCallback = (newValue: any) => void;
-type UnsubscribeCallback = () => void;
-
 /**
  * Number of seconds to wait before disabling db watchers once the browser tab
  * loses visibility.
@@ -57,7 +52,6 @@ export class DraftController extends EventListener {
   private pendingUpdates = new Map<string, any>();
   private dbUnsubscribe?: () => void;
   private cachedData: any = {};
-  private subscribers: Subscribers = {};
   private saveState = SaveState.NO_CHANGES;
   private autolock = false;
   private autolockReason = 'autolock';
@@ -106,7 +100,7 @@ export class DraftController extends EventListener {
         applyUpdates(data, Object.fromEntries(this.pendingUpdates));
       }
       this.cachedData = data;
-      this.notifySubscribers();
+      this.dispatch(EventType.CHANGE, data);
     });
   }
 
@@ -145,36 +139,6 @@ export class DraftController extends EventListener {
     return this.on(EventType.FLUSH, callback);
   }
 
-  /**
-   * Subscribes to remote changes for a given key. Returns a callback function
-   * that can be used to unsubscribe.
-   */
-  subscribe(key: string, callback: SubscriberCallback): UnsubscribeCallback {
-    this.subscribers[key] ??= new Set();
-    this.subscribers[key].add(callback);
-    callback(this.getValue(key));
-
-    const unsubscribe = () => {
-      this.subscribers[key].delete(callback);
-      if (this.subscribers[key].size === 0) {
-        delete this.subscribers[key];
-      }
-    };
-    return unsubscribe;
-  }
-
-  /**
-   * Notifies subscribers of changes.
-   */
-  notifySubscribers() {
-    const data = this.cachedData;
-    this.dispatch(EventType.CHANGE, data);
-    notify(this.subscribers, data);
-  }
-
-  getValue(key: string): any {
-    return getNestedValue(this.cachedData, key);
-  }
 
   /**
    * Updates a single key. The key can be a nested key, e.g. "meta.title".
@@ -335,31 +299,6 @@ function applyUpdates(data: any, updates: any) {
       } else {
         data[key] = val;
       }
-    }
-  }
-}
-
-/**
- * Recursively walks the data tree and notifies subscribers of the new value.
- */
-function notify(subscribers: Subscribers, data: any, parentKeys?: string[]) {
-  if (!parentKeys) {
-    parentKeys = [];
-  }
-
-  for (const key in data) {
-    const keys = [...parentKeys, key];
-    const deepKey = keys.join('.');
-    const callbacks = subscribers[deepKey];
-    const newValue = data[key];
-    if (callbacks) {
-      // console.log('notifying', deepKey, newValue, callbacks);
-      Array.from(callbacks).forEach((cb) => {
-        cb(newValue);
-      });
-    }
-    if (isObject(newValue)) {
-      notify(subscribers, newValue, keys);
     }
   }
 }

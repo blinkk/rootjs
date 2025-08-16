@@ -6,7 +6,7 @@ import {FieldProps} from './FieldProps.js';
 export function BooleanField(props: FieldProps) {
   const field = props.field as schema.BooleanField;
   const label = field.checkboxLabel || 'Enabled';
-  const [value, setValue] = useState<boolean>(false);
+  const [value, setValue] = useState<boolean>(props.value || false);
 
   const onChange = useCallback(
     (newValue: boolean) => {
@@ -17,14 +17,8 @@ export function BooleanField(props: FieldProps) {
   );
 
   useEffect(() => {
-    const unsubscribe = props.draft.subscribe(
-      props.deepKey,
-      (newValue: boolean) => {
-        setValue(newValue);
-      }
-    );
-    return unsubscribe;
-  }, []);
+    setValue(props.value || false);
+  }, [props.value]);
 
   return (
     <div className="DocEditor__BooleanField">

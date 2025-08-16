@@ -6,18 +6,12 @@ import {FieldProps} from './FieldProps.js';
 
 export function ImageField(props: FieldProps) {
   const field = props.field as schema.ImageField;
-  const [uploadedFile, setUploadedFile] = useState<UploadedFile | null>(null);
+  const [uploadedFile, setUploadedFile] = useState<UploadedFile | null>(
+    props.value || null
+  );
   useEffect(() => {
-    const unsubscribe = props.draft.subscribe(
-      props.deepKey,
-      (newUploadedFile: UploadedFile | null) => {
-        setUploadedFile(newUploadedFile);
-      }
-    );
-    return () => {
-      unsubscribe();
-    };
-  }, []);
+    setUploadedFile(props.value || null);
+  }, [props.value]);
 
   return (
     <FileUploadField

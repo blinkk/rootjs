@@ -4,7 +4,7 @@ import {FieldProps} from './FieldProps.js';
 
 export function DateField(props: FieldProps) {
   const field = props.field as schema.DateField;
-  const [value, setValue] = useState(field.default || '');
+  const [value, setValue] = useState(props.value || field.default || '');
 
   const onChange = useCallback(
     (newValue: string) => {
@@ -24,14 +24,8 @@ export function DateField(props: FieldProps) {
   );
 
   useEffect(() => {
-    const unsubscribe = props.draft.subscribe(
-      props.deepKey,
-      (newVal: string) => {
-        setValue(newVal || '');
-      }
-    );
-    return unsubscribe;
-  }, []);
+    setValue(props.value || '');
+  }, [props.value]);
 
   return (
     <div className="DocEditor__DateField">
