@@ -416,3 +416,27 @@ test('define schema', () => {
     }
   `);
 });
+
+test('schema map', () => {
+  const Embed = schema.define({
+    name: 'Embed',
+    fields: [schema.string({id: 'url'})],
+  });
+  const Block = schema.define({
+    name: 'Block',
+    fields: [
+      schema.oneOf({
+        id: 'embed',
+        types: [Embed, schema.define({name: 'Inline', fields: []})],
+      }),
+    ],
+  });
+
+  const {schema: mapped, schemaMap} = schema.toSchemaMap(Block);
+  expect(Object.keys(schemaMap)).toEqual(['Embed', 'Inline']);
+  const oneOfField = mapped.fields[0] as any;
+  expect(oneOfField.types).toEqual(['Embed', 'Inline']);
+
+  const restored = schema.fromSchemaMap(mapped, schemaMap);
+  expect(restored).toEqual(Block);
+});

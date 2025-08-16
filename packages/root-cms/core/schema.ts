@@ -350,3 +350,116 @@ export function defineCollection(
 }
 
 export const collection = defineCollection;
+
+export interface SchemaMapResult<T extends Schema = Schema> {
+  schema: T;
+  schemaMap: Record<string, Schema>;
+}
+
+/** Extracts named schema definitions into a map. */
+export function toSchemaMap<T extends Schema>(schema: T): SchemaMapResult<T> {
+  const schemaMap: Record<string, Schema> = {};
+  const mapped = cloneSchema(schema, schemaMap, false) as T;
+  return {schema: mapped, schemaMap};
+}
+
+function cloneSchema(
+  schema: Schema,
+  schemaMap: Record<string, Schema>,
+  shouldRef: boolean
+): any {
+  const fields = schema.fields.map((f) => cloneField(f, schemaMap));
+  const clone = {...schema, fields};
+  if (shouldRef && schema.name && !(schema as any).id) {
+    schemaMap[schema.name] = clone;
+    return schema.name;
+  }
+  return clone;
+}
+
+function cloneField(field: FieldWithId, schemaMap: Record<string, Schema>): any {
+  switch (field.type) {
+    case 'object':
+      return {...field, fields: field.fields.map((f) => cloneField(f, schemaMap))};
+    case 'array':
+      return {...field, of: cloneObjectLike(field.of, schemaMap)};
+    case 'oneof':
+      return {...field, types: field.types.map((s) => cloneSchema(s, schemaMap, true))};
+    default:
+      return field;
+  }
+}
+
+function cloneObjectLike(
+  field: ObjectLikeField,
+  schemaMap: Record<string, Schema>
+): any {
+  switch (field.type) {
+    case 'object':
+      return {...field, fields: field.fields.map((f) => cloneField(f, schemaMap))};
+    case 'oneof':
+      return {
+        ...field,
+        types: field.types.map((s) => cloneSchema(s, schemaMap, true)),
+      };
+    default:
+      return field;
+  }
+}
+
+/** Hydrates schemas from a map of named definitions. */
+export function fromSchemaMap<T extends Schema>(
+  schema: T,
+  schemaMap: Record<string, Schema>
+): T {
+  return restoreSchema(schema, schemaMap) as T;
+}
+
+function restoreSchema(schema: any, schemaMap: Record<string, Schema>): any {
+  if (typeof schema === 'string') {
+    const mapped = schemaMap[schema];
+    if (!mapped) {
+      throw new Error(`schema not found: ${schema}`);
+    }
+    return restoreSchema(mapped, schemaMap);
+  }
+  const fields = schema.fields.map((f: any) => restoreField(f, schemaMap));
+  return {...schema, fields};
+}
+
+function restoreField(field: any, schemaMap: Record<string, Schema>): any {
+  switch (field.type) {
+    case 'object':
+      return {
+        ...field,
+        fields: field.fields.map((f: any) => restoreField(f, schemaMap)),
+      };
+    case 'array':
+      return {...field, of: restoreObjectLike(field.of, schemaMap)};
+    case 'oneof':
+      return {
+        ...field,
+        types: field.types.map((t: any) => restoreSchema(t, schemaMap)),
+      };
+    default:
+      return field;
+  }
+}
+
+function restoreObjectLike(field: any, schemaMap: Record<string, Schema>): any {
+  switch (field.type) {
+    case 'object':
+      return {
+        ...field,
+        fields: field.fields.map((f: any) => restoreField(f, schemaMap)),
+      };
+    case 'oneof':
+      return {
+        ...field,
+        types: field.types.map((t: any) => restoreSchema(t, schemaMap)),
+      };
+    default:
+      return field;
+  }
+}
+
