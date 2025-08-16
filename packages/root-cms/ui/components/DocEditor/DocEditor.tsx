@@ -1439,6 +1439,8 @@ function getSchemaPreviewTemplates(
   return null;
 }
 
+class PlaceholderNotFoundError extends Error {}
+
 /** Builds the value to display given a set of string templates to use for previews. */
 function buildPreviewValue(
   /** The string template (or templates) used to construct the preview. */
@@ -1448,28 +1450,39 @@ function buildPreviewValue(
   /** The position of the item within the array of the CMS UI. */
   index?: number
 ): string | undefined {
-  const templates = Array.isArray(previews) ? [...previews] : [previews];
-  while (templates.length > 0) {
-    const template = templates.shift()!;
-    const preview = strFormatFn(template, (key) => {
-      if (index !== undefined) {
-        if (key === '_index' || key === '_index0') {
-          return String(index);
-        }
-        if (key === '_index1') {
-          return String(index + 1);
-        }
-        if (key === '_index:02') {
-          return String(index).padStart(2, '0');
-        }
-        if (key === '_index:03') {
-          return String(index).padStart(3, '0');
-        }
+  const templates = Array.isArray(previews) ? previews : [previews];
+
+  const getPlaceholder = (key: string) => {
+    if (index !== undefined) {
+      if (key === '_index' || key === '_index0') {
+        return String(index);
       }
-      return getNestedValue(data, key);
-    });
-    if (getPlaceholderKeys(preview).length === 0) {
+      if (key === '_index1') {
+        return String(index + 1);
+      }
+      if (key === '_index:02') {
+        return String(index).padStart(2, '0');
+      }
+      if (key === '_index:03') {
+        return String(index).padStart(3, '0');
+      }
+    }
+    const val = getNestedValue(data, key);
+    if (!val) {
+      throw new PlaceholderNotFoundError(key);
+    }
+    return val;
+  };
+
+  for (const template of templates) {
+    try {
+      const preview = strFormatFn(template, getPlaceholder);
       return preview;
+    } catch (err) {
+      if (err instanceof PlaceholderNotFoundError) {
+        continue;
+      }
+      throw err;
     }
   }
   return undefined;
