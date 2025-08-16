@@ -105,8 +105,10 @@ export class DraftController extends EventListener {
       if (this.pendingUpdates.size > 0) {
         applyUpdates(data, Object.fromEntries(this.pendingUpdates));
       }
+      const changedKeys = diffKeys(this.cachedData, data);
       this.cachedData = data;
-      this.notifySubscribers();
+      this.dispatch(EventType.CHANGE, data);
+      this.notifySubscribers(changedKeys);
     });
   }
 
@@ -164,12 +166,13 @@ export class DraftController extends EventListener {
   }
 
   /**
-   * Notifies subscribers of changes.
+   * Notifies subscribers of changes for the specified keys.
    */
-  notifySubscribers() {
-    const data = this.cachedData;
-    this.dispatch(EventType.CHANGE, data);
-    notify(this.subscribers, data);
+  notifySubscribers(keys: string[]) {
+    if (keys.length === 0) {
+      return;
+    }
+    notify(this.subscribers, this.cachedData, keys);
   }
 
   getValue(key: string): any {
@@ -187,11 +190,13 @@ export class DraftController extends EventListener {
    * Updates a group of keys. The keys can be a nested, e.g. "meta.title".
    */
   async updateKeys(updates: Record<string, any>) {
+    const changedKeys = Object.keys(updates);
     for (const key in updates) {
       this.pendingUpdates.set(key, updates[key]);
     }
     applyUpdates(this.cachedData, updates);
     this.dispatch(EventType.CHANGE, this.cachedData);
+    this.notifySubscribers(changedKeys);
     this.setSaveState(SaveState.UPDATES_PENDING);
     this.queueChanges();
   }
@@ -203,6 +208,7 @@ export class DraftController extends EventListener {
     this.pendingUpdates.set(key, deleteField());
     applyUpdates(this.cachedData, {[key]: undefined});
     this.dispatch(EventType.CHANGE, this.cachedData);
+    this.notifySubscribers([key]);
     this.setSaveState(SaveState.UPDATES_PENDING);
     this.queueChanges();
   }
@@ -340,28 +346,45 @@ function applyUpdates(data: any, updates: any) {
 }
 
 /**
- * Recursively walks the data tree and notifies subscribers of the new value.
+ * Notifies subscribers of the specified keys.
  */
-function notify(subscribers: Subscribers, data: any, parentKeys?: string[]) {
-  if (!parentKeys) {
-    parentKeys = [];
+function notify(subscribers: Subscribers, data: any, keys: string[]) {
+  const notified = new Set<string>();
+  for (const changedKey of keys) {
+    for (const subKey in subscribers) {
+      if (notified.has(subKey)) {
+        continue;
+      }
+      if (
+        subKey === changedKey ||
+        subKey.startsWith(changedKey + '.') ||
+        changedKey.startsWith(subKey + '.')
+      ) {
+        const callbacks = subscribers[subKey];
+        const newValue = getNestedValue(data, subKey);
+        Array.from(callbacks).forEach((cb) => cb(newValue));
+        notified.add(subKey);
+      }
+    }
   }
+}
 
-  for (const key in data) {
-    const keys = [...parentKeys, key];
-    const deepKey = keys.join('.');
-    const callbacks = subscribers[deepKey];
-    const newValue = data[key];
-    if (callbacks) {
-      // console.log('notifying', deepKey, newValue, callbacks);
-      Array.from(callbacks).forEach((cb) => {
-        cb(newValue);
-      });
-    }
-    if (isObject(newValue)) {
-      notify(subscribers, newValue, keys);
+function diffKeys(oldData: any, newData: any, prefix = ''): string[] {
+  const changed: string[] = [];
+  const oldKeys = oldData ? Object.keys(oldData) : [];
+  const newKeys = newData ? Object.keys(newData) : [];
+  const allKeys = new Set([...oldKeys, ...newKeys]);
+  for (const key of allKeys) {
+    const oldVal = oldData ? oldData[key] : undefined;
+    const newVal = newData ? newData[key] : undefined;
+    const deepKey = prefix ? `${prefix}.${key}` : key;
+    if (isObject(oldVal) && isObject(newVal)) {
+      changed.push(...diffKeys(oldVal, newVal, deepKey));
+    } else if (oldVal !== newVal) {
+      changed.push(deepKey);
     }
   }
+  return changed;
 }
 
 function splitKey(key: string) {

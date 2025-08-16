@@ -1009,7 +1009,6 @@ DocEditor.ArrayField = (props: FieldProps) => {
           newValue,
           deepKey: props.deepKey,
         });
-        draft.notifySubscribers();
         editJsonModal.close();
       },
     });
@@ -1028,7 +1027,6 @@ DocEditor.ArrayField = (props: FieldProps) => {
           newValue,
           deepKey: props.deepKey,
         });
-        draft.notifySubscribers();
         aiEditModal.close();
       },
     });
