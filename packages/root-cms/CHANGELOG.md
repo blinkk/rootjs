@@ -1,5 +1,12 @@
 # @blinkk/root-cms
 
+## 2.0.7
+
+### Patch Changes
+
+- b6d8264: fix: add useCallback() and useMemo() everywhere (#683)
+  - @blinkk/root@2.0.7
+
 ## 2.0.6
 
 ### Patch Changes
