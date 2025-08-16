@@ -1,5 +1,5 @@
 import {Select} from '@mantine/core';
-import {useEffect, useState} from 'preact/hooks';
+import {useCallback, useEffect, useState} from 'preact/hooks';
 import * as schema from '../../../../core/schema.js';
 import {FieldProps} from './FieldProps.js';
 
@@ -18,10 +18,13 @@ export function SelectField(props: FieldProps) {
     };
   });
 
-  function onChange(newValue: string) {
-    props.draft.updateKey(`${props.deepKey}`, newValue);
-    setValue(newValue || '');
-  }
+  const onChange = useCallback(
+    (newValue: string) => {
+      props.draft.updateKey(`${props.deepKey}`, newValue);
+      setValue(newValue || '');
+    },
+    [props.deepKey]
+  );
 
   useEffect(() => {
     const unsubscribe = props.draft.subscribe(

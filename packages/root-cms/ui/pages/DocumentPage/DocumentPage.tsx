@@ -296,7 +296,7 @@ DocumentPage.Preview = (props: PreviewProps) => {
         !iframeWindow.location.href.startsWith('about:blank')
       ) {
         const currentPath = iframeWindow.location.pathname;
-        console.log(`iframe url change: ${currentPath}`);
+        // console.log(`iframe url change: ${currentPath}`);
         setIframeUrl(`${domain}${currentPath}`);
       }
     }

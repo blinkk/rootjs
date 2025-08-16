@@ -19,7 +19,7 @@ import {Timer} from '../../utils/timer.js';
 import './Viewers.css';
 
 // Frequency to update.
-const UPDATE_INTERVAL = 30 * TIME_UNITS.second;
+const UPDATE_INTERVAL = 60 * TIME_UNITS.second;
 
 // Idle timeout for when no user interaction is detected.
 const IDLE_TIMEOUT = 5 * TIME_UNITS.minute;
@@ -96,7 +96,7 @@ class ViewersController extends EventListener {
       console.log('no user email:', user);
       return;
     }
-    console.log(`updating lastViewedAt for ${user.email}`);
+    // console.log(`updating lastViewedAt for ${user.email}`);
     await setDoc(
       this.docRef,
       {

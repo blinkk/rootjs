@@ -1,6 +1,6 @@
 import {TextInput, Textarea} from '@mantine/core';
 import {ChangeEvent} from 'preact/compat';
-import {useEffect, useState} from 'preact/hooks';
+import {useCallback, useEffect, useState} from 'preact/hooks';
 import * as schema from '../../../../core/schema.js';
 import {FieldProps} from './FieldProps.js';
 
@@ -8,10 +8,13 @@ export function StringField(props: FieldProps) {
   const field = props.field as schema.StringField;
   const [value, setValue] = useState('');
 
-  function onChange(newValue: string) {
-    setValue(newValue);
-    props.draft.updateKey(props.deepKey, newValue);
-  }
+  const onChange = useCallback(
+    (newValue: string) => {
+      setValue(newValue);
+      props.draft.updateKey(props.deepKey, newValue);
+    },
+    [props.deepKey]
+  );
 
   useEffect(() => {
     const unsubscribe = props.draft.subscribe(

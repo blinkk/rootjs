@@ -1,5 +1,5 @@
 import {NumberInput} from '@mantine/core';
-import {useEffect, useState} from 'preact/hooks';
+import {useCallback, useEffect, useState} from 'preact/hooks';
 import * as schema from '../../../../core/schema.js';
 import {FieldProps} from './FieldProps.js';
 
@@ -7,10 +7,13 @@ export function NumberField(props: FieldProps) {
   const field = props.field as schema.NumberField;
   const [value, setValue] = useState(field.default || 0);
 
-  function onChange(newValue: number) {
-    setValue(newValue);
-    props.draft.updateKey(props.deepKey, newValue);
-  }
+  const onChange = useCallback(
+    (newValue: number) => {
+      setValue(newValue);
+      props.draft.updateKey(props.deepKey, newValue);
+    },
+    [props.deepKey]
+  );
 
   useEffect(() => {
     const unsubscribe = props.draft.subscribe(

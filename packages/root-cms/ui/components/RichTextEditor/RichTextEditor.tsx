@@ -6,7 +6,7 @@ import {LexicalEditor} from './lexical/LexicalEditor.js';
 export interface RichTextEditorProps {
   className?: string;
   placeholder?: string;
-  value?: RichTextData;
+  value?: RichTextData | null;
   onChange?: (data: RichTextData) => void;
 }
 

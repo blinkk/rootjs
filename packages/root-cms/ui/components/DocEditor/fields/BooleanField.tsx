@@ -1,5 +1,5 @@
 import {Checkbox} from '@mantine/core';
-import {useEffect, useState} from 'preact/hooks';
+import {useCallback, useEffect, useState} from 'preact/hooks';
 import * as schema from '../../../../core/schema.js';
 import {FieldProps} from './FieldProps.js';
 
@@ -8,10 +8,13 @@ export function BooleanField(props: FieldProps) {
   const label = field.checkboxLabel || 'Enabled';
   const [value, setValue] = useState<boolean>(false);
 
-  function onChange(newValue: boolean) {
-    setValue(newValue);
-    props.draft.updateKey(props.deepKey, newValue);
-  }
+  const onChange = useCallback(
+    (newValue: boolean) => {
+      setValue(newValue);
+      props.draft.updateKey(props.deepKey, newValue);
+    },
+    [props.deepKey]
+  );
 
   useEffect(() => {
     const unsubscribe = props.draft.subscribe(

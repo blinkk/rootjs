@@ -49,6 +49,7 @@ import {route} from 'preact-router';
 import * as schema from '../../../core/schema.js';
 import {useCollectionSchema} from '../../hooks/useCollectionSchema.js';
 import {
+  buildDeeplinkUrl,
   DeeplinkProvider,
   scrollToDeeplink,
   useDeeplink,
@@ -265,19 +266,20 @@ DocEditor.Field = (props: FieldProps) => {
   const ref = useRef<HTMLDivElement>(null);
   const [value, setValue] = useState(null);
 
-  const fieldValueEmpty = testFieldEmpty(field, value);
+  const fieldValueEmpty = useMemo(() => testFieldEmpty(field, value), [value]);
   const showTranslateIcon =
     (field.type === 'string' || field.type === 'richtext') && field.translate;
 
-  let showFieldHeader = !props.hideHeader && !field.hideLabel;
-  // The "drawer" variant shows the header within the accordion button.
-  if (field.type === 'object') {
-    // Default to the "drawer" variant.
-    const variant = field.variant || 'drawer';
-    if (variant === 'drawer') {
-      showFieldHeader = false;
+  const showFieldHeader = useMemo(() => {
+    if (field.type === 'object') {
+      // Default to the "drawer" variant.
+      const variant = field.variant || 'drawer';
+      if (variant === 'drawer') {
+        return false;
+      }
     }
-  }
+    return !props.hideHeader && !field.hideLabel;
+  }, [props.deepKey]);
 
   useEffect(() => {
     const unsubscribe = props.draft.subscribe(
@@ -287,7 +289,7 @@ DocEditor.Field = (props: FieldProps) => {
       }
     );
     return unsubscribe;
-  }, [props.draft, props.deepKey]);
+  }, [props.deepKey]);
 
   useEffect(() => {
     if (targeted) {
@@ -376,12 +378,6 @@ DocEditor.FieldHeader = (props: {
   /** Whether the field has translations to display (i.e. if the field is not empty). */
   hasTranslations?: boolean;
 }) => {
-  function buildDeeplinkUrl() {
-    const url = new URL(window.location.href);
-    url.searchParams.set('deeplink', props.deepKey!);
-    return url.toString();
-  }
-
   const deeplink = useDeeplink();
   const docData = useDocData() || {};
   const l10nSheet = docData.sys?.l10nSheet;
@@ -389,6 +385,11 @@ DocEditor.FieldHeader = (props: {
   const i18nConfig = window.__ROOT_CTX.rootConfig.i18n || {};
   const i18nLocales = i18nConfig.locales || ['en'];
   const editTranslationsModal = useEditTranslationsModal();
+
+  const deeplinkUrl = useMemo(
+    () => buildDeeplinkUrl(props.deepKey || ''),
+    [props.deepKey]
+  );
 
   return (
     <div className={joinClassNames(props.className, 'DocEditor__FieldHeader')}>
@@ -402,11 +403,11 @@ DocEditor.FieldHeader = (props: {
           {props.deepKey && (
             <a
               className="DocEditor__FieldHeader__label__deeplink"
-              href={buildDeeplinkUrl()}
+              href={deeplinkUrl}
               title="Link to field"
               onClick={(e) => {
                 e.preventDefault();
-                window.history.replaceState({}, '', buildDeeplinkUrl());
+                window.history.replaceState({}, '', deeplinkUrl);
                 deeplink.setValue(props.deepKey!);
               }}
             >
@@ -865,7 +866,7 @@ DocEditor.ArrayField = (props: FieldProps) => {
       }
     );
     return unsubscribe;
-  }, [props.draft, props.deepKey]);
+  }, [props.deepKey]);
 
   // Focus the field that was just moved (for hotkey support).
   useEffect(() => {
@@ -878,88 +879,112 @@ DocEditor.ArrayField = (props: FieldProps) => {
     dispatch({type: 'add', draft: draft, deepKey: props.deepKey});
   };
 
-  const pasteBefore = (index: number) => {
-    dispatch({
-      type: 'pasteBefore',
-      draft: draft,
-      deepKey: props.deepKey,
-      index: index,
-      virtualClipboard: virtualClipboard,
-    });
-  };
+  const pasteBefore = useCallback(
+    (index: number) => {
+      dispatch({
+        type: 'pasteBefore',
+        draft: draft,
+        deepKey: props.deepKey,
+        index: index,
+        virtualClipboard: virtualClipboard,
+      });
+    },
+    [props.deepKey]
+  );
 
-  const pasteAfter = (index: number) => {
-    dispatch({
-      type: 'pasteAfter',
-      draft: draft,
-      deepKey: props.deepKey,
-      index: index,
-      virtualClipboard: virtualClipboard,
-    });
-  };
+  const pasteAfter = useCallback(
+    (index: number) => {
+      dispatch({
+        type: 'pasteAfter',
+        draft: draft,
+        deepKey: props.deepKey,
+        index: index,
+        virtualClipboard: virtualClipboard,
+      });
+    },
+    [props.deepKey]
+  );
 
-  const insertBefore = (index: number) => {
-    dispatch({
-      type: 'insertBefore',
-      draft: draft,
-      deepKey: props.deepKey,
-      index: index,
-    });
-  };
+  const insertBefore = useCallback(
+    (index: number) => {
+      dispatch({
+        type: 'insertBefore',
+        draft: draft,
+        deepKey: props.deepKey,
+        index: index,
+      });
+    },
+    [props.deepKey]
+  );
 
-  const insertAfter = (index: number) => {
-    dispatch({
-      type: 'insertAfter',
-      draft: draft,
-      deepKey: props.deepKey,
-      index: index,
-    });
-  };
+  const insertAfter = useCallback(
+    (index: number) => {
+      dispatch({
+        type: 'insertAfter',
+        draft: draft,
+        deepKey: props.deepKey,
+        index: index,
+      });
+    },
+    [props.deepKey]
+  );
 
-  const duplicate = (index: number) => {
-    dispatch({
-      type: 'duplicate',
-      draft: draft,
-      deepKey: props.deepKey,
-      index: index,
-    });
-  };
+  const duplicate = useCallback(
+    (index: number) => {
+      dispatch({
+        type: 'duplicate',
+        draft: draft,
+        deepKey: props.deepKey,
+        index: index,
+      });
+    },
+    [props.deepKey]
+  );
 
-  const removeAt = (index: number) => {
-    dispatch({
-      type: 'removeAt',
-      draft: draft,
-      deepKey: props.deepKey,
-      index: index,
-    });
-  };
+  const removeAt = useCallback(
+    (index: number) => {
+      dispatch({
+        type: 'removeAt',
+        draft: draft,
+        deepKey: props.deepKey,
+        index: index,
+      });
+    },
+    [props.deepKey]
+  );
 
   /** Focus the field header (the clickable "summary" part). */
   const focusFieldHeader = (deepKey: string, index: number) => {
     document.getElementById(`summary-for-${deepKey}.${order[index]}`)?.focus();
   };
 
-  const moveUp = (index: number) => {
-    if (index > 0) {
-      dispatch({
-        type: 'moveUp',
-        draft: draft,
-        deepKey: props.deepKey,
-        index: index,
-      });
-    }
-  };
+  const moveUp = useCallback(
+    (index: number) => {
+      if (index > 0) {
+        dispatch({
+          type: 'moveUp',
+          draft: draft,
+          deepKey: props.deepKey,
+          index: index,
+        });
+      }
+    },
+    [props.deepKey]
+  );
 
-  const moveDown = (index: number) => {
-    if (index < order.length - 1) {
-      dispatch({
-        type: 'moveDown',
-        draft: draft,
-        deepKey: props.deepKey,
-        index: index,
-      });
-    }
-  };
+  const moveDown = useCallback(
+    (index: number) => {
+      if (index < order.length - 1) {
+        dispatch({
+          type: 'moveDown',
+          draft: draft,
+          deepKey: props.deepKey,
+          index: index,
+        });
+      }
+    },
+    [props.deepKey]
+  );
 
   /** Copies the item data to the state so it can be "pasted" via the context menu later. */
   const copyToVirtualClipboard = (index: number) => {
@@ -1014,24 +1039,27 @@ DocEditor.ArrayField = (props: FieldProps) => {
   }
 
   /** Handler for using the arrow keys when the array item's header is focused.  */
-  function handleKeyDown(e: KeyboardEvent, arrayKey: string) {
-    if (!e.target) {
-      return;
-    }
-    // Move the items up and down using the up/down arrow keys.
-    // Collapse and expand the item using the left/right arrow keys.
-    if (e.key === 'ArrowUp') {
-      e.preventDefault();
-      moveUp(order.indexOf(arrayKey));
-    } else if (e.key === 'ArrowDown') {
-      e.preventDefault();
-      moveDown(order.indexOf(arrayKey));
-    } else if (e.key === 'ArrowLeft') {
-      (e.target as HTMLElement).closest('details')!.open = false;
-    } else if (e.key === 'ArrowRight') {
-      (e.target as HTMLElement).closest('details')!.open = true;
-    }
-  }
+  const handleKeyDown = useCallback(
+    (e: KeyboardEvent, arrayKey: string) => {
+      if (!e.target) {
+        return;
+      }
+      // Move the items up and down using the up/down arrow keys.
+      // Collapse and expand the item using the left/right arrow keys.
+      if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        moveUp(order.indexOf(arrayKey));
+      } else if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        moveDown(order.indexOf(arrayKey));
+      } else if (e.key === 'ArrowLeft') {
+        (e.target as HTMLElement).closest('details')!.open = false;
+      } else if (e.key === 'ArrowRight') {
+        (e.target as HTMLElement).closest('details')!.open = true;
+      }
+    },
+    [props.deepKey]
+  );
 
   const addButtonRow = (
     <div className="DocEditor__ArrayField__add">
@@ -1313,7 +1341,7 @@ DocEditor.OneOfField = (props: FieldProps) => {
       }
     );
     return unsubscribe;
-  }, [props.draft, props.deepKey]);
+  }, [props.deepKey]);
 
   // When the dropdown receives focus, highlight the <input> text so that it can
   // be easily searched.
