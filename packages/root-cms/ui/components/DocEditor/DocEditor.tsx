@@ -877,215 +877,279 @@ DocEditor.ArrayField = (props: FieldProps) => {
     dispatch({type: 'add', draft: draft, deepKey: props.deepKey});
   }, [draft, props.deepKey]);
 
-  const pasteBefore = useCallback((index: number) => {
-    dispatch({
-      type: 'pasteBefore',
-      draft: draft,
-      deepKey: props.deepKey,
-      index: index,
-      virtualClipboard: virtualClipboard,
-    });
-  }, [draft, props.deepKey, virtualClipboard]);
+  const pasteBefore = useCallback(
+    (index: number) => {
+      dispatch({
+        type: 'pasteBefore',
+        draft: draft,
+        deepKey: props.deepKey,
+        index: index,
+        virtualClipboard: virtualClipboard,
+      });
+    },
+    [draft, props.deepKey, virtualClipboard]
+  );
 
-  const pasteAfter = useCallback((index: number) => {
-    dispatch({
-      type: 'pasteAfter',
-      draft: draft,
-      deepKey: props.deepKey,
-      index: index,
-      virtualClipboard: virtualClipboard,
-    });
-  }, [draft, props.deepKey, virtualClipboard]);
+  const pasteAfter = useCallback(
+    (index: number) => {
+      dispatch({
+        type: 'pasteAfter',
+        draft: draft,
+        deepKey: props.deepKey,
+        index: index,
+        virtualClipboard: virtualClipboard,
+      });
+    },
+    [draft, props.deepKey, virtualClipboard]
+  );
 
-  const insertBefore = useCallback((index: number) => {
-    dispatch({
-      type: 'insertBefore',
-      draft: draft,
-      deepKey: props.deepKey,
-      index: index,
-    });
-  }, [draft, props.deepKey]);
+  const insertBefore = useCallback(
+    (index: number) => {
+      dispatch({
+        type: 'insertBefore',
+        draft: draft,
+        deepKey: props.deepKey,
+        index: index,
+      });
+    },
+    [draft, props.deepKey]
+  );
 
-  const insertAfter = useCallback((index: number) => {
-    dispatch({
-      type: 'insertAfter',
-      draft: draft,
-      deepKey: props.deepKey,
-      index: index,
-    });
-  }, [draft, props.deepKey]);
+  const insertAfter = useCallback(
+    (index: number) => {
+      dispatch({
+        type: 'insertAfter',
+        draft: draft,
+        deepKey: props.deepKey,
+        index: index,
+      });
+    },
+    [draft, props.deepKey]
+  );
 
-  const duplicate = useCallback((index: number) => {
-    dispatch({
-      type: 'duplicate',
-      draft: draft,
-      deepKey: props.deepKey,
-      index: index,
-    });
-  }, [draft, props.deepKey]);
+  const duplicate = useCallback(
+    (index: number) => {
+      dispatch({
+        type: 'duplicate',
+        draft: draft,
+        deepKey: props.deepKey,
+        index: index,
+      });
+    },
+    [draft, props.deepKey]
+  );
 
-  const removeAt = useCallback((index: number) => {
-    dispatch({
-      type: 'removeAt',
-      draft: draft,
-      deepKey: props.deepKey,
-      index: index,
-    });
-  }, [draft, props.deepKey]);
+  const removeAt = useCallback(
+    (index: number) => {
+      dispatch({
+        type: 'removeAt',
+        draft: draft,
+        deepKey: props.deepKey,
+        index: index,
+      });
+    },
+    [draft, props.deepKey]
+  );
 
   /** Focus the field header (the clickable "summary" part). */
-  const focusFieldHeader = useCallback((deepKey: string, index: number) => {
-    document.getElementById(`summary-for-${deepKey}.${order[index]}`)?.focus();
-  }, [order]);
+  const focusFieldHeader = useCallback(
+    (deepKey: string, index: number) => {
+      document
+        .getElementById(`summary-for-${deepKey}.${order[index]}`)
+        ?.focus();
+    },
+    [order]
+  );
 
-  const moveUp = useCallback((index: number) => {
-    if (index > 0) {
-      dispatch({
-        type: 'moveUp',
-        draft: draft,
-        deepKey: props.deepKey,
-        index: index,
-      });
-    }
-  }, [draft, props.deepKey]);
+  const moveUp = useCallback(
+    (index: number) => {
+      if (index > 0) {
+        dispatch({
+          type: 'moveUp',
+          draft: draft,
+          deepKey: props.deepKey,
+          index: index,
+        });
+      }
+    },
+    [draft, props.deepKey]
+  );
 
-  const moveDown = useCallback((index: number) => {
-    if (index < order.length - 1) {
-      dispatch({
-        type: 'moveDown',
-        draft: draft,
-        deepKey: props.deepKey,
-        index: index,
-      });
-    }
-  }, [draft, props.deepKey, order.length]);
+  const moveDown = useCallback(
+    (index: number) => {
+      if (index < order.length - 1) {
+        dispatch({
+          type: 'moveDown',
+          draft: draft,
+          deepKey: props.deepKey,
+          index: index,
+        });
+      }
+    },
+    [draft, props.deepKey, order.length]
+  );
 
   /** Copies the item data to the state so it can be "pasted" via the context menu later. */
-  const copyToVirtualClipboard = useCallback((index: number) => {
-    const key = order[index];
-    const item = value[key];
-    virtualClipboard.set(item);
-  }, [order, value, virtualClipboard]);
+  const copyToVirtualClipboard = useCallback(
+    (index: number) => {
+      const key = order[index];
+      const item = value[key];
+      virtualClipboard.set(item);
+    },
+    [order, value, virtualClipboard]
+  );
 
   // Use a separate function to handle the setTimeout to avoid creating closures on every render
-  const copyToVirtualClipboardDelayed = useCallback((index: number) => {
-    setTimeout(() => copyToVirtualClipboard(index), 500);
-  }, [copyToVirtualClipboard]);
+  const copyToVirtualClipboardDelayed = useCallback(
+    (index: number) => {
+      setTimeout(() => copyToVirtualClipboard(index), 500);
+    },
+    [copyToVirtualClipboard]
+  );
 
   const editJsonModal = useEditJsonModal();
   const aiEditModal = useAiEditModal();
 
-  const editJson = useCallback((index: number) => {
-    const key = order[index];
-    editJsonModal.open({
-      data: value[key],
-      onSave: (newValue) => {
-        console.log('editJson, onSave():', newValue);
-        dispatch({
-          type: 'updateItem',
-          draft,
-          index,
-          newValue,
-          deepKey: props.deepKey,
-        });
-        draft.notifySubscribers();
-        editJsonModal.close();
-      },
-    });
-  }, [order, value, editJsonModal, draft, props.deepKey]);
+  const editJson = useCallback(
+    (index: number) => {
+      const key = order[index];
+      editJsonModal.open({
+        data: value[key],
+        onSave: (newValue) => {
+          console.log('editJson, onSave():', newValue);
+          dispatch({
+            type: 'updateItem',
+            draft,
+            index,
+            newValue,
+            deepKey: props.deepKey,
+          });
+          draft.notifySubscribers();
+          editJsonModal.close();
+        },
+      });
+    },
+    [order, value, editJsonModal, draft, props.deepKey]
+  );
 
-  const aiEdit = useCallback((index: number) => {
-    const key = order[index];
-    aiEditModal.open({
-      data: value[key],
-      onSave: (newValue) => {
-        console.log('aiEdit, onSave():', newValue);
-        dispatch({
-          type: 'updateItem',
-          draft,
-          index,
-          newValue,
-          deepKey: props.deepKey,
-        });
-        draft.notifySubscribers();
-        aiEditModal.close();
-      },
-    });
-  }, [order, value, aiEditModal, draft, props.deepKey]);
+  const aiEdit = useCallback(
+    (index: number) => {
+      const key = order[index];
+      aiEditModal.open({
+        data: value[key],
+        onSave: (newValue) => {
+          console.log('aiEdit, onSave():', newValue);
+          dispatch({
+            type: 'updateItem',
+            draft,
+            index,
+            newValue,
+            deepKey: props.deepKey,
+          });
+          draft.notifySubscribers();
+          aiEditModal.close();
+        },
+      });
+    },
+    [order, value, aiEditModal, draft, props.deepKey]
+  );
 
-  const itemInDeeplink = useCallback((itemKey: string) => {
-    return Boolean(deeplink.value.startsWith(`${props.deepKey}.${itemKey}`));
-  }, [deeplink.value, props.deepKey]);
+  const itemInDeeplink = useCallback(
+    (itemKey: string) => {
+      return Boolean(deeplink.value.startsWith(`${props.deepKey}.${itemKey}`));
+    },
+    [deeplink.value, props.deepKey]
+  );
 
   /** Handler for using the arrow keys when the array item's header is focused.  */
-  const handleKeyDown = useCallback((e: KeyboardEvent, arrayKey: string) => {
-    if (!e.target) {
-      return;
-    }
-    // Move the items up and down using the up/down arrow keys.
-    // Collapse and expand the item using the left/right arrow keys.
-    if (e.key === 'ArrowUp') {
-      e.preventDefault();
-      moveUp(order.indexOf(arrayKey));
-    } else if (e.key === 'ArrowDown') {
-      e.preventDefault();
-      moveDown(order.indexOf(arrayKey));
-    } else if (e.key === 'ArrowLeft') {
-      (e.target as HTMLElement).closest('details')!.open = false;
-    } else if (e.key === 'ArrowRight') {
-      (e.target as HTMLElement).closest('details')!.open = true;
-    }
-  }, [moveUp, moveDown, order]);
+  const handleKeyDown = useCallback(
+    (e: KeyboardEvent, arrayKey: string) => {
+      if (!e.target) {
+        return;
+      }
+      // Move the items up and down using the up/down arrow keys.
+      // Collapse and expand the item using the left/right arrow keys.
+      if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        moveUp(order.indexOf(arrayKey));
+      } else if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        moveDown(order.indexOf(arrayKey));
+      } else if (e.key === 'ArrowLeft') {
+        (e.target as HTMLElement).closest('details')!.open = false;
+      } else if (e.key === 'ArrowRight') {
+        (e.target as HTMLElement).closest('details')!.open = true;
+      }
+    },
+    [moveUp, moveDown, order]
+  );
 
-  const onDragEnd = useCallback((result: DropResult) => {
-    const {source, destination} = result;
-    if (!destination) {
-      return;
-    }
-    dispatch({
-      type: 'moveTo',
-      fromIndex: source.index,
-      toIndex: destination.index,
-      draft,
-      deepKey: props.deepKey,
-    });
-  }, [draft, props.deepKey]);
+  const onDragEnd = useCallback(
+    (result: DropResult) => {
+      const {source, destination} = result;
+      if (!destination) {
+        return;
+      }
+      dispatch({
+        type: 'moveTo',
+        fromIndex: source.index,
+        toIndex: destination.index,
+        draft,
+        deepKey: props.deepKey,
+      });
+    },
+    [draft, props.deepKey]
+  );
 
   // Memoize expensive preview calculations to prevent unnecessary re-computation
   const previewData = useMemo(() => {
-    return order.reduce((acc, key, i) => {
-      acc[key] = {
-        image: arrayPreviewImage(field, value[key]),
-        title: arrayPreview(field, value[key], i)
-      };
-      return acc;
-    }, {} as Record<string, {image: string | undefined, title: string}>);
+    return order.reduce(
+      (acc, key, i) => {
+        acc[key] = {
+          image: arrayPreviewImage(field, value[key]),
+          title: arrayPreview(field, value[key], i),
+        };
+        return acc;
+      },
+      {} as Record<string, {image: string | undefined; title: string}>
+    );
   }, [field, value, order]);
-
-  // Create memoized click handlers for array item buttons to prevent inline function creation
-  const createClickHandler = useCallback((fn: (index: number) => void, index: number) => {
-    return () => fn(index);
-  }, []);
 
   // Memoize all click handlers for array items
   const clickHandlers = useMemo(() => {
-    return order.reduce((acc, key, i) => {
-      acc[key] = {
-        moveUp: () => moveUp(i),
-        moveDown: () => moveDown(i),
-        insertBefore: () => insertBefore(i),
-        insertAfter: () => insertAfter(i),
-        duplicate: () => duplicate(i),
-        copyToVirtualClipboard: () => copyToVirtualClipboardDelayed(i),
-        pasteBefore: () => pasteBefore(i),
-        pasteAfter: () => pasteAfter(i),
-        editJson: () => editJson(i),
-        aiEdit: () => aiEdit(i),
-        removeAt: () => removeAt(i),
-      };
-      return acc;
-    }, {} as Record<string, Record<string, () => void>>);
-  }, [order, moveUp, moveDown, insertBefore, insertAfter, duplicate, copyToVirtualClipboardDelayed, pasteBefore, pasteAfter, editJson, aiEdit, removeAt]);
+    return order.reduce(
+      (acc, key, i) => {
+        acc[key] = {
+          moveUp: () => moveUp(i),
+          moveDown: () => moveDown(i),
+          insertBefore: () => insertBefore(i),
+          insertAfter: () => insertAfter(i),
+          duplicate: () => duplicate(i),
+          copyToVirtualClipboard: () => copyToVirtualClipboardDelayed(i),
+          pasteBefore: () => pasteBefore(i),
+          pasteAfter: () => pasteAfter(i),
+          editJson: () => editJson(i),
+          aiEdit: () => aiEdit(i),
+          removeAt: () => removeAt(i),
+        };
+        return acc;
+      },
+      {} as Record<string, Record<string, () => void>>
+    );
+  }, [
+    order,
+    moveUp,
+    moveDown,
+    insertBefore,
+    insertAfter,
+    duplicate,
+    copyToVirtualClipboardDelayed,
+    pasteBefore,
+    pasteAfter,
+    editJson,
+    aiEdit,
+    removeAt,
+  ]);
 
   const addButtonRow = (
     <div className="DocEditor__ArrayField__add">
@@ -1114,7 +1178,6 @@ DocEditor.ArrayField = (props: FieldProps) => {
   return (
     <div className="DocEditor__ArrayField">
       <DragDropContext onDragEnd={onDragEnd}>
-      >
         <Droppable droppableId="dnd-list" direction="vertical">
           {(provided: DroppableProvided) => (
             <div
@@ -1125,7 +1188,7 @@ DocEditor.ArrayField = (props: FieldProps) => {
               {order.map((key: string, i: number) => {
                 const previewImage = previewData[key]?.image;
                 const previewTitle = previewData[key]?.title;
-                
+
                 return (
                   <Draggable key={key} index={i} draggableId={key}>
                     {(provided, snapshot) => (
@@ -1229,7 +1292,9 @@ DocEditor.ArrayField = (props: FieldProps) => {
                                   icon={<IconClipboardCopy size={20} />}
                                   // Allow the menu to close before updating the virtual clipboard (avoids layout shift)
                                   // in the menu that may be distracting.
-                                  onClick={clickHandlers[key]?.copyToVirtualClipboard}
+                                  onClick={
+                                    clickHandlers[key]?.copyToVirtualClipboard
+                                  }
                                 >
                                   Copy
                                 </Menu.Item>
@@ -1321,31 +1386,37 @@ DocEditor.OneOfField = (props: FieldProps) => {
     return {};
   }, []);
 
-  const onTypeChange = useCallback(async (newType: string) => {
-    const newValue: any = {};
-    if (newType) {
-      if (newType in cachedValues) {
-        // When swapping to a previously selected type, reset to the previous
-        // value.
-        const cachedValue = cachedValues[newType];
-        Object.assign(newValue, cachedValue);
-      } else if (newType in typesMap) {
-        const defaultValue = getDefaultFieldValue(typesMap[newType]);
-        Object.assign(newValue, defaultValue);
+  const onTypeChange = useCallback(
+    async (newType: string) => {
+      const newValue: any = {};
+      if (newType) {
+        if (newType in cachedValues) {
+          // When swapping to a previously selected type, reset to the previous
+          // value.
+          const cachedValue = cachedValues[newType];
+          Object.assign(newValue, cachedValue);
+        } else if (newType in typesMap) {
+          const defaultValue = getDefaultFieldValue(typesMap[newType]);
+          Object.assign(newValue, defaultValue);
+        }
       }
-    }
-    newValue._type = newType;
+      newValue._type = newType;
 
-    await props.draft.updateKey(props.deepKey, newValue);
-    setType(newType);
-  }, [cachedValues, typesMap, props.draft, props.deepKey]);
+      await props.draft.updateKey(props.deepKey, newValue);
+      setType(newType);
+    },
+    [cachedValues, typesMap, props.draft, props.deepKey]
+  );
 
-  const subscriptionCallback = useCallback((newValue: any) => {
-    if (newValue?._type) {
-      setType(newValue._type || '');
-      cachedValues[newValue._type] = newValue;
-    }
-  }, [cachedValues]);
+  const subscriptionCallback = useCallback(
+    (newValue: any) => {
+      if (newValue?._type) {
+        setType(newValue._type || '');
+        cachedValues[newValue._type] = newValue;
+      }
+    },
+    [cachedValues]
+  );
 
   useEffect(() => {
     const unsubscribe = props.draft.subscribe(
