@@ -71,9 +71,9 @@ import {
 } from '../../utils/doc.js';
 import {extractField} from '../../utils/extract.js';
 import {getDefaultFieldValue} from '../../utils/fields.js';
-import {flattenNestedKeys} from '../../utils/objects.js';
+import {getNestedValue} from '../../utils/objects.js';
 import {autokey} from '../../utils/rand.js';
-import {getPlaceholderKeys, strFormat} from '../../utils/str-format.js';
+import {getPlaceholderKeys, strFormatFn} from '../../utils/str-format.js';
 import {testFieldEmpty} from '../../utils/test-field-empty.js';
 import {formatDateTime} from '../../utils/time.js';
 import {testHasExperimentParam} from '../../utils/url-params.js';
@@ -1449,17 +1449,25 @@ function buildPreviewValue(
   index?: number
 ): string | undefined {
   const templates = Array.isArray(previews) ? [...previews] : [previews];
-  const placeholders = flattenNestedKeys(data);
-  if (index !== undefined) {
-    placeholders._index = String(index);
-    placeholders._index0 = String(index);
-    placeholders._index1 = String(index + 1);
-    placeholders['_index:02'] = placeholders._index.padStart(2, '0');
-    placeholders['_index:03'] = placeholders._index.padStart(3, '0');
-  }
   while (templates.length > 0) {
     const template = templates.shift()!;
-    const preview = strFormat(template, placeholders);
+    const preview = strFormatFn(template, (key) => {
+      if (index !== undefined) {
+        if (key === '_index' || key === '_index0') {
+          return String(index);
+        }
+        if (key === '_index1') {
+          return String(index + 1);
+        }
+        if (key === '_index:02') {
+          return String(index).padStart(2, '0');
+        }
+        if (key === '_index:03') {
+          return String(index).padStart(3, '0');
+        }
+      }
+      return getNestedValue(data, key);
+    });
     if (getPlaceholderKeys(preview).length === 0) {
       return preview;
     }
