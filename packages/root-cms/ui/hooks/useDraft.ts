@@ -40,6 +40,12 @@ type Subscribers = Record<string, Set<SubscriberCallback>>;
 type SubscriberCallback = (newValue: any) => void;
 type UnsubscribeCallback = () => void;
 
+/**
+ * Number of seconds to wait before disabling db watchers once the browser tab
+ * loses visibility.
+ */
+const VISIBILITY_TIMEOUT = 30;
+
 export class DraftController extends EventListener {
   readonly projectId: string;
   readonly docId: string;
@@ -388,9 +394,17 @@ export function useDraft(docId: string): UseDraftHook {
     controller.start();
 
     const onVisibilityChange = () => {
+      let visibilityTimeoutId: number | undefined;
+
       if (document.hidden || document.visibilityState !== 'visible') {
-        controller.stop();
+        visibilityTimeoutId = window.setTimeout(() => {
+          controller.stop();
+        }, VISIBILITY_TIMEOUT * 1000);
       } else {
+        if (visibilityTimeoutId) {
+          clearTimeout(visibilityTimeoutId);
+          visibilityTimeoutId = undefined;
+        }
         if (!controller.started) {
           setLoading(true);
           controller.start();
