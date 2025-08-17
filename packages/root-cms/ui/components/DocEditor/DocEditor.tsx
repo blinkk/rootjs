@@ -1542,6 +1542,7 @@ function arrayPreviewImage(
   if (schemaLevelTemplates) {
     const value = buildPreviewValue(schemaLevelTemplates, data);
     if (value) {
+      // TODO: This doesn't fetch the `canvasBgColor`, we should see if we can get that too.
       return {src: value};
     }
   }
