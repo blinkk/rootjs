@@ -71,6 +71,7 @@ import {
 } from '../../utils/doc.js';
 import {extractField} from '../../utils/extract.js';
 import {getDefaultFieldValue} from '../../utils/fields.js';
+import {targetNode} from '../../utils/iframe-preview.js';
 import {flattenNestedKeys} from '../../utils/objects.js';
 import {autokey} from '../../utils/rand.js';
 import {getPlaceholderKeys, strFormat} from '../../utils/str-format.js';
@@ -1133,6 +1134,9 @@ DocEditor.ArrayField = (props: FieldProps) => {
                           className="DocEditor__ArrayField__item"
                           key={key}
                           open={newlyAdded.includes(key) || itemInDeeplink(key)}
+                          onMouseEnter={() => {
+                            targetNode(`${props.deepKey}.${order[i]}`);
+                          }}
                         >
                           <summary
                             id={`summary-for-${props.deepKey}.${order[i]}`}
@@ -1379,6 +1383,12 @@ DocEditor.OneOfField = (props: FieldProps) => {
               shallowKey={field.id!}
               deepKey={`${props.deepKey}.${field.id!}`}
               draft={props.draft}
+              onBlur={() => {
+                targetNode(null);
+              }}
+              onFocus={() => {
+                targetNode(`${props.deepKey}.${field.id!}`);
+              }}
             />
           ))}
         </div>

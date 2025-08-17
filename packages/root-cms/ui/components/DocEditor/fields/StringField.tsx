@@ -38,6 +38,7 @@ export function StringField(props: FieldProps) {
         onChange={(e: ChangeEvent<HTMLTextAreaElement>) => {
           onChange(e.currentTarget.value);
         }}
+        onFocus={props.onFocus}
       />
     );
   }
@@ -49,6 +50,7 @@ export function StringField(props: FieldProps) {
       onChange={(e: ChangeEvent<HTMLInputElement>) => {
         onChange(e.currentTarget.value);
       }}
+      onFocus={props.onFocus}
     />
   );
 }

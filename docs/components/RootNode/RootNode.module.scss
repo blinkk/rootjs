@@ -1,4 +1,5 @@
 .node {
+  display: block;
   position: relative;
 }
 
@@ -15,4 +16,21 @@
 .nodeButton:hover {
   background-color: #e7f6ff;
   mix-blend-mode: darken;
+}
+
+:global(.--flash) {
+  animation: flash-animation 1s forwards;
+}
+
+:global(.--targeted) {
+  outline: 1px solid -webkit-focus-ring-color;
+}
+
+@keyframes flash-animation {
+  0% {
+    background-color: #e7f6ff;
+  }
+  100% {
+    background-color: transparent;
+  }
 }

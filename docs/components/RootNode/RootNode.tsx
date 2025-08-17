@@ -23,16 +23,17 @@ export function RootNode(props: {fieldKey?: string; children: any}) {
     return props.children;
   }
   return (
-    <root-node data-deep-key={joinDeepKey(moduleInfo.deepKey, props.fieldKey)}>
-      <div className={styles.node}>
-        <div
-          role="button"
-          title="Edit in CMS"
-          className={styles.nodeButton}
-          data-slot="button"
-        ></div>
-        {props.children}
-      </div>
+    <root-node
+      data-deep-key={joinDeepKey(moduleInfo.deepKey, props.fieldKey)}
+      className={styles.node}
+    >
+      <div
+        role="button"
+        title="Edit in CMS"
+        className={styles.nodeButton}
+        data-slot="button"
+      ></div>
+      {props.children}
     </root-node>
   );
 }
