@@ -302,6 +302,10 @@
   width: 100%;
 }
 
+.DocEditor__ArrayField__item__header__preview__image__img--dark {
+  background-color: #000;
+}
+
 .DocEditor__ArrayField__item__header__preview__title {
   font-family: var(--font-family-mono);
   font-weight: 500;

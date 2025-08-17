@@ -71,9 +71,10 @@ import {
 } from '../../utils/doc.js';
 import {extractField} from '../../utils/extract.js';
 import {getDefaultFieldValue} from '../../utils/fields.js';
+import {testIsImageFile} from '../../utils/gcs.js';
 import {getNestedValue} from '../../utils/objects.js';
 import {autokey} from '../../utils/rand.js';
-import {getPlaceholderKeys, strFormatFn} from '../../utils/str-format.js';
+import {strFormatFn} from '../../utils/str-format.js';
 import {testFieldEmpty} from '../../utils/test-field-empty.js';
 import {formatDateTime} from '../../utils/time.js';
 import {testHasExperimentParam} from '../../utils/url-params.js';
@@ -100,6 +101,11 @@ import {ReferenceField} from './fields/ReferenceField.js';
 import {RichTextField} from './fields/RichTextField.js';
 import {SelectField} from './fields/SelectField.js';
 import {StringField} from './fields/StringField.js';
+
+interface ImagePreview {
+  src: string;
+  canvasBgColor?: 'light' | 'dark';
+}
 
 interface DocEditorProps {
   docId: string;
@@ -1149,9 +1155,13 @@ DocEditor.ArrayField = (props: FieldProps) => {
                               {previewImage && (
                                 <div className="DocEditor__ArrayField__item__header__preview__image">
                                   <img
-                                    src={previewImage}
                                     alt=""
-                                    className="DocEditor__ArrayField__item__header__preview__image__img"
+                                    src={previewImage.src}
+                                    className={joinClassNames(
+                                      'DocEditor__ArrayField__item__header__preview__image__img',
+                                      previewImage.canvasBgColor === 'dark' &&
+                                        'DocEditor__ArrayField__item__header__preview__image__img--dark'
+                                    )}
                                     loading="lazy"
                                   />
                                 </div>
@@ -1488,11 +1498,37 @@ function buildPreviewValue(
   return undefined;
 }
 
+/** Finds the first image within an array item. */
+function findFirstImage(data: any): ImagePreview | undefined {
+  if (!data || typeof data !== 'object') {
+    return undefined;
+  }
+  // Loop over all keys and test whether the value is an image object by
+  // checking the properties.
+  for (const key in data) {
+    const imageObj = data[key];
+    if (imageObj && typeof imageObj !== 'object') {
+      continue;
+    }
+    if (
+      imageObj &&
+      imageObj.src &&
+      imageObj.width &&
+      imageObj.height &&
+      imageObj.filename &&
+      testIsImageFile(imageObj.src)
+    ) {
+      return {src: imageObj.src, canvasBgColor: imageObj.canvasBgColor};
+    }
+  }
+  return undefined;
+}
+
 /** Builds the preview image for an array item. */
 function arrayPreviewImage(
   field: schema.ArrayField,
   data: any
-): string | undefined {
+): ImagePreview | undefined {
   if (DISABLE_SCHEMA_LEVEL_ARRAY_PREVIEW) {
     return undefined;
   }
@@ -1501,10 +1537,15 @@ function arrayPreviewImage(
     data,
     'image'
   );
-  if (!schemaLevelTemplates) {
-    return undefined;
+  // If schema-level templates were provided by the schema, use them to find the image.
+  // Fall back to the first image (and use it as a default).
+  if (schemaLevelTemplates) {
+    const value = buildPreviewValue(schemaLevelTemplates, data);
+    if (value) {
+      return {src: value};
+    }
   }
-  return buildPreviewValue(schemaLevelTemplates, data);
+  return findFirstImage(data);
 }
 
 /** Builds the preview for an array item. */
