@@ -214,6 +214,8 @@
 
 .DocEditor__ArrayField__item {
   flex: 1;
+  /** Prevent details elements from pushing the page contents _upwards_ when opened. */
+  overflow-anchor: none;
   width: 100%;
 }
 
