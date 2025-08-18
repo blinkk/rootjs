@@ -1,5 +1,17 @@
 # @blinkk/root-cms
 
+## 2.0.8
+
+### Patch Changes
+
+- 6d1602a: revert: saving richtext data from edit flows (#669)
+- 1f6fd26: revert: use deepEqual instead of timeSaved for lexical changes (#674)
+- a6c3f4a: fix: optimize lookup of array preview values (#687)
+- d2e0068: feat: handle pasting svg text
+- 26fcd17: refactor: use navigator clipboard instead of virtual clipboard object
+- 85d9f8a: fix: stabilize scroll position when using details element
+  - @blinkk/root@2.0.8
+
 ## 2.0.7
 
 ### Patch Changes
