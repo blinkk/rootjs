@@ -18,20 +18,7 @@
   mix-blend-mode: darken;
 }
 
-:global(.--flash) {
-  animation: flash-animation 1s forwards;
-}
-
 :global(.--highlighted) {
   outline: 1px solid -webkit-focus-ring-color;
   outline-offset: -1px;
-}
-
-@keyframes flash-animation {
-  0% {
-    background-color: #e7f6ff;
-  }
-  100% {
-    background-color: transparent;
-  }
 }
