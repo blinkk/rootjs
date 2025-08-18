@@ -77,7 +77,6 @@ window.addEventListener('message', (event) => {
     RootNodeElement.clearAllHighlighted();
     if (deepKey) {
       const rootNode = RootNodeElement.getByDeepKey(deepKey);
-      console.log('Highlighting node:', rootNode, options?.scroll);
       if (rootNode) {
         rootNode.setHighlighted(options?.scroll);
       }
