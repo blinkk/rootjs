@@ -23,7 +23,7 @@ function getIframePreviewElement(): HTMLIFrameElement | null {
   return document.querySelector('iframe[title="iframe preview"]');
 }
 
-/** Returns whether the channel to the preview should be enabled. If unspecified, the channel is open. */
+/** Returns whether the channel to the preview should be enabled. */
 function testEnableChannelToPreview() {
   const previewOptions = window.__ROOT_CTX.preview;
   return [true, 'to-preview'].includes(previewOptions.channel);

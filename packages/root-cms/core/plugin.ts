@@ -195,7 +195,7 @@ export type CMSPluginOptions = {
     /**
      * Whether to send messages to the preview iframe, handle messages from
      * the preview iframe, enable both (`true`), or disable messages entirely
-     * (`false`). If unspecified, the default is `true`.
+     * (`false`). If unspecified, the default is `false`.
      */
     channel: true | false | 'to-preview' | 'from-preview';
   };

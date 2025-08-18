@@ -115,7 +115,7 @@ export async function renderApp(
     sidebar: cmsConfig.sidebar,
     experiments: cmsConfig.experiments,
     preview: {
-      channel: cmsConfig.preview?.channel ?? true,
+      channel: cmsConfig.preview?.channel ?? false,
     },
   };
   const projectName = cmsConfig.name || cmsConfig.id || '';
