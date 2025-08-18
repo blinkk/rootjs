@@ -1,6 +1,5 @@
 import './DocEditor.css';
 
-import {request} from 'http';
 import {
   DragDropContext,
   Draggable,
@@ -1135,7 +1134,7 @@ DocEditor.ArrayField = (props: FieldProps) => {
                           className="DocEditor__ArrayField__item"
                           key={key}
                           open={newlyAdded.includes(key) || itemInDeeplink(key)}
-                          onToggle={(e: ToggleEvent) => {
+                          onToggle={(e) => {
                             if ((e.target as HTMLDetailsElement).open) {
                               requestHighlightNode(
                                 `${props.deepKey}.${order[i]}`,
@@ -1296,6 +1295,15 @@ DocEditor.ArrayField = (props: FieldProps) => {
                               draft={props.draft}
                               hideHeader
                               isArrayChild
+                              onFocus={() => {
+                                requestHighlightNode(
+                                  `${props.deepKey}.${key}`,
+                                  {scroll: true}
+                                );
+                              }}
+                              onBlur={() => {
+                                requestHighlightNode(null);
+                              }}
                             />
                           </div>
                         </details>
@@ -1403,7 +1411,9 @@ DocEditor.OneOfField = (props: FieldProps) => {
                 requestHighlightNode(null);
               }}
               onFocus={() => {
-                requestHighlightNode(`${props.deepKey}.${field.id!}`);
+                requestHighlightNode(`${props.deepKey}.${field.id!}`, {
+                  scroll: true,
+                });
               }}
             />
           ))}

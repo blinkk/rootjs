@@ -2,6 +2,7 @@ import {TextInput, Textarea} from '@mantine/core';
 import {ChangeEvent} from 'preact/compat';
 import {useCallback, useEffect, useState} from 'preact/hooks';
 import * as schema from '../../../../core/schema.js';
+import {requestHighlightNode} from '../../../utils/iframe-preview.js';
 import {FieldProps} from './FieldProps.js';
 
 export function StringField(props: FieldProps) {
@@ -38,7 +39,14 @@ export function StringField(props: FieldProps) {
         onChange={(e: ChangeEvent<HTMLTextAreaElement>) => {
           onChange(e.currentTarget.value);
         }}
-        onFocus={props.onFocus}
+        onFocus={(e: FocusEvent) => {
+          props.onFocus?.(e);
+          requestHighlightNode(props.deepKey, {scroll: true});
+        }}
+        onBlur={(e: FocusEvent) => {
+          props.onBlur?.(e);
+          requestHighlightNode(null);
+        }}
       />
     );
   }
@@ -50,7 +58,14 @@ export function StringField(props: FieldProps) {
       onChange={(e: ChangeEvent<HTMLInputElement>) => {
         onChange(e.currentTarget.value);
       }}
-      onFocus={props.onFocus}
+      onFocus={(e: FocusEvent) => {
+        props.onFocus?.(e);
+        requestHighlightNode(props.deepKey, {scroll: true});
+      }}
+      onBlur={(e: FocusEvent) => {
+        props.onBlur?.(e);
+        requestHighlightNode(null);
+      }}
     />
   );
 }
