@@ -72,9 +72,9 @@ import {
 import {extractField} from '../../utils/extract.js';
 import {getDefaultFieldValue} from '../../utils/fields.js';
 import {requestHighlightNode} from '../../utils/iframe-preview.js';
-import {flattenNestedKeys} from '../../utils/objects.js';
+import {getNestedValue} from '../../utils/objects.js';
 import {autokey} from '../../utils/rand.js';
-import {getPlaceholderKeys, strFormat} from '../../utils/str-format.js';
+import {strFormatFn} from '../../utils/str-format.js';
 import {testFieldEmpty} from '../../utils/test-field-empty.js';
 import {formatDateTime} from '../../utils/time.js';
 import {testHasExperimentParam} from '../../utils/url-params.js';
@@ -1475,29 +1475,50 @@ function getSchemaPreviewTemplates(
   return null;
 }
 
-/** Builds the value to display given a set of string templates to use for previews. */
+class PlaceholderNotFoundError extends Error {}
+
+/**
+ * Builds the value to display given a set of string templates to use for
+ * previews.
+ */
 function buildPreviewValue(
-  /** The string template (or templates) used to construct the preview. */
   previews: string | string[],
-  /** The CMS data. */
   data: any,
-  /** The position of the item within the array of the CMS UI. */
   index?: number
 ): string | undefined {
-  const templates = Array.isArray(previews) ? [...previews] : [previews];
-  const placeholders = flattenNestedKeys(data);
-  if (index !== undefined) {
-    placeholders._index = String(index);
-    placeholders._index0 = String(index);
-    placeholders._index1 = String(index + 1);
-    placeholders['_index:02'] = placeholders._index.padStart(2, '0');
-    placeholders['_index:03'] = placeholders._index.padStart(3, '0');
-  }
-  while (templates.length > 0) {
-    const template = templates.shift()!;
-    const preview = strFormat(template, placeholders);
-    if (getPlaceholderKeys(preview).length === 0) {
+  const templates = Array.isArray(previews) ? previews : [previews];
+
+  const getPlaceholder = (key: string) => {
+    if (index !== undefined) {
+      if (key === '_index' || key === '_index0') {
+        return String(index);
+      }
+      if (key === '_index1') {
+        return String(index + 1);
+      }
+      if (key === '_index:02') {
+        return String(index).padStart(2, '0');
+      }
+      if (key === '_index:03') {
+        return String(index).padStart(3, '0');
+      }
+    }
+    const val = getNestedValue(data, key);
+    if (!val) {
+      throw new PlaceholderNotFoundError(key);
+    }
+    return val;
+  };
+
+  for (const template of templates) {
+    try {
+      const preview = strFormatFn(template, getPlaceholder);
       return preview;
+    } catch (err) {
+      if (err instanceof PlaceholderNotFoundError) {
+        continue;
+      }
+      throw err;
     }
   }
   return undefined;
