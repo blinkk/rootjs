@@ -1,3 +1,13 @@
+/** Messages that can be sent from the CMS to the preview. */
+interface RootNodeEventData {
+  highlightNode?: {
+    deepKey: string | null;
+    options?: {
+      scroll: boolean;
+    };
+  };
+}
+
 declare module 'preact' {
   namespace JSX {
     interface IntrinsicElements {
@@ -29,12 +39,14 @@ class RootNodeElement extends HTMLElement {
     );
   }
 
+  /** Clears all the highlighted nodes. */
   static clearAllHighlighted() {
     document
       .querySelectorAll<RootNodeElement>('root-node.--highlighted')
       .forEach((el) => el.classList.remove('--highlighted'));
   }
 
+  /** Sets an individual node as highlighted. */
   setHighlighted(scroll: boolean = false) {
     this.classList.add('--highlighted');
     if (scroll) {
@@ -56,30 +68,26 @@ class RootNodeElement extends HTMLElement {
   }
 }
 
-if (!customElements.get('root-node')) {
-  customElements.define('root-node', RootNodeElement);
-}
-
-/** Messages that can be sent from the CMS to the preview. */
-interface RootNodeEventData {
-  highlightNode?: {
-    deepKey: string | null;
-    options?: {
-      scroll: boolean;
-    };
-  };
-}
-
-window.addEventListener('message', (event) => {
-  const {highlightNode} = event.data as RootNodeEventData;
-  if (highlightNode) {
-    const {deepKey, options} = highlightNode;
-    RootNodeElement.clearAllHighlighted();
-    if (deepKey) {
-      const rootNode = RootNodeElement.getByDeepKey(deepKey);
-      if (rootNode) {
-        rootNode.setHighlighted(options?.scroll);
+/** Creates a listener to handle messages sent from the CMS. */
+function createMessageListener() {
+  const listener = (event: MessageEvent<RootNodeEventData>) => {
+    const {highlightNode} = event.data;
+    if (highlightNode) {
+      const {deepKey, options} = highlightNode;
+      RootNodeElement.clearAllHighlighted();
+      if (deepKey) {
+        const rootNode = RootNodeElement.getByDeepKey(deepKey);
+        if (rootNode) {
+          rootNode.setHighlighted(options?.scroll);
+        }
       }
     }
-  }
-});
+  };
+  window.addEventListener('message', listener);
+  return listener;
+}
+
+if (!customElements.get('root-node')) {
+  customElements.define('root-node', RootNodeElement);
+  createMessageListener();
+}

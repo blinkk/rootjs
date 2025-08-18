@@ -18,6 +18,8 @@ export interface EditorJSEditorProps {
   placeholder?: string;
   value?: any;
   onChange?: (data: any) => void;
+  onFocus?: (e: FocusEvent) => void;
+  onBlur?: (e: FocusEvent) => void;
 }
 
 export function EditorJSEditor(props: EditorJSEditorProps) {

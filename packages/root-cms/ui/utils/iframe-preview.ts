@@ -1,4 +1,5 @@
 interface HighlightNodeOptions {
+  /** Whether to scroll to the element in the preview. */
   scroll: boolean;
 }
 
@@ -14,6 +15,7 @@ export function requestHighlightNode(
   iframeEl.contentWindow?.postMessage({highlightNode: {deepKey, options}}, '*');
 }
 
+/** Returns the iframe element used for previewing content. */
 function getIframePreviewElement(): HTMLIFrameElement | null {
   return document.querySelector('iframe[title="iframe preview"]');
 }

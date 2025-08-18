@@ -54,6 +54,8 @@ export interface LexicalEditorProps {
   placeholder?: string;
   value?: RichTextData | null;
   onChange?: (value: RichTextData | null) => void;
+  onFocus?: (e: FocusEvent) => void;
+  onBlur?: (e: FocusEvent) => void;
 }
 
 export function LexicalEditor(props: LexicalEditorProps) {
@@ -69,6 +71,8 @@ export function LexicalEditor(props: LexicalEditorProps) {
               placeholder={props.placeholder}
               value={props.value}
               onChange={props.onChange}
+              onFocus={props.onFocus}
+              onBlur={props.onBlur}
             />
           </div>
         </ToolbarProvider>
@@ -81,6 +85,10 @@ interface EditorProps {
   placeholder?: string;
   value?: RichTextData | null;
   onChange?: (value: RichTextData | null) => void;
+  /** Focus handler (currently unimplemented.) */
+  onFocus?: (e: FocusEvent) => void;
+  /** Blur handler (currently unimplemented.) */
+  onBlur?: (e: FocusEvent) => void;
 }
 
 function Editor(props: EditorProps) {
