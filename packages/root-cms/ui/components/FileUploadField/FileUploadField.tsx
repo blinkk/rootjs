@@ -1030,5 +1030,7 @@ function canvasPreviewInlineStyles(uploadedFile: UploadedFile) {
 
 /** Returns whether a string is an SVG. */
 function testSvg(text: string): boolean {
-  return text.startsWith('<svg') || text.startsWith('<?xml');
+  return /^(?:\uFEFF)?\s*(?:<!--[\s\S]*?-->\s*)*(?:<\?xml[\s\S]*?\?>\s*)?(?:<!DOCTYPE\s+svg[\s\S]*?>\s*)?<svg\b[^>]*?(?:\/>|>[\s\S]*?<\/svg>)\s*$/.test(
+    text
+  );
 }
