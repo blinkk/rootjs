@@ -79,8 +79,6 @@ body.menu\:open {
 }
 
 .bootstrap {
-  font-size: 48px;
-  font-weight: 900;
   width: 100%;
   height: 100vh;
   display: flex;
@@ -89,23 +87,7 @@ body.menu\:open {
   align-items: center;
   text-align: center;
   padding: 40px;
-  gap: 36px;
   position: relative;
-}
-
-.bootstrap-error {
-  font-size: 14px;
-  font-weight: 400;
-  line-height: 20px;
-  position: absolute;
-  bottom: 100px;
-  left: 0;
-  right: 0;
-  text-align: center;
-  animation: 0.5s forwards bootstrap-loading-error;
-  animation-delay: 1s;
-  opacity: 0;
-  padding: 0 24px;
 }
 
 .sr-only {
@@ -118,13 +100,4 @@ body.menu\:open {
   clip: rect(0, 0, 0, 0);
   white-space: nowrap;
   border-width: 0;
-}
-
-@keyframes bootstrap-loading-error {
-  0% {
-    opacity: 0;
-  }
-  100% {
-    opacity: 1;
-  }
 }

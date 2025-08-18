@@ -1,5 +1,6 @@
 import './styles/global.css';
 import './styles/theme.css';
+import '../ui/components/AppLoadingIcon/AppLoadingIcon.css';
 
 import {MantineProvider} from '@mantine/core';
 import {ModalsProvider} from '@mantine/modals';

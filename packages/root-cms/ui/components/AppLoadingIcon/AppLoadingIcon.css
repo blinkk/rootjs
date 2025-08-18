@@ -1,0 +1,61 @@
+.AppLoadingIcon {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-direction: column;
+  text-align: center;
+  padding: 0 24px;
+}
+
+.AppLoadingIcon__Image {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.AppLoadingIcon__Image__Path {
+  fill: none;
+  stroke: #000;
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  animation: loading-draw-erase-animation 2.4s ease-in-out infinite;
+  stroke-dasharray: var(--path-length);
+  stroke-dashoffset: 0;
+}
+
+.AppLoadingIcon__Image svg {
+  margin: 0 auto;
+}
+
+.AppLoadingIcon__Caption {
+  font-weight: 700;
+  margin-bottom: 6px;
+}
+
+.AppLoadingIcon__Error {
+  animation: 0.5s forwards bootstrap-loading-error-animation;
+  animation-delay: 2s;
+  font-size: 14px;
+  line-height: 20px;
+  max-width: 360px;
+  opacity: 0;
+}
+
+@keyframes bootstrap-loading-error-animation {
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes loading-draw-erase-animation {
+  /* Phase 1: DRAW forward (nothing -> full) */
+  0% {
+    stroke-dasharray: 0 var(--path-length);
+    stroke-dashoffset: 0;
+  }
+  100% {
+    stroke-dasharray: var(--path-length) 0;  /* erased */
+    stroke-dashoffset: var(--path-length);   /* shift forward */
+  }
+}

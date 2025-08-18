@@ -4,6 +4,7 @@ import {fileURLToPath} from 'node:url';
 import {Request, Response, RootConfig} from '@blinkk/root';
 import {render as renderToString} from 'preact-render-to-string';
 import packageJson from '../package.json' assert {type: 'json'};
+import {AppLoadingIcon} from '../ui/components/AppLoadingIcon/AppLoadingIcon.js';
 import {CMSPluginOptions} from './plugin.js';
 import {getProjectSchemas} from './project.js';
 import {Collection} from './schema.js';
@@ -57,11 +58,7 @@ function App(props: AppProps) {
       <body>
         <div id="root">
           <div className="bootstrap">
-            <h1 className="bootstrap__loading">Loading...</h1>
-            <div className="bootstrap-error">
-              If this page fails to load, try a force refresh by holding the
-              shift key while refreshing the page.
-            </div>
+            <AppLoadingIcon />
           </div>
         </div>
         <script
@@ -201,11 +198,7 @@ function SignIn(props: SignInProps) {
       <body>
         <div id="root">
           <div className="bootstrap">
-            <h1 className="bootstrap__loading">Loading...</h1>
-            <div className="bootstrap-error">
-              If this page fails to load, try a force refresh by holding the
-              shift key while refreshing the page.
-            </div>
+            <AppLoadingIcon />
           </div>
         </div>
         <script
