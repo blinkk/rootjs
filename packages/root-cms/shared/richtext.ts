@@ -67,6 +67,31 @@ export interface RichTextData {
   version: string;
 }
 
-export function testValidRichTextData(data: RichTextData) {
-  return isObject(data) && Array.isArray(data.blocks) && data.blocks.length > 0;
+export function testValidRichTextData(data: RichTextData | unknown) {
+  return (
+    isObject(data) &&
+    Array.isArray((data as Record<string, any>).blocks) &&
+    (data as Record<string, any>).blocks.length > 0
+  );
+}
+
+/**
+ * Modifies the `time` property of any nested `RichTextData` within a data
+ * object. Updated `time` properties ensure that the RichTextEditor component
+ * rerenders.
+ */
+export function updateRichTextDataTime(data: Record<string, any>) {
+  if (testValidRichTextData(data)) {
+    data.time = Date.now();
+  }
+  if (isObject(data)) {
+    for (const key in data) {
+      if (Object.hasOwn(data, key)) {
+        updateRichTextDataTime(data[key]);
+      }
+    }
+  } else if (Array.isArray(data)) {
+    data.forEach((item) => updateRichTextDataTime(item));
+  }
+  return data;
 }

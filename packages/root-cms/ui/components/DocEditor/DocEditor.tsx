@@ -47,6 +47,7 @@ import {
 } from 'preact/hooks';
 import {route} from 'preact-router';
 import * as schema from '../../../core/schema.js';
+import {updateRichTextDataTime} from '../../../shared/richtext.js';
 import {useCollectionSchema} from '../../hooks/useCollectionSchema.js';
 import {
   buildDeeplinkUrl,
@@ -1006,7 +1007,7 @@ DocEditor.ArrayField = (props: FieldProps) => {
           type: 'updateItem',
           draft,
           index,
-          newValue,
+          newValue: updateRichTextDataTime(newValue) as ArrayFieldValue,
           deepKey: props.deepKey,
         });
         draft.notifySubscribers();
@@ -1025,7 +1026,7 @@ DocEditor.ArrayField = (props: FieldProps) => {
           type: 'updateItem',
           draft,
           index,
-          newValue,
+          newValue: updateRichTextDataTime(newValue) as ArrayFieldValue,
           deepKey: props.deepKey,
         });
         draft.notifySubscribers();
