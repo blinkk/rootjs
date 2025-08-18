@@ -36,25 +36,21 @@ export function EditorJSEditor(props: EditorJSEditorProps) {
       return;
     }
     const newValue = props.value;
-    // Skip if there were no changes.
-    if (
-      currentValue?.time &&
-      newValue?.time &&
-      currentValue.time < newValue.time
-    ) {
-      return;
-    }
-    if (validateRichTextData(newValue)) {
-      const blocks = newValue.blocks || [];
-      if (blocks.length > 0) {
-        editor.render(newValue);
-      } else {
-        editor.render({
-          ...newValue,
-          blocks: [{type: 'paragraph', data: {text: ''}}],
-        });
+    if (currentValue?.time !== newValue?.time) {
+      const currentTime = currentValue?.time || 0;
+      const newValueTime = newValue?.time || 0;
+      if (newValueTime > currentTime && validateRichTextData(newValue)) {
+        const blocks = newValue?.blocks || [];
+        if (blocks.length > 0) {
+          editor.render(newValue);
+        } else {
+          editor.render({
+            ...newValue,
+            blocks: [{type: 'paragraph', data: {text: ''}}],
+          });
+        }
+        setCurrentValue(newValue);
       }
-      setCurrentValue(newValue);
     }
   }, [editor, props.value]);
 
