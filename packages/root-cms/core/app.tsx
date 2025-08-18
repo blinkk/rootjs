@@ -114,6 +114,9 @@ export async function renderApp(
     collections: collections,
     sidebar: cmsConfig.sidebar,
     experiments: cmsConfig.experiments,
+    preview: {
+      channel: cmsConfig.preview?.channel ?? true,
+    },
   };
   const projectName = cmsConfig.name || cmsConfig.id || '';
   const title = projectName ? `${projectName} – Root CMS` : 'Root CMS';

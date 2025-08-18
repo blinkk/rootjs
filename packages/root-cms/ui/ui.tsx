@@ -86,6 +86,9 @@ declare global {
       experiments?: {
         ai?: boolean | {endpoint?: string};
       };
+      preview: {
+        channel: true | false | 'to-preview' | 'from-preview';
+      };
     };
     firebase: FirebaseContextObject;
   }
