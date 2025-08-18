@@ -1,3 +1,5 @@
+import './FileUploadField.css';
+
 import {
   ActionIcon,
   Box,
@@ -25,7 +27,6 @@ import {
   IconPaperclip,
   IconPhotoStar,
   IconPhotoUp,
-  IconRobot,
   IconSparkles,
   IconTrash,
 } from '@tabler/icons-preact';
@@ -44,10 +45,7 @@ import {
   UploadedFile,
   uploadFileToGCS,
 } from '../../utils/gcs.js';
-
-import './FileUploadField.css';
 import {testHasExperimentParam} from '../../utils/url-params.js';
-import {MessageBlock} from '../ChatBar/ChatBar.js';
 
 /** Mimetypes accepted by the image input field. */
 const IMAGE_MIMETYPES = [
@@ -117,7 +115,7 @@ interface FileUploadContextValue {
   /** Accepted file types. If empty, accepts all file types. */
   acceptedFileTypes: string[];
   focusDropZone: () => void;
-  handleFile: (file: File) => void;
+  handleFile: (file: File | string, options?: {as?: 'svg'}) => void;
   removeFile: () => void;
   requestFileUpload: () => void;
   requestFileDownload: () => void;
@@ -192,10 +190,21 @@ export function FileUploadField(props: FileUploadFieldProps) {
   }
 
   /** Validates incoming file data and if it passes validation, uploads it. */
-  function handleFile(file: File) {
+  function handleFile(file: File | string, options?: {as?: 'svg'}) {
     if (!file) {
       return;
     }
+    // Convert text to a File.
+    if (options?.as === 'svg') {
+      file = new File(
+        [new Blob([file], {type: 'image/svg+xml'})],
+        'untitled.svg',
+        {
+          type: 'image/svg+xml',
+        }
+      );
+    }
+    file = file as File;
     const ext = getFileExt(file.name);
     if (
       acceptedFileTypes.length > 0 &&
@@ -600,9 +609,17 @@ FileUploadField.Preview = () => {
         }}
         onPaste={(e) => {
           e.preventDefault();
+          // Handle Files.
           const file = e.clipboardData?.files[0];
-          if (file && ctx) {
+          if (file) {
             ctx.handleFile(file);
+            return;
+          }
+          // Handle SVG text (supports copying SVG from Figma).
+          const text = e.clipboardData?.getData('text/plain');
+          if (text && testSvg(text)) {
+            ctx.handleFile(text, {as: 'svg'});
+            return;
           }
         }}
       >
@@ -934,6 +951,10 @@ FileUploadField.Dropzone = forwardRef<HTMLButtonElement, {}>((props, ref) => {
         }
       }}
       onPaste={(e) => {
+        e.preventDefault();
+        if (!context) {
+          return;
+        }
         // Handle pasting from one field to another.
         const json = e.clipboardData?.getData('application/json');
         if (json) {
@@ -953,10 +974,17 @@ FileUploadField.Dropzone = forwardRef<HTMLButtonElement, {}>((props, ref) => {
             console.error('error parsing json', err);
           }
         }
-        e.preventDefault();
+        // Handle files.
         const file = e.clipboardData?.files[0];
-        if (file && context) {
+        if (file) {
           context.handleFile(file);
+          return;
+        }
+        // Handle SVG text (supports copying SVG from Figma).
+        const text = e.clipboardData?.getData('text/plain');
+        if (text && testSvg(text)) {
+          context.handleFile(text, {as: 'svg'});
+          return;
         }
       }}
       title="Drop or paste to upload a file"
@@ -998,4 +1026,11 @@ function canvasPreviewInlineStyles(uploadedFile: UploadedFile) {
     inlineStyles['--canvas-bg-color'] = '#000';
   }
   return inlineStyles;
+}
+
+/** Returns whether a string is an SVG. */
+function testSvg(text: string): boolean {
+  return /^(?:\uFEFF)?\s*(?:<!--[\s\S]*?-->\s*)*(?:<\?xml[\s\S]*?\?>\s*)?(?:<!DOCTYPE\s+svg[\s\S]*?>\s*)?<svg\b[^>]*?(?:\/>|>[\s\S]*?<\/svg>)\s*$/.test(
+    text
+  );
 }
