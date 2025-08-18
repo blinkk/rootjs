@@ -1,10 +1,17 @@
-/** Sends a request to the preview iframe to target a node. */
-export function targetNode(deepKey: string | null) {
+interface HighlightNodeOptions {
+  scroll: boolean;
+}
+
+/** Sends a request to the preview iframe to highlight a node. */
+export function requestHighlightNode(
+  deepKey: string | null,
+  options?: HighlightNodeOptions
+) {
   const iframeEl = getIframePreviewElement();
   if (!iframeEl) {
     return;
   }
-  iframeEl.contentWindow?.postMessage({targetNode: {deepKey}}, '*');
+  iframeEl.contentWindow?.postMessage({highlightNode: {deepKey, options}}, '*');
 }
 
 function getIframePreviewElement(): HTMLIFrameElement | null {

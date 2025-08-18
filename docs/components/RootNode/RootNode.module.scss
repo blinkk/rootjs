@@ -22,8 +22,9 @@
   animation: flash-animation 1s forwards;
 }
 
-:global(.--targeted) {
+:global(.--highlighted) {
   outline: 1px solid -webkit-focus-ring-color;
+  outline-offset: -1px;
 }
 
 @keyframes flash-animation {

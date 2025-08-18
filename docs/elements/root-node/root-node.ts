@@ -29,27 +29,17 @@ class RootNodeElement extends HTMLElement {
     );
   }
 
-  static clearTargeted() {
+  static clearAllHighlighted() {
     document
-      .querySelectorAll<RootNodeElement>('root-node.--targeted')
-      .forEach((el) => el.classList.remove('--targeted'));
+      .querySelectorAll<RootNodeElement>('root-node.--highlighted')
+      .forEach((el) => el.classList.remove('--highlighted'));
   }
 
-  setFlashed() {
-    this.classList.remove('--flash');
-    this.classList.add('--flash');
-    this.scrollIntoView({
-      behavior: 'smooth',
-    });
-  }
-
-  setTargeted() {
-    console.log('targeting', this.deepKey);
-    this.classList.remove('--flash');
-    this.classList.add('--targeted');
-    this.scrollIntoViewIfNeeded({
-      behavior: 'smooth',
-    });
+  setHighlighted(scroll: boolean = false) {
+    this.classList.add('--highlighted');
+    if (scroll) {
+      this.scrollIntoView({behavior: 'smooth', block: 'center'});
+    }
   }
 
   /** Sends a message to the CMS requesting that the field associated with this node be focused. */
@@ -64,34 +54,32 @@ class RootNodeElement extends HTMLElement {
       '*'
     );
   }
-
-  /** Sends a message to the CMS signaling whether the connection should be "enabled" or "disabled". When enabled, the CMS will allow the user to focus a node. */
-  static setConnectionStatus(status: 'connected' | 'disconnected') {
-    window.parent.postMessage(
-      {
-        setConnectionStatus: {
-          status,
-        },
-      },
-      '*'
-    );
-  }
 }
 
 if (!customElements.get('root-node')) {
   customElements.define('root-node', RootNodeElement);
 }
 
+/** Messages that can be sent from the CMS to the preview. */
+interface RootNodeEventData {
+  highlightNode?: {
+    deepKey: string | null;
+    options?: {
+      scroll: boolean;
+    };
+  };
+}
+
 window.addEventListener('message', (event) => {
-  const {targetNode} = event.data;
-  console.log(event.data);
-  if (targetNode) {
-    const {deepKey} = targetNode;
-    RootNodeElement.clearTargeted();
+  const {highlightNode} = event.data as RootNodeEventData;
+  if (highlightNode) {
+    const {deepKey, options} = highlightNode;
+    RootNodeElement.clearAllHighlighted();
     if (deepKey) {
       const rootNode = RootNodeElement.getByDeepKey(deepKey);
+      console.log('Highlighting node:', rootNode, options?.scroll);
       if (rootNode) {
-        rootNode.setTargeted();
+        rootNode.setHighlighted(options?.scroll);
       }
     }
   }
