@@ -15,6 +15,7 @@ import {
   Select,
   Tooltip,
 } from '@mantine/core';
+import {showNotification} from '@mantine/notifications';
 import {
   IconBraces,
   IconChevronDown,
@@ -61,8 +62,8 @@ import {
   UseDraftHook,
 } from '../../hooks/useDraft.js';
 import {
+  ClipboardData,
   useVirtualClipboard,
-  VirtualClipboard,
 } from '../../hooks/useVirtualClipboard.js';
 import {joinClassNames} from '../../utils/classes.js';
 import {
@@ -74,7 +75,7 @@ import {extractField} from '../../utils/extract.js';
 import {getDefaultFieldValue} from '../../utils/fields.js';
 import {getNestedValue} from '../../utils/objects.js';
 import {autokey} from '../../utils/rand.js';
-import {getPlaceholderKeys, strFormatFn} from '../../utils/str-format.js';
+import {strFormatFn} from '../../utils/str-format.js';
 import {testFieldEmpty} from '../../utils/test-field-empty.js';
 import {formatDateTime} from '../../utils/time.js';
 import {testHasExperimentParam} from '../../utils/url-params.js';
@@ -620,7 +621,7 @@ interface ArrayPasteAfter {
   index: number;
   draft: DraftController;
   deepKey: string;
-  virtualClipboard: VirtualClipboard;
+  data: ClipboardData;
 }
 
 interface ArrayPasteBefore {
@@ -628,7 +629,7 @@ interface ArrayPasteBefore {
   index: number;
   draft: DraftController;
   deepKey: string;
-  virtualClipboard: VirtualClipboard;
+  data: ClipboardData;
 }
 
 type ArrayAction =
@@ -806,7 +807,15 @@ function arrayReducer(state: ArrayFieldValue, action: ArrayAction) {
       const data = state ?? {};
       const order = [...(data._array || [])];
       const newKey = autokey();
-      const newData = action.virtualClipboard.value;
+      const newData = action.data;
+      if (!newData) {
+        showNotification({
+          title: 'Skipped',
+          message: 'Nothing to paste.',
+          autoClose: true,
+        });
+        return state;
+      }
       order.splice(action.index + 1, 0, newKey);
       action.draft.updateKeys({
         [`${action.deepKey}._array`]: order,
@@ -824,7 +833,15 @@ function arrayReducer(state: ArrayFieldValue, action: ArrayAction) {
       const data = state ?? {};
       const order = [...(data._array || [])];
       const newKey = autokey();
-      const newData = action.virtualClipboard.value;
+      const newData = action.data;
+      if (!newData) {
+        showNotification({
+          title: 'Skipped',
+          message: 'Nothing to paste.',
+          autoClose: true,
+        });
+        return state;
+      }
       order.splice(action.index, 0, newKey);
       action.draft.updateKeys({
         [`${action.deepKey}._array`]: order,
@@ -881,26 +898,26 @@ DocEditor.ArrayField = (props: FieldProps) => {
   };
 
   const pasteBefore = useCallback(
-    (index: number) => {
+    (index: number, data: ClipboardData) => {
       dispatch({
         type: 'pasteBefore',
         draft: draft,
         deepKey: props.deepKey,
         index: index,
-        virtualClipboard: virtualClipboard,
+        data,
       });
     },
     [props.deepKey]
   );
 
   const pasteAfter = useCallback(
-    (index: number) => {
+    (index: number, data: ClipboardData) => {
       dispatch({
         type: 'pasteAfter',
         draft: draft,
         deepKey: props.deepKey,
         index: index,
-        virtualClipboard: virtualClipboard,
+        data,
       });
     },
     [props.deepKey]
@@ -987,7 +1004,7 @@ DocEditor.ArrayField = (props: FieldProps) => {
     [props.deepKey]
   );
 
-  /** Copies the item data to the state so it can be "pasted" via the context menu later. */
+  /** Copies the item data to the virtual clipboard. */
   const copyToVirtualClipboard = (index: number) => {
     const key = order[index];
     const item = value[key];
@@ -1185,6 +1202,7 @@ DocEditor.ArrayField = (props: FieldProps) => {
                               <Menu
                                 className="DocEditor__ArrayField__item__header__controls__menu"
                                 position="bottom"
+                                transitionDuration={0}
                                 control={
                                   <ActionIcon className="DocEditor__ArrayField__item__header__controls__dots">
                                     <IconDotsVertical size={16} />
@@ -1193,64 +1211,65 @@ DocEditor.ArrayField = (props: FieldProps) => {
                               >
                                 <Menu.Label>INSERT</Menu.Label>
                                 <Menu.Item
-                                  icon={<IconRowInsertTop size={20} />}
+                                  className="DocEditor__ArrayField__item__header__controls__menu__item"
+                                  icon={<IconRowInsertTop size={18} />}
                                   onClick={() => insertBefore(i)}
                                 >
                                   Add before
                                 </Menu.Item>
                                 <Menu.Item
-                                  icon={<IconRowInsertBottom size={20} />}
+                                  className="DocEditor__ArrayField__item__header__controls__menu__item"
+                                  icon={<IconRowInsertBottom size={18} />}
                                   onClick={() => insertAfter(i)}
                                 >
                                   Add after
                                 </Menu.Item>
                                 <Menu.Item
-                                  icon={<IconCopy size={20} />}
+                                  className="DocEditor__ArrayField__item__header__controls__menu__item"
+                                  icon={<IconCopy size={18} />}
                                   onClick={() => duplicate(i)}
                                 >
                                   Duplicate
                                 </Menu.Item>
                                 <Menu.Label>CLIPBOARD</Menu.Label>
                                 <Menu.Item
-                                  icon={<IconClipboardCopy size={20} />}
-                                  // Allow the menu to close before updating the virtual clipboard (avoids layout shift)
-                                  // in the menu that may be distracting.
-                                  onClick={() =>
-                                    setTimeout(
-                                      () => copyToVirtualClipboard(i),
-                                      500
-                                    )
-                                  }
+                                  className="DocEditor__ArrayField__item__header__controls__menu__item"
+                                  icon={<IconClipboardCopy size={18} />}
+                                  onClick={() => copyToVirtualClipboard(i)}
                                 >
                                   Copy
                                 </Menu.Item>
-                                {virtualClipboard.value && (
-                                  <>
-                                    <Menu.Item
-                                      icon={<IconRowInsertTop size={20} />}
-                                      onClick={() => pasteBefore(i)}
-                                    >
-                                      Paste before
-                                    </Menu.Item>
-                                    <Menu.Item
-                                      icon={<IconRowInsertBottom size={20} />}
-                                      onClick={() => pasteAfter(i)}
-                                    >
-                                      Paste after
-                                    </Menu.Item>
-                                  </>
-                                )}
+                                <Menu.Item
+                                  className="DocEditor__ArrayField__item__header__controls__menu__item"
+                                  icon={<IconRowInsertTop size={18} />}
+                                  onClick={async () =>
+                                    pasteBefore(i, await virtualClipboard.get())
+                                  }
+                                >
+                                  Paste before
+                                </Menu.Item>
+                                <Menu.Item
+                                  className="DocEditor__ArrayField__item__header__controls__menu__item"
+                                  icon={<IconRowInsertBottom size={18} />}
+                                  onClick={async () =>
+                                    pasteAfter(i, await virtualClipboard.get())
+                                  }
+                                >
+                                  Paste after
+                                </Menu.Item>
                                 <Menu.Label>CODE</Menu.Label>
                                 <Menu.Item
-                                  icon={<IconBraces size={20} />}
+                                  className="DocEditor__ArrayField__item__header__controls__menu__item"
+                                  icon={<IconBraces size={18} />}
                                   onClick={() => editJson(i)}
                                 >
                                   Edit JSON
                                 </Menu.Item>
                                 {experiments.ai && (
                                   <Menu.Item
+                                    className="DocEditor__ArrayField__item__header__controls__menu__item"
                                     icon={
-                                      <IconSparkles size={20} stroke="1.75" />
+                                      <IconSparkles size={18} stroke="1.75" />
                                     }
                                     onClick={() => aiEdit(i)}
                                   >
@@ -1259,7 +1278,8 @@ DocEditor.ArrayField = (props: FieldProps) => {
                                 )}
                                 <Menu.Label>REMOVE</Menu.Label>
                                 <Menu.Item
-                                  icon={<IconTrash size={20} />}
+                                  className="DocEditor__ArrayField__item__header__controls__menu__item"
+                                  icon={<IconTrash size={18} />}
                                   onClick={() => removeAt(i)}
                                 >
                                   Remove
