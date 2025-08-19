@@ -35,6 +35,8 @@ export function RichTextField(props: FieldProps) {
       value={value}
       placeholder={field.placeholder}
       onChange={onChange}
+      onFocus={props.onFocus}
+      onBlur={props.onBlur}
     />
   );
 }

@@ -8,6 +8,8 @@ export interface RichTextEditorProps {
   placeholder?: string;
   value?: RichTextData | null;
   onChange?: (data: RichTextData) => void;
+  onFocus?: (e: FocusEvent) => void;
+  onBlur?: (e: FocusEvent) => void;
 }
 
 export function RichTextEditor(props: RichTextEditorProps) {

@@ -73,6 +73,7 @@ import {
 } from '../../utils/doc.js';
 import {extractField} from '../../utils/extract.js';
 import {getDefaultFieldValue} from '../../utils/fields.js';
+import {requestHighlightNode} from '../../utils/iframe-preview.js';
 import {getNestedValue} from '../../utils/objects.js';
 import {autokey} from '../../utils/rand.js';
 import {strFormatFn} from '../../utils/str-format.js';
@@ -1151,6 +1152,24 @@ DocEditor.ArrayField = (props: FieldProps) => {
                           className="DocEditor__ArrayField__item"
                           key={key}
                           open={newlyAdded.includes(key) || itemInDeeplink(key)}
+                          onToggle={(e) => {
+                            if ((e.target as HTMLDetailsElement).open) {
+                              requestHighlightNode(
+                                `${props.deepKey}.${order[i]}`,
+                                {scroll: true}
+                              );
+                            } else {
+                              requestHighlightNode(null);
+                            }
+                          }}
+                          onMouseEnter={() => {
+                            requestHighlightNode(
+                              `${props.deepKey}.${order[i]}`
+                            );
+                          }}
+                          onMouseLeave={() => {
+                            requestHighlightNode(null);
+                          }}
                         >
                           <summary
                             id={`summary-for-${props.deepKey}.${order[i]}`}
@@ -1297,6 +1316,15 @@ DocEditor.ArrayField = (props: FieldProps) => {
                               draft={props.draft}
                               hideHeader
                               isArrayChild
+                              onFocus={() => {
+                                requestHighlightNode(
+                                  `${props.deepKey}.${key}`,
+                                  {scroll: true}
+                                );
+                              }}
+                              onBlur={() => {
+                                requestHighlightNode(null);
+                              }}
                             />
                           </div>
                         </details>
@@ -1400,6 +1428,14 @@ DocEditor.OneOfField = (props: FieldProps) => {
               shallowKey={field.id!}
               deepKey={`${props.deepKey}.${field.id!}`}
               draft={props.draft}
+              onBlur={() => {
+                requestHighlightNode(null);
+              }}
+              onFocus={() => {
+                requestHighlightNode(`${props.deepKey}.${field.id!}`, {
+                  scroll: true,
+                });
+              }}
             />
           ))}
         </div>

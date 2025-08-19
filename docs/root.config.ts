@@ -55,6 +55,9 @@ export default defineConfig({
       experiments: {
         ai: true,
       },
+      preview: {
+        channel: true,
+      },
     }),
   ],
   prettyHtml: true,

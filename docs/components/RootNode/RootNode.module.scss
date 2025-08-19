@@ -1,4 +1,5 @@
 .node {
+  display: block;
   position: relative;
 }
 
@@ -15,4 +16,9 @@
 .nodeButton:hover {
   background-color: #e7f6ff;
   mix-blend-mode: darken;
+}
+
+:global(.--highlighted) {
+  outline: 1px solid -webkit-focus-ring-color;
+  outline-offset: -1px;
 }

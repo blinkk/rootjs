@@ -189,6 +189,16 @@ export type CMSPluginOptions = {
    * `root-cms.d.ts`). Defaults to `true`.
    */
   watch?: boolean;
+
+  /** Options associated with the preview. */
+  preview?: {
+    /**
+     * Whether to send messages to the preview iframe, handle messages from
+     * the preview iframe, enable both (`true`), or disable messages entirely
+     * (`false`). If unspecified, the default is `false`.
+     */
+    channel: boolean | 'to-preview' | 'from-preview';
+  };
 };
 
 export type CMSPlugin = Plugin & {
