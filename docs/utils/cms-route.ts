@@ -69,6 +69,11 @@ export interface CMSRouteOptions {
    * Enables SSG mode for sites that serve on SCS or other static servers.
    */
   enableSSG?: boolean;
+
+  /**
+   * Whether the route should only be accessible in preview mode.
+   */
+  previewOnly?: boolean;
 }
 
 export interface CMSDoc {
@@ -104,6 +109,10 @@ export function cmsRoute(options: CMSRouteOptions) {
     if (options.translations) {
       const tags = options.translations(routeContext)?.tags || [];
       translationsTags.push(...tags);
+    }
+
+    if (options.previewOnly && mode !== 'draft') {
+      return {notFound: true};
     }
 
     const [doc, translationsMap, data] = await Promise.all([
@@ -181,6 +190,9 @@ export function cmsRoute(options: CMSRouteOptions) {
         return ctx.render404();
       }
       const mode = String(req.query.preview) === 'true' ? 'draft' : 'published';
+      if (options.previewOnly && mode !== 'draft') {
+        return {notFound: true};
+      }
       const routeContext: CMSRouteContext = {req, slug, mode, cmsClient};
 
       const translationsTags = ['common', `${options.collection}/${slug}`];
