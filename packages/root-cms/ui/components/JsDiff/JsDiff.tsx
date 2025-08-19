@@ -2,7 +2,7 @@ import './JsDiff.css';
 
 import {diffLines} from 'diff';
 import type {JSX} from 'preact';
-import {useMemo} from 'preact/hooks';
+import {useEffect, useMemo, useRef} from 'preact/hooks';
 import {joinClassNames} from '../../utils/classes.js';
 
 export interface JsDiffProps {
@@ -16,6 +16,20 @@ export function JsDiff(props: JsDiffProps) {
 
   const diffResult = useMemo(() => {
     return diffLines(oldCode, newCode);
+  }, [oldCode, newCode]);
+
+  const contentRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    // Scroll to the first diff whenever `oldCode` or `newCode` change.
+    if (contentRef.current) {
+      const firstChangedLine = contentRef.current.querySelector(
+        '.JsDiff__diffLine--added, .JsDiff__diffLine--removed'
+      );
+      if (firstChangedLine) {
+        firstChangedLine.scrollIntoView({behavior: 'smooth', block: 'center'});
+      }
+    }
   }, [oldCode, newCode]);
 
   const renderDiffLines = () => {
@@ -57,7 +71,9 @@ export function JsDiff(props: JsDiffProps) {
 
   return (
     <div className={joinClassNames('JsDiff__container', className)}>
-      <div className="JsDiff__content">{renderDiffLines()}</div>
+      <div className="JsDiff__content" ref={contentRef}>
+        {renderDiffLines()}
+      </div>
     </div>
   );
 }
