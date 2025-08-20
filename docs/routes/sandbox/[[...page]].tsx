@@ -5,7 +5,7 @@ const SandboxPage = Page;
 export default SandboxPage;
 
 export const {handle} = cmsRoute({
-  collection: 'Pages',
+  collection: 'Sandbox',
   slugParam: 'page',
   previewOnly: true,
 });
