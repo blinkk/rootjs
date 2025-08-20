@@ -1,5 +1,12 @@
 # @blinkk/root-cms
 
+## 2.0.9
+
+### Patch Changes
+
+- e70aa38: chore: auto-scroll to first diff when making a change
+  - @blinkk/root@2.0.9
+
 ## 2.0.8
 
 ### Patch Changes
