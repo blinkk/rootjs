@@ -99,6 +99,10 @@ export class DraftController extends EventListener {
     }
     this.started = true;
     this.dbUnsubscribe = onSnapshot(this.docRef, (snapshot) => {
+      // Ignore local db write callbacks.
+      if (snapshot.metadata.hasPendingWrites) {
+        return;
+      }
       const data = snapshot.data();
       // Save the user's local changes to the snapshot so that their updates
       // are not overwritten.
