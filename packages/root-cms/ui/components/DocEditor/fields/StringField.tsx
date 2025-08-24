@@ -7,7 +7,7 @@ import {FieldProps} from './FieldProps.js';
 
 export function StringField(props: FieldProps) {
   const field = props.field as schema.StringField;
-  const [value, setValue] = useState('');
+  const [value, setValue] = useState(props.value || '');
 
   const onChange = useCallback(
     (newValue: string) => {
@@ -18,14 +18,8 @@ export function StringField(props: FieldProps) {
   );
 
   useEffect(() => {
-    const unsubscribe = props.draft.subscribe(
-      props.deepKey,
-      (newValue: string) => {
-        setValue(newValue);
-      }
-    );
-    return unsubscribe;
-  }, []);
+    setValue(props.value || '');
+  }, [props.value]);
 
   if (field.variant === 'textarea') {
     return (

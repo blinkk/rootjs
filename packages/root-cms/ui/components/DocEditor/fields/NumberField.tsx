@@ -5,7 +5,7 @@ import {FieldProps} from './FieldProps.js';
 
 export function NumberField(props: FieldProps) {
   const field = props.field as schema.NumberField;
-  const [value, setValue] = useState(field.default || 0);
+  const [value, setValue] = useState(props.value ?? field.default ?? 0);
 
   const onChange = useCallback(
     (newValue: number) => {
@@ -16,14 +16,8 @@ export function NumberField(props: FieldProps) {
   );
 
   useEffect(() => {
-    const unsubscribe = props.draft.subscribe(
-      props.deepKey,
-      (newValue: number) => {
-        setValue(newValue);
-      }
-    );
-    return unsubscribe;
-  }, []);
+    setValue(props.value ?? field.default ?? 0);
+  }, [props.value]);
 
   return (
     <NumberInput

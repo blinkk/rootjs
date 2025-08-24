@@ -5,7 +5,7 @@ import {FieldProps} from './FieldProps.js';
 
 export function MultiSelectField(props: FieldProps) {
   const field = props.field as schema.MultiSelectField;
-  const [value, setValue] = useState<string[]>([]);
+  const [value, setValue] = useState<string[]>(props.value || []);
 
   const options = (field.options || []).map((option) => {
     // Mantine requires both label and value to be set.
@@ -27,14 +27,8 @@ export function MultiSelectField(props: FieldProps) {
   );
 
   useEffect(() => {
-    const unsubscribe = props.draft.subscribe(
-      props.deepKey,
-      (newValue: string[]) => {
-        setValue(newValue || []);
-      }
-    );
-    return unsubscribe;
-  }, []);
+    setValue(props.value || []);
+  }, [props.value]);
 
   return (
     <div className="DocEditor__MultiSelectField">
