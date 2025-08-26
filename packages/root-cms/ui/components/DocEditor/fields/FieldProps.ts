@@ -1,16 +1,13 @@
 import * as schema from '../../../../core/schema.js';
-import {DraftController} from '../../../hooks/useDraft.js';
 
-export interface FieldProps {
-  collection: schema.Collection;
+export interface FieldProps<T = any> {
   field: schema.Field;
+  deepKey: string;
   level?: number;
   hideHeader?: boolean;
-  onChange?: (newValue: any) => void;
+  value?: T;
+  onChange?: (newValue: T) => void;
   onFocus?: (event: FocusEvent) => void;
   onBlur?: (event: FocusEvent) => void;
-  shallowKey: string;
-  deepKey: string;
-  draft: DraftController;
   isArrayChild?: boolean;
 }

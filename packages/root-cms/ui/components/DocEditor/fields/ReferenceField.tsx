@@ -1,46 +1,41 @@
+import './ReferenceField.css';
+
 import {ActionIcon, Button, Image, Loader, Tooltip} from '@mantine/core';
 import {IconTrash} from '@tabler/icons-preact';
 import {useCallback, useEffect, useState} from 'preact/hooks';
 import * as schema from '../../../../core/schema.js';
+import {useDraftDoc} from '../../../hooks/useDraftDoc.js';
 import {getDocFromCacheOrFetch} from '../../../utils/doc-cache.js';
 import {notifyErrors} from '../../../utils/notifications.js';
 import {getNestedValue} from '../../../utils/objects.js';
 import {useDocPickerModal} from '../../DocPickerModal/DocPickerModal.js';
 import {FieldProps} from './FieldProps.js';
-import './ReferenceField.css';
 
 export function ReferenceField(props: FieldProps) {
   const field = props.field as schema.ReferenceField;
-  const [refId, setRefId] = useState('');
+  const draft = useDraftDoc();
 
   const onChange = useCallback(
     (newRefId: string) => {
       if (newRefId) {
         const [collection, slug] = newRefId.split('/');
-        props.draft.updateKey(props.deepKey, {id: newRefId, collection, slug});
+        draft.controller.updateKey(props.deepKey, {
+          id: newRefId,
+          collection,
+          slug,
+        });
       } else {
-        props.draft.removeKey(props.deepKey);
+        draft.controller.removeKey(props.deepKey);
       }
-      setRefId(newRefId);
     },
     [props.deepKey]
   );
 
-  useEffect(() => {
-    const unsubscribe = props.draft.subscribe(
-      props.deepKey,
-      (newValue?: {id: string}) => {
-        setRefId(newValue?.id || '');
-      }
-    );
-    return unsubscribe;
-  }, []);
-
   const docPickerModal = useDocPickerModal();
 
   function openDocPicker() {
-    const initialCollection = refId
-      ? refId.split('/')[0]
+    const initialCollection = props.value
+      ? props.value.split('/')[0]
       : field.initialCollection;
     docPickerModal.open({
       collections: field.collections,
@@ -58,9 +53,9 @@ export function ReferenceField(props: FieldProps) {
 
   return (
     <div className="ReferenceField">
-      {refId ? (
+      {props.value ? (
         <div className="ReferenceField__ref">
-          <ReferenceField.Preview id={refId} />
+          <ReferenceField.Preview id={props.value} />
           <div className="ReferenceField__remove">
             <Tooltip label="Remove">
               <ActionIcon

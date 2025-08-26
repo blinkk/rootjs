@@ -36,14 +36,11 @@ import {
   IconTriangleFilled,
   IconSparkles,
 } from '@tabler/icons-preact';
-import {createContext} from 'preact';
 import {
-  useContext,
   useEffect,
   useMemo,
   useReducer,
   useRef,
-  useState,
   useCallback,
 } from 'preact/hooks';
 import {route} from 'preact-router';
@@ -59,18 +56,14 @@ import {
 import {
   DraftController,
   SaveState,
-  UseDraftHook,
-} from '../../hooks/useDraft.js';
+  useDraftDoc,
+} from '../../hooks/useDraftDoc.js';
 import {
   ClipboardData,
   useVirtualClipboard,
 } from '../../hooks/useVirtualClipboard.js';
 import {joinClassNames} from '../../utils/classes.js';
-import {
-  CMSDoc,
-  testIsScheduled,
-  testPublishingLocked,
-} from '../../utils/doc.js';
+import {testIsScheduled, testPublishingLocked} from '../../utils/doc.js';
 import {extractField} from '../../utils/extract.js';
 import {getDefaultFieldValue} from '../../utils/fields.js';
 import {requestHighlightNode} from '../../utils/iframe-preview.js';
@@ -106,24 +99,17 @@ import {StringField} from './fields/StringField.js';
 
 interface DocEditorProps {
   docId: string;
-  collection: schema.Collection;
-  draft: UseDraftHook;
+  collectionId: string;
 }
-
-const DOC_DATA_CONTEXT = createContext(null);
 
 const DISABLE_SCHEMA_LEVEL_ARRAY_PREVIEW = testHasExperimentParam(
   'DisableSchemaLevelArrayPreview'
 );
 
-function useDocData(): CMSDoc {
-  return useContext(DOC_DATA_CONTEXT)!;
-}
-
 export function DocEditor(props: DocEditorProps) {
   // Load the full collection schema.
-  const collection = useCollectionSchema(props.collection.id);
-  const draft = props.draft;
+  const collection = useCollectionSchema(props.collectionId);
+  const draft = useDraftDoc();
   const {controller, saveState, data} = draft;
   const loading = collection.loading || draft.loading;
   const fields = collection.schema?.fields || [];
@@ -146,118 +132,113 @@ export function DocEditor(props: DocEditorProps) {
   const localizationModal = useLocalizationModal({
     docId: props.docId,
     draft: controller,
-    collection: props.collection,
   });
 
   return (
-    <DOC_DATA_CONTEXT.Provider value={data}>
-      <DeeplinkProvider>
-        <div className="DocEditor">
-          <LoadingOverlay
-            visible={loading}
-            loaderProps={{color: 'gray', size: 'xl'}}
-          />
-          <div className="DocEditor__statusBar">
-            <div className="DocEditor__statusBar__viewers">
-              <Viewers id={`doc/${props.docId}`} />
+    <DeeplinkProvider>
+      <div className="DocEditor">
+        <LoadingOverlay
+          visible={loading}
+          loaderProps={{color: 'gray', size: 'xl'}}
+        />
+        <div className="DocEditor__statusBar">
+          <div className="DocEditor__statusBar__viewers">
+            <Viewers id={`doc/${props.docId}`} />
+          </div>
+          <div className="DocEditor__statusBar__saveState">
+            {saveState === SaveState.SAVED && 'saved!'}
+            {saveState === SaveState.SAVING && 'saving...'}
+            {saveState === SaveState.UPDATES_PENDING && 'saving...'}
+            {saveState === SaveState.ERROR && 'error saving'}
+          </div>
+          {!loading && data?.sys && (
+            <div className="DocEditor__statusBar__statusBadges">
+              <DocStatusBadges doc={data} />
             </div>
-            <div className="DocEditor__statusBar__saveState">
-              {saveState === SaveState.SAVED && 'saved!'}
-              {saveState === SaveState.SAVING && 'saving...'}
-              {saveState === SaveState.UPDATES_PENDING && 'saving...'}
-              {saveState === SaveState.ERROR && 'error saving'}
-            </div>
-            {!loading && data?.sys && (
-              <div className="DocEditor__statusBar__statusBadges">
-                <DocStatusBadges doc={data} />
-              </div>
-            )}
-            <div className="DocEditor__statusBar__i18n">
+          )}
+          <div className="DocEditor__statusBar__i18n">
+            <Button
+              variant="default"
+              color="dark"
+              size="xs"
+              leftIcon={<IconPlanet size={16} />}
+              onClick={() => localizationModal.open()}
+            >
+              Localization
+            </Button>
+          </div>
+          <div className="DocEditor__statusBar__publishButton">
+            {loading ? (
               <Button
-                variant="default"
                 color="dark"
                 size="xs"
-                leftIcon={<IconPlanet size={16} />}
-                onClick={() => localizationModal.open()}
+                onClick={() => publishDocModal.open()}
+                loading
+                disabled
               >
-                Localization
+                Publish
               </Button>
-            </div>
-            <div className="DocEditor__statusBar__publishButton">
-              {loading ? (
-                <Button
-                  color="dark"
-                  size="xs"
-                  onClick={() => publishDocModal.open()}
-                  loading
-                  disabled
-                >
-                  Publish
-                </Button>
-              ) : testIsScheduled(data) ? (
-                <Tooltip
-                  label={`Scheduled ${formatDateTime(
-                    data.sys.scheduledAt
-                  )} by ${data.sys.scheduledBy}`}
-                  transition="pop"
-                >
-                  <Button
-                    color="dark"
-                    size="xs"
-                    leftIcon={<IconRocket size={16} />}
-                    disabled
-                  >
-                    Publish
-                  </Button>
-                </Tooltip>
-              ) : testPublishingLocked(data) ? (
-                <Tooltip
-                  label={`Locked by ${data.sys.publishingLocked.lockedBy}: "${data.sys.publishingLocked.reason}"`}
-                  transition="pop"
-                >
-                  <Button
-                    color="dark"
-                    size="xs"
-                    leftIcon={<IconLock size={16} />}
-                    disabled
-                  >
-                    Publish
-                  </Button>
-                </Tooltip>
-              ) : (
+            ) : testIsScheduled(data) ? (
+              <Tooltip
+                label={`Scheduled ${formatDateTime(data.sys.scheduledAt)} by ${
+                  data.sys.scheduledBy
+                }`}
+                transition="pop"
+              >
                 <Button
                   color="dark"
                   size="xs"
                   leftIcon={<IconRocket size={16} />}
-                  onClick={() => publishDocModal.open()}
+                  disabled
                 >
                   Publish
                 </Button>
-              )}
-            </div>
-            <div className="DocEditor__statusBar__actionsMenu">
-              <DocActionsMenu
-                docId={props.docId}
-                data={data}
-                onAction={onDocAction}
-              />
-            </div>
+              </Tooltip>
+            ) : testPublishingLocked(data) ? (
+              <Tooltip
+                label={`Locked by ${data.sys.publishingLocked.lockedBy}: "${data.sys.publishingLocked.reason}"`}
+                transition="pop"
+              >
+                <Button
+                  color="dark"
+                  size="xs"
+                  leftIcon={<IconLock size={16} />}
+                  disabled
+                >
+                  Publish
+                </Button>
+              </Tooltip>
+            ) : (
+              <Button
+                color="dark"
+                size="xs"
+                leftIcon={<IconRocket size={16} />}
+                onClick={() => publishDocModal.open()}
+              >
+                Publish
+              </Button>
+            )}
           </div>
-          <div className="DocEditor__fields">
-            {fields.map((field) => (
-              <DocEditor.Field
-                key={field.id}
-                collection={props.collection}
-                field={field}
-                shallowKey={field.id!}
-                deepKey={`fields.${field.id!}`}
-                draft={controller}
-              />
-            ))}
+          <div className="DocEditor__statusBar__actionsMenu">
+            <DocActionsMenu
+              docId={props.docId}
+              data={data}
+              onAction={onDocAction}
+            />
           </div>
         </div>
-      </DeeplinkProvider>
-    </DOC_DATA_CONTEXT.Provider>
+        <div className="DocEditor__fields">
+          {fields.map((field) => (
+            <DocEditor.Field
+              key={field.id}
+              field={field}
+              deepKey={`fields.${field.id!}`}
+              value={(data?.fields || {})[field.id!]}
+            />
+          ))}
+        </div>
+      </div>
+    </DeeplinkProvider>
   );
 }
 
@@ -267,7 +248,7 @@ DocEditor.Field = (props: FieldProps) => {
   const deeplink = useDeeplink();
   const targeted = deeplink.value === props.deepKey;
   const ref = useRef<HTMLDivElement>(null);
-  const [value, setValue] = useState(null);
+  const value = props.value;
 
   const fieldValueEmpty = useMemo(() => testFieldEmpty(field, value), [value]);
   const showTranslateIcon =
@@ -282,16 +263,6 @@ DocEditor.Field = (props: FieldProps) => {
       }
     }
     return !props.hideHeader && !field.hideLabel;
-  }, [props.deepKey]);
-
-  useEffect(() => {
-    const unsubscribe = props.draft.subscribe(
-      props.deepKey,
-      (newValue: any) => {
-        setValue(newValue);
-      }
-    );
-    return unsubscribe;
   }, [props.deepKey]);
 
   useEffect(() => {
@@ -320,7 +291,7 @@ DocEditor.Field = (props: FieldProps) => {
       {showFieldHeader && (
         <DocEditor.FieldHeader
           field={field}
-          fieldValue={value}
+          value={value}
           deepKey={props.deepKey}
           label={field.label || field.id}
           help={field.help}
@@ -371,7 +342,7 @@ DocEditor.Field = (props: FieldProps) => {
 DocEditor.FieldHeader = (props: {
   className?: string;
   field: schema.Field;
-  fieldValue?: any;
+  value?: any;
   deepKey?: string;
   label?: string;
   help?: string;
@@ -382,7 +353,7 @@ DocEditor.FieldHeader = (props: {
   hasTranslations?: boolean;
 }) => {
   const deeplink = useDeeplink();
-  const docData = useDocData() || {};
+  const docData = useDraftDoc().data || {};
   const l10nSheet = docData.sys?.l10nSheet;
 
   const i18nConfig = window.__ROOT_CTX.rootConfig.i18n || {};
@@ -430,7 +401,7 @@ DocEditor.FieldHeader = (props: {
                 size="xs"
                 onClick={() => {
                   const strings = new Set<string>();
-                  extractField(strings, props.field, props.fieldValue);
+                  extractField(strings, props.field, props.value);
                   const translateStrings = Array.from(strings);
                   editTranslationsModal.open({
                     docId: docData.id,
@@ -455,6 +426,7 @@ DocEditor.FieldHeader = (props: {
 
 DocEditor.ObjectField = (props: FieldProps) => {
   const field = props.field as schema.ObjectField;
+  const value = props.value || {};
   // Default to the "drawer" variant.
   let variant = field.variant;
   if (!variant) {
@@ -471,16 +443,16 @@ DocEditor.ObjectField = (props: FieldProps) => {
   return (
     <div className="DocEditor__ObjectField">
       <div className="DocEditor__ObjectField__fields">
-        {field.fields.map((field) => (
-          <DocEditor.Field
-            key={field.id}
-            collection={props.collection}
-            field={field}
-            shallowKey={field.id!}
-            deepKey={`${props.deepKey}.${field.id}`}
-            draft={props.draft}
-          />
-        ))}
+        {field.fields
+          .filter((field) => !!field.id)
+          .map((field) => (
+            <DocEditor.Field
+              key={field.id!}
+              field={field}
+              deepKey={`${props.deepKey}.${field.id!}`}
+              value={value[field.id!]}
+            />
+          ))}
       </div>
     </div>
   );
@@ -494,6 +466,7 @@ DocEditor.ObjectFieldDrawer = (props: FieldProps) => {
 
   const deeplink = useDeeplink();
   const initialOpen = !collapsed || deeplink.value.includes(props.deepKey);
+  const value = props.value || {};
 
   return (
     <div
@@ -524,16 +497,16 @@ DocEditor.ObjectFieldDrawer = (props: FieldProps) => {
           </div>
         </summary>
         <div className="DocEditor__ObjectFieldDrawer__drawer__content DocEditor__ObjectFieldDrawer__fields">
-          {field.fields.map((field) => (
-            <DocEditor.Field
-              key={field.id}
-              collection={props.collection}
-              field={field}
-              shallowKey={field.id!}
-              deepKey={`${props.deepKey}.${field.id}`}
-              draft={props.draft}
-            />
-          ))}
+          {field.fields
+            .filter((field) => !!field.id)
+            .map((field) => (
+              <DocEditor.Field
+                key={field.id!}
+                field={field}
+                deepKey={`${props.deepKey}.${field.id!}`}
+                value={value[field.id!]}
+              />
+            ))}
         </div>
       </details>
     </div>
@@ -864,28 +837,20 @@ function arrayReducer(state: ArrayFieldValue, action: ArrayAction) {
 }
 
 DocEditor.ArrayField = (props: FieldProps) => {
-  const draft = props.draft;
   const field = props.field as schema.ArrayField;
-  const [value, dispatch] = useReducer(arrayReducer, {_array: []});
+  const [value, dispatch] = useReducer(arrayReducer, {
+    _array: props.value?._array || [],
+  });
   const deeplink = useDeeplink();
   const virtualClipboard = useVirtualClipboard();
   const experiments = window.__ROOT_CTX.experiments || {};
+  const draft = useDraftDoc();
 
   const data = value ?? {};
   const order = data._array || [];
 
   // Keep track of newly-added keys, which should start in the "open" state.
   const newlyAdded = value._new || [];
-
-  useEffect(() => {
-    const unsubscribe = props.draft.subscribe(
-      props.deepKey,
-      (newValue: ArrayFieldValue) => {
-        dispatch({type: 'update', newValue});
-      }
-    );
-    return unsubscribe;
-  }, [props.deepKey]);
 
   // Focus the field that was just moved (for hotkey support).
   useEffect(() => {
@@ -894,15 +859,15 @@ DocEditor.ArrayField = (props: FieldProps) => {
     }
   }, [value]);
 
-  const add = () => {
-    dispatch({type: 'add', draft: draft, deepKey: props.deepKey});
-  };
+  const add = useCallback(() => {
+    dispatch({type: 'add', draft: draft.controller, deepKey: props.deepKey});
+  }, [props.deepKey]);
 
   const pasteBefore = useCallback(
     (index: number, data: ClipboardData) => {
       dispatch({
         type: 'pasteBefore',
-        draft: draft,
+        draft: draft.controller,
         deepKey: props.deepKey,
         index: index,
         data,
@@ -915,7 +880,7 @@ DocEditor.ArrayField = (props: FieldProps) => {
     (index: number, data: ClipboardData) => {
       dispatch({
         type: 'pasteAfter',
-        draft: draft,
+        draft: draft.controller,
         deepKey: props.deepKey,
         index: index,
         data,
@@ -928,7 +893,7 @@ DocEditor.ArrayField = (props: FieldProps) => {
     (index: number) => {
       dispatch({
         type: 'insertBefore',
-        draft: draft,
+        draft: draft.controller,
         deepKey: props.deepKey,
         index: index,
       });
@@ -940,7 +905,7 @@ DocEditor.ArrayField = (props: FieldProps) => {
     (index: number) => {
       dispatch({
         type: 'insertAfter',
-        draft: draft,
+        draft: draft.controller,
         deepKey: props.deepKey,
         index: index,
       });
@@ -952,7 +917,7 @@ DocEditor.ArrayField = (props: FieldProps) => {
     (index: number) => {
       dispatch({
         type: 'duplicate',
-        draft: draft,
+        draft: draft.controller,
         deepKey: props.deepKey,
         index: index,
       });
@@ -964,7 +929,7 @@ DocEditor.ArrayField = (props: FieldProps) => {
     (index: number) => {
       dispatch({
         type: 'removeAt',
-        draft: draft,
+        draft: draft.controller,
         deepKey: props.deepKey,
         index: index,
       });
@@ -982,7 +947,7 @@ DocEditor.ArrayField = (props: FieldProps) => {
       if (index > 0) {
         dispatch({
           type: 'moveUp',
-          draft: draft,
+          draft: draft.controller,
           deepKey: props.deepKey,
           index: index,
         });
@@ -996,7 +961,7 @@ DocEditor.ArrayField = (props: FieldProps) => {
       if (index < order.length - 1) {
         dispatch({
           type: 'moveDown',
-          draft: draft,
+          draft: draft.controller,
           deepKey: props.deepKey,
           index: index,
         });
@@ -1023,12 +988,12 @@ DocEditor.ArrayField = (props: FieldProps) => {
         console.log('editJson, onSave():', newValue);
         dispatch({
           type: 'updateItem',
-          draft,
+          draft: draft.controller,
           index,
           newValue: updateRichTextDataTime(newValue) as ArrayFieldValue,
           deepKey: props.deepKey,
         });
-        draft.notifySubscribers();
+        // draft.notifySubscribers();
         editJsonModal.close();
       },
     });
@@ -1042,19 +1007,19 @@ DocEditor.ArrayField = (props: FieldProps) => {
         console.log('aiEdit, onSave():', newValue);
         dispatch({
           type: 'updateItem',
-          draft,
+          draft: draft.controller,
           index,
           newValue: updateRichTextDataTime(newValue) as ArrayFieldValue,
           deepKey: props.deepKey,
         });
-        draft.notifySubscribers();
+        // draft.notifySubscribers();
         aiEditModal.close();
       },
     });
   };
 
   function itemInDeeplink(itemKey: string) {
-    return Boolean(deeplink.value.startsWith(`${props.deepKey}.${itemKey}`));
+    return deeplink.value.startsWith(`${props.deepKey}.${itemKey}`);
   }
 
   /** Handler for using the arrow keys when the array item's header is focused.  */
@@ -1080,17 +1045,20 @@ DocEditor.ArrayField = (props: FieldProps) => {
     [props.deepKey]
   );
 
-  const addButtonRow = (
-    <div className="DocEditor__ArrayField__add">
-      <Button
-        color="dark"
-        size="xs"
-        leftIcon={<IconCirclePlus size={16} />}
-        onClick={() => add()}
-      >
-        {field.buttonLabel || 'Add'}
-      </Button>
-    </div>
+  const addButtonRow = useMemo(
+    () => (
+      <div className="DocEditor__ArrayField__add">
+        <Button
+          color="dark"
+          size="xs"
+          leftIcon={<IconCirclePlus size={16} />}
+          onClick={() => add()}
+        >
+          {field.buttonLabel || 'Add'}
+        </Button>
+      </div>
+    ),
+    [field]
   );
 
   if (order.length === 0 && !value._new) {
@@ -1116,7 +1084,7 @@ DocEditor.ArrayField = (props: FieldProps) => {
             type: 'moveTo',
             fromIndex: source.index,
             toIndex: destination.index,
-            draft,
+            draft: draft.controller,
             deepKey: props.deepKey,
           });
         }}
@@ -1309,11 +1277,8 @@ DocEditor.ArrayField = (props: FieldProps) => {
                           <div className="DocEditor__ArrayField__item__body">
                             <DocEditor.Field
                               key={`${props.deepKey}.${key}`}
-                              collection={props.collection}
                               field={field.of}
-                              shallowKey={field.id!}
                               deepKey={`${props.deepKey}.${key}`}
-                              draft={props.draft}
                               hideHeader
                               isArrayChild
                               onFocus={() => {
@@ -1345,20 +1310,31 @@ DocEditor.ArrayField = (props: FieldProps) => {
 
 DocEditor.OneOfField = (props: FieldProps) => {
   const field = props.field as schema.OneOfField;
-  const [type, setType] = useState('');
   const typesMap: Record<string, schema.Schema> = {};
-  const dropdownValues: Array<{value: string; label: string}> = [
-    {value: '', label: field.placeholder || 'Select type'},
-  ];
-  field.types.forEach((type) => {
-    typesMap[type.name] = type;
-    dropdownValues.push({value: type.name, label: type.name});
-  });
-  const selectedType = typesMap[type || ''];
+  const dropdownOptions = useMemo(() => {
+    const options = [{value: '', label: field.placeholder || 'Select type'}];
+    field.types.forEach((type) => {
+      typesMap[type.name] = type;
+      options.push({value: type.name, label: type.name});
+    });
+    return options;
+  }, [field]);
+  const type = props.value?._type || '';
+  const selectedType = typesMap[type];
+  const draft = useDraftDoc();
+  console.log(props.value);
+  console.log(type);
 
+  // Store all the "previous" values for a type in a memoized dict. If a user
+  // swaps to a type and then swaps back, restore the original data.
   const cachedValues = useMemo<any>(() => {
     return {};
-  }, []);
+  }, [props.deepKey]);
+  useEffect(() => {
+    if (props.value?._type) {
+      cachedValues[props.value._type] = props.value;
+    }
+  }, [props.value]);
 
   async function onTypeChange(newType: string) {
     const newValue: any = {};
@@ -1374,23 +1350,8 @@ DocEditor.OneOfField = (props: FieldProps) => {
       }
     }
     newValue._type = newType;
-
-    await props.draft.updateKey(props.deepKey, newValue);
-    setType(newType);
+    await draft.controller.updateKey(props.deepKey, newValue);
   }
-
-  useEffect(() => {
-    const unsubscribe = props.draft.subscribe(
-      props.deepKey,
-      (newValue: any) => {
-        if (newValue?._type) {
-          setType(newValue._type || '');
-          cachedValues[newValue._type] = newValue;
-        }
-      }
-    );
-    return unsubscribe;
-  }, [props.deepKey]);
 
   // When the dropdown receives focus, highlight the <input> text so that it can
   // be easily searched.
@@ -1406,7 +1367,7 @@ DocEditor.OneOfField = (props: FieldProps) => {
       <div className="DocEditor__OneOfField__select">
         <div className="DocEditor__OneOfField__select__label">Type:</div>
         <Select
-          data={dropdownValues}
+          data={dropdownOptions}
           value={type}
           placeholder={field.placeholder}
           onChange={(e: string) => onTypeChange(e || '')}
@@ -1423,11 +1384,9 @@ DocEditor.OneOfField = (props: FieldProps) => {
           {selectedType.fields.map((field) => (
             <DocEditor.Field
               key={`${type}::${field.id}`}
-              collection={props.collection}
               field={field}
-              shallowKey={field.id!}
               deepKey={`${props.deepKey}.${field.id!}`}
-              draft={props.draft}
+              value={props.value}
               onBlur={() => {
                 requestHighlightNode(null);
               }}

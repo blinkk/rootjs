@@ -8,10 +8,12 @@ import {
   serverTimestamp,
   deleteField,
 } from 'firebase/firestore';
-import {useEffect, useMemo, useState} from 'preact/hooks';
+import {ComponentChildren, createContext} from 'preact';
+import {useContext, useEffect, useMemo, useState} from 'preact/hooks';
 import {logAction} from '../utils/actions.js';
 import {debounce} from '../utils/debounce.js';
 import {setDocToCache} from '../utils/doc-cache.js';
+import {CMSDoc} from '../utils/doc.js';
 import {EventListener} from '../utils/events.js';
 import {getNestedValue, isObject} from '../utils/objects.js';
 import {TIME_UNITS} from '../utils/time.js';
@@ -131,7 +133,7 @@ export class DraftController extends EventListener {
   /**
    * Adds a listener for data change events.
    */
-  onChange(callback: (data: any) => void) {
+  onChange(callback: (data: CMSDoc) => void) {
     return this.on(EventType.CHANGE, callback);
   }
 
@@ -184,7 +186,11 @@ export class DraftController extends EventListener {
    * Updates a single key. The key can be a nested key, e.g. "meta.title".
    */
   async updateKey(key: string, newValue: any) {
-    await this.updateKeys({[key]: newValue});
+    this.pendingUpdates.set(key, newValue);
+    applyUpdates(this.cachedData, {[key]: newValue});
+    this.dispatch(EventType.CHANGE, this.cachedData);
+    this.setSaveState(SaveState.UPDATES_PENDING);
+    this.queueChanges();
   }
 
   /**
@@ -375,31 +381,49 @@ function splitKey(key: string) {
   return [head, tail] as const;
 }
 
-export interface UseDraftHook {
-  loading: boolean;
-  saveState: SaveState;
-  controller: DraftController;
-  data: any;
+export interface DraftDocProviderProps {
+  docId: string;
+  children?: ComponentChildren;
 }
 
-export function useDraft(docId: string): UseDraftHook {
+interface DraftDocContext {
+  data: CMSDoc;
+  loading: boolean;
+  controller: DraftController;
+  saveState: SaveState;
+}
+
+const DRAFT_DOC_CONTEXT = createContext<DraftDocContext | null>(null);
+
+/**
+ * Context provider that provides a DraftController instance.
+ */
+export function DraftDocProvider(props: DraftDocProviderProps) {
   const [loading, setLoading] = useState(true);
+  const controller = useMemo(
+    () => new DraftController(props.docId),
+    [props.docId]
+  );
   const [data, setData] = useState<any>({});
-  const controller = useMemo(() => new DraftController(docId), [docId]);
   const [saveState, setSaveState] = useState(SaveState.NO_CHANGES);
 
   useEffect(() => {
-    controller.onChange((data: any) => {
+    controller.onChange((data: CMSDoc) => {
       setData(data);
       setLoading(false);
-      setDocToCache(docId, data);
+      setDocToCache(props.docId, data);
     });
     controller.onSaveStateChange((newSaveState) => setSaveState(newSaveState));
     controller.start();
+    return () => controller.dispose();
+  }, [controller]);
 
+  useEffect(() => {
+    if (!controller) {
+      return;
+    }
     const onVisibilityChange = () => {
       let visibilityTimeoutId: number | undefined;
-
       if (document.hidden || document.visibilityState !== 'visible') {
         visibilityTimeoutId = window.setTimeout(() => {
           controller.stop();
@@ -417,10 +441,21 @@ export function useDraft(docId: string): UseDraftHook {
     };
     document.addEventListener('visibilitychange', onVisibilityChange);
     return () => {
-      controller.dispose();
       document.removeEventListener('visibilitychange', onVisibilityChange);
     };
-  }, [docId]);
+  }, [controller]);
 
-  return {loading, saveState, controller, data};
+  return (
+    <DRAFT_DOC_CONTEXT.Provider value={{loading, data, controller, saveState}}>
+      {props.children}
+    </DRAFT_DOC_CONTEXT.Provider>
+  );
+}
+
+export function useDraftDoc(): DraftDocContext {
+  const value = useContext(DRAFT_DOC_CONTEXT);
+  if (!value) {
+    throw new Error('missing DraftDocContext. Use <DraftDocProvider>');
+  }
+  return value;
 }

@@ -14,14 +14,15 @@ import {
   IconLayoutSidebarRightCollapse,
   IconLayoutSidebarRightExpand,
 } from '@tabler/icons-preact';
-import {useEffect, useRef, useState} from 'preact/hooks';
+import {useCallback, useEffect, useRef, useState} from 'preact/hooks';
+import {Collection} from '../../../core/schema.js';
 import {DocEditor} from '../../components/DocEditor/DocEditor.js';
 import {useEditJsonModal} from '../../components/EditJsonModal/EditJsonModal.js';
 import {
   SplitPanel,
   useSplitPanel,
 } from '../../components/SplitPanel/SplitPanel.js';
-import {UseDraftHook, useDraft} from '../../hooks/useDraft.js';
+import {DraftDocProvider, useDraftDoc} from '../../hooks/useDraftDoc.js';
 import {useLocalStorage} from '../../hooks/useLocalStorage.js';
 import {Layout} from '../../layout/Layout.js';
 import {joinClassNames} from '../../utils/classes.js';
@@ -53,12 +54,20 @@ function getPreviewUrl(
   return `${basePreviewPath}?${query}`;
 }
 
+function openPreviewInNewTab(collectionId: string, slug: string) {
+  const previewUrl = getPreviewUrl(collectionId, slug);
+  // `noopener,noreferrer` used for `testEmbedMode()`.
+  const tab = window.open(previewUrl, '_blank', 'noopener,noreferrer');
+  if (tab) {
+    tab.focus();
+  }
+}
+
 export function DocumentPage(props: DocumentPageProps) {
   const collectionId = props.collection;
   const slug = props.slug;
   const docId = `${collectionId}/${slug}`;
   const collection = window.__ROOT_CTX.collections[collectionId];
-  const draft = useDraft(docId);
   const [isPreviewVisible, setIsPreviewVisible] = useLocalStorage<boolean>(
     `root::DocumentPage::previewVisible::${collectionId}`,
     true
@@ -68,22 +77,68 @@ export function DocumentPage(props: DocumentPageProps) {
     return <div>Could not find collection.</div>;
   }
 
-  function openPreviewInNewTab() {
-    const previewUrl = getPreviewUrl(collectionId, slug);
-    // `noopener,noreferrer` used for `testEmbedMode()`.
-    const tab = window.open(previewUrl, '_blank', 'noopener,noreferrer');
-    if (tab) {
-      tab.focus();
-    }
-  }
+  return (
+    <DraftDocProvider docId={docId}>
+      <Layout>
+        <SplitPanel className="DocumentPage" localStorageId="DocumentPage">
+          <SplitPanel.Item
+            className={joinClassNames(
+              'DocumentPage__side',
+              !isPreviewVisible && 'DocumentPage__side--expanded'
+            )}
+          >
+            <DocumentPage.Editor
+              key={docId}
+              collection={collection}
+              docId={docId}
+              isPreviewVisible={isPreviewVisible}
+              setIsPreviewVisible={setIsPreviewVisible}
+            />
+          </SplitPanel.Item>
+          <SplitPanel.Item
+            className={joinClassNames(
+              'DocumentPage__main',
+              !isPreviewVisible && 'DocumentPage__main--hidden'
+            )}
+            fluid
+          >
+            {isPreviewVisible && (
+              <DocumentPage.Preview
+                key={docId}
+                collection={collection}
+                docId={docId}
+                slug={slug}
+              />
+            )}
+          </SplitPanel.Item>
+        </SplitPanel>
+      </Layout>
+    </DraftDocProvider>
+  );
+}
 
-  function saveDraft() {
-    draft.controller.flush();
-  }
+interface EditorProps {
+  collection: Omit<Collection, 'fields'>;
+  docId: string;
+  isPreviewVisible: boolean;
+  setIsPreviewVisible: (isPreviewVisible: boolean) => void;
+}
 
+DocumentPage.Editor = (props: EditorProps) => {
+  const collectionId = props.collection.id;
+  const docId = props.docId;
+  const isPreviewVisible = props.isPreviewVisible;
+  const setIsPreviewVisible = props.setIsPreviewVisible;
+  const draft = useDraftDoc();
   const editJsonModal = useEditJsonModal();
 
-  const editJson = () => {
+  const saveDraft = useCallback(() => {
+    draft.controller.flush();
+  }, [draft]);
+
+  useHotkeys([['mod+S', () => saveDraft()]]);
+
+  const editJson = useCallback(() => {
     editJsonModal.open({
       data: draft.data?.fields || {},
       onSave: (newValue) => {
@@ -94,123 +149,79 @@ export function DocumentPage(props: DocumentPageProps) {
         editJsonModal.close();
       },
     });
-  };
-
-  useHotkeys([['mod+S', () => saveDraft()]]);
+  }, [draft]);
 
   return (
-    <Layout>
-      <SplitPanel className="DocumentPage" localStorageId="DocumentPage">
-        <SplitPanel.Item
-          className={joinClassNames(
-            'DocumentPage__side',
-            !isPreviewVisible && 'DocumentPage__side--expanded'
-          )}
-        >
-          <div className="DocumentPage__side__header">
-            <div className="DocumentPage__side__header__nav">
-              <a href={`/cms/content/${collectionId}`}>
-                <ActionIcon className="DocumentPage__side__header__back">
-                  <IconArrowLeft size={16} />
-                </ActionIcon>
-              </a>
-              <div className="DocumentPage__side__header__docId">{docId}</div>
-            </div>
-            <div className="DocumentPage__side__header__buttons">
-              <Button
-                className="DocumentPage__side__header__saveButton"
-                variant="filled"
-                color="dark"
-                size="xs"
-                compact
-                leftIcon={<IconDeviceFloppy size={16} />}
-                onClick={() => saveDraft()}
-              >
-                Save
-              </Button>
-              <Tooltip label="Edit JSON">
-                <ActionIcon
-                  className="DocumentPage__side__header__editJson"
-                  onClick={() => editJson()}
-                >
-                  <IconBraces size={14} />
-                </ActionIcon>
-              </Tooltip>
-              {/* <Menu
-                className="DocumentPage__side__header__menu"
-                position="bottom"
-                control={
-                  <ActionIcon className="DocumentPage__side__header__menu__dots">
-                    <IconDotsVertical size={16} />
-                  </ActionIcon>
-                }
-              >
-                <Menu.Item
-                  icon={<IconBraces size={20} />}
-                  onClick={() => editJson()}
-                >
-                  Edit JSON
-                </Menu.Item>
-              </Menu> */}
-              <Tooltip
-                label={isPreviewVisible ? 'Hide preview' : 'Show preview'}
-              >
-                <ActionIcon
-                  className="DocumentPage__side__header__previewToggle"
-                  onClick={() => setIsPreviewVisible(!isPreviewVisible)}
-                >
-                  {isPreviewVisible ? (
-                    <IconLayoutSidebarRightCollapse size={16} />
-                  ) : (
-                    <IconLayoutSidebarRightExpand size={16} />
-                  )}
-                </ActionIcon>
-              </Tooltip>
-              {!isPreviewVisible && (
-                <Tooltip label="Open preview in new tab">
-                  <ActionIcon
-                    className="DocumentPage__side__header__openNewTab"
-                    onClick={openPreviewInNewTab}
-                  >
-                    <IconArrowUpRight size={16} />
-                  </ActionIcon>
-                </Tooltip>
-              )}
-            </div>
-          </div>
-          <div
-            className={joinClassNames(
-              'DocumentPage__side__editor',
-              !isPreviewVisible && 'DocumentPage__side__editor--centered'
-            )}
+    <>
+      <div className="DocumentPage__side__header">
+        <div className="DocumentPage__side__header__nav">
+          <a href={`/cms/content/${collectionId}`}>
+            <ActionIcon className="DocumentPage__side__header__back">
+              <IconArrowLeft size={16} />
+            </ActionIcon>
+          </a>
+          <div className="DocumentPage__side__header__docId">{docId}</div>
+        </div>
+        <div className="DocumentPage__side__header__buttons">
+          <Button
+            className="DocumentPage__side__header__saveButton"
+            variant="filled"
+            color="dark"
+            size="xs"
+            compact
+            leftIcon={<IconDeviceFloppy size={16} />}
+            onClick={() => saveDraft()}
           >
-            <DocEditor
-              key={docId}
-              collection={collection}
-              docId={docId}
-              draft={draft}
-            />
-          </div>
-        </SplitPanel.Item>
-        <SplitPanel.Item
-          className={joinClassNames(
-            'DocumentPage__main',
-            !isPreviewVisible && 'DocumentPage__main--hidden'
+            Save
+          </Button>
+          <Tooltip label="Edit JSON">
+            <ActionIcon
+              className="DocumentPage__side__header__editJson"
+              onClick={() => editJson()}
+            >
+              <IconBraces size={14} />
+            </ActionIcon>
+          </Tooltip>
+          <Tooltip label={isPreviewVisible ? 'Hide preview' : 'Show preview'}>
+            <ActionIcon
+              className="DocumentPage__side__header__previewToggle"
+              onClick={() => setIsPreviewVisible(!isPreviewVisible)}
+            >
+              {isPreviewVisible ? (
+                <IconLayoutSidebarRightCollapse size={16} />
+              ) : (
+                <IconLayoutSidebarRightExpand size={16} />
+              )}
+            </ActionIcon>
+          </Tooltip>
+          {!isPreviewVisible && (
+            <Tooltip label="Open preview in new tab">
+              <ActionIcon
+                className="DocumentPage__side__header__openNewTab"
+                onClick={openPreviewInNewTab}
+              >
+                <IconArrowUpRight size={16} />
+              </ActionIcon>
+            </Tooltip>
           )}
-          fluid
-        >
-          {isPreviewVisible && (
-            <DocumentPage.Preview key={docId} docId={docId} draft={draft} />
-          )}
-        </SplitPanel.Item>
-      </SplitPanel>
-    </Layout>
+        </div>
+      </div>
+      <div
+        className={joinClassNames(
+          'DocumentPage__side__editor',
+          !isPreviewVisible && 'DocumentPage__side__editor--centered'
+        )}
+      >
+        <DocEditor key={docId} collectionId={collectionId} docId={docId} />
+      </div>
+    </>
   );
-}
+};
 
 interface PreviewProps {
+  collection: Omit<Collection, 'fields'>;
   docId: string;
-  draft: UseDraftHook;
+  slug: string;
 }
 
 type Device = 'mobile' | 'tablet' | 'desktop' | '';
@@ -232,14 +243,11 @@ function getLocaleLabel(locale: string) {
 }
 
 DocumentPage.Preview = (props: PreviewProps) => {
-  const [collectionId, slug] = props.docId.split('/');
-  const collections = window.__ROOT_CTX.collections;
-  const rootCollection = collections[collectionId];
-  if (!rootCollection) {
-    throw new Error(`collection not found: ${collectionId}`);
-  }
+  const collection = props.collection;
+  const collectionId = collection.id;
+  const slug = props.slug;
   const domain =
-    rootCollection.domain ||
+    collection.domain ||
     window.__ROOT_CTX.rootConfig.domain ||
     'https://example.com';
   const servingPath = getDocServingPath({collectionId, slug});
@@ -258,8 +266,9 @@ DocumentPage.Preview = (props: PreviewProps) => {
   });
   const [selectedLocale, setSelectedLocale] = useState('');
   const iframeRef = useRef<HTMLIFrameElement>(null);
-  const locales = props.draft.controller.getLocales();
   const splitPanel = useSplitPanel();
+  const draft = useDraftDoc();
+  const locales = draft.controller.getLocales();
 
   const previewUrl = getPreviewUrl(collectionId, slug);
   const localizedPreviewUrl = getPreviewUrl(collectionId, slug, selectedLocale);
@@ -300,13 +309,12 @@ DocumentPage.Preview = (props: PreviewProps) => {
         !iframeWindow.location.href.startsWith('about:blank')
       ) {
         const currentPath = iframeWindow.location.pathname;
-        // console.log(`iframe url change: ${currentPath}`);
         setIframeUrl(`${domain}${currentPath}`);
       }
     }
     iframe.addEventListener('load', onIframeLoad);
 
-    const removeOnFlush = props.draft.controller.onFlush(() => {
+    const removeOnFlush = draft.controller.onFlush(() => {
       reloadIframe();
     });
 
@@ -332,7 +340,7 @@ DocumentPage.Preview = (props: PreviewProps) => {
 
   function onReloadClick() {
     // Save any unsaved changes and then reload the iframe.
-    props.draft.controller.flush().then(() => reloadIframe());
+    draft.controller.flush().then(() => reloadIframe());
   }
 
   function openNewTab() {

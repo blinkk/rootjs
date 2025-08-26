@@ -1,30 +1,12 @@
 import {Checkbox} from '@mantine/core';
-import {useCallback, useEffect, useState} from 'preact/hooks';
 import * as schema from '../../../../core/schema.js';
+import {useDraftDoc} from '../../../hooks/useDraftDoc.js';
 import {FieldProps} from './FieldProps.js';
 
 export function BooleanField(props: FieldProps) {
   const field = props.field as schema.BooleanField;
   const label = field.checkboxLabel || 'Enabled';
-  const [value, setValue] = useState<boolean>(false);
-
-  const onChange = useCallback(
-    (newValue: boolean) => {
-      setValue(newValue);
-      props.draft.updateKey(props.deepKey, newValue);
-    },
-    [props.deepKey]
-  );
-
-  useEffect(() => {
-    const unsubscribe = props.draft.subscribe(
-      props.deepKey,
-      (newValue: boolean) => {
-        setValue(newValue);
-      }
-    );
-    return unsubscribe;
-  }, []);
+  const draft = useDraftDoc();
 
   return (
     <div className="DocEditor__BooleanField">
@@ -32,9 +14,10 @@ export function BooleanField(props: FieldProps) {
         label={label}
         onChange={(e: Event) => {
           const target = e.currentTarget as HTMLInputElement;
-          onChange(target.checked);
+          const value = target.checked;
+          draft.controller.updateKey(props.deepKey, value);
         }}
-        checked={value}
+        checked={!!props.value}
         size="xs"
       />
     </div>

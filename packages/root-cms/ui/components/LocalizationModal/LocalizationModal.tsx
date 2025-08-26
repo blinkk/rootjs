@@ -23,8 +23,7 @@ import {
   IconTable,
 } from '@tabler/icons-preact';
 import {useEffect, useMemo, useState} from 'preact/hooks';
-import * as schema from '../../../core/schema.js';
-import {DraftController} from '../../hooks/useDraft.js';
+import {DraftController} from '../../hooks/useDraftDoc.js';
 import {GapiClient, useGapiClient} from '../../hooks/useGapiClient.js';
 import {useModalTheme} from '../../hooks/useModalTheme.js';
 import {logAction} from '../../utils/actions.js';
@@ -62,7 +61,6 @@ enum MenuAction {
 export interface LocalizationModalProps {
   [key: string]: unknown;
   draft: DraftController;
-  collection: schema.Collection;
   docId: string;
 }
 
@@ -284,7 +282,6 @@ LocalizationModal.AllNoneButtons = (props: AllNoneButtonsProps) => {
 };
 
 interface TranslationsProps {
-  collection: schema.Collection;
   docId: string;
 }
 

@@ -1,35 +1,24 @@
 import {NumberInput} from '@mantine/core';
-import {useCallback, useEffect, useState} from 'preact/hooks';
-import * as schema from '../../../../core/schema.js';
+import {useCallback} from 'preact/hooks';
+import {useDraftDoc} from '../../../hooks/useDraftDoc.js';
 import {FieldProps} from './FieldProps.js';
 
 export function NumberField(props: FieldProps) {
-  const field = props.field as schema.NumberField;
-  const [value, setValue] = useState(field.default || 0);
+  // const field = props.field as schema.NumberField;
+  const draft = useDraftDoc();
 
   const onChange = useCallback(
     (newValue: number) => {
-      setValue(newValue);
-      props.draft.updateKey(props.deepKey, newValue);
+      draft.controller.updateKey(props.deepKey, newValue);
     },
     [props.deepKey]
   );
-
-  useEffect(() => {
-    const unsubscribe = props.draft.subscribe(
-      props.deepKey,
-      (newValue: number) => {
-        setValue(newValue);
-      }
-    );
-    return unsubscribe;
-  }, []);
 
   return (
     <NumberInput
       size="xs"
       radius={0}
-      value={value}
+      value={props.value || 0}
       onChange={(value: number) => onChange(value)}
       hideControls
     />
