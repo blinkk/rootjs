@@ -4,6 +4,9 @@ on:
   push:
     branches:
       - main
+    # Ignore "release" tags since the release would not be available on npm yet.
+    tags-ignore:
+      - "@blinkk/.*"
   workflow_dispatch:
 
 jobs:
