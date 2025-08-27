@@ -1,10 +1,24 @@
-import {ComponentChild, ComponentChildren} from 'preact';
+import {ComponentChild, ComponentChildren, createContext} from 'preact';
 import {CSSProperties} from 'preact/compat';
-import {useEffect, useRef, useState} from 'preact/hooks';
+import {useContext, useEffect, useRef, useState} from 'preact/hooks';
 
 import {useLocalStorage} from '../../hooks/useLocalStorage.js';
 import {joinClassNames} from '../../utils/classes.js';
 import './SplitPanel.css';
+
+interface SplitPanelContextValue {
+  onResize: (callback: () => void) => () => void;
+}
+
+const SplitPanelContext = createContext<SplitPanelContextValue | null>(null);
+
+export function useSplitPanel() {
+  const context = useContext(SplitPanelContext);
+  if (!context) {
+    throw new Error('useSplitPanel must be used within a SplitPanel');
+  }
+  return context;
+}
 
 export interface SplitPanelProps {
   className?: string;
@@ -20,9 +34,19 @@ export function SplitPanel(props: SplitPanelProps) {
   );
   const [isDragging, setIsDragging] = useState(false);
   const [offset, setOffset] = useState(0);
+  const resizeCallbacksRef = useRef<Set<() => void>>(new Set());
 
   const containerRef = useRef<HTMLDivElement>(null);
   const dividerRef = useRef<HTMLDivElement>(null);
+
+  const contextValue: SplitPanelContextValue = {
+    onResize: (callback: () => void) => {
+      resizeCallbacksRef.current.add(callback);
+      return () => {
+        resizeCallbacksRef.current.delete(callback);
+      };
+    },
+  };
 
   useEffect(() => {
     const onMouseUp = () => setIsDragging(false);
@@ -39,6 +63,8 @@ export function SplitPanel(props: SplitPanelProps) {
     const onMouseMove = (e: MouseEvent) => {
       const newPanelWidth = e.clientX - offset;
       setPanelSize(newPanelWidth);
+      // Trigger all registered resize callbacks
+      resizeCallbacksRef.current.forEach((callback) => callback());
     };
     if (isDragging) {
       window.addEventListener('mousemove', onMouseMove);
@@ -54,23 +80,25 @@ export function SplitPanel(props: SplitPanelProps) {
     '--panel-size': `${panelSize}px`,
   };
   return (
-    <div
-      className={joinClassNames(
-        className,
-        'SplitPanel',
-        isDragging && 'dragging'
-      )}
-      ref={containerRef}
-      style={style}
-    >
-      {children[0]}
+    <SplitPanelContext.Provider value={contextValue}>
       <div
-        className="SplitPanel__divider"
-        ref={dividerRef}
-        onMouseDown={() => setIsDragging(true)}
-      ></div>
-      {children[1]}
-    </div>
+        className={joinClassNames(
+          className,
+          'SplitPanel',
+          isDragging && 'dragging'
+        )}
+        ref={containerRef}
+        style={style}
+      >
+        {children[0]}
+        <div
+          className="SplitPanel__divider"
+          ref={dividerRef}
+          onMouseDown={() => setIsDragging(true)}
+        ></div>
+        {children[1]}
+      </div>
+    </SplitPanelContext.Provider>
   );
 }
 
