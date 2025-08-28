@@ -1,6 +1,6 @@
 import {ComponentChild, ComponentChildren, createContext} from 'preact';
 import {CSSProperties} from 'preact/compat';
-import {useContext, useEffect, useRef, useState} from 'preact/hooks';
+import {useContext, useEffect, useMemo, useRef, useState} from 'preact/hooks';
 
 import {useLocalStorage} from '../../hooks/useLocalStorage.js';
 import {joinClassNames} from '../../utils/classes.js';
@@ -34,16 +34,16 @@ export function SplitPanel(props: SplitPanelProps) {
   );
   const [isDragging, setIsDragging] = useState(false);
   const [offset, setOffset] = useState(0);
-  const resizeCallbacksRef = useRef<Set<() => void>>(new Set());
+  const resizeCallbacks = useMemo(() => new Set<() => void>(), []);
 
   const containerRef = useRef<HTMLDivElement>(null);
   const dividerRef = useRef<HTMLDivElement>(null);
 
   const contextValue: SplitPanelContextValue = {
     onResize: (callback: () => void) => {
-      resizeCallbacksRef.current.add(callback);
+      resizeCallbacks.add(callback);
       return () => {
-        resizeCallbacksRef.current.delete(callback);
+        resizeCallbacks.delete(callback);
       };
     },
   };
@@ -64,7 +64,7 @@ export function SplitPanel(props: SplitPanelProps) {
       const newPanelWidth = e.clientX - offset;
       setPanelSize(newPanelWidth);
       // Trigger all registered resize callbacks
-      resizeCallbacksRef.current.forEach((callback) => callback());
+      resizeCallbacks.forEach((callback) => callback());
     };
     if (isDragging) {
       window.addEventListener('mousemove', onMouseMove);
