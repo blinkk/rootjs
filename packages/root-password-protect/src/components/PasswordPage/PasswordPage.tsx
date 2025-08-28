@@ -1,26 +1,13 @@
-import {ComponentChildren} from 'preact';
 import {CSS} from './PasswordPage.css.js';
-
-export interface PasswordPageOptions {
-  /** The icon to display. Use "false" to suppress the icon. Default: Shield. */
-  icon?: ComponentChildren | false;
-  /** The title to display. Use "false" to suppress the title. Default: "This page is protected". */
-  title?: string | false;
-  /** The subtitle to display. Use "false" to suppress the subtitle. Default: "Enter the password below to continue:". */
-  subtitle?: string | false;
-  /** Additional component children to display at the top of the headline container. Use this to add other elements to the page, such as style overrides. */
-  children?: ComponentChildren;
-}
 
 export interface PasswordPageProps {
   nonce: string;
   error?: string;
-  options?: PasswordPageOptions;
 }
 
 export function PasswordPage(props: PasswordPageProps) {
   return (
-    <html>
+    <html lang="en">
       <head>
         <meta charset="utf-8" />
         <title>Protected</title>
@@ -40,21 +27,13 @@ export function PasswordPage(props: PasswordPageProps) {
         <div id="root">
           <div className="signin">
             <div className="signin__headline">
-              {props.options?.children}
-              {props.options?.icon !== false && (
-                <div className="signin__headline__icon">
-                  {props.options?.icon || <ShieldIcon />}
-                </div>
-              )}
-              {props.options?.title !== false && (
-                <h1>{props.options?.title || 'This page is protected.'}</h1>
-              )}
-              {props.options?.subtitle !== false && (
-                <p className="signin__headline__body">
-                  {props.options?.subtitle ||
-                    'Enter the password below to continue:'}
-                </p>
-              )}
+              <div className="signin__headline__icon">
+                <ShieldIcon />
+              </div>
+              <h1>This page is protected.</h1>
+              <p className="signin__headline__body">
+                Enter the password below to continue:
+              </p>
             </div>
             <form className="signin__form" method="POST">
               <input
@@ -63,6 +42,7 @@ export function PasswordPage(props: PasswordPageProps) {
                 name="password"
                 type="password"
                 placeholder="Password"
+                autoFocus={true}
               />
               <button className="signin__button" type="submit">
                 <div className="signin__button__label">Submit</div>

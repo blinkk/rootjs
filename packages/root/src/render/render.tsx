@@ -189,6 +189,8 @@ export class Renderer {
         let statusCode = 200;
         if (route.src === 'routes/404.tsx') {
           statusCode = 404;
+        } else if (route.src === 'routes/401.tsx') {
+          statusCode = 401;
         } else if (route.src === 'routes/500.tsx') {
           statusCode = 500;
         }

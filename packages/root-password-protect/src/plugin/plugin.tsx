@@ -4,11 +4,13 @@ import micromatch from 'micromatch';
 import {renderToString} from 'preact-render-to-string';
 import {
   PasswordPage,
-  PasswordPageOptions,
   PasswordPageProps,
 } from '../components/PasswordPage/PasswordPage.js';
 import {generateNonce, setSecurityHeaders} from '../core/csp.js';
 import {hashPassword, verifyPassword} from '../core/password.js';
+
+/** Props for sites to provide a custom password page. */
+export type {PasswordPageProps};
 
 const SESSION_COOKIE_HASH = 'password_protect.hash';
 const SESSION_COOKIE_SALT = 'password_protect.salt';
@@ -43,8 +45,12 @@ export interface PasswordProtectedRoute {
     salt: string;
   };
 
-  /** Options for customizing the password page UI. */
-  ui?: PasswordPageOptions;
+  /**
+   * Override the default password page with a custom one that more closely
+   * aligns with your site's look and feel. The custom page should submit a
+   * POST request to itself, and the form should include a "password" field.
+   */
+  unauthorizedPage?: preact.ComponentType<PasswordPageProps>;
 }
 
 export interface PasswordProtectPluginOptions {
@@ -111,9 +117,8 @@ async function handleProtectedRoute(
       !req.body.password
     ) {
       res.status(400);
-      renderPasswordPage(req, res, {
+      renderPasswordPage(req, res, protectedRoute.unauthorizedPage, {
         error: 'Bad request (no password).',
-        options: protectedRoute.ui,
       });
       return;
     }
@@ -125,9 +130,8 @@ async function handleProtectedRoute(
       protectedRoute.password.salt
     );
     if (!isValid) {
-      renderPasswordPage(req, res, {
+      renderPasswordPage(req, res, protectedRoute.unauthorizedPage, {
         error: 'Incorrect password.',
-        options: protectedRoute.ui,
       });
       return;
     }
@@ -145,9 +149,7 @@ async function handleProtectedRoute(
     return;
   }
 
-  renderPasswordPage(req, res, {
-    options: protectedRoute.ui,
-  });
+  renderPasswordPage(req, res, protectedRoute.unauthorizedPage);
 }
 
 /**
@@ -184,10 +186,12 @@ async function verifySessionCookie(
 export async function renderPasswordPage(
   req: Request,
   res: Response,
+  page?: PasswordProtectedRoute['unauthorizedPage'],
   props?: Omit<PasswordPageProps, 'nonce'>
 ) {
+  const Component = page ?? PasswordPage;
   const nonce = generateNonce();
-  const mainHtml = renderToString(<PasswordPage {...props} nonce={nonce} />);
+  const mainHtml = renderToString(<Component {...props} nonce={nonce} />);
   const html = `<!doctype html>\n${mainHtml}`;
   res.setHeader('content-type', 'text/html');
   setSecurityHeaders(res, nonce);
