@@ -21,7 +21,7 @@ function KeyIcon() {
   );
 }
 
-export function UnauthorizedPage(props: PasswordPageProps) {
+export default function UnauthorizedPage(props: PasswordPageProps) {
   return (
     <html lang="en">
       <head>

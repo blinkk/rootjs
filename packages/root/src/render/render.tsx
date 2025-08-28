@@ -93,6 +93,11 @@ export class Renderer {
     this.router = new Router(rootConfig);
   }
 
+  /** Returns a route from the router. */
+  getRoute(url: string): [Route | undefined, Record<string, string>] {
+    return this.router.get(url);
+  }
+
   async handle(req: Request, res: Response, next: NextFunction) {
     let url = req.path;
     // Decode unicode paths.
