@@ -4,6 +4,7 @@ import micromatch from 'micromatch';
 import {renderToString} from 'preact-render-to-string';
 import {
   PasswordPage,
+  PasswordPageOptions,
   PasswordPageProps,
 } from '../components/PasswordPage/PasswordPage.js';
 import {generateNonce, setSecurityHeaders} from '../core/csp.js';
@@ -41,6 +42,9 @@ export interface PasswordProtectedRoute {
      */
     salt: string;
   };
+
+  /** Options for customizing the password page UI. */
+  ui?: PasswordPageOptions;
 }
 
 export interface PasswordProtectPluginOptions {
@@ -107,7 +111,10 @@ async function handleProtectedRoute(
       !req.body.password
     ) {
       res.status(400);
-      renderPasswordPage(req, res, {error: 'Bad request (no password).'});
+      renderPasswordPage(req, res, {
+        error: 'Bad request (no password).',
+        options: protectedRoute.ui,
+      });
       return;
     }
 
@@ -118,7 +125,10 @@ async function handleProtectedRoute(
       protectedRoute.password.salt
     );
     if (!isValid) {
-      renderPasswordPage(req, res, {error: 'Incorrect password.'});
+      renderPasswordPage(req, res, {
+        error: 'Incorrect password.',
+        options: protectedRoute.ui,
+      });
       return;
     }
     // Set a session cookie value to verify subsequent requests.
@@ -135,7 +145,9 @@ async function handleProtectedRoute(
     return;
   }
 
-  renderPasswordPage(req, res);
+  renderPasswordPage(req, res, {
+    options: protectedRoute.ui,
+  });
 }
 
 /**

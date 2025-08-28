@@ -1,8 +1,21 @@
+import {ComponentChildren} from 'preact';
 import {CSS} from './PasswordPage.css.js';
+
+export interface PasswordPageOptions {
+  /** The icon to display. Use "false" to suppress the icon. Default: Shield. */
+  icon?: ComponentChildren | false;
+  /** The title to display. Use "false" to suppress the title. Default: "This page is protected". */
+  title?: string | false;
+  /** The subtitle to display. Use "false" to suppress the subtitle. Default: "Enter the password below to continue:". */
+  subtitle?: string | false;
+  /** Additional component children to display at the top of the headline container. Use this to add other elements to the page, such as style overrides. */
+  children?: ComponentChildren;
+}
 
 export interface PasswordPageProps {
   nonce: string;
   error?: string;
+  options?: PasswordPageOptions;
 }
 
 export function PasswordPage(props: PasswordPageProps) {
@@ -17,8 +30,8 @@ export function PasswordPage(props: PasswordPageProps) {
           type="image/png"
         />
         <link
+          href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900"
           rel="stylesheet"
-          href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@500&display=swap"
           nonce={props.nonce}
         />
         <style nonce={props.nonce}>{CSS}</style>
@@ -27,13 +40,21 @@ export function PasswordPage(props: PasswordPageProps) {
         <div id="root">
           <div className="signin">
             <div className="signin__headline">
-              <div className="signin__headline__icon">
-                <ShieldIcon />
-              </div>
-              <h1>This page is protected.</h1>
-              <p className="signin__headline__body">
-                Enter the password below to continue:
-              </p>
+              {props.options?.children}
+              {props.options?.icon !== false && (
+                <div className="signin__headline__icon">
+                  {props.options?.icon || <ShieldIcon />}
+                </div>
+              )}
+              {props.options?.title !== false && (
+                <h1>{props.options?.title || 'This page is protected.'}</h1>
+              )}
+              {props.options?.subtitle !== false && (
+                <p className="signin__headline__body">
+                  {props.options?.subtitle ||
+                    'Enter the password below to continue:'}
+                </p>
+              )}
             </div>
             <form className="signin__form" method="POST">
               <input
