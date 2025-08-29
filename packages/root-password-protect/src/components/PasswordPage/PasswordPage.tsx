@@ -7,7 +7,7 @@ export interface PasswordPageProps {
 
 export function PasswordPage(props: PasswordPageProps) {
   return (
-    <html>
+    <html lang="en">
       <head>
         <meta charset="utf-8" />
         <title>Protected</title>
@@ -17,8 +17,8 @@ export function PasswordPage(props: PasswordPageProps) {
           type="image/png"
         />
         <link
+          href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900"
           rel="stylesheet"
-          href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@500&display=swap"
           nonce={props.nonce}
         />
         <style nonce={props.nonce}>{CSS}</style>
@@ -42,6 +42,7 @@ export function PasswordPage(props: PasswordPageProps) {
                 name="password"
                 type="password"
                 placeholder="Password"
+                autoFocus={true}
               />
               <button className="signin__button" type="submit">
                 <div className="signin__button__label">Submit</div>

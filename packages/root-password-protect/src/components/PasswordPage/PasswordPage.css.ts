@@ -1,6 +1,6 @@
 export const CSS = `
 .signin {
-  font-family: 'Google Sans', arial, sans-serif;
+  font-family: 'Inter', system-ui, sans-serif;
   text-align: center;
   padding: 48px 20px;
   color: #3c4043;

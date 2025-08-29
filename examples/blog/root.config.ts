@@ -48,7 +48,10 @@ export default defineConfig({
       {source: '/restricted/[...path]', destination: '/unauthorized'},
     ],
     headers: [
-      {source: '/test-json.txt', headers: [{key: 'content-type', value: 'application/json'}]},
+      {
+        source: '/test-json.txt',
+        headers: [{key: 'content-type', value: 'application/json'}],
+      },
     ],
   },
   plugins: [
