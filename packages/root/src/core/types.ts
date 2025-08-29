@@ -174,10 +174,9 @@ export interface StaticContentResult {
  * that function is passed to `getStaticContent()`. Otherwise a default props
  * value is passed which includes the `rootConfig` and route param values.
  */
-export type GetStaticContent = (props: any) =>
-  | Promise<StaticContentResult | string>
-  | StaticContentResult
-  | string;
+export type GetStaticContent = (
+  props: any
+) => Promise<StaticContentResult | string> | StaticContentResult | string;
 
 export interface RouteModule {
   default?: ComponentType<unknown>;
