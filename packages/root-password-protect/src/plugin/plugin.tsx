@@ -21,19 +21,6 @@ export interface PasswordProtectedRoute {
    */
   source: string;
 
-  /**
-   * Customize the page to display to unauthorized users. To create a custom
-   * page, send a POST request to itself with a form that contains a single
-   * field "password".
-   *
-   * Falls back to:
-   * 1. The route that the URL provided here resolves to (if specified). For
-   *    example, `/protected/` would resolve to `routes/protected.tsx`.
-   * 2. The route at `routes/401.tsx` (if it exists).
-   * 3. The default password page provided by the plugin.
-   */
-  unauthorizedPageUrl?: string;
-
   password: {
     /**
      * A hash of the password. Note: a plain-text password should never be
@@ -123,7 +110,7 @@ async function handleProtectedRoute(
       !req.body.password
     ) {
       res.status(400);
-      renderPasswordPage(req, res, protectedRoute, {
+      renderPasswordPage(req, res, {
         error: 'Bad request (no password).',
       });
       return;
@@ -136,7 +123,7 @@ async function handleProtectedRoute(
       protectedRoute.password.salt
     );
     if (!isValid) {
-      renderPasswordPage(req, res, protectedRoute, {
+      renderPasswordPage(req, res, {
         error: 'Incorrect password.',
       });
       return;
@@ -155,7 +142,7 @@ async function handleProtectedRoute(
     return;
   }
 
-  renderPasswordPage(req, res, protectedRoute);
+  renderPasswordPage(req, res);
 }
 
 /**
@@ -192,16 +179,29 @@ async function verifySessionCookie(
 export async function renderPasswordPage(
   req: Request,
   res: Response,
-  protectedRoute: PasswordProtectedRoute,
   props?: Omit<PasswordPageProps, 'nonce'>
 ) {
-  const [customRoute] =
-    req.renderer?.getRoute(protectedRoute.unauthorizedPageUrl || '/401') ?? [];
-  const Component = customRoute?.module.default ?? PasswordPage;
   const nonce = generateNonce();
-  const mainHtml = renderToString(<Component {...props} nonce={nonce} />);
-  const html = `<!doctype html>\n${mainHtml}`;
   res.setHeader('content-type', 'text/html');
+  res.status(401);
   setSecurityHeaders(res, nonce);
-  res.send(html);
+  async function getHtml() {
+    // First, try to render the `/401` route. The route served at this path will
+    // display the "not authorized" interstitial page with a password prompt. The
+    // page should have a form on it that sends a POST request to itself with a
+    // form that contains a single field "password".
+    const route = req.renderer?.getRoute('/401')?.[0];
+    if (route) {
+      const data = await req.renderer?.renderRoute(route, {
+        routeParams: {nonce},
+      });
+      if (data) {
+        return data.html;
+      }
+    }
+    // If there's no `/401` route, fall back to the default password page.
+    const mainHtml = renderToString(<PasswordPage {...props} nonce={nonce} />);
+    return `<!doctype html>\n${mainHtml}`;
+  }
+  res.send(await getHtml());
 }
