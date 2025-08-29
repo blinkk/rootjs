@@ -2,18 +2,18 @@ import {Request, Response, NextFunction, Plugin, Server} from '@blinkk/root';
 import bodyParser from 'body-parser';
 import micromatch from 'micromatch';
 import {renderToString} from 'preact-render-to-string';
-import {
-  PasswordPage,
-  PasswordPageProps,
-} from '../components/PasswordPage/PasswordPage.js';
+import {PasswordPage} from '../components/PasswordPage/PasswordPage.js';
 import {generateNonce, setSecurityHeaders} from '../core/csp.js';
 import {hashPassword, verifyPassword} from '../core/password.js';
 
-/** Props for sites to provide a custom password page. */
-export type {PasswordPageProps};
-
 const SESSION_COOKIE_HASH = 'password_protect.hash';
 const SESSION_COOKIE_SALT = 'password_protect.salt';
+
+export enum PasswordProtectError {
+  UNKNOWN = 'UNKNOWN',
+  PASSWORD_REQUIRED = 'PASSWORD_REQUIRED',
+  PASSWORD_INVALID = 'PASSWORD_INVALID',
+}
 
 export interface PasswordProtectedRoute {
   /**
@@ -110,10 +110,9 @@ async function handleProtectedRoute(
       !req.body.password
     ) {
       res.status(400);
-      renderPasswordPage(req, res, {
-        error: 'Bad request (no password).',
+      return renderPasswordPage(req, res, {
+        error: PasswordProtectError.PASSWORD_REQUIRED,
       });
-      return;
     }
 
     const password = req.body.password as string;
@@ -123,26 +122,23 @@ async function handleProtectedRoute(
       protectedRoute.password.salt
     );
     if (!isValid) {
-      renderPasswordPage(req, res, {
-        error: 'Incorrect password.',
+      return renderPasswordPage(req, res, {
+        error: PasswordProtectError.PASSWORD_INVALID,
       });
-      return;
     }
     // Set a session cookie value to verify subsequent requests.
     await setSessionCookie(protectedRoute, res);
-    next();
-    return;
+    return next();
   }
 
   // If previously logged in, check the session cookie against the current
   // password hash.
   const isValid = await verifySessionCookie(protectedRoute, req);
   if (isValid) {
-    next();
-    return;
+    return next();
   }
 
-  renderPasswordPage(req, res);
+  return renderPasswordPage(req, res);
 }
 
 /**
@@ -179,29 +175,51 @@ async function verifySessionCookie(
 export async function renderPasswordPage(
   req: Request,
   res: Response,
-  props?: Omit<PasswordPageProps, 'nonce'>
+  options?: {error?: PasswordProtectError}
 ) {
-  const nonce = generateNonce();
-  res.setHeader('content-type', 'text/html');
-  res.status(401);
-  setSecurityHeaders(res, nonce);
-  async function getHtml() {
-    // First, try to render the `/401` route. The route served at this path will
-    // display the "not authorized" interstitial page with a password prompt. The
-    // page should have a form on it that sends a POST request to itself with a
-    // form that contains a single field "password".
-    const route = req.renderer?.getRoute('/401')?.[0];
+  // If there's no `/401` route, fall back to the default password page.
+  const defaultHandler = () => {
+    const nonce = generateNonce();
+    res.setHeader('content-type', 'text/html');
+    res.status(401);
+    setSecurityHeaders(res, nonce);
+    const errorMsg = getErrorMessage(options?.error);
+    const mainHtml = renderToString(
+      <PasswordPage error={errorMsg} nonce={nonce} />
+    );
+    const html = `<!doctype html>\n${mainHtml}`;
+    res.send(html);
+  };
+
+  // If the app defines `routes/401.tsx`, render that page.
+  if (req.renderer) {
+    const [route, routeParams] = req.renderer.getRoute('/401');
     if (route) {
-      const data = await req.renderer?.renderRoute(route, {
-        routeParams: {nonce},
+      // Add the error type to the req object. Routes that define a `handle()`
+      // method should be able to read from it to construct an appropriate
+      // error message for the page.
+      (req as any).passwordProtect = {error: options?.error};
+      return req.renderer.handleRoute(req, res, defaultHandler, route, {
+        defaultStatusCode: 401,
+        routeParams: routeParams,
       });
-      if (data) {
-        return data.html;
-      }
     }
-    // If there's no `/401` route, fall back to the default password page.
-    const mainHtml = renderToString(<PasswordPage {...props} nonce={nonce} />);
-    return `<!doctype html>\n${mainHtml}`;
   }
-  res.send(await getHtml());
+  return defaultHandler();
+}
+
+/**
+ * Converts a `PasswordProtectError` to a user-friendly error message.
+ */
+function getErrorMessage(error?: PasswordProtectError) {
+  if (!error) {
+    return undefined;
+  }
+  if (error === PasswordProtectError.PASSWORD_REQUIRED) {
+    return 'Bad request (no password).';
+  }
+  if (error === PasswordProtectError.PASSWORD_INVALID) {
+    return 'Incorrect password.';
+  }
+  return 'Unknown error.';
 }

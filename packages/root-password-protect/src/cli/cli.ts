@@ -1,6 +1,6 @@
 import {Command} from 'commander';
 import {bgGreen, black} from 'kleur/colors';
-import {generateHash} from './generate-hash';
+import {generateHash} from './generate-hash.js';
 
 export class CliRunner {
   private name: string;
