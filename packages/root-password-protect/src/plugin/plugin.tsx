@@ -2,15 +2,9 @@ import {Request, Response, NextFunction, Plugin, Server} from '@blinkk/root';
 import bodyParser from 'body-parser';
 import micromatch from 'micromatch';
 import {renderToString} from 'preact-render-to-string';
-import {
-  PasswordPage,
-  PasswordPageProps,
-} from '../components/PasswordPage/PasswordPage.js';
+import {PasswordPage} from '../components/PasswordPage/PasswordPage.js';
 import {generateNonce, setSecurityHeaders} from '../core/csp.js';
 import {hashPassword, verifyPassword} from '../core/password.js';
-
-/** Props for sites to provide a custom password page. */
-export type {PasswordPageProps};
 
 const SESSION_COOKIE_HASH = 'password_protect.hash';
 const SESSION_COOKIE_SALT = 'password_protect.salt';
