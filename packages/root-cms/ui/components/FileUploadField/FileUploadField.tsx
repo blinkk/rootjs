@@ -154,6 +154,14 @@ export function FileUploadField(props: FileUploadFieldProps) {
         preserveFilename: props.preserveFilename,
         cacheControl: props.cacheControl,
       });
+      // Preserve previous alt text when a new file is uploaded.
+      if (
+        !uploadedFile.alt &&
+        testShouldHaveAltText(uploadedFile.filename) &&
+        props.file?.alt
+      ) {
+        uploadedFile.alt = props.file.alt;
+      }
       setFileData(uploadedFile);
     } catch (err) {
       console.error('upload failed');
