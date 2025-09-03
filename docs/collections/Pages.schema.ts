@@ -19,7 +19,7 @@ export default schema.collection({
     },
   },
   autolock: true,
-  sort: [
+  sortOptions: [
     {id: 'title', label: 'Title A-Z', field: 'fields.meta.title'},
   ],
 

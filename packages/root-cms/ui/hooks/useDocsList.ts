@@ -43,7 +43,7 @@ export function useDocsList(collectionId: string, options: {orderBy: string}) {
       dbQuery = query(dbCollection, queryOrderby(documentId(), 'desc'));
     } else {
       const col = window.__ROOT_CTX.collections[collectionId] as any;
-      const custom = col?.sort?.find((s: any) => s.id === orderBy);
+      const custom = col?.sortOptions?.find((s: any) => s.id === orderBy);
       if (custom) {
         dbQuery =
           custom.direction === 'desc'

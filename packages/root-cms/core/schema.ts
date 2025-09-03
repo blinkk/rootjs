@@ -333,7 +333,7 @@ export type Collection = Schema & {
   /**
    * Custom sort options available when listing documents in the CMS.
    */
-  sort?: Array<{
+  sortOptions?: Array<{
     /** Unique identifier for the sort option. */
     id: string;
     /** Label displayed in the CMS UI. */

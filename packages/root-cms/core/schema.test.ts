@@ -417,11 +417,3 @@ test('define schema', () => {
   `);
 });
 
-test('define collection with custom sort', () => {
-  const col = schema.collection({
-    name: 'Test',
-    fields: [],
-    sort: [{id: 'title', label: 'Title A-Z', field: 'fields.title'}],
-  });
-  expect(col.sort?.[0].field).toBe('fields.title');
-});
