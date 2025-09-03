@@ -331,6 +331,23 @@ export type Collection = Schema & {
     };
   };
   /**
+   * Custom sort options available when listing documents in the CMS.
+   *
+   * NOTE: a new DB index may need to be created for the sort option. The first
+   * time using the sort option, you will get an error that provides a link for
+   * creating the index.
+   */
+  sortOptions?: Array<{
+    /** Unique identifier for the sort option. */
+    id: string;
+    /** Label displayed in the CMS UI. */
+    label: string;
+    /** DB field path to sort by, e.g. 'fields.meta.title'. */
+    field: string;
+    /** Sort direction. Defaults to ascending. */
+    direction?: 'asc' | 'desc';
+  }>;
+  /**
    * Regular expression used to validate document slugs. Should be provided as a
    * string so it can be serialized to the CMS UI.
    */

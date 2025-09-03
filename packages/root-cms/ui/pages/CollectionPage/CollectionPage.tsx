@@ -153,6 +153,15 @@ CollectionPage.Collection = (props: CollectionProps) => {
     return <></>;
   }
 
+  const sortOptions = [
+    {value: 'slug', label: 'A-Z'},
+    {value: 'slugDesc', label: 'Z-A'},
+    {value: 'newest', label: 'Newest'},
+    {value: 'oldest', label: 'Oldest'},
+    {value: 'modifiedAt', label: 'Last modified'},
+    ...(collection.sortOptions?.map((s: any) => ({value: s.id, label: s.label})) || []),
+  ];
+
   const [loading, listDocs, docs] = useDocsList(props.collection, {orderBy});
 
   return (
@@ -193,13 +202,7 @@ CollectionPage.Collection = (props: CollectionProps) => {
                         onChange={(value: any) =>
                           setOrderBy(value || 'modifiedAt')
                         }
-                        data={[
-                          {value: 'slug', label: 'A-Z'},
-                          {value: 'slugDesc', label: 'Z-A'},
-                          {value: 'newest', label: 'Newest'},
-                          {value: 'oldest', label: 'Oldest'},
-                          {value: 'modifiedAt', label: 'Last modified'},
-                        ]}
+                        data={sortOptions}
                       />
                     </div>
                     <div className="CollectionPage__collection__docsTab__controls__newDoc">

@@ -41,6 +41,15 @@ export function useDocsList(collectionId: string, options: {orderBy: string}) {
       dbQuery = query(dbCollection, queryOrderby(documentId()));
     } else if (orderBy === 'slugDesc') {
       dbQuery = query(dbCollection, queryOrderby(documentId(), 'desc'));
+    } else {
+      const col = window.__ROOT_CTX.collections[collectionId] as any;
+      const custom = col?.sortOptions?.find((s: any) => s.id === orderBy);
+      if (custom) {
+        dbQuery =
+          custom.direction === 'desc'
+            ? query(dbCollection, queryOrderby(custom.field, 'desc'))
+            : query(dbCollection, queryOrderby(custom.field));
+      }
     }
     await notifyErrors(async () => {
       const snapshot = await getDocs(dbQuery);
