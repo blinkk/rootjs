@@ -6,6 +6,7 @@ export default defineConfig({
   entry: {
     app: './core/app.tsx',
     cli: './cli/cli.ts',
+    'cli/generate-schema-json': './cli/generate-schema-json.ts',
     client: './core/client.ts',
     core: './core/core.ts',
     functions: './core/functions.ts',

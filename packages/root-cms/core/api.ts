@@ -1,5 +1,7 @@
 import {Server, Request, Response} from '@blinkk/root';
 import {multipartMiddleware} from '@blinkk/root/middleware';
+import {promises as fs} from 'node:fs';
+import path from 'node:path';
 import {
   ChatPrompt,
   AiResponse,
@@ -69,17 +71,34 @@ export function api(server: Server, options: ApiOptions) {
     }
 
     try {
-      const app = await options.getRenderer(req);
-      const collections = app.getCollections();
-      const collection = collections[reqBody.collectionId];
-      if (!collection) {
-        res.status(404).json({success: false, error: 'NOT_FOUND'});
+      if (req.viteServer) {
+        const app = await options.getRenderer(req);
+        const collections = app.getCollections();
+        const collection = collections[reqBody.collectionId];
+        if (!collection) {
+          res.status(404).json({success: false, error: 'NOT_FOUND'});
+          return;
+        }
+        res.status(200).json({success: true, data: collection});
         return;
       }
+
+      const schemaPath = path.join(
+        req.rootConfig!.rootDir,
+        'dist',
+        'collections',
+        `${reqBody.collectionId}.json`
+      );
+      const contents = await fs.readFile(schemaPath, 'utf8');
+      const collection = JSON.parse(contents);
       res.status(200).json({success: true, data: collection});
-    } catch (err) {
-      console.error(err.stack || err);
-      res.status(500).json({success: false, error: 'UNKNOWN'});
+    } catch (err: any) {
+      if (err && err.code === 'ENOENT') {
+        res.status(404).json({success: false, error: 'NOT_FOUND'});
+      } else {
+        console.error(err.stack || err);
+        res.status(500).json({success: false, error: 'UNKNOWN'});
+      }
     }
   });
 

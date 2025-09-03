@@ -1,6 +1,7 @@
 import {promises as fs} from 'node:fs';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
+import {execFileSync} from 'node:child_process';
 
 import {
   ConfigureServerOptions,
@@ -463,9 +464,22 @@ export function cmsPlugin(options: CMSPluginOptions): CMSPlugin {
     /**
      * A map of ssr files to include when running `root build`.
      */
-    ssrInput: () => ({
-      cms: path.resolve(__dirname, './app.js'),
-    }),
+    ssrInput: () => {
+      if (process.env.NODE_ENV !== 'development') {
+        try {
+          execFileSync(
+            'node',
+            [path.resolve(__dirname, './cli/generate-schema-json.js')],
+            {stdio: 'inherit'}
+          );
+        } catch (err) {
+          console.error('failed to generate schema json', err);
+        }
+      }
+      return {
+        cms: path.resolve(__dirname, './app.js'),
+      };
+    },
 
     /**
      * Attaches CMS-specific middleware to the Root.js server.
