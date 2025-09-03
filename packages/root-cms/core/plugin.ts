@@ -1,7 +1,6 @@
 import {promises as fs} from 'node:fs';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
-import {execFileSync} from 'node:child_process';
 
 import {
   ConfigureServerOptions,
@@ -9,6 +8,7 @@ import {
   Plugin,
   Request,
   Response,
+  RootConfig,
   Server,
 } from '@blinkk/root';
 import bodyParser from 'body-parser';
@@ -25,10 +25,34 @@ import sirv from 'sirv';
 import {type RootAiModel} from './ai.js';
 import {api} from './api.js';
 import {Action, RootCMSClient} from './client.js';
+import {loadRootConfig, viteSsrLoadModule} from '@blinkk/root/node';
+import {Schema} from './schema.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 type AppModule = typeof import('./app.js');
+type ProjectModule = typeof import('./project.js');
+
+async function generateSchemaJson(rootDir: string) {
+  const rootConfig = await loadRootConfig(rootDir, {command: 'root-cms'});
+  const modulePath = path.resolve(__dirname, './project.js');
+  const project = (await viteSsrLoadModule(
+    rootConfig,
+    modulePath
+  )) as ProjectModule;
+  const schemas = project.getProjectSchemas();
+  const outDir = path.join(rootDir, 'dist', 'collections');
+  await fs.mkdir(outDir, {recursive: true});
+  for (const [fileId, schema] of Object.entries(schemas) as [string, Schema][]) {
+    if (!fileId.startsWith('/collections/')) {
+      continue;
+    }
+    const collectionId = path.basename(fileId).split('.')[0];
+    const jsonPath = path.join(outDir, `${collectionId}.json`);
+    const data = JSON.stringify({...schema, id: collectionId}, null, 2);
+    await fs.writeFile(jsonPath, data);
+  }
+}
 
 // The session key name used for Root CMS authentication.
 const SESSION_COOKIE_AUTH = 'root-cms-auth';
@@ -461,21 +485,22 @@ export function cmsPlugin(options: CMSPluginOptions): CMSPlugin {
       return getFirestore(app, databaseId);
     },
 
+    hooks: {
+      async preBuild(rootConfig: RootConfig) {
+        if (process.env.NODE_ENV !== 'development') {
+          try {
+            await generateSchemaJson(rootConfig.rootDir);
+          } catch (err) {
+            console.error('failed to generate schema json', err);
+          }
+        }
+      },
+    },
+
     /**
      * A map of ssr files to include when running `root build`.
      */
     ssrInput: () => {
-      if (process.env.NODE_ENV !== 'development') {
-        try {
-          execFileSync(
-            'node',
-            [path.resolve(__dirname, './cli/generate-schema-json.js')],
-            {stdio: 'inherit'}
-          );
-        } catch (err) {
-          console.error('failed to generate schema json', err);
-        }
-      }
       return {
         cms: path.resolve(__dirname, './app.js'),
       };

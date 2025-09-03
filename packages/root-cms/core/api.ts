@@ -14,6 +14,10 @@ import {arrayToCsv, csvToArray} from './csv.js';
 
 type AppModule = typeof import('./app.js');
 
+function testValidCollectionId(id: string): boolean {
+  return /^[A-Za-z0-9_-]+$/.test(id);
+}
+
 export interface ChatApiRequest {
   chatId: string;
   prompt: ChatPrompt | ChatPrompt[];
@@ -65,8 +69,14 @@ export function api(server: Server, options: ApiOptions) {
     }
 
     const reqBody = req.body || {};
-    if (!reqBody.collectionId) {
+    const collectionId = String(reqBody.collectionId || '');
+    if (!collectionId) {
       res.status(400).json({success: false, error: 'MISSING_COLLECTION_ID'});
+      return;
+    }
+
+    if (!testValidCollectionId(collectionId)) {
+      res.status(400).json({success: false, error: 'INVALID_COLLECTION_ID'});
       return;
     }
 
@@ -74,7 +84,7 @@ export function api(server: Server, options: ApiOptions) {
       if (req.viteServer) {
         const app = await options.getRenderer(req);
         const collections = app.getCollections();
-        const collection = collections[reqBody.collectionId];
+        const collection = collections[collectionId];
         if (!collection) {
           res.status(404).json({success: false, error: 'NOT_FOUND'});
           return;
@@ -87,7 +97,7 @@ export function api(server: Server, options: ApiOptions) {
         req.rootConfig!.rootDir,
         'dist',
         'collections',
-        `${reqBody.collectionId}.json`
+        `${collectionId}.json`
       );
       const contents = await fs.readFile(schemaPath, 'utf8');
       const collection = JSON.parse(contents);
