@@ -19,6 +19,9 @@ export default schema.collection({
     },
   },
   autolock: true,
+  sort: [
+    {id: 'title', label: 'Title A-Z', field: 'fields.meta.title'},
+  ],
 
   fields: [
     schema.object({

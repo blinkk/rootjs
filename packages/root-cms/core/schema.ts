@@ -331,6 +331,19 @@ export type Collection = Schema & {
     };
   };
   /**
+   * Custom sort options available when listing documents in the CMS.
+   */
+  sort?: Array<{
+    /** Unique identifier for the sort option. */
+    id: string;
+    /** Label displayed in the CMS UI. */
+    label: string;
+    /** Firestore field path to sort by, e.g. 'fields.meta.title'. */
+    field: string;
+    /** Sort direction. Defaults to ascending. */
+    direction?: 'asc' | 'desc';
+  }>;
+  /**
    * Regular expression used to validate document slugs. Should be provided as a
    * string so it can be serialized to the CMS UI.
    */
