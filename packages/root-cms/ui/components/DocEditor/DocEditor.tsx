@@ -111,6 +111,7 @@ interface DocEditorProps {
 }
 
 const DOC_DATA_CONTEXT = createContext(null);
+const DOC_TYPES_CONTEXT = createContext<Record<string, schema.Schema>>({});
 
 const DISABLE_SCHEMA_LEVEL_ARRAY_PREVIEW = testHasExperimentParam(
   'DisableSchemaLevelArrayPreview'
@@ -120,6 +121,10 @@ function useDocData(): CMSDoc {
   return useContext(DOC_DATA_CONTEXT)!;
 }
 
+function useDocTypes(): Record<string, schema.Schema> {
+  return useContext(DOC_TYPES_CONTEXT) || {};
+}
+
 export function DocEditor(props: DocEditorProps) {
   // Load the full collection schema.
   const collection = useCollectionSchema(props.collection.id);
@@ -127,6 +132,7 @@ export function DocEditor(props: DocEditorProps) {
   const {controller, saveState, data} = draft;
   const loading = collection.loading || draft.loading;
   const fields = collection.schema?.fields || [];
+  const types = collection.schema?.types || {};
 
   const goBack = useCallback(() => {
     const collectionId = props.docId.split('/')[0];
@@ -151,8 +157,9 @@ export function DocEditor(props: DocEditorProps) {
 
   return (
     <DOC_DATA_CONTEXT.Provider value={data}>
-      <DeeplinkProvider>
-        <div className="DocEditor">
+      <DOC_TYPES_CONTEXT.Provider value={types}>
+        <DeeplinkProvider>
+          <div className="DocEditor">
           <LoadingOverlay
             visible={loading}
             loaderProps={{color: 'gray', size: 'xl'}}
@@ -255,8 +262,9 @@ export function DocEditor(props: DocEditorProps) {
               />
             ))}
           </div>
-        </div>
-      </DeeplinkProvider>
+          </div>
+        </DeeplinkProvider>
+      </DOC_TYPES_CONTEXT.Provider>
     </DOC_DATA_CONTEXT.Provider>
   );
 }
@@ -268,8 +276,11 @@ DocEditor.Field = (props: FieldProps) => {
   const targeted = deeplink.value === props.deepKey;
   const ref = useRef<HTMLDivElement>(null);
   const [value, setValue] = useState(null);
-
-  const fieldValueEmpty = useMemo(() => testFieldEmpty(field, value), [value]);
+  const types = useDocTypes();
+  const fieldValueEmpty = useMemo(
+    () => testFieldEmpty(field, value, types),
+    [value, types]
+  );
   const showTranslateIcon =
     (field.type === 'string' || field.type === 'richtext') && field.translate;
 
@@ -384,6 +395,7 @@ DocEditor.FieldHeader = (props: {
   const deeplink = useDeeplink();
   const docData = useDocData() || {};
   const l10nSheet = docData.sys?.l10nSheet;
+  const types = useDocTypes();
 
   const i18nConfig = window.__ROOT_CTX.rootConfig.i18n || {};
   const i18nLocales = i18nConfig.locales || ['en'];
@@ -430,7 +442,7 @@ DocEditor.FieldHeader = (props: {
                 size="xs"
                 onClick={() => {
                   const strings = new Set<string>();
-                  extractField(strings, props.field, props.fieldValue);
+                  extractField(strings, props.field, props.fieldValue, types);
                   const translateStrings = Array.from(strings);
                   editTranslationsModal.open({
                     docId: docData.id,
@@ -870,6 +882,7 @@ DocEditor.ArrayField = (props: FieldProps) => {
   const deeplink = useDeeplink();
   const virtualClipboard = useVirtualClipboard();
   const experiments = window.__ROOT_CTX.experiments || {};
+  const types = useDocTypes();
 
   const data = value ?? {};
   const order = data._array || [];
@@ -1129,7 +1142,7 @@ DocEditor.ArrayField = (props: FieldProps) => {
               className="DocEditor__ArrayField__items"
             >
               {order.map((key: string, i: number) => {
-                const previewImage = arrayPreviewImage(field, value[key]);
+                const previewImage = arrayPreviewImage(field, value[key], types);
                 return (
                   <Draggable key={key} index={i} draggableId={key}>
                     {(provided, snapshot) => (
@@ -1194,7 +1207,7 @@ DocEditor.ArrayField = (props: FieldProps) => {
                                 </div>
                               )}
                               <div className="DocEditor__ArrayField__item__header__preview__title">
-                                {arrayPreview(field, value[key], i)}
+                                {arrayPreview(field, value[key], i, types)}
                               </div>
                             </div>
                             <div className="DocEditor__ArrayField__item__header__controls">
@@ -1345,14 +1358,23 @@ DocEditor.ArrayField = (props: FieldProps) => {
 
 DocEditor.OneOfField = (props: FieldProps) => {
   const field = props.field as schema.OneOfField;
+  const allTypes = useDocTypes();
   const [type, setType] = useState('');
   const typesMap: Record<string, schema.Schema> = {};
   const dropdownValues: Array<{value: string; label: string}> = [
     {value: '', label: field.placeholder || 'Select type'},
   ];
-  field.types.forEach((type) => {
-    typesMap[type.name] = type;
-    dropdownValues.push({value: type.name, label: type.name});
+  (field.types || []).forEach((t: any) => {
+    if (typeof t === 'string') {
+      const schemaType = allTypes[t];
+      if (schemaType) {
+        typesMap[t] = schemaType;
+        dropdownValues.push({value: t, label: t});
+      }
+    } else if (t && t.name) {
+      typesMap[t.name] = t;
+      dropdownValues.push({value: t.name, label: t.name});
+    }
   });
   const selectedType = typesMap[type || ''];
 
@@ -1481,15 +1503,22 @@ function arrayMove<T = unknown>(arr: T[], fromIndex: number, toIndex: number) {
 function getSchemaPreviewTemplates(
   arrayOfField: schema.ObjectLikeField,
   data: any,
+  types: Record<string, schema.Schema>,
   key: 'title' | 'image' = 'title'
 ): string | string[] | null {
   if (arrayOfField.type === 'oneof') {
     const oneOfField = arrayOfField as schema.OneOfField;
     const selectedTypeName = data?._type;
     if (selectedTypeName) {
-      const selectedSchema = oneOfField.types.find(
-        (schema) => schema.name === selectedTypeName
-      );
+      let selectedSchema: schema.Schema | undefined;
+      const fieldTypes = oneOfField.types || [];
+      if (typeof fieldTypes[0] === 'string') {
+        selectedSchema = types[selectedTypeName];
+      } else {
+        selectedSchema = (fieldTypes as any[]).find(
+          (schema) => schema.name === selectedTypeName
+        );
+      }
       return selectedSchema?.preview?.[key] || null;
     }
   }
@@ -1548,7 +1577,8 @@ function buildPreviewValue(
 /** Builds the preview image for an array item. */
 function arrayPreviewImage(
   field: schema.ArrayField,
-  data: any
+  data: any,
+  types: Record<string, schema.Schema>
 ): string | undefined {
   if (DISABLE_SCHEMA_LEVEL_ARRAY_PREVIEW) {
     return undefined;
@@ -1556,6 +1586,7 @@ function arrayPreviewImage(
   const schemaLevelTemplates = getSchemaPreviewTemplates(
     field.of,
     data,
+    types,
     'image'
   );
   if (!schemaLevelTemplates) {
@@ -1568,13 +1599,15 @@ function arrayPreviewImage(
 function arrayPreview(
   field: schema.ArrayField,
   data: any,
-  index: number
+  index: number,
+  types: Record<string, schema.Schema>
 ): string {
   if (!DISABLE_SCHEMA_LEVEL_ARRAY_PREVIEW) {
     // First, check if the item has a preview defined at the schema level.
     const schemaLevelTemplates = getSchemaPreviewTemplates(
       field.of,
       data,
+      types,
       'title'
     );
     if (schemaLevelTemplates) {

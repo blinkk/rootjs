@@ -21,28 +21,30 @@ export async function extractStringsForDoc(docId: string) {
   const snapshot = await getDoc(docRef);
   const data = snapshot.data() || {};
   const strings = new Set<string>();
-  extractFields(strings, schema.fields, data.fields || {});
+  extractFields(strings, schema.fields, data.fields || {}, schema.types);
   return Array.from(strings);
 }
 
 export function extractFields(
   strings: Set<string>,
   fields: schema.Field[],
-  data: Record<string, any>
+  data: Record<string, any>,
+  types: Record<string, schema.Schema> = {}
 ) {
   fields.forEach((field) => {
     if (!field.id) {
       return;
     }
     const fieldValue = data[field.id];
-    extractField(strings, field, fieldValue);
+    extractField(strings, field, fieldValue, types);
   });
 }
 
 export function extractField(
   strings: Set<string>,
   field: schema.Field,
-  fieldValue: any
+  fieldValue: any,
+  types: Record<string, schema.Schema> = {}
 ) {
   if (!fieldValue) {
     return;
@@ -56,11 +58,11 @@ export function extractField(
   }
 
   if (field.type === 'object') {
-    extractFields(strings, field.fields || [], fieldValue);
+    extractFields(strings, field.fields || [], fieldValue, types);
   } else if (field.type === 'array') {
     const arrayKeys = fieldValue._array || [];
     for (const arrayKey of arrayKeys) {
-      extractField(strings, field.of, fieldValue[arrayKey]);
+      extractField(strings, field.of, fieldValue[arrayKey], types);
     }
   } else if (field.type === 'string' || field.type === 'select') {
     if (field.translate) {
@@ -77,10 +79,19 @@ export function extractField(
       }
     }
   } else if (field.type === 'oneof') {
-    const types = field.types || [];
-    const fieldValueType = types.find((item) => item.name === fieldValue._type);
+    const fieldTypes = field.types || [];
+    let fieldValueType: any;
+    if (typeof fieldTypes[0] === 'string') {
+      if ((fieldTypes as string[]).includes(fieldValue._type)) {
+        fieldValueType = types[fieldValue._type];
+      }
+    } else {
+      fieldValueType = (fieldTypes as any[]).find(
+        (item: any) => item.name === fieldValue._type
+      );
+    }
     if (fieldValueType) {
-      extractFields(strings, fieldValueType.fields || [], fieldValue);
+      extractFields(strings, fieldValueType.fields || [], fieldValue, types);
     }
   } else if (field.type === 'richtext') {
     if (field.translate) {

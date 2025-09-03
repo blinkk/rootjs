@@ -18,6 +18,38 @@ function testValidCollectionId(id: string): boolean {
   return /^[A-Za-z0-9_-]+$/.test(id);
 }
 
+/**
+ * Converts all `oneof` field type definitions into a map keyed by the type
+ * name. The field definitions are replaced with an array of type names.
+ */
+function convertOneOfTypes(collection: any): any {
+  const clone = JSON.parse(JSON.stringify(collection));
+  const types: Record<string, any> = {};
+
+  function walk(schema: any) {
+    const fields = schema?.fields || [];
+    fields.forEach((field: any) => {
+      if (field.type === 'oneof' && Array.isArray(field.types)) {
+        const names: string[] = [];
+        field.types.forEach((sub: any) => {
+          walk(sub);
+          types[sub.name] = sub;
+          names.push(sub.name);
+        });
+        field.types = names;
+      } else if (field.type === 'object') {
+        walk(field);
+      } else if (field.type === 'array' && field.of) {
+        walk(field.of);
+      }
+    });
+  }
+
+  walk(clone);
+  clone.types = types;
+  return clone;
+}
+
 export interface ChatApiRequest {
   chatId: string;
   prompt: ChatPrompt | ChatPrompt[];
@@ -89,7 +121,8 @@ export function api(server: Server, options: ApiOptions) {
           res.status(404).json({success: false, error: 'NOT_FOUND'});
           return;
         }
-        res.status(200).json({success: true, data: collection});
+        const data = convertOneOfTypes(collection);
+        res.status(200).json({success: true, data});
         return;
       }
 
@@ -101,7 +134,8 @@ export function api(server: Server, options: ApiOptions) {
       );
       const contents = await fs.readFile(schemaPath, 'utf8');
       const collection = JSON.parse(contents);
-      res.status(200).json({success: true, data: collection});
+      const data = convertOneOfTypes(collection);
+      res.status(200).json({success: true, data});
     } catch (err: any) {
       if (err && err.code === 'ENOENT') {
         res.status(404).json({success: false, error: 'NOT_FOUND'});

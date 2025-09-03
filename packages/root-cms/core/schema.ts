@@ -192,7 +192,12 @@ export function array(field: Omit<ArrayField, 'type'>): ArrayField {
 
 export type OneOfField = CommonFieldProps & {
   type: 'oneof';
-  types: Schema[];
+  /**
+   * List of content type definitions. In the editor runtime, this will be a
+   * string array of type names with the definitions provided separately via a
+   * map. During schema authoring, an array of {@link Schema} objects is
+   * expected. */
+  types: Schema[] | string[];
 };
 
 export function oneOf(field: Omit<OneOfField, 'type'>): OneOfField {
@@ -259,6 +264,11 @@ export interface Schema {
   description?: string;
   /** Fields describe the structure of the content. */
   fields: FieldWithId[];
+  /**
+   * Map of reusable content type definitions referenced by one-of fields. The
+   * key is the schema name and the value is the schema definition.
+   */
+  types?: Record<string, Schema>;
   /** Defines the preview displayed within the CMS UI. Overrides the `preview` definition for the `array` field. */
   preview?: {
     /**
