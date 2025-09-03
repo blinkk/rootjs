@@ -9,6 +9,7 @@ import {ChatClient, RootAiModel} from './ai.js';
 import {RootCMSClient} from './client.js';
 import {runCronJobs} from './cron.js';
 import {arrayToCsv, csvToArray} from './csv.js';
+import {toSchemaMap} from './schema.js';
 
 type AppModule = typeof import('./app.js');
 
@@ -76,7 +77,8 @@ export function api(server: Server, options: ApiOptions) {
         res.status(404).json({success: false, error: 'NOT_FOUND'});
         return;
       }
-      res.status(200).json({success: true, data: collection});
+      const {schema: mapped, schemaMap} = toSchemaMap(collection);
+      res.status(200).json({success: true, data: {collection: mapped, schemaMap}});
     } catch (err) {
       console.error(err.stack || err);
       res.status(500).json({success: false, error: 'UNKNOWN'});

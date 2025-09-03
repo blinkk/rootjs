@@ -1,4 +1,4 @@
-import {Collection} from '../../core/schema.js';
+import {Collection, fromSchemaMap} from '../../core/schema.js';
 
 export async function fetchCollectionSchema(
   collectionId: string
@@ -17,5 +17,6 @@ export async function fetchCollectionSchema(
     throw new Error(errorText);
   }
   const resData = (await res.json()).data;
-  return resData;
+  const {collection, schemaMap} = resData;
+  return fromSchemaMap(collection, schemaMap) as Collection;
 }
