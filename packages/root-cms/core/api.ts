@@ -1,5 +1,7 @@
 import {Server, Request, Response} from '@blinkk/root';
 import {multipartMiddleware} from '@blinkk/root/middleware';
+import {promises as fs} from 'node:fs';
+import path from 'node:path';
 import {
   ChatPrompt,
   AiResponse,
@@ -11,6 +13,10 @@ import {runCronJobs} from './cron.js';
 import {arrayToCsv, csvToArray} from './csv.js';
 
 type AppModule = typeof import('./app.js');
+
+function testValidCollectionId(id: string): boolean {
+  return /^[A-Za-z0-9_-]+$/.test(id);
+}
 
 export interface ChatApiRequest {
   chatId: string;
@@ -63,23 +69,46 @@ export function api(server: Server, options: ApiOptions) {
     }
 
     const reqBody = req.body || {};
-    if (!reqBody.collectionId) {
+    const collectionId = String(reqBody.collectionId || '');
+    if (!collectionId) {
       res.status(400).json({success: false, error: 'MISSING_COLLECTION_ID'});
       return;
     }
 
+    if (!testValidCollectionId(collectionId)) {
+      res.status(400).json({success: false, error: 'INVALID_COLLECTION_ID'});
+      return;
+    }
+
     try {
-      const app = await options.getRenderer(req);
-      const collections = app.getCollections();
-      const collection = collections[reqBody.collectionId];
-      if (!collection) {
-        res.status(404).json({success: false, error: 'NOT_FOUND'});
+      if (req.viteServer) {
+        const app = await options.getRenderer(req);
+        const collections = app.getCollections();
+        const collection = collections[collectionId];
+        if (!collection) {
+          res.status(404).json({success: false, error: 'NOT_FOUND'});
+          return;
+        }
+        res.status(200).json({success: true, data: collection});
         return;
       }
+
+      const schemaPath = path.join(
+        req.rootConfig!.rootDir,
+        'dist',
+        'collections',
+        `${collectionId}.json`
+      );
+      const contents = await fs.readFile(schemaPath, 'utf8');
+      const collection = JSON.parse(contents);
       res.status(200).json({success: true, data: collection});
-    } catch (err) {
-      console.error(err.stack || err);
-      res.status(500).json({success: false, error: 'UNKNOWN'});
+    } catch (err: any) {
+      if (err && err.code === 'ENOENT') {
+        res.status(404).json({success: false, error: 'NOT_FOUND'});
+      } else {
+        console.error(err.stack || err);
+        res.status(500).json({success: false, error: 'UNKNOWN'});
+      }
     }
   });
 

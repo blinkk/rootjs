@@ -4,6 +4,8 @@ import {NextFunction, Request, Response, Server} from './types.js';
 
 type MaybePromise<T> = T | Promise<T>;
 
+type PreBuildHook = (rootConfig: RootConfig) => MaybePromise<void>;
+
 export type ConfigureServerHook = (
   server: Server,
   options: ConfigureServerOptions
@@ -16,11 +18,16 @@ export interface ConfigureServerOptions {
 
 export interface PluginHooks {
   /**
+   * Hook that runs before the build starts.
+   */
+  preBuild?: PreBuildHook;
+
+  /**
    * Post-render hook that's called before the HTML is rendered to the response
    * object. If a string is returned from this hook, it will replace the
    * rendered HTML.
    */
-  preRender: (html: string) => void | string | Promise<string>;
+  preRender?: (html: string) => void | MaybePromise<string>;
 }
 
 export interface Plugin {
