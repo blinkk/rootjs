@@ -84,6 +84,12 @@ export async function build(rootProjectDir?: string, options?: BuildOptions) {
 
   const rootPlugins = rootConfig.plugins || [];
   const viteConfig = rootConfig.vite || {};
+
+  for (const plugin of rootPlugins) {
+    if (plugin.hooks?.preBuild) {
+      await plugin.hooks.preBuild(rootConfig);
+    }
+  }
   const vitePlugins = [
     ...(viteConfig.plugins || []),
     ...getVitePlugins(rootPlugins),
