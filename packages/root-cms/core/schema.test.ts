@@ -416,4 +416,3 @@ test('define schema', () => {
     }
   `);
 });
-
