@@ -26,7 +26,20 @@ export async function loadRootConfig(
   if (typeof config === 'function') {
     config = (await config(options)) || {};
   }
-  return Object.assign({}, config, {rootDir});
+  const rootConfig = Object.assign({}, config, {rootDir});
+  validateRootconfig(rootConfig);
+  return rootConfig;
+}
+
+function validateRootconfig(rootConfig: RootConfig) {
+  // Update vite legacy config options.
+  const scss: any = rootConfig.vite?.css?.preprocessorOptions?.scss;
+  if (scss.includePaths) {
+    console.warn(
+      '[deprecation warning] root.config.ts: vite.css.preprocessorOptions.scss.includePaths is deprecated. rename "includePaths" -> "loadPaths"'
+    );
+    scss.loadPaths = scss.includePaths;
+  }
 }
 
 /**
