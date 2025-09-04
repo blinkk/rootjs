@@ -20,7 +20,7 @@ export default defineConfig({
     css: {
       preprocessorOptions: {
         scss: {
-          loadPaths: [path.resolve(rootDir, './styles')],
+          includePaths: [path.resolve(rootDir, './styles')],
         },
       },
     },
