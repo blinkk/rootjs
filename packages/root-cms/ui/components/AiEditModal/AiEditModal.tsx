@@ -69,10 +69,6 @@ export function AiEditModal(modalProps: ContextModalProps<AiEditModalProps>) {
     [value, originalValue]
   );
 
-  const onChange = useCallback((s: string) => {
-    setValue(s);
-  }, []);
-
   const onSave = useCallback(() => {
     if (!parsedValue) {
       return;
@@ -80,11 +76,7 @@ export function AiEditModal(modalProps: ContextModalProps<AiEditModalProps>) {
     if (props.onSave) {
       props.onSave(parsedValue);
     }
-  }, [value, props]);
-
-  const onReset = useCallback(() => {
-    setValue(originalValue);
-  }, [originalValue]);
+  }, [parsedValue]);
 
   const handleEditModeResponse = useCallback((resp: AiResponse) => {
     if (resp?.data) {
@@ -104,7 +96,7 @@ export function AiEditModal(modalProps: ContextModalProps<AiEditModalProps>) {
               <div className="AiEditModal__JsonEditor">
                 <JsonInput
                   value={value}
-                  onChange={onChange}
+                  onChange={(newValue: string) => setValue(newValue)}
                   formatOnBlur
                   height="100%"
                   className="AiEditModal__JsonInput"
@@ -157,7 +149,7 @@ export function AiEditModal(modalProps: ContextModalProps<AiEditModalProps>) {
           type="button"
           leftIcon={<IconArrowBackUp size={16} />}
           disabled={!changed}
-          onClick={onReset}
+          onClick={() => setValue(originalValue)}
         >
           Reset
         </Button>
