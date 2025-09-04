@@ -104,7 +104,7 @@ export function ChatBar(props: {
       prompt,
       props.options
     );
-    if (response && props.onData) {
+    if (props.onData && response) {
       props.onData(response);
     }
   }
