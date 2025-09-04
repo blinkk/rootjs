@@ -1,5 +1,13 @@
 # @blinkk/root-cms
 
+## 2.1.2-alpha.0
+
+### Patch Changes
+
+- 9903c0e: chore: update core deps
+- Updated dependencies [9903c0e]
+  - @blinkk/root@2.1.2-alpha.0
+
 ## 2.1.1
 
 ### Patch Changes

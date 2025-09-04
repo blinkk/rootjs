@@ -1,0 +1,21 @@
+{
+  "mode": "pre",
+  "tag": "alpha",
+  "initialVersions": {
+    "@private/docs": "0.0.0",
+    "@examples/basepath": "0.0.0",
+    "@examples/blog": "0.0.0",
+    "@examples/cms": "0.0.0",
+    "@examples/minimal": "0.0.0",
+    "@examples/starter": "0.0.0",
+    "@blinkk/create-root": "2.1.1",
+    "@blinkk/eslint-config-root": "0.1.0",
+    "@blinkk/rds": "2.1.0",
+    "@blinkk/root": "2.1.1",
+    "@blinkk/root-cms": "2.1.1",
+    "@blinkk/root-password-protect": "2.1.1"
+  },
+  "changesets": [
+    "curvy-zebras-flow"
+  ]
+}

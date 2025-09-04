@@ -1,5 +1,11 @@
 # @blinkk/root
 
+## 2.1.2-alpha.0
+
+### Patch Changes
+
+- 9903c0e: chore: update core deps
+
 ## 2.1.1
 
 ### Patch Changes
