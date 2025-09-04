@@ -154,8 +154,7 @@ export function DocEditor(props: DocEditorProps) {
         // properly trigger the `onSnapshot()` callback with
         // `{hasPendingWrites: false}`. This is a temporary fix.
         // TODO(stevenle): avoid the extra db write here.
-        draft.controller.removeKey('sys.publishingLocked');
-        draft.controller.flush();
+        draft.controller.removePublishingLock();
       }
     },
     [props.docId]
