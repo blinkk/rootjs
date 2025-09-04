@@ -35,10 +35,10 @@ type ProjectModule = typeof import('./project.js');
 async function writeCollectionSchemasToJson(rootDir: string) {
   const rootConfig = await loadRootConfig(rootDir, {command: 'root-cms'});
   const modulePath = path.resolve(__dirname, './project.js');
-  const project = (await viteSsrLoadModule(
+  const project = await viteSsrLoadModule<ProjectModule>(
     rootConfig,
     modulePath
-  )) as ProjectModule;
+  );
 
   const outDir = path.join(rootDir, 'dist', 'collections');
   await fs.mkdir(outDir, {recursive: true});
@@ -49,9 +49,11 @@ async function writeCollectionSchemasToJson(rootDir: string) {
     }
     const collectionId = path.basename(fileId).split('.')[0];
     const schema = await project.getCollectionSchema(collectionId);
-    const jsonPath = path.join(outDir, `${collectionId}.schema.json`);
-    const data = JSON.stringify({id: collectionId, ...schema}, null, 2);
-    await fs.writeFile(jsonPath, data);
+    if (schema) {
+      const jsonPath = path.join(outDir, `${collectionId}.schema.json`);
+      const data = JSON.stringify(schema, null, 2);
+      await fs.writeFile(jsonPath, data);
+    }
   }
 }
 

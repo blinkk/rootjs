@@ -59,6 +59,7 @@ export async function getCollectionSchema(
     return null;
   }
   const collection = module.default as schema.Collection;
+  collection.id = collectionId;
 
   // Convert `schema.oneOf()` object types to an array of strings and move the
   // type schema to `collection.types`.
