@@ -90,6 +90,22 @@ export function AiEditModal(modalProps: ContextModalProps<AiEditModalProps>) {
   return (
     <div className="AiEditModal">
       <div className="AiEditModal__SplitPanel">
+        <div className="AiEditModal__SplitPanel__ChatPanel">
+          <ChatPanel
+            editModeData={parsedValue}
+            onEditModeResponse={handleEditModeResponse}
+          >
+            <p>
+              Tell me what you want to change. I can make simple text edits,
+              replace content within a module, or answer questions about the
+              content.
+            </p>
+            <p>
+              Just enter simple instructions, or attach a screenshot and ask me
+              to use it as reference.
+            </p>
+          </ChatPanel>
+        </div>
         <div className="AiEditModal__SplitPanel__JsonPanel">
           <Tabs className="AiEditModal__Tabs" grow>
             <Tabs.Tab label="JSON" icon={<IconJson size={20} />}>
@@ -115,22 +131,6 @@ export function AiEditModal(modalProps: ContextModalProps<AiEditModalProps>) {
               </div>
             </Tabs.Tab>
           </Tabs>
-        </div>
-        <div className="AiEditModal__SplitPanel__ChatPanel">
-          <ChatPanel
-            editModeData={parsedValue}
-            onEditModeResponse={handleEditModeResponse}
-          >
-            <p>
-              Tell me what you want to change. I can make simple text edits,
-              replace content within a module, or answer questions about the
-              content.
-            </p>
-            <p>
-              Just enter simple instructions, or attach a screenshot and ask me
-              to use it as reference.
-            </p>
-          </ChatPanel>
         </div>
       </div>
       <div className="AiEditModal__buttons">
