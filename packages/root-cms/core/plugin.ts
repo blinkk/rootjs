@@ -11,7 +11,7 @@ import {
   RootConfig,
   Server,
 } from '@blinkk/root';
-import {loadRootConfig, viteSsrLoadModule} from '@blinkk/root/node';
+import {viteSsrLoadModule} from '@blinkk/root/node';
 import bodyParser from 'body-parser';
 import {
   App,
@@ -32,15 +32,14 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 type AppModule = typeof import('./app.js');
 type ProjectModule = typeof import('./project.js');
 
-async function writeCollectionSchemasToJson(rootDir: string) {
-  const rootConfig = await loadRootConfig(rootDir, {command: 'root-cms'});
+async function writeCollectionSchemasToJson(rootConfig: RootConfig) {
   const modulePath = path.resolve(__dirname, './project.js');
   const project = await viteSsrLoadModule<ProjectModule>(
     rootConfig,
     modulePath
   );
 
-  const outDir = path.join(rootDir, 'dist', 'collections');
+  const outDir = path.join(rootConfig.rootDir, 'dist', 'collections');
   await fs.mkdir(outDir, {recursive: true});
   const fileIds = Object.keys(project.SCHEMA_MODULES);
   for (const fileId of fileIds) {
@@ -49,11 +48,13 @@ async function writeCollectionSchemasToJson(rootDir: string) {
     }
     const collectionId = path.basename(fileId).split('.')[0];
     const schema = await project.getCollectionSchema(collectionId);
-    if (schema) {
-      const jsonPath = path.join(outDir, `${collectionId}.schema.json`);
-      const data = JSON.stringify(schema, null, 2);
-      await fs.writeFile(jsonPath, data);
+    if (!schema) {
+      console.warn(`collection is missing a default export: ${fileId}`);
+      continue;
     }
+    const jsonPath = path.join(outDir, `${collectionId}.schema.json`);
+    const data = JSON.stringify(schema, null, 2);
+    await fs.writeFile(jsonPath, data, 'utf-8');
   }
 }
 
@@ -494,7 +495,7 @@ export function cmsPlugin(options: CMSPluginOptions): CMSPlugin {
        * `dist/collections/*.schema.json` for prod builds.
        */
       preBuild: async (rootConfig: RootConfig) => {
-        await writeCollectionSchemasToJson(rootConfig.rootDir);
+        await writeCollectionSchemasToJson(rootConfig);
       },
     },
 

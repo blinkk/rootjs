@@ -11,12 +11,15 @@ export interface SchemaModule {
   default: schema.Schema;
 }
 
-export const SCHEMA_MODULES = import.meta.glob<SchemaModule>([
-  '/**/*.schema.ts',
-  '!/appengine/**/*.schema.ts',
-  '!/functions/**/*.schema.ts',
-  '!/gae/**/*.schema.ts',
-]);
+export const SCHEMA_MODULES = import.meta.glob<SchemaModule>(
+  [
+    '/**/*.schema.ts',
+    '!/appengine/**/*.schema.ts',
+    '!/functions/**/*.schema.ts',
+    '!/gae/**/*.schema.ts',
+  ],
+  {eager: true}
+);
 
 /**
  * Returns a map of all `schema.ts` files defined in the project as
@@ -28,7 +31,7 @@ export async function getProjectSchemas(): Promise<
 > {
   const schemas: Record<string, schema.Schema> = {};
   for (const fileId in SCHEMA_MODULES) {
-    const schemaModule = await SCHEMA_MODULES[fileId]();
+    const schemaModule = SCHEMA_MODULES[fileId];
     if (schemaModule.default) {
       schemas[fileId] = schemaModule.default;
     }
@@ -48,12 +51,7 @@ export async function getCollectionSchema(
   }
 
   const fileId = `/collections/${collectionId}.schema.ts`;
-  const loader = SCHEMA_MODULES[fileId];
-  if (!loader) {
-    console.warn(`collection not found: ${collectionId}`);
-    return null;
-  }
-  const module = await loader();
+  const module = SCHEMA_MODULES[fileId];
   if (!module.default) {
     console.warn(`collection schema not exported in: ${fileId}`);
     return null;

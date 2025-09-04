@@ -90,6 +90,7 @@ export async function build(rootProjectDir?: string, options?: BuildOptions) {
       await plugin.hooks.preBuild(rootConfig);
     }
   }
+
   const vitePlugins = [
     ...(viteConfig.plugins || []),
     ...getVitePlugins(rootPlugins),
