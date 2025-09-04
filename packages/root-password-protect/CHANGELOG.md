@@ -1,5 +1,13 @@
 # @blinkk/root-password-protect
 
+## 2.1.1
+
+### Patch Changes
+
+- bc3b4097: feat: add ability to customize the password page
+- Updated dependencies [f091260a]
+  - @blinkk/root@2.1.1
+
 ## 2.0.10
 
 ### Patch Changes

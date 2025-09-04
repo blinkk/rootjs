@@ -1,5 +1,11 @@
 # @blinkk/root
 
+## 2.1.1
+
+### Patch Changes
+
+- f091260a: feat: pre-render collection schemas for prod
+
 ## 2.0.10
 
 ## 2.0.9

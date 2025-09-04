@@ -1,5 +1,19 @@
 # @blinkk/root-cms
 
+## 2.1.1
+
+### Patch Changes
+
+- e0c32a50: fix: resize iframe preview when the split panel resizes
+- 7e704f5d: fix: preserve alt text when new files are uploaded
+- 83b27258: fix: fix ui status badges when locking/unlocking docs
+- ae3b1c42: feat: add custom sort options to schema.collection()
+- f091260a: feat: pre-render collection schemas for prod
+- 6bd997b9: feat: flatten oneof types in collection schemas
+- 8ca7c658: feat: add references field
+- Updated dependencies [f091260a]
+  - @blinkk/root@2.1.1
+
 ## 2.0.10
 
 ### Patch Changes
