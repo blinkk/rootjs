@@ -2,8 +2,8 @@ import {ActionIcon, Button, Tooltip} from '@mantine/core';
 import {IconTrash} from '@tabler/icons-preact';
 import {useEffect, useState} from 'preact/hooks';
 import * as schema from '../../../../core/schema.js';
-import {useDocSelectModal} from '../../DocSelectModal/DocSelectModal.js';
 import {DocPreviewCard} from '../../DocPreviewCard/DocPreviewCard.js';
+import {useDocSelectModal} from '../../DocSelectModal/DocSelectModal.js';
 import {FieldProps} from './FieldProps.js';
 import './ReferencesField.css';
 
@@ -58,7 +58,6 @@ export function ReferencesField(props: FieldProps) {
               next.splice(i, 1);
             }
           }
-          next.sort();
           onChange(next);
           return next;
         });

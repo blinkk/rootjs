@@ -65,6 +65,8 @@ export interface BlogPostsFields {
     description?: string;
     /** Image. Meta image for social shares. Recommended size: 1200x600. */
     image?: RootCMSImage;
+    /** Related Posts */
+    relatedPosts?: RootCMSReference[];
   };
   /** Content */
   content?: {

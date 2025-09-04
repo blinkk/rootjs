@@ -331,7 +331,7 @@ function fieldType(field: Field, options: FieldPropertyOptions): dom.Type {
   }
   if (field.type === 'references') {
     const referenceType = dom.create.namedTypeReference('RootCMSReference');
-    return dom.create.arrayType(referenceType);
+    return dom.type.array(referenceType);
   }
   if (field.type === 'richtext') {
     const richtextType = dom.create.namedTypeReference('RootCMSRichText');
