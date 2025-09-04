@@ -62,7 +62,12 @@ TranslationsArbPage.RequestForm = () => {
       const strings = new Set<string>();
       const collectionId = docId.split('/')[0];
       const schema = await fetchCollectionSchema(collectionId);
-      extractFields(strings, schema.fields, draft.fields || {});
+      extractFields(
+        strings,
+        schema.fields,
+        draft.fields || {},
+        schema.types || {}
+      );
 
       for (const source of strings) {
         const hash = await sourceHash(source);
@@ -181,7 +186,10 @@ TranslationsArbPage.Preview = (props: {arb: Arb}) => {
       </thead>
       <tbody>
         {values.map((item) => (
-          <tr key={item.source} class="TranslationsArbPage__Preview__Table__row">
+          <tr
+            key={item.source}
+            class="TranslationsArbPage__Preview__Table__row"
+          >
             <td>{item.source}</td>
             <td>
               {item.meta?.context}

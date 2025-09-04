@@ -85,12 +85,12 @@ export async function createViteServer(
 /**
  * Shortcut `viteServer.ssrLoadModule()` without starting an actual dev server.
  */
-export async function viteSsrLoadModule(
+export async function viteSsrLoadModule<T = Record<string, any>>(
   rootConfig: RootConfig,
   file: string
-): Promise<Record<string, any>> {
+): Promise<T> {
   const viteServer = await createViteServer(rootConfig, {hmr: false});
   const module = await viteServer.ssrLoadModule(file);
   await viteServer.close();
-  return module;
+  return module as T;
 }

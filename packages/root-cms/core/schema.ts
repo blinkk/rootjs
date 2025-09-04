@@ -1,5 +1,3 @@
-import {FunctionalComponent} from 'preact';
-
 export interface CommonFieldProps {
   /** The type that defines the structure of the field and its UI component. */
   type: string;
@@ -30,7 +28,7 @@ export type StringField = CommonFieldProps & {
 };
 
 export function string(field: Omit<StringField, 'type'>): StringField {
-  return {...field, type: 'string'};
+  return {type: 'string', ...field};
 }
 
 export type NumberField = CommonFieldProps & {
@@ -39,7 +37,7 @@ export type NumberField = CommonFieldProps & {
 };
 
 export function number(field: Omit<NumberField, 'type'>): NumberField {
-  return {...field, type: 'number'};
+  return {type: 'number', ...field};
 }
 
 export type DateField = CommonFieldProps & {
@@ -48,7 +46,7 @@ export type DateField = CommonFieldProps & {
 };
 
 export function date(field: Omit<DateField, 'type'>): DateField {
-  return {...field, type: 'date'};
+  return {type: 'date', ...field};
 }
 
 export type DateTimeField = CommonFieldProps & {
@@ -57,7 +55,7 @@ export type DateTimeField = CommonFieldProps & {
 };
 
 export function datetime(field: Omit<DateTimeField, 'type'>): DateTimeField {
-  return {...field, type: 'datetime'};
+  return {type: 'datetime', ...field};
 }
 
 export type BooleanField = CommonFieldProps & {
@@ -67,7 +65,7 @@ export type BooleanField = CommonFieldProps & {
 };
 
 export function boolean(field: Omit<BooleanField, 'type'>): BooleanField {
-  return {...field, type: 'boolean'};
+  return {type: 'boolean', ...field};
 }
 
 export type SelectField = CommonFieldProps & {
@@ -79,7 +77,7 @@ export type SelectField = CommonFieldProps & {
 };
 
 export function select(field: Omit<SelectField, 'type'>): SelectField {
-  return {...field, type: 'select'};
+  return {type: 'select', ...field};
 }
 
 export type MultiSelectField = Omit<SelectField, 'type'> & {
@@ -92,7 +90,7 @@ export type MultiSelectField = Omit<SelectField, 'type'> & {
 export function multiselect(
   field: Omit<MultiSelectField, 'type'>
 ): MultiSelectField {
-  return {...field, type: 'multiselect'};
+  return {type: 'multiselect', ...field};
 }
 
 export type ImageField = CommonFieldProps & {
@@ -109,7 +107,7 @@ export type ImageField = CommonFieldProps & {
 };
 
 export function image(field: Omit<ImageField, 'type'>): ImageField {
-  return {...field, type: 'image'};
+  return {type: 'image', ...field};
 }
 
 export type FileField = CommonFieldProps & {
@@ -130,7 +128,7 @@ export type FileField = CommonFieldProps & {
 };
 
 export function file(field: Omit<FileField, 'type'>): FileField {
-  return {...field, type: 'file'};
+  return {type: 'file', ...field};
 }
 
 export type ObjectField = CommonFieldProps & {
@@ -151,7 +149,7 @@ export type ObjectField = CommonFieldProps & {
 };
 
 export function object(field: Omit<ObjectField, 'type'>): ObjectField {
-  return {...field, type: 'object'};
+  return {type: 'object', ...field};
 }
 
 export type ArrayField = CommonFieldProps & {
@@ -187,16 +185,16 @@ export type ArrayField = CommonFieldProps & {
 };
 
 export function array(field: Omit<ArrayField, 'type'>): ArrayField {
-  return {...field, type: 'array'};
+  return {type: 'array', ...field};
 }
 
 export type OneOfField = CommonFieldProps & {
   type: 'oneof';
-  types: Schema[];
+  types: Schema[] | string[];
 };
 
 export function oneOf(field: Omit<OneOfField, 'type'>): OneOfField {
-  return {...field, type: 'oneof'};
+  return {type: 'oneof', ...field};
 }
 
 export type RichTextField = CommonFieldProps & {
@@ -206,7 +204,7 @@ export type RichTextField = CommonFieldProps & {
 };
 
 export function richtext(field: Omit<RichTextField, 'type'>): RichTextField {
-  return {...field, type: 'richtext'};
+  return {type: 'richtext', ...field};
 }
 
 export type ReferenceField = CommonFieldProps & {
@@ -220,7 +218,7 @@ export type ReferenceField = CommonFieldProps & {
 };
 
 export function reference(field: Omit<ReferenceField, 'type'>): ReferenceField {
-  return {...field, type: 'reference'};
+  return {type: 'reference', ...field};
 }
 
 export type Field =
@@ -286,6 +284,11 @@ export interface Schema {
   };
 }
 
+export type SchemaWithTypes = Schema & {
+  /** Reusable type definitions used by the schema, e.g. for oneOf() fields. */
+  types?: Record<string, Schema>;
+};
+
 export function defineSchema(schema: Schema): Schema {
   return schema;
 }
@@ -293,7 +296,7 @@ export function defineSchema(schema: Schema): Schema {
 /** Defines the schema for a collection or reusable component. */
 export const define = defineSchema;
 
-export type Collection = Schema & {
+export type Collection = SchemaWithTypes & {
   /**
    * The ID of the collection. This comes from the schema filename, e.g
    * `<id>.schema.ts`.
@@ -314,8 +317,6 @@ export type Collection = Schema & {
    * editor to render instant previews. If blank, defaults to the `url` config.
    */
   previewUrl?: string;
-  /** Page component to render the collection for instant previews */
-  Component?: FunctionalComponent;
   /**
    * Defines the fields to use for document preview. Defaults to "title" and
    * "image". Use dot notation for nested fields, e.g. "meta.title".
@@ -330,6 +331,17 @@ export type Collection = Schema & {
       src: string;
     };
   };
+  /**
+   * Regular expression used to validate document slugs. Should be provided as a
+   * string so it can be serialized to the CMS UI.
+   */
+  slugRegex?: string;
+  /**
+   * Automatically add a publishing lock whenever the doc is edited.
+   */
+  autolock?: boolean;
+  /** Reason for the automatic publishing lock. */
+  autolockReason?: string;
   /**
    * Custom sort options available when listing documents in the CMS.
    *
@@ -347,17 +359,6 @@ export type Collection = Schema & {
     /** Sort direction. Defaults to ascending. */
     direction?: 'asc' | 'desc';
   }>;
-  /**
-   * Regular expression used to validate document slugs. Should be provided as a
-   * string so it can be serialized to the CMS UI.
-   */
-  slugRegex?: string;
-  /**
-   * Automatically add a publishing lock whenever the doc is edited.
-   */
-  autolock?: boolean;
-  /** Reason for the automatic publishing lock. */
-  autolockReason?: string;
 };
 
 export function defineCollection(

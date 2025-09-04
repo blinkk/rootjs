@@ -11,6 +11,7 @@ import {
   RootConfig,
   Server,
 } from '@blinkk/root';
+import {viteSsrLoadModule} from '@blinkk/root/node';
 import bodyParser from 'body-parser';
 import {
   App,
@@ -25,32 +26,35 @@ import sirv from 'sirv';
 import {type RootAiModel} from './ai.js';
 import {api} from './api.js';
 import {Action, RootCMSClient} from './client.js';
-import {loadRootConfig, viteSsrLoadModule} from '@blinkk/root/node';
-import {Schema} from './schema.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 type AppModule = typeof import('./app.js');
 type ProjectModule = typeof import('./project.js');
 
-async function generateSchemaJson(rootDir: string) {
-  const rootConfig = await loadRootConfig(rootDir, {command: 'root-cms'});
+async function writeCollectionSchemasToJson(rootConfig: RootConfig) {
   const modulePath = path.resolve(__dirname, './project.js');
-  const project = (await viteSsrLoadModule(
+  const project = await viteSsrLoadModule<ProjectModule>(
     rootConfig,
     modulePath
-  )) as ProjectModule;
-  const schemas = project.getProjectSchemas();
-  const outDir = path.join(rootDir, 'dist', 'collections');
+  );
+
+  const outDir = path.join(rootConfig.rootDir, 'dist', 'collections');
   await fs.mkdir(outDir, {recursive: true});
-  for (const [fileId, schema] of Object.entries(schemas) as [string, Schema][]) {
+  const fileIds = Object.keys(project.SCHEMA_MODULES);
+  for (const fileId of fileIds) {
     if (!fileId.startsWith('/collections/')) {
       continue;
     }
     const collectionId = path.basename(fileId).split('.')[0];
-    const jsonPath = path.join(outDir, `${collectionId}.json`);
-    const data = JSON.stringify({...schema, id: collectionId}, null, 2);
-    await fs.writeFile(jsonPath, data);
+    const schema = await project.getCollectionSchema(collectionId);
+    if (!schema) {
+      console.warn(`collection is missing a default export: ${fileId}`);
+      continue;
+    }
+    const jsonPath = path.join(outDir, `${collectionId}.schema.json`);
+    const data = JSON.stringify(schema, null, 2);
+    await fs.writeFile(jsonPath, data, 'utf-8');
   }
 }
 
@@ -486,14 +490,12 @@ export function cmsPlugin(options: CMSPluginOptions): CMSPlugin {
     },
 
     hooks: {
-      async preBuild(rootConfig: RootConfig) {
-        if (process.env.NODE_ENV !== 'development') {
-          try {
-            await generateSchemaJson(rootConfig.rootDir);
-          } catch (err) {
-            console.error('failed to generate schema json', err);
-          }
-        }
+      /**
+       * Saves collection schema files from `collections/*.schema.ts` to
+       * `dist/collections/*.schema.json` for prod builds.
+       */
+      preBuild: async (rootConfig: RootConfig) => {
+        await writeCollectionSchemasToJson(rootConfig);
       },
     },
 
