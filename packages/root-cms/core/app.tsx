@@ -1,14 +1,11 @@
 import crypto from 'node:crypto';
 import path from 'node:path';
-import {fileURLToPath} from 'node:url';
 import {Request, Response, RootConfig} from '@blinkk/root';
 import {render as renderToString} from 'preact-render-to-string';
 import packageJson from '../package.json' with {type: 'json'};
 import {CMSPluginOptions} from './plugin.js';
 import {getCollectionSchema, getProjectSchemas} from './project.js';
 import {Collection} from './schema.js';
-
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const DEFAULT_FAVICON_URL =
   'https://lh3.googleusercontent.com/ijK50TfQlV_yJw3i-CMlnD6osH4PboZBILZrJcWhoNMEmoyCD5e1bAxXbaOPe5w4gG_Scf37EXrmZ6p8sP2lue5fLZ419m5JyLMs=e385-w256';
@@ -126,26 +123,11 @@ export async function renderApp(
   const mainHtml = renderToString(
     <App title={title} ctx={ctx} favicon={cmsConfig.favicon} />
   );
-  let html = `<!doctype html>\n${mainHtml}`;
   const nonce = generateNonce();
-  if (req.viteServer) {
-    const uiCssPath = path.join(__dirname, 'ui/ui.css');
-    const uiJsPath = path.join(__dirname, 'ui/ui.js');
-    const tpl = html
-      .replace('{CSS_URL}', cachebust(req, `/@fs${uiCssPath}`))
-      .replace('{JS_URL}', cachebust(req, `/@fs${uiJsPath}`))
-      .replaceAll('{NONCE}', nonce);
-    html = await req.viteServer!.transformIndexHtml(req.originalUrl, tpl);
-    html = html.replace(
-      '<script type="module" src="/@vite/client"></script>',
-      `<script type="module" src="/@vite/client" nonce="${nonce}"></script>`
-    );
-  } else {
-    html = html
-      .replace('{CSS_URL}', cachebust(req, '/cms/static/ui.css'))
-      .replace('{JS_URL}', cachebust(req, '/cms/static/ui.js'))
-      .replaceAll('{NONCE}', nonce);
-  }
+  const html = `<!doctype html>\n${mainHtml}`
+    .replace('{CSS_URL}', cachebust(req, '/cms/static/ui.css'))
+    .replace('{JS_URL}', cachebust(req, '/cms/static/ui.js'))
+    .replaceAll('{NONCE}', nonce);
   res.setHeader('Content-Type', 'text/html');
   setSecurityHeaders(options, req, res, nonce);
   res.send(html);
@@ -237,26 +219,11 @@ export async function renderSignIn(
   const mainHtml = renderToString(
     <SignIn title="Sign in" ctx={ctx} favicon={options.cmsConfig.favicon} />
   );
-  let html = `<!doctype html>\n${mainHtml}`;
   const nonce = generateNonce();
-  if (req.viteServer) {
-    const cssPath = path.join(__dirname, 'ui/signin.css');
-    const jsPath = path.join(__dirname, 'ui/signin.js');
-    const tpl = html
-      .replace('{CSS_URL}', cachebust(req, `/@fs${cssPath}`))
-      .replace('{JS_URL}', cachebust(req, `/@fs${jsPath}`))
-      .replaceAll('{NONCE}', nonce);
-    html = await req.viteServer!.transformIndexHtml(req.originalUrl, tpl);
-    html = html.replace(
-      '<script type="module" src="/@vite/client"></script>',
-      `<script type="module" src="/@vite/client" nonce="${nonce}"></script>`
-    );
-  } else {
-    html = html
-      .replace('{CSS_URL}', cachebust(req, '/cms/static/signin.css'))
-      .replace('{JS_URL}', cachebust(req, '/cms/static/signin.js'))
-      .replaceAll('{NONCE}', nonce);
-  }
+  const html = `<!doctype html>\n${mainHtml}`
+    .replace('{CSS_URL}', cachebust(req, '/cms/static/signin.css'))
+    .replace('{JS_URL}', cachebust(req, '/cms/static/signin.js'))
+    .replaceAll('{NONCE}', nonce);
   res.setHeader('Content-Type', 'text/html');
   setSecurityHeaders(options, req, res, nonce);
   res.status(403);
@@ -340,11 +307,14 @@ function getRefererOrigin(req: Request): string {
 
 /** Modify the given URL to bust the cache. */
 function cachebust(req: Request, url: string) {
-  // In local dev, use the the timestamp to cachebust.
-  // In non-local mode, use the package version.
-  const value =
-    req.hostname === 'localhost'
-      ? Math.floor(new Date().getTime() / 1000)
-      : packageJson.version;
-  return `${url}?c=${value}`;
+  const host = req.get('host');
+  // On localhost, use a full URL so that the vite server doesn't attempt to
+  // transform the file. Use a timestamp to cachebust.
+  if (host?.includes('localhost')) {
+    const cb = Math.floor(new Date().getTime() / 1000);
+    return `http://${host}${url}?c=${cb}`;
+  }
+  // On prod, cachebust using the package.json version.
+  const cb = packageJson.version;
+  return `${url}?c=${cb}`;
 }
