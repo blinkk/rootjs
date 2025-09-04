@@ -283,8 +283,11 @@ DocEditor.Field = (props: FieldProps) => {
   const targeted = deeplink.value === props.deepKey;
   const ref = useRef<HTMLDivElement>(null);
   const [value, setValue] = useState(null);
-
-  const fieldValueEmpty = useMemo(() => testFieldEmpty(field, value), [value]);
+  const types = useCollectionSchemaTypes();
+  const fieldValueEmpty = useMemo(
+    () => testFieldEmpty(field, value, types),
+    [value, types]
+  );
   const showTranslateIcon =
     (field.type === 'string' || field.type === 'richtext') && field.translate;
 
@@ -408,6 +411,7 @@ DocEditor.FieldHeader = (props: {
     () => buildDeeplinkUrl(props.deepKey || ''),
     [props.deepKey]
   );
+  const types = useCollectionSchemaTypes();
 
   return (
     <div className={joinClassNames(props.className, 'DocEditor__FieldHeader')}>
@@ -445,7 +449,7 @@ DocEditor.FieldHeader = (props: {
                 size="xs"
                 onClick={() => {
                   const strings = new Set<string>();
-                  extractField(strings, props.field, props.fieldValue);
+                  extractField(strings, props.field, props.fieldValue, types);
                   const translateStrings = Array.from(strings);
                   editTranslationsModal.open({
                     docId: docData.id,
@@ -1504,13 +1508,20 @@ function getSchemaPreviewTemplates(
   data: any,
   key: 'title' | 'image' = 'title'
 ): string | string[] | null {
+  const types = useCollectionSchemaTypes();
   if (arrayOfField.type === 'oneof') {
     const oneOfField = arrayOfField as schema.OneOfField;
     const selectedTypeName = data?._type;
     if (selectedTypeName) {
-      const selectedSchema = oneOfField.types.find(
-        (schema) => schema.name === selectedTypeName
-      );
+      let selectedSchema: schema.Schema | undefined;
+      const fieldTypes = oneOfField.types || [];
+      if (typeof fieldTypes[0] === 'string') {
+        selectedSchema = types[selectedTypeName];
+      } else {
+        selectedSchema = (fieldTypes as any[]).find(
+          (schema) => schema.name === selectedTypeName
+        );
+      }
       return selectedSchema?.preview?.[key] || null;
     }
   }
