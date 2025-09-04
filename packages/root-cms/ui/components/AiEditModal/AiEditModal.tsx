@@ -87,7 +87,7 @@ export function AiEditModal(modalProps: ContextModalProps<AiEditModalProps>) {
   }, [originalValue]);
 
   const handleEditModeResponse = useCallback((resp: AiResponse) => {
-    if (resp.data) {
+    if (resp?.data) {
       const newValue = JSON.stringify(resp.data, null, 2);
       setValue(newValue);
       // Show the diff automatically when the AI is done editing.
