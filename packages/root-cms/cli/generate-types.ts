@@ -314,7 +314,7 @@ function fieldType(field: Field, options: FieldPropertyOptions): dom.Type {
 
         const oneOfOption = dom.create.namedTypeReference('RootCMSOneOfOption');
         oneOfOption.typeArguments = [
-          dom.type.stringLiteral(cleanName),
+          dom.type.stringLiteral(typeName),
           dom.create.namedTypeReference(oneOfTypeId),
         ];
         unionTypes.push(oneOfOption);
