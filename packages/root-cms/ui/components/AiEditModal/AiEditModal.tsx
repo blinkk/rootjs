@@ -9,6 +9,7 @@ import {
   IconJson,
 } from '@tabler/icons-preact';
 import {useRef, useState} from 'preact/hooks';
+import {useMemo, useCallback} from 'preact/hooks';
 import {AiResponse} from '../../../shared/ai/prompts.js';
 import {useModalTheme} from '../../hooks/useModalTheme.js';
 import {JsDiff} from '../JsDiff/JsDiff.js';
@@ -45,39 +46,73 @@ export function useAiEditModal() {
 export function AiEditModal(modalProps: ContextModalProps<AiEditModalProps>) {
   const {innerProps: props, context, id} = modalProps;
   const diffTabRef = useRef<HTMLButtonElement | null>(null);
-  const originalValue = JSON.stringify(props.data || {}, null, 2);
+
+  const originalValue = useMemo(
+    () => JSON.stringify(props.data || {}, null, 2),
+    [props.data]
+  );
   const [value, setValue] = useState(originalValue);
-  const [valid, setValid] = useState(true);
-  const [changed, setChanged] = useState(false);
 
-  function onChange(s: string) {
-    setValue(s);
+  const parsedValue = useMemo(() => {
+    if (!value) {
+      return null;
+    }
     try {
-      JSON.parse(s);
-      setValid(true);
+      return JSON.parse(value);
     } catch (e) {
-      setValid(false);
+      return null;
     }
-    setChanged(s !== originalValue);
-  }
+  }, [value]);
 
-  function onSave() {
-    const data = JSON.parse(value);
-    if (props.onSave) {
-      props.onSave(data);
+  const changed = useMemo(
+    () => value !== originalValue,
+    [value, originalValue]
+  );
+
+  const onSave = useCallback(() => {
+    if (!parsedValue) {
+      return;
     }
-  }
+    if (props.onSave) {
+      props.onSave(parsedValue);
+    }
+  }, [parsedValue]);
+
+  const handleEditModeResponse = useCallback((resp: AiResponse) => {
+    if (resp?.data) {
+      const newValue = JSON.stringify(resp.data, null, 2);
+      setValue(newValue);
+      // Show the diff automatically when the AI is done editing.
+      diffTabRef.current?.click();
+    }
+  }, []);
 
   return (
     <div className="AiEditModal">
       <div className="AiEditModal__SplitPanel">
+        <div className="AiEditModal__SplitPanel__ChatPanel">
+          <ChatPanel
+            editModeData={parsedValue}
+            onEditModeResponse={handleEditModeResponse}
+          >
+            <p>
+              Tell me what you want to change. I can make simple text edits,
+              replace content within a module, or answer questions about the
+              content.
+            </p>
+            <p>
+              Just enter simple instructions, or attach a screenshot and ask me
+              to use it as reference.
+            </p>
+          </ChatPanel>
+        </div>
         <div className="AiEditModal__SplitPanel__JsonPanel">
           <Tabs className="AiEditModal__Tabs" grow>
             <Tabs.Tab label="JSON" icon={<IconJson size={20} />}>
               <div className="AiEditModal__JsonEditor">
                 <JsonInput
                   value={value}
-                  onChange={onChange}
+                  onChange={(newValue: string) => setValue(newValue)}
                   formatOnBlur
                   height="100%"
                   className="AiEditModal__JsonInput"
@@ -91,38 +126,11 @@ export function AiEditModal(modalProps: ContextModalProps<AiEditModalProps>) {
             >
               <div className="AiEditModal__JsonDiffViewer">
                 {props.data && value && (
-                  <JsDiff
-                    oldCode={JSON.stringify(props.data, null, 2)}
-                    newCode={value}
-                  />
+                  <JsDiff oldCode={originalValue} newCode={value} />
                 )}
               </div>
             </Tabs.Tab>
           </Tabs>
-        </div>
-        <div className="AiEditModal__SplitPanel__ChatPanel">
-          <ChatPanel
-            editModeData={JSON.parse(value)}
-            onEditModeResponse={(resp: AiResponse) => {
-              const newValue = JSON.stringify(resp.data, null, 2);
-              setValue(newValue);
-              setChanged(newValue !== originalValue);
-              // Show the diff automatically when the AI is done editing.
-              if (diffTabRef.current) {
-                diffTabRef.current.click();
-              }
-            }}
-          >
-            <p>
-              Tell me what you want to change. I can make simple text edits,
-              replace content within a module, or answer questions about the
-              content.
-            </p>
-            <p>
-              Just enter simple instructions, or attach a screenshot and ask me
-              to use it as reference.
-            </p>
-          </ChatPanel>
         </div>
       </div>
       <div className="AiEditModal__buttons">
@@ -141,11 +149,7 @@ export function AiEditModal(modalProps: ContextModalProps<AiEditModalProps>) {
           type="button"
           leftIcon={<IconArrowBackUp size={16} />}
           disabled={!changed}
-          onClick={() => {
-            setValue(originalValue);
-            setValid(true);
-            setChanged(false);
-          }}
+          onClick={() => setValue(originalValue)}
         >
           Reset
         </Button>
@@ -154,7 +158,7 @@ export function AiEditModal(modalProps: ContextModalProps<AiEditModalProps>) {
           variant="filled"
           size="xs"
           color="green"
-          disabled={!valid || !changed}
+          disabled={!parsedValue || !changed}
           onClick={onSave}
         >
           Accept changes

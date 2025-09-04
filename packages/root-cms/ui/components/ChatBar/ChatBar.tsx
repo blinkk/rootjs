@@ -104,7 +104,9 @@ export function ChatBar(props: {
       prompt,
       props.options
     );
-    props.onData?.(response);
+    if (props.onData && response) {
+      props.onData(response);
+    }
   }
 
   function updateTextareaHeight() {
