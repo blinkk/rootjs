@@ -1,6 +1,6 @@
 import {doc, getDoc} from 'firebase/firestore';
 import * as schema from '../../core/schema.js';
-import {RichTextData} from '../components/RichTextEditor/RichTextEditor.js';
+import {RichTextData} from '../../shared/richtext.js';
 import {fetchCollectionSchema} from './collection.js';
 import {normalizeString} from './l10n.js';
 

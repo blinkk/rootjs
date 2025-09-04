@@ -281,20 +281,23 @@ function fieldType(field: Field, options: FieldPropertyOptions): dom.Type {
     if (field.types && Array.isArray(field.types)) {
       const unionTypes: dom.NamedTypeReference[] = [];
       field.types.forEach((schema: Schema | string) => {
+        let typeName: string;
         if (typeof schema === 'string') {
-          // TODO(stevenle): impl.
+          typeName = schema;
           return;
+        } else {
+          typeName = schema.name;
         }
         // The "name" property is required.
-        if (!schema.name) {
+        if (!typeName) {
           return;
         }
 
-        const cleanName = alphanumeric(schema.name);
+        const cleanName = alphanumeric(typeName);
         const oneOfTypeId = `${cleanName}Fields`;
 
         // Add the oneOf type to the .d.ts file.
-        if (!options.oneOfTypes[oneOfTypeId]) {
+        if (typeof schema === 'object' && !options.oneOfTypes[oneOfTypeId]) {
           const oneOfTypeInterface = dom.create.interface(
             oneOfTypeId,
             dom.DeclarationFlags.Export
@@ -311,7 +314,7 @@ function fieldType(field: Field, options: FieldPropertyOptions): dom.Type {
 
         const oneOfOption = dom.create.namedTypeReference('RootCMSOneOfOption');
         oneOfOption.typeArguments = [
-          dom.type.stringLiteral(schema.name),
+          dom.type.stringLiteral(cleanName),
           dom.create.namedTypeReference(oneOfTypeId),
         ];
         unionTypes.push(oneOfOption);
