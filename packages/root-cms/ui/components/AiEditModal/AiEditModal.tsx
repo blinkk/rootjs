@@ -102,14 +102,16 @@ export function AiEditModal(modalProps: ContextModalProps<AiEditModalProps>) {
         </div>
         <div className="AiEditModal__SplitPanel__ChatPanel">
           <ChatPanel
-            editModeData={JSON.parse(value)}
+            editModeData={valid ? JSON.parse(value) : undefined}
             onEditModeResponse={(resp: AiResponse) => {
-              const newValue = JSON.stringify(resp.data, null, 2);
-              setValue(newValue);
-              setChanged(newValue !== originalValue);
-              // Show the diff automatically when the AI is done editing.
-              if (diffTabRef.current) {
-                diffTabRef.current.click();
+              if (resp.data) {
+                const newValue = JSON.stringify(resp.data, null, 2);
+                setValue(newValue);
+                setChanged(newValue !== originalValue);
+                // Show the diff automatically when the AI is done editing.
+                if (diffTabRef.current) {
+                  diffTabRef.current.click();
+                }
               }
             }}
           >
