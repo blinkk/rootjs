@@ -239,6 +239,14 @@ export class DraftController extends EventListener {
     this.dispatch(EventType.SAVE_STATE_CHANGE, newSaveState);
   }
 
+  removePublishingLock() {
+    // Prevent autolocking since this method would only be called if the user
+    // explicitly unlocks the publishing.
+    this.autolockApplied = true;
+    this.removeKey('sys.publishingLocked');
+    this.flush();
+  }
+
   /**
    * Immediately write all queued data to the DB.
    */
@@ -246,6 +254,7 @@ export class DraftController extends EventListener {
     if (this.pendingUpdates.size === 0) {
       return;
     }
+
     const updates = Object.fromEntries(this.pendingUpdates);
     updates['sys.modifiedAt'] = serverTimestamp();
     updates['sys.modifiedBy'] = window.firebase.user.email;

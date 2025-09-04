@@ -28,7 +28,14 @@ import {Text} from '../Text/Text.js';
 import {useVersionHistoryModal} from '../VersionHistoryModal/VersionHistoryModal.js';
 
 export interface DocActionEvent {
-  action: 'copy' | 'delete' | 'revert-draft' | 'unpublish' | 'unschedule';
+  action:
+    | 'copy'
+    | 'delete'
+    | 'revert-draft'
+    | 'unpublish'
+    | 'unschedule'
+    | 'locked'
+    | 'unlocked';
   newDocId?: string;
 }
 
@@ -132,6 +139,12 @@ export function DocActionsMenu(props: DocActionsMenuProps) {
         }
       },
     });
+  };
+
+  const onLockChanged = (state: 'locked' | 'unlocked') => {
+    if (props.onAction) {
+      props.onAction({action: state});
+    }
   };
 
   const onUnscheduleDoc = () => {
@@ -269,14 +282,18 @@ export function DocActionsMenu(props: DocActionsMenuProps) {
       {testPublishingLocked(data) ? (
         <Menu.Item
           icon={<IconLockOpen size={20} />}
-          onClick={() => lockPublishingModal.open({unlock: true})}
+          onClick={() =>
+            lockPublishingModal.open({unlock: true, onChange: onLockChanged})
+          }
         >
           Unlock publishing
         </Menu.Item>
       ) : (
         <Menu.Item
           icon={<IconLock size={20} />}
-          onClick={() => lockPublishingModal.open()}
+          onClick={() =>
+            lockPublishingModal.open({unlock: false, onChange: onLockChanged})
+          }
           // Prevent "publishing lock" if the doc has an existing scheduled
           // publish.
           disabled={testIsScheduled(data)}
