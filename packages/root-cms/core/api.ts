@@ -1,7 +1,7 @@
-import {Server, Request, Response} from '@blinkk/root';
-import {multipartMiddleware} from '@blinkk/root/middleware';
 import {promises as fs} from 'node:fs';
 import path from 'node:path';
+import {Server, Request, Response} from '@blinkk/root';
+import {multipartMiddleware} from '@blinkk/root/middleware';
 import {
   ChatPrompt,
   AiResponse,
@@ -41,6 +41,35 @@ export interface ApiOptions {
  */
 export function api(server: Server, options: ApiOptions) {
   /**
+   * Reads the collection's schema defined in `/collections/<id>.schema.ts`.
+   */
+  async function getCollectionSchema(req: Request, collectionId: string) {
+    // On dev, read the collection's `schema.ts` file directly.
+    if (req.viteServer) {
+      const app = await options.getRenderer(req);
+      return await app.getCollection(collectionId);
+    }
+    // On prod, read the collection's schema from
+    // `dist/collections/<id>.schema.json`. This file is built in the
+    // `preBuild()` hook within `plugin.ts`.
+    try {
+      const schemaPath = path.join(
+        req.rootConfig!.rootDir,
+        'dist',
+        'collections',
+        `${collectionId}.schema.json`
+      );
+      const contents = await fs.readFile(schemaPath, 'utf8');
+      return JSON.parse(contents);
+    } catch (err) {
+      if (err && err.code === 'ENOENT') {
+        return null;
+      }
+      throw err;
+    }
+  }
+
+  /**
    * Returns the schema for a collection.
    *
    * Example:
@@ -74,41 +103,21 @@ export function api(server: Server, options: ApiOptions) {
       res.status(400).json({success: false, error: 'MISSING_COLLECTION_ID'});
       return;
     }
-
     if (!testValidCollectionId(collectionId)) {
       res.status(400).json({success: false, error: 'INVALID_COLLECTION_ID'});
       return;
     }
 
     try {
-      if (req.viteServer) {
-        const app = await options.getRenderer(req);
-        const collections = app.getCollections();
-        const collection = collections[collectionId];
-        if (!collection) {
-          res.status(404).json({success: false, error: 'NOT_FOUND'});
-          return;
-        }
-        res.status(200).json({success: true, data: collection});
+      const collection = await getCollectionSchema(req, collectionId);
+      if (!collection) {
+        res.status(404).json({success: false, error: 'NOT_FOUND'});
         return;
       }
-
-      const schemaPath = path.join(
-        req.rootConfig!.rootDir,
-        'dist',
-        'collections',
-        `${collectionId}.json`
-      );
-      const contents = await fs.readFile(schemaPath, 'utf8');
-      const collection = JSON.parse(contents);
       res.status(200).json({success: true, data: collection});
     } catch (err: any) {
-      if (err && err.code === 'ENOENT') {
-        res.status(404).json({success: false, error: 'NOT_FOUND'});
-      } else {
-        console.error(err.stack || err);
-        res.status(500).json({success: false, error: 'UNKNOWN'});
-      }
+      console.error(err.stack || err);
+      res.status(500).json({success: false, error: 'UNKNOWN'});
     }
   });
 

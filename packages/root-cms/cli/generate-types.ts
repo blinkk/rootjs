@@ -17,7 +17,7 @@ export async function generateTypes() {
     rootConfig,
     modulePath
   )) as ProjectModule;
-  const schemas = project.getProjectSchemas();
+  const schemas = await project.getProjectSchemas();
   const outputPath = path.resolve(rootDir, 'root-cms.d.ts');
   await generateSchemaDts(outputPath, schemas);
   console.log('saved root-cms.d.ts!');
@@ -280,7 +280,11 @@ function fieldType(field: Field, options: FieldPropertyOptions): dom.Type {
     const oneOf = dom.create.namedTypeReference('RootCMSOneOf');
     if (field.types && Array.isArray(field.types)) {
       const unionTypes: dom.NamedTypeReference[] = [];
-      field.types.forEach((schema: Schema) => {
+      field.types.forEach((schema: Schema | string) => {
+        if (typeof schema === 'string') {
+          // TODO(stevenle): impl.
+          return;
+        }
         // The "name" property is required.
         if (!schema.name) {
           return;

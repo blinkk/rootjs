@@ -110,7 +110,7 @@ interface DocEditorProps {
   draft: UseDraftHook;
 }
 
-const DOC_DATA_CONTEXT = createContext(null);
+const DOC_DATA_CONTEXT = createContext<CMSDoc | null>(null);
 
 const DISABLE_SCHEMA_LEVEL_ARRAY_PREVIEW = testHasExperimentParam(
   'DisableSchemaLevelArrayPreview'
@@ -118,6 +118,17 @@ const DISABLE_SCHEMA_LEVEL_ARRAY_PREVIEW = testHasExperimentParam(
 
 function useDocData(): CMSDoc {
   return useContext(DOC_DATA_CONTEXT)!;
+}
+
+const COLLECTION_SCHEMA_TYPES_CONTEXT = createContext<
+  Record<string, schema.Schema>
+>({});
+
+/**
+ * Returns a map of types defined in the collection's schema.ts file.
+ */
+function useCollectionSchemaTypes(): Record<string, schema.Schema> {
+  return useContext(COLLECTION_SCHEMA_TYPES_CONTEXT);
 }
 
 export function DocEditor(props: DocEditorProps) {
@@ -150,114 +161,118 @@ export function DocEditor(props: DocEditorProps) {
   });
 
   return (
-    <DOC_DATA_CONTEXT.Provider value={data}>
-      <DeeplinkProvider>
-        <div className="DocEditor">
-          <LoadingOverlay
-            visible={loading}
-            loaderProps={{color: 'gray', size: 'xl'}}
-          />
-          <div className="DocEditor__statusBar">
-            <div className="DocEditor__statusBar__viewers">
-              <Viewers id={`doc/${props.docId}`} />
-            </div>
-            <div className="DocEditor__statusBar__saveState">
-              {saveState === SaveState.SAVED && 'saved!'}
-              {saveState === SaveState.SAVING && 'saving...'}
-              {saveState === SaveState.UPDATES_PENDING && 'saving...'}
-              {saveState === SaveState.ERROR && 'error saving'}
-            </div>
-            {!loading && data?.sys && (
-              <div className="DocEditor__statusBar__statusBadges">
-                <DocStatusBadges doc={data} />
+    <COLLECTION_SCHEMA_TYPES_CONTEXT.Provider
+      value={collection?.schema?.types || {}}
+    >
+      <DOC_DATA_CONTEXT.Provider value={data}>
+        <DeeplinkProvider>
+          <div className="DocEditor">
+            <LoadingOverlay
+              visible={loading}
+              loaderProps={{color: 'gray', size: 'xl'}}
+            />
+            <div className="DocEditor__statusBar">
+              <div className="DocEditor__statusBar__viewers">
+                <Viewers id={`doc/${props.docId}`} />
               </div>
-            )}
-            <div className="DocEditor__statusBar__i18n">
-              <Button
-                variant="default"
-                color="dark"
-                size="xs"
-                leftIcon={<IconPlanet size={16} />}
-                onClick={() => localizationModal.open()}
-              >
-                Localization
-              </Button>
-            </div>
-            <div className="DocEditor__statusBar__publishButton">
-              {loading ? (
+              <div className="DocEditor__statusBar__saveState">
+                {saveState === SaveState.SAVED && 'saved!'}
+                {saveState === SaveState.SAVING && 'saving...'}
+                {saveState === SaveState.UPDATES_PENDING && 'saving...'}
+                {saveState === SaveState.ERROR && 'error saving'}
+              </div>
+              {!loading && data?.sys && (
+                <div className="DocEditor__statusBar__statusBadges">
+                  <DocStatusBadges doc={data} />
+                </div>
+              )}
+              <div className="DocEditor__statusBar__i18n">
                 <Button
+                  variant="default"
                   color="dark"
                   size="xs"
-                  onClick={() => publishDocModal.open()}
-                  loading
-                  disabled
+                  leftIcon={<IconPlanet size={16} />}
+                  onClick={() => localizationModal.open()}
                 >
-                  Publish
+                  Localization
                 </Button>
-              ) : testIsScheduled(data) ? (
-                <Tooltip
-                  label={`Scheduled ${formatDateTime(
-                    data.sys.scheduledAt
-                  )} by ${data.sys.scheduledBy}`}
-                  transition="pop"
-                >
+              </div>
+              <div className="DocEditor__statusBar__publishButton">
+                {loading ? (
+                  <Button
+                    color="dark"
+                    size="xs"
+                    onClick={() => publishDocModal.open()}
+                    loading
+                    disabled
+                  >
+                    Publish
+                  </Button>
+                ) : testIsScheduled(data) ? (
+                  <Tooltip
+                    label={`Scheduled ${formatDateTime(
+                      data.sys.scheduledAt
+                    )} by ${data.sys.scheduledBy}`}
+                    transition="pop"
+                  >
+                    <Button
+                      color="dark"
+                      size="xs"
+                      leftIcon={<IconRocket size={16} />}
+                      disabled
+                    >
+                      Publish
+                    </Button>
+                  </Tooltip>
+                ) : testPublishingLocked(data) ? (
+                  <Tooltip
+                    label={`Locked by ${data.sys.publishingLocked.lockedBy}: "${data.sys.publishingLocked.reason}"`}
+                    transition="pop"
+                  >
+                    <Button
+                      color="dark"
+                      size="xs"
+                      leftIcon={<IconLock size={16} />}
+                      disabled
+                    >
+                      Publish
+                    </Button>
+                  </Tooltip>
+                ) : (
                   <Button
                     color="dark"
                     size="xs"
                     leftIcon={<IconRocket size={16} />}
-                    disabled
+                    onClick={() => publishDocModal.open()}
                   >
                     Publish
                   </Button>
-                </Tooltip>
-              ) : testPublishingLocked(data) ? (
-                <Tooltip
-                  label={`Locked by ${data.sys.publishingLocked.lockedBy}: "${data.sys.publishingLocked.reason}"`}
-                  transition="pop"
-                >
-                  <Button
-                    color="dark"
-                    size="xs"
-                    leftIcon={<IconLock size={16} />}
-                    disabled
-                  >
-                    Publish
-                  </Button>
-                </Tooltip>
-              ) : (
-                <Button
-                  color="dark"
-                  size="xs"
-                  leftIcon={<IconRocket size={16} />}
-                  onClick={() => publishDocModal.open()}
-                >
-                  Publish
-                </Button>
-              )}
+                )}
+              </div>
+              <div className="DocEditor__statusBar__actionsMenu">
+                <DocActionsMenu
+                  docId={props.docId}
+                  data={data}
+                  onAction={onDocAction}
+                />
+              </div>
             </div>
-            <div className="DocEditor__statusBar__actionsMenu">
-              <DocActionsMenu
-                docId={props.docId}
-                data={data}
-                onAction={onDocAction}
-              />
+            <div className="DocEditor__fields">
+              {fields.map((field) => (
+                <DocEditor.Field
+                  key={field.id}
+                  collection={props.collection}
+                  field={field}
+                  shallowKey={field.id!}
+                  deepKey={`fields.${field.id!}`}
+                  draft={controller}
+                />
+              ))}
             </div>
           </div>
-          <div className="DocEditor__fields">
-            {fields.map((field) => (
-              <DocEditor.Field
-                key={field.id}
-                collection={props.collection}
-                field={field}
-                shallowKey={field.id!}
-                deepKey={`fields.${field.id!}`}
-                draft={controller}
-              />
-            ))}
-          </div>
-        </div>
-      </DeeplinkProvider>
-    </DOC_DATA_CONTEXT.Provider>
+        </DeeplinkProvider>
+      </DOC_DATA_CONTEXT.Provider>
+    </COLLECTION_SCHEMA_TYPES_CONTEXT.Provider>
   );
 }
 
@@ -1346,13 +1361,19 @@ DocEditor.ArrayField = (props: FieldProps) => {
 DocEditor.OneOfField = (props: FieldProps) => {
   const field = props.field as schema.OneOfField;
   const [type, setType] = useState('');
+  const collectionTypes = useCollectionSchemaTypes();
   const typesMap: Record<string, schema.Schema> = {};
   const dropdownValues: Array<{value: string; label: string}> = [
     {value: '', label: field.placeholder || 'Select type'},
   ];
-  field.types.forEach((type) => {
-    typesMap[type.name] = type;
-    dropdownValues.push({value: type.name, label: type.name});
+  field.types.forEach((typedef) => {
+    if (typeof typedef === 'string') {
+      typesMap[typedef] = collectionTypes[typedef];
+      dropdownValues.push({value: typedef, label: typedef});
+    } else {
+      typesMap[typedef.name] = typedef;
+      dropdownValues.push({value: typedef.name, label: typedef.name});
+    }
   });
   const selectedType = typesMap[type || ''];
 

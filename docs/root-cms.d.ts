@@ -220,6 +220,27 @@ export interface PagesFields {
 /** Generated from `/collections/Pages.schema.ts`. */
 export type PagesDoc = RootCMSDoc<PagesFields>;
 
+/** Generated from `/collections/Sandbox.schema.ts`. */
+export interface SandboxFields {
+  /** Meta */
+  meta?: {
+    /** Title. Page title. */
+    title?: string;
+    /** Description. Description for SEO and social shares. */
+    description?: string;
+    /** Image. Meta image for social shares. Recommended: 1400x600 JPG. */
+    image?: RootCMSImage;
+  };
+  /** Content */
+  content?: {
+    /** Modules. Compose the page by adding one or more modules. */
+    modules?: RootCMSOneOf<RootCMSOneOfOption<'Divider', DividerFields> | RootCMSOneOfOption<'Section', SectionFields> | RootCMSOneOfOption<'Spacer', SpacerFields> | RootCMSOneOfOption<'Template50x50', Template50x50Fields> | RootCMSOneOfOption<'TemplateHeadline', TemplateHeadlineFields> | RootCMSOneOfOption<'TemplateImage', TemplateImageFields> | RootCMSOneOfOption<'TemplateJumplinks', TemplateJumplinksFields> | RootCMSOneOfOption<'TemplatePoweredBy', TemplatePoweredByFields> | RootCMSOneOfOption<'TemplateSandbox', TemplateSandboxFields>>[];
+  };
+}
+
+/** Generated from `/collections/Sandbox.schema.ts`. */
+export type SandboxDoc = RootCMSDoc<SandboxFields>;
+
 /** Generated from `/templates/Section/Section.schema.ts`. */
 export interface SectionFields {
   /** ID. Used for deep linking, tracking, etc. */

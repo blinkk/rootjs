@@ -5,7 +5,7 @@ import {Request, Response, RootConfig} from '@blinkk/root';
 import {render as renderToString} from 'preact-render-to-string';
 import packageJson from '../package.json' assert {type: 'json'};
 import {CMSPluginOptions} from './plugin.js';
-import {getProjectSchemas} from './project.js';
+import {getCollectionSchema, getProjectSchemas} from './project.js';
 import {Collection} from './schema.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -88,9 +88,11 @@ export async function renderApp(
 ) {
   // Exclude "fields" from the serialized collections to reduce payload size.
   const collections: Record<string, Partial<Collection>> = {};
-  Object.entries(getCollections()).forEach(([collectionId, collection]) => {
-    collections[collectionId] = serializeCollection(collection);
-  });
+  Object.entries(await getCollections()).forEach(
+    ([collectionId, collection]) => {
+      collections[collectionId] = serializeCollection(collection);
+    }
+  );
   const rootConfig = options.rootConfig || {};
   const cmsConfig = options.cmsConfig || {};
   let gci = cmsConfig.gci;
@@ -166,6 +168,7 @@ function serializeCollection(collection: Collection): Partial<Collection> {
     slugRegex: collection.slugRegex,
     autolock: collection.autolock,
     autolockReason: collection.autolockReason,
+    sortOptions: collection.sortOptions,
   };
 }
 
@@ -260,22 +263,32 @@ export async function renderSignIn(
   res.send(html);
 }
 
-export function getCollections(): Record<string, Collection> {
+export async function getCollections(): Promise<Record<string, Collection>> {
   const collections: Record<string, Collection> = {};
-  const schemas = getProjectSchemas();
+  const schemas = await getProjectSchemas();
   Object.entries(schemas).forEach(([fileId, schema]) => {
     if (fileId.startsWith('/collections/')) {
-      const collectionId = parseCollectionId(fileId);
-      collections[collectionId] = {...schema, id: collectionId} as Collection;
+      const collectionId = toCollectionId(fileId);
+      collections[collectionId] = {id: collectionId, ...schema} as Collection;
     }
   });
   return collections;
 }
 
 /**
+ * Returns a collection's schema definition as defined in
+ * `/collections/<id>.schema.ts`.
+ */
+export async function getCollection(
+  collectionId: string
+): Promise<Collection | null> {
+  return getCollectionSchema(collectionId);
+}
+
+/**
  * Converts a fileId path like "/collections/Foo.schema.ts" and returns "Foo".
  */
-function parseCollectionId(fileId: string) {
+function toCollectionId(fileId: string) {
   return path.basename(fileId).split('.')[0];
 }
 

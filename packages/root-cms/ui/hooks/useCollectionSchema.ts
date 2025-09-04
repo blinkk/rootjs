@@ -1,11 +1,11 @@
 import {showNotification} from '@mantine/notifications';
 import {useCallback, useEffect, useState} from 'preact/hooks';
-import {Schema} from '../../core/schema.js';
+import {Collection} from '../../core/schema.js';
 import {fetchCollectionSchema} from '../utils/collection.js';
 
 export function useCollectionSchema(collectionId: string) {
   const [loading, setLoading] = useState(true);
-  const [schema, setSchema] = useState<Schema | null>(null);
+  const [schema, setSchema] = useState<Collection | null>(null);
 
   const fetchSchema = useCallback(async () => {
     try {
