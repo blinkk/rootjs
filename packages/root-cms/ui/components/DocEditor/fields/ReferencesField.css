@@ -1,0 +1,27 @@
+.ReferencesField__none {
+  font-family: var(--font-family-mono);
+  margin-bottom: 16px;
+}
+
+.ReferencesField__refs {
+  margin-bottom: 16px;
+}
+
+.ReferencesField__card {
+  display: flex;
+  gap: 8px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.ReferencesField__card:first-child {
+  border-top: 1px solid var(--color-border);
+}
+
+.ReferencesField__card__preview {
+  flex: 1;
+}
+
+.ReferencesField__card__controls {
+  display: flex;
+  align-items: flex-start;
+}

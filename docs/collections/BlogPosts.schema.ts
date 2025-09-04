@@ -41,6 +41,11 @@ export default schema.collection({
           label: 'Image',
           help: 'Meta image for social shares. Recommended size: 1200x600.',
         }),
+        schema.references({
+          id: 'relatedPosts',
+          label: 'Related Posts',
+          collections: ['BlogPosts'],
+        }),
       ],
     }),
     schema.object({

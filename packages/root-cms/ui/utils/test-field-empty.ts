@@ -34,6 +34,8 @@ export function testFieldEmpty(
       return !value || !value.src;
     case 'reference':
       return !value || !value.id;
+    case 'references':
+      return !Array.isArray(value) || value.length === 0;
     case 'richtext':
       return !testValidRichTextData(value);
     case 'object':

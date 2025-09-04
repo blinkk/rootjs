@@ -100,6 +100,7 @@ import {ImageField} from './fields/ImageField.js';
 import {MultiSelectField} from './fields/MultiSelectField.js';
 import {NumberField} from './fields/NumberField.js';
 import {ReferenceField} from './fields/ReferenceField.js';
+import {ReferencesField} from './fields/ReferencesField.js';
 import {RichTextField} from './fields/RichTextField.js';
 import {SelectField} from './fields/SelectField.js';
 import {StringField} from './fields/StringField.js';
@@ -370,6 +371,8 @@ DocEditor.Field = (props: FieldProps) => {
           <DocEditor.OneOfField {...props} />
         ) : field.type === 'reference' ? (
           <ReferenceField {...props} />
+        ) : field.type === 'references' ? (
+          <ReferencesField {...props} />
         ) : field.type === 'richtext' ? (
           <RichTextField {...props} />
         ) : field.type === 'select' ? (

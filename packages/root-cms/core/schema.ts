@@ -221,6 +221,22 @@ export function reference(field: Omit<ReferenceField, 'type'>): ReferenceField {
   return {type: 'reference', ...field};
 }
 
+export type ReferencesField = CommonFieldProps & {
+  type: 'references';
+  /** List of collection ids the references can be chosen from. */
+  collections?: string[];
+  /** Initial collection to show when picking a reference. */
+  initialCollection?: string;
+  /** Label for the button. Defaults to "Select". */
+  buttonLabel?: string;
+};
+
+export function references(
+  field: Omit<ReferencesField, 'type'>
+): ReferencesField {
+  return {...field, type: 'references'};
+}
+
 export type Field =
   | StringField
   | NumberField
@@ -235,7 +251,8 @@ export type Field =
   | ArrayField
   | OneOfField
   | RichTextField
-  | ReferenceField;
+  | ReferenceField
+  | ReferencesField;
 
 /**
  * Similar to {@link Field} but with a required `id`.
