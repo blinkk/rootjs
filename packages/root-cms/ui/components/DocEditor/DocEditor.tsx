@@ -1056,7 +1056,6 @@ DocEditor.ArrayField = (props: FieldProps) => {
           newValue: updateRichTextDataTime(newValue) as ArrayFieldValue,
           deepKey: props.deepKey,
         });
-        draft.notifySubscribers();
         editJsonModal.close();
       },
     });
@@ -1075,7 +1074,6 @@ DocEditor.ArrayField = (props: FieldProps) => {
           newValue: updateRichTextDataTime(newValue) as ArrayFieldValue,
           deepKey: props.deepKey,
         });
-        draft.notifySubscribers();
         aiEditModal.close();
       },
     });
