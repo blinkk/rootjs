@@ -18,6 +18,7 @@ export interface LockPublishingModalProps {
   [key: string]: unknown;
   docId: string;
   unlock?: boolean;
+  onChange?: (state: 'locked' | 'unlocked') => void;
 }
 
 export function useLockPublishingModal(props: LockPublishingModalProps) {
@@ -77,6 +78,9 @@ LockPublishingModal.Lock = (
         autoClose: 10000,
       });
       modals.closeModal(id);
+      if (props.onChange) {
+        props.onChange('locked');
+      }
     });
   }
 
@@ -167,6 +171,9 @@ LockPublishingModal.Unlock = (
         autoClose: 10000,
       });
       modals.closeModal(id);
+      if (props.onChange) {
+        props.onChange('unlocked');
+      }
     });
   }
 

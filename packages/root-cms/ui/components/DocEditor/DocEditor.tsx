@@ -149,6 +149,13 @@ export function DocEditor(props: DocEditorProps) {
     (event: DocActionEvent) => {
       if (event.action === 'delete') {
         goBack();
+      } else if (event.action === 'unlocked') {
+        // NOTE(stevenle): for some reason, the unlock publishing doesn't
+        // properly trigger the `onSnapshot()` callback with
+        // `{hasPendingWrites: false}`. This is a temporary fix.
+        // TODO(stevenle): avoid the extra db write here.
+        draft.controller.removeKey('sys.publishingLocked');
+        draft.controller.flush();
       }
     },
     [props.docId]

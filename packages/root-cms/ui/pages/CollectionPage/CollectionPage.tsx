@@ -159,7 +159,10 @@ CollectionPage.Collection = (props: CollectionProps) => {
     {value: 'newest', label: 'Newest'},
     {value: 'oldest', label: 'Oldest'},
     {value: 'modifiedAt', label: 'Last modified'},
-    ...(collection.sortOptions?.map((s: any) => ({value: s.id, label: s.label})) || []),
+    ...(collection.sortOptions?.map((s: any) => ({
+      value: s.id,
+      label: s.label,
+    })) || []),
   ];
 
   const [loading, listDocs, docs] = useDocsList(props.collection, {orderBy});
@@ -326,7 +329,12 @@ CollectionPage.DocsList = (props: {
                 docId={doc.id}
                 data={doc}
                 onAction={(e) => {
-                  if (e.action === 'delete' || e.action === 'unpublish') {
+                  if (
+                    e.action === 'delete' ||
+                    e.action === 'unpublish' ||
+                    e.action === 'locked' ||
+                    e.action === 'unlocked'
+                  ) {
                     props.reloadDocs();
                   }
                 }}
