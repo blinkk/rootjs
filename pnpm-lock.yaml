@@ -519,8 +519,8 @@ importers:
         specifier: 7.6.0
         version: 7.6.0
       esbuild:
-        specifier: 0.19.9
-        version: 0.19.9
+        specifier: 0.25.9
+        version: 0.25.9
       firebase:
         specifier: 12.2.1
         version: 12.2.1
@@ -5734,7 +5734,7 @@ packages:
   /@types/preact-custom-element@4.0.2:
     resolution: {integrity: sha512-Ea1m7ZTV4EzOvlAOJa3ZuwGwyRslFOzEEAzuXJM8jrxm1G4dYCpDKTWze4UojFMOmHfLmBhQebONS9t4Jqs1oQ==}
     dependencies:
-      preact: 10.19.3
+      preact: 10.27.1
     dev: true
 
   /@types/qs@6.9.7:
