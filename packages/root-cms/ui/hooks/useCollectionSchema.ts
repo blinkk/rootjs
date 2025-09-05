@@ -27,5 +27,31 @@ export function useCollectionSchema(collectionId: string) {
     fetchSchema();
   }, [collectionId]);
 
+  // Connect to server-sent events (SSE) and listen for schema changes.
+  useEffect(() => {
+    const eventSource = new EventSource('/cms/api/sse.connect');
+    eventSource.onmessage = (event) => {
+      const data = maybeParseJson(event?.data);
+      console.log('sse:', data);
+      if (data?.event === 'schema-changed') {
+        fetchSchema();
+      }
+    };
+    eventSource.onerror = (event) => {
+      console.error('SSE error:', event);
+    };
+    eventSource.onopen = (event) => {
+      console.log('SSE connection opened');
+    };
+  }, []);
+
   return {loading, schema};
+}
+
+function maybeParseJson(s: string) {
+  try {
+    return JSON.parse(s);
+  } catch (err) {
+    return null;
+  }
 }
