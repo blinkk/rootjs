@@ -34,7 +34,7 @@ export async function loadRootConfig(
 function validateRootconfig(rootConfig: RootConfig) {
   // Update vite legacy config options.
   const scss: any = rootConfig.vite?.css?.preprocessorOptions?.scss;
-  if (scss.includePaths) {
+  if (scss?.includePaths) {
     console.warn(
       '[deprecation warning] root.config.ts: vite.css.preprocessorOptions.scss.includePaths is deprecated. rename "includePaths" -> "loadPaths"'
     );
