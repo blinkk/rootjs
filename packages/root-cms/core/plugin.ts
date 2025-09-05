@@ -26,6 +26,7 @@ import sirv from 'sirv';
 import {type RootAiModel} from './ai.js';
 import {api} from './api.js';
 import {Action, RootCMSClient} from './client.js';
+import {sse} from './sse.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -272,6 +273,7 @@ export function cmsPlugin(options: CMSPluginOptions): CMSPlugin {
   const firebaseConfig = options.firebaseConfig || {};
   const app = getFirebaseApp(firebaseConfig.projectId);
   const auth = getAuth(app);
+  let sseBroadcast: (data: any) => void;
 
   /**
    * Checks if login is required for the request. Currently returns `true` if
@@ -624,6 +626,12 @@ export function cmsPlugin(options: CMSPluginOptions): CMSPlugin {
       const staticDir = path.resolve(__dirname, 'ui');
       server.use('/cms/static', sirv(staticDir, {dev: false}));
 
+      // Register server-sent events (SSE) endpoints.
+      const sseData = sse(server);
+      if (sseData.sseBroadcast) {
+        sseBroadcast = sseData.sseBroadcast;
+      }
+
       // Register API handlers.
       api(server, {getRenderer});
 
@@ -651,7 +659,7 @@ export function cmsPlugin(options: CMSPluginOptions): CMSPlugin {
     },
   };
 
-  if (options.watch !== false) {
+  if (process.env.NODE_ENV === 'development' && options.watch !== false) {
     plugin.onFileChange = (
       eventName: 'add' | 'addDir' | 'change' | 'unlink' | 'unlinkDir',
       filepath: string
@@ -663,6 +671,11 @@ export function cmsPlugin(options: CMSPluginOptions): CMSPlugin {
           const generateTypes = generateTypesModule.generateTypes;
           generateTypes();
         });
+
+        // Send an event to SSE-connected clients.
+        if (sseBroadcast) {
+          sseBroadcast({event: 'schema-changed'});
+        }
       }
     };
   }
