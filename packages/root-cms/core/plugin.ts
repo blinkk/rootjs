@@ -23,10 +23,11 @@ import {getAuth, DecodedIdToken} from 'firebase-admin/auth';
 import {Firestore, getFirestore} from 'firebase-admin/firestore';
 import * as jsonwebtoken from 'jsonwebtoken';
 import sirv from 'sirv';
+import {SSEEvent} from '../shared/sse.js';
 import {type RootAiModel} from './ai.js';
 import {api} from './api.js';
 import {Action, RootCMSClient} from './client.js';
-import {sse} from './sse.js';
+import {sse, SSEBroadcastFn} from './sse.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -273,7 +274,7 @@ export function cmsPlugin(options: CMSPluginOptions): CMSPlugin {
   const firebaseConfig = options.firebaseConfig || {};
   const app = getFirebaseApp(firebaseConfig.projectId);
   const auth = getAuth(app);
-  let sseBroadcast: (data: any) => void;
+  let sseBroadcast: SSEBroadcastFn | null = null;
 
   /**
    * Checks if login is required for the request. Currently returns `true` if
@@ -674,7 +675,9 @@ export function cmsPlugin(options: CMSPluginOptions): CMSPlugin {
 
         // Send an event to SSE-connected clients.
         if (sseBroadcast) {
-          sseBroadcast({event: 'schema-changed'});
+          sseBroadcast(SSEEvent.SCHEMA_CHANGED, {
+            file: path.basename(filepath),
+          });
         }
       }
     };
