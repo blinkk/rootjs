@@ -1,14 +1,11 @@
 import crypto from 'node:crypto';
 import path from 'node:path';
-import {fileURLToPath} from 'node:url';
 import {Request, Response, RootConfig} from '@blinkk/root';
 import {render as renderToString} from 'preact-render-to-string';
 import packageJson from '../package.json' with {type: 'json'};
 import {CMSPluginOptions} from './plugin.js';
 import {getCollectionSchema, getProjectSchemas} from './project.js';
 import {Collection} from './schema.js';
-
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const DEFAULT_FAVICON_URL =
   'https://lh3.googleusercontent.com/ijK50TfQlV_yJw3i-CMlnD6osH4PboZBILZrJcWhoNMEmoyCD5e1bAxXbaOPe5w4gG_Scf37EXrmZ6p8sP2lue5fLZ419m5JyLMs=e385-w256';
@@ -126,24 +123,11 @@ export async function renderApp(
   const mainHtml = renderToString(
     <App title={title} ctx={ctx} favicon={cmsConfig.favicon} />
   );
-  let html = `<!doctype html>\n${mainHtml}`;
   const nonce = generateNonce();
-  if (req.viteServer) {
-    const tpl = html
-      .replace('{CSS_URL}', cachebust(req, '/cms/static/ui.css'))
-      .replace('{JS_URL}', cachebust(req, '/cms/static/ui.js'))
-      .replaceAll('{NONCE}', nonce);
-    html = await req.viteServer!.transformIndexHtml(req.originalUrl, tpl);
-    html = html.replace(
-      '<script type="module" src="/@vite/client"></script>',
-      `<script type="module" src="/@vite/client" nonce="${nonce}"></script>`
-    );
-  } else {
-    html = html
-      .replace('{CSS_URL}', cachebust(req, '/cms/static/ui.css'))
-      .replace('{JS_URL}', cachebust(req, '/cms/static/ui.js'))
-      .replaceAll('{NONCE}', nonce);
-  }
+  const html = `<!doctype html>\n${mainHtml}`
+    .replace('{CSS_URL}', cachebust(req, '/cms/static/ui.css'))
+    .replace('{JS_URL}', cachebust(req, '/cms/static/ui.js'))
+    .replaceAll('{NONCE}', nonce);
   res.setHeader('Content-Type', 'text/html');
   setSecurityHeaders(options, req, res, nonce);
   res.send(html);
@@ -235,24 +219,11 @@ export async function renderSignIn(
   const mainHtml = renderToString(
     <SignIn title="Sign in" ctx={ctx} favicon={options.cmsConfig.favicon} />
   );
-  let html = `<!doctype html>\n${mainHtml}`;
   const nonce = generateNonce();
-  if (req.viteServer) {
-    const tpl = html
-      .replace('{CSS_URL}', cachebust(req, '/cms/static/signin.css'))
-      .replace('{JS_URL}', cachebust(req, '/cms/static/signin.js'))
-      .replaceAll('{NONCE}', nonce);
-    html = await req.viteServer!.transformIndexHtml(req.originalUrl, tpl);
-    html = html.replace(
-      '<script type="module" src="/@vite/client"></script>',
-      `<script type="module" src="/@vite/client" nonce="${nonce}"></script>`
-    );
-  } else {
-    html = html
-      .replace('{CSS_URL}', cachebust(req, '/cms/static/signin.css'))
-      .replace('{JS_URL}', cachebust(req, '/cms/static/signin.js'))
-      .replaceAll('{NONCE}', nonce);
-  }
+  const html = `<!doctype html>\n${mainHtml}`
+    .replace('{CSS_URL}', cachebust(req, '/cms/static/signin.css'))
+    .replace('{JS_URL}', cachebust(req, '/cms/static/signin.js'))
+    .replaceAll('{NONCE}', nonce);
   res.setHeader('Content-Type', 'text/html');
   setSecurityHeaders(options, req, res, nonce);
   res.status(403);
