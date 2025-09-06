@@ -26,6 +26,7 @@ import {ScheduleReleaseModal} from './components/ScheduleReleaseModal/ScheduleRe
 import {VersionHistoryModal} from './components/VersionHistoryModal/VersionHistoryModal.js';
 import {FirebaseContext, FirebaseContextObject} from './hooks/useFirebase.js';
 import {SiteSettingsProvider} from './hooks/useSiteSettings.js';
+import {SSEProvider} from './hooks/useSSE.js';
 import {UserPreferencesProvider} from './hooks/useUserPreferences.js';
 import {VirtualClipboardProvider} from './hooks/useVirtualClipboard.js';
 import {AIPage} from './pages/AIPage/AIPage.js';
@@ -105,79 +106,87 @@ function App() {
       <NotificationsProvider>
         <FirebaseContext.Provider value={window.firebase}>
           <VirtualClipboardProvider>
-            <SiteSettingsProvider>
-              <UserPreferencesProvider>
-                <ModalsProvider
-                  modals={{
-                    [AiEditModal.id]: AiEditModal,
-                    [CopyDocModal.id]: CopyDocModal,
-                    [DocPickerModal.id]: DocPickerModal,
-                    [DocSelectModal.id]: DocSelectModal,
-                    [DataSourceSelectModal.id]: DataSourceSelectModal,
-                    [EditJsonModal.id]: EditJsonModal,
-                    [EditTranslationsModal.id]: EditTranslationsModal,
-                    [ExportSheetModal.id]: ExportSheetModal,
-                    [LocalizationModal.id]: LocalizationModal,
-                    [LockPublishingModal.id]: LockPublishingModal,
-                    [PublishDocModal.id]: PublishDocModal,
-                    [ScheduleReleaseModal.id]: ScheduleReleaseModal,
-                    [VersionHistoryModal.id]: VersionHistoryModal,
-                  }}
-                >
-                  <Router>
-                    <Route path="/cms" component={ProjectPage} />
-                    <Route path="/cms/ai" component={AIPage} />
-                    <Route path="/cms/assets" component={AssetsPage} />
-                    <Route path="/cms/compare" component={ComparePage} />
-                    <Route
-                      path="/cms/content/:collection?"
-                      component={CollectionPage}
-                    />
-                    <Route
-                      path="/cms/content/:collection/:slug"
-                      component={DocumentPage}
-                    />
-                    <Route path="/cms/data" component={DataPage} />
-                    <Route path="/cms/data/new" component={NewDataSourcePage} />
-                    <Route path="/cms/data/:id" component={DataSourcePage} />
-                    <Route
-                      path="/cms/data/:id/edit"
-                      component={EditDataSourcePage}
-                    />
-                    <Route path="/cms/logs" component={LogsPage} />
-                    <Route path="/cms/releases" component={ReleasesPage} />
-                    <Route
-                      path="/cms/releases/new"
-                      component={NewReleasePage}
-                    />
-                    <Route path="/cms/releases/:id" component={ReleasePage} />
-                    <Route
-                      path="/cms/releases/:id/edit"
-                      component={EditReleasePage}
-                    />
-                    <Route path="/cms/settings" component={SettingsPage} />
-                    <Route path="/cms/tools/:id" component={SidebarToolsPage} />
-                    <Route
-                      path="/cms/translations"
-                      component={TranslationsPage}
-                    />
-                    <Route
-                      path="/cms/translations/arb"
-                      component={TranslationsArbPage}
-                    />
-                    <Route
-                      path="/cms/translations/:hash"
-                      component={TranslationsEditPage}
-                    />
-                    <Route
-                      path="/cms/translations/:collection/:slug"
-                      component={DocTranslationsPage}
-                    />
-                    <Route default component={NotFoundPage} />
-                  </Router>
-                </ModalsProvider>
-              </UserPreferencesProvider>
-            </SiteSettingsProvider>
+            <SSEProvider>
+              <SiteSettingsProvider>
+                <UserPreferencesProvider>
+                  <ModalsProvider
+                    modals={{
+                      [AiEditModal.id]: AiEditModal,
+                      [CopyDocModal.id]: CopyDocModal,
+                      [DocPickerModal.id]: DocPickerModal,
+                      [DocSelectModal.id]: DocSelectModal,
+                      [DataSourceSelectModal.id]: DataSourceSelectModal,
+                      [EditJsonModal.id]: EditJsonModal,
+                      [EditTranslationsModal.id]: EditTranslationsModal,
+                      [ExportSheetModal.id]: ExportSheetModal,
+                      [LocalizationModal.id]: LocalizationModal,
+                      [LockPublishingModal.id]: LockPublishingModal,
+                      [PublishDocModal.id]: PublishDocModal,
+                      [ScheduleReleaseModal.id]: ScheduleReleaseModal,
+                      [VersionHistoryModal.id]: VersionHistoryModal,
+                    }}
+                  >
+                    <Router>
+                      <Route path="/cms" component={ProjectPage} />
+                      <Route path="/cms/ai" component={AIPage} />
+                      <Route path="/cms/assets" component={AssetsPage} />
+                      <Route path="/cms/compare" component={ComparePage} />
+                      <Route
+                        path="/cms/content/:collection?"
+                        component={CollectionPage}
+                      />
+                      <Route
+                        path="/cms/content/:collection/:slug"
+                        component={DocumentPage}
+                      />
+                      <Route path="/cms/data" component={DataPage} />
+                      <Route
+                        path="/cms/data/new"
+                        component={NewDataSourcePage}
+                      />
+                      <Route path="/cms/data/:id" component={DataSourcePage} />
+                      <Route
+                        path="/cms/data/:id/edit"
+                        component={EditDataSourcePage}
+                      />
+                      <Route path="/cms/logs" component={LogsPage} />
+                      <Route path="/cms/releases" component={ReleasesPage} />
+                      <Route
+                        path="/cms/releases/new"
+                        component={NewReleasePage}
+                      />
+                      <Route path="/cms/releases/:id" component={ReleasePage} />
+                      <Route
+                        path="/cms/releases/:id/edit"
+                        component={EditReleasePage}
+                      />
+                      <Route path="/cms/settings" component={SettingsPage} />
+                      <Route
+                        path="/cms/tools/:id"
+                        component={SidebarToolsPage}
+                      />
+                      <Route
+                        path="/cms/translations"
+                        component={TranslationsPage}
+                      />
+                      <Route
+                        path="/cms/translations/arb"
+                        component={TranslationsArbPage}
+                      />
+                      <Route
+                        path="/cms/translations/:hash"
+                        component={TranslationsEditPage}
+                      />
+                      <Route
+                        path="/cms/translations/:collection/:slug"
+                        component={DocTranslationsPage}
+                      />
+                      <Route default component={NotFoundPage} />
+                    </Router>
+                  </ModalsProvider>
+                </UserPreferencesProvider>
+              </SiteSettingsProvider>
+            </SSEProvider>
           </VirtualClipboardProvider>
         </FirebaseContext.Provider>
       </NotificationsProvider>
