@@ -2,10 +2,10 @@ import crypto from 'node:crypto';
 import path from 'node:path';
 import {Request, Response, RootConfig} from '@blinkk/root';
 import {render as renderToString} from 'preact-render-to-string';
-import packageJson from '../package.json' with {type: 'json'};
 import {CMSPluginOptions} from './plugin.js';
 import {getCollectionSchema, getProjectSchemas} from './project.js';
 import {Collection} from './schema.js';
+import {getServerVersion} from './server-version.js';
 
 const DEFAULT_FAVICON_URL =
   'https://lh3.googleusercontent.com/ijK50TfQlV_yJw3i-CMlnD6osH4PboZBILZrJcWhoNMEmoyCD5e1bAxXbaOPe5w4gG_Scf37EXrmZ6p8sP2lue5fLZ419m5JyLMs=e385-w256';
@@ -307,14 +307,12 @@ function getRefererOrigin(req: Request): string {
 
 /** Modify the given URL to bust the cache. */
 function cachebust(req: Request, url: string) {
+  const cb = getServerVersion();
   const host = req.get('host');
   // On localhost, use a full URL so that the vite server doesn't attempt to
-  // transform the file. Use a timestamp to cachebust.
+  // transform the file.
   if (host?.includes('localhost')) {
-    const cb = Math.floor(new Date().getTime() / 1000);
     return `http://${host}${url}?c=${cb}`;
   }
-  // On prod, cachebust using the package.json version.
-  const cb = packageJson.version;
   return `${url}?c=${cb}`;
 }
