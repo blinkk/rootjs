@@ -3,4 +3,4 @@
 '@blinkk/root': patch
 ---
 
-chore: update core deps (vite, express, sass, etc.)
+chore: update core deps (vite, express, sass, etc.) (#728)
