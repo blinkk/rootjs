@@ -13,75 +13,54 @@ import {
   useEffect,
   useMemo,
   useRef,
-  useState,
 } from 'preact/hooks';
-import {SSEEvent} from '../../shared/sse.js';
+import {SSEConnectedEvent, SSEEvent} from '../../shared/sse.js';
+import {testHasExperimentParam} from '../utils/url-params.js';
 
 // Re-export types from shared/sse.ts.
 export * from '../../shared/sse.js';
 
+const SSE_CONNECT_URL = '/cms/api/sse.connect';
+const DEBUG = testHasExperimentParam('EnableVerboseLogging');
+const IS_LOCALHOST = window.location.hostname === 'localhost';
+
 type Listener<T = unknown> = (data: T, evt: MessageEvent<string>) => void;
 
-type Emitter = {
-  on: (type: string, listener: Listener) => () => void;
-  emit: (type: string, data: any, evt: MessageEvent<string>) => void;
-};
+class Emitter {
+  private map = new Map<string, Set<Listener>>();
 
-const SSE_CONNECT_URL = '/cms/api/sse.connect';
+  on(type: string, listener: Listener) {
+    if (!this.map.has(type)) {
+      this.map.set(type, new Set());
+    }
+    this.map.get(type)!.add(listener);
+    return () => {
+      this.map.get(type)?.delete(listener);
+    };
+  }
 
-const DEBUG = true;
+  emit(type: string, data: any, event: MessageEvent<string>) {
+    this.map.get(type)?.forEach((cb) => cb(data, event));
+    this.map.get('*')?.forEach((cb) => cb({type, data}, event));
+  }
+}
 
 export type SSEProviderProps = {
   children: ComponentChildren;
 };
 
-type ConnectionState = {
-  connected: boolean;
-  reconnectCount: number;
-  lastEventId?: string;
-};
-
 const SSEContext = createContext<{
-  on: Emitter['on'];
-  state: ConnectionState;
+  emitter: Emitter;
 } | null>(null);
 
-function createEmitter(): Emitter {
-  const map = new Map<string, Set<Listener>>();
-
-  const on: Emitter['on'] = (type, listener) => {
-    if (!map.has(type)) {
-      map.set(type, new Set());
-    }
-    map.get(type)!.add(listener);
-    return () => {
-      map.get(type)?.delete(listener);
-    };
-  };
-
-  const emit: Emitter['emit'] = (type, data, event) => {
-    map.get(type)?.forEach((cb) => cb(data, event));
-    map.get('*')?.forEach((cb) => cb({type, data}, event));
-  };
-
-  return {on, emit};
-}
-
 export function SSEProvider(props: SSEProviderProps) {
-  const emitterRef = useRef<Emitter>();
-  if (!emitterRef.current) emitterRef.current = createEmitter();
+  const emitterRef = useRef<Emitter>(new Emitter());
   const emitter = emitterRef.current;
-
-  const [state, setState] = useState<ConnectionState>({
-    connected: false,
-    reconnectCount: 0,
-    lastEventId: undefined,
-  });
 
   const esRef = useRef<EventSource | null>(null);
   const reconnectingRef = useRef(false);
-  const lastWasOpenRef = useRef(false);
   const backoffRef = useRef({attempt: 0, timer: 0 as unknown as number});
+  const serverVersionRef = useRef('');
 
   const clearCurrent = () => {
     if (esRef.current) {
@@ -97,40 +76,38 @@ export function SSEProvider(props: SSEProviderProps) {
     const sseEventSource = new EventSource(SSE_CONNECT_URL);
     esRef.current = sseEventSource;
 
-    sseEventSource.addEventListener('open', () => {
-      const isReconnect =
-        lastWasOpenRef.current === false && state.reconnectCount > 0;
-      DEBUG && console.log(`[sse] connected, isReconnect=${isReconnect}`);
-      lastWasOpenRef.current = true;
-      reconnectingRef.current = false;
-      backoffRef.current.attempt = 0;
-
-      setState((s) => ({...s, connected: true}));
-      if (isReconnect) {
-        const event = new MessageEvent<string>(SSEEvent.RECONNECTED);
-        emitter.emit(SSEEvent.RECONNECTED, undefined, event);
-      }
-    });
-
     sseEventSource.addEventListener(
-      'message',
+      SSEEvent.CONNECTED,
       (event: MessageEvent<string>) => {
-        DEBUG && console.log('[sse] message', event);
-        const data = parse(event.data);
-        setState((s) => ({
-          ...s,
-          lastEventId: event.lastEventId ?? s.lastEventId,
-        }));
-        emitter.emit('message', data, event);
+        DEBUG && console.log('[sse] connected');
+        reconnectingRef.current = false;
+        backoffRef.current.attempt = 0;
+
+        // On localhost, if the server version changed, reload the page.
+        // TODO(stevenle): on prod, display a notification banner to reload.
+        if (IS_LOCALHOST) {
+          const data = parse(event.data) as SSEConnectedEvent;
+          const serverVersion = data?.serverVersion || '';
+          if (!serverVersionRef.current) {
+            serverVersionRef.current = serverVersion;
+          } else if (serverVersionRef.current !== serverVersion) {
+            console.log(
+              `server version changed: ${serverVersionRef.current} -> ${serverVersion}`
+            );
+            console.log('reloading...');
+            window.location.reload();
+          }
+        }
       }
     );
 
-    const forwardNamed = (event: MessageEvent<string>) => {
-      DEBUG && console.log('[sse] event:', event);
+    const forwardNamed = (event: MessageEvent) => {
       if (!event || !event.type) {
         return;
       }
-      emitter.emit(event.type, parse(event.data), event);
+      const data = parse(event.data);
+      DEBUG && console.log('[sse] event:', event.type, data);
+      emitter.emit(event.type, data, event);
     };
 
     Object.values(SSEEvent).forEach((eventName) => {
@@ -139,8 +116,6 @@ export function SSEProvider(props: SSEProviderProps) {
 
     sseEventSource.addEventListener('error', () => {
       DEBUG && console.log('[sse] disconnected');
-      setState((s) => ({...s, connected: false}));
-      lastWasOpenRef.current = false;
 
       if (
         sseEventSource.readyState === EventSource.CLOSED &&
@@ -154,7 +129,6 @@ export function SSEProvider(props: SSEProviderProps) {
           const delay = base + jitter;
           window.clearTimeout(backoffRef.current.timer);
           backoffRef.current.timer = window.setTimeout(() => {
-            setState((s) => ({...s, reconnectCount: s.reconnectCount + 1}));
             reconnectingRef.current = false;
             connect();
           }, delay as number);
@@ -163,7 +137,7 @@ export function SSEProvider(props: SSEProviderProps) {
         schedule();
       }
     });
-  }, [emitter, state.reconnectCount]);
+  }, [emitter]);
 
   useEffect(() => {
     connect();
@@ -171,7 +145,6 @@ export function SSEProvider(props: SSEProviderProps) {
       if (document.visibilityState === 'visible') {
         const rs = esRef.current?.readyState;
         if (rs !== EventSource.OPEN) {
-          setState((s) => ({...s, reconnectCount: s.reconnectCount + 1}));
           connect();
         }
       }
@@ -184,14 +157,7 @@ export function SSEProvider(props: SSEProviderProps) {
     };
   }, [connect]);
 
-  const ctx = useMemo(
-    () => ({
-      on: emitter.on,
-      state,
-    }),
-    [emitter.on, state]
-  );
-
+  const ctx = useMemo(() => ({emitter: emitter}), [emitter]);
   return (
     <SSEContext.Provider value={ctx}>{props.children}</SSEContext.Provider>
   );
@@ -211,22 +177,14 @@ export function useSSE<T = unknown>(type: string, listener: Listener<T>) {
     throw new Error('useSSE() must be used within an <SSEProvider>');
   }
 
-  const stableListener = useRef(listener);
+  const stableListenerRef = useRef(listener);
   useEffect(() => {
-    stableListener.current = listener;
+    stableListenerRef.current = listener;
   }, [listener]);
 
   useEffect(() => {
-    return ctx.on(type, (data, evt) => stableListener.current(data as T, evt));
+    return ctx.emitter.on(type, (data, evt) =>
+      stableListenerRef.current(data as T, evt)
+    );
   }, [ctx, type]);
-
-  return ctx.state;
-}
-
-export function useSSEConnection() {
-  const ctx = useContext(SSEContext);
-  if (!ctx) {
-    throw new Error('useSSEConnection() must be used within an <SSEProvider>');
-  }
-  return ctx.state;
 }

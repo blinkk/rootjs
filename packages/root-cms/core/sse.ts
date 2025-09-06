@@ -4,7 +4,8 @@
  */
 
 import {Server, Request, Response} from '@blinkk/root';
-import {SSEEvent} from '../shared/sse.js';
+import {SSEConnectedEvent, SSEEvent} from '../shared/sse.js';
+import {getServerVersion} from './server-version.js';
 
 export type SSEBroadcastFn = (event: string, data?: any) => void;
 export type SSEClient = Response;
@@ -14,11 +15,7 @@ export function sse(server: Server) {
 
   /** Broadcasts events to all connected `sseClients`. */
   const sseBroadcast: SSEBroadcastFn = (event: string, data?: any) => {
-    const lines = [`event: ${event}`];
-    if (data) {
-      lines.push(`data: ${JSON.stringify(data)}`);
-    }
-    const message = lines.join('\n') + '\n\n';
+    const message = formatMessage(event, data);
     sseClients.forEach((res: Response) => {
       try {
         res.write(message);
@@ -38,8 +35,13 @@ export function sse(server: Server) {
       'Access-Control-Allow-Headers': 'Cache-Control',
     });
     sseClients.add(res);
-    console.log('[sse] client connected');
-    res.write(`event: ${SSEEvent.CONNECTED}\n\n\n`);
+    const connectedMessage = formatMessage<SSEConnectedEvent>(
+      SSEEvent.CONNECTED,
+      // Send the server version to notify clients if their current version is
+      // out-of-date.
+      {serverVersion: getServerVersion()}
+    );
+    res.write(connectedMessage);
     req.on('close', () => {
       sseClients.delete(res);
     });
@@ -49,4 +51,13 @@ export function sse(server: Server) {
   });
 
   return {sseBroadcast};
+}
+
+function formatMessage<T = unknown>(event: string, data?: T) {
+  const lines = [`event: ${event}`];
+  if (data) {
+    lines.push(`data: ${JSON.stringify(data)}`);
+  }
+  const message = lines.join('\n') + '\n\n';
+  return message;
 }

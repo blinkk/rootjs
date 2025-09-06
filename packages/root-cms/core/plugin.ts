@@ -23,7 +23,7 @@ import {getAuth, DecodedIdToken} from 'firebase-admin/auth';
 import {Firestore, getFirestore} from 'firebase-admin/firestore';
 import * as jsonwebtoken from 'jsonwebtoken';
 import sirv from 'sirv';
-import {SSEEvent} from '../shared/sse.js';
+import {SSEEvent, SSESchemaChangedEvent} from '../shared/sse.js';
 import {type RootAiModel} from './ai.js';
 import {api} from './api.js';
 import {Action, RootCMSClient} from './client.js';
@@ -675,9 +675,10 @@ export function cmsPlugin(options: CMSPluginOptions): CMSPlugin {
 
         // Send an event to SSE-connected clients.
         if (sseBroadcast) {
-          sseBroadcast(SSEEvent.SCHEMA_CHANGED, {
+          const eventData: SSESchemaChangedEvent = {
             file: path.basename(filepath),
-          });
+          };
+          sseBroadcast(SSEEvent.SCHEMA_CHANGED, eventData);
         }
       }
     };
