@@ -23,7 +23,6 @@ import {
 } from '../../components/SplitPanel/SplitPanel.js';
 import {UseDraftHook, useDraft} from '../../hooks/useDraft.js';
 import {useLocalStorage} from '../../hooks/useLocalStorage.js';
-import {SSEEvent, useSSE} from '../../hooks/useSSE.js';
 import {Layout} from '../../layout/Layout.js';
 import {joinClassNames} from '../../utils/classes.js';
 import {getDocPreviewPath, getDocServingPath} from '../../utils/doc-urls.js';
@@ -98,12 +97,6 @@ export function DocumentPage(props: DocumentPageProps) {
   };
 
   useHotkeys([['mod+S', () => saveDraft()]]);
-
-  // When the dev server restarts, reload the page.
-  useSSE(SSEEvent.RECONNECTED, () => {
-    console.log('sse: reconnect');
-    // location.reload();
-  });
 
   return (
     <Layout>
