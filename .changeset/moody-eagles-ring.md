@@ -2,4 +2,4 @@
 '@blinkk/root-cms': patch
 ---
 
-feat: add server-sent events for schema changes
+feat: add server-sent events for schema changes (#732)
