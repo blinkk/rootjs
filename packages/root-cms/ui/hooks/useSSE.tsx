@@ -24,7 +24,7 @@ const SSE_CONNECT_URL = '/cms/api/sse.connect';
 const DEBUG = testHasExperimentParam('EnableVerboseLogging');
 const IS_LOCALHOST = window.location.hostname === 'localhost';
 
-type Listener<T = unknown> = (data: T, evt: MessageEvent<string>) => void;
+type Listener<T = unknown> = (data: T, event: MessageEvent<string>) => void;
 
 class Emitter {
   private map = new Map<string, Set<Listener>>();
@@ -183,8 +183,8 @@ export function useSSE<T = unknown>(type: string, listener: Listener<T>) {
   }, [listener]);
 
   useEffect(() => {
-    return ctx.emitter.on(type, (data, evt) =>
-      stableListenerRef.current(data as T, evt)
+    return ctx.emitter.on(type, (data, event) =>
+      stableListenerRef.current(data as T, event)
     );
   }, [ctx, type]);
 }
