@@ -110,11 +110,11 @@
     "firebase-admin": "11.11.0",
     "firebase-functions": "4.8.0",
     "nodemon": "3.0.1",
-    "preact": "10.19.3",
-    "preact-custom-element": "4.3.0",
-    "preact-render-to-string": "6.3.1",
-    "tsup": "8.0.1",
-    "typescript": "5.2.2",
-    "vitest": "0.34.6"
+    "preact": "10.27.1",
+    "preact-custom-element": "4.5.0",
+    "preact-render-to-string": "6.6.1",
+    "tsup": "8.5.0",
+    "typescript": "5.9.2",
+    "vitest": "3.2.4"
   }
 }
