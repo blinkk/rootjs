@@ -16,6 +16,7 @@
     "@blinkk/root-password-protect": "2.2.0"
   },
   "changesets": [
+    "afraid-snails-tickle",
     "bright-singers-pump",
     "green-grapes-report",
     "moody-eagles-ring",

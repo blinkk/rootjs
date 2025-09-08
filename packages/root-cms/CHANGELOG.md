@@ -1,5 +1,13 @@
 # @blinkk/root-cms
 
+## 2.2.1-alpha.1
+
+### Patch Changes
+
+- chore: bump alpha version
+- Updated dependencies
+  - @blinkk/root@2.2.1-alpha.1
+
 ## 2.2.1-alpha.0
 
 ### Patch Changes
