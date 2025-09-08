@@ -1,5 +1,15 @@
 # @blinkk/root-password-protect
 
+## 2.2.1-alpha.0
+
+### Patch Changes
+
+- 4fed313: chore: bump major version to 2.2.0
+- Updated dependencies [4fed313]
+- Updated dependencies [e0b3ca1]
+- Updated dependencies [e60fa2e]
+  - @blinkk/root@2.2.1-alpha.0
+
 ## 2.1.1
 
 ### Patch Changes
