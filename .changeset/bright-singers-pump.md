@@ -6,4 +6,4 @@
 '@blinkk/rds': patch
 ---
 
-chore: bump major version to 3.0.0
+chore: bump major version to 2.2.0
