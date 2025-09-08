@@ -1,5 +1,11 @@
 # @blinkk/root
 
+## 2.2.1-alpha.1
+
+### Patch Changes
+
+- chore: bump alpha version
+
 ## 2.2.1-alpha.0
 
 ### Patch Changes
