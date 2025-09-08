@@ -10,6 +10,7 @@ export function isObject(data: any): boolean {
  * ```
  * getNestedValue({meta: {title: 'Foo'}}, 'meta.title');
  * // => Foo
+ *
  * // With fallbacks:
  * getNestedValue(data, ['meta.image', 'meta.thumbnail']);
  * ```
@@ -17,7 +18,7 @@ export function isObject(data: any): boolean {
  * If the value does not exist, `undefined` is returned. When an array of keys
  * is provided, the first defined value is returned.
  */
-export function getNestedValue(data: any, key: string | string[]) {
+export function getNestedValue(data: any, key: string | string[]): any {
   if (Array.isArray(key)) {
     for (const k of key) {
       const value = getNestedValue(data, k);
@@ -33,7 +34,7 @@ export function getNestedValue(data: any, key: string | string[]) {
   const keys = key.split('.');
   let current = data;
   for (const segment of keys) {
-    if (current == null) {
+    if (current === undefined || current === null) {
       return undefined;
     }
     current = current[segment];
