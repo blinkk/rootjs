@@ -1,5 +1,18 @@
 # @blinkk/root-cms
 
+## 2.2.1-alpha.0
+
+### Patch Changes
+
+- 4fed313: chore: bump major version to 2.2.0
+- 606a848: feat: add server-sent events for schema changes (#732)
+- c1cd14f: chore: remove vite transformation from cms ui (#730)
+- e60fa2e: chore: update core deps (vite, express, sass, etc.) (#728)
+- Updated dependencies [4fed313]
+- Updated dependencies [e0b3ca1]
+- Updated dependencies [e60fa2e]
+  - @blinkk/root@2.2.1-alpha.0
+
 ## 2.1.1
 
 ### Patch Changes

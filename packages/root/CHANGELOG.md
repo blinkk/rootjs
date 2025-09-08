@@ -1,5 +1,13 @@
 # @blinkk/root
 
+## 2.2.1-alpha.0
+
+### Patch Changes
+
+- 4fed313: chore: bump major version to 2.2.0
+- e0b3ca1: chore: auto-convert scss.includePaths to loadPaths with warning (#729)
+- e60fa2e: chore: update core deps (vite, express, sass, etc.) (#728)
+
 ## 2.1.1
 
 ### Patch Changes
