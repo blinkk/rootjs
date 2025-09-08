@@ -1,5 +1,12 @@
 # @blinkk/root-password-protect
 
+## 2.2.1-alpha.1
+
+### Patch Changes
+
+- Updated dependencies
+  - @blinkk/root@2.2.1-alpha.1
+
 ## 2.2.1-alpha.0
 
 ### Patch Changes
