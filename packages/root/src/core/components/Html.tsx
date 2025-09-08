@@ -6,7 +6,7 @@ export interface HtmlContext {
   headAttrs: preact.JSX.HTMLAttributes<HTMLHeadElement>;
   headComponents: ComponentChildren[];
   bodyAttrs: preact.JSX.HTMLAttributes<HTMLBodyElement>;
-  scriptDeps: Array<preact.JSX.HTMLAttributes<HTMLScriptElement>>;
+  scriptDeps: Array<preact.JSX.ScriptHTMLAttributes<HTMLScriptElement>>;
 }
 
 export const HTML_CONTEXT = createContext<HtmlContext | null>(null);
