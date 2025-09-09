@@ -138,6 +138,8 @@ function hmrSSRReload(): Plugin {
           server.ws.send({type: 'full-reload'});
           return [];
         }
+
+        return;
       },
     },
   };
