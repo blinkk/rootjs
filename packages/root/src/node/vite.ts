@@ -113,7 +113,6 @@ function hmrSSRReload(): Plugin {
         }
 
         let hasSsrOnlyModules = false;
-
         const invalidatedModules = new Set<EnvironmentModuleNode>();
         for (const mod of modules) {
           if (mod.id === null) {
@@ -121,17 +120,17 @@ function hmrSSRReload(): Plugin {
           }
           const clientModule =
             server.environments.client.moduleGraph.getModuleById(mod.id);
-          if (clientModule !== null) {
+          if (clientModule) {
             continue;
           }
 
+          hasSsrOnlyModules = true;
           this.environment.moduleGraph.invalidateModule(
             mod,
             invalidatedModules,
             timestamp,
             true
           );
-          hasSsrOnlyModules = true;
         }
 
         if (hasSsrOnlyModules) {
