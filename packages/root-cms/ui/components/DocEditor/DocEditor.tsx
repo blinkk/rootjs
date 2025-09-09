@@ -48,7 +48,11 @@ import {
 } from 'preact/hooks';
 import {route} from 'preact-router';
 import * as schema from '../../../core/schema.js';
-import {updateRichTextDataTime} from '../../../shared/richtext.js';
+import {
+  updateRichTextDataTime,
+  testValidRichTextData,
+} from '../../../shared/richtext.js';
+import type {RichTextData} from '../../../shared/richtext.js';
 import {useCollectionSchema} from '../../hooks/useCollectionSchema.js';
 import {
   buildDeeplinkUrl,
@@ -1537,6 +1541,23 @@ function getSchemaPreviewTemplates(
   return null;
 }
 
+/** Returns the first line of text from rich text data. */
+function getRichTextPreview(data: RichTextData): string | undefined {
+  const blocks = data?.blocks || [];
+  for (const block of blocks) {
+    if (block.type === 'paragraph') {
+      let text = block.data?.text || '';
+      text = text.replace(/<br\s*\/?>/gi, '\n');
+      text = text.replace(/<[^>]+>/g, '').replace(/&nbsp;/g, ' ');
+      const firstLine = text.split(/\r?\n/)[0].trim();
+      if (firstLine) {
+        return firstLine;
+      }
+    }
+  }
+  return undefined;
+}
+
 class PlaceholderNotFoundError extends Error {}
 
 /**
@@ -1569,7 +1590,13 @@ function buildPreviewValue(
     if (!val) {
       throw new PlaceholderNotFoundError(key);
     }
-    return val;
+    if (testValidRichTextData(val)) {
+      const richTextPreview = getRichTextPreview(val as RichTextData);
+      if (richTextPreview) {
+        return richTextPreview;
+      }
+    }
+    return String(val);
   };
 
   for (const template of templates) {
