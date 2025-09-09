@@ -1,5 +1,11 @@
 # @blinkk/root
 
+## 2.2.1-alpha.2
+
+### Patch Changes
+
+- 9c29b32: fix: fix hmr reloads when ssr-only files change (#736)
+
 ## 2.2.1-alpha.1
 
 ### Patch Changes

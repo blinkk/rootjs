@@ -1,5 +1,12 @@
 # @blinkk/rds
 
+## 2.2.1-alpha.2
+
+### Patch Changes
+
+- Updated dependencies [9c29b32]
+  - @blinkk/root@2.2.1-alpha.2
+
 ## 2.2.1-alpha.1
 
 ### Patch Changes
