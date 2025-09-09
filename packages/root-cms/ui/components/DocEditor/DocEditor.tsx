@@ -48,7 +48,10 @@ import {
 } from 'preact/hooks';
 import {route} from 'preact-router';
 import * as schema from '../../../core/schema.js';
-import {updateRichTextDataTime, testValidRichTextData} from '../../../shared/richtext.js';
+import {
+  updateRichTextDataTime,
+  testValidRichTextData,
+} from '../../../shared/richtext.js';
 import type {RichTextData} from '../../../shared/richtext.js';
 import {useCollectionSchema} from '../../hooks/useCollectionSchema.js';
 import {
@@ -1532,13 +1535,14 @@ function getSchemaPreviewTemplates(
           (schema) => schema.name === selectedTypeName
         );
       }
-  return selectedSchema?.preview?.[key] || null;
+      return selectedSchema?.preview?.[key] || null;
     }
   }
   return null;
 }
 
-function richTextFirstLine(data: RichTextData): string | undefined {
+/** Returns the first line of text from rich text data. */
+function getRichTextPreview(data: RichTextData): string | undefined {
   const blocks = data?.blocks || [];
   for (const block of blocks) {
     if (block.type === 'paragraph') {
@@ -1587,11 +1591,10 @@ function buildPreviewValue(
       throw new PlaceholderNotFoundError(key);
     }
     if (testValidRichTextData(val)) {
-      const text = richTextFirstLine(val as RichTextData);
-      if (!text) {
-        throw new PlaceholderNotFoundError(key);
+      const richTextPreview = getRichTextPreview(val as RichTextData);
+      if (richTextPreview) {
+        return richTextPreview;
       }
-      return text;
     }
     return String(val);
   };
