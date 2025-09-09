@@ -1,4 +1,5 @@
 import {createServer, ViteDevServer} from 'vite';
+import type {Plugin, EnvironmentModuleNode} from 'vite';
 import {RootConfig} from '../core/config.js';
 import {getVitePlugins} from '../core/plugin.js';
 
@@ -75,6 +76,7 @@ export async function createViteServer(
       jsxImportSource: 'preact',
     },
     plugins: [
+      hmrSSRReload(),
       ...(viteConfig.plugins || []),
       ...getVitePlugins(rootConfig.plugins || []),
     ],
@@ -93,4 +95,50 @@ export async function viteSsrLoadModule<T = Record<string, any>>(
   const module = await viteServer.ssrLoadModule(file);
   await viteServer.close();
   return module as T;
+}
+
+/**
+ * Vite plugin to reload the page when SSR modules change.
+ * https://github.com/vitejs/vite/issues/19114
+ */
+function hmrSSRReload(): Plugin {
+  return {
+    name: 'hmr-ssr-reload',
+    enforce: 'post',
+    hotUpdate: {
+      order: 'post',
+      handler({modules, server, timestamp}) {
+        if (this.environment.name !== 'ssr') {
+          return;
+        }
+
+        let hasSsrOnlyModules = false;
+
+        const invalidatedModules = new Set<EnvironmentModuleNode>();
+        for (const mod of modules) {
+          if (mod.id === null) {
+            continue;
+          }
+          const clientModule =
+            server.environments.client.moduleGraph.getModuleById(mod.id);
+          if (clientModule !== null) {
+            continue;
+          }
+
+          this.environment.moduleGraph.invalidateModule(
+            mod,
+            invalidatedModules,
+            timestamp,
+            true
+          );
+          hasSsrOnlyModules = true;
+        }
+
+        if (hasSsrOnlyModules) {
+          server.ws.send({type: 'full-reload'});
+          return [];
+        }
+      },
+    },
+  };
 }
