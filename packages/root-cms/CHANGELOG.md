@@ -1,5 +1,13 @@
 # @blinkk/root-cms
 
+## 2.1.2
+
+### Patch Changes
+
+- a3b1cd1c: feat: add preview text for richtext data (#737)
+- 04d8df7a: fix: support preview image fallback arrays (#734)
+  - @blinkk/root@2.1.2
+
 ## 2.1.1
 
 ### Patch Changes
