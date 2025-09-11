@@ -1,10 +1,12 @@
 import {Timestamp} from 'firebase/firestore';
-import {useCallback, useEffect, useState} from 'preact/hooks';
+import {useCallback, useState} from 'preact/hooks';
+import {useDraftDoc, useDraftDocField} from '../../../hooks/useDraftDoc.js';
 import {FieldProps} from './FieldProps.js';
 
 export function DateTimeField(props: FieldProps) {
   // const field = props.field as schema.DateTimeField;
   const [dateStr, setDateStr] = useState('');
+  const draft = useDraftDoc().controller;
 
   const onChange = useCallback(
     (newDateStr: string) => {
@@ -12,28 +14,22 @@ export function DateTimeField(props: FieldProps) {
         const millis = Math.floor(new Date(newDateStr).getTime());
         const newValue = Timestamp.fromMillis(millis);
         setDateStr(toDateStr(newValue));
-        props.draft.updateKey(props.deepKey, newValue);
+        draft.updateKey(props.deepKey, newValue);
       } else {
         setDateStr('');
-        props.draft.removeKey(props.deepKey);
+        draft.removeKey(props.deepKey);
       }
     },
     [props.deepKey]
   );
 
-  useEffect(() => {
-    const unsubscribe = props.draft.subscribe(
-      props.deepKey,
-      (newValue: Timestamp) => {
-        if (newValue) {
-          setDateStr(toDateStr(newValue));
-        } else {
-          setDateStr('');
-        }
-      }
-    );
-    return unsubscribe;
-  }, []);
+  useDraftDocField(props.deepKey, (newValue: Timestamp) => {
+    if (newValue) {
+      setDateStr(toDateStr(newValue));
+    } else {
+      setDateStr('');
+    }
+  });
 
   return (
     <div className="DocEditor__DateTimeField">

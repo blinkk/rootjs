@@ -61,10 +61,14 @@ import {
   useDeeplink,
 } from '../../hooks/useDeeplink.js';
 import {
-  DraftController,
+  DraftDocContext,
+  DraftDocController,
   SaveState,
-  UseDraftHook,
-} from '../../hooks/useDraft.js';
+  useDraftDoc,
+  useDraftDocData,
+  useDraftDocField,
+  useDraftDocSaveState,
+} from '../../hooks/useDraftDoc.js';
 import {
   ClipboardData,
   useVirtualClipboard,
@@ -111,19 +115,11 @@ import {StringField} from './fields/StringField.js';
 
 interface DocEditorProps {
   docId: string;
-  collection: schema.Collection;
-  draft: UseDraftHook;
 }
-
-const DOC_DATA_CONTEXT = createContext<CMSDoc | null>(null);
 
 const DISABLE_SCHEMA_LEVEL_ARRAY_PREVIEW = testHasExperimentParam(
   'DisableSchemaLevelArrayPreview'
 );
-
-function useDocData(): CMSDoc {
-  return useContext(DOC_DATA_CONTEXT)!;
-}
 
 const COLLECTION_SCHEMA_TYPES_CONTEXT = createContext<
   Record<string, schema.Schema>
@@ -137,22 +133,68 @@ function useCollectionSchemaTypes(): Record<string, schema.Schema> {
 }
 
 export function DocEditor(props: DocEditorProps) {
+  const collectionId = props.docId.split('/')[0];
   // Load the full collection schema.
-  const collection = useCollectionSchema(props.collection.id);
-  const draft = props.draft;
-  const {controller, saveState, data} = draft;
+  const collection = useCollectionSchema(collectionId);
+  const draft = useDraftDoc();
   const loading = collection.loading || draft.loading;
   const fields = collection.schema?.fields || [];
 
-  const goBack = useCallback(() => {
-    const collectionId = props.docId.split('/')[0];
-    route(`/cms/content/${collectionId}`);
-  }, [props.docId]);
+  return (
+    <COLLECTION_SCHEMA_TYPES_CONTEXT.Provider
+      value={collection?.schema?.types || {}}
+    >
+      <DeeplinkProvider>
+        <div className="DocEditor">
+          <LoadingOverlay
+            visible={loading}
+            loaderProps={{color: 'gray', size: 'xl'}}
+          />
+          {!loading && (
+            <DocEditor.StatusBar
+              {...props}
+              draft={draft}
+              collection={collection.schema!}
+            />
+          )}
+          <div className="DocEditor__fields">
+            {fields.map((field) => (
+              <DocEditor.Field
+                key={field.id}
+                field={field}
+                deepKey={`fields.${field.id!}`}
+              />
+            ))}
+          </div>
+        </div>
+      </DeeplinkProvider>
+    </COLLECTION_SCHEMA_TYPES_CONTEXT.Provider>
+  );
+}
+
+type StatusBarProps = DocEditorProps & {
+  draft: DraftDocContext;
+  collection: schema.Collection;
+};
+
+DocEditor.StatusBar = (props: StatusBarProps) => {
+  const draft = props.draft;
+  const [data, setData] = useState<Partial<CMSDoc> | null>(
+    draft.controller.getData()
+  );
+
+  // For the status bar, only the "sys" attr on the doc is needed.
+  useDraftDocField('sys', (sys: any) => {
+    console.log('[StatusBar] sys changed:', sys);
+    const data: Partial<CMSDoc> = {sys};
+    setData(data);
+  });
 
   const onDocAction = useCallback(
     (event: DocActionEvent) => {
       if (event.action === 'delete') {
-        goBack();
+        const collectionId = props.docId.split('/')[0];
+        route(`/cms/content/${collectionId}`);
       } else if (event.action === 'unlocked') {
         // NOTE(stevenle): for some reason, the unlock publishing doesn't
         // properly trigger the `onSnapshot()` callback with
@@ -165,127 +207,118 @@ export function DocEditor(props: DocEditorProps) {
   );
 
   const publishDocModal = usePublishDocModal({docId: props.docId});
-  const localizationModal = useLocalizationModal({
-    docId: props.docId,
-    draft: controller,
-    collection: props.collection,
-  });
+  const localizationModal = useLocalizationModal();
+
+  const loading = !data;
+  if (loading) {
+    return null;
+  }
 
   return (
-    <COLLECTION_SCHEMA_TYPES_CONTEXT.Provider
-      value={collection?.schema?.types || {}}
-    >
-      <DOC_DATA_CONTEXT.Provider value={data}>
-        <DeeplinkProvider>
-          <div className="DocEditor">
-            <LoadingOverlay
-              visible={loading}
-              loaderProps={{color: 'gray', size: 'xl'}}
-            />
-            <div className="DocEditor__statusBar">
-              <div className="DocEditor__statusBar__viewers">
-                <Viewers id={`doc/${props.docId}`} />
-              </div>
-              <div className="DocEditor__statusBar__saveState">
-                {saveState === SaveState.SAVED && 'saved!'}
-                {saveState === SaveState.SAVING && 'saving...'}
-                {saveState === SaveState.UPDATES_PENDING && 'saving...'}
-                {saveState === SaveState.ERROR && 'error saving'}
-              </div>
-              {!loading && data?.sys && (
-                <div className="DocEditor__statusBar__statusBadges">
-                  <DocStatusBadges doc={data} />
-                </div>
-              )}
-              <div className="DocEditor__statusBar__i18n">
-                <Button
-                  variant="default"
-                  color="dark"
-                  size="xs"
-                  leftIcon={<IconPlanet size={16} />}
-                  onClick={() => localizationModal.open()}
-                >
-                  Localization
-                </Button>
-              </div>
-              <div className="DocEditor__statusBar__publishButton">
-                {loading ? (
-                  <Button
-                    color="dark"
-                    size="xs"
-                    onClick={() => publishDocModal.open()}
-                    loading
-                    disabled
-                  >
-                    Publish
-                  </Button>
-                ) : testIsScheduled(data) ? (
-                  <Tooltip
-                    label={`Scheduled ${formatDateTime(
-                      data.sys.scheduledAt
-                    )} by ${data.sys.scheduledBy}`}
-                    transition="pop"
-                  >
-                    <Button
-                      color="dark"
-                      size="xs"
-                      leftIcon={<IconRocket size={16} />}
-                      disabled
-                    >
-                      Publish
-                    </Button>
-                  </Tooltip>
-                ) : testPublishingLocked(data) ? (
-                  <Tooltip
-                    label={`Locked by ${data.sys.publishingLocked.lockedBy}: "${data.sys.publishingLocked.reason}"`}
-                    transition="pop"
-                  >
-                    <Button
-                      color="dark"
-                      size="xs"
-                      leftIcon={<IconLock size={16} />}
-                      disabled
-                    >
-                      Publish
-                    </Button>
-                  </Tooltip>
-                ) : (
-                  <Button
-                    color="dark"
-                    size="xs"
-                    leftIcon={<IconRocket size={16} />}
-                    onClick={() => publishDocModal.open()}
-                  >
-                    Publish
-                  </Button>
-                )}
-              </div>
-              <div className="DocEditor__statusBar__actionsMenu">
-                <DocActionsMenu
-                  docId={props.docId}
-                  data={data}
-                  onAction={onDocAction}
-                />
-              </div>
-            </div>
-            <div className="DocEditor__fields">
-              {fields.map((field) => (
-                <DocEditor.Field
-                  key={field.id}
-                  collection={props.collection}
-                  field={field}
-                  shallowKey={field.id!}
-                  deepKey={`fields.${field.id!}`}
-                  draft={controller}
-                />
-              ))}
-            </div>
-          </div>
-        </DeeplinkProvider>
-      </DOC_DATA_CONTEXT.Provider>
-    </COLLECTION_SCHEMA_TYPES_CONTEXT.Provider>
+    <div className="DocEditor__statusBar">
+      <div className="DocEditor__statusBar__viewers">
+        <Viewers id={`doc/${props.docId}`} />
+      </div>
+      <DocEditor.SaveState />
+      {data?.sys && (
+        <div className="DocEditor__statusBar__statusBadges">
+          <DocStatusBadges doc={data} />
+        </div>
+      )}
+      <div className="DocEditor__statusBar__i18n">
+        <Button
+          variant="default"
+          color="dark"
+          size="xs"
+          leftIcon={<IconPlanet size={16} />}
+          onClick={() =>
+            localizationModal.open({
+              docId: props.docId,
+              collection: props.collection,
+              draft: draft.controller,
+            })
+          }
+        >
+          Localization
+        </Button>
+      </div>
+      <div className="DocEditor__statusBar__publishButton">
+        {loading ? (
+          <Button
+            color="dark"
+            size="xs"
+            onClick={() => publishDocModal.open()}
+            loading
+            disabled
+          >
+            Publish
+          </Button>
+        ) : testIsScheduled(data) ? (
+          <Tooltip
+            label={`Scheduled ${formatDateTime(data.sys.scheduledAt)} by ${
+              data.sys.scheduledBy
+            }`}
+            transition="pop"
+          >
+            <Button
+              color="dark"
+              size="xs"
+              leftIcon={<IconRocket size={16} />}
+              disabled
+            >
+              Publish
+            </Button>
+          </Tooltip>
+        ) : testPublishingLocked(data) ? (
+          <Tooltip
+            label={`Locked by ${data.sys.publishingLocked.lockedBy}: "${data.sys.publishingLocked.reason}"`}
+            transition="pop"
+          >
+            <Button
+              color="dark"
+              size="xs"
+              leftIcon={<IconLock size={16} />}
+              disabled
+            >
+              Publish
+            </Button>
+          </Tooltip>
+        ) : (
+          <Button
+            color="dark"
+            size="xs"
+            leftIcon={<IconRocket size={16} />}
+            onClick={() => publishDocModal.open()}
+          >
+            Publish
+          </Button>
+        )}
+      </div>
+      <div className="DocEditor__statusBar__actionsMenu">
+        <DocActionsMenu
+          docId={props.docId}
+          data={data}
+          onAction={onDocAction}
+        />
+      </div>
+    </div>
   );
-}
+};
+
+DocEditor.SaveState = () => {
+  const [saveState, setSaveState] = useState<SaveState>(SaveState.NO_CHANGES);
+  useDraftDocSaveState((saveState) => {
+    setSaveState(saveState);
+  });
+  return (
+    <div className="DocEditor__statusBar__saveState">
+      {saveState === SaveState.SAVED && 'saved!'}
+      {saveState === SaveState.SAVING && 'saving...'}
+      {saveState === SaveState.UPDATES_PENDING && 'saving...'}
+      {saveState === SaveState.ERROR && 'error saving'}
+    </div>
+  );
+};
 
 DocEditor.Field = (props: FieldProps) => {
   const field = props.field;
@@ -293,14 +326,8 @@ DocEditor.Field = (props: FieldProps) => {
   const deeplink = useDeeplink();
   const targeted = deeplink.value === props.deepKey;
   const ref = useRef<HTMLDivElement>(null);
-  const [value, setValue] = useState(null);
+  const [fieldValueEmpty, setFieldValueEmpty] = useState(true);
   const types = useCollectionSchemaTypes();
-  const fieldValueEmpty = useMemo(
-    () => testFieldEmpty(field, value, types),
-    [value, types]
-  );
-  const showTranslateIcon =
-    (field.type === 'string' || field.type === 'richtext') && field.translate;
 
   const showFieldHeader = useMemo(() => {
     if (field.type === 'object') {
@@ -311,17 +338,11 @@ DocEditor.Field = (props: FieldProps) => {
       }
     }
     return !props.hideHeader && !field.hideLabel;
-  }, [props.deepKey]);
+  }, [props.hideHeader, field]);
 
-  useEffect(() => {
-    const unsubscribe = props.draft.subscribe(
-      props.deepKey,
-      (newValue: any) => {
-        setValue(newValue);
-      }
-    );
-    return unsubscribe;
-  }, [props.deepKey]);
+  useDraftDocField(props.deepKey, (newValue: any) => {
+    setFieldValueEmpty(testFieldEmpty(field, newValue, types));
+  });
 
   useEffect(() => {
     if (targeted) {
@@ -346,18 +367,7 @@ DocEditor.Field = (props: FieldProps) => {
       id={props.deepKey}
       ref={ref}
     >
-      {showFieldHeader && (
-        <DocEditor.FieldHeader
-          field={field}
-          fieldValue={value}
-          deepKey={props.deepKey}
-          label={field.label || field.id}
-          help={field.help}
-          deprecated={field.deprecated}
-          translate={showTranslateIcon}
-          hasTranslations={!fieldValueEmpty}
-        />
-      )}
+      {showFieldHeader && <DocEditor.FieldHeader {...props} />}
       <div className="DocEditor__field__input">
         {field.type === 'array' ? (
           <DocEditor.ArrayField {...props} />
@@ -399,42 +409,28 @@ DocEditor.Field = (props: FieldProps) => {
   );
 };
 
-DocEditor.FieldHeader = (props: {
-  className?: string;
-  field: schema.Field;
-  fieldValue?: any;
-  deepKey?: string;
-  label?: string;
-  help?: string;
-  deprecated?: boolean;
-  /** Whether to display the "translations" action icon. */
-  translate?: boolean;
-  /** Whether the field has translations to display (i.e. if the field is not empty). */
-  hasTranslations?: boolean;
-}) => {
+DocEditor.FieldHeader = (props: FieldProps & {className?: string}) => {
+  const field = props.field;
+  const label = field.label || field.id;
+  const [value, setValue] = useState<any>(null);
+
   const deeplink = useDeeplink();
-  const docData = useDocData() || {};
-  const l10nSheet = docData.sys?.l10nSheet;
-
-  const i18nConfig = window.__ROOT_CTX.rootConfig.i18n || {};
-  const i18nLocales = i18nConfig.locales || ['en'];
-  const editTranslationsModal = useEditTranslationsModal();
-
   const deeplinkUrl = useMemo(
     () => buildDeeplinkUrl(props.deepKey || ''),
     [props.deepKey]
   );
-  const types = useCollectionSchemaTypes();
+
+  useDraftDocField(props.deepKey, (value: any) => {
+    setValue(value);
+  });
 
   return (
     <div className={joinClassNames(props.className, 'DocEditor__FieldHeader')}>
-      {props.deprecated ? (
-        <div className="DocEditor__FieldHeader__label">
-          DEPRECATED: {props.label}
-        </div>
+      {field.deprecated ? (
+        <div className="DocEditor__FieldHeader__label">DEPRECATED: {label}</div>
       ) : (
         <div className="DocEditor__FieldHeader__label">
-          <span>{props.label}</span>
+          <span>{label}</span>
           {props.deepKey && (
             <a
               className="DocEditor__FieldHeader__label__deeplink"
@@ -451,34 +447,70 @@ DocEditor.FieldHeader = (props: {
           )}
         </div>
       )}
-      {props.help && (
-        <div className="DocEditor__FieldHeader__help">{props.help}</div>
+      {field.help && (
+        <div className="DocEditor__FieldHeader__help">{field.help}</div>
       )}
-      {i18nLocales.length > 1 && props.translate && (
-        <div className="DocEditor__FieldHeader__translate">
-          {props.hasTranslations ? (
-            <Tooltip label="Show translations">
-              <ActionIcon
-                size="xs"
-                onClick={() => {
-                  const strings = new Set<string>();
-                  extractField(strings, props.field, props.fieldValue, types);
-                  const translateStrings = Array.from(strings);
-                  editTranslationsModal.open({
-                    docId: docData.id,
-                    strings: translateStrings,
-                    l10nSheet,
-                  });
-                }}
-              >
-                <IconLanguage size={16} />
-              </ActionIcon>
-            </Tooltip>
-          ) : (
-            <div className="DocEditor__FieldHeader__translate__iconDisabled">
-              <IconLanguage size={16} />
-            </div>
-          )}
+      <DocEditor.FieldHeaderTranslationsActionIcon
+        field={field}
+        value={value}
+      />
+    </div>
+  );
+};
+
+interface FieldHeaderTranslationsActionIconProps {
+  field: schema.Field;
+  value: any;
+}
+
+DocEditor.FieldHeaderTranslationsActionIcon = (
+  props: FieldHeaderTranslationsActionIconProps
+) => {
+  const field = props.field;
+  const value = props.value;
+  const translate: boolean = Boolean((field as any).translate);
+  const i18nConfig = window.__ROOT_CTX.rootConfig.i18n || {};
+  const i18nLocales = i18nConfig.locales || ['en'];
+  const editTranslationsModal = useEditTranslationsModal();
+  const draft = useDraftDoc();
+
+  const types = useCollectionSchemaTypes();
+  const actionIconDisabled = useMemo(
+    () => !translate || testFieldEmpty(field, value, types),
+    [field, value]
+  );
+
+  if (!translate || i18nLocales.length <= 1) {
+    return null;
+  }
+
+  return (
+    <div className="DocEditor__FieldHeader__translate">
+      {!actionIconDisabled ? (
+        <Tooltip label="Show translations">
+          <ActionIcon
+            size="xs"
+            onClick={() => {
+              const docData = draft.controller.getData();
+              if (!docData) {
+                return;
+              }
+              const strings = new Set<string>();
+              extractField(strings, field, value, types);
+              const translateStrings = Array.from(strings);
+              editTranslationsModal.open({
+                docId: draft.controller.docId,
+                strings: translateStrings,
+                l10nSheet: docData?.sys?.l10nSheet,
+              });
+            }}
+          >
+            <IconLanguage size={16} />
+          </ActionIcon>
+        </Tooltip>
+      ) : (
+        <div className="DocEditor__FieldHeader__translate__iconDisabled">
+          <IconLanguage size={16} />
         </div>
       )}
     </div>
@@ -506,11 +538,8 @@ DocEditor.ObjectField = (props: FieldProps) => {
         {field.fields.map((field) => (
           <DocEditor.Field
             key={field.id}
-            collection={props.collection}
             field={field}
-            shallowKey={field.id!}
             deepKey={`${props.deepKey}.${field.id}`}
-            draft={props.draft}
           />
         ))}
       </div>
@@ -548,8 +577,6 @@ DocEditor.ObjectFieldDrawer = (props: FieldProps) => {
             className="DocEditor__ObjectFieldDrawer__drawer__toggle__header"
             field={field}
             deepKey={props.deepKey}
-            label={field.label || field.id}
-            help={field.help}
           />
           <div className="DocEditor__ObjectFieldDrawer__drawer__toggle__icon">
             <IconChevronDown size={16} />
@@ -559,11 +586,8 @@ DocEditor.ObjectFieldDrawer = (props: FieldProps) => {
           {field.fields.map((field) => (
             <DocEditor.Field
               key={field.id}
-              collection={props.collection}
               field={field}
-              shallowKey={field.id!}
               deepKey={`${props.deepKey}.${field.id}`}
-              draft={props.draft}
             />
           ))}
         </div>
@@ -589,48 +613,48 @@ interface ArrayUpdateItem {
   type: 'updateItem';
   index: number;
   newValue: ArrayFieldValue;
-  draft: DraftController;
+  draft: DraftDocController;
   deepKey: string;
 }
 
 interface ArrayAdd {
   type: 'add';
-  draft: DraftController;
+  draft: DraftDocController;
   deepKey: string;
 }
 
 interface ArrayInsertBefore {
   type: 'insertBefore';
   index: number;
-  draft: DraftController;
+  draft: DraftDocController;
   deepKey: string;
 }
 
 interface ArrayInsertAfter {
   type: 'insertAfter';
   index: number;
-  draft: DraftController;
+  draft: DraftDocController;
   deepKey: string;
 }
 
 interface ArrayDuplicate {
   type: 'duplicate';
   index: number;
-  draft: DraftController;
+  draft: DraftDocController;
   deepKey: string;
 }
 
 interface ArrayMoveUp {
   type: 'moveUp';
   index: number;
-  draft: DraftController;
+  draft: DraftDocController;
   deepKey: string;
 }
 
 interface ArrayMoveDown {
   type: 'moveDown';
   index: number;
-  draft: DraftController;
+  draft: DraftDocController;
   deepKey: string;
 }
 
@@ -638,21 +662,21 @@ interface ArrayMoveTo {
   type: 'moveTo';
   fromIndex: number;
   toIndex: number;
-  draft: DraftController;
+  draft: DraftDocController;
   deepKey: string;
 }
 
 interface ArrayRemoveAt {
   type: 'removeAt';
   index: number;
-  draft: DraftController;
+  draft: DraftDocController;
   deepKey: string;
 }
 
 interface ArrayPasteAfter {
   type: 'pasteAfter';
   index: number;
-  draft: DraftController;
+  draft: DraftDocController;
   deepKey: string;
   data: ClipboardData;
 }
@@ -660,7 +684,7 @@ interface ArrayPasteAfter {
 interface ArrayPasteBefore {
   type: 'pasteBefore';
   index: number;
-  draft: DraftController;
+  draft: DraftDocController;
   deepKey: string;
   data: ClipboardData;
 }
@@ -896,7 +920,7 @@ function arrayReducer(state: ArrayFieldValue, action: ArrayAction) {
 }
 
 DocEditor.ArrayField = (props: FieldProps) => {
-  const draft = props.draft;
+  const draft = useDraftDoc().controller;
   const field = props.field as schema.ArrayField;
   const [value, dispatch] = useReducer(arrayReducer, {_array: []});
   const deeplink = useDeeplink();
@@ -909,15 +933,9 @@ DocEditor.ArrayField = (props: FieldProps) => {
   // Keep track of newly-added keys, which should start in the "open" state.
   const newlyAdded = value._new || [];
 
-  useEffect(() => {
-    const unsubscribe = props.draft.subscribe(
-      props.deepKey,
-      (newValue: ArrayFieldValue) => {
-        dispatch({type: 'update', newValue});
-      }
-    );
-    return unsubscribe;
-  }, [props.deepKey]);
+  useDraftDocField(props.deepKey, (newValue: ArrayFieldValue) => {
+    dispatch({type: 'update', newValue});
+  });
 
   // Focus the field that was just moved (for hotkey support).
   useEffect(() => {
@@ -930,112 +948,88 @@ DocEditor.ArrayField = (props: FieldProps) => {
     dispatch({type: 'add', draft: draft, deepKey: props.deepKey});
   };
 
-  const pasteBefore = useCallback(
-    (index: number, data: ClipboardData) => {
-      dispatch({
-        type: 'pasteBefore',
-        draft: draft,
-        deepKey: props.deepKey,
-        index: index,
-        data,
-      });
-    },
-    [props.deepKey]
-  );
+  const pasteBefore = (index: number, data: ClipboardData) => {
+    dispatch({
+      type: 'pasteBefore',
+      draft: draft,
+      deepKey: props.deepKey,
+      index: index,
+      data,
+    });
+  };
 
-  const pasteAfter = useCallback(
-    (index: number, data: ClipboardData) => {
-      dispatch({
-        type: 'pasteAfter',
-        draft: draft,
-        deepKey: props.deepKey,
-        index: index,
-        data,
-      });
-    },
-    [props.deepKey]
-  );
+  const pasteAfter = (index: number, data: ClipboardData) => {
+    dispatch({
+      type: 'pasteAfter',
+      draft: draft,
+      deepKey: props.deepKey,
+      index: index,
+      data,
+    });
+  };
 
-  const insertBefore = useCallback(
-    (index: number) => {
-      dispatch({
-        type: 'insertBefore',
-        draft: draft,
-        deepKey: props.deepKey,
-        index: index,
-      });
-    },
-    [props.deepKey]
-  );
+  const insertBefore = (index: number) => {
+    dispatch({
+      type: 'insertBefore',
+      draft: draft,
+      deepKey: props.deepKey,
+      index: index,
+    });
+  };
 
-  const insertAfter = useCallback(
-    (index: number) => {
-      dispatch({
-        type: 'insertAfter',
-        draft: draft,
-        deepKey: props.deepKey,
-        index: index,
-      });
-    },
-    [props.deepKey]
-  );
+  const insertAfter = (index: number) => {
+    dispatch({
+      type: 'insertAfter',
+      draft: draft,
+      deepKey: props.deepKey,
+      index: index,
+    });
+  };
 
-  const duplicate = useCallback(
-    (index: number) => {
-      dispatch({
-        type: 'duplicate',
-        draft: draft,
-        deepKey: props.deepKey,
-        index: index,
-      });
-    },
-    [props.deepKey]
-  );
+  const duplicate = (index: number) => {
+    dispatch({
+      type: 'duplicate',
+      draft: draft,
+      deepKey: props.deepKey,
+      index: index,
+    });
+  };
 
-  const removeAt = useCallback(
-    (index: number) => {
-      dispatch({
-        type: 'removeAt',
-        draft: draft,
-        deepKey: props.deepKey,
-        index: index,
-      });
-    },
-    [props.deepKey]
-  );
+  const removeAt = (index: number) => {
+    dispatch({
+      type: 'removeAt',
+      draft: draft,
+      deepKey: props.deepKey,
+      index: index,
+    });
+  };
 
   /** Focus the field header (the clickable "summary" part). */
   const focusFieldHeader = (deepKey: string, index: number) => {
     document.getElementById(`summary-for-${deepKey}.${order[index]}`)?.focus();
   };
 
-  const moveUp = useCallback(
-    (index: number) => {
-      if (index > 0) {
-        dispatch({
-          type: 'moveUp',
-          draft: draft,
-          deepKey: props.deepKey,
-          index: index,
-        });
-      }
-    },
-    [props.deepKey]
-  );
+  const moveUp = (index: number) => {
+    if (index > 0) {
+      dispatch({
+        type: 'moveUp',
+        draft: draft,
+        deepKey: props.deepKey,
+        index: index,
+      });
+    }
+  };
 
-  const moveDown = useCallback(
-    (index: number) => {
-      if (index < order.length - 1) {
-        dispatch({
-          type: 'moveDown',
-          draft: draft,
-          deepKey: props.deepKey,
-          index: index,
-        });
-      }
-    },
-    [props.deepKey]
-  );
+  const moveDown = (index: number) => {
+    if (index < order.length - 1) {
+      dispatch({
+        type: 'moveDown',
+        draft: draft,
+        deepKey: props.deepKey,
+        index: index,
+      });
+    }
+  };
 
   /** Copies the item data to the virtual clipboard. */
   const copyToVirtualClipboard = (index: number) => {
@@ -1060,7 +1054,6 @@ DocEditor.ArrayField = (props: FieldProps) => {
           newValue: updateRichTextDataTime(newValue) as ArrayFieldValue,
           deepKey: props.deepKey,
         });
-        draft.notifySubscribers();
         editJsonModal.close();
       },
     });
@@ -1079,7 +1072,6 @@ DocEditor.ArrayField = (props: FieldProps) => {
           newValue: updateRichTextDataTime(newValue) as ArrayFieldValue,
           deepKey: props.deepKey,
         });
-        draft.notifySubscribers();
         aiEditModal.close();
       },
     });
@@ -1341,11 +1333,8 @@ DocEditor.ArrayField = (props: FieldProps) => {
                           <div className="DocEditor__ArrayField__item__body">
                             <DocEditor.Field
                               key={`${props.deepKey}.${key}`}
-                              collection={props.collection}
                               field={field.of}
-                              shallowKey={field.id!}
                               deepKey={`${props.deepKey}.${key}`}
-                              draft={props.draft}
                               hideHeader
                               isArrayChild
                               onFocus={() => {
@@ -1393,6 +1382,7 @@ DocEditor.OneOfField = (props: FieldProps) => {
     }
   });
   const selectedType = typesMap[type || ''];
+  const draft = useDraftDoc().controller;
 
   const cachedValues = useMemo<any>(() => {
     return {};
@@ -1413,22 +1403,16 @@ DocEditor.OneOfField = (props: FieldProps) => {
     }
     newValue._type = newType;
 
-    await props.draft.updateKey(props.deepKey, newValue);
+    await draft.updateKey(props.deepKey, newValue);
     setType(newType);
   }
 
-  useEffect(() => {
-    const unsubscribe = props.draft.subscribe(
-      props.deepKey,
-      (newValue: any) => {
-        if (newValue?._type) {
-          setType(newValue._type || '');
-          cachedValues[newValue._type] = newValue;
-        }
-      }
-    );
-    return unsubscribe;
-  }, [props.deepKey]);
+  useDraftDocField(props.deepKey, (newValue: any) => {
+    if (newValue?._type) {
+      setType(newValue._type || '');
+      cachedValues[newValue._type] = newValue;
+    }
+  });
 
   // When the dropdown receives focus, highlight the <input> text so that it can
   // be easily searched.
@@ -1461,11 +1445,8 @@ DocEditor.OneOfField = (props: FieldProps) => {
           {selectedType.fields.map((field) => (
             <DocEditor.Field
               key={`${type}::${field.id}`}
-              collection={props.collection}
               field={field}
-              shallowKey={field.id!}
               deepKey={`${props.deepKey}.${field.id!}`}
-              draft={props.draft}
               onBlur={() => {
                 requestHighlightNode(null);
               }}

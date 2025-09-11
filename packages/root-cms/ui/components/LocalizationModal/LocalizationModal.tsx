@@ -24,7 +24,7 @@ import {
 } from '@tabler/icons-preact';
 import {useEffect, useMemo, useState} from 'preact/hooks';
 import * as schema from '../../../core/schema.js';
-import {DraftController} from '../../hooks/useDraft.js';
+import {DraftDocController} from '../../hooks/useDraftDoc.js';
 import {GapiClient, useGapiClient} from '../../hooks/useGapiClient.js';
 import {useModalTheme} from '../../hooks/useModalTheme.js';
 import {logAction} from '../../utils/actions.js';
@@ -61,22 +61,22 @@ enum MenuAction {
 
 export interface LocalizationModalProps {
   [key: string]: unknown;
-  draft: DraftController;
+  draft: DraftDocController;
   collection: schema.Collection;
   docId: string;
 }
 
-export function useLocalizationModal(props: LocalizationModalProps) {
+export function useLocalizationModal() {
   const modals = useModals();
   const modalTheme = useModalTheme();
   return {
-    open: () => {
+    open: (innerProps: LocalizationModalProps) => {
       modals.openContextModal(MODAL_ID, {
         ...modalTheme,
-        innerProps: props,
+        innerProps: innerProps,
         size: 'clamp(80%, 1024px, 1280px)',
         onClose: () => {
-          props.draft.flush();
+          innerProps.draft.flush();
         },
       });
     },
