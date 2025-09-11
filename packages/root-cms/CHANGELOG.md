@@ -1,5 +1,14 @@
 # @blinkk/root-cms
 
+## 2.2.1-alpha.3
+
+### Patch Changes
+
+- 8db4242: fix: improve re-render perf with doc editor (#740)
+- a3b1cd1: feat: add preview text for richtext data (#737)
+- 04d8df7: fix: support preview image fallback arrays (#734)
+  - @blinkk/root@2.2.1-alpha.3
+
 ## 2.2.1-alpha.2
 
 ### Patch Changes
