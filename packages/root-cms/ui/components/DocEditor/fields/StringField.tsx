@@ -1,31 +1,27 @@
 import {TextInput, Textarea} from '@mantine/core';
 import {ChangeEvent} from 'preact/compat';
-import {useCallback, useEffect, useState} from 'preact/hooks';
+import {useCallback, useState} from 'preact/hooks';
 import * as schema from '../../../../core/schema.js';
+import {useDraftDoc, useDraftDocField} from '../../../hooks/useDraftDoc.js';
 import {requestHighlightNode} from '../../../utils/iframe-preview.js';
 import {FieldProps} from './FieldProps.js';
 
 export function StringField(props: FieldProps) {
   const field = props.field as schema.StringField;
   const [value, setValue] = useState('');
+  const draft = useDraftDoc().controller;
 
   const onChange = useCallback(
     (newValue: string) => {
       setValue(newValue);
-      props.draft.updateKey(props.deepKey, newValue);
+      draft.updateKey(props.deepKey, newValue);
     },
-    [props.deepKey]
+    [props.deepKey, draft]
   );
 
-  useEffect(() => {
-    const unsubscribe = props.draft.subscribe(
-      props.deepKey,
-      (newValue: string) => {
-        setValue(newValue);
-      }
-    );
-    return unsubscribe;
-  }, []);
+  useDraftDocField(props.deepKey, (newValue: string) => {
+    setValue(newValue);
+  });
 
   if (field.variant === 'textarea') {
     return (

@@ -8,12 +8,18 @@ import {
   serverTimestamp,
   deleteField,
 } from 'firebase/firestore';
-import {useEffect, useMemo, useState} from 'preact/hooks';
+import {ComponentChildren, createContext} from 'preact';
+import {useContext, useEffect, useMemo, useState} from 'preact/hooks';
 import {logAction} from '../utils/actions.js';
 import {debounce} from '../utils/debounce.js';
 import {setDocToCache} from '../utils/doc-cache.js';
+import {CMSDoc} from '../utils/doc.js';
 import {EventListener} from '../utils/events.js';
-import {getNestedValue, isObject} from '../utils/objects.js';
+import {
+  JsonTrieStore,
+  SubscribeCallback,
+  UnsubscribeCallback,
+} from '../utils/json-trie-store.js';
 import {TIME_UNITS} from '../utils/time.js';
 
 const SAVE_DELAY = 3 * TIME_UNITS.second;
@@ -36,28 +42,24 @@ export enum EventType {
   FLUSH = 'FLUSH',
 }
 
-type Subscribers = Record<string, Set<SubscriberCallback>>;
-type SubscriberCallback = (newValue: any) => void;
-type UnsubscribeCallback = () => void;
-
 /**
  * Number of seconds to wait before disabling db watchers once the browser tab
  * loses visibility.
  */
 const VISIBILITY_TIMEOUT = 30;
 
-export class DraftController extends EventListener {
+export class DraftDocController extends EventListener {
   readonly projectId: string;
   readonly docId: string;
   readonly collectionId: string;
   readonly slug: string;
   private db: Firestore;
   private docRef: DocumentReference;
+  private store: JsonTrieStore;
+  private storeUnsubscribe: UnsubscribeCallback;
 
   private pendingUpdates = new Map<string, any>();
   private dbUnsubscribe?: () => void;
-  private cachedData: any = {};
-  private subscribers: Subscribers = {};
   private saveState = SaveState.NO_CHANGES;
   private autolock = false;
   private autolockReason = 'autolock';
@@ -81,6 +83,15 @@ export class DraftController extends EventListener {
       'Drafts',
       slug
     );
+    this.store = new JsonTrieStore({
+      id: this.docId,
+      collection: this.collectionId,
+      slug: this.slug,
+      sys: {},
+    });
+    this.storeUnsubscribe = this.store.subscribe('', (data) => {
+      this.dispatch(EventType.CHANGE, data);
+    });
     const collection = window.__ROOT_CTX.collections[collectionId];
     if (collection) {
       this.autolock = !!collection.autolock;
@@ -103,14 +114,15 @@ export class DraftController extends EventListener {
       if (snapshot.metadata.hasPendingWrites) {
         return;
       }
-      const data = snapshot.data();
+      const data = snapshot.data() || {};
+      console.log('onSanpshot()');
       // Save the user's local changes to the snapshot so that their updates
       // are not overwritten.
       if (this.pendingUpdates.size > 0) {
         applyUpdates(data, Object.fromEntries(this.pendingUpdates));
       }
-      this.cachedData = data;
-      this.notifySubscribers();
+      console.log('pending updates:', this.pendingUpdates.size);
+      this.store.setData(data);
     });
   }
 
@@ -153,38 +165,27 @@ export class DraftController extends EventListener {
    * Subscribes to remote changes for a given key. Returns a callback function
    * that can be used to unsubscribe.
    */
-  subscribe(key: string, callback: SubscriberCallback): UnsubscribeCallback {
-    this.subscribers[key] ??= new Set();
-    this.subscribers[key].add(callback);
-    callback(this.getValue(key));
-
-    const unsubscribe = () => {
-      this.subscribers[key].delete(callback);
-      if (this.subscribers[key].size === 0) {
-        delete this.subscribers[key];
-      }
-    };
-    return unsubscribe;
+  subscribe(key: string, callback: SubscribeCallback): UnsubscribeCallback {
+    return this.store.subscribe(key, callback);
   }
 
-  /**
-   * Notifies subscribers of changes.
-   */
-  notifySubscribers() {
-    const data = this.cachedData;
-    this.dispatch(EventType.CHANGE, data);
-    notify(this.subscribers, data);
+  getData(): CMSDoc | null {
+    return this.store.getDataSnapshot() as CMSDoc | null;
   }
 
   getValue(key: string): any {
-    return getNestedValue(this.cachedData, key);
+    // return getNestedValue(this.cachedData, key);
+    return this.store.get(key);
   }
 
   /**
    * Updates a single key. The key can be a nested key, e.g. "meta.title".
    */
-  async updateKey(key: string, newValue: any) {
-    await this.updateKeys({[key]: newValue});
+  async updateKey(key: string, value: any) {
+    this.pendingUpdates.set(key, value);
+    this.store.set(key, value);
+    this.setSaveState(SaveState.UPDATES_PENDING);
+    this.queueChanges();
   }
 
   /**
@@ -194,8 +195,7 @@ export class DraftController extends EventListener {
     for (const key in updates) {
       this.pendingUpdates.set(key, updates[key]);
     }
-    applyUpdates(this.cachedData, updates);
-    this.dispatch(EventType.CHANGE, this.cachedData);
+    this.store.update(updates);
     this.setSaveState(SaveState.UPDATES_PENDING);
     this.queueChanges();
   }
@@ -205,8 +205,7 @@ export class DraftController extends EventListener {
    */
   async removeKey(key: string) {
     this.pendingUpdates.set(key, deleteField());
-    applyUpdates(this.cachedData, {[key]: undefined});
-    this.dispatch(EventType.CHANGE, this.cachedData);
+    this.store.set(key, undefined);
     this.setSaveState(SaveState.UPDATES_PENDING);
     this.queueChanges();
   }
@@ -264,7 +263,7 @@ export class DraftController extends EventListener {
     if (
       this.autolock &&
       !this.autolockApplied &&
-      !this.cachedData?.sys?.publishingLocked
+      !this.store.get('sys.publishingLocked')
     ) {
       this.autolockApplied = true;
       updates['sys.publishingLocked'] = {
@@ -316,8 +315,9 @@ export class DraftController extends EventListener {
   }
 
   getLocales(): string[] {
-    if (this.cachedData && this.cachedData.sys?.locales) {
-      return this.cachedData.sys.locales;
+    const locales = this.store.get('sys.locales');
+    if (locales) {
+      return locales;
     }
     return ['en'];
   }
@@ -331,6 +331,9 @@ export class DraftController extends EventListener {
    */
   async dispose() {
     super.dispose();
+    if (this.storeUnsubscribe) {
+      this.storeUnsubscribe();
+    }
     this.stop();
   }
 }
@@ -352,31 +355,6 @@ function applyUpdates(data: any, updates: any) {
   }
 }
 
-/**
- * Recursively walks the data tree and notifies subscribers of the new value.
- */
-function notify(subscribers: Subscribers, data: any, parentKeys?: string[]) {
-  if (!parentKeys) {
-    parentKeys = [];
-  }
-
-  for (const key in data) {
-    const keys = [...parentKeys, key];
-    const deepKey = keys.join('.');
-    const callbacks = subscribers[deepKey];
-    const newValue = data[key];
-    if (callbacks) {
-      // console.log('notifying', deepKey, newValue, callbacks);
-      Array.from(callbacks).forEach((cb) => {
-        cb(newValue);
-      });
-    }
-    if (isObject(newValue)) {
-      notify(subscribers, newValue, keys);
-    }
-  }
-}
-
 function splitKey(key: string) {
   const index = key.indexOf('.');
   const head = key.substring(0, index);
@@ -384,31 +362,44 @@ function splitKey(key: string) {
   return [head, tail] as const;
 }
 
-export interface UseDraftHook {
-  loading: boolean;
-  saveState: SaveState;
-  controller: DraftController;
-  data: any;
+export interface DraftDocProviderProps {
+  docId: string;
+  children?: ComponentChildren;
 }
 
-export function useDraft(docId: string): UseDraftHook {
+export interface DraftDocContext {
+  loading: boolean;
+  controller: DraftDocController;
+}
+
+const DRAFT_DOC_CONTEXT = createContext<DraftDocContext | null>(null);
+
+/**
+ * Context provider that provides a DraftDocController instance.
+ */
+export function DraftDocProvider(props: DraftDocProviderProps) {
   const [loading, setLoading] = useState(true);
-  const [data, setData] = useState<any>({});
-  const controller = useMemo(() => new DraftController(docId), [docId]);
-  const [saveState, setSaveState] = useState(SaveState.NO_CHANGES);
+
+  const controller = useMemo(
+    () => new DraftDocController(props.docId),
+    [props.docId]
+  );
 
   useEffect(() => {
-    controller.onChange((data: any) => {
-      setData(data);
+    setLoading(true);
+    controller.onChange((data: CMSDoc) => {
       setLoading(false);
-      setDocToCache(docId, data);
+      setDocToCache(data.id, data);
     });
-    controller.onSaveStateChange((newSaveState) => setSaveState(newSaveState));
     controller.start();
+    return () => controller.dispose();
+  }, [controller]);
 
+  // Automatically start/stop the db watcher N seconds after the browser
+  // visibility state changes.
+  useEffect(() => {
     const onVisibilityChange = () => {
       let visibilityTimeoutId: number | undefined;
-
       if (document.hidden || document.visibilityState !== 'visible') {
         visibilityTimeoutId = window.setTimeout(() => {
           controller.stop();
@@ -426,10 +417,57 @@ export function useDraft(docId: string): UseDraftHook {
     };
     document.addEventListener('visibilitychange', onVisibilityChange);
     return () => {
-      controller.dispose();
       document.removeEventListener('visibilitychange', onVisibilityChange);
     };
-  }, [docId]);
+  }, [controller]);
 
-  return {loading, saveState, controller, data};
+  return (
+    <DRAFT_DOC_CONTEXT.Provider value={{loading, controller}}>
+      {props.children}
+    </DRAFT_DOC_CONTEXT.Provider>
+  );
+}
+
+export function useDraftDoc(): DraftDocContext {
+  const value = useContext(DRAFT_DOC_CONTEXT);
+  if (!value) {
+    throw new Error('useDraftDoc() should be used within a <DraftDocProvider>');
+  }
+  return value;
+}
+
+/**
+ * Hook for subscribing to changes to a draft doc's save state.
+ */
+export function useDraftDocSaveState(cb: (saveState: SaveState) => void) {
+  const {controller} = useDraftDoc();
+  useEffect(() => {
+    return controller.onSaveStateChange(cb);
+  }, [controller]);
+}
+
+/**
+ * Hook for subscribing to all data changes to a draft doc.
+ */
+export function useDraftDocData(cb: (data: CMSDoc) => void) {
+  const {controller} = useDraftDoc();
+  useEffect(() => {
+    return controller.onChange(cb);
+  }, [controller]);
+}
+
+/**
+ * Hook for subscribing to changes to a specific field in a doc.
+ *
+ * ```
+ * useDraftDocFieldData('fields.meta.title', (title) => {
+ *   console.log(`title: ${title}`);
+ * })
+ * ```
+ */
+export function useDraftDocField<T>(deepKey: string, cb: (data: T) => void) {
+  const {controller} = useDraftDoc();
+  useEffect(() => {
+    return controller.subscribe(deepKey, cb);
+  }, [controller]);
 }
