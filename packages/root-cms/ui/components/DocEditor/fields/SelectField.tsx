@@ -1,11 +1,13 @@
 import {Select} from '@mantine/core';
-import {useCallback, useEffect, useState} from 'preact/hooks';
+import {useCallback, useState} from 'preact/hooks';
 import * as schema from '../../../../core/schema.js';
+import {useDraftDoc, useDraftDocField} from '../../../hooks/useDraftDoc.js';
 import {FieldProps} from './FieldProps.js';
 
 export function SelectField(props: FieldProps) {
   const field = props.field as schema.SelectField;
   const [value, setValue] = useState('');
+  const draft = useDraftDoc().controller;
 
   const options = (field.options || []).map((option) => {
     // Mantine requires both label and value to be set.
@@ -20,21 +22,15 @@ export function SelectField(props: FieldProps) {
 
   const onChange = useCallback(
     (newValue: string) => {
-      props.draft.updateKey(`${props.deepKey}`, newValue);
+      draft.updateKey(`${props.deepKey}`, newValue);
       setValue(newValue || '');
     },
-    [props.deepKey]
+    [props.deepKey, draft]
   );
 
-  useEffect(() => {
-    const unsubscribe = props.draft.subscribe(
-      props.deepKey,
-      (newValue: string) => {
-        setValue(newValue || '');
-      }
-    );
-    return unsubscribe;
-  }, []);
+  useDraftDocField(props.deepKey, (newValue: string) => {
+    setValue(newValue || '');
+  });
 
   return (
     <div className="DocEditor__SelectField">

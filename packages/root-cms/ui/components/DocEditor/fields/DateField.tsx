@@ -1,20 +1,22 @@
-import {useCallback, useEffect, useState} from 'preact/hooks';
+import {useCallback, useState} from 'preact/hooks';
 import * as schema from '../../../../core/schema.js';
+import {useDraftDoc, useDraftDocField} from '../../../hooks/useDraftDoc.js';
 import {FieldProps} from './FieldProps.js';
 
 export function DateField(props: FieldProps) {
   const field = props.field as schema.DateField;
   const [value, setValue] = useState(field.default || '');
+  const draft = useDraftDoc().controller;
 
   const onChange = useCallback(
     (newValue: string) => {
       if (newValue) {
         // Value is stored in DB as YYYY-MM-DD string
-        props.draft.updateKey(props.deepKey, newValue);
+        draft.updateKey(props.deepKey, newValue);
         setValue(newValue);
       } else {
+        draft.removeKey(props.deepKey);
         setValue('');
-        props.draft.removeKey(props.deepKey);
       }
       if (props.onChange) {
         props.onChange(newValue);
@@ -23,15 +25,9 @@ export function DateField(props: FieldProps) {
     [props.deepKey]
   );
 
-  useEffect(() => {
-    const unsubscribe = props.draft.subscribe(
-      props.deepKey,
-      (newVal: string) => {
-        setValue(newVal || '');
-      }
-    );
-    return unsubscribe;
-  }, []);
+  useDraftDocField(props.deepKey, (newVal: string) => {
+    setValue(newVal || '');
+  });
 
   return (
     <div className="DocEditor__DateField">

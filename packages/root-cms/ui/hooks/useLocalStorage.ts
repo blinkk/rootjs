@@ -1,6 +1,9 @@
 import {StateUpdater, useState} from 'preact/hooks';
 
-export function useLocalStorage<T>(key: string, defaultValue: T) {
+export function useLocalStorage<T>(
+  key: string,
+  defaultValue: T
+): [T, (value: StateUpdater<T>) => void] {
   const [storedValue, setStoredValue] = useState<T>(() => {
     try {
       const item = window.localStorage.getItem(key);
@@ -10,7 +13,7 @@ export function useLocalStorage<T>(key: string, defaultValue: T) {
       return defaultValue;
     }
   });
-  const setValue: StateUpdater<T> = (value) => {
+  const setValue = (value: StateUpdater<T>) => {
     if (typeof value === 'function') {
       const fn = value as (currentValue: T) => T;
       value = fn(storedValue);

@@ -1,11 +1,13 @@
 import {MultiSelect} from '@mantine/core';
 import {useCallback, useEffect, useState} from 'preact/hooks';
 import * as schema from '../../../../core/schema.js';
+import {useDraftDoc, useDraftDocField} from '../../../hooks/useDraftDoc.js';
 import {FieldProps} from './FieldProps.js';
 
 export function MultiSelectField(props: FieldProps) {
   const field = props.field as schema.MultiSelectField;
   const [value, setValue] = useState<string[]>([]);
+  const draft = useDraftDoc().controller;
 
   const options = (field.options || []).map((option) => {
     // Mantine requires both label and value to be set.
@@ -20,21 +22,15 @@ export function MultiSelectField(props: FieldProps) {
 
   const onChange = useCallback(
     (newValue: string[]) => {
-      props.draft.updateKey(props.deepKey, newValue || []);
+      draft.updateKey(props.deepKey, newValue || []);
       setValue(newValue);
     },
     [props.deepKey]
   );
 
-  useEffect(() => {
-    const unsubscribe = props.draft.subscribe(
-      props.deepKey,
-      (newValue: string[]) => {
-        setValue(newValue || []);
-      }
-    );
-    return unsubscribe;
-  }, []);
+  useDraftDocField(props.deepKey, (newValue: string[]) => {
+    setValue(newValue || []);
+  });
 
   return (
     <div className="DocEditor__MultiSelectField">
