@@ -179,10 +179,14 @@ type StatusBarProps = DocEditorProps & {
 
 DocEditor.StatusBar = (props: StatusBarProps) => {
   const draft = props.draft;
-  const [data, setData] = useState<CMSDoc | null>(draft.controller.getData());
+  const [data, setData] = useState<Partial<CMSDoc> | null>(
+    draft.controller.getData()
+  );
 
-  useDraftDocData((data) => {
-    console.log(data);
+  // For the status bar, only the "sys" attr on the doc is needed.
+  useDraftDocField('sys', (sys: any) => {
+    console.log('[StatusBar] sys changed:', sys);
+    const data: Partial<CMSDoc> = {sys};
     setData(data);
   });
 
@@ -206,9 +210,9 @@ DocEditor.StatusBar = (props: StatusBarProps) => {
   const localizationModal = useLocalizationModal();
 
   const loading = !data;
-  // if (loading) {
-  //   return null;
-  // }
+  if (loading) {
+    return null;
+  }
 
   return (
     <div className="DocEditor__statusBar">

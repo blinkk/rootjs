@@ -115,13 +115,11 @@ export class DraftDocController extends EventListener {
         return;
       }
       const data = snapshot.data() || {};
-      console.log('onSanpshot()');
       // Save the user's local changes to the snapshot so that their updates
       // are not overwritten.
       if (this.pendingUpdates.size > 0) {
         applyUpdates(data, Object.fromEntries(this.pendingUpdates));
       }
-      console.log('pending updates:', this.pendingUpdates.size);
       this.store.setData(data);
     });
   }

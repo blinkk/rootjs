@@ -1,12 +1,7 @@
-/**
- * Type for the subscriber callback function.
- * @param newValue - The new value at the subscribed path.
- */
+import {deepEqual, isObject} from './objects.js';
+
 export type SubscribeCallback = (newValue: any) => void;
 
-/**
- * Type for the returned unsubscribe function.
- */
 export type UnsubscribeCallback = () => void;
 
 /**
@@ -26,17 +21,13 @@ export class JsonTrieStore {
   private data: Record<string, any>;
   private readonly root: TrieNode = new TrieNode();
 
-  /**
-   * Initializes the store with optional initial data.
-   * @param initialData - The starting JSON data.
-   */
   constructor(initialData?: Record<string, any>) {
     this.data = initialData || {};
   }
 
   /**
    * Retrieves a value from the data store using dot notation.
-   * @param path - The dot-notation path (e.g., 'user.address.city').
+   * @param path The dot-notation path (e.g., 'user.address.city').
    * @returns The value at the specified path or undefined if not found.
    */
   public get(path: string): any {
@@ -45,16 +36,12 @@ export class JsonTrieStore {
 
   /**
    * Sets a single value at a deeply nested path by calling the update method.
-   * @param path - The dot-notation path (e.g., 'user.address.city').
-   * @param value - The value to set at the specified path.
+   * @param path The dot-notation path (e.g., 'user.address.city').
+   * @param value The value to set at the specified path.
    */
   public set(path: string, value: any) {
     if (path === '') {
-      if (
-        typeof value === 'object' &&
-        value !== null &&
-        !Array.isArray(value)
-      ) {
+      if (isObject(value)) {
         this.setData(value);
       }
       return;
@@ -66,18 +53,33 @@ export class JsonTrieStore {
    * Applies partial updates for one or more deeply nested keys. Mutations
    * are batched, and subscribers are notified efficiently after all changes
    * have been applied.
-   * @param updates - An object where keys are dot-notation paths and
-   * values are the new data for those paths.
+   * @param updates An object where keys are dot-notation paths and values are
+   * the new data for those paths.
    */
   public update(updates: Record<string, any>) {
-    const pathsToNotify = new Set<string>();
+    const pathsToNotify = new Set<{path: string; value: any}>();
 
-    // 1. Apply all mutations to the data object in-place
-    Object.entries(updates).forEach(([path, value]) => {
-      // const oldValue = this.getValueFromPath(path, this.data);
-      // if (oldValue === value) {
-      //   return;
-      // }
+    const addPathToNotify = (path: string, oldValue: any, newValue: any) => {
+      pathsToNotify.add({path, value: newValue});
+      // Add child paths.
+      if (isObject(oldValue) && isObject(newValue)) {
+        Object.entries(newValue).forEach(([key, childValue]) => {
+          const childOldValue = oldValue[key];
+          if (!deepEqual(childOldValue, childValue)) {
+            addPathToNotify(`${path}.${key}`, childOldValue, childValue);
+          }
+        });
+        // Notify any deleted keys.
+        Object.keys(oldValue).forEach((key) => {
+          if (!(key in newValue)) {
+            addPathToNotify(`${path}.${key}`, oldValue[key], undefined);
+          }
+        });
+      }
+    };
+
+    // Apply all mutations to the data object in-place.
+    Object.entries(updates).forEach(([path, newValue]) => {
       let current: any = this.data;
       const keys = path.split('.');
       const lastKey = keys.pop()!;
@@ -88,44 +90,41 @@ export class JsonTrieStore {
         }
         current = current[key];
       }
-      current[lastKey] = value;
+      const oldValue = current[lastKey];
+      current[lastKey] = newValue;
 
-      // 2. Collect this path and all its parent paths for notification
-      pathsToNotify.add(path);
-      // const parentPathKeys = keys;
-      // while (parentPathKeys.length > 0) {
-      //   pathsToNotify.add(parentPathKeys.join('.'));
-      //   parentPathKeys.pop();
-      // }
+      // Collect notify subscribers on the current path and child paths.
+      addPathToNotify(path, oldValue, newValue);
     });
 
-    // 3. Trigger notifications for all unique affected paths
-    pathsToNotify.forEach((path) => {
-      console.log(`notify: ${path}`);
-      const node = this.getTrieNode(path); // Don't create new nodes
+    // Trigger notifications for all affected paths.
+    pathsToNotify.forEach((item) => {
+      const node = this.getTrieNode(item.path);
       if (node && node.subscribers.size > 0) {
-        const newValue = this.getValueFromPath(path, this.data);
-        node.subscribers.forEach((cb) => cb(newValue));
+        node.subscribers.forEach((cb) => cb(item.value));
       }
     });
+
+    // Notify subscribers on the root that data has changed.
+    this.root.subscribers.forEach((cb) => cb(this.data));
   }
 
   /**
    * Replaces the entire data object and notifies all subscribers whose
    * watched values have changed.
-   * @param newData - The new data object.
+   * @param newData The new data object.
    */
   public setData(newData: Record<string, any>) {
     const oldData = this.data;
-    // Use the deep comparison notifier for total data replacement
+    // Use the deep comparison notifier for total data replacement.
     this.notifyOnUpdate(this.root, '', oldData, newData);
     this.data = newData;
   }
 
   /**
    * Subscribes a callback function to changes at a specific path.
-   * @param path - The dot-notation path to watch for changes.
-   * @param callback - The function to execute when the value at the path changes.
+   * @param path The dot-notation path to watch for changes.
+   * @param callback The function to execute when the value at the path changes.
    * @returns A function to unsubscribe the callback.
    */
   public subscribe(
@@ -146,8 +145,7 @@ export class JsonTrieStore {
   }
 
   /**
-   * Returns a deep copy of the current data.
-   * @returns A snapshot of the data.
+   * Returns the current stored data.
    */
   public getDataSnapshot(): Record<string, any> {
     return this.data;
@@ -177,7 +175,7 @@ export class JsonTrieStore {
   ) {
     const oldValue = this.getValueFromPath(path, oldData);
     const newValue = this.getValueFromPath(path, newData);
-    if (oldValue !== newValue) {
+    if (!deepEqual(oldValue, newValue)) {
       node.subscribers.forEach((callback) => callback(newValue));
     }
     node.children.forEach((childNode, key) => {
@@ -187,7 +185,9 @@ export class JsonTrieStore {
   }
 
   private getValueFromPath(path: string, source: Record<string, any>): any {
-    if (!path) return source;
+    if (!path) {
+      return source;
+    }
     const keys = path.split('.');
     let current: any = source;
     for (const key of keys) {
@@ -207,7 +207,9 @@ export class JsonTrieStore {
     path: string,
     createIfMissing: boolean = false
   ): TrieNode | undefined {
-    if (!path) return this.root;
+    if (!path) {
+      return this.root;
+    }
     const keys = path.split('.');
     let currentNode = this.root;
     for (const key of keys) {

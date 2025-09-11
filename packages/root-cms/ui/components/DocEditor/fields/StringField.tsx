@@ -1,6 +1,6 @@
 import {TextInput, Textarea} from '@mantine/core';
 import {ChangeEvent} from 'preact/compat';
-import {useCallback, useState} from 'preact/hooks';
+import {useState} from 'preact/hooks';
 import * as schema from '../../../../core/schema.js';
 import {useDraftDoc, useDraftDocField} from '../../../hooks/useDraftDoc.js';
 import {requestHighlightNode} from '../../../utils/iframe-preview.js';
@@ -11,13 +11,10 @@ export function StringField(props: FieldProps) {
   const [value, setValue] = useState('');
   const draft = useDraftDoc().controller;
 
-  const onChange = useCallback(
-    (newValue: string) => {
-      setValue(newValue);
-      draft.updateKey(props.deepKey, newValue);
-    },
-    [props.deepKey, draft]
-  );
+  const onChange = (newValue: string) => {
+    setValue(newValue);
+    draft.updateKey(props.deepKey, newValue);
+  };
 
   useDraftDocField(props.deepKey, (newValue: string) => {
     setValue(newValue);

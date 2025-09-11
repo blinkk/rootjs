@@ -1,4 +1,4 @@
-import {useCallback, useState} from 'preact/hooks';
+import {useState} from 'preact/hooks';
 import * as schema from '../../../../core/schema.js';
 import {RichTextData} from '../../../../shared/richtext.js';
 import {useDraftDoc, useDraftDocField} from '../../../hooks/useDraftDoc.js';
@@ -10,17 +10,14 @@ export function RichTextField(props: FieldProps) {
   const [value, setValue] = useState<RichTextData | null>(null);
   const draft = useDraftDoc().controller;
 
-  const onChange = useCallback(
-    (newValue: RichTextData) => {
-      setValue((oldValue: RichTextData | null) => {
-        if (oldValue?.time !== newValue?.time) {
-          draft.updateKey(props.deepKey, newValue);
-        }
-        return newValue;
-      });
-    },
-    [props.deepKey, draft]
-  );
+  const onChange = (newValue: RichTextData) => {
+    setValue((oldValue: RichTextData | null) => {
+      if (oldValue?.time !== newValue?.time) {
+        draft.updateKey(props.deepKey, newValue);
+      }
+      return newValue;
+    });
+  };
 
   useDraftDocField(props.deepKey, (newValue: RichTextData) => {
     setValue(newValue);
