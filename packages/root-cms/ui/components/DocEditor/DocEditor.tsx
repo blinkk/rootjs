@@ -65,7 +65,6 @@ import {
   DraftDocController,
   SaveState,
   useDraftDoc,
-  useDraftDocData,
   useDraftDocField,
   useDraftDocSaveState,
 } from '../../hooks/useDraftDoc.js';
@@ -185,7 +184,6 @@ DocEditor.StatusBar = (props: StatusBarProps) => {
 
   // For the status bar, only the "sys" attr on the doc is needed.
   useDraftDocField('sys', (sys: any) => {
-    console.log('[StatusBar] sys changed:', sys);
     const data: Partial<CMSDoc> = {sys};
     setData(data);
   });
@@ -209,7 +207,7 @@ DocEditor.StatusBar = (props: StatusBarProps) => {
   const publishDocModal = usePublishDocModal({docId: props.docId});
   const localizationModal = useLocalizationModal();
 
-  const loading = !data;
+  const loading = !data?.sys;
   if (loading) {
     return null;
   }
@@ -222,7 +220,7 @@ DocEditor.StatusBar = (props: StatusBarProps) => {
       <DocEditor.SaveState />
       {data?.sys && (
         <div className="DocEditor__statusBar__statusBadges">
-          <DocStatusBadges doc={data} />
+          <DocStatusBadges doc={data as CMSDoc} />
         </div>
       )}
       <div className="DocEditor__statusBar__i18n">
@@ -253,10 +251,10 @@ DocEditor.StatusBar = (props: StatusBarProps) => {
           >
             Publish
           </Button>
-        ) : testIsScheduled(data) ? (
+        ) : testIsScheduled(data as CMSDoc) ? (
           <Tooltip
-            label={`Scheduled ${formatDateTime(data.sys.scheduledAt)} by ${
-              data.sys.scheduledBy
+            label={`Scheduled ${formatDateTime(data.sys!.scheduledAt)} by ${
+              data.sys!.scheduledBy
             }`}
             transition="pop"
           >
@@ -269,9 +267,11 @@ DocEditor.StatusBar = (props: StatusBarProps) => {
               Publish
             </Button>
           </Tooltip>
-        ) : testPublishingLocked(data) ? (
+        ) : testPublishingLocked(data as CMSDoc) ? (
           <Tooltip
-            label={`Locked by ${data.sys.publishingLocked.lockedBy}: "${data.sys.publishingLocked.reason}"`}
+            label={`Locked by ${data.sys!.publishingLocked.lockedBy}: "${
+              data.sys!.publishingLocked.reason
+            }"`}
             transition="pop"
           >
             <Button
@@ -297,7 +297,7 @@ DocEditor.StatusBar = (props: StatusBarProps) => {
       <div className="DocEditor__statusBar__actionsMenu">
         <DocActionsMenu
           docId={props.docId}
-          data={data}
+          data={data as CMSDoc}
           onAction={onDocAction}
         />
       </div>

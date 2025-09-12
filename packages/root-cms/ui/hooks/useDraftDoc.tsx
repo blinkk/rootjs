@@ -469,3 +469,31 @@ export function useDraftDocField<T>(deepKey: string, cb: (data: T) => void) {
     return controller.subscribe(deepKey, cb);
   }, [controller]);
 }
+
+/**
+ * A hook with a similar interface as `useState()` that manages the state of a
+ * value within a draft doc.
+ */
+export function useDraftDocValue<T>(deepKey: string, defaultValue?: T) {
+  const {controller} = useDraftDoc();
+  const [value, setValue] = useState<T>(
+    controller.getValue(deepKey) ?? defaultValue
+  );
+
+  useEffect(() => {
+    return controller.subscribe(deepKey, (newValue: T) => {
+      setValue(newValue);
+    });
+  }, [controller]);
+
+  const setDraftValue = (newValue: T) => {
+    setValue(newValue);
+    if (newValue === null || newValue === undefined) {
+      controller.removeKey(deepKey);
+    } else {
+      controller.updateKey(deepKey, newValue);
+    }
+  };
+
+  return [value, setDraftValue] as const;
+}
