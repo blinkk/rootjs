@@ -81,7 +81,6 @@ type FileFieldVariant = 'file' | 'image';
 type FileFieldLoadingState = 'loading' | 'complete' | 'error';
 
 type FileFieldProps = FieldProps & {
-  field: schema.FileField;
   variant?: FileFieldVariant;
 };
 
@@ -120,7 +119,7 @@ function useFileField() {
 }
 
 export function FileField(props: FileFieldProps) {
-  const field = props.field;
+  const field = props.field as schema.FileField;
   const theme = useMantineTheme();
   const dropZoneRef = useRef<HTMLButtonElement>(null);
   const [placeholderModalOpened, setPlaceholderModalOpened] = useState(false);

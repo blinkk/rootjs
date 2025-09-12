@@ -375,7 +375,7 @@ DocEditor.Field = (props: FieldProps) => {
         ) : field.type === 'datetime' ? (
           <DateTimeField {...props} />
         ) : field.type === 'file' ? (
-          <FileField {...props} field={props.field as schema.FileField} />
+          <FileField {...props} />
         ) : field.type === 'image' ? (
           <ImageField {...props} />
         ) : field.type === 'multiselect' ? (
