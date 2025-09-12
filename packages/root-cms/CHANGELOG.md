@@ -1,5 +1,12 @@
 # @blinkk/root-cms
 
+## 2.2.1-alpha.4
+
+### Patch Changes
+
+- fb91226: fix: fix realtime array preview changes (#742)
+  - @blinkk/root@2.2.1-alpha.4
+
 ## 2.2.1-alpha.3
 
 ### Patch Changes
