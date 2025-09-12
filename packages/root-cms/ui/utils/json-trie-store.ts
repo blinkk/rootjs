@@ -1,8 +1,16 @@
+import {EventListener} from './events.js';
 import {deepEqual, isObject} from './objects.js';
 
 export type SubscribeCallback = (newValue: any) => void;
 
 export type UnsubscribeCallback = () => void;
+
+export enum JsonTrieStoreEventType {
+  /** Data change to the json store. */
+  CHANGE = 'CHANGE',
+  /** Change to a key within the json store. */
+  VALUE_CHANGE = 'VALUE_CHANGE',
+}
 
 /**
  * Represents a node in the subscriber trie. Each node holds subscribers
@@ -17,11 +25,12 @@ class TrieNode {
  * A data structure for storing JSON data that allows setting/getting deeply
  * nested values using dot notation and subscribing to changes.
  */
-export class JsonTrieStore {
+export class JsonTrieStore extends EventListener {
   private data: Record<string, any>;
   private readonly root: TrieNode = new TrieNode();
 
   constructor(initialData?: Record<string, any>) {
+    super();
     this.data = initialData || {};
   }
 
@@ -92,6 +101,7 @@ export class JsonTrieStore {
       }
       const oldValue = current[lastKey];
       current[lastKey] = newValue;
+      this.dispatch(JsonTrieStoreEventType.VALUE_CHANGE, path, newValue);
 
       // Collect notify subscribers on the current path and child paths.
       addPathToNotify(path, oldValue, newValue);
@@ -106,7 +116,7 @@ export class JsonTrieStore {
     });
 
     // Notify subscribers on the root that data has changed.
-    this.root.subscribers.forEach((cb) => cb(this.data));
+    this.dispatch(JsonTrieStoreEventType.CHANGE, this.data);
   }
 
   /**
@@ -119,6 +129,8 @@ export class JsonTrieStore {
     // Use the deep comparison notifier for total data replacement.
     this.notifyOnUpdate(this.root, '', oldData, newData);
     this.data = newData;
+    // Notify subscribers on the root that data has changed.
+    this.dispatch(JsonTrieStoreEventType.CHANGE, this.data);
   }
 
   /**
@@ -156,6 +168,7 @@ export class JsonTrieStore {
    * preventing memory leaks.
    */
   public dispose() {
+    super.dispose();
     this.data = {};
     // By clearing the root's children and subscribers, we allow the garbage
     // collector to reclaim the memory used by the entire trie.

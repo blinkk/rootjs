@@ -63,6 +63,7 @@ import {
 import {
   DraftDocContext,
   DraftDocController,
+  DraftDocEventType,
   SaveState,
   useDraftDoc,
   useDraftDocField,
@@ -73,6 +74,7 @@ import {
   useVirtualClipboard,
 } from '../../hooks/useVirtualClipboard.js';
 import {joinClassNames} from '../../utils/classes.js';
+import {debounce} from '../../utils/debounce.js';
 import {
   CMSDoc,
   testIsScheduled,
@@ -86,7 +88,6 @@ import {autokey} from '../../utils/rand.js';
 import {strFormatFn} from '../../utils/str-format.js';
 import {testFieldEmpty} from '../../utils/test-field-empty.js';
 import {formatDateTime} from '../../utils/time.js';
-import {testHasExperimentParam} from '../../utils/url-params.js';
 import {useAiEditModal} from '../AiEditModal/AiEditModal.js';
 import {
   DocActionEvent,
@@ -115,10 +116,6 @@ import {StringField} from './fields/StringField.js';
 interface DocEditorProps {
   docId: string;
 }
-
-const DISABLE_SCHEMA_LEVEL_ARRAY_PREVIEW = testHasExperimentParam(
-  'DisableSchemaLevelArrayPreview'
-);
 
 const COLLECTION_SCHEMA_TYPES_CONTEXT = createContext<
   Record<string, schema.Schema>
@@ -1153,7 +1150,6 @@ DocEditor.ArrayField = (props: FieldProps) => {
               className="DocEditor__ArrayField__items"
             >
               {order.map((key: string, i: number) => {
-                const previewImage = arrayPreviewImage(field, value[key]);
                 return (
                   <Draggable key={key} index={i} draggableId={key}>
                     {(provided, snapshot) => (
@@ -1206,21 +1202,11 @@ DocEditor.ArrayField = (props: FieldProps) => {
                             <div className="DocEditor__ArrayField__item__header__icon">
                               <IconTriangleFilled size={6} />
                             </div>
-                            <div className="DocEditor__ArrayField__item__header__preview">
-                              {previewImage && (
-                                <div className="DocEditor__ArrayField__item__header__preview__image">
-                                  <img
-                                    src={previewImage}
-                                    alt=""
-                                    className="DocEditor__ArrayField__item__header__preview__image__img"
-                                    loading="lazy"
-                                  />
-                                </div>
-                              )}
-                              <div className="DocEditor__ArrayField__item__header__preview__title">
-                                {arrayPreview(field, value[key], i)}
-                              </div>
-                            </div>
+                            <DocEditor.ArrayFieldPreview
+                              field={field}
+                              deepKey={`${props.deepKey}.${key}`}
+                              index={i}
+                            />
                             <div className="DocEditor__ArrayField__item__header__controls">
                               <div className="DocEditor__ArrayField__item__header__controls__arrows">
                                 <button
@@ -1360,6 +1346,66 @@ DocEditor.ArrayField = (props: FieldProps) => {
         </Droppable>
       </DragDropContext>
       {addButtonRow}
+    </div>
+  );
+};
+
+interface ArrayFieldPreviewProps {
+  field: schema.ArrayField;
+  deepKey: string;
+  index: number;
+}
+
+DocEditor.ArrayFieldPreview = (props: ArrayFieldPreviewProps) => {
+  const draft = useDraftDoc().controller;
+  const [value, setValue] = useState<any>(draft.getValue(props.deepKey));
+
+  const previewImage = useMemo(() => {
+    return arrayPreviewImage(props.field, value);
+  }, [value]);
+  const previewText = useMemo(() => {
+    return arrayPreview(props.field, value, props.index);
+  }, [value, props.index]);
+
+  // Since re-calculating the preview text can be expensive, use a debounced
+  // callback for updating the value.
+  const onValueChange = useCallback(
+    debounce(() => {
+      const newValue = draft.getValue(props.deepKey);
+      // A new object is created to force re-rendering on the preview text.
+      setValue({...newValue});
+    }, 250),
+    [props.deepKey, draft]
+  );
+
+  useEffect(() => {
+    return draft.on(
+      DraftDocEventType.VALUE_CHANGE,
+      (key: string, newValue: any) => {
+        if (key === props.deepKey) {
+          setValue(newValue);
+        } else if (key.startsWith(props.deepKey)) {
+          onValueChange();
+        }
+      }
+    );
+  }, [props.deepKey, draft]);
+
+  return (
+    <div className="DocEditor__ArrayField__item__header__preview">
+      {previewImage && (
+        <div className="DocEditor__ArrayField__item__header__preview__image">
+          <img
+            src={previewImage}
+            alt=""
+            className="DocEditor__ArrayField__item__header__preview__image__img"
+            loading="lazy"
+          />
+        </div>
+      )}
+      <div className="DocEditor__ArrayField__item__header__preview__title">
+        {previewText}
+      </div>
     </div>
   );
 };
@@ -1599,9 +1645,6 @@ function arrayPreviewImage(
   field: schema.ArrayField,
   data: any
 ): string | undefined {
-  if (DISABLE_SCHEMA_LEVEL_ARRAY_PREVIEW) {
-    return undefined;
-  }
   const schemaLevelTemplates = getSchemaPreviewTemplates(
     field.of,
     data,
@@ -1619,18 +1662,16 @@ function arrayPreview(
   data: any,
   index: number
 ): string {
-  if (!DISABLE_SCHEMA_LEVEL_ARRAY_PREVIEW) {
-    // First, check if the item has a preview defined at the schema level.
-    const schemaLevelTemplates = getSchemaPreviewTemplates(
-      field.of,
-      data,
-      'title'
-    );
-    if (schemaLevelTemplates) {
-      const result = buildPreviewValue(schemaLevelTemplates, data, index);
-      if (result) {
-        return result;
-      }
+  // First, check if the item has a preview defined at the schema level.
+  const schemaLevelTemplates = getSchemaPreviewTemplates(
+    field.of,
+    data,
+    'title'
+  );
+  if (schemaLevelTemplates) {
+    const result = buildPreviewValue(schemaLevelTemplates, data, index);
+    if (result) {
+      return result;
     }
   }
   // Fall back to array-level preview.

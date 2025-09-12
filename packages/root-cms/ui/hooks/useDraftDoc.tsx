@@ -17,6 +17,7 @@ import {CMSDoc} from '../utils/doc.js';
 import {EventListener} from '../utils/events.js';
 import {
   JsonTrieStore,
+  JsonTrieStoreEventType,
   SubscribeCallback,
   UnsubscribeCallback,
 } from '../utils/json-trie-store.js';
@@ -33,9 +34,11 @@ export enum SaveState {
   ERROR = 'ERROR',
 }
 
-export enum EventType {
-  /** Changes made to the draft document and are pending a save to the DB. */
+export enum DraftDocEventType {
+  /** Changes made to the draft doc and are pending a save to the DB. */
   CHANGE = 'CHANGE',
+  /** Change to a key within the draft doc. */
+  VALUE_CHANGE = 'VALUE_CHANGE',
   /** The `SaveState` changed. */
   SAVE_STATE_CHANGE = 'SAVE_STATE_CHANGE',
   /** Data was saved to the DB. */
@@ -46,7 +49,7 @@ export enum EventType {
  * Number of seconds to wait before disabling db watchers once the browser tab
  * loses visibility.
  */
-const VISIBILITY_TIMEOUT = 30;
+const VISIBILITY_TIMEOUT = 30 * TIME_UNITS.second;
 
 export class DraftDocController extends EventListener {
   readonly projectId: string;
@@ -56,7 +59,6 @@ export class DraftDocController extends EventListener {
   private db: Firestore;
   private docRef: DocumentReference;
   private store: JsonTrieStore;
-  private storeUnsubscribe: UnsubscribeCallback;
 
   private pendingUpdates = new Map<string, any>();
   private dbUnsubscribe?: () => void;
@@ -89,9 +91,15 @@ export class DraftDocController extends EventListener {
       slug: this.slug,
       sys: {},
     });
-    this.storeUnsubscribe = this.store.subscribe('', (data) => {
-      this.dispatch(EventType.CHANGE, data);
+    this.store.on(JsonTrieStoreEventType.CHANGE, (data: CMSDoc) => {
+      this.dispatch(DraftDocEventType.CHANGE, data);
     });
+    this.store.on(
+      JsonTrieStoreEventType.VALUE_CHANGE,
+      (key: string, value: any) => {
+        this.dispatch(DraftDocEventType.VALUE_CHANGE, key, value);
+      }
+    );
     const collection = window.__ROOT_CTX.collections[collectionId];
     if (collection) {
       this.autolock = !!collection.autolock;
@@ -142,21 +150,21 @@ export class DraftDocController extends EventListener {
    * Adds a listener for data change events.
    */
   onChange(callback: (data: any) => void) {
-    return this.on(EventType.CHANGE, callback);
+    return this.on(DraftDocEventType.CHANGE, callback);
   }
 
   /**
    * Adds a listener for save state change events.
    */
   onSaveStateChange(callback: (saveState: SaveState) => void) {
-    return this.on(EventType.SAVE_STATE_CHANGE, callback);
+    return this.on(DraftDocEventType.SAVE_STATE_CHANGE, callback);
   }
 
   /**
    * Adds a listener for db write events.
    */
   onFlush(callback: () => void) {
-    return this.on(EventType.FLUSH, callback);
+    return this.on(DraftDocEventType.FLUSH, callback);
   }
 
   /**
@@ -233,7 +241,7 @@ export class DraftDocController extends EventListener {
       }, SAVE_DELAY);
     }
 
-    this.dispatch(EventType.SAVE_STATE_CHANGE, newSaveState);
+    this.dispatch(DraftDocEventType.SAVE_STATE_CHANGE, newSaveState);
   }
 
   removePublishingLock() {
@@ -280,7 +288,7 @@ export class DraftDocController extends EventListener {
       this.setSaveState(SaveState.SAVING);
       await updateDoc(this.docRef, updates);
       this.setSaveState(SaveState.SAVED);
-      this.dispatch(EventType.FLUSH);
+      this.dispatch(DraftDocEventType.FLUSH);
       logAction('doc.save', {
         metadata: {docId: this.docId},
         throttle: SAVE_ACTION_LOG_THROTTLE,
@@ -329,9 +337,6 @@ export class DraftDocController extends EventListener {
    */
   async dispose() {
     super.dispose();
-    if (this.storeUnsubscribe) {
-      this.storeUnsubscribe();
-    }
     this.stop();
   }
 }
@@ -401,7 +406,7 @@ export function DraftDocProvider(props: DraftDocProviderProps) {
       if (document.hidden || document.visibilityState !== 'visible') {
         visibilityTimeoutId = window.setTimeout(() => {
           controller.stop();
-        }, VISIBILITY_TIMEOUT * 1000);
+        }, VISIBILITY_TIMEOUT);
       } else {
         if (visibilityTimeoutId) {
           clearTimeout(visibilityTimeoutId);
