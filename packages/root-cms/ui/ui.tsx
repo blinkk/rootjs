@@ -26,8 +26,8 @@ import {ScheduleReleaseModal} from './components/ScheduleReleaseModal/ScheduleRe
 import {VersionHistoryModal} from './components/VersionHistoryModal/VersionHistoryModal.js';
 import {FirebaseContext, FirebaseContextObject} from './hooks/useFirebase.js';
 import {SiteSettingsProvider} from './hooks/useSiteSettings.js';
+import {SSEProvider} from './hooks/useSSE.js';
 import {UserPreferencesProvider} from './hooks/useUserPreferences.js';
-import {VirtualClipboardProvider} from './hooks/useVirtualClipboard.js';
 import {AIPage} from './pages/AIPage/AIPage.js';
 import {AssetsPage} from './pages/AssetsPage/AssetsPage.js';
 import {CollectionPage} from './pages/CollectionPage/CollectionPage.js';
@@ -104,7 +104,7 @@ function App() {
     >
       <NotificationsProvider>
         <FirebaseContext.Provider value={window.firebase}>
-          <VirtualClipboardProvider>
+          <SSEProvider>
             <SiteSettingsProvider>
               <UserPreferencesProvider>
                 <ModalsProvider
@@ -178,7 +178,7 @@ function App() {
                 </ModalsProvider>
               </UserPreferencesProvider>
             </SiteSettingsProvider>
-          </VirtualClipboardProvider>
+          </SSEProvider>
         </FirebaseContext.Provider>
       </NotificationsProvider>
     </MantineProvider>

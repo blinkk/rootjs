@@ -1,5 +1,23 @@
 # @blinkk/create-root
 
+## 2.2.1-alpha.6
+
+## 2.2.1-alpha.5
+
+## 2.2.1-alpha.4
+
+## 2.2.1-alpha.3
+
+## 2.2.1-alpha.2
+
+## 2.2.1-alpha.1
+
+## 2.2.1-alpha.0
+
+### Patch Changes
+
+- 4fed313: chore: bump major version to 2.2.0
+
 ## 2.1.1
 
 ## 2.0.10

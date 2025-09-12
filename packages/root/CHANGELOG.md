@@ -1,5 +1,33 @@
 # @blinkk/root
 
+## 2.2.1-alpha.6
+
+## 2.2.1-alpha.5
+
+## 2.2.1-alpha.4
+
+## 2.2.1-alpha.3
+
+## 2.2.1-alpha.2
+
+### Patch Changes
+
+- 9c29b32: fix: fix hmr reloads when ssr-only files change (#736)
+
+## 2.2.1-alpha.1
+
+### Patch Changes
+
+- chore: bump alpha version
+
+## 2.2.1-alpha.0
+
+### Patch Changes
+
+- 4fed313: chore: bump major version to 2.2.0
+- e0b3ca1: chore: auto-convert scss.includePaths to loadPaths with warning (#729)
+- e60fa2e: chore: update core deps (vite, express, sass, etc.) (#728)
+
 ## 2.1.1
 
 ### Patch Changes

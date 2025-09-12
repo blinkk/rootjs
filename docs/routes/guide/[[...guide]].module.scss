@@ -278,3 +278,7 @@ $guide-toc-width: 216px;
 .mainContentSectionBlock {
   margin-top: 20px;
 }
+
+.mainContentSectionBlock[data-type="CopyBlock"]:has(h2) {
+  margin-top: 30px;
+}

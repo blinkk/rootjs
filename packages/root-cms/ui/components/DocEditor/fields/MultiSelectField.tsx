@@ -1,40 +1,25 @@
 import {MultiSelect} from '@mantine/core';
-import {useCallback, useEffect, useState} from 'preact/hooks';
+import {useMemo} from 'preact/hooks';
 import * as schema from '../../../../core/schema.js';
+import {useDraftDocValue} from '../../../hooks/useDraftDoc.js';
 import {FieldProps} from './FieldProps.js';
 
 export function MultiSelectField(props: FieldProps) {
   const field = props.field as schema.MultiSelectField;
-  const [value, setValue] = useState<string[]>([]);
+  const [value, setValue] = useDraftDocValue<string[]>(props.deepKey, []);
 
-  const options = (field.options || []).map((option) => {
-    // Mantine requires both label and value to be set.
-    if (typeof option === 'string') {
-      return {label: option, value: option};
-    }
-    return {
-      label: option.label ?? option.value ?? '',
-      value: option.value ?? option.label ?? '',
-    };
-  });
-
-  const onChange = useCallback(
-    (newValue: string[]) => {
-      props.draft.updateKey(props.deepKey, newValue || []);
-      setValue(newValue);
-    },
-    [props.deepKey]
-  );
-
-  useEffect(() => {
-    const unsubscribe = props.draft.subscribe(
-      props.deepKey,
-      (newValue: string[]) => {
-        setValue(newValue || []);
+  const options = useMemo(() => {
+    return (field.options || []).map((option) => {
+      // Mantine requires both label and value to be set.
+      if (typeof option === 'string') {
+        return {label: option, value: option};
       }
-    );
-    return unsubscribe;
-  }, []);
+      return {
+        label: option.label ?? option.value ?? '',
+        value: option.value ?? option.label ?? '',
+      };
+    });
+  }, [field.options]);
 
   return (
     <div className="DocEditor__MultiSelectField">
@@ -47,7 +32,7 @@ export function MultiSelectField(props: FieldProps) {
         searchable
         creatable={field.creatable || false}
         getCreateLabel={(query: string) => `+ Add "${query}"`}
-        onChange={(newValue: string[]) => onChange(newValue)}
+        onChange={(newValue: string[]) => setValue(newValue)}
         // Due to issues with preact/compat, use a div for the dropdown el.
         dropdownComponent="div"
       />

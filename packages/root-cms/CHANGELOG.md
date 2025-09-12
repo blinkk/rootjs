@@ -1,5 +1,63 @@
 # @blinkk/root-cms
 
+## 2.2.1-alpha.6
+
+### Patch Changes
+
+- 6f70e5a: chore: reduce boilerplate in field state management (#744)
+  - @blinkk/root@2.2.1-alpha.6
+
+## 2.2.1-alpha.5
+
+### Patch Changes
+
+- 995623a: fix: fix race conditions with lexical editor (#743)
+  - @blinkk/root@2.2.1-alpha.5
+
+## 2.2.1-alpha.4
+
+### Patch Changes
+
+- fb91226: fix: fix realtime array preview changes (#742)
+  - @blinkk/root@2.2.1-alpha.4
+
+## 2.2.1-alpha.3
+
+### Patch Changes
+
+- 8db4242: fix: improve re-render perf with doc editor (#740)
+- a3b1cd1: feat: add preview text for richtext data (#737)
+- 04d8df7: fix: support preview image fallback arrays (#734)
+  - @blinkk/root@2.2.1-alpha.3
+
+## 2.2.1-alpha.2
+
+### Patch Changes
+
+- Updated dependencies [9c29b32]
+  - @blinkk/root@2.2.1-alpha.2
+
+## 2.2.1-alpha.1
+
+### Patch Changes
+
+- chore: bump alpha version
+- Updated dependencies
+  - @blinkk/root@2.2.1-alpha.1
+
+## 2.2.1-alpha.0
+
+### Patch Changes
+
+- 4fed313: chore: bump major version to 2.2.0
+- 606a848: feat: add server-sent events for schema changes (#732)
+- c1cd14f: chore: remove vite transformation from cms ui (#730)
+- e60fa2e: chore: update core deps (vite, express, sass, etc.) (#728)
+- Updated dependencies [4fed313]
+- Updated dependencies [e0b3ca1]
+- Updated dependencies [e60fa2e]
+  - @blinkk/root@2.2.1-alpha.0
+
 ## 2.1.1
 
 ### Patch Changes

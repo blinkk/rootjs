@@ -16,49 +16,56 @@ const GUIDE_LINKS = [
     label: 'Getting Started',
     href: '/guide',
     isActive: (ctx: RequestContext) => {
-      return ctx.currentPath === '/guide';
+      return ctx.currentPath === '/guide/';
     },
   },
   {
     label: 'Project Structure',
     href: '/guide/project-structure',
     isActive: (ctx: RequestContext) => {
-      return ctx.currentPath === '/guide/project-structure';
+      return ctx.currentPath === '/guide/project-structure/';
     },
   },
   {
     label: 'Routes',
     href: '/guide/routes',
     isActive: (ctx: RequestContext) => {
-      return ctx.currentPath === '/guide/routes';
+      return ctx.currentPath === '/guide/routes/';
     },
   },
   {
     label: 'Interactive Islands',
     href: '/guide/islands',
     isActive: (ctx: RequestContext) => {
-      return ctx.currentPath === '/guide/islands';
+      return ctx.currentPath === '/guide/islands/';
     },
   },
   {
     label: 'Localization',
     href: '/guide/localization',
     isActive: (ctx: RequestContext) => {
-      return ctx.currentPath === '/guide/localization';
+      return ctx.currentPath === '/guide/localization/';
     },
   },
   {
     label: 'Plugins',
     href: '/guide/plugins',
     isActive: (ctx: RequestContext) => {
-      return ctx.currentPath === '/guide/plugins';
+      return ctx.currentPath === '/guide/plugins/';
     },
   },
   {
     label: 'Config',
     href: '/guide/config',
     isActive: (ctx: RequestContext) => {
-      return ctx.currentPath === '/guide/config';
+      return ctx.currentPath === '/guide/config/';
+    },
+  },
+  {
+    label: 'v2 Migration Guide',
+    href: '/guide/migration/v2',
+    isActive: (ctx: RequestContext) => {
+      return ctx.currentPath === '/guide/migration/v2/';
     },
   },
 ];

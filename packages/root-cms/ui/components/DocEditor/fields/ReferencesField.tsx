@@ -1,29 +1,19 @@
+import './ReferencesField.css';
+
 import {ActionIcon, Button, Tooltip} from '@mantine/core';
 import {IconTrash} from '@tabler/icons-preact';
-import {useEffect, useState} from 'preact/hooks';
+import {useState} from 'preact/hooks';
 import * as schema from '../../../../core/schema.js';
+import {useDraftDoc, useDraftDocField} from '../../../hooks/useDraftDoc.js';
 import {DocPreviewCard} from '../../DocPreviewCard/DocPreviewCard.js';
 import {useDocSelectModal} from '../../DocSelectModal/DocSelectModal.js';
 import {FieldProps} from './FieldProps.js';
-import './ReferencesField.css';
+import {ReferenceFieldValue} from './ReferenceField.js';
 
 export function ReferencesField(props: FieldProps) {
   const field = props.field as schema.ReferencesField;
   const [refIds, setRefIds] = useState<string[]>([]);
-
-  useEffect(() => {
-    const unsubscribe = props.draft.subscribe(
-      props.deepKey,
-      (newValue?: Array<{id: string}>) => {
-        if (Array.isArray(newValue)) {
-          setRefIds(newValue.map((v) => v.id));
-        } else {
-          setRefIds([]);
-        }
-      }
-    );
-    return unsubscribe;
-  }, [props.deepKey]);
+  const draft = useDraftDoc().controller;
 
   function onChange(newIds: string[]) {
     if (newIds.length) {
@@ -31,12 +21,20 @@ export function ReferencesField(props: FieldProps) {
         const [collection, slug] = id.split('/');
         return {id, collection, slug};
       });
-      props.draft.updateKey(props.deepKey, refs);
+      draft.updateKey(props.deepKey, refs);
     } else {
-      props.draft.removeKey(props.deepKey);
+      draft.removeKey(props.deepKey);
     }
     setRefIds(newIds);
   }
+
+  useDraftDocField(props.deepKey, (newValue?: ReferenceFieldValue[]) => {
+    if (Array.isArray(newValue)) {
+      setRefIds(newValue.map((v) => v.id));
+    } else {
+      setRefIds([]);
+    }
+  });
 
   const docSelectModal = useDocSelectModal();
 

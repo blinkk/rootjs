@@ -1,5 +1,53 @@
 # @blinkk/rds
 
+## 2.2.1-alpha.6
+
+### Patch Changes
+
+- @blinkk/root@2.2.1-alpha.6
+
+## 2.2.1-alpha.5
+
+### Patch Changes
+
+- @blinkk/root@2.2.1-alpha.5
+
+## 2.2.1-alpha.4
+
+### Patch Changes
+
+- @blinkk/root@2.2.1-alpha.4
+
+## 2.2.1-alpha.3
+
+### Patch Changes
+
+- @blinkk/root@2.2.1-alpha.3
+
+## 2.2.1-alpha.2
+
+### Patch Changes
+
+- Updated dependencies [9c29b32]
+  - @blinkk/root@2.2.1-alpha.2
+
+## 2.2.1-alpha.1
+
+### Patch Changes
+
+- Updated dependencies
+  - @blinkk/root@2.2.1-alpha.1
+
+## 2.2.1-alpha.0
+
+### Patch Changes
+
+- 4fed313: chore: bump major version to 2.2.0
+- Updated dependencies [4fed313]
+- Updated dependencies [e0b3ca1]
+- Updated dependencies [e60fa2e]
+  - @blinkk/root@2.2.1-alpha.0
+
 ## 2.0.10
 
 ### Patch Changes

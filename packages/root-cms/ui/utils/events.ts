@@ -1,27 +1,38 @@
+import {autokey} from './rand.js';
+
 export type EventCallback = (...args: any[]) => void;
 
 export class EventListener {
-  private events = new Map<string, EventCallback[]>();
+  private events = new Map<string, Map<string, EventCallback>>();
 
   on(eventName: string, callback: EventCallback): () => void {
-    const callbacks = this.events.get(eventName) ?? [];
-    this.events.set(eventName, [...callbacks, callback]);
+    const id = autokey(6);
+    let eventCallbacks = this.events.get(eventName);
+    if (!eventCallbacks) {
+      eventCallbacks = new Map();
+      this.events.set(eventName, eventCallbacks);
+    }
+    eventCallbacks.set(id, callback);
     return () => {
-      this.off(eventName, callback);
+      this.off(eventName, id);
     };
   }
 
-  off(eventName: string, callback: EventCallback) {
-    const eventCallbacks = this.events.get(eventName) ?? [];
-    const index = eventCallbacks.indexOf(callback);
-    if (index >= 0) {
-      eventCallbacks.splice(index, 1);
+  private off(eventName: string, id: string) {
+    const eventCallbacks = this.events.get(eventName);
+    if (eventCallbacks) {
+      eventCallbacks.delete(id);
+      if (eventCallbacks.size === 0) {
+        this.events.delete(eventName);
+      }
     }
   }
 
   dispatch(eventName: string, ...args: any[]) {
-    const eventCallbacks = this.events.get(eventName) ?? [];
-    eventCallbacks.forEach((callback) => callback(...args));
+    const eventCallbacks = this.events.get(eventName);
+    if (eventCallbacks) {
+      eventCallbacks.forEach((callback) => callback(...args));
+    }
   }
 
   dispose() {

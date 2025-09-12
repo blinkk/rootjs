@@ -1,46 +1,43 @@
+import './ReferenceField.css';
+
 import {ActionIcon, Button, Image, Loader, Tooltip} from '@mantine/core';
 import {IconTrash} from '@tabler/icons-preact';
-import {useCallback, useEffect, useState} from 'preact/hooks';
+import {useEffect, useState} from 'preact/hooks';
 import * as schema from '../../../../core/schema.js';
+import {useDraftDocValue} from '../../../hooks/useDraftDoc.js';
 import {getDocFromCacheOrFetch} from '../../../utils/doc-cache.js';
+import {parseDocId} from '../../../utils/doc.js';
 import {notifyErrors} from '../../../utils/notifications.js';
 import {getNestedValue} from '../../../utils/objects.js';
 import {useDocPickerModal} from '../../DocPickerModal/DocPickerModal.js';
 import {FieldProps} from './FieldProps.js';
-import './ReferenceField.css';
+
+export interface ReferenceFieldValue {
+  id: string;
+  collection: string;
+  slug: string;
+}
 
 export function ReferenceField(props: FieldProps) {
   const field = props.field as schema.ReferenceField;
-  const [refId, setRefId] = useState('');
-
-  const onChange = useCallback(
-    (newRefId: string) => {
-      if (newRefId) {
-        const [collection, slug] = newRefId.split('/');
-        props.draft.updateKey(props.deepKey, {id: newRefId, collection, slug});
-      } else {
-        props.draft.removeKey(props.deepKey);
-      }
-      setRefId(newRefId);
-    },
-    [props.deepKey]
+  const [value, setValue] = useDraftDocValue<ReferenceFieldValue | null>(
+    props.deepKey
   );
+  const refId = value?.id || '';
 
-  useEffect(() => {
-    const unsubscribe = props.draft.subscribe(
-      props.deepKey,
-      (newValue?: {id: string}) => {
-        setRefId(newValue?.id || '');
-      }
-    );
-    return unsubscribe;
-  }, []);
+  function onChange(newRefId: string) {
+    if (newRefId) {
+      setValue(parseDocId(newRefId));
+    } else {
+      setValue(null);
+    }
+  }
 
   const docPickerModal = useDocPickerModal();
 
   function openDocPicker() {
     const initialCollection = refId
-      ? refId.split('/')[0]
+      ? parseDocId(refId).collection
       : field.initialCollection;
     docPickerModal.open({
       collections: field.collections,
@@ -52,10 +49,6 @@ export function ReferenceField(props: FieldProps) {
     });
   }
 
-  function removeDoc() {
-    onChange('');
-  }
-
   return (
     <div className="ReferenceField">
       {refId ? (
@@ -65,7 +58,7 @@ export function ReferenceField(props: FieldProps) {
             <Tooltip label="Remove">
               <ActionIcon
                 className="ReferenceField__remove__icon"
-                onClick={() => removeDoc()}
+                onClick={() => setValue(null)}
               >
                 <IconTrash size={16} />
               </ActionIcon>
@@ -132,7 +125,7 @@ ReferenceField.DocCard = (props: {doc: any}) => {
       </div>
     );
   }
-  const collection = docId.split('/')[0];
+  const collection = parseDocId(docId).collection;
   const fields = doc.fields || {};
   const rootCollection = window.__ROOT_CTX.collections[collection];
   if (!rootCollection) {

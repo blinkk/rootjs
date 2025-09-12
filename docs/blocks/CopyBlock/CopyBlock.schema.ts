@@ -12,7 +12,7 @@ export default schema.define({
       id: 'options',
       label: 'Module Options',
       help: 'Layout and display options.',
-      options: [{value: 'title:h1'}],
+      options: [],
       creatable: true,
     }),
     schema.string({

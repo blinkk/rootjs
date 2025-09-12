@@ -14,18 +14,23 @@ import {
   IconLayoutSidebarRightCollapse,
   IconLayoutSidebarRightExpand,
 } from '@tabler/icons-preact';
-import {useEffect, useRef, useState} from 'preact/hooks';
+import {useCallback, useEffect, useRef, useState} from 'preact/hooks';
 import {DocEditor} from '../../components/DocEditor/DocEditor.js';
 import {useEditJsonModal} from '../../components/EditJsonModal/EditJsonModal.js';
 import {
   SplitPanel,
   useSplitPanel,
 } from '../../components/SplitPanel/SplitPanel.js';
-import {UseDraftHook, useDraft} from '../../hooks/useDraft.js';
+import {
+  DraftDocProvider,
+  useDraftDocData,
+  useDraftDoc,
+} from '../../hooks/useDraftDoc.js';
 import {useLocalStorage} from '../../hooks/useLocalStorage.js';
 import {Layout} from '../../layout/Layout.js';
 import {joinClassNames} from '../../utils/classes.js';
 import {getDocPreviewPath, getDocServingPath} from '../../utils/doc-urls.js';
+import {CMSDoc} from '../../utils/doc.js';
 
 interface DocumentPageProps {
   collection: string;
@@ -57,8 +62,19 @@ export function DocumentPage(props: DocumentPageProps) {
   const collectionId = props.collection;
   const slug = props.slug;
   const docId = `${collectionId}/${slug}`;
+  return (
+    <DraftDocProvider docId={docId}>
+      <DocumentPageLayout {...props} />
+    </DraftDocProvider>
+  );
+}
+
+function DocumentPageLayout(props: DocumentPageProps) {
+  const collectionId = props.collection;
+  const slug = props.slug;
+  const docId = `${collectionId}/${slug}`;
   const collection = window.__ROOT_CTX.collections[collectionId];
-  const draft = useDraft(docId);
+  const draft = useDraftDoc();
   const [isPreviewVisible, setIsPreviewVisible] = useLocalStorage<boolean>(
     `root::DocumentPage::previewVisible::${collectionId}`,
     true
@@ -77,26 +93,28 @@ export function DocumentPage(props: DocumentPageProps) {
     }
   }
 
-  function saveDraft() {
-    draft.controller.flush();
-  }
+  const saveDraft = useCallback(() => {
+    if (draft.controller) {
+      draft.controller.flush();
+    }
+  }, [draft.controller]);
 
   const editJsonModal = useEditJsonModal();
 
-  const editJson = () => {
+  const editJson = useCallback(() => {
     editJsonModal.open({
-      data: draft.data?.fields || {},
+      data: draft.controller?.getData() || {},
       onSave: (newValue) => {
-        if (newValue && typeof newValue === 'object') {
+        if (draft.controller && newValue && typeof newValue === 'object') {
           draft.controller.updateKey('fields', newValue);
           draft.controller.flush();
         }
         editJsonModal.close();
       },
     });
-  };
+  }, [draft.controller]);
 
-  useHotkeys([['mod+S', () => saveDraft()]]);
+  useHotkeys([['mod+S', saveDraft]]);
 
   return (
     <Layout>
@@ -137,21 +155,21 @@ export function DocumentPage(props: DocumentPageProps) {
                 </ActionIcon>
               </Tooltip>
               {/* <Menu
-                className="DocumentPage__side__header__menu"
-                position="bottom"
-                control={
-                  <ActionIcon className="DocumentPage__side__header__menu__dots">
-                    <IconDotsVertical size={16} />
-                  </ActionIcon>
-                }
-              >
-                <Menu.Item
-                  icon={<IconBraces size={20} />}
-                  onClick={() => editJson()}
+                  className="DocumentPage__side__header__menu"
+                  position="bottom"
+                  control={
+                    <ActionIcon className="DocumentPage__side__header__menu__dots">
+                      <IconDotsVertical size={16} />
+                    </ActionIcon>
+                  }
                 >
-                  Edit JSON
-                </Menu.Item>
-              </Menu> */}
+                  <Menu.Item
+                    icon={<IconBraces size={20} />}
+                    onClick={() => editJson()}
+                  >
+                    Edit JSON
+                  </Menu.Item>
+                </Menu> */}
               <Tooltip
                 label={isPreviewVisible ? 'Hide preview' : 'Show preview'}
               >
@@ -184,12 +202,7 @@ export function DocumentPage(props: DocumentPageProps) {
               !isPreviewVisible && 'DocumentPage__side__editor--centered'
             )}
           >
-            <DocEditor
-              key={docId}
-              collection={collection}
-              docId={docId}
-              draft={draft}
-            />
+            <DocEditor docId={docId} />
           </div>
         </SplitPanel.Item>
         <SplitPanel.Item
@@ -200,7 +213,7 @@ export function DocumentPage(props: DocumentPageProps) {
           fluid
         >
           {isPreviewVisible && (
-            <DocumentPage.Preview key={docId} docId={docId} draft={draft} />
+            <DocumentPage.Preview key={docId} docId={docId} />
           )}
         </SplitPanel.Item>
       </SplitPanel>
@@ -210,7 +223,6 @@ export function DocumentPage(props: DocumentPageProps) {
 
 interface PreviewProps {
   docId: string;
-  draft: UseDraftHook;
 }
 
 type Device = 'mobile' | 'tablet' | 'desktop' | '';
@@ -232,6 +244,12 @@ function getLocaleLabel(locale: string) {
 }
 
 DocumentPage.Preview = (props: PreviewProps) => {
+  const draft = useDraftDoc();
+  // TODO(stevenle): add a loader here instead.
+  if (draft.loading) {
+    return null;
+  }
+
   const [collectionId, slug] = props.docId.split('/');
   const collections = window.__ROOT_CTX.collections;
   const rootCollection = collections[collectionId];
@@ -258,7 +276,8 @@ DocumentPage.Preview = (props: PreviewProps) => {
   });
   const [selectedLocale, setSelectedLocale] = useState('');
   const iframeRef = useRef<HTMLIFrameElement>(null);
-  const locales = props.draft.controller.getLocales();
+
+  const locales = draft.controller!.getLocales() || [];
   const splitPanel = useSplitPanel();
 
   const previewUrl = getPreviewUrl(collectionId, slug);
@@ -306,7 +325,7 @@ DocumentPage.Preview = (props: PreviewProps) => {
     }
     iframe.addEventListener('load', onIframeLoad);
 
-    const removeOnFlush = props.draft.controller.onFlush(() => {
+    const removeOnFlush = draft.controller?.onFlush(() => {
       reloadIframe();
     });
 
@@ -322,7 +341,7 @@ DocumentPage.Preview = (props: PreviewProps) => {
   }, [selectedLocale]);
 
   function toggleDevice(device: Device) {
-    setDevice((current) => {
+    setDevice((current: Device) => {
       if (current === device) {
         return '';
       }
@@ -332,7 +351,9 @@ DocumentPage.Preview = (props: PreviewProps) => {
 
   function onReloadClick() {
     // Save any unsaved changes and then reload the iframe.
-    props.draft.controller.flush().then(() => reloadIframe());
+    if (draft.controller) {
+      draft.controller.flush().then(() => reloadIframe());
+    }
   }
 
   function openNewTab() {
