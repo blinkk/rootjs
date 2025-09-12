@@ -1,5 +1,12 @@
 # @blinkk/root-cms
 
+## 2.2.1-alpha.5
+
+### Patch Changes
+
+- 995623a: fix: fix race conditions with lexical editor (#743)
+  - @blinkk/root@2.2.1-alpha.5
+
 ## 2.2.1-alpha.4
 
 ### Patch Changes
