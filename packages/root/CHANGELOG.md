@@ -1,5 +1,7 @@
 # @blinkk/root
 
+## 2.2.1-alpha.6
+
 ## 2.2.1-alpha.5
 
 ## 2.2.1-alpha.4
