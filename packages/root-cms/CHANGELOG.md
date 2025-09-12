@@ -1,5 +1,12 @@
 # @blinkk/root-cms
 
+## 2.2.1-alpha.6
+
+### Patch Changes
+
+- 6f70e5a: chore: reduce boilerplate in field state management (#744)
+  - @blinkk/root@2.2.1-alpha.6
+
 ## 2.2.1-alpha.5
 
 ### Patch Changes
