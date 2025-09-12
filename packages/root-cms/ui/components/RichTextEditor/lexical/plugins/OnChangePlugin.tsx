@@ -18,9 +18,11 @@ export function OnChangePlugin(props: OnChangePluginProps) {
   const isUpdatingRef = useRef(false);
 
   useEffect(() => {
+    // When props.value changes, convert the RichTextData to lexical data and
+    // write to the active editor.
     const time = props.value?.time || 0;
     if (time > timeSavedRef.current) {
-      timeSavedRef.current = props.value?.time || 0;
+      timeSavedRef.current = time;
       editor.update(() => {
         isUpdatingRef.current = true;
         convertToLexical(props.value);
@@ -34,8 +36,8 @@ export function OnChangePlugin(props: OnChangePluginProps) {
       isUpdatingRef.current = false;
       return;
     }
-    // Read the current lexical data, convert it to RichTextData, and then
-    // call the onChange() callback.
+    // When the user enters new content, read the current lexical data, convert
+    // it to RichTextData, and then call the onChange() callback.
     editorState.read(() => {
       const richTextData = convertToRichTextData();
       timeSavedRef.current = richTextData?.time || 0;
