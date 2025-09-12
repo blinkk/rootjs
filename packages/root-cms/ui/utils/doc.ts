@@ -240,7 +240,13 @@ function updatePublishedDocDataInBatch(
     'Versions',
     String(Date.now())
   );
-  const versionData: any = {id: docId, collection: collectionId, slug, fields: data.fields || {}, sys};
+  const versionData: any = {
+    id: docId,
+    collection: collectionId,
+    slug,
+    fields: data.fields || {},
+    sys,
+  };
   if (versionTags?.length) {
     versionData.tags = versionTags;
   }
@@ -911,4 +917,14 @@ function randString(len: number): string {
     result.push(chars.charAt(rand));
   }
   return result.join('');
+}
+
+export function parseDocId(docId: string) {
+  // TODO(stevenle): normalize improperly formatted docIds like 'Foo/bar/baz'.
+  const [collection, slug] = docId.split('/');
+  return {
+    id: docId,
+    collection: collection,
+    slug: slug,
+  };
 }

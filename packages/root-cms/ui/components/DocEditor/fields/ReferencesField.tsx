@@ -2,9 +2,9 @@ import './ReferencesField.css';
 
 import {ActionIcon, Button, Tooltip} from '@mantine/core';
 import {IconTrash} from '@tabler/icons-preact';
-import {useState} from 'preact/hooks';
 import * as schema from '../../../../core/schema.js';
-import {useDraftDoc, useDraftDocField} from '../../../hooks/useDraftDoc.js';
+import {useDraftDocValue} from '../../../hooks/useDraftDoc.js';
+import {parseDocId} from '../../../utils/doc.js';
 import {DocPreviewCard} from '../../DocPreviewCard/DocPreviewCard.js';
 import {useDocSelectModal} from '../../DocSelectModal/DocSelectModal.js';
 import {FieldProps} from './FieldProps.js';
@@ -12,29 +12,20 @@ import {ReferenceFieldValue} from './ReferenceField.js';
 
 export function ReferencesField(props: FieldProps) {
   const field = props.field as schema.ReferencesField;
-  const [refIds, setRefIds] = useState<string[]>([]);
-  const draft = useDraftDoc().controller;
+  const [value, setValue] = useDraftDocValue<ReferenceFieldValue[]>(
+    props.deepKey,
+    []
+  );
+  const refIds = value.map((ref) => ref.id);
 
-  function onChange(newIds: string[]) {
-    if (newIds.length) {
-      const refs = newIds.map((id) => {
-        const [collection, slug] = id.split('/');
-        return {id, collection, slug};
-      });
-      draft.updateKey(props.deepKey, refs);
+  function onChange(newRefIds: string[]) {
+    if (newRefIds.length) {
+      const refs = newRefIds.map((refId) => parseDocId(refId));
+      setValue(refs);
     } else {
-      draft.removeKey(props.deepKey);
+      setValue([]);
     }
-    setRefIds(newIds);
   }
-
-  useDraftDocField(props.deepKey, (newValue?: ReferenceFieldValue[]) => {
-    if (Array.isArray(newValue)) {
-      setRefIds(newValue.map((v) => v.id));
-    } else {
-      setRefIds([]);
-    }
-  });
 
   const docSelectModal = useDocSelectModal();
 
@@ -44,28 +35,25 @@ export function ReferencesField(props: FieldProps) {
       initialCollection: field.initialCollection,
       selectedDocIds: refIds,
       onChange: (docId: string, selected: boolean) => {
-        setRefIds((old) => {
-          const next = [...old];
-          if (selected) {
-            if (!next.includes(docId)) {
-              next.push(docId);
-            }
-          } else {
-            const i = next.indexOf(docId);
-            if (i > -1) {
-              next.splice(i, 1);
-            }
+        const newRefIds = [...refIds];
+        if (selected) {
+          if (!newRefIds.includes(docId)) {
+            newRefIds.push(docId);
           }
-          onChange(next);
-          return next;
-        });
+        } else {
+          const i = newRefIds.indexOf(docId);
+          if (i > -1) {
+            newRefIds.splice(i, 1);
+          }
+        }
+        onChange(newRefIds);
       },
     });
   }
 
   function removeDoc(id: string) {
-    const next = refIds.filter((x) => x !== id);
-    onChange(next);
+    const newRefIds = refIds.filter((x) => x !== id);
+    onChange(newRefIds);
   }
 
   return (

@@ -375,7 +375,7 @@ DocEditor.Field = (props: FieldProps) => {
         ) : field.type === 'datetime' ? (
           <DateTimeField {...props} />
         ) : field.type === 'file' ? (
-          <FileField {...props} />
+          <FileField {...props} field={props.field as schema.FileField} />
         ) : field.type === 'image' ? (
           <ImageField {...props} />
         ) : field.type === 'multiselect' ? (
@@ -601,6 +601,8 @@ interface ArrayFieldValue {
   _new?: string[];
 }
 
+type ArrayItemValue = Record<string, any>;
+
 interface ArrayUpdate {
   type: 'update';
   newValue: ArrayFieldValue;
@@ -609,7 +611,7 @@ interface ArrayUpdate {
 interface ArrayUpdateItem {
   type: 'updateItem';
   index: number;
-  newValue: ArrayFieldValue;
+  newValue: ArrayItemValue;
   draft: DraftDocController;
   deepKey: string;
 }
@@ -639,6 +641,7 @@ interface ArrayDuplicate {
   index: number;
   draft: DraftDocController;
   deepKey: string;
+  value: ArrayItemValue;
 }
 
 interface ArrayMoveUp {
@@ -770,9 +773,8 @@ function arrayReducer(state: ArrayFieldValue, action: ArrayAction) {
     case 'duplicate': {
       const data = state ?? {};
       const order = [...(data._array || [])];
-      const ogKey = order[action.index];
-      const clonedValue = structuredClone(data[ogKey]);
       const newKey = autokey();
+      const clonedValue = structuredClone(action.value);
       order.splice(action.index + 1, 0, newKey);
       action.draft.updateKeys({
         [`${action.deepKey}._array`]: order,
@@ -941,6 +943,13 @@ DocEditor.ArrayField = (props: FieldProps) => {
     }
   }, [value]);
 
+  /** Returns the array item's field value from the draft controller. */
+  const getItemValue = (index: number) => {
+    const key = order[index];
+    const itemKey = `${props.deepKey}.${key}`;
+    return draft.getValue(itemKey) || {};
+  };
+
   const add = () => {
     dispatch({type: 'add', draft: draft, deepKey: props.deepKey});
   };
@@ -989,6 +998,7 @@ DocEditor.ArrayField = (props: FieldProps) => {
       draft: draft,
       deepKey: props.deepKey,
       index: index,
+      value: getItemValue(index),
     });
   };
 
@@ -1030,25 +1040,24 @@ DocEditor.ArrayField = (props: FieldProps) => {
 
   /** Copies the item data to the virtual clipboard. */
   const copyToVirtualClipboard = (index: number) => {
-    const key = order[index];
-    const item = value[key];
-    virtualClipboard.set(item);
+    const data = getItemValue(index);
+    virtualClipboard.set(data);
   };
 
   const editJsonModal = useEditJsonModal();
   const aiEditModal = useAiEditModal();
 
   const editJson = (index: number) => {
-    const key = order[index];
+    const data = getItemValue(index);
     editJsonModal.open({
-      data: value[key],
+      data: data,
       onSave: (newValue) => {
-        console.log('editJson, onSave():', newValue);
+        console.log('[edit json] onSave()', newValue);
         dispatch({
           type: 'updateItem',
           draft,
           index,
-          newValue: updateRichTextDataTime(newValue) as ArrayFieldValue,
+          newValue: updateRichTextDataTime(newValue),
           deepKey: props.deepKey,
         });
         editJsonModal.close();
@@ -1057,16 +1066,16 @@ DocEditor.ArrayField = (props: FieldProps) => {
   };
 
   const aiEdit = (index: number) => {
-    const key = order[index];
+    const data = getItemValue(index);
     aiEditModal.open({
-      data: value[key],
+      data: data,
       onSave: (newValue) => {
-        console.log('aiEdit, onSave():', newValue);
+        console.log('[ai edit] onSave()', newValue);
         dispatch({
           type: 'updateItem',
           draft,
           index,
-          newValue: updateRichTextDataTime(newValue) as ArrayFieldValue,
+          newValue: updateRichTextDataTime(newValue),
           deepKey: props.deepKey,
         });
         aiEditModal.close();
