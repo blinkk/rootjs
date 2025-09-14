@@ -199,13 +199,14 @@ export class DraftDocController extends EventListener {
    */
   async updateKeys(updates: Record<string, any>) {
     for (const key in updates) {
-      if (key === null || key === undefined) {
+      const val = updates[key];
+      if (val === null || val === undefined) {
         // Firestore doesn't support `undefined`, so use deleteField() instead.
         // NOTE(stevenle): this doesn't currently handle nested `undefined`
         // values.
         this.pendingUpdates.set(key, deleteField());
       } else {
-        this.pendingUpdates.set(key, updates[key]);
+        this.pendingUpdates.set(key, val);
       }
     }
     this.store.update(updates);
