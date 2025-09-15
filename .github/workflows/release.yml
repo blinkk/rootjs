@@ -28,6 +28,10 @@ jobs:
         uses: pnpm/action-setup@v4
         with:
           version: '8.9.0'
+          run_install: false
+
+      - name: Install dependencies
+        run: pnpm install
 
       - name: Get pnpm store directory
         shell: bash
