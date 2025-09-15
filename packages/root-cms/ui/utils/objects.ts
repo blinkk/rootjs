@@ -46,6 +46,7 @@ function resolveSegment(data: any, segment: string): any {
     return data;
   }
 
+  // eslint-disable-next-line no-useless-escape
   const matcher = /([^\[\]]+)|\[(\d+)\]/g;
   let current = data;
 
