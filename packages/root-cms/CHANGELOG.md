@@ -1,5 +1,12 @@
 # @blinkk/root-cms
 
+## 2.2.1-alpha.7
+
+### Patch Changes
+
+- 55cf8c2: fix: replace `undefined` with `deleteField()` (#745)
+  - @blinkk/root@2.2.1-alpha.7
+
 ## 2.2.1-alpha.6
 
 ### Patch Changes
