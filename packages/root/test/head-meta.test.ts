@@ -23,15 +23,15 @@ test('inject meta tags into <head>', async () => {
   const html = await fs.readFile(index, 'utf-8');
   expect(html).toMatchInlineSnapshot(`
     "<!doctype html>
-    <html lang=\\"en-GB\\" dir=\\"ltr\\">
+    <html lang="en-GB" dir="ltr">
     <head>
-    <meta charset=\\"utf-8\\" />
+    <meta charset="utf-8" />
     <title>Hello world</title>
-    <meta content=\\"website\\" property=\\"og:type\\" />
-    <meta content=\\"summary_large_image\\" name=\\"twitter:card\\" />
-    <meta content=\\"Hello world\\" property=\\"og:title\\" />
+    <meta content="website" property="og:type" />
+    <meta content="summary_large_image" name="twitter:card" />
+    <meta content="Hello world" property="og:title" />
     </head>
-    <body class=\\"body\\">
+    <body class="body">
     <h1>Hello world</h1>
     </body>
     </html>

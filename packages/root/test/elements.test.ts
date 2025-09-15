@@ -29,12 +29,12 @@ test('add custom element to a page', async () => {
     "<!doctype html>
     <html>
     <head>
-    <meta charset=\\"utf-8\\" />
-    <script type=\\"module\\" src=\\"/assets/root-counter.min.js\\"></script>
-    <script type=\\"module\\" src=\\"/assets/root-label.min.js\\"></script>
+    <meta charset="utf-8" />
+    <script type="module" src="/assets/root-counter.min.js"></script>
+    <script type="module" src="/assets/root-label.min.js"></script>
     </head>
     <body>
-    <h1>Counter</h1><root-counter start=\\"3\\"></root-counter>
+    <h1>Counter</h1><root-counter start="3"></root-counter>
     </body>
     </html>
     "
@@ -51,10 +51,10 @@ test('use custom elements from another directory', async () => {
     "<!doctype html>
     <html>
     <head>
-    <meta charset=\\"utf-8\\" />
-    <script type=\\"module\\" src=\\"/assets/ds-foo.min.js\\"></script>
+    <meta charset="utf-8" />
+    <script type="module" src="/assets/ds-foo.min.js"></script>
     </head>
-    <body><ds-foo name=\\"Alice\\"></ds-foo></body>
+    <body><ds-foo name="Alice"></ds-foo></body>
     </html>
     "
   `);
@@ -72,12 +72,12 @@ test('exclude elements matching a certain pattern', async () => {
     "<!doctype html>
     <html>
     <head>
-    <meta charset=\\"utf-8\\" />
-    <script type=\\"module\\" src=\\"/assets/root-counter.min.js\\"></script>
-    <script type=\\"module\\" src=\\"/assets/root-label.min.js\\"></script>
+    <meta charset="utf-8" />
+    <script type="module" src="/assets/root-counter.min.js"></script>
+    <script type="module" src="/assets/root-label.min.js"></script>
     </head>
     <body>
-    <h1>Counter</h1><root-counter start=\\"3\\"></root-counter>
+    <h1>Counter</h1><root-counter start="3"></root-counter>
     <h1>The following element deps should not be auto-injected:</h1><root-exclude></root-exclude>
     </body>
     </html>

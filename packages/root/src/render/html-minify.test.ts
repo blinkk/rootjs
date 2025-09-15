@@ -20,11 +20,11 @@ test('minify html', async () => {
   const output = await htmlMinify(input);
   expect(output).toMatchInlineSnapshot(`
     "<!doctype html>
-    <html lang=\\"en\\">
-    <meta charset=\\"utf-8\\">
+    <html lang="en">
+    <meta charset="utf-8">
     <title>🔬 Test</title>
     <body>
-    <h1 class=\\"\\">Hello world</h1>
+    <h1 class="">Hello world</h1>
     <p>Lorem ipsum dolor sit amet.</p>
     </body>
     </html>
