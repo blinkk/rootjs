@@ -1,5 +1,11 @@
 # @blinkk/create-root
 
+## 2.2.1
+
+### Patch Changes
+
+- fe2ef212: chore: bump major version to 2.2.0
+
 ## 2.2.1-alpha.7
 
 ## 2.2.1-alpha.6
