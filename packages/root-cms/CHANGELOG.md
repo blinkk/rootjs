@@ -1,5 +1,29 @@
 # @blinkk/root-cms
 
+## 2.2.1
+
+### Patch Changes
+
+- 27cf0921: chore: bump alpha version
+- fe2ef212: chore: bump major version to 2.2.0
+- 56ad0f50: fix: improve re-render perf with doc editor (#740)
+- 257fdbd3: chore: reduce boilerplate in field state management (#744)
+- a3b1cd1c: feat: add preview text for richtext data (#737)
+- 04d8df7a: fix: support preview image fallback arrays (#734)
+- eb7594dd: feat: add server-sent events for schema changes (#732)
+- dcca9af4: fix: replace `undefined` with `deleteField()` (#745)
+- 68f05250: fix: fix race conditions with lexical editor (#743)
+- 38b93e21: chore: remove vite transformation from cms ui (#730)
+- 830636e0: feat: add support for array values in preview text (#749)
+- 6ea64f8e: chore: update core deps (vite, express, sass, etc.) (#728)
+- 796870b3: fix: fix realtime array preview changes (#742)
+- Updated dependencies [27cf0921]
+- Updated dependencies [fe2ef212]
+- Updated dependencies [b0c69084]
+- Updated dependencies [6ea64f8e]
+- Updated dependencies [bf3cbaf1]
+  - @blinkk/root@2.2.1
+
 ## 2.2.1-alpha.7
 
 ### Patch Changes
