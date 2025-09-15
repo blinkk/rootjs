@@ -342,7 +342,7 @@ export type Collection = SchemaWithTypes & {
     /** The field that provides the document title. */
     title?: string;
     /** The field that provides the document image. */
-    image?: string;
+    image?: string | string[];
     /** A fallback image to display when the document image field is empty. */
     defaultImage?: {
       src: string;
