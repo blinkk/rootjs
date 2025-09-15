@@ -28,17 +28,69 @@ export function getNestedValue(data: any, key: string | string[]): any {
     }
     return undefined;
   }
-  if (!key.includes('.')) {
-    return (data || {})[key];
-  }
-  const keys = key.split('.');
+
+  const segments = key.split('.');
   let current = data;
-  for (const segment of keys) {
+  for (const segment of segments) {
     if (current === undefined || current === null) {
       return undefined;
     }
-    current = current[segment];
+
+    current = resolveSegment(current, segment);
   }
+  return current;
+}
+
+function resolveSegment(data: any, segment: string): any {
+  if (!segment) {
+    return data;
+  }
+
+  const matcher = /([^\[\]]+)|\[(\d+)\]/g;
+  let current = data;
+
+  let match: RegExpExecArray | null;
+  while ((match = matcher.exec(segment))) {
+    if (current === undefined || current === null) {
+      return undefined;
+    }
+
+    const property = match[1];
+    const index = match[2];
+    if (property !== undefined) {
+      current = current[property];
+      continue;
+    }
+
+    if (index === undefined) {
+      return undefined;
+    }
+    const arrayIndex = Number(index);
+    if (Array.isArray(current)) {
+      current = current[arrayIndex];
+      continue;
+    }
+
+    if (isObject(current) && Array.isArray(current._array)) {
+      const key = current._array[arrayIndex];
+      if (key === undefined) {
+        return undefined;
+      }
+      current = current[key];
+      continue;
+    }
+
+    if (
+      isObject(current) &&
+      Object.prototype.hasOwnProperty.call(current, String(arrayIndex))
+    ) {
+      current = current[String(arrayIndex)];
+      continue;
+    }
+
+    return undefined;
+  }
+
   return current;
 }
 
