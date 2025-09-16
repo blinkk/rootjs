@@ -340,7 +340,7 @@ export type Collection = SchemaWithTypes & {
    */
   preview?: {
     /** The field that provides the document title. */
-    title?: string;
+    title?: string | string[];
     /** The field that provides the document image. */
     image?: string | string[];
     /** A fallback image to display when the document image field is empty. */
