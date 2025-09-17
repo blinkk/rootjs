@@ -21,3 +21,4 @@ export {RequestContext, useRequestContext} from './hooks/useRequestContext.js';
 export {useTranslations} from './hooks/useTranslations.js';
 export * from './plugin.js';
 export * from './types.js';
+export {replaceParams} from '../render/router.js';
