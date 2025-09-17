@@ -1,12 +1,13 @@
 import {Button, Loader, Table} from '@mantine/core';
 import {ContextModalProps, useModals} from '@mantine/modals';
 import {showNotification} from '@mantine/notifications';
-import {IconArrowUpRight, IconHistory} from '@tabler/icons-preact';
+import {IconArrowUpRight, IconCopy, IconHistory} from '@tabler/icons-preact';
 import {useEffect, useState} from 'preact/hooks';
 import {useModalTheme} from '../../hooks/useModalTheme.js';
 import {Version, cmsListVersions, cmsRestoreVersion} from '../../utils/doc.js';
 import {Heading} from '../Heading/Heading.js';
 import {Text} from '../Text/Text.js';
+import {useCopyDocModal} from '../CopyDocModal/CopyDocModal.js';
 import './VersionHistoryModal.css';
 
 const MODAL_ID = 'VersionHistoryModal';
@@ -38,6 +39,7 @@ export function VersionHistoryModal(
   const docId = props.docId;
   const [loading, setLoading] = useState(true);
   const [versions, setVersions] = useState<Version[]>([]);
+  const copyDocModal = useCopyDocModal({fromDocId: docId});
 
   const dateFormat = new Intl.DateTimeFormat('en-US', {
     year: 'numeric',
@@ -66,6 +68,18 @@ export function VersionHistoryModal(
     if (props.onRestore) {
       props.onRestore({version});
     }
+  }
+
+  function copyToNewDoc(version: Version) {
+    const modifiedAt = version.sys?.modifiedAt?.toDate();
+    let label = `${docId}@${version._versionId}`;
+    if (modifiedAt) {
+      label = `${docId} @ ${dateFormat.format(modifiedAt)}`;
+    }
+    copyDocModal.open({
+      fields: version.fields || {},
+      fromLabel: label,
+    });
   }
 
   function getCompareUrl(version: Version) {
@@ -127,6 +141,15 @@ export function VersionHistoryModal(
                       onClick={() => restore(version)}
                     >
                       restore
+                    </Button>
+                    <Button
+                      variant="default"
+                      size="xs"
+                      compact
+                      onClick={() => copyToNewDoc(version)}
+                      leftIcon={<IconCopy size={12} />}
+                    >
+                      copy to doc
                     </Button>
                     <Button
                       className="VersionHistoryModal__versions__buttons__compare"
