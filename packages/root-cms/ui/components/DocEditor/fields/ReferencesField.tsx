@@ -1,10 +1,12 @@
 import './ReferencesField.css';
 
+import {DragDropContext, Droppable, Draggable, DropResult} from '@hello-pangea/dnd';
 import {ActionIcon, Button, Tooltip} from '@mantine/core';
-import {IconTrash} from '@tabler/icons-preact';
+import {IconGripVertical, IconTrash} from '@tabler/icons-preact';
 import {useState} from 'preact/hooks';
 import * as schema from '../../../../core/schema.js';
 import {useDraftDoc, useDraftDocField} from '../../../hooks/useDraftDoc.js';
+import {joinClassNames} from '../../../utils/classes.js';
 import {DocPreviewCard} from '../../DocPreviewCard/DocPreviewCard.js';
 import {useDocSelectModal} from '../../DocSelectModal/DocSelectModal.js';
 import {FieldProps} from './FieldProps.js';
@@ -71,27 +73,66 @@ export function ReferencesField(props: FieldProps) {
   return (
     <div className="ReferencesField">
       {refIds.length > 0 ? (
-        <div className="ReferencesField__refs">
-          {refIds.map((id) => (
-            <div key={id} className="ReferencesField__card">
-              <DocPreviewCard
-                className="ReferencesField__card__preview"
-                docId={id}
-                variant="compact"
-              />
-              <div className="ReferencesField__card__controls">
-                <Tooltip label="Remove">
-                  <ActionIcon
-                    className="ReferencesField__card__controls__remove"
-                    onClick={() => removeDoc(id)}
-                  >
-                    <IconTrash size={16} />
-                  </ActionIcon>
-                </Tooltip>
+        <DragDropContext
+          onDragEnd={(result: DropResult) => {
+            const {destination, source} = result;
+            if (!destination || destination.index === source.index) {
+              return;
+            }
+            const next = [...refIds];
+            const [removed] = next.splice(source.index, 1);
+            next.splice(destination.index, 0, removed);
+            onChange(next);
+          }}
+        >
+          <Droppable droppableId="ReferencesField__droppable" direction="vertical">
+            {(provided) => (
+              <div
+                ref={provided.innerRef}
+                {...provided.droppableProps}
+                className="ReferencesField__refs"
+              >
+                {refIds.map((id, index) => (
+                  <Draggable key={id} draggableId={id} index={index}>
+                    {(provided, snapshot) => (
+                      <div
+                        ref={provided.innerRef}
+                        {...provided.draggableProps}
+                        className={joinClassNames(
+                          'ReferencesField__card',
+                          snapshot.isDragging && 'ReferencesField__card--dragging'
+                        )}
+                      >
+                        <div
+                          className="ReferencesField__card__handle"
+                          {...provided.dragHandleProps}
+                        >
+                          <IconGripVertical size={16} stroke={'1.5'} />
+                        </div>
+                        <DocPreviewCard
+                          className="ReferencesField__card__preview"
+                          docId={id}
+                          variant="compact"
+                        />
+                        <div className="ReferencesField__card__controls">
+                          <Tooltip label="Remove">
+                            <ActionIcon
+                              className="ReferencesField__card__controls__remove"
+                              onClick={() => removeDoc(id)}
+                            >
+                              <IconTrash size={16} />
+                            </ActionIcon>
+                          </Tooltip>
+                        </div>
+                      </div>
+                    )}
+                  </Draggable>
+                ))}
+                {provided.placeholder}
               </div>
-            </div>
-          ))}
-        </div>
+            )}
+          </Droppable>
+        </DragDropContext>
       ) : (
         <div className="ReferencesField__none">None selected</div>
       )}
