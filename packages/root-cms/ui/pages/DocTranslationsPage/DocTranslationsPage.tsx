@@ -44,7 +44,17 @@ export function DocTranslationsPage(props: DocTranslationsPageProps) {
   const docId = `${collection}/${slug}`;
 
   const i18nConfig = window.__ROOT_CTX.rootConfig.i18n || {};
-  const i18nLocales = i18nConfig.locales || ['en'];
+  const [i18nLocales, setI18nLocales] = useState<string[]>(() => {
+    // Use the locales from the i18n config by default.
+    const locales = i18nConfig.locales || [];
+    const urlParams = new URLSearchParams(window.location.search);
+    // Allow using the `locale` param to filter the locales shown in the table.
+    const localeParams = urlParams.getAll('locale');
+    if (localeParams.length > 0) {
+      return locales.filter((locale) => localeParams.includes(locale));
+    }
+    return locales;
+  });
 
   async function init() {
     try {
@@ -112,6 +122,21 @@ export function DocTranslationsPage(props: DocTranslationsPageProps) {
     setSaving(false);
   }
 
+  function updateSelectedLocales(locale: string) {
+    const newUrl = new URL(window.location.href);
+    const currentLocales = newUrl.searchParams.getAll('locale');
+    if (currentLocales.includes(locale)) {
+      // If locale is already selected, clear all locale params and show all locales.
+      newUrl.searchParams.delete('locale');
+      setI18nLocales(i18nConfig.locales || []);
+    } else {
+      // Show only the selected locale.
+      newUrl.searchParams.append('locale', locale);
+      setI18nLocales(() => [locale]);
+    }
+    window.history.replaceState({}, '', newUrl.toString());
+  }
+
   return (
     <Layout>
       <div className="DocTranslationsPage">
@@ -177,6 +202,7 @@ export function DocTranslationsPage(props: DocTranslationsPageProps) {
               translationsMap={translationsMap}
               onChange={onChange}
               changesMap={changesMap}
+              onSelectLocale={(locale) => updateSelectedLocales(locale)}
             />
           )}
         </div>
@@ -221,6 +247,7 @@ interface DocTranslationsPageTableProps {
   sourceStrings: string[];
   translationsMap: TranslationsMap;
   onChange: (source: string, locale: string, translation: string) => void;
+  onSelectLocale: (locale: string) => void;
   changesMap: Record<string, Translation>;
 }
 
@@ -249,9 +276,17 @@ DocTranslationsPage.Table = (props: DocTranslationsPageTableProps) => {
       <table className="DocTranslationsPage__Table">
         <thead>
           <tr>
-            <th>source</th>
+            <th className="DocTranslationsPage__Table__sourceCellHeader">
+              source
+            </th>
             {props.locales.map((locale) => (
-              <th key={locale}>{locale}</th>
+              <th
+                onClick={() => props.onSelectLocale(locale)}
+                title={`Filter by locale: ${locale}`}
+                style={{cursor: 'pointer'}}
+              >
+                {locale}
+              </th>
             ))}
           </tr>
         </thead>
