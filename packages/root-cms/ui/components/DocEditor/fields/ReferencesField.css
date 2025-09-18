@@ -10,11 +10,37 @@
 .ReferencesField__card {
   display: flex;
   gap: 8px;
+  align-items: stretch;
+  padding: 8px 0;
   border-bottom: 1px solid var(--color-border);
+}
+
+.ReferencesField__card__preview {
+  padding: 0 !important;
 }
 
 .ReferencesField__card:first-child {
   border-top: 1px solid var(--color-border);
+}
+
+.ReferencesField__card--dragging {
+  background-color: #f8f9fa;
+  border: 1px solid #dedede;
+  border-radius: 4px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05), rgba(0, 0, 0, 0.05) 0 10px 15px -5px,
+    rgba(0, 0, 0, 0.04) 0 7px 7px -5px;
+}
+
+.ReferencesField__card__handle {
+  display: flex;
+  align-items: center;
+  padding: 0 8px;
+  color: var(--color-text-subtle);
+  cursor: grab;
+}
+
+.ReferencesField__card__handle:active {
+  cursor: grabbing;
 }
 
 .ReferencesField__card__preview {
@@ -24,4 +50,5 @@
 .ReferencesField__card__controls {
   display: flex;
   align-items: flex-start;
+  padding: 0 8px;
 }
