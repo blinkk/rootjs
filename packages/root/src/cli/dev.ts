@@ -1,5 +1,7 @@
+import fs from 'node:fs';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
+import type {Server as NodeHttpServer} from 'node:http';
 
 import cookieParser from 'cookie-parser';
 import {default as express} from 'express';
@@ -41,19 +43,126 @@ export async function dev(rootProjectDir?: string, options?: DevOptions) {
   const defaultPort = parseInt(process.env.PORT || '4007');
   const host = options?.host || 'localhost';
   const port = await findOpenPort(defaultPort, defaultPort + 10);
-  const server = await createDevServer({rootDir, port});
-  const rootConfig: RootConfig = server.get('rootConfig');
-  const basePath = rootConfig.base || '';
-  const homePagePath = rootConfig.server?.homePagePath || basePath;
-  console.log();
-  console.log(`${dim('┃')} project:  ${rootDir}`);
-  console.log(`${dim('┃')} server:   http://${host}:${port}${homePagePath}`);
-  if (testCmsEnabled(rootConfig)) {
-    console.log(`${dim('┃')} cms:      http://${host}:${port}/cms/`);
+  const rootConfigPath = path.resolve(rootDir, 'root.config.ts');
+
+  let currentServer: Server | undefined;
+  let httpServer: NodeHttpServer | undefined;
+  let configWatcher: fs.FSWatcher | undefined;
+  let pendingRestart = false;
+  let restartTimer: NodeJS.Timeout | undefined;
+  let isRestarting = false;
+
+  const rootConfig = await startServer();
+  logServerInfo(rootConfig);
+  ensureRootConfigWatcher();
+
+  function logServerInfo(activeConfig: RootConfig) {
+    const basePath = activeConfig.base || '';
+    const homePagePath = activeConfig.server?.homePagePath || basePath;
+    console.log();
+    console.log(`${dim('┃')} project:  ${rootDir}`);
+    console.log(`${dim('┃')} server:   http://${host}:${port}${homePagePath}`);
+    if (testCmsEnabled(activeConfig)) {
+      console.log(`${dim('┃')} cms:      http://${host}:${port}/cms/`);
+    }
+    console.log(`${dim('┃')} mode:     development`);
+    console.log();
   }
-  console.log(`${dim('┃')} mode:     development`);
-  console.log();
-  server.listen(port, host);
+
+  async function startServer(): Promise<RootConfig> {
+    const server = await createDevServer({rootDir, port});
+    const activeConfig: RootConfig = server.get('rootConfig');
+    const listener = server.listen(port, host) as unknown as NodeHttpServer;
+    currentServer = server;
+    httpServer = listener;
+    return activeConfig;
+  }
+
+  async function stopCurrentServer() {
+    if (!currentServer && !httpServer) {
+      return;
+    }
+    const serverToStop = currentServer;
+    const httpServerToClose = httpServer;
+    currentServer = undefined;
+    httpServer = undefined;
+
+    if (httpServerToClose) {
+      await new Promise<void>((resolve, reject) => {
+        httpServerToClose.close((err) => (err ? reject(err) : resolve()));
+      });
+    }
+
+    if (serverToStop) {
+      const viteServer = serverToStop.get('viteServer') as ViteDevServer | undefined;
+      if (viteServer) {
+        await viteServer.close();
+      }
+    }
+  }
+
+  function ensureRootConfigWatcher() {
+    if (configWatcher) {
+      return;
+    }
+    try {
+      configWatcher = fs.watch(rootDir, (eventType, filename) => {
+        if (!filename) {
+          return;
+        }
+        const changedPath = path.resolve(rootDir, filename.toString());
+        if (changedPath !== rootConfigPath) {
+          return;
+        }
+        if (eventType === 'change' || eventType === 'rename') {
+          scheduleRestart();
+        }
+      });
+      configWatcher.on('error', (err) => {
+        console.error('root.config.ts watcher error:', err);
+      });
+    } catch (err) {
+      console.error('Failed to watch root.config.ts for changes.');
+      console.error(String((err as Error).stack || err));
+    }
+  }
+
+  function scheduleRestart() {
+    pendingRestart = true;
+    if (restartTimer) {
+      return;
+    }
+    restartTimer = setTimeout(() => {
+      restartTimer = undefined;
+      void attemptRestart();
+    }, 100);
+  }
+
+  async function attemptRestart() {
+    if (!pendingRestart) {
+      return;
+    }
+    if (isRestarting) {
+      scheduleRestart();
+      return;
+    }
+    isRestarting = true;
+    pendingRestart = false;
+    console.log(`${dim('┃')} ${rootConfigPath} updated. restarting dev server...`);
+    try {
+      await stopCurrentServer();
+      const activeConfig = await startServer();
+      logServerInfo(activeConfig);
+    } catch (err) {
+      console.error('Failed to restart dev server after root.config.ts change.');
+      console.error(String((err as Error).stack || err));
+    } finally {
+      isRestarting = false;
+      if (pendingRestart) {
+        scheduleRestart();
+      }
+    }
+  }
 }
 
 export async function createDevServer(options?: {
