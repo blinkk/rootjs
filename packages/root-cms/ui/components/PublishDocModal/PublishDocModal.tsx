@@ -4,7 +4,11 @@ import {showNotification} from '@mantine/notifications';
 import {useState, useRef} from 'preact/hooks';
 import {useModalTheme} from '../../hooks/useModalTheme.js';
 import {joinClassNames} from '../../utils/classes.js';
-import {cmsPublishDoc, cmsScheduleDoc} from '../../utils/doc.js';
+import {
+  cmsGetDocDiffSummary,
+  cmsPublishDoc,
+  cmsScheduleDoc,
+} from '../../utils/doc.js';
 import {getLocalISOString} from '../../utils/time.js';
 import {DocDiffViewer} from '../DocDiffViewer/DocDiffViewer.js';
 import {Text} from '../Text/Text.js';
@@ -45,6 +49,7 @@ export function PublishDocModal(
   const dateTimeRef = useRef<HTMLInputElement>(null);
   const modals = useModals();
   const modalTheme = useModalTheme();
+  const experiments = window.__ROOT_CTX.experiments || {};
 
   const buttonLabel = publishType === 'scheduled' ? 'Schedule' : 'Publish';
 
@@ -228,8 +233,76 @@ export function PublishDocModal(
           </div>
         </form>
 
+        {experiments.ai && <AiSummary docId={props.docId} />}
         <ShowChanges docId={props.docId} />
       </div>
+    </div>
+  );
+}
+
+function AiSummary(props: {docId: string}) {
+  const docId = props.docId;
+  const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>(
+    'idle'
+  );
+  const [summary, setSummary] = useState('');
+  const [error, setError] = useState('');
+  const hasRequestedRef = useRef(false);
+
+  async function loadSummary() {
+    setStatus('loading');
+    try {
+      const res = await cmsGetDocDiffSummary(docId);
+      setSummary(res);
+      setStatus('success');
+    } catch (err) {
+      console.error(err);
+      setError(err instanceof Error ? err.message : 'Unknown error');
+      setStatus('error');
+    }
+  }
+
+  function handleToggle() {
+    if (!hasRequestedRef.current) {
+      hasRequestedRef.current = true;
+      loadSummary();
+    }
+  }
+
+  let content = null;
+  if (status === 'idle' || status === 'loading') {
+    content = <Loader />;
+  } else if (status === 'error') {
+    content = (
+      <Text size="body-sm" color="gray">
+        Failed to load AI summary.
+        {error && (
+          <>
+            <br />
+            {error}
+          </>
+        )}
+      </Text>
+    );
+  } else if (!summary) {
+    content = (
+      <Text size="body-sm" color="gray">
+        No AI summary available for this draft yet.
+      </Text>
+    );
+  } else {
+    content = (
+      <Text as="pre" size="body-sm">
+        {summary}
+      </Text>
+    );
+  }
+
+  return (
+    <div className="PublishDocModal__ShowChanges">
+      <Accordion iconPosition="right" onChange={() => handleToggle()}>
+        <Accordion.Item label="AI summary of changes">{content}</Accordion.Item>
+      </Accordion>
     </div>
   );
 }
@@ -245,7 +318,7 @@ function ShowChanges(props: {docId: string}) {
   return (
     <div className="PublishDocModal__ShowChanges">
       <Accordion iconPosition="right" onChange={() => toggle()}>
-        <Accordion.Item label="Show changes">
+        <Accordion.Item label="Show changes (JSON)">
           {toggled ? (
             <DocDiffViewer
               left={{docId, versionId: 'published'}}

@@ -904,6 +904,39 @@ export function unmarshalArray(arrObject: ArrayObject): any[] {
   return arr;
 }
 
+export async function cmsGetDocDiffSummary(docId: string): Promise<string> {
+  const res = await window.fetch('/cms/api/ai.doc_diff_summary', {
+    method: 'POST',
+    headers: {'content-type': 'application/json'},
+    body: JSON.stringify({docId}),
+  });
+
+  const responseText = await res.text();
+  let resData: any = null;
+  try {
+    resData = JSON.parse(responseText);
+  } catch (err) {
+    // Ignore JSON parsing errors and fall back to the response text below.
+  }
+
+  if (!res.ok || resData?.success === false) {
+    const errorMessage =
+      (resData && (resData.error || resData.message)) || responseText;
+    throw new Error(errorMessage || 'Failed to fetch AI summary');
+  }
+
+  if (typeof resData?.summary === 'string') {
+    return resData.summary;
+  }
+  if (typeof resData?.data?.summary === 'string') {
+    return resData.data.summary;
+  }
+  if (!resData && responseText) {
+    return responseText;
+  }
+  return '';
+}
+
 function isObject(data: any): boolean {
   return typeof data === 'object' && !Array.isArray(data) && data !== null;
 }
