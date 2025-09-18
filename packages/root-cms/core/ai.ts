@@ -63,6 +63,7 @@ export async function summarizeDiff(
     'You are an assistant that summarizes changes made to CMS documents stored as JSON.',
     'Provide a concise description of the most important updates using short bullet points.',
     'If there are no meaningful differences, respond with "No significant changes."',
+    'Focus on just the content changes, ignore insignificant changes to richtext blocks and structure, such as updates to the richtext block\'s "timestamp" and "version" fields.',
   ].join('\n');
 
   const diffPrompt = [

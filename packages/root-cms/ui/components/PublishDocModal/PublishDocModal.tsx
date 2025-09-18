@@ -242,9 +242,9 @@ export function PublishDocModal(
 
 function AiSummary(props: {docId: string}) {
   const docId = props.docId;
-  const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>(
-    'idle'
-  );
+  const [status, setStatus] = useState<
+    'idle' | 'loading' | 'success' | 'error'
+  >('idle');
   const [summary, setSummary] = useState('');
   const [error, setError] = useState('');
   const hasRequestedRef = useRef(false);
@@ -274,7 +274,11 @@ function AiSummary(props: {docId: string}) {
     content = <Loader />;
   } else if (status === 'error') {
     content = (
-      <Text size="body-sm" color="gray">
+      <Text
+        className="PublishDocModal__ShowChanges__aiSummary"
+        size="body-sm"
+        color="gray"
+      >
         Failed to load AI summary.
         {error && (
           <>
@@ -286,13 +290,21 @@ function AiSummary(props: {docId: string}) {
     );
   } else if (!summary) {
     content = (
-      <Text size="body-sm" color="gray">
+      <Text
+        className="PublishDocModal__ShowChanges__aiSummary"
+        size="body-sm"
+        color="gray"
+      >
         No AI summary available for this draft yet.
       </Text>
     );
   } else {
     content = (
-      <Text as="pre" size="body-sm">
+      <Text
+        className="PublishDocModal__ShowChanges__aiSummary"
+        as="pre"
+        size="body-sm"
+      >
         {summary}
       </Text>
     );
@@ -301,7 +313,9 @@ function AiSummary(props: {docId: string}) {
   return (
     <div className="PublishDocModal__ShowChanges">
       <Accordion iconPosition="right" onChange={() => handleToggle()}>
-        <Accordion.Item label="AI summary of changes">{content}</Accordion.Item>
+        <Accordion.Item label="Summarize changes (AI)">
+          {content}
+        </Accordion.Item>
       </Accordion>
     </div>
   );

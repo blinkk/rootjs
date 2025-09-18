@@ -88,6 +88,10 @@
   margin-top: 24px;
 }
 
+.PublishDocModal__ShowChanges + .PublishDocModal__ShowChanges {
+  margin-top: 12px;
+}
+
 .PublishDocModal__ShowChanges .mantine-Accordion-control[aria-expanded="true"] {
   background: #fff;
 }
@@ -99,4 +103,11 @@
 
 .PublishDocModal__ShowChanges .mantine-Accordion-contentInner {
   padding: 0;
+}
+
+.PublishDocModal__ShowChanges__aiSummary {
+  padding: 12px 16px 24px;
+  white-space: pre-wrap;
+  font-family: var(--font-family-mono);
+  color: black;
 }
