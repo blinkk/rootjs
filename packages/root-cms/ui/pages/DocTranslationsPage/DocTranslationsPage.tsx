@@ -122,7 +122,8 @@ export function DocTranslationsPage(props: DocTranslationsPageProps) {
     setSaving(false);
   }
 
-  function updateSelectedLocales(locale: string) {
+  /** Toggles the locale in the URL and updates the state accordingly. */
+  function toggleLocale(locale: string) {
     const newUrl = new URL(window.location.href);
     const currentLocales = newUrl.searchParams.getAll('locale');
     if (currentLocales.includes(locale)) {
@@ -202,7 +203,7 @@ export function DocTranslationsPage(props: DocTranslationsPageProps) {
               translationsMap={translationsMap}
               onChange={onChange}
               changesMap={changesMap}
-              onSelectLocale={(locale) => updateSelectedLocales(locale)}
+              onSelectLocale={(locale) => toggleLocale(locale)}
             />
           )}
         </div>
@@ -277,15 +278,30 @@ DocTranslationsPage.Table = (props: DocTranslationsPageTableProps) => {
         <thead>
           <tr>
             <th className="DocTranslationsPage__Table__sourceCellHeader">
-              source
+              <div className="DocTranslationsPage__Table__headerLabel">
+                source
+              </div>
             </th>
             {props.locales.map((locale) => (
               <th
+                key={locale}
                 onClick={() => props.onSelectLocale(locale)}
-                title={`Filter by locale: ${locale}`}
-                style={{cursor: 'pointer'}}
+                className="DocTranslationsPage__Table__localeHeader"
               >
-                {locale}
+                <Tooltip
+                  className="DocTranslationsPage__Table__headerTooltip"
+                  placement="start"
+                  withArrow
+                  label={
+                    props.locales.length === 1 && props.locales[0] === locale
+                      ? 'Show all locales'
+                      : `Show only ${locale}`
+                  }
+                >
+                  <div className="DocTranslationsPage__Table__headerLabel">
+                    {locale}
+                  </div>
+                </Tooltip>
               </th>
             ))}
           </tr>

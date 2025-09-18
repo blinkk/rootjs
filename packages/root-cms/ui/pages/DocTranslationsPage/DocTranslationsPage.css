@@ -77,7 +77,6 @@
 .DocTranslationsPage__Table th {
   border: 1px solid var(--color-border);
   background: #F8F9FA;
-  padding: 4px 10px;
   text-align: left;
 }
 
@@ -96,6 +95,22 @@
 .DocTranslationsPage__Table__sourceCellHeader {
   position: sticky;
   left: 0;
+  z-index: 1;
+}
+
+.DocTranslationsPage__Table__headerLabel {
+  padding: 4px 10px;
+  display: block;
+  width: 100%;
+}
+
+.DocTranslationsPage__Table__localeHeader {
+  cursor: pointer;
+  position: relative;
+}
+
+.DocTranslationsPage__Table__headerTooltip {
+  width: 100%;
 }
 
 .DocTranslationsPage__Table__sourceCellWrap {
