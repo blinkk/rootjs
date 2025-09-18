@@ -271,7 +271,11 @@ function AiSummary(props: {docId: string}) {
 
   let content = null;
   if (status === 'idle' || status === 'loading') {
-    content = <Loader />;
+    content = (
+      <div className="PublishDocModal__ShowChanges__loading">
+        <Loader size="md" color="gray" />
+      </div>
+    );
   } else if (status === 'error') {
     content = (
       <Text
@@ -340,7 +344,9 @@ function ShowChanges(props: {docId: string}) {
               showExpandButton={true}
             />
           ) : (
-            <Loader />
+            <div className="PublishDocModal__ShowChanges__loading">
+              <Loader size="md" color="gray" />
+            </div>
           )}
         </Accordion.Item>
       </Accordion>

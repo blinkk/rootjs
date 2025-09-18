@@ -92,6 +92,10 @@
   margin-top: 12px;
 }
 
+.PublishDocModal__ShowChanges__loading {
+  padding: 12px 16px 24px;
+}
+
 .PublishDocModal__ShowChanges .mantine-Accordion-control[aria-expanded="true"] {
   background: #fff;
 }
