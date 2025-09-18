@@ -8,6 +8,7 @@ import {
 } from '@tabler/icons-preact';
 import {useEffect, useMemo, useRef, useState} from 'preact/hooks';
 import {Heading} from '../../components/Heading/Heading.js';
+import {useArrayParam} from '../../hooks/useQueryParam.js';
 import {Layout} from '../../layout/Layout.js';
 import {joinClassNames} from '../../utils/classes.js';
 import {
@@ -44,7 +45,8 @@ export function DocTranslationsPage(props: DocTranslationsPageProps) {
   const docId = `${collection}/${slug}`;
 
   const i18nConfig = window.__ROOT_CTX.rootConfig.i18n || {};
-  const i18nLocales = i18nConfig.locales || ['en'];
+  const defaultLocales = i18nConfig.locales || [];
+  const [i18nLocales, setI18nLocales] = useArrayParam('locale', defaultLocales);
 
   async function init() {
     try {
@@ -112,6 +114,17 @@ export function DocTranslationsPage(props: DocTranslationsPageProps) {
     setSaving(false);
   }
 
+  /** Toggles the locale in the URL and updates the state accordingly. */
+  function toggleLocale(locale: string) {
+    if (i18nLocales.length === defaultLocales.length) {
+      // Show only the selected locale.
+      setI18nLocales([locale]);
+    } else {
+      // Show all locales.
+      setI18nLocales(defaultLocales);
+    }
+  }
+
   return (
     <Layout>
       <div className="DocTranslationsPage">
@@ -177,6 +190,7 @@ export function DocTranslationsPage(props: DocTranslationsPageProps) {
               translationsMap={translationsMap}
               onChange={onChange}
               changesMap={changesMap}
+              onSelectLocale={(locale) => toggleLocale(locale)}
             />
           )}
         </div>
@@ -221,10 +235,13 @@ interface DocTranslationsPageTableProps {
   sourceStrings: string[];
   translationsMap: TranslationsMap;
   onChange: (source: string, locale: string, translation: string) => void;
+  onSelectLocale: (locale: string) => void;
   changesMap: Record<string, Translation>;
 }
 
 DocTranslationsPage.Table = (props: DocTranslationsPageTableProps) => {
+  const i18nConfig = window.__ROOT_CTX.rootConfig.i18n || {};
+  const allLocales = i18nConfig.locales || [];
   const sourceToTranslationsMap = useMemo(() => {
     const results: {[source: string]: Record<string, string>} = {};
     Object.values(props.translationsMap).forEach(
@@ -249,9 +266,32 @@ DocTranslationsPage.Table = (props: DocTranslationsPageTableProps) => {
       <table className="DocTranslationsPage__Table">
         <thead>
           <tr>
-            <th>source</th>
+            <th className="DocTranslationsPage__Table__sourceCellHeader">
+              <div className="DocTranslationsPage__Table__headerLabel">
+                source
+              </div>
+            </th>
             {props.locales.map((locale) => (
-              <th key={locale}>{locale}</th>
+              <th
+                key={locale}
+                onClick={() => props.onSelectLocale(locale)}
+                className="DocTranslationsPage__Table__localeHeader"
+              >
+                <Tooltip
+                  className="DocTranslationsPage__Table__headerTooltip"
+                  placement="start"
+                  withArrow
+                  label={
+                    props.locales.length === allLocales.length
+                      ? `Show only ${locale}`
+                      : 'Show all locales'
+                  }
+                >
+                  <div className="DocTranslationsPage__Table__headerLabel">
+                    {locale}
+                  </div>
+                </Tooltip>
+              </th>
             ))}
           </tr>
         </thead>
