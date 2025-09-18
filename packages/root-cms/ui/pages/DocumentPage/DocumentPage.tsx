@@ -21,16 +21,12 @@ import {
   SplitPanel,
   useSplitPanel,
 } from '../../components/SplitPanel/SplitPanel.js';
-import {
-  DraftDocProvider,
-  useDraftDocData,
-  useDraftDoc,
-} from '../../hooks/useDraftDoc.js';
+import {DraftDocProvider, useDraftDoc} from '../../hooks/useDraftDoc.js';
 import {useLocalStorage} from '../../hooks/useLocalStorage.js';
+import {useStringParam} from '../../hooks/useQueryParam.js';
 import {Layout} from '../../layout/Layout.js';
 import {joinClassNames} from '../../utils/classes.js';
 import {getDocPreviewPath, getDocServingPath} from '../../utils/doc-urls.js';
-import {CMSDoc} from '../../utils/doc.js';
 
 interface DocumentPageProps {
   collection: string;
@@ -46,6 +42,13 @@ function getPreviewUrl(
   const basePreviewPath = getDocPreviewPath({collectionId, slug});
   const searchParams = new URLSearchParams(window.location.search);
   searchParams.set('preview', 'true');
+  // Avoid passing through the ?locale= param (set by the CMS to preserve the
+  // preview frame locale).
+  // NOTE(stevenle): if we ever need to pass through the locale param, switch to
+  // using hash params for the internal CMS params that shouldn't pass through.
+  if (searchParams.has('locale')) {
+    searchParams.delete('locale');
+  }
   const query = `${searchParams.toString()}${window.location.hash}`;
   if (selectedLocale) {
     const localizedPreviewPath = getDocPreviewPath({
@@ -274,7 +277,7 @@ DocumentPage.Preview = (props: PreviewProps) => {
     '--iframe-height': '100%',
     '--iframe-scale': '1',
   });
-  const [selectedLocale, setSelectedLocale] = useState('');
+  const [selectedLocale, setSelectedLocale] = useStringParam('locale', '');
   const iframeRef = useRef<HTMLIFrameElement>(null);
 
   const locales = draft.controller!.getLocales() || [];
