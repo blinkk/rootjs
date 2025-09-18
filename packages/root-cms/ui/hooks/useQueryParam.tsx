@@ -1,11 +1,11 @@
 import {useState, useEffect, useCallback} from 'preact/hooks';
 
 interface UseQueryParamOptions<T> {
-  /** Whether to replace history entry instead of pushing new one */
+  /** Whether to replace history entry instead of pushing new one. */
   replace?: boolean;
-  /** Custom serialization function for complex values */
+  /** Custom serialization function for complex values. */
   serialize?: (value: T) => string;
-  /** Custom deserialization function for complex values */
+  /** Custom deserialization function for complex values. */
   deserialize?: (value: string) => T;
 }
 
@@ -28,8 +28,6 @@ export function useQueryParam<T = string>(
 
   // Get initial value from URL.
   const getInitialValue = useCallback((): T => {
-    if (typeof window === 'undefined') return defaultValue;
-
     const urlParams = new URLSearchParams(window.location.search);
     const paramValue = urlParams.get(paramName);
 
@@ -38,7 +36,7 @@ export function useQueryParam<T = string>(
 
   const [value, setValue] = useState(getInitialValue);
 
-  // Update state when URL changes (e.g., browser back/forward)
+  // Update state when URL changes (e.g., browser back/forward).
   useEffect(() => {
     const handlePopState = () => {
       const urlParams = new URLSearchParams(window.location.search);
@@ -52,18 +50,16 @@ export function useQueryParam<T = string>(
     return () => window.removeEventListener('popstate', handlePopState);
   }, [paramName, defaultValue, deserialize]);
 
-  // Function to update both state and URL
+  // Function to update both state and URL.
   const updateParam = useCallback(
     (newValue: T) => {
       setValue(newValue);
-
-      if (typeof window === 'undefined') return;
 
       const url = new URL(window.location.href);
       const serializedValue = serialize(newValue);
 
       if (serializedValue === String(defaultValue) || serializedValue === '') {
-        // Remove parameter if it's the default value or empty
+        // Remove parameter if it's the default value or empty.
         url.searchParams.delete(paramName);
       } else {
         url.searchParams.set(paramName, serializedValue);
