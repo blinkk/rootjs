@@ -5,7 +5,7 @@ import {useState} from 'preact/hooks';
 import {route} from 'preact-router';
 import {isSlugValid, normalizeSlug} from '../../../shared/slug.js';
 import {useModalTheme} from '../../hooks/useModalTheme.js';
-import {cmsCopyDoc} from '../../utils/doc.js';
+import {cmsCopyDoc, cmsCreateDoc} from '../../utils/doc.js';
 import {SlugInput} from '../SlugInput/SlugInput.js';
 import {Text} from '../Text/Text.js';
 import './CopyDocModal.css';
@@ -15,16 +15,19 @@ const MODAL_ID = 'CopyDocModal';
 export interface CopyDocModalProps {
   [key: string]: unknown;
   fromDocId: string;
+  fields?: Record<string, any>;
+  fromLabel?: string;
+  onSuccess?: (newDocId: string) => void;
 }
 
 export function useCopyDocModal(props: CopyDocModalProps) {
   const modals = useModals();
   const modalTheme = useModalTheme();
   return {
-    open: () => {
+    open: (overrideProps?: Partial<CopyDocModalProps>) => {
       modals.openContextModal(MODAL_ID, {
         ...modalTheme,
-        innerProps: props,
+        innerProps: {...props, ...overrideProps},
       });
     },
   };
@@ -40,6 +43,7 @@ export function CopyDocModal(modalProps: ContextModalProps<CopyDocModalProps>) {
 
   const fromDocId = props.fromDocId;
   const fromCollectionId = fromDocId.split('/')[0];
+  const sourceLabel = props.fromLabel || fromDocId;
 
   async function onSubmit(e: Event) {
     e.preventDefault();
@@ -61,13 +65,23 @@ export function CopyDocModal(modalProps: ContextModalProps<CopyDocModalProps>) {
 
     const toDocId = `${toCollectionId}/${cleanSlug}`;
     try {
-      await cmsCopyDoc(fromDocId, toDocId, {overwrite: confirmOverwrite});
+      if (props.fields) {
+        await cmsCreateDoc(toDocId, {
+          fields: props.fields,
+          overwrite: confirmOverwrite,
+        });
+      } else {
+        await cmsCopyDoc(fromDocId, toDocId, {overwrite: confirmOverwrite});
+      }
       context.closeModal(id);
       showNotification({
         title: 'Copied!',
-        message: `Succesfully copied ${fromDocId} to ${toDocId}.`,
+        message: `Succesfully copied ${sourceLabel} to ${toDocId}.`,
         autoClose: 5000,
       });
+      if (props.onSuccess) {
+        props.onSuccess(toDocId);
+      }
     } catch (err) {
       const errMsg = String(err);
       setError(errMsg);
@@ -93,7 +107,7 @@ export function CopyDocModal(modalProps: ContextModalProps<CopyDocModalProps>) {
             From:
           </Text>
           <Text className="CopyDocModal__from__value" size="body-sm">
-            <code>{props.fromDocId}</code>
+            <code>{sourceLabel}</code>
           </Text>
         </div>
 

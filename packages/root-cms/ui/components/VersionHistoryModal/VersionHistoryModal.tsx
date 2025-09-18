@@ -1,10 +1,11 @@
 import {Button, Loader, Table} from '@mantine/core';
 import {ContextModalProps, useModals} from '@mantine/modals';
 import {showNotification} from '@mantine/notifications';
-import {IconArrowUpRight, IconHistory} from '@tabler/icons-preact';
+import {IconArrowUpRight, IconCopy, IconHistory} from '@tabler/icons-preact';
 import {useEffect, useState} from 'preact/hooks';
 import {useModalTheme} from '../../hooks/useModalTheme.js';
 import {Version, cmsListVersions, cmsRestoreVersion} from '../../utils/doc.js';
+import {useCopyDocModal} from '../CopyDocModal/CopyDocModal.js';
 import {Heading} from '../Heading/Heading.js';
 import {Text} from '../Text/Text.js';
 import './VersionHistoryModal.css';
@@ -34,10 +35,11 @@ export function useVersionHistoryModal(props: VersionHistoryModalProps) {
 export function VersionHistoryModal(
   modalProps: ContextModalProps<VersionHistoryModalProps>
 ) {
-  const {innerProps: props} = modalProps;
+  const {innerProps: props, context, id} = modalProps;
   const docId = props.docId;
   const [loading, setLoading] = useState(true);
   const [versions, setVersions] = useState<Version[]>([]);
+  const copyDocModal = useCopyDocModal({fromDocId: docId});
 
   const dateFormat = new Intl.DateTimeFormat('en-US', {
     year: 'numeric',
@@ -66,6 +68,22 @@ export function VersionHistoryModal(
     if (props.onRestore) {
       props.onRestore({version});
     }
+  }
+
+  function copyToNewDoc(version: Version) {
+    let label = `${docId}@${version._versionId}`;
+    const modifiedAt = version.sys?.modifiedAt?.toDate();
+    if (modifiedAt) {
+      const isoDate = formatIsoDate(modifiedAt);
+      label = `${docId}@${isoDate}`;
+    }
+    copyDocModal.open({
+      fields: version.fields || {},
+      fromLabel: label,
+      onSuccess: () => {
+        context.closeModal(id);
+      },
+    });
   }
 
   function getCompareUrl(version: Version) {
@@ -129,6 +147,15 @@ export function VersionHistoryModal(
                       restore
                     </Button>
                     <Button
+                      variant="default"
+                      size="xs"
+                      compact
+                      onClick={() => copyToNewDoc(version)}
+                      leftIcon={<IconCopy size={12} />}
+                    >
+                      copy to doc
+                    </Button>
+                    <Button
                       className="VersionHistoryModal__versions__buttons__compare"
                       component="a"
                       variant="default"
@@ -155,6 +182,15 @@ function toUrlParam(docId: string, versionId: string): string {
   return encodeURIComponent(`${docId}@${versionId}`)
     .replaceAll('%2F', '/')
     .replaceAll('%40', '@');
+}
+
+function formatIsoDate(date: Date): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  const hours = String(date.getHours()).padStart(2, '0');
+  const minutes = String(date.getMinutes()).padStart(2, '0');
+  return `${year}-${month}-${day}T${hours}:${minutes}`;
 }
 
 VersionHistoryModal.id = MODAL_ID;
