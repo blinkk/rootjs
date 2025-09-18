@@ -27,6 +27,72 @@ export type RootAiModel =
 
 const DEFAULT_MODEL: RootAiModel = 'vertexai/gemini-2.5-flash';
 
+export interface SummarizeDiffOptions {
+  before: Record<string, any> | null;
+  after: Record<string, any> | null;
+}
+
+/**
+ * Generates a natural language summary of the differences between two JSON
+ * payloads.
+ */
+export async function summarizeDiff(
+  cmsClient: RootCMSClient,
+  options: SummarizeDiffOptions
+): Promise<string> {
+  const cmsPluginOptions = cmsClient.cmsPlugin.getConfig();
+  const firebaseConfig = cmsPluginOptions.firebaseConfig;
+  const model: RootAiModel =
+    (typeof cmsPluginOptions.experiments?.ai === 'object'
+      ? cmsPluginOptions.experiments.ai.model
+      : undefined) || DEFAULT_MODEL;
+
+  const ai = genkit({
+    plugins: [
+      vertexAI({
+        projectId: firebaseConfig.projectId,
+        location: firebaseConfig.location || 'us-central1',
+      }),
+    ],
+  });
+
+  const beforeJson = JSON.stringify(options.before ?? null, null, 2);
+  const afterJson = JSON.stringify(options.after ?? null, null, 2);
+
+  const systemPrompt = [
+    'You are an assistant that summarizes changes made to CMS documents stored as JSON.',
+    'Provide a concise description of the most important updates using short bullet points.',
+    'If there are no meaningful differences, respond with "No significant changes."',
+  ].join('\n');
+
+  const diffPrompt = [
+    'Previous version JSON:',
+    '```json',
+    beforeJson,
+    '```',
+    '',
+    'Updated version JSON:',
+    '```json',
+    afterJson,
+    '```',
+    '',
+    'Summarize the differences between the two payloads.',
+  ].join('\n');
+
+  const res = await ai.generate({
+    model,
+    messages: [
+      {
+        role: 'system',
+        content: [{text: systemPrompt}],
+      },
+    ],
+    prompt: [{text: diffPrompt}],
+  });
+
+  return res.text?.trim() || '';
+}
+
 export class Chat {
   chatClient: ChatClient;
   cmsClient: RootCMSClient;

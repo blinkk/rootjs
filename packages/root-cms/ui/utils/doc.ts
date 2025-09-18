@@ -905,10 +905,28 @@ export function unmarshalArray(arrObject: ArrayObject): any[] {
 }
 
 export async function cmsGetDocDiffSummary(docId: string): Promise<string> {
-  const res = await window.fetch('/cms/api/ai.doc_diff_summary', {
+  const [publishedDoc, draftDoc] = await Promise.all([
+    cmsReadDocVersion(docId, 'published'),
+    cmsReadDocVersion(docId, 'draft'),
+  ]);
+
+  if (!draftDoc && !publishedDoc) {
+    return '';
+  }
+
+  const payload = {
+    before: publishedDoc
+      ? unmarshalData(publishedDoc.fields || {}, {removeArrayKey: true})
+      : null,
+    after: draftDoc
+      ? unmarshalData(draftDoc.fields || {}, {removeArrayKey: true})
+      : null,
+  };
+
+  const res = await window.fetch('/cms/api/ai.diff', {
     method: 'POST',
     headers: {'content-type': 'application/json'},
-    body: JSON.stringify({docId}),
+    body: JSON.stringify(payload),
   });
 
   const responseText = await res.text();
