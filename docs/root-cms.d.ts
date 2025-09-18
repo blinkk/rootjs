@@ -357,4 +357,6 @@ export interface TemplateSandboxFields {
   file?: RootCMSFile;
   /** FileField (.txt only) */
   fileTxtOnly?: RootCMSFile;
+  /** References */
+  references?: RootCMSReference[];
 }

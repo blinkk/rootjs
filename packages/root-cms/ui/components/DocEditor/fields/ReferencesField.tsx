@@ -1,6 +1,11 @@
 import './ReferencesField.css';
 
-import {DragDropContext, Droppable, Draggable, DropResult} from '@hello-pangea/dnd';
+import {
+  DragDropContext,
+  Droppable,
+  Draggable,
+  DropResult,
+} from '@hello-pangea/dnd';
 import {ActionIcon, Button, Tooltip} from '@mantine/core';
 import {IconGripVertical, IconTrash} from '@tabler/icons-preact';
 import {useState} from 'preact/hooks';
@@ -85,40 +90,45 @@ export function ReferencesField(props: FieldProps) {
             onChange(next);
           }}
         >
-          <Droppable droppableId="ReferencesField__droppable" direction="vertical">
-            {(provided) => (
+          <Droppable
+            droppableId="ReferencesField__droppable"
+            direction="vertical"
+          >
+            {(provided: any) => (
               <div
                 ref={provided.innerRef}
                 {...provided.droppableProps}
                 className="ReferencesField__refs"
               >
-                {refIds.map((id, index) => (
-                  <Draggable key={id} draggableId={id} index={index}>
+                {refIds.map((refId, index) => (
+                  <Draggable key={refId} draggableId={refId} index={index}>
                     {(provided, snapshot) => (
                       <div
                         ref={provided.innerRef}
-                        {...provided.draggableProps}
+                        {...(provided.draggableProps as any)}
                         className={joinClassNames(
                           'ReferencesField__card',
-                          snapshot.isDragging && 'ReferencesField__card--dragging'
+                          snapshot.isDragging &&
+                            'ReferencesField__card--dragging'
                         )}
                       >
                         <div
                           className="ReferencesField__card__handle"
-                          {...provided.dragHandleProps}
+                          {...(provided.dragHandleProps as any)}
                         >
                           <IconGripVertical size={16} stroke={'1.5'} />
                         </div>
                         <DocPreviewCard
                           className="ReferencesField__card__preview"
-                          docId={id}
+                          docId={refId}
                           variant="compact"
+                          clickable
                         />
                         <div className="ReferencesField__card__controls">
                           <Tooltip label="Remove">
                             <ActionIcon
                               className="ReferencesField__card__controls__remove"
-                              onClick={() => removeDoc(id)}
+                              onClick={() => removeDoc(refId)}
                             >
                               <IconTrash size={16} />
                             </ActionIcon>

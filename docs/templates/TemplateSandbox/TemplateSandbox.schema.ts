@@ -19,5 +19,9 @@ export default schema.define({
       label: 'FileField (.txt only)',
       exts: ['.txt'],
     }),
+    schema.references({
+      id: 'references',
+      label: 'References',
+    }),
   ],
 });

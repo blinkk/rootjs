@@ -1,3 +1,5 @@
+import './DocPreviewCard.css';
+
 import {Image, Loader} from '@mantine/core';
 import {useEffect, useState} from 'preact/hooks';
 import {joinClassNames} from '../../utils/classes.js';
@@ -6,7 +8,6 @@ import {getDocServingUrl} from '../../utils/doc-urls.js';
 import {notifyErrors} from '../../utils/notifications.js';
 import {getNestedValue} from '../../utils/objects.js';
 import {DocStatusBadges} from '../DocStatusBadges/DocStatusBadges.js';
-import './DocPreviewCard.css';
 
 export interface DocPreviewCardProps {
   className?: string;
@@ -14,6 +15,7 @@ export interface DocPreviewCardProps {
   docId: string;
   doc?: any;
   statusBadges?: boolean;
+  clickable?: boolean;
 }
 
 export function DocPreviewCard(props: DocPreviewCardProps) {
@@ -67,13 +69,22 @@ export function DocPreviewCard(props: DocPreviewCardProps) {
     slug: slug,
   });
 
+  let Component: 'div' | 'a' = 'div';
+  const attrs: Record<string, any> = {};
+  if (props.clickable) {
+    Component = 'a';
+    attrs.href = `/cms/content/${props.docId}`;
+    attrs.target = '_blank';
+  }
+
   return (
-    <div
+    <Component
       className={joinClassNames(
         props.className,
         'DocPreviewCard',
         props.variant && `DocPreviewCard--${props.variant}`
       )}
+      {...attrs}
     >
       <div className="DocPreviewCard__image">
         <Image
@@ -95,6 +106,6 @@ export function DocPreviewCard(props: DocPreviewCardProps) {
           <div className="DocPreviewCard__content__url">{docServingUrl}</div>
         )}
       </div>
-    </div>
+    </Component>
   );
 }

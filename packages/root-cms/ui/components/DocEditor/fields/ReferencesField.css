@@ -15,6 +15,10 @@
   border-bottom: 1px solid var(--color-border);
 }
 
+.ReferencesField__card__preview {
+  padding: 0 !important;
+}
+
 .ReferencesField__card:first-child {
   border-top: 1px solid var(--color-border);
 }
