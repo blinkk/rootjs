@@ -5,9 +5,9 @@ import {IconArrowUpRight, IconCopy, IconHistory} from '@tabler/icons-preact';
 import {useEffect, useState} from 'preact/hooks';
 import {useModalTheme} from '../../hooks/useModalTheme.js';
 import {Version, cmsListVersions, cmsRestoreVersion} from '../../utils/doc.js';
+import {useCopyDocModal} from '../CopyDocModal/CopyDocModal.js';
 import {Heading} from '../Heading/Heading.js';
 import {Text} from '../Text/Text.js';
-import {useCopyDocModal} from '../CopyDocModal/CopyDocModal.js';
 import './VersionHistoryModal.css';
 
 const MODAL_ID = 'VersionHistoryModal';
@@ -35,7 +35,7 @@ export function useVersionHistoryModal(props: VersionHistoryModalProps) {
 export function VersionHistoryModal(
   modalProps: ContextModalProps<VersionHistoryModalProps>
 ) {
-  const {innerProps: props} = modalProps;
+  const {innerProps: props, context, id} = modalProps;
   const docId = props.docId;
   const [loading, setLoading] = useState(true);
   const [versions, setVersions] = useState<Version[]>([]);
@@ -71,14 +71,18 @@ export function VersionHistoryModal(
   }
 
   function copyToNewDoc(version: Version) {
-    const modifiedAt = version.sys?.modifiedAt?.toDate();
     let label = `${docId}@${version._versionId}`;
+    const modifiedAt = version.sys?.modifiedAt?.toDate();
     if (modifiedAt) {
-      label = `${docId} @ ${dateFormat.format(modifiedAt)}`;
+      const isoDate = formatIsoDate(modifiedAt);
+      label = `${docId}@${isoDate}`;
     }
     copyDocModal.open({
       fields: version.fields || {},
       fromLabel: label,
+      onSuccess: () => {
+        context.closeModal(id);
+      },
     });
   }
 
@@ -178,6 +182,15 @@ function toUrlParam(docId: string, versionId: string): string {
   return encodeURIComponent(`${docId}@${versionId}`)
     .replaceAll('%2F', '/')
     .replaceAll('%40', '@');
+}
+
+function formatIsoDate(date: Date): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  const hours = String(date.getHours()).padStart(2, '0');
+  const minutes = String(date.getMinutes()).padStart(2, '0');
+  return `${year}-${month}-${day}T${hours}:${minutes}`;
 }
 
 VersionHistoryModal.id = MODAL_ID;

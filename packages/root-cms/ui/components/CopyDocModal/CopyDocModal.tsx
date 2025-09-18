@@ -17,6 +17,7 @@ export interface CopyDocModalProps {
   fromDocId: string;
   fields?: Record<string, any>;
   fromLabel?: string;
+  onSuccess?: (newDocId: string) => void;
 }
 
 export function useCopyDocModal(props: CopyDocModalProps) {
@@ -78,6 +79,9 @@ export function CopyDocModal(modalProps: ContextModalProps<CopyDocModalProps>) {
         message: `Succesfully copied ${sourceLabel} to ${toDocId}.`,
         autoClose: 5000,
       });
+      if (props.onSuccess) {
+        props.onSuccess(toDocId);
+      }
     } catch (err) {
       const errMsg = String(err);
       setError(errMsg);
