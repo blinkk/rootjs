@@ -8,7 +8,7 @@ import {
 } from '@tabler/icons-preact';
 import {useEffect, useMemo, useRef, useState} from 'preact/hooks';
 import {Heading} from '../../components/Heading/Heading.js';
-import {useQueryParam} from '../../hooks/useQueryParam.js';
+import {useArrayParam} from '../../hooks/useQueryParam.js';
 import {Layout} from '../../layout/Layout.js';
 import {joinClassNames} from '../../utils/classes.js';
 import {
@@ -46,7 +46,7 @@ export function DocTranslationsPage(props: DocTranslationsPageProps) {
 
   const i18nConfig = window.__ROOT_CTX.rootConfig.i18n || {};
   const defaultLocales = i18nConfig.locales || [];
-  const [i18nLocales, setI18nLocales] = useQueryParam('locale', defaultLocales);
+  const [i18nLocales, setI18nLocales] = useArrayParam('locale', defaultLocales);
 
   async function init() {
     try {
@@ -116,17 +116,13 @@ export function DocTranslationsPage(props: DocTranslationsPageProps) {
 
   /** Toggles the locale in the URL and updates the state accordingly. */
   function toggleLocale(locale: string) {
-    setI18nLocales((currentValue) => {
-      if (
-        Array.isArray(currentValue) &&
-        currentValue.length === defaultLocales.length
-      ) {
-        // Show only the selected locale.
-        return [locale];
-      }
+    if (i18nLocales.length === defaultLocales.length) {
+      // Show only the selected locale.
+      setI18nLocales([locale]);
+    } else {
       // Show all locales.
-      return defaultLocales;
-    });
+      setI18nLocales(defaultLocales);
+    }
   }
 
   return (

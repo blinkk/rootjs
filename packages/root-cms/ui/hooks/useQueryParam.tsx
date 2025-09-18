@@ -1,80 +1,143 @@
-import {useCallback, useEffect, useState} from 'preact/hooks';
+import {useState, useEffect, useCallback} from 'preact/hooks';
+
+interface UseQueryParamOptions<T> {
+  /** Whether to replace history entry instead of pushing new one */
+  replace?: boolean;
+  /** Custom serialization function for complex values */
+  serialize?: (value: T) => string;
+  /** Custom deserialization function for complex values */
+  deserialize?: (value: string) => T;
+}
+
+type QueryParamSetter<T> = (value: T) => void;
+type QueryParamHookReturn<T> = [T, QueryParamSetter<T>];
 
 /**
- * A hook to manage a query parameter in the URL.
- *
- * The query param can be a single value or an array of values.
- *
- * If the value is the same as the default value, the query param is cleared
- * from the URL.
+ * Hook that synchronizes state with a URL query parameter.
  */
-export function useQueryParam<T extends string | string[]>(
+export function useQueryParam<T = string>(
   paramName: string,
-  defaultValue: T
-): [T, (newValue: T | ((currentValue: T) => T)) => void] {
-  const getParamValue = useCallback((): T => {
+  defaultValue: T,
+  options: UseQueryParamOptions<T> = {}
+): QueryParamHookReturn<T> {
+  const {
+    replace = false,
+    serialize = (value: T) => String(value),
+    deserialize = (value: string) => value as T,
+  } = options;
+
+  // Get initial value from URL.
+  const getInitialValue = useCallback((): T => {
+    if (typeof window === 'undefined') return defaultValue;
+
     const urlParams = new URLSearchParams(window.location.search);
-    if (Array.isArray(defaultValue)) {
-      const allParams = urlParams.getAll(paramName);
-      if (allParams.length > 0) {
-        // Filter params to only include valid values from the default array.
-        const validParams = allParams.filter((param) =>
-          (defaultValue as string[]).includes(param)
-        );
-        if (validParams.length > 0) {
-          return validParams as T;
-        }
-      }
-    } else {
+    const paramValue = urlParams.get(paramName);
+
+    return paramValue !== null ? deserialize(paramValue) : defaultValue;
+  }, [paramName, defaultValue, deserialize]);
+
+  const [value, setValue] = useState(getInitialValue);
+
+  // Update state when URL changes (e.g., browser back/forward)
+  useEffect(() => {
+    const handlePopState = () => {
+      const urlParams = new URLSearchParams(window.location.search);
       const paramValue = urlParams.get(paramName);
-      if (paramValue) {
-        return paramValue as T;
-      }
-    }
-    return defaultValue;
-  }, [paramName, defaultValue]);
+      const newValue =
+        paramValue !== null ? deserialize(paramValue) : defaultValue;
+      setValue(newValue);
+    };
 
-  const [value, setValue] = useState<T>(getParamValue());
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, [paramName, defaultValue, deserialize]);
 
-  const setParamValue = useCallback(
-    (newValue: T | ((currentValue: T) => T)) => {
-      const nextValue =
-        typeof newValue === 'function'
-          ? (newValue as (currentValue: T) => T)(value)
-          : newValue;
+  // Function to update both state and URL
+  const updateParam = useCallback(
+    (newValue: T) => {
+      setValue(newValue);
 
-      setValue(nextValue);
+      if (typeof window === 'undefined') return;
 
-      const newUrl = new URL(window.location.href);
-      newUrl.searchParams.delete(paramName);
+      const url = new URL(window.location.href);
+      const serializedValue = serialize(newValue);
 
-      const defaultValueStr = JSON.stringify(defaultValue);
-      const nextValueStr = JSON.stringify(nextValue);
-
-      if (defaultValueStr !== nextValueStr) {
-        if (Array.isArray(nextValue)) {
-          nextValue.forEach((val) => {
-            newUrl.searchParams.append(paramName, String(val));
-          });
-        } else {
-          newUrl.searchParams.set(paramName, String(nextValue));
-        }
+      if (serializedValue === String(defaultValue) || serializedValue === '') {
+        // Remove parameter if it's the default value or empty
+        url.searchParams.delete(paramName);
+      } else {
+        url.searchParams.set(paramName, serializedValue);
       }
 
-      window.history.replaceState({}, '', newUrl.toString());
+      const method = replace ? 'replaceState' : 'pushState';
+      window.history[method]({}, '', url.toString());
     },
-    [paramName, defaultValue, value]
+    [paramName, defaultValue, serialize, replace]
   );
 
-  useEffect(() => {
-    const onPopState = () => {
-      setValue(getParamValue());
-    };
-    window.addEventListener('popstate', onPopState);
-    return () => {
-      window.removeEventListener('popstate', onPopState);
-    };
-  }, [getParamValue]);
+  return [value, updateParam];
+}
 
-  return [value, setParamValue];
+export function useStringParam(
+  paramName: string,
+  defaultValue: string = ''
+): QueryParamHookReturn<string> {
+  return useQueryParam(paramName, defaultValue);
+}
+
+export function useNumberParam(
+  paramName: string,
+  defaultValue: number = 0
+): QueryParamHookReturn<number> {
+  return useQueryParam(paramName, defaultValue, {
+    serialize: (value: number) => String(value),
+    deserialize: (value: string) => {
+      const num = Number(value);
+      return isNaN(num) ? defaultValue : num;
+    },
+  });
+}
+
+export function useBooleanParam(
+  paramName: string,
+  defaultValue: boolean = false
+): QueryParamHookReturn<boolean> {
+  return useQueryParam(paramName, defaultValue, {
+    serialize: (value: boolean) => (value ? 'true' : 'false'),
+    deserialize: (value: string) => value === 'true',
+  });
+}
+
+export function useArrayParam(
+  paramName: string,
+  defaultValue: string[] = []
+): QueryParamHookReturn<string[]> {
+  return useQueryParam(paramName, defaultValue, {
+    serialize: (value: string[]) =>
+      Array.isArray(value) ? value.join(',') : '',
+    deserialize: (value: string) =>
+      value ? value.split(',').filter(Boolean) : defaultValue,
+  });
+}
+
+export function useJSONParam<T = Record<string, unknown>>(
+  paramName: string,
+  defaultValue: T
+): QueryParamHookReturn<T> {
+  return useQueryParam(paramName, defaultValue, {
+    serialize: (value: T) => {
+      try {
+        return JSON.stringify(value);
+      } catch {
+        return JSON.stringify(defaultValue);
+      }
+    },
+    deserialize: (value: string) => {
+      try {
+        return JSON.parse(value) as T;
+      } catch {
+        return defaultValue;
+      }
+    },
+  });
 }
