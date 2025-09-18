@@ -1,5 +1,15 @@
 # @blinkk/root-cms
 
+## 2.2.2
+
+### Patch Changes
+
+- 4370cbe6: feat: allow filtering by locale in the translations page (#754)
+- ce602764: feat: enable drag and drop reordering in references field (#752)
+- e40d0380: feat: add ai summary to publish doc modal (#756)
+- 26f92d95: feat: copy versions to new docs (#751)
+  - @blinkk/root@2.2.2
+
 ## 2.2.1
 
 ### Patch Changes
