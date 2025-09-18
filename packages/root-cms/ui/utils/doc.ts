@@ -904,6 +904,57 @@ export function unmarshalArray(arrObject: ArrayObject): any[] {
   return arr;
 }
 
+export async function cmsGetDocDiffSummary(docId: string): Promise<string> {
+  const [publishedDoc, draftDoc] = await Promise.all([
+    cmsReadDocVersion(docId, 'published'),
+    cmsReadDocVersion(docId, 'draft'),
+  ]);
+
+  if (!draftDoc && !publishedDoc) {
+    return '';
+  }
+
+  const payload = {
+    before: publishedDoc
+      ? unmarshalData(publishedDoc.fields || {}, {removeArrayKey: true})
+      : null,
+    after: draftDoc
+      ? unmarshalData(draftDoc.fields || {}, {removeArrayKey: true})
+      : null,
+  };
+
+  const res = await window.fetch('/cms/api/ai.diff', {
+    method: 'POST',
+    headers: {'content-type': 'application/json'},
+    body: JSON.stringify(payload),
+  });
+
+  const responseText = await res.text();
+  let resData: any = null;
+  try {
+    resData = JSON.parse(responseText);
+  } catch (err) {
+    // Ignore JSON parsing errors and fall back to the response text below.
+  }
+
+  if (!res.ok || resData?.success === false) {
+    const errorMessage =
+      (resData && (resData.error || resData.message)) || responseText;
+    throw new Error(errorMessage || 'Failed to fetch AI summary');
+  }
+
+  if (typeof resData?.summary === 'string') {
+    return resData.summary;
+  }
+  if (typeof resData?.data?.summary === 'string') {
+    return resData.data.summary;
+  }
+  if (!resData && responseText) {
+    return responseText;
+  }
+  return '';
+}
+
 function isObject(data: any): boolean {
   return typeof data === 'object' && !Array.isArray(data) && data !== null;
 }

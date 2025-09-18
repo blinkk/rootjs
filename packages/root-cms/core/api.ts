@@ -7,7 +7,7 @@ import {
   AiResponse,
   SendPromptOptions,
 } from '../shared/ai/prompts.js';
-import {ChatClient, RootAiModel} from './ai.js';
+import {ChatClient, RootAiModel, summarizeDiff} from './ai.js';
 import {RootCMSClient} from './client.js';
 import {runCronJobs} from './cron.js';
 import {arrayToCsv, csvToArray} from './csv.js';
@@ -318,6 +318,43 @@ export function api(server: Server, options: ApiOptions) {
       };
       res.status(200).json(apiResponse);
     } catch (err) {
+      console.error(err.stack || err);
+      res.status(500).json({success: false, error: 'UNKNOWN'});
+    }
+  });
+
+  server.use('/cms/api/ai.diff', async (req: Request, res: Response) => {
+    if (
+      req.method !== 'POST' ||
+      !String(req.get('content-type')).startsWith('application/json')
+    ) {
+      res.status(400).json({success: false, error: 'BAD_REQUEST'});
+      return;
+    }
+
+    if (!req.user?.email) {
+      res.status(401).json({success: false, error: 'UNAUTHORIZED'});
+      return;
+    }
+
+    const reqBody = req.body || {};
+    if (!Object.prototype.hasOwnProperty.call(reqBody, 'after')) {
+      res.status(400).json({
+        success: false,
+        error: 'MISSING_REQUIRED_FIELD',
+        field: 'after',
+      });
+      return;
+    }
+
+    try {
+      const cmsClient = new RootCMSClient(req.rootConfig!);
+      const summary = await summarizeDiff(cmsClient, {
+        before: reqBody.before ?? null,
+        after: reqBody.after ?? null,
+      });
+      res.status(200).json({success: true, summary});
+    } catch (err: any) {
       console.error(err.stack || err);
       res.status(500).json({success: false, error: 'UNKNOWN'});
     }
