@@ -32,11 +32,12 @@ import {
 import type {ElementGraph} from '../node/element-graph.js';
 import {parseTagNames} from '../utils/elements.js';
 import {toHrefLang} from '../utils/i18n.js';
+import {replaceParams} from '../utils/url-path-params.js';
 import {AssetMap} from './asset-map/asset-map.js';
 import {htmlMinify} from './html-minify.js';
 import {htmlPretty} from './html-pretty.js';
 import {getFallbackLocales} from './i18n-fallbacks.js';
-import {normalizeUrlPath, replaceParams, Router} from './router.js';
+import {normalizeUrlPath, Router} from './router.js';
 
 const CONTENT_TYPES: Record<string, string> = {
   html: 'text/html',

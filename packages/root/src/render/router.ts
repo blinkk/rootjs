@@ -1,6 +1,7 @@
 import path from 'node:path';
 import {RootConfig} from '../core/config.js';
 import {Route, RouteModule} from '../core/types.js';
+import {replaceParams, testPathHasParams} from '../utils/url-path-params.js';
 import {RouteTrie} from './route-trie.js';
 
 const ROUTES_FILES = import.meta.glob<RouteModule>(
@@ -138,15 +139,9 @@ export class Router {
           }
         );
       }
-    } else if (
-      routeModule.getStaticProps &&
-      !pathHasParams
-    ) {
+    } else if (routeModule.getStaticProps && !pathHasParams) {
       urlPaths.push({urlPath: normalizeUrlPath(urlPathFormat), params: {}});
-    } else if (
-      !routeModule.handle &&
-      !pathHasParams
-    ) {
+    } else if (!routeModule.handle && !pathHasParams) {
       urlPaths.push({urlPath: normalizeUrlPath(urlPathFormat), params: {}});
     } else if (
       pathHasParams &&
@@ -166,23 +161,6 @@ export class Router {
   }
 }
 
-export function replaceParams(
-  urlPathFormat: string,
-  params: Record<string, string>
-) {
-  const urlPath = urlPathFormat.replaceAll(
-    /\[\[?(\.\.\.)?([\w\-_]*)\]?\]/g,
-    (match: string, _wildcard: string, key: string) => {
-      const val = params[key];
-      if (!val) {
-        throw new Error(`unreplaced param ${match} in url: ${urlPathFormat}`);
-      }
-      return val;
-    }
-  );
-  return urlPath;
-}
-
 export function normalizeUrlPath(
   urlPath: string,
   options?: {trailingSlash?: boolean}
@@ -192,11 +170,9 @@ export function normalizeUrlPath(
   // Remove trailing slash.
   if (
     testPathHasFileExt(urlPath) ||
-    (
-      options?.trailingSlash === false &&
+    (options?.trailingSlash === false &&
       urlPath !== '/' &&
-      urlPath.endsWith('/')
-    )
+      urlPath.endsWith('/'))
   ) {
     urlPath = removeTrailingSlash(urlPath);
   }
@@ -217,13 +193,6 @@ export function normalizeUrlPath(
     urlPath = `${urlPath}/`;
   }
   return urlPath;
-}
-
-function testPathHasParams(urlPath: string) {
-  const segments = urlPath.split('/');
-  return segments.some((segment) => {
-    return segment.startsWith('[') && segment.includes(']');
-  });
 }
 
 function testPathHasFileExt(urlPath: string) {
