@@ -8,6 +8,7 @@ import {
 } from '@tabler/icons-preact';
 import {useEffect, useMemo, useRef, useState} from 'preact/hooks';
 import {Heading} from '../../components/Heading/Heading.js';
+import {useQueryParam} from '../../hooks/useQueryParam.js';
 import {Layout} from '../../layout/Layout.js';
 import {joinClassNames} from '../../utils/classes.js';
 import {
@@ -44,17 +45,8 @@ export function DocTranslationsPage(props: DocTranslationsPageProps) {
   const docId = `${collection}/${slug}`;
 
   const i18nConfig = window.__ROOT_CTX.rootConfig.i18n || {};
-  const [i18nLocales, setI18nLocales] = useState<string[]>(() => {
-    // Use the locales from the i18n config by default.
-    const locales = i18nConfig.locales || [];
-    const urlParams = new URLSearchParams(window.location.search);
-    // Allow using the `locale` param to filter the locales shown in the table.
-    const localeParams = urlParams.getAll('locale');
-    if (localeParams.length > 0) {
-      return locales.filter((locale) => localeParams.includes(locale));
-    }
-    return locales;
-  });
+  const defaultLocales = i18nConfig.locales || [];
+  const [i18nLocales, setI18nLocales] = useQueryParam('locale', defaultLocales);
 
   async function init() {
     try {
@@ -124,18 +116,17 @@ export function DocTranslationsPage(props: DocTranslationsPageProps) {
 
   /** Toggles the locale in the URL and updates the state accordingly. */
   function toggleLocale(locale: string) {
-    const newUrl = new URL(window.location.href);
-    const currentLocales = newUrl.searchParams.getAll('locale');
-    if (currentLocales.includes(locale)) {
-      // If locale is already selected, clear all locale params and show all locales.
-      newUrl.searchParams.delete('locale');
-      setI18nLocales(i18nConfig.locales || []);
-    } else {
-      // Show only the selected locale.
-      newUrl.searchParams.append('locale', locale);
-      setI18nLocales(() => [locale]);
-    }
-    window.history.replaceState({}, '', newUrl.toString());
+    setI18nLocales((currentValue) => {
+      if (
+        Array.isArray(currentValue) &&
+        currentValue.length === defaultLocales.length
+      ) {
+        // Show only the selected locale.
+        return [locale];
+      }
+      // Show all locales.
+      return defaultLocales;
+    });
   }
 
   return (
@@ -253,6 +244,8 @@ interface DocTranslationsPageTableProps {
 }
 
 DocTranslationsPage.Table = (props: DocTranslationsPageTableProps) => {
+  const i18nConfig = window.__ROOT_CTX.rootConfig.i18n || {};
+  const allLocales = i18nConfig.locales || [];
   const sourceToTranslationsMap = useMemo(() => {
     const results: {[source: string]: Record<string, string>} = {};
     Object.values(props.translationsMap).forEach(
@@ -293,9 +286,9 @@ DocTranslationsPage.Table = (props: DocTranslationsPageTableProps) => {
                   placement="start"
                   withArrow
                   label={
-                    props.locales.length === 1 && props.locales[0] === locale
-                      ? 'Show all locales'
-                      : `Show only ${locale}`
+                    props.locales.length === allLocales.length
+                      ? `Show only ${locale}`
+                      : 'Show all locales'
                   }
                 >
                   <div className="DocTranslationsPage__Table__headerLabel">
