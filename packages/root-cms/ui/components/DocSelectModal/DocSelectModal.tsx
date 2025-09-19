@@ -1,11 +1,13 @@
-import {Button, Image, Loader, Select} from '@mantine/core';
+import './DocSelectModal.css';
+
+import {Button, Loader, Select} from '@mantine/core';
 import {ContextModalProps, useModals} from '@mantine/modals';
 import {useState} from 'preact/hooks';
 import {useDocsList} from '../../hooks/useDocsList.js';
 import {useModalTheme} from '../../hooks/useModalTheme.js';
 import {getDocServingUrl} from '../../utils/doc-urls.js';
 import {getNestedValue} from '../../utils/objects.js';
-import './DocSelectModal.css';
+import {FilePreview} from '../FilePreview/FilePreview.js';
 
 const MODAL_ID = 'DocSelectModal';
 
@@ -68,8 +70,6 @@ export function DocSelectModal(
       props.onChange(doc.id, false /* selected */);
     }
   }
-
-  console.log('selected docs:', props.selectedDocIds);
 
   return (
     <div className="DocSelectModal">
@@ -172,8 +172,8 @@ DocSelectModal.DocCard = (props: {
   return (
     <div className="DocSelectModal__DocCard">
       <div className="DocSelectModal__DocCard__image">
-        <Image
-          src={previewImage?.src}
+        <FilePreview
+          file={previewImage}
           width={120}
           height={90}
           withPlaceholder={!previewImage?.src}

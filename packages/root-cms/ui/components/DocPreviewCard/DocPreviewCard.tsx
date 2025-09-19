@@ -1,6 +1,6 @@
 import './DocPreviewCard.css';
 
-import {Image, Loader} from '@mantine/core';
+import {Loader} from '@mantine/core';
 import {useEffect, useState} from 'preact/hooks';
 import {joinClassNames} from '../../utils/classes.js';
 import {getDocFromCacheOrFetch} from '../../utils/doc-cache.js';
@@ -8,6 +8,7 @@ import {getDocServingUrl} from '../../utils/doc-urls.js';
 import {notifyErrors} from '../../utils/notifications.js';
 import {getNestedValue} from '../../utils/objects.js';
 import {DocStatusBadges} from '../DocStatusBadges/DocStatusBadges.js';
+import {FilePreview} from '../FilePreview/FilePreview.js';
 
 export interface DocPreviewCardProps {
   className?: string;
@@ -87,8 +88,8 @@ export function DocPreviewCard(props: DocPreviewCardProps) {
       {...attrs}
     >
       <div className="DocPreviewCard__image">
-        <Image
-          src={previewImage?.src}
+        <FilePreview
+          file={previewImage}
           width={80}
           height={60}
           withPlaceholder={!previewImage?.src}

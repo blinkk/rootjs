@@ -1,15 +1,16 @@
-import {Button, Image, Loader, Select, Tabs} from '@mantine/core';
+import './CollectionPage.css';
+
+import {Button, Loader, Select, Tabs} from '@mantine/core';
 import {
   IconArrowRoundaboutRight,
   IconCirclePlus,
   IconFolder,
 } from '@tabler/icons-preact';
-
 import {useEffect, useState} from 'preact/hooks';
 import {route} from 'preact-router';
-
 import {DocActionsMenu} from '../../components/DocActionsMenu/DocActionsMenu.js';
 import {DocStatusBadges} from '../../components/DocStatusBadges/DocStatusBadges.js';
+import {FilePreview} from '../../components/FilePreview/FilePreview.js';
 import {Heading} from '../../components/Heading/Heading.js';
 import {Markdown} from '../../components/Markdown/Markdown.js';
 import {NewDocModal} from '../../components/NewDocModal/NewDocModal.js';
@@ -20,7 +21,6 @@ import {Layout} from '../../layout/Layout.js';
 import {joinClassNames} from '../../utils/classes.js';
 import {getDocServingUrl} from '../../utils/doc-urls.js';
 import {getNestedValue} from '../../utils/objects.js';
-import './CollectionPage.css';
 
 interface CollectionPageProps {
   collection?: string;
@@ -299,8 +299,8 @@ CollectionPage.DocsList = (props: {
           >
             <div className="CollectionPage__collection__docsList__doc__image">
               <a href={cmsUrl}>
-                <Image
-                  src={previewImage?.src}
+                <FilePreview
+                  file={previewImage}
                   width={120}
                   height={90}
                   withPlaceholder={!previewImage?.src}
