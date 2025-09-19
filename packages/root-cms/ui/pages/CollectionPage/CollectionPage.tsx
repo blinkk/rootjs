@@ -1,4 +1,4 @@
-import {Button, Image, Loader, Select, Tabs} from '@mantine/core';
+import {Button, Loader, Select, Tabs} from '@mantine/core';
 import {
   IconArrowRoundaboutRight,
   IconCirclePlus,
@@ -10,6 +10,7 @@ import {route} from 'preact-router';
 
 import {DocActionsMenu} from '../../components/DocActionsMenu/DocActionsMenu.js';
 import {DocStatusBadges} from '../../components/DocStatusBadges/DocStatusBadges.js';
+import {FilePreview} from '../../components/FilePreview/FilePreview.js';
 import {Heading} from '../../components/Heading/Heading.js';
 import {Markdown} from '../../components/Markdown/Markdown.js';
 import {NewDocModal} from '../../components/NewDocModal/NewDocModal.js';
@@ -299,8 +300,8 @@ CollectionPage.DocsList = (props: {
           >
             <div className="CollectionPage__collection__docsList__doc__image">
               <a href={cmsUrl}>
-                <Image
-                  src={previewImage?.src}
+                <FilePreview
+                  file={previewImage}
                   width={120}
                   height={90}
                   withPlaceholder={!previewImage?.src}
