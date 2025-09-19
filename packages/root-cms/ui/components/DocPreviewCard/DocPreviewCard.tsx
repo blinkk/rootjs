@@ -36,6 +36,126 @@ export function DocPreviewCard(props: DocPreviewCardProps) {
     fetchDocData();
   }, [docId]);
 
+  const [collection, slug] = docId.split('/');
+  const fields = doc?.fields || {};
+  const rootCollection = window.__ROOT_CTX.collections[collection];
+  if (!rootCollection) {
+    throw new Error(`could not find collection: ${collection}`);
+  }
+  const previewTitle = getNestedValue(
+    fields,
+    rootCollection.preview?.title || 'meta.title'
+  );
+  const previewImage =
+    getNestedValue(fields, rootCollection.preview?.image || 'meta.image') ||
+    rootCollection.preview?.defaultImage;
+  const previewImageSrc =
+    typeof previewImage === 'string' ? previewImage : previewImage?.src;
+  const previewImageMimeType =
+    typeof previewImage === 'object' && previewImage
+      ? previewImage.mimeType ||
+        previewImage.contentType ||
+        previewImage.type ||
+        previewImage.file?.type
+      : undefined;
+  const [previewSrc, setPreviewSrc] = useState<string | undefined>(
+    previewImageSrc
+  );
+  const docServingUrl = getDocServingUrl({
+    collectionId: collection,
+    slug: slug,
+  });
+
+  useEffect(() => {
+    if (!previewImageSrc) {
+      setPreviewSrc(undefined);
+      return;
+    }
+
+    const isMp4 =
+      (typeof previewImageMimeType === 'string' &&
+        previewImageMimeType.toLowerCase().includes('mp4')) ||
+      /\.mp4(?:$|\?)/i.test(previewImageSrc);
+
+    if (!isMp4) {
+      setPreviewSrc(previewImageSrc);
+      return;
+    }
+
+    let cancelled = false;
+    setPreviewSrc(undefined);
+
+    const video = document.createElement('video');
+    video.crossOrigin = 'anonymous';
+    video.muted = true;
+    video.playsInline = true;
+    video.preload = 'auto';
+
+    const cleanupVideo = () => {
+      video.pause();
+      video.removeAttribute('src');
+      try {
+        video.load();
+      } catch (error) {
+        // Ignore load errors during cleanup.
+      }
+    };
+
+    const handleLoadedData = () => {
+      if (cancelled) {
+        cleanupVideo();
+        return;
+      }
+
+      try {
+        if (!video.videoWidth || !video.videoHeight) {
+          throw new Error('Video dimensions unavailable');
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        const context = canvas.getContext('2d');
+        if (!context) {
+          throw new Error('Unable to get canvas context');
+        }
+        context.drawImage(video, 0, 0, canvas.width, canvas.height);
+        const dataUrl = canvas.toDataURL('image/png');
+        if (!cancelled) {
+          setPreviewSrc(dataUrl);
+        }
+      } catch (error) {
+        if (!cancelled) {
+          setPreviewSrc(undefined);
+        }
+      } finally {
+        cleanupVideo();
+      }
+    };
+
+    const handleError = () => {
+      if (!cancelled) {
+        setPreviewSrc(undefined);
+      }
+      cleanupVideo();
+    };
+
+    video.addEventListener('loadeddata', handleLoadedData);
+    video.addEventListener('error', handleError);
+    video.src = previewImageSrc;
+    try {
+      video.load();
+    } catch (error) {
+      // Ignore load errors; the error event handler will handle failures.
+    }
+
+    return () => {
+      cancelled = true;
+      video.removeEventListener('loadeddata', handleLoadedData);
+      video.removeEventListener('error', handleError);
+      cleanupVideo();
+    };
+  }, [previewImageMimeType, previewImageSrc]);
+
   if (loading) {
     return (
       <div
@@ -50,24 +170,6 @@ export function DocPreviewCard(props: DocPreviewCardProps) {
       </div>
     );
   }
-
-  const [collection, slug] = docId.split('/');
-  const fields = doc.fields || {};
-  const rootCollection = window.__ROOT_CTX.collections[collection];
-  if (!rootCollection) {
-    throw new Error(`could not find collection: ${collection}`);
-  }
-  const previewTitle = getNestedValue(
-    fields,
-    rootCollection.preview?.title || 'meta.title'
-  );
-  const previewImage =
-    getNestedValue(fields, rootCollection.preview?.image || 'meta.image') ||
-    rootCollection.preview?.defaultImage;
-  const docServingUrl = getDocServingUrl({
-    collectionId: collection,
-    slug: slug,
-  });
 
   let Component: 'div' | 'a' = 'div';
   const attrs: Record<string, any> = {};
@@ -88,10 +190,10 @@ export function DocPreviewCard(props: DocPreviewCardProps) {
     >
       <div className="DocPreviewCard__image">
         <Image
-          src={previewImage?.src}
+          src={previewSrc}
           width={80}
           height={60}
-          withPlaceholder={!previewImage?.src}
+          withPlaceholder={!previewSrc}
         />
       </div>
       <div className="DocPreviewCard__content">
