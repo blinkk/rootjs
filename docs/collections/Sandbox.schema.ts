@@ -7,7 +7,7 @@ export default schema.collection({
   url: '/sandbox/[...slug]',
   preview: {
     title: 'meta.title',
-    image: 'meta.image',
+    image: ['content.modules[0].file', 'meta.image'],
     defaultImage: {
       src: 'https://lh3.googleusercontent.com/c2ECbvhJtxf3xbPIjaXCSpmvAsJkkhzJwG98T9RPvWy4s30jZKClom8pvWTnupRYOnyI3qGhNXPOwqoN6sqljkDO62LIKRtR988',
     },

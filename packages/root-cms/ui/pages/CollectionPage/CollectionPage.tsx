@@ -1,13 +1,13 @@
+import './CollectionPage.css';
+
 import {Button, Loader, Select, Tabs} from '@mantine/core';
 import {
   IconArrowRoundaboutRight,
   IconCirclePlus,
   IconFolder,
 } from '@tabler/icons-preact';
-
 import {useEffect, useState} from 'preact/hooks';
 import {route} from 'preact-router';
-
 import {DocActionsMenu} from '../../components/DocActionsMenu/DocActionsMenu.js';
 import {DocStatusBadges} from '../../components/DocStatusBadges/DocStatusBadges.js';
 import {FilePreview} from '../../components/FilePreview/FilePreview.js';
@@ -21,7 +21,6 @@ import {Layout} from '../../layout/Layout.js';
 import {joinClassNames} from '../../utils/classes.js';
 import {getDocServingUrl} from '../../utils/doc-urls.js';
 import {getNestedValue} from '../../utils/objects.js';
-import './CollectionPage.css';
 
 interface CollectionPageProps {
   collection?: string;
