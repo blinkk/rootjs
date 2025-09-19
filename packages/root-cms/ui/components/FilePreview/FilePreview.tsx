@@ -19,33 +19,27 @@ export function FilePreview(props: FilePreviewProps) {
   const {file, width, height, withPlaceholder, className, alt} = props;
   const src = typeof file === 'string' ? file : file?.src;
 
-  if (!src) {
+  if (isMp4File(file)) {
     return (
-      <Image
+      <VideoPreview
         className={className}
-        src={undefined}
+        src={src!}
         width={width}
         height={height}
-        withPlaceholder={withPlaceholder}
-        alt={alt}
       />
     );
   }
 
-  if (!isMp4File(file)) {
-    return (
-      <Image
-        className={className}
-        src={src}
-        width={width}
-        height={height}
-        withPlaceholder={withPlaceholder}
-        alt={alt}
-      />
-    );
-  }
-
-  return <VideoPreview className={className} src={src} width={width} height={height} />;
+  return (
+    <Image
+      className={className}
+      src={src}
+      width={width}
+      height={height}
+      withPlaceholder={withPlaceholder}
+      alt={alt}
+    />
+  );
 }
 
 function isMp4File(file?: FilePreviewFile | string | null) {

@@ -71,8 +71,6 @@ export function DocSelectModal(
     }
   }
 
-  console.log('selected docs:', props.selectedDocIds);
-
   return (
     <div className="DocSelectModal">
       {collections.length === 0 && (
