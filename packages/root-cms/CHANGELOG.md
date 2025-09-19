@@ -1,5 +1,14 @@
 # @blinkk/root-cms
 
+## 2.2.3
+
+### Patch Changes
+
+- 9b0c57d2: feat: preserve doc preview locale with url param (#758)
+- 33a262e7: feat: add createRoute() for creating cms-powered routes (#753)
+- fd93f248: feat: support mp4s as doc preview image (#761)
+  - @blinkk/root@2.2.3
+
 ## 2.2.2
 
 ### Patch Changes
