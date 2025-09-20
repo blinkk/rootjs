@@ -8,7 +8,7 @@ import {
   SendPromptOptions,
 } from '../shared/ai/prompts.js';
 import {ChatClient, RootAiModel, summarizeDiff} from './ai.js';
-import {RootCMSClient} from './client.js';
+import {RootCMSClient, parseDocId, unmarshalData} from './client.js';
 import {runCronJobs} from './cron.js';
 import {arrayToCsv, csvToArray} from './csv.js';
 
@@ -16,6 +16,69 @@ type AppModule = typeof import('./app.js');
 
 function testValidCollectionId(id: string): boolean {
   return /^[A-Za-z0-9_-]+$/.test(id);
+}
+
+type DocVersion = 'draft' | 'published';
+
+interface BuildDocDiffOptions {
+  beforeVersion: DocVersion;
+  afterVersion: DocVersion;
+}
+
+interface DocDiffPayload {
+  before: Record<string, any> | null;
+  after: Record<string, any> | null;
+}
+
+async function buildDocDiffPayload(
+  cmsClient: RootCMSClient,
+  docId: string,
+  options: BuildDocDiffOptions
+): Promise<DocDiffPayload> {
+  const [before, after] = await Promise.all([
+    readDocVersionFields(cmsClient, docId, options.beforeVersion),
+    readDocVersionFields(cmsClient, docId, options.afterVersion),
+  ]);
+  return {before, after};
+}
+
+async function readDocVersionFields(
+  cmsClient: RootCMSClient,
+  docId: string,
+  version: DocVersion
+): Promise<Record<string, any> | null> {
+  const {collection, slug} = parseDocId(docId);
+  const doc = await cmsClient.getRawDoc(collection, slug, {mode: version});
+  if (!doc) {
+    return null;
+  }
+  const fields = unmarshalData(doc.fields || {});
+  return removeArrayKeys(fields);
+}
+
+function removeArrayKeys(data: any): any {
+  if (Array.isArray(data)) {
+    return data.map((item) => removeArrayKeys(item));
+  }
+  if (isRecord(data)) {
+    const result: Record<string, any> = {};
+    for (const [key, value] of Object.entries(data)) {
+      if (key === '_arrayKey') {
+        continue;
+      }
+      result[key] = removeArrayKeys(value);
+    }
+    return result;
+  }
+  return data;
+}
+
+function isRecord(value: unknown): value is Record<string, any> {
+  return typeof value === 'object' && value !== null;
+}
+
+function isDocVersion(value: unknown): value is DocVersion {
+  return value === 'draft' || value === 'published';
 }
 
 export interface ChatApiRequest {
@@ -338,20 +401,35 @@ export function api(server: Server, options: ApiOptions) {
     }
 
     const reqBody = req.body || {};
-    if (!Object.prototype.hasOwnProperty.call(reqBody, 'after')) {
+    const docId = typeof reqBody.docId === 'string' ? reqBody.docId.trim() : '';
+    if (!docId) {
       res.status(400).json({
         success: false,
         error: 'MISSING_REQUIRED_FIELD',
-        field: 'after',
+        field: 'docId',
       });
       return;
     }
 
     try {
       const cmsClient = new RootCMSClient(req.rootConfig!);
+      const beforeVersion: DocVersion = isDocVersion(reqBody.beforeVersion)
+        ? reqBody.beforeVersion
+        : 'published';
+      const afterVersion: DocVersion = isDocVersion(reqBody.afterVersion)
+        ? reqBody.afterVersion
+        : 'draft';
+      const diffPayload = await buildDocDiffPayload(cmsClient, docId, {
+        beforeVersion,
+        afterVersion,
+      });
+      if (!diffPayload.before && !diffPayload.after) {
+        res.status(200).json({success: true, summary: ''});
+        return;
+      }
       const summary = await summarizeDiff(cmsClient, {
-        before: reqBody.before ?? null,
-        after: reqBody.after ?? null,
+        before: diffPayload.before,
+        after: diffPayload.after,
       });
       res.status(200).json({success: true, summary});
     } catch (err: any) {
