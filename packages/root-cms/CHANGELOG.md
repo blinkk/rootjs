@@ -1,5 +1,12 @@
 # @blinkk/root-cms
 
+## 2.2.4
+
+### Patch Changes
+
+- 0b588898: fix: fetch doc diff data on server (#762)
+  - @blinkk/root@2.2.4
+
 ## 2.2.3
 
 ### Patch Changes
