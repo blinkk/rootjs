@@ -21,7 +21,11 @@ export default schema.define({
     }),
     schema.references({
       id: 'references',
-      label: 'References',
+      label: 'ReferencesField',
+    }),
+    schema.datetime({
+      id: 'datetime',
+      label: 'DateTimeField',
     }),
   ],
 });

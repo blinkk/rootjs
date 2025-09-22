@@ -48,10 +48,7 @@ import {
 } from 'preact/hooks';
 import {route} from 'preact-router';
 import * as schema from '../../../core/schema.js';
-import {
-  updateRichTextDataTime,
-  testValidRichTextData,
-} from '../../../shared/richtext.js';
+import {testValidRichTextData} from '../../../shared/richtext.js';
 import type {RichTextData} from '../../../shared/richtext.js';
 import {useCollectionSchema} from '../../hooks/useCollectionSchema.js';
 import {
@@ -77,6 +74,7 @@ import {joinClassNames} from '../../utils/classes.js';
 import {debounce} from '../../utils/debounce.js';
 import {
   CMSDoc,
+  deserializeDocJson,
   testIsScheduled,
   testPublishingLocked,
 } from '../../utils/doc.js';
@@ -1057,7 +1055,7 @@ DocEditor.ArrayField = (props: FieldProps) => {
           type: 'updateItem',
           draft,
           index,
-          newValue: updateRichTextDataTime(newValue),
+          newValue: newValue,
           deepKey: props.deepKey,
         });
         editJsonModal.close();
@@ -1075,7 +1073,7 @@ DocEditor.ArrayField = (props: FieldProps) => {
           type: 'updateItem',
           draft,
           index,
-          newValue: updateRichTextDataTime(newValue),
+          newValue: newValue,
           deepKey: props.deepKey,
         });
         aiEditModal.close();

@@ -19,6 +19,7 @@ import {
   WriteBatch,
   DocumentReference,
 } from 'firebase/firestore';
+import {testValidRichTextData} from '../../shared/richtext.js';
 import {logAction} from './actions.js';
 import {removeDocFromCache, removeDocsFromCache} from './doc-cache.js';
 import {GoogleSheetId} from './gsheets.js';
@@ -964,4 +965,53 @@ export function parseDocId(docId: string) {
     collection: collection,
     slug: slug,
   };
+}
+
+/**
+ * For doc JSON edits, deserializes the JSON data into a format that's
+ * compatible with the db.
+ *
+ * Performs the following:
+ * - Updates the "time" property in richtext data to the current timestamp
+ * - Converts firestore timestamp data objects to Timestamp objects
+ */
+export function deserializeDocJson(data: any): any {
+  // Convert firestore Timestamp objects.
+  if (testIsFirestoreTimestampObject(data)) {
+    return Timestamp.fromMillis(data.seconds * 1000);
+  }
+  // Update richtext time.
+  if (testValidRichTextData(data)) {
+    data.time = Date.now();
+    return data;
+  }
+  // Recursively walk the data tree.
+  if (Array.isArray(data)) {
+    return data.map((item) => deserializeDocJson(item));
+  }
+  if (isObject(data)) {
+    const copy: any = {};
+    Object.keys(data).forEach((key) => {
+      copy[key] = deserializeDocJson(data[key]);
+    });
+    return copy;
+  }
+  return data;
+}
+
+interface FirestireTimestampObject {
+  type: 'firestore/timestamp/1.0';
+  seconds: number;
+  nanoseconds: number;
+}
+
+function testIsFirestoreTimestampObject(
+  data: any
+): data is FirestireTimestampObject {
+  // {
+  //   "type": "firestore/timestamp/1.0",
+  //   "seconds": 1758632400,
+  //   "nanoseconds": 0
+  // }
+  return data?.type === 'firestore/timestamp/1.0';
 }

@@ -8,6 +8,7 @@ import {
 import {useState} from 'preact/hooks';
 import {useModalTheme} from '../../hooks/useModalTheme.js';
 import './EditJsonModal.css';
+import {deserializeDocJson} from '../../utils/doc.js';
 
 const MODAL_ID = 'EditJsonModal';
 
@@ -65,8 +66,9 @@ export function EditJsonModal(
 
   function onSave() {
     const data = JSON.parse(value);
+    const newValue = deserializeDocJson(data);
     if (props.onSave) {
-      props.onSave(data);
+      props.onSave(newValue);
     }
   }
 
