@@ -42,9 +42,14 @@ export function DateTimeField(props: FieldProps) {
 }
 
 function toDateStr(ts: Timestamp) {
-  const date = ts.toDate();
-  // Subtract by the timezone offset so that toISOString() returns the local
-  // datetime string.
-  date.setMinutes(date.getMinutes() - date.getTimezoneOffset());
-  return date.toISOString().slice(0, 16);
+  try {
+    const date = ts.toDate();
+    // Subtract by the timezone offset so that toISOString() returns the local
+    // datetime string.
+    date.setMinutes(date.getMinutes() - date.getTimezoneOffset());
+    return date.toISOString().slice(0, 16);
+  } catch (err) {
+    console.error('failed to parse date: ', ts);
+    return '';
+  }
 }

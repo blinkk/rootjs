@@ -12,6 +12,7 @@ import {useRef, useState} from 'preact/hooks';
 import {useMemo, useCallback} from 'preact/hooks';
 import {AiResponse} from '../../../shared/ai/prompts.js';
 import {useModalTheme} from '../../hooks/useModalTheme.js';
+import {deserializeDocJson} from '../../utils/doc.js';
 import {JsDiff} from '../JsDiff/JsDiff.js';
 import {ChatPanel} from './ChatPanel.js';
 
@@ -73,8 +74,9 @@ export function AiEditModal(modalProps: ContextModalProps<AiEditModalProps>) {
     if (!parsedValue) {
       return;
     }
+    const newValue = deserializeDocJson(parsedValue);
     if (props.onSave) {
-      props.onSave(parsedValue);
+      props.onSave(newValue);
     }
   }, [parsedValue]);
 

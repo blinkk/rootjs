@@ -357,6 +357,8 @@ export interface TemplateSandboxFields {
   file?: RootCMSFile;
   /** FileField (.txt only) */
   fileTxtOnly?: RootCMSFile;
-  /** References */
+  /** ReferencesField */
   references?: RootCMSReference[];
+  /** DateTimeField */
+  datetime?: number;
 }
