@@ -1,5 +1,13 @@
 # @blinkk/root-cms
 
+## 2.2.4
+
+### Patch Changes
+
+- 670a0189: fix: fix edit json with datetime fields (#764)
+- 0b588898: fix: fetch doc diff data on server (#762)
+  - @blinkk/root@2.2.4
+
 ## 2.2.3
 
 ### Patch Changes
