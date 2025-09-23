@@ -1,5 +1,12 @@
 # @blinkk/root-cms
 
+## 2.2.5
+
+### Patch Changes
+
+- 8479d8e7: fix: render markdown for ai summary (#765)
+  - @blinkk/root@2.2.5
+
 ## 2.2.4
 
 ### Patch Changes
