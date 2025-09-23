@@ -11,6 +11,7 @@ import {
 } from '../../utils/doc.js';
 import {getLocalISOString} from '../../utils/time.js';
 import {DocDiffViewer} from '../DocDiffViewer/DocDiffViewer.js';
+import {Markdown} from '../Markdown/Markdown.js';
 import {Text} from '../Text/Text.js';
 
 import './PublishDocModal.css';
@@ -304,13 +305,10 @@ function AiSummary(props: {docId: string}) {
     );
   } else {
     content = (
-      <Text
+      <Markdown
         className="PublishDocModal__ShowChanges__aiSummary"
-        as="pre"
-        size="body-sm"
-      >
-        {summary}
-      </Text>
+        code={summary}
+      />
     );
   }
 

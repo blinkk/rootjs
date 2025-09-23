@@ -110,8 +110,20 @@
 }
 
 .PublishDocModal__ShowChanges__aiSummary {
-  padding: 12px 16px 24px;
-  white-space: pre-wrap;
+  padding: 0 16px 24px;
+  font-size: 14px;
+}
+
+.PublishDocModal__ShowChanges__aiSummary ul {
+  margin: 10px 0;
+  padding: 0 20px;
+}
+
+.PublishDocModal__ShowChanges__aiSummary code {
   font-family: var(--font-family-mono);
-  color: black;
+  background: #f5f5f5;
+  padding: 2px;
+  border: 1px solid #dedede;
+  border-radius: 2px;
+  margin: 0 4px;
 }
