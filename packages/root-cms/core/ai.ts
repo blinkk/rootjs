@@ -12,6 +12,10 @@ import {
 } from '../shared/ai/prompts.js';
 import {RootCMSClient} from './client.js';
 import {CMSPluginOptions} from './plugin.js';
+import {
+  GenkitTool,
+  createRootCmsGetDocGenkitTool,
+} from './ai/tools/getDocTool.js';
 
 // Suppress the "Shutting down all Genkit servers..." message.
 logger.setLogLevel('warn');
@@ -102,6 +106,7 @@ export class Chat {
   history: HistoryItem[];
   model: string;
   ai: Genkit;
+  getDocTool: GenkitTool;
 
   constructor(
     chatClient: ChatClient,
@@ -128,6 +133,7 @@ export class Chat {
         }),
       ],
     });
+    this.getDocTool = createRootCmsGetDocGenkitTool(this.cmsClient);
   }
 
   /** Builds the messages for the AI request. */
@@ -197,6 +203,7 @@ export class Chat {
       model: chatRequest.model,
       messages: chatRequest.messages,
       prompt: Array.isArray(prompt) ? prompt.flat() : prompt,
+      tools: [this.getDocTool],
     });
     this.history = res.messages;
     await this.dbDoc().update({
