@@ -105,8 +105,9 @@ function DocumentPageLayout(props: DocumentPageProps) {
   const editJsonModal = useEditJsonModal();
 
   const editJson = useCallback(() => {
+    const data = draft.controller?.getData()?.fields || {};
     editJsonModal.open({
-      data: draft.controller?.getData() || {},
+      data: data,
       onSave: (newValue) => {
         if (draft.controller && newValue && typeof newValue === 'object') {
           draft.controller.updateKey('fields', newValue);
