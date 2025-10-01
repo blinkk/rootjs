@@ -1,5 +1,12 @@
 # @blinkk/root-cms
 
+## 2.2.6
+
+### Patch Changes
+
+- 9b40048d: fix: fix "edit json" on doc fields (#771)
+  - @blinkk/root@2.2.6
+
 ## 2.2.5
 
 ### Patch Changes
