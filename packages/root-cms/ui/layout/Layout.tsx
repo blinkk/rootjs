@@ -120,24 +120,35 @@ Layout.Side = () => {
         {sidebarTools && (
           <>
             <div className="Layout__side__divider" />
-            {Object.entries(sidebarTools).map(([id, tool]) => (
-              <Layout.SideButton
-                className="Layout__side__tool"
-                label={tool.label || ''}
-                url={`/cms/tools/${id}`}
-                active={currentUrl.startsWith(`/cms/tools/${id}`)}
-              >
-                {tool.icon ? (
-                  <img
-                    className="Layout__side__tool__icon"
-                    src={tool.icon}
-                    alt={tool.label || ''}
-                  />
-                ) : (
-                  <IconCarrot stroke={ICON_STROKE} />
-                )}
-              </Layout.SideButton>
-            ))}
+            {Object.entries(sidebarTools).map(([id, tool]) => {
+              const cmsUrl = tool.cmsUrl?.startsWith('/cms/')
+                ? tool.cmsUrl
+                : undefined;
+              const href = cmsUrl ?? `/cms/tools/${id}`;
+              const normalizedHref = href.replace(/\/*$/g, '');
+              const active =
+                currentUrl === normalizedHref ||
+                currentUrl.startsWith(`${normalizedHref}/`);
+              return (
+                <Layout.SideButton
+                  key={id}
+                  className="Layout__side__tool"
+                  label={tool.label || ''}
+                  url={href}
+                  active={active}
+                >
+                  {tool.icon ? (
+                    <img
+                      className="Layout__side__tool__icon"
+                      src={tool.icon}
+                      alt={tool.label || ''}
+                    />
+                  ) : (
+                    <IconCarrot stroke={ICON_STROKE} />
+                  )}
+                </Layout.SideButton>
+              );
+            })}
             <div className="Layout__side__divider" />
           </>
         )}

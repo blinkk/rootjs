@@ -89,6 +89,12 @@ export interface CMSSidebarTool {
   label?: string;
   /** Iframe URL to render for the tool. */
   iframeUrl?: string;
+  /**
+   * CMS URL that should be opened when the tool is selected. The url must start
+   * with `/cms/`. Use this to create shortcuts to CMS pages instead of
+   * rendering the tool inside an iframe.
+   */
+  cmsUrl?: string;
 }
 
 export type CMSPluginOptions = {

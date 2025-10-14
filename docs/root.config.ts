@@ -50,6 +50,7 @@ export default defineConfig({
       sidebar: {
         tools: {
           design: {label: 'Design System', iframeUrl: '/design'},
+          docs: {label: 'Docs', cmsUrl: '/cms/content'},
         },
       },
       experiments: {
