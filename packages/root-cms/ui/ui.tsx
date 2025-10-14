@@ -80,7 +80,12 @@ declare global {
       sidebar?: {
         tools?: Record<
           string,
-          {icon?: string; label?: string; iframeUrl?: string}
+          {
+            icon?: string;
+            label?: string;
+            iframeUrl?: string;
+            cmsUrl?: string;
+          }
         >;
       };
       experiments?: {

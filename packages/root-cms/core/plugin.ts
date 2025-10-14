@@ -89,6 +89,12 @@ export interface CMSSidebarTool {
   label?: string;
   /** Iframe URL to render for the tool. */
   iframeUrl?: string;
+  /**
+   * Optional CMS URL that should be opened when the tool is selected. If the
+   * url starts with `/cms/`, the sidebar will link directly to this path
+   * instead of rendering the tool inside an iframe.
+   */
+  cmsUrl?: string;
 }
 
 export type CMSPluginOptions = {
