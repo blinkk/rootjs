@@ -11,3 +11,7 @@
 .SidebarToolsPage--error {
   padding: 60px;
 }
+
+.SidebarToolsPage--message {
+  padding: 60px;
+}

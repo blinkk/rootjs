@@ -142,11 +142,15 @@ Layout.Side = () => {
               const cmsUrl = tool.cmsUrl?.startsWith('/cms/')
                 ? tool.cmsUrl
                 : undefined;
-              const href = cmsUrl ?? `/cms/tools/${id}`;
-              const normalizedHref = href.replace(/\/*$/g, '');
-              const active =
-                currentUrl === normalizedHref ||
-                currentUrl.startsWith(`${normalizedHref}/`);
+              const externalUrl = tool.externalUrl;
+              const href = externalUrl ?? cmsUrl ?? `/cms/tools/${id}`;
+              const normalizedHref = externalUrl
+                ? undefined
+                : href.replace(/\/*$/g, '');
+              const active = !externalUrl &&
+                !!normalizedHref &&
+                (currentUrl === normalizedHref ||
+                  currentUrl.startsWith(`${normalizedHref}/`));
               return (
                 <Layout.SideButton
                   key={id}
@@ -154,6 +158,7 @@ Layout.Side = () => {
                   label={tool.label || ''}
                   url={href}
                   active={active}
+                  external={Boolean(externalUrl)}
                 >
                   {tool.icon ? (
                     <img
@@ -195,6 +200,7 @@ interface SideButtonProps {
   label: string;
   url: string;
   active: boolean;
+  external?: boolean;
   children: ComponentChildren;
 }
 
@@ -206,7 +212,12 @@ Layout.SideButton = (props: SideButtonProps) => {
       position="right"
       withArrow
     >
-      <a className={joinClassNames(props.active && 'active')} href={props.url}>
+      <a
+        className={joinClassNames(props.active && 'active')}
+        href={props.url}
+        target={props.external ? '_blank' : undefined}
+        rel={props.external ? 'noreferrer noopener' : undefined}
+      >
         {props.children}
       </a>
     </Tooltip>
