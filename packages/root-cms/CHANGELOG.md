@@ -1,5 +1,13 @@
 # @blinkk/root-cms
 
+## 2.2.7
+
+### Patch Changes
+
+- 3e683e28: feat: allow hiding built-in sidebar tools (#776)
+- cc1c51df: feat: support cms sidebar tool shortcuts (#775)
+  - @blinkk/root@2.2.7
+
 ## 2.2.6
 
 ### Patch Changes
