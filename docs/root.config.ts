@@ -48,6 +48,7 @@ export default defineConfig({
       },
       gci: true,
       sidebar: {
+        hiddenBuiltInTools: ['translations'],
         tools: {
           design: {label: 'Design System', iframeUrl: '/design'},
           docs: {label: 'Docs', cmsUrl: '/cms/content'},
