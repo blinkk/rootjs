@@ -79,6 +79,7 @@ declare global {
       };
       collections: Record<string, CollectionMeta>;
       sidebar?: {
+        hiddenBuiltInTools?: CMSBuiltInSidebarTool[];
         tools?: Record<
           string,
           {
@@ -88,7 +89,6 @@ declare global {
             cmsUrl?: string;
           }
         >;
-        hiddenBuiltInTools?: CMSBuiltInSidebarTool[];
       };
       experiments?: {
         ai?: boolean | {endpoint?: string};
@@ -102,9 +102,6 @@ declare global {
 }
 
 function App() {
-  const hiddenBuiltInTools = new Set<CMSBuiltInSidebarTool>(
-    window.__ROOT_CTX.sidebar?.hiddenBuiltInTools || []
-  );
   return (
     <MantineProvider
       theme={{
@@ -137,9 +134,7 @@ function App() {
                   <Router>
                     <Route path="/cms" component={ProjectPage} />
                     <Route path="/cms/ai" component={AIPage} />
-                  {!hiddenBuiltInTools.has('assets') && (
                     <Route path="/cms/assets" component={AssetsPage} />
-                  )}
                     <Route path="/cms/compare" component={ComparePage} />
                     <Route
                       path="/cms/content/:collection?"
@@ -149,68 +144,42 @@ function App() {
                       path="/cms/content/:collection/:slug"
                       component={DocumentPage}
                     />
-                    {!hiddenBuiltInTools.has('data') && (
-                      <>
-                        <Route path="/cms/data" component={DataPage} />
-                        <Route
-                          path="/cms/data/new"
-                          component={NewDataSourcePage}
-                        />
-                        <Route
-                          path="/cms/data/:id"
-                          component={DataSourcePage}
-                        />
-                        <Route
-                          path="/cms/data/:id/edit"
-                          component={EditDataSourcePage}
-                        />
-                      </>
-                    )}
+                    <Route path="/cms/data" component={DataPage} />
+                    <Route path="/cms/data/new" component={NewDataSourcePage} />
+                    <Route path="/cms/data/:id" component={DataSourcePage} />
+                    <Route
+                      path="/cms/data/:id/edit"
+                      component={EditDataSourcePage}
+                    />
                     <Route path="/cms/logs" component={LogsPage} />
-                    {!hiddenBuiltInTools.has('releases') && (
-                      <>
-                        <Route
-                          path="/cms/releases"
-                          component={ReleasesPage}
-                        />
-                        <Route
-                          path="/cms/releases/new"
-                          component={NewReleasePage}
-                        />
-                        <Route
-                          path="/cms/releases/:id"
-                          component={ReleasePage}
-                        />
-                        <Route
-                          path="/cms/releases/:id/edit"
-                          component={EditReleasePage}
-                        />
-                      </>
-                    )}
-                    {!hiddenBuiltInTools.has('settings') && (
-                      <Route path="/cms/settings" component={SettingsPage} />
-                    )}
+                    <Route path="/cms/releases" component={ReleasesPage} />
+                    <Route
+                      path="/cms/releases/new"
+                      component={NewReleasePage}
+                    />
+                    <Route path="/cms/releases/:id" component={ReleasePage} />
+                    <Route
+                      path="/cms/releases/:id/edit"
+                      component={EditReleasePage}
+                    />
+                    <Route path="/cms/settings" component={SettingsPage} />
                     <Route path="/cms/tools/:id" component={SidebarToolsPage} />
-                    {!hiddenBuiltInTools.has('translations') && (
-                      <>
-                        <Route
-                          path="/cms/translations"
-                          component={TranslationsPage}
-                        />
-                        <Route
-                          path="/cms/translations/arb"
-                          component={TranslationsArbPage}
-                        />
-                        <Route
-                          path="/cms/translations/:hash"
-                          component={TranslationsEditPage}
-                        />
-                        <Route
-                          path="/cms/translations/:collection/:slug"
-                          component={DocTranslationsPage}
-                        />
-                      </>
-                    )}
+                    <Route
+                      path="/cms/translations"
+                      component={TranslationsPage}
+                    />
+                    <Route
+                      path="/cms/translations/arb"
+                      component={TranslationsArbPage}
+                    />
+                    <Route
+                      path="/cms/translations/:hash"
+                      component={TranslationsEditPage}
+                    />
+                    <Route
+                      path="/cms/translations/:collection/:slug"
+                      component={DocTranslationsPage}
+                    />
                     <Route default component={NotFoundPage} />
                   </Router>
                 </ModalsProvider>

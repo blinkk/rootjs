@@ -11,8 +11,8 @@ import {
   IconSettings,
 } from '@tabler/icons-preact';
 import {ComponentChildren} from 'preact';
-import type {CMSBuiltInSidebarTool} from '../../core/plugin.js';
 import {useRouter} from 'preact-router';
+import type {CMSBuiltInSidebarTool} from '../../core/plugin.js';
 import packageJson from '../../package.json' assert {type: 'json'};
 import {RootCMSLogo} from '../components/RootCMSLogo/RootCMSLogo.js';
 import {joinClassNames} from '../utils/classes.js';

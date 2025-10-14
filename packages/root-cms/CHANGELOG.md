@@ -1,11 +1,5 @@
 # @blinkk/root-cms
 
-## Unreleased
-
-### Minor Changes
-
-- feat: add option to hide built-in sidebar tools such as data sources, assets, and translations
-
 ## 2.2.6
 
 ### Patch Changes
