@@ -125,7 +125,7 @@ Layout.Side = () => {
           </Layout.SideButton>
         )}
 
-        {experiments.ai && (
+        {experiments.ai && !isBuiltInHidden('ai') && (
           <Layout.SideButton
             label="Root AI (experimental)"
             url="/cms/ai"

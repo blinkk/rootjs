@@ -39,6 +39,7 @@ export type CMSBuiltInSidebarTool =
   | 'data'
   | 'assets'
   | 'translations'
+  | 'ai'
   | 'settings';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
