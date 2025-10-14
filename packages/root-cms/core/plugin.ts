@@ -29,6 +29,18 @@ import {api} from './api.js';
 import {Action, RootCMSClient} from './client.js';
 import {sse, SSEBroadcastFn} from './sse.js';
 
+/**
+ * Built-in sidebar tools that can be toggled on/off in the CMS UI.
+ */
+export type CMSBuiltInSidebarTool =
+  | 'home'
+  | 'content'
+  | 'releases'
+  | 'data'
+  | 'assets'
+  | 'translations'
+  | 'settings';
+
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 type AppModule = typeof import('./app.js');
@@ -189,6 +201,11 @@ export type CMSPluginOptions = {
      * iframe.
      */
     tools?: Record<string, CMSSidebarTool>;
+
+    /**
+     * Hide specific built-in sidebar tools.
+     */
+    hiddenBuiltInTools?: CMSBuiltInSidebarTool[];
   };
 
   /**

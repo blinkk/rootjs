@@ -10,6 +10,7 @@ import {initializeFirestore} from 'firebase/firestore';
 import {getStorage} from 'firebase/storage';
 import {render} from 'preact';
 import {Route, Router} from 'preact-router';
+import type {CMSBuiltInSidebarTool} from '../core/plugin.js';
 import {Collection} from '../core/schema.js';
 import {AiEditModal} from './components/AiEditModal/AiEditModal.js';
 import {CopyDocModal} from './components/CopyDocModal/CopyDocModal.js';
@@ -78,6 +79,7 @@ declare global {
       };
       collections: Record<string, CollectionMeta>;
       sidebar?: {
+        hiddenBuiltInTools?: CMSBuiltInSidebarTool[];
         tools?: Record<
           string,
           {

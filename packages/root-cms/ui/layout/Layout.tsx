@@ -12,6 +12,7 @@ import {
 } from '@tabler/icons-preact';
 import {ComponentChildren} from 'preact';
 import {useRouter} from 'preact-router';
+import type {CMSBuiltInSidebarTool} from '../../core/plugin.js';
 import packageJson from '../../package.json' assert {type: 'json'};
 import {RootCMSLogo} from '../components/RootCMSLogo/RootCMSLogo.js';
 import {joinClassNames} from '../utils/classes.js';
@@ -55,57 +56,74 @@ Layout.Side = () => {
   const currentUrl = route.url.replace(/\/*$/g, '');
   const user = window.firebase.user;
   const sidebarTools = window.__ROOT_CTX.sidebar?.tools;
+  const hiddenBuiltInTools = new Set<CMSBuiltInSidebarTool>(
+    window.__ROOT_CTX.sidebar?.hiddenBuiltInTools || []
+  );
+  const isBuiltInHidden = (tool: CMSBuiltInSidebarTool) =>
+    hiddenBuiltInTools.has(tool);
   const experiments = window.__ROOT_CTX.experiments || {};
   return (
     <div className="Layout__side">
       <div className="Layout__side__buttons">
-        <Layout.SideButton
-          label="Home"
-          url="/cms"
-          active={currentUrl === '/cms'}
-        >
-          <IconHome stroke={ICON_STROKE} />
-        </Layout.SideButton>
+        {!isBuiltInHidden('home') && (
+          <Layout.SideButton
+            label="Home"
+            url="/cms"
+            active={currentUrl === '/cms'}
+          >
+            <IconHome stroke={ICON_STROKE} />
+          </Layout.SideButton>
+        )}
 
-        <Layout.SideButton
-          label="Content"
-          url="/cms/content"
-          active={currentUrl.startsWith('/cms/content')}
-        >
-          <IconFolder stroke={ICON_STROKE} />
-        </Layout.SideButton>
+        {!isBuiltInHidden('content') && (
+          <Layout.SideButton
+            label="Content"
+            url="/cms/content"
+            active={currentUrl.startsWith('/cms/content')}
+          >
+            <IconFolder stroke={ICON_STROKE} />
+          </Layout.SideButton>
+        )}
 
-        <Layout.SideButton
-          label="Releases"
-          url="/cms/releases"
-          active={currentUrl.startsWith('/cms/releases')}
-        >
-          <IconRocket stroke={ICON_STROKE} />
-        </Layout.SideButton>
+        {!isBuiltInHidden('releases') && (
+          <Layout.SideButton
+            label="Releases"
+            url="/cms/releases"
+            active={currentUrl.startsWith('/cms/releases')}
+          >
+            <IconRocket stroke={ICON_STROKE} />
+          </Layout.SideButton>
+        )}
 
-        <Layout.SideButton
-          label="Data"
-          url="/cms/data"
-          active={currentUrl.startsWith('/cms/data')}
-        >
-          <IconDatabase stroke={ICON_STROKE} />
-        </Layout.SideButton>
+        {!isBuiltInHidden('data') && (
+          <Layout.SideButton
+            label="Data"
+            url="/cms/data"
+            active={currentUrl.startsWith('/cms/data')}
+          >
+            <IconDatabase stroke={ICON_STROKE} />
+          </Layout.SideButton>
+        )}
 
-        <Layout.SideButton
-          label="Assets"
-          url="/cms/assets"
-          active={currentUrl.startsWith('/cms/assets')}
-        >
-          <IconPhoto stroke={ICON_STROKE} />
-        </Layout.SideButton>
+        {!isBuiltInHidden('assets') && (
+          <Layout.SideButton
+            label="Assets"
+            url="/cms/assets"
+            active={currentUrl.startsWith('/cms/assets')}
+          >
+            <IconPhoto stroke={ICON_STROKE} />
+          </Layout.SideButton>
+        )}
 
-        <Layout.SideButton
-          label="Translations"
-          url="/cms/translations"
-          active={currentUrl.startsWith('/cms/translations')}
-        >
-          <IconLanguage stroke={ICON_STROKE} />
-        </Layout.SideButton>
+        {!isBuiltInHidden('translations') && (
+          <Layout.SideButton
+            label="Translations"
+            url="/cms/translations"
+            active={currentUrl.startsWith('/cms/translations')}
+          >
+            <IconLanguage stroke={ICON_STROKE} />
+          </Layout.SideButton>
+        )}
 
         {experiments.ai && (
           <Layout.SideButton
@@ -153,13 +171,15 @@ Layout.Side = () => {
           </>
         )}
 
-        <Layout.SideButton
-          label="Settings"
-          url="/cms/settings"
-          active={currentUrl.startsWith('/cms/settings')}
-        >
-          <IconSettings stroke={ICON_STROKE} />
-        </Layout.SideButton>
+        {!isBuiltInHidden('settings') && (
+          <Layout.SideButton
+            label="Settings"
+            url="/cms/settings"
+            active={currentUrl.startsWith('/cms/settings')}
+          >
+            <IconSettings stroke={ICON_STROKE} />
+          </Layout.SideButton>
+        )}
       </div>
       <div className="Layout__side__user">
         <Tooltip label={user.email!} position="right" withArrow>
