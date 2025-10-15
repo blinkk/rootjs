@@ -33,7 +33,17 @@ export function DeeplinkProvider(props: {children: ComponentChildren}) {
   const [value, setValue] = useState(getDeeplink());
   const deeplinkCtx = {value, setValue};
 
-  /** Enable posting messages from the preview frame to the DocEditor so that fields can be focused. */
+  // When navigating between docs, update the deeplink (if any).
+  useEffect(() => {
+    const handlePopState = () => {
+      setValue(getDeeplink());
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
+
+  //  Enable posting messages from the preview frame to the DocEditor so that
+  // fields can be focused.
   useEffect(() => {
     const handleMessage = (event: MessageEvent) => {
       const req = event.data as DocEditorMessage;
