@@ -78,7 +78,7 @@ function extractListItems(node: ListNode): RichTextListItem[] {
       items.push(extractListItem(child));
     }
   });
-  return items;
+  return normalizeListItems(items);
 }
 
 function extractListItem(node: ListItemNode): RichTextListItem {
@@ -171,4 +171,21 @@ function escapeHTML(html: string) {
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#039;');
+}
+
+/**
+ * Normalizes items in a list. This function will "merge" nested lists into the
+ * previous item to preserve compatibility with the legacy editorjs impl.
+ */
+function normalizeListItems(items: RichTextListItem[]) {
+  const results: RichTextListItem[] = [];
+  items.forEach((item) => {
+    if (item.itemsType && item.items && results.length > 0) {
+      results.at(-1)!.itemsType = item.itemsType;
+      results.at(-1)!.items = item.items;
+    } else {
+      results.push(item);
+    }
+  });
+  return results;
 }
