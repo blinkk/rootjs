@@ -50,6 +50,10 @@ export default defineConfig({
       sidebar: {
         tools: {
           design: {label: 'Design System', iframeUrl: '/design'},
+          docs: {
+            label: 'Root.js Docs',
+            externalUrl: 'https://rootjs.dev/guide/introduction',
+          },
         },
       },
       experiments: {

@@ -10,6 +10,7 @@ export function SidebarToolsPage(props: SidebarToolsPageProps) {
   const sidebarTools = window.__ROOT_CTX.sidebar?.tools || {};
   const tool = sidebarTools[props.id];
   const cmsUrl = tool?.cmsUrl;
+  const externalUrl = tool?.externalUrl;
 
   useEffect(() => {
     if (cmsUrl?.startsWith('/cms/')) {
@@ -17,11 +18,29 @@ export function SidebarToolsPage(props: SidebarToolsPageProps) {
     }
   }, [cmsUrl]);
 
+  useEffect(() => {
+    if (externalUrl) {
+      const tab = window.open(externalUrl, '_blank', 'noopener,noreferrer');
+      tab?.focus();
+    }
+  }, [externalUrl]);
+
   if (!tool) {
     return (
       <Layout>
         <div className="SidebarToolsPage SidebarToolsPage--error">
           not found: {props.id}
+        </div>
+      </Layout>
+    );
+  }
+  if (externalUrl) {
+    return (
+      <Layout>
+        <div className="SidebarToolsPage SidebarToolsPage--message">
+          <a href={externalUrl} target="_blank" rel="noreferrer noopener">
+            Open {tool.label || props.id} in a new tab
+          </a>
         </div>
       </Layout>
     );
