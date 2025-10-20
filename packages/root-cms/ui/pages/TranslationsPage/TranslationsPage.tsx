@@ -54,7 +54,6 @@ TranslationsPage.TranslationsTable = () => {
   ];
   const [i18nLocales, setI18nLocales] = useArrayParam('locale', allLocales);
   const collections = window.__ROOT_CTX.collections;
-  console.log('xxx', collections);
 
   const localeHeaders = i18nLocales.map((locale) => (
     <Tooltip
