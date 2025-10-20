@@ -83,13 +83,6 @@
 }
 
 .TranslationsPage__TranslationsTable tbody th {
-  font-weight: 100;
-  font-style: italic;
-  text-align: left;
-  position: relative;
-}
-
-.TranslationsPage__TranslationsTable tbody th {
   position: sticky;
   left: 0;
   z-index: 1;
