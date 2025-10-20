@@ -10,17 +10,105 @@
   margin-top: 12px;
 }
 
+
 .TranslationsPage__TranslationsTable {
+  border-bottom: 1px solid #dee2e6;
+  border-right: 1px solid #dee2e6;
+  overflow: auto;
   width: 100%;
+}
+
+.TranslationsPage__TranslationsTable table {
+  border: 0;
+  border-collapse: separate;
+  border-spacing: 0;
+  table-layout: fixed;
+}
+
+.TranslationsPage__TranslationsTable__headerTooltip {
+  width: 100%;
+}
+
+.TranslationsPage__TranslationsTable__localeHeader {
+  cursor: pointer;
+  padding: 10px;
+}
+
+.TranslationsPage__TranslationsTable thead tr th,
+.TranslationsPage__TranslationsTable tbody tr td {
+  border-top: 1px solid #dee2e6;
+  border-left: 1px solid #dee2e6;
+  border-bottom: 0;
+}
+
+.TranslationsPage__TranslationsTable th:last-child,
+.TranslationsPage__TranslationsTable td:last-child {
+  border-right: 0;
+}
+
+.TranslationsPage__TranslationsTable tbody tr:last-child th,
+.TranslationsPage__TranslationsTable tbody tr:last-child td {
+  border-bottom: 1px solid #dee2e6;
+}
+
+.TranslationsPage__TranslationsTable td[data-col="tags"],
+.TranslationsPage__TranslationsTable th[data-col="tags"] {
+  max-width: 250px;
+  width: 250px;
+}
+
+.TranslationsPage__TranslationsTable .TranslationsPage__TranslationsTable__cell:has(.TranslationsPage__TranslationsTable__localeHeader) {
+  cursor: pointer;
+  padding: 0;
+}
+
+.TranslationsPage__TranslationsTable td[data-col="tags"] .TranslationsPage__TranslationsTable__Tag {
+  display: inline-block;
+  white-space: nowrap;
+  width: fit-content;
+}
+
+.TranslationsPage__TranslationsTable__cell {
+  max-width: 300px;
+  width: 300px;
   overflow: auto;
 }
 
-.TranslationsPage__TranslationsTable td[data-col="hash"] {
+.TranslationsPage__TranslationsTable td[data-col="hash"],
+.TranslationsPage__TranslationsTable th[data-col="hash"] {
   max-width: 80px;
+  width: 80px;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-.TranslationsPage__TranslationsTable td[data-string-cell="true"] {
-  min-width: 250px;
+.TranslationsPage__TranslationsTable tbody th {
+  font-weight: 100;
+  font-style: italic;
+  text-align: left;
+  position: relative;
+}
+
+.TranslationsPage__TranslationsTable tbody th {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+}
+
+.TranslationsPage__TranslationsTable thead th:first-child,
+.TranslationsPage__TranslationsTable tbody td:first-child {
+  background: white;
+  border-right: 1px solid #dee2e6;
+  position: sticky;
+  left: 0;
+  z-index: 2;
+}
+
+.TranslationsPage__TranslationsTable thead th:nth-child(2),
+.TranslationsPage__TranslationsTable tbody td:nth-child(2) {
+  border-left: 0;
+}
+
+.TranslationsPage__TranslationsTable tbody tr:last-child td {
+  border-bottom: 0;
 }

@@ -649,7 +649,10 @@ export function cmsPlugin(options: CMSPluginOptions): CMSPlugin {
       });
 
       const staticDir = path.resolve(__dirname, 'ui');
-      server.use('/cms/static', sirv(staticDir, {dev: false}));
+      server.use(
+        '/cms/static',
+        sirv(staticDir, {dev: process.env.NODE_ENV === 'development'})
+      );
 
       // Register server-sent events (SSE) endpoints.
       const sseData = sse(server);
