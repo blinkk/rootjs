@@ -31,7 +31,8 @@ export function TranslationsPage() {
   );
 }
 
-function getTags(tags: string | string[] | undefined): string[] {
+/** Normalizes the tags into a sorted array of strings. */
+function normalizeTags(tags: string | string[] | undefined): string[] {
   if (!tags) {
     return [];
   }
@@ -96,7 +97,7 @@ TranslationsPage.TranslationsTable = () => {
         translations.source,
         ...i18nLocales.map((locale) => translations[locale] || ''),
         <>
-          {getTags(translations.tags).map((tag) => {
+          {normalizeTags(translations.tags).map((tag) => {
             const attrs = {};
             // Build links for tags that likely correspond to collections or docs.
             let Component: 'div' | 'a' = 'div';
