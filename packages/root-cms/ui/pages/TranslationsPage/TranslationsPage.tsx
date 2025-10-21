@@ -180,7 +180,7 @@ TranslationsPage.TranslationsTable = () => {
           <tr>
             {headers.map((header, colIndex) => (
               <th
-                key={header}
+                key={headerValues[colIndex]}
                 data-col={headerValues[colIndex]}
                 className="TranslationsPage__TranslationsTable__cell"
               >
