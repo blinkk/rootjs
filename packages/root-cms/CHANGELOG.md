@@ -1,5 +1,12 @@
 # @blinkk/root-cms
 
+## 2.2.8
+
+### Patch Changes
+
+- 0633f304: feat: add externalUrl option to sidebar tools (#778)
+  - @blinkk/root@2.2.8
+
 ## 2.2.7
 
 ### Patch Changes
