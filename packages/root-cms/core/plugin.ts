@@ -108,6 +108,10 @@ export interface CMSSidebarTool {
    * rendering the tool inside an iframe.
    */
   cmsUrl?: string;
+  /**
+   * External URL that should open in a new tab when the tool is selected.
+   */
+  externalUrl?: string;
 }
 
 export type CMSPluginOptions = {

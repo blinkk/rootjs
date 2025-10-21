@@ -87,6 +87,7 @@ declare global {
             label?: string;
             iframeUrl?: string;
             cmsUrl?: string;
+            externalUrl?: string;
           }
         >;
       };
