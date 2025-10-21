@@ -110,7 +110,6 @@ export interface CMSSidebarTool {
   cmsUrl?: string;
   /**
    * External URL that should open in a new tab when the tool is selected.
-   * Use this to link to external dashboards or documentation.
    */
   externalUrl?: string;
 }
