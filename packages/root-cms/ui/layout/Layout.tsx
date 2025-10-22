@@ -147,7 +147,8 @@ Layout.Side = () => {
               const normalizedHref = externalUrl
                 ? undefined
                 : href.replace(/\/*$/g, '');
-              const active = !externalUrl &&
+              const active =
+                !externalUrl &&
                 !!normalizedHref &&
                 (currentUrl === normalizedHref ||
                   currentUrl.startsWith(`${normalizedHref}/`));
