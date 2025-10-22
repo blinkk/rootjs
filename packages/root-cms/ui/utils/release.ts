@@ -14,8 +14,8 @@ import {
   writeBatch,
 } from 'firebase/firestore';
 import {logAction} from './actions.js';
-import {cmsPublishDocs} from './doc.js';
 import {cmsPublishDataSources} from './data-source.js';
+import {cmsPublishDocs} from './doc.js';
 
 export interface Release {
   id: string;
