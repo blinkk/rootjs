@@ -974,7 +974,7 @@ export class RootCMSClient {
 
   async publishDataSources(
     dataSourceIds: string[],
-    options?: {publishedBy: string; batch?: WriteBatch, commitBatch?: boolean}
+    options?: {publishedBy: string; batch?: WriteBatch; commitBatch?: boolean}
   ) {
     const publishedBy = options?.publishedBy || 'root-cms-client';
     const batch = options?.batch || this.db.batch();

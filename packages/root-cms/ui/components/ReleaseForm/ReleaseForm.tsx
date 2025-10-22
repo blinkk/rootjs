@@ -19,11 +19,9 @@ import {
   getRelease,
   updateRelease,
 } from '../../utils/release.js';
+import {useDataSourceSelectModal} from '../DataSourceSelectModal/DataSourceSelectModal.js';
 import {DocPreviewCard} from '../DocPreviewCard/DocPreviewCard.js';
 import {useDocSelectModal} from '../DocSelectModal/DocSelectModal.js';
-import {
-  useDataSourceSelectModal,
-} from '../DataSourceSelectModal/DataSourceSelectModal.js';
 import './ReleaseForm.css';
 
 export interface ReleaseFormProps {

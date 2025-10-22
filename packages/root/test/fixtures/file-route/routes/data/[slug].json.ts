@@ -1,9 +1,6 @@
 export async function getStaticPaths() {
   return {
-    paths: [
-      {params: {slug: 'foo'}},
-      {params: {slug: 'bar'}},
-    ],
+    paths: [{params: {slug: 'foo'}}, {params: {slug: 'bar'}}],
   };
 }
 

@@ -12,7 +12,5 @@ export default function Page() {
 
 function MyComponent() {
   const t = useTranslations();
-  return (
-    <p>{t('{foo} / {bar}')}</p>
-  );
+  return <p>{t('{foo} / {bar}')}</p>;
 }
