@@ -1,7 +1,7 @@
 import './TranslationsPage.css';
 
 import {Button, Loader, Table, Tooltip} from '@mantine/core';
-import {useEffect, useState} from 'preact/hooks';
+import {useEffect, useState, useMemo, useCallback} from 'preact/hooks';
 import {Heading} from '../../components/Heading/Heading.js';
 import {useArrayParam} from '../../hooks/useQueryParam.js';
 import {Layout} from '../../layout/Layout.js';
@@ -42,44 +42,115 @@ function normalizeTags(tags: string | string[] | undefined): string[] {
   return [tags];
 }
 
+/** Component for rendering translation tags with proper links */
+function TranslationTags({
+  tags,
+  collections,
+}: {
+  tags: string | string[] | undefined;
+  collections: any;
+}) {
+  const normalizedTags = normalizeTags(tags);
+
+  return (
+    <>
+      {normalizedTags.map((tag) => {
+        const attrs: any = {};
+        // Build links for tags that likely correspond to collections or docs.
+        let Component: 'div' | 'a' = 'div';
+        if (tag.includes('/')) {
+          const [collectionId, slug] = tag.split('/');
+          const collection = collections[collectionId];
+          if (collection) {
+            Component = 'a';
+            Object.assign(attrs, {
+              target: '_blank',
+              href: `/cms/content/${collectionId}/${slug}`,
+            });
+          }
+        } else if (collections[tag]) {
+          Component = 'a';
+          Object.assign(attrs, {
+            target: '_blank',
+            href: `/cms/content/${tag}`,
+          });
+        }
+        return (
+          <div key={tag}>
+            <Component
+              {...attrs}
+              className="TranslationsPage__TranslationsTable__Tag"
+            >
+              {tag}
+            </Component>
+          </div>
+        );
+      })}
+    </>
+  );
+}
+
 TranslationsPage.TranslationsTable = () => {
   const [loading, setLoading] = useState(true);
-  const [tableData, setTableData] = useState<string[][]>([]);
+  const [tableData, setTableData] = useState<any[]>([]);
   const [translationsMap, setTranslationsMap] = useState<
     Record<string, Record<string, string>>
   >({});
   const locales = window.__ROOT_CTX.rootConfig.i18n?.locales || [];
-  const allLocales = [
-    'en',
-    ...locales.filter((l: string) => l !== 'en').sort(),
-  ];
+  const allLocales = useMemo(
+    () => ['en', ...locales.filter((l: string) => l !== 'en').sort()],
+    [locales]
+  );
   const [i18nLocales, setI18nLocales] = useArrayParam('locale', allLocales);
   const collections = window.__ROOT_CTX.collections;
 
-  const localeHeaders = i18nLocales.map((locale) => (
-    <Tooltip
-      className="TranslationsPage__TranslationsTable__headerTooltip"
-      placement="start"
-      withArrow
-      label={
-        i18nLocales.length === allLocales.length
-          ? `Show only ${locale}`
-          : 'Show all locales'
+  /** Toggles the locale in the URL and updates the state accordingly. */
+  const toggleLocale = useCallback(
+    (locale: string) => {
+      if (i18nLocales.length === allLocales.length) {
+        // Show only the selected locale.
+        setI18nLocales([locale]);
+      } else {
+        // Show all locales.
+        setI18nLocales(allLocales);
       }
-    >
-      <div
-        className="TranslationsPage__TranslationsTable__localeHeader"
-        onClick={() => {
-          toggleLocale(locale);
-        }}
-      >
-        {locale}
-      </div>
-    </Tooltip>
-  ));
+    },
+    [i18nLocales.length, allLocales.length, setI18nLocales, allLocales]
+  );
 
-  const headers = ['hash', 'source', ...localeHeaders, 'tags'];
-  const headerValues = ['hash', 'source', ...i18nLocales, 'tags'];
+  const localeHeaders = useMemo(
+    () =>
+      i18nLocales.map((locale) => (
+        <Tooltip
+          key={locale}
+          className="TranslationsPage__TranslationsTable__headerTooltip"
+          placement="start"
+          withArrow
+          label={
+            i18nLocales.length === allLocales.length
+              ? `Show only ${locale}`
+              : 'Show all locales'
+          }
+        >
+          <div
+            className="TranslationsPage__TranslationsTable__localeHeader"
+            onClick={() => toggleLocale(locale)}
+          >
+            {locale}
+          </div>
+        </Tooltip>
+      )),
+    [i18nLocales, allLocales.length, toggleLocale]
+  );
+
+  const headers = useMemo(
+    () => ['hash', 'source', ...localeHeaders, 'tags'],
+    [localeHeaders]
+  );
+  const headerValues = useMemo(
+    () => ['hash', 'source', ...i18nLocales, 'tags'],
+    [i18nLocales]
+  );
 
   async function updateTranslationsMap() {
     setLoading(true);
@@ -89,56 +160,22 @@ TranslationsPage.TranslationsTable = () => {
     setLoading(false);
   }
 
-  async function updateTable() {
+  const updateTable = useCallback(() => {
     const tableData: any[] = [];
     Object.entries(translationsMap).forEach(([hash, translations]) => {
-      tableData.push([
+      tableData.push({
         hash,
-        translations.source,
-        ...i18nLocales.map((locale) => translations[locale] || ''),
-        <>
-          {normalizeTags(translations.tags).map((tag) => {
-            const attrs = {};
-            // Build links for tags that likely correspond to collections or docs.
-            let Component: 'div' | 'a' = 'div';
-            if (tag.includes('/')) {
-              const [collectionId, slug] = tag.split('/');
-              const collection = collections[collectionId];
-              if (collection) {
-                Component = 'a';
-                Object.assign(attrs, {
-                  target: '_blank',
-                  href: `/cms/content/${collectionId}/${slug}`,
-                });
-              }
-            } else if (collections[tag]) {
-              Component = 'a';
-              Object.assign(attrs, {
-                target: '_blank',
-                href: `/cms/content/${tag}`,
-              });
-            }
-            return (
-              <div>
-                <Component
-                  {...attrs}
-                  key={tag}
-                  className="TranslationsPage__TranslationsTable__Tag"
-                >
-                  {tag}
-                </Component>
-              </div>
-            );
-          })}
-        </>,
-      ]);
+        source: translations.source,
+        locales: i18nLocales.map((locale) => translations[locale] || ''),
+        tags: translations.tags,
+      });
     });
     // Sort by the source string.
-    tableData.sort((a: string[], b: string[]) => {
-      return a[1].toLowerCase().localeCompare(b[1].toLowerCase());
+    tableData.sort((a: any, b: any) => {
+      return a.source.toLowerCase().localeCompare(b.source.toLowerCase());
     });
     setTableData(tableData);
-  }
+  }, [translationsMap, i18nLocales]);
 
   useEffect(() => {
     updateTranslationsMap();
@@ -146,18 +183,7 @@ TranslationsPage.TranslationsTable = () => {
 
   useEffect(() => {
     updateTable();
-  }, [translationsMap, i18nLocales]);
-
-  /** Toggles the locale in the URL and updates the state accordingly. */
-  function toggleLocale(locale: string) {
-    if (i18nLocales.length === locales.length) {
-      // Show only the selected locale.
-      setI18nLocales([locale]);
-    } else {
-      // Show all locales.
-      setI18nLocales(locales);
-    }
-  }
+  }, [updateTable]);
 
   if (loading) {
     return <Loader color="gray" size="xl" />;
@@ -190,21 +216,42 @@ TranslationsPage.TranslationsTable = () => {
           </tr>
         </thead>
         <tbody>
-          {tableData.map((cells) => (
-            <tr key={cells[0]}>
-              {cells.map((cell, colIndex) => (
+          {tableData.map((row) => (
+            <tr key={row.hash}>
+              <td
+                key="hash"
+                data-col="hash"
+                data-string-cell={false}
+                class="TranslationsPage__TranslationsTable__cell"
+              >
+                <a href={`/cms/translations/${row.hash}`}>{row.hash}</a>
+              </td>
+              <td
+                key="source"
+                data-col="source"
+                data-string-cell={true}
+                class="TranslationsPage__TranslationsTable__cell"
+              >
+                {row.source}
+              </td>
+              {row.locales.map((translation: string, localeIndex: number) => (
                 <td
-                  data-col={headerValues[colIndex]}
-                  data-string-cell={![0, headers.length - 1].includes(colIndex)}
+                  key={i18nLocales[localeIndex]}
+                  data-col={i18nLocales[localeIndex]}
+                  data-string-cell={true}
                   class="TranslationsPage__TranslationsTable__cell"
                 >
-                  {colIndex === 0 ? (
-                    <a href={`/cms/translations/${cell}`}>{cell}</a>
-                  ) : (
-                    cell
-                  )}
+                  {translation}
                 </td>
               ))}
+              <td
+                key="tags"
+                data-col="tags"
+                data-string-cell={false}
+                class="TranslationsPage__TranslationsTable__cell"
+              >
+                <TranslationTags tags={row.tags} collections={collections} />
+              </td>
             </tr>
           ))}
         </tbody>
