@@ -26,7 +26,10 @@ export function redirectsMiddleware(options: RedirectsMiddlewareOptions) {
     if (redirect) {
       const destination = replaceParams(redirect.destination!, params);
       const code = redirect.type || 302;
-      res.setHeader('cache-control', 'no-cache');
+      res.setHeader(
+        'cache-control',
+        'no-cache, no-store, max-age=0, must-revalidate'
+      );
       res.redirect(code, destination);
       return;
     }
