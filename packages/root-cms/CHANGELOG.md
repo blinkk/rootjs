@@ -1,5 +1,12 @@
 # @blinkk/root-cms
 
+## 2.2.9
+
+### Patch Changes
+
+- Updated dependencies [e5781852]
+  - @blinkk/root@2.2.9
+
 ## 2.2.8
 
 ### Patch Changes
