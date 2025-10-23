@@ -1,5 +1,11 @@
 # @blinkk/root
 
+## 2.2.9
+
+### Patch Changes
+
+- e5781852: chore: add no-cache header to server-side redirects (#782)
+
 ## 2.2.8
 
 ## 2.2.7
