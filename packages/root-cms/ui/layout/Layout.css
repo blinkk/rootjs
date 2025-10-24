@@ -8,18 +8,12 @@
 }
 
 .Layout__top {
-  background-color: white;
   grid-area: top;
   height: 48px;
   display: flex;
   align-items: center;
   padding: 8px;
   border-bottom: 1px solid var(--color-border);
-  position: sticky;
-  left: 0;
-  top: 0;
-  width: 100%;
-  z-index: 999;
 }
 
 .Layout__top__logo {
@@ -70,10 +64,6 @@
   align-items: center;
   justify-content: space-between;
   padding-bottom: 12px;
-  position: fixed;
-  left: 0;
-  top: 48px;
-  width: 48px;
 }
 
 .Layout__side__buttons {
