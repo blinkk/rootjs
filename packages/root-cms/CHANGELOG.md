@@ -1,5 +1,12 @@
 # @blinkk/root-cms
 
+## 2.2.10
+
+### Patch Changes
+
+- 0f781131: fix: style issue obscuring buttons on doc editor
+  - @blinkk/root@2.2.10
+
 ## 2.2.9
 
 ### Patch Changes

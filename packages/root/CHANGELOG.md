@@ -1,5 +1,7 @@
 # @blinkk/root
 
+## 2.2.10
+
 ## 2.2.9
 
 ### Patch Changes
