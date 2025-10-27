@@ -80,8 +80,8 @@
 }
 
 .LexicalEditor__customBlock {
-  border: 1px solid var(--mantine-color-gray-4);
-  background: var(--mantine-color-gray-1);
+  border: 1px solid #dedede;
+  background: #fafafa;
   padding: 12px;
   border-radius: 8px;
   display: flex;

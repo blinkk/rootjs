@@ -38,6 +38,26 @@ export default schema.define({
       label: 'Body copy',
       help: 'Headline body copy.',
       translate: true,
+      customBlocks: [
+        schema.define({
+          name: 'HtmlBlock',
+          fields: [
+            schema.string({
+              id: 'html',
+              variant: 'textarea',
+            }),
+          ],
+        }),
+        schema.define({
+          name: 'YouTubeBlock',
+          fields: [
+            schema.string({
+              id: 'html',
+              variant: 'textarea',
+            }),
+          ],
+        }),
+      ],
     }),
     schema.array({
       id: 'buttons',

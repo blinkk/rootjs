@@ -32,7 +32,8 @@ function CustomBlockComponent(props: CustomBlockComponentProps) {
         <div className="LexicalEditor__customBlock__actions">
           <Button
             size="xs"
-            variant="light"
+            variant="default"
+            compact
             onClick={() =>
               onEditBlock(props.blockName, {
                 mode: 'edit',
@@ -132,9 +133,7 @@ export function $createCustomBlockNode(
   return new CustomBlockNode(blockName, data);
 }
 
-export function $isCustomBlockNode(
-  node: any
-): node is CustomBlockNode {
+export function $isCustomBlockNode(node: any): node is CustomBlockNode {
   return node instanceof CustomBlockNode;
 }
 

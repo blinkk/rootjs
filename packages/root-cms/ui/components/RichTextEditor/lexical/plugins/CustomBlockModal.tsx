@@ -1,12 +1,12 @@
 import {Button, Group, Modal, Stack, Text} from '@mantine/core';
 import {useMemo} from 'preact/hooks';
 import * as schema from '../../../../../core/schema.js';
-import {DocEditor} from '../../../DocEditor/DocEditor.js';
 import {
   DraftDocContext,
   DraftDocContextProvider,
-} from '../../../hooks/useDraftDoc.js';
-import {getNestedValue} from '../../../utils/objects.js';
+} from '../../../../hooks/useDraftDoc.js';
+import {getNestedValue} from '../../../../utils/objects.js';
+import {DocEditor} from '../../../DocEditor/DocEditor.js';
 
 interface CustomBlockModalProps {
   schema: schema.Schema;
@@ -145,7 +145,7 @@ export function CustomBlockModal(props: CustomBlockModalProps) {
       ({
         loading: false,
         controller: controller as unknown as DraftDocContext['controller'],
-      } as DraftDocContext),
+      }) as DraftDocContext,
     [controller]
   );
 
@@ -167,7 +167,12 @@ export function CustomBlockModal(props: CustomBlockModalProps) {
   };
 
   return (
-    <Modal opened={props.opened} onClose={props.onClose} title={props.schema.name} size="lg">
+    <Modal
+      opened={props.opened}
+      onClose={props.onClose}
+      title={props.schema.name}
+      size="lg"
+    >
       <Stack spacing="md">
         {props.schema.fields.length > 0 ? (
           <DraftDocContextProvider value={draftContext}>

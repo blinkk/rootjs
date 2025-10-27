@@ -1,7 +1,7 @@
+import {NodeKey} from 'lexical';
 import {ComponentChildren, createContext} from 'preact';
 import {useContext} from 'preact/hooks';
 import * as schema from '../../../../../core/schema.js';
-import {NodeKey} from 'lexical';
 
 type CustomBlockMap = Map<string, schema.Schema>;
 
@@ -17,7 +17,7 @@ interface CustomBlocksContextValue {
   ) => void;
 }
 
-const CustomBlocksContext = createContext<CustomBlocksContextValue>({
+const CUSTOM_BLOCKS_CONTEXT = createContext<CustomBlocksContextValue>({
   blocks: new Map(),
 });
 
@@ -36,14 +36,14 @@ export interface CustomBlocksProviderProps {
 
 export function CustomBlocksProvider(props: CustomBlocksProviderProps) {
   return (
-    <CustomBlocksContext.Provider
+    <CUSTOM_BLOCKS_CONTEXT.Provider
       value={{blocks: props.blocks, onEditBlock: props.onEditBlock}}
     >
       {props.children}
-    </CustomBlocksContext.Provider>
+    </CUSTOM_BLOCKS_CONTEXT.Provider>
   );
 }
 
 export function useCustomBlocks() {
-  return useContext(CustomBlocksContext);
+  return useContext(CUSTOM_BLOCKS_CONTEXT);
 }
