@@ -439,6 +439,19 @@ export function DraftDocProvider(props: DraftDocProviderProps) {
   );
 }
 
+export interface DraftDocContextProviderProps {
+  value: DraftDocContext;
+  children?: ComponentChildren;
+}
+
+export function DraftDocContextProvider(props: DraftDocContextProviderProps) {
+  return (
+    <DRAFT_DOC_CONTEXT.Provider value={props.value}>
+      {props.children}
+    </DRAFT_DOC_CONTEXT.Provider>
+  );
+}
+
 export function useDraftDoc(): DraftDocContext {
   const value = useContext(DRAFT_DOC_CONTEXT);
   if (!value) {

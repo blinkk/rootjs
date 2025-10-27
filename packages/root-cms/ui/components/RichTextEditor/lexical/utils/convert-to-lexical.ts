@@ -13,17 +13,18 @@ import {
   LexicalNode,
   TextNode,
 } from 'lexical';
-import {
-  RichTextData,
-  RichTextListItem,
-} from '../../../../../shared/richtext.js';
+import {RichTextData, RichTextListItem} from '../../../../../shared/richtext.js';
+import {$createCustomBlockNode} from '../nodes/CustomBlockNode.js';
 
 /**
  * Converts from lexical to rich text data and writes the output directly to
  * the current editor.
  * NOTE: this function must be called within an `editor.update()` callback.
  */
-export function convertToLexical(data?: RichTextData | null) {
+export function convertToLexical(
+  data?: RichTextData | null,
+  _customBlocks?: Map<string, unknown>
+) {
   const root = $getRoot();
   root.clear();
 
@@ -51,6 +52,9 @@ export function convertToLexical(data?: RichTextData | null) {
         listNode.append(...createListItemNodes(item, style));
       }
       root.append(listNode);
+    } else if (block.type) {
+      const node = $createCustomBlockNode(block.type, block.data || {});
+      root.append(node);
     }
   }
 }

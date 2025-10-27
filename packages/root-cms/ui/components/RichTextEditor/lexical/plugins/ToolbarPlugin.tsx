@@ -35,6 +35,7 @@ import {
   IconCode,
   IconH4,
   IconH5,
+  IconLayoutCollage,
 } from '@tabler/icons-preact';
 import {
   $getSelection,
@@ -57,7 +58,7 @@ import {
 //   InsertImageDialog,
 // } from './ImagesPlugin.js';
 import {ComponentChildren} from 'preact';
-import {Dispatch, useCallback, useEffect, useState} from 'preact/compat';
+import {Dispatch, useCallback, useEffect, useMemo, useState} from 'preact/compat';
 import * as schema from '../../../../../core/schema.js';
 import {joinClassNames} from '../../../../utils/classes.js';
 // import {useEmbedModal} from '../../components/EmbedModal/EmbedModal.js';
@@ -250,10 +251,19 @@ interface ToolbarPluginProps {
   activeEditor: LexicalEditor;
   setActiveEditor: Dispatch<LexicalEditor>;
   setIsLinkEditMode: Dispatch<boolean>;
+  customBlocks?: schema.Schema[];
+  onInsertCustomBlock?: (blockName: string) => void;
 }
 
 export function ToolbarPlugin(props: ToolbarPluginProps) {
-  const {editor, activeEditor, setActiveEditor, setIsLinkEditMode} = props;
+  const {
+    editor,
+    activeEditor,
+    setActiveEditor,
+    setIsLinkEditMode,
+    customBlocks,
+    onInsertCustomBlock,
+  } = props;
   const [selectedElementKey, setSelectedElementKey] = useState<NodeKey | null>(
     null
   );
@@ -415,6 +425,13 @@ export function ToolbarPlugin(props: ToolbarPluginProps) {
     }
   }, [activeEditor, setIsLinkEditMode, toolbarState.isLink]);
 
+  const sortedCustomBlocks = useMemo(() => {
+    if (!customBlocks) {
+      return [] as schema.Schema[];
+    }
+    return [...customBlocks].sort((a, b) => a.name.localeCompare(b.name));
+  }, [customBlocks]);
+
   return (
     <div className="LexicalEditor__toolbar">
       {toolbarState.blockType in TOOLBAR_BLOCK_LABELS &&
@@ -489,6 +506,37 @@ export function ToolbarPlugin(props: ToolbarPluginProps) {
         </div>
 
         <Divider />
+
+        {sortedCustomBlocks.length > 0 && (
+          <>
+            <Menu
+              control={
+                <Button
+                  className={joinClassNames(
+                    'LexicalEditor__toolbar__dropdown',
+                    'LexicalEditor__toolbar__insertDropdown'
+                  )}
+                  variant="default"
+                  compact
+                  rightIcon={<IconChevronDown size={16} />}
+                  leftIcon={<IconLayoutCollage size={16} />}
+                >
+                  Blocks
+                </Button>
+              }
+            >
+              {sortedCustomBlocks.map((block) => (
+                <Menu.Item
+                  key={block.name}
+                  onClick={() => onInsertCustomBlock?.(block.name)}
+                >
+                  {block.name}
+                </Menu.Item>
+              ))}
+            </Menu>
+            <Divider />
+          </>
+        )}
 
         {/* <InsertDropdown /> */}
 

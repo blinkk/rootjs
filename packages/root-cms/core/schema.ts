@@ -201,6 +201,8 @@ export type RichTextField = CommonFieldProps & {
   type: 'richtext';
   translate?: boolean;
   placeholder?: string;
+  /** Custom block definitions available in the rich text editor. */
+  customBlocks?: Schema[];
 };
 
 export function richtext(field: Omit<RichTextField, 'type'>): RichTextField {

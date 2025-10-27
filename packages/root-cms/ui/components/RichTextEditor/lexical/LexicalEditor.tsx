@@ -15,21 +15,31 @@ import {ListPlugin} from '@lexical/react/LexicalListPlugin';
 import {RichTextPlugin} from '@lexical/react/LexicalRichTextPlugin';
 import {TabIndentationPlugin} from '@lexical/react/LexicalTabIndentationPlugin';
 import {HeadingNode} from '@lexical/rich-text';
+import {$getNodeByKey, $insertNodes, NodeKey} from 'lexical';
 import {useMemo, useState} from 'preact/hooks';
+import * as schema from '../../../../core/schema.js';
 import {RichTextData} from '../../../../shared/richtext.js';
+import {getDefaultFieldValue} from '../../../utils/fields.js';
 import {joinClassNames} from '../../../utils/classes.js';
 import {
   SharedHistoryProvider,
   useSharedHistory,
 } from './hooks/useSharedHistory.js';
+import {CustomBlocksProvider} from './hooks/useCustomBlocks.js';
 import {ToolbarProvider} from './hooks/useToolbar.js';
 import {LexicalTheme} from './LexicalTheme.js';
 import {FloatingLinkEditorPlugin} from './plugins/FloatingLinkEditorPlugin.js';
 import {FloatingToolbarPlugin} from './plugins/FloatingToolbarPlugin.js';
 import {MarkdownTransformPlugin} from './plugins/MarkdownTransformPlugin.js';
 import {OnChangePlugin} from './plugins/OnChangePlugin.js';
+import {CustomBlockModal} from './plugins/CustomBlockModal.js';
 import {ShortcutsPlugin} from './plugins/ShortcutsPlugin.js';
 import {ToolbarPlugin} from './plugins/ToolbarPlugin.js';
+import {
+  $createCustomBlockNode,
+  $isCustomBlockNode,
+  CustomBlockNode,
+} from './nodes/CustomBlockNode.js';
 
 const INITIAL_CONFIG: InitialConfigType = {
   namespace: 'RootCMS',
@@ -41,6 +51,7 @@ const INITIAL_CONFIG: InitialConfigType = {
     LinkNode,
     ListNode,
     ListItemNode,
+    CustomBlockNode,
     // YouTubeNode,
   ],
   onError: (err: Error) => {
@@ -49,6 +60,23 @@ const INITIAL_CONFIG: InitialConfigType = {
   },
 };
 
+interface CustomBlockModalState {
+  schema: schema.Schema;
+  mode: 'create' | 'edit';
+  initialValue: Record<string, any>;
+  nodeKey?: NodeKey;
+}
+
+function cloneData<T>(data: T): T {
+  if (data === undefined || data === null) {
+    return data;
+  }
+  if (typeof globalThis.structuredClone === 'function') {
+    return globalThis.structuredClone(data);
+  }
+  return JSON.parse(JSON.stringify(data));
+}
+
 export interface LexicalEditorProps {
   className?: string;
   placeholder?: string;
@@ -56,6 +84,7 @@ export interface LexicalEditorProps {
   onChange?: (value: RichTextData | null) => void;
   onFocus?: (e: FocusEvent) => void;
   onBlur?: (e: FocusEvent) => void;
+  customBlocks?: schema.Schema[];
 }
 
 export function LexicalEditor(props: LexicalEditorProps) {
@@ -73,6 +102,7 @@ export function LexicalEditor(props: LexicalEditorProps) {
               onChange={props.onChange}
               onFocus={props.onFocus}
               onBlur={props.onBlur}
+              customBlocks={props.customBlocks}
             />
           </div>
         </ToolbarProvider>
@@ -89,6 +119,7 @@ interface EditorProps {
   onFocus?: (e: FocusEvent) => void;
   /** Blur handler (currently unimplemented.) */
   onBlur?: (e: FocusEvent) => void;
+  customBlocks?: schema.Schema[];
 }
 
 function Editor(props: EditorProps) {
@@ -98,6 +129,16 @@ function Editor(props: EditorProps) {
   const [isLinkEditMode, setIsLinkEditMode] = useState(false);
   const [floatingAnchorElem, setFloatingAnchorElem] =
     useState<HTMLElement | null>(null);
+  const customBlocksMap = useMemo(() => {
+    const map = new Map<string, schema.Schema>();
+    props.customBlocks?.forEach((block) => {
+      map.set(block.name, block);
+    });
+    return map;
+  }, [props.customBlocks]);
+  const [customBlockModalState, setCustomBlockModalState] = useState<
+    CustomBlockModalState | null
+  >(null);
 
   // The "onRef" var is used as a callback, so it's typed to `any` here to avoid
   // type warnings.
@@ -107,14 +148,78 @@ function Editor(props: EditorProps) {
     }
   };
 
+  const openCustomBlockModal = (blockName: string, options?: {
+    mode?: 'create' | 'edit';
+    initialValue?: Record<string, any>;
+    nodeKey?: NodeKey;
+  }) => {
+    const schemaDef = customBlocksMap.get(blockName);
+    if (!schemaDef) {
+      return;
+    }
+    const initialValue = options?.initialValue
+      ? cloneData(options.initialValue)
+      : getDefaultFieldValue(schemaDef);
+    setCustomBlockModalState({
+      schema: schemaDef,
+      mode: options?.mode ?? 'create',
+      initialValue,
+      nodeKey: options?.nodeKey,
+    });
+  };
+
+  const insertCustomBlock = (blockName: string, data: Record<string, any>) => {
+    editor.update(() => {
+      const node = $createCustomBlockNode(blockName, data);
+      $insertNodes([node]);
+      node.selectNext();
+    });
+  };
+
+  const updateCustomBlock = (nodeKey: NodeKey, data: Record<string, any>) => {
+    editor.update(() => {
+      const node = $getNodeByKey(nodeKey);
+      if ($isCustomBlockNode(node)) {
+        node.setBlockData(data);
+      }
+    });
+  };
+
+  const closeCustomBlockModal = () => {
+    setCustomBlockModalState(null);
+  };
+
+  const onCustomBlockSubmit = (data: Record<string, any>) => {
+    if (!customBlockModalState) {
+      return;
+    }
+    if (customBlockModalState.mode === 'edit' && customBlockModalState.nodeKey) {
+      updateCustomBlock(customBlockModalState.nodeKey, data);
+    } else {
+      insertCustomBlock(customBlockModalState.schema.name, data);
+    }
+    closeCustomBlockModal();
+  };
+
   return (
-    <>
-      <OnChangePlugin value={props.value} onChange={props.onChange} />
+    <CustomBlocksProvider
+      blocks={customBlocksMap}
+      onEditBlock={openCustomBlockModal}
+    >
+      <OnChangePlugin
+        value={props.value}
+        onChange={props.onChange}
+        customBlocks={customBlocksMap}
+      />
       <ToolbarPlugin
         editor={editor}
         activeEditor={activeEditor}
         setActiveEditor={setActiveEditor}
         setIsLinkEditMode={setIsLinkEditMode}
+        customBlocks={props.customBlocks}
+        onInsertCustomBlock={(blockName) =>
+          openCustomBlockModal(blockName, {mode: 'create'})
+        }
       />
       <ShortcutsPlugin
         editor={activeEditor}
@@ -151,7 +256,17 @@ function Editor(props: EditorProps) {
           />
         </>
       )}
-    </>
+      {customBlockModalState && (
+        <CustomBlockModal
+          schema={customBlockModalState.schema}
+          opened={true}
+          initialValue={customBlockModalState.initialValue}
+          mode={customBlockModalState.mode}
+          onClose={closeCustomBlockModal}
+          onSubmit={onCustomBlockSubmit}
+        />
+      )}
+    </CustomBlocksProvider>
   );
 }
 

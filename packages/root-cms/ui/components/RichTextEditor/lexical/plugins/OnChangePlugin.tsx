@@ -2,6 +2,7 @@ import {useLexicalComposerContext} from '@lexical/react/LexicalComposerContext';
 import {OnChangePlugin as LexicalOnChangePlugin} from '@lexical/react/LexicalOnChangePlugin';
 import {EditorState} from 'lexical';
 import {useEffect, useRef} from 'preact/hooks';
+import * as schema from '../../../../../core/schema.js';
 import {RichTextData} from '../../../../../shared/richtext.js';
 import {convertToRichTextData} from '../utils/convert-from-lexical.js';
 import {convertToLexical} from '../utils/convert-to-lexical.js';
@@ -9,6 +10,7 @@ import {convertToLexical} from '../utils/convert-to-lexical.js';
 export interface OnChangePluginProps {
   value?: RichTextData | null;
   onChange?: (data: RichTextData | null) => void;
+  customBlocks?: Map<string, schema.Schema>;
 }
 
 export function OnChangePlugin(props: OnChangePluginProps) {
@@ -25,10 +27,10 @@ export function OnChangePlugin(props: OnChangePluginProps) {
       timeSavedRef.current = time;
       editor.update(() => {
         isUpdatingRef.current = true;
-        convertToLexical(props.value);
+        convertToLexical(props.value, props.customBlocks);
       });
     }
-  }, [editor, props.value]);
+  }, [editor, props.value, props.customBlocks]);
 
   const onChange = (editorState: EditorState) => {
     // Ignore editor updates from props.value changes.
@@ -39,7 +41,7 @@ export function OnChangePlugin(props: OnChangePluginProps) {
     // When the user enters new content, read the current lexical data, convert
     // it to RichTextData, and then call the onChange() callback.
     editorState.read(() => {
-      const richTextData = convertToRichTextData();
+      const richTextData = convertToRichTextData(props.customBlocks);
       timeSavedRef.current = richTextData?.time || 0;
       if (props.onChange) {
         props.onChange(richTextData);

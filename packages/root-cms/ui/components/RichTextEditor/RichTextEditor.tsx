@@ -1,3 +1,4 @@
+import * as schema from '../../../core/schema.js';
 import {RichTextData} from '../../../shared/richtext.js';
 import {useUserPreferences} from '../../hooks/useUserPreferences.js';
 import {EditorJSEditor} from './editorjs/EditorJSEditor.js';
@@ -10,12 +11,14 @@ export interface RichTextEditorProps {
   onChange?: (data: RichTextData) => void;
   onFocus?: (e: FocusEvent) => void;
   onBlur?: (e: FocusEvent) => void;
+  customBlocks?: schema.Schema[];
 }
 
 export function RichTextEditor(props: RichTextEditorProps) {
+  const {customBlocks, ...rest} = props;
   const userPrefs = useUserPreferences();
   if (userPrefs.preferences.EnableLexicalEditor) {
-    return <LexicalEditor {...props} />;
+    return <LexicalEditor {...rest} customBlocks={customBlocks} />;
   }
-  return <EditorJSEditor {...props} />;
+  return <EditorJSEditor {...rest} />;
 }

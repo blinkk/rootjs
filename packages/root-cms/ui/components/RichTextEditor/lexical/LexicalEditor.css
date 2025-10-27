@@ -74,3 +74,32 @@
   color: #666;
   pointer-events: none;
 }
+
+.LexicalEditor__customBlockWrapper {
+  margin: 8px 0;
+}
+
+.LexicalEditor__customBlock {
+  border: 1px solid var(--mantine-color-gray-4);
+  background: var(--mantine-color-gray-1);
+  padding: 12px;
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.LexicalEditor__customBlock__header {
+  font-weight: 600;
+  color: var(--mantine-color-gray-7);
+}
+
+.LexicalEditor__customBlock__preview {
+  color: var(--mantine-color-gray-7);
+  font-size: 0.875rem;
+}
+
+.LexicalEditor__customBlock__actions {
+  display: flex;
+  justify-content: flex-end;
+}
