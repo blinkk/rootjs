@@ -45,6 +45,10 @@
   color: rgb(28, 126, 214);
 }
 
+.LexicalEditor__toolbar__insertDropdown {
+  font-size: 12px;
+}
+
 .LexicalEditor__editor {
   border: 1px solid #ced4da;
   background: #fff;
@@ -91,12 +95,10 @@
 
 .LexicalEditor__customBlock__header {
   font-weight: 600;
-  color: var(--mantine-color-gray-7);
 }
 
 .LexicalEditor__customBlock__preview {
-  color: var(--mantine-color-gray-7);
-  font-size: 0.875rem;
+  font-size: 12px;
 }
 
 .LexicalEditor__customBlock__actions {

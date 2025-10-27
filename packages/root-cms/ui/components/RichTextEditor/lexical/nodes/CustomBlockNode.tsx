@@ -14,7 +14,7 @@ interface CustomBlockComponentProps {
 function CustomBlockComponent(props: CustomBlockComponentProps) {
   const {blocks, onEditBlock} = useCustomBlocks();
   const schemaDef = blocks.get(props.blockName);
-  const label = schemaDef?.name || props.blockName;
+  const label = schemaDef?.label || schemaDef?.name || props.blockName;
   const preview = useMemo(() => {
     if (!schemaDef) {
       return undefined;

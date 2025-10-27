@@ -58,7 +58,13 @@ import {
 //   InsertImageDialog,
 // } from './ImagesPlugin.js';
 import {ComponentChildren} from 'preact';
-import {Dispatch, useCallback, useEffect, useMemo, useState} from 'preact/compat';
+import {
+  Dispatch,
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+} from 'preact/compat';
 import * as schema from '../../../../../core/schema.js';
 import {joinClassNames} from '../../../../utils/classes.js';
 // import {useEmbedModal} from '../../components/EmbedModal/EmbedModal.js';
@@ -230,18 +236,6 @@ function InsertDropdown() {
   );
 }
 
-const INSERT_HTML_SCHEMA = schema.define({
-  name: 'InsertHTML',
-  fields: [
-    schema.string({
-      id: 'html',
-      label: 'HTML',
-      help: 'HTML code to embed. Please use caution when embedding HTML.',
-      variant: 'textarea',
-    }),
-  ],
-});
-
 function Divider() {
   return <div className="divider" />;
 }
@@ -258,10 +252,10 @@ interface ToolbarPluginProps {
 export function ToolbarPlugin(props: ToolbarPluginProps) {
   const {
     editor,
+    customBlocks,
     activeEditor,
     setActiveEditor,
     setIsLinkEditMode,
-    customBlocks,
     onInsertCustomBlock,
   } = props;
   const [selectedElementKey, setSelectedElementKey] = useState<NodeKey | null>(
@@ -429,7 +423,11 @@ export function ToolbarPlugin(props: ToolbarPluginProps) {
     if (!customBlocks) {
       return [] as schema.Schema[];
     }
-    return [...customBlocks].sort((a, b) => a.name.localeCompare(b.name));
+    return [...customBlocks].sort((a, b) => {
+      const aLabel = a.label || a.name;
+      const bLabel = b.label || b.name;
+      return aLabel.localeCompare(bLabel);
+    });
   }, [customBlocks]);
 
   return (
@@ -530,7 +528,7 @@ export function ToolbarPlugin(props: ToolbarPluginProps) {
                   key={block.name}
                   onClick={() => onInsertCustomBlock?.(block.name)}
                 >
-                  {block.name}
+                  {block.label || block.name}
                 </Menu.Item>
               ))}
             </Menu>

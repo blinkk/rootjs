@@ -19,27 +19,27 @@ import {$getNodeByKey, $insertNodes, NodeKey} from 'lexical';
 import {useMemo, useState} from 'preact/hooks';
 import * as schema from '../../../../core/schema.js';
 import {RichTextData} from '../../../../shared/richtext.js';
-import {getDefaultFieldValue} from '../../../utils/fields.js';
 import {joinClassNames} from '../../../utils/classes.js';
+import {getDefaultFieldValue} from '../../../utils/fields.js';
+import {CustomBlocksProvider} from './hooks/useCustomBlocks.js';
 import {
   SharedHistoryProvider,
   useSharedHistory,
 } from './hooks/useSharedHistory.js';
-import {CustomBlocksProvider} from './hooks/useCustomBlocks.js';
 import {ToolbarProvider} from './hooks/useToolbar.js';
 import {LexicalTheme} from './LexicalTheme.js';
-import {FloatingLinkEditorPlugin} from './plugins/FloatingLinkEditorPlugin.js';
-import {FloatingToolbarPlugin} from './plugins/FloatingToolbarPlugin.js';
-import {MarkdownTransformPlugin} from './plugins/MarkdownTransformPlugin.js';
-import {OnChangePlugin} from './plugins/OnChangePlugin.js';
-import {CustomBlockModal} from './plugins/CustomBlockModal.js';
-import {ShortcutsPlugin} from './plugins/ShortcutsPlugin.js';
-import {ToolbarPlugin} from './plugins/ToolbarPlugin.js';
 import {
   $createCustomBlockNode,
   $isCustomBlockNode,
   CustomBlockNode,
 } from './nodes/CustomBlockNode.js';
+import {CustomBlockModal} from './plugins/CustomBlockModal.js';
+import {FloatingLinkEditorPlugin} from './plugins/FloatingLinkEditorPlugin.js';
+import {FloatingToolbarPlugin} from './plugins/FloatingToolbarPlugin.js';
+import {MarkdownTransformPlugin} from './plugins/MarkdownTransformPlugin.js';
+import {OnChangePlugin} from './plugins/OnChangePlugin.js';
+import {ShortcutsPlugin} from './plugins/ShortcutsPlugin.js';
+import {ToolbarPlugin} from './plugins/ToolbarPlugin.js';
 
 const INITIAL_CONFIG: InitialConfigType = {
   namespace: 'RootCMS',
@@ -111,6 +111,24 @@ export function LexicalEditor(props: LexicalEditorProps) {
   );
 }
 
+const INSERT_HTML_BLOCK = schema.define({
+  name: 'html',
+  label: 'HTML Code',
+  preview: {
+    title: 'html',
+  },
+  fields: [
+    schema.string({
+      id: 'html',
+      label: 'HTML',
+      help: 'HTML code to embed. Please use caution when inserting HTML.',
+      variant: 'textarea',
+    }),
+  ],
+});
+
+const BUILT_IN_BLOCKS = [INSERT_HTML_BLOCK];
+
 interface EditorProps {
   placeholder?: string;
   value?: RichTextData | null;
@@ -131,14 +149,16 @@ function Editor(props: EditorProps) {
     useState<HTMLElement | null>(null);
   const customBlocksMap = useMemo(() => {
     const map = new Map<string, schema.Schema>();
+    BUILT_IN_BLOCKS.forEach((block) => {
+      map.set(block.name, block);
+    });
     props.customBlocks?.forEach((block) => {
       map.set(block.name, block);
     });
     return map;
   }, [props.customBlocks]);
-  const [customBlockModalState, setCustomBlockModalState] = useState<
-    CustomBlockModalState | null
-  >(null);
+  const [customBlockModalState, setCustomBlockModalState] =
+    useState<CustomBlockModalState | null>(null);
 
   // The "onRef" var is used as a callback, so it's typed to `any` here to avoid
   // type warnings.
@@ -148,11 +168,14 @@ function Editor(props: EditorProps) {
     }
   };
 
-  const openCustomBlockModal = (blockName: string, options?: {
-    mode?: 'create' | 'edit';
-    initialValue?: Record<string, any>;
-    nodeKey?: NodeKey;
-  }) => {
+  const openCustomBlockModal = (
+    blockName: string,
+    options?: {
+      mode?: 'create' | 'edit';
+      initialValue?: Record<string, any>;
+      nodeKey?: NodeKey;
+    }
+  ) => {
     const schemaDef = customBlocksMap.get(blockName);
     if (!schemaDef) {
       return;
@@ -193,7 +216,10 @@ function Editor(props: EditorProps) {
     if (!customBlockModalState) {
       return;
     }
-    if (customBlockModalState.mode === 'edit' && customBlockModalState.nodeKey) {
+    if (
+      customBlockModalState.mode === 'edit' &&
+      customBlockModalState.nodeKey
+    ) {
       updateCustomBlock(customBlockModalState.nodeKey, data);
     } else {
       insertCustomBlock(customBlockModalState.schema.name, data);

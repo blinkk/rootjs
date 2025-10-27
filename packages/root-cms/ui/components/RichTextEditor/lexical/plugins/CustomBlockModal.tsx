@@ -153,7 +153,7 @@ export function CustomBlockModal(props: CustomBlockModalProps) {
     () => ({
       type: 'object',
       id: 'block',
-      label: props.schema.name,
+      label: props.schema.label || props.schema.name,
       variant: 'inline',
       fields: props.schema.fields,
     }),
@@ -170,7 +170,7 @@ export function CustomBlockModal(props: CustomBlockModalProps) {
     <Modal
       opened={props.opened}
       onClose={props.onClose}
-      title={props.schema.name}
+      title={props.schema.label || props.schema.name}
       size="lg"
     >
       <Stack spacing="md">
@@ -183,11 +183,11 @@ export function CustomBlockModal(props: CustomBlockModalProps) {
             This block does not define any editable fields.
           </Text>
         )}
-        <Group position="right">
-          <Button variant="default" onClick={props.onClose}>
+        <Group position="right" spacing="sm">
+          <Button variant="default" size="xs" onClick={props.onClose}>
             Cancel
           </Button>
-          <Button onClick={handleSubmit}>
+          <Button size="xs" onClick={handleSubmit}>
             {props.mode === 'edit' ? 'Save block' : 'Insert block'}
           </Button>
         </Group>
