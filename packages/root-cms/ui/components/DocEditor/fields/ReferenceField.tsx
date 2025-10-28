@@ -106,8 +106,8 @@ ReferenceField.Preview = (props: ReferencePreviewProps) => {
         <ReferenceField.DocCard doc={previewDoc} />
       ) : (
         <div className="ReferenceField__Preview__notfound">
-          Doc Not found: "{props.id}" (was it deleted?). Select a new doc or
-          remove using the trash icon to the right.
+          Doc not found: <b>{props.id}</b> (was it deleted?). Select a new doc
+          or remove using the trash icon to the right.
         </div>
       )}
     </div>

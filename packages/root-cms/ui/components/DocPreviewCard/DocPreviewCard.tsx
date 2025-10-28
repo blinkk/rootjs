@@ -56,7 +56,12 @@ export function DocPreviewCard(props: DocPreviewCardProps) {
   const fields = doc.fields || {};
   const rootCollection = window.__ROOT_CTX.collections[collection];
   if (!rootCollection) {
-    throw new Error(`could not find collection: ${collection}`);
+    console.error(`could not find collection: ${collection}`);
+    return (
+      <div className="DocPreviewCard">
+        Collection <b>{collection}</b> not found.
+      </div>
+    );
   }
   const previewTitle = getNestedValue(
     fields,
