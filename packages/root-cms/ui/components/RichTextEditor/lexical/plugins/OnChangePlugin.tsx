@@ -14,7 +14,7 @@ export interface OnChangePluginProps {
 export function OnChangePlugin(props: OnChangePluginProps) {
   const [editor] = useLexicalComposerContext();
 
-  const timeSavedRef = useRef(props.value?.time || 0);
+  const timeSavedRef = useRef(0);
   const isUpdatingRef = useRef(false);
 
   useEffect(() => {
