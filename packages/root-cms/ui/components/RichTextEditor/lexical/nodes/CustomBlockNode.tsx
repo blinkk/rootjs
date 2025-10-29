@@ -1,6 +1,6 @@
 import {DecoratorBlockNode} from '@lexical/react/LexicalDecoratorBlockNode';
 import {Button} from '@mantine/core';
-import {LexicalEditor, NodeKey, SerializedLexicalNode, Spread} from 'lexical';
+import {NodeKey, SerializedLexicalNode, Spread} from 'lexical';
 import {useMemo} from 'preact/hooks';
 import {getSchemaPreviewTitle} from '../../../../utils/schema-previews.js';
 import {useCustomBlocks} from '../hooks/useCustomBlocks.js';
@@ -64,12 +64,6 @@ export class CustomBlockNode extends DecoratorBlockNode {
   __blockName: string;
   __blockData: Record<string, any>;
 
-  constructor(blockName: string, data?: Record<string, any>, key?: NodeKey) {
-    super(key);
-    this.__blockName = blockName;
-    this.__blockData = data ? cloneData(data) : {};
-  }
-
   static getType(): string {
     return 'custom-block';
   }
@@ -83,13 +77,20 @@ export class CustomBlockNode extends DecoratorBlockNode {
     return new CustomBlockNode(blockName, data);
   }
 
-  exportJSON(): SerializedCustomBlockNode {
+  exportJSON() {
     return {
+      ...super.exportJSON(),
       type: 'custom-block',
       blockName: this.__blockName,
       data: cloneData(this.__blockData),
       version: 1,
     };
+  }
+
+  constructor(blockName: string, data?: Record<string, any>, key?: NodeKey) {
+    super('', key);
+    this.__blockName = blockName;
+    this.__blockData = data ? cloneData(data) : {};
   }
 
   createDOM(): HTMLElement {
@@ -102,7 +103,7 @@ export class CustomBlockNode extends DecoratorBlockNode {
     return false;
   }
 
-  decorate(_: LexicalEditor) {
+  decorate() {
     return (
       <CustomBlockComponent
         blockName={this.__blockName}
@@ -121,7 +122,7 @@ export class CustomBlockNode extends DecoratorBlockNode {
   }
 
   setBlockData(data: Record<string, any>) {
-    const writable = this.getWritable<CustomBlockNode>();
+    const writable = this.getWritable();
     writable.__blockData = cloneData(data);
   }
 }

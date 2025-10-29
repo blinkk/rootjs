@@ -38,31 +38,6 @@ export default schema.define({
       label: 'Body copy',
       help: 'Headline body copy.',
       translate: true,
-      customBlocks: [
-        schema.define({
-          name: 'HtmlBlock',
-          label: 'HTML Embed',
-          fields: [
-            schema.string({
-              id: 'html',
-              label: 'HTML code',
-              help: 'Please use caution when inserting HTML code.',
-              variant: 'textarea',
-            }),
-          ],
-          preview: {title: 'html'},
-        }),
-        schema.define({
-          name: 'YouTubeBlock',
-          label: 'YouTube Embed',
-          fields: [
-            schema.string({
-              id: 'html',
-              variant: 'textarea',
-            }),
-          ],
-        }),
-      ],
     }),
     schema.array({
       id: 'buttons',

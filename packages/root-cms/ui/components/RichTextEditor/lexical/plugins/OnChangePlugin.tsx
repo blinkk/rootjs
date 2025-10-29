@@ -27,10 +27,10 @@ export function OnChangePlugin(props: OnChangePluginProps) {
       timeSavedRef.current = time;
       editor.update(() => {
         isUpdatingRef.current = true;
-        convertToLexical(props.value, props.customBlocks);
+        convertToLexical(props.value);
       });
     }
-  }, [editor, props.value, props.customBlocks]);
+  }, [editor, props.value]);
 
   const onChange = (editorState: EditorState) => {
     // Ignore editor updates from props.value changes.

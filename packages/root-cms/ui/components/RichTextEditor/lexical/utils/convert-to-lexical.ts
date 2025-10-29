@@ -13,7 +13,10 @@ import {
   LexicalNode,
   TextNode,
 } from 'lexical';
-import {RichTextData, RichTextListItem} from '../../../../../shared/richtext.js';
+import {
+  RichTextData,
+  RichTextListItem,
+} from '../../../../../shared/richtext.js';
 import {$createCustomBlockNode} from '../nodes/CustomBlockNode.js';
 
 /**
@@ -21,10 +24,8 @@ import {$createCustomBlockNode} from '../nodes/CustomBlockNode.js';
  * the current editor.
  * NOTE: this function must be called within an `editor.update()` callback.
  */
-export function convertToLexical(
-  data?: RichTextData | null,
-  _customBlocks?: Map<string, unknown>
-) {
+export function convertToLexical(data?: RichTextData | null) {
+  console.log(data);
   const root = $getRoot();
   root.clear();
 

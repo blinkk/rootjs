@@ -91,6 +91,7 @@ export function LexicalEditor(props: LexicalEditorProps) {
   // This component sets up the context providers and shell for lexical, and
   // then renders the <Editor> component which can use the shared context states
   // to render the rich text editor.
+
   return (
     <LexicalComposer initialConfig={INITIAL_CONFIG}>
       <SharedHistoryProvider>
@@ -111,11 +112,31 @@ export function LexicalEditor(props: LexicalEditorProps) {
   );
 }
 
+const INSERT_IMAGE_BLOCK = schema.define({
+  name: 'Image',
+  label: 'Image Embed',
+  preview: {
+    title: ['{internalDesc}', '{file.alt}'],
+    image: '{file.src}',
+  },
+  fields: [
+    schema.string({
+      id: 'internalDesc',
+      label: '[INTERNAL] Description',
+      variant: 'textarea',
+    }),
+    schema.image({
+      id: 'file',
+      label: 'Image',
+    }),
+  ],
+});
+
 const INSERT_HTML_BLOCK = schema.define({
   name: 'html',
   label: 'HTML Code',
   preview: {
-    title: 'html',
+    title: '{html}',
   },
   fields: [
     schema.string({
@@ -127,7 +148,7 @@ const INSERT_HTML_BLOCK = schema.define({
   ],
 });
 
-const BUILT_IN_BLOCKS = [INSERT_HTML_BLOCK];
+const BUILT_IN_BLOCKS = [INSERT_IMAGE_BLOCK, INSERT_HTML_BLOCK];
 
 interface EditorProps {
   placeholder?: string;
@@ -157,6 +178,7 @@ function Editor(props: EditorProps) {
     });
     return map;
   }, [props.customBlocks]);
+  const customBlocks = Array.from(customBlocksMap.values());
   const [customBlockModalState, setCustomBlockModalState] =
     useState<CustomBlockModalState | null>(null);
 
@@ -242,7 +264,7 @@ function Editor(props: EditorProps) {
         activeEditor={activeEditor}
         setActiveEditor={setActiveEditor}
         setIsLinkEditMode={setIsLinkEditMode}
-        customBlocks={props.customBlocks}
+        customBlocks={customBlocks}
         onInsertCustomBlock={(blockName) =>
           openCustomBlockModal(blockName, {mode: 'create'})
         }

@@ -8,17 +8,16 @@ export interface RichTextEditorProps {
   className?: string;
   placeholder?: string;
   value?: RichTextData | null;
-  onChange?: (data: RichTextData) => void;
+  onChange?: (data: RichTextData | null) => void;
   onFocus?: (e: FocusEvent) => void;
   onBlur?: (e: FocusEvent) => void;
   customBlocks?: schema.Schema[];
 }
 
 export function RichTextEditor(props: RichTextEditorProps) {
-  const {customBlocks, ...rest} = props;
   const userPrefs = useUserPreferences();
   if (userPrefs.preferences.EnableLexicalEditor) {
-    return <LexicalEditor {...rest} customBlocks={customBlocks} />;
+    return <LexicalEditor {...props} />;
   }
-  return <EditorJSEditor {...rest} />;
+  return <EditorJSEditor {...props} />;
 }
