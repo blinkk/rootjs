@@ -97,9 +97,16 @@
   font-weight: 600;
 }
 
+.LexicalEditor__customBlock__previewImage img {
+  max-width: 100%;
+  max-height: 150px;
+  object-fit: contain;
+}
+
 .LexicalEditor__customBlock__preview {
   font-size: 12px;
 }
+
 
 .LexicalEditor__customBlock__actions {
   display: flex;

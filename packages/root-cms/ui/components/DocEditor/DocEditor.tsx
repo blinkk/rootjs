@@ -48,7 +48,6 @@ import {
 } from 'preact/hooks';
 import {route} from 'preact-router';
 import * as schema from '../../../core/schema.js';
-import type {RichTextData} from '../../../shared/richtext.js';
 import {useCollectionSchema} from '../../hooks/useCollectionSchema.js';
 import {
   buildDeeplinkUrl,
@@ -73,18 +72,16 @@ import {joinClassNames} from '../../utils/classes.js';
 import {debounce} from '../../utils/debounce.js';
 import {
   CMSDoc,
-  deserializeDocJson,
   testIsScheduled,
   testPublishingLocked,
 } from '../../utils/doc.js';
 import {extractField} from '../../utils/extract.js';
 import {getDefaultFieldValue} from '../../utils/fields.js';
 import {requestHighlightNode} from '../../utils/iframe-preview.js';
-import {getNestedValue} from '../../utils/objects.js';
 import {autokey} from '../../utils/rand.js';
+import {buildPreviewValue} from '../../utils/schema-previews.js';
 import {testFieldEmpty} from '../../utils/test-field-empty.js';
 import {formatDateTime} from '../../utils/time.js';
-import {buildPreviewValue} from '../../utils/schema-previews.js';
 import {useAiEditModal} from '../AiEditModal/AiEditModal.js';
 import {
   DocActionEvent,

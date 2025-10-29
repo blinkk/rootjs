@@ -2,7 +2,11 @@ import {DecoratorBlockNode} from '@lexical/react/LexicalDecoratorBlockNode';
 import {Button} from '@mantine/core';
 import {NodeKey, SerializedLexicalNode, Spread} from 'lexical';
 import {useMemo} from 'preact/hooks';
-import {getSchemaPreviewTitle} from '../../../../utils/schema-previews.js';
+import {testIsImageFile} from '../../../../utils/gcs.js';
+import {
+  getSchemaPreviewImage,
+  getSchemaPreviewTitle,
+} from '../../../../utils/schema-previews.js';
 import {useCustomBlocks} from '../hooks/useCustomBlocks.js';
 
 interface CustomBlockComponentProps {
@@ -15,18 +19,31 @@ function CustomBlockComponent(props: CustomBlockComponentProps) {
   const {blocks, onEditBlock} = useCustomBlocks();
   const schemaDef = blocks.get(props.blockName);
   const label = schemaDef?.label || schemaDef?.name || props.blockName;
-  const preview = useMemo(() => {
+  const previewTitle = useMemo(() => {
     if (!schemaDef) {
       return undefined;
     }
     return getSchemaPreviewTitle(schemaDef, props.data);
   }, [schemaDef, props.data]);
+  const previewImage = useMemo(() => {
+    if (!schemaDef) {
+      return undefined;
+    }
+    return getSchemaPreviewImage(schemaDef, props.data);
+  }, [schemaDef, props.data]);
 
   return (
     <div className="LexicalEditor__customBlock">
       <div className="LexicalEditor__customBlock__header">{label}</div>
-      {preview && (
-        <div className="LexicalEditor__customBlock__preview">{preview}</div>
+      {previewImage && testIsImageFile(previewImage) && (
+        <div className="LexicalEditor__customBlock__previewImage">
+          <img src={previewImage} />
+        </div>
+      )}
+      {previewTitle && (
+        <div className="LexicalEditor__customBlock__preview">
+          {previewTitle}
+        </div>
       )}
       {schemaDef && onEditBlock && (
         <div className="LexicalEditor__customBlock__actions">

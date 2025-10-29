@@ -123,6 +123,7 @@ const INSERT_IMAGE_BLOCK = schema.define({
     schema.string({
       id: 'internalDesc',
       label: '[INTERNAL] Description',
+      help: 'Internal-only description of the image.',
       variant: 'textarea',
     }),
     schema.image({
