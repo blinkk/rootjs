@@ -105,6 +105,10 @@
 
 .LexicalEditor__customBlock__preview {
   font-size: 12px;
+  display: -webkit-box;
+  -webkit-line-clamp: 5;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
 
