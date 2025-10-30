@@ -22,6 +22,7 @@ import {
   RichTextListItem,
   RichTextParagraphBlock,
 } from '../../../../../shared/richtext.js';
+import {cloneData} from '../../../../utils/objects.js';
 import {$isCustomBlockNode} from '../nodes/CustomBlockNode.js';
 
 function extractTextNode(node: ElementNode) {
@@ -101,9 +102,7 @@ function extractListItem(node: ListItemNode): RichTextListItem {
  * Converts from lexical to rich text data.
  * NOTE: this function must be called within a `editor.read()` callback.
  */
-export function convertToRichTextData(
-  _customBlocks?: Map<string, unknown>
-): RichTextData | null {
+export function convertToRichTextData(): RichTextData | null {
   const blocks: RichTextBlock[] = [];
 
   const root = $getRoot();
@@ -163,16 +162,6 @@ export function convertToRichTextData(
     blocks,
     version: 'lexical-0.31.2',
   };
-}
-
-function cloneData<T>(data: T): T {
-  if (data === undefined || data === null) {
-    return data;
-  }
-  if (typeof globalThis.structuredClone === 'function') {
-    return globalThis.structuredClone(data);
-  }
-  return JSON.parse(JSON.stringify(data));
 }
 
 function testLastBlockIsEmpty(blocks: RichTextBlock[]) {

@@ -21,6 +21,7 @@ import * as schema from '../../../../core/schema.js';
 import {RichTextData} from '../../../../shared/richtext.js';
 import {joinClassNames} from '../../../utils/classes.js';
 import {getDefaultFieldValue} from '../../../utils/fields.js';
+import {cloneData} from '../../../utils/objects.js';
 import {CustomBlocksProvider} from './hooks/useCustomBlocks.js';
 import {
   SharedHistoryProvider,
@@ -66,16 +67,6 @@ interface CustomBlockModalState {
   nodeKey?: NodeKey;
 }
 
-function cloneData<T>(data: T): T {
-  if (data === undefined || data === null) {
-    return data;
-  }
-  if (typeof globalThis.structuredClone === 'function') {
-    return globalThis.structuredClone(data);
-  }
-  return JSON.parse(JSON.stringify(data));
-}
-
 export interface LexicalEditorProps {
   className?: string;
   placeholder?: string;
@@ -115,16 +106,10 @@ const INSERT_IMAGE_BLOCK = schema.define({
   name: 'image',
   label: 'Image Embed',
   preview: {
-    title: ['{internalDesc}', '{file.alt}'],
+    title: '{file.alt}',
     image: '{file.src}',
   },
   fields: [
-    schema.string({
-      id: 'internalDesc',
-      label: '[INTERNAL] Description',
-      help: 'Internal-only description of the image.',
-      variant: 'textarea',
-    }),
     schema.image({
       id: 'file',
       label: 'Image',

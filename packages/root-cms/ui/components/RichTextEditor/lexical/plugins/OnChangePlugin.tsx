@@ -41,7 +41,7 @@ export function OnChangePlugin(props: OnChangePluginProps) {
     // When the user enters new content, read the current lexical data, convert
     // it to RichTextData, and then call the onChange() callback.
     editorState.read(() => {
-      const richTextData = convertToRichTextData(props.customBlocks);
+      const richTextData = convertToRichTextData();
       timeSavedRef.current = richTextData?.time || 0;
       if (props.onChange) {
         props.onChange(richTextData);

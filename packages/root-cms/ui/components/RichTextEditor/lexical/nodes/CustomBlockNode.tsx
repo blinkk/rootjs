@@ -13,6 +13,7 @@ import {
 import {useEffect, useMemo} from 'preact/hooks';
 import {joinClassNames} from '../../../../utils/classes.js';
 import {testIsImageFile} from '../../../../utils/gcs.js';
+import {cloneData} from '../../../../utils/objects.js';
 import {
   getSchemaPreviewImage,
   getSchemaPreviewTitle,
@@ -210,14 +211,4 @@ export function $createCustomBlockNode(
 
 export function $isCustomBlockNode(node: any): node is CustomBlockNode {
   return node instanceof CustomBlockNode;
-}
-
-function cloneData<T>(data: T): T {
-  if (data === undefined || data === null) {
-    return data;
-  }
-  if (typeof globalThis.structuredClone === 'function') {
-    return globalThis.structuredClone(data);
-  }
-  return JSON.parse(JSON.stringify(data));
 }

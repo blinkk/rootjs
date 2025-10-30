@@ -5,7 +5,7 @@ import {
   DraftDocContext,
   DraftDocContextProvider,
 } from '../../../../hooks/useDraftDoc.js';
-import {getNestedValue} from '../../../../utils/objects.js';
+import {cloneData, getNestedValue} from '../../../../utils/objects.js';
 import {DocEditor} from '../../../DocEditor/DocEditor.js';
 
 interface CustomBlockModalProps {
@@ -28,7 +28,7 @@ class InMemoryDraftDocController {
   slug = 'custom-block';
 
   constructor(initialValue: Record<string, any>) {
-    this.data = {block: structuredCloneIfAvailable(initialValue)};
+    this.data = {block: cloneData(initialValue)};
   }
 
   getValue(key: string): any {
@@ -64,7 +64,7 @@ class InMemoryDraftDocController {
   }
 
   getDataSnapshot() {
-    return structuredCloneIfAvailable(this.data);
+    return cloneData(this.data);
   }
 
   getData() {
@@ -81,16 +81,6 @@ class InMemoryDraftDocController {
       listeners.forEach((cb) => cb(value));
     }
   }
-}
-
-function structuredCloneIfAvailable<T>(value: T): T {
-  if (value === undefined || value === null) {
-    return value;
-  }
-  if (typeof globalThis.structuredClone === 'function') {
-    return globalThis.structuredClone(value);
-  }
-  return JSON.parse(JSON.stringify(value));
 }
 
 function setNestedValue(target: Record<string, any>, key: string, value: any) {
@@ -162,7 +152,7 @@ export function CustomBlockModal(props: CustomBlockModalProps) {
 
   const handleSubmit = () => {
     const value = controller.getValue('block') || {};
-    const clonedValue = structuredCloneIfAvailable(value);
+    const clonedValue = cloneData(value);
 
     // For backwards compatibility with the legacy EditorJS editor, the "image"
     // field value is modified to include a preview url.

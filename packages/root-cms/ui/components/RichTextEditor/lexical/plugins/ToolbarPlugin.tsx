@@ -43,7 +43,6 @@ import {
   COMMAND_PRIORITY_CRITICAL,
   FORMAT_TEXT_COMMAND,
   LexicalEditor,
-  NodeKey,
   SELECTION_CHANGE_COMMAND,
 } from 'lexical';
 
