@@ -111,7 +111,7 @@
 
 .FileField__Canvas__Info {
   pointer-events: all;
-  background-color: #f5f5f5;
+  background-color: #fafafa;
   padding: 40px 10px 10px;
   height: 100%;
   overflow: auto;
@@ -178,7 +178,7 @@
 .FileField__Dropzone {
   appearance: none;
   border: 0;
-  background: #f5f5f5;
+  background: #fafafa;
   padding: 0;
   position: absolute;
   inset: 0;
@@ -189,7 +189,7 @@
 }
 
 .FileField__Dropzone:focus {
-  outline: 1px solid -webkit-focus-ring-color;
+  outline: 1px solid rgb(51, 154, 240);
 }
 
 .FileField__Dropzone.dragging {
@@ -197,7 +197,7 @@
 }
 
 .FileField__Empty:focus {
-  outline: 1px solid -webkit-focus-ring-color;
+  outline: 1px solid rgb(51, 154, 240);
 }
 
 .FileField__Empty__Label {

@@ -1,7 +1,24 @@
+import {useLexicalComposerContext} from '@lexical/react/LexicalComposerContext';
 import {DecoratorBlockNode} from '@lexical/react/LexicalDecoratorBlockNode';
+import {useLexicalNodeSelection} from '@lexical/react/useLexicalNodeSelection';
+import {mergeRegister} from '@lexical/utils';
 import {Button} from '@mantine/core';
-import {NodeKey, SerializedLexicalNode, Spread} from 'lexical';
-import {useMemo} from 'preact/hooks';
+import {
+  $createNodeSelection,
+  $getNodeByKey,
+  $getSelection,
+  $isNodeSelection,
+  $setSelection,
+  CLICK_COMMAND,
+  COMMAND_PRIORITY_LOW,
+  KEY_BACKSPACE_COMMAND,
+  KEY_DELETE_COMMAND,
+  NodeKey,
+  SerializedLexicalNode,
+  Spread,
+} from 'lexical';
+import {useEffect, useMemo, useState} from 'preact/hooks';
+import {joinClassNames} from '../../../../utils/classes.js';
 import {testIsImageFile} from '../../../../utils/gcs.js';
 import {
   getSchemaPreviewImage,
@@ -16,9 +33,15 @@ interface CustomBlockComponentProps {
 }
 
 function CustomBlockComponent(props: CustomBlockComponentProps) {
+  const {nodeKey} = props;
+  const [editor] = useLexicalComposerContext();
+  const [isSelected, setSelected, clearSelection] =
+    useLexicalNodeSelection(nodeKey);
+
   const {blocks, onEditBlock} = useCustomBlocks();
   const schemaDef = blocks.get(props.blockName);
   const label = schemaDef?.label || schemaDef?.name || props.blockName;
+
   const previewTitle = useMemo(() => {
     if (!schemaDef) {
       return undefined;
@@ -32,9 +55,68 @@ function CustomBlockComponent(props: CustomBlockComponentProps) {
     return getSchemaPreviewImage(schemaDef, props.data);
   }, [schemaDef, props.data]);
 
+  useEffect(() => {
+    return mergeRegister(
+      // Click to toggle selection of the node.
+      editor.registerCommand(
+        CLICK_COMMAND,
+        (e: MouseEvent) => {
+          const target = e.target as HTMLElement | null;
+          if (!target) {
+            return false;
+          }
+
+          // Make sure the click came from *this* node’s root DOM.
+          const root = target.closest(`[data-node-key="${nodeKey}"]`);
+          if (!root) {
+            return false;
+          }
+          // Prevent the editor from moving the caret inside.
+          e.preventDefault();
+          e.stopPropagation();
+          // Toggle selection.
+          if (!isSelected) {
+            clearSelection();
+            setSelected(true);
+          } else {
+            setSelected(false);
+          }
+          return true;
+        },
+        COMMAND_PRIORITY_LOW
+      )
+    );
+  }, [editor, isSelected, nodeKey, clearSelection, setSelected]);
+
   return (
-    <div className="LexicalEditor__customBlock">
-      <div className="LexicalEditor__customBlock__header">{label}</div>
+    <div
+      className={joinClassNames(
+        'LexicalEditor__customBlock',
+        isSelected && 'LexicalEditor__customBlock--selected'
+      )}
+      data-node-key={nodeKey}
+    >
+      <div className="LexicalEditor__customBlock__header">
+        <div className="LexicalEditor__customBlock__header__title">{label}</div>
+        {schemaDef && onEditBlock && (
+          <div className="LexicalEditor__customBlock__actions">
+            <Button
+              size="xs"
+              variant="default"
+              compact
+              onClick={() =>
+                onEditBlock(props.blockName, {
+                  mode: 'edit',
+                  nodeKey: props.nodeKey,
+                  initialValue: props.data,
+                })
+              }
+            >
+              Edit block
+            </Button>
+          </div>
+        )}
+      </div>
       {previewImage && testIsImageFile(previewImage) && (
         <div className="LexicalEditor__customBlock__previewImage">
           <img src={previewImage} />
@@ -43,24 +125,6 @@ function CustomBlockComponent(props: CustomBlockComponentProps) {
       {previewTitle && (
         <div className="LexicalEditor__customBlock__preview">
           {previewTitle}
-        </div>
-      )}
-      {schemaDef && onEditBlock && (
-        <div className="LexicalEditor__customBlock__actions">
-          <Button
-            size="xs"
-            variant="default"
-            compact
-            onClick={() =>
-              onEditBlock(props.blockName, {
-                mode: 'edit',
-                nodeKey: props.nodeKey,
-                initialValue: props.data,
-              })
-            }
-          >
-            Edit block
-          </Button>
         </div>
       )}
     </div>

@@ -91,9 +91,20 @@
   display: flex;
   flex-direction: column;
   gap: 8px;
+  max-width: calc(100% - 8px);
+}
+
+.LexicalEditor__customBlock--selected {
+  border-color: lightslategray;
 }
 
 .LexicalEditor__customBlock__header {
+  display: flex;
+  gap: 8px;
+  justify-content: space-between;
+}
+
+.LexicalEditor__customBlock__header__title {
   font-weight: 600;
 }
 
