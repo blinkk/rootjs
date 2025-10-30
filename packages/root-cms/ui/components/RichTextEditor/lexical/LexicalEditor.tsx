@@ -40,6 +40,7 @@ import {MarkdownTransformPlugin} from './plugins/MarkdownTransformPlugin.js';
 import {OnChangePlugin} from './plugins/OnChangePlugin.js';
 import {ShortcutsPlugin} from './plugins/ShortcutsPlugin.js';
 import {ToolbarPlugin} from './plugins/ToolbarPlugin.js';
+import {TrailingParagraphPlugin} from './plugins/TrailingParagraphPlugin.js';
 
 const INITIAL_CONFIG: InitialConfigType = {
   namespace: 'RootCMS',
@@ -292,6 +293,7 @@ function Editor(props: EditorProps) {
       <ListPlugin />
       <TabIndentationPlugin maxIndent={7} />
       <MarkdownTransformPlugin />
+      <TrailingParagraphPlugin />
       {floatingAnchorElem && (
         <>
           <FloatingToolbarPlugin
