@@ -28,12 +28,12 @@ import {
 } from './hooks/useSharedHistory.js';
 import {ToolbarProvider} from './hooks/useToolbar.js';
 import {LexicalTheme} from './LexicalTheme.js';
+import {CustomBlockModal} from './nodes/CustomBlockModal.js';
 import {
   $createCustomBlockNode,
   $isCustomBlockNode,
   CustomBlockNode,
 } from './nodes/CustomBlockNode.js';
-import {CustomBlockModal} from './plugins/CustomBlockModal.js';
 import {FloatingLinkEditorPlugin} from './plugins/FloatingLinkEditorPlugin.js';
 import {FloatingToolbarPlugin} from './plugins/FloatingToolbarPlugin.js';
 import {MarkdownTransformPlugin} from './plugins/MarkdownTransformPlugin.js';
