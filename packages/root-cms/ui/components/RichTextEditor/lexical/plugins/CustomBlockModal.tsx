@@ -163,6 +163,13 @@ export function CustomBlockModal(props: CustomBlockModalProps) {
   const handleSubmit = () => {
     const value = controller.getValue('block') || {};
     const clonedValue = structuredCloneIfAvailable(value);
+
+    // For backwards compatibility with the legacy EditorJS editor, the "image"
+    // field value is modified to include a preview url.
+    if (props.schema.name === 'image' && clonedValue?.file?.src) {
+      clonedValue.file.url = imagePreviewUrl(clonedValue.file.src);
+    }
+
     props.onSubmit(clonedValue);
   };
 
@@ -194,4 +201,15 @@ export function CustomBlockModal(props: CustomBlockModalProps) {
       </Stack>
     </Modal>
   );
+}
+
+function imagePreviewUrl(src: string) {
+  if (isGciUrl(src)) {
+    return `${src}=s0-e365`;
+  }
+  return src;
+}
+
+function isGciUrl(url: string) {
+  return url.startsWith('https://lh3.googleusercontent.com/');
 }

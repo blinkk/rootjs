@@ -25,7 +25,6 @@ import {$createCustomBlockNode} from '../nodes/CustomBlockNode.js';
  * NOTE: this function must be called within an `editor.update()` callback.
  */
 export function convertToLexical(data?: RichTextData | null) {
-  console.log(data);
   const root = $getRoot();
   root.clear();
 

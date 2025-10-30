@@ -4,20 +4,13 @@ import {useLexicalNodeSelection} from '@lexical/react/useLexicalNodeSelection';
 import {mergeRegister} from '@lexical/utils';
 import {Button} from '@mantine/core';
 import {
-  $createNodeSelection,
-  $getNodeByKey,
-  $getSelection,
-  $isNodeSelection,
-  $setSelection,
   CLICK_COMMAND,
   COMMAND_PRIORITY_LOW,
-  KEY_BACKSPACE_COMMAND,
-  KEY_DELETE_COMMAND,
   NodeKey,
   SerializedLexicalNode,
   Spread,
 } from 'lexical';
-import {useEffect, useMemo, useState} from 'preact/hooks';
+import {useEffect, useMemo} from 'preact/hooks';
 import {joinClassNames} from '../../../../utils/classes.js';
 import {testIsImageFile} from '../../../../utils/gcs.js';
 import {

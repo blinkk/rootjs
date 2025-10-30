@@ -48,12 +48,10 @@ const INITIAL_CONFIG: InitialConfigType = {
   nodes: [
     AutoLinkNode,
     HeadingNode,
-    // ImageNode,
     LinkNode,
     ListNode,
     ListItemNode,
     CustomBlockNode,
-    // YouTubeNode,
   ],
   onError: (err: Error) => {
     console.error('[LexicalEditor] error:', err);
@@ -114,7 +112,7 @@ export function LexicalEditor(props: LexicalEditorProps) {
 }
 
 const INSERT_IMAGE_BLOCK = schema.define({
-  name: 'Image',
+  name: 'image',
   label: 'Image Embed',
   preview: {
     title: ['{internalDesc}', '{file.alt}'],

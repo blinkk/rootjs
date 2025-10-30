@@ -324,6 +324,7 @@ export class DraftDocController extends EventListener {
         this.pendingUpdates.set(key, updates[key]);
         this.queueChanges();
         console.log('re-queued updates');
+        console.log(this.pendingUpdates);
       }
     }
   }

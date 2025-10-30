@@ -28,11 +28,7 @@ import {
   IconLink,
   IconSuperscript,
   IconChevronDown,
-  IconPhoto,
-  IconBrandYoutube,
-  IconMovie,
   IconStrikethrough,
-  IconCode,
   IconH4,
   IconH5,
   IconLayoutCollage,
@@ -51,12 +47,6 @@ import {
   SELECTION_CHANGE_COMMAND,
 } from 'lexical';
 
-// import useModal from '../../hooks/useModal';
-// import DropDown, {DropDownItem} from '../../ui/DropDown';
-// import {EmbedConfigs} from './AutoEmbedPlugin.js';
-// import {
-//   InsertImageDialog,
-// } from './ImagesPlugin.js';
 import {ComponentChildren} from 'preact';
 import {
   Dispatch,
@@ -67,7 +57,6 @@ import {
 } from 'preact/compat';
 import * as schema from '../../../../../core/schema.js';
 import {joinClassNames} from '../../../../utils/classes.js';
-// import {useEmbedModal} from '../../components/EmbedModal/EmbedModal.js';
 import {
   TOOLBAR_BLOCK_LABELS,
   ToolbarBlockType,
@@ -133,7 +122,7 @@ interface BlockFormatDropDownProps {
 }
 
 function BlockFormatDropDown(props: BlockFormatDropDownProps) {
-  const {editor, blockType, rootType, disabled = false} = props;
+  const {editor, blockType} = props;
   return (
     <Menu
       control={
@@ -211,31 +200,6 @@ function BlockFormatDropDown(props: BlockFormatDropDownProps) {
   );
 }
 
-function InsertDropdown() {
-  return (
-    <Menu
-      control={
-        <Button
-          className={joinClassNames(
-            'LexicalEditor__toolbar__dropdown',
-            'LexicalEditor__toolbar__insertDropdown'
-          )}
-          variant="default"
-          compact
-          rightIcon={<IconChevronDown size={16} />}
-        >
-          Embed
-        </Button>
-      }
-    >
-      <Menu.Item icon={<IconCode size={16} />}>HTML Code (WIP)</Menu.Item>
-      <Menu.Item icon={<IconPhoto size={16} />}>Image (WIP)</Menu.Item>
-      <Menu.Item icon={<IconMovie size={16} />}>Video (.mp4) (WIP)</Menu.Item>
-      <Menu.Item icon={<IconBrandYoutube size={16} />}>YouTube (WIP)</Menu.Item>
-    </Menu>
-  );
-}
-
 function Divider() {
   return <div className="divider" />;
 }
@@ -258,10 +222,9 @@ export function ToolbarPlugin(props: ToolbarPluginProps) {
     setIsLinkEditMode,
     onInsertCustomBlock,
   } = props;
-  const [selectedElementKey, setSelectedElementKey] = useState<NodeKey | null>(
-    null
-  );
-  // const [modal, showModal] = useModal();
+  // const [selectedElementKey, setSelectedElementKey] = useState<NodeKey | null>(
+  //   null
+  // );
   const [isEditable, setIsEditable] = useState(() => editor.isEditable());
   const {toolbarState, updateToolbarState} = useToolbar();
 
@@ -306,7 +269,7 @@ export function ToolbarPlugin(props: ToolbarPluginProps) {
       updateToolbarState('rootType', 'root');
 
       if (elementDOM !== null) {
-        setSelectedElementKey(elementKey);
+        // setSelectedElementKey(elementKey);
         if ($isListNode(element)) {
           const parentList = $getNearestNodeOfType<ListNode>(
             anchorNode,
@@ -535,142 +498,7 @@ export function ToolbarPlugin(props: ToolbarPluginProps) {
             <Divider />
           </>
         )}
-
-        {/* <InsertDropdown /> */}
-
-        {/* <button
-          disabled={!isEditable}
-          onClick={() => {
-            activeEditor.dispatchCommand(FORMAT_TEXT_COMMAND, 'italic');
-          }}
-          className={
-            'toolbar-item spaced ' + (toolbarState.isItalic ? 'active' : '')
-          }
-          title={`Italic (${SHORTCUTS.ITALIC})`}
-          type="button"
-          aria-label={`Format text as italics. Shortcut: ${SHORTCUTS.ITALIC}`}>
-          <IconItalic size={16} />
-        </button> */}
-        {/* <button
-          disabled={!isEditable}
-          onClick={() => {
-            activeEditor.dispatchCommand(FORMAT_TEXT_COMMAND, 'underline');
-          }}
-          className={
-            'toolbar-item spaced ' +
-            (toolbarState.isUnderline ? 'active' : '')
-          }
-          title={`Underline (${SHORTCUTS.UNDERLINE})`}
-          type="button"
-          aria-label={`Format text to underlined. Shortcut: ${SHORTCUTS.UNDERLINE}`}>
-          <IconUnderline size={16} />
-        </button> */}
-        {/* <button
-          disabled={!isEditable}
-          onClick={insertLink}
-          className={
-            'toolbar-item spaced ' + (toolbarState.isLink ? 'active' : '')
-          }
-          aria-label="Insert link"
-          title={`Insert link (${SHORTCUTS.INSERT_LINK})`}
-          type="button">
-          <IconLink size={16} />
-        </button> */}
-        {/* <DropDown
-          disabled={!isEditable}
-          buttonClassName="toolbar-item spaced"
-          buttonLabel=""
-          buttonAriaLabel="Formatting options for additional text styles"
-          buttonIconClassName="icon dropdown-more">
-          <DropDownItem
-            onClick={() => {
-              activeEditor.dispatchCommand(
-                FORMAT_TEXT_COMMAND,
-                'strikethrough',
-              );
-            }}
-            className={
-              'item wide ' + dropDownActiveClass(toolbarState.isStrikethrough)
-            }
-            title="Strikethrough"
-            aria-label="Format text with a strikethrough">
-            <div className="icon-text-container">
-              <i className="icon strikethrough" />
-              <span className="text">Strikethrough</span>
-            </div>
-            <span className="shortcut">{SHORTCUTS.STRIKETHROUGH}</span>
-          </DropDownItem>
-          <DropDownItem
-            onClick={() => {
-              activeEditor.dispatchCommand(
-                FORMAT_TEXT_COMMAND,
-                'superscript',
-              );
-            }}
-            className={
-              'item wide ' + dropDownActiveClass(toolbarState.isSuperscript)
-            }
-            title="Superscript"
-            aria-label="Format text with a superscript">
-            <div className="icon-text-container">
-              <i className="icon superscript" />
-              <span className="text">Superscript</span>
-            </div>
-            <span className="shortcut">{SHORTCUTS.SUPERSCRIPT}</span>
-          </DropDownItem>
-          <DropDownItem
-            onClick={() => clearFormatting(activeEditor)}
-            className="item wide"
-            title="Clear text formatting"
-            aria-label="Clear all text formatting">
-            <div className="icon-text-container">
-              <i className="icon clear" />
-              <span className="text">Clear Formatting</span>
-            </div>
-            <span className="shortcut">{SHORTCUTS.CLEAR_FORMATTING}</span>
-          </DropDownItem>
-        </DropDown> */}
-        {/* {canViewerSeeInsertDropdown && (
-          <>
-            <Divider />
-            <DropDown
-              disabled={!isEditable}
-              buttonClassName="toolbar-item spaced"
-              buttonLabel="Insert"
-              buttonAriaLabel="Insert specialized editor node"
-              buttonIconClassName="icon plus">
-              <DropDownItem
-                onClick={() => {
-                  showModal('Insert Image', (onClose) => (
-                    <InsertImageDialog
-                      activeEditor={activeEditor}
-                      onClose={onClose}
-                    />
-                  ));
-                }}
-                className="item">
-                <i className="icon image" />
-                <span className="text">Image</span>
-              </DropDownItem>
-              {EmbedConfigs.map((embedConfig) => (
-                <DropDownItem
-                  key={embedConfig.type}
-                  onClick={() => {
-                    activeEditor.dispatchCommand(
-                      INSERT_EMBED_COMMAND,
-                      embedConfig.type,
-                    );
-                  }}
-                  className="item">
-                  {embedConfig.icon}
-                  <span className="text">{embedConfig.contentName}</span>
-                </DropDownItem>
-              ))}
-            </DropDown>
-          </>
-        )} */}
       </>
-      {/* {modal} */}
     </div>
   );
 }
