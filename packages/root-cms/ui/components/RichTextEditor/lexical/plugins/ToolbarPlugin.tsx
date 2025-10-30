@@ -221,6 +221,7 @@ export function ToolbarPlugin(props: ToolbarPluginProps) {
     setIsLinkEditMode,
     onInsertCustomBlock,
   } = props;
+  // TODO(stevenle): figure out if this is required or not.
   // const [selectedElementKey, setSelectedElementKey] = useState<NodeKey | null>(
   //   null
   // );
@@ -268,6 +269,7 @@ export function ToolbarPlugin(props: ToolbarPluginProps) {
       updateToolbarState('rootType', 'root');
 
       if (elementDOM !== null) {
+        // TODO(stevenle): figure out if this is required or not.
         // setSelectedElementKey(elementKey);
         if ($isListNode(element)) {
           const parentList = $getNearestNodeOfType<ListNode>(
