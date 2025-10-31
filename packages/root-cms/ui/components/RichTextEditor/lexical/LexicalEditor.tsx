@@ -16,6 +16,7 @@ import {RichTextPlugin} from '@lexical/react/LexicalRichTextPlugin';
 import {TabIndentationPlugin} from '@lexical/react/LexicalTabIndentationPlugin';
 import {HeadingNode} from '@lexical/rich-text';
 import {$getNodeByKey, $insertNodes, NodeKey} from 'lexical';
+import {CSSProperties} from 'preact/compat';
 import {useMemo, useState} from 'preact/hooks';
 import * as schema from '../../../../core/schema.js';
 import {RichTextData} from '../../../../shared/richtext.js';
@@ -74,6 +75,7 @@ export interface LexicalEditorProps {
   onChange?: (value: RichTextData | null) => void;
   onFocus?: (e: FocusEvent) => void;
   onBlur?: (e: FocusEvent) => void;
+  autosize?: boolean;
   customBlocks?: schema.Schema[];
 }
 
@@ -86,7 +88,13 @@ export function LexicalEditor(props: LexicalEditorProps) {
     <LexicalComposer initialConfig={INITIAL_CONFIG}>
       <SharedHistoryProvider>
         <ToolbarProvider>
-          <div className={joinClassNames(props.className, 'LexicalEditor')}>
+          <div
+            className={joinClassNames(
+              props.className,
+              'LexicalEditor',
+              !props.autosize && 'LexicalEditor--withMaxHeight'
+            )}
+          >
             <Editor
               placeholder={props.placeholder}
               value={props.value}
@@ -143,6 +151,7 @@ interface EditorProps {
   onFocus?: (e: FocusEvent) => void;
   /** Blur handler (currently unimplemented.) */
   onBlur?: (e: FocusEvent) => void;
+  maxRows?: number;
   customBlocks?: schema.Schema[];
 }
 

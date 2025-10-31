@@ -16,7 +16,7 @@
   overflow: hidden;
   padding: 6px 10px;
   position: sticky;
-  top: calc(35px + var(--lexical-toolbar-offset, 0px));
+  top: calc(36px + var(--lexical-toolbar-offset, 0px));
   z-index: 1;
 }
 
@@ -60,12 +60,16 @@
 .LexicalEditor__editor {
   border: 1px solid #ced4da;
   background: #fff;
-  padding: 10px 10px;
-  padding-bottom: 40px;
-  min-height: 180px;
+  padding: 10px 10px 30px;
+  min-height: 140px;
   position: relative;
   font-family: var(--font-family-default);
   font-size: 12px;
+}
+
+.LexicalEditor--withMaxHeight .LexicalEditor__editor {
+  max-height: max(30vh, 280px);
+  overflow: auto;
 }
 
 .LexicalEditor:has(.LexicalEditor__editor:focus) .LexicalEditor__toolbar {
