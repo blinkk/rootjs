@@ -1,5 +1,13 @@
 # @blinkk/root-cms
 
+## 2.2.11
+
+### Patch Changes
+
+- 4e14f101: fix: fix startup race condition with lexical editor
+- bdc3f1a0: feat: support custom blocks in lexical editor (#787)
+  - @blinkk/root@2.2.11
+
 ## 2.2.10
 
 ### Patch Changes
