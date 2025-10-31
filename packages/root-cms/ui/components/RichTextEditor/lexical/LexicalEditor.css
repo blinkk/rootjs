@@ -140,3 +140,46 @@
   display: flex;
   justify-content: flex-end;
 }
+
+.LexicalEditor__inlineComponentWrapper {
+  display: inline-block;
+}
+
+.LexicalEditor__inlineComponent {
+  display: inline-block;
+}
+
+.LexicalEditor__inlineComponent__button {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 6px;
+  border-radius: 12px;
+  border: 1px solid var(--mantine-color-gray-3, #dee2e6);
+  background-color: var(--mantine-color-gray-0, #f1f3f5);
+  color: var(--mantine-color-dark-7, #343a40);
+  font-size: 12px;
+  line-height: 1.2;
+  cursor: pointer;
+  transition: background-color 120ms ease, border-color 120ms ease;
+}
+
+.LexicalEditor__inlineComponent__button:hover {
+  background-color: var(--mantine-color-gray-1, #e9ecef);
+}
+
+.LexicalEditor__inlineComponent__button--disabled {
+  cursor: default;
+}
+
+.LexicalEditor__inlineComponent__button--disabled:hover {
+  background-color: var(--mantine-color-gray-0, #f1f3f5);
+}
+
+.LexicalEditor__inlineComponent__label {
+  font-weight: 600;
+}
+
+.LexicalEditor__inlineComponent__id {
+  color: var(--mantine-color-gray-6, #868e96);
+}

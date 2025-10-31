@@ -12,6 +12,7 @@ export interface RichTextEditorProps {
   onFocus?: (e: FocusEvent) => void;
   onBlur?: (e: FocusEvent) => void;
   customBlocks?: schema.Schema[];
+  inlineComponents?: schema.Schema[];
 }
 
 export function RichTextEditor(props: RichTextEditorProps) {

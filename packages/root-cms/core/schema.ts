@@ -208,6 +208,8 @@ export type RichTextField = CommonFieldProps & {
   autosize?: boolean;
   /** Custom block definitions available in the rich text editor. */
   customBlocks?: Schema[];
+  /** Inline component definitions available in the rich text editor. */
+  inlineComponents?: Schema[];
 };
 
 export function richtext(field: Omit<RichTextField, 'type'>): RichTextField {

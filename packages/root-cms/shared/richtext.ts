@@ -8,10 +8,21 @@ export type RichTextBlock =
   | RichTextHtmlBlock
   | RichTextCustomBlock;
 
+export interface RichTextInlineComponent {
+  type: string;
+  data?: Record<string, any>;
+}
+
+export type RichTextInlineComponentsMap = Record<
+  string,
+  RichTextInlineComponent
+>;
+
 export interface RichTextParagraphBlock {
   type: 'paragraph';
   data?: {
     text?: string;
+    components?: RichTextInlineComponentsMap;
   };
 }
 
@@ -20,6 +31,7 @@ export interface RichTextHeadingBlock {
   data?: {
     level?: number;
     text?: string;
+    components?: RichTextInlineComponentsMap;
   };
 }
 
@@ -27,6 +39,7 @@ export interface RichTextListItem {
   content?: string;
   itemsType?: 'orderedList' | 'unorderedList';
   items?: RichTextListItem[];
+  components?: RichTextInlineComponentsMap;
 }
 
 export interface RichTextListBlock {

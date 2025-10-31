@@ -18,34 +18,75 @@ import {
   RichTextBlock,
   RichTextData,
   RichTextHeadingBlock,
+  RichTextInlineComponentsMap,
   RichTextListBlock,
   RichTextListItem,
   RichTextParagraphBlock,
 } from '../../../../../shared/richtext.js';
 import {cloneData} from '../../../../utils/objects.js';
 import {$isCustomBlockNode} from '../nodes/CustomBlockNode.js';
+import {$isInlineComponentNode} from '../nodes/InlineComponentNode.js';
 
-function extractTextNode(node: ElementNode) {
-  const texts = node.getChildren().map(extractTextChild);
-  return texts.join('');
+interface TextExtractionResult {
+  text: string;
+  components: RichTextInlineComponentsMap;
 }
 
-function extractTextChild(node: LexicalNode): string {
+function createEmptyExtractionResult(): TextExtractionResult {
+  return {text: '', components: {}};
+}
+
+function mergeTextExtractionResults(
+  results: TextExtractionResult[]
+): TextExtractionResult {
+  const merged: TextExtractionResult = createEmptyExtractionResult();
+  results.forEach((result) => {
+    merged.text += result.text;
+    Object.assign(merged.components, result.components);
+  });
+  return merged;
+}
+
+function extractTextNode(node: ElementNode): TextExtractionResult {
+  const texts = node.getChildren().map(extractTextChild);
+  return mergeTextExtractionResults(texts);
+}
+
+function extractTextChild(node: LexicalNode): TextExtractionResult {
   if ($isLineBreakNode(node)) {
-    return '<br>';
+    return {text: '<br>', components: {}};
   }
   if ($isLinkNode(node)) {
     const href = node.getURL();
-    return `<a href="${href}">${extractTextNode(node)}</a>`;
+    const result = extractTextNode(node);
+    return {
+      text: `<a href="${href}">${result.text}</a>`,
+      components: result.components,
+    };
+  }
+  if ($isInlineComponentNode(node)) {
+    const componentId = node.getComponentId();
+    const componentName = node.getComponentName();
+    const componentData = cloneData(node.getComponentData());
+    const components: RichTextInlineComponentsMap = {
+      [componentId]: {
+        type: componentName,
+        data: componentData,
+      },
+    };
+    return {
+      text: `{component:${componentId}}`,
+      components,
+    };
   }
   if (!$isTextNode(node)) {
     console.log('unhandled node');
     console.log(node);
-    return '';
+    return createEmptyExtractionResult();
   }
   const text = node.getTextContent();
   if (!text) {
-    return '';
+    return createEmptyExtractionResult();
   }
   const formatTags = {
     s: node.hasFormat('strikethrough'),
@@ -54,7 +95,10 @@ function extractTextChild(node: LexicalNode): string {
     b: node.hasFormat('bold'),
     sup: node.hasFormat('superscript'),
   };
-  return formatTextNode(text, formatTags);
+  return {
+    text: formatTextNode(text, formatTags),
+    components: {},
+  };
 }
 
 function formatTextNode(text: string, formatTags: Record<string, boolean>) {
@@ -95,7 +139,12 @@ function extractListItem(node: ListItemNode): RichTextListItem {
   }
 
   // Handle list item with text content.
-  return {content: extractTextNode(node)};
+  const result = extractTextNode(node);
+  const item: RichTextListItem = {content: result.text};
+  if (hasInlineComponents(result.components)) {
+    item.components = result.components;
+  }
+  return item;
 }
 
 /**
@@ -110,20 +159,30 @@ export function convertToRichTextData(): RichTextData | null {
 
   children.forEach((node) => {
     if ($isParagraphNode(node)) {
+      const result = extractTextNode(node);
       const block: RichTextParagraphBlock = {
         type: 'paragraph',
-        data: {text: extractTextNode(node)},
+        data: {
+          text: result.text,
+        },
       };
+      if (hasInlineComponents(result.components)) {
+        block.data!.components = result.components;
+      }
       blocks.push(block);
     } else if ($isHeadingNode(node)) {
       const level = node.getTag().slice(1);
+      const result = extractTextNode(node);
       const block: RichTextHeadingBlock = {
         type: 'heading',
         data: {
-          text: extractTextNode(node),
+          text: result.text,
           level: parseInt(level),
         },
       };
+      if (hasInlineComponents(result.components)) {
+        block.data!.components = result.components;
+      }
       blocks.push(block);
     } else if ($isListNode(node)) {
       const tag = node.getTag();
@@ -166,10 +225,22 @@ export function convertToRichTextData(): RichTextData | null {
 
 function testLastBlockIsEmpty(blocks: RichTextBlock[]) {
   const lastBlock = blocks.length > 0 && blocks.at(-1);
-  if (lastBlock && lastBlock.type === 'paragraph' && !lastBlock.data?.text) {
+  if (
+    lastBlock &&
+    lastBlock.type === 'paragraph' &&
+    !lastBlock.data?.text &&
+    !hasInlineComponents(lastBlock.data?.components || {})
+  ) {
     return true;
   }
   return false;
+}
+
+function hasInlineComponents(components: RichTextInlineComponentsMap | undefined) {
+  if (!components) {
+    return false;
+  }
+  return Object.keys(components).length > 0;
 }
 
 function escapeHTML(html: string) {

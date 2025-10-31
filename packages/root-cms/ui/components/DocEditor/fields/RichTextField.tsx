@@ -27,11 +27,12 @@ export function RichTextField(props: FieldProps) {
     <RichTextEditor
       value={value}
       placeholder={field.placeholder}
+      customBlocks={field.customBlocks}
+      inlineComponents={field.inlineComponents}
       onChange={onChange}
       onFocus={props.onFocus}
       onBlur={props.onBlur}
       autosize={field.autosize}
-      customBlocks={field.customBlocks}
     />
   );
 }
