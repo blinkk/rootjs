@@ -16,7 +16,6 @@ import {RichTextPlugin} from '@lexical/react/LexicalRichTextPlugin';
 import {TabIndentationPlugin} from '@lexical/react/LexicalTabIndentationPlugin';
 import {HeadingNode} from '@lexical/rich-text';
 import {$getNodeByKey, $insertNodes, NodeKey} from 'lexical';
-import {CSSProperties} from 'preact/compat';
 import {useMemo, useState} from 'preact/hooks';
 import * as schema from '../../../../core/schema.js';
 import {RichTextData} from '../../../../shared/richtext.js';
