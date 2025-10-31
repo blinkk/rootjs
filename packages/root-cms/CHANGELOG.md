@@ -1,5 +1,13 @@
 # @blinkk/root-cms
 
+## 2.2.12
+
+### Patch Changes
+
+- 16898aef: fix: fix array preview index placeholders (#792)
+- 0da26dac: feat: add autosize option to richtext fields (#794)
+  - @blinkk/root@2.2.12
+
 ## 2.2.11
 
 ### Patch Changes
