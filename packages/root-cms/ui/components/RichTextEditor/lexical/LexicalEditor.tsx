@@ -151,7 +151,6 @@ interface EditorProps {
   onFocus?: (e: FocusEvent) => void;
   /** Blur handler (currently unimplemented.) */
   onBlur?: (e: FocusEvent) => void;
-  maxRows?: number;
   customBlocks?: schema.Schema[];
 }
 
