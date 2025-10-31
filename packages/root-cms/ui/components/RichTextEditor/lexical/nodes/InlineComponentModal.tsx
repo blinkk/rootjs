@@ -1,5 +1,5 @@
-import {Button, Group, Modal, Stack, Text} from '@mantine/core';
-import {useMemo} from 'preact/hooks';
+import {Button, Group, Modal, Stack, Text, TextInput} from '@mantine/core';
+import {useEffect, useMemo, useState} from 'preact/hooks';
 import * as schema from '../../../../../core/schema.js';
 import {
   DraftDocContext,
@@ -7,24 +7,27 @@ import {
 } from '../../../../hooks/useDraftDoc.js';
 import {cloneData} from '../../../../utils/objects.js';
 import {DocEditor} from '../../../DocEditor/DocEditor.js';
-import {
-  InMemoryDraftDocController,
-  setNestedValue,
-  deleteNestedValue,
-} from '../utils/InMemoryDraftDocController.js';
+import {InMemoryDraftDocController} from '../utils/InMemoryDraftDocController.js';
 
-interface CustomBlockModalProps {
+interface InlineComponentModalProps {
   schema: schema.Schema;
   opened: boolean;
+  componentId: string;
   initialValue: Record<string, any>;
   mode?: 'create' | 'edit';
   onClose: () => void;
-  onSubmit: (value: Record<string, any>) => void;
+  onSubmit: (value: {componentId: string; data: Record<string, any>}) => void;
 }
 
-export function CustomBlockModal(props: CustomBlockModalProps) {
+export function InlineComponentModal(props: InlineComponentModalProps) {
+  const [componentId, setComponentId] = useState(props.componentId);
+
+  useEffect(() => {
+    setComponentId(props.componentId);
+  }, [props.componentId]);
+
   const controller = useMemo(
-    () => new InMemoryDraftDocController(props.initialValue || {}),
+    () => new InMemoryDraftDocController(props.initialValue || {}, 'component'),
     [props.schema, props.initialValue]
   );
 
@@ -40,7 +43,7 @@ export function CustomBlockModal(props: CustomBlockModalProps) {
   const objectField = useMemo<schema.ObjectField>(
     () => ({
       type: 'object',
-      id: 'block',
+      id: 'component',
       label: props.schema.label || props.schema.name,
       variant: 'inline',
       fields: props.schema.fields,
@@ -49,16 +52,9 @@ export function CustomBlockModal(props: CustomBlockModalProps) {
   );
 
   const handleSubmit = () => {
-    const value = controller.getValue('block') || {};
+    const value = controller.getValue('component') || {};
     const clonedValue = cloneData(value);
-
-    // For backwards compatibility with the legacy EditorJS editor, the "image"
-    // field value is modified to include a preview url.
-    if (props.schema.name === 'image' && clonedValue?.file?.src) {
-      clonedValue.file.url = imagePreviewUrl(clonedValue.file.src);
-    }
-
-    props.onSubmit(clonedValue);
+    props.onSubmit({componentId: componentId.trim(), data: clonedValue});
   };
 
   return (
@@ -69,35 +65,35 @@ export function CustomBlockModal(props: CustomBlockModalProps) {
       size="lg"
     >
       <Stack spacing="md">
+        <TextInput
+          label="Component ID"
+          value={componentId}
+          onChange={(event) => setComponentId(event.currentTarget.value)}
+          placeholder="component-id"
+          required
+        />
         {props.schema.fields.length > 0 ? (
           <DraftDocContextProvider value={draftContext}>
-            <DocEditor.ObjectField field={objectField} deepKey="block" />
+            <DocEditor.ObjectField field={objectField} deepKey="component" />
           </DraftDocContextProvider>
         ) : (
           <Text size="sm" color="dimmed">
-            This block does not define any editable fields.
+            This component does not define any editable fields.
           </Text>
         )}
         <Group position="right" spacing="sm">
           <Button variant="default" size="xs" onClick={props.onClose}>
             Cancel
           </Button>
-          <Button size="xs" onClick={handleSubmit}>
-            {props.mode === 'edit' ? 'Save block' : 'Insert block'}
+          <Button
+            size="xs"
+            onClick={handleSubmit}
+            disabled={!componentId.trim()}
+          >
+            {props.mode === 'edit' ? 'Save component' : 'Insert component'}
           </Button>
         </Group>
       </Stack>
     </Modal>
   );
-}
-
-function imagePreviewUrl(src: string) {
-  if (isGciUrl(src)) {
-    return `${src}=s0-e365`;
-  }
-  return src;
-}
-
-function isGciUrl(url: string) {
-  return url.startsWith('https://lh3.googleusercontent.com/');
 }

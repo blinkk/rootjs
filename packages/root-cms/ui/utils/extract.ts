@@ -1,6 +1,7 @@
 import {doc, getDoc} from 'firebase/firestore';
 import * as schema from '../../core/schema.js';
 import {RichTextData} from '../../shared/richtext.js';
+import {isObject} from './objects.js';
 import {fetchCollectionSchema} from './collection.js';
 import {normalizeString} from './l10n.js';
 
@@ -120,6 +121,7 @@ export function extractRichTextStrings(
 interface ListItemData {
   content?: string;
   items?: ListItemData[];
+  components?: Record<string, any>;
 }
 
 function extractBlockStrings(strings: Set<string>, block: any) {
@@ -137,18 +139,43 @@ function extractBlockStrings(strings: Set<string>, block: any) {
     }
   }
 
+  function addComponentStrings(components?: Record<string, any>) {
+    if (!components) {
+      return;
+    }
+    Object.values(components).forEach((component) => {
+      collectComponentStrings(component);
+    });
+  }
+
+  function collectComponentStrings(value: any) {
+    if (typeof value === 'string') {
+      addString(value);
+      return;
+    }
+    if (Array.isArray(value)) {
+      value.forEach((item) => collectComponentStrings(item));
+      return;
+    }
+    if (isObject(value)) {
+      Object.values(value).forEach((item) => collectComponentStrings(item));
+    }
+  }
+
   function extractList(items?: ListItemData[]) {
     if (!items) {
       return;
     }
     items.forEach((item) => {
       addString(item.content);
+      addComponentStrings(item.components);
       extractList(item.items);
     });
   }
 
   if (block.type === 'heading' || block.type === 'paragraph') {
     addString(block.data?.text);
+    addComponentStrings(block.data?.components);
   } else if (block.type === 'orderedList' || block.type === 'unorderedList') {
     extractList(block.data?.items);
   } else if (block.type === 'html') {

@@ -32,6 +32,7 @@ import {
   IconH4,
   IconH5,
   IconLayoutCollage,
+  IconPuzzle,
 } from '@tabler/icons-preact';
 import {
   $getSelection,
@@ -210,16 +211,20 @@ interface ToolbarPluginProps {
   setIsLinkEditMode: Dispatch<boolean>;
   customBlocks?: schema.Schema[];
   onInsertCustomBlock?: (blockName: string) => void;
+  inlineComponents?: schema.Schema[];
+  onInsertInlineComponent?: (componentName: string) => void;
 }
 
 export function ToolbarPlugin(props: ToolbarPluginProps) {
   const {
     editor,
     customBlocks,
+    inlineComponents,
     activeEditor,
     setActiveEditor,
     setIsLinkEditMode,
     onInsertCustomBlock,
+    onInsertInlineComponent,
   } = props;
   // TODO(stevenle): figure out if this is required or not.
   // const [selectedElementKey, setSelectedElementKey] = useState<NodeKey | null>(
@@ -394,6 +399,17 @@ export function ToolbarPlugin(props: ToolbarPluginProps) {
     });
   }, [customBlocks]);
 
+  const sortedInlineComponents = useMemo(() => {
+    if (!inlineComponents) {
+      return [] as schema.Schema[];
+    }
+    return [...inlineComponents].sort((a, b) => {
+      const aLabel = a.label || a.name;
+      const bLabel = b.label || b.name;
+      return aLabel.localeCompare(bLabel);
+    });
+  }, [inlineComponents]);
+
   return (
     <div className="LexicalEditor__toolbar">
       {toolbarState.blockType in TOOLBAR_BLOCK_LABELS &&
@@ -468,6 +484,37 @@ export function ToolbarPlugin(props: ToolbarPluginProps) {
         </div>
 
         <Divider />
+
+        {sortedInlineComponents.length > 0 && (
+          <>
+            <Menu
+              control={
+                <Button
+                  className={joinClassNames(
+                    'LexicalEditor__toolbar__dropdown',
+                    'LexicalEditor__toolbar__insertDropdown'
+                  )}
+                  variant="default"
+                  compact
+                  rightIcon={<IconChevronDown size={16} />}
+                  leftIcon={<IconPuzzle size={16} />}
+                >
+                  Components
+                </Button>
+              }
+            >
+              {sortedInlineComponents.map((component) => (
+                <Menu.Item
+                  key={component.name}
+                  onClick={() => onInsertInlineComponent?.(component.name)}
+                >
+                  {component.label || component.name}
+                </Menu.Item>
+              ))}
+            </Menu>
+            <Divider />
+          </>
+        )}
 
         {sortedCustomBlocks.length > 0 && (
           <>
