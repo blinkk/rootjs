@@ -201,6 +201,11 @@ export type RichTextField = CommonFieldProps & {
   type: 'richtext';
   translate?: boolean;
   placeholder?: string;
+  /**
+   * Set to `true` to allow the richtext editor to allow the editor to
+   * automatically resize its height based on its content.
+   */
+  autosize?: boolean;
   /** Custom block definitions available in the rich text editor. */
   customBlocks?: Schema[];
 };

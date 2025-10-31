@@ -57,6 +57,7 @@ export default schema.collection({
           label: 'Main content body',
           help: 'Top content body.',
           translate: true,
+          autosize: true,
           customBlocks: [
             schema.define({
               name: 'YouTubeBlock',

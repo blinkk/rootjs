@@ -74,6 +74,7 @@ export interface LexicalEditorProps {
   onChange?: (value: RichTextData | null) => void;
   onFocus?: (e: FocusEvent) => void;
   onBlur?: (e: FocusEvent) => void;
+  autosize?: boolean;
   customBlocks?: schema.Schema[];
 }
 
@@ -86,7 +87,13 @@ export function LexicalEditor(props: LexicalEditorProps) {
     <LexicalComposer initialConfig={INITIAL_CONFIG}>
       <SharedHistoryProvider>
         <ToolbarProvider>
-          <div className={joinClassNames(props.className, 'LexicalEditor')}>
+          <div
+            className={joinClassNames(
+              props.className,
+              'LexicalEditor',
+              !props.autosize && 'LexicalEditor--withMaxHeight'
+            )}
+          >
             <Editor
               placeholder={props.placeholder}
               value={props.value}
