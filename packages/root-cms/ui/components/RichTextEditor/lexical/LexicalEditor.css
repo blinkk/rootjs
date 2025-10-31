@@ -45,6 +45,10 @@
   color: rgb(28, 126, 214);
 }
 
+.LexicalEditor__toolbar__insertDropdown {
+  font-size: 12px;
+}
+
 .LexicalEditor__editor {
   border: 1px solid #ced4da;
   background: #fff;
@@ -73,4 +77,53 @@
   left: 10px;
   color: #666;
   pointer-events: none;
+}
+
+.LexicalEditor__customBlockWrapper {
+  margin: 12px 0;
+}
+
+.LexicalEditor__customBlock {
+  border: 1px solid #dedede;
+  background: #fafafa;
+  padding: 12px;
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-width: calc(100% - 8px);
+}
+
+.LexicalEditor__customBlock--selected {
+  border-color: lightslategray;
+}
+
+.LexicalEditor__customBlock__header {
+  display: flex;
+  gap: 8px;
+  justify-content: space-between;
+}
+
+.LexicalEditor__customBlock__header__title {
+  font-weight: 600;
+}
+
+.LexicalEditor__customBlock__previewImage img {
+  max-width: 100%;
+  max-height: 150px;
+  object-fit: contain;
+}
+
+.LexicalEditor__customBlock__preview {
+  font-size: 12px;
+  display: -webkit-box;
+  -webkit-line-clamp: 5;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+
+.LexicalEditor__customBlock__actions {
+  display: flex;
+  justify-content: flex-end;
 }

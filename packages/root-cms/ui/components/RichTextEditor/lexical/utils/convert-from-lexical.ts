@@ -22,6 +22,8 @@ import {
   RichTextListItem,
   RichTextParagraphBlock,
 } from '../../../../../shared/richtext.js';
+import {cloneData} from '../../../../utils/objects.js';
+import {$isCustomBlockNode} from '../nodes/CustomBlockNode.js';
 
 function extractTextNode(node: ElementNode) {
   const texts = node.getChildren().map(extractTextChild);
@@ -131,6 +133,12 @@ export function convertToRichTextData(): RichTextData | null {
           style: tag === 'ol' ? 'ordered' : 'unordered',
           items: extractListItems(node),
         },
+      };
+      blocks.push(block);
+    } else if ($isCustomBlockNode(node)) {
+      const block: RichTextBlock = {
+        type: node.getBlockName(),
+        data: cloneData(node.getBlockData()),
       };
       blocks.push(block);
     }

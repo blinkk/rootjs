@@ -27,6 +27,7 @@ export function RichTextField(props: FieldProps) {
     <RichTextEditor
       value={value}
       placeholder={field.placeholder}
+      customBlocks={field.customBlocks}
       onChange={onChange}
       onFocus={props.onFocus}
       onBlur={props.onBlur}

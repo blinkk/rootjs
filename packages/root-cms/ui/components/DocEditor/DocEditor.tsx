@@ -48,8 +48,6 @@ import {
 } from 'preact/hooks';
 import {route} from 'preact-router';
 import * as schema from '../../../core/schema.js';
-import {testValidRichTextData} from '../../../shared/richtext.js';
-import type {RichTextData} from '../../../shared/richtext.js';
 import {useCollectionSchema} from '../../hooks/useCollectionSchema.js';
 import {
   buildDeeplinkUrl,
@@ -74,16 +72,14 @@ import {joinClassNames} from '../../utils/classes.js';
 import {debounce} from '../../utils/debounce.js';
 import {
   CMSDoc,
-  deserializeDocJson,
   testIsScheduled,
   testPublishingLocked,
 } from '../../utils/doc.js';
 import {extractField} from '../../utils/extract.js';
 import {getDefaultFieldValue} from '../../utils/fields.js';
 import {requestHighlightNode} from '../../utils/iframe-preview.js';
-import {getNestedValue} from '../../utils/objects.js';
 import {autokey} from '../../utils/rand.js';
-import {strFormatFn} from '../../utils/str-format.js';
+import {buildPreviewValue} from '../../utils/schema-previews.js';
 import {testFieldEmpty} from '../../utils/test-field-empty.js';
 import {formatDateTime} from '../../utils/time.js';
 import {useAiEditModal} from '../AiEditModal/AiEditModal.js';
@@ -1576,77 +1572,6 @@ function getSchemaPreviewTemplates(
 }
 
 /** Returns the first line of text from rich text data. */
-function getRichTextPreview(data: RichTextData): string | undefined {
-  const blocks = data?.blocks || [];
-  for (const block of blocks) {
-    if (block.type === 'paragraph') {
-      let text = block.data?.text || '';
-      text = text.replace(/<br\s*\/?>/gi, '\n');
-      text = text.replace(/<[^>]+>/g, '').replace(/&nbsp;/g, ' ');
-      const firstLine = text.split(/\r?\n/)[0].trim();
-      if (firstLine) {
-        return firstLine;
-      }
-    }
-  }
-  return undefined;
-}
-
-class PlaceholderNotFoundError extends Error {}
-
-/**
- * Builds the value to display given a set of string templates to use for
- * previews.
- */
-function buildPreviewValue(
-  previews: string | string[],
-  data: any,
-  index?: number
-): string | undefined {
-  const templates = Array.isArray(previews) ? previews : [previews];
-
-  const getPlaceholder = (key: string) => {
-    if (index !== undefined) {
-      if (key === '_index' || key === '_index0') {
-        return String(index);
-      }
-      if (key === '_index1') {
-        return String(index + 1);
-      }
-      if (key === '_index:02') {
-        return String(index).padStart(2, '0');
-      }
-      if (key === '_index:03') {
-        return String(index).padStart(3, '0');
-      }
-    }
-    const val = getNestedValue(data, key);
-    if (!val) {
-      throw new PlaceholderNotFoundError(key);
-    }
-    if (testValidRichTextData(val)) {
-      const richTextPreview = getRichTextPreview(val as RichTextData);
-      if (richTextPreview) {
-        return richTextPreview;
-      }
-    }
-    return String(val);
-  };
-
-  for (const template of templates) {
-    try {
-      const preview = strFormatFn(template, getPlaceholder);
-      return preview;
-    } catch (err) {
-      if (err instanceof PlaceholderNotFoundError) {
-        continue;
-      }
-      throw err;
-    }
-  }
-  return undefined;
-}
-
 /** Builds the preview image for an array item. */
 function arrayPreviewImage(
   field: schema.ArrayField,

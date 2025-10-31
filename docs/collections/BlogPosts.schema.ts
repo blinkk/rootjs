@@ -57,6 +57,21 @@ export default schema.collection({
           label: 'Main content body',
           help: 'Top content body.',
           translate: true,
+          customBlocks: [
+            schema.define({
+              name: 'YouTubeBlock',
+              label: 'YouTube Embed',
+              preview: {title: '{youtubeUrl}'},
+              fields: [
+                schema.string({
+                  id: 'youtubeUrl',
+                  label: 'YouTube URL',
+                  variant: 'textarea',
+                  translate: true,
+                }),
+              ],
+            }),
+          ],
         }),
         schema.array({
           id: 'blocks',

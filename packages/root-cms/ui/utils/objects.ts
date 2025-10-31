@@ -179,3 +179,13 @@ export function deepEqual(obj1: any, obj2: any) {
 
   return true;
 }
+
+export function cloneData<T>(data: T): T {
+  if (data === undefined || data === null) {
+    return data;
+  }
+  if (typeof globalThis.structuredClone === 'function') {
+    return globalThis.structuredClone(data);
+  }
+  return JSON.parse(JSON.stringify(data));
+}

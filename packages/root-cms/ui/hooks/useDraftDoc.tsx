@@ -324,6 +324,7 @@ export class DraftDocController extends EventListener {
         this.pendingUpdates.set(key, updates[key]);
         this.queueChanges();
         console.log('re-queued updates');
+        console.log(this.pendingUpdates);
       }
     }
   }
@@ -434,6 +435,19 @@ export function DraftDocProvider(props: DraftDocProviderProps) {
 
   return (
     <DRAFT_DOC_CONTEXT.Provider value={{loading, controller}}>
+      {props.children}
+    </DRAFT_DOC_CONTEXT.Provider>
+  );
+}
+
+export interface DraftDocContextProviderProps {
+  value: DraftDocContext;
+  children?: ComponentChildren;
+}
+
+export function DraftDocContextProvider(props: DraftDocContextProviderProps) {
+  return (
+    <DRAFT_DOC_CONTEXT.Provider value={props.value}>
       {props.children}
     </DRAFT_DOC_CONTEXT.Provider>
   );

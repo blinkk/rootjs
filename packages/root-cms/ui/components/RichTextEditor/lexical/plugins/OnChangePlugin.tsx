@@ -2,6 +2,7 @@ import {useLexicalComposerContext} from '@lexical/react/LexicalComposerContext';
 import {OnChangePlugin as LexicalOnChangePlugin} from '@lexical/react/LexicalOnChangePlugin';
 import {EditorState} from 'lexical';
 import {useEffect, useRef} from 'preact/hooks';
+import * as schema from '../../../../../core/schema.js';
 import {RichTextData} from '../../../../../shared/richtext.js';
 import {convertToRichTextData} from '../utils/convert-from-lexical.js';
 import {convertToLexical} from '../utils/convert-to-lexical.js';
@@ -9,6 +10,7 @@ import {convertToLexical} from '../utils/convert-to-lexical.js';
 export interface OnChangePluginProps {
   value?: RichTextData | null;
   onChange?: (data: RichTextData | null) => void;
+  customBlocks?: Map<string, schema.Schema>;
 }
 
 export function OnChangePlugin(props: OnChangePluginProps) {

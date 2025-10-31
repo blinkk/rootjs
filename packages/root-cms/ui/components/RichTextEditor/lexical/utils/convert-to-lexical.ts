@@ -17,6 +17,7 @@ import {
   RichTextData,
   RichTextListItem,
 } from '../../../../../shared/richtext.js';
+import {$createCustomBlockNode} from '../nodes/CustomBlockNode.js';
 
 /**
  * Converts from lexical to rich text data and writes the output directly to
@@ -51,6 +52,9 @@ export function convertToLexical(data?: RichTextData | null) {
         listNode.append(...createListItemNodes(item, style));
       }
       root.append(listNode);
+    } else if (block.type) {
+      const node = $createCustomBlockNode(block.type, block.data || {});
+      root.append(node);
     }
   }
 }

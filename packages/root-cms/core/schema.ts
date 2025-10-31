@@ -201,6 +201,8 @@ export type RichTextField = CommonFieldProps & {
   type: 'richtext';
   translate?: boolean;
   placeholder?: string;
+  /** Custom block definitions available in the rich text editor. */
+  customBlocks?: Schema[];
 };
 
 export function richtext(field: Omit<RichTextField, 'type'>): RichTextField {
@@ -270,6 +272,8 @@ export type ObjectLikeField =
 export interface Schema {
   /** The name of the content type. Used as the field key. */
   name: string;
+  /** Label to use for UI strings. */
+  label?: string;
   /** The description of the content type. Appears in CMS menus. */
   description?: string;
   /** Fields describe the structure of the content. */
