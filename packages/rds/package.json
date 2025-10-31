@@ -1,7 +1,7 @@
 {
   "name": "@blinkk/rds",
   "description": "Root.js Design System",
-  "version": "2.2.11",
+  "version": "2.2.12",
   "author": "s@blinkk.com",
   "license": "MIT",
   "engines": {
@@ -32,7 +32,7 @@
     "typescript": "^5.0.4"
   },
   "peerDependencies": {
-    "@blinkk/root": "2.2.11",
+    "@blinkk/root": "2.2.12",
     "preact": "*"
   },
   "dependencies": {
