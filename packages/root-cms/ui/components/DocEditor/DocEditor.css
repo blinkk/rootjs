@@ -240,18 +240,28 @@
   width: 100%;
 }
 
+.DocEditor__ArrayField .DocEditor__ArrayField {
+  --array-field-header-offset: 30px;
+}
+
+.DocEditor__ArrayField .DocEditor__ArrayField .DocEditor__ArrayField {
+  --array-field-header-offset: 60px;
+}
+
+.DocEditor__ArrayField .DocEditor__ArrayField .DocEditor__ArrayField .DocEditor__ArrayField {
+  --array-field-header-offset: 90px;
+}
+
 .DocEditor__ArrayField .DocEditor__ArrayField .DocEditor__ArrayField__item__header {
-  top: calc(var(--top-bar-height) + 30px);
+  top: calc(var(--top-bar-height) + var(--array-field-header-offset));
   z-index: 8;
 }
 
 .DocEditor__ArrayField .DocEditor__ArrayField .DocEditor__ArrayField .DocEditor__ArrayField__item__header {
-  top: calc(var(--top-bar-height) + 60px);
   z-index: 7;
 }
 
 .DocEditor__ArrayField .DocEditor__ArrayField .DocEditor__ArrayField .DocEditor__ArrayField .DocEditor__ArrayField__item__header {
-  top: calc(var(--top-bar-height) + 90px);
   z-index: 6;
 }
 

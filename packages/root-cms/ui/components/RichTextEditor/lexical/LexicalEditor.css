@@ -2,14 +2,22 @@
   position: relative;
 }
 
+.DocEditor__ArrayField .LexicalEditor__toolbar {
+  --lexical-toolbar-offset: calc(var(--array-field-header-offset, 0px) + 30px);
+}
+
 .LexicalEditor__toolbar {
-  position: relative;
+  background: white;
+  border-bottom: 1px solid #ced4da;
+  border: 1px solid #ced4da;
   display: flex;
   gap: 4px;
-  border: 1px solid #ced4da;
-  border-bottom: none;
-  padding: 6px 10px;
+  margin-bottom: -1px;
   overflow: hidden;
+  padding: 6px 10px;
+  position: sticky;
+  top: calc(35px + var(--lexical-toolbar-offset, 0px));
+  z-index: 1;
 }
 
 .LexicalEditor__toolbar__dropdown {
@@ -58,8 +66,10 @@
   position: relative;
   font-family: var(--font-family-default);
   font-size: 12px;
-  max-height: 380px;
-  overflow: auto;
+}
+
+.LexicalEditor:has(.LexicalEditor__editor:focus) .LexicalEditor__toolbar {
+  border-bottom: 1px solid rgb(51, 154, 240);
 }
 
 .LexicalEditor__editor > *:first-child {
@@ -121,7 +131,6 @@
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
-
 
 .LexicalEditor__customBlock__actions {
   display: flex;
