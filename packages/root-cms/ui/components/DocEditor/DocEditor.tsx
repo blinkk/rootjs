@@ -1601,7 +1601,7 @@ function arrayPreview(
     'title'
   );
   if (schemaLevelTemplates) {
-    const result = buildPreviewValue(schemaLevelTemplates, data, index);
+    const result = buildPreviewValue(schemaLevelTemplates, data, {index});
     if (result) {
       return result;
     }
@@ -1610,5 +1610,7 @@ function arrayPreview(
   if (!field.preview) {
     return `item ${index}`;
   }
-  return buildPreviewValue(field.preview, data, index) ?? `item ${index}`;
+  return (
+    buildPreviewValue(field.preview, data, {index}) ?? `item ${index}`
+  );
 }
