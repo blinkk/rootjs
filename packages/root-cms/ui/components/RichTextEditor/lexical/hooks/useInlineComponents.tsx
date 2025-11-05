@@ -37,7 +37,10 @@ export interface InlineComponentsProviderProps {
 export function InlineComponentsProvider(props: InlineComponentsProviderProps) {
   return (
     <INLINE_COMPONENTS_CONTEXT.Provider
-      value={{components: props.components, onEditComponent: props.onEditComponent}}
+      value={{
+        components: props.components,
+        onEditComponent: props.onEditComponent,
+      }}
     >
       {props.children}
     </INLINE_COMPONENTS_CONTEXT.Provider>

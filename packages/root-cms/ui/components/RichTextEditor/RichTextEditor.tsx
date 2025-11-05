@@ -8,10 +8,11 @@ export interface RichTextEditorProps {
   className?: string;
   placeholder?: string;
   value?: RichTextData | null;
+  autosize?: boolean;
   onChange?: (data: RichTextData | null) => void;
   onFocus?: (e: FocusEvent) => void;
   onBlur?: (e: FocusEvent) => void;
-  customBlocks?: schema.Schema[];
+  blockComponents?: schema.Schema[];
   inlineComponents?: schema.Schema[];
 }
 

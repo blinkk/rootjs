@@ -206,9 +206,9 @@ export type RichTextField = CommonFieldProps & {
    * automatically resize its height based on its content.
    */
   autosize?: boolean;
-  /** Custom block definitions available in the rich text editor. */
-  customBlocks?: Schema[];
-  /** Inline component definitions available in the rich text editor. */
+  /** Custom block components definitions to include in the rich text editor. */
+  blockComponents?: Schema[];
+  /** Custom inline component definitions to include in the rich text editor. */
   inlineComponents?: Schema[];
 };
 

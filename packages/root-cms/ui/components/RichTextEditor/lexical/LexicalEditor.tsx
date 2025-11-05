@@ -22,7 +22,7 @@ import {RichTextData} from '../../../../shared/richtext.js';
 import {joinClassNames} from '../../../utils/classes.js';
 import {getDefaultFieldValue} from '../../../utils/fields.js';
 import {cloneData} from '../../../utils/objects.js';
-import {CustomBlocksProvider} from './hooks/useCustomBlocks.js';
+import {BlockComponentsProvider} from './hooks/useBlockComponents.js';
 import {InlineComponentsProvider} from './hooks/useInlineComponents.js';
 import {
   SharedHistoryProvider,
@@ -32,9 +32,9 @@ import {ToolbarProvider} from './hooks/useToolbar.js';
 import {LexicalTheme} from './LexicalTheme.js';
 import {CustomBlockModal} from './nodes/CustomBlockModal.js';
 import {
-  $createCustomBlockNode,
-  $isCustomBlockNode,
-  CustomBlockNode,
+  $createBlockComponentNode,
+  $isBlockComponentNode,
+  BlockComponentNode,
 } from './nodes/CustomBlockNode.js';
 import {
   $createInlineComponentNode,
@@ -59,7 +59,7 @@ const INITIAL_CONFIG: InitialConfigType = {
     LinkNode,
     ListNode,
     ListItemNode,
-    CustomBlockNode,
+    BlockComponentNode,
     InlineComponentNode,
   ],
   onError: (err: Error) => {
@@ -237,7 +237,7 @@ function Editor(props: EditorProps) {
 
   const insertCustomBlock = (blockName: string, data: Record<string, any>) => {
     editor.update(() => {
-      const node = $createCustomBlockNode(blockName, data);
+      const node = $createBlockComponentNode(blockName, data);
       $insertNodes([node]);
       node.selectNext();
     });
@@ -246,7 +246,7 @@ function Editor(props: EditorProps) {
   const updateCustomBlock = (nodeKey: NodeKey, data: Record<string, any>) => {
     editor.update(() => {
       const node = $getNodeByKey(nodeKey);
-      if ($isCustomBlockNode(node)) {
+      if ($isBlockComponentNode(node)) {
         node.setBlockData(data);
       }
     });
@@ -357,7 +357,7 @@ function Editor(props: EditorProps) {
         })
       }
     >
-      <CustomBlocksProvider
+      <BlockComponentsProvider
         blocks={customBlocksMap}
         onEditBlock={openCustomBlockModal}
       >
@@ -371,9 +371,9 @@ function Editor(props: EditorProps) {
           activeEditor={activeEditor}
           setActiveEditor={setActiveEditor}
           setIsLinkEditMode={setIsLinkEditMode}
-          customBlocks={customBlocks}
+          blockComponents={customBlocks}
           inlineComponents={inlineComponents}
-          onInsertCustomBlock={(blockName) =>
+          onInsertBlockComponent={(blockName) =>
             openCustomBlockModal(blockName, {mode: 'create'})
           }
           onInsertInlineComponent={(componentName) =>
@@ -437,7 +437,7 @@ function Editor(props: EditorProps) {
             onSubmit={onInlineComponentSubmit}
           />
         )}
-      </CustomBlocksProvider>
+      </BlockComponentsProvider>
     </InlineComponentsProvider>
   );
 }

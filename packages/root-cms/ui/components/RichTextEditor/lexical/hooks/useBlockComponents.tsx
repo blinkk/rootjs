@@ -3,10 +3,10 @@ import {ComponentChildren, createContext} from 'preact';
 import {useContext} from 'preact/hooks';
 import * as schema from '../../../../../core/schema.js';
 
-type CustomBlockMap = Map<string, schema.Schema>;
+type BlockComponentsMap = Map<string, schema.Schema>;
 
-interface CustomBlocksContextValue {
-  blocks: CustomBlockMap;
+interface BlockComponentsContextValue {
+  blocks: BlockComponentsMap;
   onEditBlock?: (
     blockName: string,
     options?: {
@@ -17,12 +17,12 @@ interface CustomBlocksContextValue {
   ) => void;
 }
 
-const CUSTOM_BLOCKS_CONTEXT = createContext<CustomBlocksContextValue>({
+const BLOCK_COMPONENTS_CONTEXT = createContext<BlockComponentsContextValue>({
   blocks: new Map(),
 });
 
 export interface CustomBlocksProviderProps {
-  blocks: CustomBlockMap;
+  blocks: BlockComponentsMap;
   onEditBlock?: (
     blockName: string,
     options?: {
@@ -34,16 +34,16 @@ export interface CustomBlocksProviderProps {
   children?: ComponentChildren;
 }
 
-export function CustomBlocksProvider(props: CustomBlocksProviderProps) {
+export function BlockComponentsProvider(props: CustomBlocksProviderProps) {
   return (
-    <CUSTOM_BLOCKS_CONTEXT.Provider
+    <BLOCK_COMPONENTS_CONTEXT.Provider
       value={{blocks: props.blocks, onEditBlock: props.onEditBlock}}
     >
       {props.children}
-    </CUSTOM_BLOCKS_CONTEXT.Provider>
+    </BLOCK_COMPONENTS_CONTEXT.Provider>
   );
 }
 
-export function useCustomBlocks() {
-  return useContext(CUSTOM_BLOCKS_CONTEXT);
+export function useBlockComponents() {
+  return useContext(BLOCK_COMPONENTS_CONTEXT);
 }

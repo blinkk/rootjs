@@ -24,7 +24,7 @@ import {
   RichTextParagraphBlock,
 } from '../../../../../shared/richtext.js';
 import {cloneData} from '../../../../utils/objects.js';
-import {$isCustomBlockNode} from '../nodes/CustomBlockNode.js';
+import {$isBlockComponentNode} from '../nodes/CustomBlockNode.js';
 import {
   $isInlineComponentNode,
   InlineComponentNode,
@@ -281,7 +281,7 @@ export function convertToRichTextData(): RichTextData | null {
         },
       };
       blocks.push(block);
-    } else if ($isCustomBlockNode(node)) {
+    } else if ($isBlockComponentNode(node)) {
       const block: RichTextBlock = {
         type: node.getBlockName(),
         data: cloneData(node.getBlockData()),

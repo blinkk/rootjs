@@ -31,7 +31,6 @@ import {
   IconStrikethrough,
   IconH4,
   IconH5,
-  IconLayoutCollage,
   IconPuzzle,
 } from '@tabler/icons-preact';
 import {
@@ -209,8 +208,8 @@ interface ToolbarPluginProps {
   activeEditor: LexicalEditor;
   setActiveEditor: Dispatch<LexicalEditor>;
   setIsLinkEditMode: Dispatch<boolean>;
-  customBlocks?: schema.Schema[];
-  onInsertCustomBlock?: (blockName: string) => void;
+  blockComponents?: schema.Schema[];
+  onInsertBlockComponent?: (blockName: string) => void;
   inlineComponents?: schema.Schema[];
   onInsertInlineComponent?: (componentName: string) => void;
 }
@@ -218,12 +217,12 @@ interface ToolbarPluginProps {
 export function ToolbarPlugin(props: ToolbarPluginProps) {
   const {
     editor,
-    customBlocks,
+    blockComponents,
     inlineComponents,
     activeEditor,
     setActiveEditor,
     setIsLinkEditMode,
-    onInsertCustomBlock,
+    onInsertBlockComponent,
     onInsertInlineComponent,
   } = props;
   // TODO(stevenle): figure out if this is required or not.
@@ -388,16 +387,16 @@ export function ToolbarPlugin(props: ToolbarPluginProps) {
     }
   }, [activeEditor, setIsLinkEditMode, toolbarState.isLink]);
 
-  const sortedCustomBlocks = useMemo(() => {
-    if (!customBlocks) {
+  const sortedBlockComponents = useMemo(() => {
+    if (!blockComponents) {
       return [] as schema.Schema[];
     }
-    return [...customBlocks].sort((a, b) => {
+    return [...blockComponents].sort((a, b) => {
       const aLabel = a.label || a.name;
       const bLabel = b.label || b.name;
       return aLabel.localeCompare(bLabel);
     });
-  }, [customBlocks]);
+  }, [blockComponents]);
 
   const sortedInlineComponents = useMemo(() => {
     if (!inlineComponents) {
@@ -409,6 +408,9 @@ export function ToolbarPlugin(props: ToolbarPluginProps) {
       return aLabel.localeCompare(bLabel);
     });
   }, [inlineComponents]);
+
+  const hasCustomComponents =
+    sortedBlockComponents.length > 0 || sortedInlineComponents.length > 0;
 
   return (
     <div className="LexicalEditor__toolbar">
@@ -485,7 +487,7 @@ export function ToolbarPlugin(props: ToolbarPluginProps) {
 
         <Divider />
 
-        {sortedInlineComponents.length > 0 && (
+        {hasCustomComponents && (
           <>
             <Menu
               control={
@@ -496,52 +498,39 @@ export function ToolbarPlugin(props: ToolbarPluginProps) {
                   )}
                   variant="default"
                   compact
-                  rightIcon={<IconChevronDown size={16} />}
                   leftIcon={<IconPuzzle size={16} />}
+                  rightIcon={<IconChevronDown size={16} />}
                 >
                   Components
                 </Button>
               }
             >
-              {sortedInlineComponents.map((component) => (
-                <Menu.Item
-                  key={component.name}
-                  onClick={() => onInsertInlineComponent?.(component.name)}
-                >
-                  {component.label || component.name}
-                </Menu.Item>
-              ))}
-            </Menu>
-            <Divider />
-          </>
-        )}
-
-        {sortedCustomBlocks.length > 0 && (
-          <>
-            <Menu
-              control={
-                <Button
-                  className={joinClassNames(
-                    'LexicalEditor__toolbar__dropdown',
-                    'LexicalEditor__toolbar__insertDropdown'
-                  )}
-                  variant="default"
-                  compact
-                  rightIcon={<IconChevronDown size={16} />}
-                  leftIcon={<IconLayoutCollage size={16} />}
-                >
-                  Blocks
-                </Button>
-              }
-            >
-              {sortedCustomBlocks.map((block) => (
-                <Menu.Item
-                  key={block.name}
-                  onClick={() => onInsertCustomBlock?.(block.name)}
-                >
-                  {block.label || block.name}
-                </Menu.Item>
-              ))}
+              {sortedInlineComponents.length > 0 && (
+                <>
+                  <Menu.Label>Inline Components</Menu.Label>
+                  {sortedInlineComponents.map((component) => (
+                    <Menu.Item
+                      key={component.name}
+                      onClick={() => onInsertInlineComponent?.(component.name)}
+                    >
+                      {component.label || component.name}
+                    </Menu.Item>
+                  ))}
+                </>
+              )}
+              {sortedBlockComponents.length > 0 && (
+                <>
+                  <Menu.Label>Block Components</Menu.Label>
+                  {sortedBlockComponents.map((block) => (
+                    <Menu.Item
+                      key={block.name}
+                      onClick={() => onInsertBlockComponent?.(block.name)}
+                    >
+                      {block.label || block.name}
+                    </Menu.Item>
+                  ))}
+                </>
+              )}
             </Menu>
             <Divider />
           </>

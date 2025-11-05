@@ -18,7 +18,7 @@ import {
   RichTextInlineComponentsMap,
   RichTextListItem,
 } from '../../../../../shared/richtext.js';
-import {$createCustomBlockNode} from '../nodes/CustomBlockNode.js';
+import {$createBlockComponentNode} from '../nodes/CustomBlockNode.js';
 import {$createInlineComponentNode} from '../nodes/InlineComponentNode.js';
 import {cloneData} from '../../../../utils/objects.js';
 
@@ -62,7 +62,7 @@ export function convertToLexical(data?: RichTextData | null) {
       }
       root.append(listNode);
     } else if (block.type) {
-      const node = $createCustomBlockNode(block.type, block.data || {});
+      const node = $createBlockComponentNode(block.type, block.data || {});
       root.append(node);
     }
   }
