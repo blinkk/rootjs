@@ -167,7 +167,7 @@ function createNodesFromTextContent(
     return nodes;
   }
 
-  const pattern = /\{component:([^}]+)\}/g;
+  const pattern = /\{([^:{}]+):([^}]+)\}/g;
   let lastIndex = 0;
   let match: RegExpExecArray | null;
 
@@ -177,12 +177,13 @@ function createNodesFromTextContent(
       nodes.push($createTextNode(preceding));
     }
 
-    const componentId = match[1];
+    const componentType = match[1];
+    const componentId = match[2];
     const component = components?.[componentId];
     if (component) {
       nodes.push(
         $createInlineComponentNode(
-          component.type,
+          componentType || component.type,
           componentId,
           component.data ? cloneData(component.data) : {}
         )

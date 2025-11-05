@@ -470,9 +470,25 @@ function Placeholder(props: PlaceholderProps) {
   return <div className="LexicalEditor__placeholder">{placeholder}</div>;
 }
 
+const INLINE_COMPONENT_ID_LENGTH = 6;
+const INLINE_COMPONENT_ID_ALPHABET = 'abcdefghijklmnopqrstuvwxyz0123456789';
+
 function generateInlineComponentId() {
-  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
-    return crypto.randomUUID();
+  const alphabetLength = INLINE_COMPONENT_ID_ALPHABET.length;
+  if (
+    typeof crypto !== 'undefined' &&
+    typeof crypto.getRandomValues === 'function'
+  ) {
+    const values = new Uint32Array(INLINE_COMPONENT_ID_LENGTH);
+    crypto.getRandomValues(values);
+    return Array.from(values, (value) =>
+      INLINE_COMPONENT_ID_ALPHABET[value % alphabetLength]
+    ).join('');
   }
-  return `component-${Math.random().toString(36).slice(2, 10)}`;
+
+  let fallback = '';
+  while (fallback.length < INLINE_COMPONENT_ID_LENGTH) {
+    fallback += Math.random().toString(36).slice(2);
+  }
+  return fallback.slice(0, INLINE_COMPONENT_ID_LENGTH);
 }
