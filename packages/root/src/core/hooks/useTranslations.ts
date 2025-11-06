@@ -13,6 +13,7 @@ import {useTranslationMiddleware} from './useTranslationsMiddleware.js';
  * const t = useTranslations();
  * t('Hello {name}', {name: 'Bob'});
  * // => 'Bounjour Bob'
+ * ```
  */
 export function useTranslations() {
   // Ignore I18nContext not found error when used with client-side rehydration.
@@ -26,6 +27,13 @@ export function useTranslations() {
   const stringParams = useStringParams();
   const middleware = useTranslationMiddleware();
   const t = (str: string, params?: Record<string, string | number>) => {
+    // Suppress verbatim `'undefined'` and `'null'` output, which can occur when
+    // using `useTranslations` with undefined values.
+    if (typeof str === 'undefined' || str === null) {
+      // Return `undefined` to suppress empty props, e.g.
+      // <a title={t(undefined)}>Learn more</a>
+      return undefined;
+    }
     let input = normalizeString(str);
     middleware.beforeTranslateFns.forEach((fn) => {
       input = fn(input);
