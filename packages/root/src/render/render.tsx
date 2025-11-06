@@ -414,7 +414,7 @@ export class Renderer {
 
       // Override the status code for 404 and 500 routes, which are defined at
       // routes/404.tsx and routes/500.tsx respectively.
-      let statusCode = defaultStatusCode;
+      let statusCode = options?.statusCode || defaultStatusCode;
       if (route.src === 'routes/404.tsx') {
         statusCode = 404;
       } else if (route.src === 'routes/401.tsx') {

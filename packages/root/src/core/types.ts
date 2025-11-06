@@ -223,6 +223,8 @@ export interface Route {
 }
 
 export interface HandlerRenderOptions {
+  /** HTTP status code to return. Defaults to 200. */
+  statusCode?: number;
   /** The rendered locale. */
   locale?: string;
   /**
