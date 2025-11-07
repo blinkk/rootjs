@@ -75,7 +75,7 @@ RichText.ParagraphBlock = (props: RichTextParagraphBlockProps) => {
     return null;
   }
   const t = useTranslations();
-  return <p dangerouslySetInnerHTML={{__html: t(props.data.text)}} />;
+  return <p dangerouslySetInnerHTML={{__html: t(props.data.text)!}} />;
 };
 
 export interface RichTextHeadingBlockProps {
@@ -95,7 +95,7 @@ RichText.HeadingBlock = (props: RichTextHeadingBlockProps) => {
   const t = useTranslations();
   const level = props.data.level || 2;
   const Component = `h${level}` as HeadingComponent;
-  return <Component dangerouslySetInnerHTML={{__html: t(props.data.text)}} />;
+  return <Component dangerouslySetInnerHTML={{__html: t(props.data.text)!}} />;
 };
 
 interface ListItem {
