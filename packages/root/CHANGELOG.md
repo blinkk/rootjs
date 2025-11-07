@@ -1,5 +1,11 @@
 # @blinkk/root
 
+## 2.3.1
+
+### Patch Changes
+
+- d935637b: fix: overload function definition for useTranslations() (#799)
+
 ## 2.2.13
 
 ### Patch Changes
