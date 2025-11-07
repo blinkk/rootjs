@@ -26,7 +26,12 @@ export function useTranslations() {
   const translations = i18nContext?.translations || {};
   const stringParams = useStringParams();
   const middleware = useTranslationMiddleware();
-  const t = (str: string, params?: Record<string, string | number>) => {
+
+  function t(str: string, params?: Record<string, string | number>): string;
+  function t(
+    str: string | null | undefined,
+    params?: Record<string, string | number>
+  ): string | undefined {
     // Suppress verbatim `'undefined'` and `'null'` output, which can occur when
     // using `useTranslations` with undefined values.
     if (typeof str === 'undefined' || str === null) {
@@ -58,7 +63,7 @@ export function useTranslations() {
     });
 
     return translation;
-  };
+  }
   return t;
 }
 
