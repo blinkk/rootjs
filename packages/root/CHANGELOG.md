@@ -1,5 +1,11 @@
 # @blinkk/root
 
+## 2.2.13
+
+### Patch Changes
+
+- 740c53d7: feat: add statusCode option to ssr render method (#797)
+
 ## 2.2.12
 
 ## 2.2.11
