@@ -18,9 +18,9 @@ import {
   RichTextInlineComponentsMap,
   RichTextListItem,
 } from '../../../../../shared/richtext.js';
+import {cloneData} from '../../../../utils/objects.js';
 import {$createBlockComponentNode} from '../nodes/CustomBlockNode.js';
 import {$createInlineComponentNode} from '../nodes/InlineComponentNode.js';
-import {cloneData} from '../../../../utils/objects.js';
 
 /**
  * Converts from lexical to rich text data and writes the output directly to
@@ -226,10 +226,7 @@ function createListItemTextNode(
   const listItemNode = $createListItemNode();
 
   if (listItem.content) {
-    const children = createNodesFromHTML(
-      listItem.content,
-      listItem.components
-    );
+    const children = createNodesFromHTML(listItem.content, listItem.components);
     listItemNode.append(...children);
   }
 

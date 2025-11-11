@@ -21,7 +21,7 @@ export interface EditorJSEditorProps {
   onChange?: (data: any) => void;
   onFocus?: (e: FocusEvent) => void;
   onBlur?: (e: FocusEvent) => void;
-  customBlocks?: schema.Schema[];
+  blockComponents?: schema.Schema[];
   inlineComponents?: schema.Schema[];
 }
 

@@ -1,8 +1,8 @@
 import {DecoratorNode} from 'lexical';
 import {NodeKey, SerializedLexicalNode, Spread} from 'lexical';
-import {MouseEvent, useCallback} from 'preact/compat';
-import {cloneData} from '../../../../utils/objects.js';
+import {JSX, MouseEvent, useCallback} from 'preact/compat';
 import {joinClassNames} from '../../../../utils/classes.js';
+import {cloneData} from '../../../../utils/objects.js';
 import {useInlineComponents} from '../hooks/useInlineComponents.js';
 
 interface InlineComponentProps {
@@ -52,7 +52,9 @@ function InlineComponent(props: InlineComponentProps) {
         contentEditable={false}
       >
         <span className="LexicalEditor__inlineComponent__label">{label}</span>
-        <span className="LexicalEditor__inlineComponent__id">{componentId}</span>
+        <span className="LexicalEditor__inlineComponent__id">
+          {componentId}
+        </span>
       </button>
     </span>
   );
@@ -150,7 +152,7 @@ export class InlineComponentNode extends DecoratorNode<JSX.Element> {
   }
 
   setComponentName(componentName: string) {
-    const writable = this.getWritable<InlineComponentNode>();
+    const writable = this.getWritable();
     writable.__componentName = componentName;
   }
 
@@ -159,7 +161,7 @@ export class InlineComponentNode extends DecoratorNode<JSX.Element> {
   }
 
   setComponentId(componentId: string) {
-    const writable = this.getWritable<InlineComponentNode>();
+    const writable = this.getWritable();
     writable.__componentId = componentId;
   }
 
@@ -168,7 +170,7 @@ export class InlineComponentNode extends DecoratorNode<JSX.Element> {
   }
 
   setComponentData(data: Record<string, any>) {
-    const writable = this.getWritable<InlineComponentNode>();
+    const writable = this.getWritable();
     writable.__componentData = cloneData(data);
   }
 }
