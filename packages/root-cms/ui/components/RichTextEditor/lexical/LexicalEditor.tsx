@@ -22,6 +22,7 @@ import {RichTextData} from '../../../../shared/richtext.js';
 import {joinClassNames} from '../../../utils/classes.js';
 import {getDefaultFieldValue} from '../../../utils/fields.js';
 import {cloneData} from '../../../utils/objects.js';
+import {autokey} from '../../../utils/rand.js';
 import {BlockComponentsProvider} from './hooks/useBlockComponents.js';
 import {InlineComponentsProvider} from './hooks/useInlineComponents.js';
 import {
@@ -36,12 +37,12 @@ import {
   $isBlockComponentNode,
   BlockComponentNode,
 } from './nodes/CustomBlockNode.js';
+import {InlineComponentModal} from './nodes/InlineComponentModal.js';
 import {
   $createInlineComponentNode,
   $isInlineComponentNode,
   InlineComponentNode,
 } from './nodes/InlineComponentNode.js';
-import {InlineComponentModal} from './nodes/InlineComponentModal.js';
 import {FloatingLinkEditorPlugin} from './plugins/FloatingLinkEditorPlugin.js';
 import {FloatingToolbarPlugin} from './plugins/FloatingToolbarPlugin.js';
 import {MarkdownTransformPlugin} from './plugins/MarkdownTransformPlugin.js';
@@ -290,7 +291,7 @@ function Editor(props: EditorProps) {
     setInlineComponentModalState({
       schema: schemaDef,
       componentName,
-      componentId: options?.componentId || generateInlineComponentId(),
+      componentId: options?.componentId || autokey(),
       mode: options?.mode ?? 'create',
       initialValue,
       nodeKey: options?.nodeKey,
@@ -338,7 +339,12 @@ function Editor(props: EditorProps) {
     }
     const {componentName, mode, nodeKey} = inlineComponentModalState;
     if (mode === 'edit' && nodeKey) {
-      updateInlineComponent(nodeKey, componentName, value.componentId, value.data);
+      updateInlineComponent(
+        nodeKey,
+        componentName,
+        value.componentId,
+        value.data
+      );
     } else {
       insertInlineComponent(componentName, value.componentId, value.data);
     }
@@ -468,27 +474,4 @@ function Placeholder(props: PlaceholderProps) {
     []
   );
   return <div className="LexicalEditor__placeholder">{placeholder}</div>;
-}
-
-const INLINE_COMPONENT_ID_LENGTH = 6;
-const INLINE_COMPONENT_ID_ALPHABET = 'abcdefghijklmnopqrstuvwxyz0123456789';
-
-function generateInlineComponentId() {
-  const alphabetLength = INLINE_COMPONENT_ID_ALPHABET.length;
-  if (
-    typeof crypto !== 'undefined' &&
-    typeof crypto.getRandomValues === 'function'
-  ) {
-    const values = new Uint32Array(INLINE_COMPONENT_ID_LENGTH);
-    crypto.getRandomValues(values);
-    return Array.from(values, (value) =>
-      INLINE_COMPONENT_ID_ALPHABET[value % alphabetLength]
-    ).join('');
-  }
-
-  let fallback = '';
-  while (fallback.length < INLINE_COMPONENT_ID_LENGTH) {
-    fallback += Math.random().toString(36).slice(2);
-  }
-  return fallback.slice(0, INLINE_COMPONENT_ID_LENGTH);
 }
