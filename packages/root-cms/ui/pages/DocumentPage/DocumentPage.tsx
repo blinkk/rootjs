@@ -274,8 +274,8 @@ DocumentPage.Preview = (props: PreviewProps) => {
     'root::DocumentPage::preview::device',
     ''
   );
-  const [stretchVertically, setStretchVertically] = useLocalStorage<boolean>(
-    'root::DocumentPage::preview::stretchVertically',
+  const [expandVertically, setexpandVertically] = useLocalStorage<boolean>(
+    'root::DocumentPage::preview::expandVertically',
     false
   );
   const [iframeStyle, setIframeStyle] = useState({
@@ -353,17 +353,17 @@ DocumentPage.Preview = (props: PreviewProps) => {
     setDevice((current: Device) => {
       const nextDevice = current === targetDevice ? '' : targetDevice;
       if (nextDevice === '') {
-        setStretchVertically(false);
+        setexpandVertically(false);
       }
       return nextDevice;
     });
   }
 
-  function toggleStretchVertically() {
+  function toggleexpandVertically() {
     if (!device) {
       return;
     }
-    setStretchVertically((current) => !current);
+    setexpandVertically((current) => !current);
   }
 
   function onReloadClick() {
@@ -410,8 +410,8 @@ DocumentPage.Preview = (props: PreviewProps) => {
 
     const normalizedScale = Number(scale.toFixed(4)) || 1;
 
-    // When stretching vertically, adjust iframe height to fill available space
-    const iframeHeight = stretchVertically
+    // When expanding vertically, adjust iframe height to fill available space
+    const iframeHeight = expandVertically
       ? `${availableHeight / normalizedScale}px`
       : `${height}px`;
 
@@ -432,7 +432,7 @@ DocumentPage.Preview = (props: PreviewProps) => {
       unsubscribe();
       window.removeEventListener('resize', updateIframeStyle);
     };
-  }, [device, splitPanel, stretchVertically]);
+  }, [device, splitPanel, expandVertically]);
 
   return (
     <div className="DocumentPage__main__preview">
@@ -471,15 +471,15 @@ DocumentPage.Preview = (props: PreviewProps) => {
               <IconDeviceDesktop size={16} />
             </ActionIcon>
           </Tooltip>
-          <Tooltip label="Stretch">
+          <Tooltip label="Expand">
             <ActionIcon
               className={joinClassNames(
                 'DocumentPage__main__previewBar__device',
-                stretchVertically && 'active'
+                expandVertically && 'active'
               )}
-              aria-pressed={stretchVertically}
+              aria-pressed={expandVertically}
               disabled={device === ''}
-              onClick={toggleStretchVertically}
+              onClick={toggleexpandVertically}
             >
               <IconArrowsVertical size={16} />
             </ActionIcon>
