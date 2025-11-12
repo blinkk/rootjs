@@ -127,7 +127,7 @@ export function SettingsPage() {
                     >
                       Lexical
                     </a>{' '}
-                    (default) rich text editor with the legacy{' '}
+                    (default) rich text editor with the{' '}
                     <a
                       href="https://editorjs.io/"
                       target="_blank"
@@ -135,7 +135,7 @@ export function SettingsPage() {
                     >
                       EditorJS
                     </a>{' '}
-                    version.
+                    (legacy) version.
                   </p>
                 </Text>
               </div>
