@@ -13,6 +13,7 @@ import {
   IconWorld,
   IconLayoutSidebarRightCollapse,
   IconLayoutSidebarRightExpand,
+  IconArrowsVertical,
 } from '@tabler/icons-preact';
 import {useCallback, useEffect, useRef, useState} from 'preact/hooks';
 import {DocEditor} from '../../components/DocEditor/DocEditor.js';
@@ -273,6 +274,10 @@ DocumentPage.Preview = (props: PreviewProps) => {
     'root::DocumentPage::preview::device',
     ''
   );
+  const [expandVertically, setExpandVertically] = useLocalStorage<boolean>(
+    'root::DocumentPage::preview::expandVertically',
+    false
+  );
   const [iframeStyle, setIframeStyle] = useState({
     '--iframe-width': '100%',
     '--iframe-height': '100%',
@@ -344,13 +349,21 @@ DocumentPage.Preview = (props: PreviewProps) => {
     iframe.src = localizedPreviewUrl;
   }, [selectedLocale]);
 
-  function toggleDevice(device: Device) {
+  function toggleDevice(targetDevice: Device) {
     setDevice((current: Device) => {
-      if (current === device) {
-        return '';
+      const nextDevice = current === targetDevice ? '' : targetDevice;
+      if (nextDevice === '') {
+        setExpandVertically(false);
       }
-      return device;
+      return nextDevice;
     });
+  }
+
+  function toggleExpandVertically() {
+    if (!device) {
+      return;
+    }
+    setExpandVertically((current) => !current);
   }
 
   function onReloadClick() {
@@ -383,20 +396,29 @@ DocumentPage.Preview = (props: PreviewProps) => {
     const rect = container.getBoundingClientRect();
     const [width, height] = DeviceResolution[device];
     const padding = 20;
-    let scale = 1;
-    if (
-      width > rect.width - 2 * padding ||
-      height > rect.height - 2 * padding
-    ) {
-      scale = Math.min(
-        (rect.width - 2 * padding) / width,
-        (rect.height - 2 * padding) / height
-      );
-    }
+    const availableWidth = Math.max(rect.width - 2 * padding, 0);
+    const availableHeight = Math.max(rect.height - 2 * padding, 0);
+
+    // Calculate scale factors, clamping to 1 if not constraining in that dimension
+    const widthScale =
+      availableWidth > 0 && width > 0 ? availableWidth / width : 1;
+    const heightScale =
+      availableHeight > 0 && height > 0 ? availableHeight / height : 1;
+
+    // Apply the most restrictive scale (smallest value < 1), or 1 if neither is constraining
+    const scale = Math.min(widthScale, heightScale, 1);
+
+    const normalizedScale = Number(scale.toFixed(4)) || 1;
+
+    // When expanding vertically, adjust iframe height to fill available space
+    const iframeHeight = expandVertically
+      ? `${availableHeight / normalizedScale}px`
+      : `${height}px`;
+
     setIframeStyle({
       '--iframe-width': `${width}px`,
-      '--iframe-height': `${height}px`,
-      '--iframe-scale': String(scale),
+      '--iframe-height': iframeHeight,
+      '--iframe-scale': String(normalizedScale),
     });
   }
 
@@ -410,7 +432,7 @@ DocumentPage.Preview = (props: PreviewProps) => {
       unsubscribe();
       window.removeEventListener('resize', updateIframeStyle);
     };
-  }, [device, splitPanel]);
+  }, [device, splitPanel, expandVertically]);
 
   return (
     <div className="DocumentPage__main__preview">
@@ -447,6 +469,19 @@ DocumentPage.Preview = (props: PreviewProps) => {
               onClick={() => toggleDevice('desktop')}
             >
               <IconDeviceDesktop size={16} />
+            </ActionIcon>
+          </Tooltip>
+          <Tooltip label="Expand">
+            <ActionIcon
+              className={joinClassNames(
+                'DocumentPage__main__previewBar__device',
+                expandVertically && 'active'
+              )}
+              aria-pressed={expandVertically}
+              disabled={device === ''}
+              onClick={toggleExpandVertically}
+            >
+              <IconArrowsVertical size={16} />
             </ActionIcon>
           </Tooltip>
         </div>
