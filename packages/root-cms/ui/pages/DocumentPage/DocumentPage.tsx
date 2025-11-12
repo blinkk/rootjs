@@ -274,7 +274,7 @@ DocumentPage.Preview = (props: PreviewProps) => {
     'root::DocumentPage::preview::device',
     ''
   );
-  const [expandVertically, setexpandVertically] = useLocalStorage<boolean>(
+  const [expandVertically, setExpandVertically] = useLocalStorage<boolean>(
     'root::DocumentPage::preview::expandVertically',
     false
   );
@@ -353,7 +353,7 @@ DocumentPage.Preview = (props: PreviewProps) => {
     setDevice((current: Device) => {
       const nextDevice = current === targetDevice ? '' : targetDevice;
       if (nextDevice === '') {
-        setexpandVertically(false);
+        setExpandVertically(false);
       }
       return nextDevice;
     });
@@ -363,7 +363,7 @@ DocumentPage.Preview = (props: PreviewProps) => {
     if (!device) {
       return;
     }
-    setexpandVertically((current) => !current);
+    setExpandVertically((current) => !current);
   }
 
   function onReloadClick() {
