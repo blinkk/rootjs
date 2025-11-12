@@ -359,7 +359,7 @@ DocumentPage.Preview = (props: PreviewProps) => {
     });
   }
 
-  function toggleexpandVertically() {
+  function toggleExpandVertically() {
     if (!device) {
       return;
     }
@@ -479,7 +479,7 @@ DocumentPage.Preview = (props: PreviewProps) => {
               )}
               aria-pressed={expandVertically}
               disabled={device === ''}
-              onClick={toggleexpandVertically}
+              onClick={toggleExpandVertically}
             >
               <IconArrowsVertical size={16} />
             </ActionIcon>
