@@ -15,9 +15,12 @@ import {
 } from 'lexical';
 import {
   RichTextData,
+  RichTextInlineComponentsMap,
   RichTextListItem,
 } from '../../../../../shared/richtext.js';
-import {$createCustomBlockNode} from '../nodes/CustomBlockNode.js';
+import {cloneData} from '../../../../utils/objects.js';
+import {$createBlockComponentNode} from '../nodes/CustomBlockNode.js';
+import {$createInlineComponentNode} from '../nodes/InlineComponentNode.js';
 
 /**
  * Converts from lexical to rich text data and writes the output directly to
@@ -33,7 +36,10 @@ export function convertToLexical(data?: RichTextData | null) {
     if (block.type === 'paragraph') {
       const paragraphNode = $createParagraphNode();
       if (block.data.text) {
-        const children = createNodesFromHTML(block.data.text);
+        const children = createNodesFromHTML(
+          block.data.text,
+          block.data.components
+        );
         paragraphNode.append(...children);
       }
       root.append(paragraphNode);
@@ -41,7 +47,10 @@ export function convertToLexical(data?: RichTextData | null) {
       const tagName = `h${block.data?.level || 2}` as HeadingTagType;
       const headingNode = $createHeadingNode(tagName);
       if (block.data.text) {
-        const children = createNodesFromHTML(block.data.text);
+        const children = createNodesFromHTML(
+          block.data.text,
+          block.data.components
+        );
         headingNode.append(...children);
       }
       root.append(headingNode);
@@ -53,13 +62,16 @@ export function convertToLexical(data?: RichTextData | null) {
       }
       root.append(listNode);
     } else if (block.type) {
-      const node = $createCustomBlockNode(block.type, block.data || {});
+      const node = $createBlockComponentNode(block.type, block.data || {});
       root.append(node);
     }
   }
 }
 
-function createNodesFromHTML(htmlString: string) {
+function createNodesFromHTML(
+  htmlString: string,
+  components?: RichTextInlineComponentsMap
+) {
   const template = document.createElement('template');
   template.innerHTML = htmlString;
   const fragment = template.content;
@@ -68,7 +80,7 @@ function createNodesFromHTML(htmlString: string) {
 
   function parseNode(domNode: Node): LexicalNode | Array<LexicalNode> | null {
     if (domNode.nodeType === Node.TEXT_NODE) {
-      return $createTextNode(domNode.textContent || '');
+      return createNodesFromTextContent(domNode.textContent || '', components);
     }
 
     if (domNode.nodeType === Node.ELEMENT_NODE) {
@@ -82,33 +94,38 @@ function createNodesFromHTML(htmlString: string) {
         case 'b':
         case 'strong':
           return children.map((child: LexicalNode) => {
-            const textNode = child as TextNode;
-            textNode.toggleFormat('bold');
+            if (child instanceof TextNode) {
+              child.toggleFormat('bold');
+            }
             return child;
           });
         case 'i':
         case 'em':
           return children.map((child: LexicalNode) => {
-            const textNode = child as TextNode;
-            textNode.toggleFormat('italic');
+            if (child instanceof TextNode) {
+              child.toggleFormat('italic');
+            }
             return child;
           });
         case 'u':
           return children.map((child: LexicalNode) => {
-            const textNode = child as TextNode;
-            textNode.toggleFormat('underline');
+            if (child instanceof TextNode) {
+              child.toggleFormat('underline');
+            }
             return child;
           });
         case 's':
           return children.map((child: LexicalNode) => {
-            const textNode = child as TextNode;
-            textNode.toggleFormat('strikethrough');
+            if (child instanceof TextNode) {
+              child.toggleFormat('strikethrough');
+            }
             return child;
           });
         case 'sup':
           return children.map((child: LexicalNode) => {
-            const textNode = child as TextNode;
-            textNode.toggleFormat('superscript');
+            if (child instanceof TextNode) {
+              child.toggleFormat('superscript');
+            }
             return child;
           });
         case 'a':
@@ -141,6 +158,51 @@ function createNodesFromHTML(htmlString: string) {
   return nodes;
 }
 
+function createNodesFromTextContent(
+  textContent: string,
+  components?: RichTextInlineComponentsMap
+): LexicalNode[] {
+  const nodes: LexicalNode[] = [];
+  if (!textContent) {
+    return nodes;
+  }
+
+  const pattern = /\{([^:{}]+):([^}]+)\}/g;
+  let lastIndex = 0;
+  let match: RegExpExecArray | null;
+
+  while ((match = pattern.exec(textContent)) !== null) {
+    const preceding = textContent.slice(lastIndex, match.index);
+    if (preceding) {
+      nodes.push($createTextNode(preceding));
+    }
+
+    const componentType = match[1];
+    const componentId = match[2];
+    const component = components?.[componentId];
+    if (component) {
+      nodes.push(
+        $createInlineComponentNode(
+          componentType || component.type,
+          componentId,
+          component.data ? cloneData(component.data) : {}
+        )
+      );
+    } else {
+      nodes.push($createTextNode(match[0]));
+    }
+
+    lastIndex = pattern.lastIndex;
+  }
+
+  const remainder = textContent.slice(lastIndex);
+  if (remainder) {
+    nodes.push($createTextNode(remainder));
+  }
+
+  return nodes;
+}
+
 function createListItemNodes(
   listItem: RichTextListItem,
   parentStyle: 'number' | 'bullet'
@@ -164,7 +226,7 @@ function createListItemTextNode(
   const listItemNode = $createListItemNode();
 
   if (listItem.content) {
-    const children = createNodesFromHTML(listItem.content);
+    const children = createNodesFromHTML(listItem.content, listItem.components);
     listItemNode.append(...children);
   }
 

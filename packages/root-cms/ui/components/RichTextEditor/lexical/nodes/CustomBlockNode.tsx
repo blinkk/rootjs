@@ -18,21 +18,21 @@ import {
   getSchemaPreviewImage,
   getSchemaPreviewTitle,
 } from '../../../../utils/schema-previews.js';
-import {useCustomBlocks} from '../hooks/useCustomBlocks.js';
+import {useBlockComponents} from '../hooks/useBlockComponents.js';
 
-interface CustomBlockComponentProps {
+interface BlockComponentProps {
   blockName: string;
   data: Record<string, any>;
   nodeKey: NodeKey;
 }
 
-function CustomBlockComponent(props: CustomBlockComponentProps) {
+function BlockComponent(props: BlockComponentProps) {
   const {nodeKey} = props;
   const [editor] = useLexicalComposerContext();
   const [isSelected, setSelected, clearSelection] =
     useLexicalNodeSelection(nodeKey);
 
-  const {blocks, onEditBlock} = useCustomBlocks();
+  const {blocks, onEditBlock} = useBlockComponents();
   const schemaDef = blocks.get(props.blockName);
   const label = schemaDef?.label || schemaDef?.name || props.blockName;
 
@@ -125,9 +125,9 @@ function CustomBlockComponent(props: CustomBlockComponentProps) {
   );
 }
 
-export type SerializedCustomBlockNode = Spread<
+export type SerializedBlockComponentNode = Spread<
   {
-    type: 'custom-block';
+    type: 'block-component';
     blockName: string;
     data: Record<string, any>;
     version: 1;
@@ -135,27 +135,31 @@ export type SerializedCustomBlockNode = Spread<
   SerializedLexicalNode
 >;
 
-export class CustomBlockNode extends DecoratorBlockNode {
+export class BlockComponentNode extends DecoratorBlockNode {
   __blockName: string;
   __blockData: Record<string, any>;
 
   static getType(): string {
-    return 'custom-block';
+    return 'block-component';
   }
 
-  static clone(node: CustomBlockNode) {
-    return new CustomBlockNode(node.__blockName, node.__blockData, node.__key);
+  static clone(node: BlockComponentNode) {
+    return new BlockComponentNode(
+      node.__blockName,
+      node.__blockData,
+      node.__key
+    );
   }
 
-  static importJSON(serializedNode: SerializedCustomBlockNode) {
+  static importJSON(serializedNode: SerializedBlockComponentNode) {
     const {blockName, data} = serializedNode;
-    return new CustomBlockNode(blockName, data);
+    return new BlockComponentNode(blockName, data);
   }
 
   exportJSON() {
     return {
       ...super.exportJSON(),
-      type: 'custom-block',
+      type: 'block-component',
       blockName: this.__blockName,
       data: cloneData(this.__blockData),
       version: 1,
@@ -180,7 +184,7 @@ export class CustomBlockNode extends DecoratorBlockNode {
 
   decorate() {
     return (
-      <CustomBlockComponent
+      <BlockComponent
         blockName={this.__blockName}
         data={this.__blockData}
         nodeKey={this.__key}
@@ -202,13 +206,13 @@ export class CustomBlockNode extends DecoratorBlockNode {
   }
 }
 
-export function $createCustomBlockNode(
+export function $createBlockComponentNode(
   blockName: string,
   data?: Record<string, any>
 ) {
-  return new CustomBlockNode(blockName, data);
+  return new BlockComponentNode(blockName, data);
 }
 
-export function $isCustomBlockNode(node: any): node is CustomBlockNode {
-  return node instanceof CustomBlockNode;
+export function $isBlockComponentNode(node: any): node is BlockComponentNode {
+  return node instanceof BlockComponentNode;
 }

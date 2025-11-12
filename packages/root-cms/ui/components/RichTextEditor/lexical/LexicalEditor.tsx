@@ -22,7 +22,9 @@ import {RichTextData} from '../../../../shared/richtext.js';
 import {joinClassNames} from '../../../utils/classes.js';
 import {getDefaultFieldValue} from '../../../utils/fields.js';
 import {cloneData} from '../../../utils/objects.js';
-import {CustomBlocksProvider} from './hooks/useCustomBlocks.js';
+import {autokey} from '../../../utils/rand.js';
+import {BlockComponentsProvider} from './hooks/useBlockComponents.js';
+import {InlineComponentsProvider} from './hooks/useInlineComponents.js';
 import {
   SharedHistoryProvider,
   useSharedHistory,
@@ -31,10 +33,16 @@ import {ToolbarProvider} from './hooks/useToolbar.js';
 import {LexicalTheme} from './LexicalTheme.js';
 import {CustomBlockModal} from './nodes/CustomBlockModal.js';
 import {
-  $createCustomBlockNode,
-  $isCustomBlockNode,
-  CustomBlockNode,
+  $createBlockComponentNode,
+  $isBlockComponentNode,
+  BlockComponentNode,
 } from './nodes/CustomBlockNode.js';
+import {InlineComponentModal} from './nodes/InlineComponentModal.js';
+import {
+  $createInlineComponentNode,
+  $isInlineComponentNode,
+  InlineComponentNode,
+} from './nodes/InlineComponentNode.js';
 import {FloatingLinkEditorPlugin} from './plugins/FloatingLinkEditorPlugin.js';
 import {FloatingToolbarPlugin} from './plugins/FloatingToolbarPlugin.js';
 import {MarkdownTransformPlugin} from './plugins/MarkdownTransformPlugin.js';
@@ -52,7 +60,8 @@ const INITIAL_CONFIG: InitialConfigType = {
     LinkNode,
     ListNode,
     ListItemNode,
-    CustomBlockNode,
+    BlockComponentNode,
+    InlineComponentNode,
   ],
   onError: (err: Error) => {
     console.error('[LexicalEditor] error:', err);
@@ -67,6 +76,15 @@ interface CustomBlockModalState {
   nodeKey?: NodeKey;
 }
 
+interface InlineComponentModalState {
+  schema: schema.Schema;
+  componentName: string;
+  componentId: string;
+  mode: 'create' | 'edit';
+  initialValue: Record<string, any>;
+  nodeKey?: NodeKey;
+}
+
 export interface LexicalEditorProps {
   className?: string;
   placeholder?: string;
@@ -76,6 +94,7 @@ export interface LexicalEditorProps {
   onBlur?: (e: FocusEvent) => void;
   autosize?: boolean;
   customBlocks?: schema.Schema[];
+  inlineComponents?: schema.Schema[];
 }
 
 export function LexicalEditor(props: LexicalEditorProps) {
@@ -101,6 +120,7 @@ export function LexicalEditor(props: LexicalEditorProps) {
               onFocus={props.onFocus}
               onBlur={props.onBlur}
               customBlocks={props.customBlocks}
+              inlineComponents={props.inlineComponents}
             />
           </div>
         </ToolbarProvider>
@@ -151,6 +171,7 @@ interface EditorProps {
   /** Blur handler (currently unimplemented.) */
   onBlur?: (e: FocusEvent) => void;
   customBlocks?: schema.Schema[];
+  inlineComponents?: schema.Schema[];
 }
 
 function Editor(props: EditorProps) {
@@ -173,6 +194,16 @@ function Editor(props: EditorProps) {
   const customBlocks = Array.from(customBlocksMap.values());
   const [customBlockModalState, setCustomBlockModalState] =
     useState<CustomBlockModalState | null>(null);
+  const inlineComponentsMap = useMemo(() => {
+    const map = new Map<string, schema.Schema>();
+    props.inlineComponents?.forEach((component) => {
+      map.set(component.name, component);
+    });
+    return map;
+  }, [props.inlineComponents]);
+  const inlineComponents = Array.from(inlineComponentsMap.values());
+  const [inlineComponentModalState, setInlineComponentModalState] =
+    useState<InlineComponentModalState | null>(null);
 
   // The "onRef" var is used as a callback, so it's typed to `any` here to avoid
   // type warnings.
@@ -207,7 +238,7 @@ function Editor(props: EditorProps) {
 
   const insertCustomBlock = (blockName: string, data: Record<string, any>) => {
     editor.update(() => {
-      const node = $createCustomBlockNode(blockName, data);
+      const node = $createBlockComponentNode(blockName, data);
       $insertNodes([node]);
       node.selectNext();
     });
@@ -216,7 +247,7 @@ function Editor(props: EditorProps) {
   const updateCustomBlock = (nodeKey: NodeKey, data: Record<string, any>) => {
     editor.update(() => {
       const node = $getNodeByKey(nodeKey);
-      if ($isCustomBlockNode(node)) {
+      if ($isBlockComponentNode(node)) {
         node.setBlockData(data);
       }
     });
@@ -241,73 +272,179 @@ function Editor(props: EditorProps) {
     closeCustomBlockModal();
   };
 
+  const openInlineComponentModal = (
+    componentName: string,
+    options?: {
+      mode?: 'create' | 'edit';
+      initialValue?: Record<string, any>;
+      componentId?: string;
+      nodeKey?: NodeKey;
+    }
+  ) => {
+    const schemaDef = inlineComponentsMap.get(componentName);
+    if (!schemaDef) {
+      return;
+    }
+    const initialValue = options?.initialValue
+      ? cloneData(options.initialValue)
+      : getDefaultFieldValue(schemaDef);
+    setInlineComponentModalState({
+      schema: schemaDef,
+      componentName,
+      componentId: options?.componentId || autokey(),
+      mode: options?.mode ?? 'create',
+      initialValue,
+      nodeKey: options?.nodeKey,
+    });
+  };
+
+  const insertInlineComponent = (
+    componentName: string,
+    componentId: string,
+    data: Record<string, any>
+  ) => {
+    editor.update(() => {
+      const node = $createInlineComponentNode(componentName, componentId, data);
+      $insertNodes([node]);
+      node.selectNext();
+    });
+  };
+
+  const updateInlineComponent = (
+    nodeKey: NodeKey,
+    componentName: string,
+    componentId: string,
+    data: Record<string, any>
+  ) => {
+    editor.update(() => {
+      const node = $getNodeByKey(nodeKey);
+      if ($isInlineComponentNode(node)) {
+        node.setComponentName(componentName);
+        node.setComponentId(componentId);
+        node.setComponentData(data);
+      }
+    });
+  };
+
+  const closeInlineComponentModal = () => {
+    setInlineComponentModalState(null);
+  };
+
+  const onInlineComponentSubmit = (value: {
+    componentId: string;
+    data: Record<string, any>;
+  }) => {
+    if (!inlineComponentModalState) {
+      return;
+    }
+    const {componentName, mode, nodeKey} = inlineComponentModalState;
+    if (mode === 'edit' && nodeKey) {
+      updateInlineComponent(
+        nodeKey,
+        componentName,
+        value.componentId,
+        value.data
+      );
+    } else {
+      insertInlineComponent(componentName, value.componentId, value.data);
+    }
+    closeInlineComponentModal();
+  };
+
   return (
-    <CustomBlocksProvider
-      blocks={customBlocksMap}
-      onEditBlock={openCustomBlockModal}
+    <InlineComponentsProvider
+      components={inlineComponentsMap}
+      onEditComponent={(componentName, options) =>
+        openInlineComponentModal(componentName, {
+          mode: options?.mode ?? 'edit',
+          initialValue: options?.initialValue,
+          componentId: options?.componentId,
+          nodeKey: options?.nodeKey,
+        })
+      }
     >
-      <OnChangePlugin
-        value={props.value}
-        onChange={props.onChange}
-        customBlocks={customBlocksMap}
-      />
-      <ToolbarPlugin
-        editor={editor}
-        activeEditor={activeEditor}
-        setActiveEditor={setActiveEditor}
-        setIsLinkEditMode={setIsLinkEditMode}
-        customBlocks={customBlocks}
-        onInsertCustomBlock={(blockName) =>
-          openCustomBlockModal(blockName, {mode: 'create'})
-        }
-      />
-      <ShortcutsPlugin
-        editor={activeEditor}
-        setIsLinkEditMode={setIsLinkEditMode}
-      />
-      <HistoryPlugin externalHistoryState={historyState} />
-      <RichTextPlugin
-        contentEditable={
-          <div className="LexicalEditor__scroller">
-            <div className="LexicalEditor__root" ref={onRef}>
-              <ContentEditable
-                className="LexicalEditor__editor"
-                placeholder={<Placeholder placeholder={props.placeholder} />}
-              />
-            </div>
-          </div>
-        }
-        ErrorBoundary={LexicalErrorBoundary}
-      />
-      <LinkPlugin />
-      <ListPlugin />
-      <TabIndentationPlugin maxIndent={7} />
-      <MarkdownTransformPlugin />
-      <TrailingParagraphPlugin />
-      {floatingAnchorElem && (
-        <>
-          <FloatingToolbarPlugin
-            anchorElem={floatingAnchorElem}
-            setIsLinkEditMode={setIsLinkEditMode}
-          />
-          <FloatingLinkEditorPlugin
-            anchorElem={floatingAnchorElem}
-            isLinkEditMode={isLinkEditMode}
-            setIsLinkEditMode={setIsLinkEditMode}
-          />
-        </>
-      )}
-      {customBlockModalState && (
-        <CustomBlockModal
-          schema={customBlockModalState.schema}
-          opened={true}
-          initialValue={customBlockModalState.initialValue}
-          mode={customBlockModalState.mode}
-          onClose={closeCustomBlockModal}
-          onSubmit={onCustomBlockSubmit}
+      <BlockComponentsProvider
+        blocks={customBlocksMap}
+        onEditBlock={openCustomBlockModal}
+      >
+        <OnChangePlugin
+          value={props.value}
+          onChange={props.onChange}
+          customBlocks={customBlocksMap}
         />
-      )}
-    </CustomBlocksProvider>
+        <ToolbarPlugin
+          editor={editor}
+          activeEditor={activeEditor}
+          setActiveEditor={setActiveEditor}
+          setIsLinkEditMode={setIsLinkEditMode}
+          blockComponents={customBlocks}
+          inlineComponents={inlineComponents}
+          onInsertBlockComponent={(blockName) =>
+            openCustomBlockModal(blockName, {mode: 'create'})
+          }
+          onInsertInlineComponent={(componentName) =>
+            openInlineComponentModal(componentName, {mode: 'create'})
+          }
+        />
+        <ShortcutsPlugin
+          editor={activeEditor}
+          setIsLinkEditMode={setIsLinkEditMode}
+        />
+        <HistoryPlugin externalHistoryState={historyState} />
+        <RichTextPlugin
+          contentEditable={
+            <div className="LexicalEditor__scroller">
+              <div className="LexicalEditor__root" ref={onRef}>
+                <ContentEditable
+                  className="LexicalEditor__editor"
+                  placeholder={<Placeholder placeholder={props.placeholder} />}
+                />
+              </div>
+            </div>
+          }
+          ErrorBoundary={LexicalErrorBoundary}
+        />
+        <LinkPlugin />
+        <ListPlugin />
+        <TabIndentationPlugin maxIndent={7} />
+        <MarkdownTransformPlugin />
+        <TrailingParagraphPlugin />
+        {floatingAnchorElem && (
+          <>
+            <FloatingToolbarPlugin
+              anchorElem={floatingAnchorElem}
+              setIsLinkEditMode={setIsLinkEditMode}
+            />
+            <FloatingLinkEditorPlugin
+              anchorElem={floatingAnchorElem}
+              isLinkEditMode={isLinkEditMode}
+              setIsLinkEditMode={setIsLinkEditMode}
+            />
+          </>
+        )}
+        {customBlockModalState && (
+          <CustomBlockModal
+            schema={customBlockModalState.schema}
+            opened={true}
+            initialValue={customBlockModalState.initialValue}
+            mode={customBlockModalState.mode}
+            onClose={closeCustomBlockModal}
+            onSubmit={onCustomBlockSubmit}
+          />
+        )}
+        {inlineComponentModalState && (
+          <InlineComponentModal
+            schema={inlineComponentModalState.schema}
+            opened={true}
+            componentId={inlineComponentModalState.componentId}
+            initialValue={inlineComponentModalState.initialValue}
+            mode={inlineComponentModalState.mode}
+            onClose={closeInlineComponentModal}
+            onSubmit={onInlineComponentSubmit}
+          />
+        )}
+      </BlockComponentsProvider>
+    </InlineComponentsProvider>
   );
 }
 

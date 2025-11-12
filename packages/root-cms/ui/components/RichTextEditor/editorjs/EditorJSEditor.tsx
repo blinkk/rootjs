@@ -5,6 +5,7 @@ import ImageTool from '@editorjs/image';
 import NestedList from '@editorjs/nested-list';
 import RawHtmlTool from '@editorjs/raw';
 import {useEffect, useRef, useState} from 'preact/hooks';
+import * as schema from '../../../../core/schema.js';
 import {RichTextData} from '../../../../shared/richtext.js';
 import {joinClassNames} from '../../../utils/classes.js';
 import {uploadFileToGCS} from '../../../utils/gcs.js';
@@ -20,6 +21,8 @@ export interface EditorJSEditorProps {
   onChange?: (data: any) => void;
   onFocus?: (e: FocusEvent) => void;
   onBlur?: (e: FocusEvent) => void;
+  blockComponents?: schema.Schema[];
+  inlineComponents?: schema.Schema[];
 }
 
 export function EditorJSEditor(props: EditorJSEditorProps) {

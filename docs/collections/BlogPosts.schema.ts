@@ -58,7 +58,22 @@ export default schema.collection({
           help: 'Top content body.',
           translate: true,
           autosize: true,
-          customBlocks: [
+          inlineComponents: [
+            schema.define({
+              name: 'Emoji',
+              fields: [
+                schema.select({
+                  id: 'emojiName',
+                  label: 'Emoji',
+                  options: [
+                    {value: 'heart', label: 'heart ❤️'},
+                    {value: 'joy', label: 'joy 😂'},
+                  ],
+                }),
+              ],
+            }),
+          ],
+          blockComponents: [
             schema.define({
               name: 'YouTubeBlock',
               label: 'YouTube Embed',

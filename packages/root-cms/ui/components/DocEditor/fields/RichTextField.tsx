@@ -10,7 +10,7 @@ export function RichTextField(props: FieldProps) {
   const [value, setValue] = useState<RichTextData | null>(null);
   const draft = useDraftDoc().controller;
 
-  const onChange = (newValue: RichTextData) => {
+  const onChange = (newValue: RichTextData | null) => {
     setValue((oldValue: RichTextData | null) => {
       if (oldValue?.time !== newValue?.time) {
         draft.updateKey(props.deepKey, newValue);
@@ -27,11 +27,12 @@ export function RichTextField(props: FieldProps) {
     <RichTextEditor
       value={value}
       placeholder={field.placeholder}
+      blockComponents={field.blockComponents}
+      inlineComponents={field.inlineComponents}
       onChange={onChange}
       onFocus={props.onFocus}
       onBlur={props.onBlur}
       autosize={field.autosize}
-      customBlocks={field.customBlocks}
     />
   );
 }
