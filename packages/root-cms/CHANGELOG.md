@@ -1,5 +1,12 @@
 # @blinkk/root-cms
 
+## 2.3.2
+
+### Patch Changes
+
+- 399ce96a: feat: support inline components in lexical editor (#791)
+  - @blinkk/root@2.3.2
+
 ## 2.3.1
 
 ### Patch Changes
