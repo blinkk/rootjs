@@ -8,7 +8,7 @@ import {
 } from '@lexical/link';
 import {useLexicalComposerContext} from '@lexical/react/LexicalComposerContext';
 import {$findMatchingParent, mergeRegister} from '@lexical/utils';
-import {ActionIcon, Tooltip} from '@mantine/core';
+import {ActionIcon, Textarea, Tooltip} from '@mantine/core';
 import {IconCheck, IconPencil, IconTrash, IconX} from '@tabler/icons-preact';
 import {
   $getSelection,
@@ -57,7 +57,7 @@ function FloatingLinkEditor(props: FloatingLinkEditorProps) {
   const editorRef = useRef<HTMLDivElement | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const [linkUrl, setLinkUrl] = useState('');
-  const [editedLinkUrl, setEditedLinkUrl] = useState('https://');
+  const [editedLinkUrl, setEditedLinkUrl] = useState('');
   const [lastSelection, setLastSelection] = useState<BaseSelection | null>(
     null
   );
@@ -76,7 +76,7 @@ function FloatingLinkEditor(props: FloatingLinkEditorProps) {
         setLinkUrl('');
       }
       if (isLinkEditMode) {
-        setEditedLinkUrl(linkUrl);
+        setEditedLinkUrl(normalizeUrl(linkUrl));
       }
     } else if ($isNodeSelection(selection)) {
       const nodes = selection.getNodes();
@@ -91,7 +91,7 @@ function FloatingLinkEditor(props: FloatingLinkEditorProps) {
           setLinkUrl('');
         }
         if (isLinkEditMode) {
-          setEditedLinkUrl(linkUrl);
+          setEditedLinkUrl(normalizeUrl(linkUrl));
         }
       }
     }
@@ -223,11 +223,11 @@ function FloatingLinkEditor(props: FloatingLinkEditorProps) {
       e.preventDefault();
     }
     if (lastSelection !== null) {
-      if (linkUrl !== '') {
+      if (linkUrl !== null) {
         editor.update(() => {
           editor.dispatchCommand(
             TOGGLE_LINK_COMMAND,
-            sanitizeUrl(editedLinkUrl)
+            normalizeUrl(editedLinkUrl)
           );
           const selection = $getSelection();
           if ($isRangeSelection(selection)) {
@@ -243,7 +243,7 @@ function FloatingLinkEditor(props: FloatingLinkEditorProps) {
           }
         });
       }
-      setEditedLinkUrl('https://');
+      setEditedLinkUrl('');
       setIsLinkEditMode(false);
     }
   };
@@ -258,17 +258,21 @@ function FloatingLinkEditor(props: FloatingLinkEditorProps) {
     >
       {!isLink ? null : isLinkEditMode ? (
         <>
-          <input
+          <Textarea
             ref={inputRef}
             className="LexicalEditor__link__input"
             value={editedLinkUrl}
-            onChange={(event) => {
+            onChange={(event: KeyboardEvent) => {
               const target = event.target as HTMLInputElement;
               setEditedLinkUrl(target.value);
             }}
-            onKeyDown={(event) => {
+            onKeyDown={(event: KeyboardEvent) => {
               monitorInputInteraction(event);
             }}
+            autosize={true}
+            minRows={1}
+            radius="xs"
+            placeholder="https://"
           />
           <div className="LexicalEditor__link__controls">
             <ToolbarActionIcon
@@ -509,4 +513,11 @@ export function setFloatingElemPositionForLinkEditor(
 
   floatingElem.style.opacity = '1';
   floatingElem.style.transform = `translate(${left}px, ${top}px)`;
+}
+
+function normalizeUrl(url: string) {
+  if (!url) {
+    return url;
+  }
+  return url.trim();
 }

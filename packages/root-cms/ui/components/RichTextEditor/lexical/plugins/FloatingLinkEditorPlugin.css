@@ -22,22 +22,27 @@
   display: none;
 }
 
-.LexicalEditor__link__input,
+.LexicalEditor__link__input {
+  display: block;
+  width: 100%;
+}
+
+.LexicalEditor__link__input textarea,
 .LexicalEditor__link__preview {
   flex: 1;
   display: block;
   border: 1px solid #dedede;
   position: relative;
   padding: 4px 8px;
-  height: 28px;
+  min-height: 28px;
   display: flex;
   align-items: center;
   font-family: var(--font-family-default);
   font-size: 12px;
-  line-height: 1;
+  line-height: 1.5;
 }
 
-.LexicalEditor__link__input:focus {
+.LexicalEditor__link__input textarea:focus {
   outline: none;
   border-color: #339af0;
 }
