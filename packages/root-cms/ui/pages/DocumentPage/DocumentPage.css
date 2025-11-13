@@ -102,6 +102,7 @@
 .DocumentPage__main__previewBar__buttons {
   display: flex;
   align-items: center;
+  gap: 2px;
 }
 
 .DocumentPage__main__previewBar__devices .mantine-Tooltip-root,
