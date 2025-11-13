@@ -1,5 +1,12 @@
 # @blinkk/root-cms
 
+## 2.3.3
+
+### Patch Changes
+
+- febab770: feat: add stretch button
+  - @blinkk/root@2.3.3
+
 ## 2.3.2
 
 ### Patch Changes
