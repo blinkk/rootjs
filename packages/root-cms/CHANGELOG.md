@@ -1,5 +1,12 @@
 # @blinkk/root-cms
 
+## 2.4.1
+
+### Patch Changes
+
+- 039417cb: feat: update lexical editor to be the default rte (#803)
+  - @blinkk/root@2.4.1
+
 ## 2.3.3
 
 ### Patch Changes
