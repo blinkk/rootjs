@@ -110,7 +110,7 @@ export function SettingsPage() {
                   size="body"
                   weight="semi-bold"
                 >
-                  Enable Lexical Editor (experimental)
+                  Enable EditorJS Editor (legacy)
                 </Text>
                 <Text
                   className="SettingsPage__section__userPref__description__body"
@@ -121,33 +121,32 @@ export function SettingsPage() {
                   <p>
                     Replaces the{' '}
                     <a
-                      href="https://editorjs.io/"
-                      target="_blank"
-                      rel="noopener noreferrer nofollow"
-                    >
-                      EditorJS
-                    </a>{' '}
-                    rich text editor with the{' '}
-                    <a
                       href="https://lexical.dev/"
                       target="_blank"
                       rel="noopener noreferrer nofollow"
                     >
                       Lexical
                     </a>{' '}
-                    version. The data saved by the Lexical version is backwards
-                    compatible but the editor may be missing a few features.
+                    (default) rich text editor with the{' '}
+                    <a
+                      href="https://editorjs.io/"
+                      target="_blank"
+                      rel="noopener noreferrer nofollow"
+                    >
+                      EditorJS
+                    </a>{' '}
+                    (legacy) version.
                   </p>
                 </Text>
               </div>
               <div className="SettingsPage__section__userPref__input">
                 <Switch
                   color="dark"
-                  checked={userPrefs.preferences.EnableLexicalEditor}
+                  checked={userPrefs.preferences.EnableEditorJSEditor}
                   onChange={(e: Event) => {
                     const enabled = (e.currentTarget as HTMLInputElement)
                       .checked;
-                    userPrefs.setPreference('EnableLexicalEditor', enabled);
+                    userPrefs.setPreference('EnableEditorJSEditor', enabled);
                   }}
                 />
               </div>

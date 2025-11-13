@@ -18,8 +18,8 @@ export interface RichTextEditorProps {
 
 export function RichTextEditor(props: RichTextEditorProps) {
   const userPrefs = useUserPreferences();
-  if (userPrefs.preferences.EnableLexicalEditor) {
-    return <LexicalEditor {...props} />;
+  if (userPrefs.preferences.EnableEditorJSEditor) {
+    return <EditorJSEditor {...props} />;
   }
-  return <EditorJSEditor {...props} />;
+  return <LexicalEditor {...props} />;
 }
