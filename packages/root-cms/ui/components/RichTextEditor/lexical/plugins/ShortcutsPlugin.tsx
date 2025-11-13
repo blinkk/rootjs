@@ -72,7 +72,7 @@ export function ShortcutsPlugin(props: ShortcutsPluginProps): null {
       } else if (isClearFormatting(event)) {
         clearFormatting(editor);
       } else if (isInsertLink(event)) {
-        const url = toolbarState.isLink ? null : sanitizeUrl('https://');
+        const url = toolbarState.isLink ? null : '';
         setIsLinkEditMode(!toolbarState.isLink);
         editor.dispatchCommand(TOGGLE_LINK_COMMAND, url);
       } else {
