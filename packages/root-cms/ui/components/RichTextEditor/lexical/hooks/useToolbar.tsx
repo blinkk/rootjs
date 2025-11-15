@@ -16,6 +16,7 @@ export const TOOLBAR_BLOCK_LABELS = {
   h6: 'Heading 6',
   bullet: 'Bulleted List',
   number: 'Numbered List',
+  quote: 'Quote',
 };
 
 export type ToolbarBlockType = keyof typeof TOOLBAR_BLOCK_LABELS;

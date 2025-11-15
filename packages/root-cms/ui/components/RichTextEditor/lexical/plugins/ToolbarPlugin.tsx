@@ -1,7 +1,9 @@
 import {$isLinkNode, TOGGLE_LINK_COMMAND} from '@lexical/link';
 import {$isListNode, ListNode} from '@lexical/list';
+import {INSERT_HORIZONTAL_RULE_COMMAND} from '@lexical/react/LexicalHorizontalRuleNode';
 import {$isHeadingNode} from '@lexical/rich-text';
 import {$isParentElementRTL} from '@lexical/selection';
+import {INSERT_TABLE_COMMAND} from '@lexical/table';
 import {
   $findMatchingParent,
   $getNearestNodeOfType,
@@ -27,11 +29,16 @@ import {
   IconUnderline,
   IconLink,
   IconSuperscript,
+  IconSubscript,
   IconChevronDown,
   IconStrikethrough,
   IconH4,
   IconH5,
   IconPuzzle,
+  IconCode,
+  IconQuote,
+  IconSeparatorHorizontal,
+  IconTable,
 } from '@tabler/icons-preact';
 import {
   $getSelection,
@@ -68,6 +75,7 @@ import {
   formatHeading,
   formatNumberedList,
   formatParagraph,
+  formatBlockquote,
 } from '../utils/toolbar.js';
 import {sanitizeUrl} from '../utils/url.js';
 
@@ -109,6 +117,9 @@ function BlockTypeIcon(props: BlockTypeIconProps) {
   }
   if (blockType === 'bullet') {
     return <IconList size={16} />;
+  }
+  if (blockType === 'quote') {
+    return <IconQuote size={16} />;
   }
   return null;
 }
@@ -194,6 +205,13 @@ function BlockFormatDropDown(props: BlockFormatDropDownProps) {
         onClick={() => formatHeading(editor, blockType, 'h5')}
       >
         Heading 5
+      </Menu.Item>
+      <Menu.Item
+        icon={<BlockTypeIcon blockType="quote" />}
+        className={dropDownActiveClass(blockType === 'quote')}
+        onClick={() => formatBlockquote(editor, blockType)}
+      >
+        Quote
       </Menu.Item>
     </Menu>
   );
@@ -324,6 +342,8 @@ export function ToolbarPlugin(props: ToolbarPluginProps) {
         selection.hasFormat('strikethrough')
       );
       updateToolbarState('isSuperscript', selection.hasFormat('superscript'));
+      updateToolbarState('isSubscript', selection.hasFormat('subscript'));
+      updateToolbarState('isCode', selection.hasFormat('code'));
     }
   }, [activeEditor, editor, updateToolbarState]);
 
@@ -477,11 +497,53 @@ export function ToolbarPlugin(props: ToolbarPluginProps) {
             <IconSuperscript size={16} />
           </ToolbarActionIcon>
           <ToolbarActionIcon
+            tooltip={`Subscript (${SHORTCUTS.SUBSCRIPT})`}
+            active={toolbarState.isSubscript}
+            onClick={() => {
+              activeEditor.dispatchCommand(FORMAT_TEXT_COMMAND, 'subscript');
+            }}
+          >
+            <IconSubscript size={16} />
+          </ToolbarActionIcon>
+          <ToolbarActionIcon
+            tooltip="Code"
+            active={toolbarState.isCode}
+            onClick={() => {
+              activeEditor.dispatchCommand(FORMAT_TEXT_COMMAND, 'code');
+            }}
+          >
+            <IconCode size={16} />
+          </ToolbarActionIcon>
+          <ToolbarActionIcon
             tooltip={`Insert link (${SHORTCUTS.INSERT_LINK})`}
             active={toolbarState.isLink}
             onClick={insertLink}
           >
             <IconLink size={16} />
+          </ToolbarActionIcon>
+        </div>
+
+        <Divider />
+
+        <div className="LexicalEditor__toolbar__group">
+          <ToolbarActionIcon
+            tooltip="Insert horizontal rule"
+            onClick={() => {
+              activeEditor.dispatchCommand(INSERT_HORIZONTAL_RULE_COMMAND, undefined);
+            }}
+          >
+            <IconSeparatorHorizontal size={16} />
+          </ToolbarActionIcon>
+          <ToolbarActionIcon
+            tooltip="Insert table"
+            onClick={() => {
+              activeEditor.dispatchCommand(INSERT_TABLE_COMMAND, {
+                columns: '3',
+                rows: '3',
+              });
+            }}
+          >
+            <IconTable size={16} />
           </ToolbarActionIcon>
         </div>
 

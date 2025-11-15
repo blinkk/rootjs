@@ -5,6 +5,7 @@ import {
 import {$isDecoratorBlockNode} from '@lexical/react/LexicalDecoratorBlockNode';
 import {
   $createHeadingNode,
+  $createQuoteNode,
   $isHeadingNode,
   $isQuoteNode,
   HeadingTagType,
@@ -120,4 +121,15 @@ export const clearFormatting = (editor: LexicalEditor) => {
       });
     }
   });
+};
+
+export const formatBlockquote = (editor: LexicalEditor, blockType: string) => {
+  if (blockType !== 'quote') {
+    editor.update(() => {
+      const selection = $getSelection();
+      $setBlocksType(selection, () => $createQuoteNode());
+    });
+  } else {
+    formatParagraph(editor);
+  }
 };
