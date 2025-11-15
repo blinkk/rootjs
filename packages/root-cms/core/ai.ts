@@ -205,7 +205,11 @@ export class Chat {
     });
     // Using the `output` property provides both data and text responses.
     if (options.mode === 'edit') {
-      return res.output as AiResponse & {editData?: any};
+      const aiResponse = res.output as AiResponse & {editData?: any};
+      if (aiResponse?.data && !aiResponse.message) {
+        aiResponse.message = '';
+      }
+      return aiResponse;
     }
     return {message: res.text, data: null};
   }

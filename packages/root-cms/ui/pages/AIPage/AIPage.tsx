@@ -374,6 +374,14 @@ function ChatMessageTextBlock(props: {
     onAnimationComplete: props.onAnimationComplete,
   });
 
+  // If there are no nodes to render and animation is enabled,
+  // complete the animation immediately to prevent hanging.
+  useEffect(() => {
+    if (markdownTree.children.length === 0 && props.animated) {
+      props.onAnimationComplete();
+    }
+  }, [markdownTree.children.length, props.animated]);
+
   return (
     <div className="AIPage__ChatMessageTextBlock">
       {nodes.map((node, i) => (
