@@ -31,13 +31,13 @@ import {
 } from './hooks/useSharedHistory.js';
 import {ToolbarProvider} from './hooks/useToolbar.js';
 import {LexicalTheme} from './LexicalTheme.js';
-import {BlockComponentModal} from './nodes/BlockComponentModal.js';
+import {useBlockComponentModal} from './nodes/BlockComponentModal.js';
 import {
   $createBlockComponentNode,
   $isBlockComponentNode,
   BlockComponentNode,
 } from './nodes/BlockComponentNode.js';
-import {InlineComponentModal} from './nodes/InlineComponentModal.js';
+import {useInlineComponentModal} from './nodes/InlineComponentModal.js';
 import {
   $createInlineComponentNode,
   $isInlineComponentNode,
@@ -68,22 +68,6 @@ const INITIAL_CONFIG: InitialConfigType = {
     throw err;
   },
 };
-
-interface BlockComponentModalState {
-  schema: schema.Schema;
-  mode: 'create' | 'edit';
-  initialValue: Record<string, any>;
-  nodeKey?: NodeKey;
-}
-
-interface InlineComponentModalState {
-  schema: schema.Schema;
-  componentName: string;
-  componentId: string;
-  mode: 'create' | 'edit';
-  initialValue: Record<string, any>;
-  nodeKey?: NodeKey;
-}
 
 export interface LexicalEditorProps {
   className?: string;
@@ -192,8 +176,7 @@ function Editor(props: EditorProps) {
     return map;
   }, [props.blockComponents]);
   const blockComponents = Array.from(blockComponentsMap.values());
-  const [blockComponentModalState, setBlockComponentModalState] =
-    useState<BlockComponentModalState | null>(null);
+  const blockComponentModal = useBlockComponentModal();
   const inlineComponentsMap = useMemo(() => {
     const map = new Map<string, schema.Schema>();
     props.inlineComponents?.forEach((component) => {
@@ -202,8 +185,7 @@ function Editor(props: EditorProps) {
     return map;
   }, [props.inlineComponents]);
   const inlineComponents = Array.from(inlineComponentsMap.values());
-  const [inlineComponentModalState, setInlineComponentModalState] =
-    useState<InlineComponentModalState | null>(null);
+  const inlineComponentModal = useInlineComponentModal();
 
   // The "onRef" var is used as a callback, so it's typed to `any` here to avoid
   // type warnings.
@@ -225,14 +207,21 @@ function Editor(props: EditorProps) {
     if (!schemaDef) {
       return;
     }
+    const mode = options?.mode ?? 'create';
     const initialValue = options?.initialValue
       ? cloneData(options.initialValue)
       : getDefaultFieldValue(schemaDef);
-    setBlockComponentModalState({
+    blockComponentModal.open({
       schema: schemaDef,
-      mode: options?.mode ?? 'create',
+      mode,
       initialValue,
-      nodeKey: options?.nodeKey,
+      onSubmit: (data: Record<string, any>) => {
+        if (mode === 'edit' && options?.nodeKey) {
+          updateBlockComponent(options.nodeKey, data);
+        } else {
+          insertBlockComponent(schemaDef.name, data);
+        }
+      },
     });
   };
 
@@ -259,25 +248,6 @@ function Editor(props: EditorProps) {
     });
   };
 
-  const closeBlockComponentModal = () => {
-    setBlockComponentModalState(null);
-  };
-
-  const onBlockComponentSubmit = (data: Record<string, any>) => {
-    if (!blockComponentModalState) {
-      return;
-    }
-    if (
-      blockComponentModalState.mode === 'edit' &&
-      blockComponentModalState.nodeKey
-    ) {
-      updateBlockComponent(blockComponentModalState.nodeKey, data);
-    } else {
-      insertBlockComponent(blockComponentModalState.schema.name, data);
-    }
-    closeBlockComponentModal();
-  };
-
   const openInlineComponentModal = (
     componentName: string,
     options?: {
@@ -291,16 +261,28 @@ function Editor(props: EditorProps) {
     if (!schemaDef) {
       return;
     }
+    const mode = options?.mode ?? 'create';
     const initialValue = options?.initialValue
       ? cloneData(options.initialValue)
       : getDefaultFieldValue(schemaDef);
-    setInlineComponentModalState({
+    const componentId = options?.componentId || autokey();
+    inlineComponentModal.open({
       schema: schemaDef,
-      componentName,
-      componentId: options?.componentId || autokey(),
-      mode: options?.mode ?? 'create',
+      componentId,
+      mode,
       initialValue,
-      nodeKey: options?.nodeKey,
+      onSubmit: (value) => {
+        if (mode === 'edit' && options?.nodeKey) {
+          updateInlineComponent(
+            options.nodeKey,
+            componentName,
+            value.componentId,
+            value.data
+          );
+        } else {
+          insertInlineComponent(componentName, value.componentId, value.data);
+        }
+      },
     });
   };
 
@@ -330,31 +312,6 @@ function Editor(props: EditorProps) {
         node.setComponentData(data);
       }
     });
-  };
-
-  const closeInlineComponentModal = () => {
-    setInlineComponentModalState(null);
-  };
-
-  const onInlineComponentSubmit = (value: {
-    componentId: string;
-    data: Record<string, any>;
-  }) => {
-    if (!inlineComponentModalState) {
-      return;
-    }
-    const {componentName, mode, nodeKey} = inlineComponentModalState;
-    if (mode === 'edit' && nodeKey) {
-      updateInlineComponent(
-        nodeKey,
-        componentName,
-        value.componentId,
-        value.data
-      );
-    } else {
-      insertInlineComponent(componentName, value.componentId, value.data);
-    }
-    closeInlineComponentModal();
   };
 
   return (
@@ -423,27 +380,6 @@ function Editor(props: EditorProps) {
               setIsLinkEditMode={setIsLinkEditMode}
             />
           </>
-        )}
-        {blockComponentModalState && (
-          <BlockComponentModal
-            schema={blockComponentModalState.schema}
-            opened={true}
-            initialValue={blockComponentModalState.initialValue}
-            mode={blockComponentModalState.mode}
-            onClose={closeBlockComponentModal}
-            onSubmit={onBlockComponentSubmit}
-          />
-        )}
-        {inlineComponentModalState && (
-          <InlineComponentModal
-            schema={inlineComponentModalState.schema}
-            opened={true}
-            componentId={inlineComponentModalState.componentId}
-            initialValue={inlineComponentModalState.initialValue}
-            mode={inlineComponentModalState.mode}
-            onClose={closeInlineComponentModal}
-            onSubmit={onInlineComponentSubmit}
-          />
         )}
       </BlockComponentsProvider>
     </InlineComponentsProvider>

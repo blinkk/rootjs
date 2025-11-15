@@ -39,6 +39,8 @@ import {DocTranslationsPage} from './pages/DocTranslationsPage/DocTranslationsPa
 import {DocumentPage} from './pages/DocumentPage/DocumentPage.js';
 import {EditDataSourcePage} from './pages/EditDataSourcePage/EditDataSourcePage.js';
 import {EditReleasePage} from './pages/EditReleasePage/EditReleasePage.js';
+import {BlockComponentModal} from './components/RichTextEditor/lexical/nodes/BlockComponentModal.js';
+import {InlineComponentModal} from './components/RichTextEditor/lexical/nodes/InlineComponentModal.js';
 import {LogsPage} from './pages/LogsPage/LogsPage.js';
 import {NewDataSourcePage} from './pages/NewDataSourcePage/NewDataSourcePage.js';
 import {NewReleasePage} from './pages/NewReleasePage/NewReleasePage.js';
@@ -125,6 +127,8 @@ function App() {
                     [EditJsonModal.id]: EditJsonModal,
                     [EditTranslationsModal.id]: EditTranslationsModal,
                     [ExportSheetModal.id]: ExportSheetModal,
+                    [BlockComponentModal.id]: BlockComponentModal,
+                    [InlineComponentModal.id]: InlineComponentModal,
                     [LocalizationModal.id]: LocalizationModal,
                     [LockPublishingModal.id]: LockPublishingModal,
                     [PublishDocModal.id]: PublishDocModal,
