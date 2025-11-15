@@ -1,24 +1,29 @@
-import {Button, Group, Modal, Stack, Text} from '@mantine/core';
+import {Button, Group, Stack, Text} from '@mantine/core';
+import {ContextModalProps, useModals} from '@mantine/modals';
 import {useMemo} from 'preact/hooks';
 import * as schema from '../../../../../core/schema.js';
 import {
   DraftDocContext,
   DraftDocContextProvider,
 } from '../../../../hooks/useDraftDoc.js';
+import {useModalTheme} from '../../../../hooks/useModalTheme.js';
 import {cloneData} from '../../../../utils/objects.js';
 import {DocEditor} from '../../../DocEditor/DocEditor.js';
 import {InMemoryDraftDocController} from '../utils/InMemoryDraftDocController.js';
 
-interface BlockComponentModalProps {
+const MODAL_ID = 'BlockComponentModal';
+
+export interface BlockComponentModalProps {
   schema: schema.Schema;
-  opened: boolean;
   initialValue: Record<string, any>;
   mode?: 'create' | 'edit';
-  onClose: () => void;
   onSubmit: (value: Record<string, any>) => void;
 }
 
-export function BlockComponentModal(props: BlockComponentModalProps) {
+export function BlockComponentModal(
+  modalProps: ContextModalProps<BlockComponentModalProps>
+) {
+  const {innerProps: props, context, id} = modalProps;
   const controller = useMemo(
     () => new InMemoryDraftDocController(props.initialValue || {}),
     [props.schema, props.initialValue]
@@ -53,37 +58,30 @@ export function BlockComponentModal(props: BlockComponentModalProps) {
     if (props.schema.name === 'image' && clonedValue?.file?.src) {
       clonedValue.file.url = imagePreviewUrl(clonedValue.file.src);
     }
-
     props.onSubmit(clonedValue);
+    context.closeModal(id);
   };
 
   return (
-    <Modal
-      opened={props.opened}
-      onClose={props.onClose}
-      title={props.schema.label || props.schema.name}
-      size="lg"
-    >
-      <Stack spacing="md">
-        {props.schema.fields.length > 0 ? (
-          <DraftDocContextProvider value={draftContext}>
-            <DocEditor.ObjectField field={objectField} deepKey="block" />
-          </DraftDocContextProvider>
-        ) : (
-          <Text size="sm" color="dimmed">
-            This block does not define any editable fields.
-          </Text>
-        )}
-        <Group position="right" spacing="sm">
-          <Button variant="default" size="xs" onClick={props.onClose}>
-            Cancel
-          </Button>
-          <Button size="xs" onClick={handleSubmit}>
-            {props.mode === 'edit' ? 'Save block' : 'Insert block'}
-          </Button>
-        </Group>
-      </Stack>
-    </Modal>
+    <Stack spacing="md">
+      {props.schema.fields.length > 0 ? (
+        <DraftDocContextProvider value={draftContext}>
+          <DocEditor.ObjectField field={objectField} deepKey="block" />
+        </DraftDocContextProvider>
+      ) : (
+        <Text size="sm" color="dimmed">
+          This block does not define any editable fields.
+        </Text>
+      )}
+      <Group position="right" spacing="sm">
+        <Button variant="default" size="xs" onClick={() => context.closeModal(id)}>
+          Cancel
+        </Button>
+        <Button size="xs" onClick={handleSubmit}>
+          {props.mode === 'edit' ? 'Save block' : 'Insert block'}
+        </Button>
+      </Group>
+    </Stack>
   );
 }
 
@@ -96,4 +94,21 @@ function imagePreviewUrl(src: string) {
 
 function isGciUrl(url: string) {
   return url.startsWith('https://lh3.googleusercontent.com/');
+}
+
+BlockComponentModal.id = MODAL_ID;
+
+export function useBlockComponentModal() {
+  const modals = useModals();
+  const modalTheme = useModalTheme();
+  return {
+    open: (props: BlockComponentModalProps) =>
+      modals.openContextModal(MODAL_ID, {
+        ...modalTheme,
+        innerProps: props,
+        size: 'lg',
+        title: props.schema.label || props.schema.name,
+      }),
+    close: () => modals.closeModal(MODAL_ID),
+  };
 }
