@@ -1,5 +1,12 @@
 # @blinkk/root-cms
 
+## 2.4.2
+
+### Patch Changes
+
+- 7f5736db: fix: fix lexical custom block components
+  - @blinkk/root@2.4.2
+
 ## 2.4.1
 
 ### Patch Changes
