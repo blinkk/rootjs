@@ -223,6 +223,7 @@ sup:has(.LexicalTheme__textSuperscript) {
   width: fit-content;
   margin-top: 25px;
   margin-bottom: 30px;
+  border: 1px solid #d0d0d0;
 }
 .LexicalTheme__tableScrollableWrapper.LexicalTheme__tableFrozenRow {
   /* position:sticky needs overflow:clip or visible
@@ -283,7 +284,7 @@ sup:has(.LexicalTheme__textSuperscript) {
   outline: 2px solid rgb(60, 132, 244);
 }
 .LexicalTheme__tableCell {
-  border: 1px solid #bbb;
+  border: 1px solid #d0d0d0;
   width: 75px;
   vertical-align: top;
   text-align: start;
