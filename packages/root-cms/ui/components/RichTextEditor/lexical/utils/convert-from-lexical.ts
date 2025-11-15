@@ -129,7 +129,9 @@ function elementMatchesFormats(node: ElementNode, formats: string[]): boolean {
   return true;
 }
 
-function extractInlineComponent(node: InlineComponentNode): TextExtractionResult {
+function extractInlineComponent(
+  node: InlineComponentNode
+): TextExtractionResult {
   const componentId = node.getComponentId();
   const componentName = node.getComponentName();
   const componentData = cloneData(node.getComponentData());
@@ -181,7 +183,10 @@ function extractTextNode(node: ElementNode): TextExtractionResult {
     }
 
     if ($isLinkNode(child)) {
-      if (activeFormats.length > 0 && !elementMatchesFormats(child, activeFormats)) {
+      if (
+        activeFormats.length > 0 &&
+        !elementMatchesFormats(child, activeFormats)
+      ) {
         closeAllFormats(activeFormats, result);
       }
       appendExtractionResult(result, extractLinkNode(child));
@@ -323,7 +328,9 @@ function testLastBlockIsEmpty(blocks: RichTextBlock[]) {
   return false;
 }
 
-function hasInlineComponents(components: RichTextInlineComponentsMap | undefined) {
+function hasInlineComponents(
+  components: RichTextInlineComponentsMap | undefined
+) {
   if (!components) {
     return false;
   }

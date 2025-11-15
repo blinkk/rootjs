@@ -529,7 +529,10 @@ export function ToolbarPlugin(props: ToolbarPluginProps) {
           <ToolbarActionIcon
             tooltip="Insert horizontal rule"
             onClick={() => {
-              activeEditor.dispatchCommand(INSERT_HORIZONTAL_RULE_COMMAND, undefined);
+              activeEditor.dispatchCommand(
+                INSERT_HORIZONTAL_RULE_COMMAND,
+                undefined
+              );
             }}
           >
             <IconSeparatorHorizontal size={16} />

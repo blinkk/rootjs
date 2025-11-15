@@ -1610,7 +1610,5 @@ function arrayPreview(
   if (!field.preview) {
     return `item ${index}`;
   }
-  return (
-    buildPreviewValue(field.preview, data, {index}) ?? `item ${index}`
-  );
+  return buildPreviewValue(field.preview, data, {index}) ?? `item ${index}`;
 }
