@@ -24,7 +24,7 @@ import {
   RichTextParagraphBlock,
 } from '../../../../../shared/richtext.js';
 import {cloneData} from '../../../../utils/objects.js';
-import {$isBlockComponentNode} from '../nodes/CustomBlockNode.js';
+import {$isBlockComponentNode} from '../nodes/BlockComponentNode.js';
 import {
   $isInlineComponentNode,
   InlineComponentNode,

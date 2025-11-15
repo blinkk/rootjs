@@ -7,13 +7,9 @@ import {
 } from '../../../../hooks/useDraftDoc.js';
 import {cloneData} from '../../../../utils/objects.js';
 import {DocEditor} from '../../../DocEditor/DocEditor.js';
-import {
-  InMemoryDraftDocController,
-  setNestedValue,
-  deleteNestedValue,
-} from '../utils/InMemoryDraftDocController.js';
+import {InMemoryDraftDocController} from '../utils/InMemoryDraftDocController.js';
 
-interface CustomBlockModalProps {
+interface BlockComponentModalProps {
   schema: schema.Schema;
   opened: boolean;
   initialValue: Record<string, any>;
@@ -22,7 +18,7 @@ interface CustomBlockModalProps {
   onSubmit: (value: Record<string, any>) => void;
 }
 
-export function CustomBlockModal(props: CustomBlockModalProps) {
+export function BlockComponentModal(props: BlockComponentModalProps) {
   const controller = useMemo(
     () => new InMemoryDraftDocController(props.initialValue || {}),
     [props.schema, props.initialValue]

@@ -19,7 +19,7 @@ import {
   RichTextListItem,
 } from '../../../../../shared/richtext.js';
 import {cloneData} from '../../../../utils/objects.js';
-import {$createBlockComponentNode} from '../nodes/CustomBlockNode.js';
+import {$createBlockComponentNode} from '../nodes/BlockComponentNode.js';
 import {$createInlineComponentNode} from '../nodes/InlineComponentNode.js';
 
 /**

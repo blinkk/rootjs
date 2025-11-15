@@ -31,12 +31,12 @@ import {
 } from './hooks/useSharedHistory.js';
 import {ToolbarProvider} from './hooks/useToolbar.js';
 import {LexicalTheme} from './LexicalTheme.js';
-import {CustomBlockModal} from './nodes/CustomBlockModal.js';
+import {BlockComponentModal} from './nodes/BlockComponentModal.js';
 import {
   $createBlockComponentNode,
   $isBlockComponentNode,
   BlockComponentNode,
-} from './nodes/CustomBlockNode.js';
+} from './nodes/BlockComponentNode.js';
 import {InlineComponentModal} from './nodes/InlineComponentModal.js';
 import {
   $createInlineComponentNode,
@@ -69,7 +69,7 @@ const INITIAL_CONFIG: InitialConfigType = {
   },
 };
 
-interface CustomBlockModalState {
+interface BlockComponentModalState {
   schema: schema.Schema;
   mode: 'create' | 'edit';
   initialValue: Record<string, any>;
@@ -93,7 +93,7 @@ export interface LexicalEditorProps {
   onFocus?: (e: FocusEvent) => void;
   onBlur?: (e: FocusEvent) => void;
   autosize?: boolean;
-  customBlocks?: schema.Schema[];
+  blockComponents?: schema.Schema[];
   inlineComponents?: schema.Schema[];
 }
 
@@ -119,7 +119,7 @@ export function LexicalEditor(props: LexicalEditorProps) {
               onChange={props.onChange}
               onFocus={props.onFocus}
               onBlur={props.onBlur}
-              customBlocks={props.customBlocks}
+              blockComponents={props.blockComponents}
               inlineComponents={props.inlineComponents}
             />
           </div>
@@ -170,7 +170,7 @@ interface EditorProps {
   onFocus?: (e: FocusEvent) => void;
   /** Blur handler (currently unimplemented.) */
   onBlur?: (e: FocusEvent) => void;
-  customBlocks?: schema.Schema[];
+  blockComponents?: schema.Schema[];
   inlineComponents?: schema.Schema[];
 }
 
@@ -181,19 +181,19 @@ function Editor(props: EditorProps) {
   const [isLinkEditMode, setIsLinkEditMode] = useState(false);
   const [floatingAnchorElem, setFloatingAnchorElem] =
     useState<HTMLElement | null>(null);
-  const customBlocksMap = useMemo(() => {
+  const blockComponentsMap = useMemo(() => {
     const map = new Map<string, schema.Schema>();
     BUILT_IN_BLOCKS.forEach((block) => {
       map.set(block.name, block);
     });
-    props.customBlocks?.forEach((block) => {
+    props.blockComponents?.forEach((block) => {
       map.set(block.name, block);
     });
     return map;
-  }, [props.customBlocks]);
-  const customBlocks = Array.from(customBlocksMap.values());
-  const [customBlockModalState, setCustomBlockModalState] =
-    useState<CustomBlockModalState | null>(null);
+  }, [props.blockComponents]);
+  const blockComponents = Array.from(blockComponentsMap.values());
+  const [blockComponentModalState, setBlockComponentModalState] =
+    useState<BlockComponentModalState | null>(null);
   const inlineComponentsMap = useMemo(() => {
     const map = new Map<string, schema.Schema>();
     props.inlineComponents?.forEach((component) => {
@@ -213,7 +213,7 @@ function Editor(props: EditorProps) {
     }
   };
 
-  const openCustomBlockModal = (
+  const openBlockComponentModal = (
     blockName: string,
     options?: {
       mode?: 'create' | 'edit';
@@ -221,14 +221,14 @@ function Editor(props: EditorProps) {
       nodeKey?: NodeKey;
     }
   ) => {
-    const schemaDef = customBlocksMap.get(blockName);
+    const schemaDef = blockComponentsMap.get(blockName);
     if (!schemaDef) {
       return;
     }
     const initialValue = options?.initialValue
       ? cloneData(options.initialValue)
       : getDefaultFieldValue(schemaDef);
-    setCustomBlockModalState({
+    setBlockComponentModalState({
       schema: schemaDef,
       mode: options?.mode ?? 'create',
       initialValue,
@@ -236,7 +236,10 @@ function Editor(props: EditorProps) {
     });
   };
 
-  const insertCustomBlock = (blockName: string, data: Record<string, any>) => {
+  const insertBlockComponent = (
+    blockName: string,
+    data: Record<string, any>
+  ) => {
     editor.update(() => {
       const node = $createBlockComponentNode(blockName, data);
       $insertNodes([node]);
@@ -244,7 +247,10 @@ function Editor(props: EditorProps) {
     });
   };
 
-  const updateCustomBlock = (nodeKey: NodeKey, data: Record<string, any>) => {
+  const updateBlockComponent = (
+    nodeKey: NodeKey,
+    data: Record<string, any>
+  ) => {
     editor.update(() => {
       const node = $getNodeByKey(nodeKey);
       if ($isBlockComponentNode(node)) {
@@ -253,23 +259,23 @@ function Editor(props: EditorProps) {
     });
   };
 
-  const closeCustomBlockModal = () => {
-    setCustomBlockModalState(null);
+  const closeBlockComponentModal = () => {
+    setBlockComponentModalState(null);
   };
 
-  const onCustomBlockSubmit = (data: Record<string, any>) => {
-    if (!customBlockModalState) {
+  const onBlockComponentSubmit = (data: Record<string, any>) => {
+    if (!blockComponentModalState) {
       return;
     }
     if (
-      customBlockModalState.mode === 'edit' &&
-      customBlockModalState.nodeKey
+      blockComponentModalState.mode === 'edit' &&
+      blockComponentModalState.nodeKey
     ) {
-      updateCustomBlock(customBlockModalState.nodeKey, data);
+      updateBlockComponent(blockComponentModalState.nodeKey, data);
     } else {
-      insertCustomBlock(customBlockModalState.schema.name, data);
+      insertBlockComponent(blockComponentModalState.schema.name, data);
     }
-    closeCustomBlockModal();
+    closeBlockComponentModal();
   };
 
   const openInlineComponentModal = (
@@ -364,23 +370,19 @@ function Editor(props: EditorProps) {
       }
     >
       <BlockComponentsProvider
-        blocks={customBlocksMap}
-        onEditBlock={openCustomBlockModal}
+        blocks={blockComponentsMap}
+        onEditBlock={openBlockComponentModal}
       >
-        <OnChangePlugin
-          value={props.value}
-          onChange={props.onChange}
-          customBlocks={customBlocksMap}
-        />
+        <OnChangePlugin value={props.value} onChange={props.onChange} />
         <ToolbarPlugin
           editor={editor}
           activeEditor={activeEditor}
           setActiveEditor={setActiveEditor}
           setIsLinkEditMode={setIsLinkEditMode}
-          blockComponents={customBlocks}
+          blockComponents={blockComponents}
           inlineComponents={inlineComponents}
           onInsertBlockComponent={(blockName) =>
-            openCustomBlockModal(blockName, {mode: 'create'})
+            openBlockComponentModal(blockName, {mode: 'create'})
           }
           onInsertInlineComponent={(componentName) =>
             openInlineComponentModal(componentName, {mode: 'create'})
@@ -422,14 +424,14 @@ function Editor(props: EditorProps) {
             />
           </>
         )}
-        {customBlockModalState && (
-          <CustomBlockModal
-            schema={customBlockModalState.schema}
+        {blockComponentModalState && (
+          <BlockComponentModal
+            schema={blockComponentModalState.schema}
             opened={true}
-            initialValue={customBlockModalState.initialValue}
-            mode={customBlockModalState.mode}
-            onClose={closeCustomBlockModal}
-            onSubmit={onCustomBlockSubmit}
+            initialValue={blockComponentModalState.initialValue}
+            mode={blockComponentModalState.mode}
+            onClose={closeBlockComponentModal}
+            onSubmit={onBlockComponentSubmit}
           />
         )}
         {inlineComponentModalState && (
@@ -453,9 +455,12 @@ const PLACEHOLDERS = [
   'Start writing something legendary...',
   'Words go here. Preferably brilliant ones...',
   'Compose like nobody’s watching...',
-  'Your masterpiece begins here...',
   'Add text that makes Hemingway jealous...',
   'Here lies your unwritten brilliance...',
+  'This is where the magic happens...',
+  'Let the words flow...',
+  'In the beginning, there was a blank page...',
+  'To write, or not to write, that is the question...',
 ];
 
 function getRandPlaceholder() {
