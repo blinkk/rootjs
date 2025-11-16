@@ -5,7 +5,7 @@ import {
   ListItemNode,
   ListNode,
 } from '@lexical/list';
-import {$isHeadingNode} from '@lexical/rich-text';
+import {$isHeadingNode, $isQuoteNode} from '@lexical/rich-text';
 import {
   $getRoot,
   $isParagraphNode,
@@ -13,6 +13,7 @@ import {
   ElementNode,
   TextNode,
   $isLineBreakNode,
+  $isDecoratorNode,
 } from 'lexical';
 import {
   RichTextBlock,
@@ -44,14 +45,18 @@ type SupportedFormat =
   | 'underline'
   | 'italic'
   | 'bold'
-  | 'superscript';
+  | 'superscript'
+  | 'subscript'
+  | 'code';
 
 const FORMAT_TAGS_ORDER: Array<{tag: string; format: SupportedFormat}> = [
+  {tag: 'code', format: 'code'},
   {tag: 's', format: 'strikethrough'},
   {tag: 'u', format: 'underline'},
   {tag: 'i', format: 'italic'},
   {tag: 'b', format: 'bold'},
   {tag: 'sup', format: 'superscript'},
+  {tag: 'sub', format: 'subscript'},
 ];
 
 function getTextNodeFormats(node: TextNode) {
@@ -276,6 +281,18 @@ export function convertToRichTextData(): RichTextData | null {
         block.data!.components = result.components;
       }
       blocks.push(block);
+    } else if ($isQuoteNode(node)) {
+      const result = extractTextNode(node);
+      const block: RichTextBlock = {
+        type: 'quote',
+        data: {
+          text: result.text,
+        },
+      };
+      if (hasInlineComponents(result.components)) {
+        block.data!.components = result.components;
+      }
+      blocks.push(block);
     } else if ($isListNode(node)) {
       const tag = node.getTag();
       const block: RichTextListBlock = {
@@ -290,6 +307,13 @@ export function convertToRichTextData(): RichTextData | null {
       const block: RichTextBlock = {
         type: node.getBlockName(),
         data: cloneData(node.getBlockData()),
+      };
+      blocks.push(block);
+    } else if ($isDecoratorNode(node) && node.getType() === 'horizontalrule') {
+      // Handle horizontal rule nodes
+      const block: RichTextBlock = {
+        type: 'delimiter',
+        data: {},
       };
       blocks.push(block);
     }

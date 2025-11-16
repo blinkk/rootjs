@@ -4,7 +4,12 @@ import {
   $createListNode,
   ListItemNode,
 } from '@lexical/list';
-import {$createHeadingNode, HeadingTagType} from '@lexical/rich-text';
+import {$createHorizontalRuleNode} from '@lexical/react/LexicalHorizontalRuleNode';
+import {
+  $createHeadingNode,
+  $createQuoteNode,
+  HeadingTagType,
+} from '@lexical/rich-text';
 import {
   $applyNodeReplacement,
   $createParagraphNode,
@@ -54,6 +59,16 @@ export function convertToLexical(data?: RichTextData | null) {
         headingNode.append(...children);
       }
       root.append(headingNode);
+    } else if (block.type === 'quote') {
+      const quoteNode = $createQuoteNode();
+      if (block.data?.text) {
+        const children = createNodesFromHTML(
+          block.data.text,
+          block.data.components
+        );
+        quoteNode.append(...children);
+      }
+      root.append(quoteNode);
     } else if (block.type === 'orderedList' || block.type === 'unorderedList') {
       const style = block.data.style === 'ordered' ? 'number' : 'bullet';
       const listNode = $createListNode(style);
@@ -61,6 +76,10 @@ export function convertToLexical(data?: RichTextData | null) {
         listNode.append(...createListItemNodes(item, style));
       }
       root.append(listNode);
+    } else if (block.type === 'delimiter') {
+      // Handle horizontal rule / delimiter blocks
+      const hrNode = $createHorizontalRuleNode();
+      root.append(hrNode);
     } else if (block.type) {
       const node = $createBlockComponentNode(block.type, block.data || {});
       root.append(node);
@@ -128,6 +147,23 @@ function createNodesFromHTML(
             }
             return child;
           });
+        case 'sub':
+          return children.map((child: LexicalNode) => {
+            if (child instanceof TextNode) {
+              child.toggleFormat('subscript');
+            }
+            return child;
+          });
+        case 'code':
+          return children.map((child: LexicalNode) => {
+            if (child instanceof TextNode) {
+              child.toggleFormat('code');
+            }
+            return child;
+          });
+        case 'br':
+          // Line breaks are handled by Lexical's LineBreakNode
+          return [];
         case 'a':
           return [
             $applyNodeReplacement(

@@ -39,6 +39,7 @@ import {
   IconQuote,
   IconSeparatorHorizontal,
   IconTable,
+  IconClearFormatting,
 } from '@tabler/icons-preact';
 import {
   $getSelection,
@@ -76,6 +77,7 @@ import {
   formatNumberedList,
   formatParagraph,
   formatBlockquote,
+  clearFormatting,
 } from '../utils/toolbar.js';
 import {sanitizeUrl} from '../utils/url.js';
 
@@ -219,6 +221,81 @@ function BlockFormatDropDown(props: BlockFormatDropDownProps) {
 
 function Divider() {
   return <div className="divider" />;
+}
+
+interface MoreFormattingDropdownProps {
+  editor: LexicalEditor;
+  isStrikethrough: boolean;
+  isSuperscript: boolean;
+  isSubscript: boolean;
+  isCode: boolean;
+}
+
+function MoreFormattingDropdown(props: MoreFormattingDropdownProps) {
+  const {editor, isStrikethrough, isSuperscript, isSubscript, isCode} = props;
+  const isAnyActive = isStrikethrough || isSuperscript || isSubscript || isCode;
+
+  return (
+    <Menu
+      styles={{
+        body: {
+          minWidth: '240px',
+        },
+      }}
+      control={
+        <Tooltip
+          className={joinClassNames(
+            'LexicalEditor__toolbar__actionIcon',
+            isAnyActive && 'LexicalEditor__toolbar__actionIcon--active'
+          )}
+          label="More formatting"
+          position="top"
+          withArrow
+        >
+          <ActionIcon variant="default" title="More formatting">
+            <IconChevronDown size={16} />
+          </ActionIcon>
+        </Tooltip>
+      }
+    >
+      <Menu.Item
+        icon={<IconStrikethrough size={16} />}
+        className={dropDownActiveClass(isStrikethrough)}
+        onClick={() => {
+          editor.dispatchCommand(FORMAT_TEXT_COMMAND, 'strikethrough');
+        }}
+      >
+        Strikethrough ({SHORTCUTS.STRIKETHROUGH})
+      </Menu.Item>
+      <Menu.Item
+        icon={<IconSuperscript size={16} />}
+        className={dropDownActiveClass(isSuperscript)}
+        onClick={() => {
+          editor.dispatchCommand(FORMAT_TEXT_COMMAND, 'superscript');
+        }}
+      >
+        Superscript ({SHORTCUTS.SUPERSCRIPT})
+      </Menu.Item>
+      <Menu.Item
+        icon={<IconSubscript size={16} />}
+        className={dropDownActiveClass(isSubscript)}
+        onClick={() => {
+          editor.dispatchCommand(FORMAT_TEXT_COMMAND, 'subscript');
+        }}
+      >
+        Subscript ({SHORTCUTS.SUBSCRIPT})
+      </Menu.Item>
+      <Menu.Item
+        icon={<IconCode size={16} />}
+        className={dropDownActiveClass(isCode)}
+        onClick={() => {
+          editor.dispatchCommand(FORMAT_TEXT_COMMAND, 'code');
+        }}
+      >
+        Code
+      </Menu.Item>
+    </Menu>
+  );
 }
 
 interface ToolbarPluginProps {
@@ -475,45 +552,18 @@ export function ToolbarPlugin(props: ToolbarPluginProps) {
           >
             <IconUnderline size={16} />
           </ToolbarActionIcon>
-          <ToolbarActionIcon
-            tooltip={`Strikethrough (${SHORTCUTS.STRIKETHROUGH})`}
-            active={toolbarState.isStrikethrough}
-            onClick={() => {
-              activeEditor.dispatchCommand(
-                FORMAT_TEXT_COMMAND,
-                'strikethrough'
-              );
-            }}
-          >
-            <IconStrikethrough size={16} />
-          </ToolbarActionIcon>
-          <ToolbarActionIcon
-            tooltip={`Superscript (${SHORTCUTS.SUPERSCRIPT})`}
-            active={toolbarState.isSuperscript}
-            onClick={() => {
-              activeEditor.dispatchCommand(FORMAT_TEXT_COMMAND, 'superscript');
-            }}
-          >
-            <IconSuperscript size={16} />
-          </ToolbarActionIcon>
-          <ToolbarActionIcon
-            tooltip={`Subscript (${SHORTCUTS.SUBSCRIPT})`}
-            active={toolbarState.isSubscript}
-            onClick={() => {
-              activeEditor.dispatchCommand(FORMAT_TEXT_COMMAND, 'subscript');
-            }}
-          >
-            <IconSubscript size={16} />
-          </ToolbarActionIcon>
-          <ToolbarActionIcon
-            tooltip="Code"
-            active={toolbarState.isCode}
-            onClick={() => {
-              activeEditor.dispatchCommand(FORMAT_TEXT_COMMAND, 'code');
-            }}
-          >
-            <IconCode size={16} />
-          </ToolbarActionIcon>
+          <MoreFormattingDropdown
+            editor={activeEditor}
+            isStrikethrough={toolbarState.isStrikethrough}
+            isSuperscript={toolbarState.isSuperscript}
+            isSubscript={toolbarState.isSubscript}
+            isCode={toolbarState.isCode}
+          />
+        </div>
+
+        <Divider />
+
+        <div className="LexicalEditor__toolbar__group">
           <ToolbarActionIcon
             tooltip={`Insert link (${SHORTCUTS.INSERT_LINK})`}
             active={toolbarState.isLink}
@@ -549,6 +599,17 @@ export function ToolbarPlugin(props: ToolbarPluginProps) {
             <IconTable size={16} />
           </ToolbarActionIcon>
         </div>
+
+        <Divider />
+
+        <ToolbarActionIcon
+          tooltip={`Clear formatting (${SHORTCUTS.CLEAR_FORMATTING})`}
+          onClick={() => {
+            clearFormatting(activeEditor);
+          }}
+        >
+          <IconClearFormatting size={16} />
+        </ToolbarActionIcon>
 
         <Divider />
 

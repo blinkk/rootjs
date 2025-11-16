@@ -33,6 +33,7 @@ export interface RichTextProps {
 export function RichText(props: RichTextProps) {
   const richTextContext = useRichTextContext();
   const components: Record<string, RichTextBlockComponent> = {
+    delimiter: RichText.DelimiterBlock,
     heading: RichText.HeadingBlock,
     html: RichText.HtmlBlock,
     image: RichText.ImageBlock,
@@ -76,6 +77,15 @@ RichText.ParagraphBlock = (props: RichTextParagraphBlockProps) => {
   }
   const t = useTranslations();
   return <p dangerouslySetInnerHTML={{__html: t(props.data.text)}} />;
+};
+
+export interface RichTextDelimiterBlockProps {
+  type: 'delimiter';
+  data?: {};
+}
+
+RichText.DelimiterBlock = () => {
+  return <hr />;
 };
 
 export interface RichTextHeadingBlockProps {

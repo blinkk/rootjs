@@ -1,7 +1,7 @@
 import {RequestContext, useRequestContext, useTranslations} from '@blinkk/root';
+import {RichText} from '@blinkk/root-cms/richtext';
 import {IconLayoutSidebarLeftExpand} from '@tabler/icons-preact';
 import Block from '@/components/Block/Block.js';
-import {RichText} from '@/components/RichText/RichText.js';
 import {Text} from '@/components/Text/Text.js';
 import {UnstyledList} from '@/components/UnstyledList/UnstyledList.js';
 import {LogoToggle} from '@/islands/LogoToggle/LogoToggle.js';

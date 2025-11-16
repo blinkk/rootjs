@@ -1,7 +1,7 @@
 import {useTranslations} from '@blinkk/root';
+import {RichText} from '@blinkk/root-cms/richtext';
 import {Container} from '@/components/Container/Container.js';
 import {Image, ImageProps} from '@/components/Image/Image.js';
-import {RichText} from '@/components/RichText/RichText.js';
 import {Text} from '@/components/Text/Text.js';
 import {TemplatePoweredByFields} from '@/root-cms.js';
 import {joinClassNames} from '@/utils/classes.js';
