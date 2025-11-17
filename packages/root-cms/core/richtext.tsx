@@ -219,11 +219,7 @@ export interface RichTextTableBlockProps {
   data?: {
     rows?: Array<{
       cells: Array<{
-        data: {
-          text?: string;
-          components?: Record<string, {type: string; data?: any}>;
-          blocks?: RichTextBlock[];
-        };
+        blocks: RichTextBlock[];
         type: 'header' | 'data';
       }>;
     }>;
@@ -237,7 +233,6 @@ RichText.TableBlock = (props: RichTextTableBlockProps) => {
   if (rows.length === 0) {
     return null;
   }
-  const t = useTranslations();
 
   return (
     <table>
@@ -248,26 +243,14 @@ RichText.TableBlock = (props: RichTextTableBlockProps) => {
               const isHeader = cell.type === 'header';
               const Cell = isHeader ? 'th' : 'td';
 
-              // Check if cell has blocks array (multiple blocks or block components)
-              if (cell.data?.blocks && Array.isArray(cell.data.blocks)) {
-                return (
-                  <Cell key={cellIndex}>
-                    <RichText
-                      data={{blocks: cell.data.blocks, time: 0, version: ''}}
-                      components={richTextContext.components}
-                    />
-                  </Cell>
-                );
-              } else {
-                // Legacy format: single text content
-                const cellText = cell.data?.text || '';
-                return (
-                  <Cell
-                    key={cellIndex}
-                    dangerouslySetInnerHTML={{__html: t(cellText)}}
+              return (
+                <Cell key={cellIndex}>
+                  <RichText
+                    data={{blocks: cell.blocks, time: 0, version: ''}}
+                    components={richTextContext.components}
                   />
-                );
-              }
+                </Cell>
+              );
             })}
           </tr>
         ))}

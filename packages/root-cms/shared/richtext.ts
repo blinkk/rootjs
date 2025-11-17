@@ -4,6 +4,7 @@ export type RichTextBlock =
   | RichTextParagraphBlock
   | RichTextHeadingBlock
   | RichTextListBlock
+  | RichTextTableBlock
   | RichTextImageBlock
   | RichTextHtmlBlock
   | RichTextCustomBlock;
@@ -47,6 +48,22 @@ export interface RichTextListBlock {
   data?: {
     style?: 'ordered' | 'unordered';
     items?: RichTextListItem[];
+  };
+}
+
+export interface RichTextTableCell {
+  blocks: RichTextBlock[];
+  type: 'header' | 'data';
+}
+
+export interface RichTextTableRow {
+  cells: RichTextTableCell[];
+}
+
+export interface RichTextTableBlock {
+  type: 'table';
+  data?: {
+    rows?: RichTextTableRow[];
   };
 }
 

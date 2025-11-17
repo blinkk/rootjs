@@ -255,11 +255,7 @@ function extractListItem(node: ListItemNode): RichTextListItem {
 function extractTableData(node: TableNode) {
   const rows: Array<{
     cells: Array<{
-      data: {
-        text?: string;
-        components?: RichTextInlineComponentsMap;
-        blocks?: RichTextBlock[];
-      };
+      blocks: RichTextBlock[];
       type: 'header' | 'data';
     }>;
   }> = [];
@@ -267,11 +263,7 @@ function extractTableData(node: TableNode) {
   node.getChildren().forEach((rowNode: any) => {
     if ($isTableRowNode(rowNode)) {
       const cells: Array<{
-        data: {
-          text?: string;
-          components?: RichTextInlineComponentsMap;
-          blocks?: RichTextBlock[];
-        };
+        blocks: RichTextBlock[];
         type: 'header' | 'data';
       }> = [];
 
@@ -283,12 +275,10 @@ function extractTableData(node: TableNode) {
           // Extract cell content - could be text nodes or block components
           const cellChildren = (cellNode as TableCellNode).getChildren();
           const cellBlocks: RichTextBlock[] = [];
-          let hasBlockComponents = false;
 
           cellChildren.forEach((child) => {
             // Check for block components
             if ($isBlockComponentNode(child)) {
-              hasBlockComponents = true;
               cellBlocks.push({
                 type: child.getBlockName(),
                 data: cloneData(child.getBlockData()),
@@ -344,35 +334,8 @@ function extractTableData(node: TableNode) {
             }
           });
 
-          // Build cell data structure
-          const cellData: {
-            text?: string;
-            components?: RichTextInlineComponentsMap;
-            blocks?: RichTextBlock[];
-          } = {};
-
-          // If there are multiple blocks or block components, use blocks array
-          if (cellBlocks.length > 1 || hasBlockComponents) {
-            cellData.blocks = cellBlocks;
-          } else if (
-            cellBlocks.length === 1 &&
-            cellBlocks[0].type === 'paragraph'
-          ) {
-            // Single paragraph - store as text for backward compatibility
-            cellData.text = cellBlocks[0].data?.text || '';
-            if (cellBlocks[0].data?.components) {
-              cellData.components = cellBlocks[0].data.components;
-            }
-          } else if (cellBlocks.length === 1) {
-            // Single non-paragraph block
-            cellData.blocks = cellBlocks;
-          } else {
-            // Empty cell
-            cellData.text = '';
-          }
-
           cells.push({
-            data: cellData,
+            blocks: cellBlocks,
             type: isHeader ? 'header' : 'data',
           });
         }
