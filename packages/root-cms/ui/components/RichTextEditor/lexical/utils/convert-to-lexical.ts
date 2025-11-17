@@ -91,22 +91,83 @@ export function convertToLexical(data?: RichTextData | null) {
         const cells = row.cells || [];
 
         cells.forEach((cell: any) => {
-          const cellText = cell.data?.text || '';
-          const cellComponents = cell.data?.components;
+          const cellData = cell.data || {};
           const cellType = cell.type || 'data';
           // Convert type to header state: 'header' -> 1, 'data' -> 0
           const headerState = cellType === 'header' ? 1 : 0;
           const cellNode = $createTableCellNode(headerState);
 
-          if (cellText) {
-            // Parse HTML content in the cell text, including inline components
-            const cellNodes = createNodesFromHTML(cellText, cellComponents);
-            if (cellNodes.length > 0) {
-              const paragraphNode = $createParagraphNode();
-              paragraphNode.append(...cellNodes);
-              cellNode.append(paragraphNode);
+          // Check if cell has blocks array (multiple blocks or block components)
+          if (cellData.blocks && Array.isArray(cellData.blocks)) {
+            // Process each block in the cell
+            cellData.blocks.forEach((cellBlock: any) => {
+              if (cellBlock.type === 'paragraph') {
+                const paragraphNode = $createParagraphNode();
+                if (cellBlock.data?.text) {
+                  const children = createNodesFromHTML(
+                    cellBlock.data.text,
+                    cellBlock.data.components
+                  );
+                  paragraphNode.append(...children);
+                }
+                cellNode.append(paragraphNode);
+              } else if (cellBlock.type === 'heading') {
+                const tagName = `h${
+                  cellBlock.data?.level || 2
+                }` as HeadingTagType;
+                const headingNode = $createHeadingNode(tagName);
+                if (cellBlock.data?.text) {
+                  const children = createNodesFromHTML(
+                    cellBlock.data.text,
+                    cellBlock.data.components
+                  );
+                  headingNode.append(...children);
+                }
+                cellNode.append(headingNode);
+              } else if (cellBlock.type === 'quote') {
+                const quoteNode = $createQuoteNode();
+                if (cellBlock.data?.text) {
+                  const children = createNodesFromHTML(
+                    cellBlock.data.text,
+                    cellBlock.data.components
+                  );
+                  quoteNode.append(...children);
+                }
+                cellNode.append(quoteNode);
+              } else if (
+                cellBlock.type === 'orderedList' ||
+                cellBlock.type === 'unorderedList'
+              ) {
+                const style =
+                  cellBlock.data.style === 'ordered' ? 'number' : 'bullet';
+                const listNode = $createListNode(style);
+                for (const item of cellBlock.data.items) {
+                  listNode.append(...createListItemNodes(item, style));
+                }
+                cellNode.append(listNode);
+              } else {
+                // Block component
+                const blockComponentNode = $createBlockComponentNode(
+                  cellBlock.type,
+                  cellBlock.data || {}
+                );
+                cellNode.append(blockComponentNode);
+              }
+            });
+          } else if (cellData.text !== undefined) {
+            // Legacy format: single text content (backward compatibility)
+            const cellText = cellData.text || '';
+            const cellComponents = cellData.components;
+            if (cellText) {
+              const cellNodes = createNodesFromHTML(cellText, cellComponents);
+              if (cellNodes.length > 0) {
+                const paragraphNode = $createParagraphNode();
+                paragraphNode.append(...cellNodes);
+                cellNode.append(paragraphNode);
+              }
             }
           }
+
           rowNode.append(cellNode);
         });
 

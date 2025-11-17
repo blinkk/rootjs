@@ -220,8 +220,9 @@ export interface RichTextTableBlockProps {
     rows?: Array<{
       cells: Array<{
         data: {
-          text: string;
+          text?: string;
           components?: Record<string, {type: string; data?: any}>;
+          blocks?: RichTextBlock[];
         };
         type: 'header' | 'data';
       }>;
@@ -231,6 +232,7 @@ export interface RichTextTableBlockProps {
 
 RichText.TableBlock = (props: RichTextTableBlockProps) => {
   const rows = props.data?.rows || [];
+  const richTextContext = useRichTextContext();
 
   if (rows.length === 0) {
     return null;
@@ -243,15 +245,29 @@ RichText.TableBlock = (props: RichTextTableBlockProps) => {
         {rows.map((row, rowIndex) => (
           <tr key={rowIndex}>
             {row.cells.map((cell, cellIndex) => {
-              const cellText = cell.data?.text || '';
               const isHeader = cell.type === 'header';
-              const CellTag = isHeader ? 'th' : 'td';
-              return (
-                <CellTag
-                  key={cellIndex}
-                  dangerouslySetInnerHTML={{__html: t(cellText)}}
-                />
-              );
+              const Cell = isHeader ? 'th' : 'td';
+
+              // Check if cell has blocks array (multiple blocks or block components)
+              if (cell.data?.blocks && Array.isArray(cell.data.blocks)) {
+                return (
+                  <Cell key={cellIndex}>
+                    <RichText
+                      data={{blocks: cell.data.blocks, time: 0, version: ''}}
+                      components={richTextContext.components}
+                    />
+                  </Cell>
+                );
+              } else {
+                // Legacy format: single text content
+                const cellText = cell.data?.text || '';
+                return (
+                  <Cell
+                    key={cellIndex}
+                    dangerouslySetInnerHTML={{__html: t(cellText)}}
+                  />
+                );
+              }
             })}
           </tr>
         ))}

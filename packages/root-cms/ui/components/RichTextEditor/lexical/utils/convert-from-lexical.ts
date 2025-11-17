@@ -255,7 +255,11 @@ function extractListItem(node: ListItemNode): RichTextListItem {
 function extractTableData(node: TableNode) {
   const rows: Array<{
     cells: Array<{
-      data: {text: string; components?: RichTextInlineComponentsMap};
+      data: {
+        text?: string;
+        components?: RichTextInlineComponentsMap;
+        blocks?: RichTextBlock[];
+      };
       type: 'header' | 'data';
     }>;
   }> = [];
@@ -263,27 +267,108 @@ function extractTableData(node: TableNode) {
   node.getChildren().forEach((rowNode: any) => {
     if ($isTableRowNode(rowNode)) {
       const cells: Array<{
-        data: {text: string; components?: RichTextInlineComponentsMap};
+        data: {
+          text?: string;
+          components?: RichTextInlineComponentsMap;
+          blocks?: RichTextBlock[];
+        };
         type: 'header' | 'data';
       }> = [];
 
       (rowNode as TableRowNode).getChildren().forEach((cellNode: any) => {
         if ($isTableCellNode(cellNode)) {
-          const result = extractTextNode(cellNode as TableCellNode);
           const headerState = (cellNode as TableCellNode).getHeaderStyles();
-          // If cell has any header state (row, column, or both), it's a header
           const isHeader = headerState > 0;
 
-          const cellData: {
-            text: string;
-            components?: RichTextInlineComponentsMap;
-          } = {
-            text: result.text || '',
-          };
+          // Extract cell content - could be text nodes or block components
+          const cellChildren = (cellNode as TableCellNode).getChildren();
+          const cellBlocks: RichTextBlock[] = [];
+          let hasBlockComponents = false;
 
-          // Include components if they exist
-          if (hasInlineComponents(result.components)) {
-            cellData.components = result.components;
+          cellChildren.forEach((child) => {
+            // Check for block components
+            if ($isBlockComponentNode(child)) {
+              hasBlockComponents = true;
+              cellBlocks.push({
+                type: child.getBlockName(),
+                data: cloneData(child.getBlockData()),
+              });
+            } else if ($isParagraphNode(child)) {
+              const result = extractTextNode(child);
+              const block: RichTextParagraphBlock = {
+                type: 'paragraph',
+                data: {
+                  text: result.text,
+                },
+              };
+              if (hasInlineComponents(result.components)) {
+                block.data!.components = result.components;
+              }
+              cellBlocks.push(block);
+            } else if ($isHeadingNode(child)) {
+              const level = child.getTag().slice(1);
+              const result = extractTextNode(child);
+              const block: RichTextHeadingBlock = {
+                type: 'heading',
+                data: {
+                  text: result.text,
+                  level: parseInt(level),
+                },
+              };
+              if (hasInlineComponents(result.components)) {
+                block.data!.components = result.components;
+              }
+              cellBlocks.push(block);
+            } else if ($isQuoteNode(child)) {
+              const result = extractTextNode(child);
+              const block: RichTextBlock = {
+                type: 'quote',
+                data: {
+                  text: result.text,
+                },
+              };
+              if (hasInlineComponents(result.components)) {
+                block.data!.components = result.components;
+              }
+              cellBlocks.push(block);
+            } else if ($isListNode(child)) {
+              const tag = child.getTag();
+              const block: RichTextListBlock = {
+                type: tag === 'ol' ? 'orderedList' : 'unorderedList',
+                data: {
+                  style: tag === 'ol' ? 'ordered' : 'unordered',
+                  items: extractListItems(child),
+                },
+              };
+              cellBlocks.push(block);
+            }
+          });
+
+          // Build cell data structure
+          const cellData: {
+            text?: string;
+            components?: RichTextInlineComponentsMap;
+            blocks?: RichTextBlock[];
+          } = {};
+
+          // If there are multiple blocks or block components, use blocks array
+          if (cellBlocks.length > 1 || hasBlockComponents) {
+            cellData.blocks = cellBlocks;
+          } else if (
+            cellBlocks.length === 1 &&
+            cellBlocks[0].type === 'paragraph'
+          ) {
+            // Single paragraph - store as text for backward compatibility
+            cellData.text = cellBlocks[0].data?.text || '';
+            if (cellBlocks[0].data?.components) {
+              cellData.components = cellBlocks[0].data.components;
+            }
+          } else if (cellBlocks.length === 1) {
+            // Single non-paragraph block
+            cellData.blocks = cellBlocks;
+          } else {
+            // Empty cell
+            cellData.text = '';
           }
 
           cells.push({
