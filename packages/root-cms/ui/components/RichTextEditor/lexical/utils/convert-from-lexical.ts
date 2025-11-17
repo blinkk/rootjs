@@ -255,7 +255,7 @@ function extractListItem(node: ListItemNode): RichTextListItem {
 function extractTableData(node: TableNode) {
   const rows: Array<{
     cells: Array<{
-      data: {text: string};
+      data: {text: string; components?: RichTextInlineComponentsMap};
       type: 'header' | 'data';
     }>;
   }> = [];
@@ -263,7 +263,7 @@ function extractTableData(node: TableNode) {
   node.getChildren().forEach((rowNode: any) => {
     if ($isTableRowNode(rowNode)) {
       const cells: Array<{
-        data: {text: string};
+        data: {text: string; components?: RichTextInlineComponentsMap};
         type: 'header' | 'data';
       }> = [];
 
@@ -274,10 +274,20 @@ function extractTableData(node: TableNode) {
           // If cell has any header state (row, column, or both), it's a header
           const isHeader = headerState > 0;
 
+          const cellData: {
+            text: string;
+            components?: RichTextInlineComponentsMap;
+          } = {
+            text: result.text || '',
+          };
+
+          // Include components if they exist
+          if (hasInlineComponents(result.components)) {
+            cellData.components = result.components;
+          }
+
           cells.push({
-            data: {
-              text: result.text || '',
-            },
+            data: cellData,
             type: isHeader ? 'header' : 'data',
           });
         }

@@ -219,7 +219,10 @@ export interface RichTextTableBlockProps {
   data?: {
     rows?: Array<{
       cells: Array<{
-        data: {text: string};
+        data: {
+          text: string;
+          components?: Record<string, {type: string; data?: any}>;
+        };
         type: 'header' | 'data';
       }>;
     }>;

@@ -92,14 +92,15 @@ export function convertToLexical(data?: RichTextData | null) {
 
         cells.forEach((cell: any) => {
           const cellText = cell.data?.text || '';
+          const cellComponents = cell.data?.components;
           const cellType = cell.type || 'data';
           // Convert type to header state: 'header' -> 1, 'data' -> 0
           const headerState = cellType === 'header' ? 1 : 0;
           const cellNode = $createTableCellNode(headerState);
 
           if (cellText) {
-            // Parse HTML content in the cell text
-            const cellNodes = createNodesFromHTML(cellText);
+            // Parse HTML content in the cell text, including inline components
+            const cellNodes = createNodesFromHTML(cellText, cellComponents);
             if (cellNodes.length > 0) {
               const paragraphNode = $createParagraphNode();
               paragraphNode.append(...cellNodes);
