@@ -98,10 +98,13 @@ export function convertToLexical(data?: RichTextData | null) {
           const cellNode = $createTableCellNode(headerState);
 
           if (cellText) {
-            const textNode = $createTextNode(cellText);
-            const paragraphNode = $createParagraphNode();
-            paragraphNode.append(textNode);
-            cellNode.append(paragraphNode);
+            // Parse HTML content in the cell text
+            const cellNodes = createNodesFromHTML(cellText);
+            if (cellNodes.length > 0) {
+              const paragraphNode = $createParagraphNode();
+              paragraphNode.append(...cellNodes);
+              cellNode.append(paragraphNode);
+            }
           }
           rowNode.append(cellNode);
         });

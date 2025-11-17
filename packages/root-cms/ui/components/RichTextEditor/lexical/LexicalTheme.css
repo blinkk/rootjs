@@ -220,7 +220,7 @@ sup:has(.LexicalTheme__textSuperscript) {
   overflow-y: scroll;
   overflow-x: scroll;
   table-layout: fixed;
-  width: fit-content;
+  width: 100%;
   margin-top: 25px;
   margin-bottom: 30px;
   border: 1px solid #d0d0d0;
