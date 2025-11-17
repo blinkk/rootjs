@@ -217,20 +217,19 @@ RichText.HtmlBlock = (props: RichTextHtmlBlockProps) => {
 export interface RichTextTableBlockProps {
   type: 'table';
   data?: {
-    rows?: number;
-    cols?: number;
-    cells?: string[];
-    headers?: number[]; // Header states: 0=normal, 1=row, 2=column, 3=both
+    rows?: Array<{
+      cells: Array<{
+        data: {text: string};
+        type: 'header' | 'data';
+      }>;
+    }>;
   };
 }
 
 RichText.TableBlock = (props: RichTextTableBlockProps) => {
-  const numRows = props.data?.rows || 0;
-  const numCols = props.data?.cols || 0;
-  const cells = props.data?.cells || [];
-  const headers = props.data?.headers || [];
+  const rows = props.data?.rows || [];
 
-  if (numRows === 0 || numCols === 0) {
+  if (rows.length === 0) {
     return null;
   }
   const t = useTranslations();
@@ -238,18 +237,15 @@ RichText.TableBlock = (props: RichTextTableBlockProps) => {
   return (
     <table>
       <tbody>
-        {Array.from({length: numRows}).map((_, rowIndex) => (
+        {rows.map((row, rowIndex) => (
           <tr key={rowIndex}>
-            {Array.from({length: numCols}).map((_, colIndex) => {
-              const cellIndex = rowIndex * numCols + colIndex;
-              const cellText = cells[cellIndex] || '';
-              const headerState = headers[cellIndex] || 0;
-              // headerState: 0=normal, 1=row header, 2=column header, 3=both
-              const isHeader = headerState > 0;
+            {row.cells.map((cell, cellIndex) => {
+              const cellText = cell.data?.text || '';
+              const isHeader = cell.type === 'header';
               const CellTag = isHeader ? 'th' : 'td';
               return (
                 <CellTag
-                  key={colIndex}
+                  key={cellIndex}
                   dangerouslySetInnerHTML={{__html: t(cellText)}}
                 />
               );

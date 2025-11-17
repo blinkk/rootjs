@@ -82,20 +82,21 @@ export function convertToLexical(data?: RichTextData | null) {
       }
       root.append(listNode);
     } else if (block.type === 'table') {
-      // Handle table blocks with flattened structure
+      // Handle table blocks with nested rows/cells structure
       const tableNode = $createTableNode();
-      const numRows = block.data?.rows || 0;
-      const numCols = block.data?.cols || 0;
-      const cells = block.data?.cells || [];
-      const headers = block.data?.headers || []; // Header states for each cell
+      const rows = block.data?.rows || [];
 
-      for (let rowIndex = 0; rowIndex < numRows; rowIndex++) {
+      rows.forEach((row: any) => {
         const rowNode = $createTableRowNode();
-        for (let colIndex = 0; colIndex < numCols; colIndex++) {
-          const cellIndex = rowIndex * numCols + colIndex;
-          const cellText = cells[cellIndex] || '';
-          const headerState = headers[cellIndex] || 0; // 0 = normal, 1 = row, 2 = column, 3 = both
+        const cells = row.cells || [];
+
+        cells.forEach((cell: any) => {
+          const cellText = cell.data?.text || '';
+          const cellType = cell.type || 'data';
+          // Convert type to header state: 'header' -> 1, 'data' -> 0
+          const headerState = cellType === 'header' ? 1 : 0;
           const cellNode = $createTableCellNode(headerState);
+
           if (cellText) {
             const textNode = $createTextNode(cellText);
             const paragraphNode = $createParagraphNode();
@@ -103,9 +104,11 @@ export function convertToLexical(data?: RichTextData | null) {
             cellNode.append(paragraphNode);
           }
           rowNode.append(cellNode);
-        }
+        });
+
         tableNode.append(rowNode);
-      }
+      });
+
       root.append(tableNode);
     } else if (block.type === 'delimiter') {
       // Handle horizontal rule / delimiter blocks

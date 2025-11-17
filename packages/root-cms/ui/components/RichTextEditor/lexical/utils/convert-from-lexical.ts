@@ -253,37 +253,41 @@ function extractListItem(node: ListItemNode): RichTextListItem {
 }
 
 function extractTableData(node: TableNode) {
-  const cells: string[] = [];
-  const headers: number[] = []; // Store header states for each cell
-  let numRows = 0;
-  let numCols = 0;
+  const rows: Array<{
+    cells: Array<{
+      data: {text: string};
+      type: 'header' | 'data';
+    }>;
+  }> = [];
 
   node.getChildren().forEach((rowNode: any) => {
     if ($isTableRowNode(rowNode)) {
-      let colCount = 0;
+      const cells: Array<{
+        data: {text: string};
+        type: 'header' | 'data';
+      }> = [];
+
       (rowNode as TableRowNode).getChildren().forEach((cellNode: any) => {
         if ($isTableCellNode(cellNode)) {
           const result = extractTextNode(cellNode as TableCellNode);
-          cells.push(result.text || '');
-          // Get header state: 0 (none), 1 (row), 2 (column), or 3 (both)
           const headerState = (cellNode as TableCellNode).getHeaderStyles();
-          headers.push(headerState);
-          colCount++;
+          // If cell has any header state (row, column, or both), it's a header
+          const isHeader = headerState > 0;
+
+          cells.push({
+            data: {
+              text: result.text || '',
+            },
+            type: isHeader ? 'header' : 'data',
+          });
         }
       });
-      if (colCount > numCols) {
-        numCols = colCount;
-      }
-      numRows++;
+
+      rows.push({cells});
     }
   });
 
-  return {
-    rows: numRows,
-    cols: numCols,
-    cells,
-    headers,
-  };
+  return {rows};
 }
 
 /**
