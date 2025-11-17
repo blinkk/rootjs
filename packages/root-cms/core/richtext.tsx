@@ -39,6 +39,8 @@ export function RichText(props: RichTextProps) {
     image: RichText.ImageBlock,
     orderedList: RichText.ListBlock,
     paragraph: RichText.ParagraphBlock,
+    quote: RichText.QuoteBlock,
+    table: RichText.TableBlock,
     unorderedList: RichText.ListBlock,
     ...richTextContext.components,
     ...props.components,
@@ -106,6 +108,21 @@ RichText.HeadingBlock = (props: RichTextHeadingBlockProps) => {
   const level = props.data.level || 2;
   const Component = `h${level}` as HeadingComponent;
   return <Component dangerouslySetInnerHTML={{__html: t(props.data.text)}} />;
+};
+
+export interface RichTextQuoteBlockProps {
+  type: 'quote';
+  data?: {
+    text?: string;
+  };
+}
+
+RichText.QuoteBlock = (props: RichTextQuoteBlockProps) => {
+  if (!props.data?.text) {
+    return null;
+  }
+  const t = useTranslations();
+  return <blockquote dangerouslySetInnerHTML={{__html: t(props.data.text)}} />;
 };
 
 interface ListItem {
@@ -195,6 +212,47 @@ RichText.HtmlBlock = (props: RichTextHtmlBlockProps) => {
     return null;
   }
   return <div dangerouslySetInnerHTML={{__html: html}} />;
+};
+
+export interface RichTextTableBlockProps {
+  type: 'table';
+  data?: {
+    rows?: number;
+    cols?: number;
+    cells?: string[];
+  };
+}
+
+RichText.TableBlock = (props: RichTextTableBlockProps) => {
+  const numRows = props.data?.rows || 0;
+  const numCols = props.data?.cols || 0;
+  const cells = props.data?.cells || [];
+
+  if (numRows === 0 || numCols === 0) {
+    return null;
+  }
+  const t = useTranslations();
+
+  return (
+    <table>
+      <tbody>
+        {Array.from({length: numRows}).map((_, rowIndex) => (
+          <tr key={rowIndex}>
+            {Array.from({length: numCols}).map((_, colIndex) => {
+              const cellIndex = rowIndex * numCols + colIndex;
+              const cellText = cells[cellIndex] || '';
+              return (
+                <td
+                  key={colIndex}
+                  dangerouslySetInnerHTML={{__html: t(cellText)}}
+                />
+              );
+            })}
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  );
 };
 
 function toNumber(input?: string | number): number {

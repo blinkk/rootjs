@@ -7,6 +7,14 @@ import {
 } from '@lexical/list';
 import {$isHeadingNode, $isQuoteNode} from '@lexical/rich-text';
 import {
+  $isTableNode,
+  $isTableRowNode,
+  $isTableCellNode,
+  TableNode,
+  TableRowNode,
+  TableCellNode,
+} from '@lexical/table';
+import {
   $getRoot,
   $isParagraphNode,
   $isTextNode,
@@ -244,6 +252,35 @@ function extractListItem(node: ListItemNode): RichTextListItem {
   return item;
 }
 
+function extractTableData(node: TableNode) {
+  const cells: string[] = [];
+  let numRows = 0;
+  let numCols = 0;
+
+  node.getChildren().forEach((rowNode: any) => {
+    if ($isTableRowNode(rowNode)) {
+      let colCount = 0;
+      (rowNode as TableRowNode).getChildren().forEach((cellNode: any) => {
+        if ($isTableCellNode(cellNode)) {
+          const result = extractTextNode(cellNode as TableCellNode);
+          cells.push(result.text || '');
+          colCount++;
+        }
+      });
+      if (colCount > numCols) {
+        numCols = colCount;
+      }
+      numRows++;
+    }
+  });
+
+  return {
+    rows: numRows,
+    cols: numCols,
+    cells,
+  };
+}
+
 /**
  * Converts from lexical to rich text data.
  * NOTE: this function must be called within a `editor.read()` callback.
@@ -301,6 +338,13 @@ export function convertToRichTextData(): RichTextData | null {
           style: tag === 'ol' ? 'ordered' : 'unordered',
           items: extractListItems(node),
         },
+      };
+      blocks.push(block);
+    } else if ($isTableNode(node)) {
+      const tableData = extractTableData(node);
+      const block: RichTextBlock = {
+        type: 'table',
+        data: tableData,
       };
       blocks.push(block);
     } else if ($isBlockComponentNode(node)) {

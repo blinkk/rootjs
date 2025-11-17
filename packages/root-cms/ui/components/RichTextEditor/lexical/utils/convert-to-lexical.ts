@@ -11,6 +11,11 @@ import {
   HeadingTagType,
 } from '@lexical/rich-text';
 import {
+  $createTableNode,
+  $createTableRowNode,
+  $createTableCellNode,
+} from '@lexical/table';
+import {
   $applyNodeReplacement,
   $createParagraphNode,
   $createTextNode,
@@ -76,6 +81,30 @@ export function convertToLexical(data?: RichTextData | null) {
         listNode.append(...createListItemNodes(item, style));
       }
       root.append(listNode);
+    } else if (block.type === 'table') {
+      // Handle table blocks with flattened structure
+      const tableNode = $createTableNode();
+      const numRows = block.data?.rows || 0;
+      const numCols = block.data?.cols || 0;
+      const cells = block.data?.cells || [];
+
+      for (let rowIndex = 0; rowIndex < numRows; rowIndex++) {
+        const rowNode = $createTableRowNode();
+        for (let colIndex = 0; colIndex < numCols; colIndex++) {
+          const cellIndex = rowIndex * numCols + colIndex;
+          const cellText = cells[cellIndex] || '';
+          const cellNode = $createTableCellNode(0); // 0 = normal cell, 1 = header cell
+          if (cellText) {
+            const textNode = $createTextNode(cellText);
+            const paragraphNode = $createParagraphNode();
+            paragraphNode.append(textNode);
+            cellNode.append(paragraphNode);
+          }
+          rowNode.append(cellNode);
+        }
+        tableNode.append(rowNode);
+      }
+      root.append(tableNode);
     } else if (block.type === 'delimiter') {
       // Handle horizontal rule / delimiter blocks
       const hrNode = $createHorizontalRuleNode();
