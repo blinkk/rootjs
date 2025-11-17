@@ -87,13 +87,15 @@ export function convertToLexical(data?: RichTextData | null) {
       const numRows = block.data?.rows || 0;
       const numCols = block.data?.cols || 0;
       const cells = block.data?.cells || [];
+      const headers = block.data?.headers || []; // Header states for each cell
 
       for (let rowIndex = 0; rowIndex < numRows; rowIndex++) {
         const rowNode = $createTableRowNode();
         for (let colIndex = 0; colIndex < numCols; colIndex++) {
           const cellIndex = rowIndex * numCols + colIndex;
           const cellText = cells[cellIndex] || '';
-          const cellNode = $createTableCellNode(0); // 0 = normal cell, 1 = header cell
+          const headerState = headers[cellIndex] || 0; // 0 = normal, 1 = row, 2 = column, 3 = both
+          const cellNode = $createTableCellNode(headerState);
           if (cellText) {
             const textNode = $createTextNode(cellText);
             const paragraphNode = $createParagraphNode();

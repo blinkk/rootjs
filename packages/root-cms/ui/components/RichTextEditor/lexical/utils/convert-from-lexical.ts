@@ -254,6 +254,7 @@ function extractListItem(node: ListItemNode): RichTextListItem {
 
 function extractTableData(node: TableNode) {
   const cells: string[] = [];
+  const headers: number[] = []; // Store header states for each cell
   let numRows = 0;
   let numCols = 0;
 
@@ -264,6 +265,9 @@ function extractTableData(node: TableNode) {
         if ($isTableCellNode(cellNode)) {
           const result = extractTextNode(cellNode as TableCellNode);
           cells.push(result.text || '');
+          // Get header state: 0 (none), 1 (row), 2 (column), or 3 (both)
+          const headerState = (cellNode as TableCellNode).getHeaderStyles();
+          headers.push(headerState);
           colCount++;
         }
       });
@@ -278,6 +282,7 @@ function extractTableData(node: TableNode) {
     rows: numRows,
     cols: numCols,
     cells,
+    headers,
   };
 }
 

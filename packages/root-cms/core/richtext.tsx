@@ -220,6 +220,7 @@ export interface RichTextTableBlockProps {
     rows?: number;
     cols?: number;
     cells?: string[];
+    headers?: number[]; // Header states: 0=normal, 1=row, 2=column, 3=both
   };
 }
 
@@ -227,6 +228,7 @@ RichText.TableBlock = (props: RichTextTableBlockProps) => {
   const numRows = props.data?.rows || 0;
   const numCols = props.data?.cols || 0;
   const cells = props.data?.cells || [];
+  const headers = props.data?.headers || [];
 
   if (numRows === 0 || numCols === 0) {
     return null;
@@ -241,8 +243,12 @@ RichText.TableBlock = (props: RichTextTableBlockProps) => {
             {Array.from({length: numCols}).map((_, colIndex) => {
               const cellIndex = rowIndex * numCols + colIndex;
               const cellText = cells[cellIndex] || '';
+              const headerState = headers[cellIndex] || 0;
+              // headerState: 0=normal, 1=row header, 2=column header, 3=both
+              const isHeader = headerState > 0;
+              const CellTag = isHeader ? 'th' : 'td';
               return (
-                <td
+                <CellTag
                   key={colIndex}
                   dangerouslySetInnerHTML={{__html: t(cellText)}}
                 />
