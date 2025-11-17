@@ -40,6 +40,8 @@ import {
   IconSeparatorHorizontal,
   IconTable,
   IconClearFormatting,
+  IconPhoto,
+  IconHtml,
 } from '@tabler/icons-preact';
 import {
   $getSelection,
@@ -506,8 +508,17 @@ export function ToolbarPlugin(props: ToolbarPluginProps) {
     });
   }, [inlineComponents]);
 
-  const hasCustomComponents =
-    sortedBlockComponents.length > 0 || sortedInlineComponents.length > 0;
+  const getComponentIcon = (componentName: string) => {
+    switch (componentName) {
+      case 'image':
+        return <IconPhoto size={16} />;
+      case 'html':
+        return <IconHtml size={16} />;
+      default:
+        break;
+    }
+    return <IconMenuItemPlaceholder />;
+  };
 
   return (
     <div className="LexicalEditor__toolbar">
@@ -575,33 +586,6 @@ export function ToolbarPlugin(props: ToolbarPluginProps) {
 
         <Divider />
 
-        <div className="LexicalEditor__toolbar__group">
-          <ToolbarActionIcon
-            tooltip="Insert horizontal rule"
-            onClick={() => {
-              activeEditor.dispatchCommand(
-                INSERT_HORIZONTAL_RULE_COMMAND,
-                undefined
-              );
-            }}
-          >
-            <IconSeparatorHorizontal size={16} />
-          </ToolbarActionIcon>
-          <ToolbarActionIcon
-            tooltip="Insert table"
-            onClick={() => {
-              activeEditor.dispatchCommand(INSERT_TABLE_COMMAND, {
-                columns: '3',
-                rows: '3',
-              });
-            }}
-          >
-            <IconTable size={16} />
-          </ToolbarActionIcon>
-        </div>
-
-        <Divider />
-
         <ToolbarActionIcon
           tooltip={`Clear formatting (${SHORTCUTS.CLEAR_FORMATTING})`}
           onClick={() => {
@@ -613,54 +597,76 @@ export function ToolbarPlugin(props: ToolbarPluginProps) {
 
         <Divider />
 
-        {hasCustomComponents && (
-          <>
-            <Menu
-              control={
-                <Button
-                  className={joinClassNames(
-                    'LexicalEditor__toolbar__dropdown',
-                    'LexicalEditor__toolbar__insertDropdown'
-                  )}
-                  variant="default"
-                  compact
-                  leftIcon={<IconPuzzle size={16} />}
-                  rightIcon={<IconChevronDown size={16} />}
-                >
-                  Components
-                </Button>
-              }
+        <Menu
+          control={
+            <Button
+              className={joinClassNames(
+                'LexicalEditor__toolbar__dropdown',
+                'LexicalEditor__toolbar__insertDropdown'
+              )}
+              variant="default"
+              compact
+              leftIcon={<IconPuzzle size={16} />}
+              rightIcon={<IconChevronDown size={16} />}
             >
-              {sortedInlineComponents.length > 0 && (
-                <>
-                  <Menu.Label>Inline Components</Menu.Label>
-                  {sortedInlineComponents.map((component) => (
-                    <Menu.Item
-                      key={component.name}
-                      onClick={() => onInsertInlineComponent?.(component.name)}
-                    >
-                      {component.label || component.name}
-                    </Menu.Item>
-                  ))}
-                </>
-              )}
-              {sortedBlockComponents.length > 0 && (
-                <>
-                  <Menu.Label>Block Components</Menu.Label>
-                  {sortedBlockComponents.map((block) => (
-                    <Menu.Item
-                      key={block.name}
-                      onClick={() => onInsertBlockComponent?.(block.name)}
-                    >
-                      {block.label || block.name}
-                    </Menu.Item>
-                  ))}
-                </>
-              )}
-            </Menu>
-            <Divider />
-          </>
-        )}
+              Components
+            </Button>
+          }
+        >
+          <Menu.Label>Insert</Menu.Label>
+          <Menu.Item
+            icon={<IconTable size={16} />}
+            onClick={() => {
+              activeEditor.dispatchCommand(INSERT_TABLE_COMMAND, {
+                columns: '3',
+                rows: '3',
+              });
+            }}
+          >
+            Table
+          </Menu.Item>
+          <Menu.Item
+            icon={<IconSeparatorHorizontal size={16} />}
+            onClick={() => {
+              activeEditor.dispatchCommand(
+                INSERT_HORIZONTAL_RULE_COMMAND,
+                undefined
+              );
+            }}
+          >
+            Horizontal Rule
+          </Menu.Item>
+
+          {sortedInlineComponents.length > 0 && (
+            <>
+              <Menu.Label>Inline Components</Menu.Label>
+              {sortedInlineComponents.map((component) => (
+                <Menu.Item
+                  key={component.name}
+                  icon={<IconMenuItemPlaceholder />}
+                  onClick={() => onInsertInlineComponent?.(component.name)}
+                >
+                  {component.label || component.name}
+                </Menu.Item>
+              ))}
+            </>
+          )}
+          {sortedBlockComponents.length > 0 && (
+            <>
+              <Menu.Label>Block Components</Menu.Label>
+              {sortedBlockComponents.map((block) => (
+                <Menu.Item
+                  key={block.name}
+                  icon={getComponentIcon(block.name)}
+                  onClick={() => onInsertBlockComponent?.(block.name)}
+                >
+                  {block.label || block.name}
+                </Menu.Item>
+              ))}
+            </>
+          )}
+        </Menu>
+        <Divider />
       </>
     </div>
   );
@@ -694,4 +700,8 @@ export function ToolbarActionIcon(props: ToolbarActionIconProps) {
       </ActionIcon>
     </Tooltip>
   );
+}
+
+function IconMenuItemPlaceholder() {
+  return <div style={{width: 16, height: 16}}></div>;
 }

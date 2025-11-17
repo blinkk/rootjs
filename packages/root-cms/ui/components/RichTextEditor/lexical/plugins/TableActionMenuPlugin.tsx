@@ -514,13 +514,15 @@ export function TableActionMenuPlugin(props: TableActionMenuPluginProps) {
             className="LexicalEditor__tableActionMenuItem"
             onClick={toggleRowHeader}
           >
-            {isRowHeader ? 'Remove row header' : 'Add row header'}
+            {isRowHeader ? 'Remove row header' : 'Convert to row header'}
           </button>
           <button
             className="LexicalEditor__tableActionMenuItem"
             onClick={toggleColumnHeader}
           >
-            {isColumnHeader ? 'Remove column header' : 'Add column header'}
+            {isColumnHeader
+              ? 'Remove column header'
+              : 'Convert to column header'}
           </button>
         </div>
       )}
