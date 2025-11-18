@@ -10,7 +10,7 @@ export default defineConfig({
       headless: true,
     },
     setupFiles: ['./vitest.setup.ts'],
-    include: ['**/*.screenshot.test.tsx'],
+    include: ['**/*.visual.test.tsx'],
   },
   optimizeDeps: {
     include: ['preact/jsx-dev-runtime'],

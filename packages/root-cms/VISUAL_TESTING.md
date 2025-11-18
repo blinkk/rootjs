@@ -15,7 +15,7 @@ This will run the tests in a headless Chromium browser.
 
 ## Writing Tests
 
-Visual tests should be placed in files ending with `.screenshot.test.tsx`.
+Visual tests should be placed in files ending with `.visual.test.tsx`.
 
 Example:
 
