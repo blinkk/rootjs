@@ -141,6 +141,14 @@ const INSERT_IMAGE_BLOCK = schema.define({
       id: 'file',
       label: 'Image',
     }),
+    // Provides backwards compatibility with EditorJS caption field.
+    schema.string({
+      id: 'caption',
+      label: 'Caption',
+      variant: 'textarea',
+      translate: true,
+      deprecated: true,
+    }),
   ],
 });
 
