@@ -337,6 +337,7 @@ export function api(server: Server, options: ApiOptions) {
       await cmsClient.logAction(action, {
         by: req.user?.email,
         metadata: metadata,
+        links: reqBody.links,
       });
       res.status(200).json({success: true});
     } catch (err) {
