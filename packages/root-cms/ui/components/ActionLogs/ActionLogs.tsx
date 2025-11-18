@@ -135,7 +135,7 @@ export function ActionLogs(props: ActionLogsProps) {
                       size="xs"
                       compact
                       href={link.url}
-                      target="_blank"
+                      target={link.target}
                     >
                       {link.label}
                     </Button>

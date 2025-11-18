@@ -17,7 +17,7 @@ export interface Action {
   metadata: any;
   timestamp: Timestamp;
   by: string;
-  links?: {label: string; url: string}[];
+  links?: {label: string; url: string; target?: string}[];
 }
 
 export async function logAction(
@@ -26,7 +26,7 @@ export async function logAction(
     metadata?: any;
     throttle?: number;
     throttleId?: string;
-    links?: {label: string; url: string}[];
+    links?: {label: string; url: string; target?: string}[];
   }
 ) {
   // Certain actions like "doc.save" should be throttled so that only 1 action

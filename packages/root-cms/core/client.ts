@@ -170,7 +170,7 @@ export interface Action<T = any> {
   /**
    * Optional list of quick links to display in the UI.
    */
-  links?: {label: string; url: string}[];
+  links?: {label: string; url: string; target?: string}[];
 }
 
 export interface ListActionsOptions {
@@ -1165,7 +1165,7 @@ export class RootCMSClient {
     options?: {
       by?: string;
       metadata?: any;
-      links?: {label: string; url: string}[];
+      links?: {label: string; url: string; target?: string}[];
     }
   ) {
     if (!action) {
