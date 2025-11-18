@@ -128,6 +128,18 @@ export function ActionLogs(props: ActionLogsProps) {
                       Open settings
                     </Button>
                   )}
+                  {action.links?.map((link) => (
+                    <Button
+                      component="a"
+                      variant="default"
+                      size="xs"
+                      compact
+                      href={link.url}
+                      target="_blank"
+                    >
+                      {link.label}
+                    </Button>
+                  ))}
                 </div>
               </td>
             </tr>

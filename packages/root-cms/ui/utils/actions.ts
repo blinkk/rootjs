@@ -17,11 +17,17 @@ export interface Action {
   metadata: any;
   timestamp: Timestamp;
   by: string;
+  links?: {label: string; url: string}[];
 }
 
 export async function logAction(
   action: string,
-  options?: {metadata?: any; throttle?: number; throttleId?: string}
+  options?: {
+    metadata?: any;
+    throttle?: number;
+    throttleId?: string;
+    links?: {label: string; url: string}[];
+  }
 ) {
   // Certain actions like "doc.save" should be throttled so that only 1 action
   // is logged per N milliseconds.
@@ -36,7 +42,11 @@ export async function logAction(
   const res = await fetch('/cms/api/actions.log', {
     method: 'POST',
     headers: {'content-type': 'application/json'},
-    body: JSON.stringify({action: action, metadata: options?.metadata || {}}),
+    body: JSON.stringify({
+      action: action,
+      metadata: options?.metadata || {},
+      links: options?.links,
+    }),
   });
   if (res.status !== 200) {
     const err = await res.text();

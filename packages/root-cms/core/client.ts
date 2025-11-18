@@ -167,6 +167,10 @@ export interface Action<T = any> {
    * Metadata for the action.
    */
   metadata?: T;
+  /**
+   * Optional list of quick links to display in the UI.
+   */
+  links?: {label: string; url: string}[];
 }
 
 export interface ListActionsOptions {
@@ -1156,16 +1160,26 @@ export class RootCMSClient {
     return false;
   }
 
-  async logAction(action: string, options?: {by?: string; metadata?: any}) {
+  async logAction(
+    action: string,
+    options?: {
+      by?: string;
+      metadata?: any;
+      links?: {label: string; url: string}[];
+    }
+  ) {
     if (!action) {
       throw new Error('missing required: "action"');
     }
-    const data = {
+    const data: Action = {
       action: action,
       timestamp: Timestamp.now(),
       by: options?.by || 'system',
       metadata: options?.metadata || {},
     };
+    if (options?.links) {
+      data.links = options.links;
+    }
     const colRef = this.db.collection(`Projects/${this.projectId}/ActionLogs`);
     await colRef.add(data);
 
