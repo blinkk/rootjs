@@ -1,5 +1,14 @@
 # @blinkk/root-cms
 
+## 2.4.3
+
+### Patch Changes
+
+- 3462e94d: fix: fix lexical custom component modal stacking order (#822)
+- 187c40a2: feat: add extra formatting options to lexical editor (#816)
+- 0a991234: feat: add ability to customize quick links with action log (#819)
+  - @blinkk/root@2.4.3
+
 ## 2.4.2
 
 ### Patch Changes
