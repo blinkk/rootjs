@@ -41,9 +41,7 @@ import {
   IconTable,
   IconClearFormatting,
   IconPhoto,
-  IconHtml,
   IconBracketsAngle,
-  IconCircle,
   IconSquare,
   IconCapsuleHorizontal,
 } from '@tabler/icons-preact';

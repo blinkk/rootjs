@@ -77,7 +77,7 @@ export default schema.collection({
             schema.define({
               name: 'RelatedPostsBlock',
               label: 'Related Posts',
-              preview: {title: '{youtubeUrl}'},
+              preview: {title: '{posts}'},
               fields: [
                 schema.references({
                   id: 'posts',
