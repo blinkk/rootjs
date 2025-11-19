@@ -47,6 +47,7 @@ jobs:
             ${{ runner.os }}-pnpm-store-
 
       - name: Install playwright deps
+        working-directory: ./packages/root-cms
         run: pnpm exec playwright install
 
       - name: Unit tests
