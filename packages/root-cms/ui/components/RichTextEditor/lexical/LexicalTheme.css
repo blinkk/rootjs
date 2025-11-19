@@ -13,15 +13,17 @@
   margin-top: 0;
 }
 .LexicalTheme__quote {
+  font-family: var(--font-family-default);
+  font-size: 14px;
+  line-height: 1.2;
   margin: 0;
-  margin-left: 20px;
+  margin-left: 8px;
   margin-bottom: 10px;
-  font-size: 15px;
   color: rgb(101, 103, 107);
   border-left-color: rgb(206, 208, 212);
-  border-left-width: 4px;
+  border-left-width: 3px;
   border-left-style: solid;
-  padding-left: 16px;
+  padding-left: 12px;
 }
 .LexicalTheme__h1 {
   font-size: 18px;

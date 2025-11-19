@@ -42,6 +42,10 @@ import {
   IconClearFormatting,
   IconPhoto,
   IconHtml,
+  IconBracketsAngle,
+  IconCircle,
+  IconSquare,
+  IconCapsuleHorizontal,
 } from '@tabler/icons-preact';
 import {
   $getSelection,
@@ -513,11 +517,11 @@ export function ToolbarPlugin(props: ToolbarPluginProps) {
       case 'image':
         return <IconPhoto size={16} />;
       case 'html':
-        return <IconHtml size={16} />;
+        return <IconBracketsAngle size={16} />;
       default:
         break;
     }
-    return <IconMenuItemPlaceholder />;
+    return <IconSquare size={16} />;
   };
 
   return (
@@ -643,7 +647,7 @@ export function ToolbarPlugin(props: ToolbarPluginProps) {
               {sortedInlineComponents.map((component) => (
                 <Menu.Item
                   key={component.name}
-                  icon={<IconMenuItemPlaceholder />}
+                  icon={<IconCapsuleHorizontal size={16} />}
                   onClick={() => onInsertInlineComponent?.(component.name)}
                 >
                   {component.label || component.name}
