@@ -4,7 +4,17 @@ import {
   $createListNode,
   ListItemNode,
 } from '@lexical/list';
-import {$createHeadingNode, HeadingTagType} from '@lexical/rich-text';
+import {$createHorizontalRuleNode} from '@lexical/react/LexicalHorizontalRuleNode';
+import {
+  $createHeadingNode,
+  $createQuoteNode,
+  HeadingTagType,
+} from '@lexical/rich-text';
+import {
+  $createTableNode,
+  $createTableRowNode,
+  $createTableCellNode,
+} from '@lexical/table';
 import {
   $applyNodeReplacement,
   $createParagraphNode,
@@ -54,6 +64,16 @@ export function convertToLexical(data?: RichTextData | null) {
         headingNode.append(...children);
       }
       root.append(headingNode);
+    } else if (block.type === 'quote') {
+      const quoteNode = $createQuoteNode();
+      if (block.data?.text) {
+        const children = createNodesFromHTML(
+          block.data.text,
+          block.data.components
+        );
+        quoteNode.append(...children);
+      }
+      root.append(quoteNode);
     } else if (block.type === 'orderedList' || block.type === 'unorderedList') {
       const style = block.data.style === 'ordered' ? 'number' : 'bullet';
       const listNode = $createListNode(style);
@@ -61,6 +81,89 @@ export function convertToLexical(data?: RichTextData | null) {
         listNode.append(...createListItemNodes(item, style));
       }
       root.append(listNode);
+    } else if (block.type === 'table') {
+      // Handle table blocks with nested rows/cells structure
+      const tableNode = $createTableNode();
+      const rows = block.data?.rows || [];
+
+      rows.forEach((row: any) => {
+        const rowNode = $createTableRowNode();
+        const cells = row.cells || [];
+
+        cells.forEach((cell: any) => {
+          const cellBlocks = cell.blocks || [];
+          const cellType = cell.type || 'data';
+          // Convert type to header state: 'header' -> 1, 'data' -> 0
+          const headerState = cellType === 'header' ? 1 : 0;
+          const cellNode = $createTableCellNode(headerState);
+
+          // Process each block in the cell
+          cellBlocks.forEach((cellBlock: any) => {
+            if (cellBlock.type === 'paragraph') {
+              const paragraphNode = $createParagraphNode();
+              if (cellBlock.data?.text) {
+                const children = createNodesFromHTML(
+                  cellBlock.data.text,
+                  cellBlock.data.components
+                );
+                paragraphNode.append(...children);
+              }
+              cellNode.append(paragraphNode);
+            } else if (cellBlock.type === 'heading') {
+              const tagName = `h${
+                cellBlock.data?.level || 2
+              }` as HeadingTagType;
+              const headingNode = $createHeadingNode(tagName);
+              if (cellBlock.data?.text) {
+                const children = createNodesFromHTML(
+                  cellBlock.data.text,
+                  cellBlock.data.components
+                );
+                headingNode.append(...children);
+              }
+              cellNode.append(headingNode);
+            } else if (cellBlock.type === 'quote') {
+              const quoteNode = $createQuoteNode();
+              if (cellBlock.data?.text) {
+                const children = createNodesFromHTML(
+                  cellBlock.data.text,
+                  cellBlock.data.components
+                );
+                quoteNode.append(...children);
+              }
+              cellNode.append(quoteNode);
+            } else if (
+              cellBlock.type === 'orderedList' ||
+              cellBlock.type === 'unorderedList'
+            ) {
+              const style =
+                cellBlock.data.style === 'ordered' ? 'number' : 'bullet';
+              const listNode = $createListNode(style);
+              for (const item of cellBlock.data.items) {
+                listNode.append(...createListItemNodes(item, style));
+              }
+              cellNode.append(listNode);
+            } else {
+              // Block component
+              const blockComponentNode = $createBlockComponentNode(
+                cellBlock.type,
+                cellBlock.data || {}
+              );
+              cellNode.append(blockComponentNode);
+            }
+          });
+
+          rowNode.append(cellNode);
+        });
+
+        tableNode.append(rowNode);
+      });
+
+      root.append(tableNode);
+    } else if (block.type === 'delimiter') {
+      // Handle horizontal rule / delimiter blocks
+      const hrNode = $createHorizontalRuleNode();
+      root.append(hrNode);
     } else if (block.type) {
       const node = $createBlockComponentNode(block.type, block.data || {});
       root.append(node);
@@ -128,6 +231,23 @@ function createNodesFromHTML(
             }
             return child;
           });
+        case 'sub':
+          return children.map((child: LexicalNode) => {
+            if (child instanceof TextNode) {
+              child.toggleFormat('subscript');
+            }
+            return child;
+          });
+        case 'code':
+          return children.map((child: LexicalNode) => {
+            if (child instanceof TextNode) {
+              child.toggleFormat('code');
+            }
+            return child;
+          });
+        case 'br':
+          // Line breaks are handled by Lexical's LineBreakNode
+          return [];
         case 'a':
           return [
             $applyNodeReplacement(

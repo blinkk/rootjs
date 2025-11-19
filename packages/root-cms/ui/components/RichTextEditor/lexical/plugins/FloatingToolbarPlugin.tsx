@@ -6,9 +6,12 @@ import {useLexicalComposerContext} from '@lexical/react/LexicalComposerContext';
 import {mergeRegister} from '@lexical/utils';
 import {
   IconBold,
+  IconClearFormatting,
+  IconCode,
   IconItalic,
   IconLink,
   IconStrikethrough,
+  IconSubscript,
   IconSuperscript,
   IconUnderline,
 } from '@tabler/icons-preact';
@@ -27,6 +30,7 @@ import {createPortal} from 'preact/compat';
 import {Dispatch, useCallback, useEffect, useRef, useState} from 'preact/hooks';
 import {getDOMRangeRect, getSelectedNode} from '../utils/selection.js';
 import {SHORTCUTS} from '../utils/shortcuts.js';
+import {clearFormatting} from '../utils/toolbar.js';
 import {ToolbarActionIcon} from './ToolbarPlugin.js';
 
 const VERTICAL_GAP = 12;
@@ -36,9 +40,11 @@ interface FloatingToolbarProps {
   editor: LexicalEditor;
   anchorElem: HTMLElement;
   isBold: boolean;
+  isCode: boolean;
   isItalic: boolean;
   isLink: boolean;
   isStrikethrough: boolean;
+  isSubscript: boolean;
   isSuperscript: boolean;
   isUnderline: boolean;
   setIsLinkEditMode: Dispatch<boolean>;
@@ -50,9 +56,11 @@ function FloatingToolbar(props: FloatingToolbarProps) {
     anchorElem,
     isLink,
     isBold,
+    isCode,
     isItalic,
     isUnderline,
     isStrikethrough,
+    isSubscript,
     isSuperscript,
     setIsLinkEditMode,
   } = props;
@@ -238,11 +246,40 @@ function FloatingToolbar(props: FloatingToolbarProps) {
           </ToolbarActionIcon>
           <ToolbarActionIcon
             variant="hover"
+            tooltip={`Subscript (${SHORTCUTS.SUBSCRIPT})`}
+            active={isSubscript}
+            onClick={() => {
+              editor.dispatchCommand(FORMAT_TEXT_COMMAND, 'subscript');
+            }}
+          >
+            <IconSubscript size={16} />
+          </ToolbarActionIcon>
+          <ToolbarActionIcon
+            variant="hover"
+            tooltip="Code"
+            active={isCode}
+            onClick={() => {
+              editor.dispatchCommand(FORMAT_TEXT_COMMAND, 'code');
+            }}
+          >
+            <IconCode size={16} />
+          </ToolbarActionIcon>
+          <ToolbarActionIcon
+            variant="hover"
             tooltip={`Insert link (${SHORTCUTS.INSERT_LINK})`}
             active={isLink}
             onClick={insertLink}
           >
             <IconLink size={16} />
+          </ToolbarActionIcon>
+          <ToolbarActionIcon
+            variant="hover"
+            tooltip={`Clear formatting (${SHORTCUTS.CLEAR_FORMATTING})`}
+            onClick={() => {
+              clearFormatting(editor);
+            }}
+          >
+            <IconClearFormatting size={16} />
           </ToolbarActionIcon>
         </>
       )}
@@ -258,8 +295,10 @@ function useFloatingTextFormatToolbar(
   const [isText, setIsText] = useState(false);
   const [isLink, setIsLink] = useState(false);
   const [isBold, setIsBold] = useState(false);
+  const [isCode, setIsCode] = useState(false);
   const [isItalic, setIsItalic] = useState(false);
   const [isStrikethrough, setIsStrikethrough] = useState(false);
+  const [isSubscript, setIsSubscript] = useState(false);
   const [isUnderline, setIsUnderline] = useState(false);
   const [isSuperscript, setIsSuperscript] = useState(false);
 
@@ -291,9 +330,11 @@ function useFloatingTextFormatToolbar(
 
       // Update text format
       setIsBold(selection.hasFormat('bold'));
+      setIsCode(selection.hasFormat('code'));
       setIsItalic(selection.hasFormat('italic'));
       setIsUnderline(selection.hasFormat('underline'));
       setIsStrikethrough(selection.hasFormat('strikethrough'));
+      setIsSubscript(selection.hasFormat('subscript'));
       setIsSuperscript(selection.hasFormat('superscript'));
 
       // Update links
@@ -351,8 +392,10 @@ function useFloatingTextFormatToolbar(
       anchorElem={anchorElem}
       isLink={isLink}
       isBold={isBold}
+      isCode={isCode}
       isItalic={isItalic}
       isStrikethrough={isStrikethrough}
+      isSubscript={isSubscript}
       isSuperscript={isSuperscript}
       isUnderline={isUnderline}
       setIsLinkEditMode={setIsLinkEditMode}

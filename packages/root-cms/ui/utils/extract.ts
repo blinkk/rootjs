@@ -1,9 +1,14 @@
 import {doc, getDoc} from 'firebase/firestore';
 import * as schema from '../../core/schema.js';
-import {RichTextData} from '../../shared/richtext.js';
-import {isObject} from './objects.js';
+import {
+  RichTextBlock,
+  RichTextData,
+  RichTextListItem,
+  RichTextTableRow,
+} from '../../shared/richtext.js';
 import {fetchCollectionSchema} from './collection.js';
 import {normalizeString} from './l10n.js';
+import {isObject} from './objects.js';
 
 export async function extractStringsForDoc(docId: string) {
   const db = window.firebase.db;
@@ -118,13 +123,7 @@ export function extractRichTextStrings(
   });
 }
 
-interface ListItemData {
-  content?: string;
-  items?: ListItemData[];
-  components?: Record<string, any>;
-}
-
-function extractBlockStrings(strings: Set<string>, block: any) {
+function extractBlockStrings(strings: Set<string>, block: RichTextBlock) {
   if (!block?.type) {
     return;
   }
@@ -162,7 +161,7 @@ function extractBlockStrings(strings: Set<string>, block: any) {
     }
   }
 
-  function extractList(items?: ListItemData[]) {
+  function extractList(items?: RichTextListItem[]) {
     if (!items) {
       return;
     }
@@ -180,5 +179,18 @@ function extractBlockStrings(strings: Set<string>, block: any) {
     extractList(block.data?.items);
   } else if (block.type === 'html') {
     addString(block.data?.html);
+  } else if (block.type === 'table') {
+    // Extract strings from table cells
+    const rows = block.data?.rows || [];
+    rows.forEach((row: RichTextTableRow) => {
+      const cells = row.cells || [];
+      cells.forEach((cell) => {
+        // Each cell contains an array of blocks
+        const cellBlocks = cell.blocks || [];
+        cellBlocks.forEach((cellBlock) => {
+          extractBlockStrings(strings, cellBlock);
+        });
+      });
+    });
   }
 }

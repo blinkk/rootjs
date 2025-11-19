@@ -33,11 +33,14 @@ export interface RichTextProps {
 export function RichText(props: RichTextProps) {
   const richTextContext = useRichTextContext();
   const components: Record<string, RichTextBlockComponent> = {
+    delimiter: RichText.DelimiterBlock,
     heading: RichText.HeadingBlock,
     html: RichText.HtmlBlock,
     image: RichText.ImageBlock,
     orderedList: RichText.ListBlock,
     paragraph: RichText.ParagraphBlock,
+    quote: RichText.QuoteBlock,
+    table: RichText.TableBlock,
     unorderedList: RichText.ListBlock,
     ...richTextContext.components,
     ...props.components,
@@ -78,6 +81,15 @@ RichText.ParagraphBlock = (props: RichTextParagraphBlockProps) => {
   return <p dangerouslySetInnerHTML={{__html: t(props.data.text)}} />;
 };
 
+export interface RichTextDelimiterBlockProps {
+  type: 'delimiter';
+  data?: {};
+}
+
+RichText.DelimiterBlock = () => {
+  return <hr />;
+};
+
 export interface RichTextHeadingBlockProps {
   type: 'heading';
   data?: {
@@ -96,6 +108,21 @@ RichText.HeadingBlock = (props: RichTextHeadingBlockProps) => {
   const level = props.data.level || 2;
   const Component = `h${level}` as HeadingComponent;
   return <Component dangerouslySetInnerHTML={{__html: t(props.data.text)}} />;
+};
+
+export interface RichTextQuoteBlockProps {
+  type: 'quote';
+  data?: {
+    text?: string;
+  };
+}
+
+RichText.QuoteBlock = (props: RichTextQuoteBlockProps) => {
+  if (!props.data?.text) {
+    return null;
+  }
+  const t = useTranslations();
+  return <blockquote dangerouslySetInnerHTML={{__html: t(props.data.text)}} />;
 };
 
 interface ListItem {
@@ -185,6 +212,51 @@ RichText.HtmlBlock = (props: RichTextHtmlBlockProps) => {
     return null;
   }
   return <div dangerouslySetInnerHTML={{__html: html}} />;
+};
+
+export interface RichTextTableBlockProps {
+  type: 'table';
+  data?: {
+    rows?: Array<{
+      cells: Array<{
+        blocks: RichTextBlock[];
+        type: 'header' | 'data';
+      }>;
+    }>;
+  };
+}
+
+RichText.TableBlock = (props: RichTextTableBlockProps) => {
+  const rows = props.data?.rows || [];
+  const richTextContext = useRichTextContext();
+
+  if (rows.length === 0) {
+    return null;
+  }
+
+  return (
+    <table>
+      <tbody>
+        {rows.map((row, rowIndex) => (
+          <tr key={rowIndex}>
+            {row.cells.map((cell, cellIndex) => {
+              const isHeader = cell.type === 'header';
+              const Cell = isHeader ? 'th' : 'td';
+
+              return (
+                <Cell key={cellIndex}>
+                  <RichText
+                    data={{blocks: cell.blocks, time: 0, version: ''}}
+                    components={richTextContext.components}
+                  />
+                </Cell>
+              );
+            })}
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  );
 };
 
 function toNumber(input?: string | number): number {

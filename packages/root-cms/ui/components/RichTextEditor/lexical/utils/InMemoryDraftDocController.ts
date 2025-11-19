@@ -67,7 +67,11 @@ export class InMemoryDraftDocController {
   }
 }
 
-export function setNestedValue(target: Record<string, any>, key: string, value: any) {
+export function setNestedValue(
+  target: Record<string, any>,
+  key: string,
+  value: any
+) {
   const parts = key.split('.');
   let current = target;
   for (let i = 0; i < parts.length - 1; i++) {

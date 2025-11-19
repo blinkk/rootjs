@@ -1,7 +1,9 @@
 import {$isLinkNode, TOGGLE_LINK_COMMAND} from '@lexical/link';
 import {$isListNode, ListNode} from '@lexical/list';
+import {INSERT_HORIZONTAL_RULE_COMMAND} from '@lexical/react/LexicalHorizontalRuleNode';
 import {$isHeadingNode} from '@lexical/rich-text';
 import {$isParentElementRTL} from '@lexical/selection';
+import {INSERT_TABLE_COMMAND} from '@lexical/table';
 import {
   $findMatchingParent,
   $getNearestNodeOfType,
@@ -27,11 +29,23 @@ import {
   IconUnderline,
   IconLink,
   IconSuperscript,
+  IconSubscript,
   IconChevronDown,
   IconStrikethrough,
   IconH4,
   IconH5,
   IconPuzzle,
+  IconCode,
+  IconQuote,
+  IconSeparatorHorizontal,
+  IconTable,
+  IconClearFormatting,
+  IconPhoto,
+  IconHtml,
+  IconBracketsAngle,
+  IconCircle,
+  IconSquare,
+  IconCapsuleHorizontal,
 } from '@tabler/icons-preact';
 import {
   $getSelection,
@@ -68,6 +82,8 @@ import {
   formatHeading,
   formatNumberedList,
   formatParagraph,
+  formatBlockquote,
+  clearFormatting,
 } from '../utils/toolbar.js';
 import {sanitizeUrl} from '../utils/url.js';
 
@@ -109,6 +125,9 @@ function BlockTypeIcon(props: BlockTypeIconProps) {
   }
   if (blockType === 'bullet') {
     return <IconList size={16} />;
+  }
+  if (blockType === 'quote') {
+    return <IconQuote size={16} />;
   }
   return null;
 }
@@ -195,12 +214,94 @@ function BlockFormatDropDown(props: BlockFormatDropDownProps) {
       >
         Heading 5
       </Menu.Item>
+      <Menu.Item
+        icon={<BlockTypeIcon blockType="quote" />}
+        className={dropDownActiveClass(blockType === 'quote')}
+        onClick={() => formatBlockquote(editor, blockType)}
+      >
+        Quote
+      </Menu.Item>
     </Menu>
   );
 }
 
 function Divider() {
   return <div className="divider" />;
+}
+
+interface MoreFormattingDropdownProps {
+  editor: LexicalEditor;
+  isStrikethrough: boolean;
+  isSuperscript: boolean;
+  isSubscript: boolean;
+  isCode: boolean;
+}
+
+function MoreFormattingDropdown(props: MoreFormattingDropdownProps) {
+  const {editor, isStrikethrough, isSuperscript, isSubscript, isCode} = props;
+  const isAnyActive = isStrikethrough || isSuperscript || isSubscript || isCode;
+
+  return (
+    <Menu
+      styles={{
+        body: {
+          minWidth: '240px',
+        },
+      }}
+      control={
+        <Tooltip
+          className={joinClassNames(
+            'LexicalEditor__toolbar__actionIcon',
+            isAnyActive && 'LexicalEditor__toolbar__actionIcon--active'
+          )}
+          label="More formatting"
+          position="top"
+          withArrow
+        >
+          <ActionIcon variant="default" title="More formatting">
+            <IconChevronDown size={16} />
+          </ActionIcon>
+        </Tooltip>
+      }
+    >
+      <Menu.Item
+        icon={<IconStrikethrough size={16} />}
+        className={dropDownActiveClass(isStrikethrough)}
+        onClick={() => {
+          editor.dispatchCommand(FORMAT_TEXT_COMMAND, 'strikethrough');
+        }}
+      >
+        Strikethrough ({SHORTCUTS.STRIKETHROUGH})
+      </Menu.Item>
+      <Menu.Item
+        icon={<IconSuperscript size={16} />}
+        className={dropDownActiveClass(isSuperscript)}
+        onClick={() => {
+          editor.dispatchCommand(FORMAT_TEXT_COMMAND, 'superscript');
+        }}
+      >
+        Superscript ({SHORTCUTS.SUPERSCRIPT})
+      </Menu.Item>
+      <Menu.Item
+        icon={<IconSubscript size={16} />}
+        className={dropDownActiveClass(isSubscript)}
+        onClick={() => {
+          editor.dispatchCommand(FORMAT_TEXT_COMMAND, 'subscript');
+        }}
+      >
+        Subscript ({SHORTCUTS.SUBSCRIPT})
+      </Menu.Item>
+      <Menu.Item
+        icon={<IconCode size={16} />}
+        className={dropDownActiveClass(isCode)}
+        onClick={() => {
+          editor.dispatchCommand(FORMAT_TEXT_COMMAND, 'code');
+        }}
+      >
+        Code
+      </Menu.Item>
+    </Menu>
+  );
 }
 
 interface ToolbarPluginProps {
@@ -324,6 +425,8 @@ export function ToolbarPlugin(props: ToolbarPluginProps) {
         selection.hasFormat('strikethrough')
       );
       updateToolbarState('isSuperscript', selection.hasFormat('superscript'));
+      updateToolbarState('isSubscript', selection.hasFormat('subscript'));
+      updateToolbarState('isCode', selection.hasFormat('code'));
     }
   }, [activeEditor, editor, updateToolbarState]);
 
@@ -409,8 +512,17 @@ export function ToolbarPlugin(props: ToolbarPluginProps) {
     });
   }, [inlineComponents]);
 
-  const hasCustomComponents =
-    sortedBlockComponents.length > 0 || sortedInlineComponents.length > 0;
+  const getComponentIcon = (componentName: string) => {
+    switch (componentName) {
+      case 'image':
+        return <IconPhoto size={16} />;
+      case 'html':
+        return <IconBracketsAngle size={16} />;
+      default:
+        break;
+    }
+    return <IconSquare size={16} />;
+  };
 
   return (
     <div className="LexicalEditor__toolbar">
@@ -455,27 +567,18 @@ export function ToolbarPlugin(props: ToolbarPluginProps) {
           >
             <IconUnderline size={16} />
           </ToolbarActionIcon>
-          <ToolbarActionIcon
-            tooltip={`Strikethrough (${SHORTCUTS.STRIKETHROUGH})`}
-            active={toolbarState.isStrikethrough}
-            onClick={() => {
-              activeEditor.dispatchCommand(
-                FORMAT_TEXT_COMMAND,
-                'strikethrough'
-              );
-            }}
-          >
-            <IconStrikethrough size={16} />
-          </ToolbarActionIcon>
-          <ToolbarActionIcon
-            tooltip={`Superscript (${SHORTCUTS.SUPERSCRIPT})`}
-            active={toolbarState.isSuperscript}
-            onClick={() => {
-              activeEditor.dispatchCommand(FORMAT_TEXT_COMMAND, 'superscript');
-            }}
-          >
-            <IconSuperscript size={16} />
-          </ToolbarActionIcon>
+          <MoreFormattingDropdown
+            editor={activeEditor}
+            isStrikethrough={toolbarState.isStrikethrough}
+            isSuperscript={toolbarState.isSuperscript}
+            isSubscript={toolbarState.isSubscript}
+            isCode={toolbarState.isCode}
+          />
+        </div>
+
+        <Divider />
+
+        <div className="LexicalEditor__toolbar__group">
           <ToolbarActionIcon
             tooltip={`Insert link (${SHORTCUTS.INSERT_LINK})`}
             active={toolbarState.isLink}
@@ -487,54 +590,87 @@ export function ToolbarPlugin(props: ToolbarPluginProps) {
 
         <Divider />
 
-        {hasCustomComponents && (
-          <>
-            <Menu
-              control={
-                <Button
-                  className={joinClassNames(
-                    'LexicalEditor__toolbar__dropdown',
-                    'LexicalEditor__toolbar__insertDropdown'
-                  )}
-                  variant="default"
-                  compact
-                  leftIcon={<IconPuzzle size={16} />}
-                  rightIcon={<IconChevronDown size={16} />}
-                >
-                  Components
-                </Button>
-              }
+        <ToolbarActionIcon
+          tooltip={`Clear formatting (${SHORTCUTS.CLEAR_FORMATTING})`}
+          onClick={() => {
+            clearFormatting(activeEditor);
+          }}
+        >
+          <IconClearFormatting size={16} />
+        </ToolbarActionIcon>
+
+        <Divider />
+
+        <Menu
+          control={
+            <Button
+              className={joinClassNames(
+                'LexicalEditor__toolbar__dropdown',
+                'LexicalEditor__toolbar__insertDropdown'
+              )}
+              variant="default"
+              compact
+              leftIcon={<IconPuzzle size={16} />}
+              rightIcon={<IconChevronDown size={16} />}
             >
-              {sortedInlineComponents.length > 0 && (
-                <>
-                  <Menu.Label>Inline Components</Menu.Label>
-                  {sortedInlineComponents.map((component) => (
-                    <Menu.Item
-                      key={component.name}
-                      onClick={() => onInsertInlineComponent?.(component.name)}
-                    >
-                      {component.label || component.name}
-                    </Menu.Item>
-                  ))}
-                </>
-              )}
-              {sortedBlockComponents.length > 0 && (
-                <>
-                  <Menu.Label>Block Components</Menu.Label>
-                  {sortedBlockComponents.map((block) => (
-                    <Menu.Item
-                      key={block.name}
-                      onClick={() => onInsertBlockComponent?.(block.name)}
-                    >
-                      {block.label || block.name}
-                    </Menu.Item>
-                  ))}
-                </>
-              )}
-            </Menu>
-            <Divider />
-          </>
-        )}
+              Components
+            </Button>
+          }
+        >
+          <Menu.Label>Insert</Menu.Label>
+          <Menu.Item
+            icon={<IconTable size={16} />}
+            onClick={() => {
+              activeEditor.dispatchCommand(INSERT_TABLE_COMMAND, {
+                columns: '3',
+                rows: '3',
+              });
+            }}
+          >
+            Table
+          </Menu.Item>
+          <Menu.Item
+            icon={<IconSeparatorHorizontal size={16} />}
+            onClick={() => {
+              activeEditor.dispatchCommand(
+                INSERT_HORIZONTAL_RULE_COMMAND,
+                undefined
+              );
+            }}
+          >
+            Horizontal Rule
+          </Menu.Item>
+
+          {sortedInlineComponents.length > 0 && (
+            <>
+              <Menu.Label>Inline Components</Menu.Label>
+              {sortedInlineComponents.map((component) => (
+                <Menu.Item
+                  key={component.name}
+                  icon={<IconCapsuleHorizontal size={16} />}
+                  onClick={() => onInsertInlineComponent?.(component.name)}
+                >
+                  {component.label || component.name}
+                </Menu.Item>
+              ))}
+            </>
+          )}
+          {sortedBlockComponents.length > 0 && (
+            <>
+              <Menu.Label>Block Components</Menu.Label>
+              {sortedBlockComponents.map((block) => (
+                <Menu.Item
+                  key={block.name}
+                  icon={getComponentIcon(block.name)}
+                  onClick={() => onInsertBlockComponent?.(block.name)}
+                >
+                  {block.label || block.name}
+                </Menu.Item>
+              ))}
+            </>
+          )}
+        </Menu>
+        <Divider />
       </>
     </div>
   );
@@ -568,4 +704,8 @@ export function ToolbarActionIcon(props: ToolbarActionIconProps) {
       </ActionIcon>
     </Tooltip>
   );
+}
+
+function IconMenuItemPlaceholder() {
+  return <div style={{width: 16, height: 16}}></div>;
 }

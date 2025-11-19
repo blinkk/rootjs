@@ -10,11 +10,15 @@ import {useLexicalComposerContext} from '@lexical/react/LexicalComposerContext';
 import {ContentEditable} from '@lexical/react/LexicalContentEditable';
 import {LexicalErrorBoundary} from '@lexical/react/LexicalErrorBoundary';
 import {HistoryPlugin} from '@lexical/react/LexicalHistoryPlugin';
+import {HorizontalRuleNode} from '@lexical/react/LexicalHorizontalRuleNode';
+import {HorizontalRulePlugin} from '@lexical/react/LexicalHorizontalRulePlugin';
 import {LinkPlugin} from '@lexical/react/LexicalLinkPlugin';
 import {ListPlugin} from '@lexical/react/LexicalListPlugin';
 import {RichTextPlugin} from '@lexical/react/LexicalRichTextPlugin';
 import {TabIndentationPlugin} from '@lexical/react/LexicalTabIndentationPlugin';
-import {HeadingNode} from '@lexical/rich-text';
+import {TablePlugin} from '@lexical/react/LexicalTablePlugin';
+import {HeadingNode, QuoteNode} from '@lexical/rich-text';
+import {TableCellNode, TableNode, TableRowNode} from '@lexical/table';
 import {$getNodeByKey, $insertNodes, NodeKey} from 'lexical';
 import {useMemo, useState} from 'preact/hooks';
 import * as schema from '../../../../core/schema.js';
@@ -48,6 +52,7 @@ import {FloatingToolbarPlugin} from './plugins/FloatingToolbarPlugin.js';
 import {MarkdownTransformPlugin} from './plugins/MarkdownTransformPlugin.js';
 import {OnChangePlugin} from './plugins/OnChangePlugin.js';
 import {ShortcutsPlugin} from './plugins/ShortcutsPlugin.js';
+import {TableActionMenuPlugin} from './plugins/TableActionMenuPlugin.js';
 import {ToolbarPlugin} from './plugins/ToolbarPlugin.js';
 import {TrailingParagraphPlugin} from './plugins/TrailingParagraphPlugin.js';
 
@@ -57,9 +62,14 @@ const INITIAL_CONFIG: InitialConfigType = {
   nodes: [
     AutoLinkNode,
     HeadingNode,
+    QuoteNode,
     LinkNode,
     ListNode,
     ListItemNode,
+    HorizontalRuleNode,
+    TableNode,
+    TableCellNode,
+    TableRowNode,
     BlockComponentNode,
     InlineComponentNode,
   ],
@@ -416,6 +426,9 @@ function Editor(props: EditorProps) {
         />
         <LinkPlugin />
         <ListPlugin />
+        <HorizontalRulePlugin />
+        <TablePlugin />
+        <TableActionMenuPlugin editor={activeEditor} />
         <TabIndentationPlugin maxIndent={7} />
         <MarkdownTransformPlugin />
         <TrailingParagraphPlugin />
