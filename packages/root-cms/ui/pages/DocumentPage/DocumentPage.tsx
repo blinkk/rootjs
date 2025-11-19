@@ -233,7 +233,7 @@ interface PreviewProps {
 type Device = 'mobile' | 'tablet' | 'desktop' | '';
 
 const DeviceResolution = {
-  mobile: [360, 800],
+  mobile: [430, 932],
   tablet: [768, 1024],
   desktop: [1440, 800],
 };
