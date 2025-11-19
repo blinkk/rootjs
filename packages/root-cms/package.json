@@ -60,8 +60,8 @@
     "dev:core": "pnpm build:core --watch",
     "dev:signin": "pnpm build:signin --watch",
     "dev:ui": "pnpm build:ui --watch",
-    "test": "pnpm build && firebase emulators:exec 'vitest run'",
-    "test:visual": "vitest run --browser",
+    "test": "pnpm build && firebase emulators:exec 'vitest run --exclude=**/*.visual.test.tsx'",
+    "test:visual": "vitest run --config=vitest.config.visual.ts",
     "test:watch": "pnpm build && firebase emulators:exec 'vitest'"
   },
   "dependencies": {
