@@ -5,6 +5,7 @@ import {
   DraftDocContext,
   DraftDocContextProvider,
 } from '../../../../hooks/useDraftDoc.js';
+import {useModalTheme} from '../../../../hooks/useModalTheme.js';
 import {cloneData} from '../../../../utils/objects.js';
 import {DocEditor} from '../../../DocEditor/DocEditor.js';
 import {InMemoryDraftDocController} from '../utils/InMemoryDraftDocController.js';
@@ -57,12 +58,18 @@ export function BlockComponentModal(props: BlockComponentModalProps) {
     props.onSubmit(clonedValue);
   };
 
+  const modalTheme = useModalTheme();
+
   return (
     <Modal
+      {...modalTheme}
       opened={props.opened}
       onClose={props.onClose}
       title={props.schema.label || props.schema.name}
       size="lg"
+      // Prevent stacking order issues with the ReferenceField's
+      // `DocPickerModal` by using a z-index lower than 200.
+      zIndex={190}
     >
       <Stack spacing="md">
         {props.schema.fields.length > 0 ? (
