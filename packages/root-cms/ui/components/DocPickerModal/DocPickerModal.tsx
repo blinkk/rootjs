@@ -9,6 +9,7 @@ import {getDocServingUrl} from '../../utils/doc-urls.js';
 import {getNestedValue} from '../../utils/objects.js';
 import {DocStatusBadges} from '../DocStatusBadges/DocStatusBadges.js';
 import {FilePreview} from '../FilePreview/FilePreview.js';
+import {NewDocModal} from '../NewDocModal/NewDocModal.js';
 import './DocPickerModal.css';
 
 const MODAL_ID = 'DocPickerModal';
@@ -129,8 +130,9 @@ DocPickerModal.DocsList = (props: {
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState('modifiedAt');
+  const [newDocModalOpen, setNewDocModalOpen] = useState(false);
 
-  const [loading, , docs] = useDocsList(props.collection || '', {
+  const [loading, refreshDocs, docs] = useDocsList(props.collection || '', {
     orderBy: sortBy,
   });
 
@@ -194,11 +196,7 @@ DocPickerModal.DocsList = (props: {
                 variant="outline"
                 color="dark"
                 size="xs"
-                rightIcon={<IconExternalLink size={14} />}
-                onClick={() => {
-                  const url = `/cms/content/${props.collectionSelectValue}`;
-                  window.open(url, '_blank');
-                }}
+                onClick={() => setNewDocModalOpen(true)}
               >
                 New
               </Button>
@@ -249,7 +247,7 @@ DocPickerModal.DocsList = (props: {
           </div>
         ) : (
           <div className="DocPickerModal__DocsList__docs">
-            {filteredDocs.map((doc) => (
+            {filteredDocs.map((doc: any) => (
               <DocPickerModal.DocCard
                 key={doc.id}
                 doc={doc}
@@ -258,11 +256,23 @@ DocPickerModal.DocsList = (props: {
                 multiSelect={props.multiSelect}
                 selected={selectedDocIds.includes(doc.id)}
                 enableStatusBadges={props.enableStatusBadges}
+                showOpenInNewTab={true}
               />
             ))}
           </div>
         )}
       </div>
+      {props.collectionSelectValue && (
+        <NewDocModal
+          collection={props.collectionSelectValue}
+          opened={newDocModalOpen}
+          skipNavigation={true}
+          onClose={() => {
+            setNewDocModalOpen(false);
+            refreshDocs();
+          }}
+        />
+      )}
     </div>
   );
 };
@@ -274,6 +284,7 @@ DocPickerModal.DocCard = (props: {
   multiSelect?: boolean;
   selected?: boolean;
   enableStatusBadges?: boolean;
+  showOpenInNewTab?: boolean;
 }) => {
   const [selected, setSelected] = useState(!!props.selected);
   const doc = props.doc;
@@ -320,6 +331,20 @@ DocPickerModal.DocCard = (props: {
         )}
       </div>
       <div className="DocPickerModal__DocCard__controls">
+        {props.showOpenInNewTab && (
+          <Button
+            variant="subtle"
+            color="gray"
+            size="xs"
+            onClick={() => {
+              const url = `/cms/content/${collection}/${slug}`;
+              window.open(url, '_blank');
+            }}
+            style={{padding: '0 8px'}}
+          >
+            <IconExternalLink size={16} />
+          </Button>
+        )}
         {props.multiSelect ? (
           selected ? (
             <Button
