@@ -52,6 +52,11 @@ export function DocPreviewCard(props: DocPreviewCardProps) {
     );
   }
 
+  // Short circuit if there is no doc (i.e. a stale reference).
+  if (!doc) {
+    return;
+  }
+
   const [collection, slug] = docId.split('/');
   const fields = doc.fields || {};
   const rootCollection = window.__ROOT_CTX.collections[collection];
