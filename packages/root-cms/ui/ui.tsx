@@ -16,7 +16,6 @@ import {AiEditModal} from './components/AiEditModal/AiEditModal.js';
 import {CopyDocModal} from './components/CopyDocModal/CopyDocModal.js';
 import {DataSourceSelectModal} from './components/DataSourceSelectModal/DataSourceSelectModal.js';
 import {DocPickerModal} from './components/DocPickerModal/DocPickerModal.js';
-import {DocSelectModal} from './components/DocSelectModal/DocSelectModal.js';
 import {EditJsonModal} from './components/EditJsonModal/EditJsonModal.js';
 import {EditTranslationsModal} from './components/EditTranslationsModal/EditTranslationsModal.js';
 import {ExportSheetModal} from './components/ExportSheetModal/ExportSheetModal.js';
@@ -120,7 +119,8 @@ function App() {
                     [AiEditModal.id]: AiEditModal,
                     [CopyDocModal.id]: CopyDocModal,
                     [DocPickerModal.id]: DocPickerModal,
-                    [DocSelectModal.id]: DocSelectModal,
+                    // Backwards compatibility alias for DocSelectModal
+                    ['DocSelectModal']: DocPickerModal,
                     [DataSourceSelectModal.id]: DataSourceSelectModal,
                     [EditJsonModal.id]: EditJsonModal,
                     [EditTranslationsModal.id]: EditTranslationsModal,
