@@ -236,6 +236,11 @@ export type CMSPluginOptions = {
      * Enables the v2 `TranslationsManager`.
      */
     v2TranslationsManager?: boolean;
+
+    /**
+     * Enables the dependency graph API.
+     */
+    dependencyGraphApi?: boolean;
   };
 
   /**
