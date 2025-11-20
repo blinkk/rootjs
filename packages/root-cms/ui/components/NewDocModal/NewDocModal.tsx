@@ -12,6 +12,8 @@ interface NewDocModalProps {
   collection: string;
   opened?: boolean;
   onClose?: () => void;
+  /** If true, don't navigate to doc editor after creation. */
+  skipNavigation?: boolean;
 }
 
 export function NewDocModal(props: NewDocModalProps) {
@@ -60,7 +62,12 @@ export function NewDocModal(props: NewDocModalProps) {
       return;
     }
     setRpcLoading(false);
-    route(`/cms/content/${props.collection}/${cleanSlug}`);
+    if (props.skipNavigation) {
+      // Just close the modal without navigating
+      onClose();
+    } else {
+      route(`/cms/content/${props.collection}/${cleanSlug}`);
+    }
   }
 
   return (
