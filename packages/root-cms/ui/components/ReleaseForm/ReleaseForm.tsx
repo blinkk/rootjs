@@ -20,8 +20,8 @@ import {
   updateRelease,
 } from '../../utils/release.js';
 import {useDataSourceSelectModal} from '../DataSourceSelectModal/DataSourceSelectModal.js';
+import {useDocSelectModal} from '../DocPickerModal/DocPickerModal.js';
 import {DocPreviewCard} from '../DocPreviewCard/DocPreviewCard.js';
-import {useDocSelectModal} from '../DocSelectModal/DocSelectModal.js';
 import './ReleaseForm.css';
 
 export interface ReleaseFormProps {
@@ -124,8 +124,9 @@ export function ReleaseForm(props: ReleaseFormProps) {
 
   function openDocSelectModal() {
     docSelectModal.open({
+      multiSelect: true,
       selectedDocIds: docIds,
-      onChange: (docId: string, selected: boolean) => {
+      onChangeMulti: (docId: string, selected: boolean) => {
         setDocIds((oldValue) => {
           const newValue = [...oldValue];
           if (selected) {

@@ -12,8 +12,8 @@ import {useState} from 'preact/hooks';
 import * as schema from '../../../../core/schema.js';
 import {useDraftDoc, useDraftDocField} from '../../../hooks/useDraftDoc.js';
 import {joinClassNames} from '../../../utils/classes.js';
+import {useDocSelectModal} from '../../DocPickerModal/DocPickerModal.js';
 import {DocPreviewCard} from '../../DocPreviewCard/DocPreviewCard.js';
-import {useDocSelectModal} from '../../DocSelectModal/DocSelectModal.js';
 import {FieldProps} from './FieldProps.js';
 import {ReferenceFieldValue} from './ReferenceField.js';
 
@@ -49,8 +49,9 @@ export function ReferencesField(props: FieldProps) {
     docSelectModal.open({
       collections: field.collections,
       initialCollection: field.initialCollection,
+      multiSelect: true,
       selectedDocIds: refIds,
-      onChange: (docId: string, selected: boolean) => {
+      onChangeMulti: (docId: string, selected: boolean) => {
         setRefIds((old) => {
           const next = [...old];
           if (selected) {

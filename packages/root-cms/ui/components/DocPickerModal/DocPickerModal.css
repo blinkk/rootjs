@@ -1,3 +1,7 @@
+.DocPickerModal {
+  padding-right: 20px;
+}
+
 .DocPickerModal__collection__select {
   display: flex;
   gap: 8px;
@@ -10,12 +14,60 @@
   font-weight: 600;
 }
 
+.DocPickerModal__DocsList__controls {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.DocPickerModal__DocsList__controls:last-child {
+  border-bottom: 0;
+  margin-bottom: 0;
+}
+
+.DocPickerModal__DocsList__controls__search {
+  flex: 1;
+  min-width: 200px;
+}
+
+.DocPickerModal__DocsList__controls__sort {
+  min-width: 140px;
+}
+
+.DocPickerModal__DocsList {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.DocPickerModal__DocsList__stickyHeader {
+  position: sticky;
+  top: 0;
+  background: white;
+  z-index: 1;
+  margin-bottom: 8px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.DocPickerModal__DocsList__docsContainer {
+  flex: 1;
+  overflow-y: auto;
+  min-height: 0;
+}
+
 .DocPickerModal__DocCard {
   display: flex;
   align-items: center;
   padding: 8px 0;
   border-top: 1px solid var(--color-border);
   overflow: hidden;
+}
+
+.DocPickerModal__DocCard:first-child {
+  border-top: none;
 }
 
 .DocPickerModal__DocCard__image {
@@ -28,6 +80,13 @@
   padding: 0 12px;
   text-decoration: none;
   flex: 1;
+}
+
+.DocPickerModal__DocCard__content__header {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
 }
 
 .DocPickerModal__DocCard__content__header__docId {
@@ -55,4 +114,31 @@
   display: flex;
   gap: 8px;
   align-items: center;
+}
+
+.DocPickerModal__DocsList__loading {
+  display: flex;
+  justify-content: center;
+  padding: 40px 0;
+}
+
+.DocPickerModal__DocsList__empty {
+  padding: 40px 20px;
+  text-align: center;
+  color: #999;
+  font-size: 14px;
+}
+
+.DocPickerModal__noCollections {
+  padding: 20px;
+  text-align: center;
+  color: #999;
+  font-size: 14px;
+}
+
+.DocPickerModal__DocsList__count {
+  font-size: 12px;
+  color: #666;
+  margin-bottom: 12px;
+  padding: 0 4px;
 }
