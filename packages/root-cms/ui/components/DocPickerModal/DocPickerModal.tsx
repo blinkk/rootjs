@@ -18,16 +18,24 @@ export interface DocPickerModalProps {
   [key: string]: unknown;
   collections?: string[];
   initialCollection?: string;
-  // Single-select mode (default)
-  onChange?: (id: string) => void;
-  // Multi-select mode
-  multiSelect?: boolean;
   selectedDocIds?: string[];
+
+  onChange?: (id: string) => void;
   onChangeMulti?: (docId: string, selected: boolean) => void | Promise<void>;
-  // Feature flags (opt-in)
+
+  /** Whether to allow selecting multiple docs. */
+  multiSelect?: boolean;
+
+  /** Enable search functionality. */
   enableSearch?: boolean;
+
+  /** Enable sort functionality. */
   enableSort?: boolean;
+
+  /** Enable create new doc functionality. */
   enableCreate?: boolean;
+
+  /** Enable status badges display. */
   enableStatusBadges?: boolean;
 }
 
@@ -97,28 +105,25 @@ export function DocPickerModal(
           collection={selectedCollectionId}
           onDocSelected={onDocSelected}
           onDocUnselected={onDocUnselected}
+          onCollectionChange={setSelectedCollectionId}
           multiSelect={props.multiSelect}
           selectedDocIds={props.selectedDocIds}
-          enableSearch={props.enableSearch ?? true}
-          enableSort={props.enableSort ?? true}
-          enableCreate={props.enableCreate ?? true}
-          enableStatusBadges={props.enableStatusBadges ?? true}
-          showCollectionSelect={collections.length > 1}
-          collectionSelectValue={selectedCollectionId}
-          collectionSelectOptions={dropdownValues}
-          onCollectionChange={setSelectedCollectionId}
+          options={{
+            enableSearch: props.enableSearch ?? true,
+            enableSort: props.enableSort ?? true,
+            enableCreate: props.enableCreate ?? true,
+            enableStatusBadges: props.enableStatusBadges ?? true,
+            showCollectionSelect: collections.length > 1,
+            collectionSelectValue: selectedCollectionId,
+            collectionSelectOptions: dropdownValues,
+          }}
         />
       )}
     </div>
   );
 }
 
-DocPickerModal.DocsList = (props: {
-  collection: string;
-  onDocSelected: (doc: any) => void;
-  onDocUnselected: (doc: any) => void;
-  multiSelect?: boolean;
-  selectedDocIds?: string[];
+interface DocPickerModalOptions {
   enableSearch?: boolean;
   enableSort?: boolean;
   enableCreate?: boolean;
@@ -126,7 +131,16 @@ DocPickerModal.DocsList = (props: {
   showCollectionSelect?: boolean;
   collectionSelectValue?: string;
   collectionSelectOptions?: Array<{value: string; label: string}>;
+}
+
+DocPickerModal.DocsList = (props: {
+  collection: string;
+  onDocSelected: (doc: any) => void;
+  onDocUnselected: (doc: any) => void;
   onCollectionChange?: (value: string) => void;
+  multiSelect?: boolean;
+  selectedDocIds?: string[];
+  options?: DocPickerModalOptions;
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState('modifiedAt');
@@ -168,18 +182,19 @@ DocPickerModal.DocsList = (props: {
   ];
 
   const selectedDocIds = props.selectedDocIds || [];
+  const options = props.options || {};
 
   return (
     <div className="DocPickerModal__DocsList">
       <div className="DocPickerModal__DocsList__stickyHeader">
-        {props.showCollectionSelect && (
+        {options.showCollectionSelect && (
           <div className="DocPickerModal__collection__select">
             <div className="DocPickerModal__collection__select__label">
               Content Type:
             </div>
             <Select
-              data={props.collectionSelectOptions || []}
-              value={props.collectionSelectValue}
+              data={options.collectionSelectOptions || []}
+              value={options.collectionSelectValue}
               placeholder={'Select'}
               onChange={(e: string) => {
                 props.onCollectionChange?.(e || '');
@@ -191,7 +206,7 @@ DocPickerModal.DocsList = (props: {
               // Due to issues with preact/compat, use a div for the dropdown el.
               dropdownComponent="div"
             />
-            {props.collectionSelectValue && (
+            {options.collectionSelectValue && (
               <Button
                 variant="outline"
                 color="dark"
@@ -203,7 +218,7 @@ DocPickerModal.DocsList = (props: {
             )}
           </div>
         )}
-        {props.enableSearch && props.collectionSelectValue && (
+        {options.enableSearch && options.collectionSelectValue && (
           <div className="DocPickerModal__DocsList__controls">
             <TextInput
               placeholder="Search documents..."
@@ -213,7 +228,7 @@ DocPickerModal.DocsList = (props: {
               size="xs"
               className="DocPickerModal__DocsList__controls__search"
             />
-            {props.enableSort && (
+            {options.enableSort && (
               <Select
                 data={sortOptions}
                 value={sortBy}
@@ -255,16 +270,16 @@ DocPickerModal.DocsList = (props: {
                 onDocUnselected={props.onDocUnselected}
                 multiSelect={props.multiSelect}
                 selected={selectedDocIds.includes(doc.id)}
-                enableStatusBadges={props.enableStatusBadges}
+                enableStatusBadges={options.enableStatusBadges}
                 showOpenInNewTab={true}
               />
             ))}
           </div>
         )}
       </div>
-      {props.collectionSelectValue && (
+      {options.collectionSelectValue && (
         <NewDocModal
-          collection={props.collectionSelectValue}
+          collection={options.collectionSelectValue}
           opened={newDocModalOpen}
           skipNavigation={true}
           onClose={() => {
