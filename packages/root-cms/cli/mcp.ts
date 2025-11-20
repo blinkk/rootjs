@@ -172,6 +172,71 @@ export async function runMcpServer(options?: {cwd?: string}) {
             required: ['collectionId', 'slug', 'prompt'],
           },
         },
+        {
+          name: 'list_translations',
+          description: 'List translations, optionally filtered by tags',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              tags: {
+                type: 'array',
+                items: {type: 'string'},
+                description: 'Filter by tags',
+              },
+            },
+          },
+        },
+        {
+          name: 'get_translations_for_locale',
+          description: 'Get translations for a specific locale',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              locale: {
+                type: 'string',
+                description: 'The locale (e.g. "en", "es")',
+              },
+              tags: {
+                type: 'array',
+                items: {type: 'string'},
+                description: 'Filter by tags',
+              },
+            },
+            required: ['locale'],
+          },
+        },
+        {
+          name: 'save_translations',
+          description: 'Save or update translations',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              translations: {
+                type: 'object',
+                description:
+                  'Map of source strings to locale translations, e.g. {"Hello": {"es": "Hola"}}',
+              },
+              tags: {
+                type: 'array',
+                items: {type: 'string'},
+                description: 'Tags to apply to the translations',
+              },
+            },
+            required: ['translations'],
+          },
+        },
+        {
+          name: 'extract_strings',
+          description: 'Extract translatable strings from a document',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              collectionId: {type: 'string'},
+              slug: {type: 'string'},
+            },
+            required: ['collectionId', 'slug'],
+          },
+        },
       ],
     };
   });
@@ -334,6 +399,79 @@ export async function runMcpServer(options?: {cwd?: string}) {
         };
       }
 
+      if (name === 'list_translations') {
+        const tags = args?.tags as string[] | undefined;
+        const translations = await cmsClient.loadTranslations({tags});
+        return {
+          content: [
+            {type: 'text', text: JSON.stringify(translations, null, 2)},
+          ],
+        };
+      }
+
+      if (name === 'get_translations_for_locale') {
+        const locale = String(args?.locale);
+        const tags = args?.tags as string[] | undefined;
+        const translations = await cmsClient.loadTranslationsForLocale(locale, {
+          tags,
+        });
+        return {
+          content: [
+            {type: 'text', text: JSON.stringify(translations, null, 2)},
+          ],
+        };
+      }
+
+      if (name === 'save_translations') {
+        const translations = args?.translations as any;
+        const tags = args?.tags as string[] | undefined;
+        await cmsClient.saveTranslations(translations, tags);
+        return {
+          content: [{type: 'text', text: 'Translations saved.'}],
+        };
+      }
+
+      if (name === 'extract_strings') {
+        const collectionId = String(args?.collectionId);
+        const slug = String(args?.slug);
+        const doc = await cmsClient.getDoc(collectionId, slug, {mode: 'draft'});
+        if (!doc) {
+          return {
+            content: [
+              {
+                type: 'text',
+                text: `Document not found: ${collectionId}/${slug}`,
+              },
+            ],
+            isError: true,
+          };
+        }
+
+        const plugin = cmsClient.cmsPlugin as any;
+        const collectionConfig = plugin.collections?.[collectionId];
+        if (!collectionConfig) {
+          return {
+            content: [{type: 'text', text: 'Collection not found in config'}],
+            isError: true,
+          };
+        }
+        const schema = collectionConfig;
+
+        const strings = new Set<string>();
+        extractFields(
+          strings,
+          schema.fields || [],
+          doc.fields || {},
+          schema.types || {}
+        );
+
+        return {
+          content: [
+            {type: 'text', text: JSON.stringify(Array.from(strings), null, 2)},
+          ],
+        };
+      }
+
       throw new McpError(ErrorCode.MethodNotFound, `Unknown tool: ${name}`);
     } catch (err: any) {
       return {
@@ -345,4 +483,154 @@ export async function runMcpServer(options?: {cwd?: string}) {
 
   const transport = new StdioServerTransport();
   await server.connect(transport);
+}
+
+function normalizeString(str: string) {
+  return str.trim().replace(/[ \t]+$/gm, '');
+}
+
+function extractFields(
+  strings: Set<string>,
+  fields: any[],
+  data: Record<string, any>,
+  types: Record<string, any> = {}
+) {
+  fields.forEach((field) => {
+    if (!field.id) {
+      return;
+    }
+    const fieldValue = data[field.id];
+    extractField(strings, field, fieldValue, types);
+  });
+}
+
+function extractField(
+  strings: Set<string>,
+  field: any,
+  fieldValue: any,
+  types: Record<string, any> = {}
+) {
+  if (!fieldValue) {
+    return;
+  }
+
+  function addString(text: string) {
+    const str = normalizeString(text);
+    if (str) {
+      strings.add(str);
+    }
+  }
+
+  if (field.type === 'object') {
+    extractFields(strings, field.fields || [], fieldValue, types);
+  } else if (field.type === 'array') {
+    const arrayKeys = fieldValue._array || [];
+    for (const arrayKey of arrayKeys) {
+      extractField(strings, field.of, fieldValue[arrayKey], types);
+    }
+  } else if (field.type === 'string' || field.type === 'select') {
+    if (field.translate) {
+      addString(fieldValue);
+    }
+  } else if (field.type === 'image') {
+    if (
+      field.translate &&
+      fieldValue &&
+      fieldValue.alt &&
+      field.alt !== false
+    ) {
+      addString(fieldValue.alt);
+    }
+  } else if (field.type === 'multiselect') {
+    if (field.translate && Array.isArray(fieldValue)) {
+      for (const value of fieldValue) {
+        addString(value);
+      }
+    }
+  } else if (field.type === 'oneof') {
+    const fieldTypes = field.types || [];
+    let fieldValueType: any;
+    if (typeof fieldTypes[0] === 'string') {
+      if ((fieldTypes as string[]).includes(fieldValue._type)) {
+        fieldValueType = types[fieldValue._type];
+      }
+    } else {
+      fieldValueType = (fieldTypes as any[]).find(
+        (item: any) => item.name === fieldValue._type
+      );
+    }
+    if (fieldValueType) {
+      extractFields(strings, fieldValueType.fields || [], fieldValue, types);
+    }
+  } else if (field.type === 'richtext') {
+    if (field.translate) {
+      extractRichTextStrings(strings, fieldValue);
+    }
+  }
+}
+
+function extractRichTextStrings(strings: Set<string>, data: any) {
+  const blocks = data?.blocks || [];
+  blocks.forEach((block: any) => {
+    extractBlockStrings(strings, block);
+  });
+}
+
+function extractBlockStrings(strings: Set<string>, block: any) {
+  if (!block?.type) {
+    return;
+  }
+
+  function addString(text?: string) {
+    if (!text) {
+      return;
+    }
+    const str = normalizeString(text);
+    if (str) {
+      strings.add(str);
+    }
+  }
+
+  function addComponentStrings(components?: Record<string, any>) {
+    if (!components) {
+      return;
+    }
+    Object.values(components).forEach((component) => {
+      collectComponentStrings(component);
+    });
+  }
+
+  function collectComponentStrings(value: any) {
+    if (typeof value === 'string') {
+      addString(value);
+      return;
+    }
+    if (Array.isArray(value)) {
+      value.forEach((item) => collectComponentStrings(item));
+      return;
+    }
+    if (typeof value === 'object' && value !== null) {
+      Object.values(value).forEach((item) => collectComponentStrings(item));
+    }
+  }
+
+  function extractList(items?: any[]) {
+    if (!items) {
+      return;
+    }
+    items.forEach((item) => {
+      addString(item.content);
+      addComponentStrings(item.components);
+      extractList(item.items);
+    });
+  }
+
+  if (block.type === 'heading' || block.type === 'paragraph') {
+    addString(block.data?.text);
+    addComponentStrings(block.data?.components);
+  } else if (block.type === 'orderedList' || block.type === 'unorderedList') {
+    extractList(block.data?.items);
+  } else if (block.type === 'html') {
+    addString(block.data?.html);
+  }
 }

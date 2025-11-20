@@ -3,7 +3,7 @@
     "root-cms": {
       "command": "pnpm",
       "args": ["exec", "root-cms", "mcp"],
-      "cwd": "/Users/jeremydw/git/rootjs/docs"
+      "cwd": "./docs/"
     }
   }
 }
