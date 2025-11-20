@@ -157,11 +157,14 @@ DocSelectModal.DocCard = (props: {
   const [collection, slug] = doc.id.split('/');
   const fields = doc.fields || {};
   const rootCollection = window.__ROOT_CTX.collections[collection];
+  const hasCollectionUrl = !!rootCollection.url;
   // const cmsUrl = `/cms/content/${collection}/${slug}`;
-  const liveUrl = getDocServingUrl({
-    collectionId: collection,
-    slug: slug,
-  });
+  const liveUrl = hasCollectionUrl
+    ? getDocServingUrl({
+        collectionId: collection,
+        slug: slug,
+      })
+    : '';
   const previewTitle = getNestedValue(
     fields,
     rootCollection.preview?.title || 'meta.title'
@@ -188,7 +191,9 @@ DocSelectModal.DocCard = (props: {
         <div className="DocSelectModal__DocCard__content__title">
           {previewTitle || '[UNTITLED]'}
         </div>
-        <div className="DocSelectModal__DocCard__content__url">{liveUrl}</div>
+        {hasCollectionUrl && liveUrl && (
+          <div className="DocSelectModal__DocCard__content__url">{liveUrl}</div>
+        )}
       </div>
       <div className="DocSelectModal__DocCard__controls">
         {selected ? (

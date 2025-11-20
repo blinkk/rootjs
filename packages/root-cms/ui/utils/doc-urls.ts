@@ -10,6 +10,9 @@ export function getDocServingUrl(options: DocUrlOptions) {
   if (!rootCollection) {
     throw new Error(`collection not found: ${options.collectionId}`);
   }
+  if (!rootCollection.url) {
+    return '';
+  }
   const domain =
     rootCollection.domain ||
     window.__ROOT_CTX.rootConfig.domain ||
@@ -24,6 +27,9 @@ export function getDocServingPath(options: DocUrlOptions) {
   const rootCollection = collections[collectionId];
   if (!rootCollection) {
     throw new Error(`collection not found: ${collectionId}`);
+  }
+  if (!rootCollection.url) {
+    return '';
   }
 
   const rootConfig = window.__ROOT_CTX.rootConfig;
