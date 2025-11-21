@@ -70,6 +70,7 @@ When working on this project, please adhere to the following guidelines:
 
 - **Update Docs**: If you change functionality, check if `docs/` needs updating. The documentation is a Root.js app itself.
 - **Comment Style**: All comments should end in punctuation. Use block comments to describe interfaces and their fields. Avoid adding superfluous comments.
+- **Comment Requirements**: When creating new classes, hooks, or components that have medium-to-complex functionality, ensure you write at least a brief block comment describing what it is for. For complex functionality, provide an example of how to use it in the comment.
 
 ## Contribution
 
