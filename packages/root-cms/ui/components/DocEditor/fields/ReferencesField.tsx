@@ -45,7 +45,7 @@ export function ReferencesField(props: FieldProps) {
 
   const docPickerModal = useDocPickerModal();
 
-  function openDocSelectModal() {
+  function openDocPickerModal() {
     docPickerModal.open({
       collections: field.collections,
       initialCollection: field.initialCollection,
@@ -147,7 +147,7 @@ export function ReferencesField(props: FieldProps) {
       ) : (
         <div className="ReferencesField__none">None selected</div>
       )}
-      <Button color="dark" size="xs" onClick={() => openDocSelectModal()}>
+      <Button color="dark" size="xs" onClick={() => openDocPickerModal()}>
         {field.buttonLabel || 'Select'}
       </Button>
     </div>
