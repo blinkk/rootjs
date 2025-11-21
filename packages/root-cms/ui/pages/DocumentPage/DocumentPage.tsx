@@ -79,9 +79,10 @@ function DocumentPageLayout(props: DocumentPageProps) {
   const docId = `${collectionId}/${slug}`;
   const collection = window.__ROOT_CTX.collections[collectionId];
   const draft = useDraftDoc();
+  const hasCollectionUrl = !!collection?.url;
   const [isPreviewVisible, setIsPreviewVisible] = useLocalStorage<boolean>(
     `root::DocumentPage::previewVisible::${collectionId}`,
-    true
+    hasCollectionUrl
   );
 
   if (!collection) {
@@ -89,6 +90,9 @@ function DocumentPageLayout(props: DocumentPageProps) {
   }
 
   function openPreviewInNewTab() {
+    if (!hasCollectionUrl) {
+      return;
+    }
     const previewUrl = getPreviewUrl(collectionId, slug);
     // `noopener,noreferrer` used for `testEmbedMode()`.
     const tab = window.open(previewUrl, '_blank', 'noopener,noreferrer');
@@ -127,7 +131,8 @@ function DocumentPageLayout(props: DocumentPageProps) {
         <SplitPanel.Item
           className={joinClassNames(
             'DocumentPage__side',
-            !isPreviewVisible && 'DocumentPage__side--expanded'
+            (!hasCollectionUrl || !isPreviewVisible) &&
+              'DocumentPage__side--expanded'
           )}
         >
           <div className="DocumentPage__side__header">
@@ -175,36 +180,41 @@ function DocumentPageLayout(props: DocumentPageProps) {
                     Edit JSON
                   </Menu.Item>
                 </Menu> */}
-              <Tooltip
-                label={isPreviewVisible ? 'Hide preview' : 'Show preview'}
-              >
-                <ActionIcon
-                  className="DocumentPage__side__header__previewToggle"
-                  onClick={() => setIsPreviewVisible(!isPreviewVisible)}
-                >
-                  {isPreviewVisible ? (
-                    <IconLayoutSidebarRightCollapse size={16} />
-                  ) : (
-                    <IconLayoutSidebarRightExpand size={16} />
-                  )}
-                </ActionIcon>
-              </Tooltip>
-              {!isPreviewVisible && (
-                <Tooltip label="Open preview in new tab">
-                  <ActionIcon
-                    className="DocumentPage__side__header__openNewTab"
-                    onClick={openPreviewInNewTab}
+              {hasCollectionUrl && (
+                <>
+                  <Tooltip
+                    label={isPreviewVisible ? 'Hide preview' : 'Show preview'}
                   >
-                    <IconArrowUpRight size={16} />
-                  </ActionIcon>
-                </Tooltip>
+                    <ActionIcon
+                      className="DocumentPage__side__header__previewToggle"
+                      onClick={() => setIsPreviewVisible(!isPreviewVisible)}
+                    >
+                      {isPreviewVisible ? (
+                        <IconLayoutSidebarRightCollapse size={16} />
+                      ) : (
+                        <IconLayoutSidebarRightExpand size={16} />
+                      )}
+                    </ActionIcon>
+                  </Tooltip>
+                  {!isPreviewVisible && (
+                    <Tooltip label="Open preview in new tab">
+                      <ActionIcon
+                        className="DocumentPage__side__header__openNewTab"
+                        onClick={openPreviewInNewTab}
+                      >
+                        <IconArrowUpRight size={16} />
+                      </ActionIcon>
+                    </Tooltip>
+                  )}
+                </>
               )}
             </div>
           </div>
           <div
             className={joinClassNames(
               'DocumentPage__side__editor',
-              !isPreviewVisible && 'DocumentPage__side__editor--centered'
+              (!hasCollectionUrl || !isPreviewVisible) &&
+                'DocumentPage__side__editor--centered'
             )}
           >
             <DocEditor docId={docId} />
@@ -213,11 +223,12 @@ function DocumentPageLayout(props: DocumentPageProps) {
         <SplitPanel.Item
           className={joinClassNames(
             'DocumentPage__main',
-            !isPreviewVisible && 'DocumentPage__main--hidden'
+            (!hasCollectionUrl || !isPreviewVisible) &&
+              'DocumentPage__main--hidden'
           )}
           fluid
         >
-          {isPreviewVisible && (
+          {hasCollectionUrl && isPreviewVisible && (
             <DocumentPage.Preview key={docId} docId={docId} />
           )}
         </SplitPanel.Item>
@@ -260,6 +271,9 @@ DocumentPage.Preview = (props: PreviewProps) => {
   const rootCollection = collections[collectionId];
   if (!rootCollection) {
     throw new Error(`collection not found: ${collectionId}`);
+  }
+  if (!rootCollection.url) {
+    return null;
   }
   const domain =
     rootCollection.domain ||

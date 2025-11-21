@@ -28,7 +28,7 @@ export function StringField(props: FieldProps) {
       <Textarea
         size="xs"
         radius={0}
-        autosize={false}
+        autosize={field.autosize}
         minRows={4}
         maxRows={field.maxRows || 12}
         value={value}

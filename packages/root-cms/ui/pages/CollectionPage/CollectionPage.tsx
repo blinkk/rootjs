@@ -271,9 +271,13 @@ CollectionPage.DocsList = (props: {
   if (!rootCollection) {
     throw new Error(`could not find collection: ${collectionId}`);
   }
+  const hasCollectionUrl = !!rootCollection.url;
 
   const docs = props.docs || [];
   function getLiveUrl(slug: string): string {
+    if (!hasCollectionUrl) {
+      return '';
+    }
     return getDocServingUrl({collectionId, slug});
   }
 
@@ -320,9 +324,11 @@ CollectionPage.DocsList = (props: {
               <div className="CollectionPage__collection__docsList__doc__content__title">
                 {previewTitle || '[UNTITLED]'}
               </div>
-              <div className="CollectionPage__collection__docsList__doc__content__url">
-                {liveUrl}
-              </div>
+              {hasCollectionUrl && liveUrl && (
+                <div className="CollectionPage__collection__docsList__doc__content__url">
+                  {liveUrl}
+                </div>
+              )}
             </a>
             <div className="CollectionPage__collection__docsList__doc__controls">
               <DocActionsMenu

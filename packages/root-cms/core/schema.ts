@@ -25,6 +25,11 @@ export type StringField = CommonFieldProps & {
   variant?: 'input' | 'textarea';
   /** For textarea variant, the maximum number of rows of text to show. */
   maxRows?: number;
+  /**
+   * For textarea variant, set to `true` to allow the textarea to automatically
+   * resize its height based on its content.
+   */
+  autosize?: boolean;
 };
 
 export function string(field: Omit<StringField, 'type'>): StringField {
