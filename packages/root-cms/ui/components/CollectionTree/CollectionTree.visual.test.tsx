@@ -55,6 +55,56 @@ describe('CollectionTree', () => {
     window.localStorage.clear();
   });
 
+  it('renders collections without folder hierarchy', async () => {
+    const collectionsWithoutFolders = {
+      Homepage: {
+        id: 'Homepage',
+        name: 'Homepage',
+        description: 'Main landing page',
+      },
+      AboutUs: {
+        id: 'AboutUs',
+        name: 'About Us',
+        description: 'About us pages',
+      },
+      ContactPages: {
+        id: 'ContactPages',
+        name: 'Contact Pages',
+        description: 'Contact and support pages',
+      },
+      LandingPages: {
+        id: 'Landing Pages',
+        name: 'Landing Pages',
+        description: 'Marketing landing pages',
+      },
+    };
+
+    render(
+      <MantineProvider>
+        <div
+          style={{
+            width: '300px',
+            background: 'white',
+          }}
+          data-testid="collection-sidebar-no-folders"
+        >
+          <div className="CollectionPage__side__collections">
+            <CollectionTree
+              collections={collectionsWithoutFolders}
+              projectId="test-project-no-folders"
+            />
+          </div>
+        </div>
+      </MantineProvider>
+    );
+
+    const element = page.getByTestId('collection-sidebar-no-folders');
+    await expect.element(element).toBeVisible();
+    await expect
+      .element(element)
+      .toMatchScreenshot('collection-no-folders.png');
+  });
+
   it('renders collections with folder hierarchy', async () => {
     render(
       <MantineProvider>
@@ -103,7 +153,6 @@ describe('CollectionTree', () => {
     );
 
     const element = page.getByTestId('collection-sidebar-expanded');
-    // @ts-expect-error - vitest browser mode types
     await expect.element(element).toBeVisible();
 
     // Click the Blog folder to expand it

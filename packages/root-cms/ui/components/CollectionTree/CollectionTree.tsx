@@ -1,6 +1,6 @@
 import './CollectionTree.css';
 import {Accordion} from '@mantine/core';
-import {IconFolder} from '@tabler/icons-preact';
+import {IconBox, IconFolder} from '@tabler/icons-preact';
 import {ComponentChildren} from 'preact';
 import {useLocalStorage} from '../../hooks/useLocalStorage.js';
 import {joinClassNames} from '../../utils/classes.js';
@@ -21,7 +21,8 @@ export function CollectionTree(props: CollectionTreeProps) {
   const {collections, activeCollectionId, query = '', projectId} = props;
   const [openFolders, setOpenFolders] = useLocalStorage<string[]>(
     `root-cms::${projectId}::open_folders`,
-    []
+    // Default to having "Default" folder open.
+    ['folder:Default']
   );
 
   const collectionTree = buildCollectionTree(collections);
@@ -91,6 +92,7 @@ export function CollectionTree(props: CollectionTreeProps) {
         node,
         depth,
         <div className="CollectionTree__group__label">
+          <IconBox size={20} strokeWidth="1.75" />
           <span>{node.name}</span>
         </div>
       );

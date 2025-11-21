@@ -2,12 +2,25 @@
  * Utilities for building hierarchical tree structures from flat collection lists.
  */
 
+/**
+ * Represents a node in the collection tree, which can be either a collection
+ * or a virtual folder grouping.
+ */
 export interface CollectionNode {
+  /** Unique identifier for the node. */
   id: string;
+  /** Display name of the collection or folder. */
   name: string;
+  /** Optional description text. */
   description?: string;
-  isGroup: boolean; // true if this is just a grouping node without an actual collection
-  collection?: any; // the actual collection object if isGroup is false
+  /**
+   * True if this is just a grouping node without an actual collection.
+   * False if this represents an actual collection.
+   */
+  isGroup: boolean;
+  /** The actual collection object if isGroup is false. */
+  collection?: any;
+  /** Child nodes (collections or folders) under this node. */
   children: CollectionNode[];
 }
 
@@ -24,7 +37,7 @@ export function buildCollectionTree(
 
   const folders: Record<string, CollectionNode> = {};
 
-  // First pass: create nodes for all collections
+  // First pass: create nodes for all collections.
   Object.entries(collections).forEach(([id, collection]) => {
     nodes[id] = {
       id,
@@ -36,13 +49,13 @@ export function buildCollectionTree(
     };
   });
 
-  // Second pass: organize into tree structure
+  // Second pass: organize into tree structure.
   Object.entries(collections).forEach(([id, collection]) => {
     const node = nodes[id];
     const folderId = collection.folder;
 
     if (folderId) {
-      // Create folder if it doesn't exist
+      // Create folder if it doesn't exist.
       if (!folders[folderId]) {
         folders[folderId] = {
           id: `folder:${folderId}`,
@@ -51,20 +64,37 @@ export function buildCollectionTree(
           children: [],
         };
       }
-      // Add collection to folder
+      // Add collection to folder.
       folders[folderId].children.push(node);
     } else {
-      // No folder - this is a root node
+      // No folder - this is a root node.
       roots.push(node);
     }
   });
 
-  // Add all folders to roots
+  // If any folders exist, create a Default folder for collections without folders.
+  const hasFolders = Object.keys(folders).length > 0;
+  if (hasFolders && roots.length > 0) {
+    const defaultFolder: CollectionNode = {
+      id: 'folder:Default',
+      name: 'Default',
+      isGroup: true,
+      children: roots,
+    };
+    // Replace roots with just the Default folder and other folders.
+    // Sort other folders alphabetically, but keep Default at the top.
+    const otherFolders = Object.values(folders).sort((a, b) =>
+      a.name.localeCompare(b.name)
+    );
+    return [defaultFolder, ...otherFolders];
+  }
+
+  // Add all folders to roots.
   Object.values(folders).forEach((folder) => {
     roots.push(folder);
   });
 
-  // Sort children alphabetically
+  // Sort children alphabetically.
   const sortNodes = (nodeList: CollectionNode[]) => {
     nodeList.sort((a, b) => a.name.localeCompare(b.name));
     nodeList.forEach((node) => {
@@ -101,7 +131,7 @@ export function filterCollectionTree(
       .map(filterNode)
       .filter((child): child is CollectionNode => child !== null);
 
-    // Include node if it matches or has matching children
+    // Include node if it matches or has matching children.
     if (
       nameMatches ||
       idMatches ||
