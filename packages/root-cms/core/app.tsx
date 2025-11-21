@@ -143,6 +143,7 @@ function serializeCollection(collection: Collection): Partial<Collection> {
     id: collection.id,
     name: collection.name ?? collection.id,
     description: collection.description,
+    folder: collection.folder,
     domain: collection.domain,
     url: collection.url,
     previewUrl: collection.previewUrl,
