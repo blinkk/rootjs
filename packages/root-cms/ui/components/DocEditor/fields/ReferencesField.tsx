@@ -12,8 +12,8 @@ import {useState} from 'preact/hooks';
 import * as schema from '../../../../core/schema.js';
 import {useDraftDoc, useDraftDocField} from '../../../hooks/useDraftDoc.js';
 import {joinClassNames} from '../../../utils/classes.js';
+import {useDocPickerModal} from '../../DocPickerModal/DocPickerModal.js';
 import {DocPreviewCard} from '../../DocPreviewCard/DocPreviewCard.js';
-import {useDocSelectModal} from '../../DocSelectModal/DocSelectModal.js';
 import {FieldProps} from './FieldProps.js';
 import {ReferenceFieldValue} from './ReferenceField.js';
 
@@ -43,14 +43,15 @@ export function ReferencesField(props: FieldProps) {
     }
   });
 
-  const docSelectModal = useDocSelectModal();
+  const docPickerModal = useDocPickerModal();
 
-  function openDocSelectModal() {
-    docSelectModal.open({
+  function openDocPickerModal() {
+    docPickerModal.open({
       collections: field.collections,
       initialCollection: field.initialCollection,
+      multiSelect: true,
       selectedDocIds: refIds,
-      onChange: (docId: string, selected: boolean) => {
+      onChangeMulti: (docId: string, selected: boolean) => {
         setRefIds((old) => {
           const next = [...old];
           if (selected) {
@@ -146,7 +147,7 @@ export function ReferencesField(props: FieldProps) {
       ) : (
         <div className="ReferencesField__none">None selected</div>
       )}
-      <Button color="dark" size="xs" onClick={() => openDocSelectModal()}>
+      <Button color="dark" size="xs" onClick={() => openDocPickerModal()}>
         {field.buttonLabel || 'Select'}
       </Button>
     </div>

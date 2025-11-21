@@ -38,13 +38,13 @@ export interface CMSDoc {
     createdBy: string;
     modifiedAt: Timestamp;
     modifiedBy: string;
-    scheduledAt: Timestamp;
-    scheduledBy: string;
-    firstPublishedAt: Timestamp;
-    firstPublishedBy: string;
-    publishedAt: Timestamp;
-    publishedBy: string;
-    publishingLocked: {
+    scheduledAt?: Timestamp;
+    scheduledBy?: string;
+    firstPublishedAt?: Timestamp;
+    firstPublishedBy?: string;
+    publishedAt?: Timestamp;
+    publishedBy?: string;
+    publishingLocked?: {
       lockedAt: string;
       lockedBy: string;
       reason: string;
