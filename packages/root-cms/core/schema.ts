@@ -336,6 +336,10 @@ export type Collection = SchemaWithTypes & {
    */
   id: string;
   /**
+   * Group name for organizing collections together into a hierarchy.
+   */
+  group?: string;
+  /**
    * Domain where the collection serves from. Used for multi-domain sites,
    * defaults to the "domain" value `from root.config.ts`.
    */
