@@ -1,5 +1,12 @@
 # @blinkk/root-cms
 
+## 2.4.4
+
+### Patch Changes
+
+- 52a216ea: fix: remove preview pane for url-less collections (#829)
+  - @blinkk/root@2.4.4
+
 ## 2.4.3
 
 ### Patch Changes
