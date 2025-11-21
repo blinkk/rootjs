@@ -122,7 +122,7 @@ export function ReleaseForm(props: ReleaseFormProps) {
     }
   }
 
-  function openDocSelectModal() {
+  function openDocPickerModal() {
     docPickerModal.open({
       multiSelect: true,
       selectedDocIds: docIds,
@@ -233,7 +233,7 @@ export function ReleaseForm(props: ReleaseFormProps) {
           className="ReleaseForm__docSelectButton"
           color="dark"
           size="xs"
-          onClick={() => openDocSelectModal()}
+          onClick={() => openDocPickerModal()}
         >
           {'Select'}
         </Button>
