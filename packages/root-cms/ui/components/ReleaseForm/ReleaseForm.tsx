@@ -20,7 +20,7 @@ import {
   updateRelease,
 } from '../../utils/release.js';
 import {useDataSourceSelectModal} from '../DataSourceSelectModal/DataSourceSelectModal.js';
-import {useDocSelectModal} from '../DocPickerModal/DocPickerModal.js';
+import {useDocPickerModal} from '../DocPickerModal/DocPickerModal.js';
 import {DocPreviewCard} from '../DocPreviewCard/DocPreviewCard.js';
 import './ReleaseForm.css';
 
@@ -38,7 +38,7 @@ export function ReleaseForm(props: ReleaseFormProps) {
   const [release, setRelease] = useState<Release | null>(null);
   const [docIds, setDocIds] = useState<string[]>([]);
   const [dataSourceIds, setDataSourceIds] = useState<string[]>([]);
-  const docSelectModal = useDocSelectModal();
+  const docPickerModal = useDocPickerModal();
   const dataSourceSelectModal = useDataSourceSelectModal();
 
   async function fetchRelease(releaseId: string) {
@@ -123,7 +123,7 @@ export function ReleaseForm(props: ReleaseFormProps) {
   }
 
   function openDocSelectModal() {
-    docSelectModal.open({
+    docPickerModal.open({
       multiSelect: true,
       selectedDocIds: docIds,
       onChangeMulti: (docId: string, selected: boolean) => {

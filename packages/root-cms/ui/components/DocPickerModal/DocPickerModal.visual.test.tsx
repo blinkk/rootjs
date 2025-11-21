@@ -1,5 +1,6 @@
 import '../../styles/global.css';
 import '../../styles/theme.css';
+import '../../pages/CollectionPage/CollectionPage.css';
 import './DocPickerModal.css';
 
 import {MantineProvider} from '@mantine/core';
@@ -220,7 +221,7 @@ describe('DocPickerModal', () => {
         onChange: vi.fn(),
         enableSearch: false,
         enableSort: false,
-        enableCreate: false,
+        enableCreate: true,
         enableStatusBadges: false,
       },
     };
@@ -242,6 +243,7 @@ describe('DocPickerModal', () => {
       id: 'test-modal',
       innerProps: {
         collections: ['BlogPosts', 'Pages'],
+        initialCollection: 'BlogPosts',
         onChange: vi.fn(),
         enableSearch: true,
         enableSort: true,
@@ -259,5 +261,33 @@ describe('DocPickerModal', () => {
     const element = page.getByTestId('wrapper');
     await expect.element(element).toBeVisible();
     await expect.element(element).toMatchScreenshot('multiple-collections.png');
+  });
+
+  it('renders initial state with collection selector and create button', async () => {
+    const modalProps: ContextModalProps<DocPickerModalProps> = {
+      context: {} as any,
+      id: 'test-modal',
+      innerProps: {
+        collections: ['BlogPosts', 'Pages'],
+        initialCollection: 'BlogPosts',
+        onChange: vi.fn(),
+        enableSearch: true,
+        enableSort: true,
+        enableCreate: true,
+        enableStatusBadges: true,
+      },
+    };
+
+    render(
+      <TestWrapper>
+        <DocPickerModal {...modalProps} />
+      </TestWrapper>
+    );
+
+    const element = page.getByTestId('wrapper');
+    await expect.element(element).toBeVisible();
+    await expect
+      .element(element)
+      .toMatchScreenshot('collection-selector-with-create-button.png');
   });
 });

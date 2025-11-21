@@ -1,16 +1,18 @@
+import './DocPickerModal.css';
+
 import {Button, Loader, Select, TextInput} from '@mantine/core';
 import {ContextModalProps, useModals} from '@mantine/modals';
-import {IconExternalLink, IconSearch} from '@tabler/icons-preact';
-import {useMemo, useState} from 'preact/hooks';
+import {IconSearch} from '@tabler/icons-preact';
+import {useState} from 'preact/hooks';
 
 import {useDocsList} from '../../hooks/useDocsList.js';
+import {useFilteredDocs} from '../../hooks/useFilteredDocs.js';
+import {useLocalStorage} from '../../hooks/useLocalStorage.js';
 import {useModalTheme} from '../../hooks/useModalTheme.js';
-import {getDocServingUrl} from '../../utils/doc-urls.js';
 import {getNestedValue} from '../../utils/objects.js';
 import {DocStatusBadges} from '../DocStatusBadges/DocStatusBadges.js';
 import {FilePreview} from '../FilePreview/FilePreview.js';
 import {NewDocModal} from '../NewDocModal/NewDocModal.js';
-import './DocPickerModal.css';
 
 const MODAL_ID = 'DocPickerModal';
 
@@ -75,9 +77,32 @@ export function DocPickerModal(
     dropdownValues.push({value: collection, label: collection});
   });
 
+  const [lastSelectedCollection, setLastSelectedCollection] =
+    useLocalStorage<string>('DocPickerModal.lastSelectedCollection', '');
+
+  // Fetch the initial collection from local storage (so it remembers)
+  // the last selected collection between openings of the modal.
+  const getInitialCollection = () => {
+    if (props.initialCollection) {
+      return props.initialCollection;
+    }
+    if (
+      lastSelectedCollection &&
+      collections.includes(lastSelectedCollection)
+    ) {
+      return lastSelectedCollection;
+    }
+    return collections.length === 1 ? collections[0] : '';
+  };
+
   const [selectedCollectionId, setSelectedCollectionId] = useState(
-    props.initialCollection || (collections.length === 1 ? collections[0] : '')
+    getInitialCollection()
   );
+
+  const handleCollectionChange = (collectionId: string) => {
+    setSelectedCollectionId(collectionId);
+    setLastSelectedCollection(collectionId);
+  };
 
   function onDocSelected(doc: any) {
     if (props.multiSelect && props.onChangeMulti) {
@@ -105,7 +130,7 @@ export function DocPickerModal(
           collection={selectedCollectionId}
           onDocSelected={onDocSelected}
           onDocUnselected={onDocUnselected}
-          onCollectionChange={setSelectedCollectionId}
+          onCollectionChange={handleCollectionChange}
           multiSelect={props.multiSelect}
           selectedDocIds={props.selectedDocIds}
           options={{
@@ -150,28 +175,7 @@ DocPickerModal.DocsList = (props: {
     orderBy: sortBy,
   });
 
-  // Filter docs based on search query
-  const filteredDocs = useMemo(() => {
-    if (!searchQuery.trim()) {
-      return docs;
-    }
-    const query = searchQuery.toLowerCase();
-    return docs.filter((doc: any) => {
-      const [collection, slug] = doc.id.split('/');
-      const fields = doc.fields || {};
-      const rootCollection = window.__ROOT_CTX.collections[collection];
-      const previewTitle = getNestedValue(
-        fields,
-        rootCollection.preview?.title || 'meta.title'
-      );
-      const title = previewTitle || '';
-      return (
-        doc.id.toLowerCase().includes(query) ||
-        title.toLowerCase().includes(query) ||
-        slug.toLowerCase().includes(query)
-      );
-    });
-  }, [docs, searchQuery]);
+  const filteredDocs = useFilteredDocs(docs, searchQuery);
 
   const sortOptions = [
     {value: 'modifiedAt', label: 'Last Modified'},
@@ -271,7 +275,6 @@ DocPickerModal.DocsList = (props: {
                 multiSelect={props.multiSelect}
                 selected={selectedDocIds.includes(doc.id)}
                 enableStatusBadges={options.enableStatusBadges}
-                showOpenInNewTab={true}
               />
             ))}
           </div>
@@ -299,21 +302,13 @@ DocPickerModal.DocCard = (props: {
   multiSelect?: boolean;
   selected?: boolean;
   enableStatusBadges?: boolean;
-  showOpenInNewTab?: boolean;
 }) => {
   const [selected, setSelected] = useState(!!props.selected);
   const doc = props.doc;
   const [collection, slug] = doc.id.split('/');
   const fields = doc.fields || {};
   const rootCollection = window.__ROOT_CTX.collections[collection];
-  const hasCollectionUrl = !!rootCollection.url;
-  // const cmsUrl = `/cms/content/${collection}/${slug}`;
-  const liveUrl = hasCollectionUrl
-    ? getDocServingUrl({
-        collectionId: collection,
-        slug: slug,
-      })
-    : '';
+  const cmsUrl = `/cms/content/${collection}/${slug}`;
   const previewTitle = getNestedValue(
     fields,
     rootCollection.preview?.title || 'meta.title'
@@ -323,7 +318,10 @@ DocPickerModal.DocCard = (props: {
     rootCollection.preview?.defaultImage;
   return (
     <div className="DocPickerModal__DocCard">
-      <div className="DocPickerModal__DocCard__image">
+      <div
+        className="DocPickerModal__DocCard__image"
+        onClick={() => window.open(cmsUrl, '_blank')}
+      >
         <FilePreview
           file={previewImage}
           width={120}
@@ -333,75 +331,68 @@ DocPickerModal.DocCard = (props: {
       </div>
       <div className="DocPickerModal__DocCard__content">
         <div className="DocPickerModal__DocCard__content__header">
-          <div className="DocPickerModal__DocCard__content__header__docId">
+          <div
+            className="DocPickerModal__DocCard__content__header__docId"
+            onClick={() => window.open(cmsUrl, '_blank')}
+          >
             {doc.id}
           </div>
-          {props.enableStatusBadges && <DocStatusBadges doc={doc} />}
         </div>
         <div className="DocPickerModal__DocCard__content__title">
-          {previewTitle || '[UNTITLED]'}
+          <div
+            className="DocPickerModal__DocCard__content__link"
+            onClick={() => window.open(cmsUrl, '_blank')}
+          >
+            {previewTitle || '[UNTITLED]'}
+          </div>
         </div>
-        {hasCollectionUrl && liveUrl && (
-          <div className="DocPickerModal__DocCard__content__url">{liveUrl}</div>
+        {props.enableStatusBadges && (
+          <div className="DocPickerModal__DocCard__content__badges">
+            <DocStatusBadges doc={doc} />
+          </div>
         )}
       </div>
       <div className="DocPickerModal__DocCard__controls">
-        {props.showOpenInNewTab && (
-          <Button
-            variant="subtle"
-            color="gray"
-            size="xs"
-            onClick={() => {
-              const url = `/cms/content/${collection}/${slug}`;
-              window.open(url, '_blank');
-            }}
-            style={{padding: '0 8px'}}
-          >
-            <IconExternalLink size={16} />
-          </Button>
-        )}
-        {props.multiSelect ? (
-          selected ? (
-            <Button
-              variant="light"
-              color="blue"
-              size="xs"
-              onClick={() => {
-                setSelected(false);
-                props.onDocUnselected(props.doc);
-              }}
-            >
-              Unselect
-            </Button>
+        <div className="DocPickerModal__DocCard__controls__buttons">
+          {props.multiSelect ? (
+            selected ? (
+              <Button
+                variant="light"
+                color="blue"
+                size="xs"
+                onClick={() => {
+                  setSelected(false);
+                  props.onDocUnselected(props.doc);
+                }}
+              >
+                Unselect
+              </Button>
+            ) : (
+              <Button
+                variant="filled"
+                color="blue"
+                size="xs"
+                onClick={() => {
+                  setSelected(true);
+                  props.onDocSelected(props.doc);
+                }}
+              >
+                Select
+              </Button>
+            )
           ) : (
             <Button
-              variant="filled"
               color="blue"
               size="xs"
-              onClick={() => {
-                setSelected(true);
-                props.onDocSelected(props.doc);
-              }}
+              onClick={() => props.onDocSelected(props.doc)}
             >
               Select
             </Button>
-          )
-        ) : (
-          <Button
-            color="blue"
-            size="xs"
-            onClick={() => props.onDocSelected(props.doc)}
-          >
-            Select
-          </Button>
-        )}
+          )}
+        </div>
       </div>
     </div>
   );
 };
 
 DocPickerModal.id = MODAL_ID;
-
-// Backwards compatibility: export useDocSelectModal as an alias
-export const useDocSelectModal = useDocPickerModal;
-export type DocSelectModalProps = DocPickerModalProps;

@@ -12,7 +12,7 @@ import {useState} from 'preact/hooks';
 import * as schema from '../../../../core/schema.js';
 import {useDraftDoc, useDraftDocField} from '../../../hooks/useDraftDoc.js';
 import {joinClassNames} from '../../../utils/classes.js';
-import {useDocSelectModal} from '../../DocPickerModal/DocPickerModal.js';
+import {useDocPickerModal} from '../../DocPickerModal/DocPickerModal.js';
 import {DocPreviewCard} from '../../DocPreviewCard/DocPreviewCard.js';
 import {FieldProps} from './FieldProps.js';
 import {ReferenceFieldValue} from './ReferenceField.js';
@@ -43,10 +43,10 @@ export function ReferencesField(props: FieldProps) {
     }
   });
 
-  const docSelectModal = useDocSelectModal();
+  const docPickerModal = useDocPickerModal();
 
   function openDocSelectModal() {
-    docSelectModal.open({
+    docPickerModal.open({
       collections: field.collections,
       initialCollection: field.initialCollection,
       multiSelect: true,
