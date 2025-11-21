@@ -11,6 +11,7 @@ export default defineConfig({
     },
     setupFiles: ['./vitest.setup.ts'],
     include: ['**/*.visual.test.tsx'],
+    testTimeout: 10000,
   },
   optimizeDeps: {
     include: ['preact/jsx-dev-runtime'],

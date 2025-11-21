@@ -119,8 +119,6 @@ function App() {
                     [AiEditModal.id]: AiEditModal,
                     [CopyDocModal.id]: CopyDocModal,
                     [DocPickerModal.id]: DocPickerModal,
-                    // Backwards compatibility alias for DocSelectModal
-                    ['DocSelectModal']: DocPickerModal,
                     [DataSourceSelectModal.id]: DataSourceSelectModal,
                     [EditJsonModal.id]: EditJsonModal,
                     [EditTranslationsModal.id]: EditTranslationsModal,

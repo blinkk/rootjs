@@ -61,7 +61,7 @@
 .DocPickerModal__DocCard {
   display: flex;
   align-items: center;
-  padding: 8px 0;
+  padding: 8px 8px 8px 0;
   border-top: 1px solid var(--color-border);
   overflow: hidden;
 }
@@ -73,13 +73,15 @@
 .DocPickerModal__DocCard__image {
   border: 1px solid var(--color-border);
   flex-shrink: 0;
+  cursor: pointer;
 }
 
 .DocPickerModal__DocCard__content {
-  display: block;
+  display: flex;
   padding: 0 12px;
   text-decoration: none;
   flex: 1;
+  flex-direction: column;
 }
 
 .DocPickerModal__DocCard__content__header {
@@ -92,6 +94,7 @@
 .DocPickerModal__DocCard__content__header__docId {
   font-size: 14px;
   font-weight: 500;
+  cursor: pointer;
 }
 
 .DocPickerModal__DocCard__content__title {
@@ -102,15 +105,37 @@
   display: -webkit-box;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 1;
+  cursor: pointer;
 }
 
-.DocPickerModal__DocCard__content__url {
-  font-size: 12px;
-  font-weight: 500;
-  color: #ababab;
+.DocPickerModal__DocCard__content__link {
+  display: inline-block;
+  cursor: pointer;
+}
+
+.DocPickerModal__DocCard__content__badges {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 4px;
+}
+
+.DocPickerModal__DocCard__content__badges .mantine-Tooltip-root {
+  display: block;
+}
+
+.DocPickerModal__DocCard__content__badges .mantine-Badge-root {
+  display: flex;
 }
 
 .DocPickerModal__DocCard__controls {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-direction: column;
+}
+
+.DocPickerModal__DocCard__controls__buttons {
   display: flex;
   gap: 8px;
   align-items: center;
