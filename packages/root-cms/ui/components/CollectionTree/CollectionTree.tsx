@@ -2,6 +2,7 @@ import './CollectionTree.css';
 import {Accordion} from '@mantine/core';
 import {IconBox, IconFolder} from '@tabler/icons-preact';
 import {ComponentChildren} from 'preact';
+import {useMemo} from 'preact/hooks';
 import {useLocalStorage} from '../../hooks/useLocalStorage.js';
 import {joinClassNames} from '../../utils/classes.js';
 import {
@@ -19,22 +20,28 @@ interface CollectionTreeProps {
 
 export function CollectionTree(props: CollectionTreeProps) {
   const {collections, activeCollectionId, query = '', projectId} = props;
-  const [openFolders, setOpenFolders] = useLocalStorage<string[]>(
-    `root-cms::${projectId}::open_folders`,
-    // Default to having "Default" folder open.
-    ['folder:Default']
+  const [openGroups, setOpenGroups] = useLocalStorage<string[]>(
+    `root-cms::${projectId}::open_groups`,
+    // Default to having "Default" group open.
+    ['group:Default']
   );
 
-  const collectionTree = buildCollectionTree(collections);
-  const filteredTree = filterCollectionTree(collectionTree, query);
+  const collectionTree = useMemo(
+    () => buildCollectionTree(collections),
+    [collections]
+  );
+  const filteredTree = useMemo(
+    () => filterCollectionTree(collectionTree, query),
+    [collectionTree, query]
+  );
 
-  const handleAccordionChange = (folderId: string, isOpen: boolean) => {
+  const handleAccordionChange = (groupId: string, isOpen: boolean) => {
     if (isOpen) {
-      if (!openFolders.includes(folderId)) {
-        setOpenFolders([...openFolders, folderId]);
+      if (!openGroups.includes(groupId)) {
+        setOpenGroups([...openGroups, groupId]);
       }
     } else {
-      setOpenFolders(openFolders.filter((id) => id !== folderId));
+      setOpenGroups(openGroups.filter((id) => id !== groupId));
     }
   };
 
@@ -43,7 +50,7 @@ export function CollectionTree(props: CollectionTreeProps) {
     depth: number,
     label: ComponentChildren
   ) => {
-    const isOpen = openFolders.includes(node.id);
+    const isOpen = openGroups.includes(node.id);
 
     return (
       <div

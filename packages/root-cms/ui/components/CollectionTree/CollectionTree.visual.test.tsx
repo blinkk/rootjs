@@ -9,7 +9,7 @@ import {CollectionTree} from './CollectionTree.js';
 
 describe('CollectionTree', () => {
   const mockCollections = {
-    // Collections without folders (root level)
+    // Collections without groups (root level)
     Homepage: {
       id: 'Homepage',
       name: 'Homepage',
@@ -30,24 +30,24 @@ describe('CollectionTree', () => {
       name: 'Landing Pages',
       description: 'Marketing landing pages',
     },
-    // Collections inside "Blog" folder
+    // Collections inside "Blog" group
     BlogPosts: {
       id: 'BlogPosts',
       name: 'Blog Posts',
       description: 'Articles and blog content',
-      folder: 'Blog',
+      group: 'Blog',
     },
     BlogAuthors: {
       id: 'BlogAuthors',
       name: 'Blog Authors',
       description: 'Author profiles',
-      folder: 'Blog',
+      group: 'Blog',
     },
     BlogCategories: {
       id: 'BlogCategories',
       name: 'Blog Categories',
       description: 'Blog post categories',
-      folder: 'Blog',
+      group: 'Blog',
     },
   };
 
@@ -55,8 +55,8 @@ describe('CollectionTree', () => {
     window.localStorage.clear();
   });
 
-  it('renders collections without folder hierarchy', async () => {
-    const collectionsWithoutFolders = {
+  it('renders collections without group hierarchy', async () => {
+    const collectionsWithoutGroups = {
       Homepage: {
         id: 'Homepage',
         name: 'Homepage',
@@ -86,26 +86,24 @@ describe('CollectionTree', () => {
             width: '300px',
             background: 'white',
           }}
-          data-testid="collection-sidebar-no-folders"
+          data-testid="collection-sidebar-no-groups"
         >
           <div className="CollectionPage__side__collections">
             <CollectionTree
-              collections={collectionsWithoutFolders}
-              projectId="test-project-no-folders"
+              collections={collectionsWithoutGroups}
+              projectId="test-project-no-groups"
             />
           </div>
         </div>
       </MantineProvider>
     );
 
-    const element = page.getByTestId('collection-sidebar-no-folders');
+    const element = page.getByTestId('collection-sidebar-no-groups');
     await expect.element(element).toBeVisible();
-    await expect
-      .element(element)
-      .toMatchScreenshot('collection-no-folders.png');
+    await expect.element(element).toMatchScreenshot('collection-no-groups.png');
   });
 
-  it('renders collections with folder hierarchy', async () => {
+  it('renders collections with group hierarchy', async () => {
     render(
       <MantineProvider>
         <div
@@ -129,10 +127,10 @@ describe('CollectionTree', () => {
     await expect.element(element).toBeVisible();
     await expect
       .element(element)
-      .toMatchScreenshot('collection-folder-hierarchy.png');
+      .toMatchScreenshot('collection-group-hierarchy.png');
   });
 
-  it('renders collections with Blog folder expanded', async () => {
+  it('renders collections with Blog group expanded', async () => {
     render(
       <MantineProvider>
         <div
@@ -155,15 +153,15 @@ describe('CollectionTree', () => {
     const element = page.getByTestId('collection-sidebar-expanded');
     await expect.element(element).toBeVisible();
 
-    // Click the Blog folder to expand it
-    const blogFolder = element.getByText('Blog');
-    await blogFolder.click();
+    // Click the Blog group to expand it
+    const blogGroup = element.getByText('Blog');
+    await blogGroup.click();
 
     // Wait for animation to complete
     await new Promise((resolve) => setTimeout(resolve, 100));
 
     await expect
       .element(element)
-      .toMatchScreenshot('collection-folder-hierarchy-expanded.png');
+      .toMatchScreenshot('collection-group-hierarchy-expanded.png');
   });
 });

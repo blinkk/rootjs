@@ -5,7 +5,7 @@ export default schema.collection({
   name: 'Sandbox',
   description: 'Sandbox Pages (Preview Only)',
   url: '/sandbox/[...slug]',
-  folder: 'Sandbox',
+  group: 'Sandbox',
   preview: {
     title: 'meta.title',
     image: ['content.modules[0].file', 'meta.image'],

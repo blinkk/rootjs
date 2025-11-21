@@ -151,7 +151,7 @@
   justify-content: center;
 }
 
-.CollectionTree__group__folder {
+.CollectionTree__group__icon-wrapper {
   display: flex;
   align-items: center;
 }
