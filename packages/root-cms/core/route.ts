@@ -33,7 +33,12 @@ import {
   RootConfig,
   RouteParams,
 } from '@blinkk/root';
-import {DocMode, RootCMSClient, translationsForLocale} from './client.js';
+import {
+  BatchRequest,
+  BatchResponse,
+  DocMode,
+  RootCMSClient,
+} from './client.js';
 
 export interface RootCMSDoc<Fields = any> {
   /** The id of the doc, e.g. "Pages/foo-bar". */
@@ -85,6 +90,16 @@ export interface RouteContext {
    * Client for interacting with Root CMS data.
    */
   cmsClient: RootCMSClient;
+
+  /**
+   * Batch request helper for fetching CMS data.
+   */
+  batchRequest: BatchRequest;
+
+  /**
+   * Batch response populated after calling `batchRequest.fetch()`.
+   */
+  batchResponse?: BatchResponse;
 
   /**
    * URL param map from filesystem routing.
@@ -223,24 +238,37 @@ export function createRoute(options: CreateRouteOptions): Route {
     return resolvePromisesMap(promisesMap);
   }
 
-  async function generateProps(routeContext: RouteContext, locale: string) {
-    const {slug, mode} = routeContext;
-    const translationsTags = [
-      'common',
-      `${options.collection}/${slug.replaceAll('/', '--')}`,
-    ];
+  async function generateProps(
+    routeContext: RouteContext,
+    locale: string,
+    siteLocales: string[]
+  ) {
+    const {slug, mode, batchRequest} = routeContext;
+    const normalizedSlug = slug.replaceAll('/', '--');
+    const docId = `${options.collection}/${normalizedSlug}`;
+    batchRequest.addDoc(docId);
+
+    const docTranslationsId = docId;
+    const translationsTags = new Set<string>(['common', docTranslationsId]);
     if (options.translations) {
       const tags = options.translations(routeContext)?.tags || [];
-      translationsTags.push(...tags);
+      tags.forEach((tag) => translationsTags.add(tag));
+    }
+    const shouldLoadTranslations = siteLocales.length > 1;
+    if (shouldLoadTranslations) {
+      translationsTags.forEach((tag) => {
+        if (tag !== docTranslationsId) {
+          batchRequest.addTranslations(tag);
+        }
+      });
     }
 
-    const [doc, translationsMap, data] = await Promise.all([
-      cmsClient.getDoc<RootCMSDoc>(options.collection, slug, {
-        mode,
-      }),
-      cmsClient.loadTranslations({tags: translationsTags}),
-      fetchData(routeContext),
-    ]);
+    const dataPromise = fetchData(routeContext);
+    const batchResponse = await batchRequest.fetch();
+    routeContext.batchResponse = batchResponse;
+    const data = await dataPromise;
+
+    const doc = batchResponse.docs[docId] as RootCMSDoc | undefined;
     if (!doc) {
       return {notFound: true};
     }
@@ -249,7 +277,9 @@ export function createRoute(options: CreateRouteOptions): Route {
       return {notFound: true};
     }
 
-    const translations = translationsForLocale(translationsMap, locale);
+    const translations = shouldLoadTranslations
+      ? batchResponse.getTranslations(locale)
+      : {};
     let props: any = {...data, locale, mode, slug, doc};
     if (options.preRenderHook) {
       props = await options.preRenderHook(props, routeContext);
@@ -282,33 +312,44 @@ export function createRoute(options: CreateRouteOptions): Route {
         return ctx.render404();
       }
 
+      const batchRequest = cmsClient.createBatchRequest({
+        mode,
+        translate: siteLocales.length > 1,
+      });
       const routeContext: RouteContext = {
         req,
         slug,
         mode,
         cmsClient,
         params: ctx.params,
+        batchRequest,
       };
 
-      const translationsTags = [
-        'common',
-        `${options.collection}/${slug.replaceAll('/', '--')}`,
-      ];
+      const normalizedSlug = slug.replaceAll('/', '--');
+      const docId = `${options.collection}/${normalizedSlug}`;
+      batchRequest.addDoc(docId);
+
+      const docTranslationsId = docId;
+      const translationsTags = new Set<string>(['common', docTranslationsId]);
       if (options.translations) {
         const tags = options.translations(routeContext)?.tags || [];
-        translationsTags.push(...tags);
+        tags.forEach((tag) => translationsTags.add(tag));
       }
 
-      const [doc, translationsMap, data] = await Promise.all([
-        cmsClient.getDoc<RootCMSDoc>(options.collection, slug, {
-          mode,
-        }),
-        // Only load translations for sites that have >1 locale configured.
-        siteLocales.length > 1
-          ? cmsClient.loadTranslations({tags: translationsTags})
-          : Promise.resolve({}),
-        fetchData(routeContext),
-      ]);
+      const shouldLoadTranslations = siteLocales.length > 1;
+      if (shouldLoadTranslations) {
+        translationsTags.forEach((tag) => {
+          if (tag !== docTranslationsId) {
+            batchRequest.addTranslations(tag);
+          }
+        });
+      }
+
+      const dataPromise = fetchData(routeContext);
+      const batchResponse = await batchRequest.fetch();
+      routeContext.batchResponse = batchResponse;
+      const data = await dataPromise;
+      const doc = batchResponse.docs[docId] as RootCMSDoc | undefined;
       if (!doc) {
         // console.log(`doc not found: ${options.collection}/${slug}`);
         if (options.notFoundHook) {
@@ -410,7 +451,9 @@ export function createRoute(options: CreateRouteOptions): Route {
         }
       }
 
-      const translations = translationsForLocale(translationsMap, locale);
+      const translations = shouldLoadTranslations
+        ? batchResponse.getTranslations(locale)
+        : {};
       let props: any = {...data, req, locale, mode, slug, doc, country};
       if (options.preRenderHook) {
         props = await options.preRenderHook(props, routeContext);
@@ -470,15 +513,21 @@ export function createRoute(options: CreateRouteOptions): Route {
       }
       const slug = getSlug(ctx.params);
       const mode = options.ssgMode || 'published';
+      const siteLocales = ctx.rootConfig?.i18n?.locales || ['en'];
+      const batchRequest = cmsClient.createBatchRequest({
+        mode,
+        translate: siteLocales.length > 1,
+      });
       const routeContext: RouteContext = {
         req: undefined,
         slug,
         mode,
         cmsClient,
         params: ctx.params,
+        batchRequest,
       };
 
-      return generateProps(routeContext, ctx.params.$locale);
+      return generateProps(routeContext, ctx.params.$locale, siteLocales);
     };
   }
 
