@@ -52,6 +52,7 @@ import {FloatingToolbarPlugin} from './plugins/FloatingToolbarPlugin.js';
 import {MarkdownTransformPlugin} from './plugins/MarkdownTransformPlugin.js';
 import {OnChangePlugin} from './plugins/OnChangePlugin.js';
 import {ShortcutsPlugin} from './plugins/ShortcutsPlugin.js';
+import {SpecialCharacterHighlightPlugin} from './plugins/SpecialCharacterHighlightPlugin.js';
 import {TableActionMenuPlugin} from './plugins/TableActionMenuPlugin.js';
 import {ToolbarPlugin} from './plugins/ToolbarPlugin.js';
 import {TrailingParagraphPlugin} from './plugins/TrailingParagraphPlugin.js';
@@ -431,6 +432,7 @@ function Editor(props: EditorProps) {
         <TableActionMenuPlugin editor={activeEditor} />
         <TabIndentationPlugin maxIndent={7} />
         <MarkdownTransformPlugin />
+        <SpecialCharacterHighlightPlugin />
         <TrailingParagraphPlugin />
         {floatingAnchorElem && (
           <>
