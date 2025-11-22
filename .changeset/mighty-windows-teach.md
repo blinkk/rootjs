@@ -2,4 +2,4 @@
 '@blinkk/root-cms': patch
 ---
 
-feat: add folder support to collections
+feat: add support for "group" field on collections (#833)
