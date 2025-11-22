@@ -1,22 +1,20 @@
 import './DocumentPage.css';
-import {ActionIcon, Button, Select, Tooltip} from '@mantine/core';
+import {ActionIcon, Button, Tooltip} from '@mantine/core';
 import {useHotkeys} from '@mantine/hooks';
 import {
   IconArrowLeft,
   IconArrowUpRight,
   IconBraces,
-  IconDeviceDesktop,
   IconDeviceFloppy,
-  IconDeviceIpad,
-  IconDeviceMobile,
-  IconReload,
-  IconWorld,
   IconLayoutSidebarRightCollapse,
   IconLayoutSidebarRightExpand,
-  IconArrowsVertical,
 } from '@tabler/icons-preact';
 import {useCallback, useEffect, useRef, useState} from 'preact/hooks';
 import {DocEditor} from '../../components/DocEditor/DocEditor.js';
+import {
+  DocumentPagePreviewBar,
+  type Device,
+} from '../../components/DocumentPagePreviewBar/DocumentPagePreviewBar.js';
 import {useEditJsonModal} from '../../components/EditJsonModal/EditJsonModal.js';
 import {
   SplitPanel,
@@ -241,8 +239,6 @@ interface PreviewProps {
   docId: string;
 }
 
-type Device = 'mobile' | 'tablet' | 'desktop' | '';
-
 const DeviceResolution = {
   mobile: [430, 932],
   tablet: [768, 1024],
@@ -450,93 +446,18 @@ DocumentPage.Preview = (props: PreviewProps) => {
 
   return (
     <div className="DocumentPage__main__preview">
-      <div className="DocumentPage__main__previewBar">
-        <div className="DocumentPage__main__previewBar__devices">
-          <Tooltip label="Mobile">
-            <ActionIcon
-              className={joinClassNames(
-                'DocumentPage__main__previewBar__device',
-                device === 'mobile' && 'active'
-              )}
-              onClick={() => toggleDevice('mobile')}
-            >
-              <IconDeviceMobile size={16} />
-            </ActionIcon>
-          </Tooltip>
-          <Tooltip label="Tablet">
-            <ActionIcon
-              className={joinClassNames(
-                'DocumentPage__main__previewBar__device',
-                device === 'tablet' && 'active'
-              )}
-              onClick={() => toggleDevice('tablet')}
-            >
-              <IconDeviceIpad size={16} />
-            </ActionIcon>
-          </Tooltip>
-          <Tooltip label="Desktop">
-            <ActionIcon
-              className={joinClassNames(
-                'DocumentPage__main__previewBar__device',
-                device === 'desktop' && 'active'
-              )}
-              onClick={() => toggleDevice('desktop')}
-            >
-              <IconDeviceDesktop size={16} />
-            </ActionIcon>
-          </Tooltip>
-          <Tooltip label="Expand">
-            <ActionIcon
-              className={joinClassNames(
-                'DocumentPage__main__previewBar__device',
-                expandVertically && 'active'
-              )}
-              aria-pressed={expandVertically}
-              disabled={device === ''}
-              onClick={toggleExpandVertically}
-            >
-              <IconArrowsVertical size={16} />
-            </ActionIcon>
-          </Tooltip>
-        </div>
-        <div className="DocumentPage__main__previewBar__navbar">
-          <div className="DocumentPage__main__previewBar__navbar__url">
-            {iframeUrl}
-          </div>
-        </div>
-        <div className="DocumentPage__main__previewBar__locales">
-          <Select
-            data={localeOptions}
-            placeholder="Locale"
-            radius="xl"
-            size="xs"
-            required
-            icon={<IconWorld size={16} strokeWidth={1.5} />}
-            value={selectedLocale}
-            onChange={(newValue: string) => {
-              setSelectedLocale(newValue);
-            }}
-          />
-        </div>
-        <div className="DocumentPage__main__previewBar__buttons">
-          <Tooltip label="Reload">
-            <ActionIcon
-              className="DocumentPage__main__previewBar__button DocumentPage__main__previewBar__button--reload"
-              onClick={() => onReloadClick()}
-            >
-              <IconReload size={16} />
-            </ActionIcon>
-          </Tooltip>
-          <Tooltip label="Open new tab">
-            <ActionIcon
-              className="DocumentPage__main__previewBar__button DocumentPage__main__previewBar__button--openNewTab"
-              onClick={() => openNewTab()}
-            >
-              <IconArrowUpRight size={16} />
-            </ActionIcon>
-          </Tooltip>
-        </div>
-      </div>
+      <DocumentPagePreviewBar
+        device={device}
+        expandVertically={expandVertically}
+        iframeUrl={iframeUrl}
+        localeOptions={localeOptions}
+        selectedLocale={selectedLocale}
+        onToggleDevice={toggleDevice}
+        onToggleExpandVertically={toggleExpandVertically}
+        onReloadClick={onReloadClick}
+        onOpenNewTab={openNewTab}
+        onLocaleChange={setSelectedLocale}
+      />
       <div
         className="DocumentPage__main__previewFrame"
         data-device={device || 'full'}
