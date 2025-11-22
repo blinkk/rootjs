@@ -25,56 +25,56 @@ function combineStyle(baseStyle: string) {
   return [trimmed, SPECIAL_CHARACTER_STYLE].filter(Boolean).join(' ');
 }
 
-function highlightNode(textNode: TextNode) {
-  const textContent = textNode.getTextContent();
+function $findAndTransformText(node: TextNode): null | TextNode {
+  const text = node.getTextContent();
   SPECIAL_CHARACTER_REGEX.lastIndex = 0;
-  const hasSpecialCharacter = SPECIAL_CHARACTER_REGEX.test(textContent);
-  if (!hasSpecialCharacter) {
-    if (textNode.getStyle().includes('--rootcms-special-char')) {
-      textNode.setStyle(removeSpecialCharacterStyle(textNode.getStyle()));
-    }
-    return;
-  }
+  const match = SPECIAL_CHARACTER_REGEX.exec(text);
 
-  if (
-    textContent.length === 1 &&
-    textNode.getStyle().includes('--rootcms-special-char')
-  ) {
-    return;
-  }
+  if (match) {
+    const startIndex = match.index;
+    const matchLength = match[0].length;
 
-  const baseStyle = textNode.getStyle();
-  const nodes: TextNode[] = [];
-  let lastIndex = 0;
-  SPECIAL_CHARACTER_REGEX.lastIndex = 0;
-  let match: RegExpExecArray | null;
-
-  while ((match = SPECIAL_CHARACTER_REGEX.exec(textContent)) !== null) {
-    const matchIndex = match.index;
-    if (matchIndex > lastIndex) {
-      const normalNode = textNode.clone();
-      normalNode.setTextContent(textContent.slice(lastIndex, matchIndex));
-      normalNode.setStyle(removeSpecialCharacterStyle(baseStyle));
-      nodes.push(normalNode);
+    // If the node is already styled and is exactly the special char, skip it.
+    if (
+      node.getStyle().includes('--rootcms-special-char') &&
+      text.length === matchLength
+    ) {
+      return null;
     }
 
-    const specialNode = textNode.clone();
-    specialNode.setTextContent(match[0]);
-    specialNode.setStyle(combineStyle(baseStyle));
-    nodes.push(specialNode);
+    let targetNode: TextNode;
+    if (startIndex === 0) {
+      if (text.length === matchLength) {
+        targetNode = node;
+      } else {
+        [targetNode] = node.splitText(matchLength);
+      }
+    } else {
+      [, targetNode] = node.splitText(startIndex, startIndex + matchLength);
+    }
 
-    lastIndex = matchIndex + match[0].length;
+    targetNode.setStyle(combineStyle(targetNode.getStyle()));
+    return targetNode;
   }
 
-  if (lastIndex < textContent.length) {
-    const trailingNode = textNode.clone();
-    trailingNode.setTextContent(textContent.slice(lastIndex));
-    trailingNode.setStyle(removeSpecialCharacterStyle(baseStyle));
-    nodes.push(trailingNode);
+  // If the node has the special char style but doesn't match the regex anymore
+  // (e.g. user edited it), remove the style.
+  if (node.getStyle().includes('--rootcms-special-char')) {
+    node.setStyle(removeSpecialCharacterStyle(node.getStyle()));
   }
 
-  if (nodes.length > 0) {
-    textNode.replace(nodes);
+  return null;
+}
+
+function $textNodeTransform(node: TextNode): void {
+  let targetNode: TextNode | null = node;
+
+  while (targetNode !== null) {
+    if (!targetNode.isSimpleText()) {
+      return;
+    }
+
+    targetNode = $findAndTransformText(targetNode);
   }
 }
 
@@ -82,7 +82,7 @@ export function SpecialCharacterHighlightPlugin() {
   const [editor] = useLexicalComposerContext();
 
   useEffect(() => {
-    return editor.registerTextNodeTransform(TextNode, highlightNode);
+    return editor.registerNodeTransform(TextNode, $textNodeTransform);
   }, [editor]);
 
   return null;
