@@ -2,6 +2,7 @@ import {Command} from 'commander';
 import {bgGreen, black} from 'kleur/colors';
 import {generateTypes} from './generate-types.js';
 import {initFirebase} from './init-firebase.js';
+import {startMcpServer} from './mcp.js';
 
 class CliRunner {
   private name: string;
@@ -37,8 +38,14 @@ class CliRunner {
         'generates root-cms.d.ts from *.schema.ts files in the project'
       )
       .action(generateTypes);
+    program
+      .command('mcp')
+      .description(
+        'starts a Model Context Protocol server for the current Root CMS project'
+      )
+      .action(startMcpServer);
     await program.parseAsync(argv);
   }
 }
 
-export {CliRunner, generateTypes, initFirebase};
+export {CliRunner, generateTypes, initFirebase, startMcpServer};
