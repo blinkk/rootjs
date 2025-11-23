@@ -47,11 +47,13 @@ import {
   $isInlineComponentNode,
   InlineComponentNode,
 } from './nodes/InlineComponentNode.js';
+import {SpecialCharacterNode} from './nodes/SpecialCharacterNode.js';
 import {FloatingLinkEditorPlugin} from './plugins/FloatingLinkEditorPlugin.js';
 import {FloatingToolbarPlugin} from './plugins/FloatingToolbarPlugin.js';
 import {MarkdownTransformPlugin} from './plugins/MarkdownTransformPlugin.js';
 import {OnChangePlugin} from './plugins/OnChangePlugin.js';
 import {ShortcutsPlugin} from './plugins/ShortcutsPlugin.js';
+import {SpecialCharacterPlugin} from './plugins/SpecialCharacterPlugin.js';
 import {TableActionMenuPlugin} from './plugins/TableActionMenuPlugin.js';
 import {ToolbarPlugin} from './plugins/ToolbarPlugin.js';
 import {TrailingParagraphPlugin} from './plugins/TrailingParagraphPlugin.js';
@@ -72,6 +74,7 @@ const INITIAL_CONFIG: InitialConfigType = {
     TableRowNode,
     BlockComponentNode,
     InlineComponentNode,
+    SpecialCharacterNode,
   ],
   onError: (err: Error) => {
     console.error('[LexicalEditor] error:', err);
@@ -432,6 +435,7 @@ function Editor(props: EditorProps) {
         <TabIndentationPlugin maxIndent={7} />
         <MarkdownTransformPlugin />
         <TrailingParagraphPlugin />
+        <SpecialCharacterPlugin />
         {floatingAnchorElem && (
           <>
             <FloatingToolbarPlugin

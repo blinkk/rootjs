@@ -250,3 +250,9 @@
   background-color: var(--mantine-color-gray-3, #dee2e6);
   margin: 4px 0;
 }
+
+.SpecialCharacterNode {
+  background-color: rgba(255, 220, 0, 0.25);
+  border-radius: 2px;
+  outline: 1px solid rgba(200, 180, 0, 0.4);
+}
