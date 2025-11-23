@@ -33,6 +33,9 @@
   border-radius: 2px;
 }
 
+.StringField__container {
+  background-color: #fff;
+
 .StringField__input input,
 .StringField__input textarea {
   background-color: transparent !important;
