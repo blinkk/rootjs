@@ -1,3 +1,5 @@
+import './StringField.css';
+
 import {TextInput, Textarea} from '@mantine/core';
 import {ChangeEvent} from 'preact/compat';
 import {useRef} from 'preact/hooks';
@@ -5,17 +7,15 @@ import * as schema from '../../../../core/schema.js';
 import {useDraftDocValue} from '../../../hooks/useDraftDoc.js';
 import {requestHighlightNode} from '../../../utils/iframe-preview.js';
 import {FieldProps} from './FieldProps.js';
-import './StringField.css';
 
-function Highlighter({
-  value,
-  variant,
-  scrollRef,
-}: {
+interface HighlighterProps {
   value: string;
   variant: 'input' | 'textarea';
   scrollRef?: any;
-}) {
+}
+
+function Highlighter(props: HighlighterProps) {
+  const {value, variant, scrollRef} = props;
   const parts = value.split(/([\u00A0\u2011])/g);
   return (
     <div
