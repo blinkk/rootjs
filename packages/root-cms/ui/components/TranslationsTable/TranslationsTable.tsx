@@ -212,71 +212,6 @@ export function TranslationsTable() {
           );
         },
       },
-      {
-        field: 'tags',
-        headerName: 'Tags',
-        headerComponent: (props: any) => (
-          <div
-            class="ag-header-cell-label"
-            role="presentation"
-            style={{gap: 10}}
-          >
-            <IconTag size={18} />
-            <span>{props.displayName}</span>
-          </div>
-        ),
-        width: 150,
-        sortable: false,
-        autoHeight: true,
-        valueFormatter: (params: ValueFormatterParams) =>
-          Array.isArray(params.value) ? params.value.join(', ') : '',
-        cellRenderer: (params: ICellRendererParams) => {
-          if (
-            !params.value ||
-            !Array.isArray(params.value) ||
-            params.value.length === 0
-          ) {
-            return null;
-          }
-          return (
-            <div
-              style={{
-                display: 'flex',
-                flexDirection: 'column',
-                gap: 2,
-                padding: '8px 0',
-              }}
-            >
-              {params.value.map((tag: string) => (
-                <div
-                  key={tag}
-                  style={{
-                    display: 'flex',
-                    fontSize: '12px',
-                    lineHeight: '1.2',
-                  }}
-                >
-                  <span
-                    style={{
-                      cursor: 'pointer',
-                      textDecoration: 'underline',
-                    }}
-                    onClick={() => {
-                      if (!selectedTags.includes(tag)) {
-                        setSelectedTags([...selectedTags, tag]);
-                      } else {
-                        setSelectedTags(selectedTags.filter((t) => t !== tag));
-                      }
-                    }}
-                  >
-                    {tag}
-                  </span>
-                </div>
-              ))}
-            </div>
-          );
-        },
-      },
     ];
 
     visibleLocales.forEach((locale: string) => {
@@ -314,7 +249,7 @@ export function TranslationsTable() {
       lockPinned: true,
       lockPosition: true,
       suppressMovable: true,
-      width: 100,
+      width: 90,
       sortable: false,
       cellRenderer: (params: ICellRendererParams) => {
         return (
@@ -329,6 +264,79 @@ export function TranslationsTable() {
           >
             Edit
           </Button>
+        );
+      },
+    });
+
+    // Tags column.
+    cols.push({
+      field: 'tags',
+      headerName: 'Tags',
+      headerComponent: (props: any) => (
+        <div class="ag-header-cell-label" role="presentation" style={{gap: 10}}>
+          <IconTag size={18} />
+          <span>{props.displayName}</span>
+        </div>
+      ),
+      pinned: 'right',
+      lockPinned: true,
+      lockPosition: true,
+      width: 150,
+      sortable: false,
+      autoHeight: true,
+      valueFormatter: (params: ValueFormatterParams) =>
+        Array.isArray(params.value) ? params.value.join(', ') : '',
+      cellRenderer: (params: ICellRendererParams) => {
+        if (
+          !params.value ||
+          !Array.isArray(params.value) ||
+          params.value.length === 0
+        ) {
+          return null;
+        }
+        return (
+          <div
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 2,
+              padding: '8px 0',
+            }}
+          >
+            {params.value.map((tag: string) => (
+              <div
+                key={tag}
+                style={{
+                  fontSize: '12px',
+                  lineHeight: '1.2',
+                  overflow: 'hidden',
+                  whiteSpace: 'nowrap',
+                  textOverflow: 'ellipsis',
+                }}
+              >
+                <span
+                  title={tag}
+                  style={{
+                    cursor: 'pointer',
+                    textDecoration: 'underline',
+                    overflow: 'hidden',
+                    whiteSpace: 'nowrap',
+                    textOverflow: 'ellipsis',
+                    display: 'block',
+                  }}
+                  onClick={() => {
+                    if (!selectedTags.includes(tag)) {
+                      setSelectedTags([...selectedTags, tag]);
+                    } else {
+                      setSelectedTags(selectedTags.filter((t) => t !== tag));
+                    }
+                  }}
+                >
+                  {tag}
+                </span>
+              </div>
+            ))}
+          </div>
         );
       },
     });
