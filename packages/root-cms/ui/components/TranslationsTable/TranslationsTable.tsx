@@ -165,7 +165,11 @@ export function TranslationsTable() {
         headerName: 'Source',
         headerClass: 'no-border-header',
         headerComponent: (props: any) => (
-          <div style={{display: 'flex', alignItems: 'center', gap: 8}}>
+          <div
+            class="ag-header-cell-label"
+            role="presentation"
+            style={{gap: 10}}
+          >
             <IconKey size={18} />
             <span>{props.displayName}</span>
           </div>
@@ -212,7 +216,11 @@ export function TranslationsTable() {
         field: 'tags',
         headerName: 'Tags',
         headerComponent: (props: any) => (
-          <div style={{display: 'flex', alignItems: 'center', gap: 8}}>
+          <div
+            class="ag-header-cell-label"
+            role="presentation"
+            style={{gap: 10}}
+          >
             <IconTag size={18} />
             <span>{props.displayName}</span>
           </div>
@@ -244,22 +252,25 @@ export function TranslationsTable() {
                   key={tag}
                   style={{
                     display: 'flex',
-                    alignItems: 'center',
-                    gap: 0,
-                    cursor: 'pointer',
                     fontSize: '12px',
                     lineHeight: '1.2',
-                    textDecoration: 'underline',
-                  }}
-                  onClick={() => {
-                    if (!selectedTags.includes(tag)) {
-                      setSelectedTags([...selectedTags, tag]);
-                    } else {
-                      setSelectedTags(selectedTags.filter((t) => t !== tag));
-                    }
                   }}
                 >
-                  {tag}
+                  <span
+                    style={{
+                      cursor: 'pointer',
+                      textDecoration: 'underline',
+                    }}
+                    onClick={() => {
+                      if (!selectedTags.includes(tag)) {
+                        setSelectedTags([...selectedTags, tag]);
+                      } else {
+                        setSelectedTags(selectedTags.filter((t) => t !== tag));
+                      }
+                    }}
+                  >
+                    {tag}
+                  </span>
                 </div>
               ))}
             </div>
@@ -313,7 +324,7 @@ export function TranslationsTable() {
             target="_blank"
             size="xs"
             variant="outline"
-            color="black"
+            color="dark"
             compact
           >
             Edit
@@ -360,8 +371,7 @@ export function TranslationsTable() {
           searchable
           clearable
           icon={<IconWorld size={14} />}
-          size="xs"
-          maxDropdownHeight={400}
+          maxDropdownHeight={600}
           style={{width: 300}}
         />
         <MultiSelect
@@ -372,8 +382,7 @@ export function TranslationsTable() {
           searchable
           clearable
           icon={<IconTag size={14} />}
-          size="xs"
-          maxDropdownHeight={400}
+          maxDropdownHeight={600}
           style={{width: 300}}
         />
         <Menu
