@@ -168,7 +168,10 @@ DocPickerModal.DocsList = (props: {
   options?: DocPickerModalOptions;
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
-  const [sortBy, setSortBy] = useState('modifiedAt');
+  const [sortBy, setSortBy] = useLocalStorage<string>(
+    `root::DocPickerModal:${props.collection}:sortBy`,
+    'modifiedAt'
+  );
   const [newDocModalOpen, setNewDocModalOpen] = useState(false);
 
   const [loading, refreshDocs, docs] = useDocsList(props.collection || '', {
