@@ -65,6 +65,10 @@
     "test:watch": "pnpm build && firebase emulators:exec 'vitest'"
   },
   "dependencies": {
+    "@ag-grid-community/client-side-row-model": "^32.3.9",
+    "@ag-grid-community/core": "^32.3.9",
+    "@ag-grid-community/react": "^32.3.9",
+    "@ag-grid-community/styles": "^32.3.9",
     "@genkit-ai/ai": "1.18.0",
     "@genkit-ai/core": "1.18.0",
     "@genkit-ai/vertexai": "1.18.0",
