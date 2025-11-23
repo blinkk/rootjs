@@ -355,8 +355,8 @@ export function TranslationsTable() {
       `}</style>
       <div style={{marginBottom: 16, display: 'flex', gap: 16}}>
         <TextInput
-          placeholder="Search translations..."
-          icon={<IconSearch size={16} />}
+          placeholder="Search translations"
+          icon={<IconSearch size={18} />}
           value={searchQuery}
           onChange={(e: any) => setSearchQuery(e.currentTarget.value)}
           style={{flex: 1}}
@@ -370,7 +370,7 @@ export function TranslationsTable() {
           }
           searchable
           clearable
-          icon={<IconWorld size={14} />}
+          icon={<IconWorld size={18} />}
           maxDropdownHeight={600}
           style={{width: 300}}
         />
@@ -381,14 +381,14 @@ export function TranslationsTable() {
           placeholder={selectedTags.length === 0 ? 'All tags' : 'Filter tags'}
           searchable
           clearable
-          icon={<IconTag size={14} />}
+          icon={<IconTag size={18} />}
           maxDropdownHeight={600}
           style={{width: 300}}
         />
         <Menu
           shadow="md"
           control={
-            <ActionIcon variant="outline" size="lg">
+            <ActionIcon variant="outline" size="lg" style={{height: 36}}>
               <IconDots size={18} />
             </ActionIcon>
           }
