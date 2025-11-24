@@ -347,16 +347,16 @@ importers:
   packages/root-cms:
     dependencies:
       '@ag-grid-community/client-side-row-model':
-        specifier: ^32.3.9
+        specifier: 32.3.9
         version: 32.3.9
       '@ag-grid-community/core':
-        specifier: ^32.3.9
+        specifier: 32.3.9
         version: 32.3.9
       '@ag-grid-community/react':
-        specifier: ^32.3.9
+        specifier: 32.3.9
         version: 32.3.9(@ag-grid-community/core@32.3.9)(@preact/compat@18.3.1)(@preact/compat@18.3.1)
       '@ag-grid-community/styles':
-        specifier: ^32.3.9
+        specifier: 32.3.9
         version: 32.3.9
       '@genkit-ai/ai':
         specifier: 1.18.0
@@ -607,7 +607,7 @@ importers:
         version: 5.9.2
       vite:
         specifier: 7.1.4
-        version: 7.1.4(@types/node@24.3.1)
+        version: 7.1.4(@types/node@24.3.1)(sass-embedded@1.92.0)
       vitest:
         specifier: 4.0.10
         version: 4.0.10(@types/node@24.3.1)(@vitest/browser-playwright@4.0.10)
@@ -6087,7 +6087,7 @@ packages:
       '@vitest/spy': 4.0.10
       estree-walker: 3.0.3
       magic-string: 0.30.21
-      vite: 7.1.4(@types/node@24.3.1)
+      vite: 7.1.4(@types/node@24.3.1)(sass-embedded@1.92.0)
     dev: true
 
   /@vitest/pretty-format@3.2.4:
@@ -7562,17 +7562,6 @@ packages:
         optional: true
     dependencies:
       ms: 2.0.0
-
-  /debug@3.2.7:
-    resolution: {integrity: sha512-CFjzYYAi4ThfiQvizrFQevTTXHtnCqWfe7x1AhgEscTz6ZbLbfoLRLPugTQyBth6f8ZERVUSyWHFD/7Wu4t1XQ==}
-    peerDependencies:
-      supports-color: '*'
-    peerDependenciesMeta:
-      supports-color:
-        optional: true
-    dependencies:
-      ms: 2.1.3
-    dev: true
 
   /debug@3.2.7(supports-color@5.5.0):
     resolution: {integrity: sha512-CFjzYYAi4ThfiQvizrFQevTTXHtnCqWfe7x1AhgEscTz6ZbLbfoLRLPugTQyBth6f8ZERVUSyWHFD/7Wu4t1XQ==}
@@ -12905,7 +12894,7 @@ packages:
     engines: {node: '>= 0.12.0'}
     dependencies:
       async: 2.6.4
-      debug: 3.2.7
+      debug: 3.2.7(supports-color@5.5.0)
       mkdirp: 0.5.6
     transitivePeerDependencies:
       - supports-color
@@ -15739,57 +15728,6 @@ packages:
       - yaml
     dev: true
 
-  /vite@7.1.4(@types/node@24.3.1):
-    resolution: {integrity: sha512-X5QFK4SGynAeeIt+A7ZWnApdUyHYm+pzv/8/A57LqSGcI88U6R6ipOs3uCesdc6yl7nl+zNO0t8LmqAdXcQihw==}
-    engines: {node: ^20.19.0 || >=22.12.0}
-    hasBin: true
-    peerDependencies:
-      '@types/node': ^20.19.0 || >=22.12.0
-      jiti: '>=1.21.0'
-      less: ^4.0.0
-      lightningcss: ^1.21.0
-      sass: ^1.70.0
-      sass-embedded: ^1.70.0
-      stylus: '>=0.54.8'
-      sugarss: ^5.0.0
-      terser: ^5.16.0
-      tsx: ^4.8.1
-      yaml: ^2.4.2
-    peerDependenciesMeta:
-      '@types/node':
-        optional: true
-      jiti:
-        optional: true
-      less:
-        optional: true
-      lightningcss:
-        optional: true
-      sass:
-        optional: true
-      sass-embedded:
-        optional: true
-      stylus:
-        optional: true
-      sugarss:
-        optional: true
-      terser:
-        optional: true
-      tsx:
-        optional: true
-      yaml:
-        optional: true
-    dependencies:
-      '@types/node': 24.3.1
-      esbuild: 0.25.9
-      fdir: 6.5.0(picomatch@4.0.3)
-      picomatch: 4.0.3
-      postcss: 8.5.6
-      rollup: 4.50.0
-      tinyglobby: 0.2.14
-    optionalDependencies:
-      fsevents: 2.3.3
-    dev: true
-
   /vite@7.1.4(@types/node@24.3.1)(sass-embedded@1.92.0):
     resolution: {integrity: sha512-X5QFK4SGynAeeIt+A7ZWnApdUyHYm+pzv/8/A57LqSGcI88U6R6ipOs3uCesdc6yl7nl+zNO0t8LmqAdXcQihw==}
     engines: {node: ^20.19.0 || >=22.12.0}
@@ -15962,7 +15900,7 @@ packages:
       tinyexec: 0.3.2
       tinyglobby: 0.2.15
       tinyrainbow: 3.0.3
-      vite: 7.1.4(@types/node@24.3.1)
+      vite: 7.1.4(@types/node@24.3.1)(sass-embedded@1.92.0)
       why-is-node-running: 2.3.0
     transitivePeerDependencies:
       - jiti
