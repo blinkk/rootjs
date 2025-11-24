@@ -1,3 +1,5 @@
+import './TranslationsTable.css';
+
 import {ClientSideRowModelModule} from '@ag-grid-community/client-side-row-model';
 import {
   ColDef,
@@ -201,7 +203,6 @@ export function TranslationsTable() {
                 <div style={{fontSize: '0.8em', color: '#888', marginTop: 4}}>
                   <a
                     href={`/cms/translations/${params.data.hash}`}
-                    target="_blank"
                     style={{textDecoration: 'none', color: 'inherit'}}
                   >
                     {params.data.hash}
@@ -256,7 +257,6 @@ export function TranslationsTable() {
           <Button
             component="a"
             href={`/cms/translations/${params.data.hash}`}
-            target="_blank"
             size="xs"
             variant="outline"
             color="dark"
@@ -276,7 +276,8 @@ export function TranslationsTable() {
         <div
           className="ag-header-cell-label"
           role="presentation"
-          style={{gap: 10}}
+          style={{gap: 10, cursor: 'pointer'}}
+          onClick={(e) => props.progressSort && props.progressSort(e.shiftKey)}
         >
           <IconTag size={18} />
           <span>{props.displayName}</span>
@@ -310,7 +311,7 @@ export function TranslationsTable() {
       lockPinned: true,
       lockPosition: true,
       width: 150,
-      sortable: false,
+      sortable: true,
       autoHeight: true,
       valueFormatter: (params: ValueFormatterParams) =>
         Array.isArray(params.value) ? params.value.join(', ') : '',
