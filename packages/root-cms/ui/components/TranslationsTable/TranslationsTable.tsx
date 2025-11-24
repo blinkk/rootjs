@@ -10,7 +10,14 @@ import {
 import {AgGridReact} from '@ag-grid-community/react';
 import '@ag-grid-community/styles/ag-grid.css';
 import '@ag-grid-community/styles/ag-theme-alpine.css';
-import {ActionIcon, Button, Menu, MultiSelect, TextInput} from '@mantine/core';
+import {
+  ActionIcon,
+  Button,
+  Loader,
+  Menu,
+  MultiSelect,
+  TextInput,
+} from '@mantine/core';
 import {
   IconCheck,
   IconDots,
@@ -45,13 +52,14 @@ export function TranslationsTable() {
     ...locales.filter((l: string) => l !== 'en').sort(),
   ];
 
-  // URL State
+  // URL State.
   const [searchQuery, setSearchQuery] = useStringParam('q', '');
   const [selectedLocales, setSelectedLocales] = useArrayParam('locales', []);
   const [selectedTags, setSelectedTags] = useArrayParam('tags', []);
   const [showHashes, setShowHashes] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
-  // Derived state for available tags
+  // Derived state for available tags.
   const availableTags = useMemo(() => {
     const tags = new Set<string>();
     Object.values(translationsMap).forEach((t) => {
@@ -64,11 +72,11 @@ export function TranslationsTable() {
       }
     });
 
-    // Group tags
+    // Group tags.
     const result: {value: string; label: string; group: string}[] = [];
     const tagsArray = Array.from(tags).sort();
 
-    // First identify all implicit groups from tags with slashes
+    // First identify all implicit groups from tags with slashes.
     const groups = new Set<string>();
     tagsArray.forEach((tag) => {
       if (tag.includes('/')) {
@@ -81,7 +89,7 @@ export function TranslationsTable() {
       if (tag.includes('/')) {
         group = tag.split('/')[0];
       } else if (groups.has(tag)) {
-        // If the tag itself is a group name (e.g. "Common" when "Common/Button" exists)
+        // If the tag itself is a group name (e.g. "Common" when "Common/Button" exists).
         group = tag;
       }
 
@@ -92,10 +100,12 @@ export function TranslationsTable() {
   }, [translationsMap]);
 
   async function updateTranslationsMap() {
+    setIsLoading(true);
     await notifyErrors(async () => {
       const data = await loadTranslations();
       console.log('Loaded translations:', Object.keys(data).length);
       setTranslationsMap(data);
+      setIsLoading(false);
     });
   }
 
@@ -106,7 +116,7 @@ export function TranslationsTable() {
   useEffect(() => {
     const data: TableRowData[] = [];
     Object.entries(translationsMap).forEach(([hash, translations]) => {
-      // Filter by tags if any are selected
+      // Filter by tags if any are selected.
       const rowTags = normalizeTags(translations.tags);
       if (selectedTags.length > 0) {
         const hasTag = selectedTags.some((tag: string) =>
@@ -117,11 +127,11 @@ export function TranslationsTable() {
         }
       }
 
-      // Filter by search query
+      // Filter by search query.
       if (searchQuery) {
         const query = (searchQuery || '').toLowerCase();
 
-        // Defensive checks for translations object
+        // Defensive checks for translations object.
         if (!translations) {
           return;
         }
@@ -155,7 +165,7 @@ export function TranslationsTable() {
     setRowData(data);
   }, [translationsMap, searchQuery, selectedTags, selectedLocales]);
 
-  // Determine which locales to show
+  // Determine which locales to show.
   const visibleLocales =
     selectedLocales.length > 0 ? selectedLocales : allLocales;
 
@@ -230,7 +240,7 @@ export function TranslationsTable() {
       });
     });
 
-    // Actions column
+    // Actions column.
     cols.push({
       headerName: 'Actions',
       field: 'actions',
@@ -365,7 +375,7 @@ export function TranslationsTable() {
   const gridOptions: GridOptions = {
     headerHeight: 40,
     animateRows: true,
-    enableCellTextSelection: true, // Enable text selection
+    enableCellTextSelection: true, // Enable text selection.
     suppressMovableColumns: true,
   };
 
@@ -430,17 +440,36 @@ export function TranslationsTable() {
           </Menu.Item>
         </Menu>
       </div>
-      <div
-        className="ag-theme-alpine"
-        style={{height: 'calc(100vh - 200px)', width: '100%', fontSize: '13px'}}
-      >
-        {/* @ts-expect-error - AgGridReact not compatible with Preact types. */}
-        <AgGridReact
-          rowData={rowData}
-          columnDefs={columnDefs}
-          gridOptions={gridOptions}
-        />
-      </div>
+      {isLoading ? (
+        <div
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            height: 'calc(100vh - 200px)',
+            gap: 16,
+          }}
+        >
+          <Loader size="lg" />
+        </div>
+      ) : (
+        <div
+          className="ag-theme-alpine"
+          style={{
+            height: 'calc(100vh - 200px)',
+            width: '100%',
+            fontSize: '13px',
+          }}
+        >
+          {/* @ts-expect-error - AgGridReact not compatible with Preact types. */}
+          <AgGridReact
+            rowData={rowData}
+            columnDefs={columnDefs}
+            gridOptions={gridOptions}
+          />
+        </div>
+      )}
     </div>
   );
 }
