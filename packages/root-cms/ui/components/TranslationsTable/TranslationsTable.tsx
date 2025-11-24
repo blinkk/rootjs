@@ -382,14 +382,6 @@ export function TranslationsTable() {
 
   return (
     <div className="TranslationsTable">
-      <style>{`
-        .no-border-header .ag-header-cell-resize::after {
-          display: none !important;
-        }
-        .no-border-header {
-          border-right: none !important;
-        }
-      `}</style>
       <div style={{marginBottom: 16, display: 'flex', gap: 16}}>
         <TextInput
           placeholder="Search translations"
