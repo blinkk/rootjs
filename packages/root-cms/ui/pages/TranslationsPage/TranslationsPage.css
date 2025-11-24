@@ -1,13 +1,12 @@
 .TranslationsPage {
-  padding: 60px;
+  padding: 60px 60px 20px 60px;
 }
 
 .TranslationsPage__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
   margin-bottom: 40px;
-}
-
-.TranslationsPage__header__buttons {
-  margin-top: 12px;
 }
 
 .TranslationsPage__TranslationsTable table {

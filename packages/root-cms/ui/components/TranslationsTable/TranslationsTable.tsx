@@ -440,7 +440,7 @@ export function TranslationsTable() {
             flexDirection: 'column',
             alignItems: 'center',
             justifyContent: 'center',
-            height: 'calc(100vh - 200px)',
+            height: 'calc(100vh - 250px)',
             gap: 16,
           }}
         >
@@ -450,7 +450,7 @@ export function TranslationsTable() {
         <div
           className="ag-theme-alpine"
           style={{
-            height: 'calc(100vh - 200px)',
+            height: 'calc(100vh - 250px)',
             width: '100%',
             fontSize: '13px',
           }}
