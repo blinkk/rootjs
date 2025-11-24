@@ -19,6 +19,7 @@
       "@types/gapi.client.drive-v3",
       "@types/gapi.client.sheets-v4",
       "@types/google.accounts",
+      "@vitest/browser/matchers",
       "vite/client"
     ],
     "useUnknownInCatchVariables": false,
@@ -34,6 +35,6 @@
     "*.tsx",
     "**/*.tsx",
     "../shared/*.ts",
-    "../shared/*.tsx",
+    "../shared/*.tsx"
   ]
 }
