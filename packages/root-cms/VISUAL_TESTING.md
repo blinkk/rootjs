@@ -8,7 +8,7 @@ We use [Vitest Browser Mode](https://vitest.dev/guide/browser.html) with
 To run the visual tests, use the following command:
 
 ```bash
-pnpm test:screenshots
+pnpm test:visual
 ```
 
 This will run the tests in a headless Chromium browser.
@@ -38,8 +38,14 @@ describe('MyComponent', () => {
 ## Updating Snapshots
 
 If you make intentional changes to the UI, the visual tests will fail. To update
-the golden screenshots, delete the existing screenshot in the `__screenshots__`
-directory and re-run the test.
+the golden screenshots, run the following command:
+
+```bash
+pnpm test:visual --update
+```
+
+During development of a new feature, use the `--update` flag to automatically
+update the golden screenshots.
 
 ## Troubleshooting
 

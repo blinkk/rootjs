@@ -1,0 +1,20 @@
+.TranslationsTable .no-border-header .ag-header-cell-resize::after {
+  display: none !important;
+}
+
+.TranslationsTable .no-border-header {
+  border-right: none !important;
+}
+
+.TranslationsTable .string-cell {
+  white-space: normal;
+  line-height: 1.5;
+  padding: 8px 0;
+  font-size: 12px;
+}
+
+.TranslationsTable .ag-theme-alpine {
+  --ag-border-color: var(--color-border) !important;
+  --ag-row-border-color: var(--color-border) !important;
+  --ag-header-column-separator-color: var(--color-border);
+}
