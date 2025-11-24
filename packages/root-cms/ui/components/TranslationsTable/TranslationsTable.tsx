@@ -3,6 +3,7 @@ import {
   ColDef,
   GridOptions,
   ICellRendererParams,
+  IHeaderParams,
   ModuleRegistry,
   ValueFormatterParams,
 } from '@ag-grid-community/core';
@@ -13,13 +14,13 @@ import {ActionIcon, Button, Menu, MultiSelect, TextInput} from '@mantine/core';
 import {
   IconCheck,
   IconDots,
-  IconKey,
   IconSearch,
   IconTag,
   IconWorld,
 } from '@tabler/icons-preact';
 import {useEffect, useMemo, useState} from 'preact/hooks';
 import {useArrayParam, useStringParam} from '../../hooks/useQueryParam.js';
+import {joinClassNames} from '../../utils/classes.js';
 import {loadTranslations} from '../../utils/l10n.js';
 import {notifyErrors} from '../../utils/notifications.js';
 
@@ -164,22 +165,11 @@ export function TranslationsTable() {
         field: 'source',
         headerName: 'Source',
         headerClass: 'no-border-header',
-        headerComponent: (props: any) => (
-          <div
-            class="ag-header-cell-label"
-            role="presentation"
-            style={{gap: 10}}
-          >
-            <IconKey size={18} />
-            <span>{props.displayName}</span>
-          </div>
-        ),
         pinned: 'left',
         lockPinned: true,
         lockPosition: true,
         suppressMovable: true,
         width: 310,
-        filter: true,
         sortable: true,
         resizable: true,
         wrapText: true,
@@ -223,7 +213,7 @@ export function TranslationsTable() {
         resizable: true,
         wrapText: true,
         autoHeight: true,
-        cellRenderer: (params: any) => {
+        cellRenderer: (params: ICellRendererParams) => {
           return (
             <div
               style={{
@@ -272,10 +262,38 @@ export function TranslationsTable() {
     cols.push({
       field: 'tags',
       headerName: 'Tags',
-      headerComponent: (props: any) => (
-        <div class="ag-header-cell-label" role="presentation" style={{gap: 10}}>
+      headerComponent: (props: IHeaderParams) => (
+        <div
+          className="ag-header-cell-label"
+          role="presentation"
+          style={{gap: 10}}
+        >
           <IconTag size={18} />
           <span>{props.displayName}</span>
+          {props.enableSorting && (
+            <div className="ag-sort-indicator-container">
+              <span
+                className={joinClassNames(
+                  'ag-sort-indicator-icon',
+                  'ag-sort-ascending-icon',
+                  props.column.getSort() !== 'asc' && 'ag-hidden'
+                )}
+                aria-hidden="true"
+              >
+                <span className="ag-icon ag-icon-asc" role="presentation" />
+              </span>
+              <span
+                className={joinClassNames(
+                  'ag-sort-indicator-icon',
+                  'ag-sort-descending-icon',
+                  props.column.getSort() !== 'desc' && 'ag-hidden'
+                )}
+                aria-hidden="true"
+              >
+                <span className="ag-icon ag-icon-desc" role="presentation" />
+              </span>
+            </div>
+          )}
         </div>
       ),
       pinned: 'right',
@@ -325,10 +343,10 @@ export function TranslationsTable() {
                     display: 'block',
                   }}
                   onClick={() => {
-                    if (!selectedTags.includes(tag)) {
-                      setSelectedTags([...selectedTags, tag]);
-                    } else {
+                    if (selectedTags.includes(tag)) {
                       setSelectedTags(selectedTags.filter((t) => t !== tag));
+                    } else {
+                      setSelectedTags([...selectedTags, tag]);
                     }
                   }}
                 >
@@ -366,7 +384,9 @@ export function TranslationsTable() {
           placeholder="Search translations"
           icon={<IconSearch size={18} />}
           value={searchQuery}
-          onChange={(e: any) => setSearchQuery(e.currentTarget.value)}
+          onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+            setSearchQuery(e.currentTarget.value)
+          }
           style={{flex: 1}}
         />
         <MultiSelect
@@ -414,7 +434,7 @@ export function TranslationsTable() {
         className="ag-theme-alpine"
         style={{height: 'calc(100vh - 200px)', width: '100%', fontSize: '13px'}}
       >
-        {/* @ts-ignore */}
+        {/* @ts-expect-error - AgGridReact not compatible with Preact types. */}
         <AgGridReact
           rowData={rowData}
           columnDefs={columnDefs}
