@@ -1,22 +1,20 @@
 import './DocumentPage.css';
-import {ActionIcon, Button, Select, Tooltip} from '@mantine/core';
+import {ActionIcon, Button, Tooltip} from '@mantine/core';
 import {useHotkeys} from '@mantine/hooks';
 import {
   IconArrowLeft,
   IconArrowUpRight,
   IconBraces,
-  IconDeviceDesktop,
   IconDeviceFloppy,
-  IconDeviceIpad,
-  IconDeviceMobile,
-  IconReload,
-  IconWorld,
   IconLayoutSidebarRightCollapse,
   IconLayoutSidebarRightExpand,
-  IconArrowsVertical,
 } from '@tabler/icons-preact';
 import {useCallback, useEffect, useRef, useState} from 'preact/hooks';
 import {DocEditor} from '../../components/DocEditor/DocEditor.js';
+import {
+  DocumentPagePreviewBar,
+  type Device,
+} from '../../components/DocumentPagePreviewBar/DocumentPagePreviewBar.js';
 import {useEditJsonModal} from '../../components/EditJsonModal/EditJsonModal.js';
 import {
   SplitPanel,
@@ -79,9 +77,10 @@ function DocumentPageLayout(props: DocumentPageProps) {
   const docId = `${collectionId}/${slug}`;
   const collection = window.__ROOT_CTX.collections[collectionId];
   const draft = useDraftDoc();
+  const hasCollectionUrl = !!collection?.url;
   const [isPreviewVisible, setIsPreviewVisible] = useLocalStorage<boolean>(
     `root::DocumentPage::previewVisible::${collectionId}`,
-    true
+    hasCollectionUrl
   );
 
   if (!collection) {
@@ -89,6 +88,9 @@ function DocumentPageLayout(props: DocumentPageProps) {
   }
 
   function openPreviewInNewTab() {
+    if (!hasCollectionUrl) {
+      return;
+    }
     const previewUrl = getPreviewUrl(collectionId, slug);
     // `noopener,noreferrer` used for `testEmbedMode()`.
     const tab = window.open(previewUrl, '_blank', 'noopener,noreferrer');
@@ -127,7 +129,8 @@ function DocumentPageLayout(props: DocumentPageProps) {
         <SplitPanel.Item
           className={joinClassNames(
             'DocumentPage__side',
-            !isPreviewVisible && 'DocumentPage__side--expanded'
+            (!hasCollectionUrl || !isPreviewVisible) &&
+              'DocumentPage__side--expanded'
           )}
         >
           <div className="DocumentPage__side__header">
@@ -175,36 +178,41 @@ function DocumentPageLayout(props: DocumentPageProps) {
                     Edit JSON
                   </Menu.Item>
                 </Menu> */}
-              <Tooltip
-                label={isPreviewVisible ? 'Hide preview' : 'Show preview'}
-              >
-                <ActionIcon
-                  className="DocumentPage__side__header__previewToggle"
-                  onClick={() => setIsPreviewVisible(!isPreviewVisible)}
-                >
-                  {isPreviewVisible ? (
-                    <IconLayoutSidebarRightCollapse size={16} />
-                  ) : (
-                    <IconLayoutSidebarRightExpand size={16} />
-                  )}
-                </ActionIcon>
-              </Tooltip>
-              {!isPreviewVisible && (
-                <Tooltip label="Open preview in new tab">
-                  <ActionIcon
-                    className="DocumentPage__side__header__openNewTab"
-                    onClick={openPreviewInNewTab}
+              {hasCollectionUrl && (
+                <>
+                  <Tooltip
+                    label={isPreviewVisible ? 'Hide preview' : 'Show preview'}
                   >
-                    <IconArrowUpRight size={16} />
-                  </ActionIcon>
-                </Tooltip>
+                    <ActionIcon
+                      className="DocumentPage__side__header__previewToggle"
+                      onClick={() => setIsPreviewVisible(!isPreviewVisible)}
+                    >
+                      {isPreviewVisible ? (
+                        <IconLayoutSidebarRightCollapse size={16} />
+                      ) : (
+                        <IconLayoutSidebarRightExpand size={16} />
+                      )}
+                    </ActionIcon>
+                  </Tooltip>
+                  {!isPreviewVisible && (
+                    <Tooltip label="Open preview in new tab">
+                      <ActionIcon
+                        className="DocumentPage__side__header__openNewTab"
+                        onClick={openPreviewInNewTab}
+                      >
+                        <IconArrowUpRight size={16} />
+                      </ActionIcon>
+                    </Tooltip>
+                  )}
+                </>
               )}
             </div>
           </div>
           <div
             className={joinClassNames(
               'DocumentPage__side__editor',
-              !isPreviewVisible && 'DocumentPage__side__editor--centered'
+              (!hasCollectionUrl || !isPreviewVisible) &&
+                'DocumentPage__side__editor--centered'
             )}
           >
             <DocEditor docId={docId} />
@@ -213,11 +221,12 @@ function DocumentPageLayout(props: DocumentPageProps) {
         <SplitPanel.Item
           className={joinClassNames(
             'DocumentPage__main',
-            !isPreviewVisible && 'DocumentPage__main--hidden'
+            (!hasCollectionUrl || !isPreviewVisible) &&
+              'DocumentPage__main--hidden'
           )}
           fluid
         >
-          {isPreviewVisible && (
+          {hasCollectionUrl && isPreviewVisible && (
             <DocumentPage.Preview key={docId} docId={docId} />
           )}
         </SplitPanel.Item>
@@ -230,10 +239,8 @@ interface PreviewProps {
   docId: string;
 }
 
-type Device = 'mobile' | 'tablet' | 'desktop' | '';
-
 const DeviceResolution = {
-  mobile: [360, 800],
+  mobile: [430, 932],
   tablet: [768, 1024],
   desktop: [1440, 800],
 };
@@ -260,6 +267,9 @@ DocumentPage.Preview = (props: PreviewProps) => {
   const rootCollection = collections[collectionId];
   if (!rootCollection) {
     throw new Error(`collection not found: ${collectionId}`);
+  }
+  if (!rootCollection.url) {
+    return null;
   }
   const domain =
     rootCollection.domain ||
@@ -436,93 +446,18 @@ DocumentPage.Preview = (props: PreviewProps) => {
 
   return (
     <div className="DocumentPage__main__preview">
-      <div className="DocumentPage__main__previewBar">
-        <div className="DocumentPage__main__previewBar__devices">
-          <Tooltip label="Mobile">
-            <ActionIcon
-              className={joinClassNames(
-                'DocumentPage__main__previewBar__device',
-                device === 'mobile' && 'active'
-              )}
-              onClick={() => toggleDevice('mobile')}
-            >
-              <IconDeviceMobile size={16} />
-            </ActionIcon>
-          </Tooltip>
-          <Tooltip label="Tablet">
-            <ActionIcon
-              className={joinClassNames(
-                'DocumentPage__main__previewBar__device',
-                device === 'tablet' && 'active'
-              )}
-              onClick={() => toggleDevice('tablet')}
-            >
-              <IconDeviceIpad size={16} />
-            </ActionIcon>
-          </Tooltip>
-          <Tooltip label="Desktop">
-            <ActionIcon
-              className={joinClassNames(
-                'DocumentPage__main__previewBar__device',
-                device === 'desktop' && 'active'
-              )}
-              onClick={() => toggleDevice('desktop')}
-            >
-              <IconDeviceDesktop size={16} />
-            </ActionIcon>
-          </Tooltip>
-          <Tooltip label="Expand">
-            <ActionIcon
-              className={joinClassNames(
-                'DocumentPage__main__previewBar__device',
-                expandVertically && 'active'
-              )}
-              aria-pressed={expandVertically}
-              disabled={device === ''}
-              onClick={toggleExpandVertically}
-            >
-              <IconArrowsVertical size={16} />
-            </ActionIcon>
-          </Tooltip>
-        </div>
-        <div className="DocumentPage__main__previewBar__navbar">
-          <div className="DocumentPage__main__previewBar__navbar__url">
-            {iframeUrl}
-          </div>
-        </div>
-        <div className="DocumentPage__main__previewBar__locales">
-          <Select
-            data={localeOptions}
-            placeholder="Locale"
-            radius="xl"
-            size="xs"
-            required
-            icon={<IconWorld size={16} strokeWidth={1.5} />}
-            value={selectedLocale}
-            onChange={(newValue: string) => {
-              setSelectedLocale(newValue);
-            }}
-          />
-        </div>
-        <div className="DocumentPage__main__previewBar__buttons">
-          <Tooltip label="Reload">
-            <ActionIcon
-              className="DocumentPage__main__previewBar__button DocumentPage__main__previewBar__button--reload"
-              onClick={() => onReloadClick()}
-            >
-              <IconReload size={16} />
-            </ActionIcon>
-          </Tooltip>
-          <Tooltip label="Open new tab">
-            <ActionIcon
-              className="DocumentPage__main__previewBar__button DocumentPage__main__previewBar__button--openNewTab"
-              onClick={() => openNewTab()}
-            >
-              <IconArrowUpRight size={16} />
-            </ActionIcon>
-          </Tooltip>
-        </div>
-      </div>
+      <DocumentPagePreviewBar
+        device={device}
+        expandVertically={expandVertically}
+        iframeUrl={iframeUrl}
+        localeOptions={localeOptions}
+        selectedLocale={selectedLocale}
+        onToggleDevice={toggleDevice}
+        onToggleExpandVertically={toggleExpandVertically}
+        onReloadClick={onReloadClick}
+        onOpenNewTab={openNewTab}
+        onLocaleChange={setSelectedLocale}
+      />
       <div
         className="DocumentPage__main__previewFrame"
         data-device={device || 'full'}

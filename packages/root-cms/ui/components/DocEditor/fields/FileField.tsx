@@ -455,6 +455,7 @@ FileField.Preview = () => {
               size="sm"
               variant="outline"
               className="FileField__Preview__InfoButton__Icon"
+              aria-label="Toggle file info"
             >
               <IconInfoCircle size={16} />
             </ActionIcon>
@@ -634,6 +635,8 @@ FileField.Preview = () => {
                       value={ctx.value?.src}
                       size="xs"
                       radius={0}
+                      autosize
+                      maxRows={10}
                     />
                   </td>
                 </tr>

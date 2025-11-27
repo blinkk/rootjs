@@ -5,7 +5,15 @@ import {
   ListItemNode,
   ListNode,
 } from '@lexical/list';
-import {$isHeadingNode} from '@lexical/rich-text';
+import {$isHeadingNode, $isQuoteNode} from '@lexical/rich-text';
+import {
+  $isTableNode,
+  $isTableRowNode,
+  $isTableCellNode,
+  TableNode,
+  TableRowNode,
+  TableCellNode,
+} from '@lexical/table';
 import {
   $getRoot,
   $isParagraphNode,
@@ -13,6 +21,7 @@ import {
   ElementNode,
   TextNode,
   $isLineBreakNode,
+  $isDecoratorNode,
 } from 'lexical';
 import {
   RichTextBlock,
@@ -44,14 +53,18 @@ type SupportedFormat =
   | 'underline'
   | 'italic'
   | 'bold'
-  | 'superscript';
+  | 'superscript'
+  | 'subscript'
+  | 'code';
 
 const FORMAT_TAGS_ORDER: Array<{tag: string; format: SupportedFormat}> = [
+  {tag: 'code', format: 'code'},
   {tag: 's', format: 'strikethrough'},
   {tag: 'u', format: 'underline'},
   {tag: 'i', format: 'italic'},
   {tag: 'b', format: 'bold'},
   {tag: 'sup', format: 'superscript'},
+  {tag: 'sub', format: 'subscript'},
 ];
 
 function getTextNodeFormats(node: TextNode) {
@@ -129,7 +142,9 @@ function elementMatchesFormats(node: ElementNode, formats: string[]): boolean {
   return true;
 }
 
-function extractInlineComponent(node: InlineComponentNode): TextExtractionResult {
+function extractInlineComponent(
+  node: InlineComponentNode
+): TextExtractionResult {
   const componentId = node.getComponentId();
   const componentName = node.getComponentName();
   const componentData = cloneData(node.getComponentData());
@@ -181,7 +196,10 @@ function extractTextNode(node: ElementNode): TextExtractionResult {
     }
 
     if ($isLinkNode(child)) {
-      if (activeFormats.length > 0 && !elementMatchesFormats(child, activeFormats)) {
+      if (
+        activeFormats.length > 0 &&
+        !elementMatchesFormats(child, activeFormats)
+      ) {
         closeAllFormats(activeFormats, result);
       }
       appendExtractionResult(result, extractLinkNode(child));
@@ -234,6 +252,102 @@ function extractListItem(node: ListItemNode): RichTextListItem {
   return item;
 }
 
+function extractTableData(node: TableNode) {
+  const rows: Array<{
+    cells: Array<{
+      blocks: RichTextBlock[];
+      type: 'header' | 'data';
+    }>;
+  }> = [];
+
+  node.getChildren().forEach((rowNode: any) => {
+    if ($isTableRowNode(rowNode)) {
+      const cells: Array<{
+        blocks: RichTextBlock[];
+        type: 'header' | 'data';
+      }> = [];
+
+      (rowNode as TableRowNode).getChildren().forEach((cellNode: any) => {
+        if ($isTableCellNode(cellNode)) {
+          const headerState = (cellNode as TableCellNode).getHeaderStyles();
+          const isHeader = headerState > 0;
+
+          // Extract cell content - could be text nodes or block components
+          const cellChildren = (cellNode as TableCellNode).getChildren();
+          const cellBlocks: RichTextBlock[] = [];
+
+          cellChildren.forEach((child) => {
+            // Check for block components
+            if ($isBlockComponentNode(child)) {
+              cellBlocks.push({
+                type: child.getBlockName(),
+                data: cloneData(child.getBlockData()),
+              });
+            } else if ($isParagraphNode(child)) {
+              const result = extractTextNode(child);
+              const block: RichTextParagraphBlock = {
+                type: 'paragraph',
+                data: {
+                  text: result.text,
+                },
+              };
+              if (hasInlineComponents(result.components)) {
+                block.data!.components = result.components;
+              }
+              cellBlocks.push(block);
+            } else if ($isHeadingNode(child)) {
+              const level = child.getTag().slice(1);
+              const result = extractTextNode(child);
+              const block: RichTextHeadingBlock = {
+                type: 'heading',
+                data: {
+                  text: result.text,
+                  level: parseInt(level),
+                },
+              };
+              if (hasInlineComponents(result.components)) {
+                block.data!.components = result.components;
+              }
+              cellBlocks.push(block);
+            } else if ($isQuoteNode(child)) {
+              const result = extractTextNode(child);
+              const block: RichTextBlock = {
+                type: 'quote',
+                data: {
+                  text: result.text,
+                },
+              };
+              if (hasInlineComponents(result.components)) {
+                block.data!.components = result.components;
+              }
+              cellBlocks.push(block);
+            } else if ($isListNode(child)) {
+              const tag = child.getTag();
+              const block: RichTextListBlock = {
+                type: tag === 'ol' ? 'orderedList' : 'unorderedList',
+                data: {
+                  style: tag === 'ol' ? 'ordered' : 'unordered',
+                  items: extractListItems(child),
+                },
+              };
+              cellBlocks.push(block);
+            }
+          });
+
+          cells.push({
+            blocks: cellBlocks,
+            type: isHeader ? 'header' : 'data',
+          });
+        }
+      });
+
+      rows.push({cells});
+    }
+  });
+
+  return {rows};
+}
+
 /**
  * Converts from lexical to rich text data.
  * NOTE: this function must be called within a `editor.read()` callback.
@@ -271,6 +385,18 @@ export function convertToRichTextData(): RichTextData | null {
         block.data!.components = result.components;
       }
       blocks.push(block);
+    } else if ($isQuoteNode(node)) {
+      const result = extractTextNode(node);
+      const block: RichTextBlock = {
+        type: 'quote',
+        data: {
+          text: result.text,
+        },
+      };
+      if (hasInlineComponents(result.components)) {
+        block.data!.components = result.components;
+      }
+      blocks.push(block);
     } else if ($isListNode(node)) {
       const tag = node.getTag();
       const block: RichTextListBlock = {
@@ -281,10 +407,24 @@ export function convertToRichTextData(): RichTextData | null {
         },
       };
       blocks.push(block);
+    } else if ($isTableNode(node)) {
+      const tableData = extractTableData(node);
+      const block: RichTextBlock = {
+        type: 'table',
+        data: tableData,
+      };
+      blocks.push(block);
     } else if ($isBlockComponentNode(node)) {
       const block: RichTextBlock = {
         type: node.getBlockName(),
         data: cloneData(node.getBlockData()),
+      };
+      blocks.push(block);
+    } else if ($isDecoratorNode(node) && node.getType() === 'horizontalrule') {
+      // Handle horizontal rule nodes
+      const block: RichTextBlock = {
+        type: 'delimiter',
+        data: {},
       };
       blocks.push(block);
     }
@@ -323,7 +463,9 @@ function testLastBlockIsEmpty(blocks: RichTextBlock[]) {
   return false;
 }
 
-function hasInlineComponents(components: RichTextInlineComponentsMap | undefined) {
+function hasInlineComponents(
+  components: RichTextInlineComponentsMap | undefined
+) {
   if (!components) {
     return false;
   }

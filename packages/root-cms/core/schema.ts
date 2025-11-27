@@ -25,6 +25,11 @@ export type StringField = CommonFieldProps & {
   variant?: 'input' | 'textarea';
   /** For textarea variant, the maximum number of rows of text to show. */
   maxRows?: number;
+  /**
+   * For textarea variant, set to `true` to allow the textarea to automatically
+   * resize its height based on its content.
+   */
+  autosize?: boolean;
 };
 
 export function string(field: Omit<StringField, 'type'>): StringField {
@@ -330,6 +335,10 @@ export type Collection = SchemaWithTypes & {
    * `<id>.schema.ts`.
    */
   id: string;
+  /**
+   * Group name for organizing collections together into a hierarchy.
+   */
+  group?: string;
   /**
    * Domain where the collection serves from. Used for multi-domain sites,
    * defaults to the "domain" value `from root.config.ts`.

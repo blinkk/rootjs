@@ -1,5 +1,5 @@
 import {useTranslations} from '@blinkk/root';
-import {RichText} from '@/components/RichText/RichText.js';
+import {RichText} from '@blinkk/root-cms/richtext';
 import {node} from '@/components/RootNode/RootNode.js';
 import {Text, TextSize} from '@/components/Text/Text.js';
 import {CopyBlockFields} from '@/root-cms.js';

@@ -10,6 +10,7 @@ import {
   McpError,
   ReadResourceRequestSchema,
 } from '@modelcontextprotocol/sdk/types.js';
+import {FieldValue} from 'firebase-admin/firestore';
 import {ChatClient} from '../core/ai.js';
 import {RootCMSClient} from '../core/client.js';
 
@@ -226,6 +227,42 @@ export async function runMcpServer(options?: {cwd?: string}) {
           },
         },
         {
+          name: 'add_translation_tag',
+          description: 'Add a tag to a translation string',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              source: {
+                type: 'string',
+                description: 'The source string to tag',
+              },
+              tag: {
+                type: 'string',
+                description: 'The tag to add (e.g. "xx/yy")',
+              },
+            },
+            required: ['source', 'tag'],
+          },
+        },
+        {
+          name: 'remove_translation_tag',
+          description: 'Remove a tag from a translation string',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              source: {
+                type: 'string',
+                description: 'The source string to untag',
+              },
+              tag: {
+                type: 'string',
+                description: 'The tag to remove',
+              },
+            },
+            required: ['source', 'tag'],
+          },
+        },
+        {
           name: 'extract_strings',
           description: 'Extract translatable strings from a document',
           inputSchema: {
@@ -428,6 +465,34 @@ export async function runMcpServer(options?: {cwd?: string}) {
         await cmsClient.saveTranslations(translations, tags);
         return {
           content: [{type: 'text', text: 'Translations saved.'}],
+        };
+      }
+
+      if (name === 'add_translation_tag') {
+        const source = String(args?.source);
+        const tag = String(args?.tag);
+        // Saving with an empty translation map for the source string will just
+        // update the tags for that string's hash without overwriting existing
+        // translations, because `saveTranslations` uses `merge: true`.
+        await cmsClient.saveTranslations({[source]: {}}, [tag]);
+        return {
+          content: [{type: 'text', text: `Added tag "${tag}" to "${source}"`}],
+        };
+      }
+
+      if (name === 'remove_translation_tag') {
+        const source = String(args?.source);
+        const tag = String(args?.tag);
+        const hash = cmsClient.getTranslationKey(source);
+        const translationsPath = `Projects/${projectId}/Translations`;
+        const translationRef = cmsClient.db.doc(`${translationsPath}/${hash}`);
+        await translationRef.update({
+          tags: FieldValue.arrayRemove(tag),
+        });
+        return {
+          content: [
+            {type: 'text', text: `Removed tag "${tag}" from "${source}"`},
+          ],
         };
       }
 

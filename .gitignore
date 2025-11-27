@@ -8,3 +8,4 @@ out/
 .env
 .turbo/
 *.code-workspace
+.vitest-attachments/

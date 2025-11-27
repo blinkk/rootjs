@@ -75,6 +75,18 @@ export default schema.collection({
           ],
           blockComponents: [
             schema.define({
+              name: 'RelatedPostsBlock',
+              label: 'Related Posts',
+              preview: {title: '{posts}'},
+              fields: [
+                schema.references({
+                  id: 'posts',
+                  label: 'Posts',
+                  collections: ['BlogPosts'],
+                }),
+              ],
+            }),
+            schema.define({
               name: 'YouTubeBlock',
               label: 'YouTube Embed',
               preview: {title: '{youtubeUrl}'},

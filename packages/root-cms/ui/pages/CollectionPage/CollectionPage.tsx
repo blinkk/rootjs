@@ -1,13 +1,10 @@
 import './CollectionPage.css';
 
 import {Button, Loader, Select, Tabs} from '@mantine/core';
-import {
-  IconArrowRoundaboutRight,
-  IconCirclePlus,
-  IconFolder,
-} from '@tabler/icons-preact';
+import {IconArrowRoundaboutRight, IconCirclePlus} from '@tabler/icons-preact';
 import {useEffect, useState} from 'preact/hooks';
 import {route} from 'preact-router';
+import {CollectionTree} from '../../components/CollectionTree/CollectionTree.js';
 import {DocActionsMenu} from '../../components/DocActionsMenu/DocActionsMenu.js';
 import {DocStatusBadges} from '../../components/DocStatusBadges/DocStatusBadges.js';
 import {FilePreview} from '../../components/FilePreview/FilePreview.js';
@@ -18,7 +15,6 @@ import {SplitPanel} from '../../components/SplitPanel/SplitPanel.js';
 import {useDocsList} from '../../hooks/useDocsList.js';
 import {useLocalStorage} from '../../hooks/useLocalStorage.js';
 import {Layout} from '../../layout/Layout.js';
-import {joinClassNames} from '../../utils/classes.js';
 import {getDocServingUrl} from '../../utils/doc-urls.js';
 import {getNestedValue} from '../../utils/objects.js';
 
@@ -28,10 +24,10 @@ interface CollectionPageProps {
 
 export function CollectionPage(props: CollectionPageProps) {
   const [query, setQuery] = useState('');
+  const projectId = window.__ROOT_CTX.rootConfig.projectId;
 
   // If no collection is selected, select one by default.
   useEffect(() => {
-    const projectId = window.__ROOT_CTX.rootConfig.projectId;
     const collections = window.__ROOT_CTX.collections;
     const localStorageKey = `root-cms::${projectId}::last_collection`;
     if (props.collection) {
@@ -57,22 +53,9 @@ export function CollectionPage(props: CollectionPageProps) {
       }
       console.warn('no collections');
     }
-  }, [props.collection]);
+  }, [props.collection, projectId]);
 
-  const collectionIds = Object.keys(window.__ROOT_CTX.collections);
-  const matchedCollections = collectionIds
-    .filter((id) => {
-      if (!query) {
-        return true;
-      }
-      return id.toLowerCase().includes(query.toLowerCase());
-    })
-    .map((id) => {
-      return {
-        ...window.__ROOT_CTX.collections[id],
-        id: id,
-      };
-    });
+  const collections = window.__ROOT_CTX.collections;
 
   return (
     <Layout>
@@ -87,33 +70,12 @@ export function CollectionPage(props: CollectionPageProps) {
             />
           </div>
           <div className="CollectionPage__side__collections">
-            {matchedCollections.map((collection) => (
-              <a
-                className={joinClassNames(
-                  'CollectionPage__side__collection',
-                  collection.id === props.collection && 'active'
-                )}
-                href={`/cms/content/${collection.id}`}
-                key={collection.id}
-              >
-                <div className="CollectionPage__side__collection__icon">
-                  <IconFolder size={20} strokeWidth="1.75" />
-                </div>
-                <div className="CollectionPage__side__collection__name">
-                  {collection.name || collection.id}
-                </div>
-                {collection.description && (
-                  <div className="CollectionPage__side__collection__desc">
-                    {collection.description}
-                  </div>
-                )}
-              </a>
-            ))}
-            {matchedCollections.length === 0 && (
-              <div className="CollectionPage__side__collections__empty">
-                No collections match your query.
-              </div>
-            )}
+            <CollectionTree
+              collections={collections}
+              activeCollectionId={props.collection}
+              query={query}
+              projectId={projectId}
+            />
           </div>
         </SplitPanel.Item>
         <SplitPanel.Item className="CollectionPage__main" fluid>
@@ -271,9 +233,13 @@ CollectionPage.DocsList = (props: {
   if (!rootCollection) {
     throw new Error(`could not find collection: ${collectionId}`);
   }
+  const hasCollectionUrl = !!rootCollection.url;
 
   const docs = props.docs || [];
   function getLiveUrl(slug: string): string {
+    if (!hasCollectionUrl) {
+      return '';
+    }
     return getDocServingUrl({collectionId, slug});
   }
 
@@ -320,9 +286,11 @@ CollectionPage.DocsList = (props: {
               <div className="CollectionPage__collection__docsList__doc__content__title">
                 {previewTitle || '[UNTITLED]'}
               </div>
-              <div className="CollectionPage__collection__docsList__doc__content__url">
-                {liveUrl}
-              </div>
+              {hasCollectionUrl && liveUrl && (
+                <div className="CollectionPage__collection__docsList__doc__content__url">
+                  {liveUrl}
+                </div>
+              )}
             </a>
             <div className="CollectionPage__collection__docsList__doc__controls">
               <DocActionsMenu
