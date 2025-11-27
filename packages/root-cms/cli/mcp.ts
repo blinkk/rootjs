@@ -1,5 +1,6 @@
 import path from 'node:path';
-import {loadRootConfig} from '@blinkk/root/node';
+import {fileURLToPath} from 'node:url';
+import {loadRootConfig, viteSsrLoadModule} from '@blinkk/root/node';
 import {Server} from '@modelcontextprotocol/sdk/server/index.js';
 import {StdioServerTransport} from '@modelcontextprotocol/sdk/server/stdio.js';
 import {
@@ -10,15 +11,26 @@ import {
   McpError,
   ReadResourceRequestSchema,
 } from '@modelcontextprotocol/sdk/types.js';
-import {FieldValue} from 'firebase-admin/firestore';
+import {FieldValue, Timestamp} from 'firebase-admin/firestore';
 import {ChatClient} from '../core/ai.js';
 import {RootCMSClient} from '../core/client.js';
+import {extractFields} from '../core/functions.js';
+import {schemaToZod} from '../core/zod.js';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 export async function runMcpServer(options?: {cwd?: string}) {
   const rootDir = options?.cwd ? path.resolve(options.cwd) : process.cwd();
   const rootConfig = await loadRootConfig(rootDir, {command: 'root-cms'});
   const cmsClient = new RootCMSClient(rootConfig);
   const projectId = cmsClient.projectId;
+
+  // Load the project module to access schemas.
+  const projectModulePath = path.resolve(__dirname, '../core/project.js');
+  const projectModule = (await viteSsrLoadModule(
+    rootConfig,
+    projectModulePath
+  )) as any;
 
   const server = new Server(
     {
@@ -455,6 +467,43 @@ export async function runMcpServer(options?: {cwd?: string}) {
         const data = args?.data as any;
         const docId = `${collectionId}/${slug}`;
 
+        // Validate against schema
+        const schema = await projectModule.getCollectionSchema(collectionId);
+        if (schema) {
+          const getSchema = (id: string) => {
+            // Note: This is synchronous in schemaToZod but getCollectionSchema is async.
+            // We might need to preload schemas or change schemaToZod to be async.
+            // However, projectModule.SCHEMA_MODULES is available synchronously in project.ts
+            // if we access it directly, but `getCollectionSchema` does some processing.
+            // Let's assume for now we can't easily get it synchronously without refactoring.
+            // BUT, `projectModule` loaded via viteSsrLoadModule might expose the raw modules.
+            // Let's check `project.ts` again. `SCHEMA_MODULES` is exported.
+            // So we can access it.
+            const fileId = `/collections/${id}.schema.ts`;
+            const module = projectModule.SCHEMA_MODULES[fileId];
+            return module?.default;
+          };
+
+          const zodSchema = schemaToZod(schema, getSchema);
+          const validationResult = zodSchema.safeParse(data);
+          if (!validationResult.success) {
+            const errors = validationResult.error.issues
+              .map((e) => `${e.path.join('.')}: ${e.message}`)
+              .join('\n');
+            return {
+              content: [
+                {
+                  type: 'text',
+                  text: `Validation failed for ${docId}:\n${errors}`,
+                },
+              ],
+              isError: true,
+            };
+          }
+        } else {
+          console.warn(`No schema found for collection: ${collectionId}`);
+        }
+
         await cmsClient.saveDraftData(docId, data);
         return {
           content: [{type: 'text', text: `Saved draft for ${docId}`}],
@@ -577,19 +626,79 @@ export async function runMcpServer(options?: {cwd?: string}) {
           };
         }
 
+        const schema = await projectModule.getCollectionSchema(collectionId);
+        let systemPrompt = '';
+        if (schema) {
+          systemPrompt = `
+You are editing a document in the Root CMS.
+The document follows this schema:
+${JSON.stringify(schema, null, 2)}
+
+IMPORTANT:
+- Output valid JSON matching the schema.
+- For 'oneof' fields, use the '_type' property to specify the type.
+- Do NOT use 'type' for the type discriminator, use '_type'.
+- Arrays should be JSON arrays, not objects with '_array' keys.
+- For 'richtext' fields, use the EditorJS format: {"blocks": [{"type": "paragraph", "data": {"text": "..."}}, ...]}.
+`;
+        }
+
         const chatClient = new ChatClient(cmsClient, 'mcp-server');
         const chat = await chatClient.getOrCreateChat(chatId);
 
-        const res = await chat.sendPrompt([{text: prompt}], {
-          mode: 'edit',
-          editData: doc.fields,
-        });
+        const res = await chat.sendPrompt(
+          [
+            {text: systemPrompt},
+            {
+              text: `Current document state:\n${JSON.stringify(
+                doc.fields,
+                null,
+                2
+              )}`,
+            },
+            {text: prompt},
+          ],
+          {
+            mode: 'edit',
+            editData: doc.fields,
+          }
+        );
 
         if (res.error) {
           return {
             content: [{type: 'text', text: `AI Error: ${res.error}`}],
             isError: true,
           };
+        }
+
+        // Validate the AI output against the schema
+        if (schema) {
+          const getSchema = (id: string) => {
+            const fileId = `/collections/${id}.schema.ts`;
+            const module = projectModule.SCHEMA_MODULES[fileId];
+            return module?.default;
+          };
+
+          const zodSchema = schemaToZod(schema, getSchema);
+          const validationResult = zodSchema.safeParse(res.data);
+          if (!validationResult.success) {
+            const errors = validationResult.error.issues
+              .map((e) => `${e.path.join('.')}: ${e.message}`)
+              .join('\n');
+            return {
+              content: [
+                {
+                  type: 'text',
+                  text: `AI generated invalid data:\n${errors}\n\nGenerated data:\n${JSON.stringify(
+                    res.data,
+                    null,
+                    2
+                  )}`,
+                },
+              ],
+              isError: true,
+            };
+          }
         }
 
         return {
