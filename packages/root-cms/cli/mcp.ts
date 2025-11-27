@@ -142,7 +142,8 @@ export async function runMcpServer(options?: {cwd?: string}) {
         },
         {
           name: 'docs_save',
-          description: 'Save a draft document',
+          description:
+            'Save a draft document. For richtext fields, use EditorJS format: {"blocks": [{"type": "paragraph", "data": {"text": "..."}}]}',
           inputSchema: {
             type: 'object',
             properties: {
@@ -406,20 +407,26 @@ export async function runMcpServer(options?: {cwd?: string}) {
       }
 
       if (name === 'collections_get_schema') {
-        // This is tricky without `project.js`.
-        // But we can try to read the schema from the file system if we are in the project root.
-        // Or maybe `cmsClient` can help?
-        // `cmsPlugin` has `hooks` that write schemas.
-        // Let's assume for now we can't easily get the full schema without `project.js`.
-        // We'll return a message saying "Not implemented yet".
+        const collectionId = String(args?.collectionId);
+        const schema = await projectModule.getCollectionSchema(collectionId);
+        if (!schema) {
+          return {
+            content: [
+              {
+                type: 'text',
+                text: `No schema found for collection: ${collectionId}`,
+              },
+            ],
+            isError: true,
+          };
+        }
         return {
           content: [
             {
               type: 'text',
-              text: 'Schema retrieval not yet implemented via MCP',
+              text: JSON.stringify(schema, null, 2),
             },
           ],
-          isError: true,
         };
       }
 
@@ -468,43 +475,65 @@ export async function runMcpServer(options?: {cwd?: string}) {
         const docId = `${collectionId}/${slug}`;
 
         // Validate against schema
+        // Validate against schema
         const schema = await projectModule.getCollectionSchema(collectionId);
-        if (schema) {
-          const getSchema = (id: string) => {
-            // Note: This is synchronous in schemaToZod but getCollectionSchema is async.
-            // We might need to preload schemas or change schemaToZod to be async.
-            // However, projectModule.SCHEMA_MODULES is available synchronously in project.ts
-            // if we access it directly, but `getCollectionSchema` does some processing.
-            // Let's assume for now we can't easily get it synchronously without refactoring.
-            // BUT, `projectModule` loaded via viteSsrLoadModule might expose the raw modules.
-            // Let's check `project.ts` again. `SCHEMA_MODULES` is exported.
-            // So we can access it.
-            const fileId = `/collections/${id}.schema.ts`;
-            const module = projectModule.SCHEMA_MODULES[fileId];
-            return module?.default;
+        if (!schema) {
+          return {
+            content: [
+              {
+                type: 'text',
+                text: `No schema found for collection: ${collectionId}`,
+              },
+            ],
+            isError: true,
           };
-
-          const zodSchema = schemaToZod(schema, getSchema);
-          const validationResult = zodSchema.safeParse(data);
-          if (!validationResult.success) {
-            const errors = validationResult.error.issues
-              .map((e) => `${e.path.join('.')}: ${e.message}`)
-              .join('\n');
-            return {
-              content: [
-                {
-                  type: 'text',
-                  text: `Validation failed for ${docId}:\n${errors}`,
-                },
-              ],
-              isError: true,
-            };
-          }
-        } else {
-          console.warn(`No schema found for collection: ${collectionId}`);
         }
 
-        await cmsClient.saveDraftData(docId, data);
+        const getSchema = (id: string) => {
+          // Build a map of schemas by name if not already built.
+          // Since we are inside the handler, we can build it once per request or cache it.
+          // For simplicity, we'll iterate over SCHEMA_MODULES.
+          for (const fileId in projectModule.SCHEMA_MODULES) {
+            const module = projectModule.SCHEMA_MODULES[fileId];
+            if (module?.default?.name === id) {
+              return module.default;
+            }
+          }
+          // Fallback to checking file ID if name doesn't match (e.g. for collections)
+          const fileId = `/collections/${id}.schema.ts`;
+          const module = projectModule.SCHEMA_MODULES[fileId];
+          return module?.default;
+        };
+
+        const zodSchema = schemaToZod(schema, getSchema);
+        const validationResult = zodSchema.safeParse(data);
+        if (!validationResult.success) {
+          let errors = validationResult.error.issues
+            .map((e) => `${e.path.join('.')}: ${e.message}`)
+            .join('\n');
+
+          // Add hint for richtext errors
+          if (
+            errors.includes('richtext') ||
+            errors.includes('Expected object') ||
+            errors.includes('blocks')
+          ) {
+            errors +=
+              '\n\nHINT: Richtext fields must use EditorJS format: {"blocks": [{"type": "paragraph", "data": {"text": "..."}}]}';
+          }
+
+          return {
+            content: [
+              {
+                type: 'text',
+                text: `Validation failed for ${docId}:\n${errors}`,
+              },
+            ],
+            isError: true,
+          };
+        }
+
+        await cmsClient.saveDraftData(docId, validationResult.data);
         return {
           content: [{type: 'text', text: `Saved draft for ${docId}`}],
         };
@@ -627,9 +656,19 @@ export async function runMcpServer(options?: {cwd?: string}) {
         }
 
         const schema = await projectModule.getCollectionSchema(collectionId);
-        let systemPrompt = '';
-        if (schema) {
-          systemPrompt = `
+        if (!schema) {
+          return {
+            content: [
+              {
+                type: 'text',
+                text: `No schema found for collection: ${collectionId}`,
+              },
+            ],
+            isError: true,
+          };
+        }
+
+        const systemPrompt = `
 You are editing a document in the Root CMS.
 The document follows this schema:
 ${JSON.stringify(schema, null, 2)}
@@ -641,7 +680,6 @@ IMPORTANT:
 - Arrays should be JSON arrays, not objects with '_array' keys.
 - For 'richtext' fields, use the EditorJS format: {"blocks": [{"type": "paragraph", "data": {"text": "..."}}, ...]}.
 `;
-        }
 
         const chatClient = new ChatClient(cmsClient, 'mcp-server');
         const chat = await chatClient.getOrCreateChat(chatId);
@@ -674,6 +712,12 @@ IMPORTANT:
         // Validate the AI output against the schema
         if (schema) {
           const getSchema = (id: string) => {
+            for (const fileId in projectModule.SCHEMA_MODULES) {
+              const module = projectModule.SCHEMA_MODULES[fileId];
+              if (module?.default?.name === id) {
+                return module.default;
+              }
+            }
             const fileId = `/collections/${id}.schema.ts`;
             const module = projectModule.SCHEMA_MODULES[fileId];
             return module?.default;
