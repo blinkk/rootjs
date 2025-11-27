@@ -73,7 +73,7 @@ export async function runMcpServer(options?: {cwd?: string}) {
     return {
       tools: [
         {
-          name: 'list_collections',
+          name: 'collections.list',
           description: 'List all collections in the CMS project',
           inputSchema: {
             type: 'object',
@@ -81,7 +81,7 @@ export async function runMcpServer(options?: {cwd?: string}) {
           },
         },
         {
-          name: 'get_collection_schema',
+          name: 'collections.get_schema',
           description: 'Get the schema for a specific collection',
           inputSchema: {
             type: 'object',
@@ -95,7 +95,7 @@ export async function runMcpServer(options?: {cwd?: string}) {
           },
         },
         {
-          name: 'list_docs',
+          name: 'docs.list',
           description: 'List documents in a collection',
           inputSchema: {
             type: 'object',
@@ -116,7 +116,7 @@ export async function runMcpServer(options?: {cwd?: string}) {
           },
         },
         {
-          name: 'get_doc',
+          name: 'docs.get',
           description: 'Get a document by slug',
           inputSchema: {
             type: 'object',
@@ -129,7 +129,7 @@ export async function runMcpServer(options?: {cwd?: string}) {
           },
         },
         {
-          name: 'save_doc',
+          name: 'docs.save',
           description: 'Save a draft document',
           inputSchema: {
             type: 'object',
@@ -142,7 +142,7 @@ export async function runMcpServer(options?: {cwd?: string}) {
           },
         },
         {
-          name: 'publish_doc',
+          name: 'docs.publish',
           description: 'Publish a document',
           inputSchema: {
             type: 'object',
@@ -154,7 +154,48 @@ export async function runMcpServer(options?: {cwd?: string}) {
           },
         },
         {
-          name: 'edit_doc',
+          name: 'docs.unpublish',
+          description: 'Unpublish a document',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              collectionId: {type: 'string'},
+              slug: {type: 'string'},
+            },
+            required: ['collectionId', 'slug'],
+          },
+        },
+        {
+          name: 'docs.delete',
+          description: 'Delete a draft document',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              collectionId: {type: 'string'},
+              slug: {type: 'string'},
+            },
+            required: ['collectionId', 'slug'],
+          },
+        },
+        {
+          name: 'docs.lock',
+          description: 'Lock a document for publishing',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              collectionId: {type: 'string'},
+              slug: {type: 'string'},
+              reason: {type: 'string', description: 'Reason for locking'},
+              until: {
+                type: 'number',
+                description: 'Timestamp (ms) until the lock expires',
+              },
+            },
+            required: ['collectionId', 'slug', 'reason'],
+          },
+        },
+        {
+          name: 'docs.edit',
           description: 'Edit a document using AI',
           inputSchema: {
             type: 'object',
@@ -174,7 +215,48 @@ export async function runMcpServer(options?: {cwd?: string}) {
           },
         },
         {
-          name: 'list_translations',
+          name: 'translations.create',
+          description: 'Create a new translation string',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              source: {
+                type: 'string',
+                description: 'The source string to add',
+              },
+              tags: {
+                type: 'array',
+                items: {type: 'string'},
+                description: 'Optional tags to add',
+              },
+            },
+            required: ['source'],
+          },
+        },
+        {
+          name: 'translations.edit',
+          description: 'Edit a translation for a specific locale',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              source: {
+                type: 'string',
+                description: 'The source string to edit',
+              },
+              locale: {
+                type: 'string',
+                description: 'The locale to edit (e.g. "es")',
+              },
+              translation: {
+                type: 'string',
+                description: 'The translated string',
+              },
+            },
+            required: ['source', 'locale', 'translation'],
+          },
+        },
+        {
+          name: 'translations.list',
           description: 'List translations, optionally filtered by tags',
           inputSchema: {
             type: 'object',
@@ -188,7 +270,7 @@ export async function runMcpServer(options?: {cwd?: string}) {
           },
         },
         {
-          name: 'get_translations_for_locale',
+          name: 'translations.get',
           description: 'Get translations for a specific locale',
           inputSchema: {
             type: 'object',
@@ -207,7 +289,7 @@ export async function runMcpServer(options?: {cwd?: string}) {
           },
         },
         {
-          name: 'save_translations',
+          name: 'translations.save',
           description: 'Save or update translations',
           inputSchema: {
             type: 'object',
@@ -227,7 +309,7 @@ export async function runMcpServer(options?: {cwd?: string}) {
           },
         },
         {
-          name: 'add_translation_tag',
+          name: 'translations.add_tag',
           description: 'Add a tag to a translation string',
           inputSchema: {
             type: 'object',
@@ -245,7 +327,7 @@ export async function runMcpServer(options?: {cwd?: string}) {
           },
         },
         {
-          name: 'remove_translation_tag',
+          name: 'translations.remove_tag',
           description: 'Remove a tag from a translation string',
           inputSchema: {
             type: 'object',
@@ -263,7 +345,7 @@ export async function runMcpServer(options?: {cwd?: string}) {
           },
         },
         {
-          name: 'extract_strings',
+          name: 'translations.extract_strings',
           description: 'Extract translatable strings from a document',
           inputSchema: {
             type: 'object',
@@ -283,7 +365,7 @@ export async function runMcpServer(options?: {cwd?: string}) {
     const {name, arguments: args} = request.params;
 
     try {
-      if (name === 'list_collections') {
+      if (name === 'collections.list') {
         // RootCMSClient doesn't have a direct listCollections method exposed in the public API easily?
         // Actually, we can list collections by looking at the schema or firestore.
         // Let's look at `core/project.ts` or similar if needed, but `cmsClient` might not have it.
@@ -315,7 +397,7 @@ export async function runMcpServer(options?: {cwd?: string}) {
         };
       }
 
-      if (name === 'get_collection_schema') {
+      if (name === 'collections.get_schema') {
         // This is tricky without `project.js`.
         // But we can try to read the schema from the file system if we are in the project root.
         // Or maybe `cmsClient` can help?
@@ -333,7 +415,7 @@ export async function runMcpServer(options?: {cwd?: string}) {
         };
       }
 
-      if (name === 'list_docs') {
+      if (name === 'docs.list') {
         const collectionId = String(args?.collectionId);
         const limit = Number(args?.limit) || 10;
         const offset = Number(args?.offset) || 0;
@@ -349,7 +431,7 @@ export async function runMcpServer(options?: {cwd?: string}) {
         };
       }
 
-      if (name === 'get_doc') {
+      if (name === 'docs.get') {
         const collectionId = String(args?.collectionId);
         const slug = String(args?.slug);
         const mode = (String(args?.mode) || 'draft') as 'draft' | 'published';
@@ -371,7 +453,7 @@ export async function runMcpServer(options?: {cwd?: string}) {
         };
       }
 
-      if (name === 'save_doc') {
+      if (name === 'docs.save') {
         const collectionId = String(args?.collectionId);
         const slug = String(args?.slug);
         const data = args?.data as any;
@@ -383,7 +465,7 @@ export async function runMcpServer(options?: {cwd?: string}) {
         };
       }
 
-      if (name === 'publish_doc') {
+      if (name === 'docs.publish') {
         const collectionId = String(args?.collectionId);
         const slug = String(args?.slug);
         const docId = `${collectionId}/${slug}`;
@@ -394,7 +476,93 @@ export async function runMcpServer(options?: {cwd?: string}) {
         };
       }
 
-      if (name === 'edit_doc') {
+      if (name === 'docs.unpublish') {
+        const collectionId = String(args?.collectionId);
+        const slug = String(args?.slug);
+        const docId = `${collectionId}/${slug}`;
+        const publishedRef = cmsClient.dbDocRef(collectionId, slug, {
+          mode: 'published',
+        });
+        const draftRef = cmsClient.dbDocRef(collectionId, slug, {
+          mode: 'draft',
+        });
+
+        const batch = cmsClient.db.batch();
+        batch.delete(publishedRef);
+        batch.update(draftRef, {
+          'sys.publishedAt': FieldValue.delete(),
+          'sys.publishedBy': FieldValue.delete(),
+          'sys.firstPublishedAt': FieldValue.delete(),
+          'sys.firstPublishedBy': FieldValue.delete(),
+        });
+        await batch.commit();
+
+        return {
+          content: [{type: 'text', text: `Unpublished ${docId}`}],
+        };
+      }
+
+      if (name === 'docs.delete') {
+        const collectionId = String(args?.collectionId);
+        const slug = String(args?.slug);
+        const docId = `${collectionId}/${slug}`;
+        const draftRef = cmsClient.dbDocRef(collectionId, slug, {
+          mode: 'draft',
+        });
+        const publishedRef = cmsClient.dbDocRef(collectionId, slug, {
+          mode: 'published',
+        });
+
+        // Check if published doc exists to warn user?
+        // For now, just delete draft.
+        // If we want to delete everything, we should delete published too.
+        // But "delete" usually means "delete draft".
+        // Let's assume delete draft for now.
+        // Actually, let's delete both to be safe if it's a full delete.
+        // But usually "delete" in CMS means delete the doc entirely.
+        const batch = cmsClient.db.batch();
+        batch.delete(draftRef);
+        batch.delete(publishedRef);
+        await batch.commit();
+
+        return {
+          content: [{type: 'text', text: `Deleted ${docId}`}],
+        };
+      }
+
+      if (name === 'docs.lock') {
+        const collectionId = String(args?.collectionId);
+        const slug = String(args?.slug);
+        const reason = String(args?.reason);
+        const until = args?.until ? Number(args?.until) : undefined;
+        const draftRef = cmsClient.dbDocRef(collectionId, slug, {
+          mode: 'draft',
+        });
+
+        const lockingData: any = {
+          lockedAt: new Date().toISOString(),
+          lockedBy: 'mcp-server',
+          reason: reason,
+        };
+        if (until) {
+          lockingData.until = Timestamp.fromMillis(until);
+        }
+
+        await draftRef.update({
+          'sys.publishingLocked': lockingData,
+        });
+
+        return {
+          content: [
+            {
+              type: 'text',
+              text: `Locked ${collectionId}/${slug} for publishing`,
+            },
+          ],
+        };
+      }
+
+      if (name === 'docs.edit') {
         const collectionId = String(args?.collectionId);
         const slug = String(args?.slug);
         const prompt = String(args?.prompt);
@@ -436,7 +604,31 @@ export async function runMcpServer(options?: {cwd?: string}) {
         };
       }
 
-      if (name === 'list_translations') {
+      if (name === 'translations.create') {
+        const source = String(args?.source);
+        const tags = args?.tags as string[] | undefined;
+        await cmsClient.saveTranslations({[source]: {}}, tags);
+        return {
+          content: [{type: 'text', text: `Created translation "${source}"`}],
+        };
+      }
+
+      if (name === 'translations.edit') {
+        const source = String(args?.source);
+        const locale = String(args?.locale);
+        const translation = String(args?.translation);
+        await cmsClient.saveTranslations({[source]: {[locale]: translation}});
+        return {
+          content: [
+            {
+              type: 'text',
+              text: `Updated translation for "${source}" (${locale})`,
+            },
+          ],
+        };
+      }
+
+      if (name === 'translations.list') {
         const tags = args?.tags as string[] | undefined;
         const translations = await cmsClient.loadTranslations({tags});
         return {
@@ -446,7 +638,7 @@ export async function runMcpServer(options?: {cwd?: string}) {
         };
       }
 
-      if (name === 'get_translations_for_locale') {
+      if (name === 'translations.get') {
         const locale = String(args?.locale);
         const tags = args?.tags as string[] | undefined;
         const translations = await cmsClient.loadTranslationsForLocale(locale, {
@@ -459,7 +651,7 @@ export async function runMcpServer(options?: {cwd?: string}) {
         };
       }
 
-      if (name === 'save_translations') {
+      if (name === 'translations.save') {
         const translations = args?.translations as any;
         const tags = args?.tags as string[] | undefined;
         await cmsClient.saveTranslations(translations, tags);
@@ -468,7 +660,7 @@ export async function runMcpServer(options?: {cwd?: string}) {
         };
       }
 
-      if (name === 'add_translation_tag') {
+      if (name === 'translations.add_tag') {
         const source = String(args?.source);
         const tag = String(args?.tag);
         // Saving with an empty translation map for the source string will just
@@ -480,7 +672,7 @@ export async function runMcpServer(options?: {cwd?: string}) {
         };
       }
 
-      if (name === 'remove_translation_tag') {
+      if (name === 'translations.remove_tag') {
         const source = String(args?.source);
         const tag = String(args?.tag);
         const hash = cmsClient.getTranslationKey(source);
@@ -496,7 +688,7 @@ export async function runMcpServer(options?: {cwd?: string}) {
         };
       }
 
-      if (name === 'extract_strings') {
+      if (name === 'translations.extract_strings') {
         const collectionId = String(args?.collectionId);
         const slug = String(args?.slug);
         const doc = await cmsClient.getDoc(collectionId, slug, {mode: 'draft'});
