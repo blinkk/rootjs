@@ -73,7 +73,7 @@ export async function runMcpServer(options?: {cwd?: string}) {
     return {
       tools: [
         {
-          name: 'collections.list',
+          name: 'collections_list',
           description: 'List all collections in the CMS project',
           inputSchema: {
             type: 'object',
@@ -81,7 +81,7 @@ export async function runMcpServer(options?: {cwd?: string}) {
           },
         },
         {
-          name: 'collections.get_schema',
+          name: 'collections_get_schema',
           description: 'Get the schema for a specific collection',
           inputSchema: {
             type: 'object',
@@ -95,7 +95,7 @@ export async function runMcpServer(options?: {cwd?: string}) {
           },
         },
         {
-          name: 'docs.list',
+          name: 'docs_list',
           description: 'List documents in a collection',
           inputSchema: {
             type: 'object',
@@ -116,7 +116,7 @@ export async function runMcpServer(options?: {cwd?: string}) {
           },
         },
         {
-          name: 'docs.get',
+          name: 'docs_get',
           description: 'Get a document by slug',
           inputSchema: {
             type: 'object',
@@ -129,7 +129,7 @@ export async function runMcpServer(options?: {cwd?: string}) {
           },
         },
         {
-          name: 'docs.save',
+          name: 'docs_save',
           description: 'Save a draft document',
           inputSchema: {
             type: 'object',
@@ -142,7 +142,7 @@ export async function runMcpServer(options?: {cwd?: string}) {
           },
         },
         {
-          name: 'docs.publish',
+          name: 'docs_publish',
           description: 'Publish a document',
           inputSchema: {
             type: 'object',
@@ -154,7 +154,7 @@ export async function runMcpServer(options?: {cwd?: string}) {
           },
         },
         {
-          name: 'docs.unpublish',
+          name: 'docs_unpublish',
           description: 'Unpublish a document',
           inputSchema: {
             type: 'object',
@@ -166,7 +166,7 @@ export async function runMcpServer(options?: {cwd?: string}) {
           },
         },
         {
-          name: 'docs.delete',
+          name: 'docs_delete',
           description: 'Delete a draft document',
           inputSchema: {
             type: 'object',
@@ -178,7 +178,7 @@ export async function runMcpServer(options?: {cwd?: string}) {
           },
         },
         {
-          name: 'docs.lock',
+          name: 'docs_lock',
           description: 'Lock a document for publishing',
           inputSchema: {
             type: 'object',
@@ -195,7 +195,7 @@ export async function runMcpServer(options?: {cwd?: string}) {
           },
         },
         {
-          name: 'docs.edit',
+          name: 'docs_edit',
           description: 'Edit a document using AI',
           inputSchema: {
             type: 'object',
@@ -215,7 +215,7 @@ export async function runMcpServer(options?: {cwd?: string}) {
           },
         },
         {
-          name: 'translations.create',
+          name: 'translations_create',
           description: 'Create a new translation string',
           inputSchema: {
             type: 'object',
@@ -234,7 +234,7 @@ export async function runMcpServer(options?: {cwd?: string}) {
           },
         },
         {
-          name: 'translations.edit',
+          name: 'translations_edit',
           description: 'Edit a translation for a specific locale',
           inputSchema: {
             type: 'object',
@@ -256,7 +256,7 @@ export async function runMcpServer(options?: {cwd?: string}) {
           },
         },
         {
-          name: 'translations.list',
+          name: 'translations_list',
           description: 'List translations, optionally filtered by tags',
           inputSchema: {
             type: 'object',
@@ -270,7 +270,7 @@ export async function runMcpServer(options?: {cwd?: string}) {
           },
         },
         {
-          name: 'translations.get',
+          name: 'translations_get',
           description: 'Get translations for a specific locale',
           inputSchema: {
             type: 'object',
@@ -289,7 +289,7 @@ export async function runMcpServer(options?: {cwd?: string}) {
           },
         },
         {
-          name: 'translations.save',
+          name: 'translations_save',
           description: 'Save or update translations',
           inputSchema: {
             type: 'object',
@@ -309,7 +309,7 @@ export async function runMcpServer(options?: {cwd?: string}) {
           },
         },
         {
-          name: 'translations.add_tag',
+          name: 'translations_add_tag',
           description: 'Add a tag to a translation string',
           inputSchema: {
             type: 'object',
@@ -327,7 +327,7 @@ export async function runMcpServer(options?: {cwd?: string}) {
           },
         },
         {
-          name: 'translations.remove_tag',
+          name: 'translations_remove_tag',
           description: 'Remove a tag from a translation string',
           inputSchema: {
             type: 'object',
@@ -345,7 +345,7 @@ export async function runMcpServer(options?: {cwd?: string}) {
           },
         },
         {
-          name: 'translations.extract_strings',
+          name: 'translations_extract_strings',
           description: 'Extract translatable strings from a document',
           inputSchema: {
             type: 'object',
@@ -365,17 +365,13 @@ export async function runMcpServer(options?: {cwd?: string}) {
     const {name, arguments: args} = request.params;
 
     try {
-      if (name === 'collections.list') {
+      if (name === 'collections_list') {
         // RootCMSClient doesn't have a direct listCollections method exposed in the public API easily?
         // Actually, we can list collections by looking at the schema or firestore.
         // Let's look at `core/project.ts` or similar if needed, but `cmsClient` might not have it.
         // Wait, `cmsPlugin` writes schemas to `dist/collections`.
         // Or we can query Firestore `Projects/{id}/Collections`.
-        // Let's try to use `cmsClient.db` to list collections if possible, or better, use the project config.
-        // `RootCMSClient` has `rootConfig`.
-        // Let's use `project.getProjectSchemas()` if we can access it.
-        // But `project.js` is a server-side module.
-        // For now, let's try to list from Firestore if possible, or just return a placeholder.
+        // Let's try to use `cmsClient.db` to list collections if possible, or just return a placeholder.
         // Actually, `cmsClient` is the best way.
         // Let's check `cmsClient` capabilities again.
         // It has `db`.
@@ -397,7 +393,7 @@ export async function runMcpServer(options?: {cwd?: string}) {
         };
       }
 
-      if (name === 'collections.get_schema') {
+      if (name === 'collections_get_schema') {
         // This is tricky without `project.js`.
         // But we can try to read the schema from the file system if we are in the project root.
         // Or maybe `cmsClient` can help?
@@ -415,7 +411,7 @@ export async function runMcpServer(options?: {cwd?: string}) {
         };
       }
 
-      if (name === 'docs.list') {
+      if (name === 'docs_list') {
         const collectionId = String(args?.collectionId);
         const limit = Number(args?.limit) || 10;
         const offset = Number(args?.offset) || 0;
@@ -431,7 +427,7 @@ export async function runMcpServer(options?: {cwd?: string}) {
         };
       }
 
-      if (name === 'docs.get') {
+      if (name === 'docs_get') {
         const collectionId = String(args?.collectionId);
         const slug = String(args?.slug);
         const mode = (String(args?.mode) || 'draft') as 'draft' | 'published';
@@ -453,7 +449,7 @@ export async function runMcpServer(options?: {cwd?: string}) {
         };
       }
 
-      if (name === 'docs.save') {
+      if (name === 'docs_save') {
         const collectionId = String(args?.collectionId);
         const slug = String(args?.slug);
         const data = args?.data as any;
@@ -465,7 +461,7 @@ export async function runMcpServer(options?: {cwd?: string}) {
         };
       }
 
-      if (name === 'docs.publish') {
+      if (name === 'docs_publish') {
         const collectionId = String(args?.collectionId);
         const slug = String(args?.slug);
         const docId = `${collectionId}/${slug}`;
@@ -476,7 +472,7 @@ export async function runMcpServer(options?: {cwd?: string}) {
         };
       }
 
-      if (name === 'docs.unpublish') {
+      if (name === 'docs_unpublish') {
         const collectionId = String(args?.collectionId);
         const slug = String(args?.slug);
         const docId = `${collectionId}/${slug}`;
@@ -502,7 +498,7 @@ export async function runMcpServer(options?: {cwd?: string}) {
         };
       }
 
-      if (name === 'docs.delete') {
+      if (name === 'docs_delete') {
         const collectionId = String(args?.collectionId);
         const slug = String(args?.slug);
         const docId = `${collectionId}/${slug}`;
@@ -530,7 +526,7 @@ export async function runMcpServer(options?: {cwd?: string}) {
         };
       }
 
-      if (name === 'docs.lock') {
+      if (name === 'docs_lock') {
         const collectionId = String(args?.collectionId);
         const slug = String(args?.slug);
         const reason = String(args?.reason);
@@ -562,7 +558,7 @@ export async function runMcpServer(options?: {cwd?: string}) {
         };
       }
 
-      if (name === 'docs.edit') {
+      if (name === 'docs_edit') {
         const collectionId = String(args?.collectionId);
         const slug = String(args?.slug);
         const prompt = String(args?.prompt);
@@ -604,7 +600,7 @@ export async function runMcpServer(options?: {cwd?: string}) {
         };
       }
 
-      if (name === 'translations.create') {
+      if (name === 'translations_create') {
         const source = String(args?.source);
         const tags = args?.tags as string[] | undefined;
         await cmsClient.saveTranslations({[source]: {}}, tags);
@@ -613,7 +609,7 @@ export async function runMcpServer(options?: {cwd?: string}) {
         };
       }
 
-      if (name === 'translations.edit') {
+      if (name === 'translations_edit') {
         const source = String(args?.source);
         const locale = String(args?.locale);
         const translation = String(args?.translation);
@@ -628,7 +624,7 @@ export async function runMcpServer(options?: {cwd?: string}) {
         };
       }
 
-      if (name === 'translations.list') {
+      if (name === 'translations_list') {
         const tags = args?.tags as string[] | undefined;
         const translations = await cmsClient.loadTranslations({tags});
         return {
@@ -638,7 +634,7 @@ export async function runMcpServer(options?: {cwd?: string}) {
         };
       }
 
-      if (name === 'translations.get') {
+      if (name === 'translations_get') {
         const locale = String(args?.locale);
         const tags = args?.tags as string[] | undefined;
         const translations = await cmsClient.loadTranslationsForLocale(locale, {
@@ -651,7 +647,7 @@ export async function runMcpServer(options?: {cwd?: string}) {
         };
       }
 
-      if (name === 'translations.save') {
+      if (name === 'translations_save') {
         const translations = args?.translations as any;
         const tags = args?.tags as string[] | undefined;
         await cmsClient.saveTranslations(translations, tags);
@@ -660,7 +656,7 @@ export async function runMcpServer(options?: {cwd?: string}) {
         };
       }
 
-      if (name === 'translations.add_tag') {
+      if (name === 'translations_add_tag') {
         const source = String(args?.source);
         const tag = String(args?.tag);
         // Saving with an empty translation map for the source string will just
@@ -672,7 +668,7 @@ export async function runMcpServer(options?: {cwd?: string}) {
         };
       }
 
-      if (name === 'translations.remove_tag') {
+      if (name === 'translations_remove_tag') {
         const source = String(args?.source);
         const tag = String(args?.tag);
         const hash = cmsClient.getTranslationKey(source);
@@ -688,7 +684,7 @@ export async function runMcpServer(options?: {cwd?: string}) {
         };
       }
 
-      if (name === 'translations.extract_strings') {
+      if (name === 'translations_extract_strings') {
         const collectionId = String(args?.collectionId);
         const slug = String(args?.slug);
         const doc = await cmsClient.getDoc(collectionId, slug, {mode: 'draft'});
