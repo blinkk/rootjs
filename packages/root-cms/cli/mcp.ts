@@ -16,6 +16,7 @@ import {ChatClient} from '../core/ai.js';
 import {RootCMSClient} from '../core/client.js';
 import {extractFields} from '../core/functions.js';
 import {schemaToZod} from '../core/zod.js';
+import {generateTypes} from './generate-types.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -27,10 +28,16 @@ export async function runMcpServer(options?: {cwd?: string}) {
 
   // Load the project module to access schemas.
   const projectModulePath = path.resolve(__dirname, '../core/project.js');
-  const projectModule = (await viteSsrLoadModule(
-    rootConfig,
-    projectModulePath
-  )) as any;
+  let projectModule: any;
+
+  async function loadProject() {
+    projectModule = (await viteSsrLoadModule(
+      rootConfig,
+      projectModulePath
+    )) as any;
+  }
+
+  await loadProject();
 
   const server = new Server(
     {
@@ -84,6 +91,22 @@ export async function runMcpServer(options?: {cwd?: string}) {
   server.setRequestHandler(ListToolsRequestSchema, async () => {
     return {
       tools: [
+        {
+          name: 'project_reload',
+          description: 'Reload the project configuration and schemas',
+          inputSchema: {
+            type: 'object',
+            properties: {},
+          },
+        },
+        {
+          name: 'regenerate_types',
+          description: 'Regenerate TypeScript definitions for the CMS',
+          inputSchema: {
+            type: 'object',
+            properties: {},
+          },
+        },
         {
           name: 'collections_list',
           description: 'List all collections in the CMS project',
@@ -378,6 +401,30 @@ export async function runMcpServer(options?: {cwd?: string}) {
     const {name, arguments: args} = request.params;
 
     try {
+      if (name === 'project_reload') {
+        await loadProject();
+        return {
+          content: [
+            {
+              type: 'text',
+              text: 'Project reloaded successfully',
+            },
+          ],
+        };
+      }
+
+      if (name === 'regenerate_types') {
+        await generateTypes();
+        return {
+          content: [
+            {
+              type: 'text',
+              text: 'Types regenerated successfully',
+            },
+          ],
+        };
+      }
+
       if (name === 'collections_list') {
         // RootCMSClient doesn't have a direct listCollections method exposed in the public API easily?
         // Actually, we can list collections by looking at the schema or firestore.
