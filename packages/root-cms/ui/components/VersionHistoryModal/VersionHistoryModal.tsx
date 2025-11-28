@@ -45,6 +45,7 @@ export function VersionHistoryModal(
   const [loading, setLoading] = useState(true);
   const [versions, setVersions] = useState<Version[]>([]);
   const [selectedVersions, setSelectedVersions] = useState<string[]>([]);
+  const [showPublishedOnly, setShowPublishedOnly] = useState(false);
   const copyDocModal = useCopyDocModal({fromDocId: docId});
 
   const dateFormat = new Intl.DateTimeFormat('en-US', {
@@ -148,6 +149,20 @@ export function VersionHistoryModal(
     fetchVersions();
   }, []);
 
+  const filteredVersions = versions.filter((v) => {
+    if (v._versionId === 'draft') {
+      return true;
+    }
+    if (!showPublishedOnly) {
+      return true;
+    }
+    return v.tags?.includes('published');
+  });
+
+  const hasPublishedVersions = versions.some(
+    (v) => v.tags?.includes('published')
+  );
+
   if (loading) {
     return <Loader />;
   }
@@ -174,8 +189,16 @@ export function VersionHistoryModal(
         >
           Compare
         </Button>
+        {hasPublishedVersions && (
+          <Checkbox
+            size="xs"
+            label="Published versions only"
+            checked={showPublishedOnly}
+            onChange={(e: any) => setShowPublishedOnly(e.currentTarget.checked)}
+          />
+        )}
       </div>
-      {versions.length === 0 ? (
+      {filteredVersions.length === 0 ? (
         <Text className="VersionHistoryModal__versionsEmpty" size="body">
           <p>No versions found.</p>
           <p className="VersionHistoryModal__versionsEmpty__developer">
@@ -194,7 +217,7 @@ export function VersionHistoryModal(
             </tr>
           </thead>
           <tbody>
-            {versions.map((version) => {
+            {filteredVersions.map((version) => {
               const isDraft = version._versionId === 'draft';
               const isSelected = selectedVersions.includes(version._versionId);
               const isDisabled = !isSelected && selectedVersions.length >= 2;
@@ -218,7 +241,14 @@ export function VersionHistoryModal(
                           (Latest)
                         </span>
                       ) : (
-                        dateFormat.format(version.sys.modifiedAt.toDate())
+                        <>
+                          {dateFormat.format(version.sys.modifiedAt.toDate())}
+                          {version.tags?.includes('published') && (
+                            <span style={{marginLeft: '4px', opacity: 0.5}}>
+                              (Published)
+                            </span>
+                          )}
+                        </>
                       )}
                     </Text>
                   </td>
