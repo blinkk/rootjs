@@ -1,10 +1,15 @@
-import {Button, Loader, Table} from '@mantine/core';
+import {Button, Checkbox, Loader, Table} from '@mantine/core';
 import {ContextModalProps, useModals} from '@mantine/modals';
 import {showNotification} from '@mantine/notifications';
 import {IconArrowUpRight, IconCopy, IconHistory} from '@tabler/icons-preact';
 import {useEffect, useState} from 'preact/hooks';
 import {useModalTheme} from '../../hooks/useModalTheme.js';
-import {Version, cmsListVersions, cmsRestoreVersion} from '../../utils/doc.js';
+import {
+  Version,
+  cmsListVersions,
+  cmsReadDocVersion,
+  cmsRestoreVersion,
+} from '../../utils/doc.js';
 import {useCopyDocModal} from '../CopyDocModal/CopyDocModal.js';
 import {Heading} from '../Heading/Heading.js';
 import {Text} from '../Text/Text.js';
@@ -39,6 +44,7 @@ export function VersionHistoryModal(
   const docId = props.docId;
   const [loading, setLoading] = useState(true);
   const [versions, setVersions] = useState<Version[]>([]);
+  const [selectedVersions, setSelectedVersions] = useState<string[]>([]);
   const copyDocModal = useCopyDocModal({fromDocId: docId});
 
   const dateFormat = new Intl.DateTimeFormat('en-US', {
@@ -51,9 +57,23 @@ export function VersionHistoryModal(
 
   async function fetchVersions() {
     setLoading(true);
-    const versions = await cmsListVersions(docId);
+    const [savedVersions, draftDoc] = await Promise.all([
+      cmsListVersions(docId),
+      cmsReadDocVersion(docId, 'draft'),
+    ]);
+
+    // Add a virtual "draft" version at the top.
+    const draftVersion: Version = {
+      _versionId: 'draft',
+      sys: {
+        modifiedAt:
+          draftDoc?.sys?.modifiedAt || ({toDate: () => new Date()} as any),
+        modifiedBy: draftDoc?.sys?.modifiedBy || 'Unknown',
+      },
+    } as any;
+    setVersions([draftVersion, ...savedVersions]);
+    setSelectedVersions(['draft']);
     setLoading(false);
-    setVersions(versions);
   }
 
   async function restore(version: Version) {
@@ -86,10 +106,42 @@ export function VersionHistoryModal(
     });
   }
 
-  function getCompareUrl(version: Version) {
-    const left = toUrlParam(docId, version._versionId);
-    const right = toUrlParam(docId, 'draft');
-    return `/cms/compare?left=${left}&right=${right}`;
+  function toggleVersion(versionId: string) {
+    if (selectedVersions.includes(versionId)) {
+      setSelectedVersions(selectedVersions.filter((id) => id !== versionId));
+    } else {
+      if (selectedVersions.length < 2) {
+        setSelectedVersions([...selectedVersions, versionId]);
+      }
+    }
+  }
+
+  function getCompareUrl() {
+    if (selectedVersions.length !== 2) {
+      return '#';
+    }
+    // Sort so that the older version is on the left (usually).
+    // Actually, let's just respect the order of selection or the list order?
+    // Let's use the list order to determine left/right (newer on right usually, or older on left).
+    // The user asked for "compare", usually left is old, right is new.
+    // The versions list is sorted desc (newest first).
+    // So if we pick two, the one that appears earlier in `versions` array is newer.
+    // Let's find the indices.
+    const v1 = versions.find((v) => v._versionId === selectedVersions[0]);
+    const v2 = versions.find((v) => v._versionId === selectedVersions[1]);
+    if (!v1 || !v2) return '#';
+
+    // We want the older one on the left.
+    // Since `versions` is sorted DESC (newest first), the one with higher index is older.
+    const idx1 = versions.indexOf(v1);
+    const idx2 = versions.indexOf(v2);
+
+    const left = idx1 > idx2 ? v1 : v2;
+    const right = idx1 > idx2 ? v2 : v1;
+
+    const leftParam = toUrlParam(docId, left._versionId);
+    const rightParam = toUrlParam(docId, right._versionId);
+    return `/cms/compare?left=${leftParam}&right=${rightParam}`;
   }
 
   useEffect(() => {
@@ -101,12 +153,27 @@ export function VersionHistoryModal(
   }
   return (
     <div className="VersionHistoryModal">
-      <Heading className="VersionHistoryModal__title" size="h2">
-        <IconHistory strokeWidth={1.5} />
-        <span>Version history</span>
-      </Heading>
+      <div className="VersionHistoryModal__header">
+        <Heading className="VersionHistoryModal__title" size="h2">
+          <IconHistory strokeWidth={1.5} />
+          <span>Version history</span>
+        </Heading>
+      </div>
       <div className="VersionHistoryModal__docId">
         <code>{docId}</code>
+      </div>
+      <div className="VersionHistoryModal__actions">
+        <Button
+          component={selectedVersions.length === 2 ? 'a' : 'button'}
+          variant="filled"
+          size="xs"
+          disabled={selectedVersions.length !== 2}
+          href={selectedVersions.length === 2 ? getCompareUrl() : undefined}
+          target={selectedVersions.length === 2 ? '_blank' : undefined}
+          rightIcon={<IconArrowUpRight size={16} />}
+        >
+          Compare
+        </Button>
       </div>
       {versions.length === 0 ? (
         <Text className="VersionHistoryModal__versionsEmpty" size="body">
@@ -120,57 +187,72 @@ export function VersionHistoryModal(
         <Table className="VersionHistoryModal__versions">
           <thead>
             <tr>
+              <th style={{width: '40px'}}></th>
               <th>modified at</th>
               <th>modified by</th>
               <th>actions</th>
             </tr>
           </thead>
           <tbody>
-            {versions.map((version, i) => (
-              <tr>
-                <td>
-                  <Text size="body-sm">
-                    {dateFormat.format(version.sys.modifiedAt.toDate())}
-                  </Text>
-                </td>
-                <td>
-                  <Text size="body-sm">{version.sys.modifiedBy}</Text>
-                </td>
-                <td>
-                  <div className="VersionHistoryModal__versions__buttons">
-                    <Button
-                      variant="default"
-                      size="xs"
-                      compact
-                      onClick={() => restore(version)}
-                    >
-                      restore
-                    </Button>
-                    <Button
-                      variant="default"
-                      size="xs"
-                      compact
-                      onClick={() => copyToNewDoc(version)}
-                      leftIcon={<IconCopy size={12} />}
-                    >
-                      copy to doc
-                    </Button>
-                    <Button
-                      className="VersionHistoryModal__versions__buttons__compare"
-                      component="a"
-                      variant="default"
-                      size="xs"
-                      compact
-                      href={getCompareUrl(version)}
-                      target="_blank"
-                      rightIcon={<IconArrowUpRight size={12} />}
-                    >
-                      compare
-                    </Button>
-                  </div>
-                </td>
-              </tr>
-            ))}
+            {versions.map((version) => {
+              const isDraft = version._versionId === 'draft';
+              const isSelected = selectedVersions.includes(version._versionId);
+              const isDisabled = !isSelected && selectedVersions.length >= 2;
+
+              return (
+                <tr key={version._versionId}>
+                  <td>
+                    <Checkbox
+                      size="sm"
+                      checked={isSelected}
+                      disabled={isDisabled}
+                      onChange={() => toggleVersion(version._versionId)}
+                      style={{cursor: 'pointer'}}
+                    />
+                  </td>
+                  <td>
+                    <Text size="body-sm">
+                      {isDraft ? (
+                        <span title="Current Draft">
+                          {dateFormat.format(version.sys.modifiedAt.toDate())}{' '}
+                          (Latest)
+                        </span>
+                      ) : (
+                        dateFormat.format(version.sys.modifiedAt.toDate())
+                      )}
+                    </Text>
+                  </td>
+                  <td>
+                    <Text size="body-sm">{version.sys.modifiedBy}</Text>
+                  </td>
+                  <td>
+                    <div className="VersionHistoryModal__versions__buttons">
+                      {!isDraft && (
+                        <>
+                          <Button
+                            variant="default"
+                            size="xs"
+                            compact
+                            onClick={() => restore(version)}
+                          >
+                            restore
+                          </Button>
+                          <Button
+                            variant="default"
+                            size="xs"
+                            compact
+                            onClick={() => copyToNewDoc(version)}
+                            leftIcon={<IconCopy size={12} />}
+                          >
+                            copy to doc
+                          </Button>
+                        </>
+                      )}
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </Table>
       )}

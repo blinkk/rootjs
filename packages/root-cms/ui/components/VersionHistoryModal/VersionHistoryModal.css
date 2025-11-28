@@ -23,6 +23,10 @@
   color: #333;
 }
 
+.VersionHistoryModal__actions {
+  margin-top: 16px;
+}
+
 .VersionHistoryModal__versions {
   margin-top: 20px;
   margin-left: -10px;
