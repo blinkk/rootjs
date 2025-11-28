@@ -121,16 +121,11 @@ export function VersionHistoryModal(
     if (selectedVersions.length !== 2) {
       return '#';
     }
-    // Sort so that the older version is on the left (usually).
-    // Actually, let's just respect the order of selection or the list order?
-    // Let's use the list order to determine left/right (newer on right usually, or older on left).
-    // The user asked for "compare", usually left is old, right is new.
-    // The versions list is sorted desc (newest first).
-    // So if we pick two, the one that appears earlier in `versions` array is newer.
-    // Let's find the indices.
     const v1 = versions.find((v) => v._versionId === selectedVersions[0]);
     const v2 = versions.find((v) => v._versionId === selectedVersions[1]);
-    if (!v1 || !v2) return '#';
+    if (!v1 || !v2) {
+      return '#';
+    }
 
     // We want the older one on the left.
     // Since `versions` is sorted DESC (newest first), the one with higher index is older.
