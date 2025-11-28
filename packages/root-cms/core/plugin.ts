@@ -688,6 +688,28 @@ export function cmsPlugin(options: CMSPluginOptions): CMSPlugin {
           res.status(500).send('UNKNOWN SERVER ERROR');
         }
       });
+
+      // Handle Firestore reauth errors.
+      // See: https://github.com/googleapis/nodejs-firestore/issues/1023
+      process.on('unhandledRejection', (reason) => {
+        const err = reason as any;
+        if (
+          err?.message?.includes('reauth related error') ||
+          err?.message?.includes('invalid_grant')
+        ) {
+          console.log('\n');
+          console.log('==================================================');
+          console.log('Google Cloud Reauthentication Required');
+          console.log('==================================================');
+          console.log(
+            'Your Google Cloud credentials have expired or require reauthentication.'
+          );
+          console.log('Please run the following command to reauthenticate:');
+          console.log('\n    gcloud auth application-default login\n');
+          console.log('==================================================');
+          console.log('\n');
+        }
+      });
     },
   };
 
