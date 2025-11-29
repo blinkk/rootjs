@@ -1,3 +1,18 @@
+.Viewers {
+  display: flex;
+  flex-direction: row;
+}
+
+.Viewers > * {
+  margin-left: -10px;
+  border: 2px solid var(--mantine-color-body, #fff);
+  border-radius: 50%;
+}
+
+.Viewers > *:first-child {
+  margin-left: 0;
+}
+
 .Viewers__viewer {
   opacity: 1;
   transition: opacity 0.3s ease;
