@@ -12,6 +12,7 @@ export default defineConfig({
     plugin: './core/plugin.ts',
     project: './core/project.ts',
     richtext: './core/richtext.tsx',
+    extract: './core/extract.ts',
   },
   target: 'node22',
   dts: {
@@ -22,6 +23,7 @@ export default defineConfig({
       './core/plugin.ts',
       './core/project.ts',
       './core/richtext.tsx',
+      './core/extract.ts',
     ],
   },
   format: ['esm'],

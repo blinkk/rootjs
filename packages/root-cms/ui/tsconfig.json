@@ -35,6 +35,7 @@
     "*.tsx",
     "**/*.tsx",
     "../shared/*.ts",
-    "../shared/*.tsx"
+    "../shared/*.tsx",
+    "../core/*.ts"
   ]
 }
