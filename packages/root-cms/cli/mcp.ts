@@ -392,6 +392,117 @@ export async function runMcpServer(options?: {cwd?: string}) {
             required: ['collectionId', 'slug'],
           },
         },
+        {
+          name: 'releases_list',
+          description: 'List all releases',
+          inputSchema: {
+            type: 'object',
+            properties: {},
+          },
+        },
+        {
+          name: 'releases_get',
+          description: 'Get a release by ID',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              id: {type: 'string', description: 'The release ID'},
+            },
+            required: ['id'],
+          },
+        },
+        {
+          name: 'releases_create',
+          description: 'Create a new release',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              id: {type: 'string', description: 'The release ID'},
+              description: {type: 'string', description: 'Release description'},
+              docIds: {
+                type: 'array',
+                items: {type: 'string'},
+                description: 'List of doc IDs to include',
+              },
+              dataSourceIds: {
+                type: 'array',
+                items: {type: 'string'},
+                description: 'List of data source IDs to include',
+              },
+            },
+            required: ['id'],
+          },
+        },
+        {
+          name: 'releases_edit',
+          description: 'Edit an existing release',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              id: {type: 'string', description: 'The release ID'},
+              description: {type: 'string', description: 'Release description'},
+              docIds: {
+                type: 'array',
+                items: {type: 'string'},
+                description: 'List of doc IDs to include',
+              },
+              dataSourceIds: {
+                type: 'array',
+                items: {type: 'string'},
+                description: 'List of data source IDs to include',
+              },
+            },
+            required: ['id'],
+          },
+        },
+        {
+          name: 'releases_delete',
+          description: 'Delete a release',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              id: {type: 'string', description: 'The release ID'},
+            },
+            required: ['id'],
+          },
+        },
+        {
+          name: 'releases_publish',
+          description: 'Publish a release immediately',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              id: {type: 'string', description: 'The release ID'},
+            },
+            required: ['id'],
+          },
+        },
+        {
+          name: 'releases_schedule',
+          description: 'Schedule a release for future publishing',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              id: {type: 'string', description: 'The release ID'},
+              timestamp: {
+                type: 'number',
+                description: 'Timestamp (ms) when to publish',
+              },
+            },
+            required: ['id', 'timestamp'],
+          },
+        },
+        {
+          name: 'releases_unschedule',
+          description: 'Cancel a scheduled release',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              id: {type: 'string', description: 'The release ID'},
+            },
+            required: ['id'],
+          },
+        },
       ],
     };
   });
@@ -565,7 +676,8 @@ export async function runMcpServer(options?: {cwd?: string}) {
 
         const convertedData = applySchemaConversions(
           validationResult.data,
-          schema
+          schema,
+          getSchema
         );
         await cmsClient.saveDraftData(docId, convertedData);
         return {
@@ -801,6 +913,95 @@ IMPORTANT:
         await cmsClient.saveTranslations(translations, tags);
         return {
           content: [{type: 'text', text: 'Translations saved.'}],
+        };
+      }
+
+      if (name === 'releases_list') {
+        const releases = await cmsClient.listReleases();
+        return {
+          content: [{type: 'text', text: JSON.stringify(releases, null, 2)}],
+        };
+      }
+
+      if (name === 'releases_get') {
+        const id = String(args?.id);
+        const release = await cmsClient.getRelease(id);
+        if (!release) {
+          return {
+            content: [{type: 'text', text: `Release not found: ${id}`}],
+            isError: true,
+          };
+        }
+        return {
+          content: [{type: 'text', text: JSON.stringify(release, null, 2)}],
+        };
+      }
+
+      if (name === 'releases_create') {
+        const id = String(args?.id);
+        const release = {
+          description: args?.description
+            ? String(args?.description)
+            : undefined,
+          docIds: args?.docIds as string[] | undefined,
+          dataSourceIds: args?.dataSourceIds as string[] | undefined,
+        };
+        await cmsClient.createRelease(id, release);
+        return {
+          content: [{type: 'text', text: `Created release ${id}`}],
+        };
+      }
+
+      if (name === 'releases_edit') {
+        const id = String(args?.id);
+        const release: any = {};
+        if (args?.description) release.description = String(args.description);
+        if (args?.docIds) release.docIds = args.docIds;
+        if (args?.dataSourceIds) release.dataSourceIds = args.dataSourceIds;
+
+        await cmsClient.updateRelease(id, release);
+        return {
+          content: [{type: 'text', text: `Updated release ${id}`}],
+        };
+      }
+
+      if (name === 'releases_delete') {
+        const id = String(args?.id);
+        await cmsClient.deleteRelease(id);
+        return {
+          content: [{type: 'text', text: `Deleted release ${id}`}],
+        };
+      }
+
+      if (name === 'releases_publish') {
+        const id = String(args?.id);
+        await cmsClient.publishRelease(id);
+        return {
+          content: [{type: 'text', text: `Published release ${id}`}],
+        };
+      }
+
+      if (name === 'releases_schedule') {
+        const id = String(args?.id);
+        const timestamp = Number(args?.timestamp);
+        await cmsClient.scheduleRelease(id, timestamp);
+        return {
+          content: [
+            {
+              type: 'text',
+              text: `Scheduled release ${id} for ${new Date(
+                timestamp
+              ).toISOString()}`,
+            },
+          ],
+        };
+      }
+
+      if (name === 'releases_unschedule') {
+        const id = String(args?.id);
+        await cmsClient.unscheduleRelease(id);
+        return {
+          content: [{type: 'text', text: `Unscheduled release ${id}`}],
         };
       }
 
