@@ -16,7 +16,7 @@ export function schemaToZod(
       shape[field.id] = fieldToZod(field, getSchema);
     }
   }
-  return z.object(shape);
+  return z.object(shape).strict();
 }
 
 /**
@@ -75,7 +75,7 @@ export function fieldToZod(
           shape[subField.id] = fieldToZod(subField, getSchema);
         }
       }
-      zodType = z.object(shape);
+      zodType = z.object(shape).strict();
       break;
     }
     case 'array':
@@ -99,9 +99,11 @@ export function fieldToZod(
           if (subSchema) {
             // Recursively convert the sub-schema to Zod
             // We need to ensure it has the literal _type field
-            const subZod = schemaToZod(subSchema, getSchema).extend({
-              _type: z.literal(typeName),
-            });
+            const subZod = schemaToZod(subSchema, getSchema)
+              .extend({
+                _type: z.literal(typeName),
+              })
+              .strict();
             unionOptions.push(subZod);
           } else {
             // If we can't resolve the schema, we can at least validate the _type

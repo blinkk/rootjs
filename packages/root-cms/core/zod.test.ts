@@ -86,6 +86,26 @@ describe('zod conversion', () => {
       if (!result.success) {
         expect(result.error.issues.length).toBe(2);
       }
+      if (!result.success) {
+        expect(result.error.issues.length).toBe(2);
+      }
+
+      const extraKeyDoc = {
+        title: 'Hello',
+        count: 123,
+        extra: 'bar',
+      };
+      const extraKeyResult = zodSchema.safeParse(extraKeyDoc);
+      expect(extraKeyResult.success).toBe(false);
+      if (!extraKeyResult.success) {
+        const issue = extraKeyResult.error.issues.find(
+          (i) => i.code === 'unrecognized_keys'
+        );
+        expect(issue).toBeDefined();
+        expect(issue?.message).toContain(
+          "Unrecognized key(s) in object: 'extra'"
+        );
+      }
     });
 
     it('validates the reported invalid structure', () => {
@@ -217,6 +237,21 @@ describe('zod conversion', () => {
         );
         expect(issue).toBeDefined();
         expect(issue?.message).toContain('Expected string');
+      }
+
+      // Invalid extra key
+      const extraKeyResult = zodSchema.safeParse({
+        module: {_type: 'TemplateHeadline', headline: 'foo', extra: 'bar'},
+      });
+      expect(extraKeyResult.success).toBe(false);
+      if (!extraKeyResult.success) {
+        const issue = extraKeyResult.error.issues.find(
+          (i) => i.code === 'unrecognized_keys'
+        );
+        expect(issue).toBeDefined();
+        expect(issue?.message).toContain(
+          "Unrecognized key(s) in object: 'extra'"
+        );
       }
     });
 
