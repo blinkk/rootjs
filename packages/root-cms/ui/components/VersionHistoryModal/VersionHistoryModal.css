@@ -10,7 +10,7 @@
 }
 
 .VersionHistoryModal__docId {
-  margin-top: 8px;
+  margin-top: 20px;
 }
 
 .VersionHistoryModal__docId code {
@@ -23,10 +23,15 @@
   color: #333;
 }
 
+.VersionHistoryModal__actions {
+  margin-top: 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
 .VersionHistoryModal__versions {
   margin-top: 20px;
-  margin-left: -10px;
-  margin-right: -10px;
 }
 
 .VersionHistoryModal__versionsEmpty {
