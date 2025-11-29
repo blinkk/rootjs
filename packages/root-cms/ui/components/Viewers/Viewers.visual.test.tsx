@@ -116,4 +116,82 @@ describe('Viewers', () => {
 
     await expect.element(element).toMatchScreenshot('Viewers-tooltip.png');
   });
+
+  it('renders single viewer', async () => {
+    page.viewport(400, 200);
+
+    const nowMillis = Date.now();
+    const mockTimestamp = {toMillis: () => nowMillis};
+
+    const viewersData = {
+      'user1@example.com': {
+        email: 'user1@example.com',
+        photoURL:
+          'data:image/svg+xml;charset=UTF-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22150%22%20height%3D%22150%22%20viewBox%3D%220%200%20150%20150%22%3E%3Crect%20width%3D%22150%22%20height%3D%22150%22%20fill%3D%22%23ddd%22%20%2F%3E%3Ctext%20x%3D%2250%25%22%20y%3D%2250%25%22%20dominant-baseline%3D%22middle%22%20text-anchor%3D%22middle%22%20font-family%3D%22Arial%22%20font-size%3D%2250%22%3EBL%3C%2Ftext%3E%3C%2Fsvg%3E',
+        lastViewedAt: mockTimestamp,
+      },
+    };
+
+    mockOnSnapshot.mockImplementation((ref, callback) => {
+      callback({
+        data: () => viewersData,
+      });
+      return () => {};
+    });
+
+    render(
+      <MantineProvider>
+        <div style={{padding: 50}} data-testid="viewers-container-single">
+          <Viewers id="test-doc" />
+        </div>
+      </MantineProvider>
+    );
+
+    const element = page.getByTestId('viewers-container-single');
+    await expect.element(element).toBeVisible();
+    await expect
+      .element(element.getByRole('img', {name: 'user1@example.com'}))
+      .toBeVisible();
+    await expect.element(element).toMatchScreenshot('Viewers-single.png');
+  });
+
+  it('renders many viewers with overflow', async () => {
+    page.viewport(400, 200);
+
+    const nowMillis = Date.now();
+    const mockTimestamp = {toMillis: () => nowMillis};
+
+    const viewersData: Record<string, any> = {};
+    for (let i = 1; i <= 5; i++) {
+      viewersData[`user${i}@example.com`] = {
+        email: `user${i}@example.com`,
+        photoURL: '',
+        lastViewedAt: mockTimestamp,
+      };
+    }
+
+    mockOnSnapshot.mockImplementation((ref, callback) => {
+      callback({
+        data: () => viewersData,
+      });
+      return () => {};
+    });
+
+    render(
+      <MantineProvider>
+        <div style={{padding: 50}} data-testid="viewers-container-overflow">
+          <Viewers id="test-doc" />
+        </div>
+      </MantineProvider>
+    );
+
+    const element = page.getByTestId('viewers-container-overflow');
+    await expect.element(element).toBeVisible();
+
+    // So with 5 viewers, we should see 3 avatars and a +2 indicator.
+    // The overflow indicator is rendered as an Avatar with text "+2".
+
+    await expect.element(element.getByText('+2')).toBeVisible();
+    await expect.element(element).toMatchScreenshot('Viewers-overflow.png');
+  });
 });

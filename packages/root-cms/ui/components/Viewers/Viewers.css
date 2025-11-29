@@ -5,8 +5,11 @@
 
 .Viewers > * {
   margin-left: -10px;
+}
+
+.Viewers__avatar {
   border: 2px solid var(--mantine-color-body, #fff);
-  border-radius: 50%;
+  box-sizing: content-box;
 }
 
 .Viewers > *:first-child {

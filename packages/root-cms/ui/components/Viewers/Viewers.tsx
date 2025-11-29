@@ -187,6 +187,8 @@ export function Viewers(props: ViewersProps) {
     return viewer.disconnectedAt > viewer.lastViewedAt;
   }
 
+  // Use plain CSS instead of `AvatarsGroup` because that
+  // component doesn't support using Tooltips as children.
   const limit = props.max || 3;
   const visibleViewers = viewers.slice(0, limit);
   const overflow = viewers.length - limit;
@@ -203,7 +205,12 @@ export function Viewers(props: ViewersProps) {
               position="bottom"
               withArrow
             >
-              <Avatar alt={viewer.email} size={30} radius="xl">
+              <Avatar
+                className="Viewers__avatar"
+                alt={viewer.email}
+                size={30}
+                radius="xl"
+              >
                 {initial}
               </Avatar>
             </Tooltip>
@@ -219,6 +226,7 @@ export function Viewers(props: ViewersProps) {
             <Avatar
               className={joinClassNames(
                 'Viewers__viewer',
+                'Viewers__avatar',
                 isViewerDisconnected(viewer) && 'Viewers__viewer--disconnected'
               )}
               src={viewer.photoURL}
@@ -230,7 +238,7 @@ export function Viewers(props: ViewersProps) {
         );
       })}
       {overflow > 0 && (
-        <Avatar size={30} radius="xl">
+        <Avatar className="Viewers__avatar" size={30} radius="xl">
           +{overflow}
         </Avatar>
       )}
