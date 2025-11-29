@@ -12,6 +12,8 @@ import {
   Server,
 } from '@blinkk/root';
 import {viteSsrLoadModule} from '@blinkk/root/node';
+import {StreamableHTTPServerTransport} from '@modelcontextprotocol/sdk/server/streamableHttp.js';
+
 import bodyParser from 'body-parser';
 import {
   App,
@@ -23,10 +25,12 @@ import {getAuth, DecodedIdToken} from 'firebase-admin/auth';
 import {Firestore, getFirestore} from 'firebase-admin/firestore';
 import * as jsonwebtoken from 'jsonwebtoken';
 import sirv from 'sirv';
+import {generateTypes} from '../cli/generate-types.js';
 import {SSEEvent, SSESchemaChangedEvent} from '../shared/sse.js';
 import {type RootAiModel} from './ai.js';
 import {api} from './api.js';
 import {Action, RootCMSClient} from './client.js';
+import {createMcpServer} from './mcp.js';
 import {sse, SSEBroadcastFn} from './sse.js';
 
 /**
@@ -547,6 +551,48 @@ export function cmsPlugin(options: CMSPluginOptions): CMSPlugin {
       serverOptions: ConfigureServerOptions
     ) => {
       server.use(bodyParser.json());
+
+      // MCP Server Integration
+      if (serverOptions.type === 'dev') {
+        const modulePath = path.resolve(__dirname, './project.js');
+        const projectModule = (await viteSsrLoadModule(
+          serverOptions.rootConfig,
+          modulePath
+        )) as any;
+
+        const mcpServer = createMcpServer({
+          name: 'root-cms-mcp',
+          version: '0.0.1',
+          cmsClient: new RootCMSClient(serverOptions.rootConfig),
+          projectModule,
+          loadProject: async () => {
+            // In dev, vite handles reloading, but we might need to re-fetch the module
+            // if we were caching it. For now, we rely on vite's HMR.
+          },
+          generateTypes,
+        });
+
+        const transport = new StreamableHTTPServerTransport({
+          sessionIdGenerator: undefined,
+        });
+        await mcpServer.connect(transport);
+
+        server.use('/_root-cms/mcp/sse', async (req, res, next) => {
+          if (req.method !== 'GET') {
+            next();
+            return;
+          }
+          await transport.handleRequest(req, res, req.body);
+        });
+
+        server.use('/_root-cms/mcp/messages', async (req, res, next) => {
+          if (req.method !== 'POST') {
+            next();
+            return;
+          }
+          await transport.handleRequest(req, res, req.body);
+        });
+      }
 
       async function getRenderer(req: Request): Promise<AppModule> {
         if (serverOptions.type === 'dev') {
