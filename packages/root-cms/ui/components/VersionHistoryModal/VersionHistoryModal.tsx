@@ -221,7 +221,7 @@ export function VersionHistoryModal(
                 <tr key={version._versionId}>
                   <td>
                     <Checkbox
-                      size="sm"
+                      size="xs"
                       checked={isSelected}
                       disabled={isDisabled}
                       onChange={() => toggleVersion(version._versionId)}
