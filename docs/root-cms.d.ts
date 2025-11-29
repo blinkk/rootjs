@@ -215,7 +215,7 @@ export interface PagesFields {
   /** Content */
   content?: {
     /** Modules. Compose the page by adding one or more modules. */
-    modules?: RootCMSOneOf<RootCMSOneOfOption<'Divider', DividerFields> | RootCMSOneOfOption<'Section', SectionFields> | RootCMSOneOfOption<'Spacer', SpacerFields> | RootCMSOneOfOption<'Template50x50', Template50x50Fields> | RootCMSOneOfOption<'TemplateFeatureTabs', TemplateFeatureTabsFields> | RootCMSOneOfOption<'TemplateHeadline', TemplateHeadlineFields> | RootCMSOneOfOption<'TemplateImage', TemplateImageFields> | RootCMSOneOfOption<'TemplateJumplinks', TemplateJumplinksFields> | RootCMSOneOfOption<'TemplatePoweredBy', TemplatePoweredByFields> | RootCMSOneOfOption<'TemplateSandbox', TemplateSandboxFields> | RootCMSOneOfOption<'TemplateSteps', TemplateStepsFields>>[];
+    modules?: RootCMSOneOf<RootCMSOneOfOption<'Divider', DividerFields> | RootCMSOneOfOption<'Section', SectionFields> | RootCMSOneOfOption<'Spacer', SpacerFields> | RootCMSOneOfOption<'Template50x50', Template50x50Fields> | RootCMSOneOfOption<'TemplateHeadline', TemplateHeadlineFields> | RootCMSOneOfOption<'TemplateImage', TemplateImageFields> | RootCMSOneOfOption<'TemplateJumplinks', TemplateJumplinksFields> | RootCMSOneOfOption<'TemplatePoweredBy', TemplatePoweredByFields> | RootCMSOneOfOption<'TemplateSandbox', TemplateSandboxFields>>[];
   };
 }
 
@@ -236,7 +236,7 @@ export interface SandboxFields {
   /** Content */
   content?: {
     /** Modules. Compose the page by adding one or more modules. */
-    modules?: RootCMSOneOf<RootCMSOneOfOption<'Divider', DividerFields> | RootCMSOneOfOption<'Section', SectionFields> | RootCMSOneOfOption<'Spacer', SpacerFields> | RootCMSOneOfOption<'Template50x50', Template50x50Fields> | RootCMSOneOfOption<'TemplateFeatureTabs', TemplateFeatureTabsFields> | RootCMSOneOfOption<'TemplateHeadline', TemplateHeadlineFields> | RootCMSOneOfOption<'TemplateImage', TemplateImageFields> | RootCMSOneOfOption<'TemplateJumplinks', TemplateJumplinksFields> | RootCMSOneOfOption<'TemplatePoweredBy', TemplatePoweredByFields> | RootCMSOneOfOption<'TemplateSandbox', TemplateSandboxFields> | RootCMSOneOfOption<'TemplateSteps', TemplateStepsFields>>[];
+    modules?: RootCMSOneOf<RootCMSOneOfOption<'Divider', DividerFields> | RootCMSOneOfOption<'Section', SectionFields> | RootCMSOneOfOption<'Spacer', SpacerFields> | RootCMSOneOfOption<'Template50x50', Template50x50Fields> | RootCMSOneOfOption<'TemplateHeadline', TemplateHeadlineFields> | RootCMSOneOfOption<'TemplateImage', TemplateImageFields> | RootCMSOneOfOption<'TemplateJumplinks', TemplateJumplinksFields> | RootCMSOneOfOption<'TemplatePoweredBy', TemplatePoweredByFields> | RootCMSOneOfOption<'TemplateSandbox', TemplateSandboxFields>>[];
   };
 }
 
@@ -252,7 +252,7 @@ export interface SectionFields {
   /** Module Options. Layout and display options. */
   options?: string[];
   /** Modules */
-  modules?: RootCMSOneOf<RootCMSOneOfOption<'Divider', DividerFields> | RootCMSOneOfOption<'Spacer', SpacerFields> | RootCMSOneOfOption<'Template50x50', Template50x50Fields> | RootCMSOneOfOption<'TemplateFeatureTabs', TemplateFeatureTabsFields> | RootCMSOneOfOption<'TemplateHeadline', TemplateHeadlineFields> | RootCMSOneOfOption<'TemplateImage', TemplateImageFields> | RootCMSOneOfOption<'TemplateJumplinks', TemplateJumplinksFields> | RootCMSOneOfOption<'TemplatePoweredBy', TemplatePoweredByFields> | RootCMSOneOfOption<'TemplateSandbox', TemplateSandboxFields> | RootCMSOneOfOption<'TemplateSteps', TemplateStepsFields>>[];
+  modules?: RootCMSOneOf<RootCMSOneOfOption<'Divider', DividerFields> | RootCMSOneOfOption<'Spacer', SpacerFields> | RootCMSOneOfOption<'Template50x50', Template50x50Fields> | RootCMSOneOfOption<'TemplateHeadline', TemplateHeadlineFields> | RootCMSOneOfOption<'TemplateImage', TemplateImageFields> | RootCMSOneOfOption<'TemplateJumplinks', TemplateJumplinksFields> | RootCMSOneOfOption<'TemplatePoweredBy', TemplatePoweredByFields> | RootCMSOneOfOption<'TemplateSandbox', TemplateSandboxFields>>[];
 }
 
 /** Generated from `/templates/Spacer/Spacer.schema.ts`. */
@@ -275,25 +275,6 @@ export interface Template50x50Fields {
   leftSection?: RootCMSOneOf<RootCMSOneOfOption<'ButtonsBlock', ButtonsBlockFields> | RootCMSOneOfOption<'CodeBlock', CodeBlockFields> | RootCMSOneOfOption<'CopyBlock', CopyBlockFields> | RootCMSOneOfOption<'ImageBlock', ImageBlockFields>>;
   /** Right Section */
   rightSection?: RootCMSOneOf<RootCMSOneOfOption<'ButtonsBlock', ButtonsBlockFields> | RootCMSOneOfOption<'CodeBlock', CodeBlockFields> | RootCMSOneOfOption<'CopyBlock', CopyBlockFields> | RootCMSOneOfOption<'ImageBlock', ImageBlockFields>>;
-}
-
-/** Generated from `/templates/TemplateFeatureTabs/TemplateFeatureTabs.schema.ts`. */
-export interface TemplateFeatureTabsFields {
-  /** ID. Used for deep linking, tracking, etc. */
-  id?: string;
-  /** Variant. Visual style variant for the feature tabs. */
-  variant?: string;
-  /** Module Options. Layout and display options. */
-  options?: string[];
-  /** Feature Tabs. Add feature cards that can be displayed in tabs. */
-  tabs?: {
-    /** Icon. Icon identifier (e.g., globe, wifi, translate, expand) */
-    icon?: string;
-    /** Title. Feature title */
-    title?: string;
-    /** Body. Feature description */
-    body?: RootCMSRichText;
-  }[];
 }
 
 /** Generated from `/templates/TemplateHeadline/TemplateHeadline.schema.ts`. */
@@ -380,36 +361,4 @@ export interface TemplateSandboxFields {
   references?: RootCMSReference[];
   /** DateTimeField */
   datetime?: number;
-}
-
-/** Generated from `/templates/TemplateSteps/TemplateSteps.schema.ts`. */
-export interface TemplateStepsFields {
-  /** ID. Used for deep linking, tracking, etc. */
-  id?: string;
-  /** Module Options. Layout and display options. */
-  options?: string[];
-  /** Title. Main section title. */
-  title?: string;
-  /** Description. Optional description below the title. */
-  description?: string;
-  /** Steps. Add steps with images and descriptions. */
-  steps?: {
-    /** Step Number. Step number (e.g., '1', '2', '3') */
-    stepNumber?: string;
-    /** Image. Step illustration or screenshot */
-    image?: RootCMSImage;
-    /** Title. Step title */
-    title?: string;
-    /** Description. Step description */
-    description?: RootCMSRichText;
-  }[];
-  /** Buttons. Optional CTA buttons below the steps. */
-  buttons?: {
-    /** Label */
-    label?: string;
-    /** URL */
-    href?: string;
-    /** Button Options */
-    options?: string[];
-  }[];
 }
