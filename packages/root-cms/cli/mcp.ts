@@ -13,7 +13,7 @@ import {
 } from '@modelcontextprotocol/sdk/types.js';
 import {Timestamp} from 'firebase-admin/firestore';
 import {ChatClient} from '../core/ai.js';
-import {RootCMSClient} from '../core/client.js';
+import {RootCMSClient, applySchemaConversions} from '../core/client.js';
 import {extractFields} from '../core/extract.js';
 import {schemaToZod} from '../core/zod.js';
 import {generateTypes} from './generate-types.js';
@@ -563,7 +563,11 @@ export async function runMcpServer(options?: {cwd?: string}) {
           };
         }
 
-        await cmsClient.saveDraftData(docId, validationResult.data);
+        const convertedData = applySchemaConversions(
+          validationResult.data,
+          schema
+        );
+        await cmsClient.saveDraftData(docId, convertedData);
         return {
           content: [{type: 'text', text: `Saved draft for ${docId}`}],
         };

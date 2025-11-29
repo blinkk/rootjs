@@ -39,6 +39,14 @@ describe('validation', () => {
       ]);
     });
 
+    it('validates datetime', () => {
+      const field: Field = {type: 'datetime', id: 'foo'};
+      expect(validateField(1630000000000, field)).toEqual([]);
+      expect(validateField('2021-01-01', field)).toEqual([
+        'Expected number (timestamp), got string',
+      ]);
+    });
+
     it('validates image', () => {
       const field: Field = {type: 'image', id: 'foo'};
       expect(validateField({src: 'foo.jpg'}, field)).toEqual([]);

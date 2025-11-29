@@ -9,6 +9,7 @@ import {
   WriteBatch,
 } from 'firebase-admin/firestore';
 import {CMSPlugin} from './plugin.js';
+import {Schema} from './schema.js';
 import {TranslationsManager} from './translations-manager.js';
 
 export interface Doc<Fields = any> {
@@ -1319,7 +1320,10 @@ export function marshalData(data: any): any {
   const result: any = {};
   for (const key in data) {
     const val = data[key];
-    if (isObject(val)) {
+    if (val && typeof val.toMillis === 'function') {
+      // Preserve timestamps.
+      result[key] = val;
+    } else if (isObject(val)) {
       result[key] = marshalData(val);
     } else if (Array.isArray(val)) {
       if (val.length > 0 && val.some((item) => isObject(item))) {
@@ -1335,6 +1339,53 @@ export function marshalData(data: any): any {
       }
     } else {
       result[key] = val;
+    }
+  }
+  return result;
+}
+
+/**
+ * Applies schema-based conversions to the data before saving.
+ * e.g. converts `datetime` fields from numbers to Firestore Timestamps.
+ */
+export function applySchemaConversions(data: any, schema: Schema): any {
+  if (!data || !schema) {
+    return data;
+  }
+
+  const result = {...data};
+  const fields = schema.fields || [];
+
+  for (const field of fields) {
+    if (!field.id) {
+      continue;
+    }
+    const value = result[field.id];
+    if (value === undefined || value === null) {
+      continue;
+    }
+
+    if (field.type === 'datetime') {
+      if (typeof value === 'number') {
+        result[field.id] = Timestamp.fromMillis(value);
+      }
+    } else if (field.type === 'object') {
+      result[field.id] = applySchemaConversions(value, {
+        name: field.id || '',
+        fields: field.fields,
+      });
+    } else if (field.type === 'array') {
+      if (Array.isArray(value)) {
+        result[field.id] = value.map((item) => {
+          if (field.of.type === 'object') {
+            return applySchemaConversions(item, {
+              name: field.id || '',
+              fields: field.of.fields,
+            });
+          }
+          return item;
+        });
+      }
     }
   }
   return result;
