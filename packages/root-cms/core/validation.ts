@@ -10,6 +10,9 @@ export interface ValidationResult {
   errors: ValidationError[];
 }
 
+/**
+ * Validates a document against a schema.
+ */
 export function validateDoc(doc: any, schema: Schema): ValidationResult {
   const errors: ValidationError[] = [];
   const fields = schema.fields || [];
@@ -35,6 +38,9 @@ export function validateDoc(doc: any, schema: Schema): ValidationResult {
   };
 }
 
+/**
+ * Validates a single field value against its field definition.
+ */
 export function validateField(value: any, field: Field): string[] {
   const errors: string[] = [];
 
@@ -60,8 +66,9 @@ export function validateField(value: any, field: Field): string[] {
   } else if (field.type === 'date') {
     if (typeof value !== 'string') {
       errors.push(`Expected string (date), got ${typeof value}`);
+    } else if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+      errors.push(`Expected date in YYYY-MM-DD format, got "${value}"`);
     }
-    // TODO: Validate date format?
   } else if (field.type === 'datetime') {
     if (typeof value !== 'number') {
       errors.push(`Expected number (timestamp), got ${typeof value}`);
@@ -122,7 +129,7 @@ export function validateField(value: any, field: Field): string[] {
         const item = value[i];
         const itemErrors = validateField(item, field.of);
         for (const error of itemErrors) {
-          errors.push(`[${i}]: ${error}`);
+          errors.push(`[${i}]${error.startsWith('[') ? '' : '.'}${error}`);
         }
       }
     }

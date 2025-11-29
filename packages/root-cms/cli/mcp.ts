@@ -11,10 +11,10 @@ import {
   McpError,
   ReadResourceRequestSchema,
 } from '@modelcontextprotocol/sdk/types.js';
-import {FieldValue, Timestamp} from 'firebase-admin/firestore';
+import {Timestamp} from 'firebase-admin/firestore';
 import {ChatClient} from '../core/ai.js';
 import {RootCMSClient} from '../core/client.js';
-import {extractFields} from '../core/functions.js';
+import {extractFields} from '../core/extract.js';
 import {schemaToZod} from '../core/zod.js';
 import {generateTypes} from './generate-types.js';
 
@@ -426,28 +426,12 @@ export async function runMcpServer(options?: {cwd?: string}) {
       }
 
       if (name === 'collections_list') {
-        // RootCMSClient doesn't have a direct listCollections method exposed in the public API easily?
-        // Actually, we can list collections by looking at the schema or firestore.
-        // Let's look at `core/project.ts` or similar if needed, but `cmsClient` might not have it.
-        // Wait, `cmsPlugin` writes schemas to `dist/collections`.
-        // Or we can query Firestore `Projects/{id}/Collections`.
-        // Let's try to use `cmsClient.db` to list collections if possible, or just return a placeholder.
-        // Actually, `cmsClient` is the best way.
-        // Let's check `cmsClient` capabilities again.
-        // It has `db`.
-        const collectionsPath = `Projects/${projectId}/Collections`;
-        const collections = await cmsClient.db
-          .collection(collectionsPath)
-          .listDocuments();
+        const collections = await cmsClient.listCollections();
         return {
           content: [
             {
               type: 'text',
-              text: JSON.stringify(
-                collections.map((c) => c.id),
-                null,
-                2
-              ),
+              text: JSON.stringify(collections, null, 2),
             },
           ],
         };
@@ -521,7 +505,6 @@ export async function runMcpServer(options?: {cwd?: string}) {
         const data = args?.data as any;
         const docId = `${collectionId}/${slug}`;
 
-        // Validate against schema
         // Validate against schema
         const schema = await projectModule.getCollectionSchema(collectionId);
         if (!schema) {
@@ -601,22 +584,8 @@ export async function runMcpServer(options?: {cwd?: string}) {
         const collectionId = String(args?.collectionId);
         const slug = String(args?.slug);
         const docId = `${collectionId}/${slug}`;
-        const publishedRef = cmsClient.dbDocRef(collectionId, slug, {
-          mode: 'published',
-        });
-        const draftRef = cmsClient.dbDocRef(collectionId, slug, {
-          mode: 'draft',
-        });
 
-        const batch = cmsClient.db.batch();
-        batch.delete(publishedRef);
-        batch.update(draftRef, {
-          'sys.publishedAt': FieldValue.delete(),
-          'sys.publishedBy': FieldValue.delete(),
-          'sys.firstPublishedAt': FieldValue.delete(),
-          'sys.firstPublishedBy': FieldValue.delete(),
-        });
-        await batch.commit();
+        await cmsClient.unpublishDoc(collectionId, slug);
 
         return {
           content: [{type: 'text', text: `Unpublished ${docId}`}],
@@ -627,24 +596,8 @@ export async function runMcpServer(options?: {cwd?: string}) {
         const collectionId = String(args?.collectionId);
         const slug = String(args?.slug);
         const docId = `${collectionId}/${slug}`;
-        const draftRef = cmsClient.dbDocRef(collectionId, slug, {
-          mode: 'draft',
-        });
-        const publishedRef = cmsClient.dbDocRef(collectionId, slug, {
-          mode: 'published',
-        });
 
-        // Check if published doc exists to warn user?
-        // For now, just delete draft.
-        // If we want to delete everything, we should delete published too.
-        // But "delete" usually means "delete draft".
-        // Let's assume delete draft for now.
-        // Actually, let's delete both to be safe if it's a full delete.
-        // But usually "delete" in CMS means delete the doc entirely.
-        const batch = cmsClient.db.batch();
-        batch.delete(draftRef);
-        batch.delete(publishedRef);
-        await batch.commit();
+        await cmsClient.deleteDoc(collectionId, slug);
 
         return {
           content: [{type: 'text', text: `Deleted ${docId}`}],
@@ -656,22 +609,13 @@ export async function runMcpServer(options?: {cwd?: string}) {
         const slug = String(args?.slug);
         const reason = String(args?.reason);
         const until = args?.until ? Number(args?.until) : undefined;
-        const draftRef = cmsClient.dbDocRef(collectionId, slug, {
-          mode: 'draft',
-        });
 
-        const lockingData: any = {
-          lockedAt: new Date().toISOString(),
-          lockedBy: 'mcp-server',
-          reason: reason,
-        };
-        if (until) {
-          lockingData.until = Timestamp.fromMillis(until);
-        }
-
-        await draftRef.update({
-          'sys.publishingLocked': lockingData,
-        });
+        await cmsClient.lockDoc(
+          collectionId,
+          slug,
+          reason,
+          until ? Timestamp.fromMillis(until) : undefined
+        );
 
         return {
           content: [
@@ -859,10 +803,7 @@ IMPORTANT:
       if (name === 'translations_add_tag') {
         const source = String(args?.source);
         const tag = String(args?.tag);
-        // Saving with an empty translation map for the source string will just
-        // update the tags for that string's hash without overwriting existing
-        // translations, because `saveTranslations` uses `merge: true`.
-        await cmsClient.saveTranslations({[source]: {}}, [tag]);
+        await cmsClient.addTranslationTag(source, tag);
         return {
           content: [{type: 'text', text: `Added tag "${tag}" to "${source}"`}],
         };
@@ -871,12 +812,7 @@ IMPORTANT:
       if (name === 'translations_remove_tag') {
         const source = String(args?.source);
         const tag = String(args?.tag);
-        const hash = cmsClient.getTranslationKey(source);
-        const translationsPath = `Projects/${projectId}/Translations`;
-        const translationRef = cmsClient.db.doc(`${translationsPath}/${hash}`);
-        await translationRef.update({
-          tags: FieldValue.arrayRemove(tag),
-        });
+        await cmsClient.removeTranslationTag(source, tag);
         return {
           content: [
             {type: 'text', text: `Removed tag "${tag}" from "${source}"`},
@@ -936,154 +872,4 @@ IMPORTANT:
 
   const transport = new StdioServerTransport();
   await server.connect(transport);
-}
-
-function normalizeString(str: string) {
-  return str.trim().replace(/[ \t]+$/gm, '');
-}
-
-function extractFields(
-  strings: Set<string>,
-  fields: any[],
-  data: Record<string, any>,
-  types: Record<string, any> = {}
-) {
-  fields.forEach((field) => {
-    if (!field.id) {
-      return;
-    }
-    const fieldValue = data[field.id];
-    extractField(strings, field, fieldValue, types);
-  });
-}
-
-function extractField(
-  strings: Set<string>,
-  field: any,
-  fieldValue: any,
-  types: Record<string, any> = {}
-) {
-  if (!fieldValue) {
-    return;
-  }
-
-  function addString(text: string) {
-    const str = normalizeString(text);
-    if (str) {
-      strings.add(str);
-    }
-  }
-
-  if (field.type === 'object') {
-    extractFields(strings, field.fields || [], fieldValue, types);
-  } else if (field.type === 'array') {
-    const arrayKeys = fieldValue._array || [];
-    for (const arrayKey of arrayKeys) {
-      extractField(strings, field.of, fieldValue[arrayKey], types);
-    }
-  } else if (field.type === 'string' || field.type === 'select') {
-    if (field.translate) {
-      addString(fieldValue);
-    }
-  } else if (field.type === 'image') {
-    if (
-      field.translate &&
-      fieldValue &&
-      fieldValue.alt &&
-      field.alt !== false
-    ) {
-      addString(fieldValue.alt);
-    }
-  } else if (field.type === 'multiselect') {
-    if (field.translate && Array.isArray(fieldValue)) {
-      for (const value of fieldValue) {
-        addString(value);
-      }
-    }
-  } else if (field.type === 'oneof') {
-    const fieldTypes = field.types || [];
-    let fieldValueType: any;
-    if (typeof fieldTypes[0] === 'string') {
-      if ((fieldTypes as string[]).includes(fieldValue._type)) {
-        fieldValueType = types[fieldValue._type];
-      }
-    } else {
-      fieldValueType = (fieldTypes as any[]).find(
-        (item: any) => item.name === fieldValue._type
-      );
-    }
-    if (fieldValueType) {
-      extractFields(strings, fieldValueType.fields || [], fieldValue, types);
-    }
-  } else if (field.type === 'richtext') {
-    if (field.translate) {
-      extractRichTextStrings(strings, fieldValue);
-    }
-  }
-}
-
-function extractRichTextStrings(strings: Set<string>, data: any) {
-  const blocks = data?.blocks || [];
-  blocks.forEach((block: any) => {
-    extractBlockStrings(strings, block);
-  });
-}
-
-function extractBlockStrings(strings: Set<string>, block: any) {
-  if (!block?.type) {
-    return;
-  }
-
-  function addString(text?: string) {
-    if (!text) {
-      return;
-    }
-    const str = normalizeString(text);
-    if (str) {
-      strings.add(str);
-    }
-  }
-
-  function addComponentStrings(components?: Record<string, any>) {
-    if (!components) {
-      return;
-    }
-    Object.values(components).forEach((component) => {
-      collectComponentStrings(component);
-    });
-  }
-
-  function collectComponentStrings(value: any) {
-    if (typeof value === 'string') {
-      addString(value);
-      return;
-    }
-    if (Array.isArray(value)) {
-      value.forEach((item) => collectComponentStrings(item));
-      return;
-    }
-    if (typeof value === 'object' && value !== null) {
-      Object.values(value).forEach((item) => collectComponentStrings(item));
-    }
-  }
-
-  function extractList(items?: any[]) {
-    if (!items) {
-      return;
-    }
-    items.forEach((item) => {
-      addString(item.content);
-      addComponentStrings(item.components);
-      extractList(item.items);
-    });
-  }
-
-  if (block.type === 'heading' || block.type === 'paragraph') {
-    addString(block.data?.text);
-    addComponentStrings(block.data?.components);
-  } else if (block.type === 'orderedList' || block.type === 'unorderedList') {
-    extractList(block.data?.items);
-  } else if (block.type === 'html') {
-    addString(block.data?.html);
-  }
 }

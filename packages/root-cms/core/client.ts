@@ -321,6 +321,15 @@ export class RootCMSClient {
   }
 
   /**
+   * Lists collections in the project.
+   */
+  async listCollections() {
+    const collectionsPath = `Projects/${this.projectId}/Collections`;
+    const snapshot = await this.db.collection(collectionsPath).get();
+    return snapshot.docs.map((doc) => doc.id);
+  }
+
+  /**
    * Prefer `saveDraftData('Pages/foo', data)`. Only use this if you know what
    * you're doing.
    */
@@ -716,6 +725,53 @@ export class RootCMSClient {
   }
 
   /**
+   * Locks a doc for publishing.
+   */
+  async lockDoc(
+    collectionId: string,
+    slug: string,
+    reason: string,
+    until?: Timestamp
+  ) {
+    const docRef = this.dbDocRef(collectionId, slug, {mode: 'draft'});
+    const lockedBy = 'root-cms-client'; // TODO: Pass user email.
+    const lockedAt = new Date().toISOString();
+    await docRef.update({
+      'sys.publishingLocked': {
+        lockedAt,
+        lockedBy,
+        reason,
+        until: until || null,
+      },
+    });
+  }
+
+  /**
+   * Unpublishes a doc (deletes the published version).
+   */
+  async unpublishDoc(collectionId: string, slug: string) {
+    const docRef = this.dbDocRef(collectionId, slug, {mode: 'published'});
+    await docRef.delete();
+
+    // Update draft to remove published metadata.
+    const draftRef = this.dbDocRef(collectionId, slug, {mode: 'draft'});
+    await draftRef.update({
+      'sys.publishedAt': FieldValue.delete(),
+      'sys.publishedBy': FieldValue.delete(),
+      'sys.firstPublishedAt': FieldValue.delete(),
+      'sys.firstPublishedBy': FieldValue.delete(),
+    });
+  }
+
+  /**
+   * Deletes a draft doc.
+   */
+  async deleteDoc(collectionId: string, slug: string) {
+    const docRef = this.dbDocRef(collectionId, slug, {mode: 'draft'});
+    await docRef.delete();
+  }
+
+  /**
    * Returns a `TranslationsManager` object for managing translations.
    *
    * To get translations:
@@ -803,6 +859,25 @@ export class RootCMSClient {
       throw new Error('up to 500 translations can be saved at a time.');
     }
     await batch.commit();
+  }
+
+  /**
+   * Adds a tag to a translation string.
+   */
+  async addTranslationTag(source: string, tag: string) {
+    await this.saveTranslations({[source]: {}}, [tag]);
+  }
+
+  /**
+   * Removes a tag from a translation string.
+   */
+  async removeTranslationTag(source: string, tag: string) {
+    const hash = this.getTranslationKey(source);
+    const translationsPath = `Projects/${this.projectId}/Translations`;
+    const translationRef = this.db.doc(`${translationsPath}/${hash}`);
+    await translationRef.update({
+      tags: FieldValue.arrayRemove(tag),
+    });
   }
 
   /**

@@ -1,6 +1,6 @@
 import {describe, it, expect} from 'vitest';
-import {validateDoc, validateField} from './validation.js';
 import {Schema, Field} from './schema.js';
+import {validateDoc, validateField} from './validation.js';
 
 describe('validation', () => {
   describe('validateField', () => {
@@ -25,6 +25,17 @@ describe('validation', () => {
       expect(validateField(true, field)).toEqual([]);
       expect(validateField('bar', field)).toEqual([
         'Expected boolean, got string',
+      ]);
+    });
+
+    it('validates date', () => {
+      const field: Field = {type: 'date', id: 'foo'};
+      expect(validateField('2021-01-01', field)).toEqual([]);
+      expect(validateField('2021/01/01', field)).toEqual([
+        'Expected date in YYYY-MM-DD format, got "2021/01/01"',
+      ]);
+      expect(validateField(123, field)).toEqual([
+        'Expected string (date), got number',
       ]);
     });
 
@@ -55,11 +66,14 @@ describe('validation', () => {
       const field: Field = {
         type: 'array',
         id: 'foo',
-        of: {type: 'string', id: 'item'},
+        of: {
+          type: 'object',
+          fields: [{type: 'string', id: 'val'}],
+        },
       };
-      expect(validateField(['a', 'b'], field)).toEqual([]);
-      expect(validateField(['a', 123], field)).toEqual([
-        '[1]: Expected string, got number',
+      expect(validateField([{val: 'a'}, {val: 'b'}], field)).toEqual([]);
+      expect(validateField([{val: 'a'}, {val: 123}], field)).toEqual([
+        '[1].val: Expected string, got number',
       ]);
     });
 

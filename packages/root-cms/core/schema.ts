@@ -100,6 +100,7 @@ export function multiselect(
 
 export type ImageField = CommonFieldProps & {
   type: 'image';
+  /** Whether to translate the alt text. */
   translate?: boolean;
   /** List of supported exts, e.g. `['.mp4']`. */
   exts?: string[];
@@ -117,6 +118,8 @@ export function image(field: Omit<ImageField, 'type'>): ImageField {
 
 export type FileField = CommonFieldProps & {
   type: 'file';
+  /** Whether to translate the alt text. */
+  translate?: boolean;
   /** List of supported exts, e.g. `['.mp4']`. */
   exts?: string[];
   /**

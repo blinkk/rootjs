@@ -48,6 +48,10 @@
     "./richtext": {
       "types": "./dist/richtext.d.ts",
       "import": "./dist/richtext.js"
+    },
+    "./extract": {
+      "types": "./dist/core/extract.d.ts",
+      "import": "./dist/extract.js"
     }
   },
   "scripts": {

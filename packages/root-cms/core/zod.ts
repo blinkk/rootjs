@@ -3,6 +3,9 @@ import {Field, Schema} from './schema.js';
 
 export type GetSchemaFn = (id: string) => Schema | undefined;
 
+/**
+ * Converts a Root CMS schema to a Zod schema.
+ */
 export function schemaToZod(
   schema: Schema,
   getSchema?: GetSchemaFn
@@ -16,6 +19,9 @@ export function schemaToZod(
   return z.object(shape);
 }
 
+/**
+ * Converts a single Root CMS field to a Zod type.
+ */
 export function fieldToZod(
   field: Field,
   getSchema?: GetSchemaFn
