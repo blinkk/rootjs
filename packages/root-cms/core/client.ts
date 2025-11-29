@@ -1501,8 +1501,7 @@ export function marshalData(data: any): any {
 }
 
 /**
- * Applies schema-based conversions to the data before saving.
- * e.g. converts `datetime` fields from numbers to Firestore Timestamps.
+ * Recursively converts schema fields.
  */
 export function applySchemaConversions(
   data: any,

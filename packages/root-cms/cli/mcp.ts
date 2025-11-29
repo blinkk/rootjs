@@ -93,7 +93,8 @@ export async function runMcpServer(options?: {cwd?: string}) {
       tools: [
         {
           name: 'project_reload',
-          description: 'Reload the project configuration and schemas',
+          description:
+            'Reload the project configuration and schemas. Use this whenever the module library changes.',
           inputSchema: {
             type: 'object',
             properties: {},
@@ -101,7 +102,8 @@ export async function runMcpServer(options?: {cwd?: string}) {
         },
         {
           name: 'regenerate_types',
-          description: 'Regenerate TypeScript definitions for the CMS',
+          description:
+            'Regenerate TypeScript definitions for the CMS. Use this whenever the module library changes.',
           inputSchema: {
             type: 'object',
             properties: {},
@@ -109,7 +111,7 @@ export async function runMcpServer(options?: {cwd?: string}) {
         },
         {
           name: 'collections_list',
-          description: 'List all collections in the CMS project',
+          description: 'List all collections in the CMS project.',
           inputSchema: {
             type: 'object',
             properties: {},
@@ -390,6 +392,21 @@ export async function runMcpServer(options?: {cwd?: string}) {
               slug: {type: 'string'},
             },
             required: ['collectionId', 'slug'],
+          },
+        },
+        {
+          name: 'docs_unlock',
+          description: 'Unlock publishing for a document',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              id: {
+                type: 'string',
+                description:
+                  'The ID of the document to unlock (e.g. "Pages/foo")',
+              },
+            },
+            required: ['id'],
           },
         },
         {
@@ -1066,7 +1083,15 @@ IMPORTANT:
         };
       }
 
-      throw new McpError(ErrorCode.MethodNotFound, `Unknown tool: ${name}`);
+      if (name === 'docs_unlock') {
+        const id = String(args?.id);
+        await cmsClient.unlockPublishing(id);
+        return {
+          content: [{type: 'text', text: `Unlocked publishing for ${id}`}],
+        };
+      }
+
+      throw new Error(`Unknown tool: ${name}`);
     } catch (err: any) {
       return {
         content: [{type: 'text', text: `Error: ${err.message}`}],

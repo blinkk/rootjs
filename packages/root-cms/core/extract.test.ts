@@ -91,6 +91,19 @@ describe('extractFields', () => {
     expect(strings.has('Heading text')).toBe(true);
   });
 
+  test('handles richtext with invalid blocks gracefully', () => {
+    const fields: schema.Field[] = [
+      schema.richtext({id: 'content', translate: true}),
+    ];
+    const data = {
+      content: {
+        blocks: {some: 'object'} as any, // Invalid blocks
+      },
+    };
+    const strings = new Set<string>();
+    expect(() => extractFields(strings, fields, data)).not.toThrow();
+  });
+
   test('filters blocked strings', () => {
     const fields: schema.Field[] = [
       schema.string({id: 'text', translate: true}),

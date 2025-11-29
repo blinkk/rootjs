@@ -144,7 +144,7 @@ export function extractRichTextStrings(
   strings: Set<string>,
   data: RichTextData
 ) {
-  const blocks = data?.blocks || [];
+  const blocks = Array.isArray(data?.blocks) ? data.blocks : [];
   blocks.forEach((block) => {
     extractBlockStrings(strings, block);
   });
@@ -213,7 +213,7 @@ function extractBlockStrings(strings: Set<string>, block: RichTextBlock) {
       const cells = row.cells || [];
       cells.forEach((cell: RichTextTableCell) => {
         // Each cell contains an array of blocks
-        const cellBlocks = cell.blocks || [];
+        const cellBlocks = Array.isArray(cell.blocks) ? cell.blocks : [];
         cellBlocks.forEach((cellBlock: RichTextBlock) => {
           extractBlockStrings(strings, cellBlock);
         });
