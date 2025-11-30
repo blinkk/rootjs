@@ -1,6 +1,11 @@
 import {Timestamp} from 'firebase-admin/firestore';
 import {describe, it, expect, vi, beforeEach} from 'vitest';
-import {marshalData, applySchemaConversions, RootCMSClient} from './client.js';
+import {
+  marshalData,
+  applySchemaConversions,
+  RootCMSClient,
+  cleanMarshaledData,
+} from './client.js';
 import {Schema} from './schema.js';
 
 // Mock Firebase Admin
@@ -186,6 +191,64 @@ describe('client', () => {
         id === 'MyType' ? subSchema : undefined;
       const converted = applySchemaConversions(data, schema, getSchema);
       expect(converted.content.date).toBeInstanceOf(Timestamp);
+    });
+  });
+
+  describe('cleanMarshaledData', () => {
+    it('removes _arrayKey fields from array items', () => {
+      const data = {
+        modules: [
+          {_type: 'Hero', _arrayKey: 'abc123', title: 'Hello'},
+          {_type: 'CTA', _arrayKey: 'def456', buttonText: 'Click me'},
+        ],
+      };
+      const cleaned = cleanMarshaledData(data);
+      expect(cleaned.modules[0]).not.toHaveProperty('_arrayKey');
+      expect(cleaned.modules[0]._type).toBe('Hero');
+      expect(cleaned.modules[0].title).toBe('Hello');
+      expect(cleaned.modules[1]).not.toHaveProperty('_arrayKey');
+    });
+
+    it('removes _arrayKey from nested objects', () => {
+      const data = {
+        content: {
+          modules: [
+            {
+              _type: 'TabModule',
+              _arrayKey: 'tab1',
+              tabs: [
+                {_arrayKey: 'inner1', label: 'Tab 1'},
+                {_arrayKey: 'inner2', label: 'Tab 2'},
+              ],
+            },
+          ],
+        },
+      };
+      const cleaned = cleanMarshaledData(data);
+      expect(cleaned.content.modules[0]).not.toHaveProperty('_arrayKey');
+      expect(cleaned.content.modules[0].tabs[0]).not.toHaveProperty(
+        '_arrayKey'
+      );
+      expect(cleaned.content.modules[0].tabs[0].label).toBe('Tab 1');
+    });
+
+    it('preserves other fields', () => {
+      const data = {
+        title: 'My Page',
+        modules: [{_type: 'Hero', _arrayKey: 'x', hero: {title: 'Welcome'}}],
+      };
+      const cleaned = cleanMarshaledData(data);
+      expect(cleaned.title).toBe('My Page');
+      expect(cleaned.modules[0].hero.title).toBe('Welcome');
+    });
+
+    it('handles arrays without _arrayKey fields', () => {
+      const data = {
+        modules: [{_type: 'Hero', title: 'Hello'}],
+      };
+      const cleaned = cleanMarshaledData(data);
+      expect(cleaned.modules[0]._type).toBe('Hero');
+      expect(cleaned.modules[0].title).toBe('Hello');
     });
   });
 });

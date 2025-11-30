@@ -2,7 +2,11 @@ import {McpServer} from '@modelcontextprotocol/sdk/server/mcp.js';
 import {FieldValue, Timestamp} from 'firebase-admin/firestore';
 import {z} from 'zod';
 import {ChatClient} from './ai.js';
-import {RootCMSClient, applySchemaConversions} from './client.js';
+import {
+  RootCMSClient,
+  applySchemaConversions,
+  cleanMarshaledData,
+} from './client.js';
 import {extractFields} from './extract.js';
 import {Schema} from './schema.js';
 import {schemaToZod} from './zod.js';
@@ -19,7 +23,118 @@ export interface McpServerOptions {
   /**
    * Optional callback to regenerate types.
    */
-  generateTypes?: () => Promise<void>;
+  onReloadProject?: () => Promise<void>;
+}
+
+/**
+ * Sets a value at a deep key path in an object.
+ * Path segments are separated by dots, array indices are numeric.
+ * E.g.: "content.modules.0.title" sets obj.content.modules[0].title
+ */
+export function setDeepValue(obj: any, path: string, value: any): void {
+  const segments = path.split('.');
+  let current = obj;
+
+  for (let i = 0; i < segments.length - 1; i++) {
+    const segment = segments[i];
+    const isArrayIndex = /^\d+$/.test(segment);
+
+    if (isArrayIndex) {
+      const index = parseInt(segment, 10);
+      if (!Array.isArray(current)) {
+        throw new Error(
+          `Expected array at path segment "${segments
+            .slice(0, i)
+            .join('.')}" but found ${typeof current}`
+        );
+      }
+      if (!current[index]) {
+        current[index] = {};
+      }
+      current = current[index];
+    } else {
+      if (!current[segment]) {
+        // Look ahead to see if next segment is an array index
+        const nextIsArray =
+          i + 1 < segments.length && /^\d+$/.test(segments[i + 1]);
+        current[segment] = nextIsArray ? [] : {};
+      }
+      current = current[segment];
+    }
+  }
+
+  const lastSegment = segments[segments.length - 1];
+  const isArrayIndex = /^\d+$/.test(lastSegment);
+
+  if (isArrayIndex) {
+    const index = parseInt(lastSegment, 10);
+    if (!Array.isArray(current)) {
+      throw new Error(
+        `Expected array at path "${segments
+          .slice(0, -1)
+          .join('.')}" but found ${typeof current}`
+      );
+    }
+    current[index] = value;
+  } else {
+    current[lastSegment] = value;
+  }
+}
+
+/**
+ * Gets the schema definition for a field at a deep key path.
+ * Returns null if the path cannot be resolved or if validation is not possible.
+ */
+function getSchemaForPath(
+  schema: Schema,
+  path: string,
+  getSchema: (id: string) => Schema | undefined
+): Schema | null {
+  const segments = path.split('.');
+  let currentSchema: Schema | null = schema;
+
+  for (const segment of segments) {
+    if (!currentSchema || !currentSchema.fields) {
+      return null;
+    }
+
+    const isArrayIndex = /^\d+$/.test(segment);
+
+    if (isArrayIndex) {
+      // This segment is an array index, we don't need to traverse further
+      // The schema should already be for the array items
+      continue;
+    }
+
+    // Find the field in the current schema
+    const field = currentSchema.fields.find((f) => f.id === segment);
+    if (!field) {
+      return null;
+    }
+
+    // Handle different field types
+    if (field.type === 'object' && 'fields' in field) {
+      currentSchema = {name: '', fields: field.fields} as Schema;
+    } else if (field.type === 'array' && 'of' in field && field.of) {
+      if (field.of.type === 'object' && 'fields' in field.of) {
+        currentSchema = {name: '', fields: field.of.fields} as Schema;
+      } else if (field.of.type === 'oneof') {
+        // Cannot validate oneof without knowing the type
+        return null;
+      } else {
+        // Primitive array item
+        return {name: '', fields: [field.of]} as Schema;
+      }
+    } else if (field.type === 'oneof') {
+      // Cannot validate oneof fields without type information
+      return null;
+    } else {
+      // Leaf field
+      return {name: '', fields: [field]} as Schema;
+    }
+  }
+
+  return currentSchema;
 }
 
 export async function createMcpServer(options: McpServerOptions) {
@@ -261,7 +376,8 @@ export async function createMcpServer(options: McpServerOptions) {
   server.registerTool(
     'docs_get',
     {
-      description: 'Get a document by slug',
+      description:
+        'Get a document by slug. The returned data can be used directly with docs_save (internal _arrayKey fields will be automatically cleaned).',
       inputSchema: {
         collectionId: z.string(),
         slug: z.string(),
@@ -292,7 +408,7 @@ export async function createMcpServer(options: McpServerOptions) {
     'docs_save',
     {
       description:
-        'Save a draft document. For richtext fields, use EditorJS format: {"blocks": [{"type": "paragraph", "data": {"text": "..."}}]}',
+        'Save a draft document. Data from docs_get can be used directly - internal _arrayKey fields are automatically removed. For richtext fields, use EditorJS format: {"blocks": [{"type": "paragraph", "data": {"text": "..."}}]}.',
       inputSchema: {
         collectionId: z.string(),
         slug: z.string(),
@@ -301,6 +417,10 @@ export async function createMcpServer(options: McpServerOptions) {
     },
     async ({collectionId, slug, data}) => {
       const docId = `${collectionId}/${slug}`;
+
+      // Automatically clean up any _arrayKey fields that may have been
+      // copied from docs_get output
+      const cleanedData = cleanMarshaledData(data);
 
       // Validate against schema
       const schema = await projectModule.getCollectionSchema(collectionId);
@@ -348,7 +468,7 @@ export async function createMcpServer(options: McpServerOptions) {
       };
 
       const zodSchema = schemaToZod(schema, getSchema);
-      const validationResult = zodSchema.safeParse(data);
+      const validationResult = zodSchema.safeParse(cleanedData);
       if (!validationResult.success) {
         let errors = validationResult.error.issues
           .map((e) => `${e.path.join('.')}: ${e.message}`)
@@ -383,6 +503,189 @@ export async function createMcpServer(options: McpServerOptions) {
       await cmsClient.saveDraftData(docId, convertedData);
       return {
         content: [{type: 'text', text: `Saved draft for ${docId}`}],
+      };
+    }
+  );
+
+  server.registerTool(
+    'docs_update',
+    {
+      description:
+        'Update a specific field in a document using a deep key path (e.g., "content.modules.0.title"). More efficient than docs_save for small changes. The value will be automatically cleaned of _arrayKey fields.',
+      inputSchema: {
+        collectionId: z.string(),
+        slug: z.string(),
+        path: z
+          .string()
+          .describe(
+            'Deep key path to the field (e.g., "content.modules.0.title")'
+          ),
+        value: z.any().describe('The value to set at the path'),
+      },
+    },
+    async ({collectionId, slug, path, value}) => {
+      const docId = `${collectionId}/${slug}`;
+
+      // Fetch current document
+      const doc = await cmsClient.getDoc(collectionId, slug, {mode: 'draft'});
+      if (!doc) {
+        return {
+          content: [
+            {
+              type: 'text',
+              text: `Document not found: ${docId}`,
+            },
+          ],
+          isError: true,
+        };
+      }
+
+      // Clean the value to remove any _arrayKey fields
+      const cleanedValue = cleanMarshaledData(value);
+
+      // Get schema for validation
+      const schema = await projectModule.getCollectionSchema(collectionId);
+      if (!schema) {
+        return {
+          content: [
+            {
+              type: 'text',
+              text: `No schema found for collection: ${collectionId}`,
+            },
+          ],
+          isError: true,
+        };
+      }
+
+      // Cache schema lookups to avoid duplicates in discriminated unions
+      const schemaCache = new Map<string, Schema>();
+      const getSchema = (id: string) => {
+        if (schemaCache.has(id)) {
+          return schemaCache.get(id);
+        }
+
+        let schema: Schema | undefined;
+        for (const fileId in projectModule.SCHEMA_MODULES) {
+          const module = projectModule.SCHEMA_MODULES[fileId];
+          if (module?.default?.name === id) {
+            schema = module.default;
+            break;
+          }
+        }
+        if (!schema) {
+          const fileId = `/collections/${id}.schema.ts`;
+          const module = projectModule.SCHEMA_MODULES[fileId];
+          schema = module?.default;
+        }
+
+        if (schema) {
+          schemaCache.set(id, schema);
+        }
+        return schema;
+      };
+
+      // Get schema for the specific path
+      const fieldSchema = getSchemaForPath(schema, path, getSchema);
+      if (fieldSchema && fieldSchema.fields && fieldSchema.fields.length > 0) {
+        // Validate the value against the field schema
+        const zodSchema = schemaToZod(fieldSchema, getSchema);
+        const validationResult = zodSchema.safeParse({
+          value: cleanedValue,
+        });
+
+        if (!validationResult.success) {
+          const errors = validationResult.error.issues
+            .map((e) => `${e.path.slice(1).join('.')}: ${e.message}`)
+            .join('\n');
+          return {
+            content: [
+              {
+                type: 'text',
+                text: `Validation failed for path "${path}":\n${errors}`,
+              },
+            ],
+            isError: true,
+          };
+        }
+
+        // Apply schema conversions to the validated value
+        const convertedValue = applySchemaConversions(
+          {value: validationResult.data.value},
+          fieldSchema,
+          getSchema
+        ).value;
+
+        // Set the value at the path
+        try {
+          setDeepValue(doc.fields, path, convertedValue);
+        } catch (err: any) {
+          return {
+            content: [
+              {
+                type: 'text',
+                text: `Error setting value at path "${path}": ${err.message}`,
+              },
+            ],
+            isError: true,
+          };
+        }
+      } else {
+        // No schema found for path, set value without validation
+        try {
+          setDeepValue(doc.fields, path, cleanedValue);
+        } catch (err: any) {
+          return {
+            content: [
+              {
+                type: 'text',
+                text: `Error setting value at path "${path}": ${err.message}`,
+              },
+            ],
+            isError: true,
+          };
+        }
+      }
+
+      // Clean the entire document to remove _arrayKey fields before validation
+      // The document from getDoc() contains _arrayKey fields from unmarshaling
+      const cleanedDocFields = cleanMarshaledData(doc.fields);
+
+      // Always validate the entire updated document before saving
+      // This ensures document integrity even if we couldn't validate the specific field
+      const fullSchema = schemaToZod(schema, getSchema);
+      const fullValidationResult = fullSchema.safeParse(cleanedDocFields);
+
+      if (!fullValidationResult.success) {
+        const errors = fullValidationResult.error.issues
+          .map((e) => `${e.path.join('.')}: ${e.message}`)
+          .join('\n');
+        return {
+          content: [
+            {
+              type: 'text',
+              text: `Document validation failed after update:\n${errors}`,
+            },
+          ],
+          isError: true,
+        };
+      }
+
+      // Apply schema conversions to the entire document
+      const convertedDoc = applySchemaConversions(
+        fullValidationResult.data,
+        schema,
+        getSchema
+      );
+
+      // Save the updated document
+      await cmsClient.saveDraftData(docId, convertedDoc);
+      return {
+        content: [
+          {
+            type: 'text',
+            text: `Updated ${docId} at path "${path}"`,
+          },
+        ],
       };
     }
   );
@@ -473,147 +776,6 @@ export async function createMcpServer(options: McpServerOptions) {
     }
   );
 
-  server.registerTool(
-    'docs_edit',
-    {
-      description: 'Edit a document using AI',
-      inputSchema: {
-        collectionId: z.string(),
-        slug: z.string(),
-        prompt: z.string().describe('Instructions for the edit'),
-        chatId: z
-          .string()
-          .optional()
-          .describe('Optional chat ID to continue a conversation'),
-      },
-    },
-    async ({collectionId, slug, prompt, chatId}) => {
-      const doc = await cmsClient.getDoc(collectionId, slug, {mode: 'draft'});
-      if (!doc) {
-        return {
-          content: [
-            {
-              type: 'text',
-              text: `Document not found: ${collectionId}/${slug}`,
-            },
-          ],
-          isError: true,
-        };
-      }
-
-      const schema = await projectModule.getCollectionSchema(collectionId);
-      if (!schema) {
-        return {
-          content: [
-            {
-              type: 'text',
-              text: `No schema found for collection: ${collectionId}`,
-            },
-          ],
-          isError: true,
-        };
-      }
-
-      const systemPrompt = `
-You are editing a document in the Root CMS.
-The document follows this schema:
-${JSON.stringify(schema, null, 2)}
-
-IMPORTANT:
-- Output valid JSON matching the schema.
-- For 'oneof' fields, use the '_type' property to specify the type.
-- Do NOT use 'type' for the type discriminator, use '_type'.
-- Arrays should be JSON arrays, not objects with '_array' keys.
-- For 'richtext' fields, use the EditorJS format: {"blocks": [{"type": "paragraph", "data": {"text": "..."}}, ...]}.
-`;
-
-      const chatClient = new ChatClient(cmsClient, 'mcp-server');
-      const chat = await chatClient.getOrCreateChat(chatId);
-
-      const res = await chat.sendPrompt(
-        [
-          {text: systemPrompt},
-          {
-            text: `Current document state:\n${JSON.stringify(
-              doc.fields,
-              null,
-              2
-            )}`,
-          },
-          {text: prompt},
-        ],
-        {
-          mode: 'edit',
-          editData: doc.fields,
-        }
-      );
-
-      if (res.error) {
-        return {
-          content: [{type: 'text', text: `AI Error: ${res.error}`}],
-          isError: true,
-        };
-      }
-
-      // Validate the AI output against the schema
-      if (schema) {
-        // Cache schema lookups to avoid duplicates in discriminated unions
-        const schemaCache = new Map<string, Schema>();
-        const getSchema = (id: string) => {
-          if (schemaCache.has(id)) {
-            return schemaCache.get(id);
-          }
-
-          let schema: Schema | undefined;
-          for (const fileId in projectModule.SCHEMA_MODULES) {
-            const module = projectModule.SCHEMA_MODULES[fileId];
-            if (module?.default?.name === id) {
-              schema = module.default;
-              break;
-            }
-          }
-          if (!schema) {
-            const fileId = `/collections/${id}.schema.ts`;
-            const module = projectModule.SCHEMA_MODULES[fileId];
-            schema = module?.default;
-          }
-
-          if (schema) {
-            schemaCache.set(id, schema);
-          }
-          return schema;
-        };
-
-        const zodSchema = schemaToZod(schema, getSchema);
-        const validationResult = zodSchema.safeParse(res.data);
-        if (!validationResult.success) {
-          const errors = validationResult.error.issues
-            .map((e) => `${e.path.join('.')}: ${e.message}`)
-            .join('\n');
-          return {
-            content: [
-              {
-                type: 'text',
-                text: `AI generated invalid data:\n${errors}\n\nGenerated data:\n${JSON.stringify(
-                  res.data,
-                  null,
-                  2
-                )}`,
-              },
-            ],
-            isError: true,
-          };
-        }
-      }
-
-      return {
-        content: [
-          {type: 'text', text: res.message || 'Edit complete.'},
-          {type: 'text', text: JSON.stringify(res.data, null, 2)},
-        ],
-      };
-    }
-  );
   server.registerTool(
     'translations_create',
     {

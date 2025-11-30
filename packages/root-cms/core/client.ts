@@ -1640,6 +1640,45 @@ export function unmarshalData(data: any): any {
   return result;
 }
 
+/**
+ * Removes internal _arrayKey fields from data that may have been copied from
+ * docs_get output. This allows MCP clients and other consumers to use data
+ * from docs_get directly with docs_save without manual cleanup.
+ *
+ * E.g.:
+ * cleanMarshaledData({
+ *   modules: [{_type: 'Hero', _arrayKey: 'abc123', title: 'Hello'}]
+ * })
+ * // => {modules: [{_type: 'Hero', title: 'Hello'}]}
+ */
+export function cleanMarshaledData(data: any): any {
+  if (Array.isArray(data)) {
+    return data.map((item) => cleanMarshaledData(item));
+  }
+
+  if (!isObject(data)) {
+    return data;
+  }
+
+  const result: any = {};
+  for (const key in data) {
+    // Skip _arrayKey fields
+    if (key === '_arrayKey') {
+      continue;
+    }
+
+    const val = data[key];
+    if (Array.isArray(val)) {
+      result[key] = val.map((item) => cleanMarshaledData(item));
+    } else if (isObject(val)) {
+      result[key] = cleanMarshaledData(val);
+    } else {
+      result[key] = val;
+    }
+  }
+  return result;
+}
+
 /** @deprecated Use `unmarshalData()` instead. */
 export function normalizeData(data: any): any {
   return unmarshalData(data);
