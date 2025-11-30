@@ -11,7 +11,6 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 export async function runMcpServer(options?: {cwd?: string}) {
   const rootDir = options?.cwd ? path.resolve(options.cwd) : process.cwd();
   const rootConfig = await loadRootConfig(rootDir, {command: 'root-cms'});
-  const cmsClient = new RootCMSClient(rootConfig);
 
   // Load the project module to access schemas.
   const projectModulePath = path.resolve(__dirname, './project.js');
@@ -25,6 +24,8 @@ export async function runMcpServer(options?: {cwd?: string}) {
   }
 
   await loadProject();
+
+  const cmsClient = new RootCMSClient(rootConfig);
 
   const server = await createMcpServer({
     name: 'root-cms-mcp',

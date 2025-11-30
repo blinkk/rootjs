@@ -31,38 +31,50 @@ export async function createMcpServer(options: McpServerOptions) {
   });
 
   const projectId = cmsClient.projectId;
+  // Track registered collection resources for refresh
+  const registeredCollectionResources = new Set<string>();
 
-  // Register Resources
-  // Collections as resources
-  const collections = await cmsClient.listCollections();
-  for (const collectionId of collections) {
-    server.resource(
-      `Collection: ${collectionId}`,
-      `root-cms://${projectId}/collections/${collectionId}`,
-      {
-        description: `Schema for ${collectionId} collection`,
-        mimeType: 'application/json',
-      },
-      async () => {
-        const schema = await projectModule.getCollectionSchema(collectionId);
-        if (!schema) {
-          throw new Error(`Collection schema not found: ${collectionId}`);
-        }
-        return {
-          contents: [
-            {
-              uri: `root-cms://${projectId}/collections/${collectionId}`,
-              mimeType: 'application/json',
-              text: JSON.stringify(schema, null, 2),
-            },
-          ],
-        };
+  // Function to refresh collection resources after project reload
+  async function refreshResources() {
+    const collections = await cmsClient.listCollections();
+
+    // Register new collections that aren't already registered
+    for (const collectionId of collections) {
+      if (!registeredCollectionResources.has(collectionId)) {
+        server.registerResource(
+          `Collection: ${collectionId}`,
+          `root-cms://${projectId}/collections/${collectionId}`,
+          {
+            description: `Schema for ${collectionId} collection`,
+            mimeType: 'application/json',
+          },
+          async () => {
+            const schema =
+              await projectModule.getCollectionSchema(collectionId);
+            if (!schema) {
+              throw new Error(`Collection schema not found: ${collectionId}`);
+            }
+            return {
+              contents: [
+                {
+                  uri: `root-cms://${projectId}/collections/${collectionId}`,
+                  mimeType: 'application/json',
+                  text: JSON.stringify(schema, null, 2),
+                },
+              ],
+            };
+          }
+        );
+        registeredCollectionResources.add(collectionId);
       }
-    );
+    }
   }
 
+  // Initial resource registration
+  await refreshResources();
+
   // Translations resource
-  server.resource(
+  server.registerResource(
     'Translations',
     `root-cms://${projectId}/translations`,
     {
@@ -84,7 +96,7 @@ export async function createMcpServer(options: McpServerOptions) {
   );
 
   // Releases resource
-  server.resource(
+  server.registerResource(
     'Releases',
     `root-cms://${projectId}/releases`,
     {
@@ -115,11 +127,13 @@ export async function createMcpServer(options: McpServerOptions) {
     async () => {
       if (options.loadProject) {
         await options.loadProject();
+        // Refresh resources after project reload to pick up new collections
+        await refreshResources();
         return {
           content: [
             {
               type: 'text',
-              text: 'Project reloaded successfully',
+              text: 'Project reloaded successfully. Resources refreshed.',
             },
           ],
         };

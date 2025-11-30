@@ -45,6 +45,11 @@ vi.mock('firebase-admin/firestore', () => {
   };
 });
 
+// Mock tiny-glob
+vi.mock('tiny-glob', () => ({
+  default: vi.fn(),
+}));
+
 describe('client', () => {
   describe('marshalData', () => {
     it('preserves Timestamps', () => {
@@ -195,6 +200,7 @@ describe('RootCMSClient Release Management', () => {
 
     // Create client instance with mocked dependencies
     const mockConfig = {
+      rootDir: '/test/project',
       projectId: 'test-project',
       plugins: [
         {
@@ -374,6 +380,45 @@ describe('RootCMSClient Release Management', () => {
           scheduledBy: 'DELETE_FIELD',
         })
       );
+    });
+  });
+
+  describe('listCollections', () => {
+    it('returns sorted collection IDs from schema files', async () => {
+      // Import glob to access the mock
+      const glob = (await import('tiny-glob')).default;
+
+      // Mock glob to return schema files
+      vi.mocked(glob).mockResolvedValue([
+        'Pages.schema.ts',
+        'Posts.schema.ts',
+        'Authors.schema.ts',
+      ]);
+
+      const result = await client.listCollections();
+
+      expect(result).toEqual(['Authors', 'Pages', 'Posts']);
+      expect(glob).toHaveBeenCalledWith('*.schema.ts', {
+        cwd: expect.stringContaining('collections'),
+      });
+    });
+
+    it('returns empty array when no schema files found', async () => {
+      const glob = (await import('tiny-glob')).default;
+      vi.mocked(glob).mockResolvedValue([]);
+
+      const result = await client.listCollections();
+
+      expect(result).toEqual([]);
+    });
+
+    it('strips .schema.ts extension from filenames', async () => {
+      const glob = (await import('tiny-glob')).default;
+      vi.mocked(glob).mockResolvedValue(['my-custom-collection.schema.ts']);
+
+      const result = await client.listCollections();
+
+      expect(result).toEqual(['my-custom-collection']);
     });
   });
 });

@@ -1,4 +1,5 @@
 import crypto from 'node:crypto';
+import path from 'node:path';
 import {Plugin, RootConfig} from '@blinkk/root';
 import {App} from 'firebase-admin/app';
 import {
@@ -8,6 +9,7 @@ import {
   Timestamp,
   WriteBatch,
 } from 'firebase-admin/firestore';
+import glob from 'tiny-glob';
 import {CMSPlugin} from './plugin.js';
 import {Schema} from './schema.js';
 import {TranslationsManager} from './translations-manager.js';
@@ -322,12 +324,17 @@ export class RootCMSClient {
   }
 
   /**
-   * Lists collections in the project.
+   * Lists collections in the project by reading schema files from the collections directory.
    */
-  async listCollections() {
-    const collectionsPath = `Projects/${this.projectId}/Collections`;
-    const snapshot = await this.db.collection(collectionsPath).get();
-    return snapshot.docs.map((doc) => doc.id);
+  async listCollections(): Promise<string[]> {
+    const collectionIds: string[] = [];
+    const collectionFileNames = await glob('*.schema.ts', {
+      cwd: path.join(this.rootConfig.rootDir, 'collections'),
+    });
+    collectionFileNames.forEach((filename) => {
+      collectionIds.push(filename.slice(0, -10));
+    });
+    return collectionIds.sort();
   }
 
   /**
