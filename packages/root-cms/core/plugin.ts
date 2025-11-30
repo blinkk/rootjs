@@ -572,17 +572,26 @@ export function cmsPlugin(options: CMSPluginOptions): CMSPlugin {
           generateTypes,
         });
 
-        const transport = new StreamableHTTPServerTransport({
-          sessionIdGenerator: undefined,
-        });
-        await mcpServer.connect(transport);
+        const handleMcpRequest = async (req: Request, res: Response) => {
+          const transport = new StreamableHTTPServerTransport({
+            sessionIdGenerator: undefined,
+            enableJsonResponse: true,
+          });
+
+          res.on('close', () => {
+            transport.close();
+          });
+
+          await mcpServer.connect(transport);
+          await transport.handleRequest(req as any, res as any, req.body);
+        };
 
         server.use('/_root-cms/mcp/sse', async (req, res, next) => {
           if (req.method !== 'GET') {
             next();
             return;
           }
-          await transport.handleRequest(req, res, req.body);
+          await handleMcpRequest(req as any, res as any);
         });
 
         server.use('/_root-cms/mcp/messages', async (req, res, next) => {
@@ -590,7 +599,7 @@ export function cmsPlugin(options: CMSPluginOptions): CMSPlugin {
             next();
             return;
           }
-          await transport.handleRequest(req, res, req.body);
+          await handleMcpRequest(req as any, res as any);
         });
       }
 
