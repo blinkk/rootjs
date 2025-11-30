@@ -1,4 +1,4 @@
-import {Avatar, AvatarsGroup} from '@mantine/core';
+import {Avatar, Tooltip} from '@mantine/core';
 import {
   DocumentReference,
   FieldPath,
@@ -187,31 +187,61 @@ export function Viewers(props: ViewersProps) {
     return viewer.disconnectedAt > viewer.lastViewedAt;
   }
 
+  // Use plain CSS instead of `AvatarsGroup` because that
+  // component doesn't support using Tooltips as children.
+  const limit = props.max || 3;
+  const visibleViewers = viewers.slice(0, limit);
+  const overflow = viewers.length - limit;
+
   return (
-    <AvatarsGroup className="Viewers" limit={3} size={30}>
-      {viewers.map((viewer) => {
+    <div className="Viewers">
+      {visibleViewers.map((viewer) => {
         if (!viewer.photoURL) {
           const initial = viewer.email[0].toUpperCase();
           return (
-            <Avatar alt={viewer.email} size={24} radius="xl">
-              {initial}
-            </Avatar>
+            <Tooltip
+              key={viewer.email}
+              label={viewer.email}
+              position="bottom"
+              withArrow
+            >
+              <Avatar
+                className="Viewers__avatar"
+                alt={viewer.email}
+                size={30}
+                radius="xl"
+              >
+                {initial}
+              </Avatar>
+            </Tooltip>
           );
         }
         return (
-          <Avatar
-            className={joinClassNames(
-              'Viewers__viewer',
-              isViewerDisconnected(viewer) && 'Viewers__viewer--disconnected'
-            )}
+          <Tooltip
             key={viewer.email}
-            src={viewer.photoURL}
-            alt={viewer.email}
-            size={24}
-            radius="xl"
-          />
+            label={viewer.email}
+            position="bottom"
+            withArrow
+          >
+            <Avatar
+              className={joinClassNames(
+                'Viewers__viewer',
+                'Viewers__avatar',
+                isViewerDisconnected(viewer) && 'Viewers__viewer--disconnected'
+              )}
+              src={viewer.photoURL}
+              alt={viewer.email}
+              size={30}
+              radius="xl"
+            />
+          </Tooltip>
         );
       })}
-    </AvatarsGroup>
+      {overflow > 0 && (
+        <Avatar className="Viewers__avatar" size={30} radius="xl">
+          +{overflow}
+        </Avatar>
+      )}
+    </div>
   );
 }

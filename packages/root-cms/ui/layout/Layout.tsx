@@ -1,10 +1,18 @@
-import {Avatar, Tooltip} from '@mantine/core';
+import {
+  Avatar,
+  Divider,
+  Menu,
+  Text,
+  Tooltip,
+  UnstyledButton,
+} from '@mantine/core';
 import {
   IconCarrot,
   IconDatabase,
   IconFolder,
   IconHome,
   IconLanguage,
+  IconLogout,
   IconPhoto,
   IconRobot,
   IconRocket,
@@ -62,6 +70,12 @@ Layout.Side = () => {
   const isBuiltInHidden = (tool: CMSBuiltInSidebarTool) =>
     hiddenBuiltInTools.has(tool);
   const experiments = window.__ROOT_CTX.experiments || {};
+
+  const onSignOut = async () => {
+    await window.firebase.auth.signOut();
+    window.location.href = '/cms/login';
+  };
+
   return (
     <div className="Layout__side">
       <div className="Layout__side__buttons">
@@ -188,9 +202,34 @@ Layout.Side = () => {
         )}
       </div>
       <div className="Layout__side__user">
-        <Tooltip label={user.email!} position="right" withArrow>
-          <Avatar src={user.photoURL} alt={user.email!} size={30} radius="xl" />
-        </Tooltip>
+        <Menu
+          shadow="md"
+          position="right"
+          control={
+            <UnstyledButton>
+              <Avatar
+                src={user.photoURL}
+                alt={user.email!}
+                size={30}
+                radius="xl"
+              />
+            </UnstyledButton>
+          }
+        >
+          <Menu.Label>
+            <Text size="xs" color="dimmed" truncate>
+              Signed in as {user.email}
+            </Text>
+          </Menu.Label>
+          <Divider />
+          <Menu.Item
+            color="red"
+            icon={<IconLogout style={{width: 14, height: 14}} />}
+            onClick={onSignOut}
+          >
+            Sign out
+          </Menu.Item>
+        </Menu>
       </div>
     </div>
   );

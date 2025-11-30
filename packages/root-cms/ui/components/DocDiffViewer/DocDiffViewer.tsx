@@ -1,12 +1,9 @@
 import {Button, Loader} from '@mantine/core';
-import {Differ, Viewer as JsonDiffViewer} from 'json-diff-kit';
 import {useEffect, useState} from 'preact/hooks';
 import {joinClassNames} from '../../utils/classes.js';
 import {CMSDoc, cmsReadDocVersion, unmarshalData} from '../../utils/doc.js';
-import {getTimeAgo} from '../../utils/time.js';
+import {JsDiff} from '../JsDiff/JsDiff.js';
 
-import 'json-diff-kit/dist/viewer.css';
-import 'json-diff-kit/dist/viewer-monokai.css';
 import './DocDiffViewer.css';
 
 export interface DocVersionId {
@@ -31,11 +28,8 @@ export function DocDiffViewer(props: DocDiffViewerProps) {
   const [leftDoc, setLeftDoc] = useState<CMSDoc | null>(null);
   const [rightDoc, setRightDoc] = useState<CMSDoc | null>(null);
 
-  const leftData = cleanData(leftDoc?.fields || {});
-  const rightData = cleanData(rightDoc?.fields || {});
-
-  const differ = new Differ({});
-  const diff = differ.diff(leftData, rightData);
+  const leftData = JSON.stringify(cleanData(leftDoc?.fields || {}), null, 2);
+  const rightData = JSON.stringify(cleanData(rightDoc?.fields || {}), null, 2);
 
   const expandUrl = `/cms/compare?left=${toUrlParam(left)}&right=${toUrlParam(
     right
@@ -78,34 +72,40 @@ export function DocDiffViewer(props: DocDiffViewerProps) {
       )}
       <div className="DocDiffViewer__header">
         <div className="DocDiffViewer__header__label">
-          {props.left.docId}@{props.left.versionId} - modified{' '}
-          {getModifiedString(leftDoc)}
+          <div className="DocDiffViewer__header__label__title">
+            {props.left.docId}@{props.left.versionId}
+          </div>
+          <div className="DocDiffViewer__header__label__meta">
+            {getMetaString(leftDoc)}
+          </div>
         </div>
         <div className="DocDiffViewer__header__label">
-          {props.right.docId}@{props.right.versionId} - modified{' '}
-          {getModifiedString(rightDoc)}
+          <div className="DocDiffViewer__header__label__title">
+            {props.right.docId}@{props.right.versionId}
+          </div>
+          <div className="DocDiffViewer__header__label__meta">
+            {getMetaString(rightDoc)}
+          </div>
         </div>
       </div>
-      <JsonDiffViewer
-        diff={diff}
-        syntaxHighlight={{theme: 'root-cms'}}
-        lineNumbers={true}
-        highlightInlineDiff={true}
-        hideUnchangedLines={true}
-        inlineDiffOptions={{
-          mode: 'word',
-          wordSeparator: ' ',
-        }}
-      />
+      <JsDiff oldCode={leftData} newCode={rightData} />
     </div>
   );
 }
 
-function getModifiedString(doc: CMSDoc | null) {
+function getMetaString(doc: CMSDoc | null) {
   if (!doc?.sys?.modifiedAt) {
     return 'never';
   }
-  return getTimeAgo(doc.sys.modifiedAt.toMillis());
+  const date = doc.sys.modifiedAt.toDate();
+  const dateFormat = new Intl.DateTimeFormat('en-US', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+  return `${dateFormat.format(date)} by ${doc.sys.modifiedBy}`;
 }
 
 function cleanData(data: any) {

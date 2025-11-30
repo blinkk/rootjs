@@ -1,3 +1,21 @@
+.Viewers {
+  display: flex;
+  flex-direction: row;
+}
+
+.Viewers > * {
+  margin-left: -10px;
+}
+
+.Viewers__avatar {
+  border: 2px solid var(--mantine-color-body, #fff);
+  box-sizing: content-box;
+}
+
+.Viewers > *:first-child {
+  margin-left: 0;
+}
+
 .Viewers__viewer {
   opacity: 1;
   transition: opacity 0.3s ease;
