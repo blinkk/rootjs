@@ -26,7 +26,7 @@ export async function runMcpServer(options?: {cwd?: string}) {
 
   await loadProject();
 
-  const server = createMcpServer({
+  const server = await createMcpServer({
     name: 'root-cms-mcp',
     version: '0.0.1',
     cmsClient,

@@ -4,6 +4,7 @@ import {z} from 'zod';
 import {ChatClient} from './ai.js';
 import {RootCMSClient, applySchemaConversions} from './client.js';
 import {extractFields} from './extract.js';
+import {Schema} from './schema.js';
 import {schemaToZod} from './zod.js';
 
 export interface McpServerOptions {
@@ -21,13 +22,88 @@ export interface McpServerOptions {
   generateTypes?: () => Promise<void>;
 }
 
-export function createMcpServer(options: McpServerOptions) {
+export async function createMcpServer(options: McpServerOptions) {
   const {cmsClient, projectModule} = options;
 
   const server = new McpServer({
     name: options.name,
     version: options.version,
   });
+
+  const projectId = cmsClient.projectId;
+
+  // Register Resources
+  // Collections as resources
+  const collections = await cmsClient.listCollections();
+  for (const collectionId of collections) {
+    server.resource(
+      `Collection: ${collectionId}`,
+      `root-cms://${projectId}/collections/${collectionId}`,
+      {
+        description: `Schema for ${collectionId} collection`,
+        mimeType: 'application/json',
+      },
+      async () => {
+        const schema = await projectModule.getCollectionSchema(collectionId);
+        if (!schema) {
+          throw new Error(`Collection schema not found: ${collectionId}`);
+        }
+        return {
+          contents: [
+            {
+              uri: `root-cms://${projectId}/collections/${collectionId}`,
+              mimeType: 'application/json',
+              text: JSON.stringify(schema, null, 2),
+            },
+          ],
+        };
+      }
+    );
+  }
+
+  // Translations resource
+  server.resource(
+    'Translations',
+    `root-cms://${projectId}/translations`,
+    {
+      description: 'All translation strings',
+      mimeType: 'application/json',
+    },
+    async () => {
+      const translations = await cmsClient.loadTranslations({});
+      return {
+        contents: [
+          {
+            uri: `root-cms://${projectId}/translations`,
+            mimeType: 'application/json',
+            text: JSON.stringify(translations, null, 2),
+          },
+        ],
+      };
+    }
+  );
+
+  // Releases resource
+  server.resource(
+    'Releases',
+    `root-cms://${projectId}/releases`,
+    {
+      description: 'All releases',
+      mimeType: 'application/json',
+    },
+    async () => {
+      const releases = await cmsClient.listReleases();
+      return {
+        contents: [
+          {
+            uri: `root-cms://${projectId}/releases`,
+            mimeType: 'application/json',
+            text: JSON.stringify(releases, null, 2),
+          },
+        ],
+      };
+    }
+  );
 
   server.registerTool(
     'project_reload',
@@ -226,20 +302,35 @@ export function createMcpServer(options: McpServerOptions) {
         };
       }
 
+      // Cache schema lookups to avoid duplicates in discriminated unions
+      const schemaCache = new Map<string, Schema>();
       const getSchema = (id: string) => {
+        if (schemaCache.has(id)) {
+          return schemaCache.get(id);
+        }
+
+        let schema: Schema | undefined;
         // Build a map of schemas by name if not already built.
         // Since we are inside the handler, we can build it once per request or cache it.
         // For simplicity, we'll iterate over SCHEMA_MODULES.
         for (const fileId in projectModule.SCHEMA_MODULES) {
           const module = projectModule.SCHEMA_MODULES[fileId];
           if (module?.default?.name === id) {
-            return module.default;
+            schema = module.default;
+            break;
           }
         }
         // Fallback to checking file ID if name doesn't match (e.g. for collections)
-        const fileId = `/collections/${id}.schema.ts`;
-        const module = projectModule.SCHEMA_MODULES[fileId];
-        return module?.default;
+        if (!schema) {
+          const fileId = `/collections/${id}.schema.ts`;
+          const module = projectModule.SCHEMA_MODULES[fileId];
+          schema = module?.default;
+        }
+
+        if (schema) {
+          schemaCache.set(id, schema);
+        }
+        return schema;
       };
 
       const zodSchema = schemaToZod(schema, getSchema);
@@ -452,16 +543,31 @@ IMPORTANT:
 
       // Validate the AI output against the schema
       if (schema) {
+        // Cache schema lookups to avoid duplicates in discriminated unions
+        const schemaCache = new Map<string, Schema>();
         const getSchema = (id: string) => {
+          if (schemaCache.has(id)) {
+            return schemaCache.get(id);
+          }
+
+          let schema: Schema | undefined;
           for (const fileId in projectModule.SCHEMA_MODULES) {
             const module = projectModule.SCHEMA_MODULES[fileId];
             if (module?.default?.name === id) {
-              return module.default;
+              schema = module.default;
+              break;
             }
           }
-          const fileId = `/collections/${id}.schema.ts`;
-          const module = projectModule.SCHEMA_MODULES[fileId];
-          return module?.default;
+          if (!schema) {
+            const fileId = `/collections/${id}.schema.ts`;
+            const module = projectModule.SCHEMA_MODULES[fileId];
+            schema = module?.default;
+          }
+
+          if (schema) {
+            schemaCache.set(id, schema);
+          }
+          return schema;
         };
 
         const zodSchema = schemaToZod(schema, getSchema);
