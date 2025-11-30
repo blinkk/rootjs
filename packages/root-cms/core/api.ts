@@ -464,4 +464,42 @@ export function api(server: Server, options: ApiOptions) {
       res.status(500).json({success: false, error: 'UNKNOWN'});
     }
   });
+
+  server.use(
+    '/cms/api/ai.generate_image',
+    async (req: Request, res: Response) => {
+      if (
+        req.method !== 'POST' ||
+        !String(req.get('content-type')).startsWith('application/json')
+      ) {
+        res.status(400).json({success: false, error: 'BAD_REQUEST'});
+        return;
+      }
+      if (!req.user?.email) {
+        res.status(401).json({success: false, error: 'UNAUTHORIZED'});
+        return;
+      }
+      const reqBody = req.body || {};
+      const prompt = reqBody.prompt;
+      const aspectRatio = reqBody.aspectRatio;
+
+      if (!prompt || !aspectRatio) {
+        res.status(400).json({success: false, error: 'MISSING_REQUIRED_FIELD'});
+        return;
+      }
+
+      try {
+        const cmsClient = new RootCMSClient(req.rootConfig!);
+        const {generateImage} = await import('./ai.js');
+        const imageUrl = await generateImage(cmsClient, {
+          prompt,
+          aspectRatio,
+        });
+        res.status(200).json({success: true, image: imageUrl});
+      } catch (err: any) {
+        console.error(err.stack || err);
+        res.status(500).json({success: false, error: err.message || 'UNKNOWN'});
+      }
+    }
+  );
 }

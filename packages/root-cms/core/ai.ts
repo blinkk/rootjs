@@ -94,6 +94,68 @@ export async function summarizeDiff(
   return res.text?.trim() || '';
 }
 
+/** Allowed aspect ratios for image generation (https://docs.cloud.google.com/vertex-ai/generative-ai/docs/reference/rest/v1beta1/GenerationConfig#ImageConfig). */
+export type AspectRatio =
+  | '1:1'
+  | '2:3'
+  | '3:2'
+  | '3:4'
+  | '4:3'
+  | '4:5'
+  | '5:4'
+  | '9:16'
+  | '16:9'
+  | '21:9';
+
+export interface GenerateImageOptions {
+  prompt: string;
+  aspectRatio: AspectRatio;
+}
+
+/**
+ * Generates an image using Vertex AI.
+ */
+export async function generateImage(
+  cmsClient: RootCMSClient,
+  options: GenerateImageOptions
+): Promise<string> {
+  const cmsPluginOptions = cmsClient.cmsPlugin.getConfig();
+  const firebaseConfig = cmsPluginOptions.firebaseConfig;
+  const model = 'vertexai/gemini-2.5-flash-image';
+
+  const ai = genkit({
+    plugins: [
+      vertexAI({
+        projectId: firebaseConfig.projectId,
+        location: firebaseConfig.location || 'us-central1',
+      }),
+    ],
+  });
+
+  const res = await ai.generate({
+    model: model,
+    prompt: [
+      {
+        text: options.prompt,
+      },
+    ],
+    config: {
+      imageConfig: {
+        aspectRatio: options.aspectRatio,
+      },
+    },
+    output: {
+      format: 'media',
+    },
+  });
+
+  if (!res.media) {
+    throw new Error('No image generated');
+  }
+
+  return res.media.url;
+}
+
 export class Chat {
   chatClient: ChatClient;
   cmsClient: RootCMSClient;
