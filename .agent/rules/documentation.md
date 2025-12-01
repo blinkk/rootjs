@@ -23,18 +23,6 @@ The project is a monorepo managed with `pnpm` and `turbo`.
 - **@blinkk/root** (`packages/root`): The core framework package.
 - **@blinkk/root-cms** (`packages/root-cms`): The CMS integration for Root.js.
 - **@blinkk/create-root** (`packages/create-root`): CLI tool to scaffold new Root.js projects.
-- **Other Packages**:
-  - `eslint-config-root`: Shared ESLint configuration.
-  - `rds`: Likely related to data services or storage (needs verification).
-  - `root-core`: Core logic/utilities.
-  - `root-db`: Database abstraction/layer.
-  - `root-form`: Form handling utilities.
-  - `root-password-protect`: Middleware/utility for password protection.
-  - `root-webui`: UI components or interface for the system.
-
-### Apps (`apps/`)
-
-- **gci**: An application built within the monorepo.
 
 ### Documentation (`docs/`)
 
@@ -58,11 +46,17 @@ When working on this project, please adhere to the following guidelines:
 
 - **Always use `pnpm`**: This project uses `pnpm` for package management. Do not use `npm` or `yarn`.
 - **Install dependencies**: Run `pnpm install` at the root to install dependencies for all packages.
+- **Update types**: Use `pnpm types` within Root CMS projects to regenerate types.
 
 ### Build & Test
 
 - **Use Turbo**: Use `turbo run build` or `turbo run test` to run tasks across the monorepo efficiently.
 - **Dev Server**: Use `pnpm dev` in specific package or app directories for development.
+
+### UI Development
+
+- Follow existing conventions.
+- Avoid manually importing custom element definitions (these are collected by Root.js during the build process).
 
 ### Version Control & Contributions
 
@@ -72,9 +66,8 @@ When working on this project, please adhere to the following guidelines:
 
 ### Documentation
 
-- **Update Docs**: If you change functionality, check if `docs/` needs updating. The documentation is a Root.js app itself.
 - **Comment Style**: All comments MUST end in punctuation. Use block comments to describe interfaces and their fields. Avoid adding superfluous comments. Inline comments MUST also end in punctuation.
-- **Comment Requirements**: When creating new classes, hooks, or components that have medium-to-complex functionality, ensure you write at least a brief block comment describing what it is for. For complex functionality, provide an example of how to use it in the comment.
+- **Comment Requirements**: When creating new classes, hooks, or components, write at least a brief block comment describing what it is for. For very complex functionality, provide an example of how to use it in the comment.
 
 ## Contribution
 
