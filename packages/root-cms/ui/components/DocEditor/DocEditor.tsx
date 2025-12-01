@@ -592,6 +592,8 @@ interface ArrayFieldValue {
   _array: string[];
   /** Tracks the last-moved array item. */
   _moved?: string;
+  /** Tracks the last-pasted array item. */
+  _pasted?: string;
   _new?: string[];
 }
 
@@ -877,6 +879,7 @@ function arrayReducer(state: ArrayFieldValue, action: ArrayAction) {
         [newKey]: newData,
         _array: order,
         _new: [...newlyAdded, newKey],
+        _pasted: newKey,
       };
     }
     case 'pasteBefore': {
@@ -903,6 +906,7 @@ function arrayReducer(state: ArrayFieldValue, action: ArrayAction) {
         [newKey]: newData,
         _array: order,
         _new: [...newlyAdded, newKey],
+        _pasted: newKey,
       };
     }
     default: {
@@ -925,15 +929,18 @@ DocEditor.ArrayField = (props: FieldProps) => {
 
   // Keep track of newly-added keys, which should start in the "open" state.
   const newlyAdded = value._new || [];
+  const [cutIndex, setCutIndex] = useState<number | null>(null);
 
   useDraftDocField(props.deepKey, (newValue: ArrayFieldValue) => {
     dispatch({type: 'update', newValue});
   });
 
-  // Focus the field that was just moved (for hotkey support).
+  // Focus the field that was just moved or pasted.
   useEffect(() => {
     if (value._moved) {
       focusFieldHeader(props.deepKey, order.indexOf(value._moved));
+    } else if (value._pasted) {
+      focusFieldHeader(props.deepKey, order.indexOf(value._pasted));
     }
   }, [value]);
 
@@ -1036,6 +1043,47 @@ DocEditor.ArrayField = (props: FieldProps) => {
   const copyToVirtualClipboard = (index: number) => {
     const data = getItemValue(index);
     virtualClipboard.set(data);
+    setCutIndex(null);
+    showNotification({
+      message: 'Copied to clipboard',
+      autoClose: 2000,
+    });
+  };
+
+  const cutToVirtualClipboard = (index: number) => {
+    const data = getItemValue(index);
+    virtualClipboard.set(data);
+    setCutIndex(index);
+    showNotification({
+      message: 'Cut to clipboard',
+      autoClose: 2000,
+    });
+  };
+
+  const pasteFromVirtualClipboard = async (index: number) => {
+    const data = await virtualClipboard.get();
+    if (!data) {
+      showNotification({
+        message: 'Clipboard empty (nothing to paste)',
+        color: 'red',
+        autoClose: 2000,
+      });
+      return;
+    }
+
+    pasteAfter(index, data);
+    if (cutIndex !== null) {
+      let indexToRemove = cutIndex;
+      if (index < cutIndex) {
+        indexToRemove += 1;
+      }
+      removeAt(indexToRemove);
+      setCutIndex(null);
+    }
+    showNotification({
+      message: 'Pasted item',
+      autoClose: 2000,
+    });
   };
 
   const editJsonModal = useEditJsonModal();
@@ -1087,21 +1135,38 @@ DocEditor.ArrayField = (props: FieldProps) => {
       if (!e.target) {
         return;
       }
+      const index = order.indexOf(arrayKey);
       // Move the items up and down using the up/down arrow keys.
       // Collapse and expand the item using the left/right arrow keys.
-      if (e.key === 'ArrowUp') {
+      if (e.metaKey && e.key === 'x') {
         e.preventDefault();
-        moveUp(order.indexOf(arrayKey));
+        cutToVirtualClipboard(index);
+      } else if (e.metaKey && e.key === 'c') {
+        e.preventDefault();
+        copyToVirtualClipboard(index);
+      } else if (e.metaKey && e.key === 'v') {
+        e.preventDefault();
+        pasteFromVirtualClipboard(index);
+      } else if (e.metaKey && (e.key === 'Backspace' || e.key === 'Delete')) {
+        e.preventDefault();
+        removeAt(index);
+        showNotification({
+          message: 'Deleted item',
+          autoClose: 2000,
+        });
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        moveUp(index);
       } else if (e.key === 'ArrowDown') {
         e.preventDefault();
-        moveDown(order.indexOf(arrayKey));
+        moveDown(index);
       } else if (e.key === 'ArrowLeft') {
         (e.target as HTMLElement).closest('details')!.open = false;
       } else if (e.key === 'ArrowRight') {
         (e.target as HTMLElement).closest('details')!.open = true;
       }
     },
-    [props.deepKey]
+    [props.deepKey, order, cutIndex]
   );
 
   const addButtonRow = (
@@ -1162,12 +1227,15 @@ DocEditor.ArrayField = (props: FieldProps) => {
                         className={joinClassNames(
                           'DocEditor__ArrayField__item__wrapper',
                           snapshot.isDragging &&
-                            'DocEditor__ArrayField__item__wrapper--dragging'
+                            'DocEditor__ArrayField__item__wrapper--dragging',
+                          cutIndex === i &&
+                            'DocEditor__ArrayField__item__wrapper--cut'
                         )}
                       >
                         <div
                           className="DocEditor__ArrayField__item__handle"
                           {...provided.dragHandleProps}
+                          onClick={() => focusFieldHeader(props.deepKey, i)}
                         >
                           <IconGripVertical size={18} stroke={'1.5'} />
                         </div>

@@ -200,6 +200,12 @@
   visibility: hidden;
 }
 
+.DocEditor__ArrayField__item__wrapper--cut {
+  opacity: 0.65;
+  outline: 1px dashed #adb5bd;
+  border-radius: 4px;
+}
+
 .DocEditor__ArrayField__item__wrapper--dragging {
   background-color: #f8f9fa;
   border: 1px solid #dedede;
