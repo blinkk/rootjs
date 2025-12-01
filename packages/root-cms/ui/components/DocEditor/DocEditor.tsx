@@ -873,12 +873,13 @@ function arrayReducer(state: ArrayFieldValue, action: ArrayAction) {
         [`${action.deepKey}._array`]: order,
         [`${action.deepKey}.${newKey}`]: newData,
       });
+      // Don't add to `_new` so that the item is collapsed by default.
       const newlyAdded = state._new || [];
       return {
         ...data,
         [newKey]: newData,
         _array: order,
-        _new: [...newlyAdded, newKey],
+        _new: newlyAdded,
         _pasted: newKey,
       };
     }
@@ -900,12 +901,13 @@ function arrayReducer(state: ArrayFieldValue, action: ArrayAction) {
         [`${action.deepKey}._array`]: order,
         [`${action.deepKey}.${newKey}`]: newData,
       });
+      // Don't add to `_new` so that the item is collapsed by default.
       const newlyAdded = state._new || [];
       return {
         ...data,
         [newKey]: newData,
         _array: order,
-        _new: [...newlyAdded, newKey],
+        _new: newlyAdded,
         _pasted: newKey,
       };
     }
