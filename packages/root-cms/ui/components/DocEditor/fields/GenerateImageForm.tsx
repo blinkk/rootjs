@@ -118,15 +118,21 @@ export function GenerateImageForm(props: GenerateImageFormProps) {
     const backgroundColor = formData.get('backgroundColor') as string;
     const label = (formData.get('label') as string) || `${w}x${h}`;
 
-    let svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}"><rect width="${w}" height="${h}" fill="${backgroundColor}" />`;
+    const svgParts: string[] = [];
+    svgParts.push(
+      `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}"><rect width="${w}" height="${h}" fill="${backgroundColor}" />`
+    );
     if (label) {
       const maxTextWidthRatio = 0.5;
       const estimatedCharWidth = 0.6;
       const fontSize =
         (w * maxTextWidthRatio) / (label.length * estimatedCharWidth);
-      svg += `<text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" font-family="sans-serif" font-size="${fontSize}" fill="#fff">${label}</text>`;
+      svgParts.push(
+        `<text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" font-family="sans-serif" font-size="${fontSize}" fill="#fff">${label}</text>`
+      );
     }
-    svg += '</svg>';
+    svgParts.push('</svg>');
+    const svg = svgParts.join('');
 
     const encoder = new TextEncoder();
     const uint8Array = encoder.encode(svg);
@@ -147,18 +153,18 @@ export function GenerateImageForm(props: GenerateImageFormProps) {
     if (!generatedImage) return;
     setSaving(true);
     try {
-      // Fetch the image from the generated URL
+      // Fetch the image from the generated URL.
       const res = await fetch(generatedImage);
       const blob = await res.blob();
       const file = new File([blob], 'generated-image.png', {type: 'image/png'});
 
-      // Upload to GCS
+      // Upload to GCS.
       const {uploadFileToGCS} = await import('../../../utils/gcs.js');
       const uploadedFile = await uploadFileToGCS(file);
 
-      // Calculate dimensions based on aspect ratio
+      // Calculate dimensions based on aspect ratio.
       const [wRatio, hRatio] = aspectRatio.split(':').map(Number);
-      // Assume a base width of 1600 for high quality
+      // Assume a base width of 1600 for high quality.
       const calculatedWidth = 1600;
       const calculatedHeight = Math.round((calculatedWidth * hRatio) / wRatio);
 

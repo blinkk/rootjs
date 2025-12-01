@@ -20,7 +20,7 @@ describe('GenerateImageForm', () => {
   });
 
   it('renders AI mode when selected', async () => {
-    // Enable AI experiment
+    // Enable AI experiment.
     (window as any).__ROOT_CTX = {
       experiments: {
         ai: true,
@@ -40,19 +40,19 @@ describe('GenerateImageForm', () => {
     const element = page.getByTestId('wrapper-ai');
     await expect.element(element).toBeVisible();
 
-    // Verify control is present
+    // Verify control is present.
     const simpleSegment = page.getByText('Simple');
     await expect.element(simpleSegment).toBeVisible();
 
-    // Switch to AI mode
+    // Switch to AI mode.
     const aiSegment = page.getByText('Generate with AI');
     await aiSegment.click();
 
-    // Verify Aspect Ratio select is present
+    // Verify Aspect Ratio select is present.
     const aspectRatioSelect = page.getByText('Aspect Ratio');
     await expect.element(aspectRatioSelect).toBeVisible();
 
-    // Verify Save button is disabled initially
+    // Verify Save button is disabled initially.
     const saveButton = page.getByRole('button', {name: 'Save'});
     await expect.element(saveButton).toBeDisabled();
 
