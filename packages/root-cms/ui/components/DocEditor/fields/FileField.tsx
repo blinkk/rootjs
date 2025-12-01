@@ -4,16 +4,13 @@ import {
   ActionIcon,
   Box,
   Button,
-  ColorInput,
   Divider,
   Loader,
   LoadingOverlay,
   MantineSize,
   Modal,
-  Stack,
   Table,
   Textarea,
-  TextInput,
   Tooltip,
   useMantineTheme,
 } from '@mantine/core';
@@ -48,6 +45,7 @@ import {
   uploadFileToGCS,
 } from '../../../utils/gcs.js';
 import {FieldProps} from './FieldProps.js';
+import {GenerateImageForm} from './GenerateImageForm.js';
 
 /** Mimetypes accepted by the image input field. */
 const IMAGE_MIMETYPES = [
@@ -56,24 +54,6 @@ const IMAGE_MIMETYPES = [
   'image/png',
   'image/svg+xml',
   'image/webp',
-];
-
-/** Default placeholder colors (from https://v4.mantine.dev/core/color-picker/#with-swatches). */
-const PLACEHOLDER_COLORS = [
-  '#25262b',
-  '#868e96',
-  '#fa5252',
-  '#e64980',
-  '#be4bdb',
-  '#7950f2',
-  '#4c6ef5',
-  '#228be6',
-  '#15aabf',
-  '#12b886',
-  '#40c057',
-  '#82c91e',
-  '#fab005',
-  '#fd7e14',
 ];
 
 type FileFieldVariant = 'file' | 'image';
@@ -342,78 +322,12 @@ export function FileField(props: FileFieldProps) {
             : theme.colors.gray[2]
         }
       >
-        <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            const formData = new FormData(e.currentTarget);
-            const width = parseInt(formData.get('width') as string, 10);
-            const height = parseInt(formData.get('height') as string, 10);
-            const backgroundColor = formData.get('backgroundColor') as string;
-            const label =
-              (formData.get('label') as string) || `${width}x${height}`;
-
-            let svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}"><rect width="${width}" height="${height}" fill="${backgroundColor}" />`;
-            if (label) {
-              const maxTextWidthRatio = 0.5;
-              const estimatedCharWidth = 0.6;
-              const fontSize =
-                (width * maxTextWidthRatio) /
-                (label.length * estimatedCharWidth);
-              svg += `<text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" font-family="sans-serif" font-size="${fontSize}" fill="#fff">${label}</text>`;
-            }
-            svg += '</svg>';
-
-            const encoder = new TextEncoder();
-            const uint8Array = encoder.encode(svg);
-            const src = `data:image/svg+xml;base64,${btoa(
-              String.fromCharCode(...uint8Array)
-            )}`;
-            const placeholderFile: UploadedFile = {
-              src: src,
-              filename: 'placeholder.svg',
-              width: width,
-              height: height,
-              alt: '',
-            };
-            setValue(placeholderFile);
+        <GenerateImageForm
+          onSubmit={(file) => {
+            setValue(file);
             setPlaceholderModalOpened(false);
           }}
-        >
-          <Stack gap="xs">
-            <TextInput
-              label="Width"
-              name="width"
-              type="number"
-              defaultValue={1600}
-              data-autofocus
-            />
-            <TextInput
-              label="Height"
-              name="height"
-              type="number"
-              defaultValue={900}
-            />
-            <TextInput name="label" label="Label" defaultValue="" autofocus />
-            <ColorInput
-              name="backgroundColor"
-              label="Background color"
-              format="hex"
-              defaultValue="#868e96"
-              swatches={PLACEHOLDER_COLORS}
-            />
-          </Stack>
-          <div
-            style={{
-              display: 'flex',
-              justifyContent: 'flex-end',
-              marginTop: '1rem',
-            }}
-          >
-            <Button variant="filled" type="submit">
-              Create
-            </Button>
-          </div>
-        </form>
+        />
       </Modal>
       <div className="FileField">
         <FileField.Dropzone ref={dropZoneRef} />
