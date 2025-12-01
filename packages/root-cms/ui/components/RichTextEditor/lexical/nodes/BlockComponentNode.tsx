@@ -2,7 +2,7 @@ import {useLexicalComposerContext} from '@lexical/react/LexicalComposerContext';
 import {DecoratorBlockNode} from '@lexical/react/LexicalDecoratorBlockNode';
 import {useLexicalNodeSelection} from '@lexical/react/useLexicalNodeSelection';
 import {mergeRegister} from '@lexical/utils';
-import {Button} from '@mantine/core';
+import {Button, Loader} from '@mantine/core';
 import {
   CLICK_COMMAND,
   COMMAND_PRIORITY_LOW,
@@ -114,6 +114,11 @@ function BlockComponent(props: BlockComponentProps) {
       {previewImage && testIsImageFile(previewImage) && (
         <div className="LexicalEditor__customBlock__previewImage">
           <img src={previewImage} />
+          {props.data.loading && (
+            <div className="LexicalEditor__customBlock__previewImage__loading">
+              <Loader variant="oval" color="gray" />
+            </div>
+          )}
         </div>
       )}
       {previewTitle && (
