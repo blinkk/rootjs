@@ -13,6 +13,14 @@ export async function loadRootConfig(
   rootDir: string,
   options: ConfigOptions
 ): Promise<RootConfig> {
+  const {rootConfig} = await loadRootConfigWithDeps(rootDir, options);
+  return rootConfig;
+}
+
+export async function loadRootConfigWithDeps(
+  rootDir: string,
+  options: ConfigOptions
+): Promise<{rootConfig: RootConfig; dependencies: string[]}> {
   const configPath = path.resolve(rootDir, 'root.config.ts');
   const exists = await fileExists(configPath);
   if (!exists) {
@@ -28,7 +36,7 @@ export async function loadRootConfig(
   }
   const rootConfig = Object.assign({}, config, {rootDir});
   validateRootconfig(rootConfig);
-  return rootConfig;
+  return {rootConfig, dependencies: configBundle.dependencies};
 }
 
 function validateRootconfig(rootConfig: RootConfig) {

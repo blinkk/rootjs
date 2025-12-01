@@ -1,3 +1,4 @@
+import http from 'node:http';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 
@@ -20,7 +21,7 @@ import {
 import {redirectsMiddleware} from '../middleware/redirects.js';
 import {sessionMiddleware} from '../middleware/session.js';
 import {getElements, getElementsDirs} from '../node/element-graph.js';
-import {loadRootConfig} from '../node/load-config.js';
+import {loadRootConfigWithDeps} from '../node/load-config.js';
 import {createViteServer} from '../node/vite.js';
 import {DevServerAssetMap} from '../render/asset-map/dev-asset-map.js';
 import {dirExists, isDirectory, isJsFile} from '../utils/fsutils.js';
@@ -41,19 +42,60 @@ export async function dev(rootProjectDir?: string, options?: DevOptions) {
   const defaultPort = parseInt(process.env.PORT || '4007');
   const host = options?.host || 'localhost';
   const port = await findOpenPort(defaultPort, defaultPort + 10);
-  const server = await createDevServer({rootDir, port});
-  const rootConfig: RootConfig = server.get('rootConfig');
-  const basePath = rootConfig.base || '';
-  const homePagePath = rootConfig.server?.homePagePath || basePath;
-  console.log();
-  console.log(`${dim('┃')} project:  ${rootDir}`);
-  console.log(`${dim('┃')} server:   http://${host}:${port}${homePagePath}`);
-  if (testCmsEnabled(rootConfig)) {
-    console.log(`${dim('┃')} cms:      http://${host}:${port}/cms/`);
+
+  let currentServer: http.Server | null = null;
+  let currentViteServer: ViteDevServer | null = null;
+
+  async function start() {
+    const server = await createDevServer({rootDir, port});
+    const rootConfig: RootConfig = server.get('rootConfig');
+    const viteServer: ViteDevServer = server.get('viteServer');
+    currentViteServer = viteServer;
+
+    const basePath = rootConfig.base || '';
+    const homePagePath = rootConfig.server?.homePagePath || basePath;
+    console.log();
+    console.log(`${dim('┃')} project:  ${rootDir}`);
+    console.log(`${dim('┃')} server:   http://${host}:${port}${homePagePath}`);
+    if (testCmsEnabled(rootConfig)) {
+      console.log(`${dim('┃')} cms:      http://${host}:${port}/cms/`);
+    }
+    console.log(`${dim('┃')} mode:     development`);
+    console.log();
+    currentServer = server.listen(port, host);
+
+    // Watch for config changes.
+    const rootConfigDependencies: string[] = server.get(
+      'rootConfigDependencies'
+    );
+    const dependencies = [
+      path.resolve(rootDir, 'root.config.ts'),
+      ...rootConfigDependencies,
+    ];
+    viteServer.watcher.add(dependencies);
+    viteServer.watcher.on('change', async (file) => {
+      if (dependencies.includes(file)) {
+        console.log(
+          `\n${dim('┃')} root.config.ts changed. restarting server...`
+        );
+        await restart();
+      }
+    });
   }
-  console.log(`${dim('┃')} mode:     development`);
-  console.log();
-  server.listen(port, host);
+
+  async function restart() {
+    if (currentServer) {
+      currentServer.close();
+      currentServer = null;
+    }
+    if (currentViteServer) {
+      await currentViteServer.close();
+      currentViteServer = null;
+    }
+    await start();
+  }
+
+  await start();
 }
 
 export async function createDevServer(options?: {
@@ -61,11 +103,14 @@ export async function createDevServer(options?: {
   port?: number;
 }): Promise<Server> {
   const rootDir = path.resolve(options?.rootDir || process.cwd());
-  const rootConfig = await loadRootConfig(rootDir, {command: 'dev'});
+  const {rootConfig, dependencies} = await loadRootConfigWithDeps(rootDir, {
+    command: 'dev',
+  });
   const port = options?.port;
 
   const server: Server = express();
   server.set('rootConfig', rootConfig);
+  server.set('rootConfigDependencies', dependencies);
   server.disable('x-powered-by');
 
   // Create viteServer.
