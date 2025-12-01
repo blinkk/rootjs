@@ -1,5 +1,19 @@
 # @blinkk/root-cms
 
+## 2.4.4
+
+### Patch Changes
+
+- 10cd114a: feat: improve doc picker modal
+- 37654063: feat: add keyboard shortcuts for cut/copy/paste/delete in array field #846
+- 33504bf9: feat: add support for "group" field on collections (#833)
+- 19f95b76: feat: highlight special chars in StringField and RichTextField (#837)
+- 31f074ed: feat: implement robust translations table
+- 80eee7e3: feat: add sign out menu #843
+- 75e967ee: feat: add ai-generated image placeholder feature
+- 52a216ea: fix: remove preview pane for url-less collections (#829)
+  - @blinkk/root@2.4.4
+
 ## 2.4.3
 
 ### Patch Changes
