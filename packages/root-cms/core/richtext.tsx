@@ -125,16 +125,17 @@ RichText.QuoteBlock = (props: RichTextQuoteBlockProps) => {
   return <blockquote dangerouslySetInnerHTML={{__html: t(props.data.text)}} />;
 };
 
-interface ListItem {
+export interface RichTextListItem {
   content?: string;
-  items?: ListItem[];
+  components?: Record<string, any>;
+  items?: RichTextListItem[];
 }
 
 export interface RichTextListBlockProps {
   type: 'orderedList' | 'unorderedList';
   data?: {
     style?: 'ordered' | 'unordered';
-    items?: ListItem[];
+    items?: RichTextListItem[];
   };
 }
 
@@ -217,13 +218,17 @@ RichText.HtmlBlock = (props: RichTextHtmlBlockProps) => {
 export interface RichTextTableBlockProps {
   type: 'table';
   data?: {
-    rows?: Array<{
-      cells: Array<{
-        blocks: RichTextBlock[];
-        type: 'header' | 'data';
-      }>;
-    }>;
+    rows?: RichTextTableRow[];
   };
+}
+
+export interface RichTextTableCell {
+  blocks: RichTextBlock[];
+  type: 'header' | 'data';
+}
+
+export interface RichTextTableRow {
+  cells: RichTextTableCell[];
 }
 
 RichText.TableBlock = (props: RichTextTableBlockProps) => {

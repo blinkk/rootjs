@@ -9,6 +9,7 @@ import {
   WriteBatch,
 } from 'firebase-admin/firestore';
 import {CMSPlugin} from './plugin.js';
+import {Schema} from './schema.js';
 import {TranslationsManager} from './translations-manager.js';
 
 export interface Doc<Fields = any> {
@@ -321,6 +322,15 @@ export class RootCMSClient {
   }
 
   /**
+   * Lists collections in the project.
+   */
+  async listCollections() {
+    const collectionsPath = `Projects/${this.projectId}/Collections`;
+    const snapshot = await this.db.collection(collectionsPath).get();
+    return snapshot.docs.map((doc) => doc.id);
+  }
+
+  /**
    * Prefer `saveDraftData('Pages/foo', data)`. Only use this if you know what
    * you're doing.
    */
@@ -397,7 +407,12 @@ export class RootCMSClient {
    */
   async publishDocs(
     docIds: string[],
-    options?: {publishedBy: string; batch?: WriteBatch; releaseId?: string}
+    options?: {
+      publishedBy?: string;
+      batch?: WriteBatch;
+      releaseId?: string;
+      commitBatch?: boolean;
+    }
   ) {
     const projectCollectionsPath = `Projects/${this.projectId}/Collections`;
     const publishedBy = options?.publishedBy || 'root-cms-client';
@@ -716,6 +731,53 @@ export class RootCMSClient {
   }
 
   /**
+   * Locks a doc for publishing.
+   */
+  async lockDoc(
+    collectionId: string,
+    slug: string,
+    reason: string,
+    until?: Timestamp
+  ) {
+    const docRef = this.dbDocRef(collectionId, slug, {mode: 'draft'});
+    const lockedBy = 'root-cms-client'; // TODO: Pass user email.
+    const lockedAt = new Date().toISOString();
+    await docRef.update({
+      'sys.publishingLocked': {
+        lockedAt,
+        lockedBy,
+        reason,
+        until: until || null,
+      },
+    });
+  }
+
+  /**
+   * Unpublishes a doc (deletes the published version).
+   */
+  async unpublishDoc(collectionId: string, slug: string) {
+    const docRef = this.dbDocRef(collectionId, slug, {mode: 'published'});
+    await docRef.delete();
+
+    // Update draft to remove published metadata.
+    const draftRef = this.dbDocRef(collectionId, slug, {mode: 'draft'});
+    await draftRef.update({
+      'sys.publishedAt': FieldValue.delete(),
+      'sys.publishedBy': FieldValue.delete(),
+      'sys.firstPublishedAt': FieldValue.delete(),
+      'sys.firstPublishedBy': FieldValue.delete(),
+    });
+  }
+
+  /**
+   * Deletes a draft doc.
+   */
+  async deleteDoc(collectionId: string, slug: string) {
+    const docRef = this.dbDocRef(collectionId, slug, {mode: 'draft'});
+    await docRef.delete();
+  }
+
+  /**
    * Returns a `TranslationsManager` object for managing translations.
    *
    * To get translations:
@@ -803,6 +865,25 @@ export class RootCMSClient {
       throw new Error('up to 500 translations can be saved at a time.');
     }
     await batch.commit();
+  }
+
+  /**
+   * Adds a tag to a translation string.
+   */
+  async addTranslationTag(source: string, tag: string) {
+    await this.saveTranslations({[source]: {}}, [tag]);
+  }
+
+  /**
+   * Removes a tag from a translation string.
+   */
+  async removeTranslationTag(source: string, tag: string) {
+    const hash = this.getTranslationKey(source);
+    const translationsPath = `Projects/${this.projectId}/Translations`;
+    const translationRef = this.db.doc(`${translationsPath}/${hash}`);
+    await translationRef.update({
+      tags: FieldValue.arrayRemove(tag),
+    });
   }
 
   /**
@@ -1204,6 +1285,157 @@ export class RootCMSClient {
   createBatchRequest(options: BatchRequestOptions): BatchRequest {
     return new BatchRequest(this, options);
   }
+
+  /**
+   * Creates a new release.
+   */
+  async createRelease(id: string, release: Partial<Release>) {
+    if (!id) {
+      throw new Error('missing release id');
+    }
+    const docRef = this.db.doc(`Projects/${this.projectId}/Releases/${id}`);
+    await this.db.runTransaction(async (t) => {
+      const snapshot = await t.get(docRef);
+      if (snapshot.exists) {
+        throw new Error(`release exists: ${id}`);
+      }
+      t.set(docRef, {
+        ...release,
+        id: id,
+        createdAt: FieldValue.serverTimestamp(),
+        createdBy: 'root-cms-client',
+      });
+    });
+    await this.logAction('release.create', {metadata: {releaseId: id}});
+  }
+
+  /**
+   * Lists all releases.
+   */
+  async listReleases(): Promise<Release[]> {
+    const colRef = this.db.collection(`Projects/${this.projectId}/Releases`);
+    const q = colRef.orderBy('createdAt', 'desc');
+    const querySnapshot = await q.get();
+    const res: Release[] = [];
+    querySnapshot.forEach((doc) => {
+      res.push(doc.data() as Release);
+    });
+    return res;
+  }
+
+  /**
+   * Gets a release by ID.
+   */
+  async getRelease(id: string): Promise<Release | null> {
+    const docRef = this.db.doc(`Projects/${this.projectId}/Releases/${id}`);
+    const snapshot = await docRef.get();
+    if (!snapshot.exists) {
+      return null;
+    }
+    return snapshot.data() as Release;
+  }
+
+  /**
+   * Updates a release.
+   */
+  async updateRelease(id: string, release: Partial<Release>) {
+    const docRef = this.db.doc(`Projects/${this.projectId}/Releases/${id}`);
+    await docRef.update(release);
+    await this.logAction('release.save', {metadata: {releaseId: id}});
+  }
+
+  /**
+   * Deletes a release.
+   */
+  async deleteRelease(id: string) {
+    const docRef = this.db.doc(`Projects/${this.projectId}/Releases/${id}`);
+    await docRef.delete();
+    await this.logAction('release.delete', {metadata: {releaseId: id}});
+  }
+
+  /**
+   * Publishes a release.
+   */
+  async publishRelease(id: string) {
+    const release = await this.getRelease(id);
+    if (!release) {
+      throw new Error(`release not found: ${id}`);
+    }
+    const docIds = release.docIds || [];
+    const dataSourceIds = release.dataSourceIds || [];
+    if (docIds.length === 0 && dataSourceIds.length === 0) {
+      throw new Error(`no docs or data sources to publish for release: ${id}`);
+    }
+
+    const docRef = this.db.doc(`Projects/${this.projectId}/Releases/${id}`);
+    const batch = this.db.batch();
+
+    batch.update(docRef, {
+      publishedAt: FieldValue.serverTimestamp(),
+      publishedBy: 'root-cms-client',
+      scheduledAt: FieldValue.delete(),
+      scheduledBy: FieldValue.delete(),
+    });
+
+    if (dataSourceIds.length > 0) {
+      await this.publishDataSources(dataSourceIds, {
+        publishedBy: 'root-cms-client',
+        batch,
+        commitBatch: false,
+      });
+    }
+    if (docIds.length > 0) {
+      await this.publishDocs(docIds, {
+        publishedBy: 'root-cms-client',
+        batch,
+        commitBatch: false,
+      });
+    }
+
+    await batch.commit();
+    await this.logAction('release.publish', {
+      metadata: {releaseId: id, docIds, dataSourceIds},
+    });
+  }
+
+  /**
+   * Schedules a release.
+   */
+  async scheduleRelease(id: string, timestamp: Timestamp | number) {
+    const release = await this.getRelease(id);
+    if (!release) {
+      throw new Error(`release not found: ${id}`);
+    }
+
+    if (typeof timestamp === 'number') {
+      timestamp = Timestamp.fromMillis(timestamp);
+    }
+
+    const docRef = this.db.doc(`Projects/${this.projectId}/Releases/${id}`);
+    await docRef.update({
+      scheduledAt: timestamp,
+      scheduledBy: 'root-cms-client',
+    });
+    await this.logAction('release.schedule', {
+      metadata: {releaseId: id, scheduledAt: timestamp.toMillis()},
+    });
+  }
+
+  /**
+   * Unschedules a release.
+   */
+  async unscheduleRelease(id: string) {
+    const release = await this.getRelease(id);
+    if (!release) {
+      throw new Error(`release not found: ${id}`);
+    }
+
+    const docRef = this.db.doc(`Projects/${this.projectId}/Releases/${id}`);
+    await docRef.update({
+      scheduledBy: FieldValue.delete(),
+    });
+    await this.logAction('release.unschedule', {metadata: {releaseId: id}});
+  }
 }
 
 /**
@@ -1244,7 +1476,10 @@ export function marshalData(data: any): any {
   const result: any = {};
   for (const key in data) {
     const val = data[key];
-    if (isObject(val)) {
+    if (val && typeof val.toMillis === 'function') {
+      // Preserve timestamps.
+      result[key] = val;
+    } else if (isObject(val)) {
       result[key] = marshalData(val);
     } else if (Array.isArray(val)) {
       if (val.length > 0 && val.some((item) => isObject(item))) {
@@ -1263,6 +1498,99 @@ export function marshalData(data: any): any {
     }
   }
   return result;
+}
+
+/**
+ * Applies schema-based conversions to the data before saving.
+ * e.g. converts `datetime` fields from numbers to Firestore Timestamps.
+ */
+export function applySchemaConversions(
+  data: any,
+  schema: Schema,
+  getSchema?: (id: string) => Schema | undefined
+): any {
+  if (!data || !schema) {
+    return data;
+  }
+
+  const result = {...data};
+  const fields = schema.fields || [];
+
+  for (const field of fields) {
+    if (!field.id) {
+      continue;
+    }
+    const value = result[field.id];
+    if (value === undefined || value === null) {
+      continue;
+    }
+
+    if (field.type === 'datetime') {
+      if (typeof value === 'number') {
+        result[field.id] = Timestamp.fromMillis(value);
+      }
+    } else if (field.type === 'object') {
+      result[field.id] = applySchemaConversions(
+        value,
+        {
+          name: field.id || '',
+          fields: field.fields,
+        },
+        getSchema
+      );
+    } else if (field.type === 'array') {
+      if (Array.isArray(value)) {
+        result[field.id] = value.map((item) => {
+          if (field.of.type === 'object') {
+            return applySchemaConversions(
+              item,
+              {
+                name: field.id || '',
+                fields: field.of.fields,
+              },
+              getSchema
+            );
+          } else if (field.of.type === 'oneof') {
+            return applyOneOfConversions(item, field.of, getSchema);
+          }
+          return item;
+        });
+      }
+    } else if (field.type === 'oneof') {
+      result[field.id] = applyOneOfConversions(value, field, getSchema);
+    }
+  }
+  return result;
+}
+
+function applyOneOfConversions(
+  data: any,
+  field: any, // OneOfField
+  getSchema?: (id: string) => Schema | undefined
+) {
+  if (!data || !data._type) {
+    return data;
+  }
+  const typeName = data._type;
+  for (const typeRef of field.types) {
+    let subSchema: Schema | undefined;
+    let subTypeName: string;
+
+    if (typeof typeRef === 'string') {
+      subTypeName = typeRef;
+      if (getSchema) {
+        subSchema = getSchema(typeRef);
+      }
+    } else {
+      subTypeName = typeRef.name;
+      subSchema = typeRef;
+    }
+
+    if (subTypeName === typeName && subSchema) {
+      return applySchemaConversions(data, subSchema, getSchema);
+    }
+  }
+  return data;
 }
 
 /**
