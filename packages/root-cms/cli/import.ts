@@ -137,6 +137,17 @@ export async function importData(options: ImportOptions) {
     );
   }
 
+  // Import project document if it exists.
+  const projectFilePath = path.join(importDir, '__data.json');
+  if (fs.existsSync(projectFilePath)) {
+    console.log('Importing project document...');
+    const rawData = JSON.parse(fs.readFileSync(projectFilePath, 'utf-8'));
+    const projectData = convertTimestamps(rawData);
+    const projectPath = `Projects/${siteId}`;
+    await db.doc(projectPath).set(projectData, {merge: true});
+    console.log('  - Project document updated');
+  }
+
   console.log('\n✅ Import complete!');
 }
 
@@ -236,14 +247,31 @@ async function importCollectionRecursive(
   for (const entry of entries) {
     if (entry.isFile() && entry.name.endsWith('.json')) {
       // Import document.
-      const docId = path.basename(entry.name, '.json');
       const rawData = JSON.parse(
         fs.readFileSync(path.join(inputDir, entry.name), 'utf-8')
       );
       // Convert timestamps before importing.
       const docData = convertTimestamps(rawData);
-      const docPath = `${collectionPath}/${docId}`;
-      await db.doc(docPath).set(docData);
+
+      let docPath: string;
+      if (entry.name === '__data.json') {
+        // Handle __data.json (data for the current container document).
+        docPath = collectionPath;
+        // If we are at the root of a collection (e.g. Projects/site/Col),
+        // __data.json shouldn't really exist unless the collection itself has data (impossible in Firestore).
+        // But if we are in a sub-document folder (Projects/site/Col/Doc), collectionPath is the Doc path.
+        // So this works.
+        // However, we should use 'update' or 'set' with merge?
+        // set() overwrites. If we have subcollections, the doc might implicitly exist?
+        // set() is fine.
+        await db.doc(docPath).set(docData, {merge: true});
+      } else {
+        // Standard document file (DocId.json).
+        const docId = path.basename(entry.name, '.json');
+        docPath = `${collectionPath}/${docId}`;
+        await db.doc(docPath).set(docData);
+      }
+
       if (progressBar) {
         progressBar.increment();
       }

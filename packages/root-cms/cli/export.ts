@@ -14,17 +14,6 @@ export interface ExportOptions {
   project?: string;
 }
 
-const COLLECTION_TYPES = [
-  'ActionLogs',
-  'Collections',
-  'DataSources',
-  'Releases',
-  'Translations',
-  'Users',
-] as const;
-
-type CollectionType = (typeof COLLECTION_TYPES)[number];
-
 export async function exportData(options: ExportOptions) {
   const rootDir = process.cwd();
   const rootConfig = await loadRootConfig(rootDir, {command: 'root-cms'});
@@ -34,33 +23,36 @@ export async function exportData(options: ExportOptions) {
   const databaseId = options.database || '(default)';
   const db = cmsPlugin.getFirestore({databaseId});
 
+  // Get all collections in the project.
+  const projectPath = `Projects/${siteId}`;
+  const projectRef = db.doc(projectPath);
+  const collections = await projectRef.listCollections();
+  const allCollectionIds = collections.map((c: any) => c.id);
+
   // Parse includes filter.
-  let includes: CollectionType[] = [...COLLECTION_TYPES];
+  let includes: string[] = allCollectionIds;
   if (options.include) {
     const requestedIncludes = options.include
       .split(',')
       .map((s) => s.trim())
       .filter((s) => s.length > 0);
-    includes = requestedIncludes.filter((inc) =>
-      COLLECTION_TYPES.includes(inc as CollectionType)
-    ) as CollectionType[];
+    includes = requestedIncludes;
+  }
 
-    if (includes.length === 0) {
-      throw new Error(
-        `No valid collection types specified in --include. Valid types: ${COLLECTION_TYPES.join(
-          ', '
-        )}`
-      );
-    }
+  if (includes.length === 0) {
+    console.log('No collections found to export.');
+    return;
   }
 
   // Create export directory with timestamp.
   const now = new Date();
   const timestamp = formatTimestamp(now);
-  const exportDir = `export_${siteId}_${timestamp}`;
   const gcpProjectId =
-    options.project || cmsPluginOptions.firebaseConfig?.projectId || 'unknown';
-
+    options.project || cmsPluginOptions.firebaseConfig?.projectId || 'default';
+  const exportDir =
+    `export_${gcpProjectId}_${databaseId}_${siteId}_${timestamp}`
+      .replace(/\(/g, '')
+      .replace(/\)/g, '');
   // Display export information in table format.
   console.log('');
   console.table({
@@ -74,6 +66,15 @@ export async function exportData(options: ExportOptions) {
 
   if (!fs.existsSync(exportDir)) {
     fs.mkdirSync(exportDir, {recursive: true});
+  }
+
+  // Export project document (e.g. Projects/www) to preserve settings/roles.
+  const projectDoc = await projectRef.get();
+  if (projectDoc.exists) {
+    const projectData = projectDoc.data();
+    const projectFilePath = path.join(exportDir, '__data.json');
+    fs.writeFileSync(projectFilePath, JSON.stringify(projectData, null, 2));
+    console.log('Exported project document to __data.json');
   }
 
   // Export each collection type.
@@ -168,7 +169,7 @@ async function exportCollectionRecursive(
 
   const collection = db.collection(collectionPath);
 
-  // Get all document references (including phantom docs).
+  // Get all document references.
   const refs = await collection.listDocuments();
   if (refs.length === 0) {
     return;
@@ -183,18 +184,32 @@ async function exportCollectionRecursive(
 
   for (const ref of refs) {
     const doc = docMap.get(ref.id);
+    const subcollections = await ref.listCollections();
+    const hasSubcollections = subcollections.length > 0;
 
-    // If document exists (has data), export it.
+    // Determine where to save the document data.
+    // If it has subcollections, save as __data.json inside the document folder.
+    // Otherwise, save as {docId}.json.
     if (doc) {
       const docData = doc.data();
-      const filePath = path.join(outputDir, `${doc.id}.json`);
+      let filePath: string;
+
+      if (hasSubcollections) {
+        const docDir = path.join(outputDir, doc.id);
+        if (!fs.existsSync(docDir)) {
+          fs.mkdirSync(docDir, {recursive: true});
+        }
+        filePath = path.join(docDir, '__data.json');
+      } else {
+        filePath = path.join(outputDir, `${doc.id}.json`);
+      }
+
       fs.writeFileSync(filePath, JSON.stringify(docData, null, 2));
       stats.count++;
       spinner.update(`Exporting ${stats.count} documents...`);
     }
 
-    // Export subcollections for ALL documents (real and phantom).
-    const subcollections = await ref.listCollections();
+    // Export subcollections.
     for (const subcollection of subcollections) {
       const subcollectionDir = path.join(outputDir, ref.id, subcollection.id);
       await exportCollectionRecursive(
