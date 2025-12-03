@@ -1,6 +1,8 @@
 import {Command} from 'commander';
 import {bgGreen, black} from 'kleur/colors';
+import {exportData} from './export.js';
 import {generateTypes} from './generate-types.js';
+import {importData} from './import.js';
 import {initFirebase} from './init-firebase.js';
 
 class CliRunner {
@@ -37,8 +39,37 @@ class CliRunner {
         'generates root-cms.d.ts from *.schema.ts files in the project'
       )
       .action(generateTypes);
+    program
+      .command('export')
+      .description('exports firestore data to a local directory')
+      .option(
+        '--include <types>',
+        'comma-separated list of collection types to export (ActionLogs, Collections, DataSources, Releases, Translations, Users)'
+      )
+      .option('--site <siteId>', 'site id to export (overrides root config)')
+      .option(
+        '--database <databaseId>',
+        'firestore database id (overrides root config, default: "(default)")'
+      )
+      .option('--project <projectId>', 'gcp project id (overrides root config)')
+      .action(exportData);
+    program
+      .command('import')
+      .description('imports firestore data from a local directory')
+      .option('--dir <directory>', 'directory to import from (required)')
+      .option(
+        '--include <types>',
+        'comma-separated list of collection types to import (ActionLogs, Collections, DataSources, Releases, Translations, Users)'
+      )
+      .option('--site <siteId>', 'site id to import to (overrides root config)')
+      .option(
+        '--database <databaseId>',
+        'firestore database id (overrides root config, default: "(default)")'
+      )
+      .option('--project <projectId>', 'gcp project id (overrides root config)')
+      .action(importData);
     await program.parseAsync(argv);
   }
 }
 
-export {CliRunner, generateTypes, initFirebase};
+export {CliRunner, exportData, generateTypes, importData, initFirebase};
