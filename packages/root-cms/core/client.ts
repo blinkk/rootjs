@@ -1,5 +1,5 @@
 import crypto from 'node:crypto';
-import {Plugin, RootConfig} from '@blinkk/root';
+import {type Plugin, type RootConfig} from '@blinkk/root';
 import {App} from 'firebase-admin/app';
 import {
   FieldValue,
@@ -9,7 +9,10 @@ import {
   WriteBatch,
 } from 'firebase-admin/firestore';
 import {CMSPlugin} from './plugin.js';
+import * as project from './project.js';
+import {Collection} from './schema.js';
 import {TranslationsManager} from './translations-manager.js';
+import {validateFields} from './validation.js';
 
 export interface Doc<Fields = any> {
   /** The id of the doc, e.g. "Pages/foo-bar". */
@@ -99,6 +102,12 @@ export interface SaveDraftOptions {
    * Email of user modifying the doc. If blank, defaults to `root-cms-client`.
    */
   modifiedBy?: string;
+
+  /**
+   * Whether to validate fieldsData against the collection schema before saving.
+   * If validation fails, an error will be thrown with details about the validation errors.
+   */
+  validate?: boolean;
 }
 
 export interface ListDocsOptions {
@@ -287,6 +296,14 @@ export class RootCMSClient {
   }
 
   /**
+   * Returns a collection's schema definition as defined in
+   * `/collections/<id>.schema.ts`.
+   */
+  async getCollection(collectionId: string): Promise<Collection | null> {
+    return await project.getCollectionSchema(collectionId);
+  }
+
+  /**
    * Saves draft data to a doc.
    *
    * Note: this saves data to the "fields" attr of the draft doc. If you need to
@@ -298,6 +315,24 @@ export class RootCMSClient {
     options?: SaveDraftOptions
   ) {
     const {collection, slug} = parseDocId(docId);
+
+    // Validate fieldsData if requested.
+    if (options?.validate) {
+      const collectionSchema = await this.getCollection(collection);
+      if (!collectionSchema) {
+        throw new Error(
+          `Collection schema not found for: ${collection}. Unable to validate.`
+        );
+      }
+      const errors = validateFields(fieldsData, collectionSchema);
+      if (errors.length > 0) {
+        const errorMessages = errors
+          .map((err) => `  - ${err.path}: ${err.message}`)
+          .join('\n');
+        throw new Error(`Validation failed for ${docId}:\n${errorMessages}`);
+      }
+    }
+
     const draftDoc =
       (await this.getRawDoc(collection, slug, {mode: 'draft'})) || {};
     const draftSys = draftDoc.sys || {};
