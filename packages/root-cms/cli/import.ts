@@ -2,6 +2,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 import * as readline from 'node:readline';
 import {loadRootConfig} from '@blinkk/root/node';
+import cliProgress from 'cli-progress';
+import {Timestamp} from 'firebase-admin/firestore';
 import {getCmsPlugin} from '../core/client.js';
 
 export interface ImportOptions {
@@ -79,119 +81,14 @@ export async function importData(options: ImportOptions) {
   // Scan the directory and count documents.
   const summary: ImportSummary[] = [];
 
-  // Count Collections.
-  const collectionsDir = path.join(importDir, 'Collections');
-  if (includes.includes('Collections') && fs.existsSync(collectionsDir)) {
-    const collections = fs.readdirSync(collectionsDir);
-    let totalDocs = 0;
-    const collectionDetails: string[] = [];
-
-    for (const collectionId of collections) {
-      const collectionPath = path.join(collectionsDir, collectionId);
-      if (!fs.statSync(collectionPath).isDirectory()) continue;
-
-      let collectionCount = 0;
-      const draftsDir = path.join(collectionPath, 'Drafts');
-      if (fs.existsSync(draftsDir)) {
-        const drafts = fs
-          .readdirSync(draftsDir)
-          .filter((f) => f.endsWith('.json'));
-        collectionCount += drafts.length;
-      }
-
-      const publishedDir = path.join(collectionPath, 'Published');
-      if (fs.existsSync(publishedDir)) {
-        const published = fs
-          .readdirSync(publishedDir)
-          .filter((f) => f.endsWith('.json'));
-        collectionCount += published.length;
-      }
-
-      if (collectionCount > 0) {
-        collectionDetails.push(`${collectionId} (${collectionCount})`);
-        totalDocs += collectionCount;
-      }
-    }
-
-    if (totalDocs > 0) {
-      summary.push({
-        collectionType: 'Collections',
-        count: totalDocs,
-        details: collectionDetails.join(', '),
-      });
-    }
-  }
-
-  // Count DataSources.
-  const dataSourcesDir = path.join(importDir, 'DataSources');
-  if (includes.includes('DataSources') && fs.existsSync(dataSourcesDir)) {
-    const dataSources = fs.readdirSync(dataSourcesDir).filter((f) => {
-      const p = path.join(dataSourcesDir, f);
-      return fs.statSync(p).isDirectory();
-    });
-    if (dataSources.length > 0) {
-      summary.push({
-        collectionType: 'DataSources',
-        count: dataSources.length,
-      });
-    }
-  }
-
-  // Count Releases.
-  const releasesDir = path.join(importDir, 'Releases');
-  if (includes.includes('Releases') && fs.existsSync(releasesDir)) {
-    const releases = fs
-      .readdirSync(releasesDir)
-      .filter((f) => f.endsWith('.json'));
-    if (releases.length > 0) {
-      summary.push({
-        collectionType: 'Releases',
-        count: releases.length,
-      });
-    }
-  }
-
-  // Count Translations.
-  const translationsDir = path.join(importDir, 'Translations');
-  if (includes.includes('Translations') && fs.existsSync(translationsDir)) {
-    const translations = fs
-      .readdirSync(translationsDir)
-      .filter((f) => f.endsWith('.json'));
-    if (translations.length > 0) {
-      summary.push({
-        collectionType: 'Translations',
-        count: translations.length,
-      });
-    }
-  }
-
-  // Count ActionLogs.
-  const actionLogsDir = path.join(importDir, 'ActionLogs');
-  if (includes.includes('ActionLogs') && fs.existsSync(actionLogsDir)) {
-    const actionLogs = fs
-      .readdirSync(actionLogsDir)
-      .filter((f) => f.endsWith('.json'));
-    if (actionLogs.length > 0) {
-      summary.push({
-        collectionType: 'ActionLogs',
-        count: actionLogs.length,
-      });
-    }
-  }
-
-  // Count Users.
-  const usersDir = path.join(importDir, 'Users');
-  if (includes.includes('Users') && fs.existsSync(usersDir)) {
-    const projectFile = path.join(usersDir, 'project.json');
-    if (fs.existsSync(projectFile)) {
-      const projectData = JSON.parse(fs.readFileSync(projectFile, 'utf-8'));
-      const rolesCount = projectData.roles
-        ? Object.keys(projectData.roles).length
-        : 0;
-      if (rolesCount > 0) {
+  for (const collectionType of includes) {
+    const collectionDir = path.join(importDir, collectionType);
+    if (fs.existsSync(collectionDir)) {
+      const count = countJsonFilesRecursive(collectionDir);
+      if (count > 0) {
         summary.push({
-          collectionType: 'Users',
-          count: rolesCount,
+          collectionType,
+          count,
         });
       }
     }
@@ -211,12 +108,7 @@ export async function importData(options: ImportOptions) {
   tableData['Site'] = siteId;
 
   for (const item of summary) {
-    const parts = [`${item.count}`];
-    if (item.details) {
-      parts.push(` – ${item.details}`);
-    }
-    const value = parts.join('');
-    tableData[item.collectionType] = value;
+    tableData[item.collectionType] = `${item.count} documents`;
   }
 
   console.log('');
@@ -234,181 +126,138 @@ export async function importData(options: ImportOptions) {
 
   // Perform the import.
   for (const item of summary) {
-    console.log(`Importing ${item.collectionType}...`);
-
-    if (item.collectionType === 'Collections') {
-      await importCollections(db, siteId, importDir);
-    } else if (item.collectionType === 'DataSources') {
-      await importDataSources(db, siteId, importDir);
-    } else if (item.collectionType === 'Releases') {
-      await importReleases(db, siteId, importDir);
-    } else if (item.collectionType === 'Translations') {
-      await importTranslations(db, siteId, importDir);
-    } else if (item.collectionType === 'ActionLogs') {
-      await importActionLogs(db, siteId, importDir);
-    } else if (item.collectionType === 'Users') {
-      await importUsers(db, siteId, importDir);
-    }
+    const collectionPath = `Projects/${siteId}/${item.collectionType}`;
+    const collectionDir = path.join(importDir, item.collectionType);
+    await importCollection(
+      db,
+      collectionPath,
+      collectionDir,
+      item.collectionType,
+      item.count
+    );
   }
 
   console.log('\n✅ Import complete!');
 }
 
-async function importCollections(db: any, siteId: string, importDir: string) {
-  const collectionsDir = path.join(importDir, 'Collections');
-  const collections = fs.readdirSync(collectionsDir);
-
-  for (const collectionId of collections) {
-    const collectionPath = path.join(collectionsDir, collectionId);
-    if (!fs.statSync(collectionPath).isDirectory()) continue;
-
-    // Import Drafts.
-    const draftsDir = path.join(collectionPath, 'Drafts');
-    if (fs.existsSync(draftsDir)) {
-      const drafts = fs
-        .readdirSync(draftsDir)
-        .filter((f) => f.endsWith('.json'));
-      for (const draftFile of drafts) {
-        const docId = path.basename(draftFile, '.json');
-        const docData = JSON.parse(
-          fs.readFileSync(path.join(draftsDir, draftFile), 'utf-8')
-        );
-        const docPath = `Projects/${siteId}/Collections/${collectionId}/Drafts/${docId}`;
-        await db.doc(docPath).set(docData);
-      }
-      if (drafts.length > 0) {
-        console.log(`  - ${collectionId}/Drafts: ${drafts.length} documents`);
-      }
-    }
-
-    // Import Published.
-    const publishedDir = path.join(collectionPath, 'Published');
-    if (fs.existsSync(publishedDir)) {
-      const published = fs
-        .readdirSync(publishedDir)
-        .filter((f) => f.endsWith('.json'));
-      for (const publishedFile of published) {
-        const docId = path.basename(publishedFile, '.json');
-        const docData = JSON.parse(
-          fs.readFileSync(path.join(publishedDir, publishedFile), 'utf-8')
-        );
-        const docPath = `Projects/${siteId}/Collections/${collectionId}/Published/${docId}`;
-        await db.doc(docPath).set(docData);
-      }
-      if (published.length > 0) {
-        console.log(
-          `  - ${collectionId}/Published: ${published.length} documents`
-        );
-      }
+/**
+ * Recursively counts .json files in a directory.
+ */
+function countJsonFilesRecursive(dir: string): number {
+  let count = 0;
+  const entries = fs.readdirSync(dir, {withFileTypes: true});
+  for (const entry of entries) {
+    if (entry.isDirectory()) {
+      count += countJsonFilesRecursive(path.join(dir, entry.name));
+    } else if (entry.isFile() && entry.name.endsWith('.json')) {
+      count++;
     }
   }
+  return count;
 }
 
-async function importDataSources(db: any, siteId: string, importDir: string) {
-  const dataSourcesDir = path.join(importDir, 'DataSources');
-  const dataSources = fs.readdirSync(dataSourcesDir).filter((f) => {
-    const p = path.join(dataSourcesDir, f);
-    return fs.statSync(p).isDirectory();
+/**
+ * Generic function to import a collection and all its subcollections.
+ */
+async function importCollection(
+  db: any,
+  collectionPath: string,
+  inputDir: string,
+  displayName: string,
+  totalDocs: number
+) {
+  console.log(`Importing ${displayName}...`);
+
+  const progressBar = new cliProgress.SingleBar({
+    format: `Importing ${displayName} [{bar}] {percentage}% | {value}/{total}`,
+    barCompleteChar: '\u2588',
+    barIncompleteChar: '\u2591',
+    hideCursor: true,
   });
+  progressBar.start(totalDocs, 0);
 
-  for (const dataSourceId of dataSources) {
-    const dataSourcePath = path.join(dataSourcesDir, dataSourceId);
+  await importCollectionRecursive(db, collectionPath, inputDir, progressBar);
 
-    // Import metadata.
-    const metadataFile = path.join(dataSourcePath, 'metadata.json');
-    if (fs.existsSync(metadataFile)) {
-      const metadata = JSON.parse(fs.readFileSync(metadataFile, 'utf-8'));
-      const docPath = `Projects/${siteId}/DataSources/${dataSourceId}`;
-      await db.doc(docPath).set(metadata);
+  progressBar.stop();
+  console.log(`  - ${displayName}: ${totalDocs} documents`);
+}
+
+/**
+ * Recursively converts timestamp objects to Firestore Timestamps.
+ * Firestore timestamps are exported as {_seconds: number, _nanoseconds: number}.
+ */
+function convertTimestamps(obj: any): any {
+  if (obj === null || obj === undefined) {
+    return obj;
+  }
+
+  // Check if this object is a timestamp.
+  if (
+    typeof obj === 'object' &&
+    '_seconds' in obj &&
+    '_nanoseconds' in obj &&
+    Object.keys(obj).length === 2
+  ) {
+    return new Timestamp(obj._seconds, obj._nanoseconds);
+  }
+
+  // Recursively process arrays.
+  if (Array.isArray(obj)) {
+    return obj.map((item) => convertTimestamps(item));
+  }
+
+  // Recursively process objects.
+  if (typeof obj === 'object') {
+    const converted: any = {};
+    for (const [key, value] of Object.entries(obj)) {
+      converted[key] = convertTimestamps(value);
     }
+    return converted;
+  }
 
-    // Import draft data.
-    const draftFile = path.join(dataSourcePath, 'draft.json');
-    if (fs.existsSync(draftFile)) {
-      const draftData = JSON.parse(fs.readFileSync(draftFile, 'utf-8'));
-      const draftPath = `Projects/${siteId}/DataSources/${dataSourceId}/Data/draft`;
-      await db.doc(draftPath).set(draftData);
+  return obj;
+}
+
+/**
+ * Recursively imports documents and subcollections from a directory.
+ */
+async function importCollectionRecursive(
+  db: any,
+  collectionPath: string,
+  inputDir: string,
+  progressBar?: cliProgress.SingleBar
+) {
+  if (!fs.existsSync(inputDir)) {
+    return;
+  }
+
+  const entries = fs.readdirSync(inputDir, {withFileTypes: true});
+
+  for (const entry of entries) {
+    if (entry.isFile() && entry.name.endsWith('.json')) {
+      // Import document.
+      const docId = path.basename(entry.name, '.json');
+      const rawData = JSON.parse(
+        fs.readFileSync(path.join(inputDir, entry.name), 'utf-8')
+      );
+      // Convert timestamps before importing.
+      const docData = convertTimestamps(rawData);
+      const docPath = `${collectionPath}/${docId}`;
+      await db.doc(docPath).set(docData);
+      if (progressBar) {
+        progressBar.increment();
+      }
+    } else if (entry.isDirectory()) {
+      // Recursively import subcollection.
+      const subCollectionPath = `${collectionPath}/${entry.name}`;
+      const subCollectionDir = path.join(inputDir, entry.name);
+      await importCollectionRecursive(
+        db,
+        subCollectionPath,
+        subCollectionDir,
+        progressBar
+      );
     }
-
-    // Import published data.
-    const publishedFile = path.join(dataSourcePath, 'published.json');
-    if (fs.existsSync(publishedFile)) {
-      const publishedData = JSON.parse(fs.readFileSync(publishedFile, 'utf-8'));
-      const publishedPath = `Projects/${siteId}/DataSources/${dataSourceId}/Data/published`;
-      await db.doc(publishedPath).set(publishedData);
-    }
-  }
-
-  console.log(`  - Imported ${dataSources.length} data sources`);
-}
-
-async function importReleases(db: any, siteId: string, importDir: string) {
-  const releasesDir = path.join(importDir, 'Releases');
-  const releases = fs
-    .readdirSync(releasesDir)
-    .filter((f) => f.endsWith('.json'));
-
-  for (const releaseFile of releases) {
-    const releaseId = path.basename(releaseFile, '.json');
-    const releaseData = JSON.parse(
-      fs.readFileSync(path.join(releasesDir, releaseFile), 'utf-8')
-    );
-    const docPath = `Projects/${siteId}/Releases/${releaseId}`;
-    await db.doc(docPath).set(releaseData);
-  }
-
-  console.log(`  - Imported ${releases.length} releases`);
-}
-
-async function importTranslations(db: any, siteId: string, importDir: string) {
-  const translationsDir = path.join(importDir, 'Translations');
-  const translations = fs
-    .readdirSync(translationsDir)
-    .filter((f) => f.endsWith('.json'));
-
-  for (const translationFile of translations) {
-    const translationHash = path.basename(translationFile, '.json');
-    const translationData = JSON.parse(
-      fs.readFileSync(path.join(translationsDir, translationFile), 'utf-8')
-    );
-    const docPath = `Projects/${siteId}/Translations/${translationHash}`;
-    await db.doc(docPath).set(translationData);
-  }
-
-  console.log(`  - Imported ${translations.length} translations`);
-}
-
-async function importActionLogs(db: any, siteId: string, importDir: string) {
-  const actionLogsDir = path.join(importDir, 'ActionLogs');
-  const actionLogs = fs
-    .readdirSync(actionLogsDir)
-    .filter((f) => f.endsWith('.json'));
-
-  for (const actionLogFile of actionLogs) {
-    const actionLogId = path.basename(actionLogFile, '.json');
-    const actionLogData = JSON.parse(
-      fs.readFileSync(path.join(actionLogsDir, actionLogFile), 'utf-8')
-    );
-    const docPath = `Projects/${siteId}/ActionLogs/${actionLogId}`;
-    await db.doc(docPath).set(actionLogData);
-  }
-
-  console.log(`  - Imported ${actionLogs.length} action logs`);
-}
-
-async function importUsers(db: any, siteId: string, importDir: string) {
-  const usersDir = path.join(importDir, 'Users');
-  const projectFile = path.join(usersDir, 'project.json');
-
-  if (fs.existsSync(projectFile)) {
-    const projectData = JSON.parse(fs.readFileSync(projectFile, 'utf-8'));
-    const docPath = `Projects/${siteId}`;
-    await db.doc(docPath).set(projectData, {merge: true});
-
-    const rolesCount = projectData.roles
-      ? Object.keys(projectData.roles).length
-      : 0;
-    console.log(`  - Imported ${rolesCount} users`);
   }
 }
 

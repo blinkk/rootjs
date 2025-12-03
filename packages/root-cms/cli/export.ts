@@ -79,203 +79,132 @@ export async function exportData(options: ExportOptions) {
   // Export each collection type.
   for (const collectionType of includes) {
     console.log(`Exporting ${collectionType}...`);
-
-    if (collectionType === 'Collections') {
-      await exportCollections(db, siteId, exportDir);
-    } else if (collectionType === 'DataSources') {
-      await exportDataSources(db, siteId, exportDir);
-    } else if (collectionType === 'Releases') {
-      await exportReleases(db, siteId, exportDir);
-    } else if (collectionType === 'Translations') {
-      await exportTranslations(db, siteId, exportDir);
-    } else if (collectionType === 'ActionLogs') {
-      await exportActionLogs(db, siteId, exportDir);
-    } else if (collectionType === 'Users') {
-      await exportUsers(db, siteId, exportDir);
-    }
+    const collectionPath = `Projects/${siteId}/${collectionType}`;
+    const collectionDir = path.join(exportDir, collectionType);
+    await exportCollection(db, collectionPath, collectionDir, collectionType);
   }
 
   console.log(`\n✅ Export complete! Data saved to: ${exportDir}`);
 }
 
-async function exportCollections(db: any, siteId: string, exportDir: string) {
-  const collectionsDir = path.join(exportDir, 'Collections');
-  if (!fs.existsSync(collectionsDir)) {
-    fs.mkdirSync(collectionsDir, {recursive: true});
+/**
+ * Simple terminal spinner.
+ */
+class Spinner {
+  private timer: NodeJS.Timeout | null = null;
+  private frames = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏'];
+  private currentFrame = 0;
+  private text: string;
+
+  constructor(text: string) {
+    this.text = text;
   }
 
-  // Get all collection names by listing the Collections directory.
-  const collectionsPath = `Projects/${siteId}/Collections`;
-  const collectionsSnapshot = await db
-    .collection(collectionsPath)
-    .listDocuments();
+  start() {
+    this.render();
+    this.timer = setInterval(() => {
+      this.currentFrame = (this.currentFrame + 1) % this.frames.length;
+      this.render();
+    }, 80);
+  }
 
-  for (const collectionRef of collectionsSnapshot) {
-    const collectionId = collectionRef.id;
-    const collectionDir = path.join(collectionsDir, collectionId);
+  update(text: string) {
+    this.text = text;
+    this.render();
+  }
 
-    // Export Drafts.
-    const draftsPath = `${collectionsPath}/${collectionId}/Drafts`;
-    const draftsSnapshot = await db.collection(draftsPath).get();
-    if (!draftsSnapshot.empty) {
-      const draftsDir = path.join(collectionDir, 'Drafts');
-      if (!fs.existsSync(draftsDir)) {
-        fs.mkdirSync(draftsDir, {recursive: true});
-      }
+  stop() {
+    if (this.timer) {
+      clearInterval(this.timer);
+      this.timer = null;
+    }
+    process.stdout.write('\r\x1b[K'); // Clear line
+  }
 
-      for (const doc of draftsSnapshot.docs) {
-        const docData = doc.data();
-        const filePath = path.join(draftsDir, `${doc.id}.json`);
-        fs.writeFileSync(filePath, JSON.stringify(docData, null, 2));
-      }
-      console.log(
-        `  - ${collectionId}/Drafts: ${draftsSnapshot.size} documents`
+  private render() {
+    process.stdout.write(`\r${this.frames[this.currentFrame]} ${this.text}`);
+  }
+}
+
+/**
+ * Generic function to export a collection and all its subcollections.
+ */
+async function exportCollection(
+  db: any,
+  collectionPath: string,
+  outputDir: string,
+  displayName: string
+) {
+  const stats = {count: 0};
+  const spinner = new Spinner(`Exporting ${displayName}...`);
+  spinner.start();
+
+  // Export recursively.
+  await exportCollectionRecursive(
+    db,
+    collectionPath,
+    outputDir,
+    stats,
+    spinner
+  );
+
+  spinner.stop();
+  console.log(`  - ${displayName}: ${stats.count} documents`);
+}
+
+/**
+ * Recursively exports documents and subcollections.
+ */
+async function exportCollectionRecursive(
+  db: any,
+  collectionPath: string,
+  outputDir: string,
+  stats: {count: number},
+  spinner: Spinner
+) {
+  if (!fs.existsSync(outputDir)) {
+    fs.mkdirSync(outputDir, {recursive: true});
+  }
+
+  const collection = db.collection(collectionPath);
+
+  // Get all document references (including phantom docs).
+  const refs = await collection.listDocuments();
+  if (refs.length === 0) {
+    return;
+  }
+
+  // Fetch data for all existing documents efficiently.
+  const snapshot = await collection.get();
+  const docMap = new Map();
+  snapshot.docs.forEach((doc: any) => {
+    docMap.set(doc.id, doc);
+  });
+
+  for (const ref of refs) {
+    const doc = docMap.get(ref.id);
+
+    // If document exists (has data), export it.
+    if (doc) {
+      const docData = doc.data();
+      const filePath = path.join(outputDir, `${doc.id}.json`);
+      fs.writeFileSync(filePath, JSON.stringify(docData, null, 2));
+      stats.count++;
+      spinner.update(`Exporting ${stats.count} documents...`);
+    }
+
+    // Export subcollections for ALL documents (real and phantom).
+    const subcollections = await ref.listCollections();
+    for (const subcollection of subcollections) {
+      const subcollectionDir = path.join(outputDir, ref.id, subcollection.id);
+      await exportCollectionRecursive(
+        db,
+        subcollection.path,
+        subcollectionDir,
+        stats,
+        spinner
       );
     }
-
-    // Export Published.
-    const publishedPath = `${collectionsPath}/${collectionId}/Published`;
-    const publishedSnapshot = await db.collection(publishedPath).get();
-    if (!publishedSnapshot.empty) {
-      const publishedDir = path.join(collectionDir, 'Published');
-      if (!fs.existsSync(publishedDir)) {
-        fs.mkdirSync(publishedDir, {recursive: true});
-      }
-
-      for (const doc of publishedSnapshot.docs) {
-        const docData = doc.data();
-        const filePath = path.join(publishedDir, `${doc.id}.json`);
-        fs.writeFileSync(filePath, JSON.stringify(docData, null, 2));
-      }
-      console.log(
-        `  - ${collectionId}/Published: ${publishedSnapshot.size} documents`
-      );
-    }
-  }
-}
-
-async function exportDataSources(db: any, siteId: string, exportDir: string) {
-  const dataSourcesDir = path.join(exportDir, 'DataSources');
-  if (!fs.existsSync(dataSourcesDir)) {
-    fs.mkdirSync(dataSourcesDir, {recursive: true});
-  }
-
-  const dataSourcesPath = `Projects/${siteId}/DataSources`;
-  const snapshot = await db.collection(dataSourcesPath).get();
-
-  for (const doc of snapshot.docs) {
-    const dataSourceId = doc.id;
-    const dataSourceData = doc.data();
-    const dataSourceDir = path.join(dataSourcesDir, dataSourceId);
-    if (!fs.existsSync(dataSourceDir)) {
-      fs.mkdirSync(dataSourceDir, {recursive: true});
-    }
-
-    // Save data source metadata.
-    const metadataPath = path.join(dataSourceDir, 'metadata.json');
-    fs.writeFileSync(metadataPath, JSON.stringify(dataSourceData, null, 2));
-
-    // Export draft data if it exists.
-    const draftDataPath = `${dataSourcesPath}/${dataSourceId}/Data/draft`;
-    const draftDataDoc = await db.doc(draftDataPath).get();
-    if (draftDataDoc.exists) {
-      const draftFilePath = path.join(dataSourceDir, 'draft.json');
-      fs.writeFileSync(
-        draftFilePath,
-        JSON.stringify(draftDataDoc.data(), null, 2)
-      );
-    }
-
-    // Export published data if it exists.
-    const publishedDataPath = `${dataSourcesPath}/${dataSourceId}/Data/published`;
-    const publishedDataDoc = await db.doc(publishedDataPath).get();
-    if (publishedDataDoc.exists) {
-      const publishedFilePath = path.join(dataSourceDir, 'published.json');
-      fs.writeFileSync(
-        publishedFilePath,
-        JSON.stringify(publishedDataDoc.data(), null, 2)
-      );
-    }
-  }
-
-  console.log(`  - DataSources: ${snapshot.size} data sources`);
-}
-
-async function exportReleases(db: any, siteId: string, exportDir: string) {
-  const releasesDir = path.join(exportDir, 'Releases');
-  if (!fs.existsSync(releasesDir)) {
-    fs.mkdirSync(releasesDir, {recursive: true});
-  }
-
-  const releasesPath = `Projects/${siteId}/Releases`;
-  const snapshot = await db.collection(releasesPath).get();
-
-  for (const doc of snapshot.docs) {
-    const releaseData = doc.data();
-    const filePath = path.join(releasesDir, `${doc.id}.json`);
-    fs.writeFileSync(filePath, JSON.stringify(releaseData, null, 2));
-  }
-
-  console.log(`  - Releases: ${snapshot.size} documents`);
-}
-
-async function exportTranslations(db: any, siteId: string, exportDir: string) {
-  const translationsDir = path.join(exportDir, 'Translations');
-  if (!fs.existsSync(translationsDir)) {
-    fs.mkdirSync(translationsDir, {recursive: true});
-  }
-
-  const translationsPath = `Projects/${siteId}/Translations`;
-  const snapshot = await db.collection(translationsPath).get();
-
-  for (const doc of snapshot.docs) {
-    const translationData = doc.data();
-    const filePath = path.join(translationsDir, `${doc.id}.json`);
-    fs.writeFileSync(filePath, JSON.stringify(translationData, null, 2));
-  }
-
-  console.log(`  - Translations: ${snapshot.size} documents`);
-}
-
-async function exportActionLogs(db: any, siteId: string, exportDir: string) {
-  const actionLogsDir = path.join(exportDir, 'ActionLogs');
-  if (!fs.existsSync(actionLogsDir)) {
-    fs.mkdirSync(actionLogsDir, {recursive: true});
-  }
-
-  const actionLogsPath = `Projects/${siteId}/ActionLogs`;
-  const snapshot = await db.collection(actionLogsPath).get();
-
-  for (const doc of snapshot.docs) {
-    const actionData = doc.data();
-    const filePath = path.join(actionLogsDir, `${doc.id}.json`);
-    fs.writeFileSync(filePath, JSON.stringify(actionData, null, 2));
-  }
-
-  console.log(`  - ActionLogs: ${snapshot.size} documents`);
-}
-
-async function exportUsers(db: any, siteId: string, exportDir: string) {
-  const usersDir = path.join(exportDir, 'Users');
-  if (!fs.existsSync(usersDir)) {
-    fs.mkdirSync(usersDir, {recursive: true});
-  }
-
-  // Users/roles are stored in the Project document itself.
-  const projectPath = `Projects/${siteId}`;
-  const projectDoc = await db.doc(projectPath).get();
-
-  if (projectDoc.exists) {
-    const projectData = projectDoc.data();
-    const filePath = path.join(usersDir, 'project.json');
-    fs.writeFileSync(filePath, JSON.stringify(projectData, null, 2));
-
-    const rolesCount = projectData.roles
-      ? Object.keys(projectData.roles).length
-      : 0;
-    console.log(`  - Users: ${rolesCount} users`);
-  } else {
-    console.log('  - Users: 0 users');
   }
 }
 

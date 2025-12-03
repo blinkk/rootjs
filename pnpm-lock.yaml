@@ -373,9 +373,15 @@ importers:
       '@hello-pangea/dnd':
         specifier: 18.0.1
         version: 18.0.1(@preact/compat@18.3.1)(@preact/compat@18.3.1)
+      '@types/cli-progress':
+        specifier: ^3.11.6
+        version: 3.11.6
       body-parser:
         specifier: 1.20.2
         version: 1.20.2
+      cli-progress:
+        specifier: ^3.12.0
+        version: 3.12.0
       commander:
         specifier: 11.0.0
         version: 11.0.0
@@ -3625,8 +3631,8 @@ packages:
       '@types/gapi.client.discovery-v1': 0.0.4
     dev: true
 
-  /@maxim_mazurok/gapi.client.sheets-v4@0.1.20251119:
-    resolution: {integrity: sha512-owbWoiuyY+zOvpw7tSBrFlVrMmoQ1y4zI9w7Pw0FmIrpTg8e7/sA5XFYyU2PjHQBcpkf65rMh3MjDV2RLKDbnw==}
+  /@maxim_mazurok/gapi.client.sheets-v4@0.1.20251201:
+    resolution: {integrity: sha512-rJZDjcfBzDk2VoDBzFZMnVSBDYhXWbKSs3GMXzhxXZ7WX800BL0xqs+Csk8iyJAW/HDGwscopSoUx5sbIpDM2w==}
     dependencies:
       '@types/gapi.client': 1.0.8
       '@types/gapi.client.discovery-v1': 0.0.4
@@ -5496,6 +5502,12 @@ packages:
       '@types/deep-eql': 4.0.2
     dev: true
 
+  /@types/cli-progress@3.11.6:
+    resolution: {integrity: sha512-cE3+jb9WRlu+uOSAugewNpITJDt1VF8dHOopPO4IABFc3SXYL5WE/+PTz/FCdZRRfIujiWW3n3aMbv1eIGVRWA==}
+    dependencies:
+      '@types/node': 20.11.25
+    dev: false
+
   /@types/compression@1.7.2:
     resolution: {integrity: sha512-lwEL4M/uAGWngWFLSG87ZDr2kLrbuR8p7X+QZB1OQlT+qkHsCPDVFnHPyXf4Vyl4yDDorNY+mAhosxkCvppatg==}
     dependencies:
@@ -5607,7 +5619,7 @@ packages:
   /@types/gapi.client.sheets-v4@0.0.4:
     resolution: {integrity: sha512-6kTJ7aDMAElfdQV1XzVJmZWjgbibpa84DMuKuaN8Cwqci/dkglPyHXKvsGrRugmuYvgFYr35AQqwz6j3q8R0dw==}
     dependencies:
-      '@maxim_mazurok/gapi.client.sheets-v4': 0.1.20251119
+      '@maxim_mazurok/gapi.client.sheets-v4': 0.1.20251201
     dev: true
 
   /@types/gapi.client@1.0.8:
@@ -7131,6 +7143,13 @@ packages:
       parse5-htmlparser2-tree-adapter: 6.0.1
       yargs: 16.2.0
     dev: true
+
+  /cli-progress@3.12.0:
+    resolution: {integrity: sha512-tRkV3HJ1ASwm19THiiLIXLO7Im7wlTuKnvkYaTkyoAPefqjNg7W7DHKUlGRxy9vxDvbyCYQkQozvptuMkGCg8A==}
+    engines: {node: '>=4'}
+    dependencies:
+      string-width: 4.2.3
+    dev: false
 
   /cli-spinners@2.9.2:
     resolution: {integrity: sha512-ywqV+5MmyL4E7ybXgKys4DugZbX0FC6LnwrhjuykIjnK9k8OQacQ7axGKnjDXWNhns0xot3bZI5h55H8yo9cJg==}
