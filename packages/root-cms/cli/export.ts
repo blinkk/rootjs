@@ -39,11 +39,6 @@ export async function exportData(options: ExportOptions) {
     includes = requestedIncludes;
   }
 
-  if (includes.length === 0) {
-    console.log('No collections found to export.');
-    return;
-  }
-
   // Create export directory with timestamp.
   const now = new Date();
   const timestamp = formatTimestamp(now);

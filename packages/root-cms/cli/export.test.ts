@@ -1,0 +1,127 @@
+import * as fs from 'node:fs';
+import * as path from 'node:path';
+import {describe, it, expect, vi, beforeEach, afterEach} from 'vitest';
+
+// Mock dependencies.
+vi.mock('node:fs');
+vi.mock('node:path');
+vi.mock('node:readline');
+vi.mock('cli-progress');
+vi.mock('@blinkk/root/node', () => ({
+  loadRootConfig: vi.fn().mockResolvedValue({}),
+}));
+vi.mock('../core/client.js', () => ({
+  getCmsPlugin: vi.fn(),
+}));
+
+// Mock Firestore.
+const mockFirestore = {
+  collection: vi.fn(),
+  doc: vi.fn(),
+};
+
+const mockCmsPlugin = {
+  getConfig: vi.fn().mockReturnValue({
+    id: 'test-site',
+    firebaseConfig: {projectId: 'test-project'},
+  }),
+  getFirestore: vi.fn().mockReturnValue(mockFirestore),
+};
+
+import {getCmsPlugin} from '../core/client.js';
+import {exportData} from './export.js';
+(getCmsPlugin as any).mockReturnValue(mockCmsPlugin);
+
+describe('Export CLI', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    // Default mocks.
+    (path.join as any).mockImplementation((...args: string[]) =>
+      args.join('/')
+    );
+    (path.basename as any).mockImplementation((p: string, ext?: string) => {
+      const base = p.split('/').pop() || '';
+      return ext ? base.replace(ext, '') : base;
+    });
+    (fs.existsSync as any).mockReturnValue(true);
+    (fs.mkdirSync as any).mockReturnValue(undefined);
+    (fs.writeFileSync as any).mockReturnValue(undefined);
+    (fs.readFileSync as any).mockReturnValue('{}');
+    (fs.readdirSync as any).mockReturnValue([]);
+
+    // Mock console to avoid clutter.
+    // vi.spyOn(console, 'log').mockImplementation(() => {});
+    vi.spyOn(console, 'table').mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  describe('exportData', () => {
+    it('should export project document to __data.json', async () => {
+      const mockProjectDoc = {
+        exists: true,
+        data: vi.fn().mockReturnValue({roles: {admin: 'user'}}),
+      };
+      const mockProjectRef = {
+        get: vi.fn().mockResolvedValue(mockProjectDoc),
+        listCollections: vi.fn().mockResolvedValue([]),
+      };
+      mockFirestore.doc.mockReturnValue(mockProjectRef);
+
+      await exportData({site: 'test-site'});
+
+      expect(mockFirestore.doc).toHaveBeenCalledWith('Projects/test-site');
+      expect(fs.writeFileSync).toHaveBeenCalledWith(
+        expect.stringContaining('__data.json'),
+        expect.stringContaining('"roles":')
+      );
+    });
+
+    it('should export documents with subcollections to __data.json in a folder', async () => {
+      // Setup mock data.
+      const mockCollection = {
+        listDocuments: vi.fn().mockResolvedValue([{id: 'doc1'}]),
+        get: vi.fn().mockResolvedValue({
+          docs: [{id: 'doc1', data: () => ({title: 'Doc 1'})}],
+        }),
+      };
+      const mockDocRef = {
+        id: 'doc1',
+        listCollections: vi
+          .fn()
+          .mockResolvedValue([{id: 'subcol', path: 'col/doc1/subcol'}]),
+      };
+
+      // Mock listDocuments to return ref with listCollections.
+      mockCollection.listDocuments.mockResolvedValue([mockDocRef]);
+
+      // Mock subcollection.
+      const mockSubCollection = {
+        listDocuments: vi.fn().mockResolvedValue([]),
+        get: vi.fn().mockResolvedValue({docs: []}),
+      };
+
+      mockFirestore.collection.mockImplementation((path) => {
+        if (path === 'col/doc1/subcol') return mockSubCollection;
+        return mockCollection;
+      });
+
+      // Mock project listing to return our test collection.
+      const mockProjectRef = {
+        get: vi.fn().mockResolvedValue({exists: false}),
+        listCollections: vi.fn().mockResolvedValue([{id: 'test-col'}]),
+      };
+      mockFirestore.doc.mockReturnValue(mockProjectRef);
+
+      await exportData({site: 'test-site', include: 'test-col'});
+
+      // Verify fs.writeFileSync was called with __data.json for doc1.
+      expect(fs.writeFileSync).toHaveBeenCalledWith(
+        expect.stringContaining('doc1/__data.json'),
+        expect.stringContaining('"title": "Doc 1"')
+      );
+    });
+  });
+});
