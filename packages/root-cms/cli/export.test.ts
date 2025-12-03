@@ -123,5 +123,29 @@ describe('Export CLI', () => {
         expect.stringContaining('"title": "Doc 1"')
       );
     });
+
+    it('should export DocumentReference as _referencePath', async () => {
+      const mockDocRef = {
+        exists: true,
+        data: vi.fn().mockReturnValue({
+          ref: {
+            path: 'Projects/other',
+            constructor: {name: 'DocumentReference'},
+          },
+        }),
+      };
+      const mockProjectRef = {
+        get: vi.fn().mockResolvedValue(mockDocRef),
+        listCollections: vi.fn().mockResolvedValue([]),
+      };
+      mockFirestore.doc.mockReturnValue(mockProjectRef);
+
+      await exportData({site: 'test-site'});
+
+      expect(fs.writeFileSync).toHaveBeenCalledWith(
+        expect.stringContaining('__data.json'),
+        expect.stringContaining('"_referencePath": "Projects/other"')
+      );
+    });
   });
 });

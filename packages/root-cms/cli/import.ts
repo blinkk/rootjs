@@ -3,7 +3,7 @@ import path from 'node:path';
 import * as readline from 'node:readline';
 import {loadRootConfig} from '@blinkk/root/node';
 import cliProgress from 'cli-progress';
-import {Timestamp} from 'firebase-admin/firestore';
+import {Timestamp, GeoPoint} from 'firebase-admin/firestore';
 import {getCmsPlugin} from '../core/client.js';
 
 export interface ImportOptions {
@@ -141,7 +141,7 @@ export async function importData(options: ImportOptions) {
   if (fs.existsSync(projectFilePath)) {
     console.log('Importing project document...');
     const rawData = JSON.parse(fs.readFileSync(projectFilePath, 'utf-8'));
-    const projectData = convertTimestamps(rawData);
+    const projectData = convertFirestoreTypes(rawData, db);
     const projectPath = `Projects/${siteId}`;
     await db.doc(projectPath).set(projectData, {merge: true});
     console.log('  - Project document updated');
@@ -195,8 +195,9 @@ async function importCollection(
 /**
  * Recursively converts timestamp objects to Firestore Timestamps.
  * Firestore timestamps are exported as {_seconds: number, _nanoseconds: number}.
+ * Also converts GeoPoints and DocumentReferences.
  */
-function convertTimestamps(obj: any): any {
+function convertFirestoreTypes(obj: any, db: any): any {
   if (obj === null || obj === undefined) {
     return obj;
   }
@@ -211,16 +212,35 @@ function convertTimestamps(obj: any): any {
     return new Timestamp(obj._seconds, obj._nanoseconds);
   }
 
+  // Check if this object is a GeoPoint.
+  if (
+    typeof obj === 'object' &&
+    '_latitude' in obj &&
+    '_longitude' in obj &&
+    Object.keys(obj).length === 2
+  ) {
+    return new GeoPoint(obj._latitude, obj._longitude);
+  }
+
+  // Check if this object is a DocumentReference.
+  if (
+    typeof obj === 'object' &&
+    '_referencePath' in obj &&
+    Object.keys(obj).length === 1
+  ) {
+    return db.doc(obj._referencePath);
+  }
+
   // Recursively process arrays.
   if (Array.isArray(obj)) {
-    return obj.map((item) => convertTimestamps(item));
+    return obj.map((item) => convertFirestoreTypes(item, db));
   }
 
   // Recursively process objects.
   if (typeof obj === 'object') {
     const converted: any = {};
     for (const [key, value] of Object.entries(obj)) {
-      converted[key] = convertTimestamps(value);
+      converted[key] = convertFirestoreTypes(value, db);
     }
     return converted;
   }
@@ -250,7 +270,7 @@ async function importCollectionRecursive(
         fs.readFileSync(path.join(inputDir, entry.name), 'utf-8')
       );
       // Convert timestamps before importing.
-      const docData = convertTimestamps(rawData);
+      const docData = convertFirestoreTypes(rawData, db);
 
       if (entry.name === '__data.json') {
         // Handle __data.json (data for the current container document).

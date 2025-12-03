@@ -1,6 +1,6 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
-import {Timestamp} from 'firebase-admin/firestore';
+import {Timestamp, GeoPoint} from 'firebase-admin/firestore';
 import {describe, it, expect, vi, beforeEach, afterEach} from 'vitest';
 
 // Mock dependencies.
@@ -159,6 +159,57 @@ describe('Import CLI', () => {
 
       expect(mockDocRef.set).toHaveBeenCalledWith({
         createdAt: new Timestamp(1600000000, 0),
+      });
+    });
+
+    it('should convert GeoPoint and DocumentReference correctly', async () => {
+      // Mock fs structure.
+      (fs.readdirSync as any).mockImplementation((dir: string) => {
+        if (dir.endsWith('export_dir')) {
+          return [
+            {name: 'test-col', isDirectory: () => true, isFile: () => false},
+          ];
+        }
+        if (dir.endsWith('test-col')) {
+          return [
+            {name: 'doc1.json', isDirectory: () => false, isFile: () => true},
+          ];
+        }
+        return [];
+      });
+
+      (fs.readFileSync as any).mockReturnValue(
+        JSON.stringify({
+          location: {_latitude: 37.7749, _longitude: -122.4194},
+          ref: {_referencePath: 'Projects/other'},
+        })
+      );
+
+      // Mock prompt.
+      vi.mock('node:readline', () => ({
+        createInterface: () => ({
+          question: (_q: string, cb: (a: string) => void) => cb('yes'),
+          close: vi.fn(),
+        }),
+      }));
+
+      const mockDocRef = {
+        set: vi.fn().mockResolvedValue(undefined),
+      };
+      mockFirestore.doc.mockImplementation((path) => {
+        if (path === 'Projects/other') return {path: 'Projects/other'};
+        return mockDocRef;
+      });
+
+      await importData({
+        dir: 'export_dir',
+        site: 'test-site',
+        include: 'test-col',
+      });
+
+      expect(mockDocRef.set).toHaveBeenCalledWith({
+        location: new GeoPoint(37.7749, -122.4194),
+        ref: {path: 'Projects/other'},
       });
     });
   });

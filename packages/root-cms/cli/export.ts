@@ -68,7 +68,10 @@ export async function exportData(options: ExportOptions) {
   if (projectDoc.exists) {
     const projectData = projectDoc.data();
     const projectFilePath = path.join(exportDir, '__data.json');
-    fs.writeFileSync(projectFilePath, JSON.stringify(projectData, null, 2));
+    fs.writeFileSync(
+      projectFilePath,
+      JSON.stringify(convertForExport(projectData), null, 2)
+    );
     console.log('Exported project document to __data.json');
   }
 
@@ -199,7 +202,10 @@ async function exportCollectionRecursive(
         filePath = path.join(outputDir, `${doc.id}.json`);
       }
 
-      fs.writeFileSync(filePath, JSON.stringify(docData, null, 2));
+      fs.writeFileSync(
+        filePath,
+        JSON.stringify(convertForExport(docData), null, 2)
+      );
       stats.count++;
       spinner.update(`Exporting ${stats.count} documents...`);
     }
@@ -225,4 +231,45 @@ function formatTimestamp(date: Date): string {
   const hour = String(date.getHours()).padStart(2, '0');
   const minute = String(date.getMinutes()).padStart(2, '0');
   return `${year}${month}${day}t${hour}${minute}`;
+}
+
+/**
+ * Recursively converts Firestore types to JSON-serializable format.
+ */
+function convertForExport(obj: any): any {
+  if (obj === null || obj === undefined) {
+    return obj;
+  }
+
+  // Handle DocumentReference.
+  // Note: We check for the `path` property and `firestore` property to identify
+  // a DocumentReference, as `instanceof` might not work if the instance comes
+  // from a different version of the library or if we don't have the class imported.
+  // However, checking `constructor.name` or specific properties is safer.
+  if (
+    typeof obj === 'object' &&
+    typeof obj.path === 'string' &&
+    obj.constructor.name === 'DocumentReference'
+  ) {
+    return {_referencePath: obj.path};
+  }
+
+  // Recursively process arrays.
+  if (Array.isArray(obj)) {
+    return obj.map((item) => convertForExport(item));
+  }
+
+  // Recursively process objects.
+  if (typeof obj === 'object') {
+    // Check if it's a plain object or a Firestore type that we want to preserve as-is
+    // (like Timestamp or GeoPoint which serialize to JSON fine).
+    // Actually, we should traverse everything to find nested References.
+    const converted: any = {};
+    for (const [key, value] of Object.entries(obj)) {
+      converted[key] = convertForExport(value);
+    }
+    return converted;
+  }
+
+  return obj;
 }
