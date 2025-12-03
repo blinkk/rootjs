@@ -48,30 +48,28 @@ export async function importData(options: ImportOptions) {
     options.project || cmsPluginOptions.firebaseConfig?.projectId || 'unknown';
   const db = cmsPlugin.getFirestore({databaseId});
 
-  // Parse includes filter.
-  const COLLECTION_TYPES = [
-    'ActionLogs',
-    'Collections',
-    'DataSources',
-    'Releases',
-    'Translations',
-    'Users',
-  ] as const;
-  type CollectionType = (typeof COLLECTION_TYPES)[number];
+  // Get available collections from the import directory.
+  const entries = fs.readdirSync(importDir, {withFileTypes: true});
+  const availableCollections = entries
+    .filter((entry) => entry.isDirectory())
+    .map((entry) => entry.name);
 
-  let includes: CollectionType[] = [...COLLECTION_TYPES];
+  // Parse includes filter.
+  let includes: string[] = availableCollections;
   if (options.include) {
     const requestedIncludes = options.include
       .split(',')
       .map((s) => s.trim())
       .filter((s) => s.length > 0);
+
+    // Filter requested includes to ensure they exist in the import directory.
     includes = requestedIncludes.filter((inc) =>
-      COLLECTION_TYPES.includes(inc as CollectionType)
-    ) as CollectionType[];
+      availableCollections.includes(inc)
+    );
 
     if (includes.length === 0) {
       throw new Error(
-        `No valid collection types specified in --include. Valid types: ${COLLECTION_TYPES.join(
+        `No valid collection types specified in --include. Available types: ${availableCollections.join(
           ', '
         )}`
       );
@@ -106,6 +104,7 @@ export async function importData(options: ImportOptions) {
   tableData['GCP Project'] = gcpProjectId;
   tableData['Database'] = `${databaseId}/Projects/${siteId}`;
   tableData['Site'] = siteId;
+  tableData['--'] = '';
 
   for (const item of summary) {
     tableData[item.collectionType] = `${item.count} documents`;
@@ -253,23 +252,13 @@ async function importCollectionRecursive(
       // Convert timestamps before importing.
       const docData = convertTimestamps(rawData);
 
-      let docPath: string;
       if (entry.name === '__data.json') {
         // Handle __data.json (data for the current container document).
-        docPath = collectionPath;
-        // If we are at the root of a collection (e.g. Projects/site/Col),
-        // __data.json shouldn't really exist unless the collection itself has data (impossible in Firestore).
-        // But if we are in a sub-document folder (Projects/site/Col/Doc), collectionPath is the Doc path.
-        // So this works.
-        // However, we should use 'update' or 'set' with merge?
-        // set() overwrites. If we have subcollections, the doc might implicitly exist?
-        // set() is fine.
-        await db.doc(docPath).set(docData, {merge: true});
+        await db.doc(collectionPath).set(docData, {merge: true});
       } else {
         // Standard document file (DocId.json).
         const docId = path.basename(entry.name, '.json');
-        docPath = `${collectionPath}/${docId}`;
-        await db.doc(docPath).set(docData);
+        await db.doc(`${collectionPath}/${docId}`).set(docData);
       }
 
       if (progressBar) {
