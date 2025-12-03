@@ -52,6 +52,7 @@ When working on this project, please adhere to the following guidelines:
 
 - **Use Turbo**: Use `turbo run build` or `turbo run test` to run tasks across the monorepo efficiently.
 - **Dev Server**: Use `pnpm dev` in specific package or app directories for development.
+- **Visual Tests**: Always use the `--update` flag with `pnpm run test:visual`.
 
 ### UI Development
 

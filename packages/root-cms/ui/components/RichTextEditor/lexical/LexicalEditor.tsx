@@ -50,6 +50,7 @@ import {
 import {SpecialCharacterNode} from './nodes/SpecialCharacterNode.js';
 import {FloatingLinkEditorPlugin} from './plugins/FloatingLinkEditorPlugin.js';
 import {FloatingToolbarPlugin} from './plugins/FloatingToolbarPlugin.js';
+import {ImagePastePlugin} from './plugins/ImagePastePlugin.js';
 import {MarkdownTransformPlugin} from './plugins/MarkdownTransformPlugin.js';
 import {OnChangePlugin} from './plugins/OnChangePlugin.js';
 import {ShortcutsPlugin} from './plugins/ShortcutsPlugin.js';
@@ -436,6 +437,7 @@ function Editor(props: EditorProps) {
         <MarkdownTransformPlugin />
         <TrailingParagraphPlugin />
         <SpecialCharacterPlugin />
+        <ImagePastePlugin />
         {floatingAnchorElem && (
           <>
             <FloatingToolbarPlugin
