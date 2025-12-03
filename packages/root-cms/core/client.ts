@@ -9,10 +9,10 @@ import {
   WriteBatch,
 } from 'firebase-admin/firestore';
 import {CMSPlugin} from './plugin.js';
-import * as project from './project.js';
 import {Collection} from './schema.js';
 import {TranslationsManager} from './translations-manager.js';
 import {validateFields} from './validation.js';
+import {setValueAtPath} from './values.js';
 
 export interface Doc<Fields = any> {
   /** The id of the doc, e.g. "Pages/foo-bar". */
@@ -308,6 +308,9 @@ export class RootCMSClient {
    * `/collections/<id>.schema.ts`.
    */
   async getCollection(collectionId: string): Promise<Collection | null> {
+    // Lazy load the project module to minimize the amount of code loaded
+    // when the client is initialized (the project module loads all schema files).
+    const project = await import('./project.js');
     return await project.getCollectionSchema(collectionId);
   }
 
@@ -1507,37 +1510,6 @@ export function parseDocId(docId: string) {
     throw new Error(`invalid doc id: ${docId}`);
   }
   return {collection, slug};
-}
-
-/**
- * Sets a value at a JSON path in an object.
- * Supports dot notation for nested objects and array indices.
- * Examples:
- *   setValueAtPath(obj, 'title', 'New Title')
- *   setValueAtPath(obj, 'hero.title', 'New Title')
- *   setValueAtPath(obj, 'content.0.text', 'First item')
- */
-function setValueAtPath(obj: any, path: string, value: any): void {
-  const keys = path.split('.');
-  let current = obj;
-
-  for (let i = 0; i < keys.length - 1; i++) {
-    const key = keys[i];
-    const nextKey = keys[i + 1];
-
-    // Check if next key is an array index.
-    const isNextKeyArrayIndex = /^\d+$/.test(nextKey);
-
-    if (!(key in current)) {
-      // Create object or array based on next key.
-      current[key] = isNextKeyArrayIndex ? [] : {};
-    }
-
-    current = current[key];
-  }
-
-  const lastKey = keys[keys.length - 1];
-  current[lastKey] = value;
 }
 
 export interface BatchRequestOptions {
