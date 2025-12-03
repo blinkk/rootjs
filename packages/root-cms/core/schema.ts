@@ -45,6 +45,25 @@ export function number(field: Omit<NumberField, 'type'>): NumberField {
   return {type: 'number', ...field};
 }
 
+function validateTimezone(timezone?: string): string | undefined {
+  if (!timezone) {
+    return undefined;
+  }
+  if (typeof Intl !== 'undefined' && Intl.supportedValuesOf) {
+    if (timezone === 'UTC') {
+      return timezone;
+    }
+    const timezones = Intl.supportedValuesOf('timeZone');
+    if (!timezones.includes(timezone)) {
+      console.warn(
+        `Invalid timezone: "${timezone}". Must be a valid IANA timezone identifier.`
+      );
+      return undefined;
+    }
+  }
+  return timezone;
+}
+
 export type DateField = CommonFieldProps & {
   type: 'date';
   default?: string;
@@ -57,10 +76,16 @@ export function date(field: Omit<DateField, 'type'>): DateField {
 export type DateTimeField = CommonFieldProps & {
   type: 'datetime';
   default?: string;
+  /**
+   * Timezone to use for the datetime field. If set, the field will be limited to
+   * this timezone.
+   */
+  timezone?: string;
 };
 
 export function datetime(field: Omit<DateTimeField, 'type'>): DateTimeField {
-  return {type: 'datetime', ...field};
+  const timezone = validateTimezone(field.timezone);
+  return {type: 'datetime', ...field, timezone};
 }
 
 export type BooleanField = CommonFieldProps & {
