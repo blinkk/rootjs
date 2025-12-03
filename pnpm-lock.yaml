@@ -366,7 +366,7 @@ importers:
         version: 1.18.0(@google-cloud/firestore@7.11.3)(firebase-admin@13.5.0)(firebase@12.2.1)(genkit@1.18.0)
       '@genkit-ai/vertexai':
         specifier: 1.18.0
-        version: 1.18.0(genkit@1.18.0)(zod@4.1.13)
+        version: 1.18.0(genkit@1.18.0)(zod@4.0.0)
       '@google-cloud/firestore':
         specifier: 7.11.3
         version: 7.11.3
@@ -410,8 +410,8 @@ importers:
         specifier: 0.2.9
         version: 0.2.9
       zod:
-        specifier: ^4.0.0
-        version: 4.1.13
+        specifier: 4.0.0
+        version: 4.0.0
     devDependencies:
       '@babel/core':
         specifier: 7.17.9
@@ -2570,7 +2570,7 @@ packages:
     dev: false
     optional: true
 
-  /@genkit-ai/vertexai@1.18.0(genkit@1.18.0)(zod@4.1.13):
+  /@genkit-ai/vertexai@1.18.0(genkit@1.18.0)(zod@4.0.0):
     resolution: {integrity: sha512-la6ykLKIryNZv1yXCi3aadVTxQEvbJKDV48S1DaNabLcPsrqNMm0tvriHNUpceWGiJf5yy6O7XgKJfZSfe65Yg==}
     peerDependencies:
       genkit: ^1.18.0
@@ -2579,12 +2579,12 @@ packages:
       '@anthropic-ai/vertex-sdk': 0.4.3
       '@google-cloud/aiplatform': 3.35.0
       '@google-cloud/vertexai': 1.10.0
-      '@mistralai/mistralai-gcp': 1.5.0(zod@4.1.13)
+      '@mistralai/mistralai-gcp': 1.5.0(zod@4.0.0)
       genkit: 1.18.0(@google-cloud/firestore@7.11.3)(firebase-admin@13.5.0)(firebase@12.2.1)
       google-auth-library: 9.15.1
       googleapis: 140.0.1
       node-fetch: 3.3.2
-      openai: 4.104.0(zod@4.1.13)
+      openai: 4.104.0(zod@4.0.0)
     optionalDependencies:
       '@google-cloud/bigquery': 7.9.4
       firebase-admin: 13.5.0
@@ -3629,13 +3629,13 @@ packages:
       '@types/gapi.client.discovery-v1': 0.0.4
     dev: true
 
-  /@mistralai/mistralai-gcp@1.5.0(zod@4.1.13):
+  /@mistralai/mistralai-gcp@1.5.0(zod@4.0.0):
     resolution: {integrity: sha512-KUv4GziIN8do4gmPe7T85gpYW1o2Q89e0hs8PQfZhFRMYz7uYPwxHyVI5UaxWlHFcmAvyxfaOAH0OuCC38Hb6g==}
     peerDependencies:
       zod: '>= 3'
     dependencies:
       google-auth-library: 9.15.1
-      zod: 4.1.13
+      zod: 4.0.0
     transitivePeerDependencies:
       - encoding
       - supports-color
@@ -12450,7 +12450,7 @@ packages:
       is-wsl: 2.2.0
     dev: false
 
-  /openai@4.104.0(zod@4.1.13):
+  /openai@4.104.0(zod@4.0.0):
     resolution: {integrity: sha512-p99EFNsA/yX6UhVO93f5kJsDRLAg+CTA2RBqdHK4RtK8u5IJw32Hyb2dTGKbnnFmnuoBv5r7Z2CURI9sGZpSuA==}
     hasBin: true
     peerDependencies:
@@ -12469,7 +12469,7 @@ packages:
       form-data-encoder: 1.7.2
       formdata-node: 4.4.1
       node-fetch: 2.7.0
-      zod: 4.1.13
+      zod: 4.0.0
     transitivePeerDependencies:
       - encoding
     dev: false
@@ -16359,8 +16359,8 @@ packages:
   /zod@3.25.76:
     resolution: {integrity: sha512-gzUt/qt81nXsFGKIFcC3YnfEAx5NkunCfnDlvuBSSFS02bcXu4Lmea0AFIUwbLWxWPx3d9p8S5QoaujKcNQxcQ==}
 
-  /zod@4.1.13:
-    resolution: {integrity: sha512-AvvthqfqrAhNH9dnfmrfKzX5upOdjUVJYFqNSlkmGf64gRaTzlPwz99IHYnVs28qYAybvAlBV+H7pn0saFY4Ig==}
+  /zod@4.0.0:
+    resolution: {integrity: sha512-9diLdTPc/L7w/5jI4C3gHYNiGHDV9IZYxo1e5LSD8cabi65WVTWWb+g2BGPEpUUCOxR4D+6O5B0AzyMdUAXwrw==}
     dev: false
 
   /zwitch@2.0.4:
