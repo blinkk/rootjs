@@ -191,4 +191,175 @@ describe('RootCMSClient Validation', () => {
       expect(mockGetCollectionSchema).not.toHaveBeenCalled();
     });
   });
+
+  describe('updateDraftData', () => {
+    it('updates a simple field path', async () => {
+      const {RootCMSClient} = await import('./client.js');
+      const client = new RootCMSClient(mockRootConfig);
+
+      // Mock getRawDoc to return existing data.
+      const mockGetRawDoc = vi.fn().mockResolvedValue({
+        sys: {},
+        fields: {
+          title: 'Old Title',
+          count: 10,
+        },
+      });
+      client.getRawDoc = mockGetRawDoc as any;
+
+      const mockSetRawDoc = vi.fn();
+      client.setRawDoc = mockSetRawDoc as any;
+
+      await client.updateDraftData('Pages/test', 'title', 'New Title');
+
+      // Verify the document was saved with updated title.
+      expect(mockSetRawDoc).toHaveBeenCalled();
+      const savedData = mockSetRawDoc.mock.calls[0][2];
+      expect(savedData.fields.title).toBe('New Title');
+      expect(savedData.fields.count).toBe(10); // Unchanged.
+    });
+
+    it('updates a nested field path', async () => {
+      const {RootCMSClient} = await import('./client.js');
+      const client = new RootCMSClient(mockRootConfig);
+
+      const mockGetRawDoc = vi.fn().mockResolvedValue({
+        sys: {},
+        fields: {
+          hero: {
+            title: 'Old Hero Title',
+            subtitle: 'Subtitle',
+          },
+        },
+      });
+      client.getRawDoc = mockGetRawDoc as any;
+
+      const mockSetRawDoc = vi.fn();
+      client.setRawDoc = mockSetRawDoc as any;
+
+      await client.updateDraftData(
+        'Pages/test',
+        'hero.title',
+        'New Hero Title'
+      );
+
+      const savedData = mockSetRawDoc.mock.calls[0][2];
+      expect(savedData.fields.hero.title).toBe('New Hero Title');
+      expect(savedData.fields.hero.subtitle).toBe('Subtitle'); // Unchanged.
+    });
+
+    it('updates an array item by index', async () => {
+      const {RootCMSClient} = await import('./client.js');
+      const client = new RootCMSClient(mockRootConfig);
+
+      const mockGetRawDoc = vi.fn().mockResolvedValue({
+        sys: {},
+        fields: {
+          content: {
+            _array: ['item1', 'item2'],
+            item1: {text: 'First item'},
+            item2: {text: 'Second item'},
+          },
+        },
+      });
+      client.getRawDoc = mockGetRawDoc as any;
+
+      const mockSaveDraftData = vi.fn();
+      client.saveDraftData = mockSaveDraftData as any;
+
+      await client.updateDraftData(
+        'Pages/test',
+        'content.0.text',
+        'Updated first item'
+      );
+
+      // Verify saveDraftData was called with the updated data.
+      expect(mockSaveDraftData).toHaveBeenCalled();
+      const savedData = mockSaveDraftData.mock.calls[0][1];
+      expect(savedData.content[0].text).toBe('Updated first item');
+      expect(savedData.content[1].text).toBe('Second item');
+    });
+
+    it('validates after update when validate: true', async () => {
+      const {RootCMSClient} = await import('./client.js');
+      const client = new RootCMSClient(mockRootConfig);
+
+      const testSchema = schema.define({
+        name: 'Pages',
+        fields: [schema.string({id: 'title'}), schema.number({id: 'count'})],
+      });
+
+      mockGetCollectionSchema.mockResolvedValue(testSchema);
+
+      const mockGetRawDoc = vi.fn().mockResolvedValue({
+        sys: {},
+        fields: {
+          title: 'Old Title',
+          count: 10,
+        },
+      });
+      client.getRawDoc = mockGetRawDoc as any;
+
+      const mockSetRawDoc = vi.fn();
+      client.setRawDoc = mockSetRawDoc as any;
+
+      // Valid update.
+      await client.updateDraftData('Pages/test', 'title', 'New Title', {
+        validate: true,
+      });
+
+      expect(mockSetRawDoc).toHaveBeenCalled();
+    });
+
+    it('throws validation error when update results in invalid document', async () => {
+      const {RootCMSClient} = await import('./client.js');
+      const client = new RootCMSClient(mockRootConfig);
+
+      const testSchema = schema.define({
+        name: 'Pages',
+        fields: [schema.string({id: 'title'}), schema.number({id: 'count'})],
+      });
+
+      mockGetCollectionSchema.mockResolvedValue(testSchema);
+
+      const mockGetRawDoc = vi.fn().mockResolvedValue({
+        sys: {},
+        fields: {
+          title: 'Old Title',
+          count: 10,
+        },
+      });
+      client.getRawDoc = mockGetRawDoc as any;
+
+      // Try to set count to invalid value.
+      await expect(
+        client.updateDraftData('Pages/test', 'count', 'invalid', {
+          validate: true,
+        })
+      ).rejects.toThrow(/Validation failed for Pages\/test/);
+    });
+
+    it('skips validation when validate: false', async () => {
+      const {RootCMSClient} = await import('./client.js');
+      const client = new RootCMSClient(mockRootConfig);
+
+      const mockGetRawDoc = vi.fn().mockResolvedValue({
+        sys: {},
+        fields: {
+          title: 'Old Title',
+        },
+      });
+      client.getRawDoc = mockGetRawDoc as any;
+
+      const mockSetRawDoc = vi.fn();
+      client.setRawDoc = mockSetRawDoc as any;
+
+      await client.updateDraftData('Pages/test', 'title', 123, {
+        validate: false,
+      });
+
+      expect(mockGetCollectionSchema).not.toHaveBeenCalled();
+      expect(mockSetRawDoc).toHaveBeenCalled();
+    });
+  });
 });

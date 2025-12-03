@@ -110,6 +110,14 @@ export interface SaveDraftOptions {
   validate?: boolean;
 }
 
+export interface UpdateDraftOptions {
+  /**
+   * Whether to validate the updated field against the collection schema.
+   * If validation fails, an error will be thrown with details about the validation errors.
+   */
+  validate?: boolean;
+}
+
 export interface ListDocsOptions {
   mode: DocMode;
   offset?: number;
@@ -353,6 +361,39 @@ export class RootCMSClient {
       fields,
     };
     await this.setRawDoc(collection, slug, data, {mode: 'draft'});
+  }
+
+  /**
+   * Updates a specific field path in a draft doc.
+   *
+   * This allows partial updates to nested fields without replacing the entire document.
+   * For example: `updateDraftData('Pages/home', 'hero.title', 'New Title')`
+   *
+   * @param docId - The document ID (e.g., 'Pages/home')
+   * @param path - JSON path to the field (e.g., 'hero.title' or 'content.0.text')
+   * @param fieldValue - The value to set at the specified path
+   * @param options - Update options including validation
+   */
+  async updateDraftData(
+    docId: string,
+    path: string,
+    fieldValue: any,
+    options?: UpdateDraftOptions
+  ) {
+    const {collection, slug} = parseDocId(docId);
+
+    // Get current draft doc.
+    const draftDoc =
+      (await this.getRawDoc(collection, slug, {mode: 'draft'})) || {};
+    const fieldsData = unmarshalData(draftDoc.fields || {});
+
+    // Set the value at the specified path.
+    setValueAtPath(fieldsData, path, fieldValue);
+
+    // Save the updated document using saveDraftData.
+    await this.saveDraftData(docId, fieldsData, {
+      validate: options?.validate,
+    });
   }
 
   /**
@@ -1466,6 +1507,37 @@ export function parseDocId(docId: string) {
     throw new Error(`invalid doc id: ${docId}`);
   }
   return {collection, slug};
+}
+
+/**
+ * Sets a value at a JSON path in an object.
+ * Supports dot notation for nested objects and array indices.
+ * Examples:
+ *   setValueAtPath(obj, 'title', 'New Title')
+ *   setValueAtPath(obj, 'hero.title', 'New Title')
+ *   setValueAtPath(obj, 'content.0.text', 'First item')
+ */
+function setValueAtPath(obj: any, path: string, value: any): void {
+  const keys = path.split('.');
+  let current = obj;
+
+  for (let i = 0; i < keys.length - 1; i++) {
+    const key = keys[i];
+    const nextKey = keys[i + 1];
+
+    // Check if next key is an array index.
+    const isNextKeyArrayIndex = /^\d+$/.test(nextKey);
+
+    if (!(key in current)) {
+      // Create object or array based on next key.
+      current[key] = isNextKeyArrayIndex ? [] : {};
+    }
+
+    current = current[key];
+  }
+
+  const lastKey = keys[keys.length - 1];
+  current[lastKey] = value;
 }
 
 export interface BatchRequestOptions {
