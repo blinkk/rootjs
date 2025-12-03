@@ -2,6 +2,7 @@ import {Command} from 'commander';
 import {bgGreen, black} from 'kleur/colors';
 import {generateTypes} from './generate-types.js';
 import {initFirebase} from './init-firebase.js';
+import {pruneTranslations} from './prune-translations.js';
 
 class CliRunner {
   private name: string;
@@ -37,8 +38,15 @@ class CliRunner {
         'generates root-cms.d.ts from *.schema.ts files in the project'
       )
       .action(generateTypes);
+    program
+      .command('prune_translations <doc>')
+      .alias('prune-translations')
+      .description(
+        'removes unused translations tagged with the provided doc id'
+      )
+      .action(pruneTranslations);
     await program.parseAsync(argv);
   }
 }
 
-export {CliRunner, generateTypes, initFirebase};
+export {CliRunner, generateTypes, initFirebase, pruneTranslations};
