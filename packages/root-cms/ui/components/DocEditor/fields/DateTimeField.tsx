@@ -9,16 +9,29 @@ import {FieldProps} from './FieldProps.js';
 export function DateTimeField(props: FieldProps) {
   const field = props.field as DateTimeFieldSchema;
   const [value, setValue] = useDraftDocValue<Timestamp | null>(props.deepKey);
+
+  // Metadata is stored in a sibling field prefixed with `@`.
+  // e.g. if field is `scheduledAt`, metadata is in `@scheduledAt`.
+  const metadataKey = getMetadataKey(props.deepKey);
+  const [metadata, setMetadata] = useDraftDocValue<Record<string, any>>(
+    metadataKey,
+    {}
+  );
+
   const [timezone, setTimezone] = useState(
-    field.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone
+    field.timezone ||
+      metadata?.timezone ||
+      Intl.DateTimeFormat().resolvedOptions().timeZone
   );
 
   // Update timezone if field config changes.
   useEffect(() => {
     if (field.timezone) {
       setTimezone(field.timezone);
+    } else if (metadata?.timezone) {
+      setTimezone(metadata.timezone);
     }
-  }, [field.timezone]);
+  }, [field.timezone, metadata?.timezone]);
 
   const dateStr = useMemo(() => {
     if (!value) {
@@ -26,60 +39,97 @@ export function DateTimeField(props: FieldProps) {
     }
     // value is Timestamp. toDate() gives a Date object (UTC).
     // We want to format it in the selected timezone.
-    return formatInTimeZone(value.toDate(), timezone, "yyyy-MM-dd'T'HH:mm");
+    try {
+      return formatInTimeZone(value.toDate(), timezone, "yyyy-MM-dd'T'HH:mm");
+    } catch (err) {
+      console.error('Error formatting date:', err);
+      return '';
+    }
   }, [value, timezone]);
 
-  const onDateChange = (newDateStr: string) => {
+  const [error, setError] = useState<string | null>(null);
+
+  const onDateChange = (newDateStr: string, validity?: ValidityState) => {
+    if (validity && !validity.valid) {
+      console.warn('Invalid date input');
+      setError('Invalid datetime');
+      return;
+    }
+
     if (newDateStr) {
       // newDateStr is "YYYY-MM-DDTHH:mm"
       // We interpret this as being in `timezone`.
-      const date = fromZonedTime(newDateStr, timezone);
-      setValue(Timestamp.fromDate(date));
+      try {
+        const date = fromZonedTime(newDateStr, timezone);
+        // Check if date is valid
+        if (isNaN(date.getTime())) {
+          console.warn('Invalid date:', newDateStr);
+          setError('Invalid datetime');
+          return;
+        }
+        setError(null);
+        setValue(Timestamp.fromDate(date));
+      } catch (err) {
+        console.error('Error parsing date:', err);
+        setError('Invalid datetime');
+      }
     } else {
+      setError(null);
       setValue(null);
     }
   };
 
   const onTimezoneChange = (newTimezone: string) => {
     setTimezone(newTimezone);
+    setMetadata({...metadata, timezone: newTimezone});
   };
 
   return (
-    <div
-      className="DocEditor__DateTimeField"
-      style={{display: 'flex', gap: '8px', alignItems: 'center'}}
-    >
-      <input
-        type="datetime-local"
-        value={dateStr}
-        onChange={(e) => {
-          const target = e.target as HTMLInputElement;
-          onDateChange(target.value);
-        }}
-        style={{flex: 1}}
-      />
-      {field.timezone ? (
-        <div
-          className="DocEditor__DateTimeField__timezone"
-          style={{marginTop: 0}}
-        >
-          timezone: {field.timezone}
-        </div>
-      ) : (
-        <Select
-          className="DocEditor__DateTimeField__timezoneSelect"
-          value={timezone}
-          onChange={(val: string | null) => {
-            if (val) {
-              onTimezoneChange(val);
-            }
+    <div className="DocEditor__DateTimeField">
+      <div style={{display: 'flex', gap: '8px', alignItems: 'center'}}>
+        <input
+          type="datetime-local"
+          value={dateStr}
+          onChange={(e) => {
+            const target = e.target as HTMLInputElement;
+            onDateChange(target.value, target.validity);
           }}
-          data={Intl.supportedValuesOf('timeZone')}
-          searchable
-          size="xs"
-          style={{width: '180px'}}
+          style={{flex: 1}}
         />
+        {field.timezone ? (
+          <div
+            className="DocEditor__DateTimeField__timezone"
+            style={{marginTop: 0}}
+          >
+            timezone: {field.timezone}
+          </div>
+        ) : (
+          <Select
+            className="DocEditor__DateTimeField__timezoneSelect"
+            value={timezone}
+            onChange={(val: string | null) => {
+              if (val) {
+                onTimezoneChange(val);
+              }
+            }}
+            data={Intl.supportedValuesOf('timeZone')}
+            searchable
+            size="xs"
+            style={{width: '180px'}}
+          />
+        )}
+      </div>
+      {error && (
+        <div style={{color: 'red', fontSize: '12px', marginTop: '4px'}}>
+          {error}
+        </div>
       )}
     </div>
   );
+}
+
+function getMetadataKey(key: string) {
+  const parts = key.split('.');
+  const last = parts.pop();
+  return [...parts, `@${last}`].join('.');
 }

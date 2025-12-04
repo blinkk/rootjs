@@ -118,4 +118,138 @@ describe('DateTimeField', () => {
     ) as HTMLInputElement;
     expect(input.value).toBe('2023-10-27T12:00');
   });
+
+  it('reads timezone from metadata if available', () => {
+    useDraftDocValueMock.mockImplementation((key: string) => {
+      if (key === 'date') {
+        return [null, vi.fn()];
+      }
+      if (key === '@date') {
+        return [{timezone: 'Europe/London'}, vi.fn()];
+      }
+      return [null, vi.fn()];
+    });
+
+    render(
+      <DateTimeField field={{type: 'datetime', label: 'Date'}} deepKey="date" />
+    );
+
+    const select = screen.getByTestId(
+      'mantine-select-input'
+    ) as HTMLInputElement;
+    expect(select.value).toBe('Europe/London');
+  });
+
+  it('updates metadata when timezone changes', () => {
+    const setMetadata = vi.fn();
+    useDraftDocValueMock.mockImplementation((key: string) => {
+      if (key === 'date') {
+        return [null, vi.fn()];
+      }
+      if (key === '@date') {
+        return [{}, setMetadata];
+      }
+      return [null, vi.fn()];
+    });
+
+    render(
+      <DateTimeField field={{type: 'datetime', label: 'Date'}} deepKey="date" />
+    );
+
+    const select = screen.getByTestId(
+      'mantine-select-input'
+    ) as HTMLInputElement;
+    fireEvent.change(select, {target: {value: 'America/New_York'}});
+
+    expect(setMetadata).toHaveBeenCalledWith({timezone: 'America/New_York'});
+  });
+
+  it('field config timezone takes precedence over metadata', () => {
+    useDraftDocValueMock.mockImplementation((key: string) => {
+      if (key === 'date') {
+        return [null, vi.fn()];
+      }
+      if (key === '@date') {
+        return [{timezone: 'Europe/London'}, vi.fn()];
+      }
+      return [null, vi.fn()];
+    });
+
+    render(
+      <DateTimeField
+        field={{type: 'datetime', label: 'Date', timezone: 'Asia/Tokyo'}}
+        deepKey="date"
+      />
+    );
+
+    expect(screen.queryByTestId('mantine-select-input')).toBeNull();
+    expect(screen.getByText('timezone: Asia/Tokyo')).not.toBeNull();
+  });
+
+  it('does not crash with invalid timestamp', () => {
+    useDraftDocValueMock.mockImplementation((key: string) => {
+      if (key === 'date') {
+        return [Timestamp.now(), vi.fn()];
+      }
+      if (key === '@date') {
+        return [{}, vi.fn()];
+      }
+      return [null, vi.fn()];
+    });
+
+    render(
+      <DateTimeField
+        field={{type: 'datetime', label: 'Date', timezone: 'Invalid/Timezone'}}
+        deepKey="date"
+      />
+    );
+  });
+
+  it('does not crash with invalid date input', () => {
+    useDraftDocValueMock.mockImplementation((key: string) => {
+      if (key === 'date') {
+        return [null, vi.fn()];
+      }
+      return [null, vi.fn()];
+    });
+
+    const {container} = render(
+      <DateTimeField field={{type: 'datetime', label: 'Date'}} deepKey="date" />
+    );
+
+    const input = container.querySelector(
+      'input[type="datetime-local"]'
+    ) as HTMLInputElement;
+    expect(input).not.toBeNull();
+  });
+
+  it('shows error message for invalid date input', () => {
+    useDraftDocValueMock.mockImplementation((key: string) => {
+      if (key === 'date') {
+        return [null, vi.fn()];
+      }
+      return [null, vi.fn()];
+    });
+
+    const {container} = render(
+      <DateTimeField field={{type: 'datetime', label: 'Date'}} deepKey="date" />
+    );
+
+    const input = container.querySelector(
+      'input[type="datetime-local"]'
+    ) as HTMLInputElement;
+
+    // Mock validity.
+    Object.defineProperty(input, 'validity', {
+      value: {
+        valid: false,
+        badInput: true,
+      },
+      writable: true,
+    });
+
+    fireEvent.change(input, {target: {value: ''}});
+
+    expect(screen.getByText('Invalid datetime')).not.toBeNull();
+  });
 });
