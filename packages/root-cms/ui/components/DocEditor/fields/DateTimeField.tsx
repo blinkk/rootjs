@@ -1,7 +1,7 @@
 import {Select} from '@mantine/core';
 import {formatInTimeZone, fromZonedTime} from 'date-fns-tz';
 import {Timestamp} from 'firebase/firestore';
-import {useEffect, useMemo, useState} from 'preact/hooks';
+import {useMemo, useState} from 'preact/hooks';
 import {DateTimeField as DateTimeFieldSchema} from '../../../core/schema.js';
 import {useDraftDocValue} from '../../../hooks/useDraftDoc.js';
 import {FieldProps} from './FieldProps.js';
@@ -12,26 +12,14 @@ export function DateTimeField(props: FieldProps) {
 
   // Metadata is stored in a sibling field prefixed with `@`.
   // e.g. if field is `scheduledAt`, metadata is in `@scheduledAt`.
-  const metadataKey = getMetadataKey(props.deepKey);
-  const [metadata, setMetadata] = useDraftDocValue<Record<string, any>>(
-    metadataKey,
-    {}
-  );
+  // Only listen to the timezone key specifically.
+  const timezoneKey = `${getMetadataKey(props.deepKey)}.timezone`;
+  const [timezone, setTimezone] = useDraftDocValue<string | null>(timezoneKey);
 
-  const [timezone, setTimezone] = useState(
+  const activeTimezone =
     field.timezone ||
-      metadata?.timezone ||
-      Intl.DateTimeFormat().resolvedOptions().timeZone
-  );
-
-  // Update timezone if field config changes.
-  useEffect(() => {
-    if (field.timezone) {
-      setTimezone(field.timezone);
-    } else if (metadata?.timezone) {
-      setTimezone(metadata.timezone);
-    }
-  }, [field.timezone, metadata?.timezone]);
+    timezone ||
+    Intl.DateTimeFormat().resolvedOptions().timeZone;
 
   const dateStr = useMemo(() => {
     if (!value) {
@@ -40,12 +28,16 @@ export function DateTimeField(props: FieldProps) {
     // value is Timestamp. toDate() gives a Date object (UTC).
     // We want to format it in the selected timezone.
     try {
-      return formatInTimeZone(value.toDate(), timezone, "yyyy-MM-dd'T'HH:mm");
+      return formatInTimeZone(
+        value.toDate(),
+        activeTimezone,
+        "yyyy-MM-dd'T'HH:mm"
+      );
     } catch (err) {
       console.error('Error formatting date:', err);
       return '';
     }
-  }, [value, timezone]);
+  }, [value, activeTimezone]);
 
   const [error, setError] = useState<string | null>(null);
 
@@ -60,7 +52,7 @@ export function DateTimeField(props: FieldProps) {
       // newDateStr is "YYYY-MM-DDTHH:mm"
       // We interpret this as being in `timezone`.
       try {
-        const date = fromZonedTime(newDateStr, timezone);
+        const date = fromZonedTime(newDateStr, activeTimezone);
         // Check if date is valid
         if (isNaN(date.getTime())) {
           console.warn('Invalid date:', newDateStr);
@@ -81,7 +73,6 @@ export function DateTimeField(props: FieldProps) {
 
   const onTimezoneChange = (newTimezone: string) => {
     setTimezone(newTimezone);
-    setMetadata({...metadata, timezone: newTimezone});
   };
 
   return (
@@ -106,7 +97,7 @@ export function DateTimeField(props: FieldProps) {
         ) : (
           <Select
             className="DocEditor__DateTimeField__timezoneSelect"
-            value={timezone}
+            value={activeTimezone}
             onChange={(val: string | null) => {
               if (val) {
                 onTimezoneChange(val);

@@ -124,8 +124,8 @@ describe('DateTimeField', () => {
       if (key === 'date') {
         return [null, vi.fn()];
       }
-      if (key === '@date') {
-        return [{timezone: 'Europe/London'}, vi.fn()];
+      if (key === '@date.timezone') {
+        return ['Europe/London', vi.fn()];
       }
       return [null, vi.fn()];
     });
@@ -141,13 +141,13 @@ describe('DateTimeField', () => {
   });
 
   it('updates metadata when timezone changes', () => {
-    const setMetadata = vi.fn();
+    const setStoredTimezone = vi.fn();
     useDraftDocValueMock.mockImplementation((key: string) => {
       if (key === 'date') {
         return [null, vi.fn()];
       }
-      if (key === '@date') {
-        return [{}, setMetadata];
+      if (key === '@date.timezone') {
+        return [null, setStoredTimezone];
       }
       return [null, vi.fn()];
     });
@@ -161,7 +161,7 @@ describe('DateTimeField', () => {
     ) as HTMLInputElement;
     fireEvent.change(select, {target: {value: 'America/New_York'}});
 
-    expect(setMetadata).toHaveBeenCalledWith({timezone: 'America/New_York'});
+    expect(setStoredTimezone).toHaveBeenCalledWith('America/New_York');
   });
 
   it('field config timezone takes precedence over metadata', () => {
@@ -169,8 +169,8 @@ describe('DateTimeField', () => {
       if (key === 'date') {
         return [null, vi.fn()];
       }
-      if (key === '@date') {
-        return [{timezone: 'Europe/London'}, vi.fn()];
+      if (key === '@date.timezone') {
+        return ['Europe/London', vi.fn()];
       }
       return [null, vi.fn()];
     });
@@ -191,8 +191,8 @@ describe('DateTimeField', () => {
       if (key === 'date') {
         return [Timestamp.now(), vi.fn()];
       }
-      if (key === '@date') {
-        return [{}, vi.fn()];
+      if (key === '@date.timezone') {
+        return [null, vi.fn()];
       }
       return [null, vi.fn()];
     });
