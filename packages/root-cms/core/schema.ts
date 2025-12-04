@@ -49,17 +49,15 @@ function validateTimezone(timezone?: string): string | undefined {
   if (!timezone) {
     return undefined;
   }
-  if (typeof Intl !== 'undefined' && Intl.supportedValuesOf) {
-    if (timezone === 'UTC') {
-      return timezone;
-    }
-    const timezones = Intl.supportedValuesOf('timeZone');
-    if (!timezones.includes(timezone)) {
-      console.warn(
-        `Invalid timezone: "${timezone}". Must be a valid IANA timezone identifier.`
-      );
-      return undefined;
-    }
+  if (timezone === 'UTC') {
+    return timezone;
+  }
+  const timezones = Intl.supportedValuesOf('timeZone');
+  if (!timezones.includes(timezone)) {
+    console.warn(
+      `Invalid timezone: "${timezone}". Must be a valid IANA timezone identifier (e.g. "America/Los_Angeles").`
+    );
+    return undefined;
   }
   return timezone;
 }
@@ -78,7 +76,7 @@ export type DateTimeField = CommonFieldProps & {
   default?: string;
   /**
    * Timezone to use for the datetime field. If set, the field will be limited to
-   * this timezone.
+   * this timezone. Example: America/Los_Angeles.
    */
   timezone?: string;
 };

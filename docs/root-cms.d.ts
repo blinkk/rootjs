@@ -362,7 +362,7 @@ export interface TemplateSandboxFields {
   /** DateTimeField */
   datetime?: number;
   /** DateTimeField */
-  datetimeTokyo?: number;
+  datetimeWithTimezone?: number;
   /** DateField */
   date?: string;
 }
