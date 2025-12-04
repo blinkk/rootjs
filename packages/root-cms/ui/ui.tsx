@@ -4,7 +4,7 @@ import './styles/theme.css';
 import {MantineProvider} from '@mantine/core';
 import {ModalsProvider} from '@mantine/modals';
 import {NotificationsProvider} from '@mantine/notifications';
-import {initializeApp} from 'firebase/app';
+import {initializeApp, getApp} from 'firebase/app';
 import {User, getAuth} from 'firebase/auth';
 import {initializeFirestore} from 'firebase/firestore';
 import {getStorage} from 'firebase/storage';
@@ -72,6 +72,7 @@ declare global {
         };
       };
       firebaseConfig: Record<string, string>;
+      storageConfig?: Record<string, string>;
       gapi?: {
         apiKey: string;
         clientId: string;
@@ -201,6 +202,14 @@ function loginRedirect() {
 }
 
 const app = initializeApp(window.__ROOT_CTX.firebaseConfig);
+let storageApp = app;
+if (window.__ROOT_CTX.storageConfig) {
+  try {
+    storageApp = initializeApp(window.__ROOT_CTX.storageConfig, 'storage');
+  } catch (err) {
+    storageApp = getApp('storage');
+  }
+}
 const databaseId = window.__ROOT_CTX.firebaseConfig.databaseId || '(default)';
 // const db = getFirestore(app);
 // NOTE(stevenle): the firestore web channel rpc sometimes has issues in
@@ -216,7 +225,7 @@ const db = initializeFirestore(
   databaseId
 );
 const auth = getAuth(app);
-const storage = getStorage(app);
+const storage = getStorage(storageApp);
 auth.onAuthStateChanged((user) => {
   if (!user) {
     loginRedirect();
