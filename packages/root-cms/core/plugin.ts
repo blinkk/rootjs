@@ -264,7 +264,7 @@ export type CMSPlugin = Plugin & {
   name: 'root-cms';
   getConfig: () => CMSPluginOptions;
   getFirebaseApp: () => App;
-  getFirestore: () => Firestore;
+  getFirestore: (options?: {databaseId?: string}) => Firestore;
 };
 
 function isExpired(decodedIdToken: DecodedIdToken) {
@@ -515,8 +515,14 @@ export function cmsPlugin(options: CMSPluginOptions): CMSPlugin {
     /**
      * Returns the Firestore instance used by the plugin.
      */
-    getFirestore: () => {
-      const databaseId = firebaseConfig.databaseId || '(default)';
+    getFirestore: (options?: {
+      /**
+       * The database ID to use. If not specified, the default database ID is used.
+       */
+      databaseId?: string;
+    }) => {
+      const databaseId =
+        options?.databaseId || firebaseConfig.databaseId || '(default)';
       return getFirestore(app, databaseId);
     },
 
