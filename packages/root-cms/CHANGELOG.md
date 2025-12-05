@@ -1,5 +1,13 @@
 # @blinkk/root-cms
 
+## 2.4.5
+
+### Patch Changes
+
+- ae8edd61: feat: add paste support for images in lexical editor
+- fb58298f: feat: add ability to specify timezone on datetimefield
+  - @blinkk/root@2.4.5
+
 ## 2.4.4
 
 ### Patch Changes
