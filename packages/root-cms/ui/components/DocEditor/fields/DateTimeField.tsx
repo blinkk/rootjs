@@ -77,7 +77,7 @@ export function DateTimeField(props: FieldProps) {
 
   return (
     <div className="DocEditor__DateTimeField">
-      <div style={{display: 'flex', gap: '8px', alignItems: 'center'}}>
+      <div className="DocEditor__DateTimeField__row">
         <input
           type="datetime-local"
           value={dateStr}
@@ -85,13 +85,10 @@ export function DateTimeField(props: FieldProps) {
             const target = e.target as HTMLInputElement;
             onDateChange(target.value, target.validity);
           }}
-          style={{flex: 1}}
+          className="DocEditor__DateTimeField__input"
         />
         {field.timezone ? (
-          <div
-            className="DocEditor__DateTimeField__timezone"
-            style={{marginTop: 0}}
-          >
+          <div className="DocEditor__DateTimeField__timezone">
             timezone: {field.timezone}
           </div>
         ) : (
@@ -106,15 +103,10 @@ export function DateTimeField(props: FieldProps) {
             data={Intl.supportedValuesOf('timeZone')}
             searchable
             size="xs"
-            style={{width: '180px'}}
           />
         )}
       </div>
-      {error && (
-        <div style={{color: 'red', fontSize: '12px', marginTop: '4px'}}>
-          {error}
-        </div>
-      )}
+      {error && <div className="DocEditor__DateTimeField__error">{error}</div>}
     </div>
   );
 }
