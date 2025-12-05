@@ -361,4 +361,8 @@ export interface TemplateSandboxFields {
   references?: RootCMSReference[];
   /** DateTimeField */
   datetime?: number;
+  /** DateTimeField */
+  datetimeWithTimezone?: number;
+  /** DateField */
+  date?: string;
 }

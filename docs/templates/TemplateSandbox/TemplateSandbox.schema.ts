@@ -27,5 +27,14 @@ export default schema.define({
       id: 'datetime',
       label: 'DateTimeField',
     }),
+    schema.datetime({
+      id: 'datetimeWithTimezone',
+      label: 'DateTimeField',
+      timezone: 'Asia/Tokyo',
+    }),
+    schema.date({
+      id: 'date',
+      label: 'DateField',
+    }),
   ],
 });
