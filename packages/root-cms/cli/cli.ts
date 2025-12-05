@@ -41,7 +41,18 @@ class CliRunner {
       .action(generateTypes);
     program
       .command('export')
-      .description('exports firestore data to a local directory')
+      .description(
+        'exports firestore data to a local directory\n\n' +
+          'By default, all content in the Firestore database associated with the CMS will be exported.\n\n' +
+          'Example output:\n' +
+          '  <output>/Collections/Pages/Draft/...\n' +
+          '  <output>/Collections/Pages/Published/...\n' +
+          '  <output>/ActionLogs/...\n\n' +
+          'File naming conventions:\n' +
+          "- Documents that act as containers for subcollections are exported as a directory containing a `__data.json` file for the document's own data.\n" +
+          '- Standalone documents are exported as JSON files named after their document ID (e.g. `page.json`).\n' +
+          '- For collections like ActionLogs and Translations, the document ID (often a hash) is used as the filename.'
+      )
       .option(
         '--filter <pattern>',
         'comma-separated list of glob patterns to filter content (e.g. Collections/Pages/**, !ActionLogs/**)'
