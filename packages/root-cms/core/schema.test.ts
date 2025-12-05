@@ -1,4 +1,4 @@
-import {expect, test} from 'vitest';
+import {expect, test, vi} from 'vitest';
 
 import * as schema from './schema.js';
 
@@ -415,4 +415,17 @@ test('define schema', () => {
       "name": "TestBlogSchema",
     }
   `);
+});
+
+test('validate timezone', () => {
+  const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+  const datetimeField = schema.datetime({
+    id: 'datetime',
+    timezone: 'Invalid/Timezone',
+  });
+  expect(datetimeField.timezone).toBeUndefined();
+  expect(consoleWarnSpy).toHaveBeenCalledTimes(1);
+
+  consoleWarnSpy.mockRestore();
 });
