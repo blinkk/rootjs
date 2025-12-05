@@ -43,8 +43,8 @@ class CliRunner {
       .command('export')
       .description('exports firestore data to a local directory')
       .option(
-        '--include <types>',
-        'comma-separated list of collection types to export (ActionLogs, Collections, DataSources, Releases, Translations, Users)'
+        '--filter <pattern>',
+        'comma-separated list of glob patterns to filter content (e.g. Collections/Pages/**, !ActionLogs/**)'
       )
       .option('--site <siteId>', 'site id to export (overrides root config)')
       .option(
@@ -58,8 +58,8 @@ class CliRunner {
       .description('imports firestore data from a local directory')
       .option('--dir <directory>', 'directory to import from (required)')
       .option(
-        '--include <types>',
-        'comma-separated list of collection types to import (ActionLogs, Collections, DataSources, Releases, Translations, Users)'
+        '--filter <pattern>',
+        'comma-separated list of glob patterns to filter content (e.g. Collections/Pages/**, !ActionLogs/**)'
       )
       .option('--site <siteId>', 'site id to import to (overrides root config)')
       .option(

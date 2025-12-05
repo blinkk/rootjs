@@ -102,7 +102,7 @@ describe('Import CLI', () => {
       await importData({
         dir: 'export_dir',
         site: 'test-site',
-        include: 'test-col',
+        filter: 'test-col/**',
       });
 
       // Verify db.doc was called with the correct path for __data.json.
@@ -154,7 +154,7 @@ describe('Import CLI', () => {
       await importData({
         dir: 'export_dir',
         site: 'test-site',
-        include: 'test-col',
+        filter: 'test-col/**',
       });
 
       expect(mockDocRef.set).toHaveBeenCalledWith({
@@ -204,7 +204,7 @@ describe('Import CLI', () => {
       await importData({
         dir: 'export_dir',
         site: 'test-site',
-        include: 'test-col',
+        filter: 'test-col/**',
       });
 
       expect(mockDocRef.set).toHaveBeenCalledWith({

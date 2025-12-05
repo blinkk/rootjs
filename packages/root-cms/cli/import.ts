@@ -5,12 +5,13 @@ import {loadRootConfig} from '@blinkk/root/node';
 import cliProgress from 'cli-progress';
 import {Timestamp, GeoPoint} from 'firebase-admin/firestore';
 import {getCmsPlugin} from '../core/client.js';
+import {getPathStatus, parseFilters} from './utils.js';
 
 export interface ImportOptions {
   /** Directory to import from. */
   dir?: string;
-  /** Filter to specific collection types. */
-  include?: string;
+  /** Filter to specific content. */
+  filter?: string;
   /** Site id to import to (overrides root config). */
   site?: string;
   /** Firestore database id. */
@@ -54,35 +55,33 @@ export async function importData(options: ImportOptions) {
     .filter((entry) => entry.isDirectory())
     .map((entry) => entry.name);
 
-  // Parse includes filter.
-  let includes: string[] = availableCollections;
-  if (options.include) {
-    const requestedIncludes = options.include
-      .split(',')
-      .map((s) => s.trim())
-      .filter((s) => s.length > 0);
+  // Parse filter.
+  const {includes, excludes} = parseFilters(options.filter);
+  const collectionsToImport = availableCollections.filter((id) => {
+    const status = getPathStatus(id, includes, excludes);
+    return status !== 'SKIP' && status !== 'EXCLUDE';
+  });
 
-    // Filter requested includes to ensure they exist in the import directory.
-    includes = requestedIncludes.filter((inc) =>
-      availableCollections.includes(inc)
+  if (collectionsToImport.length === 0) {
+    throw new Error(
+      `No valid collection types found matching filter. Available types: ${availableCollections.join(
+        ', '
+      )}`
     );
-
-    if (includes.length === 0) {
-      throw new Error(
-        `No valid collection types specified in --include. Available types: ${availableCollections.join(
-          ', '
-        )}`
-      );
-    }
   }
 
   // Scan the directory and count documents.
   const summary: ImportSummary[] = [];
 
-  for (const collectionType of includes) {
+  for (const collectionType of collectionsToImport) {
     const collectionDir = path.join(importDir, collectionType);
     if (fs.existsSync(collectionDir)) {
-      const count = countJsonFilesRecursive(collectionDir);
+      const count = countJsonFilesRecursive(
+        collectionDir,
+        collectionType,
+        includes,
+        excludes
+      );
       if (count > 0) {
         summary.push({
           collectionType,
@@ -104,7 +103,6 @@ export async function importData(options: ImportOptions) {
   tableData['GCP Project'] = gcpProjectId;
   tableData['Database'] = `${databaseId}/Projects/${siteId}`;
   tableData['Site'] = siteId;
-  tableData['--'] = '';
 
   for (const item of summary) {
     tableData[item.collectionType] = `${item.count} documents`;
@@ -132,7 +130,10 @@ export async function importData(options: ImportOptions) {
       collectionPath,
       collectionDir,
       item.collectionType,
-      item.count
+      item.count,
+      item.collectionType,
+      includes,
+      excludes
     );
   }
 
@@ -153,14 +154,40 @@ export async function importData(options: ImportOptions) {
 /**
  * Recursively counts .json files in a directory.
  */
-function countJsonFilesRecursive(dir: string): number {
+function countJsonFilesRecursive(
+  dir: string,
+  relativePath: string,
+  includes: string[],
+  excludes: string[]
+): number {
   let count = 0;
   const entries = fs.readdirSync(dir, {withFileTypes: true});
   for (const entry of entries) {
     if (entry.isDirectory()) {
-      count += countJsonFilesRecursive(path.join(dir, entry.name));
+      const subRelativePath = `${relativePath}/${entry.name}`;
+      const status = getPathStatus(subRelativePath, includes, excludes);
+      if (status !== 'SKIP' && status !== 'EXCLUDE') {
+        count += countJsonFilesRecursive(
+          path.join(dir, entry.name),
+          subRelativePath,
+          includes,
+          excludes
+        );
+      }
     } else if (entry.isFile() && entry.name.endsWith('.json')) {
-      count++;
+      if (entry.name === '__data.json') {
+        const status = getPathStatus(relativePath, includes, excludes);
+        if (status === 'INCLUDE') {
+          count++;
+        }
+        continue;
+      }
+      const docId = path.basename(entry.name, '.json');
+      const docRelativePath = `${relativePath}/${docId}`;
+      const status = getPathStatus(docRelativePath, includes, excludes);
+      if (status !== 'SKIP' && status !== 'EXCLUDE') {
+        count++;
+      }
     }
   }
   return count;
@@ -174,7 +201,10 @@ async function importCollection(
   collectionPath: string,
   inputDir: string,
   displayName: string,
-  totalDocs: number
+  totalDocs: number,
+  relativePath: string,
+  includes: string[],
+  excludes: string[]
 ) {
   console.log(`Importing ${displayName}...`);
 
@@ -186,7 +216,15 @@ async function importCollection(
   });
   progressBar.start(totalDocs, 0);
 
-  await importCollectionRecursive(db, collectionPath, inputDir, progressBar);
+  await importCollectionRecursive(
+    db,
+    collectionPath,
+    inputDir,
+    progressBar,
+    relativePath,
+    includes,
+    excludes
+  );
 
   progressBar.stop();
   console.log(`  - ${displayName}: ${totalDocs} documents`);
@@ -255,7 +293,11 @@ async function importCollectionRecursive(
   db: any,
   collectionPath: string,
   inputDir: string,
-  progressBar?: cliProgress.SingleBar
+
+  progressBar?: cliProgress.SingleBar,
+  relativePath?: string,
+  includes?: string[],
+  excludes?: string[]
 ) {
   if (!fs.existsSync(inputDir)) {
     return;
@@ -274,26 +316,55 @@ async function importCollectionRecursive(
 
       if (entry.name === '__data.json') {
         // Handle __data.json (data for the current container document).
-        await db.doc(collectionPath).set(docData, {merge: true});
+        // Only import if the container itself is explicitly included (not just traversed).
+        const status =
+          includes && excludes
+            ? getPathStatus(relativePath || '', includes, excludes)
+            : 'INCLUDE';
+        if (status === 'INCLUDE') {
+          await db.doc(collectionPath).set(docData, {merge: true});
+        }
       } else {
         // Standard document file (DocId.json).
         const docId = path.basename(entry.name, '.json');
-        await db.doc(`${collectionPath}/${docId}`).set(docData);
-      }
+        const docRelativePath = relativePath
+          ? `${relativePath}/${docId}`
+          : docId;
+        const status =
+          includes && excludes
+            ? getPathStatus(docRelativePath, includes, excludes)
+            : 'INCLUDE';
 
-      if (progressBar) {
-        progressBar.increment();
+        if (status !== 'SKIP' && status !== 'EXCLUDE') {
+          await db.doc(`${collectionPath}/${docId}`).set(docData);
+          if (progressBar) {
+            progressBar.increment();
+          }
+        }
       }
     } else if (entry.isDirectory()) {
       // Recursively import subcollection.
       const subCollectionPath = `${collectionPath}/${entry.name}`;
       const subCollectionDir = path.join(inputDir, entry.name);
-      await importCollectionRecursive(
-        db,
-        subCollectionPath,
-        subCollectionDir,
-        progressBar
-      );
+      const subRelativePath = relativePath
+        ? `${relativePath}/${entry.name}`
+        : entry.name;
+      const status =
+        includes && excludes
+          ? getPathStatus(subRelativePath, includes, excludes)
+          : 'INCLUDE';
+
+      if (status !== 'SKIP' && status !== 'EXCLUDE') {
+        await importCollectionRecursive(
+          db,
+          subCollectionPath,
+          subCollectionDir,
+          progressBar,
+          subRelativePath,
+          includes,
+          excludes
+        );
+      }
     }
   }
 }

@@ -2,10 +2,11 @@ import fs from 'node:fs';
 import path from 'node:path';
 import {loadRootConfig} from '@blinkk/root/node';
 import {getCmsPlugin} from '../core/client.js';
+import {getPathStatus, parseFilters} from './utils.js';
 
 export interface ExportOptions {
-  /** Filter to specific collection types. */
-  include?: string;
+  /** Filter to specific content. */
+  filter?: string;
   /** Site id to export (overrides root config). */
   site?: string;
   /** Firestore database id. */
@@ -29,15 +30,12 @@ export async function exportData(options: ExportOptions) {
   const collections = await projectRef.listCollections();
   const allCollectionIds = collections.map((c: any) => c.id);
 
-  // Parse includes filter.
-  let includes: string[] = allCollectionIds;
-  if (options.include) {
-    const requestedIncludes = options.include
-      .split(',')
-      .map((s) => s.trim())
-      .filter((s) => s.length > 0);
-    includes = requestedIncludes;
-  }
+  // Parse filter.
+  const {includes, excludes} = parseFilters(options.filter);
+  const collectionsToExport = allCollectionIds.filter((id: string) => {
+    const status = getPathStatus(id, includes, excludes);
+    return status !== 'SKIP' && status !== 'EXCLUDE';
+  });
 
   // Create export directory with timestamp.
   const now = new Date();
@@ -55,7 +53,8 @@ export async function exportData(options: ExportOptions) {
     'GCP Project': gcpProjectId,
     Database: `${databaseId}/Projects/${siteId}`,
     Site: siteId,
-    Collections: includes.join(', '),
+    Collections: collectionsToExport.join(', '),
+    Filter: options.filter || '(none)',
   });
   console.log('');
 
@@ -64,23 +63,34 @@ export async function exportData(options: ExportOptions) {
   }
 
   // Export project document (e.g. Projects/www) to preserve settings/roles.
-  const projectDoc = await projectRef.get();
-  if (projectDoc.exists) {
-    const projectData = projectDoc.data();
-    const projectFilePath = path.join(exportDir, '__data.json');
-    fs.writeFileSync(
-      projectFilePath,
-      JSON.stringify(convertForExport(projectData), null, 2)
-    );
-    console.log('Exported project document to __data.json');
+  // Only export if no filter is specified.
+  if (!options.filter) {
+    const projectDoc = await projectRef.get();
+    if (projectDoc.exists) {
+      const projectData = projectDoc.data();
+      const projectFilePath = path.join(exportDir, '__data.json');
+      fs.writeFileSync(
+        projectFilePath,
+        JSON.stringify(convertForExport(projectData), null, 2)
+      );
+      console.log('Exported project document to __data.json');
+    }
   }
 
   // Export each collection type.
-  for (const collectionType of includes) {
+  for (const collectionType of collectionsToExport) {
     console.log(`Exporting ${collectionType}...`);
     const collectionPath = `Projects/${siteId}/${collectionType}`;
     const collectionDir = path.join(exportDir, collectionType);
-    await exportCollection(db, collectionPath, collectionDir, collectionType);
+    await exportCollection(
+      db,
+      collectionPath,
+      collectionDir,
+      collectionType,
+      collectionType,
+      includes,
+      excludes
+    );
   }
 
   console.log(`\n✅ Export complete! Data saved to: ${exportDir}`);
@@ -132,7 +142,10 @@ async function exportCollection(
   db: any,
   collectionPath: string,
   outputDir: string,
-  displayName: string
+  displayName: string,
+  relativePath: string,
+  includes: string[],
+  excludes: string[]
 ) {
   const stats = {count: 0};
   const spinner = new Spinner(`Exporting ${displayName}...`);
@@ -144,7 +157,10 @@ async function exportCollection(
     collectionPath,
     outputDir,
     stats,
-    spinner
+    spinner,
+    relativePath,
+    includes,
+    excludes
   );
 
   spinner.stop();
@@ -159,7 +175,10 @@ async function exportCollectionRecursive(
   collectionPath: string,
   outputDir: string,
   stats: {count: number},
-  spinner: Spinner
+  spinner: Spinner,
+  relativePath: string,
+  includes: string[],
+  excludes: string[]
 ) {
   if (!fs.existsSync(outputDir)) {
     fs.mkdirSync(outputDir, {recursive: true});
@@ -185,10 +204,13 @@ async function exportCollectionRecursive(
     const subcollections = await ref.listCollections();
     const hasSubcollections = subcollections.length > 0;
 
+    const docRelativePath = `${relativePath}/${ref.id}`;
+    const docStatus = getPathStatus(docRelativePath, includes, excludes);
+
     // Determine where to save the document data.
     // If it has subcollections, save as __data.json inside the document folder.
     // Otherwise, save as {docId}.json.
-    if (doc) {
+    if (doc && docStatus !== 'SKIP' && docStatus !== 'EXCLUDE') {
       const docData = doc.data();
       let filePath: string;
 
@@ -212,13 +234,22 @@ async function exportCollectionRecursive(
 
     // Export subcollections.
     for (const subcollection of subcollections) {
+      const subRelativePath = `${docRelativePath}/${subcollection.id}`;
+      const status = getPathStatus(subRelativePath, includes, excludes);
+      if (status === 'SKIP' || status === 'EXCLUDE') {
+        continue;
+      }
+
       const subcollectionDir = path.join(outputDir, ref.id, subcollection.id);
       await exportCollectionRecursive(
         db,
         subcollection.path,
         subcollectionDir,
         stats,
-        spinner
+        spinner,
+        subRelativePath,
+        includes,
+        excludes
       );
     }
   }

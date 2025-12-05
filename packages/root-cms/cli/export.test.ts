@@ -79,6 +79,25 @@ describe('Export CLI', () => {
       );
     });
 
+    it('should NOT export project document if filter is specified', async () => {
+      const mockProjectDoc = {
+        exists: true,
+        data: vi.fn().mockReturnValue({roles: {admin: 'user'}}),
+      };
+      const mockProjectRef = {
+        get: vi.fn().mockResolvedValue(mockProjectDoc),
+        listCollections: vi.fn().mockResolvedValue([]),
+      };
+      mockFirestore.doc.mockReturnValue(mockProjectRef);
+
+      await exportData({site: 'test-site', filter: 'SomeCollection'});
+
+      expect(fs.writeFileSync).not.toHaveBeenCalledWith(
+        expect.stringContaining('__data.json'),
+        expect.any(String)
+      );
+    });
+
     it('should export documents with subcollections to __data.json in a folder', async () => {
       // Setup mock data.
       const mockCollection = {
@@ -115,7 +134,7 @@ describe('Export CLI', () => {
       };
       mockFirestore.doc.mockReturnValue(mockProjectRef);
 
-      await exportData({site: 'test-site', include: 'test-col'});
+      await exportData({site: 'test-site', filter: 'test-col/**'});
 
       // Verify fs.writeFileSync was called with __data.json for doc1.
       expect(fs.writeFileSync).toHaveBeenCalledWith(
@@ -145,6 +164,57 @@ describe('Export CLI', () => {
       expect(fs.writeFileSync).toHaveBeenCalledWith(
         expect.stringContaining('__data.json'),
         expect.stringContaining('"_referencePath": "Projects/other"')
+      );
+    });
+
+    it('should filter documents recursively', async () => {
+      // Setup mock data.
+      const mockCollection = {
+        listDocuments: vi.fn().mockResolvedValue([{id: 'doc1'}, {id: 'doc2'}]),
+        get: vi.fn().mockResolvedValue({
+          docs: [
+            {id: 'doc1', data: () => ({title: 'Doc 1'})},
+            {id: 'doc2', data: () => ({title: 'Doc 2'})},
+          ],
+        }),
+      };
+      const mockDocRef1 = {
+        id: 'doc1',
+        listCollections: vi.fn().mockResolvedValue([]),
+      };
+      const mockDocRef2 = {
+        id: 'doc2',
+        listCollections: vi.fn().mockResolvedValue([]),
+      };
+
+      // Mock listDocuments to return refs.
+      mockCollection.listDocuments.mockResolvedValue([
+        mockDocRef1,
+        mockDocRef2,
+      ]);
+
+      mockFirestore.collection.mockReturnValue(mockCollection);
+
+      // Mock project listing.
+      const mockProjectRef = {
+        get: vi.fn().mockResolvedValue({exists: false}),
+        listCollections: vi.fn().mockResolvedValue([{id: 'test-col'}]),
+      };
+      mockFirestore.doc.mockReturnValue(mockProjectRef);
+
+      // Filter to only doc1.
+      await exportData({site: 'test-site', filter: 'test-col/doc1'});
+
+      // Verify doc1 exported.
+      expect(fs.writeFileSync).toHaveBeenCalledWith(
+        expect.stringContaining('doc1.json'),
+        expect.stringContaining('"title": "Doc 1"')
+      );
+
+      // Verify doc2 NOT exported.
+      expect(fs.writeFileSync).not.toHaveBeenCalledWith(
+        expect.stringContaining('doc2.json'),
+        expect.any(String)
       );
     });
   });
