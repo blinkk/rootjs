@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import {loadRootConfig} from '@blinkk/root/node';
 import {getCmsPlugin} from '../core/client.js';
-import {getPathStatus, parseFilters} from './utils.js';
+import {getPathStatus, parseFilters, pLimit, LimitFunction} from './utils.js';
 
 export interface ExportOptions {
   /** Filter to specific content. */
@@ -78,6 +78,7 @@ export async function exportData(options: ExportOptions) {
   }
 
   // Export each collection type.
+  const limit = pLimit(10);
   for (const collectionType of collectionsToExport) {
     console.log(`Exporting ${collectionType}...`);
     const collectionPath = `Projects/${siteId}/${collectionType}`;
@@ -89,7 +90,8 @@ export async function exportData(options: ExportOptions) {
       collectionType,
       collectionType,
       includes,
-      excludes
+      excludes,
+      limit
     );
   }
 
@@ -145,7 +147,8 @@ async function exportCollection(
   displayName: string,
   relativePath: string,
   includes: string[],
-  excludes: string[]
+  excludes: string[],
+  limit: LimitFunction
 ) {
   const stats = {count: 0};
   const spinner = new Spinner(`Exporting ${displayName}...`);
@@ -160,7 +163,8 @@ async function exportCollection(
     spinner,
     relativePath,
     includes,
-    excludes
+    excludes,
+    limit
   );
 
   spinner.stop();
@@ -178,7 +182,8 @@ async function exportCollectionRecursive(
   spinner: Spinner,
   relativePath: string,
   includes: string[],
-  excludes: string[]
+  excludes: string[],
+  limit: LimitFunction
 ) {
   if (!fs.existsSync(outputDir)) {
     fs.mkdirSync(outputDir, {recursive: true});
@@ -187,72 +192,75 @@ async function exportCollectionRecursive(
   const collection = db.collection(collectionPath);
 
   // Get all document references.
-  const refs = await collection.listDocuments();
+  const refs = await limit<any[]>(() => collection.listDocuments());
   if (refs.length === 0) {
     return;
   }
 
   // Fetch data for all existing documents efficiently.
-  const snapshot = await collection.get();
+  const snapshot = await limit<any>(() => collection.get());
   const docMap = new Map();
   snapshot.docs.forEach((doc: any) => {
     docMap.set(doc.id, doc);
   });
 
-  for (const ref of refs) {
-    const doc = docMap.get(ref.id);
-    const subcollections = await ref.listCollections();
-    const hasSubcollections = subcollections.length > 0;
+  await Promise.all(
+    refs.map(async (ref: any) => {
+      const doc = docMap.get(ref.id);
+      const subcollections = await limit<any[]>(() => ref.listCollections());
+      const hasSubcollections = subcollections.length > 0;
 
-    const docRelativePath = `${relativePath}/${ref.id}`;
-    const docStatus = getPathStatus(docRelativePath, includes, excludes);
+      const docRelativePath = `${relativePath}/${ref.id}`;
+      const docStatus = getPathStatus(docRelativePath, includes, excludes);
 
-    // Determine where to save the document data.
-    // If it has subcollections, save as __data.json inside the document folder.
-    // Otherwise, save as {docId}.json.
-    if (doc && docStatus !== 'SKIP' && docStatus !== 'EXCLUDE') {
-      const docData = doc.data();
-      let filePath: string;
+      // Determine where to save the document data.
+      // If it has subcollections, save as __data.json inside the document folder.
+      // Otherwise, save as {docId}.json.
+      if (doc && docStatus !== 'SKIP' && docStatus !== 'EXCLUDE') {
+        const docData = doc.data();
+        let filePath: string;
 
-      if (hasSubcollections) {
-        const docDir = path.join(outputDir, doc.id);
-        if (!fs.existsSync(docDir)) {
-          fs.mkdirSync(docDir, {recursive: true});
+        if (hasSubcollections) {
+          const docDir = path.join(outputDir, doc.id);
+          if (!fs.existsSync(docDir)) {
+            fs.mkdirSync(docDir, {recursive: true});
+          }
+          filePath = path.join(docDir, '__data.json');
+        } else {
+          filePath = path.join(outputDir, `${doc.id}.json`);
         }
-        filePath = path.join(docDir, '__data.json');
-      } else {
-        filePath = path.join(outputDir, `${doc.id}.json`);
+
+        fs.writeFileSync(
+          filePath,
+          JSON.stringify(convertForExport(docData), null, 2)
+        );
+        stats.count++;
+        spinner.update(`Exporting ${stats.count} documents...`);
       }
 
-      fs.writeFileSync(
-        filePath,
-        JSON.stringify(convertForExport(docData), null, 2)
-      );
-      stats.count++;
-      spinner.update(`Exporting ${stats.count} documents...`);
-    }
+      // Export subcollections.
+      for (const subcollection of subcollections) {
+        const subRelativePath = `${docRelativePath}/${subcollection.id}`;
+        const status = getPathStatus(subRelativePath, includes, excludes);
+        if (status === 'SKIP' || status === 'EXCLUDE') {
+          continue;
+        }
 
-    // Export subcollections.
-    for (const subcollection of subcollections) {
-      const subRelativePath = `${docRelativePath}/${subcollection.id}`;
-      const status = getPathStatus(subRelativePath, includes, excludes);
-      if (status === 'SKIP' || status === 'EXCLUDE') {
-        continue;
+        const subcollectionDir = path.join(outputDir, ref.id, subcollection.id);
+        await exportCollectionRecursive(
+          db,
+          subcollection.path,
+          subcollectionDir,
+          stats,
+          spinner,
+          subRelativePath,
+          includes,
+          excludes,
+          limit
+        );
       }
-
-      const subcollectionDir = path.join(outputDir, ref.id, subcollection.id);
-      await exportCollectionRecursive(
-        db,
-        subcollection.path,
-        subcollectionDir,
-        stats,
-        spinner,
-        subRelativePath,
-        includes,
-        excludes
-      );
-    }
-  }
+    })
+  );
 }
 
 function formatTimestamp(date: Date): string {
@@ -294,7 +302,6 @@ function convertForExport(obj: any): any {
   if (typeof obj === 'object') {
     // Check if it's a plain object or a Firestore type that we want to preserve as-is
     // (like Timestamp or GeoPoint which serialize to JSON fine).
-    // Actually, we should traverse everything to find nested References.
     const converted: any = {};
     for (const [key, value] of Object.entries(obj)) {
       converted[key] = convertForExport(value);

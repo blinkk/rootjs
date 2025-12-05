@@ -47,3 +47,30 @@ describe('getPathStatus', () => {
     );
   });
 });
+
+import {pLimit} from './utils.js';
+
+describe('pLimit', () => {
+  it('should limit concurrency', async () => {
+    const limit = pLimit(2);
+    let active = 0;
+    let maxActive = 0;
+
+    const task = async () => {
+      active++;
+      maxActive = Math.max(maxActive, active);
+      await new Promise((resolve) => setTimeout(resolve, 10));
+      active--;
+    };
+
+    await Promise.all([
+      limit(task),
+      limit(task),
+      limit(task),
+      limit(task),
+      limit(task),
+    ]);
+
+    expect(maxActive).toBe(2);
+  });
+});

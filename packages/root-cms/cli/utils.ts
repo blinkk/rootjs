@@ -138,3 +138,37 @@ function matchSegments(pathParts: string[], patternParts: string[]): boolean {
 
   return true;
 }
+
+export type LimitFunction = <T>(fn: () => Promise<T>) => Promise<T>;
+
+/**
+ * Creates a concurrency limiter.
+ */
+export function pLimit(concurrency: number): LimitFunction {
+  const queue: (() => void)[] = [];
+  let activeCount = 0;
+
+  const next = () => {
+    activeCount--;
+    if (queue.length > 0) {
+      const job = queue.shift();
+      if (job) job();
+    }
+  };
+
+  return async <T>(fn: () => Promise<T>): Promise<T> => {
+    if (activeCount >= concurrency) {
+      await new Promise<void>((resolve) => {
+        queue.push(resolve);
+      });
+    }
+
+    activeCount++;
+
+    try {
+      return await fn();
+    } finally {
+      next();
+    }
+  };
+}
