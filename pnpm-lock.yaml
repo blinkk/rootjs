@@ -373,6 +373,9 @@ importers:
       '@hello-pangea/dnd':
         specifier: 18.0.1
         version: 18.0.1(@preact/compat@18.3.1)(@preact/compat@18.3.1)
+      '@modelcontextprotocol/sdk':
+        specifier: 1.17.5
+        version: 1.17.5
       body-parser:
         specifier: 1.20.2
         version: 1.20.2
