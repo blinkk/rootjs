@@ -127,6 +127,8 @@
 }
 
 .LexicalEditor__customBlock__header__title {
+  align-items: center;
+  display: flex;
   font-weight: 600;
 }
 
