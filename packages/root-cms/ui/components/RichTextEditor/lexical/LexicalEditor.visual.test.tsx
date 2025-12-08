@@ -1,0 +1,123 @@
+import './LexicalEditor.css';
+import '../../../styles/global.css';
+import '../../../styles/theme.css';
+
+import {MantineProvider} from '@mantine/core';
+import {render} from '@testing-library/preact';
+import {describe, it, vi, expect} from 'vitest';
+import {page} from 'vitest/browser';
+import {RichTextData} from '../../../../shared/richtext.js';
+import {LexicalEditor} from './LexicalEditor.js';
+
+// Mock URL.createObjectURL to return a data URI.
+const CARROT_ICON_DATA_URI =
+  'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KICA8cGF0aCBkPSJNMTAwIDE4MCBMNDAgNDAgTDE2MCA0MCBaIiBmaWxsPSJvcmFuZ2UiIC8+CiAgPHJlY3QgeD0iOTAiIHk9IjEwIiB3aWR0aD0iMjAiIGhlaWdodD0iMzAiIGZpbGw9ImdyZWVuIiAvPgo8L3N2Zz4=';
+
+window.URL.createObjectURL = vi.fn(() => CARROT_ICON_DATA_URI);
+window.URL.revokeObjectURL = vi.fn();
+
+// Mock the context.
+window.__ROOT_CTX = {
+  experiments: {},
+  rootConfig: {
+    projectId: 'test-project',
+  },
+} as any;
+
+const RICH_TEXT_DATA: RichTextData = {
+  version: '1',
+  time: 1234567890,
+  blocks: [
+    {
+      type: 'heading',
+      data: {
+        level: 1,
+        text: 'Hello World',
+      },
+    },
+    {
+      type: 'paragraph',
+      data: {
+        text: 'This is a paragraph with <b>bold</b> and <i>italic</i> text.',
+      },
+    },
+    {
+      type: 'unorderedList',
+      data: {
+        style: 'unordered',
+        items: [{content: 'Unordered Item 1'}, {content: 'Unordered Item 2'}],
+      },
+    },
+    {
+      type: 'orderedList',
+      data: {
+        style: 'ordered',
+        items: [{content: 'Ordered Item 1'}, {content: 'Ordered Item 2'}],
+      },
+    },
+    {
+      type: 'quote',
+      data: {
+        text: 'This is a quote block.',
+      },
+    },
+    {
+      type: 'image',
+      data: {
+        file: {
+          src: CARROT_ICON_DATA_URI,
+          width: 200,
+          height: 200,
+          alt: 'Example Image',
+        },
+      },
+    },
+    {
+      type: 'table',
+      data: {
+        rows: [
+          {
+            cells: [
+              {
+                type: 'header',
+                blocks: [{type: 'paragraph', data: {text: 'Header 1'}}],
+              },
+              {
+                type: 'header',
+                blocks: [{type: 'paragraph', data: {text: 'Header 2'}}],
+              },
+            ],
+          },
+          {
+            cells: [
+              {
+                type: 'data',
+                blocks: [{type: 'paragraph', data: {text: 'Cell 1'}}],
+              },
+              {
+                type: 'data',
+                blocks: [{type: 'paragraph', data: {text: 'Cell 2'}}],
+              },
+            ],
+          },
+        ],
+      },
+    },
+  ],
+};
+
+describe('LexicalEditor', () => {
+  it('renders with various blocks', async () => {
+    page.viewport(800, 1000);
+    render(
+      <MantineProvider>
+        <div style={{minHeight: '500px', padding: '20px'}}>
+          <LexicalEditor value={RICH_TEXT_DATA} autosize />
+        </div>
+      </MantineProvider>
+    );
+    await expect
+      .element(document.body)
+      .toMatchScreenshot('lexical-editor-blocks.png');
+  });
+});
