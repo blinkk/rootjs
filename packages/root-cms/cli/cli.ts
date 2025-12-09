@@ -44,14 +44,19 @@ class CliRunner {
       .description(
         'exports firestore data to a local directory\n\n' +
           'By default, all content in the Firestore database associated with the CMS will be exported.\n\n' +
+          'A unique new directory will be created for each export.\n\n' +
+          'File naming conventions:\n' +
+          "- Documents that act as containers for subcollections are exported as directories containing a `__data.json` file for the document's own data.\n" +
+          '- Standalone documents are exported as JSON files named after their document ID (e.g. `page.json`).\n' +
+          '- For collections like ActionLogs and Translations, the document ID (often a hash) is used as the filename.\n\n' +
+          'Usage examples:\n' +
+          '  $ root-cms export\n' +
+          '  $ root-cms export --filter "Collections/Pages/**"\n' +
+          '  $ root-cms export --filter "Collections/Pages/**,!Collections/Pages/Draft/**"\n\n' +
           'Example output:\n' +
           '  <output>/Collections/Pages/Draft/...\n' +
           '  <output>/Collections/Pages/Published/...\n' +
-          '  <output>/ActionLogs/...\n\n' +
-          'File naming conventions:\n' +
-          "- Documents that act as containers for subcollections are exported as a directory containing a `__data.json` file for the document's own data.\n" +
-          '- Standalone documents are exported as JSON files named after their document ID (e.g. `page.json`).\n' +
-          '- For collections like ActionLogs and Translations, the document ID (often a hash) is used as the filename.'
+          '  <output>/ActionLogs/...'
       )
       .option(
         '--filter <pattern>',
@@ -66,7 +71,12 @@ class CliRunner {
       .action(exportData);
     program
       .command('import')
-      .description('imports firestore data from a local directory')
+      .description(
+        'imports firestore data from a local directory\n\n' +
+          'Usage examples:\n' +
+          '  $ root-cms import --dir export_project_site_20251209t1305\n' +
+          '  $ root-cms import --dir export_project_site_20251209t1305 --filter "Collections/Pages/**"'
+      )
       .option('--dir <directory>', 'directory to import from (required)')
       .option(
         '--filter <pattern>',
