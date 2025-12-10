@@ -1,5 +1,14 @@
 # @blinkk/root-cms
 
+## 2.4.5
+
+### Patch Changes
+
+- 2a81c859: fix: lexical embedded blocks that use arrays
+- ae8edd61: feat: add paste support for images in lexical editor
+- fb58298f: feat: add ability to specify timezone on datetimefield
+  - @blinkk/root@2.4.5
+
 ## 2.4.4
 
 ### Patch Changes
