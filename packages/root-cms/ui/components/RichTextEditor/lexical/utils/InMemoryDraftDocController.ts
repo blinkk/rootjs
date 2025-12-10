@@ -1,9 +1,11 @@
+import {DraftDocEventType} from '../../../../hooks/useDraftDoc.js';
+import {EventListener} from '../../../../utils/events.js';
 import {cloneData} from '../../../../utils/objects.js';
 import {getNestedValue} from '../../../../utils/objects.js';
 
 export type Listener = (value: any) => void;
 
-export class InMemoryDraftDocController {
+export class InMemoryDraftDocController extends EventListener {
   private data: Record<string, any>;
   private listeners = new Map<string, Set<Listener>>();
 
@@ -12,6 +14,7 @@ export class InMemoryDraftDocController {
   slug = 'custom-block';
 
   constructor(initialValue: Record<string, any>, rootKey = 'block') {
+    super();
     this.data = {[rootKey]: cloneData(initialValue)};
   }
 
@@ -56,6 +59,7 @@ export class InMemoryDraftDocController {
   }
 
   private notify(key: string) {
+    this.dispatch(DraftDocEventType.VALUE_CHANGE, key, this.getValue(key));
     for (const target of getKeyHierarchy(key)) {
       const listeners = this.listeners.get(target);
       if (!listeners) {

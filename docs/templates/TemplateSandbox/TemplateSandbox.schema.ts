@@ -36,5 +36,39 @@ export default schema.define({
       id: 'date',
       label: 'DateField',
     }),
+    schema.richtext({
+      id: 'richtext',
+      label: 'RichTextField',
+      blockComponents: [
+        schema.define({
+          name: 'PeopleListBlock',
+          label: 'People List Block',
+          fields: [
+            schema.array({
+              id: 'people',
+              label: 'People',
+              of: schema.object({
+                fields: [
+                  schema.object({
+                    id: 'person',
+                    label: 'Person',
+                    fields: [
+                      schema.string({
+                        id: 'name',
+                        label: 'Name',
+                      }),
+                      schema.image({
+                        id: 'photo',
+                        label: 'Photo',
+                      }),
+                    ],
+                  }),
+                ],
+              }),
+            }),
+          ],
+        }),
+      ],
+    }),
   ],
 });
