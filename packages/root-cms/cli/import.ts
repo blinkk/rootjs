@@ -1,0 +1,405 @@
+import fs from 'node:fs';
+import path from 'node:path';
+import * as readline from 'node:readline';
+import {loadRootConfig} from '@blinkk/root/node';
+import cliProgress from 'cli-progress';
+import {Timestamp, GeoPoint} from 'firebase-admin/firestore';
+import {getCmsPlugin} from '../core/client.js';
+import {getPathStatus, parseFilters, pLimit, LimitFunction} from './utils.js';
+
+export interface ImportOptions {
+  /** Directory to import from. */
+  dir?: string;
+  /** Filter to specific content. */
+  filter?: string;
+  /** Site id to import to (overrides root config). */
+  site?: string;
+  /** Firestore database id. */
+  database?: string;
+  /** GCP project id (overrides root config). */
+  project?: string;
+}
+
+interface ImportSummary {
+  collectionType: string;
+  count: number;
+  details?: string;
+}
+
+export async function importData(options: ImportOptions) {
+  if (!options.dir) {
+    throw new Error(
+      'Error: --dir flag is required. Usage: root-cms import --dir=export_siteId_timestamp'
+    );
+  }
+
+  const importDir = options.dir;
+
+  if (!fs.existsSync(importDir)) {
+    throw new Error(`Error: Directory not found: ${importDir}`);
+  }
+
+  const rootDir = process.cwd();
+  const rootConfig = await loadRootConfig(rootDir, {command: 'root-cms'});
+  const cmsPlugin = getCmsPlugin(rootConfig);
+  const cmsPluginOptions = cmsPlugin.getConfig();
+  const siteId = options.site || cmsPluginOptions.id || 'default';
+  const databaseId = options.database || '(default)';
+  const gcpProjectId =
+    options.project || cmsPluginOptions.firebaseConfig?.projectId || 'unknown';
+  const db = cmsPlugin.getFirestore({databaseId});
+
+  // Get available collections from the import directory.
+  const entries = fs.readdirSync(importDir, {withFileTypes: true});
+  const availableCollections = entries
+    .filter((entry) => entry.isDirectory())
+    .map((entry) => entry.name);
+
+  // Parse filter.
+  const {includes, excludes} = parseFilters(options.filter);
+  const collectionsToImport = availableCollections.filter((id) => {
+    const status = getPathStatus(id, includes, excludes);
+    return status !== 'SKIP' && status !== 'EXCLUDE';
+  });
+
+  if (collectionsToImport.length === 0) {
+    throw new Error(
+      `No valid collection types found matching filter. Available types: ${availableCollections.join(
+        ', '
+      )}`
+    );
+  }
+
+  // Scan the directory and count documents.
+  const summary: ImportSummary[] = [];
+
+  for (const collectionType of collectionsToImport) {
+    const collectionDir = path.join(importDir, collectionType);
+    if (fs.existsSync(collectionDir)) {
+      const count = countJsonFilesRecursive(
+        collectionDir,
+        collectionType,
+        includes,
+        excludes
+      );
+      if (count > 0) {
+        summary.push({
+          collectionType,
+          count,
+        });
+      }
+    }
+  }
+
+  if (summary.length === 0) {
+    console.log('No data found to import.');
+    return;
+  }
+
+  // Display summary and ask for confirmation.
+  const tableData: Record<string, string> = {};
+
+  tableData['Import Directory'] = importDir;
+  tableData['GCP Project'] = gcpProjectId;
+  tableData['Database'] = `${databaseId}/Projects/${siteId}`;
+  tableData['Site'] = siteId;
+
+  for (const item of summary) {
+    tableData[item.collectionType] = `${item.count} documents`;
+  }
+
+  console.log('');
+  console.table(tableData);
+  console.log('');
+
+  const proceed = await promptYesNo('Proceed with import? (yes/no): ');
+
+  if (!proceed) {
+    console.log('Import cancelled.');
+    return;
+  }
+
+  console.log('\nStarting import...\n');
+
+  // Perform the import.
+  const limit = pLimit(10);
+  for (const item of summary) {
+    const collectionPath = `Projects/${siteId}/${item.collectionType}`;
+    const collectionDir = path.join(importDir, item.collectionType);
+    await importCollection(
+      db,
+      collectionPath,
+      collectionDir,
+      item.collectionType,
+      item.count,
+      item.collectionType,
+      includes,
+      excludes,
+      limit
+    );
+  }
+
+  // Import project document if it exists.
+  const projectFilePath = path.join(importDir, '__data.json');
+  if (fs.existsSync(projectFilePath)) {
+    console.log('Importing project document...');
+    const rawData = JSON.parse(fs.readFileSync(projectFilePath, 'utf-8'));
+    const projectData = convertFirestoreTypes(rawData, db);
+    const projectPath = `Projects/${siteId}`;
+    await db.doc(projectPath).set(projectData, {merge: true});
+    console.log('  - Project document updated');
+  }
+
+  console.log('\n✅ Import complete!');
+}
+
+/**
+ * Recursively counts .json files in a directory.
+ */
+function countJsonFilesRecursive(
+  dir: string,
+  relativePath: string,
+  includes: string[],
+  excludes: string[]
+): number {
+  let count = 0;
+  const entries = fs.readdirSync(dir, {withFileTypes: true});
+  for (const entry of entries) {
+    if (entry.isDirectory()) {
+      const subRelativePath = `${relativePath}/${entry.name}`;
+      const status = getPathStatus(subRelativePath, includes, excludes);
+      if (status !== 'SKIP' && status !== 'EXCLUDE') {
+        count += countJsonFilesRecursive(
+          path.join(dir, entry.name),
+          subRelativePath,
+          includes,
+          excludes
+        );
+      }
+    } else if (entry.isFile() && entry.name.endsWith('.json')) {
+      if (entry.name === '__data.json') {
+        const status = getPathStatus(relativePath, includes, excludes);
+        if (status === 'INCLUDE') {
+          count++;
+        }
+        continue;
+      }
+      const docId = path.basename(entry.name, '.json');
+      const docRelativePath = `${relativePath}/${docId}`;
+      const status = getPathStatus(docRelativePath, includes, excludes);
+      if (status !== 'SKIP' && status !== 'EXCLUDE') {
+        count++;
+      }
+    }
+  }
+  return count;
+}
+
+/**
+ * Generic function to import a collection and all its subcollections.
+ */
+async function importCollection(
+  db: any,
+  collectionPath: string,
+  inputDir: string,
+  displayName: string,
+  totalDocs: number,
+  relativePath: string,
+  includes: string[],
+  excludes: string[],
+  limit: LimitFunction
+) {
+  console.log(`Importing ${displayName}...`);
+
+  const progressBar = new cliProgress.SingleBar({
+    format: `Importing ${displayName} [{bar}] {percentage}% | {value}/{total}`,
+    barCompleteChar: '\u2588',
+    barIncompleteChar: '\u2591',
+    hideCursor: true,
+  });
+  progressBar.start(totalDocs, 0);
+
+  await importCollectionRecursive(
+    db,
+    collectionPath,
+    inputDir,
+    progressBar,
+    relativePath,
+    includes,
+    excludes,
+    limit
+  );
+
+  progressBar.stop();
+  console.log(`  - ${displayName}: ${totalDocs} documents`);
+}
+
+/**
+ * Recursively converts timestamp objects to Firestore Timestamps.
+ * Firestore timestamps are exported as {_seconds: number, _nanoseconds: number}.
+ * Also converts GeoPoints and DocumentReferences.
+ */
+function convertFirestoreTypes(obj: any, db: any): any {
+  if (obj === null || obj === undefined) {
+    return obj;
+  }
+
+  // Check if this object is a timestamp.
+  if (
+    typeof obj === 'object' &&
+    '_seconds' in obj &&
+    '_nanoseconds' in obj &&
+    Object.keys(obj).length === 2
+  ) {
+    return new Timestamp(obj._seconds, obj._nanoseconds);
+  }
+
+  // Check if this object is a GeoPoint.
+  if (
+    typeof obj === 'object' &&
+    '_latitude' in obj &&
+    '_longitude' in obj &&
+    Object.keys(obj).length === 2
+  ) {
+    return new GeoPoint(obj._latitude, obj._longitude);
+  }
+
+  // Check if this object is a DocumentReference.
+  if (
+    typeof obj === 'object' &&
+    '_referencePath' in obj &&
+    Object.keys(obj).length === 1
+  ) {
+    return db.doc(obj._referencePath);
+  }
+
+  // Recursively process arrays.
+  if (Array.isArray(obj)) {
+    return obj.map((item) => convertFirestoreTypes(item, db));
+  }
+
+  // Recursively process objects.
+  if (typeof obj === 'object') {
+    const converted: any = {};
+    for (const [key, value] of Object.entries(obj)) {
+      converted[key] = convertFirestoreTypes(value, db);
+    }
+    return converted;
+  }
+
+  return obj;
+}
+
+/**
+ * Recursively imports documents and subcollections from a directory.
+ */
+async function importCollectionRecursive(
+  db: any,
+  collectionPath: string,
+  inputDir: string,
+
+  progressBar?: cliProgress.SingleBar,
+  relativePath?: string,
+  includes?: string[],
+  excludes?: string[],
+  limit?: LimitFunction
+) {
+  if (!fs.existsSync(inputDir)) {
+    return;
+  }
+
+  const entries = fs.readdirSync(inputDir, {withFileTypes: true});
+
+  await Promise.all(
+    entries.map(async (entry) => {
+      if (entry.isFile() && entry.name.endsWith('.json')) {
+        // Import document.
+        const rawData = JSON.parse(
+          fs.readFileSync(path.join(inputDir, entry.name), 'utf-8')
+        );
+        // Convert timestamps before importing.
+        const docData = convertFirestoreTypes(rawData, db);
+
+        if (entry.name === '__data.json') {
+          // Handle __data.json (data for the current container document).
+          // Only import if the container itself is explicitly included (not just traversed).
+          const status =
+            includes && excludes
+              ? getPathStatus(relativePath || '', includes, excludes)
+              : 'INCLUDE';
+          if (status === 'INCLUDE') {
+            if (limit) {
+              await limit(() =>
+                db.doc(collectionPath).set(docData, {merge: true})
+              );
+            } else {
+              await db.doc(collectionPath).set(docData, {merge: true});
+            }
+          }
+        } else {
+          // Standard document file (DocId.json).
+          const docId = path.basename(entry.name, '.json');
+          const docRelativePath = relativePath
+            ? `${relativePath}/${docId}`
+            : docId;
+          const status =
+            includes && excludes
+              ? getPathStatus(docRelativePath, includes, excludes)
+              : 'INCLUDE';
+
+          if (status !== 'SKIP' && status !== 'EXCLUDE') {
+            if (limit) {
+              await limit(() =>
+                db.doc(`${collectionPath}/${docId}`).set(docData)
+              );
+            } else {
+              await db.doc(`${collectionPath}/${docId}`).set(docData);
+            }
+            if (progressBar) {
+              progressBar.increment();
+            }
+          }
+        }
+      } else if (entry.isDirectory()) {
+        // Recursively import subcollection.
+        const subCollectionPath = `${collectionPath}/${entry.name}`;
+        const subCollectionDir = path.join(inputDir, entry.name);
+        const subRelativePath = relativePath
+          ? `${relativePath}/${entry.name}`
+          : entry.name;
+        const status =
+          includes && excludes
+            ? getPathStatus(subRelativePath, includes, excludes)
+            : 'INCLUDE';
+
+        if (status !== 'SKIP' && status !== 'EXCLUDE') {
+          await importCollectionRecursive(
+            db,
+            subCollectionPath,
+            subCollectionDir,
+            progressBar,
+            subRelativePath,
+            includes,
+            excludes,
+            limit
+          );
+        }
+      }
+    })
+  );
+}
+
+async function promptYesNo(question: string): Promise<boolean> {
+  const rl = readline.createInterface({
+    input: process.stdin,
+    output: process.stdout,
+  });
+
+  return new Promise((resolve) => {
+    rl.question(question, (answer) => {
+      rl.close();
+      const normalized = answer.trim().toLowerCase();
+      resolve(normalized === 'yes' || normalized === 'y');
+    });
+  });
+}
