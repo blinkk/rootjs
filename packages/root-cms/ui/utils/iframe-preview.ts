@@ -25,6 +25,6 @@ function getIframePreviewElement(): HTMLIFrameElement | null {
 
 /** Returns whether the channel to the preview should be enabled. */
 function testEnableChannelToPreview() {
-  const previewOptions = window.__ROOT_CTX.preview;
+  const previewOptions = window.__ROOT_CTX.preview || {};
   return [true, 'to-preview'].includes(previewOptions.channel);
 }

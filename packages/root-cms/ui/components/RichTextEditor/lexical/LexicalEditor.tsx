@@ -178,6 +178,10 @@ const INSERT_HTML_BLOCK = schema.define({
       label: 'HTML',
       help: 'HTML code to embed. Please use caution when inserting HTML.',
       variant: 'textarea',
+      autosize: true,
+      // Allow the textarea to grow without limit. Useful for huge blocks of HTML.
+      // In this scenario, the modal itself scrolls (if needed).
+      maxRows: 50,
     }),
   ],
 });
