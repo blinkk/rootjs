@@ -1,0 +1,19 @@
+.DocIdBadge {
+  word-break: break-word;
+  margin-top: 8px;
+}
+
+.DocIdBadge code {
+  background: #efefef;
+  padding: 4px 8px;
+  border-radius: 2px;
+  white-space: nowrap;
+  font-family: var(--font-family-mono);
+  font-weight: 600;
+  font-size: 12px;
+  line-height: 1.5;
+  display: inline-flex;
+  margin: 0;
+  word-break: break-all;
+  white-space: pre-wrap;
+}

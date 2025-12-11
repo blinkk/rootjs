@@ -8,6 +8,7 @@ import {useModalTheme} from '../../hooks/useModalTheme.js';
 import {cmsLockPublishing, cmsUnlockPublishing} from '../../utils/doc.js';
 import {notifyErrors} from '../../utils/notifications.js';
 import {getLocalISOString} from '../../utils/time.js';
+import {DocIdBadge} from '../DocIdBadge/DocIdBadge.js';
 import {Text} from '../Text/Text.js';
 
 import './LockPublishingModal.css';
@@ -180,9 +181,10 @@ LockPublishingModal.Unlock = (
   return (
     <div className="LockPublishingModal LockPublishingModal--unlock">
       <Text className="LockPublishingModal__body">
-        Are you sure you want to unlock publishing for {props.docId}? This will
-        re-enable content editors to publish the doc.
+        Are you sure you want to unlock publishing for the following doc? This
+        will re-enable content editors to publish the doc.
       </Text>
+      <DocIdBadge docId={props.docId} />
       <div className="LockPublishingModal__buttons">
         <Button
           variant="outline"

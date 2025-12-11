@@ -23,9 +23,12 @@ import {
   testPublishingLocked,
 } from '../../utils/doc.js';
 import {useCopyDocModal} from '../CopyDocModal/CopyDocModal.js';
+import {DocIdBadge} from '../DocIdBadge/DocIdBadge.js';
 import {useLockPublishingModal} from '../LockPublishingModal/LockPublishingModal.js';
 import {Text} from '../Text/Text.js';
 import {useVersionHistoryModal} from '../VersionHistoryModal/VersionHistoryModal.js';
+
+import './DocActionsMenu.css';
 
 export interface DocActionEvent {
   action:
@@ -62,11 +65,18 @@ export function DocActionsMenu(props: DocActionsMenuProps) {
       ...modalTheme,
       title: `Discard draft edits for ${docId}`,
       children: (
-        <Text size="body-sm" weight="semi-bold">
-          Are you sure you want to discard draft changes for{' '}
-          <code>{docId}</code>? The doc data will revert to the published
-          version. There is no undo.
-        </Text>
+        <>
+          <Text
+            size="body-sm"
+            weight="semi-bold"
+            className="DocActionsMenu__confirmText"
+          >
+            Are you sure you want to discard draft changes for the following
+            doc? The doc data will revert to the published version. There is no
+            undo.
+          </Text>
+          <DocIdBadge docId={docId} />
+        </>
       ),
       labels: {confirm: 'Discard draft edits', cancel: 'Cancel'},
       cancelProps: {size: 'xs'},
@@ -105,10 +115,17 @@ export function DocActionsMenu(props: DocActionsMenuProps) {
       ...modalTheme,
       title: `Unpublish ${docId}`,
       children: (
-        <Text size="body-sm" weight="semi-bold">
-          Are you sure you want to unpublish <code>{docId}</code>? There is no
-          undo.
-        </Text>
+        <>
+          <Text
+            size="body-sm"
+            weight="semi-bold"
+            className="DocActionsMenu__confirmText"
+          >
+            Are you sure you want to unpublish the following doc? There is no
+            undo.
+          </Text>
+          <DocIdBadge docId={docId} />
+        </>
       ),
       labels: {confirm: 'Unpublish', cancel: 'Cancel'},
       cancelProps: {size: 'xs'},
@@ -153,9 +170,16 @@ export function DocActionsMenu(props: DocActionsMenuProps) {
       ...modalTheme,
       title: `Unschedule ${docId}`,
       children: (
-        <Text size="body-sm" weight="semi-bold">
-          Are you sure you want to unschedule <code>{docId}</code>?
-        </Text>
+        <>
+          <Text
+            size="body-sm"
+            weight="semi-bold"
+            className="DocActionsMenu__confirmText"
+          >
+            Are you sure you want to unschedule the following doc?
+          </Text>
+          <DocIdBadge docId={docId} />
+        </>
       ),
       labels: {confirm: 'Unschedule', cancel: 'Cancel'},
       cancelProps: {size: 'xs'},
@@ -194,10 +218,16 @@ export function DocActionsMenu(props: DocActionsMenuProps) {
       ...modalTheme,
       title: 'Delete doc',
       children: (
-        <Text size="body-sm" weight="semi-bold">
-          Are you sure you want to delete <code>{docId}</code>? There is no
-          undo.
-        </Text>
+        <>
+          <Text
+            size="body-sm"
+            weight="semi-bold"
+            className="DocActionsMenu__confirmText"
+          >
+            Are you sure you want to delete the following doc? There is no undo.
+          </Text>
+          <DocIdBadge docId={docId} />
+        </>
       ),
       labels: {confirm: 'Delete', cancel: 'Cancel'},
       cancelProps: {size: 'xs'},
