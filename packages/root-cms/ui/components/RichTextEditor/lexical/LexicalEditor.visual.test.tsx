@@ -3,11 +3,30 @@ import '../../../styles/global.css';
 import '../../../styles/theme.css';
 
 import {MantineProvider} from '@mantine/core';
-import {render} from '@testing-library/preact';
+import {render, screen} from '@testing-library/preact';
+import userEvent from '@testing-library/user-event';
 import {describe, it, vi, expect} from 'vitest';
 import {page} from 'vitest/browser';
 import {RichTextData} from '../../../../shared/richtext.js';
+import {DeeplinkProvider} from '../../../hooks/useDeeplink.js';
 import {LexicalEditor} from './LexicalEditor.js';
+
+vi.mock('../../../hooks/useDeeplink.js', async () => {
+  const actual = await vi.importActual<any>('../../../hooks/useDeeplink.js');
+  return {
+    ...actual,
+    useDeeplink: () => ({
+      value: '',
+      setValue: vi.fn(),
+    }),
+  };
+});
+
+vi.mock('../../EditTranslationsModal/EditTranslationsModal.js', () => ({
+  useEditTranslationsModal: () => ({
+    open: vi.fn(),
+  }),
+}));
 
 // Mock URL.createObjectURL to return a data URI.
 const CARROT_ICON_DATA_URI =
@@ -119,5 +138,44 @@ describe('LexicalEditor', () => {
     await expect
       .element(document.body)
       .toMatchScreenshot('lexical-editor-blocks.png');
+  });
+
+  it('renders html block', async () => {
+    page.viewport(800, 1000);
+    const user = userEvent.setup();
+    render(
+      <MantineProvider>
+        <DeeplinkProvider>
+          <div style={{minHeight: '500px', padding: '20px'}}>
+            <LexicalEditor />
+          </div>
+        </DeeplinkProvider>
+      </MantineProvider>
+    );
+
+    await user.click(screen.getAllByRole('button', {name: 'Components'})[0]);
+    await user.click(screen.getByRole('menuitem', {name: 'HTML Code'}));
+
+    const textarea = screen.getAllByRole('textbox')[0];
+    await user.click(textarea);
+
+    // Use paste because `user.type` is slow for tons of content.
+    await user.paste(
+      Array.from(
+        {length: 20},
+        () =>
+          '<p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.</p>'
+      ).join('\n')
+    );
+
+    await expect
+      .element(document.body)
+      .toMatchScreenshot('lexical-editor-html-block-modal.png');
+
+    await user.click(screen.getByRole('button', {name: 'Insert block'}));
+
+    await expect
+      .element(document.body)
+      .toMatchScreenshot('lexical-editor-html-block-inserted.png');
   });
 });

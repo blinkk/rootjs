@@ -365,4 +365,8 @@ export interface TemplateSandboxFields {
   datetimeWithTimezone?: number;
   /** DateField */
   date?: string;
+  /** StringField */
+  string?: string;
+  /** RichTextField */
+  richtext?: RootCMSRichText;
 }

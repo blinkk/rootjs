@@ -36,9 +36,16 @@ export default schema.define({
       id: 'date',
       label: 'DateField',
     }),
+    schema.string({
+      id: 'string',
+      label: 'StringField',
+      autosize: true,
+      variant: 'textarea',
+    }),
     schema.richtext({
       id: 'richtext',
       label: 'RichTextField',
+      autosize: true,
       blockComponents: [
         schema.define({
           name: 'PeopleListBlock',

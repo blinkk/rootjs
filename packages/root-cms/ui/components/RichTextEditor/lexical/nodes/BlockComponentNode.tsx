@@ -113,7 +113,7 @@ function BlockComponent(props: BlockComponentProps) {
       </div>
       {previewImage && testIsImageFile(previewImage) && (
         <div className="LexicalEditor__customBlock__previewImage">
-          <img src={previewImage} />
+          <img src={previewImage} alt="" />
           {props.data.loading && (
             <div className="LexicalEditor__customBlock__previewImage__loading">
               <Loader variant="oval" color="gray" />
@@ -122,7 +122,13 @@ function BlockComponent(props: BlockComponentProps) {
         </div>
       )}
       {previewTitle && (
-        <div className="LexicalEditor__customBlock__preview">
+        <div
+          className={joinClassNames(
+            'LexicalEditor__customBlock__preview',
+            schemaDef?.name === 'html' &&
+              'LexicalEditor__customBlock__preview--html'
+          )}
+        >
           {previewTitle}
         </div>
       )}

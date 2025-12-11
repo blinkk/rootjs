@@ -163,6 +163,10 @@
   overflow: hidden;
 }
 
+.LexicalEditor__customBlock__preview--html {
+  font-family: var(--font-family-mono);
+}
+
 .LexicalEditor__customBlock__actions {
   display: flex;
   justify-content: flex-end;
