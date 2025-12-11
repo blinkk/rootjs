@@ -56,10 +56,26 @@ export function TranslationsTable() {
 
   // URL State.
   const [searchQuery, setSearchQuery] = useStringParam('q', '');
+  const [inputValue, setInputValue] = useState(searchQuery);
   const [selectedLocales, setSelectedLocales] = useArrayParam('locales', []);
   const [selectedTags, setSelectedTags] = useArrayParam('tags', []);
   const [showHashes, setShowHashes] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+
+  // Sync input value when URL param changes (e.g. back/forward navigation).
+  useEffect(() => {
+    setInputValue(searchQuery);
+  }, [searchQuery]);
+
+  // Debounce search query updates.
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (inputValue !== searchQuery) {
+        setSearchQuery(inputValue);
+      }
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [inputValue, searchQuery]);
 
   // Derived state for available tags.
   const availableTags = useMemo(() => {
@@ -386,9 +402,9 @@ export function TranslationsTable() {
         <TextInput
           placeholder="Search translations"
           icon={<IconSearch size={18} />}
-          value={searchQuery}
+          value={inputValue}
           onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-            setSearchQuery(e.currentTarget.value)
+            setInputValue(e.currentTarget.value)
           }
           style={{flex: 1}}
         />
