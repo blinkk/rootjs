@@ -1,10 +1,25 @@
+// @vitest-environment node
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import {describe, it, expect, vi, beforeEach, afterEach} from 'vitest';
 
 // Mock dependencies.
 vi.mock('node:fs');
-vi.mock('node:path');
+vi.mock('node:path', async () => {
+  const {vi} = await import('vitest');
+  const mod = {
+    join: vi.fn(),
+    basename: vi.fn(),
+    resolve: vi.fn(),
+    dirname: vi.fn(),
+    extname: vi.fn(),
+    sep: '/',
+  };
+  return {
+    ...mod,
+    default: mod,
+  };
+});
 vi.mock('node:readline');
 vi.mock('cli-progress');
 vi.mock('@blinkk/root/node', () => ({
