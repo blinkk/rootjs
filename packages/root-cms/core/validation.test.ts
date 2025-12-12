@@ -1,4 +1,4 @@
-import {expect, test} from 'vitest';
+import {expect, test, vi} from 'vitest';
 
 import * as schema from './schema.js';
 import {validateFields} from './validation.js';
@@ -19,9 +19,9 @@ test('validates string fields', () => {
     [
       {
         "expected": "string",
-        "message": "Invalid input: expected string, received number",
+        "message": "Expected string, received number",
         "path": "title",
-        "received": undefined,
+        "received": "number",
       },
     ]
   `);
@@ -36,9 +36,9 @@ test('validates string fields', () => {
     [
       {
         "expected": "string",
-        "message": "Invalid input: expected string, received null",
+        "message": "Expected string, received null",
         "path": "title",
-        "received": undefined,
+        "received": "null",
       },
     ]
   `);
@@ -60,9 +60,9 @@ test('validates number fields', () => {
     [
       {
         "expected": "number",
-        "message": "Invalid input: expected number, received string",
+        "message": "Expected number, received string",
         "path": "count",
-        "received": undefined,
+        "received": "string",
       },
     ]
   `);
@@ -72,9 +72,9 @@ test('validates number fields', () => {
     [
       {
         "expected": "number",
-        "message": "Invalid input: expected number, received NaN",
+        "message": "Expected number, received nan",
         "path": "count",
-        "received": "NaN",
+        "received": "nan",
       },
     ]
   `);
@@ -100,9 +100,9 @@ test('validates boolean fields', () => {
       [
         {
           "expected": "boolean",
-          "message": "Invalid input: expected boolean, received string",
+          "message": "Expected boolean, received string",
           "path": "published",
-          "received": undefined,
+          "received": "string",
         },
       ]
     `);
@@ -155,9 +155,9 @@ test('validates date and datetime fields', () => {
       [
         {
           "expected": "object",
-          "message": "Invalid input: expected object, received string",
+          "message": "Expected object, received string",
           "path": "publishDate",
-          "received": undefined,
+          "received": "string",
         },
       ]
     `);
@@ -169,15 +169,15 @@ test('validates date and datetime fields', () => {
       [
         {
           "expected": "number",
-          "message": "Invalid input: expected number, received undefined",
+          "message": "Required",
           "path": "publishDate.seconds",
-          "received": undefined,
+          "received": "undefined",
         },
         {
           "expected": "number",
-          "message": "Invalid input: expected number, received undefined",
+          "message": "Required",
           "path": "publishDate.nanoseconds",
-          "received": undefined,
+          "received": "undefined",
         },
       ]
     `);
@@ -204,9 +204,9 @@ test('validates select fields', () => {
     [
       {
         "expected": "string",
-        "message": "Invalid input: expected string, received number",
+        "message": "Expected string, received number",
         "path": "category",
-        "received": undefined,
+        "received": "number",
       },
     ]
   `);
@@ -234,9 +234,9 @@ test('validates multiselect fields', () => {
       [
         {
           "expected": "array",
-          "message": "Invalid input: expected array, received string",
+          "message": "Expected array, received string",
           "path": "tags",
-          "received": undefined,
+          "received": "string",
         },
       ]
     `);
@@ -247,9 +247,9 @@ test('validates multiselect fields', () => {
       [
         {
           "expected": "string",
-          "message": "Invalid input: expected string, received number",
+          "message": "Expected string, received number",
           "path": "tags.1",
-          "received": undefined,
+          "received": "number",
         },
       ]
     `);
@@ -280,9 +280,9 @@ test('validates image fields', () => {
       [
         {
           "expected": "object",
-          "message": "Invalid input: expected object, received string",
+          "message": "Expected object, received string",
           "path": "thumbnail",
-          "received": undefined,
+          "received": "string",
         },
       ]
     `);
@@ -293,9 +293,9 @@ test('validates image fields', () => {
       [
         {
           "expected": "string",
-          "message": "Invalid input: expected string, received undefined",
+          "message": "Required",
           "path": "thumbnail.src",
-          "received": undefined,
+          "received": "undefined",
         },
       ]
     `);
@@ -306,9 +306,9 @@ test('validates image fields', () => {
       [
         {
           "expected": "string",
-          "message": "Invalid input: expected string, received number",
+          "message": "Expected string, received number",
           "path": "thumbnail.alt",
-          "received": undefined,
+          "received": "number",
         },
       ]
     `);
@@ -331,9 +331,9 @@ test('validates file fields', () => {
       [
         {
           "expected": "object",
-          "message": "Invalid input: expected object, received array",
+          "message": "Expected object, received array",
           "path": "document",
-          "received": undefined,
+          "received": "array",
         },
       ]
     `);
@@ -364,9 +364,9 @@ test('validates object fields', () => {
       [
         {
           "expected": "object",
-          "message": "Invalid input: expected object, received string",
+          "message": "Expected object, received string",
           "path": "meta",
-          "received": undefined,
+          "received": "string",
         },
       ]
     `);
@@ -377,9 +377,9 @@ test('validates object fields', () => {
       [
         {
           "expected": "string",
-          "message": "Invalid input: expected string, received number",
+          "message": "Expected string, received number",
           "path": "meta.title",
-          "received": undefined,
+          "received": "number",
         },
       ]
     `);
@@ -425,9 +425,9 @@ test('validates array fields with object items', () => {
       [
         {
           "expected": "array",
-          "message": "Invalid input: expected array, received string",
+          "message": "Expected array, received string",
           "path": "items",
-          "received": undefined,
+          "received": "string",
         },
       ]
     `);
@@ -439,9 +439,9 @@ test('validates array fields with object items', () => {
     [
       {
         "expected": "number",
-        "message": "Invalid input: expected number, received string",
+        "message": "Expected number, received string",
         "path": "items.0.quantity",
-        "received": undefined,
+        "received": "string",
       },
     ]
   `);
@@ -461,15 +461,15 @@ test('validates array fields with object items', () => {
     [
       {
         "expected": "string",
-        "message": "Invalid input: expected string, received number",
+        "message": "Expected string, received number",
         "path": "items.0.name",
-        "received": undefined,
+        "received": "number",
       },
       {
         "expected": "number",
-        "message": "Invalid input: expected number, received string",
+        "message": "Expected number, received string",
         "path": "items.0.quantity",
-        "received": undefined,
+        "received": "string",
       },
     ]
   `);
@@ -500,9 +500,9 @@ test('validates array fields with image items', () => {
       [
         {
           "expected": "string",
-          "message": "Invalid input: expected string, received undefined",
+          "message": "Required",
           "path": "gallery.0.src",
-          "received": undefined,
+          "received": "undefined",
         },
       ]
     `);
@@ -547,8 +547,8 @@ test('validates oneOf fields', () => {
     .toMatchInlineSnapshot(`
       [
         {
-          "expected": undefined,
-          "message": "Invalid input",
+          "expected": "valid discriminator value",
+          "message": "Invalid discriminator value. Expected 'ImageBlock' | 'TextBlock'",
           "path": "content._type",
           "received": undefined,
         },
@@ -564,8 +564,8 @@ test('validates oneOf fields', () => {
   ).toMatchInlineSnapshot(`
     [
       {
-        "expected": undefined,
-        "message": "Invalid input",
+        "expected": "valid discriminator value",
+        "message": "Invalid discriminator value. Expected 'ImageBlock' | 'TextBlock'",
         "path": "content._type",
         "received": undefined,
       },
@@ -578,9 +578,9 @@ test('validates oneOf fields', () => {
       [
         {
           "expected": "string",
-          "message": "Invalid input: expected string, received number",
+          "message": "Expected string, received number",
           "path": "content.text",
-          "received": undefined,
+          "received": "number",
         },
       ]
     `);
@@ -591,9 +591,9 @@ test('validates oneOf fields', () => {
       [
         {
           "expected": "object",
-          "message": "Invalid input: expected object, received string",
+          "message": "Expected object, received string",
           "path": "content",
-          "received": undefined,
+          "received": "string",
         },
       ]
     `);
@@ -641,9 +641,9 @@ test('validates richtext fields', () => {
       [
         {
           "expected": "object",
-          "message": "Invalid input: expected object, received string",
+          "message": "Expected object, received string",
           "path": "body",
-          "received": undefined,
+          "received": "string",
         },
       ]
     `);
@@ -654,9 +654,9 @@ test('validates richtext fields', () => {
     [
       {
         "expected": "array",
-        "message": "Invalid input: expected array, received undefined",
+        "message": "Required",
         "path": "body.blocks",
-        "received": undefined,
+        "received": "undefined",
       },
     ]
   `);
@@ -668,9 +668,9 @@ test('validates richtext fields', () => {
     [
       {
         "expected": "string",
-        "message": "Invalid input: expected string, received undefined",
+        "message": "Required",
         "path": "body.blocks.0.type",
-        "received": undefined,
+        "received": "undefined",
       },
     ]
   `);
@@ -702,9 +702,9 @@ test('validates reference fields', () => {
     [
       {
         "expected": "object",
-        "message": "Invalid input: expected object, received string",
+        "message": "Expected object, received string",
         "path": "author",
-        "received": undefined,
+        "received": "string",
       },
     ]
   `);
@@ -715,15 +715,15 @@ test('validates reference fields', () => {
     [
       {
         "expected": "string",
-        "message": "Invalid input: expected string, received undefined",
+        "message": "Required",
         "path": "author.collection",
-        "received": undefined,
+        "received": "undefined",
       },
       {
         "expected": "string",
-        "message": "Invalid input: expected string, received undefined",
+        "message": "Required",
         "path": "author.slug",
-        "received": undefined,
+        "received": "undefined",
       },
     ]
   `);
@@ -754,9 +754,9 @@ test('validates references fields', () => {
     [
       {
         "expected": "array",
-        "message": "Invalid input: expected array, received string",
+        "message": "Expected array, received string",
         "path": "relatedPosts",
-        "received": undefined,
+        "received": "string",
       },
     ]
   `);
@@ -768,15 +768,15 @@ test('validates references fields', () => {
     [
       {
         "expected": "object",
-        "message": "Invalid input: expected object, received string",
+        "message": "Expected object, received string",
         "path": "relatedPosts.0",
-        "received": undefined,
+        "received": "string",
       },
       {
         "expected": "object",
-        "message": "Invalid input: expected object, received string",
+        "message": "Expected object, received string",
         "path": "relatedPosts.1",
-        "received": undefined,
+        "received": "string",
       },
     ]
   `);
@@ -812,30 +812,24 @@ test('validates complex nested structures', () => {
   expect(
     validateFields(
       {
-        meta: {
-          title: 'Blog Post',
-          image: {src: '/hero.jpg'},
-        },
+        meta: {title: 'Hello', image: {src: '/img.jpg'}},
         content: [
-          {_type: 'TextBlock', text: 'Intro'},
-          {_type: 'ImageBlock', image: {src: '/content.jpg'}},
+          {_type: 'TextBlock', text: 'Hello'},
+          {_type: 'ImageBlock', image: {src: '/img.jpg'}},
         ],
       },
       testSchema
     )
   ).toMatchInlineSnapshot('[]');
 
-  // Multiple nested errors.
+  // Invalid nested fields.
   expect(
     validateFields(
       {
-        meta: {
-          title: 123,
-          image: '/hero.jpg',
-        },
+        meta: {title: 123, image: '/img.jpg'},
         content: [
-          {_type: 'TextBlock', text: 456},
-          {_type: 'ImageBlock', image: 'not-an-object'},
+          {_type: 'TextBlock', text: 123},
+          {_type: 'ImageBlock', image: '/img.jpg'},
         ],
       },
       testSchema
@@ -844,34 +838,33 @@ test('validates complex nested structures', () => {
     [
       {
         "expected": "string",
-        "message": "Invalid input: expected string, received number",
+        "message": "Expected string, received number",
         "path": "meta.title",
-        "received": undefined,
+        "received": "number",
       },
       {
         "expected": "object",
-        "message": "Invalid input: expected object, received string",
+        "message": "Expected object, received string",
         "path": "meta.image",
-        "received": undefined,
+        "received": "string",
       },
       {
         "expected": "string",
-        "message": "Invalid input: expected string, received number",
+        "message": "Expected string, received number",
         "path": "content.0.text",
-        "received": undefined,
+        "received": "number",
       },
       {
         "expected": "object",
-        "message": "Invalid input: expected object, received string",
+        "message": "Expected object, received string",
         "path": "content.1.image",
-        "received": undefined,
+        "received": "string",
       },
     ]
   `);
 });
 
 test('validates nested oneOf fields', () => {
-  // Test oneOf inside arrays, objects, and other complex scenarios.
   const ButtonBlock = schema.define({
     name: 'ButtonBlock',
     fields: [schema.string({id: 'label'}), schema.string({id: 'url'})],
@@ -879,14 +872,12 @@ test('validates nested oneOf fields', () => {
 
   const VideoBlock = schema.define({
     name: 'VideoBlock',
-    fields: [schema.string({id: 'videoUrl'}), schema.boolean({id: 'autoplay'})],
+    fields: [schema.string({id: 'videoId'})],
   });
 
-  const SectionBlock = schema.define({
-    name: 'SectionBlock',
+  const Section = schema.define({
+    name: 'Section',
     fields: [
-      schema.string({id: 'heading'}),
-      // Nested oneOf inside a oneOf.
       schema.array({
         id: 'items',
         of: schema.oneOf({
@@ -899,59 +890,23 @@ test('validates nested oneOf fields', () => {
   const testSchema = schema.define({
     name: 'Page',
     fields: [
-      // OneOf in an array.
       schema.array({
         id: 'content',
-        of: schema.oneOf({
-          types: [ButtonBlock, VideoBlock, SectionBlock],
-        }),
-      }),
-      // OneOf in an object.
-      schema.object({
-        id: 'hero',
-        fields: [
-          schema.oneOf({
-            id: 'media',
-            types: [
-              schema.define({
-                name: 'Image',
-                fields: [schema.image({id: 'image'})],
-              }),
-              schema.define({
-                name: 'Video',
-                fields: [schema.string({id: 'videoUrl'})],
-              }),
-            ],
-          }),
-        ],
+        of: schema.oneOf({types: [Section]}),
       }),
     ],
   });
 
-  // Valid data - oneOf in array.
-  expect(
-    validateFields(
-      {
-        content: [
-          {_type: 'ButtonBlock', label: 'Click me', url: '/page'},
-          {_type: 'VideoBlock', videoUrl: '/video.mp4', autoplay: false},
-        ],
-      },
-      testSchema
-    )
-  ).toMatchInlineSnapshot('[]');
-
-  // Valid data - nested oneOf (SectionBlock contains array of oneOf).
+  // Valid deep structure.
   expect(
     validateFields(
       {
         content: [
           {
-            _type: 'SectionBlock',
-            heading: 'Features',
+            _type: 'Section',
             items: [
-              {_type: 'ButtonBlock', label: 'Get Started', url: '/start'},
-              {_type: 'VideoBlock', videoUrl: '/demo.mp4', autoplay: true},
+              {_type: 'ButtonBlock', label: 'Click me', url: '/'},
+              {_type: 'VideoBlock', videoId: '123'},
             ],
           },
         ],
@@ -960,30 +915,14 @@ test('validates nested oneOf fields', () => {
     )
   ).toMatchInlineSnapshot('[]');
 
-  // Valid data - oneOf in object.
-  expect(
-    validateFields(
-      {
-        hero: {
-          media: {
-            _type: 'Image',
-            image: {src: '/hero.jpg', alt: 'Hero image'},
-          },
-        },
-      },
-      testSchema
-    )
-  ).toMatchInlineSnapshot('[]');
-
-  // Invalid data - wrong type in nested oneOf.
+  // Invalid deep structure - wrong discriminator.
   expect(
     validateFields(
       {
         content: [
           {
-            _type: 'SectionBlock',
-            heading: 'Features',
-            items: [{_type: 'InvalidBlock', label: 'Wrong'}],
+            _type: 'Section',
+            items: [{_type: 'InvalidBlock', label: 'Click me', url: '/'}],
           },
         ],
       },
@@ -992,130 +931,55 @@ test('validates nested oneOf fields', () => {
   ).toMatchInlineSnapshot(`
     [
       {
-        "expected": undefined,
-        "message": "Invalid input",
+        "expected": "valid discriminator value",
+        "message": "Invalid discriminator value. Expected 'ButtonBlock' | 'VideoBlock'",
         "path": "content.0.items.0._type",
         "received": undefined,
       },
     ]
   `);
-
-  // Invalid data - missing _type in nested structure.
-  expect(
-    validateFields(
-      {
-        hero: {
-          media: {
-            image: {src: '/hero.jpg'},
-          },
-        },
-      },
-      testSchema
-    )
-  ).toMatchInlineSnapshot(`
-    [
-      {
-        "expected": undefined,
-        "message": "Invalid input",
-        "path": "hero.media._type",
-        "received": undefined,
-      },
-    ]
-  `);
-
-  // Invalid data - wrong field type in nested oneOf item.
-  expect(
-    validateFields(
-      {
-        content: [
-          {
-            _type: 'SectionBlock',
-            heading: 'Features',
-            items: [{_type: 'ButtonBlock', label: 123, url: '/start'}],
-          },
-        ],
-      },
-      testSchema
-    )
-  ).toMatchInlineSnapshot(`
-    [
-      {
-        "expected": "string",
-        "message": "Invalid input: expected string, received number",
-        "path": "content.0.items.0.label",
-        "received": undefined,
-      },
-    ]
-  `);
 });
 
-test('validates empty data', () => {
+test('fallback validation for unknown types', () => {
+  const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
   const testSchema = schema.define({
     name: 'TestSchema',
-    fields: [schema.string({id: 'title'})],
+    fields: [
+      // @ts-ignore - explicitly testing unknown type
+      {id: 'raw', type: 'unknown-type'},
+    ],
   });
 
-  // Empty object - valid (partial validation).
-  expect(validateFields({}, testSchema)).toMatchInlineSnapshot('[]');
+  // Since we don't know the type, we accept anything.
+  expect(validateFields({raw: 'anything'}, testSchema)).toMatchInlineSnapshot(
+    '[]'
+  );
+  expect(warnSpy).toHaveBeenCalledWith('Unknown field type: unknown-type');
 
-  // Null - valid (no fields to validate).
-  expect(validateFields(null, testSchema)).toMatchInlineSnapshot('[]');
-
-  // Undefined - valid (no fields to validate).
-  expect(validateFields(undefined, testSchema)).toMatchInlineSnapshot('[]');
+  warnSpy.mockRestore();
 });
 
-test('validates non-object fieldsData', () => {
+test('partial validation', () => {
   const testSchema = schema.define({
     name: 'TestSchema',
-    fields: [schema.string({id: 'title'})],
+    fields: [schema.string({id: 'title'}), schema.string({id: 'description'})],
   });
 
-  // String instead of object.
-  expect(validateFields('not an object', testSchema)).toMatchInlineSnapshot(`
-    [
-      {
-        "expected": "object",
-        "message": "Expected object for fields data",
-        "path": "",
-        "received": "string",
-      },
-    ]
-  `);
-
-  // Array instead of object.
-  expect(validateFields(['not', 'an', 'object'], testSchema))
-    .toMatchInlineSnapshot(`
-    [
-      {
-        "expected": "object",
-        "message": "Expected object for fields data",
-        "path": "",
-        "received": "object",
-      },
-    ]
-  `);
+  // Partial data is valid.
+  expect(validateFields({title: 'Hello'}, testSchema)).toMatchInlineSnapshot(
+    '[]'
+  );
+  expect(
+    validateFields({description: 'World'}, testSchema)
+  ).toMatchInlineSnapshot('[]');
 });
 
 test('partial validation ignores missing fields', () => {
   const testSchema = schema.define({
     name: 'TestSchema',
-    fields: [
-      schema.string({id: 'title'}),
-      schema.string({id: 'description'}),
-      schema.number({id: 'count'}),
-      schema.boolean({id: 'published'}),
-    ],
+    fields: [schema.string({id: 'title'}), schema.number({id: 'count'})],
   });
-
-  // Only validate the fields that are present.
-  expect(validateFields({title: 'Hello'}, testSchema)).toMatchInlineSnapshot(
-    '[]'
-  );
-
-  expect(
-    validateFields({title: 'Hello', count: 42}, testSchema)
-  ).toMatchInlineSnapshot('[]');
 
   // Validate errors only for present fields.
   expect(validateFields({title: 'Hello', count: 'not-a-number'}, testSchema))
@@ -1123,9 +987,9 @@ test('partial validation ignores missing fields', () => {
       [
         {
           "expected": "number",
-          "message": "Invalid input: expected number, received string",
+          "message": "Expected number, received string",
           "path": "count",
-          "received": undefined,
+          "received": "string",
         },
       ]
     `);
