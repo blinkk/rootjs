@@ -90,7 +90,7 @@
     "kleur": "4.1.5",
     "sirv": "2.0.3",
     "tiny-glob": "0.2.9",
-    "zod": "3.23.8"
+    "zod": "4.0.0"
   },
   "//": "NOTE(stevenle): due to compat issues with mantine and preact, mantine is pinned to v4.2.12",
   "devDependencies": {
