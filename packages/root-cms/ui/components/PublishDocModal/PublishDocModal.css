@@ -127,3 +127,7 @@
   border-radius: 2px;
   margin: 0 4px;
 }
+
+.PublishDocModal__confirmText {
+  text-wrap: pretty;
+}

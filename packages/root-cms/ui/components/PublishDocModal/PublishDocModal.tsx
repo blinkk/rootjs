@@ -11,6 +11,7 @@ import {
 } from '../../utils/doc.js';
 import {getLocalISOString} from '../../utils/time.js';
 import {DocDiffViewer} from '../DocDiffViewer/DocDiffViewer.js';
+import {DocIdBadge} from '../DocIdBadge/DocIdBadge.js';
 import {Markdown} from '../Markdown/Markdown.js';
 import {Text} from '../Text/Text.js';
 
@@ -104,10 +105,17 @@ export function PublishDocModal(
       ...modalTheme,
       title: `${buttonLabel} ${props.docId}`,
       children: (
-        <Text size="body-sm" weight="semi-bold">
-          Are you sure you want to publish <code>{props.docId}</code>? The doc
-          will go live {publishType === 'now' ? 'now' : `at ${scheduledDate}`}.
-        </Text>
+        <>
+          <Text
+            size="body-sm"
+            weight="semi-bold"
+            className="PublishDocModal__confirmText"
+          >
+            Are you sure you want to publish the following doc? The doc will go
+            live {publishType === 'now' ? 'now' : `at ${scheduledDate}`}.
+          </Text>
+          <DocIdBadge docId={props.docId} />
+        </>
       ),
       labels: {confirm: buttonLabel, cancel: 'Cancel'},
       cancelProps: {size: 'xs'},
