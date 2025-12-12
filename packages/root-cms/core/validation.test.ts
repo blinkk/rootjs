@@ -567,7 +567,7 @@ test('validates oneOf fields', () => {
         "expected": "valid discriminator value",
         "message": "Invalid discriminator value. Expected 'ImageBlock' | 'TextBlock'",
         "path": "content._type",
-        "received": undefined,
+        "received": "UnknownBlock",
       },
     ]
   `);
@@ -934,7 +934,7 @@ test('validates nested oneOf fields', () => {
         "expected": "valid discriminator value",
         "message": "Invalid discriminator value. Expected 'ButtonBlock' | 'VideoBlock'",
         "path": "content.0.items.0._type",
-        "received": undefined,
+        "received": "InvalidBlock",
       },
     ]
   `);
@@ -946,7 +946,7 @@ test('fallback validation for unknown types', () => {
   const testSchema = schema.define({
     name: 'TestSchema',
     fields: [
-      // @ts-ignore - explicitly testing unknown type
+      // @ts-expect-error - explicitly testing unknown type
       {id: 'raw', type: 'unknown-type'},
     ],
   });
