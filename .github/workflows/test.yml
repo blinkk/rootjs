@@ -1,0 +1,54 @@
+name: Test
+
+on:
+  pull_request:
+    branches:
+      - main
+
+defaults:
+  run:
+    shell: bash
+
+env:
+  FORCE_COLOR: true
+
+jobs:
+  test:
+    name: Unit Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Setup PNPM
+        uses: pnpm/action-setup@v4
+        with:
+          version: '8.9.0'
+          run_install: false
+
+      - name: Install dependencies
+        run: pnpm install
+
+      - name: Get pnpm store directory
+        shell: bash
+        run: |
+          echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
+
+      - uses: actions/cache@v4
+        name: Setup pnpm cache
+        with:
+          path: ${{ env.STORE_PATH }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-
+
+      - name: Install playwright deps
+        working-directory: ./packages/root-cms
+        run: pnpm exec playwright install
+
+      - name: Unit tests
+        run: pnpm test
