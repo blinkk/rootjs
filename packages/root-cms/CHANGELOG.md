@@ -1,5 +1,12 @@
 # @blinkk/root-cms
 
+## 2.4.6
+
+### Patch Changes
+
+- 831c2292: feat: add import/export cli
+  - @blinkk/root@2.4.6
+
 ## 2.4.5
 
 ### Patch Changes
