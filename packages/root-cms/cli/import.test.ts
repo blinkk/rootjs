@@ -1,11 +1,10 @@
+// @vitest-environment node
 import * as fs from 'node:fs';
-import * as path from 'node:path';
 import {Timestamp, GeoPoint} from 'firebase-admin/firestore';
 import {describe, it, expect, vi, beforeEach, afterEach} from 'vitest';
 
 // Mock dependencies.
 vi.mock('node:fs');
-vi.mock('node:path');
 vi.mock('node:readline');
 vi.mock('cli-progress');
 vi.mock('@blinkk/root/node', () => ({
@@ -37,21 +36,12 @@ describe('Import CLI', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     // Default mocks.
-    (path.join as any).mockImplementation((...args: string[]) =>
-      args.join('/')
-    );
-    (path.basename as any).mockImplementation((p: string, ext?: string) => {
-      const base = p.split('/').pop() || '';
-      return ext ? base.replace(ext, '') : base;
-    });
     (fs.existsSync as any).mockReturnValue(true);
     (fs.mkdirSync as any).mockReturnValue(undefined);
     (fs.writeFileSync as any).mockReturnValue(undefined);
     (fs.readFileSync as any).mockReturnValue('{}');
     (fs.readdirSync as any).mockReturnValue([]);
-
     // Mock console to avoid clutter.
-    // vi.spyOn(console, 'log').mockImplementation(() => {});
     vi.spyOn(console, 'table').mockImplementation(() => {});
   });
 
