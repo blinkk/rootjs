@@ -34,6 +34,12 @@ export default defineConfig({
         projectId: 'rootjs-dev',
         storageBucket: 'rootjs-dev.appspot.com',
       },
+      storageConfig: {
+        apiKey: 'AIzaSyDIoi6zECKeyJoCduYEmV5j9PIF-wbpaPo',
+        authDomain: 'rootjs-dev.firebaseapp.com',
+        projectId: 'rootjs-dev',
+        storageBucket: 'rootjs-dev.appspot.com',
+      },
       gapi: {
         apiKey: process.env.GAPI_API_KEY,
         clientId: process.env.GAPI_CLIENT_ID,
