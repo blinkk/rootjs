@@ -29,14 +29,22 @@
   font-size: 18px;
 }
 .LexicalTheme__h2 {
-  font-size: 16px;
+  font-size: 17px;
 }
 .LexicalTheme__h3 {
+  font-size: 16px;
+}
+.LexicalTheme__h4 {
+  font-size: 15px;
+}
+.LexicalTheme__h5 {
   font-size: 14px;
 }
 .LexicalTheme__h1,
 .LexicalTheme__h2,
-.LexicalTheme__h3 {
+.LexicalTheme__h3,
+.LexicalTheme__h4,
+.LexicalTheme__h5 {
   margin: 0;
   margin-top: 8px;
   font-weight: 500;

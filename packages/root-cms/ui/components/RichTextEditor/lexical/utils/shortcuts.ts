@@ -43,7 +43,7 @@ export function isFormatHeading(event: KeyboardEvent): boolean {
   const keyNumber = code[code.length - 1];
 
   return (
-    ['1', '2', '3'].includes(keyNumber) &&
+    ['1', '2', '3', '4', '5'].includes(keyNumber) &&
     isModifierMatch(event, {...CONTROL_OR_META, altKey: true})
   );
 }
