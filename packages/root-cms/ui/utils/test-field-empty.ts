@@ -52,6 +52,17 @@ export function testFieldEmpty(
       }
       return true;
     case 'array':
+      if (Array.isArray(value)) {
+        if (value.length === 0) {
+          return true;
+        }
+        for (const item of value) {
+          if (!testFieldEmpty(field.of, item, types)) {
+            return false;
+          }
+        }
+        return true;
+      }
       if (
         !isObject(value) ||
         !Array.isArray(value._array) ||
@@ -64,7 +75,7 @@ export function testFieldEmpty(
           return false;
         }
       }
-      return false;
+      return true;
     case 'oneof': {
       if (!isObject(value) || !value._type) {
         return true;
