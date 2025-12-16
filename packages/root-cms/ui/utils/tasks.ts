@@ -16,6 +16,7 @@ export interface Task {
   title: string;
   description?: string;
   assignee?: string | null;
+  status?: string;
   createdAt: Timestamp;
   createdBy: string;
   updatedAt?: Timestamp;
@@ -90,12 +91,14 @@ export async function createTask(options: {
   const projectId = window.__ROOT_CTX.rootConfig.projectId;
   const taskRef = doc(collection(db, 'Projects', projectId, 'Tasks'));
   const assignee = options.assignee ?? (await getDefaultTaskAssignee());
+  const status = 'open';
 
   await setDoc(taskRef, {
     id: taskRef.id,
     title: options.title,
     description: options.description || '',
     assignee: assignee ?? null,
+    status,
     createdAt: serverTimestamp(),
     createdBy: window.firebase.user.email || '',
     updatedAt: serverTimestamp(),
@@ -117,6 +120,21 @@ export async function updateTaskAssignee(taskId: string, assignee: string) {
   logAction('tasks.updateAssignee', {metadata: {taskId, assignee}});
 }
 
+export async function updateTaskStatus(taskId: string, status: string) {
+  if (!taskId) {
+    throw new Error('missing task id');
+  }
+  if (!status) {
+    throw new Error('missing status');
+  }
+  await updateDoc(taskDocRef(taskId), {
+    status,
+    updatedAt: serverTimestamp(),
+    updatedBy: window.firebase.user.email || '',
+  });
+  logAction('tasks.updateStatus', {metadata: {taskId, status}});
+}
+
 export async function addTaskComment(taskId: string, content: string) {
   if (!taskId) {
     throw new Error('missing task id');
@@ -130,9 +148,10 @@ export async function addTaskComment(taskId: string, content: string) {
   const commentRef = doc(
     collection(db, 'Projects', projectId, 'Tasks', taskId, 'Comments')
   );
+  const commentId = commentRef.id;
 
   await setDoc(commentRef, {
-    id: commentRef.id,
+    id: commentId,
     taskId,
     content,
     createdAt: serverTimestamp(),
@@ -141,8 +160,10 @@ export async function addTaskComment(taskId: string, content: string) {
   });
 
   logAction('tasks.comment.add', {
-    metadata: {taskId, commentId: commentRef.id},
+    metadata: {taskId, commentId},
   });
+
+  return commentId;
 }
 
 export async function editTaskComment(
