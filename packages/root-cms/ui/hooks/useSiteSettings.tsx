@@ -10,6 +10,8 @@ import {useFirebase} from './useFirebase.js';
 interface SiteSettings {
   /** The Google Drive folder where files created by Root CMS are stored. If unspecified, files will be created in your "My Drive". */
   googleDriveFolder?: string;
+  /** The default assignee for new tasks created within the CMS. */
+  defaultAssignee?: string;
 }
 
 interface Setting {
