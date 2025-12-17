@@ -18,14 +18,18 @@ logger.setLogLevel('warn');
 
 type HistoryItem = MessageData;
 
-/** Supported Root AI models. Defaults to 'vertexai/gemini-2.5-flash'. */
+/**
+ * Supported Root AI models. Defaults to 'vertexai/gemini-3-flash-preview'.
+ * Custom model identifiers can also be provided as strings.
+ */
 export type RootAiModel =
+  | 'vertexai/gemini-3-pro-preview'
+  | 'vertexai/gemini-3-flash-preview'
   | 'vertexai/gemini-2.5-flash'
   | 'vertexai/gemini-2.0-pro'
-  | 'vertexai/gemini-1.5-flash'
-  | 'vertexai/gemini-1.5-pro';
+  | string;
 
-const DEFAULT_MODEL: RootAiModel = 'vertexai/gemini-2.5-flash';
+const DEFAULT_MODEL: RootAiModel = 'vertexai/gemini-3-flash-preview';
 
 export interface SummarizeDiffOptions {
   before: Record<string, any> | null;
