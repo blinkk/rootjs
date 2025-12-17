@@ -13,6 +13,20 @@ export interface ReleaseStatusBadgeProps {
 
 export function ReleaseStatusBadge(props: ReleaseStatusBadgeProps) {
   const release = props.release;
+  if (release.archivedAt) {
+    return (
+      <Tooltip
+        {...TOOLTIP_PROPS}
+        label={`Archived ${formatDateTime(release.archivedAt)} by ${
+          release.archivedBy
+        }`}
+      >
+        <Badge size="xs" variant="gradient" gradient={{from: 'gray', to: 'dark'}}>
+          Archived
+        </Badge>
+      </Tooltip>
+    );
+  }
   if (release.scheduledAt) {
     return (
       <Tooltip

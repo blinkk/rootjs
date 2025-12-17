@@ -20,9 +20,11 @@ import {Layout} from '../../layout/Layout.js';
 import {notifyErrors} from '../../utils/notifications.js';
 import {
   Release,
+  archiveRelease,
   cancelScheduledRelease,
   getRelease,
   publishRelease,
+  unarchiveRelease,
 } from '../../utils/release.js';
 import {timestamp} from '../../utils/time.js';
 import './ReleasePage.css';
@@ -113,6 +115,7 @@ ReleasePage.PublishStatus = (props: {
 }) => {
   const release = props.release;
   const [publishLoading, setPublishLoading] = useState(false);
+  const [archiveLoading, setArchiveLoading] = useState(false);
 
   const modals = useModals();
   const modalTheme = useModalTheme();
@@ -196,6 +199,40 @@ ReleasePage.PublishStatus = (props: {
     props.onAction('cancel-schedule');
   }
 
+  function onArchiveClicked() {
+    const modalId = modals.openConfirmModal({
+      ...modalTheme,
+      title: `Archive release: ${release.id}`,
+      children: (
+        <Text size="body-sm" weight="semi-bold">
+          Archived releases will be hidden from the active list and cannot be
+          published or scheduled until they are unarchived.
+        </Text>
+      ),
+      labels: {confirm: 'Archive', cancel: 'Cancel'},
+      cancelProps: {size: 'xs'},
+      confirmProps: {color: 'red', size: 'xs'},
+      onConfirm: async () => {
+        setArchiveLoading(true);
+        await notifyErrors(async () => {
+          await archiveRelease(release.id);
+          props.onAction('archive');
+        });
+        setArchiveLoading(false);
+        modals.closeModal(modalId);
+      },
+    });
+  }
+
+  async function onUnarchiveClicked() {
+    setArchiveLoading(true);
+    await notifyErrors(async () => {
+      await unarchiveRelease(release.id);
+      props.onAction('unarchive');
+    });
+    setArchiveLoading(false);
+  }
+
   return (
     <div className="ReleasePage__PublishStatus">
       <Heading size="h2">Status</Heading>
@@ -213,53 +250,93 @@ ReleasePage.PublishStatus = (props: {
             </td>
             <td>
               <div className="ReleasePage__PublishStatus__actions">
-                {!release.scheduledAt && (
-                  <Tooltip
-                    label="Publish the release immediately"
-                    position="bottom"
-                    withArrow
-                  >
-                    <Button
-                      variant="default"
-                      size="xs"
-                      compact
-                      onClick={() => onPublishClicked()}
-                      loading={publishLoading}
+                {!release.archivedAt && (
+                  <>
+                    {!release.scheduledAt && (
+                      <Tooltip
+                        label="Publish the release immediately"
+                        position="bottom"
+                        withArrow
+                      >
+                        <Button
+                          variant="default"
+                          size="xs"
+                          compact
+                          onClick={() => onPublishClicked()}
+                          loading={publishLoading}
+                        >
+                          {release.publishedAt ? 'Re-publish' : 'Publish'}
+                        </Button>
+                      </Tooltip>
+                    )}
+                    {release.scheduledAt ? (
+                      <Tooltip
+                        label="Cancel the scheduled release"
+                        position="bottom"
+                        withArrow
+                      >
+                        <Button
+                          variant="default"
+                          size="xs"
+                          compact
+                          onClick={() => onCancelScheduleClicked()}
+                        >
+                          Cancel Schedule
+                        </Button>
+                      </Tooltip>
+                    ) : (
+                      <Tooltip
+                        label="Schedule the release to be published at a future date"
+                        position="bottom"
+                        withArrow
+                        wrapLines
+                        width={180}
+                      >
+                        <Button
+                          variant="default"
+                          size="xs"
+                          compact
+                          onClick={() => onScheduleClicked()}
+                        >
+                          Schedule
+                        </Button>
+                      </Tooltip>
+                    )}
+                    <Tooltip
+                      label="Archive the release to hide it from the active list"
+                      position="bottom"
+                      withArrow
+                      wrapLines
+                      width={200}
                     >
-                      {release.publishedAt ? 'Re-publish' : 'Publish'}
-                    </Button>
-                  </Tooltip>
+                      <Button
+                        variant="outline"
+                        size="xs"
+                        compact
+                        onClick={() => onArchiveClicked()}
+                        loading={archiveLoading}
+                      >
+                        Archive
+                      </Button>
+                    </Tooltip>
+                  </>
                 )}
-                {release.scheduledAt ? (
+                {release.archivedAt && (
                   <Tooltip
-                    label="Cancel the scheduled release"
-                    position="bottom"
-                    withArrow
-                  >
-                    <Button
-                      variant="default"
-                      size="xs"
-                      compact
-                      onClick={() => onCancelScheduleClicked()}
-                    >
-                      Cancel Schedule
-                    </Button>
-                  </Tooltip>
-                ) : (
-                  <Tooltip
-                    label="Schedule the release to be published at a future date"
+                    label="Unarchive the release to enable publishing and scheduling"
                     position="bottom"
                     withArrow
                     wrapLines
-                    width={180}
+                    width={200}
                   >
                     <Button
                       variant="default"
                       size="xs"
                       compact
-                      onClick={() => onScheduleClicked()}
+                      onClick={() => onUnarchiveClicked()}
+                      loading={archiveLoading}
                     >
-                      Schedule
+                      Unarchive
                     </Button>
                   </Tooltip>
                 )}

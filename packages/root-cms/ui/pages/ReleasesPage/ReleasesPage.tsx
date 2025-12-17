@@ -1,4 +1,4 @@
-import {Button, Loader, Table} from '@mantine/core';
+import {Button, Loader, Switch, Table} from '@mantine/core';
 import {useEffect, useState} from 'preact/hooks';
 import {Heading} from '../../components/Heading/Heading.js';
 import {ReleaseStatusBadge} from '../../components/ReleaseStatusBadge/ReleaseStatusBadge.js';
@@ -36,16 +36,18 @@ export function ReleasesPage() {
 ReleasesPage.ReleasesTable = () => {
   const [loading, setLoading] = useState(true);
   const [tableData, setTableData] = useState<Release[]>([]);
+  const [includeArchived, setIncludeArchived] = useState(false);
 
   async function init() {
-    const releases = await listReleases();
+    setLoading(true);
+    const releases = await listReleases({includeArchived});
     setTableData(releases);
     setLoading(false);
   }
 
   useEffect(() => {
     init();
-  }, []);
+  }, [includeArchived]);
 
   return (
     <div className="ReleasesPage__ReleasesTable">
@@ -62,7 +64,10 @@ ReleasesPage.ReleasesTable = () => {
           </thead>
           <tbody>
             {tableData.map((release) => (
-              <tr key={release.id}>
+              <tr
+                key={release.id}
+                className={release.archivedAt ? 'ReleasesPage__row--archived' : ''}
+              >
                 <td>
                   <a href={`/cms/releases/${release.id}`}>{release.id}</a>
                 </td>
@@ -84,6 +89,14 @@ ReleasesPage.ReleasesTable = () => {
           </tbody>
         </Table>
       )}
+      <div className="ReleasesPage__ReleasesTable__controls">
+        <Switch
+          size="md"
+          checked={includeArchived}
+          onChange={(event) => setIncludeArchived(event.currentTarget.checked)}
+          label="Show archived"
+        />
+      </div>
     </div>
   );
 };

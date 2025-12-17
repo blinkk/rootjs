@@ -28,6 +28,8 @@ export interface Release {
   scheduledBy?: string;
   publishedAt?: Timestamp;
   publishedBy?: string;
+  archivedAt?: Timestamp;
+  archivedBy?: string;
 }
 
 const COLLECTION_ID = 'Releases';
@@ -54,7 +56,9 @@ export async function addRelease(id: string, release: Partial<Release>) {
   logAction('release.create', {metadata: {releaseId: id}});
 }
 
-export async function listReleases(): Promise<Release[]> {
+export async function listReleases(
+  options: {includeArchived?: boolean} = {}
+): Promise<Release[]> {
   const projectId = window.__ROOT_CTX.rootConfig.projectId;
   const db = window.firebase.db;
   const colRef = collection(db, 'Projects', projectId, COLLECTION_ID);
@@ -64,7 +68,10 @@ export async function listReleases(): Promise<Release[]> {
   querySnapshot.forEach((doc) => {
     res.push(doc.data() as Release);
   });
-  return res;
+  if (options.includeArchived) {
+    return res;
+  }
+  return res.filter((release) => !release.archivedAt);
 }
 
 export async function getRelease(id: string) {
@@ -99,6 +106,9 @@ export async function publishRelease(id: string) {
   const release = await getRelease(id);
   if (!release) {
     throw new Error(`release not found: ${id}`);
+  }
+  if (release.archivedAt) {
+    throw new Error(`release is archived: ${id}`);
   }
   const docIds = release.docIds || [];
   const dataSourceIds = release.dataSourceIds || [];
@@ -138,6 +148,9 @@ export async function scheduleRelease(
   if (!release) {
     throw new Error(`release not found: ${id}`);
   }
+  if (release.archivedAt) {
+    throw new Error(`release is archived: ${id}`);
+  }
 
   if (typeof timestamp === 'number') {
     timestamp = Timestamp.fromMillis(timestamp);
@@ -171,4 +184,40 @@ export async function cancelScheduledRelease(id: string) {
     scheduledBy: deleteField(),
   });
   logAction('release.unschedule', {metadata: {releaseId: id}});
+}
+
+export async function archiveRelease(id: string) {
+  const release = await getRelease(id);
+  if (!release) {
+    throw new Error(`release not found: ${id}`);
+  }
+
+  const projectId = window.__ROOT_CTX.rootConfig.projectId;
+  const db = window.firebase.db;
+  const docRef = doc(db, 'Projects', projectId, COLLECTION_ID, id);
+
+  await updateDoc(docRef, {
+    archivedAt: serverTimestamp(),
+    archivedBy: window.firebase.user.email,
+    scheduledAt: deleteField(),
+    scheduledBy: deleteField(),
+  });
+  logAction('release.archive', {metadata: {releaseId: id}});
+}
+
+export async function unarchiveRelease(id: string) {
+  const release = await getRelease(id);
+  if (!release) {
+    throw new Error(`release not found: ${id}`);
+  }
+
+  const projectId = window.__ROOT_CTX.rootConfig.projectId;
+  const db = window.firebase.db;
+  const docRef = doc(db, 'Projects', projectId, COLLECTION_ID, id);
+
+  await updateDoc(docRef, {
+    archivedAt: deleteField(),
+    archivedBy: deleteField(),
+  });
+  logAction('release.unarchive', {metadata: {releaseId: id}});
 }
