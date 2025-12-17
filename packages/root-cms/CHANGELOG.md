@@ -1,5 +1,13 @@
 # @blinkk/root-cms
 
+## 2.4.7
+
+### Patch Changes
+
+- f4fd45bd: feat: add gemini 3 models to root ai (#873)
+- 98d8d7df: feat: add task manager db calls (#870)
+  - @blinkk/root@2.4.7
+
 ## 2.4.6
 
 ### Patch Changes
