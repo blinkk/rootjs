@@ -1,5 +1,12 @@
 # @blinkk/root-cms
 
+## 2.4.8
+
+### Patch Changes
+
+- ee179be9: fix: fix gemini-3-flash-preview model api calls
+  - @blinkk/root@2.4.8
+
 ## 2.4.7
 
 ### Patch Changes
