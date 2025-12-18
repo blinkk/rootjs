@@ -1,7 +1,7 @@
 import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
-import {vertexAI} from '@genkit-ai/vertexai';
+import {vertexAI, googleAI} from '@genkit-ai/google-genai';
 import {Timestamp} from 'firebase-admin/firestore';
 import {Genkit, genkit, MessageData} from 'genkit';
 import {logger} from 'genkit/logging';
@@ -19,17 +19,25 @@ logger.setLogLevel('warn');
 type HistoryItem = MessageData;
 
 /**
- * Supported Root AI models. Defaults to 'vertexai/gemini-3-flash-preview'.
- * Custom model identifiers can also be provided as strings.
+ * Supported Root AI models. Defaults to 'gemini-3-flash-preview'.
  */
 export type RootAiModel =
-  | 'vertexai/gemini-3-pro-preview'
-  | 'vertexai/gemini-3-flash-preview'
-  | 'vertexai/gemini-2.5-flash'
-  | 'vertexai/gemini-2.0-pro'
+  | 'gemini-3-pro-preview'
+  | 'gemini-3-flash-preview'
+  | 'gemini-2.5-flash'
+  | 'gemini-2.0-pro'
   | string;
 
-const DEFAULT_MODEL: RootAiModel = 'vertexai/gemini-3-flash-preview';
+export type RootAiImagenModel = 'gemini-2.5-flash-image' | string;
+
+const DEFAULT_MODEL: RootAiModel = 'gemini-3-flash-preview';
+const DEFAULT_IMAGEGEN_MODEL: RootAiImagenModel = 'gemini-2.5-flash-image';
+
+// Rename models from '@genkit-ai/google-vertexai' to '@genkit-ai/google-genai'.
+const LEGACY_MODEL_RENAME: Record<string, string> = {
+  'vertexai/gemini-2.5-flash': 'gemini-2.5-flash',
+  'vertexai/gemini-2.0-pro': 'gemini-2.0-pro',
+};
 
 export interface SummarizeDiffOptions {
   before: Record<string, any> | null;
@@ -85,7 +93,7 @@ export async function summarizeDiff(
   ].join('\n');
 
   const res = await ai.generate({
-    model,
+    model: vertexAI.model(model),
     messages: [
       {
         role: 'system',
@@ -114,6 +122,7 @@ export type AspectRatio =
 export interface GenerateImageOptions {
   prompt: string;
   aspectRatio: AspectRatio;
+  model?: RootAiImagenModel;
 }
 
 /**
@@ -125,7 +134,7 @@ export async function generateImage(
 ): Promise<string> {
   const cmsPluginOptions = cmsClient.cmsPlugin.getConfig();
   const firebaseConfig = cmsPluginOptions.firebaseConfig;
-  const model = 'vertexai/gemini-2.5-flash-image';
+  const model = options.model || DEFAULT_IMAGEGEN_MODEL;
 
   const ai = genkit({
     plugins: [
@@ -137,7 +146,7 @@ export async function generateImage(
   });
 
   const res = await ai.generate({
-    model: model,
+    model: vertexAI.model(model),
     prompt: [
       {
         text: options.prompt,
@@ -179,12 +188,13 @@ export class Chat {
     this.cmsPluginOptions = this.cmsClient.cmsPlugin.getConfig();
     this.id = id;
     this.history = options?.history ?? [];
-    this.model =
+    this.model = cleanModelName(
       options?.model ||
-      (typeof this.cmsPluginOptions.experiments?.ai === 'object'
-        ? this.cmsPluginOptions.experiments.ai.model
-        : undefined) ||
-      DEFAULT_MODEL;
+        (typeof this.cmsPluginOptions.experiments?.ai === 'object'
+          ? this.cmsPluginOptions.experiments.ai.model
+          : undefined) ||
+        DEFAULT_MODEL
+    );
     const firebaseConfig = this.cmsPluginOptions.firebaseConfig;
     this.ai = genkit({
       plugins: [
@@ -260,7 +270,7 @@ export class Chat {
     // TODO: Use streaming responses per https://genkit.dev/docs/models/#streaming
     // to improve UI performance.
     const res = await this.ai.generate({
-      model: chatRequest.model,
+      model: vertexAI.model(chatRequest.model),
       messages: chatRequest.messages,
       prompt: Array.isArray(prompt) ? prompt.flat() : prompt,
     });
@@ -402,4 +412,8 @@ export class ChatClient {
       `Projects/${this.cmsClient.projectId}/Experiments/ai/Chat`
     );
   }
+}
+
+function cleanModelName(model: string) {
+  return LEGACY_MODEL_RENAME[model] || model;
 }
