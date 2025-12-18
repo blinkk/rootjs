@@ -273,6 +273,10 @@ export class Chat {
       model: vertexAI.model(chatRequest.model),
       messages: chatRequest.messages,
       prompt: Array.isArray(prompt) ? prompt.flat() : prompt,
+      // NOTE(stevenle): the global location is required for
+      // `gemini-3-flash-preview`, it may be possible to remove this in the
+      // future.
+      config: {location: 'global'},
     });
     this.history = res.messages;
     await this.dbDoc().update({
