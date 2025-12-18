@@ -1,7 +1,7 @@
 import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
-import {vertexAI, googleAI} from '@genkit-ai/google-genai';
+import {vertexAI} from '@genkit-ai/google-genai';
 import {Timestamp} from 'firebase-admin/firestore';
 import {Genkit, genkit, MessageData} from 'genkit';
 import {logger} from 'genkit/logging';
