@@ -33,3 +33,16 @@
   font-size: 14px;
   font-weight: 500;
 }
+
+.TranslationsEditPage__TagsForm {
+  margin-top: 48px;
+  max-width: 650px;
+}
+
+.TranslationsEditPage__TagsForm__heading {
+  margin-bottom: 16px;
+}
+
+.TranslationsEditPage__TagsForm__submit {
+  margin-top: 16px;
+}

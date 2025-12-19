@@ -61,6 +61,7 @@ export function TranslationsTable() {
   const [selectedTags, setSelectedTags] = useArrayParam('tags', []);
   const [showHashes, setShowHashes] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [exactMatchesOnly, setExactMatchesOnly] = useState(false);
 
   // Sync input value when URL param changes (e.g. back/forward navigation).
   useEffect(() => {
@@ -155,15 +156,27 @@ export function TranslationsTable() {
         }
 
         const source = translations.source || '';
-        const matchesSource = source.toLowerCase().includes(query);
-
         const hashStr = hash || '';
-        const matchesHash = hashStr.toLowerCase().includes(query);
 
-        const matchesTranslation = allLocales.some((locale) => {
-          const translation = translations[locale];
-          return (translation || '').toLowerCase().includes(query);
-        });
+        let matchesSource = false;
+        let matchesHash = false;
+        let matchesTranslation = false;
+
+        if (exactMatchesOnly) {
+          matchesSource = source.toLowerCase() === query;
+          matchesHash = hashStr.toLowerCase() === query;
+          matchesTranslation = allLocales.some((locale) => {
+            const translation = translations[locale];
+            return (translation || '').toLowerCase() === query;
+          });
+        } else {
+          matchesSource = source.toLowerCase().includes(query);
+          matchesHash = hashStr.toLowerCase().includes(query);
+          matchesTranslation = allLocales.some((locale) => {
+            const translation = translations[locale];
+            return (translation || '').toLowerCase().includes(query);
+          });
+        }
 
         if (!matchesSource && !matchesHash && !matchesTranslation) {
           return;
@@ -181,7 +194,13 @@ export function TranslationsTable() {
       data.push(row);
     });
     setRowData(data);
-  }, [translationsMap, searchQuery, selectedTags, selectedLocales]);
+  }, [
+    translationsMap,
+    searchQuery,
+    selectedTags,
+    selectedLocales,
+    exactMatchesOnly,
+  ]);
 
   // Determine which locales to show.
   const visibleLocales =
@@ -446,6 +465,12 @@ export function TranslationsTable() {
             onClick={() => setShowHashes(!showHashes)}
           >
             Show Hashes
+          </Menu.Item>
+          <Menu.Item
+            icon={exactMatchesOnly ? <IconCheck size={14} /> : null}
+            onClick={() => setExactMatchesOnly(!exactMatchesOnly)}
+          >
+            Exact Matches Only
           </Menu.Item>
         </Menu>
       </div>

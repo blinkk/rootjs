@@ -11,8 +11,9 @@ import {logAction} from './actions.js';
 import {TIME_UNITS} from './time.js';
 
 export interface Translation {
-  [locale: string]: string;
+  [locale: string]: string | string[] | undefined;
   source: string;
+  tags?: string[];
 }
 
 export interface TranslationsMap {
@@ -79,14 +80,18 @@ export async function getTranslationByHash(hash: string) {
  */
 export async function updateTranslationByHash(
   hash: string,
-  translations: Record<string, string>
+  translations: Translation
 ) {
   const projectId = window.__ROOT_CTX.rootConfig.projectId;
   const db = window.firebase.db;
   const docRef = doc(db, 'Projects', projectId, 'Translations', hash);
 
-  const updates: Record<string, string> = {};
+  const updates: Partial<Translation> = {};
   for (const key in translations) {
+    if (key === 'tags') {
+      updates.tags = translations.tags;
+      continue;
+    }
     const locale = normalizeLocale(key);
     if (locale) {
       updates[locale] = translations[key];
@@ -94,7 +99,7 @@ export async function updateTranslationByHash(
   }
   console.log('updating translations: ', updates);
 
-  await updateDoc(docRef, updates);
+  await updateDoc(docRef, updates as any);
   logAction('translations.save', {
     metadata: {hash},
     throttle: 5 * TIME_UNITS.minute,
