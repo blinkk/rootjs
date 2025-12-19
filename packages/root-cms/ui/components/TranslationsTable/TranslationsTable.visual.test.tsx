@@ -186,4 +186,58 @@ describe('TranslationsTable', () => {
     // 'es' column header should be visible.
     await expect.element(element.getByText('es').first()).toBeVisible();
   });
+
+  it('filters by exact match', async () => {
+    page.viewport(1200, 800);
+    const mockData = generateMockTranslations(10);
+    mockData['exact-match-hash'] = {
+      source: 'ExactMatch',
+      en: 'ExactMatch EN',
+      tags: ['exact-tag'],
+    };
+    mockData['partial-match-hash'] = {
+      source: 'ExactMatchPartial',
+      en: 'ExactMatchPartial EN',
+      tags: ['partial-tag'],
+    };
+    vi.mocked(l10n.loadTranslations).mockResolvedValue(mockData);
+
+    render(
+      <MantineProvider>
+        <div data-testid="translations-table-exact">
+          <TranslationsTable />
+        </div>
+      </MantineProvider>
+    );
+
+    const element = page.getByTestId('translations-table-exact');
+
+    // Wait for load.
+    await expect.element(element.getByText('ExactMatch').first()).toBeVisible();
+
+    // Search for "ExactMatch".
+    const searchInput = element.getByPlaceholder('Search translations');
+    await searchInput.fill('ExactMatch');
+
+    // Both should be visible initially (partial match).
+    await expect.element(element.getByText('ExactMatch').first()).toBeVisible();
+    await expect
+      .element(element.getByText('ExactMatchPartial').first())
+      .toBeVisible();
+
+    // Enable "Exact Matches Only".
+    const menuButton = element.locator('button[aria-haspopup="menu"]');
+    await menuButton.click();
+
+    await expect.element(page.getByText('Exact Matches Only')).toBeVisible();
+    await page.getByText('Exact Matches Only').click();
+
+    // Now "ExactMatchPartial" should be gone.
+    await expect
+      .element(element.getByText('ExactMatchPartial'))
+      .not.toBeInTheDocument();
+
+    // "ExactMatch" should still be visible.
+    await expect.element(element.getByText('ExactMatch').first()).toBeVisible();
+  });
 });
