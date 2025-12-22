@@ -80,6 +80,9 @@ describe('TranslationsEditPage', () => {
     await tagInput.fill('new-tag');
     await userEvent.keyboard('{Enter}');
 
+    // Wait for the tag to be added.
+    await expect.element(element.getByText('new-tag')).toBeVisible();
+
     // Click "Save tags".
     const saveTagsButton = element.getByRole('button', {name: 'Save tags'});
     await saveTagsButton.click();

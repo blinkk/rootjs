@@ -24,8 +24,11 @@ a.DocPreviewCard {
 .DocPreviewCard__content__header {
   display: flex;
   gap: 12px;
-  align-items: flex-end;
-  margin-bottom: 4px;
+  align-items: center;
+}
+
+.DocPreviewCard__content__header .DocStatusBadges {
+  margin-left: auto;
 }
 
 .DocPreviewCard__content__header__docId {
@@ -72,4 +75,9 @@ a.DocPreviewCard {
   display: -webkit-box;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 1;
+}
+
+.DocPreviewCard--compact .DocStatusBadges {
+  zoom: 0.9;
+  gap: 6px;
 }

@@ -1,0 +1,13 @@
+.DocStatusBadges {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.DocStatusBadges .mantine-Tooltip-root {
+  display: block;
+}
+
+.DocStatusBadges .mantine-Badge-root {
+  display: flex;
+}

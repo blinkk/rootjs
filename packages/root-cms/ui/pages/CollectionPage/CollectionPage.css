@@ -156,19 +156,6 @@
   gap: 12px;
 }
 
-.CollectionPage__collection__docsList__doc__content__header__badges {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.CollectionPage__collection__docsList__doc__content__header__badges .mantine-Tooltip-root {
-  display: block;
-}
-
-.CollectionPage__collection__docsList__doc__content__header__badges .mantine-Badge-root {
-  display: flex;
-}
 
 .CollectionPage__collection__docsList__doc__content__header__docId {
   font-size: 14px;
