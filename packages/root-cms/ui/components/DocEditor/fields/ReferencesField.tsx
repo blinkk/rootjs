@@ -124,6 +124,7 @@ export function ReferencesField(props: FieldProps) {
                           docId={refId}
                           variant="compact"
                           clickable
+                          statusBadges
                         />
                         <div className="ReferencesField__card__controls">
                           <Tooltip label="Remove">

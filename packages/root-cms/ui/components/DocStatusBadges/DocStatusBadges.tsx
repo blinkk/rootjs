@@ -1,3 +1,5 @@
+import './DocStatusBadges.css';
+
 import {Badge, Tooltip} from '@mantine/core';
 import {Timestamp} from 'firebase/firestore';
 import {CMSDoc, testPublishingLocked} from '../../utils/doc.js';
@@ -16,7 +18,7 @@ export function DocStatusBadges(props: DocStatusBadgesProps) {
   const doc = props.doc;
   const sys = doc.sys;
   return (
-    <div className="CollectionPage__collection__docsList__doc__content__header__badges">
+    <div className="DocStatusBadges">
       {(!sys.publishedAt ||
         !sys.modifiedAt ||
         sys.modifiedAt > sys.publishedAt) && (
