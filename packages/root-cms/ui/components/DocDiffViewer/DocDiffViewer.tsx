@@ -1,10 +1,11 @@
+import './DocDiffViewer.css';
+
 import {Button, Loader} from '@mantine/core';
 import {useEffect, useState} from 'preact/hooks';
 import {joinClassNames} from '../../utils/classes.js';
 import {CMSDoc, cmsReadDocVersion, unmarshalData} from '../../utils/doc.js';
+import {AiSummary} from '../AiSummary/AiSummary.js';
 import {JsDiff} from '../JsDiff/JsDiff.js';
-
-import './DocDiffViewer.css';
 
 export interface DocVersionId {
   /** Doc id, e.g. `Pages/foo`. */
@@ -19,6 +20,8 @@ export interface DocDiffViewerProps {
   right: DocVersionId;
   /** Whether to show the "expand" button which opens diff in a new tab. */
   showExpandButton?: boolean;
+  /** Whether to show the AI summary section. */
+  showAiSummary?: boolean;
 }
 
 export function DocDiffViewer(props: DocDiffViewerProps) {
@@ -27,6 +30,12 @@ export function DocDiffViewer(props: DocDiffViewerProps) {
   const [loading, setLoading] = useState(false);
   const [leftDoc, setLeftDoc] = useState<CMSDoc | null>(null);
   const [rightDoc, setRightDoc] = useState<CMSDoc | null>(null);
+
+  const experiments = (window as any).__ROOT_CTX?.experiments || {};
+  const showAiSummary =
+    experiments.ai &&
+    left.docId === right.docId &&
+    props.showAiSummary !== false;
 
   const leftData = JSON.stringify(cleanData(leftDoc?.fields || {}), null, 2);
   const rightData = JSON.stringify(cleanData(rightDoc?.fields || {}), null, 2);
@@ -51,45 +60,61 @@ export function DocDiffViewer(props: DocDiffViewerProps) {
   }, []);
 
   if (loading) {
-    return <Loader size="md" color="gray" />;
+    return (
+      <div className="DocDiffViewer DocDiffViewer--loading">
+        <Loader size="md" color="gray" />
+      </div>
+    );
   }
 
   return (
-    <div className={joinClassNames(props.className, 'DocDiffViewer')}>
-      {props.showExpandButton && (
-        <div className="DocDiffViewer__expand">
-          <Button
-            component="a"
-            variant="default"
-            size="xs"
-            compact
-            href={expandUrl}
-            target="_blank"
-          >
-            Open in new tab
-          </Button>
-        </div>
+    <>
+      {showAiSummary && (
+        <AiSummary
+          className="DocDiffViewer__aiSummary"
+          docId={left.docId}
+          beforeVersion={String(left.versionId)}
+          afterVersion={String(right.versionId)}
+        />
       )}
-      <div className="DocDiffViewer__header">
-        <div className="DocDiffViewer__header__label">
-          <div className="DocDiffViewer__header__label__title">
-            {props.left.docId}@{props.left.versionId}
+      <div className={joinClassNames(props.className, 'DocDiffViewer')}>
+        {props.showExpandButton && (
+          <div className="DocDiffViewer__expand">
+            <Button
+              component="a"
+              variant="default"
+              size="xs"
+              compact
+              href={expandUrl}
+              target="_blank"
+            >
+              Open in new tab
+            </Button>
           </div>
-          <div className="DocDiffViewer__header__label__meta">
-            {getMetaString(leftDoc)}
+        )}
+        <div className="DocDiffViewer__header">
+          <div className="DocDiffViewer__header__label">
+            <div className="DocDiffViewer__header__label__title">
+              {props.left.docId}@{props.left.versionId}
+            </div>
+            <div className="DocDiffViewer__header__label__meta">
+              {getMetaString(leftDoc)}
+            </div>
+          </div>
+          <div className="DocDiffViewer__header__label">
+            <div className="DocDiffViewer__header__label__title">
+              {props.right.docId}@{props.right.versionId}
+            </div>
+            <div className="DocDiffViewer__header__label__meta">
+              {getMetaString(rightDoc)}
+            </div>
           </div>
         </div>
-        <div className="DocDiffViewer__header__label">
-          <div className="DocDiffViewer__header__label__title">
-            {props.right.docId}@{props.right.versionId}
-          </div>
-          <div className="DocDiffViewer__header__label__meta">
-            {getMetaString(rightDoc)}
-          </div>
+        <div className="DocDiffViewer__diff">
+          <JsDiff oldCode={leftData} newCode={rightData} />
         </div>
       </div>
-      <JsDiff oldCode={leftData} newCode={rightData} />
-    </div>
+    </>
   );
 }
 

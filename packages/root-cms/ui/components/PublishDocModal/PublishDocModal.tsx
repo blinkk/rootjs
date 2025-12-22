@@ -1,21 +1,18 @@
-import {Accordion, Button, Loader} from '@mantine/core';
+import './PublishDocModal.css';
+
+import {Accordion, Button} from '@mantine/core';
 import {ContextModalProps, useModals} from '@mantine/modals';
 import {showNotification} from '@mantine/notifications';
+import {IconGitCompare} from '@tabler/icons-preact';
 import {useState, useRef} from 'preact/hooks';
 import {useModalTheme} from '../../hooks/useModalTheme.js';
 import {joinClassNames} from '../../utils/classes.js';
-import {
-  cmsGetDocDiffSummary,
-  cmsPublishDoc,
-  cmsScheduleDoc,
-} from '../../utils/doc.js';
+import {cmsPublishDoc, cmsScheduleDoc} from '../../utils/doc.js';
 import {getLocalISOString} from '../../utils/time.js';
+import {AiSummary} from '../AiSummary/AiSummary.js';
 import {DocDiffViewer} from '../DocDiffViewer/DocDiffViewer.js';
 import {DocIdBadge} from '../DocIdBadge/DocIdBadge.js';
-import {Markdown} from '../Markdown/Markdown.js';
 import {Text} from '../Text/Text.js';
-
-import './PublishDocModal.css';
 
 const MODAL_ID = 'PublishDocModal';
 
@@ -241,92 +238,17 @@ export function PublishDocModal(
             </Button>
           </div>
         </form>
-
-        {experiments.ai && <AiSummary docId={props.docId} />}
-        <ShowChanges docId={props.docId} />
+        <div className="PublishDocModal__DiffWrapper">
+          {experiments.ai && (
+            <AiSummary
+              docId={props.docId}
+              beforeVersion="published"
+              afterVersion="draft"
+            />
+          )}
+          <ShowChanges docId={props.docId} />
+        </div>
       </div>
-    </div>
-  );
-}
-
-function AiSummary(props: {docId: string}) {
-  const docId = props.docId;
-  const [status, setStatus] = useState<
-    'idle' | 'loading' | 'success' | 'error'
-  >('idle');
-  const [summary, setSummary] = useState('');
-  const [error, setError] = useState('');
-  const hasRequestedRef = useRef(false);
-
-  async function loadSummary() {
-    setStatus('loading');
-    try {
-      const res = await cmsGetDocDiffSummary(docId);
-      setSummary(res);
-      setStatus('success');
-    } catch (err) {
-      console.error(err);
-      setError(err instanceof Error ? err.message : 'Unknown error');
-      setStatus('error');
-    }
-  }
-
-  function handleToggle() {
-    if (!hasRequestedRef.current) {
-      hasRequestedRef.current = true;
-      loadSummary();
-    }
-  }
-
-  let content = null;
-  if (status === 'idle' || status === 'loading') {
-    content = (
-      <div className="PublishDocModal__ShowChanges__loading">
-        <Loader size="md" color="gray" />
-      </div>
-    );
-  } else if (status === 'error') {
-    content = (
-      <Text
-        className="PublishDocModal__ShowChanges__aiSummary"
-        size="body-sm"
-        color="gray"
-      >
-        Failed to load AI summary.
-        {error && (
-          <>
-            <br />
-            {error}
-          </>
-        )}
-      </Text>
-    );
-  } else if (!summary) {
-    content = (
-      <Text
-        className="PublishDocModal__ShowChanges__aiSummary"
-        size="body-sm"
-        color="gray"
-      >
-        No AI summary available for this draft yet.
-      </Text>
-    );
-  } else {
-    content = (
-      <Markdown
-        className="PublishDocModal__ShowChanges__aiSummary"
-        code={summary}
-      />
-    );
-  }
-
-  return (
-    <div className="PublishDocModal__ShowChanges">
-      <Accordion iconPosition="right" onChange={() => handleToggle()}>
-        <Accordion.Item label="Summarize changes (AI)">
-          {content}
-        </Accordion.Item>
-      </Accordion>
     </div>
   );
 }
@@ -341,18 +263,23 @@ function ShowChanges(props: {docId: string}) {
 
   return (
     <div className="PublishDocModal__ShowChanges">
-      <Accordion iconPosition="right" onChange={() => toggle()}>
-        <Accordion.Item label="Show changes (JSON)">
-          {toggled ? (
+      <Accordion
+        iconPosition="right"
+        onChange={() => toggle()}
+        disableIconRotation={true}
+      >
+        <Accordion.Item
+          label="Compare JSON data"
+          icon={<IconGitCompare stroke={1.5} />}
+          iconPosition="left"
+        >
+          {toggled && (
             <DocDiffViewer
               left={{docId, versionId: 'published'}}
               right={{docId, versionId: 'draft'}}
               showExpandButton={true}
+              showAiSummary={false}
             />
-          ) : (
-            <div className="PublishDocModal__ShowChanges__loading">
-              <Loader size="md" color="gray" />
-            </div>
           )}
         </Accordion.Item>
       </Accordion>

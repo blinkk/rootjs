@@ -905,14 +905,17 @@ export function unmarshalArray(arrObject: ArrayObject): any[] {
   return arr;
 }
 
-export async function cmsGetDocDiffSummary(docId: string): Promise<string> {
+export async function cmsGetDocDiffSummary(
+  docId: string,
+  options?: {beforeVersion?: string; afterVersion?: string}
+): Promise<string> {
   const res = await window.fetch('/cms/api/ai.diff', {
     method: 'POST',
     headers: {'content-type': 'application/json'},
     body: JSON.stringify({
       docId,
-      beforeVersion: 'published',
-      afterVersion: 'draft',
+      beforeVersion: options?.beforeVersion || 'published',
+      afterVersion: options?.afterVersion || 'draft',
     }),
   });
 
