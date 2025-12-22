@@ -1,0 +1,43 @@
+.AiSummary + .AiSummary {
+  margin-top: 12px;
+}
+
+.AiSummary__loading {
+  padding: 0 24px 8px;
+}
+
+.AiSummary .mantine-Accordion-control[aria-expanded="true"] {
+  background: #fff;
+}
+
+.AiSummary .mantine-Accordion-item {
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+}
+
+.AiSummary .mantine-Accordion-contentInner {
+  padding: 16px 0;
+}
+
+.AiSummary .mantine-Accordion-content {
+  padding-left: 0;
+}
+
+.AiSummary__content {
+  padding: 0 16px;
+  font-size: 14px;
+}
+
+.AiSummary__content ul {
+  margin: 10px 0;
+  padding: 0 20px;
+}
+
+.AiSummary__content code {
+  font-family: var(--font-family-mono);
+  background: #f5f5f5;
+  padding: 2px;
+  border: 1px solid #dedede;
+  border-radius: 2px;
+  margin: 0 4px;
+}

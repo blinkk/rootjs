@@ -1,3 +1,5 @@
+import './ComparePage.css';
+
 import {Loader} from '@mantine/core';
 import {useEffect, useState} from 'preact/hooks';
 import {
@@ -5,8 +7,6 @@ import {
   DocVersionId,
 } from '../../components/DocDiffViewer/DocDiffViewer.js';
 import {Layout} from '../../layout/Layout.js';
-
-import './ComparePage.css';
 
 export function ComparePage() {
   const [loading, setLoading] = useState(true);

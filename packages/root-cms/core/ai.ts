@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import {vertexAI} from '@genkit-ai/google-genai';
 import {Timestamp} from 'firebase-admin/firestore';
-import {Genkit, genkit, MessageData} from 'genkit';
+import {GenerateOptions, Genkit, genkit, MessageData} from 'genkit';
 import {logger} from 'genkit/logging';
 import {
   ChatPrompt,
@@ -92,8 +92,7 @@ export async function summarizeDiff(
     'Summarize the differences between the two payloads.',
   ].join('\n');
 
-  const res = await ai.generate({
-    model: vertexAI.model(model),
+  const res = await generate(ai, model, {
     messages: [
       {
         role: 'system',
@@ -145,8 +144,7 @@ export async function generateImage(
     ],
   });
 
-  const res = await ai.generate({
-    model: vertexAI.model(model),
+  const res = await generate(ai, model, {
     prompt: [
       {
         text: options.prompt,
@@ -167,6 +165,29 @@ export async function generateImage(
   }
 
   return res.media.url;
+}
+
+/**
+ * Wrapper around \`ai.generate\` that normalizes the request options based on the
+ * model.
+ */
+async function generate(ai: Genkit, model: string, options: GenerateOptions) {
+  const generateOptions = {
+    ...options,
+    model: vertexAI.model(model),
+  };
+
+  // NOTE(stevenle): the global location is required for
+  // \`gemini-3-flash-preview\`, it may be possible to remove this in the
+  // future.
+  if (model.startsWith('gemini-3')) {
+    generateOptions.config = {
+      ...generateOptions.config,
+      location: 'global',
+    };
+  }
+
+  return ai.generate(generateOptions);
 }
 
 export class Chat {
@@ -269,14 +290,9 @@ export class Chat {
     const chatRequest = await this.buildGenerateRequest(prompt, options);
     // TODO: Use streaming responses per https://genkit.dev/docs/models/#streaming
     // to improve UI performance.
-    const res = await this.ai.generate({
-      model: vertexAI.model(chatRequest.model),
+    const res = await generate(this.ai, chatRequest.model, {
       messages: chatRequest.messages,
       prompt: Array.isArray(prompt) ? prompt.flat() : prompt,
-      // NOTE(stevenle): the global location is required for
-      // `gemini-3-flash-preview`, it may be possible to remove this in the
-      // future.
-      config: {location: 'global'},
     });
     this.history = res.messages;
     await this.dbDoc().update({
