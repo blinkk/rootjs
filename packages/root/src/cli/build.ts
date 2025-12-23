@@ -11,6 +11,7 @@ import {getVitePlugins} from '../core/plugin.js';
 import {Route, Sitemap} from '../core/types.js';
 import {getElements} from '../node/element-graph.js';
 import {bundleRootConfig, loadRootConfig} from '../node/load-config.js';
+import {pluginRootRoutes} from '../node/vite-plugin-root-routes.js';
 import {BuildAssetMap} from '../render/asset-map/build-asset-map.js';
 import {htmlMinify} from '../render/html-minify.js';
 import {htmlPretty} from '../render/html-pretty.js';
@@ -66,6 +67,15 @@ export async function build(rootProjectDir?: string, options?: BuildOptions) {
     });
   }
 
+  const rootPlugins = rootConfig.plugins || [];
+  rootPlugins.forEach((plugin) => {
+    if (plugin.routes) {
+      Object.values(plugin.routes).forEach((filePath) => {
+        routeFiles.push(filePath);
+      });
+    }
+  });
+
   const elementGraph = await getElements(rootConfig);
   const elements = Object.values(elementGraph.sourceFiles).map((sourceFile) => {
     return sourceFile.filePath;
@@ -82,7 +92,6 @@ export async function build(rootProjectDir?: string, options?: BuildOptions) {
     });
   }
 
-  const rootPlugins = rootConfig.plugins || [];
   const viteConfig = rootConfig.vite || {};
 
   for (const plugin of rootPlugins) {
@@ -92,6 +101,7 @@ export async function build(rootProjectDir?: string, options?: BuildOptions) {
   }
 
   const vitePlugins = [
+    pluginRootRoutes(rootConfig),
     ...(viteConfig.plugins || []),
     ...getVitePlugins(rootPlugins),
   ];
