@@ -6,13 +6,16 @@ export function replaceParams(
     /\[\[?(\.\.\.)?([\w\-_]*)\]?\]/g,
     (match: string, _wildcard: string, key: string) => {
       const val = params[key];
-      if (!val) {
+      if (typeof val !== 'string') {
+        if (match.startsWith('[[') && match.endsWith(']]')) {
+          return '';
+        }
         throw new Error(`unreplaced param ${match} in url: ${urlPathFormat}`);
       }
       return val;
     }
   );
-  return urlPath;
+  return urlPath.replace(/\/+$/, '') || '/';
 }
 
 export function testPathHasParams(urlPath: string) {
