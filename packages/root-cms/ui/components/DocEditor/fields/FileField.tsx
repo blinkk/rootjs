@@ -26,6 +26,7 @@ import {
   IconPhotoUp,
   IconSparkles,
   IconTrash,
+  IconCheck,
 } from '@tabler/icons-preact';
 import {IconDotsVertical} from '@tabler/icons-preact';
 import {ComponentChildren, createContext} from 'preact';
@@ -376,9 +377,7 @@ FileField.Preview = () => {
           </Tooltip>
         )}
         <Menu
-          className="FileField__Preview__Menu"
           shadow="sm"
-          withinPortal={false}
           closeOnItemClick={false}
           control={
             <ActionIcon
@@ -443,6 +442,28 @@ FileField.Preview = () => {
           >
             {copied ? 'Copied!' : 'Copy URL'}
           </Menu.Item>
+          {testIsImageFile(ctx.value?.src || '') &&
+            ctx.value?.canvasBgColor && (
+              <Menu.Item
+                icon={
+                  ctx.value?.canvasBgColor === 'dark' ? (
+                    <IconCheck size={16} />
+                  ) : (
+                    <IconCheck size={16} style={{opacity: 0}} />
+                  )
+                }
+                closeOnItemClick={false}
+                onClick={() => {
+                  const newColor =
+                    ctx.value?.canvasBgColor === 'dark' ? 'light' : 'dark';
+                  if (ctx.value) {
+                    ctx.setValue({...ctx.value, canvasBgColor: newColor});
+                  }
+                }}
+              >
+                Use dark canvas
+              </Menu.Item>
+            )}
           <Divider />
           <Menu.Item
             color="red"
