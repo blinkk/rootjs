@@ -1,5 +1,12 @@
 # @blinkk/root-cms
 
+## 2.4.9
+
+### Patch Changes
+
+- 04a78526: fix: add auth check to sse api endpoint
+  - @blinkk/root@2.4.9
+
 ## 2.4.8
 
 ### Patch Changes
