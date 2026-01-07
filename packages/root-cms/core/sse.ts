@@ -27,6 +27,10 @@ export function sse(server: Server) {
   };
 
   server.use('/cms/api/sse.connect', async (req: Request, res: Response) => {
+    if (!req.user) {
+      res.status(401).json({success: false, error: 'NOT_AUTHORIZED'});
+      return;
+    }
     res.writeHead(200, {
       'Content-Type': 'text/event-stream',
       'Cache-Control': 'no-cache',
