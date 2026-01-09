@@ -26,7 +26,8 @@ import {
   IconPhotoUp,
   IconSparkles,
   IconTrash,
-  IconCheck,
+  IconSquareCheckFilled,
+  IconSquareCheck,
 } from '@tabler/icons-preact';
 import {IconDotsVertical} from '@tabler/icons-preact';
 import {ComponentChildren, createContext} from 'preact';
@@ -447,9 +448,9 @@ FileField.Preview = () => {
               <Menu.Item
                 icon={
                   ctx.value?.canvasBgColor === 'dark' ? (
-                    <IconCheck size={16} />
+                    <IconSquareCheckFilled size={16} />
                   ) : (
-                    <IconCheck size={16} style={{opacity: 0}} />
+                    <IconSquareCheck size={16} style={{opacity: 0.25}} />
                   )
                 }
                 closeOnItemClick={false}
