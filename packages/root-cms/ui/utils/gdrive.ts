@@ -50,12 +50,16 @@ export async function downloadFromDrive(
     gapi.client.drive.files.get({
       fileId: fileId,
       fields: 'name,mimeType,size',
+      supportsAllDrives: true,
     }),
-    fetch(`https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    }),
+    fetch(
+      `https://www.googleapis.com/drive/v3/files/${fileId}?alt=media&supportsAllDrives=true`,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    ),
   ]);
   const meta = metaResp.result;
 

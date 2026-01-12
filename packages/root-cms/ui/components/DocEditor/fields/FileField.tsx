@@ -181,15 +181,30 @@ export function FileField(props: FileFieldProps) {
           const downloadedFile = await downloadFromDrive(gapiClient, driveId);
           hideNotification('gdrive-download');
           uploadFile(downloadedFile);
-        } catch (err) {
+        } catch (err: any) {
           console.error(err);
           setLoadingState('error');
+          let message = 'Failed to download file from Google Drive.';
+          if (
+            err?.result?.error?.code === 404 ||
+            err?.message?.includes('File not found')
+          ) {
+            message =
+              'File not found. Please check that the file exists and you have access to it.';
+          } else if (err instanceof Error) {
+            message = err.message;
+          } else if (err?.result?.error?.message) {
+            message = err.result.error.message;
+          }
+
+          hideNotification('gdrive-download');
           showNotification({
-            id: 'gdrive-download',
-            title: 'Google Drive file import failed',
-            message: String(err),
+            id: 'gdrive-error',
+            title: 'Google Drive import failed',
+            message: message,
             color: 'red',
             autoClose: false,
+            loading: false,
           });
         }
         return;
