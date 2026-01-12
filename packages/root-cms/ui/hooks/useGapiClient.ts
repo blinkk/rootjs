@@ -14,8 +14,9 @@ const DISCOVERY_DOCS = [
 export interface GapiClient {
   enabled: boolean;
   loading: boolean;
+  hasScope: (scope: string) => boolean;
   isLoggedIn: () => boolean;
-  login: () => Promise<void>;
+  login: (options?: {scopes?: string[]}) => Promise<void>;
 }
 
 interface GapiUserConsent {
@@ -47,12 +48,15 @@ export function useGapiClient(): GapiClient {
     }
   }, []);
 
-  function login() {
+  function login(options?: {scopes?: string[]}) {
     return new Promise<void>((resolve) => {
       const clientId = window.__ROOT_CTX.gapi!.clientId!;
+      const scopes = [...SCOPES, ...(options?.scopes || [])];
+      // De-dupe scopes.
+      const uniqueScopes = [...new Set(scopes)];
       const tokenClient = google.accounts.oauth2.initTokenClient({
         client_id: clientId,
-        scope: SCOPES.join(' '),
+        scope: uniqueScopes.join(' '),
         callback: async (token) => {
           // console.log('logged in');
           // console.log(token);
@@ -62,14 +66,14 @@ export function useGapiClient(): GapiClient {
           setUserConsent({
             at: timestamp(),
             clientId: clientId,
-            scopes: SCOPES,
+            scopes: uniqueScopes,
           });
           resolve();
         },
       });
 
       // if (gapi.client.getToken() === null) {
-      if (userConsent && verifyUserConsent(userConsent)) {
+      if (userConsent && verifyUserConsent(userConsent, uniqueScopes)) {
         // Skip display of account chooser and consent dialog when user has
         // previously consented.
         console.log('requesting token without prompt');
@@ -87,10 +91,14 @@ export function useGapiClient(): GapiClient {
     return timestamp() < tokenExpiresAt;
   }
 
-  return {enabled, loading, isLoggedIn, login};
+  function hasScope(scope: string) {
+    return userConsent?.scopes?.includes(scope) || false;
+  }
+
+  return {enabled, loading, isLoggedIn, login, hasScope};
 }
 
-function verifyUserConsent(userConsent: GapiUserConsent) {
+function verifyUserConsent(userConsent: GapiUserConsent, scopes: string[]) {
   if (!userConsent) {
     return false;
   }
@@ -106,8 +114,8 @@ function verifyUserConsent(userConsent: GapiUserConsent) {
   }
 
   // Verify all scopes.
-  const scopes = userConsent.scopes || [];
-  return SCOPES.every((scope) => scopes.includes(scope));
+  const consentedScopes = userConsent.scopes || [];
+  return scopes.every((scope) => consentedScopes.includes(scope));
 }
 
 function timestamp() {
