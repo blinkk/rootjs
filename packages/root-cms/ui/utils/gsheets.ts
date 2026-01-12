@@ -50,6 +50,7 @@ export class GSpreadsheet {
         removeParents: 'root',
         fields: 'id, parents',
         resource: {},
+        supportsAllDrives: true,
       });
     }
 
@@ -151,6 +152,7 @@ export class GSpreadsheet {
           resource: permission,
           sendNotificationEmail: false,
           fields: 'id',
+          supportsAllDrives: true,
         });
       })
     );
