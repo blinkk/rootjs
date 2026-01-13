@@ -45,7 +45,7 @@ import {
   UploadedFile,
   uploadFileToGCS,
 } from '../../../utils/gcs.js';
-import {downloadFromDrive, getGoogleDriveId} from '../../../utils/gdrive.js';
+import {downloadFromDrive, parseGoogleDriveId} from '../../../utils/gdrive.js';
 import {FieldProps} from './FieldProps.js';
 import {GenerateImageForm} from './GenerateImageForm.js';
 
@@ -161,7 +161,7 @@ export function FileField(props: FileFieldProps) {
 
     // Handle Google Drive URLs.
     if (typeof file === 'string' && !options?.as) {
-      const driveId = getGoogleDriveId(file);
+      const driveId = parseGoogleDriveId(file);
       if (driveId) {
         try {
           if (!gapiClient.enabled) {
@@ -546,7 +546,7 @@ FileField.Preview = () => {
           // Handle SVG text (supports copying SVG from Figma) or Drive URLs.
           const text = e.clipboardData?.getData('text/plain');
           if (text) {
-            if (getGoogleDriveId(text)) {
+            if (parseGoogleDriveId(text)) {
               ctx.handleFile(text);
               return;
             }
@@ -899,7 +899,7 @@ FileField.Dropzone = forwardRef<HTMLButtonElement, {}>((props, ref) => {
         // Handle SVG text (supports copying SVG from Figma) or Drive URLs.
         const text = e.clipboardData?.getData('text/plain');
         if (text) {
-          if (getGoogleDriveId(text)) {
+          if (parseGoogleDriveId(text)) {
             ctx.handleFile(text);
             return;
           }

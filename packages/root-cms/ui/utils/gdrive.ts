@@ -1,10 +1,12 @@
 import {GapiClient} from '../hooks/useGapiClient.js';
 
+const GOOGLE_DRIVE_HOSTNAMES = ['drive.google.com', 'docs.google.com'];
+
 /** Extracts the Google Drive file ID from a URL. */
-export function getGoogleDriveId(url: string): string | null {
+export function parseGoogleDriveId(url: string): string | null {
   try {
     const u = new URL(url);
-    if (!u.hostname.endsWith('google.com')) {
+    if (!GOOGLE_DRIVE_HOSTNAMES.includes(u.hostname)) {
       return null;
     }
     // https://drive.google.com/open?id=...

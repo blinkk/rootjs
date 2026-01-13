@@ -51,9 +51,9 @@ export function useGapiClient(): GapiClient {
   function login(options?: {scopes?: string[]}) {
     return new Promise<void>((resolve) => {
       const clientId = window.__ROOT_CTX.gapi!.clientId!;
-      const scopes = [...SCOPES, ...(options?.scopes || [])];
-      // De-dupe scopes.
-      const uniqueScopes = [...new Set(scopes)];
+      const uniqueScopes = Array.from(
+        new Set([...SCOPES, ...(options?.scopes || [])])
+      );
       const tokenClient = google.accounts.oauth2.initTokenClient({
         client_id: clientId,
         scope: uniqueScopes.join(' '),
