@@ -1,5 +1,12 @@
 # @blinkk/root-cms
 
+## 2.4.10
+
+### Patch Changes
+
+- 00968342: feat: add ability to paste google drive url
+  - @blinkk/root@2.4.10
+
 ## 2.4.9
 
 ### Patch Changes
