@@ -15,7 +15,7 @@ import {
   useMantineTheme,
 } from '@mantine/core';
 import {Menu} from '@mantine/core';
-import {showNotification} from '@mantine/notifications';
+import {hideNotification, showNotification} from '@mantine/notifications';
 import {
   IconCopy,
   IconDownload,
@@ -33,6 +33,7 @@ import {ChangeEvent, CSSProperties, forwardRef} from 'preact/compat';
 import {useContext, useMemo, useRef, useState} from 'preact/hooks';
 import * as schema from '../../../../core/schema.js';
 import {useDraftDocValue} from '../../../hooks/useDraftDoc.js';
+import {useGapiClient} from '../../../hooks/useGapiClient.js';
 import {ChatController, useChat} from '../../../pages/AIPage/AIPage.js';
 import {joinClassNames} from '../../../utils/classes.js';
 import {
@@ -44,6 +45,7 @@ import {
   UploadedFile,
   uploadFileToGCS,
 } from '../../../utils/gcs.js';
+import {downloadFromDrive, parseGoogleDriveId} from '../../../utils/gdrive.js';
 import {FieldProps} from './FieldProps.js';
 import {GenerateImageForm} from './GenerateImageForm.js';
 
@@ -106,6 +108,7 @@ export function FileField(props: FileFieldProps) {
   const [value, setValue] = useDraftDocValue<FileFieldValueType>(props.deepKey);
   const [loadingState, setLoadingState] =
     useState<FileFieldLoadingState | null>(null);
+  const gapiClient = useGapiClient();
 
   const acceptedFileTypes =
     field.exts ?? (props.variant === 'image' ? IMAGE_MIMETYPES : []);
@@ -151,10 +154,63 @@ export function FileField(props: FileFieldProps) {
   }
 
   /** Validates incoming file data and if it passes validation, uploads it. */
-  function handleFile(file: File | string, options?: {as?: 'svg'}) {
+  async function handleFile(file: File | string, options?: {as?: 'svg'}) {
     if (!file) {
       return;
     }
+
+    // Handle Google Drive URLs.
+    if (typeof file === 'string' && !options?.as) {
+      const driveId = parseGoogleDriveId(file);
+      if (driveId) {
+        try {
+          if (!gapiClient.enabled) {
+            console.warn(
+              'Google API integration is not enabled for this project. Specify the `gapi` config in your root.config.ts to enable pasting from Google Drive URLs.'
+            );
+            return;
+          }
+
+          setLoadingState('loading');
+          showNotification({
+            message: 'Downloading from Google Drive...',
+            loading: true,
+            autoClose: false,
+            id: 'gdrive-download',
+          });
+          const downloadedFile = await downloadFromDrive(gapiClient, driveId);
+          hideNotification('gdrive-download');
+          uploadFile(downloadedFile);
+        } catch (err: any) {
+          console.error(err);
+          setLoadingState('error');
+          let message = 'Failed to download file from Google Drive.';
+          if (
+            err?.result?.error?.code === 404 ||
+            err?.message?.includes('File not found')
+          ) {
+            message =
+              'File not found. Please check that the file exists and you have access to it.';
+          } else if (err instanceof Error) {
+            message = err.message;
+          } else if (err?.result?.error?.message) {
+            message = err.result.error.message;
+          }
+
+          hideNotification('gdrive-download');
+          showNotification({
+            id: 'gdrive-error',
+            title: 'Google Drive import failed',
+            message: message,
+            color: 'red',
+            autoClose: false,
+            loading: false,
+          });
+        }
+        return;
+      }
+    }
+
     // Convert text to a File.
     if (options?.as === 'svg') {
       file = new File(
@@ -487,11 +543,17 @@ FileField.Preview = () => {
             ctx.handleFile(file);
             return;
           }
-          // Handle SVG text (supports copying SVG from Figma).
+          // Handle SVG text (supports copying SVG from Figma) or Drive URLs.
           const text = e.clipboardData?.getData('text/plain');
-          if (text && testSvg(text)) {
-            ctx.handleFile(text, {as: 'svg'});
-            return;
+          if (text) {
+            if (parseGoogleDriveId(text)) {
+              ctx.handleFile(text);
+              return;
+            }
+            if (testSvg(text)) {
+              ctx.handleFile(text, {as: 'svg'});
+              return;
+            }
           }
         }}
       >
@@ -834,11 +896,17 @@ FileField.Dropzone = forwardRef<HTMLButtonElement, {}>((props, ref) => {
           ctx.handleFile(file);
           return;
         }
-        // Handle SVG text (supports copying SVG from Figma).
+        // Handle SVG text (supports copying SVG from Figma) or Drive URLs.
         const text = e.clipboardData?.getData('text/plain');
-        if (text && testSvg(text)) {
-          ctx.handleFile(text, {as: 'svg'});
-          return;
+        if (text) {
+          if (parseGoogleDriveId(text)) {
+            ctx.handleFile(text);
+            return;
+          }
+          if (testSvg(text)) {
+            ctx.handleFile(text, {as: 'svg'});
+            return;
+          }
         }
       }}
       title="Drop or paste to upload a file"
