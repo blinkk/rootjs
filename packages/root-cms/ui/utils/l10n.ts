@@ -6,6 +6,7 @@ import {
   query,
   updateDoc,
   where,
+  writeBatch,
 } from 'firebase/firestore';
 import {logAction} from './actions.js';
 import {TIME_UNITS} from './time.js';
@@ -105,6 +106,28 @@ export async function updateTranslationByHash(
     throttle: 5 * TIME_UNITS.minute,
     throttleId: hash,
   });
+}
+
+/**
+ * Updates tags for multiple translations.
+ */
+export async function batchUpdateTags(
+  updates: Array<{hash: string; tags: string[]}>
+) {
+  const projectId = window.__ROOT_CTX.rootConfig.projectId;
+  const db = window.firebase.db;
+
+  // Firestore batch limit is 500.
+  const batchSize = 500;
+  for (let i = 0; i < updates.length; i += batchSize) {
+    const batch = writeBatch(db);
+    const chunk = updates.slice(i, i + batchSize);
+    chunk.forEach(({hash, tags}) => {
+      const docRef = doc(db, 'Projects', projectId, 'Translations', hash);
+      batch.update(docRef, {tags});
+    });
+    await batch.commit();
+  }
 }
 
 /** Returns the sha1 hash for a source string. */

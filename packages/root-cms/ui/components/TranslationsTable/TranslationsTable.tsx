@@ -15,9 +15,13 @@ import '@ag-grid-community/styles/ag-theme-alpine.css';
 import {
   ActionIcon,
   Button,
+  Divider,
+  Group,
   Loader,
   Menu,
+  Modal,
   MultiSelect,
+  Text,
   TextInput,
 } from '@mantine/core';
 import {
@@ -25,12 +29,14 @@ import {
   IconDots,
   IconSearch,
   IconTag,
+  IconTagMinus,
+  IconTagPlus,
   IconWorld,
 } from '@tabler/icons-preact';
 import {useEffect, useMemo, useState} from 'preact/hooks';
 import {useArrayParam, useStringParam} from '../../hooks/useQueryParam.js';
 import {joinClassNames} from '../../utils/classes.js';
-import {loadTranslations} from '../../utils/l10n.js';
+import {batchUpdateTags, loadTranslations} from '../../utils/l10n.js';
 import {notifyErrors} from '../../utils/notifications.js';
 
 ModuleRegistry.registerModules([ClientSideRowModelModule]);
@@ -62,6 +68,61 @@ export function TranslationsTable() {
   const [showHashes, setShowHashes] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [exactMatchesOnly, setExactMatchesOnly] = useState(false);
+
+  // Bulk Edit Tags Modal State
+  const [isAddTagsModalOpen, setIsAddTagsModalOpen] = useState(false);
+  const [isRemoveTagsModalOpen, setIsRemoveTagsModalOpen] = useState(false);
+  const [tagsToBulkAdd, setTagsToBulkAdd] = useState<string[]>([]);
+  const [tagsToBulkRemove, setTagsToBulkRemove] = useState<string[]>([]);
+  const [isBulkUpdating, setIsBulkUpdating] = useState(false);
+
+  const handleBulkAddTags = async () => {
+    setIsBulkUpdating(true);
+    try {
+      const updates = rowData.map((row) => {
+        const currentTags = row.tags || [];
+        const newTags = Array.from(
+          new Set([...currentTags, ...tagsToBulkAdd])
+        ).sort();
+        return {hash: row.hash, tags: newTags};
+      });
+      await batchUpdateTags(updates);
+      await updateTranslationsMap();
+      setIsAddTagsModalOpen(false);
+      setTagsToBulkAdd([]);
+    } catch (err) {
+      console.error(err);
+      notifyErrors(async () => {
+        throw err;
+      });
+    } finally {
+      setIsBulkUpdating(false);
+    }
+  };
+
+  const handleBulkRemoveTags = async () => {
+    setIsBulkUpdating(true);
+    try {
+      const updates = rowData.map((row) => {
+        const currentTags = row.tags || [];
+        const newTags = currentTags.filter(
+          (t) => !tagsToBulkRemove.includes(t)
+        );
+        return {hash: row.hash, tags: newTags};
+      });
+      await batchUpdateTags(updates);
+      await updateTranslationsMap();
+      setIsRemoveTagsModalOpen(false);
+      setTagsToBulkRemove([]);
+    } catch (err) {
+      console.error(err);
+      notifyErrors(async () => {
+        throw err;
+      });
+    } finally {
+      setIsBulkUpdating(false);
+    }
+  };
 
   // Sync input value when URL param changes (e.g. back/forward navigation).
   useEffect(() => {
@@ -472,6 +533,20 @@ export function TranslationsTable() {
           >
             Exact Matches Only
           </Menu.Item>
+          <Divider />
+          <Menu.Label>Bulk Edit Tags</Menu.Label>
+          <Menu.Item
+            icon={<IconTagPlus size={14} />}
+            onClick={() => setIsAddTagsModalOpen(true)}
+          >
+            Add tags...
+          </Menu.Item>
+          <Menu.Item
+            icon={<IconTagMinus size={14} />}
+            onClick={() => setIsRemoveTagsModalOpen(true)}
+          >
+            Remove tags...
+          </Menu.Item>
         </Menu>
       </div>
       {isLoading ? (
@@ -504,6 +579,76 @@ export function TranslationsTable() {
           />
         </div>
       )}
+      <Modal
+        opened={isAddTagsModalOpen}
+        onClose={() => setIsAddTagsModalOpen(false)}
+        title="Bulk Add Tags"
+      >
+        <Text size="sm" mb="md">
+          The following tags will be added to the {rowData.length} strings
+          currently visible in the table.
+        </Text>
+        <MultiSelect
+          data={availableTags}
+          value={tagsToBulkAdd}
+          onChange={setTagsToBulkAdd}
+          placeholder="Select or create tags"
+          searchable
+          creatable
+          getCreateLabel={(query: string) => `+ Create ${query}`}
+          onCreate={(query: string) => {
+            const item = {value: query, label: query, group: 'Other'};
+            setTagsToBulkAdd((current) => [...current, query]);
+            return item;
+          }}
+          mb="md"
+        />
+        <Group position="right">
+          <Button
+            variant="default"
+            onClick={() => setIsAddTagsModalOpen(false)}
+          >
+            Cancel
+          </Button>
+          <Button loading={isBulkUpdating} onClick={handleBulkAddTags}>
+            Add Tags
+          </Button>
+        </Group>
+      </Modal>
+
+      <Modal
+        opened={isRemoveTagsModalOpen}
+        onClose={() => setIsRemoveTagsModalOpen(false)}
+        title="Bulk Remove Tags"
+      >
+        <Text size="sm" mb="md">
+          The following tags will be removed from the {rowData.length} strings
+          currently visible in the table.
+        </Text>
+        <MultiSelect
+          data={availableTags}
+          value={tagsToBulkRemove}
+          onChange={setTagsToBulkRemove}
+          placeholder="Select tags to remove"
+          searchable
+          mb="md"
+        />
+        <Group position="right">
+          <Button
+            variant="default"
+            onClick={() => setIsRemoveTagsModalOpen(false)}
+          >
+            Cancel
+          </Button>
+          <Button
+            color="red"
+            loading={isBulkUpdating}
+            onClick={handleBulkRemoveTags}
+          >
+            Remove Tags
+          </Button>
+        </Group>
+      </Modal>
     </div>
   );
 }
