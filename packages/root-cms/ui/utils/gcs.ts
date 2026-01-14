@@ -291,7 +291,8 @@ export function buildDownloadURL(src: string) {
   return src;
 }
 
-function shouldImageUseDarkBg(file: File) {
+/** Returns whether the provided image file should use a dark background for previews. */
+export function shouldImageUseDarkBg(file: File) {
   return new Promise((resolve, reject) => {
     const img = new Image();
     const reader = new FileReader();
@@ -313,16 +314,38 @@ function shouldImageUseDarkBg(file: File) {
         b = 0,
         count = 0;
 
-      for (let i = 0; i < data.length; i += 4 * 100) {
+      // Check a subset of pixels to save performance.
+      // Target roughly 10,000 pixels to sample.
+      // 4 channels (rgba) * 10000 pixels = 40000 data points.
+      // Stride = total data length / 40000.
+      // Ensure stride is at least 4 (1 pixel) and is a multiple of 4.
+      let stride = Math.floor(data.length / 40000) * 4;
+      if (stride < 4) {
+        stride = 4;
+      }
+
+      for (let i = 0; i < data.length; i += stride) {
+        const a = data[i + 3];
+        // Skip pixels that are mostly transparent.
+        if (a < 128) {
+          continue;
+        }
         r += data[i];
         g += data[i + 1];
         b += data[i + 2];
         count++;
       }
 
+      // If the image is fully transparent, assume it works on a light background.
+      if (count === 0) {
+        resolve(false);
+        return;
+      }
+
       const avgLuminance =
         0.299 * (r / count) + 0.587 * (g / count) + 0.114 * (b / count);
-      resolve(avgLuminance < 128); // true = use dark bg
+      // If the image is light (high luminance), use a dark background for contrast.
+      resolve(avgLuminance > 128); // true = use dark bg
     };
 
     img.onerror = reject;
