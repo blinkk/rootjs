@@ -30,8 +30,10 @@ import {
   IconSquareCheck,
 } from '@tabler/icons-preact';
 import {IconDotsVertical} from '@tabler/icons-preact';
+import {IconCrop} from '@tabler/icons-preact';
 import {ComponentChildren, createContext} from 'preact';
 import {ChangeEvent, CSSProperties, forwardRef} from 'preact/compat';
+import {lazy, Suspense} from 'preact/compat';
 import {useContext, useMemo, useRef, useState} from 'preact/hooks';
 import * as schema from '../../../../core/schema.js';
 import {useDraftDocValue} from '../../../hooks/useDraftDoc.js';
@@ -85,12 +87,17 @@ interface FileFieldContextValue {
   requestFileDownload: () => void;
   requestGenerateAltText: (chat: ChatController) => void;
   requestPlaceholderModalOpen: () => void;
+  requestImageEditorOpen: () => void;
   showAltText: boolean;
   altText: string;
   setAltText: (altText: string) => void;
 }
 
 const FileFieldContext = createContext<FileFieldContextValue | null>(null);
+
+const ImageEditorDialog = lazy(() =>
+  import('./ImageEditorDialog.js').then((m) => ({default: m.ImageEditorDialog}))
+);
 
 function useFileField() {
   const ctx = useContext(FileFieldContext);
@@ -107,6 +114,7 @@ export function FileField(props: FileFieldProps) {
   const theme = useMantineTheme();
   const dropZoneRef = useRef<HTMLButtonElement>(null);
   const [placeholderModalOpened, setPlaceholderModalOpened] = useState(false);
+  const [imageEditorOpened, setImageEditorOpened] = useState(false);
   const [value, setValue] = useDraftDocValue<FileFieldValueType>(props.deepKey);
   const [loadingState, setLoadingState] =
     useState<FileFieldLoadingState | null>(null);
@@ -294,6 +302,10 @@ export function FileField(props: FileFieldProps) {
     setPlaceholderModalOpened(true);
   }
 
+  function requestImageEditorOpen() {
+    setImageEditorOpened(true);
+  }
+
   function setAltText(altText: string) {
     if (!value?.src) {
       return;
@@ -363,6 +375,7 @@ export function FileField(props: FileFieldProps) {
         requestFileUpload: requestFileUpload,
         requestFileDownload: requestFileDownload,
         requestPlaceholderModalOpen: requestPlaceholderModalOpen,
+        requestImageEditorOpen: requestImageEditorOpen,
         showAltText: showAltText,
         altText: altText,
         setAltText: setAltText,
@@ -387,6 +400,22 @@ export function FileField(props: FileFieldProps) {
           }}
         />
       </Modal>
+      {imageEditorOpened && value?.src && (
+        <Suspense fallback={null}>
+          <ImageEditorDialog
+            opened={imageEditorOpened}
+            onClose={() => setImageEditorOpened(false)}
+            src={value.src}
+            filename={value.filename}
+            initialWidth={parseInt(value.width as unknown as string)}
+            initialHeight={parseInt(value.height as unknown as string)}
+            onSave={(file) => {
+              uploadFile(file);
+              setImageEditorOpened(false);
+            }}
+          />
+        </Suspense>
+      )}
       <div className="FileField">
         <FileField.Dropzone ref={dropZoneRef} />
         {value?.src ? (
@@ -435,7 +464,6 @@ FileField.Preview = () => {
         )}
         <Menu
           shadow="sm"
-          closeOnItemClick={false}
           control={
             <ActionIcon
               variant="outline"
@@ -472,6 +500,19 @@ FileField.Preview = () => {
               Placeholder image
             </Menu.Item>
           )}
+          {testIsImageFile(ctx.value?.src) &&
+            !ctx.value?.src?.endsWith('.svg') && (
+              <Menu.Item
+                disabled={!ctx.value?.src}
+                icon={<IconCrop size={16} />}
+                closeMenuOnClick
+                onClick={() => {
+                  ctx.requestImageEditorOpen();
+                }}
+              >
+                Edit image
+              </Menu.Item>
+            )}
           <Divider />
           <Menu.Item
             disabled={ctx.value?.src?.startsWith('data:')}

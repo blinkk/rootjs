@@ -415,6 +415,9 @@ importers:
       kleur:
         specifier: 4.1.5
         version: 4.1.5
+      react-easy-crop:
+        specifier: 5.5.6
+        version: 5.5.6(@preact/compat@18.3.1)(@preact/compat@18.3.1)
       sirv:
         specifier: 2.0.3
         version: 2.0.3
@@ -625,7 +628,7 @@ importers:
         version: 5.9.2
       vite:
         specifier: 7.1.4
-        version: 7.1.4(@types/node@24.3.1)
+        version: 7.1.4(@types/node@24.3.1)(sass-embedded@1.92.0)
       vitest:
         specifier: 4.0.10
         version: 4.0.10(@types/node@24.3.1)(@vitest/browser-playwright@4.0.10)(jsdom@27.2.0)
@@ -3647,15 +3650,15 @@ packages:
       '@types/gapi.client.discovery-v1': 0.0.4
     dev: true
 
-  /@maxim_mazurok/gapi.client.drive-v3@0.1.20251201:
-    resolution: {integrity: sha512-qa9DQ7uOs4f1x3TimrkZbB+vyrYhbx0VMsFvCkAuuoyLCof5/XESCg/ump9W9+ST7blYcufXNc+iOUiJ4dMIlw==}
+  /@maxim_mazurok/gapi.client.drive-v3@0.1.20260113:
+    resolution: {integrity: sha512-XJFWVL+FGyerjT2UewJVUyJEkehkX2iZRP4sRuODnOWVnJ0BMEqa5OAiQI5771s/RAM3oOKLLLdS3Xkj29gzYA==}
     dependencies:
       '@types/gapi.client': 1.0.8
       '@types/gapi.client.discovery-v1': 0.0.4
     dev: true
 
-  /@maxim_mazurok/gapi.client.sheets-v4@0.1.20251203:
-    resolution: {integrity: sha512-RAEJbh4QGLTTtWxuzQKHtEU3qtbkDpWOTLcbqdAorCfQwHrcC2NCLyl00GpRRltdz0i6R9a+smKjL32rsWrvpQ==}
+  /@maxim_mazurok/gapi.client.sheets-v4@0.1.20260112:
+    resolution: {integrity: sha512-ZQotadpW0amISI6ahyPnWmFweyPdDnVFwbLR8qokxK0OsCd2iQiE+qNG/1lXGkXUE+QpkRttEdahWtyo6dBsog==}
     dependencies:
       '@types/gapi.client': 1.0.8
       '@types/gapi.client.discovery-v1': 0.0.4
@@ -5625,13 +5628,13 @@ packages:
   /@types/gapi.client.drive-v3@0.0.4:
     resolution: {integrity: sha512-jE37dJ0EzAdY0aJPFOp20xmec/aO0P4HtUIA9k07RMPyedFDOcuMlSac1r0PklwQdgXF7BHaMoObNHNAnwSQUQ==}
     dependencies:
-      '@maxim_mazurok/gapi.client.drive-v3': 0.1.20251201
+      '@maxim_mazurok/gapi.client.drive-v3': 0.1.20260113
     dev: true
 
   /@types/gapi.client.sheets-v4@0.0.4:
     resolution: {integrity: sha512-6kTJ7aDMAElfdQV1XzVJmZWjgbibpa84DMuKuaN8Cwqci/dkglPyHXKvsGrRugmuYvgFYr35AQqwz6j3q8R0dw==}
     dependencies:
-      '@maxim_mazurok/gapi.client.sheets-v4': 0.1.20251203
+      '@maxim_mazurok/gapi.client.sheets-v4': 0.1.20260112
     dev: true
 
   /@types/gapi.client@1.0.8:
@@ -6115,7 +6118,7 @@ packages:
       '@vitest/spy': 4.0.10
       estree-walker: 3.0.3
       magic-string: 0.30.21
-      vite: 7.1.4(@types/node@24.3.1)
+      vite: 7.1.4(@types/node@24.3.1)(sass-embedded@1.92.0)
     dev: true
 
   /@vitest/pretty-format@3.2.4:
@@ -7632,17 +7635,6 @@ packages:
         optional: true
     dependencies:
       ms: 2.0.0
-
-  /debug@3.2.7:
-    resolution: {integrity: sha512-CFjzYYAi4ThfiQvizrFQevTTXHtnCqWfe7x1AhgEscTz6ZbLbfoLRLPugTQyBth6f8ZERVUSyWHFD/7Wu4t1XQ==}
-    peerDependencies:
-      supports-color: '*'
-    peerDependenciesMeta:
-      supports-color:
-        optional: true
-    dependencies:
-      ms: 2.1.3
-    dev: true
 
   /debug@3.2.7(supports-color@5.5.0):
     resolution: {integrity: sha512-CFjzYYAi4ThfiQvizrFQevTTXHtnCqWfe7x1AhgEscTz6ZbLbfoLRLPugTQyBth6f8ZERVUSyWHFD/7Wu4t1XQ==}
@@ -12453,6 +12445,10 @@ packages:
     engines: {node: '>=0.10.0'}
     dev: true
 
+  /normalize-wheel@1.0.1:
+    resolution: {integrity: sha512-1OnlAPZ3zgrk8B91HyRj+eVv+kS5u+Z0SCsak6Xil/kmgEia50ga7zfkumayonZrImffAxPU/5WcyGhzetHNPA==}
+    dev: false
+
   /npm-run-path@4.0.1:
     resolution: {integrity: sha512-S48WzZW777zhNIrn7gxOlISNAqi9ZC/uQFnRdbeIHhZhCA6UqpkOT8T1G7BvfdgP4Er8gF4sUbaS0i7QvIfCWw==}
     engines: {node: '>=8'}
@@ -13016,7 +13012,7 @@ packages:
     engines: {node: '>= 0.12.0'}
     dependencies:
       async: 2.6.4
-      debug: 3.2.7
+      debug: 3.2.7(supports-color@5.5.0)
       mkdirp: 0.5.6
     transitivePeerDependencies:
       - supports-color
@@ -13498,6 +13494,18 @@ packages:
       - supports-color
     dev: true
     optional: true
+
+  /react-easy-crop@5.5.6(@preact/compat@18.3.1)(@preact/compat@18.3.1):
+    resolution: {integrity: sha512-Jw3/ozs8uXj3NpL511Suc4AHY+mLRO23rUgipXvNYKqezcFSYHxe4QXibBymkOoY6oOtLVMPO2HNPRHYvMPyTw==}
+    peerDependencies:
+      react: '>=16.4.0'
+      react-dom: '>=16.4.0'
+    dependencies:
+      normalize-wheel: 1.0.1
+      react: /@preact/compat@18.3.1(preact@10.27.1)
+      react-dom: /@preact/compat@18.3.1(preact@10.27.1)
+      tslib: 2.6.2
+    dev: false
 
   /react-error-boundary@3.1.4(@preact/compat@18.3.1):
     resolution: {integrity: sha512-uM9uPzZJTF6wRQORmSrvOIgt4lJ9MC1sNgEOj2XGsDTRE4kmpWxg7ENK9EWNKJRMAOY9z0MuF4yIfl6gp4sotA==}
@@ -15880,57 +15888,6 @@ packages:
       - yaml
     dev: true
 
-  /vite@7.1.4(@types/node@24.3.1):
-    resolution: {integrity: sha512-X5QFK4SGynAeeIt+A7ZWnApdUyHYm+pzv/8/A57LqSGcI88U6R6ipOs3uCesdc6yl7nl+zNO0t8LmqAdXcQihw==}
-    engines: {node: ^20.19.0 || >=22.12.0}
-    hasBin: true
-    peerDependencies:
-      '@types/node': ^20.19.0 || >=22.12.0
-      jiti: '>=1.21.0'
-      less: ^4.0.0
-      lightningcss: ^1.21.0
-      sass: ^1.70.0
-      sass-embedded: ^1.70.0
-      stylus: '>=0.54.8'
-      sugarss: ^5.0.0
-      terser: ^5.16.0
-      tsx: ^4.8.1
-      yaml: ^2.4.2
-    peerDependenciesMeta:
-      '@types/node':
-        optional: true
-      jiti:
-        optional: true
-      less:
-        optional: true
-      lightningcss:
-        optional: true
-      sass:
-        optional: true
-      sass-embedded:
-        optional: true
-      stylus:
-        optional: true
-      sugarss:
-        optional: true
-      terser:
-        optional: true
-      tsx:
-        optional: true
-      yaml:
-        optional: true
-    dependencies:
-      '@types/node': 24.3.1
-      esbuild: 0.25.9
-      fdir: 6.5.0(picomatch@4.0.3)
-      picomatch: 4.0.3
-      postcss: 8.5.6
-      rollup: 4.50.0
-      tinyglobby: 0.2.14
-    optionalDependencies:
-      fsevents: 2.3.3
-    dev: true
-
   /vite@7.1.4(@types/node@24.3.1)(sass-embedded@1.92.0):
     resolution: {integrity: sha512-X5QFK4SGynAeeIt+A7ZWnApdUyHYm+pzv/8/A57LqSGcI88U6R6ipOs3uCesdc6yl7nl+zNO0t8LmqAdXcQihw==}
     engines: {node: ^20.19.0 || >=22.12.0}
@@ -16104,7 +16061,7 @@ packages:
       tinyexec: 0.3.2
       tinyglobby: 0.2.15
       tinyrainbow: 3.0.3
-      vite: 7.1.4(@types/node@24.3.1)
+      vite: 7.1.4(@types/node@24.3.1)(sass-embedded@1.92.0)
       why-is-node-running: 2.3.0
     transitivePeerDependencies:
       - jiti
