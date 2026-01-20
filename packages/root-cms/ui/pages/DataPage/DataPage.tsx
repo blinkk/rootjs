@@ -1,13 +1,21 @@
-import {Button, Loader, Table} from '@mantine/core';
+import './DataPage.css';
+
+import {Button, Loader, Table, Tooltip} from '@mantine/core';
 import {useEffect, useState} from 'preact/hooks';
+import {ConditionalTooltip} from '../../components/ConditionalTooltip/ConditionalTooltip.js';
 import {DataSourceStatusButton} from '../../components/DataSourceStatusButton/DataSourceStatusButton.js';
 import {Heading} from '../../components/Heading/Heading.js';
 import {Text} from '../../components/Text/Text.js';
+import {useProjectRoles} from '../../hooks/useProjectRoles.js';
 import {Layout} from '../../layout/Layout.js';
 import {DataSource, listDataSources} from '../../utils/data-source.js';
-import './DataPage.css';
+import {testCanEdit} from '../../utils/permissions.js';
 
 export function DataPage() {
+  const {roles} = useProjectRoles();
+  const currentUserEmail = window.firebase.user.email || '';
+  const canEdit = testCanEdit(roles, currentUserEmail);
+
   return (
     <Layout>
       <div className="DataPage">
@@ -18,9 +26,21 @@ export function DataPage() {
             Sheets.
           </Text>
           <div className="DataPage__header__buttons">
-            <Button component="a" color="blue" size="xs" href="/cms/data/new">
-              New data source
-            </Button>
+            <ConditionalTooltip
+              label="You don't have access to create new data sources"
+              condition={!canEdit}
+            >
+              <Button
+                component="a"
+                color="blue"
+                size="xs"
+                href="/cms/data/new"
+                disabled={!canEdit}
+                style={!canEdit ? {pointerEvents: 'none'} : undefined}
+              >
+                New data source
+              </Button>
+            </ConditionalTooltip>
           </div>
         </div>
         <DataPage.DataSourcesTable />

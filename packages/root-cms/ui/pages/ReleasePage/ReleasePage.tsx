@@ -16,8 +16,10 @@ import {ReleaseStatusBadge} from '../../components/ReleaseStatusBadge/ReleaseSta
 import {useScheduleReleaseModal} from '../../components/ScheduleReleaseModal/ScheduleReleaseModal.js';
 import {Text} from '../../components/Text/Text.js';
 import {useModalTheme} from '../../hooks/useModalTheme.js';
+import {useProjectRoles} from '../../hooks/useProjectRoles.js';
 import {Layout} from '../../layout/Layout.js';
 import {notifyErrors} from '../../utils/notifications.js';
+import {testCanPublish} from '../../utils/permissions.js';
 import {
   Release,
   cancelScheduledRelease,
@@ -111,6 +113,10 @@ ReleasePage.PublishStatus = (props: {
   release: Release;
   onAction: (action: string) => void;
 }) => {
+  const {roles} = useProjectRoles();
+  const currentUserEmail = window.firebase.user.email || '';
+  const canPublish = testCanPublish(roles, currentUserEmail);
+
   const release = props.release;
   const [publishLoading, setPublishLoading] = useState(false);
 
@@ -225,6 +231,7 @@ ReleasePage.PublishStatus = (props: {
                       compact
                       onClick={() => onPublishClicked()}
                       loading={publishLoading}
+                      disabled={!canPublish}
                     >
                       {release.publishedAt ? 'Re-publish' : 'Publish'}
                     </Button>
@@ -241,6 +248,7 @@ ReleasePage.PublishStatus = (props: {
                       size="xs"
                       compact
                       onClick={() => onCancelScheduleClicked()}
+                      disabled={!canPublish}
                     >
                       Cancel Schedule
                     </Button>
@@ -258,6 +266,7 @@ ReleasePage.PublishStatus = (props: {
                       size="xs"
                       compact
                       onClick={() => onScheduleClicked()}
+                      disabled={!canPublish}
                     >
                       Schedule
                     </Button>

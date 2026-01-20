@@ -30,7 +30,8 @@ export function SettingsPage() {
               </p>
               <ul>
                 <li>VIEWER: view docs but not edit</li>
-                <li>EDITOR: view and edit docs</li>
+                <li>CONTRIBUTOR: view and edit docs, but not publish</li>
+                <li>EDITOR: view, edit, and publish docs</li>
                 <li>ADMIN: all of the above and change sharing settings</li>
               </ul>
             </Text>

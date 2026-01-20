@@ -1,10 +1,11 @@
 import './CollectionPage.css';
 
-import {Button, Loader, Select, Tabs} from '@mantine/core';
+import {Button, Loader, Select, Tabs, Tooltip} from '@mantine/core';
 import {IconArrowRoundaboutRight, IconCirclePlus} from '@tabler/icons-preact';
 import {useEffect, useState} from 'preact/hooks';
 import {route} from 'preact-router';
 import {CollectionTree} from '../../components/CollectionTree/CollectionTree.js';
+import {ConditionalTooltip} from '../../components/ConditionalTooltip/ConditionalTooltip.js';
 import {DocActionsMenu} from '../../components/DocActionsMenu/DocActionsMenu.js';
 import {DocStatusBadges} from '../../components/DocStatusBadges/DocStatusBadges.js';
 import {FilePreview} from '../../components/FilePreview/FilePreview.js';
@@ -14,9 +15,11 @@ import {NewDocModal} from '../../components/NewDocModal/NewDocModal.js';
 import {SplitPanel} from '../../components/SplitPanel/SplitPanel.js';
 import {useDocsList} from '../../hooks/useDocsList.js';
 import {useLocalStorage} from '../../hooks/useLocalStorage.js';
+import {useProjectRoles} from '../../hooks/useProjectRoles.js';
 import {Layout} from '../../layout/Layout.js';
 import {getDocServingUrl} from '../../utils/doc-urls.js';
 import {getNestedValue} from '../../utils/objects.js';
+import {testCanEdit} from '../../utils/permissions.js';
 
 interface CollectionPageProps {
   collection?: string;
@@ -103,6 +106,10 @@ interface CollectionProps {
 }
 
 CollectionPage.Collection = (props: CollectionProps) => {
+  const {roles} = useProjectRoles();
+  const currentUserEmail = window.firebase.user.email || '';
+  const canEdit = testCanEdit(roles, currentUserEmail);
+
   const [orderBy, setOrderBy] = useLocalStorage<string>(
     `root::CollectionPage:${props.collection}:orderBy`,
     'modifiedAt'
@@ -171,14 +178,20 @@ CollectionPage.Collection = (props: CollectionProps) => {
                       />
                     </div>
                     <div className="CollectionPage__collection__docsTab__controls__newDoc">
-                      <Button
-                        color="dark"
-                        size="xs"
-                        leftIcon={<IconCirclePlus size={16} />}
-                        onClick={() => setNewDocModalOpen(true)}
+                      <ConditionalTooltip
+                        label="You don't have access to create new documents"
+                        condition={!canEdit}
                       >
-                        New
-                      </Button>
+                        <Button
+                          color="dark"
+                          size="xs"
+                          leftIcon={<IconCirclePlus size={16} />}
+                          onClick={() => setNewDocModalOpen(true)}
+                          disabled={!canEdit}
+                        >
+                          New
+                        </Button>
+                      </ConditionalTooltip>
                     </div>
                   </div>
                 </div>
@@ -197,14 +210,20 @@ CollectionPage.Collection = (props: CollectionProps) => {
                       Collection is empty.
                     </div>
                     <div class="CollectionPage__collection__docsEmpty__button">
-                      <Button
-                        color="dark"
-                        size="xs"
-                        leftIcon={<IconCirclePlus size={16} />}
-                        onClick={() => setNewDocModalOpen(true)}
+                      <ConditionalTooltip
+                        label="You don't have access to create new documents"
+                        condition={!canEdit}
                       >
-                        New
-                      </Button>
+                        <Button
+                          color="dark"
+                          size="xs"
+                          leftIcon={<IconCirclePlus size={16} />}
+                          onClick={() => setNewDocModalOpen(true)}
+                          disabled={!canEdit}
+                        >
+                          New
+                        </Button>
+                      </ConditionalTooltip>
                     </div>
                   </div>
                 ) : (

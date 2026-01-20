@@ -64,6 +64,7 @@ import {
   useDraftDocField,
   useDraftDocSaveState,
 } from '../../hooks/useDraftDoc.js';
+import {useProjectRoles} from '../../hooks/useProjectRoles.js';
 import {
   ClipboardData,
   useVirtualClipboard,
@@ -78,6 +79,7 @@ import {
 import {extractField} from '../../utils/extract.js';
 import {getDefaultFieldValue} from '../../utils/fields.js';
 import {requestHighlightNode} from '../../utils/iframe-preview.js';
+import {testCanPublish} from '../../utils/permissions.js';
 import {autokey} from '../../utils/rand.js';
 import {buildPreviewValue} from '../../utils/schema-previews.js';
 import {testFieldEmpty} from '../../utils/test-field-empty.js';
@@ -168,6 +170,10 @@ type StatusBarProps = DocEditorProps & {
 };
 
 DocEditor.StatusBar = (props: StatusBarProps) => {
+  const {roles} = useProjectRoles();
+  const currentUserEmail = window.firebase.user.email || '';
+  const canPublish = testCanPublish(roles, currentUserEmail);
+
   const draft = props.draft;
   const [data, setData] = useState<Partial<CMSDoc> | null>(
     draft.controller.getData()

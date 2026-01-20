@@ -1,13 +1,21 @@
+import './ReleasesPage.css';
+
 import {Button, Loader, Table} from '@mantine/core';
 import {useEffect, useState} from 'preact/hooks';
+import {ConditionalTooltip} from '../../components/ConditionalTooltip/ConditionalTooltip.js';
 import {Heading} from '../../components/Heading/Heading.js';
 import {ReleaseStatusBadge} from '../../components/ReleaseStatusBadge/ReleaseStatusBadge.js';
 import {Text} from '../../components/Text/Text.js';
+import {useProjectRoles} from '../../hooks/useProjectRoles.js';
 import {Layout} from '../../layout/Layout.js';
+import {testCanPublish} from '../../utils/permissions.js';
 import {Release, listReleases} from '../../utils/release.js';
-import './ReleasesPage.css';
 
 export function ReleasesPage() {
+  const {roles} = useProjectRoles();
+  const currentUserEmail = window.firebase.user.email || '';
+  const canPublish = testCanPublish(roles, currentUserEmail);
+
   return (
     <Layout>
       <div className="ReleasesPage">
@@ -17,14 +25,21 @@ export function ReleasesPage() {
             Create a release for publishing content in a batch.
           </Text>
           <div className="ReleasesPage__header__buttons">
-            <Button
-              component="a"
-              color="blue"
-              size="xs"
-              href="/cms/releases/new"
+            <ConditionalTooltip
+              label="You don't have access to create new releases"
+              condition={!canPublish}
             >
-              New release
-            </Button>
+              <Button
+                component="a"
+                color="blue"
+                size="xs"
+                href="/cms/releases/new"
+                disabled={!canPublish}
+                style={!canPublish ? {pointerEvents: 'none'} : undefined}
+              >
+                New release
+              </Button>
+            </ConditionalTooltip>
           </div>
         </div>
         <ReleasesPage.ReleasesTable />

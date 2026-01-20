@@ -1,4 +1,5 @@
 import './DocumentPage.css';
+
 import {ActionIcon, Button, Tooltip} from '@mantine/core';
 import {useHotkeys} from '@mantine/hooks';
 import {
@@ -10,6 +11,7 @@ import {
   IconLayoutSidebarRightExpand,
 } from '@tabler/icons-preact';
 import {useCallback, useEffect, useRef, useState} from 'preact/hooks';
+import {ConditionalTooltip} from '../../components/ConditionalTooltip/ConditionalTooltip.js';
 import {DocEditor} from '../../components/DocEditor/DocEditor.js';
 import {
   DocumentPagePreviewBar,
@@ -22,10 +24,12 @@ import {
 } from '../../components/SplitPanel/SplitPanel.js';
 import {DraftDocProvider, useDraftDoc} from '../../hooks/useDraftDoc.js';
 import {useLocalStorage} from '../../hooks/useLocalStorage.js';
+import {useProjectRoles} from '../../hooks/useProjectRoles.js';
 import {useStringParam} from '../../hooks/useQueryParam.js';
 import {Layout} from '../../layout/Layout.js';
 import {joinClassNames} from '../../utils/classes.js';
 import {getDocPreviewPath, getDocServingPath} from '../../utils/doc-urls.js';
+import {testCanEdit} from '../../utils/permissions.js';
 
 interface DocumentPageProps {
   collection: string;
@@ -72,6 +76,10 @@ export function DocumentPage(props: DocumentPageProps) {
 }
 
 function DocumentPageLayout(props: DocumentPageProps) {
+  const {roles} = useProjectRoles();
+  const currentUserEmail = window.firebase.user.email || '';
+  const canEdit = testCanEdit(roles, currentUserEmail);
+
   const collectionId = props.collection;
   const slug = props.slug;
   const docId = `${collectionId}/${slug}`;
@@ -100,10 +108,10 @@ function DocumentPageLayout(props: DocumentPageProps) {
   }
 
   const saveDraft = useCallback(() => {
-    if (draft.controller) {
+    if (canEdit && draft.controller) {
       draft.controller.flush();
     }
-  }, [draft.controller]);
+  }, [canEdit, draft.controller]);
 
   const editJsonModal = useEditJsonModal();
 
@@ -143,25 +151,37 @@ function DocumentPageLayout(props: DocumentPageProps) {
               <div className="DocumentPage__side__header__docId">{docId}</div>
             </div>
             <div className="DocumentPage__side__header__buttons">
-              <Button
-                className="DocumentPage__side__header__saveButton"
-                variant="filled"
-                color="dark"
-                size="xs"
-                compact
-                leftIcon={<IconDeviceFloppy size={16} />}
-                onClick={() => saveDraft()}
+              <ConditionalTooltip
+                label="You don't have access to edit this document"
+                condition={!canEdit}
               >
-                Save
-              </Button>
-              <Tooltip label="Edit JSON">
-                <ActionIcon
-                  className="DocumentPage__side__header__editJson"
-                  onClick={() => editJson()}
+                <Button
+                  className="DocumentPage__side__header__saveButton"
+                  variant="filled"
+                  color="dark"
+                  size="xs"
+                  compact
+                  leftIcon={<IconDeviceFloppy size={16} />}
+                  onClick={() => saveDraft()}
+                  disabled={!canEdit}
                 >
-                  <IconBraces size={14} />
-                </ActionIcon>
-              </Tooltip>
+                  Save
+                </Button>
+              </ConditionalTooltip>
+              <ConditionalTooltip
+                label="You don't have access to edit this document"
+                condition={!canEdit}
+              >
+                <Tooltip label="Edit JSON" disabled={!canEdit}>
+                  <ActionIcon
+                    className="DocumentPage__side__header__editJson"
+                    onClick={() => editJson()}
+                    disabled={!canEdit}
+                  >
+                    <IconBraces size={14} />
+                  </ActionIcon>
+                </Tooltip>
+              </ConditionalTooltip>
               {/* <Menu
                   className="DocumentPage__side__header__menu"
                   position="bottom"
