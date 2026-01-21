@@ -217,3 +217,65 @@ test('should only allow admins to configure a project', async () => {
   await assertSucceeds(getDoc(doc(adamDb, docPath)));
   await assertSucceeds(updateDoc(doc(adamDb, docPath), {foo: 'bar'}));
 });
+
+test('should restrict scheduling docs', async () => {
+  await testEnv.withSecurityRulesDisabled(async (context) => {
+    await setDoc(doc(context.firestore(), 'Projects/foo'), {
+      roles: {
+        'adam@example.com': 'ADMIN',
+        'edith@example.com': 'EDITOR',
+        'connie@example.com': 'CONTRIBUTOR',
+      },
+    });
+  });
+
+  const adamDb = testEnv
+    .authenticatedContext('adam', {email: 'adam@example.com'})
+    .firestore();
+  const edithDb = testEnv
+    .authenticatedContext('edith', {email: 'edith@example.com'})
+    .firestore();
+  const connieDb = testEnv
+    .authenticatedContext('connie', {email: 'connie@example.com'})
+    .firestore();
+
+  const scheduledPath = 'Projects/foo/Collections/bar/Scheduled/baz';
+
+  // Admin and Editor can schedule.
+  await assertSucceeds(setDoc(doc(adamDb, scheduledPath), {foo: 'bar'}));
+  await assertSucceeds(setDoc(doc(edithDb, scheduledPath), {foo: 'bar'}));
+
+  // Contributor cannot schedule.
+  await assertFails(setDoc(doc(connieDb, scheduledPath), {foo: 'bar'}));
+});
+
+test('should restrict creating/editing releases', async () => {
+  await testEnv.withSecurityRulesDisabled(async (context) => {
+    await setDoc(doc(context.firestore(), 'Projects/foo'), {
+      roles: {
+        'adam@example.com': 'ADMIN',
+        'edith@example.com': 'EDITOR',
+        'connie@example.com': 'CONTRIBUTOR',
+      },
+    });
+  });
+
+  const adamDb = testEnv
+    .authenticatedContext('adam', {email: 'adam@example.com'})
+    .firestore();
+  const edithDb = testEnv
+    .authenticatedContext('edith', {email: 'edith@example.com'})
+    .firestore();
+  const connieDb = testEnv
+    .authenticatedContext('connie', {email: 'connie@example.com'})
+    .firestore();
+
+  const releasePath = 'Projects/foo/Releases/rel1';
+
+  // Admin and Editor can create/edit releases.
+  await assertSucceeds(setDoc(doc(adamDb, releasePath), {desc: 'release'}));
+  await assertSucceeds(setDoc(doc(edithDb, releasePath), {desc: 'release'}));
+
+  // Contributor cannot create/edit releases.
+  await assertFails(setDoc(doc(connieDb, releasePath), {desc: 'release'}));
+});

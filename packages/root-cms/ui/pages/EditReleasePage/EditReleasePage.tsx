@@ -3,17 +3,23 @@ import {useModals} from '@mantine/modals';
 import {showNotification, updateNotification} from '@mantine/notifications';
 import {IconTrashFilled} from '@tabler/icons-preact';
 import {route} from 'preact-router';
+import {ConditionalTooltip} from '../../components/ConditionalTooltip/ConditionalTooltip.js';
 import {Heading} from '../../components/Heading/Heading.js';
 import {ReleaseForm} from '../../components/ReleaseForm/ReleaseForm.js';
 import {Text} from '../../components/Text/Text.js';
 import {useModalTheme} from '../../hooks/useModalTheme.js';
+import {useProjectRoles} from '../../hooks/useProjectRoles.js';
 import {Layout} from '../../layout/Layout.js';
+import {testCanPublish} from '../../utils/permissions.js';
 import './EditReleasePage.css';
 import {deleteRelease} from '../../utils/release.js';
 
 export function EditReleasePage(props: {id: string}) {
   const modals = useModals();
   const modalTheme = useModalTheme();
+  const {roles} = useProjectRoles();
+  const currentUserEmail = window.firebase.user.email || '';
+  const canPublish = testCanPublish(roles, currentUserEmail);
 
   function onDeleteClicked() {
     const notificationId = `delete-release-${props.id}`;
@@ -66,11 +72,20 @@ export function EditReleasePage(props: {id: string}) {
           <div className="EditReleasePage__header__titleWrap">
             <Heading size="h1">Edit Release: {props.id}</Heading>
             <div className="EditReleasePage__header__controls">
-              <Tooltip label="Delete">
-                <ActionIcon onClick={onDeleteClicked}>
-                  <IconTrashFilled size={20} stroke="1.5" />
-                </ActionIcon>
-              </Tooltip>
+              <ConditionalTooltip
+                label="You don't have access to delete releases"
+                condition={!canPublish}
+              >
+                <Tooltip label="Delete" disabled={!canPublish}>
+                  <ActionIcon
+                    onClick={onDeleteClicked}
+                    loading={!roles}
+                    disabled={!canPublish}
+                  >
+                    <IconTrashFilled size={20} stroke="1.5" />
+                  </ActionIcon>
+                </Tooltip>
+              </ConditionalTooltip>
             </div>
           </div>
         </div>

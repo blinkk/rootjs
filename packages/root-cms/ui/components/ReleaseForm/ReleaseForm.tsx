@@ -12,7 +12,10 @@ import {IconArrowUpRight, IconTrash} from '@tabler/icons-preact';
 import {useEffect, useRef, useState} from 'preact/hooks';
 import {route} from 'preact-router';
 import {isSlugValid} from '../../../shared/slug.js';
+import {ConditionalTooltip} from '../../components/ConditionalTooltip/ConditionalTooltip.js';
+import {useProjectRoles} from '../../hooks/useProjectRoles.js';
 import {notifyErrors} from '../../utils/notifications.js';
+import {testCanPublish} from '../../utils/permissions.js';
 import {
   Release,
   addRelease,
@@ -40,6 +43,10 @@ export function ReleaseForm(props: ReleaseFormProps) {
   const [dataSourceIds, setDataSourceIds] = useState<string[]>([]);
   const docPickerModal = useDocPickerModal();
   const dataSourceSelectModal = useDataSourceSelectModal();
+
+  const {roles} = useProjectRoles();
+  const currentUserEmail = window.firebase.user.email || '';
+  const canPublish = testCanPublish(roles, currentUserEmail);
 
   async function fetchRelease(releaseId: string) {
     console.log(releaseId);
@@ -216,6 +223,7 @@ export function ReleaseForm(props: ReleaseFormProps) {
         size="xs"
         radius={0}
         value={release?.description}
+        disabled={!canPublish}
       />
       <InputWrapper
         className="ReleaseForm__input"
@@ -227,6 +235,7 @@ export function ReleaseForm(props: ReleaseFormProps) {
           <ReleaseForm.DocPreviewCards
             docIds={docIds!}
             onRemoveDoc={onRemoveDoc}
+            canEdit={canPublish}
           />
         )}
         <Button
@@ -234,6 +243,7 @@ export function ReleaseForm(props: ReleaseFormProps) {
           color="dark"
           size="xs"
           onClick={() => openDocPickerModal()}
+          disabled={!canPublish}
         >
           {'Select'}
         </Button>
@@ -248,6 +258,7 @@ export function ReleaseForm(props: ReleaseFormProps) {
           <ReleaseForm.DataSourceIds
             ids={dataSourceIds}
             onRemove={onRemoveDataSource}
+            canEdit={canPublish}
           />
         )}
         <Button
@@ -255,20 +266,29 @@ export function ReleaseForm(props: ReleaseFormProps) {
           color="dark"
           size="xs"
           onClick={() => openDataSourceSelectModal()}
+          disabled={!canPublish}
         >
           {'Select'}
         </Button>
       </InputWrapper>
       <div className="ReleaseForm__submit__buttons">
-        <Button
-          className="ReleaseForm__submit"
-          color="blue"
-          size="xs"
-          type="submit"
-          loading={submitting}
+        <ConditionalTooltip
+          label="You don't have access to create or edit releases"
+          condition={!canPublish}
         >
-          {props.buttonLabel || 'Save'}
-        </Button>
+          <span>
+            <Button
+              className="ReleaseForm__submit"
+              color="blue"
+              size="xs"
+              type="submit"
+              loading={submitting}
+              disabled={!canPublish}
+            >
+              {props.buttonLabel || 'Save'}
+            </Button>
+          </span>
+        </ConditionalTooltip>
       </div>
       {error && <div className="ReleaseForm__error">Error: {error}</div>}
     </form>
@@ -278,6 +298,7 @@ export function ReleaseForm(props: ReleaseFormProps) {
 ReleaseForm.DocPreviewCards = (props: {
   docIds: string[];
   onRemoveDoc: (docId: string) => void;
+  canEdit: boolean;
 }) => {
   return (
     <div className="ReleaseForm__DocPreviewCards">
@@ -288,16 +309,18 @@ ReleaseForm.DocPreviewCards = (props: {
             docId={docId}
           />
           <div className="ReleaseForm__DocPreviewCards__card__controls">
-            <div className="ReleaseForm__DocPreviewCards__card__controls__remove">
-              <Tooltip label="Remove">
-                <ActionIcon
-                  className="ReleaseForm__DocPreviewCards__card__controls__remove__icon"
-                  onClick={() => props.onRemoveDoc(docId)}
-                >
-                  <IconTrash size={16} />
-                </ActionIcon>
-              </Tooltip>
-            </div>
+            {props.canEdit && (
+              <div className="ReleaseForm__DocPreviewCards__card__controls__remove">
+                <Tooltip label="Remove">
+                  <ActionIcon
+                    className="ReleaseForm__DocPreviewCards__card__controls__remove__icon"
+                    onClick={() => props.onRemoveDoc(docId)}
+                  >
+                    <IconTrash size={16} />
+                  </ActionIcon>
+                </Tooltip>
+              </div>
+            )}
             <div className="ReleaseForm__DocPreviewCards__card__controls__open">
               <Tooltip label="Open">
                 <ActionIcon<'a'>
@@ -320,18 +343,21 @@ ReleaseForm.DocPreviewCards = (props: {
 ReleaseForm.DataSourceIds = (props: {
   ids: string[];
   onRemove: (id: string) => void;
+  canEdit: boolean;
 }) => {
   return (
     <div className="ReleaseForm__DataSourceIds">
       {props.ids.map((id) => (
         <div key={id} className="ReleaseForm__DataSourceIds__item">
           <span className="ReleaseForm__DataSourceIds__item__id">{id}</span>
-          <ActionIcon
-            className="ReleaseForm__DataSourceIds__item__remove"
-            onClick={() => props.onRemove(id)}
-          >
-            <IconTrash size={16} />
-          </ActionIcon>
+          {props.canEdit && (
+            <ActionIcon
+              className="ReleaseForm__DataSourceIds__item__remove"
+              onClick={() => props.onRemove(id)}
+            >
+              <IconTrash size={16} />
+            </ActionIcon>
+          )}
         </div>
       ))}
     </div>
