@@ -85,6 +85,7 @@ import {buildPreviewValue} from '../../utils/schema-previews.js';
 import {testFieldEmpty} from '../../utils/test-field-empty.js';
 import {formatDateTime} from '../../utils/time.js';
 import {useAiEditModal} from '../AiEditModal/AiEditModal.js';
+import {ConditionalTooltip} from '../ConditionalTooltip/ConditionalTooltip.js';
 import {
   DocActionEvent,
   DocActionsMenu,
@@ -281,14 +282,20 @@ DocEditor.StatusBar = (props: StatusBarProps) => {
             </Button>
           </Tooltip>
         ) : (
-          <Button
-            color="dark"
-            size="xs"
-            leftIcon={<IconRocket size={16} />}
-            onClick={() => publishDocModal.open()}
+          <ConditionalTooltip
+            label="You don't have access to publish this document"
+            condition={!canPublish}
           >
-            Publish
-          </Button>
+            <Button
+              color="dark"
+              size="xs"
+              leftIcon={<IconRocket size={16} />}
+              onClick={() => publishDocModal.open()}
+              disabled={!canPublish}
+            >
+              Publish
+            </Button>
+          </ConditionalTooltip>
         )}
       </div>
       <div className="DocEditor__statusBar__actionsMenu">

@@ -3,6 +3,7 @@
 Firestore must be setup as `Native Mode` and not `Datastore Mode`
 
 Firestore read/writes will need to be locked down by adding the following to the security rules (in Firebase's Firestore UI):
+
 ```
 rules_version = '2';
 service cloud.firestore {
@@ -72,6 +73,7 @@ service cloud.firestore {
 In Firestore, add a document at `Projects/<yourprojectid>` with a value of `{roles: {"youremail@yourdomain.tld": "ADMIN"}}`.
 
 Using Firestore Studio:
+
 - Under `Give the collection an ID`, set `Collection ID` to `Projects`
 - Under `Add its first document` set `Document ID` to your project ID
 - For the first record set `Field name` to `roles` with a `Field type` of `map`

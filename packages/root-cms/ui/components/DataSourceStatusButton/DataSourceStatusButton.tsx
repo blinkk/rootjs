@@ -10,6 +10,7 @@ import {
   syncDataSource,
 } from '../../utils/data-source.js';
 import {testCanPublish} from '../../utils/permissions.js';
+import {ConditionalTooltip} from '../ConditionalTooltip/ConditionalTooltip.js';
 import {TimeSinceActionTooltip} from '../TimeSinceActionTooltip/TimeSinceActionTooltip.js';
 import './DataSourceStatusButton.css';
 
@@ -103,18 +104,27 @@ export function DataSourceStatusButton(props: DataSourceStatusButtonProps) {
         )}
       </div>
       <div className="DataSourceStatusButton__button">
-        <Tooltip transition="pop" label={buttonTooltip}>
-          <Button
-            variant="default"
-            size="xs"
-            compact
-            onClick={() => onClick()}
-            loading={loading}
+        <ConditionalTooltip
+          label="You don't have access to publish this data source"
+          condition={isPublishAction && !canPublish}
+        >
+          <Tooltip
+            transition="pop"
+            label={buttonTooltip}
             disabled={isPublishAction && !canPublish}
           >
-            {props.action}
-          </Button>
-        </Tooltip>
+            <Button
+              variant="default"
+              size="xs"
+              compact
+              onClick={() => onClick()}
+              loading={loading}
+              disabled={isPublishAction && !canPublish}
+            >
+              {props.action}
+            </Button>
+          </Tooltip>
+        </ConditionalTooltip>
       </div>
     </div>
   );

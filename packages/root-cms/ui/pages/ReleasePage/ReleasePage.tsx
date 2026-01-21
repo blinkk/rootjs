@@ -10,6 +10,7 @@ import {useModals} from '@mantine/modals';
 import {showNotification, updateNotification} from '@mantine/notifications';
 import {IconSettings} from '@tabler/icons-preact';
 import {useEffect, useState} from 'preact/hooks';
+import {ConditionalTooltip} from '../../components/ConditionalTooltip/ConditionalTooltip.js';
 import {DocPreviewCard} from '../../components/DocPreviewCard/DocPreviewCard.js';
 import {Heading} from '../../components/Heading/Heading.js';
 import {ReleaseStatusBadge} from '../../components/ReleaseStatusBadge/ReleaseStatusBadge.js';
@@ -220,57 +221,75 @@ ReleasePage.PublishStatus = (props: {
             <td>
               <div className="ReleasePage__PublishStatus__actions">
                 {!release.scheduledAt && (
-                  <Tooltip
-                    label="Publish the release immediately"
-                    position="bottom"
-                    withArrow
+                  <ConditionalTooltip
+                    label="You don't have access to publish this release"
+                    condition={!canPublish}
                   >
-                    <Button
-                      variant="default"
-                      size="xs"
-                      compact
-                      onClick={() => onPublishClicked()}
-                      loading={publishLoading}
+                    <Tooltip
+                      label="Publish the release immediately"
+                      position="bottom"
+                      withArrow
                       disabled={!canPublish}
                     >
-                      {release.publishedAt ? 'Re-publish' : 'Publish'}
-                    </Button>
-                  </Tooltip>
+                      <Button
+                        variant="default"
+                        size="xs"
+                        compact
+                        onClick={() => onPublishClicked()}
+                        loading={publishLoading}
+                        disabled={!canPublish}
+                      >
+                        {release.publishedAt ? 'Re-publish' : 'Publish'}
+                      </Button>
+                    </Tooltip>
+                  </ConditionalTooltip>
                 )}
                 {release.scheduledAt ? (
-                  <Tooltip
-                    label="Cancel the scheduled release"
-                    position="bottom"
-                    withArrow
+                  <ConditionalTooltip
+                    label="You don't have access to manage scheduled releases"
+                    condition={!canPublish}
                   >
-                    <Button
-                      variant="default"
-                      size="xs"
-                      compact
-                      onClick={() => onCancelScheduleClicked()}
+                    <Tooltip
+                      label="Cancel the scheduled release"
+                      position="bottom"
+                      withArrow
                       disabled={!canPublish}
                     >
-                      Cancel Schedule
-                    </Button>
-                  </Tooltip>
+                      <Button
+                        variant="default"
+                        size="xs"
+                        compact
+                        onClick={() => onCancelScheduleClicked()}
+                        disabled={!canPublish}
+                      >
+                        Cancel Schedule
+                      </Button>
+                    </Tooltip>
+                  </ConditionalTooltip>
                 ) : (
-                  <Tooltip
-                    label="Schedule the release to be published at a future date"
-                    position="bottom"
-                    withArrow
-                    wrapLines
-                    width={180}
+                  <ConditionalTooltip
+                    label="You don't have access to manage scheduled releases"
+                    condition={!canPublish}
                   >
-                    <Button
-                      variant="default"
-                      size="xs"
-                      compact
-                      onClick={() => onScheduleClicked()}
+                    <Tooltip
+                      label="Schedule the release to be published at a future date"
+                      position="bottom"
+                      withArrow
+                      wrapLines
+                      width={180}
                       disabled={!canPublish}
                     >
-                      Schedule
-                    </Button>
-                  </Tooltip>
+                      <Button
+                        variant="default"
+                        size="xs"
+                        compact
+                        onClick={() => onScheduleClicked()}
+                        disabled={!canPublish}
+                      >
+                        Schedule
+                      </Button>
+                    </Tooltip>
+                  </ConditionalTooltip>
                 )}
               </div>
             </td>
