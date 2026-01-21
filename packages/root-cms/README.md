@@ -19,9 +19,14 @@ service cloud.firestore {
 
       match /{collection}/{document=**} {
         allow write:
-          if isSignedIn() && userCanWrite();
+          if isSignedIn() && userCanPublish();
         allow read:
           if isSignedIn() && userCanRead();
+      }
+
+      match /Collections/{collectionId}/Drafts/{document=**} {
+        allow write:
+          if isSignedIn() && userCanEdit();
       }
 
       function isSignedIn() {
@@ -36,14 +41,21 @@ service cloud.firestore {
         let roles = getRoles();
         let email = request.auth.token.email;
         let domain = '*@' + email.split('@')[1];
-        return (roles[email] in ['ADMIN', 'EDITOR', 'VIEWER']) || (roles[domain] in ['ADMIN', 'EDITOR', 'VIEWER']);
+        return (roles[email] in ['ADMIN', 'EDITOR', 'CONTRIBUTOR', 'VIEWER']) || (roles[domain] in ['ADMIN', 'EDITOR', 'CONTRIBUTOR', 'VIEWER']);
       }
 
-      function userCanWrite() {
+      function userCanPublish() {
         let roles = getRoles();
         let email = request.auth.token.email;
         let domain = '*@' + email.split('@')[1];
         return (roles[email] in ['ADMIN', 'EDITOR']) || (roles[domain] in ['ADMIN', 'EDITOR']);
+      }
+
+      function userCanEdit() {
+        let roles = getRoles();
+        let email = request.auth.token.email;
+        let domain = '*@' + email.split('@')[1];
+        return (roles[email] in ['ADMIN', 'EDITOR', 'CONTRIBUTOR']) || (roles[domain] in ['ADMIN', 'EDITOR', 'CONTRIBUTOR']);
       }
 
       function userIsAdmin() {

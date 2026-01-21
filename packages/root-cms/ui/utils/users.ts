@@ -15,7 +15,7 @@ export async function getAllEditors(): Promise<string[]> {
   const roles: Record<string, string> = data.roles || {};
   const editors: string[] = [];
   Object.entries(roles).forEach(([email, role]) => {
-    if (role === 'ADMIN' || role === 'EDITOR') {
+    if (role === 'ADMIN' || role === 'EDITOR' || role === 'CONTRIBUTOR') {
       editors.push(email);
     }
   });
