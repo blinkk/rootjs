@@ -42,6 +42,8 @@ export interface UploadedFile {
   uploadedBy?: string;
   uploadedAt?: string | number;
   canvasBgColor?: 'light' | 'dark';
+  /** The original source URL if the image has been edited. */
+  originalSrc?: string;
 }
 
 /** Uploads a File object to GCS. */

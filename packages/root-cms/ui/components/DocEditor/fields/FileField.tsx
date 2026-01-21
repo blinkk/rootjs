@@ -129,7 +129,7 @@ export function FileField(props: FileFieldProps) {
   const showAltText = field.alt !== false;
 
   /** Uploads file data to GCS. */
-  async function uploadFile(file: File) {
+  async function uploadFile(file: File, originalSrc?: string) {
     try {
       setLoadingState('loading');
       const uploadedFile = await uploadFileToGCS(file, {
@@ -143,6 +143,9 @@ export function FileField(props: FileFieldProps) {
         altText
       ) {
         uploadedFile.alt = altText;
+      }
+      if (originalSrc) {
+        uploadedFile.originalSrc = originalSrc;
       }
       setValue(uploadedFile);
       setLoadingState('complete');
@@ -403,14 +406,16 @@ export function FileField(props: FileFieldProps) {
       {imageEditorOpened && value?.src && (
         <Suspense fallback={null}>
           <ImageEditorDialog
+            key={value.src}
             opened={imageEditorOpened}
             onClose={() => setImageEditorOpened(false)}
             src={value.src}
+            originalSrc={value.originalSrc}
             filename={value.filename}
             initialWidth={parseInt(value.width as unknown as string)}
             initialHeight={parseInt(value.height as unknown as string)}
             onSave={(file) => {
-              uploadFile(file);
+              uploadFile(file, value.originalSrc || value.src);
               setImageEditorOpened(false);
             }}
           />

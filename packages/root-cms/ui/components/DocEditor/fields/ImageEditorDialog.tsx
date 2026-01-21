@@ -16,9 +16,10 @@ import {
   IconArrowsVertical,
   IconCheck,
 } from '@tabler/icons-preact';
-import {useEffect, useState, useCallback} from 'preact/hooks';
+import {useEffect, useState, useCallback, useMemo} from 'preact/hooks';
 import EasyCrop from 'react-easy-crop';
 import type {Area, MediaSize} from 'react-easy-crop';
+import {GCI_URL_PREFIX} from '../../../utils/gcs.js';
 import './ImageEditorDialog.css';
 
 const Cropper = EasyCrop as any;
@@ -41,16 +42,32 @@ interface ImageEditorDialogProps {
   initialWidth?: number;
   /** The initial height of the crop frame. */
   initialHeight?: number;
+  /** The original source URL if the image has been edited. */
+  originalSrc?: string;
 }
 
 export function ImageEditorDialog(props: ImageEditorDialogProps) {
   const theme = useMantineTheme();
+  const [activeSrc, setActiveSrc] = useState(props.src);
   const [crop, setCrop] = useState({x: 0, y: 0});
   const [zoom, setZoom] = useState(1);
   const [croppedAreaPixels, setCroppedAreaPixels] = useState<Area | null>(null);
   const [saving, setSaving] = useState(false);
-  const [frameWidth, setFrameWidth] = useState(props.initialWidth || 800);
-  const [frameHeight, setFrameHeight] = useState(props.initialHeight || 600);
+  const [frameWidth, setFrameWidth] = useState(props.initialWidth || 0);
+  const [frameHeight, setFrameHeight] = useState(props.initialHeight || 0);
+
+  const cropperSrc = useMemo(() => {
+    // If the image is a Google Cloud Image, we can request the original image
+    // by appending `=s0` to the URL. This ensures we are cropping the highest
+    // quality image available.
+    if (activeSrc.startsWith(GCI_URL_PREFIX)) {
+      if (activeSrc.includes('=')) {
+        return activeSrc.split('=')[0] + '=s0';
+      }
+      return activeSrc + '=s0';
+    }
+    return activeSrc;
+  }, [activeSrc]);
 
   const ext = props.filename ? getFileExt(props.filename) : 'jpg';
   const fileType = ext === 'png' ? 'image/png' : 'image/jpeg';
@@ -62,6 +79,10 @@ export function ImageEditorDialog(props: ImageEditorDialogProps) {
     props.src.toLowerCase().endsWith('.jpg') ||
     props.src.toLowerCase().endsWith('.jpeg');
   const [bgColor, setBgColor] = useState('#ffffff');
+
+  useEffect(() => {
+    setActiveSrc(props.src);
+  }, [props.src]);
 
   useEffect(() => {
     if (props.initialWidth) {
@@ -91,7 +112,7 @@ export function ImageEditorDialog(props: ImageEditorDialogProps) {
     setSaving(true);
     try {
       const croppedImage = await getCroppedImg(
-        props.src,
+        cropperSrc,
         croppedAreaPixels,
         {width: frameWidth || 800, height: frameHeight || 600},
         props.filename,
@@ -114,6 +135,16 @@ export function ImageEditorDialog(props: ImageEditorDialogProps) {
 
   const centerVertically = () => {
     setCrop((prev) => ({...prev, y: 0}));
+  };
+
+  const handleRevert = () => {
+    if (props.originalSrc) {
+      setActiveSrc(props.originalSrc);
+      setFrameWidth(0);
+      setFrameHeight(0);
+      setCrop({x: 0, y: 0});
+      setZoom(1);
+    }
   };
 
   return (
@@ -158,7 +189,7 @@ export function ImageEditorDialog(props: ImageEditorDialogProps) {
 
         <div className="ImageEditorDialog__CropperContainer">
           <Cropper
-            image={props.src}
+            image={cropperSrc}
             crop={crop}
             zoom={zoom}
             aspect={
@@ -206,17 +237,31 @@ export function ImageEditorDialog(props: ImageEditorDialogProps) {
           </Group>
         </Group>
 
-        <Group position="right" mt="md">
-          <Button variant="default" onClick={props.onClose} disabled={saving}>
-            Discard
-          </Button>
-          <Button
-            onClick={handleSave}
-            loading={saving}
-            leftIcon={<IconCheck />}
-          >
-            Save
-          </Button>
+        <Group
+          position={
+            props.originalSrc && activeSrc !== props.originalSrc
+              ? 'apart'
+              : 'right'
+          }
+          mt="md"
+        >
+          {props.originalSrc && activeSrc !== props.originalSrc && (
+            <Button variant="default" onClick={handleRevert} disabled={saving}>
+              Restore Original
+            </Button>
+          )}
+          <Group>
+            <Button variant="default" onClick={props.onClose} disabled={saving}>
+              Discard
+            </Button>
+            <Button
+              onClick={handleSave}
+              loading={saving}
+              leftIcon={<IconCheck />}
+            >
+              Save
+            </Button>
+          </Group>
         </Group>
       </Stack>
     </Modal>
