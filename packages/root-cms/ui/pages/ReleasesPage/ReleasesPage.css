@@ -28,3 +28,11 @@
 .ReleasesPage__ReleasesTable__publishStatus__icon {
   color: #12b886;
 }
+
+.ReleasesPage__ReleasesTable__controls {
+  margin-top: 16px;
+}
+
+.ReleasesPage__row--archived {
+  opacity: 0.6;
+}
