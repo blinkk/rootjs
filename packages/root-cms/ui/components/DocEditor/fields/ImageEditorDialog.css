@@ -1,0 +1,16 @@
+.ImageEditorDialog__CropperContainer {
+  position: relative;
+  width: 100%;
+  height: 400px;
+  background: #333;
+}
+
+.ImageEditorDialog__ZoomSlider {
+  flex: 1;
+}
+
+.ImageEditorDialog__ZoomSlider .mantine-Slider-thumb {
+  /* Fixes a weird bug where the thumb is not clickable. */
+  pointer-events: none;
+}
+
