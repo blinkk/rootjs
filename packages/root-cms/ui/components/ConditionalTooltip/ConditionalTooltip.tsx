@@ -1,5 +1,8 @@
+import './ConditionalTooltip.css';
+
 import {Tooltip} from '@mantine/core';
 import {ComponentChildren} from 'preact';
+import {joinClassNames} from '../../utils/classes.js';
 
 interface ConditionalTooltipProps {
   label: string;
@@ -22,14 +25,10 @@ export function ConditionalTooltip(props: ConditionalTooltipProps) {
   return (
     <Tooltip label={props.label}>
       <div
-        className={props.className}
-        style={{
-          display: 'inline-block',
-          cursor: 'not-allowed',
-          ...props.style,
-        }}
+        className={joinClassNames(props.className, 'ConditionalTooltip')}
+        style={props.style}
       >
-        <div style={{pointerEvents: 'none'}}>{props.children}</div>
+        <div className="ConditionalTooltip__content">{props.children}</div>
       </div>
     </Tooltip>
   );
