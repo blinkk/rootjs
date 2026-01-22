@@ -25,7 +25,7 @@ export default defineConfig({
     ],
   },
   format: ['esm'],
-  splitting: false,
+  splitting: true,
   platform: 'node',
   esbuildOptions(options) {
     options.tsconfig = './core/tsconfig.json';
