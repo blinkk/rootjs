@@ -1,5 +1,5 @@
 import crypto from 'node:crypto';
-import {Plugin, RootConfig} from '@blinkk/root';
+import {type Plugin, type RootConfig} from '@blinkk/root';
 import {App} from 'firebase-admin/app';
 import {
   FieldValue,
@@ -9,7 +9,10 @@ import {
   WriteBatch,
 } from 'firebase-admin/firestore';
 import {CMSPlugin} from './plugin.js';
+import {Collection} from './schema.js';
 import {TranslationsManager} from './translations-manager.js';
+import {validateFields} from './validation.js';
+import {setValueAtPath} from './values.js';
 
 export interface Doc<Fields = any> {
   /** The id of the doc, e.g. "Pages/foo-bar". */
@@ -99,6 +102,20 @@ export interface SaveDraftOptions {
    * Email of user modifying the doc. If blank, defaults to `root-cms-client`.
    */
   modifiedBy?: string;
+
+  /**
+   * Whether to validate fieldsData against the collection schema before saving.
+   * If validation fails, an error will be thrown with details about the validation errors.
+   */
+  validate?: boolean;
+}
+
+export interface UpdateDraftOptions {
+  /**
+   * Whether to validate the updated field against the collection schema.
+   * If validation fails, an error will be thrown with details about the validation errors.
+   */
+  validate?: boolean;
 }
 
 export interface ListDocsOptions {
@@ -287,6 +304,17 @@ export class RootCMSClient {
   }
 
   /**
+   * Returns a collection's schema definition as defined in
+   * `/collections/<id>.schema.ts`.
+   */
+  async getCollection(collectionId: string): Promise<Collection | null> {
+    // Lazy load the project module to minimize the amount of code loaded
+    // when the client is initialized (the project module loads all schema files).
+    const project = await import('./project.js');
+    return await project.getCollectionSchema(collectionId);
+  }
+
+  /**
    * Saves draft data to a doc.
    *
    * Note: this saves data to the "fields" attr of the draft doc. If you need to
@@ -298,6 +326,24 @@ export class RootCMSClient {
     options?: SaveDraftOptions
   ) {
     const {collection, slug} = parseDocId(docId);
+
+    // Validate fieldsData if requested.
+    if (options?.validate) {
+      const collectionSchema = await this.getCollection(collection);
+      if (!collectionSchema) {
+        throw new Error(
+          `Collection schema not found for: ${collection}. Unable to validate.`
+        );
+      }
+      const errors = validateFields(fieldsData, collectionSchema);
+      if (errors.length > 0) {
+        const errorMessages = errors
+          .map((err) => `  - ${err.path}: ${err.message}`)
+          .join('\n');
+        throw new Error(`Validation failed for ${docId}:\n${errorMessages}`);
+      }
+    }
+
     const draftDoc =
       (await this.getRawDoc(collection, slug, {mode: 'draft'})) || {};
     const draftSys = draftDoc.sys || {};
@@ -318,6 +364,39 @@ export class RootCMSClient {
       fields,
     };
     await this.setRawDoc(collection, slug, data, {mode: 'draft'});
+  }
+
+  /**
+   * Updates a specific field path in a draft doc.
+   *
+   * This allows partial updates to nested fields without replacing the entire document.
+   * For example: `updateDraftData('Pages/home', 'hero.title', 'New Title')`
+   *
+   * @param docId - The document ID (e.g., 'Pages/home')
+   * @param path - JSON path to the field (e.g., 'hero.title' or 'content.0.text')
+   * @param fieldValue - The value to set at the specified path
+   * @param options - Update options including validation
+   */
+  async updateDraftData(
+    docId: string,
+    path: string,
+    fieldValue: any,
+    options?: UpdateDraftOptions
+  ) {
+    const {collection, slug} = parseDocId(docId);
+
+    // Get current draft doc.
+    const draftDoc =
+      (await this.getRawDoc(collection, slug, {mode: 'draft'})) || {};
+    const fieldsData = unmarshalData(draftDoc.fields || {});
+
+    // Set the value at the specified path.
+    setValueAtPath(fieldsData, path, fieldValue);
+
+    // Save the updated document using saveDraftData.
+    await this.saveDraftData(docId, fieldsData, {
+      validate: options?.validate,
+    });
   }
 
   /**
