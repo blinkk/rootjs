@@ -415,6 +415,9 @@ importers:
       kleur:
         specifier: 4.1.5
         version: 4.1.5
+      react-easy-crop:
+        specifier: 5.5.6
+        version: 5.5.6(@preact/compat@18.3.1)(@preact/compat@18.3.1)
       sirv:
         specifier: 2.0.3
         version: 2.0.3
@@ -3644,15 +3647,15 @@ packages:
       '@types/gapi.client.discovery-v1': 0.0.4
     dev: true
 
-  /@maxim_mazurok/gapi.client.drive-v3@0.1.20260105:
-    resolution: {integrity: sha512-siz+TvNpM/BAalrJpYr4HxK686e3UKTxTwfTSPaliwgOe7zBrShpxO8Ile9ntX7Y2ufv4Hvaac2eydgXmDbF9w==}
+  /@maxim_mazurok/gapi.client.drive-v3@0.1.20260118:
+    resolution: {integrity: sha512-AapBEaj1ztX+AnUBvBnypCC8mWf6q72+4n0oXDopdXmggwYqDISocyoXrQ/iSCk237gFsBSb6WUYTxg7LEiojw==}
     dependencies:
       '@types/gapi.client': 1.0.8
       '@types/gapi.client.discovery-v1': 0.0.4
     dev: true
 
-  /@maxim_mazurok/gapi.client.sheets-v4@0.1.20260108:
-    resolution: {integrity: sha512-l2lYe46BfhcLZwVRuEIfHwt8Os+Ii9bar2vwHRXvJjbZycaNSYaE9erP3+BYJS0D8KXfVVofeam6guB0pxIMcw==}
+  /@maxim_mazurok/gapi.client.sheets-v4@0.1.20260114:
+    resolution: {integrity: sha512-rhqbdPctKpTA9EsmLVe+FlbL2wiMd+SGBEgTedPi8IuLbmO7Dcg7+c50eQanHuFVx/rDHiol1k/LiTvDpQ/l2Q==}
     dependencies:
       '@types/gapi.client': 1.0.8
       '@types/gapi.client.discovery-v1': 0.0.4
@@ -5622,13 +5625,13 @@ packages:
   /@types/gapi.client.drive-v3@0.0.4:
     resolution: {integrity: sha512-jE37dJ0EzAdY0aJPFOp20xmec/aO0P4HtUIA9k07RMPyedFDOcuMlSac1r0PklwQdgXF7BHaMoObNHNAnwSQUQ==}
     dependencies:
-      '@maxim_mazurok/gapi.client.drive-v3': 0.1.20260105
+      '@maxim_mazurok/gapi.client.drive-v3': 0.1.20260118
     dev: true
 
   /@types/gapi.client.sheets-v4@0.0.4:
     resolution: {integrity: sha512-6kTJ7aDMAElfdQV1XzVJmZWjgbibpa84DMuKuaN8Cwqci/dkglPyHXKvsGrRugmuYvgFYr35AQqwz6j3q8R0dw==}
     dependencies:
-      '@maxim_mazurok/gapi.client.sheets-v4': 0.1.20260108
+      '@maxim_mazurok/gapi.client.sheets-v4': 0.1.20260114
     dev: true
 
   /@types/gapi.client@1.0.8:
@@ -12440,6 +12443,10 @@ packages:
     engines: {node: '>=0.10.0'}
     dev: true
 
+  /normalize-wheel@1.0.1:
+    resolution: {integrity: sha512-1OnlAPZ3zgrk8B91HyRj+eVv+kS5u+Z0SCsak6Xil/kmgEia50ga7zfkumayonZrImffAxPU/5WcyGhzetHNPA==}
+    dev: false
+
   /npm-run-path@4.0.1:
     resolution: {integrity: sha512-S48WzZW777zhNIrn7gxOlISNAqi9ZC/uQFnRdbeIHhZhCA6UqpkOT8T1G7BvfdgP4Er8gF4sUbaS0i7QvIfCWw==}
     engines: {node: '>=8'}
@@ -13490,6 +13497,18 @@ packages:
       - supports-color
     dev: true
     optional: true
+
+  /react-easy-crop@5.5.6(@preact/compat@18.3.1)(@preact/compat@18.3.1):
+    resolution: {integrity: sha512-Jw3/ozs8uXj3NpL511Suc4AHY+mLRO23rUgipXvNYKqezcFSYHxe4QXibBymkOoY6oOtLVMPO2HNPRHYvMPyTw==}
+    peerDependencies:
+      react: '>=16.4.0'
+      react-dom: '>=16.4.0'
+    dependencies:
+      normalize-wheel: 1.0.1
+      react: /@preact/compat@18.3.1(preact@10.27.1)
+      react-dom: /@preact/compat@18.3.1(preact@10.27.1)
+      tslib: 2.6.2
+    dev: false
 
   /react-error-boundary@3.1.4(@preact/compat@18.3.1):
     resolution: {integrity: sha512-uM9uPzZJTF6wRQORmSrvOIgt4lJ9MC1sNgEOj2XGsDTRE4kmpWxg7ENK9EWNKJRMAOY9z0MuF4yIfl6gp4sotA==}
