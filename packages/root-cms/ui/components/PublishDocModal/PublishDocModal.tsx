@@ -6,8 +6,10 @@ import {showNotification} from '@mantine/notifications';
 import {IconGitCompare} from '@tabler/icons-preact';
 import {useState, useRef} from 'preact/hooks';
 import {useModalTheme} from '../../hooks/useModalTheme.js';
+import {useProjectRoles} from '../../hooks/useProjectRoles.js';
 import {joinClassNames} from '../../utils/classes.js';
 import {cmsPublishDoc, cmsScheduleDoc} from '../../utils/doc.js';
+import {testCanPublish} from '../../utils/permissions.js';
 import {getLocalISOString} from '../../utils/time.js';
 import {AiSummary} from '../AiSummary/AiSummary.js';
 import {DocDiffViewer} from '../DocDiffViewer/DocDiffViewer.js';
@@ -49,6 +51,10 @@ export function PublishDocModal(
   const modals = useModals();
   const modalTheme = useModalTheme();
   const experiments = window.__ROOT_CTX.experiments || {};
+
+  const {roles, loading: rolesLoading} = useProjectRoles();
+  const currentUserEmail = window.firebase.user.email || '';
+  const canPublish = testCanPublish(roles, currentUserEmail);
 
   const buttonLabel = publishType === 'scheduled' ? 'Schedule' : 'Publish';
 
@@ -134,6 +140,10 @@ export function PublishDocModal(
     disabled = false;
   } else if (publishType === 'scheduled' && scheduledDate) {
     disabled = false;
+  }
+
+  if (rolesLoading || !canPublish) {
+    disabled = true;
   }
 
   return (

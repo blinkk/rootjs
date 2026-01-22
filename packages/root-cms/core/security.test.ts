@@ -61,6 +61,7 @@ test('should allow certain users to read/write from a project', async () => {
       roles: {
         'adam@example.com': 'ADMIN',
         'edith@example.com': 'EDITOR',
+        'connie@example.com': 'CONTRIBUTOR',
         'victor@example.com': 'VIEWER',
       },
     });
@@ -72,17 +73,30 @@ test('should allow certain users to read/write from a project', async () => {
   const edithDb = testEnv
     .authenticatedContext('edith', {email: 'edith@example.com'})
     .firestore();
+  const connieDb = testEnv
+    .authenticatedContext('connie', {email: 'connie@example.com'})
+    .firestore();
   const victorDb = testEnv
     .authenticatedContext('victor', {email: 'victor@example.com'})
     .firestore();
 
-  const docPath = 'Projects/foo/Collections/bar/Drafts/baz';
-  await assertSucceeds(getDoc(doc(adamDb, docPath)));
-  await assertSucceeds(setDoc(doc(adamDb, docPath), {foo: 'bar'}));
-  await assertSucceeds(getDoc(doc(edithDb, docPath)));
-  await assertSucceeds(setDoc(doc(edithDb, docPath), {foo: 'bar'}));
-  await assertSucceeds(getDoc(doc(victorDb, docPath)));
-  await assertFails(setDoc(doc(victorDb, docPath), {foo: 'bar'}));
+  // Test Drafts.
+  const draftPath = 'Projects/foo/Collections/bar/Drafts/baz';
+  await assertSucceeds(getDoc(doc(adamDb, draftPath)));
+  await assertSucceeds(setDoc(doc(adamDb, draftPath), {foo: 'bar'}));
+  await assertSucceeds(getDoc(doc(edithDb, draftPath)));
+  await assertSucceeds(setDoc(doc(edithDb, draftPath), {foo: 'bar'}));
+  await assertSucceeds(getDoc(doc(connieDb, draftPath)));
+  await assertSucceeds(setDoc(doc(connieDb, draftPath), {foo: 'bar'}));
+  await assertSucceeds(getDoc(doc(victorDb, draftPath)));
+  await assertFails(setDoc(doc(victorDb, draftPath), {foo: 'bar'}));
+
+  // Test Published.
+  const publishedPath = 'Projects/foo/Collections/bar/Published/baz';
+  await assertSucceeds(setDoc(doc(adamDb, publishedPath), {foo: 'bar'}));
+  await assertSucceeds(setDoc(doc(edithDb, publishedPath), {foo: 'bar'}));
+  await assertFails(setDoc(doc(connieDb, publishedPath), {foo: 'bar'}));
+  await assertFails(setDoc(doc(victorDb, publishedPath), {foo: 'bar'}));
 });
 
 test('should allow certain users to list docs from a project', async () => {
@@ -163,6 +177,7 @@ test('should only allow admins to configure a project', async () => {
       roles: {
         'adam@example.com': 'ADMIN',
         'edith@example.com': 'EDITOR',
+        'connie@example.com': 'CONTRIBUTOR',
         'victor@example.com': 'VIEWER',
       },
     });
@@ -174,6 +189,9 @@ test('should only allow admins to configure a project', async () => {
     .firestore();
   const edithDb = testEnv
     .authenticatedContext('edith', {email: 'edith@example.com'})
+    .firestore();
+  const connieDb = testEnv
+    .authenticatedContext('connie', {email: 'connie@example.com'})
     .firestore();
   const victorDb = testEnv
     .authenticatedContext('victor', {email: 'victor@example.com'})
@@ -188,12 +206,76 @@ test('should only allow admins to configure a project', async () => {
   await assertFails(updateDoc(doc(unauthedDb, docPath), {foo: 'bar'}));
   await assertFails(getDoc(doc(hackerDb, docPath)));
   await assertFails(updateDoc(doc(hackerDb, docPath), {foo: 'bar'}));
-  // Editors/viewers can only read.
+  // Editors/Contributors/Viewers can only read.
   await assertSucceeds(getDoc(doc(edithDb, docPath)));
   await assertFails(updateDoc(doc(edithDb, docPath), {foo: 'bar'}));
+  await assertSucceeds(getDoc(doc(connieDb, docPath)));
+  await assertFails(updateDoc(doc(connieDb, docPath), {foo: 'bar'}));
   await assertSucceeds(getDoc(doc(victorDb, docPath)));
   await assertFails(updateDoc(doc(victorDb, docPath), {foo: 'bar'}));
   // Admins can read/write.
   await assertSucceeds(getDoc(doc(adamDb, docPath)));
   await assertSucceeds(updateDoc(doc(adamDb, docPath), {foo: 'bar'}));
+});
+
+test('should restrict scheduling docs', async () => {
+  await testEnv.withSecurityRulesDisabled(async (context) => {
+    await setDoc(doc(context.firestore(), 'Projects/foo'), {
+      roles: {
+        'adam@example.com': 'ADMIN',
+        'edith@example.com': 'EDITOR',
+        'connie@example.com': 'CONTRIBUTOR',
+      },
+    });
+  });
+
+  const adamDb = testEnv
+    .authenticatedContext('adam', {email: 'adam@example.com'})
+    .firestore();
+  const edithDb = testEnv
+    .authenticatedContext('edith', {email: 'edith@example.com'})
+    .firestore();
+  const connieDb = testEnv
+    .authenticatedContext('connie', {email: 'connie@example.com'})
+    .firestore();
+
+  const scheduledPath = 'Projects/foo/Collections/bar/Scheduled/baz';
+
+  // Admin and Editor can schedule.
+  await assertSucceeds(setDoc(doc(adamDb, scheduledPath), {foo: 'bar'}));
+  await assertSucceeds(setDoc(doc(edithDb, scheduledPath), {foo: 'bar'}));
+
+  // Contributor cannot schedule.
+  await assertFails(setDoc(doc(connieDb, scheduledPath), {foo: 'bar'}));
+});
+
+test('should restrict creating/editing releases', async () => {
+  await testEnv.withSecurityRulesDisabled(async (context) => {
+    await setDoc(doc(context.firestore(), 'Projects/foo'), {
+      roles: {
+        'adam@example.com': 'ADMIN',
+        'edith@example.com': 'EDITOR',
+        'connie@example.com': 'CONTRIBUTOR',
+      },
+    });
+  });
+
+  const adamDb = testEnv
+    .authenticatedContext('adam', {email: 'adam@example.com'})
+    .firestore();
+  const edithDb = testEnv
+    .authenticatedContext('edith', {email: 'edith@example.com'})
+    .firestore();
+  const connieDb = testEnv
+    .authenticatedContext('connie', {email: 'connie@example.com'})
+    .firestore();
+
+  const releasePath = 'Projects/foo/Releases/rel1';
+
+  // Admin and Editor can create/edit releases.
+  await assertSucceeds(setDoc(doc(adamDb, releasePath), {desc: 'release'}));
+  await assertSucceeds(setDoc(doc(edithDb, releasePath), {desc: 'release'}));
+
+  // Contributor cannot create/edit releases.
+  await assertFails(setDoc(doc(connieDb, releasePath), {desc: 'release'}));
 });

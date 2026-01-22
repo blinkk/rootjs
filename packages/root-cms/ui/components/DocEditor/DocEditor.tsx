@@ -64,6 +64,7 @@ import {
   useDraftDocField,
   useDraftDocSaveState,
 } from '../../hooks/useDraftDoc.js';
+import {useProjectRoles} from '../../hooks/useProjectRoles.js';
 import {
   ClipboardData,
   useVirtualClipboard,
@@ -78,11 +79,13 @@ import {
 import {extractField} from '../../utils/extract.js';
 import {getDefaultFieldValue} from '../../utils/fields.js';
 import {requestHighlightNode} from '../../utils/iframe-preview.js';
+import {testCanPublish} from '../../utils/permissions.js';
 import {autokey} from '../../utils/rand.js';
 import {buildPreviewValue} from '../../utils/schema-previews.js';
 import {testFieldEmpty} from '../../utils/test-field-empty.js';
 import {formatDateTime} from '../../utils/time.js';
 import {useAiEditModal} from '../AiEditModal/AiEditModal.js';
+import {ConditionalTooltip} from '../ConditionalTooltip/ConditionalTooltip.js';
 import {
   DocActionEvent,
   DocActionsMenu,
@@ -168,6 +171,10 @@ type StatusBarProps = DocEditorProps & {
 };
 
 DocEditor.StatusBar = (props: StatusBarProps) => {
+  const {roles} = useProjectRoles();
+  const currentUserEmail = window.firebase.user.email || '';
+  const canPublish = testCanPublish(roles, currentUserEmail);
+
   const draft = props.draft;
   const [data, setData] = useState<Partial<CMSDoc> | null>(
     draft.controller.getData()
@@ -275,14 +282,20 @@ DocEditor.StatusBar = (props: StatusBarProps) => {
             </Button>
           </Tooltip>
         ) : (
-          <Button
-            color="dark"
-            size="xs"
-            leftIcon={<IconRocket size={16} />}
-            onClick={() => publishDocModal.open()}
+          <ConditionalTooltip
+            label="You don't have access to publish this document"
+            condition={!canPublish}
           >
-            Publish
-          </Button>
+            <Button
+              color="dark"
+              size="xs"
+              leftIcon={<IconRocket size={16} />}
+              onClick={() => publishDocModal.open()}
+              disabled={!canPublish}
+            >
+              Publish
+            </Button>
+          </ConditionalTooltip>
         )}
       </div>
       <div className="DocEditor__statusBar__actionsMenu">

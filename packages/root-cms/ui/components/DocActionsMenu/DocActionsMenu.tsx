@@ -22,6 +22,8 @@ import {
   testIsScheduled,
   testPublishingLocked,
 } from '../../utils/doc.js';
+import {testCanEdit, testCanPublish} from '../../utils/permissions.js';
+import {useProjectRoles} from '../../hooks/useProjectRoles.js';
 import {useCopyDocModal} from '../CopyDocModal/CopyDocModal.js';
 import {DocIdBadge} from '../DocIdBadge/DocIdBadge.js';
 import {useLockPublishingModal} from '../LockPublishingModal/LockPublishingModal.js';
@@ -50,6 +52,11 @@ export interface DocActionsMenuProps {
 }
 
 export function DocActionsMenu(props: DocActionsMenuProps) {
+  const {roles} = useProjectRoles();
+  const currentUserEmail = window.firebase.user.email || '';
+  const canEdit = testCanEdit(roles, currentUserEmail);
+  const canPublish = testCanPublish(roles, currentUserEmail);
+
   const docId = props.docId;
   const data = (props.data || {}) as CMSDoc;
   const sys = data.sys || {};
@@ -280,6 +287,7 @@ export function DocActionsMenu(props: DocActionsMenuProps) {
       <Menu.Item
         icon={<IconCopy size={20} />}
         onClick={() => copyDocModal.open()}
+        disabled={!canEdit}
       >
         Copy
       </Menu.Item>
@@ -289,6 +297,7 @@ export function DocActionsMenu(props: DocActionsMenuProps) {
           <Menu.Item
             icon={<IconArrowBack size={20} />}
             onClick={() => onRevertDraft()}
+            disabled={!canEdit}
           >
             Discard draft edits
           </Menu.Item>
@@ -297,6 +306,7 @@ export function DocActionsMenu(props: DocActionsMenuProps) {
         <Menu.Item
           icon={<IconCloudOff size={20} />}
           onClick={() => onUnpublishDoc()}
+          disabled={!canPublish}
         >
           Unpublish
         </Menu.Item>
@@ -305,6 +315,7 @@ export function DocActionsMenu(props: DocActionsMenuProps) {
         <Menu.Item
           icon={<IconAlarmOff size={20} />}
           onClick={() => onUnscheduleDoc()}
+          disabled={!canPublish}
         >
           Unschedule
         </Menu.Item>
@@ -315,6 +326,7 @@ export function DocActionsMenu(props: DocActionsMenuProps) {
           onClick={() =>
             lockPublishingModal.open({unlock: true, onChange: onLockChanged})
           }
+          disabled={!canEdit}
         >
           Unlock publishing
         </Menu.Item>
@@ -326,12 +338,16 @@ export function DocActionsMenu(props: DocActionsMenuProps) {
           }
           // Prevent "publishing lock" if the doc has an existing scheduled
           // publish.
-          disabled={testIsScheduled(data)}
+          disabled={!canEdit || testIsScheduled(data)}
         >
           Lock publishing
         </Menu.Item>
       )}
-      <Menu.Item icon={<IconTrash size={20} />} onClick={() => onDeleteDoc()}>
+      <Menu.Item
+        icon={<IconTrash size={20} />}
+        onClick={() => onDeleteDoc()}
+        disabled={!canEdit}
+      >
         Delete
       </Menu.Item>
     </Menu>

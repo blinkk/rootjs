@@ -18,7 +18,7 @@ export interface ShareBoxProps {
   className?: string;
 }
 
-type UserRole = 'ADMIN' | 'EDITOR' | 'VIEWER' | 'REMOVE';
+type UserRole = 'ADMIN' | 'EDITOR' | 'CONTRIBUTOR' | 'VIEWER' | 'REMOVE';
 
 function getCurrentUserRole(roles: Record<string, UserRole>) {
   const currentUser = window.firebase.user.email;
@@ -180,6 +180,7 @@ ShareBox.User = (props: ShareBoxUserProps) => {
           data={[
             {value: 'ADMIN', label: 'ADMIN'},
             {value: 'EDITOR', label: 'EDITOR'},
+            {value: 'CONTRIBUTOR', label: 'CONTRIBUTOR'},
             {value: 'VIEWER', label: 'VIEWER'},
             {value: 'REMOVE', label: 'REMOVE'},
           ]}

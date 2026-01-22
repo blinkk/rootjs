@@ -3,6 +3,7 @@
 Firestore must be setup as `Native Mode` and not `Datastore Mode`
 
 Firestore read/writes will need to be locked down by adding the following to the security rules (in Firebase's Firestore UI):
+
 ```
 rules_version = '2';
 service cloud.firestore {
@@ -19,9 +20,14 @@ service cloud.firestore {
 
       match /{collection}/{document=**} {
         allow write:
-          if isSignedIn() && userCanWrite();
+          if isSignedIn() && userCanPublish();
         allow read:
           if isSignedIn() && userCanRead();
+      }
+
+      match /Collections/{collectionId}/Drafts/{document=**} {
+        allow write:
+          if isSignedIn() && userCanEdit();
       }
 
       function isSignedIn() {
@@ -36,14 +42,21 @@ service cloud.firestore {
         let roles = getRoles();
         let email = request.auth.token.email;
         let domain = '*@' + email.split('@')[1];
-        return (roles[email] in ['ADMIN', 'EDITOR', 'VIEWER']) || (roles[domain] in ['ADMIN', 'EDITOR', 'VIEWER']);
+        return (roles[email] in ['ADMIN', 'EDITOR', 'CONTRIBUTOR', 'VIEWER']) || (roles[domain] in ['ADMIN', 'EDITOR', 'CONTRIBUTOR', 'VIEWER']);
       }
 
-      function userCanWrite() {
+      function userCanPublish() {
         let roles = getRoles();
         let email = request.auth.token.email;
         let domain = '*@' + email.split('@')[1];
         return (roles[email] in ['ADMIN', 'EDITOR']) || (roles[domain] in ['ADMIN', 'EDITOR']);
+      }
+
+      function userCanEdit() {
+        let roles = getRoles();
+        let email = request.auth.token.email;
+        let domain = '*@' + email.split('@')[1];
+        return (roles[email] in ['ADMIN', 'EDITOR', 'CONTRIBUTOR']) || (roles[domain] in ['ADMIN', 'EDITOR', 'CONTRIBUTOR']);
       }
 
       function userIsAdmin() {
@@ -60,6 +73,7 @@ service cloud.firestore {
 In Firestore, add a document at `Projects/<yourprojectid>` with a value of `{roles: {"youremail@yourdomain.tld": "ADMIN"}}`.
 
 Using Firestore Studio:
+
 - Under `Give the collection an ID`, set `Collection ID` to `Projects`
 - Under `Add its first document` set `Document ID` to your project ID
 - For the first record set `Field name` to `roles` with a `Field type` of `map`

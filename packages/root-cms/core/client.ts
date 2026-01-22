@@ -43,7 +43,7 @@ export interface Doc<Fields = any> {
 
 export type DocMode = 'draft' | 'published';
 
-export type UserRole = 'ADMIN' | 'EDITOR' | 'VIEWER';
+export type UserRole = 'ADMIN' | 'EDITOR' | 'CONTRIBUTOR' | 'VIEWER';
 
 export type HttpMethod = 'GET' | 'POST';
 

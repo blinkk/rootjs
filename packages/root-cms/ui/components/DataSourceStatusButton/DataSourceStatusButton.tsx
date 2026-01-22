@@ -3,11 +3,14 @@ import {showNotification, updateNotification} from '@mantine/notifications';
 import {Timestamp} from 'firebase/firestore';
 import {useState} from 'preact/hooks';
 import {useGapiClient} from '../../hooks/useGapiClient.js';
+import {useProjectRoles} from '../../hooks/useProjectRoles.js';
 import {
   DataSource,
   publishDataSource,
   syncDataSource,
 } from '../../utils/data-source.js';
+import {testCanPublish} from '../../utils/permissions.js';
+import {ConditionalTooltip} from '../ConditionalTooltip/ConditionalTooltip.js';
 import {TimeSinceActionTooltip} from '../TimeSinceActionTooltip/TimeSinceActionTooltip.js';
 import './DataSourceStatusButton.css';
 
@@ -27,6 +30,11 @@ export function DataSourceStatusButton(props: DataSourceStatusButtonProps) {
     props.action === 'sync' ? dataSource.syncedBy : dataSource.publishedBy
   );
   const gapiClient = useGapiClient();
+
+  const {roles} = useProjectRoles();
+  const currentUserEmail = window.firebase.user.email || '';
+  const canPublish = testCanPublish(roles, currentUserEmail);
+  const isPublishAction = props.action === 'publish';
 
   async function onClick() {
     setLoading(true);
@@ -96,17 +104,27 @@ export function DataSourceStatusButton(props: DataSourceStatusButtonProps) {
         )}
       </div>
       <div className="DataSourceStatusButton__button">
-        <Tooltip transition="pop" label={buttonTooltip}>
-          <Button
-            variant="default"
-            size="xs"
-            compact
-            onClick={() => onClick()}
-            loading={loading}
+        <ConditionalTooltip
+          label="You don't have access to publish this data source"
+          condition={isPublishAction && !canPublish}
+        >
+          <Tooltip
+            transition="pop"
+            label={buttonTooltip}
+            disabled={isPublishAction && !canPublish}
           >
-            {props.action}
-          </Button>
-        </Tooltip>
+            <Button
+              variant="default"
+              size="xs"
+              compact
+              onClick={() => onClick()}
+              loading={loading}
+              disabled={isPublishAction && !canPublish}
+            >
+              {props.action}
+            </Button>
+          </Tooltip>
+        </ConditionalTooltip>
       </div>
     </div>
   );
