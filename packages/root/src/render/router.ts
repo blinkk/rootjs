@@ -1,4 +1,5 @@
 import path from 'node:path';
+import PLUGIN_ROUTES from 'virtual:root-plugin-routes';
 import {RootConfig} from '../core/config.js';
 import {Route, RouteModule} from '../core/types.js';
 import {replaceParams, testPathHasParams} from '../utils/url-path-params.js';
@@ -36,19 +37,12 @@ export class Router {
     const defaultLocale = this.rootConfig.i18n?.defaultLocale || 'en';
 
     const trie = new RouteTrie<Route>();
-    Object.keys(ROUTES_FILES).forEach((modulePath) => {
-      const src = modulePath.slice(1);
-      let relativeRoutePath = modulePath.replace(/^\/routes/, '');
-      const parts = path.parse(relativeRoutePath);
-      if (parts.name.startsWith('_')) {
-        return;
-      }
-      if (parts.name === 'index') {
-        relativeRoutePath = parts.dir;
-      } else {
-        relativeRoutePath = path.join(parts.dir, parts.name);
-      }
 
+    const addRoute = (
+      relativeRoutePath: string,
+      src: string,
+      module: RouteModule
+    ) => {
       const urlFormat = '/[base]/[path]';
       const i18nUrlFormat = toSquareBrackets(
         this.rootConfig.i18n?.urlFormat || '/[locale]/[base]/[path]'
@@ -72,7 +66,7 @@ export class Router {
 
       trie.add(routePath, {
         src,
-        module: ROUTES_FILES[modulePath],
+        module,
         locale: defaultLocale,
         isDefaultLocale: true,
         routePath: routePath,
@@ -88,7 +82,7 @@ export class Router {
           if (localePath !== relativeRoutePath) {
             trie.add(localePath, {
               src,
-              module: ROUTES_FILES[modulePath],
+              module,
               locale: locale,
               isDefaultLocale: false,
               routePath,
@@ -97,7 +91,28 @@ export class Router {
           }
         });
       }
+    };
+
+    Object.keys(ROUTES_FILES).forEach((modulePath) => {
+      const src = modulePath.slice(1);
+      let relativeRoutePath = modulePath.replace(/^\/routes/, '');
+      const parts = path.parse(relativeRoutePath);
+      if (parts.name.startsWith('_')) {
+        return;
+      }
+      if (parts.name === 'index') {
+        relativeRoutePath = parts.dir;
+      } else {
+        relativeRoutePath = path.join(parts.dir, parts.name);
+      }
+      addRoute(relativeRoutePath, src, ROUTES_FILES[modulePath]);
     });
+
+    Object.keys(PLUGIN_ROUTES).forEach((routePath) => {
+      const {module, src} = PLUGIN_ROUTES[routePath];
+      addRoute(routePath, src, module);
+    });
+
     return trie;
   }
 
@@ -141,7 +156,7 @@ export class Router {
       }
     } else if (routeModule.getStaticProps && !pathHasParams) {
       urlPaths.push({urlPath: normalizeUrlPath(urlPathFormat), params: {}});
-    } else if (!routeModule.handle && !pathHasParams) {
+    } else if (!pathHasParams) {
       urlPaths.push({urlPath: normalizeUrlPath(urlPathFormat), params: {}});
     } else if (
       pathHasParams &&
