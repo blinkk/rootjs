@@ -1,5 +1,15 @@
 # @blinkk/root-cms
 
+## 2.4.10
+
+### Patch Changes
+
+- 2088ceff: feat: add contributor role
+- 00968342: feat: add ability to paste google drive url
+- 39751cdd: feat: add ability to bulk edit translation tags
+- 7277c011: feat: add image editing functionality
+  - @blinkk/root@2.4.10
+
 ## 2.4.9
 
 ### Patch Changes
