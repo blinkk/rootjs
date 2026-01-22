@@ -8,6 +8,9 @@
     "test": {
       "dependsOn": ["^test"]
     },
+    "test:prod": {
+      "dependsOn": ["build"]
+    },
     "dev": {
       "cache": false
     }
