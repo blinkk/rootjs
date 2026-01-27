@@ -1,6 +1,7 @@
-import {Button} from '@mantine/core';
+import {Button, Checkbox, Tooltip} from '@mantine/core';
 import {ContextModalProps, useModals} from '@mantine/modals';
 import {showNotification} from '@mantine/notifications';
+import {IconInfoCircle} from '@tabler/icons-preact';
 import {useState} from 'preact/hooks';
 import {route} from 'preact-router';
 import {isSlugValid, normalizeSlug} from '../../../shared/slug.js';
@@ -39,6 +40,7 @@ export function CopyDocModal(modalProps: ContextModalProps<CopyDocModalProps>) {
   const [toSlug, setToSlug] = useState('');
   const [error, setError] = useState('');
   const [confirmOverwrite, setConfirmOverwrite] = useState(false);
+  const [copyTranslationTags, setCopyTranslationTags] = useState(true);
   const [loading, setLoading] = useState(false);
 
   const fromDocId = props.fromDocId;
@@ -71,7 +73,10 @@ export function CopyDocModal(modalProps: ContextModalProps<CopyDocModalProps>) {
           overwrite: confirmOverwrite,
         });
       } else {
-        await cmsCopyDoc(fromDocId, toDocId, {overwrite: confirmOverwrite});
+        await cmsCopyDoc(fromDocId, toDocId, {
+          overwrite: confirmOverwrite,
+          copyTranslationTags: copyTranslationTags,
+        });
       }
       context.closeModal(id);
       showNotification({
@@ -123,6 +128,33 @@ export function CopyDocModal(modalProps: ContextModalProps<CopyDocModalProps>) {
               setToSlug(newValue.slug);
             }}
           />
+        </div>
+
+        <div className="CopyDocModal__options">
+          <Checkbox
+            checked={copyTranslationTags}
+            label="Also copy translation tags"
+            size="xs"
+            onChange={(e: any) =>
+              setCopyTranslationTags(e.currentTarget.checked)
+            }
+          />
+          <Tooltip
+            label={
+              toSlug
+                ? `Copy translations from ${fromDocId} to ${toCollectionId}/${normalizeSlug(
+                    toSlug
+                  )}`
+                : `Copy translations from ${fromDocId} to the new doc`
+            }
+            width={300}
+            wrapLines
+            withArrow
+          >
+            <div className="CopyDocModal__info">
+              <IconInfoCircle size={16} />
+            </div>
+          </Tooltip>
         </div>
 
         {error && <div className="CopyDocModal__error">{error}</div>}

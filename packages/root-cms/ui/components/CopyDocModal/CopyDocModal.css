@@ -24,3 +24,16 @@
   justify-content: flex-end;
   gap: 12px;
 }
+
+.CopyDocModal__options {
+  margin-top: 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.CopyDocModal__info {
+  display: flex;
+  align-items: center;
+  color: #868e96;
+}

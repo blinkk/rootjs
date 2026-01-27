@@ -482,10 +482,18 @@ export function testPublishingLocked(docData: CMSDoc) {
   return false;
 }
 
+/**
+ * Copies a doc to a new ID.
+ */
 export async function cmsCopyDoc(
   fromDocId: string,
   toDocId: string,
-  options?: {overwrite?: boolean}
+  options?: {
+    /** Overwrite the destination doc if it already exists. */
+    overwrite?: boolean;
+    /** Copies any translation tags from the source doc to the new doc. */
+    copyTranslationTags?: boolean;
+  }
 ) {
   const fromDocRef = getDraftDocRef(fromDocId);
   const fromDoc = await getDoc(fromDocRef);
@@ -494,6 +502,53 @@ export async function cmsCopyDoc(
   }
   const fields = fromDoc.data().fields ?? {};
   await cmsCreateDoc(toDocId, {fields, overwrite: options?.overwrite});
+
+  if (options?.copyTranslationTags) {
+    await cmsCopyTranslationTags(fromDocId, toDocId);
+  }
+}
+
+/**
+ * Iterates through all translations associated with a doc and copies tags
+ * from one doc to another.
+ *
+ * This is used when copying a doc so that the new doc will be associated with
+ * the same translations as the original doc.
+ */
+export async function cmsCopyTranslationTags(
+  fromDocId: string,
+  toDocId: string
+) {
+  const translationsCollection = getTranslationsCollection();
+  const q = query(
+    translationsCollection,
+    where('tags', 'array-contains', fromDocId)
+  );
+  const querySnapshot = await getDocs(q);
+  const db = window.firebase.db;
+  const batchSize = 500;
+  let batch = writeBatch(db);
+  let count = 0;
+
+  querySnapshot.forEach((docSnap) => {
+    const docRef = doc(translationsCollection, docSnap.id);
+    batch.update(docRef, {
+      tags: arrayUnion(toDocId),
+    });
+    count += 1;
+    if (count >= batchSize) {
+      batch.commit();
+      batch = writeBatch(db);
+      count = 0;
+    }
+  });
+
+  if (count > 0) {
+    await batch.commit();
+  }
+  logAction('doc.copy_translation_tags', {
+    metadata: {fromDocId, toDocId},
+  });
 }
 
 export async function cmsCreateDoc(
