@@ -267,11 +267,9 @@ function FileFieldInternal(props: FileFieldInternalProps) {
     setOverwriteConfirmed(false);
 
     if (typeof file === 'string' && !options?.as) {
-      // Handle Google Drive URLs (existing logic)
+      // Handle Google Drive URLs.
       const driveId = parseGoogleDriveId(file);
       if (driveId) {
-        // ... existing drive logic ...
-        // For brevity preserving existing start/end logic
         try {
           if (!gapiClient.enabled) {
             console.warn(
@@ -289,10 +287,8 @@ function FileFieldInternal(props: FileFieldInternalProps) {
           });
           const downloadedFile = await downloadFromDrive(gapiClient, driveId);
           hideNotification('gdrive-download');
-          // Start process again with the file object
           handleFile(downloadedFile);
         } catch (err: any) {
-          // ... error handling ...
           console.error(err);
           setLoadingState('error');
           hideNotification('gdrive-download');
@@ -666,6 +662,13 @@ function FileFieldInternal(props: FileFieldInternalProps) {
   );
 }
 
+/**
+ * CMS-connected file field.
+ *
+ * This component is designed to be used within the CMS document editor. It
+ * automatically connects to the draft doc state using `useDraftDocValue` and
+ * handles reading and writing values to the document.
+ */
 export function FileField(props: FileFieldProps) {
   const field = props.field as schema.FileField;
   const [value, setValue] = useDraftDocValue<FileFieldValueType>(props.deepKey);
@@ -685,6 +688,13 @@ export function FileField(props: FileFieldProps) {
   );
 }
 
+/**
+ * Standalone file uploader.
+ *
+ * This component is a controlled component that can be used anywhere in the UI
+ * (e.g. AssetsPage). It does not connect to the CMS document state and relies
+ * on the `value` and `onChange` props to manage its state.
+ */
 export function FileUploader(props: FileUploaderProps) {
   const [value, setValue] = useState<FileFieldValueType>(props.value || null);
   const [loadingState, setLoadingState] =
@@ -723,8 +733,6 @@ export function FileUploader(props: FileUploaderProps) {
     </div>
   );
 }
-
-// ... Rest of the file (FileField.Preview, FileField.Dropzone, etc.) ...
 
 FileField.Preview = () => {
   const ctx = useFileField();
