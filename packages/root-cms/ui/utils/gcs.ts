@@ -31,6 +31,12 @@ export const GCI_URL_PREFIX = 'https://lh3.googleusercontent.com/';
 export interface UploadFileOptions {
   /** @deprecated Use namingMode instead. */
   preserveFilename?: boolean;
+  /**
+   * The naming strategy for uploaded files.
+   * - `hash`: Renames the file to `{hash}.{ext}` (default).
+   * - `hash-path`: Renames the file to `{hash}/{filename}.{ext}`.
+   * - `clean`: Keeps the original filename `{filename}.{ext}`. Note that this can overwrite existing files.
+   */
   namingMode?: 'hash' | 'hash-path' | 'clean';
   cacheControl?: string;
   disableGci?: boolean;

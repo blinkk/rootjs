@@ -11,12 +11,12 @@ export function AssetsPage() {
 
   return (
     <Layout>
-      <div className="AssetsPage">
+      <div className="AssetsPage" data-testid="assets-page">
         <div className="AssetsPage__header">
           <Heading size="h1">Assets</Heading>
           <Text as="p">Upload assets to the project's GCS bucket.</Text>
         </div>
-        <div style={{maxWidth: 520, width: '100%'}}>
+        <div style={{maxWidth: 600, width: '100%'}}>
           <FileUploader
             value={file}
             onChange={setFile}
