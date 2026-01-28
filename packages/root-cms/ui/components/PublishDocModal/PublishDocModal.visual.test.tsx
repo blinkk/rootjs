@@ -5,13 +5,74 @@ import './PublishDocModal.css';
 import {MantineProvider} from '@mantine/core';
 import {ModalsProvider, ContextModalProps} from '@mantine/modals';
 import {render} from '@testing-library/preact';
-import {describe, it, expect, beforeAll} from 'vitest';
+import {describe, it, expect, beforeAll, vi} from 'vitest';
 import {page} from 'vitest/browser';
 import {PublishDocModal, PublishDocModalProps} from './PublishDocModal.js';
 
+vi.mock('firebase/firestore', async () => {
+  return {
+    getFirestore: vi.fn(),
+    doc: vi.fn(() => ({id: 'mock-doc-id', path: 'mock/path'})),
+    collection: vi.fn(() => ({id: 'mock-collection-id', path: 'mock/path'})),
+    getDoc: vi.fn(() =>
+      Promise.resolve({
+        exists: () => true,
+        data: () => ({roles: {'test@example.com': 'ADMIN'}, fields: {}}),
+      })
+    ),
+    getDocs: vi.fn(() =>
+      Promise.resolve({
+        forEach: (cb: any) => {
+          // mock one doc
+          cb({id: 'mock-doc', data: () => ({sys: {}, fields: {}})});
+        },
+        empty: false,
+        size: 1,
+      })
+    ),
+    query: vi.fn(),
+    where: vi.fn(),
+    orderBy: vi.fn(),
+    limit: vi.fn(),
+    documentId: vi.fn(),
+    writeBatch: vi.fn(() => ({
+      set: vi.fn(),
+      update: vi.fn(),
+      delete: vi.fn(),
+      commit: vi.fn(),
+    })),
+    setDoc: vi.fn(),
+    updateDoc: vi.fn(),
+    arrayUnion: vi.fn(),
+    runTransaction: vi.fn(),
+    serverTimestamp: vi.fn(),
+    deleteField: vi.fn(),
+    Timestamp: {
+      now: vi.fn(() => ({toMillis: () => Date.now()})),
+      fromMillis: vi.fn((m) => ({toMillis: () => m})),
+    },
+  };
+});
+
 describe('PublishDocModal', () => {
   beforeAll(() => {
-    (window as any).__ROOT_CTX = {experiments: {}};
+    (window as any).__ROOT_CTX = {
+      experiments: {},
+      rootConfig: {projectId: 'test-project'},
+    };
+    window.firebase = {
+      db: {},
+      storage: {
+        app: {
+          options: {
+            storageBucket: 'test-bucket',
+          },
+        },
+      },
+      user: {
+        email: 'test@example.com',
+      },
+    } as any;
   });
 
   it('renders publish confirmation with long doc id', async () => {

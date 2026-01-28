@@ -11,6 +11,7 @@ import {TranslationsTable} from './TranslationsTable.js';
 // Mock l10n.
 vi.mock('../../utils/l10n.js', () => ({
   loadTranslations: vi.fn(),
+  batchUpdateTags: vi.fn(),
 }));
 
 // Mock notifications.
