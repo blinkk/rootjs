@@ -1,4 +1,11 @@
-import {Button, Checkbox, Loader, Table, Tooltip} from '@mantine/core';
+import {
+  ActionIcon,
+  Button,
+  Checkbox,
+  Loader,
+  Popover,
+  Table,
+} from '@mantine/core';
 import {ContextModalProps, useModals} from '@mantine/modals';
 import {showNotification} from '@mantine/notifications';
 import {
@@ -7,6 +14,7 @@ import {
   IconHistory,
   IconMessage,
 } from '@tabler/icons-preact';
+import {set} from 'date-fns';
 import {useEffect, useState} from 'preact/hooks';
 import {useModalTheme} from '../../hooks/useModalTheme.js';
 import {
@@ -51,6 +59,7 @@ export function VersionHistoryModal(
   const [versions, setVersions] = useState<Version[]>([]);
   const [selectedVersions, setSelectedVersions] = useState<string[]>([]);
   const [showPublishedOnly, setShowPublishedOnly] = useState(false);
+  const [openTooltip, setOpenTooltip] = useState<string | null>(null);
   const copyDocModal = useCopyDocModal({fromDocId: docId});
 
   const dateFormat = new Intl.DateTimeFormat('en-US', {
@@ -240,7 +249,7 @@ export function VersionHistoryModal(
                       style={{
                         display: 'flex',
                         alignItems: 'center',
-                        gap: '8px',
+                        gap: '4px',
                       }}
                     >
                       <Text size="body-sm" style={{flex: 1}}>
@@ -253,7 +262,7 @@ export function VersionHistoryModal(
                           <>
                             {dateFormat.format(version.sys.modifiedAt.toDate())}
                             {version.tags?.includes('published') && (
-                              <span style={{marginLeft: '4px', opacity: 0.5}}>
+                              <span className="VersionHistoryModal__publishedLabel">
                                 (Published)
                               </span>
                             )}
@@ -261,30 +270,35 @@ export function VersionHistoryModal(
                         )}
                       </Text>
                       {version.message && (
-                        <Tooltip
-                          label={version.message}
-                          withArrow
+                        <Popover
+                          withCloseButton={true}
+                          opened={openTooltip === version._versionId}
+                          onClose={() => setOpenTooltip(null)}
                           position="right"
-                          multiline
+                          withArrow
+                          shadow="md"
                           width={320}
-                          allowPointerEvents
-                          wrapLines
-                          styles={{
-                            tooltip: {
-                              maxWidth: '320px',
-                              whiteSpace: 'pre-wrap',
-                            },
-                          }}
+                          target={
+                            <ActionIcon
+                              size="xs"
+                              variant="light"
+                              className="VersionHistoryModal__messageIcon"
+                              onClick={() =>
+                                setOpenTooltip(
+                                  openTooltip === version._versionId
+                                    ? null
+                                    : version._versionId
+                                )
+                              }
+                            >
+                              <IconMessage size={18} />
+                            </ActionIcon>
+                          }
                         >
-                          <IconMessage
-                            size={18}
-                            style={{
-                              cursor: 'pointer',
-                              opacity: 0.6,
-                              flexShrink: 0,
-                            }}
-                          />
-                        </Tooltip>
+                          <div className="VersionHistoryModal__message">
+                            {version.message}
+                          </div>
+                        </Popover>
                       )}
                     </div>
                   </td>

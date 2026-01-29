@@ -48,6 +48,7 @@ const mockVersions: Version[] = [
       modifiedBy: 'test@example.com',
     },
     tags: ['published'],
+    message: 'Update navigation menu\nFix broken links\nAdd new footer section',
   } as any,
   {
     _versionId: 'v2',
