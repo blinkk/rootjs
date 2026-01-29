@@ -64,6 +64,7 @@ export interface CMSDoc {
 export type Version = CMSDoc & {
   _versionId: string;
   tags?: string[];
+  message?: string;
 };
 
 export async function cmsDeleteDoc(docId: string) {
@@ -110,8 +111,11 @@ export async function cmsDeleteDoc(docId: string) {
   logAction('doc.delete', {metadata: {docId}});
 }
 
-export async function cmsPublishDoc(docId: string) {
-  await cmsPublishDocs([docId]);
+export async function cmsPublishDoc(
+  docId: string,
+  options?: {message?: string}
+) {
+  await cmsPublishDocs([docId], options);
 }
 
 /**
@@ -119,7 +123,7 @@ export async function cmsPublishDoc(docId: string) {
  */
 export async function cmsPublishDocs(
   docIds: string[],
-  options?: {batch?: WriteBatch; releaseId?: string}
+  options?: {batch?: WriteBatch; releaseId?: string; message?: string}
 ) {
   if (docIds.length === 0) {
     console.log('no docs to publish');
@@ -145,7 +149,13 @@ export async function cmsPublishDocs(
     if (!draftData) {
       throw new Error(`doc does not exist: ${docId}`);
     }
-    updatePublishedDocDataInBatch(batch, docId, draftData, versionTags);
+    updatePublishedDocDataInBatch(
+      batch,
+      docId,
+      draftData,
+      versionTags,
+      options?.message
+    );
   });
   await batch.commit();
 
@@ -173,7 +183,8 @@ function updatePublishedDocDataInBatch(
   batch: WriteBatch,
   docId: string,
   draftData: CMSDoc,
-  versionTags: string[]
+  versionTags: string[],
+  message?: string
 ) {
   if (testPublishingLocked(draftData)) {
     throw new Error(`publishing is locked for doc: ${draftData.id}`);
@@ -251,13 +262,20 @@ function updatePublishedDocDataInBatch(
   if (versionTags?.length) {
     versionData.tags = versionTags;
   }
+  if (message) {
+    versionData.message = message;
+  }
   batch.set(versionRef, versionData);
 }
 
 /**
  * Schedules a CMS doc to be published at some time in the future.
  */
-export async function cmsScheduleDoc(docId: string, millis: number) {
+export async function cmsScheduleDoc(
+  docId: string,
+  millis: number,
+  options?: {message?: string}
+) {
   const projectId = window.__ROOT_CTX.rootConfig.projectId;
   const db = window.firebase.db;
   const [collectionId, slug] = docId.split('/');
@@ -294,8 +312,12 @@ export async function cmsScheduleDoc(docId: string, millis: number) {
 
     // Update the "sys" metadata in the draft doc.
     transaction.update(draftDocRef, {sys});
-    // Copy the "draft" data to "published" data.
-    transaction.set(scheduledDocRef, {...data, sys});
+    // Copy the "draft" data to "scheduled" data.
+    const scheduledData: any = {...data, sys};
+    if (options?.message) {
+      scheduledData.scheduledMessage = options.message;
+    }
+    transaction.set(scheduledDocRef, scheduledData);
   });
   console.log(`saved ${scheduledDocRef.id}`);
 

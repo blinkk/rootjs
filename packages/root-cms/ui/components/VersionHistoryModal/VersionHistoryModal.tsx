@@ -1,7 +1,12 @@
-import {Button, Checkbox, Loader, Table} from '@mantine/core';
+import {Button, Checkbox, Loader, Table, Tooltip} from '@mantine/core';
 import {ContextModalProps, useModals} from '@mantine/modals';
 import {showNotification} from '@mantine/notifications';
-import {IconArrowUpRight, IconCopy, IconHistory} from '@tabler/icons-preact';
+import {
+  IconArrowUpRight,
+  IconCopy,
+  IconHistory,
+  IconMessage,
+} from '@tabler/icons-preact';
 import {useEffect, useState} from 'preact/hooks';
 import {useModalTheme} from '../../hooks/useModalTheme.js';
 import {
@@ -205,7 +210,9 @@ export function VersionHistoryModal(
         <Table className="VersionHistoryModal__versions">
           <thead>
             <tr>
-              <th style={{width: '40px'}}></th>
+              <th style={{width: '40px'}}>
+                <span style={{opacity: 0, position: 'absolute'}}>Select</span>
+              </th>
               <th>modified at</th>
               <th>modified by</th>
               <th>actions</th>
@@ -229,23 +236,57 @@ export function VersionHistoryModal(
                     />
                   </td>
                   <td>
-                    <Text size="body-sm">
-                      {isDraft ? (
-                        <span title="Current Draft">
-                          {dateFormat.format(version.sys.modifiedAt.toDate())}{' '}
-                          (Latest)
-                        </span>
-                      ) : (
-                        <>
-                          {dateFormat.format(version.sys.modifiedAt.toDate())}
-                          {version.tags?.includes('published') && (
-                            <span style={{marginLeft: '4px', opacity: 0.5}}>
-                              (Published)
-                            </span>
-                          )}
-                        </>
+                    <div
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                      }}
+                    >
+                      <Text size="body-sm" style={{flex: 1}}>
+                        {isDraft ? (
+                          <span title="Current Draft">
+                            {dateFormat.format(version.sys.modifiedAt.toDate())}{' '}
+                            (Latest)
+                          </span>
+                        ) : (
+                          <>
+                            {dateFormat.format(version.sys.modifiedAt.toDate())}
+                            {version.tags?.includes('published') && (
+                              <span style={{marginLeft: '4px', opacity: 0.5}}>
+                                (Published)
+                              </span>
+                            )}
+                          </>
+                        )}
+                      </Text>
+                      {version.message && (
+                        <Tooltip
+                          label={version.message}
+                          withArrow
+                          position="right"
+                          multiline
+                          width={320}
+                          allowPointerEvents
+                          wrapLines
+                          styles={{
+                            tooltip: {
+                              maxWidth: '320px',
+                              whiteSpace: 'pre-wrap',
+                            },
+                          }}
+                        >
+                          <IconMessage
+                            size={18}
+                            style={{
+                              cursor: 'pointer',
+                              opacity: 0.6,
+                              flexShrink: 0,
+                            }}
+                          />
+                        </Tooltip>
                       )}
-                    </Text>
+                    </div>
                   </td>
                   <td>
                     <Text size="body-sm">{version.sys.modifiedBy}</Text>
