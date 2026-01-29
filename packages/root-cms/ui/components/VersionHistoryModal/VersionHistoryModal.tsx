@@ -13,6 +13,7 @@ import {
   IconCopy,
   IconHistory,
   IconMessage,
+  IconRocket,
 } from '@tabler/icons-preact';
 import {set} from 'date-fns';
 import {useEffect, useState} from 'preact/hooks';
@@ -272,7 +273,9 @@ export function VersionHistoryModal(
                       {version.message && (
                         <Popover
                           withCloseButton={true}
-                          opened={openTooltip === version._versionId}
+                          opened={
+                            openTooltip === `${version._versionId}-message`
+                          }
                           onClose={() => setOpenTooltip(null)}
                           position="right"
                           withArrow
@@ -285,9 +288,10 @@ export function VersionHistoryModal(
                               className="VersionHistoryModal__messageIcon"
                               onClick={() =>
                                 setOpenTooltip(
-                                  openTooltip === version._versionId
+                                  openTooltip ===
+                                    `${version._versionId}-message`
                                     ? null
-                                    : version._versionId
+                                    : `${version._versionId}-message`
                                 )
                               }
                             >
@@ -300,6 +304,48 @@ export function VersionHistoryModal(
                           </div>
                         </Popover>
                       )}
+                      {(() => {
+                        const releaseTag = version.tags?.find((tag) =>
+                          tag.startsWith('release:')
+                        );
+                        const releaseId = releaseTag?.replace('release:', '');
+                        return (
+                          releaseId && (
+                            <Popover
+                              withCloseButton={true}
+                              opened={
+                                openTooltip === `${version._versionId}-release`
+                              }
+                              onClose={() => setOpenTooltip(null)}
+                              position="right"
+                              withArrow
+                              shadow="md"
+                              width={320}
+                              target={
+                                <ActionIcon
+                                  size="xs"
+                                  variant="light"
+                                  className="VersionHistoryModal__messageIcon"
+                                  onClick={() =>
+                                    setOpenTooltip(
+                                      openTooltip ===
+                                        `${version._versionId}-release`
+                                        ? null
+                                        : `${version._versionId}-release`
+                                    )
+                                  }
+                                >
+                                  <IconRocket size={18} />
+                                </ActionIcon>
+                              }
+                            >
+                              <div className="VersionHistoryModal__message">
+                                <strong>Release:</strong> {releaseId}
+                              </div>
+                            </Popover>
+                          )
+                        );
+                      })()}
                     </div>
                   </td>
                   <td>
