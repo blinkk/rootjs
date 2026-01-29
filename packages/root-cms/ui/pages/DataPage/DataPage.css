@@ -30,3 +30,16 @@
   overflow: hidden;
   text-overflow: ellipsis;
 }
+
+.DataPage__DataSourcesTable__url {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.DataPage__DataSourcesTable__url__text {
+  display: inline-block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
