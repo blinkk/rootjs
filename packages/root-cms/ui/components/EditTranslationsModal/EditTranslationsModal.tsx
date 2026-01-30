@@ -1,7 +1,21 @@
-import {Button, Checkbox, Loader, Textarea, Tooltip} from '@mantine/core';
+import './EditTranslationsModal.css';
+
+import {
+  ActionIcon,
+  Button,
+  Checkbox,
+  Loader,
+  Textarea,
+  Tooltip,
+} from '@mantine/core';
 import {ContextModalProps, useModals} from '@mantine/modals';
 import {showNotification, updateNotification} from '@mantine/notifications';
-import {IconExternalLink, IconInfoCircle} from '@tabler/icons-preact';
+import {
+  IconExternalLink,
+  IconInfoCircle,
+  IconSparkles,
+  IconLoader2,
+} from '@tabler/icons-preact';
 import {ChangeEvent} from 'preact/compat';
 import {useEffect, useState} from 'preact/hooks';
 import {DraftDocContext} from '../../hooks/useDraftDoc.js';
@@ -12,7 +26,6 @@ import {GoogleSheetId, getSpreadsheetUrl} from '../../utils/gsheets.js';
 import {loadTranslations} from '../../utils/l10n.js';
 import {notifyErrors} from '../../utils/notifications.js';
 import {Heading} from '../Heading/Heading.js';
-import './EditTranslationsModal.css';
 
 const MODAL_ID = 'EditTranslationsModal';
 
@@ -66,6 +79,7 @@ export function EditTranslationsModal(
   const [loading, setLoading] = useState(true);
   const [doNotTranslate, setDoNotTranslate] = useState(false);
   const [description, setDescription] = useState('');
+  const [aiGenerating, setAiGenerating] = useState(false);
 
   // Use draft from props (passed from DocEditor)
   const draft = props.draft || null;
@@ -152,6 +166,89 @@ export function EditTranslationsModal(
     setHasChanges(true);
   }
 
+  async function generateAiTranslations() {
+    if (strings.length === 0) return;
+
+    setAiGenerating(true);
+    try {
+      await notifyErrors(async () => {
+        // For each source string, call AI API
+        for (const source of strings) {
+          const existingRow = translationsMap[source] || {source};
+          const existingTranslations: Record<string, string> = {};
+
+          // Collect existing translations for this string
+          i18nLocales.forEach((locale) => {
+            if (existingRow[locale]) {
+              existingTranslations[locale] = existingRow[locale];
+            }
+          });
+
+          // Find locales that need translation (blank fields)
+          const targetLocales = i18nLocales.filter(
+            (locale) => !existingRow[locale]
+          );
+
+          if (targetLocales.length === 0) continue;
+
+          const res = await window.fetch('/cms/api/ai.translate', {
+            method: 'POST',
+            headers: {'content-type': 'application/json'},
+            body: JSON.stringify({
+              sourceText: source,
+              targetLocales,
+              description: description || undefined,
+              existingTranslations,
+            }),
+          });
+
+          if (res.status !== 200) {
+            const err = await res.text();
+            throw new Error(`Translation failed: ${err}`);
+          }
+
+          const data = await res.json();
+          if (data.success && data.translations) {
+            // Update the translations map with AI-generated translations
+            const updatedRow = {...existingRow};
+            Object.entries(data.translations).forEach(
+              ([locale, translation]) => {
+                updatedRow[locale] = translation as string;
+              }
+            );
+            onChange(updatedRow);
+          }
+        }
+
+        showNotification({
+          message: 'Finished generating AI translations',
+          color: 'green',
+        });
+      });
+    } finally {
+      setAiGenerating(false);
+    }
+  }
+
+  function shouldShowAiButton() {
+    const experiments = (window as any).__ROOT_CTX?.experiments || {};
+    const aiEnabled = !!experiments.ai;
+
+    if (!aiEnabled) return false;
+
+    // Check if any translation fields are blank
+    for (const source of strings) {
+      const row = translationsMap[source] || {};
+      for (const locale of i18nLocales) {
+        if (!row[locale]) {
+          return true; // Found at least one blank field
+        }
+      }
+    }
+
+    return false;
+  }
+
   return (
     <div className="EditTranslationsModal">
       {loading ? (
@@ -215,9 +312,39 @@ export function EditTranslationsModal(
                   </Heading>
                 </th>
                 <th>
-                  <Heading size="h4" weight="semi-bold">
-                    TRANSLATIONS
-                  </Heading>
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                    }}
+                  >
+                    <Heading size="h4" weight="semi-bold">
+                      TRANSLATIONS
+                    </Heading>
+                    {shouldShowAiButton() && (
+                      <Tooltip
+                        label="Generate quick translations using AI"
+                        withArrow
+                        position="left"
+                      >
+                        <ActionIcon
+                          variant="light"
+                          color="violet"
+                          onClick={generateAiTranslations}
+                          loading={aiGenerating}
+                          disabled={aiGenerating}
+                          size="sm"
+                        >
+                          {aiGenerating ? (
+                            <IconLoader2 size={16} />
+                          ) : (
+                            <IconSparkles size={16} />
+                          )}
+                        </ActionIcon>
+                      </Tooltip>
+                    )}
+                  </div>
                 </th>
               </tr>
             </thead>
@@ -306,6 +433,11 @@ EditTranslationsModal.StringsEditor = (props: {
     props.translations || {}
   );
   const [hasChanges, setHasChanges] = useState(false);
+
+  // Update local state when props.translations changes (e.g., from AI)
+  useEffect(() => {
+    setTranslations(props.translations || {});
+  }, [props.translations]);
 
   function updateTranslation(locale: string, value: string) {
     setHasChanges(true);

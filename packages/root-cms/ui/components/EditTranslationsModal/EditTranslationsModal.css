@@ -39,6 +39,11 @@
   width: 100%;
 }
 
+.EditTranslationsModal__table thead {
+  /** Prevent layout shift from button. */
+  height: 62px;
+}
+
 .EditTranslationsModal__table th {
   text-align: left;
 }
