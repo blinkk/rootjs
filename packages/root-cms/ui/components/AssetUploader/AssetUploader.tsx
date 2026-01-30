@@ -4,7 +4,11 @@ import {IconFileUpload} from '@tabler/icons-preact';
 import {useEffect, useRef, useState} from 'preact/hooks';
 import {Text} from '../../components/Text/Text.js';
 import {joinClassNames} from '../../utils/classes.js';
-import {UploadFileOptions, uploadFileToGCS} from '../../utils/gcs.js';
+import {
+  UploadFileOptions,
+  uploadFileToGCS,
+  testIsImageFile,
+} from '../../utils/gcs.js';
 import './AssetUploader.css';
 
 export interface AssetUploaderProps {
@@ -134,7 +138,7 @@ AssetUploader.FilePreview = (props: {asset: any}) => {
   if (!asset?.src) {
     return null;
   }
-  const isImage = asset.width && asset.height;
+  const isImage = testIsImageFile(asset.src);
   if (isImage) {
     return <AssetUploader.ImagePreview asset={props.asset} />;
   }
@@ -163,9 +167,11 @@ AssetUploader.ImagePreview = (props: {asset: any}) => {
           height={asset.height}
           alt={asset.alt || ''}
         />
-        <div className="AssetUploader__ImagePreview__dimens">
-          {`${asset.width}x${asset.height}`}
-        </div>
+        {asset.width && asset.height && (
+          <div className="AssetUploader__ImagePreview__dimens">
+            {`${asset.width}x${asset.height}`}
+          </div>
+        )}
       </div>
       <TextInput
         className="AssetUploader__ImagePreview__image__url"
