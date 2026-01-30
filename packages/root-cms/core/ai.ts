@@ -438,6 +438,25 @@ function cleanModelName(model: string) {
   return LEGACY_MODEL_RENAME[model] || model;
 }
 
+/**
+ * Extracts JSON from an AI response that may contain markdown code blocks.
+ * @internal
+ */
+export function extractJsonFromResponse(responseText: string): string {
+  let jsonText = responseText.trim();
+
+  // Remove markdown code blocks if present.
+  if (jsonText.startsWith('```')) {
+    const lines = jsonText.split('\n');
+    jsonText = lines.slice(1, -1).join('\n');
+    if (jsonText.startsWith('json')) {
+      jsonText = jsonText.substring(4).trim();
+    }
+  }
+
+  return jsonText;
+}
+
 export interface TranslateStringOptions {
   sourceText: string;
   targetLocales: string[];
@@ -476,30 +495,37 @@ export async function translateString(
     'Do not include any markdown formatting, code blocks, or explanatory text.',
   ].join('\n');
 
-  let userPrompt = `Source text: "${options.sourceText}"\n\n`;
+  const userPromptParts: string[] = [
+    `Source text: "${options.sourceText}"`,
+    '',
+  ];
 
   if (options.description) {
-    userPrompt += `Context/Description: ${options.description}\n\n`;
+    userPromptParts.push(`Context/Description: ${options.description}`, '');
   }
 
   if (
     options.existingTranslations &&
     Object.keys(options.existingTranslations).length > 0
   ) {
-    userPrompt += 'Existing translations for reference:\n';
+    userPromptParts.push('Existing translations for reference:');
     Object.entries(options.existingTranslations).forEach(
       ([locale, translation]) => {
         if (translation) {
-          userPrompt += `- ${locale}: "${translation}"\n`;
+          userPromptParts.push(`- ${locale}: "${translation}"`);
         }
       }
     );
-    userPrompt += '\n';
+    userPromptParts.push('');
   }
 
-  userPrompt += `Target locales: ${options.targetLocales.join(', ')}\n\n`;
-  userPrompt +=
-    'Provide translations as a JSON object with locale codes as keys.';
+  userPromptParts.push(
+    `Target locales: ${options.targetLocales.join(', ')}`,
+    '',
+    'Provide translations as a JSON object with locale codes as keys.'
+  );
+
+  const userPrompt = userPromptParts.join('\n');
 
   const res = await generate(ai, model, {
     messages: [
@@ -516,17 +542,8 @@ export async function translateString(
 
   const responseText = res.text || '{}';
 
-  // Try to extract JSON from the response
-  let jsonText = responseText.trim();
-
-  // Remove markdown code blocks if present
-  if (jsonText.startsWith('```')) {
-    const lines = jsonText.split('\n');
-    jsonText = lines.slice(1, -1).join('\n');
-    if (jsonText.startsWith('json')) {
-      jsonText = jsonText.substring(4).trim();
-    }
-  }
+  // Try to extract JSON from the response.
+  const jsonText = extractJsonFromResponse(responseText);
 
   try {
     const translations = JSON.parse(jsonText);
