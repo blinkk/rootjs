@@ -3,6 +3,7 @@ import './DocStatusBadges.css';
 import {Badge, Tooltip} from '@mantine/core';
 import {Timestamp} from 'firebase/firestore';
 import {CMSDoc, testPublishingLocked} from '../../utils/doc.js';
+import {safeTimestamp} from '../../utils/time.js';
 import {formatDateTime, getTimeAgo} from '../../utils/time.js';
 
 interface DocStatusBadgesProps {
@@ -84,11 +85,9 @@ export function DocStatusBadges(props: DocStatusBadgesProps) {
 }
 
 function timeDiff(ts: Timestamp | null) {
-  // Since we're using server timestamps, firestore doesn't always return the
-  // timestamp right away since the db save is happening asynchronously. In
-  // these cases, assume that the update happened very recently.
-  if (!ts) {
+  const validTs = safeTimestamp(ts);
+  if (!validTs) {
     return getTimeAgo(new Date().getTime());
   }
-  return getTimeAgo(ts.toMillis());
+  return getTimeAgo(validTs.toMillis());
 }

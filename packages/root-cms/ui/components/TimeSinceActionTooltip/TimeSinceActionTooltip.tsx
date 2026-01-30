@@ -1,7 +1,7 @@
 import {Tooltip} from '@mantine/core';
 import {Timestamp} from 'firebase/firestore';
 import {useEffect, useState} from 'preact/hooks';
-import {getTimeAgo} from '../../utils/time.js';
+import {getTimeAgo, safeTimestamp} from '../../utils/time.js';
 
 export interface TimeSinceTooltipActionProps {
   timestamp?: number | Timestamp;
@@ -53,8 +53,6 @@ function toMillis(timestamp?: number | Timestamp) {
   if (typeof timestamp === 'number') {
     return timestamp;
   }
-  if (!timestamp) {
-    return 0;
-  }
-  return timestamp.toMillis();
+  const validTs = safeTimestamp(timestamp);
+  return validTs ? validTs.toMillis() : 0;
 }

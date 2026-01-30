@@ -15,7 +15,6 @@ import {
   IconMessage,
   IconRocket,
 } from '@tabler/icons-preact';
-import {set} from 'date-fns';
 import {useEffect, useState} from 'preact/hooks';
 import {useModalTheme} from '../../hooks/useModalTheme.js';
 import {
@@ -24,6 +23,7 @@ import {
   cmsReadDocVersion,
   cmsRestoreVersion,
 } from '../../utils/doc.js';
+import {safeFormatTimestamp} from '../../utils/time.js';
 import {useCopyDocModal} from '../CopyDocModal/CopyDocModal.js';
 import {Heading} from '../Heading/Heading.js';
 import {Text} from '../Text/Text.js';
@@ -96,8 +96,9 @@ export function VersionHistoryModal(
     await cmsRestoreVersion(docId, version);
     showNotification({
       title: 'Saved!',
-      message: `Restored ${docId} to ${dateFormat.format(
-        version.sys.modifiedAt.toDate()
+      message: `Restored ${docId} to ${safeFormatTimestamp(
+        version.sys.modifiedAt,
+        dateFormat
       )}.`,
       autoClose: 5000,
     });
@@ -256,12 +257,18 @@ export function VersionHistoryModal(
                       <Text size="body-sm" style={{flex: 1}}>
                         {isDraft ? (
                           <span title="Current Draft">
-                            {dateFormat.format(version.sys.modifiedAt.toDate())}{' '}
+                            {safeFormatTimestamp(
+                              version.sys.modifiedAt,
+                              dateFormat
+                            )}{' '}
                             (Latest)
                           </span>
                         ) : (
                           <>
-                            {dateFormat.format(version.sys.modifiedAt.toDate())}
+                            {safeFormatTimestamp(
+                              version.sys.modifiedAt,
+                              dateFormat
+                            )}
                             {version.tags?.includes('published') && (
                               <span className="VersionHistoryModal__publishedLabel">
                                 (Published)
