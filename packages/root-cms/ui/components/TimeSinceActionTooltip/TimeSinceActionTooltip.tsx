@@ -14,7 +14,7 @@ export interface TimeSinceTooltipActionProps {
 export function TimeSinceActionTooltip(props: TimeSinceTooltipActionProps) {
   const millis = toMillis(props.timestamp);
   const [label, setLabel] = useState(
-    props.timestamp ? getTimeAgo(millis, {style: 'short'}) : 'never'
+    millis > 0 ? getTimeAgo(millis, {style: 'short'}) : 'never'
   );
 
   if (!millis) {
@@ -53,7 +53,7 @@ function toMillis(timestamp?: number | Timestamp) {
   if (typeof timestamp === 'number') {
     return timestamp;
   }
-  if (!timestamp) {
+  if (!timestamp?.toMillis) {
     return 0;
   }
   return timestamp.toMillis();

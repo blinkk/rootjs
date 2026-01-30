@@ -98,7 +98,7 @@ DataPage.DataSourcesTable = () => {
                           href={dataSource.url}
                           target="_blank"
                           rel="noreferrer"
-                          variant="subtle"
+                          variant="filled"
                           color="green"
                           size="sm"
                           aria-label="Open spreadsheet"
