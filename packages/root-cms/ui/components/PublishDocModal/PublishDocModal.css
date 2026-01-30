@@ -77,6 +77,57 @@
   text-align: right;
 }
 
+.PublishDocModal__form__publishMessage {
+  margin-top: 16px;
+}
+
+.PublishDocModal__form__publishMessage__wrapper {
+  position: relative;
+}
+
+.PublishDocModal__form__publishMessage__textarea {
+  width: 100%;
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  padding: 8px 40px 8px 12px;
+  font-family: inherit;
+  font-size: 12px;
+  resize: vertical;
+  line-height: 1.5;
+}
+
+.PublishDocModal__form__publishMessage__textarea:focus {
+  outline: none;
+  border-color: #339af0;
+}
+
+.PublishDocModal__form__publishMessage__sparkle {
+  position: absolute;
+  right: 6px;
+  top: 6px;
+  background: white;
+  border: 1px solid var(--color-border);
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  color: inherit;
+}
+
+.PublishDocModal__form__publishMessage__sparkle:hover:not(:disabled) {
+  background: rgba(51, 154, 240, 0.05);
+  border-color: #339af0;
+}
+
+.PublishDocModal__form__publishMessage__sparkle:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 .PublishDocModal__form__buttons {
   margin-top: 24px;
   display: flex;

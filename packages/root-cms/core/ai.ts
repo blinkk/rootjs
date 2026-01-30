@@ -54,6 +54,63 @@ export async function summarizeDiff(
 ): Promise<string> {
   const cmsPluginOptions = cmsClient.cmsPlugin.getConfig();
   const firebaseConfig = cmsPluginOptions.firebaseConfig;
+  // Use fastest model for diff summarization
+  const model: RootAiModel = 'gemini-2.5-flash';
+
+  const ai = genkit({
+    plugins: [
+      vertexAI({
+        projectId: firebaseConfig.projectId,
+        location: firebaseConfig.location || 'us-central1',
+      }),
+    ],
+  });
+
+  const beforeJson = JSON.stringify(options.before ?? null, null, 2);
+  const afterJson = JSON.stringify(options.after ?? null, null, 2);
+
+  const systemPrompt = [
+    'Summarize CMS document changes in 2-4 bullet points.',
+    'Focus on content changes only. Ignore metadata like timestamps.',
+    'If no meaningful changes, say "No significant changes."',
+  ].join('\n');
+
+  const diffPrompt = [
+    'Before:',
+    beforeJson,
+    '',
+    'After:',
+    afterJson,
+    '',
+    'What changed?',
+  ].join('\n');
+
+  const res = await generate(ai, model, {
+    messages: [
+      {
+        role: 'system',
+        content: [{text: systemPrompt}],
+      },
+    ],
+    prompt: [{text: diffPrompt}],
+    config: {
+      // Respond more quickly with less creativity.
+      temperature: 0.3,
+    },
+  });
+
+  return res.text?.trim() || '';
+}
+
+/**
+ * Generates a concise publish message based on document changes.
+ */
+export async function generatePublishMessage(
+  cmsClient: RootCMSClient,
+  options: SummarizeDiffOptions
+): Promise<string> {
+  const cmsPluginOptions = cmsClient.cmsPlugin.getConfig();
+  const firebaseConfig = cmsPluginOptions.firebaseConfig;
   const model: RootAiModel =
     (typeof cmsPluginOptions.experiments?.ai === 'object'
       ? cmsPluginOptions.experiments.ai.model
@@ -72,10 +129,13 @@ export async function summarizeDiff(
   const afterJson = JSON.stringify(options.after ?? null, null, 2);
 
   const systemPrompt = [
-    'You are an assistant that summarizes changes made to CMS documents stored as JSON.',
-    'Provide a concise description of the most important updates using short bullet points.',
-    'If there are no meaningful differences, respond with "No significant changes."',
-    'Focus on just the content changes, ignore insignificant changes to richtext blocks and structure, such as updates to the richtext block\'s "timestamp" and "version" fields.',
+    'You are an assistant that generates concise commit-style messages for CMS document changes.',
+    'Generate a single short sentence (maximum 60 characters) describing the most important change.',
+    'Use imperative mood like "Add feature" or "Update content" or "Fix typo".',
+    'Focus on the key content change, ignore structural metadata changes.',
+    'Do not use punctuation at the end.',
+    'Examples: "Add new hero image", "Update pricing details", "Fix typo in headline"',
+    'Include ',
   ].join('\n');
 
   const diffPrompt = [
@@ -89,7 +149,7 @@ export async function summarizeDiff(
     afterJson,
     '```',
     '',
-    'Summarize the differences between the two payloads.',
+    'Generate a commit message for these changes.',
   ].join('\n');
 
   const res = await generate(ai, model, {

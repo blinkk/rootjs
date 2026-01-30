@@ -50,6 +50,21 @@
   gap: 8px;
 }
 
+.VersionHistoryModal__message {
+  white-space: pre-line;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.VersionHistoryModal__messageIcon {
+  vertical-align: middle;
+}
+
+.VersionHistoryModal__publishedLabel {
+  margin-left: 4px;
+  opacity: 0.5;
+}
+
 .VersionHistoryModal__versions__buttons__compare .mantine-Button-icon {
   margin-left: 4px;
 }
