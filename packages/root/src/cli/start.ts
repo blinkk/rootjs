@@ -24,7 +24,7 @@ import {
   BuildAssetMap,
 } from '../render/asset-map/build-asset-map.js';
 import {fileExists, loadJson} from '../utils/fsutils.js';
-import {randString} from '../utils/rand.js';
+import {deterministicSessionSecret} from '../utils/rand.js';
 
 type RenderModule = typeof import('../render/render.js');
 
@@ -64,7 +64,8 @@ export async function createProdServer(options: {
 
   // Session middleware for handling session cookies.
   const sessionCookieSecret =
-    rootConfig.server?.sessionCookieSecret || randString(36);
+    rootConfig.server?.sessionCookieSecret ||
+    deterministicSessionSecret(rootDir);
   server.use(cookieParser(sessionCookieSecret));
   server.use(sessionMiddleware());
 

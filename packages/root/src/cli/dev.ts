@@ -26,7 +26,7 @@ import {createViteServer} from '../node/vite.js';
 import {DevServerAssetMap} from '../render/asset-map/dev-asset-map.js';
 import {dirExists, isDirectory, isJsFile} from '../utils/fsutils.js';
 import {findOpenPort} from '../utils/ports.js';
-import {randString} from '../utils/rand.js';
+import {deterministicSessionSecret} from '../utils/rand.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -127,7 +127,8 @@ export async function createDevServer(options?: {
 
   // Session middleware for handling session cookies.
   const sessionCookieSecret =
-    rootConfig.server?.sessionCookieSecret || randString(36);
+    rootConfig.server?.sessionCookieSecret ||
+    deterministicSessionSecret(rootDir);
   server.use(cookieParser(sessionCookieSecret));
   server.use(sessionMiddleware());
 
