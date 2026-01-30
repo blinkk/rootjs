@@ -27,6 +27,7 @@ import {
   IconCopy,
   IconDotsVertical,
   IconLanguage,
+  IconLanguageOff,
   IconLock,
   IconPlanet,
   IconRocket,
@@ -457,6 +458,7 @@ DocEditor.FieldHeader = (props: FieldProps & {className?: string}) => {
       <DocEditor.FieldHeaderTranslationsActionIcon
         field={field}
         value={value}
+        deepKey={props.deepKey}
       />
     </div>
   );
@@ -465,6 +467,7 @@ DocEditor.FieldHeader = (props: FieldProps & {className?: string}) => {
 interface FieldHeaderTranslationsActionIconProps {
   field: schema.Field;
   value: any;
+  deepKey: string;
 }
 
 DocEditor.FieldHeaderTranslationsActionIcon = (
@@ -484,13 +487,58 @@ DocEditor.FieldHeaderTranslationsActionIcon = (
     [field, value]
   );
 
+  // Check for doNotTranslate metadata
+  const [doNotTranslate, setDoNotTranslate] = useState(false);
+
+  useEffect(() => {
+    if (props.deepKey && draft.controller) {
+      const metadataKey = getMetadataKey(props.deepKey);
+      const unsubscribe = draft.controller.subscribe(
+        metadataKey,
+        (metadata: any) => {
+          const translations = metadata?.translations || {};
+          setDoNotTranslate(translations.doNotTranslate || false);
+        }
+      );
+      return unsubscribe;
+    }
+  }, [props.deepKey, draft.controller]);
+
   if (!translate || i18nLocales.length <= 1) {
     return null;
   }
 
   return (
     <div className="DocEditor__FieldHeader__translate">
-      {!actionIconDisabled ? (
+      {doNotTranslate ? (
+        <Tooltip label="Do not translate">
+          <ActionIcon
+            size="xs"
+            color="red"
+            onClick={() => {
+              const docData = draft.controller.getData();
+              if (!docData) {
+                return;
+              }
+              const strings = new Set<string>();
+              extractField(strings, field, value, types);
+              const translateStrings = Array.from(strings);
+              editTranslationsModal.open({
+                docId: draft.controller.docId,
+                strings: translateStrings,
+                l10nSheet: docData?.sys?.l10nSheet,
+                field: {
+                  id: field.id,
+                  deepKey: props.deepKey,
+                },
+                draft: draft,
+              });
+            }}
+          >
+            <IconLanguageOff size={16} />
+          </ActionIcon>
+        </Tooltip>
+      ) : !actionIconDisabled ? (
         <Tooltip label="Show translations">
           <ActionIcon
             size="xs"
@@ -506,6 +554,11 @@ DocEditor.FieldHeaderTranslationsActionIcon = (
                 docId: draft.controller.docId,
                 strings: translateStrings,
                 l10nSheet: docData?.sys?.l10nSheet,
+                field: {
+                  id: field.id,
+                  deepKey: props.deepKey,
+                },
+                draft: draft,
               });
             }}
           >
@@ -1694,4 +1747,10 @@ function arrayPreview(
     return `item ${index}`;
   }
   return buildPreviewValue(field.preview, data, {index}) ?? `item ${index}`;
+}
+
+function getMetadataKey(key: string) {
+  const parts = key.split('.');
+  const last = parts.pop();
+  return [...parts, `@${last}`].join('.');
 }
