@@ -14,7 +14,7 @@ import {normalizeSlug} from '../../../shared/slug.js';
 import {joinClassNames} from '../../utils/classes.js';
 import {EventListener} from '../../utils/events.js';
 import {throttle} from '../../utils/throttle.js';
-import {TIME_UNITS, safeTimestamp} from '../../utils/time.js';
+import {TIME_UNITS, toTimestamp} from '../../utils/time.js';
 import {Timer} from '../../utils/timer.js';
 import './Viewers.css';
 
@@ -80,7 +80,7 @@ class ViewersController extends EventListener {
       }
 
       // Ignore viewers that haven't checked in within `IDLE_TIMEOUT`.
-      const validLastViewedAt = safeTimestamp(viewer.lastViewedAt);
+      const validLastViewedAt = toTimestamp(viewer.lastViewedAt);
       if (!validLastViewedAt) {
         return false;
       }

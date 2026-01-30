@@ -49,46 +49,47 @@ export function timestamp(): number {
 }
 
 /**
- * Validates and normalizes a timestamp value.
+ * Converts various timestamp formats to a Firestore Timestamp object.
+ * Accepts: Timestamp, Date, number (milliseconds), or plain object with seconds.
  * Returns a valid Timestamp object or undefined if the input is invalid.
- * Use this to sanitize timestamps from the database before using them.
  */
-export function safeTimestamp(ts: any): Timestamp | undefined {
+export function toTimestamp(ts: any): Timestamp | undefined {
   if (!ts) {
     return undefined;
   }
 
   try {
-    // Already a valid Timestamp with working methods
+    // Already a valid Timestamp with working methods.
     if (typeof ts.toMillis === 'function' && typeof ts.toDate === 'function') {
-      // Verify it actually works
+      // Verify it actually works.
       ts.toMillis();
       return ts as Timestamp;
     }
 
-    // Plain object with seconds/nanoseconds (Timestamp-like from Firestore)
+    // Plain object with seconds (Timestamp-like from Firestore).
     if (
       typeof ts === 'object' &&
       'seconds' in ts &&
       typeof ts.seconds === 'number'
     ) {
-      const millis = ts.seconds * 1000 + (ts.nanoseconds || 0) / 1000000;
+      const millis = ts.seconds * 1000;
       return Timestamp.fromMillis(millis);
     }
 
-    // Number (assume milliseconds)
+    // Number (assume milliseconds).
     if (typeof ts === 'number') {
       return Timestamp.fromMillis(ts);
     }
 
-    // Date object
+    // Date object.
     if (ts instanceof Date) {
       return Timestamp.fromDate(ts);
     }
 
     return undefined;
   } catch (error) {
-    console.error('Invalid timestamp:', error, ts);
+    console.error('Invalid timestamp:', ts);
+    console.error(error);
     return undefined;
   }
 }
@@ -118,44 +119,45 @@ export function getLocalISOString() {
 }
 
 /**
- * Safely formats a Timestamp to a localized date string.
- * Returns a fallback string if the timestamp is corrupt or invalid.
+ * Formats a timestamp to a localized date string.
+ * Accepts: Timestamp, Date, number (milliseconds), or plain object with seconds.
+ * Returns a fallback string if the timestamp is invalid.
  */
-export function safeFormatTimestamp(
+export function formatTimestamp(
   timestamp: any,
   formatter: Intl.DateTimeFormat,
   fallback: string = 'Invalid date'
 ): string {
   try {
-    // Handle undefined/null
+    // Handle undefined/null.
     if (!timestamp) {
       return fallback;
     }
 
-    // If it's already a Date object
+    // If it's already a Date object.
     if (timestamp instanceof Date) {
       return formatter.format(timestamp);
     }
 
-    // If it has a toDate method (Timestamp)
+    // If it has a toDate method (Timestamp).
     if (typeof timestamp.toDate === 'function') {
       const date = timestamp.toDate();
       return formatter.format(date);
     }
 
-    // If it has a toMillis method (Timestamp)
+    // If it has a toMillis method (Timestamp).
     if (typeof timestamp.toMillis === 'function') {
       const date = new Date(timestamp.toMillis());
       return formatter.format(date);
     }
 
-    // If it's a number (assume milliseconds)
+    // If it's a number (assume milliseconds).
     if (typeof timestamp === 'number') {
       const date = new Date(timestamp);
       return formatter.format(date);
     }
 
-    // If it's an object with seconds/nanoseconds (Timestamp-like)
+    // If it's an object with seconds (Timestamp-like).
     if (
       typeof timestamp === 'object' &&
       'seconds' in timestamp &&
@@ -168,7 +170,8 @@ export function safeFormatTimestamp(
 
     return fallback;
   } catch (error) {
-    console.error('Error formatting timestamp:', error, timestamp);
+    console.error('Error formatting timestamp:', timestamp);
+    console.error(error);
     return fallback;
   }
 }

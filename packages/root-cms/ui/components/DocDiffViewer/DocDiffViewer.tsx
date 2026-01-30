@@ -4,7 +4,7 @@ import {Button, Loader} from '@mantine/core';
 import {useEffect, useState} from 'preact/hooks';
 import {joinClassNames} from '../../utils/classes.js';
 import {CMSDoc, cmsReadDocVersion, unmarshalData} from '../../utils/doc.js';
-import {safeTimestamp} from '../../utils/time.js';
+import {toTimestamp} from '../../utils/time.js';
 import {AiSummary} from '../AiSummary/AiSummary.js';
 import {JsDiff} from '../JsDiff/JsDiff.js';
 
@@ -123,7 +123,7 @@ function getMetaString(doc: CMSDoc | null) {
   if (!doc?.sys?.modifiedAt) {
     return 'never';
   }
-  const validTs = safeTimestamp(doc.sys.modifiedAt);
+  const validTs = toTimestamp(doc.sys.modifiedAt);
   if (!validTs) {
     return `Invalid date by ${doc.sys.modifiedBy}`;
   }

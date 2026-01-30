@@ -1,11 +1,7 @@
 import {Badge, Tooltip} from '@mantine/core';
 import {Timestamp} from 'firebase/firestore';
 import {Release} from '../../utils/release.js';
-import {
-  getTimeAgo,
-  safeFormatTimestamp,
-  safeTimestamp,
-} from '../../utils/time.js';
+import {getTimeAgo, formatTimestamp, toTimestamp} from '../../utils/time.js';
 
 const TOOLTIP_PROPS = {
   transition: 'pop',
@@ -63,7 +59,7 @@ export function ReleaseStatusBadge(props: ReleaseStatusBadgeProps) {
 }
 
 function timeDiff(ts: Timestamp | null) {
-  const validTs = safeTimestamp(ts);
+  const validTs = toTimestamp(ts);
   if (!validTs) {
     return getTimeAgo(new Date().getTime());
   }
@@ -78,5 +74,5 @@ function formatDateTime(ts: Timestamp) {
     hour: '2-digit',
     minute: '2-digit',
   });
-  return safeFormatTimestamp(ts, formatter, 'Unknown date');
+  return formatTimestamp(ts, formatter, 'Unknown date');
 }

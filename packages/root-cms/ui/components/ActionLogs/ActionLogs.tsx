@@ -4,7 +4,7 @@ import {useEffect, useState} from 'preact/hooks';
 import {Action, listActions} from '../../utils/actions.js';
 import './ActionsLogs.css';
 import {getSpreadsheetUrl} from '../../utils/gsheets.js';
-import {safeTimestamp} from '../../utils/time.js';
+import {toTimestamp} from '../../utils/time.js';
 
 export interface ActionLogsProps {
   className?: string;
@@ -152,7 +152,7 @@ export function ActionLogs(props: ActionLogsProps) {
 }
 
 function formatDate(timestamp: Timestamp) {
-  const validTs = safeTimestamp(timestamp);
+  const validTs = toTimestamp(timestamp);
   if (!validTs) {
     return 'Invalid date';
   }

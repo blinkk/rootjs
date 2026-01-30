@@ -23,7 +23,7 @@ import {
   cmsReadDocVersion,
   cmsRestoreVersion,
 } from '../../utils/doc.js';
-import {safeFormatTimestamp} from '../../utils/time.js';
+import {formatTimestamp} from '../../utils/time.js';
 import {useCopyDocModal} from '../CopyDocModal/CopyDocModal.js';
 import {Heading} from '../Heading/Heading.js';
 import {Text} from '../Text/Text.js';
@@ -96,7 +96,7 @@ export function VersionHistoryModal(
     await cmsRestoreVersion(docId, version);
     showNotification({
       title: 'Saved!',
-      message: `Restored ${docId} to ${safeFormatTimestamp(
+      message: `Restored ${docId} to ${formatTimestamp(
         version.sys.modifiedAt,
         dateFormat
       )}.`,
@@ -257,7 +257,7 @@ export function VersionHistoryModal(
                       <Text size="body-sm" style={{flex: 1}}>
                         {isDraft ? (
                           <span title="Current Draft">
-                            {safeFormatTimestamp(
+                            {formatTimestamp(
                               version.sys.modifiedAt,
                               dateFormat
                             )}{' '}
@@ -265,7 +265,7 @@ export function VersionHistoryModal(
                           </span>
                         ) : (
                           <>
-                            {safeFormatTimestamp(
+                            {formatTimestamp(
                               version.sys.modifiedAt,
                               dateFormat
                             )}

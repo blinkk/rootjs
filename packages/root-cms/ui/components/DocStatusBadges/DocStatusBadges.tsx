@@ -3,7 +3,7 @@ import './DocStatusBadges.css';
 import {Badge, Tooltip} from '@mantine/core';
 import {Timestamp} from 'firebase/firestore';
 import {CMSDoc, testPublishingLocked} from '../../utils/doc.js';
-import {safeTimestamp} from '../../utils/time.js';
+import {toTimestamp} from '../../utils/time.js';
 import {formatDateTime, getTimeAgo} from '../../utils/time.js';
 
 interface DocStatusBadgesProps {
@@ -85,7 +85,7 @@ export function DocStatusBadges(props: DocStatusBadgesProps) {
 }
 
 function timeDiff(ts: Timestamp | null) {
-  const validTs = safeTimestamp(ts);
+  const validTs = toTimestamp(ts);
   if (!validTs) {
     return getTimeAgo(new Date().getTime());
   }
