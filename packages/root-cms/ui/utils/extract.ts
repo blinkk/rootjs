@@ -72,7 +72,7 @@ export function extractFields(
     // Check if field has "do not translate" metadata
     const metadataKey = `@${field.id}`;
     const metadata = data[metadataKey];
-    if (metadata?.translations?.doNotTranslate) {
+    if (metadata?.disableTranslations) {
       return; // Skip this field
     }
 
@@ -95,11 +95,11 @@ export function extractFieldsWithMetadata(
     // Check if field has "do not translate" metadata
     const metadataKey = `@${field.id}`;
     const metadata = data[metadataKey];
-    if (metadata?.translations?.doNotTranslate) {
+    if (metadata?.disableTranslations) {
       return; // Skip this field
     }
 
-    const description = metadata?.translations?.description;
+    const description = metadata?.description;
     extractFieldWithMetadata(
       stringsWithMeta,
       field,

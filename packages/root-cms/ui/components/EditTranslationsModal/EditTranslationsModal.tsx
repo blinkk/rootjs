@@ -89,9 +89,8 @@ export function EditTranslationsModal(
     if (props.field?.deepKey && draft?.controller) {
       const metadataKey = getMetadataKey(props.field.deepKey);
       const metadata = draft.controller.getValue(metadataKey) || {};
-      const translations = metadata.translations || {};
-      setDoNotTranslate(translations.doNotTranslate || false);
-      setDescription(translations.description || '');
+      setDoNotTranslate(metadata.disableTranslations || false);
+      setDescription(metadata.description || '');
     }
   }, [props.field?.deepKey, draft?.controller]);
 
@@ -123,10 +122,8 @@ export function EditTranslationsModal(
       if (props.field?.deepKey && draft?.controller) {
         const metadataKey = getMetadataKey(props.field.deepKey);
         const metadata = draft.controller.getValue(metadataKey) || {};
-        metadata.translations = {
-          doNotTranslate: doNotTranslate,
-          description: description,
-        };
+        metadata.disableTranslations = doNotTranslate;
+        metadata.description = description;
         await draft.controller.updateKey(metadataKey, metadata);
         // Ensure the metadata is saved immediately
         await draft.controller.flush();
@@ -330,7 +327,6 @@ export function EditTranslationsModal(
                       >
                         <ActionIcon
                           variant="light"
-                          color="violet"
                           onClick={generateAiTranslations}
                           loading={aiGenerating}
                           disabled={aiGenerating}

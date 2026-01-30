@@ -39,7 +39,7 @@ export class Arb {
   list(): {key: string; source: string; meta?: ArbSourceMeta}[] {
     const result: {key: string; source: string; meta?: ArbSourceMeta}[] = [];
     Object.entries(this.data).forEach(([key]) => {
-      if (key.startsWith('@@')) {
+      if (key.startsWith('@')) {
         return;
       }
       const source = this.data[key];

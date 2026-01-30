@@ -84,10 +84,8 @@ describe('EditTranslationsModal', () => {
 
   it('should load translation metadata from draft controller', async () => {
     mockDraft.controller.getValue.mockReturnValue({
-      translations: {
-        doNotTranslate: true,
-        description: 'Keep it simple',
-      },
+      disableTranslations: true,
+      description: 'Keep it simple',
     });
 
     render(<EditTranslationsModal {...defaultProps} />);
@@ -121,7 +119,7 @@ describe('EditTranslationsModal', () => {
 
   it('should hide translation table when "Do not translate" is checked', async () => {
     mockDraft.controller.getValue.mockReturnValue({
-      translations: {doNotTranslate: true},
+      disableTranslations: true,
     });
 
     render(<EditTranslationsModal {...defaultProps} />);
@@ -156,17 +154,15 @@ describe('EditTranslationsModal', () => {
       expect(mockDraft.controller.updateKey).toHaveBeenCalledWith(
         'fields.@title',
         expect.objectContaining({
-          translations: {
-            doNotTranslate: true,
-            description: 'Important context',
-          },
+          disableTranslations: true,
+          description: 'Important context',
         })
       );
       expect(mockDraft.controller.flush).toHaveBeenCalled();
     });
   });
 
-  it('should not import translations when doNotTranslate is true', async () => {
+  it('should not import translations when disableTranslations is true', async () => {
     mockDraft.controller.getValue.mockReturnValue({});
 
     render(<EditTranslationsModal {...defaultProps} />);

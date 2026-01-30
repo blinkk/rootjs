@@ -23,7 +23,7 @@ describe('extract', () => {
       expect(strings.has('hello-world')).toBe(false);
     });
 
-    it('should skip fields marked with doNotTranslate', () => {
+    it('should skip fields marked with disableTranslations', () => {
       const fields: schema.Field[] = [
         {type: 'string', id: 'title', translate: true},
         {type: 'string', id: 'description', translate: true},
@@ -32,9 +32,7 @@ describe('extract', () => {
         title: 'Hello World',
         description: 'This is a description',
         '@description': {
-          translations: {
-            doNotTranslate: true,
-          },
+          disableTranslations: true,
         },
       };
       const strings = new Set<string>();
@@ -45,7 +43,7 @@ describe('extract', () => {
       expect(strings.has('This is a description')).toBe(false);
     });
 
-    it('should extract fields without doNotTranslate metadata', () => {
+    it('should extract fields without disableTranslations metadata', () => {
       const fields: schema.Field[] = [
         {type: 'string', id: 'title', translate: true},
         {type: 'string', id: 'description', translate: true},
@@ -54,9 +52,7 @@ describe('extract', () => {
         title: 'Hello World',
         description: 'This is a description',
         '@description': {
-          translations: {
-            doNotTranslate: false,
-          },
+          disableTranslations: false,
         },
       };
       const strings = new Set<string>();
@@ -78,9 +74,7 @@ describe('extract', () => {
         title: 'Hello World',
         description: 'This is a description',
         '@description': {
-          translations: {
-            description: 'This should be formal',
-          },
+          description: 'This should be formal',
         },
       };
       const stringsWithMeta = new Map<string, {description?: string}>();
@@ -95,17 +89,15 @@ describe('extract', () => {
       });
     });
 
-    it('should skip fields marked with doNotTranslate', () => {
+    it('should skip fields marked with disableTranslations', () => {
       const fields: schema.Field[] = [
         {type: 'string', id: 'title', translate: true},
       ];
       const data = {
         title: 'Hello World',
         '@title': {
-          translations: {
-            doNotTranslate: true,
-            description: 'Some description',
-          },
+          disableTranslations: true,
+          description: 'Some description',
         },
       };
       const stringsWithMeta = new Map<string, {description?: string}>();
@@ -127,9 +119,7 @@ describe('extract', () => {
         meta: {
           title: 'Nested Title',
           '@title': {
-            translations: {
-              description: 'Important context',
-            },
+            description: 'Important context',
           },
         },
       };
