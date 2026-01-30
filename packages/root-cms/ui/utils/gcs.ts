@@ -1,7 +1,9 @@
 import {
+  getMetadata,
   ref as storageRef,
   updateMetadata,
   uploadBytesResumable,
+  deleteObject,
 } from 'firebase/storage';
 
 /**
@@ -27,9 +29,18 @@ export const VIDEO_EXTS = ['mp4', 'webm'];
 export const GCI_URL_PREFIX = 'https://lh3.googleusercontent.com/';
 
 export interface UploadFileOptions {
+  /** @deprecated Use namingMode instead. */
   preserveFilename?: boolean;
+  /**
+   * The naming strategy for uploaded files.
+   * - `hash`: Renames the file to `{hash}.{ext}` (default).
+   * - `hash-path`: Renames the file to `{hash}/{filename}.{ext}`.
+   * - `clean`: Keeps the original filename `{filename}.{ext}`. Note that this can overwrite existing files.
+   */
+  namingMode?: 'hash' | 'hash-path' | 'clean';
   cacheControl?: string;
   disableGci?: boolean;
+  checkExists?: boolean;
 }
 
 export interface UploadedFile {
@@ -54,11 +65,17 @@ export async function uploadFileToGCS(
   const projectId = window.__ROOT_CTX.rootConfig.projectId;
   const hashHex = await sha1(file);
   const ext = getFileExt(file.name);
-  const filename = options?.preserveFilename
-    ? `${hashHex}/${file.name}`
-    : `${hashHex}.${ext}`;
+  const filename = getGcsFilename(file, hashHex, ext, options);
   const filePath = `${projectId}/uploads/${filename}`;
   const gcsRef = storageRef(window.firebase.storage, filePath);
+
+  if (options?.checkExists) {
+    const exists = await checkFileExists(filePath);
+    if (exists) {
+      throw new Error(`File already exists: ${filePath}`);
+    }
+  }
+
   const task = uploadBytesResumable(gcsRef, file);
 
   // Throw if the file upload stalls for more than 10 seconds.
@@ -102,6 +119,56 @@ export async function uploadFileToGCS(
     );
   });
   return finalizeUpload(gcsRef, file, ext, options);
+}
+
+/**
+ * Deletes a file from GCS.
+ * Accepts a full GCS path (gs://...), a public URL, or a relative path in the default bucket.
+ */
+export async function deleteFileFromGCS(gcsPath: string): Promise<void> {
+  // If the path starts with a slash, it's likely "/bucket/path/to/object".
+  // convert it to a gs:// URL to ensure it resolves correctly.
+  const storage = window.firebase.storage;
+  let fileRef;
+  if (gcsPath.startsWith('/')) {
+    fileRef = storageRef(storage, `gs://${gcsPath.substring(1)}`);
+  } else if (gcsPath.startsWith('http')) {
+    fileRef = storageRef(storage, gcsPath);
+  } else {
+    // Assume it's a relative path in the default bucket
+    fileRef = storageRef(storage, gcsPath);
+  }
+
+  await deleteObject(fileRef);
+  console.log(`deleted ${gcsPath}`);
+}
+
+function getGcsFilename(
+  file: File,
+  hash: string,
+  ext: string,
+  options?: UploadFileOptions
+) {
+  if (options?.namingMode === 'clean') {
+    return file.name;
+  }
+  if (options?.namingMode === 'hash-path' || options?.preserveFilename) {
+    return `${hash}/${file.name}`;
+  }
+  return `${hash}.${ext}`;
+}
+
+export async function checkFileExists(filePath: string): Promise<boolean> {
+  const gcsRef = storageRef(window.firebase.storage, filePath);
+  try {
+    await getMetadata(gcsRef);
+    return true;
+  } catch (err: any) {
+    if (err.code === 'storage/object-not-found') {
+      return false;
+    }
+    throw err;
+  }
 }
 
 async function finalizeUpload(
