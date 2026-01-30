@@ -270,7 +270,7 @@ export function VersionHistoryModal(
                           </>
                         )}
                       </Text>
-                      {version.message && (
+                      {version.commitMessage && (
                         <Popover
                           withCloseButton={true}
                           opened={
@@ -300,7 +300,7 @@ export function VersionHistoryModal(
                           }
                         >
                           <div className="VersionHistoryModal__message">
-                            {version.message}
+                            {version.commitMessage}
                           </div>
                         </Popover>
                       )}

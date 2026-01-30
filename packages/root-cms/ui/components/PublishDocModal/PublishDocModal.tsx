@@ -47,7 +47,7 @@ export function PublishDocModal(
   const [publishType, setPublishType] = useState<PublishType>('');
   const [scheduledDate, setScheduledDate] = useState('');
   const [loading, setLoading] = useState(false);
-  const [publishMessage, setPublishMessage] = useState('');
+  const [commitMessage, setCommitMessage] = useState('');
   const [generatingMessage, setGeneratingMessage] = useState(false);
   const dateTimeRef = useRef<HTMLInputElement>(null);
   const modals = useModals();
@@ -64,7 +64,7 @@ export function PublishDocModal(
     try {
       setLoading(true);
       await cmsPublishDoc(props.docId, {
-        message: publishMessage.trim() || undefined,
+        commitMessage: commitMessage.trim() || undefined,
       });
       setLoading(false);
       showNotification({
@@ -109,7 +109,7 @@ export function PublishDocModal(
     }
   }
 
-  async function generatePublishMessage() {
+  async function generateCommitMessage() {
     try {
       setGeneratingMessage(true);
       const res = await window.fetch('/cms/api/ai.publish_message', {
@@ -119,7 +119,7 @@ export function PublishDocModal(
       });
       const data = await res.json();
       if (data.success && data.message) {
-        setPublishMessage(data.message);
+        setCommitMessage(data.message);
       } else {
         showNotification({
           title: 'Generation failed',
@@ -268,19 +268,19 @@ export function PublishDocModal(
             <div className="PublishDocModal__form__publishMessage__wrapper">
               <textarea
                 className="PublishDocModal__form__publishMessage__textarea"
-                placeholder="Optional: Add a message to describe the changes"
-                value={publishMessage}
+                placeholder="Optional: Add a commit message to describe the changes"
+                value={commitMessage}
                 rows={3}
                 onInput={(e: Event) => {
                   const target = e.target as HTMLTextAreaElement;
-                  setPublishMessage(target.value);
+                  setCommitMessage(target.value);
                 }}
               />
               {experiments.ai && (
                 <button
                   type="button"
                   className="PublishDocModal__form__publishMessage__sparkle"
-                  onClick={generatePublishMessage}
+                  onClick={generateCommitMessage}
                   disabled={generatingMessage}
                 >
                   <Tooltip
