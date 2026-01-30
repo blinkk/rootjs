@@ -347,7 +347,13 @@ export function VersionHistoryModal(
                               }
                             >
                               <div className="VersionHistoryModal__message">
-                                <strong>Release:</strong> {releaseId}
+                                <strong>Release:</strong>{' '}
+                                <a
+                                  href={`/cms/releases/${releaseId}`}
+                                  target="_blank"
+                                >
+                                  {releaseId}
+                                </a>
                               </div>
                             </Popover>
                           )
