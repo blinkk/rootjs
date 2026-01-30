@@ -81,10 +81,10 @@ export function EditTranslationsModal(
   const [description, setDescription] = useState('');
   const [aiGenerating, setAiGenerating] = useState(false);
 
-  // Use draft from props (passed from DocEditor)
+  // Use draft from props (passed from DocEditor).
   const draft = props.draft || null;
 
-  // Load translation metadata from the document
+  // Load translation metadata from the document.
   useEffect(() => {
     if (props.field?.deepKey && draft?.controller) {
       const metadataKey = getMetadataKey(props.field.deepKey);
@@ -118,18 +118,18 @@ export function EditTranslationsModal(
         disallowClose: true,
       });
 
-      // Save translation metadata if field is provided
+      // Save translation metadata if field is provided.
       if (props.field?.deepKey && draft?.controller) {
         const metadataKey = getMetadataKey(props.field.deepKey);
         const metadata = draft.controller.getValue(metadataKey) || {};
         metadata.disableTranslations = doNotTranslate;
         metadata.description = description;
         await draft.controller.updateKey(metadataKey, metadata);
-        // Ensure the metadata is saved immediately
+        // Ensure the metadata is saved immediately.
         await draft.controller.flush();
       }
 
-      // Only save translations if not marked as "do not translate"
+      // Only save translations if not marked as "do not translate".
       if (!doNotTranslate && changedKeys.length > 0) {
         const changes: CsvTranslation[] = [];
         changedKeys.forEach((changedKey) => {
@@ -169,19 +169,20 @@ export function EditTranslationsModal(
     setAiGenerating(true);
     try {
       await notifyErrors(async () => {
-        // For each source string, call AI API
+        // For each source string, call AI API.
         for (const source of strings) {
           const existingRow = translationsMap[source] || {source};
           const existingTranslations: Record<string, string> = {};
 
-          // Collect existing translations for this string
+          // Collect existing translations for this string.
           i18nLocales.forEach((locale) => {
             if (existingRow[locale]) {
               existingTranslations[locale] = existingRow[locale];
             }
           });
 
-          // Find locales that need translation (blank fields)
+          // Find locales that need translation (blank fields only).
+          // AI will NOT overwrite existing translations.
           const targetLocales = i18nLocales.filter(
             (locale) => !existingRow[locale]
           );
@@ -206,7 +207,7 @@ export function EditTranslationsModal(
 
           const data = await res.json();
           if (data.success && data.translations) {
-            // Update the translations map with AI-generated translations
+            // Update the translations map with AI-generated translations.
             const updatedRow = {...existingRow};
             Object.entries(data.translations).forEach(
               ([locale, translation]) => {
@@ -233,12 +234,12 @@ export function EditTranslationsModal(
 
     if (!aiEnabled) return false;
 
-    // Check if any translation fields are blank
+    // Check if any translation fields are blank.
     for (const source of strings) {
       const row = translationsMap[source] || {};
       for (const locale of i18nLocales) {
         if (!row[locale]) {
-          return true; // Found at least one blank field
+          return true; // Found at least one blank field.
         }
       }
     }
