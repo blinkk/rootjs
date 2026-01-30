@@ -1,5 +1,7 @@
 import crypto from 'node:crypto';
 
+import {RootConfig} from '../core/config.js';
+
 export function randString(len: number): string {
   const result = [];
   const chars =
@@ -18,4 +20,41 @@ export function randString(len: number): string {
  */
 export function deterministicSessionSecret(seed: string): string {
   return crypto.createHash('sha256').update(seed).digest('hex');
+}
+
+/**
+ * Gets the session cookie secret for the server.
+ *
+ * Priority order:
+ * 1. Explicit config value (rootConfig.server.sessionCookieSecret)
+ * 2. Development mode: deterministic secret based on rootDir (sessions persist across restarts)
+ * 3. Production mode: random secret with security warning
+ */
+export function getSessionCookieSecret(
+  rootConfig: RootConfig,
+  rootDir: string
+): string | string[] {
+  if (rootConfig.server?.sessionCookieSecret) {
+    return rootConfig.server.sessionCookieSecret;
+  }
+
+  if (process.env.NODE_ENV === 'development') {
+    return deterministicSessionSecret(rootDir);
+  }
+
+  console.warn('⚠️  WARNING: sessionCookieSecret is not configured!');
+  console.warn(
+    '⚠️  Using a random secret. Sessions will not persist across server restarts.'
+  );
+  console.warn('⚠️  Add this to your root.config.ts for production:');
+  console.warn('⚠️    server: {');
+  console.warn('⚠️      sessionCookieSecret: process.env.SESSION_SECRET,');
+  console.warn('⚠️    }');
+  console.warn('⚠️  Generate a secret with:');
+  console.warn(
+    "⚠️    node -e \"console.log(require('crypto').randomBytes(32).toString('hex'))\""
+  );
+  console.warn('');
+
+  return randString(36);
 }

@@ -232,6 +232,11 @@ export interface RootServerConfig {
 
   /**
    * Cookie secret for the session middleware.
+   *
+   * Generate a secure secret with:
+   * ```
+   * node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+   * ```
    */
   sessionCookieSecret?: string | string[];
 
