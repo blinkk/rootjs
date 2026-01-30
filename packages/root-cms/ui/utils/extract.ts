@@ -31,6 +31,32 @@ export async function extractStringsForDoc(docId: string) {
   return Array.from(strings);
 }
 
+export async function extractStringsWithMetadataForDoc(docId: string) {
+  const db = window.firebase.db;
+  const projectId = window.__ROOT_CTX.rootConfig.projectId;
+  const [collectionId, slug] = docId.split('/', 2);
+  const schema = await fetchCollectionSchema(collectionId);
+  const docRef = doc(
+    db,
+    'Projects',
+    projectId,
+    'Collections',
+    collectionId,
+    'Drafts',
+    slug
+  );
+  const snapshot = await getDoc(docRef);
+  const data = snapshot.data() || {};
+  const stringsWithMeta = new Map<string, {description?: string}>();
+  extractFieldsWithMetadata(
+    stringsWithMeta,
+    schema.fields,
+    data.fields || {},
+    schema.types || {}
+  );
+  return stringsWithMeta;
+}
+
 export function extractFields(
   strings: Set<string>,
   fields: schema.Field[],
@@ -42,7 +68,45 @@ export function extractFields(
       return;
     }
     const fieldValue = data[field.id];
+
+    // Check if field has "do not translate" metadata
+    const metadataKey = `@${field.id}`;
+    const metadata = data[metadataKey];
+    if (metadata?.disableTranslations) {
+      return; // Skip this field
+    }
+
     extractField(strings, field, fieldValue, types);
+  });
+}
+
+export function extractFieldsWithMetadata(
+  stringsWithMeta: Map<string, {description?: string}>,
+  fields: schema.Field[],
+  data: Record<string, any>,
+  types: Record<string, schema.Schema> = {}
+) {
+  fields.forEach((field) => {
+    if (!field.id) {
+      return;
+    }
+    const fieldValue = data[field.id];
+
+    // Check if field has "do not translate" metadata
+    const metadataKey = `@${field.id}`;
+    const metadata = data[metadataKey];
+    if (metadata?.disableTranslations) {
+      return; // Skip this field
+    }
+
+    const description = metadata?.description;
+    extractFieldWithMetadata(
+      stringsWithMeta,
+      field,
+      fieldValue,
+      types,
+      description
+    );
   });
 }
 
@@ -110,6 +174,94 @@ export function extractField(
     }
   } else {
     console.log(`extract: ignoring field, id=${field.id}, type=${field.type}`);
+  }
+}
+
+export function extractFieldWithMetadata(
+  stringsWithMeta: Map<string, {description?: string}>,
+  field: schema.Field,
+  fieldValue: any,
+  types: Record<string, schema.Schema> = {},
+  description?: string
+) {
+  if (!fieldValue) {
+    return;
+  }
+
+  function addStringWithMeta(text: string) {
+    const str = normalizeString(text);
+    if (str) {
+      const existing = stringsWithMeta.get(str);
+      if (!existing || !existing.description) {
+        stringsWithMeta.set(str, {description: description});
+      }
+    }
+  }
+
+  if (field.type === 'object') {
+    extractFieldsWithMetadata(
+      stringsWithMeta,
+      field.fields || [],
+      fieldValue,
+      types
+    );
+  } else if (field.type === 'array') {
+    const arrayKeys = fieldValue._array || [];
+    for (const arrayKey of arrayKeys) {
+      extractFieldWithMetadata(
+        stringsWithMeta,
+        field.of,
+        fieldValue[arrayKey],
+        types,
+        description
+      );
+    }
+  } else if (field.type === 'string' || field.type === 'select') {
+    if (field.translate) {
+      addStringWithMeta(fieldValue);
+    }
+  } else if (field.type === 'image') {
+    if (
+      field.translate &&
+      fieldValue &&
+      fieldValue.alt &&
+      field.alt !== false
+    ) {
+      addStringWithMeta(fieldValue.alt);
+    }
+  } else if (field.type === 'multiselect') {
+    if (field.translate && Array.isArray(fieldValue)) {
+      for (const value of fieldValue) {
+        addStringWithMeta(value);
+      }
+    }
+  } else if (field.type === 'oneof') {
+    const fieldTypes = field.types || [];
+    let fieldValueType: any;
+    if (typeof fieldTypes[0] === 'string') {
+      if ((fieldTypes as string[]).includes(fieldValue._type)) {
+        fieldValueType = types[fieldValue._type];
+      }
+    } else {
+      fieldValueType = (fieldTypes as any[]).find(
+        (item: any) => item.name === fieldValue._type
+      );
+    }
+    if (fieldValueType) {
+      extractFieldsWithMetadata(
+        stringsWithMeta,
+        fieldValueType.fields || [],
+        fieldValue,
+        types
+      );
+    }
+  } else if (field.type === 'richtext') {
+    if (field.translate) {
+      // For richtext, we still use the simple extraction without metadata
+      const strings = new Set<string>();
+      extractRichTextStrings(strings, fieldValue);
+      strings.forEach((str) => addStringWithMeta(str));
+    }
   }
 }
 

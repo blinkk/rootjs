@@ -5,13 +5,36 @@ import './PublishDocModal.css';
 import {MantineProvider} from '@mantine/core';
 import {ModalsProvider, ContextModalProps} from '@mantine/modals';
 import {render} from '@testing-library/preact';
-import {describe, it, expect, beforeAll} from 'vitest';
+import {describe, it, expect, beforeAll, vi} from 'vitest';
 import {page} from 'vitest/browser';
 import {PublishDocModal, PublishDocModalProps} from './PublishDocModal.js';
 
+// Mock firebase/firestore.
+vi.mock('firebase/firestore', async (importOriginal) => {
+  const mod = await importOriginal<typeof import('firebase/firestore')>();
+  return {
+    ...mod,
+    doc: vi.fn(),
+    getDoc: vi.fn().mockResolvedValue({
+      data: () => ({roles: {'test@example.com': 'ADMIN'}}),
+    }),
+  };
+});
+
 describe('PublishDocModal', () => {
   beforeAll(() => {
-    (window as any).__ROOT_CTX = {experiments: {}};
+    (window as any).__ROOT_CTX = {
+      experiments: {},
+      rootConfig: {
+        projectId: 'test-project',
+      },
+    };
+    (window as any).firebase = {
+      user: {
+        email: 'test@example.com',
+      },
+      db: {},
+    };
   });
 
   it('renders publish confirmation with long doc id', async () => {

@@ -502,4 +502,43 @@ export function api(server: Server, options: ApiOptions) {
       }
     }
   );
+
+  server.use('/cms/api/ai.translate', async (req: Request, res: Response) => {
+    if (
+      req.method !== 'POST' ||
+      !String(req.get('content-type')).startsWith('application/json')
+    ) {
+      res.status(400).json({success: false, error: 'BAD_REQUEST'});
+      return;
+    }
+    if (!req.user?.email) {
+      res.status(401).json({success: false, error: 'UNAUTHORIZED'});
+      return;
+    }
+    const reqBody = req.body || {};
+    const sourceText = reqBody.sourceText;
+    const targetLocales = reqBody.targetLocales;
+    const description = reqBody.description;
+    const existingTranslations = reqBody.existingTranslations || {};
+
+    if (!sourceText || !targetLocales || !Array.isArray(targetLocales)) {
+      res.status(400).json({success: false, error: 'MISSING_REQUIRED_FIELD'});
+      return;
+    }
+
+    try {
+      const cmsClient = new RootCMSClient(req.rootConfig!);
+      const {translateString} = await import('./ai.js');
+      const translations = await translateString(cmsClient, {
+        sourceText,
+        targetLocales,
+        description,
+        existingTranslations,
+      });
+      res.status(200).json({success: true, translations});
+    } catch (err: any) {
+      console.error(err.stack || err);
+      res.status(500).json({success: false, error: err.message || 'UNKNOWN'});
+    }
+  });
 }
