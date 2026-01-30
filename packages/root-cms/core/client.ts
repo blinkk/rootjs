@@ -739,6 +739,16 @@ export class RootCMSClient {
       await batch.commit();
     }
     console.log(`published ${publishedDocs.length} docs!`);
+
+    // Log an action for each published doc.
+    for (const doc of publishedDocs) {
+      const scheduledBy = doc.data?.sys?.scheduledBy || 'system';
+      await this.logAction('doc.scheduled_publish', {
+        by: scheduledBy,
+        metadata: {docId: doc.id},
+      });
+    }
+
     return publishedDocs;
   }
 
@@ -775,6 +785,16 @@ export class RootCMSClient {
         publishedBy,
         batch,
         releaseId: release.id,
+      });
+
+      // Log an action for the published release.
+      await this.logAction('release.scheduled_publish', {
+        by: publishedBy,
+        metadata: {
+          releaseId: release.id,
+          docIds: release.docIds || [],
+          dataSourceIds: release.dataSourceIds || [],
+        },
       });
     }
   }
