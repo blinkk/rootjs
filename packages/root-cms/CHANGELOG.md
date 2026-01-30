@@ -1,5 +1,12 @@
 # @blinkk/root-cms
 
+## 2.4.11
+
+### Patch Changes
+
+- b378fca6: feat: add clickable sheets icon to data sources table (#890)
+  - @blinkk/root@2.4.11
+
 ## 2.4.10
 
 ### Patch Changes
