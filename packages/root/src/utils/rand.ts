@@ -42,19 +42,5 @@ export function getSessionCookieSecret(
     return deterministicSessionSecret(rootDir);
   }
 
-  console.warn('⚠️  WARNING: sessionCookieSecret is not configured!');
-  console.warn(
-    '⚠️  Using a random secret. Sessions will not persist across server restarts.'
-  );
-  console.warn('⚠️  Add this to your root.config.ts for production:');
-  console.warn('⚠️    server: {');
-  console.warn('⚠️      sessionCookieSecret: process.env.SESSION_SECRET,');
-  console.warn('⚠️    }');
-  console.warn('⚠️  Generate a secret with:');
-  console.warn(
-    "⚠️    node -e \"console.log(require('crypto').randomBytes(32).toString('hex'))\""
-  );
-  console.warn('');
-
   return randString(36);
 }
