@@ -9,6 +9,18 @@ import {describe, it, expect, beforeAll, vi} from 'vitest';
 import {page} from 'vitest/browser';
 import {PublishDocModal, PublishDocModalProps} from './PublishDocModal.js';
 
+// Mock firebase/firestore.
+vi.mock('firebase/firestore', async (importOriginal) => {
+  const mod = await importOriginal<typeof import('firebase/firestore')>();
+  return {
+    ...mod,
+    doc: vi.fn(),
+    getDoc: vi.fn().mockResolvedValue({
+      data: () => ({roles: {'test@example.com': 'ADMIN'}}),
+    }),
+  };
+});
+
 // Mock the doc utilities
 vi.mock('../../utils/doc.js', () => ({
   cmsPublishDoc: vi.fn(),
@@ -40,11 +52,15 @@ describe('PublishDocModal', () => {
   beforeAll(() => {
     (window as any).__ROOT_CTX = {
       experiments: {},
-      rootConfig: {projectId: 'test-project'},
+      rootConfig: {
+        projectId: 'test-project',
+      },
     };
     (window as any).firebase = {
+      user: {
+        email: 'test@example.com',
+      },
       db: {},
-      user: {email: 'test@example.com'},
     };
   });
 
