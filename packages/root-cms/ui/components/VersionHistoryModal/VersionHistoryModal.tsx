@@ -220,8 +220,10 @@ export function VersionHistoryModal(
         <Table className="VersionHistoryModal__versions">
           <thead>
             <tr>
-              <th style={{width: '40px'}}>
-                <span style={{opacity: 0, position: 'absolute'}}>Select</span>
+              <th>
+                <span className="VersionHistoryModal__versions__selectLabel">
+                  Select
+                </span>
               </th>
               <th>modified at</th>
               <th>modified by</th>
@@ -242,18 +244,15 @@ export function VersionHistoryModal(
                       checked={isSelected}
                       disabled={isDisabled}
                       onChange={() => toggleVersion(version._versionId)}
-                      style={{cursor: 'pointer'}}
+                      className="VersionHistoryModal__versions__checkbox"
                     />
                   </td>
                   <td>
-                    <div
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '4px',
-                      }}
-                    >
-                      <Text size="body-sm" style={{flex: 1}}>
+                    <div className="VersionHistoryModal__versions__modifiedAt">
+                      <Text
+                        size="body-sm"
+                        className="VersionHistoryModal__versions__modifiedAt__text"
+                      >
                         {isDraft ? (
                           <span title="Current Draft">
                             {dateFormat.format(version.sys.modifiedAt.toDate())}{' '}
