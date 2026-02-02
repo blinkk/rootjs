@@ -51,6 +51,7 @@ describe('Plugin Routes Integration', () => {
       expect(routes['/wiki/[[...slug]]']).toBeDefined();
       expect(routes['/props']).toBeDefined();
       expect(routes['/handler']).toBeDefined();
+      expect(routes['/api/data']).toBeDefined();
     });
 
     it('should have valid route modules with default exports', async () => {
@@ -78,6 +79,45 @@ describe('Plugin Routes Integration', () => {
 
       // Handler route should have a handle function.
       expect(routes['/handler'].module.handle).toBeDefined();
+
+      // API route should only have a handle function (no default component).
+      expect(routes['/api/data'].module.handle).toBeDefined();
+      expect(routes['/api/data'].module.default).toBeUndefined();
+    });
+
+    it('should support API routes that return JSON responses', async () => {
+      const rootDir = path.resolve(__dirname, FIXTURE_PATH);
+      const rootConfig = await loadRootConfig(rootDir, {command: 'build'});
+
+      const pluginRoutes = await viteSsrLoadModule<{
+        default: PluginRoutesMap;
+      }>(rootConfig, 'virtual:root-plugin-routes');
+
+      const routes = pluginRoutes.default;
+      const apiRoute = routes['/api/data'];
+
+      // Create mock request/response to test the handler.
+      const responseHeaders: Record<string, string> = {};
+      let responseBody = '';
+
+      const mockReq = {} as any;
+      const mockRes = {
+        setHeader: (key: string, value: string) => {
+          responseHeaders[key] = value;
+        },
+        end: (body: string) => {
+          responseBody = body;
+        },
+      } as any;
+
+      // Call the handler.
+      await apiRoute.module.handle(mockReq, mockRes, () => {});
+
+      // Verify JSON response.
+      expect(responseHeaders['Content-Type']).toBe('application/json');
+      const json = JSON.parse(responseBody);
+      expect(json.success).toBe(true);
+      expect(json.message).toBe('Hello from API route!');
     });
 
     it('should include source path for each route', async () => {

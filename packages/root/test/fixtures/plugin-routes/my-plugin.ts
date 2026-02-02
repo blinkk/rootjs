@@ -13,6 +13,7 @@ export function myPlugin(): Plugin {
       '/wiki/[[...slug]]': path.resolve(__dirname, 'wiki-route.tsx'),
       '/props': path.resolve(__dirname, 'props-route.tsx'),
       '/handler': path.resolve(__dirname, 'handler-route.tsx'),
+      '/api/data': path.resolve(__dirname, 'api-route.tsx'),
     },
   };
 }
