@@ -52,6 +52,7 @@ describe('Plugin Routes Integration', () => {
       expect(routes['/props']).toBeDefined();
       expect(routes['/handler']).toBeDefined();
       expect(routes['/api/data']).toBeDefined();
+      expect(routes['/components']).toBeDefined();
     });
 
     it('should have valid route modules with default exports', async () => {
@@ -83,6 +84,10 @@ describe('Plugin Routes Integration', () => {
       // API route should only have a handle function (no default component).
       expect(routes['/api/data'].module.handle).toBeDefined();
       expect(routes['/api/data'].module.default).toBeUndefined();
+
+      // Components route should have getStaticProps (uses import.meta.glob).
+      expect(routes['/components'].module.getStaticProps).toBeDefined();
+      expect(routes['/components'].module.default).toBeDefined();
     });
 
     it('should support API routes that return JSON responses', async () => {
@@ -219,6 +224,27 @@ describe('Plugin Routes Integration', () => {
 
       const html = await fs.readFile(handlerPath, 'utf-8');
       expect(html).toContain('<h1>Handler Route</h1>');
+    });
+
+    it('should support import.meta.glob for component discovery', async () => {
+      await fixture.build();
+
+      const componentsPath = path.join(
+        fixture.distDir,
+        'html/components/index.html'
+      );
+      expect(await fileExists(componentsPath)).toBe(true);
+
+      const html = await fs.readFile(componentsPath, 'utf-8');
+      // Verify the page lists all components discovered via import.meta.glob.
+      expect(html).toContain('<h1>Component Library</h1>');
+      expect(html).toContain('Button');
+      expect(html).toContain('Card');
+      expect(html).toContain('Modal');
+      // Verify component descriptions are rendered.
+      expect(html).toContain('A simple button component');
+      expect(html).toContain('A card container component');
+      expect(html).toContain('A modal dialog component');
     });
   });
 });

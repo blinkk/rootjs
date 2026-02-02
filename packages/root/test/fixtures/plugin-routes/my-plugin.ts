@@ -14,6 +14,7 @@ export function myPlugin(): Plugin {
       '/props': path.resolve(__dirname, 'props-route.tsx'),
       '/handler': path.resolve(__dirname, 'handler-route.tsx'),
       '/api/data': path.resolve(__dirname, 'api-route.tsx'),
+      '/components': path.resolve(__dirname, 'component-list-route.tsx'),
     },
   };
 }
