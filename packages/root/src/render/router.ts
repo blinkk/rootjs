@@ -38,6 +38,7 @@ export class Router {
 
     const trie = new RouteTrie<Route>();
 
+    // Helper function to register a route in the trie with i18n support.
     const addRoute = (
       relativeRoutePath: string,
       src: string,
@@ -93,10 +94,12 @@ export class Router {
       }
     };
 
+    // Process file-based routes from the /routes directory.
     Object.keys(ROUTES_FILES).forEach((modulePath) => {
       const src = modulePath.slice(1);
       let relativeRoutePath = modulePath.replace(/^\/routes/, '');
       const parts = path.parse(relativeRoutePath);
+      // Skip private route files (prefixed with underscore).
       if (parts.name.startsWith('_')) {
         return;
       }
@@ -108,6 +111,7 @@ export class Router {
       addRoute(relativeRoutePath, src, ROUTES_FILES[modulePath]);
     });
 
+    // Process routes defined by plugins via the `routes` property.
     Object.keys(PLUGIN_ROUTES).forEach((routePath) => {
       const {module, src} = PLUGIN_ROUTES[routePath];
       addRoute(routePath, src, module);
