@@ -18,7 +18,6 @@ export {
   getTranslations,
 } from './hooks/useI18nContext.js';
 export {RequestContext, useRequestContext} from './hooks/useRequestContext.js';
-export {useRouter} from './hooks/useRouter.js';
 export {useTranslations} from './hooks/useTranslations.js';
 export * from './plugin.js';
 export * from './types.js';

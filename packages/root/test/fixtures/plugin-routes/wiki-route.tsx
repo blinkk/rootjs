@@ -1,4 +1,4 @@
-import {GetStaticPaths, useRouter} from '@blinkk/root';
+import {GetStaticPaths, useRequestContext} from '@blinkk/root';
 
 export const getStaticPaths: GetStaticPaths = async () => {
   return {
@@ -11,8 +11,8 @@ export const getStaticPaths: GetStaticPaths = async () => {
 };
 
 export default function WikiRoute() {
-  const router = useRouter();
-  const {slug} = router.params;
+  const ctx = useRequestContext();
+  const {slug} = ctx.routeParams;
   const slugStr = Array.isArray(slug) ? slug.join('/') : slug;
   return <h1>Wiki: {slugStr || 'index'}</h1>;
 }

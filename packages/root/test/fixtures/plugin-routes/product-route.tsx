@@ -1,4 +1,4 @@
-import {GetStaticPaths, useRouter} from '@blinkk/root';
+import {GetStaticPaths, useRequestContext} from '@blinkk/root';
 
 export const getStaticPaths: GetStaticPaths = async () => {
   return {
@@ -7,7 +7,7 @@ export const getStaticPaths: GetStaticPaths = async () => {
 };
 
 export default function ProductRoute() {
-  const router = useRouter();
-  const {id} = router.params;
+  const ctx = useRequestContext();
+  const {id} = ctx.routeParams;
   return <h1>Product: {id}</h1>;
 }
