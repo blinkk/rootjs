@@ -7,7 +7,7 @@ import {Layout} from '../../layout/Layout.js';
 import {Arb} from '../../utils/arb.js';
 import {fetchCollectionSchema} from '../../utils/collection.js';
 import {getDraftDocs} from '../../utils/doc.js';
-import {extractFields} from '../../utils/extract.js';
+import {extractStringsWithMetadataForDoc} from '../../utils/extract.js';
 import {sourceHash} from '../../utils/l10n.js';
 
 import './TranslationsArbPage.css';
@@ -59,17 +59,9 @@ TranslationsArbPage.RequestForm = () => {
 
     for (const docId in drafts) {
       const draft = drafts[docId];
-      const strings = new Set<string>();
-      const collectionId = docId.split('/')[0];
-      const schema = await fetchCollectionSchema(collectionId);
-      extractFields(
-        strings,
-        schema.fields,
-        draft.fields || {},
-        schema.types || {}
-      );
+      const stringsWithMeta = await extractStringsWithMetadataForDoc(docId);
 
-      for (const source of strings) {
+      for (const [source, metadata] of stringsWithMeta.entries()) {
         const hash = await sourceHash(source);
         let meta = arb.get(hash)?.meta;
         if (meta) {
@@ -77,10 +69,17 @@ TranslationsArbPage.RequestForm = () => {
           contextIds.push(docId);
           contextIds.sort();
           meta.context = contextIds.join(', ');
+          // Preserve existing description if it exists, otherwise use description from metadata
+          if (!meta.description && metadata.description) {
+            meta.description = metadata.description;
+          }
         } else {
           meta = {
             context: docId,
           };
+          if (metadata.notes) {
+            meta.description = metadata.notes;
+          }
         }
         arb.add(hash, source, meta);
       }
