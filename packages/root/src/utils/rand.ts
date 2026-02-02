@@ -18,26 +18,27 @@ export function randString(len: number): string {
  * This ensures the same secret is generated for the same seed across dev server restarts,
  * while still allowing different projects to have unique secrets.
  */
-export function deterministicSessionSecret(seed: string): string {
+function deterministicSessionSecret(seed: string): string {
   return crypto.createHash('sha256').update(seed).digest('hex');
 }
 
 /**
  * Gets the session cookie secret for the server.
  *
- * Priority order:
- * 1. Explicit config value (rootConfig.server.sessionCookieSecret)
- * 2. Development mode: deterministic secret based on rootDir (sessions persist across restarts)
- * 3. Production mode: random secret with security warning
+ * Returns the configured session cookie secret, or generates one if not provided:
+ * - In development: uses a deterministic secret based on rootDir for session persistence
+ * - In production: generates a random secret (sessions won't persist across restarts)
  */
 export function getSessionCookieSecret(
   rootConfig: RootConfig,
   rootDir: string
 ): string | string[] {
+  // Use configured secret if provided.
   if (rootConfig.server?.sessionCookieSecret) {
     return rootConfig.server.sessionCookieSecret;
   }
 
+  // Use deterministic secret in dev mode for consistent sessions across server restarts.
   if (process.env.NODE_ENV === 'development') {
     return deterministicSessionSecret(rootDir);
   }
