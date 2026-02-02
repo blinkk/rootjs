@@ -64,7 +64,7 @@ export interface CMSDoc {
 export type Version = CMSDoc & {
   _versionId: string;
   tags?: string[];
-  commitMessage?: string;
+  publishMessage?: string;
 };
 
 export async function cmsDeleteDoc(docId: string) {
@@ -113,7 +113,7 @@ export async function cmsDeleteDoc(docId: string) {
 
 export async function cmsPublishDoc(
   docId: string,
-  options?: {commitMessage?: string}
+  options?: {publishMessage?: string}
 ) {
   await cmsPublishDocs([docId], options);
 }
@@ -123,7 +123,7 @@ export async function cmsPublishDoc(
  */
 export async function cmsPublishDocs(
   docIds: string[],
-  options?: {batch?: WriteBatch; releaseId?: string; commitMessage?: string}
+  options?: {batch?: WriteBatch; releaseId?: string; publishMessage?: string}
 ) {
   if (docIds.length === 0) {
     console.log('no docs to publish');
@@ -154,7 +154,7 @@ export async function cmsPublishDocs(
       docId,
       draftData,
       versionTags,
-      options?.commitMessage
+      options?.publishMessage
     );
   });
   await batch.commit();
@@ -184,7 +184,7 @@ function updatePublishedDocDataInBatch(
   docId: string,
   draftData: CMSDoc,
   versionTags: string[],
-  commitMessage?: string
+  publishMessage?: string
 ) {
   if (testPublishingLocked(draftData)) {
     throw new Error(`publishing is locked for doc: ${draftData.id}`);
@@ -262,8 +262,8 @@ function updatePublishedDocDataInBatch(
   if (versionTags?.length) {
     versionData.tags = versionTags;
   }
-  if (commitMessage) {
-    versionData.commitMessage = commitMessage;
+  if (publishMessage) {
+    versionData.publishMessage = publishMessage;
   }
   batch.set(versionRef, versionData);
 }
@@ -274,7 +274,7 @@ function updatePublishedDocDataInBatch(
 export async function cmsScheduleDoc(
   docId: string,
   millis: number,
-  options?: {commitMessage?: string}
+  options?: {publishMessage?: string}
 ) {
   const projectId = window.__ROOT_CTX.rootConfig.projectId;
   const db = window.firebase.db;
@@ -314,8 +314,8 @@ export async function cmsScheduleDoc(
     transaction.update(draftDocRef, {sys});
     // Copy the "draft" data to "scheduled" data.
     const scheduledData: any = {...data, sys};
-    if (options?.commitMessage) {
-      scheduledData.scheduledCommitMessage = options.commitMessage;
+    if (options?.publishMessage) {
+      scheduledData.scheduledPublishMessage = options.publishMessage;
     }
     transaction.set(scheduledDocRef, scheduledData);
   });

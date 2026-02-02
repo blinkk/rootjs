@@ -48,7 +48,7 @@ const mockVersions: Version[] = [
       modifiedBy: 'test@example.com',
     },
     tags: ['published', 'release:2024-01-launch'],
-    commitMessage:
+    publishMessage:
       'Update navigation menu\nFix broken links\nAdd new footer section',
   } as any,
   {
