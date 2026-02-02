@@ -437,3 +437,119 @@ export class ChatClient {
 function cleanModelName(model: string) {
   return LEGACY_MODEL_RENAME[model] || model;
 }
+
+/**
+ * Extracts JSON from an AI response that may contain markdown code blocks.
+ * @internal
+ */
+export function extractJsonFromResponse(responseText: string): string {
+  let jsonText = responseText.trim();
+
+  // Remove markdown code blocks if present.
+  if (jsonText.startsWith('```')) {
+    const lines = jsonText.split('\n');
+    jsonText = lines.slice(1, -1).join('\n');
+    if (jsonText.startsWith('json')) {
+      jsonText = jsonText.substring(4).trim();
+    }
+  }
+
+  return jsonText;
+}
+
+export interface TranslateStringOptions {
+  sourceText: string;
+  targetLocales: string[];
+  description?: string;
+  existingTranslations?: Record<string, string>;
+}
+
+/**
+ * Translates a source string into multiple target locales using AI.
+ */
+export async function translateString(
+  cmsClient: RootCMSClient,
+  options: TranslateStringOptions
+): Promise<Record<string, string>> {
+  const cmsPluginOptions = cmsClient.cmsPlugin.getConfig();
+  const firebaseConfig = cmsPluginOptions.firebaseConfig;
+  const model: RootAiModel =
+    (typeof cmsPluginOptions.experiments?.ai === 'object'
+      ? cmsPluginOptions.experiments.ai.model
+      : undefined) || DEFAULT_MODEL;
+
+  const ai = genkit({
+    plugins: [
+      vertexAI({
+        projectId: firebaseConfig.projectId,
+        location: firebaseConfig.location || 'us-central1',
+      }),
+    ],
+  });
+
+  const systemPrompt = [
+    'You are a professional translator assistant.',
+    'Translate the given source text into the requested target languages.',
+    'Maintain the tone, style, and intent of the original text.',
+    'Return ONLY a valid JSON object with locale codes as keys and translations as values.',
+    'Do not include any markdown formatting, code blocks, or explanatory text.',
+  ].join('\n');
+
+  const userPromptParts: string[] = [
+    `Source text: "${options.sourceText}"`,
+    '',
+  ];
+
+  if (options.description) {
+    userPromptParts.push(`Context/Description: ${options.description}`, '');
+  }
+
+  if (
+    options.existingTranslations &&
+    Object.keys(options.existingTranslations).length > 0
+  ) {
+    userPromptParts.push('Existing translations for reference:');
+    Object.entries(options.existingTranslations).forEach(
+      ([locale, translation]) => {
+        if (translation) {
+          userPromptParts.push(`- ${locale}: "${translation}"`);
+        }
+      }
+    );
+    userPromptParts.push('');
+  }
+
+  userPromptParts.push(
+    `Target locales: ${options.targetLocales.join(', ')}`,
+    '',
+    'Provide translations as a JSON object with locale codes as keys.'
+  );
+
+  const userPrompt = userPromptParts.join('\n');
+
+  const res = await generate(ai, model, {
+    messages: [
+      {
+        role: 'system',
+        content: [{text: systemPrompt}],
+      },
+      {
+        role: 'user',
+        content: [{text: userPrompt}],
+      },
+    ],
+  });
+
+  const responseText = res.text || '{}';
+
+  // Try to extract JSON from the response.
+  const jsonText = extractJsonFromResponse(responseText);
+
+  try {
+    const translations = JSON.parse(jsonText);
+    return translations;
+  } catch (err) {
+    console.error('Failed to parse AI translation response:', responseText);
+    throw new Error('Invalid response format from AI translation');
+  }
+}

@@ -41,11 +41,13 @@ export default schema.define({
       label: 'StringField',
       autosize: true,
       variant: 'textarea',
+      translate: true,
     }),
     schema.richtext({
       id: 'richtext',
       label: 'RichTextField',
       autosize: true,
+      translate: true,
       blockComponents: [
         schema.define({
           name: 'PeopleListBlock',
