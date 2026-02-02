@@ -90,6 +90,32 @@ describe('Plugin Routes Integration', () => {
       expect(routes['/components'].module.default).toBeDefined();
     });
 
+    it('should support import.meta.glob for component discovery in dev mode', async () => {
+      const rootDir = path.resolve(__dirname, FIXTURE_PATH);
+      const rootConfig = await loadRootConfig(rootDir, {command: 'build'});
+
+      const pluginRoutes = await viteSsrLoadModule<{
+        default: PluginRoutesMap;
+      }>(rootConfig, 'virtual:root-plugin-routes');
+
+      const routes = pluginRoutes.default;
+      const componentsRoute = routes['/components'];
+
+      // Call getStaticProps to verify import.meta.glob works in dev mode.
+      const result = await componentsRoute.module.getStaticProps();
+      expect(result.props).toBeDefined();
+      expect(result.props.components).toBeDefined();
+      expect(result.props.components).toHaveLength(3);
+
+      // Verify component metadata was extracted correctly.
+      const componentNames = result.props.components.map(
+        (c: {name: string}) => c.name
+      );
+      expect(componentNames).toContain('Button');
+      expect(componentNames).toContain('Card');
+      expect(componentNames).toContain('Modal');
+    });
+
     it('should support API routes that return JSON responses', async () => {
       const rootDir = path.resolve(__dirname, FIXTURE_PATH);
       const rootConfig = await loadRootConfig(rootDir, {command: 'build'});
