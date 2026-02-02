@@ -1,22 +1,5 @@
 import {schema} from '@blinkk/root-cms';
 
-const blockModules = import.meta.glob('/blocks/*/*.schema.ts', {
-  eager: true,
-});
-const blocks = Object.values(blockModules).map(
-  (module: {default: schema.Schema}) => module.default
-);
-
-function omit(schemas: schema.Schema[], ...args: string[]) {
-  const fieldIds = args;
-  return schemas.map((s) => {
-    return {
-      ...s,
-      fields: s.fields.filter((field) => !fieldIds.includes(field.id)),
-    };
-  });
-}
-
 export default schema.define({
   name: 'Template50x50',
   fields: [
@@ -39,12 +22,12 @@ export default schema.define({
     schema.oneOf({
       id: 'leftSection',
       label: 'Left Section',
-      types: omit(blocks, 'id'),
+      types: schema.allSchemas('/blocks/*/*.schema.ts', {omitFields: ['id']}),
     }),
     schema.oneOf({
       id: 'rightSection',
       label: 'Right Section',
-      types: omit(blocks, 'id'),
+      types: schema.allSchemas('/blocks/*/*.schema.ts', {omitFields: ['id']}),
     }),
   ],
 });

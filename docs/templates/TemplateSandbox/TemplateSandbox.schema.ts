@@ -77,5 +77,12 @@ export default schema.define({
         }),
       ],
     }),
+    schema.array({
+      id: 'modules',
+      label: 'Modules',
+      of: schema.oneOf({
+        types: schema.allSchemas('/templates/*/*.schema.ts'),
+      }),
+    }),
   ],
 });

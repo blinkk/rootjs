@@ -1,13 +1,5 @@
 import {schema} from '@blinkk/root-cms';
 
-const templateModules = import.meta.glob(
-  ['/templates/*/*.schema.ts', '!**/Section.schema.ts'],
-  {eager: true}
-);
-const templates = Object.values(templateModules).map(
-  (module: {default: schema.Schema}) => module.default
-);
-
 export default schema.define({
   name: 'Section',
   description: '',
@@ -34,7 +26,9 @@ export default schema.define({
       id: 'modules',
       label: 'Modules',
       of: schema.oneOf({
-        types: templates,
+        types: schema.allSchemas('/templates/*/*.schema.ts', {
+          exclude: ['Section'],
+        }),
       }),
       preview: ['{_type} (#{id})', '{_type}', '(empty)'],
     }),

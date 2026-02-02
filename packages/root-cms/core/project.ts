@@ -30,13 +30,42 @@ export async function getProjectSchemas(): Promise<
   Record<string, schema.Schema>
 > {
   const schemas: Record<string, schema.Schema> = {};
+
   for (const fileId in SCHEMA_MODULES) {
     const schemaModule = SCHEMA_MODULES[fileId];
     if (schemaModule.default) {
-      schemas[fileId] = schemaModule.default;
+      // Resolve SchemaPatterns in oneOf fields so type generation works.
+      const resolved = resolveOneOfPatterns(schemaModule.default);
+      schemas[fileId] = resolved;
     }
   }
   return schemas;
+}
+
+/**
+ * Resolves SchemaPattern objects in oneOf fields to arrays of Schema objects.
+ * This is needed for type generation which expects `field.types` to be an array.
+ */
+function resolveOneOfPatterns(schemaObj: schema.Schema): schema.Schema {
+  const clone = structuredClone(schemaObj);
+
+  function handleField(field: schema.Field) {
+    if (field.type === 'oneof') {
+      const oneOfField = field as schema.OneOfField;
+      if (isSchemaPattern(oneOfField.types)) {
+        const resolved = resolveSchemaPattern(oneOfField.types);
+        // Convert names back to schema objects for type generation.
+        oneOfField.types = resolved.names.map((name) => resolved.schemas[name]);
+      }
+    } else if (field.type === 'object' && 'fields' in field) {
+      (field.fields || []).forEach(handleField);
+    } else if (field.type === 'array' && 'of' in field && field.of) {
+      handleField(field.of);
+    }
+  }
+
+  (clone.fields || []).forEach(handleField);
+  return clone;
 }
 
 /**
@@ -69,18 +98,138 @@ function testValidCollectionId(id: string): boolean {
 }
 
 /**
+ * Type guard to check if a value is a SchemaPattern.
+ */
+function isSchemaPattern(value: unknown): value is schema.SchemaPattern {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    '_schemaPattern' in value &&
+    (value as schema.SchemaPattern)._schemaPattern === true
+  );
+}
+
+/**
+ * Build a map of schema name to schema for resolving string references.
+ */
+function buildSchemaNameMap(): Record<string, schema.Schema> {
+  const nameMap: Record<string, schema.Schema> = {};
+  for (const fileId in SCHEMA_MODULES) {
+    const module = SCHEMA_MODULES[fileId];
+    if (module.default && module.default.name) {
+      nameMap[module.default.name] = module.default;
+    }
+  }
+  return nameMap;
+}
+
+/**
+ * Converts a glob pattern to a RegExp for matching file paths.
+ * Supports basic glob syntax: * (any chars except /), ** (any chars including /).
+ */
+function globToRegex(pattern: string): RegExp {
+  const regexStr = pattern
+    // Escape special regex chars except * and /.
+    .replace(/[.+^${}()|[\]\\]/g, '\\$&')
+    // Convert ** to a placeholder.
+    .replace(/\*\*/g, '{{DOUBLE_STAR}}')
+    // Convert * to match any chars except /.
+    .replace(/\*/g, '[^/]*')
+    // Convert ** placeholder to match any chars including /.
+    .replace(/\{\{DOUBLE_STAR\}\}/g, '.*');
+
+  return new RegExp(`^${regexStr}$`);
+}
+
+/**
+ * Resolves a SchemaPattern to an array of schema names.
+ */
+function resolveSchemaPattern(pattern: schema.SchemaPattern): {
+  names: string[];
+  schemas: Record<string, schema.Schema>;
+} {
+  const regex = globToRegex(pattern.pattern);
+  const excludeSet = new Set(pattern.exclude || []);
+  const names: string[] = [];
+  const schemas: Record<string, schema.Schema> = {};
+
+  for (const fileId in SCHEMA_MODULES) {
+    if (!regex.test(fileId)) {
+      continue;
+    }
+    const module = SCHEMA_MODULES[fileId];
+    if (!module.default || !module.default.name) {
+      continue;
+    }
+    const schemaName = module.default.name;
+    if (excludeSet.has(schemaName)) {
+      continue;
+    }
+
+    let schemaObj = module.default;
+
+    // Apply field omissions if specified.
+    if (pattern.omitFields && pattern.omitFields.length > 0) {
+      const omitSet = new Set(pattern.omitFields);
+      schemaObj = {
+        ...schemaObj,
+        fields: schemaObj.fields.filter(
+          (f: schema.Field) => !omitSet.has(f.id || '')
+        ),
+      };
+    }
+
+    names.push(schemaName);
+    schemas[schemaName] = schemaObj;
+  }
+
+  return {names, schemas};
+}
+
+/**
  * Converts all `oneof` field type definitions into a map keyed by the type
  * name. The field definitions are replaced with an array of type names.
+ *
+ * String references (used for self-referencing schemas) are resolved from the
+ * project's schema modules. SchemaPatterns are resolved by matching file paths.
  */
 function convertOneOfTypes(collection: schema.Collection): schema.Collection {
   const clone: schema.Collection = structuredClone(collection);
   const types: Record<string, schema.Schema> = clone.types || {};
+  const schemaNameMap = buildSchemaNameMap();
 
   function handleOneOfField(field: schema.OneOfField) {
+    // Handle SchemaPattern (from schema.allSchemas()).
+    if (isSchemaPattern(field.types)) {
+      const resolved = resolveSchemaPattern(field.types);
+      // Process nested oneOf fields in the resolved schemas.
+      // Only process schemas that haven't been added to types yet to prevent
+      // infinite recursion with self-referencing schemas (e.g., a Container
+      // that can contain other Containers).
+      for (const [name, schemaObj] of Object.entries(resolved.schemas)) {
+        if (!types[name]) {
+          types[name] = schemaObj;
+          if (schemaObj.fields) {
+            walk(schemaObj);
+          }
+        }
+      }
+      field.types = resolved.names;
+      return;
+    }
+
     const names: string[] = [];
     (field.types || []).forEach((sub: any) => {
       if (typeof sub === 'string') {
         names.push(sub);
+        // Resolve string references from the project schemas.
+        if (!types[sub] && schemaNameMap[sub]) {
+          const resolvedSchema = schemaNameMap[sub];
+          types[sub] = resolvedSchema;
+          if (resolvedSchema.fields) {
+            walk(resolvedSchema);
+          }
+        }
         return;
       }
       if (sub.name) {

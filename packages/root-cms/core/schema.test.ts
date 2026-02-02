@@ -429,3 +429,95 @@ test('validate timezone', () => {
 
   consoleWarnSpy.mockRestore();
 });
+
+test('allSchemas creates a SchemaPattern', () => {
+  const pattern = schema.allSchemas('/templates/*/*.schema.ts');
+
+  expect(pattern._schemaPattern).toBe(true);
+  expect(pattern.pattern).toBe('/templates/*/*.schema.ts');
+  expect(pattern.exclude).toBeUndefined();
+  expect(pattern.omitFields).toBeUndefined();
+});
+
+test('allSchemas with options', () => {
+  const pattern = schema.allSchemas('/blocks/*/*.schema.ts', {
+    exclude: ['DeprecatedBlock', 'InternalBlock'],
+    omitFields: ['id', 'internalNotes'],
+  });
+
+  expect(pattern._schemaPattern).toBe(true);
+  expect(pattern.pattern).toBe('/blocks/*/*.schema.ts');
+  expect(pattern.exclude).toEqual(['DeprecatedBlock', 'InternalBlock']);
+  expect(pattern.omitFields).toEqual(['id', 'internalNotes']);
+});
+
+test('allSchemas returns a valid SchemaPattern object', () => {
+  const pattern = schema.allSchemas('/templates/*/*.schema.ts');
+
+  expect(pattern._schemaPattern).toBe(true);
+  expect(pattern.pattern).toBe('/templates/*/*.schema.ts');
+});
+
+test('oneOf accepts SchemaPattern as types', () => {
+  const field = schema.oneOf({
+    id: 'modules',
+    types: schema.allSchemas('/templates/*/*.schema.ts'),
+  });
+
+  expect(field.type).toBe('oneof');
+  expect(field.id).toBe('modules');
+  const pattern = field.types as schema.SchemaPattern;
+  expect(pattern._schemaPattern).toBe(true);
+});
+
+test('oneOf with allSchemas can be used in collection definition', () => {
+  const collection = schema.collection({
+    name: 'Pages',
+    url: '/[...slug]',
+    fields: [
+      schema.array({
+        id: 'modules',
+        label: 'Modules',
+        of: schema.oneOf({
+          types: schema.allSchemas('/templates/*/*.schema.ts'),
+        }),
+      }),
+    ],
+  });
+
+  expect(collection.name).toBe('Pages');
+  expect(collection.fields).toHaveLength(1);
+  const arrayField = collection.fields[0] as schema.ArrayField;
+  expect(arrayField.type).toBe('array');
+  const oneOfField = arrayField.of as schema.OneOfField;
+  expect(oneOfField.type).toBe('oneof');
+  const pattern = oneOfField.types as schema.SchemaPattern;
+  expect(pattern._schemaPattern).toBe(true);
+});
+
+test('allSchemas can be used for self-referencing container schemas', () => {
+  // This simulates a Container schema that can contain other Containers.
+  const containerSchema = schema.define({
+    name: 'Container',
+    description: 'A container that can hold nested templates.',
+    fields: [
+      schema.string({id: 'id', label: 'ID'}),
+      schema.array({
+        id: 'children',
+        label: 'Children',
+        of: schema.oneOf({
+          // Container references all templates including itself via pattern.
+          types: schema.allSchemas('/templates/*/*.schema.ts'),
+        }),
+      }),
+    ],
+  });
+
+  expect(containerSchema.name).toBe('Container');
+  expect(containerSchema.fields).toHaveLength(2);
+  const arrayField = containerSchema.fields[1] as schema.ArrayField;
+  const oneOfField = arrayField.of as schema.OneOfField;
+  const pattern = oneOfField.types as schema.SchemaPattern;
+  expect(pattern._schemaPattern).toBe(true);
+  expect(pattern.pattern).toBe('/templates/*/*.schema.ts');
+});

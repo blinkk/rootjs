@@ -1,12 +1,5 @@
 import {schema} from '@blinkk/root-cms';
 
-const templateModules = import.meta.glob('/templates/*/*.schema.ts', {
-  eager: true,
-});
-const templates = Object.values(templateModules).map(
-  (module: {default: schema.Schema}) => module.default
-);
-
 export default schema.collection({
   name: 'Pages',
   description: 'Landing Pages',
@@ -56,7 +49,7 @@ export default schema.collection({
           label: 'Modules',
           help: 'Compose the page by adding one or more modules.',
           of: schema.oneOf({
-            types: templates,
+            types: schema.allSchemas('/templates/*/*.schema.ts'),
           }),
           preview: [
             'm{_index:02}: {description} (#{id})',

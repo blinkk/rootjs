@@ -216,9 +216,32 @@ export function array(field: Omit<ArrayField, 'type'>): ArrayField {
   return {type: 'array', ...field};
 }
 
+/**
+ * A schema pattern that is resolved at project load time. This allows schemas
+ * to reference other schemas by glob pattern without causing circular import
+ * issues, since resolution is deferred until all schemas are loaded.
+ */
+export interface SchemaPattern {
+  /** Marker to identify this as a schema pattern. */
+  _schemaPattern: true;
+  /** Glob pattern to match schema files. */
+  pattern: string;
+  /** Schema names to exclude from the matched results. */
+  exclude?: string[];
+  /** Field IDs to omit from the matched schemas. */
+  omitFields?: string[];
+}
+
 export type OneOfField = CommonFieldProps & {
   type: 'oneof';
-  types: Schema[] | string[];
+  /**
+   * Schema types to include in the oneOf field. Can be:
+   * - An array of Schema objects
+   * - An array of string names (resolved at runtime)
+   * - A mixed array of Schema objects and strings
+   * - A SchemaPattern from `schema.allSchemas()` (resolved at project load)
+   */
+  types: Schema[] | string[] | Array<Schema | string> | SchemaPattern;
 };
 
 export function oneOf(field: Omit<OneOfField, 'type'>): OneOfField {
@@ -428,3 +451,66 @@ export function defineCollection(
 }
 
 export const collection = defineCollection;
+
+/**
+ * Options for `schema.allSchemas()`.
+ */
+export interface AllSchemasOptions {
+  /** Schema names to exclude from the matched results. */
+  exclude?: string[];
+  /** Field IDs to omit from the matched schemas. */
+  omitFields?: string[];
+}
+
+/**
+ * Creates a schema pattern that is resolved at project load time.
+ *
+ * This is the recommended way to reference multiple schemas in a `oneOf` field,
+ * especially for self-referencing schemas like containers. The pattern is
+ * resolved after all schemas are loaded, completely avoiding circular import
+ * issues.
+ *
+ * @param pattern - Glob pattern to match schema files (e.g., '/templates/*\/*.schema.ts')
+ * @param options - Optional configuration for exclusions and field omissions
+ *
+ * @example
+ * ```ts
+ * // Simple usage - include all templates:
+ * export default schema.define({
+ *   name: 'Container',
+ *   fields: [
+ *     schema.array({
+ *       id: 'children',
+ *       of: schema.oneOf({
+ *         types: schema.allSchemas('/templates/*\/*.schema.ts'),
+ *       }),
+ *     }),
+ *   ],
+ * });
+ *
+ * // With exclusions:
+ * schema.oneOf({
+ *   types: schema.allSchemas('/templates/*\/*.schema.ts', {
+ *     exclude: ['DeprecatedTemplate'],
+ *   }),
+ * });
+ *
+ * // With field omissions (useful for nested contexts):
+ * schema.oneOf({
+ *   types: schema.allSchemas('/blocks/*\/*.schema.ts', {
+ *     omitFields: ['id'],
+ *   }),
+ * });
+ * ```
+ */
+export function allSchemas(
+  pattern: string,
+  options?: AllSchemasOptions
+): SchemaPattern {
+  return {
+    _schemaPattern: true,
+    pattern,
+    exclude: options?.exclude,
+    omitFields: options?.omitFields,
+  };
+}

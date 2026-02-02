@@ -109,6 +109,8 @@ export interface ButtonsBlockFields {
 }
 
 export interface CodeBlockFields {
+  /** ID. Used for deep linking, tracking, etc. */
+  id?: string;
   /** Module Options. Layout and display options. */
   options?: string[];
   /** Language */
@@ -118,6 +120,8 @@ export interface CodeBlockFields {
 }
 
 export interface CopyBlockFields {
+  /** ID. Used for deep linking, tracking, etc. */
+  id?: string;
   /** Module Options. Layout and display options. */
   options?: string[];
   /** Eyebrow. Small text above the title. */
@@ -186,6 +190,8 @@ export interface GuideFields {
 export type GuideDoc = RootCMSDoc<GuideFields>;
 
 export interface ImageBlockFields {
+  /** ID. Used for deep linking, tracking, etc. */
+  id?: string;
   /** Module Options. Layout and display options. */
   options?: string[];
   /** Image */
@@ -369,4 +375,6 @@ export interface TemplateSandboxFields {
   string?: string;
   /** RichTextField */
   richtext?: RootCMSRichText;
+  /** Modules */
+  modules?: RootCMSOneOf<RootCMSOneOfOption<'Divider', DividerFields> | RootCMSOneOfOption<'Section', SectionFields> | RootCMSOneOfOption<'Spacer', SpacerFields> | RootCMSOneOfOption<'Template50x50', Template50x50Fields> | RootCMSOneOfOption<'TemplateHeadline', TemplateHeadlineFields> | RootCMSOneOfOption<'TemplateImage', TemplateImageFields> | RootCMSOneOfOption<'TemplateJumplinks', TemplateJumplinksFields> | RootCMSOneOfOption<'TemplatePoweredBy', TemplatePoweredByFields> | RootCMSOneOfOption<'TemplateSandbox', TemplateSandboxFields>>[];
 }
