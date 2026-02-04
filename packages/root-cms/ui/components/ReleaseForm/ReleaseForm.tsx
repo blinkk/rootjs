@@ -9,8 +9,8 @@ import {
 } from '@mantine/core';
 import {showNotification} from '@mantine/notifications';
 import {IconArrowUpRight, IconTrash} from '@tabler/icons-preact';
+import {useLocation} from 'preact-iso';
 import {useEffect, useRef, useState} from 'preact/hooks';
-import {route} from 'preact-router';
 import {isSlugValid} from '../../../shared/slug.js';
 import {ConditionalTooltip} from '../../components/ConditionalTooltip/ConditionalTooltip.js';
 import {useProjectRoles} from '../../hooks/useProjectRoles.js';
@@ -34,6 +34,7 @@ export interface ReleaseFormProps {
 }
 
 export function ReleaseForm(props: ReleaseFormProps) {
+  const {route} = useLocation();
   const formRef = useRef<HTMLFormElement>(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');

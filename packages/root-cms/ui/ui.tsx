@@ -9,7 +9,7 @@ import {User, getAuth} from 'firebase/auth';
 import {initializeFirestore} from 'firebase/firestore';
 import {getStorage} from 'firebase/storage';
 import {render} from 'preact';
-import {Route, Router} from 'preact-router';
+import {Route, Router} from 'preact-iso';
 import type {CMSBuiltInSidebarTool} from '../core/plugin.js';
 import {Collection} from '../core/schema.js';
 import {AiEditModal} from './components/AiEditModal/AiEditModal.js';
