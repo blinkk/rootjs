@@ -8,7 +8,7 @@ import {
 } from '@lexical/link';
 import {useLexicalComposerContext} from '@lexical/react/LexicalComposerContext';
 import {$findMatchingParent, mergeRegister} from '@lexical/utils';
-import {ActionIcon, Textarea, Tooltip} from '@mantine/core';
+import {ActionIcon, Select, Textarea, Tooltip} from '@mantine/core';
 import {IconCheck, IconPencil, IconTrash, IconX} from '@tabler/icons-preact';
 import {
   $getSelection,
@@ -58,6 +58,8 @@ function FloatingLinkEditor(props: FloatingLinkEditorProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [linkUrl, setLinkUrl] = useState('');
   const [editedLinkUrl, setEditedLinkUrl] = useState('');
+  const [linkTarget, setLinkTarget] = useState<string | null>(null);
+  const [editedLinkTarget, setEditedLinkTarget] = useState<string | null>(null);
   const [lastSelection, setLastSelection] = useState<BaseSelection | null>(
     null
   );
@@ -70,13 +72,17 @@ function FloatingLinkEditor(props: FloatingLinkEditorProps) {
 
       if (linkParent) {
         setLinkUrl(linkParent.getURL());
+        setLinkTarget(linkParent.getTarget());
       } else if ($isLinkNode(node)) {
         setLinkUrl(node.getURL());
+        setLinkTarget(node.getTarget());
       } else {
         setLinkUrl('');
+        setLinkTarget(null);
       }
       if (isLinkEditMode) {
         setEditedLinkUrl(normalizeUrl(linkUrl));
+        setEditedLinkTarget(linkTarget);
       }
     } else if ($isNodeSelection(selection)) {
       const nodes = selection.getNodes();
@@ -85,13 +91,17 @@ function FloatingLinkEditor(props: FloatingLinkEditorProps) {
         const parent = node.getParent();
         if ($isLinkNode(parent)) {
           setLinkUrl(parent.getURL());
+          setLinkTarget(parent.getTarget());
         } else if ($isLinkNode(node)) {
           setLinkUrl(node.getURL());
+          setLinkTarget(node.getTarget());
         } else {
           setLinkUrl('');
+          setLinkTarget(null);
         }
         if (isLinkEditMode) {
           setEditedLinkUrl(normalizeUrl(linkUrl));
+          setEditedLinkTarget(linkTarget);
         }
       }
     }
@@ -224,18 +234,19 @@ function FloatingLinkEditor(props: FloatingLinkEditorProps) {
     }
     if (lastSelection !== null) {
       if (linkUrl !== null) {
+        const targetValue = editedLinkTarget === '_blank' ? '_blank' : null;
         editor.update(() => {
-          editor.dispatchCommand(
-            TOGGLE_LINK_COMMAND,
-            normalizeUrl(editedLinkUrl)
-          );
+          editor.dispatchCommand(TOGGLE_LINK_COMMAND, {
+            url: normalizeUrl(editedLinkUrl),
+            target: targetValue,
+          });
           const selection = $getSelection();
           if ($isRangeSelection(selection)) {
             const parent = getSelectedNode(selection).getParent();
             if ($isAutoLinkNode(parent)) {
               const linkNode = $createLinkNode(parent.getURL(), {
                 rel: parent.__rel,
-                target: parent.__target,
+                target: targetValue,
                 title: parent.__title,
               });
               parent.replace(linkNode, true);
@@ -244,6 +255,7 @@ function FloatingLinkEditor(props: FloatingLinkEditorProps) {
         });
       }
       setEditedLinkUrl('');
+      setEditedLinkTarget(null);
       setIsLinkEditMode(false);
     }
   };
@@ -257,7 +269,7 @@ function FloatingLinkEditor(props: FloatingLinkEditorProps) {
       )}
     >
       {!isLink ? null : isLinkEditMode ? (
-        <>
+        <div className="LexicalEditor__link__editForm">
           <Textarea
             ref={inputRef}
             className="LexicalEditor__link__input"
@@ -274,21 +286,36 @@ function FloatingLinkEditor(props: FloatingLinkEditorProps) {
             radius="xs"
             placeholder="https://"
           />
-          <div className="LexicalEditor__link__controls">
-            <ToolbarActionIcon
-              tooltip="Cancel"
-              onClick={() => setIsLinkEditMode(false)}
-            >
-              <IconX size={12} />
-            </ToolbarActionIcon>
-            <ToolbarActionIcon
-              tooltip="Save"
-              onClick={() => handleLinkSubmission()}
-            >
-              <IconCheck size={12} />
-            </ToolbarActionIcon>
+          <div className="LexicalEditor__link__row">
+            <Select
+              className="LexicalEditor__link__target"
+              placeholder="Target"
+              value={editedLinkTarget}
+              onChange={(value: string) => setEditedLinkTarget(value)}
+              data={[
+                {value: '', label: 'Default', group: 'Target'},
+                {value: '_blank', label: 'New tab', group: 'Target'},
+              ]}
+              clearable
+              size="xs"
+              radius="xs"
+            />
+            <div className="LexicalEditor__link__controls">
+              <ToolbarActionIcon
+                tooltip="Cancel"
+                onClick={() => setIsLinkEditMode(false)}
+              >
+                <IconX size={12} />
+              </ToolbarActionIcon>
+              <ToolbarActionIcon
+                tooltip="Save"
+                onClick={() => handleLinkSubmission()}
+              >
+                <IconCheck size={12} />
+              </ToolbarActionIcon>
+            </div>
           </div>
-        </>
+        </div>
       ) : (
         <>
           <div className="LexicalEditor__link__preview">

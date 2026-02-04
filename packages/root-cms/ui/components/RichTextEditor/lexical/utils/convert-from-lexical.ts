@@ -162,9 +162,11 @@ function extractInlineComponent(
 
 function extractLinkNode(node: ElementNode): TextExtractionResult {
   const href = ($isLinkNode(node) && node.getURL()) || '';
+  const target = ($isLinkNode(node) && node.getTarget()) || '';
   const result = extractTextNode(node);
+  const targetAttr = target ? ` target="${target}"` : '';
   return {
-    text: `<a href="${href}">${result.text}</a>`,
+    text: `<a href="${href}"${targetAttr}>${result.text}</a>`,
     components: result.components,
   };
 }
