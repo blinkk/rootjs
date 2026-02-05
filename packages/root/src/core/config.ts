@@ -3,6 +3,7 @@ import {HtmlMinifyOptions} from '../render/html-minify.js';
 import {HtmlPrettyOptions} from '../render/html-pretty.js';
 import {Plugin} from './plugin.js';
 import {RequestMiddleware} from './types.js';
+import type {Options as SirvOptions} from 'sirv';
 
 export interface RootUserConfig {
   /**
@@ -275,6 +276,12 @@ export interface RootServerConfig {
    * Home page URL path, which is printed when the dev server starts.
    */
   homePagePath?: string;
+
+  /**
+   * Options passed to sirv when serving static files. These options are merged
+   * with Root.js defaults.
+   */
+  sirvOptions?: SirvOptions;
 }
 
 export function defineConfig(config: RootUserConfig): RootUserConfig {
