@@ -503,6 +503,59 @@ export function api(server: Server, options: ApiOptions) {
     }
   );
 
+  server.use(
+    '/cms/api/ai.publish_message',
+    async (req: Request, res: Response) => {
+      if (
+        req.method !== 'POST' ||
+        !String(req.get('content-type')).startsWith('application/json')
+      ) {
+        res.status(400).json({success: false, error: 'BAD_REQUEST'});
+        return;
+      }
+
+      if (!req.user?.email) {
+        res.status(401).json({success: false, error: 'UNAUTHORIZED'});
+        return;
+      }
+
+      const reqBody = req.body || {};
+      const docId =
+        typeof reqBody.docId === 'string' ? reqBody.docId.trim() : '';
+      if (!docId) {
+        res.status(400).json({
+          success: false,
+          error: 'MISSING_REQUIRED_FIELD',
+          field: 'docId',
+        });
+        return;
+      }
+
+      try {
+        const cmsClient = new RootCMSClient(req.rootConfig!);
+        const beforeVersion: DocVersion = 'published';
+        const afterVersion: DocVersion = 'draft';
+        const diffPayload = await buildDocDiffPayload(cmsClient, docId, {
+          beforeVersion,
+          afterVersion,
+        });
+        if (!diffPayload.before && !diffPayload.after) {
+          res.status(200).json({success: true, message: 'Initial version'});
+          return;
+        }
+        const {generatePublishMessage} = await import('./ai.js');
+        const message = await generatePublishMessage(cmsClient, {
+          before: diffPayload.before,
+          after: diffPayload.after,
+        });
+        res.status(200).json({success: true, message});
+      } catch (err: any) {
+        console.error(err.stack || err);
+        res.status(500).json({success: false, error: 'UNKNOWN'});
+      }
+    }
+  );
+
   server.use('/cms/api/ai.translate', async (req: Request, res: Response) => {
     if (
       req.method !== 'POST' ||

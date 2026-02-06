@@ -50,6 +50,44 @@
   gap: 8px;
 }
 
+.VersionHistoryModal__message {
+  white-space: pre-line;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.VersionHistoryModal__messageIcon {
+  vertical-align: middle;
+}
+
+.VersionHistoryModal__publishedLabel {
+  margin-left: 4px;
+  opacity: 0.5;
+}
+
 .VersionHistoryModal__versions__buttons__compare .mantine-Button-icon {
   margin-left: 4px;
+}
+
+.VersionHistoryModal__versions th:first-child {
+  width: 40px;
+}
+
+.VersionHistoryModal__versions__selectLabel {
+  opacity: 0;
+  position: absolute;
+}
+
+.VersionHistoryModal__versions__checkbox {
+  cursor: pointer;
+}
+
+.VersionHistoryModal__versions__modifiedAt {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.VersionHistoryModal__versions__modifiedAt__text {
+  flex: 1;
 }

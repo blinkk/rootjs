@@ -608,6 +608,89 @@ export class RootCMSClient {
   }
 
   /**
+   * Batch unpublishes a set of docs by id.
+   */
+  async unpublishDocs(
+    docIds: string[],
+    options?: {unpublishedBy?: string; batch?: WriteBatch}
+  ) {
+    const projectCollectionsPath = `Projects/${this.projectId}/Collections`;
+    const unpublishedBy = options?.unpublishedBy || 'root-cms-client';
+
+    // Fetch the current draft data for each doc.
+    const docRefs = docIds.map((docId) => {
+      const [collection, slug] = docId.split('/');
+      if (!collection || !slug) {
+        throw new Error(`invalid doc id: ${docId}`);
+      }
+      const docRef = this.db.doc(
+        `${projectCollectionsPath}/${collection}/Drafts/${slug}`
+      );
+      return docRef;
+    });
+    const docSnapshots = await this.db.getAll(...docRefs);
+    const docs = docSnapshots
+      // Retrieve snapshot data for each doc.
+      .map((snapshot) => snapshot.data() as Doc)
+      // Remove docs that don't exist.
+      .filter((d) => !!d);
+
+    if (docs.length === 0) {
+      console.log('no docs to unpublish');
+      return [];
+    }
+
+    let batchCount = 0;
+    const batch = options?.batch || this.db.batch();
+    const unpublishedDocs: any[] = [];
+
+    for (const doc of docs) {
+      const {id, collection, slug} = doc;
+      const draftRef = this.db.doc(
+        `${projectCollectionsPath}/${collection}/Drafts/${slug}`
+      );
+      const scheduledRef = this.db.doc(
+        `${projectCollectionsPath}/${collection}/Scheduled/${slug}`
+      );
+      const publishedRef = this.db.doc(
+        `${projectCollectionsPath}/${collection}/Published/${slug}`
+      );
+
+      // Update the draft doc to remove published fields.
+      batch.update(draftRef, {
+        'sys.modifiedAt': FieldValue.serverTimestamp(),
+        'sys.modifiedBy': unpublishedBy,
+        'sys.publishedAt': FieldValue.delete(),
+        'sys.publishedBy': FieldValue.delete(),
+        'sys.firstPublishedAt': FieldValue.delete(),
+        'sys.firstPublishedBy': FieldValue.delete(),
+      });
+      batchCount += 1;
+
+      // Delete the scheduled doc, if any.
+      batch.delete(scheduledRef);
+      batchCount += 1;
+
+      // Delete the published doc.
+      batch.delete(publishedRef);
+      batchCount += 1;
+
+      unpublishedDocs.push(doc);
+
+      if (batchCount >= 400) {
+        await batch.commit();
+        batchCount = 0;
+      }
+    }
+
+    if (batchCount > 0) {
+      await batch.commit();
+    }
+    console.log(`unpublished ${unpublishedDocs.length} docs!`);
+    return unpublishedDocs;
+  }
+
+  /**
    * Publishes scheduled docs.
    */
   async publishScheduledDocs() {
