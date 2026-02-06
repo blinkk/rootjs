@@ -49,7 +49,7 @@ export default schema.collection({
           label: 'Modules',
           help: 'Compose the page by adding one or more modules.',
           of: schema.oneOf({
-            types: schema.allSchemas('/templates/*/*.schema.ts'),
+            types: schema.glob('/templates/*/*.schema.ts'),
           }),
           preview: [
             'm{_index:02}: {description} (#{id})',

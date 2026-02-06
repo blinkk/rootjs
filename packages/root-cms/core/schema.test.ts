@@ -430,8 +430,8 @@ test('validate timezone', () => {
   consoleWarnSpy.mockRestore();
 });
 
-test('allSchemas creates a SchemaPattern', () => {
-  const pattern = schema.allSchemas('/templates/*/*.schema.ts');
+test('glob creates a SchemaPattern', () => {
+  const pattern = schema.glob('/templates/*/*.schema.ts');
 
   expect(pattern._schemaPattern).toBe(true);
   expect(pattern.pattern).toBe('/templates/*/*.schema.ts');
@@ -439,8 +439,8 @@ test('allSchemas creates a SchemaPattern', () => {
   expect(pattern.omitFields).toBeUndefined();
 });
 
-test('allSchemas with options', () => {
-  const pattern = schema.allSchemas('/blocks/*/*.schema.ts', {
+test('glob with options', () => {
+  const pattern = schema.glob('/blocks/*/*.schema.ts', {
     exclude: ['DeprecatedBlock', 'InternalBlock'],
     omitFields: ['id', 'internalNotes'],
   });
@@ -451,8 +451,8 @@ test('allSchemas with options', () => {
   expect(pattern.omitFields).toEqual(['id', 'internalNotes']);
 });
 
-test('allSchemas returns a valid SchemaPattern object', () => {
-  const pattern = schema.allSchemas('/templates/*/*.schema.ts');
+test('glob returns a valid SchemaPattern object', () => {
+  const pattern = schema.glob('/templates/*/*.schema.ts');
 
   expect(pattern._schemaPattern).toBe(true);
   expect(pattern.pattern).toBe('/templates/*/*.schema.ts');
@@ -461,7 +461,7 @@ test('allSchemas returns a valid SchemaPattern object', () => {
 test('oneOf accepts SchemaPattern as types', () => {
   const field = schema.oneOf({
     id: 'modules',
-    types: schema.allSchemas('/templates/*/*.schema.ts'),
+    types: schema.glob('/templates/*/*.schema.ts'),
   });
 
   expect(field.type).toBe('oneof');
@@ -470,7 +470,7 @@ test('oneOf accepts SchemaPattern as types', () => {
   expect(pattern._schemaPattern).toBe(true);
 });
 
-test('oneOf with allSchemas can be used in collection definition', () => {
+test('oneOf with glob can be used in collection definition', () => {
   const collection = schema.collection({
     name: 'Pages',
     url: '/[...slug]',
@@ -479,7 +479,7 @@ test('oneOf with allSchemas can be used in collection definition', () => {
         id: 'modules',
         label: 'Modules',
         of: schema.oneOf({
-          types: schema.allSchemas('/templates/*/*.schema.ts'),
+          types: schema.glob('/templates/*/*.schema.ts'),
         }),
       }),
     ],
@@ -495,7 +495,7 @@ test('oneOf with allSchemas can be used in collection definition', () => {
   expect(pattern._schemaPattern).toBe(true);
 });
 
-test('allSchemas can be used for self-referencing container schemas', () => {
+test('glob can be used for self-referencing container schemas', () => {
   // This simulates a Container schema that can contain other Containers.
   const containerSchema = schema.define({
     name: 'Container',
@@ -507,7 +507,7 @@ test('allSchemas can be used for self-referencing container schemas', () => {
         label: 'Children',
         of: schema.oneOf({
           // Container references all templates including itself via pattern.
-          types: schema.allSchemas('/templates/*/*.schema.ts'),
+          types: schema.glob('/templates/*/*.schema.ts'),
         }),
       }),
     ],

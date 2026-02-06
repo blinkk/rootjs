@@ -3,7 +3,7 @@ import {schema} from '@blinkk/root-cms';
 /**
  * Container template that can hold other templates, including other Containers.
  *
- * Uses `schema.allSchemas()` to reference templates by glob pattern. This
+ * Uses `schema.glob()` to reference templates by glob pattern. This
  * pattern is resolved at project load time when all schemas are available,
  * completely avoiding circular import issues that would occur with
  * `import.meta.glob()`.
@@ -41,7 +41,7 @@ export default schema.define({
       preview: '{_type}',
       of: schema.oneOf({
         // All templates matching this pattern, including Container itself.
-        types: schema.allSchemas('/templates/*/*.schema.ts'),
+        types: schema.glob('/templates/*/*.schema.ts'),
       }),
     }),
   ],

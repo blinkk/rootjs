@@ -22,12 +22,12 @@ export default schema.define({
     schema.oneOf({
       id: 'leftSection',
       label: 'Left Section',
-      types: schema.allSchemas('/blocks/*/*.schema.ts', {omitFields: ['id']}),
+      types: schema.glob('/blocks/*/*.schema.ts', {omitFields: ['id']}),
     }),
     schema.oneOf({
       id: 'rightSection',
       label: 'Right Section',
-      types: schema.allSchemas('/blocks/*/*.schema.ts', {omitFields: ['id']}),
+      types: schema.glob('/blocks/*/*.schema.ts', {omitFields: ['id']}),
     }),
   ],
 });

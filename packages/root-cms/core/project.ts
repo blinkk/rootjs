@@ -199,7 +199,7 @@ function convertOneOfTypes(collection: schema.Collection): schema.Collection {
   const schemaNameMap = buildSchemaNameMap();
 
   function handleOneOfField(field: schema.OneOfField) {
-    // Handle SchemaPattern (from schema.allSchemas()).
+    // Handle SchemaPattern (from schema.glob()).
     if (isSchemaPattern(field.types)) {
       const resolved = resolveSchemaPattern(field.types);
       // Process nested oneOf fields in the resolved schemas.

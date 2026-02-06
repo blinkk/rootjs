@@ -23,7 +23,7 @@ describe('Production Bundle Integration', () => {
     expect(typeof coreModule.schema.boolean).toBe('function');
     expect(typeof coreModule.schema.array).toBe('function');
     expect(typeof coreModule.schema.object).toBe('function');
-    expect(typeof coreModule.schema.allSchemas).toBe('function');
+    expect(typeof coreModule.schema.glob).toBe('function');
   });
 
   it('should be able to create a collection schema using schema.collection()', async () => {
@@ -102,13 +102,13 @@ describe('SchemaPattern Resolution', () => {
   it('should export allSchemas function from core module', async () => {
     const coreModule = await import('./core.js');
 
-    expect(typeof coreModule.schema.allSchemas).toBe('function');
+    expect(typeof coreModule.schema.glob).toBe('function');
   });
 
   it('should create valid SchemaPattern with allSchemas', async () => {
     const coreModule = await import('./core.js');
 
-    const pattern = coreModule.schema.allSchemas('/templates/*/*.schema.ts');
+    const pattern = coreModule.schema.glob('/templates/*/*.schema.ts');
 
     expect(pattern._schemaPattern).toBe(true);
     expect(pattern.pattern).toBe('/templates/*/*.schema.ts');
@@ -117,7 +117,7 @@ describe('SchemaPattern Resolution', () => {
   it('should support allSchemas with exclude option', async () => {
     const coreModule = await import('./core.js');
 
-    const pattern = coreModule.schema.allSchemas('/templates/*/*.schema.ts', {
+    const pattern = coreModule.schema.glob('/templates/*/*.schema.ts', {
       exclude: ['DeprecatedTemplate'],
     });
 
@@ -127,7 +127,7 @@ describe('SchemaPattern Resolution', () => {
   it('should support allSchemas with omitFields option', async () => {
     const coreModule = await import('./core.js');
 
-    const pattern = coreModule.schema.allSchemas('/blocks/*/*.schema.ts', {
+    const pattern = coreModule.schema.glob('/blocks/*/*.schema.ts', {
       omitFields: ['id'],
     });
 
@@ -145,7 +145,7 @@ describe('SchemaPattern Resolution', () => {
           id: 'modules',
           label: 'Modules',
           of: coreModule.schema.oneOf({
-            types: coreModule.schema.allSchemas('/templates/*/*.schema.ts'),
+            types: coreModule.schema.glob('/templates/*/*.schema.ts'),
           }),
         }),
       ],
@@ -171,7 +171,7 @@ describe('SchemaPattern Resolution', () => {
           id: 'children',
           of: coreModule.schema.oneOf({
             // Self-reference via pattern - no circular import issues!
-            types: coreModule.schema.allSchemas('/templates/*/*.schema.ts'),
+            types: coreModule.schema.glob('/templates/*/*.schema.ts'),
           }),
         }),
       ],
@@ -195,13 +195,13 @@ describe('SchemaPattern Resolution', () => {
         coreModule.schema.array({
           id: 'mainContent',
           of: coreModule.schema.oneOf({
-            types: coreModule.schema.allSchemas('/templates/*/*.schema.ts'),
+            types: coreModule.schema.glob('/templates/*/*.schema.ts'),
           }),
         }),
         coreModule.schema.array({
           id: 'sidebar',
           of: coreModule.schema.oneOf({
-            types: coreModule.schema.allSchemas('/blocks/*/*.schema.ts', {
+            types: coreModule.schema.glob('/blocks/*/*.schema.ts', {
               omitFields: ['id'],
             }),
           }),

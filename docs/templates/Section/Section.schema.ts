@@ -26,7 +26,7 @@ export default schema.define({
       id: 'modules',
       label: 'Modules',
       of: schema.oneOf({
-        types: schema.allSchemas('/templates/*/*.schema.ts', {
+        types: schema.glob('/templates/*/*.schema.ts', {
           exclude: ['Section'],
         }),
       }),

@@ -23,9 +23,7 @@ export default schema.define({
     schema.oneOf({
       id: 'asset',
       label: 'Asset',
-      types: schema.allSchemas(
-        '/templates/Template5050/5050assets/*.schema.ts'
-      ),
+      types: schema.glob('/templates/Template5050/5050assets/*.schema.ts'),
     }),
   ],
 });

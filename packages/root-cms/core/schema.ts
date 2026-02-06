@@ -239,7 +239,7 @@ export type OneOfField = CommonFieldProps & {
    * - An array of Schema objects
    * - An array of string names (resolved at runtime)
    * - A mixed array of Schema objects and strings
-   * - A SchemaPattern from `schema.allSchemas()` (resolved at project load)
+   * - A SchemaPattern from `schema.glob()` (resolved at project load)
    */
   types: Schema[] | string[] | Array<Schema | string> | SchemaPattern;
 };
@@ -453,9 +453,9 @@ export function defineCollection(
 export const collection = defineCollection;
 
 /**
- * Options for `schema.allSchemas()`.
+ * Options for `schema.glob()`.
  */
-export interface AllSchemasOptions {
+export interface GlobOptions {
   /** Schema names to exclude from the matched results. */
   exclude?: string[];
   /** Field IDs to omit from the matched schemas. */
@@ -482,7 +482,7 @@ export interface AllSchemasOptions {
  *     schema.array({
  *       id: 'children',
  *       of: schema.oneOf({
- *         types: schema.allSchemas('/templates/*\/*.schema.ts'),
+ *         types: schema.glob('/templates/*\/*.schema.ts'),
  *       }),
  *     }),
  *   ],
@@ -490,23 +490,20 @@ export interface AllSchemasOptions {
  *
  * // With exclusions:
  * schema.oneOf({
- *   types: schema.allSchemas('/templates/*\/*.schema.ts', {
+ *   types: schema.glob('/templates/*\/*.schema.ts', {
  *     exclude: ['DeprecatedTemplate'],
  *   }),
  * });
  *
  * // With field omissions (useful for nested contexts):
  * schema.oneOf({
- *   types: schema.allSchemas('/blocks/*\/*.schema.ts', {
+ *   types: schema.glob('/blocks/*\/*.schema.ts', {
  *     omitFields: ['id'],
  *   }),
  * });
  * ```
  */
-export function allSchemas(
-  pattern: string,
-  options?: AllSchemasOptions
-): SchemaPattern {
+export function glob(pattern: string, options?: GlobOptions): SchemaPattern {
   return {
     _schemaPattern: true,
     pattern,
