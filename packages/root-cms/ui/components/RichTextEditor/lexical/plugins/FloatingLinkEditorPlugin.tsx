@@ -1,15 +1,10 @@
 import './FloatingLinkEditorPlugin.css';
 
-import {
-  $createLinkNode,
-  $isAutoLinkNode,
-  $isLinkNode,
-  TOGGLE_LINK_COMMAND,
-} from '@lexical/link';
+import {$isAutoLinkNode, $isLinkNode, TOGGLE_LINK_COMMAND} from '@lexical/link';
 import {useLexicalComposerContext} from '@lexical/react/LexicalComposerContext';
 import {$findMatchingParent, mergeRegister} from '@lexical/utils';
-import {ActionIcon, Select, Textarea, Tooltip} from '@mantine/core';
-import {IconCheck, IconPencil, IconTrash, IconX} from '@tabler/icons-preact';
+import {ActionIcon, Checkbox, Textarea, Tooltip} from '@mantine/core';
+import {IconCheck, IconTrash, IconX} from '@tabler/icons-preact';
 import {
   $getSelection,
   $isLineBreakNode,
@@ -31,7 +26,6 @@ import {Dispatch, useCallback, useEffect, useRef, useState} from 'preact/hooks';
 
 import {joinClassNames} from '../../../../utils/classes.js';
 import {getSelectedNode} from '../utils/selection.js';
-import {sanitizeUrl} from '../utils/url.js';
 
 const VERTICAL_GAP = 10;
 const HORIZONTAL_OFFSET = 5;
@@ -43,6 +37,7 @@ interface FloatingLinkEditorProps {
   anchorElem: HTMLElement;
   isLinkEditMode: boolean;
   setIsLinkEditMode: Dispatch<boolean>;
+  onDismiss?: () => void;
 }
 
 function FloatingLinkEditor(props: FloatingLinkEditorProps) {
@@ -53,6 +48,7 @@ function FloatingLinkEditor(props: FloatingLinkEditorProps) {
     anchorElem,
     isLinkEditMode,
     setIsLinkEditMode,
+    onDismiss,
   } = props;
   const editorRef = useRef<HTMLDivElement | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -63,6 +59,8 @@ function FloatingLinkEditor(props: FloatingLinkEditorProps) {
   const [lastSelection, setLastSelection] = useState<BaseSelection | null>(
     null
   );
+  // Track the previous linkUrl to detect when we switch to a different link.
+  const prevLinkUrlRef = useRef<string>('');
 
   const $updateLinkEditor = useCallback(() => {
     const selection = $getSelection();
@@ -70,39 +68,49 @@ function FloatingLinkEditor(props: FloatingLinkEditorProps) {
       const node = getSelectedNode(selection);
       const linkParent = $findMatchingParent(node, $isLinkNode);
 
+      let url = '';
+      let target: string | null = null;
       if (linkParent) {
-        setLinkUrl(linkParent.getURL());
-        setLinkTarget(linkParent.getTarget());
+        url = linkParent.getURL();
+        target = linkParent.getTarget() || null;
       } else if ($isLinkNode(node)) {
-        setLinkUrl(node.getURL());
-        setLinkTarget(node.getTarget());
-      } else {
-        setLinkUrl('');
-        setLinkTarget(null);
+        url = node.getURL();
+        target = node.getTarget() || null;
       }
-      if (isLinkEditMode) {
-        setEditedLinkUrl(normalizeUrl(linkUrl));
-        setEditedLinkTarget(linkTarget);
+      setLinkUrl(url);
+      setLinkTarget(target);
+      // Always sync edited values when not actively editing (i.e., when the
+      // input is not focused), or when switching to a different link.
+      const isInputFocused = inputRef.current === document.activeElement;
+      const isSwitchingLinks = url !== prevLinkUrlRef.current;
+      if (!isInputFocused || isSwitchingLinks) {
+        setEditedLinkUrl(normalizeUrl(url));
+        setEditedLinkTarget(target);
       }
+      prevLinkUrlRef.current = url;
     } else if ($isNodeSelection(selection)) {
       const nodes = selection.getNodes();
       if (nodes.length > 0) {
         const node = nodes[0];
         const parent = node.getParent();
+        let url = '';
+        let target: string | null = null;
         if ($isLinkNode(parent)) {
-          setLinkUrl(parent.getURL());
-          setLinkTarget(parent.getTarget());
+          url = parent.getURL();
+          target = parent.getTarget() || null;
         } else if ($isLinkNode(node)) {
-          setLinkUrl(node.getURL());
-          setLinkTarget(node.getTarget());
-        } else {
-          setLinkUrl('');
-          setLinkTarget(null);
+          url = node.getURL();
+          target = node.getTarget() || null;
         }
-        if (isLinkEditMode) {
-          setEditedLinkUrl(normalizeUrl(linkUrl));
-          setEditedLinkTarget(linkTarget);
+        setLinkUrl(url);
+        setLinkTarget(target);
+        const isInputFocused = inputRef.current === document.activeElement;
+        const isSwitchingLinks = url !== prevLinkUrlRef.current;
+        if (!isInputFocused || isSwitchingLinks) {
+          setEditedLinkUrl(normalizeUrl(url));
+          setEditedLinkTarget(target);
         }
+        prevLinkUrlRef.current = url;
       }
     }
 
@@ -147,6 +155,7 @@ function FloatingLinkEditor(props: FloatingLinkEditorProps) {
       setLastSelection(null);
       setIsLinkEditMode(false);
       setLinkUrl('');
+      prevLinkUrlRef.current = '';
     }
 
     return true;
@@ -197,6 +206,7 @@ function FloatingLinkEditor(props: FloatingLinkEditorProps) {
         () => {
           if (isLink) {
             setIsLink(false);
+            onDismiss?.();
             return true;
           }
           return false;
@@ -213,10 +223,76 @@ function FloatingLinkEditor(props: FloatingLinkEditorProps) {
   }, [editor, $updateLinkEditor]);
 
   useEffect(() => {
+    if (isLink) {
+      editor.getEditorState().read(() => {
+        $updateLinkEditor();
+      });
+    }
+  }, [isLink, editor, $updateLinkEditor]);
+
+  useEffect(() => {
     if (isLinkEditMode && inputRef.current) {
       inputRef.current.focus();
     }
   }, [isLinkEditMode, isLink]);
+
+  // Close the floating link editor when clicking outside of it or pressing
+  // Escape. Clicks inside the editor popup or within the rich text editor
+  // area are ignored so that the user can continue editing.
+  useEffect(() => {
+    if (!isLink) {
+      return;
+    }
+
+    const closeLinkEditor = () => {
+      setIsLink(false);
+      setIsLinkEditMode(false);
+      onDismiss?.();
+    };
+
+    const handleMouseDown = (event: MouseEvent) => {
+      const target = event.target as Node | null;
+      if (!target) {
+        return;
+      }
+      // Ignore clicks inside the floating link editor popup.
+      if (editorRef.current && editorRef.current.contains(target)) {
+        return;
+      }
+      // Ignore clicks inside the rich text editor area.
+      if (anchorElem.contains(target)) {
+        return;
+      }
+      if (
+        anchorElem.parentElement &&
+        anchorElem.parentElement.contains(target)
+      ) {
+        return;
+      }
+      closeLinkEditor();
+    };
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        // Only close when focus is inside the floating link editor popup.
+        if (
+          editorRef.current &&
+          editorRef.current.contains(document.activeElement)
+        ) {
+          event.preventDefault();
+          closeLinkEditor();
+        }
+      }
+    };
+
+    window.addEventListener('mousedown', handleMouseDown);
+    window.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      window.removeEventListener('mousedown', handleMouseDown);
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isLink, anchorElem, setIsLink, setIsLinkEditMode]);
 
   const monitorInputInteraction = (e: KeyboardEvent) => {
     if (e.key === 'Enter') {
@@ -224,7 +300,9 @@ function FloatingLinkEditor(props: FloatingLinkEditorProps) {
       handleLinkSubmission();
     } else if (e.key === 'Escape') {
       e.preventDefault();
+      setIsLink(false);
       setIsLinkEditMode(false);
+      onDismiss?.();
     }
   };
 
@@ -236,28 +314,57 @@ function FloatingLinkEditor(props: FloatingLinkEditorProps) {
       if (linkUrl !== null) {
         const targetValue = editedLinkTarget === '_blank' ? '_blank' : null;
         editor.update(() => {
-          editor.dispatchCommand(TOGGLE_LINK_COMMAND, {
-            url: normalizeUrl(editedLinkUrl),
-            target: targetValue,
-          });
           const selection = $getSelection();
           if ($isRangeSelection(selection)) {
-            const parent = getSelectedNode(selection).getParent();
-            if ($isAutoLinkNode(parent)) {
-              const linkNode = $createLinkNode(parent.getURL(), {
-                rel: parent.__rel,
+            const node = getSelectedNode(selection);
+            const linkNode = $findMatchingParent(node, $isLinkNode);
+            if (linkNode) {
+              // Update existing link node directly using setURL() and
+              // setTarget() instead of TOGGLE_LINK_COMMAND. This ensures the
+              // editor state is properly dirtied when only the target changes
+              // (e.g. toggling "open in new tab"), which wouldn't trigger a
+              // change if we used TOGGLE_LINK_COMMAND on an existing link.
+              linkNode.setURL(normalizeUrl(editedLinkUrl));
+              linkNode.setTarget(targetValue);
+            } else if ($isLinkNode(node)) {
+              node.setURL(normalizeUrl(editedLinkUrl));
+              node.setTarget(targetValue);
+            } else {
+              // Create a new link if there isn't one.
+              editor.dispatchCommand(TOGGLE_LINK_COMMAND, {
+                url: normalizeUrl(editedLinkUrl),
                 target: targetValue,
-                title: parent.__title,
               });
-              parent.replace(linkNode, true);
+            }
+          } else if ($isNodeSelection(selection)) {
+            const nodes = selection.getNodes();
+            if (nodes.length > 0) {
+              const node = nodes[0];
+              const parent = node.getParent();
+              if ($isLinkNode(parent)) {
+                parent.setURL(normalizeUrl(editedLinkUrl));
+                parent.setTarget(targetValue);
+              } else if ($isLinkNode(node)) {
+                node.setURL(normalizeUrl(editedLinkUrl));
+                node.setTarget(targetValue);
+              }
             }
           }
         });
       }
-      setEditedLinkUrl('');
-      setEditedLinkTarget(null);
       setIsLinkEditMode(false);
     }
+  };
+
+  // Check if user has made changes to the link.
+  const hasChanges =
+    normalizeUrl(editedLinkUrl) !== normalizeUrl(linkUrl) ||
+    editedLinkTarget !== linkTarget;
+
+  // Revert changes back to the original link values.
+  const handleUndo = () => {
+    setEditedLinkUrl(linkUrl);
+    setEditedLinkTarget(linkTarget);
   };
 
   return (
@@ -268,7 +375,7 @@ function FloatingLinkEditor(props: FloatingLinkEditorProps) {
         !isLink && 'LexicalEditor__linkEditor--hidden'
       )}
     >
-      {!isLink ? null : isLinkEditMode ? (
+      {!isLink || !lastSelection ? null : (
         <div className="LexicalEditor__link__editForm">
           <Textarea
             ref={inputRef}
@@ -287,67 +394,42 @@ function FloatingLinkEditor(props: FloatingLinkEditorProps) {
             placeholder="https://"
           />
           <div className="LexicalEditor__link__row">
-            <Select
+            <Checkbox
               className="LexicalEditor__link__target"
-              placeholder="Target"
-              value={editedLinkTarget}
-              onChange={(value: string) => setEditedLinkTarget(value)}
-              data={[
-                {value: '', label: 'Default', group: 'Target'},
-                {value: '_blank', label: 'New tab', group: 'Target'},
-              ]}
-              clearable
+              label="Open in new tab"
+              checked={editedLinkTarget === '_blank'}
+              onChange={(event: React.ChangeEvent<HTMLInputElement>) =>
+                setEditedLinkTarget(
+                  event.currentTarget.checked ? '_blank' : null
+                )
+              }
               size="xs"
-              radius="xs"
             />
             <div className="LexicalEditor__link__controls">
+              {hasChanges && (
+                <>
+                  <ToolbarActionIcon tooltip="Undo" onClick={handleUndo}>
+                    <IconX size={12} />
+                  </ToolbarActionIcon>
+                  <ToolbarActionIcon
+                    tooltip="Save"
+                    onClick={() => handleLinkSubmission()}
+                  >
+                    <IconCheck size={12} />
+                  </ToolbarActionIcon>
+                </>
+              )}
               <ToolbarActionIcon
-                tooltip="Cancel"
-                onClick={() => setIsLinkEditMode(false)}
+                tooltip="Remove"
+                onClick={() => {
+                  editor.dispatchCommand(TOGGLE_LINK_COMMAND, null);
+                }}
               >
-                <IconX size={12} />
-              </ToolbarActionIcon>
-              <ToolbarActionIcon
-                tooltip="Save"
-                onClick={() => handleLinkSubmission()}
-              >
-                <IconCheck size={12} />
+                <IconTrash size={12} />
               </ToolbarActionIcon>
             </div>
           </div>
         </div>
-      ) : (
-        <>
-          <div className="LexicalEditor__link__preview">
-            <a
-              href={sanitizeUrl(linkUrl)}
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              {linkUrl}
-            </a>
-            {/* <IconArrowUpRight size={16} /> */}
-          </div>
-          <div className="LexicalEditor__link__controls">
-            <ToolbarActionIcon
-              tooltip="Edit"
-              onClick={() => {
-                setEditedLinkUrl(linkUrl);
-                setIsLinkEditMode(true);
-              }}
-            >
-              <IconPencil size={12} />
-            </ToolbarActionIcon>
-            <ToolbarActionIcon
-              tooltip="Remove"
-              onClick={() => {
-                editor.dispatchCommand(TOGGLE_LINK_COMMAND, null);
-              }}
-            >
-              <IconTrash size={12} />
-            </ToolbarActionIcon>
-          </div>
-        </>
       )}
     </div>
   );
@@ -385,8 +467,23 @@ function useFloatingLinkEditorToolbar(
   const [activeEditor, setActiveEditor] = useState(editor);
   const [isLink, setIsLink] = useState(false);
 
+  // Tracks when the floating editor was last dismissed (e.g. via Escape).
+  // Used to suppress re-opening the editor immediately after dismissal,
+  // since the cursor is still on the link text and selection changes would
+  // otherwise re-trigger the popup.
+  const dismissedAtRef = useRef(0);
+  const DISMISS_COOLDOWN_MS = 300;
+
+  const onDismiss = useCallback(() => {
+    dismissedAtRef.current = Date.now();
+  }, []);
+
   useEffect(() => {
     function $updateToolbar() {
+      // Suppress re-opening during the cooldown period after a dismissal.
+      if (Date.now() - dismissedAtRef.current < DISMISS_COOLDOWN_MS) {
+        return;
+      }
       const selection = $getSelection();
       if ($isRangeSelection(selection)) {
         const focusNode = getSelectedNode(selection);
@@ -483,6 +580,7 @@ function useFloatingLinkEditorToolbar(
       setIsLink={setIsLink}
       isLinkEditMode={isLinkEditMode}
       setIsLinkEditMode={setIsLinkEditMode}
+      onDismiss={onDismiss}
     />,
     anchorElem
   );

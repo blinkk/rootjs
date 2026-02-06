@@ -32,8 +32,11 @@
 .LexicalEditor__link__row {
   display: flex;
   align-items: center;
-  justify-content: space-between;
   gap: 8px;
+}
+
+.LexicalEditor__link__row .LexicalEditor__link__controls {
+  margin-left: auto;
 }
 
 .LexicalEditor__link__input {
