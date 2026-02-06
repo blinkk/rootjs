@@ -450,7 +450,7 @@ function ToolbarActionIcon(props: ToolbarActionIconProps) {
     <Tooltip label={props.tooltip} position="top" withArrow>
       <ActionIcon
         radius="xl"
-        variant={props.color ? 'outline' : 'default'}
+        variant={props.color ? 'filled' : 'default'}
         color={props.color || 'dark'}
         size="sm"
         title={props.tooltip}
