@@ -145,6 +145,18 @@ export interface BlogPostsSandboxFields {
 /** Generated from `/collections/BlogPostsSandbox.schema.ts`. */
 export type BlogPostsSandboxDoc = RootCMSDoc<BlogPostsSandboxFields>;
 
+/** Generated from `/templates/Container/Container.schema.ts`. */
+export interface ContainerFields {
+  /** ID. Used for deep linking, tracking, etc. */
+  id?: string;
+  /** Title. Optional title for the container. */
+  title?: string;
+  /** Layout. How children are arranged. */
+  layout?: string;
+  /** Children. Nested templates inside this container. */
+  children?: RootCMSOneOf<RootCMSOneOfOption<'Container', ContainerFields> | RootCMSOneOfOption<'Spacer', SpacerFields> | RootCMSOneOfOption<'Template5050', Template5050Fields> | RootCMSOneOfOption<'TemplateFeaturedBlogPosts', TemplateFeaturedBlogPostsFields> | RootCMSOneOfOption<'TemplateHero', TemplateHeroFields>>[];
+}
+
 /** Generated from `/templates/Template5050/5050assets/ImageAsset.schema.ts`. */
 export interface ImageAssetFields {
   /** Image to embed. Optional. If not provided, the default YT thumbnail is used. */
@@ -167,7 +179,7 @@ export interface PagesFields {
   /** Content */
   content?: {
     /** Modules. Compose the page by adding one or more modules. */
-    modules?: RootCMSOneOf<RootCMSOneOfOption<'Spacer', SpacerFields> | RootCMSOneOfOption<'Template5050', Template5050Fields> | RootCMSOneOfOption<'TemplateFeaturedBlogPosts', TemplateFeaturedBlogPostsFields> | RootCMSOneOfOption<'TemplateHero', TemplateHeroFields>>[];
+    modules?: RootCMSOneOf<RootCMSOneOfOption<'Container', ContainerFields> | RootCMSOneOfOption<'Spacer', SpacerFields> | RootCMSOneOfOption<'Template5050', Template5050Fields> | RootCMSOneOfOption<'TemplateFeaturedBlogPosts', TemplateFeaturedBlogPostsFields> | RootCMSOneOfOption<'TemplateHero', TemplateHeroFields>>[];
   };
   /** Advanced */
   advanced?: {

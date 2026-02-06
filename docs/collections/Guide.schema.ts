@@ -1,12 +1,5 @@
 import {schema} from '@blinkk/root-cms';
 
-const blockModules = import.meta.glob('/blocks/*/*.schema.ts', {
-  eager: true,
-});
-const blocks = Object.values(blockModules).map(
-  (module: {default: schema.Schema}) => module.default
-);
-
 export default schema.collection({
   name: 'Guide',
   description: 'How-to Guides',
@@ -107,7 +100,7 @@ export default schema.collection({
                 label: 'Section: Blocks',
                 help: 'Add blocks to embed various content types to the section.',
                 of: schema.oneOf({
-                  types: blocks,
+                  types: schema.glob('/blocks/*/*.schema.ts'),
                 }),
                 preview: [
                   'm{_index:02}: {_type} ({id})',
