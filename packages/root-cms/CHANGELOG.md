@@ -1,5 +1,17 @@
 # @blinkk/root-cms
 
+## 2.5.1
+
+### Patch Changes
+
+- 37082a54: feat: add unpublishDocs to cms client
+- c1054c29: feat: update file upload field on assets page
+- b378fca6: feat: add clickable sheets icon to data sources table (#890)
+- f6f66b8a: feat: add publish message support
+- 8ad7d907: feat: add translation metadata and quick ai translations
+- 3924e235: feat: implement glob for schema pattern resolution
+  - @blinkk/root@2.5.1
+
 ## 2.4.10
 
 ### Patch Changes
