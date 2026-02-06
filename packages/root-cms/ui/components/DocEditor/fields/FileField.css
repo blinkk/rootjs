@@ -1,19 +1,15 @@
-.FileField,
-.FileUploader {
+.FileField {
   border: 1px solid #ced4da;
   padding: 10px;
   position: relative;
 }
 
-.FileField:has(.dragging),
-.FileUploader:has(.dragging) {
+.FileField:has(.dragging) {
   border: 1px solid #eebefa;
 }
 
 .FileField:has(.dragging) .FileField__Dropzone,
-.FileUploader:has(.dragging) .FileField__Dropzone,
-.FileField:has(.dragging) .FileField__Canvas,
-.FileUploader:has(.dragging) .FileField__Canvas {
+.FileField:has(.dragging) .FileField__Canvas {
   background-color: #f3d9fa;
 }
 
@@ -275,4 +271,8 @@
 
 .FileField__overwriteWarning__actions {
   margin-top: 4px;
+}
+
+.FileField__NamingModeItem {
+  padding: 8px 10px;
 }

@@ -71,14 +71,14 @@ const IMAGE_MIMETYPES = [
 
 type FileFieldVariant = 'file' | 'image';
 
-type FileFieldLoadingState = 'loading' | 'complete' | 'error';
+export type FileFieldLoadingState = 'loading' | 'complete' | 'error';
 
 type FileFieldProps = FieldProps & {
   variant?: FileFieldVariant;
   allowEditing?: boolean;
 };
 
-type FileFieldValueType = UploadedFile | null;
+export type FileFieldValueType = UploadedFile | null;
 
 interface FileFieldContextValue {
   field: schema.FileField;
@@ -118,24 +118,7 @@ function useFileField() {
   return ctx;
 }
 
-export interface FileUploaderProps {
-  /** The currently uploaded file. */
-  value?: FileFieldValueType;
-  /** Callback when the file changes. */
-  onChange?: (file: FileFieldValueType) => void;
-  /** Allowed file extensions or MIME types. */
-  accept?: string[];
-  /** Whether to show naming options and overwrite protection. */
-  showNamingOptions?: boolean;
-  /** Variant for UI. */
-  variant?: FileFieldVariant;
-  className?: string;
-  field?: schema.FileField;
-  /** Whether to allow editing/replacing the file after upload. Default true. */
-  allowEditing?: boolean;
-}
-
-interface FileFieldInternalProps {
+export interface FileFieldInternalProps {
   field: schema.FileField;
   variant?: FileFieldVariant;
   value: FileFieldValueType;
@@ -147,7 +130,7 @@ interface FileFieldInternalProps {
   allowEditing?: boolean;
 }
 
-function FileFieldInternal(props: FileFieldInternalProps) {
+export function FileFieldInternal(props: FileFieldInternalProps) {
   const {field, value, setValue, loadingState, setLoadingState} = props;
   const theme = useMantineTheme();
   const dropZoneRef = useRef<HTMLButtonElement>(null);
@@ -635,19 +618,25 @@ function FileFieldInternal(props: FileFieldInternalProps) {
               <Select
                 label="File name options"
                 size="xs"
+                itemComponent={NamingModeSelectItem}
                 data={[
                   {
                     value: 'hash',
-                    label: 'Hide the original file name (default, hash.png)',
+                    label: 'Hash the file name',
+                    description:
+                      "The filename will be hashed so the file's original name won't be exposed.",
                   },
                   {
                     value: 'hash-path',
-                    label:
-                      'Use hash along with the original file name (hash/file.png)',
+                    label: 'Use a hashed path with the original file name',
+                    description:
+                      'Use the original file name, but put it inside a hashed directory.',
                   },
                   {
                     value: 'clean',
-                    label: 'Use original file name only (file.png)',
+                    label: 'Use the original file name only',
+                    description:
+                      'The file will be uploaded to the bucket as-is, without a hashed directory.',
                   },
                 ]}
                 value={namingMode}
@@ -688,52 +677,6 @@ export function FileField(props: FileFieldProps) {
   );
 }
 
-/**
- * Standalone file uploader.
- *
- * This component is a controlled component that can be used anywhere in the UI
- * (e.g. AssetsPage). It does not connect to the CMS document state and relies
- * on the `value` and `onChange` props to manage its state.
- */
-export function FileUploader(props: FileUploaderProps) {
-  const [value, setValue] = useState<FileFieldValueType>(props.value || null);
-  const [loadingState, setLoadingState] =
-    useState<FileFieldLoadingState | null>(null);
-
-  // Sync prop value
-  if (props.value !== undefined && props.value !== value) {
-    setValue(props.value);
-  }
-
-  const handleChange = (file: FileFieldValueType) => {
-    setValue(file);
-    if (props.onChange) {
-      props.onChange(file);
-    }
-  };
-
-  const defaultField: schema.FileField = {
-    type: 'file',
-    label: '',
-  };
-
-  return (
-    <div className={joinClassNames('FileUploader', props.className)}>
-      <FileFieldInternal
-        field={props.field || defaultField}
-        value={value}
-        setValue={handleChange}
-        loadingState={loadingState}
-        setLoadingState={setLoadingState}
-        variant={props.variant}
-        showNamingOptions={props.showNamingOptions}
-        accept={props.accept}
-        allowEditing={props.allowEditing}
-      />
-    </div>
-  );
-}
-
 FileField.Preview = () => {
   const ctx = useFileField();
   const [dragging, setDragging] = useState(false);
@@ -742,9 +685,34 @@ FileField.Preview = () => {
   const experiments = window.__ROOT_CTX.experiments || {};
 
   // Videos and images are the only files that get the canvas preview.
-  // Other types just show the info panel.
-  const supportsCanvasPreview = testShouldHaveAltText(ctx.value?.filename);
+  // Other types just show the info panel. Videos with zero dimensions
+  // (e.g. missing metadata) are treated as non-previewable.
+  const hasValidDimensions =
+    !!ctx.value?.width &&
+    !!ctx.value?.height &&
+    Number(ctx.value.width) > 0 &&
+    Number(ctx.value.height) > 0;
+  const filename = ctx.value?.filename || '';
+  const isVideo = testIsVideoFile(filename);
+  const supportsCanvasPreview =
+    testIsImageFile(filename) || (isVideo && hasValidDimensions);
   const [infoOpened, setInfoOpened] = useState(!supportsCanvasPreview);
+
+  // Keep infoOpened in sync when the file type changes (e.g. uploading a PDF
+  // after an MP4). Without this, the state would be stale from the first file.
+  const prevFileSrcRef = useRef(ctx.value?.src);
+  if (ctx.value?.src !== prevFileSrcRef.current) {
+    prevFileSrcRef.current = ctx.value?.src;
+    const newFilename = ctx.value?.filename || '';
+    const newSupportsCanvas =
+      testIsImageFile(newFilename) ||
+      (testIsVideoFile(newFilename) && hasValidDimensions);
+    if (!newSupportsCanvas && !infoOpened) {
+      setInfoOpened(true);
+    } else if (newSupportsCanvas && infoOpened) {
+      setInfoOpened(false);
+    }
+  }
 
   if (!ctx.value?.src) {
     return null;
@@ -907,13 +875,12 @@ FileField.Preview = () => {
           e.preventDefault();
           setDragging(false);
           const file = e.dataTransfer?.files[0];
-          if (file && ctx && ctx.allowEditing) {
+          if (file && ctx) {
             ctx.handleFile(file);
           }
         }}
         onPaste={(e) => {
           e.preventDefault();
-          if (!ctx.allowEditing) return;
           // Handle Files.
           const file = e.clipboardData?.files[0];
           if (file) {
@@ -1301,6 +1268,22 @@ FileField.Dropzone = forwardRef<HTMLButtonElement, {}>((props, ref) => {
     ></button>
   );
 });
+
+const NamingModeSelectItem = forwardRef(
+  (props: {label: string; description: string; ref: any}) => {
+    const {label, description, ...selectProps} = props;
+    return (
+      <div className="FileField__NamingModeItem" {...selectProps}>
+        <Text size="sm" weight={500}>
+          {label}
+        </Text>
+        <Text size="xs" color="dimmed">
+          {description}
+        </Text>
+      </div>
+    );
+  }
+);
 
 /** Returns whether a file should display the alt text field (based on its filename). */
 function testShouldHaveAltText(filename: string | undefined): boolean {
