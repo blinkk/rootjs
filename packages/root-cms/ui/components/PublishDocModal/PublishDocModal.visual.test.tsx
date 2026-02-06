@@ -10,14 +10,48 @@ import {page} from 'vitest/browser';
 import {PublishDocModal, PublishDocModalProps} from './PublishDocModal.js';
 
 // Mock firebase/firestore.
-vi.mock('firebase/firestore', async (importOriginal) => {
-  const mod = await importOriginal<typeof import('firebase/firestore')>();
+vi.mock('firebase/firestore', async () => {
   return {
-    ...mod,
-    doc: vi.fn(),
-    getDoc: vi.fn().mockResolvedValue({
-      data: () => ({roles: {'test@example.com': 'ADMIN'}}),
-    }),
+    getFirestore: vi.fn(),
+    doc: vi.fn(() => ({id: 'mock-doc-id', path: 'mock/path'})),
+    collection: vi.fn(() => ({id: 'mock-collection-id', path: 'mock/path'})),
+    getDoc: vi.fn(() =>
+      Promise.resolve({
+        exists: () => true,
+        data: () => ({roles: {'test@example.com': 'ADMIN'}, fields: {}}),
+      })
+    ),
+    getDocs: vi.fn(() =>
+      Promise.resolve({
+        forEach: (cb: any) => {
+          // mock one doc
+          cb({id: 'mock-doc', data: () => ({sys: {}, fields: {}})});
+        },
+        empty: false,
+        size: 1,
+      })
+    ),
+    query: vi.fn(),
+    where: vi.fn(),
+    orderBy: vi.fn(),
+    limit: vi.fn(),
+    documentId: vi.fn(),
+    writeBatch: vi.fn(() => ({
+      set: vi.fn(),
+      update: vi.fn(),
+      delete: vi.fn(),
+      commit: vi.fn(),
+    })),
+    setDoc: vi.fn(),
+    updateDoc: vi.fn(),
+    arrayUnion: vi.fn(),
+    runTransaction: vi.fn(),
+    serverTimestamp: vi.fn(),
+    deleteField: vi.fn(),
+    Timestamp: {
+      now: vi.fn(() => ({toMillis: () => Date.now()})),
+      fromMillis: vi.fn((m) => ({toMillis: () => m})),
+    },
   };
 });
 
@@ -47,21 +81,25 @@ vi.mock('../../utils/permissions.js', () => ({
 vi.mock('../../utils/time.js', () => ({
   getLocalISOString: vi.fn(() => '2026-01-29T12:00'),
 }));
-
 describe('PublishDocModal', () => {
   beforeAll(() => {
     (window as any).__ROOT_CTX = {
       experiments: {},
-      rootConfig: {
-        projectId: 'test-project',
-      },
+      rootConfig: {projectId: 'test-project'},
     };
-    (window as any).firebase = {
+    window.firebase = {
+      db: {},
+      storage: {
+        app: {
+          options: {
+            storageBucket: 'test-bucket',
+          },
+        },
+      },
       user: {
         email: 'test@example.com',
       },
-      db: {},
-    };
+    } as any;
   });
 
   it('renders default state with AI experiment enabled', async () => {

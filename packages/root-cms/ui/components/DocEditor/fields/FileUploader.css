@@ -1,0 +1,13 @@
+.FileUploader {
+  position: relative;
+}
+
+.FileUploader:has(.dragging) {
+  outline: 2px solid #eebefa;
+  outline-offset: 2px;
+}
+
+.FileUploader:has(.dragging) .FileField__Dropzone,
+.FileUploader:has(.dragging) .FileField__Canvas {
+  background-color: #f3d9fa;
+}

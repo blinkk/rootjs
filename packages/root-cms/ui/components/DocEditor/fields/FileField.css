@@ -22,6 +22,13 @@
   display: flex;
   flex-direction: column;
   gap: 4px;
+  position: relative;
+  z-index: 2;
+  pointer-events: none;
+}
+
+.FileField__Empty > * {
+  pointer-events: auto;
 }
 
 .FileField__Preview {
@@ -225,4 +232,47 @@
   display: inline;
   position: relative;
   z-index: 1;
+}
+
+.FileField__settings {
+  position: relative;
+  z-index: 2;
+}
+
+.FileField__overwriteWarning {
+  padding: 12px;
+  border: 1px solid #ced4da;
+  border-radius: 4px;
+  background: #fafafa;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.FileField__overwriteWarning__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.FileField__overwriteWarning__link a {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  text-decoration: underline;
+  white-space: nowrap;
+  font-weight: 700;
+  color: inherit;
+}
+
+.FileField__overwriteWarning__checkbox {
+  margin-top: 4px;
+}
+
+.FileField__overwriteWarning__actions {
+  margin-top: 4px;
+}
+
+.FileField__NamingModeItem {
+  padding: 8px 10px;
 }
