@@ -31,6 +31,7 @@ export function SelectField(props: FieldProps) {
         size="xs"
         radius={0}
         searchable={field.searchable ?? true}
+        clearable={true}
         // Due to issues with preact/compat, use a div for the dropdown el.
         dropdownComponent="div"
       />

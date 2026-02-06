@@ -47,7 +47,9 @@ const mockVersions: Version[] = [
       modifiedAt: mockTimestamp(1647485978000 + 20000),
       modifiedBy: 'test@example.com',
     },
-    tags: ['published'],
+    tags: ['published', 'release:2024-01-launch'],
+    publishMessage:
+      'Update navigation menu\nFix broken links\nAdd new footer section',
   } as any,
   {
     _versionId: 'v2',

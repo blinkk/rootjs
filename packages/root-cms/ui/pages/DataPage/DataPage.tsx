@@ -1,6 +1,7 @@
 import './DataPage.css';
 
-import {Button, Loader, Table, Tooltip} from '@mantine/core';
+import {ActionIcon, Button, Loader, Table, Tooltip} from '@mantine/core';
+import {IconTable} from '@tabler/icons-preact';
 import {useEffect, useState} from 'preact/hooks';
 import {ConditionalTooltip} from '../../components/ConditionalTooltip/ConditionalTooltip.js';
 import {DataSourceStatusButton} from '../../components/DataSourceStatusButton/DataSourceStatusButton.js';
@@ -52,6 +53,8 @@ export function DataPage() {
 DataPage.DataSourcesTable = () => {
   const [loading, setLoading] = useState(true);
   const [tableData, setTableData] = useState<DataSource[]>([]);
+  const isGoogleSheetUrl = (url?: string | null) =>
+    !!url && url.startsWith('https://docs.google.com/spreadsheets/');
 
   async function init() {
     const dataSources = await listDataSources();
@@ -86,7 +89,36 @@ DataPage.DataSourcesTable = () => {
                 </td>
                 <td>{dataSource.description || ''}</td>
                 <td>{dataSource.type}</td>
-                <td>{dataSource.url}</td>
+                <td>
+                  {isGoogleSheetUrl(dataSource.url) ? (
+                    <div className="DataPage__DataSourcesTable__url">
+                      <Tooltip label="Open spreadsheet">
+                        <ActionIcon<'a'>
+                          component="a"
+                          href={dataSource.url}
+                          target="_blank"
+                          rel="noreferrer"
+                          variant="filled"
+                          color="green"
+                          size="sm"
+                          aria-label="Open spreadsheet"
+                        >
+                          <IconTable size={16} stroke="2.25" />
+                        </ActionIcon>
+                      </Tooltip>
+                      <a
+                        className="DataPage__DataSourcesTable__url__text"
+                        href={dataSource.url}
+                        target="_blank"
+                        rel="noreferrer"
+                      >
+                        {dataSource.url}
+                      </a>
+                    </div>
+                  ) : (
+                    dataSource.url || ''
+                  )}
+                </td>
                 <td>
                   <DataSourceStatusButton
                     dataSource={dataSource}

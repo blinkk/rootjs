@@ -54,6 +54,63 @@ export async function summarizeDiff(
 ): Promise<string> {
   const cmsPluginOptions = cmsClient.cmsPlugin.getConfig();
   const firebaseConfig = cmsPluginOptions.firebaseConfig;
+  // Use fastest model for diff summarization
+  const model: RootAiModel = 'gemini-2.5-flash';
+
+  const ai = genkit({
+    plugins: [
+      vertexAI({
+        projectId: firebaseConfig.projectId,
+        location: firebaseConfig.location || 'us-central1',
+      }),
+    ],
+  });
+
+  const beforeJson = JSON.stringify(options.before ?? null, null, 2);
+  const afterJson = JSON.stringify(options.after ?? null, null, 2);
+
+  const systemPrompt = [
+    'Summarize CMS document changes in 2-4 bullet points.',
+    'Focus on content changes only. Ignore metadata like timestamps.',
+    'If no meaningful changes, say "No significant changes."',
+  ].join('\n');
+
+  const diffPrompt = [
+    'Before:',
+    beforeJson,
+    '',
+    'After:',
+    afterJson,
+    '',
+    'What changed?',
+  ].join('\n');
+
+  const res = await generate(ai, model, {
+    messages: [
+      {
+        role: 'system',
+        content: [{text: systemPrompt}],
+      },
+    ],
+    prompt: [{text: diffPrompt}],
+    config: {
+      // Respond more quickly with less creativity.
+      temperature: 0.3,
+    },
+  });
+
+  return res.text?.trim() || '';
+}
+
+/**
+ * Generates a concise publish message based on document changes.
+ */
+export async function generatePublishMessage(
+  cmsClient: RootCMSClient,
+  options: SummarizeDiffOptions
+): Promise<string> {
+  const cmsPluginOptions = cmsClient.cmsPlugin.getConfig();
+  const firebaseConfig = cmsPluginOptions.firebaseConfig;
   const model: RootAiModel =
     (typeof cmsPluginOptions.experiments?.ai === 'object'
       ? cmsPluginOptions.experiments.ai.model
@@ -72,10 +129,13 @@ export async function summarizeDiff(
   const afterJson = JSON.stringify(options.after ?? null, null, 2);
 
   const systemPrompt = [
-    'You are an assistant that summarizes changes made to CMS documents stored as JSON.',
-    'Provide a concise description of the most important updates using short bullet points.',
-    'If there are no meaningful differences, respond with "No significant changes."',
-    'Focus on just the content changes, ignore insignificant changes to richtext blocks and structure, such as updates to the richtext block\'s "timestamp" and "version" fields.',
+    'You are an assistant that generates concise commit-style messages for CMS document changes.',
+    'Generate a single short sentence (maximum 60 characters) describing the most important change.',
+    'Use imperative mood like "Add feature" or "Update content" or "Fix typo".',
+    'Focus on the key content change, ignore structural metadata changes.',
+    'Do not use punctuation at the end.',
+    'Examples: "Add new hero image", "Update pricing details", "Fix typo in headline"',
+    'Include ',
   ].join('\n');
 
   const diffPrompt = [
@@ -89,7 +149,7 @@ export async function summarizeDiff(
     afterJson,
     '```',
     '',
-    'Summarize the differences between the two payloads.',
+    'Generate a commit message for these changes.',
   ].join('\n');
 
   const res = await generate(ai, model, {
@@ -436,4 +496,120 @@ export class ChatClient {
 
 function cleanModelName(model: string) {
   return LEGACY_MODEL_RENAME[model] || model;
+}
+
+/**
+ * Extracts JSON from an AI response that may contain markdown code blocks.
+ * @internal
+ */
+export function extractJsonFromResponse(responseText: string): string {
+  let jsonText = responseText.trim();
+
+  // Remove markdown code blocks if present.
+  if (jsonText.startsWith('```')) {
+    const lines = jsonText.split('\n');
+    jsonText = lines.slice(1, -1).join('\n');
+    if (jsonText.startsWith('json')) {
+      jsonText = jsonText.substring(4).trim();
+    }
+  }
+
+  return jsonText;
+}
+
+export interface TranslateStringOptions {
+  sourceText: string;
+  targetLocales: string[];
+  description?: string;
+  existingTranslations?: Record<string, string>;
+}
+
+/**
+ * Translates a source string into multiple target locales using AI.
+ */
+export async function translateString(
+  cmsClient: RootCMSClient,
+  options: TranslateStringOptions
+): Promise<Record<string, string>> {
+  const cmsPluginOptions = cmsClient.cmsPlugin.getConfig();
+  const firebaseConfig = cmsPluginOptions.firebaseConfig;
+  const model: RootAiModel =
+    (typeof cmsPluginOptions.experiments?.ai === 'object'
+      ? cmsPluginOptions.experiments.ai.model
+      : undefined) || DEFAULT_MODEL;
+
+  const ai = genkit({
+    plugins: [
+      vertexAI({
+        projectId: firebaseConfig.projectId,
+        location: firebaseConfig.location || 'us-central1',
+      }),
+    ],
+  });
+
+  const systemPrompt = [
+    'You are a professional translator assistant.',
+    'Translate the given source text into the requested target languages.',
+    'Maintain the tone, style, and intent of the original text.',
+    'Return ONLY a valid JSON object with locale codes as keys and translations as values.',
+    'Do not include any markdown formatting, code blocks, or explanatory text.',
+  ].join('\n');
+
+  const userPromptParts: string[] = [
+    `Source text: "${options.sourceText}"`,
+    '',
+  ];
+
+  if (options.description) {
+    userPromptParts.push(`Context/Description: ${options.description}`, '');
+  }
+
+  if (
+    options.existingTranslations &&
+    Object.keys(options.existingTranslations).length > 0
+  ) {
+    userPromptParts.push('Existing translations for reference:');
+    Object.entries(options.existingTranslations).forEach(
+      ([locale, translation]) => {
+        if (translation) {
+          userPromptParts.push(`- ${locale}: "${translation}"`);
+        }
+      }
+    );
+    userPromptParts.push('');
+  }
+
+  userPromptParts.push(
+    `Target locales: ${options.targetLocales.join(', ')}`,
+    '',
+    'Provide translations as a JSON object with locale codes as keys.'
+  );
+
+  const userPrompt = userPromptParts.join('\n');
+
+  const res = await generate(ai, model, {
+    messages: [
+      {
+        role: 'system',
+        content: [{text: systemPrompt}],
+      },
+      {
+        role: 'user',
+        content: [{text: userPrompt}],
+      },
+    ],
+  });
+
+  const responseText = res.text || '{}';
+
+  // Try to extract JSON from the response.
+  const jsonText = extractJsonFromResponse(responseText);
+
+  try {
+    const translations = JSON.parse(jsonText);
+    return translations;
+  } catch (err) {
+    console.error('Failed to parse AI translation response:', responseText);
+    throw new Error('Invalid response format from AI translation');
+  }
 }
