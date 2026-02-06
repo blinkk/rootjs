@@ -170,10 +170,15 @@ export function FileFieldInternal(props: FileFieldInternalProps) {
       const mode =
         options?.namingMode || (field.preserveFilename ? 'clean' : 'hash');
 
+      // When using the original filename without a hash, the file can be
+      // overwritten by a subsequent upload, so disable caching.
+      const cacheControl =
+        field.cacheControl || (mode === 'clean' ? 'no-cache' : undefined);
+
       const uploadedFile = await uploadFileToGCS(file, {
         namingMode: mode,
         checkExists: options?.checkExists ?? false,
-        cacheControl: field.cacheControl,
+        cacheControl,
       });
 
       // Preserve previous alt text when a new file is uploaded.
