@@ -4,7 +4,7 @@ import {$isAutoLinkNode, $isLinkNode, TOGGLE_LINK_COMMAND} from '@lexical/link';
 import {useLexicalComposerContext} from '@lexical/react/LexicalComposerContext';
 import {$findMatchingParent, mergeRegister} from '@lexical/utils';
 import {ActionIcon, Checkbox, Textarea, Tooltip} from '@mantine/core';
-import {IconCheck, IconTrash, IconX} from '@tabler/icons-preact';
+import {IconArrowBackUp, IconCheck, IconTrash} from '@tabler/icons-preact';
 import {
   $getSelection,
   $isLineBreakNode,
@@ -406,19 +406,6 @@ function FloatingLinkEditor(props: FloatingLinkEditorProps) {
               size="xs"
             />
             <div className="LexicalEditor__link__controls">
-              {hasChanges && (
-                <>
-                  <ToolbarActionIcon tooltip="Undo" onClick={handleUndo}>
-                    <IconX size={12} />
-                  </ToolbarActionIcon>
-                  <ToolbarActionIcon
-                    tooltip="Save"
-                    onClick={() => handleLinkSubmission()}
-                  >
-                    <IconCheck size={12} />
-                  </ToolbarActionIcon>
-                </>
-              )}
               <ToolbarActionIcon
                 tooltip="Remove"
                 onClick={() => {
@@ -426,6 +413,21 @@ function FloatingLinkEditor(props: FloatingLinkEditorProps) {
                 }}
               >
                 <IconTrash size={12} />
+              </ToolbarActionIcon>
+              <ToolbarActionIcon
+                tooltip="Undo"
+                onClick={handleUndo}
+                disabled={!hasChanges}
+              >
+                <IconArrowBackUp size={12} />
+              </ToolbarActionIcon>
+              <ToolbarActionIcon
+                tooltip="Save"
+                onClick={() => handleLinkSubmission()}
+                disabled={!hasChanges}
+                color="green"
+              >
+                <IconCheck size={12} />
               </ToolbarActionIcon>
             </div>
           </div>
@@ -439,6 +441,8 @@ interface ToolbarActionIconProps {
   tooltip: string;
   onClick: () => void;
   children: ComponentChildren;
+  disabled?: boolean;
+  color?: string;
 }
 
 function ToolbarActionIcon(props: ToolbarActionIconProps) {
@@ -446,11 +450,12 @@ function ToolbarActionIcon(props: ToolbarActionIconProps) {
     <Tooltip label={props.tooltip} position="top" withArrow>
       <ActionIcon
         radius="xl"
-        variant="default"
-        color="dark"
+        variant={props.color ? 'outline' : 'default'}
+        color={props.color || 'dark'}
         size="sm"
         title={props.tooltip}
         onClick={props.onClick}
+        disabled={props.disabled}
       >
         {props.children}
       </ActionIcon>
