@@ -99,13 +99,13 @@ describe('Production Bundle Integration', () => {
 });
 
 describe('SchemaPattern Resolution', () => {
-  it('should export allSchemas function from core module', async () => {
+  it('should export glob function from core module', async () => {
     const coreModule = await import('./core.js');
 
     expect(typeof coreModule.schema.glob).toBe('function');
   });
 
-  it('should create valid SchemaPattern with allSchemas', async () => {
+  it('should create valid SchemaPattern with glob', async () => {
     const coreModule = await import('./core.js');
 
     const pattern = coreModule.schema.glob('/templates/*/*.schema.ts');
@@ -114,7 +114,7 @@ describe('SchemaPattern Resolution', () => {
     expect(pattern.pattern).toBe('/templates/*/*.schema.ts');
   });
 
-  it('should support allSchemas with exclude option', async () => {
+  it('should support glob with exclude option', async () => {
     const coreModule = await import('./core.js');
 
     const pattern = coreModule.schema.glob('/templates/*/*.schema.ts', {
@@ -124,7 +124,7 @@ describe('SchemaPattern Resolution', () => {
     expect(pattern.exclude).toEqual(['DeprecatedTemplate']);
   });
 
-  it('should support allSchemas with omitFields option', async () => {
+  it('should support glob with omitFields option', async () => {
     const coreModule = await import('./core.js');
 
     const pattern = coreModule.schema.glob('/blocks/*/*.schema.ts', {
@@ -158,7 +158,7 @@ describe('SchemaPattern Resolution', () => {
     expect(pattern._schemaPattern).toBe(true);
   });
 
-  it('should support self-referencing container schemas via allSchemas', async () => {
+  it('should support self-referencing container schemas via glob', async () => {
     const coreModule = await import('./core.js');
 
     // This is the key use case: a Container that can nest other Containers.
@@ -184,7 +184,7 @@ describe('SchemaPattern Resolution', () => {
     expect(pattern._schemaPattern).toBe(true);
   });
 
-  it('should work with multiple allSchemas patterns in same collection', async () => {
+  it('should work with multiple glob patterns in same collection', async () => {
     const coreModule = await import('./core.js');
 
     // A page that uses templates for main content and blocks for sidebars.

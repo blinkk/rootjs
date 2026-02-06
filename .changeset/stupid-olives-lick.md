@@ -2,4 +2,4 @@
 '@blinkk/root-cms': patch
 ---
 
-feat: implement allSchemas for schema pattern resolution
+feat: implement glob for schema pattern resolution
