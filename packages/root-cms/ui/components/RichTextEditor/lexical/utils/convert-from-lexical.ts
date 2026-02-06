@@ -162,9 +162,11 @@ function extractInlineComponent(
 
 function extractLinkNode(node: ElementNode): TextExtractionResult {
   const href = ($isLinkNode(node) && node.getURL()) || '';
+  const target = ($isLinkNode(node) && node.getTarget()) || '';
   const result = extractTextNode(node);
+  const targetAttr = testLinkTarget(target) ? ` target="${target}"` : '';
   return {
-    text: `<a href="${href}">${result.text}</a>`,
+    text: `<a href="${href}"${targetAttr}>${result.text}</a>`,
     components: result.components,
   };
 }
@@ -496,4 +498,10 @@ function normalizeListItems(items: RichTextListItem[]) {
     }
   });
   return results;
+}
+
+/** Validates that a link target value is a safe HTML attribute. */
+function testLinkTarget(target: string): boolean {
+  const VALID_TARGETS = ['_blank', '_self', '_parent', '_top'];
+  return VALID_TARGETS.includes(target);
 }

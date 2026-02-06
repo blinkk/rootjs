@@ -22,9 +22,30 @@
   display: none;
 }
 
+.LexicalEditor__link__editForm {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+}
+
+.LexicalEditor__link__row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.LexicalEditor__link__row .LexicalEditor__link__controls {
+  margin-left: auto;
+}
+
 .LexicalEditor__link__input {
   display: block;
   width: 100%;
+}
+
+.LexicalEditor__link__target {
+  width: auto;
 }
 
 .LexicalEditor__link__input textarea,
