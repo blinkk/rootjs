@@ -21,6 +21,7 @@ import {
   IconLanguage,
   IconMapPin,
   IconTable,
+  IconTagPlus,
 } from '@tabler/icons-preact';
 import {useEffect, useMemo, useState} from 'preact/hooks';
 import * as schema from '../../../core/schema.js';
@@ -34,6 +35,10 @@ import {
   cmsGetLinkedGoogleSheetL10n,
   cmsUnlinkGoogleSheetL10n,
 } from '../../utils/doc.js';
+import {
+  batchUpdateTags,
+  sourceHash,
+} from '../../utils/l10n.js';
 import {extractStringsForDoc} from '../../utils/extract.js';
 import {
   GSheet,
@@ -525,6 +530,52 @@ LocalizationModal.Translations = (props: TranslationsProps) => {
     });
   }
 
+  async function applyDocTag() {
+    setLoading(true);
+    const updates: Array<{hash: string; tags: string[]}> = [];
+    const docTags = [props.docId];
+
+    for (const source of sourceStrings) {
+      const hash = await sourceHash(source);
+      // We can only update tags for strings that have already been translated/imported
+      // and thus exist in the translations map.
+      if (translationsMap[hash]) {
+        const existingTags = translationsMap[hash].tags || [];
+        // Create a Set to ensure uniqueness
+        const newTags = Array.from(new Set([...existingTags, ...docTags]));
+        updates.push({hash, tags: newTags});
+      }
+    }
+
+    if (updates.length > 0) {
+      await batchUpdateTags(updates);
+
+      // Update local state
+      setTranslationsMap((prev) => {
+        const next = {...prev};
+        updates.forEach(({hash, tags}) => {
+          if (next[hash]) {
+            next[hash] = {...next[hash], tags};
+          }
+        });
+        return next;
+      });
+
+      showNotification({
+        title: 'Tags Applied',
+        message: `Applied tag "${props.docId}" to ${updates.length} strings.`,
+        color: 'green',
+      });
+    } else {
+      showNotification({
+        title: 'No strings updated',
+        message: `No existing translations found to tag.`,
+        color: 'blue',
+      });
+    }
+    setLoading(false);
+  }
+
   /**
    * Wrapper that calls a function and shows a generic error notification if any
    * exceptions occur.
@@ -612,6 +663,15 @@ LocalizationModal.Translations = (props: TranslationsProps) => {
           >
             Open Translations Editor
           </Button>
+          <Tooltip label="Apply doc tag to all strings">
+            <ActionIcon
+              variant="default"
+              onClick={() => notifyErrors(applyDocTag)}
+              loading={loading}
+            >
+              <IconTagPlus size={16} />
+            </ActionIcon>
+          </Tooltip>
         </div>
         <div className="LocalizationModal__translations__header__buttons">
           {gapiClient.enabled && linkedSheet?.spreadsheetId && (
