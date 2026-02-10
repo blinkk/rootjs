@@ -473,54 +473,61 @@ describe('RootCMSClient Validation', () => {
       ).rejects.toThrow(/Invalid timestamp for sys\.createdAt/);
     });
 
-    it('throws error for missing required sys fields', async () => {
+    it('sets default values for missing required sys fields', async () => {
+      const {RootCMSClient} = await import('./client.js');
+      const client = new RootCMSClient(mockRootConfig);
+
+      const dataWithMissingSysFields = {
+        id: 'Pages/test',
+        collection: 'Pages',
+        slug: 'test',
+        sys: {
+          // All required fields are missing - should use defaults.
+        },
+        fields: {title: 'Test'},
+      };
+
+      await client.setRawDoc('Pages', 'test', dataWithMissingSysFields, {
+        mode: 'draft',
+      });
+
+      expect(mockDocRef.set).toHaveBeenCalled();
+      const savedData = mockDocRef.set.mock.calls[0][0];
+      expect(savedData.sys.createdAt).toBeDefined();
+      expect(typeof savedData.sys.createdAt.toMillis).toBe('function');
+      expect(savedData.sys.modifiedAt).toBeDefined();
+      expect(typeof savedData.sys.modifiedAt.toMillis).toBe('function');
+      expect(savedData.sys.createdBy).toBe('root-cms-client');
+      expect(savedData.sys.modifiedBy).toBe('root-cms-client');
+      expect(savedData.sys.locales).toEqual(['en']);
+    });
+
+    it('uses default for invalid createdBy but keeps valid modifiedBy', async () => {
       const {RootCMSClient} = await import('./client.js');
       const {Timestamp} = await import('firebase-admin/firestore');
       const client = new RootCMSClient(mockRootConfig);
 
-      const dataWithMissingCreatedBy = {
+      const dataWithInvalidCreatedBy = {
         id: 'Pages/test',
         collection: 'Pages',
         slug: 'test',
         sys: {
           createdAt: Timestamp.now(),
-          // createdBy is missing.
+          createdBy: 123, // Invalid - number instead of string.
           modifiedAt: Timestamp.now(),
           modifiedBy: 'user@example.com',
         },
         fields: {title: 'Test'},
       };
 
-      await expect(
-        client.setRawDoc('Pages', 'test', dataWithMissingCreatedBy, {
-          mode: 'draft',
-        })
-      ).rejects.toThrow(/Invalid sys\.createdBy/);
-    });
+      await client.setRawDoc('Pages', 'test', dataWithInvalidCreatedBy, {
+        mode: 'draft',
+      });
 
-    it('throws error for invalid sys field types', async () => {
-      const {RootCMSClient} = await import('./client.js');
-      const {Timestamp} = await import('firebase-admin/firestore');
-      const client = new RootCMSClient(mockRootConfig);
-
-      const dataWithInvalidModifiedBy = {
-        id: 'Pages/test',
-        collection: 'Pages',
-        slug: 'test',
-        sys: {
-          createdAt: Timestamp.now(),
-          createdBy: 'user@example.com',
-          modifiedAt: Timestamp.now(),
-          modifiedBy: 123, // Number instead of string.
-        },
-        fields: {title: 'Test'},
-      };
-
-      await expect(
-        client.setRawDoc('Pages', 'test', dataWithInvalidModifiedBy, {
-          mode: 'draft',
-        })
-      ).rejects.toThrow(/Invalid sys\.modifiedBy/);
+      expect(mockDocRef.set).toHaveBeenCalled();
+      const savedData = mockDocRef.set.mock.calls[0][0];
+      expect(savedData.sys.createdBy).toBe('root-cms-client'); // Defaults to root-cms-client.
+      expect(savedData.sys.modifiedBy).toBe('user@example.com'); // Keeps valid value.
     });
 
     it('validates locales array if present', async () => {
@@ -573,6 +580,35 @@ describe('RootCMSClient Validation', () => {
           mode: 'draft',
         })
       ).rejects.toThrow(/Invalid sys\.locales/);
+    });
+
+    it('corrects mismatched id, collection, and slug fields', async () => {
+      const {RootCMSClient} = await import('./client.js');
+      const {Timestamp} = await import('firebase-admin/firestore');
+      const client = new RootCMSClient(mockRootConfig);
+
+      const dataWithWrongIds = {
+        id: 'Pages/wrong-slug', // Wrong ID.
+        collection: 'WrongCollection', // Wrong collection.
+        slug: 'wrong-slug', // Wrong slug.
+        sys: {
+          createdAt: Timestamp.now(),
+          createdBy: 'user@example.com',
+          modifiedAt: Timestamp.now(),
+          modifiedBy: 'user@example.com',
+        },
+        fields: {title: 'Test'},
+      };
+
+      await client.setRawDoc('Pages', 'correct-slug', dataWithWrongIds, {
+        mode: 'draft',
+      });
+
+      expect(mockDocRef.set).toHaveBeenCalled();
+      const savedData = mockDocRef.set.mock.calls[0][0];
+      expect(savedData.id).toBe('Pages/correct-slug');
+      expect(savedData.collection).toBe('Pages');
+      expect(savedData.slug).toBe('correct-slug');
     });
 
     it('allows data without sys field to be set', async () => {

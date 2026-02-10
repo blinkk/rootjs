@@ -425,15 +425,21 @@ export class RootCMSClient {
    * - `number` - Interpreted as milliseconds since epoch, converted to Timestamp
    * - `Date` object - Converted to Timestamp
    *
-   * ### Required Fields
-   * - `sys.createdBy` - Non-empty string identifier
-   * - `sys.modifiedBy` - Non-empty string identifier
+   * ### Required Fields (auto-populated with defaults if missing)
+   * - `sys.createdAt` - Defaults to current time if not provided
+   * - `sys.modifiedAt` - Defaults to current time if not provided
+   * - `sys.createdBy` - Defaults to 'root-cms-client' if not provided
+   * - `sys.modifiedBy` - Defaults to 'root-cms-client' if not provided
+   * - `sys.locales` - Defaults to ['en'] if not provided
    *
    * ### Optional Fields (validated if present)
    * - `sys.publishedBy` - String identifier
    * - `sys.firstPublishedBy` - String identifier
-   * - `sys.locales` - Array of locale strings (e.g., `['en', 'es']`)
    * - `sys.publishingLocked` - Object with optional `until` Timestamp
+   *
+   * ### Document Identity Validation
+   * The `id`, `collection`, and `slug` fields in the data object are automatically
+   * corrected to match the provided parameters to prevent data inconsistencies.
    *
    * @param collectionId - The collection ID (e.g., 'Pages')
    * @param slug - The document slug (e.g., 'home')
@@ -445,7 +451,15 @@ export class RootCMSClient {
    *
    * @example
    * ```typescript
-   * // Save a document with number timestamps (auto-converted)
+   * // Minimal example - sys fields use defaults
+   * await client.setRawDoc('Pages', 'home', {
+   *   sys: {},  // All sys fields will be auto-populated with defaults
+   *   fields: {
+   *     title: 'Home Page'
+   *   }
+   * }, { mode: 'draft' });
+   *
+   * // Full example - with number timestamps (auto-converted)
    * await client.setRawDoc('Pages', 'home', {
    *   id: 'Pages/home',
    *   collection: 'Pages',
@@ -469,6 +483,18 @@ export class RootCMSClient {
     data: any,
     options: SetDocOptions
   ) {
+    // Ensure id, collection, and slug fields match the parameters to prevent data inconsistencies.
+    const expectedId = `${collectionId}/${slug}`;
+    if (data.id !== undefined && data.id !== expectedId) {
+      data.id = expectedId;
+    }
+    if (data.collection !== undefined && data.collection !== collectionId) {
+      data.collection = collectionId;
+    }
+    if (data.slug !== undefined && data.slug !== slug) {
+      data.slug = slug;
+    }
+
     // Validate and normalize sys fields to prevent data integrity issues.
     if (data.sys) {
       data.sys = validateSysFields(data.sys);
@@ -1533,8 +1559,39 @@ export function unmarshalData(data: any): any {
 }
 
 /**
+ * Converts a value to a Firestore Timestamp.
+ *
+ * @param value - The value to convert (Timestamp, number, or Date)
+ * @param fieldName - The name of the field (for error messages)
+ * @returns A Firestore Timestamp object
+ * @throws Error if the value cannot be converted to a Timestamp
+ */
+function convertToTimestamp(value: any, fieldName: string): Timestamp {
+  // If it's already a Timestamp, return it.
+  if (
+    value &&
+    typeof value === 'object' &&
+    typeof value.toMillis === 'function'
+  ) {
+    return value;
+  }
+  // If it's a number (milliseconds), convert to Timestamp.
+  if (typeof value === 'number') {
+    return Timestamp.fromMillis(value);
+  }
+  // If it's a Date, convert to Timestamp.
+  if (value instanceof Date) {
+    return Timestamp.fromDate(value);
+  }
+  // Otherwise, it's invalid.
+  throw new Error(
+    `Invalid timestamp for ${fieldName}: expected Timestamp, number, or Date, got ${typeof value}`
+  );
+}
+
+/**
  * Validates and normalizes sys fields to ensure data integrity.
- * Converts timestamp numbers to Firestore Timestamp objects.
+ * Converts timestamp numbers to Firestore Timestamp objects and sets defaults for missing fields.
  * @throws Error if sys fields are invalid.
  */
 function validateSysFields(sys: any): any {
@@ -1544,52 +1601,35 @@ function validateSysFields(sys: any): any {
 
   const result: any = {...sys};
 
-  // Validate and normalize timestamp fields.
-  const timestampFields = [
-    'createdAt',
-    'modifiedAt',
-    'firstPublishedAt',
-    'publishedAt',
-  ];
+  // Set default values for required timestamp fields if not provided.
+  const now = Timestamp.now();
+  if (result.createdAt === undefined || result.createdAt === null) {
+    result.createdAt = now;
+  } else {
+    result.createdAt = convertToTimestamp(result.createdAt, 'sys.createdAt');
+  }
 
-  for (const field of timestampFields) {
+  if (result.modifiedAt === undefined || result.modifiedAt === null) {
+    result.modifiedAt = now;
+  } else {
+    result.modifiedAt = convertToTimestamp(result.modifiedAt, 'sys.modifiedAt');
+  }
+
+  // Validate and normalize optional timestamp fields.
+  const optionalTimestampFields = ['firstPublishedAt', 'publishedAt'];
+  for (const field of optionalTimestampFields) {
     if (sys[field] !== undefined && sys[field] !== null) {
-      const val = sys[field];
-      // If it's already a Timestamp, keep it.
-      if (
-        val &&
-        typeof val === 'object' &&
-        typeof val.toMillis === 'function'
-      ) {
-        result[field] = val;
-      }
-      // If it's a number (milliseconds), convert to Timestamp.
-      else if (typeof val === 'number') {
-        result[field] = Timestamp.fromMillis(val);
-      }
-      // If it's a Date, convert to Timestamp.
-      else if (val instanceof Date) {
-        result[field] = Timestamp.fromDate(val);
-      }
-      // Otherwise, it's invalid.
-      else {
-        throw new Error(
-          `Invalid timestamp for sys.${field}: expected Timestamp, number, or Date, got ${typeof val}`
-        );
-      }
+      result[field] = convertToTimestamp(sys[field], `sys.${field}`);
     }
   }
 
-  // Validate required string fields.
-  const requiredStringFields = ['createdBy', 'modifiedBy'];
-  for (const field of requiredStringFields) {
-    if (!sys[field] || typeof sys[field] !== 'string') {
-      throw new Error(
-        `Invalid sys.${field}: expected non-empty string, got ${typeof sys[
-          field
-        ]}`
-      );
-    }
+  // Set default values for required string fields if not provided.
+  if (!result.createdBy || typeof result.createdBy !== 'string') {
+    result.createdBy = 'root-cms-client';
+  }
+
+  if (!result.modifiedBy || typeof result.modifiedBy !== 'string') {
+    result.modifiedBy = 'root-cms-client';
   }
 
   // Validate optional string fields.
@@ -1610,37 +1650,24 @@ function validateSysFields(sys: any): any {
       throw new Error('Invalid sys.publishingLocked: expected object or null');
     }
     if (sys.publishingLocked.until !== undefined) {
-      const until = sys.publishingLocked.until;
-      if (
-        until &&
-        typeof until === 'object' &&
-        typeof until.toMillis === 'function'
-      ) {
-        // Already a Timestamp.
-      } else if (typeof until === 'number') {
-        result.publishingLocked = {
-          ...sys.publishingLocked,
-          until: Timestamp.fromMillis(until),
-        };
-      } else if (until instanceof Date) {
-        result.publishingLocked = {
-          ...sys.publishingLocked,
-          until: Timestamp.fromDate(until),
-        };
-      } else {
-        throw new Error(
-          `Invalid sys.publishingLocked.until: expected Timestamp, number, or Date, got ${typeof until}`
-        );
-      }
+      result.publishingLocked = {
+        ...sys.publishingLocked,
+        until: convertToTimestamp(
+          sys.publishingLocked.until,
+          'sys.publishingLocked.until'
+        ),
+      };
     }
   }
 
-  // Validate locales if present.
-  if (sys.locales !== undefined && sys.locales !== null) {
-    if (!Array.isArray(sys.locales)) {
+  // Set default locales if not provided.
+  if (result.locales === undefined || result.locales === null) {
+    result.locales = ['en'];
+  } else {
+    if (!Array.isArray(result.locales)) {
       throw new Error('Invalid sys.locales: expected array');
     }
-    if (!sys.locales.every((locale: any) => typeof locale === 'string')) {
+    if (!result.locales.every((locale: any) => typeof locale === 'string')) {
       throw new Error('Invalid sys.locales: all items must be strings');
     }
   }
