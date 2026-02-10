@@ -1,0 +1,13 @@
+* Host localhost:4007 was resolved.
+* IPv6: ::1
+* IPv4: 127.0.0.1
+  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
+                                 Dload  Upload   Total   Spent    Left  Speed
+  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0*   Trying [::1]:4007...
+* connect to ::1 port 4007 from ::1 port 48980 failed: Connection refused
+*   Trying 127.0.0.1:4007...
+* connect to 127.0.0.1 port 4007 from 127.0.0.1 port 34112 failed: Connection refused
+* Failed to connect to localhost port 4007 after 3 ms: Couldn't connect to server
+  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0
+* Closing connection
+curl: (7) Failed to connect to localhost port 4007 after 3 ms: Couldn't connect to server
