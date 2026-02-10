@@ -5,6 +5,7 @@
  * `import.meta.glob()` calls are resolved.
  */
 
+import {isSchemaPattern, globToRegex, setRegistry} from './schema-utils.js';
 import * as schema from './schema.js';
 
 export interface SchemaModule {
@@ -20,6 +21,10 @@ export const SCHEMA_MODULES = import.meta.glob<SchemaModule>(
   ],
   {eager: true}
 );
+
+// Auto-populate the schema registry so that schemas are resolved in-place
+// and ready to use immediately after import.
+setRegistry(SCHEMA_MODULES);
 
 /**
  * Returns a map of all `schema.ts` files defined in the project as
@@ -98,18 +103,6 @@ function testValidCollectionId(id: string): boolean {
 }
 
 /**
- * Type guard to check if a value is a SchemaPattern.
- */
-function isSchemaPattern(value: unknown): value is schema.SchemaPattern {
-  return (
-    typeof value === 'object' &&
-    value !== null &&
-    '_schemaPattern' in value &&
-    (value as schema.SchemaPattern)._schemaPattern === true
-  );
-}
-
-/**
  * Build a map of schema name to schema for resolving string references.
  */
 function buildSchemaNameMap(): Record<string, schema.Schema> {
@@ -121,24 +114,6 @@ function buildSchemaNameMap(): Record<string, schema.Schema> {
     }
   }
   return nameMap;
-}
-
-/**
- * Converts a glob pattern to a RegExp for matching file paths.
- * Supports basic glob syntax: * (any chars except /), ** (any chars including /).
- */
-function globToRegex(pattern: string): RegExp {
-  const regexStr = pattern
-    // Escape special regex chars except * and /.
-    .replace(/[.+^${}()|[\]\\]/g, '\\$&')
-    // Convert ** to a placeholder.
-    .replace(/\*\*/g, '{{DOUBLE_STAR}}')
-    // Convert * to match any chars except /.
-    .replace(/\*/g, '[^/]*')
-    // Convert ** placeholder to match any chars including /.
-    .replace(/\{\{DOUBLE_STAR\}\}/g, '.*');
-
-  return new RegExp(`^${regexStr}$`);
 }
 
 /**
