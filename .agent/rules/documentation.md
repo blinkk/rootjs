@@ -70,6 +70,27 @@ When working on this project, please adhere to the following guidelines:
 - **Comment Style**: All comments MUST end in punctuation. Use block comments to describe interfaces and their fields. Avoid adding superfluous comments. Inline comments MUST also end in punctuation.
 - **Comment Requirements**: When creating new classes, hooks, or components, write at least a brief block comment describing what it is for. For very complex functionality, provide an example of how to use it in the comment.
 
+### Coding Conventions
+
+- **Null/Undefined Checks**: When checking if a value is defined (not `undefined` and not `null`), prefer using a helper function like `isDef()` instead of repeating `value !== undefined && value !== null`. This improves readability and maintainability.
+- **Conditional Logic Ordering**: Prefer reading conditionals with the positive value first, followed by the default case. For example:
+
+  ```typescript
+  // Preferred
+  if (isDef(value)) {
+    // Normalize or process value
+  } else {
+    // Set default value
+  }
+
+  // Avoid
+  if (value === undefined || value === null) {
+    // Set default value
+  } else {
+    // Normalize or process value
+  }
+  ```
+
 ## Contribution
 
 Refer to `CONTRIBUTING.md` for guidelines on contributing to the project.

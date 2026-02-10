@@ -1559,6 +1559,16 @@ export function unmarshalData(data: any): any {
 }
 
 /**
+ * Checks if a value is defined (not undefined and not null).
+ *
+ * @param value - The value to check
+ * @returns True if the value is defined, false otherwise
+ */
+function isDef(value: any): boolean {
+  return value !== undefined && value !== null;
+}
+
+/**
  * Converts a value to a Firestore Timestamp.
  *
  * @param value - The value to convert (Timestamp, number, or Date)
@@ -1603,22 +1613,22 @@ function validateSysFields(sys: any): any {
 
   // Set default values for required timestamp fields if not provided.
   const now = Timestamp.now();
-  if (result.createdAt === undefined || result.createdAt === null) {
-    result.createdAt = now;
-  } else {
+  if (isDef(result.createdAt)) {
     result.createdAt = convertToTimestamp(result.createdAt, 'sys.createdAt');
+  } else {
+    result.createdAt = now;
   }
 
-  if (result.modifiedAt === undefined || result.modifiedAt === null) {
-    result.modifiedAt = now;
-  } else {
+  if (isDef(result.modifiedAt)) {
     result.modifiedAt = convertToTimestamp(result.modifiedAt, 'sys.modifiedAt');
+  } else {
+    result.modifiedAt = now;
   }
 
   // Validate and normalize optional timestamp fields.
   const optionalTimestampFields = ['firstPublishedAt', 'publishedAt'];
   for (const field of optionalTimestampFields) {
-    if (sys[field] !== undefined && sys[field] !== null) {
+    if (isDef(sys[field])) {
       result[field] = convertToTimestamp(sys[field], `sys.${field}`);
     }
   }
@@ -1627,7 +1637,6 @@ function validateSysFields(sys: any): any {
   if (!result.createdBy || typeof result.createdBy !== 'string') {
     result.createdBy = 'root-cms-client';
   }
-
   if (!result.modifiedBy || typeof result.modifiedBy !== 'string') {
     result.modifiedBy = 'root-cms-client';
   }
@@ -1635,7 +1644,7 @@ function validateSysFields(sys: any): any {
   // Validate optional string fields.
   const optionalStringFields = ['firstPublishedBy', 'publishedBy'];
   for (const field of optionalStringFields) {
-    if (sys[field] !== undefined && sys[field] !== null) {
+    if (isDef(sys[field])) {
       if (typeof sys[field] !== 'string') {
         throw new Error(
           `Invalid sys.${field}: expected string, got ${typeof sys[field]}`
@@ -1645,11 +1654,11 @@ function validateSysFields(sys: any): any {
   }
 
   // Validate publishingLocked if present.
-  if (sys.publishingLocked !== undefined && sys.publishingLocked !== null) {
+  if (isDef(sys.publishingLocked)) {
     if (typeof sys.publishingLocked !== 'object') {
       throw new Error('Invalid sys.publishingLocked: expected object or null');
     }
-    if (sys.publishingLocked.until !== undefined) {
+    if (isDef(sys.publishingLocked.until)) {
       result.publishingLocked = {
         ...sys.publishingLocked,
         until: convertToTimestamp(
@@ -1661,15 +1670,15 @@ function validateSysFields(sys: any): any {
   }
 
   // Set default locales if not provided.
-  if (result.locales === undefined || result.locales === null) {
-    result.locales = ['en'];
-  } else {
+  if (isDef(result.locales)) {
     if (!Array.isArray(result.locales)) {
       throw new Error('Invalid sys.locales: expected array');
     }
     if (!result.locales.every((locale: any) => typeof locale === 'string')) {
       throw new Error('Invalid sys.locales: all items must be strings');
     }
+  } else {
+    result.locales = ['en'];
   }
 
   return result;
