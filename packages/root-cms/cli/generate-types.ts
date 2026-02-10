@@ -17,7 +17,7 @@ export async function generateTypes() {
     rootConfig,
     modulePath
   )) as ProjectModule;
-  const schemas = await project.getProjectSchemas();
+  const schemas = project.getProjectSchemas();
   const outputPath = path.resolve(rootDir, 'root-cms.d.ts');
   await generateSchemaDts(outputPath, schemas);
   console.log('saved root-cms.d.ts!');
