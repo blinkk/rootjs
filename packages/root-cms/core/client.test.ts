@@ -18,6 +18,14 @@ vi.mock('firebase-admin/firestore', () => ({
   })),
   Timestamp: {
     now: vi.fn(() => ({toMillis: () => 1234567890})),
+    fromMillis: vi.fn((millis: number) => ({
+      toMillis: () => millis,
+      toDate: () => new Date(millis),
+    })),
+    fromDate: vi.fn((date: Date) => ({
+      toMillis: () => date.getTime(),
+      toDate: () => date,
+    })),
   },
   FieldValue: {},
 }));
@@ -360,6 +368,229 @@ describe('RootCMSClient Validation', () => {
 
       expect(mockGetCollectionSchema).not.toHaveBeenCalled();
       expect(mockSetRawDoc).toHaveBeenCalled();
+    });
+  });
+
+  describe('setRawDoc sys field validation', () => {
+    let mockDocRef: any;
+    let mockDb: any;
+
+    beforeEach(() => {
+      // Setup mock Firestore for setRawDoc tests.
+      mockDocRef = {
+        set: vi.fn(),
+      };
+      mockDb = {
+        doc: vi.fn(() => mockDocRef),
+      };
+      const plugin = mockRootConfig.plugins?.[0] as any;
+      if (plugin) {
+        plugin.getFirestore = vi.fn(() => mockDb);
+      }
+    });
+
+    it('validates and converts timestamp numbers to Firestore Timestamps', async () => {
+      const {RootCMSClient} = await import('./client.js');
+      const client = new RootCMSClient(mockRootConfig);
+
+      const dataWithNumberTimestamps = {
+        id: 'Pages/test',
+        collection: 'Pages',
+        slug: 'test',
+        sys: {
+          createdAt: 1234567890, // Number instead of Timestamp.
+          createdBy: 'user@example.com',
+          modifiedAt: 1234567890, // Number instead of Timestamp.
+          modifiedBy: 'user@example.com',
+        },
+        fields: {title: 'Test'},
+      };
+
+      await client.setRawDoc('Pages', 'test', dataWithNumberTimestamps, {
+        mode: 'draft',
+      });
+
+      // Verify that set was called.
+      expect(mockDocRef.set).toHaveBeenCalled();
+
+      // Verify that timestamps were converted to Firestore Timestamps.
+      const savedData = mockDocRef.set.mock.calls[0][0];
+      expect(savedData.sys.createdAt).toBeDefined();
+      expect(typeof savedData.sys.createdAt.toMillis).toBe('function');
+      expect(savedData.sys.modifiedAt).toBeDefined();
+      expect(typeof savedData.sys.modifiedAt.toMillis).toBe('function');
+    });
+
+    it('keeps existing Firestore Timestamps unchanged', async () => {
+      const {RootCMSClient} = await import('./client.js');
+      const {Timestamp} = await import('firebase-admin/firestore');
+      const client = new RootCMSClient(mockRootConfig);
+
+      const now = Timestamp.now();
+      const dataWithProperTimestamps = {
+        id: 'Pages/test',
+        collection: 'Pages',
+        slug: 'test',
+        sys: {
+          createdAt: now,
+          createdBy: 'user@example.com',
+          modifiedAt: now,
+          modifiedBy: 'user@example.com',
+        },
+        fields: {title: 'Test'},
+      };
+
+      await client.setRawDoc('Pages', 'test', dataWithProperTimestamps, {
+        mode: 'draft',
+      });
+
+      const savedData = mockDocRef.set.mock.calls[0][0];
+      expect(savedData.sys.createdAt).toBe(now);
+      expect(savedData.sys.modifiedAt).toBe(now);
+    });
+
+    it('throws error for invalid timestamp types', async () => {
+      const {RootCMSClient} = await import('./client.js');
+      const client = new RootCMSClient(mockRootConfig);
+
+      const dataWithInvalidTimestamp = {
+        id: 'Pages/test',
+        collection: 'Pages',
+        slug: 'test',
+        sys: {
+          createdAt: 'invalid-timestamp', // String instead of Timestamp/number.
+          createdBy: 'user@example.com',
+          modifiedAt: 1234567890,
+          modifiedBy: 'user@example.com',
+        },
+        fields: {title: 'Test'},
+      };
+
+      await expect(
+        client.setRawDoc('Pages', 'test', dataWithInvalidTimestamp, {
+          mode: 'draft',
+        })
+      ).rejects.toThrow(/Invalid timestamp for sys\.createdAt/);
+    });
+
+    it('throws error for missing required sys fields', async () => {
+      const {RootCMSClient} = await import('./client.js');
+      const {Timestamp} = await import('firebase-admin/firestore');
+      const client = new RootCMSClient(mockRootConfig);
+
+      const dataWithMissingCreatedBy = {
+        id: 'Pages/test',
+        collection: 'Pages',
+        slug: 'test',
+        sys: {
+          createdAt: Timestamp.now(),
+          // createdBy is missing.
+          modifiedAt: Timestamp.now(),
+          modifiedBy: 'user@example.com',
+        },
+        fields: {title: 'Test'},
+      };
+
+      await expect(
+        client.setRawDoc('Pages', 'test', dataWithMissingCreatedBy, {
+          mode: 'draft',
+        })
+      ).rejects.toThrow(/Invalid sys\.createdBy/);
+    });
+
+    it('throws error for invalid sys field types', async () => {
+      const {RootCMSClient} = await import('./client.js');
+      const {Timestamp} = await import('firebase-admin/firestore');
+      const client = new RootCMSClient(mockRootConfig);
+
+      const dataWithInvalidModifiedBy = {
+        id: 'Pages/test',
+        collection: 'Pages',
+        slug: 'test',
+        sys: {
+          createdAt: Timestamp.now(),
+          createdBy: 'user@example.com',
+          modifiedAt: Timestamp.now(),
+          modifiedBy: 123, // Number instead of string.
+        },
+        fields: {title: 'Test'},
+      };
+
+      await expect(
+        client.setRawDoc('Pages', 'test', dataWithInvalidModifiedBy, {
+          mode: 'draft',
+        })
+      ).rejects.toThrow(/Invalid sys\.modifiedBy/);
+    });
+
+    it('validates locales array if present', async () => {
+      const {RootCMSClient} = await import('./client.js');
+      const {Timestamp} = await import('firebase-admin/firestore');
+      const client = new RootCMSClient(mockRootConfig);
+
+      const dataWithValidLocales = {
+        id: 'Pages/test',
+        collection: 'Pages',
+        slug: 'test',
+        sys: {
+          createdAt: Timestamp.now(),
+          createdBy: 'user@example.com',
+          modifiedAt: Timestamp.now(),
+          modifiedBy: 'user@example.com',
+          locales: ['en', 'es', 'fr'],
+        },
+        fields: {title: 'Test'},
+      };
+
+      await client.setRawDoc('Pages', 'test', dataWithValidLocales, {
+        mode: 'draft',
+      });
+
+      expect(mockDocRef.set).toHaveBeenCalled();
+    });
+
+    it('throws error for invalid locales', async () => {
+      const {RootCMSClient} = await import('./client.js');
+      const {Timestamp} = await import('firebase-admin/firestore');
+      const client = new RootCMSClient(mockRootConfig);
+
+      const dataWithInvalidLocales = {
+        id: 'Pages/test',
+        collection: 'Pages',
+        slug: 'test',
+        sys: {
+          createdAt: Timestamp.now(),
+          createdBy: 'user@example.com',
+          modifiedAt: Timestamp.now(),
+          modifiedBy: 'user@example.com',
+          locales: ['en', 123], // Number in array.
+        },
+        fields: {title: 'Test'},
+      };
+
+      await expect(
+        client.setRawDoc('Pages', 'test', dataWithInvalidLocales, {
+          mode: 'draft',
+        })
+      ).rejects.toThrow(/Invalid sys\.locales/);
+    });
+
+    it('allows data without sys field to be set', async () => {
+      const {RootCMSClient} = await import('./client.js');
+      const client = new RootCMSClient(mockRootConfig);
+
+      const dataWithoutSys = {
+        id: 'Pages/test',
+        collection: 'Pages',
+        slug: 'test',
+        fields: {title: 'Test'},
+      };
+
+      await client.setRawDoc('Pages', 'test', dataWithoutSys, {
+        mode: 'draft',
+      });
+
+      expect(mockDocRef.set).toHaveBeenCalled();
     });
   });
 });

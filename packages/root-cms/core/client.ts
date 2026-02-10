@@ -400,8 +400,68 @@ export class RootCMSClient {
   }
 
   /**
-   * Prefer `saveDraftData('Pages/foo', data)`. Only use this if you know what
-   * you're doing.
+   * Sets the raw document data directly in Firestore.
+   *
+   * CAUTION Prefer using `saveDraftData('Pages/foo', data)` in most cases.
+   * Only use this method if you need to manipulate system-level (sys) fields
+   * directly or if you're implementing low-level data operations.
+   *
+   * ## Validation & Normalization
+   *
+   * This method automatically validates and normalizes `sys` fields to prevent
+   * data integrity issues that can cause runtime errors like
+   * "e.toMillis is not a function".
+   *
+   * ### Timestamp Fields (auto-converted)
+   * The following fields accept multiple formats and are automatically converted
+   * to Firestore Timestamp objects:
+   * - `sys.createdAt`
+   * - `sys.modifiedAt`
+   * - `sys.publishedAt`
+   * - `sys.firstPublishedAt`
+   *
+   * Accepted formats:
+   * - Firestore `Timestamp` object (unchanged)
+   * - `number` - Interpreted as milliseconds since epoch, converted to Timestamp
+   * - `Date` object - Converted to Timestamp
+   *
+   * ### Required Fields
+   * - `sys.createdBy` - Non-empty string identifier
+   * - `sys.modifiedBy` - Non-empty string identifier
+   *
+   * ### Optional Fields (validated if present)
+   * - `sys.publishedBy` - String identifier
+   * - `sys.firstPublishedBy` - String identifier
+   * - `sys.locales` - Array of locale strings (e.g., `['en', 'es']`)
+   * - `sys.publishingLocked` - Object with optional `until` Timestamp
+   *
+   * @param collectionId - The collection ID (e.g., 'Pages')
+   * @param slug - The document slug (e.g., 'home')
+   * @param data - The complete document data including sys and fields
+   * @param options - Options specifying mode ('draft' or 'published')
+   *
+   * @throws {Error} If sys fields are invalid or missing required fields
+   * @throws {Error} If timestamp fields have invalid types
+   *
+   * @example
+   * ```typescript
+   * // Save a document with number timestamps (auto-converted)
+   * await client.setRawDoc('Pages', 'home', {
+   *   id: 'Pages/home',
+   *   collection: 'Pages',
+   *   slug: 'home',
+   *   sys: {
+   *     createdAt: Date.now(),  // Auto-converted to Timestamp.
+   *     createdBy: 'user@example.com',
+   *     modifiedAt: Date.now(),  // Auto-converted to Timestamp.
+   *     modifiedBy: 'user@example.com',
+   *     locales: ['en', 'es']
+   *   },
+   *   fields: {
+   *     title: 'Home Page'
+   *   }
+   * }, { mode: 'draft' });
+   * ```
    */
   async setRawDoc(
     collectionId: string,
@@ -409,6 +469,11 @@ export class RootCMSClient {
     data: any,
     options: SetDocOptions
   ) {
+    // Validate and normalize sys fields to prevent data integrity issues.
+    if (data.sys) {
+      data.sys = validateSysFields(data.sys);
+    }
+
     const mode = options.mode;
     const modeCollection = mode === 'draft' ? 'Drafts' : 'Published';
     const dbPath = `Projects/${this.projectId}/Collections/${collectionId}/${modeCollection}/${slug}`;
@@ -1464,6 +1529,122 @@ export function unmarshalData(data: any): any {
       result[key] = val;
     }
   }
+  return result;
+}
+
+/**
+ * Validates and normalizes sys fields to ensure data integrity.
+ * Converts timestamp numbers to Firestore Timestamp objects.
+ * @throws Error if sys fields are invalid.
+ */
+function validateSysFields(sys: any): any {
+  if (!sys || typeof sys !== 'object') {
+    throw new Error('sys must be an object');
+  }
+
+  const result: any = {...sys};
+
+  // Validate and normalize timestamp fields.
+  const timestampFields = [
+    'createdAt',
+    'modifiedAt',
+    'firstPublishedAt',
+    'publishedAt',
+  ];
+
+  for (const field of timestampFields) {
+    if (sys[field] !== undefined && sys[field] !== null) {
+      const val = sys[field];
+      // If it's already a Timestamp, keep it.
+      if (
+        val &&
+        typeof val === 'object' &&
+        typeof val.toMillis === 'function'
+      ) {
+        result[field] = val;
+      }
+      // If it's a number (milliseconds), convert to Timestamp.
+      else if (typeof val === 'number') {
+        result[field] = Timestamp.fromMillis(val);
+      }
+      // If it's a Date, convert to Timestamp.
+      else if (val instanceof Date) {
+        result[field] = Timestamp.fromDate(val);
+      }
+      // Otherwise, it's invalid.
+      else {
+        throw new Error(
+          `Invalid timestamp for sys.${field}: expected Timestamp, number, or Date, got ${typeof val}`
+        );
+      }
+    }
+  }
+
+  // Validate required string fields.
+  const requiredStringFields = ['createdBy', 'modifiedBy'];
+  for (const field of requiredStringFields) {
+    if (!sys[field] || typeof sys[field] !== 'string') {
+      throw new Error(
+        `Invalid sys.${field}: expected non-empty string, got ${typeof sys[
+          field
+        ]}`
+      );
+    }
+  }
+
+  // Validate optional string fields.
+  const optionalStringFields = ['firstPublishedBy', 'publishedBy'];
+  for (const field of optionalStringFields) {
+    if (sys[field] !== undefined && sys[field] !== null) {
+      if (typeof sys[field] !== 'string') {
+        throw new Error(
+          `Invalid sys.${field}: expected string, got ${typeof sys[field]}`
+        );
+      }
+    }
+  }
+
+  // Validate publishingLocked if present.
+  if (sys.publishingLocked !== undefined && sys.publishingLocked !== null) {
+    if (typeof sys.publishingLocked !== 'object') {
+      throw new Error('Invalid sys.publishingLocked: expected object or null');
+    }
+    if (sys.publishingLocked.until !== undefined) {
+      const until = sys.publishingLocked.until;
+      if (
+        until &&
+        typeof until === 'object' &&
+        typeof until.toMillis === 'function'
+      ) {
+        // Already a Timestamp.
+      } else if (typeof until === 'number') {
+        result.publishingLocked = {
+          ...sys.publishingLocked,
+          until: Timestamp.fromMillis(until),
+        };
+      } else if (until instanceof Date) {
+        result.publishingLocked = {
+          ...sys.publishingLocked,
+          until: Timestamp.fromDate(until),
+        };
+      } else {
+        throw new Error(
+          `Invalid sys.publishingLocked.until: expected Timestamp, number, or Date, got ${typeof until}`
+        );
+      }
+    }
+  }
+
+  // Validate locales if present.
+  if (sys.locales !== undefined && sys.locales !== null) {
+    if (!Array.isArray(sys.locales)) {
+      throw new Error('Invalid sys.locales: expected array');
+    }
+    if (!sys.locales.every((locale: any) => typeof locale === 'string')) {
+      throw new Error('Invalid sys.locales: all items must be strings');
+    }
+  }
+
   return result;
 }
 
