@@ -26,9 +26,7 @@ export const SCHEMA_MODULES = import.meta.glob<SchemaModule>(
  * fileId => schema. This is used by `generate-types.ts` to build the
  * `root-cms.d.ts` file.
  */
-export async function getProjectSchemas(): Promise<
-  Record<string, schema.Schema>
-> {
+export function getProjectSchemas(): Record<string, schema.Schema> {
   const schemas: Record<string, schema.Schema> = {};
 
   for (const fileId in SCHEMA_MODULES) {
@@ -46,7 +44,7 @@ export async function getProjectSchemas(): Promise<
  * Resolves SchemaPattern objects in oneOf fields to arrays of Schema objects.
  * This is needed for type generation which expects `field.types` to be an array.
  */
-function resolveOneOfPatterns(schemaObj: schema.Schema): schema.Schema {
+export function resolveOneOfPatterns(schemaObj: schema.Schema): schema.Schema {
   const clone = structuredClone(schemaObj);
 
   function handleField(field: schema.Field) {
@@ -72,9 +70,9 @@ function resolveOneOfPatterns(schemaObj: schema.Schema): schema.Schema {
  * Returns a collection's schema definition as defined in
  * `/collections/<id>.schema.ts`.
  */
-export async function getCollectionSchema(
+export function getCollectionSchema(
   collectionId: string
-): Promise<schema.Collection | null> {
+): schema.Collection | null {
   if (!testValidCollectionId(collectionId)) {
     throw new Error(`invalid collection id: ${collectionId}`);
   }
