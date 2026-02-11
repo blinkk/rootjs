@@ -223,6 +223,13 @@ export class RootCMSClient {
   }
 
   /**
+   * Converts a doc mode to the Firestore collection name.
+   */
+  private getModeCollection(mode: DocMode): string {
+    return mode === 'draft' ? 'Drafts' : 'Published';
+  }
+
+  /**
    * Retrieves doc data from Root.js CMS.
    */
   async getDoc<Fields = any>(
@@ -246,8 +253,14 @@ export class RootCMSClient {
     slug: string,
     options: GetDocOptions
   ): Promise<any | null> {
-    const mode = options.mode;
-    const modeCollection = mode === 'draft' ? 'Drafts' : 'Published';
+    if (!collectionId) {
+      throw new Error('collectionId is required');
+    }
+    if (!slug) {
+      throw new Error('slug is required');
+    }
+
+    const modeCollection = this.getModeCollection(options.mode);
     // Slugs with slashes are encoded as `--` in the DB.
     slug = slug.replaceAll('/', '--');
     const dbPath = `Projects/${this.projectId}/Collections/${collectionId}/${modeCollection}/${slug}`;
@@ -437,9 +450,10 @@ export class RootCMSClient {
    * - `sys.firstPublishedBy` - String identifier
    * - `sys.publishingLocked` - Object with optional `until` Timestamp
    *
-   * ### Document Identity Validation
-   * The `id`, `collection`, and `slug` fields in the data object are automatically
-   * corrected to match the provided parameters to prevent data inconsistencies.
+   * ### Document Identity
+   * The `id`, `collection`, and `slug` fields are always set to match the
+   * provided parameters, overwriting any existing values to prevent data
+   * inconsistencies.
    *
    * @param collectionId - The collection ID (e.g., 'Pages')
    * @param slug - The document slug (e.g., 'home')
@@ -483,25 +497,27 @@ export class RootCMSClient {
     data: any,
     options: SetDocOptions
   ) {
+    if (!collectionId) {
+      throw new Error('collectionId is required');
+    }
+    if (!slug) {
+      throw new Error('slug is required');
+    }
+
     // Ensure id, collection, and slug fields match the parameters to prevent data inconsistencies.
     const expectedId = `${collectionId}/${slug}`;
-    if (data.id !== undefined && data.id !== expectedId) {
-      data.id = expectedId;
-    }
-    if (data.collection !== undefined && data.collection !== collectionId) {
-      data.collection = collectionId;
-    }
-    if (data.slug !== undefined && data.slug !== slug) {
-      data.slug = slug;
-    }
+    data.id = expectedId;
+    data.collection = collectionId;
+    data.slug = slug;
 
     // Validate and normalize sys fields to prevent data integrity issues.
-    if (data.sys) {
-      data.sys = validateSysFields(data.sys);
+    // Default to empty object if sys is not provided.
+    if (!data.sys) {
+      data.sys = {};
     }
+    data.sys = validateSysFields(data.sys);
 
-    const mode = options.mode;
-    const modeCollection = mode === 'draft' ? 'Drafts' : 'Published';
+    const modeCollection = this.getModeCollection(options.mode);
     const dbPath = `Projects/${this.projectId}/Collections/${collectionId}/${modeCollection}/${slug}`;
     const docRef = this.db.doc(dbPath);
     await docRef.set(data);
@@ -514,8 +530,11 @@ export class RootCMSClient {
     collectionId: string,
     options: ListDocsOptions
   ): Promise<{docs: T[]}> {
-    const mode = options.mode;
-    const modeCollection = mode === 'draft' ? 'Drafts' : 'Published';
+    if (!collectionId) {
+      throw new Error('collectionId is required');
+    }
+
+    const modeCollection = this.getModeCollection(options.mode);
     const dbPath = `Projects/${this.projectId}/Collections/${collectionId}/${modeCollection}`;
     let query: Query = this.db.collection(dbPath);
     if (options.limit) {
@@ -550,8 +569,11 @@ export class RootCMSClient {
    * Returns the number of docs in a Root.js CMS collection.
    */
   async getDocsCount(collectionId: string, options: GetCountOptions) {
-    const mode = options.mode;
-    const modeCollection = mode === 'draft' ? 'Drafts' : 'Published';
+    if (!collectionId) {
+      throw new Error('collectionId is required');
+    }
+
+    const modeCollection = this.getModeCollection(options.mode);
     const dbPath = `Projects/${this.projectId}/Collections/${collectionId}/${modeCollection}`;
     let query: Query = this.db.collection(dbPath);
     if (options.query) {

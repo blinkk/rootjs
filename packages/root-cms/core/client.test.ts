@@ -611,14 +611,38 @@ describe('RootCMSClient Validation', () => {
       expect(savedData.slug).toBe('correct-slug');
     });
 
-    it('allows data without sys field to be set', async () => {
+    it('sets id, collection, and slug fields when missing', async () => {
+      const {RootCMSClient} = await import('./client.js');
+      const {Timestamp} = await import('firebase-admin/firestore');
+      const client = new RootCMSClient(mockRootConfig);
+
+      const dataWithMissingIds = {
+        // id, collection, and slug are missing.
+        sys: {
+          createdAt: Timestamp.now(),
+          createdBy: 'user@example.com',
+          modifiedAt: Timestamp.now(),
+          modifiedBy: 'user@example.com',
+        },
+        fields: {title: 'Test'},
+      };
+
+      await client.setRawDoc('Pages', 'test-slug', dataWithMissingIds, {
+        mode: 'draft',
+      });
+
+      expect(mockDocRef.set).toHaveBeenCalled();
+      const savedData = mockDocRef.set.mock.calls[0][0];
+      expect(savedData.id).toBe('Pages/test-slug');
+      expect(savedData.collection).toBe('Pages');
+      expect(savedData.slug).toBe('test-slug');
+    });
+
+    it('defaults sys to empty object and adds required fields when sys is missing', async () => {
       const {RootCMSClient} = await import('./client.js');
       const client = new RootCMSClient(mockRootConfig);
 
       const dataWithoutSys = {
-        id: 'Pages/test',
-        collection: 'Pages',
-        slug: 'test',
         fields: {title: 'Test'},
       };
 
@@ -627,6 +651,74 @@ describe('RootCMSClient Validation', () => {
       });
 
       expect(mockDocRef.set).toHaveBeenCalled();
+      const savedData = mockDocRef.set.mock.calls[0][0];
+      // Verify sys was created with default values.
+      expect(savedData.sys).toBeDefined();
+      expect(savedData.sys.createdAt).toBeDefined();
+      expect(savedData.sys.modifiedAt).toBeDefined();
+      expect(savedData.sys.createdBy).toBe('root-cms-client');
+      expect(savedData.sys.modifiedBy).toBe('root-cms-client');
+      expect(savedData.sys.locales).toEqual(['en']);
+    });
+
+    it('throws error when collectionId is empty', async () => {
+      const {RootCMSClient} = await import('./client.js');
+      const client = new RootCMSClient(mockRootConfig);
+
+      await expect(
+        client.setRawDoc('', 'test-slug', {fields: {}}, {mode: 'draft'})
+      ).rejects.toThrow(/collectionId is required/);
+    });
+
+    it('throws error when slug is empty', async () => {
+      const {RootCMSClient} = await import('./client.js');
+      const client = new RootCMSClient(mockRootConfig);
+
+      await expect(
+        client.setRawDoc('Pages', '', {fields: {}}, {mode: 'draft'})
+      ).rejects.toThrow(/slug is required/);
+    });
+  });
+
+  describe('getRawDoc parameter validation', () => {
+    it('throws error when collectionId is empty', async () => {
+      const {RootCMSClient} = await import('./client.js');
+      const client = new RootCMSClient(mockRootConfig);
+
+      await expect(
+        client.getRawDoc('', 'test-slug', {mode: 'draft'})
+      ).rejects.toThrow(/collectionId is required/);
+    });
+
+    it('throws error when slug is empty', async () => {
+      const {RootCMSClient} = await import('./client.js');
+      const client = new RootCMSClient(mockRootConfig);
+
+      await expect(
+        client.getRawDoc('Pages', '', {mode: 'draft'})
+      ).rejects.toThrow(/slug is required/);
+    });
+  });
+
+  describe('listDocs parameter validation', () => {
+    it('throws error when collectionId is empty', async () => {
+      const {RootCMSClient} = await import('./client.js');
+      const client = new RootCMSClient(mockRootConfig);
+
+      await expect(client.listDocs('', {mode: 'draft'})).rejects.toThrow(
+        /collectionId is required/
+      );
+    });
+  });
+
+  describe('getDocsCount parameter validation', () => {
+    it('throws error when collectionId is empty', async () => {
+      const {RootCMSClient} = await import('./client.js');
+      const client = new RootCMSClient(mockRootConfig);
+
+      await expect(client.getDocsCount('', {mode: 'draft'})).rejects.toThrow(
+        /collectionId is required/
+      );
     });
   });
 });
