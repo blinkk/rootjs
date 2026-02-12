@@ -8,6 +8,7 @@ import {
   Timestamp,
   WriteBatch,
 } from 'firebase-admin/firestore';
+import {normalizeSlug} from '../shared/slug.js';
 import {CMSPlugin} from './plugin.js';
 import {Collection} from './schema.js';
 import {TranslationsManager} from './translations-manager.js';
@@ -262,7 +263,7 @@ export class RootCMSClient {
 
     const modeCollection = this.getModeCollection(options.mode);
     // Slugs with slashes are encoded as `--` in the DB.
-    slug = slug.replaceAll('/', '--');
+    slug = normalizeSlug(slug);
     const dbPath = `Projects/${this.projectId}/Collections/${collectionId}/${modeCollection}/${slug}`;
     const docRef = this.db.doc(dbPath);
     const doc = await docRef.get();
@@ -300,7 +301,7 @@ export class RootCMSClient {
   ) {
     const collectionDocsPath = this.dbCollectionDocsPath(collectionId, options);
     // Slugs with slashes are encoded as `--` in the DB.
-    const normalizedSlug = slug.replaceAll('/', '--');
+    const normalizedSlug = normalizeSlug(slug);
     return `${collectionDocsPath}/${normalizedSlug}`;
   }
 
@@ -504,6 +505,9 @@ export class RootCMSClient {
       throw new Error('slug is required');
     }
 
+    // Slugs with slashes are encoded as `--` in the DB.
+    slug = normalizeSlug(slug);
+
     // Ensure id, collection, and slug fields match the parameters to prevent data inconsistencies.
     const expectedId = `${collectionId}/${slug}`;
     data.id = expectedId;
@@ -511,11 +515,7 @@ export class RootCMSClient {
     data.slug = slug;
 
     // Validate and normalize sys fields to prevent data integrity issues.
-    // Default to empty object if sys is not provided.
-    if (!data.sys) {
-      data.sys = {};
-    }
-    data.sys = validateSysFields(data.sys);
+    data.sys = validateSysFields(data.sys || {});
 
     const modeCollection = this.getModeCollection(options.mode);
     const dbPath = `Projects/${this.projectId}/Collections/${collectionId}/${modeCollection}/${slug}`;
@@ -1134,7 +1134,7 @@ export class RootCMSClient {
     if (!(mode === 'draft' || mode === 'published')) {
       throw new Error(`invalid mode: ${mode}`);
     }
-    const slug = translationsId.replaceAll('/', '--');
+    const slug = normalizeSlug(translationsId);
     const dbPath = `Projects/${this.projectId}/TranslationsManager/${mode}/Translations/${slug}`;
     return dbPath;
   }
@@ -1827,7 +1827,7 @@ export function parseDocId(docId: string) {
     throw new Error(`invalid doc id: ${docId}`);
   }
   const collection = docId.slice(0, sepIndex);
-  const slug = docId.slice(sepIndex + 1).replaceAll('/', '--');
+  const slug = normalizeSlug(docId.slice(sepIndex + 1));
   if (!collection || !slug) {
     throw new Error(`invalid doc id: ${docId}`);
   }

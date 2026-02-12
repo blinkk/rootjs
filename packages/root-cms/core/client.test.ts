@@ -678,6 +678,21 @@ describe('RootCMSClient Validation', () => {
         client.setRawDoc('Pages', '', {fields: {}}, {mode: 'draft'})
       ).rejects.toThrow(/slug is required/);
     });
+
+    it('normalizes slugs with slashes to double dashes', async () => {
+      const {RootCMSClient} = await import('./client.js');
+      const client = new RootCMSClient(mockRootConfig);
+
+      await client.setRawDoc('Pages', 'parent/child/page', {fields: {}}, {
+        mode: 'draft',
+      });
+
+      expect(mockDocRef.set).toHaveBeenCalled();
+      const savedData = mockDocRef.set.mock.calls[0][0];
+      // Verify slug was normalized to use -- instead of /.
+      expect(savedData.slug).toBe('parent--child--page');
+      expect(savedData.id).toBe('Pages/parent--child--page');
+    });
   });
 
   describe('getRawDoc parameter validation', () => {
