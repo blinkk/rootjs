@@ -440,6 +440,7 @@ DocEditor.FieldHeader = (props: FieldProps & {className?: string}) => {
             <a
               className="DocEditor__FieldHeader__label__deeplink"
               href={deeplinkUrl}
+              tabIndex={-1}
               title="Link to field"
               onClick={(e) => {
                 e.preventDefault();
@@ -1540,9 +1541,10 @@ DocEditor.ArrayFieldPreview = (props: ArrayFieldPreviewProps) => {
           />
         </div>
       )}
-      <div className="DocEditor__ArrayField__item__header__preview__title">
-        {previewText}
-      </div>
+      <div
+        className="DocEditor__ArrayField__item__header__preview__title"
+        data-preview={previewText}
+      />
     </div>
   );
 };
