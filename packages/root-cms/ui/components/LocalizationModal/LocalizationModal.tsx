@@ -15,6 +15,7 @@ import {
 import {ContextModalProps, useModals} from '@mantine/modals';
 import {showNotification} from '@mantine/notifications';
 import {
+  IconAlertTriangle,
   IconChevronDown,
   IconFileDownload,
   IconFileUpload,
@@ -22,6 +23,7 @@ import {
   IconMapPin,
   IconTable,
   IconTagPlus,
+  IconTool,
 } from '@tabler/icons-preact';
 import {useEffect, useMemo, useState} from 'preact/hooks';
 import * as schema from '../../../core/schema.js';
@@ -35,10 +37,6 @@ import {
   cmsGetLinkedGoogleSheetL10n,
   cmsUnlinkGoogleSheetL10n,
 } from '../../utils/doc.js';
-import {
-  batchUpdateTags,
-  sourceHash,
-} from '../../utils/l10n.js';
 import {extractStringsForDoc} from '../../utils/extract.js';
 import {
   GSheet,
@@ -46,6 +44,7 @@ import {
   GoogleSheetId,
   getSpreadsheetUrl,
 } from '../../utils/gsheets.js';
+import {batchUpdateTags, sourceHash} from '../../utils/l10n.js';
 import {TranslationsMap, loadTranslations} from '../../utils/l10n.js';
 import {useExportSheetModal} from '../ExportSheetModal/ExportSheetModal.js';
 import {Heading} from '../Heading/Heading.js';
@@ -306,6 +305,38 @@ LocalizationModal.Translations = (props: TranslationsProps) => {
   const gapiClient = useGapiClient();
   const [linkedSheet, setLinkedSheet] = useState<GoogleSheetId | null>(null);
   const exportSheetModal = useExportSheetModal();
+  const [missingTagsCount, setMissingTagsCount] = useState(0);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function checkMissingTags() {
+      if (loading) {
+        return;
+      }
+      const docTags = [props.docId];
+      let count = 0;
+      for (const source of sourceStrings) {
+        if (cancelled) {
+          return;
+        }
+        const hash = await sourceHash(source);
+        if (translationsMap[hash]) {
+          const existingTags = translationsMap[hash].tags || [];
+          const hasTag = docTags.every((t) => existingTags.includes(t));
+          if (!hasTag) {
+            count += 1;
+          }
+        }
+      }
+      if (!cancelled) {
+        setMissingTagsCount(count);
+      }
+    }
+    checkMissingTags();
+    return () => {
+      cancelled = true;
+    };
+  }, [props.docId, sourceStrings, translationsMap, loading]);
 
   const sourceToTranslationsMap = useMemo(() => {
     const results: {[source: string]: Record<string, string>} = {};
@@ -563,13 +594,13 @@ LocalizationModal.Translations = (props: TranslationsProps) => {
 
       showNotification({
         title: 'Tags Applied',
-        message: `Applied tag "${props.docId}" to ${updates.length} strings.`,
+        message: `Applied tag "${props.docId}" to ${updates.length} string(s).`,
         color: 'green',
       });
     } else {
       showNotification({
         title: 'No strings updated',
-        message: `No existing translations found to tag.`,
+        message: 'No existing translations found to tag.',
         color: 'blue',
       });
     }
@@ -663,15 +694,6 @@ LocalizationModal.Translations = (props: TranslationsProps) => {
           >
             Open Translations Editor
           </Button>
-          <Tooltip label="Apply doc tag to all strings">
-            <ActionIcon
-              variant="default"
-              onClick={() => notifyErrors(applyDocTag)}
-              loading={loading}
-            >
-              <IconTagPlus size={16} />
-            </ActionIcon>
-          </Tooltip>
         </div>
         <div className="LocalizationModal__translations__header__buttons">
           {gapiClient.enabled && linkedSheet?.spreadsheetId && (
@@ -700,6 +722,35 @@ LocalizationModal.Translations = (props: TranslationsProps) => {
           />
         </div>
       </div>
+
+      {missingTagsCount > 0 && (
+        <div className="LocalizationModal__missingTags">
+          <div className="LocalizationModal__missingTags__message">
+            <IconAlertTriangle />
+            {missingTagsCount > 1 ? (
+              <Text size="sm">
+                <b>{missingTagsCount} strings</b> are missing the "{props.docId}
+                " tag.
+              </Text>
+            ) : (
+              <Text size="sm">
+                <b>{missingTagsCount} string</b> is missing the "{props.docId}"
+                tag.
+              </Text>
+            )}
+          </div>
+          <Button
+            variant="filled"
+            size="xs"
+            onClick={() => notifyErrors(applyDocTag)}
+            loading={loading}
+            leftIcon={<IconTool size={16} />}
+          >
+            Fix missing tags
+          </Button>
+        </div>
+      )}
+
       <table className="LocalizationModal__translations__table">
         <tr className="LocalizationModal__translations__table__row LocalizationModal__translations__table__row--header">
           <th className="LocalizationModal__translations__table__header">
