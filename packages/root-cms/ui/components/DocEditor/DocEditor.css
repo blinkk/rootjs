@@ -330,6 +330,10 @@
   text-overflow: ellipsis;
 }
 
+.DocEditor__ArrayField__item__header__preview__title::before {
+  content: attr(data-preview);
+}
+
 .DocEditor__ArrayField__item__header__controls {
   flex-shrink: 0;
   display: flex;
