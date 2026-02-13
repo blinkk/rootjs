@@ -1,5 +1,12 @@
 # @blinkk/root-cms
 
+## 2.5.2
+
+### Patch Changes
+
+- 6738d032: feat: add button for appending tag to a doc's string
+  - @blinkk/root@2.5.2
+
 ## 2.5.1
 
 ### Patch Changes
