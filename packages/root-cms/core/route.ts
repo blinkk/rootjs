@@ -33,6 +33,7 @@ import {
   RootConfig,
   RouteParams,
 } from '@blinkk/root';
+import {normalizeSlug} from '../shared/slug.js';
 import {DocMode, RootCMSClient, translationsForLocale} from './client.js';
 
 export interface RootCMSDoc<Fields = any> {
@@ -227,7 +228,7 @@ export function createRoute(options: CreateRouteOptions): Route {
     const {slug, mode} = routeContext;
     const translationsTags = [
       'common',
-      `${options.collection}/${slug.replaceAll('/', '--')}`,
+      `${options.collection}/${normalizeSlug(slug)}`,
     ];
     if (options.translations) {
       const tags = options.translations(routeContext)?.tags || [];
@@ -292,7 +293,7 @@ export function createRoute(options: CreateRouteOptions): Route {
 
       const translationsTags = [
         'common',
-        `${options.collection}/${slug.replaceAll('/', '--')}`,
+        `${options.collection}/${normalizeSlug(slug)}`,
       ];
       if (options.translations) {
         const tags = options.translations(routeContext)?.tags || [];

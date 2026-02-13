@@ -18,6 +18,14 @@ vi.mock('firebase-admin/firestore', () => ({
   })),
   Timestamp: {
     now: vi.fn(() => ({toMillis: () => 1234567890})),
+    fromMillis: vi.fn((millis: number) => ({
+      toMillis: () => millis,
+      toDate: () => new Date(millis),
+    })),
+    fromDate: vi.fn((date: Date) => ({
+      toMillis: () => date.getTime(),
+      toDate: () => date,
+    })),
   },
   FieldValue: {},
 }));
@@ -360,6 +368,372 @@ describe('RootCMSClient Validation', () => {
 
       expect(mockGetCollectionSchema).not.toHaveBeenCalled();
       expect(mockSetRawDoc).toHaveBeenCalled();
+    });
+  });
+
+  describe('setRawDoc sys field validation', () => {
+    let mockDocRef: any;
+    let mockDb: any;
+
+    beforeEach(() => {
+      // Setup mock Firestore for setRawDoc tests.
+      mockDocRef = {
+        set: vi.fn(),
+      };
+      mockDb = {
+        doc: vi.fn(() => mockDocRef),
+      };
+      const plugin = mockRootConfig.plugins?.[0] as any;
+      if (plugin) {
+        plugin.getFirestore = vi.fn(() => mockDb);
+      }
+    });
+
+    it('validates and converts timestamp numbers to Firestore Timestamps', async () => {
+      const {RootCMSClient} = await import('./client.js');
+      const client = new RootCMSClient(mockRootConfig);
+
+      const dataWithNumberTimestamps = {
+        id: 'Pages/test',
+        collection: 'Pages',
+        slug: 'test',
+        sys: {
+          createdAt: 1234567890, // Number instead of Timestamp.
+          createdBy: 'user@example.com',
+          modifiedAt: 1234567890, // Number instead of Timestamp.
+          modifiedBy: 'user@example.com',
+        },
+        fields: {title: 'Test'},
+      };
+
+      await client.setRawDoc('Pages', 'test', dataWithNumberTimestamps, {
+        mode: 'draft',
+      });
+
+      // Verify that set was called.
+      expect(mockDocRef.set).toHaveBeenCalled();
+
+      // Verify that timestamps were converted to Firestore Timestamps.
+      const savedData = mockDocRef.set.mock.calls[0][0];
+      expect(savedData.sys.createdAt).toBeDefined();
+      expect(typeof savedData.sys.createdAt.toMillis).toBe('function');
+      expect(savedData.sys.modifiedAt).toBeDefined();
+      expect(typeof savedData.sys.modifiedAt.toMillis).toBe('function');
+    });
+
+    it('keeps existing Firestore Timestamps unchanged', async () => {
+      const {RootCMSClient} = await import('./client.js');
+      const {Timestamp} = await import('firebase-admin/firestore');
+      const client = new RootCMSClient(mockRootConfig);
+
+      const now = Timestamp.now();
+      const dataWithProperTimestamps = {
+        id: 'Pages/test',
+        collection: 'Pages',
+        slug: 'test',
+        sys: {
+          createdAt: now,
+          createdBy: 'user@example.com',
+          modifiedAt: now,
+          modifiedBy: 'user@example.com',
+        },
+        fields: {title: 'Test'},
+      };
+
+      await client.setRawDoc('Pages', 'test', dataWithProperTimestamps, {
+        mode: 'draft',
+      });
+
+      const savedData = mockDocRef.set.mock.calls[0][0];
+      expect(savedData.sys.createdAt).toBe(now);
+      expect(savedData.sys.modifiedAt).toBe(now);
+    });
+
+    it('throws error for invalid timestamp types', async () => {
+      const {RootCMSClient} = await import('./client.js');
+      const client = new RootCMSClient(mockRootConfig);
+
+      const dataWithInvalidTimestamp = {
+        id: 'Pages/test',
+        collection: 'Pages',
+        slug: 'test',
+        sys: {
+          createdAt: 'invalid-timestamp', // String instead of Timestamp/number.
+          createdBy: 'user@example.com',
+          modifiedAt: 1234567890,
+          modifiedBy: 'user@example.com',
+        },
+        fields: {title: 'Test'},
+      };
+
+      await expect(
+        client.setRawDoc('Pages', 'test', dataWithInvalidTimestamp, {
+          mode: 'draft',
+        })
+      ).rejects.toThrow(/Invalid timestamp for sys\.createdAt/);
+    });
+
+    it('sets default values for missing required sys fields', async () => {
+      const {RootCMSClient} = await import('./client.js');
+      const client = new RootCMSClient(mockRootConfig);
+
+      const dataWithMissingSysFields = {
+        id: 'Pages/test',
+        collection: 'Pages',
+        slug: 'test',
+        sys: {
+          // All required fields are missing - should use defaults.
+        },
+        fields: {title: 'Test'},
+      };
+
+      await client.setRawDoc('Pages', 'test', dataWithMissingSysFields, {
+        mode: 'draft',
+      });
+
+      expect(mockDocRef.set).toHaveBeenCalled();
+      const savedData = mockDocRef.set.mock.calls[0][0];
+      expect(savedData.sys.createdAt).toBeDefined();
+      expect(typeof savedData.sys.createdAt.toMillis).toBe('function');
+      expect(savedData.sys.modifiedAt).toBeDefined();
+      expect(typeof savedData.sys.modifiedAt.toMillis).toBe('function');
+      expect(savedData.sys.createdBy).toBe('root-cms-client');
+      expect(savedData.sys.modifiedBy).toBe('root-cms-client');
+      expect(savedData.sys.locales).toEqual(['en']);
+    });
+
+    it('uses default for invalid createdBy but keeps valid modifiedBy', async () => {
+      const {RootCMSClient} = await import('./client.js');
+      const {Timestamp} = await import('firebase-admin/firestore');
+      const client = new RootCMSClient(mockRootConfig);
+
+      const dataWithInvalidCreatedBy = {
+        id: 'Pages/test',
+        collection: 'Pages',
+        slug: 'test',
+        sys: {
+          createdAt: Timestamp.now(),
+          createdBy: 123, // Invalid - number instead of string.
+          modifiedAt: Timestamp.now(),
+          modifiedBy: 'user@example.com',
+        },
+        fields: {title: 'Test'},
+      };
+
+      await client.setRawDoc('Pages', 'test', dataWithInvalidCreatedBy, {
+        mode: 'draft',
+      });
+
+      expect(mockDocRef.set).toHaveBeenCalled();
+      const savedData = mockDocRef.set.mock.calls[0][0];
+      expect(savedData.sys.createdBy).toBe('root-cms-client'); // Defaults to root-cms-client.
+      expect(savedData.sys.modifiedBy).toBe('user@example.com'); // Keeps valid value.
+    });
+
+    it('validates locales array if present', async () => {
+      const {RootCMSClient} = await import('./client.js');
+      const {Timestamp} = await import('firebase-admin/firestore');
+      const client = new RootCMSClient(mockRootConfig);
+
+      const dataWithValidLocales = {
+        id: 'Pages/test',
+        collection: 'Pages',
+        slug: 'test',
+        sys: {
+          createdAt: Timestamp.now(),
+          createdBy: 'user@example.com',
+          modifiedAt: Timestamp.now(),
+          modifiedBy: 'user@example.com',
+          locales: ['en', 'es', 'fr'],
+        },
+        fields: {title: 'Test'},
+      };
+
+      await client.setRawDoc('Pages', 'test', dataWithValidLocales, {
+        mode: 'draft',
+      });
+
+      expect(mockDocRef.set).toHaveBeenCalled();
+    });
+
+    it('throws error for invalid locales', async () => {
+      const {RootCMSClient} = await import('./client.js');
+      const {Timestamp} = await import('firebase-admin/firestore');
+      const client = new RootCMSClient(mockRootConfig);
+
+      const dataWithInvalidLocales = {
+        id: 'Pages/test',
+        collection: 'Pages',
+        slug: 'test',
+        sys: {
+          createdAt: Timestamp.now(),
+          createdBy: 'user@example.com',
+          modifiedAt: Timestamp.now(),
+          modifiedBy: 'user@example.com',
+          locales: ['en', 123], // Number in array.
+        },
+        fields: {title: 'Test'},
+      };
+
+      await expect(
+        client.setRawDoc('Pages', 'test', dataWithInvalidLocales, {
+          mode: 'draft',
+        })
+      ).rejects.toThrow(/Invalid sys\.locales/);
+    });
+
+    it('corrects mismatched id, collection, and slug fields', async () => {
+      const {RootCMSClient} = await import('./client.js');
+      const {Timestamp} = await import('firebase-admin/firestore');
+      const client = new RootCMSClient(mockRootConfig);
+
+      const dataWithWrongIds = {
+        id: 'Pages/wrong-slug', // Wrong ID.
+        collection: 'WrongCollection', // Wrong collection.
+        slug: 'wrong-slug', // Wrong slug.
+        sys: {
+          createdAt: Timestamp.now(),
+          createdBy: 'user@example.com',
+          modifiedAt: Timestamp.now(),
+          modifiedBy: 'user@example.com',
+        },
+        fields: {title: 'Test'},
+      };
+
+      await client.setRawDoc('Pages', 'correct-slug', dataWithWrongIds, {
+        mode: 'draft',
+      });
+
+      expect(mockDocRef.set).toHaveBeenCalled();
+      const savedData = mockDocRef.set.mock.calls[0][0];
+      expect(savedData.id).toBe('Pages/correct-slug');
+      expect(savedData.collection).toBe('Pages');
+      expect(savedData.slug).toBe('correct-slug');
+    });
+
+    it('sets id, collection, and slug fields when missing', async () => {
+      const {RootCMSClient} = await import('./client.js');
+      const {Timestamp} = await import('firebase-admin/firestore');
+      const client = new RootCMSClient(mockRootConfig);
+
+      const dataWithMissingIds = {
+        // id, collection, and slug are missing.
+        sys: {
+          createdAt: Timestamp.now(),
+          createdBy: 'user@example.com',
+          modifiedAt: Timestamp.now(),
+          modifiedBy: 'user@example.com',
+        },
+        fields: {title: 'Test'},
+      };
+
+      await client.setRawDoc('Pages', 'test-slug', dataWithMissingIds, {
+        mode: 'draft',
+      });
+
+      expect(mockDocRef.set).toHaveBeenCalled();
+      const savedData = mockDocRef.set.mock.calls[0][0];
+      expect(savedData.id).toBe('Pages/test-slug');
+      expect(savedData.collection).toBe('Pages');
+      expect(savedData.slug).toBe('test-slug');
+    });
+
+    it('defaults sys to empty object and adds required fields when sys is missing', async () => {
+      const {RootCMSClient} = await import('./client.js');
+      const client = new RootCMSClient(mockRootConfig);
+
+      const dataWithoutSys = {
+        fields: {title: 'Test'},
+      };
+
+      await client.setRawDoc('Pages', 'test', dataWithoutSys, {
+        mode: 'draft',
+      });
+
+      expect(mockDocRef.set).toHaveBeenCalled();
+      const savedData = mockDocRef.set.mock.calls[0][0];
+      // Verify sys was created with default values.
+      expect(savedData.sys).toBeDefined();
+      expect(savedData.sys.createdAt).toBeDefined();
+      expect(savedData.sys.modifiedAt).toBeDefined();
+      expect(savedData.sys.createdBy).toBe('root-cms-client');
+      expect(savedData.sys.modifiedBy).toBe('root-cms-client');
+      expect(savedData.sys.locales).toEqual(['en']);
+    });
+
+    it('throws error when collectionId is empty', async () => {
+      const {RootCMSClient} = await import('./client.js');
+      const client = new RootCMSClient(mockRootConfig);
+
+      await expect(
+        client.setRawDoc('', 'test-slug', {fields: {}}, {mode: 'draft'})
+      ).rejects.toThrow(/collectionId is required/);
+    });
+
+    it('throws error when slug is empty', async () => {
+      const {RootCMSClient} = await import('./client.js');
+      const client = new RootCMSClient(mockRootConfig);
+
+      await expect(
+        client.setRawDoc('Pages', '', {fields: {}}, {mode: 'draft'})
+      ).rejects.toThrow(/slug is required/);
+    });
+
+    it('normalizes slugs with slashes to double dashes', async () => {
+      const {RootCMSClient} = await import('./client.js');
+      const client = new RootCMSClient(mockRootConfig);
+
+      await client.setRawDoc('Pages', 'parent/child/page', {fields: {}}, {
+        mode: 'draft',
+      });
+
+      expect(mockDocRef.set).toHaveBeenCalled();
+      const savedData = mockDocRef.set.mock.calls[0][0];
+      // Verify slug was normalized to use -- instead of /.
+      expect(savedData.slug).toBe('parent--child--page');
+      expect(savedData.id).toBe('Pages/parent--child--page');
+    });
+  });
+
+  describe('getRawDoc parameter validation', () => {
+    it('throws error when collectionId is empty', async () => {
+      const {RootCMSClient} = await import('./client.js');
+      const client = new RootCMSClient(mockRootConfig);
+
+      await expect(
+        client.getRawDoc('', 'test-slug', {mode: 'draft'})
+      ).rejects.toThrow(/collectionId is required/);
+    });
+
+    it('throws error when slug is empty', async () => {
+      const {RootCMSClient} = await import('./client.js');
+      const client = new RootCMSClient(mockRootConfig);
+
+      await expect(
+        client.getRawDoc('Pages', '', {mode: 'draft'})
+      ).rejects.toThrow(/slug is required/);
+    });
+  });
+
+  describe('listDocs parameter validation', () => {
+    it('throws error when collectionId is empty', async () => {
+      const {RootCMSClient} = await import('./client.js');
+      const client = new RootCMSClient(mockRootConfig);
+
+      await expect(client.listDocs('', {mode: 'draft'})).rejects.toThrow(
+        /collectionId is required/
+      );
+    });
+  });
+
+  describe('getDocsCount parameter validation', () => {
+    it('throws error when collectionId is empty', async () => {
+      const {RootCMSClient} = await import('./client.js');
+      const client = new RootCMSClient(mockRootConfig);
+
+      await expect(client.getDocsCount('', {mode: 'draft'})).rejects.toThrow(
+        /collectionId is required/
+      );
     });
   });
 });

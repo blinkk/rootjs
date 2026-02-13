@@ -2,6 +2,7 @@
 
 import {RootConfig} from '@blinkk/root';
 import {FieldValue, Query, Timestamp} from 'firebase-admin/firestore';
+import {normalizeSlug} from '../shared/slug.js';
 import {
   LoadTranslationsOptions,
   LocaleTranslations,
@@ -31,7 +32,7 @@ export async function getDoc<T>(
   const modeCollection = mode === 'draft' ? 'Drafts' : 'Published';
   const db = cmsPlugin.getFirestore();
   // Slugs with slashes are encoded as `--` in the DB.
-  slug = slug.replaceAll('/', '--');
+  slug = normalizeSlug(slug);
   const dbPath = `Projects/${projectId}/Collections/${collectionId}/${modeCollection}/${slug}`;
   const docRef = db.doc(dbPath);
   const doc = await docRef.get();

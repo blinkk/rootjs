@@ -4,6 +4,7 @@ import {
   Timestamp,
   WriteBatch,
 } from 'firebase-admin/firestore';
+import {normalizeSlug} from '../shared/slug.js';
 import {hashStr} from '../shared/strings.js';
 import type {RootCMSClient} from './client.js';
 
@@ -475,6 +476,6 @@ export function buildTranslationsLocaleDocDbPath(
     options.project
   )
     .replace('{mode}', options.mode)
-    .replace('{id}', options.id.replaceAll('/', '--'))
+    .replace('{id}', normalizeSlug(options.id))
     .replace('{locale}', options.locale);
 }

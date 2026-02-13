@@ -8,6 +8,7 @@ import {
   Timestamp,
   WriteBatch,
 } from 'firebase-admin/firestore';
+import {normalizeSlug} from '../shared/slug.js';
 import {CMSPlugin} from './plugin.js';
 import {Collection} from './schema.js';
 import {TranslationsManager} from './translations-manager.js';
@@ -223,6 +224,13 @@ export class RootCMSClient {
   }
 
   /**
+   * Converts a doc mode to the Firestore collection name.
+   */
+  private getModeCollection(mode: DocMode): string {
+    return mode === 'draft' ? 'Drafts' : 'Published';
+  }
+
+  /**
    * Retrieves doc data from Root.js CMS.
    */
   async getDoc<Fields = any>(
@@ -246,10 +254,16 @@ export class RootCMSClient {
     slug: string,
     options: GetDocOptions
   ): Promise<any | null> {
-    const mode = options.mode;
-    const modeCollection = mode === 'draft' ? 'Drafts' : 'Published';
+    if (!collectionId) {
+      throw new Error('collectionId is required');
+    }
+    if (!slug) {
+      throw new Error('slug is required');
+    }
+
+    const modeCollection = this.getModeCollection(options.mode);
     // Slugs with slashes are encoded as `--` in the DB.
-    slug = slug.replaceAll('/', '--');
+    slug = normalizeSlug(slug);
     const dbPath = `Projects/${this.projectId}/Collections/${collectionId}/${modeCollection}/${slug}`;
     const docRef = this.db.doc(dbPath);
     const doc = await docRef.get();
@@ -287,7 +301,7 @@ export class RootCMSClient {
   ) {
     const collectionDocsPath = this.dbCollectionDocsPath(collectionId, options);
     // Slugs with slashes are encoded as `--` in the DB.
-    const normalizedSlug = slug.replaceAll('/', '--');
+    const normalizedSlug = normalizeSlug(slug);
     return `${collectionDocsPath}/${normalizedSlug}`;
   }
 
@@ -400,8 +414,83 @@ export class RootCMSClient {
   }
 
   /**
-   * Prefer `saveDraftData('Pages/foo', data)`. Only use this if you know what
-   * you're doing.
+   * Sets the raw document data directly in Firestore.
+   *
+   * CAUTION Prefer using `saveDraftData('Pages/foo', data)` in most cases.
+   * Only use this method if you need to manipulate system-level (sys) fields
+   * directly or if you're implementing low-level data operations.
+   *
+   * ## Validation & Normalization
+   *
+   * This method automatically validates and normalizes `sys` fields to prevent
+   * data integrity issues that can cause runtime errors like
+   * "e.toMillis is not a function".
+   *
+   * ### Timestamp Fields (auto-converted)
+   * The following fields accept multiple formats and are automatically converted
+   * to Firestore Timestamp objects:
+   * - `sys.createdAt`
+   * - `sys.modifiedAt`
+   * - `sys.publishedAt`
+   * - `sys.firstPublishedAt`
+   *
+   * Accepted formats:
+   * - Firestore `Timestamp` object (unchanged)
+   * - `number` - Interpreted as milliseconds since epoch, converted to Timestamp
+   * - `Date` object - Converted to Timestamp
+   *
+   * ### Required Fields (auto-populated with defaults if missing)
+   * - `sys.createdAt` - Defaults to current time if not provided
+   * - `sys.modifiedAt` - Defaults to current time if not provided
+   * - `sys.createdBy` - Defaults to 'root-cms-client' if not provided
+   * - `sys.modifiedBy` - Defaults to 'root-cms-client' if not provided
+   * - `sys.locales` - Defaults to ['en'] if not provided
+   *
+   * ### Optional Fields (validated if present)
+   * - `sys.publishedBy` - String identifier
+   * - `sys.firstPublishedBy` - String identifier
+   * - `sys.publishingLocked` - Object with optional `until` Timestamp
+   *
+   * ### Document Identity
+   * The `id`, `collection`, and `slug` fields are always set to match the
+   * provided parameters, overwriting any existing values to prevent data
+   * inconsistencies.
+   *
+   * @param collectionId - The collection ID (e.g., 'Pages')
+   * @param slug - The document slug (e.g., 'home')
+   * @param data - The complete document data including sys and fields
+   * @param options - Options specifying mode ('draft' or 'published')
+   *
+   * @throws {Error} If sys fields are invalid or missing required fields
+   * @throws {Error} If timestamp fields have invalid types
+   *
+   * @example
+   * ```typescript
+   * // Minimal example - sys fields use defaults
+   * await client.setRawDoc('Pages', 'home', {
+   *   sys: {},  // All sys fields will be auto-populated with defaults
+   *   fields: {
+   *     title: 'Home Page'
+   *   }
+   * }, { mode: 'draft' });
+   *
+   * // Full example - with number timestamps (auto-converted)
+   * await client.setRawDoc('Pages', 'home', {
+   *   id: 'Pages/home',
+   *   collection: 'Pages',
+   *   slug: 'home',
+   *   sys: {
+   *     createdAt: Date.now(),  // Auto-converted to Timestamp.
+   *     createdBy: 'user@example.com',
+   *     modifiedAt: Date.now(),  // Auto-converted to Timestamp.
+   *     modifiedBy: 'user@example.com',
+   *     locales: ['en', 'es']
+   *   },
+   *   fields: {
+   *     title: 'Home Page'
+   *   }
+   * }, { mode: 'draft' });
+   * ```
    */
   async setRawDoc(
     collectionId: string,
@@ -409,8 +498,26 @@ export class RootCMSClient {
     data: any,
     options: SetDocOptions
   ) {
-    const mode = options.mode;
-    const modeCollection = mode === 'draft' ? 'Drafts' : 'Published';
+    if (!collectionId) {
+      throw new Error('collectionId is required');
+    }
+    if (!slug) {
+      throw new Error('slug is required');
+    }
+
+    // Slugs with slashes are encoded as `--` in the DB.
+    slug = normalizeSlug(slug);
+
+    // Ensure id, collection, and slug fields match the parameters to prevent data inconsistencies.
+    const expectedId = `${collectionId}/${slug}`;
+    data.id = expectedId;
+    data.collection = collectionId;
+    data.slug = slug;
+
+    // Validate and normalize sys fields to prevent data integrity issues.
+    data.sys = validateSysFields(data.sys || {});
+
+    const modeCollection = this.getModeCollection(options.mode);
     const dbPath = `Projects/${this.projectId}/Collections/${collectionId}/${modeCollection}/${slug}`;
     const docRef = this.db.doc(dbPath);
     await docRef.set(data);
@@ -423,8 +530,11 @@ export class RootCMSClient {
     collectionId: string,
     options: ListDocsOptions
   ): Promise<{docs: T[]}> {
-    const mode = options.mode;
-    const modeCollection = mode === 'draft' ? 'Drafts' : 'Published';
+    if (!collectionId) {
+      throw new Error('collectionId is required');
+    }
+
+    const modeCollection = this.getModeCollection(options.mode);
     const dbPath = `Projects/${this.projectId}/Collections/${collectionId}/${modeCollection}`;
     let query: Query = this.db.collection(dbPath);
     if (options.limit) {
@@ -459,8 +569,11 @@ export class RootCMSClient {
    * Returns the number of docs in a Root.js CMS collection.
    */
   async getDocsCount(collectionId: string, options: GetCountOptions) {
-    const mode = options.mode;
-    const modeCollection = mode === 'draft' ? 'Drafts' : 'Published';
+    if (!collectionId) {
+      throw new Error('collectionId is required');
+    }
+
+    const modeCollection = this.getModeCollection(options.mode);
     const dbPath = `Projects/${this.projectId}/Collections/${collectionId}/${modeCollection}`;
     let query: Query = this.db.collection(dbPath);
     if (options.query) {
@@ -1021,7 +1134,7 @@ export class RootCMSClient {
     if (!(mode === 'draft' || mode === 'published')) {
       throw new Error(`invalid mode: ${mode}`);
     }
-    const slug = translationsId.replaceAll('/', '--');
+    const slug = normalizeSlug(translationsId);
     const dbPath = `Projects/${this.projectId}/TranslationsManager/${mode}/Translations/${slug}`;
     return dbPath;
   }
@@ -1467,6 +1580,132 @@ export function unmarshalData(data: any): any {
   return result;
 }
 
+/**
+ * Checks if a value is defined (not undefined and not null).
+ *
+ * @param value - The value to check
+ * @returns True if the value is defined, false otherwise
+ */
+function isDef(value: any): boolean {
+  return value !== undefined && value !== null;
+}
+
+/**
+ * Converts a value to a Firestore Timestamp.
+ *
+ * @param value - The value to convert (Timestamp, number, or Date)
+ * @param fieldName - The name of the field (for error messages)
+ * @returns A Firestore Timestamp object
+ * @throws Error if the value cannot be converted to a Timestamp
+ */
+function convertToTimestamp(value: any, fieldName: string): Timestamp {
+  // If it's already a Timestamp, return it.
+  if (
+    value &&
+    typeof value === 'object' &&
+    typeof value.toMillis === 'function'
+  ) {
+    return value;
+  }
+  // If it's a number (milliseconds), convert to Timestamp.
+  if (typeof value === 'number') {
+    return Timestamp.fromMillis(value);
+  }
+  // If it's a Date, convert to Timestamp.
+  if (value instanceof Date) {
+    return Timestamp.fromDate(value);
+  }
+  // Otherwise, it's invalid.
+  throw new Error(
+    `Invalid timestamp for ${fieldName}: expected Timestamp, number, or Date, got ${typeof value}`
+  );
+}
+
+/**
+ * Validates and normalizes sys fields to ensure data integrity.
+ * Converts timestamp numbers to Firestore Timestamp objects and sets defaults for missing fields.
+ * @throws Error if sys fields are invalid.
+ */
+function validateSysFields(sys: any): any {
+  if (!sys || typeof sys !== 'object') {
+    throw new Error('sys must be an object');
+  }
+
+  const result: any = {...sys};
+
+  // Set default values for required timestamp fields if not provided.
+  const now = Timestamp.now();
+  if (isDef(result.createdAt)) {
+    result.createdAt = convertToTimestamp(result.createdAt, 'sys.createdAt');
+  } else {
+    result.createdAt = now;
+  }
+
+  if (isDef(result.modifiedAt)) {
+    result.modifiedAt = convertToTimestamp(result.modifiedAt, 'sys.modifiedAt');
+  } else {
+    result.modifiedAt = now;
+  }
+
+  // Validate and normalize optional timestamp fields.
+  const optionalTimestampFields = ['firstPublishedAt', 'publishedAt'];
+  for (const field of optionalTimestampFields) {
+    if (isDef(sys[field])) {
+      result[field] = convertToTimestamp(sys[field], `sys.${field}`);
+    }
+  }
+
+  // Set default values for required string fields if not provided.
+  if (!result.createdBy || typeof result.createdBy !== 'string') {
+    result.createdBy = 'root-cms-client';
+  }
+  if (!result.modifiedBy || typeof result.modifiedBy !== 'string') {
+    result.modifiedBy = 'root-cms-client';
+  }
+
+  // Validate optional string fields.
+  const optionalStringFields = ['firstPublishedBy', 'publishedBy'];
+  for (const field of optionalStringFields) {
+    if (isDef(sys[field])) {
+      if (typeof sys[field] !== 'string') {
+        throw new Error(
+          `Invalid sys.${field}: expected string, got ${typeof sys[field]}`
+        );
+      }
+    }
+  }
+
+  // Validate publishingLocked if present.
+  if (isDef(sys.publishingLocked)) {
+    if (typeof sys.publishingLocked !== 'object') {
+      throw new Error('Invalid sys.publishingLocked: expected object or null');
+    }
+    if (isDef(sys.publishingLocked.until)) {
+      result.publishingLocked = {
+        ...sys.publishingLocked,
+        until: convertToTimestamp(
+          sys.publishingLocked.until,
+          'sys.publishingLocked.until'
+        ),
+      };
+    }
+  }
+
+  // Set default locales if not provided.
+  if (isDef(result.locales)) {
+    if (!Array.isArray(result.locales)) {
+      throw new Error('Invalid sys.locales: expected array');
+    }
+    if (!result.locales.every((locale: any) => typeof locale === 'string')) {
+      throw new Error('Invalid sys.locales: all items must be strings');
+    }
+  } else {
+    result.locales = ['en'];
+  }
+
+  return result;
+}
+
 /** @deprecated Use `unmarshalData()` instead. */
 export function normalizeData(data: any): any {
   return unmarshalData(data);
@@ -1588,7 +1827,7 @@ export function parseDocId(docId: string) {
     throw new Error(`invalid doc id: ${docId}`);
   }
   const collection = docId.slice(0, sepIndex);
-  const slug = docId.slice(sepIndex + 1).replaceAll('/', '--');
+  const slug = normalizeSlug(docId.slice(sepIndex + 1));
   if (!collection || !slug) {
     throw new Error(`invalid doc id: ${docId}`);
   }
