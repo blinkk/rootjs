@@ -222,6 +222,9 @@ importers:
 
   packages/root:
     dependencies:
+      '@modelcontextprotocol/sdk':
+        specifier: 1.12.0
+        version: 1.12.0
       '@types/js-yaml':
         specifier: 4.0.9
         version: 4.0.9
@@ -288,6 +291,9 @@ importers:
       workspace-tools:
         specifier: 0.37.0
         version: 0.37.0
+      zod:
+        specifier: 3.25.0
+        version: 3.25.0
     devDependencies:
       '@types/busboy':
         specifier: 1.5.0
@@ -2573,8 +2579,8 @@ packages:
       express: 4.21.2
       get-port: 5.1.1
       json-schema: 0.4.0
-      zod: 3.25.76
-      zod-to-json-schema: 3.24.6(zod@3.25.76)
+      zod: 3.25.0
+      zod-to-json-schema: 3.24.6(zod@3.25.0)
     optionalDependencies:
       '@genkit-ai/firebase': 1.18.0(@google-cloud/firestore@7.11.3)(firebase-admin@13.5.0)(firebase@12.2.1)(genkit@1.26.0)
     transitivePeerDependencies:
@@ -3647,22 +3653,22 @@ packages:
       '@types/gapi.client.discovery-v1': 0.0.4
     dev: true
 
-  /@maxim_mazurok/gapi.client.drive-v3@0.1.20260118:
-    resolution: {integrity: sha512-AapBEaj1ztX+AnUBvBnypCC8mWf6q72+4n0oXDopdXmggwYqDISocyoXrQ/iSCk237gFsBSb6WUYTxg7LEiojw==}
+  /@maxim_mazurok/gapi.client.drive-v3@0.1.20260210:
+    resolution: {integrity: sha512-+AbG6C4goi1oWUkutBVHkIv2gbcYBzdoDZ7MzvFCNME9vLsh5U3OKurXe4Tek8D9Cj7h+/umsKh/YLuVoePeqQ==}
     dependencies:
       '@types/gapi.client': 1.0.8
       '@types/gapi.client.discovery-v1': 0.0.4
     dev: true
 
-  /@maxim_mazurok/gapi.client.sheets-v4@0.1.20260114:
-    resolution: {integrity: sha512-rhqbdPctKpTA9EsmLVe+FlbL2wiMd+SGBEgTedPi8IuLbmO7Dcg7+c50eQanHuFVx/rDHiol1k/LiTvDpQ/l2Q==}
+  /@maxim_mazurok/gapi.client.sheets-v4@0.1.20260210:
+    resolution: {integrity: sha512-ZT7QUSLJoEHugtsRocviV21maMHsNA4jMx0g3lx+buVHKqptQsz43wCePEJ36gkoCsYgPNZ5Yw/6TwTGwaRStQ==}
     dependencies:
       '@types/gapi.client': 1.0.8
       '@types/gapi.client.discovery-v1': 0.0.4
     dev: true
 
-  /@modelcontextprotocol/sdk@1.17.5:
-    resolution: {integrity: sha512-QakrKIGniGuRVfWBdMsDea/dx1PNE739QJ7gCM41s9q+qaCYTHCdsIBXQVVXry3mfWAiaM9kT22Hyz53Uw8mfg==}
+  /@modelcontextprotocol/sdk@1.12.0:
+    resolution: {integrity: sha512-m//7RlINx1F3sz3KqwY1WWzVgTcYX52HYk4bJ1hkBXV3zccAEth+jRvG8DBRrdaQuRsPAJOx2MH3zaHNCKL7Zg==}
     engines: {node: '>=18'}
     dependencies:
       ajv: 6.12.6
@@ -3670,16 +3676,14 @@ packages:
       cors: 2.8.5
       cross-spawn: 7.0.6
       eventsource: 3.0.7
-      eventsource-parser: 3.0.6
       express: 5.1.0
       express-rate-limit: 7.5.1(express@5.1.0)
       pkce-challenge: 5.0.0
       raw-body: 3.0.1
-      zod: 3.25.76
-      zod-to-json-schema: 3.24.6(zod@3.25.76)
+      zod: 3.25.0
+      zod-to-json-schema: 3.24.6(zod@3.25.0)
     transitivePeerDependencies:
       - supports-color
-    dev: true
 
   /@nodelib/fs.scandir@2.1.5:
     resolution: {integrity: sha512-vq24Bq3ym5HEQm2NKCr3yXDwjc7vTsEThRDnkp2DK9p1uqLR+DHurm/NOTo0KG7HYHU7eppKZj3MyqYuMBf62g==}
@@ -4958,7 +4962,7 @@ packages:
     resolution: {integrity: sha512-POgTXhjrTfbTV63DiFXav4lBHiICLKKwDeaKn9Nphwj7WH6m0hMMCaJkMyRWjgtPFyRKRVoMXXjczsTQRDEhYw==}
     engines: {node: ^12.20.0 || ^14.18.0 || >=16.0.0}
     dependencies:
-      cross-spawn: 7.0.3
+      cross-spawn: 7.0.6
       fast-glob: 3.3.1
       is-glob: 4.0.3
       open: 9.1.0
@@ -5625,13 +5629,13 @@ packages:
   /@types/gapi.client.drive-v3@0.0.4:
     resolution: {integrity: sha512-jE37dJ0EzAdY0aJPFOp20xmec/aO0P4HtUIA9k07RMPyedFDOcuMlSac1r0PklwQdgXF7BHaMoObNHNAnwSQUQ==}
     dependencies:
-      '@maxim_mazurok/gapi.client.drive-v3': 0.1.20260118
+      '@maxim_mazurok/gapi.client.drive-v3': 0.1.20260210
     dev: true
 
   /@types/gapi.client.sheets-v4@0.0.4:
     resolution: {integrity: sha512-6kTJ7aDMAElfdQV1XzVJmZWjgbibpa84DMuKuaN8Cwqci/dkglPyHXKvsGrRugmuYvgFYr35AQqwz6j3q8R0dw==}
     dependencies:
-      '@maxim_mazurok/gapi.client.sheets-v4': 0.1.20260114
+      '@maxim_mazurok/gapi.client.sheets-v4': 0.1.20260210
     dev: true
 
   /@types/gapi.client@1.0.8:
@@ -7513,7 +7517,6 @@ packages:
       path-key: 3.1.1
       shebang-command: 2.0.0
       which: 2.0.2
-    dev: true
 
   /crypto-random-string@2.0.0:
     resolution: {integrity: sha512-v1plID3y9r/lPhviJ1wrXpLeyUIGAZ2SHNYTEapm7/8A9nLPoyvVp3RK/EPFqn5kEznyWgYZNsRtYYIWbuG8KA==}
@@ -8641,14 +8644,12 @@ packages:
   /eventsource-parser@3.0.6:
     resolution: {integrity: sha512-Vo1ab+QXPzZ4tCa8SwIHJFaSzy4R6SHf7BY79rFBDf0idraZWAkYrDjDj8uWaSm3S2TK+hJ7/t1CEmZ7jXw+pg==}
     engines: {node: '>=18.0.0'}
-    dev: true
 
   /eventsource@3.0.7:
     resolution: {integrity: sha512-CRT1WTyuQoD771GW56XEZFQ/ZoSfWid1alKGDYMmkt2yl8UXrVR4pspqWNEcqKvVIzg6PAltWjxcSSPrboA4iA==}
     engines: {node: '>=18.0.0'}
     dependencies:
       eventsource-parser: 3.0.6
-    dev: true
 
   /execa@5.1.1:
     resolution: {integrity: sha512-8uSpZZocAZRBAPIEINJj3Lo9HyGitllczc27Eh5YYojjMFMn8yHMDMaUHE2Jqfq05D/wucwI4JGURyXt1vchyg==}
@@ -8668,7 +8669,7 @@ packages:
     resolution: {integrity: sha512-UduyVP7TLB5IcAQl+OzLyLcS/l32W/GLg+AhHJ+ow40FOk2U3SAllPwR44v4vmdFwIWqpdwxxpQbF1n5ta9seA==}
     engines: {node: ^14.18.0 || ^16.14.0 || >=18.0.0}
     dependencies:
-      cross-spawn: 7.0.3
+      cross-spawn: 7.0.6
       get-stream: 6.0.1
       human-signals: 4.3.1
       is-stream: 3.0.0
@@ -8755,7 +8756,6 @@ packages:
       express: '>= 4.11'
     dependencies:
       express: 5.1.0
-    dev: true
 
   /express@4.18.2:
     resolution: {integrity: sha512-5/PsL6iGPdfQ/lKM1UuielYgv3BUoJfz1aUwU9vHZ+J7gyvwdQXFEBIEIaxeGf0GIcreATNyBExtalisDbuMqQ==}
@@ -9324,7 +9324,7 @@ packages:
       '@google-cloud/cloud-sql-connector': 1.7.0
       '@google-cloud/pubsub': 4.10.0
       '@inquirer/prompts': 7.8.4(@types/node@24.3.1)
-      '@modelcontextprotocol/sdk': 1.17.5
+      '@modelcontextprotocol/sdk': 1.12.0
       abort-controller: 3.0.0
       ajv: 8.17.1
       ajv-formats: 3.0.1
@@ -9391,8 +9391,8 @@ packages:
       winston-transport: 4.9.0
       ws: 7.5.10
       yaml: 2.7.0
-      zod: 3.25.76
-      zod-to-json-schema: 3.24.6(zod@3.25.76)
+      zod: 3.25.0
+      zod-to-json-schema: 3.24.6(zod@3.25.0)
     transitivePeerDependencies:
       - '@types/node'
       - bufferutil
@@ -12960,7 +12960,6 @@ packages:
   /pkce-challenge@5.0.0:
     resolution: {integrity: sha512-ueGLflrrnvwB3xuo/uGob5pd5FN7l0MsLf0Z87o/UQmRtwjvfylfc9MurIxRAWywCYTgrvpXBcqjV4OfCYGCIQ==}
     engines: {node: '>=16.20.0'}
-    dev: true
 
   /pkg-dir@4.2.0:
     resolution: {integrity: sha512-HRDzbaKjC+AOWVXxAU/x54COGeIv9eb+6CkDSQoNTt4XyWoIJvuPsXizxu/Fr23EiekbtZwmh1IcIG/l/a10GQ==}
@@ -16541,15 +16540,15 @@ packages:
       readable-stream: 4.7.0
     dev: true
 
-  /zod-to-json-schema@3.24.6(zod@3.25.76):
+  /zod-to-json-schema@3.24.6(zod@3.25.0):
     resolution: {integrity: sha512-h/z3PKvcTcTetyjl1fkj79MHNEjm+HpD6NXheWjzOekY7kV+lwDYnHw+ivHkijnCSMz1yJaWBD9vu/Fcmk+vEg==}
     peerDependencies:
       zod: ^3.24.1
     dependencies:
-      zod: 3.25.76
+      zod: 3.25.0
 
-  /zod@3.25.76:
-    resolution: {integrity: sha512-gzUt/qt81nXsFGKIFcC3YnfEAx5NkunCfnDlvuBSSFS02bcXu4Lmea0AFIUwbLWxWPx3d9p8S5QoaujKcNQxcQ==}
+  /zod@3.25.0:
+    resolution: {integrity: sha512-ficnZKUW0mlNivqeJkosTEkGbJ6NKCtSaOHGx5aXbtfeWMdRyzXLbAIn19my4C/KB7WPY/p9vlGPt+qpOp6c4Q==}
 
   /zwitch@2.0.4:
     resolution: {integrity: sha512-bXE4cR/kVZhKZX/RjPEflHaKVhUVl85noU3v6b8apfQEc1x4A+zBxjZ4lN8LqGd6WZ3dl98pY4o717VFmoPp+A==}
