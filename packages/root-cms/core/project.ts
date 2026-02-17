@@ -1,8 +1,10 @@
 /**
  * Loads various files or configurations from the project.
  *
- * NOTE: This file needs to be loaded through vite's ssrLoadModule so that
- * `import.meta.glob()` calls are resolved.
+ * NOTE: When loaded through Vite's ssrLoadModule, `import.meta.glob()` calls
+ * are resolved. In Node.js environments (e.g. scripts, CLI tools),
+ * `import.meta.glob` is not available and SCHEMA_MODULES defaults to an empty
+ * object.
  */
 
 import * as schema from './schema.js';
@@ -11,15 +13,18 @@ export interface SchemaModule {
   default: schema.Schema;
 }
 
-export const SCHEMA_MODULES = import.meta.glob<SchemaModule>(
-  [
-    '/**/*.schema.ts',
-    '!/appengine/**/*.schema.ts',
-    '!/functions/**/*.schema.ts',
-    '!/gae/**/*.schema.ts',
-  ],
-  {eager: true}
-);
+export const SCHEMA_MODULES: Record<string, SchemaModule> =
+  typeof import.meta.glob === 'function'
+    ? import.meta.glob<SchemaModule>(
+        [
+          '/**/*.schema.ts',
+          '!/appengine/**/*.schema.ts',
+          '!/functions/**/*.schema.ts',
+          '!/gae/**/*.schema.ts',
+        ],
+        {eager: true}
+      )
+    : {};
 
 /**
  * Returns a map of all `schema.ts` files defined in the project as
@@ -79,7 +84,7 @@ export function getCollectionSchema(
 
   const fileId = `/collections/${collectionId}.schema.ts`;
   const module = SCHEMA_MODULES[fileId];
-  if (!module.default) {
+  if (!module || !module.default) {
     console.warn(`collection schema not exported in: ${fileId}`);
     return null;
   }
