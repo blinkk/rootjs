@@ -1,4 +1,5 @@
 import crypto from 'node:crypto';
+import {existsSync} from 'node:fs';
 import path from 'node:path';
 import {pathToFileURL} from 'node:url';
 import {type Plugin, type RootConfig} from '@blinkk/root';
@@ -341,15 +342,18 @@ export class RootCMSClient {
         rootDir,
         `collections/${collectionId}.schema.ts`
       );
-      try {
-        const mod = await import(pathToFileURL(schemaPath).href);
-        if (mod.default) {
-          const collection = mod.default as Collection;
-          collection.id = collectionId;
-          return collection;
+      if (existsSync(schemaPath)) {
+        try {
+          const mod = await import(pathToFileURL(schemaPath).href);
+          if (mod.default) {
+            const collection = mod.default as Collection;
+            collection.id = collectionId;
+            return collection;
+          }
+        } catch (e) {
+          // Schema file exists but failed to load.
+          console.warn(`failed to load schema from ${schemaPath}:`, e);
         }
-      } catch (e) {
-        // Schema file not found or failed to load.
       }
     }
     return null;
