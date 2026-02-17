@@ -102,6 +102,22 @@ describe('RootCMSClient Validation', () => {
 
       expect(result).toBeNull();
     });
+
+    it('falls back to filesystem import when getCollectionSchema returns null', async () => {
+      const {RootCMSClient} = await import('./client.js');
+      const client = new RootCMSClient(mockRootConfig);
+
+      // Simulate Node.js environment where import.meta.glob is unavailable,
+      // so getCollectionSchema returns null.
+      mockGetCollectionSchema.mockResolvedValue(null);
+
+      // rootDir is '/test' which doesn't have real schema files, so the
+      // fallback import should also fail gracefully and return null.
+      const result = await client.getCollection('Pages');
+
+      expect(mockGetCollectionSchema).toHaveBeenCalledWith('Pages');
+      expect(result).toBeNull();
+    });
   });
 
   describe('saveDraftData with validation', () => {
