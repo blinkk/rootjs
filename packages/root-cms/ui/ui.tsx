@@ -59,6 +59,7 @@ declare global {
       rootConfig: {
         projectId: string;
         projectName: string;
+        minimalBranding: boolean;
         domain: string;
         base: string;
         gci: string | boolean;

@@ -45,16 +45,27 @@ export function Layout(props: LayoutProps) {
 }
 
 Layout.Top = () => {
-  const projectName =
-    window.__ROOT_CTX.rootConfig.projectName ||
-    window.__ROOT_CTX.rootConfig.projectId;
+  const rootConfig = window.__ROOT_CTX.rootConfig;
+  const projectName = rootConfig.projectName || rootConfig.projectId;
+  const minimalBranding = rootConfig.minimalBranding;
   return (
     <div className="Layout__top">
-      <a className="Layout__top__logo" href="/cms">
-        <RootCMSLogo />
-      </a>
-      <div className="Layout__top__version">v{packageJson.version}</div>
-      <div className="Layout__top__project">{projectName}</div>
+      {!minimalBranding && (
+        <>
+          <a className="Layout__top__logo" href="/cms">
+            <RootCMSLogo />
+          </a>
+          <div className="Layout__top__version">v{packageJson.version}</div>
+        </>
+      )}
+      <div
+        className={joinClassNames(
+          'Layout__top__project',
+          minimalBranding && 'Layout__top__project--minimal'
+        )}
+      >
+        {projectName}
+      </div>
     </div>
   );
 };

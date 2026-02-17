@@ -100,6 +100,7 @@ export async function renderApp(
     rootConfig: {
       projectId: cmsConfig.id || 'default',
       projectName: cmsConfig.name || cmsConfig.id || '',
+      minimalBranding: cmsConfig.minimalBranding ?? false,
       domain: rootConfig.domain || 'https://example.com',
       base: rootConfig.base || '/',
       gci: gci,

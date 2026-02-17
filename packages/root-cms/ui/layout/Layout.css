@@ -47,6 +47,10 @@
   margin-left: 16px;
 }
 
+.Layout__top__project--minimal {
+  margin-left: auto;
+}
+
 .Layout__top__logo:hover {
   background-color: var(--button-background-hover);
 }
