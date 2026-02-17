@@ -1,7 +1,4 @@
 import crypto from 'node:crypto';
-import {existsSync} from 'node:fs';
-import path from 'node:path';
-import {pathToFileURL} from 'node:url';
 import {type Plugin, type RootConfig} from '@blinkk/root';
 import {App} from 'firebase-admin/app';
 import {
@@ -328,35 +325,9 @@ export class RootCMSClient {
     // Lazy load the project module to minimize the amount of code loaded
     // when the client is initialized (the project module loads all schema files).
     const project = await import('./project.js');
-    const result = await project.getCollectionSchema(collectionId);
-    if (result) {
-      return result;
-    }
-
-    // Fallback for Node.js environments where import.meta.glob is not
-    // available (e.g., CLI tools, migration scripts). Directly import
-    // the schema file from disk using the rootDir from the config.
-    const rootDir = this.rootConfig.rootDir;
-    if (rootDir) {
-      const schemaPath = path.resolve(
-        rootDir,
-        `collections/${collectionId}.schema.ts`
-      );
-      if (existsSync(schemaPath)) {
-        try {
-          const mod = await import(pathToFileURL(schemaPath).href);
-          if (mod.default) {
-            const collection = mod.default as Collection;
-            collection.id = collectionId;
-            return collection;
-          }
-        } catch (e) {
-          // Schema file exists but failed to load.
-          console.warn(`failed to load schema from ${schemaPath}:`, e);
-        }
-      }
-    }
-    return null;
+    return await project.getCollectionSchema(collectionId, {
+      rootDir: this.rootConfig.rootDir,
+    });
   }
 
   /**

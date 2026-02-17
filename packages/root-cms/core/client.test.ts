@@ -88,7 +88,9 @@ describe('RootCMSClient Validation', () => {
 
       const result = await client.getCollection('TestCollection');
 
-      expect(mockGetCollectionSchema).toHaveBeenCalledWith('TestCollection');
+      expect(mockGetCollectionSchema).toHaveBeenCalledWith('TestCollection', {
+        rootDir: '/test',
+      });
       expect(result).toEqual(testSchema);
     });
 
@@ -103,19 +105,19 @@ describe('RootCMSClient Validation', () => {
       expect(result).toBeNull();
     });
 
-    it('falls back to filesystem import when getCollectionSchema returns null', async () => {
+    it('passes rootDir to getCollectionSchema for filesystem fallback', async () => {
       const {RootCMSClient} = await import('./client.js');
       const client = new RootCMSClient(mockRootConfig);
 
-      // Simulate Node.js environment where import.meta.glob is unavailable,
-      // so getCollectionSchema returns null.
       mockGetCollectionSchema.mockResolvedValue(null);
 
-      // rootDir is '/test' which doesn't have real schema files, so the
-      // fallback import should also fail gracefully and return null.
       const result = await client.getCollection('Pages');
 
-      expect(mockGetCollectionSchema).toHaveBeenCalledWith('Pages');
+      // Verify rootDir is passed so getCollectionSchema can use the
+      // filesystem fallback in non-Vite environments.
+      expect(mockGetCollectionSchema).toHaveBeenCalledWith('Pages', {
+        rootDir: '/test',
+      });
       expect(result).toBeNull();
     });
   });
