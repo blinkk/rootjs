@@ -114,7 +114,7 @@ export async function getCollectionSchema(
         if (mod.default) {
           const collection = mod.default as schema.Collection;
           collection.id = collectionId;
-          return collection;
+          return convertOneOfTypes(collection);
         }
       } catch (e) {
         // Schema file exists but failed to load.
