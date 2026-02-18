@@ -166,7 +166,11 @@ export async function cmsPublishDocs(
   }
 
   for (const docId of docIds) {
-    logAction('doc.publish', {metadata: {docId}});
+    const metadata: Record<string, unknown> = {docId};
+    if (options?.publishMessage) {
+      metadata.publishMessage = options.publishMessage;
+    }
+    logAction('doc.publish', {metadata});
   }
 
   // Reset doc cache for published docs.
