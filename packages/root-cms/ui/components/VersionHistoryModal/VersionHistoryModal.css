@@ -56,6 +56,25 @@
   line-height: 1.5;
 }
 
+.VersionHistoryModal__popover__body {
+  background-color: #1a1b1e;
+  color: #fff;
+  border: 1px solid #2c2e33;
+}
+
+.VersionHistoryModal__popover__arrow {
+  background-color: #1a1b1e;
+  border: 1px solid #2c2e33;
+}
+
+.VersionHistoryModal__popover__close {
+  color: #909296;
+}
+
+.VersionHistoryModal__popover__close:hover {
+  color: #fff;
+}
+
 .VersionHistoryModal__messageIcon {
   vertical-align: middle;
 }

@@ -66,10 +66,7 @@ export function DocStatusBadges(props: DocStatusBadgesProps) {
         </Tooltip>
       )}
       {testPublishingLocked(doc) && (
-        <Tooltip
-          {...tooltipProps}
-          label={`Locked by ${doc.sys.publishingLocked.lockedBy}: "${doc.sys.publishingLocked.reason}"`}
-        >
+        <Tooltip {...tooltipProps} label={getPublishingLockedLabel(doc)}>
           <Badge
             size="xs"
             variant="gradient"
@@ -81,6 +78,21 @@ export function DocStatusBadges(props: DocStatusBadgesProps) {
       )}
     </div>
   );
+}
+
+/**
+ * Returns a human-readable label for the publishing lock tooltip.
+ */
+export function getPublishingLockedLabel(docData: CMSDoc): string {
+  const lock = docData.sys?.publishingLocked;
+  if (!lock) {
+    return '';
+  }
+  if (lock.until) {
+    const formatted = formatDateTime(lock.until);
+    return `Locked until ${formatted} by ${lock.lockedBy}: "${lock.reason}"`;
+  }
+  return `Locked by ${lock.lockedBy}: "${lock.reason}"`;
 }
 
 function timeDiff(ts: Timestamp | null) {

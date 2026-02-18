@@ -91,7 +91,10 @@ import {
   DocActionEvent,
   DocActionsMenu,
 } from '../DocActionsMenu/DocActionsMenu.js';
-import {DocStatusBadges} from '../DocStatusBadges/DocStatusBadges.js';
+import {
+  DocStatusBadges,
+  getPublishingLockedLabel,
+} from '../DocStatusBadges/DocStatusBadges.js';
 import {useEditJsonModal} from '../EditJsonModal/EditJsonModal.js';
 import {useEditTranslationsModal} from '../EditTranslationsModal/EditTranslationsModal.js';
 import {useLocalizationModal} from '../LocalizationModal/LocalizationModal.js';
@@ -268,9 +271,7 @@ DocEditor.StatusBar = (props: StatusBarProps) => {
           </Tooltip>
         ) : testPublishingLocked(data as CMSDoc) ? (
           <Tooltip
-            label={`Locked by ${data.sys!.publishingLocked.lockedBy}: "${
-              data.sys!.publishingLocked.reason
-            }"`}
+            label={getPublishingLockedLabel(data as CMSDoc)}
             transition="pop"
           >
             <Button

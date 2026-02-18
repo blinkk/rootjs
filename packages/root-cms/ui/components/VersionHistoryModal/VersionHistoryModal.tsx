@@ -280,6 +280,11 @@ export function VersionHistoryModal(
                           withArrow
                           shadow="md"
                           width={320}
+                          classNames={{
+                            body: 'VersionHistoryModal__popover__body',
+                            arrow: 'VersionHistoryModal__popover__arrow',
+                            close: 'VersionHistoryModal__popover__close',
+                          }}
                           target={
                             <ActionIcon
                               size="xs"
