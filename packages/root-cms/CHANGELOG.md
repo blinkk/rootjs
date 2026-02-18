@@ -1,5 +1,12 @@
 # @blinkk/root-cms
 
+## 2.5.3
+
+### Patch Changes
+
+- 79b9cabe: feat: add minimalBranding option for cms (#915)
+  - @blinkk/root@2.5.3
+
 ## 2.5.2
 
 ### Patch Changes
