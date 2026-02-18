@@ -6,8 +6,12 @@
  * circular dependency issues when schema files import from '@blinkk/root-cms'.
  */
 
+import path from 'node:path';
+import {fileURLToPath} from 'node:url';
 import {describe, it, expect} from 'vitest';
 import * as schema from './schema.js';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 describe('Production Bundle Integration', () => {
   it('should export schema namespace without circular dependency errors', async () => {
@@ -95,6 +99,52 @@ describe('Production Bundle Integration', () => {
     expect(extendedCollection.fields).toHaveLength(2);
     expect(extendedCollection.fields[0].id).toBe('title');
     expect(extendedCollection.fields[1].id).toBe('description');
+  });
+});
+
+describe('getCollectionSchema', () => {
+  it('returns null when schema not found in SCHEMA_MODULES and no rootDir', async () => {
+    const projectModule = await import('./project.js');
+
+    // Without rootDir, should return null for non-existent collection.
+    const result = await projectModule.getCollectionSchema('NonExistent');
+    expect(result).toBeNull();
+  });
+
+  it('returns null when schema not found and rootDir has no matching file', async () => {
+    const projectModule = await import('./project.js');
+
+    const result = await projectModule.getCollectionSchema('NonExistent', {
+      rootDir: '/nonexistent/path',
+    });
+    expect(result).toBeNull();
+  });
+
+  it('loads schema from filesystem when rootDir is provided', async () => {
+    const projectModule = await import('./project.js');
+
+    // Use the testdata directory as rootDir.
+    const testRootDir = path.resolve(__dirname, 'testdata');
+    const result = await projectModule.getCollectionSchema('TestPages', {
+      rootDir: testRootDir,
+    });
+
+    expect(result).not.toBeNull();
+    expect(result!.name).toBe('TestPages');
+    expect(result!.id).toBe('TestPages');
+    expect(result!.fields).toHaveLength(2);
+    expect(result!.fields[0].id).toBe('title');
+    expect(result!.fields[0].type).toBe('string');
+    expect(result!.fields[1].id).toBe('count');
+    expect(result!.fields[1].type).toBe('number');
+  });
+
+  it('throws error for invalid collection id', async () => {
+    const projectModule = await import('./project.js');
+
+    await expect(
+      projectModule.getCollectionSchema('invalid/id')
+    ).rejects.toThrow('invalid collection id');
   });
 });
 

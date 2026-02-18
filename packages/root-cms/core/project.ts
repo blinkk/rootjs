@@ -1,25 +1,34 @@
 /**
  * Loads various files or configurations from the project.
  *
- * NOTE: This file needs to be loaded through vite's ssrLoadModule so that
- * `import.meta.glob()` calls are resolved.
+ * NOTE: When loaded through Vite's ssrLoadModule, `import.meta.glob()` calls
+ * are resolved. In Node.js environments (e.g. scripts, CLI tools),
+ * `import.meta.glob` is not available and SCHEMA_MODULES defaults to an empty
+ * object. In that case, `getCollectionSchema()` falls back to importing the
+ * schema file directly from disk using the provided `rootDir`.
  */
 
+import {existsSync} from 'node:fs';
+import path from 'node:path';
+import {pathToFileURL} from 'node:url';
 import * as schema from './schema.js';
 
 export interface SchemaModule {
   default: schema.Schema;
 }
 
-export const SCHEMA_MODULES = import.meta.glob<SchemaModule>(
-  [
-    '/**/*.schema.ts',
-    '!/appengine/**/*.schema.ts',
-    '!/functions/**/*.schema.ts',
-    '!/gae/**/*.schema.ts',
-  ],
-  {eager: true}
-);
+export const SCHEMA_MODULES: Record<string, SchemaModule> =
+  typeof import.meta.glob === 'function'
+    ? import.meta.glob<SchemaModule>(
+        [
+          '/**/*.schema.ts',
+          '!/appengine/**/*.schema.ts',
+          '!/functions/**/*.schema.ts',
+          '!/gae/**/*.schema.ts',
+        ],
+        {eager: true}
+      )
+    : {};
 
 /**
  * Returns a map of all `schema.ts` files defined in the project as
@@ -69,26 +78,57 @@ export function resolveOneOfPatterns(schemaObj: schema.Schema): schema.Schema {
 /**
  * Returns a collection's schema definition as defined in
  * `/collections/<id>.schema.ts`.
+ *
+ * In Vite environments, schemas are loaded from `SCHEMA_MODULES` (populated
+ * by `import.meta.glob`). In Node.js environments, if `rootDir` is provided,
+ * falls back to importing the schema file directly from disk.
  */
-export function getCollectionSchema(
-  collectionId: string
-): schema.Collection | null {
+export async function getCollectionSchema(
+  collectionId: string,
+  options?: {rootDir?: string}
+): Promise<schema.Collection | null> {
   if (!testValidCollectionId(collectionId)) {
     throw new Error(`invalid collection id: ${collectionId}`);
   }
 
   const fileId = `/collections/${collectionId}.schema.ts`;
   const module = SCHEMA_MODULES[fileId];
-  if (!module.default) {
-    console.warn(`collection schema not exported in: ${fileId}`);
-    return null;
+  if (module && module.default) {
+    const collection = module.default as schema.Collection;
+    collection.id = collectionId;
+    return convertOneOfTypes(collection);
   }
-  const collection = module.default as schema.Collection;
-  collection.id = collectionId;
 
-  // Convert `schema.oneOf()` object types to an array of strings and move the
-  // type schema to `collection.types`.
-  return convertOneOfTypes(collection);
+  // Fallback for Node.js environments where import.meta.glob is not
+  // available (e.g., CLI tools, migration scripts). Directly import
+  // the schema file from disk using the provided rootDir.
+  const rootDir = options?.rootDir;
+  if (rootDir) {
+    const schemaPath = path.resolve(
+      rootDir,
+      `collections/${collectionId}.schema.ts`
+    );
+    if (existsSync(schemaPath)) {
+      try {
+        const mod = await import(pathToFileURL(schemaPath).href);
+        if (mod.default) {
+          const collection = mod.default as schema.Collection;
+          collection.id = collectionId;
+          return convertOneOfTypes(collection);
+        }
+      } catch (e) {
+        // Schema file exists but failed to load.
+        console.warn(`failed to load schema from ${schemaPath}:`, e);
+      }
+    }
+  }
+
+  if (!module) {
+    console.warn(`collection schema not found: ${fileId}`);
+  } else {
+    console.warn(`collection schema not exported in: ${fileId}`);
+  }
+  return null;
 }
 
 function testValidCollectionId(id: string): boolean {

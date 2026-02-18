@@ -325,7 +325,9 @@ export class RootCMSClient {
     // Lazy load the project module to minimize the amount of code loaded
     // when the client is initialized (the project module loads all schema files).
     const project = await import('./project.js');
-    return await project.getCollectionSchema(collectionId);
+    return await project.getCollectionSchema(collectionId, {
+      rootDir: this.rootConfig.rootDir,
+    });
   }
 
   /**
