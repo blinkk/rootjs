@@ -123,10 +123,18 @@ export async function publishRelease(id: string) {
   if (dataSourceIds.length > 0) {
     await cmsPublishDataSources(dataSourceIds, {batch, commitBatch: false});
   }
-  await cmsPublishDocs(docIds, {batch, releaseId: id});
+  await cmsPublishDocs(docIds, {
+    batch,
+    releaseId: id,
+    publishMessage: release.description,
+  });
   console.log(`published release: ${id}`);
+  const metadata: Record<string, unknown> = {releaseId: id, docIds, dataSourceIds};
+  if (release.description) {
+    metadata.publishMessage = release.description;
+  }
   logAction('release.publish', {
-    metadata: {releaseId: id, docIds, dataSourceIds},
+    metadata,
   });
 }
 
