@@ -50,22 +50,22 @@ Layout.Top = () => {
   const minimalBranding = rootConfig.minimalBranding;
   return (
     <div className="Layout__top">
-      {!minimalBranding && (
+      {!minimalBranding ? (
         <>
           <a className="Layout__top__logo" href="/cms">
             <RootCMSLogo />
           </a>
           <div className="Layout__top__version">v{packageJson.version}</div>
+          <div className="Layout__top__project">{projectName}</div>
+        </>
+      ) : (
+        <>
+          <a className="Layout__top__logo" href="/cms">
+            {projectName}
+          </a>
+          <div className="Layout__top__version">v{packageJson.version}</div>
         </>
       )}
-      <div
-        className={joinClassNames(
-          'Layout__top__project',
-          minimalBranding && 'Layout__top__project--minimal'
-        )}
-      >
-        {projectName}
-      </div>
     </div>
   );
 };

@@ -17,11 +17,10 @@
 }
 
 .Layout__top__logo {
-  font-size: 14px;
+  font-size: 15px;
   line-height: 1;
   font-weight: 700;
   text-decoration: none;
-  text-transform: uppercase;
   padding: 4px 10px;
   display: flex;
   gap: 4px;
