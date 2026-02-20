@@ -78,6 +78,18 @@ interface RenderOptions {
   cmsConfig: CMSPluginOptions;
 }
 
+function getCmsTitle(projectName: string, minimalBranding?: boolean): string {
+  if (!projectName) {
+    return 'Root CMS';
+  }
+
+  if (minimalBranding) {
+    return projectName;
+  }
+
+  return `${projectName} – Root CMS`;
+}
+
 export async function renderApp(
   req: Request,
   res: Response,
@@ -119,7 +131,7 @@ export async function renderApp(
     },
   };
   const projectName = cmsConfig.name || cmsConfig.id || '';
-  const title = projectName ? `${projectName} – Root CMS` : 'Root CMS';
+  const title = getCmsTitle(projectName, cmsConfig.minimalBranding);
 
   const mainHtml = renderToString(
     <App title={title} ctx={ctx} favicon={cmsConfig.favicon} />
