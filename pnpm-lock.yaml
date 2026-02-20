@@ -379,6 +379,9 @@ importers:
       '@hello-pangea/dnd':
         specifier: 18.0.1
         version: 18.0.1(@preact/compat@18.3.1)(@preact/compat@18.3.1)
+      '@modelcontextprotocol/sdk':
+        specifier: 1.12.0
+        version: 1.12.0
       '@types/cli-progress':
         specifier: 3.11.6
         version: 3.11.6
@@ -430,6 +433,9 @@ importers:
       tiny-glob:
         specifier: 0.2.9
         version: 0.2.9
+      zod:
+        specifier: 3.24.4
+        version: 3.24.4
     devDependencies:
       '@babel/core':
         specifier: 7.17.9
@@ -3653,15 +3659,15 @@ packages:
       '@types/gapi.client.discovery-v1': 0.0.4
     dev: true
 
-  /@maxim_mazurok/gapi.client.drive-v3@0.1.20260210:
-    resolution: {integrity: sha512-+AbG6C4goi1oWUkutBVHkIv2gbcYBzdoDZ7MzvFCNME9vLsh5U3OKurXe4Tek8D9Cj7h+/umsKh/YLuVoePeqQ==}
+  /@maxim_mazurok/gapi.client.drive-v3@0.1.20260215:
+    resolution: {integrity: sha512-u2FW7c54o1aA4HDXiQSc28urNQwLfegS9FzfD3TnLfAHcTC8OO83Dq03nAUJFuWbThQNdo7QmRskZjB9EIx7Sw==}
     dependencies:
       '@types/gapi.client': 1.0.8
       '@types/gapi.client.discovery-v1': 0.0.4
     dev: true
 
-  /@maxim_mazurok/gapi.client.sheets-v4@0.1.20260210:
-    resolution: {integrity: sha512-ZT7QUSLJoEHugtsRocviV21maMHsNA4jMx0g3lx+buVHKqptQsz43wCePEJ36gkoCsYgPNZ5Yw/6TwTGwaRStQ==}
+  /@maxim_mazurok/gapi.client.sheets-v4@0.1.20260217:
+    resolution: {integrity: sha512-G7U1X/mzA6dhkZ4vez/RB1MoKhB4PB0XGVyxcjicjkHwzOnRRUbc8z+LktKAfIVvj1aKlJAf/TgYwHX+JC93Mw==}
     dependencies:
       '@types/gapi.client': 1.0.8
       '@types/gapi.client.discovery-v1': 0.0.4
@@ -5629,13 +5635,13 @@ packages:
   /@types/gapi.client.drive-v3@0.0.4:
     resolution: {integrity: sha512-jE37dJ0EzAdY0aJPFOp20xmec/aO0P4HtUIA9k07RMPyedFDOcuMlSac1r0PklwQdgXF7BHaMoObNHNAnwSQUQ==}
     dependencies:
-      '@maxim_mazurok/gapi.client.drive-v3': 0.1.20260210
+      '@maxim_mazurok/gapi.client.drive-v3': 0.1.20260215
     dev: true
 
   /@types/gapi.client.sheets-v4@0.0.4:
     resolution: {integrity: sha512-6kTJ7aDMAElfdQV1XzVJmZWjgbibpa84DMuKuaN8Cwqci/dkglPyHXKvsGrRugmuYvgFYr35AQqwz6j3q8R0dw==}
     dependencies:
-      '@maxim_mazurok/gapi.client.sheets-v4': 0.1.20260210
+      '@maxim_mazurok/gapi.client.sheets-v4': 0.1.20260217
     dev: true
 
   /@types/gapi.client@1.0.8:
@@ -16546,6 +16552,10 @@ packages:
       zod: ^3.24.1
     dependencies:
       zod: 3.25.0
+
+  /zod@3.24.4:
+    resolution: {integrity: sha512-OdqJE9UDRPwWsrHjLN2F8bPxvwJBK22EHLWtanu0LSYr5YqzsaaW3RMgmjwr8Rypg5k+meEJdSPXJZXE/yqOMg==}
+    dev: false
 
   /zod@3.25.0:
     resolution: {integrity: sha512-ficnZKUW0mlNivqeJkosTEkGbJ6NKCtSaOHGx5aXbtfeWMdRyzXLbAIn19my4C/KB7WPY/p9vlGPt+qpOp6c4Q==}

@@ -23,6 +23,8 @@ import {getAuth, DecodedIdToken} from 'firebase-admin/auth';
 import {Firestore, getFirestore} from 'firebase-admin/firestore';
 import * as jsonwebtoken from 'jsonwebtoken';
 import sirv from 'sirv';
+import glob from 'tiny-glob';
+import {z} from 'zod';
 import {SSEEvent, SSESchemaChangedEvent} from '../shared/sse.js';
 import {type RootAiModel} from './ai.js';
 import {api} from './api.js';
@@ -722,6 +724,113 @@ export function cmsPlugin(options: CMSPluginOptions): CMSPlugin {
           console.log('\n');
         }
       });
+    },
+
+    configureMcpServer: async (server, {rootConfig}) => {
+      const cmsClient = new RootCMSClient(rootConfig);
+
+      server.tool(
+        'cms.listCollections',
+        'Lists all CMS collections defined in the project',
+        {},
+        async () => {
+          const collectionFileNames = await glob('*.schema.ts', {
+            cwd: path.join(rootConfig.rootDir, 'collections'),
+          });
+          const collectionIds = collectionFileNames.map((filename) =>
+            filename.slice(0, -'.schema.ts'.length)
+          );
+          return {
+            content: [
+              {type: 'text', text: JSON.stringify(collectionIds, null, 2)},
+            ],
+          };
+        }
+      );
+
+      server.tool(
+        'cms.listDocs',
+        'Lists documents in a CMS collection',
+        {
+          collectionId: z.string().describe('The collection ID'),
+          mode: z
+            .enum(['draft', 'published'])
+            .default('draft')
+            .describe('Document mode'),
+          limit: z
+            .number()
+            .optional()
+            .describe('Max number of documents to return'),
+        },
+        async ({collectionId, mode, limit}) => {
+          const result = await cmsClient.listDocs(collectionId, {
+            mode,
+            limit,
+          });
+          const docs = result.docs.map((doc: any) => ({
+            id: doc.id,
+            slug: doc.slug,
+            sys: {
+              modifiedAt: doc.sys?.modifiedAt,
+              modifiedBy: doc.sys?.modifiedBy,
+            },
+          }));
+          return {
+            content: [{type: 'text', text: JSON.stringify(docs, null, 2)}],
+          };
+        }
+      );
+
+      server.tool(
+        'cms.getDoc',
+        'Reads a single document from the CMS',
+        {
+          collectionId: z.string().describe('The collection ID'),
+          slug: z.string().describe('The document slug'),
+          mode: z
+            .enum(['draft', 'published'])
+            .default('draft')
+            .describe('Document mode'),
+        },
+        async ({collectionId, slug, mode}) => {
+          const doc = await cmsClient.getDoc(collectionId, slug, {mode});
+          if (!doc) {
+            return {
+              content: [
+                {
+                  type: 'text',
+                  text: `Document not found: ${collectionId}/${slug}`,
+                },
+              ],
+              isError: true,
+            };
+          }
+          return {
+            content: [{type: 'text', text: JSON.stringify(doc, null, 2)}],
+          };
+        }
+      );
+
+      server.tool(
+        'cms.saveDoc',
+        'Saves draft data to a CMS document',
+        {
+          docId: z
+            .string()
+            .describe('The document ID (e.g. "Pages/home")'),
+          data: z
+            .record(z.string(), z.any())
+            .describe('The fields data to save'),
+        },
+        async ({docId, data}) => {
+          await cmsClient.saveDraftData(docId, data);
+          return {
+            content: [
+              {type: 'text', text: `Successfully saved draft: ${docId}`},
+            ],
+          };
+        }
+      );
     },
   };
 
