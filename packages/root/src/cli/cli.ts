@@ -77,7 +77,11 @@ class CliRunner {
         '--host <host>',
         'network address the server should listen on, e.g. 127.0.0.1'
       )
-      .action(dev);
+      .option('--mcp', 'start an MCP server for AI tool integration')
+      .action((rootPackageDir, options) => {
+        options.version = this.version;
+        dev(rootPackageDir, options);
+      });
     program
       .command('gae-deploy <appdir>')
       .description(

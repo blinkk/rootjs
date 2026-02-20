@@ -64,6 +64,7 @@
     "@types/micromatch": "4.0.6",
     "bundle-require": "4.0.2",
     "busboy": "1.6.0",
+    "@modelcontextprotocol/sdk": "1.12.0",
     "commander": "11.0.0",
     "compression": "1.7.4",
     "cookie-parser": "1.4.6",
@@ -81,7 +82,8 @@
     "source-map-support": "0.5.21",
     "tiny-glob": "0.2.9",
     "vite": "7.1.4",
-    "workspace-tools": "0.37.0"
+    "workspace-tools": "0.37.0",
+    "zod": "3.25.0"
   },
   "peerDependencies": {
     "firebase-admin": ">=11",
