@@ -28,3 +28,9 @@
 .ReleasesPage__ReleasesTable__publishStatus__icon {
   color: #12b886;
 }
+
+.ReleasesPage__ReleasesTable__filters {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 20px;
+}

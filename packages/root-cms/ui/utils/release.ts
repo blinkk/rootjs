@@ -108,6 +108,17 @@ export async function archiveRelease(id: string) {
   logAction('release.archive', {metadata: {releaseId: id}});
 }
 
+export async function unarchiveRelease(id: string) {
+  const projectId = window.__ROOT_CTX.rootConfig.projectId;
+  const db = window.firebase.db;
+  const docRef = doc(db, 'Projects', projectId, COLLECTION_ID, id);
+  await updateDoc(docRef, {
+    archivedAt: deleteField(),
+    archivedBy: deleteField(),
+  });
+  logAction('release.unarchive', {metadata: {releaseId: id}});
+}
+
 export async function publishRelease(id: string) {
   const release = await getRelease(id);
   if (!release) {
@@ -145,7 +156,11 @@ export async function publishRelease(id: string) {
     publishMessage: release.description,
   });
   console.log(`published release: ${id}`);
-  const metadata: Record<string, unknown> = {releaseId: id, docIds, dataSourceIds};
+  const metadata: Record<string, unknown> = {
+    releaseId: id,
+    docIds,
+    dataSourceIds,
+  };
   if (release.description) {
     metadata.publishMessage = release.description;
   }

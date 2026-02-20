@@ -87,17 +87,19 @@ ReleasesPage.ReleasesTable = () => {
       {loading && <Loader color="gray" size="xl" />}
       {!loading && (
         <>
-          <SegmentedControl
-            value={filter}
-            onChange={(value) => setFilter(value as ReleaseListFilter)}
-            data={[
-              {label: 'Active', value: 'active'},
-              {label: 'Unpublished', value: 'unpublished'},
-              {label: 'Published', value: 'published'},
-              {label: 'Archived', value: 'archived'},
-            ]}
-            mb="md"
-          />
+          <div className="ReleasesPage__ReleasesTable__filters">
+            <SegmentedControl
+              size="sm"
+              value={filter}
+              onChange={(value: ReleaseListFilter) => setFilter(value)}
+              data={[
+                {label: 'Active', value: 'active'},
+                {label: 'Unpublished', value: 'unpublished'},
+                {label: 'Published', value: 'published'},
+                {label: 'Archived', value: 'archived'},
+              ]}
+            />
+          </div>
           {filteredReleases.length > 0 && (
             <Table verticalSpacing="xs" striped highlightOnHover fontSize="xs">
               <thead>
