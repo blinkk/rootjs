@@ -2,7 +2,7 @@ import {ActionIcon, Breadcrumbs, Tooltip} from '@mantine/core';
 import {useModals} from '@mantine/modals';
 import {showNotification, updateNotification} from '@mantine/notifications';
 import {IconTrashFilled} from '@tabler/icons-preact';
-import {route} from 'preact-router';
+import {useLocation} from 'preact-iso';
 import {DataSourceForm} from '../../components/DataSourceForm/DataSourceForm.js';
 import {Heading} from '../../components/Heading/Heading.js';
 import {Text} from '../../components/Text/Text.js';
@@ -12,6 +12,7 @@ import {deleteDataSource} from '../../utils/data-source.js';
 import './EditDataSourcePage.css';
 
 export function EditDataSourcePage(props: {id: string}) {
+  const {route} = useLocation();
   const modals = useModals();
   const modalTheme = useModalTheme();
 

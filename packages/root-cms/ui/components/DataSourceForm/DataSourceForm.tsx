@@ -6,8 +6,8 @@ import {
   Textarea,
 } from '@mantine/core';
 import {showNotification} from '@mantine/notifications';
+import {useLocation} from 'preact-iso';
 import {useEffect, useRef, useState} from 'preact/hooks';
-import {route} from 'preact-router';
 import {isSlugValid} from '../../../shared/slug.js';
 import {useGapiClient} from '../../hooks/useGapiClient.js';
 import {
@@ -34,6 +34,7 @@ export interface DataSourceFormProps {
 }
 
 export function DataSourceForm(props: DataSourceFormProps) {
+  const {route} = useLocation();
   const formRef = useRef<HTMLFormElement>(null);
   const gapiClient = useGapiClient();
   const [submitting, setSubmitting] = useState(false);

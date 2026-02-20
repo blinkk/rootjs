@@ -1,8 +1,8 @@
 import {Button} from '@mantine/core';
 import {ContextModalProps, useModals} from '@mantine/modals';
 import {showNotification} from '@mantine/notifications';
+import {useLocation} from 'preact-iso';
 import {useState} from 'preact/hooks';
-import {route} from 'preact-router';
 import {isSlugValid, normalizeSlug} from '../../../shared/slug.js';
 import {useModalTheme} from '../../hooks/useModalTheme.js';
 import {cmsCopyDoc, cmsCreateDoc} from '../../utils/doc.js';
@@ -35,6 +35,7 @@ export function useCopyDocModal(props: CopyDocModalProps) {
 
 export function CopyDocModal(modalProps: ContextModalProps<CopyDocModalProps>) {
   const {innerProps: props, context, id} = modalProps;
+  const {route} = useLocation();
   const [toCollectionId, setToCollectionId] = useState('');
   const [toSlug, setToSlug] = useState('');
   const [error, setError] = useState('');

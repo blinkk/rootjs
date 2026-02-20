@@ -38,6 +38,7 @@ import {
   IconSparkles,
 } from '@tabler/icons-preact';
 import {createContext} from 'preact';
+import {useLocation} from 'preact-iso';
 import {
   useContext,
   useEffect,
@@ -47,7 +48,6 @@ import {
   useState,
   useCallback,
 } from 'preact/hooks';
-import {route} from 'preact-router';
 import * as schema from '../../../core/schema.js';
 import {useCollectionSchema} from '../../hooks/useCollectionSchema.js';
 import {
@@ -175,6 +175,7 @@ type StatusBarProps = DocEditorProps & {
 };
 
 DocEditor.StatusBar = (props: StatusBarProps) => {
+  const {route} = useLocation();
   const {roles} = useProjectRoles();
   const currentUserEmail = window.firebase.user.email || '';
   const canPublish = testCanPublish(roles, currentUserEmail);
@@ -203,7 +204,7 @@ DocEditor.StatusBar = (props: StatusBarProps) => {
         draft.controller.removePublishingLock();
       }
     },
-    [props.docId]
+    [props.docId, route]
   );
 
   const publishDocModal = usePublishDocModal({docId: props.docId});
