@@ -8,7 +8,12 @@ import {
 } from '@mantine/core';
 import {useModals} from '@mantine/modals';
 import {showNotification, updateNotification} from '@mantine/notifications';
-import {IconSettings} from '@tabler/icons-preact';
+import {
+  IconArchive,
+  IconArchiveOff,
+  IconRestore,
+  IconSettings,
+} from '@tabler/icons-preact';
 import {useEffect, useState} from 'preact/hooks';
 import {ConditionalTooltip} from '../../components/ConditionalTooltip/ConditionalTooltip.js';
 import {DocPreviewCard} from '../../components/DocPreviewCard/DocPreviewCard.js';
@@ -26,6 +31,8 @@ import {
   cancelScheduledRelease,
   getRelease,
   publishRelease,
+  archiveRelease,
+  unarchiveRelease,
 } from '../../utils/release.js';
 import {timestamp} from '../../utils/time.js';
 import './ReleasePage.css';
@@ -35,6 +42,12 @@ export function ReleasePage(props: {id: string}) {
   const [release, setRelease] = useState<Release | null>(null);
   const [updated, setUpdated] = useState(0);
   const id = props.id;
+
+  const modals = useModals();
+  const modalTheme = useModalTheme();
+  const {roles} = useProjectRoles();
+  const currentUserEmail = window.firebase.user.email || '';
+  const canPublish = testCanPublish(roles, currentUserEmail);
 
   async function init() {
     setLoading(true);
@@ -53,6 +66,48 @@ export function ReleasePage(props: {id: string}) {
   function onAction(action: string) {
     console.log('onAction()', action);
     init();
+  }
+
+  function onArchiveClicked() {
+    modals.openConfirmModal({
+      ...modalTheme,
+      title: `Archive release: ${id}`,
+      children: (
+        <Text size="body-sm" weight="semi-bold">
+          Are you sure you want to archive this release?
+        </Text>
+      ),
+      labels: {confirm: 'Archive', cancel: 'Cancel'},
+      cancelProps: {size: 'xs'},
+      confirmProps: {color: 'dark', size: 'xs'},
+      closeOnConfirm: true,
+      onConfirm: async () => {
+        await notifyErrors(async () => {
+          await archiveRelease(id);
+        });
+      },
+    });
+  }
+
+  function onUnarchiveClicked() {
+    modals.openConfirmModal({
+      ...modalTheme,
+      title: `Unarchive release: ${id}`,
+      children: (
+        <Text size="body-sm" weight="semi-bold">
+          Are you sure you want to unarchive this release?
+        </Text>
+      ),
+      labels: {confirm: 'Unarchive', cancel: 'Cancel'},
+      cancelProps: {size: 'xs'},
+      confirmProps: {color: 'dark', size: 'xs'},
+      closeOnConfirm: true,
+      onConfirm: async () => {
+        await notifyErrors(async () => {
+          await unarchiveRelease(id);
+        });
+      },
+    });
   }
 
   return (
@@ -103,6 +158,34 @@ export function ReleasePage(props: {id: string}) {
                   key={`data-sources-${updated}`}
                 />
               )}
+            {release && canPublish && (
+              <div className="ReleasePage__footer">
+                {release.archivedAt ? (
+                  <Button
+                    className="ReleasePage__footer__unarchive"
+                    variant="default"
+                    size="xs"
+                    leftIcon={<IconRestore size={16} />}
+                    onClick={() => onUnarchiveClicked()}
+                    disabled={!canPublish}
+                  >
+                    Unarchive Release
+                  </Button>
+                ) : (
+                  <Button
+                    className="ReleasePage__footer__archive"
+                    variant="filled"
+                    color="red"
+                    size="xs"
+                    leftIcon={<IconArchive size={16} />}
+                    onClick={() => onArchiveClicked()}
+                    disabled={!canPublish}
+                  >
+                    Archive Release
+                  </Button>
+                )}
+              </div>
+            )}
           </>
         )}
       </div>
@@ -220,7 +303,7 @@ ReleasePage.PublishStatus = (props: {
             </td>
             <td>
               <div className="ReleasePage__PublishStatus__actions">
-                {!release.scheduledAt && (
+                {!release.archivedAt && !release.scheduledAt && (
                   <ConditionalTooltip
                     label="You don't have access to publish this release"
                     condition={!canPublish}
@@ -244,53 +327,54 @@ ReleasePage.PublishStatus = (props: {
                     </Tooltip>
                   </ConditionalTooltip>
                 )}
-                {release.scheduledAt ? (
-                  <ConditionalTooltip
-                    label="You don't have access to manage scheduled releases"
-                    condition={!canPublish}
-                  >
-                    <Tooltip
-                      label="Cancel the scheduled release"
-                      position="bottom"
-                      withArrow
-                      disabled={!canPublish}
+                {!release.archivedAt &&
+                  (release.scheduledAt ? (
+                    <ConditionalTooltip
+                      label="You don't have access to manage scheduled releases"
+                      condition={!canPublish}
                     >
-                      <Button
-                        variant="default"
-                        size="xs"
-                        compact
-                        onClick={() => onCancelScheduleClicked()}
+                      <Tooltip
+                        label="Cancel the scheduled release"
+                        position="bottom"
+                        withArrow
                         disabled={!canPublish}
                       >
-                        Cancel Schedule
-                      </Button>
-                    </Tooltip>
-                  </ConditionalTooltip>
-                ) : (
-                  <ConditionalTooltip
-                    label="You don't have access to manage scheduled releases"
-                    condition={!canPublish}
-                  >
-                    <Tooltip
-                      label="Schedule the release to be published at a future date"
-                      position="bottom"
-                      withArrow
-                      wrapLines
-                      width={180}
-                      disabled={!canPublish}
+                        <Button
+                          variant="default"
+                          size="xs"
+                          compact
+                          onClick={() => onCancelScheduleClicked()}
+                          disabled={!canPublish}
+                        >
+                          Cancel Schedule
+                        </Button>
+                      </Tooltip>
+                    </ConditionalTooltip>
+                  ) : (
+                    <ConditionalTooltip
+                      label="You don't have access to manage scheduled releases"
+                      condition={!canPublish}
                     >
-                      <Button
-                        variant="default"
-                        size="xs"
-                        compact
-                        onClick={() => onScheduleClicked()}
+                      <Tooltip
+                        label="Schedule the release to be published at a future date"
+                        position="bottom"
+                        withArrow
+                        wrapLines
+                        width={180}
                         disabled={!canPublish}
                       >
-                        Schedule
-                      </Button>
-                    </Tooltip>
-                  </ConditionalTooltip>
-                )}
+                        <Button
+                          variant="default"
+                          size="xs"
+                          compact
+                          onClick={() => onScheduleClicked()}
+                          disabled={!canPublish}
+                        >
+                          Schedule
+                        </Button>
+                      </Tooltip>
+                    </ConditionalTooltip>
+                  ))}
               </div>
             </td>
           </tr>

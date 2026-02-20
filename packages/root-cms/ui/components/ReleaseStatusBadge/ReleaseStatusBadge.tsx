@@ -13,7 +13,21 @@ export interface ReleaseStatusBadgeProps {
 
 export function ReleaseStatusBadge(props: ReleaseStatusBadgeProps) {
   const release = props.release;
-  if (release.scheduledAt) {
+  if (testIsValidTimestamp(release.archivedAt)) {
+    return (
+      <Tooltip
+        {...TOOLTIP_PROPS}
+        label={`Archived ${timeDiff(release.archivedAt)} by ${
+          release.archivedBy
+        }`}
+      >
+        <Badge size="xs" color="gray" variant="filled">
+          Archived
+        </Badge>
+      </Tooltip>
+    );
+  }
+  if (testIsValidTimestamp(release.scheduledAt)) {
     return (
       <Tooltip
         {...TOOLTIP_PROPS}
@@ -33,7 +47,7 @@ export function ReleaseStatusBadge(props: ReleaseStatusBadgeProps) {
       </Tooltip>
     );
   }
-  if (release.publishedAt) {
+  if (testIsValidTimestamp(release.publishedAt)) {
     return (
       <Tooltip
         {...TOOLTIP_PROPS}
@@ -58,11 +72,15 @@ export function ReleaseStatusBadge(props: ReleaseStatusBadgeProps) {
   );
 }
 
+function testIsValidTimestamp(ts: any): ts is Timestamp {
+  return Boolean(ts && ts.toMillis);
+}
+
 function timeDiff(ts: Timestamp | null) {
   // Since we're using server timestamps, firestore doesn't always return the
   // timestamp right away since the db save is happening asynchronously. In
   // these cases, assume that the update happened very recently.
-  if (!ts) {
+  if (!ts?.toMillis) {
     return getTimeAgo(new Date().getTime());
   }
   return getTimeAgo(ts.toMillis());

@@ -100,3 +100,7 @@
   border-top: 1px solid var(--color-border);
   padding: 4px 8px;
 }
+
+.ReleasePage__footer {
+  margin-top: 40px;
+}
