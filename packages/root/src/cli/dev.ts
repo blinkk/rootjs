@@ -6,6 +6,7 @@ import cookieParser from 'cookie-parser';
 import {default as express} from 'express';
 import {dim} from 'kleur/colors';
 import sirv from 'sirv';
+import type {Options as SirvOptions} from 'sirv';
 import glob from 'tiny-glob';
 
 import {ViteDevServer} from 'vite';
@@ -155,7 +156,13 @@ export async function createDevServer(options?: {
       // Add static file middleware.
       const publicDir = path.join(rootDir, 'public');
       if (await dirExists(publicDir)) {
-        server.use(rootPublicDirMiddleware({publicDir, viteServer}));
+        const sirvOptions = Object.assign(
+          {dev: false},
+          rootConfig.server?.sirvOptions || {}
+        );
+        server.use(
+          rootPublicDirMiddleware({publicDir, viteServer, sirvOptions})
+        );
       }
 
       // NOTE: The trailing slash middleware needs to come after public files so
@@ -272,6 +279,7 @@ async function createViteMiddleware(options: {
 function rootPublicDirMiddleware(options: {
   publicDir: string;
   viteServer: ViteDevServer;
+  sirvOptions: SirvOptions;
 }) {
   const publicDir = options.publicDir;
 
@@ -279,7 +287,7 @@ function rootPublicDirMiddleware(options: {
   // to `true`, every request will traverse the filesystem to check if a
   // matching file exists. Setting it to `false` uses a cache, which can be
   // reloaded whenever a file change is detected in the `public` directory.
-  const sirvOptions = {dev: false};
+  const sirvOptions = options.sirvOptions;
   let handler = sirv(publicDir, sirvOptions);
 
   const reloadPublicDirCache = debounce(() => {

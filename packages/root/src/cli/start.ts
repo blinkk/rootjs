@@ -91,7 +91,11 @@ export async function createProdServer(options: {
 
       // Add static file middleware.
       const publicDir = path.join(distDir, 'html');
-      server.use(sirv(publicDir, {dev: false}));
+      const sirvOptions = Object.assign(
+        {dev: false},
+        rootConfig.server?.sirvOptions || {}
+      );
+      server.use(sirv(publicDir, sirvOptions));
 
       // NOTE: The trailing slash middleware needs to come after public files so
       // that slashes are not appended to public file routes.
