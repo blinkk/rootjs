@@ -58,6 +58,11 @@ export interface Plugin {
    * broader config option called "ssr" or "ssrOptions".
    */
   ssrInput?: () => {[entryAlias: string]: string};
+  /**
+   * A map of routes to add to the application. The key is the route path
+   * (e.g. `/foo/bar`) and the value is the absolute path to the component.
+   */
+  routes?: Record<string, string>;
   /** Adds vite plugins. */
   vitePlugins?: VitePlugin[];
   /** Plugin lifecycle callback hooks. */

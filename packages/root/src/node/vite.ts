@@ -2,6 +2,7 @@ import {createServer, ViteDevServer} from 'vite';
 import type {Plugin, EnvironmentModuleNode} from 'vite';
 import {RootConfig} from '../core/config.js';
 import {getVitePlugins} from '../core/plugin.js';
+import {pluginRootRoutes} from './vite-plugin-root-routes.js';
 
 export interface CreateViteServerOptions {
   /** Override HMR settings. */
@@ -77,6 +78,7 @@ export async function createViteServer(
     },
     plugins: [
       hmrSSRReload(),
+      pluginRootRoutes(rootConfig),
       ...(viteConfig.plugins || []),
       ...getVitePlugins(rootConfig.plugins || []),
     ],
