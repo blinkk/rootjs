@@ -28,6 +28,8 @@ export interface Release {
   scheduledBy?: string;
   publishedAt?: Timestamp;
   publishedBy?: string;
+  archivedAt?: Timestamp;
+  archivedBy?: string;
 }
 
 const COLLECTION_ID = 'Releases';
@@ -95,10 +97,35 @@ export async function deleteRelease(id: string) {
   logAction('release.delete', {metadata: {releaseId: id}});
 }
 
+export async function archiveRelease(id: string) {
+  const projectId = window.__ROOT_CTX.rootConfig.projectId;
+  const db = window.firebase.db;
+  const docRef = doc(db, 'Projects', projectId, COLLECTION_ID, id);
+  await updateDoc(docRef, {
+    archivedAt: serverTimestamp(),
+    archivedBy: window.firebase.user.email,
+  });
+  logAction('release.archive', {metadata: {releaseId: id}});
+}
+
+export async function unarchiveRelease(id: string) {
+  const projectId = window.__ROOT_CTX.rootConfig.projectId;
+  const db = window.firebase.db;
+  const docRef = doc(db, 'Projects', projectId, COLLECTION_ID, id);
+  await updateDoc(docRef, {
+    archivedAt: deleteField(),
+    archivedBy: deleteField(),
+  });
+  logAction('release.unarchive', {metadata: {releaseId: id}});
+}
+
 export async function publishRelease(id: string) {
   const release = await getRelease(id);
   if (!release) {
     throw new Error(`release not found: ${id}`);
+  }
+  if (release.archivedAt) {
+    throw new Error(`release is archived: ${id}`);
   }
   const docIds = release.docIds || [];
   const dataSourceIds = release.dataSourceIds || [];
@@ -129,7 +156,11 @@ export async function publishRelease(id: string) {
     publishMessage: release.description,
   });
   console.log(`published release: ${id}`);
-  const metadata: Record<string, unknown> = {releaseId: id, docIds, dataSourceIds};
+  const metadata: Record<string, unknown> = {
+    releaseId: id,
+    docIds,
+    dataSourceIds,
+  };
   if (release.description) {
     metadata.publishMessage = release.description;
   }
@@ -145,6 +176,10 @@ export async function scheduleRelease(
   const release = await getRelease(id);
   if (!release) {
     throw new Error(`release not found: ${id}`);
+  }
+
+  if (release.archivedAt) {
+    throw new Error(`release is archived: ${id}`);
   }
 
   if (typeof timestamp === 'number') {
