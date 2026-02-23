@@ -68,8 +68,11 @@ export function DocumentPage(props: DocumentPageProps) {
   const collectionId = props.collection;
   const slug = props.slug;
   const docId = `${collectionId}/${slug}`;
+  const {roles} = useProjectRoles();
+  const currentUserEmail = window.firebase.user.email || '';
+  const canEdit = testCanEdit(roles, currentUserEmail);
   return (
-    <DraftDocProvider docId={docId}>
+    <DraftDocProvider docId={docId} readOnly={!canEdit}>
       <DocumentPageLayout {...props} />
     </DraftDocProvider>
   );

@@ -66,6 +66,8 @@ export class DraftDocController extends EventListener {
   private autolock = false;
   private autolockReason = 'autolock';
   private autolockApplied = false;
+  /** When true, prevents any writes to the DB (e.g. user lacks edit access). */
+  readOnly = false;
   started = false;
 
   constructor(docId: string) {
@@ -188,6 +190,9 @@ export class DraftDocController extends EventListener {
    * Updates a single key. The key can be a nested key, e.g. "meta.title".
    */
   async updateKey(key: string, value: any) {
+    if (this.readOnly) {
+      return;
+    }
     this.pendingUpdates.set(key, value);
     this.store.set(key, value);
     this.setSaveState(SaveState.UPDATES_PENDING);
@@ -198,6 +203,9 @@ export class DraftDocController extends EventListener {
    * Updates a group of keys. The keys can be a nested, e.g. "meta.title".
    */
   async updateKeys(updates: Record<string, any>) {
+    if (this.readOnly) {
+      return;
+    }
     for (const key in updates) {
       const val = updates[key];
       if (val === null || val === undefined) {
@@ -218,6 +226,9 @@ export class DraftDocController extends EventListener {
    * Removes a key.
    */
   async removeKey(key: string) {
+    if (this.readOnly) {
+      return;
+    }
     this.pendingUpdates.set(key, deleteField());
     this.store.set(key, undefined);
     this.setSaveState(SaveState.UPDATES_PENDING);
@@ -264,6 +275,9 @@ export class DraftDocController extends EventListener {
    * Immediately write all queued data to the DB.
    */
   async flush() {
+    if (this.readOnly) {
+      return;
+    }
     if (this.pendingUpdates.size === 0) {
       return;
     }
@@ -376,6 +390,8 @@ function splitKey(key: string) {
 
 export interface DraftDocProviderProps {
   docId: string;
+  /** When true, prevents any writes to the DB (e.g. user lacks edit access). */
+  readOnly?: boolean;
   children?: ComponentChildren;
 }
 
@@ -396,6 +412,9 @@ export function DraftDocProvider(props: DraftDocProviderProps) {
     () => new DraftDocController(props.docId),
     [props.docId]
   );
+
+  // Set readOnly mode on the controller based on the prop.
+  controller.readOnly = props.readOnly ?? false;
 
   useEffect(() => {
     setLoading(true);
