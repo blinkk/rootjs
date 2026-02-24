@@ -1239,14 +1239,36 @@ DocEditor.ArrayField = (props: FieldProps) => {
 
   const addButtonRow = (
     <div className="DocEditor__ArrayField__add">
-      <Button
-        color="dark"
-        size="xs"
-        leftIcon={<IconCirclePlus size={16} />}
-        onClick={() => add()}
-      >
-        {field.buttonLabel || 'Add'}
-      </Button>
+      <div className="DocEditor__ArrayField__add__actions">
+        <Button
+          color="dark"
+          size="xs"
+          leftIcon={<IconCirclePlus size={16} />}
+          onClick={() => add()}
+        >
+          {field.buttonLabel || 'Add'}
+        </Button>
+        <Menu withArrow position="bottom-end">
+          <Menu.Target>
+            <Button
+              color="dark"
+              size="xs"
+              px={8}
+              aria-label="More add options"
+            >
+              <IconChevronDown size={16} />
+            </Button>
+          </Menu.Target>
+          <Menu.Dropdown>
+            <Menu.Item
+              leftSection={<IconClipboardCopy size={16} />}
+              onClick={() => pasteFromVirtualClipboard(order.length - 1)}
+            >
+              Paste
+            </Menu.Item>
+          </Menu.Dropdown>
+        </Menu>
+      </div>
     </div>
   );
 

@@ -415,6 +415,11 @@
   margin-top: 16px;
 }
 
+.DocEditor__ArrayField__add__actions {
+  display: flex;
+  gap: 4px;
+}
+
 .DocEditor__OneOfField__select {
   display: flex;
   gap: 8px;
