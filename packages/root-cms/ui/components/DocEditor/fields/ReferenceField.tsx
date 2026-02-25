@@ -1,15 +1,28 @@
 import './ReferenceField.css';
 
-import {ActionIcon, Button, Image, Loader, Tooltip} from '@mantine/core';
-import {IconTrash} from '@tabler/icons-preact';
+import {
+  ActionIcon,
+  Button,
+  Group,
+  Image,
+  Loader,
+  Modal,
+  Tooltip,
+} from '@mantine/core';
+import {IconExternalLink, IconTrash} from '@tabler/icons-preact';
 import {useEffect, useState} from 'preact/hooks';
 import * as schema from '../../../../core/schema.js';
-import {useDraftDocValue} from '../../../hooks/useDraftDoc.js';
+import {
+  DraftDocProvider,
+  useDraftDocValue,
+} from '../../../hooks/useDraftDoc.js';
+import {useModalTheme} from '../../../hooks/useModalTheme.js';
 import {getDocFromCacheOrFetch} from '../../../utils/doc-cache.js';
 import {parseDocId} from '../../../utils/doc.js';
 import {notifyErrors} from '../../../utils/notifications.js';
 import {getNestedValue} from '../../../utils/objects.js';
 import {useDocPickerModal} from '../../DocPickerModal/DocPickerModal.js';
+import {DocEditor} from '../DocEditor.js';
 import {FieldProps} from './FieldProps.js';
 import {ReferenceFieldEditorModal} from './ReferenceFieldEditorModal.js';
 
@@ -163,12 +176,7 @@ ReferenceField.DocCard = (props: {
       target="_blank"
       rel="noopener noreferrer"
       onClick={(event) => {
-        if (
-          event.metaKey ||
-          event.ctrlKey ||
-          event.shiftKey ||
-          event.altKey
-        ) {
+        if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) {
           return;
         }
         event.preventDefault();
@@ -194,5 +202,48 @@ ReferenceField.DocCard = (props: {
         </div>
       </div>
     </a>
+  );
+};
+
+interface ReferenceQuickEditModalProps {
+  docId: string | null;
+  opened: boolean;
+  onClose: () => void;
+}
+
+ReferenceField.QuickEditModal = (props: ReferenceQuickEditModalProps) => {
+  const modalTheme = useModalTheme();
+  if (!props.docId) {
+    return null;
+  }
+
+  return (
+    <Modal
+      {...modalTheme}
+      opened={props.opened}
+      onClose={props.onClose}
+      title="Quick Edit Reference"
+      size="90%"
+      zIndex={190}
+    >
+      <div className="ReferenceField__QuickEditModal">
+        <Group position="right" mb="sm">
+          <Button
+            component="a"
+            href={`/cms/content/${props.docId}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            size="xs"
+            variant="default"
+            leftIcon={<IconExternalLink size={14} />}
+          >
+            Open in new tab
+          </Button>
+        </Group>
+        <DraftDocProvider docId={props.docId}>
+          <DocEditor docId={props.docId} />
+        </DraftDocProvider>
+      </div>
+    </Modal>
   );
 };
