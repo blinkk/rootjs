@@ -540,6 +540,47 @@ export function cmsPlugin(options: CMSPluginOptions): CMSPlugin {
       preBuild: async (rootConfig: RootConfig) => {
         await writeCollectionSchemasToJson(rootConfig);
       },
+
+      /**
+       * Exports action logs to `dist/.root/actions.json` after the build.
+       */
+      postBuild: async (
+        rootConfig: RootConfig,
+        options?: {ssrOnly?: boolean}
+      ) => {
+        if (options?.ssrOnly) {
+          return;
+        }
+        try {
+          const {RootCMSClient} = await import('./client.js');
+          const cmsClient = new RootCMSClient(rootConfig);
+          const [actions, total] = await Promise.all([
+            // Limit to 500 most recent actions.
+            cmsClient.listActions({limit: 500}),
+            cmsClient.countActions(),
+          ]);
+          const actionsJson = JSON.stringify(
+            {
+              total,
+              actions: actions.map((action) => ({
+                action: action.action,
+                by: action.by,
+                timestamp: action.timestamp.toMillis(),
+                metadata: action.metadata || {},
+                ...(action.links ? {links: action.links} : {}),
+              })),
+            },
+            null,
+            2
+          );
+          const distDir = path.join(rootConfig.rootDir, 'dist');
+          const outPath = path.join(distDir, '.root/actions.json');
+          await fs.mkdir(path.dirname(outPath), {recursive: true});
+          await fs.writeFile(outPath, actionsJson);
+        } catch (err) {
+          console.error('failed to export action logs:', err);
+        }
+      },
     },
 
     /**

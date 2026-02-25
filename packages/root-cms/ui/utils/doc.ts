@@ -325,7 +325,11 @@ export async function cmsScheduleDoc(
   });
   console.log(`saved ${scheduledDocRef.id}`);
 
-  logAction('doc.schedule', {metadata: {docId, scheduledAt: millis}});
+  const metadata: Record<string, unknown> = {docId, scheduledAt: millis};
+  if (options?.publishMessage) {
+    metadata.publishMessage = options.publishMessage;
+  }
+  logAction('doc.schedule', {metadata});
 }
 
 export async function cmsUnpublishDoc(docId: string) {
