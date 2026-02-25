@@ -1461,15 +1461,6 @@ export class RootCMSClient {
     return snapshot.docs.map((doc) => doc.data() as Action);
   }
 
-  /**
-   * Returns the total count of action logs.
-   */
-  async countActions(): Promise<number> {
-    const colPath = `Projects/${this.projectId}/ActionLogs`;
-    const snapshot = await this.db.collection(colPath).count().get();
-    return snapshot.data().count;
-  }
-
   async logAction(
     action: string,
     options?: {
