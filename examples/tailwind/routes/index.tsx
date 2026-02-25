@@ -1,4 +1,9 @@
 import {Body, Head, Html} from '@blinkk/root';
+import type {GetStaticPaths} from '@blinkk/root';
+
+export const getStaticPaths: GetStaticPaths = async () => {
+  return {paths: [{params: {}}]};
+};
 
 export default function Index() {
   return (
@@ -11,7 +16,7 @@ export default function Index() {
       <Body>
         <div class="min-h-screen bg-gray-50 flex items-center justify-center p-8">
           <div class="text-center">
-            <h1 class="text-4xl font-bold text-primary sm:text-secondary">
+            <h1 class="text-4xl font-bold text-secondary sm:text-primary">
               Hello, Root.js + Tailwind CSS
             </h1>
             <p class="mt-4 text-lg text-gray-600">

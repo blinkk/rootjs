@@ -3,5 +3,5 @@
 @theme {
   --color-primary: #C141E2;
   --color-secondary: #256ABC;
-  --breakpoint-sm: 30rem;
+  --breakpoint-sm: 640px;
 }
