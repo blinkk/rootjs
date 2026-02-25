@@ -227,6 +227,12 @@ export class Renderer {
       });
     }
 
+    // Merge user-configured stylesheet entries first. This allows global
+    // entries to appear before auto-collected stylesheets.
+    this.getConfiguredStyleEntries().forEach((styleEntry) => {
+      cssDeps.add(styleEntry);
+    });
+
     // Parse the HTML for custom elements that are found within the project
     // and automatically inject the script deps for them.
     await this.collectElementDeps(mainHtml, jsDeps, cssDeps);
@@ -580,6 +586,16 @@ export class Renderer {
     return orderedSitemap;
   }
 
+
+  private getConfiguredStyleEntries() {
+    const styleEntries = this.rootConfig.styles?.entries || [];
+    const basePath = this.rootConfig.base || '/';
+    return styleEntries
+      .map((entry) => entry.trim())
+      .filter((entry) => entry)
+      .map((entry) => normalizeStyleEntry(entry, basePath));
+  }
+
   private async renderHtml(html: string, options?: RenderHtmlOptions) {
     const htmlAttrs = options?.htmlAttrs || {};
     const headAttrs = options?.headAttrs || {};
@@ -858,6 +874,11 @@ function sortLocales(a: string, b: string) {
     return 1;
   }
   return a.localeCompare(b);
+}
+
+function normalizeStyleEntry(entry: string, basePath: string) {
+  const normalizedEntry = normalizeUrlPath(entry.replace(/^\.\//, ''));
+  return normalizeUrlPath(`${basePath}/${normalizedEntry}`);
 }
 
 function guessContentType(ext: string): string {
