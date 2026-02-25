@@ -11,6 +11,7 @@ import {notifyErrors} from '../../../utils/notifications.js';
 import {getNestedValue} from '../../../utils/objects.js';
 import {useDocPickerModal} from '../../DocPickerModal/DocPickerModal.js';
 import {FieldProps} from './FieldProps.js';
+import {ReferenceFieldEditorModal} from './ReferenceFieldEditorModal.js';
 
 export interface ReferenceFieldValue {
   id: string;
@@ -34,6 +35,7 @@ export function ReferenceField(props: FieldProps) {
   }
 
   const docPickerModal = useDocPickerModal();
+  const [quickEditDocId, setQuickEditDocId] = useState<string | null>(null);
 
   function openDocPicker() {
     const initialCollection = refId
@@ -53,7 +55,10 @@ export function ReferenceField(props: FieldProps) {
     <div className="ReferenceField">
       {refId ? (
         <div className="ReferenceField__ref">
-          <ReferenceField.Preview id={refId} />
+          <ReferenceField.Preview
+            id={refId}
+            onOpenQuickEdit={(docId) => setQuickEditDocId(docId)}
+          />
           <div className="ReferenceField__remove">
             <Tooltip label="Remove">
               <ActionIcon
@@ -71,12 +76,18 @@ export function ReferenceField(props: FieldProps) {
       <Button color="dark" size="xs" onClick={() => openDocPicker()}>
         {field.buttonLabel || 'Select'}
       </Button>
+      <ReferenceFieldEditorModal
+        docId={quickEditDocId}
+        opened={!!quickEditDocId}
+        onClose={() => setQuickEditDocId(null)}
+      />
     </div>
   );
 }
 
 interface ReferencePreviewProps {
   id: string;
+  onOpenQuickEdit?: (docId: string) => void;
 }
 
 ReferenceField.Preview = (props: ReferencePreviewProps) => {
@@ -103,7 +114,10 @@ ReferenceField.Preview = (props: ReferencePreviewProps) => {
           <Loader color="gray" size="sm" />
         </div>
       ) : previewDoc ? (
-        <ReferenceField.DocCard doc={previewDoc} />
+        <ReferenceField.DocCard
+          doc={previewDoc}
+          onOpenQuickEdit={props.onOpenQuickEdit}
+        />
       ) : (
         <div className="ReferenceField__Preview__notfound">
           Doc not found: <b>{props.id}</b> (was it deleted?). Select a new doc
@@ -114,7 +128,10 @@ ReferenceField.Preview = (props: ReferencePreviewProps) => {
   );
 };
 
-ReferenceField.DocCard = (props: {doc: any}) => {
+ReferenceField.DocCard = (props: {
+  doc: any;
+  onOpenQuickEdit?: (docId: string) => void;
+}) => {
   const doc = props.doc;
   // NOTE(stevenle): older db versions stored the doc id as doc.sys.id.
   const docId = doc.id || doc.sys?.id || '';
@@ -144,6 +161,19 @@ ReferenceField.DocCard = (props: {doc: any}) => {
       className="ReferenceField__DocCard"
       href={`/cms/content/${docId}`}
       target="_blank"
+      rel="noopener noreferrer"
+      onClick={(event) => {
+        if (
+          event.metaKey ||
+          event.ctrlKey ||
+          event.shiftKey ||
+          event.altKey
+        ) {
+          return;
+        }
+        event.preventDefault();
+        props.onOpenQuickEdit?.(docId);
+      }}
     >
       <div className="ReferenceField__DocCard__image">
         <Image
