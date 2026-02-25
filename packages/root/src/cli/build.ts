@@ -538,6 +538,13 @@ export async function build(rootProjectDir?: string, options?: BuildOptions) {
       printFileOutput(fileSize(outPath), 'dist/html/', 'sitemap.xml');
     }
   }
+
+  // Run postBuild hooks.
+  for (const plugin of rootPlugins) {
+    if (plugin.hooks?.postBuild) {
+      await plugin.hooks.postBuild(rootConfig, {ssrOnly});
+    }
+  }
 }
 
 function isRouteFile(filepath: string) {

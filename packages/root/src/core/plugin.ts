@@ -6,6 +6,16 @@ type MaybePromise<T> = T | Promise<T>;
 
 type PreBuildHook = (rootConfig: RootConfig) => MaybePromise<void>;
 
+export interface PostBuildOptions {
+  /** Whether the build was SSR-only (no SSG pre-rendering). */
+  ssrOnly?: boolean;
+}
+
+type PostBuildHook = (
+  rootConfig: RootConfig,
+  options?: PostBuildOptions
+) => MaybePromise<void>;
+
 export type ConfigureServerHook = (
   server: Server,
   options: ConfigureServerOptions
@@ -21,6 +31,11 @@ export interface PluginHooks {
    * Hook that runs before the build starts.
    */
   preBuild?: PreBuildHook;
+
+  /**
+   * Hook that runs after the build completes.
+   */
+  postBuild?: PostBuildHook;
 
   /**
    * Post-render hook that's called before the HTML is rendered to the response

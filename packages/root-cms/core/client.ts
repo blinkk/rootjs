@@ -903,6 +903,9 @@ export class RootCMSClient {
         },
         tags: versionTags,
       };
+      if (data.scheduledPublishMessage) {
+        versionData.publishMessage = data.scheduledPublishMessage;
+      }
       batch.set(versionRef, versionData);
       batchCount += 1;
 
@@ -1433,6 +1436,29 @@ export class RootCMSClient {
       return true;
     }
     return false;
+  }
+
+  /**
+   * Lists action logs from the database.
+   */
+  async listActions(options?: ListActionsOptions): Promise<Action[]> {
+    const colPath = `Projects/${this.projectId}/ActionLogs`;
+    let queryRef: Query = this.db
+      .collection(colPath)
+      .orderBy('timestamp', 'desc');
+
+    if (options?.action) {
+      queryRef = queryRef.where('action', '==', options.action);
+    }
+    if (options?.by) {
+      queryRef = queryRef.where('by', '==', options.by);
+    }
+
+    const limit = options?.limit ?? 100;
+    queryRef = queryRef.limit(limit);
+
+    const snapshot = await queryRef.get();
+    return snapshot.docs.map((doc) => doc.data() as Action);
   }
 
   async logAction(
