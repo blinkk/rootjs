@@ -1,0 +1,9 @@
+.ReferenceFieldEditorModal {
+  max-height: calc(100vh - 160px);
+  overflow: auto;
+}
+
+.ReferenceFieldEditorModal__footer {
+  border-top: 1px solid var(--color-border);
+  padding-top: 12px;
+}

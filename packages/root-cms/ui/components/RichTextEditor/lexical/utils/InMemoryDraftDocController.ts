@@ -13,9 +13,14 @@ export class InMemoryDraftDocController extends EventListener {
   collectionId = 'custom-block';
   slug = 'custom-block';
 
-  constructor(initialValue: Record<string, any>, rootKey = 'block') {
+  constructor(
+    initialValue: Record<string, any>,
+    rootKey: string | null = 'block'
+  ) {
     super();
-    this.data = {[rootKey]: cloneData(initialValue)};
+    this.data = rootKey
+      ? {[rootKey]: cloneData(initialValue)}
+      : cloneData(initialValue);
   }
 
   getValue(key: string): any {

@@ -15,12 +15,14 @@ import {joinClassNames} from '../../../utils/classes.js';
 import {useDocPickerModal} from '../../DocPickerModal/DocPickerModal.js';
 import {DocPreviewCard} from '../../DocPreviewCard/DocPreviewCard.js';
 import {FieldProps} from './FieldProps.js';
+import {ReferenceFieldEditorModal} from './ReferenceFieldEditorModal.js';
 import {ReferenceFieldValue} from './ReferenceField.js';
 
 export function ReferencesField(props: FieldProps) {
   const field = props.field as schema.ReferencesField;
   const [refIds, setRefIds] = useState<string[]>([]);
   const draft = useDraftDoc().controller;
+  const [quickEditDocId, setQuickEditDocId] = useState<string | null>(null);
 
   function onChange(newIds: string[]) {
     if (newIds.length) {
@@ -119,13 +121,31 @@ export function ReferencesField(props: FieldProps) {
                         >
                           <IconGripVertical size={16} stroke={'1.5'} />
                         </div>
-                        <DocPreviewCard
+                        <div
                           className="ReferencesField__card__preview"
-                          docId={refId}
-                          variant="compact"
-                          clickable
-                          statusBadges
-                        />
+                          onClickCapture={(event) => {
+                            if (
+                              event.button !== 0 ||
+                              event.metaKey ||
+                              event.ctrlKey ||
+                              event.shiftKey ||
+                              event.altKey
+                            ) {
+                              return;
+                            }
+                            event.preventDefault();
+                            event.stopPropagation();
+                            setQuickEditDocId(refId);
+                          }}
+                        >
+                          <DocPreviewCard
+                            className="ReferencesField__card__previewCard"
+                            docId={refId}
+                            variant="compact"
+                            clickable
+                            statusBadges
+                          />
+                        </div>
                         <div className="ReferencesField__card__controls">
                           <Tooltip label="Remove">
                             <ActionIcon
@@ -151,6 +171,11 @@ export function ReferencesField(props: FieldProps) {
       <Button color="dark" size="xs" onClick={() => openDocPickerModal()}>
         {field.buttonLabel || 'Select'}
       </Button>
+      <ReferenceFieldEditorModal
+        docId={quickEditDocId}
+        opened={!!quickEditDocId}
+        onClose={() => setQuickEditDocId(null)}
+      />
     </div>
   );
 }
