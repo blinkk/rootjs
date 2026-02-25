@@ -189,3 +189,34 @@ export function cloneData<T>(data: T): T {
   }
   return JSON.parse(JSON.stringify(data));
 }
+
+/**
+ * Returns a deep-cloned value with object keys sorted alphabetically.
+ */
+export function sortObjectKeysDeep<T>(data: T): T {
+  if (Array.isArray(data)) {
+    return data.map((item) => sortObjectKeysDeep(item)) as T;
+  }
+
+  if (isObject(data)) {
+    const sortedData: Record<string, unknown> = {};
+    const keys = Object.keys(data as Record<string, unknown>).sort((a, b) =>
+      a.localeCompare(b)
+    );
+    for (const key of keys) {
+      sortedData[key] = sortObjectKeysDeep(
+        (data as Record<string, unknown>)[key]
+      );
+    }
+    return sortedData as T;
+  }
+
+  return data;
+}
+
+/**
+ * Stringifies JSON-like data with stable object-key ordering.
+ */
+export function stableJsonStringify(data: unknown, space = 2): string {
+  return JSON.stringify(sortObjectKeysDeep(data), null, space);
+}
