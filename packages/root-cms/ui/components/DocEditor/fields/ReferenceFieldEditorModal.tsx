@@ -6,11 +6,11 @@ import {IconExternalLink} from '@tabler/icons-preact';
 import {doc, serverTimestamp, updateDoc} from 'firebase/firestore';
 import {useEffect, useMemo, useState} from 'preact/hooks';
 import * as schema from '../../../../core/schema.js';
+import {useCollectionSchema} from '../../../hooks/useCollectionSchema.js';
 import {
   DraftDocContext,
   DraftDocContextProvider,
 } from '../../../hooks/useDraftDoc.js';
-import {useCollectionSchema} from '../../../hooks/useCollectionSchema.js';
 import {useModalTheme} from '../../../hooks/useModalTheme.js';
 import {
   getDocFromCacheOrFetch,
@@ -18,8 +18,8 @@ import {
 } from '../../../utils/doc-cache.js';
 import {notifyErrors} from '../../../utils/notifications.js';
 import {cloneData} from '../../../utils/objects.js';
-import {DocEditor} from '../DocEditor.js';
 import {InMemoryDraftDocController} from '../../RichTextEditor/lexical/utils/InMemoryDraftDocController.js';
+import {DocEditor} from '../DocEditor.js';
 
 interface ReferenceFieldEditorModalProps {
   docId: string | null;
@@ -135,7 +135,7 @@ export function ReferenceFieldEditorModal(
       {...modalTheme}
       opened={props.opened}
       onClose={props.onClose}
-      title="Reference Editor"
+      title={`Edit ${props.docId}`}
       size="90%"
       zIndex={190}
     >
