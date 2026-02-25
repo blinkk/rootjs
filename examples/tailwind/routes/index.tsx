@@ -6,12 +6,12 @@ export default function Index() {
       <Head>
         <title>Root.js + Tailwind CSS</title>
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <link rel="stylesheet" href="/styles/main.css" />
+        <link rel="stylesheet" href="/styles/index.css" />
       </Head>
       <Body>
-        <div class="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div class="min-h-screen bg-gray-50 flex items-center justify-center p-8">
           <div class="text-center">
-            <h1 class="text-4xl font-bold text-gray-900">
+            <h1 class="text-4xl font-bold text-primary sm:text-secondary">
               Hello, Root.js + Tailwind CSS
             </h1>
             <p class="mt-4 text-lg text-gray-600">
