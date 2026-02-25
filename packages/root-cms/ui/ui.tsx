@@ -201,6 +201,31 @@ function loginRedirect() {
   window.location.replace(`/cms/login?${params.toString()}`);
 }
 
+function registerDevServerRedirectShortcut() {
+  window.addEventListener('keydown', (event: KeyboardEvent) => {
+    const isShortcutPressed =
+      (event.metaKey || event.ctrlKey) &&
+      event.shiftKey &&
+      event.key.toLowerCase() === 'd';
+    if (!isShortcutPressed) {
+      return;
+    }
+
+    const isLocalhost =
+      window.location.hostname === 'localhost' ||
+      window.location.hostname === '127.0.0.1';
+    if (isLocalhost) {
+      return;
+    }
+
+    event.preventDefault();
+    const path = `${window.location.pathname}${window.location.search}${window.location.hash}`;
+    window.location.assign(`http://localhost:4007${path}`);
+  });
+}
+
+registerDevServerRedirectShortcut();
+
 const app = initializeApp(window.__ROOT_CTX.firebaseConfig);
 const databaseId = window.__ROOT_CTX.firebaseConfig.databaseId || '(default)';
 // const db = getFirestore(app);
