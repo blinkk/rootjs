@@ -4,6 +4,7 @@ import {diffLines} from 'diff';
 import type {JSX} from 'preact';
 import {useEffect, useMemo, useRef} from 'preact/hooks';
 import {joinClassNames} from '../../utils/classes.js';
+import {stableJsonStringify} from '../../utils/objects.js';
 
 export interface JsDiffProps {
   oldCode: string;
@@ -14,9 +15,21 @@ export interface JsDiffProps {
 export function JsDiff(props: JsDiffProps) {
   const {oldCode, newCode, className = ''} = props;
 
-  const diffResult = useMemo(() => {
-    return diffLines(oldCode, newCode);
+  const normalizedCode = useMemo(() => {
+    const oldJson = parseJson(oldCode);
+    const newJson = parseJson(newCode);
+    if (oldJson !== undefined && newJson !== undefined) {
+      return {
+        oldCode: stableJsonStringify(oldJson),
+        newCode: stableJsonStringify(newJson),
+      };
+    }
+    return {oldCode, newCode};
   }, [oldCode, newCode]);
+
+  const diffResult = useMemo(() => {
+    return diffLines(normalizedCode.oldCode, normalizedCode.newCode);
+  }, [normalizedCode]);
 
   const contentRef = useRef<HTMLDivElement>(null);
 
@@ -30,7 +43,7 @@ export function JsDiff(props: JsDiffProps) {
         firstChangedLine.scrollIntoView({behavior: 'smooth', block: 'center'});
       }
     }
-  }, [oldCode, newCode]);
+  }, [normalizedCode]);
 
   const renderDiffLines = () => {
     const elements: JSX.Element[] = [];
@@ -76,4 +89,12 @@ export function JsDiff(props: JsDiffProps) {
       </div>
     </div>
   );
+}
+
+function parseJson(value: string): unknown | undefined {
+  try {
+    return JSON.parse(value);
+  } catch {
+    return undefined;
+  }
 }
