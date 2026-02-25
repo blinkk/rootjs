@@ -64,7 +64,3 @@
   color: #ababab;
 }
 
-.ReferenceField__QuickEditModal {
-  max-height: calc(100vh - 160px);
-  overflow: auto;
-}

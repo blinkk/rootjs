@@ -15,8 +15,8 @@ import {joinClassNames} from '../../../utils/classes.js';
 import {useDocPickerModal} from '../../DocPickerModal/DocPickerModal.js';
 import {DocPreviewCard} from '../../DocPreviewCard/DocPreviewCard.js';
 import {FieldProps} from './FieldProps.js';
-import {ReferenceFieldEditorModal} from './ReferenceFieldEditorModal.js';
 import {ReferenceFieldValue} from './ReferenceField.js';
+import {ReferenceFieldEditorModal} from './ReferenceFieldEditorModal.js';
 
 export function ReferencesField(props: FieldProps) {
   const field = props.field as schema.ReferencesField;
