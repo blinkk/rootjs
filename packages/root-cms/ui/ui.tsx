@@ -206,7 +206,7 @@ function registerDevServerRedirectShortcut() {
     const isShortcutPressed =
       (event.metaKey || event.ctrlKey) &&
       event.shiftKey &&
-      event.key.toLowerCase() === 'l';
+      event.key.toLowerCase() === 'd';
     if (!isShortcutPressed) {
       return;
     }
