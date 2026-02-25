@@ -1,3 +1,6 @@
+// Needed for prod mode (included in SSG build).
+import '../styles/index.css';
+
 import {Body, Head, Html} from '@blinkk/root';
 import type {GetStaticPaths} from '@blinkk/root';
 
@@ -11,6 +14,7 @@ export default function Index() {
       <Head>
         <title>Root.js + Tailwind CSS</title>
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        {/** Needed for dev mode (loaded as a direct stylesheet). NOTE: We should suppress this <link> in prod mode as it 404s. */}
         <link rel="stylesheet" href="/styles/index.css" />
       </Head>
       <Body>
