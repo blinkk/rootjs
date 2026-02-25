@@ -1,8 +1,33 @@
+.ReferenceFieldEditorModalWrap .mantine-Modal-modal {
+  padding: 0;
+}
+
+.ReferenceFieldEditorModalWrap .mantine-Modal-header {
+  padding: 12px 20px;
+  margin-bottom: 0;
+}
+
+.mantine-Modal-body {
+  display: flex;
+  flex-direction: column;
+}
+
+.ReferenceFieldEditorModal {
+  display: contents;
+}
+
+.ReferenceFieldEditorModal__DocEditor {
+  flex: 1;
+  overflow: auto;
+  padding: 0 20px 40px;
+  padding-bottom: 80px;
+}
+
 .ReferenceFieldEditorModal__footer {
+  flex-shrink: 0;
   display: flex;
   justify-content: flex-end;
-  gap: var(--spacing-2);
-  margin-top: var(--spacing-4);
-  padding-top: var(--spacing-3);
+  gap: 12px;
   border-top: 1px solid var(--color-border);
+  padding: 12px 20px;
 }

@@ -9,6 +9,7 @@ import {DocEditor} from '../DocEditor/DocEditor.js';
 const MODAL_ID = 'ReferenceFieldEditorModal';
 
 export interface ReferenceFieldEditorModalProps {
+  [key: string]: unknown;
   docId: string;
 }
 
@@ -17,9 +18,11 @@ export function useReferenceFieldEditorModal() {
   const modalTheme = useModalTheme();
   return {
     open: (props: ReferenceFieldEditorModalProps) => {
-      modals.openContextModal(MODAL_ID, {
+      modals.openContextModal<ReferenceFieldEditorModalProps>(MODAL_ID, {
         ...modalTheme,
+        className: 'ReferenceFieldEditorModalWrap',
         innerProps: props,
+        title: `Edit ${props.docId}`,
         size: 'xl',
         overflow: 'inside',
         closeOnClickOutside: false,
@@ -43,7 +46,11 @@ export function ReferenceFieldEditorModal(
         autoSave={false}
         flushOnStop={false}
       >
-        <DocEditor docId={innerProps.docId} hideStatusBar />
+        <DocEditor
+          className="ReferenceFieldEditorModal__DocEditor"
+          docId={innerProps.docId}
+          hideStatusBar
+        />
         <ReferenceFieldEditorModal.Footer
           onCancel={() => context.closeModal(id)}
         />
@@ -57,11 +64,12 @@ ReferenceFieldEditorModal.Footer = (props: {onCancel: () => void}) => {
 
   return (
     <div className="ReferenceFieldEditorModal__footer">
-      <Button variant="default" onClick={props.onCancel}>
+      <Button variant="default" size="xs" onClick={props.onCancel}>
         Cancel
       </Button>
       <Button
         color="dark"
+        size="xs"
         onClick={async () => {
           await draft.controller.flush();
           props.onCancel();

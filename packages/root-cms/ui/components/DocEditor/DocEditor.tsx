@@ -115,6 +115,7 @@ import {SelectField} from './fields/SelectField.js';
 import {StringField} from './fields/StringField.js';
 
 interface DocEditorProps {
+  className?: string;
   docId: string;
   hideStatusBar?: boolean;
 }
@@ -143,7 +144,7 @@ export function DocEditor(props: DocEditorProps) {
       value={collection?.schema?.types || {}}
     >
       <DeeplinkProvider>
-        <div className="DocEditor">
+        <div className={joinClassNames(props.className, 'DocEditor')}>
           <LoadingOverlay
             visible={loading}
             loaderProps={{color: 'gray', size: 'xl'}}
