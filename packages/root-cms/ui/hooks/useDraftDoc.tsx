@@ -68,6 +68,10 @@ export class DraftDocController extends EventListener {
   private autolockApplied = false;
   /** When true, prevents any writes to the DB (e.g. user lacks edit access). */
   readOnly = false;
+  /** When false, draft changes are only written by explicitly calling flush(). */
+  autoSave = true;
+  /** When false, pending updates are discarded when stop()/dispose() is called. */
+  flushOnStop = true;
   started = false;
 
   constructor(docId: string) {
@@ -144,7 +148,9 @@ export class DraftDocController extends EventListener {
     if (this.dbUnsubscribe) {
       this.dbUnsubscribe();
     }
-    this.flush();
+    if (this.flushOnStop) {
+      this.flush();
+    }
     this.started = false;
   }
 
@@ -196,7 +202,9 @@ export class DraftDocController extends EventListener {
     this.pendingUpdates.set(key, value);
     this.store.set(key, value);
     this.setSaveState(SaveState.UPDATES_PENDING);
-    this.queueChanges();
+    if (this.autoSave) {
+      this.queueChanges();
+    }
   }
 
   /**
@@ -219,7 +227,9 @@ export class DraftDocController extends EventListener {
     }
     this.store.update(updates);
     this.setSaveState(SaveState.UPDATES_PENDING);
-    this.queueChanges();
+    if (this.autoSave) {
+      this.queueChanges();
+    }
   }
 
   /**
@@ -232,7 +242,9 @@ export class DraftDocController extends EventListener {
     this.pendingUpdates.set(key, deleteField());
     this.store.set(key, undefined);
     this.setSaveState(SaveState.UPDATES_PENDING);
-    this.queueChanges();
+    if (this.autoSave) {
+      this.queueChanges();
+    }
   }
 
   /**
@@ -392,6 +404,10 @@ export interface DraftDocProviderProps {
   docId: string;
   /** When true, prevents any writes to the DB (e.g. user lacks edit access). */
   readOnly?: boolean;
+  /** When false, changes are only persisted when `flush()` is called. */
+  autoSave?: boolean;
+  /** When false, pending updates are discarded when unmounting the provider. */
+  flushOnStop?: boolean;
   children?: ComponentChildren;
 }
 
@@ -415,6 +431,8 @@ export function DraftDocProvider(props: DraftDocProviderProps) {
 
   // Set readOnly mode on the controller based on the prop.
   controller.readOnly = props.readOnly ?? false;
+  controller.autoSave = props.autoSave ?? true;
+  controller.flushOnStop = props.flushOnStop ?? true;
 
   useEffect(() => {
     setLoading(true);

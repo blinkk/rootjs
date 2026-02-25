@@ -1,7 +1,7 @@
 import './ReferenceField.css';
 
 import {ActionIcon, Button, Image, Loader, Tooltip} from '@mantine/core';
-import {IconTrash} from '@tabler/icons-preact';
+import {IconPencil, IconTrash} from '@tabler/icons-preact';
 import {useEffect, useState} from 'preact/hooks';
 import * as schema from '../../../../core/schema.js';
 import {useDraftDocValue} from '../../../hooks/useDraftDoc.js';
@@ -10,6 +10,7 @@ import {parseDocId} from '../../../utils/doc.js';
 import {notifyErrors} from '../../../utils/notifications.js';
 import {getNestedValue} from '../../../utils/objects.js';
 import {useDocPickerModal} from '../../DocPickerModal/DocPickerModal.js';
+import {useReferenceFieldEditorModal} from '../../ReferenceFieldEditorModal/ReferenceFieldEditorModal.js';
 import {FieldProps} from './FieldProps.js';
 
 export interface ReferenceFieldValue {
@@ -34,6 +35,7 @@ export function ReferenceField(props: FieldProps) {
   }
 
   const docPickerModal = useDocPickerModal();
+  const referenceFieldEditorModal = useReferenceFieldEditorModal();
 
   function openDocPicker() {
     const initialCollection = refId
@@ -55,6 +57,14 @@ export function ReferenceField(props: FieldProps) {
         <div className="ReferenceField__ref">
           <ReferenceField.Preview id={refId} />
           <div className="ReferenceField__remove">
+            <Tooltip label="Quick edit">
+              <ActionIcon
+                className="ReferenceField__remove__icon"
+                onClick={() => referenceFieldEditorModal.open({docId: refId})}
+              >
+                <IconPencil size={16} />
+              </ActionIcon>
+            </Tooltip>
             <Tooltip label="Remove">
               <ActionIcon
                 className="ReferenceField__remove__icon"

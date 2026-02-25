@@ -7,13 +7,14 @@ import {
   DropResult,
 } from '@hello-pangea/dnd';
 import {ActionIcon, Button, Tooltip} from '@mantine/core';
-import {IconGripVertical, IconTrash} from '@tabler/icons-preact';
+import {IconGripVertical, IconPencil, IconTrash} from '@tabler/icons-preact';
 import {useState} from 'preact/hooks';
 import * as schema from '../../../../core/schema.js';
 import {useDraftDoc, useDraftDocField} from '../../../hooks/useDraftDoc.js';
 import {joinClassNames} from '../../../utils/classes.js';
 import {useDocPickerModal} from '../../DocPickerModal/DocPickerModal.js';
 import {DocPreviewCard} from '../../DocPreviewCard/DocPreviewCard.js';
+import {useReferenceFieldEditorModal} from '../../ReferenceFieldEditorModal/ReferenceFieldEditorModal.js';
 import {FieldProps} from './FieldProps.js';
 import {ReferenceFieldValue} from './ReferenceField.js';
 
@@ -44,6 +45,7 @@ export function ReferencesField(props: FieldProps) {
   });
 
   const docPickerModal = useDocPickerModal();
+  const referenceFieldEditorModal = useReferenceFieldEditorModal();
 
   function openDocPickerModal() {
     docPickerModal.open({
@@ -127,6 +129,15 @@ export function ReferencesField(props: FieldProps) {
                           statusBadges
                         />
                         <div className="ReferencesField__card__controls">
+                          <Tooltip label="Quick edit">
+                            <ActionIcon
+                              onClick={() =>
+                                referenceFieldEditorModal.open({docId: refId})
+                              }
+                            >
+                              <IconPencil size={16} />
+                            </ActionIcon>
+                          </Tooltip>
                           <Tooltip label="Remove">
                             <ActionIcon
                               className="ReferencesField__card__controls__remove"

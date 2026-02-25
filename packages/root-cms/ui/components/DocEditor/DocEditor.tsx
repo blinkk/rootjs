@@ -116,6 +116,7 @@ import {StringField} from './fields/StringField.js';
 
 interface DocEditorProps {
   docId: string;
+  hideStatusBar?: boolean;
 }
 
 const COLLECTION_SCHEMA_TYPES_CONTEXT = createContext<
@@ -147,7 +148,7 @@ export function DocEditor(props: DocEditorProps) {
             visible={loading}
             loaderProps={{color: 'gray', size: 'xl'}}
           />
-          {!loading && (
+          {!loading && !props.hideStatusBar && (
             <DocEditor.StatusBar
               {...props}
               draft={draft}

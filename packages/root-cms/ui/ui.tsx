@@ -22,6 +22,7 @@ import {ExportSheetModal} from './components/ExportSheetModal/ExportSheetModal.j
 import {LocalizationModal} from './components/LocalizationModal/LocalizationModal.js';
 import {LockPublishingModal} from './components/LockPublishingModal/LockPublishingModal.js';
 import {PublishDocModal} from './components/PublishDocModal/PublishDocModal.js';
+import {ReferenceFieldEditorModal} from './components/ReferenceFieldEditorModal/ReferenceFieldEditorModal.js';
 import {ScheduleReleaseModal} from './components/ScheduleReleaseModal/ScheduleReleaseModal.js';
 import {VersionHistoryModal} from './components/VersionHistoryModal/VersionHistoryModal.js';
 import {FirebaseContext, FirebaseContextObject} from './hooks/useFirebase.js';
@@ -127,6 +128,7 @@ function App() {
                     [LocalizationModal.id]: LocalizationModal,
                     [LockPublishingModal.id]: LockPublishingModal,
                     [PublishDocModal.id]: PublishDocModal,
+                    [ReferenceFieldEditorModal.id]: ReferenceFieldEditorModal,
                     [ScheduleReleaseModal.id]: ScheduleReleaseModal,
                     [VersionHistoryModal.id]: VersionHistoryModal,
                   }}
