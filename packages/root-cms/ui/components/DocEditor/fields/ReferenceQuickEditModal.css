@@ -2,3 +2,7 @@
   max-height: calc(100vh - 160px);
   overflow: auto;
 }
+
+.ReferenceQuickEditModal .DocEditor__statusBar {
+  display: none;
+}

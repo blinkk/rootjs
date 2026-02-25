@@ -26,8 +26,8 @@ export function ReferenceQuickEditModal(props: ReferenceQuickEditModalProps) {
       {...modalTheme}
       opened={props.opened}
       onClose={props.onClose}
-      title="Quick Edit Reference"
-      size="90%"
+      title={`Edit ${props.docId}`}
+      size="xl"
       zIndex={190}
     >
       <div className="ReferenceQuickEditModal">
