@@ -1,5 +1,17 @@
 # @blinkk/root-cms
 
+## 2.5.4
+
+### Patch Changes
+
+- 290d7f22: feat: add quick edit modal for reference fields
+- 7155bdef: feat: add keyboard shortcut to redirect to dev server (#932)
+- e039a74b: feat: enable paste for empty array fields
+- 1fccd23a: feat: add release archiving and status filters
+- Updated dependencies [1fbaa7a2]
+- Updated dependencies [d6f8bc52]
+  - @blinkk/root@2.5.4
+
 ## 2.5.3
 
 ### Patch Changes
