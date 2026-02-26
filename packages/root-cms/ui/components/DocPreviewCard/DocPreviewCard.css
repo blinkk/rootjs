@@ -27,10 +27,6 @@ a.DocPreviewCard {
   align-items: center;
 }
 
-.DocPreviewCard__content__header .DocStatusBadges {
-  margin-left: auto;
-}
-
 .DocPreviewCard__content__header__docId {
   font-size: 14px;
   line-height: 1;
