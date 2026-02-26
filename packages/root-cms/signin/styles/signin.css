@@ -44,7 +44,8 @@
 }
 
 .signin__warning {
-  margin: 0 0 16px;
+  max-width: 520px;
+  margin: 0 auto 40px;
   padding: 12px;
   border: 1px solid #fbbc04;
   border-radius: 8px;
