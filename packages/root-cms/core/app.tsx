@@ -226,9 +226,15 @@ export async function renderSignIn(
   res: Response,
   options: RenderOptions
 ) {
+  const warning =
+    process.env.NODE_ENV === 'development' &&
+    !options.rootConfig.server?.sessionCookieSecret
+      ? 'Dev warning: `server.sessionCookieSecret` is missing in `root.config.ts`. Configure this secret in production to secure CMS sessions.'
+      : '';
   const ctx = {
     name: options.cmsConfig.name || options.cmsConfig.id || '',
     firebaseConfig: options.cmsConfig.firebaseConfig,
+    warning,
   };
   const mainHtml = renderToString(
     <SignIn title="Sign in" ctx={ctx} favicon={options.cmsConfig.favicon} />

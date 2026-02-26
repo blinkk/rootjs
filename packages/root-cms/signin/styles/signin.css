@@ -43,6 +43,17 @@
   transition: all 0.218s ease;
 }
 
+.signin__warning {
+  margin: 0 0 16px;
+  padding: 12px;
+  border: 1px solid #fbbc04;
+  border-radius: 8px;
+  background: #fff9db;
+  color: #5f370e;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
 .signin__button:hover {
   border-color: #d2e3fc;
   background-color: rgba(66, 133, 244, 0.04);
