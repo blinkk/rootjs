@@ -43,10 +43,6 @@ a.DocPreviewCard {
   -webkit-line-clamp: 1;
 }
 
-.DocPreviewCard__content__badges {
-  margin-bottom: 4px;
-}
-
 .DocPreviewCard__content__url {
   font-size: 12px;
   font-weight: 500;
