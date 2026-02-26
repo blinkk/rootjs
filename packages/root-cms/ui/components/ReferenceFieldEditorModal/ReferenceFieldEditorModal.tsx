@@ -23,7 +23,7 @@ export function useReferenceFieldEditorModal() {
         ...modalTheme,
         className: 'ReferenceFieldEditorModalWrap',
         innerProps: props,
-        title: <ReferenceFieldEditorModal.Header docId={props.docId} />,
+        title: `Edit ${props.docId}`,
         size: 'xl',
         overflow: 'inside',
         closeOnClickOutside: false,
@@ -40,19 +40,17 @@ export function ReferenceFieldEditorModal(
   modalProps: ContextModalProps<ReferenceFieldEditorModalProps>
 ) {
   const {id, context, innerProps} = modalProps;
+  const docId = innerProps.docId;
   return (
     <div className="ReferenceFieldEditorModal">
-      <DraftDocProvider
-        docId={innerProps.docId}
-        autoSave={false}
-        flushOnStop={false}
-      >
+      <DraftDocProvider docId={docId} autoSave={false} flushOnStop={false}>
         <DocEditor
           className="ReferenceFieldEditorModal__DocEditor"
           docId={innerProps.docId}
           hideStatusBar
         />
         <ReferenceFieldEditorModal.Footer
+          docId={docId}
           onCancel={() => context.closeModal(id)}
         />
       </DraftDocProvider>
@@ -60,33 +58,26 @@ export function ReferenceFieldEditorModal(
   );
 }
 
-ReferenceFieldEditorModal.Header = (props: {docId: string}) => {
-  const docUrl = `/cms/content/${props.docId}`;
-  return (
-    <div className="ReferenceFieldEditorModal__header">
-      <div className="ReferenceFieldEditorModal__header__title">
-        Edit {props.docId}
-      </div>
-      <Button
-        component="a"
-        href={docUrl}
-        target="_blank"
-        variant="default"
-        compact
-        size="xs"
-        tabindex="-1"
-      >
-        open in new tab
-      </Button>
-    </div>
-  );
-};
-
-ReferenceFieldEditorModal.Footer = (props: {onCancel: () => void}) => {
+ReferenceFieldEditorModal.Footer = (props: {
+  docId: string;
+  onCancel: () => void;
+}) => {
   const draft = useDraftDoc();
 
   return (
     <div className="ReferenceFieldEditorModal__footer">
+      <div className="ReferenceFieldEditorModal__footer__start">
+        <Button
+          component="a"
+          variant="default"
+          size="xs"
+          rightIcon={<IconArrowUpRight size={16} />}
+          href={`/cms/content/${props.docId}`}
+          target="_blank"
+        >
+          Open {props.docId}
+        </Button>
+      </div>
       <Button variant="default" size="xs" onClick={props.onCancel}>
         Cancel
       </Button>
