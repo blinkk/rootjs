@@ -1,7 +1,8 @@
 import './ReferenceFieldEditorModal.css';
 
-import {Button} from '@mantine/core';
+import {ActionIcon, Button, Tooltip} from '@mantine/core';
 import {ContextModalProps, useModals} from '@mantine/modals';
+import {IconArrowUpRight} from '@tabler/icons-preact';
 import {DraftDocProvider, useDraftDoc} from '../../hooks/useDraftDoc.js';
 import {useModalTheme} from '../../hooks/useModalTheme.js';
 import {DocEditor} from '../DocEditor/DocEditor.js';
@@ -22,7 +23,7 @@ export function useReferenceFieldEditorModal() {
         ...modalTheme,
         className: 'ReferenceFieldEditorModalWrap',
         innerProps: props,
-        title: `Edit ${props.docId}`,
+        title: <ReferenceFieldEditorModal.Header docId={props.docId} />,
         size: 'xl',
         overflow: 'inside',
         closeOnClickOutside: false,
@@ -58,6 +59,28 @@ export function ReferenceFieldEditorModal(
     </div>
   );
 }
+
+ReferenceFieldEditorModal.Header = (props: {docId: string}) => {
+  const docUrl = `/cms/content/${props.docId}`;
+  return (
+    <div className="ReferenceFieldEditorModal__header">
+      <div className="ReferenceFieldEditorModal__header__title">
+        Edit {props.docId}
+      </div>
+      <Button
+        component="a"
+        href={docUrl}
+        target="_blank"
+        variant="default"
+        compact
+        size="xs"
+        tabindex="-1"
+      >
+        open in new tab
+      </Button>
+    </div>
+  );
+};
 
 ReferenceFieldEditorModal.Footer = (props: {onCancel: () => void}) => {
   const draft = useDraftDoc();

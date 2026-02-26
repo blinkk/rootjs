@@ -31,3 +31,18 @@
   border-top: 1px solid var(--color-border);
   padding: 12px 20px;
 }
+
+.ReferenceFieldEditorModal__header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.ReferenceFieldEditorModal__header__title a {
+  text-decoration: none;
+}
+
+.ReferenceFieldEditorModal__header__title a:hover {
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
