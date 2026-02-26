@@ -27,10 +27,6 @@ a.DocPreviewCard {
   align-items: center;
 }
 
-.DocPreviewCard__content__header .DocStatusBadges {
-  margin-left: auto;
-}
-
 .DocPreviewCard__content__header__docId {
   font-size: 14px;
   line-height: 1;
@@ -45,6 +41,10 @@ a.DocPreviewCard {
   display: -webkit-box;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 1;
+}
+
+.DocPreviewCard__content__badges {
+  margin-bottom: 4px;
 }
 
 .DocPreviewCard__content__url {

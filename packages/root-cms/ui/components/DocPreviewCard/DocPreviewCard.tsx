@@ -108,11 +108,15 @@ export function DocPreviewCard(props: DocPreviewCardProps) {
       <div className="DocPreviewCard__content">
         <div className="DocPreviewCard__content__header">
           <div className="DocPreviewCard__content__header__docId">{doc.id}</div>
-          {props.statusBadges && doc && <DocStatusBadges doc={doc} />}
         </div>
         <div className="DocPreviewCard__content__title">
           {previewTitle || '[UNTITLED]'}
         </div>
+        {props.statusBadges && doc && (
+          <div className="DocPreviewCard__content__badges">
+            <DocStatusBadges doc={doc} />
+          </div>
+        )}
         {props.variant !== 'compact' && docServingUrl && (
           <div className="DocPreviewCard__content__url">{docServingUrl}</div>
         )}
