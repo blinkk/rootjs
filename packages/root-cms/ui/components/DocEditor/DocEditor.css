@@ -380,11 +380,11 @@
   background-color: var(--button-background-active);
 }
 
-.DocEditor__ArrayField__item__header__controls__menu__item {
+.DocEditor__ArrayField__menu__item {
   padding: 6px 10px;
 }
 
-.DocEditor__ArrayField__item__header__controls__menu__item .mantine-Menu-itemLabel {
+.DocEditor__ArrayField__menu__item .mantine-Menu-itemLabel {
   font-size: 12px;
 }
 
@@ -413,9 +413,6 @@
 
 .DocEditor__ArrayField__add {
   margin-top: 16px;
-}
-
-.DocEditor__ArrayField__add__actions {
   display: flex;
   gap: 4px;
 }

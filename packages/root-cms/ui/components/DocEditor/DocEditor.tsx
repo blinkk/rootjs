@@ -1239,36 +1239,32 @@ DocEditor.ArrayField = (props: FieldProps) => {
 
   const addButtonRow = (
     <div className="DocEditor__ArrayField__add">
-      <div className="DocEditor__ArrayField__add__actions">
-        <Button
-          color="dark"
-          size="xs"
-          leftIcon={<IconCirclePlus size={16} />}
-          onClick={() => add()}
+      <Button
+        className="DocEditor__ArrayField__add__button"
+        color="dark"
+        size="xs"
+        leftIcon={<IconCirclePlus size={16} />}
+        onClick={() => add()}
+      >
+        {field.buttonLabel || 'Add'}
+      </Button>
+      <Menu
+        className="DocEditor__ArrayField__add__menu"
+        control={
+          <ActionIcon className="DocEditor__ArrayField__item__header__controls__dots">
+            <IconDotsVertical size={16} />
+          </ActionIcon>
+        }
+      >
+        <Menu.Label>CLIPBOARD</Menu.Label>
+        <Menu.Item
+          className="DocEditor__ArrayField__menu__item"
+          icon={<IconRowInsertBottom size={18} />}
+          onClick={() => pasteFromVirtualClipboard(order.length - 1)}
         >
-          {field.buttonLabel || 'Add'}
-        </Button>
-        <Menu withArrow position="bottom-end">
-          <Menu.Target>
-            <Button
-              color="dark"
-              size="xs"
-              px={8}
-              aria-label="More add options"
-            >
-              <IconChevronDown size={16} />
-            </Button>
-          </Menu.Target>
-          <Menu.Dropdown>
-            <Menu.Item
-              leftSection={<IconClipboardCopy size={16} />}
-              onClick={() => pasteFromVirtualClipboard(order.length - 1)}
-            >
-              Paste
-            </Menu.Item>
-          </Menu.Dropdown>
-        </Menu>
-      </div>
+          Paste item to end
+        </Menu.Item>
+      </Menu>
     </div>
   );
 
@@ -1401,21 +1397,21 @@ DocEditor.ArrayField = (props: FieldProps) => {
                               >
                                 <Menu.Label>INSERT</Menu.Label>
                                 <Menu.Item
-                                  className="DocEditor__ArrayField__item__header__controls__menu__item"
+                                  className="DocEditor__ArrayField__menu__item"
                                   icon={<IconRowInsertTop size={18} />}
                                   onClick={() => insertBefore(i)}
                                 >
                                   Add before
                                 </Menu.Item>
                                 <Menu.Item
-                                  className="DocEditor__ArrayField__item__header__controls__menu__item"
+                                  className="DocEditor__ArrayField__menu__item"
                                   icon={<IconRowInsertBottom size={18} />}
                                   onClick={() => insertAfter(i)}
                                 >
                                   Add after
                                 </Menu.Item>
                                 <Menu.Item
-                                  className="DocEditor__ArrayField__item__header__controls__menu__item"
+                                  className="DocEditor__ArrayField__menu__item"
                                   icon={<IconCopy size={18} />}
                                   onClick={() => duplicate(i)}
                                 >
@@ -1423,14 +1419,14 @@ DocEditor.ArrayField = (props: FieldProps) => {
                                 </Menu.Item>
                                 <Menu.Label>CLIPBOARD</Menu.Label>
                                 <Menu.Item
-                                  className="DocEditor__ArrayField__item__header__controls__menu__item"
+                                  className="DocEditor__ArrayField__menu__item"
                                   icon={<IconClipboardCopy size={18} />}
                                   onClick={() => copyToVirtualClipboard(i)}
                                 >
                                   Copy
                                 </Menu.Item>
                                 <Menu.Item
-                                  className="DocEditor__ArrayField__item__header__controls__menu__item"
+                                  className="DocEditor__ArrayField__menu__item"
                                   icon={<IconRowInsertTop size={18} />}
                                   onClick={async () =>
                                     pasteBefore(i, await virtualClipboard.get())
@@ -1439,7 +1435,7 @@ DocEditor.ArrayField = (props: FieldProps) => {
                                   Paste before
                                 </Menu.Item>
                                 <Menu.Item
-                                  className="DocEditor__ArrayField__item__header__controls__menu__item"
+                                  className="DocEditor__ArrayField__menu__item"
                                   icon={<IconRowInsertBottom size={18} />}
                                   onClick={async () =>
                                     pasteAfter(i, await virtualClipboard.get())
@@ -1449,7 +1445,7 @@ DocEditor.ArrayField = (props: FieldProps) => {
                                 </Menu.Item>
                                 <Menu.Label>CODE</Menu.Label>
                                 <Menu.Item
-                                  className="DocEditor__ArrayField__item__header__controls__menu__item"
+                                  className="DocEditor__ArrayField__menu__item"
                                   icon={<IconBraces size={18} />}
                                   onClick={() => editJson(i)}
                                 >
@@ -1457,7 +1453,7 @@ DocEditor.ArrayField = (props: FieldProps) => {
                                 </Menu.Item>
                                 {experiments.ai && (
                                   <Menu.Item
-                                    className="DocEditor__ArrayField__item__header__controls__menu__item"
+                                    className="DocEditor__ArrayField__menu__item"
                                     icon={
                                       <IconSparkles size={18} stroke="1.75" />
                                     }
@@ -1468,7 +1464,7 @@ DocEditor.ArrayField = (props: FieldProps) => {
                                 )}
                                 <Menu.Label>REMOVE</Menu.Label>
                                 <Menu.Item
-                                  className="DocEditor__ArrayField__item__header__controls__menu__item"
+                                  className="DocEditor__ArrayField__menu__item"
                                   icon={<IconTrash size={18} />}
                                   onClick={() => removeAt(i)}
                                 >
