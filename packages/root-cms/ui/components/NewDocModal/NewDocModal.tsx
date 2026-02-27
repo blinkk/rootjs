@@ -1,6 +1,6 @@
 import {Button, Modal, useMantineTheme} from '@mantine/core';
+import {useLocation} from 'preact-iso';
 import {useState} from 'preact/hooks';
-import {route} from 'preact-router';
 import {isSlugValid, normalizeSlug} from '../../../shared/slug.js';
 import {useCollectionSchema} from '../../hooks/useCollectionSchema.js';
 import {cmsCreateDoc} from '../../utils/doc.js';
@@ -17,6 +17,7 @@ interface NewDocModalProps {
 }
 
 export function NewDocModal(props: NewDocModalProps) {
+  const {route} = useLocation();
   const [slug, setSlug] = useState('');
   const [rpcLoading, setRpcLoading] = useState(false);
   const [slugError, setSlugError] = useState('');
