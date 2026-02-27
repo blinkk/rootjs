@@ -88,7 +88,9 @@ describe('RootCMSClient Validation', () => {
 
       const result = await client.getCollection('TestCollection');
 
-      expect(mockGetCollectionSchema).toHaveBeenCalledWith('TestCollection');
+      expect(mockGetCollectionSchema).toHaveBeenCalledWith('TestCollection', {
+        rootDir: '/test',
+      });
       expect(result).toEqual(testSchema);
     });
 
@@ -100,6 +102,22 @@ describe('RootCMSClient Validation', () => {
 
       const result = await client.getCollection('NonExistent');
 
+      expect(result).toBeNull();
+    });
+
+    it('passes rootDir to getCollectionSchema for filesystem fallback', async () => {
+      const {RootCMSClient} = await import('./client.js');
+      const client = new RootCMSClient(mockRootConfig);
+
+      mockGetCollectionSchema.mockResolvedValue(null);
+
+      const result = await client.getCollection('Pages');
+
+      // Verify rootDir is passed so getCollectionSchema can use the
+      // filesystem fallback in non-Vite environments.
+      expect(mockGetCollectionSchema).toHaveBeenCalledWith('Pages', {
+        rootDir: '/test',
+      });
       expect(result).toBeNull();
     });
   });
