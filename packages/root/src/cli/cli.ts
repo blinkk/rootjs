@@ -1,6 +1,7 @@
 import {Command, InvalidArgumentError} from 'commander';
 import {bgGreen, black} from 'kleur/colors';
 import {build, BuildOptions} from './build.js';
+import {ai} from './ai.js';
 import {codegen} from './codegen.js';
 import {createPackage} from './create-package.js';
 import {dev, createDevServer} from './dev.js';
@@ -48,6 +49,15 @@ class CliRunner {
         ''
       )
       .action(build);
+    program
+      .command('ai [prompt...]')
+      .description('uses an AI model to generate and edit project files')
+      .option('--api-key <apiKey>', 'Gemini API key (or use GEMINI_API_KEY)')
+      .option('--model <model>', 'Gemini model', 'gemini-2.5-pro')
+      .option('--yes', 'apply generated changes without confirmation')
+      .option('--dry-run', 'preview changes without writing files')
+      .option('--json', 'print the raw JSON response and exit')
+      .action(ai);
     program
       .command('codegen [type] [name]')
       .description('generates boilerplate code')
@@ -128,6 +138,7 @@ function numberFlag(value: string) {
 }
 
 export {
+  ai,
   CliRunner,
   build,
   BuildOptions,
