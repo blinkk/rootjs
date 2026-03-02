@@ -1,6 +1,6 @@
 import {Button} from '@mantine/core';
-import {IconFolder} from '@tabler/icons-preact';
 import {ActionLogs} from '../../components/ActionLogs/ActionLogs.js';
+import {CollectionTree} from '../../components/CollectionTree/CollectionTree.js';
 import {Heading} from '../../components/Heading/Heading.js';
 import {Layout} from '../../layout/Layout.js';
 import './ProjectPage.css';
@@ -49,38 +49,12 @@ export function ProjectPage() {
 }
 
 ProjectPage.CollectionList = () => {
-  const collections = Object.keys(window.__ROOT_CTX.collections).map((id) => {
-    return {
-      ...window.__ROOT_CTX.collections[id],
-      id: id,
-    };
-  });
+  const collections = window.__ROOT_CTX.collections;
+  const projectId = window.__ROOT_CTX.rootConfig.projectId;
+
   return (
-    <div className="ProjectPage__collectionList">
-      {collections.map((collection) => (
-        <a
-          className="ProjectPage__collectionList__collection"
-          href={`/cms/content/${collection.id}`}
-          key={collection.id}
-        >
-          <div className="ProjectPage__collectionList__collection__icon">
-            <IconFolder size={20} strokeWidth="1.75" />
-          </div>
-          <div className="ProjectPage__collectionList__collection__name">
-            {collection.name || collection.id}
-          </div>
-          {collection.description && (
-            <div className="ProjectPage__collectionList__collection__desc">
-              {collection.description}
-            </div>
-          )}
-        </a>
-      ))}
-      {collections.length === 0 && (
-        <div className="ProjectPage__collectionList__collections__empty">
-          No collections match your query.
-        </div>
-      )}
+    <div className="ProjectPage__collectionTree">
+      <CollectionTree collections={collections} projectId={projectId} />
     </div>
   );
 };
