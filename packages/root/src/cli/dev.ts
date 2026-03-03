@@ -1,4 +1,5 @@
 import http from 'node:http';
+import {createRequire} from 'node:module';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 
@@ -22,6 +23,10 @@ import {redirectsMiddleware} from '../middleware/redirects.js';
 import {sessionMiddleware} from '../middleware/session.js';
 import {getElements, getElementsDirs} from '../node/element-graph.js';
 import {loadRootConfigWithDeps} from '../node/load-config.js';
+import {
+  flattenPackageDepsFromMonorepo,
+  loadPackageJson,
+} from '../node/monorepo.js';
 import {createViteServer} from '../node/vite.js';
 import {DevServerAssetMap} from '../render/asset-map/dev-asset-map.js';
 import {dirExists, isDirectory, isJsFile} from '../utils/fsutils.js';
@@ -29,6 +34,8 @@ import {findOpenPort} from '../utils/ports.js';
 import {getSessionCookieSecret} from '../utils/rand.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const require = createRequire(import.meta.url);
+const rootPackageJson = require('../../package.json') as {version?: string};
 
 type RenderModule = typeof import('../render/render.js');
 
@@ -45,6 +52,8 @@ export async function dev(rootProjectDir?: string, options?: DevOptions) {
 
   let currentServer: http.Server | null = null;
   let currentViteServer: ViteDevServer | null = null;
+
+  runDevStartupTasks(rootDir);
 
   async function start() {
     const server = await createDevServer({rootDir, port});
@@ -96,6 +105,59 @@ export async function dev(rootProjectDir?: string, options?: DevOptions) {
   }
 
   await start();
+}
+
+function runDevStartupTasks(rootDir: string) {
+  warnOnRootVersionMismatch(rootDir);
+}
+
+function warnOnRootVersionMismatch(rootDir: string) {
+  const currentVersion = rootPackageJson.version;
+  if (!currentVersion) {
+    return;
+  }
+
+  const deps = flattenPackageDepsFromMonorepo(rootDir);
+  let declaredVersion = deps['@blinkk/root'];
+  if (!declaredVersion) {
+    const packageJson = loadPackageJson(path.resolve(rootDir, 'package.json'));
+    declaredVersion =
+      packageJson?.dependencies?.['@blinkk/root'] ||
+      packageJson?.devDependencies?.['@blinkk/root'] ||
+      packageJson?.peerDependencies?.['@blinkk/root'];
+  }
+
+  if (!declaredVersion) {
+    return;
+  }
+
+  const normalizedVersion = normalizeRootVersion(declaredVersion);
+  if (!normalizedVersion) {
+    return;
+  }
+
+  if (normalizedVersion !== currentVersion) {
+    console.warn(
+      `⚠️ root version mismatch: current ${currentVersion} does not match package.json (${declaredVersion}).`
+    );
+  }
+}
+
+function normalizeRootVersion(version: string) {
+  if (!version || version === '*') {
+    return null;
+  }
+
+  const workspacePrefix = 'workspace:';
+  const normalized = version.startsWith(workspacePrefix)
+    ? version.slice(workspacePrefix.length)
+    : version;
+
+  if (normalized === '*') {
+    return null;
+  }
+
+  return normalized.replace(/^[~^]/, '');
 }
 
 export async function createDevServer(options?: {
