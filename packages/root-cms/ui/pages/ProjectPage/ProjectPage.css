@@ -26,5 +26,22 @@
 }
 
 .ProjectPage__collectionTree {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
   max-width: 580px;
+}
+
+.ProjectPage__collectionTree .mantine-Accordion-control {
+  padding-top: 12px;
+  padding-bottom: 12px;
+}
+
+.ProjectPage__collectionTree .CollectionTree__accordion__children {
+  gap: 12px;
+}
+
+.ProjectPage__collectionTree .CollectionTree__collection {
+  border: 2px solid black;
+  border-radius: 8px;
 }
