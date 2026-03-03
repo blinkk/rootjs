@@ -1,7 +1,8 @@
 import {ActionIcon, Breadcrumbs, Tooltip} from '@mantine/core';
 import {useModals} from '@mantine/modals';
 import {showNotification, updateNotification} from '@mantine/notifications';
-import {IconTrashFilled} from '@tabler/icons-preact';
+import {IconArchive, IconRestore} from '@tabler/icons-preact';
+import {useEffect, useState} from 'preact/hooks';
 import {route} from 'preact-router';
 import {ConditionalTooltip} from '../../components/ConditionalTooltip/ConditionalTooltip.js';
 import {Heading} from '../../components/Heading/Heading.js';
@@ -12,28 +13,38 @@ import {useProjectRoles} from '../../hooks/useProjectRoles.js';
 import {Layout} from '../../layout/Layout.js';
 import {testCanPublish} from '../../utils/permissions.js';
 import './EditReleasePage.css';
-import {deleteRelease} from '../../utils/release.js';
+import {
+  Release,
+  archiveRelease,
+  getRelease,
+  unarchiveRelease,
+} from '../../utils/release.js';
 
 export function EditReleasePage(props: {id: string}) {
+  const [release, setRelease] = useState<Release | null>(null);
   const modals = useModals();
   const modalTheme = useModalTheme();
   const {roles} = useProjectRoles();
   const currentUserEmail = window.firebase.user.email || '';
   const canPublish = testCanPublish(roles, currentUserEmail);
 
-  function onDeleteClicked() {
-    const notificationId = `delete-release-${props.id}`;
+  useEffect(() => {
+    getRelease(props.id).then((release) => {
+      setRelease(release);
+    });
+  }, [props.id]);
+
+  function onArchiveClicked() {
+    const notificationId = `archive-release-${props.id}`;
     const modalId = modals.openConfirmModal({
       ...modalTheme,
-      title: 'Delete release',
+      title: 'Archive release',
       children: (
         <Text size="body-sm" weight="semi-bold">
-          Are you sure you want to delete release <code>{props.id}</code>? There
-          is no undo. This will only delete the release; the docs in the release
-          will remain unchanged.
+          Are you sure you want to archive release <code>{props.id}</code>?
         </Text>
       ),
-      labels: {confirm: 'Delete', cancel: 'Cancel'},
+      labels: {confirm: 'Archive', cancel: 'Cancel'},
       cancelProps: {size: 'xs'},
       confirmProps: {color: 'red', size: 'xs'},
       onCancel: () => console.log('Cancel'),
@@ -41,21 +52,62 @@ export function EditReleasePage(props: {id: string}) {
       onConfirm: async () => {
         showNotification({
           id: notificationId,
-          title: 'Deleting release',
-          message: `Deleting ${props.id}...`,
+          title: 'Archiving release',
+          message: `Archiving ${props.id}...`,
           loading: true,
           autoClose: false,
         });
-        await deleteRelease(props.id);
+        await archiveRelease(props.id);
+        const newRelease = await getRelease(props.id);
+        setRelease(newRelease);
         updateNotification({
           id: notificationId,
-          title: 'Deleted release',
-          message: `Successfully deleted ${props.id}`,
+          title: 'Archived release',
+          message: `Successfully archived ${props.id}`,
           loading: false,
           autoClose: 5000,
         });
         modals.closeModal(modalId);
         route('/cms/releases');
+      },
+    });
+  }
+
+  function onUnarchiveClicked() {
+    const notificationId = `unarchive-release-${props.id}`;
+    const modalId = modals.openConfirmModal({
+      ...modalTheme,
+      title: 'Unarchive release',
+      children: (
+        <Text size="body-sm" weight="semi-bold">
+          Are you sure you want to unarchive release <code>{props.id}</code>?
+        </Text>
+      ),
+      labels: {confirm: 'Unarchive', cancel: 'Cancel'},
+      cancelProps: {size: 'xs'},
+      confirmProps: {color: 'dark', size: 'xs'},
+      onCancel: () => console.log('Cancel'),
+      closeOnConfirm: false,
+      onConfirm: async () => {
+        showNotification({
+          id: notificationId,
+          title: 'Unarchiving release',
+          message: `Unarchiving ${props.id}...`,
+          loading: true,
+          autoClose: false,
+        });
+        await unarchiveRelease(props.id);
+        const newRelease = await getRelease(props.id);
+        setRelease(newRelease);
+        updateNotification({
+          id: notificationId,
+          title: 'Unarchived release',
+          message: `Successfully unarchived ${props.id}`,
+          loading: false,
+          autoClose: 5000,
+        });
+        modals.closeModal(modalId);
+        route(`/cms/releases/${props.id}`);
       },
     });
   }
@@ -73,18 +125,30 @@ export function EditReleasePage(props: {id: string}) {
             <Heading size="h1">Edit Release: {props.id}</Heading>
             <div className="EditReleasePage__header__controls">
               <ConditionalTooltip
-                label="You don't have access to delete releases"
+                label="You don't have access to archive releases"
                 condition={!canPublish}
               >
-                <Tooltip label="Delete" disabled={!canPublish}>
-                  <ActionIcon
-                    onClick={onDeleteClicked}
-                    loading={!roles}
-                    disabled={!canPublish}
-                  >
-                    <IconTrashFilled size={20} stroke="1.5" />
-                  </ActionIcon>
-                </Tooltip>
+                {release?.archivedAt ? (
+                  <Tooltip label="Unarchive" disabled={!canPublish}>
+                    <ActionIcon
+                      onClick={onUnarchiveClicked}
+                      loading={!roles}
+                      disabled={!canPublish}
+                    >
+                      <IconRestore size={20} stroke="1.5" />
+                    </ActionIcon>
+                  </Tooltip>
+                ) : (
+                  <Tooltip label="Archive" disabled={!canPublish}>
+                    <ActionIcon
+                      onClick={onArchiveClicked}
+                      loading={!roles}
+                      disabled={!canPublish}
+                    >
+                      <IconArchive size={20} stroke="1.5" />
+                    </ActionIcon>
+                  </Tooltip>
+                )}
               </ConditionalTooltip>
             </div>
           </div>

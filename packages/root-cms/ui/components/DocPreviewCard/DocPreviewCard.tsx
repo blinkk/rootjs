@@ -4,7 +4,6 @@ import {Loader} from '@mantine/core';
 import {useEffect, useState} from 'preact/hooks';
 import {joinClassNames} from '../../utils/classes.js';
 import {getDocFromCacheOrFetch} from '../../utils/doc-cache.js';
-import {getDocServingUrl} from '../../utils/doc-urls.js';
 import {notifyErrors} from '../../utils/notifications.js';
 import {getNestedValue} from '../../utils/objects.js';
 import {DocStatusBadges} from '../DocStatusBadges/DocStatusBadges.js';
@@ -57,7 +56,7 @@ export function DocPreviewCard(props: DocPreviewCardProps) {
     return;
   }
 
-  const [collection, slug] = docId.split('/');
+  const [collection] = docId.split('/');
   const fields = doc.fields || {};
   const rootCollection = window.__ROOT_CTX.collections[collection];
   if (!rootCollection) {
@@ -75,10 +74,6 @@ export function DocPreviewCard(props: DocPreviewCardProps) {
   const previewImage =
     getNestedValue(fields, rootCollection.preview?.image || 'meta.image') ||
     rootCollection.preview?.defaultImage;
-  const docServingUrl = getDocServingUrl({
-    collectionId: collection,
-    slug: slug,
-  });
 
   let Component: 'div' | 'a' = 'div';
   const attrs: Record<string, any> = {};
@@ -116,9 +111,6 @@ export function DocPreviewCard(props: DocPreviewCardProps) {
           <div className="DocPreviewCard__content__badges">
             <DocStatusBadges doc={doc} />
           </div>
-        )}
-        {props.variant !== 'compact' && docServingUrl && (
-          <div className="DocPreviewCard__content__url">{docServingUrl}</div>
         )}
       </div>
     </Component>
