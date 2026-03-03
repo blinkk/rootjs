@@ -684,6 +684,7 @@ interface ArrayAdd {
   type: 'add';
   draft: DraftDocController;
   deepKey: string;
+  defaultValue: ArrayItemValue;
 }
 
 interface ArrayInsertBefore {
@@ -691,6 +692,7 @@ interface ArrayInsertBefore {
   index: number;
   draft: DraftDocController;
   deepKey: string;
+  defaultValue: ArrayItemValue;
 }
 
 interface ArrayInsertAfter {
@@ -698,6 +700,7 @@ interface ArrayInsertAfter {
   index: number;
   draft: DraftDocController;
   deepKey: string;
+  defaultValue: ArrayItemValue;
 }
 
 interface ArrayDuplicate {
@@ -787,15 +790,16 @@ function arrayReducer(state: ArrayFieldValue, action: ArrayAction) {
     case 'add': {
       const data = state ?? {};
       const newKey = autokey();
+      const defaultValue = structuredClone(action.defaultValue || {});
       const order = [...(data._array || []), newKey];
       action.draft.updateKeys({
         [`${action.deepKey}._array`]: order,
-        [`${action.deepKey}.${newKey}`]: {},
+        [`${action.deepKey}.${newKey}`]: defaultValue,
       });
       const newlyAdded = state._new || [];
       return {
         ...data,
-        [newKey]: {},
+        [newKey]: defaultValue,
         _array: order,
         _new: [...newlyAdded, newKey],
       };
@@ -804,15 +808,16 @@ function arrayReducer(state: ArrayFieldValue, action: ArrayAction) {
       const data = state ?? {};
       const order = [...(data._array || [])];
       const newKey = autokey();
+      const defaultValue = structuredClone(action.defaultValue || {});
       order.splice(action.index, 0, newKey);
       action.draft.updateKeys({
         [`${action.deepKey}._array`]: order,
-        [`${action.deepKey}.${newKey}`]: {},
+        [`${action.deepKey}.${newKey}`]: defaultValue,
       });
       const newlyAdded = state._new || [];
       return {
         ...data,
-        [newKey]: {},
+        [newKey]: defaultValue,
         _array: order,
         _new: [...newlyAdded, newKey],
       };
@@ -821,15 +826,16 @@ function arrayReducer(state: ArrayFieldValue, action: ArrayAction) {
       const data = state ?? {};
       const order = [...(data._array || [])];
       const newKey = autokey();
+      const defaultValue = structuredClone(action.defaultValue || {});
       order.splice(action.index + 1, 0, newKey);
       action.draft.updateKeys({
         [`${action.deepKey}._array`]: order,
-        [`${action.deepKey}.${newKey}`]: {},
+        [`${action.deepKey}.${newKey}`]: defaultValue,
       });
       const newlyAdded = state._new || [];
       return {
         ...data,
-        [newKey]: {},
+        [newKey]: defaultValue,
         _array: order,
         _new: [...newlyAdded, newKey],
       };
@@ -1022,7 +1028,12 @@ DocEditor.ArrayField = (props: FieldProps) => {
   };
 
   const add = () => {
-    dispatch({type: 'add', draft: draft, deepKey: props.deepKey});
+    dispatch({
+      type: 'add',
+      draft: draft,
+      deepKey: props.deepKey,
+      defaultValue: field.itemDefault || {},
+    });
   };
 
   const pasteBefore = (index: number, data: ClipboardData) => {
@@ -1051,6 +1062,7 @@ DocEditor.ArrayField = (props: FieldProps) => {
       draft: draft,
       deepKey: props.deepKey,
       index: index,
+      defaultValue: field.itemDefault || {},
     });
   };
 
@@ -1060,6 +1072,7 @@ DocEditor.ArrayField = (props: FieldProps) => {
       draft: draft,
       deepKey: props.deepKey,
       index: index,
+      defaultValue: field.itemDefault || {},
     });
   };
 
