@@ -45,7 +45,7 @@ export async function startMcpServer(
   const server = await createMcpServer(options);
   const transport = new StdioServerTransport();
   await server.connect(transport);
-  console.error('Root.js MCP server running on stdio');
+  console.error('🤖 Root AI MCP server started.');
   return {
     close: async () => {
       await server.close();

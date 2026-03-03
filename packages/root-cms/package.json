@@ -69,12 +69,12 @@
     "@ag-grid-community/core": "32.3.9",
     "@ag-grid-community/react": "32.3.9",
     "@ag-grid-community/styles": "32.3.9",
-    "@modelcontextprotocol/sdk": "1.12.0",
     "@genkit-ai/ai": "1.26.0",
     "@genkit-ai/core": "1.26.0",
     "@genkit-ai/google-genai": "1.26.0",
     "@google-cloud/firestore": "7.11.3",
     "@hello-pangea/dnd": "18.0.1",
+    "@modelcontextprotocol/sdk": "1.27.1",
     "@types/cli-progress": "3.11.6",
     "body-parser": "1.20.2",
     "cli-progress": "3.12.0",
@@ -92,7 +92,7 @@
     "react-easy-crop": "5.5.6",
     "sirv": "2.0.3",
     "tiny-glob": "0.2.9",
-    "zod": "3.24.4"
+    "zod": "4.3.6"
   },
   "//": "NOTE(stevenle): due to compat issues with mantine and preact, mantine is pinned to v4.2.12",
   "devDependencies": {
