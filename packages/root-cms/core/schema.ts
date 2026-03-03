@@ -184,6 +184,10 @@ export type ArrayField = CommonFieldProps & {
   type: 'array';
   default?: any[];
   /**
+   * Default value to use when a new array item is added in the CMS UI.
+   */
+  itemDefault?: Record<string, any>;
+  /**
    * String format for the preview line of an item in the array. Placeholder
    * values should use brackets, e.g. `m{_index:02}: {_type}`.
    *
