@@ -10,7 +10,7 @@
     "node": "22"
   },
   "scripts": {
-    "dev": "root dev",
+    "dev": "root dev --mcp",
     "build": "rm -rf dist/ && root package --target=firebase --out=functions && touch .env && cp .env functions",
     "preview": "rm -rf dist/ && root build --ssr-only && root preview",
     "deploy": "pnpm run build && firebase deploy",

@@ -34,6 +34,8 @@ type RenderModule = typeof import('../render/render.js');
 
 export interface DevOptions {
   host?: string;
+  mcp?: boolean;
+  version?: string;
 }
 
 export async function dev(rootProjectDir?: string, options?: DevOptions) {
@@ -42,9 +44,11 @@ export async function dev(rootProjectDir?: string, options?: DevOptions) {
   const defaultPort = parseInt(process.env.PORT || '4007');
   const host = options?.host || 'localhost';
   const port = await findOpenPort(defaultPort, defaultPort + 10);
+  const mcpMode = options?.mcp ?? false;
 
   let currentServer: http.Server | null = null;
   let currentViteServer: ViteDevServer | null = null;
+  let currentMcpHandle: {close: () => Promise<void>} | null = null;
 
   async function start() {
     const server = await createDevServer({rootDir, port});
@@ -62,7 +66,16 @@ export async function dev(rootProjectDir?: string, options?: DevOptions) {
     }
     console.log(`${dim('┃')} mode:     development`);
     console.log();
+
     currentServer = server.listen(port, host);
+
+    if (mcpMode) {
+      const {startMcpServer} = await import('./mcp.js');
+      currentMcpHandle = await startMcpServer({
+        rootConfig,
+        version: options?.version || '1.0.0',
+      });
+    }
 
     // Watch for config changes.
     const rootConfigDependencies: string[] = server.get(
@@ -75,15 +88,23 @@ export async function dev(rootProjectDir?: string, options?: DevOptions) {
     viteServer.watcher.add(dependencies);
     viteServer.watcher.on('change', async (file) => {
       if (dependencies.includes(file)) {
-        console.log(
-          `\n${dim('┃')} root.config.ts changed. restarting server...`
-        );
+        if (mcpMode) {
+          console.error('root.config.ts changed. restarting server...');
+        } else {
+          console.log(
+            `\n${dim('┃')} root.config.ts changed. restarting server...`
+          );
+        }
         await restart();
       }
     });
   }
 
-  async function restart() {
+  async function shutdown() {
+    if (currentMcpHandle) {
+      await currentMcpHandle.close();
+      currentMcpHandle = null;
+    }
     if (currentServer) {
       currentServer.close();
       currentServer = null;
@@ -92,8 +113,18 @@ export async function dev(rootProjectDir?: string, options?: DevOptions) {
       await currentViteServer.close();
       currentViteServer = null;
     }
+  }
+
+  async function restart() {
+    await shutdown();
     await start();
   }
+
+  process.on('SIGINT', async () => {
+    await shutdown();
+    // eslint-disable-next-line no-process-exit
+    process.exit(0);
+  });
 
   await start();
 }
