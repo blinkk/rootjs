@@ -1,0 +1,42 @@
+{
+  "name": "@blinkk/root-tailwind",
+  "version": "0.0.0",
+  "author": "s@blinkk.com",
+  "license": "MIT",
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/blinkk/rootjs.git",
+    "directory": "packages/root-tailwind"
+  },
+  "files": [
+    "dist/*"
+  ],
+  "type": "module",
+  "module": "./dist/core.js",
+  "types": "./dist/core.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/core.d.ts",
+      "import": "./dist/core.js"
+    }
+  },
+  "scripts": {
+    "build": "rm -rf dist && tsup-node",
+    "dev": "pnpm build --watch",
+    "test": "pnpm build"
+  },
+  "peerDependencies": {
+    "@blinkk/root": "2.5.3",
+    "postcss": "^8.4.0",
+    "tailwindcss": "^3.4.0"
+  },
+  "devDependencies": {
+    "@blinkk/root": "workspace:*",
+    "@types/node": "24.3.1",
+    "tsup": "8.5.0",
+    "typescript": "5.9.2"
+  }
+}
