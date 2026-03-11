@@ -3,7 +3,7 @@ import {useModals} from '@mantine/modals';
 import {showNotification, updateNotification} from '@mantine/notifications';
 import {IconArchive, IconRestore} from '@tabler/icons-preact';
 import {useEffect, useState} from 'preact/hooks';
-import {route} from 'preact-router';
+import {useLocation} from 'preact-iso';
 import {ConditionalTooltip} from '../../components/ConditionalTooltip/ConditionalTooltip.js';
 import {Heading} from '../../components/Heading/Heading.js';
 import {ReleaseForm} from '../../components/ReleaseForm/ReleaseForm.js';
@@ -21,6 +21,7 @@ import {
 } from '../../utils/release.js';
 
 export function EditReleasePage(props: {id: string}) {
+  const {route} = useLocation();
   const [release, setRelease] = useState<Release | null>(null);
   const modals = useModals();
   const modalTheme = useModalTheme();
