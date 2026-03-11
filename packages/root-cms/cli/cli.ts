@@ -1,5 +1,6 @@
 import {Command} from 'commander';
 import {bgGreen, black} from 'kleur/colors';
+import {docsGet, docsSet, docsDownload, docsUpload} from './docs.js';
 import {exportData} from './export.js';
 import {generateTypes} from './generate-types.js';
 import {importData} from './import.js';
@@ -89,8 +90,73 @@ class CliRunner {
       )
       .option('--project <projectId>', 'gcp project id (overrides root config)')
       .action(importData);
+    program
+      .command('docs.get <docId> [outputPath]')
+      .description(
+        'fetches a single doc and writes it as JSON\n\n' +
+          'Usage examples:\n' +
+          '  $ root-cms docs.get Pages/home\n' +
+          '  $ root-cms docs.get Pages/home ./out/home.json\n' +
+          '  $ root-cms docs.get Pages/home --mode published'
+      )
+      .option(
+        '--mode <mode>',
+        'doc mode: "draft" or "published" (default: "draft")'
+      )
+      .option('--raw', 'output raw firestore data without unmarshaling')
+      .action(docsGet);
+    program
+      .command('docs.set <docId> <filepath>')
+      .description(
+        'updates a single doc from a JSON file\n\n' +
+          'Usage examples:\n' +
+          '  $ root-cms docs.set Pages/home home.json\n' +
+          '  $ root-cms docs.set Pages/home home.json --mode published'
+      )
+      .option(
+        '--mode <mode>',
+        'doc mode: "draft" or "published" (default: "draft")'
+      )
+      .action(docsSet);
+    program
+      .command('docs.download <collection> [outputDir]')
+      .description(
+        'downloads all docs in a collection to a local directory\n\n' +
+          'Usage examples:\n' +
+          '  $ root-cms docs.download Pages\n' +
+          '  $ root-cms docs.download Pages ./my-pages\n' +
+          '  $ root-cms docs.download Pages --mode published'
+      )
+      .option(
+        '--mode <mode>',
+        'doc mode: "draft" or "published" (default: "draft")'
+      )
+      .action(docsDownload);
+    program
+      .command('docs.upload <collection> <dir>')
+      .description(
+        'uploads docs from a local directory to a collection\n\n' +
+          'Usage examples:\n' +
+          '  $ root-cms docs.upload Pages ./Pages\n' +
+          '  $ root-cms docs.upload Pages ./my-pages --mode published'
+      )
+      .option(
+        '--mode <mode>',
+        'doc mode: "draft" or "published" (default: "draft")'
+      )
+      .action(docsUpload);
     await program.parseAsync(argv);
   }
 }
 
-export {CliRunner, exportData, generateTypes, importData, initFirebase};
+export {
+  CliRunner,
+  docsGet,
+  docsSet,
+  docsDownload,
+  docsUpload,
+  exportData,
+  generateTypes,
+  importData,
+  initFirebase,
+};
