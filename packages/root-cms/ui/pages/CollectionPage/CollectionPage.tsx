@@ -3,7 +3,7 @@ import './CollectionPage.css';
 import {Button, Loader, Select, Tabs, Tooltip} from '@mantine/core';
 import {IconArrowRoundaboutRight, IconCirclePlus} from '@tabler/icons-preact';
 import {useEffect, useState} from 'preact/hooks';
-import {route} from 'preact-router';
+import {useLocation} from 'preact-iso';
 import {CollectionTree} from '../../components/CollectionTree/CollectionTree.js';
 import {ConditionalTooltip} from '../../components/ConditionalTooltip/ConditionalTooltip.js';
 import {DocActionsMenu} from '../../components/DocActionsMenu/DocActionsMenu.js';
@@ -26,6 +26,7 @@ interface CollectionPageProps {
 }
 
 export function CollectionPage(props: CollectionPageProps) {
+  const {route} = useLocation();
   const [query, setQuery] = useState('');
   const projectId = window.__ROOT_CTX.rootConfig.projectId;
 

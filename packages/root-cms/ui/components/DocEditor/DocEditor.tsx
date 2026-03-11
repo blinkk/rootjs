@@ -47,7 +47,7 @@ import {
   useState,
   useCallback,
 } from 'preact/hooks';
-import {route} from 'preact-router';
+import {useLocation} from 'preact-iso';
 import * as schema from '../../../core/schema.js';
 import {useCollectionSchema} from '../../hooks/useCollectionSchema.js';
 import {
@@ -177,6 +177,7 @@ type StatusBarProps = DocEditorProps & {
 };
 
 DocEditor.StatusBar = (props: StatusBarProps) => {
+  const {route} = useLocation();
   const {roles} = useProjectRoles();
   const currentUserEmail = window.firebase.user.email || '';
   const canPublish = testCanPublish(roles, currentUserEmail);
