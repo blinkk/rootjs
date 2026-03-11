@@ -93,11 +93,13 @@ class CliRunner {
     program
       .command('docs.get <docId> [outputPath]')
       .description(
-        'fetches a single doc and writes it as JSON\n\n' +
+        'fetches a single doc and outputs it as JSON\n\n' +
+          'If an output path is provided, writes to a file. Otherwise, writes to stdout.\n\n' +
           'Usage examples:\n' +
           '  $ root-cms docs.get Pages/home\n' +
           '  $ root-cms docs.get Pages/home ./out/home.json\n' +
-          '  $ root-cms docs.get Pages/home --mode published'
+          '  $ root-cms docs.get Pages/home --mode published\n' +
+          '  $ root-cms docs.get Pages/home | jq .fields'
       )
       .option(
         '--mode <mode>',
@@ -106,12 +108,14 @@ class CliRunner {
       .option('--raw', 'output raw firestore data without unmarshaling')
       .action(docsGet);
     program
-      .command('docs.set <docId> <filepath>')
+      .command('docs.set <docId> [filepath]')
       .description(
-        'updates a single doc from a JSON file\n\n' +
+        'updates a single doc from a JSON file or stdin\n\n' +
+          'If a filepath is provided, reads from the file. Otherwise, reads from stdin.\n\n' +
           'Usage examples:\n' +
           '  $ root-cms docs.set Pages/home home.json\n' +
-          '  $ root-cms docs.set Pages/home home.json --mode published'
+          '  $ root-cms docs.set Pages/home home.json --mode published\n' +
+          '  $ cat data.json | root-cms docs.set Pages/home'
       )
       .option(
         '--mode <mode>',

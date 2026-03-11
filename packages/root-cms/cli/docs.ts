@@ -28,7 +28,8 @@ export interface DocsUploadOptions {
 }
 
 /**
- * Fetches a single doc and writes it to a JSON file.
+ * Fetches a single doc and outputs it as JSON.
+ * If an output path is provided, writes to a file. Otherwise, writes to stdout.
  *
  * Usage:
  *   root-cms docs.get <docId> [outputPath] [--mode draft] [--raw]
@@ -52,26 +53,30 @@ export async function docsGet(
   const data = options.raw ? rawData : unmarshalData(rawData);
   const json = JSON.stringify(convertForExport(data), null, 2);
 
-  const resolvedPath = path.resolve(
-    outputPath || path.join('dist', `${collection}/${slug}.json`)
-  );
-  const dir = path.dirname(resolvedPath);
-  if (!fs.existsSync(dir)) {
-    fs.mkdirSync(dir, {recursive: true});
+  if (outputPath) {
+    const resolvedPath = path.resolve(outputPath);
+    const dir = path.dirname(resolvedPath);
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, {recursive: true});
+    }
+    fs.writeFileSync(resolvedPath, json);
+    console.error(`Wrote ${docId} to ${resolvedPath}`);
+  } else {
+    process.stdout.write(json + '\n');
   }
-  fs.writeFileSync(resolvedPath, json);
-  console.log(`Wrote ${docId} to ${resolvedPath}`);
 }
 
 /**
- * Sets a single doc's data from a JSON file.
+ * Sets a single doc's data from a JSON file or stdin.
+ * If a filepath is provided, reads from the file. Otherwise, reads from stdin.
  *
  * Usage:
- *   root-cms docs.set <docId> <filepath> [--mode draft]
+ *   root-cms docs.set <docId> [filepath] [--mode draft]
+ *   cat data.json | root-cms docs.set Pages/home
  */
 export async function docsSet(
   docId: string,
-  filepath: string,
+  filepath: string | undefined,
   options: DocsSetOptions
 ) {
   const mode = validateMode(options.mode);
@@ -81,12 +86,18 @@ export async function docsSet(
   const cmsPlugin = getCmsPlugin(rootConfig);
   const db = cmsPlugin.getFirestore();
 
-  const filePath = path.resolve(filepath);
-  if (!fs.existsSync(filePath)) {
-    throw new Error(`file not found: ${filePath}`);
+  let jsonStr: string;
+  if (filepath) {
+    const filePath = path.resolve(filepath);
+    if (!fs.existsSync(filePath)) {
+      throw new Error(`file not found: ${filePath}`);
+    }
+    jsonStr = fs.readFileSync(filePath, 'utf-8');
+  } else {
+    jsonStr = await readStdin();
   }
 
-  const rawJson = JSON.parse(fs.readFileSync(filePath, 'utf-8'));
+  const rawJson = JSON.parse(jsonStr);
   const data = convertFirestoreTypes(rawJson, db);
 
   const {collection, slug} = parseDocId(docId);
@@ -201,8 +212,16 @@ export async function docsUpload(
 }
 
 /**
- * Validates the mode option and returns a typed value.
+ * Reads all data from stdin as a string.
  */
+async function readStdin(): Promise<string> {
+  const chunks: Buffer[] = [];
+  for await (const chunk of process.stdin) {
+    chunks.push(chunk);
+  }
+  return Buffer.concat(chunks).toString('utf-8');
+}
+
 /**
  * Prompts the user for a yes/no confirmation.
  */
