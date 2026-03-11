@@ -1,3 +1,4 @@
+import type {McpServer} from '@modelcontextprotocol/sdk/server/mcp.js';
 import {ViteDevServer, PluginOption as VitePlugin} from 'vite';
 import {RootConfig} from './config.js';
 import {NextFunction, Request, Response, Server} from './types.js';
@@ -25,6 +26,15 @@ export interface ConfigureServerOptions {
   type: 'dev' | 'preview' | 'prod';
   rootConfig: RootConfig;
 }
+
+export interface ConfigureMcpServerOptions {
+  rootConfig: RootConfig;
+}
+
+export type ConfigureMcpServerHook = (
+  server: McpServer,
+  options: ConfigureMcpServerOptions
+) => MaybePromise<void>;
 
 export interface PluginHooks {
   /**
@@ -83,6 +93,12 @@ export interface Plugin {
     res: Response,
     next: NextFunction
   ) => void | Promise<void>;
+  /**
+   * Configures the MCP (Model Context Protocol) server. Plugins can use
+   * this hook to register MCP tools that will be available when the dev
+   * server is started with `--mcp`.
+   */
+  configureMcpServer?: ConfigureMcpServerHook;
 }
 
 /**
