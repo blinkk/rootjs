@@ -2,7 +2,13 @@ import fs from 'node:fs';
 import path from 'node:path';
 import {loadRootConfig} from '@blinkk/root/node';
 import {getCmsPlugin} from '../core/client.js';
-import {getPathStatus, parseFilters, pLimit, LimitFunction} from './utils.js';
+import {
+  convertForExport,
+  getPathStatus,
+  parseFilters,
+  pLimit,
+  LimitFunction,
+} from './utils.js';
 
 export interface ExportOptions {
   /** Filter to specific content. */
@@ -270,44 +276,4 @@ function formatTimestamp(date: Date): string {
   const hour = String(date.getHours()).padStart(2, '0');
   const minute = String(date.getMinutes()).padStart(2, '0');
   return `${year}${month}${day}t${hour}${minute}`;
-}
-
-/**
- * Recursively converts Firestore types to JSON-serializable format.
- */
-function convertForExport(obj: any): any {
-  if (obj === null || obj === undefined) {
-    return obj;
-  }
-
-  // Handle DocumentReference.
-  // Note: We check for the `path` property and `firestore` property to identify
-  // a DocumentReference, as `instanceof` might not work if the instance comes
-  // from a different version of the library or if we don't have the class imported.
-  // However, checking `constructor.name` or specific properties is safer.
-  if (
-    typeof obj === 'object' &&
-    typeof obj.path === 'string' &&
-    obj.constructor.name === 'DocumentReference'
-  ) {
-    return {_referencePath: obj.path};
-  }
-
-  // Recursively process arrays.
-  if (Array.isArray(obj)) {
-    return obj.map((item) => convertForExport(item));
-  }
-
-  // Recursively process objects.
-  if (typeof obj === 'object') {
-    // Check if it's a plain object or a Firestore type that we want to preserve as-is
-    // (like Timestamp or GeoPoint which serialize to JSON fine).
-    const converted: any = {};
-    for (const [key, value] of Object.entries(obj)) {
-      converted[key] = convertForExport(value);
-    }
-    return converted;
-  }
-
-  return obj;
 }
