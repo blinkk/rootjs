@@ -1,6 +1,7 @@
 import {NextFunction, Request, Response} from '../core/types.js';
 
 export const SESSION_COOKIE = '__session';
+let hasWarnedMissingSessionCookieSecret = false;
 
 // 5 days.
 const DEFAULT_MAX_AGE = 60 * 60 * 24 * 5 * 1000;
@@ -29,6 +30,17 @@ export function sessionMiddleware(options?: SessionMiddlewareOptions) {
       if (!session.hasChanges) {
         return;
       }
+
+      const hasConfiguredSessionSecret = Boolean(
+        req.rootConfig?.server?.sessionCookieSecret
+      );
+      if (!hasConfiguredSessionSecret && !hasWarnedMissingSessionCookieSecret) {
+        console.warn(
+          'session cookie is being set without a configured server.sessionCookieSecret; sessions may be invalidated across server restarts'
+        );
+        hasWarnedMissingSessionCookieSecret = true;
+      }
+
       // "secure" cookies require https, so disable "secure" when in development.
       const secureCookie = Boolean(process.env.NODE_ENV !== 'development');
       const cookieValue = session.toString();

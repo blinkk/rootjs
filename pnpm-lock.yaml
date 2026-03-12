@@ -415,9 +415,6 @@ importers:
       kleur:
         specifier: 4.1.5
         version: 4.1.5
-      react-easy-crop:
-        specifier: 5.5.6
-        version: 5.5.6(@preact/compat@18.3.1)(@preact/compat@18.3.1)
       sirv:
         specifier: 2.0.3
         version: 2.0.3
@@ -602,18 +599,21 @@ importers:
       preact:
         specifier: 10.27.1
         version: 10.27.1
+      preact-iso:
+        specifier: 2.11.1
+        version: 2.11.1(preact-render-to-string@6.6.1)(preact@10.27.1)
       preact-render-to-string:
         specifier: 6.6.1
         version: 6.6.1(preact@10.27.1)
-      preact-router:
-        specifier: 4.1.2
-        version: 4.1.2(preact@10.27.1)
       react:
         specifier: npm:@preact/compat@18.3.1
         version: /@preact/compat@18.3.1(preact@10.27.1)
       react-dom:
         specifier: npm:@preact/compat@18.3.1
         version: /@preact/compat@18.3.1(preact@10.27.1)
+      react-easy-crop:
+        specifier: 5.5.6
+        version: 5.5.6(@preact/compat@18.3.1)(@preact/compat@18.3.1)
       react-json-view-compare:
         specifier: 2.0.2
         version: 2.0.2(@preact/compat@18.3.1)(@preact/compat@18.3.1)
@@ -3647,15 +3647,15 @@ packages:
       '@types/gapi.client.discovery-v1': 0.0.4
     dev: true
 
-  /@maxim_mazurok/gapi.client.drive-v3@0.1.20260118:
-    resolution: {integrity: sha512-AapBEaj1ztX+AnUBvBnypCC8mWf6q72+4n0oXDopdXmggwYqDISocyoXrQ/iSCk237gFsBSb6WUYTxg7LEiojw==}
+  /@maxim_mazurok/gapi.client.drive-v3@0.1.20260305:
+    resolution: {integrity: sha512-i5D44X8hazSANFGOwzs6ONwB70fV+dTCsrodsbcjx1Cz+4UVC/QLPtnH/suSe7McHZOkUcrOzzbW8d2NAjCRMA==}
     dependencies:
       '@types/gapi.client': 1.0.8
       '@types/gapi.client.discovery-v1': 0.0.4
     dev: true
 
-  /@maxim_mazurok/gapi.client.sheets-v4@0.1.20260114:
-    resolution: {integrity: sha512-rhqbdPctKpTA9EsmLVe+FlbL2wiMd+SGBEgTedPi8IuLbmO7Dcg7+c50eQanHuFVx/rDHiol1k/LiTvDpQ/l2Q==}
+  /@maxim_mazurok/gapi.client.sheets-v4@0.2.20260304:
+    resolution: {integrity: sha512-zrVgWMTZfaQ9h9cGgZLKu/2XKjLl/Rj8z7mz/WvtnA1eLfbLE0RG3zaN3IxMGcAXKfPSBw1/n2igi3iKEwVEgg==}
     dependencies:
       '@types/gapi.client': 1.0.8
       '@types/gapi.client.discovery-v1': 0.0.4
@@ -5625,13 +5625,13 @@ packages:
   /@types/gapi.client.drive-v3@0.0.4:
     resolution: {integrity: sha512-jE37dJ0EzAdY0aJPFOp20xmec/aO0P4HtUIA9k07RMPyedFDOcuMlSac1r0PklwQdgXF7BHaMoObNHNAnwSQUQ==}
     dependencies:
-      '@maxim_mazurok/gapi.client.drive-v3': 0.1.20260118
+      '@maxim_mazurok/gapi.client.drive-v3': 0.1.20260305
     dev: true
 
   /@types/gapi.client.sheets-v4@0.0.4:
     resolution: {integrity: sha512-6kTJ7aDMAElfdQV1XzVJmZWjgbibpa84DMuKuaN8Cwqci/dkglPyHXKvsGrRugmuYvgFYr35AQqwz6j3q8R0dw==}
     dependencies:
-      '@maxim_mazurok/gapi.client.sheets-v4': 0.1.20260114
+      '@maxim_mazurok/gapi.client.sheets-v4': 0.2.20260304
     dev: true
 
   /@types/gapi.client@1.0.8:
@@ -12445,7 +12445,7 @@ packages:
 
   /normalize-wheel@1.0.1:
     resolution: {integrity: sha512-1OnlAPZ3zgrk8B91HyRj+eVv+kS5u+Z0SCsak6Xil/kmgEia50ga7zfkumayonZrImffAxPU/5WcyGhzetHNPA==}
-    dev: false
+    dev: true
 
   /npm-run-path@4.0.1:
     resolution: {integrity: sha512-S48WzZW777zhNIrn7gxOlISNAqi9ZC/uQFnRdbeIHhZhCA6UqpkOT8T1G7BvfdgP4Er8gF4sUbaS0i7QvIfCWw==}
@@ -13091,6 +13091,16 @@ packages:
       preact: 10.27.1
     dev: true
 
+  /preact-iso@2.11.1(preact-render-to-string@6.6.1)(preact@10.27.1):
+    resolution: {integrity: sha512-rLy0RmzP/hrDjnFdnEblxFgKtzUj4njkHrpGJBGS7S4QuYw1zv0lA38qsWpeAAB10JAz/hF2CsHrLen9ufCtbw==}
+    peerDependencies:
+      preact: '>=10 || >= 11.0.0-0'
+      preact-render-to-string: '>=6.4.0'
+    dependencies:
+      preact: 10.27.1
+      preact-render-to-string: 6.6.1(preact@10.27.1)
+    dev: true
+
   /preact-render-to-string@5.2.4(preact@10.18.1):
     resolution: {integrity: sha512-iIPHb3BXUQ3Za6KNhkjN/waq11Oh+QWWtAgN3id3LrL+cszH3DYh8TxJPNQ6Aogsbu4JsqdJLBZltwPFpG6N6w==}
     peerDependencies:
@@ -13106,14 +13116,6 @@ packages:
       preact: '>=10 || >= 11.0.0-0'
     dependencies:
       preact: 10.27.1
-
-  /preact-router@4.1.2(preact@10.27.1):
-    resolution: {integrity: sha512-uICUaUFYh+XQ+6vZtQn1q+X6rSqwq+zorWOCLWPF5FAsQh3EJ+RsDQ9Ee+fjk545YWQHfUxhrBAaemfxEnMOUg==}
-    peerDependencies:
-      preact: '>=10'
-    dependencies:
-      preact: 10.27.1
-    dev: true
 
   /preact@10.11.0:
     resolution: {integrity: sha512-Fk6+vB2kb6mSJfDgODq0YDhMfl0HNtK5+Uc9QqECO4nlyPAQwCI+BKyWO//idA7ikV7o+0Fm6LQmNuQi1wXI1w==}
@@ -13508,7 +13510,7 @@ packages:
       react: /@preact/compat@18.3.1(preact@10.27.1)
       react-dom: /@preact/compat@18.3.1(preact@10.27.1)
       tslib: 2.6.2
-    dev: false
+    dev: true
 
   /react-error-boundary@3.1.4(@preact/compat@18.3.1):
     resolution: {integrity: sha512-uM9uPzZJTF6wRQORmSrvOIgt4lJ9MC1sNgEOj2XGsDTRE4kmpWxg7ENK9EWNKJRMAOY9z0MuF4yIfl6gp4sotA==}

@@ -4,6 +4,7 @@ import {Button, Loader} from '@mantine/core';
 import {useEffect, useState} from 'preact/hooks';
 import {joinClassNames} from '../../utils/classes.js';
 import {CMSDoc, cmsReadDocVersion, unmarshalData} from '../../utils/doc.js';
+import {stableJsonStringify} from '../../utils/objects.js';
 import {AiSummary} from '../AiSummary/AiSummary.js';
 import {JsDiff} from '../JsDiff/JsDiff.js';
 
@@ -37,8 +38,8 @@ export function DocDiffViewer(props: DocDiffViewerProps) {
     left.docId === right.docId &&
     props.showAiSummary !== false;
 
-  const leftData = JSON.stringify(cleanData(leftDoc?.fields || {}), null, 2);
-  const rightData = JSON.stringify(cleanData(rightDoc?.fields || {}), null, 2);
+  const leftData = stableJsonStringify(cleanData(leftDoc?.fields || {}));
+  const rightData = stableJsonStringify(cleanData(rightDoc?.fields || {}));
 
   const expandUrl = `/cms/compare?left=${toUrlParam(left)}&right=${toUrlParam(
     right

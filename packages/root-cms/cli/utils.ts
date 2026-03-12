@@ -139,6 +139,38 @@ function matchSegments(pathParts: string[], patternParts: string[]): boolean {
   return true;
 }
 
+/**
+ * Recursively converts Firestore types to JSON-serializable format.
+ */
+export function convertForExport(obj: any): any {
+  if (obj === null || obj === undefined) {
+    return obj;
+  }
+
+  // Handle DocumentReference.
+  if (
+    typeof obj === 'object' &&
+    typeof obj.path === 'string' &&
+    obj.constructor?.name === 'DocumentReference'
+  ) {
+    return {_referencePath: obj.path};
+  }
+
+  if (Array.isArray(obj)) {
+    return obj.map((item) => convertForExport(item));
+  }
+
+  if (typeof obj === 'object') {
+    const converted: any = {};
+    for (const [key, value] of Object.entries(obj)) {
+      converted[key] = convertForExport(value);
+    }
+    return converted;
+  }
+
+  return obj;
+}
+
 export type LimitFunction = <T>(fn: () => Promise<T>) => Promise<T>;
 
 /**

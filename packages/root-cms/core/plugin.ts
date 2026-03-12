@@ -219,6 +219,12 @@ export type CMSPluginOptions = {
   favicon?: string;
 
   /**
+   * Enables minimal branding mode in the CMS header. This hides the Root CMS
+   * logo and displays the project name on the top-right.
+   */
+  minimalBranding?: boolean;
+
+  /**
    * Callback when an action occurs.
    */
   onAction?: (action: Action) => any;

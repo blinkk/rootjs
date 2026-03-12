@@ -1,9 +1,9 @@
 import './PublishDocModal.css';
 
-import {Accordion, Button} from '@mantine/core';
+import {Accordion, Button, Loader, Tooltip} from '@mantine/core';
 import {ContextModalProps, useModals} from '@mantine/modals';
 import {showNotification} from '@mantine/notifications';
-import {IconGitCompare} from '@tabler/icons-preact';
+import {IconGitCompare, IconSparkles} from '@tabler/icons-preact';
 import {useState, useRef} from 'preact/hooks';
 import {useModalTheme} from '../../hooks/useModalTheme.js';
 import {useProjectRoles} from '../../hooks/useProjectRoles.js';
@@ -47,6 +47,8 @@ export function PublishDocModal(
   const [publishType, setPublishType] = useState<PublishType>('');
   const [scheduledDate, setScheduledDate] = useState('');
   const [loading, setLoading] = useState(false);
+  const [publishMessage, setPublishMessage] = useState('');
+  const [generatingMessage, setGeneratingMessage] = useState(false);
   const dateTimeRef = useRef<HTMLInputElement>(null);
   const modals = useModals();
   const modalTheme = useModalTheme();
@@ -61,7 +63,9 @@ export function PublishDocModal(
   async function publish() {
     try {
       setLoading(true);
-      await cmsPublishDoc(props.docId);
+      await cmsPublishDoc(props.docId, {
+        publishMessage: publishMessage.trim() || undefined,
+      });
       setLoading(false);
       showNotification({
         title: 'Published!',
@@ -84,7 +88,9 @@ export function PublishDocModal(
     try {
       setLoading(true);
       const millis = Math.floor(new Date(scheduledDate).getTime());
-      await cmsScheduleDoc(props.docId, millis);
+      await cmsScheduleDoc(props.docId, millis, {
+        publishMessage: publishMessage.trim() || undefined,
+      });
       setLoading(false);
       showNotification({
         title: 'Scheduled!',
@@ -100,6 +106,38 @@ export function PublishDocModal(
         color: 'red',
         autoClose: false,
       });
+    }
+  }
+
+  async function generatePublishMessage() {
+    try {
+      setGeneratingMessage(true);
+      const res = await window.fetch('/cms/api/ai.publish_message', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({docId: props.docId}),
+      });
+      const data = await res.json();
+      if (data.success && data.message) {
+        setPublishMessage(data.message);
+      } else {
+        showNotification({
+          title: 'Generation failed',
+          message: 'Failed to generate publish message.',
+          color: 'red',
+          autoClose: 5000,
+        });
+      }
+    } catch (err) {
+      console.error(err);
+      showNotification({
+        title: 'Generation failed',
+        message: 'Failed to generate publish message.',
+        color: 'red',
+        autoClose: 5000,
+      });
+    } finally {
+      setGeneratingMessage(false);
     }
   }
 
@@ -223,6 +261,43 @@ export function PublishDocModal(
                   </div>
                 </div>
               </label>
+            </div>
+          </div>
+
+          <div className="PublishDocModal__form__publishMessage">
+            <div className="PublishDocModal__form__publishMessage__wrapper">
+              <textarea
+                className="PublishDocModal__form__publishMessage__textarea"
+                placeholder="Optional: Add a message to describe the changes"
+                value={publishMessage}
+                rows={3}
+                onInput={(e: Event) => {
+                  const target = e.target as HTMLTextAreaElement;
+                  setPublishMessage(target.value);
+                }}
+              />
+              {experiments.ai && (
+                <button
+                  type="button"
+                  className="PublishDocModal__form__publishMessage__sparkle"
+                  onClick={generatePublishMessage}
+                  disabled={generatingMessage}
+                >
+                  <Tooltip
+                    label="Generate message"
+                    withArrow
+                    position="left"
+                    allowPointerEvents
+                    wrapLines
+                  >
+                    {generatingMessage ? (
+                      <Loader size={16} />
+                    ) : (
+                      <IconSparkles size={16} stroke={1.5} />
+                    )}
+                  </Tooltip>
+                </button>
+              )}
             </div>
           </div>
 

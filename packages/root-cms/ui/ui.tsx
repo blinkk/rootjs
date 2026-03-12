@@ -8,8 +8,8 @@ import {initializeApp} from 'firebase/app';
 import {User, getAuth} from 'firebase/auth';
 import {initializeFirestore} from 'firebase/firestore';
 import {getStorage} from 'firebase/storage';
-import {render} from 'preact';
-import {Route, Router} from 'preact-router';
+import {render, FunctionComponent} from 'preact';
+import {LocationProvider, Router, Route, lazy} from 'preact-iso';
 import type {CMSBuiltInSidebarTool} from '../core/plugin.js';
 import {Collection} from '../core/schema.js';
 import {AiEditModal} from './components/AiEditModal/AiEditModal.js';
@@ -22,34 +22,111 @@ import {ExportSheetModal} from './components/ExportSheetModal/ExportSheetModal.j
 import {LocalizationModal} from './components/LocalizationModal/LocalizationModal.js';
 import {LockPublishingModal} from './components/LockPublishingModal/LockPublishingModal.js';
 import {PublishDocModal} from './components/PublishDocModal/PublishDocModal.js';
+import {ReferenceFieldEditorModal} from './components/ReferenceFieldEditorModal/ReferenceFieldEditorModal.js';
 import {ScheduleReleaseModal} from './components/ScheduleReleaseModal/ScheduleReleaseModal.js';
 import {VersionHistoryModal} from './components/VersionHistoryModal/VersionHistoryModal.js';
 import {FirebaseContext, FirebaseContextObject} from './hooks/useFirebase.js';
 import {SiteSettingsProvider} from './hooks/useSiteSettings.js';
 import {SSEProvider} from './hooks/useSSE.js';
 import {UserPreferencesProvider} from './hooks/useUserPreferences.js';
-import {AIPage} from './pages/AIPage/AIPage.js';
-import {AssetsPage} from './pages/AssetsPage/AssetsPage.js';
-import {CollectionPage} from './pages/CollectionPage/CollectionPage.js';
-import {ComparePage} from './pages/ComparePage/ComparePage.js';
-import {DataPage} from './pages/DataPage/DataPage.js';
-import {DataSourcePage} from './pages/DataSourcePage/DataSourcePage.js';
-import {DocTranslationsPage} from './pages/DocTranslationsPage/DocTranslationsPage.js';
-import {DocumentPage} from './pages/DocumentPage/DocumentPage.js';
-import {EditDataSourcePage} from './pages/EditDataSourcePage/EditDataSourcePage.js';
-import {EditReleasePage} from './pages/EditReleasePage/EditReleasePage.js';
-import {LogsPage} from './pages/LogsPage/LogsPage.js';
-import {NewDataSourcePage} from './pages/NewDataSourcePage/NewDataSourcePage.js';
-import {NewReleasePage} from './pages/NewReleasePage/NewReleasePage.js';
-import {NotFoundPage} from './pages/NotFoundPage/NotFoundPage.js';
-import {ProjectPage} from './pages/ProjectPage/ProjectPage.js';
-import {ReleasePage} from './pages/ReleasePage/ReleasePage.js';
-import {ReleasesPage} from './pages/ReleasesPage/ReleasesPage.js';
-import {SettingsPage} from './pages/SettingsPage/SettingsPage.js';
-import {SidebarToolsPage} from './pages/SidebarToolsPage/SidebarToolsPage.js';
-import {TranslationsArbPage} from './pages/TranslationsArbPage/TranslationsArbPage.js';
-import {TranslationsEditPage} from './pages/TranslationsEditPage/TranslationsEditPage.js';
-import {TranslationsPage} from './pages/TranslationsPage/TranslationsPage.js';
+
+/** Lazy-loads a named component export for use as a route component. */
+function lazyRoute<P>(
+  factory: () => Promise<FunctionComponent<P>>
+): FunctionComponent<P> {
+  return lazy(() =>
+    factory().then((component) => ({default: component}))
+  ) as unknown as FunctionComponent<P>;
+}
+
+const AIPage = lazyRoute(() =>
+  import('./pages/AIPage/AIPage.js').then((m) => m.AIPage)
+);
+const AssetsPage = lazyRoute(() =>
+  import('./pages/AssetsPage/AssetsPage.js').then((m) => m.AssetsPage)
+);
+const CollectionPage = lazyRoute(() =>
+  import('./pages/CollectionPage/CollectionPage.js').then(
+    (m) => m.CollectionPage
+  )
+);
+const ComparePage = lazyRoute(() =>
+  import('./pages/ComparePage/ComparePage.js').then((m) => m.ComparePage)
+);
+const DataPage = lazyRoute(() =>
+  import('./pages/DataPage/DataPage.js').then((m) => m.DataPage)
+);
+const DataSourcePage = lazyRoute(() =>
+  import('./pages/DataSourcePage/DataSourcePage.js').then(
+    (m) => m.DataSourcePage
+  )
+);
+const DocTranslationsPage = lazyRoute(() =>
+  import('./pages/DocTranslationsPage/DocTranslationsPage.js').then(
+    (m) => m.DocTranslationsPage
+  )
+);
+const DocumentPage = lazyRoute(() =>
+  import('./pages/DocumentPage/DocumentPage.js').then((m) => m.DocumentPage)
+);
+const EditDataSourcePage = lazyRoute(() =>
+  import('./pages/EditDataSourcePage/EditDataSourcePage.js').then(
+    (m) => m.EditDataSourcePage
+  )
+);
+const EditReleasePage = lazyRoute(() =>
+  import('./pages/EditReleasePage/EditReleasePage.js').then(
+    (m) => m.EditReleasePage
+  )
+);
+const LogsPage = lazyRoute(() =>
+  import('./pages/LogsPage/LogsPage.js').then((m) => m.LogsPage)
+);
+const NewDataSourcePage = lazyRoute(() =>
+  import('./pages/NewDataSourcePage/NewDataSourcePage.js').then(
+    (m) => m.NewDataSourcePage
+  )
+);
+const NewReleasePage = lazyRoute(() =>
+  import('./pages/NewReleasePage/NewReleasePage.js').then(
+    (m) => m.NewReleasePage
+  )
+);
+const NotFoundPage = lazyRoute(() =>
+  import('./pages/NotFoundPage/NotFoundPage.js').then((m) => m.NotFoundPage)
+);
+const ProjectPage = lazyRoute(() =>
+  import('./pages/ProjectPage/ProjectPage.js').then((m) => m.ProjectPage)
+);
+const ReleasePage = lazyRoute(() =>
+  import('./pages/ReleasePage/ReleasePage.js').then((m) => m.ReleasePage)
+);
+const ReleasesPage = lazyRoute(() =>
+  import('./pages/ReleasesPage/ReleasesPage.js').then((m) => m.ReleasesPage)
+);
+const SettingsPage = lazyRoute(() =>
+  import('./pages/SettingsPage/SettingsPage.js').then((m) => m.SettingsPage)
+);
+const SidebarToolsPage = lazyRoute(() =>
+  import('./pages/SidebarToolsPage/SidebarToolsPage.js').then(
+    (m) => m.SidebarToolsPage
+  )
+);
+const TranslationsArbPage = lazyRoute(() =>
+  import('./pages/TranslationsArbPage/TranslationsArbPage.js').then(
+    (m) => m.TranslationsArbPage
+  )
+);
+const TranslationsEditPage = lazyRoute(() =>
+  import('./pages/TranslationsEditPage/TranslationsEditPage.js').then(
+    (m) => m.TranslationsEditPage
+  )
+);
+const TranslationsPage = lazyRoute(() =>
+  import('./pages/TranslationsPage/TranslationsPage.js').then(
+    (m) => m.TranslationsPage
+  )
+);
 
 type CollectionMeta = Omit<Collection, 'fields'>;
 
@@ -59,6 +136,7 @@ declare global {
       rootConfig: {
         projectId: string;
         projectName: string;
+        minimalBranding: boolean;
         domain: string;
         base: string;
         gci: string | boolean;
@@ -126,61 +204,70 @@ function App() {
                     [LocalizationModal.id]: LocalizationModal,
                     [LockPublishingModal.id]: LockPublishingModal,
                     [PublishDocModal.id]: PublishDocModal,
+                    [ReferenceFieldEditorModal.id]: ReferenceFieldEditorModal,
                     [ScheduleReleaseModal.id]: ScheduleReleaseModal,
                     [VersionHistoryModal.id]: VersionHistoryModal,
                   }}
                 >
-                  <Router>
-                    <Route path="/cms" component={ProjectPage} />
-                    <Route path="/cms/ai" component={AIPage} />
-                    <Route path="/cms/assets" component={AssetsPage} />
-                    <Route path="/cms/compare" component={ComparePage} />
-                    <Route
-                      path="/cms/content/:collection?"
-                      component={CollectionPage}
-                    />
-                    <Route
-                      path="/cms/content/:collection/:slug"
-                      component={DocumentPage}
-                    />
-                    <Route path="/cms/data" component={DataPage} />
-                    <Route path="/cms/data/new" component={NewDataSourcePage} />
-                    <Route path="/cms/data/:id" component={DataSourcePage} />
-                    <Route
-                      path="/cms/data/:id/edit"
-                      component={EditDataSourcePage}
-                    />
-                    <Route path="/cms/logs" component={LogsPage} />
-                    <Route path="/cms/releases" component={ReleasesPage} />
-                    <Route
-                      path="/cms/releases/new"
-                      component={NewReleasePage}
-                    />
-                    <Route path="/cms/releases/:id" component={ReleasePage} />
-                    <Route
-                      path="/cms/releases/:id/edit"
-                      component={EditReleasePage}
-                    />
-                    <Route path="/cms/settings" component={SettingsPage} />
-                    <Route path="/cms/tools/:id" component={SidebarToolsPage} />
-                    <Route
-                      path="/cms/translations"
-                      component={TranslationsPage}
-                    />
-                    <Route
-                      path="/cms/translations/arb"
-                      component={TranslationsArbPage}
-                    />
-                    <Route
-                      path="/cms/translations/:hash"
-                      component={TranslationsEditPage}
-                    />
-                    <Route
-                      path="/cms/translations/:collection/:slug"
-                      component={DocTranslationsPage}
-                    />
-                    <Route default component={NotFoundPage} />
-                  </Router>
+                  <LocationProvider>
+                    <Router>
+                      <Route path="/cms" component={ProjectPage} />
+                      <Route path="/cms/ai" component={AIPage} />
+                      <Route path="/cms/assets" component={AssetsPage} />
+                      <Route path="/cms/compare" component={ComparePage} />
+                      <Route
+                        path="/cms/content/:collection?"
+                        component={CollectionPage}
+                      />
+                      <Route
+                        path="/cms/content/:collection/:slug"
+                        component={DocumentPage}
+                      />
+                      <Route path="/cms/data" component={DataPage} />
+                      <Route
+                        path="/cms/data/new"
+                        component={NewDataSourcePage}
+                      />
+                      <Route path="/cms/data/:id" component={DataSourcePage} />
+                      <Route
+                        path="/cms/data/:id/edit"
+                        component={EditDataSourcePage}
+                      />
+                      <Route path="/cms/logs" component={LogsPage} />
+                      <Route path="/cms/releases" component={ReleasesPage} />
+                      <Route
+                        path="/cms/releases/new"
+                        component={NewReleasePage}
+                      />
+                      <Route path="/cms/releases/:id" component={ReleasePage} />
+                      <Route
+                        path="/cms/releases/:id/edit"
+                        component={EditReleasePage}
+                      />
+                      <Route path="/cms/settings" component={SettingsPage} />
+                      <Route
+                        path="/cms/tools/:id"
+                        component={SidebarToolsPage}
+                      />
+                      <Route
+                        path="/cms/translations"
+                        component={TranslationsPage}
+                      />
+                      <Route
+                        path="/cms/translations/arb"
+                        component={TranslationsArbPage}
+                      />
+                      <Route
+                        path="/cms/translations/:hash"
+                        component={TranslationsEditPage}
+                      />
+                      <Route
+                        path="/cms/translations/:collection/:slug"
+                        component={DocTranslationsPage}
+                      />
+                      <Route default component={NotFoundPage} />
+                    </Router>
+                  </LocationProvider>
                 </ModalsProvider>
               </UserPreferencesProvider>
             </SiteSettingsProvider>
@@ -199,6 +286,31 @@ function loginRedirect() {
   const params = new URLSearchParams({continue: originalUrl});
   window.location.replace(`/cms/login?${params.toString()}`);
 }
+
+function registerDevServerRedirectShortcut() {
+  window.addEventListener('keydown', (event: KeyboardEvent) => {
+    const isShortcutPressed =
+      (event.metaKey || event.ctrlKey) &&
+      event.shiftKey &&
+      event.key.toLowerCase() === 'd';
+    if (!isShortcutPressed) {
+      return;
+    }
+
+    const isLocalhost =
+      window.location.hostname === 'localhost' ||
+      window.location.hostname === '127.0.0.1';
+    if (isLocalhost) {
+      return;
+    }
+
+    event.preventDefault();
+    const path = `${window.location.pathname}${window.location.search}${window.location.hash}`;
+    window.location.assign(`http://localhost:4007${path}`);
+  });
+}
+
+registerDevServerRedirectShortcut();
 
 const app = initializeApp(window.__ROOT_CTX.firebaseConfig);
 const databaseId = window.__ROOT_CTX.firebaseConfig.databaseId || '(default)';

@@ -11,6 +11,7 @@ declare global {
     __ROOT_CTX: {
       name: string;
       firebaseConfig: Record<string, string>;
+      warning: string;
     };
     firebase: {
       app: FirebaseApp;
@@ -22,6 +23,7 @@ declare global {
 function SignIn() {
   const [errorMsg, setErrorMsg] = useState('');
   const title = window.__ROOT_CTX.name;
+  const warning = window.__ROOT_CTX.warning;
 
   function onError(msg: string) {
     setErrorMsg(msg);
@@ -35,6 +37,7 @@ function SignIn() {
           {title ? `Sign in to continue to ${title}` : 'Sign in to continue'}
         </p>
       </div>
+      {warning && <div className="signin__warning">{warning}</div>}
       <SignIn.Button onError={onError} />
       {errorMsg && <p className="signin__error">{errorMsg}</p>}
     </div>

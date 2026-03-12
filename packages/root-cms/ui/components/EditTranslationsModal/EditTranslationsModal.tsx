@@ -1,8 +1,24 @@
-import {Button, Loader, Textarea} from '@mantine/core';
+import './EditTranslationsModal.css';
+
+import {
+  ActionIcon,
+  Button,
+  Checkbox,
+  Loader,
+  Textarea,
+  Tooltip,
+} from '@mantine/core';
 import {ContextModalProps, useModals} from '@mantine/modals';
 import {showNotification, updateNotification} from '@mantine/notifications';
+import {
+  IconExternalLink,
+  IconInfoCircle,
+  IconSparkles,
+  IconLoader2,
+} from '@tabler/icons-preact';
 import {ChangeEvent} from 'preact/compat';
 import {useEffect, useState} from 'preact/hooks';
+import {DraftDocContext} from '../../hooks/useDraftDoc.js';
 import {useModalTheme} from '../../hooks/useModalTheme.js';
 import {joinClassNames} from '../../utils/classes.js';
 import {CsvTranslation, cmsDocImportTranslations} from '../../utils/doc.js';
@@ -10,7 +26,6 @@ import {GoogleSheetId, getSpreadsheetUrl} from '../../utils/gsheets.js';
 import {loadTranslations} from '../../utils/l10n.js';
 import {notifyErrors} from '../../utils/notifications.js';
 import {Heading} from '../Heading/Heading.js';
-import './EditTranslationsModal.css';
 
 const MODAL_ID = 'EditTranslationsModal';
 
@@ -22,6 +37,10 @@ export interface EditTranslationsModalProps {
   strings: string[];
   /** A linked Google Sheet associated with the doc, if any. */
   l10nSheet?: GoogleSheetId;
+  /** The field for which translations are being edited. */
+  field?: {id: string; deepKey: string};
+  /** Draft controller for saving field metadata. */
+  draft?: DraftDocContext;
 }
 
 export function useEditTranslationsModal() {
@@ -58,6 +77,22 @@ export function EditTranslationsModal(
   const [hasChanges, setHasChanges] = useState(false);
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [doNotTranslate, setDoNotTranslate] = useState(false);
+  const [description, setDescription] = useState('');
+  const [aiGenerating, setAiGenerating] = useState(false);
+
+  // Use draft from props (passed from DocEditor).
+  const draft = props.draft || null;
+
+  // Load translation metadata from the document.
+  useEffect(() => {
+    if (props.field?.deepKey && draft?.controller) {
+      const metadataKey = getMetadataKey(props.field.deepKey);
+      const metadata = draft.controller.getValue(metadataKey) || {};
+      setDoNotTranslate(metadata.disableTranslations || false);
+      setDescription(metadata.description || '');
+    }
+  }, [props.field?.deepKey, draft?.controller]);
 
   useEffect(() => {
     loadTranslations({tags: [props.docId]}).then((res) => {
@@ -73,7 +108,6 @@ export function EditTranslationsModal(
   async function onSave() {
     setSaving(true);
     await notifyErrors(async () => {
-      console.log('EditTranslationsModal.onSave()');
       const notificationId = `edit-translations-${props.docId}`;
       showNotification({
         id: notificationId,
@@ -83,12 +117,28 @@ export function EditTranslationsModal(
         autoClose: false,
         disallowClose: true,
       });
-      const changes: CsvTranslation[] = [];
-      changedKeys.forEach((changedKey) => {
-        const row = translationsMap[changedKey] as CsvTranslation;
-        changes.push(row);
-      });
-      await cmsDocImportTranslations(props.docId, changes);
+
+      // Save translation metadata if field is provided.
+      if (props.field?.deepKey && draft?.controller) {
+        const metadataKey = getMetadataKey(props.field.deepKey);
+        const metadata = draft.controller.getValue(metadataKey) || {};
+        metadata.disableTranslations = doNotTranslate;
+        metadata.description = description;
+        await draft.controller.updateKey(metadataKey, metadata);
+        // Ensure the metadata is saved immediately.
+        await draft.controller.flush();
+      }
+
+      // Only save translations if not marked as "do not translate".
+      if (!doNotTranslate && changedKeys.length > 0) {
+        const changes: CsvTranslation[] = [];
+        changedKeys.forEach((changedKey) => {
+          const row = translationsMap[changedKey] as CsvTranslation;
+          changes.push(row);
+        });
+        await cmsDocImportTranslations(props.docId, changes);
+      }
+
       updateNotification({
         id: notificationId,
         title: 'Saved translations',
@@ -113,77 +163,240 @@ export function EditTranslationsModal(
     setHasChanges(true);
   }
 
+  async function generateAiTranslations() {
+    if (strings.length === 0) return;
+
+    setAiGenerating(true);
+    try {
+      await notifyErrors(async () => {
+        // For each source string, call AI API.
+        for (const source of strings) {
+          const existingRow = translationsMap[source] || {source};
+          const existingTranslations: Record<string, string> = {};
+
+          // Collect existing translations for this string.
+          i18nLocales.forEach((locale) => {
+            if (existingRow[locale]) {
+              existingTranslations[locale] = existingRow[locale];
+            }
+          });
+
+          // Find locales that need translation (blank fields only).
+          // AI will NOT overwrite existing translations.
+          const targetLocales = i18nLocales.filter(
+            (locale) => !existingRow[locale]
+          );
+
+          if (targetLocales.length === 0) continue;
+
+          const res = await window.fetch('/cms/api/ai.translate', {
+            method: 'POST',
+            headers: {'content-type': 'application/json'},
+            body: JSON.stringify({
+              sourceText: source,
+              targetLocales,
+              description: description || undefined,
+              existingTranslations,
+            }),
+          });
+
+          if (res.status !== 200) {
+            const err = await res.text();
+            throw new Error(`Translation failed: ${err}`);
+          }
+
+          const data = await res.json();
+          if (data.success && data.translations) {
+            // Update the translations map with AI-generated translations.
+            const updatedRow = {...existingRow};
+            Object.entries(data.translations).forEach(
+              ([locale, translation]) => {
+                updatedRow[locale] = translation as string;
+              }
+            );
+            onChange(updatedRow);
+          }
+        }
+
+        showNotification({
+          message: 'Finished generating AI translations',
+          color: 'green',
+        });
+      });
+    } finally {
+      setAiGenerating(false);
+    }
+  }
+
+  function shouldShowAiButton() {
+    const experiments = (window as any).__ROOT_CTX?.experiments || {};
+    const aiEnabled = !!experiments.ai;
+
+    if (!aiEnabled) return false;
+
+    // Check if any translation fields are blank.
+    for (const source of strings) {
+      const row = translationsMap[source] || {};
+      for (const locale of i18nLocales) {
+        if (!row[locale]) {
+          return true; // Found at least one blank field.
+        }
+      }
+    }
+
+    return false;
+  }
+
   return (
     <div className="EditTranslationsModal">
-      <div className="EditTranslationsModal__header">
-        <Button
-          component="a"
-          href={`/cms/translations/${props.docId}`}
-          target="_blank"
-          variant="default"
-          size="xs"
-        >
-          Open Translations Editor
-        </Button>
-      </div>
-
       {loading ? (
         <Loader />
       ) : (
-        <table className="EditTranslationsModal__table">
-          <thead>
-            <tr>
-              <th>
-                <Heading size="h4" weight="semi-bold">
-                  SOURCE
-                </Heading>
-              </th>
-              <th>
-                <Heading size="h4" weight="semi-bold">
-                  TRANSLATIONS
-                </Heading>
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {strings.map((source) => (
+        <>
+          <div className="EditTranslationsModal__controls">
+            <div className="EditTranslationsModal__controls__doNotTranslate">
+              <Checkbox
+                label="Do not translate"
+                checked={doNotTranslate}
+                onChange={(e: ChangeEvent<HTMLInputElement>) => {
+                  setDoNotTranslate(e.currentTarget.checked);
+                  setHasChanges(true);
+                }}
+                size="sm"
+              />
+              <Tooltip
+                label="Prevent the string from being included for translation"
+                withArrow
+                position="right"
+              >
+                <IconInfoCircle size={14} style={{marginLeft: '6px'}} />
+              </Tooltip>
+            </div>
+
+            <div className="EditTranslationsModal__controls__description">
+              <div className="EditTranslationsModal__controls__description__label">
+                <span>Description</span>
+                <Tooltip
+                  label="Translator notes may be included when the string is extracted and sent for translation"
+                  withArrow
+                  position="right"
+                >
+                  <IconInfoCircle size={14} style={{marginLeft: '6px'}} />
+                </Tooltip>
+              </div>
+              <Textarea
+                size="sm"
+                autosize
+                minRows={1}
+                maxRows={6}
+                value={description}
+                placeholder="Add context or notes for translators..."
+                onChange={(e: ChangeEvent<HTMLTextAreaElement>) => {
+                  setDescription(e.currentTarget.value);
+                  setHasChanges(true);
+                }}
+              />
+            </div>
+          </div>
+
+          <table className="EditTranslationsModal__table">
+            <thead
+              style={{display: doNotTranslate ? 'none' : 'table-header-group'}}
+            >
               <tr>
-                <td>
-                  <div className="EditTranslationsModal__table__source">
-                    {source}
+                <th>
+                  <Heading size="h4" weight="semi-bold">
+                    SOURCE
+                  </Heading>
+                </th>
+                <th>
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                    }}
+                  >
+                    <Heading size="h4" weight="semi-bold">
+                      TRANSLATIONS
+                    </Heading>
+                    {shouldShowAiButton() && (
+                      <Tooltip
+                        label="Generate quick translations using AI"
+                        withArrow
+                        position="left"
+                      >
+                        <ActionIcon
+                          variant="light"
+                          onClick={generateAiTranslations}
+                          loading={aiGenerating}
+                          disabled={aiGenerating}
+                          size="sm"
+                        >
+                          {aiGenerating ? (
+                            <IconLoader2 size={16} />
+                          ) : (
+                            <IconSparkles size={16} />
+                          )}
+                        </ActionIcon>
+                      </Tooltip>
+                    )}
                   </div>
-                </td>
-                <td>
-                  <EditTranslationsModal.StringsEditor
-                    source={source}
-                    locales={i18nLocales}
-                    translations={translationsMap[source] || {}}
-                    onChange={onChange}
-                  />
-                </td>
+                </th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {strings.map((source) => (
+                <tr style={{display: doNotTranslate ? 'none' : 'table-row'}}>
+                  <td>
+                    <div className="EditTranslationsModal__table__source">
+                      {source}
+                    </div>
+                  </td>
+                  <td>
+                    <EditTranslationsModal.StringsEditor
+                      source={source}
+                      locales={i18nLocales}
+                      translations={translationsMap[source] || {}}
+                      onChange={onChange}
+                    />
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </>
       )}
 
       <div className="EditTranslationsModal__footer">
-        {props.l10nSheet && (
-          <div className="EditTranslationsModal__footer__gsheet">
-            <strong>NOTE:</strong> Translations for this doc are managed in{' '}
-            <a
-              href={getSpreadsheetUrl(props.l10nSheet)}
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              Google Sheets
-            </a>
-          </div>
-        )}
+        <div className="EditTranslationsModal__footer__left">
+          <Button
+            component="a"
+            href={`/cms/translations/${props.docId}`}
+            target="_blank"
+            variant="default"
+            size="md"
+            rightIcon={<IconExternalLink size={14} />}
+          >
+            Open Translations Editor
+          </Button>
+          {props.l10nSheet && (
+            <div className="EditTranslationsModal__footer__gsheet">
+              <strong>NOTE:</strong> Translations for this doc are managed in{' '}
+              <a
+                href={getSpreadsheetUrl(props.l10nSheet)}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                Google Sheets
+              </a>
+            </div>
+          )}
+        </div>
         <div className="EditTranslationsModal__footer__buttons">
           <Button
             variant="default"
-            size="xs"
+            size="md"
             color="dark"
             type="button"
             onClick={() => context.closeModal(id)}
@@ -192,7 +405,7 @@ export function EditTranslationsModal(
           </Button>
           <Button
             variant="filled"
-            size="xs"
+            size="md"
             color="dark"
             onClick={() => onSave()}
             disabled={!hasChanges}
@@ -217,6 +430,11 @@ EditTranslationsModal.StringsEditor = (props: {
     props.translations || {}
   );
   const [hasChanges, setHasChanges] = useState(false);
+
+  // Update local state when props.translations changes (e.g., from AI)
+  useEffect(() => {
+    setTranslations(props.translations || {});
+  }, [props.translations]);
 
   function updateTranslation(locale: string, value: string) {
     setHasChanges(true);
@@ -268,3 +486,9 @@ EditTranslationsModal.StringsEditor = (props: {
 };
 
 EditTranslationsModal.id = MODAL_ID;
+
+function getMetadataKey(key: string) {
+  const parts = key.split('.');
+  const last = parts.pop();
+  return [...parts, `@${last}`].join('.');
+}

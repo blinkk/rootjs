@@ -248,14 +248,15 @@ function createNodesFromHTML(
         case 'br':
           // Line breaks are handled by Lexical's LineBreakNode
           return [];
-        case 'a':
-          return [
-            $applyNodeReplacement(
-              $createLinkNode(el.getAttribute('href') || '').append(
-                ...(children as LexicalNode[])
-              )
-            ),
-          ];
+        case 'a': {
+          const linkNode = $createLinkNode(el.getAttribute('href') || '');
+          const target = el.getAttribute('target');
+          if (target) {
+            linkNode.setTarget(target);
+          }
+          linkNode.append(...(children as LexicalNode[]));
+          return [$applyNodeReplacement(linkNode)];
+        }
         default:
           console.log('unhandled tag: ' + el.tagName);
           console.log(children);

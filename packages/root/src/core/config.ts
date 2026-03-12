@@ -34,6 +34,25 @@ export interface RootUserConfig {
   };
 
   /**
+   * Config for manually injecting stylesheet entries as
+   * `<link rel="stylesheet">` tags.
+   */
+  styles?: {
+    /**
+     * Project-root-relative stylesheet files to include on every rendered
+     * page, e.g. `styles/index.css`.
+     *
+     * Entries are normalized as URL paths, so both `styles/index.css` and
+     * `/styles/index.css` resolve to `/styles/index.css`.
+     *
+     * Manual entries are injected first, then auto-collected CSS
+     * dependencies are merged after. Duplicate URLs are de-duped so each
+     * stylesheet is only injected once.
+     */
+    entries?: string[];
+  };
+
+  /**
    * Config options for localization and internationalization.
    */
   i18n?: RootI18nConfig;
@@ -232,6 +251,11 @@ export interface RootServerConfig {
 
   /**
    * Cookie secret for the session middleware.
+   *
+   * Generate a secure secret with:
+   * ```
+   * node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+   * ```
    */
   sessionCookieSecret?: string | string[];
 

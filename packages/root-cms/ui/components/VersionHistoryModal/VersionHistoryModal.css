@@ -50,6 +50,63 @@
   gap: 8px;
 }
 
+.VersionHistoryModal__message {
+  white-space: pre-line;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.VersionHistoryModal__popover__body {
+  background-color: #1a1b1e;
+  color: #fff;
+  border: 1px solid #2c2e33;
+}
+
+.VersionHistoryModal__popover__arrow {
+  background-color: #1a1b1e;
+  border: 1px solid #2c2e33;
+}
+
+.VersionHistoryModal__popover__close {
+  color: #909296;
+}
+
+.VersionHistoryModal__popover__close:hover {
+  color: #fff;
+}
+
+.VersionHistoryModal__messageIcon {
+  vertical-align: middle;
+}
+
+.VersionHistoryModal__publishedLabel {
+  margin-left: 4px;
+  opacity: 0.5;
+}
+
 .VersionHistoryModal__versions__buttons__compare .mantine-Button-icon {
   margin-left: 4px;
+}
+
+.VersionHistoryModal__versions th:first-child {
+  width: 40px;
+}
+
+.VersionHistoryModal__versions__selectLabel {
+  opacity: 0;
+  position: absolute;
+}
+
+.VersionHistoryModal__versions__checkbox {
+  cursor: pointer;
+}
+
+.VersionHistoryModal__versions__modifiedAt {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.VersionHistoryModal__versions__modifiedAt__text {
+  flex: 1;
 }

@@ -1,5 +1,9 @@
 import {describe, it, expect} from 'vitest';
-import {getNestedValue} from './objects.js';
+import {
+  getNestedValue,
+  sortObjectKeysDeep,
+  stableJsonStringify,
+} from './objects.js';
 
 describe('getNestedValue', () => {
   it('returns a nested property when using dot notation', () => {
@@ -43,5 +47,68 @@ describe('getNestedValue', () => {
     };
 
     expect(getNestedValue(data, 'items[1].title')).toBeUndefined();
+  });
+});
+
+describe('sortObjectKeysDeep', () => {
+  it('sorts nested object keys but preserves array order', () => {
+    const data = {
+      z: 1,
+      a: {
+        d: 4,
+        b: 2,
+      },
+      items: [
+        {
+          z: 1,
+          a: 2,
+        },
+        {
+          b: 1,
+          a: 2,
+        },
+      ],
+    };
+
+    expect(sortObjectKeysDeep(data)).toEqual({
+      a: {
+        b: 2,
+        d: 4,
+      },
+      items: [
+        {
+          a: 2,
+          z: 1,
+        },
+        {
+          a: 2,
+          b: 1,
+        },
+      ],
+      z: 1,
+    });
+  });
+});
+
+describe('stableJsonStringify', () => {
+  it('returns the same string for different key insertion orders', () => {
+    const before = {
+      block: {
+        type: 'html',
+        data: {
+          html: '<p>Hello</p>',
+        },
+      },
+    };
+    const after = {
+      block: {
+        data: {
+          html: '<p>Hello</p>',
+        },
+        type: 'html',
+      },
+    };
+
+    expect(stableJsonStringify(before)).toBe(stableJsonStringify(after));
   });
 });

@@ -10,3 +10,28 @@
   margin-top: 16px;
   max-width: 600px;
 }
+
+.AssetsPage__urlGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.AssetsPage__urlRow__label {
+  font-size: 12px;
+  font-weight: 500;
+  color: #666;
+  margin-bottom: 4px;
+}
+
+.AssetsPage__urlRow__input {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.AssetsPage__urlRow__input textarea {
+  font-size: 12px;
+}

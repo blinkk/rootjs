@@ -1,5 +1,43 @@
 # @blinkk/root-cms
 
+## 2.5.4
+
+### Patch Changes
+
+- 290d7f22: feat: add quick edit modal for reference fields
+- 7155bdef: feat: add keyboard shortcut to redirect to dev server (#932)
+- e039a74b: feat: enable paste for empty array fields
+- 1fccd23a: feat: add release archiving and status filters
+- Updated dependencies [1fbaa7a2]
+- Updated dependencies [d6f8bc52]
+  - @blinkk/root@2.5.4
+
+## 2.5.3
+
+### Patch Changes
+
+- 79b9cabe: feat: add minimalBranding option for cms (#915)
+  - @blinkk/root@2.5.3
+
+## 2.5.2
+
+### Patch Changes
+
+- 6738d032: feat: add button for appending tag to a doc's string
+  - @blinkk/root@2.5.2
+
+## 2.5.1
+
+### Patch Changes
+
+- 37082a54: feat: add unpublishDocs to cms client
+- c1054c29: feat: update file upload field on assets page
+- b378fca6: feat: add clickable sheets icon to data sources table (#890)
+- f6f66b8a: feat: add publish message support
+- 8ad7d907: feat: add translation metadata and quick ai translations
+- 3924e235: feat: implement glob for schema pattern resolution
+  - @blinkk/root@2.5.1
+
 ## 2.4.10
 
 ### Patch Changes

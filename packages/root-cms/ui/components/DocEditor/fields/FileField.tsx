@@ -4,33 +4,38 @@ import {
   ActionIcon,
   Box,
   Button,
+  Checkbox,
   Divider,
+  Group,
   Loader,
   LoadingOverlay,
   MantineSize,
+  Menu,
   Modal,
+  Select,
   Table,
+  Text,
   Textarea,
   Tooltip,
   useMantineTheme,
 } from '@mantine/core';
-import {Menu} from '@mantine/core';
 import {hideNotification, showNotification} from '@mantine/notifications';
 import {
   IconCopy,
+  IconCrop,
+  IconDotsVertical,
   IconDownload,
+  IconExternalLink,
   IconFileUpload,
   IconInfoCircle,
   IconPaperclip,
   IconPhotoStar,
   IconPhotoUp,
   IconSparkles,
-  IconTrash,
-  IconSquareCheckFilled,
   IconSquareCheck,
+  IconSquareCheckFilled,
+  IconTrash,
 } from '@tabler/icons-preact';
-import {IconDotsVertical} from '@tabler/icons-preact';
-import {IconCrop} from '@tabler/icons-preact';
 import {ComponentChildren, createContext} from 'preact';
 import {ChangeEvent, CSSProperties, forwardRef} from 'preact/compat';
 import {lazy, Suspense} from 'preact/compat';
@@ -42,12 +47,14 @@ import {ChatController, useChat} from '../../../pages/AIPage/AIPage.js';
 import {joinClassNames} from '../../../utils/classes.js';
 import {
   buildDownloadURL,
+  checkFileExists,
   getFileExt,
   testIsGoogleCloudImageFile,
   testIsImageFile,
   testIsVideoFile,
   UploadedFile,
   uploadFileToGCS,
+  deleteFileFromGCS,
 } from '../../../utils/gcs.js';
 import {downloadFromDrive, parseGoogleDriveId} from '../../../utils/gdrive.js';
 import {FieldProps} from './FieldProps.js';
@@ -64,13 +71,14 @@ const IMAGE_MIMETYPES = [
 
 type FileFieldVariant = 'file' | 'image';
 
-type FileFieldLoadingState = 'loading' | 'complete' | 'error';
+export type FileFieldLoadingState = 'loading' | 'complete' | 'error';
 
 type FileFieldProps = FieldProps & {
   variant?: FileFieldVariant;
+  allowEditing?: boolean;
 };
 
-type FileFieldValueType = UploadedFile | null;
+export type FileFieldValueType = UploadedFile | null;
 
 interface FileFieldContextValue {
   field: schema.FileField;
@@ -91,6 +99,7 @@ interface FileFieldContextValue {
   showAltText: boolean;
   altText: string;
   setAltText: (altText: string) => void;
+  allowEditing: boolean;
 }
 
 const FileFieldContext = createContext<FileFieldContextValue | null>(null);
@@ -109,33 +118,69 @@ function useFileField() {
   return ctx;
 }
 
-export function FileField(props: FileFieldProps) {
-  const field = props.field as schema.FileField;
+export interface FileFieldInternalProps {
+  field: schema.FileField;
+  variant?: FileFieldVariant;
+  value: FileFieldValueType;
+  setValue: (value: FileFieldValueType) => void;
+  loadingState: FileFieldLoadingState | null;
+  setLoadingState: (state: FileFieldLoadingState | null) => void;
+  showNamingOptions?: boolean;
+  accept?: string[];
+  allowEditing?: boolean;
+}
+
+export function FileFieldInternal(props: FileFieldInternalProps) {
+  const {field, value, setValue, loadingState, setLoadingState} = props;
   const theme = useMantineTheme();
   const dropZoneRef = useRef<HTMLButtonElement>(null);
   const [placeholderModalOpened, setPlaceholderModalOpened] = useState(false);
+  const [deleteModalOpened, setDeleteModalOpened] = useState(false);
   const [imageEditorOpened, setImageEditorOpened] = useState(false);
-  const [value, setValue] = useDraftDocValue<FileFieldValueType>(props.deepKey);
-  const [loadingState, setLoadingState] =
-    useState<FileFieldLoadingState | null>(null);
   const gapiClient = useGapiClient();
+  const allowEditing = props.allowEditing !== false;
+
+  // New state from FileUploader
+  const [namingMode, setNamingMode] = useState<'hash' | 'hash-path' | 'clean'>(
+    'hash'
+  );
+  const [pendingUpload, setPendingUpload] = useState<File | null>(null);
+  const [overwriteConfirmed, setOverwriteConfirmed] = useState(false);
+  const [existingFileUrl, setExistingFileUrl] = useState<string | null>(null);
 
   const acceptedFileTypes =
-    field.exts ?? (props.variant === 'image' ? IMAGE_MIMETYPES : []);
+    props.accept ??
+    field.exts ??
+    (props.variant === 'image' ? IMAGE_MIMETYPES : []);
 
   const altText = value?.alt || '';
-  // The alt text field is visible by default, only hidden when explicitly set
-  // to `false`.
   const showAltText = field.alt !== false;
 
-  /** Uploads file data to GCS. */
-  async function uploadFile(file: File, originalSrc?: string) {
+  async function uploadFile(
+    file: File,
+    originalSrc?: string,
+    options?: {
+      namingMode?: 'hash' | 'hash-path' | 'clean';
+      checkExists?: boolean;
+    }
+  ) {
     try {
       setLoadingState('loading');
+      // Use prop namingMode if available, otherwise fall back to field config
+      const mode =
+        options?.namingMode || (field.preserveFilename ? 'clean' : 'hash');
+
+      // When using the original filename without a hash, the file can be
+      // overwritten by a subsequent upload, so disable caching.
+      const cacheControl =
+        field.cacheControl || (mode === 'clean' ? 'no-cache' : undefined);
+
       const uploadedFile = await uploadFileToGCS(file, {
-        preserveFilename: field.preserveFilename,
-        cacheControl: field.cacheControl,
+        namingMode: mode,
+        checkExists: options?.checkExists ?? false,
+        cacheControl,
       });
+
       // Preserve previous alt text when a new file is uploaded.
       if (
         !uploadedFile.alt &&
@@ -149,6 +194,8 @@ export function FileField(props: FileFieldProps) {
       }
       setValue(uploadedFile);
       setLoadingState('complete');
+      setPendingUpload(null);
+      setExistingFileUrl(null);
     } catch (err) {
       console.error('upload failed');
       console.error(err);
@@ -162,18 +209,53 @@ export function FileField(props: FileFieldProps) {
     }
   }
 
+  async function handleRemoveFileConfirm() {
+    setLoadingState('loading');
+    try {
+      const gcsPath = value?.gcsPath || value?.src;
+      if (gcsPath) {
+        await deleteFileFromGCS(gcsPath);
+      }
+      setValue(null);
+      setLoadingState(null);
+      showNotification({
+        message: 'File deleted from GCS',
+        color: 'green',
+      });
+    } catch (err) {
+      console.error(err);
+      setLoadingState('error');
+      showNotification({
+        title: 'Delete failed',
+        message: String(err),
+        color: 'red',
+      });
+    } finally {
+      setDeleteModalOpened(false);
+    }
+  }
+
   function removeFile() {
+    if (!allowEditing && value?.src) {
+      // In standalone uploader mode (allowEditing=false), "remove" means
+      // delete from GCS.
+      setDeleteModalOpened(true);
+      return;
+    }
     setValue(null);
   }
 
-  /** Validates incoming file data and if it passes validation, uploads it. */
   async function handleFile(file: File | string, options?: {as?: 'svg'}) {
     if (!file) {
       return;
     }
 
-    // Handle Google Drive URLs.
+    setPendingUpload(null);
+    setExistingFileUrl(null);
+    setOverwriteConfirmed(false);
+
     if (typeof file === 'string' && !options?.as) {
+      // Handle Google Drive URLs.
       const driveId = parseGoogleDriveId(file);
       if (driveId) {
         try {
@@ -193,31 +275,15 @@ export function FileField(props: FileFieldProps) {
           });
           const downloadedFile = await downloadFromDrive(gapiClient, driveId);
           hideNotification('gdrive-download');
-          uploadFile(downloadedFile);
+          handleFile(downloadedFile);
         } catch (err: any) {
           console.error(err);
           setLoadingState('error');
-          let message = 'Failed to download file from Google Drive.';
-          if (
-            err?.result?.error?.code === 404 ||
-            err?.message?.includes('File not found')
-          ) {
-            message =
-              'File not found. Please check that the file exists and you have access to it.';
-          } else if (err instanceof Error) {
-            message = err.message;
-          } else if (err?.result?.error?.message) {
-            message = err.result.error.message;
-          }
-
           hideNotification('gdrive-download');
           showNotification({
-            id: 'gdrive-error',
             title: 'Google Drive import failed',
-            message: message,
+            message: err.message || 'Failed to download',
             color: 'red',
-            autoClose: false,
-            loading: false,
           });
         }
         return;
@@ -225,7 +291,7 @@ export function FileField(props: FileFieldProps) {
     }
 
     // Convert text to a File.
-    if (options?.as === 'svg') {
+    if (options?.as === 'svg' && typeof file === 'string') {
       file = new File(
         [new Blob([file], {type: 'image/svg+xml'})],
         'untitled.svg',
@@ -234,8 +300,11 @@ export function FileField(props: FileFieldProps) {
         }
       );
     }
-    file = file as File;
-    const ext = getFileExt(file.name);
+
+    const fileObj = file as File;
+    const ext = getFileExt(fileObj.name);
+
+    // Validation
     if (
       acceptedFileTypes.length > 0 &&
       !acceptedFileTypes.some(
@@ -243,7 +312,7 @@ export function FileField(props: FileFieldProps) {
           type.endsWith(ext) ||
           type === `*/${ext}` ||
           type === '*/*' ||
-          type === file.type
+          type === fileObj.type
       )
     ) {
       showNotification({
@@ -254,20 +323,38 @@ export function FileField(props: FileFieldProps) {
       });
       return;
     }
-    uploadFile(file);
+
+    // Check for overwrite if clean naming mode is active
+    if (namingMode === 'clean' && props.showNamingOptions) {
+      setLoadingState('loading');
+      const projectId = window.__ROOT_CTX.rootConfig.projectId;
+      const filePath = `${projectId}/uploads/${fileObj.name}`;
+      try {
+        const exists = await checkFileExists(filePath);
+        if (exists) {
+          setPendingUpload(fileObj);
+          setExistingFileUrl(
+            `https://storage.googleapis.com/${window.firebase.storage.app.options.storageBucket}/${filePath}`
+          );
+          setLoadingState(null); // Stop loading to show UI
+          return;
+        }
+      } catch (err) {
+        console.warn('Failed to check file existence', err);
+      }
+    }
+
+    uploadFile(fileObj, undefined, {namingMode: namingMode});
   }
 
   function focusDropZone() {
     dropZoneRef.current?.focus();
   }
 
-  /** Downloads the file. */
   function requestFileDownload() {
     if (!value?.src) {
       return;
     }
-    // Google Cloud Images can be forced to download as attachments by
-    // using their download URL.
     if (testIsGoogleCloudImageFile(value.src)) {
       const link = document.createElement('a');
       link.href = buildDownloadURL(value.src);
@@ -278,12 +365,10 @@ export function FileField(props: FileFieldProps) {
       link.click();
       document.body.removeChild(link);
     } else {
-      // Other files may not download as attachments so just open them in a new tab.
       window.open(value.src, '_blank');
     }
   }
 
-  /** Starts the file upload flow by opening a file picker dialog. */
   function requestFileUpload() {
     const inputEl = document.createElement('input');
     inputEl.type = 'file';
@@ -300,7 +385,6 @@ export function FileField(props: FileFieldProps) {
     inputEl.remove();
   }
 
-  /** Opens the "create placeholder" modal. */
   function requestPlaceholderModalOpen() {
     setPlaceholderModalOpened(true);
   }
@@ -309,14 +393,13 @@ export function FileField(props: FileFieldProps) {
     setImageEditorOpened(true);
   }
 
-  function setAltText(altText: string) {
+  function setAltText(newAltText: string) {
     if (!value?.src) {
       return;
     }
-    setValue({...value, alt: altText || ''});
+    setValue({...value, alt: newAltText || ''});
   }
 
-  /** Requests generation of the alt text associated with the uploaded file. */
   async function requestGenerateAltText(chat: ChatController) {
     const uploadedFile = value;
     if (!uploadedFile?.src || !chat) {
@@ -382,6 +465,7 @@ export function FileField(props: FileFieldProps) {
         showAltText: showAltText,
         altText: altText,
         setAltText: setAltText,
+        allowEditing: allowEditing,
       }}
     >
       <Modal
@@ -403,6 +487,39 @@ export function FileField(props: FileFieldProps) {
           }}
         />
       </Modal>
+      <Modal
+        size="sm"
+        opened={deleteModalOpened}
+        onClose={() => setDeleteModalOpened(false)}
+        title="Delete file?"
+        centered
+        overlayColor={
+          theme.colorScheme === 'dark'
+            ? theme.colors.dark[9]
+            : theme.colors.gray[2]
+        }
+      >
+        <Text size="sm" mb="lg">
+          Are you sure you want to delete this file from GCS? This action cannot
+          be undone.
+        </Text>
+        <Group grow spacing="xs">
+          <Button
+            variant="default"
+            onClick={() => setDeleteModalOpened(false)}
+            disabled={loadingState === 'loading'}
+          >
+            Cancel
+          </Button>
+          <Button
+            color="red"
+            onClick={handleRemoveFileConfirm}
+            loading={loadingState === 'loading'}
+          >
+            Delete
+          </Button>
+        </Group>
+      </Modal>
       {imageEditorOpened && value?.src && (
         <Suspense fallback={null}>
           <ImageEditorDialog
@@ -421,17 +538,147 @@ export function FileField(props: FileFieldProps) {
           />
         </Suspense>
       )}
-      <div className="FileField">
-        <FileField.Dropzone ref={dropZoneRef} />
-        {value?.src ? (
-          <FileField.Preview />
-        ) : (
-          <FileField.InvisibleDropzone>
-            <FileField.Empty />
-          </FileField.InvisibleDropzone>
-        )}
-      </div>
+
+      {/* Pending Upload Warning */}
+      {pendingUpload ? (
+        <div className="FileField__overwriteWarning">
+          <div className="FileField__overwriteWarning__header">
+            <Text size="sm" color="red" weight={700}>
+              File already exists
+            </Text>
+          </div>
+          <Text size="sm">
+            A file named <strong>{pendingUpload.name}</strong> already exists.
+          </Text>
+          {existingFileUrl && (
+            <Text size="sm" className="FileField__overwriteWarning__link">
+              <a
+                href={existingFileUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                View existing file <IconExternalLink size={12} />
+              </a>
+            </Text>
+          )}
+
+          <div className="FileField__overwriteWarning__checkbox">
+            <Checkbox
+              label="Confirm overwrite"
+              checked={overwriteConfirmed}
+              onChange={(e: ChangeEvent<HTMLInputElement>) =>
+                setOverwriteConfirmed(e.currentTarget.checked)
+              }
+            />
+          </div>
+
+          <Group
+            grow
+            spacing="xs"
+            className="FileField__overwriteWarning__actions"
+          >
+            <Button
+              variant="default"
+              onClick={() => {
+                setPendingUpload(null);
+                setExistingFileUrl(null);
+                setOverwriteConfirmed(false);
+              }}
+              disabled={loadingState === 'loading'}
+            >
+              Cancel
+            </Button>
+            <Button
+              disabled={!overwriteConfirmed}
+              onClick={() =>
+                uploadFile(pendingUpload, undefined, {namingMode: 'clean'})
+              }
+              color="red"
+              loading={loadingState === 'loading'}
+            >
+              Overwrite
+            </Button>
+          </Group>
+        </div>
+      ) : (
+        <>
+          <div
+            className={joinClassNames(
+              'FileField',
+              props.showNamingOptions && 'FileField--withOptions'
+            )}
+          >
+            <FileField.Dropzone ref={dropZoneRef} />
+            {value?.src ? (
+              <FileField.Preview />
+            ) : (
+              <FileField.InvisibleDropzone>
+                <FileField.Empty />
+              </FileField.InvisibleDropzone>
+            )}
+          </div>
+
+          {props.showNamingOptions && !value && (
+            <div className="FileField__settings" style={{marginTop: 8}}>
+              <Select
+                label="File name options"
+                size="xs"
+                itemComponent={NamingModeSelectItem}
+                data={[
+                  {
+                    value: 'hash',
+                    label: 'Hash the file name',
+                    description:
+                      "The filename will be hashed so the file's original name won't be exposed.",
+                  },
+                  {
+                    value: 'hash-path',
+                    label: 'Use a hashed path with the original file name',
+                    description:
+                      'Use the original file name, but put it inside a hashed directory.',
+                  },
+                  {
+                    value: 'clean',
+                    label: 'Use the original file name only',
+                    description:
+                      'The file will be uploaded to the bucket as-is, without a hashed directory.',
+                  },
+                ]}
+                value={namingMode}
+                onChange={(val: any) => setNamingMode(val || 'hash')}
+                disabled={loadingState === 'loading' || !!value}
+              />
+            </div>
+          )}
+        </>
+      )}
     </FileFieldContext.Provider>
+  );
+}
+
+/**
+ * CMS-connected file field.
+ *
+ * This component is designed to be used within the CMS document editor. It
+ * automatically connects to the draft doc state using `useDraftDocValue` and
+ * handles reading and writing values to the document.
+ */
+export function FileField(props: FileFieldProps) {
+  const field = props.field as schema.FileField;
+  const [value, setValue] = useDraftDocValue<FileFieldValueType>(props.deepKey);
+  const [loadingState, setLoadingState] =
+    useState<FileFieldLoadingState | null>(null);
+
+  return (
+    <FileFieldInternal
+      field={field}
+      value={value}
+      setValue={setValue}
+      loadingState={loadingState}
+      setLoadingState={setLoadingState}
+      variant={props.variant}
+      allowEditing={props.allowEditing}
+    />
   );
 }
 
@@ -443,9 +690,34 @@ FileField.Preview = () => {
   const experiments = window.__ROOT_CTX.experiments || {};
 
   // Videos and images are the only files that get the canvas preview.
-  // Other types just show the info panel.
-  const supportsCanvasPreview = testShouldHaveAltText(ctx.value?.filename);
+  // Other types just show the info panel. Videos with zero dimensions
+  // (e.g. missing metadata) are treated as non-previewable.
+  const hasValidDimensions =
+    !!ctx.value?.width &&
+    !!ctx.value?.height &&
+    Number(ctx.value.width) > 0 &&
+    Number(ctx.value.height) > 0;
+  const filename = ctx.value?.filename || '';
+  const isVideo = testIsVideoFile(filename);
+  const supportsCanvasPreview =
+    testIsImageFile(filename) || (isVideo && hasValidDimensions);
   const [infoOpened, setInfoOpened] = useState(!supportsCanvasPreview);
+
+  // Keep infoOpened in sync when the file type changes (e.g. uploading a PDF
+  // after an MP4). Without this, the state would be stale from the first file.
+  const prevFileSrcRef = useRef(ctx.value?.src);
+  if (ctx.value?.src !== prevFileSrcRef.current) {
+    prevFileSrcRef.current = ctx.value?.src;
+    const newFilename = ctx.value?.filename || '';
+    const newSupportsCanvas =
+      testIsImageFile(newFilename) ||
+      (testIsVideoFile(newFilename) && hasValidDimensions);
+    if (!newSupportsCanvas && !infoOpened) {
+      setInfoOpened(true);
+    } else if (newSupportsCanvas && infoOpened) {
+      setInfoOpened(false);
+    }
+  }
 
   if (!ctx.value?.src) {
     return null;
@@ -481,44 +753,48 @@ FileField.Preview = () => {
             </ActionIcon>
           }
         >
-          <Menu.Label size="sm">REPLACE</Menu.Label>
-          <Menu.Item
-            icon={
-              ctx.variant === 'image' ? (
-                <IconPhotoUp size={16} />
-              ) : (
-                <IconFileUpload size={16} />
-              )
-            }
-            onClick={() => ctx.requestFileUpload()}
-          >
-            Upload {ctx.variant === 'image' ? 'image' : 'file'}
-          </Menu.Item>
-          {testSupportsCreatePlaceholder(ctx.acceptedFileTypes) && (
-            <Menu.Item
-              disabled={!ctx.value?.src}
-              icon={<IconPhotoStar size={16} />}
-              onClick={() => {
-                ctx.requestPlaceholderModalOpen();
-              }}
-            >
-              Placeholder image
-            </Menu.Item>
-          )}
-          {testIsImageFile(ctx.value?.src) &&
-            !ctx.value?.src?.endsWith('.svg') && (
+          {ctx.allowEditing && (
+            <>
+              <Menu.Label size="sm">REPLACE</Menu.Label>
               <Menu.Item
-                disabled={!ctx.value?.src}
-                icon={<IconCrop size={16} />}
-                closeMenuOnClick
-                onClick={() => {
-                  ctx.requestImageEditorOpen();
-                }}
+                icon={
+                  ctx.variant === 'image' ? (
+                    <IconPhotoUp size={16} />
+                  ) : (
+                    <IconFileUpload size={16} />
+                  )
+                }
+                onClick={() => ctx.requestFileUpload()}
               >
-                Edit image
+                Upload {ctx.variant === 'image' ? 'image' : 'file'}
               </Menu.Item>
-            )}
-          <Divider />
+              {testSupportsCreatePlaceholder(ctx.acceptedFileTypes) && (
+                <Menu.Item
+                  disabled={!ctx.value?.src}
+                  icon={<IconPhotoStar size={16} />}
+                  onClick={() => {
+                    ctx.requestPlaceholderModalOpen();
+                  }}
+                >
+                  Placeholder image
+                </Menu.Item>
+              )}
+              {testIsImageFile(ctx.value?.src) &&
+                !ctx.value?.src?.endsWith('.svg') && (
+                  <Menu.Item
+                    disabled={!ctx.value?.src}
+                    icon={<IconCrop size={16} />}
+                    closeMenuOnClick
+                    onClick={() => {
+                      ctx.requestImageEditorOpen();
+                    }}
+                  >
+                    Edit image
+                  </Menu.Item>
+                )}
+              <Divider />
+            </>
+          )}
           <Menu.Item
             disabled={ctx.value?.src?.startsWith('data:')}
             onClick={() => {
@@ -533,8 +809,12 @@ FileField.Preview = () => {
             icon={<IconCopy size={16} />}
             onClick={() => {
               setCopied(false);
+              let url = ctx.value?.src || '';
+              if (testIsGoogleCloudImageFile(url)) {
+                url = url.split('=')[0] + '=s0';
+              }
               navigator.clipboard
-                .writeText(ctx.value?.src || '')
+                .writeText(url)
                 .then(() => setCopied(true))
                 .finally(() =>
                   setTimeout(() => {
@@ -545,7 +825,8 @@ FileField.Preview = () => {
           >
             {copied ? 'Copied!' : 'Copy URL'}
           </Menu.Item>
-          {testIsImageFile(ctx.value?.src || '') &&
+          {ctx.allowEditing &&
+            testIsImageFile(ctx.value?.src || '') &&
             ctx.value?.canvasBgColor && (
               <Menu.Item
                 icon={
@@ -633,7 +914,7 @@ FileField.Preview = () => {
               className="FileField__Canvas__Info__Icon"
             />
             <Table
-              className="FileField__Canvas__InfoTable"
+              className="FileField__Canvas__Info__Table"
               verticalSpacing="xs"
               fontSize="xs"
             >
@@ -700,7 +981,9 @@ FileField.Preview = () => {
                   ctx?.focusDropZone();
                 }}
                 onDblClick={() => {
-                  ctx?.requestFileUpload();
+                  if (ctx.allowEditing) {
+                    ctx?.requestFileUpload();
+                  }
                 }}
                 src={ctx.value.src}
                 alt={ctx.value.alt || 'Uploaded file preview'}
@@ -724,14 +1007,17 @@ FileField.Preview = () => {
             )}
           </>
         )}
-        <div className="FileField__reupload">
-          <FileField.UploadButton
-            className="FileField__reupload__button"
-            compact
-          />
-        </div>
+        {ctx.allowEditing && (
+          <div className="FileField__reupload">
+            <FileField.UploadButton
+              className="FileField__reupload__button"
+              compact
+            />
+          </div>
+        )}
       </div>
-      {ctx.showAltText &&
+      {ctx.allowEditing &&
+        ctx.showAltText &&
         (ctx.altText ||
           testShouldHaveAltText(ctx.value?.filename) ||
           ctx.variant === 'image') && (
@@ -851,7 +1137,13 @@ FileField.Empty = () => {
     if (ctx.acceptedFileTypes.length === 0) {
       return '';
     }
-    return ctx.acceptedFileTypes
+    const visibleTypes = ctx.acceptedFileTypes.filter(
+      (t) => t !== '*/*' && t !== '*'
+    );
+    if (visibleTypes.length === 0) {
+      return '';
+    }
+    return visibleTypes
       .map((mimeType) =>
         mimeType.split('/').pop()!.split('+')[0].replaceAll('.', '')
       )
@@ -981,6 +1273,22 @@ FileField.Dropzone = forwardRef<HTMLButtonElement, {}>((props, ref) => {
     ></button>
   );
 });
+
+const NamingModeSelectItem = forwardRef(
+  (props: {label: string; description: string; ref: any}) => {
+    const {label, description, ...selectProps} = props;
+    return (
+      <div className="FileField__NamingModeItem" {...selectProps}>
+        <Text size="sm" weight={500}>
+          {label}
+        </Text>
+        <Text size="xs" color="dimmed">
+          {description}
+        </Text>
+      </div>
+    );
+  }
+);
 
 /** Returns whether a file should display the alt text field (based on its filename). */
 function testShouldHaveAltText(filename: string | undefined): boolean {

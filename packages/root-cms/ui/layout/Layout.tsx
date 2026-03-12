@@ -19,7 +19,7 @@ import {
   IconSettings,
 } from '@tabler/icons-preact';
 import {ComponentChildren} from 'preact';
-import {useRouter} from 'preact-router';
+import {useLocation} from 'preact-iso';
 import type {CMSBuiltInSidebarTool} from '../../core/plugin.js';
 import packageJson from '../../package.json' assert {type: 'json'};
 import {RootCMSLogo} from '../components/RootCMSLogo/RootCMSLogo.js';
@@ -45,23 +45,34 @@ export function Layout(props: LayoutProps) {
 }
 
 Layout.Top = () => {
-  const projectName =
-    window.__ROOT_CTX.rootConfig.projectName ||
-    window.__ROOT_CTX.rootConfig.projectId;
+  const rootConfig = window.__ROOT_CTX.rootConfig;
+  const projectName = rootConfig.projectName || rootConfig.projectId;
+  const minimalBranding = rootConfig.minimalBranding;
   return (
     <div className="Layout__top">
-      <a className="Layout__top__logo" href="/cms">
-        <RootCMSLogo />
-      </a>
-      <div className="Layout__top__version">v{packageJson.version}</div>
-      <div className="Layout__top__project">{projectName}</div>
+      {!minimalBranding ? (
+        <>
+          <a className="Layout__top__logo" href="/cms">
+            <RootCMSLogo />
+          </a>
+          <div className="Layout__top__version">v{packageJson.version}</div>
+          <div className="Layout__top__project">{projectName}</div>
+        </>
+      ) : (
+        <>
+          <a className="Layout__top__logo" href="/cms">
+            {projectName}
+          </a>
+          <div className="Layout__top__version">v{packageJson.version}</div>
+        </>
+      )}
     </div>
   );
 };
 
 Layout.Side = () => {
-  const [route] = useRouter();
-  const currentUrl = route.url.replace(/\/*$/g, '');
+  const {url} = useLocation();
+  const currentUrl = url.replace(/\/*$/g, '');
   const user = window.firebase.user;
   const sidebarTools = window.__ROOT_CTX.sidebar?.tools;
   const hiddenBuiltInTools = new Set<CMSBuiltInSidebarTool>(

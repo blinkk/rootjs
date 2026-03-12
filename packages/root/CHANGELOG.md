@@ -1,5 +1,18 @@
 # @blinkk/root
 
+## 2.5.4
+
+### Patch Changes
+
+- 1fbaa7a2: feat: add `styles.entries` config for injecting global stylesheets (#929)
+- d6f8bc52: feat: add postBuild hook to root build
+
+## 2.5.3
+
+## 2.5.2
+
+## 2.5.1
+
 ## 2.4.10
 
 ## 2.4.9

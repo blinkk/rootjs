@@ -27,6 +27,7 @@ import {
   IconCopy,
   IconDotsVertical,
   IconLanguage,
+  IconLanguageOff,
   IconLock,
   IconPlanet,
   IconRocket,
@@ -46,7 +47,7 @@ import {
   useState,
   useCallback,
 } from 'preact/hooks';
-import {route} from 'preact-router';
+import {useLocation} from 'preact-iso';
 import * as schema from '../../../core/schema.js';
 import {useCollectionSchema} from '../../hooks/useCollectionSchema.js';
 import {
@@ -90,7 +91,10 @@ import {
   DocActionEvent,
   DocActionsMenu,
 } from '../DocActionsMenu/DocActionsMenu.js';
-import {DocStatusBadges} from '../DocStatusBadges/DocStatusBadges.js';
+import {
+  DocStatusBadges,
+  getPublishingLockedLabel,
+} from '../DocStatusBadges/DocStatusBadges.js';
 import {useEditJsonModal} from '../EditJsonModal/EditJsonModal.js';
 import {useEditTranslationsModal} from '../EditTranslationsModal/EditTranslationsModal.js';
 import {useLocalizationModal} from '../LocalizationModal/LocalizationModal.js';
@@ -111,7 +115,9 @@ import {SelectField} from './fields/SelectField.js';
 import {StringField} from './fields/StringField.js';
 
 interface DocEditorProps {
+  className?: string;
   docId: string;
+  hideStatusBar?: boolean;
 }
 
 const COLLECTION_SCHEMA_TYPES_CONTEXT = createContext<
@@ -138,12 +144,12 @@ export function DocEditor(props: DocEditorProps) {
       value={collection?.schema?.types || {}}
     >
       <DeeplinkProvider>
-        <div className="DocEditor">
+        <div className={joinClassNames(props.className, 'DocEditor')}>
           <LoadingOverlay
             visible={loading}
             loaderProps={{color: 'gray', size: 'xl'}}
           />
-          {!loading && (
+          {!loading && !props.hideStatusBar && (
             <DocEditor.StatusBar
               {...props}
               draft={draft}
@@ -171,6 +177,7 @@ type StatusBarProps = DocEditorProps & {
 };
 
 DocEditor.StatusBar = (props: StatusBarProps) => {
+  const {route} = useLocation();
   const {roles} = useProjectRoles();
   const currentUserEmail = window.firebase.user.email || '';
   const canPublish = testCanPublish(roles, currentUserEmail);
@@ -267,9 +274,7 @@ DocEditor.StatusBar = (props: StatusBarProps) => {
           </Tooltip>
         ) : testPublishingLocked(data as CMSDoc) ? (
           <Tooltip
-            label={`Locked by ${data.sys!.publishingLocked.lockedBy}: "${
-              data.sys!.publishingLocked.reason
-            }"`}
+            label={getPublishingLockedLabel(data as CMSDoc)}
             transition="pop"
           >
             <Button
@@ -439,6 +444,7 @@ DocEditor.FieldHeader = (props: FieldProps & {className?: string}) => {
             <a
               className="DocEditor__FieldHeader__label__deeplink"
               href={deeplinkUrl}
+              tabIndex={-1}
               title="Link to field"
               onClick={(e) => {
                 e.preventDefault();
@@ -457,6 +463,7 @@ DocEditor.FieldHeader = (props: FieldProps & {className?: string}) => {
       <DocEditor.FieldHeaderTranslationsActionIcon
         field={field}
         value={value}
+        deepKey={props.deepKey}
       />
     </div>
   );
@@ -465,6 +472,7 @@ DocEditor.FieldHeader = (props: FieldProps & {className?: string}) => {
 interface FieldHeaderTranslationsActionIconProps {
   field: schema.Field;
   value: any;
+  deepKey: string;
 }
 
 DocEditor.FieldHeaderTranslationsActionIcon = (
@@ -484,13 +492,56 @@ DocEditor.FieldHeaderTranslationsActionIcon = (
     [field, value]
   );
 
+  // Check for disableTranslations metadata
+  const [doNotTranslate, setDoNotTranslate] = useState(false);
+
+  useEffect(() => {
+    if (props.deepKey && draft.controller) {
+      const metadataKey = getMetadataKey(props.deepKey);
+      const unsubscribe = draft.controller.subscribe(
+        metadataKey,
+        (metadata: any) => {
+          setDoNotTranslate(metadata?.disableTranslations || false);
+        }
+      );
+      return unsubscribe;
+    }
+  }, [props.deepKey, draft.controller]);
+
   if (!translate || i18nLocales.length <= 1) {
     return null;
   }
 
   return (
     <div className="DocEditor__FieldHeader__translate">
-      {!actionIconDisabled ? (
+      {doNotTranslate ? (
+        <Tooltip label="Translations are disabled">
+          <ActionIcon
+            size="xs"
+            onClick={() => {
+              const docData = draft.controller.getData();
+              if (!docData) {
+                return;
+              }
+              const strings = new Set<string>();
+              extractField(strings, field, value, types);
+              const translateStrings = Array.from(strings);
+              editTranslationsModal.open({
+                docId: draft.controller.docId,
+                strings: translateStrings,
+                l10nSheet: docData?.sys?.l10nSheet,
+                field: {
+                  id: field.id,
+                  deepKey: props.deepKey,
+                },
+                draft: draft,
+              });
+            }}
+          >
+            <IconLanguageOff size={16} />
+          </ActionIcon>
+        </Tooltip>
+      ) : !actionIconDisabled ? (
         <Tooltip label="Show translations">
           <ActionIcon
             size="xs"
@@ -506,6 +557,11 @@ DocEditor.FieldHeaderTranslationsActionIcon = (
                 docId: draft.controller.docId,
                 strings: translateStrings,
                 l10nSheet: docData?.sys?.l10nSheet,
+                field: {
+                  id: field.id,
+                  deepKey: props.deepKey,
+                },
+                draft: draft,
               });
             }}
           >
@@ -629,6 +685,7 @@ interface ArrayAdd {
   type: 'add';
   draft: DraftDocController;
   deepKey: string;
+  defaultValue: ArrayItemValue;
 }
 
 interface ArrayInsertBefore {
@@ -636,6 +693,7 @@ interface ArrayInsertBefore {
   index: number;
   draft: DraftDocController;
   deepKey: string;
+  defaultValue: ArrayItemValue;
 }
 
 interface ArrayInsertAfter {
@@ -643,6 +701,7 @@ interface ArrayInsertAfter {
   index: number;
   draft: DraftDocController;
   deepKey: string;
+  defaultValue: ArrayItemValue;
 }
 
 interface ArrayDuplicate {
@@ -732,15 +791,16 @@ function arrayReducer(state: ArrayFieldValue, action: ArrayAction) {
     case 'add': {
       const data = state ?? {};
       const newKey = autokey();
+      const defaultValue = structuredClone(action.defaultValue || {});
       const order = [...(data._array || []), newKey];
       action.draft.updateKeys({
         [`${action.deepKey}._array`]: order,
-        [`${action.deepKey}.${newKey}`]: {},
+        [`${action.deepKey}.${newKey}`]: defaultValue,
       });
       const newlyAdded = state._new || [];
       return {
         ...data,
-        [newKey]: {},
+        [newKey]: defaultValue,
         _array: order,
         _new: [...newlyAdded, newKey],
       };
@@ -749,15 +809,16 @@ function arrayReducer(state: ArrayFieldValue, action: ArrayAction) {
       const data = state ?? {};
       const order = [...(data._array || [])];
       const newKey = autokey();
+      const defaultValue = structuredClone(action.defaultValue || {});
       order.splice(action.index, 0, newKey);
       action.draft.updateKeys({
         [`${action.deepKey}._array`]: order,
-        [`${action.deepKey}.${newKey}`]: {},
+        [`${action.deepKey}.${newKey}`]: defaultValue,
       });
       const newlyAdded = state._new || [];
       return {
         ...data,
-        [newKey]: {},
+        [newKey]: defaultValue,
         _array: order,
         _new: [...newlyAdded, newKey],
       };
@@ -766,15 +827,16 @@ function arrayReducer(state: ArrayFieldValue, action: ArrayAction) {
       const data = state ?? {};
       const order = [...(data._array || [])];
       const newKey = autokey();
+      const defaultValue = structuredClone(action.defaultValue || {});
       order.splice(action.index + 1, 0, newKey);
       action.draft.updateKeys({
         [`${action.deepKey}._array`]: order,
-        [`${action.deepKey}.${newKey}`]: {},
+        [`${action.deepKey}.${newKey}`]: defaultValue,
       });
       const newlyAdded = state._new || [];
       return {
         ...data,
-        [newKey]: {},
+        [newKey]: defaultValue,
         _array: order,
         _new: [...newlyAdded, newKey],
       };
@@ -967,7 +1029,12 @@ DocEditor.ArrayField = (props: FieldProps) => {
   };
 
   const add = () => {
-    dispatch({type: 'add', draft: draft, deepKey: props.deepKey});
+    dispatch({
+      type: 'add',
+      draft: draft,
+      deepKey: props.deepKey,
+      defaultValue: field.itemDefault || {},
+    });
   };
 
   const pasteBefore = (index: number, data: ClipboardData) => {
@@ -996,6 +1063,7 @@ DocEditor.ArrayField = (props: FieldProps) => {
       draft: draft,
       deepKey: props.deepKey,
       index: index,
+      defaultValue: field.itemDefault || {},
     });
   };
 
@@ -1005,6 +1073,7 @@ DocEditor.ArrayField = (props: FieldProps) => {
       draft: draft,
       deepKey: props.deepKey,
       index: index,
+      defaultValue: field.itemDefault || {},
     });
   };
 
@@ -1187,6 +1256,7 @@ DocEditor.ArrayField = (props: FieldProps) => {
   const addButtonRow = (
     <div className="DocEditor__ArrayField__add">
       <Button
+        className="DocEditor__ArrayField__add__button"
         color="dark"
         size="xs"
         leftIcon={<IconCirclePlus size={16} />}
@@ -1194,6 +1264,23 @@ DocEditor.ArrayField = (props: FieldProps) => {
       >
         {field.buttonLabel || 'Add'}
       </Button>
+      <Menu
+        className="DocEditor__ArrayField__add__menu"
+        control={
+          <ActionIcon className="DocEditor__ArrayField__item__header__controls__dots">
+            <IconDotsVertical size={16} />
+          </ActionIcon>
+        }
+      >
+        <Menu.Label>CLIPBOARD</Menu.Label>
+        <Menu.Item
+          className="DocEditor__ArrayField__menu__item"
+          icon={<IconRowInsertBottom size={18} />}
+          onClick={() => pasteFromVirtualClipboard(order.length - 1)}
+        >
+          Paste item to end
+        </Menu.Item>
+      </Menu>
     </div>
   );
 
@@ -1326,21 +1413,21 @@ DocEditor.ArrayField = (props: FieldProps) => {
                               >
                                 <Menu.Label>INSERT</Menu.Label>
                                 <Menu.Item
-                                  className="DocEditor__ArrayField__item__header__controls__menu__item"
+                                  className="DocEditor__ArrayField__menu__item"
                                   icon={<IconRowInsertTop size={18} />}
                                   onClick={() => insertBefore(i)}
                                 >
                                   Add before
                                 </Menu.Item>
                                 <Menu.Item
-                                  className="DocEditor__ArrayField__item__header__controls__menu__item"
+                                  className="DocEditor__ArrayField__menu__item"
                                   icon={<IconRowInsertBottom size={18} />}
                                   onClick={() => insertAfter(i)}
                                 >
                                   Add after
                                 </Menu.Item>
                                 <Menu.Item
-                                  className="DocEditor__ArrayField__item__header__controls__menu__item"
+                                  className="DocEditor__ArrayField__menu__item"
                                   icon={<IconCopy size={18} />}
                                   onClick={() => duplicate(i)}
                                 >
@@ -1348,14 +1435,14 @@ DocEditor.ArrayField = (props: FieldProps) => {
                                 </Menu.Item>
                                 <Menu.Label>CLIPBOARD</Menu.Label>
                                 <Menu.Item
-                                  className="DocEditor__ArrayField__item__header__controls__menu__item"
+                                  className="DocEditor__ArrayField__menu__item"
                                   icon={<IconClipboardCopy size={18} />}
                                   onClick={() => copyToVirtualClipboard(i)}
                                 >
                                   Copy
                                 </Menu.Item>
                                 <Menu.Item
-                                  className="DocEditor__ArrayField__item__header__controls__menu__item"
+                                  className="DocEditor__ArrayField__menu__item"
                                   icon={<IconRowInsertTop size={18} />}
                                   onClick={async () =>
                                     pasteBefore(i, await virtualClipboard.get())
@@ -1364,7 +1451,7 @@ DocEditor.ArrayField = (props: FieldProps) => {
                                   Paste before
                                 </Menu.Item>
                                 <Menu.Item
-                                  className="DocEditor__ArrayField__item__header__controls__menu__item"
+                                  className="DocEditor__ArrayField__menu__item"
                                   icon={<IconRowInsertBottom size={18} />}
                                   onClick={async () =>
                                     pasteAfter(i, await virtualClipboard.get())
@@ -1374,7 +1461,7 @@ DocEditor.ArrayField = (props: FieldProps) => {
                                 </Menu.Item>
                                 <Menu.Label>CODE</Menu.Label>
                                 <Menu.Item
-                                  className="DocEditor__ArrayField__item__header__controls__menu__item"
+                                  className="DocEditor__ArrayField__menu__item"
                                   icon={<IconBraces size={18} />}
                                   onClick={() => editJson(i)}
                                 >
@@ -1382,7 +1469,7 @@ DocEditor.ArrayField = (props: FieldProps) => {
                                 </Menu.Item>
                                 {experiments.ai && (
                                   <Menu.Item
-                                    className="DocEditor__ArrayField__item__header__controls__menu__item"
+                                    className="DocEditor__ArrayField__menu__item"
                                     icon={
                                       <IconSparkles size={18} stroke="1.75" />
                                     }
@@ -1393,7 +1480,7 @@ DocEditor.ArrayField = (props: FieldProps) => {
                                 )}
                                 <Menu.Label>REMOVE</Menu.Label>
                                 <Menu.Item
-                                  className="DocEditor__ArrayField__item__header__controls__menu__item"
+                                  className="DocEditor__ArrayField__menu__item"
                                   icon={<IconTrash size={18} />}
                                   onClick={() => removeAt(i)}
                                 >
@@ -1489,9 +1576,10 @@ DocEditor.ArrayFieldPreview = (props: ArrayFieldPreviewProps) => {
           />
         </div>
       )}
-      <div className="DocEditor__ArrayField__item__header__preview__title">
-        {previewText}
-      </div>
+      <div
+        className="DocEditor__ArrayField__item__header__preview__title"
+        data-preview={previewText}
+      />
     </div>
   );
 };
@@ -1694,4 +1782,10 @@ function arrayPreview(
     return `item ${index}`;
   }
   return buildPreviewValue(field.preview, data, {index}) ?? `item ${index}`;
+}
+
+function getMetadataKey(key: string) {
+  const parts = key.split('.');
+  const last = parts.pop();
+  return [...parts, `@${last}`].join('.');
 }

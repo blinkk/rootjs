@@ -66,6 +66,12 @@ export class DraftDocController extends EventListener {
   private autolock = false;
   private autolockReason = 'autolock';
   private autolockApplied = false;
+  /** When true, prevents any writes to the DB (e.g. user lacks edit access). */
+  readOnly = false;
+  /** When false, draft changes are only written by explicitly calling flush(). */
+  autoSave = true;
+  /** When false, pending updates are discarded when stop()/dispose() is called. */
+  flushOnStop = true;
   started = false;
 
   constructor(docId: string) {
@@ -142,7 +148,9 @@ export class DraftDocController extends EventListener {
     if (this.dbUnsubscribe) {
       this.dbUnsubscribe();
     }
-    this.flush();
+    if (this.flushOnStop) {
+      this.flush();
+    }
     this.started = false;
   }
 
@@ -188,16 +196,24 @@ export class DraftDocController extends EventListener {
    * Updates a single key. The key can be a nested key, e.g. "meta.title".
    */
   async updateKey(key: string, value: any) {
+    if (this.readOnly) {
+      return;
+    }
     this.pendingUpdates.set(key, value);
     this.store.set(key, value);
     this.setSaveState(SaveState.UPDATES_PENDING);
-    this.queueChanges();
+    if (this.autoSave) {
+      this.queueChanges();
+    }
   }
 
   /**
    * Updates a group of keys. The keys can be a nested, e.g. "meta.title".
    */
   async updateKeys(updates: Record<string, any>) {
+    if (this.readOnly) {
+      return;
+    }
     for (const key in updates) {
       const val = updates[key];
       if (val === null || val === undefined) {
@@ -211,17 +227,24 @@ export class DraftDocController extends EventListener {
     }
     this.store.update(updates);
     this.setSaveState(SaveState.UPDATES_PENDING);
-    this.queueChanges();
+    if (this.autoSave) {
+      this.queueChanges();
+    }
   }
 
   /**
    * Removes a key.
    */
   async removeKey(key: string) {
+    if (this.readOnly) {
+      return;
+    }
     this.pendingUpdates.set(key, deleteField());
     this.store.set(key, undefined);
     this.setSaveState(SaveState.UPDATES_PENDING);
-    this.queueChanges();
+    if (this.autoSave) {
+      this.queueChanges();
+    }
   }
 
   /**
@@ -264,6 +287,9 @@ export class DraftDocController extends EventListener {
    * Immediately write all queued data to the DB.
    */
   async flush() {
+    if (this.readOnly) {
+      return;
+    }
     if (this.pendingUpdates.size === 0) {
       return;
     }
@@ -376,6 +402,12 @@ function splitKey(key: string) {
 
 export interface DraftDocProviderProps {
   docId: string;
+  /** When true, prevents any writes to the DB (e.g. user lacks edit access). */
+  readOnly?: boolean;
+  /** When false, changes are only persisted when `flush()` is called. */
+  autoSave?: boolean;
+  /** When false, pending updates are discarded when unmounting the provider. */
+  flushOnStop?: boolean;
   children?: ComponentChildren;
 }
 
@@ -396,6 +428,11 @@ export function DraftDocProvider(props: DraftDocProviderProps) {
     () => new DraftDocController(props.docId),
     [props.docId]
   );
+
+  // Set readOnly mode on the controller based on the prop.
+  controller.readOnly = props.readOnly ?? false;
+  controller.autoSave = props.autoSave ?? true;
+  controller.flushOnStop = props.flushOnStop ?? true;
 
   useEffect(() => {
     setLoading(true);

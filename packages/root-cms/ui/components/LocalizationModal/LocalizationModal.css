@@ -90,3 +90,27 @@
 .LocalizationModal__translations__menu__item .mantine-Menu-itemBody {
   font-size: 13px;
 }
+
+.LocalizationModal__missingTags {
+  background-color: #FFF9C4;
+  border: 1px solid #FBC02D;
+  color: #333;
+  padding: 8px;
+  border-radius: 4px;
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+
+
+.LocalizationModal__missingTags__message {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.LocalizationModal__missingTags__message svg {
+  color: #FBC02D;
+}

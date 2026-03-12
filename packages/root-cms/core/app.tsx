@@ -78,6 +78,18 @@ interface RenderOptions {
   cmsConfig: CMSPluginOptions;
 }
 
+function getCmsTitle(projectName: string, minimalBranding?: boolean): string {
+  if (!projectName) {
+    return 'Root CMS';
+  }
+
+  if (minimalBranding) {
+    return projectName;
+  }
+
+  return `${projectName} – Root CMS`;
+}
+
 export async function renderApp(
   req: Request,
   res: Response,
@@ -100,6 +112,7 @@ export async function renderApp(
     rootConfig: {
       projectId: cmsConfig.id || 'default',
       projectName: cmsConfig.name || cmsConfig.id || '',
+      minimalBranding: cmsConfig.minimalBranding ?? false,
       domain: rootConfig.domain || 'https://example.com',
       base: rootConfig.base || '/',
       gci: gci,
@@ -118,7 +131,7 @@ export async function renderApp(
     },
   };
   const projectName = cmsConfig.name || cmsConfig.id || '';
-  const title = projectName ? `${projectName} – Root CMS` : 'Root CMS';
+  const title = getCmsTitle(projectName, cmsConfig.minimalBranding);
 
   const mainHtml = renderToString(
     <App title={title} ctx={ctx} favicon={cmsConfig.favicon} />
@@ -213,10 +226,27 @@ export async function renderSignIn(
   res: Response,
   options: RenderOptions
 ) {
-  const ctx = {
+  const ctx: any = {
     name: options.cmsConfig.name || options.cmsConfig.id || '',
     firebaseConfig: options.cmsConfig.firebaseConfig,
   };
+
+  // If the session cookie secret is missing, users will be forced to re-login
+  // whenever a new server spins up or restarts. On dev, show the warning
+  // directly on the sign in page. On prod, suggest the user to check server
+  // logs.
+  if (!options.rootConfig.server?.sessionCookieSecret) {
+    const warning =
+      'Dev warning: `server.sessionCookieSecret` is missing in `root.config.ts`. Configure this secret in production to secure CMS sessions.';
+    console.warn(warning);
+    if (process.env.NODE_ENV === 'development') {
+      ctx.warning = warning;
+    } else {
+      ctx.warning =
+        'Dev warning: Server may be misconfigured. See logs for more information.';
+    }
+  }
+
   const mainHtml = renderToString(
     <SignIn title="Sign in" ctx={ctx} favicon={options.cmsConfig.favicon} />
   );
