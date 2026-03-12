@@ -1,5 +1,14 @@
 # @blinkk/root-cms
 
+## 2.5.5
+
+### Patch Changes
+
+- 745e2ce7: feat: add `itemDefault` for array fields
+- 762db437: feat: add root-cms cli command to get/set docs to/from filesystem
+- e756ccde: refactor: switch from `preact-router` to `preact-iso`
+  - @blinkk/root@2.5.5
+
 ## 2.5.4
 
 ### Patch Changes
