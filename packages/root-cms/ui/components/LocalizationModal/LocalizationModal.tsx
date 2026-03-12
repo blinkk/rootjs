@@ -22,7 +22,6 @@ import {
   IconLanguage,
   IconMapPin,
   IconTable,
-  IconTagPlus,
   IconTool,
 } from '@tabler/icons-preact';
 import {useEffect, useMemo, useState} from 'preact/hooks';
@@ -447,7 +446,7 @@ LocalizationModal.Translations = (props: TranslationsProps) => {
             resData
           );
           setTranslationsMap((currentTranslations) => {
-            return Object.assign({}, currentTranslations, importedTranslations);
+            return mergeTranslations(currentTranslations, importedTranslations);
           });
           showNotification({
             title: 'Saved!',
@@ -542,7 +541,7 @@ LocalizationModal.Translations = (props: TranslationsProps) => {
       values
     );
     setTranslationsMap((currentTranslations) => {
-      return Object.assign({}, currentTranslations, importedTranslations);
+      return mergeTranslations(currentTranslations, importedTranslations);
     });
     showNotification({
       title: 'Saved!',
@@ -953,6 +952,22 @@ function ExportMenuButton(props: MenuButtonProps) {
       )}
     </Menu>
   );
+}
+
+/**
+ * Merges imported translations into the existing map, preserving fields like
+ * `tags` that may exist on the current entries but not on the imports.
+ */
+function mergeTranslations(
+  current: TranslationsMap,
+  imported: TranslationsMap
+): TranslationsMap {
+  const merged = {...current};
+  for (const [hash, importedEntry] of Object.entries(imported)) {
+    const existing = merged[hash];
+    merged[hash] = existing ? {...existing, ...importedEntry} : importedEntry;
+  }
+  return merged;
 }
 
 function getLocaleLabel(locale: string) {
