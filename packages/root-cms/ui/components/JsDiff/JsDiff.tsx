@@ -116,7 +116,7 @@ export function JsDiff(props: JsDiffProps) {
 
     // If there are no changes, show everything.
     if (changedIndices.size === 0) {
-      return allLines.map((line) => renderLine(line));
+      return allLines.map((line) => <Line key={line.key} line={line} />);
     }
 
     const elements: JSX.Element[] = [];
@@ -125,7 +125,7 @@ export function JsDiff(props: JsDiffProps) {
 
     while (i < allLines.length) {
       if (visibleIndices.has(i)) {
-        elements.push(renderLine(allLines[i]));
+        elements.push(<Line key={allLines[i].key} line={allLines[i]} />);
         i++;
       } else {
         // Collect consecutive collapsed lines.
@@ -153,7 +153,9 @@ export function JsDiff(props: JsDiffProps) {
               </span>
             </div>
           );
-          elements.push(...collapsedLines.map((line) => renderLine(line)));
+          elements.push(
+            ...collapsedLines.map((line) => <Line key={line.key} line={line} />)
+          );
         } else {
           elements.push(
             <div
@@ -185,10 +187,10 @@ export function JsDiff(props: JsDiffProps) {
   );
 }
 
-function renderLine(line: DiffLine): JSX.Element {
+function Line(props: {line: DiffLine}) {
+  const {line} = props;
   return (
     <div
-      key={line.key}
       className={joinClassNames(
         'JsDiff__diffLine',
         line.type === 'added' && 'JsDiff__diffLine--added',
