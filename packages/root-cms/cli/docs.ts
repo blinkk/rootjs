@@ -4,6 +4,7 @@ import * as readline from 'node:readline';
 import {loadRootConfig} from '@blinkk/root/node';
 import {Timestamp, GeoPoint} from 'firebase-admin/firestore';
 import {RootCMSClient, unmarshalData, getCmsPlugin} from '../core/client.js';
+import {convertForExport} from './utils.js';
 
 export interface DocsGetOptions {
   /** Doc mode: "draft" or "published". */
@@ -271,38 +272,6 @@ function parseDocId(docId: string): {collection: string; slug: string} {
     );
   }
   return {collection, slug};
-}
-
-/**
- * Recursively converts Firestore types to JSON-serializable format.
- */
-function convertForExport(obj: any): any {
-  if (obj === null || obj === undefined) {
-    return obj;
-  }
-
-  // Handle DocumentReference.
-  if (
-    typeof obj === 'object' &&
-    typeof obj.path === 'string' &&
-    obj.constructor?.name === 'DocumentReference'
-  ) {
-    return {_referencePath: obj.path};
-  }
-
-  if (Array.isArray(obj)) {
-    return obj.map((item) => convertForExport(item));
-  }
-
-  if (typeof obj === 'object') {
-    const converted: any = {};
-    for (const [key, value] of Object.entries(obj)) {
-      converted[key] = convertForExport(value);
-    }
-    return converted;
-  }
-
-  return obj;
 }
 
 /**
