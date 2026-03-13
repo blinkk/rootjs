@@ -5,7 +5,6 @@ import {
   Checkbox,
   Divider,
   Group,
-  Loader,
   Menu,
   Select,
   Stack,
@@ -17,6 +16,7 @@ import {showNotification} from '@mantine/notifications';
 import {
   IconAlertTriangle,
   IconChevronDown,
+  IconExternalLink,
   IconFileDownload,
   IconFileUpload,
   IconLanguage,
@@ -47,6 +47,7 @@ import {batchUpdateTags, sourceHash} from '../../utils/l10n.js';
 import {TranslationsMap, loadTranslations} from '../../utils/l10n.js';
 import {useExportSheetModal} from '../ExportSheetModal/ExportSheetModal.js';
 import {Heading} from '../Heading/Heading.js';
+import {ProgressiveLoader} from '../ProgressiveLoader/ProgressiveLoader.js';
 import './LocalizationModal.css';
 
 const MODAL_ID = 'LocalizationModal';
@@ -313,12 +314,13 @@ LocalizationModal.Translations = (props: TranslationsProps) => {
         return;
       }
       const docTags = [props.docId];
+      // Batch all hash computations in parallel for better performance.
+      const hashes = await Promise.all(
+        sourceStrings.map((source) => sourceHash(source))
+      );
+      if (cancelled) return;
       let count = 0;
-      for (const source of sourceStrings) {
-        if (cancelled) {
-          return;
-        }
-        const hash = await sourceHash(source);
+      for (const hash of hashes) {
         if (translationsMap[hash]) {
           const existingTags = translationsMap[hash].tags || [];
           const hasTag = docTags.every((t) => existingTags.includes(t));
@@ -349,6 +351,11 @@ LocalizationModal.Translations = (props: TranslationsProps) => {
     value: locale,
     label: getLocaleLabel(locale),
   }));
+
+  const missingTranslationsCount = useMemo(() => {
+    if (!selectedLocale || sourceStrings.length === 0) return 0;
+    return sourceStrings.filter((source) => !localeTranslations[source]).length;
+  }, [sourceStrings, localeTranslations, selectedLocale]);
 
   useEffect(() => {
     setLoading(true);
@@ -666,14 +673,6 @@ LocalizationModal.Translations = (props: TranslationsProps) => {
     }
   }
 
-  if (loading) {
-    return (
-      <div className="LocalizationModal__translations__loading">
-        <Loader color="gray" size="xl" />
-      </div>
-    );
-  }
-
   return (
     <div className="LocalizationModal__translations">
       <div className="LocalizationModal__translations__header">
@@ -684,17 +683,18 @@ LocalizationModal.Translations = (props: TranslationsProps) => {
           >
             <IconLanguage strokeWidth={1.5} /> <span>Translations</span>
           </Heading>
+        </div>
+        <div className="LocalizationModal__translations__header__buttons">
           <Button
             component="a"
             href={`/cms/translations/${props.docId}`}
             target="_blank"
             variant="default"
             size="xs"
+            rightIcon={<IconExternalLink size={14} strokeWidth={1.75} />}
           >
-            Open Translations Editor
+            Open Editor
           </Button>
-        </div>
-        <div className="LocalizationModal__translations__header__buttons">
           {gapiClient.enabled && linkedSheet?.spreadsheetId && (
             <Tooltip label="Open Google Sheet">
               <ActionIcon<'a'>
@@ -722,7 +722,19 @@ LocalizationModal.Translations = (props: TranslationsProps) => {
         </div>
       </div>
 
-      {missingTagsCount > 0 && (
+      {loading && (
+        <ProgressiveLoader
+          labels={[
+            'Transmogrifying...',
+            'Deciphering the vibes...',
+            'Consulting the Rosetta Stone...',
+            'Untangling the syntax...',
+            'Babel-ing...',
+          ]}
+        />
+      )}
+
+      {!loading && missingTagsCount > 0 && (
         <div className="LocalizationModal__missingTags">
           <div className="LocalizationModal__missingTags__message">
             <IconAlertTriangle />
@@ -750,66 +762,80 @@ LocalizationModal.Translations = (props: TranslationsProps) => {
         </div>
       )}
 
-      <table className="LocalizationModal__translations__table">
-        <tr className="LocalizationModal__translations__table__row LocalizationModal__translations__table__row--header">
-          <th className="LocalizationModal__translations__table__header">
-            <Heading size="h4" weight="semi-bold">
-              SOURCE STRING
-            </Heading>
-          </th>
-          <th className="LocalizationModal__translations__table__header">
-            <Heading
-              className="LocalizationModal__translations__localeSelect"
-              size="h4"
-              weight="semi-bold"
-            >
-              <span>LOCALE: </span>{' '}
-              <Select
-                data={localeOptions}
-                size="xs"
-                placeholder="select locale"
-                allowDeselect
-                value={selectedLocale}
-                onChange={(value: string) => setSelectedLocale(value)}
-              />
-            </Heading>
-          </th>
-        </tr>
-        {sourceStrings.map((source, i) => (
-          <tr className="LocalizationModal__translations__table__row" key={i}>
-            <td className="LocalizationModal__translations__table__col">
-              <Box
-                sx={(theme) => ({
-                  backgroundColor: theme.colors.gray[0],
-                  border: `1px solid ${theme.colors.gray[3]}`,
-                  padding: '10px 20px',
-                  borderRadius: 4,
-                  height: '100%',
-                })}
-              >
-                <Text size="xs" sx={{whiteSpace: 'pre-wrap'}}>
-                  {source}
-                </Text>
-              </Box>
-            </td>
-            <td className="LocalizationModal__translations__table__col">
-              <Box
-                sx={(theme) => ({
-                  backgroundColor: theme.colors.gray[0],
-                  border: `1px solid ${theme.colors.gray[3]}`,
-                  padding: '10px 20px',
-                  borderRadius: 4,
-                  height: '100%',
-                })}
-              >
-                <Text size="xs" sx={{whiteSpace: 'pre-wrap'}}>
-                  {localeTranslations[source] || ' '}
-                </Text>
-              </Box>
-            </td>
+      {!loading && (
+        <table className="LocalizationModal__translations__table">
+          <tr className="LocalizationModal__translations__table__row LocalizationModal__translations__table__row--header">
+            <th className="LocalizationModal__translations__table__header">
+              <Heading size="h4" weight="semi-bold">
+                SOURCE STRING
+              </Heading>
+            </th>
+            <th className="LocalizationModal__translations__table__header">
+              <div className="LocalizationModal__translations__localeHeader">
+                <Heading
+                  className="LocalizationModal__translations__localeSelect"
+                  size="h4"
+                  weight="semi-bold"
+                >
+                  <span>LOCALE: </span>{' '}
+                  <Select
+                    data={localeOptions}
+                    size="xs"
+                    placeholder="select locale"
+                    allowDeselect
+                    value={selectedLocale}
+                    onChange={(value: string) => setSelectedLocale(value)}
+                  />
+                </Heading>
+                {selectedLocale && missingTranslationsCount > 0 && (
+                  <Text
+                    size="xs"
+                    weight={700}
+                    color="dimmed"
+                    className="LocalizationModal__translations__missingCount"
+                  >
+                    {missingTranslationsCount} missing
+                  </Text>
+                )}
+              </div>
+            </th>
           </tr>
-        ))}
-      </table>
+          {sourceStrings.map((source, i) => (
+            <tr className="LocalizationModal__translations__table__row" key={i}>
+              <td className="LocalizationModal__translations__table__col">
+                <Box
+                  sx={(theme) => ({
+                    backgroundColor: theme.colors.gray[0],
+                    border: `1px solid ${theme.colors.gray[3]}`,
+                    padding: '10px 20px',
+                    borderRadius: 4,
+                    height: '100%',
+                  })}
+                >
+                  <Text size="xs" sx={{whiteSpace: 'pre-wrap'}}>
+                    {source}
+                  </Text>
+                </Box>
+              </td>
+              <td className="LocalizationModal__translations__table__col">
+                <Box
+                  sx={(theme) => ({
+                    backgroundColor: theme.colors.gray[0],
+                    border: `1px solid ${theme.colors.gray[3]}`,
+                    padding: '10px 20px',
+                    borderRadius: 4,
+                    height: '100%',
+                  })}
+                >
+                  <Text size="xs" sx={{whiteSpace: 'pre-wrap'}}>
+                    {localeTranslations[source] || ' '}
+                  </Text>
+                </Box>
+              </td>
+            </tr>
+          ))}
+        </table>
+      )}
     </div>
   );
 };
