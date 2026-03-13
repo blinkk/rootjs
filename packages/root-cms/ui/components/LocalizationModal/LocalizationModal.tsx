@@ -578,7 +578,7 @@ LocalizationModal.Translations = (props: TranslationsProps) => {
     }
 
     if (updates.length > 0) {
-      await batchUpdateTags(updates);
+      await batchUpdateTags(updates, {mode: 'union'});
 
       // Update local state
       setTranslationsMap((prev) => {
