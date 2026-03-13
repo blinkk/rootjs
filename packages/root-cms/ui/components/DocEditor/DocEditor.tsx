@@ -259,8 +259,7 @@ DocEditor.StatusBar = (props: StatusBarProps) => {
               draft: draft.controller,
               locale,
             });
-          }
-          }
+          }}
         >
           Localization
         </Button>
