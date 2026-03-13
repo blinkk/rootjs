@@ -110,9 +110,45 @@
   gap: 8px;
 }
 
-.LocalizationModal__translations__missingCount {
+.LocalizationModal__translations__missingToggle {
+  display: flex;
+  align-items: center;
+  gap: 4px;
   white-space: nowrap;
   flex-shrink: 0;
+  background: none;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  padding: 2px 8px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--mantine-color-dimmed, #868e96);
+  cursor: pointer;
+}
+
+.LocalizationModal__translations__missingToggle:hover {
+  background-color: var(--mantine-color-gray-1, #f1f3f5);
+}
+
+.LocalizationModal__translations__missingToggle--active {
+  color: var(--mantine-color-blue-7, #1c7ed6);
+  background-color: var(--mantine-color-blue-0, #e7f5ff);
+  border-color: var(--mantine-color-blue-3, #74c0fc);
+}
+
+.LocalizationModal__sourceCell__link {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  opacity: 0;
+  background: white;
+  border: 1px solid var(--mantine-color-gray-4, #ced4da);
+  border-radius: 4px;
+  padding: 4px;
+}
+
+.LocalizationModal__sourceCell:hover .LocalizationModal__sourceCell__link {
+  opacity: 1;
 }
 
 .LocalizationModal__translations__localeSelect {
@@ -149,4 +185,22 @@
 
 .LocalizationModal__missingTags__message svg {
   color: #FBC02D;
+}
+
+.LocalizationModal__translations__cell--edited .mantine-Textarea-input {
+  border-color: #228be6;
+  background-color: #e7f5ff;
+}
+
+.LocalizationModal__translations__saveBar {
+  position: sticky;
+  bottom: -30px;
+  background: var(--color-background, #fff);
+  border-top: 1px solid var(--color-border);
+  padding: 12px 0;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 16px;
+  z-index: 10;
 }

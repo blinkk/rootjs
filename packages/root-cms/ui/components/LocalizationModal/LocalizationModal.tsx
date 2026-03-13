@@ -9,16 +9,20 @@ import {
   Select,
   Stack,
   Text,
+  Textarea,
   Tooltip,
 } from '@mantine/core';
 import {ContextModalProps, useModals} from '@mantine/modals';
 import {showNotification} from '@mantine/notifications';
 import {
   IconAlertTriangle,
+  IconArrowBackUp,
+  IconCheck,
   IconChevronDown,
   IconExternalLink,
   IconFileDownload,
   IconFileUpload,
+  IconFilter,
   IconLanguage,
   IconMapPin,
   IconTable,
@@ -43,7 +47,11 @@ import {
   GoogleSheetId,
   getSpreadsheetUrl,
 } from '../../utils/gsheets.js';
-import {batchUpdateTags, sourceHash} from '../../utils/l10n.js';
+import {
+  batchSaveTranslations,
+  batchUpdateTags,
+  sourceHash,
+} from '../../utils/l10n.js';
 import {TranslationsMap, loadTranslations} from '../../utils/l10n.js';
 import {useExportSheetModal} from '../ExportSheetModal/ExportSheetModal.js';
 import {Heading} from '../Heading/Heading.js';
@@ -298,6 +306,7 @@ LocalizationModal.Translations = (props: TranslationsProps) => {
   const locales = window.__ROOT_CTX.rootConfig.i18n?.locales || [];
   const defaultLocale = locales.find((l) => l !== 'en') || 'en';
   const [selectedLocale, setSelectedLocale] = useState(defaultLocale);
+  const [filterMissing, setFilterMissing] = useState(false);
   const [localeTranslations, setLocaleTranslations] = useState<
     Record<string, string>
   >({});
@@ -306,6 +315,76 @@ LocalizationModal.Translations = (props: TranslationsProps) => {
   const [linkedSheet, setLinkedSheet] = useState<GoogleSheetId | null>(null);
   const exportSheetModal = useExportSheetModal();
   const [missingTagsCount, setMissingTagsCount] = useState(0);
+  // Track pending edits: Map<sourceString, Map<locale, newValue>>.
+  const [pendingEdits, setPendingEdits] = useState<
+    Record<string, Record<string, string>>
+  >({});
+  const [saving, setSaving] = useState(false);
+  const pendingEditsCount = Object.keys(pendingEdits).length;
+
+  function updatePendingEdit(source: string, locale: string, value: string) {
+    setPendingEdits((prev) => {
+      const next = {...prev};
+      if (!next[source]) {
+        next[source] = {};
+      }
+      next[source] = {...next[source], [locale]: value};
+      // If the value matches the saved value, remove the edit.
+      const savedValue = localeTranslations[source] || '';
+      if (value === savedValue) {
+        delete next[source][locale];
+        if (Object.keys(next[source]).length === 0) {
+          delete next[source];
+        }
+      }
+      return next;
+    });
+  }
+
+  async function saveEdits() {
+    setSaving(true);
+    try {
+      const edits = Object.entries(pendingEdits).map(([source, locales]) => ({
+        source,
+        locales,
+      }));
+      await batchSaveTranslations(edits, {tags: [props.docId]});
+      // Merge edits into local translationsMap state.
+      const hashes = await Promise.all(
+        edits.map(async (edit) => ({
+          hash: await sourceHash(edit.source),
+          source: edit.source,
+          locales: edit.locales,
+        }))
+      );
+      setTranslationsMap((prev) => {
+        const next = {...prev};
+        for (const {hash, source, locales} of hashes) {
+          if (next[hash]) {
+            next[hash] = {...next[hash], ...locales};
+          } else {
+            next[hash] = {source, ...locales} as any;
+          }
+        }
+        return next;
+      });
+      setPendingEdits({});
+      showNotification({
+        title: 'Saved!',
+        message: `Updated ${edits.length} translation(s).`,
+        autoClose: 5000,
+      });
+    } catch (err) {
+      console.error(err);
+      showNotification({
+        title: 'Error saving translations',
+        message: String(err),
+        color: 'red',
+        autoClose: false,
+      });
+    }
+    setSaving(false);
+  }
 
   useEffect(() => {
     let cancelled = false;
@@ -354,8 +433,13 @@ LocalizationModal.Translations = (props: TranslationsProps) => {
 
   const missingTranslationsCount = useMemo(() => {
     if (!selectedLocale || sourceStrings.length === 0) return 0;
-    return sourceStrings.filter((source) => !localeTranslations[source]).length;
-  }, [sourceStrings, localeTranslations, selectedLocale]);
+    return sourceStrings.filter((source) => {
+      // Check pending edits first, then fall back to saved translations.
+      const pending = pendingEdits[source]?.[selectedLocale];
+      if (pending !== undefined) return !pending;
+      return !localeTranslations[source];
+    }).length;
+  }, [sourceStrings, localeTranslations, selectedLocale, pendingEdits]);
 
   useEffect(() => {
     setLoading(true);
@@ -788,57 +872,157 @@ LocalizationModal.Translations = (props: TranslationsProps) => {
                   />
                 </Heading>
                 {selectedLocale && missingTranslationsCount > 0 && (
-                  <Text
-                    size="xs"
-                    weight={700}
-                    color="dimmed"
-                    className="LocalizationModal__translations__missingCount"
+                  <Tooltip
+                    key={filterMissing ? 'active' : 'inactive'}
+                    label={
+                      filterMissing
+                        ? 'Show all translations'
+                        : 'Show only missing translations'
+                    }
+                    position="top"
+                    withArrow
                   >
-                    {missingTranslationsCount} missing
-                  </Text>
+                    <button
+                      className={`LocalizationModal__translations__missingToggle${
+                        filterMissing
+                          ? ' LocalizationModal__translations__missingToggle--active'
+                          : ''
+                      }`}
+                      onClick={() => setFilterMissing((v) => !v)}
+                    >
+                      <IconFilter size={14} />
+                      <span>{missingTranslationsCount} missing</span>
+                    </button>
+                  </Tooltip>
                 )}
               </div>
             </th>
           </tr>
-          {sourceStrings.map((source, i) => (
-            <tr className="LocalizationModal__translations__table__row" key={i}>
-              <td className="LocalizationModal__translations__table__col">
-                <Box
-                  sx={(theme) => ({
-                    backgroundColor: theme.colors.gray[0],
-                    border: `1px solid ${theme.colors.gray[3]}`,
-                    padding: '10px 20px',
-                    borderRadius: 4,
-                    height: '100%',
-                  })}
-                >
-                  <Text size="xs" sx={{whiteSpace: 'pre-wrap'}}>
-                    {source}
-                  </Text>
-                </Box>
-              </td>
-              <td className="LocalizationModal__translations__table__col">
-                <Box
-                  sx={(theme) => ({
-                    backgroundColor: theme.colors.gray[0],
-                    border: `1px solid ${theme.colors.gray[3]}`,
-                    padding: '10px 20px',
-                    borderRadius: 4,
-                    height: '100%',
-                  })}
-                >
-                  <Text size="xs" sx={{whiteSpace: 'pre-wrap'}}>
-                    {localeTranslations[source] || ' '}
-                  </Text>
-                </Box>
-              </td>
-            </tr>
-          ))}
+          {sourceStrings
+            .filter((source) => {
+              if (!filterMissing || !selectedLocale) return true;
+              return !localeTranslations[source];
+            })
+            .map((source, i) => (
+              <tr
+                className="LocalizationModal__translations__table__row"
+                key={i}
+              >
+                <td className="LocalizationModal__translations__table__col">
+                  <Box
+                    className="LocalizationModal__sourceCell"
+                    sx={(theme) => ({
+                      backgroundColor: theme.colors.gray[0],
+                      border: `1px solid ${theme.colors.gray[3]}`,
+                      padding: '10px 20px',
+                      borderRadius: 4,
+                      height: '100%',
+                      position: 'relative',
+                    })}
+                  >
+                    <Text size="xs" sx={{whiteSpace: 'pre-wrap'}}>
+                      {source}
+                    </Text>
+                    {sourceToTranslationsMap[source] && (
+                      <ActionIcon
+                        className="LocalizationModal__sourceCell__link"
+                        size="sm"
+                        variant="subtle"
+                        onClick={async () => {
+                          const hash = await sourceHash(source);
+                          window.open(`/cms/translations/${hash}`, '_blank');
+                        }}
+                      >
+                        <IconExternalLink size={16} />
+                      </ActionIcon>
+                    )}
+                  </Box>
+                </td>
+                <td className="LocalizationModal__translations__table__col">
+                  <TranslationCell
+                    source={source}
+                    locale={selectedLocale}
+                    savedValue={localeTranslations[source] || ''}
+                    pendingValue={pendingEdits[source]?.[selectedLocale]}
+                    onEdit={(value) =>
+                      updatePendingEdit(source, selectedLocale, value)
+                    }
+                  />
+                </td>
+              </tr>
+            ))}
         </table>
+      )}
+
+      {pendingEditsCount > 0 && (
+        <div className="LocalizationModal__translations__saveBar">
+          <Text size="sm" color="dimmed">
+            {pendingEditsCount} unsaved change
+            {pendingEditsCount !== 1 ? 's' : ''}
+          </Text>
+          <Button
+            variant="default"
+            size="sm"
+            leftIcon={<IconArrowBackUp size={16} />}
+            onClick={() => setPendingEdits({})}
+          >
+            Discard changes
+          </Button>
+          <Button
+            variant="filled"
+            size="sm"
+            color="green"
+            leftIcon={<IconCheck size={16} />}
+            onClick={saveEdits}
+            loading={saving}
+          >
+            Save
+          </Button>
+        </div>
       )}
     </div>
   );
 };
+
+interface TranslationCellProps {
+  source: string;
+  locale: string;
+  savedValue: string;
+  pendingValue?: string;
+  onEdit: (value: string) => void;
+}
+
+function TranslationCell(props: TranslationCellProps) {
+  const value =
+    props.pendingValue !== undefined ? props.pendingValue : props.savedValue;
+  const isEdited = props.pendingValue !== undefined;
+
+  return (
+    <Textarea
+      size="xs"
+      autosize
+      minRows={1}
+      value={value}
+      placeholder=""
+      onChange={(e: any) => props.onEdit(e.currentTarget.value)}
+      className={
+        isEdited ? 'LocalizationModal__translations__cell--edited' : undefined
+      }
+      styles={{
+        root: {
+          height: '100%',
+        },
+        wrapper: {
+          height: '100%',
+        },
+        input: {
+          fontSize: '12px',
+          minHeight: '100%',
+        },
+      }}
+    />
+  );
+}
 
 interface MenuButtonProps {
   gapiClient: GapiClient;

@@ -1,4 +1,5 @@
 import {
+  arrayUnion,
   collection,
   doc,
   getDoc,
@@ -173,4 +174,53 @@ export function normalizeLocale(locale: string) {
   }
   // Ignore locales that are not in the root config.
   return null;
+}
+
+/**
+ * Batch-saves locale translations for multiple source strings without modifying
+ * tags. Each entry maps a source string to its locale translations. Only the
+ * provided locale keys are written (merged into existing docs).
+ *
+ * Used by LocalizationModal and EditTranslationsModal for inline edits.
+ */
+export async function batchSaveTranslations(
+  edits: Array<{source: string; locales: Record<string, string>}>,
+  options?: {tags?: string[]}
+) {
+  const projectId = window.__ROOT_CTX.rootConfig.projectId;
+  const db = window.firebase.db;
+  const batchSize = 500;
+
+  // Compute hashes for all sources in parallel.
+  const hashEntries = await Promise.all(
+    edits.map(async (edit) => ({
+      hash: await sourceHash(edit.source),
+      locales: edit.locales,
+      source: edit.source,
+    }))
+  );
+
+  for (let i = 0; i < hashEntries.length; i += batchSize) {
+    const batch = writeBatch(db);
+    const chunk = hashEntries.slice(i, i + batchSize);
+    for (const entry of chunk) {
+      const docRef = doc(db, 'Projects', projectId, 'Translations', entry.hash);
+      const updates: Record<string, any> = {source: entry.source};
+      for (const [locale, value] of Object.entries(entry.locales)) {
+        const normalized = normalizeLocale(locale);
+        if (normalized) {
+          updates[normalized] = normalizeString(value);
+        }
+      }
+      if (options?.tags?.length) {
+        updates.tags = arrayUnion(...options.tags);
+      }
+      batch.set(docRef, updates, {merge: true});
+    }
+    await batch.commit();
+  }
+
+  logAction('translations.batch_save', {
+    metadata: {count: edits.length},
+  });
 }
