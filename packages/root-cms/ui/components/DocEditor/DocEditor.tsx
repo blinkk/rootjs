@@ -212,6 +212,22 @@ DocEditor.StatusBar = (props: StatusBarProps) => {
   const publishDocModal = usePublishDocModal({docId: props.docId});
   const localizationModal = useLocalizationModal();
 
+  // Read URL params for locale sync and deep linking.
+  const urlParams = new URLSearchParams(window.location.search);
+  const urlLocale = urlParams.get('locale') || '';
+  const urlModal = urlParams.get('modal') || '';
+
+  useEffect(() => {
+    if (urlModal === 'localization' && draft.controller) {
+      localizationModal.open({
+        docId: props.docId,
+        collection: props.collection,
+        draft: draft.controller,
+        locale: urlLocale || undefined,
+      });
+    }
+  }, []);
+
   const loading = !data?.sys;
   if (loading) {
     return null;
@@ -234,12 +250,16 @@ DocEditor.StatusBar = (props: StatusBarProps) => {
           color="dark"
           size="xs"
           leftIcon={<IconPlanet size={16} />}
-          onClick={() =>
+          onClick={() => {
+            const params = new URLSearchParams(window.location.search);
+            const locale = params.get('locale') || undefined;
             localizationModal.open({
               docId: props.docId,
               collection: props.collection,
               draft: draft.controller,
-            })
+              locale,
+            });
+          }
           }
         >
           Localization

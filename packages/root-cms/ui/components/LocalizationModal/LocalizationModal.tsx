@@ -24,11 +24,14 @@ import {
   IconFileUpload,
   IconFilter,
   IconLanguage,
+  IconLoader2,
   IconMapPin,
   IconTable,
   IconTool,
+  IconPlayerStop,
+  IconSparkles,
 } from '@tabler/icons-preact';
-import {useEffect, useMemo, useState} from 'preact/hooks';
+import {useEffect, useMemo, useRef, useState} from 'preact/hooks';
 import * as schema from '../../../core/schema.js';
 import {DraftDocController} from '../../hooks/useDraftDoc.js';
 import {GapiClient, useGapiClient} from '../../hooks/useGapiClient.js';
@@ -76,6 +79,7 @@ export interface LocalizationModalProps {
   draft: DraftDocController;
   collection: schema.Collection;
   docId: string;
+  locale?: string;
 }
 
 export function useLocalizationModal() {
@@ -83,12 +87,28 @@ export function useLocalizationModal() {
   const modalTheme = useModalTheme();
   return {
     open: (innerProps: LocalizationModalProps) => {
+      // Add modal param to URL.
+      const params = new URLSearchParams(window.location.search);
+      params.set('modal', 'localization');
+      window.history.replaceState(
+        null,
+        '',
+        `${window.location.pathname}?${params}`
+      );
+
       modals.openContextModal(MODAL_ID, {
         ...modalTheme,
         innerProps: innerProps,
         size: 'clamp(80%, 1024px, 1280px)',
         onClose: () => {
           innerProps.draft.flush();
+          // Remove modal param from URL.
+          const params = new URLSearchParams(window.location.search);
+          params.delete('modal');
+          const newUrl = params.toString()
+            ? `${window.location.pathname}?${params}`
+            : window.location.pathname;
+          window.history.replaceState(null, '', newUrl);
         },
       });
     },
@@ -298,13 +318,14 @@ LocalizationModal.AllNoneButtons = (props: AllNoneButtonsProps) => {
 interface TranslationsProps {
   collection: schema.Collection;
   docId: string;
+  locale?: string;
 }
 
 LocalizationModal.Translations = (props: TranslationsProps) => {
   const [loading, setLoading] = useState(true);
   const [sourceStrings, setSourceStrings] = useState<string[]>([]);
   const locales = window.__ROOT_CTX.rootConfig.i18n?.locales || [];
-  const defaultLocale = locales.find((l) => l !== 'en') || 'en';
+  const defaultLocale = props.locale || locales.find((l) => l !== 'en') || 'en';
   const [selectedLocale, setSelectedLocale] = useState(defaultLocale);
   const [filterMissing, setFilterMissing] = useState(false);
   const [localeTranslations, setLocaleTranslations] = useState<
@@ -320,6 +341,12 @@ LocalizationModal.Translations = (props: TranslationsProps) => {
     Record<string, Record<string, string>>
   >({});
   const [saving, setSaving] = useState(false);
+  const [aiGenerating, setAiGenerating] = useState(false);
+  const [aiGeneratingSource, setAiGeneratingSource] = useState<string | null>(
+    null
+  );
+  const aiAbortRef = useRef(false);
+  const aiAbortControllerRef = useRef<AbortController | null>(null);
   const pendingEditsCount = Object.keys(pendingEdits).length;
 
   function updatePendingEdit(source: string, locale: string, value: string) {
@@ -384,6 +411,103 @@ LocalizationModal.Translations = (props: TranslationsProps) => {
       });
     }
     setSaving(false);
+  }
+
+  function shouldShowAiButton() {
+    const experiments = (window as any).__ROOT_CTX?.experiments || {};
+    const aiEnabled = !!experiments.ai;
+    if (!aiEnabled || !selectedLocale) return false;
+    // Show if any translations are missing for the selected locale.
+    return sourceStrings.some((source) => {
+      const pending = pendingEdits[source]?.[selectedLocale];
+      if (pending !== undefined) return !pending;
+      return !localeTranslations[source];
+    });
+  }
+
+  function stopAiTranslations() {
+    aiAbortRef.current = true;
+    aiAbortControllerRef.current?.abort();
+  }
+
+  async function generateAiTranslations() {
+    if (!selectedLocale || sourceStrings.length === 0) return;
+    aiAbortRef.current = false;
+    setAiGenerating(true);
+    try {
+      for (const source of sourceStrings) {
+        if (aiAbortRef.current) break;
+        // Skip if already has a translation or pending edit.
+        const pending = pendingEdits[source]?.[selectedLocale];
+        if (pending) continue;
+        if (localeTranslations[source]) continue;
+
+        setAiGeneratingSource(source);
+
+        const abortController = new AbortController();
+        aiAbortControllerRef.current = abortController;
+
+        const existingTranslations: Record<string, string> = {};
+        const row = sourceToTranslationsMap[source];
+        if (row) {
+          locales.forEach((locale) => {
+            if (row[locale]) existingTranslations[locale] = row[locale];
+          });
+        }
+
+        const res = await window.fetch('/cms/api/ai.translate', {
+          method: 'POST',
+          headers: {'content-type': 'application/json'},
+          body: JSON.stringify({
+            sourceText: source,
+            targetLocales: [selectedLocale],
+            existingTranslations,
+          }),
+          signal: abortController.signal,
+        });
+
+        if (res.status !== 200) {
+          const err = await res.text();
+          throw new Error(`Translation failed: ${err}`);
+        }
+
+        const data = await res.json();
+        if (data.success && data.translations?.[selectedLocale]) {
+          updatePendingEdit(
+            source,
+            selectedLocale,
+            data.translations[selectedLocale]
+          );
+        }
+      }
+      if (!aiAbortRef.current) {
+        showNotification({
+          message: 'Finished generating AI translations',
+          color: 'green',
+        });
+      } else {
+        showNotification({
+          message: 'AI translation stopped',
+          color: 'yellow',
+        });
+      }
+    } catch (err) {
+      if (err instanceof DOMException && err.name === 'AbortError') {
+        // Fetch was aborted by stop button, not an error.
+      } else {
+        console.error(err);
+        showNotification({
+          title: 'Error generating translations',
+          message: String(err),
+          color: 'red',
+        });
+      }
+    } finally {
+      setAiGenerating(false);
+      setAiGeneratingSource(null);
+      aiAbortRef.current = false;
+      aiAbortControllerRef.current = null;
+    }
   }
 
   useEffect(() => {
@@ -870,6 +994,50 @@ LocalizationModal.Translations = (props: TranslationsProps) => {
                     value={selectedLocale}
                     onChange={(value: string) => setSelectedLocale(value)}
                   />
+                  {shouldShowAiButton() && !aiGenerating && (
+                    <Tooltip
+                      label="Generate translations using AI"
+                      withArrow
+                      position="top"
+                    >
+                      <ActionIcon
+                        variant="outline"
+                        onClick={generateAiTranslations}
+                        sx={{
+                          height: 30,
+                          width: 30,
+                          borderColor: '#ced4da',
+                        }}
+                      >
+                        <IconSparkles
+                          size={16}
+                          fill="currentColor"
+                          stroke={1.5}
+                        />
+                      </ActionIcon>
+                    </Tooltip>
+                  )}
+                  {aiGenerating && (
+                    <Tooltip label="Stop generating" withArrow position="top">
+                      <ActionIcon
+                        variant="outline"
+                        onClick={stopAiTranslations}
+                        sx={{
+                          height: 30,
+                          width: 30,
+                          borderColor: '#ced4da',
+                        }}
+                      >
+                        <IconPlayerStop size={16} fill="currentColor" />
+                      </ActionIcon>
+                    </Tooltip>
+                  )}
+                  {aiGenerating && (
+                    <IconLoader2
+                      size={18}
+                      className="LocalizationModal__spinner"
+                    />
+                  )}
                 </Heading>
                 {selectedLocale && missingTranslationsCount > 0 && (
                   <Tooltip
@@ -944,6 +1112,8 @@ LocalizationModal.Translations = (props: TranslationsProps) => {
                     locale={selectedLocale}
                     savedValue={localeTranslations[source] || ''}
                     pendingValue={pendingEdits[source]?.[selectedLocale]}
+                    isAiGenerating={aiGeneratingSource === source}
+                    readOnly={aiGenerating}
                     onEdit={(value) =>
                       updatePendingEdit(source, selectedLocale, value)
                     }
@@ -989,6 +1159,8 @@ interface TranslationCellProps {
   locale: string;
   savedValue: string;
   pendingValue?: string;
+  isAiGenerating?: boolean;
+  readOnly?: boolean;
   onEdit: (value: string) => void;
 }
 
@@ -997,6 +1169,16 @@ function TranslationCell(props: TranslationCellProps) {
     props.pendingValue !== undefined ? props.pendingValue : props.savedValue;
   const isEdited = props.pendingValue !== undefined;
 
+  const classNames =
+    [
+      isEdited ? 'LocalizationModal__translations__cell--edited' : '',
+      props.isAiGenerating
+        ? 'LocalizationModal__translations__cell--ai-generating'
+        : '',
+    ]
+      .filter(Boolean)
+      .join(' ') || undefined;
+
   return (
     <Textarea
       size="xs"
@@ -1004,10 +1186,9 @@ function TranslationCell(props: TranslationCellProps) {
       minRows={1}
       value={value}
       placeholder=""
+      readOnly={props.readOnly}
       onChange={(e: any) => props.onEdit(e.currentTarget.value)}
-      className={
-        isEdited ? 'LocalizationModal__translations__cell--edited' : undefined
-      }
+      className={classNames}
       styles={{
         root: {
           height: '100%',

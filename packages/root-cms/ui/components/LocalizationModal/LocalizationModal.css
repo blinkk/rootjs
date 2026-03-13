@@ -192,6 +192,40 @@
   background-color: #e7f5ff;
 }
 
+@keyframes shimmer-border {
+  0% {
+    border-color: #be4bdb;
+  }
+  25% {
+    border-color: #9775fa;
+  }
+  50% {
+    border-color: #da77f2;
+  }
+  75% {
+    border-color: #9775fa;
+  }
+  100% {
+    border-color: #be4bdb;
+  }
+}
+
+.LocalizationModal__translations__cell--ai-generating .mantine-Textarea-input {
+  border-color: #be4bdb;
+  background-color: #f8f0fc;
+  animation: shimmer-border 1.5s ease-in-out infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.LocalizationModal__spinner {
+  animation: spin 1s linear infinite;
+  color: #868e96;
+}
+
 .LocalizationModal__translations__saveBar {
   position: sticky;
   bottom: -30px;

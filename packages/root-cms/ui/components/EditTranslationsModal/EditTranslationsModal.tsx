@@ -327,16 +327,20 @@ export function EditTranslationsModal(
                         position="left"
                       >
                         <ActionIcon
-                          variant="light"
+                          variant="outline"
                           onClick={generateAiTranslations}
                           loading={aiGenerating}
                           disabled={aiGenerating}
-                          size="sm"
+                          sx={{
+                            height: 30,
+                            width: 30,
+                            borderColor: '#ced4da',
+                          }}
                         >
                           {aiGenerating ? (
                             <IconLoader2 size={16} />
                           ) : (
-                            <IconSparkles size={16} />
+                            <IconSparkles size={16} fill="currentColor" stroke={1.5} />
                           )}
                         </ActionIcon>
                       </Tooltip>

@@ -8,34 +8,28 @@ export interface ProgressiveLoaderProps {
 
 export function ProgressiveLoader(props: ProgressiveLoaderProps) {
   const {labels} = props;
-  const [visibleCount, setVisibleCount] = useState(1);
+  const [currentIndex, setCurrentIndex] = useState(0);
 
   useEffect(() => {
-    if (visibleCount >= labels.length) return;
+    if (currentIndex >= labels.length - 1) return;
     const timer = setTimeout(() => {
-      setVisibleCount((c) => Math.min(c + 1, labels.length));
+      setCurrentIndex((c) => Math.min(c + 1, labels.length - 1));
     }, 2000);
     return () => clearTimeout(timer);
-  }, [visibleCount, labels.length]);
+  }, [currentIndex, labels.length]);
 
   return (
     <div className="ProgressiveLoader">
       <Loader color="gray" size="md" />
       <div className="ProgressiveLoader__labels">
-        {labels.slice(0, visibleCount).map((label, i) => (
-          <Text
-            key={i}
-            size="sm"
-            color="dimmed"
-            className={
-              i === visibleCount - 1
-                ? 'ProgressiveLoader__label--entering'
-                : undefined
-            }
-          >
-            {label}
-          </Text>
-        ))}
+        <Text
+          key={currentIndex}
+          size="sm"
+          color="dimmed"
+          className="ProgressiveLoader__label--entering"
+        >
+          {labels[currentIndex]}
+        </Text>
       </div>
     </div>
   );
