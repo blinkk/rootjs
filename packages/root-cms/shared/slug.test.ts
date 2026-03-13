@@ -1,5 +1,5 @@
 import {describe, it, expect} from 'vitest';
-import {isSlugValid, normalizeSlug} from './slug.js';
+import {isSlugValid, getSlugError, normalizeSlug} from './slug.js';
 
 describe('isSlugValid', () => {
   it('validates good slugs', () => {
@@ -22,6 +22,43 @@ describe('isSlugValid', () => {
     expect(isSlugValid('!!a')).toBe(false);
     expect(isSlugValid('/foo')).toBe(false);
     expect(isSlugValid('--foo--bar')).toBe(false);
+  });
+});
+
+describe('getSlugError', () => {
+  it('returns empty string for valid slugs', () => {
+    expect(getSlugError('foo')).toBe('');
+    expect(getSlugError('foo-bar-123')).toBe('');
+    expect(getSlugError('foo_bar')).toBe('');
+    expect(getSlugError('foo--bar')).toBe('');
+  });
+
+  it('returns error for empty slug', () => {
+    expect(getSlugError('')).toMatch(/empty/i);
+  });
+
+  it('returns error for uppercase letters', () => {
+    expect(getSlugError('Foo')).toMatch(/uppercase/i);
+  });
+
+  it('returns error for invalid characters', () => {
+    expect(getSlugError('foo!bar')).toMatch(/can only contain/i);
+  });
+
+  it('returns error for leading dash', () => {
+    expect(getSlugError('-foo')).toMatch(/start with a dash/i);
+  });
+
+  it('returns error for trailing dash', () => {
+    expect(getSlugError('foo-')).toMatch(/end with a dash/i);
+  });
+
+  it('returns error for custom pattern mismatch', () => {
+    expect(getSlugError('abc', /^[0-9]+$/)).toMatch(/pattern/i);
+  });
+
+  it('returns empty string for custom pattern match', () => {
+    expect(getSlugError('123', /^[0-9]+$/)).toBe('');
   });
 });
 

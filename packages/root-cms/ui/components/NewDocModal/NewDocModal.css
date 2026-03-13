@@ -8,6 +8,18 @@
   margin-top: 16px;
 }
 
+.NewDocModal__slugError {
+  margin-top: 12px;
+  padding: 8px 12px;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.5;
+  color: #c92a2a;
+  background-color: #fff5f5;
+  border: 1px solid #ffc9c9;
+  border-radius: 4px;
+}
+
 .NewDocModal__buttons {
   margin-top: 24px;
   display: flex;
