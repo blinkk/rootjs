@@ -101,6 +101,9 @@ export function useLocalizationModal() {
         innerProps: innerProps,
         size: 'clamp(80%, 1024px, 1280px)',
         onClose: () => {
+          // Flush any pending draft changes (e.g. locale toggles) without
+          // triggering the iframe reload that normally follows a flush.
+          innerProps.draft?.flush({quiet: true});
           // Remove modal param from URL.
           const params = new URLSearchParams(window.location.search);
           params.delete('modal');
