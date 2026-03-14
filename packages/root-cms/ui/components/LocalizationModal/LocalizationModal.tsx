@@ -101,7 +101,6 @@ export function useLocalizationModal() {
         innerProps: innerProps,
         size: 'clamp(80%, 1024px, 1280px)',
         onClose: () => {
-          innerProps.draft.flush();
           // Remove modal param from URL.
           const params = new URLSearchParams(window.location.search);
           params.delete('modal');
@@ -1175,6 +1174,7 @@ function TranslationCell(props: TranslationCellProps) {
       props.isAiGenerating
         ? 'LocalizationModal__translations__cell--ai-generating'
         : '',
+      !value ? 'LocalizationModal__translations__cell--empty' : '',
     ]
       .filter(Boolean)
       .join(' ') || undefined;

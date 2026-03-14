@@ -11,9 +11,8 @@ export function ProgressiveLoader(props: ProgressiveLoaderProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
 
   useEffect(() => {
-    if (currentIndex >= labels.length - 1) return;
     const timer = setTimeout(() => {
-      setCurrentIndex((c) => Math.min(c + 1, labels.length - 1));
+      setCurrentIndex((c) => (c + 1) % labels.length);
     }, 2000);
     return () => clearTimeout(timer);
   }, [currentIndex, labels.length]);

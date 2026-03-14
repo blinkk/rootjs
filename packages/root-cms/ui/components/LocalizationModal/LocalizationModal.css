@@ -192,6 +192,10 @@
   background-color: #e7f5ff;
 }
 
+.LocalizationModal__translations__cell--empty .mantine-Textarea-input {
+  background-color: #FFF5F5;
+}
+
 @keyframes shimmer-border {
   0% {
     border-color: #be4bdb;
