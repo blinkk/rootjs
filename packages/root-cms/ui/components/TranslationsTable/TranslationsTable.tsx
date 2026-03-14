@@ -316,11 +316,33 @@ export function TranslationsTable() {
         field: locale,
         headerName: locale,
         width: 300,
-        editable: false,
+        editable: true, // Enable editing
         resizable: true,
         wrapText: true,
         autoHeight: true,
         cellRenderer: (params: ICellRendererParams) => {
+          // Show input if editing, otherwise show value
+          if (params.node.isEditing()) {
+            return (
+              <input
+                type="text"
+                autoFocus
+                style={{
+                  width: '100%',
+                  fontSize: '12px',
+                  padding: '4px 6px',
+                  boxSizing: 'border-box',
+                }}
+                defaultValue={params.value}
+                onBlur={(e) => params.api.stopEditing()}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') params.api.stopEditing();
+                  if (e.key === 'Escape') params.api.stopEditing(true);
+                }}
+                onChange={(e) => params.setValue(e.target.value)}
+              />
+            );
+          }
           return (
             <div
               style={{
@@ -336,6 +358,23 @@ export function TranslationsTable() {
         },
       });
     });
+  // Handle cell value changes for locale columns (moved out of useMemo)
+  const onCellValueChanged = async (event: any) => {
+    const {colDef, data, newValue, oldValue} = event;
+    if (!colDef || !colDef.field) return;
+    const locale = colDef.field;
+    if (!allLocales.includes(locale)) return;
+    if (newValue === oldValue) return;
+    // Update backend or state here
+    // For now, update translationsMap in memory and reload
+    const hash = data.hash;
+    setTranslationsMap((prev) => {
+      const updated = {...prev};
+      if (!updated[hash]) return updated;
+      updated[hash] = {...updated[hash], [locale]: newValue};
+      return updated;
+    });
+  };
 
     // Actions column.
     cols.push({
@@ -576,6 +615,8 @@ export function TranslationsTable() {
             rowData={rowData}
             columnDefs={columnDefs}
             gridOptions={gridOptions}
+            stopEditingWhenCellsLoseFocus={true}
+            onCellValueChanged={onCellValueChanged}
           />
         </div>
       )}
