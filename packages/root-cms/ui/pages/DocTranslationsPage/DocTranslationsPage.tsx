@@ -8,6 +8,7 @@ import {
 } from '@tabler/icons-preact';
 import {useEffect, useMemo, useRef, useState} from 'preact/hooks';
 import {Heading} from '../../components/Heading/Heading.js';
+import {usePageTitle} from '../../hooks/usePageTitle.js';
 import {useArrayParam} from '../../hooks/useQueryParam.js';
 import {Layout} from '../../layout/Layout.js';
 import {joinClassNames} from '../../utils/classes.js';
@@ -32,6 +33,7 @@ interface DocTranslationsPageProps {
 }
 
 export function DocTranslationsPage(props: DocTranslationsPageProps) {
+  usePageTitle(`Translations: ${props.collection}/${props.slug}`);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
   const [sourceStrings, setSourceStrings] = useState<string[]>([]);

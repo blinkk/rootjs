@@ -7,11 +7,13 @@ import {DataSourceForm} from '../../components/DataSourceForm/DataSourceForm.js'
 import {Heading} from '../../components/Heading/Heading.js';
 import {Text} from '../../components/Text/Text.js';
 import {useModalTheme} from '../../hooks/useModalTheme.js';
+import {usePageTitle} from '../../hooks/usePageTitle.js';
 import {Layout} from '../../layout/Layout.js';
 import {deleteDataSource} from '../../utils/data-source.js';
 import './EditDataSourcePage.css';
 
 export function EditDataSourcePage(props: {id: string}) {
+  usePageTitle(`Edit Data Source: ${props.id}`);
   const {route} = useLocation();
   const modals = useModals();
   const modalTheme = useModalTheme();

@@ -15,6 +15,7 @@ import {NewDocModal} from '../../components/NewDocModal/NewDocModal.js';
 import {SplitPanel} from '../../components/SplitPanel/SplitPanel.js';
 import {useDocsList} from '../../hooks/useDocsList.js';
 import {useLocalStorage} from '../../hooks/useLocalStorage.js';
+import {usePageTitle} from '../../hooks/usePageTitle.js';
 import {useProjectRoles} from '../../hooks/useProjectRoles.js';
 import {Layout} from '../../layout/Layout.js';
 import {getDocServingUrl} from '../../utils/doc-urls.js';
@@ -29,6 +30,7 @@ export function CollectionPage(props: CollectionPageProps) {
   const {route} = useLocation();
   const [query, setQuery] = useState('');
   const projectId = window.__ROOT_CTX.rootConfig.projectId;
+  usePageTitle(props.collection ? `Content: ${props.collection}` : 'Content');
 
   // If no collection is selected, select one by default.
   useEffect(() => {

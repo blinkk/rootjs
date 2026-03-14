@@ -24,6 +24,7 @@ import {
 } from '../../components/SplitPanel/SplitPanel.js';
 import {DraftDocProvider, useDraftDoc} from '../../hooks/useDraftDoc.js';
 import {useLocalStorage} from '../../hooks/useLocalStorage.js';
+import {usePageTitle} from '../../hooks/usePageTitle.js';
 import {useProjectRoles} from '../../hooks/useProjectRoles.js';
 import {useStringParam} from '../../hooks/useQueryParam.js';
 import {Layout} from '../../layout/Layout.js';
@@ -85,6 +86,7 @@ function DocumentPageLayout(props: DocumentPageProps) {
 
   const collectionId = props.collection;
   const slug = props.slug;
+  usePageTitle(`${slug} – ${collectionId}`);
   const docId = `${collectionId}/${slug}`;
   const collection = window.__ROOT_CTX.collections[collectionId];
   const draft = useDraftDoc();

@@ -4,10 +4,12 @@ import {useState} from 'preact/hooks';
 import {FileUploader} from '../../components/DocEditor/fields/FileUploader.js';
 import {Heading} from '../../components/Heading/Heading.js';
 import {Text} from '../../components/Text/Text.js';
+import {usePageTitle} from '../../hooks/usePageTitle.js';
 import {Layout} from '../../layout/Layout.js';
 import './AssetsPage.css';
 
 export function AssetsPage() {
+  usePageTitle('Assets');
   const [file, setFile] = useState<any>(null);
   const gcsUrl = file?.gcsPath
     ? `https://storage.googleapis.com${file.gcsPath}`
@@ -70,9 +72,7 @@ function UrlRow(props: {label?: string; url: string}) {
           minRows={1}
           size="xs"
           radius="xs"
-          onClick={(e: Event) =>
-            (e.target as HTMLTextAreaElement).select()
-          }
+          onClick={(e: Event) => (e.target as HTMLTextAreaElement).select()}
           styles={{root: {flex: 1, minWidth: 0}}}
         />
         <CopyButton url={props.url} />

@@ -1,12 +1,14 @@
 import {ActionLogs} from '../../components/ActionLogs/ActionLogs.js';
 import {Heading} from '../../components/Heading/Heading.js';
 import {Text} from '../../components/Text/Text.js';
+import {usePageTitle} from '../../hooks/usePageTitle.js';
 import {Layout} from '../../layout/Layout.js';
 import './LogsPage.css';
 
 const LIMIT = 250;
 
 export function LogsPage() {
+  usePageTitle('Action Logs');
   return (
     <Layout>
       <div className="LogsPage">

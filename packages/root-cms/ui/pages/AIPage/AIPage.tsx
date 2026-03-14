@@ -25,6 +25,7 @@ import {
   PendingMessageBlock,
   TextMessageBlock,
 } from '../../components/ChatBar/ChatBar.js';
+import {usePageTitle} from '../../hooks/usePageTitle.js';
 import {Layout} from '../../layout/Layout.js';
 import {autokey, numBetween} from '../../utils/rand.js';
 
@@ -152,6 +153,7 @@ export function useChat(): ChatController {
 }
 
 export function AIPage() {
+  usePageTitle('AI');
   const chat = useChat();
 
   const isEnabled = window.__ROOT_CTX.experiments?.ai || false;

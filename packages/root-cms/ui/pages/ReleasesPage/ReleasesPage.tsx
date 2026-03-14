@@ -6,6 +6,7 @@ import {ConditionalTooltip} from '../../components/ConditionalTooltip/Conditiona
 import {Heading} from '../../components/Heading/Heading.js';
 import {ReleaseStatusBadge} from '../../components/ReleaseStatusBadge/ReleaseStatusBadge.js';
 import {Text} from '../../components/Text/Text.js';
+import {usePageTitle} from '../../hooks/usePageTitle.js';
 import {useProjectRoles} from '../../hooks/useProjectRoles.js';
 import {Layout} from '../../layout/Layout.js';
 import {testCanPublish} from '../../utils/permissions.js';
@@ -14,6 +15,7 @@ import {Release, listReleases} from '../../utils/release.js';
 type ReleaseListFilter = 'active' | 'unpublished' | 'published' | 'archived';
 
 export function ReleasesPage() {
+  usePageTitle('Releases');
   const {roles} = useProjectRoles();
   const currentUserEmail = window.firebase.user.email || '';
   const canPublish = testCanPublish(roles, currentUserEmail);
