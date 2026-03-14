@@ -1,5 +1,12 @@
 # @blinkk/root-cms
 
+## 2.5.6
+
+### Patch Changes
+
+- c4714166: feat: add usePageTitle hook and set page titles
+  - @blinkk/root@2.5.6
+
 ## 2.5.5
 
 ### Patch Changes
