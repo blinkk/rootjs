@@ -86,8 +86,8 @@ function DocumentPageLayout(props: DocumentPageProps) {
 
   const collectionId = props.collection;
   const slug = props.slug;
-  usePageTitle(`${slug} – ${collectionId}`);
   const docId = `${collectionId}/${slug}`;
+  usePageTitle(docId);
   const collection = window.__ROOT_CTX.collections[collectionId];
   const draft = useDraftDoc();
   const hasCollectionUrl = !!collection?.url;
