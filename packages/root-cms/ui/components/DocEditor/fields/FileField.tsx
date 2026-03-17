@@ -406,43 +406,6 @@ export function FileFieldInternal(props: FileFieldInternalProps) {
       return;
     }
     setLoadingState('loading');
-
-    // SVG files are not supported by the AI vision API, so fetch the SVG
-    // content and send as text instead.
-    const isSvg = getFileExt(uploadedFile.src) === 'svg';
-    let prompt: Record<string, any>[];
-    if (isSvg) {
-      let svgContent = '';
-      try {
-        const res = await window.fetch(uploadedFile.src);
-        svgContent = await res.text();
-      } catch (e) {
-        console.error('failed to fetch SVG content', e);
-      }
-      prompt = [
-        {
-          text: [
-            'Generate alt text for the following SVG image.',
-            '',
-            '```svg',
-            svgContent,
-            '```',
-          ].join('\n'),
-        },
-      ];
-    } else {
-      prompt = [
-        {
-          text: 'Generate alt text for the image above.',
-        },
-        {
-          media: {
-            url: uploadedFile.src,
-          },
-        },
-      ];
-    }
-
     const resp = await chat.sendPrompt(
       chat.addMessage({
         sender: 'user',
@@ -455,7 +418,16 @@ export function FileFieldInternal(props: FileFieldInternalProps) {
           },
         ],
       }),
-      prompt,
+      [
+        {
+          text: 'Generate alt text for the image above.',
+        },
+        {
+          media: {
+            url: uploadedFile.src,
+          },
+        },
+      ],
       {
         mode: 'altText',
       }
