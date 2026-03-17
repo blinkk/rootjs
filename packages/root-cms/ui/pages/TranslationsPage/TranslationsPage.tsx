@@ -3,9 +3,11 @@ import './TranslationsPage.css';
 import {Button} from '@mantine/core';
 import {Heading} from '../../components/Heading/Heading.js';
 import {TranslationsTable} from '../../components/TranslationsTable/TranslationsTable.js';
+import {usePageTitle} from '../../hooks/usePageTitle.js';
 import {Layout} from '../../layout/Layout.js';
 
 export function TranslationsPage() {
+  usePageTitle('Translations');
   return (
     <Layout>
       <div className="TranslationsPage">

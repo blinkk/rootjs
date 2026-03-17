@@ -1,10 +1,12 @@
 import {Breadcrumbs} from '@mantine/core';
 import {DataSourceForm} from '../../components/DataSourceForm/DataSourceForm.js';
 import {Heading} from '../../components/Heading/Heading.js';
+import {usePageTitle} from '../../hooks/usePageTitle.js';
 import {Layout} from '../../layout/Layout.js';
 import './NewDataSourcePage.css';
 
 export function NewDataSourcePage() {
+  usePageTitle('New Data Source');
   return (
     <Layout>
       <div className="NewDataSourcePage">

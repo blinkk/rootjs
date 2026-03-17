@@ -7,12 +7,14 @@ import {ConditionalTooltip} from '../../components/ConditionalTooltip/Conditiona
 import {DataSourceStatusButton} from '../../components/DataSourceStatusButton/DataSourceStatusButton.js';
 import {Heading} from '../../components/Heading/Heading.js';
 import {Text} from '../../components/Text/Text.js';
+import {usePageTitle} from '../../hooks/usePageTitle.js';
 import {useProjectRoles} from '../../hooks/useProjectRoles.js';
 import {Layout} from '../../layout/Layout.js';
 import {DataSource, listDataSources} from '../../utils/data-source.js';
 import {testCanEdit} from '../../utils/permissions.js';
 
 export function DataPage() {
+  usePageTitle('Data Sources');
   const {roles} = useProjectRoles();
   const currentUserEmail = window.firebase.user.email || '';
   const canEdit = testCanEdit(roles, currentUserEmail);

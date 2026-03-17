@@ -9,6 +9,7 @@ import {Heading} from '../../components/Heading/Heading.js';
 import {ReleaseForm} from '../../components/ReleaseForm/ReleaseForm.js';
 import {Text} from '../../components/Text/Text.js';
 import {useModalTheme} from '../../hooks/useModalTheme.js';
+import {usePageTitle} from '../../hooks/usePageTitle.js';
 import {useProjectRoles} from '../../hooks/useProjectRoles.js';
 import {Layout} from '../../layout/Layout.js';
 import {testCanPublish} from '../../utils/permissions.js';
@@ -21,6 +22,7 @@ import {
 } from '../../utils/release.js';
 
 export function EditReleasePage(props: {id: string}) {
+  usePageTitle(`Edit Release: ${props.id}`);
   const {route} = useLocation();
   const [release, setRelease] = useState<Release | null>(null);
   const modals = useModals();
