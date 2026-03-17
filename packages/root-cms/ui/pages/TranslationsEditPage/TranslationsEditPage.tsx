@@ -9,6 +9,7 @@ import {
 import {showNotification} from '@mantine/notifications';
 import {useEffect, useState} from 'preact/hooks';
 import {Heading} from '../../components/Heading/Heading.js';
+import {usePageTitle} from '../../hooks/usePageTitle.js';
 import {Layout} from '../../layout/Layout.js';
 import {
   Translation,
@@ -24,6 +25,7 @@ interface TranslationsEditPageProps {
 }
 
 export function TranslationsEditPage(props: TranslationsEditPageProps) {
+  usePageTitle('Edit Translation');
   const hash = props.hash;
   const [loading, setLoading] = useState(false);
   const [notFound, setNotFound] = useState(false);

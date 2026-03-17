@@ -6,10 +6,12 @@ import {
   DocDiffViewer,
   DocVersionId,
 } from '../../components/DocDiffViewer/DocDiffViewer.js';
+import {usePageTitle} from '../../hooks/usePageTitle.js';
 import {Layout} from '../../layout/Layout.js';
 
 export function ComparePage() {
   const {query} = useLocation();
+  usePageTitle('Compare');
 
   const leftVersionId = useMemo(
     () => parseParam((query.left as string) || ''),

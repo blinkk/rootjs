@@ -1,10 +1,12 @@
 import {Breadcrumbs} from '@mantine/core';
 import {Heading} from '../../components/Heading/Heading.js';
 import {ReleaseForm} from '../../components/ReleaseForm/ReleaseForm.js';
+import {usePageTitle} from '../../hooks/usePageTitle.js';
 import {Layout} from '../../layout/Layout.js';
 import './NewReleasePage.css';
 
 export function NewReleasePage() {
+  usePageTitle('New Release');
   return (
     <Layout>
       <div className="NewReleasePage">

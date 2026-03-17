@@ -3,6 +3,7 @@ import {IconFileDownload} from '@tabler/icons-preact';
 import {ChangeEvent, useState} from 'preact/compat';
 import {Heading} from '../../components/Heading/Heading.js';
 import {Text} from '../../components/Text/Text.js';
+import {usePageTitle} from '../../hooks/usePageTitle.js';
 import {Layout} from '../../layout/Layout.js';
 import {Arb} from '../../utils/arb.js';
 import {fetchCollectionSchema} from '../../utils/collection.js';
@@ -13,6 +14,7 @@ import {sourceHash} from '../../utils/l10n.js';
 import './TranslationsArbPage.css';
 
 export function TranslationsArbPage() {
+  usePageTitle('ARB Translations');
   return (
     <Layout>
       <div className="TranslationsArbPage">

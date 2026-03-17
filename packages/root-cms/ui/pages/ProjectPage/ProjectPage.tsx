@@ -2,11 +2,13 @@ import {Button} from '@mantine/core';
 import {ActionLogs} from '../../components/ActionLogs/ActionLogs.js';
 import {CollectionTree} from '../../components/CollectionTree/CollectionTree.js';
 import {Heading} from '../../components/Heading/Heading.js';
+import {usePageTitle} from '../../hooks/usePageTitle.js';
 import {Layout} from '../../layout/Layout.js';
 import './ProjectPage.css';
 
 export function ProjectPage() {
   const projectName = window.__ROOT_CTX.rootConfig.projectName || 'Root CMS';
+  usePageTitle('Home');
   return (
     <Layout>
       <div className="ProjectPage">

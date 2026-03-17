@@ -14,6 +14,7 @@ import {useEffect, useState} from 'preact/hooks';
 import {DataSourceStatusButton} from '../../components/DataSourceStatusButton/DataSourceStatusButton.js';
 import {Heading} from '../../components/Heading/Heading.js';
 import {Text} from '../../components/Text/Text.js';
+import {usePageTitle} from '../../hooks/usePageTitle.js';
 import {Layout} from '../../layout/Layout.js';
 import {
   DataSourceData,
@@ -24,6 +25,7 @@ import {
 import './DataSourcePage.css';
 
 export function DataSourcePage(props: {id: string}) {
+  usePageTitle(`Data Source: ${props.id}`);
   const [loading, setLoading] = useState(true);
   const [dataSource, setDataSource] = useState<DataSource | null>(null);
   const [data, setData] = useState<any>(null);
