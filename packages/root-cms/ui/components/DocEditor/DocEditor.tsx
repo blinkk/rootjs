@@ -177,7 +177,7 @@ type StatusBarProps = DocEditorProps & {
 };
 
 DocEditor.StatusBar = (props: StatusBarProps) => {
-  const {route} = useLocation();
+  const {route, query} = useLocation();
   const {roles} = useProjectRoles();
   const currentUserEmail = window.firebase.user.email || '';
   const canPublish = testCanPublish(roles, currentUserEmail);
@@ -212,10 +212,8 @@ DocEditor.StatusBar = (props: StatusBarProps) => {
   const publishDocModal = usePublishDocModal({docId: props.docId});
   const localizationModal = useLocalizationModal();
 
-  // Read URL params for locale sync and deep linking.
-  const urlParams = new URLSearchParams(window.location.search);
-  const urlLocale = urlParams.get('locale') || '';
-  const urlModal = urlParams.get('modal') || '';
+  const urlLocale = (query.locale as string) || '';
+  const urlModal = (query.modal as string) || '';
 
   useEffect(() => {
     if (urlModal === 'localization' && draft.controller) {
