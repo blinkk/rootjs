@@ -21,8 +21,13 @@ const mockWriteBatch = vi.fn();
 const mockBatchUpdate = vi.fn();
 const mockBatchCommit = vi.fn();
 const mockDoc = vi.fn();
+const mockArrayUnion = vi.fn((...args: any[]) => ({
+  __type: 'arrayUnion',
+  values: args,
+}));
 
 vi.mock('firebase/firestore', () => ({
+  arrayUnion: (...args: any[]) => mockArrayUnion(...args),
   writeBatch: (...args: any[]) => mockWriteBatch(...args),
   doc: (...args: any[]) => mockDoc(...args),
   // Add other functions if they are imported but not used in the test path
@@ -61,6 +66,7 @@ describe('batchUpdateTags', () => {
       'Translations',
       'hash-1'
     );
+    expect(mockArrayUnion).not.toHaveBeenCalled();
     expect(mockBatchUpdate).toHaveBeenCalledWith('doc-ref-1', {
       tags: ['tag1', 'tag2'],
     });
@@ -105,5 +111,19 @@ describe('batchUpdateTags', () => {
 
     // Total updates should be 505
     expect(mockBatchUpdate).toHaveBeenCalledTimes(505);
+  });
+
+  it('uses arrayUnion in union mode for additive-only tag updates', async () => {
+    const updates = [{hash: 'hash-1', tags: ['newTag']}];
+
+    mockDoc.mockReturnValue('doc-ref-1');
+
+    await batchUpdateTags(updates, {mode: 'union'});
+
+    // Verify arrayUnion is called with the tags (not a plain array replacement).
+    expect(mockArrayUnion).toHaveBeenCalledWith('newTag');
+    expect(mockBatchUpdate).toHaveBeenCalledWith('doc-ref-1', {
+      tags: {__type: 'arrayUnion', values: ['newTag']},
+    });
   });
 });
