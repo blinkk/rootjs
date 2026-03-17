@@ -3,7 +3,7 @@ import {ContextModalProps, useModals} from '@mantine/modals';
 import {showNotification} from '@mantine/notifications';
 import {useState} from 'preact/hooks';
 import {useLocation} from 'preact-iso';
-import {isSlugValid, normalizeSlug} from '../../../shared/slug.js';
+import {getSlugError, normalizeSlug} from '../../../shared/slug.js';
 import {useModalTheme} from '../../hooks/useModalTheme.js';
 import {cmsCopyDoc, cmsCreateDoc} from '../../utils/doc.js';
 import {SlugInput} from '../SlugInput/SlugInput.js';
@@ -58,8 +58,9 @@ export function CopyDocModal(modalProps: ContextModalProps<CopyDocModalProps>) {
     }
     const cleanSlug = normalizeSlug(toSlug);
     const slugRegex = window.__ROOT_CTX.collections[toCollectionId]?.slugRegex;
-    if (!isSlugValid(cleanSlug, slugRegex)) {
-      setError('Please enter a valid slug (e.g. "foo-bar-123").');
+    const slugValidationError = getSlugError(cleanSlug, slugRegex);
+    if (slugValidationError) {
+      setError(slugValidationError);
       setLoading(false);
       return;
     }
