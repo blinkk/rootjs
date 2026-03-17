@@ -111,10 +111,16 @@ export async function updateTranslationByHash(
 
 /**
  * Updates tags for multiple translations.
+ *
+ * @param options.mode - 'union' uses Firestore arrayUnion for additive-only
+ *   updates (safe against concurrent writes). 'replace' replaces the entire
+ *   tags array (needed for tag removal). Defaults to 'replace'.
  */
 export async function batchUpdateTags(
-  updates: Array<{hash: string; tags: string[]}>
+  updates: Array<{hash: string; tags: string[]}>,
+  options?: {mode?: 'replace' | 'union'}
 ) {
+  const mode = options?.mode ?? 'replace';
   const projectId = window.__ROOT_CTX.rootConfig.projectId;
   const db = window.firebase.db;
 
@@ -125,7 +131,11 @@ export async function batchUpdateTags(
     const chunk = updates.slice(i, i + batchSize);
     chunk.forEach(({hash, tags}) => {
       const docRef = doc(db, 'Projects', projectId, 'Translations', hash);
-      batch.update(docRef, {tags});
+      if (mode === 'union') {
+        batch.update(docRef, {tags: arrayUnion(...tags)});
+      } else {
+        batch.update(docRef, {tags});
+      }
     });
     await batch.commit();
   }
