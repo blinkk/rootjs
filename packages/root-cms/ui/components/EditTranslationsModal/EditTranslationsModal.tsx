@@ -122,9 +122,22 @@ export function EditTranslationsModal(
       if (props.field?.deepKey && draft?.controller) {
         const metadataKey = getMetadataKey(props.field.deepKey);
         const metadata = draft.controller.getValue(metadataKey) || {};
-        metadata.disableTranslations = doNotTranslate;
-        metadata.description = description;
-        await draft.controller.updateKey(metadataKey, metadata);
+        // Only store non-default values to avoid superfluous data.
+        if (doNotTranslate) {
+          metadata.disableTranslations = true;
+        } else {
+          delete metadata.disableTranslations;
+        }
+        if (description) {
+          metadata.description = description;
+        } else {
+          delete metadata.description;
+        }
+        if (Object.keys(metadata).length > 0) {
+          await draft.controller.updateKey(metadataKey, metadata);
+        } else {
+          await draft.controller.updateKey(metadataKey, undefined);
+        }
         // Ensure the metadata is saved immediately.
         await draft.controller.flush();
       }
