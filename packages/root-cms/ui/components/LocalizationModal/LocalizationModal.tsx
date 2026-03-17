@@ -330,10 +330,17 @@ LocalizationModal.Translations = (props: TranslationsProps) => {
   const defaultLocale = props.locale || locales.find((l) => l !== 'en') || 'en';
   const [selectedLocale, setSelectedLocale] = useState(defaultLocale);
   const [filterMissing, setFilterMissing] = useState(false);
-  const [localeTranslations, setLocaleTranslations] = useState<
-    Record<string, string>
-  >({});
   const [translationsMap, setTranslationsMap] = useState<TranslationsMap>({});
+  const localeTranslations = useMemo(() => {
+    if (!selectedLocale) return {};
+    const result: Record<string, string> = {};
+    Object.values(translationsMap).forEach(
+      (translation: Record<string, string>) => {
+        result[translation.source] = translation[selectedLocale] || '';
+      }
+    );
+    return result;
+  }, [selectedLocale, translationsMap]);
   const gapiClient = useGapiClient();
   const [linkedSheet, setLinkedSheet] = useState<GoogleSheetId | null>(null);
   const exportSheetModal = useExportSheetModal();
@@ -386,13 +393,19 @@ LocalizationModal.Translations = (props: TranslationsProps) => {
           locales: edit.locales,
         }))
       );
+      // Merge saved edits into local state, including the doc tag so the
+      // "missing tags" banner doesn't reappear after saving.
+      const docTags = [props.docId];
       setTranslationsMap((prev) => {
         const next = {...prev};
         for (const {hash, source, locales} of hashes) {
-          if (next[hash]) {
-            next[hash] = {...next[hash], ...locales};
+          const existing = next[hash];
+          const existingTags: string[] = existing?.tags || [];
+          const tags = Array.from(new Set([...existingTags, ...docTags]));
+          if (existing) {
+            next[hash] = {...existing, ...locales, tags};
           } else {
-            next[hash] = {source, ...locales} as any;
+            next[hash] = {source, ...locales, tags} as any;
           }
         }
         return next;
@@ -401,7 +414,7 @@ LocalizationModal.Translations = (props: TranslationsProps) => {
       showNotification({
         title: 'Saved!',
         message: `Updated ${edits.length} translation(s).`,
-        autoClose: 5000,
+        autoClose: 2500,
       });
     } catch (err) {
       console.error(err);
@@ -580,21 +593,6 @@ LocalizationModal.Translations = (props: TranslationsProps) => {
       setLoading(false);
     });
   }, [props.docId]);
-
-  useEffect(() => {
-    if (!selectedLocale) {
-      setLocaleTranslations({});
-      return;
-    }
-    const localeTranslations: Record<string, string> = {};
-    Object.values(translationsMap).forEach(
-      (translation: Record<string, string>) => {
-        localeTranslations[translation.source] =
-          translation[selectedLocale] || '';
-      }
-    );
-    setLocaleTranslations(localeTranslations);
-  }, [selectedLocale, translationsMap]);
 
   function getTranslation(source: string, locale: string): string {
     const row = sourceToTranslationsMap[source];
@@ -996,6 +994,59 @@ LocalizationModal.Translations = (props: TranslationsProps) => {
                     value={selectedLocale}
                     onChange={(value: string) => setSelectedLocale(value)}
                   />
+                </Heading>
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 8,
+                    flexShrink: 0,
+                  }}
+                >
+                  {selectedLocale && missingTranslationsCount > 0 && (
+                    <Tooltip
+                      key={filterMissing ? 'active' : 'inactive'}
+                      label={
+                        filterMissing
+                          ? 'Show all translations'
+                          : 'Show only missing translations'
+                      }
+                      position="top"
+                      withArrow
+                    >
+                      <button
+                        className={`LocalizationModal__translations__missingToggle${
+                          filterMissing
+                            ? ' LocalizationModal__translations__missingToggle--active'
+                            : ''
+                        }`}
+                        onClick={() => setFilterMissing((v) => !v)}
+                      >
+                        <IconFilter size={14} />
+                        <span>{missingTranslationsCount} missing</span>
+                      </button>
+                    </Tooltip>
+                  )}
+                  {selectedLocale &&
+                    sourceStrings.length > 0 &&
+                    missingTranslationsCount === 0 &&
+                    pendingEditsCount === 0 && (
+                      <Tooltip
+                        label="Fully translated"
+                        position="top"
+                        withArrow
+                      >
+                        <ActionIcon
+                          variant="filled"
+                          color="green"
+                          size="sm"
+                          radius="xl"
+                          sx={{cursor: 'default'}}
+                        >
+                          <IconCheck size={14} />
+                        </ActionIcon>
+                      </Tooltip>
+                    )}
                   {shouldShowAiButton() && !aiGenerating && (
                     <Tooltip
                       label="Generate translations using AI"
@@ -1040,31 +1091,7 @@ LocalizationModal.Translations = (props: TranslationsProps) => {
                       className="LocalizationModal__spinner"
                     />
                   )}
-                </Heading>
-                {selectedLocale && missingTranslationsCount > 0 && (
-                  <Tooltip
-                    key={filterMissing ? 'active' : 'inactive'}
-                    label={
-                      filterMissing
-                        ? 'Show all translations'
-                        : 'Show only missing translations'
-                    }
-                    position="top"
-                    withArrow
-                  >
-                    <button
-                      className={`LocalizationModal__translations__missingToggle${
-                        filterMissing
-                          ? ' LocalizationModal__translations__missingToggle--active'
-                          : ''
-                      }`}
-                      onClick={() => setFilterMissing((v) => !v)}
-                    >
-                      <IconFilter size={14} />
-                      <span>{missingTranslationsCount} missing</span>
-                    </button>
-                  </Tooltip>
-                )}
+                </div>
               </div>
             </th>
           </tr>

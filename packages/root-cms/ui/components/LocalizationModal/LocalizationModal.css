@@ -4,9 +4,15 @@
 
 .LocalizationModal__layout {
   display: grid;
-  grid-template-columns: 400px 1fr;
+  grid-template-columns: minmax(auto, 400px) 1fr;
   margin-top: -20px;
   margin-bottom: 20px;
+}
+
+@media (max-width: 1024px) {
+  .LocalizationModal__layout {
+    grid-template-columns: minmax(auto, 200px) 1fr;
+  }
 }
 
 .LocalizationModal__iconTitle {
@@ -55,7 +61,8 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  flex-shrink: 0;
+  flex-wrap: wrap;
+  justify-content: flex-end;
 }
 
 .LocalizationModal__translations__titleWrap {
@@ -155,6 +162,7 @@
   display: flex;
   gap: 8px;
   align-items: center;
+  white-space: nowrap;
 }
 
 .LocalizationModal__translations__menu__item .mantine-Menu-itemBody {
