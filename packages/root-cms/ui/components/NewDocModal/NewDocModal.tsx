@@ -1,7 +1,7 @@
 import {Button, Modal, useMantineTheme} from '@mantine/core';
 import {useState} from 'preact/hooks';
 import {useLocation} from 'preact-iso';
-import {isSlugValid, normalizeSlug} from '../../../shared/slug.js';
+import {getSlugError, normalizeSlug} from '../../../shared/slug.js';
 import {useCollectionSchema} from '../../hooks/useCollectionSchema.js';
 import {cmsCreateDoc} from '../../utils/doc.js';
 import {getDefaultFieldValue} from '../../utils/fields.js';
@@ -42,8 +42,9 @@ export function NewDocModal(props: NewDocModalProps) {
 
     const cleanSlug = normalizeSlug(slug);
     const slugRegex = rootCollection.slugRegex;
-    if (!isSlugValid(cleanSlug, slugRegex)) {
-      setSlugError('Please enter a valid slug (e.g. "foo-bar-123").');
+    const slugValidationError = getSlugError(cleanSlug, slugRegex);
+    if (slugValidationError) {
+      setSlugError(slugValidationError);
       setRpcLoading(false);
       return;
     }

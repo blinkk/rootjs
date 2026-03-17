@@ -1,7 +1,11 @@
 import {Select, TextInput} from '@mantine/core';
 import {ChangeEvent} from 'preact/compat';
 import {useRef, useState} from 'preact/hooks';
-import {isSlugValid, normalizeSlug} from '../../../shared/slug.js';
+import {
+  getSlugError,
+  isSlugValid,
+  normalizeSlug,
+} from '../../../shared/slug.js';
 import {Text} from '../../components/Text/Text.js';
 import {joinClassNames} from '../../utils/classes.js';
 import {getDocServingUrl} from '../../utils/doc-urls.js';
@@ -36,6 +40,7 @@ export function SlugInput(props: SlugInputProps) {
   }
 
   let urlHelp = '';
+  let slugError = '';
   if (rootCollection?.url) {
     if (slug) {
       const cleanSlug = normalizeSlug(slug);
@@ -46,7 +51,7 @@ export function SlugInput(props: SlugInputProps) {
           slug: cleanSlug,
         });
       } else {
-        urlHelp = 'INVALID SLUG';
+        slugError = getSlugError(cleanSlug, slugRegex);
       }
     } else {
       urlHelp = getDocServingUrl({
@@ -108,6 +113,11 @@ export function SlugInput(props: SlugInputProps) {
       {urlHelp && (
         <Text className="SlugInput__urlHelp" size="body-sm">
           {urlHelp}
+        </Text>
+      )}
+      {slugError && (
+        <Text className="SlugInput__slugError" size="body-sm">
+          {slugError}
         </Text>
       )}
     </div>

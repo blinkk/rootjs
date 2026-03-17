@@ -15,3 +15,8 @@
 .SlugInput__urlHelp::before {
   content: 'URL: ';
 }
+
+.SlugInput__slugError {
+  margin-top: 8px;
+  color: #c92a2a;
+}
