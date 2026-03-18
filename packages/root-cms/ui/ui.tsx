@@ -12,6 +12,7 @@ import {render, FunctionComponent} from 'preact';
 import {LocationProvider, Router, Route, lazy} from 'preact-iso';
 import type {CMSBuiltInSidebarTool} from '../core/plugin.js';
 import {Collection} from '../core/schema.js';
+import {AddToReleaseModal} from './components/AddToReleaseModal/AddToReleaseModal.js';
 import {AiEditModal} from './components/AiEditModal/AiEditModal.js';
 import {CopyDocModal} from './components/CopyDocModal/CopyDocModal.js';
 import {DataSourceSelectModal} from './components/DataSourceSelectModal/DataSourceSelectModal.js';
@@ -194,6 +195,7 @@ function App() {
               <UserPreferencesProvider>
                 <ModalsProvider
                   modals={{
+                    [AddToReleaseModal.id]: AddToReleaseModal,
                     [AiEditModal.id]: AiEditModal,
                     [CopyDocModal.id]: CopyDocModal,
                     [DocPickerModal.id]: DocPickerModal,

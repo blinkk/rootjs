@@ -10,9 +10,11 @@ import {
   IconHistory,
   IconLock,
   IconLockOpen,
+  IconPackage,
   IconTrash,
 } from '@tabler/icons-preact';
 import {useModalTheme} from '../../hooks/useModalTheme.js';
+import {useProjectRoles} from '../../hooks/useProjectRoles.js';
 import {
   CMSDoc,
   cmsDeleteDoc,
@@ -23,7 +25,7 @@ import {
   testPublishingLocked,
 } from '../../utils/doc.js';
 import {testCanEdit, testCanPublish} from '../../utils/permissions.js';
-import {useProjectRoles} from '../../hooks/useProjectRoles.js';
+import {useAddToReleaseModal} from '../AddToReleaseModal/AddToReleaseModal.js';
 import {useCopyDocModal} from '../CopyDocModal/CopyDocModal.js';
 import {DocIdBadge} from '../DocIdBadge/DocIdBadge.js';
 import {useLockPublishingModal} from '../LockPublishingModal/LockPublishingModal.js';
@@ -65,6 +67,7 @@ export function DocActionsMenu(props: DocActionsMenuProps) {
   const modalTheme = useModalTheme();
   const versionHistoryModal = useVersionHistoryModal({docId});
   const lockPublishingModal = useLockPublishingModal({docId});
+  const addToReleaseModal = useAddToReleaseModal({docIds: [docId]});
 
   const onRevertDraft = () => {
     const notificationId = `revert-draft-${docId}`;
@@ -278,6 +281,13 @@ export function DocActionsMenu(props: DocActionsMenuProps) {
         </ActionIcon>
       }
     >
+      <Menu.Item
+        icon={<IconPackage size={20} />}
+        onClick={() => addToReleaseModal.open()}
+        disabled={!canPublish}
+      >
+        Add to release
+      </Menu.Item>
       <Menu.Item
         icon={<IconHistory size={20} />}
         onClick={() => versionHistoryModal.open()}
