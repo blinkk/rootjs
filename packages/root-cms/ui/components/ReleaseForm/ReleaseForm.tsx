@@ -19,6 +19,7 @@ import {testCanPublish} from '../../utils/permissions.js';
 import {
   Release,
   addRelease,
+  generateReleaseId,
   getRelease,
   updateRelease,
 } from '../../utils/release.js';
@@ -213,7 +214,7 @@ export function ReleaseForm(props: ReleaseFormProps) {
         description="Unique identifier for the release. Use alphanumeric characters and dashes only, e.g. grogus-favorite-meals"
         size="xs"
         radius={0}
-        value={props.releaseId}
+        defaultValue={props.releaseId || generateReleaseId()}
         disabled={!!props.releaseId}
       />
       <Textarea
