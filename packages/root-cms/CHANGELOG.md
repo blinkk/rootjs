@@ -1,5 +1,14 @@
 # @blinkk/root-cms
 
+## 2.5.6
+
+### Patch Changes
+
+- 3a3beab3: feat: add usePageTitle hook and set page titles
+- 42b88148: feat: show referenced docs with unpublished changes in publish modal
+- ed26ccc9: fix: apply tags across documents simultaneously
+  - @blinkk/root@2.5.6
+
 ## 2.5.5
 
 ### Patch Changes
