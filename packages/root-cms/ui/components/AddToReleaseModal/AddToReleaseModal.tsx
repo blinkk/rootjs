@@ -106,8 +106,13 @@ export function AddToReleaseModal(
       }
       await addRelease(newReleaseId, release);
       showNotification({
-        title: 'Release created',
-        message: `Created release "${newReleaseId}" with ${props.docIds.length} doc(s).`,
+        title: `Release created: ${newReleaseId}`,
+        message: (
+          <span>
+            Created release with {props.docIds.length} doc(s).{' '}
+            <a href={`/cms/releases/${newReleaseId}`}>View release</a>
+          </span>
+        ),
         autoClose: 10000,
       });
       modals.closeAll();
@@ -137,8 +142,13 @@ export function AddToReleaseModal(
       await updateRelease(selectedReleaseId, {docIds: mergedDocIds});
       const addedCount = mergedDocIds.length - existingDocIds.length;
       showNotification({
-        title: 'Docs added to release',
-        message: `Added ${addedCount} new doc(s) to release "${selectedReleaseId}".`,
+        title: `Docs added to release: ${selectedReleaseId}`,
+        message: (
+          <span>
+            Added {addedCount} new doc(s) to release.{' '}
+            <a href={`/cms/releases/${selectedReleaseId}`}>View release</a>
+          </span>
+        ),
         autoClose: 10000,
       });
       modals.closeAll();
