@@ -100,10 +100,11 @@ export function AddToReleaseModal(
 
     setSubmitting(true);
     await notifyErrors(async () => {
-      await addRelease(newReleaseId, {
-        description: newReleaseDescription || undefined,
-        docIds: props.docIds,
-      });
+      const release: Partial<Release> = {docIds: props.docIds};
+      if (newReleaseDescription) {
+        release.description = newReleaseDescription;
+      }
+      await addRelease(newReleaseId, release);
       showNotification({
         title: 'Release created',
         message: `Created release "${newReleaseId}" with ${props.docIds.length} doc(s).`,
