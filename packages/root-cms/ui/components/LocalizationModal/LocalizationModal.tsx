@@ -335,7 +335,10 @@ LocalizationModal.Translations = (props: TranslationsProps) => {
   const gapiClient = useGapiClient();
   const [linkedSheet, setLinkedSheet] = useState<GoogleSheetId | null>(null);
   const exportSheetModal = useExportSheetModal();
-  const [missingTagsCount, setMissingTagsCount] = useState(0);
+  const [missingTagSources, setMissingTagSources] = useState<Set<string>>(
+    new Set()
+  );
+  const missingTagsCount = missingTagSources.size;
   // Track pending edits: Map<sourceString, Map<locale, newValue>>.
   const [pendingEdits, setPendingEdits] = useState<
     Record<string, Record<string, string>>
@@ -516,30 +519,40 @@ LocalizationModal.Translations = (props: TranslationsProps) => {
     }
   }
 
+  // Recompute missing tags when translationsMap changes (e.g., after save/import).
+  // Initial computation is handled in the data loading effect above.
+  const initialLoadDone = useRef(false);
   useEffect(() => {
+    if (loading) {
+      return;
+    }
+    // Skip the first run after initial load since we already computed.
+    if (!initialLoadDone.current) {
+      initialLoadDone.current = true;
+      return;
+    }
     let cancelled = false;
     async function checkMissingTags() {
-      if (loading) {
-        return;
-      }
       const docTags = [props.docId];
-      // Batch all hash computations in parallel for better performance.
-      const hashes = await Promise.all(
-        sourceStrings.map((source) => sourceHash(source))
+      const hashesWithSources = await Promise.all(
+        sourceStrings.map(async (source) => ({
+          source,
+          hash: await sourceHash(source),
+        }))
       );
       if (cancelled) return;
-      let count = 0;
-      for (const hash of hashes) {
+      const missing = new Set<string>();
+      for (const {source, hash} of hashesWithSources) {
         if (translationsMap[hash]) {
           const existingTags = translationsMap[hash].tags || [];
           const hasTag = docTags.every((t) => existingTags.includes(t));
           if (!hasTag) {
-            count += 1;
+            missing.add(source);
           }
         }
       }
       if (!cancelled) {
-        setMissingTagsCount(count);
+        setMissingTagSources(missing);
       }
     }
     checkMissingTags();
@@ -577,10 +590,30 @@ LocalizationModal.Translations = (props: TranslationsProps) => {
       extractStringsForDoc(props.docId),
       loadTranslations(),
       cmsGetLinkedGoogleSheetL10n(props.docId),
-    ]).then(([sourceStrings, translationsMap, linkedSheet]) => {
+    ]).then(async ([sourceStrings, translationsMap, linkedSheet]) => {
+      // Compute missing tags before showing the UI to prevent flash.
+      const docTags = [props.docId];
+      const hashesWithSources = await Promise.all(
+        sourceStrings.map(async (source) => ({
+          source,
+          hash: await sourceHash(source),
+        }))
+      );
+      const missing = new Set<string>();
+      for (const {source, hash} of hashesWithSources) {
+        if (translationsMap[hash]) {
+          const existingTags = translationsMap[hash].tags || [];
+          const hasTag = docTags.every((t) => existingTags.includes(t));
+          if (!hasTag) {
+            missing.add(source);
+          }
+        }
+      }
+
       setSourceStrings(sourceStrings);
       setTranslationsMap(translationsMap);
       setLinkedSheet(linkedSheet);
+      setMissingTagSources(missing);
       setLoading(false);
     });
   }, [props.docId]);
@@ -1076,18 +1109,41 @@ LocalizationModal.Translations = (props: TranslationsProps) => {
                       <span className="LocalizationModal__sourceCell__text">
                         {source}
                       </span>
-                      {sourceToTranslationsMap[source] && (
-                        <ActionIcon
-                          className="LocalizationModal__sourceCell__link"
-                          size="sm"
-                          variant="subtle"
-                          onClick={async () => {
-                            const hash = await sourceHash(source);
-                            window.open(`/cms/translations/${hash}`, '_blank');
-                          }}
-                        >
-                          <IconExternalLink size={16} />
-                        </ActionIcon>
+                      {(sourceToTranslationsMap[source] ||
+                        missingTagSources.has(source)) && (
+                        <div className="LocalizationModal__sourceCell__icons">
+                          {sourceToTranslationsMap[source] && (
+                            <ActionIcon
+                              className="LocalizationModal__sourceCell__link"
+                              size="sm"
+                              variant="subtle"
+                              onClick={async () => {
+                                const hash = await sourceHash(source);
+                                window.open(
+                                  `/cms/translations/${hash}`,
+                                  '_blank'
+                                );
+                              }}
+                            >
+                              <IconExternalLink size={16} />
+                            </ActionIcon>
+                          )}
+                          {missingTagSources.has(source) && (
+                            <Tooltip
+                              label={`Missing "${props.docId}" tag`}
+                              position="top"
+                              withArrow
+                            >
+                              <ActionIcon
+                                className="LocalizationModal__sourceCell__missingTag"
+                                size="sm"
+                                variant="subtle"
+                              >
+                                <IconAlertTriangle size={14} />
+                              </ActionIcon>
+                            </Tooltip>
+                          )}
+                        </div>
                       )}
                     </div>
                   </td>
