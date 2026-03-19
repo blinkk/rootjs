@@ -29,7 +29,6 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '22'
-          cache: 'pnpm'
 
       # A newer version of npm is required for publishing with OIDC.
       - name: Update npm
