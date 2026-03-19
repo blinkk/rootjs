@@ -11,6 +11,10 @@
   margin-top: 16px;
 }
 
+.CopyDocModal__copyTranslations {
+  margin-top: 16px;
+}
+
 .CopyDocModal__error {
   margin-top: 12px;
   padding: 8px 12px;

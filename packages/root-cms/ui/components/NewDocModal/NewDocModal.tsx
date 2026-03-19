@@ -117,6 +117,7 @@ export function NewDocModal(props: NewDocModalProps) {
             size="xs"
             color="dark"
             loading={collection.loading || rpcLoading}
+            disabled={!!slugError}
           >
             Submit
           </Button>
