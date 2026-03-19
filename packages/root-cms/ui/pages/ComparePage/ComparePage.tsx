@@ -1,7 +1,7 @@
 import './ComparePage.css';
 
-import {Loader} from '@mantine/core';
-import {useEffect, useState} from 'preact/hooks';
+import {useMemo} from 'preact/hooks';
+import {useLocation} from 'preact-iso';
 import {
   DocDiffViewer,
   DocVersionId,
@@ -9,27 +9,21 @@ import {
 import {Layout} from '../../layout/Layout.js';
 
 export function ComparePage() {
-  const [loading, setLoading] = useState(true);
-  const [leftVersionId, setLeftVersionId] = useState<DocVersionId | null>(null);
-  const [rightVersionId, setRightVersionId] = useState<DocVersionId | null>(
-    null
-  );
+  const {query} = useLocation();
 
-  useEffect(() => {
-    const urlParams = new URLSearchParams(window.location.search);
-    const leftId = parseParam(urlParams.get('left') || '');
-    const rightId = parseParam(urlParams.get('right') || '');
-    setLeftVersionId(leftId);
-    setRightVersionId(rightId);
-    setLoading(false);
-  }, []);
+  const leftVersionId = useMemo(
+    () => parseParam((query.left as string) || ''),
+    [query.left]
+  );
+  const rightVersionId = useMemo(
+    () => parseParam((query.right as string) || ''),
+    [query.right]
+  );
 
   return (
     <Layout>
       <div className="ComparePage">
-        {loading ? (
-          <Loader />
-        ) : leftVersionId && rightVersionId ? (
+        {leftVersionId && rightVersionId ? (
           <DocDiffViewer
             className="ComparePage__diff"
             left={leftVersionId}

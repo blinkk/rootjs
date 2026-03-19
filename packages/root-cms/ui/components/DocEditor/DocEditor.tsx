@@ -249,13 +249,11 @@ DocEditor.StatusBar = (props: StatusBarProps) => {
           size="xs"
           leftIcon={<IconPlanet size={16} />}
           onClick={() => {
-            const params = new URLSearchParams(window.location.search);
-            const locale = params.get('locale') || undefined;
             localizationModal.open({
               docId: props.docId,
               collection: props.collection,
               draft: draft.controller,
-              locale,
+              locale: (query.locale as string) || undefined,
             });
           }}
         >
