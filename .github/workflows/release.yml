@@ -12,16 +12,17 @@ defaults:
 env:
   FORCE_COLOR: true
 
-# Allow OIDC tokens to be written for publishing to npm.
-# https://docs.npmjs.com/trusted-publishers#step-2-configure-your-cicd-workflow
-permissions:
-  id-token: write
-  contents: read
+
 
 jobs:
   changelog:
     name: Changelog PR or Release
     runs-on: ubuntu-latest
+    # Allow OIDC tokens to be written for publishing to npm.
+    # https://docs.npmjs.com/trusted-publishers#step-2-configure-your-cicd-workflow
+    permissions:
+      id-token: write
+      contents: read
     steps:
       - uses: actions/checkout@v3
 
