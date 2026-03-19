@@ -12,17 +12,16 @@ defaults:
 env:
   FORCE_COLOR: true
 
-
+# Allow OIDC tokens to be written for publishing to npm.
+# https://docs.npmjs.com/trusted-publishers#step-2-configure-your-cicd-workflow
+permissions:
+  id-token: write
+  contents: write
 
 jobs:
   changelog:
     name: Changelog PR or Release
     runs-on: ubuntu-latest
-    # Allow OIDC tokens to be written for publishing to npm.
-    # https://docs.npmjs.com/trusted-publishers#step-2-configure-your-cicd-workflow
-    permissions:
-      id-token: write
-      contents: write
     steps:
       - uses: actions/checkout@v3
 
@@ -30,6 +29,12 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '22'
+          cache: 'pnpm'
+
+      # A newer version of npm is required for publishing with OIDC.
+      - name: Update npm
+        run: |
+          npm install -g npm@latest
 
       - name: Setup PNPM
         uses: pnpm/action-setup@v4
