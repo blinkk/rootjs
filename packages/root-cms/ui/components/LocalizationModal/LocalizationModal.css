@@ -14,6 +14,7 @@
   display: grid;
   grid-template-columns: minmax(auto, 400px) 1fr;
   margin-top: -20px;
+  gap: 30px;
 }
 
 @media (max-width: 1024px) {
@@ -37,15 +38,17 @@
 }
 
 .LocalizationModal__locales {
-  padding-right: 30px;
   padding-top: 30px;
+  max-height: 80vh;
+  overflow: auto;
+  margin-right: -1px;
 }
 
 .LocalizationModal__translations {
   border-left: 1px solid var(--color-border);
   padding-left: 30px;
   padding-right: 30px;
-  max-height: 80vh;
+  height: 80vh;
   overflow: auto;
   margin-left: -30px;
   margin-right: -21px;
@@ -195,6 +198,7 @@
   border-radius: 4px;
   height: 100%;
   position: relative;
+  line-height: 17px;
 }
 
 .LocalizationModal__sourceCell__text {
@@ -261,6 +265,34 @@
 
 .LocalizationModal__translations__cell--empty .mantine-Textarea-input {
   background-color: #FFF5F5;
+}
+
+.LocalizationModal__sourceCell__missingTag {
+  color: #FBC02D;
+  background: white;
+  border: 1px solid var(--mantine-color-gray-4, #ced4da);
+  border-radius: 4px;
+  padding: 4px;
+  pointer-events: none;
+}
+
+.LocalizationModal__sourceCell__icons {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.LocalizationModal__sourceCell__icons .LocalizationModal__sourceCell__link {
+  position: static;
+  opacity: 0;
+}
+
+.LocalizationModal__sourceCell__icons:hover .LocalizationModal__sourceCell__link {
+  opacity: 1;
 }
 
 @keyframes shimmer-border {
