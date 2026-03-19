@@ -1109,7 +1109,8 @@ LocalizationModal.Translations = (props: TranslationsProps) => {
                       <span className="LocalizationModal__sourceCell__text">
                         {source}
                       </span>
-                      {missingTagSources.has(source) ? (
+                      {(sourceToTranslationsMap[source] ||
+                        missingTagSources.has(source)) && (
                         <div className="LocalizationModal__sourceCell__icons">
                           {sourceToTranslationsMap[source] && (
                             <ActionIcon
@@ -1127,37 +1128,22 @@ LocalizationModal.Translations = (props: TranslationsProps) => {
                               <IconExternalLink size={16} />
                             </ActionIcon>
                           )}
-                          <Tooltip
-                            label={`Missing "${props.docId}" tag`}
-                            position="top"
-                            withArrow
-                          >
-                            <ActionIcon
-                              className="LocalizationModal__sourceCell__missingTag"
-                              size="sm"
-                              variant="subtle"
+                          {missingTagSources.has(source) && (
+                            <Tooltip
+                              label={`Missing "${props.docId}" tag`}
+                              position="top"
+                              withArrow
                             >
-                              <IconAlertTriangle size={14} />
-                            </ActionIcon>
-                          </Tooltip>
+                              <ActionIcon
+                                className="LocalizationModal__sourceCell__missingTag"
+                                size="sm"
+                                variant="subtle"
+                              >
+                                <IconAlertTriangle size={14} />
+                              </ActionIcon>
+                            </Tooltip>
+                          )}
                         </div>
-                      ) : (
-                        sourceToTranslationsMap[source] && (
-                          <ActionIcon
-                            className="LocalizationModal__sourceCell__link"
-                            size="sm"
-                            variant="subtle"
-                            onClick={async () => {
-                              const hash = await sourceHash(source);
-                              window.open(
-                                `/cms/translations/${hash}`,
-                                '_blank'
-                              );
-                            }}
-                          >
-                            <IconExternalLink size={16} />
-                          </ActionIcon>
-                        )
                       )}
                     </div>
                   </td>
