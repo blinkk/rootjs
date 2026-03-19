@@ -1,6 +1,5 @@
 import {
   ActionIcon,
-  Box,
   Button,
   Checkbox,
   Divider,
@@ -287,29 +286,21 @@ LocalizationModal.AllNoneButtons = (props: AllNoneButtonsProps) => {
   return (
     <Group spacing="8px">
       <Button
+        className="LocalizationModal__allNoneBtn"
         variant="subtle"
         size="xs"
         compact
         onClick={props.onAllClicked}
-        sx={(theme) => ({
-          '&:hover': {
-            backgroundColor: theme.colors.gray[0],
-          },
-        })}
       >
         All
       </Button>
       /
       <Button
+        className="LocalizationModal__allNoneBtn"
         variant="subtle"
         size="xs"
         compact
         onClick={props.onNoneClicked}
-        sx={(theme) => ({
-          '&:hover': {
-            backgroundColor: theme.colors.gray[0],
-          },
-        })}
       >
         None
       </Button>
@@ -1043,13 +1034,9 @@ LocalizationModal.Translations = (props: TranslationsProps) => {
                       position="top"
                     >
                       <ActionIcon
+                        className="LocalizationModal__aiBtn"
                         variant="outline"
                         onClick={generateAiTranslations}
-                        sx={{
-                          height: 30,
-                          width: 30,
-                          borderColor: '#ced4da',
-                        }}
                       >
                         <IconSparkles
                           size={16}
@@ -1062,13 +1049,9 @@ LocalizationModal.Translations = (props: TranslationsProps) => {
                   {aiGenerating && (
                     <Tooltip label="Stop generating" withArrow position="top">
                       <ActionIcon
+                        className="LocalizationModal__aiBtn"
                         variant="outline"
                         onClick={stopAiTranslations}
-                        sx={{
-                          height: 30,
-                          width: 30,
-                          borderColor: '#ced4da',
-                        }}
                       >
                         <IconPlayerStop size={16} fill="currentColor" />
                       </ActionIcon>
@@ -1095,20 +1078,10 @@ LocalizationModal.Translations = (props: TranslationsProps) => {
                 key={i}
               >
                 <td className="LocalizationModal__translations__table__col">
-                  <Box
-                    className="LocalizationModal__sourceCell"
-                    sx={(theme) => ({
-                      backgroundColor: theme.colors.gray[0],
-                      border: `1px solid ${theme.colors.gray[3]}`,
-                      padding: '10px 20px',
-                      borderRadius: 4,
-                      height: '100%',
-                      position: 'relative',
-                    })}
-                  >
-                    <Text size="xs" sx={{whiteSpace: 'pre-wrap'}}>
+                  <div className="LocalizationModal__sourceCell">
+                    <span className="LocalizationModal__sourceCell__text">
                       {source}
-                    </Text>
+                    </span>
                     {sourceToTranslationsMap[source] && (
                       <ActionIcon
                         className="LocalizationModal__sourceCell__link"
@@ -1122,7 +1095,7 @@ LocalizationModal.Translations = (props: TranslationsProps) => {
                         <IconExternalLink size={16} />
                       </ActionIcon>
                     )}
-                  </Box>
+                  </div>
                 </td>
                 <td className="LocalizationModal__translations__table__col">
                   <TranslationCell
@@ -1142,32 +1115,36 @@ LocalizationModal.Translations = (props: TranslationsProps) => {
         </table>
       )}
 
-      {pendingEditsCount > 0 && (
-        <div className="LocalizationModal__translations__saveBar">
-          <Text size="sm" color="dimmed">
-            {pendingEditsCount} unsaved change
-            {pendingEditsCount !== 1 ? 's' : ''}
-          </Text>
+      <div className="LocalizationModal__translations__saveBar">
+        <span className="LocalizationModal__translations__saveBar__status">
+          {pendingEditsCount > 0
+            ? `${pendingEditsCount} unsaved change${
+                pendingEditsCount !== 1 ? 's' : ''
+              }`
+            : ''}
+        </span>
+        {pendingEditsCount > 0 && (
           <Button
             variant="default"
-            size="sm"
-            leftIcon={<IconArrowBackUp size={16} />}
+            size="xs"
+            leftIcon={<IconArrowBackUp size={14} />}
             onClick={() => setPendingEdits({})}
           >
             Discard changes
           </Button>
-          <Button
-            variant="filled"
-            size="sm"
-            color="green"
-            leftIcon={<IconCheck size={16} />}
-            onClick={saveEdits}
-            loading={saving}
-          >
-            Save
-          </Button>
-        </div>
-      )}
+        )}
+        <Button
+          variant="filled"
+          size="xs"
+          color="dark"
+          leftIcon={<IconCheck size={14} />}
+          onClick={saveEdits}
+          loading={saving}
+          disabled={pendingEditsCount === 0}
+        >
+          Save
+        </Button>
+      </div>
     </div>
   );
 };
