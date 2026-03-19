@@ -70,5 +70,5 @@ jobs:
         env:
           # Needs access to push to main
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          # Needs access to publish to npm
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+          # Use OIDC for npm authentication instead of NPM_TOKEN
+          NPM_TOKEN: ''
