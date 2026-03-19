@@ -6,6 +6,10 @@
  padding-bottom: 0;
 }
 
+.mantine-Modal-modal:has(.LocalizationModal__layout) .mantine-Modal-header {
+  transform: translateY(-10px);
+}
+
 .LocalizationModal__layout {
   display: grid;
   grid-template-columns: minmax(auto, 400px) 1fr;
@@ -43,10 +47,12 @@
   padding-right: 30px;
   max-height: 80vh;
   overflow: auto;
-  margin-top: 20px;
   margin-left: -30px;
   margin-right: -21px;
   padding-bottom: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
 }
 
 .LocalizationModal__translations__header {
@@ -180,12 +186,6 @@
 
 .LocalizationModal__allNoneBtn:hover {
   background-color: var(--mantine-color-gray-0, #f8f9fa);
-}
-
-.LocalizationModal__aiBtn {
-  height: 26px;
-  width: 26px;
-  border-color: #ced4da;
 }
 
 .LocalizationModal__sourceCell {

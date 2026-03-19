@@ -874,247 +874,241 @@ LocalizationModal.Translations = (props: TranslationsProps) => {
 
   return (
     <div className="LocalizationModal__translations">
-      <div className="LocalizationModal__translations__header">
-        <div className="LocalizationModal__translations__titleWrap">
-          <Heading
-            className="LocalizationModal__translations__title LocalizationModal__iconTitle"
-            size="h2"
-          >
-            <IconLanguage strokeWidth={1.5} /> <span>Translations</span>
-          </Heading>
-        </div>
-        <div className="LocalizationModal__translations__header__buttons">
-          <Button
-            component="a"
-            href={`/cms/translations/${props.docId}`}
-            target="_blank"
-            variant="default"
-            size="xs"
-            rightIcon={<IconExternalLink size={14} strokeWidth={1.75} />}
-          >
-            Open Editor
-          </Button>
-          {gapiClient.enabled && linkedSheet?.spreadsheetId && (
-            <Tooltip label="Open Google Sheet">
-              <ActionIcon<'a'>
-                component="a"
-                href={getSpreadsheetUrl(linkedSheet)}
-                target="_blank"
-                variant="filled"
-                color="green"
-                size="sm"
-              >
-                <IconTable size={16} strokeWidth={2.25} />
-              </ActionIcon>
-            </Tooltip>
-          )}
-          <ImportMenuButton
-            onAction={onAction}
-            gapiClient={gapiClient}
-            linkedSheet={linkedSheet}
-          />
-          <ExportMenuButton
-            onAction={onAction}
-            gapiClient={gapiClient}
-            linkedSheet={linkedSheet}
-          />
-        </div>
-      </div>
-
-      {loading && (
-        <ProgressiveLoader
-          labels={[
-            'Transmogrifying...',
-            'Deciphering the vibes...',
-            'Consulting the Rosetta Stone...',
-            'Untangling the syntax...',
-            'Babel-ing...',
-          ]}
-        />
-      )}
-
-      {!loading && missingTagsCount > 0 && (
-        <div className="LocalizationModal__missingTags">
-          <div className="LocalizationModal__missingTags__message">
-            <IconAlertTriangle />
-            {missingTagsCount > 1 ? (
-              <Text size="sm">
-                <b>{missingTagsCount} strings</b> are missing the "{props.docId}
-                " tag.
-              </Text>
-            ) : (
-              <Text size="sm">
-                <b>{missingTagsCount} string</b> is missing the "{props.docId}"
-                tag.
-              </Text>
-            )}
+      <div className="LocalizationModal__translations__topWrapper">
+        <div className="LocalizationModal__translations__header">
+          <div className="LocalizationModal__translations__titleWrap">
+            <Heading
+              className="LocalizationModal__translations__title LocalizationModal__iconTitle"
+              size="h2"
+            >
+              <IconLanguage strokeWidth={1.5} /> <span>Translations</span>
+            </Heading>
           </div>
-          <Button
-            variant="filled"
-            size="xs"
-            onClick={() => notifyErrors(applyDocTag)}
-            loading={loading}
-            leftIcon={<IconTool size={16} />}
-          >
-            Fix missing tags
-          </Button>
+          <div className="LocalizationModal__translations__header__buttons">
+            <Button
+              component="a"
+              href={`/cms/translations/${props.docId}`}
+              target="_blank"
+              variant="default"
+              size="xs"
+              rightIcon={<IconExternalLink size={14} strokeWidth={1.75} />}
+            >
+              Open Editor
+            </Button>
+            {gapiClient.enabled && linkedSheet?.spreadsheetId && (
+              <Tooltip label="Open Google Sheet">
+                <ActionIcon<'a'>
+                  component="a"
+                  href={getSpreadsheetUrl(linkedSheet)}
+                  target="_blank"
+                  variant="filled"
+                  color="green"
+                  size="sm"
+                >
+                  <IconTable size={16} strokeWidth={2.25} />
+                </ActionIcon>
+              </Tooltip>
+            )}
+            <ImportMenuButton
+              onAction={onAction}
+              gapiClient={gapiClient}
+              linkedSheet={linkedSheet}
+            />
+            <ExportMenuButton
+              onAction={onAction}
+              gapiClient={gapiClient}
+              linkedSheet={linkedSheet}
+            />
+          </div>
         </div>
-      )}
-
-      {!loading && (
-        <table className="LocalizationModal__translations__table">
-          <tr className="LocalizationModal__translations__table__row LocalizationModal__translations__table__row--header">
-            <th className="LocalizationModal__translations__table__header">
-              <Heading size="h4" weight="semi-bold">
-                SOURCE STRING
-              </Heading>
-            </th>
-            <th className="LocalizationModal__translations__table__header">
-              <div className="LocalizationModal__translations__localeHeader">
-                <Heading
-                  className="LocalizationModal__translations__localeSelect"
-                  size="h4"
-                  weight="semi-bold"
-                >
-                  <span>LOCALE: </span>{' '}
-                  <Select
-                    data={localeOptions}
-                    size="xs"
-                    placeholder="select locale"
-                    allowDeselect
-                    value={selectedLocale}
-                    onChange={(value: string) => setSelectedLocale(value)}
-                  />
+        {loading && (
+          <ProgressiveLoader
+            labels={[
+              'Transmogrifying...',
+              'Deciphering the vibes...',
+              'Consulting the Rosetta Stone...',
+              'Untangling the syntax...',
+              'Babel-ing...',
+            ]}
+          />
+        )}
+        {!loading && missingTagsCount > 0 && (
+          <div className="LocalizationModal__missingTags">
+            <div className="LocalizationModal__missingTags__message">
+              <IconAlertTriangle />
+              {missingTagsCount > 1 ? (
+                <Text size="sm">
+                  <b>{missingTagsCount} strings</b> are missing the "
+                  {props.docId}" tag.
+                </Text>
+              ) : (
+                <Text size="sm">
+                  <b>{missingTagsCount} string</b> is missing the "{props.docId}
+                  " tag.
+                </Text>
+              )}
+            </div>
+            <Button
+              variant="filled"
+              size="xs"
+              onClick={() => notifyErrors(applyDocTag)}
+              loading={loading}
+              leftIcon={<IconTool size={16} />}
+            >
+              Fix missing tags
+            </Button>
+          </div>
+        )}
+        {!loading && (
+          <table className="LocalizationModal__translations__table">
+            <tr className="LocalizationModal__translations__table__row LocalizationModal__translations__table__row--header">
+              <th className="LocalizationModal__translations__table__header">
+                <Heading size="h4" weight="semi-bold">
+                  SOURCE STRING
                 </Heading>
-                <div
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 8,
-                    flexShrink: 0,
-                  }}
-                >
-                  {selectedLocale && missingTranslationsCount > 0 && (
-                    <Tooltip
-                      key={filterMissing ? 'active' : 'inactive'}
-                      label={
-                        filterMissing
-                          ? 'Show all translations'
-                          : 'Show only missing translations'
-                      }
-                      position="top"
-                      withArrow
-                    >
-                      <button
-                        className={`LocalizationModal__translations__missingToggle${
-                          filterMissing
-                            ? ' LocalizationModal__translations__missingToggle--active'
-                            : ''
-                        }`}
-                        onClick={() => setFilterMissing((v) => !v)}
-                      >
-                        <IconFilter size={14} />
-                        <span>{missingTranslationsCount} missing</span>
-                      </button>
-                    </Tooltip>
-                  )}
-                  {selectedLocale &&
-                    sourceStrings.length > 0 &&
-                    missingTranslationsCount === 0 &&
-                    pendingEditsCount === 0 && (
-                      <div className="LocalizationModal__translations__fullyTranslated">
-                        <IconCheck size={14} />
-                        <span>Translated</span>
-                      </div>
-                    )}
-                  {shouldShowAiButton() && !aiGenerating && (
-                    <Tooltip
-                      label="Generate translations using AI"
-                      withArrow
-                      position="top"
-                    >
-                      <ActionIcon
-                        className="LocalizationModal__aiBtn"
-                        variant="outline"
-                        onClick={generateAiTranslations}
-                      >
-                        <IconSparkles
-                          size={16}
-                          fill="currentColor"
-                          stroke={1.5}
-                        />
-                      </ActionIcon>
-                    </Tooltip>
-                  )}
-                  {aiGenerating && (
-                    <Tooltip label="Stop generating" withArrow position="top">
-                      <ActionIcon
-                        className="LocalizationModal__aiBtn"
-                        variant="outline"
-                        onClick={stopAiTranslations}
-                      >
-                        <IconPlayerStop size={16} fill="currentColor" />
-                      </ActionIcon>
-                    </Tooltip>
-                  )}
-                  {aiGenerating && (
-                    <IconLoader2
-                      size={18}
-                      className="LocalizationModal__spinner"
+              </th>
+              <th className="LocalizationModal__translations__table__header">
+                <div className="LocalizationModal__translations__localeHeader">
+                  <Heading
+                    className="LocalizationModal__translations__localeSelect"
+                    size="h4"
+                    weight="semi-bold"
+                  >
+                    <span>LOCALE: </span>{' '}
+                    <Select
+                      data={localeOptions}
+                      size="xs"
+                      placeholder="select locale"
+                      allowDeselect
+                      value={selectedLocale}
+                      onChange={(value: string) => setSelectedLocale(value)}
                     />
-                  )}
-                </div>
-              </div>
-            </th>
-          </tr>
-          {sourceStrings
-            .filter((source) => {
-              if (!filterMissing || !selectedLocale) return true;
-              return !localeTranslations[source];
-            })
-            .map((source, i) => (
-              <tr
-                className="LocalizationModal__translations__table__row"
-                key={i}
-              >
-                <td className="LocalizationModal__translations__table__col">
-                  <div className="LocalizationModal__sourceCell">
-                    <span className="LocalizationModal__sourceCell__text">
-                      {source}
-                    </span>
-                    {sourceToTranslationsMap[source] && (
-                      <ActionIcon
-                        className="LocalizationModal__sourceCell__link"
-                        size="sm"
-                        variant="subtle"
-                        onClick={async () => {
-                          const hash = await sourceHash(source);
-                          window.open(`/cms/translations/${hash}`, '_blank');
-                        }}
+                  </Heading>
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 8,
+                      flexShrink: 0,
+                    }}
+                  >
+                    {selectedLocale && missingTranslationsCount > 0 && (
+                      <Tooltip
+                        key={filterMissing ? 'active' : 'inactive'}
+                        label={
+                          filterMissing
+                            ? 'Show all translations'
+                            : 'Show only missing translations'
+                        }
+                        position="top"
+                        withArrow
                       >
-                        <IconExternalLink size={16} />
-                      </ActionIcon>
+                        <button
+                          className={`LocalizationModal__translations__missingToggle${
+                            filterMissing
+                              ? ' LocalizationModal__translations__missingToggle--active'
+                              : ''
+                          }`}
+                          onClick={() => setFilterMissing((v) => !v)}
+                        >
+                          <IconFilter size={14} />
+                          <span>{missingTranslationsCount} missing</span>
+                        </button>
+                      </Tooltip>
+                    )}
+                    {selectedLocale &&
+                      sourceStrings.length > 0 &&
+                      missingTranslationsCount === 0 &&
+                      pendingEditsCount === 0 && (
+                        <div className="LocalizationModal__translations__fullyTranslated">
+                          <IconCheck size={14} />
+                          <span>Translated</span>
+                        </div>
+                      )}
+                    {shouldShowAiButton() && !aiGenerating && (
+                      <Tooltip
+                        label="Generate translations using AI"
+                        withArrow
+                        position="top"
+                      >
+                        <ActionIcon
+                          variant="default"
+                          size="sm"
+                          onClick={generateAiTranslations}
+                        >
+                          <IconSparkles size={14} fill="black" />
+                        </ActionIcon>
+                      </Tooltip>
+                    )}
+                    {aiGenerating && (
+                      <Tooltip label="Stop generating" withArrow position="top">
+                        <ActionIcon
+                          variant="default"
+                          size="sm"
+                          onClick={stopAiTranslations}
+                        >
+                          <IconPlayerStop size={14} fill="black" />
+                        </ActionIcon>
+                      </Tooltip>
+                    )}
+                    {aiGenerating && (
+                      <IconLoader2
+                        size={18}
+                        className="LocalizationModal__spinner"
+                      />
                     )}
                   </div>
-                </td>
-                <td className="LocalizationModal__translations__table__col">
-                  <TranslationCell
-                    source={source}
-                    locale={selectedLocale}
-                    savedValue={localeTranslations[source] || ''}
-                    pendingValue={pendingEdits[source]?.[selectedLocale]}
-                    isAiGenerating={aiGeneratingSource === source}
-                    readOnly={aiGenerating}
-                    onEdit={(value) =>
-                      updatePendingEdit(source, selectedLocale, value)
-                    }
-                  />
-                </td>
-              </tr>
-            ))}
-        </table>
-      )}
-
+                </div>
+              </th>
+            </tr>
+            {sourceStrings
+              .filter((source) => {
+                if (!filterMissing || !selectedLocale) return true;
+                return !localeTranslations[source];
+              })
+              .map((source, i) => (
+                <tr
+                  className="LocalizationModal__translations__table__row"
+                  key={i}
+                >
+                  <td className="LocalizationModal__translations__table__col">
+                    <div className="LocalizationModal__sourceCell">
+                      <span className="LocalizationModal__sourceCell__text">
+                        {source}
+                      </span>
+                      {sourceToTranslationsMap[source] && (
+                        <ActionIcon
+                          className="LocalizationModal__sourceCell__link"
+                          size="sm"
+                          variant="subtle"
+                          onClick={async () => {
+                            const hash = await sourceHash(source);
+                            window.open(`/cms/translations/${hash}`, '_blank');
+                          }}
+                        >
+                          <IconExternalLink size={16} />
+                        </ActionIcon>
+                      )}
+                    </div>
+                  </td>
+                  <td className="LocalizationModal__translations__table__col">
+                    <TranslationCell
+                      source={source}
+                      locale={selectedLocale}
+                      savedValue={localeTranslations[source] || ''}
+                      pendingValue={pendingEdits[source]?.[selectedLocale]}
+                      isAiGenerating={aiGeneratingSource === source}
+                      readOnly={aiGenerating}
+                      onEdit={(value) =>
+                        updatePendingEdit(source, selectedLocale, value)
+                      }
+                    />
+                  </td>
+                </tr>
+              ))}
+          </table>
+        )}
+      </div>
       <div className="LocalizationModal__translations__saveBar">
         <span className="LocalizationModal__translations__saveBar__status">
           {pendingEditsCount > 0
