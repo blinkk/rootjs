@@ -1031,21 +1031,10 @@ LocalizationModal.Translations = (props: TranslationsProps) => {
                     sourceStrings.length > 0 &&
                     missingTranslationsCount === 0 &&
                     pendingEditsCount === 0 && (
-                      <Tooltip
-                        label="Fully translated"
-                        position="top"
-                        withArrow
-                      >
-                        <ActionIcon
-                          variant="filled"
-                          color="green"
-                          size="sm"
-                          radius="xl"
-                          sx={{cursor: 'default'}}
-                        >
-                          <IconCheck size={14} />
-                        </ActionIcon>
-                      </Tooltip>
+                      <div className="LocalizationModal__translations__fullyTranslated">
+                        <IconCheck size={14} />
+                        <span>Translated</span>
+                      </div>
                     )}
                   {shouldShowAiButton() && !aiGenerating && (
                     <Tooltip

@@ -143,6 +143,24 @@
   border-color: var(--mantine-color-blue-3, #74c0fc);
 }
 
+.LocalizationModal__translations__fullyTranslated {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+  flex-shrink: 0;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--mantine-color-green-7, #37b24d);
+}
+
+.LocalizationModal__translations__fullyTranslated svg {
+  background-color: var(--mantine-color-green-6, #40c057);
+  color: white;
+  border-radius: 50%;
+  padding: 2px;
+}
+
 .LocalizationModal__sourceCell__link {
   position: absolute;
   top: 4px;
