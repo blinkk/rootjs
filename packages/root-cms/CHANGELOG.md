@@ -1,5 +1,12 @@
 # @blinkk/root-cms
 
+## 2.5.7
+
+### Patch Changes
+
+- bfa4e410: feat: add polish and features to localization modal
+  - @blinkk/root@2.5.7
+
 ## 2.5.6
 
 ### Patch Changes
