@@ -46,13 +46,12 @@ function getPreviewUrl(
   const basePreviewPath = getDocPreviewPath({collectionId, slug});
   const searchParams = new URLSearchParams(window.location.search);
   searchParams.set('preview', 'true');
-  // Avoid passing through the ?locale= param (set by the CMS to preserve the
-  // preview frame locale).
+  // Avoid passing through internal CMS params (locale, modal) to the preview
+  // iframe. These are used by the CMS UI only.
   // NOTE(stevenle): if we ever need to pass through the locale param, switch to
   // using hash params for the internal CMS params that shouldn't pass through.
-  if (searchParams.has('locale')) {
-    searchParams.delete('locale');
-  }
+  searchParams.delete('locale');
+  searchParams.delete('modal');
   const query = `${searchParams.toString()}${window.location.hash}`;
   if (selectedLocale) {
     const localizedPreviewPath = getDocPreviewPath({
@@ -324,7 +323,6 @@ DocumentPage.Preview = (props: PreviewProps) => {
   const locales = draft.controller!.getLocales() || [];
   const splitPanel = useSplitPanel();
 
-  const previewUrl = getPreviewUrl(collectionId, slug);
   const localizedPreviewUrl = getPreviewUrl(collectionId, slug, selectedLocale);
 
   const localeOptions = [
@@ -494,7 +492,7 @@ DocumentPage.Preview = (props: PreviewProps) => {
           </div>
         )}
         <div className="DocumentPage__main__previewFrame__iframeWrap">
-          <iframe ref={iframeRef} src={previewUrl} title="iframe preview" />
+          <iframe ref={iframeRef} title="iframe preview" />
         </div>
       </div>
     </div>

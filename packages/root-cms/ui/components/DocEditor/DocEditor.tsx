@@ -177,7 +177,7 @@ type StatusBarProps = DocEditorProps & {
 };
 
 DocEditor.StatusBar = (props: StatusBarProps) => {
-  const {route} = useLocation();
+  const {route, query} = useLocation();
   const {roles} = useProjectRoles();
   const currentUserEmail = window.firebase.user.email || '';
   const canPublish = testCanPublish(roles, currentUserEmail);
@@ -212,6 +212,20 @@ DocEditor.StatusBar = (props: StatusBarProps) => {
   const publishDocModal = usePublishDocModal({docId: props.docId});
   const localizationModal = useLocalizationModal();
 
+  const urlLocale = (query.locale as string) || '';
+  const urlModal = (query.modal as string) || '';
+
+  useEffect(() => {
+    if (urlModal === 'localization' && draft.controller) {
+      localizationModal.open({
+        docId: props.docId,
+        collection: props.collection,
+        draft: draft.controller,
+        locale: urlLocale || undefined,
+      });
+    }
+  }, []);
+
   const loading = !data?.sys;
   if (loading) {
     return null;
@@ -234,13 +248,14 @@ DocEditor.StatusBar = (props: StatusBarProps) => {
           color="dark"
           size="xs"
           leftIcon={<IconPlanet size={16} />}
-          onClick={() =>
+          onClick={() => {
             localizationModal.open({
               docId: props.docId,
               collection: props.collection,
               draft: draft.controller,
-            })
-          }
+              locale: (query.locale as string) || undefined,
+            });
+          }}
         >
           Localization
         </Button>

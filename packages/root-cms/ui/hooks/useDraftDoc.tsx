@@ -286,7 +286,7 @@ export class DraftDocController extends EventListener {
   /**
    * Immediately write all queued data to the DB.
    */
-  async flush() {
+  async flush(options?: {quiet?: boolean}) {
     if (this.readOnly) {
       return;
     }
@@ -322,7 +322,9 @@ export class DraftDocController extends EventListener {
       this.setSaveState(SaveState.SAVING);
       await updateDoc(this.docRef, updates);
       this.setSaveState(SaveState.SAVED);
-      this.dispatch(DraftDocEventType.FLUSH);
+      if (!options?.quiet) {
+        this.dispatch(DraftDocEventType.FLUSH);
+      }
       logAction('doc.save', {
         metadata: {docId: this.docId},
         throttle: SAVE_ACTION_LOG_THROTTLE,

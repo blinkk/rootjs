@@ -2,70 +2,110 @@
   padding: 30px 40px;
 }
 
+.mantine-Modal-modal:has(.LocalizationModal__layout) {
+ padding-bottom: 0;
+}
+
+.mantine-Modal-modal:has(.LocalizationModal__layout) .mantine-Modal-header {
+  transform: translateY(-10px);
+}
+
 .LocalizationModal__layout {
   display: grid;
-  grid-template-columns: 400px 1fr;
+  grid-template-columns: minmax(auto, 400px) 1fr;
   margin-top: -20px;
-  margin-bottom: 20px;
+}
+
+@media (max-width: 1024px) {
+  .LocalizationModal__layout {
+    grid-template-columns: minmax(auto, 200px) 1fr;
+  }
 }
 
 .LocalizationModal__iconTitle {
   display: flex;
   align-items: center;
   gap: 8px;
+  white-space: nowrap;
 }
 
 .LocalizationModal__locales,
 .LocalizationModal__translations {
   height: 100%;
   min-height: 400px;
-  padding-top: 30px;
   padding-bottom: 30px;
 }
 
 .LocalizationModal__locales {
   padding-right: 30px;
+  padding-top: 30px;
 }
 
 .LocalizationModal__translations {
   border-left: 1px solid var(--color-border);
   padding-left: 30px;
-  margin-right: -30px;
   padding-right: 30px;
   max-height: 80vh;
   overflow: auto;
+  margin-left: -30px;
+  margin-right: -21px;
+  padding-bottom: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
 }
 
 .LocalizationModal__translations__header {
   display: flex;
   justify-content: space-between;
-  margin-bottom: 30px;
+  align-items: flex-start;
+  gap: 12px;
+  position: sticky;
+  top: 0;
+  background: var(--color-background, #fff);
+  z-index: 10;
+  padding-top: 8px;
+  padding-bottom: 10px;
 }
 
 .LocalizationModal__translations__header__buttons {
   display: flex;
   align-items: center;
   gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
 }
 
 .LocalizationModal__translations__titleWrap {
   display: flex;
   align-items: center;
   gap: 12px;
+  flex-wrap: wrap;
+  min-width: 0;
 }
 
 .LocalizationModal__translations__table {
   display: flex;
   flex-direction: column;
+  width: 100%;
+  margin-bottom: 12px;
 }
 
 .LocalizationModal__translations__table__row {
   display: grid;
   grid-template-columns: 1fr 1fr;
+  min-width: 0;
 }
 
 .LocalizationModal__translations__table__row--header {
   align-items: center;
+  position: sticky;
+  top: 48px;
+  background: var(--color-background, #fff);
+  z-index: 9;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--color-border);
+  margin-bottom: 10px;
 }
 
 .LocalizationModal__translations__table__row + .LocalizationModal__translations__table__row {
@@ -74,17 +114,114 @@
   margin-top: 12px;
 }
 
+.LocalizationModal__translations__table__row--header + .LocalizationModal__translations__table__row {
+  border-top: none;
+  padding-top: 0;
+  margin-top: 0;
+}
+
 .LocalizationModal__translations__table__header,
+.LocalizationModal__translations__table__col {
+  text-align: left;
+  overflow-wrap: break-word;
+  word-break: break-word;
+  min-width: 0;
+}
+
 .LocalizationModal__translations__table__col {
   padding-left: 8px;
   padding-right: 8px;
-  text-align: left;
+}
+
+.LocalizationModal__translations__localeHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.LocalizationModal__translations__missingToggle {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+  flex-shrink: 0;
+  background: none;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  padding: 2px 8px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #000;
+  cursor: pointer;
+}
+
+.LocalizationModal__translations__missingToggle:hover {
+  background-color: var(--mantine-color-gray-1, #f1f3f5);
+}
+
+.LocalizationModal__translations__missingToggle--active {
+  color: var(--mantine-color-blue-7, #1c7ed6);
+  background-color: var(--mantine-color-blue-0, #e7f5ff);
+  border-color: var(--mantine-color-blue-3, #74c0fc);
+}
+
+.LocalizationModal__translations__fullyTranslated {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+  flex-shrink: 0;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--mantine-color-green-7, #37b24d);
+}
+
+.LocalizationModal__translations__fullyTranslated svg {
+  background-color: var(--mantine-color-green-6, #40c057);
+  color: white;
+  border-radius: 50%;
+  padding: 2px;
+}
+
+.LocalizationModal__allNoneBtn:hover {
+  background-color: var(--mantine-color-gray-0, #f8f9fa);
+}
+
+.LocalizationModal__sourceCell {
+  background-color: var(--mantine-color-gray-0, #f8f9fa);
+  border: 1px solid var(--mantine-color-gray-3, #dee2e6);
+  padding: 10px 20px;
+  border-radius: 4px;
+  height: 100%;
+  position: relative;
+}
+
+.LocalizationModal__sourceCell__text {
+  font-size: 12px;
+  white-space: pre-wrap;
+}
+
+.LocalizationModal__sourceCell__link {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  opacity: 0;
+  background: white;
+  border: 1px solid var(--mantine-color-gray-4, #ced4da);
+  border-radius: 4px;
+  padding: 4px;
+}
+
+.LocalizationModal__sourceCell:hover .LocalizationModal__sourceCell__link {
+  opacity: 1;
 }
 
 .LocalizationModal__translations__localeSelect {
   display: flex;
   gap: 8px;
   align-items: center;
+  white-space: nowrap;
 }
 
 .LocalizationModal__translations__menu__item .mantine-Menu-itemBody {
@@ -101,6 +238,8 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
 }
 
 
@@ -113,4 +252,65 @@
 
 .LocalizationModal__missingTags__message svg {
   color: #FBC02D;
+}
+
+.LocalizationModal__translations__cell--edited .mantine-Textarea-input {
+  border-color: #228be6;
+  background-color: #e7f5ff;
+}
+
+.LocalizationModal__translations__cell--empty .mantine-Textarea-input {
+  background-color: #FFF5F5;
+}
+
+@keyframes shimmer-border {
+  0% {
+    border-color: #be4bdb;
+  }
+  25% {
+    border-color: #9775fa;
+  }
+  50% {
+    border-color: #da77f2;
+  }
+  75% {
+    border-color: #9775fa;
+  }
+  100% {
+    border-color: #be4bdb;
+  }
+}
+
+.LocalizationModal__translations__cell--ai-generating .mantine-Textarea-input {
+  border-color: #be4bdb;
+  background-color: #f8f0fc;
+  animation: shimmer-border 1.5s ease-in-out infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.LocalizationModal__spinner {
+  animation: spin 1s linear infinite;
+  color: #868e96;
+}
+
+.LocalizationModal__translations__saveBar {
+  position: sticky;
+  bottom: 0;
+  background: var(--color-background, #fff);
+  border-top: 1px solid var(--color-border);
+  padding: 8px 0;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  z-index: 10;
+}
+
+.LocalizationModal__translations__saveBar__status {
+  font-size: 12px;
+  color: #000;
 }
