@@ -57,6 +57,7 @@ export default defineConfig({
         {
           id: 'custom/my-check',
           label: 'My Custom Check',
+          description: 'This check passes every time.',
           run: async () => {
             return {status: 'success', message: 'All good!'};
           },

@@ -176,7 +176,7 @@ declare global {
         channel: true | false | 'to-preview' | 'from-preview';
       };
       /** Checks registered via the CMS plugin config. */
-      checks?: Array<{id: string; label: string}>;
+      checks?: Array<{id: string; label: string; description?: string}>;
     };
     firebase: FirebaseContextObject;
   }

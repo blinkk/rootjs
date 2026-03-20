@@ -37,6 +37,8 @@ export interface CMSCheck {
   id: string;
   /** Human-readable label displayed in the UI. */
   label: string;
+  /** Optional description explaining what the check does. */
+  description?: string;
   /**
    * Function that runs the check on the server-side and returns a result.
    */

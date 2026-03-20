@@ -129,7 +129,11 @@ export async function renderApp(
     preview: {
       channel: cmsConfig.preview?.channel ?? false,
     },
-    checks: (cmsConfig.checks || []).map((c) => ({id: c.id, label: c.label})),
+    checks: (cmsConfig.checks || []).map((c) => ({
+      id: c.id,
+      label: c.label,
+      description: c.description,
+    })),
   };
   const projectName = cmsConfig.name || cmsConfig.id || '';
   const title = getCmsTitle(projectName, cmsConfig.minimalBranding);

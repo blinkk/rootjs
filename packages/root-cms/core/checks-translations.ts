@@ -157,6 +157,8 @@ export function translationsCheck(): CMSCheck {
   return {
     id: 'root-cms/translations',
     label: 'Missing Translations',
+    description:
+      'Checks that all translatable strings have translations for each enabled locale.',
     run: async (ctx: CheckContext): Promise<CheckResult> => {
       const {cmsClient, collectionId, slug, collectionSchema} = ctx;
 

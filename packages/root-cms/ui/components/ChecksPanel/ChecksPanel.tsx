@@ -1,11 +1,11 @@
-import './ChecksDrawer.css';
+import './ChecksPanel.css';
 
-import {Badge, Button, Drawer} from '@mantine/core';
+import {Badge, Button} from '@mantine/core';
 import {
-  IconCheck,
   IconAlertTriangle,
-  IconX,
+  IconCheck,
   IconPlayerPlay,
+  IconX,
 } from '@tabler/icons-preact';
 import {useCallback, useState} from 'preact/hooks';
 import {joinClassNames} from '../../utils/classes.js';
@@ -29,13 +29,10 @@ interface CheckState {
 interface CheckMeta {
   id: string;
   label: string;
+  description?: string;
 }
 
-export interface ChecksDrawerProps {
-  /** Whether the drawer is open. */
-  opened: boolean;
-  /** Called when the drawer is closed. */
-  onClose: () => void;
+export interface ChecksPanelProps {
   /** The document ID to run checks against. */
   docId: string;
 }
@@ -55,10 +52,10 @@ async function runCheck(checkId: string, docId: string): Promise<CheckResult> {
 }
 
 /**
- * A drawer component that displays registered CMS checks and allows users
- * to run them on demand against a document.
+ * Inline panel component that displays registered CMS checks and allows
+ * running them on demand against a document.
  */
-export function ChecksDrawer(props: ChecksDrawerProps) {
+export function ChecksPanel(props: ChecksPanelProps) {
   const checks: CheckMeta[] = window.__ROOT_CTX.checks || [];
   const [states, setStates] = useState<Record<string, CheckState>>({});
 
@@ -111,42 +108,35 @@ export function ChecksDrawer(props: ChecksDrawerProps) {
   }, [props.docId, checks]);
 
   return (
-    <Drawer
-      opened={props.opened}
-      onClose={props.onClose}
-      position="right"
-      size="md"
-      padding="lg"
-      title=""
-      withCloseButton
-    >
-      <div className="ChecksDrawer__header">
-        <div className="ChecksDrawer__header__title">Checks</div>
+    <div className="ChecksPanel">
+      <div className="ChecksPanel__header">
+        <div className="ChecksPanel__header__title">Checks</div>
         <Button
-          variant="light"
-          color="dark"
+          variant="default"
           size="xs"
           compact
-          leftIcon={<IconPlayerPlay size={14} />}
+          leftIcon={<IconPlayerPlay size={12} />}
           onClick={onRunAll}
         >
           Run All
         </Button>
       </div>
-      <div className="ChecksDrawer__checks">
-        {checks.map((check) => {
-          const state = states[check.id];
-          return (
-            <CheckItem
-              key={check.id}
-              check={check}
-              state={state}
-              onRun={() => onRunCheck(check.id)}
-            />
-          );
-        })}
+      <div className="ChecksPanel__body">
+        <div className="ChecksPanel__checks">
+          {checks.map((check) => {
+            const state = states[check.id];
+            return (
+              <CheckItem
+                key={check.id}
+                check={check}
+                state={state}
+                onRun={() => onRunCheck(check.id)}
+              />
+            );
+          })}
+        </div>
       </div>
-    </Drawer>
+    </div>
   );
 }
 
@@ -160,14 +150,14 @@ function CheckItem(props: CheckItemProps) {
   const {check, state, onRun} = props;
 
   return (
-    <div className="ChecksDrawer__check">
-      <div className="ChecksDrawer__check__header">
-        <div className="ChecksDrawer__check__label">
+    <div className="ChecksPanel__check">
+      <div className="ChecksPanel__check__header">
+        <div className="ChecksPanel__check__label">
           {check.label}
           {state?.result && <StatusBadge status={state.result.status} />}
         </div>
         <Button
-          className="ChecksDrawer__check__runButton"
+          className="ChecksPanel__check__runButton"
           variant="default"
           size="xs"
           compact
@@ -177,18 +167,23 @@ function CheckItem(props: CheckItemProps) {
           Run
         </Button>
       </div>
+      {check.description && (
+        <div className="ChecksPanel__check__description">
+          {check.description}
+        </div>
+      )}
       {state?.result && (
         <div
           className={joinClassNames(
-            'ChecksDrawer__check__result',
-            `ChecksDrawer__check__result--${state.result.status}`
+            'ChecksPanel__check__result',
+            `ChecksPanel__check__result--${state.result.status}`
           )}
         >
           <Markdown code={state.result.message} />
         </div>
       )}
       {state?.error && (
-        <div className="ChecksDrawer__check__error">{state.error}</div>
+        <div className="ChecksPanel__check__error">{state.error}</div>
       )}
     </div>
   );
@@ -216,7 +211,7 @@ function StatusBadge(props: {status: CheckStatus}) {
       size="sm"
       variant="filled"
       leftSection={<Icon size={10} />}
-      style={{marginLeft: 8, verticalAlign: 'middle'}}
+      style={{marginLeft: 6, verticalAlign: 'middle'}}
     >
       {label}
     </Badge>

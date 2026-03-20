@@ -87,7 +87,6 @@ import {buildPreviewValue} from '../../utils/schema-previews.js';
 import {testFieldEmpty} from '../../utils/test-field-empty.js';
 import {formatDateTime} from '../../utils/time.js';
 import {useAiEditModal} from '../AiEditModal/AiEditModal.js';
-import {ChecksDrawer} from '../ChecksDrawer/ChecksDrawer.js';
 import {ConditionalTooltip} from '../ConditionalTooltip/ConditionalTooltip.js';
 import {
   DocActionEvent,
@@ -213,9 +212,6 @@ DocEditor.StatusBar = (props: StatusBarProps) => {
 
   const publishDocModal = usePublishDocModal({docId: props.docId});
   const localizationModal = useLocalizationModal();
-  const checks = window.__ROOT_CTX.checks || [];
-  const hasChecks = checks.length > 0;
-  const [checksDrawerOpened, setChecksDrawerOpened] = useState(false);
 
   const urlLocale = (query.locale as string) || '';
   const urlModal = (query.modal as string) || '';
@@ -247,22 +243,19 @@ DocEditor.StatusBar = (props: StatusBarProps) => {
           <DocStatusBadges doc={data as CMSDoc} />
         </div>
       )}
-      {hasChecks && (
-        <div className="DocEditor__statusBar__checks">
+      {(window.__ROOT_CTX.checks || []).length > 0 && (
+        <div className="DocEditor__statusBar__checks" style={{marginRight: 8}}>
           <Button
             variant="default"
             color="dark"
             size="xs"
             leftIcon={<IconListCheck size={16} />}
-            onClick={() => setChecksDrawerOpened(true)}
+            onClick={() => {
+              window.dispatchEvent(new CustomEvent('root:toggle-checks'));
+            }}
           >
             Checks
           </Button>
-          <ChecksDrawer
-            opened={checksDrawerOpened}
-            onClose={() => setChecksDrawerOpened(false)}
-            docId={props.docId}
-          />
         </div>
       )}
       <div className="DocEditor__statusBar__i18n">
