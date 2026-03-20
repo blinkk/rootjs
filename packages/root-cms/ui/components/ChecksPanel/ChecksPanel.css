@@ -63,8 +63,9 @@
 .ChecksPanel__check__description {
   margin-top: 4px;
   font-size: 11px;
-  color: #868e96;
+  color: var(--color-text-gray);
   line-height: 1.4;
+  padding-right: 48px;
 }
 
 .ChecksPanel__check__result {

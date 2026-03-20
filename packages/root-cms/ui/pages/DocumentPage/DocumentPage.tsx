@@ -103,6 +103,14 @@ function DocumentPageLayout(props: DocumentPageProps) {
   );
   const isChecksVisibleRef = useRef(isChecksVisible);
   isChecksVisibleRef.current = isChecksVisible;
+
+  // Broadcast checks visibility so the StatusBar button can reflect it.
+  useEffect(() => {
+    window.dispatchEvent(
+      new CustomEvent('root:checks-visible', {detail: isChecksVisible})
+    );
+  }, [isChecksVisible]);
+
   const [savedChecksPanelWidth, setSavedChecksPanelWidth] =
     useLocalStorage<number>('root::DocumentPage::checksPanelWidth', 360);
   const [checksPanelWidth, setChecksPanelWidth] = useState(
