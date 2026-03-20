@@ -39,24 +39,30 @@ export function CopyDocModal(modalProps: ContextModalProps<CopyDocModalProps>) {
   const {route} = useLocation();
   const [toCollectionId, setToCollectionId] = useState('');
   const [toSlug, setToSlug] = useState('');
+  const [slugError, setSlugError] = useState('');
   const [error, setError] = useState('');
   const [confirmOverwrite, setConfirmOverwrite] = useState(false);
   const [loading, setLoading] = useState(false);
   const [copyTranslations, setCopyTranslations] = useState(false);
-  const [hasTranslations, setHasTranslations] = useState(false);
+  const [translationsMap, setTranslationsMap] = useState<
+    Record<string, unknown>
+  >({});
 
   const fromDocId = props.fromDocId;
   const fromCollectionId = fromDocId.split('/')[0];
   const sourceLabel = props.fromLabel || fromDocId;
+  const hasTranslations = Object.keys(translationsMap).length > 0;
 
   // Check if the source doc has any tagged translations.
   useEffect(() => {
-    async function checkTranslations() {
-      const translationsMap = await loadTranslations({tags: [fromDocId]});
-      setHasTranslations(Object.keys(translationsMap).length > 0);
-    }
-    checkTranslations();
+    loadTranslations({tags: [fromDocId]}).then(setTranslationsMap);
   }, [fromDocId]);
+
+  function validateSlug(slug: string, collectionId: string) {
+    const cleanSlug = normalizeSlug(slug);
+    const slugRegex = window.__ROOT_CTX.collections[collectionId]?.slugRegex;
+    return cleanSlug ? getSlugError(cleanSlug, slugRegex) : '';
+  }
 
   async function onSubmit(e: Event) {
     e.preventDefault();
@@ -68,15 +74,14 @@ export function CopyDocModal(modalProps: ContextModalProps<CopyDocModalProps>) {
       setLoading(false);
       return;
     }
-    const cleanSlug = normalizeSlug(toSlug);
-    const slugRegex = window.__ROOT_CTX.collections[toCollectionId]?.slugRegex;
-    const slugValidationError = getSlugError(cleanSlug, slugRegex);
+    const slugValidationError = validateSlug(toSlug, toCollectionId);
     if (slugValidationError) {
-      setError(slugValidationError);
+      // SlugInput already displays this error, just return early.
       setLoading(false);
       return;
     }
 
+    const cleanSlug = normalizeSlug(toSlug);
     const toDocId = `${toCollectionId}/${cleanSlug}`;
     try {
       if (props.fields) {
@@ -91,7 +96,6 @@ export function CopyDocModal(modalProps: ContextModalProps<CopyDocModalProps>) {
       // Copy translations by adding the new doc ID tag to all strings
       // tagged with the old doc ID.
       if (copyTranslations) {
-        const translationsMap = await loadTranslations({tags: [fromDocId]});
         const updates = Object.keys(translationsMap).map((hash) => ({
           hash,
           tags: [toDocId],
@@ -149,6 +153,9 @@ export function CopyDocModal(modalProps: ContextModalProps<CopyDocModalProps>) {
             onChange={(newValue: {collectionId: string; slug: string}) => {
               setToCollectionId(newValue.collectionId);
               setToSlug(newValue.slug);
+              setSlugError(validateSlug(newValue.slug, newValue.collectionId));
+              setError('');
+              setConfirmOverwrite(false);
             }}
           />
         </div>
@@ -185,7 +192,7 @@ export function CopyDocModal(modalProps: ContextModalProps<CopyDocModalProps>) {
             size="xs"
             color="dark"
             loading={loading}
-            disabled={!!error}
+            disabled={!!error || !!slugError}
           >
             {confirmOverwrite ? 'Overwrite?' : 'Submit'}
           </Button>
