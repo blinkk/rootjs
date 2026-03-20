@@ -262,7 +262,7 @@ DocEditor.StatusBar = (props: StatusBarProps) => {
         </div>
       )}
       {(window.__ROOT_CTX.checks || []).length > 0 && (
-        <div className="DocEditor__statusBar__checks" style={{marginRight: 8}}>
+        <div className="DocEditor__statusBar__checks">
           <Button
             className={checksActive ? 'DocEditor__checksButton--active' : ''}
             variant="default"

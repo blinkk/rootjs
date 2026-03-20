@@ -207,11 +207,11 @@ function StatusBadge(props: {status: CheckStatus}) {
   const label = props.status.charAt(0).toUpperCase() + props.status.slice(1);
   return (
     <Badge
+      className="ChecksPanel__statusBadge"
       color={color}
       size="sm"
       variant="filled"
       leftSection={<Icon size={10} />}
-      style={{marginLeft: 6, verticalAlign: 'middle'}}
     >
       {label}
     </Badge>
