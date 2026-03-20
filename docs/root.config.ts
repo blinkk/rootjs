@@ -1,7 +1,7 @@
 import path from 'node:path';
 import {URL} from 'node:url';
 import {defineConfig} from '@blinkk/root';
-import {cmsPlugin} from '@blinkk/root-cms/plugin';
+import {cmsPlugin, translationsCheck} from '@blinkk/root-cms/plugin';
 
 const rootDir = new URL('.', import.meta.url).pathname;
 
@@ -52,6 +52,16 @@ export default defineConfig({
           design: {label: 'Design System', iframeUrl: '/design'},
         },
       },
+      checks: [
+        translationsCheck(),
+        {
+          id: 'custom/my-check',
+          label: 'My Custom Check',
+          run: async () => {
+            return {status: 'success', message: 'All good!'};
+          },
+        },
+      ],
       experiments: {
         ai: true,
       },

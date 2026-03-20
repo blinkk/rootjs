@@ -8,6 +8,7 @@ import {
   SendPromptOptions,
 } from '../shared/ai/prompts.js';
 import {ChatClient, RootAiModel, summarizeDiff} from './ai.js';
+import {type CMSCheck} from './checks.js';
 import {RootCMSClient, parseDocId, unmarshalData} from './client.js';
 import {runCronJobs} from './cron.js';
 import {arrayToCsv, csvToArray} from './csv.js';
@@ -97,6 +98,8 @@ export interface ChatApiResponse {
 
 export interface ApiOptions {
   getRenderer: (req: Request) => Promise<AppModule>;
+  /** Checks registered via the CMS plugin config. */
+  checks?: CMSCheck[];
 }
 
 /**
@@ -589,6 +592,70 @@ export function api(server: Server, options: ApiOptions) {
         existingTranslations,
       });
       res.status(200).json({success: true, translations});
+    } catch (err: any) {
+      console.error(err.stack || err);
+      res.status(500).json({success: false, error: err.message || 'UNKNOWN'});
+    }
+  });
+
+  /**
+   * Runs a registered check against a document.
+   *
+   * ```
+   * POST /cms/api/check.test
+   * {"check": "check-id", "docId": "Pages/index"}
+   * ```
+   */
+  server.use('/cms/api/check.test', async (req: Request, res: Response) => {
+    if (
+      req.method !== 'POST' ||
+      !String(req.get('content-type')).startsWith('application/json')
+    ) {
+      res.status(400).json({success: false, error: 'BAD_REQUEST'});
+      return;
+    }
+    if (!req.user?.email) {
+      res.status(401).json({success: false, error: 'UNAUTHORIZED'});
+      return;
+    }
+
+    const reqBody = req.body || {};
+    const checkId = String(reqBody.check || '');
+    const docId = String(reqBody.docId || '');
+    if (!checkId || !docId) {
+      res
+        .status(400)
+        .json({success: false, error: 'MISSING_REQUIRED_FIELD'});
+      return;
+    }
+
+    const checks = options.checks || [];
+    const check = checks.find((c) => c.id === checkId);
+    if (!check) {
+      res.status(404).json({success: false, error: 'CHECK_NOT_FOUND'});
+      return;
+    }
+
+    const {collection: collectionId, slug} = parseDocId(docId);
+    const cmsClient = new RootCMSClient(req.rootConfig!);
+
+    let collectionSchema = null;
+    try {
+      collectionSchema = await getCollectionSchema(req, collectionId);
+    } catch (err) {
+      // Schema may not be available, continue with null.
+    }
+
+    try {
+      const result = await check.run({
+        rootConfig: req.rootConfig!,
+        cmsClient,
+        docId,
+        collectionId,
+        slug,
+        collectionSchema,
+      });
+      res.status(200).json({success: true, data: result});
     } catch (err: any) {
       console.error(err.stack || err);
       res.status(500).json({success: false, error: err.message || 'UNKNOWN'});

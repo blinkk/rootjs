@@ -1,0 +1,98 @@
+.ChecksDrawer__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 0 16px;
+}
+
+.ChecksDrawer__header__title {
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.ChecksDrawer__checks {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.ChecksDrawer__check {
+  border: 1px solid #dee2e6;
+  border-radius: 8px;
+  padding: 16px;
+}
+
+.ChecksDrawer__check__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.ChecksDrawer__check__label {
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.ChecksDrawer__check__runButton {
+  flex-shrink: 0;
+}
+
+.ChecksDrawer__check__result {
+  margin-top: 12px;
+  padding: 12px;
+  border-radius: 6px;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.ChecksDrawer__check__result--success {
+  background-color: #d3f9d8;
+  border: 1px solid #8ce99a;
+}
+
+.ChecksDrawer__check__result--warning {
+  background-color: #fff3bf;
+  border: 1px solid #ffe066;
+}
+
+.ChecksDrawer__check__result--error {
+  background-color: #ffe3e3;
+  border: 1px solid #ffa8a8;
+}
+
+.ChecksDrawer__check__result .Markdown {
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.ChecksDrawer__check__result .Markdown p {
+  margin: 0 0 8px;
+}
+
+.ChecksDrawer__check__result .Markdown p:last-child {
+  margin-bottom: 0;
+}
+
+.ChecksDrawer__check__result .Markdown code {
+  background-color: rgba(0, 0, 0, 0.06);
+  padding: 2px 4px;
+  border-radius: 3px;
+  font-size: 12px;
+}
+
+.ChecksDrawer__check__result .Markdown ul,
+.ChecksDrawer__check__result .Markdown ol {
+  margin: 0 0 8px;
+  padding-left: 20px;
+}
+
+.ChecksDrawer__check__error {
+  margin-top: 12px;
+  padding: 12px;
+  background-color: #ffe3e3;
+  border: 1px solid #ffa8a8;
+  border-radius: 6px;
+  font-size: 13px;
+  color: #c92a2a;
+}
