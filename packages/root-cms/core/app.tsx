@@ -133,6 +133,7 @@ export async function renderApp(
       id: c.id,
       label: c.label,
       description: c.description,
+      collections: c.collections,
     })),
   };
   const projectName = cmsConfig.name || cmsConfig.id || '';

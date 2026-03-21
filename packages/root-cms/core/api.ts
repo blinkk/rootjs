@@ -637,6 +637,18 @@ export function api(server: Server, options: ApiOptions) {
     }
 
     const {collection: collectionId, slug} = parseDocId(docId);
+
+    // Enforce collection restriction if configured.
+    if (
+      check.collections &&
+      !check.collections.includes(collectionId)
+    ) {
+      res.status(400).json({
+        success: false,
+        error: 'CHECK_NOT_APPLICABLE',
+      });
+      return;
+    }
     const cmsClient = new RootCMSClient(req.rootConfig!);
 
     let collectionSchema = null;

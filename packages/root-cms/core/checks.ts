@@ -40,6 +40,12 @@ export interface CMSCheck {
   /** Optional description explaining what the check does. */
   description?: string;
   /**
+   * Optional list of collection IDs to restrict this check to. When set, the
+   * check is only shown and runnable for documents belonging to one of the
+   * listed collections. When omitted, the check applies to all collections.
+   */
+  collections?: string[];
+  /**
    * Function that runs the check on the server-side and returns a result.
    */
   run: (ctx: CheckContext) => Promise<CheckResult>;

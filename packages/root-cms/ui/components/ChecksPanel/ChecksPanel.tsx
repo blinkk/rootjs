@@ -30,6 +30,7 @@ interface CheckMeta {
   id: string;
   label: string;
   description?: string;
+  collections?: string[];
 }
 
 export interface ChecksPanelProps {
@@ -56,7 +57,11 @@ async function runCheck(checkId: string, docId: string): Promise<CheckResult> {
  * running them on demand against a document.
  */
 export function ChecksPanel(props: ChecksPanelProps) {
-  const checks: CheckMeta[] = window.__ROOT_CTX.checks || [];
+  const allChecks: CheckMeta[] = window.__ROOT_CTX.checks || [];
+  const collectionId = props.docId.split('/')[0];
+  const checks = allChecks.filter(
+    (c) => !c.collections || c.collections.includes(collectionId)
+  );
   const [states, setStates] = useState<Record<string, CheckState>>({});
 
   const onRunCheck = useCallback(
