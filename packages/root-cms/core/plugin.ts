@@ -30,7 +30,12 @@ import {type CMSCheck} from './checks.js';
 import {Action, RootCMSClient} from './client.js';
 import {sse, SSEBroadcastFn} from './sse.js';
 
-export type {CMSCheck, CheckResult, CheckContext, CheckStatus} from './checks.js';
+export type {
+  CMSCheck,
+  CheckResult,
+  CheckContext,
+  CheckStatus,
+} from './checks.js';
 export {translationsCheck} from './checks-translations.js';
 
 /**
@@ -288,6 +293,9 @@ export type CMSPluginOptions = {
    *   ],
    * });
    * ```
+   *
+   * NOTE: The checks feature is considered a "beta" feature, its interface
+   * may change from version to version as we add new features.
    */
   checks?: CMSCheck[];
 };

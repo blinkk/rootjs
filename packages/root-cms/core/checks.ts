@@ -1,4 +1,4 @@
-import {Request, RootConfig} from '@blinkk/root';
+import {RootConfig} from '@blinkk/root';
 import {RootCMSClient} from './client.js';
 import * as schema from './schema.js';
 
