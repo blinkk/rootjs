@@ -1,3 +1,15 @@
+.DocumentPage__layout {
+  display: flex;
+  height: calc(100vh - 48px);
+  width: calc(100vw - 48px);
+}
+
+.DocumentPage__layout > .SplitPanel {
+  flex: 1;
+  width: auto;
+  min-width: 0;
+}
+
 .DocumentPage {
   --top-bar-height: 36px;
 }
@@ -141,4 +153,50 @@
   bottom: 8px;
   right: 8px;
   font-size: 12px;
+}
+
+.DocumentPage__layout--dragging * {
+  pointer-events: none;
+  user-select: none;
+}
+
+.DocumentPage__checksDivider {
+  flex: 0 0 3px;
+  width: 3px;
+  cursor: col-resize;
+  position: relative;
+}
+
+.DocumentPage__checksDivider::before {
+  content: '';
+  display: block;
+  position: absolute;
+  top: 0;
+  height: 100%;
+  left: 1px;
+  width: 1px;
+  background-color: var(--color-border);
+}
+
+.DocumentPage__checksDivider::after {
+  content: '';
+  display: block;
+  position: absolute;
+  top: 0;
+  height: 100%;
+  left: 0;
+  width: 100%;
+  background-color: transparent;
+  transition: background-color 0.18s ease;
+}
+
+.DocumentPage__checksDivider:hover::after {
+  background-color: lightblue;
+}
+
+.DocumentPage__checks {
+  flex: 0 0 360px;
+  max-height: calc(100vh - 48px);
+  overflow: hidden;
+  background: white;
 }

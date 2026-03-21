@@ -28,6 +28,7 @@ import {
   IconDotsVertical,
   IconLanguage,
   IconLanguageOff,
+  IconListCheck,
   IconLock,
   IconPlanet,
   IconRocket,
@@ -211,6 +212,24 @@ DocEditor.StatusBar = (props: StatusBarProps) => {
 
   const publishDocModal = usePublishDocModal({docId: props.docId});
   const localizationModal = useLocalizationModal();
+  const [checksActive, setChecksActive] = useState(() => {
+    try {
+      const val = window.localStorage.getItem(
+        'root::DocumentPage::checksVisible'
+      );
+      return val ? JSON.parse(val) === true : false;
+    } catch {
+      return false;
+    }
+  });
+
+  useEffect(() => {
+    const handler = (e: Event) => {
+      setChecksActive((e as CustomEvent).detail === true);
+    };
+    window.addEventListener('root:checks-visible', handler);
+    return () => window.removeEventListener('root:checks-visible', handler);
+  }, []);
 
   const urlLocale = (query.locale as string) || '';
   const urlModal = (query.modal as string) || '';
@@ -240,6 +259,22 @@ DocEditor.StatusBar = (props: StatusBarProps) => {
       {data?.sys && (
         <div className="DocEditor__statusBar__statusBadges">
           <DocStatusBadges doc={data as CMSDoc} />
+        </div>
+      )}
+      {(window.__ROOT_CTX.checks || []).length > 0 && (
+        <div className="DocEditor__statusBar__checks">
+          <Button
+            className={checksActive ? 'DocEditor__checksButton--active' : ''}
+            variant="default"
+            color="dark"
+            size="xs"
+            leftIcon={<IconListCheck size={16} />}
+            onClick={() => {
+              window.dispatchEvent(new CustomEvent('root:toggle-checks'));
+            }}
+          >
+            Checks
+          </Button>
         </div>
       )}
       <div className="DocEditor__statusBar__i18n">
