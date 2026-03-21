@@ -55,6 +55,10 @@ jobs:
         with:
           project_id: rootjs-dev
 
+      - name: Download .env from Secrets Manager
+        working-directory: docs
+        run: bash scripts/env-init.sh
+
       - name: Build root
         run: pnpm run build
 
