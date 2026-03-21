@@ -2,12 +2,14 @@ import './DocStatusBadges.css';
 
 import {Badge, Tooltip} from '@mantine/core';
 import {Timestamp} from 'firebase/firestore';
+import {usePendingReleases} from '../../hooks/usePendingReleases.js';
 import {CMSDoc, testPublishingLocked} from '../../utils/doc.js';
 import {formatDateTime, getTimeAgo} from '../../utils/time.js';
 
 interface DocStatusBadgesProps {
   doc: CMSDoc;
   tooltipPosition?: 'bottom' | 'top';
+  hideReleases?: boolean;
 }
 
 export function DocStatusBadges(props: DocStatusBadgesProps) {
@@ -76,6 +78,9 @@ export function DocStatusBadges(props: DocStatusBadgesProps) {
           </Badge>
         </Tooltip>
       )}
+      {!props.hideReleases && (
+        <ReleaseBadges docId={doc.id} tooltipProps={tooltipProps} />
+      )}
     </div>
   );
 }
@@ -93,6 +98,39 @@ export function getPublishingLockedLabel(docData: CMSDoc): string {
     return `Locked until ${formatted} by ${lock.lockedBy}: "${lock.reason}"`;
   }
   return `Locked by ${lock.lockedBy}: "${lock.reason}"`;
+}
+
+function ReleaseBadges(props: {
+  docId: string;
+  tooltipProps: Record<string, any>;
+}) {
+  const {getReleasesForDoc} = usePendingReleases();
+  const releases = getReleasesForDoc(props.docId);
+  if (releases.length === 0) {
+    return null;
+  }
+  return (
+    <>
+      {releases.map((release) => (
+        <Tooltip
+          key={release.id}
+          {...props.tooltipProps}
+          label={`In release: ${release.id}`}
+        >
+          <Badge
+            component="a"
+            href={`/cms/releases/${release.id}`}
+            size="xs"
+            variant="gradient"
+            gradient={{from: 'violet', to: 'grape'}}
+            style={{cursor: 'pointer'}}
+          >
+            {release.id}
+          </Badge>
+        </Tooltip>
+      ))}
+    </>
+  );
 }
 
 function timeDiff(ts: Timestamp | null) {
