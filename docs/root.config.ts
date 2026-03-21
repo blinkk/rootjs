@@ -1,7 +1,7 @@
 import path from 'node:path';
 import {URL} from 'node:url';
 import {defineConfig} from '@blinkk/root';
-import {cmsPlugin, translationsCheck} from '@blinkk/root-cms/plugin';
+import {cmsPlugin} from '@blinkk/root-cms/plugin';
 
 const rootDir = new URL('.', import.meta.url).pathname;
 
@@ -53,7 +53,6 @@ export default defineConfig({
         },
       },
       checks: [
-        translationsCheck(),
         {
           id: 'custom/green-check',
           label: 'Green Check',
