@@ -37,7 +37,7 @@ export default defineConfig({
       id: 'www',
       name: 'Root.js',
       firebaseConfig: {
-        apiKey: 'AIzaSyDIoi6zECKeyJoCduYEmV5j9PIF-wbpaPo',
+        apiKey: process.env.GAPI_API_KEY,
         authDomain: 'rootjs-dev.firebaseapp.com',
         projectId: 'rootjs-dev',
         storageBucket: 'rootjs-dev.appspot.com',
