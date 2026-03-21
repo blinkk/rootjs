@@ -1,4 +1,4 @@
-import {Button, Checkbox} from '@mantine/core';
+import {Button} from '@mantine/core';
 import {ContextModalProps, useModals} from '@mantine/modals';
 import {showNotification} from '@mantine/notifications';
 import {useState, useEffect} from 'preact/hooks';
@@ -43,7 +43,6 @@ export function CopyDocModal(modalProps: ContextModalProps<CopyDocModalProps>) {
   const [error, setError] = useState('');
   const [confirmOverwrite, setConfirmOverwrite] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [copyTranslations, setCopyTranslations] = useState(false);
   const [translationsMap, setTranslationsMap] = useState<
     Record<string, unknown>
   >({});
@@ -51,9 +50,8 @@ export function CopyDocModal(modalProps: ContextModalProps<CopyDocModalProps>) {
   const fromDocId = props.fromDocId;
   const fromCollectionId = fromDocId.split('/')[0];
   const sourceLabel = props.fromLabel || fromDocId;
-  const hasTranslations = Object.keys(translationsMap).length > 0;
 
-  // Check if the source doc has any tagged translations.
+  // Load translations tagged with the source doc ID.
   useEffect(() => {
     loadTranslations({tags: [fromDocId]}).then(setTranslationsMap);
   }, [fromDocId]);
@@ -93,16 +91,15 @@ export function CopyDocModal(modalProps: ContextModalProps<CopyDocModalProps>) {
         await cmsCopyDoc(fromDocId, toDocId, {overwrite: confirmOverwrite});
       }
 
-      // Copy translations by adding the new doc ID tag to all strings
+      // Auto-copy translations by adding the new doc ID tag to all strings
       // tagged with the old doc ID.
-      if (copyTranslations) {
-        const updates = Object.keys(translationsMap).map((hash) => ({
+      const translationHashes = Object.keys(translationsMap);
+      if (translationHashes.length > 0) {
+        const updates = translationHashes.map((hash) => ({
           hash,
           tags: [toDocId],
         }));
-        if (updates.length > 0) {
-          await batchUpdateTags(updates, {mode: 'union'});
-        }
+        await batchUpdateTags(updates, {mode: 'union'});
       }
 
       context.closeModal(id);
@@ -159,20 +156,6 @@ export function CopyDocModal(modalProps: ContextModalProps<CopyDocModalProps>) {
             }}
           />
         </div>
-
-        {hasTranslations && (
-          <div className="CopyDocModal__copyTranslations">
-            <Checkbox
-              label="Also copy translations"
-              size="xs"
-              checked={copyTranslations}
-              onChange={(e: Event) => {
-                const target = e.currentTarget as HTMLInputElement;
-                setCopyTranslations(target.checked);
-              }}
-            />
-          </div>
-        )}
 
         {error && <div className="CopyDocModal__error">{error}</div>}
 
