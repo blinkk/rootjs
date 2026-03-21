@@ -8,6 +8,8 @@ import {formatDateTime, getTimeAgo} from '../../utils/time.js';
 
 interface DocStatusBadgesProps {
   doc: CMSDoc;
+  /** Doc ID used for release lookup. Falls back to doc.id if not provided. */
+  docId?: string;
   tooltipPosition?: 'bottom' | 'top';
   hideReleases?: boolean;
 }
@@ -79,7 +81,10 @@ export function DocStatusBadges(props: DocStatusBadgesProps) {
         </Tooltip>
       )}
       {!props.hideReleases && (
-        <ReleaseBadges docId={doc.id} tooltipProps={tooltipProps} />
+        <ReleaseBadges
+          docId={props.docId || doc.id}
+          tooltipProps={tooltipProps}
+        />
       )}
     </div>
   );

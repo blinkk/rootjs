@@ -258,7 +258,7 @@ DocEditor.StatusBar = (props: StatusBarProps) => {
       <DocEditor.SaveState />
       {data?.sys && (
         <div className="DocEditor__statusBar__statusBadges">
-          <DocStatusBadges doc={data as CMSDoc} />
+          <DocStatusBadges doc={data as CMSDoc} docId={props.docId} />
         </div>
       )}
       {(window.__ROOT_CTX.checks || []).length > 0 && (
