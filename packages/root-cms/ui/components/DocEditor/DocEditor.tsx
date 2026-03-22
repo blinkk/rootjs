@@ -7,6 +7,29 @@ import {
   DroppableProvided,
   DropResult,
 } from '@hello-pangea/dnd';
+
+// Monkeypatch: the @hello-pangea/dnd mouse sensor rejects mousedown events when
+// modifier keys (including Alt/Option) are held. To support Alt+drag for cloning
+// array items, we intercept mousedown at the capture phase *before* the library
+// registers its own listener, and override `altKey` on the event instance.
+let _cloneDragActive = false;
+if (typeof window !== 'undefined') {
+  window.addEventListener(
+    'mousedown',
+    (e: MouseEvent) => {
+      if (!e.altKey) {
+        _cloneDragActive = false;
+        return;
+      }
+      const target = e.target as Element | null;
+      if (target?.closest?.('.DocEditor__ArrayField__item__handle')) {
+        _cloneDragActive = true;
+        Object.defineProperty(e, 'altKey', {value: false});
+      }
+    },
+    {capture: true}
+  );
+}
 import {
   ActionIcon,
   Button,
@@ -1093,7 +1116,6 @@ DocEditor.ArrayField = (props: FieldProps) => {
   const deeplink = useDeeplink();
   const virtualClipboard = useVirtualClipboard();
   const experiments = window.__ROOT_CTX.experiments || {};
-  const altKeyRef = useRef(false);
 
   const data = value ?? {};
   const order = data._array || [];
@@ -1101,33 +1123,6 @@ DocEditor.ArrayField = (props: FieldProps) => {
   // Keep track of newly-added keys, which should start in the "open" state.
   const newlyAdded = value._new || [];
   const [cutIndex, setCutIndex] = useState<number | null>(null);
-
-  // Track the Alt/Option key state for opt+drag cloning. The drag library
-  // blocks drag initiation when modifier keys are held, so the user must
-  // start dragging first, then hold Alt/Option to clone on drop.
-  useEffect(() => {
-    const onMouseMove = (e: MouseEvent) => {
-      altKeyRef.current = e.altKey;
-    };
-    const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Alt') {
-        altKeyRef.current = true;
-      }
-    };
-    const onKeyUp = (e: KeyboardEvent) => {
-      if (e.key === 'Alt') {
-        altKeyRef.current = false;
-      }
-    };
-    window.addEventListener('mousemove', onMouseMove);
-    window.addEventListener('keydown', onKeyDown, true);
-    window.addEventListener('keyup', onKeyUp, true);
-    return () => {
-      window.removeEventListener('mousemove', onMouseMove);
-      window.removeEventListener('keydown', onKeyDown, true);
-      window.removeEventListener('keyup', onKeyUp, true);
-    };
-  }, []);
 
   useDraftDocField(props.deepKey, (newValue: ArrayFieldValue) => {
     dispatch({type: 'update', newValue});
@@ -1424,7 +1419,8 @@ DocEditor.ArrayField = (props: FieldProps) => {
           if (!destination) {
             return;
           }
-          if (altKeyRef.current) {
+          if (_cloneDragActive) {
+            _cloneDragActive = false;
             dispatch({
               type: 'cloneTo',
               fromIndex: source.index,
