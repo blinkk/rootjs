@@ -908,6 +908,7 @@ function arrayReducer(state: ArrayFieldValue, action: ArrayAction) {
         [newKey]: clonedValue,
         _array: order,
         _new: action.skipOpen ? newlyAdded : [...newlyAdded, newKey],
+        _moved: action.skipOpen ? newKey : undefined,
       };
     }
     case 'moveUp': {
