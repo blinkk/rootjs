@@ -1439,7 +1439,41 @@ DocEditor.ArrayField = (props: FieldProps) => {
           }
         }}
       >
-        <Droppable droppableId="dnd-list" direction="vertical">
+        <Droppable
+          droppableId="dnd-list"
+          direction="vertical"
+          renderClone={(provided, snapshot, rubric) => {
+            const dragIndex = rubric.source.index;
+            const dragKey = order[dragIndex];
+            return (
+              <div
+                ref={provided.innerRef}
+                {...provided.draggableProps}
+                {...provided.dragHandleProps}
+                className={joinClassNames(
+                  'DocEditor__ArrayField__item__wrapper',
+                  'DocEditor__ArrayField__item__wrapper--dragging'
+                )}
+              >
+                <div className="DocEditor__ArrayField__item__handle">
+                  <IconGripVertical size={18} stroke={'1.5'} />
+                </div>
+                <details className="DocEditor__ArrayField__item">
+                  <summary className="DocEditor__ArrayField__item__header">
+                    <div className="DocEditor__ArrayField__item__header__icon">
+                      <IconTriangleFilled size={6} />
+                    </div>
+                    <DocEditor.ArrayFieldPreview
+                      field={field}
+                      deepKey={`${props.deepKey}.${dragKey}`}
+                      index={dragIndex}
+                    />
+                  </summary>
+                </details>
+              </div>
+            );
+          }}
+        >
           {(provided: DroppableProvided) => (
             <div
               {...provided.droppableProps}
@@ -1450,7 +1484,6 @@ DocEditor.ArrayField = (props: FieldProps) => {
                 return (
                   <Draggable key={key} index={i} draggableId={key}>
                     {(provided, snapshot) => (
-                      <>
                         <div
                           ref={provided.innerRef}
                           {...provided.draggableProps}
@@ -1637,29 +1670,6 @@ DocEditor.ArrayField = (props: FieldProps) => {
                           </div>
                         </details>
                       </div>
-                      {snapshot.isDragging && _cloneDragActive && (
-                        <div
-                          className="DocEditor__ArrayField__item__wrapper"
-                          style={{transform: 'none !important'}}
-                        >
-                          <div className="DocEditor__ArrayField__item__handle">
-                            <IconGripVertical size={18} stroke={'1.5'} />
-                          </div>
-                          <details className="DocEditor__ArrayField__item">
-                            <summary className="DocEditor__ArrayField__item__header">
-                              <div className="DocEditor__ArrayField__item__header__icon">
-                                <IconTriangleFilled size={6} />
-                              </div>
-                              <DocEditor.ArrayFieldPreview
-                                field={field}
-                                deepKey={`${props.deepKey}.${key}`}
-                                index={i}
-                              />
-                            </summary>
-                          </details>
-                        </div>
-                      )}
-                      </>
                     )}
                   </Draggable>
                 );
