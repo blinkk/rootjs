@@ -760,6 +760,7 @@ interface ArrayDuplicate {
   draft: DraftDocController;
   deepKey: string;
   value: ArrayItemValue;
+  skipOpen?: boolean;
 }
 
 interface ArrayMoveUp {
@@ -906,7 +907,7 @@ function arrayReducer(state: ArrayFieldValue, action: ArrayAction) {
         ...data,
         [newKey]: clonedValue,
         _array: order,
-        _new: [...newlyAdded, newKey],
+        _new: action.skipOpen ? newlyAdded : [...newlyAdded, newKey],
       };
     }
     case 'moveUp': {
@@ -1389,7 +1390,14 @@ DocEditor.ArrayField = (props: FieldProps) => {
                           {...provided.dragHandleProps}
                           onClick={(e: MouseEvent) => {
                             if (e.altKey) {
-                              duplicate(i);
+                              dispatch({
+                                type: 'duplicate',
+                                draft,
+                                deepKey: props.deepKey,
+                                index: i,
+                                value: getItemValue(i),
+                                skipOpen: true,
+                              });
                               return;
                             }
                             focusFieldHeader(props.deepKey, i);
