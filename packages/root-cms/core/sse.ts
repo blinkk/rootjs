@@ -46,12 +46,38 @@ export function sse(server: Server) {
       {serverVersion: getServerVersion()}
     );
     res.write(connectedMessage);
-    req.on('close', () => {
+
+    // Send periodic heartbeat comments to keep the connection alive through
+    // intermediate proxies.
+    const heartbeatInterval = setInterval(() => {
+      try {
+        res.write(':heartbeat\n\n');
+      } catch {
+        clearInterval(heartbeatInterval);
+      }
+    }, 30_000);
+
+    // Proactively close the connection before GAE's request deadline (~10 min)
+    // to avoid 500 errors. The client will automatically reconnect.
+    const maxConnectionTimer = setTimeout(() => {
+      clearInterval(heartbeatInterval);
+      try {
+        // Tell the client to reconnect after a short delay.
+        res.write('retry: 1000\n\n');
+        res.end();
+      } catch {
+        // Connection may already be closed.
+      }
       sseClients.delete(res);
-    });
-    req.on('aborted', () => {
+    }, 9 * 60_000);
+
+    const cleanup = () => {
+      clearInterval(heartbeatInterval);
+      clearTimeout(maxConnectionTimer);
       sseClients.delete(res);
-    });
+    };
+    req.on('close', cleanup);
+    req.on('aborted', cleanup);
   });
 
   return {sseBroadcast};
