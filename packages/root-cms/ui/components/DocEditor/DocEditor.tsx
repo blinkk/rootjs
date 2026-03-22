@@ -12,20 +12,60 @@ import {
 // modifier keys (including Alt/Option) are held. To support Alt+drag for cloning
 // array items, we intercept mousedown at the capture phase *before* the library
 // registers its own listener, and override `altKey` on the event instance.
+//
+// Flow: Alt+mousedown → clone item in state → stopPropagation → after re-render,
+// dispatch a synthetic mousedown so the library starts a normal drag on the
+// original item (which now sits next to its clone).
 let _cloneDragActive = false;
+let _syntheticMousedown = false;
+let _cloneFn: ((index: number) => void) | null = null;
 if (typeof window !== 'undefined') {
   window.addEventListener(
     'mousedown',
     (e: MouseEvent) => {
+      if (_syntheticMousedown) {
+        _syntheticMousedown = false;
+        return;
+      }
       if (!e.altKey) {
         _cloneDragActive = false;
         return;
       }
       const target = e.target as Element | null;
-      if (target?.closest?.('.DocEditor__ArrayField__item__handle')) {
-        _cloneDragActive = true;
-        Object.defineProperty(e, 'altKey', {value: false});
-      }
+      const handle = target?.closest?.('.DocEditor__ArrayField__item__handle') as HTMLElement | null;
+      if (!handle) return;
+
+      _cloneDragActive = true;
+      e.stopPropagation();
+
+      // Determine which item index was clicked.
+      const wrapper = handle.closest('.DocEditor__ArrayField__item__wrapper');
+      const container = wrapper?.parentElement;
+      if (!wrapper || !container) return;
+      const siblings = container.querySelectorAll(
+        ':scope > .DocEditor__ArrayField__item__wrapper'
+      );
+      const index = Array.from(siblings).indexOf(wrapper);
+      if (index < 0 || !_cloneFn) return;
+
+      // Clone the item in state (inserts duplicate at index + 1).
+      _cloneFn(index);
+
+      // After Preact re-renders, re-dispatch a plain mousedown so the library
+      // picks up a normal drag on the original item.
+      const {clientX, clientY, button} = e;
+      requestAnimationFrame(() => {
+        _syntheticMousedown = true;
+        handle.dispatchEvent(
+          new MouseEvent('mousedown', {
+            bubbles: true,
+            cancelable: true,
+            clientX,
+            clientY,
+            button,
+          })
+        );
+      });
     },
     {capture: true}
   );
@@ -807,14 +847,6 @@ interface ArrayMoveTo {
   deepKey: string;
 }
 
-interface ArrayCloneTo {
-  type: 'cloneTo';
-  fromIndex: number;
-  toIndex: number;
-  draft: DraftDocController;
-  deepKey: string;
-}
-
 interface ArrayRemoveAt {
   type: 'removeAt';
   index: number;
@@ -840,7 +872,6 @@ interface ArrayPasteBefore {
 
 type ArrayAction =
   | ArrayAdd
-  | ArrayCloneTo
   | ArrayDuplicate
   | ArrayInsertAfter
   | ArrayInsertBefore
@@ -994,40 +1025,6 @@ function arrayReducer(state: ArrayFieldValue, action: ArrayAction) {
         ...data,
         _array: order,
         _moved: itemKey,
-      };
-    }
-    case 'cloneTo': {
-      const data = state ?? {};
-      const order = [...(data._array || [])];
-      if (
-        action.fromIndex < 0 ||
-        action.fromIndex >= order.length ||
-        action.toIndex < 0 ||
-        action.toIndex >= order.length
-      ) {
-        console.error('Invalid cloneTo index', action);
-        return state;
-      }
-      const sourceKey = order[action.fromIndex];
-      const clonedValue = structuredClone(data[sourceKey] || {});
-      const newKey = autokey();
-      // Adjust insert index: the drag library reports toIndex assuming the
-      // source was removed. Since we keep the source, shift by 1 when
-      // dragging downward.
-      const insertIndex =
-        action.fromIndex < action.toIndex
-          ? action.toIndex + 1
-          : action.toIndex;
-      order.splice(insertIndex, 0, newKey);
-      action.draft.updateKeys({
-        [`${action.deepKey}._array`]: order,
-        [`${action.deepKey}.${newKey}`]: clonedValue,
-      });
-      return {
-        ...data,
-        [newKey]: clonedValue,
-        _array: order,
-        _pasted: newKey,
       };
     }
     case 'removeAt': {
@@ -1202,6 +1199,15 @@ DocEditor.ArrayField = (props: FieldProps) => {
       value: getItemValue(index),
     });
   };
+
+  // Register the clone callback so the module-level mousedown handler can
+  // duplicate an item before the drag starts.
+  useEffect(() => {
+    _cloneFn = (index: number) => duplicate(index);
+    return () => {
+      if (_cloneFn) _cloneFn = null;
+    };
+  });
 
   const removeAt = (index: number) => {
     dispatch({
@@ -1415,28 +1421,18 @@ DocEditor.ArrayField = (props: FieldProps) => {
     <div className="DocEditor__ArrayField">
       <DragDropContext
         onDragEnd={(result: DropResult) => {
+          _cloneDragActive = false;
           const {source, destination} = result;
           if (!destination) {
             return;
           }
-          if (_cloneDragActive) {
-            _cloneDragActive = false;
-            dispatch({
-              type: 'cloneTo',
-              fromIndex: source.index,
-              toIndex: destination.index,
-              draft,
-              deepKey: props.deepKey,
-            });
-          } else {
-            dispatch({
-              type: 'moveTo',
-              fromIndex: source.index,
-              toIndex: destination.index,
-              draft,
-              deepKey: props.deepKey,
-            });
-          }
+          dispatch({
+            type: 'moveTo',
+            fromIndex: source.index,
+            toIndex: destination.index,
+            draft,
+            deepKey: props.deepKey,
+          });
         }}
       >
         <Droppable
