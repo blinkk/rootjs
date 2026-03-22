@@ -69,6 +69,12 @@ export function DocStatusBadges(props: DocStatusBadgesProps) {
           </Badge>
         </Tooltip>
       )}
+      {!props.hideReleases && (
+        <ReleaseBadges
+          docId={props.docId || doc.id}
+          tooltipProps={tooltipProps}
+        />
+      )}
       {testPublishingLocked(doc) && (
         <Tooltip {...tooltipProps} label={getPublishingLockedLabel(doc)}>
           <Badge
@@ -79,12 +85,6 @@ export function DocStatusBadges(props: DocStatusBadgesProps) {
             Locked
           </Badge>
         </Tooltip>
-      )}
-      {!props.hideReleases && (
-        <ReleaseBadges
-          docId={props.docId || doc.id}
-          tooltipProps={tooltipProps}
-        />
       )}
     </div>
   );
