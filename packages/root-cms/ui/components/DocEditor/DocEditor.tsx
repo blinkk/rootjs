@@ -7,69 +7,6 @@ import {
   DroppableProvided,
   DropResult,
 } from '@hello-pangea/dnd';
-
-// Monkeypatch: the @hello-pangea/dnd mouse sensor rejects mousedown events when
-// modifier keys (including Alt/Option) are held. To support Alt+drag for cloning
-// array items, we intercept mousedown at the capture phase *before* the library
-// registers its own listener, and override `altKey` on the event instance.
-//
-// Flow: Alt+mousedown → clone item in state → stopPropagation → after re-render,
-// dispatch a synthetic mousedown so the library starts a normal drag on the
-// original item (which now sits next to its clone).
-let _cloneDragActive = false;
-let _syntheticMousedown = false;
-let _cloneFn: ((index: number) => void) | null = null;
-if (typeof window !== 'undefined') {
-  window.addEventListener(
-    'mousedown',
-    (e: MouseEvent) => {
-      if (_syntheticMousedown) {
-        _syntheticMousedown = false;
-        return;
-      }
-      if (!e.altKey) {
-        _cloneDragActive = false;
-        return;
-      }
-      const target = e.target as Element | null;
-      const handle = target?.closest?.('.DocEditor__ArrayField__item__handle') as HTMLElement | null;
-      if (!handle) return;
-
-      _cloneDragActive = true;
-      e.stopPropagation();
-
-      // Determine which item index was clicked.
-      const wrapper = handle.closest('.DocEditor__ArrayField__item__wrapper');
-      const container = wrapper?.parentElement;
-      if (!wrapper || !container) return;
-      const siblings = container.querySelectorAll(
-        ':scope > .DocEditor__ArrayField__item__wrapper'
-      );
-      const index = Array.from(siblings).indexOf(wrapper);
-      if (index < 0 || !_cloneFn) return;
-
-      // Clone the item in state (inserts duplicate at index + 1).
-      _cloneFn(index);
-
-      // After Preact re-renders, re-dispatch a plain mousedown so the library
-      // picks up a normal drag on the original item.
-      const {clientX, clientY, button} = e;
-      requestAnimationFrame(() => {
-        _syntheticMousedown = true;
-        handle.dispatchEvent(
-          new MouseEvent('mousedown', {
-            bubbles: true,
-            cancelable: true,
-            clientX,
-            clientY,
-            button,
-          })
-        );
-      });
-    },
-    {capture: true}
-  );
-}
 import {
   ActionIcon,
   Button,
@@ -1200,15 +1137,6 @@ DocEditor.ArrayField = (props: FieldProps) => {
     });
   };
 
-  // Register the clone callback so the module-level mousedown handler can
-  // duplicate an item before the drag starts.
-  useEffect(() => {
-    _cloneFn = (index: number) => duplicate(index);
-    return () => {
-      if (_cloneFn) _cloneFn = null;
-    };
-  });
-
   const removeAt = (index: number) => {
     dispatch({
       type: 'removeAt',
@@ -1421,7 +1349,6 @@ DocEditor.ArrayField = (props: FieldProps) => {
     <div className="DocEditor__ArrayField">
       <DragDropContext
         onDragEnd={(result: DropResult) => {
-          _cloneDragActive = false;
           const {source, destination} = result;
           if (!destination) {
             return;
@@ -1435,41 +1362,7 @@ DocEditor.ArrayField = (props: FieldProps) => {
           });
         }}
       >
-        <Droppable
-          droppableId="dnd-list"
-          direction="vertical"
-          renderClone={(provided, snapshot, rubric) => {
-            const dragIndex = rubric.source.index;
-            const dragKey = order[dragIndex];
-            return (
-              <div
-                ref={provided.innerRef}
-                {...provided.draggableProps}
-                {...provided.dragHandleProps}
-                className={joinClassNames(
-                  'DocEditor__ArrayField__item__wrapper',
-                  'DocEditor__ArrayField__item__wrapper--dragging'
-                )}
-              >
-                <div className="DocEditor__ArrayField__item__handle">
-                  <IconGripVertical size={18} stroke={'1.5'} />
-                </div>
-                <details className="DocEditor__ArrayField__item">
-                  <summary className="DocEditor__ArrayField__item__header">
-                    <div className="DocEditor__ArrayField__item__header__icon">
-                      <IconTriangleFilled size={6} />
-                    </div>
-                    <DocEditor.ArrayFieldPreview
-                      field={field}
-                      deepKey={`${props.deepKey}.${dragKey}`}
-                      index={dragIndex}
-                    />
-                  </summary>
-                </details>
-              </div>
-            );
-          }}
-        >
+        <Droppable droppableId="dnd-list" direction="vertical">
           {(provided: DroppableProvided) => (
             <div
               {...provided.droppableProps}
@@ -1494,7 +1387,13 @@ DocEditor.ArrayField = (props: FieldProps) => {
                         <div
                           className="DocEditor__ArrayField__item__handle"
                           {...provided.dragHandleProps}
-                          onClick={() => focusFieldHeader(props.deepKey, i)}
+                          onClick={(e: MouseEvent) => {
+                            if (e.altKey) {
+                              duplicate(i);
+                              return;
+                            }
+                            focusFieldHeader(props.deepKey, i);
+                          }}
                         >
                           <IconGripVertical size={18} stroke={'1.5'} />
                         </div>
