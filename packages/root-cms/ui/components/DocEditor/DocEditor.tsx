@@ -784,6 +784,14 @@ interface ArrayMoveTo {
   deepKey: string;
 }
 
+interface ArrayCloneTo {
+  type: 'cloneTo';
+  fromIndex: number;
+  toIndex: number;
+  draft: DraftDocController;
+  deepKey: string;
+}
+
 interface ArrayRemoveAt {
   type: 'removeAt';
   index: number;
@@ -809,6 +817,7 @@ interface ArrayPasteBefore {
 
 type ArrayAction =
   | ArrayAdd
+  | ArrayCloneTo
   | ArrayDuplicate
   | ArrayInsertAfter
   | ArrayInsertBefore
@@ -964,6 +973,40 @@ function arrayReducer(state: ArrayFieldValue, action: ArrayAction) {
         _moved: itemKey,
       };
     }
+    case 'cloneTo': {
+      const data = state ?? {};
+      const order = [...(data._array || [])];
+      if (
+        action.fromIndex < 0 ||
+        action.fromIndex >= order.length ||
+        action.toIndex < 0 ||
+        action.toIndex >= order.length
+      ) {
+        console.error('Invalid cloneTo index', action);
+        return state;
+      }
+      const sourceKey = order[action.fromIndex];
+      const clonedValue = structuredClone(data[sourceKey] || {});
+      const newKey = autokey();
+      // Adjust insert index: the drag library reports toIndex assuming the
+      // source was removed. Since we keep the source, shift by 1 when
+      // dragging downward.
+      const insertIndex =
+        action.fromIndex < action.toIndex
+          ? action.toIndex + 1
+          : action.toIndex;
+      order.splice(insertIndex, 0, newKey);
+      action.draft.updateKeys({
+        [`${action.deepKey}._array`]: order,
+        [`${action.deepKey}.${newKey}`]: clonedValue,
+      });
+      return {
+        ...data,
+        [newKey]: clonedValue,
+        _array: order,
+        _pasted: newKey,
+      };
+    }
     case 'removeAt': {
       const data = {...(state ?? {})};
       const order = data._array || [];
@@ -1050,6 +1093,7 @@ DocEditor.ArrayField = (props: FieldProps) => {
   const deeplink = useDeeplink();
   const virtualClipboard = useVirtualClipboard();
   const experiments = window.__ROOT_CTX.experiments || {};
+  const altKeyRef = useRef(false);
 
   const data = value ?? {};
   const order = data._array || [];
@@ -1057,6 +1101,25 @@ DocEditor.ArrayField = (props: FieldProps) => {
   // Keep track of newly-added keys, which should start in the "open" state.
   const newlyAdded = value._new || [];
   const [cutIndex, setCutIndex] = useState<number | null>(null);
+
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Alt') {
+        altKeyRef.current = true;
+      }
+    };
+    const onKeyUp = (e: KeyboardEvent) => {
+      if (e.key === 'Alt') {
+        altKeyRef.current = false;
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    window.addEventListener('keyup', onKeyUp);
+    return () => {
+      window.removeEventListener('keydown', onKeyDown);
+      window.removeEventListener('keyup', onKeyUp);
+    };
+  }, []);
 
   useDraftDocField(props.deepKey, (newValue: ArrayFieldValue) => {
     dispatch({type: 'update', newValue});
@@ -1353,13 +1416,23 @@ DocEditor.ArrayField = (props: FieldProps) => {
           if (!destination) {
             return;
           }
-          dispatch({
-            type: 'moveTo',
-            fromIndex: source.index,
-            toIndex: destination.index,
-            draft,
-            deepKey: props.deepKey,
-          });
+          if (altKeyRef.current) {
+            dispatch({
+              type: 'cloneTo',
+              fromIndex: source.index,
+              toIndex: destination.index,
+              draft,
+              deepKey: props.deepKey,
+            });
+          } else {
+            dispatch({
+              type: 'moveTo',
+              fromIndex: source.index,
+              toIndex: destination.index,
+              draft,
+              deepKey: props.deepKey,
+            });
+          }
         }}
       >
         <Droppable droppableId="dnd-list" direction="vertical">
