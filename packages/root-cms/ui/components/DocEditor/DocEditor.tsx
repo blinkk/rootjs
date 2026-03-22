@@ -1102,7 +1102,13 @@ DocEditor.ArrayField = (props: FieldProps) => {
   const newlyAdded = value._new || [];
   const [cutIndex, setCutIndex] = useState<number | null>(null);
 
+  // Track the Alt/Option key state for opt+drag cloning. The drag library
+  // blocks drag initiation when modifier keys are held, so the user must
+  // start dragging first, then hold Alt/Option to clone on drop.
   useEffect(() => {
+    const onMouseMove = (e: MouseEvent) => {
+      altKeyRef.current = e.altKey;
+    };
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Alt') {
         altKeyRef.current = true;
@@ -1113,11 +1119,13 @@ DocEditor.ArrayField = (props: FieldProps) => {
         altKeyRef.current = false;
       }
     };
-    window.addEventListener('keydown', onKeyDown);
-    window.addEventListener('keyup', onKeyUp);
+    window.addEventListener('mousemove', onMouseMove);
+    window.addEventListener('keydown', onKeyDown, true);
+    window.addEventListener('keyup', onKeyUp, true);
     return () => {
-      window.removeEventListener('keydown', onKeyDown);
-      window.removeEventListener('keyup', onKeyUp);
+      window.removeEventListener('mousemove', onMouseMove);
+      window.removeEventListener('keydown', onKeyDown, true);
+      window.removeEventListener('keyup', onKeyUp, true);
     };
   }, []);
 

@@ -153,9 +153,26 @@ function loginSuccessRedirect() {
   window.location.replace(redirectUrl);
 }
 
-const app = initializeApp(window.__ROOT_CTX.firebaseConfig);
-const auth = getAuth(app);
-window.firebase = {app, auth};
-const root = document.getElementById('root')!;
-root.innerHTML = '';
-render(<SignIn />, root);
+try {
+  const app = initializeApp(window.__ROOT_CTX.firebaseConfig);
+  const auth = getAuth(app);
+  window.firebase = {app, auth};
+  const root = document.getElementById('root')!;
+  root.innerHTML = '';
+  render(<SignIn />, root);
+} catch (err) {
+  console.error(err);
+  const root = document.getElementById('root')!;
+  root.innerHTML = '';
+  render(<BootstrapError message={(err as Error).message} />, root);
+}
+
+function BootstrapError(props: {message: string}) {
+  return (
+    <div className="bootstrap">
+      <div className="bootstrap-warning">
+        Something went wrong: {props.message}
+      </div>
+    </div>
+  );
+}

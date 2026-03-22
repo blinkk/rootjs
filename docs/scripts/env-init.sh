@@ -10,10 +10,19 @@ ENV_FILE="$DOCS_DIR/.env"
 PROJECT="rootjs-dev"
 SECRET_NAME="docs-env"
 
-if [[ -f "$ENV_FILE" ]]; then
+if [[ -s "$ENV_FILE" ]]; then
   exit 0
 fi
 
 echo ".env file not found, downloading from Google Secrets Manager..."
-gcloud secrets versions access latest --secret="$SECRET_NAME" --project="$PROJECT" > "$ENV_FILE"
+ENV_CONTENT="$(gcloud secrets versions access latest --secret="$SECRET_NAME" --project="$PROJECT")" || {
+  echo "ERROR: Failed to download .env from Google Secrets Manager." >&2
+  echo "Ensure gcloud is installed, you are authenticated, and have access to project '$PROJECT'." >&2
+  exit 1
+}
+if [[ -z "$ENV_CONTENT" ]]; then
+  echo "ERROR: Secret '$SECRET_NAME' returned empty content." >&2
+  exit 1
+fi
+echo "$ENV_CONTENT" > "$ENV_FILE"
 echo "Downloaded .env file."

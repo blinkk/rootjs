@@ -176,7 +176,12 @@ declare global {
         channel: true | false | 'to-preview' | 'from-preview';
       };
       /** Checks registered via the CMS plugin config. */
-      checks?: Array<{id: string; label: string; description?: string; collections?: string[]}>;
+      checks?: Array<{
+        id: string;
+        label: string;
+        description?: string;
+        collections?: string[];
+      }>;
     };
     firebase: FirebaseContextObject;
   }
@@ -316,35 +321,52 @@ function registerDevServerRedirectShortcut() {
 
 registerDevServerRedirectShortcut();
 
-const app = initializeApp(window.__ROOT_CTX.firebaseConfig);
-const databaseId = window.__ROOT_CTX.firebaseConfig.databaseId || '(default)';
-// const db = getFirestore(app);
-// NOTE(stevenle): the firestore web channel rpc sometimes has issues in
-// collections with a large number of docs. Forcing long polling and disabling
-// fetch streams seems to work for some people. This may cause performance
-// issues however.
-const db = initializeFirestore(
-  app,
-  {
-    experimentalForceLongPolling: true,
-    useFetchStreams: false,
-  } as any,
-  databaseId
-);
-const auth = getAuth(app);
-const storage = getStorage(app);
-auth.onAuthStateChanged((user) => {
-  if (!user) {
-    loginRedirect();
-    return;
-  }
-  window.firebase = {app, auth, db, storage, user};
+try {
+  const app = initializeApp(window.__ROOT_CTX.firebaseConfig);
+  const databaseId = window.__ROOT_CTX.firebaseConfig.databaseId || '(default)';
+  // const db = getFirestore(app);
+  // NOTE(stevenle): the firestore web channel rpc sometimes has issues in
+  // collections with a large number of docs. Forcing long polling and disabling
+  // fetch streams seems to work for some people. This may cause performance
+  // issues however.
+  const db = initializeFirestore(
+    app,
+    {
+      experimentalForceLongPolling: true,
+      useFetchStreams: false,
+    } as any,
+    databaseId
+  );
+  const auth = getAuth(app);
+  const storage = getStorage(app);
+  auth.onAuthStateChanged((user) => {
+    if (!user) {
+      loginRedirect();
+      return;
+    }
+    window.firebase = {app, auth, db, storage, user};
+    const root = document.getElementById('root')!;
+    root.innerHTML = '';
+    render(<App />, root);
+
+    updateSession(user);
+  });
+} catch (err) {
+  console.error(err);
   const root = document.getElementById('root')!;
   root.innerHTML = '';
-  render(<App />, root);
+  render(<BootstrapError message={(err as Error).message} />, root);
+}
 
-  updateSession(user);
-});
+function BootstrapError(props: {message: string}) {
+  return (
+    <div className="bootstrap">
+      <div className="bootstrap-warning">
+        Something went wrong: {props.message}
+      </div>
+    </div>
+  );
+}
 
 async function updateSession(user: User) {
   const idToken = await user.getIdToken();
