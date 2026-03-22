@@ -1450,17 +1450,18 @@ DocEditor.ArrayField = (props: FieldProps) => {
                 return (
                   <Draggable key={key} index={i} draggableId={key}>
                     {(provided, snapshot) => (
-                      <div
-                        ref={provided.innerRef}
-                        {...provided.draggableProps}
-                        className={joinClassNames(
-                          'DocEditor__ArrayField__item__wrapper',
-                          snapshot.isDragging &&
-                            'DocEditor__ArrayField__item__wrapper--dragging',
-                          cutIndex === i &&
-                            'DocEditor__ArrayField__item__wrapper--cut'
-                        )}
-                      >
+                      <>
+                        <div
+                          ref={provided.innerRef}
+                          {...provided.draggableProps}
+                          className={joinClassNames(
+                            'DocEditor__ArrayField__item__wrapper',
+                            snapshot.isDragging &&
+                              'DocEditor__ArrayField__item__wrapper--dragging',
+                            cutIndex === i &&
+                              'DocEditor__ArrayField__item__wrapper--cut'
+                          )}
+                        >
                         <div
                           className="DocEditor__ArrayField__item__handle"
                           {...provided.dragHandleProps}
@@ -1636,6 +1637,29 @@ DocEditor.ArrayField = (props: FieldProps) => {
                           </div>
                         </details>
                       </div>
+                      {snapshot.isDragging && _cloneDragActive && (
+                        <div
+                          className="DocEditor__ArrayField__item__wrapper"
+                          style={{transform: 'none !important'}}
+                        >
+                          <div className="DocEditor__ArrayField__item__handle">
+                            <IconGripVertical size={18} stroke={'1.5'} />
+                          </div>
+                          <details className="DocEditor__ArrayField__item">
+                            <summary className="DocEditor__ArrayField__item__header">
+                              <div className="DocEditor__ArrayField__item__header__icon">
+                                <IconTriangleFilled size={6} />
+                              </div>
+                              <DocEditor.ArrayFieldPreview
+                                field={field}
+                                deepKey={`${props.deepKey}.${key}`}
+                                index={i}
+                              />
+                            </summary>
+                          </details>
+                        </div>
+                      )}
+                      </>
                     )}
                   </Draggable>
                 );
