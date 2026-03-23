@@ -149,16 +149,25 @@ function extractRichTextNodeText(node: any): string {
   return '';
 }
 
+export interface TranslationsCheckOptions {
+  /**
+   * Optional list of collection IDs to restrict this check to. When set, the
+   * check is only shown and runnable for documents in these collections.
+   */
+  collections?: string[];
+}
+
 /**
  * A first-party CMS check that verifies all translatable strings in a document
  * have translations for each of the document's enabled locales.
  */
-export function translationsCheck(): CMSCheck {
+export function translationsCheck(options?: TranslationsCheckOptions): CMSCheck {
   return {
     id: 'root-cms/translations',
     label: 'Missing Translations',
     description:
       'Checks that all translatable strings have translations for each enabled locale.',
+    collections: options?.collections,
     run: async (ctx: CheckContext): Promise<CheckResult> => {
       const {cmsClient, collectionId, slug, collectionSchema} = ctx;
 

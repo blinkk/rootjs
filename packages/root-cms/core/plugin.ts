@@ -37,6 +37,7 @@ export type {
   CheckStatus,
 } from './checks.js';
 export {translationsCheck} from './checks-translations.js';
+export type {TranslationsCheckOptions} from './checks-translations.js';
 
 /**
  * Built-in sidebar tools that can be toggled on/off in the CMS UI.
