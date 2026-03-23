@@ -1,5 +1,12 @@
 # @blinkk/root-cms
 
+## 2.5.9
+
+### Patch Changes
+
+- 25a53b79: fix: minor bug fixes
+  - @blinkk/root@2.5.9
+
 ## 2.5.8
 
 ### Patch Changes
