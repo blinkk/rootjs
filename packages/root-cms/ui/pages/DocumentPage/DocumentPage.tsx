@@ -95,7 +95,11 @@ function DocumentPageLayout(props: DocumentPageProps) {
     `root::DocumentPage::previewVisible::${collectionId}`,
     hasCollectionUrl
   );
-  const checks = window.__ROOT_CTX.checks || [];
+  const allChecks = window.__ROOT_CTX.checks || [];
+  const checks = allChecks.filter(
+    (c: {collections?: string[]}) =>
+      !c.collections || c.collections.includes(collectionId)
+  );
   const hasChecks = checks.length > 0;
   const [isChecksVisible, setIsChecksVisible] = useLocalStorage<boolean>(
     'root::DocumentPage::checksVisible',
