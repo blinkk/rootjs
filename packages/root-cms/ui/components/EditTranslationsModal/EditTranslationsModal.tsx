@@ -290,7 +290,7 @@ export function EditTranslationsModal(
                 )}
                 onClick={() => setActiveTab('history')}
               >
-                History
+                Source History
               </button>
             </div>
           )}
@@ -439,7 +439,7 @@ export function EditTranslationsModal(
             href={`/cms/translations/${props.docId}`}
             target="_blank"
             variant="default"
-            size="md"
+            size="xs"
             rightIcon={<IconExternalLink size={14} />}
           >
             Open Translations Editor
@@ -460,7 +460,7 @@ export function EditTranslationsModal(
         <div className="EditTranslationsModal__footer__buttons">
           <Button
             variant="default"
-            size="md"
+            size="xs"
             color="dark"
             type="button"
             onClick={() => context.closeModal(id)}
@@ -469,7 +469,7 @@ export function EditTranslationsModal(
           </Button>
           <Button
             variant="filled"
-            size="md"
+            size="xs"
             color="dark"
             onClick={() => onSave()}
             disabled={!hasChanges}
