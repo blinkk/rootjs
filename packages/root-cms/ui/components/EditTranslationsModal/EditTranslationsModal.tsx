@@ -290,7 +290,7 @@ export function EditTranslationsModal(
                 )}
                 onClick={() => setActiveTab('history')}
               >
-                Source History
+                History
               </button>
             </div>
           )}
