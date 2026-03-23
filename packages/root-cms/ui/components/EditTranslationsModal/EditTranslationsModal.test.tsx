@@ -140,7 +140,7 @@ describe('EditTranslationsModal', () => {
     const checkbox = screen.getByLabelText(
       'Do not translate'
     ) as HTMLInputElement;
-    fireEvent.change(checkbox, {target: {checked: true}});
+    fireEvent.click(checkbox);
 
     const textarea = screen.getByPlaceholderText(
       'Add context or notes for translators...'
@@ -172,7 +172,7 @@ describe('EditTranslationsModal', () => {
     const checkbox = screen.getByLabelText(
       'Do not translate'
     ) as HTMLInputElement;
-    fireEvent.change(checkbox, {target: {checked: true}});
+    fireEvent.click(checkbox);
 
     const saveButton = screen.getByText('Save') as HTMLButtonElement;
     fireEvent.click(saveButton);
