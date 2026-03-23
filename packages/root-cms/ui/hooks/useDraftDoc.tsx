@@ -21,6 +21,7 @@ import {
   SubscribeCallback,
   UnsubscribeCallback,
 } from '../utils/json-trie-store.js';
+import {errorMessage} from '../utils/notifications.js';
 import {TIME_UNITS} from '../utils/time.js';
 
 const SAVE_DELAY = 3 * TIME_UNITS.second;
@@ -331,12 +332,14 @@ export class DraftDocController extends EventListener {
         throttleId: this.docId,
       });
     } catch (err) {
-      console.error('failed to update doc');
-      console.error(err);
+      console.error('failed to update doc:', err);
       this.setSaveState(SaveState.ERROR);
+      const detail = errorMessage(err);
       showNotification({
-        title: 'Failed to save',
-        message: `Failed to save changes to ${this.slug}`,
+        title: `Failed to save ${this.slug}`,
+        message: detail
+          ? detail
+          : `Something went wrong while saving ${this.slug}`,
         color: 'red',
         autoClose: false,
       });
