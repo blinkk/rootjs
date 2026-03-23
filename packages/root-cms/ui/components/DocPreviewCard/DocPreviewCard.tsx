@@ -15,6 +15,7 @@ export interface DocPreviewCardProps {
   docId: string;
   doc?: any;
   statusBadges?: boolean;
+  hideReleases?: boolean;
   clickable?: boolean;
 }
 
@@ -109,7 +110,7 @@ export function DocPreviewCard(props: DocPreviewCardProps) {
         </div>
         {props.statusBadges && doc && (
           <div className="DocPreviewCard__content__badges">
-            <DocStatusBadges doc={doc} />
+            <DocStatusBadges doc={doc} hideReleases={props.hideReleases} />
           </div>
         )}
       </div>
