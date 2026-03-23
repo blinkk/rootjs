@@ -1,3 +1,38 @@
+.ActionsLog {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.ActionsLog--loading {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 200px;
+}
+
+.ActionsLog__filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+}
+
+.ActionsLog__filters__search {
+  flex: 1;
+  min-width: 200px;
+  max-width: 300px;
+}
+
+.ActionsLog__filters__select {
+  min-width: 180px;
+}
+
+.ActionsLog__summary {
+  font-size: 13px;
+  color: var(--color-text-secondary);
+}
+
 .ActionsLog__table {
   font-family: var(--font-family-mono);
 }
@@ -6,6 +41,10 @@
   border-top: 1px solid var(--color-border);
   padding-top: 12px;
   margin-top: 12px;
+}
+
+.ActionsLogs__table__row:not(.ActionsLogs__table__row--header):hover td {
+  background: rgba(0, 0, 0, 0.04) !important;
 }
 
 .ActionsLogs__table__header,
@@ -17,10 +56,75 @@
 
 .ActionsLogs__table__col--nowrap {
   white-space: nowrap;
+  width: 1%;
+}
+
+.ActionsLogs__table__col--action {
+  white-space: nowrap;
+  width: 1%;
+}
+
+.ActionsLogs__table__col--links {
+  white-space: nowrap;
+  width: 1%;
+}
+
+.ActionsLogs__table__col--metadata {
+  max-width: 300px;
+}
+
+.ActionsLogs__table__col--empty {
+  text-align: center;
+  color: var(--color-text-secondary);
+  padding: 24px 10px !important;
 }
 
 .ActionsLogs__table__buttons {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
+}
+
+.ActionsLogs__user {
+  color: var(--color-text-secondary);
+}
+
+.ActionsLogs__action {
+  font-weight: 500;
+  background: var(--color-bg-secondary);
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.ActionsLogs__metadata {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 12px;
+}
+
+.ActionsLogs__metadata--empty,
+.ActionsLogs__links--empty {
+  color: var(--color-text-tertiary);
+}
+
+.ActionsLogs__metadata__item {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.ActionsLogs__metadata__key {
+  color: var(--color-text-secondary);
+}
+
+.ActionsLogs__metadata__value {
+  color: var(--color-text-primary);
+  word-break: break-word;
+}
+
+.ActionsLog__pagination {
+  display: flex;
+  justify-content: center;
+  padding: 16px 0;
 }

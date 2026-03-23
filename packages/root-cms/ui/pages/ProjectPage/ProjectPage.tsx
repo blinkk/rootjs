@@ -43,7 +43,7 @@ export function ProjectPage() {
               </Button>
             </div>
           </Heading>
-          <ActionLogs limit={20} />
+          <ActionLogs limit={20} compact />
         </div>
       </div>
     </Layout>

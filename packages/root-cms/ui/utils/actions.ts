@@ -59,17 +59,26 @@ export async function logAction(
 }
 
 export interface ListActionsOptions {
+  /** Maximum number of actions to fetch. If not specified, fetches all. */
   limit?: number;
 }
 
-export async function listActions(options: ListActionsOptions) {
+export async function listActions(options?: ListActionsOptions) {
   const projectId = window.__ROOT_CTX.rootConfig.projectId;
   const db = window.firebase.db;
   const colRef = collection(db, 'Projects', projectId, 'ActionLogs');
-  const numActions = options?.limit || 40;
-  // Request 1.5x the number of actions since we may be filtering some.
-  const queryLimit = Math.ceil(numActions * 1.5);
-  const q = query(colRef, orderBy('timestamp', 'desc'), limit(queryLimit));
+  const numActions = options?.limit;
+
+  // Build the query, applying limit only if specified.
+  let q;
+  if (numActions) {
+    // Request 1.5x the number of actions since we may be filtering some.
+    const queryLimit = Math.ceil(numActions * 1.5);
+    q = query(colRef, orderBy('timestamp', 'desc'), limit(queryLimit));
+  } else {
+    q = query(colRef, orderBy('timestamp', 'desc'));
+  }
+
   const querySnapshot = await getDocs(q);
   const actions: Action[] = [];
   function shouldSkipAction(action: Action) {
@@ -87,9 +96,8 @@ export async function listActions(options: ListActionsOptions) {
         60 * TIME_UNITS.minute
     );
   }
-  let count = 0;
   for (const doc of querySnapshot.docs) {
-    if (count >= numActions) {
+    if (numActions && actions.length >= numActions) {
       break;
     }
     const action = doc.data() as Action;
@@ -97,7 +105,6 @@ export async function listActions(options: ListActionsOptions) {
       continue;
     }
     actions.push(action);
-    count += 1;
   }
   return actions;
 }
