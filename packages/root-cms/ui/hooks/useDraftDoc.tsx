@@ -200,7 +200,12 @@ export class DraftDocController extends EventListener {
     if (this.readOnly) {
       return;
     }
-    this.pendingUpdates.set(key, value);
+    if (value === undefined) {
+      // Firestore doesn't support `undefined`, so use deleteField() instead.
+      this.pendingUpdates.set(key, deleteField());
+    } else {
+      this.pendingUpdates.set(key, value);
+    }
     this.store.set(key, value);
     this.setSaveState(SaveState.UPDATES_PENDING);
     if (this.autoSave) {

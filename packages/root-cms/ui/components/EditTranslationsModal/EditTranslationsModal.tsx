@@ -140,7 +140,7 @@ export function EditTranslationsModal(
         if (Object.keys(metadata).length > 0) {
           await draft.controller.updateKey(metadataKey, metadata);
         } else {
-          await draft.controller.updateKey(metadataKey, undefined);
+          await draft.controller.removeKey(metadataKey);
         }
         // Ensure the metadata is saved immediately.
         await draft.controller.flush();
