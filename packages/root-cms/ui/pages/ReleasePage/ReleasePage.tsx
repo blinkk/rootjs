@@ -19,6 +19,7 @@ import {ReleaseStatusBadge} from '../../components/ReleaseStatusBadge/ReleaseSta
 import {useScheduleReleaseModal} from '../../components/ScheduleReleaseModal/ScheduleReleaseModal.js';
 import {Text} from '../../components/Text/Text.js';
 import {useModalTheme} from '../../hooks/useModalTheme.js';
+import {usePageTitle} from '../../hooks/usePageTitle.js';
 import {useProjectRoles} from '../../hooks/useProjectRoles.js';
 import {Layout} from '../../layout/Layout.js';
 import {notifyErrors} from '../../utils/notifications.js';
@@ -36,6 +37,7 @@ export function ReleasePage(props: {id: string}) {
   const [release, setRelease] = useState<Release | null>(null);
   const [updated, setUpdated] = useState(0);
   const id = props.id;
+  usePageTitle(`Release: ${id}`);
 
   async function init() {
     setLoading(true);
@@ -323,7 +325,7 @@ ReleasePage.DocsList = (props: {release: Release}) => {
         {docIds.map((docId) => (
           <div key={docId} className="ReleasePage__DocsList__card">
             <a href={`/cms/content/${docId}`}>
-              <DocPreviewCard docId={docId} statusBadges />
+              <DocPreviewCard docId={docId} statusBadges hideReleases />
             </a>
           </div>
         ))}

@@ -26,8 +26,17 @@ import sirv from 'sirv';
 import {SSEEvent, SSESchemaChangedEvent} from '../shared/sse.js';
 import {type RootAiModel} from './ai.js';
 import {api} from './api.js';
+import {type CMSCheck} from './checks.js';
 import {Action, RootCMSClient} from './client.js';
 import {sse, SSEBroadcastFn} from './sse.js';
+
+export type {
+  CMSCheck,
+  CheckResult,
+  CheckContext,
+  CheckStatus,
+} from './checks.js';
+export {translationsCheck} from './checks-translations.js';
 
 /**
  * Built-in sidebar tools that can be toggled on/off in the CMS UI.
@@ -264,6 +273,31 @@ export type CMSPluginOptions = {
      */
     channel: boolean | 'to-preview' | 'from-preview';
   };
+
+  /**
+   * Checks that can be run on-demand from the CMS UI to validate document
+   * content. Each check defines a server-side function that returns a
+   * success/warning/error result with a markdown message.
+   *
+   * Example:
+   * ```ts
+   * cmsPlugin({
+   *   checks: [
+   *     {
+   *       id: 'my-check',
+   *       label: 'My Check',
+   *       run: async (ctx) => {
+   *         return {status: 'success', message: 'All good!'};
+   *       },
+   *     },
+   *   ],
+   * });
+   * ```
+   *
+   * NOTE: The checks feature is considered a "beta" feature, its interface
+   * may change from version to version as we add new features.
+   */
+  checks?: CMSCheck[];
 };
 
 export type CMSPlugin = Plugin & {
@@ -559,6 +593,26 @@ export function cmsPlugin(options: CMSPluginOptions): CMSPlugin {
       serverOptions: ConfigureServerOptions
     ) => {
       server.use(bodyParser.json());
+      // Handle body-parser errors (e.g. PayloadTooLargeError) gracefully
+      // instead of letting them bubble up as unhandled 500 errors.
+      server.use(
+        (
+          err: any,
+          req: Request,
+          res: Response,
+          next: NextFunction
+        ) => {
+          if (err.type === 'entity.too.large' || err.status === 413) {
+            res.status(413).json({error: 'Payload too large'});
+            return;
+          }
+          if (err.type === 'entity.parse.failed' || err.status === 400) {
+            res.status(400).json({error: 'Bad request'});
+            return;
+          }
+          next(err);
+        }
+      );
 
       async function getRenderer(req: Request): Promise<AppModule> {
         if (serverOptions.type === 'dev') {
@@ -677,7 +731,7 @@ export function cmsPlugin(options: CMSPluginOptions): CMSPlugin {
       }
 
       // Register API handlers.
-      api(server, {getRenderer});
+      api(server, {getRenderer, checks: options.checks});
 
       // Render the CMS SPA.
       server.use('/cms', async (req: Request, res: Response) => {

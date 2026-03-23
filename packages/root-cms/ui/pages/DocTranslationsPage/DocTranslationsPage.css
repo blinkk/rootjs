@@ -90,6 +90,8 @@
   margin: 0;
   height: inherit;
   box-sizing: border-box;
+  overflow-wrap: break-word;
+  word-break: break-word;
 }
 
 .DocTranslationsPage__Table__sourceCellHeader {
@@ -121,6 +123,8 @@
 
 .DocTranslationsPage__Table__sourceCell {
   white-space: pre-wrap;
+  overflow-wrap: break-word;
+  word-break: break-word;
 }
 
 .DocTranslationsPage__Table__sourceCell,

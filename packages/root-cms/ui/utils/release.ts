@@ -199,6 +199,91 @@ export async function scheduleRelease(
   });
 }
 
+const ADJECTIVES = [
+  'blue',
+  'bold',
+  'bright',
+  'calm',
+  'cool',
+  'cosmic',
+  'crisp',
+  'dark',
+  'eager',
+  'fast',
+  'fresh',
+  'gentle',
+  'golden',
+  'grand',
+  'happy',
+  'idle',
+  'jolly',
+  'keen',
+  'lively',
+  'lucky',
+  'mellow',
+  'mighty',
+  'neat',
+  'noble',
+  'proud',
+  'quiet',
+  'rapid',
+  'sharp',
+  'silver',
+  'swift',
+  'vivid',
+  'warm',
+  'wild',
+];
+
+const NOUNS = [
+  'arrow',
+  'beacon',
+  'breeze',
+  'canyon',
+  'cedar',
+  'comet',
+  'coral',
+  'crane',
+  'dune',
+  'eagle',
+  'ember',
+  'falcon',
+  'flame',
+  'flint',
+  'forest',
+  'fox',
+  'glacier',
+  'harbor',
+  'hawk',
+  'lantern',
+  'maple',
+  'meadow',
+  'orbit',
+  'otter',
+  'peak',
+  'pine',
+  'reef',
+  'river',
+  'sage',
+  'spark',
+  'spruce',
+  'stone',
+  'summit',
+  'tide',
+  'wolf',
+];
+
+/** Generates a release ID like `20260318-golden-meadow`. */
+export function generateReleaseId(): string {
+  const now = new Date();
+  const y = now.getFullYear();
+  const m = String(now.getMonth() + 1).padStart(2, '0');
+  const d = String(now.getDate()).padStart(2, '0');
+  const adj = ADJECTIVES[Math.floor(Math.random() * ADJECTIVES.length)];
+  const noun = NOUNS[Math.floor(Math.random() * NOUNS.length)];
+  return `${y}${m}${d}-${adj}-${noun}`;
+}
+
 export async function cancelScheduledRelease(id: string) {
   const release = await getRelease(id);
   if (!release) {

@@ -53,6 +53,7 @@ import {FloatingToolbarPlugin} from './plugins/FloatingToolbarPlugin.js';
 import {ImagePastePlugin} from './plugins/ImagePastePlugin.js';
 import {MarkdownTransformPlugin} from './plugins/MarkdownTransformPlugin.js';
 import {OnChangePlugin} from './plugins/OnChangePlugin.js';
+import {PasteCleanupPlugin} from './plugins/PasteCleanupPlugin.js';
 import {ShortcutsPlugin} from './plugins/ShortcutsPlugin.js';
 import {SpecialCharacterPlugin} from './plugins/SpecialCharacterPlugin.js';
 import {TableActionMenuPlugin} from './plugins/TableActionMenuPlugin.js';
@@ -441,6 +442,7 @@ function Editor(props: EditorProps) {
         <MarkdownTransformPlugin />
         <TrailingParagraphPlugin />
         <SpecialCharacterPlugin />
+        <PasteCleanupPlugin />
         <ImagePastePlugin />
         {floatingAnchorElem && (
           <>

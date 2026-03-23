@@ -3,11 +3,13 @@ import {Switch, Textarea} from '@mantine/core';
 import {Heading} from '../../components/Heading/Heading.js';
 import {ShareBox} from '../../components/ShareBox/ShareBox.js';
 import {Text} from '../../components/Text/Text.js';
+import {usePageTitle} from '../../hooks/usePageTitle.js';
 import {SITE_SETTINGS, useSiteSettings} from '../../hooks/useSiteSettings.js';
 import {useUserPreferences} from '../../hooks/useUserPreferences.js';
 import {Layout} from '../../layout/Layout.js';
 
 export function SettingsPage() {
+  usePageTitle('Settings');
   const userPrefs = useUserPreferences();
   const siteSettings = useSiteSettings();
   return (

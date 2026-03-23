@@ -12,6 +12,14 @@ defaults:
 env:
   FORCE_COLOR: true
 
+permissions:
+  # Allow OIDC tokens to be written for publishing to npm.
+  # https://docs.npmjs.com/trusted-publishers#step-2-configure-your-cicd-workflow
+  id-token: write
+  # Required by changesets to submit PRs.
+  contents: write
+  pull-requests: write
+
 jobs:
   changelog:
     name: Changelog PR or Release
@@ -23,6 +31,11 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '22'
+
+      # A newer version of npm is required for publishing with OIDC.
+      - name: Update npm
+        run: |
+          npm install -g npm@latest
 
       - name: Setup PNPM
         uses: pnpm/action-setup@v4
@@ -58,11 +71,11 @@ jobs:
         uses: changesets/action@v1
         with:
           version: pnpm run version
-          publish: pnpm run release
+          publish: pnpm run release:ci
           commit: 'ci: release'
           title: 'ci: release'
         env:
           # Needs access to push to main
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          # Needs access to publish to npm
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+          # Use OIDC for npm authentication instead of NPM_TOKEN
+          NPM_TOKEN: ''

@@ -12,6 +12,7 @@ import {render, FunctionComponent} from 'preact';
 import {LocationProvider, Router, Route, lazy} from 'preact-iso';
 import type {CMSBuiltInSidebarTool} from '../core/plugin.js';
 import {Collection} from '../core/schema.js';
+import {AddToReleaseModal} from './components/AddToReleaseModal/AddToReleaseModal.js';
 import {AiEditModal} from './components/AiEditModal/AiEditModal.js';
 import {CopyDocModal} from './components/CopyDocModal/CopyDocModal.js';
 import {DataSourceSelectModal} from './components/DataSourceSelectModal/DataSourceSelectModal.js';
@@ -26,6 +27,7 @@ import {ReferenceFieldEditorModal} from './components/ReferenceFieldEditorModal/
 import {ScheduleReleaseModal} from './components/ScheduleReleaseModal/ScheduleReleaseModal.js';
 import {VersionHistoryModal} from './components/VersionHistoryModal/VersionHistoryModal.js';
 import {FirebaseContext, FirebaseContextObject} from './hooks/useFirebase.js';
+import {PendingReleasesProvider} from './hooks/usePendingReleases.js';
 import {SiteSettingsProvider} from './hooks/useSiteSettings.js';
 import {SSEProvider} from './hooks/useSSE.js';
 import {UserPreferencesProvider} from './hooks/useUserPreferences.js';
@@ -174,6 +176,13 @@ declare global {
       preview: {
         channel: true | false | 'to-preview' | 'from-preview';
       };
+      /** Checks registered via the CMS plugin config. */
+      checks?: Array<{
+        id: string;
+        label: string;
+        description?: string;
+        collections?: string[];
+      }>;
     };
     firebase: FirebaseContextObject;
   }
@@ -191,85 +200,94 @@ function App() {
         <FirebaseContext.Provider value={window.firebase}>
           <SSEProvider>
             <SiteSettingsProvider>
-              <UserPreferencesProvider>
-                <ModalsProvider
-                  modals={{
-                    [AiEditModal.id]: AiEditModal,
-                    [CopyDocModal.id]: CopyDocModal,
-                    [DocPickerModal.id]: DocPickerModal,
-                    [DataSourceSelectModal.id]: DataSourceSelectModal,
-                    [EditJsonModal.id]: EditJsonModal,
-                    [EditTranslationsModal.id]: EditTranslationsModal,
-                    [ExportSheetModal.id]: ExportSheetModal,
-                    [LocalizationModal.id]: LocalizationModal,
-                    [LockPublishingModal.id]: LockPublishingModal,
-                    [PublishDocModal.id]: PublishDocModal,
-                    [ReferenceFieldEditorModal.id]: ReferenceFieldEditorModal,
-                    [ScheduleReleaseModal.id]: ScheduleReleaseModal,
-                    [VersionHistoryModal.id]: VersionHistoryModal,
-                  }}
-                >
-                  <LocationProvider>
-                    <Router>
-                      <Route path="/cms" component={ProjectPage} />
-                      <Route path="/cms/ai" component={AIPage} />
-                      <Route path="/cms/assets" component={AssetsPage} />
-                      <Route path="/cms/compare" component={ComparePage} />
-                      <Route
-                        path="/cms/content/:collection?"
-                        component={CollectionPage}
-                      />
-                      <Route
-                        path="/cms/content/:collection/:slug"
-                        component={DocumentPage}
-                      />
-                      <Route path="/cms/data" component={DataPage} />
-                      <Route
-                        path="/cms/data/new"
-                        component={NewDataSourcePage}
-                      />
-                      <Route path="/cms/data/:id" component={DataSourcePage} />
-                      <Route
-                        path="/cms/data/:id/edit"
-                        component={EditDataSourcePage}
-                      />
-                      <Route path="/cms/logs" component={LogsPage} />
-                      <Route path="/cms/releases" component={ReleasesPage} />
-                      <Route
-                        path="/cms/releases/new"
-                        component={NewReleasePage}
-                      />
-                      <Route path="/cms/releases/:id" component={ReleasePage} />
-                      <Route
-                        path="/cms/releases/:id/edit"
-                        component={EditReleasePage}
-                      />
-                      <Route path="/cms/settings" component={SettingsPage} />
-                      <Route
-                        path="/cms/tools/:id"
-                        component={SidebarToolsPage}
-                      />
-                      <Route
-                        path="/cms/translations"
-                        component={TranslationsPage}
-                      />
-                      <Route
-                        path="/cms/translations/arb"
-                        component={TranslationsArbPage}
-                      />
-                      <Route
-                        path="/cms/translations/:hash"
-                        component={TranslationsEditPage}
-                      />
-                      <Route
-                        path="/cms/translations/:collection/:slug"
-                        component={DocTranslationsPage}
-                      />
-                      <Route default component={NotFoundPage} />
-                    </Router>
-                  </LocationProvider>
-                </ModalsProvider>
-              </UserPreferencesProvider>
+              <PendingReleasesProvider>
+                <UserPreferencesProvider>
+                  <ModalsProvider
+                    modals={{
+                      [AddToReleaseModal.id]: AddToReleaseModal,
+                      [AiEditModal.id]: AiEditModal,
+                      [CopyDocModal.id]: CopyDocModal,
+                      [DocPickerModal.id]: DocPickerModal,
+                      [DataSourceSelectModal.id]: DataSourceSelectModal,
+                      [EditJsonModal.id]: EditJsonModal,
+                      [EditTranslationsModal.id]: EditTranslationsModal,
+                      [ExportSheetModal.id]: ExportSheetModal,
+                      [LocalizationModal.id]: LocalizationModal,
+                      [LockPublishingModal.id]: LockPublishingModal,
+                      [PublishDocModal.id]: PublishDocModal,
+                      [ReferenceFieldEditorModal.id]: ReferenceFieldEditorModal,
+                      [ScheduleReleaseModal.id]: ScheduleReleaseModal,
+                      [VersionHistoryModal.id]: VersionHistoryModal,
+                    }}
+                  >
+                    <LocationProvider>
+                      <Router>
+                        <Route path="/cms" component={ProjectPage} />
+                        <Route path="/cms/ai" component={AIPage} />
+                        <Route path="/cms/assets" component={AssetsPage} />
+                        <Route path="/cms/compare" component={ComparePage} />
+                        <Route
+                          path="/cms/content/:collection?"
+                          component={CollectionPage}
+                        />
+                        <Route
+                          path="/cms/content/:collection/:slug"
+                          component={DocumentPage}
+                        />
+                        <Route path="/cms/data" component={DataPage} />
+                        <Route
+                          path="/cms/data/new"
+                          component={NewDataSourcePage}
+                        />
+                        <Route
+                          path="/cms/data/:id"
+                          component={DataSourcePage}
+                        />
+                        <Route
+                          path="/cms/data/:id/edit"
+                          component={EditDataSourcePage}
+                        />
+                        <Route path="/cms/logs" component={LogsPage} />
+                        <Route path="/cms/releases" component={ReleasesPage} />
+                        <Route
+                          path="/cms/releases/new"
+                          component={NewReleasePage}
+                        />
+                        <Route
+                          path="/cms/releases/:id"
+                          component={ReleasePage}
+                        />
+                        <Route
+                          path="/cms/releases/:id/edit"
+                          component={EditReleasePage}
+                        />
+                        <Route path="/cms/settings" component={SettingsPage} />
+                        <Route
+                          path="/cms/tools/:id"
+                          component={SidebarToolsPage}
+                        />
+                        <Route
+                          path="/cms/translations"
+                          component={TranslationsPage}
+                        />
+                        <Route
+                          path="/cms/translations/arb"
+                          component={TranslationsArbPage}
+                        />
+                        <Route
+                          path="/cms/translations/:hash"
+                          component={TranslationsEditPage}
+                        />
+                        <Route
+                          path="/cms/translations/:collection/:slug"
+                          component={DocTranslationsPage}
+                        />
+                        <Route default component={NotFoundPage} />
+                      </Router>
+                    </LocationProvider>
+                  </ModalsProvider>
+                </UserPreferencesProvider>
+              </PendingReleasesProvider>
             </SiteSettingsProvider>
           </SSEProvider>
         </FirebaseContext.Provider>

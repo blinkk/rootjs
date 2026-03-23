@@ -1,6 +1,6 @@
 {
   "name": "@blinkk/root-password-protect",
-  "version": "2.5.4",
+  "version": "2.5.7",
   "author": "s@blinkk.com",
   "license": "MIT",
   "engines": {
@@ -10,6 +10,9 @@
     "type": "git",
     "url": "git+https://github.com/blinkk/rootjs.git",
     "directory": "packages/root-password-protect"
+  },
+  "publishConfig": {
+    "provenance": true
   },
   "files": [
     "dist/*"
@@ -42,7 +45,7 @@
     "micromatch": "4.0.5"
   },
   "peerDependencies": {
-    "@blinkk/root": "2.5.4",
+    "@blinkk/root": "2.5.7",
     "preact": ">=10",
     "preact-render-to-string": ">=5"
   },

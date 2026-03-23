@@ -1,5 +1,6 @@
 import {ComponentChildren, createContext} from 'preact';
 import {useContext, useEffect, useState} from 'preact/hooks';
+import {useLocation} from 'preact-iso';
 
 export interface DeeplinkContext {
   value: string;
@@ -22,25 +23,18 @@ interface ScrollToDeeplinkOptions {
   behavior: 'auto' | 'smooth';
 }
 
-function getDeeplink(): string {
-  const searchParams = new URLSearchParams(window.location.search);
-  return searchParams.get('deeplink') || '';
-}
-
 const DEEPLINK_CONTEXT = createContext<DeeplinkContext | null>(null);
 
 export function DeeplinkProvider(props: {children: ComponentChildren}) {
-  const [value, setValue] = useState(getDeeplink());
+  const {query} = useLocation();
+  const deeplinkFromUrl = (query.deeplink as string) || '';
+  const [value, setValue] = useState(deeplinkFromUrl);
   const deeplinkCtx = {value, setValue};
 
-  // When navigating between docs, update the deeplink (if any).
+  // When navigating between docs (URL changes), update the deeplink.
   useEffect(() => {
-    const handlePopState = () => {
-      setValue(getDeeplink());
-    };
-    window.addEventListener('popstate', handlePopState);
-    return () => window.removeEventListener('popstate', handlePopState);
-  }, []);
+    setValue(deeplinkFromUrl);
+  }, [deeplinkFromUrl]);
 
   //  Enable posting messages from the preview frame to the DocEditor so that
   // fields can be focused.

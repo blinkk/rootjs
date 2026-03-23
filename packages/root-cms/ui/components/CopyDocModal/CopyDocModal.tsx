@@ -1,11 +1,12 @@
 import {Button} from '@mantine/core';
 import {ContextModalProps, useModals} from '@mantine/modals';
 import {showNotification} from '@mantine/notifications';
-import {useState} from 'preact/hooks';
+import {useState, useEffect} from 'preact/hooks';
 import {useLocation} from 'preact-iso';
-import {isSlugValid, normalizeSlug} from '../../../shared/slug.js';
+import {getSlugError, normalizeSlug} from '../../../shared/slug.js';
 import {useModalTheme} from '../../hooks/useModalTheme.js';
 import {cmsCopyDoc, cmsCreateDoc} from '../../utils/doc.js';
+import {batchUpdateTags, loadTranslations} from '../../utils/l10n.js';
 import {SlugInput} from '../SlugInput/SlugInput.js';
 import {Text} from '../Text/Text.js';
 import './CopyDocModal.css';
@@ -38,13 +39,28 @@ export function CopyDocModal(modalProps: ContextModalProps<CopyDocModalProps>) {
   const {route} = useLocation();
   const [toCollectionId, setToCollectionId] = useState('');
   const [toSlug, setToSlug] = useState('');
+  const [slugError, setSlugError] = useState('');
   const [error, setError] = useState('');
   const [confirmOverwrite, setConfirmOverwrite] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [translationsMap, setTranslationsMap] = useState<
+    Record<string, unknown>
+  >({});
 
   const fromDocId = props.fromDocId;
   const fromCollectionId = fromDocId.split('/')[0];
   const sourceLabel = props.fromLabel || fromDocId;
+
+  // Load translations tagged with the source doc ID.
+  useEffect(() => {
+    loadTranslations({tags: [fromDocId]}).then(setTranslationsMap);
+  }, [fromDocId]);
+
+  function validateSlug(slug: string, collectionId: string) {
+    const cleanSlug = normalizeSlug(slug);
+    const slugRegex = window.__ROOT_CTX.collections[collectionId]?.slugRegex;
+    return cleanSlug ? getSlugError(cleanSlug, slugRegex) : '';
+  }
 
   async function onSubmit(e: Event) {
     e.preventDefault();
@@ -56,14 +72,14 @@ export function CopyDocModal(modalProps: ContextModalProps<CopyDocModalProps>) {
       setLoading(false);
       return;
     }
-    const cleanSlug = normalizeSlug(toSlug);
-    const slugRegex = window.__ROOT_CTX.collections[toCollectionId]?.slugRegex;
-    if (!isSlugValid(cleanSlug, slugRegex)) {
-      setError('Please enter a valid slug (e.g. "foo-bar-123").');
+    const slugValidationError = validateSlug(toSlug, toCollectionId);
+    if (slugValidationError) {
+      // SlugInput already displays this error, just return early.
       setLoading(false);
       return;
     }
 
+    const cleanSlug = normalizeSlug(toSlug);
     const toDocId = `${toCollectionId}/${cleanSlug}`;
     try {
       if (props.fields) {
@@ -74,6 +90,18 @@ export function CopyDocModal(modalProps: ContextModalProps<CopyDocModalProps>) {
       } else {
         await cmsCopyDoc(fromDocId, toDocId, {overwrite: confirmOverwrite});
       }
+
+      // Auto-copy translations by adding the new doc ID tag to all strings
+      // tagged with the old doc ID.
+      const translationHashes = Object.keys(translationsMap);
+      if (translationHashes.length > 0) {
+        const updates = translationHashes.map((hash) => ({
+          hash,
+          tags: [toDocId],
+        }));
+        await batchUpdateTags(updates, {mode: 'union'});
+      }
+
       context.closeModal(id);
       showNotification({
         title: 'Copied!',
@@ -122,6 +150,9 @@ export function CopyDocModal(modalProps: ContextModalProps<CopyDocModalProps>) {
             onChange={(newValue: {collectionId: string; slug: string}) => {
               setToCollectionId(newValue.collectionId);
               setToSlug(newValue.slug);
+              setSlugError(validateSlug(newValue.slug, newValue.collectionId));
+              setError('');
+              setConfirmOverwrite(false);
             }}
           />
         </div>
@@ -144,6 +175,7 @@ export function CopyDocModal(modalProps: ContextModalProps<CopyDocModalProps>) {
             size="xs"
             color="dark"
             loading={loading}
+            disabled={!!error || !!slugError}
           >
             {confirmOverwrite ? 'Overwrite?' : 'Submit'}
           </Button>

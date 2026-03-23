@@ -1,6 +1,6 @@
 {
   "name": "@blinkk/create-root",
-  "version": "2.5.4",
+  "version": "2.5.7",
   "description": "",
   "author": "s@blinkk.com",
   "license": "MIT",
@@ -11,6 +11,9 @@
     "type": "git",
     "url": "git+https://github.com/blinkk/rootjs.git",
     "directory": "packages/create-root"
+  },
+  "publishConfig": {
+    "provenance": true
   },
   "files": [
     "dist/*"

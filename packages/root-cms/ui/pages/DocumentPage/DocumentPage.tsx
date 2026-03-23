@@ -11,6 +11,7 @@ import {
   IconLayoutSidebarRightExpand,
 } from '@tabler/icons-preact';
 import {useCallback, useEffect, useRef, useState} from 'preact/hooks';
+import {ChecksPanel} from '../../components/ChecksPanel/ChecksPanel.js';
 import {ConditionalTooltip} from '../../components/ConditionalTooltip/ConditionalTooltip.js';
 import {DocEditor} from '../../components/DocEditor/DocEditor.js';
 import {
@@ -24,6 +25,7 @@ import {
 } from '../../components/SplitPanel/SplitPanel.js';
 import {DraftDocProvider, useDraftDoc} from '../../hooks/useDraftDoc.js';
 import {useLocalStorage} from '../../hooks/useLocalStorage.js';
+import {usePageTitle} from '../../hooks/usePageTitle.js';
 import {useProjectRoles} from '../../hooks/useProjectRoles.js';
 import {useStringParam} from '../../hooks/useQueryParam.js';
 import {Layout} from '../../layout/Layout.js';
@@ -45,13 +47,12 @@ function getPreviewUrl(
   const basePreviewPath = getDocPreviewPath({collectionId, slug});
   const searchParams = new URLSearchParams(window.location.search);
   searchParams.set('preview', 'true');
-  // Avoid passing through the ?locale= param (set by the CMS to preserve the
-  // preview frame locale).
+  // Avoid passing through internal CMS params (locale, modal) to the preview
+  // iframe. These are used by the CMS UI only.
   // NOTE(stevenle): if we ever need to pass through the locale param, switch to
   // using hash params for the internal CMS params that shouldn't pass through.
-  if (searchParams.has('locale')) {
-    searchParams.delete('locale');
-  }
+  searchParams.delete('locale');
+  searchParams.delete('modal');
   const query = `${searchParams.toString()}${window.location.hash}`;
   if (selectedLocale) {
     const localizedPreviewPath = getDocPreviewPath({
@@ -86,6 +87,7 @@ function DocumentPageLayout(props: DocumentPageProps) {
   const collectionId = props.collection;
   const slug = props.slug;
   const docId = `${collectionId}/${slug}`;
+  usePageTitle(docId);
   const collection = window.__ROOT_CTX.collections[collectionId];
   const draft = useDraftDoc();
   const hasCollectionUrl = !!collection?.url;
@@ -93,6 +95,62 @@ function DocumentPageLayout(props: DocumentPageProps) {
     `root::DocumentPage::previewVisible::${collectionId}`,
     hasCollectionUrl
   );
+  const checks = window.__ROOT_CTX.checks || [];
+  const hasChecks = checks.length > 0;
+  const [isChecksVisible, setIsChecksVisible] = useLocalStorage<boolean>(
+    'root::DocumentPage::checksVisible',
+    false
+  );
+  const isChecksVisibleRef = useRef(isChecksVisible);
+  isChecksVisibleRef.current = isChecksVisible;
+
+  // Broadcast checks visibility so the StatusBar button can reflect it.
+  useEffect(() => {
+    window.dispatchEvent(
+      new CustomEvent('root:checks-visible', {detail: isChecksVisible})
+    );
+  }, [isChecksVisible]);
+
+  const [savedChecksPanelWidth, setSavedChecksPanelWidth] =
+    useLocalStorage<number>('root::DocumentPage::checksPanelWidth', 360);
+  const [checksPanelWidth, setChecksPanelWidth] = useState(
+    savedChecksPanelWidth
+  );
+  const [isDraggingChecks, setIsDraggingChecks] = useState(false);
+  const checksLayoutRef = useRef<HTMLDivElement>(null);
+
+  // Listen for toggle event from DocEditor's Checks button.
+  useEffect(() => {
+    const handler = () => setIsChecksVisible(() => !isChecksVisibleRef.current);
+    window.addEventListener('root:toggle-checks', handler);
+    return () => window.removeEventListener('root:toggle-checks', handler);
+  }, []);
+
+  // Handle checks panel resize dragging.
+  useEffect(() => {
+    if (!isDraggingChecks) return;
+    const onMouseMove = (e: MouseEvent) => {
+      const container = checksLayoutRef.current;
+      if (!container) return;
+      const rect = container.getBoundingClientRect();
+      const newWidth = Math.max(200, Math.min(rect.right - e.clientX, 800));
+      setChecksPanelWidth(newWidth);
+    };
+    const onMouseUp = () => {
+      setIsDraggingChecks(false);
+      // Persist to localStorage only on mouseUp.
+      setChecksPanelWidth((w) => {
+        setSavedChecksPanelWidth(() => w);
+        return w;
+      });
+    };
+    window.addEventListener('mousemove', onMouseMove);
+    window.addEventListener('mouseup', onMouseUp);
+    return () => {
+      window.removeEventListener('mousemove', onMouseMove);
+      window.removeEventListener('mouseup', onMouseUp);
+    };
+  }, [isDraggingChecks]);
 
   if (!collection) {
     return <div>Could not find collection.</div>;
@@ -136,124 +194,131 @@ function DocumentPageLayout(props: DocumentPageProps) {
 
   return (
     <Layout>
-      <SplitPanel className="DocumentPage" localStorageId="DocumentPage">
-        <SplitPanel.Item
-          className={joinClassNames(
-            'DocumentPage__side',
-            (!hasCollectionUrl || !isPreviewVisible) &&
-              'DocumentPage__side--expanded'
-          )}
-        >
-          <div className="DocumentPage__side__header">
-            <div className="DocumentPage__side__header__nav">
-              <a href={`/cms/content/${collectionId}`}>
-                <ActionIcon className="DocumentPage__side__header__back">
-                  <IconArrowLeft size={16} />
-                </ActionIcon>
-              </a>
-              <div className="DocumentPage__side__header__docId">{docId}</div>
-            </div>
-            <div className="DocumentPage__side__header__buttons">
-              <ConditionalTooltip
-                label="You don't have access to edit this document"
-                condition={!canEdit}
-              >
-                <Button
-                  className="DocumentPage__side__header__saveButton"
-                  variant="filled"
-                  color="dark"
-                  size="xs"
-                  compact
-                  leftIcon={<IconDeviceFloppy size={16} />}
-                  onClick={() => saveDraft()}
-                  disabled={!canEdit}
-                >
-                  Save
-                </Button>
-              </ConditionalTooltip>
-              <ConditionalTooltip
-                label="You don't have access to edit this document"
-                condition={!canEdit}
-              >
-                <Tooltip label="Edit JSON" disabled={!canEdit}>
-                  <ActionIcon
-                    className="DocumentPage__side__header__editJson"
-                    onClick={() => editJson()}
-                    disabled={!canEdit}
-                  >
-                    <IconBraces size={14} />
-                  </ActionIcon>
-                </Tooltip>
-              </ConditionalTooltip>
-              {/* <Menu
-                  className="DocumentPage__side__header__menu"
-                  position="bottom"
-                  control={
-                    <ActionIcon className="DocumentPage__side__header__menu__dots">
-                      <IconDotsVertical size={16} />
-                    </ActionIcon>
-                  }
-                >
-                  <Menu.Item
-                    icon={<IconBraces size={20} />}
-                    onClick={() => editJson()}
-                  >
-                    Edit JSON
-                  </Menu.Item>
-                </Menu> */}
-              {hasCollectionUrl && (
-                <>
-                  <Tooltip
-                    label={isPreviewVisible ? 'Hide preview' : 'Show preview'}
-                  >
-                    <ActionIcon
-                      className="DocumentPage__side__header__previewToggle"
-                      onClick={() => setIsPreviewVisible(!isPreviewVisible)}
-                    >
-                      {isPreviewVisible ? (
-                        <IconLayoutSidebarRightCollapse size={16} />
-                      ) : (
-                        <IconLayoutSidebarRightExpand size={16} />
-                      )}
-                    </ActionIcon>
-                  </Tooltip>
-                  {!isPreviewVisible && (
-                    <Tooltip label="Open preview in new tab">
-                      <ActionIcon
-                        className="DocumentPage__side__header__openNewTab"
-                        onClick={openPreviewInNewTab}
-                      >
-                        <IconArrowUpRight size={16} />
-                      </ActionIcon>
-                    </Tooltip>
-                  )}
-                </>
-              )}
-            </div>
-          </div>
-          <div
+      <div
+        className={joinClassNames(
+          'DocumentPage__layout',
+          isDraggingChecks && 'DocumentPage__layout--dragging'
+        )}
+        ref={checksLayoutRef}
+      >
+        <SplitPanel className="DocumentPage" localStorageId="DocumentPage">
+          <SplitPanel.Item
             className={joinClassNames(
-              'DocumentPage__side__editor',
+              'DocumentPage__side',
               (!hasCollectionUrl || !isPreviewVisible) &&
-                'DocumentPage__side__editor--centered'
+                'DocumentPage__side--expanded'
             )}
           >
-            <DocEditor docId={docId} />
-          </div>
-        </SplitPanel.Item>
-        <SplitPanel.Item
-          className={joinClassNames(
-            'DocumentPage__main',
-            (!hasCollectionUrl || !isPreviewVisible) &&
-              'DocumentPage__main--hidden'
-          )}
-          fluid
-        >
-          {hasCollectionUrl && isPreviewVisible && (
-            <DocumentPage.Preview key={docId} docId={docId} />
-          )}
-        </SplitPanel.Item>
-      </SplitPanel>
+            <div className="DocumentPage__side__header">
+              <div className="DocumentPage__side__header__nav">
+                <a href={`/cms/content/${collectionId}`}>
+                  <ActionIcon className="DocumentPage__side__header__back">
+                    <IconArrowLeft size={16} />
+                  </ActionIcon>
+                </a>
+                <div className="DocumentPage__side__header__docId">{docId}</div>
+              </div>
+              <div className="DocumentPage__side__header__buttons">
+                <ConditionalTooltip
+                  label="You don't have access to edit this document"
+                  condition={!canEdit}
+                >
+                  <Button
+                    className="DocumentPage__side__header__saveButton"
+                    variant="filled"
+                    color="dark"
+                    size="xs"
+                    compact
+                    leftIcon={<IconDeviceFloppy size={16} />}
+                    onClick={() => saveDraft()}
+                    disabled={!canEdit}
+                  >
+                    Save
+                  </Button>
+                </ConditionalTooltip>
+                <ConditionalTooltip
+                  label="You don't have access to edit this document"
+                  condition={!canEdit}
+                >
+                  <Tooltip label="Edit JSON" disabled={!canEdit}>
+                    <ActionIcon
+                      className="DocumentPage__side__header__editJson"
+                      onClick={() => editJson()}
+                      disabled={!canEdit}
+                    >
+                      <IconBraces size={14} />
+                    </ActionIcon>
+                  </Tooltip>
+                </ConditionalTooltip>
+                {hasCollectionUrl && (
+                  <>
+                    <Tooltip
+                      label={isPreviewVisible ? 'Hide preview' : 'Show preview'}
+                    >
+                      <ActionIcon
+                        className="DocumentPage__side__header__previewToggle"
+                        onClick={() => setIsPreviewVisible(!isPreviewVisible)}
+                      >
+                        {isPreviewVisible ? (
+                          <IconLayoutSidebarRightCollapse size={16} />
+                        ) : (
+                          <IconLayoutSidebarRightExpand size={16} />
+                        )}
+                      </ActionIcon>
+                    </Tooltip>
+                    {!isPreviewVisible && (
+                      <Tooltip label="Open preview in new tab">
+                        <ActionIcon
+                          className="DocumentPage__side__header__openNewTab"
+                          onClick={openPreviewInNewTab}
+                        >
+                          <IconArrowUpRight size={16} />
+                        </ActionIcon>
+                      </Tooltip>
+                    )}
+                  </>
+                )}
+              </div>
+            </div>
+            <div
+              className={joinClassNames(
+                'DocumentPage__side__editor',
+                (!hasCollectionUrl || !isPreviewVisible) &&
+                  !isChecksVisible &&
+                  'DocumentPage__side__editor--centered'
+              )}
+            >
+              <DocEditor docId={docId} />
+            </div>
+          </SplitPanel.Item>
+          <SplitPanel.Item
+            className={joinClassNames(
+              'DocumentPage__main',
+              (!hasCollectionUrl || !isPreviewVisible) &&
+                'DocumentPage__main--hidden'
+            )}
+            fluid
+          >
+            {hasCollectionUrl && isPreviewVisible && (
+              <DocumentPage.Preview key={docId} docId={docId} />
+            )}
+          </SplitPanel.Item>
+        </SplitPanel>
+        {hasChecks && isChecksVisible && (
+          <>
+            <div
+              className="DocumentPage__checksDivider"
+              onMouseDown={() => setIsDraggingChecks(true)}
+            />
+            <div
+              className="DocumentPage__checks"
+              style={{flexBasis: `${checksPanelWidth}px`}}
+            >
+              <ChecksPanel docId={docId} />
+            </div>
+          </>
+        )}
+      </div>
     </Layout>
   );
 }
@@ -322,7 +387,6 @@ DocumentPage.Preview = (props: PreviewProps) => {
   const locales = draft.controller!.getLocales() || [];
   const splitPanel = useSplitPanel();
 
-  const previewUrl = getPreviewUrl(collectionId, slug);
   const localizedPreviewUrl = getPreviewUrl(collectionId, slug, selectedLocale);
 
   const localeOptions = [
@@ -492,7 +556,7 @@ DocumentPage.Preview = (props: PreviewProps) => {
           </div>
         )}
         <div className="DocumentPage__main__previewFrame__iframeWrap">
-          <iframe ref={iframeRef} src={previewUrl} title="iframe preview" />
+          <iframe ref={iframeRef} title="iframe preview" />
         </div>
       </div>
     </div>

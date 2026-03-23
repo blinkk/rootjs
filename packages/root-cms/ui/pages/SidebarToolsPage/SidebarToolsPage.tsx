@@ -1,4 +1,5 @@
 import {useEffect} from 'preact/hooks';
+import {usePageTitle} from '../../hooks/usePageTitle.js';
 import {Layout} from '../../layout/Layout.js';
 import './SidebarToolsPage.css';
 
@@ -9,6 +10,7 @@ interface SidebarToolsPageProps {
 export function SidebarToolsPage(props: SidebarToolsPageProps) {
   const sidebarTools = window.__ROOT_CTX.sidebar?.tools || {};
   const tool = sidebarTools[props.id];
+  usePageTitle(tool?.label || props.id);
   const cmsUrl = tool?.cmsUrl;
   const externalUrl = tool?.externalUrl;
 

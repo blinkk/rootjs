@@ -1,7 +1,7 @@
 import {Button, Modal, useMantineTheme} from '@mantine/core';
 import {useState} from 'preact/hooks';
 import {useLocation} from 'preact-iso';
-import {isSlugValid, normalizeSlug} from '../../../shared/slug.js';
+import {getSlugError, normalizeSlug} from '../../../shared/slug.js';
 import {useCollectionSchema} from '../../hooks/useCollectionSchema.js';
 import {cmsCreateDoc} from '../../utils/doc.js';
 import {getDefaultFieldValue} from '../../utils/fields.js';
@@ -21,6 +21,7 @@ export function NewDocModal(props: NewDocModalProps) {
   const [slug, setSlug] = useState('');
   const [rpcLoading, setRpcLoading] = useState(false);
   const [slugError, setSlugError] = useState('');
+  const [error, setError] = useState('');
   const theme = useMantineTheme();
   const collectionId = props.collection;
   const rootCollection = window.__ROOT_CTX.collections[collectionId];
@@ -28,6 +29,11 @@ export function NewDocModal(props: NewDocModalProps) {
     throw new Error(`collection not found: ${collectionId}`);
   }
   const collection = useCollectionSchema(collectionId);
+
+  function validateSlug(slug: string) {
+    const cleanSlug = normalizeSlug(slug);
+    return cleanSlug ? getSlugError(cleanSlug, rootCollection.slugRegex) : '';
+  }
 
   function onClose() {
     if (props.onClose) {
@@ -40,14 +46,14 @@ export function NewDocModal(props: NewDocModalProps) {
     setRpcLoading(true);
     setSlugError('');
 
-    const cleanSlug = normalizeSlug(slug);
-    const slugRegex = rootCollection.slugRegex;
-    if (!isSlugValid(cleanSlug, slugRegex)) {
-      setSlugError('Please enter a valid slug (e.g. "foo-bar-123").');
+    const slugValidationError = validateSlug(slug);
+    if (slugValidationError) {
+      // SlugInput already displays this error, just return early.
       setRpcLoading(false);
       return;
     }
 
+    const cleanSlug = normalizeSlug(slug);
     const docId = `${collectionId}/${cleanSlug}`;
     try {
       // Save the doc using the default value defined in the collection's
@@ -58,7 +64,7 @@ export function NewDocModal(props: NewDocModalProps) {
       }
       await cmsCreateDoc(docId, {fields: defaultValue});
     } catch (err) {
-      setSlugError(String(err));
+      setError(String(err));
       setRpcLoading(false);
       return;
     }
@@ -95,10 +101,12 @@ export function NewDocModal(props: NewDocModalProps) {
           collectionId={collectionId}
           onChange={(newValue: {collectionId: string; slug: string}) => {
             setSlug(newValue.slug);
+            setSlugError(validateSlug(newValue.slug));
+            setError('');
           }}
         />
 
-        {slugError && <div className="NewDocModal__slugError">{slugError}</div>}
+        {error && <div className="NewDocModal__slugError">{error}</div>}
 
         <div className="NewDocModal__buttons">
           <Button
@@ -116,6 +124,7 @@ export function NewDocModal(props: NewDocModalProps) {
             size="xs"
             color="dark"
             loading={collection.loading || rpcLoading}
+            disabled={!!slugError || !!error}
           >
             Submit
           </Button>

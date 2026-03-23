@@ -3,17 +3,21 @@ import './PublishDocModal.css';
 import {Accordion, Button, Loader, Tooltip} from '@mantine/core';
 import {ContextModalProps, useModals} from '@mantine/modals';
 import {showNotification} from '@mantine/notifications';
-import {IconGitCompare, IconSparkles} from '@tabler/icons-preact';
-import {useState, useRef} from 'preact/hooks';
+import {IconGitCompare, IconPackage, IconSparkles} from '@tabler/icons-preact';
+import {useState, useRef, useEffect} from 'preact/hooks';
 import {useModalTheme} from '../../hooks/useModalTheme.js';
 import {useProjectRoles} from '../../hooks/useProjectRoles.js';
 import {joinClassNames} from '../../utils/classes.js';
+import {getDocFromCacheOrFetch} from '../../utils/doc-cache.js';
 import {cmsPublishDoc, cmsScheduleDoc} from '../../utils/doc.js';
 import {testCanPublish} from '../../utils/permissions.js';
+import {extractReferenceDocIds} from '../../utils/references.js';
 import {getLocalISOString} from '../../utils/time.js';
+import {useAddToReleaseModal} from '../AddToReleaseModal/AddToReleaseModal.js';
 import {AiSummary} from '../AiSummary/AiSummary.js';
 import {DocDiffViewer} from '../DocDiffViewer/DocDiffViewer.js';
 import {DocIdBadge} from '../DocIdBadge/DocIdBadge.js';
+import {DocPreviewCard} from '../DocPreviewCard/DocPreviewCard.js';
 import {Text} from '../Text/Text.js';
 
 const MODAL_ID = 'PublishDocModal';
@@ -324,6 +328,7 @@ export function PublishDocModal(
           </div>
         </form>
         <div className="PublishDocModal__DiffWrapper">
+          <ReferenceDocs docId={props.docId} />
           {experiments.ai && (
             <AiSummary
               docId={props.docId}
@@ -368,6 +373,115 @@ function ShowChanges(props: {docId: string}) {
           )}
         </Accordion.Item>
       </Accordion>
+    </div>
+  );
+}
+
+/** Checks if a doc has unpublished changes (draft is newer than published). */
+function docHasUnpublishedChanges(doc: any): boolean {
+  const sys = doc?.sys;
+  if (!sys) {
+    return false;
+  }
+  if (!sys.publishedAt) {
+    return true;
+  }
+  if (sys.modifiedAt && sys.modifiedAt > sys.publishedAt) {
+    return true;
+  }
+  return false;
+}
+
+/**
+ * Shows referenced docs with unpublished changes and provides an option to
+ * add all docs to a release.
+ */
+function ReferenceDocs(props: {docId: string}) {
+  const [loading, setLoading] = useState(true);
+  const [unpublishedRefDocs, setUnpublishedRefDocs] = useState<string[]>([]);
+
+  useEffect(() => {
+    async function fetchReferences() {
+      setLoading(true);
+      try {
+        const docData = await getDocFromCacheOrFetch(props.docId);
+        if (!docData?.fields) {
+          setLoading(false);
+          return;
+        }
+        const refDocIds = extractReferenceDocIds(docData.fields).filter(
+          (id) => id !== props.docId
+        );
+        if (refDocIds.length === 0) {
+          setLoading(false);
+          return;
+        }
+        // Fetch each referenced doc to check for unpublished changes.
+        const unpublished: string[] = [];
+        await Promise.all(
+          refDocIds.map(async (refId) => {
+            try {
+              const refDoc = await getDocFromCacheOrFetch(refId);
+              if (refDoc && docHasUnpublishedChanges(refDoc)) {
+                unpublished.push(refId);
+              }
+            } catch (err) {
+              // Skip docs that fail to load (e.g. deleted references).
+              console.warn(`Failed to fetch reference doc: ${refId}`, err);
+            }
+          })
+        );
+        setUnpublishedRefDocs(unpublished.sort());
+      } catch (err) {
+        console.error('Failed to load reference docs', err);
+      }
+      setLoading(false);
+    }
+    fetchReferences();
+  }, [props.docId]);
+
+  const allDocIds = [props.docId, ...unpublishedRefDocs];
+  const addToReleaseModal = useAddToReleaseModal({docIds: allDocIds});
+
+  if (loading) {
+    return (
+      <div className="PublishDocModal__ReferenceDocs">
+        <Loader color="gray" size="sm" />
+      </div>
+    );
+  }
+
+  if (unpublishedRefDocs.length === 0) {
+    return null;
+  }
+
+  return (
+    <div className="PublishDocModal__ReferenceDocs">
+      <div className="PublishDocModal__ReferenceDocs__header">
+        <div className="PublishDocModal__ReferenceDocs__header__label">
+          Referenced docs with unpublished changes ({unpublishedRefDocs.length})
+        </div>
+        <Button
+          variant="outline"
+          size="xs"
+          color="dark"
+          leftIcon={<IconPackage size={16} />}
+          onClick={() => addToReleaseModal.open()}
+        >
+          Bundle all docs into a release
+        </Button>
+      </div>
+      <div className="PublishDocModal__ReferenceDocs__list">
+        {unpublishedRefDocs.map((refId) => (
+          <DocPreviewCard
+            key={refId}
+            docId={refId}
+            variant="compact"
+            statusBadges
+            clickable
+          />
+        ))}
+      </div>
     </div>
   );
 }

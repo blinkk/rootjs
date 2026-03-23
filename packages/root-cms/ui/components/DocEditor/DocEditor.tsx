@@ -28,6 +28,7 @@ import {
   IconDotsVertical,
   IconLanguage,
   IconLanguageOff,
+  IconListCheck,
   IconLock,
   IconPlanet,
   IconRocket,
@@ -177,7 +178,7 @@ type StatusBarProps = DocEditorProps & {
 };
 
 DocEditor.StatusBar = (props: StatusBarProps) => {
-  const {route} = useLocation();
+  const {route, query} = useLocation();
   const {roles} = useProjectRoles();
   const currentUserEmail = window.firebase.user.email || '';
   const canPublish = testCanPublish(roles, currentUserEmail);
@@ -211,6 +212,38 @@ DocEditor.StatusBar = (props: StatusBarProps) => {
 
   const publishDocModal = usePublishDocModal({docId: props.docId});
   const localizationModal = useLocalizationModal();
+  const [checksActive, setChecksActive] = useState(() => {
+    try {
+      const val = window.localStorage.getItem(
+        'root::DocumentPage::checksVisible'
+      );
+      return val ? JSON.parse(val) === true : false;
+    } catch {
+      return false;
+    }
+  });
+
+  useEffect(() => {
+    const handler = (e: Event) => {
+      setChecksActive((e as CustomEvent).detail === true);
+    };
+    window.addEventListener('root:checks-visible', handler);
+    return () => window.removeEventListener('root:checks-visible', handler);
+  }, []);
+
+  const urlLocale = (query.locale as string) || '';
+  const urlModal = (query.modal as string) || '';
+
+  useEffect(() => {
+    if (urlModal === 'localization' && draft.controller) {
+      localizationModal.open({
+        docId: props.docId,
+        collection: props.collection,
+        draft: draft.controller,
+        locale: urlLocale || undefined,
+      });
+    }
+  }, []);
 
   const loading = !data?.sys;
   if (loading) {
@@ -225,7 +258,23 @@ DocEditor.StatusBar = (props: StatusBarProps) => {
       <DocEditor.SaveState />
       {data?.sys && (
         <div className="DocEditor__statusBar__statusBadges">
-          <DocStatusBadges doc={data as CMSDoc} />
+          <DocStatusBadges doc={data as CMSDoc} docId={props.docId} />
+        </div>
+      )}
+      {(window.__ROOT_CTX.checks || []).length > 0 && (
+        <div className="DocEditor__statusBar__checks">
+          <Button
+            className={checksActive ? 'DocEditor__checksButton--active' : ''}
+            variant="default"
+            color="dark"
+            size="xs"
+            leftIcon={<IconListCheck size={16} />}
+            onClick={() => {
+              window.dispatchEvent(new CustomEvent('root:toggle-checks'));
+            }}
+          >
+            Checks
+          </Button>
         </div>
       )}
       <div className="DocEditor__statusBar__i18n">
@@ -234,13 +283,14 @@ DocEditor.StatusBar = (props: StatusBarProps) => {
           color="dark"
           size="xs"
           leftIcon={<IconPlanet size={16} />}
-          onClick={() =>
+          onClick={() => {
             localizationModal.open({
               docId: props.docId,
               collection: props.collection,
               draft: draft.controller,
-            })
-          }
+              locale: (query.locale as string) || undefined,
+            });
+          }}
         >
           Localization
         </Button>

@@ -1,5 +1,30 @@
 # @blinkk/root-cms
 
+## 2.5.7
+
+### Patch Changes
+
+- bfa4e410: feat: add polish and features to localization modal
+  - @blinkk/root@2.5.7
+
+## 2.5.6
+
+### Patch Changes
+
+- 3a3beab3: feat: add usePageTitle hook and set page titles
+- 42b88148: feat: show referenced docs with unpublished changes in publish modal
+- ed26ccc9: fix: apply tags across documents simultaneously
+  - @blinkk/root@2.5.6
+
+## 2.5.5
+
+### Patch Changes
+
+- 745e2ce7: feat: add `itemDefault` for array fields
+- 762db437: feat: add root-cms cli command to get/set docs to/from filesystem
+- e756ccde: refactor: switch from `preact-router` to `preact-iso`
+  - @blinkk/root@2.5.5
+
 ## 2.5.4
 
 ### Patch Changes

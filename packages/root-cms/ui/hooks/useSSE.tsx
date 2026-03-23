@@ -140,6 +140,13 @@ export function SSEProvider(props: SSEProviderProps) {
   }, [emitter]);
 
   useEffect(() => {
+    // Only connect to SSE on localhost. SSE is used for dev-only features
+    // like schema hot-reloading and server version change detection. On
+    // deployed environments (GAE, etc.), SSE connections are unnecessary and
+    // can cause issues with request deadline timeouts.
+    if (!IS_LOCALHOST) {
+      return;
+    }
     connect();
     const onVis = () => {
       if (document.visibilityState === 'visible') {

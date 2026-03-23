@@ -1,8 +1,10 @@
 import {IconMoodLookDown} from '@tabler/icons-preact';
+import {usePageTitle} from '../../hooks/usePageTitle.js';
 import {Layout} from '../../layout/Layout.js';
 import './NotFoundPage.css';
 
 export function NotFoundPage() {
+  usePageTitle('Not Found');
   return (
     <Layout>
       <div className="NotFoundPage">

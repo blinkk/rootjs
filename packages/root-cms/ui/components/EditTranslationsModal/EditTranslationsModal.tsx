@@ -122,9 +122,22 @@ export function EditTranslationsModal(
       if (props.field?.deepKey && draft?.controller) {
         const metadataKey = getMetadataKey(props.field.deepKey);
         const metadata = draft.controller.getValue(metadataKey) || {};
-        metadata.disableTranslations = doNotTranslate;
-        metadata.description = description;
-        await draft.controller.updateKey(metadataKey, metadata);
+        // Only store non-default values to avoid superfluous data.
+        if (doNotTranslate) {
+          metadata.disableTranslations = true;
+        } else {
+          delete metadata.disableTranslations;
+        }
+        if (description) {
+          metadata.description = description;
+        } else {
+          delete metadata.description;
+        }
+        if (Object.keys(metadata).length > 0) {
+          await draft.controller.updateKey(metadataKey, metadata);
+        } else {
+          await draft.controller.updateKey(metadataKey, undefined);
+        }
         // Ensure the metadata is saved immediately.
         await draft.controller.flush();
       }
@@ -327,16 +340,24 @@ export function EditTranslationsModal(
                         position="left"
                       >
                         <ActionIcon
-                          variant="light"
+                          variant="outline"
                           onClick={generateAiTranslations}
                           loading={aiGenerating}
                           disabled={aiGenerating}
-                          size="sm"
+                          sx={{
+                            height: 30,
+                            width: 30,
+                            borderColor: '#ced4da',
+                          }}
                         >
                           {aiGenerating ? (
                             <IconLoader2 size={16} />
                           ) : (
-                            <IconSparkles size={16} />
+                            <IconSparkles
+                              size={16}
+                              fill="currentColor"
+                              stroke={1.5}
+                            />
                           )}
                         </ActionIcon>
                       </Tooltip>

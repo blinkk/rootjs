@@ -1,4 +1,5 @@
 import {useState, useEffect, useCallback} from 'preact/hooks';
+import {useLocation} from 'preact-iso';
 
 interface UseQueryParamOptions<T> {
   /** Whether to replace history entry instead of pushing new one. */
@@ -20,35 +21,25 @@ export function useQueryParam<T = string>(
   defaultValue: T,
   options: UseQueryParamOptions<T> = {}
 ): QueryParamHookReturn<T> {
+  const {query} = useLocation();
   const {
     replace = false,
     serialize = (value: T) => String(value),
     deserialize = (value: string) => value as T,
   } = options;
 
-  // Get initial value from URL.
-  const getInitialValue = useCallback((): T => {
-    const urlParams = new URLSearchParams(window.location.search);
-    const paramValue = urlParams.get(paramName);
+  // Get value from URL query params.
+  const getValueFromQuery = useCallback((): T => {
+    const paramValue = query[paramName] as string | undefined;
+    return paramValue !== undefined ? deserialize(paramValue) : defaultValue;
+  }, [query, paramName, defaultValue, deserialize]);
 
-    return paramValue !== null ? deserialize(paramValue) : defaultValue;
-  }, [paramName, defaultValue, deserialize]);
+  const [value, setValue] = useState(getValueFromQuery);
 
-  const [value, setValue] = useState(getInitialValue);
-
-  // Update state when URL changes (e.g., browser back/forward).
+  // Update state when URL changes (via useLocation's query object).
   useEffect(() => {
-    const handlePopState = () => {
-      const urlParams = new URLSearchParams(window.location.search);
-      const paramValue = urlParams.get(paramName);
-      const newValue =
-        paramValue !== null ? deserialize(paramValue) : defaultValue;
-      setValue(newValue);
-    };
-
-    window.addEventListener('popstate', handlePopState);
-    return () => window.removeEventListener('popstate', handlePopState);
-  }, [paramName, defaultValue, deserialize]);
+    setValue(getValueFromQuery());
+  }, [getValueFromQuery]);
 
   // Function to update both state and URL.
   const updateParam = useCallback(
