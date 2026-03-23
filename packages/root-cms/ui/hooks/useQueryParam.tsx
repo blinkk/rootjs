@@ -21,7 +21,7 @@ export function useQueryParam<T = string>(
   defaultValue: T,
   options: UseQueryParamOptions<T> = {}
 ): QueryParamHookReturn<T> {
-  const {query} = useLocation();
+  const {query, route} = useLocation();
   const {
     replace = false,
     serialize = (value: T) => String(value),
@@ -56,10 +56,11 @@ export function useQueryParam<T = string>(
         url.searchParams.set(paramName, serializedValue);
       }
 
-      const method = replace ? 'replaceState' : 'pushState';
-      window.history[method]({}, '', url.toString());
+      // Use preact-iso's route() so LocationProvider stays in sync.
+      const newUrl = url.pathname + url.search;
+      route(newUrl, replace);
     },
-    [paramName, defaultValue, serialize, replace]
+    [paramName, defaultValue, serialize, replace, route]
   );
 
   return [value, updateParam];
