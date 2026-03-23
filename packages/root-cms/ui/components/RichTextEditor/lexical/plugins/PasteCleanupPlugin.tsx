@@ -10,14 +10,12 @@ import {
 import {useEffect} from 'preact/hooks';
 
 /**
- * Cleans up HTML pasted from Google Docs where links contain elements styled
- * with `text-decoration:underline`. Google Docs formats links as:
+ * Strips `text-decoration:underline` from elements inside `<a>` tags.
+ * Google Docs formats links as:
  * `<a href="..." style="text-decoration:none;"><span style="...text-decoration:underline;...">text</span></a>`
  */
 function cleanLinkUnderlines(doc: Document): boolean {
   let modified = false;
-
-  // Handle elements inside <a> with text-decoration:underline in style.
   doc.querySelectorAll('a [style]').forEach((el) => {
     if (!(el instanceof HTMLElement)) return;
     const style = el.style;
@@ -31,14 +29,29 @@ function cleanLinkUnderlines(doc: Document): boolean {
       modified = true;
     }
   });
-
   return modified;
 }
 
 /**
- * Plugin that cleans up pasted HTML to remove underline formatting from links.
- * Google Docs formats links with `text-decoration:underline` on inner spans,
- * which Lexical interprets as underline text formatting on top of the link.
+ * Strips `text-align` styles from all elements. The CMS rich text editor
+ * doesn't currently support text alignment.
+ */
+function cleanTextAlign(doc: Document): boolean {
+  let modified = false;
+  doc.querySelectorAll('[style]').forEach((el) => {
+    if (!(el instanceof HTMLElement)) return;
+    if (el.style.textAlign) {
+      el.style.removeProperty('text-align');
+      modified = true;
+    }
+  });
+  return modified;
+}
+
+/**
+ * Plugin that cleans up pasted HTML to remove unsupported formatting.
+ * - Removes `text-decoration:underline` from spans inside links (Google Docs).
+ * - Removes `text-align` styles (not currently supported in the CMS).
  */
 export function PasteCleanupPlugin() {
   const [editor] = useLexicalComposerContext();
@@ -57,14 +70,13 @@ export function PasteCleanupPlugin() {
           return false;
         }
 
-        // Quick check: skip if the HTML doesn't contain <a> tags.
-        if (!/<a[\s>]/i.test(html)) {
-          return false;
-        }
-
         const parser = new DOMParser();
         const dom = parser.parseFromString(html, 'text/html');
-        const modified = cleanLinkUnderlines(dom);
+
+        let modified = false;
+        modified = cleanLinkUnderlines(dom) || modified;
+        modified = cleanTextAlign(dom) || modified;
+
         if (!modified) {
           return false;
         }
