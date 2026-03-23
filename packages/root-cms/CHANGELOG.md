@@ -1,5 +1,18 @@
 # @blinkk/root-cms
 
+## 2.5.8
+
+### Patch Changes
+
+- 9320bfed: feat: add checks for doc validations
+- 15d6db04: fix: handle body-parser errors gracefully
+- 62362819: fix: skip SSE connection on non-localhost environments
+- 1e53094d: feat: add translation string field history viewer
+- d8b4d261: feat: add history view to translations modal (#972)
+- f7538738: feat: add release badges to doc status badges
+- 61cf405f: fix: clean up links pasted from google docs
+  - @blinkk/root@2.5.8
+
 ## 2.5.7
 
 ### Patch Changes
