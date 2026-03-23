@@ -3,6 +3,11 @@
   padding-bottom: 30px;
 }
 
+.EditTranslationsModalWrap .mantine-Modal-body {
+  max-height: calc(100vh - 200px);
+  overflow-y: auto;
+}
+
 .EditTranslationsModalWrap .mantine-Modal-header .mantine-Text-root {
   font-size: 18px;
   font-weight: 700;
@@ -15,6 +20,34 @@
   background: #f8f9fa;
   border: 1px solid #dee2e6;
   border-radius: 4px;
+}
+
+.EditTranslationsModal__tabs {
+  display: flex;
+  gap: 0;
+  margin-bottom: 20px;
+  border-bottom: 1px solid #dee2e6;
+}
+
+.EditTranslationsModal__tabs__tab {
+  padding: 10px 20px;
+  font-size: 14px;
+  font-weight: 600;
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+  color: #868e96;
+  transition: color 0.15s, border-color 0.15s;
+}
+
+.EditTranslationsModal__tabs__tab:hover {
+  color: #212529;
+}
+
+.EditTranslationsModal__tabs__tab.active {
+  color: #212529;
+  border-bottom-color: #228be6;
 }
 
 .EditTranslationsModal__controls__doNotTranslate {

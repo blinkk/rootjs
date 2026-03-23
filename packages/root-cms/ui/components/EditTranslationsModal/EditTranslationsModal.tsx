@@ -25,6 +25,7 @@ import {CsvTranslation, cmsDocImportTranslations} from '../../utils/doc.js';
 import {GoogleSheetId, getSpreadsheetUrl} from '../../utils/gsheets.js';
 import {loadTranslations} from '../../utils/l10n.js';
 import {notifyErrors} from '../../utils/notifications.js';
+import {FieldHistory} from '../FieldHistory/FieldHistory.js';
 import {Heading} from '../Heading/Heading.js';
 
 const MODAL_ID = 'EditTranslationsModal';
@@ -80,6 +81,9 @@ export function EditTranslationsModal(
   const [doNotTranslate, setDoNotTranslate] = useState(false);
   const [description, setDescription] = useState('');
   const [aiGenerating, setAiGenerating] = useState(false);
+  const [activeTab, setActiveTab] = useState<'translations' | 'history'>(
+    'translations'
+  );
 
   // Use draft from props (passed from DocEditor).
   const draft = props.draft || null;
@@ -266,126 +270,165 @@ export function EditTranslationsModal(
         <Loader />
       ) : (
         <>
-          <div className="EditTranslationsModal__controls">
-            <div className="EditTranslationsModal__controls__doNotTranslate">
-              <Checkbox
-                label="Do not translate"
-                checked={doNotTranslate}
-                onChange={(e: ChangeEvent<HTMLInputElement>) => {
-                  setDoNotTranslate(e.currentTarget.checked);
-                  setHasChanges(true);
-                }}
-                size="sm"
-              />
-              <Tooltip
-                label="Prevent the string from being included for translation"
-                withArrow
-                position="right"
+          {props.field?.deepKey && (
+            <div className="EditTranslationsModal__tabs">
+              <button
+                type="button"
+                className={joinClassNames(
+                  'EditTranslationsModal__tabs__tab',
+                  activeTab === 'translations' && 'active'
+                )}
+                onClick={() => setActiveTab('translations')}
               >
-                <IconInfoCircle size={14} style={{marginLeft: '6px'}} />
-              </Tooltip>
+                Translations
+              </button>
+              <button
+                type="button"
+                className={joinClassNames(
+                  'EditTranslationsModal__tabs__tab',
+                  activeTab === 'history' && 'active'
+                )}
+                onClick={() => setActiveTab('history')}
+              >
+                History
+              </button>
             </div>
+          )}
 
-            <div className="EditTranslationsModal__controls__description">
-              <div className="EditTranslationsModal__controls__description__label">
-                <span>Description</span>
-                <Tooltip
-                  label="Translator notes may be included when the string is extracted and sent for translation"
-                  withArrow
-                  position="right"
-                >
-                  <IconInfoCircle size={14} style={{marginLeft: '6px'}} />
-                </Tooltip>
-              </div>
-              <Textarea
-                size="sm"
-                autosize
-                minRows={1}
-                maxRows={6}
-                value={description}
-                placeholder="Add context or notes for translators..."
-                onChange={(e: ChangeEvent<HTMLTextAreaElement>) => {
-                  setDescription(e.currentTarget.value);
-                  setHasChanges(true);
-                }}
-              />
-            </div>
-          </div>
-
-          <table className="EditTranslationsModal__table">
-            <thead
-              style={{display: doNotTranslate ? 'none' : 'table-header-group'}}
-            >
-              <tr>
-                <th>
-                  <Heading size="h4" weight="semi-bold">
-                    SOURCE
-                  </Heading>
-                </th>
-                <th>
-                  <div
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
+          {activeTab === 'history' && props.field?.deepKey ? (
+            <FieldHistory
+              docId={props.docId}
+              deepKey={props.field.deepKey}
+              translatable={true}
+            />
+          ) : (
+            <>
+              <div className="EditTranslationsModal__controls">
+                <div className="EditTranslationsModal__controls__doNotTranslate">
+                  <Checkbox
+                    label="Do not translate"
+                    checked={doNotTranslate}
+                    onChange={(e: ChangeEvent<HTMLInputElement>) => {
+                      setDoNotTranslate(e.currentTarget.checked);
+                      setHasChanges(true);
                     }}
+                    size="sm"
+                  />
+                  <Tooltip
+                    label="Prevent the string from being included for translation"
+                    withArrow
+                    position="right"
                   >
-                    <Heading size="h4" weight="semi-bold">
-                      TRANSLATIONS
-                    </Heading>
-                    {shouldShowAiButton() && (
-                      <Tooltip
-                        label="Generate quick translations using AI"
-                        withArrow
-                        position="left"
-                      >
-                        <ActionIcon
-                          variant="outline"
-                          onClick={generateAiTranslations}
-                          loading={aiGenerating}
-                          disabled={aiGenerating}
-                          sx={{
-                            height: 30,
-                            width: 30,
-                            borderColor: '#ced4da',
-                          }}
-                        >
-                          {aiGenerating ? (
-                            <IconLoader2 size={16} />
-                          ) : (
-                            <IconSparkles
-                              size={16}
-                              fill="currentColor"
-                              stroke={1.5}
-                            />
-                          )}
-                        </ActionIcon>
-                      </Tooltip>
-                    )}
+                    <IconInfoCircle size={14} style={{marginLeft: '6px'}} />
+                  </Tooltip>
+                </div>
+
+                <div className="EditTranslationsModal__controls__description">
+                  <div className="EditTranslationsModal__controls__description__label">
+                    <span>Description</span>
+                    <Tooltip
+                      label="Translator notes may be included when the string is extracted and sent for translation"
+                      withArrow
+                      position="right"
+                    >
+                      <IconInfoCircle size={14} style={{marginLeft: '6px'}} />
+                    </Tooltip>
                   </div>
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {strings.map((source) => (
-                <tr style={{display: doNotTranslate ? 'none' : 'table-row'}}>
-                  <td>
-                    <div className="EditTranslationsModal__table__source">
-                      {source}
-                    </div>
-                  </td>
-                  <td>
-                    <EditTranslationsModal.StringsEditor
-                      source={source}
-                      locales={i18nLocales}
-                      translations={translationsMap[source] || {}}
-                      onChange={onChange}
-                    />
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+                  <Textarea
+                    size="sm"
+                    autosize
+                    minRows={1}
+                    maxRows={6}
+                    value={description}
+                    placeholder="Add context or notes for translators..."
+                    onChange={(e: ChangeEvent<HTMLTextAreaElement>) => {
+                      setDescription(e.currentTarget.value);
+                      setHasChanges(true);
+                    }}
+                  />
+                </div>
+              </div>
+
+              <table className="EditTranslationsModal__table">
+                <thead
+                  style={{
+                    display: doNotTranslate ? 'none' : 'table-header-group',
+                  }}
+                >
+                  <tr>
+                    <th>
+                      <Heading size="h4" weight="semi-bold">
+                        SOURCE
+                      </Heading>
+                    </th>
+                    <th>
+                      <div
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                        }}
+                      >
+                        <Heading size="h4" weight="semi-bold">
+                          TRANSLATIONS
+                        </Heading>
+                        {shouldShowAiButton() && (
+                          <Tooltip
+                            label="Generate quick translations using AI"
+                            withArrow
+                            position="left"
+                          >
+                            <ActionIcon
+                              variant="outline"
+                              onClick={generateAiTranslations}
+                              loading={aiGenerating}
+                              disabled={aiGenerating}
+                              sx={{
+                                height: 30,
+                                width: 30,
+                                borderColor: '#ced4da',
+                              }}
+                            >
+                              {aiGenerating ? (
+                                <IconLoader2 size={16} />
+                              ) : (
+                                <IconSparkles
+                                  size={16}
+                                  fill="currentColor"
+                                  stroke={1.5}
+                                />
+                              )}
+                            </ActionIcon>
+                          </Tooltip>
+                        )}
+                      </div>
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {strings.map((source) => (
+                    <tr
+                      style={{display: doNotTranslate ? 'none' : 'table-row'}}
+                    >
+                      <td>
+                        <div className="EditTranslationsModal__table__source">
+                          {source}
+                        </div>
+                      </td>
+                      <td>
+                        <EditTranslationsModal.StringsEditor
+                          source={source}
+                          locales={i18nLocales}
+                          translations={translationsMap[source] || {}}
+                          onChange={onChange}
+                        />
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </>
+          )}
         </>
       )}
 
@@ -396,7 +439,7 @@ export function EditTranslationsModal(
             href={`/cms/translations/${props.docId}`}
             target="_blank"
             variant="default"
-            size="md"
+            size="xs"
             rightIcon={<IconExternalLink size={14} />}
           >
             Open Translations Editor
@@ -417,7 +460,7 @@ export function EditTranslationsModal(
         <div className="EditTranslationsModal__footer__buttons">
           <Button
             variant="default"
-            size="md"
+            size="xs"
             color="dark"
             type="button"
             onClick={() => context.closeModal(id)}
@@ -426,7 +469,7 @@ export function EditTranslationsModal(
           </Button>
           <Button
             variant="filled"
-            size="md"
+            size="xs"
             color="dark"
             onClick={() => onSave()}
             disabled={!hasChanges}
