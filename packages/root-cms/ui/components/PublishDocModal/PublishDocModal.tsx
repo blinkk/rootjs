@@ -10,6 +10,7 @@ import {useProjectRoles} from '../../hooks/useProjectRoles.js';
 import {joinClassNames} from '../../utils/classes.js';
 import {getDocFromCacheOrFetch} from '../../utils/doc-cache.js';
 import {cmsPublishDoc, cmsScheduleDoc} from '../../utils/doc.js';
+import {errorMessage} from '../../utils/notifications.js';
 import {testCanPublish} from '../../utils/permissions.js';
 import {extractReferenceDocIds} from '../../utils/references.js';
 import {getLocalISOString} from '../../utils/time.js';
@@ -79,9 +80,10 @@ export function PublishDocModal(
       modals.closeAll();
     } catch (err) {
       console.error(err);
+      const detail = errorMessage(err);
       showNotification({
         title: 'Publish failed',
-        message: `Failed to publish ${props.docId}.`,
+        message: `Failed to publish ${props.docId}: ${detail}`,
         color: 'red',
         autoClose: false,
       });
@@ -104,9 +106,10 @@ export function PublishDocModal(
       modals.closeAll();
     } catch (err) {
       console.error(err);
+      const detail = errorMessage(err);
       showNotification({
         title: 'Schedule failed',
-        message: `Failed to schedule ${props.docId}.`,
+        message: `Failed to schedule ${props.docId}: ${detail}`,
         color: 'red',
         autoClose: false,
       });
