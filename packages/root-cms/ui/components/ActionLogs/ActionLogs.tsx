@@ -103,7 +103,10 @@ export function ActionLogs(props: ActionLogsProps) {
       }
 
       // Filter by users.
-      if (userFilters.length > 0 && (!action.by || !userFilters.includes(action.by))) {
+      if (
+        userFilters.length > 0 &&
+        (!action.by || !userFilters.includes(action.by))
+      ) {
         return false;
       }
 
@@ -139,7 +142,9 @@ export function ActionLogs(props: ActionLogsProps) {
   }, [actions, debouncedSearch, actionFilters, userFilters, timeFilter]);
 
   // Paginate filtered actions (skip pagination in compact mode).
-  const totalPages = props.compact ? 1 : Math.ceil(filteredActions.length / PAGE_SIZE);
+  const totalPages = props.compact
+    ? 1
+    : Math.ceil(filteredActions.length / PAGE_SIZE);
   const paginatedActions = useMemo(() => {
     if (props.compact) {
       return filteredActions;
@@ -155,7 +160,9 @@ export function ActionLogs(props: ActionLogsProps) {
 
   if (loading) {
     return (
-      <div className={`ActionsLog ActionsLog--loading ${props.className || ''}`}>
+      <div
+        className={`ActionsLog ActionsLog--loading ${props.className || ''}`}
+      >
         <Loader color="gray" size="xl" />
       </div>
     );
@@ -229,13 +236,13 @@ export function ActionLogs(props: ActionLogsProps) {
               <td className="ActionsLogs__table__col ActionsLogs__table__col--nowrap">
                 <span className="ActionsLogs__user">{action.by}</span>
               </td>
-              <td className="ActionsLogs__table__col">
+              <td className="ActionsLogs__table__col ActionsLogs__table__col--action">
                 <span className="ActionsLogs__action">{action.action}</span>
               </td>
               <td className="ActionsLogs__table__col ActionsLogs__table__col--metadata">
                 <MetadataDisplay metadata={action.metadata} />
               </td>
-              <td className="ActionsLogs__table__col">
+              <td className="ActionsLogs__table__col ActionsLogs__table__col--links">
                 <QuickLinks action={action} />
               </td>
             </tr>

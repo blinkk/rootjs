@@ -43,6 +43,10 @@
   margin-top: 12px;
 }
 
+.ActionsLogs__table__row:not(.ActionsLogs__table__row--header):hover td {
+  background: rgba(0, 0, 0, 0.04) !important;
+}
+
 .ActionsLogs__table__header,
 .ActionsLogs__table__col {
   font-size: 13px !important;
@@ -52,6 +56,17 @@
 
 .ActionsLogs__table__col--nowrap {
   white-space: nowrap;
+  width: 1%;
+}
+
+.ActionsLogs__table__col--action {
+  white-space: nowrap;
+  width: 1%;
+}
+
+.ActionsLogs__table__col--links {
+  white-space: nowrap;
+  width: 1%;
 }
 
 .ActionsLogs__table__col--metadata {
