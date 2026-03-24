@@ -247,7 +247,8 @@ export function EditTranslationsModal(
 
   function shouldShowAiButton() {
     const experiments = (window as any).__ROOT_CTX?.experiments || {};
-    const aiEnabled = !!experiments.ai;
+    const aiEnabled =
+      !!(window as any).__ROOT_CTX?.ai?.enabled || !!experiments.ai;
 
     if (!aiEnabled) return false;
 

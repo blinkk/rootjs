@@ -81,6 +81,7 @@ Layout.Side = () => {
   const isBuiltInHidden = (tool: CMSBuiltInSidebarTool) =>
     hiddenBuiltInTools.has(tool);
   const experiments = window.__ROOT_CTX.experiments || {};
+  const aiEnabled = !!window.__ROOT_CTX.ai?.enabled || !!experiments.ai;
 
   const onSignOut = async () => {
     await window.firebase.auth.signOut();
@@ -150,9 +151,9 @@ Layout.Side = () => {
           </Layout.SideButton>
         )}
 
-        {experiments.ai && !isBuiltInHidden('ai') && (
+        {aiEnabled && !isBuiltInHidden('ai') && (
           <Layout.SideButton
-            label="Root AI (experimental)"
+            label="Root AI"
             url="/cms/ai"
             active={currentUrl.startsWith('/cms/ai')}
           >

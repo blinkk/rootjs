@@ -39,6 +39,30 @@ const LEGACY_MODEL_RENAME: Record<string, string> = {
   'vertexai/gemini-2.0-pro': 'gemini-2.0-pro',
 };
 
+/**
+ * Resolves the AI model from the CMS plugin options. Checks the top-level `ai`
+ * config first, then falls back to the deprecated `experiments.ai` config.
+ */
+function resolveAiModel(options: CMSPluginOptions): RootAiModel {
+  if (options.ai?.model) {
+    return options.ai.model;
+  }
+  if (
+    typeof options.experiments?.ai === 'object' &&
+    options.experiments.ai.model
+  ) {
+    return options.experiments.ai.model;
+  }
+  return DEFAULT_MODEL;
+}
+
+/**
+ * Returns whether AI is enabled in the CMS plugin options.
+ */
+export function isAiEnabled(options: CMSPluginOptions): boolean {
+  return !!options.ai || !!options.experiments?.ai;
+}
+
 export interface SummarizeDiffOptions {
   before: Record<string, any> | null;
   after: Record<string, any> | null;
@@ -111,10 +135,7 @@ export async function generatePublishMessage(
 ): Promise<string> {
   const cmsPluginOptions = cmsClient.cmsPlugin.getConfig();
   const firebaseConfig = cmsPluginOptions.firebaseConfig;
-  const model: RootAiModel =
-    (typeof cmsPluginOptions.experiments?.ai === 'object'
-      ? cmsPluginOptions.experiments.ai.model
-      : undefined) || DEFAULT_MODEL;
+  const model: RootAiModel = resolveAiModel(cmsPluginOptions);
 
   const ai = genkit({
     plugins: [
@@ -270,11 +291,7 @@ export class Chat {
     this.id = id;
     this.history = options?.history ?? [];
     this.model = cleanModelName(
-      options?.model ||
-        (typeof this.cmsPluginOptions.experiments?.ai === 'object'
-          ? this.cmsPluginOptions.experiments.ai.model
-          : undefined) ||
-        DEFAULT_MODEL
+      options?.model || resolveAiModel(this.cmsPluginOptions)
     );
     const firebaseConfig = this.cmsPluginOptions.firebaseConfig;
     this.ai = genkit({
@@ -533,10 +550,7 @@ export async function translateString(
 ): Promise<Record<string, string>> {
   const cmsPluginOptions = cmsClient.cmsPlugin.getConfig();
   const firebaseConfig = cmsPluginOptions.firebaseConfig;
-  const model: RootAiModel =
-    (typeof cmsPluginOptions.experiments?.ai === 'object'
-      ? cmsPluginOptions.experiments.ai.model
-      : undefined) || DEFAULT_MODEL;
+  const model: RootAiModel = resolveAiModel(cmsPluginOptions);
 
   const ai = genkit({
     plugins: [

@@ -33,8 +33,10 @@ export function DocDiffViewer(props: DocDiffViewerProps) {
   const [rightDoc, setRightDoc] = useState<CMSDoc | null>(null);
 
   const experiments = (window as any).__ROOT_CTX?.experiments || {};
+  const aiEnabled =
+    !!(window as any).__ROOT_CTX?.ai?.enabled || !!experiments.ai;
   const showAiSummary =
-    experiments.ai &&
+    aiEnabled &&
     left.docId === right.docId &&
     props.showAiSummary !== false;
 

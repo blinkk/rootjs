@@ -58,6 +58,8 @@ export function PublishDocModal(
   const modals = useModals();
   const modalTheme = useModalTheme();
   const experiments = window.__ROOT_CTX.experiments || {};
+  const aiEnabled =
+    !!window.__ROOT_CTX.ai?.enabled || !!experiments.ai;
 
   const {roles, loading: rolesLoading} = useProjectRoles();
   const currentUserEmail = window.firebase.user.email || '';
@@ -283,7 +285,7 @@ export function PublishDocModal(
                   setPublishMessage(target.value);
                 }}
               />
-              {experiments.ai && (
+              {aiEnabled && (
                 <button
                   type="button"
                   className="PublishDocModal__form__publishMessage__sparkle"
@@ -332,7 +334,7 @@ export function PublishDocModal(
         </form>
         <div className="PublishDocModal__DiffWrapper">
           <ReferenceDocs docId={props.docId} />
-          {experiments.ai && (
+          {aiEnabled && (
             <AiSummary
               docId={props.docId}
               beforeVersion="published"
