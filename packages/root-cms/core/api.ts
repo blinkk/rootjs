@@ -7,6 +7,14 @@ import {
   AiResponse,
   SendPromptOptions,
 } from '../shared/ai/prompts.js';
+import {
+  AiGenerateRequest,
+  AiProvider,
+  aiGenerate,
+  aiGenerateStream,
+  resolveModel,
+  resolveProvider,
+} from './ai-generate.js';
 import {ChatClient, RootAiModel, summarizeDiff} from './ai.js';
 import {type CMSCheck} from './checks.js';
 import {RootCMSClient, parseDocId, unmarshalData} from './client.js';
@@ -599,6 +607,125 @@ export function api(server: Server, options: ApiOptions) {
   });
 
   /**
+   * Multi-provider AI generation endpoint with optional SSE streaming.
+   *
+   * Non-streaming request:
+   * ```
+   * POST /cms/api/ai.generate
+   * {"provider": "gemini", "model": "gemini-2.5-flash", "messages": [{"role": "user", "content": "Hello"}]}
+   * ```
+   *
+   * Streaming request (returns SSE):
+   * ```
+   * POST /cms/api/ai.generate
+   * {"provider": "gemini", "model": "gemini-2.5-flash", "messages": [...], "stream": true}
+   * ```
+   */
+  server.use('/cms/api/ai.generate', async (req: Request, res: Response) => {
+    if (
+      req.method !== 'POST' ||
+      !String(req.get('content-type')).startsWith('application/json')
+    ) {
+      res.status(400).json({success: false, error: 'BAD_REQUEST'});
+      return;
+    }
+    if (!req.user?.email) {
+      res.status(401).json({success: false, error: 'UNAUTHORIZED'});
+      return;
+    }
+
+    const cmsPlugin = req.rootConfig!.plugins?.find(
+      (p) => p.name === 'root-cms'
+    ) as import('./plugin.js').CMSPlugin | undefined;
+    const cmsConfig = cmsPlugin?.getConfig();
+    const aiConfig = cmsConfig?.ai;
+
+    // Require the `ai` config to be set in the plugin options.
+    if (!aiConfig) {
+      res.status(400).json({
+        success: false,
+        error: 'AI_NOT_CONFIGURED',
+        message:
+          'AI providers are not configured. Add an `ai` key to your cmsPlugin() options.',
+      });
+      return;
+    }
+
+    const reqBody = req.body || {};
+    const messages = reqBody.messages;
+    if (!Array.isArray(messages) || messages.length === 0) {
+      res.status(400).json({
+        success: false,
+        error: 'MISSING_REQUIRED_FIELD',
+        field: 'messages',
+      });
+      return;
+    }
+
+    const provider: AiProvider = resolveProvider(aiConfig, reqBody.provider);
+    const model = resolveModel(aiConfig, provider, reqBody.model);
+    const stream = reqBody.stream === true;
+
+    const generateRequest: AiGenerateRequest = {
+      provider,
+      model,
+      messages,
+      stream,
+      config: reqBody.config,
+    };
+
+    try {
+      if (stream) {
+        // SSE streaming response.
+        res.writeHead(200, {
+          'Content-Type': 'text/event-stream',
+          'Cache-Control': 'no-cache',
+          Connection: 'keep-alive',
+        });
+
+        for await (const chunk of aiGenerateStream(aiConfig, generateRequest)) {
+          const sseData = JSON.stringify({
+            text: chunk.text,
+            done: chunk.done,
+            provider,
+            model,
+          });
+          res.write(`data: ${sseData}\n\n`);
+          if (chunk.done) break;
+        }
+
+        res.write('data: [DONE]\n\n');
+        res.end();
+      } else {
+        // Non-streaming JSON response.
+        const result = await aiGenerate(aiConfig, generateRequest);
+        res.status(200).json({
+          success: true,
+          text: result.text,
+          provider: result.provider,
+          model: result.model,
+        });
+      }
+    } catch (err: any) {
+      console.error(err.stack || err);
+      if (stream) {
+        // If headers are already sent, write the error as an SSE event.
+        const errorData = JSON.stringify({
+          error: err.message || 'UNKNOWN',
+        });
+        try {
+          res.write(`event: error\ndata: ${errorData}\n\n`);
+          res.end();
+        } catch {
+          // Connection may already be closed.
+        }
+      } else {
+        res.status(500).json({success: false, error: err.message || 'UNKNOWN'});
+      }
+    }
+  });
+
+  /**
    * Runs a registered check against a document.
    *
    * ```
@@ -623,9 +750,7 @@ export function api(server: Server, options: ApiOptions) {
     const checkId = String(reqBody.check || '');
     const docId = String(reqBody.docId || '');
     if (!checkId || !docId) {
-      res
-        .status(400)
-        .json({success: false, error: 'MISSING_REQUIRED_FIELD'});
+      res.status(400).json({success: false, error: 'MISSING_REQUIRED_FIELD'});
       return;
     }
 
@@ -639,10 +764,7 @@ export function api(server: Server, options: ApiOptions) {
     const {collection: collectionId, slug} = parseDocId(docId);
 
     // Enforce collection restriction if configured.
-    if (
-      check.collections &&
-      !check.collections.includes(collectionId)
-    ) {
+    if (check.collections && !check.collections.includes(collectionId)) {
       res.status(400).json({
         success: false,
         error: 'CHECK_NOT_APPLICABLE',

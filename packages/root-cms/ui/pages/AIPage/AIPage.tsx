@@ -12,6 +12,7 @@ import {gfmFromMarkdown} from 'mdast-util-gfm';
 import {gfm} from 'micromark-extension-gfm';
 import {useEffect, useMemo, useRef, useState} from 'preact/hooks';
 import {ChatApiRequest, ChatApiResponse} from '../../../core/api.js';
+import {AiClient, AiStreamEvent} from '../../../shared/ai/ai-client.js';
 import {
   ChatPrompt,
   AiResponse,
@@ -52,6 +53,7 @@ export interface ChatController {
 export function useChat(): ChatController {
   const [messages, setMessages] = useState<Message[]>([]);
   const [chatId, setChatId] = useState('');
+  const aiClient = useMemo(() => new AiClient(), []);
 
   const addMessage = (message: Message) => {
     let messageId = 0;
@@ -75,7 +77,11 @@ export function useChat(): ChatController {
   const updateMessage = (messageId: number, message: Message) => {
     setMessages((current) => {
       const newMessages = [...current];
-      newMessages[messageId] = {...message, key: autokey()};
+      const existing = newMessages[messageId];
+      newMessages[messageId] = {
+        ...message,
+        key: existing?.key ?? autokey(),
+      };
       return newMessages;
     });
   };
@@ -85,62 +91,50 @@ export function useChat(): ChatController {
     prompt: ChatPrompt | ChatPrompt[],
     options?: SendPromptOptions
   ): Promise<AiResponse> => {
-    // Allow users to provide a custom api endpoint via the
-    // `{ai: {endpoint: '/api/...}}` config.
-    let endpoint = '/cms/api/ai.chat';
-    if (typeof window.__ROOT_CTX.experiments?.ai === 'object') {
-      if (window.__ROOT_CTX.experiments.ai.endpoint) {
-        endpoint = window.__ROOT_CTX.experiments.ai.endpoint;
+    // Extract the text content from the ChatPrompt parts.
+    const parts = Array.isArray(prompt) ? prompt.flat() : [prompt];
+    const textParts: string[] = [];
+    for (const part of parts) {
+      if ('text' in part && part.text) {
+        textParts.push(part.text);
       }
     }
+    const userText = textParts.join('\n');
+    if (!userText) {
+      return {message: '', data: null};
+    }
 
-    const req: ChatApiRequest = {
-      prompt,
-      chatId,
-      options,
-    };
-    const res = await window.fetch(endpoint, {
-      method: 'POST',
-      headers: {'content-type': 'application/json'},
-      body: JSON.stringify(req),
-    });
-    if (res.status !== 200) {
-      const err = await res.text();
-      console.error('chat failed', err);
-      const errorMessage = ['Something went wrong:', '```', err, '```'].join(
-        '\n'
+    try {
+      const chunks: string[] = [];
+      await aiClient.generateStream(
+        {
+          messages: [{role: 'user', content: userText}],
+        },
+        (event: AiStreamEvent) => {
+          chunks.push(event.text);
+          const currentText = chunks.join('');
+          updateMessage(messageId, {
+            sender: 'bot',
+            blocks: [{type: 'text', text: currentText}],
+          });
+        }
       );
+      const fullText = chunks.join('');
+      return {message: fullText, data: null};
+    } catch (err: any) {
+      console.error('ai.generate failed', err);
+      const errorMessage = [
+        'Something went wrong:',
+        '```',
+        err.message || String(err),
+        '```',
+      ].join('\n');
       updateMessage(messageId, {
         sender: 'bot',
-        blocks: [
-          {
-            type: 'text',
-            text: errorMessage,
-          },
-        ],
+        blocks: [{type: 'text', text: errorMessage}],
       });
-      return {message: errorMessage, data: {}, error: err};
+      return {message: errorMessage, data: null, error: err.message};
     }
-    const resData = (await res.json()) as ChatApiResponse;
-    if (resData.success && resData.chatId) {
-      setChatId(resData.chatId);
-      updateMessage(messageId, {
-        sender: 'bot',
-        data: resData.response?.data || {},
-        blocks: [
-          {
-            type: 'text',
-            text: resData.response?.message || '',
-          },
-        ],
-      });
-      return resData.response;
-    }
-    return {
-      message: 'Sorry. Something went wrong. An unknown error occurred.',
-      data: {},
-      error: 'Unknown error',
-    };
   };
 
   return {
@@ -156,7 +150,8 @@ export function AIPage() {
   usePageTitle('AI');
   const chat = useChat();
 
-  const isEnabled = window.__ROOT_CTX.experiments?.ai || false;
+  const isEnabled =
+    window.__ROOT_CTX.ai?.enabled || window.__ROOT_CTX.experiments?.ai || false;
 
   return (
     <Layout>
@@ -277,6 +272,16 @@ function ChatMessageBlocks(props: {message: Message; animated: boolean}) {
     }
   }, [props.animated]);
 
+  // Sync blocks with message when content changes (e.g., streaming updates).
+  useEffect(() => {
+    setBlocks((current) => {
+      if (current.length === 0) {
+        return current;
+      }
+      return message.blocks.slice(0, current.length);
+    });
+  }, [message]);
+
   return (
     <div className="AIPage__ChatMessageBlocks">
       {blocks.map((block, i) => {
@@ -349,6 +354,16 @@ function useAnimatedNodes<T = any>(props: {
       appendNextNode();
     }
   }, []);
+
+  // Sync nodes with props when they change (e.g., streaming updates).
+  useEffect(() => {
+    setNodes((current) => {
+      if (current.length === 0) {
+        return current;
+      }
+      return props.nodes;
+    });
+  }, [props.nodes]);
 
   return {
     nodes,

@@ -105,6 +105,33 @@ export interface CMSAIConfig {
   model?: RootAiModel;
 }
 
+/** Configuration for AI provider API keys and settings. */
+export interface CMSAIProviderConfig {
+  /** Default model to use for AI requests. */
+  model?: string;
+  /** Google Gemini configuration. */
+  gemini?: {
+    /** API key for Google Gemini / Vertex AI. */
+    apiKey?: string;
+    /** GCP project ID. Falls back to `firebaseConfig.projectId` if not set. */
+    projectId?: string;
+    /** GCP location for Vertex AI. Defaults to `'us-central1'`. */
+    location?: string;
+  };
+  /** OpenAI / ChatGPT configuration. */
+  openai?: {
+    /** API key for OpenAI. */
+    apiKey: string;
+    /** Organization ID (optional). */
+    orgId?: string;
+  };
+  /** Anthropic / Claude configuration. */
+  anthropic?: {
+    /** API key for Anthropic. */
+    apiKey: string;
+  };
+}
+
 export interface CMSSidebarTool {
   /** URL for the sidebar icon image. */
   icon?: string;
@@ -240,11 +267,29 @@ export type CMSPluginOptions = {
   onAction?: (action: Action) => any;
 
   /**
+   * AI provider configuration. Configure API keys and settings for one or
+   * more AI providers (Google Gemini, OpenAI, Anthropic).
+   *
+   * Example:
+   * ```ts
+   * cmsPlugin({
+   *   ai: {
+   *     gemini: { apiKey: process.env.GEMINI_API_KEY },
+   *     openai: { apiKey: process.env.OPENAI_API_KEY },
+   *     anthropic: { apiKey: process.env.ANTHROPIC_API_KEY },
+   *   },
+   * });
+   * ```
+   */
+  ai?: CMSAIProviderConfig;
+
+  /**
    * Experimental config options. Note: these are subject to change at any time.
    */
   experiments?: {
     /**
      * Enables the Root CMS AI page.
+     * @deprecated Use the top-level `ai` config instead.
      */
     ai?: boolean | CMSAIConfig;
 
@@ -597,12 +642,7 @@ export function cmsPlugin(options: CMSPluginOptions): CMSPlugin {
       // Handle body-parser errors (e.g. PayloadTooLargeError) gracefully
       // instead of letting them bubble up as unhandled 500 errors.
       server.use(
-        (
-          err: any,
-          req: Request,
-          res: Response,
-          next: NextFunction
-        ) => {
+        (err: any, req: Request, res: Response, next: NextFunction) => {
           if (err.type === 'entity.too.large' || err.status === 413) {
             res.status(413).json({error: 'Payload too large'});
             return;

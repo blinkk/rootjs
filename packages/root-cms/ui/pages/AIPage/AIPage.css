@@ -262,13 +262,17 @@
   display: none;
 }
 
+.AIPage__ChatBar__prompt__imageUpload .mantine-Tooltip-root {
+  display: block;
+}
+
 .AIPage__ChatBar__prompt__imagePreview {
   width: var(--image-preview-size);
   height: var(--image-preview-size);
   padding: 4px;
   position: absolute;
   left: 48px;
-  bottom: 12px;
+  bottom: 11px;
   background: #efefef;
   border: 1px solid #dedede;
   border-radius: 8px;

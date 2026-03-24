@@ -52,6 +52,11 @@ export default defineConfig({
           design: {label: 'Design System', iframeUrl: '/design'},
         },
       },
+      ai: {
+        gemini: {
+          apiKey: process.env.GEMINI_API_KEY,
+        },
+      },
       checks: [
         {
           id: 'custom/green-check',

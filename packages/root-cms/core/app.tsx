@@ -126,6 +126,7 @@ export async function renderApp(
     collections: collections,
     sidebar: cmsConfig.sidebar,
     experiments: cmsConfig.experiments,
+    ai: cmsConfig.ai ? {enabled: true} : undefined,
     preview: {
       channel: cmsConfig.preview?.channel ?? false,
     },
