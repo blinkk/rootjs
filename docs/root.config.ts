@@ -53,8 +53,14 @@ export default defineConfig({
         },
       },
       ai: {
+        anthropic: {
+          apiKey: process.env.ANTHROPIC_API_KEY,
+        },
         gemini: {
           apiKey: process.env.GEMINI_API_KEY,
+        },
+        openai: {
+          apiKey: process.env.OPENAI_API_KEY,
         },
       },
       checks: [

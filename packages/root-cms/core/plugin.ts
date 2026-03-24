@@ -111,7 +111,15 @@ export interface CMSAIProviderConfig {
   model?: string;
   /** Google Gemini configuration. */
   gemini?: {
-    /** API key for Google Gemini / Vertex AI. */
+    /**
+     * API key for Google Gemini / Vertex AI.
+     *
+     * To generate a Gemini API key:
+     * 1. Go to https://aistudio.google.com/apikey
+     * 2. Click "Create API key".
+     * 3. Select or create a Google Cloud project.
+     * 4. Copy the generated key and store it securely (e.g. in an env var).
+     */
     apiKey?: string;
     /** GCP project ID. Falls back to `firebaseConfig.projectId` if not set. */
     projectId?: string;
@@ -120,14 +128,28 @@ export interface CMSAIProviderConfig {
   };
   /** OpenAI / ChatGPT configuration. */
   openai?: {
-    /** API key for OpenAI. */
+    /**
+     * API key for OpenAI.
+     *
+     * To generate an OpenAI API key:
+     * 1. Go to https://platform.openai.com/api-keys
+     * 2. Click "Create new secret key".
+     * 3. Copy the generated key and store it securely (e.g. in an env var).
+     */
     apiKey: string;
     /** Organization ID (optional). */
     orgId?: string;
   };
   /** Anthropic / Claude configuration. */
   anthropic?: {
-    /** API key for Anthropic. */
+    /**
+     * API key for Anthropic.
+     *
+     * To generate an Anthropic API key:
+     * 1. Go to https://console.anthropic.com/settings/keys
+     * 2. Click "Create Key".
+     * 3. Copy the generated key and store it securely (e.g. in an env var).
+     */
     apiKey: string;
   };
 }
