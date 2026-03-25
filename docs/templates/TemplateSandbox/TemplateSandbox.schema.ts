@@ -38,9 +38,16 @@ export default schema.define({
     }),
     schema.string({
       id: 'string',
-      label: 'StringField',
+      label: 'StringField (Textarea)',
       autosize: true,
       variant: 'textarea',
+      translate: true,
+    }),
+    schema.string({
+      id: 'jsonString',
+      label: 'StringField (JSON)',
+      autosize: true,
+      variant: 'json',
       translate: true,
     }),
     schema.richtext({
