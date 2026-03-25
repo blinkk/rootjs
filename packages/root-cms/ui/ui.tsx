@@ -170,6 +170,14 @@ declare global {
           }
         >;
       };
+      /** AI provider configuration. */
+      ai?: {
+        enabled: boolean;
+        endpoint?: string;
+      };
+      /**
+       * @deprecated Use `ai` instead.
+       */
       experiments?: {
         ai?: boolean | {endpoint?: string};
       };

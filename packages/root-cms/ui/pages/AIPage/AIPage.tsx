@@ -88,7 +88,9 @@ export function useChat(): ChatController {
     // Allow users to provide a custom api endpoint via the
     // `{ai: {endpoint: '/api/...}}` config.
     let endpoint = '/cms/api/ai.chat';
-    if (typeof window.__ROOT_CTX.experiments?.ai === 'object') {
+    if (window.__ROOT_CTX.ai?.endpoint) {
+      endpoint = window.__ROOT_CTX.ai.endpoint;
+    } else if (typeof window.__ROOT_CTX.experiments?.ai === 'object') {
       if (window.__ROOT_CTX.experiments.ai.endpoint) {
         endpoint = window.__ROOT_CTX.experiments.ai.endpoint;
       }
@@ -156,7 +158,8 @@ export function AIPage() {
   usePageTitle('AI');
   const chat = useChat();
 
-  const isEnabled = window.__ROOT_CTX.experiments?.ai || false;
+  const isEnabled =
+    window.__ROOT_CTX.ai?.enabled || window.__ROOT_CTX.experiments?.ai || false;
 
   return (
     <Layout>

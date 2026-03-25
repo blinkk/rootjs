@@ -688,6 +688,8 @@ FileField.Preview = () => {
   const [copied, setCopied] = useState(false);
   const chat = useChat();
   const experiments = window.__ROOT_CTX.experiments || {};
+  const aiEnabled =
+    !!window.__ROOT_CTX.ai?.enabled || !!experiments.ai;
 
   // Videos and images are the only files that get the canvas preview.
   // Other types just show the info panel. Videos with zero dimensions
@@ -1034,7 +1036,7 @@ FileField.Preview = () => {
                 ctx?.setAltText(e.currentTarget.value);
               }}
             />
-            {experiments.ai &&
+            {aiEnabled &&
               !ctx.altText &&
               ctx.value?.src?.startsWith('http') && (
                 <Tooltip

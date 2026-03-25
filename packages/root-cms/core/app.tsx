@@ -125,6 +125,9 @@ export async function renderApp(
     gapi: cmsConfig.gapi,
     collections: collections,
     sidebar: cmsConfig.sidebar,
+    ai: cmsConfig.ai
+      ? {enabled: true, endpoint: cmsConfig.ai.endpoint}
+      : undefined,
     experiments: cmsConfig.experiments,
     preview: {
       channel: cmsConfig.preview?.channel ?? false,

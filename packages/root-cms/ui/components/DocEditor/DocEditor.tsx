@@ -1050,6 +1050,8 @@ DocEditor.ArrayField = (props: FieldProps) => {
   const deeplink = useDeeplink();
   const virtualClipboard = useVirtualClipboard();
   const experiments = window.__ROOT_CTX.experiments || {};
+  const aiEnabled =
+    !!window.__ROOT_CTX.ai?.enabled || !!experiments.ai;
 
   const data = value ?? {};
   const order = data._array || [];
@@ -1517,7 +1519,7 @@ DocEditor.ArrayField = (props: FieldProps) => {
                                 >
                                   Edit JSON
                                 </Menu.Item>
-                                {experiments.ai && (
+                                {aiEnabled && (
                                   <Menu.Item
                                     className="DocEditor__ArrayField__menu__item"
                                     icon={

@@ -67,7 +67,8 @@ export function GenerateImageForm(props: GenerateImageFormProps) {
 
   const experiments = (window as any).__ROOT_CTX?.experiments || {};
 
-  const aiEnabled = !!experiments.ai;
+  const aiEnabled =
+    !!(window as any).__ROOT_CTX?.ai?.enabled || !!experiments.ai;
 
   async function handleGenerate() {
     if (!prompt) {

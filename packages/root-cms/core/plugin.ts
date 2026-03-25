@@ -98,11 +98,62 @@ export interface CMSUser {
   email: string;
 }
 
+/**
+ * @deprecated Use `CMSAIProviderConfig` instead.
+ */
 export interface CMSAIConfig {
   /** Custom API endpoint for chat prompts. */
   endpoint?: string;
   /** Gen AI model to use. */
   model?: RootAiModel;
+}
+
+/**
+ * Configuration for AI providers. At least one provider must be configured
+ * for AI features to be enabled.
+ *
+ * Example:
+ * ```ts
+ * cmsPlugin({
+ *   ai: {
+ *     model: 'gemini-2.5-flash',
+ *     gemini: {
+ *       apiKey: process.env.GEMINI_API_KEY,
+ *     },
+ *   },
+ * });
+ * ```
+ */
+export interface CMSAIProviderConfig {
+  /** The default model to use for AI generation. */
+  model?: string;
+  /** Custom API endpoint for chat prompts. */
+  endpoint?: string;
+  /** Gemini AI provider configuration. */
+  gemini?: {
+    /**
+     * API key for Gemini. Obtain from https://aistudio.google.com/apikey.
+     * If not provided, falls back to Vertex AI with the Firebase project
+     * credentials.
+     */
+    apiKey?: string;
+    /** GCP project ID. Falls back to `firebaseConfig.projectId`. */
+    projectId?: string;
+    /** GCP region. Defaults to `'us-central1'`. */
+    location?: string;
+  };
+  /** OpenAI provider configuration. */
+  openai?: {
+    /** API key for OpenAI. Obtain from https://platform.openai.com/api-keys. */
+    apiKey: string;
+    /** Optional organization ID. */
+    orgId?: string;
+  };
+  /** Anthropic provider configuration. */
+  anthropic?: {
+    /** API key for Anthropic. Obtain from https://console.anthropic.com/settings/keys. */
+    apiKey: string;
+  };
 }
 
 export interface CMSSidebarTool {
@@ -245,6 +296,7 @@ export type CMSPluginOptions = {
   experiments?: {
     /**
      * Enables the Root CMS AI page.
+     * @deprecated Use the top-level `ai` config instead.
      */
     ai?: boolean | CMSAIConfig;
 
@@ -274,6 +326,22 @@ export type CMSPluginOptions = {
      */
     channel: boolean | 'to-preview' | 'from-preview';
   };
+
+  /**
+   * AI provider configuration. Enables AI features in the CMS.
+   *
+   * Example:
+   * ```ts
+   * cmsPlugin({
+   *   ai: {
+   *     gemini: {
+   *       apiKey: process.env.GEMINI_API_KEY,
+   *     },
+   *   },
+   * });
+   * ```
+   */
+  ai?: CMSAIProviderConfig;
 
   /**
    * Checks that can be run on-demand from the CMS UI to validate document
@@ -597,12 +665,7 @@ export function cmsPlugin(options: CMSPluginOptions): CMSPlugin {
       // Handle body-parser errors (e.g. PayloadTooLargeError) gracefully
       // instead of letting them bubble up as unhandled 500 errors.
       server.use(
-        (
-          err: any,
-          req: Request,
-          res: Response,
-          next: NextFunction
-        ) => {
+        (err: any, req: Request, res: Response, next: NextFunction) => {
           if (err.type === 'entity.too.large' || err.status === 413) {
             res.status(413).json({error: 'Payload too large'});
             return;

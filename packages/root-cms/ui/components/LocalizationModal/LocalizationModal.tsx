@@ -424,7 +424,8 @@ LocalizationModal.Translations = (props: TranslationsProps) => {
 
   function shouldShowAiButton() {
     const experiments = (window as any).__ROOT_CTX?.experiments || {};
-    const aiEnabled = !!experiments.ai;
+    const aiEnabled =
+      !!(window as any).__ROOT_CTX?.ai?.enabled || !!experiments.ai;
     if (!aiEnabled || !selectedLocale) return false;
     // Show if any translations are missing for the selected locale.
     return sourceStrings.some((source) => {
