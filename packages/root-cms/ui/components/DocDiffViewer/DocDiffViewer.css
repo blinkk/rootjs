@@ -98,5 +98,5 @@
   gap: 8px;
   padding: 40px 20px;
   font-size: 13px;
-  color: #636c76;
+  color: var(--color-text-gray);
 }
