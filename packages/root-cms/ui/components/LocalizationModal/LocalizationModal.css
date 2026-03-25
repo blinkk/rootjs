@@ -38,10 +38,11 @@
 }
 
 .LocalizationModal__locales {
-  padding-top: 30px;
+  margin-right: -1px;
   max-height: 80vh;
   overflow: auto;
-  margin-right: -1px;
+  padding-right: 30px;
+  padding-top: 30px;
 }
 
 .LocalizationModal__translations {
