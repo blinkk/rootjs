@@ -33,7 +33,7 @@
   border-radius: 2px;
 }
 
-.StringField__container {
+.StringField__container:has(.StringField__highlighter) {
   background-color: #fff;
 }
 
@@ -42,4 +42,20 @@
   background-color: transparent !important;
   position: relative;
   z-index: 1;
+}
+
+.StringField__input--json textarea {
+  background-color: #fff !important;
+  font-family: monospace;
+  font-size: 12px;
+}
+
+.StringField__input--error textarea {
+  border-color: #fa5252 !important;
+}
+
+.StringField__jsonError {
+  color: #fa5252;
+  font-size: 11px;
+  margin-top: 4px;
 }

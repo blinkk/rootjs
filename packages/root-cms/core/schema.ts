@@ -22,7 +22,14 @@ export type StringField = CommonFieldProps & {
   type: 'string';
   default?: string;
   translate?: boolean;
-  variant?: 'input' | 'textarea';
+  /**
+   * The UI variant to use for the string field.
+   * - `input`: A single-line text input (default).
+   * - `textarea`: A multi-line textarea.
+   * - `json`: A multi-line textarea that validates and auto-formats JSON on
+   *   blur. The value is still stored as a string.
+   */
+  variant?: 'input' | 'textarea' | 'json';
   /** For textarea variant, the maximum number of rows of text to show. */
   maxRows?: number;
   /**
