@@ -1,6 +1,7 @@
 import './DocDiffViewer.css';
 
 import {Button, Loader} from '@mantine/core';
+import {IconCircleCheckFilled} from '@tabler/icons-preact';
 import {useEffect, useState} from 'preact/hooks';
 import {joinClassNames} from '../../utils/classes.js';
 import {CMSDoc, cmsReadDocVersion, unmarshalData} from '../../utils/doc.js';
@@ -40,6 +41,7 @@ export function DocDiffViewer(props: DocDiffViewerProps) {
 
   const leftData = stableJsonStringify(cleanData(leftDoc?.fields || {}));
   const rightData = stableJsonStringify(cleanData(rightDoc?.fields || {}));
+  const isIdentical = !loading && leftDoc && rightDoc && leftData === rightData;
 
   const expandUrl = `/cms/compare?left=${toUrlParam(left)}&right=${toUrlParam(
     right
@@ -112,7 +114,14 @@ export function DocDiffViewer(props: DocDiffViewerProps) {
           </div>
         </div>
         <div className="DocDiffViewer__diff">
-          <JsDiff oldCode={leftData} newCode={rightData} />
+          {isIdentical ? (
+            <div className="DocDiffViewer__identical">
+              <IconCircleCheckFilled size={20} />
+              <span>No changes. Both versions are identical.</span>
+            </div>
+          ) : (
+            <JsDiff oldCode={leftData} newCode={rightData} />
+          )}
         </div>
       </div>
     </>
