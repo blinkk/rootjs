@@ -1,10 +1,14 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import * as readline from 'node:readline';
-import {loadRootConfig} from '@blinkk/root/node';
+import {fileURLToPath} from 'node:url';
+import {loadRootConfig, viteSsrLoadModule} from '@blinkk/root/node';
 import {Timestamp, GeoPoint} from 'firebase-admin/firestore';
 import {RootCMSClient, unmarshalData, getCmsPlugin} from '../core/client.js';
 import {convertForExport} from './utils.js';
+
+type ProjectModule = typeof import('../core/project.js');
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 export interface DocsGetOptions {
   /** Doc mode: "draft" or "published". */
@@ -26,6 +30,13 @@ export interface DocsDownloadOptions {
 export interface DocsUploadOptions {
   /** Doc mode: "draft" or "published". */
   mode?: string;
+}
+
+export interface DocsUpdateOptions {
+  /** Whether to skip schema validation. */
+  noValidate?: boolean;
+  /** Path to a JSON file containing the value. */
+  file?: string;
 }
 
 /**
@@ -210,6 +221,89 @@ export async function docsUpload(
   console.log(
     `Uploaded ${count} doc(s) to "${collectionId}" (${mode}) from ${inputDir}`
   );
+}
+
+/**
+ * Updates a single field in a draft doc by its deep key path.
+ *
+ * The value can be provided as:
+ * - An inline argument (parsed as JSON, falling back to a plain string)
+ * - A file path via the --file option
+ * - Piped via stdin (when neither inline value nor --file is provided)
+ *
+ * Validates the updated document against the collection schema by default.
+ * Use --no-validate to skip validation.
+ *
+ * Usage:
+ *   root-cms docs.update Pages/home hero.title '"New Title"'
+ *   root-cms docs.update Pages/home meta.og '{"title": "OG"}'
+ *   root-cms docs.update Pages/home hero.title --file value.json
+ *   cat value.json | root-cms docs.update Pages/home hero.title
+ */
+export async function docsUpdate(
+  docId: string,
+  fieldPath: string,
+  inlineValue: string | undefined,
+  options: DocsUpdateOptions
+) {
+  const rootDir = process.cwd();
+  const rootConfig = await loadRootConfig(rootDir, {command: 'root-cms'});
+  const client = new RootCMSClient(rootConfig);
+
+  let fieldValue: any;
+  if (isDef(inlineValue)) {
+    fieldValue = parseValue(inlineValue);
+  } else if (options.file) {
+    const filePath = path.resolve(options.file);
+    if (!fs.existsSync(filePath)) {
+      throw new Error(`file not found: ${filePath}`);
+    }
+    const jsonStr = fs.readFileSync(filePath, 'utf-8');
+    fieldValue = JSON.parse(jsonStr);
+  } else {
+    const jsonStr = await readStdin();
+    fieldValue = JSON.parse(jsonStr);
+  }
+
+  const validate = !options.noValidate;
+
+  // Load the collection schema via Vite SSR so that `import.meta.glob` in
+  // project.ts is resolved correctly (it does not work in plain Node.js).
+  const collectionId = docId.split('/')[0];
+  let collectionSchema;
+  if (validate) {
+    const modulePath = path.resolve(__dirname, '../core/project.js');
+    const project = (await viteSsrLoadModule(
+      rootConfig,
+      modulePath
+    )) as ProjectModule;
+    collectionSchema = project.getCollectionSchema(collectionId);
+  }
+
+  await client.updateDraftData(docId, fieldPath, fieldValue, {
+    validate,
+    collectionSchema: collectionSchema ?? undefined,
+  });
+  console.log(`Updated ${docId} field "${fieldPath}"`);
+}
+
+/**
+ * Returns true if the value is not undefined and not null.
+ */
+function isDef<T>(value: T | null | undefined): value is T {
+  return value !== undefined && value !== null;
+}
+
+/**
+ * Parses a CLI value string. Attempts JSON.parse first, falling back to a
+ * plain string if parsing fails.
+ */
+function parseValue(raw: string): any {
+  try {
+    return JSON.parse(raw);
+  } catch {
+    return raw;
+  }
 }
 
 /**
