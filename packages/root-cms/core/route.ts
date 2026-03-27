@@ -271,7 +271,6 @@ export function createRoute(options: CreateRouteOptions): Route {
       // Ignore slugs with `--` and `.` in it, these generally should not be
       // handled by a CMS route.
       if (slug.includes('.') || slug.includes('--')) {
-        res.setHeader('cache-control', 'private');
         return ctx.render404();
       }
       const mode = await getMode(req);
@@ -316,7 +315,6 @@ export function createRoute(options: CreateRouteOptions): Route {
           await options.notFoundHook(req, res);
           return;
         }
-        res.setHeader('cache-control', 'private');
         return ctx.render404();
       }
 
@@ -406,7 +404,6 @@ export function createRoute(options: CreateRouteOptions): Route {
             await options.notFoundHook(req, res);
             return;
           }
-          res.setHeader('cache-control', 'private');
           return ctx.render404();
         }
       }
