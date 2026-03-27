@@ -108,6 +108,18 @@ body.menu\:open {
   padding: 0 24px;
 }
 
+.bootstrap-warning {
+  max-width: 520px;
+  padding: 12px;
+  border: 1px solid #fbbc04;
+  border-radius: 8px;
+  background: #fff9db;
+  color: #5f370e;
+  font-size: 14px;
+  line-height: 1.5;
+  font-weight: 400;
+}
+
 .sr-only {
   position: absolute;
   width: 1px;

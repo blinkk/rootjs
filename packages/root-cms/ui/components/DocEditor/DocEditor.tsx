@@ -760,6 +760,7 @@ interface ArrayDuplicate {
   draft: DraftDocController;
   deepKey: string;
   value: ArrayItemValue;
+  skipOpen?: boolean;
 }
 
 interface ArrayMoveUp {
@@ -906,7 +907,8 @@ function arrayReducer(state: ArrayFieldValue, action: ArrayAction) {
         ...data,
         [newKey]: clonedValue,
         _array: order,
-        _new: [...newlyAdded, newKey],
+        _new: action.skipOpen ? newlyAdded : [...newlyAdded, newKey],
+        _moved: action.skipOpen ? newKey : undefined,
       };
     }
     case 'moveUp': {
@@ -1373,21 +1375,34 @@ DocEditor.ArrayField = (props: FieldProps) => {
                 return (
                   <Draggable key={key} index={i} draggableId={key}>
                     {(provided, snapshot) => (
-                      <div
-                        ref={provided.innerRef}
-                        {...provided.draggableProps}
-                        className={joinClassNames(
-                          'DocEditor__ArrayField__item__wrapper',
-                          snapshot.isDragging &&
-                            'DocEditor__ArrayField__item__wrapper--dragging',
-                          cutIndex === i &&
-                            'DocEditor__ArrayField__item__wrapper--cut'
-                        )}
-                      >
+                        <div
+                          ref={provided.innerRef}
+                          {...provided.draggableProps}
+                          className={joinClassNames(
+                            'DocEditor__ArrayField__item__wrapper',
+                            snapshot.isDragging &&
+                              'DocEditor__ArrayField__item__wrapper--dragging',
+                            cutIndex === i &&
+                              'DocEditor__ArrayField__item__wrapper--cut'
+                          )}
+                        >
                         <div
                           className="DocEditor__ArrayField__item__handle"
                           {...provided.dragHandleProps}
-                          onClick={() => focusFieldHeader(props.deepKey, i)}
+                          onClick={(e: MouseEvent) => {
+                            if (e.altKey) {
+                              dispatch({
+                                type: 'duplicate',
+                                draft,
+                                deepKey: props.deepKey,
+                                index: i,
+                                value: getItemValue(i),
+                                skipOpen: true,
+                              });
+                              return;
+                            }
+                            focusFieldHeader(props.deepKey, i);
+                          }}
                         >
                           <IconGripVertical size={18} stroke={'1.5'} />
                         </div>
