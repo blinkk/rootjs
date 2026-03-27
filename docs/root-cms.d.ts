@@ -371,6 +371,10 @@ export interface TemplateSandboxFields {
   datetimeWithTimezone?: number;
   /** DateField */
   date?: string;
+  /** MultiSelect */
+  multiselect?: string[];
+  /** MultiSelect (String List) */
+  multiselectStringList?: string[];
   /** StringField (Textarea) */
   string?: string;
   /** StringField (JSON) */
