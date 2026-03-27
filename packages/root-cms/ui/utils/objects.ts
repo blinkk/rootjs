@@ -214,6 +214,90 @@ export function sortObjectKeysDeep<T>(data: T): T {
   return data;
 }
 
+/** Snippet returned by `findFieldSnippet`. */
+export interface FieldSnippet {
+  /** Dot-notation path to the field, e.g. "meta.description". */
+  fieldPath: string;
+  /** Text before the matched portion. */
+  before: string;
+  /** The matched portion of the text. */
+  match: string;
+  /** Text after the matched portion. */
+  after: string;
+}
+
+/**
+ * Recursively searches a nested data structure for the first string value
+ * containing `query` (case-insensitive) and returns a snippet with surrounding
+ * context. Returns `null` if no match is found.
+ */
+export function findFieldSnippet(
+  data: unknown,
+  query: string,
+  parentPath = ''
+): FieldSnippet | null {
+  if (data === null || data === undefined) {
+    return null;
+  }
+  if (typeof data === 'string') {
+    const lower = data.toLowerCase();
+    const idx = lower.indexOf(query);
+    if (idx === -1) {
+      return null;
+    }
+    const contextChars = 40;
+    const start = Math.max(0, idx - contextChars);
+    const end = Math.min(data.length, idx + query.length + contextChars);
+    return {
+      fieldPath: parentPath,
+      before: (start > 0 ? '...' : '') + data.slice(start, idx),
+      match: data.slice(idx, idx + query.length),
+      after:
+        data.slice(idx + query.length, end) + (end < data.length ? '...' : ''),
+    };
+  }
+  if (typeof data === 'number' || typeof data === 'boolean') {
+    return findFieldSnippet(String(data), query, parentPath);
+  }
+  if (Array.isArray(data)) {
+    for (let i = 0; i < data.length; i++) {
+      const result = findFieldSnippet(data[i], query, `${parentPath}[${i}]`);
+      if (result) {
+        return result;
+      }
+    }
+    return null;
+  }
+  if (isObject(data)) {
+    const obj = data as Record<string, unknown>;
+    if (Array.isArray(obj._array)) {
+      const arr = obj._array as string[];
+      for (let i = 0; i < arr.length; i++) {
+        const result = findFieldSnippet(
+          obj[arr[i]],
+          query,
+          `${parentPath}[${i}]`
+        );
+        if (result) {
+          return result;
+        }
+      }
+      return null;
+    }
+    for (const key of Object.keys(obj)) {
+      if (key === 'sys' || key === '_type' || key === '_arrayKey') {
+        continue;
+      }
+      const childPath = parentPath ? `${parentPath}.${key}` : key;
+      const result = findFieldSnippet(obj[key], query, childPath);
+      if (result) {
+        return result;
+      }
+    }
+  }
+  return null;
+}
+
 /**
  * Stringifies JSON-like data with stable object-key ordering.
  */

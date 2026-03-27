@@ -1,7 +1,8 @@
 .DocStatusBadges {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 6px;
+  flex-wrap: wrap;
 }
 
 .DocStatusBadges .mantine-Tooltip-root {

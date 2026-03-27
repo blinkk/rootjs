@@ -1,8 +1,13 @@
 import './CollectionPage.css';
 
-import {Button, Loader, Select, Tabs, Tooltip} from '@mantine/core';
-import {IconArrowRoundaboutRight, IconCirclePlus} from '@tabler/icons-preact';
-import {useEffect, useState} from 'preact/hooks';
+import {Button, Loader, Menu, Select, Tabs} from '@mantine/core';
+import {
+  IconArrowRoundaboutRight,
+  IconCirclePlus,
+  IconColumns,
+  IconFilter,
+} from '@tabler/icons-preact';
+import {useCallback, useEffect, useMemo, useState} from 'preact/hooks';
 import {useLocation} from 'preact-iso';
 import {CollectionTree} from '../../components/CollectionTree/CollectionTree.js';
 import {ConditionalTooltip} from '../../components/ConditionalTooltip/ConditionalTooltip.js';
@@ -12,15 +17,24 @@ import {FilePreview} from '../../components/FilePreview/FilePreview.js';
 import {Heading} from '../../components/Heading/Heading.js';
 import {Markdown} from '../../components/Markdown/Markdown.js';
 import {NewDocModal} from '../../components/NewDocModal/NewDocModal.js';
+import {SearchInput} from '../../components/SearchInput/SearchInput.js';
 import {SplitPanel} from '../../components/SplitPanel/SplitPanel.js';
-import {useDocsList} from '../../hooks/useDocsList.js';
+import {useDocsListLightweight} from '../../hooks/useDocsList.js';
+import {
+  getCachedSnippet,
+  useFilteredDocs,
+} from '../../hooks/useFilteredDocs.js';
 import {useLocalStorage} from '../../hooks/useLocalStorage.js';
 import {usePageTitle} from '../../hooks/usePageTitle.js';
 import {useProjectRoles} from '../../hooks/useProjectRoles.js';
+import {useStringParam} from '../../hooks/useQueryParam.js';
 import {Layout} from '../../layout/Layout.js';
+import {joinClassNames} from '../../utils/classes.js';
 import {getDocServingUrl} from '../../utils/doc-urls.js';
-import {getNestedValue} from '../../utils/objects.js';
+import {testPublishingLocked} from '../../utils/doc.js';
+import {findFieldSnippet, getNestedValue} from '../../utils/objects.js';
 import {testCanEdit} from '../../utils/permissions.js';
+import {getTimeAgo} from '../../utils/time.js';
 
 interface CollectionPageProps {
   collection?: string;
@@ -28,7 +42,6 @@ interface CollectionPageProps {
 
 export function CollectionPage(props: CollectionPageProps) {
   const {route} = useLocation();
-  const [query, setQuery] = useState('');
   const projectId = window.__ROOT_CTX.rootConfig.projectId;
   usePageTitle(props.collection ? `Content: ${props.collection}` : 'Content');
 
@@ -68,18 +81,10 @@ export function CollectionPage(props: CollectionPageProps) {
       <SplitPanel className="CollectionPage" localStorageId="CollectionPage">
         <SplitPanel.Item className="CollectionPage__side">
           <div className="CollectionPage__side__title">Content</div>
-          <div className="CollectionPage__side__search">
-            <input
-              type="text"
-              placeholder="Search"
-              onChange={(e) => setQuery((e.target as HTMLInputElement).value)}
-            />
-          </div>
           <div className="CollectionPage__side__collections">
             <CollectionTree
               collections={collections}
               activeCollectionId={props.collection}
-              query={query}
               projectId={projectId}
             />
           </div>
@@ -118,6 +123,47 @@ CollectionPage.Collection = (props: CollectionProps) => {
     'modifiedAt'
   );
   const [newDocModalOpen, setNewDocModalOpen] = useState(false);
+  const [urlQuery, setUrlQuery] = useStringParam('q');
+  const [searchInput, setSearchInput] = useState(urlQuery);
+  // activeQuery only updates on Enter or clear, so typing doesn't trigger filtering.
+  const [activeQuery, setActiveQuery] = useState(urlQuery);
+
+  const commitSearch = useCallback(
+    (value: string) => {
+      setActiveQuery(value);
+      setUrlQuery(value);
+    },
+    [setUrlQuery]
+  );
+
+  const handleSearchChange = useCallback(
+    (value: string) => {
+      setSearchInput(value);
+      // When the input is cleared (e.g. via the X button), commit immediately.
+      if (!value) {
+        commitSearch('');
+      }
+    },
+    [commitSearch]
+  );
+
+  const handleSearchKeyDown = useCallback(
+    (e: KeyboardEvent) => {
+      if (e.key === 'Enter') {
+        commitSearch(searchInput);
+      }
+    },
+    [searchInput, commitSearch]
+  );
+
+  const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [visibleColumns, setVisibleColumns] = useLocalStorage<{
+    modified: boolean;
+    created: boolean;
+  }>(`root::CollectionPage:${props.collection}:columns`, {
+    modified: false,
+    created: false,
+  });
 
   const collection = window.__ROOT_CTX.collections[props.collection];
   if (!collection) {
@@ -137,7 +183,47 @@ CollectionPage.Collection = (props: CollectionProps) => {
     })) || []),
   ];
 
-  const [loading, listDocs, docs] = useDocsList(props.collection, {orderBy});
+  const {loading, docs, listDocs, fullDocs, fullDocsLoading, loadFullDocs} =
+    useDocsListLightweight(props.collection, {orderBy});
+
+  // When a search is committed, fetch full docs for deep field search.
+  useEffect(() => {
+    if (activeQuery) {
+      loadFullDocs();
+    }
+  }, [activeQuery]);
+
+  // Use full docs for search, lightweight docs for the unfiltered list.
+  const baseDocs = activeQuery ? fullDocs || docs : docs;
+  const filteredDocs = useFilteredDocs(baseDocs, activeQuery);
+
+  /** Apply status filter on top of search-filtered docs. */
+  const visibleDocs = useMemo(() => {
+    if (statusFilter === 'all') {
+      return filteredDocs;
+    }
+    return filteredDocs.filter((doc: any) => {
+      const sys = doc.sys || {};
+      switch (statusFilter) {
+        case 'draft':
+          return (
+            !sys.publishedAt ||
+            !sys.modifiedAt ||
+            sys.modifiedAt > sys.publishedAt
+          );
+        case 'published':
+          return !!sys.publishedAt;
+        case 'scheduled':
+          return !!sys.scheduledAt;
+        case 'locked':
+          return testPublishingLocked(doc);
+        default:
+          return true;
+      }
+    });
+  }, [filteredDocs, statusFilter]);
+
+  const activeFilterCount = statusFilter !== 'all' ? 1 : 0;
 
   return (
     <>
@@ -167,6 +253,94 @@ CollectionPage.Collection = (props: CollectionProps) => {
                     {collection.name || props.collection}
                   </Heading>
                   <div className="CollectionPage__collection__docsTab__controls">
+                    <div className="CollectionPage__collection__docsTab__controls__search">
+                      <SearchInput
+                        value={searchInput}
+                        onChange={handleSearchChange}
+                        onKeyDown={handleSearchKeyDown}
+                        placeholder={`Search ${
+                          collection.name || props.collection
+                        }...`}
+                      />
+                    </div>
+                    <div className="CollectionPage__collection__docsTab__controls__filter">
+                      <Menu
+                        control={
+                          <Button
+                            variant={activeFilterCount > 0 ? 'light' : 'subtle'}
+                            color={activeFilterCount > 0 ? 'blue' : 'gray'}
+                            size="xs"
+                            leftIcon={<IconFilter size={14} />}
+                            compact
+                          >
+                            {activeFilterCount > 0
+                              ? `Status (${activeFilterCount})`
+                              : 'Status'}
+                          </Button>
+                        }
+                      >
+                        <Menu.Label>Status</Menu.Label>
+                        <Menu.Item onClick={() => setStatusFilter('all')}>
+                          {statusFilter === 'all' ? '\u2713 ' : '\u2003 '}
+                          All
+                        </Menu.Item>
+                        <Menu.Item onClick={() => setStatusFilter('draft')}>
+                          {statusFilter === 'draft' ? '\u2713 ' : '\u2003 '}
+                          Draft
+                        </Menu.Item>
+                        <Menu.Item onClick={() => setStatusFilter('published')}>
+                          {statusFilter === 'published' ? '\u2713 ' : '\u2003 '}
+                          Published
+                        </Menu.Item>
+                        <Menu.Item onClick={() => setStatusFilter('scheduled')}>
+                          {statusFilter === 'scheduled' ? '\u2713 ' : '\u2003 '}
+                          Scheduled
+                        </Menu.Item>
+                        <Menu.Item onClick={() => setStatusFilter('locked')}>
+                          {statusFilter === 'locked' ? '\u2713 ' : '\u2003 '}
+                          Locked
+                        </Menu.Item>
+                      </Menu>
+                    </div>
+                    <div className="CollectionPage__collection__docsTab__controls__columns">
+                      <Menu
+                        control={
+                          <Button
+                            variant="subtle"
+                            color="gray"
+                            size="xs"
+                            leftIcon={<IconColumns size={14} />}
+                            compact
+                          >
+                            Columns
+                          </Button>
+                        }
+                      >
+                        <Menu.Label>Toggle columns</Menu.Label>
+                        <Menu.Item
+                          onClick={() =>
+                            setVisibleColumns((prev) => ({
+                              ...prev,
+                              modified: !prev.modified,
+                            }))
+                          }
+                        >
+                          {visibleColumns.modified ? '\u2713 ' : '\u2003 '}
+                          Modified
+                        </Menu.Item>
+                        <Menu.Item
+                          onClick={() =>
+                            setVisibleColumns((prev) => ({
+                              ...prev,
+                              created: !prev.created,
+                            }))
+                          }
+                        >
+                          {visibleColumns.created ? '\u2713 ' : '\u2003 '}
+                          Created
+                        </Menu.Item>
+                      </Menu>
+                    </div>
                     <div className="CollectionPage__collection__docsTab__controls__sort">
                       <div className="CollectionPage__collection__docsTab__controls__sort__label">
                         Sort:
@@ -197,11 +371,26 @@ CollectionPage.Collection = (props: CollectionProps) => {
                       </ConditionalTooltip>
                     </div>
                   </div>
+                  {(activeQuery || statusFilter !== 'all') && (
+                    <div className="CollectionPage__collection__docsTab__searchCount">
+                      {activeQuery && fullDocsLoading ? (
+                        <Loader color="gray" size={14} />
+                      ) : (
+                        `${visibleDocs.length} of ${
+                          (activeQuery ? fullDocs || docs : docs).length
+                        } document${
+                          (activeQuery ? fullDocs || docs : docs).length !== 1
+                            ? 's'
+                            : ''
+                        }`
+                      )}
+                    </div>
+                  )}
                 </div>
               )}
               <div className="CollectionPage__collection__docsTab__content">
                 {loading ? (
-                  <div className="CollectionPage__collection__docsTab__content__loading">
+                  <div className="CollectionPage__docsTab__content__loading">
                     <Loader color="gray" size="xl" />
                   </div>
                 ) : docs.length === 0 ? (
@@ -229,11 +418,20 @@ CollectionPage.Collection = (props: CollectionProps) => {
                       </ConditionalTooltip>
                     </div>
                   </div>
+                ) : visibleDocs.length === 0 &&
+                  (activeQuery || statusFilter !== 'all') ? (
+                  <div className="CollectionPage__collection__docsNoResults">
+                    No documents match the current{activeQuery ? ' search' : ''}
+                    {statusFilter !== 'all' ? ' filter' : ''}.
+                  </div>
                 ) : (
                   <CollectionPage.DocsList
                     collection={props.collection}
-                    docs={docs}
+                    docs={visibleDocs}
+                    searchQuery={activeQuery}
+                    statusFilter={statusFilter}
                     reloadDocs={() => listDocs()}
+                    visibleColumns={visibleColumns}
                   />
                 )}
               </div>
@@ -248,92 +446,219 @@ CollectionPage.Collection = (props: CollectionProps) => {
 CollectionPage.DocsList = (props: {
   collection: string;
   docs: any[];
+  searchQuery?: string;
+  statusFilter?: string;
   reloadDocs: () => void;
+  visibleColumns: {modified: boolean; created: boolean};
 }) => {
   const collectionId = props.collection;
   const rootCollection = window.__ROOT_CTX.collections[props.collection];
   if (!rootCollection) {
     throw new Error(`could not find collection: ${collectionId}`);
   }
-  const hasCollectionUrl = !!rootCollection.url;
 
   const docs = props.docs || [];
-  function getLiveUrl(slug: string): string {
-    if (!hasCollectionUrl) {
-      return '';
-    }
-    return getDocServingUrl({collectionId, slug});
-  }
+  const isFiltered = !!(
+    props.searchQuery ||
+    (props.statusFilter && props.statusFilter !== 'all')
+  );
+  const hasCollectionUrl = !!rootCollection.url;
+
+  const PAGE_SIZE = 100;
+  const [rowLimit, setRowLimit] = useState(PAGE_SIZE);
+  // Reset row limit when docs change (e.g. new filter).
+  useEffect(() => setRowLimit(PAGE_SIZE), [docs.length, isFiltered]);
+  const visibleDocs = docs.slice(0, rowLimit);
+  const hasMore = docs.length > rowLimit;
 
   return (
-    <div className="CollectionPage__collection__docsList">
-      {docs.map((doc) => {
-        const cmsUrl = `/cms/content/${collectionId}/${doc.slug}`;
-        const liveUrl = getLiveUrl(doc.slug);
-        const fields = doc.fields || {};
-        const previewTitle = getNestedValue(
-          fields,
-          rootCollection.preview?.title || 'meta.title'
-        );
-        const previewImage =
-          getNestedValue(
-            fields,
-            rootCollection.preview?.image || 'meta.image'
-          ) || rootCollection.preview?.defaultImage;
-        return (
-          <div
-            className="CollectionPage__collection__docsList__doc"
-            key={doc.id}
-          >
-            <div className="CollectionPage__collection__docsList__doc__image">
-              <a href={cmsUrl}>
-                <FilePreview
-                  file={previewImage}
-                  width={120}
-                  height={90}
-                  withPlaceholder={!previewImage?.src}
-                />
-              </a>
-            </div>
-            <a
-              className="CollectionPage__collection__docsList__doc__content"
-              href={cmsUrl}
-            >
-              <div className="CollectionPage__collection__docsList__doc__content__header">
-                <div className="CollectionPage__collection__docsList__doc__content__header__docId">
-                  {doc.id}
-                </div>
-                <DocStatusBadges doc={doc} />
-              </div>
-              <div className="CollectionPage__collection__docsList__doc__content__title">
-                {previewTitle || '[UNTITLED]'}
-              </div>
-              {hasCollectionUrl && liveUrl && (
-                <div className="CollectionPage__collection__docsList__doc__content__url">
-                  {liveUrl}
-                </div>
+    <>
+      <table
+        className={joinClassNames(
+          'CollectionPage__table',
+          isFiltered && 'CollectionPage__table--compact'
+        )}
+      >
+        <thead>
+          <tr>
+            <th
+              className={joinClassNames(
+                'CollectionPage__table__th',
+                isFiltered
+                  ? 'CollectionPage__table__th--image--compact'
+                  : 'CollectionPage__table__th--image'
               )}
-            </a>
-            <div className="CollectionPage__collection__docsList__doc__controls">
-              <DocActionsMenu
-                docId={doc.id}
-                data={doc}
-                onAction={(e) => {
-                  if (
-                    e.action === 'delete' ||
-                    e.action === 'unpublish' ||
-                    e.action === 'locked' ||
-                    e.action === 'unlocked'
-                  ) {
-                    props.reloadDocs();
-                  }
-                }}
-              />
-            </div>
-          </div>
-        );
-      })}
-    </div>
+            ></th>
+            <th
+              className={joinClassNames(
+                'CollectionPage__table__th',
+                isFiltered && 'CollectionPage__table__th--title--compact'
+              )}
+            >
+              Title
+            </th>
+            {isFiltered && props.searchQuery && (
+              <th className="CollectionPage__table__th CollectionPage__table__th--match">
+                Match
+              </th>
+            )}
+            <th className="CollectionPage__table__th CollectionPage__table__th--status">
+              Status
+            </th>
+            {props.visibleColumns.modified && (
+              <th className="CollectionPage__table__th CollectionPage__table__th--date">
+                Modified
+              </th>
+            )}
+            {props.visibleColumns.created && (
+              <th className="CollectionPage__table__th CollectionPage__table__th--date">
+                Created
+              </th>
+            )}
+            <th className="CollectionPage__table__th CollectionPage__table__th--actions"></th>
+          </tr>
+        </thead>
+        <tbody>
+          {visibleDocs.map((doc) => {
+            const cmsUrl = `/cms/content/${collectionId}/${doc.slug}`;
+            const fields = doc.fields || {};
+            const previewTitle = getNestedValue(
+              fields,
+              rootCollection.preview?.title || 'meta.title'
+            );
+            const previewImage =
+              getNestedValue(
+                fields,
+                rootCollection.preview?.image || 'meta.image'
+              ) || rootCollection.preview?.defaultImage;
+
+            const snippet = props.searchQuery
+              ? getCachedSnippet(doc.id) ??
+                findFieldSnippet(fields, props.searchQuery.trim().toLowerCase())
+              : null;
+
+            const liveUrl = hasCollectionUrl
+              ? getDocServingUrl({collectionId, slug: doc.slug})
+              : '';
+
+            return (
+              <tr className="CollectionPage__table__row" key={doc.id}>
+                <td
+                  className={joinClassNames(
+                    'CollectionPage__table__td',
+                    isFiltered
+                      ? 'CollectionPage__table__td--image--compact'
+                      : 'CollectionPage__table__td--image'
+                  )}
+                >
+                  <a href={cmsUrl}>
+                    <FilePreview
+                      file={previewImage}
+                      width={isFiltered ? 60 : 120}
+                      height={isFiltered ? 45 : 90}
+                      withPlaceholder={!previewImage?.src}
+                    />
+                  </a>
+                </td>
+                <td className="CollectionPage__table__td">
+                  <a className="CollectionPage__table__titleLink" href={cmsUrl}>
+                    {!isFiltered && (
+                      <span className="CollectionPage__table__slug CollectionPage__table__slug--large">
+                        {collectionId}/{doc.slug}
+                      </span>
+                    )}
+                    <span
+                      className={joinClassNames(
+                        'CollectionPage__table__title',
+                        !isFiltered && 'CollectionPage__table__title--large'
+                      )}
+                    >
+                      {previewTitle || '[UNTITLED]'}
+                    </span>
+                    {isFiltered && (
+                      <span className="CollectionPage__table__slug">
+                        {collectionId}/{doc.slug}
+                      </span>
+                    )}
+                    {!isFiltered && liveUrl && (
+                      <span className="CollectionPage__table__url">
+                        {liveUrl}
+                      </span>
+                    )}
+                  </a>
+                </td>
+                {isFiltered && props.searchQuery && (
+                  <td className="CollectionPage__table__td CollectionPage__table__td--match">
+                    {snippet && (
+                      <span className="CollectionPage__table__snippet">
+                        <span className="CollectionPage__table__snippet__field">
+                          {snippet.fieldPath}
+                        </span>
+                        <span className="CollectionPage__table__snippet__text">
+                          {snippet.before}
+                          <mark>{snippet.match}</mark>
+                          {snippet.after}
+                        </span>
+                      </span>
+                    )}
+                  </td>
+                )}
+                <td className="CollectionPage__table__td CollectionPage__table__td--status">
+                  <DocStatusBadges doc={doc} />
+                </td>
+                {props.visibleColumns.modified && (
+                  <td className="CollectionPage__table__td CollectionPage__table__td--date">
+                    {doc.sys?.modifiedAt && (
+                      <span className="CollectionPage__table__date">
+                        {getTimeAgo(doc.sys.modifiedAt.toMillis())}
+                      </span>
+                    )}
+                  </td>
+                )}
+                {props.visibleColumns.created && (
+                  <td className="CollectionPage__table__td CollectionPage__table__td--date">
+                    {doc.sys?.createdAt && (
+                      <span className="CollectionPage__table__date">
+                        {getTimeAgo(doc.sys.createdAt.toMillis())}
+                      </span>
+                    )}
+                  </td>
+                )}
+                <td className="CollectionPage__table__td CollectionPage__table__td--actions">
+                  <DocActionsMenu
+                    docId={doc.id}
+                    data={doc}
+                    onAction={(e) => {
+                      if (
+                        e.action === 'delete' ||
+                        e.action === 'unpublish' ||
+                        e.action === 'locked' ||
+                        e.action === 'unlocked'
+                      ) {
+                        props.reloadDocs();
+                      }
+                    }}
+                  />
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+      {hasMore && (
+        <div className="CollectionPage__table__showMore">
+          <Button
+            variant="subtle"
+            color="gray"
+            size="xs"
+            compact
+            onClick={() => setRowLimit((prev) => prev + PAGE_SIZE)}
+          >
+            Show more ({docs.length - rowLimit} remaining)
+          </Button>
+        </div>
+      )}
+    </>
   );
 };
 

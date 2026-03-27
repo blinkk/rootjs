@@ -1,0 +1,71 @@
+.SearchInput {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.SearchInput__icon {
+  position: absolute;
+  left: 8px;
+  display: flex;
+  align-items: center;
+  pointer-events: none;
+  color: #a3a3a3;
+}
+
+.SearchInput__input {
+  display: block;
+  width: 100%;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  line-height: 20px;
+  padding: 4px 12px 4px 32px;
+  font-family: inherit;
+  font-size: 13px;
+  color: var(--color-text-default);
+  background: white;
+  transition: border-color 0.15s;
+}
+
+.SearchInput__input:focus {
+  outline: none;
+  border-color: #a3a3a3;
+}
+
+.SearchInput__input::placeholder {
+  color: #d4d4d4;
+}
+
+.SearchInput__shortcut {
+  position: absolute;
+  right: 10px;
+  display: flex;
+  align-items: center;
+  pointer-events: none;
+  font-size: 11px;
+  font-family: var(--font-family-mono);
+  color: #a3a3a3;
+  background: #f5f5f5;
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  padding: 1px 5px;
+  line-height: 18px;
+}
+
+.SearchInput__clear {
+  position: absolute;
+  right: 10px;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  color: #a3a3a3;
+  background: none;
+  border: none;
+  padding: 2px;
+  border-radius: 4px;
+}
+
+.SearchInput__clear:hover {
+  color: var(--color-text-default);
+  background: #f5f5f5;
+}

@@ -55,6 +55,31 @@ export interface RootCMSDoc<Fields extends {}> {
   fields?: Fields;
 }
 
+/** Generated from `/collections/BigSandbox.schema.ts`. */
+export interface BigSandboxFields {
+  /** Meta */
+  meta?: {
+    /** Title */
+    title?: string;
+    /** Description. Description for SEO and social shares. */
+    description?: string;
+    /** Image. Meta image for social shares. Recommended size: 1200x600. */
+    image?: RootCMSImage;
+    /** Related Posts */
+    relatedPosts?: RootCMSReference[];
+  };
+  /** Content */
+  content?: {
+    /** Main content body. Top content body. */
+    body?: RootCMSRichText;
+    /** Content blocks. Add blocks to embed various content types to the blog. */
+    blocks?: RootCMSOneOf<RootCMSOneOfOption<'ButtonsBlock', ButtonsBlockFields> | RootCMSOneOfOption<'CodeBlock', CodeBlockFields> | RootCMSOneOfOption<'CopyBlock', CopyBlockFields> | RootCMSOneOfOption<'ImageBlock', ImageBlockFields>>[];
+  };
+}
+
+/** Generated from `/collections/BigSandbox.schema.ts`. */
+export type BigSandboxDoc = RootCMSDoc<BigSandboxFields>;
+
 /** Generated from `/collections/BlogPosts.schema.ts`. */
 export interface BlogPostsFields {
   /** Meta */

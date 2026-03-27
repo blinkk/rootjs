@@ -3,30 +3,10 @@
 } */
 .CollectionPage__side__title {
   padding: 8px 12px;
-  /* border-bottom: 1px solid var(--color-border); */
+  border-bottom: 1px solid var(--color-border);
   text-transform: uppercase;
   font-size: 13px;
   font-weight: 700;
-}
-
-.CollectionPage__side__search input {
-  display: block;
-  width: 100%;
-  border: 1px solid var(--color-border);
-  border-left: none;
-  border-right: none;
-  border-radius: 0;
-  line-height: 24px;
-  padding: 4px 12px;
-  font-family: inherit;
-}
-
-.CollectionPage__side__search input:focus {
-  outline: none;
-}
-
-.CollectionPage__side__search input::-webkit-input-placeholder {
-  color: #E5E5E5;
 }
 
 .CollectionPage__main__unselected {
@@ -100,6 +80,7 @@
   justify-content: space-between;
   align-items: center;
   gap: 16px;
+  flex-wrap: wrap;
 }
 
 .CollectionPage__collection__docsTab__header__title {
@@ -114,6 +95,27 @@
   font-size: 14px;
 }
 
+.CollectionPage__collection__docsTab__controls__search {
+  min-width: 200px;
+}
+
+.CollectionPage__collection__docsTab__searchCount {
+  width: 100%;
+  min-height: 20px;
+  display: flex;
+  align-items: center;
+  font-size: 13px;
+  color: #a3a3a3;
+  font-weight: 500;
+}
+
+.CollectionPage__collection__docsNoResults {
+  padding: 40px 0;
+  text-align: center;
+  font-size: 14px;
+  color: #a3a3a3;
+}
+
 .CollectionPage__collection__docsTab__controls__sort {
   display: flex;
   gap: 8px;
@@ -124,63 +126,199 @@
   font-weight: 600;
 }
 
-.CollectionPage__collection__docsList {
-  margin-top: 16px;
-  border-bottom: 1px solid var(--color-border);
-}
-
-.CollectionPage__collection__docsList__doc {
-  display: flex;
-  align-items: center;
-  padding: 8px 0;
-  border-top: 1px solid var(--color-border);
-  overflow: hidden;
-}
-
-.CollectionPage__collection__docsList__doc__content {
-  display: block;
-  padding: 0 12px;
-  text-decoration: none;
-  flex: 1;
-}
-
-.CollectionPage__collection__docsTab__content__loading {
+.CollectionPage__docsTab__content__loading {
   display: flex;
   justify-content: center;
   margin-top: 90px;
 }
 
-.CollectionPage__collection__docsList__doc__content__header {
-  display: flex;
-  align-items: center;
-  gap: 12px;
+.CollectionPage__table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 16px;
+  table-layout: fixed;
 }
 
-
-.CollectionPage__collection__docsList__doc__content__header__docId {
-  font-size: 14px;
-  font-weight: 500;
+.CollectionPage__table--compact {
 }
 
-.CollectionPage__collection__docsList__doc__image {
-  border: 1px solid var(--color-border);
-  flex-shrink: 0;
-}
-
-.CollectionPage__collection__docsList__doc__content__title {
-  line-height: 36px;
-  font-size: 24px;
+.CollectionPage__table__th {
+  text-align: left;
+  font-size: 11px;
   font-weight: 600;
-  overflow: hidden;
-  display: -webkit-box;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 1;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #a3a3a3;
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--color-border);
+  white-space: nowrap;
 }
 
-.CollectionPage__collection__docsList__doc__content__url {
-  font-size: 12px;
+.CollectionPage__table__th--image {
+  width: 136px;
+}
+
+.CollectionPage__table__th--image--compact {
+  width: 68px;
+}
+
+.CollectionPage__table__th--title--compact {
+  width: 200px;
+}
+
+.CollectionPage__table__th--status {
+  width: 180px;
+}
+
+.CollectionPage__table__th--date {
+  width: 140px;
+}
+
+.CollectionPage__table__th--actions {
+  width: 40px;
+}
+
+.CollectionPage__table__row {
+  border-bottom: 1px solid var(--color-border);
+}
+
+.CollectionPage__table__row:hover {
+  background: #fafafa;
+}
+
+.CollectionPage__table__td {
+  padding: 8px;
+  vertical-align: middle;
+  overflow: hidden;
+}
+
+.CollectionPage__table__td--image {
+  width: 136px;
+  min-width: 136px;
+  vertical-align: middle;
+}
+
+.CollectionPage__table__td--image a,
+.CollectionPage__table__td--image--compact a {
+  display: inline-block;
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  overflow: hidden;
+  line-height: 0;
+}
+
+.CollectionPage__table__td--image--compact {
+  width: 68px;
+  min-width: 68px;
+  vertical-align: middle;
+}
+
+.CollectionPage__table__titleLink {
+  display: flex;
+  flex-direction: column;
+  text-decoration: none;
+  gap: 0;
+  overflow: hidden;
+}
+
+.CollectionPage__table__title {
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.3;
+  color: var(--color-text-default);
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.CollectionPage__table__title--large {
+  font-size: 24px;
+  line-height: 36px;
+}
+
+.CollectionPage__table__slug {
+  font-size: 11px;
   font-weight: 500;
-  color: #ababab;
+  color: var(--color-text-default);
+  line-height: 1.3;
+}
+
+.CollectionPage__table__slug--large {
+  font-size: 14px;
+}
+
+.CollectionPage__table__url {
+  font-size: 11px;
+  color: #a3a3a3;
+  line-height: 1.3;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.CollectionPage__table__th--match {
+}
+
+.CollectionPage__table__td--match {
+  overflow: hidden;
+}
+
+.CollectionPage__table__td--status {
+  overflow: hidden;
+}
+
+.CollectionPage__table__td--date {
+  white-space: nowrap;
+}
+
+.CollectionPage__table__date {
+  font-size: 12px;
+  color: #737373;
+}
+
+.CollectionPage__table__snippet {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 12px;
+  line-height: 1.4;
+  color: #737373;
+  overflow: hidden;
+}
+
+.CollectionPage__table__snippet__field {
+  flex-shrink: 0;
+  font-family: var(--font-family-mono);
+  font-size: 10px;
+  color: #8b8b8b;
+  background: #f0f0f0;
+  padding: 1px 4px;
+  border-radius: 3px;
+  align-self: flex-start;
+}
+
+.CollectionPage__table__snippet__text {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.CollectionPage__table__snippet__text mark {
+  background: #fef08a;
+  color: inherit;
+  padding: 0 1px;
+  border-radius: 2px;
+}
+
+.CollectionPage__table__td--actions {
+  width: 40px;
+  text-align: center;
+}
+
+.CollectionPage__table__showMore {
+  display: flex;
+  justify-content: center;
+  padding: 16px 0;
 }
 
 .CollectionPage__collection__docsEmpty {
