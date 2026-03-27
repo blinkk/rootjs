@@ -374,6 +374,10 @@ export class Renderer {
         await nextRouteHandler();
         return;
       }
+      // Ensure 404 responses are never cached by CDNs.
+      if (!res.getHeader('cache-control')) {
+        res.setHeader('cache-control', 'private');
+      }
       next();
     };
 
@@ -585,7 +589,6 @@ export class Renderer {
       });
     return orderedSitemap;
   }
-
 
   private getConfiguredStyleEntries() {
     const styleEntries = this.rootConfig.styles?.entries || [];
