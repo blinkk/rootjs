@@ -918,16 +918,6 @@ LocalizationModal.Translations = (props: TranslationsProps) => {
             </Heading>
           </div>
           <div className="LocalizationModal__translations__header__buttons">
-            <Button
-              component="a"
-              href={`/cms/translations/${props.docId}`}
-              target="_blank"
-              variant="default"
-              size="xs"
-              rightIcon={<IconExternalLink size={14} strokeWidth={1.75} />}
-            >
-              Open Editor
-            </Button>
             {gapiClient.enabled && linkedSheet?.spreadsheetId && (
               <Tooltip label="Open Google Sheet">
                 <ActionIcon<'a'>
@@ -942,6 +932,16 @@ LocalizationModal.Translations = (props: TranslationsProps) => {
                 </ActionIcon>
               </Tooltip>
             )}
+            <Button
+              component="a"
+              href={`/cms/translations/${props.docId}`}
+              target="_blank"
+              variant="default"
+              size="xs"
+              rightIcon={<IconExternalLink size={14} strokeWidth={1.75} />}
+            >
+              Open Editor
+            </Button>
             <ImportMenuButton
               onAction={onAction}
               gapiClient={gapiClient}
