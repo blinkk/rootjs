@@ -48,6 +48,15 @@ export type UserRole = 'ADMIN' | 'EDITOR' | 'CONTRIBUTOR' | 'VIEWER';
 
 export type HttpMethod = 'GET' | 'POST';
 
+export type CronUnit = 'minutes' | 'hours' | 'days';
+
+export interface DataSourceCron {
+  enabled: boolean;
+  interval: number;
+  unit: CronUnit;
+  autoPublish?: boolean;
+}
+
 export interface DataSource {
   id: string;
   description?: string;
@@ -66,6 +75,7 @@ export interface DataSource {
     headers?: Record<string, string>;
     body?: string;
   };
+  cron?: DataSourceCron;
   createdAt: Timestamp;
   createdBy: string;
   syncedAt?: Timestamp;
@@ -995,6 +1005,75 @@ export class RootCMSClient {
           dataSourceIds: release.dataSourceIds || [],
         },
       });
+    }
+  }
+
+  /**
+   * Syncs data sources that have cron scheduling enabled and are due for sync.
+   */
+  async syncScheduledDataSources() {
+    const dataSourcesPath = `Projects/${this.projectId}/DataSources`;
+    const query: Query = this.db
+      .collection(dataSourcesPath)
+      .where('cron.enabled', '==', true);
+    const querySnapshot = await query.get();
+    const now = Date.now();
+
+    for (const snapshot of querySnapshot.docs) {
+      const dataSource = snapshot.data() as DataSource;
+      const cron = dataSource.cron;
+      if (!cron || !cron.enabled || !cron.interval || !cron.unit) {
+        continue;
+      }
+
+      // Calculate the interval in milliseconds.
+      let intervalMs = cron.interval;
+      switch (cron.unit) {
+        case 'minutes':
+          intervalMs *= 60 * 1000;
+          break;
+        case 'hours':
+          intervalMs *= 60 * 60 * 1000;
+          break;
+        case 'days':
+          intervalMs *= 24 * 60 * 60 * 1000;
+          break;
+        default:
+          continue;
+      }
+
+      // Check if enough time has passed since the last sync.
+      const lastSyncMs = dataSource.syncedAt
+        ? dataSource.syncedAt.toMillis()
+        : 0;
+      if (now - lastSyncMs < intervalMs) {
+        continue;
+      }
+
+      try {
+        console.log(`cron: syncing data source: ${dataSource.id}`);
+        await this.syncDataSource(dataSource.id, {syncedBy: 'cron'});
+
+        if (cron.autoPublish) {
+          console.log(`cron: auto-publishing data source: ${dataSource.id}`);
+          await this.publishDataSource(dataSource.id, {
+            publishedBy: 'cron',
+          });
+        }
+
+        await this.logAction('datasource.cron_sync', {
+          by: 'cron',
+          metadata: {
+            datasourceId: dataSource.id,
+            autoPublish: cron.autoPublish || false,
+          },
+        });
+      } catch (err) {
+        console.error(
+          `cron: failed to sync data source ${dataSource.id}:`,
+          String(err)
+        );
+      }
     }
   }
 

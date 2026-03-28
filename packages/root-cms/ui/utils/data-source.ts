@@ -20,6 +20,15 @@ export type HttpMethod = 'GET' | 'POST';
 
 export type GsheetDataFormat = 'array' | 'map';
 
+export type CronUnit = 'minutes' | 'hours' | 'days';
+
+export interface DataSourceCron {
+  enabled: boolean;
+  interval: number;
+  unit: CronUnit;
+  autoPublish?: boolean;
+}
+
 export interface DataSource {
   id: string;
   description?: string;
@@ -39,6 +48,7 @@ export interface DataSource {
     body?: string;
   };
   previewUrl?: string;
+  cron?: DataSourceCron;
   createdAt: Timestamp;
   createdBy: string;
   syncedAt?: Timestamp;

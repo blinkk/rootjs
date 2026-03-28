@@ -1,6 +1,8 @@
 import {
   Button,
+  Checkbox,
   LoadingOverlay,
+  NumberInput,
   Select,
   TextInput,
   Textarea,
@@ -11,6 +13,7 @@ import {useLocation} from 'preact-iso';
 import {isSlugValid} from '../../../shared/slug.js';
 import {useGapiClient} from '../../hooks/useGapiClient.js';
 import {
+  CronUnit,
   DataSource,
   DataSourceType,
   GsheetDataFormat,
@@ -43,6 +46,10 @@ export function DataSourceForm(props: DataSourceFormProps) {
   );
   const [dataFormat, setDataFormat] = useState<GsheetDataFormat>('map');
   const [httpMethod, setHttpMethod] = useState<HttpMethod>('GET');
+  const [cronEnabled, setCronEnabled] = useState(false);
+  const [cronInterval, setCronInterval] = useState<number>(1);
+  const [cronUnit, setCronUnit] = useState<CronUnit>('hours');
+  const [cronAutoPublish, setCronAutoPublish] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(!!props.dataSourceId);
   const [dataSource, setDataSource] = useState<DataSource | null>(null);
@@ -60,6 +67,12 @@ export function DataSourceForm(props: DataSourceFormProps) {
       setDataSource(dataSource);
       setDataSourceType(dataSource?.type || 'http');
       setDataFormat(dataSource?.dataFormat || 'map');
+      if (dataSource?.cron) {
+        setCronEnabled(dataSource.cron.enabled || false);
+        setCronInterval(dataSource.cron.interval || 1);
+        setCronUnit(dataSource.cron.unit || 'hours');
+        setCronAutoPublish(dataSource.cron.autoPublish || false);
+      }
     });
     setLoading(false);
   }
@@ -135,6 +148,17 @@ export function DataSourceForm(props: DataSourceFormProps) {
       }
 
       dataSource.dataFormat = (dataFormat || 'map') as any;
+    }
+
+    if (cronEnabled) {
+      dataSource.cron = {
+        enabled: true,
+        interval: cronInterval,
+        unit: cronUnit,
+        autoPublish: cronAutoPublish,
+      };
+    } else {
+      dataSource.cron = {enabled: false, interval: cronInterval, unit: cronUnit};
     }
 
     try {
@@ -299,6 +323,53 @@ export function DataSourceForm(props: DataSourceFormProps) {
           )}
         </div>
       )}
+
+      <div className="DataSourceForm__section">
+        <div className="DataSourceForm__section__label">Sync Schedule</div>
+        <Checkbox
+          className="DataSourceForm__input"
+          label="Enable scheduled sync"
+          checked={cronEnabled}
+          onChange={(e) => setCronEnabled(e.currentTarget.checked)}
+          size="xs"
+        />
+        {cronEnabled && (
+          <div className="DataSourceForm__cron">
+            <div className="DataSourceForm__cron__row">
+              <span>Run every</span>
+              <NumberInput
+                className="DataSourceForm__cron__interval"
+                value={cronInterval}
+                onChange={(val) => setCronInterval(Number(val) || 1)}
+                min={1}
+                size="xs"
+                radius={0}
+              />
+              <Select
+                className="DataSourceForm__cron__unit"
+                data={[
+                  {value: 'minutes', label: 'minutes'},
+                  {value: 'hours', label: 'hours'},
+                  {value: 'days', label: 'days'},
+                ]}
+                value={cronUnit}
+                onChange={(e: CronUnit) => setCronUnit(e)}
+                size="xs"
+                radius={0}
+                dropdownComponent="div"
+              />
+            </div>
+            <Checkbox
+              className="DataSourceForm__input"
+              label="Auto-publish after sync"
+              checked={cronAutoPublish}
+              onChange={(e) => setCronAutoPublish(e.currentTarget.checked)}
+              size="xs"
+            />
+          </div>
+        )}
+      </div>
+
       <TextInput
         className="DataSourceForm__input"
         name="previewUrl"

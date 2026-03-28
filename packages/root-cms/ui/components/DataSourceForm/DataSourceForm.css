@@ -31,6 +31,36 @@
   font-weight: 500;
 }
 
+.DataSourceForm__section {
+  margin-top: 24px;
+}
+
+.DataSourceForm__section__label {
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.DataSourceForm__cron {
+  margin-top: 12px;
+}
+
+.DataSourceForm__cron__row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  margin-bottom: 12px;
+}
+
+.DataSourceForm__cron__interval {
+  width: 80px;
+}
+
+.DataSourceForm__cron__unit {
+  width: 120px;
+}
+
 .DataSourceForm__submit {
   margin-top: 30px;
 }
