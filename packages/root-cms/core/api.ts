@@ -9,6 +9,7 @@ import {
 } from '../shared/ai/prompts.js';
 import {ChatClient, RootAiModel, summarizeDiff} from './ai.js';
 import {type CMSCheck} from './checks.js';
+import {type CMSTranslationService} from './translations.js';
 import {RootCMSClient, parseDocId, unmarshalData} from './client.js';
 import {runCronJobs} from './cron.js';
 import {arrayToCsv, csvToArray} from './csv.js';
@@ -100,6 +101,8 @@ export interface ApiOptions {
   getRenderer: (req: Request) => Promise<AppModule>;
   /** Checks registered via the CMS plugin config. */
   checks?: CMSCheck[];
+  /** Translation services registered via the CMS plugin config. */
+  translations?: CMSTranslationService[];
 }
 
 /**
@@ -673,4 +676,89 @@ export function api(server: Server, options: ApiOptions) {
       res.status(500).json({success: false, error: err.message || 'UNKNOWN'});
     }
   });
+
+  /**
+   * Runs a registered translation service import or export.
+   *
+   * ```
+   * POST /cms/api/translations.run
+   * {"serviceId": "crowdin", "action": "import" | "export", "docId": "Pages/index", "data": [...]}
+   * ```
+   */
+  server.use(
+    '/cms/api/translations.run',
+    async (req: Request, res: Response) => {
+      if (
+        req.method !== 'POST' ||
+        !String(req.get('content-type')).startsWith('application/json')
+      ) {
+        res.status(400).json({success: false, error: 'BAD_REQUEST'});
+        return;
+      }
+      if (!req.user?.email) {
+        res.status(401).json({success: false, error: 'UNAUTHORIZED'});
+        return;
+      }
+
+      const reqBody = req.body || {};
+      const serviceId = String(reqBody.serviceId || '');
+      const action = String(reqBody.action || '');
+      const docId = String(reqBody.docId || '');
+      const data = reqBody.data || [];
+
+      if (!serviceId || !action || !docId) {
+        res
+          .status(400)
+          .json({success: false, error: 'MISSING_REQUIRED_FIELD'});
+        return;
+      }
+
+      if (action !== 'import' && action !== 'export') {
+        res.status(400).json({success: false, error: 'INVALID_ACTION'});
+        return;
+      }
+
+      const services = options.translations || [];
+      const service = services.find((s) => s.id === serviceId);
+      if (!service) {
+        res
+          .status(404)
+          .json({success: false, error: 'SERVICE_NOT_FOUND'});
+        return;
+      }
+
+      const handler = action === 'import' ? service.import : service.export;
+      if (!handler) {
+        res.status(400).json({
+          success: false,
+          error: `SERVICE_DOES_NOT_SUPPORT_${action.toUpperCase()}`,
+        });
+        return;
+      }
+
+      try {
+        const {collection: collectionId, slug} = parseDocId(docId);
+        const cmsClient = new RootCMSClient(req.rootConfig!);
+        const locales = req.rootConfig?.i18n?.locales || [];
+
+        const result = await handler(
+          {
+            rootConfig: req.rootConfig!,
+            cmsClient,
+            docId,
+            collectionId,
+            slug,
+            locales,
+          },
+          data
+        );
+        res.status(200).json({success: true, data: result});
+      } catch (err: any) {
+        console.error(err.stack || err);
+        res
+          .status(500)
+          .json({success: false, error: err.message || 'UNKNOWN'});
+      }
+    }
+  );
 }

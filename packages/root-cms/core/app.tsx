@@ -135,6 +135,13 @@ export async function renderApp(
       description: c.description,
       collections: c.collections,
     })),
+    translations: (cmsConfig.translations || []).map((t) => ({
+      id: t.id,
+      label: t.label,
+      icon: t.icon,
+      hasImport: typeof t.import === 'function',
+      hasExport: typeof t.export === 'function',
+    })),
   };
   const projectName = cmsConfig.name || cmsConfig.id || '';
   const title = getCmsTitle(projectName, cmsConfig.minimalBranding);

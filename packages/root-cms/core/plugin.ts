@@ -27,6 +27,7 @@ import {SSEEvent, SSESchemaChangedEvent} from '../shared/sse.js';
 import {type RootAiModel} from './ai.js';
 import {api} from './api.js';
 import {type CMSCheck} from './checks.js';
+import {type CMSTranslationService} from './translations.js';
 import {Action, RootCMSClient} from './client.js';
 import {sse, SSEBroadcastFn} from './sse.js';
 
@@ -38,6 +39,11 @@ export type {
 } from './checks.js';
 export {translationsCheck} from './checks-translations.js';
 export type {TranslationsCheckOptions} from './checks-translations.js';
+export type {
+  CMSTranslationService,
+  TranslationRow,
+  TranslationServiceContext,
+} from './translations.js';
 
 /**
  * Built-in sidebar tools that can be toggled on/off in the CMS UI.
@@ -299,6 +305,27 @@ export type CMSPluginOptions = {
    * may change from version to version as we add new features.
    */
   checks?: CMSCheck[];
+
+  /**
+   * Translation services that appear in the Localization modal's Import and
+   * Export menus. Each service defines server-side import/export functions
+   * that integrate with an external translation platform (e.g. Crowdin).
+   *
+   * Example:
+   * ```ts
+   * cmsPlugin({
+   *   translations: [
+   *     {
+   *       id: 'crowdin',
+   *       label: 'Crowdin',
+   *       import: async (ctx, data) => { ... },
+   *       export: async (ctx, data) => { ... },
+   *     },
+   *   ],
+   * });
+   * ```
+   */
+  translations?: CMSTranslationService[];
 };
 
 export type CMSPlugin = Plugin & {
@@ -732,7 +759,11 @@ export function cmsPlugin(options: CMSPluginOptions): CMSPlugin {
       }
 
       // Register API handlers.
-      api(server, {getRenderer, checks: options.checks});
+      api(server, {
+        getRenderer,
+        checks: options.checks,
+        translations: options.translations,
+      });
 
       // Render the CMS SPA.
       server.use('/cms', async (req: Request, res: Response) => {

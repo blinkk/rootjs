@@ -905,6 +905,82 @@ LocalizationModal.Translations = (props: TranslationsProps) => {
     }
   }
 
+  async function onServiceAction(
+    serviceId: string,
+    action: 'import' | 'export'
+  ) {
+    const serviceMeta = (window.__ROOT_CTX.translations || []).find(
+      (s) => s.id === serviceId
+    );
+    const serviceLabel = serviceMeta?.label || serviceId;
+
+    await notifyErrors(async () => {
+      // Build translation row data from current source strings.
+      const data = sourceStrings.map((source) => {
+        const translations: Record<string, string> = {};
+        locales.forEach((locale) => {
+          const value = getTranslation(source, locale);
+          if (value) {
+            translations[locale] = value;
+          }
+        });
+        return {source, translations};
+      });
+
+      const res = await window.fetch('/cms/api/translations.run', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({
+          serviceId,
+          action,
+          docId: props.docId,
+          data,
+        }),
+      });
+
+      const contentType = res.headers.get('content-type') || '';
+      if (!contentType.includes('application/json')) {
+        throw new Error(
+          `Unexpected response (${res.status}). Please reload the page and try again.`
+        );
+      }
+
+      const resData = await res.json();
+
+      if (!resData.success) {
+        throw new Error(resData.error || 'Unknown error');
+      }
+
+      if (action === 'import' && resData.data) {
+        // Convert returned rows to CsvTranslation format for import.
+        const importedRows: CsvTranslation[] = resData.data.map(
+          (row: {source: string; translations: Record<string, string>}) => ({
+            source: row.source,
+            ...row.translations,
+          })
+        );
+        const importedTranslations = await cmsDocImportTranslations(
+          props.docId,
+          importedRows
+        );
+        setTranslationsMap((currentTranslations) => {
+          return mergeTranslations(currentTranslations, importedTranslations);
+        });
+        showNotification({
+          title: 'Imported!',
+          message: `Imported translations from ${serviceLabel}.`,
+          autoClose: 5000,
+        });
+      } else {
+        showNotification({
+          title: 'Exported!',
+          message: `Exported translations to ${serviceLabel}.`,
+          autoClose: 5000,
+        });
+      }
+    });
+  }
+
   return (
     <div className="LocalizationModal__translations">
       <div className="LocalizationModal__translations__topWrapper">
@@ -944,11 +1020,13 @@ LocalizationModal.Translations = (props: TranslationsProps) => {
             </Button>
             <ImportMenuButton
               onAction={onAction}
+              onServiceAction={onServiceAction}
               gapiClient={gapiClient}
               linkedSheet={linkedSheet}
             />
             <ExportMenuButton
               onAction={onAction}
+              onServiceAction={onServiceAction}
               gapiClient={gapiClient}
               linkedSheet={linkedSheet}
             />
@@ -1255,6 +1333,7 @@ interface MenuButtonProps {
   gapiClient: GapiClient;
   linkedSheet: GoogleSheetId | null;
   onAction?: (action: MenuAction) => void;
+  onServiceAction?: (serviceId: string, action: 'import' | 'export') => void;
 }
 
 function ImportMenuButton(props: MenuButtonProps) {
@@ -1265,6 +1344,9 @@ function ImportMenuButton(props: MenuButtonProps) {
   }
 
   const linkedSheet = props.linkedSheet;
+  const translationServices = (
+    window.__ROOT_CTX.translations || []
+  ).filter((s) => s.hasImport);
 
   return (
     <Menu
@@ -1303,6 +1385,31 @@ function ImportMenuButton(props: MenuButtonProps) {
       >
         Import .csv
       </Menu.Item>
+      {translationServices.length > 0 && (
+        <>
+          <Divider />
+          <Menu.Label>Services</Menu.Label>
+          {translationServices.map((service) => (
+            <Menu.Item
+              key={service.id}
+              className="LocalizationModal__translations__menu__item"
+              icon={
+                service.icon ? (
+                  <span
+                    style={{display: 'inline-flex', width: 16, height: 16}}
+                    dangerouslySetInnerHTML={{__html: service.icon}}
+                  />
+                ) : undefined
+              }
+              onClick={() =>
+                props.onServiceAction?.(service.id, 'import')
+              }
+            >
+              Import from {service.label}
+            </Menu.Item>
+          ))}
+        </>
+      )}
     </Menu>
   );
 }
@@ -1316,6 +1423,9 @@ function ExportMenuButton(props: MenuButtonProps) {
 
   const linkedSheet = props.linkedSheet;
   const hasLinkedSheet = !!linkedSheet?.spreadsheetId;
+  const translationServices = (
+    window.__ROOT_CTX.translations || []
+  ).filter((s) => s.hasExport);
 
   return (
     <Menu
@@ -1356,12 +1466,6 @@ function ExportMenuButton(props: MenuButtonProps) {
               >
                 Export to Google Sheet
               </Menu.Item>
-              {/* <Menu.Item
-                className="LocalizationModal__translations__menu__item"
-                onClick={() => dispatch(MenuAction.EXPORT_GOOGLE_SHEET_ADD_TAB)}
-              >
-                Add tab in Google Sheet
-              </Menu.Item> */}
             </>
           )}
           <Divider />
@@ -1374,6 +1478,31 @@ function ExportMenuButton(props: MenuButtonProps) {
       >
         Download .csv
       </Menu.Item>
+      {translationServices.length > 0 && (
+        <>
+          <Divider />
+          <Menu.Label>Services</Menu.Label>
+          {translationServices.map((service) => (
+            <Menu.Item
+              key={service.id}
+              className="LocalizationModal__translations__menu__item"
+              icon={
+                service.icon ? (
+                  <span
+                    style={{display: 'inline-flex', width: 16, height: 16}}
+                    dangerouslySetInnerHTML={{__html: service.icon}}
+                  />
+                ) : undefined
+              }
+              onClick={() =>
+                props.onServiceAction?.(service.id, 'export')
+              }
+            >
+              Export to {service.label}
+            </Menu.Item>
+          ))}
+        </>
+      )}
       {hasLinkedSheet && (
         <>
           <Divider />

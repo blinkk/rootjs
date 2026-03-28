@@ -52,6 +52,30 @@ export default defineConfig({
           design: {label: 'Design System', iframeUrl: '/design'},
         },
       },
+      translations: [
+        {
+          id: 'example',
+          label: 'Example',
+          icon: '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="m5 3-3 3m22-3-3 3M12 7v5l3 3"/></svg>',
+          import: async (ctx, data) => {
+            // Example: returns mock translations for each source string.
+            return data.map((row) => ({
+              source: row.source,
+              translations: Object.fromEntries(
+                ctx.locales.map((locale) => [
+                  locale,
+                  row.translations[locale] || `[${locale}] ${row.source}`,
+                ])
+              ),
+            }));
+          },
+          export: async (ctx, data) => {
+            console.log(
+              `[Example] Exported ${data.length} strings for doc "${ctx.docId}"`
+            );
+          },
+        },
+      ],
       checks: [
         {
           id: 'custom/green-check',
