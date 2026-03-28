@@ -1022,12 +1022,22 @@ export class RootCMSClient {
     for (const snapshot of querySnapshot.docs) {
       const dataSource = snapshot.data() as DataSource;
       const cron = dataSource.cron;
-      if (!cron || !cron.enabled || !cron.interval || !cron.unit) {
+      if (!cron || !cron.enabled || cron.interval == null || !cron.unit) {
+        continue;
+      }
+
+      // Normalize and validate the interval value.
+      const interval = Number(cron.interval);
+      if (
+        !Number.isFinite(interval) ||
+        interval <= 0 ||
+        !Number.isInteger(interval)
+      ) {
         continue;
       }
 
       // Calculate the interval in milliseconds.
-      let intervalMs = cron.interval;
+      let intervalMs = interval;
       switch (cron.unit) {
         case 'minutes':
           intervalMs *= 60 * 1000;
