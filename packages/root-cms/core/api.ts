@@ -626,9 +626,7 @@ export function api(server: Server, options: ApiOptions) {
     const checkId = String(reqBody.check || '');
     const docId = String(reqBody.docId || '');
     if (!checkId || !docId) {
-      res
-        .status(400)
-        .json({success: false, error: 'MISSING_REQUIRED_FIELD'});
+      res.status(400).json({success: false, error: 'MISSING_REQUIRED_FIELD'});
       return;
     }
 
@@ -642,10 +640,7 @@ export function api(server: Server, options: ApiOptions) {
     const {collection: collectionId, slug} = parseDocId(docId);
 
     // Enforce collection restriction if configured.
-    if (
-      check.collections &&
-      !check.collections.includes(collectionId)
-    ) {
+    if (check.collections && !check.collections.includes(collectionId)) {
       res.status(400).json({
         success: false,
         error: 'CHECK_NOT_APPLICABLE',
@@ -717,12 +712,18 @@ export function api(server: Server, options: ApiOptions) {
           res.status(400).json({success: false, error: 'INVALID_DATA_FORMAT'});
           return;
         }
+        for (const value of Object.values(row.translations)) {
+          if (typeof value !== 'string') {
+            res
+              .status(400)
+              .json({success: false, error: 'INVALID_DATA_FORMAT'});
+            return;
+          }
+        }
       }
 
       if (!serviceId || !action || !docId) {
-        res
-          .status(400)
-          .json({success: false, error: 'MISSING_REQUIRED_FIELD'});
+        res.status(400).json({success: false, error: 'MISSING_REQUIRED_FIELD'});
         return;
       }
 
@@ -734,14 +735,11 @@ export function api(server: Server, options: ApiOptions) {
       const services = options.translations || [];
       const service = services.find((s) => s.id === serviceId);
       if (!service) {
-        res
-          .status(404)
-          .json({success: false, error: 'SERVICE_NOT_FOUND'});
+        res.status(404).json({success: false, error: 'SERVICE_NOT_FOUND'});
         return;
       }
 
-      const handler =
-        action === 'import' ? service.onImport : service.onExport;
+      const handler = action === 'import' ? service.onImport : service.onExport;
       if (!handler) {
         res.status(400).json({
           success: false,
@@ -780,9 +778,7 @@ export function api(server: Server, options: ApiOptions) {
         res.status(200).json({success: true, data: result});
       } catch (err: any) {
         console.error(err.stack || err);
-        res
-          .status(500)
-          .json({success: false, error: err.message || 'UNKNOWN'});
+        res.status(500).json({success: false, error: err.message || 'UNKNOWN'});
       }
     }
   );

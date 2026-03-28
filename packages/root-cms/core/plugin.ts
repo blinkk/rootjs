@@ -624,12 +624,7 @@ export function cmsPlugin(options: CMSPluginOptions): CMSPlugin {
       // Handle body-parser errors (e.g. PayloadTooLargeError) gracefully
       // instead of letting them bubble up as unhandled 500 errors.
       server.use(
-        (
-          err: any,
-          req: Request,
-          res: Response,
-          next: NextFunction
-        ) => {
+        (err: any, req: Request, res: Response, next: NextFunction) => {
           if (err.type === 'entity.too.large' || err.status === 413) {
             res.status(413).json({error: 'Payload too large'});
             return;

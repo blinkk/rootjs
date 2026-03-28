@@ -954,10 +954,21 @@ LocalizationModal.Translations = (props: TranslationsProps) => {
         }
         // Convert returned rows to CsvTranslation format for import.
         const importedRows: CsvTranslation[] = resData.data.map(
-          (row: {source: string; translations: Record<string, string>}) => ({
-            source: row.source,
-            ...row.translations,
-          })
+          (row: {source: unknown; translations?: Record<string, unknown>}) => {
+            const safeRow: CsvTranslation = {
+              source: String(row?.source ?? ''),
+            };
+            const translations = row?.translations;
+            if (translations && typeof translations === 'object') {
+              locales.forEach((locale) => {
+                const value = (translations as Record<string, unknown>)[locale];
+                if (value != null) {
+                  safeRow[locale] = String(value);
+                }
+              });
+            }
+            return safeRow;
+          }
         );
         const importedTranslations = await cmsDocImportTranslations(
           props.docId,
@@ -1344,9 +1355,9 @@ function ImportMenuButton(props: MenuButtonProps) {
   }
 
   const linkedSheet = props.linkedSheet;
-  const translationServices = (
-    window.__ROOT_CTX.translations || []
-  ).filter((s) => s.hasImport);
+  const translationServices = (window.__ROOT_CTX.translations || []).filter(
+    (s) => s.hasImport
+  );
 
   return (
     <Menu
@@ -1402,9 +1413,7 @@ function ImportMenuButton(props: MenuButtonProps) {
                   />
                 ) : undefined
               }
-              onClick={() =>
-                props.onServiceAction?.(service.id, 'import')
-              }
+              onClick={() => props.onServiceAction?.(service.id, 'import')}
             >
               Import from {service.label}
             </Menu.Item>
@@ -1424,9 +1433,9 @@ function ExportMenuButton(props: MenuButtonProps) {
 
   const linkedSheet = props.linkedSheet;
   const hasLinkedSheet = !!linkedSheet?.spreadsheetId;
-  const translationServices = (
-    window.__ROOT_CTX.translations || []
-  ).filter((s) => s.hasExport);
+  const translationServices = (window.__ROOT_CTX.translations || []).filter(
+    (s) => s.hasExport
+  );
 
   return (
     <Menu
@@ -1496,9 +1505,7 @@ function ExportMenuButton(props: MenuButtonProps) {
                   />
                 ) : undefined
               }
-              onClick={() =>
-                props.onServiceAction?.(service.id, 'export')
-              }
+              onClick={() => props.onServiceAction?.(service.id, 'export')}
             >
               Export to {service.label}
             </Menu.Item>
