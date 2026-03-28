@@ -72,6 +72,11 @@ export function DataSourceForm(props: DataSourceFormProps) {
         setCronInterval(dataSource.cron.interval || 1);
         setCronUnit(dataSource.cron.unit || 'hours');
         setCronAutoPublish(dataSource.cron.autoPublish || false);
+      } else {
+        setCronEnabled(false);
+        setCronInterval(1);
+        setCronUnit('hours');
+        setCronAutoPublish(false);
       }
     });
     setLoading(false);
@@ -158,7 +163,11 @@ export function DataSourceForm(props: DataSourceFormProps) {
         autoPublish: cronAutoPublish,
       };
     } else {
-      dataSource.cron = {enabled: false, interval: cronInterval, unit: cronUnit};
+      dataSource.cron = {
+        enabled: false,
+        interval: cronInterval,
+        unit: cronUnit,
+      };
     }
 
     try {
