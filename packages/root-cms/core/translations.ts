@@ -25,6 +25,12 @@ export interface TranslationServiceContext {
   locales: string[];
 }
 
+/** Result returned by an onExport handler. */
+export interface TranslationExportResult {
+  /** Optional message displayed in the notification after export. */
+  message?: string;
+}
+
 /** Configuration for defining a CMS translation service. */
 export interface CMSTranslationService {
   /** Unique ID for the translation service. */
@@ -47,10 +53,11 @@ export interface CMSTranslationService {
   ) => Promise<TranslationRow[]>;
   /**
    * Async function to export translations to the service. Receives the
-   * current translation rows for the document.
+   * current translation rows for the document. Can optionally return an object
+   * with a `message` to display in the success notification.
    */
   onExport?: (
     ctx: TranslationServiceContext,
     data: TranslationRow[]
-  ) => Promise<void>;
+  ) => Promise<void | TranslationExportResult>;
 }

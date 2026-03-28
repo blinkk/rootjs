@@ -983,9 +983,12 @@ LocalizationModal.Translations = (props: TranslationsProps) => {
           autoClose: 5000,
         });
       } else {
+        const exportMessage =
+          resData.data?.message ||
+          `Exported translations to ${serviceLabel}.`;
         showNotification({
           title: 'Exported!',
-          message: `Exported translations to ${serviceLabel}.`,
+          message: exportMessage,
           autoClose: 5000,
         });
       }

@@ -41,6 +41,7 @@ export {translationsCheck} from './checks-translations.js';
 export type {TranslationsCheckOptions} from './checks-translations.js';
 export type {
   CMSTranslationService,
+  TranslationExportResult,
   TranslationRow,
   TranslationServiceContext,
 } from './translations.js';

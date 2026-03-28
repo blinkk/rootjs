@@ -73,6 +73,9 @@ export default defineConfig({
             console.log(
               `[Example] Exported ${data.length} strings for doc "${ctx.docId}"`
             );
+            return {
+              message: `Exported ${data.length} strings for "${ctx.docId}".`,
+            };
           },
         },
       ],
