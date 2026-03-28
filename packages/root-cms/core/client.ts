@@ -1053,9 +1053,12 @@ export class RootCMSClient {
       }
 
       // Check if enough time has passed since the last sync.
-      const lastSyncMs = dataSource.syncedAt
-        ? dataSource.syncedAt.toMillis()
-        : 0;
+      let lastSyncMs = dataSource.syncedAt ? dataSource.syncedAt.toMillis() : 0;
+      // Guard against future syncedAt values (e.g., from skewed client clocks)
+      // so that now - lastSyncMs does not become negative and block scheduling.
+      if (lastSyncMs > now) {
+        lastSyncMs = now;
+      }
       if (now - lastSyncMs < intervalMs) {
         continue;
       }
