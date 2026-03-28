@@ -706,6 +706,19 @@ export function api(server: Server, options: ApiOptions) {
       const docId = String(reqBody.docId || '').trim();
       const data = Array.isArray(reqBody.data) ? reqBody.data : [];
 
+      // Validate data rows have expected shape.
+      for (const row of data) {
+        if (
+          typeof row?.source !== 'string' ||
+          typeof row?.translations !== 'object' ||
+          row.translations === null ||
+          Array.isArray(row.translations)
+        ) {
+          res.status(400).json({success: false, error: 'INVALID_DATA_FORMAT'});
+          return;
+        }
+      }
+
       if (!serviceId || !action || !docId) {
         res
           .status(400)

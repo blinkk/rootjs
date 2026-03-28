@@ -1,5 +1,5 @@
-import {RootConfig} from '@blinkk/root';
-import {RootCMSClient} from './client.js';
+import type {RootConfig} from '@blinkk/root';
+import type {RootCMSClient} from './client.js';
 
 /** A row of translation data keyed by locale. */
 export interface TranslationRow {

@@ -919,10 +919,7 @@ LocalizationModal.Translations = (props: TranslationsProps) => {
       const data = sourceStrings.map((source) => {
         const translations: Record<string, string> = {};
         locales.forEach((locale) => {
-          const value = getTranslation(source, locale);
-          if (value) {
-            translations[locale] = value;
-          }
+          translations[locale] = getTranslation(source, locale) ?? '';
         });
         return {source, translations};
       });
@@ -951,7 +948,10 @@ LocalizationModal.Translations = (props: TranslationsProps) => {
         throw new Error(resData.error || 'Unknown error');
       }
 
-      if (action === 'import' && resData.data) {
+      if (action === 'import') {
+        if (!Array.isArray(resData.data)) {
+          throw new Error('Import did not return translation data.');
+        }
         // Convert returned rows to CsvTranslation format for import.
         const importedRows: CsvTranslation[] = resData.data.map(
           (row: {source: string; translations: Record<string, string>}) => ({
