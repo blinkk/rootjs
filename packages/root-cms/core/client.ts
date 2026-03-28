@@ -1274,7 +1274,7 @@ export class RootCMSClient {
       throw new Error(`data source not found: ${dataSourceId}`);
     }
 
-    const data = await this.fetchData(dataSource);
+    const result = await this.fetchData(dataSource);
 
     const dataSourceDocRef = this.db.doc(
       `Projects/${this.projectId}/DataSources/${dataSourceId}`
@@ -1293,7 +1293,8 @@ export class RootCMSClient {
     const batch = this.db.batch();
     batch.set(dataDocRef, {
       dataSource: updatedDataSource,
-      data: data,
+      data: result.data,
+      ...(result.headers ? {headers: result.headers} : {}),
     });
     batch.update(dataSourceDocRef, {
       syncedAt: Timestamp.now(),
@@ -1395,14 +1396,15 @@ export class RootCMSClient {
     }
   }
 
-  private async fetchData(dataSource: DataSource) {
+  private async fetchData(
+    dataSource: DataSource
+  ): Promise<{data: any; headers?: string[]}> {
     if (dataSource.type === 'http') {
-      return await this.fetchHttpData(dataSource);
+      return {data: await this.fetchHttpData(dataSource)};
     }
-    // TODO(stevenle): impl.
-    // if (dataSource.type === 'gsheet') {
-    //   return await fetchGsheetData(dataSource);
-    // }
+    if (dataSource.type === 'gsheet') {
+      return await this.fetchGsheetData(dataSource);
+    }
     throw new Error(`unsupported data source: ${dataSource.type}`);
   }
 
@@ -1428,6 +1430,112 @@ export class RootCMSClient {
       return await res.json();
     }
     return res.text();
+  }
+
+  /**
+   * Fetches data from a Google Sheet using the Google Sheets API v4.
+   *
+   * ## Setup
+   *
+   * For the server-side service account to access the Google Sheet:
+   *
+   * 1. **Enable the Google Sheets API** in the Google Cloud Console for the
+   *    project associated with the service account.
+   *    https://console.cloud.google.com/apis/library/sheets.googleapis.com
+   *
+   * 2. **Share the Google Sheet** with the service account's email address
+   *    (e.g. `my-service-account@my-project.iam.gserviceaccount.com`).
+   *    Open the sheet in Google Sheets, click "Share", and add the service
+   *    account email as a Viewer.
+   *
+   *    - For **App Engine**: the service account email is typically
+   *      `<project-id>@appspot.gserviceaccount.com`.
+   *    - For **Cloud Run**: check the service account configured for the
+   *      Cloud Run service in the Google Cloud Console.
+   *    - For **local development**: use the service account email from the
+   *      JSON key file specified in `GOOGLE_APPLICATION_CREDENTIALS`.
+   */
+  private async fetchGsheetData(
+    dataSource: DataSource
+  ): Promise<{data: any; headers?: string[]}> {
+    const gsheetId = parseSpreadsheetUrl(dataSource.url);
+    if (!gsheetId?.spreadsheetId) {
+      throw new Error(`failed to parse google sheet url: ${dataSource.url}`);
+    }
+
+    const credential = this.app.options.credential;
+    if (!credential) {
+      throw new Error(
+        'firebase credential not available. ensure the firebase admin app is initialized with a service account.'
+      );
+    }
+    const {access_token} = await credential.getAccessToken();
+
+    // Resolve the gid to a sheet title by fetching spreadsheet metadata.
+    let sheetTitle = 'Sheet1';
+    const metaUrl = `https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(
+      gsheetId.spreadsheetId
+    )}?fields=sheets.properties`;
+    const metaRes = await fetch(metaUrl, {
+      headers: {Authorization: `Bearer ${access_token}`},
+    });
+    if (metaRes.status !== 200) {
+      const err = await metaRes.text();
+      throw new Error(`failed to fetch spreadsheet metadata: ${err}`);
+    }
+    const meta = (await metaRes.json()) as {
+      sheets?: {properties?: {sheetId?: number; title?: string}}[];
+    };
+    const sheets = meta.sheets || [];
+    if (gsheetId.gid !== undefined) {
+      const sheet = sheets.find((s) => s.properties?.sheetId === gsheetId.gid);
+      if (sheet?.properties?.title) {
+        sheetTitle = sheet.properties.title;
+      } else if (gsheetId.gid !== 0) {
+        throw new Error(
+          `sheet with gid ${gsheetId.gid} not found in spreadsheet`
+        );
+      }
+    }
+
+    // Fetch all values from the sheet.
+    const range = encodeURIComponent(sheetTitle);
+    const valuesUrl = `https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(
+      gsheetId.spreadsheetId
+    )}/values/${range}`;
+    const valuesRes = await fetch(valuesUrl, {
+      headers: {Authorization: `Bearer ${access_token}`},
+    });
+    if (valuesRes.status !== 200) {
+      const err = await valuesRes.text();
+      throw new Error(`failed to fetch sheet values: ${err}`);
+    }
+    const valuesData = (await valuesRes.json()) as {values?: string[][]};
+    const values: string[][] = valuesData.values || [];
+    if (values.length === 0) {
+      return {data: [], headers: []};
+    }
+
+    const headers = values[0];
+    const rows = values.slice(1);
+
+    const dataFormat = dataSource.dataFormat || 'map';
+    if (dataFormat === 'array') {
+      return {data: [headers, ...rows], headers};
+    }
+
+    // Convert rows to an array of objects keyed by column headers.
+    const mapData = rows.map((row) => {
+      const item: Record<string, string> = {};
+      row.forEach((val, i) => {
+        const key = headers[i];
+        if (key) {
+          item[key] = String(val || '');
+        }
+      });
+      return item;
+    });
+    return {data: mapData, headers};
   }
 
   /**
@@ -1880,6 +1988,39 @@ export function unmarshalArray(arrObject: ArrayObject): any[] {
 
 function isObject(data: any): boolean {
   return typeof data === 'object' && !Array.isArray(data) && data !== null;
+}
+
+/**
+ * Parses a Google Sheets URL and returns the spreadsheetId and gid.
+ *
+ * Expects a URL in the format:
+ * `https://docs.google.com/spreadsheets/d/<spreadsheetId>/edit#gid=<gid>`
+ */
+function parseSpreadsheetUrl(
+  url: string
+): {spreadsheetId: string; gid: number} | null {
+  if (!url.startsWith('https://docs.google.com/spreadsheets/d/')) {
+    return null;
+  }
+  const parts = url.split('/');
+  const dIndex = parts.indexOf('d');
+  if (dIndex === -1 || dIndex + 1 >= parts.length) {
+    return null;
+  }
+  const spreadsheetId = parts[dIndex + 1];
+  if (!spreadsheetId) {
+    return null;
+  }
+  let gid = 0;
+  const hashIndex = url.indexOf('#');
+  if (hashIndex !== -1) {
+    const hash = url.slice(hashIndex);
+    const gidMatch = hash.match(/gid=(\d+)/);
+    if (gidMatch && gidMatch[1]) {
+      gid = parseInt(gidMatch[1]);
+    }
+  }
+  return {spreadsheetId, gid};
 }
 
 function randString(len: number): string {

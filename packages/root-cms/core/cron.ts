@@ -5,7 +5,11 @@ import {VersionsService} from './versions.js';
 export async function runCronJobs(rootConfig: RootConfig) {
   await Promise.all([
     runCronJob('publishScheduledDocs', runPublishScheduledDocs, rootConfig),
-    runCronJob('syncScheduledDataSources', runSyncScheduledDataSources, rootConfig),
+    runCronJob(
+      'syncScheduledDataSources',
+      runSyncScheduledDataSources,
+      rootConfig
+    ),
     runCronJob('saveVersions', runSaveVersions, rootConfig),
   ]);
 }

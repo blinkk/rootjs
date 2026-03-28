@@ -9,3 +9,4 @@ out/
 .turbo/
 *.code-workspace
 .vitest-attachments/
+.claude/
