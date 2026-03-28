@@ -56,8 +56,8 @@ export default defineConfig({
         {
           id: 'example',
           label: 'Example',
-          icon: '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="m5 3-3 3m22-3-3 3M12 7v5l3 3"/></svg>',
-          import: async (ctx, data) => {
+          icon: 'https://fonts.gstatic.com/s/i/short-term/release/googlesymbols/translate/default/20px.svg',
+          onImport: async (ctx, data) => {
             // Example: returns mock translations for each source string.
             return data.map((row) => ({
               source: row.source,
@@ -69,7 +69,7 @@ export default defineConfig({
               ),
             }));
           },
-          export: async (ctx, data) => {
+          onExport: async (ctx, data) => {
             console.log(
               `[Example] Exported ${data.length} strings for doc "${ctx.docId}"`
             );

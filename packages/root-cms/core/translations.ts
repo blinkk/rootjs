@@ -32,8 +32,8 @@ export interface CMSTranslationService {
   /** Human-readable label displayed in the UI (e.g. "Crowdin"). */
   label: string;
   /**
-   * Optional SVG icon string displayed in the UI next to the label. Should be
-   * a complete `<svg>` element as a string.
+   * Optional icon URL displayed in the UI next to the label. Similar to the
+   * sidebar tools `icon` option, this should be a URL to an image.
    */
   icon?: string;
   /**
@@ -41,7 +41,7 @@ export interface CMSTranslationService {
    * array of translation rows that will be merged into the CMS translations
    * database.
    */
-  import?: (
+  onImport?: (
     ctx: TranslationServiceContext,
     data: TranslationRow[]
   ) => Promise<TranslationRow[]>;
@@ -49,7 +49,7 @@ export interface CMSTranslationService {
    * Async function to export translations to the service. Receives the
    * current translation rows for the document.
    */
-  export?: (
+  onExport?: (
     ctx: TranslationServiceContext,
     data: TranslationRow[]
   ) => Promise<void>;

@@ -318,8 +318,8 @@ export type CMSPluginOptions = {
    *     {
    *       id: 'crowdin',
    *       label: 'Crowdin',
-   *       import: async (ctx, data) => { ... },
-   *       export: async (ctx, data) => { ... },
+   *       onImport: async (ctx, data) => { ... },
+   *       onExport: async (ctx, data) => { ... },
    *     },
    *   ],
    * });

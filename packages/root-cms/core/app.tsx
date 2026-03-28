@@ -139,8 +139,8 @@ export async function renderApp(
       id: t.id,
       label: t.label,
       icon: t.icon,
-      hasImport: typeof t.import === 'function',
-      hasExport: typeof t.export === 'function',
+      hasImport: typeof t.onImport === 'function',
+      hasExport: typeof t.onExport === 'function',
     })),
   };
   const projectName = cmsConfig.name || cmsConfig.id || '';

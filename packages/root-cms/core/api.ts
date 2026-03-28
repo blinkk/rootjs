@@ -701,10 +701,10 @@ export function api(server: Server, options: ApiOptions) {
       }
 
       const reqBody = req.body || {};
-      const serviceId = String(reqBody.serviceId || '');
-      const action = String(reqBody.action || '');
-      const docId = String(reqBody.docId || '');
-      const data = reqBody.data || [];
+      const serviceId = String(reqBody.serviceId || '').trim();
+      const action = String(reqBody.action || '').trim();
+      const docId = String(reqBody.docId || '').trim();
+      const data = Array.isArray(reqBody.data) ? reqBody.data : [];
 
       if (!serviceId || !action || !docId) {
         res
@@ -727,7 +727,8 @@ export function api(server: Server, options: ApiOptions) {
         return;
       }
 
-      const handler = action === 'import' ? service.import : service.export;
+      const handler =
+        action === 'import' ? service.onImport : service.onExport;
       if (!handler) {
         res.status(400).json({
           success: false,
@@ -736,8 +737,19 @@ export function api(server: Server, options: ApiOptions) {
         return;
       }
 
+      let collectionId: string;
+      let slug: string;
       try {
-        const {collection: collectionId, slug} = parseDocId(docId);
+        const parsed = parseDocId(docId);
+        collectionId = parsed.collection;
+        slug = parsed.slug;
+      } catch (err: any) {
+        console.error(err.stack || err);
+        res.status(400).json({success: false, error: 'INVALID_DOC_ID'});
+        return;
+      }
+
+      try {
         const cmsClient = new RootCMSClient(req.rootConfig!);
         const locales = req.rootConfig?.i18n?.locales || [];
 

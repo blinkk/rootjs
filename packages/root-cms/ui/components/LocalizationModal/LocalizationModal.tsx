@@ -1395,9 +1395,10 @@ function ImportMenuButton(props: MenuButtonProps) {
               className="LocalizationModal__translations__menu__item"
               icon={
                 service.icon ? (
-                  <span
-                    style={{display: 'inline-flex', width: 16, height: 16}}
-                    dangerouslySetInnerHTML={{__html: service.icon}}
+                  <img
+                    src={service.icon}
+                    alt={service.label}
+                    style={{width: 16, height: 16}}
                   />
                 ) : undefined
               }
@@ -1488,9 +1489,10 @@ function ExportMenuButton(props: MenuButtonProps) {
               className="LocalizationModal__translations__menu__item"
               icon={
                 service.icon ? (
-                  <span
-                    style={{display: 'inline-flex', width: 16, height: 16}}
-                    dangerouslySetInnerHTML={{__html: service.icon}}
+                  <img
+                    src={service.icon}
+                    alt={service.label}
+                    style={{width: 16, height: 16}}
                   />
                 ) : undefined
               }
