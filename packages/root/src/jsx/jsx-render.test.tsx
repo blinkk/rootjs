@@ -186,7 +186,11 @@ test('pretty mode: block elements on their own line', () => {
     </div>
   );
   const output = renderJsxToString(vnode, {mode: 'pretty'});
-  expect(output).toBe('<div>\n<p>hello</p>\n<p>world</p>\n</div>\n');
+  expect(output).toBe(`<div>
+<p>hello</p>
+<p>world</p>
+</div>
+`);
 });
 
 test('pretty mode: inline elements stay inline', () => {
@@ -196,9 +200,8 @@ test('pretty mode: inline elements stay inline', () => {
     </p>
   );
   const output = renderJsxToString(vnode, {mode: 'pretty'});
-  expect(output).toBe(
-    '<p>Hello <strong>world</strong> and <em>more</em></p>\n'
-  );
+  expect(output).toBe(`<p>Hello <strong>world</strong> and <em>more</em></p>
+`);
 });
 
 test('pretty mode: void block elements get newlines', () => {
@@ -209,9 +212,11 @@ test('pretty mode: void block elements get newlines', () => {
     </head>
   );
   const output = renderJsxToString(vnode, {mode: 'pretty'});
-  expect(output).toBe(
-    '<head>\n<meta charset="utf-8">\n<link rel="stylesheet" href="style.css">\n</head>\n'
-  );
+  expect(output).toBe(`<head>
+<meta charset="utf-8">
+<link rel="stylesheet" href="style.css">
+</head>
+`);
 });
 
 test('pretty mode: custom block elements', () => {
@@ -225,9 +230,10 @@ test('pretty mode: custom block elements', () => {
     mode: 'pretty',
     blockElements: ['my-card'],
   });
-  expect(output).toBe(
-    '<div>\n<my-card>content</my-card>\n<span>inline</span></div>\n'
-  );
+  expect(output).toBe(`<div>
+<my-card>content</my-card>
+<span>inline</span></div>
+`);
 });
 
 test('minimal mode: no extra whitespace', () => {
@@ -256,7 +262,10 @@ test('default mode is pretty', () => {
     </div>
   );
   const output = renderJsxToString(vnode);
-  expect(output).toBe('<div>\n<p>hello</p>\n</div>\n');
+  expect(output).toBe(`<div>
+<p>hello</p>
+</div>
+`);
 });
 
 // --- Whitespace handling with inline elements (minimal mode) ---
