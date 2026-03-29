@@ -924,12 +924,19 @@ LocalizationModal.Translations = (props: TranslationsProps) => {
         return {source, translations};
       });
 
-      const res = await window.fetch('/cms/api/translations.run', {
+      // Validate action before interpolating it into the URL.
+      const safeAction =
+        action === 'import' || action === 'export'
+          ? action
+          : (() => {
+              throw new Error('Invalid translations action');
+            })();
+
+      const res = await window.fetch(`/cms/api/translations.${safeAction}`, {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
         body: JSON.stringify({
           serviceId,
-          action,
           docId: props.docId,
           data,
         }),
@@ -984,8 +991,7 @@ LocalizationModal.Translations = (props: TranslationsProps) => {
         });
       } else {
         const exportMessage =
-          resData.data?.message ||
-          `Exported translations to ${serviceLabel}.`;
+          resData.data?.message || `Exported translations to ${serviceLabel}.`;
         showNotification({
           title: 'Exported!',
           message: exportMessage,
