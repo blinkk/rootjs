@@ -125,6 +125,11 @@ const LT = '&lt;';
 const GT = '&gt;';
 const QUOT = '&quot;';
 
+/** Returns `true` when `value` is neither `null` nor `undefined`. */
+function isDef<T>(value: T | null | undefined): value is T {
+  return value !== null && value !== undefined;
+}
+
 function escapeHtml(str: string): string {
   const parts: string[] = [];
   let last = 0;
@@ -168,7 +173,7 @@ function styleToString(style: Record<string, any>): string {
   const parts: string[] = [];
   for (const key in style) {
     const value = style[key];
-    if (value == null || value === '') continue;
+    if (!isDef(value) || value === '') continue;
     // Convert camelCase to kebab-case.
     const cssKey = key.replace(/[A-Z]/g, (m) => '-' + m.toLowerCase());
     parts.push(`${cssKey}:${value}`);
@@ -231,7 +236,7 @@ export function renderJsxToString(
   }
 
   function render(node: any): string {
-    if (node == null || typeof node === 'boolean') return '';
+    if (!isDef(node) || typeof node === 'boolean') return '';
     if (typeof node === 'string') return escapeHtml(node);
     if (typeof node === 'number' || typeof node === 'bigint')
       return String(node);
@@ -346,15 +351,15 @@ export function renderJsxToString(
     }
 
     let inner = '';
-    if (props?.dangerouslySetInnerHTML?.__html != null) {
+    if (isDef(props?.dangerouslySetInnerHTML?.__html)) {
       inner = props.dangerouslySetInnerHTML.__html;
-    } else if (props?.children != null) {
+    } else if (isDef(props?.children)) {
       inner = renderChildren(props.children);
     } else if (tag === 'textarea' && props) {
       // For <textarea>, render value/defaultValue as text content since
       // browsers ignore the value attribute on textarea elements.
       const textVal = props.value ?? props.defaultValue;
-      if (textVal != null) {
+      if (isDef(textVal)) {
         inner = escapeHtml(String(textVal));
       }
     }
@@ -400,7 +405,7 @@ export function renderJsxToString(
       if (key.length > 2 && key[0] === 'o' && key[1] === 'n') continue;
 
       let value = props[key];
-      if (value == null || value === false) continue;
+      if (!isDef(value) || value === false) continue;
 
       const attrName = PROP_TO_ATTR[key] || key;
 
@@ -422,7 +427,7 @@ export function renderJsxToString(
   }
 
   function renderChildren(children: any): string {
-    if (children == null) return '';
+    if (!isDef(children)) return '';
     if (Array.isArray(children)) {
       return children.map(render).join('');
     }
