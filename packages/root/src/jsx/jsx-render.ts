@@ -235,12 +235,12 @@ export function renderJsxToString(
     return globalCtx;
   }
 
-  function render(node: any): string {
+  function render(node: any, inline?: boolean): string {
     if (!isDef(node) || typeof node === 'boolean') return '';
     if (typeof node === 'string') return escapeHtml(node);
     if (typeof node === 'number' || typeof node === 'bigint')
       return String(node);
-    if (Array.isArray(node)) return node.map(render).join('');
+    if (Array.isArray(node)) return node.map((n) => render(n, inline)).join('');
 
     // Must be a VNode-like object.
     if (typeof node !== 'object' || !('type' in node)) return '';
@@ -259,7 +259,7 @@ export function renderJsxToString(
 
     // HTML element.
     if (typeof type === 'string') {
-      return renderElement(type, props);
+      return renderElement(type, props, inline);
     }
 
     return '';
@@ -339,8 +339,12 @@ export function renderJsxToString(
     }
   }
 
-  function renderElement(tag: string, props: Record<string, any>): string {
-    const isBlock = isPretty && blockSet.has(tag);
+  function renderElement(
+    tag: string,
+    props: Record<string, any>,
+    inline?: boolean
+  ): string {
+    const isBlock = isPretty && !inline && blockSet.has(tag);
     const isVoid = VOID_ELEMENTS.has(tag);
 
     const parts: string[] = ['<', tag, renderAttrs(tag, props), '>'];
@@ -426,10 +430,41 @@ export function renderJsxToString(
     return parts.join('');
   }
 
+  /**
+   * Returns true if a child node is a text-like value (string, number).
+   */
+  function isTextNode(child: any): boolean {
+    if (!isDef(child) || typeof child === 'boolean') return false;
+    return (
+      typeof child === 'string' ||
+      typeof child === 'number' ||
+      typeof child === 'bigint'
+    );
+  }
+
+  /**
+   * Checks if an array of children contains a mix of text nodes and elements.
+   * When mixed, block elements should render inline to avoid breaking text flow.
+   */
+  function hasMixedContent(children: any[]): boolean {
+    let hasText = false;
+    let hasElement = false;
+    for (const child of children) {
+      if (isTextNode(child)) {
+        hasText = true;
+      } else if (isDef(child) && typeof child === 'object' && 'type' in child) {
+        hasElement = true;
+      }
+      if (hasText && hasElement) return true;
+    }
+    return false;
+  }
+
   function renderChildren(children: any): string {
     if (!isDef(children)) return '';
     if (Array.isArray(children)) {
-      return children.map(render).join('');
+      const inline = isPretty && hasMixedContent(children);
+      return children.map((child) => render(child, inline)).join('');
     }
     return render(children);
   }
