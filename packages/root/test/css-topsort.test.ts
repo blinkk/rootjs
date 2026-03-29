@@ -25,8 +25,8 @@ test('build css-topsort', async () => {
     "<!doctype html>
     <html>
     <head>
-    <meta charset="utf-8" />
-    <link rel="stylesheet" href="/assets/Bt2MPTQs.css" />
+    <meta charset="utf-8">
+    <link rel="stylesheet" href="/assets/Bt2MPTQs.css">
     </head>
     <body>
     <h1>Hello world</h1>

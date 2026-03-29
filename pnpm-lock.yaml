@@ -331,9 +331,6 @@ importers:
       preact-custom-element:
         specifier: 4.5.0
         version: 4.5.0(preact@10.27.1)
-      preact-render-to-string:
-        specifier: 6.6.1
-        version: 6.6.1(preact@10.27.1)
       tsup:
         specifier: 8.5.0
         version: 8.5.0(typescript@5.9.2)
@@ -3640,22 +3637,22 @@ packages:
       read-yaml-file: 1.1.0
     dev: true
 
-  /@maxim_mazurok/gapi.client.discovery-v1@0.4.20200806:
-    resolution: {integrity: sha512-Jeo/KZqK39DI6ExXHcJ4lqnn1O/wEqboQ6eQ8WnNpu5eJ7wUnX/C5KazOgs1aRhnIB/dVzDe8wm62nmtkMIoaw==}
+  /@maxim_mazurok/gapi.client.discovery-v1@0.5.20200806:
+    resolution: {integrity: sha512-oVq9hnnI5VhAtsx55iJbPz8NRfJtWFpI1kINKeuygzCvsx90b1GQDeN3MDUvhADXiQ7+Izs316cqBnJjoDxCow==}
     dependencies:
       '@types/gapi.client': 1.0.8
       '@types/gapi.client.discovery-v1': 0.0.4
     dev: true
 
-  /@maxim_mazurok/gapi.client.drive-v3@0.1.20260305:
-    resolution: {integrity: sha512-i5D44X8hazSANFGOwzs6ONwB70fV+dTCsrodsbcjx1Cz+4UVC/QLPtnH/suSe7McHZOkUcrOzzbW8d2NAjCRMA==}
+  /@maxim_mazurok/gapi.client.drive-v3@0.2.20260311:
+    resolution: {integrity: sha512-2SVn8bIFZB9pq1JjqBNY/Agebv8gjHdr5k+ippSVsz07eWpl7d0Vxj4huX1O60ev0NDqrIx6a7w6MFFUIKlN6w==}
     dependencies:
       '@types/gapi.client': 1.0.8
       '@types/gapi.client.discovery-v1': 0.0.4
     dev: true
 
-  /@maxim_mazurok/gapi.client.sheets-v4@0.2.20260304:
-    resolution: {integrity: sha512-zrVgWMTZfaQ9h9cGgZLKu/2XKjLl/Rj8z7mz/WvtnA1eLfbLE0RG3zaN3IxMGcAXKfPSBw1/n2igi3iKEwVEgg==}
+  /@maxim_mazurok/gapi.client.sheets-v4@0.2.20260311:
+    resolution: {integrity: sha512-vQIXInvthytk29BQD+jwEKEDF95YijbTihVqzb/q0tr1lAvazAybM9iTaJ2W6bVUkcq8ydvTiYr8mKFicm3Mkw==}
     dependencies:
       '@types/gapi.client': 1.0.8
       '@types/gapi.client.discovery-v1': 0.0.4
@@ -5619,19 +5616,19 @@ packages:
   /@types/gapi.client.discovery-v1@0.0.4:
     resolution: {integrity: sha512-uevhRumNE65F5mf2gABLaReOmbFSXONuzFZjNR3dYv6BmkHg+wciubHrfBAsp3554zNo3Dcg6dUAlwMqQfpwjQ==}
     dependencies:
-      '@maxim_mazurok/gapi.client.discovery-v1': 0.4.20200806
+      '@maxim_mazurok/gapi.client.discovery-v1': 0.5.20200806
     dev: true
 
   /@types/gapi.client.drive-v3@0.0.4:
     resolution: {integrity: sha512-jE37dJ0EzAdY0aJPFOp20xmec/aO0P4HtUIA9k07RMPyedFDOcuMlSac1r0PklwQdgXF7BHaMoObNHNAnwSQUQ==}
     dependencies:
-      '@maxim_mazurok/gapi.client.drive-v3': 0.1.20260305
+      '@maxim_mazurok/gapi.client.drive-v3': 0.2.20260311
     dev: true
 
   /@types/gapi.client.sheets-v4@0.0.4:
     resolution: {integrity: sha512-6kTJ7aDMAElfdQV1XzVJmZWjgbibpa84DMuKuaN8Cwqci/dkglPyHXKvsGrRugmuYvgFYr35AQqwz6j3q8R0dw==}
     dependencies:
-      '@maxim_mazurok/gapi.client.sheets-v4': 0.2.20260304
+      '@maxim_mazurok/gapi.client.sheets-v4': 0.2.20260311
     dev: true
 
   /@types/gapi.client@1.0.8:

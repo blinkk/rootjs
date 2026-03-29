@@ -6,7 +6,6 @@ import {
   VNode,
   options as preactOptions,
 } from 'preact';
-import {renderToString} from 'preact-render-to-string';
 import {HtmlContext, HTML_CONTEXT} from '../core/components/Html.js';
 import {RootConfig, RootSecurityConfig} from '../core/config.js';
 import {getTranslations, I18N_CONTEXT} from '../core/hooks/useI18nContext.js';
@@ -36,6 +35,7 @@ import {replaceParams} from '../utils/url-path-params.js';
 import {AssetMap} from './asset-map/asset-map.js';
 import {htmlMinify} from './html-minify.js';
 import {htmlPretty} from './html-pretty.js';
+import {JsxRenderOptions, renderJsxToString} from './jsx-render.js';
 import {getFallbackLocales} from './i18n-fallbacks.js';
 import {normalizeUrlPath, Router} from './router.js';
 
@@ -203,7 +203,7 @@ export class Renderer {
           preactHook(vnode);
         }
       };
-      mainHtml = renderToString(vdom);
+      mainHtml = renderJsxToString(vdom, this.getJsxRenderOptions());
       preactOptions.vnode = preactHook;
     } catch (err) {
       preactOptions.vnode = preactHook;
@@ -590,6 +590,10 @@ export class Renderer {
     return orderedSitemap;
   }
 
+  private getJsxRenderOptions(): JsxRenderOptions {
+    return this.rootConfig.jsxRenderer || {};
+  }
+
   private getConfiguredStyleEntries() {
     const styleEntries = this.rootConfig.styles?.entries || [];
     const basePath = this.rootConfig.base || '/';
@@ -612,7 +616,7 @@ export class Renderer {
         <body {...bodyAttrs} dangerouslySetInnerHTML={{__html: html}} />
       </html>
     );
-    return `<!doctype html>\n${renderToString(page)}\n`;
+    return `<!doctype html>\n${renderJsxToString(page, this.getJsxRenderOptions())}`;
   }
 
   async render404(options?: {currentPath?: string}) {
@@ -629,13 +633,14 @@ export class Renderer {
       );
     }
 
-    const mainHtml = renderToString(
+    const mainHtml = renderJsxToString(
       <ErrorPage
         code={404}
         title="Not found"
         message="Double-check the URL entered and try again."
         align="center"
-      />
+      />,
+      this.getJsxRenderOptions()
     );
     const html = await this.renderHtml(mainHtml, {
       headComponents: [
@@ -661,13 +666,14 @@ export class Renderer {
       );
     }
 
-    const mainHtml = renderToString(
+    const mainHtml = renderJsxToString(
       <ErrorPage
         code={500}
         title="Something went wrong"
         message="An unknown error occurred."
         align="center"
-      />
+      />,
+      this.getJsxRenderOptions()
     );
     const html = await this.renderHtml(mainHtml, {
       headComponents: [
@@ -683,8 +689,9 @@ export class Renderer {
 
   async renderDevServer404(req: Request) {
     const sitemap = await this.getSitemap();
-    const mainHtml = renderToString(
-      <DevNotFoundPage req={req} sitemap={sitemap} />
+    const mainHtml = renderJsxToString(
+      <DevNotFoundPage req={req} sitemap={sitemap} />,
+      this.getJsxRenderOptions()
     );
     const html = await this.renderHtml(mainHtml, {
       headComponents: [<title>404 Not found | Root.js</title>],
@@ -694,13 +701,14 @@ export class Renderer {
 
   async renderDevServer500(req: Request, error: unknown) {
     const [route, routeParams] = this.router.get(req.path);
-    const mainHtml = renderToString(
+    const mainHtml = renderJsxToString(
       <DevErrorPage
         req={req}
         route={route}
         routeParams={routeParams}
         error={error}
-      />
+      />,
+      this.getJsxRenderOptions()
     );
     const html = await this.renderHtml(mainHtml, {
       headComponents: [<title>500 Error | Root.js</title>],
