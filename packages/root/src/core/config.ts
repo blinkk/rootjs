@@ -1,7 +1,7 @@
 import {UserConfig as ViteUserConfig} from 'vite';
 import {HtmlMinifyOptions} from '../render/html-minify.js';
 import {HtmlPrettyOptions} from '../render/html-pretty.js';
-import {JsxRenderOptions} from '../render/jsx-render.js';
+import {JsxRenderOptions} from '../jsx/jsx-render.js';
 import {Plugin} from './plugin.js';
 import {RequestMiddleware} from './types.js';
 

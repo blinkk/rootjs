@@ -35,7 +35,7 @@ import {replaceParams} from '../utils/url-path-params.js';
 import {AssetMap} from './asset-map/asset-map.js';
 import {htmlMinify} from './html-minify.js';
 import {htmlPretty} from './html-pretty.js';
-import {JsxRenderOptions, renderJsxToString} from './jsx-render.js';
+import {JsxRenderOptions, renderJsxToString} from '../jsx/jsx-render.js';
 import {getFallbackLocales} from './i18n-fallbacks.js';
 import {normalizeUrlPath, Router} from './router.js';
 
