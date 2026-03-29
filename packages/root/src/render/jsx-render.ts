@@ -258,10 +258,18 @@ export function renderJsxToString(
     const fn = type as Function;
 
     // Detect context Provider.
-    // In Preact 10, Provider === Context (same object). The context function
-    // has `__c` (context id, e.g. "__cC0") and `__` (default value).
-    const contextId: string | undefined = (fn as any).__c;
-    if (typeof contextId === 'string' && contextId.startsWith('__cC')) {
+    // Preact >=10.27: Provider === Context (same function). `fn.__c` is the
+    //   context id string (e.g. "__cC0").
+    // Preact <10.27:  Provider._contextRef (mangled `fn.__`) points to the
+    //   context object which has `__c` (id) and `__` (default value).
+    let contextId: string | undefined;
+    const fnAny = fn as any;
+    if (typeof fnAny.__c === 'string' && fnAny.__c.startsWith('__cC')) {
+      contextId = fnAny.__c;
+    } else if (fnAny.__ && typeof fnAny.__ === 'object' && fnAny.__.__c) {
+      contextId = fnAny.__.__c;
+    }
+    if (contextId) {
       pushCtx(contextId, (props as any).value);
       const result = renderChildren(props.children);
       popCtx(contextId);
