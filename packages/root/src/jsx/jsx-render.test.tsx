@@ -1,3 +1,5 @@
+/* eslint-disable prettier/prettier */
+
 import {createContext} from 'preact';
 import {useContext} from 'preact/hooks';
 import {expect, test} from 'vitest';
@@ -39,9 +41,7 @@ test('escapes html entities in text', () => {
   const vnode = <div>{'<script>alert("xss")</script>'}</div>;
   const output = renderJsxToString(vnode, {mode: 'minimal'});
   // Quotes don't need escaping in text content, only &, <, > do.
-  expect(output).toBe(
-    '<div>&lt;script&gt;alert("xss")&lt;/script&gt;</div>'
-  );
+  expect(output).toBe('<div>&lt;script&gt;alert("xss")&lt;/script&gt;</div>');
 });
 
 test('escapes html entities in attributes', () => {
@@ -53,9 +53,7 @@ test('escapes html entities in attributes', () => {
 });
 
 test('renders dangerouslySetInnerHTML', () => {
-  const vnode = (
-    <div dangerouslySetInnerHTML={{__html: '<b>raw</b>'}} />
-  );
+  const vnode = <div dangerouslySetInnerHTML={{__html: '<b>raw</b>'}} />;
   const output = renderJsxToString(vnode, {mode: 'minimal'});
   expect(output).toBe('<div><b>raw</b></div>');
 });
@@ -150,9 +148,7 @@ test('renders nested context providers', () => {
     </MyContext.Provider>
   );
   const output = renderJsxToString(vnode, {mode: 'minimal'});
-  expect(output).toBe(
-    '<div><span>outer</span><span>inner</span></div>'
-  );
+  expect(output).toBe('<div><span>outer</span><span>inner</span></div>');
 });
 
 test('renders numbers and ignores booleans/null', () => {
@@ -171,7 +167,11 @@ test('renders numbers and ignores booleans/null', () => {
 });
 
 test('skips event handlers', () => {
-  const vnode = <button onClick={() => {}} onMouseOver={() => {}}>click</button>;
+  const vnode = (
+    <button onClick={() => {}} onMouseOver={() => {}}>
+      click
+    </button>
+  );
   const output = renderJsxToString(vnode, {mode: 'minimal'});
   expect(output).toBe('<button>click</button>');
 });
@@ -257,4 +257,114 @@ test('default mode is pretty', () => {
   );
   const output = renderJsxToString(vnode);
   expect(output).toBe('<div>\n<p>hello</p>\n</div>\n');
+});
+
+// --- Whitespace handling with inline elements (minimal mode) ---
+
+test('minimal mode: preserves space between inline elements', () => {
+  const vnode = (
+    <div>
+      <span>foo</span> <span>bar</span>
+    </div>
+  );
+  const output = renderJsxToString(vnode, {mode: 'minimal'});
+  expect(output).toBe('<div><span>foo</span> <span>bar</span></div>');
+});
+
+test('minimal mode: preserves space between text and inline element', () => {
+  const vnode = (
+    <p>
+      Hello <strong>world</strong>
+    </p>
+  );
+  const output = renderJsxToString(vnode, {mode: 'minimal'});
+  expect(output).toBe('<p>Hello <strong>world</strong></p>');
+});
+
+test('minimal mode: preserves space after inline element', () => {
+  const vnode = (
+    <p>
+      <em>Hello</em> world
+    </p>
+  );
+  const output = renderJsxToString(vnode, {mode: 'minimal'});
+  expect(output).toBe('<p><em>Hello</em> world</p>');
+});
+
+test('minimal mode: preserves spaces between multiple inline elements', () => {
+  const vnode = (
+    <p>
+      <span>a</span> <span>b</span> <span>c</span>
+    </p>
+  );
+  const output = renderJsxToString(vnode, {mode: 'minimal'});
+  expect(output).toBe('<p><span>a</span> <span>b</span> <span>c</span></p>');
+});
+
+test('minimal mode: preserves space with anchor tags', () => {
+  const vnode = (
+    <p>
+      Visit <a href="/about">our site</a> for more info.
+    </p>
+  );
+  const output = renderJsxToString(vnode, {mode: 'minimal'});
+  expect(output).toBe(
+    '<p>Visit <a href="/about">our site</a> for more info.</p>'
+  );
+});
+
+test('minimal mode: no space between inline elements on separate lines', () => {
+  const vnode = (
+    <div>
+      <span>foo</span>
+      <span>bar</span>
+    </div>
+  );
+  const output = renderJsxToString(vnode, {mode: 'minimal'});
+  expect(output).toBe('<div><span>foo</span><span>bar</span></div>');
+});
+
+test('minimal mode: no space between text and element on separate lines', () => {
+  const vnode = (
+    <p>
+      Hello
+      <strong>world</strong>
+    </p>
+  );
+  const output = renderJsxToString(vnode, {mode: 'minimal'});
+  expect(output).toBe('<p>Hello<strong>world</strong></p>');
+});
+
+test('minimal mode: no space between element and text on separate lines', () => {
+  const vnode = (
+    <p>
+      <em>Hello</em>
+      world
+    </p>
+  );
+  const output = renderJsxToString(vnode, {mode: 'minimal'});
+  expect(output).toBe('<p><em>Hello</em>world</p>');
+});
+
+test('minimal mode: multiple inline elements on separate lines', () => {
+  const vnode = (
+    <p>
+      <span>a</span>
+      <span>b</span>
+      <span>c</span>
+    </p>
+  );
+  const output = renderJsxToString(vnode, {mode: 'minimal'});
+  expect(output).toBe('<p><span>a</span><span>b</span><span>c</span></p>');
+});
+
+test('minimal mode: explicit space expression between inline elements', () => {
+  const vnode = (
+    <p>
+      <span>a</span>{' '}
+      <span>b</span>
+    </p>
+  );
+  const output = renderJsxToString(vnode, {mode: 'minimal'});
+  expect(output).toBe('<p><span>a</span> <span>b</span></p>');
 });
