@@ -5,6 +5,11 @@ import {VersionsService} from './versions.js';
 export async function runCronJobs(rootConfig: RootConfig) {
   await Promise.all([
     runCronJob('publishScheduledDocs', runPublishScheduledDocs, rootConfig),
+    runCronJob(
+      'syncScheduledDataSources',
+      runSyncScheduledDataSources,
+      rootConfig
+    ),
     runCronJob('saveVersions', runSaveVersions, rootConfig),
   ]);
 }
@@ -27,6 +32,11 @@ async function runPublishScheduledDocs(rootConfig: RootConfig) {
   const cmsClient = new RootCMSClient(rootConfig);
   await cmsClient.publishScheduledDocs();
   await cmsClient.publishScheduledReleases();
+}
+
+async function runSyncScheduledDataSources(rootConfig: RootConfig) {
+  const cmsClient = new RootCMSClient(rootConfig);
+  await cmsClient.syncScheduledDataSources();
 }
 
 async function runSaveVersions(rootConfig: RootConfig) {
