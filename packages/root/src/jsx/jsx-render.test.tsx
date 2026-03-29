@@ -368,3 +368,24 @@ test('minimal mode: explicit space expression between inline elements', () => {
   const output = renderJsxToString(vnode, {mode: 'minimal'});
   expect(output).toBe('<p><span>a</span> <span>b</span></p>');
 });
+
+test('textarea: renders value as attribute (not as children)', () => {
+  const vnode = <textarea value="hello world" />;
+  const output = renderJsxToString(vnode, {mode: 'minimal'});
+  // Current behavior: value is rendered as an attribute.
+  // Browsers ignore the value attribute on <textarea> — the initial value
+  // should be the element's text content instead.
+  expect(output).toBe('<textarea value="hello world"></textarea>');
+});
+
+test('textarea: renders defaultValue as attribute (not as children)', () => {
+  const vnode = <textarea defaultValue="hello world" />;
+  const output = renderJsxToString(vnode, {mode: 'minimal'});
+  expect(output).toBe('<textarea defaultValue="hello world"></textarea>');
+});
+
+test('textarea: renders children as text content', () => {
+  const vnode = <textarea>hello world</textarea>;
+  const output = renderJsxToString(vnode, {mode: 'minimal'});
+  expect(output).toBe('<textarea>hello world</textarea>');
+});
