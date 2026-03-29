@@ -332,7 +332,7 @@ export function renderJsxToString(
     const isVoid = VOID_ELEMENTS.has(tag);
 
     let html = '<' + tag;
-    html += renderAttrs(props);
+    html += renderAttrs(tag, props);
     html += '>';
 
     if (isVoid) {
@@ -344,6 +344,13 @@ export function renderJsxToString(
       inner = props.dangerouslySetInnerHTML.__html;
     } else if (props?.children != null) {
       inner = renderChildren(props.children);
+    } else if (tag === 'textarea' && props) {
+      // For <textarea>, render value/defaultValue as text content since
+      // browsers ignore the value attribute on textarea elements.
+      const textVal = props.value ?? props.defaultValue;
+      if (textVal != null) {
+        inner = escapeHtml(String(textVal));
+      }
     }
 
     if (isBlock) {
@@ -359,7 +366,7 @@ export function renderJsxToString(
     return html + inner + '</' + tag + '>';
   }
 
-  function renderAttrs(props: Record<string, any>): string {
+  function renderAttrs(tag: string, props: Record<string, any>): string {
     if (!props) return '';
     let result = '';
     for (const key in props) {
@@ -371,6 +378,10 @@ export function renderJsxToString(
         key === '__self' ||
         key === '__source'
       ) {
+        continue;
+      }
+      // Skip value/defaultValue on textarea — rendered as text content.
+      if (tag === 'textarea' && (key === 'value' || key === 'defaultValue')) {
         continue;
       }
       // Skip event handlers.
