@@ -409,7 +409,10 @@ export function renderJsxToString(
       if (key.length > 2 && key[0] === 'o' && key[1] === 'n') continue;
 
       let value = props[key];
-      if (!isDef(value) || value === false) continue;
+      if (!isDef(value)) continue;
+      // For standard and boolean attributes, `false` removes the attribute.
+      // For data-* attributes, `false` is rendered as the string "false".
+      if (value === false && !key.startsWith('data-')) continue;
 
       const attrName = PROP_TO_ATTR[key] || key;
 

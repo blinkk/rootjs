@@ -31,10 +31,31 @@ test('renders boolean attributes', () => {
   expect(output).toBe('<input type="checkbox" checked disabled>');
 });
 
-test('skips null, undefined, and false attributes', () => {
-  const vnode = <div id={undefined} class={null} hidden={false} />;
-  const output = renderJsxToString(vnode, {mode: 'minimal'});
-  expect(output).toBe('<div></div>');
+test('handles falsy attribute values', () => {
+  // false: standard/boolean removed, data-* rendered as "false"
+  expect(
+    renderJsxToString(<div id={false as any} hidden={false} data-hidden={false} />, {mode: 'minimal'})
+  ).toBe('<div data-hidden="false"></div>');
+
+  // null: all removed
+  expect(
+    renderJsxToString(<div id={null} hidden={null as any} data-hidden={null} />, {mode: 'minimal'})
+  ).toBe('<div></div>');
+
+  // undefined: all removed
+  expect(
+    renderJsxToString(<div id={undefined} hidden={undefined as any} data-hidden={undefined} />, {mode: 'minimal'})
+  ).toBe('<div></div>');
+
+  // "": all rendered
+  expect(
+    renderJsxToString(<div id="" hidden={'' as any} data-hidden="" />, {mode: 'minimal'})
+  ).toBe('<div id="" hidden="" data-hidden=""></div>');
+
+  // 0: all rendered as "0"
+  expect(
+    renderJsxToString(<div id={0 as any} hidden={0 as any} data-hidden={0} />, {mode: 'minimal'})
+  ).toBe('<div id="0" hidden="0" data-hidden="0"></div>');
 });
 
 test('escapes html entities in text', () => {
