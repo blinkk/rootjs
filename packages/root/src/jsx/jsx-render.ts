@@ -126,7 +126,7 @@ const GT = '&gt;';
 const QUOT = '&quot;';
 
 function escapeHtml(str: string): string {
-  let out = '';
+  const parts: string[] = [];
   let last = 0;
   for (let i = 0; i < str.length; i++) {
     const ch = str.charCodeAt(i);
@@ -135,15 +135,17 @@ function escapeHtml(str: string): string {
     else if (ch === 60) escaped = LT;
     else if (ch === 62) escaped = GT;
     if (escaped) {
-      out += str.slice(last, i) + escaped;
+      parts.push(str.slice(last, i), escaped);
       last = i + 1;
     }
   }
-  return last === 0 ? str : out + str.slice(last);
+  if (last === 0) return str;
+  parts.push(str.slice(last));
+  return parts.join('');
 }
 
 function escapeAttr(str: string): string {
-  let out = '';
+  const parts: string[] = [];
   let last = 0;
   for (let i = 0; i < str.length; i++) {
     const ch = str.charCodeAt(i);
@@ -153,11 +155,13 @@ function escapeAttr(str: string): string {
     else if (ch === 60) escaped = LT;
     else if (ch === 62) escaped = GT;
     if (escaped) {
-      out += str.slice(last, i) + escaped;
+      parts.push(str.slice(last, i), escaped);
       last = i + 1;
     }
   }
-  return last === 0 ? str : out + str.slice(last);
+  if (last === 0) return str;
+  parts.push(str.slice(last));
+  return parts.join('');
 }
 
 function styleToString(style: Record<string, any>): string {
@@ -334,12 +338,11 @@ export function renderJsxToString(
     const isBlock = isPretty && blockSet.has(tag);
     const isVoid = VOID_ELEMENTS.has(tag);
 
-    let html = '<' + tag;
-    html += renderAttrs(tag, props);
-    html += '>';
+    const parts: string[] = ['<', tag, renderAttrs(tag, props), '>'];
 
     if (isVoid) {
-      return isBlock ? html + '\n' : html;
+      if (isBlock) parts.push('\n');
+      return parts.join('');
     }
 
     let inner = '';
@@ -364,17 +367,20 @@ export function renderJsxToString(
       const hasBlockChildren =
         !RAW_CONTENT_ELEMENTS.has(tag) && inner.includes('\n');
       if (hasBlockChildren) {
-        return html + '\n' + inner + '</' + tag + '>\n';
+        parts.push('\n', inner, '</', tag, '>\n');
+      } else {
+        parts.push(inner, '</', tag, '>\n');
       }
-      return html + inner + '</' + tag + '>\n';
+    } else {
+      parts.push(inner, '</', tag, '>');
     }
 
-    return html + inner + '</' + tag + '>';
+    return parts.join('');
   }
 
   function renderAttrs(tag: string, props: Record<string, any>): string {
     if (!props) return '';
-    let result = '';
+    const parts: string[] = [];
     for (const key in props) {
       if (
         key === 'children' ||
@@ -400,7 +406,7 @@ export function renderJsxToString(
 
       // Boolean attributes.
       if (value === true) {
-        result += ' ' + attrName;
+        parts.push(' ', attrName);
         continue;
       }
 
@@ -410,9 +416,9 @@ export function renderJsxToString(
         if (!value) continue;
       }
 
-      result += ' ' + attrName + '="' + escapeAttr(String(value)) + '"';
+      parts.push(' ', attrName, '="', escapeAttr(String(value)), '"');
     }
-    return result;
+    return parts.join('');
   }
 
   function renderChildren(children: any): string {
