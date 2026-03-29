@@ -43,6 +43,10 @@
       "types": "./dist/functions.d.ts",
       "import": "./dist/functions.js"
     },
+    "./jsx": {
+      "types": "./dist/jsx.d.ts",
+      "import": "./dist/jsx.js"
+    },
     "./middleware": {
       "types": "./dist/middleware.d.ts",
       "import": "./dist/middleware.js"
