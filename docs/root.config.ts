@@ -2,6 +2,7 @@ import path from 'node:path';
 import {URL} from 'node:url';
 import {defineConfig} from '@blinkk/root';
 import {cmsPlugin} from '@blinkk/root-cms/plugin';
+import {createCrowdinService} from './utils/crowdin.js';
 
 const rootDir = new URL('.', import.meta.url).pathname;
 
@@ -53,6 +54,15 @@ export default defineConfig({
         },
       },
       translations: [
+        ...(process.env.CROWDIN_API_TOKEN
+          ? [
+              createCrowdinService({
+                apiToken: process.env.CROWDIN_API_TOKEN,
+                projectId: Number(process.env.CROWDIN_PROJECT_ID),
+                organization: process.env.CROWDIN_ORGANIZATION,
+              }),
+            ]
+          : []),
         {
           id: 'example',
           label: 'Example',
