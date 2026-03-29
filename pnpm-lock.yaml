@@ -50,9 +50,6 @@ importers:
       preact:
         specifier: 10.27.1
         version: 10.27.1
-      preact-render-to-string:
-        specifier: 6.6.1
-        version: 6.6.1(preact@10.27.1)
     devDependencies:
       firebase-tools:
         specifier: 13.35.1
@@ -64,11 +61,8 @@ importers:
         specifier: workspace:*
         version: link:../../packages/root
       preact:
-        specifier: ^10.10.6
-        version: 10.18.1
-      preact-render-to-string:
-        specifier: ^5.2.3
-        version: 5.2.4(preact@10.18.1)
+        specifier: 10.27.1
+        version: 10.27.1
 
   examples/blog:
     dependencies:
@@ -87,9 +81,6 @@ importers:
       preact:
         specifier: 10.27.1
         version: 10.27.1
-      preact-render-to-string:
-        specifier: 6.6.1
-        version: 6.6.1(preact@10.27.1)
     devDependencies:
       '@blinkk/rds':
         specifier: workspace:*
@@ -112,9 +103,6 @@ importers:
       preact:
         specifier: 10.27.1
         version: 10.27.1
-      preact-render-to-string:
-        specifier: 6.6.1
-        version: 6.6.1(preact@10.27.1)
     devDependencies:
       '@types/node':
         specifier: 18.11.18
@@ -128,9 +116,6 @@ importers:
       preact:
         specifier: 10.27.1
         version: 10.27.1
-      preact-render-to-string:
-        specifier: 6.6.1
-        version: 6.6.1(preact@10.27.1)
     devDependencies:
       '@types/node':
         specifier: 18.11.18
@@ -144,9 +129,6 @@ importers:
       preact:
         specifier: 10.27.1
         version: 10.27.1
-      preact-render-to-string:
-        specifier: 6.6.1
-        version: 6.6.1(preact@10.27.1)
 
   packages/create-root:
     dependencies:
@@ -657,9 +639,6 @@ importers:
       preact:
         specifier: 10.27.1
         version: 10.27.1
-      preact-render-to-string:
-        specifier: 6.6.1
-        version: 6.6.1(preact@10.27.1)
       tsup:
         specifier: 8.5.0
         version: 8.5.0(typescript@5.2.2)
@@ -13094,29 +13073,9 @@ packages:
       preact: 10.27.1
     dev: true
 
-  /preact-render-to-string@5.2.4(preact@10.18.1):
-    resolution: {integrity: sha512-iIPHb3BXUQ3Za6KNhkjN/waq11Oh+QWWtAgN3id3LrL+cszH3DYh8TxJPNQ6Aogsbu4JsqdJLBZltwPFpG6N6w==}
-    peerDependencies:
-      preact: '>=10'
-    dependencies:
-      preact: 10.18.1
-      pretty-format: 3.8.0
-    dev: false
-
-  /preact-render-to-string@6.6.1(preact@10.27.1):
-    resolution: {integrity: sha512-IIMfXRjmbSP9QmG18WJLQa4Z4yx3J0VC9QN5q9z2XYlWSzFlJ+bSm/AyLyyV/YFwjof1OXFX2Mz6Ao60LXudJg==}
-    peerDependencies:
-      preact: '>=10 || >= 11.0.0-0'
-    dependencies:
-      preact: 10.27.1
-
   /preact@10.11.0:
     resolution: {integrity: sha512-Fk6+vB2kb6mSJfDgODq0YDhMfl0HNtK5+Uc9QqECO4nlyPAQwCI+BKyWO//idA7ikV7o+0Fm6LQmNuQi1wXI1w==}
     dev: true
-
-  /preact@10.18.1:
-    resolution: {integrity: sha512-mKUD7RRkQQM6s7Rkmi7IFkoEHjuFqRQUaXamO61E6Nn7vqF/bo7EZCmSyrUnp2UWHw0O7XjZ2eeXis+m7tf4lg==}
-    dev: false
 
   /preact@10.27.1:
     resolution: {integrity: sha512-V79raXEWch/rbqoNc7nT9E4ep7lu+mI3+sBmfRD4i1M73R3WLYcCtdI0ibxGVf4eQL8ZIz2nFacqEC+rmnOORQ==}
@@ -13167,10 +13126,6 @@ packages:
       ansi-styles: 5.2.0
       react-is: 17.0.2
     dev: true
-
-  /pretty-format@3.8.0:
-    resolution: {integrity: sha512-WuxUnVtlWL1OfZFQFuqvnvs6MiAGk9UNsBostyBOB0Is9wb5uRESevA6rnl/rkksXaGX3GzZhPup5d6Vp1nFew==}
-    dev: false
 
   /prismjs@1.30.0:
     resolution: {integrity: sha512-DEvV2ZF2r2/63V+tK8hQvrR2ZGn10srHbXviTlcv7Kpzw8jWiNTqbVgjO3IY8RxrrOUF8VPMQQFysYYYv0YZxw==}

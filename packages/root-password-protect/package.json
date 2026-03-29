@@ -46,8 +46,7 @@
   },
   "peerDependencies": {
     "@blinkk/root": "2.5.13",
-    "preact": ">=10",
-    "preact-render-to-string": ">=5"
+    "preact": ">=10"
   },
   "devDependencies": {
     "@blinkk/root": "workspace:*",
@@ -55,7 +54,6 @@
     "@types/micromatch": "4.0.6",
     "@types/node": "20.11.25",
     "preact": "10.27.1",
-    "preact-render-to-string": "6.6.1",
     "tsup": "8.5.0"
   }
 }
