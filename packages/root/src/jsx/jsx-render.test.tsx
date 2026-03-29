@@ -403,3 +403,22 @@ test('textarea: escapes html in value', () => {
     '<textarea>&lt;script&gt;alert("xss")&lt;/script&gt;</textarea>'
   );
 });
+
+test('pretty mode: pre tag with newlines in text content', () => {
+  const vnode = <pre>{'a\nb'}</pre>;
+  const output = renderJsxToString(vnode, {mode: 'pretty'});
+  // Should NOT inject an extra leading newline before the text content.
+  expect(output).toBe('<pre>a\nb</pre>\n');
+});
+
+test('pretty mode: script tag with newlines in text content', () => {
+  const vnode = <script>{'var a = 1;\nvar b = 2;'}</script>;
+  const output = renderJsxToString(vnode, {mode: 'pretty'});
+  expect(output).toBe('<script>var a = 1;\nvar b = 2;</script>\n');
+});
+
+test('pretty mode: style tag with newlines in text content', () => {
+  const vnode = <style>{'body {\n  color: red;\n}'}</style>;
+  const output = renderJsxToString(vnode, {mode: 'pretty'});
+  expect(output).toBe('<style>body {\n  color: red;\n}</style>\n');
+});

@@ -18,6 +18,9 @@ const VOID_ELEMENTS = new Set([
   'wbr',
 ]);
 
+/** Tags whose text content may contain literal newlines that should not be treated as block-child indicators. */
+const RAW_CONTENT_ELEMENTS = new Set(['pre', 'textarea', 'script', 'style']);
+
 /** Standard HTML block-level elements. */
 const DEFAULT_BLOCK_ELEMENTS = new Set([
   'address',
@@ -356,7 +359,10 @@ export function renderJsxToString(
     if (isBlock) {
       // When inner content contains block children (indicated by newlines),
       // add a newline after the opening tag so content starts on its own line.
-      const hasBlockChildren = inner.includes('\n');
+      // Exempt raw-content elements (pre, textarea, script, style) where
+      // newlines are literal text, not block-child indicators.
+      const hasBlockChildren =
+        !RAW_CONTENT_ELEMENTS.has(tag) && inner.includes('\n');
       if (hasBlockChildren) {
         return html + '\n' + inner + '</' + tag + '>\n';
       }
