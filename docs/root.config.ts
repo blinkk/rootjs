@@ -2,6 +2,8 @@ import path from 'node:path';
 import {URL} from 'node:url';
 import {defineConfig} from '@blinkk/root';
 import {cmsPlugin} from '@blinkk/root-cms/plugin';
+import {crowdinTranslationService} from './plugins/crowdin-translations.js';
+import {deeplTranslationService} from './plugins/deepl-translations.js';
 
 const rootDir = new URL('.', import.meta.url).pathname;
 
@@ -53,31 +55,8 @@ export default defineConfig({
         },
       },
       translations: [
-        {
-          id: 'example',
-          label: 'Example',
-          icon: 'https://fonts.gstatic.com/s/i/short-term/release/googlesymbols/translate/default/20px.svg',
-          onImport: async (ctx, data) => {
-            // Example: returns mock translations for each source string.
-            return data.map((row) => ({
-              source: row.source,
-              translations: Object.fromEntries(
-                ctx.locales.map((locale) => [
-                  locale,
-                  row.translations[locale] || `[${locale}] ${row.source}`,
-                ])
-              ),
-            }));
-          },
-          onExport: async (ctx, data) => {
-            console.log(
-              `[Example] Exported ${data.length} strings for doc "${ctx.docId}"`
-            );
-            return {
-              message: `Exported ${data.length} strings for "${ctx.docId}".`,
-            };
-          },
-        },
+        crowdinTranslationService({apiToken: process.env.CROWDIN_API_TOKEN}),
+        deeplTranslationService({apiKey: process.env.DEEPL_API_KEY}),
       ],
       checks: [
         {

@@ -742,6 +742,13 @@ export function api(server: Server, options: ApiOptions) {
           return;
         }
       }
+      if (
+        row.description !== undefined &&
+        typeof row.description !== 'string'
+      ) {
+        res.status(400).json({success: false, error: 'INVALID_DATA_FORMAT'});
+        return;
+      }
     }
 
     if (!serviceId || !docId) {

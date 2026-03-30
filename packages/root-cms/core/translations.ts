@@ -7,6 +7,8 @@ export interface TranslationRow {
   source: string;
   /** Map of locale code to translated string. */
   translations: Record<string, string>;
+  /** Optional translator notes/context for the source string. */
+  description?: string;
 }
 
 /** Context passed to translation service import/export functions. */
@@ -27,8 +29,17 @@ export interface TranslationServiceContext {
 
 /** Result returned by an onExport handler. */
 export interface TranslationExportResult {
+  /** Optional title displayed in the notification after export. */
+  title?: string;
   /** Optional message displayed in the notification after export. */
   message?: string;
+  /** Optional link displayed in the notification (e.g. to the translation service). */
+  link?: {
+    /** The URL to link to. */
+    url: string;
+    /** Optional label for the link. Defaults to "Open". */
+    label?: string;
+  };
 }
 
 /** Configuration for defining a CMS translation service. */

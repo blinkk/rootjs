@@ -12,7 +12,11 @@ import {
   Tooltip,
 } from '@mantine/core';
 import {ContextModalProps, useModals} from '@mantine/modals';
-import {showNotification} from '@mantine/notifications';
+import {
+  hideNotification,
+  showNotification,
+  updateNotification,
+} from '@mantine/notifications';
 import {
   IconAlertTriangle,
   IconArrowBackUp,
@@ -42,7 +46,10 @@ import {
   cmsGetLinkedGoogleSheetL10n,
   cmsUnlinkGoogleSheetL10n,
 } from '../../utils/doc.js';
-import {extractStringsForDoc} from '../../utils/extract.js';
+import {
+  extractStringsForDoc,
+  extractStringsWithMetadataForDoc,
+} from '../../utils/extract.js';
 import {
   GSheet,
   GSpreadsheet,
@@ -590,32 +597,43 @@ LocalizationModal.Translations = (props: TranslationsProps) => {
       extractStringsForDoc(props.docId),
       loadTranslations(),
       cmsGetLinkedGoogleSheetL10n(props.docId),
-    ]).then(async ([sourceStrings, translationsMap, linkedSheet]) => {
-      // Compute missing tags before showing the UI to prevent flash.
-      const docTags = [props.docId];
-      const hashesWithSources = await Promise.all(
-        sourceStrings.map(async (source) => ({
-          source,
-          hash: await sourceHash(source),
-        }))
-      );
-      const missing = new Set<string>();
-      for (const {source, hash} of hashesWithSources) {
-        if (translationsMap[hash]) {
-          const existingTags = translationsMap[hash].tags || [];
-          const hasTag = docTags.every((t) => existingTags.includes(t));
-          if (!hasTag) {
-            missing.add(source);
+    ])
+      .then(async ([sourceStrings, translationsMap, linkedSheet]) => {
+        // Compute missing tags before showing the UI to prevent flash.
+        const docTags = [props.docId];
+        const hashesWithSources = await Promise.all(
+          sourceStrings.map(async (source) => ({
+            source,
+            hash: await sourceHash(source),
+          }))
+        );
+        const missing = new Set<string>();
+        for (const {source, hash} of hashesWithSources) {
+          if (translationsMap[hash]) {
+            const existingTags = translationsMap[hash].tags || [];
+            const hasTag = docTags.every((t) => existingTags.includes(t));
+            if (!hasTag) {
+              missing.add(source);
+            }
           }
         }
-      }
 
-      setSourceStrings(sourceStrings);
-      setTranslationsMap(translationsMap);
-      setLinkedSheet(linkedSheet);
-      setMissingTagSources(missing);
-      setLoading(false);
-    });
+        setSourceStrings(sourceStrings);
+        setTranslationsMap(translationsMap);
+        setLinkedSheet(linkedSheet);
+        setMissingTagSources(missing);
+        setLoading(false);
+      })
+      .catch((err) => {
+        console.error('Failed to load translations:', err);
+        setLoading(false);
+        showNotification({
+          title: 'Error',
+          message: String(err?.message || err),
+          color: 'red',
+          autoClose: false,
+        });
+      });
   }, [props.docId]);
 
   function getTranslation(source: string, locale: string): string {
@@ -915,13 +933,24 @@ LocalizationModal.Translations = (props: TranslationsProps) => {
     const serviceLabel = serviceMeta?.label || serviceId;
 
     await notifyErrors(async () => {
+      // Get descriptions for export (translator notes).
+      const stringsWithMeta =
+        action === 'export'
+          ? await extractStringsWithMetadataForDoc(props.docId)
+          : null;
+
       // Build translation row data from current source strings.
       const data = sourceStrings.map((source) => {
         const translations: Record<string, string> = {};
         locales.forEach((locale) => {
           translations[locale] = getTranslation(source, locale) ?? '';
         });
-        return {source, translations};
+        const description = stringsWithMeta?.get(source)?.description;
+        return {
+          source,
+          translations,
+          ...(description ? {description} : {}),
+        };
       });
 
       // Validate action before interpolating it into the URL.
@@ -932,71 +961,142 @@ LocalizationModal.Translations = (props: TranslationsProps) => {
               throw new Error('Invalid translations action');
             })();
 
-      const res = await window.fetch(`/cms/api/translations.${safeAction}`, {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({
-          serviceId,
-          docId: props.docId,
-          data,
-        }),
+      const notificationId = `translations-${safeAction}-${serviceId}`;
+      showNotification({
+        id: notificationId,
+        message:
+          action === 'import'
+            ? `Importing from ${serviceLabel}...`
+            : `Exporting to ${serviceLabel}...`,
+        loading: true,
+        autoClose: false,
+        disallowClose: true,
       });
 
-      const contentType = res.headers.get('content-type') || '';
-      if (!contentType.includes('application/json')) {
-        throw new Error(
-          `Unexpected response (${res.status}). Please reload the page and try again.`
-        );
-      }
+      try {
+        const res = await window.fetch(`/cms/api/translations.${safeAction}`, {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({
+            serviceId,
+            docId: props.docId,
+            data,
+          }),
+        });
 
-      const resData = await res.json();
-
-      if (!resData.success) {
-        throw new Error(resData.error || 'Unknown error');
-      }
-
-      if (action === 'import') {
-        if (!Array.isArray(resData.data)) {
-          throw new Error('Import did not return translation data.');
+        const contentType = res.headers.get('content-type') || '';
+        if (!contentType.includes('application/json')) {
+          throw new Error(
+            `Unexpected response (${res.status}). Please reload the page and try again.`
+          );
         }
-        // Convert returned rows to CsvTranslation format for import.
-        const importedRows: CsvTranslation[] = resData.data.map(
-          (row: {source: unknown; translations?: Record<string, unknown>}) => {
-            const safeRow: CsvTranslation = {
-              source: String(row?.source ?? ''),
-            };
-            const translations = row?.translations;
-            if (translations && typeof translations === 'object') {
-              locales.forEach((locale) => {
-                const value = (translations as Record<string, unknown>)[locale];
-                if (value != null) {
-                  safeRow[locale] = String(value);
+
+        const resData = await res.json();
+
+        if (!resData.success) {
+          throw new Error(resData.error || 'Unknown error');
+        }
+
+        if (action === 'import') {
+          if (!Array.isArray(resData.data)) {
+            throw new Error('Import did not return translation data.');
+          }
+          // Convert returned rows to CsvTranslation format for import.
+          const importedRows: CsvTranslation[] = resData.data.map(
+            (row: {
+              source: unknown;
+              translations?: Record<string, unknown>;
+            }) => {
+              const safeRow: CsvTranslation = {
+                source: String(row?.source ?? ''),
+              };
+              const translations = row?.translations;
+              if (translations && typeof translations === 'object') {
+                locales.forEach((locale) => {
+                  const value = (translations as Record<string, unknown>)[
+                    locale
+                  ];
+                  if (value != null) {
+                    safeRow[locale] = String(value);
+                  }
+                });
+              }
+              return safeRow;
+            }
+          );
+          const importedTranslations = await cmsDocImportTranslations(
+            props.docId,
+            importedRows
+          );
+          setTranslationsMap((currentTranslations) => {
+            return mergeTranslations(currentTranslations, importedTranslations);
+          });
+
+          // Auto-tag imported translations with the doc ID.
+          const docTags = [props.docId];
+          const tagUpdates: Array<{hash: string; tags: string[]}> = [];
+          for (const row of importedRows) {
+            const hash = await sourceHash(row.source);
+            const existing = translationsMap[hash];
+            const existingTags = existing?.tags || [];
+            const newTags = Array.from(new Set([...existingTags, ...docTags]));
+            tagUpdates.push({hash, tags: newTags});
+          }
+          if (tagUpdates.length > 0) {
+            await batchUpdateTags(tagUpdates, {mode: 'union'});
+            setTranslationsMap((prev) => {
+              const next = {...prev};
+              tagUpdates.forEach(({hash, tags}) => {
+                if (next[hash]) {
+                  next[hash] = {...next[hash], tags};
                 }
               });
-            }
-            return safeRow;
+              return next;
+            });
           }
-        );
-        const importedTranslations = await cmsDocImportTranslations(
-          props.docId,
-          importedRows
-        );
-        setTranslationsMap((currentTranslations) => {
-          return mergeTranslations(currentTranslations, importedTranslations);
-        });
-        showNotification({
-          title: 'Imported!',
-          message: `Imported translations from ${serviceLabel}.`,
-          autoClose: 5000,
-        });
-      } else {
-        const exportMessage =
-          resData.data?.message || `Exported translations to ${serviceLabel}.`;
-        showNotification({
-          title: 'Exported!',
-          message: exportMessage,
-          autoClose: 5000,
-        });
+
+          updateNotification({
+            id: notificationId,
+            title: 'Imported!',
+            message: `Imported translations from ${serviceLabel}.`,
+            loading: false,
+            autoClose: 5000,
+          });
+        } else {
+          const exportData = resData.data || {};
+          const exportTitle = exportData.title || 'Exported!';
+          const exportMessage =
+            exportData.message || `Exported translations to ${serviceLabel}.`;
+          const exportLink = exportData.link;
+          updateNotification({
+            id: notificationId,
+            title: exportTitle,
+            message: exportLink?.url ? (
+              <div>
+                <div>{exportMessage}</div>
+                <Button
+                  component="a"
+                  href={exportLink.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  size="xs"
+                  variant="light"
+                  leftIcon={<IconExternalLink size={14} />}
+                  style={{marginTop: '8px'}}
+                >
+                  {exportLink.label || 'Open'}
+                </Button>
+              </div>
+            ) : (
+              exportMessage
+            ),
+            loading: false,
+            autoClose: exportLink?.url ? 10000 : 5000,
+          });
+        }
+      } catch (err) {
+        hideNotification(notificationId);
+        throw err;
       }
     });
   }
