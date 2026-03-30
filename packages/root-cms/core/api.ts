@@ -9,10 +9,10 @@ import {
 } from '../shared/ai/prompts.js';
 import {ChatClient, RootAiModel, summarizeDiff} from './ai.js';
 import {type CMSCheck} from './checks.js';
-import {type CMSTranslationService} from './translations.js';
 import {RootCMSClient, parseDocId, unmarshalData} from './client.js';
 import {runCronJobs} from './cron.js';
 import {arrayToCsv, csvToArray} from './csv.js';
+import {type CMSTranslationService} from './translations.js';
 
 type AppModule = typeof import('./app.js');
 
@@ -101,7 +101,12 @@ export interface ApiOptions {
   getRenderer: (req: Request) => Promise<AppModule>;
   /** Checks registered via the CMS plugin config. */
   checks?: CMSCheck[];
-  /** Translation services registered via the CMS plugin config. */
+  /**
+   * Translation services registered via the CMS plugin config.
+   *
+   * NOTE: The translations feature is considered a "beta" feature, its interface
+   * may change from version to version as we add new features.
+   */
   translations?: CMSTranslationService[];
 }
 

@@ -139,8 +139,8 @@ export async function renderApp(
       id: t.id,
       label: t.label,
       icon: t.icon,
-      hasImport: typeof t.onImport === 'function',
-      hasExport: typeof t.onExport === 'function',
+      hasImport: isFunction(t.onImport),
+      hasExport: isFunction(t.onExport),
     })),
   };
   const projectName = cmsConfig.name || cmsConfig.id || '';
@@ -179,6 +179,11 @@ function serializeCollection(collection: Collection): Partial<Collection> {
     autolockReason: collection.autolockReason,
     sortOptions: collection.sortOptions,
   };
+}
+
+/** Returns whether the given value is a function. */
+function isFunction(value: unknown): boolean {
+  return typeof value === 'function';
 }
 
 interface SignInProps {
