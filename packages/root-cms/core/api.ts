@@ -12,6 +12,7 @@ import {type CMSCheck} from './checks.js';
 import {RootCMSClient, parseDocId, unmarshalData} from './client.js';
 import {runCronJobs} from './cron.js';
 import {arrayToCsv, csvToArray} from './csv.js';
+import {type CMSTranslationService} from './translations.js';
 
 type AppModule = typeof import('./app.js');
 
@@ -100,6 +101,13 @@ export interface ApiOptions {
   getRenderer: (req: Request) => Promise<AppModule>;
   /** Checks registered via the CMS plugin config. */
   checks?: CMSCheck[];
+  /**
+   * Translation services registered via the CMS plugin config.
+   *
+   * NOTE: The translations feature is considered a "beta" feature, its interface
+   * may change from version to version as we add new features.
+   */
+  translations?: CMSTranslationService[];
 }
 
 /**
@@ -623,9 +631,7 @@ export function api(server: Server, options: ApiOptions) {
     const checkId = String(reqBody.check || '');
     const docId = String(reqBody.docId || '');
     if (!checkId || !docId) {
-      res
-        .status(400)
-        .json({success: false, error: 'MISSING_REQUIRED_FIELD'});
+      res.status(400).json({success: false, error: 'MISSING_REQUIRED_FIELD'});
       return;
     }
 
@@ -639,10 +645,7 @@ export function api(server: Server, options: ApiOptions) {
     const {collection: collectionId, slug} = parseDocId(docId);
 
     // Enforce collection restriction if configured.
-    if (
-      check.collections &&
-      !check.collections.includes(collectionId)
-    ) {
+    if (check.collections && !check.collections.includes(collectionId)) {
       res.status(400).json({
         success: false,
         error: 'CHECK_NOT_APPLICABLE',
@@ -673,4 +676,138 @@ export function api(server: Server, options: ApiOptions) {
       res.status(500).json({success: false, error: err.message || 'UNKNOWN'});
     }
   });
+
+  /**
+   * Imports translations from a registered translation service.
+   *
+   * ```
+   * POST /cms/api/translations.import
+   * {"serviceId": "crowdin", "docId": "Pages/index", "data": [...]}
+   * ```
+   */
+  server.use(
+    '/cms/api/translations.import',
+    async (req: Request, res: Response) => {
+      await handleTranslationServiceRequest(req, res, 'import');
+    }
+  );
+
+  /**
+   * Exports translations to a registered translation service.
+   *
+   * ```
+   * POST /cms/api/translations.export
+   * {"serviceId": "crowdin", "docId": "Pages/index", "data": [...]}
+   * ```
+   */
+  server.use(
+    '/cms/api/translations.export',
+    async (req: Request, res: Response) => {
+      await handleTranslationServiceRequest(req, res, 'export');
+    }
+  );
+
+  /** Shared handler for translation service import/export endpoints. */
+  async function handleTranslationServiceRequest(
+    req: Request,
+    res: Response,
+    action: 'import' | 'export'
+  ) {
+    if (
+      req.method !== 'POST' ||
+      !String(req.get('content-type')).startsWith('application/json')
+    ) {
+      res.status(400).json({success: false, error: 'BAD_REQUEST'});
+      return;
+    }
+    if (!req.user?.email) {
+      res.status(401).json({success: false, error: 'UNAUTHORIZED'});
+      return;
+    }
+
+    const reqBody = req.body || {};
+    const serviceId = String(reqBody.serviceId || '').trim();
+    const docId = String(reqBody.docId || '').trim();
+    const data = Array.isArray(reqBody.data) ? reqBody.data : [];
+
+    // Validate data rows have expected shape.
+    for (const row of data) {
+      if (
+        typeof row?.source !== 'string' ||
+        typeof row?.translations !== 'object' ||
+        row.translations === null ||
+        Array.isArray(row.translations)
+      ) {
+        res.status(400).json({success: false, error: 'INVALID_DATA_FORMAT'});
+        return;
+      }
+      for (const value of Object.values(row.translations)) {
+        if (typeof value !== 'string') {
+          res.status(400).json({success: false, error: 'INVALID_DATA_FORMAT'});
+          return;
+        }
+      }
+      if (
+        row.description !== undefined &&
+        typeof row.description !== 'string'
+      ) {
+        res.status(400).json({success: false, error: 'INVALID_DATA_FORMAT'});
+        return;
+      }
+    }
+
+    if (!serviceId || !docId) {
+      res.status(400).json({success: false, error: 'MISSING_REQUIRED_FIELD'});
+      return;
+    }
+
+    const services = options.translations || [];
+    const service = services.find((s) => s.id === serviceId);
+    if (!service) {
+      res.status(404).json({success: false, error: 'SERVICE_NOT_FOUND'});
+      return;
+    }
+
+    const handler = action === 'import' ? service.onImport : service.onExport;
+    if (!handler) {
+      res.status(400).json({
+        success: false,
+        error: `SERVICE_DOES_NOT_SUPPORT_${action.toUpperCase()}`,
+      });
+      return;
+    }
+
+    let collectionId: string;
+    let slug: string;
+    try {
+      const parsed = parseDocId(docId);
+      collectionId = parsed.collection;
+      slug = parsed.slug;
+    } catch (err: any) {
+      console.error(err.stack || err);
+      res.status(400).json({success: false, error: 'INVALID_DOC_ID'});
+      return;
+    }
+
+    try {
+      const cmsClient = new RootCMSClient(req.rootConfig!);
+      const locales = req.rootConfig?.i18n?.locales || [];
+
+      const result = await handler(
+        {
+          rootConfig: req.rootConfig!,
+          cmsClient,
+          docId,
+          collectionId,
+          slug,
+          locales,
+        },
+        data
+      );
+      res.status(200).json({success: true, data: result});
+    } catch (err: any) {
+      console.error(err.stack || err);
+      res.status(500).json({success: false, error: err.message || 'UNKNOWN'});
+    }
+  }
 }

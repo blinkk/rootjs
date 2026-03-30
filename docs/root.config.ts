@@ -2,6 +2,8 @@ import path from 'node:path';
 import {URL} from 'node:url';
 import {defineConfig} from '@blinkk/root';
 import {cmsPlugin} from '@blinkk/root-cms/plugin';
+import {crowdinTranslationService} from './plugins/crowdin-translations.js';
+import {deeplTranslationService} from './plugins/deepl-translations.js';
 
 const rootDir = new URL('.', import.meta.url).pathname;
 
@@ -52,6 +54,14 @@ export default defineConfig({
           design: {label: 'Design System', iframeUrl: '/design'},
         },
       },
+      translations: [
+        crowdinTranslationService({
+          apiToken: process.env.CROWDIN_API_TOKEN,
+          localeMapping: {es: 'es-ES', pt: 'pt-PT'},
+          rootDir: 'Root CMS Docs',
+        }),
+        deeplTranslationService({apiKey: process.env.DEEPL_API_KEY}),
+      ],
       checks: [
         {
           id: 'custom/green-check',

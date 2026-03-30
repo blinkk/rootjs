@@ -183,6 +183,14 @@ declare global {
         description?: string;
         collections?: string[];
       }>;
+      /** Translation services registered via the CMS plugin config. */
+      translations?: Array<{
+        id: string;
+        label: string;
+        icon?: string;
+        hasImport: boolean;
+        hasExport: boolean;
+      }>;
     };
     firebase: FirebaseContextObject;
   }

@@ -135,6 +135,13 @@ export async function renderApp(
       description: c.description,
       collections: c.collections,
     })),
+    translations: (cmsConfig.translations || []).map((t) => ({
+      id: t.id,
+      label: t.label,
+      icon: t.icon,
+      hasImport: isFunction(t.onImport),
+      hasExport: isFunction(t.onExport),
+    })),
   };
   const projectName = cmsConfig.name || cmsConfig.id || '';
   const title = getCmsTitle(projectName, cmsConfig.minimalBranding);
@@ -172,6 +179,11 @@ function serializeCollection(collection: Collection): Partial<Collection> {
     autolockReason: collection.autolockReason,
     sortOptions: collection.sortOptions,
   };
+}
+
+/** Returns whether the given value is a function. */
+function isFunction(value: unknown): boolean {
+  return typeof value === 'function';
 }
 
 interface SignInProps {
