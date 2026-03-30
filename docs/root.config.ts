@@ -58,6 +58,7 @@ export default defineConfig({
         crowdinTranslationService({
           apiToken: process.env.CROWDIN_API_TOKEN,
           localeMapping: {es: 'es-ES', pt: 'pt-PT'},
+          rootDir: 'Root CMS Docs',
         }),
         deeplTranslationService({apiKey: process.env.DEEPL_API_KEY}),
       ],

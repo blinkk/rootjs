@@ -18,6 +18,11 @@ interface CrowdinTranslationServiceOptions {
    * as-is.
    */
   localeMapping?: Record<string, string>;
+  /**
+   * Optional root directory in Crowdin to upload files into. When set, the
+   * file structure becomes `{rootDir}/{CollectionId}/{slug}.csv`.
+   */
+  rootDir?: string;
 }
 
 /**
@@ -126,6 +131,7 @@ export function crowdinTranslationService(
   const apiBase = options?.apiBase || 'https://api.crowdin.com/api/v2';
   const projectIdentifier = options?.projectIdentifier || 'root-cms-docs';
   const localeMapping = options?.localeMapping || {};
+  const rootDir = options?.rootDir;
 
   /** Maps a CMS locale to its Crowdin language ID. */
   function toCrowdinLocale(locale: string): string {
@@ -189,35 +195,76 @@ export function crowdinTranslationService(
 
   async function findDirectory(
     projectId: number,
-    name: string
+    name: string,
+    parentId?: number
   ): Promise<number | null> {
-    const data = await crowdinFetch(
-      `/projects/${projectId}/directories?filter=${encodeURIComponent(
-        name
-      )}&limit=500`
-    );
+    let url = `/projects/${projectId}/directories?filter=${encodeURIComponent(
+      name
+    )}&limit=500`;
+    if (parentId !== undefined) {
+      url += `&directoryId=${parentId}`;
+    }
+    const data = await crowdinFetch(url);
     const dir = data.data.find((d: any) => d.data.name === name);
     return dir ? dir.data.id : null;
   }
 
   async function createDirectory(
     projectId: number,
-    name: string
+    name: string,
+    parentId?: number
   ): Promise<number> {
+    const body: Record<string, any> = {name};
+    if (parentId !== undefined) {
+      body.directoryId = parentId;
+    }
     const data = await crowdinFetch(`/projects/${projectId}/directories`, {
       method: 'POST',
-      body: JSON.stringify({name}),
+      body: JSON.stringify(body),
     });
     return data.data.id;
   }
 
   async function findOrCreateDirectory(
     projectId: number,
-    name: string
+    name: string,
+    parentId?: number
   ): Promise<number> {
-    const existingId = await findDirectory(projectId, name);
+    const existingId = await findDirectory(projectId, name, parentId);
     if (existingId !== null) return existingId;
-    return createDirectory(projectId, name);
+    return createDirectory(projectId, name, parentId);
+  }
+
+  /**
+   * Returns the directory ID for the collection, creating the rootDir and
+   * collection directories as needed.
+   */
+  async function getCollectionDirectoryId(
+    projectId: number,
+    collectionId: string
+  ): Promise<number> {
+    let parentId: number | undefined;
+    if (rootDir) {
+      parentId = await findOrCreateDirectory(projectId, rootDir);
+    }
+    return findOrCreateDirectory(projectId, collectionId, parentId);
+  }
+
+  /**
+   * Finds the directory ID for a collection, traversing through rootDir if set.
+   * Returns null if any directory in the path is missing.
+   */
+  async function findCollectionDirectoryId(
+    projectId: number,
+    collectionId: string
+  ): Promise<number | null> {
+    let parentId: number | undefined;
+    if (rootDir) {
+      const rootDirId = await findDirectory(projectId, rootDir);
+      if (rootDirId === null) return null;
+      parentId = rootDirId;
+    }
+    return findDirectory(projectId, collectionId, parentId);
   }
 
   async function findFile(
@@ -333,8 +380,11 @@ export function crowdinTranslationService(
       // Upload CSV to Crowdin Storage.
       const storageId = await uploadToStorage(fileName, csv);
 
-      // Ensure the collection directory exists (e.g. "Pages").
-      const directoryId = await findOrCreateDirectory(projectId, collectionId);
+      // Ensure the directory structure exists (e.g. "Root Dir / Pages").
+      const directoryId = await getCollectionDirectoryId(
+        projectId,
+        collectionId
+      );
 
       // Create or update the file in Crowdin.
       const existingFile = await findFile(projectId, directoryId, fileName);
@@ -369,7 +419,10 @@ export function crowdinTranslationService(
       const fileName = `${slug}.csv`;
 
       // Find directory and file in Crowdin.
-      const directoryId = await findDirectory(projectId, collectionId);
+      const directoryId = await findCollectionDirectoryId(
+        projectId,
+        collectionId
+      );
       if (directoryId === null) {
         throw new Error(
           `Directory "${collectionId}" not found in Crowdin. Export first.`
