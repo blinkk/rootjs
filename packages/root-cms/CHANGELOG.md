@@ -1,5 +1,14 @@
 # @blinkk/root-cms
 
+## 2.5.10
+
+### Patch Changes
+
+- e524ecfc: feat: add variant: json support to string fields
+- 21687214: feat: add cron support to data sources
+- a86f9b09: feat: add custom translations providers with import/export
+  - @blinkk/root@2.5.10
+
 ## 2.5.9
 
 ### Patch Changes
