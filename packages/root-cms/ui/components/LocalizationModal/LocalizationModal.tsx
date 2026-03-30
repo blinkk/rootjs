@@ -20,6 +20,7 @@ import {
 import {
   IconAlertTriangle,
   IconArrowBackUp,
+  IconArrowUpRight,
   IconCheck,
   IconChevronDown,
   IconExternalLink,
@@ -1080,8 +1081,8 @@ LocalizationModal.Translations = (props: TranslationsProps) => {
                   target="_blank"
                   rel="noopener noreferrer"
                   size="xs"
-                  variant="light"
-                  leftIcon={<IconExternalLink size={14} />}
+                  variant="default"
+                  rightIcon={<IconArrowUpRight size={14} />}
                   style={{marginTop: '8px'}}
                 >
                   {exportLink.label || 'Open'}
