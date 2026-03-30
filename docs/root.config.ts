@@ -55,7 +55,10 @@ export default defineConfig({
         },
       },
       translations: [
-        crowdinTranslationService({apiToken: process.env.CROWDIN_API_TOKEN}),
+        crowdinTranslationService({
+          apiToken: process.env.CROWDIN_API_TOKEN,
+          localeMapping: {es: 'es-ES', pt: 'pt-PT'},
+        }),
         deeplTranslationService({apiKey: process.env.DEEPL_API_KEY}),
       ],
       checks: [

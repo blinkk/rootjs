@@ -12,20 +12,31 @@ interface CrowdinTranslationServiceOptions {
   projectIdentifier?: string;
   /** Crowdin API base URL. Defaults to `https://api.crowdin.com/api/v2`. */
   apiBase?: string;
+  /**
+   * Maps CMS locale codes to Crowdin language IDs when they differ.
+   * E.g. `{es: 'es-ES', pt: 'pt-PT'}`. Unmapped locales are passed through
+   * as-is.
+   */
+  localeMapping?: Record<string, string>;
 }
 
 /**
- * Builds a CSV import options `scheme` mapping column indices to locale codes.
- * Column 0 is always the source/identifier column.
+ * Builds a CSV import options `scheme` mapping column indices to Crowdin
+ * language IDs. Column 0 is always the source/identifier column. Uses
+ * localeMapping to convert CMS locale codes to Crowdin language IDs.
  */
-function buildScheme(locales: string[]): Record<string, number> {
+function buildScheme(
+  locales: string[],
+  localeMapping: Record<string, string> = {}
+): Record<string, number> {
   const scheme: Record<string, number> = {
     identifier: 0,
     sourcePhrase: 0,
     context: 1,
   };
   locales.forEach((locale, i) => {
-    scheme[locale] = i + 2;
+    const crowdinLocale = localeMapping[locale] || locale;
+    scheme[crowdinLocale] = i + 2;
   });
   return scheme;
 }
@@ -114,6 +125,12 @@ export function crowdinTranslationService(
   const apiToken = options?.apiToken || process.env.CROWDIN_API_TOKEN || '';
   const apiBase = options?.apiBase || 'https://api.crowdin.com/api/v2';
   const projectIdentifier = options?.projectIdentifier || 'root-cms-docs';
+  const localeMapping = options?.localeMapping || {};
+
+  /** Maps a CMS locale to its Crowdin language ID. */
+  function toCrowdinLocale(locale: string): string {
+    return localeMapping[locale] || locale;
+  }
 
   let cachedProjectId: number | null = null;
 
@@ -234,7 +251,7 @@ export function crowdinTranslationService(
         importOptions: {
           firstLineContainsHeader: true,
           importTranslations: true,
-          scheme: buildScheme(locales),
+          scheme: buildScheme(locales, localeMapping),
         },
       }),
     });
@@ -255,7 +272,7 @@ export function crowdinTranslationService(
         importOptions: {
           firstLineContainsHeader: true,
           importTranslations: true,
-          scheme: buildScheme(locales),
+          scheme: buildScheme(locales, localeMapping),
         },
       }),
     });
@@ -270,7 +287,12 @@ export function crowdinTranslationService(
       `/projects/${projectId}/translations/builds/files/${fileId}`,
       {
         method: 'POST',
-        body: JSON.stringify({targetLanguageId}),
+        body: JSON.stringify({
+          targetLanguageId,
+          // Skip untranslated strings so they aren't filled with the
+          // English source text. Only actual translations are returned.
+          skipUntranslatedStrings: true,
+        }),
       }
     );
     const downloadUrl: string = data.data.url;
@@ -366,17 +388,20 @@ export function crowdinTranslationService(
       const translationMap: Record<string, Record<string, string>> = {};
 
       for (const locale of targetLocales) {
+        const crowdinLocale = toCrowdinLocale(locale);
         const csvContent = await buildFileTranslation(
           projectId,
           file.id,
-          locale
+          crowdinLocale
         );
         const rows = parseCsv(csvContent);
         for (const row of rows) {
           const source = row.source || '';
           if (!source) continue;
           if (!translationMap[source]) translationMap[source] = {};
-          const value = row[locale] || '';
+          // Check both the CMS locale code and the Crowdin language ID as
+          // column headers, in case Crowdin renames the column in its output.
+          const value = row[locale] || row[crowdinLocale] || '';
           if (value) {
             translationMap[source][locale] = value;
           }
