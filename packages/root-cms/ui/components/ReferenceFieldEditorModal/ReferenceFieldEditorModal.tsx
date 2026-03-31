@@ -1,6 +1,6 @@
 import './ReferenceFieldEditorModal.css';
 
-import {ActionIcon, Button, Tooltip} from '@mantine/core';
+import {Button} from '@mantine/core';
 import {ContextModalProps, useModals} from '@mantine/modals';
 import {IconArrowUpRight} from '@tabler/icons-preact';
 import {DraftDocProvider, useDraftDoc} from '../../hooks/useDraftDoc.js';
