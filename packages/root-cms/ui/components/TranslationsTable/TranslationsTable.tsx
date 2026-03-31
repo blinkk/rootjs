@@ -54,10 +54,11 @@ export function TranslationsTable() {
     Record<string, Record<string, string>>
   >({});
 
-  const allLocales = useMemo(() => {
-    const locales = window.__ROOT_CTX.rootConfig.i18n?.locales || [];
-    return ['en', ...locales.filter((l: string) => l !== 'en').sort()];
-  }, []);
+  const locales = window.__ROOT_CTX.rootConfig.i18n?.locales || [];
+  const allLocales = [
+    'en',
+    ...locales.filter((l: string) => l !== 'en').sort(),
+  ];
 
   // URL State.
   const [searchQuery, setSearchQuery] = useStringParam('q', '');
@@ -263,10 +264,8 @@ export function TranslationsTable() {
   ]);
 
   // Determine which locales to show.
-  const visibleLocales = useMemo(
-    () => (selectedLocales.length > 0 ? selectedLocales : allLocales),
-    [selectedLocales, allLocales]
-  );
+  const visibleLocales =
+    selectedLocales.length > 0 ? selectedLocales : allLocales;
 
   const columnDefs = useMemo<ColDef[]>(() => {
     const cols: ColDef[] = [
@@ -470,15 +469,12 @@ export function TranslationsTable() {
     return cols;
   }, [visibleLocales, showHashes, selectedTags]);
 
-  const gridOptions = useMemo<GridOptions>(
-    () => ({
-      headerHeight: 40,
-      animateRows: true,
-      enableCellTextSelection: true,
-      suppressMovableColumns: true,
-    }),
-    []
-  );
+  const gridOptions: GridOptions = {
+    headerHeight: 40,
+    animateRows: true,
+    enableCellTextSelection: true,
+    suppressMovableColumns: true,
+  };
 
   return (
     <div className="TranslationsTable">
