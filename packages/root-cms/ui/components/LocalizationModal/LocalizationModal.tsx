@@ -1027,7 +1027,20 @@ LocalizationModal.Translations = (props: TranslationsProps) => {
           );
           const importedTranslations = await cmsDocImportTranslations(
             props.docId,
-            importedRows
+            importedRows,
+            {
+              actionMetadata: {
+                service: serviceId,
+                numStrings: importedRows.length,
+                locales,
+              },
+              actionLinks: [
+                {
+                  label: 'Open translations',
+                  url: `/cms/content/${props.docId}?modal=localization`,
+                },
+              ],
+            }
           );
           setTranslationsMap((currentTranslations) => {
             return mergeTranslations(currentTranslations, importedTranslations);

@@ -9,6 +9,11 @@ interface DeepLTranslationServiceOptions {
   apiKey?: string;
   /** DeepL API URL. Defaults to the free API endpoint. */
   apiUrl?: string;
+  /**
+   * Whether to overwrite existing CMS translations on import. When `false`,
+   * only missing translations are filled in. Defaults to `true`.
+   */
+  overwriteOnImport?: boolean;
 }
 
 interface DeepLTranslation {
@@ -29,6 +34,7 @@ export function deeplTranslationService(
 ): CMSTranslationService {
   const apiKey = options?.apiKey || process.env.DEEPL_API_KEY || '';
   const apiUrl = options?.apiUrl || 'https://api-free.deepl.com/v2/translate';
+  const overwriteOnImport = options?.overwriteOnImport ?? true;
 
   async function translateTexts(
     texts: string[],
@@ -84,7 +90,12 @@ export function deeplTranslationService(
       return data.map((row, i) => {
         const translations: Record<string, string> = {};
         for (const {locale, translated} of results) {
-          translations[locale] = translated[i];
+          // If overwriteOnImport is false, preserve existing translations.
+          if (!overwriteOnImport && row.translations[locale]) {
+            translations[locale] = row.translations[locale];
+          } else {
+            translations[locale] = translated[i];
+          }
         }
         return {source: row.source, translations};
       });

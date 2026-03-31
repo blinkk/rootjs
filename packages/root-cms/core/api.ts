@@ -801,6 +801,7 @@ export function api(server: Server, options: ApiOptions) {
           collectionId,
           slug,
           locales,
+          user: {email: req.user!.email},
         },
         data
       );
