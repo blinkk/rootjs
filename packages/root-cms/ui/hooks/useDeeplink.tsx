@@ -1,6 +1,5 @@
 import {ComponentChildren, createContext} from 'preact';
 import {useContext, useEffect, useState} from 'preact/hooks';
-import {useLocation} from 'preact-iso';
 
 export interface DeeplinkContext {
   value: string;
@@ -23,11 +22,15 @@ interface ScrollToDeeplinkOptions {
   behavior: 'auto' | 'smooth';
 }
 
+function getDeeplinkFromUrl(): string {
+  const params = new URLSearchParams(window.location.search);
+  return params.get('deeplink') || '';
+}
+
 const DEEPLINK_CONTEXT = createContext<DeeplinkContext | null>(null);
 
 export function DeeplinkProvider(props: {children: ComponentChildren}) {
-  const {query} = useLocation();
-  const deeplinkFromUrl = (query.deeplink as string) || '';
+  const deeplinkFromUrl = getDeeplinkFromUrl();
   const [value, setValue] = useState(deeplinkFromUrl);
   const deeplinkCtx = {value, setValue};
 
