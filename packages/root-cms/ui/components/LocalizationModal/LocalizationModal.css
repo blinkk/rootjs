@@ -229,8 +229,9 @@
   white-space: nowrap;
 }
 
-.LocalizationModal__translations__menu__item .mantine-Menu-itemBody {
+.LocalizationModal__translations__menu__item .mantine-Menu-itemLabel {
   font-size: 13px;
+  line-height: 1.4;
 }
 
 .LocalizationModal__missingTags {
