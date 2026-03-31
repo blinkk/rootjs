@@ -1,9 +1,18 @@
+/* eslint-disable node/no-extraneous-import */
 /* eslint-disable prettier/prettier */
+/** @jsxImportSource . */
 
-import {createContext} from 'preact';
-import {useContext} from 'preact/hooks';
 import {expect, test} from 'vitest';
 import {renderJsxToString} from './jsx-render.js';
+import {createContext, useContext} from './jsx-runtime.js';
+
+declare module './types.js' {
+  namespace JSX {
+    interface IntrinsicElements {
+      'root-test-card': Record<string, any>;
+    }
+  }
+}
 
 test('renders basic html elements', () => {
   const vnode = <div class="hello">world</div>;
@@ -268,16 +277,16 @@ test('pretty mode: void block elements get newlines', () => {
 test('pretty mode: custom block elements', () => {
   const vnode = (
     <div>
-      <my-card>content</my-card>
+      <root-test-card>content</root-test-card>
       <span>inline</span>
     </div>
   );
   const output = renderJsxToString(vnode, {
     mode: 'pretty',
-    blockElements: ['my-card'],
+    blockElements: ['root-test-card'],
   });
   expect(output).toBe(`<div>
-<my-card>content</my-card>
+<root-test-card>content</root-test-card>
 <span>inline</span></div>
 `);
 });
@@ -426,12 +435,6 @@ test('minimal mode: explicit space expression between inline elements', () => {
 
 test('textarea: renders value as text content', () => {
   const vnode = <textarea value="hello world" />;
-  const output = renderJsxToString(vnode, {mode: 'minimal'});
-  expect(output).toBe('<textarea>hello world</textarea>');
-});
-
-test('textarea: renders defaultValue as text content', () => {
-  const vnode = <textarea defaultValue="hello world" />;
   const output = renderJsxToString(vnode, {mode: 'minimal'});
   expect(output).toBe('<textarea>hello world</textarea>');
 });

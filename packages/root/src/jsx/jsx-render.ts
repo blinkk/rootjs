@@ -1,4 +1,5 @@
-import {VNode, Fragment, options as preactOptions} from 'preact';
+import {options as preactOptions} from 'preact';
+import {VNode, Fragment} from './jsx-runtime.js';
 
 /** HTML void elements (self-closing, no end tag). */
 const VOID_ELEMENTS = new Set([
@@ -270,12 +271,21 @@ export function renderJsxToString(
     const fn = type as Function;
 
     // Detect context Provider.
+    // Root.js local JSX runtime: Provider._isProvider === true, Provider._context
+    //   is the Context object with a _stack array.
     // Preact >=10.27: Provider === Context (same function). `fn.__c` is the
     //   context id string (e.g. "__cC0").
     // Preact <10.27:  Provider._contextRef (mangled `fn.__`) points to the
     //   context object which has `__c` (id) and `__` (default value).
-    let contextId: string | undefined;
     const fnAny = fn as any;
+    if (fnAny._isProvider && fnAny._context) {
+      const ctx = fnAny._context;
+      ctx._stack.push((props as any).value);
+      const result = renderChildren(props.children);
+      ctx._stack.pop();
+      return result;
+    }
+    let contextId: string | undefined;
     if (typeof fnAny.__c === 'string' && fnAny.__c.startsWith('__cC')) {
       contextId = fnAny.__c;
     } else if (fnAny.__ && typeof fnAny.__ === 'object' && fnAny.__.__c) {
@@ -335,7 +345,7 @@ export function renderJsxToString(
       const rendered = fn(props, component.context);
       return render(rendered);
     } finally {
-      preactOptions.diffed?.(vnode);
+      preactOptions.diffed?.(vnode as any);
     }
   }
 
