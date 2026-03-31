@@ -1,5 +1,13 @@
 # @blinkk/root-cms
 
+## 2.5.11
+
+### Patch Changes
+
+- cba94588: fix: prevent infinite re-renders with useQueryParam
+- 7a09ad76: fix: fix quick edit button error
+  - @blinkk/root@2.5.11
+
 ## 2.5.10
 
 ### Patch Changes
