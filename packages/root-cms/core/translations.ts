@@ -25,6 +25,8 @@ export interface TranslationServiceContext {
   slug: string;
   /** The locales configured for the project. */
   locales: string[];
+  /** The email of the user performing the action. */
+  user: {email: string};
 }
 
 /** Result returned by an onExport handler. */

@@ -82,7 +82,7 @@
 .ActionsLogs__table__buttons {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 2px 8px;
 }
 
 .ActionsLogs__user {

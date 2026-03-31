@@ -572,7 +572,13 @@ export interface CsvTranslation {
 export async function cmsDocImportTranslations(
   docId: string,
   csvData: CsvTranslation[],
-  options?: {tags?: string[]}
+  options?: {
+    tags?: string[];
+    /** Extra metadata to include in the action log entry. */
+    actionMetadata?: Record<string, unknown>;
+    /** Links to include in the action log entry. */
+    actionLinks?: Array<{label: string; url: string; target?: string}>;
+  }
 ) {
   const i18nConfig = window.__ROOT_CTX.rootConfig.i18n || {};
   const i18nLocales = i18nConfig.locales || ['en'];
@@ -647,7 +653,10 @@ export async function cmsDocImportTranslations(
     await batch.commit();
     console.log(`saved ${count} strings`);
   }
-  logAction('doc.import_translations', {metadata: {docId}});
+  logAction('doc.import_translations', {
+    metadata: {docId, ...options?.actionMetadata},
+    links: options?.actionLinks,
+  });
   return translationsMap;
 }
 

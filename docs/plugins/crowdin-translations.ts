@@ -23,6 +23,11 @@ interface CrowdinTranslationServiceOptions {
    * file structure becomes `{rootDir}/{CollectionId}/{slug}.csv`.
    */
   rootDir?: string;
+  /**
+   * Whether to overwrite existing CMS translations on import. When `false`,
+   * only missing translations are filled in. Defaults to `true`.
+   */
+  overwriteOnImport?: boolean;
 }
 
 /**
@@ -132,6 +137,7 @@ export function crowdinTranslationService(
   const projectIdentifier = options?.projectIdentifier || 'root-cms-docs';
   const localeMapping = options?.localeMapping || {};
   const rootDir = options?.rootDir;
+  const overwriteOnImport = options?.overwriteOnImport ?? true;
 
   /** Maps a CMS locale to its Crowdin language ID. */
   function toCrowdinLocale(locale: string): string {
@@ -400,13 +406,31 @@ export function crowdinTranslationService(
         );
       }
 
+      const crowdinLink = {
+        label: 'Open in Crowdin',
+        url: `https://crowdin.com/translate/${projectIdentifier}`,
+      };
+
+      // Log the export action.
+      const docUrl = `/cms/content/${ctx.docId}`;
+      await ctx.cmsClient.logAction('doc.export_translations', {
+        by: ctx.user.email,
+        metadata: {
+          docId: ctx.docId,
+          service: 'crowdin',
+          numStrings: data.length,
+          locales: ctx.locales,
+        },
+        links: [
+          {label: 'Open translations', url: `${docUrl}?modal=localization`},
+          crowdinLink,
+        ],
+      });
+
       return {
         title: 'Exported to Crowdin',
         message: `${collectionId}/${fileName}`,
-        link: {
-          url: `https://crowdin.com/translate/${projectIdentifier}`,
-          label: 'Open in Crowdin',
-        },
+        link: crowdinLink,
       };
     },
 
@@ -463,7 +487,11 @@ export function crowdinTranslationService(
 
       return data.map((row) => ({
         source: row.source,
-        translations: translationMap[row.source] || {},
+        translations: {
+          // If overwriteOnImport is false, preserve existing translations.
+          ...(!overwriteOnImport ? row.translations : {}),
+          ...(translationMap[row.source] || {}),
+        },
       }));
     },
   };
