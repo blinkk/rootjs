@@ -14,7 +14,7 @@ jobs:
     runs-on: ubuntu-latest
     # Skip deploy on "ci: release" commits because package versions are bumped
     # but not yet published to npm, causing Firebase deploy to fail.
-    if: ${{ !startsWith(github.event.head_commit.message, 'ci: release') }}
+    if: "!startsWith(github.event.head_commit.message, 'ci: release')"
 
     steps:
       - name: Checkout code
@@ -23,12 +23,12 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '22'
+          node-version: "22"
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
         with:
-          version: '8.9.0'
+          version: "8.9.0"
 
       - name: Get pnpm store directory
         shell: bash
