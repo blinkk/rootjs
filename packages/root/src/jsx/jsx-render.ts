@@ -132,7 +132,7 @@ function isDef<T>(value: T | null | undefined): value is T {
 }
 
 function escapeHtml(str: string): string {
-  const parts: string[] = [];
+  let result = '';
   let last = 0;
   for (let i = 0; i < str.length; i++) {
     const ch = str.charCodeAt(i);
@@ -141,17 +141,16 @@ function escapeHtml(str: string): string {
     else if (ch === 60) escaped = LT;
     else if (ch === 62) escaped = GT;
     if (escaped) {
-      parts.push(str.slice(last, i), escaped);
+      result += str.slice(last, i) + escaped;
       last = i + 1;
     }
   }
   if (last === 0) return str;
-  parts.push(str.slice(last));
-  return parts.join('');
+  return result + str.slice(last);
 }
 
 function escapeAttr(str: string): string {
-  const parts: string[] = [];
+  let result = '';
   let last = 0;
   for (let i = 0; i < str.length; i++) {
     const ch = str.charCodeAt(i);
@@ -161,13 +160,12 @@ function escapeAttr(str: string): string {
     else if (ch === 60) escaped = LT;
     else if (ch === 62) escaped = GT;
     if (escaped) {
-      parts.push(str.slice(last, i), escaped);
+      result += str.slice(last, i) + escaped;
       last = i + 1;
     }
   }
   if (last === 0) return str;
-  parts.push(str.slice(last));
-  return parts.join('');
+  return result + str.slice(last);
 }
 
 function styleToString(style: Record<string, any>): string {
@@ -356,12 +354,12 @@ export function renderJsxToString(
   ): string {
     const isBlock = isPretty && !inline && blockSet.has(tag);
     const isVoid = VOID_ELEMENTS.has(tag);
-
-    const parts: string[] = ['<', tag, renderAttrs(tag, props), '>'];
+    const attrs = renderAttrs(tag, props);
+    let result = '<' + tag + attrs + '>';
 
     if (isVoid) {
-      if (isBlock) parts.push('\n');
-      return parts.join('');
+      if (isBlock) result += '\n';
+      return result;
     }
 
     let inner = '';
@@ -386,15 +384,15 @@ export function renderJsxToString(
       const hasBlockChildren =
         !RAW_CONTENT_ELEMENTS.has(tag) && inner.includes('\n');
       if (hasBlockChildren) {
-        parts.push('\n', inner, '</', tag, '>\n');
+        result += '\n' + inner + '</' + tag + '>\n';
       } else {
-        parts.push(inner, '</', tag, '>\n');
+        result += inner + '</' + tag + '>\n';
       }
     } else {
-      parts.push(inner, '</', tag, '>');
+      result += inner + '</' + tag + '>';
     }
 
-    return parts.join('');
+    return result;
   }
 
   function renderAttrs(tag: string, props: Record<string, any>): string {
