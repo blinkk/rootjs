@@ -93,13 +93,20 @@
   "peerDependencies": {
     "firebase-admin": ">=11",
     "firebase-functions": ">=4",
-    "preact": ">=10"
+    "preact": ">=10",
+    "preact-render-to-string": ">=5"
   },
   "peerDependenciesMeta": {
     "firebase-functions": {
       "optional": true
     },
     "firebase-admin": {
+      "optional": true
+    },
+    "preact": {
+      "optional": true
+    },
+    "preact-render-to-string": {
       "optional": true
     }
   },
@@ -118,6 +125,7 @@
     "nodemon": "3.0.1",
     "preact": "10.27.1",
     "preact-custom-element": "4.5.0",
+    "preact-render-to-string": "6.6.1",
     "tsup": "8.5.0",
     "typescript": "5.9.2",
     "vitest": "3.2.4"

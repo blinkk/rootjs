@@ -55,7 +55,9 @@ test('use custom elements from another directory', async () => {
     <meta charset="utf-8">
     <script type="module" src="/assets/ds-foo.min.js"></script>
     </head>
-    <body><ds-foo name="Alice"></ds-foo></body>
+    <body>
+    <ds-foo name="Alice"></ds-foo>
+    </body>
     </html>
     "
   `);

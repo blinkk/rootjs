@@ -12,5 +12,7 @@ export default defineConfig({
       },
     },
   },
-  prettyHtml: true,
+  jsxRenderer: {
+    mode: 'pretty',
+  },
 });
