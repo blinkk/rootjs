@@ -104,5 +104,13 @@ export default defineConfig({
   },
   jsxRenderer: {
     mode: 'pretty',
+    blockElements: [
+      'root-code',
+      'root-counter',
+      'root-drawer',
+      'root-header',
+      'root-island',
+      'root-node',
+    ],
   },
 });
