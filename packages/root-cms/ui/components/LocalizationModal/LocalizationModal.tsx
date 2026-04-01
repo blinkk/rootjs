@@ -1194,13 +1194,14 @@ LocalizationModal.Translations = (props: TranslationsProps) => {
                 </ActionIcon>
               </Tooltip>
             )}
+
             <Button
               component="a"
               href={`/cms/translations/${props.docId}`}
               target="_blank"
               variant="default"
               size="xs"
-              rightIcon={<IconExternalLink size={14} strokeWidth={1.75} />}
+              rightIcon={<IconArrowUpRight size={14} strokeWidth={1.75} />}
             >
               Open Editor
             </Button>
@@ -1218,26 +1219,24 @@ LocalizationModal.Translations = (props: TranslationsProps) => {
             />
             <Menu
               className="LocalizationModal__translations__menu"
-              position="bottom"
-              placement="end"
               control={
-                <Button
-                  variant="default"
-                  color="dark"
-                  size="xs"
-                  leftIcon={<IconTool size={16} strokeWidth={1.75} />}
-                  rightIcon={<IconChevronDown size={16} strokeWidth={1.75} />}
-                >
-                  Tools
-                </Button>
+                <Tooltip label="Tools">
+                  <ActionIcon
+                    className="LocalizationModal__translations__menu__dots"
+                    variant="default"
+                  >
+                    <IconTool size={16} />
+                  </ActionIcon>
+                </Tooltip>
               }
+              size={220}
             >
               <Menu.Item
                 className="LocalizationModal__translations__menu__item"
                 icon={<IconScissors size={16} />}
                 onClick={() => notifyErrors(pruneUnusedTranslations)}
               >
-                Prune unused translations
+                Prune unused strings
               </Menu.Item>
             </Menu>
           </div>

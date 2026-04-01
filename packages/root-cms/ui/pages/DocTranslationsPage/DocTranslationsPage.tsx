@@ -205,28 +205,6 @@ export function DocTranslationsPage(props: DocTranslationsPageProps) {
           </Breadcrumbs>
           <div className="DocTranslationsPage__header__titleWrap">
             <Heading size="h1">Translations: {docId}</Heading>
-            <Menu
-              position="bottom"
-              placement="end"
-              control={
-                <Button
-                  variant="default"
-                  color="dark"
-                  size="xs"
-                  leftIcon={<IconTool size={16} strokeWidth={1.75} />}
-                  rightIcon={<IconChevronDown size={16} strokeWidth={1.75} />}
-                >
-                  Tools
-                </Button>
-              }
-            >
-              <Menu.Item
-                icon={<IconScissors size={16} />}
-                onClick={() => pruneUnusedTranslations()}
-              >
-                Prune unused translations
-              </Menu.Item>
-            </Menu>
           </div>
           {linkedSheet && (
             <div className="DocTranslationsPage__header__linkedSheet">
@@ -261,6 +239,23 @@ export function DocTranslationsPage(props: DocTranslationsPageProps) {
                 >
                   Export to Sheet
                 </Button>
+                <Menu
+                  control={
+                    <Tooltip label="Tools">
+                      <ActionIcon variant="default">
+                        <IconTool size={16} />
+                      </ActionIcon>
+                    </Tooltip>
+                  }
+                  size={220}
+                >
+                  <Menu.Item
+                    icon={<IconScissors size={16} />}
+                    onClick={() => pruneUnusedTranslations()}
+                  >
+                    Prune unused strings
+                  </Menu.Item>
+                </Menu>
               </div>
             </div>
           )}
