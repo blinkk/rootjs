@@ -1,10 +1,20 @@
-import {ActionIcon, Breadcrumbs, Button, Loader, Tooltip} from '@mantine/core';
+import {
+  ActionIcon,
+  Breadcrumbs,
+  Button,
+  Loader,
+  Menu,
+  Tooltip,
+} from '@mantine/core';
 import {showNotification, updateNotification} from '@mantine/notifications';
 import {
+  IconChevronDown,
   IconFileDownload,
   IconFileUpload,
   IconMoodLookDown,
+  IconScissors,
   IconTable,
+  IconTool,
 } from '@tabler/icons-preact';
 import {useEffect, useMemo, useRef, useState} from 'preact/hooks';
 import {Heading} from '../../components/Heading/Heading.js';
@@ -22,7 +32,9 @@ import {GoogleSheetId, getSpreadsheetUrl} from '../../utils/gsheets.js';
 import {
   Translation,
   TranslationsMap,
+  batchUpdateTags,
   loadTranslations,
+  sourceHash,
 } from '../../utils/l10n.js';
 import {notifyErrors} from '../../utils/notifications.js';
 import './DocTranslationsPage.css';
@@ -116,6 +128,61 @@ export function DocTranslationsPage(props: DocTranslationsPageProps) {
     setSaving(false);
   }
 
+  async function pruneUnusedTranslations() {
+    setLoading(true);
+    try {
+      const docTag = docId;
+      const taggedTranslations = await loadTranslations({tags: [docTag]});
+      const currentHashes = new Set(
+        await Promise.all(sourceStrings.map((s) => sourceHash(s)))
+      );
+      const updates: Array<{hash: string; tags: string[]}> = [];
+      for (const [hash, translation] of Object.entries(taggedTranslations)) {
+        if (!currentHashes.has(hash)) {
+          const existingTags: string[] = (translation.tags as string[]) || [];
+          if (existingTags.includes(docTag)) {
+            const newTags = existingTags.filter((t) => t !== docTag);
+            updates.push({hash, tags: newTags});
+          }
+        }
+      }
+
+      if (updates.length > 0) {
+        await batchUpdateTags(updates, {mode: 'replace'});
+        setTranslationsMap((prev) => {
+          const next = {...prev};
+          updates.forEach(({hash}) => {
+            delete next[hash];
+          });
+          return next;
+        });
+        showNotification({
+          title: 'Pruned translations',
+          message: `Removed "${docTag}" tag from ${updates.length} unused translation(s).`,
+          color: 'green',
+          autoClose: 5000,
+        });
+      } else {
+        showNotification({
+          title: 'No unused translations',
+          message: `All translations tagged with "${docTag}" are still in use.`,
+          color: 'blue',
+          autoClose: 5000,
+        });
+      }
+    } catch (err) {
+      console.error(err);
+      showNotification({
+        title: 'Error pruning translations',
+        message: String(err),
+        color: 'red',
+        autoClose: false,
+      });
+    } finally {
+      setLoading(false);
+    }
+  }
+
   /** Toggles the locale in the URL and updates the state accordingly. */
   function toggleLocale(locale: string) {
     if (i18nLocales.length === defaultLocales.length) {
@@ -138,6 +205,28 @@ export function DocTranslationsPage(props: DocTranslationsPageProps) {
           </Breadcrumbs>
           <div className="DocTranslationsPage__header__titleWrap">
             <Heading size="h1">Translations: {docId}</Heading>
+            <Menu
+              position="bottom"
+              placement="end"
+              control={
+                <Button
+                  variant="default"
+                  color="dark"
+                  size="xs"
+                  leftIcon={<IconTool size={16} strokeWidth={1.75} />}
+                  rightIcon={<IconChevronDown size={16} strokeWidth={1.75} />}
+                >
+                  Tools
+                </Button>
+              }
+            >
+              <Menu.Item
+                icon={<IconScissors size={16} />}
+                onClick={() => pruneUnusedTranslations()}
+              >
+                Prune unused translations
+              </Menu.Item>
+            </Menu>
           </div>
           {linkedSheet && (
             <div className="DocTranslationsPage__header__linkedSheet">
