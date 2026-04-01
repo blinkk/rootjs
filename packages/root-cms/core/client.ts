@@ -12,7 +12,7 @@ import {normalizeSlug} from '../shared/slug.js';
 import {CMSPlugin} from './plugin.js';
 import {Collection} from './schema.js';
 import {TranslationsManager} from './translations-manager.js';
-import {validateFields} from './validation.js';
+import {validateFields, resolveFieldAtPath} from './validation.js';
 import {setValueAtPath} from './values.js';
 
 export interface Doc<Fields = any> {
@@ -119,6 +119,13 @@ export interface SaveDraftOptions {
    * If validation fails, an error will be thrown with details about the validation errors.
    */
   validate?: boolean;
+
+  /**
+   * Pre-loaded collection schema for validation. When provided, skips the
+   * `getCollection()` call (which requires Vite's `import.meta.glob`). This is
+   * useful for CLI contexts where schemas are loaded via `viteSsrLoadModule`.
+   */
+  collectionSchema?: Collection;
 }
 
 export interface UpdateDraftOptions {
@@ -127,6 +134,13 @@ export interface UpdateDraftOptions {
    * If validation fails, an error will be thrown with details about the validation errors.
    */
   validate?: boolean;
+
+  /**
+   * Pre-loaded collection schema for validation. When provided, skips the
+   * `getCollection()` call (which requires Vite's `import.meta.glob`). This is
+   * useful for CLI contexts where schemas are loaded via `viteSsrLoadModule`.
+   */
+  collectionSchema?: Collection;
 }
 
 export interface ListDocsOptions {
@@ -353,7 +367,8 @@ export class RootCMSClient {
 
     // Validate fieldsData if requested.
     if (options?.validate) {
-      const collectionSchema = await this.getCollection(collection);
+      const collectionSchema =
+        options.collectionSchema ?? (await this.getCollection(collection));
       if (!collectionSchema) {
         throw new Error(
           `Collection schema not found for: ${collection}. Unable to validate.`
@@ -409,6 +424,22 @@ export class RootCMSClient {
   ) {
     const {collection, slug} = parseDocId(docId);
 
+    // Resolve the collection schema once for both path and data validation.
+    let collectionSchema = options?.collectionSchema;
+    if (options?.validate && !collectionSchema) {
+      collectionSchema = (await this.getCollection(collection)) ?? undefined;
+    }
+
+    // Validate that the field path exists in the schema.
+    if (options?.validate && collectionSchema) {
+      const field = resolveFieldAtPath(collectionSchema, path);
+      if (!field) {
+        throw new Error(
+          `Unknown field path "${path}" for collection "${collection}".`
+        );
+      }
+    }
+
     // Get current draft doc.
     const draftDoc =
       (await this.getRawDoc(collection, slug, {mode: 'draft'})) || {};
@@ -420,6 +451,7 @@ export class RootCMSClient {
     // Save the updated document using saveDraftData.
     await this.saveDraftData(docId, fieldsData, {
       validate: options?.validate,
+      collectionSchema,
     });
   }
 

@@ -1,6 +1,12 @@
 import {Command} from 'commander';
 import {bgGreen, black} from 'kleur/colors';
-import {docsGet, docsSet, docsDownload, docsUpload} from './docs.js';
+import {
+  docsGet,
+  docsSet,
+  docsUpdate,
+  docsDownload,
+  docsUpload,
+} from './docs.js';
 import {exportData} from './export.js';
 import {generateTypes} from './generate-types.js';
 import {importData} from './import.js';
@@ -137,6 +143,33 @@ class CliRunner {
       )
       .action(docsDownload);
     program
+      .command('docs.update <docId> <fieldPath> [value]')
+      .description(
+        'updates a single field in a draft doc by its key path\n\n' +
+          'The value can be provided as an inline JSON argument, from a file\n' +
+          'via --file, or piped via stdin.\n\n' +
+          'Validates the updated document against the collection schema by default.\n' +
+          'Use --no-validate to skip validation.\n\n' +
+          'Key paths use dot notation. For array fields, use 0-based\n' +
+          'numeric indices to target a specific item within the array.\n\n' +
+          'Usage examples:\n' +
+          '  $ root-cms docs.update Pages/home hero.title \'"New Title"\'\n' +
+          '  $ root-cms docs.update Pages/home meta.count 42\n' +
+          '  $ root-cms docs.update Pages/home hero.image --file image.json\n' +
+          '  $ cat value.json | root-cms docs.update Pages/home hero.title\n' +
+          '  $ root-cms docs.update Pages/home hero.title \'"New Title"\' --no-validate\n\n' +
+          'Array field examples:\n' +
+          '  # Update the title of the first item in an array field called "sections":\n' +
+          '  $ root-cms docs.update Pages/home sections.0.title \'"Introduction"\'\n\n' +
+          '  # Update the entire second item in the array:\n' +
+          '  $ root-cms docs.update Pages/home sections.1 \'{"title": "About", "body": "..."}"\'\n\n' +
+          '  # Update a deeply nested value inside an array item:\n' +
+          '  $ root-cms docs.update Pages/home sections.0.cta.label \'"Learn more"\''
+      )
+      .option('--file <filepath>', 'read the value from a JSON file')
+      .option('--no-validate', 'skip schema validation')
+      .action(docsUpdate);
+    program
       .command('docs.upload <collection> <dir>')
       .description(
         'uploads docs from a local directory to a collection\n\n' +
@@ -157,6 +190,7 @@ export {
   CliRunner,
   docsGet,
   docsSet,
+  docsUpdate,
   docsDownload,
   docsUpload,
   exportData,

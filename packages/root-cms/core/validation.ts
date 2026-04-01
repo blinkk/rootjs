@@ -7,6 +7,84 @@ import type {
 } from './schema.js';
 
 /**
+ * Resolves a dot-separated field path against a schema and returns the
+ * matching field definition, or `null` if the path does not exist.
+ *
+ * - Object fields are traversed by field `id`.
+ * - Array fields expect a numeric index, then traverse into the `of` type.
+ * - OneOf, richtext, image, file, and reference fields are treated as opaque:
+ *   once reached, any remaining path segments are accepted.
+ *
+ * Examples:
+ *   resolveFieldAtPath(schema, 'meta.title')       // ObjectField → StringField
+ *   resolveFieldAtPath(schema, 'sections.0.title')  // ArrayField → ObjectField → StringField
+ *   resolveFieldAtPath(schema, 'foo.bar')            // null (unknown top-level field)
+ */
+export function resolveFieldAtPath(
+  schema: Schema,
+  path: string
+): FieldWithId | null {
+  const parts = path.split('.');
+  let fields = schema.fields;
+  let currentField: FieldWithId | null = null;
+
+  for (let i = 0; i < parts.length; i++) {
+    const part = parts[i];
+
+    // Numeric indices navigate into an array item's type.
+    if (/^\d+$/.test(part)) {
+      if (currentField?.type !== 'array') {
+        return null;
+      }
+      const arrayField = currentField as ArrayField;
+      currentField = arrayField.of as FieldWithId;
+      // If the array item type can't be statically traversed, accept the rest.
+      if (!hasStaticNestedFields(currentField)) {
+        if (i < parts.length - 1) {
+          return currentField;
+        }
+      }
+      fields = getStaticNestedFields(currentField);
+      continue;
+    }
+
+    // Look up the field by id in the current scope.
+    const found = fields.find((f) => f.id === part);
+    if (!found) {
+      // If the current field cannot be statically traversed (e.g. oneof,
+      // richtext, image), accept the unresolvable path gracefully.
+      if (currentField && !hasStaticNestedFields(currentField)) {
+        return currentField;
+      }
+      return null;
+    }
+    currentField = found;
+    fields = getStaticNestedFields(currentField);
+  }
+
+  return currentField;
+}
+
+/**
+ * Returns the nested fields for a field type that can be statically traversed.
+ */
+function getStaticNestedFields(field: FieldWithId): FieldWithId[] {
+  if (field.type === 'object' && 'fields' in field) {
+    return (field as ObjectField).fields || [];
+  }
+  return [];
+}
+
+/**
+ * Returns true if the field type has statically-known nested fields that can
+ * be validated (only object fields). OneOf, richtext, image, file, and
+ * reference types have dynamic or implicit sub-properties.
+ */
+function hasStaticNestedFields(field: FieldWithId): boolean {
+  return field.type === 'object';
+}
+
+/**
  * Represents a validation error for a field.
  */
 export interface ValidationError {
