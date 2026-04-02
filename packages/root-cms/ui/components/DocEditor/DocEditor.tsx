@@ -529,16 +529,32 @@ DocEditor.FieldHeaderTranslationsActionIcon = (
   props: FieldHeaderTranslationsActionIconProps
 ) => {
   const field = props.field;
-  const value = props.value;
   const translate: boolean = Boolean((field as any).translate);
   const i18nConfig = window.__ROOT_CTX.rootConfig.i18n || {};
   const i18nLocales = i18nConfig.locales || ['en'];
+
+  // Early return before heavy hooks when translations aren't applicable.
+  if (!translate || i18nLocales.length <= 1) {
+    return null;
+  }
+
+  return (
+    <DocEditor.FieldHeaderTranslationsActionIconInner {...props} />
+  );
+};
+
+/** Inner component that only mounts when translations are applicable. */
+DocEditor.FieldHeaderTranslationsActionIconInner = (
+  props: FieldHeaderTranslationsActionIconProps
+) => {
+  const field = props.field;
+  const value = props.value;
   const editTranslationsModal = useEditTranslationsModal();
   const draft = useDraftDoc();
 
   const types = useCollectionSchemaTypes();
   const actionIconDisabled = useMemo(
-    () => !translate || testFieldEmpty(field, value, types),
+    () => testFieldEmpty(field, value, types),
     [field, value]
   );
 
@@ -557,10 +573,6 @@ DocEditor.FieldHeaderTranslationsActionIcon = (
       return unsubscribe;
     }
   }, [props.deepKey, draft.controller]);
-
-  if (!translate || i18nLocales.length <= 1) {
-    return null;
-  }
 
   return (
     <div className="DocEditor__FieldHeader__translate">
