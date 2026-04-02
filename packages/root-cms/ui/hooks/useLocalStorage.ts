@@ -1,4 +1,5 @@
 import {StateUpdater, useState} from 'preact/hooks';
+import {useCallback} from 'preact/hooks';
 
 export function useLocalStorage<T>(
   key: string,
@@ -13,13 +14,18 @@ export function useLocalStorage<T>(
       return defaultValue;
     }
   });
-  const setValue = (value: StateUpdater<T>) => {
-    if (typeof value === 'function') {
-      const fn = value as (currentValue: T) => T;
-      value = fn(storedValue);
-    }
-    window.localStorage.setItem(key, JSON.stringify(value));
-    setStoredValue(value);
-  };
+  const setValue = useCallback(
+    (value: StateUpdater<T>) => {
+      setStoredValue((prev) => {
+        const resolved =
+          typeof value === 'function'
+            ? (value as (currentValue: T) => T)(prev)
+            : value;
+        window.localStorage.setItem(key, JSON.stringify(resolved));
+        return resolved;
+      });
+    },
+    [key]
+  );
   return [storedValue, setValue] as const;
 }
