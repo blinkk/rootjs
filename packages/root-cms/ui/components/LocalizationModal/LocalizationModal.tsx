@@ -67,6 +67,7 @@ import {TranslationsMap, loadTranslations} from '../../utils/l10n.js';
 import {useExportSheetModal} from '../ExportSheetModal/ExportSheetModal.js';
 import {Heading} from '../Heading/Heading.js';
 import {ProgressiveLoader} from '../ProgressiveLoader/ProgressiveLoader.js';
+import {usePruneTranslationsModal} from '../PruneTranslationsModal/PruneTranslationsModal.js';
 import './LocalizationModal.css';
 
 const MODAL_ID = 'LocalizationModal';
@@ -344,6 +345,7 @@ LocalizationModal.Translations = (props: TranslationsProps) => {
   const gapiClient = useGapiClient();
   const [linkedSheet, setLinkedSheet] = useState<GoogleSheetId | null>(null);
   const exportSheetModal = useExportSheetModal();
+  const pruneModal = usePruneTranslationsModal();
   const [missingTagSources, setMissingTagSources] = useState<Set<string>>(
     new Set()
   );
@@ -865,57 +867,6 @@ LocalizationModal.Translations = (props: TranslationsProps) => {
     setLoading(false);
   }
 
-  async function pruneUnusedTranslations() {
-    setLoading(true);
-    try {
-      const docTag = props.docId;
-      // Load all translations tagged with this doc.
-      const taggedTranslations = await loadTranslations({tags: [docTag]});
-      // Compute hashes of the current source strings.
-      const currentHashes = new Set(
-        await Promise.all(sourceStrings.map((s) => sourceHash(s)))
-      );
-      // Find translations that have the doc tag but are no longer in the doc.
-      const updates: Array<{hash: string; tags: string[]}> = [];
-      for (const [hash, translation] of Object.entries(taggedTranslations)) {
-        if (!currentHashes.has(hash)) {
-          const existingTags: string[] = (translation.tags as string[]) || [];
-          if (existingTags.includes(docTag)) {
-            const newTags = existingTags.filter((t) => t !== docTag);
-            updates.push({hash, tags: newTags});
-          }
-        }
-      }
-
-      if (updates.length > 0) {
-        await batchUpdateTags(updates, {mode: 'replace'});
-        // Update local state: remove pruned entries from translationsMap.
-        setTranslationsMap((prev) => {
-          const next = {...prev};
-          updates.forEach(({hash}) => {
-            delete next[hash];
-          });
-          return next;
-        });
-        showNotification({
-          title: 'Pruned translations',
-          message: `Removed "${docTag}" tag from ${updates.length} unused translation(s).`,
-          color: 'green',
-          autoClose: 5000,
-        });
-      } else {
-        showNotification({
-          title: 'No unused translations',
-          message: `All translations tagged with "${docTag}" are still in use.`,
-          color: 'blue',
-          autoClose: 5000,
-        });
-      }
-    } finally {
-      setLoading(false);
-    }
-  }
-
   /**
    * Wrapper that calls a function and shows a generic error notification if any
    * exceptions occur.
@@ -1234,7 +1185,19 @@ LocalizationModal.Translations = (props: TranslationsProps) => {
               <Menu.Item
                 className="LocalizationModal__translations__menu__item"
                 icon={<IconScissors size={16} />}
-                onClick={() => notifyErrors(pruneUnusedTranslations)}
+                onClick={() =>
+                  pruneModal.open({
+                    docId: props.docId,
+                    sourceStrings,
+                    onPruned: (prunedHashes) => {
+                      setTranslationsMap((prev) => {
+                        const next = {...prev};
+                        prunedHashes.forEach((hash) => delete next[hash]);
+                        return next;
+                      });
+                    },
+                  })
+                }
               >
                 Prune unused strings
               </Menu.Item>

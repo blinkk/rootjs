@@ -48,6 +48,11 @@
   gap: 8px;
 }
 
+.DocTranslationsPage__toolsMenu__item .mantine-Menu-itemLabel {
+  font-size: 13px;
+  line-height: 1.4;
+}
+
 .DocTranslationsPage__content {
   flex: 1;
 }

@@ -8,7 +8,6 @@ import {
 } from '@mantine/core';
 import {showNotification, updateNotification} from '@mantine/notifications';
 import {
-  IconChevronDown,
   IconFileDownload,
   IconFileUpload,
   IconMoodLookDown,
@@ -18,6 +17,7 @@ import {
 } from '@tabler/icons-preact';
 import {useEffect, useMemo, useRef, useState} from 'preact/hooks';
 import {Heading} from '../../components/Heading/Heading.js';
+import {usePruneTranslationsModal} from '../../components/PruneTranslationsModal/PruneTranslationsModal.js';
 import {usePageTitle} from '../../hooks/usePageTitle.js';
 import {useArrayParam} from '../../hooks/useQueryParam.js';
 import {Layout} from '../../layout/Layout.js';
@@ -32,9 +32,7 @@ import {GoogleSheetId, getSpreadsheetUrl} from '../../utils/gsheets.js';
 import {
   Translation,
   TranslationsMap,
-  batchUpdateTags,
   loadTranslations,
-  sourceHash,
 } from '../../utils/l10n.js';
 import {notifyErrors} from '../../utils/notifications.js';
 import './DocTranslationsPage.css';
@@ -57,6 +55,7 @@ export function DocTranslationsPage(props: DocTranslationsPageProps) {
   const collection = props.collection;
   const slug = props.slug;
   const docId = `${collection}/${slug}`;
+  const pruneModal = usePruneTranslationsModal();
 
   const i18nConfig = window.__ROOT_CTX.rootConfig.i18n || {};
   const defaultLocales = i18nConfig.locales || [];
@@ -128,61 +127,6 @@ export function DocTranslationsPage(props: DocTranslationsPageProps) {
     setSaving(false);
   }
 
-  async function pruneUnusedTranslations() {
-    setLoading(true);
-    try {
-      const docTag = docId;
-      const taggedTranslations = await loadTranslations({tags: [docTag]});
-      const currentHashes = new Set(
-        await Promise.all(sourceStrings.map((s) => sourceHash(s)))
-      );
-      const updates: Array<{hash: string; tags: string[]}> = [];
-      for (const [hash, translation] of Object.entries(taggedTranslations)) {
-        if (!currentHashes.has(hash)) {
-          const existingTags: string[] = (translation.tags as string[]) || [];
-          if (existingTags.includes(docTag)) {
-            const newTags = existingTags.filter((t) => t !== docTag);
-            updates.push({hash, tags: newTags});
-          }
-        }
-      }
-
-      if (updates.length > 0) {
-        await batchUpdateTags(updates, {mode: 'replace'});
-        setTranslationsMap((prev) => {
-          const next = {...prev};
-          updates.forEach(({hash}) => {
-            delete next[hash];
-          });
-          return next;
-        });
-        showNotification({
-          title: 'Pruned translations',
-          message: `Removed "${docTag}" tag from ${updates.length} unused translation(s).`,
-          color: 'green',
-          autoClose: 5000,
-        });
-      } else {
-        showNotification({
-          title: 'No unused translations',
-          message: `All translations tagged with "${docTag}" are still in use.`,
-          color: 'blue',
-          autoClose: 5000,
-        });
-      }
-    } catch (err) {
-      console.error(err);
-      showNotification({
-        title: 'Error pruning translations',
-        message: String(err),
-        color: 'red',
-        autoClose: false,
-      });
-    } finally {
-      setLoading(false);
-    }
-  }
-
   /** Toggles the locale in the URL and updates the state accordingly. */
   function toggleLocale(locale: string) {
     if (i18nLocales.length === defaultLocales.length) {
@@ -240,6 +184,7 @@ export function DocTranslationsPage(props: DocTranslationsPageProps) {
                   Export to Sheet
                 </Button>
                 <Menu
+                  className="DocTranslationsPage__toolsMenu"
                   control={
                     <Tooltip label="Tools">
                       <ActionIcon variant="default">
@@ -250,8 +195,21 @@ export function DocTranslationsPage(props: DocTranslationsPageProps) {
                   size={220}
                 >
                   <Menu.Item
+                    className="DocTranslationsPage__toolsMenu__item"
                     icon={<IconScissors size={16} />}
-                    onClick={() => pruneUnusedTranslations()}
+                    onClick={() =>
+                      pruneModal.open({
+                        docId,
+                        sourceStrings,
+                        onPruned: (prunedHashes) => {
+                          setTranslationsMap((prev) => {
+                            const next = {...prev};
+                            prunedHashes.forEach((hash) => delete next[hash]);
+                            return next;
+                          });
+                        },
+                      })
+                    }
                   >
                     Prune unused strings
                   </Menu.Item>

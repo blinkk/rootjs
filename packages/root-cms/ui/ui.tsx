@@ -21,6 +21,7 @@ import {EditJsonModal} from './components/EditJsonModal/EditJsonModal.js';
 import {EditTranslationsModal} from './components/EditTranslationsModal/EditTranslationsModal.js';
 import {ExportSheetModal} from './components/ExportSheetModal/ExportSheetModal.js';
 import {LocalizationModal} from './components/LocalizationModal/LocalizationModal.js';
+import {PruneTranslationsModal} from './components/PruneTranslationsModal/PruneTranslationsModal.js';
 import {LockPublishingModal} from './components/LockPublishingModal/LockPublishingModal.js';
 import {PublishDocModal} from './components/PublishDocModal/PublishDocModal.js';
 import {ReferenceFieldEditorModal} from './components/ReferenceFieldEditorModal/ReferenceFieldEditorModal.js';
@@ -222,6 +223,7 @@ function App() {
                       [ExportSheetModal.id]: ExportSheetModal,
                       [LocalizationModal.id]: LocalizationModal,
                       [LockPublishingModal.id]: LockPublishingModal,
+                      [PruneTranslationsModal.id]: PruneTranslationsModal,
                       [PublishDocModal.id]: PublishDocModal,
                       [ReferenceFieldEditorModal.id]: ReferenceFieldEditorModal,
                       [ScheduleReleaseModal.id]: ScheduleReleaseModal,
