@@ -34,8 +34,10 @@ jobs:
 
       # A newer version of npm is required for publishing with OIDC.
       - name: Update npm
+        # NOTE(stevenle): npm@latest isn't working due to a bug upstream.
+        # https://github.com/npm/cli/issues/9151
         run: |
-          npm install -g npm@latest
+            npm install -g npm@~11.10.0
 
       - name: Setup PNPM
         uses: pnpm/action-setup@v4
