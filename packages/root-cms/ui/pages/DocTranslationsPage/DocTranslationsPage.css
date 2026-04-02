@@ -31,8 +31,15 @@
   margin-top: 4px;
 }
 
-.DocTranslationsPage__header__linkedSheet {
+.DocTranslationsPage__header__controls {
   margin-top: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.DocTranslationsPage__header__linkedSheet {
   display: flex;
   justify-content: space-between;
   align-items: center;

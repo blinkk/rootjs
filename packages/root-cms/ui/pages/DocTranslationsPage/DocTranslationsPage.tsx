@@ -150,73 +150,71 @@ export function DocTranslationsPage(props: DocTranslationsPageProps) {
           <div className="DocTranslationsPage__header__titleWrap">
             <Heading size="h1">Translations: {docId}</Heading>
           </div>
-          {linkedSheet && (
-            <div className="DocTranslationsPage__header__linkedSheet">
-              <div className="DocTranslationsPage__header__linkedSheet__label">
-                <strong>NOTE:</strong> Translations for this doc are managed in
-                Google Sheets.
-              </div>
-              <div className="DocTranslationsPage__header__linkedSheet__controls">
-                <Tooltip label="Open Google Sheet">
-                  <ActionIcon<'a'>
-                    component="a"
-                    href={getSpreadsheetUrl(linkedSheet)}
-                    target="_blank"
-                    variant="filled"
-                    color="green"
-                    size="sm"
+          <div className="DocTranslationsPage__header__controls">
+            {linkedSheet && (
+              <div className="DocTranslationsPage__header__linkedSheet">
+                <div className="DocTranslationsPage__header__linkedSheet__controls">
+                  <Tooltip label="Open Google Sheet">
+                    <ActionIcon<'a'>
+                      component="a"
+                      href={getSpreadsheetUrl(linkedSheet)}
+                      target="_blank"
+                      variant="filled"
+                      color="green"
+                      size="sm"
+                    >
+                      <IconTable size={16} strokeWidth={2.25} />
+                    </ActionIcon>
+                  </Tooltip>
+                  <Button
+                    variant="default"
+                    size="xs"
+                    leftIcon={<IconFileUpload size={16} strokeWidth={1.75} />}
                   >
-                    <IconTable size={16} strokeWidth={2.25} />
+                    Import from Sheet
+                  </Button>
+                  <Button
+                    variant="default"
+                    size="xs"
+                    leftIcon={<IconFileDownload size={16} strokeWidth={1.75} />}
+                  >
+                    Export to Sheet
+                  </Button>
+                </div>
+              </div>
+            )}
+            <Menu
+              className="DocTranslationsPage__toolsMenu"
+              control={
+                <Tooltip label="Tools">
+                  <ActionIcon variant="default">
+                    <IconTool size={16} />
                   </ActionIcon>
                 </Tooltip>
-                <Button
-                  variant="default"
-                  size="xs"
-                  leftIcon={<IconFileUpload size={16} strokeWidth={1.75} />}
-                >
-                  Import from Sheet
-                </Button>
-                <Button
-                  variant="default"
-                  size="xs"
-                  leftIcon={<IconFileDownload size={16} strokeWidth={1.75} />}
-                >
-                  Export to Sheet
-                </Button>
-                <Menu
-                  className="DocTranslationsPage__toolsMenu"
-                  control={
-                    <Tooltip label="Tools">
-                      <ActionIcon variant="default">
-                        <IconTool size={16} />
-                      </ActionIcon>
-                    </Tooltip>
-                  }
-                  size={220}
-                >
-                  <Menu.Item
-                    className="DocTranslationsPage__toolsMenu__item"
-                    icon={<IconScissors size={16} />}
-                    onClick={() =>
-                      pruneModal.open({
-                        docId,
-                        sourceStrings,
-                        onPruned: (prunedHashes) => {
-                          setTranslationsMap((prev) => {
-                            const next = {...prev};
-                            prunedHashes.forEach((hash) => delete next[hash]);
-                            return next;
-                          });
-                        },
-                      })
-                    }
-                  >
-                    Prune unused strings
-                  </Menu.Item>
-                </Menu>
-              </div>
-            </div>
-          )}
+              }
+              size={220}
+            >
+              <Menu.Item
+                className="DocTranslationsPage__toolsMenu__item"
+                icon={<IconScissors size={16} />}
+                onClick={() =>
+                  pruneModal.open({
+                    docId,
+                    sourceStrings,
+                    onPruned: (prunedHashes) => {
+                      setTranslationsMap((prev) => {
+                        const next = {...prev};
+                        prunedHashes.forEach((hash) => delete next[hash]);
+                        return next;
+                      });
+                    },
+                  })
+                }
+              >
+                Prune unused strings
+              </Menu.Item>
+            </Menu>
+          </div>
         </div>
 
         <div
