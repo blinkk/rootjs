@@ -1,5 +1,12 @@
 # @blinkk/root-cms
 
+## 2.5.13
+
+### Patch Changes
+
+- f4e211f5: fix: fix iframe visibility timeout handling#1015
+  - @blinkk/root@2.5.13
+
 ## 2.5.12
 
 ### Patch Changes
