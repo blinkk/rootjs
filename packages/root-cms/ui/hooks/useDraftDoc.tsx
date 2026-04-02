@@ -469,7 +469,6 @@ export function DraftDocProvider(props: DraftDocProviderProps) {
           visibilityTimeoutId = undefined;
         }
         if (!controller.started) {
-          setLoading(true);
           controller.start();
         }
       }
