@@ -1,5 +1,13 @@
 # @blinkk/root-cms
 
+## 2.5.12
+
+### Patch Changes
+
+- 1e69e4ce: fix: optimize performance on document page#1014
+- c1211c39: feat: add prune unused strings to translation tools#1012
+  - @blinkk/root@2.5.12
+
 ## 2.5.11
 
 ### Patch Changes
