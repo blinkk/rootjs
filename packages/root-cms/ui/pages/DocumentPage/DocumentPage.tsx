@@ -412,13 +412,13 @@ DocumentPage.Preview = (props: PreviewProps) => {
     }
     const iframe = iframeRef.current!;
     iframe.src = 'about:blank';
-    window.setTimeout(() => {
+    window.requestAnimationFrame(() => {
       if (iframe.src !== localizedPreviewUrl) {
         iframe.src = localizedPreviewUrl;
       } else {
         iframe.contentWindow!.location.reload();
       }
-    }, 30);
+    });
   }
 
   useEffect(() => {
