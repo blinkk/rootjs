@@ -563,11 +563,12 @@ DocumentPage.Preview = (props: PreviewProps) => {
         data-device={device || 'full'}
         style={iframeStyle}
       >
-        {device && (
-          <div className="DocumentPage__main__previewFrame__deviceLabel">
-            {`${device}: ${DeviceResolution[device].join('x')}`}
-          </div>
-        )}
+        <div
+          className="DocumentPage__main__previewFrame__deviceLabel"
+          style={{display: device ? undefined : 'none'}}
+        >
+          {device ? `${device}: ${DeviceResolution[device].join('x')}` : ''}
+        </div>
         <div className="DocumentPage__main__previewFrame__iframeWrap">
           <iframe ref={iframeRef} title="iframe preview" />
         </div>
