@@ -79,9 +79,7 @@ export function DocumentPage(props: DocumentPageProps) {
   );
 }
 
-function DocumentPageLayout(
-  props: DocumentPageProps & {canEdit: boolean}
-) {
+function DocumentPageLayout(props: DocumentPageProps & {canEdit: boolean}) {
   const canEdit = props.canEdit;
 
   const collectionId = props.collection;
@@ -563,6 +561,7 @@ DocumentPage.Preview = (props: PreviewProps) => {
         data-device={device || 'full'}
         style={iframeStyle}
       >
+        {/* The `display: none` inline style is needed to prevent the vdom from re-using the div component for the iframe wrapper below. */}
         <div
           className="DocumentPage__main__previewFrame__deviceLabel"
           style={{display: device ? undefined : 'none'}}
