@@ -15,5 +15,7 @@
     "@blinkk/root-cms": "2.5.11",
     "@blinkk/root-password-protect": "2.5.11"
   },
-  "changesets": []
+  "changesets": [
+    "gold-plums-love"
+  ]
 }

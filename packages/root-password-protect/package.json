@@ -11,9 +11,6 @@
     "url": "git+https://github.com/blinkk/rootjs.git",
     "directory": "packages/root-password-protect"
   },
-  "publishConfig": {
-    "provenance": true
-  },
   "files": [
     "dist/*"
   ],
