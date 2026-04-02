@@ -480,8 +480,13 @@ export function DraftDocProvider(props: DraftDocProviderProps) {
     };
   }, [controller]);
 
+  const contextValue = useMemo(
+    () => ({loading, controller}),
+    [loading, controller]
+  );
+
   return (
-    <DRAFT_DOC_CONTEXT.Provider value={{loading, controller}}>
+    <DRAFT_DOC_CONTEXT.Provider value={contextValue}>
       {props.children}
     </DRAFT_DOC_CONTEXT.Provider>
   );

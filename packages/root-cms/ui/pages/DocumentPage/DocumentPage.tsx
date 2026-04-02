@@ -10,7 +10,7 @@ import {
   IconLayoutSidebarRightCollapse,
   IconLayoutSidebarRightExpand,
 } from '@tabler/icons-preact';
-import {useCallback, useEffect, useRef, useState} from 'preact/hooks';
+import {useCallback, useEffect, useMemo, useRef, useState} from 'preact/hooks';
 import {ChecksPanel} from '../../components/ChecksPanel/ChecksPanel.js';
 import {ConditionalTooltip} from '../../components/ConditionalTooltip/ConditionalTooltip.js';
 import {DocEditor} from '../../components/DocEditor/DocEditor.js';
@@ -74,15 +74,13 @@ export function DocumentPage(props: DocumentPageProps) {
   const canEdit = testCanEdit(roles, currentUserEmail);
   return (
     <DraftDocProvider docId={docId} readOnly={!canEdit}>
-      <DocumentPageLayout {...props} />
+      <DocumentPageLayout {...props} canEdit={canEdit} />
     </DraftDocProvider>
   );
 }
 
-function DocumentPageLayout(props: DocumentPageProps) {
-  const {roles} = useProjectRoles();
-  const currentUserEmail = window.firebase.user.email || '';
-  const canEdit = testCanEdit(roles, currentUserEmail);
+function DocumentPageLayout(props: DocumentPageProps & {canEdit: boolean}) {
+  const canEdit = props.canEdit;
 
   const collectionId = props.collection;
   const slug = props.slug;
@@ -95,12 +93,13 @@ function DocumentPageLayout(props: DocumentPageProps) {
     `root::DocumentPage::previewVisible::${collectionId}`,
     hasCollectionUrl
   );
-  const allChecks = window.__ROOT_CTX.checks || [];
-  const checks = allChecks.filter(
-    (c: {collections?: string[]}) =>
-      !c.collections || c.collections.includes(collectionId)
-  );
-  const hasChecks = checks.length > 0;
+  const hasChecks = useMemo(() => {
+    const allChecks = window.__ROOT_CTX.checks || [];
+    return allChecks.some(
+      (c: {collections?: string[]}) =>
+        !c.collections || c.collections.includes(collectionId)
+    );
+  }, [collectionId]);
   const [isChecksVisible, setIsChecksVisible] = useLocalStorage<boolean>(
     'root::DocumentPage::checksVisible',
     false
@@ -160,7 +159,7 @@ function DocumentPageLayout(props: DocumentPageProps) {
     return <div>Could not find collection.</div>;
   }
 
-  function openPreviewInNewTab() {
+  const openPreviewInNewTab = useCallback(() => {
     if (!hasCollectionUrl) {
       return;
     }
@@ -170,7 +169,7 @@ function DocumentPageLayout(props: DocumentPageProps) {
     if (tab) {
       tab.focus();
     }
-  }
+  }, [hasCollectionUrl, collectionId, slug]);
 
   const saveDraft = useCallback(() => {
     if (canEdit && draft.controller) {
@@ -393,13 +392,16 @@ DocumentPage.Preview = (props: PreviewProps) => {
 
   const localizedPreviewUrl = getPreviewUrl(collectionId, slug, selectedLocale);
 
-  const localeOptions = [
-    {value: '', label: 'Select locale'},
-    ...locales.map((locale) => ({
-      value: locale,
-      label: getLocaleLabel(locale),
-    })),
-  ];
+  const localeOptions = useMemo(
+    () => [
+      {value: '', label: 'Select locale'},
+      ...locales.map((locale) => ({
+        value: locale,
+        label: getLocaleLabel(locale),
+      })),
+    ],
+    [locales]
+  );
 
   function reloadIframe() {
     const iframe = iframeRef.current!;
@@ -450,38 +452,43 @@ DocumentPage.Preview = (props: PreviewProps) => {
     iframe.src = localizedPreviewUrl;
   }, [selectedLocale]);
 
-  function toggleDevice(targetDevice: Device) {
-    setDevice((current: Device) => {
-      const nextDevice = current === targetDevice ? '' : targetDevice;
-      if (nextDevice === '') {
-        setExpandVertically(false);
+  const toggleDevice = useCallback(
+    (targetDevice: Device) => {
+      setDevice((current: Device) => {
+        const nextDevice = current === targetDevice ? '' : targetDevice;
+        if (nextDevice === '') {
+          setExpandVertically(false);
+        }
+        return nextDevice;
+      });
+    },
+    [setDevice, setExpandVertically]
+  );
+
+  const toggleExpandVertically = useCallback(() => {
+    setDevice((currentDevice: Device) => {
+      if (currentDevice) {
+        setExpandVertically((current) => !current);
       }
-      return nextDevice;
+      return currentDevice;
     });
-  }
+  }, [setDevice, setExpandVertically]);
 
-  function toggleExpandVertically() {
-    if (!device) {
-      return;
-    }
-    setExpandVertically((current) => !current);
-  }
-
-  function onReloadClick() {
+  const onReloadClick = useCallback(() => {
     // Save any unsaved changes and then reload the iframe.
     if (draft.controller) {
       draft.controller.flush().then(() => reloadIframe());
     }
-  }
+  }, [draft.controller]);
 
-  function openNewTab() {
+  const openNewTab = useCallback(() => {
     const previewUrl = getPreviewUrl(collectionId, slug, selectedLocale);
     // `noopener,noreferrer` used for `testEmbedMode()`.
     const tab = window.open(previewUrl, '_blank', 'noopener,noreferrer');
     if (tab) {
       tab.focus();
     }
-  }
+  }, [collectionId, slug, selectedLocale]);
 
   function updateIframeStyle() {
     if (device === '') {
@@ -554,11 +561,13 @@ DocumentPage.Preview = (props: PreviewProps) => {
         data-device={device || 'full'}
         style={iframeStyle}
       >
-        {device && (
-          <div className="DocumentPage__main__previewFrame__deviceLabel">
-            {`${device}: ${DeviceResolution[device].join('x')}`}
-          </div>
-        )}
+        {/* The `display: none` inline style is needed to prevent the vdom from re-using the div component for the iframe wrapper below. */}
+        <div
+          className="DocumentPage__main__previewFrame__deviceLabel"
+          style={{display: device ? undefined : 'none'}}
+        >
+          {device ? `${device}: ${DeviceResolution[device].join('x')}` : ''}
+        </div>
         <div className="DocumentPage__main__previewFrame__iframeWrap">
           <iframe ref={iframeRef} title="iframe preview" />
         </div>
