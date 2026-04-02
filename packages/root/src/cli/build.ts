@@ -100,11 +100,12 @@ export async function build(rootProjectDir?: string, options?: BuildOptions) {
     ...viteConfig,
     root: rootDir,
     mode: mode,
-    esbuild: {
-      ...viteConfig.esbuild,
-      jsx: 'automatic',
-      jsxImportSource: 'preact',
-      treeShaking: true,
+    oxc: {
+      ...viteConfig.oxc,
+      jsx: {
+        runtime: 'automatic',
+        importSource: 'preact',
+      },
     },
     plugins: vitePlugins,
   };
@@ -134,8 +135,8 @@ export async function build(rootProjectDir?: string, options?: BuildOptions) {
     publicDir: false,
     build: {
       ...viteConfig?.build,
-      rollupOptions: {
-        ...viteConfig?.build?.rollupOptions,
+      rolldownOptions: {
+        ...viteConfig?.build?.rolldownOptions,
         input: ssrInput,
         output: {
           format: 'esm',
@@ -167,8 +168,8 @@ export async function build(rootProjectDir?: string, options?: BuildOptions) {
     publicDir: false,
     build: {
       ...viteConfig?.build,
-      rollupOptions: {
-        ...viteConfig?.build?.rollupOptions,
+      rolldownOptions: {
+        ...viteConfig?.build?.rolldownOptions,
         input: [...routeFiles],
         output: {
           format: 'esm',
@@ -176,7 +177,7 @@ export async function build(rootProjectDir?: string, options?: BuildOptions) {
           assetFileNames: 'assets/[hash][extname]',
           chunkFileNames: 'chunks/[hash].min.js',
           sanitizeFileName: sanitizeFileName,
-          ...viteConfig?.build?.rollupOptions?.output,
+          ...viteConfig?.build?.rolldownOptions?.output,
         },
       },
       outDir: path.join(distDir, '.build/routes'),
@@ -200,8 +201,8 @@ export async function build(rootProjectDir?: string, options?: BuildOptions) {
       publicDir: false,
       build: {
         ...viteConfig?.build,
-        rollupOptions: {
-          ...viteConfig?.build?.rollupOptions,
+        rolldownOptions: {
+          ...viteConfig?.build?.rolldownOptions,
           input: [...elements, ...bundleScripts],
           output: {
             format: 'esm',
@@ -209,7 +210,7 @@ export async function build(rootProjectDir?: string, options?: BuildOptions) {
             assetFileNames: 'assets/[hash][extname]',
             chunkFileNames: 'chunks/[hash].min.js',
             sanitizeFileName: sanitizeFileName,
-            ...viteConfig?.build?.rollupOptions?.output,
+            ...viteConfig?.build?.rolldownOptions?.output,
           },
         },
         outDir: path.join(distDir, '.build/client'),

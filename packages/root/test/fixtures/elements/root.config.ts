@@ -11,7 +11,7 @@ export default defineConfig({
   },
   vite: {
     build: {
-      rollupOptions: {
+      rolldownOptions: {
         output: {
           // For testing, avoid adding [hash] so that the builds are
           // deterministic.
