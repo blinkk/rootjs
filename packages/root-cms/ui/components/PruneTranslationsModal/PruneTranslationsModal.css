@@ -1,0 +1,42 @@
+.PruneTranslationsModal {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.PruneTranslationsModal__loading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 16px 0;
+}
+
+.PruneTranslationsModal__empty {
+  padding: 16px 0;
+}
+
+.PruneTranslationsModal__list {
+  max-height: 240px;
+  overflow-y: auto;
+  border: 1px solid var(--color-border, #e0e0e0);
+  border-radius: 4px;
+}
+
+.PruneTranslationsModal__list__item {
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--color-border, #e0e0e0);
+  font-family: monospace;
+  font-size: 12px;
+  word-break: break-word;
+}
+
+.PruneTranslationsModal__list__item:last-child {
+  border-bottom: none;
+}
+
+.PruneTranslationsModal__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding-top: 8px;
+}

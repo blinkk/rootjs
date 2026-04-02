@@ -31,8 +31,15 @@
   margin-top: 4px;
 }
 
-.DocTranslationsPage__header__linkedSheet {
+.DocTranslationsPage__header__controls {
   margin-top: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.DocTranslationsPage__header__linkedSheet {
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -46,6 +53,11 @@
   display: flex;
   align-items: center;
   gap: 8px;
+}
+
+.DocTranslationsPage__toolsMenu__item .mantine-Menu-itemLabel {
+  font-size: 13px;
+  line-height: 1.4;
 }
 
 .DocTranslationsPage__content {

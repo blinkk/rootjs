@@ -33,6 +33,7 @@ import {
   IconTable,
   IconTool,
   IconPlayerStop,
+  IconScissors,
   IconSparkles,
 } from '@tabler/icons-preact';
 import {useEffect, useMemo, useRef, useState} from 'preact/hooks';
@@ -66,6 +67,7 @@ import {TranslationsMap, loadTranslations} from '../../utils/l10n.js';
 import {useExportSheetModal} from '../ExportSheetModal/ExportSheetModal.js';
 import {Heading} from '../Heading/Heading.js';
 import {ProgressiveLoader} from '../ProgressiveLoader/ProgressiveLoader.js';
+import {usePruneTranslationsModal} from '../PruneTranslationsModal/PruneTranslationsModal.js';
 import './LocalizationModal.css';
 
 const MODAL_ID = 'LocalizationModal';
@@ -343,6 +345,7 @@ LocalizationModal.Translations = (props: TranslationsProps) => {
   const gapiClient = useGapiClient();
   const [linkedSheet, setLinkedSheet] = useState<GoogleSheetId | null>(null);
   const exportSheetModal = useExportSheetModal();
+  const pruneModal = usePruneTranslationsModal();
   const [missingTagSources, setMissingTagSources] = useState<Set<string>>(
     new Set()
   );
@@ -1142,13 +1145,14 @@ LocalizationModal.Translations = (props: TranslationsProps) => {
                 </ActionIcon>
               </Tooltip>
             )}
+
             <Button
               component="a"
               href={`/cms/translations/${props.docId}`}
               target="_blank"
               variant="default"
               size="xs"
-              rightIcon={<IconExternalLink size={14} strokeWidth={1.75} />}
+              rightIcon={<IconArrowUpRight size={14} strokeWidth={1.75} />}
             >
               Open Editor
             </Button>
@@ -1164,6 +1168,40 @@ LocalizationModal.Translations = (props: TranslationsProps) => {
               gapiClient={gapiClient}
               linkedSheet={linkedSheet}
             />
+            <Menu
+              className="LocalizationModal__translations__menu"
+              control={
+                <Tooltip label="Tools">
+                  <ActionIcon
+                    className="LocalizationModal__translations__menu__dots"
+                    variant="default"
+                  >
+                    <IconTool size={16} />
+                  </ActionIcon>
+                </Tooltip>
+              }
+              size={220}
+            >
+              <Menu.Item
+                className="LocalizationModal__translations__menu__item"
+                icon={<IconScissors size={16} />}
+                onClick={() =>
+                  pruneModal.open({
+                    docId: props.docId,
+                    sourceStrings,
+                    onPruned: (prunedHashes) => {
+                      setTranslationsMap((prev) => {
+                        const next = {...prev};
+                        prunedHashes.forEach((hash) => delete next[hash]);
+                        return next;
+                      });
+                    },
+                  })
+                }
+              >
+                Prune unused strings
+              </Menu.Item>
+            </Menu>
           </div>
         </div>
         {loading && (
