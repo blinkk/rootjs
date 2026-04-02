@@ -457,8 +457,8 @@ export function DraftDocProvider(props: DraftDocProviderProps) {
   // Automatically start/stop the db watcher N seconds after the browser
   // visibility state changes.
   useEffect(() => {
+    let visibilityTimeoutId: number | undefined;
     const onVisibilityChange = () => {
-      let visibilityTimeoutId: number | undefined;
       if (document.hidden || document.visibilityState !== 'visible') {
         visibilityTimeoutId = window.setTimeout(() => {
           controller.stop();
@@ -477,6 +477,9 @@ export function DraftDocProvider(props: DraftDocProviderProps) {
     document.addEventListener('visibilitychange', onVisibilityChange);
     return () => {
       document.removeEventListener('visibilitychange', onVisibilityChange);
+      if (visibilityTimeoutId) {
+        clearTimeout(visibilityTimeoutId);
+      }
     };
   }, [controller]);
 

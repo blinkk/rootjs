@@ -404,6 +404,12 @@ DocumentPage.Preview = (props: PreviewProps) => {
   );
 
   function reloadIframe() {
+    // Don't reload the iframe when the tab is hidden. Browsers throttle
+    // background timers, so the intermediate about:blank may never resolve,
+    // leaving the iframe blank when the user returns.
+    if (document.hidden) {
+      return;
+    }
     const iframe = iframeRef.current!;
     iframe.src = 'about:blank';
     window.setTimeout(() => {
