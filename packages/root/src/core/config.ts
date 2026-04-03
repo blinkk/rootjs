@@ -1,6 +1,7 @@
 import {UserConfig as ViteUserConfig} from 'vite';
 import {HtmlMinifyOptions} from '../render/html-minify.js';
 import {HtmlPrettyOptions} from '../render/html-pretty.js';
+import {JsxRenderOptions} from '../jsx/jsx-render.js';
 import {Plugin} from './plugin.js';
 import {RequestMiddleware} from './types.js';
 
@@ -72,6 +73,28 @@ export interface RootUserConfig {
    * @see {@link https://vitejs.dev/config/} for more information.
    */
   vite?: ViteUserConfig;
+
+  /**
+   * Config for the built-in JSX-to-HTML renderer.
+   *
+   * - `mode: 'pretty'` (default) — block-level elements render on their own
+   *   line with no indentation.
+   * - `mode: 'minimal'` — compact output with no extra whitespace.
+   *
+   * Use `blockElements` to specify additional custom element tag names that
+   * should be treated as block-level in pretty mode.
+   *
+   * @example
+   * ```ts
+   * export default defineConfig({
+   *   jsxRenderer: {
+   *     mode: 'pretty',
+   *     blockElements: ['my-card', 'my-section'],
+   *   },
+   * });
+   * ```
+   */
+  jsxRenderer?: JsxRenderOptions;
 
   /**
    * Whether to automatically minify HTML output. This is enabled by default,

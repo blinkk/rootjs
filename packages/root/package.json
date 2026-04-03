@@ -11,9 +11,6 @@
     "url": "git+https://github.com/blinkk/rootjs.git",
     "directory": "packages/root"
   },
-  "publishConfig": {
-    "provenance": true
-  },
   "files": [
     "bin/*",
     "dist/**/*",
@@ -42,6 +39,10 @@
     "./functions": {
       "types": "./dist/functions.d.ts",
       "import": "./dist/functions.js"
+    },
+    "./jsx": {
+      "types": "./dist/jsx.d.ts",
+      "import": "./dist/jsx.js"
     },
     "./middleware": {
       "types": "./dist/middleware.d.ts",
@@ -97,6 +98,12 @@
       "optional": true
     },
     "firebase-admin": {
+      "optional": true
+    },
+    "preact": {
+      "optional": true
+    },
+    "preact-render-to-string": {
       "optional": true
     }
   },

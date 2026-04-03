@@ -1,3 +1,5 @@
 export default {
-  prettyHtml: true,
+  jsxRenderer: {
+    mode: 'pretty',
+  },
 };

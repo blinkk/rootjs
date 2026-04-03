@@ -15,7 +15,6 @@
   },
   "dependencies": {
     "@blinkk/root": "workspace:*",
-    "preact": "^10.10.6",
-    "preact-render-to-string": "^5.2.3"
+    "preact": "10.27.1"
   }
 }
