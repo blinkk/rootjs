@@ -4,6 +4,8 @@ on:
   push:
     branches:
       - main
+      - alpha
+      - beta
 
 defaults:
   run:
@@ -21,8 +23,8 @@ permissions:
   pull-requests: write
 
 jobs:
-  changelog:
-    name: Changelog PR or Release
+  release:
+    name: Release
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
@@ -68,7 +70,9 @@ jobs:
       - name: Unit tests
         run: pnpm test
 
+      # Main branch: create release PR or publish.
       - name: Create Release Pull Request or Publish
+        if: github.ref == 'refs/heads/main'
         id: changesets
         uses: changesets/action@v1
         with:
@@ -80,4 +84,40 @@ jobs:
           # Needs access to push to main
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           # Use OIDC for npm authentication instead of NPM_TOKEN
+          NPM_TOKEN: ''
+
+      # Alpha branch: publish alpha pre-release.
+      - name: Build packages
+        if: github.ref == 'refs/heads/alpha'
+        run: pnpm run build
+      - name: Enter changeset pre mode
+        if: github.ref == 'refs/heads/alpha'
+        run: pnpm changeset pre enter alpha
+      - name: Version packages
+        if: github.ref == 'refs/heads/alpha'
+        run: pnpm changeset version
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Publish alpha release
+        if: github.ref == 'refs/heads/alpha'
+        run: pnpm changeset publish --provenance
+        env:
+          NPM_TOKEN: ''
+
+      # Beta branch: publish beta pre-release.
+      - name: Build packages
+        if: github.ref == 'refs/heads/beta'
+        run: pnpm run build
+      - name: Enter changeset pre mode
+        if: github.ref == 'refs/heads/beta'
+        run: pnpm changeset pre enter beta
+      - name: Version packages
+        if: github.ref == 'refs/heads/beta'
+        run: pnpm changeset version
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Publish beta release
+        if: github.ref == 'refs/heads/beta'
+        run: pnpm changeset publish --provenance
+        env:
           NPM_TOKEN: ''
