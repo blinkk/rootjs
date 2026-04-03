@@ -44,10 +44,11 @@ export function FieldHistory(props: FieldHistoryProps) {
   useEffect(() => {
     async function fetchFieldHistory() {
       setLoading(true);
-      const [versions, draftDoc] = await Promise.all([
+      const [versionsResult, draftDoc] = await Promise.all([
         cmsListVersions(docId),
         cmsReadDocVersion(docId, 'draft'),
       ]);
+      const versions = versionsResult.versions;
 
       const entries: FieldVersion[] = [];
 

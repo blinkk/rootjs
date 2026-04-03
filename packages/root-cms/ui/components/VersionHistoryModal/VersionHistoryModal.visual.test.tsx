@@ -68,7 +68,7 @@ const mockVersions: Version[] = [
 ];
 
 vi.mock('../../utils/doc.js', () => ({
-  cmsListVersions: vi.fn(() => Promise.resolve(mockVersions)),
+  cmsListVersions: vi.fn(() => Promise.resolve({versions: mockVersions, lastDoc: null, hasMore: false})),
   cmsReadDocVersion: vi.fn(() =>
     Promise.resolve({
       sys: {

@@ -110,3 +110,9 @@
 .VersionHistoryModal__versions__modifiedAt__text {
   flex: 1;
 }
+
+.VersionHistoryModal__loadMore {
+  display: flex;
+  justify-content: center;
+  padding: 12px 0;
+}
