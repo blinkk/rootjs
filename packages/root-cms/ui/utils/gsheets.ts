@@ -54,13 +54,17 @@ export class GSpreadsheet {
       });
     }
 
-    if (!share) {
-      return gspreadsheet;
+    if (share) {
+      // Give all admins and editors "write" access. If sharing fails, the
+      // sheet is still usable — the user can share it manually.
+      try {
+        const editors = await getAllEditors();
+        await gspreadsheet.share(editors, 'writer');
+      } catch (err) {
+        console.warn('Failed to share spreadsheet:', err);
+      }
     }
 
-    // Give all admins and editors "write" access.
-    const editors = await getAllEditors();
-    await gspreadsheet.share(editors, 'writer');
     return gspreadsheet;
   }
 
