@@ -445,7 +445,7 @@ export function ExportSheetModal(
                   name="share"
                   value="true"
                   label="Share Google Sheet with collaborators"
-                  checked={googleDriveFolder ? false : true}
+                  defaultChecked={!googleDriveFolder}
                 />
               </Tooltip>
             </div>
