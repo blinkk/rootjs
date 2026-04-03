@@ -136,3 +136,29 @@ test('match all matching routes', () => {
     ['a', {slug: 'foo/bar'}],
   ]);
 });
+
+test('handles paths with Object.prototype property names', () => {
+  routeTrie.add('/foo', 'foo');
+  routeTrie.add('/foo/bar', 'foobar');
+
+  // Path segments like "constructor", "__proto__", "toString", etc. should not
+  // match inherited Object.prototype properties.
+  assert.deepEqual(routeTrie.get('/constructor'), [undefined, {}]);
+  assert.deepEqual(routeTrie.get('/constructor/foo'), [undefined, {}]);
+  assert.deepEqual(routeTrie.get('/__proto__'), [undefined, {}]);
+  assert.deepEqual(routeTrie.get('/toString'), [undefined, {}]);
+  assert.deepEqual(routeTrie.get('/hasOwnProperty'), [undefined, {}]);
+  assert.deepEqual(routeTrie.get('/valueOf'), [undefined, {}]);
+
+  // Normal routes should still work.
+  assert.deepEqual(routeTrie.get('/foo'), ['foo', {}]);
+  assert.deepEqual(routeTrie.get('/foo/bar'), ['foobar', {}]);
+});
+
+test('matchAll handles paths with Object.prototype property names', () => {
+  routeTrie.add('/foo', 'foo');
+
+  assert.deepEqual(routeTrie.matchAll('/constructor'), []);
+  assert.deepEqual(routeTrie.matchAll('/__proto__'), []);
+  assert.deepEqual(routeTrie.matchAll('/toString'), []);
+});

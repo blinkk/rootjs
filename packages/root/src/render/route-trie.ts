@@ -3,7 +3,9 @@
  * [param], [...catchall], and [[...optcatchall]] placeholders.
  */
 export class RouteTrie<T> {
-  private children: Record<string, RouteTrie<T>> = {};
+  // Use null-prototype object to avoid collisions with Object.prototype properties.
+  // @see https://github.com/blinkk/rootjs/pull/1020
+  private children: Record<string, RouteTrie<T>> = Object.create(null);
   private paramNodes?: {[param: string]: ParamNode<T>};
   private catchAllNodes?: CatchAllNode<T>;
   private optCatchAllNodes?: CatchAllNode<T>;
@@ -116,7 +118,7 @@ export class RouteTrie<T> {
    * Removes all routes from the trie.
    */
   clear() {
-    this.children = {};
+    this.children = Object.create(null);
     this.paramNodes = undefined;
     this.catchAllNodes = undefined;
     this.optCatchAllNodes = undefined;
