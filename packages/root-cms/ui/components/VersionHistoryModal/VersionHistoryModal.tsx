@@ -11,7 +11,6 @@ import {showNotification} from '@mantine/notifications';
 import {
   IconArrowUpRight,
   IconCopy,
-  IconHistory,
   IconMessage,
   IconRocket,
 } from '@tabler/icons-preact';
@@ -25,7 +24,6 @@ import {
   cmsRestoreVersion,
 } from '../../utils/doc.js';
 import {useCopyDocModal} from '../CopyDocModal/CopyDocModal.js';
-import {Heading} from '../Heading/Heading.js';
 import {Text} from '../Text/Text.js';
 import './VersionHistoryModal.css';
 
@@ -45,6 +43,7 @@ export function useVersionHistoryModal(props: VersionHistoryModalProps) {
     open: () => {
       modals.openContextModal(MODAL_ID, {
         ...modalTheme,
+        title: `Version history: ${props.docId}`,
         innerProps: props,
         overflow: 'inside',
         size: 'min(calc(100% - 32px), 720px)',
@@ -199,15 +198,6 @@ export function VersionHistoryModal(
   }
   return (
     <div className="VersionHistoryModal">
-      <div className="VersionHistoryModal__header">
-        <Heading className="VersionHistoryModal__title" size="h2">
-          <IconHistory strokeWidth={1.5} />
-          <span>Version history</span>
-        </Heading>
-      </div>
-      <div className="VersionHistoryModal__docId">
-        <code>{docId}</code>
-      </div>
       <div className="VersionHistoryModal__actions">
         <Button
           component={selectedVersions.length === 2 ? 'a' : 'button'}
@@ -255,7 +245,9 @@ export function VersionHistoryModal(
             <tbody>
               {filteredVersions.map((version) => {
                 const isDraft = version._versionId === 'draft';
-                const isSelected = selectedVersions.includes(version._versionId);
+                const isSelected = selectedVersions.includes(
+                  version._versionId
+                );
                 const isDisabled = !isSelected && selectedVersions.length >= 2;
 
                 return (
@@ -277,12 +269,16 @@ export function VersionHistoryModal(
                         >
                           {isDraft ? (
                             <span title="Current Draft">
-                              {dateFormat.format(version.sys.modifiedAt.toDate())}{' '}
+                              {dateFormat.format(
+                                version.sys.modifiedAt.toDate()
+                              )}{' '}
                               (Latest)
                             </span>
                           ) : (
                             <>
-                              {dateFormat.format(version.sys.modifiedAt.toDate())}
+                              {dateFormat.format(
+                                version.sys.modifiedAt.toDate()
+                              )}
                               {version.tags?.includes('published') && (
                                 <span className="VersionHistoryModal__publishedLabel">
                                   (Published)
@@ -340,7 +336,8 @@ export function VersionHistoryModal(
                               <Popover
                                 withCloseButton={true}
                                 opened={
-                                  openTooltip === `${version._versionId}-release`
+                                  openTooltip ===
+                                  `${version._versionId}-release`
                                 }
                                 onClose={() => setOpenTooltip(null)}
                                 position="right"
