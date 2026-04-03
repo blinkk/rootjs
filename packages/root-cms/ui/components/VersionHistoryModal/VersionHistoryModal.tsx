@@ -11,12 +11,11 @@ import {showNotification} from '@mantine/notifications';
 import {
   IconArrowUpRight,
   IconCopy,
-  IconHistory,
   IconMessage,
   IconRocket,
 } from '@tabler/icons-preact';
-import {set} from 'date-fns';
-import {useEffect, useState} from 'preact/hooks';
+import {QueryDocumentSnapshot} from 'firebase/firestore';
+import {useEffect, useRef, useState} from 'preact/hooks';
 import {useModalTheme} from '../../hooks/useModalTheme.js';
 import {
   Version,
@@ -25,11 +24,11 @@ import {
   cmsRestoreVersion,
 } from '../../utils/doc.js';
 import {useCopyDocModal} from '../CopyDocModal/CopyDocModal.js';
-import {Heading} from '../Heading/Heading.js';
 import {Text} from '../Text/Text.js';
 import './VersionHistoryModal.css';
 
 const MODAL_ID = 'VersionHistoryModal';
+const PAGE_SIZE = 50;
 
 export interface VersionHistoryModalProps {
   [key: string]: unknown;
@@ -44,7 +43,9 @@ export function useVersionHistoryModal(props: VersionHistoryModalProps) {
     open: () => {
       modals.openContextModal(MODAL_ID, {
         ...modalTheme,
+        title: `Version history: ${props.docId}`,
         innerProps: props,
+        overflow: 'inside',
         size: 'min(calc(100% - 32px), 720px)',
       });
     },
@@ -57,10 +58,13 @@ export function VersionHistoryModal(
   const {innerProps: props, context, id} = modalProps;
   const docId = props.docId;
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [versions, setVersions] = useState<Version[]>([]);
+  const [hasMore, setHasMore] = useState(false);
   const [selectedVersions, setSelectedVersions] = useState<string[]>([]);
   const [showPublishedOnly, setShowPublishedOnly] = useState(false);
   const [openTooltip, setOpenTooltip] = useState<string | null>(null);
+  const cursorRef = useRef<QueryDocumentSnapshot | null>(null);
   const copyDocModal = useCopyDocModal({fromDocId: docId});
 
   const dateFormat = new Intl.DateTimeFormat('en-US', {
@@ -73,10 +77,13 @@ export function VersionHistoryModal(
 
   async function fetchVersions() {
     setLoading(true);
-    const [savedVersions, draftDoc] = await Promise.all([
-      cmsListVersions(docId),
+    const [result, draftDoc] = await Promise.all([
+      cmsListVersions(docId, {limit: PAGE_SIZE}),
       cmsReadDocVersion(docId, 'draft'),
     ]);
+
+    cursorRef.current = result.lastDoc;
+    setHasMore(result.hasMore);
 
     // Add a virtual "draft" version at the top.
     const draftVersion: Version = {
@@ -87,9 +94,22 @@ export function VersionHistoryModal(
         modifiedBy: draftDoc?.sys?.modifiedBy || 'Unknown',
       },
     } as any;
-    setVersions([draftVersion, ...savedVersions]);
+    setVersions([draftVersion, ...result.versions]);
     setSelectedVersions(['draft']);
     setLoading(false);
+  }
+
+  async function loadMore() {
+    if (!hasMore || loadingMore) return;
+    setLoadingMore(true);
+    const result = await cmsListVersions(docId, {
+      limit: PAGE_SIZE,
+      cursor: cursorRef.current!,
+    });
+    cursorRef.current = result.lastDoc;
+    setHasMore(result.hasMore);
+    setVersions((prev) => [...prev, ...result.versions]);
+    setLoadingMore(false);
   }
 
   async function restore(version: Version) {
@@ -178,15 +198,6 @@ export function VersionHistoryModal(
   }
   return (
     <div className="VersionHistoryModal">
-      <div className="VersionHistoryModal__header">
-        <Heading className="VersionHistoryModal__title" size="h2">
-          <IconHistory strokeWidth={1.5} />
-          <span>Version history</span>
-        </Heading>
-      </div>
-      <div className="VersionHistoryModal__docId">
-        <code>{docId}</code>
-      </div>
       <div className="VersionHistoryModal__actions">
         <Button
           component={selectedVersions.length === 2 ? 'a' : 'button'}
@@ -217,174 +228,195 @@ export function VersionHistoryModal(
           </p>
         </Text>
       ) : (
-        <Table className="VersionHistoryModal__versions">
-          <thead>
-            <tr>
-              <th>
-                <span className="VersionHistoryModal__versions__selectLabel">
-                  Select
-                </span>
-              </th>
-              <th>modified at</th>
-              <th>modified by</th>
-              <th>actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filteredVersions.map((version) => {
-              const isDraft = version._versionId === 'draft';
-              const isSelected = selectedVersions.includes(version._versionId);
-              const isDisabled = !isSelected && selectedVersions.length >= 2;
+        <>
+          <Table className="VersionHistoryModal__versions">
+            <thead>
+              <tr>
+                <th>
+                  <span className="VersionHistoryModal__versions__selectLabel">
+                    Select
+                  </span>
+                </th>
+                <th>modified at</th>
+                <th>modified by</th>
+                <th>actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredVersions.map((version) => {
+                const isDraft = version._versionId === 'draft';
+                const isSelected = selectedVersions.includes(
+                  version._versionId
+                );
+                const isDisabled = !isSelected && selectedVersions.length >= 2;
 
-              return (
-                <tr key={version._versionId}>
-                  <td>
-                    <Checkbox
-                      size="xs"
-                      checked={isSelected}
-                      disabled={isDisabled}
-                      onChange={() => toggleVersion(version._versionId)}
-                      className="VersionHistoryModal__versions__checkbox"
-                    />
-                  </td>
-                  <td>
-                    <div className="VersionHistoryModal__versions__modifiedAt">
-                      <Text
-                        size="body-sm"
-                        className="VersionHistoryModal__versions__modifiedAt__text"
-                      >
-                        {isDraft ? (
-                          <span title="Current Draft">
-                            {dateFormat.format(version.sys.modifiedAt.toDate())}{' '}
-                            (Latest)
-                          </span>
-                        ) : (
+                return (
+                  <tr key={version._versionId}>
+                    <td>
+                      <Checkbox
+                        size="xs"
+                        checked={isSelected}
+                        disabled={isDisabled}
+                        onChange={() => toggleVersion(version._versionId)}
+                        className="VersionHistoryModal__versions__checkbox"
+                      />
+                    </td>
+                    <td>
+                      <div className="VersionHistoryModal__versions__modifiedAt">
+                        <Text
+                          size="body-sm"
+                          className="VersionHistoryModal__versions__modifiedAt__text"
+                        >
+                          {isDraft ? (
+                            <span title="Current Draft">
+                              {dateFormat.format(
+                                version.sys.modifiedAt.toDate()
+                              )}{' '}
+                              (Latest)
+                            </span>
+                          ) : (
+                            <>
+                              {dateFormat.format(
+                                version.sys.modifiedAt.toDate()
+                              )}
+                              {version.tags?.includes('published') && (
+                                <span className="VersionHistoryModal__publishedLabel">
+                                  (Published)
+                                </span>
+                              )}
+                            </>
+                          )}
+                        </Text>
+                        {version.publishMessage && (
+                          <Popover
+                            withCloseButton={true}
+                            opened={
+                              openTooltip === `${version._versionId}-message`
+                            }
+                            onClose={() => setOpenTooltip(null)}
+                            position="right"
+                            withArrow
+                            shadow="md"
+                            width={320}
+                            classNames={{
+                              body: 'VersionHistoryModal__popover__body',
+                              arrow: 'VersionHistoryModal__popover__arrow',
+                              close: 'VersionHistoryModal__popover__close',
+                            }}
+                            target={
+                              <ActionIcon
+                                size="xs"
+                                variant="light"
+                                className="VersionHistoryModal__messageIcon"
+                                onClick={() =>
+                                  setOpenTooltip(
+                                    openTooltip ===
+                                      `${version._versionId}-message`
+                                      ? null
+                                      : `${version._versionId}-message`
+                                  )
+                                }
+                              >
+                                <IconMessage size={18} />
+                              </ActionIcon>
+                            }
+                          >
+                            <div className="VersionHistoryModal__message">
+                              {version.publishMessage}
+                            </div>
+                          </Popover>
+                        )}
+                        {(() => {
+                          const releaseTag = version.tags?.find((tag) =>
+                            tag.startsWith('release:')
+                          );
+                          const releaseId = releaseTag?.replace('release:', '');
+                          return (
+                            releaseId && (
+                              <Popover
+                                withCloseButton={true}
+                                opened={
+                                  openTooltip ===
+                                  `${version._versionId}-release`
+                                }
+                                onClose={() => setOpenTooltip(null)}
+                                position="right"
+                                withArrow
+                                shadow="md"
+                                width={320}
+                                target={
+                                  <ActionIcon
+                                    size="xs"
+                                    variant="light"
+                                    className="VersionHistoryModal__messageIcon"
+                                    onClick={() =>
+                                      setOpenTooltip(
+                                        openTooltip ===
+                                          `${version._versionId}-release`
+                                          ? null
+                                          : `${version._versionId}-release`
+                                      )
+                                    }
+                                  >
+                                    <IconRocket size={18} />
+                                  </ActionIcon>
+                                }
+                              >
+                                <div className="VersionHistoryModal__message">
+                                  <strong>Release:</strong> {releaseId}
+                                </div>
+                              </Popover>
+                            )
+                          );
+                        })()}
+                      </div>
+                    </td>
+                    <td>
+                      <Text size="body-sm">{version.sys.modifiedBy}</Text>
+                    </td>
+                    <td>
+                      <div className="VersionHistoryModal__versions__buttons">
+                        {!isDraft && (
                           <>
-                            {dateFormat.format(version.sys.modifiedAt.toDate())}
-                            {version.tags?.includes('published') && (
-                              <span className="VersionHistoryModal__publishedLabel">
-                                (Published)
-                              </span>
-                            )}
+                            <Button
+                              variant="default"
+                              size="xs"
+                              compact
+                              onClick={() => restore(version)}
+                            >
+                              restore
+                            </Button>
+                            <Button
+                              variant="default"
+                              size="xs"
+                              compact
+                              onClick={() => copyToNewDoc(version)}
+                              leftIcon={<IconCopy size={12} />}
+                            >
+                              copy to doc
+                            </Button>
                           </>
                         )}
-                      </Text>
-                      {version.publishMessage && (
-                        <Popover
-                          withCloseButton={true}
-                          opened={
-                            openTooltip === `${version._versionId}-message`
-                          }
-                          onClose={() => setOpenTooltip(null)}
-                          position="right"
-                          withArrow
-                          shadow="md"
-                          width={320}
-                          classNames={{
-                            body: 'VersionHistoryModal__popover__body',
-                            arrow: 'VersionHistoryModal__popover__arrow',
-                            close: 'VersionHistoryModal__popover__close',
-                          }}
-                          target={
-                            <ActionIcon
-                              size="xs"
-                              variant="light"
-                              className="VersionHistoryModal__messageIcon"
-                              onClick={() =>
-                                setOpenTooltip(
-                                  openTooltip ===
-                                    `${version._versionId}-message`
-                                    ? null
-                                    : `${version._versionId}-message`
-                                )
-                              }
-                            >
-                              <IconMessage size={18} />
-                            </ActionIcon>
-                          }
-                        >
-                          <div className="VersionHistoryModal__message">
-                            {version.publishMessage}
-                          </div>
-                        </Popover>
-                      )}
-                      {(() => {
-                        const releaseTag = version.tags?.find((tag) =>
-                          tag.startsWith('release:')
-                        );
-                        const releaseId = releaseTag?.replace('release:', '');
-                        return (
-                          releaseId && (
-                            <Popover
-                              withCloseButton={true}
-                              opened={
-                                openTooltip === `${version._versionId}-release`
-                              }
-                              onClose={() => setOpenTooltip(null)}
-                              position="right"
-                              withArrow
-                              shadow="md"
-                              width={320}
-                              target={
-                                <ActionIcon
-                                  size="xs"
-                                  variant="light"
-                                  className="VersionHistoryModal__messageIcon"
-                                  onClick={() =>
-                                    setOpenTooltip(
-                                      openTooltip ===
-                                        `${version._versionId}-release`
-                                        ? null
-                                        : `${version._versionId}-release`
-                                    )
-                                  }
-                                >
-                                  <IconRocket size={18} />
-                                </ActionIcon>
-                              }
-                            >
-                              <div className="VersionHistoryModal__message">
-                                <strong>Release:</strong> {releaseId}
-                              </div>
-                            </Popover>
-                          )
-                        );
-                      })()}
-                    </div>
-                  </td>
-                  <td>
-                    <Text size="body-sm">{version.sys.modifiedBy}</Text>
-                  </td>
-                  <td>
-                    <div className="VersionHistoryModal__versions__buttons">
-                      {!isDraft && (
-                        <>
-                          <Button
-                            variant="default"
-                            size="xs"
-                            compact
-                            onClick={() => restore(version)}
-                          >
-                            restore
-                          </Button>
-                          <Button
-                            variant="default"
-                            size="xs"
-                            compact
-                            onClick={() => copyToNewDoc(version)}
-                            leftIcon={<IconCopy size={12} />}
-                          >
-                            copy to doc
-                          </Button>
-                        </>
-                      )}
-                    </div>
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </Table>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </Table>
+          {hasMore && (
+            <div className="VersionHistoryModal__loadMore">
+              <Button
+                variant="subtle"
+                size="xs"
+                loading={loadingMore}
+                onClick={loadMore}
+              >
+                Load more versions
+              </Button>
+            </div>
+          )}
+        </>
       )}
     </div>
   );

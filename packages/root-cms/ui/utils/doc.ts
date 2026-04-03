@@ -18,6 +18,9 @@ import {
   Query,
   WriteBatch,
   DocumentReference,
+  limit,
+  startAfter,
+  QueryDocumentSnapshot,
 } from 'firebase/firestore';
 import {testValidRichTextData} from '../../shared/richtext.js';
 import {logAction} from './actions.js';
@@ -743,27 +746,43 @@ export async function getDraftDocs(
   return drafts;
 }
 
+export interface ListVersionsResult {
+  versions: Version[];
+  lastDoc: QueryDocumentSnapshot | null;
+  hasMore: boolean;
+}
+
 export async function cmsListVersions(
   docId: string,
-  options?: {tags?: string[]}
-) {
+  options?: {tags?: string[]; limit?: number; cursor?: QueryDocumentSnapshot}
+): Promise<ListVersionsResult> {
   const db = window.firebase.db;
   const docRef = getDraftDocRef(docId);
   const versionsCollection = collection(db, docRef.path, 'Versions');
-  let q: Query = query(versionsCollection, orderBy('sys.modifiedAt', 'desc'));
+  const pageSize = options?.limit ?? 50;
+  let q: Query = query(
+    versionsCollection,
+    orderBy('sys.modifiedAt', 'desc'),
+    limit(pageSize)
+  );
   if (options?.tags) {
     q = query(q, where('tags', 'array-contains-any', options.tags));
   }
+  if (options?.cursor) {
+    q = query(q, startAfter(options.cursor));
+  }
   const querySnapshot = await getDocs(q);
   const versions: Version[] = [];
+  let lastDoc: QueryDocumentSnapshot | null = null;
   querySnapshot.forEach((doc) => {
     const version = {
       ...(doc.data() as Version),
       _versionId: doc.id,
     };
     versions.push(version);
+    lastDoc = doc;
   });
-  return versions;
+  return {versions, lastDoc, hasMore: querySnapshot.size === pageSize};
 }
 
 export async function cmsRestoreVersion(docId: string, version: Version) {
