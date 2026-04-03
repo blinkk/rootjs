@@ -1,7 +1,7 @@
 import crypto from 'node:crypto';
 import path from 'node:path';
 import {Request, Response, RootConfig} from '@blinkk/root';
-import {render as renderToString} from 'preact-render-to-string';
+import {renderJsxToString} from '@blinkk/root/jsx';
 import {CMSPluginOptions} from './plugin.js';
 import {getCollectionSchema, getProjectSchemas} from './project.js';
 import {Collection} from './schema.js';
@@ -146,7 +146,7 @@ export async function renderApp(
   const projectName = cmsConfig.name || cmsConfig.id || '';
   const title = getCmsTitle(projectName, cmsConfig.minimalBranding);
 
-  const mainHtml = renderToString(
+  const mainHtml = renderJsxToString(
     <App title={title} ctx={ctx} favicon={cmsConfig.favicon} />
   );
   const nonce = generateNonce();
@@ -265,7 +265,7 @@ export async function renderSignIn(
     }
   }
 
-  const mainHtml = renderToString(
+  const mainHtml = renderJsxToString(
     <SignIn title="Sign in" ctx={ctx} favicon={options.cmsConfig.favicon} />
   );
   const nonce = generateNonce();

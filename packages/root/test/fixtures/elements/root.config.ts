@@ -1,11 +1,10 @@
 import path from 'node:path';
 import {URL} from 'node:url';
-import {defineConfig} from '../../../dist/core';
+import {defineConfig} from '../../../dist/core.js';
 
 const rootDir = new URL('.', import.meta.url).pathname;
 
 export default defineConfig({
-  prettyHtml: true,
   elements: {
     include: [path.resolve(rootDir, 'designsystem')],
     exclude: [/\.stories\.tsx$/],
@@ -21,5 +20,9 @@ export default defineConfig({
         },
       },
     },
+  },
+  jsxRenderer: {
+    mode: 'pretty',
+    blockElements: ['root-counter', 'root-exclude'],
   },
 });

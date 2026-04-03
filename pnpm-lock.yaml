@@ -50,9 +50,6 @@ importers:
       preact:
         specifier: 10.27.1
         version: 10.27.1
-      preact-render-to-string:
-        specifier: 6.6.1
-        version: 6.6.1(preact@10.27.1)
     devDependencies:
       firebase-tools:
         specifier: 13.35.1
@@ -64,11 +61,8 @@ importers:
         specifier: workspace:*
         version: link:../../packages/root
       preact:
-        specifier: ^10.10.6
-        version: 10.18.1
-      preact-render-to-string:
-        specifier: ^5.2.3
-        version: 5.2.4(preact@10.18.1)
+        specifier: 10.27.1
+        version: 10.27.1
 
   examples/blog:
     dependencies:
@@ -87,9 +81,6 @@ importers:
       preact:
         specifier: 10.27.1
         version: 10.27.1
-      preact-render-to-string:
-        specifier: 6.6.1
-        version: 6.6.1(preact@10.27.1)
     devDependencies:
       '@blinkk/rds':
         specifier: workspace:*
@@ -112,9 +103,6 @@ importers:
       preact:
         specifier: 10.27.1
         version: 10.27.1
-      preact-render-to-string:
-        specifier: 6.6.1
-        version: 6.6.1(preact@10.27.1)
     devDependencies:
       '@types/node':
         specifier: 18.11.18
@@ -128,9 +116,6 @@ importers:
       preact:
         specifier: 10.27.1
         version: 10.27.1
-      preact-render-to-string:
-        specifier: 6.6.1
-        version: 6.6.1(preact@10.27.1)
     devDependencies:
       '@types/node':
         specifier: 18.11.18
@@ -144,9 +129,6 @@ importers:
       preact:
         specifier: 10.27.1
         version: 10.27.1
-      preact-render-to-string:
-        specifier: 6.6.1
-        version: 6.6.1(preact@10.27.1)
 
   packages/create-root:
     dependencies:
@@ -601,10 +583,10 @@ importers:
         version: 10.27.1
       preact-iso:
         specifier: 2.11.1
-        version: 2.11.1(preact-render-to-string@6.6.1)(preact@10.27.1)
+        version: 2.11.1(preact-render-to-string@6.6.7)(preact@10.27.1)
       preact-render-to-string:
-        specifier: 6.6.1
-        version: 6.6.1(preact@10.27.1)
+        specifier: 6.6.7
+        version: 6.6.7(preact@10.27.1)
       react:
         specifier: npm:@preact/compat@18.3.1
         version: /@preact/compat@18.3.1(preact@10.27.1)
@@ -663,9 +645,6 @@ importers:
       preact:
         specifier: 10.27.1
         version: 10.27.1
-      preact-render-to-string:
-        specifier: 6.6.1
-        version: 6.6.1(preact@10.27.1)
       tsup:
         specifier: 8.5.0
         version: 8.5.0(typescript@5.2.2)
@@ -3640,22 +3619,22 @@ packages:
       read-yaml-file: 1.1.0
     dev: true
 
-  /@maxim_mazurok/gapi.client.discovery-v1@0.4.20200806:
-    resolution: {integrity: sha512-Jeo/KZqK39DI6ExXHcJ4lqnn1O/wEqboQ6eQ8WnNpu5eJ7wUnX/C5KazOgs1aRhnIB/dVzDe8wm62nmtkMIoaw==}
+  /@maxim_mazurok/gapi.client.discovery-v1@0.5.20200806:
+    resolution: {integrity: sha512-oVq9hnnI5VhAtsx55iJbPz8NRfJtWFpI1kINKeuygzCvsx90b1GQDeN3MDUvhADXiQ7+Izs316cqBnJjoDxCow==}
     dependencies:
       '@types/gapi.client': 1.0.8
       '@types/gapi.client.discovery-v1': 0.0.4
     dev: true
 
-  /@maxim_mazurok/gapi.client.drive-v3@0.1.20260305:
-    resolution: {integrity: sha512-i5D44X8hazSANFGOwzs6ONwB70fV+dTCsrodsbcjx1Cz+4UVC/QLPtnH/suSe7McHZOkUcrOzzbW8d2NAjCRMA==}
+  /@maxim_mazurok/gapi.client.drive-v3@0.2.20260311:
+    resolution: {integrity: sha512-2SVn8bIFZB9pq1JjqBNY/Agebv8gjHdr5k+ippSVsz07eWpl7d0Vxj4huX1O60ev0NDqrIx6a7w6MFFUIKlN6w==}
     dependencies:
       '@types/gapi.client': 1.0.8
       '@types/gapi.client.discovery-v1': 0.0.4
     dev: true
 
-  /@maxim_mazurok/gapi.client.sheets-v4@0.2.20260304:
-    resolution: {integrity: sha512-zrVgWMTZfaQ9h9cGgZLKu/2XKjLl/Rj8z7mz/WvtnA1eLfbLE0RG3zaN3IxMGcAXKfPSBw1/n2igi3iKEwVEgg==}
+  /@maxim_mazurok/gapi.client.sheets-v4@0.2.20260311:
+    resolution: {integrity: sha512-vQIXInvthytk29BQD+jwEKEDF95YijbTihVqzb/q0tr1lAvazAybM9iTaJ2W6bVUkcq8ydvTiYr8mKFicm3Mkw==}
     dependencies:
       '@types/gapi.client': 1.0.8
       '@types/gapi.client.discovery-v1': 0.0.4
@@ -5619,19 +5598,19 @@ packages:
   /@types/gapi.client.discovery-v1@0.0.4:
     resolution: {integrity: sha512-uevhRumNE65F5mf2gABLaReOmbFSXONuzFZjNR3dYv6BmkHg+wciubHrfBAsp3554zNo3Dcg6dUAlwMqQfpwjQ==}
     dependencies:
-      '@maxim_mazurok/gapi.client.discovery-v1': 0.4.20200806
+      '@maxim_mazurok/gapi.client.discovery-v1': 0.5.20200806
     dev: true
 
   /@types/gapi.client.drive-v3@0.0.4:
     resolution: {integrity: sha512-jE37dJ0EzAdY0aJPFOp20xmec/aO0P4HtUIA9k07RMPyedFDOcuMlSac1r0PklwQdgXF7BHaMoObNHNAnwSQUQ==}
     dependencies:
-      '@maxim_mazurok/gapi.client.drive-v3': 0.1.20260305
+      '@maxim_mazurok/gapi.client.drive-v3': 0.2.20260311
     dev: true
 
   /@types/gapi.client.sheets-v4@0.0.4:
     resolution: {integrity: sha512-6kTJ7aDMAElfdQV1XzVJmZWjgbibpa84DMuKuaN8Cwqci/dkglPyHXKvsGrRugmuYvgFYr35AQqwz6j3q8R0dw==}
     dependencies:
-      '@maxim_mazurok/gapi.client.sheets-v4': 0.2.20260304
+      '@maxim_mazurok/gapi.client.sheets-v4': 0.2.20260311
     dev: true
 
   /@types/gapi.client@1.0.8:
@@ -13091,24 +13070,15 @@ packages:
       preact: 10.27.1
     dev: true
 
-  /preact-iso@2.11.1(preact-render-to-string@6.6.1)(preact@10.27.1):
+  /preact-iso@2.11.1(preact-render-to-string@6.6.7)(preact@10.27.1):
     resolution: {integrity: sha512-rLy0RmzP/hrDjnFdnEblxFgKtzUj4njkHrpGJBGS7S4QuYw1zv0lA38qsWpeAAB10JAz/hF2CsHrLen9ufCtbw==}
     peerDependencies:
       preact: '>=10 || >= 11.0.0-0'
       preact-render-to-string: '>=6.4.0'
     dependencies:
       preact: 10.27.1
-      preact-render-to-string: 6.6.1(preact@10.27.1)
+      preact-render-to-string: 6.6.7(preact@10.27.1)
     dev: true
-
-  /preact-render-to-string@5.2.4(preact@10.18.1):
-    resolution: {integrity: sha512-iIPHb3BXUQ3Za6KNhkjN/waq11Oh+QWWtAgN3id3LrL+cszH3DYh8TxJPNQ6Aogsbu4JsqdJLBZltwPFpG6N6w==}
-    peerDependencies:
-      preact: '>=10'
-    dependencies:
-      preact: 10.18.1
-      pretty-format: 3.8.0
-    dev: false
 
   /preact-render-to-string@6.6.1(preact@10.27.1):
     resolution: {integrity: sha512-IIMfXRjmbSP9QmG18WJLQa4Z4yx3J0VC9QN5q9z2XYlWSzFlJ+bSm/AyLyyV/YFwjof1OXFX2Mz6Ao60LXudJg==}
@@ -13116,14 +13086,19 @@ packages:
       preact: '>=10 || >= 11.0.0-0'
     dependencies:
       preact: 10.27.1
+    dev: true
+
+  /preact-render-to-string@6.6.7(preact@10.27.1):
+    resolution: {integrity: sha512-3XdbsX3+vn9dQW+jJI/FsI9rlkgl6dbeUpqLsChak6jp3j3auFqBCkno7VChbMFs5Q8ylBj6DrUkKRwtVN3nvw==}
+    peerDependencies:
+      preact: '>=10 || >= 11.0.0-0'
+    dependencies:
+      preact: 10.27.1
+    dev: true
 
   /preact@10.11.0:
     resolution: {integrity: sha512-Fk6+vB2kb6mSJfDgODq0YDhMfl0HNtK5+Uc9QqECO4nlyPAQwCI+BKyWO//idA7ikV7o+0Fm6LQmNuQi1wXI1w==}
     dev: true
-
-  /preact@10.18.1:
-    resolution: {integrity: sha512-mKUD7RRkQQM6s7Rkmi7IFkoEHjuFqRQUaXamO61E6Nn7vqF/bo7EZCmSyrUnp2UWHw0O7XjZ2eeXis+m7tf4lg==}
-    dev: false
 
   /preact@10.27.1:
     resolution: {integrity: sha512-V79raXEWch/rbqoNc7nT9E4ep7lu+mI3+sBmfRD4i1M73R3WLYcCtdI0ibxGVf4eQL8ZIz2nFacqEC+rmnOORQ==}
@@ -13174,10 +13149,6 @@ packages:
       ansi-styles: 5.2.0
       react-is: 17.0.2
     dev: true
-
-  /pretty-format@3.8.0:
-    resolution: {integrity: sha512-WuxUnVtlWL1OfZFQFuqvnvs6MiAGk9UNsBostyBOB0Is9wb5uRESevA6rnl/rkksXaGX3GzZhPup5d6Vp1nFew==}
-    dev: false
 
   /prismjs@1.30.0:
     resolution: {integrity: sha512-DEvV2ZF2r2/63V+tK8hQvrR2ZGn10srHbXviTlcv7Kpzw8jWiNTqbVgjO3IY8RxrrOUF8VPMQQFysYYYv0YZxw==}

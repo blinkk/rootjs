@@ -11,9 +11,6 @@
     "url": "git+https://github.com/blinkk/rootjs.git",
     "directory": "packages/root-cms"
   },
-  "publishConfig": {
-    "provenance": true
-  },
   "files": [
     "dist/**/*"
   ],
@@ -156,7 +153,7 @@
     "playwright": "1.56.1",
     "preact": "10.27.1",
     "preact-iso": "2.11.1",
-    "preact-render-to-string": "6.6.1",
+    "preact-render-to-string": "6.6.7",
     "react": "npm:@preact/compat@18.3.1",
     "react-dom": "npm:@preact/compat@18.3.1",
     "react-easy-crop": "5.5.6",
@@ -171,8 +168,7 @@
     "@blinkk/root": "2.5.13",
     "firebase-admin": ">=11",
     "firebase-functions": ">=4",
-    "preact": ">=10",
-    "preact-render-to-string": ">=5"
+    "preact": ">=10"
   },
   "peerDependenciesMeta": {
     "firebase-functions": {

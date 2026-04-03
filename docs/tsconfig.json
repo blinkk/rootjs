@@ -8,7 +8,7 @@
     "esModuleInterop": true,
     "types": ["@blinkk/root/client"],
     "jsx": "react-jsx",
-    "jsxImportSource": "preact",
+    "jsxImportSource": "@blinkk/root/jsx",
     "paths": {
       "@/*": ["./*"]
     }
