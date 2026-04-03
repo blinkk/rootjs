@@ -1002,9 +1002,7 @@ LocalizationModal.Translations = (props: TranslationsProps) => {
         }
 
         if (action === 'import') {
-          if (!Array.isArray(resData.data)) {
-            throw new Error('Import did not return translation data.');
-          }
+          if (Array.isArray(resData.data)) {
           // Convert returned rows to CsvTranslation format for import.
           const importedRows: CsvTranslation[] = resData.data.map(
             (row: {
@@ -1079,6 +1077,41 @@ LocalizationModal.Translations = (props: TranslationsProps) => {
             loading: false,
             autoClose: 5000,
           });
+          } else {
+            // TranslationImportResult: display notification with optional link.
+            const importData = resData.data || {};
+            const importTitle = importData.title || 'Import complete';
+            const importMessage =
+              importData.message ||
+              `Imported translations from ${serviceLabel}.`;
+            const importLink = importData.link;
+            updateNotification({
+              id: notificationId,
+              title: importTitle,
+              color: importData.color || undefined,
+              message: importLink?.url ? (
+                <div>
+                  <div>{importMessage}</div>
+                  <Button
+                    component="a"
+                    href={importLink.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    size="xs"
+                    variant="default"
+                    rightIcon={<IconArrowUpRight size={14} />}
+                    style={{marginTop: '8px'}}
+                  >
+                    {importLink.label || 'Open'}
+                  </Button>
+                </div>
+              ) : (
+                importMessage
+              ),
+              loading: false,
+              autoClose: importLink?.url ? 10000 : 5000,
+            });
+          }
         } else {
           const exportData = resData.data || {};
           const exportTitle = exportData.title || 'Exported!';
@@ -1088,6 +1121,7 @@ LocalizationModal.Translations = (props: TranslationsProps) => {
           updateNotification({
             id: notificationId,
             title: exportTitle,
+            color: exportData.color || undefined,
             message: exportLink?.url ? (
               <div>
                 <div>{exportMessage}</div>
