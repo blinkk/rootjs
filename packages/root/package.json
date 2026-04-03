@@ -1,6 +1,6 @@
 {
   "name": "@blinkk/root",
-  "version": "3.0.0",
+  "version": "2.5.13",
   "author": "s@blinkk.com",
   "license": "MIT",
   "engines": {
@@ -10,6 +10,9 @@
     "type": "git",
     "url": "git+https://github.com/blinkk/rootjs.git",
     "directory": "packages/root"
+  },
+  "publishConfig": {
+    "provenance": true
   },
   "files": [
     "bin/*",
@@ -39,18 +42,6 @@
     "./functions": {
       "types": "./dist/functions.d.ts",
       "import": "./dist/functions.js"
-    },
-    "./jsx": {
-      "types": "./dist/jsx.d.ts",
-      "import": "./dist/jsx.js"
-    },
-    "./jsx/jsx-runtime": {
-      "types": "./dist/jsx/jsx-runtime.d.ts",
-      "import": "./dist/jsx/jsx-runtime.js"
-    },
-    "./jsx/jsx-dev-runtime": {
-      "types": "./dist/jsx/jsx-dev-runtime.d.ts",
-      "import": "./dist/jsx/jsx-dev-runtime.js"
     },
     "./middleware": {
       "types": "./dist/middleware.d.ts",
@@ -106,12 +97,6 @@
       "optional": true
     },
     "firebase-admin": {
-      "optional": true
-    },
-    "preact": {
-      "optional": true
-    },
-    "preact-render-to-string": {
       "optional": true
     }
   },
