@@ -1,0 +1,85 @@
+name: Release Alpha
+
+on:
+  push:
+    branches:
+      - alpha
+
+defaults:
+  run:
+    shell: bash
+
+env:
+  FORCE_COLOR: true
+
+permissions:
+  # Allow OIDC tokens to be written for publishing to npm.
+  # https://docs.npmjs.com/trusted-publishers#step-2-configure-your-cicd-workflow
+  id-token: write
+  # Required by changesets to submit PRs.
+  contents: write
+  pull-requests: write
+
+jobs:
+  release-alpha:
+    name: Alpha Release
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      # A newer version of npm is required for publishing with OIDC.
+      - name: Update npm
+        # NOTE(stevenle): npm@latest isn't working due to a bug upstream.
+        # https://github.com/npm/cli/issues/9151
+        run: |
+            npm install -g npm@~11.10.0
+
+      - name: Setup PNPM
+        uses: pnpm/action-setup@v4
+        with:
+          version: '8.9.0'
+          run_install: false
+
+      - name: Install dependencies
+        run: pnpm install
+
+      - name: Get pnpm store directory
+        shell: bash
+        run: |
+          echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
+
+      - uses: actions/cache@v4
+        name: Setup pnpm cache
+        with:
+          path: ${{ env.STORE_PATH }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-
+
+      - name: Install playwright deps
+        working-directory: ./packages/root-cms
+        run: pnpm exec playwright install
+
+      - name: Unit tests
+        run: pnpm test
+
+      - name: Build packages
+        run: pnpm run build
+
+      - name: Enter changeset pre mode
+        run: pnpm changeset pre enter alpha
+
+      - name: Version packages
+        run: pnpm changeset version
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Publish alpha release
+        run: pnpm changeset publish --provenance
+        env:
+          NPM_TOKEN: ''
