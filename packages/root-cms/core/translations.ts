@@ -42,6 +42,35 @@ export interface TranslationExportResult {
     /** Optional label for the link. Defaults to "Open". */
     label?: string;
   };
+  /**
+   * Notification status controlling the color of the notification.
+   * - `'success'`: green
+   * - `'error'`: red
+   * - `'info'` (default): neutral
+   */
+  status?: 'success' | 'info' | 'error';
+}
+
+/** Result returned by an onImport handler when no rows are imported. */
+export interface TranslationImportResult {
+  /** Optional title displayed in the notification after import. */
+  title?: string;
+  /** Optional message displayed in the notification after import. */
+  message?: string;
+  /** Optional link displayed in the notification (e.g. to the translation service). */
+  link?: {
+    /** The URL to link to. */
+    url: string;
+    /** Optional label for the link. Defaults to "Open". */
+    label?: string;
+  };
+  /**
+   * Notification status controlling the color of the notification.
+   * - `'success'`: green
+   * - `'error'`: red
+   * - `'info'` (default): neutral
+   */
+  status?: 'success' | 'info' | 'error';
 }
 
 /** Configuration for defining a CMS translation service. */
@@ -58,12 +87,13 @@ export interface CMSTranslationService {
   /**
    * Async function to import translations from the service. Should return an
    * array of translation rows that will be merged into the CMS translations
-   * database.
+   * database, or a `TranslationImportResult` object to display a notification
+   * without importing any rows.
    */
   onImport?: (
     ctx: TranslationServiceContext,
     data: TranslationRow[]
-  ) => Promise<TranslationRow[]>;
+  ) => Promise<TranslationRow[] | TranslationImportResult>;
   /**
    * Async function to export translations to the service. Receives the
    * current translation rows for the document. Can optionally return an object
