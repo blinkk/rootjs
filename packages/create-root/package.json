@@ -12,9 +12,6 @@
     "url": "git+https://github.com/blinkk/rootjs.git",
     "directory": "packages/create-root"
   },
-  "publishConfig": {
-    "provenance": true
-  },
   "files": [
     "dist/*"
   ],
