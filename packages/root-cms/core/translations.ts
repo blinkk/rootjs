@@ -43,10 +43,12 @@ export interface TranslationExportResult {
     label?: string;
   };
   /**
-   * Optional Mantine notification color, e.g. `'green'`, `'red'`, `'blue'`.
-   * When omitted the default notification color is used.
+   * Notification status controlling the color of the notification.
+   * - `'success'`: green
+   * - `'error'`: red
+   * - `'info'` (default): neutral
    */
-  color?: string;
+  status?: 'success' | 'info' | 'error';
 }
 
 /** Result returned by an onImport handler when no rows are imported. */
@@ -63,10 +65,12 @@ export interface TranslationImportResult {
     label?: string;
   };
   /**
-   * Optional Mantine notification color, e.g. `'green'`, `'red'`, `'blue'`.
-   * When omitted the default notification color is used.
+   * Notification status controlling the color of the notification.
+   * - `'success'`: green
+   * - `'error'`: red
+   * - `'info'` (default): neutral
    */
-  color?: string;
+  status?: 'success' | 'info' | 'error';
 }
 
 /** Configuration for defining a CMS translation service. */

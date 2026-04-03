@@ -1088,7 +1088,7 @@ LocalizationModal.Translations = (props: TranslationsProps) => {
             updateNotification({
               id: notificationId,
               title: importTitle,
-              color: importData.color || undefined,
+              color: importData.status === 'success' ? 'green' : importData.status === 'error' ? 'red' : undefined,
               message: importLink?.url ? (
                 <div>
                   <div>{importMessage}</div>
@@ -1121,7 +1121,7 @@ LocalizationModal.Translations = (props: TranslationsProps) => {
           updateNotification({
             id: notificationId,
             title: exportTitle,
-            color: exportData.color || undefined,
+            color: exportData.status === 'success' ? 'green' : exportData.status === 'error' ? 'red' : undefined,
             message: exportLink?.url ? (
               <div>
                 <div>{exportMessage}</div>
