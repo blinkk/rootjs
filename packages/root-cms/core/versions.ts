@@ -18,6 +18,7 @@
  * edited.
  */
 
+import fs from 'node:fs';
 import path from 'node:path';
 import {RootConfig} from '@blinkk/root';
 import {Firestore, Query, Timestamp} from 'firebase-admin/firestore';
@@ -145,9 +146,13 @@ export class VersionsService {
    * Returns a list of collection ids for the Root project.
    */
   private async listCollections(): Promise<string[]> {
+    const collectionsDir = path.join(this.rootConfig.rootDir, 'collections');
+    if (!fs.existsSync(collectionsDir)) {
+      return [];
+    }
     const collectionIds: string[] = [];
     const collectionFileNames = await glob('*.schema.ts', {
-      cwd: path.join(this.rootConfig.rootDir, 'collections'),
+      cwd: collectionsDir,
     });
     collectionFileNames.forEach((filename) => {
       collectionIds.push(filename.slice(0, -10));
