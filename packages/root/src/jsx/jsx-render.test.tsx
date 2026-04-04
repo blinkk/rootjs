@@ -471,3 +471,73 @@ test('pretty mode: style tag with newlines in text content', () => {
   const output = renderJsxToString(vnode, {mode: 'pretty'});
   expect(output).toBe('<style>body {\n  color: red;\n}</style>\n');
 });
+
+// --- SVG attribute tests ---
+
+test('svg: converts strokeWidth to stroke-width', () => {
+  const vnode = <path strokeWidth="2" />;
+  const output = renderJsxToString(vnode, {mode: 'minimal'});
+  expect(output).toBe('<path stroke-width="2"></path>');
+});
+
+test('svg: converts stopColor to stop-color', () => {
+  const vnode = <stop stopColor="blue" offset="0%" />;
+  const output = renderJsxToString(vnode, {mode: 'minimal'});
+  expect(output).toBe('<stop stop-color="blue" offset="0%"></stop>');
+});
+
+test('svg: converts stopOpacity to stop-opacity', () => {
+  const vnode = <stop stopOpacity="0.5" />;
+  const output = renderJsxToString(vnode, {mode: 'minimal'});
+  expect(output).toBe('<stop stop-opacity="0.5"></stop>');
+});
+
+test('svg: converts fillOpacity and fillRule', () => {
+  const vnode = <path fillOpacity="0.5" fillRule="evenodd" />;
+  const output = renderJsxToString(vnode, {mode: 'minimal'});
+  expect(output).toBe('<path fill-opacity="0.5" fill-rule="evenodd"></path>');
+});
+
+test('svg: converts stroke-related attributes', () => {
+  const vnode = (
+    <line
+      strokeDasharray="5,5"
+      strokeDashoffset="2"
+      strokeLinecap="round"
+      strokeLinejoin="miter"
+      strokeOpacity="0.8"
+    />
+  );
+  const output = renderJsxToString(vnode, {mode: 'minimal'});
+  expect(output).toBe(
+    '<line stroke-dasharray="5,5" stroke-dashoffset="2" stroke-linecap="round" stroke-linejoin="miter" stroke-opacity="0.8"></line>'
+  );
+});
+
+test('svg: converts clipPath and clipRule', () => {
+  const vnode = <rect clipPath="url(#clip)" clipRule="evenodd" />;
+  const output = renderJsxToString(vnode, {mode: 'minimal'});
+  expect(output).toBe(
+    '<rect clip-path="url(#clip)" clip-rule="evenodd"></rect>'
+  );
+});
+
+test('svg: converts text presentation attributes', () => {
+  const vnode = <text textAnchor="middle" textDecoration="underline" dominantBaseline="central" />;
+  const output = renderJsxToString(vnode, {mode: 'minimal'});
+  expect(output).toBe(
+    '<text text-anchor="middle" text-decoration="underline" dominant-baseline="central"></text>'
+  );
+});
+
+test('svg: preserves non-mapped attributes like viewBox', () => {
+  const vnode = (
+    <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="50" cy="50" r="40" />
+    </svg>
+  );
+  const output = renderJsxToString(vnode, {mode: 'minimal'});
+  expect(output).toBe(
+    '<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><circle cx="50" cy="50" r="40"></circle></svg>'
+  );
+});
