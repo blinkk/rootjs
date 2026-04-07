@@ -3,10 +3,8 @@
  * [param], [...catchall], and [[...optcatchall]] placeholders.
  */
 export class RouteTrie<T> {
-  // Use null-prototype object to avoid collisions with Object.prototype properties.
-  // @see https://github.com/blinkk/rootjs/pull/1020
-  private children: Record<string, RouteTrie<T>> = Object.create(null);
-  private paramNodes?: {[param: string]: ParamNode<T>};
+  private children: Map<string, RouteTrie<T>> = new Map();
+  private paramNodes?: Map<string, ParamNode<T>>;
   private catchAllNodes?: CatchAllNode<T>;
   private optCatchAllNodes?: CatchAllNode<T>;
   private route?: T;
@@ -39,18 +37,18 @@ export class RouteTrie<T> {
     let nextNode: RouteTrie<T>;
     if (head.startsWith('[') && head.endsWith(']')) {
       if (!this.paramNodes) {
-        this.paramNodes = {};
+        this.paramNodes = new Map();
       }
       const paramName = head.slice(1, -1);
-      if (!this.paramNodes[paramName]) {
-        this.paramNodes[paramName] = new ParamNode(paramName);
+      if (!this.paramNodes.has(paramName)) {
+        this.paramNodes.set(paramName, new ParamNode(paramName));
       }
-      nextNode = this.paramNodes[paramName].trie;
+      nextNode = this.paramNodes.get(paramName)!.trie;
     } else {
-      nextNode = this.children[head];
+      nextNode = this.children.get(head)!;
       if (!nextNode) {
         nextNode = new RouteTrie();
-        this.children[head] = nextNode;
+        this.children.set(head, nextNode);
       }
     }
     nextNode.add(tail, route);
@@ -89,7 +87,7 @@ export class RouteTrie<T> {
       addPromise(cb('/', this.route));
     }
     if (this.paramNodes) {
-      Object.values(this.paramNodes).forEach((paramChild) => {
+      this.paramNodes.forEach((paramChild) => {
         const param = `[${paramChild.name}]`;
         paramChild.trie.walk((childPath: string, route: T) => {
           const paramUrlPath = `/${param}${childPath}`;
@@ -105,12 +103,11 @@ export class RouteTrie<T> {
       const wildcardUrlPath = `/[[...${this.optCatchAllNodes.name}]]`;
       addPromise(cb(wildcardUrlPath, this.optCatchAllNodes.route));
     }
-    for (const subpath of Object.keys(this.children)) {
-      const childTrie = this.children[subpath];
+    this.children.forEach((childTrie, subpath) => {
       childTrie.walk((childPath: string, childRoute: T) => {
         addPromise(cb(`/${subpath}${childPath}`, childRoute));
       });
-    }
+    });
     return Promise.all(promises).then(() => {});
   }
 
@@ -118,7 +115,7 @@ export class RouteTrie<T> {
    * Removes all routes from the trie.
    */
   clear() {
-    this.children = Object.create(null);
+    this.children = new Map();
     this.paramNodes = undefined;
     this.catchAllNodes = undefined;
     this.optCatchAllNodes = undefined;
@@ -145,7 +142,7 @@ export class RouteTrie<T> {
 
     const [head, tail] = this.splitPath(urlPath);
 
-    const child = this.children[head];
+    const child = this.children.get(head);
     if (child) {
       const route = child.getRoute(tail, params);
       if (route) {
@@ -154,7 +151,7 @@ export class RouteTrie<T> {
     }
 
     if (this.paramNodes) {
-      for (const paramChild of Object.values(this.paramNodes)) {
+      for (const paramChild of this.paramNodes.values()) {
         const route = paramChild.trie.getRoute(tail, params);
         if (route) {
           params[paramChild.name] = head;
@@ -198,13 +195,13 @@ export class RouteTrie<T> {
 
     const [head, tail] = this.splitPath(urlPath);
 
-    const child = this.children[head];
+    const child = this.children.get(head);
     if (child) {
       child.collectRoutes(tail, {...params}, results);
     }
 
     if (this.paramNodes) {
-      for (const paramChild of Object.values(this.paramNodes)) {
+      for (const paramChild of this.paramNodes.values()) {
         const paramParams = {...params, [paramChild.name]: head};
         paramChild.trie.collectRoutes(tail, paramParams, results);
       }
