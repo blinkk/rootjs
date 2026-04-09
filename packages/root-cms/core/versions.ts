@@ -38,6 +38,7 @@ interface PartialCMSDoc {
   sys: {
     modifiedAt: Timestamp;
     modifiedBy: string;
+    publishedAt?: Timestamp;
   };
 }
 
@@ -69,7 +70,17 @@ export class VersionsService {
     const now = Timestamp.now().toMillis();
     const versions = changedDocs.filter((doc) => {
       const modifiedAt = doc.sys.modifiedAt.toMillis();
-      return modifiedAt <= now - DOCUMENT_SAVE_OFFSET;
+      if (modifiedAt > now - DOCUMENT_SAVE_OFFSET) {
+        return false;
+      }
+      // Skip docs where the last modification was from a publish action.
+      // Publishing already saves a version snapshot, so the cron job
+      // doesn't need to save another one.
+      const publishedAt = doc.sys.publishedAt?.toMillis?.();
+      if (publishedAt && Math.abs(publishedAt - modifiedAt) < 5000) {
+        return false;
+      }
+      return true;
     });
     if (versions.length > 0) {
       this.saveVersionsToFirestore(versions);
