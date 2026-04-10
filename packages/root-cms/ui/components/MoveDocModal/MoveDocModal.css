@@ -1,0 +1,31 @@
+.MoveDocModal__from__label,
+.MoveDocModal__to__label {
+  margin-bottom: 8px;
+}
+
+.MoveDocModal__from__value code {
+  margin-left: 0;
+}
+
+.MoveDocModal__to {
+  margin-top: 16px;
+}
+
+.MoveDocModal__error {
+  margin-top: 12px;
+  padding: 8px 12px;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.5;
+  color: #c92a2a;
+  background-color: #fff5f5;
+  border: 1px solid #ffc9c9;
+  border-radius: 4px;
+}
+
+.MoveDocModal__buttons {
+  margin-top: 24px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+}

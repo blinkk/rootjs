@@ -7,6 +7,7 @@ import {
   IconCloudOff,
   IconCopy,
   IconDotsVertical,
+  IconFileExport,
   IconHistory,
   IconLock,
   IconLockOpen,
@@ -29,6 +30,7 @@ import {useAddToReleaseModal} from '../AddToReleaseModal/AddToReleaseModal.js';
 import {useCopyDocModal} from '../CopyDocModal/CopyDocModal.js';
 import {DocIdBadge} from '../DocIdBadge/DocIdBadge.js';
 import {useLockPublishingModal} from '../LockPublishingModal/LockPublishingModal.js';
+import {useMoveDocModal} from '../MoveDocModal/MoveDocModal.js';
 import {Text} from '../Text/Text.js';
 import {useVersionHistoryModal} from '../VersionHistoryModal/VersionHistoryModal.js';
 
@@ -38,6 +40,7 @@ export interface DocActionEvent {
   action:
     | 'copy'
     | 'delete'
+    | 'move'
     | 'revert-draft'
     | 'unpublish'
     | 'unschedule'
@@ -64,6 +67,7 @@ export function DocActionsMenu(props: DocActionsMenuProps) {
   const sys = data.sys || {};
   const modals = useModals();
   const copyDocModal = useCopyDocModal({fromDocId: docId});
+  const moveDocModal = useMoveDocModal({fromDocId: docId});
   const modalTheme = useModalTheme();
   const versionHistoryModal = useVersionHistoryModal({docId});
   const lockPublishingModal = useLockPublishingModal({docId});
@@ -300,6 +304,13 @@ export function DocActionsMenu(props: DocActionsMenuProps) {
         disabled={!canEdit}
       >
         Copy
+      </Menu.Item>
+      <Menu.Item
+        icon={<IconFileExport size={20} />}
+        onClick={() => moveDocModal.open()}
+        disabled={!canEdit}
+      >
+        Move
       </Menu.Item>
       {sys.modifiedAt &&
         sys.publishedAt &&

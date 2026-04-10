@@ -21,8 +21,9 @@ import {EditJsonModal} from './components/EditJsonModal/EditJsonModal.js';
 import {EditTranslationsModal} from './components/EditTranslationsModal/EditTranslationsModal.js';
 import {ExportSheetModal} from './components/ExportSheetModal/ExportSheetModal.js';
 import {LocalizationModal} from './components/LocalizationModal/LocalizationModal.js';
-import {PruneTranslationsModal} from './components/PruneTranslationsModal/PruneTranslationsModal.js';
 import {LockPublishingModal} from './components/LockPublishingModal/LockPublishingModal.js';
+import {MoveDocModal} from './components/MoveDocModal/MoveDocModal.js';
+import {PruneTranslationsModal} from './components/PruneTranslationsModal/PruneTranslationsModal.js';
 import {PublishDocModal} from './components/PublishDocModal/PublishDocModal.js';
 import {ReferenceFieldEditorModal} from './components/ReferenceFieldEditorModal/ReferenceFieldEditorModal.js';
 import {ScheduleReleaseModal} from './components/ScheduleReleaseModal/ScheduleReleaseModal.js';
@@ -216,6 +217,7 @@ function App() {
                       [AddToReleaseModal.id]: AddToReleaseModal,
                       [AiEditModal.id]: AiEditModal,
                       [CopyDocModal.id]: CopyDocModal,
+                      [MoveDocModal.id]: MoveDocModal,
                       [DocPickerModal.id]: DocPickerModal,
                       [DataSourceSelectModal.id]: DataSourceSelectModal,
                       [EditJsonModal.id]: EditJsonModal,

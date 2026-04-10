@@ -1,4 +1,5 @@
 import {
+  arrayRemove,
   arrayUnion,
   collection,
   doc,
@@ -136,6 +137,31 @@ export async function batchUpdateTags(
       } else {
         batch.update(docRef, {tags});
       }
+    });
+    await batch.commit();
+  }
+}
+
+/**
+ * Removes specific tags from multiple translations.
+ *
+ * Uses Firestore arrayRemove for safe concurrent removal.
+ */
+export async function batchRemoveTags(
+  hashes: string[],
+  tagsToRemove: string[]
+) {
+  const projectId = window.__ROOT_CTX.rootConfig.projectId;
+  const db = window.firebase.db;
+
+  // Firestore batch limit is 500.
+  const batchSize = 500;
+  for (let i = 0; i < hashes.length; i += batchSize) {
+    const batch = writeBatch(db);
+    const chunk = hashes.slice(i, i + batchSize);
+    chunk.forEach((hash) => {
+      const docRef = doc(db, 'Projects', projectId, 'Translations', hash);
+      batch.update(docRef, {tags: arrayRemove(...tagsToRemove)});
     });
     await batch.commit();
   }
