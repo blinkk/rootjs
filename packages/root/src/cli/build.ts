@@ -100,13 +100,6 @@ export async function build(rootProjectDir?: string, options?: BuildOptions) {
     ...viteConfig,
     root: rootDir,
     mode: mode,
-    oxc: {
-      ...viteConfig.oxc,
-      jsx: {
-        runtime: 'automatic',
-        importSource: 'preact',
-      },
-    },
     plugins: vitePlugins,
   };
 

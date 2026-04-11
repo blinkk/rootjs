@@ -57,13 +57,6 @@ export async function createViteServer(
       ...(viteConfig.ssr || {}),
       noExternal: ['@blinkk/root', '@blinkk/root-cms/richtext'],
     },
-    oxc: {
-      ...(viteConfig.oxc || {}),
-      jsx: {
-        runtime: 'automatic',
-        importSource: 'preact',
-      },
-    },
     plugins: [
       hmrSSRReload(),
       ...(viteConfig.plugins || []),
