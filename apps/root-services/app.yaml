@@ -1,5 +1,5 @@
 runtime: go125
-service: gci
+service: root-services
 app_engine_apis: true
 
 handlers:
