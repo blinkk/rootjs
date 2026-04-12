@@ -1,5 +1,13 @@
 # @blinkk/root
 
+## 3.0.1-alpha.0
+
+### Patch Changes
+
+- 69dd792b: fix: improve ssg build concurrency
+- 3b1db9e1: feat: add native root jsx runtime and renderer
+- 83871448: feat: upgrade to vite v8
+
 ## 2.5.13
 
 ## 2.5.12

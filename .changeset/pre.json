@@ -15,5 +15,11 @@
     "@blinkk/root-cms": "3.0.0",
     "@blinkk/root-password-protect": "3.0.0"
   },
-  "changesets": []
+  "changesets": [
+    "chatty-shrimps-rest",
+    "fair-dogs-wave",
+    "gold-plums-love",
+    "long-clouds-jog",
+    "tasty-lizards-call"
+  ]
 }
