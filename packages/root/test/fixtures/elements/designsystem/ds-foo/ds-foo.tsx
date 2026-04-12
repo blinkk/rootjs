@@ -1,19 +1,10 @@
-import register from 'preact-custom-element';
-
-declare module 'preact' {
-  namespace JSX {
-    interface IntrinsicElements {
-      'ds-foo': FooProps;
-    }
+class DsFoo extends HTMLElement {
+  connectedCallback() {
+    const name = this.getAttribute('name') || 'world';
+    const h1 = document.createElement('h1');
+    h1.textContent = `Hello ${name}!`;
+    this.appendChild(h1);
   }
 }
 
-interface FooProps {
-  name: string;
-}
-
-function Foo(props: FooProps) {
-  return <h1>Hello {props.name || 'world'}!</h1>;
-}
-
-register(Foo, 'ds-foo');
+customElements.define('ds-foo', DsFoo);

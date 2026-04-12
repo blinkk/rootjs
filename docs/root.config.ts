@@ -99,13 +99,18 @@ export default defineConfig({
       },
     }),
   ],
-  prettyHtml: true,
-  prettyHtmlOptions: {
-    indent_size: 0,
-    end_with_newline: true,
-    extra_liners: ['img', 'root-header', 'root-island'],
-  },
   experiments: {
     enableScriptAsync: true,
+  },
+  jsxRenderer: {
+    mode: 'pretty',
+    blockElements: [
+      'root-code',
+      'root-counter',
+      'root-drawer',
+      'root-header',
+      'root-island',
+      'root-node',
+    ],
   },
 });

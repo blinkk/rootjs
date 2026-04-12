@@ -6,7 +6,6 @@ import {
   VNode,
   options as preactOptions,
 } from 'preact';
-import {renderToString} from 'preact-render-to-string';
 import {HtmlContext, HTML_CONTEXT} from '../core/components/Html.js';
 import {RootConfig, RootSecurityConfig} from '../core/config.js';
 import {getTranslations, I18N_CONTEXT} from '../core/hooks/useI18nContext.js';
@@ -29,6 +28,7 @@ import {
   SitemapItem,
   Sitemap,
 } from '../core/types.js';
+import {JsxRenderOptions, renderJsxToString} from '../jsx/jsx-render.js';
 import type {ElementGraph} from '../node/element-graph.js';
 import {parseTagNames} from '../utils/elements.js';
 import {toHrefLang} from '../utils/i18n.js';
@@ -203,7 +203,7 @@ export class Renderer {
           preactHook(vnode);
         }
       };
-      mainHtml = renderToString(vdom);
+      mainHtml = await this.renderJsx(vdom);
       preactOptions.vnode = preactHook;
     } catch (err) {
       preactOptions.vnode = preactHook;
@@ -590,6 +590,28 @@ export class Renderer {
     return orderedSitemap;
   }
 
+  private getJsxRenderOptions(): JsxRenderOptions {
+    return this.rootConfig.jsxRenderer || {};
+  }
+
+  /**
+   * Renders JSX via either the `@blinkk/root/jsx` package or
+   * `preact-render-to-string` depending if the `jsxRenderer` config is set up
+   * in `root.config.ts`.
+   */
+  private async renderJsx(vnode: any) {
+    if (this.rootConfig.jsxRenderer?.mode) {
+      return renderJsxToString(vnode, this.getJsxRenderOptions());
+    }
+    const {renderToString} = await import('preact-render-to-string');
+    if (!renderToString) {
+      throw new Error(
+        'failed to render jsx. either install preact-render-to-string or add the "jsxRenderer" config to root.config.ts'
+      );
+    }
+    return renderToString(vnode);
+  }
+
   private getConfiguredStyleEntries() {
     const styleEntries = this.rootConfig.styles?.entries || [];
     const basePath = this.rootConfig.base || '/';
@@ -609,10 +631,21 @@ export class Renderer {
           <meta charSet="utf-8" />
           {options?.headComponents}
         </head>
-        <body {...bodyAttrs} dangerouslySetInnerHTML={{__html: html}} />
+        <body
+          {...bodyAttrs}
+          dangerouslySetInnerHTML={{__html: this.ensureNewline(html)}}
+        />
       </html>
     );
-    return `<!doctype html>\n${renderToString(page)}\n`;
+    const content = await this.renderJsx(page);
+    return `<!doctype html>\n${content}`;
+  }
+
+  private ensureNewline(str: string) {
+    if (!str.endsWith('\n')) {
+      return str + '\n';
+    }
+    return str;
   }
 
   async render404(options?: {currentPath?: string}) {
@@ -629,7 +662,7 @@ export class Renderer {
       );
     }
 
-    const mainHtml = renderToString(
+    const mainHtml = await this.renderJsx(
       <ErrorPage
         code={404}
         title="Not found"
@@ -661,7 +694,7 @@ export class Renderer {
       );
     }
 
-    const mainHtml = renderToString(
+    const mainHtml = await this.renderJsx(
       <ErrorPage
         code={500}
         title="Something went wrong"
@@ -683,7 +716,7 @@ export class Renderer {
 
   async renderDevServer404(req: Request) {
     const sitemap = await this.getSitemap();
-    const mainHtml = renderToString(
+    const mainHtml = await this.renderJsx(
       <DevNotFoundPage req={req} sitemap={sitemap} />
     );
     const html = await this.renderHtml(mainHtml, {
@@ -694,7 +727,7 @@ export class Renderer {
 
   async renderDevServer500(req: Request, error: unknown) {
     const [route, routeParams] = this.router.get(req.path);
-    const mainHtml = renderToString(
+    const mainHtml = await this.renderJsx(
       <DevErrorPage
         req={req}
         route={route}

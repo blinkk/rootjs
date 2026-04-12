@@ -1,7 +1,7 @@
 import {Request, Response, NextFunction, Plugin, Server} from '@blinkk/root';
+import {renderJsxToString} from '@blinkk/root/jsx';
 import bodyParser from 'body-parser';
 import micromatch from 'micromatch';
-import {renderToString} from 'preact-render-to-string';
 import {PasswordPage} from '../components/PasswordPage/PasswordPage.js';
 import {generateNonce, setSecurityHeaders} from '../core/csp.js';
 import {hashPassword, verifyPassword} from '../core/password.js';
@@ -184,7 +184,7 @@ export async function renderPasswordPage(
     res.status(401);
     setSecurityHeaders(res, nonce);
     const errorMsg = getErrorMessage(options?.error);
-    const mainHtml = renderToString(
+    const mainHtml = renderJsxToString(
       <PasswordPage error={errorMsg} nonce={nonce} />
     );
     const html = `<!doctype html>\n${mainHtml}`;

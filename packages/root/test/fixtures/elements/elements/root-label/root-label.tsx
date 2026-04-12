@@ -1,21 +1,9 @@
-import {ComponentChildren} from 'preact';
-import register from 'preact-custom-element';
-
-declare module 'preact' {
-  namespace JSX {
-    interface IntrinsicElements {
-      'root-label': LabelProps;
-    }
+class RootLabel extends HTMLElement {
+  connectedCallback() {
+    const label = document.createElement('label');
+    label.textContent = this.getAttribute('label') || this.textContent || '';
+    this.appendChild(label);
   }
 }
 
-interface LabelProps {
-  label?: string;
-  children?: ComponentChildren;
-}
-
-function Label(props: LabelProps) {
-  return <label>{props.children || props.label || ''}</label>;
-}
-
-register(Label, 'root-label');
+customElements.define('root-label', RootLabel);

@@ -3,7 +3,7 @@ import {defineConfig} from '../../../dist/core';
 export default defineConfig({
   vite: {
     build: {
-      rollupOptions: {
+      rolldownOptions: {
         output: {
           entryFileNames: 'static/assets/[name].[hash].min.js',
           chunkFileNames: 'static/chunks/[name].[hash].min.js',
@@ -12,5 +12,7 @@ export default defineConfig({
       },
     },
   },
-  prettyHtml: true,
+  jsxRenderer: {
+    mode: 'pretty',
+  },
 });
