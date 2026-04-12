@@ -167,8 +167,7 @@
   "peerDependencies": {
     "@blinkk/root": "2.5.13",
     "firebase-admin": ">=11",
-    "firebase-functions": ">=4",
-    "preact": ">=10"
+    "firebase-functions": ">=4"
   },
   "peerDependenciesMeta": {
     "firebase-functions": {
