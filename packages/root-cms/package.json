@@ -134,8 +134,8 @@
     "@types/google.accounts": "0.0.14",
     "@types/jsonwebtoken": "9.0.1",
     "@types/node": "24.3.1",
-    "@vitest/browser": "4.0.10",
-    "@vitest/browser-playwright": "4.0.10",
+    "@vitest/browser": "4.1.2",
+    "@vitest/browser-playwright": "4.1.2",
     "concurrently": "7.6.0",
     "esbuild": "0.25.9",
     "firebase": "12.2.1",
@@ -160,8 +160,8 @@
     "react-json-view-compare": "2.0.2",
     "tsup": "8.5.0",
     "typescript": "5.9.2",
-    "vite": "7.1.4",
-    "vitest": "4.0.10",
+    "vite": "8.0.3",
+    "vitest": "4.1.2",
     "yjs": "13.6.27"
   },
   "peerDependencies": {

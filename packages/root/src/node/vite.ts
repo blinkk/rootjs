@@ -2,6 +2,7 @@ import {createServer, ViteDevServer} from 'vite';
 import type {Plugin, EnvironmentModuleNode} from 'vite';
 import {RootConfig} from '../core/config.js';
 import {getVitePlugins} from '../core/plugin.js';
+import {preactToRootJsxPlugin} from './vite-plugin-preact-alias.js';
 
 export interface CreateViteServerOptions {
   /** Override HMR settings. */
@@ -46,19 +47,6 @@ export async function createViteServer(
     },
     appType: 'custom',
     optimizeDeps: {
-      // As of vite v5 / esbuild v19, experimentalDecorators need to be
-      // explicitly set, and for some reason this option isn't read from the
-      // project's tsconfig.json file by default.
-      // See: https://vitejs.dev/blog/announcing-vite5
-      esbuildOptions: {
-        tsconfigRaw: {
-          compilerOptions: {
-            target: 'esnext',
-            experimentalDecorators: true,
-            useDefineForClassFields: false,
-          },
-        },
-      },
       ...(viteConfig.optimizeDeps || {}),
       include: [
         ...(options?.optimizeDeps || []),
@@ -70,13 +58,9 @@ export async function createViteServer(
       ...(viteConfig.ssr || {}),
       noExternal: ['@blinkk/root', '@blinkk/root-cms/richtext'],
     },
-    esbuild: {
-      ...(viteConfig.esbuild || {}),
-      jsx: 'automatic',
-      jsxImportSource: 'preact',
-    },
     plugins: [
       hmrSSRReload(),
+      ...(rootConfig.jsxRenderer?.mode ? [preactToRootJsxPlugin()] : []),
       ...(viteConfig.plugins || []),
       ...getVitePlugins(rootConfig.plugins || []),
     ],
