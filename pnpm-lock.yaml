@@ -295,9 +295,6 @@ importers:
       '@types/node':
         specifier: 24.3.1
         version: 24.3.1
-      '@types/preact-custom-element':
-        specifier: 4.0.2
-        version: 4.0.2
       firebase-admin:
         specifier: 11.11.0
         version: 11.11.0
@@ -310,9 +307,6 @@ importers:
       preact:
         specifier: 10.27.1
         version: 10.27.1
-      preact-custom-element:
-        specifier: 4.5.0
-        version: 4.5.0(preact@10.27.1)
       preact-render-to-string:
         specifier: 6.6.1
         version: 6.6.1(preact@10.27.1)
@@ -5979,12 +5973,6 @@ packages:
       pg-types: 2.2.0
     dev: false
     optional: true
-
-  /@types/preact-custom-element@4.0.2:
-    resolution: {integrity: sha512-Ea1m7ZTV4EzOvlAOJa3ZuwGwyRslFOzEEAzuXJM8jrxm1G4dYCpDKTWze4UojFMOmHfLmBhQebONS9t4Jqs1oQ==}
-    dependencies:
-      preact: 10.27.1
-    dev: true
 
   /@types/qs@6.9.7:
     resolution: {integrity: sha512-FGa1F62FT09qcrueBA6qYTrJPVDzah9a+493+o2PCXsesWHIn27G98TsSMs3WPNbZIEj4+VJf6saSFpvD+3Zsw==}
@@ -13263,14 +13251,6 @@ packages:
     engines: {node: '>=0.10.0'}
     dependencies:
       xtend: 4.0.2
-
-  /preact-custom-element@4.5.0(preact@10.27.1):
-    resolution: {integrity: sha512-OloqaHGKf9P+YehXjk7MhB257J/gGJYmkWyEiAFh7IPfPLh2Xv+UkQAYb7N7BVWUDI/5ORif3BXho5NGRz/HFQ==}
-    peerDependencies:
-      preact: '>= 10.25.0 || >=11.0.0-0'
-    dependencies:
-      preact: 10.27.1
-    dev: true
 
   /preact-iso@2.11.1(preact-render-to-string@6.6.7)(preact@10.27.1):
     resolution: {integrity: sha512-rLy0RmzP/hrDjnFdnEblxFgKtzUj4njkHrpGJBGS7S4QuYw1zv0lA38qsWpeAAB10JAz/hF2CsHrLen9ufCtbw==}
