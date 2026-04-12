@@ -216,6 +216,46 @@ export interface ListActionsOptions {
   limit?: number;
 }
 
+export type EmailStatus = 'pending' | 'sent' | 'failed';
+
+export interface QueuedEmail {
+  /** Recipient email addresses. */
+  to: string[];
+  /** Sender email address. */
+  from: string;
+  /** Email subject. */
+  subject: string;
+  /** Plain text body. */
+  body: string;
+  /** HTML body (optional). */
+  htmlBody?: string;
+  /** Processing status. */
+  status: EmailStatus;
+  /** Error message if status is "failed". */
+  error?: string;
+  /** When the email was queued. */
+  createdAt: Timestamp;
+  /** User or system that created the email. */
+  createdBy: string;
+  /** When the email was sent. */
+  sentAt?: Timestamp;
+  /** The CMS action that triggered this email. */
+  action: string;
+  /** Additional context data. */
+  metadata?: Record<string, any>;
+}
+
+export interface QueueEmailOptions {
+  to: string[];
+  from: string;
+  subject: string;
+  body: string;
+  htmlBody?: string;
+  action: string;
+  createdBy?: string;
+  metadata?: Record<string, any>;
+}
+
 export class RootCMSClient {
   readonly rootConfig: RootConfig;
   readonly cmsPlugin: CMSPlugin;
@@ -1716,6 +1756,187 @@ export class RootCMSClient {
         console.error(err);
       }
     }
+
+    // Queue email notification if the action matches a configured event.
+    if (cmsPluginConfig.email?.enabled) {
+      const events = cmsPluginConfig.email.events || [];
+      if (events.includes(action)) {
+        try {
+          await this.queueEmailForAction(data);
+        } catch (err) {
+          console.error(`failed to queue email for action "${action}":`, err);
+        }
+      }
+    }
+  }
+
+  /**
+   * Returns the Firestore path for the Emails collection.
+   */
+  private dbEmailsPath(): string {
+    return `Projects/${this.projectId}/Emails`;
+  }
+
+  /**
+   * Resolves the email recipients from the plugin config. If the recipients
+   * list includes the sentinel value `"ADMINS"`, it resolves to all users
+   * with the ADMIN role in the project's ACL.
+   */
+  private async resolveEmailRecipients(): Promise<string[]> {
+    const emailConfig = this.cmsPlugin.getConfig().email;
+    if (!emailConfig?.recipients?.length) {
+      return [];
+    }
+    const resolved: string[] = [];
+    for (const recipient of emailConfig.recipients) {
+      if (recipient === 'ADMINS') {
+        const docRef = this.db.doc(`Projects/${this.projectId}`);
+        const snapshot = await docRef.get();
+        const data = snapshot.data() || {};
+        const acl: Record<string, string> = data.roles || {};
+        for (const [email, role] of Object.entries(acl)) {
+          if (role === 'ADMIN' && !email.startsWith('*@')) {
+            resolved.push(email);
+          }
+        }
+      } else {
+        resolved.push(recipient);
+      }
+    }
+    return [...new Set(resolved)];
+  }
+
+  /**
+   * Queues an email notification for a CMS action.
+   */
+  private async queueEmailForAction(actionData: Action): Promise<void> {
+    const emailConfig = this.cmsPlugin.getConfig().email;
+    if (!emailConfig?.sender) {
+      console.warn('email.sender is not configured, skipping email queue');
+      return;
+    }
+
+    const recipients = await this.resolveEmailRecipients();
+    if (recipients.length === 0) {
+      console.warn('no email recipients configured, skipping email queue');
+      return;
+    }
+
+    const subject = `[${this.projectId}] ${actionData.action}`;
+    const metaStr = actionData.metadata
+      ? `\n\nMetadata:\n${JSON.stringify(actionData.metadata, null, 2)}`
+      : '';
+    const body = `Action: ${actionData.action}\nBy: ${actionData.by || 'system'}\nTimestamp: ${actionData.timestamp.toDate().toISOString()}${metaStr}`;
+
+    await this.queueEmail({
+      to: recipients,
+      from: emailConfig.sender,
+      subject,
+      body,
+      action: actionData.action,
+      createdBy: actionData.by || 'system',
+      metadata: actionData.metadata,
+    });
+  }
+
+  /**
+   * Queues an email for sending. The email is stored in Firestore with a
+   * `pending` status and can be picked up by an external email-sending service.
+   */
+  async queueEmail(options: QueueEmailOptions): Promise<string> {
+    const emailData: QueuedEmail = {
+      to: options.to,
+      from: options.from,
+      subject: options.subject,
+      body: options.body,
+      status: 'pending',
+      action: options.action,
+      createdAt: Timestamp.now(),
+      createdBy: options.createdBy || 'system',
+    };
+    if (options.htmlBody) {
+      emailData.htmlBody = options.htmlBody;
+    }
+    if (options.metadata) {
+      emailData.metadata = options.metadata;
+    }
+
+    const colRef = this.db.collection(this.dbEmailsPath());
+    const docRef = await colRef.add(emailData);
+    console.log(`queued email: ${docRef.id} (action: ${options.action})`);
+
+    // Fire webhook notification if configured.
+    const emailConfig = this.cmsPlugin.getConfig().email;
+    if (emailConfig?.webhook?.url) {
+      this.fireEmailWebhook(emailConfig.webhook, {
+        id: docRef.id,
+        projectId: this.projectId,
+        ...emailData,
+      });
+    }
+
+    return docRef.id;
+  }
+
+  /**
+   * Lists pending emails from the queue.
+   */
+  async listPendingEmails(limit = 100): Promise<(QueuedEmail & {id: string})[]> {
+    const colRef = this.db.collection(this.dbEmailsPath());
+    const snapshot = await colRef
+      .where('status', '==', 'pending')
+      .orderBy('createdAt', 'asc')
+      .limit(limit)
+      .get();
+    return snapshot.docs.map((doc) => ({
+      id: doc.id,
+      ...(doc.data() as QueuedEmail),
+    }));
+  }
+
+  /**
+   * Updates the status of a queued email.
+   */
+  async updateEmailStatus(
+    emailId: string,
+    status: EmailStatus,
+    error?: string
+  ): Promise<void> {
+    const docRef = this.db.doc(`${this.dbEmailsPath()}/${emailId}`);
+    const updateData: Record<string, any> = {status};
+    if (status === 'sent') {
+      updateData.sentAt = Timestamp.now();
+    }
+    if (error) {
+      updateData.error = error;
+    }
+    await docRef.update(updateData);
+  }
+
+  /**
+   * Sends a fire-and-forget webhook POST when a new email is queued.
+   */
+  private fireEmailWebhook(
+    webhook: {url: string; secret?: string},
+    payload: Record<string, any>
+  ): void {
+    const body = JSON.stringify(payload);
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+    };
+    if (webhook.secret) {
+      const hmac = crypto.createHmac('sha256', webhook.secret);
+      hmac.update(body);
+      headers['X-Root-Signature'] = hmac.digest('hex');
+    }
+    // Fire and forget.
+    fetch(webhook.url, {
+      method: 'POST',
+      headers,
+      body,
+    }).catch((err) => {
+      console.error('failed to send email webhook:', err);
+    });
   }
 
   /**

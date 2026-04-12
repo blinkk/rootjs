@@ -1,0 +1,7 @@
+runtime: go125
+service: tools
+app_engine_apis: true
+
+handlers:
+  - url: /.*
+    script: auto

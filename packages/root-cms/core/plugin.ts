@@ -132,6 +132,42 @@ export interface CMSSidebarTool {
   externalUrl?: string;
 }
 
+export interface CMSEmailConfig {
+  /** Whether email notifications are enabled. */
+  enabled?: boolean;
+  /**
+   * The sender email address used in the "From" field. Must be an authorized
+   * sender for the email service being used (e.g. App Engine Mail API requires
+   * the sender to be an app admin or the app's default address).
+   */
+  sender?: string;
+  /**
+   * List of recipient email addresses. Use the special value `"ADMINS"` to
+   * auto-resolve recipients from the project's ACL (users with the ADMIN role).
+   */
+  recipients?: string[];
+  /**
+   * List of CMS action names that should trigger email notifications.
+   * Supported events include:
+   * - `doc.publish` — when a document is published
+   * - `doc.scheduled_publish` — when a scheduled doc is auto-published
+   * - `doc.unpublish` — when a document is unpublished
+   */
+  events?: string[];
+  /**
+   * Optional webhook configuration. When set, an HTTP POST request is sent
+   * to the specified URL whenever a new email is queued. This can be used
+   * to trigger an external email-sending service (e.g. the Root.js tools
+   * App Engine service).
+   */
+  webhook?: {
+    /** The URL to send the HTTP POST to. */
+    url: string;
+    /** Shared secret for generating an HMAC-SHA256 signature header. */
+    secret?: string;
+  };
+}
+
 export type CMSPluginOptions = {
   /**
    * The ID of the project. Data will be stored under the namespace
@@ -246,6 +282,27 @@ export type CMSPluginOptions = {
    * Callback when an action occurs.
    */
   onAction?: (action: Action) => any;
+
+  /**
+   * Email notification settings. When configured, the CMS will automatically
+   * queue email notifications in Firestore when specified actions occur.
+   * Emails are stored in a `Projects/{id}/Emails` collection and can be sent
+   * by any external service (e.g. a cron job hitting the tools App Engine
+   * service).
+   *
+   * Example:
+   * ```ts
+   * cmsPlugin({
+   *   email: {
+   *     enabled: true,
+   *     sender: 'noreply@example.com',
+   *     recipients: ['admin@example.com'],
+   *     events: ['doc.publish', 'doc.scheduled_publish', 'doc.unpublish'],
+   *   },
+   * });
+   * ```
+   */
+  email?: CMSEmailConfig;
 
   /**
    * Experimental config options. Note: these are subject to change at any time.
