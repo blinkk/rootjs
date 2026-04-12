@@ -2,6 +2,7 @@ import {createServer, ViteDevServer} from 'vite';
 import type {Plugin, EnvironmentModuleNode} from 'vite';
 import {RootConfig} from '../core/config.js';
 import {getVitePlugins} from '../core/plugin.js';
+import {preactToRootJsxPlugin} from './vite-plugin-preact-alias.js';
 
 export interface CreateViteServerOptions {
   /** Override HMR settings. */
@@ -59,6 +60,7 @@ export async function createViteServer(
     },
     plugins: [
       hmrSSRReload(),
+      ...(rootConfig.jsxRenderer?.mode ? [preactToRootJsxPlugin()] : []),
       ...(viteConfig.plugins || []),
       ...getVitePlugins(rootConfig.plugins || []),
     ],

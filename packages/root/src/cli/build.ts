@@ -11,6 +11,7 @@ import {getVitePlugins} from '../core/plugin.js';
 import {Route, Sitemap} from '../core/types.js';
 import {getElements} from '../node/element-graph.js';
 import {bundleRootConfig, loadRootConfig} from '../node/load-config.js';
+import {preactToRootJsxPlugin} from '../node/vite-plugin-preact-alias.js';
 import {BuildAssetMap} from '../render/asset-map/build-asset-map.js';
 import {htmlMinify} from '../render/html-minify.js';
 import {htmlPretty} from '../render/html-pretty.js';
@@ -92,6 +93,7 @@ export async function build(rootProjectDir?: string, options?: BuildOptions) {
   }
 
   const vitePlugins = [
+    ...(rootConfig.jsxRenderer?.mode ? [preactToRootJsxPlugin()] : []),
     ...(viteConfig.plugins || []),
     ...getVitePlugins(rootPlugins),
   ];
@@ -151,7 +153,7 @@ export async function build(rootProjectDir?: string, options?: BuildOptions) {
     ssr: {
       ...viteConfig.ssr,
       target: 'node',
-      noExternal: ['@blinkk/root', '@blinkk/root-cms/richtext', ...noExternal],
+      noExternal: ['@blinkk/root', ...noExternal],
     },
   });
 
