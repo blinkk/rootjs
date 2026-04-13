@@ -1,5 +1,14 @@
 # @blinkk/root-cms
 
+## 2.5.14
+
+### Patch Changes
+
+- 94a00f57: feat: allow translations plugins to customize import message and color
+- f79b7c93: feat: add pagination to version history modal #1021
+- Updated dependencies [69dd792b]
+  - @blinkk/root@2.5.14
+
 ## 2.5.13
 
 ### Patch Changes
