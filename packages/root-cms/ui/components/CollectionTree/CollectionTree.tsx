@@ -20,10 +20,10 @@ interface CollectionTreeProps {
 
 export function CollectionTree(props: CollectionTreeProps) {
   const {collections, activeCollectionId, query = '', projectId} = props;
-  const [openGroups, setOpenGroups] = useLocalStorage<string[]>(
-    `root-cms::${projectId}::open_groups`,
-    // Default to having "Default" group open.
-    ['group:Default']
+  // Track closed groups instead of open groups so that new groups default to open.
+  const [closedGroups, setClosedGroups] = useLocalStorage<string[]>(
+    `root-cms::${projectId}::closed_groups`,
+    []
   );
 
   const collectionTree = useMemo(
@@ -37,11 +37,11 @@ export function CollectionTree(props: CollectionTreeProps) {
 
   const handleAccordionChange = (groupId: string, isOpen: boolean) => {
     if (isOpen) {
-      if (!openGroups.includes(groupId)) {
-        setOpenGroups([...openGroups, groupId]);
-      }
+      setClosedGroups(closedGroups.filter((id) => id !== groupId));
     } else {
-      setOpenGroups(openGroups.filter((id) => id !== groupId));
+      if (!closedGroups.includes(groupId)) {
+        setClosedGroups([...closedGroups, groupId]);
+      }
     }
   };
 
@@ -50,7 +50,7 @@ export function CollectionTree(props: CollectionTreeProps) {
     depth: number,
     label: ComponentChildren
   ) => {
-    const isOpen = openGroups.includes(node.id);
+    const isOpen = !closedGroups.includes(node.id);
 
     return (
       <div
