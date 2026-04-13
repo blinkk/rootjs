@@ -1,5 +1,11 @@
 # @blinkk/root
 
+## 2.5.14
+
+### Patch Changes
+
+- 69dd792b: fix: improve ssg build concurrency
+
 ## 2.5.13
 
 ## 2.5.12
