@@ -439,13 +439,15 @@ export function DocActionsMenu(props: DocActionsMenuProps) {
           Unarchive
         </Menu.Item>
       ) : (
-        <Menu.Item
-          icon={<IconArchive size={20} />}
-          onClick={() => onArchiveDoc()}
-          disabled={!canEdit}
-        >
-          Archive
-        </Menu.Item>
+        !sys.publishedAt && (
+          <Menu.Item
+            icon={<IconArchive size={20} />}
+            onClick={() => onArchiveDoc()}
+            disabled={!canEdit}
+          >
+            Archive
+          </Menu.Item>
+        )
       )}
       <Menu.Item
         icon={<IconTrash size={20} />}
