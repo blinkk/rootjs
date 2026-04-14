@@ -86,6 +86,20 @@ export function DocStatusBadges(props: DocStatusBadgesProps) {
           </Badge>
         </Tooltip>
       )}
+      {!!sys.archivedAt && (
+        <Tooltip
+          {...tooltipProps}
+          label={`Archived ${timeDiff(sys.archivedAt)} by ${sys.archivedBy}`}
+        >
+          <Badge
+            size="xs"
+            variant="gradient"
+            gradient={{from: 'gray', to: 'dark'}}
+          >
+            Archived
+          </Badge>
+        </Tooltip>
+      )}
     </div>
   );
 }

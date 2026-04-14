@@ -3,6 +3,8 @@ import {useModals} from '@mantine/modals';
 import {showNotification, updateNotification} from '@mantine/notifications';
 import {
   IconAlarmOff,
+  IconArchive,
+  IconArchiveOff,
   IconArrowBack,
   IconCloudOff,
   IconCopy,
@@ -17,10 +19,13 @@ import {useModalTheme} from '../../hooks/useModalTheme.js';
 import {useProjectRoles} from '../../hooks/useProjectRoles.js';
 import {
   CMSDoc,
+  cmsArchiveDoc,
   cmsDeleteDoc,
   cmsRevertDraft,
+  cmsUnarchiveDoc,
   cmsUnpublishDoc,
   cmsUnscheduleDoc,
+  testIsArchived,
   testIsScheduled,
   testPublishingLocked,
 } from '../../utils/doc.js';
@@ -36,9 +41,11 @@ import './DocActionsMenu.css';
 
 export interface DocActionEvent {
   action:
+    | 'archive'
     | 'copy'
     | 'delete'
     | 'revert-draft'
+    | 'unarchive'
     | 'unpublish'
     | 'unschedule'
     | 'locked'
@@ -222,6 +229,76 @@ export function DocActionsMenu(props: DocActionsMenuProps) {
     });
   };
 
+  const onArchiveDoc = () => {
+    const notificationId = `archive-doc-${docId}`;
+    const modalId = modals.openConfirmModal({
+      ...modalTheme,
+      title: `Archive ${docId}`,
+      children: (
+        <>
+          <Text
+            size="body-sm"
+            weight="semi-bold"
+            className="DocActionsMenu__confirmText"
+          >
+            Are you sure you want to archive the following doc? Archived docs
+            are hidden from the collection list by default but can be restored
+            later.
+          </Text>
+          <DocIdBadge docId={docId} />
+        </>
+      ),
+      labels: {confirm: 'Archive', cancel: 'Cancel'},
+      cancelProps: {size: 'xs'},
+      confirmProps: {color: 'red', size: 'xs'},
+      onCancel: () => console.log('Cancel'),
+      closeOnConfirm: false,
+      onConfirm: async () => {
+        showNotification({
+          id: notificationId,
+          title: 'Archiving doc',
+          message: `Requesting archive of ${docId}...`,
+          loading: true,
+          autoClose: false,
+        });
+        await cmsArchiveDoc(docId);
+        updateNotification({
+          id: notificationId,
+          title: 'Archived!',
+          message: `Successfully archived ${docId}!`,
+          loading: false,
+          autoClose: 5000,
+        });
+        modals.closeModal(modalId);
+        if (props.onAction) {
+          props.onAction({action: 'archive'});
+        }
+      },
+    });
+  };
+
+  const onUnarchiveDoc = async () => {
+    const notificationId = `unarchive-doc-${docId}`;
+    showNotification({
+      id: notificationId,
+      title: 'Unarchiving doc',
+      message: `Requesting unarchive of ${docId}...`,
+      loading: true,
+      autoClose: false,
+    });
+    await cmsUnarchiveDoc(docId);
+    updateNotification({
+      id: notificationId,
+      title: 'Unarchived!',
+      message: `Successfully unarchived ${docId}!`,
+      loading: false,
+      autoClose: 5000,
+    });
+    if (props.onAction) {
+      props.onAction({action: 'unarchive'});
+    }
+  };
+
   const onDeleteDoc = () => {
     const notificationId = `delete-doc-${docId}`;
     const modalId = modals.openConfirmModal({
@@ -351,6 +428,23 @@ export function DocActionsMenu(props: DocActionsMenuProps) {
           disabled={!canEdit || testIsScheduled(data)}
         >
           Lock publishing
+        </Menu.Item>
+      )}
+      {testIsArchived(data) ? (
+        <Menu.Item
+          icon={<IconArchiveOff size={20} />}
+          onClick={() => onUnarchiveDoc()}
+          disabled={!canEdit}
+        >
+          Unarchive
+        </Menu.Item>
+      ) : (
+        <Menu.Item
+          icon={<IconArchive size={20} />}
+          onClick={() => onArchiveDoc()}
+          disabled={!canEdit}
+        >
+          Archive
         </Menu.Item>
       )}
       <Menu.Item
