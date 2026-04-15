@@ -1,7 +1,12 @@
 import {ActionIcon, Breadcrumbs, Tooltip} from '@mantine/core';
 import {useModals} from '@mantine/modals';
 import {showNotification, updateNotification} from '@mantine/notifications';
-import {IconArchive, IconRestore, IconTrashFilled} from '@tabler/icons-preact';
+import {
+  IconArchive,
+  IconCloudOff,
+  IconRestore,
+  IconTrashFilled,
+} from '@tabler/icons-preact';
 import {useEffect, useState} from 'preact/hooks';
 import {useLocation} from 'preact-iso';
 import {ConditionalTooltip} from '../../components/ConditionalTooltip/ConditionalTooltip.js';
@@ -18,6 +23,7 @@ import {
   deleteDataSource,
   getDataSource,
   unarchiveDataSource,
+  unpublishDataSource,
 } from '../../utils/data-source.js';
 import {testCanPublish} from '../../utils/permissions.js';
 import './EditDataSourcePage.css';
@@ -78,6 +84,7 @@ export function EditDataSourcePage(props: {id: string}) {
 
   function onArchiveClicked() {
     const notificationId = `archive-data-source-${props.id}`;
+    const isPublished = Boolean(dataSource?.publishedAt);
     const modalId = modals.openConfirmModal({
       ...modalTheme,
       title: 'Archive data source',
@@ -85,6 +92,13 @@ export function EditDataSourcePage(props: {id: string}) {
         <Text size="body-sm" weight="semi-bold">
           Are you sure you want to archive data source <code>{props.id}</code>?
           Archived data sources cannot be synced or published.
+          {isPublished && (
+            <>
+              {' '}
+              Note: previously published data will remain available until the
+              data source is unpublished.
+            </>
+          )}
         </Text>
       ),
       labels: {confirm: 'Archive', cancel: 'Cancel'},
@@ -156,6 +170,49 @@ export function EditDataSourcePage(props: {id: string}) {
     });
   }
 
+  function onUnpublishClicked() {
+    const notificationId = `unpublish-data-source-${props.id}`;
+    const modalId = modals.openConfirmModal({
+      ...modalTheme,
+      title: 'Unpublish data source',
+      children: (
+        <Text size="body-sm" weight="semi-bold">
+          Are you sure you want to unpublish data source{' '}
+          <code>{props.id}</code>? The published data will be removed and will
+          no longer be available to production. There is no undo.
+        </Text>
+      ),
+      labels: {confirm: 'Unpublish', cancel: 'Cancel'},
+      cancelProps: {size: 'xs'},
+      confirmProps: {color: 'red', size: 'xs'},
+      onCancel: () => console.log('Cancel'),
+      closeOnConfirm: false,
+      onConfirm: async () => {
+        showNotification({
+          id: notificationId,
+          title: 'Unpublishing data source',
+          message: `Unpublishing ${props.id}...`,
+          loading: true,
+          autoClose: false,
+        });
+        await unpublishDataSource(props.id);
+        const newDataSource = await getDataSource(props.id);
+        setDataSource(newDataSource);
+        updateNotification({
+          id: notificationId,
+          title: 'Unpublished data source',
+          message: `Successfully unpublished ${props.id}`,
+          loading: false,
+          autoClose: 5000,
+        });
+        modals.closeModal(modalId);
+      },
+    });
+  }
+
+  const isPublished = Boolean(dataSource?.publishedAt);
+  const isArchived = Boolean(dataSource?.archivedAt);
+
   return (
     <Layout>
       <div className="EditDataSourcePage">
@@ -168,11 +225,27 @@ export function EditDataSourcePage(props: {id: string}) {
           <div className="EditDataSourcePage__header__titleWrap">
             <Heading size="h1">Edit Data Source: {props.id}</Heading>
             <div className="EditDataSourcePage__header__controls">
+              {isPublished && !isArchived && (
+                <ConditionalTooltip
+                  label="You don't have access to unpublish data sources"
+                  condition={!canPublish}
+                >
+                  <Tooltip label="Unpublish" disabled={!canPublish}>
+                    <ActionIcon
+                      onClick={onUnpublishClicked}
+                      loading={!roles}
+                      disabled={!canPublish}
+                    >
+                      <IconCloudOff size={20} stroke="1.5" />
+                    </ActionIcon>
+                  </Tooltip>
+                </ConditionalTooltip>
+              )}
               <ConditionalTooltip
                 label="You don't have access to archive data sources"
                 condition={!canPublish}
               >
-                {dataSource?.archivedAt ? (
+                {isArchived ? (
                   <Tooltip label="Unarchive" disabled={!canPublish}>
                     <ActionIcon
                       onClick={onUnarchiveClicked}

@@ -1412,6 +1412,46 @@ export class RootCMSClient {
     console.log(`published by: ${publishedBy}`);
   }
 
+  /**
+   * Unpublishes a data source. Removes the `publishedAt`/`publishedBy`
+   * metadata from the DataSource doc and deletes the `Data/published` doc.
+   */
+  async unpublishDataSource(dataSourceId: string) {
+    const dataSource = await this.getDataSource(dataSourceId);
+    if (!dataSource) {
+      throw new Error(`data source not found: ${dataSourceId}`);
+    }
+
+    const dataSourceDocRef = this.db.doc(
+      `Projects/${this.projectId}/DataSources/${dataSourceId}`
+    );
+    const dataDocRefDraft = this.db.doc(
+      `Projects/${this.projectId}/DataSources/${dataSourceId}/Data/draft`
+    );
+    const dataDocRefPublished = this.db.doc(
+      `Projects/${this.projectId}/DataSources/${dataSourceId}/Data/published`
+    );
+
+    const batch = this.db.batch();
+    batch.update(dataSourceDocRef, {
+      publishedAt: FieldValue.delete(),
+      publishedBy: FieldValue.delete(),
+    });
+    // Also remove the embedded `publishedAt`/`publishedBy` from the draft data
+    // doc so it stays in sync.
+    const draftSnapshot = await dataDocRefDraft.get();
+    if (draftSnapshot.exists) {
+      batch.update(dataDocRefDraft, {
+        'dataSource.publishedAt': FieldValue.delete(),
+        'dataSource.publishedBy': FieldValue.delete(),
+      });
+    }
+    batch.delete(dataDocRefPublished);
+    await batch.commit();
+
+    console.log(`unpublished data source: ${dataSourceId}`);
+  }
+
   async publishDataSources(
     dataSourceIds: string[],
     options?: {publishedBy: string; batch?: WriteBatch; commitBatch?: boolean}
