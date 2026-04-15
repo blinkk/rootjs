@@ -1275,7 +1275,14 @@ export class RootCMSClient {
     const docRef = this.db.doc(dbPath);
     const doc = await docRef.get();
     if (doc.exists) {
-      return doc.data() as DataSource;
+      const dataSource = doc.data() as DataSource;
+      if (dataSource.archivedAt) {
+        console.warn(
+          `warning: data source "${dataSourceId}" is archived` +
+            (dataSource.archivedBy ? ` (archived by ${dataSource.archivedBy})` : '')
+        );
+      }
+      return dataSource;
     }
     return null;
   }
@@ -1610,7 +1617,15 @@ export class RootCMSClient {
     const docRef = this.dbDataSourceDataRef(dataSourceId, {mode});
     const doc = await docRef.get();
     if (doc.exists) {
-      return doc.data() as DataSourceData<T>;
+      const dataSourceData = doc.data() as DataSourceData<T>;
+      if (dataSourceData.dataSource?.archivedAt) {
+        const archivedBy = dataSourceData.dataSource.archivedBy;
+        console.warn(
+          `warning: data source "${dataSourceId}" is archived` +
+            (archivedBy ? ` (archived by ${archivedBy})` : '')
+        );
+      }
+      return dataSourceData;
     }
     return null;
   }
