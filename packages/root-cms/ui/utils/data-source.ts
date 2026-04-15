@@ -295,6 +295,57 @@ export async function publishDataSource(id: string) {
   logAction('datasource.publish', {metadata: {datasourceId: id}});
 }
 
+export async function unpublishDataSource(id: string) {
+  const dataSource = await getDataSource(id);
+  if (!dataSource) {
+    throw new Error(`data source not found: ${id}`);
+  }
+
+  const projectId = window.__ROOT_CTX.rootConfig.projectId;
+  const db = window.firebase.db;
+  const dataSourceDocRef = doc(db, 'Projects', projectId, 'DataSources', id);
+  const dataDocRefDraft = doc(
+    db,
+    'Projects',
+    projectId,
+    'DataSources',
+    id,
+    'Data',
+    'draft'
+  );
+  const dataDocRefPublished = doc(
+    db,
+    'Projects',
+    projectId,
+    'DataSources',
+    id,
+    'Data',
+    'published'
+  );
+
+  const batch = writeBatch(db);
+  // Remove the "published" metadata from the DataSource document.
+  batch.update(dataSourceDocRef, {
+    publishedAt: deleteField(),
+    publishedBy: deleteField(),
+  });
+  // Also remove the "published" metadata from the embedded `dataSource`
+  // object on the draft data doc so it stays in sync.
+  const draftSnapshot = await getDoc(dataDocRefDraft);
+  if (draftSnapshot.exists()) {
+    batch.update(dataDocRefDraft, {
+      'dataSource.publishedAt': deleteField(),
+      'dataSource.publishedBy': deleteField(),
+    });
+  }
+  // Delete the "published" data doc.
+  batch.delete(dataDocRefPublished);
+  await batch.commit();
+
+  console.log(`unpublished data source: ${id}`);
+  logAction('datasource.unpublish', {metadata: {datasourceId: id}});
+}
+
 export async function cmsPublishDataSources(
   ids: string[],
   options?: {batch?: WriteBatch; commitBatch?: boolean}
