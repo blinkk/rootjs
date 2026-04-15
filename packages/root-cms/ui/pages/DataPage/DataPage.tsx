@@ -4,7 +4,7 @@ import {
   ActionIcon,
   Button,
   Loader,
-  SegmentedControl,
+  Switch,
   Table,
   Tooltip,
 } from '@mantine/core';
@@ -15,13 +15,12 @@ import {DataSourceStatusBadge} from '../../components/DataSourceStatusBadge/Data
 import {DataSourceStatusButton} from '../../components/DataSourceStatusButton/DataSourceStatusButton.js';
 import {Heading} from '../../components/Heading/Heading.js';
 import {Text} from '../../components/Text/Text.js';
+import {useLocalStorage} from '../../hooks/useLocalStorage.js';
 import {usePageTitle} from '../../hooks/usePageTitle.js';
 import {useProjectRoles} from '../../hooks/useProjectRoles.js';
 import {Layout} from '../../layout/Layout.js';
 import {DataSource, listDataSources} from '../../utils/data-source.js';
 import {testCanEdit} from '../../utils/permissions.js';
-
-type DataSourceListFilter = 'active' | 'unpublished' | 'published' | 'archived';
 
 export function DataPage() {
   usePageTitle('Data Sources');
@@ -65,7 +64,10 @@ export function DataPage() {
 DataPage.DataSourcesTable = () => {
   const [loading, setLoading] = useState(true);
   const [tableData, setTableData] = useState<DataSource[]>([]);
-  const [filter, setFilter] = useState<DataSourceListFilter>('active');
+  const [showArchived, setShowArchived] = useLocalStorage<boolean>(
+    'root::DataPage:showArchived',
+    false
+  );
   const isGoogleSheetUrl = (url?: string | null) =>
     !!url && url.startsWith('https://docs.google.com/spreadsheets/');
 
@@ -75,22 +77,20 @@ DataPage.DataSourcesTable = () => {
     setLoading(false);
   }
 
+  const hasArchived = useMemo(
+    () => tableData.some((dataSource) => Boolean(dataSource.archivedAt)),
+    [tableData]
+  );
+
   const filteredDataSources = useMemo(() => {
     return tableData.filter((dataSource) => {
       const isArchived = Boolean(dataSource.archivedAt);
-      const isPublished = Boolean(dataSource.publishedAt);
-      if (filter === 'active') {
+      if (!showArchived) {
         return !isArchived;
       }
-      if (filter === 'unpublished') {
-        return !isArchived && !isPublished;
-      }
-      if (filter === 'published') {
-        return !isArchived && isPublished;
-      }
-      return isArchived;
+      return true;
     });
-  }, [tableData, filter]);
+  }, [tableData, showArchived]);
 
   useEffect(() => {
     init();
@@ -101,19 +101,19 @@ DataPage.DataSourcesTable = () => {
       {loading && <Loader color="gray" size="xl" />}
       {!loading && (
         <>
-          <div className="DataPage__DataSourcesTable__filters">
-            <SegmentedControl
-              size="sm"
-              value={filter}
-              onChange={(value: DataSourceListFilter) => setFilter(value)}
-              data={[
-                {label: 'Active', value: 'active'},
-                {label: 'Unpublished', value: 'unpublished'},
-                {label: 'Published', value: 'published'},
-                {label: 'Archived', value: 'archived'},
-              ]}
-            />
-          </div>
+          {hasArchived && (
+            <div className="DataPage__DataSourcesTable__filters">
+              <Switch
+                size="sm"
+                color="dark"
+                label="Show archived"
+                checked={showArchived}
+                onChange={(e: any) =>
+                  setShowArchived(Boolean(e.currentTarget.checked))
+                }
+              />
+            </div>
+          )}
           {filteredDataSources.length > 0 && (
             <Table verticalSpacing="xs" striped highlightOnHover fontSize="xs">
               <thead>
