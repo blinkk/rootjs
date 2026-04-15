@@ -1,12 +1,21 @@
 import './DataPage.css';
 
-import {ActionIcon, Button, Loader, Table, Tooltip} from '@mantine/core';
+import {
+  ActionIcon,
+  Button,
+  Loader,
+  Switch,
+  Table,
+  Tooltip,
+} from '@mantine/core';
 import {IconTable} from '@tabler/icons-preact';
-import {useEffect, useState} from 'preact/hooks';
+import {useEffect, useMemo, useState} from 'preact/hooks';
 import {ConditionalTooltip} from '../../components/ConditionalTooltip/ConditionalTooltip.js';
+import {DataSourceStatusBadge} from '../../components/DataSourceStatusBadge/DataSourceStatusBadge.js';
 import {DataSourceStatusButton} from '../../components/DataSourceStatusButton/DataSourceStatusButton.js';
 import {Heading} from '../../components/Heading/Heading.js';
 import {Text} from '../../components/Text/Text.js';
+import {useLocalStorage} from '../../hooks/useLocalStorage.js';
 import {usePageTitle} from '../../hooks/usePageTitle.js';
 import {useProjectRoles} from '../../hooks/useProjectRoles.js';
 import {Layout} from '../../layout/Layout.js';
@@ -55,6 +64,10 @@ export function DataPage() {
 DataPage.DataSourcesTable = () => {
   const [loading, setLoading] = useState(true);
   const [tableData, setTableData] = useState<DataSource[]>([]);
+  const [showArchived, setShowArchived] = useLocalStorage<boolean>(
+    'root::DataPage:showArchived',
+    false
+  );
   const isGoogleSheetUrl = (url?: string | null) =>
     !!url && url.startsWith('https://docs.google.com/spreadsheets/');
 
@@ -64,6 +77,21 @@ DataPage.DataSourcesTable = () => {
     setLoading(false);
   }
 
+  const hasArchived = useMemo(
+    () => tableData.some((dataSource) => Boolean(dataSource.archivedAt)),
+    [tableData]
+  );
+
+  const filteredDataSources = useMemo(() => {
+    return tableData.filter((dataSource) => {
+      const isArchived = Boolean(dataSource.archivedAt);
+      if (!showArchived) {
+        return !isArchived;
+      }
+      return true;
+    });
+  }, [tableData, showArchived]);
+
   useEffect(() => {
     init();
   }, []);
@@ -71,72 +99,96 @@ DataPage.DataSourcesTable = () => {
   return (
     <div className="DataPage__DataSourcesTable">
       {loading && <Loader color="gray" size="xl" />}
-      {tableData.length > 0 && (
-        <Table verticalSpacing="xs" striped highlightOnHover fontSize="xs">
-          <thead>
-            <tr>
-              <th>id</th>
-              <th>description</th>
-              <th>type</th>
-              <th>url</th>
-              <th>last synced</th>
-              <th>last published</th>
-            </tr>
-          </thead>
-          <tbody>
-            {tableData.map((dataSource) => (
-              <tr key={dataSource.id}>
-                <td>
-                  <a href={`/cms/data/${dataSource.id}`}>{dataSource.id}</a>
-                </td>
-                <td>{dataSource.description || ''}</td>
-                <td>{dataSource.type}</td>
-                <td>
-                  {isGoogleSheetUrl(dataSource.url) ? (
-                    <div className="DataPage__DataSourcesTable__url">
-                      <Tooltip label="Open spreadsheet">
-                        <ActionIcon<'a'>
-                          component="a"
-                          href={dataSource.url}
-                          target="_blank"
-                          rel="noreferrer"
-                          variant="filled"
-                          color="green"
-                          size="sm"
-                          aria-label="Open spreadsheet"
-                        >
-                          <IconTable size={16} stroke="2.25" />
-                        </ActionIcon>
-                      </Tooltip>
-                      <a
-                        className="DataPage__DataSourcesTable__url__text"
-                        href={dataSource.url}
-                        target="_blank"
-                        rel="noreferrer"
-                      >
-                        {dataSource.url}
-                      </a>
-                    </div>
-                  ) : (
-                    dataSource.url || ''
-                  )}
-                </td>
-                <td>
-                  <DataSourceStatusButton
-                    dataSource={dataSource}
-                    action="sync"
-                  />
-                </td>
-                <td>
-                  <DataSourceStatusButton
-                    dataSource={dataSource}
-                    action="publish"
-                  />
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </Table>
+      {!loading && (
+        <>
+          {hasArchived && (
+            <div className="DataPage__DataSourcesTable__filters">
+              <Switch
+                size="sm"
+                color="dark"
+                label="Show archived"
+                checked={showArchived}
+                onChange={(e: any) =>
+                  setShowArchived(Boolean(e.currentTarget.checked))
+                }
+              />
+            </div>
+          )}
+          {filteredDataSources.length > 0 && (
+            <Table verticalSpacing="xs" striped highlightOnHover fontSize="xs">
+              <thead>
+                <tr>
+                  <th>id</th>
+                  <th>description</th>
+                  <th>type</th>
+                  <th>url</th>
+                  <th>status</th>
+                  <th>last synced</th>
+                  <th>last published</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredDataSources.map((dataSource) => (
+                  <tr key={dataSource.id}>
+                    <td>
+                      <a href={`/cms/data/${dataSource.id}`}>{dataSource.id}</a>
+                    </td>
+                    <td>{dataSource.description || ''}</td>
+                    <td>{dataSource.type}</td>
+                    <td>
+                      {isGoogleSheetUrl(dataSource.url) ? (
+                        <div className="DataPage__DataSourcesTable__url">
+                          <Tooltip label="Open spreadsheet">
+                            <ActionIcon<'a'>
+                              component="a"
+                              href={dataSource.url}
+                              target="_blank"
+                              rel="noreferrer"
+                              variant="filled"
+                              color="green"
+                              size="sm"
+                              aria-label="Open spreadsheet"
+                            >
+                              <IconTable size={16} stroke="2.25" />
+                            </ActionIcon>
+                          </Tooltip>
+                          <a
+                            className="DataPage__DataSourcesTable__url__text"
+                            href={dataSource.url}
+                            target="_blank"
+                            rel="noreferrer"
+                          >
+                            {dataSource.url}
+                          </a>
+                        </div>
+                      ) : (
+                        dataSource.url || ''
+                      )}
+                    </td>
+                    <td>
+                      <DataSourceStatusBadge dataSource={dataSource} />
+                    </td>
+                    <td>
+                      <DataSourceStatusButton
+                        dataSource={dataSource}
+                        action="sync"
+                      />
+                    </td>
+                    <td>
+                      <DataSourceStatusButton
+                        dataSource={dataSource}
+                        action="publish"
+                      />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </Table>
+          )}
+          {filteredDataSources.length === 0 && (
+            <Text as="p">No data sources found for this filter.</Text>
+          )}
+        </>
       )}
     </div>
   );

@@ -15,6 +15,12 @@
   margin-top: 20px;
 }
 
+.DataPage__DataSourcesTable__filters {
+  margin-bottom: 20px;
+  display: flex;
+  justify-content: flex-end;
+}
+
 .DataPage__DataSourcesTable table {
   border: 1px solid #dee2e6;
 }
