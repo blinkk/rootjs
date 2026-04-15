@@ -176,7 +176,8 @@ CollectionPage.Collection = (props: CollectionProps) => {
                   <div className="CollectionPage__collection__docsTab__controls">
                     <div className="CollectionPage__collection__docsTab__controls__showArchived">
                       <Switch
-                        size="xs"
+                        size="sm"
+                        color="dark"
                         label="Show archived"
                         checked={showArchived}
                         onChange={(e: any) =>
