@@ -82,6 +82,7 @@
   text-decoration: none;
   flex: 1;
   flex-direction: column;
+  min-width: 0;
 }
 
 .DocPickerModal__DocCard__content__header {
@@ -115,6 +116,7 @@
 
 .DocPickerModal__DocCard__content__badges {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 4px;
   margin-top: 4px;
