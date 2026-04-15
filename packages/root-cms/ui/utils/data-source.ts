@@ -2,6 +2,7 @@ import {
   Timestamp,
   WriteBatch,
   collection,
+  deleteField,
   doc,
   getDoc,
   getDocs,
@@ -55,6 +56,8 @@ export interface DataSource {
   syncedBy?: string;
   publishedAt?: Timestamp;
   publishedBy?: string;
+  archivedAt?: Timestamp;
+  archivedBy?: string;
 }
 
 export interface DataSourceData<T = any> {
@@ -147,10 +150,35 @@ export async function updateDataSource(
   logAction('datasource.save', {metadata: {datasourceId: id}});
 }
 
+export async function archiveDataSource(id: string) {
+  const projectId = window.__ROOT_CTX.rootConfig.projectId;
+  const db = window.firebase.db;
+  const docRef = doc(db, 'Projects', projectId, 'DataSources', id);
+  await updateDoc(docRef, {
+    archivedAt: serverTimestamp(),
+    archivedBy: window.firebase.user.email,
+  });
+  logAction('datasource.archive', {metadata: {datasourceId: id}});
+}
+
+export async function unarchiveDataSource(id: string) {
+  const projectId = window.__ROOT_CTX.rootConfig.projectId;
+  const db = window.firebase.db;
+  const docRef = doc(db, 'Projects', projectId, 'DataSources', id);
+  await updateDoc(docRef, {
+    archivedAt: deleteField(),
+    archivedBy: deleteField(),
+  });
+  logAction('datasource.unarchive', {metadata: {datasourceId: id}});
+}
+
 export async function syncDataSource(id: string) {
   const dataSource = await getDataSource(id);
   if (!dataSource) {
     throw new Error(`data source not found: ${id}`);
+  }
+  if (dataSource.archivedAt) {
+    throw new Error(`data source is archived: ${id}`);
   }
 
   // To avoid CORS issues, non-relative HTTP fetches are handled on the server.
@@ -213,6 +241,9 @@ export async function publishDataSource(id: string) {
   const dataSource = await getDataSource(id);
   if (!dataSource) {
     throw new Error(`data source not found: ${id}`);
+  }
+  if (dataSource.archivedAt) {
+    throw new Error(`data source is archived: ${id}`);
   }
 
   const projectId = window.__ROOT_CTX.rootConfig.projectId;
@@ -278,6 +309,9 @@ export async function cmsPublishDataSources(
     const dataSource = await getDataSource(id);
     if (!dataSource) {
       throw new Error(`data source not found: ${id}`);
+    }
+    if (dataSource.archivedAt) {
+      throw new Error(`data source is archived: ${id}`);
     }
     const dataRes = await getFromDataSource(id, {mode: 'draft'});
     const dataSourceDocRef = doc(db, 'Projects', projectId, 'DataSources', id);

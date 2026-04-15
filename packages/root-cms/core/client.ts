@@ -82,6 +82,8 @@ export interface DataSource {
   syncedBy?: string;
   publishedAt?: Timestamp;
   publishedBy?: string;
+  archivedAt?: Timestamp;
+  archivedBy?: string;
 }
 
 export interface DataSourceData<T = any> {
@@ -1279,12 +1281,45 @@ export class RootCMSClient {
   }
 
   /**
+   * Archives a data source. Archived data sources cannot be synced or published.
+   */
+  async archiveDataSource(
+    dataSourceId: string,
+    options?: {archivedBy?: string}
+  ) {
+    const dbPath = `Projects/${this.projectId}/DataSources/${dataSourceId}`;
+    const docRef = this.db.doc(dbPath);
+    const archivedBy = options?.archivedBy || 'root-cms-client';
+    await docRef.update({
+      archivedAt: Timestamp.now(),
+      archivedBy: archivedBy,
+    });
+    console.log(`archived data source: ${dataSourceId}`);
+  }
+
+  /**
+   * Unarchives a data source.
+   */
+  async unarchiveDataSource(dataSourceId: string) {
+    const dbPath = `Projects/${this.projectId}/DataSources/${dataSourceId}`;
+    const docRef = this.db.doc(dbPath);
+    await docRef.update({
+      archivedAt: FieldValue.delete(),
+      archivedBy: FieldValue.delete(),
+    });
+    console.log(`unarchived data source: ${dataSourceId}`);
+  }
+
+  /**
    * Syncs a data source to draft state.
    */
   async syncDataSource(dataSourceId: string, options?: {syncedBy?: string}) {
     const dataSource = await this.getDataSource(dataSourceId);
     if (!dataSource) {
       throw new Error(`data source not found: ${dataSourceId}`);
+    }
+    if (dataSource.archivedAt) {
+      throw new Error(`data source is archived: ${dataSourceId}`);
     }
 
     const result = await this.fetchData(dataSource);
@@ -1326,6 +1361,9 @@ export class RootCMSClient {
     const dataSource = await this.getDataSource(dataSourceId);
     if (!dataSource) {
       throw new Error(`data source not found: ${dataSourceId}`);
+    }
+    if (dataSource.archivedAt) {
+      throw new Error(`data source is archived: ${dataSourceId}`);
     }
 
     const dataSourceDocRef = this.db.doc(
@@ -1377,6 +1415,9 @@ export class RootCMSClient {
       const dataSource = await this.getDataSource(id);
       if (!dataSource) {
         throw new Error(`data source not found: ${id}`);
+      }
+      if (dataSource.archivedAt) {
+        throw new Error(`data source is archived: ${id}`);
       }
       const dataSourceDocRef = this.db.doc(
         `Projects/${this.projectId}/DataSources/${id}`
