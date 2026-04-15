@@ -53,6 +53,8 @@ export interface CMSDoc {
       reason: string;
       until?: Timestamp;
     };
+    archivedAt?: Timestamp;
+    archivedBy?: string;
     /** Google Sheet linked for translations. */
     l10nSheet?: {
       spreadsheetId: string;
@@ -195,6 +197,10 @@ function updatePublishedDocDataInBatch(
 ) {
   if (testPublishingLocked(draftData)) {
     throw new Error(`publishing is locked for doc: ${draftData.id}`);
+  }
+
+  if (testIsArchived(draftData)) {
+    throw new Error(`cannot publish archived doc: ${draftData.id}`);
   }
 
   const projectId = window.__ROOT_CTX.rootConfig.projectId;
@@ -489,6 +495,38 @@ export async function cmsUnlockPublishing(docId: string) {
   };
   await updateDoc(docRef, updates);
   logAction('doc.unlock_publishing', {metadata: {docId}});
+}
+
+/**
+ * Archives a doc. Archived docs are hidden from list views by default but are
+ * otherwise left intact. Use {@link cmsUnarchiveDoc} to restore.
+ */
+export async function cmsArchiveDoc(docId: string) {
+  const docRef = getDraftDocRef(docId);
+  await updateDoc(docRef, {
+    'sys.archivedAt': serverTimestamp(),
+    'sys.archivedBy': window.firebase.user.email,
+  });
+  logAction('doc.archive', {metadata: {docId}});
+}
+
+/**
+ * Unarchives a previously archived doc.
+ */
+export async function cmsUnarchiveDoc(docId: string) {
+  const docRef = getDraftDocRef(docId);
+  await updateDoc(docRef, {
+    'sys.archivedAt': deleteField(),
+    'sys.archivedBy': deleteField(),
+  });
+  logAction('doc.unarchive', {metadata: {docId}});
+}
+
+/**
+ * Checks if a doc is archived.
+ */
+export function testIsArchived(docData: CMSDoc) {
+  return Boolean(docData?.sys?.archivedAt);
 }
 
 /**

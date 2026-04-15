@@ -1,6 +1,6 @@
 import './CollectionPage.css';
 
-import {Button, Loader, Select, Tabs, Tooltip} from '@mantine/core';
+import {Button, Loader, Select, Switch, Tabs, Tooltip} from '@mantine/core';
 import {IconArrowRoundaboutRight, IconCirclePlus} from '@tabler/icons-preact';
 import {useEffect, useState} from 'preact/hooks';
 import {useLocation} from 'preact-iso';
@@ -117,6 +117,10 @@ CollectionPage.Collection = (props: CollectionProps) => {
     `root::CollectionPage:${props.collection}:orderBy`,
     'modifiedAt'
   );
+  const [showArchived, setShowArchived] = useLocalStorage<boolean>(
+    `root::CollectionPage:${props.collection}:showArchived`,
+    false
+  );
   const [newDocModalOpen, setNewDocModalOpen] = useState(false);
 
   const collection = window.__ROOT_CTX.collections[props.collection];
@@ -137,7 +141,10 @@ CollectionPage.Collection = (props: CollectionProps) => {
     })) || []),
   ];
 
-  const [loading, listDocs, docs] = useDocsList(props.collection, {orderBy});
+  const [loading, listDocs, docs] = useDocsList(props.collection, {
+    orderBy,
+    includeArchived: showArchived,
+  });
 
   return (
     <>
@@ -161,12 +168,23 @@ CollectionPage.Collection = (props: CollectionProps) => {
         <Tabs className="CollectionPage__collection__tabs" active={1}>
           <Tabs.Tab label="Docs">
             <div className="CollectionPage__collection__docsTab">
-              {!loading && docs.length > 0 && (
+              {!loading && (
                 <div className="CollectionPage__collection__docsTab__header">
                   <Heading className="CollectionPage__collection__docsTab__header__title">
                     {collection.name || props.collection}
                   </Heading>
                   <div className="CollectionPage__collection__docsTab__controls">
+                    <div className="CollectionPage__collection__docsTab__controls__showArchived">
+                      <Switch
+                        size="sm"
+                        color="dark"
+                        label="Show archived"
+                        checked={showArchived}
+                        onChange={(e: any) =>
+                          setShowArchived(Boolean(e.currentTarget.checked))
+                        }
+                      />
+                    </div>
                     <div className="CollectionPage__collection__docsTab__controls__sort">
                       <div className="CollectionPage__collection__docsTab__controls__sort__label">
                         Sort:
@@ -320,6 +338,8 @@ CollectionPage.DocsList = (props: {
                 data={doc}
                 onAction={(e) => {
                   if (
+                    e.action === 'archive' ||
+                    e.action === 'unarchive' ||
                     e.action === 'delete' ||
                     e.action === 'unpublish' ||
                     e.action === 'locked' ||

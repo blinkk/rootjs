@@ -120,6 +120,11 @@
   align-items: center;
 }
 
+.CollectionPage__collection__docsTab__controls__showArchived {
+  display: flex;
+  align-items: center;
+}
+
 .CollectionPage__collection__docsTab__controls__sort__label {
   font-weight: 600;
 }
