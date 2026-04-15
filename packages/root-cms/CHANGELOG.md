@@ -1,5 +1,14 @@
 # @blinkk/root-cms
 
+## 2.5.15
+
+### Patch Changes
+
+- 257bea1c: feat: add ability to archive data sources #1033
+- f55c2c09: fix: fix copy doc "overwrite" button
+- e8f81185: feat: add ability to archive docs #1032
+  - @blinkk/root@2.5.15
+
 ## 2.5.14
 
 ### Patch Changes
