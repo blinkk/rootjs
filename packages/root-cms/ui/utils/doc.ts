@@ -199,6 +199,10 @@ function updatePublishedDocDataInBatch(
     throw new Error(`publishing is locked for doc: ${draftData.id}`);
   }
 
+  if (testIsArchived(draftData)) {
+    throw new Error(`cannot publish archived doc: ${draftData.id}`);
+  }
+
   const projectId = window.__ROOT_CTX.rootConfig.projectId;
   const db = window.firebase.db;
   const [collectionId, slug] = docId.split('/');

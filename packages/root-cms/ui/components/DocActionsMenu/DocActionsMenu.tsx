@@ -69,6 +69,7 @@ export function DocActionsMenu(props: DocActionsMenuProps) {
   const docId = props.docId;
   const data = (props.data || {}) as CMSDoc;
   const sys = data.sys || {};
+  const isArchived = testIsArchived(data);
   const modals = useModals();
   const copyDocModal = useCopyDocModal({fromDocId: docId});
   const modalTheme = useModalTheme();
@@ -358,13 +359,15 @@ export function DocActionsMenu(props: DocActionsMenuProps) {
         </ActionIcon>
       }
     >
-      <Menu.Item
-        icon={<IconPackage size={20} />}
-        onClick={() => addToReleaseModal.open()}
-        disabled={!canPublish}
-      >
-        Add to release
-      </Menu.Item>
+      {!isArchived && (
+        <Menu.Item
+          icon={<IconPackage size={20} />}
+          onClick={() => addToReleaseModal.open()}
+          disabled={!canPublish}
+        >
+          Add to release
+        </Menu.Item>
+      )}
       <Menu.Item
         icon={<IconHistory size={20} />}
         onClick={() => versionHistoryModal.open()}
@@ -378,7 +381,8 @@ export function DocActionsMenu(props: DocActionsMenuProps) {
       >
         Copy
       </Menu.Item>
-      {sys.modifiedAt &&
+      {!isArchived &&
+        sys.modifiedAt &&
         sys.publishedAt &&
         sys.modifiedAt > sys.publishedAt && (
           <Menu.Item
@@ -389,7 +393,7 @@ export function DocActionsMenu(props: DocActionsMenuProps) {
             Discard draft edits
           </Menu.Item>
         )}
-      {sys.firstPublishedAt && (
+      {!isArchived && sys.firstPublishedAt && (
         <Menu.Item
           icon={<IconCloudOff size={20} />}
           onClick={() => onUnpublishDoc()}
@@ -398,7 +402,7 @@ export function DocActionsMenu(props: DocActionsMenuProps) {
           Unpublish
         </Menu.Item>
       )}
-      {sys.scheduledAt && (
+      {!isArchived && sys.scheduledAt && (
         <Menu.Item
           icon={<IconAlarmOff size={20} />}
           onClick={() => onUnscheduleDoc()}
@@ -407,30 +411,31 @@ export function DocActionsMenu(props: DocActionsMenuProps) {
           Unschedule
         </Menu.Item>
       )}
-      {testPublishingLocked(data) ? (
-        <Menu.Item
-          icon={<IconLockOpen size={20} />}
-          onClick={() =>
-            lockPublishingModal.open({unlock: true, onChange: onLockChanged})
-          }
-          disabled={!canEdit}
-        >
-          Unlock publishing
-        </Menu.Item>
-      ) : (
-        <Menu.Item
-          icon={<IconLock size={20} />}
-          onClick={() =>
-            lockPublishingModal.open({unlock: false, onChange: onLockChanged})
-          }
-          // Prevent "publishing lock" if the doc has an existing scheduled
-          // publish.
-          disabled={!canEdit || testIsScheduled(data)}
-        >
-          Lock publishing
-        </Menu.Item>
-      )}
-      {testIsArchived(data) ? (
+      {!isArchived &&
+        (testPublishingLocked(data) ? (
+          <Menu.Item
+            icon={<IconLockOpen size={20} />}
+            onClick={() =>
+              lockPublishingModal.open({unlock: true, onChange: onLockChanged})
+            }
+            disabled={!canEdit}
+          >
+            Unlock publishing
+          </Menu.Item>
+        ) : (
+          <Menu.Item
+            icon={<IconLock size={20} />}
+            onClick={() =>
+              lockPublishingModal.open({unlock: false, onChange: onLockChanged})
+            }
+            // Prevent "publishing lock" if the doc has an existing scheduled
+            // publish.
+            disabled={!canEdit || testIsScheduled(data)}
+          >
+            Lock publishing
+          </Menu.Item>
+        ))}
+      {isArchived ? (
         <Menu.Item
           icon={<IconArchiveOff size={20} />}
           onClick={() => onUnarchiveDoc()}
