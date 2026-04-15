@@ -175,7 +175,7 @@ export function CopyDocModal(modalProps: ContextModalProps<CopyDocModalProps>) {
             size="xs"
             color="dark"
             loading={loading}
-            disabled={!!error || !!slugError}
+            disabled={!!slugError || (!!error && !confirmOverwrite)}
           >
             {confirmOverwrite ? 'Overwrite?' : 'Submit'}
           </Button>
