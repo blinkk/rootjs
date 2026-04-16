@@ -18,7 +18,7 @@
 }
 
 .DocStatusBadges__badge--clickable:hover {
-  opacity: 0.85;
+  opacity: 0.9;
 }
 
 .DocStatusBadges__badge--clickable:focus-visible {

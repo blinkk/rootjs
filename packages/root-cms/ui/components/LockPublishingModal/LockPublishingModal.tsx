@@ -63,9 +63,9 @@ export function useLockPublishingModal(props: LockPublishingModalProps) {
 function toLocalDateTimeString(millis: number): string {
   const pad = (n: number) => (n < 10 ? '0' + n : n);
   const d = new Date(millis);
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(
-    d.getDate()
-  )}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(
+    d.getHours()
+  )}:${pad(d.getMinutes())}`;
 }
 
 export function LockPublishingModal(
@@ -135,12 +135,14 @@ LockPublishingModal.Lock = (
   }
 
   const bodyText = isEdit
-    ? 'Update the publishing lock details below, or remove the lock to re-enable publishing.'
+    ? 'Publishing is currently locked. Update the publishing lock details below, or remove the lock to re‑enable publishing.'
     : 'Are you sure you want to lock publishing? Content editors will not be able to publish until publishing is unlocked.';
 
   return (
     <div className="LockPublishingModal LockPublishingModal--lock">
-      <Text className="LockPublishingModal__body">{bodyText}</Text>
+      <Text className="LockPublishingModal__body" size="body-sm">
+        {bodyText}
+      </Text>
 
       <form className="LockPublishingModal__form" onSubmit={(e) => onSubmit(e)}>
         <div className="LockPublishingModal__form__section">
@@ -183,7 +185,7 @@ LockPublishingModal.Lock = (
         <div className="LockPublishingModal__buttons">
           {isEdit && (
             <Button
-              variant="outline"
+              variant="filled"
               size="xs"
               color="red"
               type="button"
