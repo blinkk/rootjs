@@ -177,6 +177,90 @@
   max-width: 100%;
 }
 
+.AIPage__ToolCallBlock {
+  border: 1px solid #DADCE0;
+  border-radius: 8px;
+  background: #f8f9fa;
+  font-size: 14px;
+  overflow: hidden;
+}
+
+.AIPage__ToolCallBlock__header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 12px;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  font-family: inherit;
+  text-align: left;
+  color: inherit;
+}
+
+.AIPage__ToolCallBlock__header:hover {
+  background: #eef0f2;
+}
+
+.AIPage__ToolCallBlock__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  color: #1a73e8;
+}
+
+.AIPage__ToolCallBlock__name {
+  font-family: var(--font-family-mono);
+  font-weight: 600;
+}
+
+.AIPage__ToolCallBlock__summary {
+  color: #5f6368;
+  font-family: var(--font-family-mono);
+  font-size: 13px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex: 1;
+}
+
+.AIPage__ToolCallBlock__toggle {
+  color: #80868b;
+}
+
+.AIPage__ToolCallBlock__body {
+  padding: 8px 12px 12px;
+  border-top: 1px solid #DADCE0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.AIPage__ToolCallBlock__section__label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #5f6368;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 4px;
+}
+
+.AIPage__ToolCallBlock__section__content {
+  font-family: var(--font-family-mono);
+  font-size: 13px;
+  line-height: 1.4;
+  background: #fff;
+  border: 1px solid #DADCE0;
+  border-radius: 4px;
+  padding: 8px;
+  margin: 0;
+  white-space: pre-wrap;
+  overflow: auto;
+  max-height: 240px;
+}
+
 .AIPage__CursorDot {
   --dot-size: 12px;
   width: calc(var(--dot-size) + 8px);

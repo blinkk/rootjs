@@ -24,6 +24,7 @@ import {
   MessageBlock,
   PendingMessageBlock,
   TextMessageBlock,
+  ToolCallMessageBlock,
 } from '../../components/ChatBar/ChatBar.js';
 import {usePageTitle} from '../../hooks/usePageTitle.js';
 import {Layout} from '../../layout/Layout.js';
@@ -154,9 +155,338 @@ export function useChat(): ChatController {
   };
 }
 
+/** A message in the Vercel AI SDK `UIMessage` format. */
+interface UIMessage {
+  id: string;
+  role: 'user' | 'assistant' | 'system';
+  parts: Array<{type: 'text'; text: string}>;
+}
+
+/**
+ * Streaming chat hook backed by the `/cms/api/ai.stream` endpoint (Vercel AI
+ * SDK). Maintains a UIMessage history for the server and a display-friendly
+ * Message list for the UI, updating the active bot message in place as text
+ * and tool-call events stream in.
+ */
+export function useStreamingChat(): ChatController {
+  const [messages, setMessages] = useState<Message[]>([]);
+  const historyRef = useRef<UIMessage[]>([]);
+
+  const addMessage = (message: Message) => {
+    let messageId = 0;
+    setMessages((current) => {
+      const pendingMessage: Message = {
+        sender: 'bot',
+        blocks: [{type: 'pending'}],
+        key: autokey(),
+        streaming: true,
+      };
+      const newMessages = [
+        ...current,
+        {...message, key: autokey()},
+        pendingMessage,
+      ];
+      messageId = newMessages.length - 1;
+      return newMessages;
+    });
+    return messageId;
+  };
+
+  const updateMessage = (messageId: number, message: Message) => {
+    setMessages((current) => {
+      const newMessages = [...current];
+      const existing = newMessages[messageId];
+      newMessages[messageId] = {
+        ...message,
+        // Preserve the original key while streaming to avoid unmounting the
+        // message (which would reset rendered state).
+        key: message.streaming
+          ? existing?.key || autokey()
+          : autokey(),
+      };
+      return newMessages;
+    });
+  };
+
+  const patchMessage = (
+    messageId: number,
+    updater: (current: Message) => Message
+  ) => {
+    setMessages((current) => {
+      const newMessages = [...current];
+      const existing = newMessages[messageId];
+      if (!existing) {
+        return current;
+      }
+      newMessages[messageId] = {
+        ...updater(existing),
+        key: existing.key,
+      };
+      return newMessages;
+    });
+  };
+
+  function promptToText(prompt: ChatPrompt | ChatPrompt[]): string {
+    const parts = Array.isArray(prompt) ? prompt.flat() : [prompt];
+    const texts: string[] = [];
+    for (const part of parts) {
+      if (part && typeof (part as any).text === 'string') {
+        texts.push((part as any).text);
+      }
+    }
+    return texts.join('\n');
+  }
+
+  const sendPrompt = async (
+    messageId: number,
+    prompt: ChatPrompt | ChatPrompt[]
+  ): Promise<AiResponse> => {
+    const endpoint = '/cms/api/ai.stream';
+    const userText = promptToText(prompt);
+    const userMessage: UIMessage = {
+      id: autokey(),
+      role: 'user',
+      parts: [{type: 'text', text: userText}],
+    };
+    historyRef.current = [...historyRef.current, userMessage];
+
+    let res: globalThis.Response;
+    try {
+      res = await window.fetch(endpoint, {
+        method: 'POST',
+        headers: {'content-type': 'application/json'},
+        body: JSON.stringify({messages: historyRef.current}),
+      });
+    } catch (err: any) {
+      const errorMessage = `Network error: ${err?.message || err}`;
+      updateMessage(messageId, {
+        sender: 'bot',
+        blocks: [{type: 'text', text: errorMessage}],
+      });
+      return {message: errorMessage, data: null, error: String(err)};
+    }
+
+    if (!res.ok || !res.body) {
+      const errText = await res.text().catch(() => 'request failed');
+      const errorMessage = ['Something went wrong:', '```', errText, '```'].join(
+        '\n'
+      );
+      updateMessage(messageId, {
+        sender: 'bot',
+        blocks: [{type: 'text', text: errorMessage}],
+      });
+      return {message: errorMessage, data: null, error: errText};
+    }
+
+    // Initialize the bot message with a streaming text block; tool blocks get
+    // appended as they come in.
+    let assistantText = '';
+    const toolBlocks = new Map<string, ToolCallMessageBlock>();
+
+    const renderBlocks = (): MessageBlock[] => {
+      const blocks: MessageBlock[] = [];
+      for (const tool of toolBlocks.values()) {
+        blocks.push({...tool});
+      }
+      if (assistantText) {
+        blocks.push({type: 'text', text: assistantText, streaming: true});
+      } else if (blocks.length === 0) {
+        blocks.push({type: 'pending'});
+      }
+      return blocks;
+    };
+
+    const commitBlocks = () => {
+      patchMessage(messageId, () => ({
+        sender: 'bot',
+        blocks: renderBlocks(),
+        streaming: true,
+      }));
+    };
+
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+
+    const handleEvent = (jsonText: string) => {
+      if (!jsonText || jsonText === '[DONE]') {
+        return;
+      }
+      let event: any;
+      try {
+        event = JSON.parse(jsonText);
+      } catch {
+        return;
+      }
+      switch (event.type) {
+        case 'text-delta': {
+          const delta = typeof event.delta === 'string' ? event.delta : '';
+          assistantText += delta;
+          commitBlocks();
+          break;
+        }
+        case 'tool-input-start':
+        case 'tool-call': {
+          const id = event.toolCallId;
+          if (!id) break;
+          toolBlocks.set(id, {
+            type: 'tool',
+            toolCallId: id,
+            toolName: event.toolName || 'tool',
+            state: 'pending',
+            input: event.input,
+          });
+          commitBlocks();
+          break;
+        }
+        case 'tool-input-available': {
+          const id = event.toolCallId;
+          if (!id) break;
+          const current =
+            toolBlocks.get(id) ||
+            ({
+              type: 'tool',
+              toolCallId: id,
+              toolName: event.toolName || 'tool',
+              state: 'pending',
+            } as ToolCallMessageBlock);
+          toolBlocks.set(id, {...current, input: event.input});
+          commitBlocks();
+          break;
+        }
+        case 'tool-output-available':
+        case 'tool-result': {
+          const id = event.toolCallId;
+          if (!id) break;
+          const current =
+            toolBlocks.get(id) ||
+            ({
+              type: 'tool',
+              toolCallId: id,
+              toolName: event.toolName || 'tool',
+              state: 'pending',
+            } as ToolCallMessageBlock);
+          toolBlocks.set(id, {
+            ...current,
+            state: 'completed',
+            output: event.output ?? event.result,
+          });
+          commitBlocks();
+          break;
+        }
+        case 'tool-output-error':
+        case 'tool-error': {
+          const id = event.toolCallId;
+          if (!id) break;
+          const current =
+            toolBlocks.get(id) ||
+            ({
+              type: 'tool',
+              toolCallId: id,
+              toolName: event.toolName || 'tool',
+              state: 'pending',
+            } as ToolCallMessageBlock);
+          toolBlocks.set(id, {
+            ...current,
+            state: 'error',
+            errorMessage:
+              event.errorText || event.error?.message || 'tool error',
+          });
+          commitBlocks();
+          break;
+        }
+        case 'error': {
+          const errorText =
+            event.errorText || event.error?.message || 'stream error';
+          assistantText += `\n\n> ⚠️ ${errorText}`;
+          commitBlocks();
+          break;
+        }
+        default:
+          break;
+      }
+    };
+
+    const consumeBuffer = () => {
+      // UI Message stream is SSE: events are separated by blank lines; each
+      // `data:` line contains a JSON payload.
+      let idx: number;
+      while ((idx = buffer.indexOf('\n\n')) !== -1) {
+        const raw = buffer.slice(0, idx);
+        buffer = buffer.slice(idx + 2);
+        const lines = raw.split('\n');
+        for (const line of lines) {
+          if (line.startsWith('data:')) {
+            handleEvent(line.slice(5).trim());
+          }
+        }
+      }
+    };
+
+    try {
+      // eslint-disable-next-line no-constant-condition
+      while (true) {
+        const {value, done} = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, {stream: true});
+        consumeBuffer();
+      }
+      buffer += decoder.decode();
+      consumeBuffer();
+    } catch (err: any) {
+      const errorMessage = `Stream error: ${err?.message || err}`;
+      assistantText += `\n\n> ⚠️ ${errorMessage}`;
+    } finally {
+      try {
+        reader.releaseLock();
+      } catch {
+        // ignore
+      }
+    }
+
+    // Finalize the message (no streaming flag so the text renders without the
+    // blinking cursor).
+    const finalBlocks: MessageBlock[] = [];
+    for (const tool of toolBlocks.values()) {
+      finalBlocks.push({...tool});
+    }
+    if (assistantText) {
+      finalBlocks.push({type: 'text', text: assistantText});
+    }
+    if (finalBlocks.length === 0) {
+      finalBlocks.push({type: 'text', text: ''});
+    }
+    patchMessage(messageId, () => ({
+      sender: 'bot',
+      blocks: finalBlocks,
+      streaming: false,
+    }));
+
+    historyRef.current = [
+      ...historyRef.current,
+      {
+        id: autokey(),
+        role: 'assistant',
+        parts: assistantText
+          ? [{type: 'text', text: assistantText}]
+          : [{type: 'text', text: ''}],
+      },
+    ];
+
+    return {message: assistantText, data: null};
+  };
+
+  return {
+    messages,
+    addMessage,
+    updateMessage,
+    sendPrompt,
+  };
+}
+
 export function AIPage() {
   usePageTitle('AI');
-  const chat = useChat();
+  const chat = useStreamingChat();
 
   const isEnabled =
     window.__ROOT_CTX.ai?.enabled || window.__ROOT_CTX.experiments?.ai || false;
@@ -225,7 +555,9 @@ function ChatMessage(props: {message: Message}) {
   const message = props.message;
   const username = message.sender === 'user' ? 'You' : 'Root AI';
   const user = window.firebase.user;
-  const animated = message.sender === 'bot';
+  // Skip the typewriter animation for streaming bot messages since the server
+  // already streams tokens incrementally.
+  const animated = message.sender === 'bot' && !message.streaming;
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -262,16 +594,26 @@ function ChatMessage(props: {message: Message}) {
 
 function ChatMessageBlocks(props: {message: Message; animated: boolean}) {
   const message = props.message;
-  const [blocks, setBlocks] = useState<MessageBlock[]>(
+  const [animatedBlocks, setAnimatedBlocks] = useState<MessageBlock[]>(
     props.animated ? [] : message.blocks
   );
+  // When the message is streaming, bypass the staggered animation buffer and
+  // always render the latest blocks directly so new tokens/tool calls appear
+  // immediately.
+  const blocks = message.streaming ? message.blocks : animatedBlocks;
 
   function addNextBlock() {
-    if (blocks.length >= message.blocks.length) {
+    if (message.streaming) {
       return;
     }
-    const newBlocks = [...blocks, message.blocks[blocks.length]];
-    setBlocks(newBlocks);
+    if (animatedBlocks.length >= message.blocks.length) {
+      return;
+    }
+    const newBlocks = [
+      ...animatedBlocks,
+      message.blocks[animatedBlocks.length],
+    ];
+    setAnimatedBlocks(newBlocks);
   }
 
   useEffect(() => {
@@ -308,6 +650,16 @@ function ChatMessageBlocks(props: {message: Message; animated: boolean}) {
           return (
             <ChatMessageTextBlock
               key={key}
+              block={block}
+              animated={props.animated && !block.streaming}
+              onAnimationComplete={() => addNextBlock()}
+            />
+          );
+        }
+        if (block.type === 'tool') {
+          return (
+            <ChatMessageToolBlock
+              key={block.toolCallId || key}
               block={block}
               animated={props.animated}
               onAnimationComplete={() => addNextBlock()}
@@ -372,6 +724,23 @@ function ChatMessageTextBlock(props: {
     });
     return tree;
   }, [props.block.text]);
+
+  // For streaming text blocks, bypass the animated-nodes buffer so re-renders
+  // always reflect the latest markdown tree.
+  if (props.block.streaming) {
+    return (
+      <div className="AIPage__ChatMessageTextBlock">
+        {markdownTree.children.map((node, i) => (
+          <MarkdownNode
+            key={i}
+            node={node}
+            animated={false}
+            onAnimationComplete={() => {}}
+          />
+        ))}
+      </div>
+    );
+  }
 
   const {nodes, next} = useAnimatedNodes({
     nodes: markdownTree.children,
@@ -659,6 +1028,94 @@ function ChatMessagePendingBlock(props: {
 
 function CursorDot() {
   return <div className="AIPage__CursorDot" />;
+}
+
+function ChatMessageToolBlock(props: {
+  block: ToolCallMessageBlock;
+  animated: boolean;
+  onAnimationComplete: () => void;
+}) {
+  const {block} = props;
+  const [expanded, setExpanded] = useState(false);
+
+  useEffect(() => {
+    if (props.animated) {
+      props.onAnimationComplete();
+    }
+  }, []);
+
+  const icon =
+    block.state === 'pending'
+      ? '◌'
+      : block.state === 'error'
+        ? '✗'
+        : '✓';
+  const summary = summarizeToolInput(block.toolName, block.input);
+
+  return (
+    <div className="AIPage__ToolCallBlock">
+      <button
+        className="AIPage__ToolCallBlock__header"
+        onClick={() => setExpanded((v) => !v)}
+        type="button"
+      >
+        <span className="AIPage__ToolCallBlock__icon">{icon}</span>
+        <span className="AIPage__ToolCallBlock__name">{block.toolName}</span>
+        {summary && (
+          <span className="AIPage__ToolCallBlock__summary">{summary}</span>
+        )}
+        <span className="AIPage__ToolCallBlock__toggle">
+          {expanded ? '▾' : '▸'}
+        </span>
+      </button>
+      {expanded && (
+        <div className="AIPage__ToolCallBlock__body">
+          {block.input !== undefined && (
+            <div className="AIPage__ToolCallBlock__section">
+              <div className="AIPage__ToolCallBlock__section__label">input</div>
+              <pre className="AIPage__ToolCallBlock__section__content">
+                {safeStringify(block.input)}
+              </pre>
+            </div>
+          )}
+          {block.output !== undefined && (
+            <div className="AIPage__ToolCallBlock__section">
+              <div className="AIPage__ToolCallBlock__section__label">
+                output
+              </div>
+              <pre className="AIPage__ToolCallBlock__section__content">
+                {safeStringify(block.output)}
+              </pre>
+            </div>
+          )}
+          {block.errorMessage && (
+            <div className="AIPage__ToolCallBlock__section">
+              <div className="AIPage__ToolCallBlock__section__label">error</div>
+              <pre className="AIPage__ToolCallBlock__section__content">
+                {block.errorMessage}
+              </pre>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function summarizeToolInput(toolName: string, input: any): string {
+  if (!input || typeof input !== 'object') return '';
+  if (toolName === 'readDoc' || toolName === 'editDoc') {
+    return typeof input.docId === 'string' ? `(${input.docId})` : '';
+  }
+  return '';
+}
+
+function safeStringify(value: any): string {
+  try {
+    return JSON.stringify(value, null, 2);
+  } catch {
+    return String(value);
+  }
 }
 
 function ChatMessageImageBlock(props: {

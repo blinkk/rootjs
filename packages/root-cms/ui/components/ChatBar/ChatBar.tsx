@@ -15,6 +15,11 @@ export interface Message {
   blocks: MessageBlock[];
   key?: string;
   data?: Record<string, any>;
+  /**
+   * When true, the message is being updated in-place (e.g. from a streaming
+   * response). Consumers should avoid remounting animations while streaming.
+   */
+  streaming?: boolean;
 }
 
 export interface ImageMessageBlock {
@@ -38,12 +43,28 @@ export interface PendingMessageBlock {
 export interface TextMessageBlock {
   type: 'text';
   text: string;
+  /** When true, disables the typewriter animation and renders the text as-is. */
+  streaming?: boolean;
+}
+
+/**
+ * Represents an AI tool invocation (read/edit docs, etc.) surfaced in the chat.
+ */
+export interface ToolCallMessageBlock {
+  type: 'tool';
+  toolCallId: string;
+  toolName: string;
+  state: 'pending' | 'completed' | 'error';
+  input?: any;
+  output?: any;
+  errorMessage?: string;
 }
 
 export type MessageBlock =
   | ImageMessageBlock
   | PendingMessageBlock
-  | TextMessageBlock;
+  | TextMessageBlock
+  | ToolCallMessageBlock;
 
 export function ChatBar(props: {
   chat: ChatController;

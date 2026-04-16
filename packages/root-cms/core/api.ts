@@ -19,6 +19,46 @@ function testValidCollectionId(id: string): boolean {
   return /^[A-Za-z0-9_-]+$/.test(id);
 }
 
+/**
+ * Pipes a web `Response` (as returned by the Vercel AI SDK) into an Express
+ * `Response`, forwarding status, headers, and streaming body chunks.
+ */
+async function pipeWebResponseToExpress(
+  webResponse: globalThis.Response,
+  expressRes: Response
+): Promise<void> {
+  expressRes.status(webResponse.status);
+  webResponse.headers.forEach((value, key) => {
+    expressRes.setHeader(key, value);
+  });
+  if (!webResponse.body) {
+    expressRes.end();
+    return;
+  }
+  const reader = webResponse.body.getReader();
+  try {
+    // eslint-disable-next-line no-constant-condition
+    while (true) {
+      const {value, done} = await reader.read();
+      if (done) {
+        break;
+      }
+      if (value) {
+        expressRes.write(Buffer.from(value));
+        // `flush()` is added by the `compression` middleware; call if available
+        // so chunks reach the browser immediately.
+        const flush = (expressRes as any).flush;
+        if (typeof flush === 'function') {
+          flush.call(expressRes);
+        }
+      }
+    }
+  } finally {
+    reader.releaseLock();
+    expressRes.end();
+  }
+}
+
 type DocVersion = 'draft' | 'published';
 
 interface BuildDocDiffOptions {
@@ -387,6 +427,49 @@ export function api(server: Server, options: ApiOptions) {
     } catch (err) {
       console.error(err.stack || err);
       res.status(500).json({success: false, error: 'UNKNOWN'});
+    }
+  });
+
+  /**
+   * AI chatbot streaming endpoint powered by the Vercel AI SDK. Accepts a
+   * list of UI messages and streams the model's response (text + tool calls)
+   * back as a UI-message SSE stream.
+   */
+  server.use('/cms/api/ai.stream', async (req: Request, res: Response) => {
+    if (
+      req.method !== 'POST' ||
+      !String(req.get('content-type')).startsWith('application/json')
+    ) {
+      res.status(400).json({success: false, error: 'BAD_REQUEST'});
+      return;
+    }
+    if (!req.user?.email) {
+      res.status(401).json({success: false, error: 'UNAUTHORIZED'});
+      return;
+    }
+    const reqBody = req.body || {};
+    const messages = Array.isArray(reqBody.messages) ? reqBody.messages : null;
+    if (!messages || messages.length === 0) {
+      res.status(400).json({success: false, error: 'MISSING_MESSAGES'});
+      return;
+    }
+    try {
+      const cmsClient = new RootCMSClient(req.rootConfig!);
+      const {streamChat} = await import('./ai-stream.js');
+      const result = streamChat({
+        cmsClient,
+        messages,
+        user: req.user.email,
+      });
+      const response = result.toUIMessageStreamResponse();
+      pipeWebResponseToExpress(response, res);
+    } catch (err: any) {
+      console.error(err.stack || err);
+      if (!res.headersSent) {
+        res.status(500).json({success: false, error: 'UNKNOWN'});
+      } else {
+        res.end();
+      }
     }
   });
 
