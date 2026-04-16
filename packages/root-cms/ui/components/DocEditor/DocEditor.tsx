@@ -81,7 +81,7 @@ import {
 import {extractField} from '../../utils/extract.js';
 import {getDefaultFieldValue} from '../../utils/fields.js';
 import {requestHighlightNode} from '../../utils/iframe-preview.js';
-import {testCanPublish} from '../../utils/permissions.js';
+import {testCanEdit, testCanPublish} from '../../utils/permissions.js';
 import {autokey} from '../../utils/rand.js';
 import {buildPreviewValue} from '../../utils/schema-previews.js';
 import {testFieldEmpty} from '../../utils/test-field-empty.js';
@@ -99,6 +99,7 @@ import {
 import {useEditJsonModal} from '../EditJsonModal/EditJsonModal.js';
 import {useEditTranslationsModal} from '../EditTranslationsModal/EditTranslationsModal.js';
 import {useLocalizationModal} from '../LocalizationModal/LocalizationModal.js';
+import {useLockPublishingModal} from '../LockPublishingModal/LockPublishingModal.js';
 import {usePublishDocModal} from '../PublishDocModal/PublishDocModal.js';
 import {Viewers} from '../Viewers/Viewers.js';
 import {BooleanField} from './fields/BooleanField.js';
@@ -182,6 +183,7 @@ DocEditor.StatusBar = (props: StatusBarProps) => {
   const {roles} = useProjectRoles();
   const currentUserEmail = window.firebase.user.email || '';
   const canPublish = testCanPublish(roles, currentUserEmail);
+  const canEdit = testCanEdit(roles, currentUserEmail);
 
   const draft = props.draft;
   const [data, setData] = useState<Partial<CMSDoc> | null>(
@@ -192,6 +194,24 @@ DocEditor.StatusBar = (props: StatusBarProps) => {
   useDraftDocField('sys', (sys: any) => {
     const data: Partial<CMSDoc> = {sys};
     setData(data);
+  });
+
+  const onLockChanged = useCallback(
+    (state: 'locked' | 'unlocked') => {
+      if (state === 'unlocked') {
+        // NOTE(stevenle): for some reason, the unlock publishing doesn't
+        // properly trigger the `onSnapshot()` callback with
+        // `{hasPendingWrites: false}`. This is a temporary fix.
+        // TODO(stevenle): avoid the extra db write here.
+        draft.controller.removePublishingLock();
+      }
+    },
+    [draft.controller]
+  );
+
+  const lockPublishingModal = useLockPublishingModal({
+    docId: props.docId,
+    onChange: onLockChanged,
   });
 
   const onDocAction = useCallback(
@@ -209,6 +229,22 @@ DocEditor.StatusBar = (props: StatusBarProps) => {
     },
     [props.docId]
   );
+
+  const onPublishingLockClick = useCallback(() => {
+    if (!canEdit) {
+      return;
+    }
+    const lock = data?.sys?.publishingLocked;
+    if (!lock) {
+      return;
+    }
+    lockPublishingModal.open({
+      existingLock: {
+        reason: lock.reason,
+        until: lock.until ? lock.until.toMillis() : undefined,
+      },
+    });
+  }, [canEdit, data?.sys?.publishingLocked, lockPublishingModal]);
 
   const publishDocModal = usePublishDocModal({docId: props.docId});
   const localizationModal = useLocalizationModal();
@@ -258,7 +294,13 @@ DocEditor.StatusBar = (props: StatusBarProps) => {
       <DocEditor.SaveState />
       {data?.sys && (
         <div className="DocEditor__statusBar__statusBadges">
-          <DocStatusBadges doc={data as CMSDoc} docId={props.docId} />
+          <DocStatusBadges
+            doc={data as CMSDoc}
+            docId={props.docId}
+            onPublishingLockClick={
+              canEdit ? onPublishingLockClick : undefined
+            }
+          />
         </div>
       )}
       {(window.__ROOT_CTX.checks || []).length > 0 && (
