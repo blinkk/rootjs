@@ -104,7 +104,7 @@ export function DocActionsMenu(props: DocActionsMenuProps) {
       onConfirm: async () => {
         showNotification({
           id: notificationId,
-          title: 'Unpublishing doc',
+          title: 'Discarding draft edits',
           message: `Discarding draft edits of ${docId}...`,
           loading: true,
           autoClose: false,
@@ -112,7 +112,7 @@ export function DocActionsMenu(props: DocActionsMenuProps) {
         await cmsRevertDraft(docId);
         updateNotification({
           id: notificationId,
-          title: 'Discarded draft edited',
+          title: 'Discarded draft edits',
           message: `Successfully reverted ${docId} back to its published version`,
           loading: false,
           autoClose: 5000,
