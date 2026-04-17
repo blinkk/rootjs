@@ -2,9 +2,15 @@ import {FirebaseApp, initializeApp} from 'firebase/app';
 import {GoogleAuthProvider, signInWithPopup} from 'firebase/auth';
 import {Auth, getAuth} from 'firebase/auth';
 import {render} from 'preact';
-import {useState} from 'preact/hooks';
+import {useEffect, useRef, useState} from 'preact/hooks';
 import './styles/global.css';
 import './styles/signin.css';
+
+type MaybeString = string | false | null | undefined;
+
+function joinClassNames(...classNames: MaybeString[]) {
+  return classNames.filter((c) => !!c).join(' ') || undefined;
+}
 
 declare global {
   interface Window {
@@ -48,7 +54,34 @@ interface ButtonProps {
   onError: (msg: string) => void;
 }
 
+/** Tracks the current phase of the sign-in flow. */
+type SignInStatus =
+  /** No sign-in in progress; the button is clickable. */
+  | 'idle'
+  /** The Google auth popup is open and we're waiting for the user. */
+  | 'popup'
+  /** The popup closed successfully; we're validating the token with the server. */
+  | 'verifying'
+  /** Server validated the token; navigating to the app. */
+  | 'redirecting';
+
 SignIn.Button = (props: ButtonProps) => {
+  const [status, setStatus] = useState<SignInStatus>('idle');
+  const attemptRef = useRef(0);
+  const popupRef = useRef<Window | null>(null);
+
+  // Poll for popup closure while waiting for the Google auth popup.
+  useEffect(() => {
+    if (status !== 'popup') return;
+    const id = setInterval(() => {
+      if (popupRef.current && popupRef.current.closed) {
+        popupRef.current = null;
+        setStatus('idle');
+      }
+    }, 200);
+    return () => clearInterval(id);
+  }, [status]);
+
   async function getResData(res: Response): Promise<any> {
     try {
       return await res.json();
@@ -59,62 +92,158 @@ SignIn.Button = (props: ButtonProps) => {
   }
 
   async function signIn() {
-    const provider = new GoogleAuthProvider();
-    provider.addScope('profile');
-    provider.addScope('email');
-    const result = await signInWithPopup(window.firebase.auth, provider);
-    const user = result.user;
-    const idToken = await user.getIdToken();
-    const res = await fetch('/cms/login', {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({idToken}),
-    });
-    const data = await getResData(res);
+    if (status !== 'idle') return;
+    props.onError('');
+    const attempt = ++attemptRef.current;
+    setStatus('popup');
 
-    if (res.status === 401) {
-      const email = user?.email || '(no email)';
-      if (data.reason) {
-        props.onError(
-          `Login failed for: ${email}. Reason: ${data.reason}. If you believe this is a mistake, please contact a developer to help resolve the issue.`
-        );
-      } else {
-        props.onError(
-          `Login failed for: ${email}. If you believe this is a mistake, please contact a developer to help resolve the issue.`
-        );
+    /** Only update state if this is still the active attempt. */
+    function updateStatus(s: SignInStatus) {
+      if (attemptRef.current === attempt) {
+        setStatus(s);
       }
-      return;
     }
-    if (res.status !== 200) {
-      console.error('login failed');
-      console.log(res.status, data);
-      props.onError('An unknown error has occurred.');
-      return;
-    }
-    if (!data.success) {
-      console.error('login failed');
-      console.log(res.status, data);
-      if (data.reason) {
-        props.onError(`Login failed. Reason: ${data.reason}`);
-      } else {
-        props.onError('Login failed.');
+    function updateError(msg: string) {
+      if (attemptRef.current === attempt) {
+        props.onError(msg);
       }
+    }
+
+    let result;
+    // Intercept window.open for a single call to capture the popup reference.
+    // Restored immediately inside the interceptor so it never stacks.
+    const origOpen = window.open;
+    window.open = function (...args: Parameters<typeof window.open>) {
+      window.open = origOpen;
+      const w = origOpen.apply(this, args);
+      popupRef.current = w;
+      return w;
+    };
+    try {
+      const provider = new GoogleAuthProvider();
+      provider.addScope('profile');
+      provider.addScope('email');
+      result = await signInWithPopup(window.firebase.auth, provider);
+    } catch (err: any) {
+      const code = err?.code || '';
+      if (
+        code === 'auth/popup-closed-by-user' ||
+        code === 'auth/cancelled-popup-request'
+      ) {
+        // User deliberately closed the popup, reset silently.
+        updateStatus('idle');
+        return;
+      }
+      console.error(err);
+      updateError(
+        code === 'auth/network-request-failed'
+          ? 'Network error. Please check your connection and try again.'
+          : `Sign in failed: ${err?.message || 'unknown error'}`
+      );
+      updateStatus('idle');
       return;
     }
-    loginSuccessRedirect();
+
+    updateStatus('verifying');
+
+    try {
+      const user = result.user;
+      const idToken = await user.getIdToken();
+      const res = await fetch('/cms/login', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({idToken}),
+      });
+      const data = await getResData(res);
+
+      if (res.status === 401) {
+        const email = user?.email || '(no email)';
+        if (data.reason) {
+          updateError(
+            `Login failed for: ${email}. Reason: ${data.reason}. If you believe this is a mistake, please contact a developer to help resolve the issue.`
+          );
+        } else {
+          updateError(
+            `Login failed for: ${email}. If you believe this is a mistake, please contact a developer to help resolve the issue.`
+          );
+        }
+        updateStatus('idle');
+        return;
+      }
+      if (res.status !== 200) {
+        console.error('login failed');
+        console.log(res.status, data);
+        updateError('An unknown error has occurred.');
+        updateStatus('idle');
+        return;
+      }
+      if (!data.success) {
+        console.error('login failed');
+        console.log(res.status, data);
+        if (data.reason) {
+          updateError(`Login failed. Reason: ${data.reason}`);
+        } else {
+          updateError('Login failed.');
+        }
+        updateStatus('idle');
+        return;
+      }
+      updateStatus('redirecting');
+      loginSuccessRedirect();
+    } catch (err: any) {
+      console.error(err);
+      updateError('An unexpected error occurred. Please try again.');
+      updateStatus('idle');
+    }
   }
 
+  const busy = status !== 'idle';
+  const label =
+    status === 'popup'
+      ? 'Signing in…'
+      : status === 'verifying'
+      ? 'Authorizing…'
+      : status === 'redirecting'
+      ? 'Redirecting…'
+      : 'Sign in with Google';
+
   return (
-    <button className="signin__button" onClick={signIn}>
+    <button
+      className={joinClassNames(
+        'signin__button',
+        busy && 'signin__button--busy'
+      )}
+      onClick={signIn}
+      disabled={busy}
+    >
       <div className="signin__button__icon">
-        <SignIn.GLogo />
+        {busy ? <SignIn.Spinner /> : <SignIn.GLogo />}
       </div>
-      <div className="signin__button__label">Sign in with Google</div>
+      <div className="signin__button__label">{label}</div>
     </button>
   );
 };
+
+SignIn.Spinner = () => (
+  <svg
+    className="signin__spinner"
+    viewBox="0 0 24 24"
+    xmlns="http://www.w3.org/2000/svg"
+  >
+    <circle
+      cx="12"
+      cy="12"
+      r="10"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="3"
+      stroke-dasharray="50 14"
+      stroke-linecap="round"
+    />
+  </svg>
+);
 
 SignIn.GLogo = () => (
   <svg version="1.1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48">

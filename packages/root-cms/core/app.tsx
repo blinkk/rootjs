@@ -265,8 +265,10 @@ export async function renderSignIn(
     }
   }
 
+  const siteName = ctx.name;
+  const title = siteName ? `Sign in – ${siteName}` : 'Sign in';
   const mainHtml = renderToString(
-    <SignIn title="Sign in" ctx={ctx} favicon={options.cmsConfig.favicon} />
+    <SignIn title={title} ctx={ctx} favicon={options.cmsConfig.favicon} />
   );
   const nonce = generateNonce();
   const html = `<!doctype html>\n${mainHtml}`
