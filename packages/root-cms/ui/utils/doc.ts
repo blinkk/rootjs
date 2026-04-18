@@ -1019,7 +1019,7 @@ export async function cmsGetDocDiffSummary(
   let resData: any = null;
   try {
     resData = JSON.parse(responseText);
-  } catch (err) {
+  } catch {
     // Ignore JSON parsing errors and fall back to the response text below.
   }
 

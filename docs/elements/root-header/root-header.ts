@@ -15,6 +15,8 @@ class RootHeader extends HTMLElement {
   private close: HTMLElement;
   private lastScrollY: number;
   private menuOpen = false;
+  private boundOnScroll = () => this.onScroll();
+  private boundTrapMenuFocus = (e: KeyboardEvent) => this.trapMenuFocus(e);
 
   connectedCallback() {
     this.burger = this.getSlotElement('burger');
@@ -33,7 +35,7 @@ class RootHeader extends HTMLElement {
     }
 
     this.lastScrollY = window.scrollY;
-    window.addEventListener('scroll', () => this.onScroll(), {passive: true});
+    window.addEventListener('scroll', this.boundOnScroll, {passive: true});
     this.onScroll();
 
     this.addEventListener('click', (e) => this.onClick(e));
@@ -46,7 +48,7 @@ class RootHeader extends HTMLElement {
   }
 
   disconnectedCallback() {
-    window.removeEventListener('scroll', () => this.onScroll());
+    window.removeEventListener('scroll', this.boundOnScroll);
   }
 
   getSlotElement<T = HTMLElement>(name: string): T {
@@ -143,9 +145,7 @@ class RootHeader extends HTMLElement {
   }
 
   enableMenuFocusTrap() {
-    this.addEventListener('keydown', (e) => {
-      this.trapMenuFocus(e);
-    });
+    this.addEventListener('keydown', this.boundTrapMenuFocus);
 
     // Disable nav links except the burger
     this.navLinks?.forEach((el: HTMLElement) => {
@@ -161,9 +161,7 @@ class RootHeader extends HTMLElement {
   }
 
   disableMenuFocusTrap() {
-    this.removeEventListener('keydown', (e) => {
-      this.trapMenuFocus(e);
-    });
+    this.removeEventListener('keydown', this.boundTrapMenuFocus);
 
     // Enable nav links
     this.navLinks?.forEach((el: HTMLElement) => {

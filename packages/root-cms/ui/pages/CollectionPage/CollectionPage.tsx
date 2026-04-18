@@ -1,6 +1,6 @@
 import './CollectionPage.css';
 
-import {Button, Loader, Select, Switch, Tabs, Tooltip} from '@mantine/core';
+import {Button, Loader, Select, Switch, Tabs} from '@mantine/core';
 import {IconArrowRoundaboutRight, IconCirclePlus} from '@tabler/icons-preact';
 import {useEffect, useState} from 'preact/hooks';
 import {useLocation} from 'preact-iso';

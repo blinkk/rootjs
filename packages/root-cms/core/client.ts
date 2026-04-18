@@ -770,7 +770,7 @@ export class RootCMSClient {
     const unpublishedDocs: any[] = [];
 
     for (const doc of docs) {
-      const {id, collection, slug} = doc;
+      const {collection, slug} = doc;
       const draftRef = this.db.doc(
         `${projectCollectionsPath}/${collection}/Drafts/${slug}`
       );
@@ -1864,7 +1864,7 @@ export function marshalData(data: any): any {
     if (isObject(val)) {
       result[key] = marshalData(val);
     } else if (Array.isArray(val)) {
-      if (val.length > 0 && val.some((item) => isObject(item))) {
+      if (val.some((item) => isObject(item))) {
         const items = val.map((item) => {
           if (isObject(item)) {
             return marshalData(item);

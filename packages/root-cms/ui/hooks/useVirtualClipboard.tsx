@@ -17,7 +17,7 @@ const VIRTUAL_CLIPBOARD: VirtualClipboard = {
     try {
       const text = await getNavigatorClipboardText();
       return text ? JSON.parse(text) : null;
-    } catch (error) {
+    } catch {
       return null;
     }
   },
@@ -39,7 +39,7 @@ async function getNavigatorClipboardText(): Promise<string | null> {
     if (navigator.clipboard && navigator.clipboard.readText) {
       return await navigator.clipboard.readText();
     }
-  } catch (err) {
+  } catch {
     // Clipboard access denied or not available.
   }
   return null;

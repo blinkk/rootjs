@@ -342,7 +342,7 @@ function createListItemNodes(
 
 function createListItemTextNode(
   listItem: RichTextListItem,
-  parentStyle: 'number' | 'bullet'
+  _parentStyle: 'number' | 'bullet'
 ) {
   const listItemNode = $createListItemNode();
 

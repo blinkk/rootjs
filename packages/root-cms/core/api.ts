@@ -657,7 +657,7 @@ export function api(server: Server, options: ApiOptions) {
     let collectionSchema = null;
     try {
       collectionSchema = await getCollectionSchema(req, collectionId);
-    } catch (err) {
+    } catch {
       // Schema may not be available, continue with null.
     }
 
