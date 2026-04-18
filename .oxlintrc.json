@@ -1,6 +1,6 @@
 {
   "$schema": "https://raw.githubusercontent.com/oxc-project/oxc/main/npm/oxlint/configuration_schema.json",
-  "extends": ["@blinkk/oxlint-config-root/oxlintrc.json"],
+  "extends": ["./packages/oxlint-config-root/oxlintrc.json"],
   "ignorePatterns": [
     "node_modules/",
     ".next",

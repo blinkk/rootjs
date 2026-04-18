@@ -105,7 +105,7 @@ export class Renderer {
     if (url.includes('%')) {
       try {
         url = decodeURI(url);
-      } catch (e) {
+      } catch {
         // Intentionally ignored.
       }
     }
@@ -148,7 +148,7 @@ export class Renderer {
     const locale = options.locale;
     const translations = {
       ...getTranslations(locale),
-      ...(options.translations || {}),
+      ...options.translations,
     };
     const ctx: RequestContext = {
       currentPath,

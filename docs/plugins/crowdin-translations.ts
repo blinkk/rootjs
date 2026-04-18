@@ -490,7 +490,7 @@ export function crowdinTranslationService(
         translations: {
           // If overwriteOnImport is false, preserve existing translations.
           ...(!overwriteOnImport ? row.translations : {}),
-          ...(translationMap[row.source] || {}),
+          ...translationMap[row.source],
         },
       }));
     },

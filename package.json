@@ -35,8 +35,8 @@
   "devDependencies": {
     "@blinkk/oxlint-config-root": "workspace:*",
     "@changesets/cli": "^2.26.2",
-    "@oxc-project/oxfmt": "^0.1.0",
-    "oxlint": "^0.15.0",
+    "oxfmt": "0.45.0",
+    "oxlint": "^1.60.0",
     "turbo": "^1.10.15",
     "typescript": "^5.2.2"
   }

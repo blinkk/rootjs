@@ -138,6 +138,7 @@ export function ChatBar(props: {
       });
       setImageUploading(false);
     } catch (err) {
+      console.error(err);
       setImageUploading(false);
     }
     // Reset the input element in case the user wishes to re-upload the image.

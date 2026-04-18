@@ -3,7 +3,7 @@ export async function batchAsyncCalls<T, U>(
   concurrency: number,
   asyncFunction: (item: T) => Promise<U>
 ): Promise<U[]> {
-  const result: U[] = new Array(data.length);
+  const result: U[] = Array.from({length: data.length});
   let nextIndex = 0;
 
   async function worker() {

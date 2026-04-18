@@ -1019,7 +1019,7 @@ function arrayReducer(state: ArrayFieldValue, action: ArrayAction) {
       };
     }
     case 'removeAt': {
-      const data = {...(state ?? {})};
+      const data = {...state};
       const order = data._array || [];
       const newOrder = [...order];
       const oldKey = newOrder[action.index];
