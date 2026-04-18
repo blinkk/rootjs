@@ -9,8 +9,10 @@
     "cms:dev": "./scripts/dev_cms.sh",
     "build": "turbo run build --filter=\"@blinkk/*\"",
     "changeset": "changeset",
-    "lint": "eslint . --ext .ts,.tsx",
-    "fix": "eslint . --ext .ts,.tsx --fix",
+    "lint": "oxlint",
+    "fix": "oxlint --fix",
+    "format": "oxfmt .",
+    "format:check": "oxfmt --check .",
     "version": "changeset version && pnpm install --no-frozen-lockfile",
     "release": "pnpm run build && changeset publish",
     "release:ci": "pnpm run build && changeset publish --provenance",
@@ -31,10 +33,10 @@
   },
   "homepage": "https://github.com/blinkk/rootjs#readme",
   "devDependencies": {
-    "@blinkk/eslint-config-root": "workspace:*",
+    "@blinkk/oxlint-config-root": "workspace:*",
     "@changesets/cli": "^2.26.2",
-    "eslint": "^8.51.0",
-    "prettier": "^3.0.3",
+    "@oxc-project/oxfmt": "^0.1.0",
+    "oxlint": "^0.15.0",
     "turbo": "^1.10.15",
     "typescript": "^5.2.2"
   }

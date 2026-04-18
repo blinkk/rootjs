@@ -36,7 +36,8 @@ Contains example projects demonstrating various features of Root.js.
 
 - **Package Manager**: `pnpm`
 - **Build System**: `turbo`
-- **Linting**: `eslint`
+- **Linting**: `oxlint`
+- **Formatting**: `oxfmt`
 
 ## Best Practices for Agents
 
@@ -64,6 +65,7 @@ When working on this project, please adhere to the following guidelines:
 - **Changesets**: If your changes require a release (version bump), you must create a changeset. Run `pnpm changeset` and follow the prompts.
 - **Commit Messages**: Follow the conventional commit format (e.g., `feat: add new feature`, `fix: resolve issue`).
 - **Linting**: Ensure code passes linting rules by running `pnpm lint`.
+- **Formatting**: Format code with `pnpm format` before committing.
 
 ### Documentation
 

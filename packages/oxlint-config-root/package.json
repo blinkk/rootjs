@@ -1,0 +1,26 @@
+{
+  "name": "@blinkk/oxlint-config-root",
+  "version": "0.1.0",
+  "description": "Oxlint config for Root.js projects.",
+  "author": "s@blinkk.com",
+  "license": "MIT",
+  "keywords": [
+    "oxlint",
+    "oxlintconfig"
+  ],
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/blinkk/rootjs.git",
+    "directory": "packages/oxlint-config-root"
+  },
+  "main": "./oxlintrc.json",
+  "files": [
+    "oxlintrc.json"
+  ],
+  "peerDependencies": {
+    "oxlint": ">=0.15"
+  }
+}
