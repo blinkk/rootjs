@@ -110,10 +110,12 @@ function isSchemaPattern(value: unknown): value is schema.SchemaPattern {
 /**
  * Build a map of schema name to schema for resolving string references.
  */
-function buildSchemaNameMap(): Record<string, schema.Schema> {
+function buildSchemaNameMap(
+  schemaModules: Record<string, SchemaModule> = SCHEMA_MODULES
+): Record<string, schema.Schema> {
   const nameMap: Record<string, schema.Schema> = {};
-  for (const fileId in SCHEMA_MODULES) {
-    const module = SCHEMA_MODULES[fileId];
+  for (const fileId in schemaModules) {
+    const module = schemaModules[fileId];
     if (module.default && module.default.name) {
       nameMap[module.default.name] = module.default;
     }
@@ -141,8 +143,15 @@ function globToRegex(pattern: string): RegExp {
 
 /**
  * Resolves a SchemaPattern to an array of schema names.
+ *
+ * Returned schemas are deep-cloned so that callers may safely mutate them
+ * (e.g. by rewriting nested `oneof` `types` in place) without leaking those
+ * mutations back into `SCHEMA_MODULES`.
  */
-function resolveSchemaPattern(pattern: schema.SchemaPattern): {
+function resolveSchemaPattern(
+  pattern: schema.SchemaPattern,
+  schemaModules: Record<string, SchemaModule> = SCHEMA_MODULES
+): {
   names: string[];
   schemas: Record<string, schema.Schema>;
 } {
@@ -151,11 +160,11 @@ function resolveSchemaPattern(pattern: schema.SchemaPattern): {
   const names: string[] = [];
   const schemas: Record<string, schema.Schema> = {};
 
-  for (const fileId in SCHEMA_MODULES) {
+  for (const fileId in schemaModules) {
     if (!regex.test(fileId)) {
       continue;
     }
-    const module = SCHEMA_MODULES[fileId];
+    const module = schemaModules[fileId];
     if (!module.default || !module.default.name) {
       continue;
     }
@@ -164,17 +173,14 @@ function resolveSchemaPattern(pattern: schema.SchemaPattern): {
       continue;
     }
 
-    let schemaObj = module.default;
+    const schemaObj = structuredClone(module.default);
 
     // Apply field omissions if specified.
     if (pattern.omitFields && pattern.omitFields.length > 0) {
       const omitSet = new Set(pattern.omitFields);
-      schemaObj = {
-        ...schemaObj,
-        fields: schemaObj.fields.filter(
-          (f: schema.Field) => !omitSet.has(f.id || '')
-        ),
-      };
+      schemaObj.fields = schemaObj.fields.filter(
+        (f: schema.Field) => !omitSet.has(f.id || '')
+      );
     }
 
     names.push(schemaName);
@@ -190,16 +196,24 @@ function resolveSchemaPattern(pattern: schema.SchemaPattern): {
  *
  * String references (used for self-referencing schemas) are resolved from the
  * project's schema modules. SchemaPatterns are resolved by matching file paths.
+ *
+ * Schemas pulled in via SchemaPattern or string-name reference are always
+ * deep-cloned before being walked. The walk rewrites `oneof` fields in place,
+ * and skipping the clone would mutate the shared entries in `SCHEMA_MODULES`
+ * and corrupt subsequent calls (e.g. when building multiple collections).
  */
-function convertOneOfTypes(collection: schema.Collection): schema.Collection {
+export function convertOneOfTypes(
+  collection: schema.Collection,
+  schemaModules: Record<string, SchemaModule> = SCHEMA_MODULES
+): schema.Collection {
   const clone: schema.Collection = structuredClone(collection);
   const types: Record<string, schema.Schema> = clone.types || {};
-  const schemaNameMap = buildSchemaNameMap();
+  const schemaNameMap = buildSchemaNameMap(schemaModules);
 
   function handleOneOfField(field: schema.OneOfField) {
     // Handle SchemaPattern (from schema.glob()).
     if (isSchemaPattern(field.types)) {
-      const resolved = resolveSchemaPattern(field.types);
+      const resolved = resolveSchemaPattern(field.types, schemaModules);
       // Process nested oneOf fields in the resolved schemas.
       // Only process schemas that haven't been added to types yet to prevent
       // infinite recursion with self-referencing schemas (e.g., a Container
@@ -222,7 +236,7 @@ function convertOneOfTypes(collection: schema.Collection): schema.Collection {
         names.push(sub);
         // Resolve string references from the project schemas.
         if (!types[sub] && schemaNameMap[sub]) {
-          const resolvedSchema = schemaNameMap[sub];
+          const resolvedSchema = structuredClone(schemaNameMap[sub]);
           types[sub] = resolvedSchema;
           if (resolvedSchema.fields) {
             walk(resolvedSchema);
