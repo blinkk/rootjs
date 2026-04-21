@@ -1,5 +1,14 @@
 # @blinkk/root-cms
 
+## 2.5.16
+
+### Patch Changes
+
+- 1633812a: feat: add ability to unpublish data sources
+- 149f76ee: feat: make publishing lock badge clickable to edit or remove #1039
+- 11ba4d07: fix: clone schemas before walking in convertOneOfTypes
+  - @blinkk/root@2.5.16
+
 ## 2.5.15
 
 ### Patch Changes
