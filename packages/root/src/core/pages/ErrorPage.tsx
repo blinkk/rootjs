@@ -1,4 +1,4 @@
-import {ComponentChildren} from 'virtual:root-jsx';
+import {ComponentChildren} from 'preact';
 
 const STYLES = `
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap');

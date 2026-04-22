@@ -11,7 +11,7 @@ import {getVitePlugins} from '../core/plugin.js';
 import {Route, Sitemap} from '../core/types.js';
 import {getElements} from '../node/element-graph.js';
 import {bundleRootConfig, loadRootConfig} from '../node/load-config.js';
-import {rootJsxVirtualPlugin} from '../node/vite-plugin-root-jsx-virtual.js';
+import {preactToRootJsxPlugin} from '../node/vite-plugin-root-jsx-virtual.js';
 import {BuildAssetMap} from '../render/asset-map/build-asset-map.js';
 import {htmlMinify} from '../render/html-minify.js';
 import {htmlPretty} from '../render/html-pretty.js';
@@ -93,7 +93,7 @@ export async function build(rootProjectDir?: string, options?: BuildOptions) {
   }
 
   const vitePlugins = [
-    rootJsxVirtualPlugin({useRootJsx: !!rootConfig.jsxRenderer?.mode}),
+    preactToRootJsxPlugin({useRootJsx: !!rootConfig.jsxRenderer?.mode}),
     ...(viteConfig.plugins || []),
     ...getVitePlugins(rootPlugins),
   ];

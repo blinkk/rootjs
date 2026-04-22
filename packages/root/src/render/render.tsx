@@ -5,7 +5,7 @@ import {
   ComponentType,
   VNode,
   options as preactOptions,
-} from 'virtual:root-jsx';
+} from 'preact';
 import {HtmlContext, HTML_CONTEXT} from '../core/components/Html.js';
 import {RootConfig, RootSecurityConfig} from '../core/config.js';
 import {getTranslations, I18N_CONTEXT} from '../core/hooks/useI18nContext.js';

@@ -1,6 +1,6 @@
 import path from 'node:path';
-import {createContext} from 'virtual:root-jsx';
-import {useContext} from 'virtual:root-jsx/hooks';
+import {createContext} from 'preact';
+import {useContext} from 'preact/hooks';
 
 export const I18N_CONTEXT = createContext<I18nContext | null>(null);
 

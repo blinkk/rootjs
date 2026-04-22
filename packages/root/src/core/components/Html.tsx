@@ -1,5 +1,5 @@
-import {ComponentChildren, FunctionalComponent, createContext} from 'virtual:root-jsx';
-import {useContext} from 'virtual:root-jsx/hooks';
+import {ComponentChildren, FunctionalComponent, createContext} from 'preact';
+import {useContext} from 'preact/hooks';
 
 export interface HtmlContext {
   htmlAttrs: preact.JSX.HTMLAttributes<HTMLHtmlElement>;

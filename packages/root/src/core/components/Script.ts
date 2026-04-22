@@ -1,5 +1,5 @@
-import {FunctionalComponent} from 'virtual:root-jsx';
-import {useContext} from 'virtual:root-jsx/hooks';
+import {FunctionalComponent} from 'preact';
+import {useContext} from 'preact/hooks';
 import {HTML_CONTEXT} from './Html.js';
 
 export type ScriptProps = preact.JSX.HTMLAttributes<HTMLScriptElement> & {

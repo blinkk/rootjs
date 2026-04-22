@@ -1,5 +1,5 @@
-import {createContext} from 'virtual:root-jsx';
-import {useContext} from 'virtual:root-jsx/hooks';
+import {createContext} from 'preact';
+import {useContext} from 'preact/hooks';
 import {Route} from '../types.js';
 
 export interface RequestContext {

@@ -1,5 +1,5 @@
-import {ComponentChildren, FunctionalComponent} from 'virtual:root-jsx';
-import {useContext} from 'virtual:root-jsx/hooks';
+import {ComponentChildren, FunctionalComponent} from 'preact';
+import {useContext} from 'preact/hooks';
 import {HTML_CONTEXT} from './Html.js';
 
 export type HeadProps = preact.JSX.HTMLAttributes<HTMLHeadElement> & {

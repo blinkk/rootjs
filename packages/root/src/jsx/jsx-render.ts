@@ -1,4 +1,4 @@
-import {options as preactOptions} from 'virtual:root-jsx';
+import {options as preactOptions} from 'preact';
 import {VNode, Fragment} from './jsx-runtime.js';
 
 /** HTML void elements (self-closing, no end tag). */

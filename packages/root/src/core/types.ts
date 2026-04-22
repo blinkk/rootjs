@@ -4,7 +4,7 @@ import {
   Response as ExpressResponse,
   NextFunction as ExpressNextFunction,
 } from 'express';
-import {ComponentType} from 'virtual:root-jsx';
+import {ComponentType} from 'preact';
 import {ViteDevServer} from 'vite';
 import {Hooks} from '../middleware/hooks.js';
 import {SaveSessionOptions, Session} from '../middleware/session.js';
