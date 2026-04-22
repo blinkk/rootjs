@@ -14,6 +14,7 @@ export default defineConfig({
     node: 'src/node/node.ts',
     render: 'src/render/render.tsx',
   },
+  external: [/^virtual:/],
   sourcemap: true,
   target: 'node18',
   dts: true,
