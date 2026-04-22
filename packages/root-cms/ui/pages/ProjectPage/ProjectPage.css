@@ -1,47 +1,28 @@
 .ProjectPage {
-  padding: 60px;
+  background: var(--page-background);
+  padding: var(--page-padding);
 }
 
-.ProjectPage__headline {
-  margin-bottom: 60px;
+.ProjectPage__section {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+  max-width: 1280px;
 }
 
-.ProjectPage__body {
-  margin-top: 16px;
-  max-width: 70ch;
+.ProjectPage__sectionTitle {
+  font-size: 14px;
+  line-height: 1.2;
+  font-weight: 600;
 }
 
-.ProjectPage__section + .ProjectPage__section {
-  margin-top: 80px;
-}
-
-.ProjectPage__section__title {
-  margin-bottom: 20px;
-}
-
-.ProjectPage__section__title--flex {
-  display: flex;
+.ProjectPage__actionLogs__header {
+  display: grid;
+  grid-template-columns: 1fr auto;
   align-items: center;
-  gap: 12px;
+  margin-bottom: 12px;
 }
 
-.ProjectPage__collectionTree {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  max-width: 580px;
-}
-
-.ProjectPage__collectionTree .mantine-Accordion-control {
-  padding-top: 12px;
-  padding-bottom: 12px;
-}
-
-.ProjectPage__collectionTree .CollectionTree__accordion__children {
-  gap: 12px;
-}
-
-.ProjectPage__collectionTree .CollectionTree__collection {
-  border: 2px solid black;
-  border-radius: 8px;
+.ProjectPage__actionLogs .ActionLogsCompact__table .mantine-Accordion-item:last-child {
+  border-bottom: none;
 }

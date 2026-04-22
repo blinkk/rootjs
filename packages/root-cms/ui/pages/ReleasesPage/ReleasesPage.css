@@ -1,5 +1,6 @@
 .ReleasesPage {
-  padding: 60px;
+  background: var(--page-background);
+  padding: var(--page-padding-lg);
 }
 
 .ReleasesPage__header {
@@ -33,4 +34,8 @@
   display: flex;
   justify-content: flex-end;
   margin-bottom: 20px;
+}
+
+.ReleasesPage__ReleasesTable__table {
+  border: none;
 }

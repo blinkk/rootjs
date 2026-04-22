@@ -17,6 +17,7 @@ import {DocPreviewCard} from '../../components/DocPreviewCard/DocPreviewCard.js'
 import {Heading} from '../../components/Heading/Heading.js';
 import {ReleaseStatusBadge} from '../../components/ReleaseStatusBadge/ReleaseStatusBadge.js';
 import {useScheduleReleaseModal} from '../../components/ScheduleReleaseModal/ScheduleReleaseModal.js';
+import {Surface} from '../../components/Surface/Surface.js';
 import {Text} from '../../components/Text/Text.js';
 import {useModalTheme} from '../../hooks/useModalTheme.js';
 import {usePageTitle} from '../../hooks/usePageTitle.js';
@@ -209,52 +210,33 @@ ReleasePage.PublishStatus = (props: {
   return (
     <div className="ReleasePage__PublishStatus">
       <Heading size="h2">Status</Heading>
-      <Table verticalSpacing="xs" striped fontSize="xs">
-        <thead>
-          <tr>
-            <th>status</th>
-            <th>actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td>
-              <ReleaseStatusBadge release={release} />
-            </td>
-            <td>
-              <div className="ReleasePage__PublishStatus__actions">
-                {!release.archivedAt && !release.scheduledAt && (
-                  <ConditionalTooltip
-                    label="You don't have access to publish this release"
-                    condition={!canPublish}
-                  >
-                    <Tooltip
-                      label="Publish the release immediately"
-                      position="bottom"
-                      withArrow
-                      disabled={!canPublish}
-                    >
-                      <Button
-                        variant="default"
-                        size="xs"
-                        compact
-                        onClick={() => onPublishClicked()}
-                        loading={publishLoading}
-                        disabled={!canPublish}
-                      >
-                        {release.publishedAt ? 'Re-publish' : 'Publish'}
-                      </Button>
-                    </Tooltip>
-                  </ConditionalTooltip>
-                )}
-                {!release.archivedAt &&
-                  (release.scheduledAt ? (
+      <Surface>
+        <Table
+          className="ReleasePage__PublishStatus__table"
+          verticalSpacing="xs"
+          striped
+          fontSize="xs"
+        >
+          <thead>
+            <tr>
+              <th>status</th>
+              <th>actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>
+                <ReleaseStatusBadge release={release} />
+              </td>
+              <td>
+                <div className="ReleasePage__PublishStatus__actions">
+                  {!release.archivedAt && !release.scheduledAt && (
                     <ConditionalTooltip
-                      label="You don't have access to manage scheduled releases"
+                      label="You don't have access to publish this release"
                       condition={!canPublish}
                     >
                       <Tooltip
-                        label="Cancel the scheduled release"
+                        label="Publish the release immediately"
                         position="bottom"
                         withArrow
                         disabled={!canPublish}
@@ -263,43 +245,69 @@ ReleasePage.PublishStatus = (props: {
                           variant="default"
                           size="xs"
                           compact
-                          onClick={() => onCancelScheduleClicked()}
+                          onClick={() => onPublishClicked()}
+                          loading={publishLoading}
                           disabled={!canPublish}
                         >
-                          Cancel Schedule
+                          {release.publishedAt ? 'Re-publish' : 'Publish'}
                         </Button>
                       </Tooltip>
                     </ConditionalTooltip>
-                  ) : (
-                    <ConditionalTooltip
-                      label="You don't have access to manage scheduled releases"
-                      condition={!canPublish}
-                    >
-                      <Tooltip
-                        label="Schedule the release to be published at a future date"
-                        position="bottom"
-                        withArrow
-                        wrapLines
-                        width={180}
-                        disabled={!canPublish}
+                  )}
+                  {!release.archivedAt &&
+                    (release.scheduledAt ? (
+                      <ConditionalTooltip
+                        label="You don't have access to manage scheduled releases"
+                        condition={!canPublish}
                       >
-                        <Button
-                          variant="default"
-                          size="xs"
-                          compact
-                          onClick={() => onScheduleClicked()}
+                        <Tooltip
+                          label="Cancel the scheduled release"
+                          position="bottom"
+                          withArrow
                           disabled={!canPublish}
                         >
-                          Schedule
-                        </Button>
-                      </Tooltip>
-                    </ConditionalTooltip>
-                  ))}
-              </div>
-            </td>
-          </tr>
-        </tbody>
-      </Table>
+                          <Button
+                            variant="default"
+                            size="xs"
+                            compact
+                            onClick={() => onCancelScheduleClicked()}
+                            disabled={!canPublish}
+                          >
+                            Cancel Schedule
+                          </Button>
+                        </Tooltip>
+                      </ConditionalTooltip>
+                    ) : (
+                      <ConditionalTooltip
+                        label="You don't have access to manage scheduled releases"
+                        condition={!canPublish}
+                      >
+                        <Tooltip
+                          label="Schedule the release to be published at a future date"
+                          position="bottom"
+                          withArrow
+                          wrapLines
+                          width={180}
+                          disabled={!canPublish}
+                        >
+                          <Button
+                            variant="default"
+                            size="xs"
+                            compact
+                            onClick={() => onScheduleClicked()}
+                            disabled={!canPublish}
+                          >
+                            Schedule
+                          </Button>
+                        </Tooltip>
+                      </ConditionalTooltip>
+                    ))}
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </Table>
+      </Surface>
     </div>
   );
 };
@@ -321,7 +329,7 @@ ReleasePage.DocsList = (props: {release: Release}) => {
           Edit
         </Button>
       </div>
-      <div className="ReleasePage__DocsList__cards">
+      <Surface className="ReleasePage__DocsList__cards">
         {docIds.map((docId) => (
           <div key={docId} className="ReleasePage__DocsList__card">
             <a href={`/cms/content/${docId}`}>
@@ -329,7 +337,7 @@ ReleasePage.DocsList = (props: {release: Release}) => {
             </a>
           </div>
         ))}
-      </div>
+      </Surface>
     </div>
   );
 };

@@ -1,0 +1,6 @@
+.Surface {
+  background: var(--surface-background);
+  border: 1px solid var(--color-border);
+  border-radius: var(--surface-border-radius);
+  overflow: hidden;
+}

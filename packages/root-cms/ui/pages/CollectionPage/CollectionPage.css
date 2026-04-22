@@ -1,24 +1,42 @@
-/* .CollectionPage {
-  padding: 8px;
-} */
+.CollectionPage {
+  --side-width: 400px;
+  background: var(--page-background);
+}
+
+.CollectionPage__layout {
+  position: relative;
+  min-height: calc(100vh - var(--header-height));
+}
+
+.CollectionPage__side {
+  position: absolute;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  overflow: auto;
+  width: var(--side-width);
+  z-index: 10;
+  padding-top: var(--page-padding);
+  padding-left: var(--page-padding);
+  padding-bottom: var(--page-padding);
+}
+
 .CollectionPage__side__title {
-  padding: 8px 12px;
-  /* border-bottom: 1px solid var(--color-border); */
-  text-transform: uppercase;
-  font-size: 13px;
-  font-weight: 700;
+  font-size: 14px;
+  line-height: 1.2;
+  font-weight: 600;
+  margin-bottom: 12px;
 }
 
 .CollectionPage__side__search input {
   display: block;
   width: 100%;
   border: 1px solid var(--color-border);
-  border-left: none;
-  border-right: none;
-  border-radius: 0;
+  border-radius: var(--surface-border-radius);
   line-height: 24px;
   padding: 4px 12px;
   font-family: inherit;
+  margin-bottom: 8px;
 }
 
 .CollectionPage__side__search input:focus {
@@ -29,70 +47,16 @@
   color: #E5E5E5;
 }
 
-.CollectionPage__main__unselected {
-  padding: 12px;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.CollectionPage__main__unselected svg {
-  transform: rotate(180deg);
-}
-
-.CollectionPage__main__unselected__title {
-  font-size: 14px;
-  font-weight: 500;
-}
-
-.CollectionPage__collection__header {
-  padding: 12px;
-  display: none;
-}
-
-.CollectionPage__collection__header__title {
-  font-size: 20px;
-  font-weight: 700;
-}
-
-.CollectionPage__collection__header__description {
-  font-size: 14px;
-  font-weight: 500;
-  margin-top: 4px;
-
-}
-
-.CollectionPage__collection__header__description a {
-  font-weight: 700;
-}
-
-.CollectionPage__collection__header__description a:hover {
-  color: black;
-}
-
-/* Tabs are hidden until there are more than one. */
-.CollectionPage__collection__tabs .mantine-Tabs-tabsListWrapper {
-  display: none;
-}
-
-.CollectionPage__collection__tabs .mantine-Tabs-body {
-  padding-top: 0;
-}
-
-.CollectionPage__collection__tabs [role="tab"] {
-  font-weight: 500;
-}
-
-.CollectionPage__collection__tabs [role="tab"][data-active] {
-  border-color: lightblue;
-}
-
-.CollectionPage__collection__tabs [role="tablist"] {
-  border-color: var(--color-border);
+.CollectionPage__main {
+  padding-left: calc(var(--side-width) + var(--page-padding));
+  padding-top: var(--page-padding);
+  padding-right: var(--page-padding);
+  max-height: calc(100vh - var(--header-height));
+  overflow: auto;
 }
 
 .CollectionPage__collection__docsTab {
-  padding: 16px 12px 250px;
+  padding: 0 0 120px;
 }
 
 .CollectionPage__collection__docsTab__header {
@@ -100,10 +64,14 @@
   justify-content: space-between;
   align-items: center;
   gap: 16px;
+  margin-bottom: 12px;
 }
 
 .CollectionPage__collection__docsTab__header__title {
   flex: 1;
+  font-size: 22px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
 }
 
 .CollectionPage__collection__docsTab__controls {
@@ -120,21 +88,32 @@
   align-items: center;
 }
 
-.CollectionPage__collection__docsTab__controls__sort__label {
-  font-weight: 600;
+.CollectionPage__collection__docsTab__controls__showArchived .mantine-Switch-root {
+  display: flex;
+  align-items: center;
+  flex-direction: row-reverse;
+  gap: 8px;
 }
 
-.CollectionPage__collection__docsList {
-  margin-top: 16px;
-  border-bottom: 1px solid var(--color-border);
+.CollectionPage__collection__docsTab__controls__showArchived .mantine-Switch-label {
+  color: var(--color-text-default);
+  font-weight: 500;
+  margin-left: 0;
+}
+
+.CollectionPage__collection__docsTab__controls__sort__label {
+  font-weight: 500;
 }
 
 .CollectionPage__collection__docsList__doc {
   display: flex;
   align-items: center;
-  padding: 8px 0;
-  border-top: 1px solid var(--color-border);
+  padding: 12px;
   overflow: hidden;
+}
+
+.CollectionPage__collection__docsList__doc + .CollectionPage__collection__docsList__doc {
+  border-top: 1px solid var(--color-border);
 }
 
 .CollectionPage__collection__docsList__doc__content {

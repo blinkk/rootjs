@@ -1,7 +1,7 @@
 import './CollectionPage.css';
 
-import {Button, Loader, Select, Tabs, Tooltip} from '@mantine/core';
-import {IconArrowRoundaboutRight, IconCirclePlus} from '@tabler/icons-preact';
+import {Button, Loader, Select, Switch} from '@mantine/core';
+import {IconCirclePlus} from '@tabler/icons-preact';
 import {useEffect, useState} from 'preact/hooks';
 import {useLocation} from 'preact-iso';
 import {CollectionTree} from '../../components/CollectionTree/CollectionTree.js';
@@ -9,10 +9,8 @@ import {ConditionalTooltip} from '../../components/ConditionalTooltip/Conditiona
 import {DocActionsMenu} from '../../components/DocActionsMenu/DocActionsMenu.js';
 import {DocStatusBadges} from '../../components/DocStatusBadges/DocStatusBadges.js';
 import {FilePreview} from '../../components/FilePreview/FilePreview.js';
-import {Heading} from '../../components/Heading/Heading.js';
-import {Markdown} from '../../components/Markdown/Markdown.js';
 import {NewDocModal} from '../../components/NewDocModal/NewDocModal.js';
-import {SplitPanel} from '../../components/SplitPanel/SplitPanel.js';
+import {Surface} from '../../components/Surface/Surface.js';
 import {useDocsList} from '../../hooks/useDocsList.js';
 import {useLocalStorage} from '../../hooks/useLocalStorage.js';
 import {usePageTitle} from '../../hooks/usePageTitle.js';
@@ -28,7 +26,6 @@ interface CollectionPageProps {
 
 export function CollectionPage(props: CollectionPageProps) {
   const {route} = useLocation();
-  const [query, setQuery] = useState('');
   const projectId = window.__ROOT_CTX.rootConfig.projectId;
   usePageTitle(props.collection ? `Content: ${props.collection}` : 'Content');
 
@@ -65,41 +62,26 @@ export function CollectionPage(props: CollectionPageProps) {
 
   return (
     <Layout>
-      <SplitPanel className="CollectionPage" localStorageId="CollectionPage">
-        <SplitPanel.Item className="CollectionPage__side">
-          <div className="CollectionPage__side__title">Content</div>
-          <div className="CollectionPage__side__search">
-            <input
-              type="text"
-              placeholder="Search"
-              onChange={(e) => setQuery((e.target as HTMLInputElement).value)}
-            />
-          </div>
-          <div className="CollectionPage__side__collections">
+      <div className="CollectionPage">
+        <div className="CollectionPage__layout">
+          <div className="CollectionPage__side">
+            {/* <div className="CollectionPage__side__title">Content</div> */}
             <CollectionTree
               collections={collections}
               activeCollectionId={props.collection}
-              query={query}
               projectId={projectId}
             />
           </div>
-        </SplitPanel.Item>
-        <SplitPanel.Item className="CollectionPage__main" fluid>
-          {props.collection ? (
-            <CollectionPage.Collection
-              key={props.collection}
-              collection={props.collection}
-            />
-          ) : (
-            <div className="CollectionPage__main__unselected">
-              <IconArrowRoundaboutRight size={24} strokeWidth={1.75} />
-              <div className="CollectionPage__main__unselected__title">
-                Select a collection to get started.
-              </div>
-            </div>
-          )}
-        </SplitPanel.Item>
-      </SplitPanel>
+          <div className="CollectionPage__main">
+            {props.collection && (
+              <CollectionPage.Collection
+                key={props.collection}
+                collection={props.collection}
+              />
+            )}
+          </div>
+        </div>
+      </div>
     </Layout>
   );
 }
@@ -116,6 +98,10 @@ CollectionPage.Collection = (props: CollectionProps) => {
   const [orderBy, setOrderBy] = useLocalStorage<string>(
     `root::CollectionPage:${props.collection}:orderBy`,
     'modifiedAt'
+  );
+  const [showArchived, setShowArchived] = useLocalStorage<boolean>(
+    `root::CollectionPage:${props.collection}:showArchived`,
+    false
   );
   const [newDocModalOpen, setNewDocModalOpen] = useState(false);
 
@@ -137,7 +123,10 @@ CollectionPage.Collection = (props: CollectionProps) => {
     })) || []),
   ];
 
-  const [loading, listDocs, docs] = useDocsList(props.collection, {orderBy});
+  const [loading, listDocs, docs] = useDocsList(props.collection, {
+    orderBy,
+    includeArchived: showArchived,
+  });
 
   return (
     <>
@@ -147,99 +136,93 @@ CollectionPage.Collection = (props: CollectionProps) => {
         onClose={() => setNewDocModalOpen(false)}
       />
       <div className="CollectionPage__collection">
-        <div className="CollectionPage__collection__header">
-          <div className="CollectionPage__collection__header__title">
-            {collection.name}
-          </div>
-          {collection.description && (
-            <Markdown
-              className="CollectionPage__collection__header__description"
-              code={collection.description}
-            />
-          )}
-        </div>
-        <Tabs className="CollectionPage__collection__tabs" active={1}>
-          <Tabs.Tab label="Docs">
-            <div className="CollectionPage__collection__docsTab">
-              {!loading && docs.length > 0 && (
-                <div className="CollectionPage__collection__docsTab__header">
-                  <Heading className="CollectionPage__collection__docsTab__header__title">
-                    {collection.name || props.collection}
-                  </Heading>
-                  <div className="CollectionPage__collection__docsTab__controls">
-                    <div className="CollectionPage__collection__docsTab__controls__sort">
-                      <div className="CollectionPage__collection__docsTab__controls__sort__label">
-                        Sort:
-                      </div>
-                      <Select
-                        size="xs"
-                        value={orderBy}
-                        onChange={(value: any) =>
-                          setOrderBy(value || 'modifiedAt')
-                        }
-                        data={sortOptions}
-                      />
-                    </div>
-                    <div className="CollectionPage__collection__docsTab__controls__newDoc">
-                      <ConditionalTooltip
-                        label="You don't have access to create new documents"
-                        condition={!canEdit}
-                      >
-                        <Button
-                          color="dark"
-                          size="xs"
-                          leftIcon={<IconCirclePlus size={16} />}
-                          onClick={() => setNewDocModalOpen(true)}
-                          disabled={!canEdit}
-                        >
-                          New
-                        </Button>
-                      </ConditionalTooltip>
-                    </div>
-                  </div>
-                </div>
-              )}
-              <div className="CollectionPage__collection__docsTab__content">
-                {loading ? (
-                  <div className="CollectionPage__collection__docsTab__content__loading">
-                    <Loader color="gray" size="xl" />
-                  </div>
-                ) : docs.length === 0 ? (
-                  <div class="CollectionPage__collection__docsEmpty">
-                    <div class="CollectionPage__collection__docsEmpty__icon">
-                      <EmptyDocsImage />
-                    </div>
-                    <div class="CollectionPage__collection__docsEmpty__title">
-                      Collection is empty.
-                    </div>
-                    <div class="CollectionPage__collection__docsEmpty__button">
-                      <ConditionalTooltip
-                        label="You don't have access to create new documents"
-                        condition={!canEdit}
-                      >
-                        <Button
-                          color="dark"
-                          size="xs"
-                          leftIcon={<IconCirclePlus size={16} />}
-                          onClick={() => setNewDocModalOpen(true)}
-                          disabled={!canEdit}
-                        >
-                          New
-                        </Button>
-                      </ConditionalTooltip>
-                    </div>
-                  </div>
-                ) : (
-                  <CollectionPage.DocsList
-                    collection={props.collection}
-                    docs={docs}
-                    reloadDocs={() => listDocs()}
+        <div className="CollectionPage__collection__docsTab">
+          {!loading && (
+            <div className="CollectionPage__collection__docsTab__header">
+              <div className="CollectionPage__collection__docsTab__header__title">
+                {collection.name || props.collection}
+              </div>
+              <div className="CollectionPage__collection__docsTab__controls">
+                <div className="CollectionPage__collection__docsTab__controls__showArchived">
+                  <Switch
+                    size="sm"
+                    color="dark"
+                    label="Show archived:"
+                    checked={showArchived}
+                    onChange={(e: any) =>
+                      setShowArchived(Boolean(e.currentTarget.checked))
+                    }
                   />
-                )}
+                </div>
+                <div className="CollectionPage__collection__docsTab__controls__sort">
+                  <div className="CollectionPage__collection__docsTab__controls__sort__label">
+                    Sort:
+                  </div>
+                  <Select
+                    size="xs"
+                    value={orderBy}
+                    onChange={(value: any) => setOrderBy(value || 'modifiedAt')}
+                    data={sortOptions}
+                  />
+                </div>
+                <div className="CollectionPage__collection__docsTab__controls__newDoc">
+                  <ConditionalTooltip
+                    label="You don't have access to create new documents"
+                    condition={!canEdit}
+                  >
+                    <Button
+                      color="dark"
+                      size="xs"
+                      leftIcon={<IconCirclePlus size={16} />}
+                      onClick={() => setNewDocModalOpen(true)}
+                      disabled={!canEdit}
+                    >
+                      New
+                    </Button>
+                  </ConditionalTooltip>
+                </div>
               </div>
             </div>
-          </Tabs.Tab>
-        </Tabs>
+          )}
+          <Surface className="CollectionPage__collection__docsTab__content">
+            {loading ? (
+              <div className="CollectionPage__collection__docsTab__content__loading">
+                <Loader color="gray" size="xl" />
+              </div>
+            ) : docs.length === 0 ? (
+              <div class="CollectionPage__collection__docsEmpty">
+                <div class="CollectionPage__collection__docsEmpty__icon">
+                  <EmptyDocsImage />
+                </div>
+                <div class="CollectionPage__collection__docsEmpty__title">
+                  Collection is empty.
+                </div>
+                <div class="CollectionPage__collection__docsEmpty__button">
+                  <ConditionalTooltip
+                    label="You don't have access to create new documents"
+                    condition={!canEdit}
+                  >
+                    <Button
+                      color="dark"
+                      size="xs"
+                      leftIcon={<IconCirclePlus size={16} />}
+                      onClick={() => setNewDocModalOpen(true)}
+                      disabled={!canEdit}
+                    >
+                      New
+                    </Button>
+                  </ConditionalTooltip>
+                </div>
+              </div>
+            ) : (
+              <CollectionPage.DocsList
+                collection={props.collection}
+                docs={docs}
+                reloadDocs={() => listDocs()}
+              />
+            )}
+          </Surface>
+        </div>
       </div>
     </>
   );
@@ -320,6 +303,8 @@ CollectionPage.DocsList = (props: {
                 data={doc}
                 onAction={(e) => {
                   if (
+                    e.action === 'archive' ||
+                    e.action === 'unarchive' ||
                     e.action === 'delete' ||
                     e.action === 'unpublish' ||
                     e.action === 'locked' ||

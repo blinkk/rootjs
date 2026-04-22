@@ -128,3 +128,75 @@
   justify-content: center;
   padding: 16px 0;
 }
+
+.ActionLogsCompactItemPreview {
+  display: grid;
+  grid-template-columns: auto auto auto 1fr auto;
+  gap: 12px;
+  align-items: center;
+  font-family: var(--font-family-mono);
+  font-size: 12px;
+  color: var(--color-text-dark);
+  letter-spacing: -0.4px;
+}
+
+.ActionLogsCompact__table .mantine-Accordion-control {
+  padding-top: 12px;
+  padding-bottom: 12px;
+}
+
+.ActionLogsCompact__table .mantine-Accordion-icon {
+  transform: rotate(-90deg);
+}
+
+.ActionLogsCompact__table [aria-expanded="true"] .mantine-Accordion-icon {
+  transform: rotate(0deg) !important;
+}
+
+.ActionLogsCompactItemPreview__timestamp {
+  white-space: nowrap;
+}
+
+.ActionLogsCompactItemPreview__action {
+  padding: 2px 6px;
+  border-radius: 3px;
+  background: var(--chip-background);
+  color: var(--chip-text-color);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.ActionLogsCompactItemPreview__actionMetaId {
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  overflow: hidden;
+}
+
+.ActionLogsCompactItemPreview__buttons {
+  flex: 1;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.ActionLogsCompactItemPreview__user .mantine-Tooltip-root {
+  display: block;
+}
+
+.ActionLogsCompactItemPreview__user .mantine-Avatar-placeholder {
+  background-color: #333;
+  color: #fff;
+}
+
+.ActionLogsCompact__table .mantine-Accordion-content {
+  background: var(--page-background);
+  border-top: 1px dashed var(--color-border);
+}
+
+.ActionLogsCompact__table .mantine-Accordion-contentInner {
+  padding-top: 12px;
+  padding-bottom: 12px;
+}
+
+.ActionLogsCompactItemDetails .ActionsLogs__table__buttons {
+  margin-top: 8px;
+}

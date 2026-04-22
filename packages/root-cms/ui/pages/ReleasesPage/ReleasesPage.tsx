@@ -5,6 +5,7 @@ import {useEffect, useMemo, useState} from 'preact/hooks';
 import {ConditionalTooltip} from '../../components/ConditionalTooltip/ConditionalTooltip.js';
 import {Heading} from '../../components/Heading/Heading.js';
 import {ReleaseStatusBadge} from '../../components/ReleaseStatusBadge/ReleaseStatusBadge.js';
+import {Surface} from '../../components/Surface/Surface.js';
 import {Text} from '../../components/Text/Text.js';
 import {usePageTitle} from '../../hooks/usePageTitle.js';
 import {useProjectRoles} from '../../hooks/useProjectRoles.js';
@@ -26,7 +27,9 @@ export function ReleasesPage() {
         <div className="ReleasesPage__header">
           <Heading size="h1">Releases</Heading>
           <Text as="p">
-            Create a release for publishing content in a batch.
+            Bundle one or more documents and publish them together. Schedule a
+            release to go live at a specific time, or publish manually when
+            you're ready.
           </Text>
           <div className="ReleasesPage__header__buttons">
             <ConditionalTooltip
@@ -103,38 +106,46 @@ ReleasesPage.ReleasesTable = () => {
             />
           </div>
           {filteredReleases.length > 0 && (
-            <Table verticalSpacing="xs" striped highlightOnHover fontSize="xs">
-              <thead>
-                <tr>
-                  <th>id</th>
-                  <th>description</th>
-                  <th>content</th>
-                  <th>status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredReleases.map((release) => (
-                  <tr key={release.id}>
-                    <td>
-                      <a href={`/cms/releases/${release.id}`}>{release.id}</a>
-                    </td>
-                    <td>{release.description || ''}</td>
-                    <td>
-                      {(release.docIds || []).map((docId) => (
-                        <div key={docId}>
-                          <a href={`/cms/content/${docId}`}>{docId}</a>
-                        </div>
-                      ))}
-                    </td>
-                    <td>
-                      <div className="ReleasesPage__ReleasesTable__publishStatus">
-                        <ReleaseStatusBadge release={release} />
-                      </div>
-                    </td>
+            <Surface>
+              <Table
+                className="ReleasesPage__ReleasesTable__table"
+                verticalSpacing="xs"
+                striped
+                highlightOnHover
+                fontSize="xs"
+              >
+                <thead>
+                  <tr>
+                    <th>id</th>
+                    <th>description</th>
+                    <th>content</th>
+                    <th>status</th>
                   </tr>
-                ))}
-              </tbody>
-            </Table>
+                </thead>
+                <tbody>
+                  {filteredReleases.map((release) => (
+                    <tr key={release.id}>
+                      <td>
+                        <a href={`/cms/releases/${release.id}`}>{release.id}</a>
+                      </td>
+                      <td>{release.description || ''}</td>
+                      <td>
+                        {(release.docIds || []).map((docId) => (
+                          <div key={docId}>
+                            <a href={`/cms/content/${docId}`}>{docId}</a>
+                          </div>
+                        ))}
+                      </td>
+                      <td>
+                        <div className="ReleasesPage__ReleasesTable__publishStatus">
+                          <ReleaseStatusBadge release={release} />
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </Table>
+            </Surface>
           )}
           {filteredReleases.length === 0 && (
             <Text as="p">No releases found for this filter.</Text>
