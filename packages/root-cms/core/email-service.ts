@@ -32,8 +32,12 @@ export interface RootEmailServiceOptions {
  * import {rootEmailService} from '@blinkk/root-cms/plugin';
  *
  * cmsPlugin({
- *   services: {
- *     email: rootEmailService({
+ *   email: {
+ *     enabled: true,
+ *     sender: 'noreply@example.com',
+ *     recipients: ['admin@example.com'],
+ *     events: ['doc.publish'],
+ *     service: rootEmailService({
  *       webhookUrl: 'https://tools.example.com/_/send_emails',
  *       projectId: 'my-project',
  *     }),

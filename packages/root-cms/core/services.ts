@@ -1,21 +1,3 @@
-/**
- * Services are optional integrations that plugins can register to enable
- * extra functionality in Root CMS. For example, registering an email service
- * enables the CMS to send email notifications when actions occur.
- *
- * Services are configured via the `services` option in `cmsPlugin()`:
- *
- * ```ts
- * cmsPlugin({
- *   services: {
- *     email: rootEmailService({
- *       webhookUrl: 'https://tools.example.com/_/send_emails',
- *     }),
- *   },
- * });
- * ```
- */
-
 /** Options for sending an email. */
 export interface SendEmailOptions {
   /** Recipient email addresses. */
@@ -39,13 +21,13 @@ export interface SendEmailResult {
 }
 
 /**
- * Interface for an email service that can send emails. Implement this
- * interface to integrate with any email provider (e.g. App Engine Mail API,
- * SendGrid, Mailgun, etc.).
+ * Interface for an email service provider that can send emails. Implement
+ * this interface to integrate with any email provider (e.g. App Engine Mail
+ * API, SendGrid, Mailgun, etc.).
  *
  * Example:
  * ```ts
- * const myEmailService: CMSEmailService = {
+ * const myEmailService: CMSEmailServiceProvider = {
  *   async sendEmail(options) {
  *     // Send the email using your provider.
  *     return {success: true};
@@ -56,12 +38,4 @@ export interface SendEmailResult {
 export interface CMSEmailServiceProvider {
   /** Sends an email. */
   sendEmail(options: SendEmailOptions): Promise<SendEmailResult>;
-}
-
-/**
- * Map of optional services that can be registered with Root CMS.
- */
-export interface CMSServices {
-  /** Email service for sending emails. */
-  email?: CMSEmailServiceProvider;
 }

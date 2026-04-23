@@ -15,6 +15,9 @@ import {TranslationsManager} from './translations-manager.js';
 import {validateFields} from './validation.js';
 import {setValueAtPath} from './values.js';
 
+/** Default email expiration: 1 hour (in milliseconds). */
+const DEFAULT_EMAIL_EXPIRES_AFTER_MS = 60 * 60 * 1000;
+
 export interface Doc<Fields = any> {
   /** The id of the doc, e.g. "Pages/foo-bar". */
   id: string;
@@ -239,6 +242,8 @@ export interface QueuedEmail {
   createdBy: string;
   /** When the email was sent. */
   sentAt?: Timestamp;
+  /** When the email expires and should no longer be sent. */
+  expiresAt: Timestamp;
   /** The CMS action that triggered this email. */
   action: string;
   /** Additional context data. */
@@ -1844,6 +1849,11 @@ export class RootCMSClient {
    * `pending` status and can be picked up by an external email-sending service.
    */
   async queueEmail(options: QueueEmailOptions): Promise<string> {
+    const cmsPluginConfig = this.cmsPlugin.getConfig();
+    const emailConfig = cmsPluginConfig.email;
+    const expiresAfterMs = emailConfig?.expiresAfterMs ?? DEFAULT_EMAIL_EXPIRES_AFTER_MS;
+    const expiresAt = Timestamp.fromMillis(Date.now() + expiresAfterMs);
+
     const emailData: QueuedEmail = {
       to: options.to,
       from: options.from,
@@ -1853,6 +1863,7 @@ export class RootCMSClient {
       action: options.action,
       createdAt: Timestamp.now(),
       createdBy: options.createdBy || 'system',
+      expiresAt,
     };
     if (options.htmlBody) {
       emailData.htmlBody = options.htmlBody;
@@ -1866,8 +1877,7 @@ export class RootCMSClient {
     console.log(`queued email: ${docRef.id} (action: ${options.action})`);
 
     // If an email service is registered, attempt to send immediately.
-    const cmsPluginConfig = this.cmsPlugin.getConfig();
-    const emailService = cmsPluginConfig.services?.email;
+    const emailService = emailConfig?.service;
     if (emailService) {
       try {
         const result = await emailService.sendEmail({
@@ -1890,9 +1900,9 @@ export class RootCMSClient {
         console.error('email service failed to send:', err);
         await this.updateEmailStatus(docRef.id, 'failed', String(err));
       }
-    } else if (cmsPluginConfig.email?.webhook?.url) {
+    } else if (emailConfig?.webhook?.url) {
       // Fall back to webhook notification if no email service is registered.
-      this.fireEmailWebhook(cmsPluginConfig.email.webhook, {
+      this.fireEmailWebhook(emailConfig.webhook, {
         id: docRef.id,
         projectId: this.projectId,
         ...emailData,
@@ -1903,19 +1913,38 @@ export class RootCMSClient {
   }
 
   /**
-   * Lists pending emails from the queue.
+   * Lists pending emails from the queue, filtering out expired emails.
+   * Emails that have passed their `expiresAt` timestamp are automatically
+   * marked as `failed` with an expiration error.
    */
-  async listPendingEmails(limit = 100): Promise<(QueuedEmail & {id: string})[]> {
+  async listPendingEmails(options?: {
+    limit?: number;
+    /** Override expiration window (ms). Uses the config default if unset. */
+    expiresAfterMs?: number;
+  }): Promise<(QueuedEmail & {id: string})[]> {
+    const limit = options?.limit ?? 100;
     const colRef = this.db.collection(this.dbEmailsPath());
     const snapshot = await colRef
       .where('status', '==', 'pending')
       .orderBy('createdAt', 'asc')
       .limit(limit)
       .get();
-    return snapshot.docs.map((doc) => ({
-      id: doc.id,
-      ...(doc.data() as QueuedEmail),
-    }));
+
+    const now = Date.now();
+    const result: (QueuedEmail & {id: string})[] = [];
+
+    for (const doc of snapshot.docs) {
+      const data = doc.data() as QueuedEmail;
+      // Check expiration. If the email has an `expiresAt` field and it has
+      // passed, mark it as failed and skip it.
+      if (data.expiresAt && data.expiresAt.toMillis() <= now) {
+        await this.updateEmailStatus(doc.id, 'failed', 'expired');
+        continue;
+      }
+      result.push({id: doc.id, ...data});
+    }
+
+    return result;
   }
 
   /**

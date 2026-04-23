@@ -12,7 +12,7 @@ import {type CMSCheck} from './checks.js';
 import {RootCMSClient, parseDocId, unmarshalData} from './client.js';
 import {runCronJobs} from './cron.js';
 import {arrayToCsv, csvToArray} from './csv.js';
-import {type CMSServices} from './services.js';
+import {type CMSEmailConfig} from './plugin.js';
 import {type CMSTranslationService} from './translations.js';
 
 type AppModule = typeof import('./app.js');
@@ -109,8 +109,8 @@ export interface ApiOptions {
    * may change from version to version as we add new features.
    */
   translations?: CMSTranslationService[];
-  /** Optional services registered via the CMS plugin config. */
-  services?: CMSServices;
+  /** Email notification config registered via the CMS plugin config. */
+  email?: CMSEmailConfig;
 }
 
 /**
@@ -834,7 +834,8 @@ export function api(server: Server, options: ApiOptions) {
       return;
     }
 
-    const emailService = options.services?.email;
+    const emailConfig = options.email;
+    const emailService = emailConfig?.service;
     if (!emailService) {
       res.status(400).json({
         success: false,
@@ -845,7 +846,10 @@ export function api(server: Server, options: ApiOptions) {
 
     try {
       const cmsClient = new RootCMSClient(req.rootConfig!);
-      const pendingEmails = await cmsClient.listPendingEmails();
+      const expiresAfterMs = emailConfig?.expiresAfterMs;
+      const pendingEmails = await cmsClient.listPendingEmails({
+        expiresAfterMs,
+      });
       let sent = 0;
       let failed = 0;
 

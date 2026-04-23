@@ -27,10 +27,10 @@ import {SSEEvent, SSESchemaChangedEvent} from '../shared/sse.js';
 import {type RootAiModel} from './ai.js';
 import {api} from './api.js';
 import {type CMSCheck} from './checks.js';
-import {type CMSServices} from './services.js';
-import {type CMSTranslationService} from './translations.js';
 import {Action, RootCMSClient} from './client.js';
+import {type CMSEmailServiceProvider} from './services.js';
 import {sse, SSEBroadcastFn} from './sse.js';
+import {type CMSTranslationService} from './translations.js';
 
 export type {
   CMSCheck,
@@ -44,7 +44,6 @@ export {rootEmailService} from './email-service.js';
 export type {RootEmailServiceOptions} from './email-service.js';
 export type {
   CMSEmailServiceProvider,
-  CMSServices,
   SendEmailOptions,
   SendEmailResult,
 } from './services.js';
@@ -175,6 +174,38 @@ export interface CMSEmailConfig {
     /** Shared secret for generating an HMAC-SHA256 signature header. */
     secret?: string;
   };
+  /**
+   * An email service provider used to send queued emails. When set, emails
+   * are sent immediately after being queued. If not set, emails remain in
+   * `pending` status until processed by an external service (e.g. via the
+   * webhook).
+   *
+   * Example:
+   * ```ts
+   * import {rootEmailService} from '@blinkk/root-cms/plugin';
+   *
+   * cmsPlugin({
+   *   email: {
+   *     enabled: true,
+   *     sender: 'noreply@example.com',
+   *     recipients: ['admin@example.com'],
+   *     events: ['doc.publish'],
+   *     service: rootEmailService({
+   *       webhookUrl: 'https://tools.example.com/_/send_emails',
+   *       projectId: 'my-project',
+   *     }),
+   *   },
+   * });
+   * ```
+   */
+  service?: CMSEmailServiceProvider;
+  /**
+   * How long a pending email remains eligible for sending, in milliseconds.
+   * Emails older than this are skipped to avoid sending a large backlog if
+   * the email runner hasn't been invoked in a while. Defaults to `3600000`
+   * (1 hour).
+   */
+  expiresAfterMs?: number;
 }
 
 export type CMSPluginOptions = {
@@ -394,24 +425,6 @@ export type CMSPluginOptions = {
    * ```
    */
   translations?: CMSTranslationService[];
-
-  /**
-   * Optional services that extend Root CMS functionality. Services are
-   * provided by plugins or custom implementations and are used to integrate
-   * with external systems (e.g. email providers, caching layers, etc.).
-   *
-   * Example:
-   * ```ts
-   * cmsPlugin({
-   *   services: {
-   *     email: rootEmailService({
-   *       webhookUrl: 'https://tools.example.com/_/send_emails',
-   *     }),
-   *   },
-   * });
-   * ```
-   */
-  services?: CMSServices;
 };
 
 export type CMSPlugin = Plugin & {
@@ -844,7 +857,7 @@ export function cmsPlugin(options: CMSPluginOptions): CMSPlugin {
         getRenderer,
         checks: options.checks,
         translations: options.translations,
-        services: options.services,
+        email: options.email,
       });
 
       // Render the CMS SPA.
