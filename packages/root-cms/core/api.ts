@@ -12,6 +12,7 @@ import {type CMSCheck} from './checks.js';
 import {RootCMSClient, parseDocId, unmarshalData} from './client.js';
 import {runCronJobs} from './cron.js';
 import {arrayToCsv, csvToArray} from './csv.js';
+import {type CMSServices} from './services.js';
 import {type CMSTranslationService} from './translations.js';
 
 type AppModule = typeof import('./app.js');
@@ -108,6 +109,8 @@ export interface ApiOptions {
    * may change from version to version as we add new features.
    */
   translations?: CMSTranslationService[];
+  /** Optional services registered via the CMS plugin config. */
+  services?: CMSServices;
 }
 
 /**
@@ -811,4 +814,66 @@ export function api(server: Server, options: ApiOptions) {
       res.status(500).json({success: false, error: err.message || 'UNKNOWN'});
     }
   }
+
+  /**
+   * Sends pending emails using the registered email service. This endpoint
+   * processes queued emails from Firestore and sends them via the configured
+   * email service provider.
+   *
+   * ```
+   * POST /cms/api/email.send
+   * ```
+   */
+  server.use('/cms/api/email.send', async (req: Request, res: Response) => {
+    if (req.method !== 'POST') {
+      res.status(400).json({success: false, error: 'BAD_REQUEST'});
+      return;
+    }
+    if (!req.user?.email) {
+      res.status(401).json({success: false, error: 'UNAUTHORIZED'});
+      return;
+    }
+
+    const emailService = options.services?.email;
+    if (!emailService) {
+      res.status(400).json({
+        success: false,
+        error: 'EMAIL_SERVICE_NOT_CONFIGURED',
+      });
+      return;
+    }
+
+    try {
+      const cmsClient = new RootCMSClient(req.rootConfig!);
+      const pendingEmails = await cmsClient.listPendingEmails();
+      let sent = 0;
+      let failed = 0;
+
+      for (const email of pendingEmails) {
+        const result = await emailService.sendEmail({
+          to: email.to,
+          from: email.from,
+          subject: email.subject,
+          body: email.body,
+          htmlBody: email.htmlBody,
+        });
+        if (result.success) {
+          await cmsClient.updateEmailStatus(email.id, 'sent');
+          sent++;
+        } else {
+          await cmsClient.updateEmailStatus(
+            email.id,
+            'failed',
+            result.error || 'unknown error'
+          );
+          failed++;
+        }
+      }
+
+      res.status(200).json({success: true, sent, failed});
+    } catch (err: any) {
+      console.error(err.stack || err);
+      res.status(500).json({success: false, error: err.message || 'UNKNOWN'});
+    }
+  });
 }

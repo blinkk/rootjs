@@ -27,6 +27,7 @@ import {SSEEvent, SSESchemaChangedEvent} from '../shared/sse.js';
 import {type RootAiModel} from './ai.js';
 import {api} from './api.js';
 import {type CMSCheck} from './checks.js';
+import {type CMSServices} from './services.js';
 import {type CMSTranslationService} from './translations.js';
 import {Action, RootCMSClient} from './client.js';
 import {sse, SSEBroadcastFn} from './sse.js';
@@ -39,6 +40,14 @@ export type {
 } from './checks.js';
 export {translationsCheck} from './checks-translations.js';
 export type {TranslationsCheckOptions} from './checks-translations.js';
+export {rootEmailService} from './email-service.js';
+export type {RootEmailServiceOptions} from './email-service.js';
+export type {
+  CMSEmailServiceProvider,
+  CMSServices,
+  SendEmailOptions,
+  SendEmailResult,
+} from './services.js';
 export type {
   CMSTranslationService,
   TranslationExportResult,
@@ -385,6 +394,24 @@ export type CMSPluginOptions = {
    * ```
    */
   translations?: CMSTranslationService[];
+
+  /**
+   * Optional services that extend Root CMS functionality. Services are
+   * provided by plugins or custom implementations and are used to integrate
+   * with external systems (e.g. email providers, caching layers, etc.).
+   *
+   * Example:
+   * ```ts
+   * cmsPlugin({
+   *   services: {
+   *     email: rootEmailService({
+   *       webhookUrl: 'https://tools.example.com/_/send_emails',
+   *     }),
+   *   },
+   * });
+   * ```
+   */
+  services?: CMSServices;
 };
 
 export type CMSPlugin = Plugin & {
@@ -817,6 +844,7 @@ export function cmsPlugin(options: CMSPluginOptions): CMSPlugin {
         getRenderer,
         checks: options.checks,
         translations: options.translations,
+        services: options.services,
       });
 
       // Render the CMS SPA.

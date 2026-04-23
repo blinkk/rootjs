@@ -1865,10 +1865,34 @@ export class RootCMSClient {
     const docRef = await colRef.add(emailData);
     console.log(`queued email: ${docRef.id} (action: ${options.action})`);
 
-    // Fire webhook notification if configured.
-    const emailConfig = this.cmsPlugin.getConfig().email;
-    if (emailConfig?.webhook?.url) {
-      this.fireEmailWebhook(emailConfig.webhook, {
+    // If an email service is registered, attempt to send immediately.
+    const cmsPluginConfig = this.cmsPlugin.getConfig();
+    const emailService = cmsPluginConfig.services?.email;
+    if (emailService) {
+      try {
+        const result = await emailService.sendEmail({
+          to: options.to,
+          from: options.from,
+          subject: options.subject,
+          body: options.body,
+          htmlBody: options.htmlBody,
+        });
+        if (result.success) {
+          await this.updateEmailStatus(docRef.id, 'sent');
+        } else {
+          await this.updateEmailStatus(
+            docRef.id,
+            'failed',
+            result.error || 'unknown error'
+          );
+        }
+      } catch (err) {
+        console.error('email service failed to send:', err);
+        await this.updateEmailStatus(docRef.id, 'failed', String(err));
+      }
+    } else if (cmsPluginConfig.email?.webhook?.url) {
+      // Fall back to webhook notification if no email service is registered.
+      this.fireEmailWebhook(cmsPluginConfig.email.webhook, {
         id: docRef.id,
         projectId: this.projectId,
         ...emailData,
