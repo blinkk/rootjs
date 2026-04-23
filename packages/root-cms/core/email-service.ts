@@ -7,10 +7,9 @@ import {
 
 export interface RootEmailServiceOptions {
   /**
-   * The URL of the Root.js tools service endpoint for sending emails.
-   * This is typically the App Engine service at `/_/send_emails`.
+   * The URL of the root-tools service endpoint for sending emails.
    *
-   * Example: `https://tools.example.com/_/send_emails`
+   * Example: `https://root-tools.example.com/_/send_emails`
    */
   webhookUrl: string;
   /**
@@ -38,7 +37,7 @@ export interface RootEmailServiceOptions {
  *     recipients: ['admin@example.com'],
  *     events: ['doc.publish'],
  *     service: rootEmailService({
- *       webhookUrl: 'https://tools.example.com/_/send_emails',
+ *       webhookUrl: 'https://root-tools.example.com/_/send_emails',
  *       projectId: 'my-project',
  *     }),
  *   },

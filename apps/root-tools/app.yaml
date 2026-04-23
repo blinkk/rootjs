@@ -1,5 +1,5 @@
 runtime: go125
-service: tools
+service: root-tools
 app_engine_apis: true
 
 handlers:
