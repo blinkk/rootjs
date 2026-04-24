@@ -151,6 +151,12 @@ export interface DividerFields {
   };
 }
 
+/** Generated from `/components/Emoji/Emoji.schema.ts`. */
+export interface EmojiFields {
+  /** Emoji */
+  emojiName?: string;
+}
+
 /** Generated from `/collections/Guide.schema.ts`. */
 export interface GuideFields {
   /** Meta */

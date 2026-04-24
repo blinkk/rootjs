@@ -1,4 +1,5 @@
 import {schema} from '@blinkk/root-cms';
+import EmojiSchema from '@/components/Emoji/Emoji.schema.js';
 
 export default schema.collection({
   name: 'BlogPosts',
@@ -51,21 +52,7 @@ export default schema.collection({
           help: 'Top content body.',
           translate: true,
           autosize: true,
-          inlineComponents: [
-            schema.define({
-              name: 'Emoji',
-              fields: [
-                schema.select({
-                  id: 'emojiName',
-                  label: 'Emoji',
-                  options: [
-                    {value: 'heart', label: 'heart ❤️'},
-                    {value: 'joy', label: 'joy 😂'},
-                  ],
-                }),
-              ],
-            }),
-          ],
+          inlineComponents: [EmojiSchema],
           blockComponents: [
             schema.define({
               name: 'RelatedPostsBlock',

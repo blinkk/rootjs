@@ -1,6 +1,7 @@
-import {useTranslations} from '@blinkk/root';
+import {StringParamsProvider, useTranslations} from '@blinkk/root';
 import {FunctionalComponent, createContext} from 'preact';
 import {useContext} from 'preact/hooks';
+import {renderToString} from 'preact-render-to-string';
 
 export interface RichTextBlock {
   type: string;
@@ -9,13 +10,24 @@ export interface RichTextBlock {
 
 export interface RichTextData {
   [key: string]: any;
-  blocks: any[];
+  blocks: RichTextBlock[];
 }
 
-export type RichTextBlockComponent = FunctionalComponent<any>;
+export type RichTextComponent = FunctionalComponent<any>;
+export type RichTextBlockComponent = RichTextComponent;
+export type RichTextInlineComponent = RichTextComponent;
+
+export type RichTextComponentMap = Record<string, RichTextComponent>;
 
 export interface RichTextContextProps {
-  components?: Record<string, RichTextBlockComponent>;
+  /**
+   * Rich text components override for both inline and block level components.
+   */
+  components?: RichTextComponentMap;
+  /**
+   * Translator function override.
+   */
+  t?: (msg: string, params?: Record<string, string | number>) => string;
 }
 
 export const RichTextContext = createContext<RichTextContextProps>({});
@@ -24,52 +36,85 @@ export function useRichTextContext(): RichTextContextProps {
   return useContext(RichTextContext);
 }
 
+const RichTextComponentMapContext = createContext<RichTextComponentMap>({});
+
+function useRichTextContextComponentMap(): RichTextComponentMap {
+  return useContext(RichTextComponentMapContext);
+}
+
+function useRichTextTranslations() {
+  const ctx = useRichTextContext();
+  if (ctx.t) {
+    return ctx.t;
+  }
+  return useTranslations();
+}
+
 export interface RichTextProps {
-  data: RichTextData;
+  data: RichTextData | undefined;
   components?: Record<string, RichTextBlockComponent>;
+  /** @deprecated */
+  translate?: boolean;
 }
 
 /** Renders data from the "richtext" field. */
 export function RichText(props: RichTextProps) {
+  const blocks = props.data?.blocks || [];
+  if (blocks.length === 0) {
+    return null;
+  }
+
   const richTextContext = useRichTextContext();
-  const components: Record<string, RichTextBlockComponent> = {
-    delimiter: RichText.DelimiterBlock,
+  const componentMap: Record<string, RichTextBlockComponent> = {
     heading: RichText.HeadingBlock,
     html: RichText.HtmlBlock,
     image: RichText.ImageBlock,
     orderedList: RichText.ListBlock,
     paragraph: RichText.ParagraphBlock,
-    quote: RichText.QuoteBlock,
     table: RichText.TableBlock,
     unorderedList: RichText.ListBlock,
     ...richTextContext.components,
     ...props.components,
   };
-  const blocks = (props.data?.blocks || []).filter((block) => {
-    const blockType = block?.type;
-    if (!blockType) {
-      return false;
-    }
-    if (!(blockType in components)) {
-      console.warn(`ignoring unknown richtext type: "${blockType}"`);
-      return false;
-    }
-    return true;
-  });
   return (
-    <>
-      {blocks.map((block) => {
-        const Block = components[block.type];
-        return <Block {...block} />;
-      })}
-    </>
+    <RichTextComponentMapContext.Provider value={componentMap}>
+      {blocks
+        .map((block) => {
+          return <RichText.Block {...block} />;
+        })
+        .filter((value) => !!value)}
+    </RichTextComponentMapContext.Provider>
   );
 }
+
+RichText.Block = (props: RichTextBlock) => {
+  const block = props;
+  const blockType = block?.type;
+  if (!blockType) {
+    return null;
+  }
+  const componentMap = useRichTextContextComponentMap();
+  const Component = componentMap[blockType];
+  if (!Component) {
+    console.warn(`[RichText] ignoring unknown richtext type: "${blockType}"`);
+    return null;
+  }
+  const stringParams = collectInlineComponentParams(block, componentMap);
+  if (stringParams) {
+    return (
+      <StringParamsProvider value={stringParams}>
+        <Component {...block} />
+      </StringParamsProvider>
+    );
+  }
+  return <Component {...block} />;
+};
 
 export interface RichTextParagraphBlockProps {
   type: 'paragraph';
   data?: {
     text?: string;
+    components?: Record<string, any>;
   };
 }
 
@@ -77,17 +122,9 @@ RichText.ParagraphBlock = (props: RichTextParagraphBlockProps) => {
   if (!props.data?.text) {
     return null;
   }
-  const t = useTranslations();
-  return <p dangerouslySetInnerHTML={{__html: t(props.data.text)}} />;
-};
-
-export interface RichTextDelimiterBlockProps {
-  type: 'delimiter';
-  data?: {};
-}
-
-RichText.DelimiterBlock = () => {
-  return <hr />;
+  const t = useRichTextTranslations();
+  const html = t(props.data.text);
+  return <p dangerouslySetInnerHTML={{__html: html}} />;
 };
 
 export interface RichTextHeadingBlockProps {
@@ -104,30 +141,17 @@ RichText.HeadingBlock = (props: RichTextHeadingBlockProps) => {
   if (!props.data?.text) {
     return null;
   }
-  const t = useTranslations();
+  const t = useRichTextTranslations();
   const level = props.data.level || 2;
   const Component = `h${level}` as HeadingComponent;
-  return <Component dangerouslySetInnerHTML={{__html: t(props.data.text)}} />;
-};
-
-export interface RichTextQuoteBlockProps {
-  type: 'quote';
-  data?: {
-    text?: string;
-  };
-}
-
-RichText.QuoteBlock = (props: RichTextQuoteBlockProps) => {
-  if (!props.data?.text) {
-    return null;
-  }
-  const t = useTranslations();
-  return <blockquote dangerouslySetInnerHTML={{__html: t(props.data.text)}} />;
+  const html = t(props.data.text);
+  return <Component dangerouslySetInnerHTML={{__html: html}} />;
 };
 
 interface ListItem {
   content?: string;
   items?: ListItem[];
+  components?: Record<string, any>;
 }
 
 export interface RichTextListBlockProps {
@@ -156,13 +180,13 @@ RichText.ListBlock = (props: RichTextListBlockProps) => {
           return (
             <li>
               {item.content && (
-                <RichText.ParagraphBlock
+                <RichText.Block
                   type="paragraph"
-                  data={{text: item.content}}
+                  data={{text: item.content, components: item.components}}
                 />
               )}
               {item.items && item.items.length > 0 && (
-                <RichText.ListBlock
+                <RichText.Block
                   type={props.type}
                   data={{style, items: item.items}}
                 />
@@ -179,6 +203,8 @@ RichText.ListBlock = (props: RichTextListBlockProps) => {
 export interface RichTextImageBlockProps {
   type: 'image';
   data?: {
+    /** The caption entered into the CMS Image field. */
+    caption?: string;
     file?: {
       url: string;
       width: string | number;
@@ -207,7 +233,8 @@ export interface RichTextHtmlBlockProps {
 }
 
 RichText.HtmlBlock = (props: RichTextHtmlBlockProps) => {
-  const html = props.data?.html || '';
+  const t = useRichTextTranslations();
+  const html = t(props.data?.html || '');
   if (!html) {
     return null;
   }
@@ -229,20 +256,16 @@ export interface RichTextTableBlockProps {
 RichText.TableBlock = (props: RichTextTableBlockProps) => {
   const rows = props.data?.rows || [];
   const richTextContext = useRichTextContext();
-
   if (rows.length === 0) {
     return null;
   }
-
   return (
     <table>
       <tbody>
         {rows.map((row, rowIndex) => (
           <tr key={rowIndex}>
             {row.cells.map((cell, cellIndex) => {
-              const isHeader = cell.type === 'header';
-              const Cell = isHeader ? 'th' : 'td';
-
+              const Cell = cell.type === 'header' ? 'th' : 'td';
               return (
                 <Cell key={cellIndex}>
                   <RichText
@@ -271,4 +294,39 @@ function toNumber(input?: string | number): number {
     return 0;
   }
   return parsedNumber;
+}
+
+/** Returns whether the rich text value is truthy. */
+export function testContent(data: RichTextData) {
+  return data?.blocks?.length > 0;
+}
+
+/**
+ * Collects inline component data from all blocks and renders them into a string
+ * params map. Keys use the `{ComponentType:componentId}` format that matches
+ * the markers in the rich text content.
+ */
+function collectInlineComponentParams(
+  block: RichTextBlock,
+  componentMap: RichTextComponentMap
+): Record<string, string> | null {
+  const components: Record<string, any> = block?.data?.components || {};
+  if (Object.keys(components).length === 0) {
+    return null;
+  }
+
+  const params: Record<string, string> = {};
+  for (const [componentId, component] of Object.entries(components)) {
+    const Component = componentMap[component.type];
+    if (Component) {
+      const key = `${component.type}:${componentId}`;
+      params[key] = renderToString(<Component {...component.data} />);
+    } else {
+      console.warn(
+        `[RichText] could not find inline component for type: "${component.type}"`
+      );
+    }
+  }
+
+  return params;
 }
