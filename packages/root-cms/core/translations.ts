@@ -1,5 +1,4 @@
-import type {RootConfig} from '@blinkk/root';
-import type {RootCMSClient} from './client.js';
+import type {CMSService, CMSServiceContext} from './services.js';
 
 /** A row of translation data keyed by locale. */
 export interface TranslationRow {
@@ -12,11 +11,7 @@ export interface TranslationRow {
 }
 
 /** Context passed to translation service import/export functions. */
-export interface TranslationServiceContext {
-  /** The Root.js config. */
-  rootConfig: RootConfig;
-  /** The Root CMS client for accessing the database. */
-  cmsClient: RootCMSClient;
+export interface TranslationServiceContext extends CMSServiceContext {
   /** The document ID, e.g. `Pages/index`. */
   docId: string;
   /** The collection ID, e.g. `Pages`. */
@@ -74,16 +69,7 @@ export interface TranslationImportResult {
 }
 
 /** Configuration for defining a CMS translation service. */
-export interface CMSTranslationService {
-  /** Unique ID for the translation service. */
-  id: string;
-  /** Human-readable label displayed in the UI (e.g. "Crowdin"). */
-  label: string;
-  /**
-   * Optional icon URL displayed in the UI next to the label. Similar to the
-   * sidebar tools `icon` option, this should be a URL to an image.
-   */
-  icon?: string;
+export interface CMSTranslationService extends CMSService {
   /**
    * Async function to import translations from the service. Should return an
    * array of translation rows that will be merged into the CMS translations

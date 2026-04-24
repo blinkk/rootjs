@@ -27,6 +27,7 @@ import {SSEEvent, SSESchemaChangedEvent} from '../shared/sse.js';
 import {type RootAiModel} from './ai.js';
 import {api} from './api.js';
 import {type CMSCheck} from './checks.js';
+import {type CMSEmailService} from './services-email.js';
 import {type CMSTranslationService} from './translations.js';
 import {Action, RootCMSClient} from './client.js';
 import {sse, SSEBroadcastFn} from './sse.js';
@@ -39,6 +40,15 @@ export type {
 } from './checks.js';
 export {translationsCheck} from './checks-translations.js';
 export type {TranslationsCheckOptions} from './checks-translations.js';
+export type {CMSService, CMSServiceContext} from './services.js';
+export type {
+  CMSEmailAddress,
+  CMSEmailAttachment,
+  CMSEmailMessage,
+  CMSEmailSendResult,
+  CMSEmailService,
+  CMSEmailServiceContext,
+} from './services-email.js';
 export type {
   CMSTranslationService,
   TranslationExportResult,
@@ -313,21 +323,58 @@ export type CMSPluginOptions = {
    * Export menus. Each service defines server-side import/export functions
    * that integrate with an external translation platform (e.g. Crowdin).
    *
+   * @deprecated Prefer `services.translations`. This top-level option is
+   *   merged with `services.translations` for backwards compatibility.
+   */
+  translations?: CMSTranslationService[];
+
+  /**
+   * Services provided by plugins (or the user) that extend root-cms with
+   * external capabilities such as transactional email and translations.
+   *
+   * All services share a consistent configuration style: each has an `id`,
+   * `label`, optional `icon`, and one or more server-side handler functions
+   * specific to the service.
+   *
    * Example:
    * ```ts
    * cmsPlugin({
-   *   translations: [
-   *     {
-   *       id: 'crowdin',
-   *       label: 'Crowdin',
-   *       onImport: async (ctx, data) => { ... },
-   *       onExport: async (ctx, data) => { ... },
+   *   services: {
+   *     email: {
+   *       id: 'sendgrid',
+   *       label: 'SendGrid',
+   *       send: async (ctx, message) => {
+   *         await sendgrid.send(message);
+   *         return {status: 'success'};
+   *       },
    *     },
-   *   ],
+   *     translations: [
+   *       {
+   *         id: 'crowdin',
+   *         label: 'Crowdin',
+   *         onImport: async (ctx, data) => { ... },
+   *         onExport: async (ctx, data) => { ... },
+   *       },
+   *     ],
+   *   },
    * });
    * ```
    */
-  translations?: CMSTranslationService[];
+  services?: {
+    /**
+     * Email service(s) used for transactional email (e.g. user invitations,
+     * notifications). A single service or an array may be supplied; callers
+     * select a service by its `id`.
+     */
+    email?: CMSEmailService | CMSEmailService[];
+
+    /**
+     * Translation services that appear in the Localization modal's Import and
+     * Export menus. Each service defines server-side import/export functions
+     * that integrate with an external translation platform (e.g. Crowdin).
+     */
+    translations?: CMSTranslationService[];
+  };
 };
 
 export type CMSPlugin = Plugin & {
@@ -373,6 +420,16 @@ export function cmsPlugin(options: CMSPluginOptions): CMSPlugin {
   const app = getFirebaseApp(firebaseConfig.projectId);
   const auth = getAuth(app);
   let sseBroadcast: SSEBroadcastFn | null = null;
+
+  // Merge the deprecated top-level `translations` option with
+  // `services.translations`. Downstream code reads from `options.translations`.
+  const servicesTranslations = options.services?.translations;
+  if (servicesTranslations && servicesTranslations.length > 0) {
+    options.translations = [
+      ...(options.translations || []),
+      ...servicesTranslations,
+    ];
+  }
 
   /**
    * Checks if login is required for the request. Currently returns `true` if
