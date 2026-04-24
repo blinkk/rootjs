@@ -7,6 +7,7 @@ import (
 	"log"
 	"net/http"
 	"strings"
+	"time"
 
 	"cloud.google.com/go/firestore"
 	"cloud.google.com/go/storage"
@@ -202,8 +203,22 @@ func processPendingEmails(ctx context.Context, fsClient *firestore.Client, proje
 	}
 
 	result := &SendEmailsResult{Success: true}
+	now := time.Now()
 	for _, doc := range docs {
 		data := doc.Data()
+
+		// Skip emails that have expired.
+		if expiredAt, ok := data["expiredAt"].(time.Time); ok && now.After(expiredAt) {
+			log.Printf("skipping expired email %s", doc.Ref.ID)
+			_, updateErr := doc.Ref.Update(ctx, []firestore.Update{
+				{Path: "status", Value: "expired"},
+			})
+			if updateErr != nil {
+				log.Printf("failed to update email status to expired: %v", updateErr)
+			}
+			continue
+		}
+
 		msg := &mail.Message{
 			Sender:  fmt.Sprintf("%v", data["from"]),
 			Subject: fmt.Sprintf("%v", data["subject"]),
