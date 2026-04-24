@@ -1,16 +1,20 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
 	"strings"
+	"time"
 
+	"cloud.google.com/go/firestore"
 	"cloud.google.com/go/storage"
 	"google.golang.org/appengine/v2"
 	"google.golang.org/appengine/v2/blobstore"
 	"google.golang.org/appengine/v2/image"
+	"google.golang.org/appengine/v2/mail"
 )
 
 type ServingURLData struct {
@@ -21,7 +25,8 @@ type ServingURLData struct {
 func main() {
 	http.HandleFunc("/_/serving_url", servingURLHandler)
 	http.HandleFunc("/_/service_account", serviceAccountHandler)
-	log.Println("starting gci server")
+	http.HandleFunc("/_/send_emails", sendEmailsHandler)
+	log.Println("starting tools server")
 	appengine.Main()
 }
 
@@ -135,4 +140,129 @@ func serviceAccountHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.Write(data)
+}
+
+type SendEmailsResult struct {
+	Success bool     `json:"success"`
+	Sent    int      `json:"sent"`
+	Failed  int      `json:"failed"`
+	Errors  []string `json:"errors,omitempty"`
+}
+
+// sendEmailsHandler fetches pending emails from Firestore and sends them using
+// the App Engine Mail API. It expects a ?projectId= query param to scope which
+// project's email queue to process.
+func sendEmailsHandler(w http.ResponseWriter, r *http.Request) {
+	ctx := appengine.NewContext(r)
+	w.Header().Set("Content-Type", "application/json")
+
+	projectId := r.URL.Query().Get("projectId")
+	if projectId == "" {
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprint(w, `{"success": false, "error": "missing required param: projectId"}`)
+		return
+	}
+
+	fsClient, err := firestore.NewClient(ctx, firestore.DetectProjectID)
+	if err != nil {
+		log.Printf("failed to create firestore client: %v", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprint(w, `{"success": false, "error": "failed to init firestore"}`)
+		return
+	}
+	defer fsClient.Close()
+
+	result, err := processPendingEmails(ctx, fsClient, projectId)
+	if err != nil {
+		log.Printf("failed to process pending emails: %v", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprint(w, `{"success": false, "error": "failed to process emails"}`)
+		return
+	}
+
+	data, err := json.Marshal(result)
+	if err != nil {
+		log.Printf("failed to serialize json: %v", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprint(w, `{"success": false}`)
+		return
+	}
+	w.Write(data)
+}
+
+func processPendingEmails(ctx context.Context, fsClient *firestore.Client, projectId string) (*SendEmailsResult, error) {
+	colPath := fmt.Sprintf("Projects/%s/Emails", projectId)
+	query := fsClient.Collection(colPath).
+		Where("status", "==", "pending").
+		OrderBy("createdAt", firestore.Asc).
+		Limit(100)
+
+	docs, err := query.Documents(ctx).GetAll()
+	if err != nil {
+		return nil, fmt.Errorf("failed to query pending emails: %w", err)
+	}
+
+	result := &SendEmailsResult{Success: true}
+	now := time.Now()
+	for _, doc := range docs {
+		data := doc.Data()
+
+		// Skip emails that have expired.
+		if expiredAt, ok := data["expiredAt"].(time.Time); ok && now.After(expiredAt) {
+			log.Printf("skipping expired email %s", doc.Ref.ID)
+			_, updateErr := doc.Ref.Update(ctx, []firestore.Update{
+				{Path: "status", Value: "expired"},
+			})
+			if updateErr != nil {
+				log.Printf("failed to update email status to expired: %v", updateErr)
+			}
+			continue
+		}
+
+		msg := &mail.Message{
+			Sender:  fmt.Sprintf("%v", data["from"]),
+			Subject: fmt.Sprintf("%v", data["subject"]),
+			Body:    fmt.Sprintf("%v", data["body"]),
+		}
+
+		// Parse recipients.
+		if toList, ok := data["to"].([]interface{}); ok {
+			for _, t := range toList {
+				msg.To = append(msg.To, fmt.Sprintf("%v", t))
+			}
+		}
+
+		// Include HTML body if present.
+		if htmlBody, ok := data["htmlBody"].(string); ok && htmlBody != "" {
+			msg.HTMLBody = htmlBody
+		}
+
+		if err := mail.Send(ctx, msg); err != nil {
+			log.Printf("failed to send email %s: %v", doc.Ref.ID, err)
+			result.Failed++
+			result.Errors = append(result.Errors, fmt.Sprintf("%s: %v", doc.Ref.ID, err))
+			// Mark as failed in Firestore.
+			_, updateErr := doc.Ref.Update(ctx, []firestore.Update{
+				{Path: "status", Value: "failed"},
+				{Path: "error", Value: err.Error()},
+			})
+			if updateErr != nil {
+				log.Printf("failed to update email status to failed: %v", updateErr)
+			}
+			continue
+		}
+
+		// Mark as sent in Firestore.
+		_, updateErr := doc.Ref.Update(ctx, []firestore.Update{
+			{Path: "status", Value: "sent"},
+			{Path: "sentAt", Value: firestore.ServerTimestamp},
+		})
+		if updateErr != nil {
+			log.Printf("failed to update email status to sent: %v", updateErr)
+		}
+		result.Sent++
+	}
+
+	log.Printf("processed %d emails for project %s: %d sent, %d failed", len(docs), projectId, result.Sent, result.Failed)
+	return result, nil
 }
