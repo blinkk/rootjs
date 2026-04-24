@@ -27,6 +27,7 @@ import {SSEEvent, SSESchemaChangedEvent} from '../shared/sse.js';
 import {type RootAiModel} from './ai.js';
 import {api} from './api.js';
 import {type CMSCheck} from './checks.js';
+import {type CMSEmailService} from './email.js';
 import {type CMSTranslationService} from './translations.js';
 import {Action, RootCMSClient} from './client.js';
 import {sse, SSEBroadcastFn} from './sse.js';
@@ -46,6 +47,27 @@ export type {
   TranslationRow,
   TranslationServiceContext,
 } from './translations.js';
+export type {
+  CMSEmailService,
+  EmailSendRequest,
+  EmailSendResult,
+  EmailServiceContext,
+} from './email.js';
+
+/**
+ * Shared configuration shape for service providers.
+ */
+export interface CMSPluginServicesConfig {
+  /**
+   * Email services available to Root CMS features that send email.
+   */
+  email?: CMSEmailService[];
+  /**
+   * Translation services shown in the Localization modal's Import and Export
+   * menus.
+   */
+  translations?: CMSTranslationService[];
+}
 
 /**
  * Built-in sidebar tools that can be toggled on/off in the CMS UI.
@@ -309,23 +331,34 @@ export type CMSPluginOptions = {
   checks?: CMSCheck[];
 
   /**
-   * Translation services that appear in the Localization modal's Import and
-   * Export menus. Each service defines server-side import/export functions
-   * that integrate with an external translation platform (e.g. Crowdin).
+   * Service providers that enhance Root CMS (e.g. email and translations).
    *
    * Example:
    * ```ts
    * cmsPlugin({
-   *   translations: [
-   *     {
-   *       id: 'crowdin',
-   *       label: 'Crowdin',
-   *       onImport: async (ctx, data) => { ... },
-   *       onExport: async (ctx, data) => { ... },
-   *     },
-   *   ],
+   *   services: {
+   *     email: [
+   *       {
+   *         id: 'resend',
+   *         label: 'Resend',
+   *         onSend: async (ctx, request) => {},
+   *       },
+   *     ],
+   *     translations: [
+   *       {
+   *         id: 'crowdin',
+   *         label: 'Crowdin',
+   *         onImport: async (ctx, data) => {},
+   *         onExport: async (ctx, data) => {},
+   *       },
+   *     ],
+   *   },
    * });
    * ```
+   */
+  services?: CMSPluginServicesConfig;
+  /**
+   * @deprecated Use `services.translations` instead.
    */
   translations?: CMSTranslationService[];
 };
@@ -759,6 +792,7 @@ export function cmsPlugin(options: CMSPluginOptions): CMSPlugin {
       api(server, {
         getRenderer,
         checks: options.checks,
+        services: options.services,
         translations: options.translations,
       });
 

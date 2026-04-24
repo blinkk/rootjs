@@ -12,6 +12,7 @@ import {type CMSCheck} from './checks.js';
 import {RootCMSClient, parseDocId, unmarshalData} from './client.js';
 import {runCronJobs} from './cron.js';
 import {arrayToCsv, csvToArray} from './csv.js';
+import {type CMSEmailService} from './email.js';
 import {type CMSTranslationService} from './translations.js';
 
 type AppModule = typeof import('./app.js');
@@ -101,12 +102,18 @@ export interface ApiOptions {
   getRenderer: (req: Request) => Promise<AppModule>;
   /** Checks registered via the CMS plugin config. */
   checks?: CMSCheck[];
+  /** Services registered via the CMS plugin config. */
+  services?: {
+    email?: CMSEmailService[];
+    translations?: CMSTranslationService[];
+  };
   /**
    * Translation services registered via the CMS plugin config.
    *
    * NOTE: The translations feature is considered a "beta" feature, its interface
    * may change from version to version as we add new features.
    */
+  /** @deprecated Use `services.translations` instead. */
   translations?: CMSTranslationService[];
 }
 
@@ -761,7 +768,7 @@ export function api(server: Server, options: ApiOptions) {
       return;
     }
 
-    const services = options.translations || [];
+    const services = options.services?.translations || options.translations || [];
     const service = services.find((s) => s.id === serviceId);
     if (!service) {
       res.status(404).json({success: false, error: 'SERVICE_NOT_FOUND'});

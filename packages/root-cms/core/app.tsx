@@ -108,6 +108,8 @@ export async function renderApp(
   if (gci === true) {
     gci = 'https://gci.rootjs.dev';
   }
+  const translationServices =
+    cmsConfig.services?.translations || cmsConfig.translations || [];
   const ctx = {
     rootConfig: {
       projectId: cmsConfig.id || 'default',
@@ -135,7 +137,7 @@ export async function renderApp(
       description: c.description,
       collections: c.collections,
     })),
-    translations: (cmsConfig.translations || []).map((t) => ({
+    translations: translationServices.map((t) => ({
       id: t.id,
       label: t.label,
       icon: t.icon,
