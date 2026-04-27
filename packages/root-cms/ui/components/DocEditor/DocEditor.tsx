@@ -1448,7 +1448,7 @@ DocEditor.ArrayField = (props: FieldProps) => {
                         <details
                           className="DocEditor__ArrayField__item"
                           key={key}
-                          open={newlyAdded.includes(key) || itemInDeeplink(key)}
+                          open={newlyAdded.includes(key) || itemInDeeplink(key) || !!field.defaultOpen}
                           onToggle={(e) => {
                             if ((e.target as HTMLDetailsElement).open) {
                               requestHighlightNode(

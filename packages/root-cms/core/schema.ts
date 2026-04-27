@@ -221,6 +221,11 @@ export type ArrayField = CommonFieldProps & {
    * Label to use for the "add item" button. Defaults to `Add`.
    */
   buttonLabel?: string;
+  /**
+   * Whether array items should be open (expanded) by default. Defaults to
+   * `false`, meaning items start collapsed.
+   */
+  defaultOpen?: boolean;
 };
 
 export function array(field: Omit<ArrayField, 'type'>): ArrayField {
