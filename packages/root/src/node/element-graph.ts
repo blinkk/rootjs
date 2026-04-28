@@ -5,6 +5,7 @@ import {searchForWorkspaceRoot} from 'vite';
 import {RootConfig} from '../core/config.js';
 import {isValidTagName, parseTagNames} from '../utils/elements.js';
 import {directoryContains, isDirectory, isJsFile} from '../utils/fsutils.js';
+import type {ResolvedPod} from './pod-collector.js';
 
 interface ElementSourceFile {
   /** Full file path. */
@@ -90,11 +91,12 @@ export class ElementGraph {
  * Returns a map of all the element file definitions in the project.
  */
 export async function getElements(
-  rootConfig: RootConfig
+  rootConfig: RootConfig,
+  pods?: ResolvedPod[]
 ): Promise<ElementGraph> {
   const rootDir = rootConfig.rootDir;
 
-  const elementsDirs = getElementsDirs(rootConfig);
+  const elementsDirs = getElementsDirs(rootConfig, pods);
   const excludePatterns = rootConfig.elements?.exclude || [];
   const excludeElement = (moduleId: string) => {
     return excludePatterns.some((pattern) => Boolean(moduleId.match(pattern)));
@@ -125,7 +127,7 @@ export async function getElements(
 /**
  * Get all element dirs.
  */
-export function getElementsDirs(rootConfig: RootConfig) {
+export function getElementsDirs(rootConfig: RootConfig, pods?: ResolvedPod[]) {
   const rootDir = rootConfig.rootDir;
   const workspaceRoot = searchForWorkspaceRoot(rootDir);
 
@@ -140,6 +142,16 @@ export function getElementsDirs(rootConfig: RootConfig) {
       );
     }
     elementsDirs.push(elementsDir);
+  }
+
+  // Pod-contributed element dirs bypass the workspace containment check
+  // because they are trusted (registered by plugins, not user input).
+  if (pods) {
+    for (const pod of pods) {
+      for (const dir of pod.elementsDirs) {
+        elementsDirs.push(dir);
+      }
+    }
   }
 
   return elementsDirs;

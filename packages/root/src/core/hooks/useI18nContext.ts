@@ -1,6 +1,8 @@
 import path from 'node:path';
 import {createContext} from 'preact';
 import {useContext} from 'preact/hooks';
+// @ts-ignore — virtual module provided by rootPodsVitePlugin
+import {TRANSLATION_MODULES} from 'virtual:root/translations';
 
 export const I18N_CONTEXT = createContext<I18nContext | null>(null);
 
@@ -21,18 +23,38 @@ export function useI18nContext() {
   return context;
 }
 
+const translationModules = (TRANSLATION_MODULES || {}) as Record<
+  string,
+  {default?: Record<string, string>}
+>;
+
 export function getTranslations(locale: string): Record<string, string> {
   const translations: Record<string, Record<string, string>> = {};
-  const translationsFiles = import.meta.glob(['/translations/*.json'], {
-    eager: true,
-  }) as Record<string, {default?: Record<string, string>}>;
-  Object.keys(translationsFiles).forEach((translationPath) => {
-    const parts = path.parse(translationPath);
-    const locale = parts.name;
-    const module = translationsFiles[translationPath];
-    if (module && module.default) {
-      translations[locale] = module.default;
+
+  // Process pod translations first (lower priority).
+  Object.keys(translationModules).forEach((translationPath) => {
+    const module = translationModules[translationPath];
+    if (!module?.default) return;
+
+    const podMatch = translationPath.match(
+      /\/translations\/pod:([^:]+):(.+)\.json$/
+    );
+    if (podMatch) {
+      const podLocale = podMatch[2];
+      translations[podLocale] = {
+        ...translations[podLocale],
+        ...module.default,
+      };
+      return;
     }
+
+    const parts = path.parse(translationPath);
+    const fileLocale = parts.name;
+    translations[fileLocale] = {
+      ...translations[fileLocale],
+      ...module.default,
+    };
   });
+
   return translations[locale] || {};
 }

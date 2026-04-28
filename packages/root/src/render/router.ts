@@ -4,10 +4,14 @@ import {Route, RouteModule} from '../core/types.js';
 import {replaceParams, testPathHasParams} from '../utils/url-path-params.js';
 import {RouteTrie} from './route-trie.js';
 
-const ROUTES_FILES = import.meta.glob<RouteModule>(
-  ['/routes/*.ts', '/routes/**/*.ts', '/routes/*.tsx', '/routes/**/*.tsx'],
-  {eager: true}
-);
+// @ts-ignore — virtual module provided by rootPodsVitePlugin
+import {ROUTE_MODULES, POD_ROUTE_MODULES} from 'virtual:root/routes';
+
+const ROUTES_FILES = ROUTE_MODULES as Record<string, RouteModule>;
+const POD_ROUTES = (POD_ROUTE_MODULES || {}) as Record<
+  string,
+  {module: RouteModule; podName: string; routePath: string; src: string}
+>;
 
 export class Router {
   private rootConfig: RootConfig;
@@ -34,6 +38,9 @@ export class Router {
     const locales = this.rootConfig.i18n?.locales || [];
     const basePath = this.rootConfig.base || '/';
     const defaultLocale = this.rootConfig.i18n?.defaultLocale || 'en';
+    const i18nUrlFormat = toSquareBrackets(
+      this.rootConfig.i18n?.urlFormat || '/[locale]/[base]/[path]'
+    );
 
     const trie = new RouteTrie<Route>();
     Object.keys(ROUTES_FILES).forEach((modulePath) => {
@@ -50,9 +57,6 @@ export class Router {
       }
 
       const urlFormat = '/[base]/[path]';
-      const i18nUrlFormat = toSquareBrackets(
-        this.rootConfig.i18n?.urlFormat || '/[locale]/[base]/[path]'
-      );
       const placeholders = {
         base: removeSlashes(basePath),
         path: removeSlashes(relativeRoutePath),
@@ -98,6 +102,53 @@ export class Router {
         });
       }
     });
+
+    // Register pod routes. These have pre-computed routePaths (mount already
+    // applied). User routes registered above take precedence since they're
+    // added to the trie first.
+    Object.keys(POD_ROUTES).forEach((key) => {
+      const entry = POD_ROUTES[key];
+      const routePath = entry.routePath;
+      const localeRoutePath = i18nUrlFormat.includes('[locale]')
+        ? i18nUrlFormat
+            .replaceAll('[base]', removeSlashes(basePath))
+            .replaceAll('[path]', removeSlashes(routePath))
+        : routePath;
+      const normalizedLocaleRoutePath = normalizeUrlPath(localeRoutePath, {
+        trailingSlash: this.rootConfig.server?.trailingSlash,
+      });
+
+      trie.add(routePath, {
+        src: entry.src,
+        module: entry.module,
+        locale: defaultLocale,
+        isDefaultLocale: true,
+        routePath,
+        localeRoutePath: normalizedLocaleRoutePath,
+        podName: entry.podName,
+      });
+
+      if (i18nUrlFormat.includes('[locale]')) {
+        locales.forEach((locale) => {
+          const localePath = normalizedLocaleRoutePath.replace(
+            '[locale]',
+            locale
+          );
+          if (localePath !== routePath) {
+            trie.add(localePath, {
+              src: entry.src,
+              module: entry.module,
+              locale: locale,
+              isDefaultLocale: false,
+              routePath,
+              localeRoutePath: normalizedLocaleRoutePath,
+              podName: entry.podName,
+            });
+          }
+        });
+      }
+    });
+
     return trie;
   }
 

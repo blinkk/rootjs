@@ -11,6 +11,8 @@ import {getVitePlugins} from '../core/plugin.js';
 import {Route, Sitemap} from '../core/types.js';
 import {getElements} from '../node/element-graph.js';
 import {bundleRootConfig, loadRootConfig} from '../node/load-config.js';
+import {collectPods} from '../node/pod-collector.js';
+import {rootPodsVitePlugin} from '../node/pods-vite-plugin.js';
 import {preactToRootJsxPlugin} from '../node/vite-plugin-root-jsx-virtual.js';
 import {BuildAssetMap} from '../render/asset-map/build-asset-map.js';
 import {htmlMinify} from '../render/html-minify.js';
@@ -56,6 +58,8 @@ export async function build(rootProjectDir?: string, options?: BuildOptions) {
   await rmDir(distDir);
   await makeDir(distDir);
 
+  const pods = await collectPods(rootConfig);
+
   const routeFiles: string[] = [];
   if (await isDirectory(path.join(rootDir, 'routes'))) {
     const pageFiles = await glob('routes/**/*', {cwd: rootDir});
@@ -66,8 +70,14 @@ export async function build(rootProjectDir?: string, options?: BuildOptions) {
       }
     });
   }
+  // Add pod route files for the CSS extraction pass.
+  for (const pod of pods) {
+    for (const route of pod.routeFiles) {
+      routeFiles.push(route.filePath);
+    }
+  }
 
-  const elementGraph = await getElements(rootConfig);
+  const elementGraph = await getElements(rootConfig, pods);
   const elements = Object.values(elementGraph.sourceFiles).map((sourceFile) => {
     return sourceFile.filePath;
   });
@@ -82,6 +92,12 @@ export async function build(rootProjectDir?: string, options?: BuildOptions) {
       }
     });
   }
+  // Add pod bundle files.
+  for (const pod of pods) {
+    for (const bundleFile of pod.bundleFiles) {
+      bundleScripts.push(bundleFile);
+    }
+  }
 
   const rootPlugins = rootConfig.plugins || [];
   const viteConfig = rootConfig.vite || {};
@@ -94,6 +110,7 @@ export async function build(rootProjectDir?: string, options?: BuildOptions) {
 
   const vitePlugins = [
     preactToRootJsxPlugin({useRootJsx: !!rootConfig.jsxRenderer?.mode}),
+    rootPodsVitePlugin(rootConfig),
     ...(viteConfig.plugins || []),
     ...getVitePlugins(rootPlugins),
   ];

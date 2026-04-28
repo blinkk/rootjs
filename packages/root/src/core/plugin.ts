@@ -1,5 +1,6 @@
 import {ViteDevServer, PluginOption as VitePlugin} from 'vite';
 import {RootConfig} from './config.js';
+import {Pod, PodFactory} from './pod.js';
 import {NextFunction, Request, Response, Server} from './types.js';
 
 type MaybePromise<T> = T | Promise<T>;
@@ -83,6 +84,13 @@ export interface Plugin {
     res: Response,
     next: NextFunction
   ) => void | Promise<void>;
+
+  /**
+   * Registers a pod (a mini root.js site) that gets merged into the parent
+   * site at dev/build time. A plugin may return a single pod, an array of
+   * pods, or a factory that receives the rootConfig.
+   */
+  pod?: Pod | Pod[] | PodFactory;
 }
 
 /**
