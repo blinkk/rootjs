@@ -3,6 +3,7 @@ import {IconCopy} from '@tabler/icons-preact';
 import {useState} from 'preact/hooks';
 import {FileUploader} from '../../components/DocEditor/fields/FileUploader.js';
 import {Heading} from '../../components/Heading/Heading.js';
+import {Surface} from '../../components/Surface/Surface.js';
 import {Text} from '../../components/Text/Text.js';
 import {usePageTitle} from '../../hooks/usePageTitle.js';
 import {Layout} from '../../layout/Layout.js';
@@ -22,7 +23,7 @@ export function AssetsPage() {
           <Heading size="h1">Assets</Heading>
           <Text as="p">Upload assets to the project's GCS bucket.</Text>
         </div>
-        <div className="AssetsPage__content">
+        <Surface className="AssetsPage__content">
           <FileUploader
             value={file}
             onChange={setFile}
@@ -52,7 +53,7 @@ export function AssetsPage() {
               Upload another file
             </Button>
           )}
-        </div>
+        </Surface>
       </div>
     </Layout>
   );
