@@ -1716,6 +1716,29 @@ export class RootCMSClient {
         console.error(err);
       }
     }
+
+    // Dispatch to notification services' `onAction` hooks.
+    const notifications = cmsPluginConfig.notifications;
+    if (notifications && notifications.length > 0) {
+      const ctx = {
+        rootConfig: this.rootConfig,
+        cmsClient: this,
+        user: data.by ? {email: data.by} : undefined,
+      };
+      for (const service of notifications) {
+        if (!service.onAction) {
+          continue;
+        }
+        try {
+          await service.onAction(ctx, data);
+        } catch (err) {
+          console.error(
+            `notification service "${service.id}" onAction failed:`,
+            err
+          );
+        }
+      }
+    }
   }
 
   /**
