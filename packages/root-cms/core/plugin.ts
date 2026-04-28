@@ -320,62 +320,45 @@ export type CMSPluginOptions = {
    * Export menus. Each service defines server-side import/export functions
    * that integrate with an external translation platform (e.g. Crowdin).
    *
-   * @deprecated Prefer `services.translations`. This top-level option is
-   *   merged with `services.translations` for backwards compatibility.
+   * Example:
+   * ```ts
+   * cmsPlugin({
+   *   translations: [
+   *     {
+   *       id: 'crowdin',
+   *       label: 'Crowdin',
+   *       onImport: async (ctx, data) => { ... },
+   *       onExport: async (ctx, data) => { ... },
+   *     },
+   *   ],
+   * });
+   * ```
    */
   translations?: CMSTranslationService[];
 
   /**
-   * Services provided by plugins (or the user) that extend root-cms with
-   * external capabilities such as notifications and translations.
-   *
-   * All services share a consistent configuration style: each has an `id`,
-   * `label`, optional `icon`, and one or more optional server-side handler
-   * functions specific to the service (e.g. `onAction`, `onImport`,
-   * `onExport`).
+   * Notification services that react to CMS actions and dispatch them to
+   * external channels (email, Slack, webhooks, etc.). Each service defines
+   * an optional server-side `onAction` handler.
    *
    * Example:
    * ```ts
    * cmsPlugin({
-   *   services: {
-   *     notifications: [
-   *       {
-   *         id: 'sendgrid',
-   *         label: 'SendGrid',
-   *         onAction: async (ctx, action) => {
-   *           if (action.action === 'doc.publish') {
-   *             await sendgrid.send({ ... });
-   *           }
-   *         },
+   *   notifications: [
+   *     {
+   *       id: 'sendgrid',
+   *       label: 'SendGrid',
+   *       onAction: async (ctx, action) => {
+   *         if (action.action === 'doc.publish') {
+   *           await sendgrid.send({ ... });
+   *         }
    *       },
-   *     ],
-   *     translations: [
-   *       {
-   *         id: 'crowdin',
-   *         label: 'Crowdin',
-   *         onImport: async (ctx, data) => { ... },
-   *         onExport: async (ctx, data) => { ... },
-   *       },
-   *     ],
-   *   },
+   *     },
+   *   ],
    * });
    * ```
    */
-  services?: {
-    /**
-     * Notification services that react to CMS actions and dispatch them to
-     * external channels (email, Slack, webhooks, etc.). Each service defines
-     * an optional server-side `onAction` handler.
-     */
-    notifications?: CMSNotificationService[];
-
-    /**
-     * Translation services that appear in the Localization modal's Import and
-     * Export menus. Each service defines server-side import/export functions
-     * that integrate with an external translation platform (e.g. Crowdin).
-     */
-    translations?: CMSTranslationService[];
-  };
+  notifications?: CMSNotificationService[];
 };
 
 export type CMSPlugin = Plugin & {
@@ -421,16 +404,6 @@ export function cmsPlugin(options: CMSPluginOptions): CMSPlugin {
   const app = getFirebaseApp(firebaseConfig.projectId);
   const auth = getAuth(app);
   let sseBroadcast: SSEBroadcastFn | null = null;
-
-  // Merge the deprecated top-level `translations` option with
-  // `services.translations`. Downstream code reads from `options.translations`.
-  const servicesTranslations = options.services?.translations;
-  if (servicesTranslations && servicesTranslations.length > 0) {
-    options.translations = [
-      ...(options.translations || []),
-      ...servicesTranslations,
-    ];
-  }
 
   /**
    * Checks if login is required for the request. Currently returns `true` if
