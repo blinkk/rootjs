@@ -2,6 +2,7 @@ import './TranslationsPage.css';
 
 import {Button} from '@mantine/core';
 import {Heading} from '../../components/Heading/Heading.js';
+import {Surface} from '../../components/Surface/Surface.js';
 import {TranslationsTable} from '../../components/TranslationsTable/TranslationsTable.js';
 import {usePageTitle} from '../../hooks/usePageTitle.js';
 import {Layout} from '../../layout/Layout.js';
@@ -24,7 +25,9 @@ export function TranslationsPage() {
             </Button>
           </div>
         </div>
-        <TranslationsTable />
+        <Surface className="TranslationsPage__content">
+          <TranslationsTable />
+        </Surface>
       </div>
     </Layout>
   );

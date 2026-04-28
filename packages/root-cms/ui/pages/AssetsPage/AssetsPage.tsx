@@ -22,7 +22,7 @@ export function AssetsPage() {
           <Heading size="h1">Assets</Heading>
           <Text as="p">Upload assets to the project's GCS bucket.</Text>
         </div>
-        <div style={{maxWidth: 600, width: '100%'}}>
+        <div className="AssetsPage__content">
           <FileUploader
             value={file}
             onChange={setFile}

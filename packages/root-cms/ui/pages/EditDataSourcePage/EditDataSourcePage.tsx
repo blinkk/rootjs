@@ -5,6 +5,7 @@ import {IconTrashFilled} from '@tabler/icons-preact';
 import {useLocation} from 'preact-iso';
 import {DataSourceForm} from '../../components/DataSourceForm/DataSourceForm.js';
 import {Heading} from '../../components/Heading/Heading.js';
+import {Surface} from '../../components/Surface/Surface.js';
 import {Text} from '../../components/Text/Text.js';
 import {useModalTheme} from '../../hooks/useModalTheme.js';
 import {usePageTitle} from '../../hooks/usePageTitle.js';
@@ -76,7 +77,9 @@ export function EditDataSourcePage(props: {id: string}) {
             </div>
           </div>
         </div>
-        <DataSourceForm dataSourceId={props.id} />
+        <Surface className="EditDataSourcePage__form">
+          <DataSourceForm dataSourceId={props.id} />
+        </Surface>
       </div>
     </Layout>
   );

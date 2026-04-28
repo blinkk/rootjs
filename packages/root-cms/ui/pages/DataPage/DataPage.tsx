@@ -6,6 +6,7 @@ import {useEffect, useState} from 'preact/hooks';
 import {ConditionalTooltip} from '../../components/ConditionalTooltip/ConditionalTooltip.js';
 import {DataSourceStatusButton} from '../../components/DataSourceStatusButton/DataSourceStatusButton.js';
 import {Heading} from '../../components/Heading/Heading.js';
+import {Surface} from '../../components/Surface/Surface.js';
 import {Text} from '../../components/Text/Text.js';
 import {usePageTitle} from '../../hooks/usePageTitle.js';
 import {useProjectRoles} from '../../hooks/useProjectRoles.js';
@@ -69,7 +70,7 @@ DataPage.DataSourcesTable = () => {
   }, []);
 
   return (
-    <div className="DataPage__DataSourcesTable">
+    <Surface className="DataPage__DataSourcesTable">
       {loading && <Loader color="gray" size="xl" />}
       {tableData.length > 0 && (
         <Table verticalSpacing="xs" striped highlightOnHover fontSize="xs">
@@ -138,6 +139,6 @@ DataPage.DataSourcesTable = () => {
           </tbody>
         </Table>
       )}
-    </div>
+    </Surface>
   );
 };

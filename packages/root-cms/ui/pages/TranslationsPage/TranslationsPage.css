@@ -1,5 +1,6 @@
 .TranslationsPage {
-  padding: 60px 60px 20px 60px;
+  background: var(--page-background);
+  padding: var(--page-padding-lg) var(--page-padding-lg) 20px;
 }
 
 .TranslationsPage__header {
@@ -7,6 +8,10 @@
   justify-content: space-between;
   align-items: center;
   margin-bottom: 40px;
+}
+
+.TranslationsPage__content {
+  padding: 16px;
 }
 
 .TranslationsPage__TranslationsTable table {

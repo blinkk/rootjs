@@ -1,5 +1,6 @@
 .AssetsPage {
-  padding: 60px;
+  background: var(--page-background);
+  padding: var(--page-padding-lg);
 }
 
 .AssetsPage__header {
@@ -7,8 +8,13 @@
 }
 
 .AssetsPage p {
-  margin-top: 16px;
+  margin-top: 8px;
   max-width: 600px;
+}
+
+.AssetsPage__content {
+  max-width: 600px;
+  width: 100%;
 }
 
 .AssetsPage__urlGroup {
