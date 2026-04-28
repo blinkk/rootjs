@@ -5,23 +5,33 @@ import {
   collection,
   doc,
   getDoc,
+  onSnapshot,
+  runTransaction,
   serverTimestamp,
   setDoc,
   updateDoc,
 } from 'firebase/firestore';
 import {logAction} from './actions.js';
 
+const TASK_COUNTER_ID = 'tasks';
+const TASK_ID_ALLOCATION_ATTEMPTS = 20;
+
 export interface Task {
   id: string;
   title: string;
   description?: string;
   assignee?: string | null;
+  priority?: TaskPriority;
   status?: string;
+  targetLaunchDate?: Timestamp | null;
   createdAt: Timestamp;
   createdBy: string;
   updatedAt?: Timestamp;
   updatedBy?: string;
 }
+
+export type TaskPriority = 'high' | 'medium' | 'normal';
+export type TaskUnsubscribe = () => void;
 
 export interface TaskCommentHistoryEntry {
   action: 'edit' | 'delete';
@@ -56,6 +66,18 @@ function taskDocRef(taskId: string) {
   return doc(db, 'Projects', projectId, 'Tasks', taskId);
 }
 
+function taskCounterDocRef() {
+  const db = window.firebase.db;
+  const projectId = window.__ROOT_CTX.rootConfig.projectId;
+  return doc(db, 'Projects', projectId, 'Counters', TASK_COUNTER_ID);
+}
+
+function tasksCollectionRef() {
+  const db = window.firebase.db;
+  const projectId = window.__ROOT_CTX.rootConfig.projectId;
+  return collection(db, 'Projects', projectId, 'Tasks');
+}
+
 function taskCommentDocRef(taskId: string, commentId: string) {
   const db = window.firebase.db;
   const projectId = window.__ROOT_CTX.rootConfig.projectId;
@@ -72,7 +94,11 @@ async function getDefaultTaskAssignee(): Promise<string | null> {
 }
 
 export async function setDefaultTaskAssignee(assignee: string | null) {
-  await updateDoc(projectDocRef(), new FieldPath('settings', 'defaultAssignee'), assignee);
+  await updateDoc(
+    projectDocRef(),
+    new FieldPath('settings', 'defaultAssignee'),
+    assignee
+  );
   logAction('tasks.defaultAssignee', {
     metadata: {assignee: assignee || null},
   });
@@ -82,30 +108,104 @@ export async function createTask(options: {
   title: string;
   description?: string;
   assignee?: string | null;
+  priority?: TaskPriority;
+  targetLaunchDate?: Date | Timestamp | null;
 }) {
   if (!options.title) {
     throw new Error('missing task title');
   }
 
   const db = window.firebase.db;
-  const projectId = window.__ROOT_CTX.rootConfig.projectId;
-  const taskRef = doc(collection(db, 'Projects', projectId, 'Tasks'));
   const assignee = options.assignee ?? (await getDefaultTaskAssignee());
+  const priority = options.priority || 'normal';
   const status = 'open';
+  const targetLaunchDate = normalizeTaskTargetLaunchDate(
+    options.targetLaunchDate
+  );
+  const taskId = await runTransaction(db, async (transaction) => {
+    const counterRef = taskCounterDocRef();
+    const counterSnapshot = await transaction.get(counterRef);
+    const counterData = counterSnapshot.data() || {};
+    const lastTaskId =
+      typeof counterData.lastTaskId === 'number' ? counterData.lastTaskId : 0;
+    let nextTaskId = Math.floor(lastTaskId) + 1;
+    let taskRef = taskDocRef(String(nextTaskId));
 
-  await setDoc(taskRef, {
-    id: taskRef.id,
-    title: options.title,
-    description: options.description || '',
-    assignee: assignee ?? null,
-    status,
-    createdAt: serverTimestamp(),
-    createdBy: window.firebase.user.email || '',
-    updatedAt: serverTimestamp(),
-    updatedBy: window.firebase.user.email || '',
+    for (let i = 0; i < TASK_ID_ALLOCATION_ATTEMPTS; i++) {
+      taskRef = taskDocRef(String(nextTaskId));
+      const taskSnapshot = await transaction.get(taskRef);
+      if (!taskSnapshot.exists()) {
+        transaction.set(
+          counterRef,
+          {
+            lastTaskId: nextTaskId,
+            updatedAt: serverTimestamp(),
+          },
+          {merge: true}
+        );
+        transaction.set(taskRef, {
+          id: String(nextTaskId),
+          title: options.title,
+          description: options.description || '',
+          assignee: assignee ?? null,
+          priority,
+          status,
+          targetLaunchDate,
+          createdAt: serverTimestamp(),
+          createdBy: window.firebase.user.email || '',
+          updatedAt: serverTimestamp(),
+          updatedBy: window.firebase.user.email || '',
+        });
+        return String(nextTaskId);
+      }
+      nextTaskId += 1;
+    }
+
+    throw new Error('unable to allocate a task id');
   });
 
-  logAction('tasks.create', {metadata: {taskId: taskRef.id}});
+  logAction('tasks.create', {metadata: {taskId}});
+  return taskId;
+}
+
+function normalizeTaskTargetLaunchDate(value?: Date | Timestamp | null) {
+  if (value instanceof Date) {
+    return Timestamp.fromDate(value);
+  }
+  return value ?? null;
+}
+
+function isOpenTaskStatus(status?: string) {
+  const normalized = (status || 'open').toLowerCase();
+  return !['closed', 'complete', 'completed', 'done', 'resolved'].includes(
+    normalized
+  );
+}
+
+export function subscribeOpenTasks(
+  onTasks: (tasks: Task[]) => void,
+  onError?: (err: Error) => void
+): TaskUnsubscribe {
+  return onSnapshot(
+    tasksCollectionRef(),
+    (snapshot) => {
+      const tasks = snapshot.docs
+        .map((docSnapshot) => {
+          return {
+            ...docSnapshot.data(),
+            id: docSnapshot.id,
+          } as Task;
+        })
+        .filter((task) => isOpenTaskStatus(task.status))
+        .sort((a, b) => {
+          const aMillis = a.createdAt?.toMillis?.() || 0;
+          const bMillis = b.createdAt?.toMillis?.() || 0;
+          return bMillis - aMillis;
+        });
+      onTasks(tasks);
+    },
+    onError
+  );
 }
 
 export async function updateTaskAssignee(taskId: string, assignee: string) {

@@ -3,14 +3,21 @@
   padding: var(--page-padding);
 }
 
+.ProjectPage__main {
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+  max-width: 1280px;
+}
+
 .ProjectPage__section {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 24px;
-  max-width: 1280px;
 }
 
 .ProjectPage__sectionTitle {
+  display: inline-block;
   font-size: 14px;
   line-height: 1.2;
   font-weight: 600;
@@ -23,6 +30,20 @@
   margin-bottom: 12px;
 }
 
-.ProjectPage__actionLogs .ActionLogsCompact__table .mantine-Accordion-item:last-child {
+.ProjectPage__actionLogs
+  .ActionLogsCompact__table
+  .mantine-Accordion-item:last-child {
   border-bottom: none;
+}
+
+@media (max-width: 900px) {
+  .ProjectPage__section {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 680px) {
+  .ProjectPage {
+    padding: 20px;
+  }
 }
