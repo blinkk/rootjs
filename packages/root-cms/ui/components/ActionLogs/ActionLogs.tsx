@@ -17,6 +17,7 @@ import {useEffect, useMemo, useState} from 'preact/hooks';
 import {Action, listActions} from '../../utils/actions.js';
 import {joinClassNames} from '../../utils/classes.js';
 import {getSpreadsheetUrl} from '../../utils/gsheets.js';
+import {Surface} from '../Surface/Surface.js';
 import './ActionsLogs.css';
 
 export interface ActionLogsProps {
@@ -179,94 +180,96 @@ export function ActionLogs(props: ActionLogsProps) {
   return (
     <div className={`ActionsLog ${props.className || ''}`}>
       {!props.compact && (
-        <div className="ActionsLog__filters">
-          <TextInput
-            className="ActionsLog__filters__search"
-            placeholder="Search actions..."
-            icon={<IconSearch size={16} />}
-            value={searchQuery}
-            onChange={(e: Event) =>
-              setSearchQuery((e.target as HTMLInputElement).value)
-            }
-          />
-          <MultiSelect
-            className="ActionsLog__filters__select"
-            placeholder="Filter by action"
-            clearable
-            searchable
-            data={actionTypes}
-            value={actionFilters}
-            onChange={setActionFilters}
-          />
-          <MultiSelect
-            className="ActionsLog__filters__select"
-            placeholder="Filter by user"
-            clearable
-            searchable
-            data={users}
-            value={userFilters}
-            onChange={setUserFilters}
-          />
-          <Select
-            className="ActionsLog__filters__select"
-            placeholder="Filter by time"
-            data={TIME_FILTERS}
-            value={timeFilter}
-            onChange={setTimeFilter}
-          />
+        <div className="ActionsLog__tableHeader">
+          <div className="ActionsLog__filters">
+            <TextInput
+              className="ActionsLog__filters__search"
+              placeholder="Search actions..."
+              icon={<IconSearch size={16} />}
+              value={searchQuery}
+              onChange={(e: Event) =>
+                setSearchQuery((e.target as HTMLInputElement).value)
+              }
+            />
+            <MultiSelect
+              className="ActionsLog__filters__select"
+              placeholder="Filter by action"
+              clearable
+              searchable
+              data={actionTypes}
+              value={actionFilters}
+              onChange={setActionFilters}
+            />
+            <MultiSelect
+              className="ActionsLog__filters__select"
+              placeholder="Filter by user"
+              clearable
+              searchable
+              data={users}
+              value={userFilters}
+              onChange={setUserFilters}
+            />
+            <Select
+              className="ActionsLog__filters__select"
+              placeholder="Filter by time"
+              data={TIME_FILTERS}
+              value={timeFilter}
+              onChange={setTimeFilter}
+            />
+          </div>
+          <div className="ActionsLog__summary">
+            Showing {paginatedActions.length} of {filteredActions.length}{' '}
+            actions
+            {filteredActions.length !== actions.length &&
+              ` (filtered from ${actions.length} total)`}
+          </div>
         </div>
       )}
 
-      {!props.compact && (
-        <div className="ActionsLog__summary">
-          Showing {paginatedActions.length} of {filteredActions.length} actions
-          {filteredActions.length !== actions.length &&
-            ` (filtered from ${actions.length} total)`}
-        </div>
-      )}
-
-      <Table className="ActionsLog__table">
-        <thead>
-          <tr className="ActionsLogs__table__row ActionsLogs__table__row--header">
-            <th className="ActionsLogs__table__header">Timestamp</th>
-            <th className="ActionsLogs__table__header">User</th>
-            <th className="ActionsLogs__table__header">Action</th>
-            <th className="ActionsLogs__table__header">Details</th>
-            <th className="ActionsLogs__table__header">Links</th>
-          </tr>
-        </thead>
-        <tbody>
-          {paginatedActions.map((action, index) => (
-            <tr key={index} className="ActionsLogs__table__row">
-              <td className="ActionsLogs__table__col ActionsLogs__table__col--nowrap">
-                {formatDate(action.timestamp)}
-              </td>
-              <td className="ActionsLogs__table__col ActionsLogs__table__col--nowrap">
-                <span className="ActionsLogs__user">{action.by}</span>
-              </td>
-              <td className="ActionsLogs__table__col ActionsLogs__table__col--action">
-                <span className="ActionsLogs__action">{action.action}</span>
-              </td>
-              <td className="ActionsLogs__table__col ActionsLogs__table__col--metadata">
-                <MetadataDisplay metadata={action.metadata} />
-              </td>
-              <td className="ActionsLogs__table__col ActionsLogs__table__col--links">
-                <QuickLinks action={action} />
-              </td>
+      <Surface className="ActionsLog__tableSurface">
+        <Table className="ActionsLog__table">
+          <thead>
+            <tr className="ActionsLogs__table__row ActionsLogs__table__row--header">
+              <th className="ActionsLogs__table__header">Timestamp</th>
+              <th className="ActionsLogs__table__header">User</th>
+              <th className="ActionsLogs__table__header">Action</th>
+              <th className="ActionsLogs__table__header">Details</th>
+              <th className="ActionsLogs__table__header">Links</th>
             </tr>
-          ))}
-          {paginatedActions.length === 0 && (
-            <tr>
-              <td
-                colSpan={5}
-                className="ActionsLogs__table__col ActionsLogs__table__col--empty"
-              >
-                No actions found matching your filters.
-              </td>
-            </tr>
-          )}
-        </tbody>
-      </Table>
+          </thead>
+          <tbody>
+            {paginatedActions.map((action, index) => (
+              <tr key={index} className="ActionsLogs__table__row">
+                <td className="ActionsLogs__table__col ActionsLogs__table__col--nowrap">
+                  {formatDate(action.timestamp)}
+                </td>
+                <td className="ActionsLogs__table__col ActionsLogs__table__col--nowrap">
+                  <span className="ActionsLogs__user">{action.by}</span>
+                </td>
+                <td className="ActionsLogs__table__col ActionsLogs__table__col--action">
+                  <span className="ActionsLogs__action">{action.action}</span>
+                </td>
+                <td className="ActionsLogs__table__col ActionsLogs__table__col--metadata">
+                  <MetadataDisplay metadata={action.metadata} />
+                </td>
+                <td className="ActionsLogs__table__col ActionsLogs__table__col--links">
+                  <QuickLinks action={action} />
+                </td>
+              </tr>
+            ))}
+            {paginatedActions.length === 0 && (
+              <tr>
+                <td
+                  colSpan={5}
+                  className="ActionsLogs__table__col ActionsLogs__table__col--empty"
+                >
+                  No actions found matching your filters.
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </Table>
+      </Surface>
 
       {!props.compact && totalPages > 1 && (
         <div className="ActionsLog__pagination">

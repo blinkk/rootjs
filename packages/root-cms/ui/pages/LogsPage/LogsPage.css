@@ -1,5 +1,6 @@
 .LogsPage {
-  padding: 60px;
+  background: var(--page-background);
+  padding: var(--page-padding-lg);
 }
 
 .LogsPage__header {

@@ -33,7 +33,19 @@
   color: var(--color-text-secondary);
 }
 
+.ActionsLog__tableHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 60px;
+}
+
+.ActionsLog__tableSurface {
+  padding: 0;
+}
+
 .ActionsLog__table {
+  border: none;
   font-family: var(--font-family-mono);
 }
 
