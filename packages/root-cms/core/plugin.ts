@@ -27,7 +27,7 @@ import {SSEEvent, SSESchemaChangedEvent} from '../shared/sse.js';
 import {type RootAiModel} from './ai.js';
 import {api} from './api.js';
 import {type CMSCheck} from './checks.js';
-import {type CMSEmailService} from './email.js';
+import {type CMSNotificationService} from './notifications.js';
 import {type CMSTranslationService} from './translations.js';
 import {Action, RootCMSClient} from './client.js';
 import {sse, SSEBroadcastFn} from './sse.js';
@@ -48,20 +48,21 @@ export type {
   TranslationServiceContext,
 } from './translations.js';
 export type {
-  CMSEmailService,
-  EmailSendRequest,
-  EmailSendResult,
-  EmailServiceContext,
-} from './email.js';
+  CMSNotificationService,
+  NotificationAction,
+  NotificationActionResult,
+  NotificationServiceContext,
+} from './notifications.js';
 
 /**
  * Shared configuration shape for service providers.
  */
 export interface CMSPluginServicesConfig {
   /**
-   * Email services available to Root CMS features that send email.
+   * Notifications services available to Root CMS features. A notifications
+   * service can support one or more channels, such as email or slack.
    */
-  email?: CMSEmailService[];
+  notifications?: CMSNotificationService[];
   /**
    * Translation services shown in the Localization modal's Import and Export
    * menus.
@@ -331,17 +332,18 @@ export type CMSPluginOptions = {
   checks?: CMSCheck[];
 
   /**
-   * Service providers that enhance Root CMS (e.g. email and translations).
+   * Service providers that enhance Root CMS (e.g. notifications and
+   * translations).
    *
    * Example:
    * ```ts
    * cmsPlugin({
    *   services: {
-   *     email: [
+   *     notifications: [
    *       {
-   *         id: 'resend',
-   *         label: 'Resend',
-   *         onSend: async (ctx, request) => {},
+   *         id: 'ops-notify',
+   *         label: 'Operations Notifications',
+   *         onAction: async (ctx, action) => {},
    *       },
    *     ],
    *     translations: [

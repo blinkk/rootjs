@@ -12,7 +12,7 @@ import {type CMSCheck} from './checks.js';
 import {RootCMSClient, parseDocId, unmarshalData} from './client.js';
 import {runCronJobs} from './cron.js';
 import {arrayToCsv, csvToArray} from './csv.js';
-import {type CMSEmailService} from './email.js';
+import {type CMSNotificationService} from './notifications.js';
 import {type CMSTranslationService} from './translations.js';
 
 type AppModule = typeof import('./app.js');
@@ -104,7 +104,7 @@ export interface ApiOptions {
   checks?: CMSCheck[];
   /** Services registered via the CMS plugin config. */
   services?: {
-    email?: CMSEmailService[];
+    notifications?: CMSNotificationService[];
     translations?: CMSTranslationService[];
   };
   /**
