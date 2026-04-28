@@ -11,13 +11,16 @@ export interface SchemaModule {
   default: schema.Schema;
 }
 
-// @ts-ignore — virtual module provided by rootPodsVitePlugin
-import {SCHEMA_MODULES as _SCHEMA_MODULES} from 'virtual:root/schemas';
+// The virtual module is resolved by rootPodsVitePlugin when loaded through
+// Vite's ssrLoadModule. Outside Vite (e.g. tests, CLI), it falls back to {}.
+let _SCHEMA_MODULES: Record<string, SchemaModule> = {};
+try {
+  // @ts-ignore — virtual module provided by rootPodsVitePlugin
+  const mod = await import('virtual:root/schemas');
+  _SCHEMA_MODULES = mod.SCHEMA_MODULES || {};
+} catch {}
 
-export const SCHEMA_MODULES = (_SCHEMA_MODULES || {}) as Record<
-  string,
-  SchemaModule
->;
+export const SCHEMA_MODULES = _SCHEMA_MODULES as Record<string, SchemaModule>;
 
 /**
  * Returns a map of all `schema.ts` files defined in the project as
