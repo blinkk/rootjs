@@ -27,7 +27,7 @@ import {SSEEvent, SSESchemaChangedEvent} from '../shared/sse.js';
 import {type RootAiModel} from './ai.js';
 import {api} from './api.js';
 import {type CMSCheck} from './checks.js';
-import {type CMSEmailService} from './services-email.js';
+import {type CMSNotificationService} from './services-notifications.js';
 import {type CMSTranslationService} from './translations.js';
 import {Action, RootCMSClient} from './client.js';
 import {sse, SSEBroadcastFn} from './sse.js';
@@ -42,13 +42,10 @@ export {translationsCheck} from './checks-translations.js';
 export type {TranslationsCheckOptions} from './checks-translations.js';
 export type {CMSService, CMSServiceContext} from './services.js';
 export type {
-  CMSEmailAddress,
-  CMSEmailAttachment,
-  CMSEmailMessage,
-  CMSEmailSendResult,
-  CMSEmailService,
-  CMSEmailServiceContext,
-} from './services-email.js';
+  CMSNotificationService,
+  NotificationResult,
+  NotificationServiceContext,
+} from './services-notifications.js';
 export type {
   CMSTranslationService,
   TranslationExportResult,
@@ -330,24 +327,28 @@ export type CMSPluginOptions = {
 
   /**
    * Services provided by plugins (or the user) that extend root-cms with
-   * external capabilities such as transactional email and translations.
+   * external capabilities such as notifications and translations.
    *
    * All services share a consistent configuration style: each has an `id`,
-   * `label`, optional `icon`, and one or more server-side handler functions
-   * specific to the service.
+   * `label`, optional `icon`, and one or more optional server-side handler
+   * functions specific to the service (e.g. `onAction`, `onImport`,
+   * `onExport`).
    *
    * Example:
    * ```ts
    * cmsPlugin({
    *   services: {
-   *     email: {
-   *       id: 'sendgrid',
-   *       label: 'SendGrid',
-   *       send: async (ctx, message) => {
-   *         await sendgrid.send(message);
-   *         return {status: 'success'};
+   *     notifications: [
+   *       {
+   *         id: 'sendgrid',
+   *         label: 'SendGrid',
+   *         onAction: async (ctx, action) => {
+   *           if (action.action === 'doc.publish') {
+   *             await sendgrid.send({ ... });
+   *           }
+   *         },
    *       },
-   *     },
+   *     ],
    *     translations: [
    *       {
    *         id: 'crowdin',
@@ -362,11 +363,11 @@ export type CMSPluginOptions = {
    */
   services?: {
     /**
-     * Email service(s) used for transactional email (e.g. user invitations,
-     * notifications). A single service or an array may be supplied; callers
-     * select a service by its `id`.
+     * Notification services that react to CMS actions and dispatch them to
+     * external channels (email, Slack, webhooks, etc.). Each service defines
+     * an optional server-side `onAction` handler.
      */
-    email?: CMSEmailService | CMSEmailService[];
+    notifications?: CMSNotificationService[];
 
     /**
      * Translation services that appear in the Localization modal's Import and
