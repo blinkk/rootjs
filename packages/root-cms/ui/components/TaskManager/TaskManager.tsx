@@ -11,6 +11,7 @@ import {
 } from '@tabler/icons-preact';
 import {ChangeEvent} from 'preact/compat';
 import {useEffect, useMemo, useState} from 'preact/hooks';
+import {joinClassNames} from '../../utils/classes.js';
 import {errorMessage} from '../../utils/notifications.js';
 import {
   createTask,
@@ -18,7 +19,6 @@ import {
   Task,
   TaskPriority,
 } from '../../utils/tasks.js';
-import {joinClassNames} from '../../utils/classes.js';
 import {Surface} from '../Surface/Surface.js';
 
 type TaskFilter = 'all' | 'assigned-to-me';
@@ -54,12 +54,12 @@ export function TaskManager(props: TaskManagerProps) {
     if (!content) {
       return;
     }
-    const [title, ...descriptionLines] = content.split('\n');
+    const taskDraft = parseTaskDraft(content);
     setCreating(true);
     try {
       await createTask({
-        title: title.trim(),
-        description: descriptionLines.join('\n').trim(),
+        title: taskDraft.title,
+        description: taskDraft.description,
         assignee: assigneeEmail.trim() || undefined,
         priority,
         targetLaunchDate: parseTargetLaunchDate(targetLaunchDate),
@@ -70,7 +70,7 @@ export function TaskManager(props: TaskManagerProps) {
       setTargetLaunchDate('');
       showNotification({
         title: 'Task created',
-        message: title.trim(),
+        message: taskDraft.title,
         autoClose: 4000,
       });
     } catch (err) {
@@ -323,6 +323,20 @@ export function TaskManager(props: TaskManagerProps) {
       </Surface>
     </div>
   );
+}
+
+function parseTaskDraft(content: string) {
+  const [titleLine, ...descriptionLines] = content.split('\n');
+  while (
+    descriptionLines.length > 0 &&
+    descriptionLines[0].trim().length === 0
+  ) {
+    descriptionLines.shift();
+  }
+  return {
+    title: titleLine.trim(),
+    description: descriptionLines.join('\n').trim(),
+  };
 }
 
 function TaskRow(props: {task: Task}) {
