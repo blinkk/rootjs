@@ -2,6 +2,7 @@ import './SettingsPage.css';
 import {Switch, Textarea} from '@mantine/core';
 import {Heading} from '../../components/Heading/Heading.js';
 import {ShareBox} from '../../components/ShareBox/ShareBox.js';
+import {Surface} from '../../components/Surface/Surface.js';
 import {Text} from '../../components/Text/Text.js';
 import {usePageTitle} from '../../hooks/usePageTitle.js';
 import {SITE_SETTINGS, useSiteSettings} from '../../hooks/useSiteSettings.js';
@@ -38,12 +39,12 @@ export function SettingsPage() {
               </ul>
             </Text>
           </div>
-          <div className="SettingsPage__section__right">
+          <Surface className="SettingsPage__section__right">
             <Heading className="SettingsPage__section__right__title" size="h3">
               Users
             </Heading>
             <ShareBox className="SettingsPage__section__users__sharebox" />
-          </div>
+          </Surface>
         </div>
         <div className="SettingsPage__section">
           <div className="SettingsPage__section__left">
@@ -62,7 +63,7 @@ export function SettingsPage() {
               </p>
             </Text>
           </div>
-          <div className="SettingsPage__section__right">
+          <Surface className="SettingsPage__section__right">
             {SITE_SETTINGS.map((setting) => (
               <div className="SettingsPage__section__setting" key={setting.key}>
                 <Text size="body" weight="semi-bold">
@@ -89,7 +90,7 @@ export function SettingsPage() {
                 )}
               </div>
             ))}
-          </div>
+          </Surface>
         </div>
         <div className="SettingsPage__section">
           <div className="SettingsPage__section__left">
@@ -105,7 +106,7 @@ export function SettingsPage() {
               <p>These settings are for you only.</p>
             </Text>
           </div>
-          <div className="SettingsPage__section__right">
+          <Surface className="SettingsPage__section__right">
             <div className="SettingsPage__section__userPref">
               <div className="SettingsPage__section__userPref__description">
                 <Text
@@ -154,7 +155,7 @@ export function SettingsPage() {
                 />
               </div>
             </div>
-          </div>
+          </Surface>
         </div>
       </div>
     </Layout>

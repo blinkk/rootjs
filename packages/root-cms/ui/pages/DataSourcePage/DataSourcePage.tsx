@@ -13,6 +13,7 @@ import {ComponentChildren} from 'preact';
 import {useEffect, useState} from 'preact/hooks';
 import {DataSourceStatusButton} from '../../components/DataSourceStatusButton/DataSourceStatusButton.js';
 import {Heading} from '../../components/Heading/Heading.js';
+import {Surface} from '../../components/Surface/Surface.js';
 import {Text} from '../../components/Text/Text.js';
 import {usePageTitle} from '../../hooks/usePageTitle.js';
 import {Layout} from '../../layout/Layout.js';
@@ -102,35 +103,37 @@ DataSourcePage.SyncStatus = (props: {
   return (
     <div className="DataSourcePage__SyncStatus">
       <Heading size="h2">Status</Heading>
-      <Table verticalSpacing="xs" striped highlightOnHover fontSize="xs">
-        <thead>
-          <tr>
-            <th>last synced</th>
-            <th>last published</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td>
-              <DataSourceStatusButton
-                dataSource={dataSource}
-                action="sync"
-                onAction={() => {
-                  if (props.onAction) {
-                    props.onAction('sync');
-                  }
-                }}
-              />
-            </td>
-            <td>
-              <DataSourceStatusButton
-                dataSource={dataSource}
-                action="publish"
-              />
-            </td>
-          </tr>
-        </tbody>
-      </Table>
+      <Surface className="DataSourcePage__SyncStatus__content">
+        <Table verticalSpacing="xs" striped highlightOnHover fontSize="xs">
+          <thead>
+            <tr>
+              <th>last synced</th>
+              <th>last published</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>
+                <DataSourceStatusButton
+                  dataSource={dataSource}
+                  action="sync"
+                  onAction={() => {
+                    if (props.onAction) {
+                      props.onAction('sync');
+                    }
+                  }}
+                />
+              </td>
+              <td>
+                <DataSourceStatusButton
+                  dataSource={dataSource}
+                  action="publish"
+                />
+              </td>
+            </tr>
+          </tbody>
+        </Table>
+      </Surface>
     </div>
   );
 };
@@ -227,7 +230,9 @@ DataSourcePage.DataSectionWrap = (props: {
           )}
         </div>
       </div>
-      {props.children}
+      <Surface className="DataSourcePage__DataSection__content">
+        {props.children}
+      </Surface>
     </div>
   );
 };

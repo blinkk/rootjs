@@ -1,6 +1,6 @@
 .DataSourcePage {
-  padding: 60px;
-  padding-top: 48px;
+  background: var(--page-background);
+  padding: 48px var(--page-padding-lg) var(--page-padding-lg);
 }
 
 .DataSourcePage__header {
@@ -45,8 +45,12 @@
   margin-bottom: 16px;
 }
 
-.DataSourcePage__SyncStatus table {
+.DataSourcePage__SyncStatus__content {
   max-width: 400px;
+}
+
+.DataSourcePage__SyncStatus__content table {
+  border: none;
 }
 
 .DataSourcePage__DataSection {
@@ -71,4 +75,8 @@
   max-width: 400px;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.DataSourcePage__DataTable__table {
+  border: none;
 }

@@ -1,5 +1,6 @@
 .DataPage {
-  padding: 60px;
+  background: var(--page-background);
+  padding: var(--page-padding-lg);
 }
 
 .DataPage__header {
@@ -16,12 +17,12 @@
 }
 
 .DataPage__DataSourcesTable table {
-  border: 1px solid #dee2e6;
+  border: none;
 }
 
 .DataPage__DataSourcesTable th:not(:first-child),
 .DataPage__DataSourcesTable td:not(:first-child) {
-  border-left: 1px solid #dee2e6;
+  border-left: 1px solid var(--color-border);
 }
 
 .DataPage__DataSourcesTable th,

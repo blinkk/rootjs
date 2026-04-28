@@ -1,6 +1,5 @@
 .ShareBox {
   position: relative;
-  max-width: 420px;
   min-height: 120px;
 }
 
@@ -13,6 +12,14 @@
   gap: 8px;
 }
 
+.ShareBox__user {
+  padding: 6px 16px;
+}
+
+.ShareBox__user:hover {
+  background-color: rgb(248, 249, 250);
+}
+
 .ShareBox__addUser__email {
   width: 100%;
 }
@@ -20,11 +27,10 @@
 .ShareBox__users {
   display: flex;
   flex-direction: column;
-  gap: 12px;
   margin-top: 12px;
-  max-height: 500px;
+  max-height: 640px;
   overflow: auto;
-  padding: 20px;
+  padding: 10px 0;
   border: 1px solid var(--color-border);
 }
 

@@ -1,4 +1,6 @@
 import {
+  Accordion,
+  Avatar,
   Button,
   Loader,
   MultiSelect,
@@ -13,7 +15,9 @@ import {IconSearch} from '@tabler/icons-preact';
 import {Timestamp} from 'firebase/firestore';
 import {useEffect, useMemo, useState} from 'preact/hooks';
 import {Action, listActions} from '../../utils/actions.js';
+import {joinClassNames} from '../../utils/classes.js';
 import {getSpreadsheetUrl} from '../../utils/gsheets.js';
+import {Surface} from '../Surface/Surface.js';
 import './ActionsLogs.css';
 
 export interface ActionLogsProps {
@@ -36,9 +40,25 @@ const TIME_FILTERS = [
   {value: '30d', label: 'Last 30 days'},
 ];
 
-export function ActionLogs(props: ActionLogsProps) {
+function useActions(limit?: number) {
   const [loading, setLoading] = useState(true);
   const [actions, setActions] = useState<Action[]>([]);
+
+  useEffect(() => {
+    // Fetch actions, applying limit if specified.
+    listActions(limit ? {limit: limit} : undefined).then((actions) => {
+      setActions(actions);
+      setLoading(false);
+    });
+  }, [limit]);
+
+  return {loading, actions};
+}
+
+export function ActionLogs(props: ActionLogsProps) {
+  if (props.compact) {
+    return <ActionLogsCompact {...props} />;
+  }
 
   // Filter state.
   const [searchQuery, setSearchQuery] = useState('');
@@ -50,18 +70,7 @@ export function ActionLogs(props: ActionLogsProps) {
   // Pagination state.
   const [currentPage, setCurrentPage] = useState(1);
 
-  async function init() {
-    // Fetch actions, applying limit if specified.
-    const actions = await listActions(
-      props.limit ? {limit: props.limit} : undefined
-    );
-    setActions(actions);
-    setLoading(false);
-  }
-
-  useEffect(() => {
-    init();
-  }, []);
+  const {actions, loading} = useActions();
 
   // Derive unique action types and users for filter dropdowns.
   const actionTypes = useMemo(() => {
@@ -171,94 +180,96 @@ export function ActionLogs(props: ActionLogsProps) {
   return (
     <div className={`ActionsLog ${props.className || ''}`}>
       {!props.compact && (
-        <div className="ActionsLog__filters">
-          <TextInput
-            className="ActionsLog__filters__search"
-            placeholder="Search actions..."
-            icon={<IconSearch size={16} />}
-            value={searchQuery}
-            onChange={(e: Event) =>
-              setSearchQuery((e.target as HTMLInputElement).value)
-            }
-          />
-          <MultiSelect
-            className="ActionsLog__filters__select"
-            placeholder="Filter by action"
-            clearable
-            searchable
-            data={actionTypes}
-            value={actionFilters}
-            onChange={setActionFilters}
-          />
-          <MultiSelect
-            className="ActionsLog__filters__select"
-            placeholder="Filter by user"
-            clearable
-            searchable
-            data={users}
-            value={userFilters}
-            onChange={setUserFilters}
-          />
-          <Select
-            className="ActionsLog__filters__select"
-            placeholder="Filter by time"
-            data={TIME_FILTERS}
-            value={timeFilter}
-            onChange={setTimeFilter}
-          />
+        <div className="ActionsLog__tableHeader">
+          <div className="ActionsLog__filters">
+            <TextInput
+              className="ActionsLog__filters__search"
+              placeholder="Search actions..."
+              icon={<IconSearch size={16} />}
+              value={searchQuery}
+              onChange={(e: Event) =>
+                setSearchQuery((e.target as HTMLInputElement).value)
+              }
+            />
+            <MultiSelect
+              className="ActionsLog__filters__select"
+              placeholder="Filter by action"
+              clearable
+              searchable
+              data={actionTypes}
+              value={actionFilters}
+              onChange={setActionFilters}
+            />
+            <MultiSelect
+              className="ActionsLog__filters__select"
+              placeholder="Filter by user"
+              clearable
+              searchable
+              data={users}
+              value={userFilters}
+              onChange={setUserFilters}
+            />
+            <Select
+              className="ActionsLog__filters__select"
+              placeholder="Filter by time"
+              data={TIME_FILTERS}
+              value={timeFilter}
+              onChange={setTimeFilter}
+            />
+          </div>
+          <div className="ActionsLog__summary">
+            Showing {paginatedActions.length} of {filteredActions.length}{' '}
+            actions
+            {filteredActions.length !== actions.length &&
+              ` (filtered from ${actions.length} total)`}
+          </div>
         </div>
       )}
 
-      {!props.compact && (
-        <div className="ActionsLog__summary">
-          Showing {paginatedActions.length} of {filteredActions.length} actions
-          {filteredActions.length !== actions.length &&
-            ` (filtered from ${actions.length} total)`}
-        </div>
-      )}
-
-      <Table className="ActionsLog__table">
-        <thead>
-          <tr className="ActionsLogs__table__row ActionsLogs__table__row--header">
-            <th className="ActionsLogs__table__header">Timestamp</th>
-            <th className="ActionsLogs__table__header">User</th>
-            <th className="ActionsLogs__table__header">Action</th>
-            <th className="ActionsLogs__table__header">Details</th>
-            <th className="ActionsLogs__table__header">Links</th>
-          </tr>
-        </thead>
-        <tbody>
-          {paginatedActions.map((action, index) => (
-            <tr key={index} className="ActionsLogs__table__row">
-              <td className="ActionsLogs__table__col ActionsLogs__table__col--nowrap">
-                {formatDate(action.timestamp)}
-              </td>
-              <td className="ActionsLogs__table__col ActionsLogs__table__col--nowrap">
-                <span className="ActionsLogs__user">{action.by}</span>
-              </td>
-              <td className="ActionsLogs__table__col ActionsLogs__table__col--action">
-                <span className="ActionsLogs__action">{action.action}</span>
-              </td>
-              <td className="ActionsLogs__table__col ActionsLogs__table__col--metadata">
-                <MetadataDisplay metadata={action.metadata} />
-              </td>
-              <td className="ActionsLogs__table__col ActionsLogs__table__col--links">
-                <QuickLinks action={action} />
-              </td>
+      <Surface className="ActionsLog__tableSurface">
+        <Table className="ActionsLog__table">
+          <thead>
+            <tr className="ActionsLogs__table__row ActionsLogs__table__row--header">
+              <th className="ActionsLogs__table__header">Timestamp</th>
+              <th className="ActionsLogs__table__header">User</th>
+              <th className="ActionsLogs__table__header">Action</th>
+              <th className="ActionsLogs__table__header">Details</th>
+              <th className="ActionsLogs__table__header">Links</th>
             </tr>
-          ))}
-          {paginatedActions.length === 0 && (
-            <tr>
-              <td
-                colSpan={5}
-                className="ActionsLogs__table__col ActionsLogs__table__col--empty"
-              >
-                No actions found matching your filters.
-              </td>
-            </tr>
-          )}
-        </tbody>
-      </Table>
+          </thead>
+          <tbody>
+            {paginatedActions.map((action, index) => (
+              <tr key={index} className="ActionsLogs__table__row">
+                <td className="ActionsLogs__table__col ActionsLogs__table__col--nowrap">
+                  {formatDate(action.timestamp)}
+                </td>
+                <td className="ActionsLogs__table__col ActionsLogs__table__col--nowrap">
+                  <span className="ActionsLogs__user">{action.by}</span>
+                </td>
+                <td className="ActionsLogs__table__col ActionsLogs__table__col--action">
+                  <span className="ActionsLogs__action">{action.action}</span>
+                </td>
+                <td className="ActionsLogs__table__col ActionsLogs__table__col--metadata">
+                  <MetadataDisplay metadata={action.metadata} />
+                </td>
+                <td className="ActionsLogs__table__col ActionsLogs__table__col--links">
+                  <QuickLinks action={action} />
+                </td>
+              </tr>
+            ))}
+            {paginatedActions.length === 0 && (
+              <tr>
+                <td
+                  colSpan={5}
+                  className="ActionsLogs__table__col ActionsLogs__table__col--empty"
+                >
+                  No actions found matching your filters.
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </Table>
+      </Surface>
 
       {!props.compact && totalPages > 1 && (
         <div className="ActionsLog__pagination">
@@ -284,8 +295,8 @@ function MetadataDisplay(props: {metadata: any}) {
   const entries = Object.entries(metadata);
   return (
     <div className="ActionsLogs__metadata">
-      {entries.map(([key, value], index) => (
-        <div key={index} className="ActionsLogs__metadata__item">
+      {entries.map(([key, value]) => (
+        <div key={key} className="ActionsLogs__metadata__item">
           <span className="ActionsLogs__metadata__key">{key}:</span>{' '}
           <span className="ActionsLogs__metadata__value">
             {formatMetadataValue(value)}
@@ -311,15 +322,39 @@ function formatMetadataValue(value: any): string {
     return `${value.slice(0, 3).join(', ')} (+${value.length - 3} more)`;
   }
   if (typeof value === 'object') {
-    return JSON.stringify(value);
+    const obj = cleanObject(value);
+    try {
+      return JSON.stringify(obj);
+    } catch (e) {
+      console.error(e);
+      console.error('failed to stringify json:', obj);
+    }
   }
   return String(value);
 }
 
+/**
+ * Removes keys starting with `_` from the object. Without this for some reason
+ * there are circular issues when trying to stringify to JSON.
+ */
+function cleanObject(obj: any) {
+  const newObj: any = {};
+  Object.entries(obj).forEach(([key, val]) => {
+    if (!key.startsWith('_')) {
+      newObj[key] = val;
+    }
+  });
+  return newObj;
+}
+
 /** Displays quick links for an action. */
-function QuickLinks(props: {action: Action}) {
+function QuickLinks(props: {action: Action; label?: string; limit?: number}) {
   const {action} = props;
-  const links: preact.JSX.Element[] = [];
+  let links: preact.JSX.Element[] = [];
+
+  function label(defaultLabel: string) {
+    return props.label || defaultLabel;
+  }
 
   if (action.action !== 'doc.delete' && action.metadata?.docId) {
     links.push(
@@ -331,7 +366,7 @@ function QuickLinks(props: {action: Action}) {
           compact
           href={`/cms/content/${action.metadata.docId}`}
         >
-          Open doc
+          {label('Open doc')}
         </Button>
       </Tooltip>
     );
@@ -351,7 +386,7 @@ function QuickLinks(props: {action: Action}) {
           compact
           href={`/cms/data/${action.metadata.datasourceId}`}
         >
-          Open data source
+          {label('Open data source')}
         </Button>
       </Tooltip>
     );
@@ -367,7 +402,7 @@ function QuickLinks(props: {action: Action}) {
           compact
           href={`/cms/releases/${action.metadata.releaseId}`}
         >
-          Open release
+          {label('Open release')}
         </Button>
       </Tooltip>
     );
@@ -384,7 +419,7 @@ function QuickLinks(props: {action: Action}) {
         href={getSpreadsheetUrl(action.metadata.sheetId)}
         target="_blank"
       >
-        Open sheet
+        {label('Open sheet')}
       </Button>
     );
   }
@@ -399,7 +434,7 @@ function QuickLinks(props: {action: Action}) {
         compact
         href="/cms/settings"
       >
-        Open settings
+        {label('Open settings')}
       </Button>
     );
   }
@@ -423,10 +458,112 @@ function QuickLinks(props: {action: Action}) {
   }
 
   if (links.length === 0) {
-    return <span className="ActionsLogs__links--empty">—</span>;
+    return <span className="ActionsLogs__links--empty"></span>;
+  }
+
+  if (props.limit) {
+    links = links.slice(0, props.limit);
   }
 
   return <div className="ActionsLogs__table__buttons">{links}</div>;
+}
+
+/**
+ * Compact variant of the action logs. Used primarily by the main ProjectPage.
+ */
+function ActionLogsCompact(props: ActionLogsProps) {
+  const {actions, loading} = useActions(props.limit || 10);
+
+  if (loading) {
+    return (
+      <div
+        className={joinClassNames(
+          props.className,
+          'ActionLogsCompact',
+          'ActionLogsCompact--loading'
+        )}
+      >
+        <Loader color="gray" size="xl" />
+      </div>
+    );
+  }
+
+  return (
+    <div
+      className={joinClassNames(
+        props.className,
+        'ActionLogsCompact',
+        'ActionLogsCompact--loading'
+      )}
+    >
+      {/* {loading &&  */}
+      <Accordion className="ActionLogsCompact__table" multiple>
+        {actions.map((action, i) => (
+          <Accordion.Item
+            label={<ActionLogsCompactItemPreview action={action} />}
+            key={i}
+          >
+            <ActionLogsCompactItemDetails action={action} />
+          </Accordion.Item>
+        ))}
+      </Accordion>
+    </div>
+  );
+}
+
+function ActionLogsCompactItemPreview(props: {action: Action}) {
+  const action = props.action;
+  const actionMetaId = getFirstMetadataId(action);
+  const actionBy = props.action.by || 'unknown';
+  const actionByInitial =
+    actionBy === 'unknown' ? '?' : actionBy.at(0)?.toUpperCase();
+
+  return (
+    <div className="ActionLogsCompactItemPreview">
+      <div className="ActionLogsCompactItemPreview__user">
+        <Tooltip label={actionBy} position="bottom" withArrow>
+          <Avatar alt={actionBy} size={20} radius="xl">
+            {actionByInitial}
+          </Avatar>
+        </Tooltip>
+      </div>
+      <div className="ActionLogsCompactItemPreview__timestamp">
+        {formatDate(action.timestamp)}
+      </div>
+      <div className="ActionLogsCompactItemPreview__action">
+        {action.action}
+      </div>
+      <div className="ActionLogsCompactItemPreview__actionMetaId">
+        {actionMetaId}
+      </div>
+      <div className="ActionLogsCompactItemPreview__buttons">
+        <QuickLinks action={action} label="Open" limit={1} />
+      </div>
+    </div>
+  );
+}
+
+function ActionLogsCompactItemDetails(props: {action: Action}) {
+  const action = props.action;
+  const metadata = {
+    user: action.by,
+    ...action.metadata,
+  };
+  return (
+    <div className="ActionLogsCompactItemDetails">
+      <MetadataDisplay metadata={metadata} />
+      <QuickLinks action={action} />
+    </div>
+  );
+}
+
+function getFirstMetadataId(action: Action) {
+  for (const key of Object.keys(action.metadata || {})) {
+    if (key.toLowerCase().endsWith('id')) {
+      return action.metadata[key];
+    }
+  }
+  return '';
 }
 
 /**
@@ -463,10 +600,11 @@ function formatDate(timestamp: Timestamp) {
     return 'Invalid date';
   }
   const date = validTs.toDate();
-  return date.toLocaleString('sv-SE', {
-    dateStyle: 'short',
-    timeStyle: 'medium',
-  });
+  const mm = String(date.getMonth() + 1).padStart(2, '0');
+  const dd = String(date.getDate()).padStart(2, '0');
+  const hh = String(date.getHours()).padStart(2, '0');
+  const min = String(date.getMinutes()).padStart(2, '0');
+  return `${mm}/${dd} ${hh}:${min}`;
 }
 
 /** A pretty printer for JavaScript objects. */

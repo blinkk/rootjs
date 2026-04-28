@@ -52,7 +52,7 @@ export function buildCollectionTree(
   // Second pass: organize into tree structure.
   Object.entries(collections).forEach(([id, collection]) => {
     const node = nodes[id];
-    const groupId = collection.group;
+    const groupId = collection.group || 'Content';
 
     if (groupId) {
       // Create group if it doesn't exist.
@@ -76,8 +76,8 @@ export function buildCollectionTree(
   const hasGroups = Object.keys(groups).length > 0;
   if (hasGroups && roots.length > 0) {
     const defaultGroup: CollectionNode = {
-      id: 'group:Default',
-      name: 'Default',
+      id: 'group:Content',
+      name: 'Content',
       isGroup: true,
       children: roots,
     };

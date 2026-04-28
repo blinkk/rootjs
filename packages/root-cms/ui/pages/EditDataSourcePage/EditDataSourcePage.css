@@ -1,5 +1,6 @@
 .EditDataSourcePage {
-  padding: 60px;
+  background: var(--page-background);
+  padding: var(--page-padding-lg);
 }
 
 .EditDataSourcePage__header {
@@ -40,4 +41,9 @@
 
 .EditDataSourcePage__header__controls a {
   display: flex;
+}
+
+.EditDataSourcePage__form {
+  max-width: 690px;
+  padding: 20px;
 }

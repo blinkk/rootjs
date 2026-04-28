@@ -4,9 +4,20 @@
   --color-text-default: #333333;
   --color-text-dark: #333333;
   --color-text-gray: #6b7280;
-  --color-border: #EFEFEF;
-  --button-background-hover: #F5F5F5;
-  --button-background-active: #E5E5E5;
+  /* --color-border: #efefef; */
+  --color-border: #e4e4e1;
+  --button-background-hover: #f5f5f5;
+  --button-background-active: #e5e5e5;
+  --page-background: #fbfbf9;
+  --page-padding: 30px;
+  --page-padding-lg: 60px;
+  --surface-background: #fff;
+  --surface-background-hover: rgb(248, 249, 250);
+  --surface-background-active: rgb(248, 249, 250);
+  --surface-border-radius: 8px;
+  --chip-background: #efefef;
+  --chip-text-color: #000;
+  --header-height: 48px;
 }
 
 html {
