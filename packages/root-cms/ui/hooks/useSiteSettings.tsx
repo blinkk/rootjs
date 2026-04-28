@@ -37,9 +37,8 @@ export const SITE_SETTINGS: Setting[] = [
       return (
         <Button
           disabled={!value}
-          variant="outline"
-          size="compact-sm"
-          color="dark"
+          variant="default"
+          compact
           rightIcon={<IconExternalLink size={16} />}
           onClick={() => {
             if (value) {
