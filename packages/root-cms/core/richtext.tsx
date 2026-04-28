@@ -1,5 +1,5 @@
 import {StringParamsProvider, useTranslations} from '@blinkk/root';
-import {FunctionalComponent, createContext} from 'preact';
+import {Component, FunctionalComponent, createContext} from 'preact';
 import {useContext} from 'preact/hooks';
 import {renderToString} from 'preact-render-to-string';
 
@@ -94,21 +94,50 @@ RichText.Block = (props: RichTextBlock) => {
     return null;
   }
   const componentMap = useRichTextContextComponentMap();
-  const Component = componentMap[blockType];
-  if (!Component) {
+  const BlockComponent = componentMap[blockType];
+  if (!BlockComponent) {
     console.warn(`[RichText] ignoring unknown richtext type: "${blockType}"`);
     return null;
   }
-  const stringParams = collectInlineComponentParams(block, componentMap);
-  if (stringParams) {
-    return (
-      <StringParamsProvider value={stringParams}>
-        <Component {...block} />
-      </StringParamsProvider>
-    );
-  }
-  return <Component {...block} />;
+  return (
+    <InlineComponentRenderer
+      block={block}
+      componentMap={componentMap}
+      BlockComponent={BlockComponent}
+    />
+  );
 };
+
+interface InlineComponentRendererProps {
+  block: RichTextBlock;
+  componentMap: RichTextComponentMap;
+  BlockComponent: RichTextBlockComponent;
+}
+
+/**
+ * Class component used to capture the parent's full Preact context tree (via
+ * `this.context`) so that inline components rendered through `renderToString`
+ * have access to the same providers (e.g. I18nContext for `useTranslations`,
+ * any custom user contexts, etc.) as the surrounding render.
+ */
+class InlineComponentRenderer extends Component<InlineComponentRendererProps> {
+  render() {
+    const {block, componentMap, BlockComponent} = this.props;
+    const stringParams = collectInlineComponentParams(
+      block,
+      componentMap,
+      this.context
+    );
+    if (stringParams) {
+      return (
+        <StringParamsProvider value={stringParams}>
+          <BlockComponent {...block} />
+        </StringParamsProvider>
+      );
+    }
+    return <BlockComponent {...block} />;
+  }
+}
 
 export interface RichTextParagraphBlockProps {
   type: 'paragraph';
@@ -305,10 +334,15 @@ export function testContent(data: RichTextData) {
  * Collects inline component data from all blocks and renders them into a string
  * params map. Keys use the `{ComponentType:componentId}` format that matches
  * the markers in the rich text content.
+ *
+ * `renderContext` is the raw Preact context object captured from the calling
+ * component's render tree, so the inline components can read context providers
+ * (e.g. `useTranslations`, custom user contexts) just like any other component.
  */
 function collectInlineComponentParams(
   block: RichTextBlock,
-  componentMap: RichTextComponentMap
+  componentMap: RichTextComponentMap,
+  renderContext?: any
 ): Record<string, string> | null {
   const components: Record<string, any> = block?.data?.components || {};
   if (Object.keys(components).length === 0) {
@@ -320,7 +354,10 @@ function collectInlineComponentParams(
     const Component = componentMap[component.type];
     if (Component) {
       const key = `${component.type}:${componentId}`;
-      params[key] = renderToString(<Component {...component.data} />);
+      params[key] = renderToString(
+        <Component {...component.data} />,
+        renderContext
+      );
     } else {
       console.warn(
         `[RichText] could not find inline component for type: "${component.type}"`
