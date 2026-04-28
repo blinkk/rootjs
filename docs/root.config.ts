@@ -4,6 +4,7 @@ import {defineConfig} from '@blinkk/root';
 import {cmsPlugin} from '@blinkk/root-cms/plugin';
 import {crowdinTranslationService} from './plugins/crowdin-translations.js';
 import {deeplTranslationService} from './plugins/deepl-translations.js';
+import {templatesPod} from './plugins/templates-pod.js';
 
 const rootDir = new URL('.', import.meta.url).pathname;
 
@@ -35,6 +36,7 @@ export default defineConfig({
     sessionCookieSecret: process.env.COOKIE_SECRET,
   },
   plugins: [
+    templatesPod(),
     cmsPlugin({
       id: 'www',
       name: 'Root.js',
@@ -52,6 +54,7 @@ export default defineConfig({
       sidebar: {
         tools: {
           design: {label: 'Design System', iframeUrl: '/design'},
+          templates: {label: 'Templates', iframeUrl: '/cms-tools/templates/'},
         },
       },
       translations: [

@@ -57,7 +57,7 @@ export async function createViteServer(
     },
     ssr: {
       ...(viteConfig.ssr || {}),
-      noExternal: ['@blinkk/root', '@blinkk/root-cms/richtext'],
+      noExternal: ['@blinkk/root', '@blinkk/root-cms/richtext', /^virtual:/],
     },
     plugins: [
       rootPodsVitePlugin(rootConfig),
