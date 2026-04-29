@@ -71,7 +71,14 @@ export function DocActionsMenu(props: DocActionsMenuProps) {
   const sys = data.sys || {};
   const isArchived = testIsArchived(data);
   const modals = useModals();
-  const copyDocModal = useCopyDocModal({fromDocId: docId});
+  const copyDocModal = useCopyDocModal({
+    fromDocId: docId,
+    onSuccess: (newDocId: string) => {
+      if (props.onAction) {
+        props.onAction({action: 'copy', newDocId});
+      }
+    },
+  });
   const modalTheme = useModalTheme();
   const versionHistoryModal = useVersionHistoryModal({docId});
   const lockPublishingModal = useLockPublishingModal({docId});
