@@ -120,6 +120,12 @@ export type MultiSelectField = Omit<SelectField, 'type'> & {
   /** Set to `true` to allow users to create arbitrary values. */
   creatable?: boolean;
   translate?: boolean;
+  /**
+   * The UI variant to use. `multiselect` renders as a dropdown with search and
+   * selection capabilities. `list` renders as a list of text inputs with
+   * drag-and-drop reordering.
+   */
+  variant?: 'multiselect' | 'list';
 };
 
 export function multiselect(
