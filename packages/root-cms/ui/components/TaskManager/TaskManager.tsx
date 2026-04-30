@@ -1,37 +1,89 @@
 import './TaskManager.css';
 
-import {Button, Loader, Menu, Popover, TextInput} from '@mantine/core';
+import {
+  Button,
+  Loader,
+  Menu,
+  Popover,
+  SegmentedControl,
+  Table,
+  TextInput,
+} from '@mantine/core';
 import {showNotification} from '@mantine/notifications';
 import {
   IconArrowRight,
   IconCalendar,
   IconChevronDown,
   IconFlag,
+  IconLayoutKanban,
+  IconTable,
   IconUserPlus,
 } from '@tabler/icons-preact';
 import {ChangeEvent} from 'preact/compat';
 import {useEffect, useMemo, useState} from 'preact/hooks';
+import {useLocalStorage} from '../../hooks/useLocalStorage.js';
 import {joinClassNames} from '../../utils/classes.js';
 import {errorMessage} from '../../utils/notifications.js';
 import {
   createTask,
   subscribeOpenTasks,
+  subscribeTasks,
   Task,
   TaskPriority,
 } from '../../utils/tasks.js';
 import {Surface} from '../Surface/Surface.js';
 
 type TaskFilter = 'all' | 'assigned-to-me';
+type TaskLayout = 'table' | 'kanban';
+type TaskListLayout = TaskLayout | 'compact';
+type TaskManagerVariant = 'compact' | 'page';
+type TaskScope = 'all' | 'open';
+
+const TASK_STATUS_COLUMNS = [
+  {value: 'open', label: 'Open'},
+  {value: 'in-progress', label: 'In progress'},
+  {value: 'blocked', label: 'Blocked'},
+  {value: 'done', label: 'Done'},
+  {value: 'closed', label: 'Closed'},
+];
+
+const TASK_LAYOUT_OPTIONS = [
+  {
+    value: 'table',
+    label: (
+      <span className="TaskManager__layoutOption">
+        <IconTable size={14} strokeWidth="1.8" />
+        Table
+      </span>
+    ),
+  },
+  {
+    value: 'kanban',
+    label: (
+      <span className="TaskManager__layoutOption">
+        <IconLayoutKanban size={14} strokeWidth="1.8" />
+        Kanban
+      </span>
+    ),
+  },
+];
 
 export interface TaskManagerProps {
   className?: string;
+  variant?: TaskManagerVariant;
 }
 
-/** Renders the task composer and open task list for CMS pages. */
+/** Renders the task composer and task list for CMS pages. */
 export function TaskManager(props: TaskManagerProps) {
   const currentUserEmail = window.firebase.user.email || '';
-  const {tasks, loading, error} = useOpenTasks();
+  const variant = props.variant || 'compact';
+  const showPageLayout = variant === 'page';
+  const {tasks, loading, error} = useTasks(showPageLayout ? 'all' : 'open');
   const [filter, setFilter] = useState<TaskFilter>('all');
+  const [layout, setLayout] = useLocalStorage<TaskLayout>(
+    'root-cms-task-manager-layout',
+    'table'
+  );
   const [draft, setDraft] = useState('');
   const [assigneeEmail, setAssigneeEmail] = useState('');
   const [assignPopoverOpen, setAssignPopoverOpen] = useState(false);
@@ -46,6 +98,9 @@ export function TaskManager(props: TaskManagerProps) {
 
   const visibleTasks = filter === 'assigned-to-me' ? assignedToMeTasks : tasks;
   const taskCount = tasks.length;
+  const taskCountLabel = showPageLayout
+    ? `${taskCount} total`
+    : `${taskCount} active`;
   const canCreate = Boolean(draft.trim()) && !creating;
 
   async function onSubmit(e: Event) {
@@ -86,7 +141,13 @@ export function TaskManager(props: TaskManagerProps) {
   }
 
   return (
-    <div className={joinClassNames(props.className, 'TaskManager')}>
+    <div
+      className={joinClassNames(
+        props.className,
+        'TaskManager',
+        showPageLayout && 'TaskManager--page'
+      )}
+    >
       <Surface className="TaskManager__composer">
         <form onSubmit={(e) => onSubmit(e)}>
           <div className="TaskManager__composer__header">
@@ -278,50 +339,257 @@ export function TaskManager(props: TaskManagerProps) {
 
       <div className="TaskManager__listHeader">
         <div>
-          <div className="TaskManager__sectionTitle">Open tasks</div>
+          <div className="TaskManager__sectionTitle">
+            {showPageLayout ? 'Tasks' : 'Open tasks'}
+          </div>
           <span className="TaskManager__listHeader__count">
-            {taskCount} active
+            {taskCountLabel}
           </span>
         </div>
-        <div className="TaskManager__filters" aria-label="Task filters">
-          <button
-            className={filter === 'all' ? 'active' : ''}
-            type="button"
-            onClick={() => setFilter('all')}
-          >
-            All
-          </button>
-          <button
-            className={filter === 'assigned-to-me' ? 'active' : ''}
-            type="button"
-            onClick={() => setFilter('assigned-to-me')}
-          >
-            Assigned to me {assignedToMeTasks.length}
-          </button>
+        <div className="TaskManager__listHeader__actions">
+          <div className="TaskManager__filters" aria-label="Task filters">
+            <button
+              className={filter === 'all' ? 'active' : ''}
+              type="button"
+              onClick={() => setFilter('all')}
+            >
+              All
+            </button>
+            <button
+              className={filter === 'assigned-to-me' ? 'active' : ''}
+              type="button"
+              onClick={() => setFilter('assigned-to-me')}
+            >
+              Assigned to me {assignedToMeTasks.length}
+            </button>
+          </div>
+          {showPageLayout ? (
+            <SegmentedControl
+              className="TaskManager__layoutToggle"
+              size="xs"
+              value={layout}
+              onChange={(value: TaskLayout) => setLayout(value)}
+              data={TASK_LAYOUT_OPTIONS}
+            />
+          ) : (
+            <Button
+              component="a"
+              href="/cms/tasks"
+              variant="default"
+              size="xs"
+              compact
+            >
+              Show all
+            </Button>
+          )}
         </div>
       </div>
 
-      <Surface className="TaskManager__list">
-        {loading && (
-          <div className="TaskManager__list__state">
-            <Loader color="gray" size="sm" />
-          </div>
-        )}
-        {!loading && error && (
-          <div className="TaskManager__list__state error">{error}</div>
-        )}
-        {!loading && !error && visibleTasks.length === 0 && (
-          <div className="TaskManager__list__state">
-            {filter === 'assigned-to-me'
-              ? 'No open tasks are assigned to you.'
-              : 'No open tasks yet.'}
-          </div>
-        )}
-        {!loading &&
-          !error &&
-          visibleTasks.map((task) => <TaskRow key={task.id} task={task} />)}
-      </Surface>
+      <TaskListContent
+        error={error}
+        filter={filter}
+        layout={showPageLayout ? layout : 'compact'}
+        loading={loading}
+        tasks={visibleTasks}
+      />
     </div>
+  );
+}
+
+interface TaskListContentProps {
+  error: string;
+  filter: TaskFilter;
+  layout: TaskListLayout;
+  loading: boolean;
+  tasks: Task[];
+}
+
+/** Renders the current task list view and shared loading states. */
+function TaskListContent(props: TaskListContentProps) {
+  const {error, filter, layout, loading, tasks} = props;
+  if (loading) {
+    return (
+      <Surface className="TaskManager__list">
+        <div className="TaskManager__list__state">
+          <Loader color="gray" size="sm" />
+        </div>
+      </Surface>
+    );
+  }
+  if (error) {
+    return (
+      <Surface className="TaskManager__list">
+        <div className="TaskManager__list__state error">{error}</div>
+      </Surface>
+    );
+  }
+  if (tasks.length === 0) {
+    return (
+      <Surface className="TaskManager__list">
+        <div className="TaskManager__list__state">
+          {getEmptyTaskMessage(filter, layout)}
+        </div>
+      </Surface>
+    );
+  }
+  if (layout === 'kanban') {
+    return <TaskKanbanBoard tasks={tasks} />;
+  }
+  if (layout === 'table') {
+    return <TaskTable tasks={tasks} />;
+  }
+  return (
+    <Surface className="TaskManager__list">
+      {tasks.map((task) => (
+        <TaskRow key={task.id} task={task} />
+      ))}
+    </Surface>
+  );
+}
+
+/** Renders tasks in a tabular layout. */
+function TaskTable(props: {tasks: Task[]}) {
+  return (
+    <Surface className="TaskManager__tableSurface">
+      <Table
+        className="TaskManager__table"
+        verticalSpacing="xs"
+        striped
+        highlightOnHover
+        fontSize="xs"
+      >
+        <thead>
+          <tr>
+            <th>task</th>
+            <th>status</th>
+            <th>priority</th>
+            <th>assignee</th>
+            <th>target</th>
+            <th>opened</th>
+          </tr>
+        </thead>
+        <tbody>
+          {props.tasks.map((task) => {
+            const createdBy = task.createdBy || 'unknown';
+            return (
+              <tr key={task.id}>
+                <td>
+                  <a
+                    className="TaskManager__tableTask"
+                    href={`/cms/tasks/${task.id}`}
+                  >
+                    <div className="TaskManager__taskRow__avatar">
+                      {getTaskAvatarLabel(
+                        task.assignee || createdBy || task.title
+                      )}
+                    </div>
+                    <span className="TaskManager__tableTask__content">
+                      <span className="TaskManager__tableTask__title">
+                        {task.title}
+                      </span>
+                      <span className="TaskManager__tableTask__meta">
+                        #{task.id} by {formatTaskUser(createdBy)}
+                      </span>
+                    </span>
+                  </a>
+                </td>
+                <td>
+                  <span className="TaskManager__taskRow__status">
+                    <span></span>
+                    {formatTaskStatus(task.status)}
+                  </span>
+                </td>
+                <td>
+                  <span
+                    className={`TaskManager__taskRow__priority TaskManager__taskRow__priority--${formatTaskPriority(
+                      task.priority
+                    )}`}
+                  >
+                    {formatTaskPriority(task.priority)}
+                  </span>
+                </td>
+                <td>
+                  {task.assignee ? formatTaskUser(task.assignee) : 'Unassigned'}
+                </td>
+                <td>
+                  {task.targetLaunchDate
+                    ? formatTaskDate(task.targetLaunchDate)
+                    : 'None'}
+                </td>
+                <td>{formatTaskDate(task.createdAt)}</td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </Table>
+    </Surface>
+  );
+}
+
+/** Renders tasks grouped by status in a kanban board. */
+function TaskKanbanBoard(props: {tasks: Task[]}) {
+  const columns = getTaskStatusColumns(props.tasks);
+  return (
+    <div className="TaskManager__kanban">
+      {columns.map((column) => {
+        const columnTasks = props.tasks.filter(
+          (task) => getTaskStatusValue(task) === column.value
+        );
+        return (
+          <section className="TaskManager__kanbanColumn" key={column.value}>
+            <div className="TaskManager__kanbanColumn__header">
+              <span>{column.label}</span>
+              <span>{columnTasks.length}</span>
+            </div>
+            <div className="TaskManager__kanbanColumn__tasks">
+              {columnTasks.length === 0 && (
+                <div className="TaskManager__kanbanColumn__empty">No tasks</div>
+              )}
+              {columnTasks.map((task) => (
+                <TaskKanbanCard key={task.id} task={task} />
+              ))}
+            </div>
+          </section>
+        );
+      })}
+    </div>
+  );
+}
+
+/** Renders a single task card for the kanban board. */
+function TaskKanbanCard(props: {task: Task}) {
+  const {task} = props;
+  const createdBy = task.createdBy || 'unknown';
+  return (
+    <a className="TaskManager__kanbanCard" href={`/cms/tasks/${task.id}`}>
+      <div className="TaskManager__kanbanCard__title">{task.title}</div>
+      {task.description && (
+        <div className="TaskManager__kanbanCard__description">
+          {task.description}
+        </div>
+      )}
+      <div className="TaskManager__kanbanCard__meta">
+        #{task.id} opened {formatTaskDate(task.createdAt)} by{' '}
+        {formatTaskUser(createdBy)}
+      </div>
+      <div className="TaskManager__kanbanCard__badges">
+        <span
+          className={`TaskManager__taskRow__priority TaskManager__taskRow__priority--${formatTaskPriority(
+            task.priority
+          )}`}
+        >
+          {formatTaskPriority(task.priority)}
+        </span>
+        <span className="TaskManager__kanbanCard__badge">
+          {task.assignee ? formatTaskUser(task.assignee) : 'Unassigned'}
+        </span>
+        {task.targetLaunchDate && (
+          <span className="TaskManager__kanbanCard__badge">
+            target {formatTaskDate(task.targetLaunchDate)}
+          </span>
+        )}
+      </div>
+    </a>
   );
 }
 
@@ -376,13 +644,15 @@ function TaskRow(props: {task: Task}) {
   );
 }
 
-function useOpenTasks() {
+function useTasks(scope: TaskScope) {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
   useEffect(() => {
-    const unsubscribe = subscribeOpenTasks(
+    setLoading(true);
+    const subscribe = scope === 'all' ? subscribeTasks : subscribeOpenTasks;
+    const unsubscribe = subscribe(
       (nextTasks) => {
         setTasks(nextTasks);
         setError('');
@@ -394,9 +664,18 @@ function useOpenTasks() {
       }
     );
     return () => unsubscribe();
-  }, []);
+  }, [scope]);
 
   return {tasks, loading, error};
+}
+
+function getEmptyTaskMessage(filter: TaskFilter, layout: TaskListLayout) {
+  if (filter === 'assigned-to-me') {
+    return layout === 'compact'
+      ? 'No open tasks are assigned to you.'
+      : 'No tasks are assigned to you.';
+  }
+  return layout === 'compact' ? 'No open tasks yet.' : 'No tasks yet.';
 }
 
 function getTaskAvatarLabel(value: string) {
@@ -428,6 +707,26 @@ function formatTaskDate(ts?: Task['createdAt']) {
 
 function formatTaskStatus(status?: string) {
   return (status || 'open').replace(/[-_]/g, ' ');
+}
+
+function getTaskStatusValue(task: Task) {
+  return task.status?.trim() || 'open';
+}
+
+function getTaskStatusColumns(tasks: Task[]) {
+  const knownStatuses = new Set(
+    TASK_STATUS_COLUMNS.map((column) => column.value)
+  );
+  const customStatuses = tasks
+    .map((task) => getTaskStatusValue(task))
+    .filter((status) => !knownStatuses.has(status));
+  return [
+    ...TASK_STATUS_COLUMNS,
+    ...Array.from(new Set(customStatuses)).map((value) => ({
+      value,
+      label: formatTaskStatus(value),
+    })),
+  ];
 }
 
 function formatTaskPriority(priority?: TaskPriority) {

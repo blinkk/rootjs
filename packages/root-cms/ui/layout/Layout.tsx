@@ -8,6 +8,7 @@ import {
 } from '@mantine/core';
 import {
   IconCarrot,
+  IconClipboardList,
   IconDatabase,
   IconFolder,
   IconHome,
@@ -107,6 +108,16 @@ Layout.Side = () => {
             active={currentUrl.startsWith('/cms/content')}
           >
             <IconFolder stroke={ICON_STROKE} />
+          </Layout.SideButton>
+        )}
+
+        {!isBuiltInHidden('tasks') && (
+          <Layout.SideButton
+            label="Tasks"
+            url="/cms/tasks"
+            active={currentUrl.startsWith('/cms/tasks')}
+          >
+            <IconClipboardList stroke={ICON_STROKE} />
           </Layout.SideButton>
         )}
 

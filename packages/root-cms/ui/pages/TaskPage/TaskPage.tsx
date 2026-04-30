@@ -121,7 +121,7 @@ export function TaskPage(props: {id: string}) {
       <div className="TaskPage">
         <div className="TaskPage__header">
           <Breadcrumbs className="TaskPage__header__breadcrumbs">
-            <a href="/cms">Tasks</a>
+            <a href="/cms/tasks">Tasks</a>
             <div>{taskId}</div>
           </Breadcrumbs>
           <div className="TaskPage__header__titleWrap">

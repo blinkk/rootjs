@@ -221,6 +221,40 @@ function isOpenTaskStatus(status?: string) {
   );
 }
 
+function sortTasksByCreatedAt(tasks: Task[]) {
+  return tasks.sort((a, b) => {
+    const aMillis = a.createdAt?.toMillis?.() || 0;
+    const bMillis = b.createdAt?.toMillis?.() || 0;
+    return bMillis - aMillis;
+  });
+}
+
+function readTasksFromSnapshot(snapshot: {
+  docs: Array<{id: string; data(): unknown}>;
+}) {
+  return sortTasksByCreatedAt(
+    snapshot.docs.map((docSnapshot) => {
+      return {
+        ...(docSnapshot.data() as Record<string, unknown>),
+        id: docSnapshot.id,
+      } as Task;
+    })
+  );
+}
+
+export function subscribeTasks(
+  onTasks: (tasks: Task[]) => void,
+  onError?: (err: Error) => void
+): TaskUnsubscribe {
+  return onSnapshot(
+    tasksCollectionRef(),
+    (snapshot) => {
+      onTasks(readTasksFromSnapshot(snapshot));
+    },
+    onError
+  );
+}
+
 export function subscribeOpenTasks(
   onTasks: (tasks: Task[]) => void,
   onError?: (err: Error) => void
@@ -228,20 +262,11 @@ export function subscribeOpenTasks(
   return onSnapshot(
     tasksCollectionRef(),
     (snapshot) => {
-      const tasks = snapshot.docs
-        .map((docSnapshot) => {
-          return {
-            ...docSnapshot.data(),
-            id: docSnapshot.id,
-          } as Task;
-        })
-        .filter((task) => isOpenTaskStatus(task.status))
-        .sort((a, b) => {
-          const aMillis = a.createdAt?.toMillis?.() || 0;
-          const bMillis = b.createdAt?.toMillis?.() || 0;
-          return bMillis - aMillis;
-        });
-      onTasks(tasks);
+      onTasks(
+        readTasksFromSnapshot(snapshot).filter((task) =>
+          isOpenTaskStatus(task.status)
+        )
+      );
     },
     onError
   );

@@ -53,6 +53,7 @@ export type {
 export type CMSBuiltInSidebarTool =
   | 'home'
   | 'content'
+  | 'tasks'
   | 'releases'
   | 'data'
   | 'assets'
