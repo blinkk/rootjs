@@ -26,17 +26,9 @@
   color: var(--mantine-color-gray-6, #868e96);
 }
 
-.GlobalSearchAction__collection {
+.GlobalSearchAction__docId {
   font-weight: 600;
   color: var(--mantine-color-dark-9, #25262b);
-}
-
-.GlobalSearchAction__slug {
-  color: var(--mantine-color-dark-6, #495057);
-}
-
-.GlobalSearchAction__sep {
-  opacity: 0.5;
 }
 
 .GlobalSearchAction__field {

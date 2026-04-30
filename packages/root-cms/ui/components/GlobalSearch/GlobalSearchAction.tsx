@@ -1,4 +1,5 @@
 import {SpotlightActionProps} from '@mantine/spotlight';
+import {IconChevronRight} from '@tabler/icons-preact';
 import type {GlobalSearchHit} from '../../hooks/useGlobalSearch.js';
 
 const SNIPPET_BEFORE = 60;
@@ -82,10 +83,10 @@ export function GlobalSearchAction(props: SpotlightActionProps) {
       }}
     >
       <div className="GlobalSearchAction__crumbs">
-        <span className="GlobalSearchAction__collection">{hit.collection}</span>
-        <span className="GlobalSearchAction__sep">/</span>
-        <span className="GlobalSearchAction__slug">{hit.slug}</span>
-        <span className="GlobalSearchAction__sep">·</span>
+        <span className="GlobalSearchAction__docId">{hit.docId}</span>
+        <span className="GlobalSearchAction__sep">
+          <IconChevronRight size={16} />
+        </span>
         <span className="GlobalSearchAction__field">{hit.fieldLabel}</span>
       </div>
       <div className="GlobalSearchAction__snippet">
