@@ -1,7 +1,7 @@
 import {RootConfig} from '@blinkk/root';
 import {Timestamp} from 'firebase-admin/firestore';
 import {RootCMSClient} from './client.js';
-import {SearchIndexService} from './search-index.js';
+import {LoadSchemaFn, SearchIndexService} from './search-index.js';
 import {VersionsService} from './versions.js';
 
 /**
@@ -11,7 +11,21 @@ import {VersionsService} from './versions.js';
  */
 export const SEARCH_INDEX_MIN_INTERVAL_MS = 5 * 60 * 1000;
 
-export async function runCronJobs(rootConfig: RootConfig) {
+export interface RunCronJobsOptions {
+  /**
+   * Optional schema loader for the search-index rebuild step. The Cloud
+   * Scheduler / functions path doesn't need this (prod uses the bundled
+   * `dist/collections/<id>.schema.json` files), but the manual
+   * `POST /cms/api/cron.run` trigger threads its request-aware loader through
+   * so dev users can rebuild without first running a full prod build.
+   */
+  loadSchema?: LoadSchemaFn;
+}
+
+export async function runCronJobs(
+  rootConfig: RootConfig,
+  options: RunCronJobsOptions = {}
+) {
   await Promise.all([
     runCronJob('publishScheduledDocs', runPublishScheduledDocs, rootConfig),
     runCronJob(
@@ -20,7 +34,12 @@ export async function runCronJobs(rootConfig: RootConfig) {
       rootConfig
     ),
     runCronJob('saveVersions', runSaveVersions, rootConfig),
-    runCronJob('incrementalSearchIndex', runIncrementalSearchIndex, rootConfig),
+    runCronJob(
+      'incrementalSearchIndex',
+      runIncrementalSearchIndex,
+      rootConfig,
+      options.loadSchema
+    ),
   ]);
 }
 
@@ -54,8 +73,11 @@ async function runSaveVersions(rootConfig: RootConfig) {
   await service.saveVersions();
 }
 
-async function runIncrementalSearchIndex(rootConfig: RootConfig) {
-  const service = new SearchIndexService(rootConfig);
+async function runIncrementalSearchIndex(
+  rootConfig: RootConfig,
+  loadSchema?: LoadSchemaFn
+) {
+  const service = new SearchIndexService(rootConfig, loadSchema);
   const status = await service.getStatus();
   if (status.lastRun !== null) {
     const elapsed = Date.now() - status.lastRun;

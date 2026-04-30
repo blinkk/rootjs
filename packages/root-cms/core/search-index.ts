@@ -137,18 +137,27 @@ export function withWeight(rec: ExtractedRecord): IndexableRecord {
   return {...rec, weight: isTitleyDeepKey(rec.deepKey) ? 2 : 1};
 }
 
+/**
+ * Loader for a collection's schema. Pluggable so callers can provide a
+ * dev-mode loader (Vite SSR) and prod uses the default (`dist/...json`).
+ */
+export type LoadSchemaFn = (collectionId: string) => Promise<Schema | null>;
+
 export class SearchIndexService {
   private readonly rootConfig: RootConfig;
   private readonly projectId: string;
   private readonly db: Firestore;
+  private readonly loadSchema: LoadSchemaFn;
   private cached: CachedIndex | null = null;
 
-  constructor(rootConfig: RootConfig) {
+  constructor(rootConfig: RootConfig, loadSchema?: LoadSchemaFn) {
     this.rootConfig = rootConfig;
     const cmsPlugin = getCmsPlugin(rootConfig);
     const cmsPluginOptions = cmsPlugin.getConfig();
     this.projectId = cmsPluginOptions.id || 'default';
     this.db = cmsPlugin.getFirestore();
+    this.loadSchema =
+      loadSchema || ((id) => this.loadCollectionSchemaFromDist(id));
   }
 
   /** Returns the MiniSearch options used by both writers and readers. */
@@ -175,10 +184,14 @@ export class SearchIndexService {
   }
 
   /**
-   * Loads a collection's schema from `dist/collections/<id>.schema.json` (or
-   * dynamically imports the .ts file as a fallback for dev).
+   * Default schema loader: reads `dist/collections/<id>.schema.json`. These
+   * files are produced by the CMS plugin's `preBuild` hook during a real
+   * `root build`. In dev there is no JSON file on disk, so callers should
+   * pass a dev-aware `loadSchema` callback to the constructor (the API
+   * endpoints do this — they delegate to the same Vite SSR path used by
+   * `/cms/api/collection.get`).
    */
-  private async loadCollectionSchema(
+  private async loadCollectionSchemaFromDist(
     collectionId: string
   ): Promise<Schema | null> {
     const distPath = path.join(
@@ -187,27 +200,11 @@ export class SearchIndexService {
       'collections',
       `${collectionId}.schema.json`
     );
-    if (fs.existsSync(distPath)) {
-      const contents = fs.readFileSync(distPath, 'utf8');
-      return JSON.parse(contents) as Schema;
+    if (!fs.existsSync(distPath)) {
+      return null;
     }
-    const tsPath = path.join(
-      this.rootConfig.rootDir,
-      'collections',
-      `${collectionId}.schema.ts`
-    );
-    if (fs.existsSync(tsPath)) {
-      try {
-        const mod = await import(tsPath);
-        const exported = mod?.default ?? mod;
-        if (exported && typeof exported === 'object' && 'fields' in exported) {
-          return exported as Schema;
-        }
-      } catch (err) {
-        console.warn(`searchIndex: failed to load schema ${collectionId}`, err);
-      }
-    }
-    return null;
+    const contents = fs.readFileSync(distPath, 'utf8');
+    return JSON.parse(contents) as Schema;
   }
 
   private async readMeta(): Promise<SearchIndexMeta | null> {
@@ -448,8 +445,14 @@ export class SearchIndexService {
     let docCount = 0;
     let fieldCount = 0;
     for (const collectionId of collectionIds) {
-      const schema = await this.loadCollectionSchema(collectionId);
+      const schema = await this.loadSchema(collectionId);
       if (!schema) {
+        console.warn(
+          `searchIndex: skipping collection "${collectionId}" — schema not available. ` +
+            'In dev, trigger the rebuild from Settings → Site Admin (the API ' +
+            'endpoint loads schemas via Vite). In prod, ensure ' +
+            `dist/collections/${collectionId}.schema.json exists.`
+        );
         continue;
       }
       const path = `Projects/${this.projectId}/Collections/${collectionId}/Drafts`;
@@ -501,10 +504,7 @@ export class SearchIndexService {
     const schemaCache = new Map<string, Schema | null>();
     const getSchema = async (collectionId: string) => {
       if (!schemaCache.has(collectionId)) {
-        schemaCache.set(
-          collectionId,
-          await this.loadCollectionSchema(collectionId)
-        );
+        schemaCache.set(collectionId, await this.loadSchema(collectionId));
       }
       return schemaCache.get(collectionId) || null;
     };

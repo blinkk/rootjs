@@ -201,7 +201,9 @@ export function api(server: Server, options: ApiOptions) {
    */
   server.use('/cms/api/cron.run', async (req: Request, res: Response) => {
     try {
-      await runCronJobs(req.rootConfig!);
+      await runCronJobs(req.rootConfig!, {
+        loadSchema: (collectionId) => getCollectionSchema(req, collectionId),
+      });
       res.status(200).json({success: true});
     } catch (err) {
       console.error(err);
@@ -313,7 +315,11 @@ export function api(server: Server, options: ApiOptions) {
       res.status(202).json({success: true, alreadyRunning: true});
       return;
     }
-    const service = new SearchIndexService(req.rootConfig!);
+    // Delegate schema loading to the same path used by `/cms/api/collection.get`
+    // so that dev (Vite SSR) and prod (dist JSON) both work transparently.
+    const service = new SearchIndexService(req.rootConfig!, (collectionId) =>
+      getCollectionSchema(req, collectionId)
+    );
     const job = service
       .rebuildIndex({force})
       .catch((err) => {
