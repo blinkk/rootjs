@@ -49,3 +49,19 @@
 .SettingsPage__section__userPref__description__body a {
   text-underline-offset: 3px;
 }
+
+.SettingsPage__siteAdmin__searchStats {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px 16px;
+  font-size: 13px;
+  color: var(--mantine-color-dark-6, #495057);
+  margin-top: 4px;
+}
+
+.SettingsPage__siteAdmin__searchButtons {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+  flex-wrap: wrap;
+}

@@ -12,6 +12,7 @@ import {type CMSCheck} from './checks.js';
 import {RootCMSClient, parseDocId, unmarshalData} from './client.js';
 import {runCronJobs} from './cron.js';
 import {arrayToCsv, csvToArray} from './csv.js';
+import {SearchIndexService, RebuildResult} from './search-index.js';
 import {type CMSTranslationService} from './translations.js';
 
 type AppModule = typeof import('./app.js');
@@ -206,6 +207,124 @@ export function api(server: Server, options: ApiOptions) {
       console.error(err);
       res.status(500).json({success: false});
     }
+  });
+
+  // Tracks in-flight search index rebuilds, keyed by projectId. Only one
+  // rebuild per project may run at a time.
+  const searchRebuildJobs = new Map<string, Promise<RebuildResult>>();
+
+  /**
+   * Runs a full-text search query against the persisted index.
+   *
+   * Authentication: any signed-in CMS user (any role) — `loginRequired`
+   * already gates `/cms/...` paths in plugin.ts.
+   *
+   * Sample request:
+   *
+   * ```
+   * POST /cms/api/search.query
+   * {"q": "homepage hero", "limit": 25}
+   * ```
+   */
+  server.use('/cms/api/search.query', async (req: Request, res: Response) => {
+    if (
+      req.method !== 'POST' ||
+      !String(req.get('content-type')).startsWith('application/json')
+    ) {
+      res.status(400).json({success: false, error: 'BAD_REQUEST'});
+      return;
+    }
+    if (!req.user?.email) {
+      res.status(401).json({success: false, error: 'UNAUTHORIZED'});
+      return;
+    }
+    const body = req.body || {};
+    const q = typeof body.q === 'string' ? body.q : '';
+    const limit = typeof body.limit === 'number' ? body.limit : 25;
+    try {
+      const service = new SearchIndexService(req.rootConfig!);
+      const result = await service.search(q, {limit});
+      res.setHeader('Cache-Control', 'no-store');
+      res.status(200).json({success: true, ...result});
+    } catch (err) {
+      console.error(err.stack || err);
+      res.status(500).json({success: false, error: 'UNKNOWN'});
+    }
+  });
+
+  /**
+   * Returns the search index's current status (last run, doc count, etc).
+   * Authentication: any signed-in CMS user.
+   */
+  server.use('/cms/api/search.status', async (req: Request, res: Response) => {
+    if (!req.user?.email) {
+      res.status(401).json({success: false, error: 'UNAUTHORIZED'});
+      return;
+    }
+    try {
+      const cmsClient = new RootCMSClient(req.rootConfig!);
+      const service = new SearchIndexService(req.rootConfig!);
+      const status = await service.getStatus();
+      const running = searchRebuildJobs.has(cmsClient.projectId);
+      res.setHeader('Cache-Control', 'no-store');
+      res.status(200).json({success: true, status, running});
+    } catch (err) {
+      console.error(err.stack || err);
+      res.status(500).json({success: false, error: 'UNKNOWN'});
+    }
+  });
+
+  /**
+   * Triggers a rebuild of the search index. ADMIN-only.
+   *
+   * Sample request:
+   *
+   * ```
+   * POST /cms/api/search.rebuild
+   * {"force": true}
+   * ```
+   */
+  server.use('/cms/api/search.rebuild', async (req: Request, res: Response) => {
+    if (req.method !== 'POST') {
+      res.status(400).json({success: false, error: 'BAD_REQUEST'});
+      return;
+    }
+    if (!req.user?.email) {
+      res.status(401).json({success: false, error: 'UNAUTHORIZED'});
+      return;
+    }
+    const cmsClient = new RootCMSClient(req.rootConfig!);
+    try {
+      const role = await cmsClient.getUserRole(req.user.email);
+      if (role !== 'ADMIN') {
+        res.status(403).json({success: false, error: 'FORBIDDEN'});
+        return;
+      }
+    } catch (err) {
+      console.error(err.stack || err);
+      res.status(500).json({success: false, error: 'UNKNOWN'});
+      return;
+    }
+
+    const body = req.body || {};
+    const force = !!body.force;
+    const projectId = cmsClient.projectId;
+    if (searchRebuildJobs.has(projectId)) {
+      res.status(202).json({success: true, alreadyRunning: true});
+      return;
+    }
+    const service = new SearchIndexService(req.rootConfig!);
+    const job = service
+      .rebuildIndex({force})
+      .catch((err) => {
+        console.error('search.rebuild failed:', err.stack || err);
+        throw err;
+      })
+      .finally(() => {
+        searchRebuildJobs.delete(projectId);
+      });
+    searchRebuildJobs.set(projectId, job);
+    res.status(202).json({success: true, started: true, force});
   });
 
   /**
