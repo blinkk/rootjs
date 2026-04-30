@@ -55,6 +55,7 @@ export interface CMSDoc {
     };
     archivedAt?: Timestamp;
     archivedBy?: string;
+    locales?: string[];
     /** Google Sheet linked for translations. */
     l10nSheet?: {
       spreadsheetId: string;
@@ -563,13 +564,23 @@ export async function cmsCopyDoc(
   if (!fromDoc.exists()) {
     throw new Error(`doc ${fromDocId} does not exist`);
   }
-  const fields = fromDoc.data().fields ?? {};
-  await cmsCreateDoc(toDocId, {fields, overwrite: options?.overwrite});
+  const data = fromDoc.data();
+  const fields = data.fields ?? {};
+  const locales = data.sys?.locales;
+  await cmsCreateDoc(toDocId, {
+    fields,
+    locales,
+    overwrite: options?.overwrite,
+  });
 }
 
 export async function cmsCreateDoc(
   docId: string,
-  options?: {fields?: Record<string, any>; overwrite?: boolean}
+  options?: {
+    fields?: Record<string, any>;
+    locales?: string[];
+    overwrite?: boolean;
+  }
 ) {
   const [collectionId, slug] = docId.split('/');
   const docRef = getDraftDocRef(docId);
@@ -586,7 +597,7 @@ export async function cmsCreateDoc(
       createdBy: window.firebase.user.email,
       modifiedAt: serverTimestamp(),
       modifiedBy: window.firebase.user.email,
-      locales: ['en'],
+      locales: options?.locales ?? ['en'],
     },
     fields: options?.fields ?? {},
   };
@@ -596,6 +607,7 @@ export async function cmsCreateDoc(
     const oldData = doc.data();
     data.sys = {
       ...oldData.sys,
+      locales: options?.locales ?? oldData.sys.locales,
       modifiedAt: serverTimestamp(),
       modifiedBy: window.firebase.user.email,
     };
