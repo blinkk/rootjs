@@ -166,32 +166,45 @@
 }
 
 .TaskManager__listHeader {
-  align-items: end;
+  align-items: start;
   display: grid;
   gap: 12px;
   grid-template-columns: 1fr auto;
   margin-bottom: 20px;
 }
 
+.TaskManager__listHeader__summary {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.TaskManager__listHeader__titleLine {
+  align-items: baseline;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
 .TaskManager__listHeader__count {
   color: var(--color-text-gray);
   font-size: 13px;
-  margin-left: 8px;
 }
 
 .TaskManager__listHeader__actions {
-  align-items: center;
   display: flex;
+  align-items: flex-end;
+  justify-content: flex-end;
+  height: 100%;
   flex-wrap: wrap;
   gap: 10px;
-  justify-content: flex-end;
 }
 
 .TaskManager__filters {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
-  justify-content: flex-end;
+  justify-content: flex-start;
 }
 
 .TaskManager__filters button {
@@ -223,8 +236,8 @@
 
 .TaskManager__layoutOption {
   align-items: center;
-  display: inline-flex;
-  gap: 5px;
+  display: flex;
+  gap: 4px;
   justify-content: center;
 }
 
@@ -432,26 +445,26 @@
   margin-top: 2px;
 }
 
-.TaskManager__kanban {
+.TaskManager__board {
   align-items: stretch;
-  display: grid;
+  display: flex;
   gap: 14px;
-  grid-template-columns: repeat(5, minmax(220px, 1fr));
   overflow-x: auto;
   padding-bottom: 4px;
 }
 
-.TaskManager__kanbanColumn {
+.TaskManager__boardColumn {
   background: #f6f6f2;
   border: 1px solid var(--color-border);
   border-radius: var(--surface-border-radius);
   display: flex;
+  flex: 1 0 220px;
   flex-direction: column;
   min-height: 280px;
   min-width: 220px;
 }
 
-.TaskManager__kanbanColumn__header {
+.TaskManager__boardColumn__header {
   align-items: center;
   border-bottom: 1px solid var(--color-border);
   display: flex;
@@ -463,7 +476,7 @@
   padding: 0 12px;
 }
 
-.TaskManager__kanbanColumn__header span:last-child {
+.TaskManager__boardColumn__header span:last-child {
   align-items: center;
   background: #fff;
   border: 1px solid var(--color-border);
@@ -479,7 +492,7 @@
   padding: 0 7px;
 }
 
-.TaskManager__kanbanColumn__tasks {
+.TaskManager__boardColumn__tasks {
   display: flex;
   flex: 1;
   flex-direction: column;
@@ -487,7 +500,7 @@
   padding: 10px;
 }
 
-.TaskManager__kanbanColumn__empty {
+.TaskManager__boardColumn__empty {
   align-items: center;
   color: var(--color-text-gray);
   display: flex;
@@ -497,7 +510,7 @@
   min-height: 88px;
 }
 
-.TaskManager__kanbanCard {
+.TaskManager__boardCard {
   background: var(--surface-background);
   border: 1px solid var(--color-border);
   border-radius: 6px;
@@ -509,21 +522,21 @@
   text-decoration: none;
 }
 
-.TaskManager__kanbanCard:hover {
+.TaskManager__boardCard:hover {
   background: var(--surface-background-hover);
 }
 
-.TaskManager__kanbanCard:active {
+.TaskManager__boardCard:active {
   background: var(--surface-background-active);
 }
 
-.TaskManager__kanbanCard__title {
+.TaskManager__boardCard__title {
   font-size: 13px;
   font-weight: 700;
   line-height: 1.35;
 }
 
-.TaskManager__kanbanCard__description {
+.TaskManager__boardCard__description {
   color: var(--color-text-gray);
   display: -webkit-box;
   font-size: 12px;
@@ -533,21 +546,21 @@
   -webkit-line-clamp: 3;
 }
 
-.TaskManager__kanbanCard__meta {
+.TaskManager__boardCard__meta {
   color: var(--color-text-gray);
   font-family: var(--font-family-mono);
   font-size: 11px;
   line-height: 1.4;
 }
 
-.TaskManager__kanbanCard__badges {
+.TaskManager__boardCard__badges {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
   margin-top: 2px;
 }
 
-.TaskManager__kanbanCard__badge {
+.TaskManager__boardCard__badge {
   align-items: center;
   background: var(--chip-background);
   border-radius: 999px;

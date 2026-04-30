@@ -214,7 +214,7 @@ function normalizeTaskTargetLaunchDate(value?: Date | Timestamp | null) {
   return value ?? null;
 }
 
-function isOpenTaskStatus(status?: string) {
+export function isOpenTaskStatus(status?: string) {
   const normalized = (status || 'open').toLowerCase();
   return !['closed', 'complete', 'completed', 'done', 'resolved'].includes(
     normalized
