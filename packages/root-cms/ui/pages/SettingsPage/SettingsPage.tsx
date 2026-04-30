@@ -180,6 +180,7 @@ function SiteAdminSection() {
           <div className="SettingsPage__siteAdmin__searchButtons">
             <Button
               variant="default"
+              size="xs"
               compact
               loading={running}
               onClick={() => rebuild(false)}
@@ -188,8 +189,8 @@ function SiteAdminSection() {
             </Button>
             <Button
               variant="default"
+              size="xs"
               compact
-              color="red"
               loading={running}
               onClick={() => {
                 if (
