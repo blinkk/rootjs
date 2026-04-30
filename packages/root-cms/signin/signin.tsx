@@ -282,9 +282,40 @@ function loginSuccessRedirect() {
   window.location.replace(redirectUrl);
 }
 
-const app = initializeApp(window.__ROOT_CTX.firebaseConfig);
-const auth = getAuth(app);
-window.firebase = {app, auth};
 const root = document.getElementById('root')!;
-root.innerHTML = '';
-render(<SignIn />, root);
+
+function getStartupErrorMessage(err: any): string {
+  const code = err?.code || '';
+  if (code === 'auth/invalid-api-key') {
+    return 'Firebase API key is invalid. Check the CMS firebaseConfig in root.config.ts.';
+  }
+  return err?.message || 'An unknown startup error occurred.';
+}
+
+function showStartupError(err: any) {
+  console.error(err);
+  root.innerHTML = '';
+  const container = document.createElement('div');
+  container.className = 'bootstrap bootstrap--error';
+
+  const title = document.createElement('h1');
+  title.className = 'bootstrap__error-title';
+  title.textContent = 'Something went wrong';
+
+  const message = document.createElement('p');
+  message.className = 'bootstrap__error-message';
+  message.textContent = getStartupErrorMessage(err);
+
+  container.append(title, message);
+  root.append(container);
+}
+
+try {
+  const app = initializeApp(window.__ROOT_CTX.firebaseConfig);
+  const auth = getAuth(app);
+  window.firebase = {app, auth};
+  root.innerHTML = '';
+  render(<SignIn />, root);
+} catch (err) {
+  showStartupError(err);
+}
