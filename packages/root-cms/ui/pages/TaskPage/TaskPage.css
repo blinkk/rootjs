@@ -104,8 +104,7 @@
   justify-content: space-between;
 }
 
-.TaskPage__description__label,
-.TaskPage__metadata__header {
+.TaskPage__description__label {
   color: var(--color-text-gray);
   font-family: var(--font-family-mono);
   font-size: 12px;
@@ -143,10 +142,6 @@
   flex-direction: column;
   gap: 16px;
   padding: 16px;
-}
-
-.TaskPage__metadata__header {
-  margin-bottom: 0;
 }
 
 .TaskPage__metadata__field {
@@ -305,7 +300,8 @@
   white-space: pre-wrap;
 }
 
-.TaskPage__comment__markdown {
+.TaskPage__comment__markdown,
+.TaskPage__comment__richText {
   white-space: normal;
 }
 
@@ -313,7 +309,13 @@
 .TaskPage__comment__markdown ul,
 .TaskPage__comment__markdown ol,
 .TaskPage__comment__markdown blockquote,
-.TaskPage__comment__markdown pre {
+.TaskPage__comment__markdown pre,
+.TaskPage__comment__richText p,
+.TaskPage__comment__richText h4,
+.TaskPage__comment__richText ul,
+.TaskPage__comment__richText ol,
+.TaskPage__comment__richText blockquote,
+.TaskPage__comment__richText pre {
   margin: 0 0 12px;
 }
 
@@ -321,16 +323,25 @@
 .TaskPage__comment__markdown ul:last-child,
 .TaskPage__comment__markdown ol:last-child,
 .TaskPage__comment__markdown blockquote:last-child,
-.TaskPage__comment__markdown pre:last-child {
+.TaskPage__comment__markdown pre:last-child,
+.TaskPage__comment__richText p:last-child,
+.TaskPage__comment__richText h4:last-child,
+.TaskPage__comment__richText ul:last-child,
+.TaskPage__comment__richText ol:last-child,
+.TaskPage__comment__richText blockquote:last-child,
+.TaskPage__comment__richText pre:last-child {
   margin-bottom: 0;
 }
 
 .TaskPage__comment__markdown ul,
-.TaskPage__comment__markdown ol {
+.TaskPage__comment__markdown ol,
+.TaskPage__comment__richText ul,
+.TaskPage__comment__richText ol {
   padding-left: 22px;
 }
 
-.TaskPage__comment__markdown code {
+.TaskPage__comment__markdown code,
+.TaskPage__comment__richText code {
   background: #efefef;
   border-radius: 4px;
   font-family: var(--font-family-mono);
@@ -338,7 +349,8 @@
   padding: 2px 5px;
 }
 
-.TaskPage__comment__markdown pre {
+.TaskPage__comment__markdown pre,
+.TaskPage__comment__richText pre {
   background: #f6f7f8;
   border: 1px solid var(--color-border);
   border-radius: 6px;
@@ -347,23 +359,38 @@
   white-space: pre;
 }
 
-.TaskPage__comment__markdown pre code {
+.TaskPage__comment__markdown pre code,
+.TaskPage__comment__richText pre code {
   background: transparent;
   border-radius: 0;
   display: block;
   padding: 0;
 }
 
-.TaskPage__comment__markdown blockquote {
+.TaskPage__comment__markdown blockquote,
+.TaskPage__comment__richText blockquote {
   border-left: 3px solid var(--color-border);
   color: var(--color-text-gray);
   padding-left: 12px;
 }
 
-.TaskPage__comment__markdown a {
+.TaskPage__comment__markdown a,
+.TaskPage__comment__richText a {
   color: #175cd3;
   font-weight: 600;
   text-underline-offset: 3px;
+}
+
+.TaskPage__comment__richText h4 {
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+.TaskPage__comment__richText img {
+  border-radius: 6px;
+  max-height: 420px;
+  object-fit: contain;
 }
 
 .TaskPage__comment__body--deleted {

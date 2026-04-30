@@ -20,6 +20,18 @@
   z-index: 1;
 }
 
+.LexicalEditor--comment .LexicalEditor__toolbar {
+  border-radius: 6px 6px 0 0;
+  gap: 6px;
+  margin-bottom: -1px;
+  padding: 6px;
+  position: static;
+}
+
+.LexicalEditor--comment .LexicalEditor__toolbar--comment {
+  flex-wrap: wrap;
+}
+
 .LexicalEditor__toolbar__dropdown {
   height: 28px;
   font-size: 12px;
@@ -73,6 +85,18 @@
   position: relative;
   font-family: var(--font-family-default);
   font-size: 12px;
+}
+
+.LexicalEditor--comment .LexicalEditor__editor {
+  border-radius: 0 0 6px 6px;
+  font-size: 14px;
+  line-height: 1.5;
+  min-height: 92px;
+  padding: 12px;
+}
+
+.LexicalEditor--comment.LexicalEditor--withMaxHeight .LexicalEditor__editor {
+  max-height: 220px;
 }
 
 .LexicalEditor--withMaxHeight .LexicalEditor__editor {

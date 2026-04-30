@@ -307,6 +307,7 @@ interface ToolbarPluginProps {
   activeEditor: LexicalEditor;
   setActiveEditor: Dispatch<LexicalEditor>;
   setIsLinkEditMode: Dispatch<boolean>;
+  variant?: 'document' | 'comment';
   blockComponents?: schema.Schema[];
   onInsertBlockComponent?: (blockName: string) => void;
   inlineComponents?: schema.Schema[];
@@ -321,6 +322,7 @@ export function ToolbarPlugin(props: ToolbarPluginProps) {
     activeEditor,
     setActiveEditor,
     setIsLinkEditMode,
+    variant = 'document',
     onInsertBlockComponent,
     onInsertInlineComponent,
   } = props;
@@ -521,10 +523,17 @@ export function ToolbarPlugin(props: ToolbarPluginProps) {
     }
     return <IconSquare size={16} />;
   };
+  const isCommentVariant = variant === 'comment';
 
   return (
-    <div className="LexicalEditor__toolbar">
-      {toolbarState.blockType in TOOLBAR_BLOCK_LABELS &&
+    <div
+      className={joinClassNames(
+        'LexicalEditor__toolbar',
+        isCommentVariant && 'LexicalEditor__toolbar--comment'
+      )}
+    >
+      {!isCommentVariant &&
+        toolbarState.blockType in TOOLBAR_BLOCK_LABELS &&
         activeEditor === editor && (
           <>
             <BlockFormatDropDown
@@ -599,76 +608,80 @@ export function ToolbarPlugin(props: ToolbarPluginProps) {
 
         <Divider />
 
-        <Menu
-          control={
-            <Button
-              className={joinClassNames(
-                'LexicalEditor__toolbar__dropdown',
-                'LexicalEditor__toolbar__insertDropdown'
-              )}
-              variant="default"
-              compact
-              leftIcon={<IconPuzzle size={16} />}
-              rightIcon={<IconChevronDown size={16} />}
+        {!isCommentVariant && (
+          <>
+            <Menu
+              control={
+                <Button
+                  className={joinClassNames(
+                    'LexicalEditor__toolbar__dropdown',
+                    'LexicalEditor__toolbar__insertDropdown'
+                  )}
+                  variant="default"
+                  compact
+                  leftIcon={<IconPuzzle size={16} />}
+                  rightIcon={<IconChevronDown size={16} />}
+                >
+                  Components
+                </Button>
+              }
             >
-              Components
-            </Button>
-          }
-        >
-          <Menu.Label>Insert</Menu.Label>
-          <Menu.Item
-            icon={<IconTable size={16} />}
-            onClick={() => {
-              activeEditor.dispatchCommand(INSERT_TABLE_COMMAND, {
-                columns: '3',
-                rows: '3',
-              });
-            }}
-          >
-            Table
-          </Menu.Item>
-          <Menu.Item
-            icon={<IconSeparatorHorizontal size={16} />}
-            onClick={() => {
-              activeEditor.dispatchCommand(
-                INSERT_HORIZONTAL_RULE_COMMAND,
-                undefined
-              );
-            }}
-          >
-            Horizontal Rule
-          </Menu.Item>
+              <Menu.Label>Insert</Menu.Label>
+              <Menu.Item
+                icon={<IconTable size={16} />}
+                onClick={() => {
+                  activeEditor.dispatchCommand(INSERT_TABLE_COMMAND, {
+                    columns: '3',
+                    rows: '3',
+                  });
+                }}
+              >
+                Table
+              </Menu.Item>
+              <Menu.Item
+                icon={<IconSeparatorHorizontal size={16} />}
+                onClick={() => {
+                  activeEditor.dispatchCommand(
+                    INSERT_HORIZONTAL_RULE_COMMAND,
+                    undefined
+                  );
+                }}
+              >
+                Horizontal Rule
+              </Menu.Item>
 
-          {sortedInlineComponents.length > 0 && (
-            <>
-              <Menu.Label>Inline Components</Menu.Label>
-              {sortedInlineComponents.map((component) => (
-                <Menu.Item
-                  key={component.name}
-                  icon={<IconCapsuleHorizontal size={16} />}
-                  onClick={() => onInsertInlineComponent?.(component.name)}
-                >
-                  {component.label || component.name}
-                </Menu.Item>
-              ))}
-            </>
-          )}
-          {sortedBlockComponents.length > 0 && (
-            <>
-              <Menu.Label>Block Components</Menu.Label>
-              {sortedBlockComponents.map((block) => (
-                <Menu.Item
-                  key={block.name}
-                  icon={getComponentIcon(block.name)}
-                  onClick={() => onInsertBlockComponent?.(block.name)}
-                >
-                  {block.label || block.name}
-                </Menu.Item>
-              ))}
-            </>
-          )}
-        </Menu>
-        <Divider />
+              {sortedInlineComponents.length > 0 && (
+                <>
+                  <Menu.Label>Inline Components</Menu.Label>
+                  {sortedInlineComponents.map((component) => (
+                    <Menu.Item
+                      key={component.name}
+                      icon={<IconCapsuleHorizontal size={16} />}
+                      onClick={() => onInsertInlineComponent?.(component.name)}
+                    >
+                      {component.label || component.name}
+                    </Menu.Item>
+                  ))}
+                </>
+              )}
+              {sortedBlockComponents.length > 0 && (
+                <>
+                  <Menu.Label>Block Components</Menu.Label>
+                  {sortedBlockComponents.map((block) => (
+                    <Menu.Item
+                      key={block.name}
+                      icon={getComponentIcon(block.name)}
+                      onClick={() => onInsertBlockComponent?.(block.name)}
+                    >
+                      {block.label || block.name}
+                    </Menu.Item>
+                  ))}
+                </>
+              )}
+            </Menu>
+            <Divider />
+          </>
+        )}
       </>
     </div>
   );
@@ -702,8 +715,4 @@ export function ToolbarActionIcon(props: ToolbarActionIconProps) {
       </ActionIcon>
     </Tooltip>
   );
-}
-
-function IconMenuItemPlaceholder() {
-  return <div style={{width: 16, height: 16}}></div>;
 }

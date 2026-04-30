@@ -13,6 +13,7 @@ import {
   setDoc,
   updateDoc,
 } from 'firebase/firestore';
+import {RichTextData, RichTextBlock} from '../../shared/richtext.js';
 import {logAction} from './actions.js';
 
 const TASK_COUNTER_ID = 'tasks';
@@ -38,6 +39,7 @@ export type TaskUnsubscribe = () => void;
 export interface TaskCommentHistoryEntry {
   action: 'edit' | 'delete';
   content: string;
+  body?: RichTextData | null;
   changedAt: Timestamp;
   changedBy: string;
 }
@@ -47,6 +49,7 @@ export interface TaskComment {
   taskId: string;
   parentId?: string | null;
   content: string;
+  body?: RichTextData | null;
   createdAt: Timestamp;
   createdBy: string;
   updatedAt?: Timestamp;
@@ -451,13 +454,19 @@ function taskMetadataValuesEqual(
 
 export async function addTaskComment(
   taskId: string,
-  content: string,
+  content: string | RichTextData,
   parentId?: string | null
 ) {
   if (!taskId) {
     throw new Error('missing task id');
   }
   if (!content) {
+    throw new Error('missing comment content');
+  }
+  const body = normalizeTaskCommentBody(content);
+  const contentText =
+    typeof content === 'string' ? content : getRichTextPlainText(content);
+  if (!contentText.trim() && !body) {
     throw new Error('missing comment content');
   }
 
@@ -468,7 +477,8 @@ export async function addTaskComment(
     id: commentId,
     taskId,
     parentId: parentId || null,
-    content,
+    content: contentText,
+    body,
     createdAt: serverTimestamp(),
     createdBy: window.firebase.user.email || '',
     history: [],
@@ -484,12 +494,18 @@ export async function addTaskComment(
 export async function editTaskComment(
   taskId: string,
   commentId: string,
-  content: string
+  content: string | RichTextData
 ) {
   if (!taskId || !commentId) {
     throw new Error('missing task or comment id');
   }
   if (!content) {
+    throw new Error('missing comment content');
+  }
+  const body = normalizeTaskCommentBody(content);
+  const contentText =
+    typeof content === 'string' ? content : getRichTextPlainText(content);
+  if (!contentText.trim() && !body) {
     throw new Error('missing comment content');
   }
 
@@ -501,13 +517,15 @@ export async function editTaskComment(
   const data = snapshot.data() as TaskComment;
 
   await updateDoc(commentRef, {
-    content,
+    content: contentText,
+    body,
     updatedAt: serverTimestamp(),
     updatedBy: window.firebase.user.email || '',
     isDeleted: false,
     history: arrayUnion({
       action: 'edit',
       content: data.content,
+      body: data.body || null,
       changedAt: Timestamp.now(),
       changedBy: window.firebase.user.email || '',
     }),
@@ -516,6 +534,60 @@ export async function editTaskComment(
   logAction('tasks.comment.edit', {
     metadata: {taskId, commentId},
   });
+}
+
+function normalizeTaskCommentBody(content: string | RichTextData) {
+  return typeof content === 'string' ? null : content;
+}
+
+function getRichTextPlainText(data: RichTextData | null) {
+  if (!data?.blocks?.length) {
+    return '';
+  }
+  return data.blocks
+    .map((block) => getRichTextBlockPlainText(block))
+    .filter(Boolean)
+    .join('\n')
+    .trim();
+}
+
+function getRichTextBlockPlainText(block: RichTextBlock): string {
+  switch (block.type) {
+    case 'paragraph':
+    case 'heading':
+    case 'quote':
+      return stripHtml(block.data?.text || '');
+    case 'orderedList':
+    case 'unorderedList':
+      return (block.data?.items || [])
+        .map((item: any) => getRichTextListItemPlainText(item))
+        .filter(Boolean)
+        .join('\n');
+    case 'image':
+      return block.data?.file?.alt || block.data?.file?.url || '';
+    default:
+      return '';
+  }
+}
+
+function getRichTextListItemPlainText(item: {
+  content?: string;
+  items?: Array<any>;
+}) {
+  const parts = [stripHtml(item.content || '')];
+  if (item.items?.length) {
+    parts.push(
+      item.items
+        .map((child) => getRichTextListItemPlainText(child))
+        .filter(Boolean)
+        .join('\n')
+    );
+  }
+  return parts.filter(Boolean).join('\n');
+}
+
+function stripHtml(value: string) {
+  return value.replace(/<[^>]+>/g, '');
 }
 
 export async function deleteTaskComment(taskId: string, commentId: string) {
