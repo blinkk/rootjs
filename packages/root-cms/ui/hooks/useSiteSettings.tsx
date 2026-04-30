@@ -38,8 +38,9 @@ export const SITE_SETTINGS: Setting[] = [
         <Button
           disabled={!value}
           variant="default"
+          size="xs"
           compact
-          rightIcon={<IconExternalLink size={16} />}
+          rightIcon={<IconExternalLink size={14} />}
           onClick={() => {
             if (value) {
               window.open(value, buildGoogleDriveFolderUrl(value));
