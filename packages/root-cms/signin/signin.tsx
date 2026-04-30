@@ -287,7 +287,7 @@ const root = document.getElementById('root')!;
 function getStartupErrorMessage(err: any): string {
   const code = err?.code || '';
   if (code === 'auth/invalid-api-key') {
-    return 'Firebase API key is invalid. Check the CMS firebaseConfig in root.config.ts.';
+    return 'Firebase API key is invalid.';
   }
   return err?.message || 'An unknown startup error occurred.';
 }
