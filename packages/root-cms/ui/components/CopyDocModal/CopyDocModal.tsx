@@ -103,10 +103,24 @@ export function CopyDocModal(modalProps: ContextModalProps<CopyDocModalProps>) {
       }
 
       context.closeModal(id);
+      const docUrl = `/cms/content/${toCollectionId}/${cleanSlug}`;
       showNotification({
         title: 'Copied!',
-        message: `Succesfully copied ${sourceLabel} to ${toDocId}.`,
-        autoClose: 5000,
+        message: (
+          <div>
+            <div>{`Successfully copied ${sourceLabel} to ${toDocId}.`}</div>
+            <Button
+              component="a"
+              href={docUrl}
+              size="xs"
+              variant="default"
+              style={{marginTop: '8px'}}
+            >
+              Open doc
+            </Button>
+          </div>
+        ),
+        autoClose: 10000,
       });
       if (props.onSuccess) {
         props.onSuccess(toDocId);
