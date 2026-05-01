@@ -15,8 +15,10 @@ import {
   IconCalendar,
   IconCheck,
   IconCornerDownRight,
+  IconExternalLink,
   IconFlag,
   IconMessageCircle,
+  IconPaperclip,
   IconPencil,
   IconTrash,
   IconUser,
@@ -24,7 +26,7 @@ import {
 } from '@tabler/icons-preact';
 import {Timestamp} from 'firebase/firestore';
 import {ChangeEvent} from 'preact/compat';
-import {useEffect, useMemo, useState} from 'preact/hooks';
+import {useEffect, useMemo, useRef, useState} from 'preact/hooks';
 import {
   RichTextBlock,
   RichTextData,
@@ -37,19 +39,24 @@ import {TaskCommentEditor} from '../../components/TaskCommentEditor/TaskCommentE
 import {usePageTitle} from '../../hooks/usePageTitle.js';
 import {Layout} from '../../layout/Layout.js';
 import {joinClassNames} from '../../utils/classes.js';
+import {uploadFileToGCS} from '../../utils/gcs.js';
 import {errorMessage} from '../../utils/notifications.js';
 import {
   addTaskComment,
+  addTaskAttachment,
   deleteTaskComment,
   editTaskComment,
+  removeTaskAttachment,
   subscribeTask,
   subscribeTaskComments,
   subscribeTaskEvents,
   Task,
+  TaskAttachment,
   TaskComment,
   TaskEvent,
   TaskMetadataField,
   TaskPriority,
+  updateTaskTitle,
   updateTaskDescription,
   updateTaskAssignee,
   updateTaskPriority,
@@ -125,7 +132,7 @@ export function TaskPage(props: {id: string}) {
             <div>{taskId}</div>
           </Breadcrumbs>
           <div className="TaskPage__header__titleWrap">
-            <Heading size="h1">{task ? task.title : `Task #${taskId}`}</Heading>
+            <TaskTitle task={task} taskId={taskId} />
             {task && (
               <span
                 className={joinClassNames(
@@ -152,6 +159,7 @@ export function TaskPage(props: {id: string}) {
           <div className="TaskPage__body">
             <main className="TaskPage__main">
               <TaskDescription task={task} />
+              <TaskAttachments task={task} />
               <TaskTimeline task={task} comments={comments} events={events} />
               <TaskCommentComposer taskId={task.id} />
             </main>
@@ -162,6 +170,121 @@ export function TaskPage(props: {id: string}) {
         )}
       </div>
     </Layout>
+  );
+}
+
+/** Renders the task title with inline editing. */
+function TaskTitle(props: {task: Task | null; taskId: string}) {
+  const {task} = props;
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(task?.title || '');
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (!editing) {
+      setDraft(task?.title || '');
+    }
+  }, [task?.title, editing]);
+
+  async function saveTitle() {
+    if (!task) {
+      return;
+    }
+    const nextTitle = draft.trim();
+    if (!nextTitle) {
+      showNotification({
+        title: 'Could not update title',
+        message: 'Task title is required.',
+        color: 'red',
+      });
+      return;
+    }
+    if (nextTitle === task.title) {
+      setDraft(task.title);
+      setEditing(false);
+      return;
+    }
+
+    setSaving(true);
+    try {
+      await updateTaskTitle(task.id, nextTitle);
+      setEditing(false);
+    } catch (err) {
+      showNotification({
+        title: 'Could not update title',
+        message: errorMessage(err),
+        color: 'red',
+        autoClose: false,
+      });
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  if (!task) {
+    return <Heading size="h1">{`Task #${props.taskId}`}</Heading>;
+  }
+
+  if (editing) {
+    return (
+      <form
+        className="TaskPage__header__titleForm"
+        onSubmit={(e) => {
+          e.preventDefault();
+          saveTitle();
+        }}
+      >
+        <TextInput
+          autoFocus
+          className="TaskPage__header__titleInput"
+          disabled={saving}
+          value={draft}
+          onChange={(e: ChangeEvent<HTMLInputElement>) =>
+            setDraft(e.currentTarget.value)
+          }
+          onKeyDown={(e: KeyboardEvent) => {
+            if (e.key === 'Escape') {
+              setDraft(task.title);
+              setEditing(false);
+            }
+          }}
+        />
+        <Button
+          compact
+          size="xs"
+          color="dark"
+          type="submit"
+          loading={saving}
+          leftIcon={<IconCheck size={14} strokeWidth="1.8" />}
+        >
+          Save
+        </Button>
+        <Button
+          compact
+          size="xs"
+          variant="default"
+          type="button"
+          leftIcon={<IconX size={14} strokeWidth="1.8" />}
+          onClick={() => {
+            setDraft(task.title);
+            setEditing(false);
+          }}
+        >
+          Cancel
+        </Button>
+      </form>
+    );
+  }
+
+  return (
+    <div className="TaskPage__header__titleContent">
+      <Heading size="h1">{task.title}</Heading>
+      <Tooltip label="Edit title">
+        <ActionIcon size="sm" onClick={() => setEditing(true)}>
+          <IconPencil size={16} strokeWidth="1.8" />
+        </ActionIcon>
+      </Tooltip>
+    </div>
   );
 }
 
@@ -251,6 +374,150 @@ function TaskDescription(props: {task: Task}) {
         >
           {task.description || 'No description provided.'}
         </div>
+      )}
+    </Surface>
+  );
+}
+
+/** Renders task attachment upload controls and the current attachment list. */
+function TaskAttachments(props: {task: Task}) {
+  const {task} = props;
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [uploading, setUploading] = useState(false);
+  const [removingAttachmentId, setRemovingAttachmentId] = useState('');
+  const attachments = task.attachments || [];
+
+  async function uploadFiles(files: FileList | File[]) {
+    const selectedFiles = Array.from(files);
+    if (selectedFiles.length === 0) {
+      return;
+    }
+
+    setUploading(true);
+    try {
+      for (const file of selectedFiles) {
+        const uploadedFile = await uploadFileToGCS(file);
+        await addTaskAttachment(task.id, {
+          ...uploadedFile,
+          filename: uploadedFile.filename || file.name,
+          contentType: file.type || undefined,
+          size: file.size,
+        });
+      }
+      showNotification({
+        message:
+          selectedFiles.length === 1
+            ? 'File attached.'
+            : `${selectedFiles.length} files attached.`,
+        color: 'green',
+      });
+    } catch (err) {
+      showNotification({
+        title: 'Could not attach file',
+        message: errorMessage(err),
+        color: 'red',
+        autoClose: false,
+      });
+    } finally {
+      setUploading(false);
+      if (inputRef.current) {
+        inputRef.current.value = '';
+      }
+    }
+  }
+
+  async function removeAttachment(attachment: TaskAttachment) {
+    const name = formatTaskAttachmentName(attachment);
+    if (!window.confirm(`Remove ${name} from this task?`)) {
+      return;
+    }
+    setRemovingAttachmentId(attachment.id);
+    try {
+      await removeTaskAttachment(task.id, attachment.id);
+    } catch (err) {
+      showNotification({
+        title: 'Could not remove attachment',
+        message: errorMessage(err),
+        color: 'red',
+        autoClose: false,
+      });
+    } finally {
+      setRemovingAttachmentId('');
+    }
+  }
+
+  return (
+    <Surface className="TaskPage__attachments">
+      <div className="TaskPage__attachments__top">
+        <div className="TaskPage__attachments__label">Attachments</div>
+        <Button
+          compact
+          size="xs"
+          color="dark"
+          type="button"
+          loading={uploading}
+          leftIcon={<IconPaperclip size={14} strokeWidth="1.8" />}
+          onClick={() => inputRef.current?.click()}
+        >
+          Attach files
+        </Button>
+        <input
+          ref={inputRef}
+          className="TaskPage__attachments__input"
+          type="file"
+          multiple
+          onChange={(e: ChangeEvent<HTMLInputElement>) => {
+            uploadFiles(e.currentTarget.files || []);
+          }}
+        />
+      </div>
+      {attachments.length > 0 ? (
+        <div className="TaskPage__attachments__list">
+          {attachments.map((attachment) => (
+            <div className="TaskPage__attachments__item" key={attachment.id}>
+              <div className="TaskPage__attachments__itemIcon">
+                <IconPaperclip size={16} strokeWidth="1.8" />
+              </div>
+              <div className="TaskPage__attachments__itemContent">
+                <a
+                  href={attachment.src}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="TaskPage__attachments__itemTitle"
+                >
+                  {formatTaskAttachmentName(attachment)}
+                </a>
+                <div className="TaskPage__attachments__itemMeta">
+                  {formatTaskAttachmentMeta(attachment)}
+                </div>
+              </div>
+              <div className="TaskPage__attachments__itemActions">
+                <Tooltip label="Open file">
+                  <ActionIcon
+                    component="a"
+                    href={attachment.src}
+                    target="_blank"
+                    rel="noreferrer"
+                    size="sm"
+                  >
+                    <IconExternalLink size={16} strokeWidth="1.8" />
+                  </ActionIcon>
+                </Tooltip>
+                <Tooltip label="Remove attachment">
+                  <ActionIcon
+                    size="sm"
+                    disabled={removingAttachmentId === attachment.id}
+                    onClick={() => removeAttachment(attachment)}
+                  >
+                    <IconTrash size={16} strokeWidth="1.8" />
+                  </ActionIcon>
+                </Tooltip>
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="TaskPage__attachments__empty">No files attached.</div>
       )}
     </Surface>
   );
@@ -466,7 +733,9 @@ function TaskEventTimelineItem(props: {event: TaskEvent}) {
   return (
     <div className="TaskPage__timelineItem TaskPage__timelineItem--event">
       <div className="TaskPage__timelineItem__marker">
-        {event.field === 'assignee' ? (
+        {event.field === 'title' ? (
+          <IconPencil size={15} strokeWidth="2" />
+        ) : event.field === 'assignee' ? (
           <IconUser size={15} strokeWidth="2" />
         ) : event.field === 'priority' ? (
           <IconFlag size={15} strokeWidth="2" />
@@ -876,6 +1145,46 @@ function timestampMillis(ts?: Timestamp) {
   return ts?.toMillis?.() || 0;
 }
 
+function formatTaskAttachmentName(attachment: TaskAttachment) {
+  const urlFilename =
+    attachment.src.split('?')[0].split('/').filter(Boolean).at(-1) || '';
+  const filename = attachment.filename || urlFilename || 'Attachment';
+  try {
+    return decodeURIComponent(filename);
+  } catch (err) {
+    return filename;
+  }
+}
+
+function formatTaskAttachmentMeta(attachment: TaskAttachment) {
+  const parts = [
+    formatFileSize(attachment.size),
+    attachment.contentType || '',
+    attachment.attachedBy
+      ? `attached by ${formatTaskUser(attachment.attachedBy)}`
+      : '',
+    attachment.attachedAt ? formatTaskDateTime(attachment.attachedAt) : '',
+  ].filter(Boolean);
+  return parts.length > 0 ? parts.join(' - ') : 'Attached file';
+}
+
+function formatFileSize(size?: number) {
+  if (typeof size !== 'number') {
+    return '';
+  }
+  if (size < 1024) {
+    return `${size} B`;
+  }
+  const units = ['KB', 'MB', 'GB'];
+  let value = size / 1024;
+  let unitIndex = 0;
+  while (value >= 1024 && unitIndex < units.length - 1) {
+    value = value / 1024;
+    unitIndex += 1;
+  }
+  return `${value.toFixed(value >= 10 ? 0 : 1)} ${units[unitIndex]}`;
+}
+
 function formatTaskUser(email: string) {
   return email.split('@')[0] || email;
 }
@@ -923,6 +1232,9 @@ function formatTaskEventValue(
   }
   if (field === 'assignee') {
     return formatTaskUser(value);
+  }
+  if (field === 'title') {
+    return value;
   }
   return value.replace(/[-_]/g, ' ');
 }

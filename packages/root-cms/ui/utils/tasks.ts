@@ -15,6 +15,7 @@ import {
 } from 'firebase/firestore';
 import {RichTextData, RichTextBlock} from '../../shared/richtext.js';
 import {logAction} from './actions.js';
+import type {UploadedFile} from './gcs.js';
 
 const TASK_COUNTER_ID = 'tasks';
 const TASK_ID_ALLOCATION_ATTEMPTS = 20;
@@ -23,6 +24,7 @@ export interface Task {
   id: string;
   title: string;
   description?: string;
+  attachments?: TaskAttachment[];
   assignee?: string | null;
   priority?: TaskPriority;
   status?: string;
@@ -35,6 +37,14 @@ export interface Task {
 
 export type TaskPriority = 'high' | 'medium' | 'normal';
 export type TaskUnsubscribe = () => void;
+
+export interface TaskAttachment extends UploadedFile {
+  id: string;
+  attachedAt: Timestamp;
+  attachedBy: string;
+  contentType?: string;
+  size?: number;
+}
 
 export interface TaskCommentHistoryEntry {
   action: 'edit' | 'delete';
@@ -61,6 +71,7 @@ export interface TaskComment {
 }
 
 export type TaskMetadataField =
+  | 'title'
   | 'assignee'
   | 'priority'
   | 'status'
@@ -351,6 +362,24 @@ export async function updateTaskAssignee(
   }
 }
 
+export async function updateTaskTitle(taskId: string, title: string) {
+  if (!taskId) {
+    throw new Error('missing task id');
+  }
+  const normalizedTitle = title.trim();
+  if (!normalizedTitle) {
+    throw new Error('missing title');
+  }
+  const didUpdate = await updateTaskMetadataField(
+    taskId,
+    'title',
+    normalizedTitle
+  );
+  if (didUpdate) {
+    logAction('tasks.updateTitle', {metadata: {taskId}});
+  }
+}
+
 export async function updateTaskStatus(taskId: string, status: string) {
   if (!taskId) {
     throw new Error('missing task id');
@@ -418,6 +447,101 @@ export async function updateTaskDescription(
   logAction('tasks.updateDescription', {metadata: {taskId}});
 }
 
+export async function addTaskAttachment(
+  taskId: string,
+  file: UploadedFile & {contentType?: string; size?: number}
+) {
+  if (!taskId) {
+    throw new Error('missing task id');
+  }
+  if (!file?.src) {
+    throw new Error('missing attachment file');
+  }
+
+  const db = window.firebase.db;
+  const taskRef = taskDocRef(taskId);
+  const userEmail = window.firebase.user.email || '';
+  const attachment: TaskAttachment = {
+    ...file,
+    id: doc(taskEventsCollectionRef(taskId)).id,
+    attachedAt: Timestamp.now(),
+    attachedBy: userEmail,
+  };
+
+  await runTransaction(db, async (transaction) => {
+    const snapshot = await transaction.get(taskRef);
+    if (!snapshot.exists()) {
+      throw new Error('task not found');
+    }
+    const data = snapshot.data() as Task;
+    const attachments = normalizeTaskAttachments(data.attachments);
+
+    transaction.update(taskRef, {
+      attachments: [...attachments, attachment],
+      updatedAt: serverTimestamp(),
+      updatedBy: userEmail,
+    });
+  });
+
+  logAction('tasks.attachment.add', {
+    metadata: {
+      taskId,
+      attachmentId: attachment.id,
+      filename: attachment.filename || attachment.src,
+    },
+  });
+
+  return attachment;
+}
+
+export async function removeTaskAttachment(
+  taskId: string,
+  attachmentId: string
+) {
+  if (!taskId || !attachmentId) {
+    throw new Error('missing task or attachment id');
+  }
+
+  const db = window.firebase.db;
+  const taskRef = taskDocRef(taskId);
+  const userEmail = window.firebase.user.email || '';
+  let removedAttachment: TaskAttachment | undefined;
+
+  const didUpdate = await runTransaction(db, async (transaction) => {
+    const snapshot = await transaction.get(taskRef);
+    if (!snapshot.exists()) {
+      throw new Error('task not found');
+    }
+    const data = snapshot.data() as Task;
+    const attachments = normalizeTaskAttachments(data.attachments);
+    removedAttachment = attachments.find(
+      (attachment) => attachment.id === attachmentId
+    );
+    if (!removedAttachment) {
+      return false;
+    }
+
+    transaction.update(taskRef, {
+      attachments: attachments.filter(
+        (attachment) => attachment.id !== attachmentId
+      ),
+      updatedAt: serverTimestamp(),
+      updatedBy: userEmail,
+    });
+    return true;
+  });
+
+  if (didUpdate) {
+    logAction('tasks.attachment.remove', {
+      metadata: {
+        taskId,
+        attachmentId,
+        filename: removedAttachment?.filename || removedAttachment?.src || '',
+      },
+    });
+  }
+}
+
 async function updateTaskMetadataField(
   taskId: string,
   field: TaskMetadataField,
@@ -475,6 +599,15 @@ function taskMetadataValuesEqual(
     return a.toMillis() === b.toMillis();
   }
   return a === b;
+}
+
+function normalizeTaskAttachments(value: unknown): TaskAttachment[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+  return value.filter((attachment): attachment is TaskAttachment => {
+    return Boolean(attachment?.id && attachment?.src);
+  });
 }
 
 export async function addTaskComment(
