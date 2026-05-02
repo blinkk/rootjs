@@ -46,6 +46,7 @@ import {
   addTaskAttachment,
   deleteTaskComment,
   editTaskComment,
+  normalizeTaskStatus,
   removeTaskAttachment,
   subscribeTask,
   subscribeTaskComments,
@@ -65,10 +66,9 @@ import {
 } from '../../utils/tasks.js';
 
 const TASK_STATUS_OPTIONS = [
-  {value: 'open', label: 'Open'},
+  {value: 'new', label: 'New'},
   {value: 'in-progress', label: 'In progress'},
-  {value: 'blocked', label: 'Blocked'},
-  {value: 'done', label: 'Done'},
+  {value: 'in-review', label: 'In review'},
   {value: 'closed', label: 'Closed'},
 ];
 
@@ -447,13 +447,13 @@ function TaskAttachments(props: {task: Task}) {
   }
 
   return (
-    <Surface className="TaskPage__attachments">
+    <section className="TaskPage__attachments">
       <div className="TaskPage__attachments__top">
         <div className="TaskPage__attachments__label">Attachments</div>
         <Button
           compact
           size="xs"
-          color="dark"
+          variant="subtle"
           type="button"
           loading={uploading}
           leftIcon={<IconPaperclip size={14} strokeWidth="1.8" />}
@@ -519,7 +519,7 @@ function TaskAttachments(props: {task: Task}) {
       ) : (
         <div className="TaskPage__attachments__empty">No files attached.</div>
       )}
-    </Surface>
+    </section>
   );
 }
 
@@ -583,9 +583,9 @@ function TaskMetadataPanel(props: {task: Task}) {
         <Select
           size="xs"
           data={TASK_STATUS_OPTIONS}
-          value={task.status || 'open'}
+          value={normalizeTaskStatus(task.status)}
           onChange={(value: string | null) => {
-            if (value && value !== (task.status || 'open')) {
+            if (value && value !== normalizeTaskStatus(task.status)) {
               saveMetadata('status', () => updateTaskStatus(task.id, value));
             }
           }}
@@ -1213,7 +1213,7 @@ function formatTaskDateTime(ts?: Timestamp | null) {
 }
 
 function formatTaskStatus(status?: string) {
-  return (status || 'open').replace(/[-_]/g, ' ');
+  return normalizeTaskStatus(status).replace(/[-_]/g, ' ');
 }
 
 function formatTaskField(field: TaskMetadataField) {
@@ -1240,7 +1240,9 @@ function formatTaskEventValue(
 }
 
 function formatClassSuffix(value?: string) {
-  return (value || 'open').replace(/[^a-z0-9]+/gi, '-').toLowerCase();
+  return normalizeTaskStatus(value)
+    .replace(/[^a-z0-9]+/gi, '-')
+    .toLowerCase();
 }
 
 function formatDateInputValue(value?: Timestamp | null) {

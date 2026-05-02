@@ -168,7 +168,7 @@ export async function createTask(options: {
   const db = window.firebase.db;
   const assignee = options.assignee ?? (await getDefaultTaskAssignee());
   const priority = options.priority || 'normal';
-  const status = 'open';
+  const status = 'new';
   const targetLaunchDate = normalizeTaskTargetLaunchDate(
     options.targetLaunchDate
   );
@@ -226,10 +226,24 @@ function normalizeTaskTargetLaunchDate(value?: Date | Timestamp | null) {
 }
 
 export function isOpenTaskStatus(status?: string) {
-  const normalized = (status || 'open').toLowerCase();
+  const normalized = normalizeTaskStatus(status);
   return !['closed', 'complete', 'completed', 'done', 'resolved'].includes(
     normalized
   );
+}
+
+export function normalizeTaskStatus(status?: string) {
+  const normalized = (status || 'new').trim().toLowerCase();
+  if (normalized === 'open') {
+    return 'new';
+  }
+  if (normalized === 'blocked') {
+    return 'in-progress';
+  }
+  if (['done', 'complete', 'completed', 'resolved'].includes(normalized)) {
+    return 'closed';
+  }
+  return normalized;
 }
 
 function sortTasksByCreatedAt(tasks: Task[]) {

@@ -27,6 +27,7 @@ import {errorMessage} from '../../utils/notifications.js';
 import {
   createTask,
   isOpenTaskStatus,
+  normalizeTaskStatus,
   subscribeOpenTasks,
   subscribeTasks,
   Task,
@@ -46,19 +47,18 @@ type TaskManagerVariant = 'compact' | 'page';
 type TaskScope = 'all' | 'open';
 
 const TASK_STATUS_COLUMNS = [
-  {value: 'open', label: 'Open'},
+  {value: 'new', label: 'New'},
   {value: 'in-progress', label: 'In progress'},
-  {value: 'blocked', label: 'Blocked'},
-  {value: 'done', label: 'Done'},
+  {value: 'in-review', label: 'In review'},
   {value: 'closed', label: 'Closed'},
 ];
 
 const TASK_OPEN_STATUS_COLUMNS = TASK_STATUS_COLUMNS.filter(
-  (column) => column.value !== 'done' && column.value !== 'closed'
+  (column) => column.value !== 'closed'
 );
 
 const TASK_CLOSED_STATUS_COLUMNS = TASK_STATUS_COLUMNS.filter(
-  (column) => column.value === 'done' || column.value === 'closed'
+  (column) => column.value === 'closed'
 );
 
 const TASK_LAYOUT_OPTIONS = [
@@ -83,12 +83,12 @@ const TASK_LAYOUT_OPTIONS = [
 ];
 
 const TASK_COMPACT_FILTER_OPTIONS: Array<{value: TaskFilter; label: string}> = [
-  {value: 'open', label: 'Open'},
+  {value: 'open', label: 'Active'},
   {value: 'assigned-to-me', label: 'Assigned to me'},
 ];
 
 const TASK_PAGE_FILTER_OPTIONS: Array<{value: TaskFilter; label: string}> = [
-  {value: 'open', label: 'Open'},
+  {value: 'open', label: 'Active'},
   {value: 'assigned-to-me', label: 'Assigned to me'},
   {value: 'created-by-me', label: 'Created by me'},
   {value: 'closed', label: 'Closed'},
@@ -369,7 +369,7 @@ export function TaskManager(props: TaskManagerProps) {
         <div className="TaskManager__listHeader__summary">
           <div className="TaskManager__listHeader__titleLine">
             <div className="TaskManager__sectionTitle">
-              {showPageLayout ? 'Tasks' : 'Open tasks'}
+              {showPageLayout ? 'Tasks' : 'Active tasks'}
             </div>
             <span className="TaskManager__listHeader__count">
               {taskCountLabel}
@@ -719,7 +719,7 @@ function getEmptyTaskMessage(filter: TaskFilter, layout: TaskListLayout) {
   switch (filter) {
     case 'assigned-to-me':
       return layout === 'compact'
-        ? 'No open tasks are assigned to you.'
+        ? 'No active tasks are assigned to you.'
         : 'No tasks are assigned to you.';
     case 'created-by-me':
       return 'No tasks created by you.';
@@ -729,7 +729,7 @@ function getEmptyTaskMessage(filter: TaskFilter, layout: TaskListLayout) {
       return 'No tasks yet.';
     case 'open':
     default:
-      return 'No open tasks yet.';
+      return 'No active tasks yet.';
   }
 }
 
@@ -761,11 +761,11 @@ function formatTaskDate(ts?: Task['createdAt']) {
 }
 
 function formatTaskStatus(status?: string) {
-  return (status || 'open').replace(/[-_]/g, ' ');
+  return normalizeTaskStatus(status).replace(/[-_]/g, ' ');
 }
 
 function getTaskStatusValue(task: Task) {
-  return task.status?.trim() || 'open';
+  return normalizeTaskStatus(task.status);
 }
 
 function getTaskStatusColumns(tasks: Task[], filter: TaskFilter) {

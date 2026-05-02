@@ -54,10 +54,10 @@
 
 .TaskPage__statusBadge {
   align-items: center;
-  background: #e7f2ec;
-  border: 1px solid #b7d8c5;
+  background: #f6f7f8;
+  border: 1px solid #d0d5dd;
   border-radius: 999px;
-  color: #226044;
+  color: #475467;
   display: inline-flex;
   font-family: var(--font-family-mono);
   font-size: 12px;
@@ -68,13 +68,18 @@
   text-transform: lowercase;
 }
 
-.TaskPage__statusBadge--blocked {
-  background: #fde8e8;
-  border-color: #fac5c5;
-  color: #b42318;
+.TaskPage__statusBadge--in-progress {
+  background: #e7f2ec;
+  border-color: #b7d8c5;
+  color: #226044;
 }
 
-.TaskPage__statusBadge--done,
+.TaskPage__statusBadge--in-review {
+  background: #eff4ff;
+  border-color: #b2ccff;
+  color: #175cd3;
+}
+
 .TaskPage__statusBadge--closed {
   background: #eceff3;
   border-color: #d0d5dd;
@@ -142,11 +147,15 @@
   text-transform: uppercase;
 }
 
+.TaskPage__attachments__label {
+  margin-bottom: 0;
+}
+
 .TaskPage__attachments {
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  padding: 16px 18px;
+  gap: 8px;
+  padding: 0 2px;
 }
 
 .TaskPage__attachments__input {
@@ -154,31 +163,23 @@
 }
 
 .TaskPage__attachments__list {
-  border: 1px solid var(--color-border);
-  border-radius: 6px;
-  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
 }
 
 .TaskPage__attachments__item {
   align-items: center;
-  background: #fff;
-  border-bottom: 1px solid var(--color-border);
+  border-radius: 6px;
   display: grid;
   gap: 10px;
   grid-template-columns: 28px minmax(0, 1fr) auto;
-  min-height: 50px;
-  padding: 10px 12px;
-}
-
-.TaskPage__attachments__item:last-child {
-  border-bottom: 0;
+  min-height: 42px;
+  padding: 6px 8px;
 }
 
 .TaskPage__attachments__itemIcon {
   align-items: center;
-  background: #f6f7f8;
-  border: 1px solid var(--color-border);
-  border-radius: 50%;
   color: var(--color-text-gray);
   display: flex;
   height: 28px;
@@ -193,8 +194,8 @@
 .TaskPage__attachments__itemTitle {
   color: var(--color-text-default);
   display: block;
-  font-size: 14px;
-  font-weight: 700;
+  font-size: 13px;
+  font-weight: 600;
   overflow: hidden;
   text-overflow: ellipsis;
   text-underline-offset: 3px;
@@ -218,7 +219,7 @@
 
 .TaskPage__attachments__empty {
   color: var(--color-text-gray);
-  font-size: 14px;
+  font-size: 13px;
   font-style: italic;
 }
 
