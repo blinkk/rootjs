@@ -1,0 +1,16 @@
+.TasksPage {
+  background: var(--page-background);
+  min-height: 100vh;
+  padding: var(--page-padding-lg);
+}
+
+.TasksPage__header {
+  margin-bottom: 28px;
+  max-width: 1280px;
+}
+
+@media (max-width: 680px) {
+  .TasksPage {
+    padding: 20px;
+  }
+}

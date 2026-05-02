@@ -2,6 +2,7 @@ import './LexicalEditor.css';
 
 import {AutoLinkNode, LinkNode} from '@lexical/link';
 import {ListItemNode, ListNode} from '@lexical/list';
+import {AutoFocusPlugin} from '@lexical/react/LexicalAutoFocusPlugin';
 import {
   InitialConfigType,
   LexicalComposer,
@@ -108,6 +109,8 @@ export interface LexicalEditorProps {
   onFocus?: (e: FocusEvent) => void;
   onBlur?: (e: FocusEvent) => void;
   autosize?: boolean;
+  variant?: 'document' | 'comment';
+  autoFocus?: boolean;
   blockComponents?: schema.Schema[];
   inlineComponents?: schema.Schema[];
 }
@@ -125,6 +128,7 @@ export function LexicalEditor(props: LexicalEditorProps) {
             className={joinClassNames(
               props.className,
               'LexicalEditor',
+              props.variant === 'comment' && 'LexicalEditor--comment',
               !props.autosize && 'LexicalEditor--withMaxHeight'
             )}
           >
@@ -134,6 +138,8 @@ export function LexicalEditor(props: LexicalEditorProps) {
               onChange={props.onChange}
               onFocus={props.onFocus}
               onBlur={props.onBlur}
+              variant={props.variant}
+              autoFocus={props.autoFocus}
               blockComponents={props.blockComponents}
               inlineComponents={props.inlineComponents}
             />
@@ -197,6 +203,8 @@ interface EditorProps {
   onFocus?: (e: FocusEvent) => void;
   /** Blur handler (currently unimplemented.) */
   onBlur?: (e: FocusEvent) => void;
+  variant?: 'document' | 'comment';
+  autoFocus?: boolean;
   blockComponents?: schema.Schema[];
   inlineComponents?: schema.Schema[];
 }
@@ -210,9 +218,11 @@ function Editor(props: EditorProps) {
     useState<HTMLElement | null>(null);
   const blockComponentsMap = useMemo(() => {
     const map = new Map<string, schema.Schema>();
-    BUILT_IN_BLOCKS.forEach((block) => {
-      map.set(block.name, block);
-    });
+    if (props.variant !== 'comment') {
+      BUILT_IN_BLOCKS.forEach((block) => {
+        map.set(block.name, block);
+      });
+    }
     props.blockComponents?.forEach((block) => {
       map.set(block.name, block);
     });
@@ -406,6 +416,7 @@ function Editor(props: EditorProps) {
           activeEditor={activeEditor}
           setActiveEditor={setActiveEditor}
           setIsLinkEditMode={setIsLinkEditMode}
+          variant={props.variant}
           blockComponents={blockComponents}
           inlineComponents={inlineComponents}
           onInsertBlockComponent={(blockName) =>
@@ -435,15 +446,20 @@ function Editor(props: EditorProps) {
         />
         <LinkPlugin />
         <ListPlugin />
-        <HorizontalRulePlugin />
-        <TablePlugin />
-        <TableActionMenuPlugin editor={activeEditor} />
-        <TabIndentationPlugin maxIndent={7} />
+        {props.variant !== 'comment' && (
+          <>
+            <HorizontalRulePlugin />
+            <TablePlugin />
+            <TableActionMenuPlugin editor={activeEditor} />
+            <TabIndentationPlugin maxIndent={7} />
+          </>
+        )}
         <MarkdownTransformPlugin />
+        {props.autoFocus && <AutoFocusPlugin />}
         <TrailingParagraphPlugin />
         <SpecialCharacterPlugin />
         <PasteCleanupPlugin />
-        <ImagePastePlugin />
+        {props.variant !== 'comment' && <ImagePastePlugin />}
         {floatingAnchorElem && (
           <>
             <FloatingToolbarPlugin

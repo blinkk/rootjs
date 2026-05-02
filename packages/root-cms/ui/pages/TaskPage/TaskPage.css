@@ -1,0 +1,611 @@
+.TaskPage {
+  background: var(--page-background);
+  min-height: 100vh;
+  padding: var(--page-padding-lg);
+}
+
+.TaskPage__header {
+  margin-bottom: 28px;
+  max-width: 1040px;
+}
+
+.TaskPage__header__breadcrumbs {
+  font-size: 12px;
+  margin-bottom: 12px;
+}
+
+.TaskPage__header__breadcrumbs a {
+  font-weight: 500;
+  text-underline-offset: 4px;
+}
+
+.TaskPage__header__titleWrap {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.TaskPage__header__titleContent {
+  align-items: center;
+  display: flex;
+  gap: 8px;
+  min-width: 0;
+}
+
+.TaskPage__header__titleContent h1 {
+  overflow-wrap: anywhere;
+}
+
+.TaskPage__header__titleForm {
+  align-items: center;
+  display: grid;
+  gap: 8px;
+  grid-template-columns: minmax(220px, 1fr) auto auto;
+  max-width: 760px;
+  min-width: 0;
+  width: 100%;
+}
+
+.TaskPage__header__titleInput input {
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.TaskPage__statusBadge {
+  align-items: center;
+  background: #f6f7f8;
+  border: 1px solid #d0d5dd;
+  border-radius: 999px;
+  color: #475467;
+  display: inline-flex;
+  font-family: var(--font-family-mono);
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1;
+  min-height: 26px;
+  padding: 0 11px;
+  text-transform: lowercase;
+}
+
+.TaskPage__statusBadge--in-progress {
+  background: #e7f2ec;
+  border-color: #b7d8c5;
+  color: #226044;
+}
+
+.TaskPage__statusBadge--in-review {
+  background: #eff4ff;
+  border-color: #b2ccff;
+  color: #175cd3;
+}
+
+.TaskPage__statusBadge--closed {
+  background: #eceff3;
+  border-color: #d0d5dd;
+  color: #475467;
+}
+
+.TaskPage__loading,
+.TaskPage__error,
+.TaskPage__notFound {
+  align-items: center;
+  display: flex;
+  justify-content: center;
+  min-height: 140px;
+}
+
+.TaskPage__error {
+  color: #b42318;
+  font-size: 14px;
+}
+
+.TaskPage__notFound {
+  max-width: 640px;
+}
+
+.TaskPage__body {
+  align-items: start;
+  display: grid;
+  gap: 28px;
+  grid-template-columns: minmax(0, 760px) minmax(260px, 320px);
+  max-width: 1120px;
+}
+
+.TaskPage__main {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  min-width: 0;
+}
+
+.TaskPage__side {
+  min-width: 0;
+  position: sticky;
+  top: calc(var(--header-height) + 20px);
+}
+
+.TaskPage__description {
+  padding: 16px 18px;
+}
+
+.TaskPage__description__top,
+.TaskPage__attachments__top {
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
+}
+
+.TaskPage__description__label,
+.TaskPage__attachments__label {
+  color: var(--color-text-gray);
+  font-family: var(--font-family-mono);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0;
+  margin-bottom: 10px;
+  text-transform: uppercase;
+}
+
+.TaskPage__attachments__label {
+  margin-bottom: 0;
+}
+
+.TaskPage__attachments {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 0 2px;
+}
+
+.TaskPage__attachments__input {
+  display: none;
+}
+
+.TaskPage__attachments__list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.TaskPage__attachments__item {
+  align-items: center;
+  border-radius: 6px;
+  display: grid;
+  gap: 10px;
+  grid-template-columns: 28px minmax(0, 1fr) auto;
+  min-height: 42px;
+  padding: 6px 8px;
+}
+
+.TaskPage__attachments__itemIcon {
+  align-items: center;
+  color: var(--color-text-gray);
+  display: flex;
+  height: 28px;
+  justify-content: center;
+  width: 28px;
+}
+
+.TaskPage__attachments__itemContent {
+  min-width: 0;
+}
+
+.TaskPage__attachments__itemTitle {
+  color: var(--color-text-default);
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-underline-offset: 3px;
+  white-space: nowrap;
+}
+
+.TaskPage__attachments__itemMeta {
+  color: var(--color-text-gray);
+  font-size: 12px;
+  line-height: 1.4;
+  margin-top: 2px;
+  overflow-wrap: anywhere;
+}
+
+.TaskPage__attachments__itemActions {
+  align-items: center;
+  display: flex;
+  flex: 0 0 auto;
+  gap: 2px;
+}
+
+.TaskPage__attachments__empty {
+  color: var(--color-text-gray);
+  font-size: 13px;
+  font-style: italic;
+}
+
+.TaskPage__description__content {
+  font-size: 14px;
+  line-height: 1.55;
+  white-space: pre-wrap;
+}
+
+.TaskPage__description__content--empty {
+  color: var(--color-text-gray);
+  font-style: italic;
+}
+
+.TaskPage__description__edit {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.TaskPage__description__editActions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.TaskPage__metadata {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 16px;
+}
+
+.TaskPage__metadata__field {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.TaskPage__metadata__field label {
+  color: var(--color-text-default);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.TaskPage__metadata__assignee,
+.TaskPage__metadata__date {
+  align-items: center;
+  display: block;
+  gap: 8px;
+}
+
+.TaskPage__metadata__date input {
+  border: 1px solid #ced4da;
+  border-radius: 4px;
+  color: var(--color-text-default);
+  font-family: var(--font-family-default);
+  font-size: 12px;
+  min-height: 30px;
+  min-width: 0;
+  padding: 4px 8px;
+  width: 100%;
+}
+
+.TaskPage__timeline {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.TaskPage__timelineItem {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: 32px minmax(0, 1fr);
+  position: relative;
+}
+
+.TaskPage__timelineItem::before {
+  background: var(--color-border);
+  bottom: 0;
+  content: '';
+  left: 15px;
+  position: absolute;
+  top: 0;
+  width: 2px;
+}
+
+.TaskPage__timelineItem:first-child::before {
+  top: 18px;
+}
+
+.TaskPage__timelineItem:last-child::before {
+  bottom: calc(100% - 18px);
+}
+
+.TaskPage__timelineItem__marker {
+  align-items: center;
+  background: #fff;
+  border: 1px solid var(--color-border);
+  border-radius: 50%;
+  color: var(--color-text-gray);
+  display: flex;
+  height: 32px;
+  justify-content: center;
+  position: relative;
+  width: 32px;
+  z-index: 1;
+}
+
+.TaskPage__timelineItem__content {
+  min-width: 0;
+  padding-bottom: 18px;
+}
+
+.TaskPage__timelineItem--event .TaskPage__timelineItem__content {
+  color: var(--color-text-gray);
+  font-size: 13px;
+  line-height: 1.5;
+  padding-top: 6px;
+}
+
+.TaskPage__timelineItem--event b {
+  color: var(--color-text-default);
+}
+
+.TaskPage__timelineItem--comment {
+  display: block;
+}
+
+.TaskPage__timelineItem--comment::before {
+  display: none;
+}
+
+.TaskPage__timelineItem--comment .TaskPage__timelineItem__marker {
+  display: none;
+}
+
+.TaskPage__timelineItem--comment .TaskPage__timelineItem__content {
+  padding-bottom: 18px;
+}
+
+.TaskPage__timelineValue {
+  background: var(--chip-background);
+  border-radius: 4px;
+  color: var(--color-text-default);
+  font-family: var(--font-family-mono);
+  font-size: 12px;
+  font-weight: 700;
+  padding: 2px 5px;
+}
+
+.TaskPage__comment {
+  overflow: visible;
+  position: relative;
+}
+
+.TaskPage__comment__header {
+  align-items: center;
+  background: #f6f7f8;
+  border-bottom: 1px solid var(--color-border);
+  border-radius: 8px 8px 0 0;
+  color: var(--color-text-gray);
+  display: flex;
+  font-size: 13px;
+  justify-content: space-between;
+  line-height: 1.4;
+  min-height: 42px;
+  padding: 9px 12px;
+}
+
+.TaskPage__comment__header b {
+  color: var(--color-text-default);
+}
+
+.TaskPage__comment__actions {
+  align-items: center;
+  display: flex;
+  flex: 0 0 auto;
+  gap: 2px;
+}
+
+.TaskPage__comment__body {
+  font-size: 14px;
+  line-height: 1.55;
+  min-height: 48px;
+  padding: 14px 16px;
+  white-space: pre-wrap;
+}
+
+.TaskPage__comment__markdown,
+.TaskPage__comment__richText {
+  white-space: normal;
+}
+
+.TaskPage__comment__markdown p,
+.TaskPage__comment__markdown ul,
+.TaskPage__comment__markdown ol,
+.TaskPage__comment__markdown blockquote,
+.TaskPage__comment__markdown pre,
+.TaskPage__comment__richText p,
+.TaskPage__comment__richText h4,
+.TaskPage__comment__richText ul,
+.TaskPage__comment__richText ol,
+.TaskPage__comment__richText blockquote,
+.TaskPage__comment__richText pre {
+  margin: 0 0 12px;
+}
+
+.TaskPage__comment__markdown p:last-child,
+.TaskPage__comment__markdown ul:last-child,
+.TaskPage__comment__markdown ol:last-child,
+.TaskPage__comment__markdown blockquote:last-child,
+.TaskPage__comment__markdown pre:last-child,
+.TaskPage__comment__richText p:last-child,
+.TaskPage__comment__richText h4:last-child,
+.TaskPage__comment__richText ul:last-child,
+.TaskPage__comment__richText ol:last-child,
+.TaskPage__comment__richText blockquote:last-child,
+.TaskPage__comment__richText pre:last-child {
+  margin-bottom: 0;
+}
+
+.TaskPage__comment__markdown ul,
+.TaskPage__comment__markdown ol,
+.TaskPage__comment__richText ul,
+.TaskPage__comment__richText ol {
+  padding-left: 22px;
+}
+
+.TaskPage__comment__markdown code,
+.TaskPage__comment__richText code {
+  background: #efefef;
+  border-radius: 4px;
+  font-family: var(--font-family-mono);
+  font-size: 12px;
+  padding: 2px 5px;
+}
+
+.TaskPage__comment__markdown pre,
+.TaskPage__comment__richText pre {
+  background: #f6f7f8;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  overflow: auto;
+  padding: 12px;
+  white-space: pre;
+}
+
+.TaskPage__comment__markdown pre code,
+.TaskPage__comment__richText pre code {
+  background: transparent;
+  border-radius: 0;
+  display: block;
+  padding: 0;
+}
+
+.TaskPage__comment__markdown blockquote,
+.TaskPage__comment__richText blockquote {
+  border-left: 3px solid var(--color-border);
+  color: var(--color-text-gray);
+  padding-left: 12px;
+}
+
+.TaskPage__comment__markdown a,
+.TaskPage__comment__richText a {
+  color: #175cd3;
+  font-weight: 600;
+  text-underline-offset: 3px;
+}
+
+.TaskPage__comment__richText h4 {
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+.TaskPage__comment__richText img {
+  border-radius: 6px;
+  max-height: 420px;
+  object-fit: contain;
+}
+
+.TaskPage__comment__body--deleted {
+  color: var(--color-text-gray);
+  font-style: italic;
+}
+
+.TaskPage__comment__edit {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px;
+}
+
+.TaskPage__comment__editActions,
+.TaskPage__composer__actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.TaskPage__composer {
+  padding: 12px;
+}
+
+.TaskPage__composer form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.TaskPage__composer--reply {
+  margin-top: 10px;
+}
+
+.TaskPage__replies {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-left: 42px;
+  margin-top: 12px;
+  padding-left: 0;
+}
+
+.TaskPage__replies .TaskPage__timelineItem {
+  display: block;
+}
+
+.TaskPage__replies .TaskPage__timelineItem::before {
+  display: none;
+}
+
+.TaskPage__replies .TaskPage__timelineItem__marker {
+  display: none;
+}
+
+.TaskPage__replies .TaskPage__timelineItem__content {
+  padding-bottom: 0;
+}
+
+@media (max-width: 900px) {
+  .TaskPage {
+    padding: 28px 18px;
+  }
+
+  .TaskPage__body {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .TaskPage__side {
+    order: -1;
+    position: static;
+  }
+}
+
+@media (max-width: 560px) {
+  .TaskPage__header__titleForm {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .TaskPage__attachments__top {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .TaskPage__attachments__item {
+    align-items: start;
+    grid-template-columns: 28px minmax(0, 1fr);
+  }
+
+  .TaskPage__attachments__itemActions {
+    grid-column: 2;
+  }
+
+  .TaskPage__replies {
+    margin-left: 18px;
+  }
+
+  .TaskPage__comment__header {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .TaskPage__comment__actions {
+    align-self: flex-end;
+  }
+}

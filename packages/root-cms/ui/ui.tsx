@@ -116,6 +116,12 @@ const SidebarToolsPage = lazyRoute(() =>
     (m) => m.SidebarToolsPage
   )
 );
+const TaskPage = lazyRoute(() =>
+  import('./pages/TaskPage/TaskPage.js').then((m) => m.TaskPage)
+);
+const TasksPage = lazyRoute(() =>
+  import('./pages/TasksPage/TasksPage.js').then((m) => m.TasksPage)
+);
 const TranslationsArbPage = lazyRoute(() =>
   import('./pages/TranslationsArbPage/TranslationsArbPage.js').then(
     (m) => m.TranslationsArbPage
@@ -280,6 +286,8 @@ function App() {
                             path="/cms/settings"
                             component={SettingsPage}
                           />
+                          <Route path="/cms/tasks" component={TasksPage} />
+                          <Route path="/cms/tasks/:id" component={TaskPage} />
                           <Route
                             path="/cms/tools/:id"
                             component={SidebarToolsPage}

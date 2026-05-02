@@ -1,0 +1,11 @@
+.TaskCommentEditor {
+  width: 100%;
+}
+
+.TaskCommentEditor .LexicalEditor__placeholder {
+  font-size: 14px;
+  line-height: 1.5;
+  top: 12px;
+  left: 12px;
+  color: var(--color-text-gray);
+}
