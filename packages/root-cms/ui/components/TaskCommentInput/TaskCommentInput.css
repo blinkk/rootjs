@@ -1,0 +1,114 @@
+.TaskCommentInput {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  border: 1px solid var(--color-border, #e0e0e0);
+  border-radius: 8px;
+  background: var(--color-bg-default, #fff);
+  padding: 8px 8px 8px 12px;
+}
+
+.TaskCommentInput[data-disabled='true'] {
+  opacity: 0.7;
+  pointer-events: none;
+}
+
+.TaskCommentInput__field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.TaskCommentInput__textarea {
+  width: 100%;
+  min-height: 32px;
+  max-height: 200px;
+  border: none;
+  resize: none;
+  outline: none;
+  font: inherit;
+  background: transparent;
+  color: inherit;
+  padding: 4px 0;
+}
+
+.TaskCommentInput__textarea::placeholder {
+  color: var(--color-text-tertiary, #999);
+}
+
+.TaskCommentInput__actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.TaskCommentInput__cancel {
+  background: none;
+  border: none;
+  color: var(--color-text-secondary, #666);
+  cursor: pointer;
+  padding: 4px 8px;
+  font-size: 13px;
+  border-radius: 4px;
+}
+
+.TaskCommentInput__cancel:hover {
+  background: var(--color-bg-secondary, #f1f3f5);
+}
+
+.TaskCommentInput__suggestions {
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  margin: 0;
+  padding: 4px;
+  list-style: none;
+  background: var(--color-bg-default, #fff);
+  border: 1px solid var(--color-border, #e0e0e0);
+  border-radius: 8px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+  z-index: 100;
+  max-height: 240px;
+  overflow-y: auto;
+}
+
+.TaskCommentInput__suggestion {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.TaskCommentInput__suggestion--active,
+.TaskCommentInput__suggestion:hover {
+  background: var(--color-bg-secondary, #f1f3f5);
+}
+
+.TaskCommentInput__suggestion__text {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+
+.TaskCommentInput__suggestion__name {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--color-text-primary, #222);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.TaskCommentInput__suggestion__email {
+  font-size: 11px;
+  color: var(--color-text-secondary, #666);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

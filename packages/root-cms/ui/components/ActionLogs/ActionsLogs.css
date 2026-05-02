@@ -99,6 +99,13 @@
 
 .ActionsLogs__user {
   color: var(--color-text-secondary);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.ActionsLogs__user__email {
+  white-space: nowrap;
 }
 
 .ActionsLogs__action {

@@ -60,6 +60,8 @@ export interface TaskComment {
   parentId?: string | null;
   content: string;
   body?: RichTextData | null;
+  /** Lower-cased emails of users mentioned via `@<email>` in the content. */
+  mentions?: string[];
   createdAt: Timestamp;
   createdBy: string;
   updatedAt?: Timestamp;
@@ -627,7 +629,8 @@ function normalizeTaskAttachments(value: unknown): TaskAttachment[] {
 export async function addTaskComment(
   taskId: string,
   content: string | RichTextData,
-  parentId?: string | null
+  parentId?: string | null,
+  options?: {mentions?: string[]}
 ) {
   if (!taskId) {
     throw new Error('missing task id');
@@ -644,6 +647,7 @@ export async function addTaskComment(
 
   const commentRef = doc(taskCommentsCollectionRef(taskId));
   const commentId = commentRef.id;
+  const mentions = (options?.mentions || []).map((m) => m.toLowerCase());
 
   await setDoc(commentRef, {
     id: commentId,
@@ -651,13 +655,14 @@ export async function addTaskComment(
     parentId: parentId || null,
     content: contentText,
     body,
+    mentions,
     createdAt: serverTimestamp(),
     createdBy: window.firebase.user.email || '',
     history: [],
   });
 
   logAction('tasks.comment.add', {
-    metadata: {taskId, commentId, parentId: parentId || null},
+    metadata: {taskId, commentId, parentId: parentId || null, mentions},
   });
 
   return commentId;
@@ -666,7 +671,8 @@ export async function addTaskComment(
 export async function editTaskComment(
   taskId: string,
   commentId: string,
-  content: string | RichTextData
+  content: string | RichTextData,
+  options?: {mentions?: string[]}
 ) {
   if (!taskId || !commentId) {
     throw new Error('missing task or comment id');
@@ -687,10 +693,12 @@ export async function editTaskComment(
     throw new Error('comment not found');
   }
   const data = snapshot.data() as TaskComment;
+  const mentions = (options?.mentions || []).map((m) => m.toLowerCase());
 
   await updateDoc(commentRef, {
     content: contentText,
     body,
+    mentions,
     updatedAt: serverTimestamp(),
     updatedBy: window.firebase.user.email || '',
     isDeleted: false,
@@ -704,7 +712,7 @@ export async function editTaskComment(
   });
 
   logAction('tasks.comment.edit', {
-    metadata: {taskId, commentId},
+    metadata: {taskId, commentId, mentions},
   });
 }
 

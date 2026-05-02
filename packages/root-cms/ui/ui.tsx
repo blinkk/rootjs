@@ -6,7 +6,12 @@ import {ModalsProvider} from '@mantine/modals';
 import {NotificationsProvider} from '@mantine/notifications';
 import {initializeApp} from 'firebase/app';
 import {User, getAuth} from 'firebase/auth';
-import {initializeFirestore} from 'firebase/firestore';
+import {
+  doc,
+  initializeFirestore,
+  serverTimestamp,
+  setDoc,
+} from 'firebase/firestore';
 import {getStorage} from 'firebase/storage';
 import {render, FunctionComponent} from 'preact';
 import {LocationProvider, Router, Route, lazy} from 'preact-iso';
@@ -385,6 +390,7 @@ auth.onAuthStateChanged((user) => {
   render(<App />, root);
 
   updateSession(user);
+  saveUserProfile(user);
 });
 
 async function updateSession(user: User) {
@@ -406,5 +412,35 @@ async function updateSession(user: User) {
     console.error('login failed');
     console.log(res);
     return;
+  }
+}
+
+/**
+ * Persists the signed-in user's profile (display name, photo URL) to the DB
+ * so other users can render their avatar/name without each client having to
+ * re-fetch from the auth provider. Stored at
+ * `Projects/<projectId>/UserProfiles/<email>` keyed by email since emails are
+ * the canonical identifier used throughout the CMS.
+ */
+async function saveUserProfile(user: User) {
+  if (!user.email) {
+    return;
+  }
+  const projectId = window.__ROOT_CTX.rootConfig.projectId;
+  const profileRef = doc(db, 'Projects', projectId, 'UserProfiles', user.email);
+  try {
+    await setDoc(
+      profileRef,
+      {
+        email: user.email,
+        displayName: user.displayName || '',
+        photoURL: user.photoURL || '',
+        uid: user.uid,
+        lastSignedInAt: serverTimestamp(),
+      },
+      {merge: true}
+    );
+  } catch (err) {
+    console.error('failed to save user profile:', err);
   }
 }
