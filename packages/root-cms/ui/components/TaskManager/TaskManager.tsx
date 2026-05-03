@@ -34,6 +34,7 @@ import {
   TaskPriority,
 } from '../../utils/tasks.js';
 import {Surface} from '../Surface/Surface.js';
+import {UserAvatar} from '../UserAvatar/UserAvatar.js';
 
 type TaskFilter =
   | 'open'
@@ -180,7 +181,7 @@ export function TaskManager(props: TaskManagerProps) {
         <form onSubmit={(e) => onSubmit(e)}>
           <div className="TaskManager__composer__header">
             <div className="TaskManager__composer__avatar">
-              {getTaskAvatarLabel(currentUserEmail)}
+              {assigneeEmail && <UserAvatar email={assigneeEmail} size={32} />}
             </div>
             <div>
               <div className="TaskManager__composer__title">Create a task</div>
@@ -505,8 +506,8 @@ function TaskTable(props: {tasks: Task[]}) {
                     href={`/cms/tasks/${task.id}`}
                   >
                     <div className="TaskManager__taskRow__avatar">
-                      {getTaskAvatarLabel(
-                        task.assignee || createdBy || task.title
+                      {task.assignee && (
+                        <UserAvatar email={task.assignee} size={24} />
                       )}
                     </div>
                     <span className="TaskManager__tableTask__content">
@@ -639,13 +640,12 @@ function TaskRow(props: {task: Task}) {
   return (
     <a className="TaskManager__taskRow" href={`/cms/tasks/${task.id}`}>
       <div className="TaskManager__taskRow__avatar">
-        {getTaskAvatarLabel(task.assignee || createdBy || task.title)}
+        {task.assignee && <UserAvatar email={task.assignee} size={28} />}
       </div>
       <div className="TaskManager__taskRow__content">
         <div className="TaskManager__taskRow__title">{task.title}</div>
         <div className="TaskManager__taskRow__meta">
           opened {formatTaskDate(task.createdAt)} by {formatTaskUser(createdBy)}
-          {task.assignee && <> - assigned to {formatTaskUser(task.assignee)}</>}
         </div>
       </div>
       <div className="TaskManager__taskRow__badges">
