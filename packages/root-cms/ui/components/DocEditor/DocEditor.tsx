@@ -281,7 +281,11 @@ DocEditor.StatusBar = (props: StatusBarProps) => {
         </div>
       )}
       <div className="DocEditor__statusBar__search">
-        <Tooltip label="Search field values (⌘⇧F)" transition="pop">
+        <Tooltip
+          label="Advanced search (⌘ + Shift + f)"
+          transition="pop"
+          withArrow
+        >
           <Button
             className={searchActive ? 'DocEditor__searchButton--active' : ''}
             variant="default"
@@ -573,9 +577,7 @@ DocEditor.FieldHeaderTranslationsActionIcon = (
     return null;
   }
 
-  return (
-    <DocEditor.FieldHeaderTranslationsActionIconInner {...props} />
-  );
+  return <DocEditor.FieldHeaderTranslationsActionIconInner {...props} />;
 };
 
 /** Inner component that only mounts when translations are applicable. */
