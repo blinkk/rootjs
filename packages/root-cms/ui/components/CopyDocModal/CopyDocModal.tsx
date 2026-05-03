@@ -110,11 +110,12 @@ export function CopyDocModal(modalProps: ContextModalProps<CopyDocModalProps>) {
           <div>
             <div>{`Successfully copied ${sourceLabel} to ${toDocId}.`}</div>
             <Button
+              className="CopyDocModal__notificationButton"
               component="a"
               href={docUrl}
               size="xs"
+              compact
               variant="default"
-              style={{marginTop: '8px'}}
             >
               Open doc
             </Button>
