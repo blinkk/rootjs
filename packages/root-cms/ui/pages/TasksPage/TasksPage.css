@@ -1,6 +1,5 @@
 .TasksPage {
   background: var(--page-background);
-  min-height: 100vh;
   padding: var(--page-padding-lg);
 }
 
