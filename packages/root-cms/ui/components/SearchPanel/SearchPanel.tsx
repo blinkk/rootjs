@@ -9,7 +9,9 @@ import {debounce} from '../../utils/debounce.js';
 import {
   DocSearchResult,
   OPEN_RICHTEXT_BLOCK_EVENT,
+  OPEN_RICHTEXT_INLINE_EVENT,
   OpenRichTextBlockEventDetail,
+  OpenRichTextInlineEventDetail,
   searchDocFields,
 } from '../../utils/doc-search.js';
 
@@ -191,6 +193,9 @@ function SearchResultItem(props: SearchResultItemProps) {
           {result.richTextBlock && (
             <span className="SearchPanel__result__badge">in block</span>
           )}
+          {result.richTextInline && (
+            <span className="SearchPanel__result__badge">inline</span>
+          )}
         </div>
       </button>
     </li>
@@ -224,8 +229,8 @@ function renderHighlightedSnippet(
 /**
  * Jumps to a search result. For regular fields this scrolls to the field via
  * the deeplink mechanism that the preview iframe already uses. For matches
- * inside a rich text custom block, the rich text field is highlighted and the
- * block's edit modal is opened on top of it.
+ * inside a rich text custom block or inline component, the rich text field is
+ * highlighted and the corresponding edit modal is opened on top of it.
  */
 function jumpToSearchResult(result: DocSearchResult) {
   // Reuse the existing `scrollToDeeplink` postMessage handler in the
@@ -239,6 +244,13 @@ function jumpToSearchResult(result: DocSearchResult) {
     setTimeout(() => {
       window.dispatchEvent(
         new CustomEvent(OPEN_RICHTEXT_BLOCK_EVENT, {detail})
+      );
+    }, 350);
+  } else if (result.richTextInline) {
+    const detail: OpenRichTextInlineEventDetail = result.richTextInline;
+    setTimeout(() => {
+      window.dispatchEvent(
+        new CustomEvent(OPEN_RICHTEXT_INLINE_EVENT, {detail})
       );
     }, 350);
   }

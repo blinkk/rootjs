@@ -47,12 +47,26 @@ export interface OpenRichTextBlockEventDetail {
 /** Event name for opening a rich text block component modal. */
 export const OPEN_RICHTEXT_BLOCK_EVENT = 'root:openRichTextBlock';
 
+/**
+ * Custom event payload for opening a rich text inline component's edit modal
+ * from outside the rich text editor.
+ */
+export interface OpenRichTextInlineEventDetail {
+  richTextDeepKey: string;
+  /** Stable component id assigned when the inline component was inserted. */
+  componentId: string;
+  componentName: string;
+}
+
+/** Event name for opening a rich text inline component modal. */
+export const OPEN_RICHTEXT_INLINE_EVENT = 'root:openRichTextInline';
+
 /** A single hit returned by the document search. */
 export interface DocSearchResult {
   /**
    * The deep key of the field to navigate to. For matches inside a rich text
-   * custom block, this is the rich text field's deep key (so the editor jumps
-   * to the rich text container).
+   * custom block or inline component, this is the rich text field's deep key
+   * (so the editor jumps to the rich text container).
    */
   deepKey: string;
   /** A breadcrumb-style label, e.g. "Sections > [0] Hero > Title". */
@@ -78,6 +92,15 @@ export interface DocSearchResult {
     blockIndex: number;
     /** The block component schema name (e.g. "image", "video"). */
     blockName: string;
+  };
+  /**
+   * For matches inside a rich text inline component, additional info needed
+   * to open the component's edit modal.
+   */
+  richTextInline?: {
+    richTextDeepKey: string;
+    componentId: string;
+    componentName: string;
   };
 }
 
@@ -346,6 +369,9 @@ function walkRichText(
     // Custom block component — walk its data using its schema, but record the
     // hit against the rich text field so deep-linking lands on the right
     // editor.
+    const blockHit: RichTextHitInfo = {
+      block: {richTextDeepKey: deepKey, blockIndex, blockName: block.type},
+    };
     const blockSchema = blockComponentSchemas.get(block.type);
     if (!blockSchema) {
       // Unregistered block type. Best-effort: search any string values.
@@ -354,11 +380,7 @@ function walkRichText(
         block.data,
         deepKey,
         [...labels, `${block.type} [block ${blockIndex}]`],
-        {
-          richTextDeepKey: deepKey,
-          blockIndex,
-          blockName: block.type,
-        }
+        blockHit
       );
       return;
     }
@@ -372,11 +394,7 @@ function walkRichText(
       block.data || {},
       deepKey,
       blockLabels,
-      {
-        richTextDeepKey: deepKey,
-        blockIndex,
-        blockName: block.type,
-      }
+      blockHit
     );
   });
 }
@@ -392,7 +410,7 @@ function walkRichTextBlockFields(
   data: Record<string, any>,
   deepKey: string,
   labels: string[],
-  blockInfo: NonNullable<DocSearchResult['richTextBlock']>
+  hitInfo: RichTextHitInfo
 ) {
   for (const field of fields) {
     if (!field.id || field.hidden) {
@@ -403,7 +421,7 @@ function walkRichTextBlockFields(
       continue;
     }
     const fieldLabels = [...labels, field.label || field.id];
-    walkRichTextBlockField(ctx, field, value, deepKey, fieldLabels, blockInfo);
+    walkRichTextBlockField(ctx, field, value, deepKey, fieldLabels, hitInfo);
   }
 }
 
@@ -413,7 +431,7 @@ function walkRichTextBlockField(
   value: any,
   deepKey: string,
   labels: string[],
-  blockInfo: NonNullable<DocSearchResult['richTextBlock']>
+  hitInfo: RichTextHitInfo
 ) {
   switch (field.type) {
     case 'object': {
@@ -423,7 +441,7 @@ function walkRichTextBlockField(
         value,
         deepKey,
         labels,
-        blockInfo
+        hitInfo
       );
       return;
     }
@@ -439,7 +457,7 @@ function walkRichTextBlockField(
           itemValue,
           deepKey,
           [...labels, `[${index}]`],
-          blockInfo
+          hitInfo
         );
       });
       return;
@@ -466,7 +484,7 @@ function walkRichTextBlockField(
           value,
           deepKey,
           [...labels.slice(0, -1), `${labels.at(-1)} (${selectedTypeName})`],
-          blockInfo
+          hitInfo
         );
       }
       return;
@@ -474,7 +492,7 @@ function walkRichTextBlockField(
     case 'string':
     case 'select': {
       if (typeof value === 'string') {
-        addStringMatch(ctx, value, field.type, deepKey, labels, blockInfo);
+        addStringMatch(ctx, value, field.type, deepKey, labels, hitInfo);
       }
       return;
     }
@@ -482,7 +500,7 @@ function walkRichTextBlockField(
       if (Array.isArray(value)) {
         const joined = value.filter((v) => typeof v === 'string').join(', ');
         if (joined) {
-          addStringMatch(ctx, joined, field.type, deepKey, labels, blockInfo);
+          addStringMatch(ctx, joined, field.type, deepKey, labels, hitInfo);
         }
       }
       return;
@@ -495,7 +513,7 @@ function walkRichTextBlockField(
           field.type,
           deepKey,
           labels,
-          blockInfo
+          hitInfo
         );
       }
       return;
@@ -514,7 +532,7 @@ function walkRichTextBlockField(
             field.type,
             deepKey,
             labels,
-            blockInfo
+            hitInfo
           );
         }
       }
@@ -537,38 +555,45 @@ function walkRichTextBlockField(
   }
 }
 
+/** Info about a rich text "container" used to route a search result. */
+interface RichTextHitInfo {
+  block?: NonNullable<DocSearchResult['richTextBlock']>;
+  inline?: NonNullable<DocSearchResult['richTextInline']>;
+}
+
 /**
  * Walks an unknown object (used when a custom block's schema is not
- * registered). Recursively collects string values so they can still be matched.
+ * registered, or when walking an inline component's data). Recursively
+ * collects string values so they can still be matched.
  */
 function walkUnknownObject(
   ctx: WalkContext,
   value: any,
   deepKey: string,
   labels: string[],
-  blockInfo?: NonNullable<DocSearchResult['richTextBlock']>
+  hitInfo?: RichTextHitInfo
 ) {
   if (value === null || value === undefined) {
     return;
   }
   if (typeof value === 'string') {
-    addStringMatch(ctx, value, 'string', deepKey, labels, blockInfo);
+    addStringMatch(ctx, value, 'string', deepKey, labels, hitInfo);
     return;
   }
   if (typeof value === 'number') {
-    addStringMatch(ctx, String(value), 'number', deepKey, labels, blockInfo);
+    addStringMatch(ctx, String(value), 'number', deepKey, labels, hitInfo);
     return;
   }
   if (Array.isArray(value)) {
     value.forEach((v, i) =>
-      walkUnknownObject(ctx, v, deepKey, [...labels, `[${i}]`], blockInfo)
+      walkUnknownObject(ctx, v, deepKey, [...labels, `[${i}]`], hitInfo)
     );
     return;
   }
   if (typeof value === 'object') {
     for (const key of Object.keys(value)) {
       if (key.startsWith('_')) continue;
-      walkUnknownObject(ctx, value[key], deepKey, [...labels, key], blockInfo);
+      walkUnknownObject(ctx, value[key], deepKey, [...labels, key], hitInfo);
     }
   }
 }
@@ -643,12 +668,24 @@ function walkInlineComponents(
   labels: string[]
 ) {
   if (!components) return;
-  Object.values(components).forEach((component) => {
-    walkUnknownObject(ctx, component?.data, deepKey, [
-      ...labels,
-      `inline:${component?.type || 'component'}`,
-    ]);
-  });
+  for (const componentId of Object.keys(components)) {
+    const component = components[componentId];
+    if (!component?.type) continue;
+    const hitInfo: RichTextHitInfo = {
+      inline: {
+        richTextDeepKey: deepKey,
+        componentId,
+        componentName: component.type,
+      },
+    };
+    walkUnknownObject(
+      ctx,
+      component?.data,
+      deepKey,
+      [...labels, `inline:${component.type}`],
+      hitInfo
+    );
+  }
 }
 
 /**
@@ -679,7 +716,7 @@ function addStringMatch(
   fieldType: string,
   deepKey: string,
   labels: string[],
-  blockInfo?: NonNullable<DocSearchResult['richTextBlock']>
+  hitInfo?: RichTextHitInfo
 ) {
   if (!text) return;
   const haystack = text.toLowerCase();
@@ -694,7 +731,8 @@ function addStringMatch(
     snippet,
     matches,
     fieldType,
-    richTextBlock: blockInfo,
+    richTextBlock: hitInfo?.block,
+    richTextInline: hitInfo?.inline,
   });
 }
 

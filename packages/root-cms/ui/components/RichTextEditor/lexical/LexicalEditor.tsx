@@ -20,6 +20,7 @@ import {TabIndentationPlugin} from '@lexical/react/LexicalTabIndentationPlugin';
 import {TablePlugin} from '@lexical/react/LexicalTablePlugin';
 import {HeadingNode, QuoteNode} from '@lexical/rich-text';
 import {TableCellNode, TableNode, TableRowNode} from '@lexical/table';
+import {$dfs} from '@lexical/utils';
 import {$getNodeByKey, $getRoot, $insertNodes, NodeKey} from 'lexical';
 import {useEffect, useMemo, useState} from 'preact/hooks';
 import * as schema from '../../../../core/schema.js';
@@ -27,7 +28,9 @@ import {RichTextData} from '../../../../shared/richtext.js';
 import {joinClassNames} from '../../../utils/classes.js';
 import {
   OPEN_RICHTEXT_BLOCK_EVENT,
+  OPEN_RICHTEXT_INLINE_EVENT,
   OpenRichTextBlockEventDetail,
+  OpenRichTextInlineEventDetail,
 } from '../../../utils/doc-search.js';
 import {getDefaultFieldValue} from '../../../utils/fields.js';
 import {cloneData} from '../../../utils/objects.js';
@@ -375,6 +378,58 @@ function Editor(props: EditorProps) {
     window.addEventListener(OPEN_RICHTEXT_BLOCK_EVENT, handler);
     return () => window.removeEventListener(OPEN_RICHTEXT_BLOCK_EVENT, handler);
   }, [editor, props.deepKey, blockComponentsMap]);
+
+  // Listen for external requests to open an inline component modal. Looks up
+  // the InlineComponentNode by its stable `componentId`.
+  useEffect(() => {
+    if (!props.deepKey) {
+      return;
+    }
+    const handler = (event: Event) => {
+      const detail = (event as CustomEvent<OpenRichTextInlineEventDetail>)
+        .detail;
+      if (!detail || detail.richTextDeepKey !== props.deepKey) {
+        return;
+      }
+      const schemaDef = inlineComponentsMap.get(detail.componentName);
+      if (!schemaDef) {
+        return;
+      }
+      let targetNodeKey: NodeKey | null = null;
+      let targetData: Record<string, any> | null = null;
+      let targetComponentName: string | null = null;
+      editor.getEditorState().read(() => {
+        for (const {node} of $dfs()) {
+          if (
+            $isInlineComponentNode(node) &&
+            (node as InlineComponentNode).getComponentId() ===
+              detail.componentId
+          ) {
+            targetNodeKey = node.getKey();
+            targetData = (node as InlineComponentNode).getComponentData();
+            targetComponentName = (
+              node as InlineComponentNode
+            ).getComponentName();
+            break;
+          }
+        }
+      });
+      if (!targetNodeKey) {
+        return;
+      }
+      setInlineComponentModalState({
+        schema: schemaDef,
+        componentName: targetComponentName || detail.componentName,
+        componentId: detail.componentId,
+        mode: 'edit',
+        initialValue: targetData ? cloneData(targetData) : {},
+        nodeKey: targetNodeKey,
+      });
+    };
+    window.addEventListener(OPEN_RICHTEXT_INLINE_EVENT, handler);
+    return () =>
+      window.removeEventListener(OPEN_RICHTEXT_INLINE_EVENT, handler);
+  }, [editor, props.deepKey, inlineComponentsMap]);
 
   const onBlockComponentSubmit = (data: Record<string, any>) => {
     if (!blockComponentModalState) {
