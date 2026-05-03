@@ -13,7 +13,7 @@ export interface UserProfile {
 }
 
 /** Time-to-live for cached profile entries. */
-const PROFILE_CACHE_TTL_MS = 5 * 60 * 1000;
+const PROFILE_CACHE_TTL_MS = 60 * 60 * 1000;
 
 interface CacheEntry {
   /** Cached profile, or `null` if no profile exists for the email. */
