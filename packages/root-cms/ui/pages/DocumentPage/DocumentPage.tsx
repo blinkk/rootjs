@@ -19,6 +19,7 @@ import {
   type Device,
 } from '../../components/DocumentPagePreviewBar/DocumentPagePreviewBar.js';
 import {useEditJsonModal} from '../../components/EditJsonModal/EditJsonModal.js';
+import {SearchPanel} from '../../components/SearchPanel/SearchPanel.js';
 import {
   SplitPanel,
   useSplitPanel,
@@ -107,12 +108,26 @@ function DocumentPageLayout(props: DocumentPageProps & {canEdit: boolean}) {
   const isChecksVisibleRef = useRef(isChecksVisible);
   isChecksVisibleRef.current = isChecksVisible;
 
+  const [isSearchVisible, setIsSearchVisible] = useLocalStorage<boolean>(
+    'root::DocumentPage::searchVisible',
+    false
+  );
+  const isSearchVisibleRef = useRef(isSearchVisible);
+  isSearchVisibleRef.current = isSearchVisible;
+
   // Broadcast checks visibility so the StatusBar button can reflect it.
   useEffect(() => {
     window.dispatchEvent(
       new CustomEvent('root:checks-visible', {detail: isChecksVisible})
     );
   }, [isChecksVisible]);
+
+  // Broadcast search visibility so the StatusBar button can reflect it.
+  useEffect(() => {
+    window.dispatchEvent(
+      new CustomEvent('root:search-visible', {detail: isSearchVisible})
+    );
+  }, [isSearchVisible]);
 
   const [savedChecksPanelWidth, setSavedChecksPanelWidth] =
     useLocalStorage<number>('root::DocumentPage::checksPanelWidth', 360);
@@ -122,11 +137,35 @@ function DocumentPageLayout(props: DocumentPageProps & {canEdit: boolean}) {
   const [isDraggingChecks, setIsDraggingChecks] = useState(false);
   const checksLayoutRef = useRef<HTMLDivElement>(null);
 
+  const [savedSearchPanelWidth, setSavedSearchPanelWidth] =
+    useLocalStorage<number>('root::DocumentPage::searchPanelWidth', 360);
+  const [searchPanelWidth, setSearchPanelWidth] = useState(
+    savedSearchPanelWidth
+  );
+  const [isDraggingSearch, setIsDraggingSearch] = useState(false);
+
   // Listen for toggle event from DocEditor's Checks button.
   useEffect(() => {
     const handler = () => setIsChecksVisible(() => !isChecksVisibleRef.current);
     window.addEventListener('root:toggle-checks', handler);
     return () => window.removeEventListener('root:toggle-checks', handler);
+  }, []);
+
+  // Listen for toggle event from DocEditor's Search button. Always focus the
+  // search input on open (whether the panel was already open or not).
+  useEffect(() => {
+    const handler = () => {
+      const willBeVisible = !isSearchVisibleRef.current;
+      setIsSearchVisible(() => willBeVisible);
+      if (willBeVisible) {
+        // Defer to allow the panel to mount before dispatching focus.
+        requestAnimationFrame(() => {
+          window.dispatchEvent(new CustomEvent('root:focus-search'));
+        });
+      }
+    };
+    window.addEventListener('root:toggle-search', handler);
+    return () => window.removeEventListener('root:toggle-search', handler);
   }, []);
 
   // Handle checks panel resize dragging.
@@ -154,6 +193,31 @@ function DocumentPageLayout(props: DocumentPageProps & {canEdit: boolean}) {
       window.removeEventListener('mouseup', onMouseUp);
     };
   }, [isDraggingChecks]);
+
+  // Handle search panel resize dragging.
+  useEffect(() => {
+    if (!isDraggingSearch) return;
+    const onMouseMove = (e: MouseEvent) => {
+      const container = checksLayoutRef.current;
+      if (!container) return;
+      const rect = container.getBoundingClientRect();
+      const newWidth = Math.max(240, Math.min(rect.right - e.clientX, 800));
+      setSearchPanelWidth(newWidth);
+    };
+    const onMouseUp = () => {
+      setIsDraggingSearch(false);
+      setSearchPanelWidth((w) => {
+        setSavedSearchPanelWidth(() => w);
+        return w;
+      });
+    };
+    window.addEventListener('mousemove', onMouseMove);
+    window.addEventListener('mouseup', onMouseUp);
+    return () => {
+      window.removeEventListener('mousemove', onMouseMove);
+      window.removeEventListener('mouseup', onMouseUp);
+    };
+  }, [isDraggingSearch]);
 
   if (!collection) {
     return <div>Could not find collection.</div>;
@@ -193,14 +257,22 @@ function DocumentPageLayout(props: DocumentPageProps & {canEdit: boolean}) {
     });
   }, [draft.controller]);
 
-  useHotkeys([['mod+S', saveDraft]]);
+  const toggleSearch = useCallback(() => {
+    window.dispatchEvent(new CustomEvent('root:toggle-search'));
+  }, []);
+
+  useHotkeys([
+    ['mod+S', saveDraft],
+    ['mod+shift+F', toggleSearch],
+  ]);
 
   return (
     <Layout>
       <div
         className={joinClassNames(
           'DocumentPage__layout',
-          isDraggingChecks && 'DocumentPage__layout--dragging'
+          (isDraggingChecks || isDraggingSearch) &&
+            'DocumentPage__layout--dragging'
         )}
         ref={checksLayoutRef}
       >
@@ -288,6 +360,7 @@ function DocumentPageLayout(props: DocumentPageProps & {canEdit: boolean}) {
                 'DocumentPage__side__editor',
                 (!hasCollectionUrl || !isPreviewVisible) &&
                   !isChecksVisible &&
+                  !isSearchVisible &&
                   'DocumentPage__side__editor--centered'
               )}
             >
@@ -318,6 +391,24 @@ function DocumentPageLayout(props: DocumentPageProps & {canEdit: boolean}) {
               style={{flexBasis: `${checksPanelWidth}px`}}
             >
               <ChecksPanel docId={docId} />
+            </div>
+          </>
+        )}
+        {isSearchVisible && (
+          <>
+            <div
+              className="DocumentPage__searchDivider"
+              onMouseDown={() => setIsDraggingSearch(true)}
+            />
+            <div
+              className="DocumentPage__search"
+              style={{flexBasis: `${searchPanelWidth}px`}}
+            >
+              <SearchPanel
+                docId={docId}
+                autoFocus
+                onClose={() => setIsSearchVisible(() => false)}
+              />
             </div>
           </>
         )}

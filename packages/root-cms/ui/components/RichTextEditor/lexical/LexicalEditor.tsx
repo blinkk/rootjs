@@ -20,11 +20,15 @@ import {TabIndentationPlugin} from '@lexical/react/LexicalTabIndentationPlugin';
 import {TablePlugin} from '@lexical/react/LexicalTablePlugin';
 import {HeadingNode, QuoteNode} from '@lexical/rich-text';
 import {TableCellNode, TableNode, TableRowNode} from '@lexical/table';
-import {$getNodeByKey, $insertNodes, NodeKey} from 'lexical';
-import {useMemo, useState} from 'preact/hooks';
+import {$getNodeByKey, $getRoot, $insertNodes, NodeKey} from 'lexical';
+import {useEffect, useMemo, useState} from 'preact/hooks';
 import * as schema from '../../../../core/schema.js';
 import {RichTextData} from '../../../../shared/richtext.js';
 import {joinClassNames} from '../../../utils/classes.js';
+import {
+  OPEN_RICHTEXT_BLOCK_EVENT,
+  OpenRichTextBlockEventDetail,
+} from '../../../utils/doc-search.js';
 import {getDefaultFieldValue} from '../../../utils/fields.js';
 import {cloneData} from '../../../utils/objects.js';
 import {autokey} from '../../../utils/rand.js';
@@ -103,6 +107,8 @@ interface InlineComponentModalState {
 
 export interface LexicalEditorProps {
   className?: string;
+  /** The deep key of the rich text field, used for cross-component targeting. */
+  deepKey?: string;
   placeholder?: string;
   value?: RichTextData | null;
   onChange?: (value: RichTextData | null) => void;
@@ -133,6 +139,7 @@ export function LexicalEditor(props: LexicalEditorProps) {
             )}
           >
             <Editor
+              deepKey={props.deepKey}
               placeholder={props.placeholder}
               value={props.value}
               onChange={props.onChange}
@@ -196,6 +203,8 @@ const INSERT_HTML_BLOCK = schema.define({
 const BUILT_IN_BLOCKS = [INSERT_IMAGE_BLOCK, INSERT_HTML_BLOCK];
 
 interface EditorProps {
+  /** The deep key of the rich text field, used for cross-component targeting. */
+  deepKey?: string;
   placeholder?: string;
   value?: RichTextData | null;
   onChange?: (value: RichTextData | null) => void;
@@ -299,6 +308,73 @@ function Editor(props: EditorProps) {
   const closeBlockComponentModal = () => {
     setBlockComponentModalState(null);
   };
+
+  // Listen for external requests to open a block component modal (e.g. from
+  // the document SearchPanel). Targeted by the rich text field's `deepKey`.
+  useEffect(() => {
+    if (!props.deepKey) {
+      return;
+    }
+    const handler = (event: Event) => {
+      const detail = (event as CustomEvent<OpenRichTextBlockEventDetail>)
+        .detail;
+      if (!detail || detail.richTextDeepKey !== props.deepKey) {
+        return;
+      }
+      const schemaDef = blockComponentsMap.get(detail.blockName);
+      if (!schemaDef) {
+        return;
+      }
+      // Walk the editor's root children to find the Nth BlockComponentNode that
+      // matches the requested block name. Block ordering in Lexical mirrors the
+      // serialized `RichTextData.blocks` array, so we can map by index.
+      let targetNodeKey: NodeKey | null = null;
+      let targetData: Record<string, any> | null = null;
+      editor.getEditorState().read(() => {
+        const root = $getRoot();
+        let blockIdx = -1;
+        for (const child of root.getChildren()) {
+          if ($isBlockComponentNode(child)) {
+            blockIdx += 1;
+            const childBlockName = (child as BlockComponentNode).getBlockName();
+            if (
+              blockIdx === detail.blockIndex &&
+              childBlockName === detail.blockName
+            ) {
+              targetNodeKey = child.getKey();
+              targetData = (child as BlockComponentNode).getBlockData();
+              break;
+            }
+          }
+        }
+        // Fallback: if the absolute index didn't match (e.g. document mutated),
+        // pick the first block with the same blockName.
+        if (!targetNodeKey) {
+          for (const child of root.getChildren()) {
+            if (
+              $isBlockComponentNode(child) &&
+              (child as BlockComponentNode).getBlockName() === detail.blockName
+            ) {
+              targetNodeKey = child.getKey();
+              targetData = (child as BlockComponentNode).getBlockData();
+              break;
+            }
+          }
+        }
+      });
+      if (!targetNodeKey) {
+        return;
+      }
+      setBlockComponentModalState({
+        schema: schemaDef,
+        mode: 'edit',
+        initialValue: targetData ? cloneData(targetData) : {},
+        nodeKey: targetNodeKey,
+      });
+    };
+    window.addEventListener(OPEN_RICHTEXT_BLOCK_EVENT, handler);
+    return () => window.removeEventListener(OPEN_RICHTEXT_BLOCK_EVENT, handler);
+  }, [editor, props.deepKey, blockComponentsMap]);
 
   const onBlockComponentSubmit = (data: Record<string, any>) => {
     if (!blockComponentModalState) {

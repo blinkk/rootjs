@@ -25,6 +25,7 @@ export function RichTextField(props: FieldProps) {
 
   return (
     <RichTextEditor
+      deepKey={props.deepKey}
       value={value}
       placeholder={field.placeholder}
       blockComponents={field.blockComponents}

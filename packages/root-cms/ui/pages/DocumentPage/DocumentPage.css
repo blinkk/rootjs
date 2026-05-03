@@ -200,3 +200,44 @@
   overflow: hidden;
   background: white;
 }
+
+.DocumentPage__searchDivider {
+  flex: 0 0 3px;
+  width: 3px;
+  cursor: col-resize;
+  position: relative;
+}
+
+.DocumentPage__searchDivider::before {
+  content: '';
+  display: block;
+  position: absolute;
+  top: 0;
+  height: 100%;
+  left: 1px;
+  width: 1px;
+  background-color: var(--color-border);
+}
+
+.DocumentPage__searchDivider::after {
+  content: '';
+  display: block;
+  position: absolute;
+  top: 0;
+  height: 100%;
+  left: 0;
+  width: 100%;
+  background-color: transparent;
+  transition: background-color 0.18s ease;
+}
+
+.DocumentPage__searchDivider:hover::after {
+  background-color: lightblue;
+}
+
+.DocumentPage__search {
+  flex: 0 0 360px;
+  max-height: calc(100vh - 48px);
+  overflow: hidden;
+  background: white;
+}

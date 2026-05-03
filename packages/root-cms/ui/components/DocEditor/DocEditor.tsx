@@ -34,6 +34,7 @@ import {
   IconRocket,
   IconRowInsertBottom,
   IconRowInsertTop,
+  IconSearch,
   IconTrash,
   IconTriangleFilled,
   IconSparkles,
@@ -222,6 +223,16 @@ DocEditor.StatusBar = (props: StatusBarProps) => {
       return false;
     }
   });
+  const [searchActive, setSearchActive] = useState(() => {
+    try {
+      const val = window.localStorage.getItem(
+        'root::DocumentPage::searchVisible'
+      );
+      return val ? JSON.parse(val) === true : false;
+    } catch {
+      return false;
+    }
+  });
 
   useEffect(() => {
     const handler = (e: Event) => {
@@ -229,6 +240,14 @@ DocEditor.StatusBar = (props: StatusBarProps) => {
     };
     window.addEventListener('root:checks-visible', handler);
     return () => window.removeEventListener('root:checks-visible', handler);
+  }, []);
+
+  useEffect(() => {
+    const handler = (e: Event) => {
+      setSearchActive((e as CustomEvent).detail === true);
+    };
+    window.addEventListener('root:search-visible', handler);
+    return () => window.removeEventListener('root:search-visible', handler);
   }, []);
 
   const urlLocale = (query.locale as string) || '';
@@ -261,6 +280,22 @@ DocEditor.StatusBar = (props: StatusBarProps) => {
           <DocStatusBadges doc={data as CMSDoc} docId={props.docId} />
         </div>
       )}
+      <div className="DocEditor__statusBar__search">
+        <Tooltip label="Search field values (⌘⇧F)" transition="pop">
+          <Button
+            className={searchActive ? 'DocEditor__searchButton--active' : ''}
+            variant="default"
+            color="dark"
+            size="xs"
+            leftIcon={<IconSearch size={16} />}
+            onClick={() => {
+              window.dispatchEvent(new CustomEvent('root:toggle-search'));
+            }}
+          >
+            Search
+          </Button>
+        </Tooltip>
+      </div>
       {(window.__ROOT_CTX.checks || []).length > 0 && (
         <div className="DocEditor__statusBar__checks">
           <Button
