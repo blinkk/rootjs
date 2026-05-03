@@ -1,3 +1,13 @@
+import {
+  collection,
+  documentId,
+  endAt,
+  getDocs,
+  limit as fbLimit,
+  orderBy,
+  query,
+  startAt,
+} from 'firebase/firestore';
 import {useCallback, useEffect, useRef, useState} from 'preact/hooks';
 
 export interface GlobalSearchHit {
@@ -152,4 +162,157 @@ export function useSearchIndexStatus(): SearchIndexAdminStatus & {
   }, [refresh]);
 
   return {...data, loading, refresh};
+}
+
+export interface DocSlugHit {
+  collection: string;
+  slug: string;
+  /** "<collection>/<slug>" */
+  docId: string;
+}
+
+export interface UseDocSlugSearchResult {
+  hits: DocSlugHit[];
+  loading: boolean;
+}
+
+const SLUG_DEBOUNCE_MS = 200;
+const PER_COLLECTION_LIMIT = 5;
+
+/**
+ * Looks up CMS docs by slug (or `<collection>/<slug>` doc id) prefix using
+ * Firestore range queries on each collection's `Drafts` subcollection.
+ *
+ * Slug-only queries (e.g. `home`) fan out across every registered collection;
+ * a `<collection>/<slug>` form (e.g. `Pages/home`) restricts the lookup to a
+ * single collection. Empty queries clear the result list.
+ */
+export function useDocSlugSearch(
+  rawQuery: string,
+  options: {limit?: number} = {}
+): UseDocSlugSearchResult {
+  const [hits, setHits] = useState<DocSlugHit[]>([]);
+  const [loading, setLoading] = useState(false);
+  const cancelRef = useRef<{aborted: boolean} | null>(null);
+  const totalLimit = options.limit ?? 10;
+
+  useEffect(() => {
+    const trimmed = rawQuery.trim();
+    if (!trimmed) {
+      if (cancelRef.current) {
+        cancelRef.current.aborted = true;
+      }
+      cancelRef.current = null;
+      setHits([]);
+      setLoading(false);
+      return;
+    }
+    setLoading(true);
+
+    const handle = window.setTimeout(async () => {
+      if (cancelRef.current) {
+        cancelRef.current.aborted = true;
+      }
+      const ctrl = {aborted: false};
+      cancelRef.current = ctrl;
+
+      let collFilter: string | null = null;
+      let prefix = trimmed;
+      const slashIdx = trimmed.indexOf('/');
+      if (slashIdx >= 0) {
+        collFilter = trimmed.slice(0, slashIdx);
+        prefix = trimmed.slice(slashIdx + 1);
+      }
+
+      const projectId = window.__ROOT_CTX?.rootConfig?.projectId;
+      const db = window.firebase?.db;
+      if (!projectId || !db) {
+        setHits([]);
+        setLoading(false);
+        return;
+      }
+
+      const allColls = Object.keys(window.__ROOT_CTX.collections || {});
+      const colls = collFilter
+        ? allColls.filter(
+            (c) => c.toLowerCase() === collFilter!.toLowerCase()
+          )
+        : allColls;
+
+      // Inclusive Firestore range bounds for a prefix match. The
+      // `` character is a high private-use codepoint that sorts
+      // after any normal slug character.
+      const lower = prefix;
+      const upper = `${prefix}`;
+
+      try {
+        const queries = colls.map(async (collId) => {
+          const ref = collection(
+            db,
+            'Projects',
+            projectId,
+            'Collections',
+            collId,
+            'Drafts'
+          );
+          const q = query(
+            ref,
+            orderBy(documentId()),
+            startAt(lower),
+            endAt(upper),
+            fbLimit(PER_COLLECTION_LIMIT)
+          );
+          try {
+            const snap = await getDocs(q);
+            const out: DocSlugHit[] = [];
+            snap.forEach((d) => {
+              out.push({
+                collection: collId,
+                slug: d.id,
+                docId: `${collId}/${d.id}`,
+              });
+            });
+            return out;
+          } catch (err) {
+            // Some Firestore instances reject documentId range filters in
+            // narrow contexts; swallow per-collection failures rather than
+            // taking down the whole spotlight.
+            console.error(`docSlugSearch failed for ${collId}:`, err);
+            return [];
+          }
+        });
+        const results = (await Promise.all(queries)).flat();
+        if (ctrl.aborted) {
+          return;
+        }
+        // Rank exact slug or docId matches first, then prefix matches
+        // alphabetically so results are stable across renders.
+        const sorted = results.sort((a, b) => {
+          const aExact =
+            a.slug === prefix || a.docId === trimmed ? 0 : 1;
+          const bExact =
+            b.slug === prefix || b.docId === trimmed ? 0 : 1;
+          if (aExact !== bExact) {
+            return aExact - bExact;
+          }
+          return a.docId.localeCompare(b.docId);
+        });
+        setHits(sorted.slice(0, totalLimit));
+        setLoading(false);
+      } catch (err) {
+        if (ctrl.aborted) {
+          return;
+        }
+        console.error('docSlugSearch failed:', err);
+        setHits([]);
+        setLoading(false);
+      }
+    }, SLUG_DEBOUNCE_MS);
+
+    return () => {
+      window.clearTimeout(handle);
+    };
+  }, [rawQuery, totalLimit]);
+
+  return {hits, loading};
 }
