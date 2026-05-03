@@ -2,7 +2,7 @@
  * Loads various files or configurations from the project.
  *
  * NOTE: This file needs to be loaded through vite's ssrLoadModule so that
- * `import.meta.glob()` calls are resolved.
+ * virtual modules are resolved.
  */
 
 import * as schema from './schema.js';
@@ -11,15 +11,16 @@ export interface SchemaModule {
   default: schema.Schema;
 }
 
-export const SCHEMA_MODULES = import.meta.glob<SchemaModule>(
-  [
-    '/**/*.schema.ts',
-    '!/appengine/**/*.schema.ts',
-    '!/functions/**/*.schema.ts',
-    '!/gae/**/*.schema.ts',
-  ],
-  {eager: true}
-);
+// The virtual module is resolved by rootPodsVitePlugin when loaded through
+// Vite's ssrLoadModule. Outside Vite (e.g. tests, CLI), it falls back to {}.
+let _SCHEMA_MODULES: Record<string, SchemaModule> = {};
+try {
+  // @ts-ignore — virtual module provided by rootPodsVitePlugin
+  const mod = await import('virtual:root/schemas');
+  _SCHEMA_MODULES = mod.SCHEMA_MODULES || {};
+} catch {}
+
+export const SCHEMA_MODULES = _SCHEMA_MODULES as Record<string, SchemaModule>;
 
 /**
  * Returns a map of all `schema.ts` files defined in the project as

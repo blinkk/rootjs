@@ -22,6 +22,7 @@ import {redirectsMiddleware} from '../middleware/redirects.js';
 import {sessionMiddleware} from '../middleware/session.js';
 import {getElements, getElementsDirs} from '../node/element-graph.js';
 import {loadRootConfigWithDeps} from '../node/load-config.js';
+import {collectPods} from '../node/pod-collector.js';
 import {createViteServer} from '../node/vite.js';
 import {DevServerAssetMap} from '../render/asset-map/dev-asset-map.js';
 import {dirExists, isDirectory, isJsFile} from '../utils/fsutils.js';
@@ -194,7 +195,9 @@ async function createViteMiddleware(options: {
   const rootConfig = options.rootConfig;
   const rootDir = rootConfig.rootDir;
 
-  let elementGraph = await getElements(rootConfig);
+  const pods = await collectPods(rootConfig);
+
+  let elementGraph = await getElements(rootConfig, pods);
   const elements = Object.values(elementGraph.sourceFiles).map((sourceFile) => {
     return sourceFile.relPath;
   });
@@ -209,6 +212,12 @@ async function createViteMiddleware(options: {
       }
     });
   }
+  // Add pod bundle scripts.
+  for (const pod of pods) {
+    for (const bundleFile of pod.bundleFiles) {
+      bundleScripts.push(bundleFile);
+    }
+  }
 
   const optimizeDeps = [...elements, ...bundleScripts];
   const viteServer = await createViteServer(rootConfig, {
@@ -220,20 +229,18 @@ async function createViteMiddleware(options: {
   // are added or deleted.
   function isInElementsDir(changedFilePath: string) {
     const filePath = path.resolve(changedFilePath);
-    const elementsDirs = getElementsDirs(rootConfig);
+    const elementsDirs = getElementsDirs(rootConfig, pods);
     return elementsDirs.some((dirPath) => filePath.startsWith(dirPath));
   }
   viteServer.watcher.on('add', async (filePath: string) => {
     if (isInElementsDir(filePath)) {
-      // Re-generate the elements graph.
-      elementGraph = await getElements(rootConfig);
+      elementGraph = await getElements(rootConfig, pods);
       console.log(`element added: ${filePath}`);
     }
   });
   viteServer.watcher.on('unlink', async (filePath: string) => {
     if (isInElementsDir(filePath)) {
-      // Re-generate the elements graph.
-      elementGraph = await getElements(rootConfig);
+      elementGraph = await getElements(rootConfig, pods);
       console.log(`element deleted: ${filePath}`);
     }
   });

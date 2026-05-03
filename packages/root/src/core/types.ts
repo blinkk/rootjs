@@ -220,6 +220,12 @@ export interface Route {
    * Per the example above, this value contains placeholder params.
    */
   localeRoutePath: string;
+
+  /**
+   * The name of the pod that contributed this route, or undefined if the
+   * route is from the user's project.
+   */
+  podName?: string;
 }
 
 export interface HandlerRenderOptions {

@@ -2,6 +2,7 @@ import {createServer, ViteDevServer} from 'vite';
 import type {Plugin, EnvironmentModuleNode} from 'vite';
 import {RootConfig} from '../core/config.js';
 import {getVitePlugins} from '../core/plugin.js';
+import {rootPodsVitePlugin} from './pods-vite-plugin.js';
 import {preactToRootJsxPlugin} from './vite-plugin-root-jsx-virtual.js';
 
 export interface CreateViteServerOptions {
@@ -56,9 +57,10 @@ export async function createViteServer(
     },
     ssr: {
       ...(viteConfig.ssr || {}),
-      noExternal: ['@blinkk/root', '@blinkk/root-cms/richtext'],
+      noExternal: ['@blinkk/root', '@blinkk/root-cms/richtext', /^virtual:/],
     },
     plugins: [
+      rootPodsVitePlugin(rootConfig),
       hmrSSRReload(),
       preactToRootJsxPlugin({useRootJsx: !!rootConfig.jsxRenderer?.mode}),
       ...(viteConfig.plugins || []),

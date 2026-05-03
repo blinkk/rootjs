@@ -62,8 +62,8 @@ describe('Production Bundle Integration', () => {
     const coreModule = await import('./core.js');
     expect(coreModule.schema).toBeDefined();
 
-    // Then, dynamically import project module (which uses import.meta.glob)
-    // This should not cause circular dependency issues
+    // Then, dynamically import project module (which uses virtual:root/schemas)
+    // The virtual module is stubbed by vitest.config.ts for testing.
     const projectModule = await import('./project.js');
     expect(projectModule.SCHEMA_MODULES).toBeDefined();
     expect(typeof projectModule.getProjectSchemas).toBe('function');

@@ -1,8 +1,9 @@
 import {UserConfig as ViteUserConfig} from 'vite';
+import {JsxRenderOptions} from '../jsx/jsx-render.js';
 import {HtmlMinifyOptions} from '../render/html-minify.js';
 import {HtmlPrettyOptions} from '../render/html-pretty.js';
-import {JsxRenderOptions} from '../jsx/jsx-render.js';
 import {Plugin} from './plugin.js';
+import {PodConfig} from './pod.js';
 import {RequestMiddleware} from './types.js';
 
 export interface RootUserConfig {
@@ -126,6 +127,12 @@ export interface RootUserConfig {
    * Plugins.
    */
   plugins?: Plugin[];
+
+  /**
+   * Per-pod user-level overrides. The key is the pod name as declared in
+   * Pod.name.
+   */
+  pods?: Record<string, PodConfig>;
 
   /**
    * Experimental config options. Note: these are subject to change at any time.

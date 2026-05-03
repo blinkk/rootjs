@@ -19,4 +19,5 @@ export default defineConfig({
   dts: true,
   format: ['esm'],
   splitting: true,
+  external: [/^virtual:/],
 });
