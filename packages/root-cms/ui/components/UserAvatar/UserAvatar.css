@@ -1,0 +1,48 @@
+.UserAvatar {
+  border: 2px solid var(--mantine-color-body, #fff);
+  box-sizing: content-box;
+  transition: opacity 0.2s ease;
+}
+
+.UserAvatar--inactive {
+  opacity: 0.5;
+}
+
+.UserAvatar__tooltip {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 2px 4px;
+  text-align: left;
+  font-weight: 400;
+}
+
+.UserAvatar__tooltip__name {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.UserAvatar__tooltip__email {
+  font-size: 11px;
+  font-weight: 400;
+  opacity: 0.85;
+}
+
+.UserAvatarGroup {
+  display: inline-flex;
+  flex-direction: row;
+  align-items: center;
+}
+
+.UserAvatarGroup > * {
+  margin-left: -10px;
+}
+
+.UserAvatarGroup > *:first-child {
+  margin-left: 0;
+}
+
+.UserAvatarGroup__overflow {
+  background-color: var(--color-bg-secondary, #f1f3f5);
+  color: var(--color-text-secondary, #495057);
+}

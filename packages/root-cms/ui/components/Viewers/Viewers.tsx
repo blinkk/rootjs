@@ -1,4 +1,4 @@
-import {Avatar, Tooltip} from '@mantine/core';
+import {Avatar} from '@mantine/core';
 import {
   DocumentReference,
   FieldPath,
@@ -11,11 +11,11 @@ import {
 } from 'firebase/firestore';
 import {useEffect, useState} from 'preact/hooks';
 import {normalizeSlug} from '../../../shared/slug.js';
-import {joinClassNames} from '../../utils/classes.js';
 import {EventListener} from '../../utils/events.js';
 import {throttle} from '../../utils/throttle.js';
 import {TIME_UNITS} from '../../utils/time.js';
 import {Timer} from '../../utils/timer.js';
+import {UserAvatar} from '../UserAvatar/UserAvatar.js';
 import './Viewers.css';
 
 // Frequency to update.
@@ -195,48 +195,15 @@ export function Viewers(props: ViewersProps) {
 
   return (
     <div className="Viewers">
-      {visibleViewers.map((viewer) => {
-        if (!viewer.photoURL) {
-          const initial = viewer.email[0].toUpperCase();
-          return (
-            <Tooltip
-              key={viewer.email}
-              label={viewer.email}
-              position="bottom"
-              withArrow
-            >
-              <Avatar
-                className="Viewers__avatar"
-                alt={viewer.email}
-                size={30}
-                radius="xl"
-              >
-                {initial}
-              </Avatar>
-            </Tooltip>
-          );
-        }
-        return (
-          <Tooltip
-            key={viewer.email}
-            label={viewer.email}
-            position="bottom"
-            withArrow
-          >
-            <Avatar
-              className={joinClassNames(
-                'Viewers__viewer',
-                'Viewers__avatar',
-                isViewerDisconnected(viewer) && 'Viewers__viewer--disconnected'
-              )}
-              src={viewer.photoURL}
-              alt={viewer.email}
-              size={30}
-              radius="xl"
-            />
-          </Tooltip>
-        );
-      })}
+      {visibleViewers.map((viewer) => (
+        <UserAvatar
+          key={viewer.email}
+          email={viewer.email}
+          size={30}
+          inactive={isViewerDisconnected(viewer)}
+          className="Viewers__avatar"
+        />
+      ))}
       {overflow > 0 && (
         <Avatar className="Viewers__avatar" size={30} radius="xl">
           +{overflow}

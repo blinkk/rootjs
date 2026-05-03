@@ -1,6 +1,5 @@
 import {
   Accordion,
-  Avatar,
   Button,
   Loader,
   MultiSelect,
@@ -18,6 +17,7 @@ import {Action, listActions} from '../../utils/actions.js';
 import {joinClassNames} from '../../utils/classes.js';
 import {getSpreadsheetUrl} from '../../utils/gsheets.js';
 import {Surface} from '../Surface/Surface.js';
+import {UserAvatar} from '../UserAvatar/UserAvatar.js';
 import './ActionsLogs.css';
 
 export interface ActionLogsProps {
@@ -244,7 +244,18 @@ export function ActionLogs(props: ActionLogsProps) {
                   {formatDate(action.timestamp)}
                 </td>
                 <td className="ActionsLogs__table__col ActionsLogs__table__col--nowrap">
-                  <span className="ActionsLogs__user">{action.by}</span>
+                  <span className="ActionsLogs__user">
+                    {action.by ? (
+                      <>
+                        <UserAvatar email={action.by} size={20} />
+                        <span className="ActionsLogs__user__email">
+                          {action.by}
+                        </span>
+                      </>
+                    ) : (
+                      '—'
+                    )}
+                  </span>
                 </td>
                 <td className="ActionsLogs__table__col ActionsLogs__table__col--action">
                   <span className="ActionsLogs__action">{action.action}</span>
@@ -514,18 +525,12 @@ function ActionLogsCompact(props: ActionLogsProps) {
 function ActionLogsCompactItemPreview(props: {action: Action}) {
   const action = props.action;
   const actionMetaId = getFirstMetadataId(action);
-  const actionBy = props.action.by || 'unknown';
-  const actionByInitial =
-    actionBy === 'unknown' ? '?' : actionBy.at(0)?.toUpperCase();
+  const actionBy = props.action.by || '';
 
   return (
     <div className="ActionLogsCompactItemPreview">
       <div className="ActionLogsCompactItemPreview__user">
-        <Tooltip label={actionBy} position="bottom" withArrow>
-          <Avatar alt={actionBy} size={20} radius="xl">
-            {actionByInitial}
-          </Avatar>
-        </Tooltip>
+        <UserAvatar email={actionBy} size={20} />
       </div>
       <div className="ActionLogsCompactItemPreview__timestamp">
         {formatDate(action.timestamp)}
