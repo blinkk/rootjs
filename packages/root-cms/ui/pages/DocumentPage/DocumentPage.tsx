@@ -144,9 +144,16 @@ function DocumentPageLayout(props: DocumentPageProps & {canEdit: boolean}) {
   );
   const [isDraggingSearch, setIsDraggingSearch] = useState(false);
 
-  // Listen for toggle event from DocEditor's Checks button.
+  // Only one right-hand panel (Checks or Search) is allowed open at a time.
+  // Opening either panel closes the other.
   useEffect(() => {
-    const handler = () => setIsChecksVisible(() => !isChecksVisibleRef.current);
+    const handler = () => {
+      const willBeVisible = !isChecksVisibleRef.current;
+      setIsChecksVisible(() => willBeVisible);
+      if (willBeVisible) {
+        setIsSearchVisible(() => false);
+      }
+    };
     window.addEventListener('root:toggle-checks', handler);
     return () => window.removeEventListener('root:toggle-checks', handler);
   }, []);
@@ -158,6 +165,7 @@ function DocumentPageLayout(props: DocumentPageProps & {canEdit: boolean}) {
       const willBeVisible = !isSearchVisibleRef.current;
       setIsSearchVisible(() => willBeVisible);
       if (willBeVisible) {
+        setIsChecksVisible(() => false);
         // Defer to allow the panel to mount before dispatching focus.
         requestAnimationFrame(() => {
           window.dispatchEvent(new CustomEvent('root:focus-search'));
