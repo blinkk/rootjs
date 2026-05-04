@@ -27,10 +27,10 @@ import {SSEEvent, SSESchemaChangedEvent} from '../shared/sse.js';
 import {type RootAiModel} from './ai.js';
 import {api} from './api.js';
 import {type CMSCheck} from './checks.js';
-import {type CMSNotificationService} from './services-notifications.js';
-import {type CMSTranslationService} from './translations.js';
 import {Action, RootCMSClient} from './client.js';
+import {type CMSNotificationService} from './services-notifications.js';
 import {sse, SSEBroadcastFn} from './sse.js';
+import {type CMSTranslationService} from './translations.js';
 
 export type {
   CMSCheck,
@@ -46,6 +46,25 @@ export type {
   NotificationResult,
   NotificationServiceContext,
 } from './services-notifications.js';
+export {EmailClient} from './email-client.js';
+export type {
+  EmailDoc,
+  EmailStatus,
+  SendEmailOptions,
+  SendEmailResult,
+} from './email-client.js';
+export {
+  RootEmailNotificationPlugin,
+  TASK_SUBSCRIBERS_RECIPIENT,
+} from './email-notification-plugin.js';
+export type {
+  EmailNotificationFilter,
+  EmailNotificationRecipient,
+  EmailNotificationTemplate,
+  EmailTemplateContext,
+  EmailTemplateOutput,
+  RootEmailNotificationPluginOptions,
+} from './email-notification-plugin.js';
 export type {
   CMSTranslationService,
   TranslationExportResult,

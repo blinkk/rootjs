@@ -231,6 +231,19 @@ func processPendingEmails(ctx context.Context, fsClient *firestore.Client, proje
 				msg.To = append(msg.To, fmt.Sprintf("%v", t))
 			}
 		}
+		if ccList, ok := data["cc"].([]interface{}); ok {
+			for _, c := range ccList {
+				msg.Cc = append(msg.Cc, fmt.Sprintf("%v", c))
+			}
+		}
+		if bccList, ok := data["bcc"].([]interface{}); ok {
+			for _, b := range bccList {
+				msg.Bcc = append(msg.Bcc, fmt.Sprintf("%v", b))
+			}
+		}
+		if replyTo, ok := data["replyTo"].(string); ok && replyTo != "" {
+			msg.ReplyTo = replyTo
+		}
 
 		// Include HTML body if present.
 		if htmlBody, ok := data["htmlBody"].(string); ok && htmlBody != "" {

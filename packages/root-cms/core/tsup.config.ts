@@ -8,6 +8,8 @@ export default defineConfig({
     cli: './cli/cli.ts',
     client: './core/client.ts',
     core: './core/core.ts',
+    'email-client': './core/email-client.ts',
+    'email-notification-plugin': './core/email-notification-plugin.ts',
     functions: './core/functions.ts',
     plugin: './core/plugin.ts',
     project: './core/project.ts',
@@ -18,6 +20,8 @@ export default defineConfig({
     entry: [
       './core/client.ts',
       './core/core.ts',
+      './core/email-client.ts',
+      './core/email-notification-plugin.ts',
       './core/functions.ts',
       './core/plugin.ts',
       './core/project.ts',
