@@ -80,14 +80,19 @@ import {
   testPublishingLocked,
 } from '../../utils/doc.js';
 import {extractField} from '../../utils/extract.js';
-import {getDefaultFieldValue} from '../../utils/fields.js';
+import {getDefaultFieldValue, normalizePresetData} from '../../utils/fields.js';
 import {requestHighlightNode} from '../../utils/iframe-preview.js';
+import {deepMerge} from '../../utils/objects.js';
 import {testCanPublish} from '../../utils/permissions.js';
 import {autokey} from '../../utils/rand.js';
 import {buildPreviewValue} from '../../utils/schema-previews.js';
 import {testFieldEmpty} from '../../utils/test-field-empty.js';
 import {formatDateTime} from '../../utils/time.js';
 import {useAiEditModal} from '../AiEditModal/AiEditModal.js';
+import {
+  ComponentPickerOption,
+  useComponentPickerModal,
+} from '../ComponentPickerModal/ComponentPickerModal.js';
 import {ConditionalTooltip} from '../ConditionalTooltip/ConditionalTooltip.js';
 import {
   DocActionEvent,
@@ -1685,45 +1690,73 @@ DocEditor.ArrayFieldPreview = (props: ArrayFieldPreviewProps) => {
 
 DocEditor.OneOfField = (props: FieldProps) => {
   const field = props.field as schema.OneOfField;
+  const variant = field.variant || 'dropdown';
   const [type, setType] = useState('');
   const collectionTypes = useCollectionSchemaTypes();
   const typesMap: Record<string, schema.Schema> = {};
+  const orderedSchemas: schema.Schema[] = [];
   const dropdownValues: Array<{value: string; label: string}> = [
     {value: '', label: field.placeholder || 'Select type'},
   ];
   field.types.forEach((typedef) => {
+    let resolved: schema.Schema | undefined;
+    let name = '';
     if (typeof typedef === 'string') {
-      typesMap[typedef] = collectionTypes[typedef];
-      dropdownValues.push({value: typedef, label: typedef});
+      resolved = collectionTypes[typedef];
+      name = typedef;
     } else {
-      typesMap[typedef.name] = typedef;
-      dropdownValues.push({value: typedef.name, label: typedef.name});
+      resolved = typedef;
+      name = typedef.name;
     }
+    if (!name) {
+      return;
+    }
+    if (resolved) {
+      typesMap[name] = resolved;
+      orderedSchemas.push(resolved);
+    }
+    dropdownValues.push({value: name, label: name});
   });
   const selectedType = typesMap[type || ''];
   const draft = useDraftDoc().controller;
+  const componentPickerModal = useComponentPickerModal();
 
   const cachedValues = useMemo<any>(() => {
     return {};
   }, []);
 
-  async function onTypeChange(newType: string) {
+  async function applyType(newType: string, prefill?: Record<string, any>) {
     const newValue: any = {};
     if (newType) {
-      if (newType in cachedValues) {
+      const typeSchema = typesMap[newType];
+      if (prefill && typeSchema) {
+        // Preset path: normalize prefill so any plain `[]` arrays in the
+        // preset's data become array-maps for proper CMS rendering, then
+        // deep-merge over schema defaults so nested objects merge instead of
+        // clobbering each other.
+        const defaults = getDefaultFieldValue(typeSchema);
+        const normalized = normalizePresetData(
+          typeSchema,
+          prefill,
+          collectionTypes
+        );
+        Object.assign(newValue, deepMerge(defaults, normalized));
+      } else if (newType in cachedValues) {
         // When swapping to a previously selected type, reset to the previous
         // value.
-        const cachedValue = cachedValues[newType];
-        Object.assign(newValue, cachedValue);
-      } else if (newType in typesMap) {
-        const defaultValue = getDefaultFieldValue(typesMap[newType]);
-        Object.assign(newValue, defaultValue);
+        Object.assign(newValue, cachedValues[newType]);
+      } else if (typeSchema) {
+        Object.assign(newValue, getDefaultFieldValue(typeSchema));
       }
     }
     newValue._type = newType;
 
     await draft.updateKey(props.deepKey, newValue);
     setType(newType);
+  }
+
+  async function onTypeChange(newType: string) {
+    await applyType(newType);
   }
 
   useDraftDocField(props.deepKey, (newValue: any) => {
@@ -1740,6 +1773,81 @@ DocEditor.OneOfField = (props: FieldProps) => {
     if (target && target.select) {
       target.select();
     }
+  }
+
+  function buildPickerOptions(): ComponentPickerOption[] {
+    const options: ComponentPickerOption[] = [];
+    orderedSchemas.forEach((s) => {
+      options.push({key: `${s.name}::__blank__`, schema: s});
+      (s.presets || []).forEach((preset) => {
+        options.push({
+          key: `${s.name}::${preset.id}`,
+          schema: s,
+          preset,
+        });
+      });
+    });
+    return options;
+  }
+
+  function openPicker() {
+    componentPickerModal.open({
+      options: buildPickerOptions(),
+      onSelect: async (opt) => {
+        await applyType(opt.schema.name, opt.preset?.data);
+        componentPickerModal.close();
+      },
+      // Only allow removal when a component is currently selected.
+      onRemove: selectedType
+        ? async () => {
+            await applyType('');
+            componentPickerModal.close();
+          }
+        : undefined,
+    });
+  }
+
+  const fieldsBlock = selectedType && (
+    <div className="DocEditor__OneOfField__fields">
+      {selectedType.fields.map((subField) => (
+        <DocEditor.Field
+          key={`${type}::${subField.id}`}
+          field={subField}
+          deepKey={`${props.deepKey}.${subField.id!}`}
+          onBlur={() => {
+            requestHighlightNode(null);
+          }}
+          onFocus={() => {
+            requestHighlightNode(`${props.deepKey}.${subField.id!}`, {
+              scroll: true,
+            });
+          }}
+        />
+      ))}
+    </div>
+  );
+
+  if (variant === 'picker') {
+    const buttonLabel = selectedType
+      ? selectedType.label || selectedType.name
+      : field.placeholder || 'Select type';
+    return (
+      <div className="DocEditor__OneOfField DocEditor__OneOfField--picker">
+        <div className="DocEditor__OneOfField__pickerButton">
+          <div className="DocEditor__OneOfField__select__label">Type:</div>
+          <Button
+            variant="default"
+            color="dark"
+            size="xs"
+            onClick={openPicker}
+            rightIcon={<IconChevronDown size={16} />}
+          >
+            {buttonLabel}
+          </Button>
+        </div>
+        {fieldsBlock}
+      </div>
+    );
   }
 
   return (
@@ -1759,25 +1867,7 @@ DocEditor.OneOfField = (props: FieldProps) => {
           dropdownComponent="div"
         />
       </div>
-      {selectedType && (
-        <div className="DocEditor__OneOfField__fields">
-          {selectedType.fields.map((field) => (
-            <DocEditor.Field
-              key={`${type}::${field.id}`}
-              field={field}
-              deepKey={`${props.deepKey}.${field.id!}`}
-              onBlur={() => {
-                requestHighlightNode(null);
-              }}
-              onFocus={() => {
-                requestHighlightNode(`${props.deepKey}.${field.id!}`, {
-                  scroll: true,
-                });
-              }}
-            />
-          ))}
-        </div>
-      )}
+      {fieldsBlock}
     </div>
   );
 };

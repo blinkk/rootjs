@@ -92,6 +92,7 @@ export interface ButtonFields {
   href?: string;
 }
 
+/** Generated from `/blocks/ButtonsBlock/ButtonsBlock.schema.ts`. */
 export interface ButtonsBlockFields {
   /** Block Options */
   options?: string[];
@@ -108,6 +109,7 @@ export interface ButtonsBlockFields {
   }[];
 }
 
+/** Generated from `/blocks/CodeBlock/CodeBlock.schema.ts`. */
 export interface CodeBlockFields {
   /** ID. Used for deep linking, tracking, etc. */
   id?: string;
@@ -119,6 +121,7 @@ export interface CodeBlockFields {
   code?: string;
 }
 
+/** Generated from `/blocks/CopyBlock/CopyBlock.schema.ts`. */
 export interface CopyBlockFields {
   /** ID. Used for deep linking, tracking, etc. */
   id?: string;
@@ -189,6 +192,7 @@ export interface GuideFields {
 /** Generated from `/collections/Guide.schema.ts`. */
 export type GuideDoc = RootCMSDoc<GuideFields>;
 
+/** Generated from `/blocks/ImageBlock/ImageBlock.schema.ts`. */
 export interface ImageBlockFields {
   /** ID. Used for deep linking, tracking, etc. */
   id?: string;

@@ -220,3 +220,36 @@ export function sortObjectKeysDeep<T>(data: T): T {
 export function stableJsonStringify(data: unknown, space = 2): string {
   return JSON.stringify(sortObjectKeysDeep(data), null, space);
 }
+
+/**
+ * Returns true if `value` is an array-map (an object containing an `_array`
+ * field listing string keys for ordered child entries). The array-map shape is
+ * used by the CMS to persist ordered arrays of objects in Firestore.
+ */
+function isArrayMap(value: any): boolean {
+  return isObject(value) && Array.isArray((value as any)._array);
+}
+
+/**
+ * Recursively merges plain objects. `source` values override `target` values.
+ * Arrays and primitives are replaced wholesale (no array concatenation).
+ * Array-maps (`{_array: [...]}`) are also replaced wholesale to avoid
+ * corrupting the ordering. `undefined` source values are skipped; `null`
+ * overrides.
+ */
+export function deepMerge<T extends Record<string, any>>(
+  target: T,
+  source: Partial<T>
+): T {
+  const result: Record<string, any> = {...target};
+  for (const key in source) {
+    const sv = source[key];
+    const tv = result[key];
+    if (isObject(sv) && isObject(tv) && !isArrayMap(sv) && !isArrayMap(tv)) {
+      result[key] = deepMerge(tv, sv as any);
+    } else if (sv !== undefined) {
+      result[key] = sv;
+    }
+  }
+  return result as T;
+}
