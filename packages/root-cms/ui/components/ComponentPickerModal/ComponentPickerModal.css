@@ -166,3 +166,7 @@
   display: flex;
   justify-content: flex-start;
 }
+
+.ComponentPickerModal__controls__layout .mantine-SegmentedControl-label {
+  display: flex;
+}
