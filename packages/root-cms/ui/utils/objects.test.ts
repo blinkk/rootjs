@@ -152,4 +152,16 @@ describe('deepMerge', () => {
     expect(target).toEqual({a: {x: 1}});
     expect(source).toEqual({a: {y: 2}});
   });
+
+  it('replaces array-maps wholesale instead of merging them', () => {
+    const target: Record<string, any> = {
+      items: {_array: ['a'], a: {title: 'old'}},
+    };
+    const source: Record<string, any> = {
+      items: {_array: ['b', 'c'], b: {title: 'new1'}, c: {title: 'new2'}},
+    };
+    expect(deepMerge(target, source)).toEqual({
+      items: {_array: ['b', 'c'], b: {title: 'new1'}, c: {title: 'new2'}},
+    });
+  });
 });

@@ -80,7 +80,7 @@ import {
   testPublishingLocked,
 } from '../../utils/doc.js';
 import {extractField} from '../../utils/extract.js';
-import {getDefaultFieldValue} from '../../utils/fields.js';
+import {getDefaultFieldValue, normalizePresetData} from '../../utils/fields.js';
 import {requestHighlightNode} from '../../utils/iframe-preview.js';
 import {deepMerge} from '../../utils/objects.js';
 import {testCanPublish} from '../../utils/permissions.js';
@@ -1728,19 +1728,25 @@ DocEditor.OneOfField = (props: FieldProps) => {
   async function applyType(newType: string, prefill?: Record<string, any>) {
     const newValue: any = {};
     if (newType) {
-      if (prefill) {
-        // Preset path: deep-merge prefill over schema defaults so nested
-        // objects merge instead of clobbering each other.
-        const defaults = typesMap[newType]
-          ? getDefaultFieldValue(typesMap[newType])
-          : {};
-        Object.assign(newValue, deepMerge(defaults, prefill));
+      const typeSchema = typesMap[newType];
+      if (prefill && typeSchema) {
+        // Preset path: normalize prefill so any plain `[]` arrays in the
+        // preset's data become array-maps for proper CMS rendering, then
+        // deep-merge over schema defaults so nested objects merge instead of
+        // clobbering each other.
+        const defaults = getDefaultFieldValue(typeSchema);
+        const normalized = normalizePresetData(
+          typeSchema,
+          prefill,
+          collectionTypes
+        );
+        Object.assign(newValue, deepMerge(defaults, normalized));
       } else if (newType in cachedValues) {
         // When swapping to a previously selected type, reset to the previous
         // value.
         Object.assign(newValue, cachedValues[newType]);
-      } else if (newType in typesMap) {
-        Object.assign(newValue, getDefaultFieldValue(typesMap[newType]));
+      } else if (typeSchema) {
+        Object.assign(newValue, getDefaultFieldValue(typeSchema));
       }
     }
     newValue._type = newType;

@@ -358,9 +358,6 @@ export interface SchemaPreset {
    * Field values to prefill. Deep-merged into the schema's default value
    * (preset values override defaults). `_type` is set automatically. The
    * preset id is NOT persisted — presets are purely a prefill mechanism.
-   *
-   * For `array` fields, use the array-map shape
-   * `{_array: ['k1'], k1: {...}}` so the array UI renders correctly.
    */
   data?: Record<string, any>;
 }
@@ -425,6 +422,30 @@ export function defineSchema(schema: Schema): Schema {
 
 /** Defines the schema for a collection or reusable component. */
 export const define = defineSchema;
+
+/**
+ * Defines a preset for use within `schema.define({presets: [...]})`. The
+ * optional generic parameter `T` constrains the shape of the preset's `data`
+ * field. Pass an auto-generated fields type to enable type-safety:
+ *
+ * ```ts
+ * import type {HeroFields} from './generated/types.d.ts';
+ *
+ * schema.definePreset<HeroFields>({
+ *   id: 'big',
+ *   label: 'Big hero',
+ *   data: {title: 'Welcome'},
+ * });
+ * ```
+ */
+export function definePreset<T = any>(
+  preset: Omit<SchemaPreset, 'data'> & {data?: T}
+): SchemaPreset {
+  return preset as SchemaPreset;
+}
+
+/** Alias for {@link definePreset}. */
+export const preset = definePreset;
 
 export type Collection = SchemaWithTypes & {
   /**

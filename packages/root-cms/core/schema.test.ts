@@ -578,3 +578,49 @@ test('schema.define accepts image and presets', () => {
   expect(Hero.presets![0].data?.cta?.text).toBe('Get started');
   expect(Hero.presets![1].id).toBe('small');
 });
+
+test('definePreset returns the preset object', () => {
+  const preset = schema.definePreset({
+    id: 'hero',
+    label: 'Hero',
+    data: {title: 'Welcome'},
+  });
+  expect(preset.id).toBe('hero');
+  expect(preset.label).toBe('Hero');
+  expect(preset.data?.title).toBe('Welcome');
+});
+
+test('preset is an alias for definePreset', () => {
+  expect(schema.preset).toBe(schema.definePreset);
+});
+
+test('definePreset accepts a generic type for data', () => {
+  interface HeroFields {
+    title?: string;
+    subtitle?: string;
+  }
+  const preset = schema.definePreset<HeroFields>({
+    id: 'hero',
+    data: {title: 'Welcome', subtitle: 'Hi'},
+  });
+  expect(preset.data?.title).toBe('Welcome');
+  expect(preset.data?.subtitle).toBe('Hi');
+});
+
+test('definePreset can be used inside schema.define presets array', () => {
+  const Hero = schema.define({
+    name: 'Hero',
+    presets: [
+      schema.definePreset({
+        id: 'big',
+        label: 'Big',
+        data: {title: 'Welcome'},
+      }),
+      schema.preset({id: 'small', data: {title: 'Hi'}}),
+    ],
+    fields: [schema.string({id: 'title'})],
+  });
+  expect(Hero.presets).toHaveLength(2);
+  expect(Hero.presets![0].id).toBe('big');
+  expect(Hero.presets![1].id).toBe('small');
+});
