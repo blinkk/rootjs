@@ -1,0 +1,53 @@
+.SearchBar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 240px;
+  height: 32px;
+  padding: 0 8px 0 12px;
+  background: var(--surface-background, #fff);
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  cursor: pointer;
+  font-family: inherit;
+  color: var(--color-text-gray, #6b7280);
+  transition: background-color 0.18s ease, border-color 0.18s ease;
+}
+
+.SearchBar:hover {
+  background-color: var(--button-background-hover);
+}
+
+.SearchBar:focus-visible {
+  outline: 2px solid var(--mantine-color-blue-5, #339af0);
+  outline-offset: 2px;
+}
+
+.SearchBar__icon {
+  flex: 0 0 auto;
+  color: var(--color-text-gray, #6b7280);
+}
+
+.SearchBar__placeholder {
+  flex: 1 1 auto;
+  text-align: left;
+  font-size: 14px;
+  line-height: 1;
+  color: var(--color-text-gray, #6b7280);
+}
+
+.SearchBar__shortcut {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 22px;
+  padding: 0 8px;
+  font-family: var(--font-family-mono);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--color-text-gray, #6b7280);
+  background: var(--chip-background, #efefef);
+  border-radius: 6px;
+  white-space: nowrap;
+}
