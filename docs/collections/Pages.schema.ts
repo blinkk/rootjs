@@ -50,6 +50,7 @@ export default schema.collection({
           help: 'Compose the page by adding one or more modules.',
           of: schema.oneOf({
             types: schema.glob('/templates/*/*.schema.ts'),
+            variant: 'picker',
           }),
           preview: [
             'm{_index:02}: {description} (#{id})',

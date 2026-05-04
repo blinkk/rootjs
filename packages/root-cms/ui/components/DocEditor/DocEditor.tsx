@@ -1826,22 +1826,11 @@ DocEditor.OneOfField = (props: FieldProps) => {
             variant="default"
             color="dark"
             size="xs"
-            radius={0}
             onClick={openPicker}
+            rightIcon={<IconChevronDown size={16} />}
           >
             {buttonLabel}
           </Button>
-          {selectedType && (
-            <Button
-              variant="subtle"
-              color="gray"
-              size="xs"
-              compact
-              onClick={() => onTypeChange('')}
-            >
-              Clear
-            </Button>
-          )}
         </div>
         {fieldsBlock}
       </div>
