@@ -7,7 +7,7 @@
   padding: 0 8px 0 12px;
   background: var(--surface-background, #fff);
   border: 1px solid var(--color-border);
-  border-radius: 8px;
+  border-radius: 4px;
   cursor: pointer;
   font-family: inherit;
   color: var(--color-text-gray, #6b7280);

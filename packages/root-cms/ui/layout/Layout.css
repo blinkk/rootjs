@@ -52,6 +52,7 @@
 
 .Layout__top__search {
   margin-left: auto;
+  padding-right: 8px;
 }
 
 .Layout__top__logo:hover {
