@@ -31,6 +31,9 @@ import {getSessionCookieSecret} from '../utils/rand.js';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 type RenderModule = typeof import('../render/render.js');
+const DEV_SERVER_404_LOG_IGNORE_PATHS = new Set([
+  '/.well-known/appspecific/com.chrome.devtools.json',
+]);
 
 export interface DevOptions {
   host?: string;
@@ -320,7 +323,9 @@ function rootDevServerMiddleware() {
 
 function rootDevServer404Middleware() {
   return async (req: Request, res: Response) => {
-    console.error(`❓ 404 ${req.originalUrl}`);
+    if (!DEV_SERVER_404_LOG_IGNORE_PATHS.has(req.path)) {
+      console.error(`❓ 404 ${req.originalUrl}`);
+    }
     if (req.renderer) {
       const url = req.path;
       const ext = path.extname(url);
