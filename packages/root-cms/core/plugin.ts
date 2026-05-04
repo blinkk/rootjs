@@ -27,6 +27,7 @@ import {SSEEvent, SSESchemaChangedEvent} from '../shared/sse.js';
 import {type RootAiModel} from './ai.js';
 import {api} from './api.js';
 import {type CMSCheck} from './checks.js';
+import {type CMSNotificationService} from './services-notifications.js';
 import {type CMSTranslationService} from './translations.js';
 import {Action, RootCMSClient} from './client.js';
 import {sse, SSEBroadcastFn} from './sse.js';
@@ -39,6 +40,12 @@ export type {
 } from './checks.js';
 export {translationsCheck} from './checks-translations.js';
 export type {TranslationsCheckOptions} from './checks-translations.js';
+export type {CMSService, CMSServiceContext} from './services.js';
+export type {
+  CMSNotificationService,
+  NotificationResult,
+  NotificationServiceContext,
+} from './services-notifications.js';
 export type {
   CMSTranslationService,
   TranslationExportResult,
@@ -329,6 +336,30 @@ export type CMSPluginOptions = {
    * ```
    */
   translations?: CMSTranslationService[];
+
+  /**
+   * Notification services that react to CMS actions and dispatch them to
+   * external channels (email, Slack, webhooks, etc.). Each service defines
+   * an optional server-side `onAction` handler.
+   *
+   * Example:
+   * ```ts
+   * cmsPlugin({
+   *   notifications: [
+   *     {
+   *       id: 'sendgrid',
+   *       label: 'SendGrid',
+   *       onAction: async (ctx, action) => {
+   *         if (action.action === 'doc.publish') {
+   *           await sendgrid.send({ ... });
+   *         }
+   *       },
+   *     },
+   *   ],
+   * });
+   * ```
+   */
+  notifications?: CMSNotificationService[];
 };
 
 export type CMSPlugin = Plugin & {
