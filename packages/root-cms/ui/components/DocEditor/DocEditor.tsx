@@ -1830,7 +1830,7 @@ DocEditor.OneOfField = (props: FieldProps) => {
   if (variant === 'picker') {
     const buttonLabel = selectedType
       ? selectedType.label || selectedType.name
-      : field.placeholder || 'Select component';
+      : field.placeholder || 'Select type';
     return (
       <div className="DocEditor__OneOfField DocEditor__OneOfField--picker">
         <div className="DocEditor__OneOfField__pickerButton">
