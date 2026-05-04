@@ -1,14 +1,30 @@
 import './ComponentPickerModal.css';
 
-import {Button, Image, TextInput} from '@mantine/core';
+import {Button, Image, SegmentedControl, TextInput} from '@mantine/core';
 import {ContextModalProps, useModals} from '@mantine/modals';
-import {IconSearch, IconTrash} from '@tabler/icons-preact';
-import {useMemo, useState} from 'preact/hooks';
+import {
+  IconLayoutGrid,
+  IconLayoutList,
+  IconSearch,
+  IconTrash,
+} from '@tabler/icons-preact';
+import {
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'preact/hooks';
 
 import * as schema from '../../../core/schema.js';
+import {useLocalStorage} from '../../hooks/useLocalStorage.js';
 import {useModalTheme} from '../../hooks/useModalTheme.js';
 
 const MODAL_ID = 'ComponentPickerModal';
+const LAYOUT_STORAGE_KEY = 'root::ComponentPickerModal:layout';
+const GRID_COLUMNS = 3;
+
+export type ComponentPickerLayout = 'list' | 'grid';
 
 export interface ComponentPickerOption {
   /** Stable key for reconciliation. */
@@ -60,6 +76,13 @@ export function ComponentPickerModal(
 ) {
   const {innerProps: props} = modalProps;
   const [searchQuery, setSearchQuery] = useState('');
+  const [layout, setLayout] = useLocalStorage<ComponentPickerLayout>(
+    LAYOUT_STORAGE_KEY,
+    'list'
+  );
+  const [focusedIndex, setFocusedIndex] = useState(0);
+  const searchInputRef = useRef<HTMLInputElement | null>(null);
+  const cardsContainerRef = useRef<HTMLDivElement | null>(null);
 
   const filtered = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
@@ -82,19 +105,110 @@ export function ComponentPickerModal(
     });
   }, [props.options, searchQuery]);
 
+  // Reset focus to the first card whenever the filtered list changes.
+  useEffect(() => {
+    setFocusedIndex(filtered.length > 0 ? 0 : -1);
+  }, [filtered]);
+
+  // Imperatively focus the search input on mount. Mantine modals can swallow
+  // the native `autoFocus` prop depending on portal/overlay timing.
+  useLayoutEffect(() => {
+    const input = searchInputRef.current;
+    if (input) {
+      input.focus();
+    }
+  }, []);
+
+  // Scroll the focused card into view as the user navigates with the keyboard.
+  useEffect(() => {
+    if (focusedIndex < 0 || !cardsContainerRef.current) {
+      return;
+    }
+    const cards = cardsContainerRef.current.querySelectorAll<HTMLElement>(
+      '.ComponentPickerModal__Card'
+    );
+    cards[focusedIndex]?.scrollIntoView({block: 'nearest'});
+  }, [focusedIndex]);
+
+  function handleKeyDown(e: KeyboardEvent) {
+    if (filtered.length === 0) {
+      return;
+    }
+    const cols = layout === 'grid' ? GRID_COLUMNS : 1;
+    const last = filtered.length - 1;
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      setFocusedIndex((i) => Math.min(last, Math.max(0, i) + cols));
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      setFocusedIndex((i) => Math.max(0, i - cols));
+    } else if (e.key === 'ArrowRight' && layout === 'grid') {
+      e.preventDefault();
+      setFocusedIndex((i) => Math.min(last, Math.max(0, i) + 1));
+    } else if (e.key === 'ArrowLeft' && layout === 'grid') {
+      e.preventDefault();
+      setFocusedIndex((i) => Math.max(0, i - 1));
+    } else if (e.key === 'Enter' && focusedIndex >= 0) {
+      const opt = filtered[focusedIndex];
+      if (opt) {
+        e.preventDefault();
+        props.onSelect(opt);
+      }
+    }
+  }
+
   const showRemoveButton = !!props.onRemove && !searchQuery.trim();
+  const layoutClass =
+    layout === 'grid'
+      ? 'ComponentPickerModal--grid'
+      : 'ComponentPickerModal--list';
 
   return (
-    <div className="ComponentPickerModal">
+    <div
+      className={`ComponentPickerModal ${layoutClass}`}
+      onKeyDown={handleKeyDown}
+    >
       <div className="ComponentPickerModal__controls">
         <TextInput
+          ref={searchInputRef}
           placeholder={props.searchPlaceholder || 'Search components...'}
           value={searchQuery}
           onChange={(e: any) => setSearchQuery(e.target.value)}
           icon={<IconSearch size={16} />}
           size="xs"
-          autoFocus
           className="ComponentPickerModal__controls__search"
+        />
+        <SegmentedControl
+          className="ComponentPickerModal__controls__layout"
+          size="xs"
+          value={layout}
+          onChange={(value: ComponentPickerLayout) => setLayout(value)}
+          data={[
+            {
+              value: 'list',
+              label: (
+                <span
+                  className="ComponentPickerModal__controls__layout__option"
+                  aria-label="List layout"
+                  title="List layout"
+                >
+                  <IconLayoutList size={14} />
+                </span>
+              ),
+            },
+            {
+              value: 'grid',
+              label: (
+                <span
+                  className="ComponentPickerModal__controls__layout__option"
+                  aria-label="Grid layout"
+                  title="Grid layout"
+                >
+                  <IconLayoutGrid size={14} />
+                </span>
+              ),
+            },
+          ]}
         />
       </div>
       {filtered.length === 0 ? (
@@ -104,11 +218,14 @@ export function ComponentPickerModal(
             : 'No components match your search.'}
         </div>
       ) : (
-        <div className="ComponentPickerModal__cards">
-          {filtered.map((opt) => (
+        <div className="ComponentPickerModal__cards" ref={cardsContainerRef}>
+          {filtered.map((opt, i) => (
             <ComponentPickerModal.Card
               key={opt.key}
               option={opt}
+              layout={layout}
+              focused={i === focusedIndex}
+              onMouseEnter={() => setFocusedIndex(i)}
               onSelect={() => props.onSelect(opt)}
             />
           ))}
@@ -133,7 +250,10 @@ export function ComponentPickerModal(
 
 ComponentPickerModal.Card = (props: {
   option: ComponentPickerOption;
+  layout: ComponentPickerLayout;
+  focused?: boolean;
   onSelect: () => void;
+  onMouseEnter?: () => void;
 }) => {
   const {schema: s, preset} = props.option;
   const title = preset?.label || preset?.id || s.label || s.name;
@@ -143,17 +263,29 @@ ComponentPickerModal.Card = (props: {
   // editor can tell which component the preset belongs to.
   const subtitle = preset ? s.label || s.name : '';
 
+  const dim = props.layout === 'grid' ? 180 : 120;
+  const imgWidth = dim;
+  const imgHeight = props.layout === 'grid' ? 120 : 90;
+
+  const className = [
+    'ComponentPickerModal__Card',
+    props.focused ? 'ComponentPickerModal__Card--focused' : '',
+  ]
+    .filter(Boolean)
+    .join(' ');
+
   return (
     <button
       type="button"
-      className="ComponentPickerModal__Card"
+      className={className}
       onClick={props.onSelect}
+      onMouseEnter={props.onMouseEnter}
     >
       <div className="ComponentPickerModal__Card__image">
         <Image
           src={image}
-          width={120}
-          height={90}
+          width={imgWidth}
+          height={imgHeight}
           withPlaceholder={!image}
           alt={title}
         />
