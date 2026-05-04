@@ -8,13 +8,7 @@ import {
   IconSearch,
   IconTrash,
 } from '@tabler/icons-preact';
-import {
-  useEffect,
-  useLayoutEffect,
-  useMemo,
-  useRef,
-  useState,
-} from 'preact/hooks';
+import {useEffect, useMemo, useRef, useState} from 'preact/hooks';
 
 import * as schema from '../../../core/schema.js';
 import {useLocalStorage} from '../../hooks/useLocalStorage.js';
@@ -81,7 +75,6 @@ export function ComponentPickerModal(
     'list'
   );
   const [focusedIndex, setFocusedIndex] = useState(0);
-  const searchInputRef = useRef<HTMLInputElement | null>(null);
   const cardsContainerRef = useRef<HTMLDivElement | null>(null);
 
   const filtered = useMemo(() => {
@@ -109,15 +102,6 @@ export function ComponentPickerModal(
   useEffect(() => {
     setFocusedIndex(filtered.length > 0 ? 0 : -1);
   }, [filtered]);
-
-  // Imperatively focus the search input on mount. Mantine modals can swallow
-  // the native `autoFocus` prop depending on portal/overlay timing.
-  useLayoutEffect(() => {
-    const input = searchInputRef.current;
-    if (input) {
-      input.focus();
-    }
-  }, []);
 
   // Scroll the focused card into view as the user navigates with the keyboard.
   useEffect(() => {
@@ -170,7 +154,10 @@ export function ComponentPickerModal(
     >
       <div className="ComponentPickerModal__controls">
         <TextInput
-          ref={searchInputRef}
+          // `data-autofocus` cooperates with Mantine's modal focus trap, which
+          // runs in setTimeout(0) and would otherwise override any imperative
+          // focus call we made on mount.
+          data-autofocus
           placeholder={props.searchPlaceholder || 'Search components...'}
           value={searchQuery}
           onChange={(e: any) => setSearchQuery(e.target.value)}
