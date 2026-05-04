@@ -2,15 +2,21 @@
   "$schema": "https://unpkg.com/@changesets/config@2.1.1/schema.json",
   "changelog": "@changesets/cli/changelog",
   "commit": false,
-  "fixed": [[
-    "@blinkk/create-root",
-    "@blinkk/root",
-    "@blinkk/root-cms",
-    "@blinkk/root-password-protect"
-  ]],
+  "fixed": [
+    [
+      "@blinkk/create-root",
+      "@blinkk/root",
+      "@blinkk/root-cms",
+      "@blinkk/root-password-protect",
+      "@blinkk/root-tailwind"
+    ]
+  ],
   "linked": [],
   "access": "public",
   "baseBranch": "main",
   "updateInternalDependencies": "patch",
-  "ignore": ["@examples/*", "@private/*"]
+  "ignore": [
+    "@examples/*",
+    "@private/*"
+  ]
 }
