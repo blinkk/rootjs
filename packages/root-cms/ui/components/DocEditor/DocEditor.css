@@ -444,6 +444,17 @@
   gap: 24px;
 }
 
+.DocEditor__OneOfField--picker .DocEditor__OneOfField__pickerButton {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.DocEditor__OneOfField__pickerButton .mantine-Button-root {
+  font-weight: 500;
+}
+
 .DocEditor__DateTimeField input {
   display: block;
   width: 100%;

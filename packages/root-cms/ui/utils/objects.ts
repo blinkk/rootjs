@@ -220,3 +220,25 @@ export function sortObjectKeysDeep<T>(data: T): T {
 export function stableJsonStringify(data: unknown, space = 2): string {
   return JSON.stringify(sortObjectKeysDeep(data), null, space);
 }
+
+/**
+ * Recursively merges plain objects. `source` values override `target` values.
+ * Arrays and primitives are replaced wholesale (no array concatenation).
+ * `undefined` source values are skipped; `null` overrides.
+ */
+export function deepMerge<T extends Record<string, any>>(
+  target: T,
+  source: Partial<T>
+): T {
+  const result: Record<string, any> = {...target};
+  for (const key in source) {
+    const sv = source[key];
+    const tv = result[key];
+    if (isObject(sv) && isObject(tv)) {
+      result[key] = deepMerge(tv, sv as any);
+    } else if (sv !== undefined) {
+      result[key] = sv;
+    }
+  }
+  return result as T;
+}

@@ -246,6 +246,13 @@ export interface SchemaPattern {
 export type OneOfField = CommonFieldProps & {
   type: 'oneof';
   /**
+   * UI variant for the oneOf field.
+   * - `dropdown` (default): A `Select` dropdown for choosing the type.
+   * - `picker`: A `Button` that opens a modal with searchable cards. Use this
+   *   variant when types declare presets or thumbnail images.
+   */
+  variant?: 'dropdown' | 'picker';
+  /**
    * Schema types to include in the oneOf field. Can be:
    * - An array of Schema objects
    * - An array of string names (resolved at runtime)
@@ -338,6 +345,26 @@ export type ObjectLikeField =
   | OneOfField
   | ReferenceField;
 
+export interface SchemaPreset {
+  /** Unique identifier for the preset within the schema. */
+  id: string;
+  /** Display title for the preset. Defaults to the preset id. */
+  label?: string;
+  /** Description shown below the title in the picker. */
+  description?: string;
+  /** Thumbnail image (URL or absolute /-path) for the picker. */
+  image?: string;
+  /**
+   * Field values to prefill. Deep-merged into the schema's default value
+   * (preset values override defaults). `_type` is set automatically. The
+   * preset id is NOT persisted — presets are purely a prefill mechanism.
+   *
+   * For `array` fields, use the array-map shape
+   * `{_array: ['k1'], k1: {...}}` so the array UI renders correctly.
+   */
+  data?: Record<string, any>;
+}
+
 export interface Schema {
   /** The name of the content type. Used as the field key. */
   name: string;
@@ -345,6 +372,19 @@ export interface Schema {
   label?: string;
   /** The description of the content type. Appears in CMS menus. */
   description?: string;
+  /**
+   * Optional thumbnail image (URL or absolute /-path) used to represent this
+   * schema in the picker UI for `oneof` fields with `variant: 'picker'`.
+   */
+  image?: string;
+  /**
+   * Optional preset prefill configurations for use in the picker UI.
+   *
+   * Each preset appears in the picker as a separate selectable card alongside
+   * the schema's "blank" card. Selecting a preset sets `_type` to the schema's
+   * `name` and merges `data` over the schema's default field values.
+   */
+  presets?: SchemaPreset[];
   /** Fields describe the structure of the content. */
   fields: FieldWithId[];
   /** Defines the preview displayed within the CMS UI. Overrides the `preview` definition for the `array` field. */

@@ -521,3 +521,60 @@ test('glob can be used for self-referencing container schemas', () => {
   expect(pattern._schemaPattern).toBe(true);
   expect(pattern.pattern).toBe('/templates/*/*.schema.ts');
 });
+
+test('oneOf accepts variant: picker', () => {
+  const field = schema.oneOf({
+    id: 'asset',
+    variant: 'picker',
+    types: [],
+  });
+  expect(field.type).toBe('oneof');
+  expect(field.variant).toBe('picker');
+});
+
+test('oneOf without variant defaults to undefined (dropdown)', () => {
+  const field = schema.oneOf({id: 'asset', types: []});
+  expect(field.variant).toBeUndefined();
+});
+
+test('schema.define accepts image and presets', () => {
+  const Hero = schema.define({
+    name: 'Hero',
+    label: 'Hero block',
+    description: 'A page hero',
+    image: '/thumbnails/hero.png',
+    presets: [
+      {
+        id: 'big',
+        label: 'Big hero',
+        description: 'Full-bleed hero with overlay',
+        image: '/thumbnails/hero-big.png',
+        data: {
+          title: 'Welcome',
+          cta: {text: 'Get started'},
+        },
+      },
+      {
+        id: 'small',
+        label: 'Compact hero',
+        data: {title: 'Hi'},
+      },
+    ],
+    fields: [
+      schema.string({id: 'title'}),
+      schema.object({
+        id: 'cta',
+        fields: [schema.string({id: 'text'}), schema.string({id: 'href'})],
+      }),
+    ],
+  });
+
+  expect(Hero.image).toBe('/thumbnails/hero.png');
+  expect(Hero.presets).toHaveLength(2);
+  expect(Hero.presets![0].id).toBe('big');
+  expect(Hero.presets![0].label).toBe('Big hero');
+  expect(Hero.presets![0].image).toBe('/thumbnails/hero-big.png');
+  expect(Hero.presets![0].data?.title).toBe('Welcome');
+  expect(Hero.presets![0].data?.cta?.text).toBe('Get started');
+  expect(Hero.presets![1].id).toBe('small');
+});
