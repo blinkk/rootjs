@@ -38,10 +38,11 @@ export interface ComponentPickerModalProps {
   /** Invoked when the user clicks a card. The caller is responsible for closing. */
   onSelect: (option: ComponentPickerOption) => void;
   /**
-   * Optional handler invoked when the user clicks the "Remove component"
-   * button in the footer. When omitted, the button is not rendered. The
-   * button is also hidden while the user has an active search query. The
-   * caller is responsible for closing the modal.
+   * Optional handler invoked when the user clicks the "Clear selection"
+   * button in the footer. When omitted, the button is not rendered, so
+   * callers should pass it only when there's an existing value to clear.
+   * The button is also hidden while the user has an active search query.
+   * The caller is responsible for closing the modal.
    */
   onRemove?: () => void;
 }
@@ -227,7 +228,7 @@ export function ComponentPickerModal(
             leftIcon={<IconTrash size={14} />}
             onClick={() => props.onRemove?.()}
           >
-            Remove component
+            Clear selection
           </Button>
         </div>
       )}
