@@ -1,8 +1,8 @@
 import './ComponentPickerModal.css';
 
-import {Image, TextInput} from '@mantine/core';
+import {Button, Image, TextInput} from '@mantine/core';
 import {ContextModalProps, useModals} from '@mantine/modals';
-import {IconSearch} from '@tabler/icons-preact';
+import {IconSearch, IconTrash} from '@tabler/icons-preact';
 import {useMemo, useState} from 'preact/hooks';
 
 import * as schema from '../../../core/schema.js';
@@ -27,6 +27,13 @@ export interface ComponentPickerModalProps {
   searchPlaceholder?: string;
   /** Invoked when the user clicks a card. The caller is responsible for closing. */
   onSelect: (option: ComponentPickerOption) => void;
+  /**
+   * Optional handler invoked when the user clicks the "Remove component"
+   * button in the footer. When omitted, the button is not rendered. The
+   * button is also hidden while the user has an active search query. The
+   * caller is responsible for closing the modal.
+   */
+  onRemove?: () => void;
 }
 
 export function useComponentPickerModal() {
@@ -75,6 +82,8 @@ export function ComponentPickerModal(
     });
   }, [props.options, searchQuery]);
 
+  const showRemoveButton = !!props.onRemove && !searchQuery.trim();
+
   return (
     <div className="ComponentPickerModal">
       <div className="ComponentPickerModal__controls">
@@ -103,6 +112,19 @@ export function ComponentPickerModal(
               onSelect={() => props.onSelect(opt)}
             />
           ))}
+        </div>
+      )}
+      {showRemoveButton && (
+        <div className="ComponentPickerModal__footer">
+          <Button
+            variant="subtle"
+            color="red"
+            size="xs"
+            leftIcon={<IconTrash size={14} />}
+            onClick={() => props.onRemove?.()}
+          >
+            Remove component
+          </Button>
         </div>
       )}
     </div>

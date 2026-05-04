@@ -97,3 +97,14 @@
   color: #999;
   font-size: 14px;
 }
+
+.ComponentPickerModal__footer {
+  position: sticky;
+  bottom: 0;
+  background: white;
+  border-top: 1px solid var(--color-border);
+  padding: 12px 0;
+  margin-top: 8px;
+  display: flex;
+  justify-content: flex-start;
+}

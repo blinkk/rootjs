@@ -1797,6 +1797,13 @@ DocEditor.OneOfField = (props: FieldProps) => {
         await applyType(opt.schema.name, opt.preset?.data);
         componentPickerModal.close();
       },
+      // Only allow removal when a component is currently selected.
+      onRemove: selectedType
+        ? async () => {
+            await applyType('');
+            componentPickerModal.close();
+          }
+        : undefined,
     });
   }
 
