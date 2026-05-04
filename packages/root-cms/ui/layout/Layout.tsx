@@ -24,6 +24,7 @@ import {useLocation} from 'preact-iso';
 import type {CMSBuiltInSidebarTool} from '../../core/plugin.js';
 import packageJson from '../../package.json' assert {type: 'json'};
 import {RootCMSLogo} from '../components/RootCMSLogo/RootCMSLogo.js';
+import {SearchBar} from '../components/SearchBar/SearchBar.js';
 import {joinClassNames} from '../utils/classes.js';
 import './Layout.css';
 
@@ -45,10 +46,23 @@ export function Layout(props: LayoutProps) {
   );
 }
 
+/**
+ * Returns true when the current URL is the document editor page
+ * (`/cms/content/:collection/:slug`), which has its own custom search and
+ * should therefore hide the global search bar.
+ */
+function isDocumentEditorUrl(url: string): boolean {
+  const path = url.split('?')[0].replace(/\/+$/g, '');
+  const parts = path.split('/').filter(Boolean);
+  return parts.length === 4 && parts[0] === 'cms' && parts[1] === 'content';
+}
+
 Layout.Top = () => {
   const rootConfig = window.__ROOT_CTX.rootConfig;
   const projectName = rootConfig.projectName || rootConfig.projectId;
   const minimalBranding = rootConfig.minimalBranding;
+  const {url} = useLocation();
+  const showSearchBar = !isDocumentEditorUrl(url);
   return (
     <div className="Layout__top">
       {!minimalBranding ? (
@@ -66,6 +80,11 @@ Layout.Top = () => {
           </a>
           <div className="Layout__top__version">v{packageJson.version}</div>
         </>
+      )}
+      {showSearchBar && (
+        <div className="Layout__top__search">
+          <SearchBar />
+        </div>
       )}
     </div>
   );
