@@ -345,7 +345,7 @@ export type ObjectLikeField =
   | OneOfField
   | ReferenceField;
 
-export interface SchemaPreset {
+export interface SchemaPreset<T = Record<string, any>> {
   /** Unique identifier for the preset within the schema. */
   id: string;
   /** Display title for the preset. Defaults to the preset id. */
@@ -358,8 +358,11 @@ export interface SchemaPreset {
    * Field values to prefill. Deep-merged into the schema's default value
    * (preset values override defaults). `_type` is set automatically. The
    * preset id is NOT persisted — presets are purely a prefill mechanism.
+   *
+   * Pass a generated fields type as the generic parameter `T` to
+   * type-check the keys against the schema's fields.
    */
-  data?: Record<string, any>;
+  data?: T;
 }
 
 export interface Schema {
@@ -381,7 +384,7 @@ export interface Schema {
    * the schema's "blank" card. Selecting a preset sets `_type` to the schema's
    * `name` and merges `data` over the schema's default field values.
    */
-  presets?: SchemaPreset[];
+  presets?: SchemaPreset<any>[];
   /** Fields describe the structure of the content. */
   fields: FieldWithId[];
   /** Defines the preview displayed within the CMS UI. Overrides the `preview` definition for the `array` field. */
@@ -438,10 +441,10 @@ export const define = defineSchema;
  * });
  * ```
  */
-export function definePreset<T = any>(
-  preset: Omit<SchemaPreset, 'data'> & {data?: T}
-): SchemaPreset {
-  return preset as SchemaPreset;
+export function definePreset<T = Record<string, any>>(
+  preset: SchemaPreset<T>
+): SchemaPreset<T> {
+  return preset;
 }
 
 /** Alias for {@link definePreset}. */

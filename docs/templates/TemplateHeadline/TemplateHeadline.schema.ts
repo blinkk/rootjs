@@ -3,9 +3,46 @@ import ButtonSchema from '@/components/Button/Button.schema.js';
 
 export default schema.define({
   name: 'TemplateHeadline',
+  label: 'Headline',
+  description: 'Title block with optional eyebrow, body and buttons.',
   preview: {
     title: ['m{_index:02}: {title}'],
   },
+  presets: [
+    schema.preset({
+      id: 'hero',
+      label: 'Hero headline',
+      description: 'Eyebrow, large title, body, and a primary CTA button.',
+      data: {
+        options: ['title:h1'],
+        eyebrow: 'Announcing',
+        title: 'A bold new headline',
+        buttons: [
+          {options: ['variant:primary'], label: 'Get started', href: '/start'},
+        ],
+      },
+    }),
+    schema.preset({
+      id: 'section',
+      label: 'Section heading',
+      description: 'Compact section title with supporting body copy.',
+      data: {
+        title: 'Section title',
+      },
+    }),
+    schema.preset({
+      id: 'cta',
+      label: 'CTA pair',
+      description: 'Title plus two buttons (primary and secondary).',
+      data: {
+        title: 'Ready to dive in?',
+        buttons: [
+          {options: ['variant:primary'], label: 'Get started', href: '/start'},
+          {options: ['variant:outline'], label: 'Learn more', href: '/docs'},
+        ],
+      },
+    }),
+  ],
   fields: [
     schema.string({
       id: 'id',
