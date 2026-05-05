@@ -298,7 +298,7 @@ async function docSet(input: {docId: string; fields: Record<string, any>}) {
       errors,
       hint:
         'The fields payload did not match the collection schema. Read the ' +
-        'doc with `doc.get` for an example of the expected shape, then retry ' +
+        'doc with `doc_get` for an example of the expected shape, then retry ' +
         'with a valid payload.',
     };
   }
@@ -336,7 +336,7 @@ async function docCreate(input: {docId: string; fields?: Record<string, any>}) {
       success: false,
       docId: input.docId,
       error: 'ALREADY_EXISTS',
-      hint: 'A doc with this id already exists. Use `doc.set` to overwrite.',
+      hint: 'A doc with this id already exists. Use `doc_set` to overwrite.',
     };
   }
 
@@ -408,7 +408,7 @@ async function docUpdateField(input: {
       errors,
       hint:
         'The value did not match the field schema. Inspect the doc with ' +
-        '`doc.get` to see the expected shape, then retry with a valid value.',
+        '`doc_get` to see the expected shape, then retry with a valid value.',
     };
   }
 
@@ -645,21 +645,21 @@ function simplifyFields(fields: any[]): any[] {
 // ---------------------------------------------------------------------------
 
 const HANDLERS: Record<string, (input: any) => Promise<unknown>> = {
-  'collections.list': collectionsList,
-  'docs.list': docsList,
-  'docs.search': docsSearch,
-  'doc.get': docGet,
-  'doc.get_version': docGetVersion,
-  'doc.set': docSet,
-  'doc.create': docCreate,
-  'doc.update_field': docUpdateField,
-  'doc.publish': docPublish,
-  'doc.delete': docDelete,
-  'doc.duplicate': docDuplicate,
-  'doc.revert_draft': docRevertDraft,
-  'doc.list_versions': docListVersions,
-  'doc.translate_field': docTranslateField,
-  'schema.get': schemaGet,
+  collections_list: collectionsList,
+  docs_list: docsList,
+  docs_search: docsSearch,
+  doc_get: docGet,
+  doc_getVersion: docGetVersion,
+  doc_set: docSet,
+  doc_create: docCreate,
+  doc_updateField: docUpdateField,
+  doc_publish: docPublish,
+  doc_delete: docDelete,
+  doc_duplicate: docDuplicate,
+  doc_revertDraft: docRevertDraft,
+  doc_listVersions: docListVersions,
+  doc_translateField: docTranslateField,
+  schema_get: schemaGet,
 };
 
 /**

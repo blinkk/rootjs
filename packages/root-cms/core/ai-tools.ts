@@ -27,21 +27,21 @@ import {validateFields, validateValue} from './validation.js';
 
 /** Tool ids handled client-side. Kept in sync with the schemas below. */
 export const CMS_TOOL_NAMES = [
-  'collections.list',
-  'docs.list',
-  'docs.search',
-  'doc.get',
-  'doc.get_version',
-  'doc.set',
-  'doc.create',
-  'doc.update_field',
-  'doc.publish',
-  'doc.delete',
-  'doc.duplicate',
-  'doc.revert_draft',
-  'doc.list_versions',
-  'doc.translate_field',
-  'schema.get',
+  'collections_list',
+  'docs_list',
+  'docs_search',
+  'doc_get',
+  'doc_getVersion',
+  'doc_set',
+  'doc_create',
+  'doc_updateField',
+  'doc_publish',
+  'doc_delete',
+  'doc_duplicate',
+  'doc_revertDraft',
+  'doc_listVersions',
+  'doc_translateField',
+  'schema_get',
 ] as const;
 export type CmsToolName = (typeof CMS_TOOL_NAMES)[number];
 
@@ -51,14 +51,14 @@ export type CmsToolName = (typeof CMS_TOOL_NAMES)[number];
  */
 export function createCmsTools(): ToolSet {
   return {
-    'collections.list': tool({
+    'collections_list': tool({
       description:
         'List all CMS collections defined in the project. Returns each ' +
         'collection id along with optional name/description metadata.',
       inputSchema: z.object({}),
     }),
 
-    'docs.list': tool({
+    'docs_list': tool({
       description:
         'List documents inside a CMS collection. Returns up to `limit` docs ' +
         '(default 25, max 100). Use this to explore content before reading ' +
@@ -75,7 +75,7 @@ export function createCmsTools(): ToolSet {
       }),
     }),
 
-    'docs.search': tool({
+    'docs_search': tool({
       description:
         'Run a full-text search across all indexed CMS docs. Returns the ' +
         'top matching doc ids ordered by relevance.',
@@ -85,7 +85,7 @@ export function createCmsTools(): ToolSet {
       }),
     }),
 
-    'doc.get': tool({
+    'doc_get': tool({
       description:
         'Read a single CMS document. Returns the doc fields plus system ' +
         'metadata. Use this when you need the full content of a doc.',
@@ -99,11 +99,11 @@ export function createCmsTools(): ToolSet {
       }),
     }),
 
-    'doc.get_version': tool({
+    'doc_getVersion': tool({
       description:
         'Read a specific version of a CMS document. Use versionId "draft" ' +
         'or "published" for the current draft/published state, or a numeric ' +
-        'timestamp for a historical version (from `doc.list_versions`).',
+        'timestamp for a historical version (from `doc_listVersions`).',
       inputSchema: z.object({
         docId: z
           .string()
@@ -118,13 +118,13 @@ export function createCmsTools(): ToolSet {
       }),
     }),
 
-    'doc.set': tool({
+    'doc_set': tool({
       description:
         'Replace the entire draft fields payload of a CMS document. Pass ' +
         'the full JSON object that should become the new draft contents — ' +
         'any fields omitted will be removed. The payload is validated ' +
         'against the collection schema and the call is rejected on ' +
-        'validation errors. Prefer `doc.update_field` for targeted edits. ' +
+        'validation errors. Prefer `doc_updateField` for targeted edits. ' +
         'Only writes the draft version; users must publish separately. ' +
         'Always confirm with the user before calling.',
       inputSchema: z.object({
@@ -141,7 +141,7 @@ export function createCmsTools(): ToolSet {
       }),
     }),
 
-    'doc.create': tool({
+    'doc_create': tool({
       description:
         'Create a new draft CMS document with the given slug. Fails if the ' +
         'doc already exists. Pass optional initial fields (validated against ' +
@@ -159,7 +159,7 @@ export function createCmsTools(): ToolSet {
       }),
     }),
 
-    'doc.update_field': tool({
+    'doc_updateField': tool({
       description:
         'Update a single field on a draft CMS document by JSON path. ' +
         'Use dotted paths (e.g. "hero.title") and array indices (e.g. ' +
@@ -175,7 +175,7 @@ export function createCmsTools(): ToolSet {
       }),
     }),
 
-    'doc.publish': tool({
+    'doc_publish': tool({
       description:
         'Publish a draft CMS document, making it live. This copies the ' +
         'current draft to the published version and saves a version ' +
@@ -189,7 +189,7 @@ export function createCmsTools(): ToolSet {
       }),
     }),
 
-    'doc.delete': tool({
+    'doc_delete': tool({
       description:
         'Delete a CMS document (draft, published, and scheduled versions). ' +
         'This is irreversible. Always confirm with the user before calling.',
@@ -202,7 +202,7 @@ export function createCmsTools(): ToolSet {
       }),
     }),
 
-    'doc.duplicate': tool({
+    'doc_duplicate': tool({
       description:
         'Duplicate an existing CMS document to a new slug. Copies all ' +
         'draft fields to the target doc id. Fails if the target already ' +
@@ -219,7 +219,7 @@ export function createCmsTools(): ToolSet {
       }),
     }),
 
-    'doc.revert_draft': tool({
+    'doc_revertDraft': tool({
       description:
         'Revert the draft of a CMS document back to its last published ' +
         'version. Discards all unpublished changes. Fails if the doc has ' +
@@ -233,11 +233,11 @@ export function createCmsTools(): ToolSet {
       }),
     }),
 
-    'doc.list_versions': tool({
+    'doc_listVersions': tool({
       description:
         'List version history for a CMS document. Returns versions ordered ' +
         'by most recent first. Use the versionId from the results with ' +
-        '`doc.get_version` to read a specific version.',
+        '`doc_getVersion` to read a specific version.',
       inputSchema: z.object({
         docId: z
           .string()
@@ -248,7 +248,7 @@ export function createCmsTools(): ToolSet {
       }),
     }),
 
-    'doc.translate_field': tool({
+    'doc_translateField': tool({
       description:
         'Translate a text value into one or more target locales using AI. ' +
         'Returns the translated strings keyed by locale. Use this to help ' +
@@ -270,7 +270,7 @@ export function createCmsTools(): ToolSet {
       }),
     }),
 
-    'schema.get': tool({
+    'schema_get': tool({
       description:
         'Get the field schema for a CMS collection. Returns the full field ' +
         'definitions including types, labels, and validation rules. Use this ' +
