@@ -14,7 +14,9 @@ import './AIPage.css';
 import {useChat} from '@ai-sdk/react';
 import {ActionIcon, Loader, Menu, Tooltip} from '@mantine/core';
 import {
+  IconCheck,
   IconChevronDown,
+  IconCopy,
   IconMessageCirclePlus,
   IconPaperclip,
   IconRobot,
@@ -28,7 +30,8 @@ import {
   DefaultChatTransport,
   lastAssistantMessageIsCompleteWithToolCalls,
 } from 'ai';
-import {useEffect, useMemo, useRef, useState} from 'preact/hooks';
+import {marked} from 'marked';
+import {useCallback, useEffect, useMemo, useRef, useState} from 'preact/hooks';
 import {useLocation} from 'preact-iso';
 import {Markdown} from '../../components/Markdown/Markdown.js';
 import {usePageTitle} from '../../hooks/usePageTitle.js';
@@ -550,6 +553,35 @@ function MessageView(props: {message: UIMessage}) {
   const isUser = message.role === 'user';
   const username = isUser ? 'You' : 'Root AI';
   const photoURL = isUser ? window.firebase.user?.photoURL : null;
+  const [copied, setCopied] = useState(false);
+
+  const getMessageMarkdown = useCallback(() => {
+    return (message.parts || [])
+      .filter((part: any) => part.type === 'text' && part.text)
+      .map((part: any) => part.text)
+      .join('\n\n');
+  }, [message.parts]);
+
+  const handleCopy = useCallback(async () => {
+    const markdown = getMessageMarkdown();
+    if (!markdown) return;
+    const html = marked.parse(markdown) as string;
+    try {
+      await navigator.clipboard.write([
+        new ClipboardItem({
+          'text/html': new Blob([html], {type: 'text/html'}),
+          'text/plain': new Blob([markdown], {type: 'text/plain'}),
+        }),
+      ]);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      // Fallback to plain text copy.
+      await navigator.clipboard.writeText(markdown);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
+  }, [getMessageMarkdown]);
 
   return (
     <div
@@ -572,6 +604,17 @@ function MessageView(props: {message: UIMessage}) {
             <PartView key={i} part={part} />
           ))}
         </div>
+        <button
+          type="button"
+          className={joinClassNames(
+            'AIPage__message__copy',
+            copied && 'AIPage__message__copy--copied'
+          )}
+          title={copied ? 'Copied!' : 'Copy message'}
+          onClick={handleCopy}
+        >
+          {copied ? <IconCheck size={14} /> : <IconCopy size={14} />}
+        </button>
       </div>
     </div>
   );

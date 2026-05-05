@@ -271,11 +271,46 @@
 
 .AIPage__message__body {
   min-width: 0;
+  position: relative;
 }
 
 .AIPage__message__username {
   font-weight: 700;
   line-height: 28px;
+}
+
+.AIPage__message__copy {
+  position: absolute;
+  top: 0;
+  right: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  background: var(--surface-background);
+  color: dimgray;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.15s ease, background 0.15s ease;
+  padding: 0;
+}
+
+.AIPage__message:hover .AIPage__message__copy,
+.AIPage__message__copy--copied {
+  opacity: 1;
+}
+
+.AIPage__message__copy:hover {
+  background: #f1f3f5;
+  color: #333;
+}
+
+.AIPage__message__copy--copied {
+  color: #2b8a3e;
+  border-color: #2b8a3e;
 }
 
 .AIPage__message__parts {
