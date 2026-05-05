@@ -24,6 +24,7 @@ import {Firestore, getFirestore} from 'firebase-admin/firestore';
 import * as jsonwebtoken from 'jsonwebtoken';
 import sirv from 'sirv';
 import {SSEEvent, SSESchemaChangedEvent} from '../shared/sse.js';
+import {type AiConfig} from './ai-chat.js';
 import {type RootAiModel} from './ai.js';
 import {api} from './api.js';
 import {type CMSCheck} from './checks.js';
@@ -32,6 +33,7 @@ import {type CMSTranslationService} from './translations.js';
 import {Action, RootCMSClient} from './client.js';
 import {sse, SSEBroadcastFn} from './sse.js';
 
+export type {AiConfig, AiModelConfig, AiProvider} from './ai-chat.js';
 export type {
   CMSCheck,
   CheckResult,
@@ -114,6 +116,10 @@ export interface CMSUser {
   email: string;
 }
 
+/**
+ * @deprecated The `experiments.ai` flag is now used only as a sidebar toggle.
+ * Configure chat models on the top-level `ai` plugin option instead.
+ */
 export interface CMSAIConfig {
   /** Custom API endpoint for chat prompts. */
   endpoint?: string;
@@ -256,11 +262,53 @@ export type CMSPluginOptions = {
   onAction?: (action: Action) => any;
 
   /**
+   * Configures the Root CMS AI chat (`/cms/ai`). Provide one or more models
+   * — the CMS proxies user requests directly to the configured providers.
+   *
+   * The shape mirrors open source tools like Ollama and LiteLLM: each entry
+   * declares the provider, model id and credentials. Keys live on the server,
+   * never on the client.
+   *
+   * Example:
+   * ```ts
+   * cmsPlugin({
+   *   ai: {
+   *     models: [
+   *       {
+   *         id: 'gpt-4o',
+   *         label: 'GPT-4o',
+   *         provider: 'openai',
+   *         apiKey: process.env.OPENAI_API_KEY,
+   *         capabilities: {tools: true, attachments: true},
+   *       },
+   *       {
+   *         id: 'claude-opus-4-5',
+   *         label: 'Claude Opus 4.5',
+   *         provider: 'anthropic',
+   *         apiKey: process.env.ANTHROPIC_API_KEY,
+   *         capabilities: {tools: true, reasoning: true, attachments: true},
+   *       },
+   *       {
+   *         id: 'llama3-local',
+   *         label: 'Llama 3 (local)',
+   *         provider: 'openai-compatible',
+   *         baseURL: 'http://localhost:11434/v1',
+   *       },
+   *     ],
+   *     defaultModel: 'gpt-4o',
+   *   },
+   * });
+   * ```
+   */
+  ai?: AiConfig;
+
+  /**
    * Experimental config options. Note: these are subject to change at any time.
    */
   experiments?: {
     /**
-     * Enables the Root CMS AI page.
+     * @deprecated Use the top-level `ai` config instead. Setting this to
+     * `true` keeps the AI chat icon visible in the sidebar.
      */
     ai?: boolean | CMSAIConfig;
 

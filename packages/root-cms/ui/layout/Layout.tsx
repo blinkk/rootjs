@@ -180,9 +180,9 @@ Layout.Side = () => {
           </Layout.SideButton>
         )}
 
-        {experiments.ai && !isBuiltInHidden('ai') && (
+        {(experiments.ai || window.__ROOT_CTX.ai) && !isBuiltInHidden('ai') && (
           <Layout.SideButton
-            label="Root AI (experimental)"
+            label="Root AI"
             url="/cms/ai"
             active={currentUrl.startsWith('/cms/ai')}
           >

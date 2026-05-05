@@ -6,9 +6,9 @@ import {
   AiResponse,
   SendPromptOptions,
 } from '../../../shared/ai/prompts.js';
-import {ChatController} from '../../pages/AIPage/AIPage.js';
 import {joinClassNames} from '../../utils/classes.js';
 import {uploadFileToGCS} from '../../utils/gcs.js';
+import {ChatController} from './legacyChat.js';
 
 export interface Message {
   sender: 'user' | 'bot';

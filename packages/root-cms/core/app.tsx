@@ -2,6 +2,7 @@ import crypto from 'node:crypto';
 import path from 'node:path';
 import {Request, Response, RootConfig} from '@blinkk/root';
 import {renderJsxToString} from '@blinkk/root/jsx';
+import {serializeAiConfig} from './ai-chat.js';
 import {CMSPluginOptions} from './plugin.js';
 import {getCollectionSchema, getProjectSchemas} from './project.js';
 import {Collection} from './schema.js';
@@ -126,6 +127,7 @@ export async function renderApp(
     collections: collections,
     sidebar: cmsConfig.sidebar,
     experiments: cmsConfig.experiments,
+    ai: cmsConfig.ai ? serializeAiConfig(cmsConfig.ai) : null,
     preview: {
       channel: cmsConfig.preview?.channel ?? false,
     },

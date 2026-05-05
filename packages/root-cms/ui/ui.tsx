@@ -187,6 +187,20 @@ declare global {
       experiments?: {
         ai?: boolean | {endpoint?: string};
       };
+      ai?: {
+        defaultModel?: string;
+        models: Array<{
+          id: string;
+          label: string;
+          description?: string;
+          provider: string;
+          capabilities: {
+            tools: boolean;
+            reasoning: boolean;
+            attachments: boolean;
+          };
+        }>;
+      } | null;
       preview: {
         channel: true | false | 'to-preview' | 'from-preview';
       };
