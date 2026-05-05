@@ -201,11 +201,6 @@
   display: block;
 }
 
-.ActionLogsCompactItemPreview__user .mantine-Avatar-placeholder {
-  background-color: #333;
-  color: #fff;
-}
-
 .ActionLogsCompact__table .mantine-Accordion-content {
   background: var(--page-background);
   border-top: 1px dashed var(--color-border);
