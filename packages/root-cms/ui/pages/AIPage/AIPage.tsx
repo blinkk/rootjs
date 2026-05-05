@@ -137,9 +137,17 @@ function ChatExperience(props: {config: AiConfigResponse}) {
   const [selectedModelId, setSelectedModelId] = useState<string>(
     props.config.defaultModel || models[0]?.id || ''
   );
-  const [chatId, setChatId] = useState<string>(NEW_CHAT_ID);
+  // The chat id used for the next mount of `ChatPane`. Empty for "new chat".
+  const [pendingChatId, setPendingChatId] = useState<string>(NEW_CHAT_ID);
+  // The chat id of the chat the user is currently looking at. Used for the
+  // sidebar highlight; updated both when switching chats and when ChatPane
+  // auto-creates a new chat after the first message.
+  const [activeChatId, setActiveChatId] = useState<string>(NEW_CHAT_ID);
   const [initialMessages, setInitialMessages] = useState<UIMessage[]>([]);
   const [chats, setChats] = useState<ChatSummary[]>([]);
+  // Bumped to force ChatPane to remount on explicit user actions ("new chat",
+  // "open chat"). Auto-assigning a chat id from ChatPane does NOT bump this,
+  // so messages aren't lost mid-conversation.
   const [resetKey, setResetKey] = useState(0);
 
   const refreshChats = async () => {
@@ -164,13 +172,14 @@ function ChatExperience(props: {config: AiConfigResponse}) {
   }, []);
 
   const startNewChat = () => {
-    setChatId(NEW_CHAT_ID);
+    setPendingChatId(NEW_CHAT_ID);
+    setActiveChatId(NEW_CHAT_ID);
     setInitialMessages([]);
     setResetKey((k) => k + 1);
   };
 
   const openChat = async (id: string) => {
-    if (id === chatId) {
+    if (id === activeChatId) {
       return;
     }
     try {
@@ -184,7 +193,8 @@ function ChatExperience(props: {config: AiConfigResponse}) {
       if (!data.success) {
         return;
       }
-      setChatId(id);
+      setPendingChatId(id);
+      setActiveChatId(id);
       setInitialMessages((data.chat.messages || []) as UIMessage[]);
       if (data.chat.modelId) {
         const exists = models.find((m) => m.id === data.chat.modelId);
@@ -206,7 +216,7 @@ function ChatExperience(props: {config: AiConfigResponse}) {
         headers: {'content-type': 'application/json'},
         body: JSON.stringify({id}),
       });
-      if (chatId === id) {
+      if (activeChatId === id) {
         startNewChat();
       }
       refreshChats();
@@ -222,7 +232,7 @@ function ChatExperience(props: {config: AiConfigResponse}) {
     <div className="AIPage__layout">
       <ChatHistorySidebar
         chats={chats}
-        activeChatId={chatId}
+        activeChatId={activeChatId}
         onSelect={openChat}
         onNew={startNewChat}
         onDelete={deleteChat}
@@ -234,12 +244,12 @@ function ChatExperience(props: {config: AiConfigResponse}) {
           onSelectModel={setSelectedModelId}
         />
         <ChatPane
-          key={`${chatId}-${resetKey}`}
-          chatId={chatId}
+          key={resetKey}
+          initialChatId={pendingChatId}
           model={selectedModel}
           initialMessages={initialMessages}
-          onChatIdChange={(newId) => {
-            setChatId(newId);
+          onChatPersisted={(id) => {
+            setActiveChatId(id);
             refreshChats();
           }}
         />
@@ -346,14 +356,20 @@ function ChatHeader(props: {
 }
 
 function ChatPane(props: {
-  chatId: string;
+  initialChatId: string;
   model?: ModelInfo;
   initialMessages: UIMessage[];
-  onChatIdChange: (id: string) => void;
+  onChatPersisted: (id: string) => void;
 }) {
-  const chatIdRef = useRef(props.chatId);
+  // Lock in the chat id for the lifetime of this mount. We generate one
+  // client-side for new chats (the AI SDK doesn't expose response headers,
+  // so the server can't communicate an id back). Subsequent prop changes do
+  // NOT update this so an in-flight conversation isn't disrupted when the
+  // parent learns the id via `onChatPersisted`.
+  const [effectiveChatId] = useState<string>(
+    () => props.initialChatId || generateChatId()
+  );
   const modelRef = useRef(props.model?.id);
-  chatIdRef.current = props.chatId;
   modelRef.current = props.model?.id;
 
   const transport = useMemo(
@@ -364,21 +380,20 @@ function ChatPane(props: {
         prepareSendMessagesRequest: ({messages}) => ({
           body: {
             messages,
-            chatId: chatIdRef.current || undefined,
+            chatId: effectiveChatId,
             modelId: modelRef.current,
           },
         }),
       }),
-    []
+    [effectiveChatId]
   );
 
   const {messages, sendMessage, status, error, stop} = useChat({
+    id: effectiveChatId,
     messages: props.initialMessages,
     transport,
     onFinish: () => {
-      // The server returns `x-root-cms-chat-id`, but the AI SDK swallows
-      // headers. Refresh the chat list to pick up the new chat.
-      props.onChatIdChange(chatIdRef.current || '');
+      props.onChatPersisted(effectiveChatId);
     },
   });
 
@@ -842,4 +857,15 @@ function guessMimeType(filename: string): string {
   if (lower.endsWith('.png')) return 'image/png';
   if (lower.endsWith('.webp')) return 'image/webp';
   return 'image/jpeg';
+}
+
+/** Generates a stable chat id used for both client state and Firestore. */
+function generateChatId(): string {
+  if (
+    typeof crypto !== 'undefined' &&
+    typeof crypto.randomUUID === 'function'
+  ) {
+    return crypto.randomUUID();
+  }
+  return `chat-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
 }

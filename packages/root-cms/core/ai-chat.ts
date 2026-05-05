@@ -206,15 +206,18 @@ export class ChatStore {
     );
   }
 
-  async createChat(modelId?: string): Promise<ChatRecord> {
-    const id = crypto.randomUUID();
+  async createChat(options?: {
+    id?: string;
+    modelId?: string;
+  }): Promise<ChatRecord> {
+    const id = options?.id || crypto.randomUUID();
     const now = Timestamp.now();
     const record: ChatRecord = {
       id,
       createdBy: this.user,
       createdAt: now,
       modifiedAt: now,
-      modelId,
+      modelId: options?.modelId,
       messages: [],
     };
     await this.collection().doc(id).set(record);
@@ -235,12 +238,18 @@ export class ChatStore {
 
   async listChats(options?: {limit?: number}): Promise<ChatRecord[]> {
     const limit = options?.limit ?? 50;
+    // Sort client-side to avoid requiring a Firestore composite index on
+    // (createdBy, modifiedAt).
     const res = await this.collection()
       .where('createdBy', '==', this.user)
-      .orderBy('modifiedAt', 'desc')
-      .limit(limit)
       .get();
-    return res.docs.map((d) => d.data() as ChatRecord);
+    const records = res.docs.map((d) => d.data() as ChatRecord);
+    records.sort((a, b) => {
+      const aMs = a.modifiedAt?.toMillis?.() ?? 0;
+      const bMs = b.modifiedAt?.toMillis?.() ?? 0;
+      return bMs - aMs;
+    });
+    return records.slice(0, limit);
   }
 
   async deleteChat(id: string): Promise<void> {

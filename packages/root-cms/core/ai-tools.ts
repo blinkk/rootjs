@@ -119,6 +119,41 @@ export function createCmsTools(options: CmsToolsOptions): ToolSet {
       },
     }),
 
+    setDoc: tool({
+      description:
+        'Replace the entire draft fields payload of a CMS document. Pass ' +
+        'the full JSON object that should become the new draft contents — ' +
+        'any fields omitted will be removed. Prefer `updateDocField` for ' +
+        'targeted edits. Only writes the draft version; users must publish ' +
+        'separately. Always confirm with the user before calling.',
+      inputSchema: z.object({
+        docId: z
+          .string()
+          .describe(
+            'Full doc id in the form "Collection/slug" (e.g. "Pages/home").'
+          ),
+        fields: z
+          .record(z.string(), z.any())
+          .describe(
+            'New fields object. Replaces the existing draft fields entirely.'
+          ),
+        validate: z
+          .boolean()
+          .default(false)
+          .describe(
+            'If true, validate fields against the collection schema before ' +
+              'saving. Recommended for hand-authored payloads.'
+          ),
+      }),
+      execute: async ({docId, fields, validate}) => {
+        await cmsClient.saveDraftData(docId, fields, {
+          validate,
+          modifiedBy: 'root-cms-ai',
+        });
+        return {success: true, docId};
+      },
+    }),
+
     searchDocs: tool({
       description:
         'Run a full-text search across all indexed CMS docs. Returns the ' +

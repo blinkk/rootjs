@@ -790,16 +790,25 @@ export function api(server: Server, options: ApiOptions) {
 
     const cmsClient = new RootCMSClient(req.rootConfig!);
     const store = new ChatStore(cmsClient, req.user.email);
-    let chatId = typeof body.chatId === 'string' ? body.chatId : '';
-    if (chatId) {
-      const existing = await store.getChat(chatId);
-      if (!existing) {
-        chatId = '';
+    const requestedChatId =
+      typeof body.chatId === 'string' ? body.chatId.trim() : '';
+    let chatId = '';
+    if (requestedChatId) {
+      const existing = await store.getChat(requestedChatId);
+      if (existing) {
+        chatId = existing.id;
+      } else {
+        // Honor the client-supplied id so a single chat session keeps the
+        // same Firestore doc id even before the first response is saved.
+        const created = await store.createChat({
+          id: requestedChatId,
+          modelId: model.id,
+        });
+        chatId = created.id;
       }
-    }
-    if (!chatId) {
-      const newChat = await store.createChat(model.id);
-      chatId = newChat.id;
+    } else {
+      const created = await store.createChat({modelId: model.id});
+      chatId = created.id;
     }
 
     try {
