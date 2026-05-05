@@ -888,6 +888,7 @@ function ChatComposer(props: {
         />
         {props.isStreaming ? (
           <ActionIcon
+            className="AIPage__composer__button AIPage__composer__stopButton"
             radius="xl"
             color="dark"
             variant="filled"
@@ -898,6 +899,7 @@ function ChatComposer(props: {
           </ActionIcon>
         ) : (
           <ActionIcon
+            className="AIPage__composer__button AIPage__composer__submitButton"
             radius="xl"
             color="dark"
             variant="filled"

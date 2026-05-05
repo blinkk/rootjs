@@ -115,14 +115,18 @@
   flex-direction: column;
   min-width: 0;
   min-height: 0;
+  position: relative;
 }
 
 .AIPage__header {
   padding: 12px 20px;
-  border-bottom: 1px solid var(--color-border);
   display: flex;
   align-items: center;
   gap: 12px;
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 100;
 }
 
 .AIPage__modelPicker {
@@ -444,9 +448,11 @@
   border-top: 1px solid var(--color-border);
 }
 
-/* Vertically align to the file attachment button. */
-.AIPage__composer__attachTooltip {
-  top: -2px;
+/* Vertically align the composer buttons. */
+.AIPage__composer__attachTooltip,
+.AIPage__composer__button {
+  position: relative;
+  top: -3px;
 }
 
 .AIPage__composer__attachments {
