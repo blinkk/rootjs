@@ -25,6 +25,7 @@ import {Firestore, Query, Timestamp} from 'firebase-admin/firestore';
 import MiniSearch from 'minisearch';
 import glob from 'tiny-glob';
 import {getCmsPlugin} from './client.js';
+import type {CMSSearchIndexConfig} from './plugin.js';
 import type {Schema} from './schema.js';
 import {extractDocRecords, ExtractedRecord} from './search-extract.js';
 
@@ -122,6 +123,73 @@ interface CmsCollectionDoc {
 
 type DocMap = Record<string, string[]>;
 
+/**
+ * Normalized form of `CMSSearchIndexConfig`. Empty arrays are treated as
+ * "unset" so the user can defensively pass an empty list without accidentally
+ * excluding everything via `includeCollections: []`.
+ */
+interface ResolvedFilters {
+  includeCollections: Set<string> | null;
+  excludeCollections: Set<string> | null;
+  includeDocIds: Set<string> | null;
+  excludeDocIds: Set<string> | null;
+}
+
+function toSetOrNull(values: string[] | undefined): Set<string> | null {
+  if (!values || values.length === 0) {
+    return null;
+  }
+  return new Set(values);
+}
+
+export function resolveSearchIndexFilters(
+  config?: CMSSearchIndexConfig
+): ResolvedFilters {
+  return {
+    includeCollections: toSetOrNull(config?.includeCollections),
+    excludeCollections: toSetOrNull(config?.excludeCollections),
+    includeDocIds: toSetOrNull(config?.includeDocIds),
+    excludeDocIds: toSetOrNull(config?.excludeDocIds),
+  };
+}
+
+export function isCollectionIndexable(
+  filters: ResolvedFilters,
+  collectionId: string
+): boolean {
+  if (
+    filters.includeCollections &&
+    !filters.includeCollections.has(collectionId)
+  ) {
+    return false;
+  }
+  if (filters.excludeCollections?.has(collectionId)) {
+    return false;
+  }
+  return true;
+}
+
+export function isDocIndexable(
+  filters: ResolvedFilters,
+  docId: string
+): boolean {
+  const slashIndex = docId.indexOf('/');
+  if (slashIndex < 0) {
+    return false;
+  }
+  const collectionId = docId.slice(0, slashIndex);
+  if (!isCollectionIndexable(filters, collectionId)) {
+    return false;
+  }
+  if (filters.includeDocIds && !filters.includeDocIds.has(docId)) {
+    return false;
+  }
+  if (filters.excludeDocIds?.has(docId)) {
+    return false;
+  }
+  return true;
+}
+
 interface CachedIndex {
   index: MiniSearch;
   meta: SearchIndexMeta;
@@ -148,9 +216,14 @@ export class SearchIndexService {
   private readonly projectId: string;
   private readonly db: Firestore;
   private readonly loadSchema: LoadSchemaFn;
+  private readonly filters: ResolvedFilters;
   private cached: CachedIndex | null = null;
 
-  constructor(rootConfig: RootConfig, loadSchema?: LoadSchemaFn) {
+  constructor(
+    rootConfig: RootConfig,
+    loadSchema?: LoadSchemaFn,
+    filtersOverride?: CMSSearchIndexConfig
+  ) {
     this.rootConfig = rootConfig;
     const cmsPlugin = getCmsPlugin(rootConfig);
     const cmsPluginOptions = cmsPlugin.getConfig();
@@ -158,6 +231,22 @@ export class SearchIndexService {
     this.db = cmsPlugin.getFirestore();
     this.loadSchema =
       loadSchema || ((id) => this.loadCollectionSchemaFromDist(id));
+    this.filters = resolveSearchIndexFilters(
+      filtersOverride ?? cmsPluginOptions.searchIndex
+    );
+  }
+
+  /** Returns true if the given collection passes the include/exclude filter. */
+  isCollectionIndexable(collectionId: string): boolean {
+    return isCollectionIndexable(this.filters, collectionId);
+  }
+
+  /**
+   * Returns true if the given doc id passes the include/exclude filter (and
+   * its collection is itself indexable). Doc ids are `<collectionId>/<slug>`.
+   */
+  isDocIndexable(docId: string): boolean {
+    return isDocIndexable(this.filters, docId);
   }
 
   /** Returns the MiniSearch options used by both writers and readers. */
@@ -173,14 +262,19 @@ export class SearchIndexService {
     return `Projects/${this.projectId}/${SEARCH_INDEX_SUBCOLLECTION}`;
   }
 
-  /** Lists collection ids by globbing `<rootDir>/collections/*.schema.ts`. */
+  /**
+   * Lists collection ids by globbing `<rootDir>/collections/*.schema.ts`,
+   * filtered by the include/exclude config.
+   */
   async listCollectionIds(): Promise<string[]> {
     const collectionsDir = path.join(this.rootConfig.rootDir, 'collections');
     if (!fs.existsSync(collectionsDir)) {
       return [];
     }
     const fileNames = await glob('*.schema.ts', {cwd: collectionsDir});
-    return fileNames.map((f) => f.slice(0, -10));
+    return fileNames
+      .map((f) => f.slice(0, -10))
+      .filter((id) => this.isCollectionIndexable(id));
   }
 
   /**
@@ -313,7 +407,10 @@ export class SearchIndexService {
     await batch.commit();
   }
 
-  /** Lists the full set of live (collection, slug, doc) tuples for `Drafts`. */
+  /**
+   * Lists the full set of live (collection, slug, doc) tuples for `Drafts`,
+   * filtered by the include/exclude config.
+   */
   private async listAllDocs(
     collectionIds: string[]
   ): Promise<CmsCollectionDoc[]> {
@@ -322,17 +419,24 @@ export class SearchIndexService {
       const path = `Projects/${this.projectId}/Collections/${collectionId}/Drafts`;
       const snap = await this.db.collection(path).get();
       snap.forEach((d) => {
+        const docId = `${collectionId}/${d.id}`;
+        if (!this.isDocIndexable(docId)) {
+          return;
+        }
         const data = (d.data() || {}) as CmsCollectionDoc;
         if (!data.collection) data.collection = collectionId;
         if (!data.slug) data.slug = d.id;
-        if (!data.id) data.id = `${collectionId}/${d.id}`;
+        if (!data.id) data.id = docId;
         all.push(data);
       });
     }
     return all;
   }
 
-  /** Lists docs modified since `lastRun` across every collection. */
+  /**
+   * Lists docs modified since `lastRun` across every collection, filtered by
+   * the include/exclude config.
+   */
   private async listChangedDocs(
     collectionIds: string[],
     lastRun: Timestamp
@@ -345,10 +449,14 @@ export class SearchIndexService {
         .where('sys.modifiedAt', '>=', lastRun);
       const snap = await q.get();
       snap.forEach((d) => {
+        const docId = `${collectionId}/${d.id}`;
+        if (!this.isDocIndexable(docId)) {
+          return;
+        }
         const data = (d.data() || {}) as CmsCollectionDoc;
         if (!data.collection) data.collection = collectionId;
         if (!data.slug) data.slug = d.id;
-        if (!data.id) data.id = `${collectionId}/${d.id}`;
+        if (!data.id) data.id = docId;
         all.push(data);
       });
     }
@@ -386,7 +494,12 @@ export class SearchIndexService {
     for (const collectionId of collectionIds) {
       const path = `Projects/${this.projectId}/Collections/${collectionId}/Drafts`;
       const snap = await this.db.collection(path).select().get();
-      snap.forEach((d) => liveIds.add(`${collectionId}/${d.id}`));
+      snap.forEach((d) => {
+        const docId = `${collectionId}/${d.id}`;
+        if (this.isDocIndexable(docId)) {
+          liveIds.add(docId);
+        }
+      });
     }
     for (const id of knownIds) {
       if (!liveIds.has(id)) {
@@ -460,6 +573,9 @@ export class SearchIndexService {
       snap.forEach((d) => {
         const data = (d.data() || {}) as CmsCollectionDoc;
         const slug = data.slug || d.id;
+        if (!this.isDocIndexable(`${collectionId}/${slug}`)) {
+          return;
+        }
         const records = extractDocRecords(schema, {
           collection: collectionId,
           slug,
@@ -540,12 +656,18 @@ export class SearchIndexService {
     }
 
     // Reconcile deletions: drop records for docs in _docMap that no longer
-    // exist in any collection.
+    // exist in any collection — or that have been newly excluded by the
+    // include/exclude config (treated as a logical deletion).
     const liveIds = new Set<string>();
     for (const collectionId of collectionIds) {
       const path = `Projects/${this.projectId}/Collections/${collectionId}/Drafts`;
       const snap = await this.db.collection(path).select().get();
-      snap.forEach((d) => liveIds.add(`${collectionId}/${d.id}`));
+      snap.forEach((d) => {
+        const docId = `${collectionId}/${d.id}`;
+        if (this.isDocIndexable(docId)) {
+          liveIds.add(docId);
+        }
+      });
     }
     let deletions = 0;
     for (const docId of Object.keys(docMap)) {
