@@ -263,6 +263,10 @@ function App() {
                         <Router>
                           <Route path="/cms" component={ProjectPage} />
                           <Route path="/cms/ai" component={AIPage} />
+                          <Route
+                            path="/cms/ai/chat/:chatId"
+                            component={AIPage}
+                          />
                           <Route path="/cms/assets" component={AssetsPage} />
                           <Route path="/cms/compare" component={ComparePage} />
                           <Route

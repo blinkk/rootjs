@@ -13,6 +13,7 @@ import {createOpenAICompatible} from '@ai-sdk/openai-compatible';
 import {RootConfig} from '@blinkk/root';
 import {
   convertToModelMessages,
+  generateText,
   LanguageModel,
   stepCountIs,
   streamText,
@@ -279,7 +280,7 @@ export class ChatStore {
   }
 }
 
-/** Derives a short title from the first user message. */
+/** Derives a short title from the first user message (used as fallback). */
 export function deriveChatTitle(messages: UIMessage[]): string {
   const first = messages.find((m) => m.role === 'user');
   if (!first) {
@@ -294,6 +295,49 @@ export function deriveChatTitle(messages: UIMessage[]): string {
     return 'New chat';
   }
   return text.length > 60 ? `${text.slice(0, 57)}…` : text;
+}
+
+/**
+ * Uses the AI model to generate a short summary title for the chat.
+ * Falls back to `deriveChatTitle` if the generation fails.
+ */
+export async function generateChatTitle(
+  model: LanguageModel,
+  messages: UIMessage[]
+): Promise<string> {
+  const fallback = deriveChatTitle(messages);
+  if (fallback === 'New chat') {
+    return fallback;
+  }
+  try {
+    const result = await generateText({
+      model,
+      system:
+        'Generate a short title (max 50 characters) summarizing the following conversation. ' +
+        'Return only the title text, no quotes or punctuation at the end.',
+      prompt: messages
+        .slice(0, 6)
+        .map((m) => {
+          const text = m.parts
+            .filter((p: any) => p.type === 'text')
+            .map((p: any) => p.text)
+            .join(' ');
+          return `${m.role}: ${text}`;
+        })
+        .join('\n'),
+      maxOutputTokens: 30,
+    });
+    const title = result.text
+      .trim()
+      .replace(/["']+$/g, '')
+      .replace(/^["']+/g, '');
+    if (title) {
+      return title.length > 80 ? `${title.slice(0, 77)}…` : title;
+    }
+  } catch (err) {
+    console.error('failed to generate chat title:', err);
+  }
+  return fallback;
 }
 
 export interface RunChatStreamOptions {
@@ -339,11 +383,13 @@ export async function runChatStream(
 
   return result.toUIMessageStreamResponse({
     sendReasoning: model.capabilities?.reasoning ?? false,
+    originalMessages: messages,
     onFinish: async ({messages: finalMessages}) => {
       const store = new ChatStore(cmsClient, user);
+      const title = await generateChatTitle(languageModel, finalMessages);
       const updates = {
         modelId: model.id,
-        title: deriveChatTitle(finalMessages),
+        title,
       };
       try {
         // Firestore rejects `undefined` values, but the AI SDK frequently

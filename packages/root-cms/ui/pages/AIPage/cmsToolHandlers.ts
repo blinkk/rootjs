@@ -202,10 +202,26 @@ async function updateDocField(input: {
   path: string;
   value: any;
 }) {
+  let value = input.value;
+  // Auto-parse JSON strings that the AI model forgot to parse.
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    if (
+      (trimmed.startsWith('{') && trimmed.endsWith('}')) ||
+      (trimmed.startsWith('[') && trimmed.endsWith(']'))
+    ) {
+      try {
+        value = JSON.parse(trimmed);
+      } catch {
+        // Not valid JSON; keep the original string value.
+      }
+    }
+  }
+
   const {collection: collectionId} = parseDocId(input.docId);
   const schema = await getCachedSchema(collectionId);
   const {validateValueAtPath} = await loadValidators();
-  const errors = validateValueAtPath(schema, input.path, input.value);
+  const errors = validateValueAtPath(schema, input.path, value);
   if (errors.length > 0) {
     return {
       success: false,
@@ -222,7 +238,7 @@ async function updateDocField(input: {
   const {firebase} = getCtx();
   const ref = draftDocRef(input.docId);
   const fieldKey = `fields.${input.path}`;
-  const marshalled = marshalData(input.value);
+  const marshalled = marshalData(value);
   await updateDoc(ref, {
     [fieldKey]: marshalled,
     'sys.modifiedAt': serverTimestamp(),

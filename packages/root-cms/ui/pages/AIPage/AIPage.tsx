@@ -29,6 +29,7 @@ import {
   lastAssistantMessageIsCompleteWithToolCalls,
 } from 'ai';
 import {useEffect, useMemo, useRef, useState} from 'preact/hooks';
+import {useLocation} from 'preact-iso';
 import {Markdown} from '../../components/Markdown/Markdown.js';
 import {usePageTitle} from '../../hooks/usePageTitle.js';
 import {Layout} from '../../layout/Layout.js';
@@ -72,7 +73,7 @@ interface AttachmentPreview {
 
 const NEW_CHAT_ID = '';
 
-export function AIPage() {
+export function AIPage(props: {chatId?: string}) {
   usePageTitle('AI');
 
   const [config, setConfig] = useState<AiConfigResponse | null>(null);
@@ -107,7 +108,7 @@ export function AIPage() {
             <Loader size="md" />
           </div>
         ) : isEnabled ? (
-          <ChatExperience config={config!} />
+          <ChatExperience config={config!} initialChatId={props.chatId} />
         ) : (
           <NotConfigured error={configError} />
         )}
@@ -136,17 +137,25 @@ function NotConfigured(props: {error?: string}) {
   );
 }
 
-function ChatExperience(props: {config: AiConfigResponse}) {
+function ChatExperience(props: {
+  config: AiConfigResponse;
+  initialChatId?: string;
+}) {
+  const {route} = useLocation();
   const models = props.config.models || [];
   const [selectedModelId, setSelectedModelId] = useState<string>(
     props.config.defaultModel || models[0]?.id || ''
   );
   // The chat id used for the next mount of `ChatPane`. Empty for "new chat".
-  const [pendingChatId, setPendingChatId] = useState<string>(NEW_CHAT_ID);
+  const [pendingChatId, setPendingChatId] = useState<string>(
+    props.initialChatId || NEW_CHAT_ID
+  );
   // The chat id of the chat the user is currently looking at. Used for the
   // sidebar highlight; updated both when switching chats and when ChatPane
   // auto-creates a new chat after the first message.
-  const [activeChatId, setActiveChatId] = useState<string>(NEW_CHAT_ID);
+  const [activeChatId, setActiveChatId] = useState<string>(
+    props.initialChatId || NEW_CHAT_ID
+  );
   const [initialMessages, setInitialMessages] = useState<UIMessage[]>([]);
   const [chats, setChats] = useState<ChatSummary[]>([]);
   // Bumped to force ChatPane to remount on explicit user actions ("new chat",
@@ -173,13 +182,46 @@ function ChatExperience(props: {config: AiConfigResponse}) {
 
   useEffect(() => {
     refreshChats();
+    // If a chat id was provided via the URL, load it on mount.
+    if (props.initialChatId) {
+      loadChat(props.initialChatId);
+    }
   }, []);
+
+  /** Fetches a chat by id and applies it to state without the activeChatId guard. */
+  const loadChat = async (id: string) => {
+    try {
+      const res = await fetch('/cms/api/ai.v2.chats.get', {
+        method: 'POST',
+        credentials: 'include',
+        headers: {'content-type': 'application/json'},
+        body: JSON.stringify({id}),
+      });
+      const data = await res.json();
+      if (!data.success) {
+        return;
+      }
+      setPendingChatId(id);
+      setActiveChatId(id);
+      setInitialMessages((data.chat.messages || []) as UIMessage[]);
+      if (data.chat.modelId) {
+        const exists = models.find((m) => m.id === data.chat.modelId);
+        if (exists) {
+          setSelectedModelId(data.chat.modelId);
+        }
+      }
+      setResetKey((k) => k + 1);
+    } catch (err) {
+      console.error('failed to load chat', err);
+    }
+  };
 
   const startNewChat = () => {
     setPendingChatId(NEW_CHAT_ID);
     setActiveChatId(NEW_CHAT_ID);
     setInitialMessages([]);
     setResetKey((k) => k + 1);
+    route('/cms/ai');
   };
 
   const openChat = async (id: string) => {
@@ -207,6 +249,7 @@ function ChatExperience(props: {config: AiConfigResponse}) {
         }
       }
       setResetKey((k) => k + 1);
+      route(`/cms/ai/chat/${id}`);
     } catch (err) {
       console.error('failed to load chat', err);
     }
@@ -255,6 +298,8 @@ function ChatExperience(props: {config: AiConfigResponse}) {
           onChatPersisted={(id) => {
             setActiveChatId(id);
             refreshChats();
+            // Update URL when the chat is first persisted (new chat).
+            window.history.replaceState(null, '', `/cms/ai/chat/${id}`);
           }}
         />
       </div>
@@ -292,9 +337,18 @@ function ChatHistorySidebar(props: {
             )}
             onClick={() => props.onSelect(chat.id)}
           >
-            <div className="AIPage__sidebar__item__title">
-              {chat.title || 'Untitled chat'}
-            </div>
+            <Tooltip
+              label={chat.title || 'Untitled chat'}
+              openDelay={500}
+              disabled={!chat.title || chat.title.length < 30}
+              position="right"
+              multiline
+              width={250}
+            >
+              <div className="AIPage__sidebar__item__title">
+                {chat.title || 'Untitled chat'}
+              </div>
+            </Tooltip>
             <button
               type="button"
               className="AIPage__sidebar__item__delete"
@@ -322,38 +376,37 @@ function ChatHeader(props: {
 }) {
   return (
     <div className="AIPage__header">
-      <Menu>
-        <Menu.Target>
+      <Menu
+        control={
           <button type="button" className="AIPage__modelPicker">
             <IconRobot size={16} />
             <span>{props.selectedModel?.label || 'Select model'}</span>
             <IconChevronDown size={14} />
           </button>
-        </Menu.Target>
-        <Menu.Dropdown>
-          {props.models.map((model) => (
-            <Menu.Item
-              key={model.id}
-              onClick={() => props.onSelectModel(model.id)}
-            >
-              <div className="AIPage__modelPicker__option">
-                <div className="AIPage__modelPicker__option__label">
-                  {model.label}
-                </div>
-                {model.description && (
-                  <div className="AIPage__modelPicker__option__description">
-                    {model.description}
-                  </div>
-                )}
-                <div className="AIPage__modelPicker__option__caps">
-                  {model.capabilities.tools && <span>tools</span>}
-                  {model.capabilities.reasoning && <span>reasoning</span>}
-                  {model.capabilities.attachments && <span>attachments</span>}
-                </div>
+        }
+      >
+        {props.models.map((model) => (
+          <Menu.Item
+            key={model.id}
+            onClick={() => props.onSelectModel(model.id)}
+          >
+            <div className="AIPage__modelPicker__option">
+              <div className="AIPage__modelPicker__option__label">
+                {model.label}
               </div>
-            </Menu.Item>
-          ))}
-        </Menu.Dropdown>
+              {model.description && (
+                <div className="AIPage__modelPicker__option__description">
+                  {model.description}
+                </div>
+              )}
+              <div className="AIPage__modelPicker__option__caps">
+                {model.capabilities.tools && <span>tools</span>}
+                {model.capabilities.reasoning && <span>reasoning</span>}
+                {model.capabilities.attachments && <span>attachments</span>}
+              </div>
+            </div>
+          </Menu.Item>
+        ))}
       </Menu>
     </div>
   );
@@ -392,7 +445,7 @@ function ChatPane(props: {
     [effectiveChatId]
   );
 
-  const {messages, sendMessage, status, error, stop, addToolResult} = useChat({
+  const {messages, sendMessage, status, error, stop, addToolOutput} = useChat({
     id: effectiveChatId,
     messages: props.initialMessages,
     transport,
@@ -403,7 +456,7 @@ function ChatPane(props: {
     // credentials. The result is fed back to the model on the next round.
     onToolCall: async ({toolCall}) => {
       const output = await executeCmsTool(toolCall.toolName, toolCall.input);
-      addToolResult({
+      addToolOutput({
         tool: toolCall.toolName as any,
         toolCallId: toolCall.toolCallId,
         output,
@@ -863,7 +916,7 @@ function ChatComposer(props: {
         )}
       </div>
       <div className="AIPage__composer__disclaimer">
-        Root AI is experimental and can make mistakes. Verify important info.
+        Root AI is experimental and can make mistakes.
       </div>
     </div>
   );
