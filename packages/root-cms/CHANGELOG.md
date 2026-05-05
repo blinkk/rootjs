@@ -1,5 +1,17 @@
 # @blinkk/root-cms
 
+## 3.0.1-alpha.1
+
+### Patch Changes
+
+- 2a7212c4: feat: expand cmd+k search to jump to cms objects and recent views
+- b0967de6: feat: add document editor search panel (#1083)
+- 12b1e2c6: feat: add picker variant + presets to schema.oneOf() (#1084)
+- 76fea4ec: feat: add task manager ui
+- 0c8af595: feat: add user avatars and @mention autocomplete for task comments
+- 9d316222: feat: add global search bar to top right of CMS UI
+  - @blinkk/root@3.0.1-alpha.1
+
 ## 3.0.1-alpha.0
 
 ### Patch Changes
