@@ -22,6 +22,10 @@ import {
   writeBatch,
 } from 'firebase/firestore';
 import {Collection} from '../../../core/schema.js';
+import {
+  marshalData,
+  unmarshalData as unmarshalDataBase,
+} from '../../../shared/marshal.js';
 import {fetchCollectionSchema} from '../../utils/collection.js';
 
 /** Lazily import the validators so we don't double-bundle them. */
@@ -121,55 +125,15 @@ function versionDocRef(docId: string, versionId: string) {
   );
 }
 
-/** Mirrors `unmarshalData` from `core/client.ts` for the read path. */
+/** Unmarshal with Firestore Timestamp support. */
 function unmarshalData(data: any): any {
-  if (data === null || typeof data !== 'object') {
-    return data;
-  }
-  if (Array.isArray(data)) {
-    return data.map(unmarshalData);
-  }
-  if (data instanceof Timestamp) {
-    return data.toMillis();
-  }
-  if (Array.isArray(data._array)) {
-    return data._array.map((key: string) => unmarshalData(data[key] ?? {}));
-  }
-  const out: Record<string, any> = {};
-  for (const [k, v] of Object.entries(data)) {
-    out[k] = unmarshalData(v);
-  }
-  return out;
+  return unmarshalDataBase(data, {
+    isTimestamp: (v) => v instanceof Timestamp,
+    timestampToValue: (v) => v.toMillis(),
+  });
 }
 
-/** Mirrors `marshalArray` from `core/client.ts` for the write path. */
-function marshalData(data: any): any {
-  if (data === null || typeof data !== 'object') {
-    return data;
-  }
-  if (Array.isArray(data)) {
-    const obj: Record<string, any> = {};
-    const keys: string[] = [];
-    for (const item of data) {
-      const key =
-        item && typeof item === 'object' && typeof item._arrayKey === 'string'
-          ? item._arrayKey
-          : Math.random().toString(36).slice(2, 8);
-      keys.push(key);
-      const cleaned = {...item};
-      delete cleaned._arrayKey;
-      obj[key] = marshalData(cleaned);
-    }
-    obj._array = keys;
-    return obj;
-  }
-  const out: Record<string, any> = {};
-  for (const [k, v] of Object.entries(data)) {
-    if (v === undefined) continue;
-    out[k] = marshalData(v);
-  }
-  return out;
-}
+// marshalData is imported from shared/marshal.js above.
 
 // ---------------------------------------------------------------------------
 // Handler implementations
