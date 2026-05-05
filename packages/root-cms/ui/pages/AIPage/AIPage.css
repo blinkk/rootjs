@@ -309,8 +309,8 @@
 }
 
 .AIPage__message__copy--copied {
-  color: #2b8a3e;
-  border-color: #2b8a3e;
+  color: var(--color-text-dark);
+  border-color: var(--color-border);
 }
 
 .AIPage__message__parts {

@@ -108,7 +108,7 @@ export function AIPage(props: {chatId?: string}) {
       <div className="AIPage">
         {!config && !configError ? (
           <div className="AIPage__loading">
-            <Loader size="md" />
+            <Loader size="md" color="gray" />
           </div>
         ) : isEnabled ? (
           <ChatExperience config={config!} initialChatId={props.chatId} />
@@ -539,7 +539,7 @@ function ChatTranscript(props: {
         ))}
         {props.isStreaming && (
           <div className="AIPage__streamingIndicator">
-            <Loader size="xs" />
+            <Loader size="xs" color="gray" />
             <span>Thinking…</span>
           </div>
         )}
