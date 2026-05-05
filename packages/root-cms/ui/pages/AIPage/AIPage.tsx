@@ -337,18 +337,12 @@ function ChatHistorySidebar(props: {
             )}
             onClick={() => props.onSelect(chat.id)}
           >
-            <Tooltip
-              label={chat.title || 'Untitled chat'}
-              openDelay={500}
-              disabled={!chat.title || chat.title.length < 30}
-              position="right"
-              multiline
-              width={250}
+            <div
+              className="AIPage__sidebar__item__title"
+              title={chat.title || 'Untitled chat'}
             >
-              <div className="AIPage__sidebar__item__title">
-                {chat.title || 'Untitled chat'}
-              </div>
-            </Tooltip>
+              {chat.title || 'Untitled chat'}
+            </div>
             <button
               type="button"
               className="AIPage__sidebar__item__delete"
@@ -399,11 +393,11 @@ function ChatHeader(props: {
                   {model.description}
                 </div>
               )}
-              <div className="AIPage__modelPicker__option__caps">
+              {/* <div className="AIPage__modelPicker__option__caps">
                 {model.capabilities.tools && <span>tools</span>}
                 {model.capabilities.reasoning && <span>reasoning</span>}
                 {model.capabilities.attachments && <span>attachments</span>}
-              </div>
+              </div> */}
             </div>
           </Menu.Item>
         ))}
@@ -527,8 +521,7 @@ function ChatTranscript(props: {
           </div>
           <div className="AIPage__welcome__title">Root AI</div>
           <div className="AIPage__welcome__body">
-            {props.emptyMessage ||
-              'Ask about your CMS content. I can read docs, search, and edit drafts.'}
+            {props.emptyMessage || 'What are we going to get done today?'}
           </div>
         </div>
       </div>
@@ -851,7 +844,10 @@ function ChatComposer(props: {
       )}
       <div className="AIPage__composer__row">
         {props.canAttach && (
-          <Tooltip label="Attach file">
+          <Tooltip
+            label="Attach file"
+            className="AIPage__composer__attachTooltip"
+          >
             <ActionIcon
               component="label"
               radius="xl"
@@ -916,7 +912,7 @@ function ChatComposer(props: {
         )}
       </div>
       <div className="AIPage__composer__disclaimer">
-        Root AI is experimental and can make mistakes.
+        Root AI is experimental and can make mistakes. Use with caution.
       </div>
     </div>
   );
