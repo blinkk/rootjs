@@ -1,18 +1,20 @@
 /**
- * Built-in tools exposed to the chat model. Each tool is a thin wrapper around
- * `RootCMSClient` so the model can read and write CMS docs from the
- * `/cms/ai` page.
+ * Built-in CMS tools exposed to the chat model on the `/cms/ai` page.
  *
- * Write tools (`updateDocField`, `setDoc`) validate values against the
- * collection schema before saving and surface validation errors back to the
- * model so it can self-correct. This guards against common mistakes like
- * passing a stringified rich text payload to a `richtext` field, which
- * expects a structured `{blocks: [...]}` object.
+ * Tools are defined here as schema-only declarations (no `execute`). The
+ * server passes them through to `streamText`, the model emits tool calls,
+ * and the browser executes them via `onToolCall` in `useChat`. This means:
+ *
+ * - Reads/writes happen with the signed-in user's Firebase credentials and
+ *   respect Firestore security rules.
+ * - Other connected clients see writes in real time via Firestore listeners.
+ * - The server stays a thin streaming proxy.
+ *
+ * Validation helpers (`validateFields`, `validateValueAtPath`) live here
+ * too so the client can run the same checks the old server-side tools did.
  */
-import {RootConfig} from '@blinkk/root';
 import {tool, ToolSet} from 'ai';
 import {z} from 'zod';
-import {parseDocId, RootCMSClient} from './client.js';
 import {
   ArrayField,
   Collection,
@@ -23,46 +25,28 @@ import {
 } from './schema.js';
 import {validateFields, validateValue} from './validation.js';
 
-export interface CmsToolsOptions {
-  cmsClient: RootCMSClient;
-  rootConfig: RootConfig;
-}
+/** Tool ids handled client-side. Kept in sync with the schemas below. */
+export const CMS_TOOL_NAMES = [
+  'listCollections',
+  'listDocs',
+  'getDoc',
+  'updateDocField',
+  'setDoc',
+  'searchDocs',
+] as const;
+export type CmsToolName = (typeof CMS_TOOL_NAMES)[number];
 
-/** Returns the tool set passed to `streamText`. */
-export function createCmsTools(options: CmsToolsOptions): ToolSet {
-  const {cmsClient} = options;
-
+/**
+ * Schema-only tool definitions. The server passes these to `streamText` so
+ * the model knows the contract; the browser provides the actual `execute`.
+ */
+export function createCmsTools(): ToolSet {
   return {
     listCollections: tool({
       description:
         'List all CMS collections defined in the project. Returns each ' +
         'collection id along with optional name/description metadata.',
       inputSchema: z.object({}),
-      execute: async () => {
-        const project = await import('./project.js');
-        const collections: Array<{
-          id: string;
-          name?: string;
-          description?: string;
-        }> = [];
-        for (const fileId in project.SCHEMA_MODULES) {
-          if (!fileId.startsWith('/collections/')) {
-            continue;
-          }
-          const id = fileId
-            .replace('/collections/', '')
-            .replace('.schema.ts', '');
-          const schema = project.getCollectionSchema(id);
-          if (schema) {
-            collections.push({
-              id,
-              name: schema.name,
-              description: schema.description,
-            });
-          }
-        }
-        return {collections};
-      },
     }),
 
     listDocs: tool({
@@ -80,19 +64,6 @@ export function createCmsTools(options: CmsToolsOptions): ToolSet {
           .describe('Whether to read draft or published versions.'),
         limit: z.number().int().min(1).max(100).default(25),
       }),
-      execute: async ({collectionId, mode, limit}) => {
-        const result = await cmsClient.listDocs<any>(collectionId, {
-          mode,
-          limit,
-        });
-        return {
-          docs: result.docs.map((doc: any) => ({
-            id: doc.id,
-            slug: doc.slug,
-            sys: doc.sys,
-          })),
-        };
-      },
     }),
 
     getDoc: tool({
@@ -107,14 +78,6 @@ export function createCmsTools(options: CmsToolsOptions): ToolSet {
           ),
         mode: z.enum(['draft', 'published']).default('draft'),
       }),
-      execute: async ({docId, mode}) => {
-        const {collection, slug} = parseDocId(docId);
-        const doc = await cmsClient.getDoc(collection, slug, {mode});
-        if (!doc) {
-          return {found: false};
-        }
-        return {found: true, doc};
-      },
     }),
 
     updateDocField: tool({
@@ -131,28 +94,6 @@ export function createCmsTools(options: CmsToolsOptions): ToolSet {
         path: z.string().describe('Dotted JSON path within the fields object.'),
         value: z.any().describe('JSON value to set at the path.'),
       }),
-      execute: async ({docId, path, value}) => {
-        const {collection} = parseDocId(docId);
-        const schema = await cmsClient.getCollection(collection);
-        if (schema) {
-          const errors = validateValueAtPath(schema, path, value);
-          if (errors.length > 0) {
-            return {
-              success: false,
-              docId,
-              path,
-              error: 'VALIDATION_FAILED',
-              errors,
-              hint:
-                'The value did not match the field schema. Inspect the ' +
-                'collection with `getDoc` to see the expected shape, then ' +
-                'retry with a valid value.',
-            };
-          }
-        }
-        await cmsClient.updateDraftData(docId, path, value);
-        return {success: true, docId, path};
-      },
     }),
 
     setDoc: tool({
@@ -176,29 +117,6 @@ export function createCmsTools(options: CmsToolsOptions): ToolSet {
             'New fields object. Replaces the existing draft fields entirely.'
           ),
       }),
-      execute: async ({docId, fields}) => {
-        const {collection} = parseDocId(docId);
-        const schema = await cmsClient.getCollection(collection);
-        if (schema) {
-          const errors = validateFields(fields, schema);
-          if (errors.length > 0) {
-            return {
-              success: false,
-              docId,
-              error: 'VALIDATION_FAILED',
-              errors,
-              hint:
-                'The fields payload did not match the collection schema. ' +
-                'Read the doc with `getDoc` for an example of the expected ' +
-                'shape, then retry with a valid payload.',
-            };
-          }
-        }
-        await cmsClient.saveDraftData(docId, fields, {
-          modifiedBy: 'root-cms-ai',
-        });
-        return {success: true, docId};
-      },
     }),
 
     searchDocs: tool({
@@ -209,12 +127,6 @@ export function createCmsTools(options: CmsToolsOptions): ToolSet {
         query: z.string().min(1),
         limit: z.number().int().min(1).max(50).default(10),
       }),
-      execute: async ({query, limit}) => {
-        const {SearchIndexService} = await import('./search-index.js');
-        const service = new SearchIndexService(options.rootConfig);
-        const result = await service.search(query, {limit});
-        return result;
-      },
     }),
   };
 }
@@ -238,6 +150,8 @@ export function validateValueAtPath(
   }
   return validateValue(value, field, path);
 }
+
+export {validateFields};
 
 /**
  * Walks `schema` to find the field declaration at `path`. Numeric segments

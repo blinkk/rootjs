@@ -4,6 +4,7 @@ import {
   deriveChatTitle,
   findModel,
   serializeAiConfig,
+  stripUndefined,
 } from './ai-chat.js';
 
 describe('ai-chat', () => {
@@ -86,6 +87,33 @@ describe('ai-chat', () => {
       ]);
       expect(title.length).toBeLessThanOrEqual(60);
       expect(title.endsWith('…')).toBe(true);
+    });
+  });
+
+  describe('stripUndefined', () => {
+    it('removes undefined keys at every depth', () => {
+      const out = stripUndefined({
+        a: 1,
+        b: undefined,
+        nested: {x: undefined, y: 'keep'},
+      });
+      expect(out).toEqual({a: 1, nested: {y: 'keep'}});
+    });
+
+    it('removes undefined entries from arrays', () => {
+      const out = stripUndefined([1, undefined, {meta: undefined, ok: true}]);
+      expect(out).toEqual([1, {ok: true}]);
+    });
+
+    it('preserves null values (only undefined is removed)', () => {
+      const out = stripUndefined({a: null, b: undefined});
+      expect(out).toEqual({a: null});
+    });
+
+    it('returns primitives unchanged', () => {
+      expect(stripUndefined('hello')).toBe('hello');
+      expect(stripUndefined(42)).toBe(42);
+      expect(stripUndefined(null)).toBeNull();
     });
   });
 });

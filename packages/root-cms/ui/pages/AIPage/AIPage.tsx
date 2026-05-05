@@ -24,13 +24,17 @@ import {
   IconX,
 } from '@tabler/icons-preact';
 import type {UIMessage} from 'ai';
-import {DefaultChatTransport} from 'ai';
+import {
+  DefaultChatTransport,
+  lastAssistantMessageIsCompleteWithToolCalls,
+} from 'ai';
 import {useEffect, useMemo, useRef, useState} from 'preact/hooks';
 import {Markdown} from '../../components/Markdown/Markdown.js';
 import {usePageTitle} from '../../hooks/usePageTitle.js';
 import {Layout} from '../../layout/Layout.js';
 import {joinClassNames} from '../../utils/classes.js';
 import {uploadFileToGCS} from '../../utils/gcs.js';
+import {executeCmsTool} from './cmsToolHandlers.js';
 
 interface ModelInfo {
   id: string;
@@ -388,10 +392,23 @@ function ChatPane(props: {
     [effectiveChatId]
   );
 
-  const {messages, sendMessage, status, error, stop} = useChat({
+  const {messages, sendMessage, status, error, stop, addToolResult} = useChat({
     id: effectiveChatId,
     messages: props.initialMessages,
     transport,
+    // Auto-resubmit once all tool calls in the latest assistant message have
+    // results. Without this, the model would stall after a tool call.
+    sendAutomaticallyWhen: lastAssistantMessageIsCompleteWithToolCalls,
+    // Tools execute in the browser using the signed-in user's Firebase
+    // credentials. The result is fed back to the model on the next round.
+    onToolCall: async ({toolCall}) => {
+      const output = await executeCmsTool(toolCall.toolName, toolCall.input);
+      addToolResult({
+        tool: toolCall.toolName as any,
+        toolCallId: toolCall.toolCallId,
+        output,
+      });
+    },
     onFinish: () => {
       props.onChatPersisted(effectiveChatId);
     },

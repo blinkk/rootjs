@@ -317,9 +317,7 @@ export async function runChatStream(
   const {model, config, messages, cmsClient, user, chatId} = options;
   const languageModel = resolveLanguageModel(model);
   const tools: ToolSet =
-    model.capabilities?.tools === false
-      ? {}
-      : createCmsTools({cmsClient, rootConfig: options.rootConfig});
+    model.capabilities?.tools === false ? {} : createCmsTools();
 
   const systemPrompt =
     config.systemPrompt ||
@@ -348,10 +346,41 @@ export async function runChatStream(
         title: deriveChatTitle(finalMessages),
       };
       try {
-        await store.updateMessages(chatId, finalMessages, updates);
+        // Firestore rejects `undefined` values, but the AI SDK frequently
+        // produces messages with `metadata: undefined`. Strip them before
+        // persisting.
+        await store.updateMessages(
+          chatId,
+          stripUndefined(finalMessages) as UIMessage[],
+          updates
+        );
       } catch (err) {
         console.error('failed to persist chat history:', err);
       }
     },
   });
+}
+
+/**
+ * Recursively removes `undefined` values from an object/array. Returns a new
+ * structure; the input is not mutated. Used to clean payloads before sending
+ * them to Firestore, which rejects `undefined` outright.
+ */
+export function stripUndefined<T>(value: T): T {
+  if (Array.isArray(value)) {
+    return value
+      .filter((v) => v !== undefined)
+      .map((v) => stripUndefined(v)) as unknown as T;
+  }
+  if (value && typeof value === 'object') {
+    const out: Record<string, unknown> = {};
+    for (const [k, v] of Object.entries(value)) {
+      if (v === undefined) {
+        continue;
+      }
+      out[k] = stripUndefined(v);
+    }
+    return out as unknown as T;
+  }
+  return value;
 }
