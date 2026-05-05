@@ -16,6 +16,9 @@
     "release:ci": "pnpm run build && changeset publish --provenance",
     "test": "pnpm run build && turbo run test",
     "test:prod": "turbo run test:prod --filter=\"@examples/blog\"",
+    "cms": "pnpm --filter=\"@blinkk/root-cms\"",
+    "root": "pnpm --filter=\"@blinkk/root\"",
+    "root-cms": "pnpm --filter=\"@blinkk/root-cms\"",
     "// workspace aliases": "",
     "blog": "pnpm run --filter=\"@examples/blog\"",
     "starter": "pnpm run --filter=\"@examples/starter\""
