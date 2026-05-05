@@ -13,11 +13,13 @@ import {
   getDoc as fbGetDoc,
   getDocs,
   limit as fbLimit,
+  orderBy,
   query,
   serverTimestamp,
   setDoc,
   Timestamp,
   updateDoc,
+  writeBatch,
 } from 'firebase/firestore';
 import {Collection} from '../../../core/schema.js';
 import {fetchCollectionSchema} from '../../utils/collection.js';
@@ -75,6 +77,50 @@ function draftDocRef(docId: string) {
   );
 }
 
+function publishedDocRef(docId: string) {
+  const {collection, slug} = parseDocId(docId);
+  const {firebase, rootConfig} = getCtx();
+  return doc(
+    firebase.db,
+    'Projects',
+    rootConfig.projectId,
+    'Collections',
+    collection,
+    'Published',
+    slug
+  );
+}
+
+function scheduledDocRef(docId: string) {
+  const {collection, slug} = parseDocId(docId);
+  const {firebase, rootConfig} = getCtx();
+  return doc(
+    firebase.db,
+    'Projects',
+    rootConfig.projectId,
+    'Collections',
+    collection,
+    'Scheduled',
+    slug
+  );
+}
+
+function versionDocRef(docId: string, versionId: string) {
+  const {collection, slug} = parseDocId(docId);
+  const {firebase, rootConfig} = getCtx();
+  return doc(
+    firebase.db,
+    'Projects',
+    rootConfig.projectId,
+    'Collections',
+    collection,
+    'Drafts',
+    slug,
+    'Versions',
+    versionId
+  );
+}
+
 /** Mirrors `unmarshalData` from `core/client.ts` for the read path. */
 function unmarshalData(data: any): any {
   if (data === null || typeof data !== 'object') {
@@ -125,7 +171,11 @@ function marshalData(data: any): any {
   return out;
 }
 
-async function listCollections() {
+// ---------------------------------------------------------------------------
+// Handler implementations
+// ---------------------------------------------------------------------------
+
+async function collectionsList() {
   const {collections} = getCtx();
   return {
     collections: Object.entries(collections).map(([id, meta]) => ({
@@ -136,7 +186,7 @@ async function listCollections() {
   };
 }
 
-async function listDocs(input: {
+async function docsList(input: {
   collectionId: string;
   mode?: 'draft' | 'published';
   limit?: number;
@@ -161,10 +211,22 @@ async function listDocs(input: {
   };
 }
 
-async function getDocImpl(input: {
-  docId: string;
-  mode?: 'draft' | 'published';
-}) {
+async function docsSearch(input: {query: string; limit?: number}) {
+  const max = Math.min(Math.max(input.limit ?? 10, 1), 50);
+  const res = await fetch('/cms/api/search.query', {
+    method: 'POST',
+    credentials: 'include',
+    headers: {'content-type': 'application/json'},
+    body: JSON.stringify({q: input.query, limit: max}),
+  });
+  if (!res.ok) {
+    throw new Error(`search.query failed: ${res.status}`);
+  }
+  const data = await res.json();
+  return data;
+}
+
+async function docGet(input: {docId: string; mode?: 'draft' | 'published'}) {
   const {firebase, rootConfig} = getCtx();
   const {collection, slug} = parseDocId(input.docId);
   const ref = doc(
@@ -193,11 +255,126 @@ async function getDocImpl(input: {
   };
 }
 
+async function docGetVersion(input: {docId: string; versionId: string}) {
+  let ref;
+  if (input.versionId === 'draft') {
+    ref = draftDocRef(input.docId);
+  } else if (input.versionId === 'published') {
+    ref = publishedDocRef(input.docId);
+  } else {
+    ref = versionDocRef(input.docId, input.versionId);
+  }
+  const snap = await fbGetDoc(ref);
+  if (!snap.exists()) {
+    return {found: false};
+  }
+  const raw = snap.data() as any;
+  return {
+    found: true,
+    doc: {
+      id: raw.id,
+      collection: raw.collection,
+      slug: raw.slug,
+      sys: unmarshalData(raw.sys || {}),
+      fields: unmarshalData(raw.fields || {}),
+    },
+  };
+}
+
 async function getCachedSchema(collectionId: string): Promise<Collection> {
   return await fetchCollectionSchema(collectionId);
 }
 
-async function updateDocField(input: {
+async function docSet(input: {docId: string; fields: Record<string, any>}) {
+  const {collection: collectionId, slug} = parseDocId(input.docId);
+  const schema = await getCachedSchema(collectionId);
+  const {validateFields} = await loadValidators();
+  const errors = validateFields(input.fields, schema);
+  if (errors.length > 0) {
+    return {
+      success: false,
+      docId: input.docId,
+      error: 'VALIDATION_FAILED',
+      errors,
+      hint:
+        'The fields payload did not match the collection schema. Read the ' +
+        'doc with `doc.get` for an example of the expected shape, then retry ' +
+        'with a valid payload.',
+    };
+  }
+
+  const {firebase} = getCtx();
+  const ref = draftDocRef(input.docId);
+  const existing = await fbGetDoc(ref);
+  const existingData = existing.exists() ? (existing.data() as any) : {};
+  const existingSys = existingData.sys || {};
+  const userEmail = firebase.user?.email || 'root-cms-ai';
+  const data = {
+    id: input.docId,
+    collection: collectionId,
+    slug,
+    sys: {
+      ...existingSys,
+      createdAt: existingSys.createdAt ?? serverTimestamp(),
+      createdBy: existingSys.createdBy ?? userEmail,
+      modifiedAt: serverTimestamp(),
+      modifiedBy: userEmail,
+      locales: existingSys.locales ?? ['en'],
+    },
+    fields: marshalData(input.fields),
+  };
+  await setDoc(ref, data);
+  return {success: true, docId: input.docId};
+}
+
+async function docCreate(input: {docId: string; fields?: Record<string, any>}) {
+  const {collection: collectionId, slug} = parseDocId(input.docId);
+  const ref = draftDocRef(input.docId);
+  const existing = await fbGetDoc(ref);
+  if (existing.exists()) {
+    return {
+      success: false,
+      docId: input.docId,
+      error: 'ALREADY_EXISTS',
+      hint: 'A doc with this id already exists. Use `doc.set` to overwrite.',
+    };
+  }
+
+  if (input.fields) {
+    const schema = await getCachedSchema(collectionId);
+    const {validateFields} = await loadValidators();
+    const errors = validateFields(input.fields, schema);
+    if (errors.length > 0) {
+      return {
+        success: false,
+        docId: input.docId,
+        error: 'VALIDATION_FAILED',
+        errors,
+        hint: 'The fields payload did not match the collection schema.',
+      };
+    }
+  }
+
+  const {firebase} = getCtx();
+  const userEmail = firebase.user?.email || 'root-cms-ai';
+  const data = {
+    id: input.docId,
+    collection: collectionId,
+    slug,
+    sys: {
+      createdAt: serverTimestamp(),
+      createdBy: userEmail,
+      modifiedAt: serverTimestamp(),
+      modifiedBy: userEmail,
+      locales: ['en'],
+    },
+    fields: input.fields ? marshalData(input.fields) : {},
+  };
+  await setDoc(ref, data);
+  return {success: true, docId: input.docId};
+}
+
+async function docUpdateField(input: {
   docId: string;
   path: string;
   value: any;
@@ -231,7 +408,7 @@ async function updateDocField(input: {
       errors,
       hint:
         'The value did not match the field schema. Inspect the doc with ' +
-        '`getDoc` to see the expected shape, then retry with a valid value.',
+        '`doc.get` to see the expected shape, then retry with a valid value.',
     };
   }
 
@@ -247,70 +424,242 @@ async function updateDocField(input: {
   return {success: true, docId: input.docId, path: input.path};
 }
 
-async function setDocImpl(input: {docId: string; fields: Record<string, any>}) {
+async function docPublish(input: {docId: string}) {
+  const {firebase, rootConfig} = getCtx();
+  const ref = draftDocRef(input.docId);
+  const snap = await fbGetDoc(ref);
+  if (!snap.exists()) {
+    return {success: false, docId: input.docId, error: 'NOT_FOUND'};
+  }
+
+  const draftData = snap.data() as any;
+  const sys = {...(draftData.sys || {})};
+  const userEmail = firebase.user?.email || 'root-cms-ai';
+  sys.modifiedAt = serverTimestamp();
+  sys.modifiedBy = userEmail;
+  sys.publishedAt = serverTimestamp();
+  sys.publishedBy = userEmail;
+  sys.firstPublishedAt ??= serverTimestamp();
+  sys.firstPublishedBy ??= userEmail;
+  delete sys.scheduledAt;
+  delete sys.scheduledBy;
+
   const {collection: collectionId, slug} = parseDocId(input.docId);
-  const schema = await getCachedSchema(collectionId);
-  const {validateFields} = await loadValidators();
-  const errors = validateFields(input.fields, schema);
-  if (errors.length > 0) {
+  const pubRef = publishedDocRef(input.docId);
+  const schedRef = scheduledDocRef(input.docId);
+  const versionRef = doc(
+    firebase.db,
+    'Projects',
+    rootConfig.projectId,
+    'Collections',
+    collectionId,
+    'Drafts',
+    slug,
+    'Versions',
+    String(Date.now())
+  );
+
+  const batch = writeBatch(firebase.db);
+  batch.update(ref, {sys});
+  batch.set(pubRef, {...draftData, sys});
+  batch.delete(schedRef);
+  batch.set(versionRef, {
+    id: input.docId,
+    collection: collectionId,
+    slug,
+    fields: draftData.fields || {},
+    sys,
+    tags: ['published'],
+  });
+  await batch.commit();
+  return {success: true, docId: input.docId};
+}
+
+async function docDelete(input: {docId: string}) {
+  const {firebase} = getCtx();
+  const batch = writeBatch(firebase.db);
+  batch.delete(draftDocRef(input.docId));
+  batch.delete(publishedDocRef(input.docId));
+  batch.delete(scheduledDocRef(input.docId));
+  await batch.commit();
+  return {success: true, docId: input.docId};
+}
+
+async function docDuplicate(input: {fromDocId: string; toDocId: string}) {
+  const fromRef = draftDocRef(input.fromDocId);
+  const fromSnap = await fbGetDoc(fromRef);
+  if (!fromSnap.exists()) {
+    return {
+      success: false,
+      error: 'NOT_FOUND',
+      hint: `Source doc "${input.fromDocId}" does not exist.`,
+    };
+  }
+
+  const toRef = draftDocRef(input.toDocId);
+  const toSnap = await fbGetDoc(toRef);
+  if (toSnap.exists()) {
+    return {
+      success: false,
+      error: 'ALREADY_EXISTS',
+      hint: `Target doc "${input.toDocId}" already exists.`,
+    };
+  }
+
+  const {collection: collectionId, slug} = parseDocId(input.toDocId);
+  const {firebase} = getCtx();
+  const userEmail = firebase.user?.email || 'root-cms-ai';
+  const fromData = fromSnap.data() as any;
+  const data = {
+    id: input.toDocId,
+    collection: collectionId,
+    slug,
+    sys: {
+      createdAt: serverTimestamp(),
+      createdBy: userEmail,
+      modifiedAt: serverTimestamp(),
+      modifiedBy: userEmail,
+      locales: fromData.sys?.locales ?? ['en'],
+    },
+    fields: fromData.fields || {},
+  };
+  await setDoc(toRef, data);
+  return {success: true, fromDocId: input.fromDocId, toDocId: input.toDocId};
+}
+
+async function docRevertDraft(input: {docId: string}) {
+  const pubRef = publishedDocRef(input.docId);
+  const pubSnap = await fbGetDoc(pubRef);
+  if (!pubSnap.exists()) {
     return {
       success: false,
       docId: input.docId,
-      error: 'VALIDATION_FAILED',
-      errors,
-      hint:
-        'The fields payload did not match the collection schema. Read the ' +
-        'doc with `getDoc` for an example of the expected shape, then retry ' +
-        'with a valid payload.',
+      error: 'NOT_PUBLISHED',
+      hint: 'Cannot revert: doc has never been published.',
     };
   }
 
   const {firebase} = getCtx();
   const ref = draftDocRef(input.docId);
-  const existing = await fbGetDoc(ref);
-  const existingData = existing.exists() ? (existing.data() as any) : {};
-  const existingSys = existingData.sys || {};
-  const userEmail = firebase.user?.email || 'root-cms-ai';
-  const data = {
-    id: input.docId,
-    collection: collectionId,
-    slug,
-    sys: {
-      ...existingSys,
-      createdAt: existingSys.createdAt ?? serverTimestamp(),
-      createdBy: existingSys.createdBy ?? userEmail,
-      modifiedAt: serverTimestamp(),
-      modifiedBy: userEmail,
-      locales: existingSys.locales ?? ['en'],
-    },
-    fields: marshalData(input.fields),
-  };
-  await setDoc(ref, data);
+  const publishedData = pubSnap.data() as any;
+  await updateDoc(ref, {
+    fields: publishedData.fields || {},
+    'sys.modifiedAt': serverTimestamp(),
+    'sys.modifiedBy': firebase.user?.email || 'root-cms-ai',
+  });
   return {success: true, docId: input.docId};
 }
 
-async function searchDocs(input: {query: string; limit?: number}) {
+async function docListVersions(input: {docId: string; limit?: number}) {
+  const {firebase, rootConfig} = getCtx();
+  const {collection, slug} = parseDocId(input.docId);
   const max = Math.min(Math.max(input.limit ?? 10, 1), 50);
-  const res = await fetch('/cms/api/search.query', {
+  const versionsCol = fbCollection(
+    firebase.db,
+    'Projects',
+    rootConfig.projectId,
+    'Collections',
+    collection,
+    'Drafts',
+    slug,
+    'Versions'
+  );
+  const snap = await getDocs(
+    query(versionsCol, orderBy('sys.modifiedAt', 'desc'), fbLimit(max))
+  );
+  return {
+    versions: snap.docs.map((d) => {
+      const data = d.data() as any;
+      return {
+        versionId: d.id,
+        sys: unmarshalData(data.sys || {}),
+        tags: data.tags || [],
+        publishMessage: data.publishMessage,
+      };
+    }),
+  };
+}
+
+async function docTranslateField(input: {
+  sourceText: string;
+  targetLocales: string[];
+  description?: string;
+}) {
+  const res = await fetch('/cms/api/ai.translate', {
     method: 'POST',
     credentials: 'include',
     headers: {'content-type': 'application/json'},
-    body: JSON.stringify({q: input.query, limit: max}),
+    body: JSON.stringify({
+      sourceText: input.sourceText,
+      targetLocales: input.targetLocales,
+      description: input.description,
+    }),
   });
   if (!res.ok) {
-    throw new Error(`search.query failed: ${res.status}`);
+    throw new Error(`ai.translate failed: ${res.status}`);
   }
   const data = await res.json();
-  return data;
+  if (!data.success) {
+    throw new Error(data.error || 'translation failed');
+  }
+  return {translations: data.translations};
 }
 
+async function schemaGet(input: {collectionId: string}) {
+  const schema = await fetchCollectionSchema(input.collectionId);
+  // Return a simplified representation for the model.
+  return {
+    collectionId: input.collectionId,
+    fields: simplifyFields(schema.fields || []),
+  };
+}
+
+/** Simplifies field definitions for the model (omit internal metadata). */
+function simplifyFields(fields: any[]): any[] {
+  return fields.map((f) => {
+    const out: any = {id: f.id, type: f.type};
+    if (f.label) out.label = f.label;
+    if (f.description) out.description = f.description;
+    if (f.required) out.required = true;
+    if (f.translate) out.translate = true;
+    if (f.options) out.options = f.options;
+    if (f.type === 'object' && f.fields) {
+      out.fields = simplifyFields(f.fields);
+    }
+    if (f.type === 'array' && f.of) {
+      out.of = simplifyFields([f.of])[0];
+    }
+    if (f.type === 'oneof' && f.types) {
+      out.types = f.types.map((t: any) =>
+        typeof t === 'string'
+          ? t
+          : {id: t.id, fields: simplifyFields(t.fields || [])}
+      );
+    }
+    return out;
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Dispatcher
+// ---------------------------------------------------------------------------
+
 const HANDLERS: Record<string, (input: any) => Promise<unknown>> = {
-  listCollections,
-  listDocs,
-  getDoc: getDocImpl,
-  updateDocField,
-  setDoc: setDocImpl,
-  searchDocs,
+  'collections.list': collectionsList,
+  'docs.list': docsList,
+  'docs.search': docsSearch,
+  'doc.get': docGet,
+  'doc.get_version': docGetVersion,
+  'doc.set': docSet,
+  'doc.create': docCreate,
+  'doc.update_field': docUpdateField,
+  'doc.publish': docPublish,
+  'doc.delete': docDelete,
+  'doc.duplicate': docDuplicate,
+  'doc.revert_draft': docRevertDraft,
+  'doc.list_versions': docListVersions,
+  'doc.translate_field': docTranslateField,
+  'schema.get': schemaGet,
 };
 
 /**
