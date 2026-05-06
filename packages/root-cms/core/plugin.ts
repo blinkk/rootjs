@@ -345,6 +345,10 @@ export type CMSPluginOptions = {
    *   },
    * });
    * ```
+   *
+   * For project-specific guidance (conventions, patterns, naming rules, etc.),
+   * drop a `ROOT.md` file at the project root. Its contents are appended to
+   * the system prompt for every chat — similar to `AGENTS.md` / `CLAUDE.md`.
    */
   ai?: AiConfig;
 
