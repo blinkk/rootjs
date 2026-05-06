@@ -259,18 +259,6 @@ export type CMSPluginOptions = {
   gci?: string | boolean;
 
   /**
-   * Configuration for the built-in task manager.
-   */
-  taskManager?: {
-    /**
-     * Disables the task manager surface on the CMS home page and removes its
-     * sidebar entry. The `/cms/tasks` and `/cms/tasks/:id` routes remain
-     * accessible to users who navigate to them directly.
-     */
-    disabled?: boolean;
-  };
-
-  /**
    * Customization options for the CMS sidebar.
    */
   sidebar?: {
@@ -282,7 +270,10 @@ export type CMSPluginOptions = {
     tools?: Record<string, CMSSidebarTool>;
 
     /**
-     * Hide specific built-in sidebar tools.
+     * Hide specific built-in sidebar tools. Hiding a tool also removes its
+     * surfaces from the CMS home page (e.g. hiding `'tasks'` removes the task
+     * manager card from the home page). The underlying routes remain
+     * accessible via direct URL.
      */
     hiddenBuiltInTools?: CMSBuiltInSidebarTool[];
   };

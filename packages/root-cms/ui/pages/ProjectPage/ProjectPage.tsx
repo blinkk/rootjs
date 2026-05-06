@@ -12,14 +12,14 @@ import {Layout} from '../../layout/Layout.js';
 export function ProjectPage() {
   // const projectName = window.__ROOT_CTX.rootConfig.projectName || 'Root CMS';
   usePageTitle('Home');
-  const taskManagerDisabled = Boolean(
-    window.__ROOT_CTX.taskManager?.disabled
-  );
+  const hiddenBuiltInTools =
+    window.__ROOT_CTX.sidebar?.hiddenBuiltInTools || [];
+  const showTaskManager = !hiddenBuiltInTools.includes('tasks');
   return (
     <Layout>
       <div className="ProjectPage">
         <div className="ProjectPage__main">
-          {!taskManagerDisabled && <TaskManager />}
+          {showTaskManager && <TaskManager />}
           <div className="ProjectPage__section">
             <ProjectPage.Collections />
             <ProjectPage.ActionLogs />

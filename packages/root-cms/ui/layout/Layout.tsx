@@ -98,9 +98,6 @@ Layout.Side = () => {
   const hiddenBuiltInTools = new Set<CMSBuiltInSidebarTool>(
     window.__ROOT_CTX.sidebar?.hiddenBuiltInTools || []
   );
-  if (window.__ROOT_CTX.taskManager?.disabled) {
-    hiddenBuiltInTools.add('tasks');
-  }
   const isBuiltInHidden = (tool: CMSBuiltInSidebarTool) =>
     hiddenBuiltInTools.has(tool);
   const experiments = window.__ROOT_CTX.experiments || {};
