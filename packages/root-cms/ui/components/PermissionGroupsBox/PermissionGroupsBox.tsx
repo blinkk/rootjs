@@ -41,6 +41,12 @@ export function PermissionGroupsBox(props: PermissionGroupsBoxProps) {
     [collections]
   );
 
+  // Controlled accordion state so newly-added groups can be opened
+  // automatically. Keyed by item index, matching Mantine's AccordionState.
+  const [accordionState, setAccordionState] = useState<Record<string, boolean>>(
+    {}
+  );
+
   function updateGroup(
     id: string,
     updater: (g: PermissionGroup) => PermissionGroup
@@ -53,7 +59,9 @@ export function PermissionGroupsBox(props: PermissionGroupsBoxProps) {
   }
 
   function addGroup() {
+    const newIndex = groups.length;
     onChange([...groups, newPermissionGroup({name: 'New group'})]);
+    setAccordionState((prev) => ({...prev, [newIndex]: true}));
   }
 
   return (
@@ -70,6 +78,8 @@ export function PermissionGroupsBox(props: PermissionGroupsBoxProps) {
           className="PermissionGroupsBox__accordion"
           offsetIcon={false}
           multiple
+          state={accordionState}
+          onChange={setAccordionState}
         >
           {groups.map((group) => (
             <Accordion.Item
