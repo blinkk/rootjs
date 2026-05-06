@@ -67,9 +67,9 @@ export function PermissionGroupsBox(props: PermissionGroupsBoxProps) {
         </div>
       ) : (
         <Accordion
-          multiple
-          iconPosition="right"
           className="PermissionGroupsBox__accordion"
+          offsetIcon={false}
+          multiple
         >
           {groups.map((group) => (
             <Accordion.Item
@@ -80,10 +80,10 @@ export function PermissionGroupsBox(props: PermissionGroupsBoxProps) {
                     {group.name || 'Untitled group'}
                   </span>
                   <Badge
-                    color="dark"
+                    color="gray"
                     radius="sm"
-                    size="sm"
-                    variant="filled"
+                    size="xs"
+                    variant="light"
                     className="PermissionGroupsBox__trigger__badge"
                   >
                     {group.users.length}{' '}

@@ -17,12 +17,28 @@
   background: white;
 }
 
+.PermissionGroupsBox__accordion .mantine-Accordion-icon {
+  transform: rotate(-90deg);
+}
+
+.PermissionGroupsBox__accordion [aria-expanded="true"] .mantine-Accordion-icon {
+  transform: rotate(0deg) !important;
+}
+
+.PermissionGroupsBox__accordion .mantine-Accordion-control {
+  padding-top: 12px;
+  padding-bottom: 12px;
+}
+
 .PermissionGroupsBox__trigger {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 12px;
   width: 100%;
   min-width: 0;
+  padding-right: 8px;
+  font-size: 14px;
 }
 
 .PermissionGroupsBox__trigger__name {
