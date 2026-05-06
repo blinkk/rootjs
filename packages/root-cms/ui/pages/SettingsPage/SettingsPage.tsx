@@ -1,8 +1,11 @@
 import './SettingsPage.css';
-import {Button, Switch, Textarea} from '@mantine/core';
+import {Button, LoadingOverlay, Switch, Textarea} from '@mantine/core';
 import {showNotification} from '@mantine/notifications';
-import {useEffect, useRef, useState} from 'preact/hooks';
+import {doc, getDoc, setDoc, updateDoc} from 'firebase/firestore';
+import {useEffect, useMemo, useRef, useState} from 'preact/hooks';
+import {UserRole} from '../../../core/client.js';
 import {Heading} from '../../components/Heading/Heading.js';
+import {PermissionGroupsBox} from '../../components/PermissionGroupsBox/PermissionGroupsBox.js';
 import {ShareBox} from '../../components/ShareBox/ShareBox.js';
 import {Surface} from '../../components/Surface/Surface.js';
 import {Text} from '../../components/Text/Text.js';
@@ -12,6 +15,12 @@ import {useProjectRoles} from '../../hooks/useProjectRoles.js';
 import {SITE_SETTINGS, useSiteSettings} from '../../hooks/useSiteSettings.js';
 import {useUserPreferences} from '../../hooks/useUserPreferences.js';
 import {Layout} from '../../layout/Layout.js';
+import {logAction} from '../../utils/actions.js';
+import {notifyErrors} from '../../utils/notifications.js';
+import {
+  PermissionGroup,
+  derivedRolesFromGroups,
+} from '../../utils/permissionGroups.js';
 
 function formatRelative(ts: number | null): string {
   if (!ts) {
@@ -212,6 +221,226 @@ function SiteAdminSection() {
   );
 }
 
+interface ShareDoc {
+  roles: Record<string, UserRole>;
+  permissionGroups: PermissionGroup[];
+}
+
+function shareDocsEqual(a: ShareDoc, b: ShareDoc): boolean {
+  return JSON.stringify(a) === JSON.stringify(b);
+}
+
+function ShareSection() {
+  const projectId = window.__ROOT_CTX.rootConfig.projectId || 'default';
+  const collections = window.__ROOT_CTX.collections || {};
+  const collectionIds = useMemo(
+    () => Object.keys(collections).sort(),
+    [collections]
+  );
+  const db = window.firebase.db;
+  const docRef = doc(db, 'Projects', projectId);
+
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  // Snapshot of the saved/server state. Used to compute the dirty flag and to
+  // diff per-collection role writes on save.
+  const [savedState, setSavedState] = useState<ShareDoc>({
+    roles: {},
+    permissionGroups: [],
+  });
+  const [draft, setDraft] = useState<ShareDoc>({
+    roles: {},
+    permissionGroups: [],
+  });
+
+  useEffect(() => {
+    getDoc(docRef).then((snapshot) => {
+      const data = snapshot.data() || {};
+      const initial: ShareDoc = {
+        roles: (data.roles || {}) as Record<string, UserRole>,
+        permissionGroups: (data.permissionGroups || []) as PermissionGroup[],
+      };
+      setSavedState(initial);
+      setDraft({
+        roles: {...initial.roles},
+        permissionGroups: initial.permissionGroups.map((g) => ({...g})),
+      });
+      setLoading(false);
+    });
+  }, []);
+
+  const currentUserIsAdmin = isCurrentUserAdmin(savedState.roles);
+  const dirty = !shareDocsEqual(savedState, draft);
+
+  function setRoles(roles: Record<string, UserRole>) {
+    setDraft((prev) => ({...prev, roles}));
+  }
+
+  function setGroups(permissionGroups: PermissionGroup[]) {
+    setDraft((prev) => ({...prev, permissionGroups}));
+  }
+
+  function discard() {
+    setDraft({
+      roles: {...savedState.roles},
+      permissionGroups: savedState.permissionGroups.map((g) => ({...g})),
+    });
+  }
+
+  async function save() {
+    if (saving || !dirty) {
+      return;
+    }
+    setSaving(true);
+    await notifyErrors(async () => {
+      // Derive the effective project + per-collection roles by merging the
+      // direct ShareBox entries with the permission groups.
+      const {projectRoles: derivedProjectRoles, collectionRoles} =
+        derivedRolesFromGroups(draft.permissionGroups, draft.roles);
+
+      await updateDoc(docRef, {
+        roles: derivedProjectRoles,
+        permissionGroups: draft.permissionGroups,
+      });
+
+      // Compute the union of touched collection ids (newly assigned + any
+      // previously assigned that may need clearing) so groups removed from
+      // collections also clear their role entries.
+      const previousCollectionGroups = savedState.permissionGroups.flatMap(
+        (g) => g.collections || []
+      );
+      const touchedCollections = new Set<string>([
+        ...Object.keys(collectionRoles),
+        ...previousCollectionGroups,
+      ]);
+      for (const collectionId of touchedCollections) {
+        const collectionDocRef = doc(
+          db,
+          'Projects',
+          projectId,
+          'Collections',
+          collectionId
+        );
+        await setDoc(
+          collectionDocRef,
+          {roles: collectionRoles[collectionId] || {}},
+          {merge: true}
+        );
+      }
+
+      const nextSavedState: ShareDoc = {
+        roles: derivedProjectRoles,
+        permissionGroups: draft.permissionGroups,
+      };
+      setSavedState(nextSavedState);
+      setDraft({
+        roles: {...nextSavedState.roles},
+        permissionGroups: nextSavedState.permissionGroups.map((g) => ({...g})),
+      });
+      logAction('acls.save_groups', {
+        metadata: {
+          groupCount: draft.permissionGroups.length,
+          userCount: Object.keys(derivedProjectRoles).length,
+          collections: Array.from(touchedCollections),
+        },
+      });
+      showNotification({
+        title: 'Saved',
+        message: 'Sharing settings updated.',
+        color: 'green',
+        autoClose: 3000,
+      });
+    });
+    setSaving(false);
+  }
+
+  return (
+    <div className="SettingsPage__section SettingsPage__section__users">
+      <div className="SettingsPage__section__left">
+        <Heading className="SettingsPage__section__left__title">Share</Heading>
+        <Text
+          className="SettingsPage__section__body"
+          size="body-sm"
+          weight="semi-bold"
+          color="gray"
+        >
+          <p>
+            Share access to the CMS. To share with everyone in a domain, use
+            *@example.com.
+          </p>
+          <ul>
+            <li>VIEWER: view docs but not edit</li>
+            <li>CONTRIBUTOR: view and edit docs, but not publish</li>
+            <li>EDITOR: view, edit, and publish docs</li>
+            <li>ADMIN: all of the above and change sharing settings</li>
+          </ul>
+          <p>
+            Use <strong>permission groups</strong> to manage many users at once
+            and optionally scope a role to specific collections. Changes are
+            staged until you click <strong>Save</strong>.
+          </p>
+        </Text>
+      </div>
+      <Surface className="SettingsPage__section__right">
+        <div className="SettingsPage__share">
+          <LoadingOverlay
+            visible={loading}
+            loaderProps={{color: 'gray', size: 'xl'}}
+          />
+          <div className="SettingsPage__share__subsection">
+            <Heading className="SettingsPage__section__right__title" size="h3">
+              Permission groups
+            </Heading>
+            <PermissionGroupsBox
+              groups={draft.permissionGroups}
+              onChange={setGroups}
+              collections={collectionIds}
+              disabled={!currentUserIsAdmin}
+            />
+          </div>
+          <div className="SettingsPage__share__subsection">
+            <Heading className="SettingsPage__section__right__title" size="h3">
+              Users
+            </Heading>
+            <ShareBox
+              className="SettingsPage__section__users__sharebox"
+              roles={draft.roles}
+              onChange={setRoles}
+              currentUserIsAdmin={currentUserIsAdmin}
+            />
+          </div>
+          <div className="SettingsPage__share__saveBar">
+            <Text size="body-sm" weight="semi-bold" color="gray">
+              {dirty ? 'You have unsaved changes.' : 'All changes saved.'}
+            </Text>
+            <div className="SettingsPage__share__saveBar__actions">
+              <Button
+                variant="default"
+                size="xs"
+                radius={0}
+                disabled={!dirty || saving}
+                onClick={discard}
+              >
+                Discard
+              </Button>
+              <Button
+                size="xs"
+                radius={0}
+                color="dark"
+                loading={saving}
+                disabled={!dirty || !currentUserIsAdmin}
+                onClick={save}
+              >
+                Save changes
+              </Button>
+            </div>
+          </div>
+        </div>
+      </Surface>
+    </div>
+  );
+}
+
 export function SettingsPage() {
   usePageTitle('Settings');
   const userPrefs = useUserPreferences();
@@ -222,36 +451,7 @@ export function SettingsPage() {
   return (
     <Layout>
       <div className="SettingsPage">
-        <div className="SettingsPage__section SettingsPage__section__users">
-          <div className="SettingsPage__section__left">
-            <Heading className="SettingsPage__section__left__title">
-              Share
-            </Heading>
-            <Text
-              className="SettingsPage__section__body"
-              size="body-sm"
-              weight="semi-bold"
-              color="gray"
-            >
-              <p>
-                Share access to the CMS. To share with everyone in a domain, use
-                *@example.com.
-              </p>
-              <ul>
-                <li>VIEWER: view docs but not edit</li>
-                <li>CONTRIBUTOR: view and edit docs, but not publish</li>
-                <li>EDITOR: view, edit, and publish docs</li>
-                <li>ADMIN: all of the above and change sharing settings</li>
-              </ul>
-            </Text>
-          </div>
-          <Surface className="SettingsPage__section__right">
-            <Heading className="SettingsPage__section__right__title" size="h3">
-              Users
-            </Heading>
-            <ShareBox className="SettingsPage__section__users__sharebox" />
-          </Surface>
-        </div>
+        <ShareSection />
         <div className="SettingsPage__section">
           <div className="SettingsPage__section__left">
             <Heading className="SettingsPage__section__left__title">

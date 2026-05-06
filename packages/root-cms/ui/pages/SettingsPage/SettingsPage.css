@@ -65,3 +65,31 @@
   margin-top: 12px;
   flex-wrap: wrap;
 }
+
+.SettingsPage__share {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  min-height: 120px;
+}
+
+.SettingsPage__share__subsection {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.SettingsPage__share__saveBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--color-border);
+}
+
+.SettingsPage__share__saveBar__actions {
+  display: flex;
+  gap: 8px;
+}
