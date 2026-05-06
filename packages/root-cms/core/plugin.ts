@@ -259,6 +259,18 @@ export type CMSPluginOptions = {
   gci?: string | boolean;
 
   /**
+   * Configuration for the built-in task manager.
+   */
+  taskManager?: {
+    /**
+     * Disables the task manager surface on the CMS home page and removes its
+     * sidebar entry. The `/cms/tasks` and `/cms/tasks/:id` routes remain
+     * accessible to users who navigate to them directly.
+     */
+    disabled?: boolean;
+  };
+
+  /**
    * Customization options for the CMS sidebar.
    */
   sidebar?: {

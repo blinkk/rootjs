@@ -184,6 +184,9 @@ declare global {
           }
         >;
       };
+      taskManager?: {
+        disabled?: boolean;
+      };
       experiments?: {
         ai?: boolean | {endpoint?: string};
       };
