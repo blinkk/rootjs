@@ -35,10 +35,7 @@ export const CMS_TOOL_NAMES = [
   'doc_set',
   'doc_create',
   'doc_updateField',
-  'doc_publish',
-  'doc_delete',
   'doc_duplicate',
-  'doc_revertDraft',
   'doc_listVersions',
   'doc_translateField',
   'schema_get',
@@ -56,28 +53,28 @@ export type CmsToolName = (typeof CMS_TOOL_NAMES)[number];
  * affect the live site or wipe authored content. Users must perform these
  * actions themselves through the regular CMS UI:
  *
- *   - `publishDoc` / `unpublishDoc` — promote/demote a draft to/from
+ *   - `doc_publish` / `doc_unpublish` — promote/demote a draft to/from
  *     production. Always user-initiated.
- *   - `deleteDoc` — permanent removal of a doc.
- *   - `revertDraft` — discards in-progress draft edits.
- *   - `scheduleDoc` / `unscheduleDoc` — affects future production state.
- *   - `lockPublishing` / `unlockPublishing` — affects governance state.
- *   - `restoreVersion` — overwrites the current draft with old data.
- *   - Bulk variants (`publishDocs`, etc.) of any of the above.
+ *   - `doc_delete` — permanent removal of a doc.
+ *   - `doc_revertDraft` — discards in-progress draft edits.
+ *   - `doc_schedule` / `doc_unschedule` — affects future production state.
+ *   - `doc_lockPublishing` / `doc_unlockPublishing` — affects governance state.
+ *   - `doc_restoreVersion` — overwrites the current draft with old data.
+ *   - Bulk variants (e.g. `docs_publish`) of any of the above.
  *
  * If you add new write tools here, keep them limited to draft-mode edits
  * the user can easily review before publishing.
  */
 export function createCmsTools(): ToolSet {
   return {
-    'collections_list': tool({
+    collections_list: tool({
       description:
         'List all CMS collections defined in the project. Returns each ' +
         'collection id along with optional name/description metadata.',
       inputSchema: z.object({}),
     }),
 
-    'docs_list': tool({
+    docs_list: tool({
       description:
         'List documents inside a CMS collection. Returns up to `limit` docs ' +
         '(default 25, max 100). Use this to explore content before reading ' +
@@ -94,7 +91,7 @@ export function createCmsTools(): ToolSet {
       }),
     }),
 
-    'docs_search': tool({
+    docs_search: tool({
       description:
         'Run a full-text search across all indexed CMS docs. Returns the ' +
         'top matching doc ids ordered by relevance.',
@@ -104,7 +101,7 @@ export function createCmsTools(): ToolSet {
       }),
     }),
 
-    'doc_get': tool({
+    doc_get: tool({
       description:
         'Read a single CMS document. Returns the doc fields plus system ' +
         'metadata. Use this when you need the full content of a doc.',
@@ -118,7 +115,7 @@ export function createCmsTools(): ToolSet {
       }),
     }),
 
-    'doc_getVersion': tool({
+    doc_getVersion: tool({
       description:
         'Read a specific version of a CMS document. Use versionId "draft" ' +
         'or "published" for the current draft/published state, or a numeric ' +
@@ -137,7 +134,7 @@ export function createCmsTools(): ToolSet {
       }),
     }),
 
-    'doc_set': tool({
+    doc_set: tool({
       description:
         'Replace the entire draft fields payload of a CMS document. Pass ' +
         'the full JSON object that should become the new draft contents — ' +
@@ -160,7 +157,7 @@ export function createCmsTools(): ToolSet {
       }),
     }),
 
-    'doc_create': tool({
+    doc_create: tool({
       description:
         'Create a new draft CMS document with the given slug. Fails if the ' +
         'doc already exists. Pass optional initial fields (validated against ' +
@@ -178,7 +175,7 @@ export function createCmsTools(): ToolSet {
       }),
     }),
 
-    'doc_updateField': tool({
+    doc_updateField: tool({
       description:
         'Update a single field on a draft CMS document by JSON path. ' +
         'Use dotted paths (e.g. "hero.title") and array indices (e.g. ' +
@@ -194,34 +191,11 @@ export function createCmsTools(): ToolSet {
       }),
     }),
 
-    'doc_publish': tool({
-      description:
-        'Publish a draft CMS document, making it live. This copies the ' +
-        'current draft to the published version and saves a version ' +
-        'snapshot. Always confirm with the user before calling.',
-      inputSchema: z.object({
-        docId: z
-          .string()
-          .describe(
-            'Full doc id in the form "Collection/slug" (e.g. "Pages/home").'
-          ),
-      }),
-    }),
+    // `doc_publish` and `doc_delete` are intentionally omitted — see the
+    // safety policy comment on `createCmsTools`. Users must run these from
+    // the CMS UI themselves.
 
-    'doc_delete': tool({
-      description:
-        'Delete a CMS document (draft, published, and scheduled versions). ' +
-        'This is irreversible. Always confirm with the user before calling.',
-      inputSchema: z.object({
-        docId: z
-          .string()
-          .describe(
-            'Full doc id in the form "Collection/slug" (e.g. "Pages/home").'
-          ),
-      }),
-    }),
-
-    'doc_duplicate': tool({
+    doc_duplicate: tool({
       description:
         'Duplicate an existing CMS document to a new slug. Copies all ' +
         'draft fields to the target doc id. Fails if the target already ' +
@@ -232,27 +206,15 @@ export function createCmsTools(): ToolSet {
           .describe('Source doc id to copy from (e.g. "Pages/home").'),
         toDocId: z
           .string()
-          .describe(
-            'Target doc id for the copy (e.g. "Pages/home-copy").'
-          ),
+          .describe('Target doc id for the copy (e.g. "Pages/home-copy").'),
       }),
     }),
 
-    'doc_revertDraft': tool({
-      description:
-        'Revert the draft of a CMS document back to its last published ' +
-        'version. Discards all unpublished changes. Fails if the doc has ' +
-        'never been published. Always confirm with the user before calling.',
-      inputSchema: z.object({
-        docId: z
-          .string()
-          .describe(
-            'Full doc id in the form "Collection/slug" (e.g. "Pages/home").'
-          ),
-      }),
-    }),
+    // `doc_revertDraft` is intentionally omitted — see the safety policy
+    // comment on `createCmsTools`. Discarding draft edits is destructive
+    // and must be triggered by the user from the CMS UI.
 
-    'doc_listVersions': tool({
+    doc_listVersions: tool({
       description:
         'List version history for a CMS document. Returns versions ordered ' +
         'by most recent first. Use the versionId from the results with ' +
@@ -267,7 +229,7 @@ export function createCmsTools(): ToolSet {
       }),
     }),
 
-    'doc_translateField': tool({
+    doc_translateField: tool({
       description:
         'Translate a text value into one or more target locales using AI. ' +
         'Returns the translated strings keyed by locale. Use this to help ' +
@@ -289,7 +251,7 @@ export function createCmsTools(): ToolSet {
       }),
     }),
 
-    'schema_get': tool({
+    schema_get: tool({
       description:
         'Get the field schema for a CMS collection. Returns the full field ' +
         'definitions including types, labels, and validation rules. Use this ' +

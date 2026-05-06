@@ -19,7 +19,6 @@ import {
   setDoc,
   Timestamp,
   updateDoc,
-  writeBatch,
 } from 'firebase/firestore';
 import {Collection} from '../../../core/schema.js';
 import {
@@ -95,19 +94,8 @@ function publishedDocRef(docId: string) {
   );
 }
 
-function scheduledDocRef(docId: string) {
-  const {collection, slug} = parseDocId(docId);
-  const {firebase, rootConfig} = getCtx();
-  return doc(
-    firebase.db,
-    'Projects',
-    rootConfig.projectId,
-    'Collections',
-    collection,
-    'Scheduled',
-    slug
-  );
-}
+// `scheduledDocRef` was removed alongside the publish/delete handlers
+// (see safety policy in `core/ai-tools.ts`).
 
 function versionDocRef(docId: string, versionId: string) {
   const {collection, slug} = parseDocId(docId);
@@ -388,66 +376,11 @@ async function docUpdateField(input: {
   return {success: true, docId: input.docId, path: input.path};
 }
 
-async function docPublish(input: {docId: string}) {
-  const {firebase, rootConfig} = getCtx();
-  const ref = draftDocRef(input.docId);
-  const snap = await fbGetDoc(ref);
-  if (!snap.exists()) {
-    return {success: false, docId: input.docId, error: 'NOT_FOUND'};
-  }
-
-  const draftData = snap.data() as any;
-  const sys = {...(draftData.sys || {})};
-  const userEmail = firebase.user?.email || 'root-cms-ai';
-  sys.modifiedAt = serverTimestamp();
-  sys.modifiedBy = userEmail;
-  sys.publishedAt = serverTimestamp();
-  sys.publishedBy = userEmail;
-  sys.firstPublishedAt ??= serverTimestamp();
-  sys.firstPublishedBy ??= userEmail;
-  delete sys.scheduledAt;
-  delete sys.scheduledBy;
-
-  const {collection: collectionId, slug} = parseDocId(input.docId);
-  const pubRef = publishedDocRef(input.docId);
-  const schedRef = scheduledDocRef(input.docId);
-  const versionRef = doc(
-    firebase.db,
-    'Projects',
-    rootConfig.projectId,
-    'Collections',
-    collectionId,
-    'Drafts',
-    slug,
-    'Versions',
-    String(Date.now())
-  );
-
-  const batch = writeBatch(firebase.db);
-  batch.update(ref, {sys});
-  batch.set(pubRef, {...draftData, sys});
-  batch.delete(schedRef);
-  batch.set(versionRef, {
-    id: input.docId,
-    collection: collectionId,
-    slug,
-    fields: draftData.fields || {},
-    sys,
-    tags: ['published'],
-  });
-  await batch.commit();
-  return {success: true, docId: input.docId};
-}
-
-async function docDelete(input: {docId: string}) {
-  const {firebase} = getCtx();
-  const batch = writeBatch(firebase.db);
-  batch.delete(draftDocRef(input.docId));
-  batch.delete(publishedDocRef(input.docId));
-  batch.delete(scheduledDocRef(input.docId));
-  await batch.commit();
-  return {success: true, docId: input.docId};
-}
+// docPublish, docDelete, and docRevertDraft are intentionally NOT
+// implemented here — see the safety policy comment in `core/ai-tools.ts`
+// (`createCmsTools`). Publishing, permanent deletes, and discarding
+// in-progress drafts must be initiated by the user through the CMS UI,
+// not by the chat model.
 
 async function docDuplicate(input: {fromDocId: string; toDocId: string}) {
   const fromRef = draftDocRef(input.fromDocId);
@@ -489,29 +422,6 @@ async function docDuplicate(input: {fromDocId: string; toDocId: string}) {
   };
   await setDoc(toRef, data);
   return {success: true, fromDocId: input.fromDocId, toDocId: input.toDocId};
-}
-
-async function docRevertDraft(input: {docId: string}) {
-  const pubRef = publishedDocRef(input.docId);
-  const pubSnap = await fbGetDoc(pubRef);
-  if (!pubSnap.exists()) {
-    return {
-      success: false,
-      docId: input.docId,
-      error: 'NOT_PUBLISHED',
-      hint: 'Cannot revert: doc has never been published.',
-    };
-  }
-
-  const {firebase} = getCtx();
-  const ref = draftDocRef(input.docId);
-  const publishedData = pubSnap.data() as any;
-  await updateDoc(ref, {
-    fields: publishedData.fields || {},
-    'sys.modifiedAt': serverTimestamp(),
-    'sys.modifiedBy': firebase.user?.email || 'root-cms-ai',
-  });
-  return {success: true, docId: input.docId};
 }
 
 async function docListVersions(input: {docId: string; limit?: number}) {
@@ -617,10 +527,7 @@ const HANDLERS: Record<string, (input: any) => Promise<unknown>> = {
   doc_set: docSet,
   doc_create: docCreate,
   doc_updateField: docUpdateField,
-  doc_publish: docPublish,
-  doc_delete: docDelete,
   doc_duplicate: docDuplicate,
-  doc_revertDraft: docRevertDraft,
   doc_listVersions: docListVersions,
   doc_translateField: docTranslateField,
   schema_get: schemaGet,
