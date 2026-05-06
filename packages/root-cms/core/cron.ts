@@ -1,9 +1,10 @@
 import {RootConfig} from '@blinkk/root';
 import {RootCMSClient} from './client.js';
+import {DependencyGraphService} from './dependency-graph.js';
 import {VersionsService} from './versions.js';
 
 export async function runCronJobs(rootConfig: RootConfig) {
-  await Promise.all([
+  const jobs = [
     runCronJob('publishScheduledDocs', runPublishScheduledDocs, rootConfig),
     runCronJob(
       'syncScheduledDataSources',
@@ -11,7 +12,18 @@ export async function runCronJobs(rootConfig: RootConfig) {
       rootConfig
     ),
     runCronJob('saveVersions', runSaveVersions, rootConfig),
-  ]);
+  ];
+
+  const dependencyGraphService = new DependencyGraphService(rootConfig);
+  if (dependencyGraphService.isEnabled()) {
+    jobs.push(
+      runCronJob('updateDependencyGraph', () =>
+        dependencyGraphService.updateDependencyGraph()
+      )
+    );
+  }
+
+  await Promise.all(jobs);
 }
 
 async function runCronJob(
