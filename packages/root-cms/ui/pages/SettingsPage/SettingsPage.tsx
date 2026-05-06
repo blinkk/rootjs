@@ -375,9 +375,8 @@ function ShareSection() {
             <li>ADMIN: all of the above and change sharing settings</li>
           </ul>
           <p>
-            Use <strong>permission groups</strong> to manage many users at once
-            and optionally scope a role to specific collections. Changes are
-            staged until you click <strong>Save</strong>.
+            Use <strong>groups</strong> to manage many users at once and
+            optionally scope a role to specific collections.
           </p>
         </Text>
       </div>
@@ -389,17 +388,6 @@ function ShareSection() {
           />
           <div className="SettingsPage__share__subsection">
             <Heading className="SettingsPage__section__right__title" size="h3">
-              Permission groups
-            </Heading>
-            <PermissionGroupsBox
-              groups={draft.permissionGroups}
-              onChange={setGroups}
-              collections={collectionIds}
-              disabled={!currentUserIsAdmin}
-            />
-          </div>
-          <div className="SettingsPage__share__subsection">
-            <Heading className="SettingsPage__section__right__title" size="h3">
               Users
             </Heading>
             <ShareBox
@@ -407,6 +395,18 @@ function ShareSection() {
               roles={draft.roles}
               onChange={setRoles}
               currentUserIsAdmin={currentUserIsAdmin}
+            />
+          </div>
+          <div className="SettingsPage__share__subsection">
+            <Heading className="SettingsPage__section__right__title" size="h3">
+              Groups
+            </Heading>
+            <Text></Text>
+            <PermissionGroupsBox
+              groups={draft.permissionGroups}
+              onChange={setGroups}
+              collections={collectionIds}
+              disabled={!currentUserIsAdmin}
             />
           </div>
           <div className="SettingsPage__share__saveBar">
