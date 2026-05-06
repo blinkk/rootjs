@@ -33,6 +33,14 @@
       "types": "./dist/core.d.ts",
       "import": "./dist/core.js"
     },
+    "./email-client": {
+      "types": "./dist/email-client.d.ts",
+      "import": "./dist/email-client.js"
+    },
+    "./email-notification": {
+      "types": "./dist/email-notification-plugin.d.ts",
+      "import": "./dist/email-notification-plugin.js"
+    },
     "./functions": {
       "types": "./dist/functions.d.ts",
       "import": "./dist/functions.js"
