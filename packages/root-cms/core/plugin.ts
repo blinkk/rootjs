@@ -28,10 +28,10 @@ import {type AiConfig} from './ai-chat.js';
 import {type RootAiModel} from './ai.js';
 import {api} from './api.js';
 import {type CMSCheck} from './checks.js';
-import {type CMSNotificationService} from './services-notifications.js';
-import {type CMSTranslationService} from './translations.js';
 import {Action, RootCMSClient} from './client.js';
+import {type CMSNotificationService} from './services-notifications.js';
 import {sse, SSEBroadcastFn} from './sse.js';
+import {type CMSTranslationService} from './translations.js';
 
 export type {AiConfig, AiModelConfig, AiProvider} from './ai-chat.js';
 export type {
@@ -275,17 +275,24 @@ export type CMSPluginOptions = {
    *   ai: {
    *     models: [
    *       {
-   *         id: 'gpt-4o',
-   *         label: 'GPT-4o',
+   *         id: 'gpt-5.5',
+   *         label: 'GPT-5.5',
    *         provider: 'openai',
    *         apiKey: process.env.OPENAI_API_KEY,
-   *         capabilities: {tools: true, attachments: true},
+   *         capabilities: {tools: true, reasoning: true, attachments: true},
    *       },
    *       {
-   *         id: 'claude-opus-4-5',
-   *         label: 'Claude Opus 4.5',
+   *         id: 'claude-opus-4-7',
+   *         label: 'Claude Opus 4.7',
    *         provider: 'anthropic',
    *         apiKey: process.env.ANTHROPIC_API_KEY,
+   *         capabilities: {tools: true, reasoning: true, attachments: true},
+   *       },
+   *       {
+   *         id: 'gemini-3.1-pro',
+   *         label: 'Gemini 3.1 Pro',
+   *         provider: 'gemini',
+   *         apiKey: process.env.GEMINI_API_KEY,
    *         capabilities: {tools: true, reasoning: true, attachments: true},
    *       },
    *       {
