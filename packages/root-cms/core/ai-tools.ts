@@ -48,6 +48,25 @@ export type CmsToolName = (typeof CMS_TOOL_NAMES)[number];
 /**
  * Schema-only tool definitions. The server passes these to `streamText` so
  * the model knows the contract; the browser provides the actual `execute`.
+ *
+ * Safety policy: this tool set is intentionally read + draft-write only.
+ * The following operations are deliberately NOT exposed to the model
+ * because they are publishing-related, destructive, or otherwise
+ * irreversible. Surfacing them would let a single hallucinated tool call
+ * affect the live site or wipe authored content. Users must perform these
+ * actions themselves through the regular CMS UI:
+ *
+ *   - `publishDoc` / `unpublishDoc` — promote/demote a draft to/from
+ *     production. Always user-initiated.
+ *   - `deleteDoc` — permanent removal of a doc.
+ *   - `revertDraft` — discards in-progress draft edits.
+ *   - `scheduleDoc` / `unscheduleDoc` — affects future production state.
+ *   - `lockPublishing` / `unlockPublishing` — affects governance state.
+ *   - `restoreVersion` — overwrites the current draft with old data.
+ *   - Bulk variants (`publishDocs`, etc.) of any of the above.
+ *
+ * If you add new write tools here, keep them limited to draft-mode edits
+ * the user can easily review before publishing.
  */
 export function createCmsTools(): ToolSet {
   return {
