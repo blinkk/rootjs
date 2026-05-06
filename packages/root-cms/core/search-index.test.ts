@@ -10,9 +10,93 @@ import * as schema from './schema.js';
 import {extractDocRecords} from './search-extract.js';
 import {
   SearchIndexService,
+  isCollectionIndexable,
+  isDocIndexable,
   isTitleyDeepKey,
+  resolveSearchIndexFilters,
   withWeight,
 } from './search-index.js';
+
+describe('search index filters', () => {
+  it('treats unset/empty config as "index everything"', () => {
+    const filters = resolveSearchIndexFilters(undefined);
+    expect(isCollectionIndexable(filters, 'Pages')).toBe(true);
+    expect(isCollectionIndexable(filters, 'Posts')).toBe(true);
+    expect(isDocIndexable(filters, 'Pages/home')).toBe(true);
+  });
+
+  it('treats empty arrays as unset (does not exclude everything)', () => {
+    const filters = resolveSearchIndexFilters({
+      includeCollections: [],
+      includeDocIds: [],
+    });
+    expect(isCollectionIndexable(filters, 'Pages')).toBe(true);
+    expect(isDocIndexable(filters, 'Pages/home')).toBe(true);
+  });
+
+  it('respects includeCollections allowlist', () => {
+    const filters = resolveSearchIndexFilters({
+      includeCollections: ['Pages'],
+    });
+    expect(isCollectionIndexable(filters, 'Pages')).toBe(true);
+    expect(isCollectionIndexable(filters, 'Posts')).toBe(false);
+    expect(isDocIndexable(filters, 'Pages/home')).toBe(true);
+    expect(isDocIndexable(filters, 'Posts/hello')).toBe(false);
+  });
+
+  it('respects excludeCollections denylist', () => {
+    const filters = resolveSearchIndexFilters({
+      excludeCollections: ['Drafts'],
+    });
+    expect(isCollectionIndexable(filters, 'Pages')).toBe(true);
+    expect(isCollectionIndexable(filters, 'Drafts')).toBe(false);
+    expect(isDocIndexable(filters, 'Drafts/foo')).toBe(false);
+  });
+
+  it('applies excludeCollections after includeCollections', () => {
+    const filters = resolveSearchIndexFilters({
+      includeCollections: ['Pages', 'Posts'],
+      excludeCollections: ['Posts'],
+    });
+    expect(isCollectionIndexable(filters, 'Pages')).toBe(true);
+    expect(isCollectionIndexable(filters, 'Posts')).toBe(false);
+    expect(isCollectionIndexable(filters, 'Other')).toBe(false);
+  });
+
+  it('respects includeDocIds allowlist', () => {
+    const filters = resolveSearchIndexFilters({
+      includeDocIds: ['Pages/home', 'Pages/about'],
+    });
+    expect(isDocIndexable(filters, 'Pages/home')).toBe(true);
+    expect(isDocIndexable(filters, 'Pages/about')).toBe(true);
+    expect(isDocIndexable(filters, 'Pages/contact')).toBe(false);
+    // Collections are still indexable; only the doc-level filter narrows.
+    expect(isCollectionIndexable(filters, 'Pages')).toBe(true);
+  });
+
+  it('respects excludeDocIds denylist', () => {
+    const filters = resolveSearchIndexFilters({
+      excludeDocIds: ['Pages/secret'],
+    });
+    expect(isDocIndexable(filters, 'Pages/home')).toBe(true);
+    expect(isDocIndexable(filters, 'Pages/secret')).toBe(false);
+  });
+
+  it('combines collection and doc-id filters', () => {
+    const filters = resolveSearchIndexFilters({
+      includeCollections: ['Pages'],
+      excludeDocIds: ['Pages/secret'],
+    });
+    expect(isDocIndexable(filters, 'Pages/home')).toBe(true);
+    expect(isDocIndexable(filters, 'Pages/secret')).toBe(false);
+    expect(isDocIndexable(filters, 'Posts/hello')).toBe(false);
+  });
+
+  it('rejects malformed doc ids (no slash)', () => {
+    const filters = resolveSearchIndexFilters(undefined);
+    expect(isDocIndexable(filters, 'no-slash')).toBe(false);
+  });
+});
 
 describe('isTitleyDeepKey', () => {
   it('matches title-like terminal segments case-insensitively', () => {

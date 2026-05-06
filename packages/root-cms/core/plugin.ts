@@ -121,6 +121,42 @@ export interface CMSAIConfig {
   model?: RootAiModel;
 }
 
+/**
+ * Filters applied to the spotlight / global search indexer. By default every
+ * collection and every doc is indexed. Use these options to scope the index to
+ * a subset of the project's content.
+ *
+ * Doc ids use the `<collectionId>/<slug>` format (e.g. `Pages/about`), which
+ * matches the format used elsewhere in the CMS.
+ */
+export interface CMSSearchIndexConfig {
+  /**
+   * Collections to include in the search index. If specified, only these
+   * collections are indexed. If unset, all collections are indexed (subject to
+   * `excludeCollections`).
+   */
+  includeCollections?: string[];
+
+  /**
+   * Collections to exclude from the search index. Applied after
+   * `includeCollections`.
+   */
+  excludeCollections?: string[];
+
+  /**
+   * Doc ids to include in the search index. If specified, only these docs are
+   * indexed (within collections that pass the collection filter). Format:
+   * `<collectionId>/<slug>`.
+   */
+  includeDocIds?: string[];
+
+  /**
+   * Doc ids to exclude from the search index. Applied after `includeDocIds`.
+   * Format: `<collectionId>/<slug>`.
+   */
+  excludeDocIds?: string[];
+}
+
 export interface CMSSidebarTool {
   /** URL for the sidebar icon image. */
   icon?: string;
@@ -360,6 +396,12 @@ export type CMSPluginOptions = {
    * ```
    */
   notifications?: CMSNotificationService[];
+
+  /**
+   * Configuration for the spotlight / global search indexer. Use this to
+   * include or exclude specific collections or docs from being indexed.
+   */
+  searchIndex?: CMSSearchIndexConfig;
 };
 
 export type CMSPlugin = Plugin & {
