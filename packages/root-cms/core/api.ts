@@ -2,11 +2,19 @@ import {promises as fs} from 'node:fs';
 import path from 'node:path';
 import {Server, Request, Response} from '@blinkk/root';
 import {multipartMiddleware} from '@blinkk/root/middleware';
+import {UIMessage} from 'ai';
 import {
   ChatPrompt,
   AiResponse,
   SendPromptOptions,
 } from '../shared/ai/prompts.js';
+import {
+  ChatStore,
+  findModel,
+  getAiConfig,
+  runChatStream,
+  serializeAiConfig,
+} from './ai-chat.js';
 import {ChatClient, RootAiModel, summarizeDiff} from './ai.js';
 import {type CMSCheck} from './checks.js';
 import {RootCMSClient, parseDocId, unmarshalData} from './client.js';
@@ -82,6 +90,41 @@ function isRecord(value: unknown): value is Record<string, any> {
 
 function isDocVersion(value: unknown): value is DocVersion {
   return value === 'draft' || value === 'published';
+}
+
+/**
+ * Pipes a Web `Response` (e.g. from `streamText().toUIMessageStreamResponse()`)
+ * to an Express `Response`. Headers are copied verbatim and the body is
+ * streamed without buffering.
+ */
+async function pipeWebResponse(
+  webResponse: globalThis.Response,
+  res: Response
+): Promise<void> {
+  res.status(webResponse.status);
+  webResponse.headers.forEach((value, key) => {
+    res.setHeader(key, value);
+  });
+  // Disable buffering for streaming responses.
+  res.setHeader('X-Accel-Buffering', 'no');
+  if (!webResponse.body) {
+    res.end();
+    return;
+  }
+  const reader = webResponse.body.getReader();
+  try {
+    let done = false;
+    while (!done) {
+      const next = await reader.read();
+      done = next.done;
+      if (next.value) {
+        res.write(next.value);
+      }
+    }
+  } finally {
+    reader.releaseLock();
+    res.end();
+  }
 }
 
 export interface ChatApiRequest {
@@ -689,6 +732,192 @@ export function api(server: Server, options: ApiOptions) {
         console.error(err.stack || err);
         res.status(500).json({success: false, error: 'UNKNOWN'});
       }
+    }
+  );
+
+  // ===========================================================================
+  // /cms/api/ai.v2.* — Vercel AI SDK powered chat for /cms/ai.
+  // ===========================================================================
+
+  /** Returns the available models (without API keys) for the model picker. */
+  server.use('/cms/api/ai.v2.config', async (req: Request, res: Response) => {
+    if (!req.user?.email) {
+      res.status(401).json({success: false, error: 'UNAUTHORIZED'});
+      return;
+    }
+    const aiConfig = getAiConfig(req.rootConfig!);
+    if (!aiConfig) {
+      res.status(200).json({success: true, enabled: false});
+      return;
+    }
+    res
+      .status(200)
+      .json({success: true, enabled: true, ...serializeAiConfig(aiConfig)});
+  });
+
+  /**
+   * Streams an LLM response using the Vercel AI SDK. The server is a thin
+   * proxy: requests are forwarded directly to the configured provider and the
+   * resulting UI message stream is piped back to the browser. Final messages
+   * are persisted to Firestore once the stream finishes.
+   */
+  server.use('/cms/api/ai.v2.chat', async (req: Request, res: Response) => {
+    if (req.method !== 'POST') {
+      res.status(400).json({success: false, error: 'BAD_REQUEST'});
+      return;
+    }
+    if (!req.user?.email) {
+      res.status(401).json({success: false, error: 'UNAUTHORIZED'});
+      return;
+    }
+    const aiConfig = getAiConfig(req.rootConfig!);
+    if (!aiConfig) {
+      res.status(404).json({success: false, error: 'AI_NOT_CONFIGURED'});
+      return;
+    }
+
+    const body = req.body || {};
+    const messages = (body.messages as UIMessage[]) || [];
+    if (!Array.isArray(messages) || messages.length === 0) {
+      res.status(400).json({success: false, error: 'MISSING_MESSAGES'});
+      return;
+    }
+    const model = findModel(aiConfig, body.modelId);
+    if (!model) {
+      res.status(400).json({success: false, error: 'UNKNOWN_MODEL'});
+      return;
+    }
+
+    const cmsClient = new RootCMSClient(req.rootConfig!);
+    const store = new ChatStore(cmsClient, req.user.email);
+    const requestedChatId =
+      typeof body.chatId === 'string' ? body.chatId.trim() : '';
+    let chatId = '';
+    if (requestedChatId) {
+      const existing = await store.getChat(requestedChatId);
+      if (existing) {
+        chatId = existing.id;
+      } else {
+        // Honor the client-supplied id so a single chat session keeps the
+        // same Firestore doc id even before the first response is saved.
+        const created = await store.createChat({
+          id: requestedChatId,
+          modelId: model.id,
+        });
+        chatId = created.id;
+      }
+    } else {
+      const created = await store.createChat({modelId: model.id});
+      chatId = created.id;
+    }
+
+    try {
+      const streamResponse = await runChatStream({
+        rootConfig: req.rootConfig!,
+        cmsClient,
+        config: aiConfig,
+        model,
+        messages,
+        chatId,
+        user: req.user.email,
+      });
+      // Surface the chat id so clients can persist it for the next request.
+      streamResponse.headers.set('x-root-cms-chat-id', chatId);
+      await pipeWebResponse(streamResponse, res);
+    } catch (err: any) {
+      console.error(err.stack || err);
+      if (!res.headersSent) {
+        res.status(500).json({success: false, error: err.message || 'UNKNOWN'});
+      } else {
+        res.end();
+      }
+    }
+  });
+
+  /** Lists the current user's recent chats. */
+  server.use(
+    '/cms/api/ai.v2.chats.list',
+    async (req: Request, res: Response) => {
+      if (!req.user?.email) {
+        res.status(401).json({success: false, error: 'UNAUTHORIZED'});
+        return;
+      }
+      const cmsClient = new RootCMSClient(req.rootConfig!);
+      const store = new ChatStore(cmsClient, req.user.email);
+      try {
+        const chats = await store.listChats({limit: req.body?.limit});
+        res.status(200).json({
+          success: true,
+          chats: chats.map((c) => ({
+            id: c.id,
+            title: c.title,
+            modelId: c.modelId,
+            createdAt: c.createdAt.toMillis(),
+            modifiedAt: c.modifiedAt.toMillis(),
+          })),
+        });
+      } catch (err: any) {
+        console.error(err.stack || err);
+        res.status(500).json({success: false, error: 'UNKNOWN'});
+      }
+    }
+  );
+
+  /** Returns the full message history for a chat. */
+  server.use(
+    '/cms/api/ai.v2.chats.get',
+    async (req: Request, res: Response) => {
+      if (!req.user?.email) {
+        res.status(401).json({success: false, error: 'UNAUTHORIZED'});
+        return;
+      }
+      const id = String(req.body?.id || '').trim();
+      if (!id) {
+        res.status(400).json({success: false, error: 'MISSING_ID'});
+        return;
+      }
+      const cmsClient = new RootCMSClient(req.rootConfig!);
+      const store = new ChatStore(cmsClient, req.user.email);
+      const chat = await store.getChat(id);
+      if (!chat) {
+        res.status(404).json({success: false, error: 'NOT_FOUND'});
+        return;
+      }
+      res.status(200).json({
+        success: true,
+        chat: {
+          id: chat.id,
+          title: chat.title,
+          modelId: chat.modelId,
+          messages: chat.messages,
+          createdAt: chat.createdAt.toMillis(),
+          modifiedAt: chat.modifiedAt.toMillis(),
+        },
+      });
+    }
+  );
+
+  /** Deletes a chat from history. */
+  server.use(
+    '/cms/api/ai.v2.chats.delete',
+    async (req: Request, res: Response) => {
+      if (req.method !== 'POST') {
+        res.status(400).json({success: false, error: 'BAD_REQUEST'});
+        return;
+      }
+      if (!req.user?.email) {
+        res.status(401).json({success: false, error: 'UNAUTHORIZED'});
+        return;
+      }
+      const id = String(req.body?.id || '').trim();
+      if (!id) {
+        res.status(400).json({success: false, error: 'MISSING_ID'});
+        return;
+      }
+      const cmsClient = new RootCMSClient(req.rootConfig!);
+      const store = new ChatStore(cmsClient, req.user.email);
+      await store.deleteChat(id);
+      res.status(200).json({success: true});
     }
   );
 

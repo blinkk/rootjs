@@ -57,6 +57,17 @@ export default defineConfig({
           templates: {label: 'Templates', iframeUrl: '/cms-tools/templates/'},
         },
       },
+      ai: {
+        models: [
+          {
+            id: 'claude-opus-4-7',
+            label: 'Claude Opus 4.7',
+            provider: 'anthropic',
+            apiKey: process.env.ANTHROPIC_API_KEY,
+            capabilities: {tools: true, reasoning: true, attachments: true},
+          },
+        ],
+      },
       translations: [
         crowdinTranslationService({
           apiToken: process.env.CROWDIN_API_TOKEN,

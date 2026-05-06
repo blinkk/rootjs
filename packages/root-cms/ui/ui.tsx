@@ -187,6 +187,20 @@ declare global {
       experiments?: {
         ai?: boolean | {endpoint?: string};
       };
+      ai?: {
+        defaultModel?: string;
+        models: Array<{
+          id: string;
+          label: string;
+          description?: string;
+          provider: string;
+          capabilities: {
+            tools: boolean;
+            reasoning: boolean;
+            attachments: boolean;
+          };
+        }>;
+      } | null;
       preview: {
         channel: true | false | 'to-preview' | 'from-preview';
       };
@@ -249,6 +263,10 @@ function App() {
                         <Router>
                           <Route path="/cms" component={ProjectPage} />
                           <Route path="/cms/ai" component={AIPage} />
+                          <Route
+                            path="/cms/ai/chat/:chatId"
+                            component={AIPage}
+                          />
                           <Route path="/cms/assets" component={AssetsPage} />
                           <Route path="/cms/compare" component={ComparePage} />
                           <Route

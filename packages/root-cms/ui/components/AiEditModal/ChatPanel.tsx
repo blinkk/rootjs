@@ -1,5 +1,6 @@
-import {ChatWindow, useChat} from '../../pages/AIPage/AIPage.js';
 import {ChatBar} from '../ChatBar/ChatBar.js';
+import {useLegacyChat} from '../ChatBar/legacyChat.js';
+import {ChatWindow} from '../ChatBar/LegacyChatView.js';
 
 interface ChatPanelProps {
   children?: preact.ComponentChildren;
@@ -10,7 +11,7 @@ interface ChatPanelProps {
 }
 
 export function ChatPanel(props: ChatPanelProps) {
-  const chat = useChat();
+  const chat = useLegacyChat();
   return (
     <>
       <ChatWindow chat={chat} children={props.children} />

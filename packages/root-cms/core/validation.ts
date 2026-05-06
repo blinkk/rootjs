@@ -75,7 +75,7 @@ export function validateFields(
 /**
  * Validates a single value against a field definition.
  */
-function validateValue(
+export function validateValue(
   value: any,
   field: FieldWithId,
   path: string

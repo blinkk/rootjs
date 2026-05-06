@@ -43,7 +43,6 @@ import {useContext, useMemo, useRef, useState} from 'preact/hooks';
 import * as schema from '../../../../core/schema.js';
 import {useDraftDocValue} from '../../../hooks/useDraftDoc.js';
 import {useGapiClient} from '../../../hooks/useGapiClient.js';
-import {ChatController, useChat} from '../../../pages/AIPage/AIPage.js';
 import {joinClassNames} from '../../../utils/classes.js';
 import {
   buildDownloadURL,
@@ -57,6 +56,7 @@ import {
   deleteFileFromGCS,
 } from '../../../utils/gcs.js';
 import {downloadFromDrive, parseGoogleDriveId} from '../../../utils/gdrive.js';
+import {ChatController, useLegacyChat} from '../../ChatBar/legacyChat.js';
 import {FieldProps} from './FieldProps.js';
 import {GenerateImageForm} from './GenerateImageForm.js';
 
@@ -686,7 +686,7 @@ FileField.Preview = () => {
   const ctx = useFileField();
   const [dragging, setDragging] = useState(false);
   const [copied, setCopied] = useState(false);
-  const chat = useChat();
+  const chat = useLegacyChat();
   const experiments = window.__ROOT_CTX.experiments || {};
 
   // Videos and images are the only files that get the canvas preview.
