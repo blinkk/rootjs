@@ -270,7 +270,10 @@ export type CMSPluginOptions = {
     tools?: Record<string, CMSSidebarTool>;
 
     /**
-     * Hide specific built-in sidebar tools.
+     * Hide specific built-in sidebar tools. Hiding a tool also removes its
+     * surfaces from the CMS home page (e.g. hiding `'tasks'` removes the task
+     * manager card from the home page). The underlying routes remain
+     * accessible via direct URL.
      */
     hiddenBuiltInTools?: CMSBuiltInSidebarTool[];
   };
