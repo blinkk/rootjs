@@ -209,6 +209,8 @@ jobs:
               '  server: server({',
               "    mode: 'production',",
               '    httpsOptions: {',
+              "      ingressSettings: 'ALLOW_ALL',",
+              "      invoker: 'public',",
               '      minInstances: 0,',
               '    },',
               '  }),',
