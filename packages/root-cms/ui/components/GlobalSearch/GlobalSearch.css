@@ -142,3 +142,37 @@
   border-top: 1px solid var(--mantine-color-gray-2, #e9ecef);
   background: var(--mantine-color-gray-0, #f8f9fa);
 }
+
+.GlobalSearchAction--tips {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-size: 11px;
+  color: var(--mantine-color-gray-6, #868e96);
+  padding: 8px 16px;
+  border-top: 1px solid var(--mantine-color-gray-2, #e9ecef);
+  background: var(--mantine-color-gray-0, #f8f9fa);
+}
+
+.GlobalSearchAction__tipItem {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.GlobalSearchAction__tipSep {
+  color: var(--mantine-color-gray-4, #ced4da);
+}
+
+.GlobalSearchAction__kbd {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 11px;
+  padding: 1px 5px;
+  border-radius: 3px;
+  background: var(--mantine-color-gray-2, #e9ecef);
+  color: var(--mantine-color-gray-8, #343a40);
+  border: 1px solid var(--mantine-color-gray-3, #dee2e6);
+  border-bottom-width: 2px;
+}

@@ -8,14 +8,9 @@ import {
   IconRocket,
 } from '@tabler/icons-preact';
 import {ComponentChild} from 'preact';
-import type {
-  DocSlugHit,
-  GlobalSearchHit,
-} from '../../hooks/useGlobalSearch.js';
+import type {DocSlugHit, GlobalSearchHit} from '../../hooks/useGlobalSearch.js';
 import type {RecentView, RecentViewKind} from '../../utils/recent-views.js';
-
-const SNIPPET_BEFORE = 60;
-const SNIPPET_AFTER = 120;
+import {buildSnippet} from './snippet.js';
 
 interface CollectionTargetMeta {
   kind: 'collection';
@@ -60,54 +55,8 @@ export type GlobalSearchActionMeta =
   | {kind: 'target'; target: StaticTargetMeta}
   | {kind: 'recent'; view: RecentView}
   | {kind: 'header'; label: string}
-  | {kind: 'footer'; lastIndexed: string};
-
-/**
- * Returns the highlighted text + surrounding context for a search hit.
- *
- * If any of the matched terms appears in `hit.text`, returns a snippet
- * windowed around the first occurrence with the term wrapped in <mark>. If
- * none of the terms match (e.g. fuzzy hit on the field label), returns the
- * full text with no highlighting.
- */
-function buildSnippet(hit: GlobalSearchHit): {
-  pre: string;
-  mark: string;
-  post: string;
-} {
-  const text = hit.text || '';
-  const terms = (hit.terms || [])
-    .filter(Boolean)
-    .sort((a, b) => b.length - a.length);
-  if (!terms.length || !text) {
-    return {pre: text, mark: '', post: ''};
-  }
-  const lower = text.toLowerCase();
-  let foundAt = -1;
-  let foundLen = 0;
-  for (const term of terms) {
-    const idx = lower.indexOf(term.toLowerCase());
-    if (idx !== -1) {
-      foundAt = idx;
-      foundLen = term.length;
-      break;
-    }
-  }
-  if (foundAt === -1) {
-    return {
-      pre: text.slice(0, SNIPPET_BEFORE + SNIPPET_AFTER),
-      mark: '',
-      post: '',
-    };
-  }
-  const start = Math.max(0, foundAt - SNIPPET_BEFORE);
-  const end = Math.min(text.length, foundAt + foundLen + SNIPPET_AFTER);
-  const pre = (start > 0 ? '… ' : '') + text.slice(start, foundAt);
-  const mark = text.slice(foundAt, foundAt + foundLen);
-  const post =
-    text.slice(foundAt + foundLen, end) + (end < text.length ? ' …' : '');
-  return {pre, mark, post};
-}
+  | {kind: 'footer'; lastIndexed: string}
+  | {kind: 'tips'};
 
 function targetIcon(kind: StaticTargetMeta['kind']): ComponentChild {
   if (kind === 'collection') {
@@ -176,7 +125,9 @@ function Row(props: RowProps) {
 }
 
 export function GlobalSearchAction(props: SpotlightActionProps) {
-  const meta = (props.action as any)?.meta as GlobalSearchActionMeta | undefined;
+  const meta = (props.action as any)?.meta as
+    | GlobalSearchActionMeta
+    | undefined;
   if (!meta) {
     return null;
   }
@@ -197,9 +148,30 @@ export function GlobalSearchAction(props: SpotlightActionProps) {
     );
   }
 
+  if (meta.kind === 'tips') {
+    return (
+      <div className="GlobalSearchAction GlobalSearchAction--tips">
+        <span className="GlobalSearchAction__tipItem">
+          <kbd className="GlobalSearchAction__kbd">"…"</kbd>
+          <span>exact phrase</span>
+        </span>
+        <span className="GlobalSearchAction__tipSep">·</span>
+        <span className="GlobalSearchAction__tipItem">
+          <kbd className="GlobalSearchAction__kbd">-word</kbd>
+          <span>exclude</span>
+        </span>
+        <span className="GlobalSearchAction__tipSep">·</span>
+        <span className="GlobalSearchAction__tipItem">
+          <kbd className="GlobalSearchAction__kbd">coll/slug</kbd>
+          <span>jump by id</span>
+        </span>
+      </div>
+    );
+  }
+
   if (meta.kind === 'field') {
     const hit = meta.hit;
-    const snippet = buildSnippet(hit);
+    const segments = buildSnippet(hit);
     return (
       <Row hovered={props.hovered} onTrigger={props.onTrigger}>
         <div className="GlobalSearchAction__crumbs">
@@ -210,11 +182,15 @@ export function GlobalSearchAction(props: SpotlightActionProps) {
           <span className="GlobalSearchAction__field">{hit.fieldLabel}</span>
         </div>
         <div className="GlobalSearchAction__snippet">
-          <span>{snippet.pre}</span>
-          {snippet.mark && (
-            <mark className="GlobalSearchAction__mark">{snippet.mark}</mark>
+          {segments.map((seg, i) =>
+            seg.kind === 'mark' ? (
+              <mark key={i} className="GlobalSearchAction__mark">
+                {seg.value}
+              </mark>
+            ) : (
+              <span key={i}>{seg.value}</span>
+            )
           )}
-          <span>{snippet.post}</span>
         </div>
       </Row>
     );

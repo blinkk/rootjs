@@ -39,6 +39,9 @@ export interface UseGlobalSearchResult {
 
 const DEBOUNCE_MS = 200;
 const DEFAULT_LIMIT = 25;
+/** Minimum chars before we hit `/cms/api/search.query` (avoids noisy 1-letter
+ * matches that prefix-match nearly every doc). */
+const DEFAULT_MIN_QUERY_LENGTH = 2;
 
 /**
  * Debounced fetch hook for the global search endpoint.
@@ -50,7 +53,7 @@ const DEFAULT_LIMIT = 25;
  */
 export function useGlobalSearch(
   query: string,
-  options: {limit?: number} = {}
+  options: {limit?: number; minQueryLength?: number} = {}
 ): UseGlobalSearchResult {
   const [hits, setHits] = useState<GlobalSearchHit[]>([]);
   const [loading, setLoading] = useState(false);
@@ -58,10 +61,11 @@ export function useGlobalSearch(
   const [status, setStatus] = useState<GlobalSearchStatus | null>(null);
   const abortRef = useRef<AbortController | null>(null);
   const limit = options.limit ?? DEFAULT_LIMIT;
+  const minLen = options.minQueryLength ?? DEFAULT_MIN_QUERY_LENGTH;
 
   useEffect(() => {
     const trimmed = query.trim();
-    if (!trimmed) {
+    if (trimmed.length < minLen) {
       // Cancel anything in flight, clear state.
       abortRef.current?.abort();
       abortRef.current = null;
@@ -109,7 +113,7 @@ export function useGlobalSearch(
     return () => {
       window.clearTimeout(handle);
     };
-  }, [query, limit]);
+  }, [query, limit, minLen]);
 
   return {hits, loading, error, status};
 }
@@ -178,6 +182,7 @@ export interface UseDocSlugSearchResult {
 
 const SLUG_DEBOUNCE_MS = 200;
 const PER_COLLECTION_LIMIT = 5;
+const SLUG_MIN_QUERY_LENGTH = 2;
 
 /**
  * Looks up CMS docs by slug (or `<collection>/<slug>` doc id) prefix using
@@ -185,20 +190,27 @@ const PER_COLLECTION_LIMIT = 5;
  *
  * Slug-only queries (e.g. `home`) fan out across every registered collection;
  * a `<collection>/<slug>` form (e.g. `Pages/home`) restricts the lookup to a
- * single collection. Empty queries clear the result list.
+ * single collection. Queries shorter than `minQueryLength` (default 2) are
+ * skipped to avoid fanning out across every collection on a single keystroke.
  */
 export function useDocSlugSearch(
   rawQuery: string,
-  options: {limit?: number} = {}
+  options: {limit?: number; minQueryLength?: number} = {}
 ): UseDocSlugSearchResult {
   const [hits, setHits] = useState<DocSlugHit[]>([]);
   const [loading, setLoading] = useState(false);
   const cancelRef = useRef<{aborted: boolean} | null>(null);
   const totalLimit = options.limit ?? 10;
+  const minLen = options.minQueryLength ?? SLUG_MIN_QUERY_LENGTH;
 
   useEffect(() => {
     const trimmed = rawQuery.trim();
-    if (!trimmed) {
+    // For `<coll>/<slug>` queries the prefix is what's *after* the slash, so
+    // gate on that piece rather than the raw query length (otherwise typing
+    // `Pages/h` would be skipped at length 7).
+    const slashIdx = trimmed.indexOf('/');
+    const probe = slashIdx >= 0 ? trimmed.slice(slashIdx + 1) : trimmed;
+    if (probe.length < minLen) {
       if (cancelRef.current) {
         cancelRef.current.aborted = true;
       }
@@ -218,7 +230,6 @@ export function useDocSlugSearch(
 
       let collFilter: string | null = null;
       let prefix = trimmed;
-      const slashIdx = trimmed.indexOf('/');
       if (slashIdx >= 0) {
         collFilter = trimmed.slice(0, slashIdx);
         prefix = trimmed.slice(slashIdx + 1);
@@ -234,9 +245,7 @@ export function useDocSlugSearch(
 
       const allColls = Object.keys(window.__ROOT_CTX.collections || {});
       const colls = collFilter
-        ? allColls.filter(
-            (c) => c.toLowerCase() === collFilter!.toLowerCase()
-          )
+        ? allColls.filter((c) => c.toLowerCase() === collFilter!.toLowerCase())
         : allColls;
 
       // Inclusive Firestore range bounds for a prefix match. The
@@ -288,10 +297,8 @@ export function useDocSlugSearch(
         // Rank exact slug or docId matches first, then prefix matches
         // alphabetically so results are stable across renders.
         const sorted = results.sort((a, b) => {
-          const aExact =
-            a.slug === prefix || a.docId === trimmed ? 0 : 1;
-          const bExact =
-            b.slug === prefix || b.docId === trimmed ? 0 : 1;
+          const aExact = a.slug === prefix || a.docId === trimmed ? 0 : 1;
+          const bExact = b.slug === prefix || b.docId === trimmed ? 0 : 1;
           if (aExact !== bExact) {
             return aExact - bExact;
           }
@@ -312,7 +319,7 @@ export function useDocSlugSearch(
     return () => {
       window.clearTimeout(handle);
     };
-  }, [rawQuery, totalLimit]);
+  }, [rawQuery, totalLimit, minLen]);
 
   return {hits, loading};
 }
