@@ -23,7 +23,7 @@ jobs:
     runs-on: ubuntu-latest
     if: >-
       github.event_name == 'workflow_dispatch' ||
-      (github.event.issue.pull_request && startsWith(github.event.comment.body,
+      (github.event.issue.pull_request && contains(github.event.comment.body,
       '/preview'))
     permissions:
       contents: read
@@ -46,9 +46,9 @@ jobs:
             }
 
             if (!isDispatch) {
-              const command = context.payload.comment.body.trim().split(/\s+/)[0];
-              if (command !== '/preview') {
-                throw new Error('Preview comments must start with /preview.');
+              const commands = context.payload.comment.body.trim().split(/\s+/);
+              if (!commands.includes('/preview')) {
+                throw new Error('Preview comments must include /preview.');
               }
 
               const allowedAssociations = new Set([
@@ -118,15 +118,54 @@ jobs:
         run: |
           PR_NUMBER="${{ steps.preview-context.outputs.pr_number }}" node <<'NODE'
             const fs = require('fs');
+            const path = require('path');
             const prNumber = process.env.PR_NUMBER;
-            const packagePaths = [
-              'packages/root/package.json',
-              'packages/root-cms/package.json',
-            ];
 
-            for (const packagePath of packagePaths) {
-              const packageJson = JSON.parse(fs.readFileSync(packagePath, 'utf8'));
-              packageJson.version = `${packageJson.version}-pr.${prNumber}`;
+            // Preview functions install package tarballs with npm, outside the
+            // pnpm workspace. Give every Root.js package a matching PR-specific
+            // version and rewrite Root.js package-to-package dependency ranges
+            // so npm can resolve the local tarballs without falling back to npm.
+            const packageDirs = fs.readdirSync('packages', {withFileTypes: true})
+              .filter((entry) => entry.isDirectory())
+              .map((entry) => path.join('packages', entry.name));
+            const packages = packageDirs
+              .map((packageDir) => {
+                const packagePath = path.join(packageDir, 'package.json');
+                if (!fs.existsSync(packagePath)) {
+                  return undefined;
+                }
+                const packageJson = JSON.parse(fs.readFileSync(packagePath, 'utf8'));
+                if (!packageJson.name?.startsWith('@blinkk/root')) {
+                  return undefined;
+                }
+                return {packageDir, packagePath, packageJson};
+              })
+              .filter(Boolean);
+            const versionsByName = Object.fromEntries(
+              packages.map(({packageJson}) => [
+                packageJson.name,
+                `${packageJson.version}-pr.${prNumber}`,
+              ])
+            );
+
+            for (const {packagePath, packageJson} of packages) {
+              packageJson.version = versionsByName[packageJson.name];
+              for (const dependencyType of [
+                'dependencies',
+                'devDependencies',
+                'peerDependencies',
+                'optionalDependencies',
+              ]) {
+                const dependencies = packageJson[dependencyType];
+                if (!dependencies) {
+                  continue;
+                }
+                for (const dependencyName of Object.keys(dependencies)) {
+                  if (versionsByName[dependencyName]) {
+                    dependencies[dependencyName] = versionsByName[dependencyName];
+                  }
+                }
+              }
               fs.writeFileSync(
                 packagePath,
                 JSON.stringify(packageJson, null, 2) + '\n'
@@ -144,8 +183,14 @@ jobs:
       - name: Pack Root.js packages for Firebase Functions
         run: |
           mkdir -p docs/functions/vendor
-          pnpm --dir packages/root pack --pack-destination "$PWD/docs/functions/vendor"
-          pnpm --dir packages/root-cms pack --pack-destination "$PWD/docs/functions/vendor"
+          # Pack every @blinkk/root* workspace package so the Firebase function
+          # can install the PR's local build instead of the published npm build.
+          for package_json in packages/*/package.json; do
+            package_name="$(node -p "require('./${package_json}').name")"
+            if [[ "$package_name" == @blinkk/root* ]]; then
+              pnpm --dir "$(dirname "$package_json")" pack --pack-destination "$PWD/docs/functions/vendor"
+            fi
+          done
 
       - name: Configure Firebase Hosting preview
         id: preview-config
@@ -175,21 +220,38 @@ jobs:
             fs.writeFileSync('functions/index.js', indexJs);
 
             const vendorFiles = fs.readdirSync('functions/vendor');
-            const rootTarball = vendorFiles.find((name) => {
-              return /^blinkk-root-\d.*\.tgz$/.test(name);
-            });
-            const rootCmsTarball = vendorFiles.find((name) => {
-              return /^blinkk-root-cms-\d.*\.tgz$/.test(name);
-            });
-            if (!rootTarball || !rootCmsTarball) {
-              throw new Error('Missing local Root.js package tarballs.');
-            }
+            // root package names are converted to pnpm tarball names like
+            // @blinkk/root-cms -> blinkk-root-cms-<version>.tgz. Map them back
+            // so only Root.js dependencies present in functions/package.json are
+            // replaced with local tarballs.
+            const tarballsByPackage = new Map(
+              vendorFiles
+                .filter((name) => name.endsWith('.tgz'))
+                .map((name) => {
+                  const packageName = name
+                    .replace(/-\d.*\.tgz$/, '')
+                    .replace(/^blinkk-/, '@blinkk/')
+                    .replace(/^@blinkk\/root-cms$/, '@blinkk/root-cms')
+                    .replace(
+                      /^@blinkk\/root-password-protect$/,
+                      '@blinkk/root-password-protect'
+                    );
+                  return [packageName, name];
+                })
+            );
 
             const packageJson = JSON.parse(
               fs.readFileSync('functions/package.json', 'utf8')
             );
-            packageJson.dependencies['@blinkk/root'] = `file:vendor/${rootTarball}`;
-            packageJson.dependencies['@blinkk/root-cms'] = `file:vendor/${rootCmsTarball}`;
+            for (const dependencyName of Object.keys(packageJson.dependencies || {})) {
+              const tarball = tarballsByPackage.get(dependencyName);
+              if (dependencyName.startsWith('@blinkk/root') && !tarball) {
+                throw new Error(`Missing local tarball for ${dependencyName}.`);
+              }
+              if (tarball) {
+                packageJson.dependencies[dependencyName] = `file:vendor/${tarball}`;
+              }
+            }
             fs.writeFileSync(
               'functions/package.json',
               JSON.stringify(packageJson, null, 2) + '\n'
