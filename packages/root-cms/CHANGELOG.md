@@ -1,5 +1,14 @@
 # @blinkk/root-cms
 
+## 2.5.17
+
+### Patch Changes
+
+- 86359bb9: feat: add defaultOpen option to ArrayField (#1061)
+- 9d96d542: fix: propagate context to RichText inline components (#1060)
+- 4bd42e1f: fix: refresh docs list when doc is copied
+  - @blinkk/root@2.5.17
+
 ## 2.5.16
 
 ### Patch Changes
