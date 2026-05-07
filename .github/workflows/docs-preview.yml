@@ -1,0 +1,345 @@
+name: Deploy rootjs.dev Preview
+
+on:
+  issue_comment:
+    types: [ created ]
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: Pull request number to preview.
+        required: true
+        type: number
+
+defaults:
+  run:
+    shell: bash
+
+env:
+  FORCE_COLOR: true
+
+jobs:
+  preview:
+    name: Firebase Preview
+    runs-on: ubuntu-latest
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.issue.pull_request && startsWith(github.event.comment.body,
+      '/preview'))
+    permissions:
+      contents: read
+      issues: write
+      pull-requests: write
+
+    steps:
+      - name: Resolve preview request
+        id: preview-context
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const isDispatch = context.eventName === 'workflow_dispatch';
+            const prNumber = isDispatch
+              ? Number(core.getInput('pr_number'))
+              : context.payload.issue.number;
+
+            if (!Number.isInteger(prNumber) || prNumber <= 0) {
+              throw new Error(`Invalid pull request number: ${prNumber}`);
+            }
+
+            if (!isDispatch) {
+              const command = context.payload.comment.body.trim().split(/\s+/)[0];
+              if (command !== '/preview') {
+                throw new Error('Preview comments must start with /preview.');
+              }
+
+              const allowedAssociations = new Set([
+                'COLLABORATOR',
+                'MEMBER',
+                'OWNER',
+              ]);
+              const association = context.payload.comment.author_association;
+              if (!allowedAssociations.has(association)) {
+                throw new Error(
+                  `Only maintainers can request previews. User association was ${association}.`
+                );
+              }
+            }
+
+            const {data: pull} = await github.rest.pulls.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: prNumber,
+            });
+
+            const repoFullName = `${context.repo.owner}/${context.repo.repo}`;
+            if (pull.head.repo.full_name !== repoFullName) {
+              throw new Error(
+                'Preview deploys are only enabled for branches in this repository.'
+              );
+            }
+
+            core.setOutput('head_sha', pull.head.sha);
+            core.setOutput('pr_number', String(prNumber));
+
+      - name: Checkout PR head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ steps.preview-context.outputs.head_sha }}
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: "8.9.0"
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GOOGLE_CREDENTIALS }}
+
+      - name: Setup Google Cloud CLI
+        uses: google-github-actions/setup-gcloud@v2
+        with:
+          project_id: rootjs-dev
+
+      - name: Download .env from Secrets Manager
+        working-directory: docs
+        run: bash scripts/env-init.sh
+
+      - name: Add preview package version suffix
+        run: |
+          PR_NUMBER="${{ steps.preview-context.outputs.pr_number }}" node <<'NODE'
+            const fs = require('fs');
+            const prNumber = process.env.PR_NUMBER;
+            const packagePaths = [
+              'packages/root/package.json',
+              'packages/root-cms/package.json',
+            ];
+
+            for (const packagePath of packagePaths) {
+              const packageJson = JSON.parse(fs.readFileSync(packagePath, 'utf8'));
+              packageJson.version = `${packageJson.version}-pr.${prNumber}`;
+              fs.writeFileSync(
+                packagePath,
+                JSON.stringify(packageJson, null, 2) + '\n'
+              );
+            }
+          NODE
+
+      - name: Build Root.js packages from PR head
+        run: pnpm run build
+
+      - name: Build docs Firebase package
+        working-directory: docs
+        run: pnpm run build
+
+      - name: Pack Root.js packages for Firebase Functions
+        run: |
+          mkdir -p docs/functions/vendor
+          pnpm --dir packages/root pack --pack-destination "$PWD/docs/functions/vendor"
+          pnpm --dir packages/root-cms pack --pack-destination "$PWD/docs/functions/vendor"
+
+      - name: Configure Firebase Hosting preview
+        id: preview-config
+        working-directory: docs
+        run: |
+          PR_NUMBER="${{ steps.preview-context.outputs.pr_number }}" node <<'NODE'
+            const fs = require('fs');
+            const prNumber = process.env.PR_NUMBER;
+            const functionGroup = `previewpr${prNumber}`;
+            const serverFunction = `${functionGroup}-server`;
+
+            const indexJs = [
+              "import {server} from '@blinkk/root/functions';",
+              '',
+              `const ${functionGroup} = {`,
+              '  server: server({',
+              "    mode: 'production',",
+              '    httpsOptions: {',
+              '      minInstances: 0,',
+              '    },',
+              '  }),',
+              '};',
+              '',
+              `export {${functionGroup}};`,
+              '',
+            ].join('\n');
+            fs.writeFileSync('functions/index.js', indexJs);
+
+            const vendorFiles = fs.readdirSync('functions/vendor');
+            const rootTarball = vendorFiles.find((name) => {
+              return /^blinkk-root-\d.*\.tgz$/.test(name);
+            });
+            const rootCmsTarball = vendorFiles.find((name) => {
+              return /^blinkk-root-cms-\d.*\.tgz$/.test(name);
+            });
+            if (!rootTarball || !rootCmsTarball) {
+              throw new Error('Missing local Root.js package tarballs.');
+            }
+
+            const packageJson = JSON.parse(
+              fs.readFileSync('functions/package.json', 'utf8')
+            );
+            packageJson.dependencies['@blinkk/root'] = `file:vendor/${rootTarball}`;
+            packageJson.dependencies['@blinkk/root-cms'] = `file:vendor/${rootCmsTarball}`;
+            fs.writeFileSync(
+              'functions/package.json',
+              JSON.stringify(packageJson, null, 2) + '\n'
+            );
+
+            const config = JSON.parse(fs.readFileSync('firebase.json', 'utf8'));
+            config.hosting.public = 'functions/dist/html';
+            config.hosting.cleanUrls = true;
+            config.hosting.rewrites = [
+              {
+                source: '**',
+                function: serverFunction,
+                pinTag: true,
+              },
+            ];
+            config.hosting.headers = [
+              {
+                source: '**',
+                headers: [{key: 'Cache-Control', value: 'no-cache'}],
+              },
+              {
+                source: '/assets/**',
+                headers: [
+                  {
+                    key: 'Cache-Control',
+                    value: 'public, max-age=31536000, immutable',
+                  },
+                ],
+              },
+              {
+                source: '/chunks/**',
+                headers: [
+                  {
+                    key: 'Cache-Control',
+                    value: 'public, max-age=31536000, immutable',
+                  },
+                ],
+              },
+            ];
+            delete config.hosting.functions;
+            fs.writeFileSync('firebase.json', JSON.stringify(config, null, 2));
+
+            fs.appendFileSync(
+              process.env.GITHUB_OUTPUT,
+              `server_function=${serverFunction}\n`
+            );
+          NODE
+
+      - name: Debug preview build output
+        working-directory: docs
+        run: |
+          echo "=== Modified firebase.json ==="
+          cat firebase.json
+          echo ""
+          echo "=== Modified functions/package.json ==="
+          cat functions/package.json
+          echo ""
+          echo "=== Modified functions/index.js ==="
+          cat functions/index.js
+          echo ""
+          echo "=== Function build output ==="
+          find functions/dist/html -type f | head -80
+
+      - name: Deploy preview function to Firebase
+        working-directory: docs
+        run: |
+          # Deploy only the PR-specific SSR function generated above. This does
+          # not deploy or overwrite the public www-server or any other function.
+          pnpm exec firebase deploy \
+            --only "functions:${{ steps.preview-config.outputs.server_function }}" \
+            --project rootjs-dev \
+            --force
+
+      - name: Deploy preview to Firebase Hosting
+        id: deploy
+        working-directory: docs
+        run: |
+          CHANNEL="pr-${{ steps.preview-context.outputs.pr_number }}"
+          OUTPUT_FILE="$(mktemp)"
+          pnpm exec firebase hosting:channel:deploy "$CHANNEL" \
+            --project rootjs-dev \
+            --expires 2d \
+            --json > "$OUTPUT_FILE"
+
+          cat "$OUTPUT_FILE"
+          URL="$(node -e "
+            const fs = require('fs');
+            const output = JSON.parse(fs.readFileSync(process.argv[1], 'utf8'));
+            const urls = [];
+            const visit = (value) => {
+              if (typeof value === 'string' && /^https:\/\/[^\\s]+\.web\.app/.test(value)) {
+                urls.push(value);
+                return;
+              }
+              if (Array.isArray(value)) {
+                value.forEach(visit);
+                return;
+              }
+              if (value && typeof value === 'object') {
+                Object.values(value).forEach(visit);
+              }
+            };
+            visit(output);
+            process.stdout.write(urls[0] || '');
+          " "$OUTPUT_FILE")"
+
+          if [[ -z "$URL" ]]; then
+            echo "Could not find preview URL in Firebase output." >&2
+            exit 1
+          fi
+
+          echo "preview_url=$URL" >> "$GITHUB_OUTPUT"
+          echo "Preview URL: $URL"
+
+      - name: Post preview URL to PR
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const previewUrl = '${{ steps.deploy.outputs.preview_url }}';
+            const prNumber = Number('${{ steps.preview-context.outputs.pr_number }}');
+            const sha = '${{ steps.preview-context.outputs.head_sha }}'.slice(0, 7);
+            const marker = '<!-- rootjs-dev-preview -->';
+            const body = [
+              marker,
+              '### rootjs.dev Preview',
+              '',
+              `**Preview URL:** ${previewUrl}`,
+              `**Commit:** \`${sha}\``,
+              '',
+              '_This preview is built from the PR head and expires in 2 days._',
+            ].join('\n');
+
+            const {data: comments} = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: prNumber,
+            });
+            for (const comment of comments) {
+              if (comment.body?.includes(marker)) {
+                await github.rest.issues.deleteComment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  comment_id: comment.id,
+                });
+              }
+            }
+
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: prNumber,
+              body,
+            });

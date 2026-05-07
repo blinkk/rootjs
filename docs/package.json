@@ -13,7 +13,7 @@
     "dev": "bash scripts/env-init.sh && root dev",
     "build": "rm -rf dist/ && root package --target=firebase --out=functions && touch .env && cp .env functions",
     "preview": "rm -rf dist/ && root build --ssr-only && root preview",
-    "deploy": "pnpm run build && firebase deploy",
+    "deploy": "pnpm run build && firebase deploy --only hosting,functions:www-server,functions:www-cron --force",
     "types": "root-cms types",
     "add-element": "root codegen element",
     "env:save": "bash scripts/env-save.sh",
