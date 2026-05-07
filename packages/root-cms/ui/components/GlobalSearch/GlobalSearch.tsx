@@ -82,7 +82,10 @@ function buildCollectionTargets(): CollectionTarget[] {
         url: `/cms/content/${id}`,
         label,
         description,
-        haystack: [id, label, description].filter(Boolean).join(' ').toLowerCase(),
+        haystack: [id, label, description]
+          .filter(Boolean)
+          .join(' ')
+          .toLowerCase(),
       };
     })
     .sort((a, b) => a.label.localeCompare(b.label));
@@ -124,7 +127,10 @@ function filterStaticTargets(
   const prefix: StaticTarget[] = [];
   const substr: StaticTarget[] = [];
   for (const t of targets) {
-    if (t.id.toLowerCase().startsWith(q) || t.label.toLowerCase().startsWith(q)) {
+    if (
+      t.id.toLowerCase().startsWith(q) ||
+      t.label.toLowerCase().startsWith(q)
+    ) {
       prefix.push(t);
     } else if (t.haystack.includes(q)) {
       substr.push(t);
@@ -217,6 +223,18 @@ function buildFooter(lastIndexed: string): SpotlightAction {
   };
 }
 
+function buildTipsRow(): SpotlightAction {
+  const meta: GlobalSearchActionMeta = {kind: 'tips'};
+  return {
+    id: '__syntax-tips__',
+    title: '',
+    description: '',
+    keywords: '__internal__',
+    onTrigger: () => {},
+    meta,
+  };
+}
+
 function GlobalSearchInner(props: {
   children: ComponentChildren;
   query: string;
@@ -225,8 +243,11 @@ function GlobalSearchInner(props: {
   const {query, onQueryChange} = props;
   const location = useLocation();
   const trimmedQuery = query.trim();
-  const {hits: fieldHits, loading: fieldLoading, status} =
-    useGlobalSearch(query);
+  const {
+    hits: fieldHits,
+    loading: fieldLoading,
+    status,
+  } = useGlobalSearch(query);
   const {hits: docSlugHits, loading: slugLoading} = useDocSlugSearch(query);
 
   const recentViews = useRecentViews();
@@ -328,13 +349,20 @@ function GlobalSearchInner(props: {
 
   const lastIndexed = formatLastIndexed(status);
   const augmented = useMemo(() => {
-    // The "last indexed" footer is only meaningful while the user is actively
-    // querying the index. When the query is empty (recent views) or there are
-    // no results, we suppress it so the surface stays clean.
-    if (!lastIndexed || !trimmedQuery || actions.length === 0) {
+    // Footers only render when there's at least one real action above them —
+    // otherwise Mantine would show them in place of the "nothing found"
+    // message and the surface would feel cluttered.
+    if (actions.length === 0) {
       return actions;
     }
-    return [...actions, buildFooter(lastIndexed)];
+    const out = [...actions];
+    if (trimmedQuery) {
+      out.push(buildTipsRow());
+    }
+    if (lastIndexed && trimmedQuery) {
+      out.push(buildFooter(lastIndexed));
+    }
+    return out;
   }, [actions, lastIndexed, trimmedQuery]);
 
   // Compose the "nothing found" message based on state.
@@ -344,9 +372,9 @@ function GlobalSearchInner(props: {
       return 'Searching…';
     }
     if (!trimmedQuery) {
-      return 'Type to search docs, collections, releases…';
+      return 'Type to search · "quotes" for exact match · -word to exclude';
     }
-    return 'No results.';
+    return 'No results. Try fewer words, or "quotes" for an exact phrase.';
   }, [loading, trimmedQuery]);
 
   // Pass-through filter: server already ranks/filters and our static-target
@@ -388,4 +416,3 @@ export function GlobalSearch(props: {children: ComponentChildren}) {
     </GlobalSearchInner>
   );
 }
-

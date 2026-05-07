@@ -28,6 +28,7 @@ import {getCmsPlugin} from './client.js';
 import type {CMSSearchIndexConfig} from './plugin.js';
 import type {Schema} from './schema.js';
 import {extractDocRecords, ExtractedRecord} from './search-extract.js';
+import {executeQuery, parseQuery} from './search-query.js';
 
 /** Max chars per shard. Leaves headroom under the Firestore 1 MB doc cap. */
 const SHARD_MAX_CHARS = 500_000;
@@ -764,7 +765,7 @@ export class SearchIndexService {
     if (!cached || !q.trim()) {
       return {hits: [], meta: status};
     }
-    const raw = cached.index.search(q.trim());
+    const raw = executeQuery(cached.index, parseQuery(q));
     const hits: SearchHit[] = raw.slice(0, limit).map((r: any) => ({
       id: String(r.id || ''),
       docId: String(r.docId || ''),
