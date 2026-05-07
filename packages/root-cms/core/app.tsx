@@ -107,7 +107,7 @@ export async function renderApp(
   const cmsConfig = options.cmsConfig || {};
   let gci = cmsConfig.gci;
   if (gci === true) {
-    gci = 'https://gci.rootjs.dev';
+    gci = 'https://services.rootjs.dev';
   }
   const ctx = {
     rootConfig: {
