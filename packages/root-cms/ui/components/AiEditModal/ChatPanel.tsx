@@ -577,56 +577,37 @@ function ChatComposer(props: {
 
   return (
     <div className="AiEditModal__ChatPanel__composer">
-      {attachments.length > 0 && (
-        <div className="AiEditModal__ChatPanel__composer__attachments">
-          {attachments.map((a, i) => (
-            <div
-              key={i}
-              className="AiEditModal__ChatPanel__composer__attachment"
-            >
-              {a.mediaType.startsWith('image/') ? (
-                <img src={a.url} alt={a.filename} />
-              ) : (
-                <span className="AiEditModal__ChatPanel__composer__attachment__name">
-                  {a.filename}
-                </span>
-              )}
-              <button
-                type="button"
-                className="AiEditModal__ChatPanel__composer__attachment__remove"
-                onClick={() =>
-                  setAttachments((prev) => prev.filter((_, idx) => idx !== i))
-                }
-              >
-                <IconX size={12} />
-              </button>
-            </div>
-          ))}
-        </div>
-      )}
-      <div className="AiEditModal__ChatPanel__composer__row">
+      <div
+        className={joinClassNames(
+          'AiEditModal__ChatPanel__composer__prompt',
+          (uploading || attachments.length > 0) &&
+            'AiEditModal__ChatPanel__composer__prompt--hasImage'
+        )}
+      >
         {props.canAttach && (
-          <Tooltip label="Attach file">
-            <ActionIcon
-              component="label"
-              radius="xl"
-              className="AiEditModal__ChatPanel__composer__attach"
-            >
-              {uploading ? <Loader size="xs" /> : <IconPaperclip size={18} />}
-              <input
-                ref={fileRef}
-                type="file"
-                accept="image/png,image/jpeg,image/webp"
-                style={{display: 'none'}}
-                onChange={onFileChange}
-              />
-            </ActionIcon>
-          </Tooltip>
+          <label className="AiEditModal__ChatPanel__composer__imageUpload">
+            <input
+              ref={fileRef}
+              type="file"
+              accept="image/png,image/jpeg,image/webp"
+              className="AiEditModal__ChatPanel__composer__imageUpload__input"
+              onChange={onFileChange}
+            />
+            <Tooltip label="Upload image">
+              <ActionIcon
+                component="div"
+                className="AiEditModal__ChatPanel__composer__imageUpload__icon"
+                radius="xl"
+              >
+                <IconPaperclip size={18} />
+              </ActionIcon>
+            </Tooltip>
+          </label>
         )}
         <textarea
           ref={textareaRef}
-          className="AiEditModal__ChatPanel__composer__textarea"
-          placeholder="Tell me what you want to change…"
+          className="AiEditModal__ChatPanel__composer__textInput"
+          placeholder="Tell me what you want to change..."
           value={text}
           rows={1}
           autofocus
@@ -644,11 +625,44 @@ function ChatComposer(props: {
             }
           }}
         />
+        {(uploading || attachments.length > 0) && (
+          <div className="AiEditModal__ChatPanel__composer__attachments">
+            {uploading && <Loader size="sm" />}
+            {attachments.map((a, i) => (
+              <Tooltip
+                key={i}
+                label={a.filename}
+                transition="pop"
+                position="top"
+                withArrow
+              >
+                <button
+                  className="AiEditModal__ChatPanel__composer__attachment"
+                  onClick={() =>
+                    setAttachments((prev) => prev.filter((_, idx) => idx !== i))
+                  }
+                >
+                  {a.mediaType.startsWith('image/') ? (
+                    <img src={a.url} alt={a.filename} />
+                  ) : (
+                    <span className="AiEditModal__ChatPanel__composer__attachment__name">
+                      {a.filename}
+                    </span>
+                  )}
+                  <div className="AiEditModal__ChatPanel__composer__attachment__close">
+                    <IconX size={20} color="white" />
+                  </div>
+                </button>
+              </Tooltip>
+            ))}
+          </div>
+        )}
         {props.isStreaming ? (
           <ActionIcon
-            radius="xl"
-            color="dark"
+            className="AiEditModal__ChatPanel__composer__submit"
             variant="filled"
+            color="dark"
+            radius="xl"
             onClick={props.onStop}
             title="Stop"
           >
@@ -656,9 +670,10 @@ function ChatComposer(props: {
           </ActionIcon>
         ) : (
           <ActionIcon
-            radius="xl"
-            color="dark"
+            className="AiEditModal__ChatPanel__composer__submit"
             variant="filled"
+            color="dark"
+            radius="xl"
             disabled={uploading || (!text && attachments.length === 0)}
             onClick={submit}
             title="Send"

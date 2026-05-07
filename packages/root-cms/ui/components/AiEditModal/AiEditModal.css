@@ -283,75 +283,121 @@
 }
 
 .AiEditModal__ChatPanel__composer {
-  border-top: 1px solid rgb(222, 226, 230);
-  padding: 8px 4px 0;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.AiEditModal__ChatPanel__composer__attachments {
-  display: flex;
-  gap: 6px;
-  flex-wrap: wrap;
-}
-
-.AiEditModal__ChatPanel__composer__attachment {
+  flex-shrink: 0;
+  padding: 12px 8px 0;
   position: relative;
+  z-index: 10;
 }
 
-.AiEditModal__ChatPanel__composer__attachment img {
-  width: 48px;
-  height: 48px;
-  object-fit: cover;
-  border-radius: 4px;
+.AiEditModal__ChatPanel__composer__prompt {
+  --image-preview-size: 64px;
+  position: relative;
+  max-width: 800px;
+  margin: 0 auto;
 }
 
-.AiEditModal__ChatPanel__composer__attachment__remove {
-  position: absolute;
-  top: -6px;
-  right: -6px;
-  background: rgb(33, 37, 41);
-  color: white;
-  border: none;
-  border-radius: 50%;
-  width: 18px;
-  height: 18px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  padding: 0;
-}
-
-.AiEditModal__ChatPanel__composer__row {
-  display: flex;
-  align-items: flex-end;
-  gap: 6px;
-}
-
-.AiEditModal__ChatPanel__composer__textarea {
-  flex: 1 1 0;
+.AiEditModal__ChatPanel__composer__textInput {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+  overflow: hidden;
   resize: none;
+  padding: 12px 48px;
+  border-radius: 24px;
   border: 1px solid rgb(222, 226, 230);
-  border-radius: 4px;
-  padding: 6px 8px;
-  font: inherit;
-  font-size: 0.875rem;
-  line-height: 1.4;
-  outline: none;
-  min-height: 32px;
+  background: white;
+  font-size: 14px;
+  line-height: 22px;
+  font-weight: 400;
+  font-family: inherit;
+  transition: box-shadow 0.3s ease;
   max-height: 200px;
 }
 
-.AiEditModal__ChatPanel__composer__textarea:focus {
-  border-color: rgb(134, 142, 150);
+.AiEditModal__ChatPanel__composer__prompt--hasImage
+  .AiEditModal__ChatPanel__composer__textInput {
+  padding-bottom: calc(var(--image-preview-size) + 24px);
+}
+
+.AiEditModal__ChatPanel__composer__textInput:focus {
+  border: 1px solid rgb(173, 181, 189);
+  outline: none;
+  box-shadow: rgba(0, 0, 0, 0.05) 0 2px 6px;
+}
+
+.AiEditModal__ChatPanel__composer__imageUpload {
+  position: absolute;
+  left: 8px;
+  bottom: 8px;
+}
+
+.AiEditModal__ChatPanel__composer__imageUpload__input {
+  display: none;
+}
+
+.AiEditModal__ChatPanel__composer__attachments {
+  position: absolute;
+  left: 44px;
+  bottom: 8px;
+  display: flex;
+  gap: 6px;
+}
+
+.AiEditModal__ChatPanel__composer__attachment {
+  width: var(--image-preview-size);
+  height: var(--image-preview-size);
+  padding: 4px;
+  background: rgb(239, 239, 239);
+  border: 1px solid rgb(222, 226, 230);
+  border-radius: 8px;
+  position: relative;
+  cursor: pointer;
+}
+
+.AiEditModal__ChatPanel__composer__attachment img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  object-position: center;
+}
+
+.AiEditModal__ChatPanel__composer__attachment__name {
+  display: block;
+  font-size: 0.6875rem;
+  text-align: center;
+  word-break: break-word;
+}
+
+.AiEditModal__ChatPanel__composer__attachment__close {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  opacity: 0;
+  background: rgba(0, 0, 0, 0.75);
+  border-radius: 50%;
+  padding: 2px;
+  transition: opacity 0.24s ease;
+}
+
+.AiEditModal__ChatPanel__composer__attachment:hover
+  .AiEditModal__ChatPanel__composer__attachment__close {
+  opacity: 1;
+}
+
+.AiEditModal__ChatPanel__composer__submit {
+  position: absolute;
+  right: 8px;
+  bottom: 8px;
 }
 
 .AiEditModal__ChatPanel__composer__disclaimer {
-  font-size: 0.6875rem;
-  color: rgb(134, 142, 150);
+  margin-top: 12px;
   text-align: center;
+  padding: 0 20px;
+  font-size: 12px;
+  color: dimgray;
+  text-wrap: balance;
 }
 
 .AiEditModal__Tabs {
