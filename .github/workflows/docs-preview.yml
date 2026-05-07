@@ -1,14 +1,6 @@
 name: Deploy rootjs.dev Preview
 
 on:
-  # TODO: Remove this before merging. The intended trigger is /preview via
-  # issue_comment, but GitHub only runs issue_comment workflows that already
-  # exist on the default branch, so pull_request is temporarily enabled to test
-  # this new workflow before it lands on main.
-  pull_request:
-    types: [ opened, synchronize, reopened ]
-    branches:
-      - main
   issue_comment:
     types: [ created ]
   workflow_dispatch:
@@ -30,9 +22,9 @@ jobs:
     name: Firebase Preview
     runs-on: ubuntu-latest
     if: >-
-      github.event_name == 'pull_request' || github.event_name ==
-      'workflow_dispatch' || (github.event.issue.pull_request &&
-      startsWith(github.event.comment.body, '/preview'))
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.issue.pull_request && startsWith(github.event.comment.body,
+      '/preview'))
     permissions:
       contents: read
       issues: write
@@ -45,18 +37,15 @@ jobs:
         with:
           script: |
             const isDispatch = context.eventName === 'workflow_dispatch';
-            const isPullRequest = context.eventName === 'pull_request';
             const prNumber = isDispatch
               ? Number(core.getInput('pr_number'))
-              : isPullRequest
-                ? context.payload.pull_request.number
-                : context.payload.issue.number;
+              : context.payload.issue.number;
 
             if (!Number.isInteger(prNumber) || prNumber <= 0) {
               throw new Error(`Invalid pull request number: ${prNumber}`);
             }
 
-            if (!isDispatch && !isPullRequest) {
+            if (!isDispatch) {
               const command = context.payload.comment.body.trim().split(/\s+/)[0];
               if (command !== '/preview') {
                 throw new Error('Preview comments must start with /preview.');
