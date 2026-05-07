@@ -1,8 +1,31 @@
 import {describe, expect, it} from 'vitest';
 
-import {extractJsonFromResponse} from './ai.js';
+import {extractJsonFromResponse, getVertexAiModelLocation} from './ai.js';
 
 describe('AI utility functions', () => {
+  describe('getVertexAiModelLocation', () => {
+    it('should use the global location for Gemini 3 text models', () => {
+      expect(getVertexAiModelLocation('gemini-3-flash-preview')).toBe('global');
+      expect(getVertexAiModelLocation('gemini-3-pro-preview')).toBe('global');
+    });
+
+    it('should use the global location for Gemini 3 models when another region is configured', () => {
+      expect(
+        getVertexAiModelLocation('gemini-3-flash-preview', 'us-central1')
+      ).toBe('global');
+    });
+
+    it('should keep the configured location for regional models', () => {
+      expect(getVertexAiModelLocation('gemini-2.5-flash', 'us-central1')).toBe(
+        'us-central1'
+      );
+    });
+
+    it('should default regional models to us-central1', () => {
+      expect(getVertexAiModelLocation('gemini-2.5-flash')).toBe('us-central1');
+    });
+  });
+
   describe('extractJsonFromResponse', () => {
     it('should extract plain JSON', () => {
       const input = '{"en": "Hello", "es": "Hola"}';

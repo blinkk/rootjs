@@ -32,6 +32,8 @@ export type RootAiImagenModel = 'gemini-2.5-flash-image' | string;
 
 const DEFAULT_MODEL: RootAiModel = 'gemini-3-flash-preview';
 const DEFAULT_IMAGEGEN_MODEL: RootAiImagenModel = 'gemini-2.5-flash-image';
+const DEFAULT_VERTEX_AI_LOCATION = 'us-central1';
+const GEMINI_3_LOCATION = 'global';
 
 // Rename models from '@genkit-ai/google-vertexai' to '@genkit-ai/google-genai'.
 const LEGACY_MODEL_RENAME: Record<string, string> = {
@@ -44,6 +46,27 @@ export interface SummarizeDiffOptions {
   after: Record<string, any> | null;
 }
 
+function vertexAiPluginOptions(
+  firebaseConfig: CMSPluginOptions['firebaseConfig'],
+  model: string
+) {
+  return {
+    projectId: firebaseConfig.projectId,
+    location: getVertexAiModelLocation(model, firebaseConfig.location),
+  };
+}
+
+/**
+ * Returns the Vertex AI location where the model can be discovered and called.
+ * @internal
+ */
+export function getVertexAiModelLocation(model: string, location?: string) {
+  if (model.startsWith('gemini-3')) {
+    return GEMINI_3_LOCATION;
+  }
+  return location || DEFAULT_VERTEX_AI_LOCATION;
+}
+
 /**
  * Generates a natural language summary of the differences between two JSON
  * payloads.
@@ -54,16 +77,10 @@ export async function summarizeDiff(
 ): Promise<string> {
   const cmsPluginOptions = cmsClient.cmsPlugin.getConfig();
   const firebaseConfig = cmsPluginOptions.firebaseConfig;
-  // Use fastest model for diff summarization
-  const model: RootAiModel = 'gemini-2.5-flash';
+  const model: RootAiModel = DEFAULT_MODEL;
 
   const ai = genkit({
-    plugins: [
-      vertexAI({
-        projectId: firebaseConfig.projectId,
-        location: firebaseConfig.location || 'us-central1',
-      }),
-    ],
+    plugins: [vertexAI(vertexAiPluginOptions(firebaseConfig, model))],
   });
 
   const beforeJson = JSON.stringify(options.before ?? null, null, 2);
@@ -117,12 +134,7 @@ export async function generatePublishMessage(
       : undefined) || DEFAULT_MODEL;
 
   const ai = genkit({
-    plugins: [
-      vertexAI({
-        projectId: firebaseConfig.projectId,
-        location: firebaseConfig.location || 'us-central1',
-      }),
-    ],
+    plugins: [vertexAI(vertexAiPluginOptions(firebaseConfig, model))],
   });
 
   const beforeJson = JSON.stringify(options.before ?? null, null, 2);
@@ -196,12 +208,7 @@ export async function generateImage(
   const model = options.model || DEFAULT_IMAGEGEN_MODEL;
 
   const ai = genkit({
-    plugins: [
-      vertexAI({
-        projectId: firebaseConfig.projectId,
-        location: firebaseConfig.location || 'us-central1',
-      }),
-    ],
+    plugins: [vertexAI(vertexAiPluginOptions(firebaseConfig, model))],
   });
 
   const res = await generate(ai, model, {
@@ -243,7 +250,7 @@ async function generate(ai: Genkit, model: string, options: GenerateOptions) {
   if (model.startsWith('gemini-3')) {
     generateOptions.config = {
       ...generateOptions.config,
-      location: 'global',
+      location: getVertexAiModelLocation(model),
     };
   }
 
@@ -278,12 +285,7 @@ export class Chat {
     );
     const firebaseConfig = this.cmsPluginOptions.firebaseConfig;
     this.ai = genkit({
-      plugins: [
-        vertexAI({
-          projectId: firebaseConfig.projectId,
-          location: firebaseConfig.location || 'us-central1',
-        }),
-      ],
+      plugins: [vertexAI(vertexAiPluginOptions(firebaseConfig, this.model))],
     });
   }
 
@@ -539,12 +541,7 @@ export async function translateString(
       : undefined) || DEFAULT_MODEL;
 
   const ai = genkit({
-    plugins: [
-      vertexAI({
-        projectId: firebaseConfig.projectId,
-        location: firebaseConfig.location || 'us-central1',
-      }),
-    ],
+    plugins: [vertexAI(vertexAiPluginOptions(firebaseConfig, model))],
   });
 
   const systemPrompt = [
