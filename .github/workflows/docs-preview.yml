@@ -23,7 +23,7 @@ jobs:
     runs-on: ubuntu-latest
     if: >-
       github.event_name == 'workflow_dispatch' ||
-      (github.event.issue.pull_request && contains(github.event.comment.body,
+      (github.event.issue.pull_request && startsWith(github.event.comment.body,
       '/preview'))
     permissions:
       contents: read
@@ -46,9 +46,9 @@ jobs:
             }
 
             if (!isDispatch) {
-              const commands = context.payload.comment.body.trim().split(/\s+/);
-              if (!commands.includes('/preview')) {
-                throw new Error('Preview comments must include /preview.');
+              const command = context.payload.comment.body.trim().split(/\s+/)[0];
+              if (command !== '/preview') {
+                throw new Error('Preview comments must start with /preview.');
               }
 
               const allowedAssociations = new Set([
