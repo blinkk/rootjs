@@ -1,0 +1,7 @@
+dispatch:
+  # Legacy "gci" version of the service.
+  - url: "gci.rootjs.dev/*"
+    service: default
+
+  - url: "services.rootjs.dev/*"
+    service: root-services
