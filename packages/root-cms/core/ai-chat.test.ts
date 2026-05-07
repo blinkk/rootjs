@@ -1,8 +1,14 @@
-import {describe, expect, it} from 'vitest';
+import {promises as fs} from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import {afterEach, beforeEach, describe, expect, it} from 'vitest';
 import {
   AiConfig,
+  buildSystemPrompt,
   deriveChatTitle,
   findModel,
+  readRootMd,
+  ROOT_MD_FILENAME,
   serializeAiConfig,
   stripUndefined,
 } from './ai-chat.js';
@@ -87,6 +93,55 @@ describe('ai-chat', () => {
       ]);
       expect(title.length).toBeLessThanOrEqual(60);
       expect(title.endsWith('…')).toBe(true);
+    });
+  });
+
+  describe('readRootMd', () => {
+    let tmpDir: string;
+
+    beforeEach(async () => {
+      tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'root-md-test-'));
+    });
+
+    afterEach(async () => {
+      await fs.rm(tmpDir, {recursive: true, force: true});
+    });
+
+    it('returns null when ROOT.md is missing', async () => {
+      expect(await readRootMd(tmpDir)).toBeNull();
+    });
+
+    it('returns trimmed contents when ROOT.md exists', async () => {
+      await fs.writeFile(
+        path.join(tmpDir, ROOT_MD_FILENAME),
+        '\n\n# Project conventions\n\nUse `Foo` for bar.\n\n'
+      );
+      expect(await readRootMd(tmpDir)).toBe(
+        '# Project conventions\n\nUse `Foo` for bar.'
+      );
+    });
+
+    it('returns null for an empty/whitespace-only file', async () => {
+      await fs.writeFile(path.join(tmpDir, ROOT_MD_FILENAME), '   \n\n');
+      expect(await readRootMd(tmpDir)).toBeNull();
+    });
+  });
+
+  describe('buildSystemPrompt', () => {
+    it('returns the base prompt unchanged when ROOT.md is null', () => {
+      expect(buildSystemPrompt('base prompt', null)).toBe('base prompt');
+    });
+
+    it('appends ROOT.md contents inside a delimited section', () => {
+      const result = buildSystemPrompt('base prompt', '# Conventions');
+      expect(result).toContain('base prompt');
+      expect(result).toContain('<ROOT.md>');
+      expect(result).toContain('# Conventions');
+      expect(result).toContain('</ROOT.md>');
+      // The framework prompt should come first; the project file second.
+      expect(result.indexOf('base prompt')).toBeLessThan(
+        result.indexOf('<ROOT.md>')
+      );
     });
   });
 

@@ -6,6 +6,8 @@
  * can resume past chats.
  */
 import crypto from 'node:crypto';
+import {promises as fs} from 'node:fs';
+import path from 'node:path';
 import {createAnthropic} from '@ai-sdk/anthropic';
 import {createGoogleGenerativeAI} from '@ai-sdk/google';
 import {createOpenAI} from '@ai-sdk/openai';
@@ -23,6 +25,9 @@ import {
 import {Timestamp} from 'firebase-admin/firestore';
 import {createCmsTools} from './ai-tools.js';
 import {RootCMSClient} from './client.js';
+
+/** Filename of the project-level instructions file loaded into the AI prompt. */
+export const ROOT_MD_FILENAME = 'ROOT.md';
 
 /**
  * Provider type for an AI model. Use `openai-compatible` for any OpenAI-style
@@ -79,7 +84,11 @@ export interface AiConfig {
   models: AiModelConfig[];
   /** Id of the default model. Defaults to the first model in `models`. */
   defaultModel?: string;
-  /** Optional system prompt prepended to every conversation. */
+  /**
+   * Optional system prompt prepended to every conversation. If a `ROOT.md`
+   * file exists at the project root, its contents are appended to this
+   * prompt automatically.
+   */
   systemPrompt?: string;
   /** Maximum tool-loop steps before stopping. Defaults to 10. */
   maxSteps?: number;
@@ -280,6 +289,57 @@ export class ChatStore {
   }
 }
 
+/**
+ * Reads the project's `ROOT.md` file, if present. Mirrors the convention used
+ * by tools like `AGENTS.md` and `CLAUDE.md`: developers can drop a markdown
+ * file at the project root to give Root AI extra context about site-specific
+ * patterns or conventions.
+ *
+ * Returns the file contents (trimmed) or `null` if the file is missing or
+ * unreadable.
+ */
+export async function readRootMd(rootDir: string): Promise<string | null> {
+  const filePath = path.join(rootDir, ROOT_MD_FILENAME);
+  try {
+    const contents = await fs.readFile(filePath, 'utf8');
+    const trimmed = contents.trim();
+    return trimmed || null;
+  } catch (err: any) {
+    if (err && err.code === 'ENOENT') {
+      return null;
+    }
+    console.error(`failed to read ${ROOT_MD_FILENAME}:`, err);
+    return null;
+  }
+}
+
+/**
+ * Builds the full system prompt by combining the configured/default base
+ * prompt with the contents of `ROOT.md`, when present. The project-level
+ * file is appended under a clearly delimited section so the model can
+ * distinguish it from the framework-provided instructions.
+ */
+export function buildSystemPrompt(
+  basePrompt: string,
+  rootMd: string | null
+): string {
+  if (!rootMd) {
+    return basePrompt;
+  }
+  return [
+    basePrompt,
+    '',
+    `The project includes a \`${ROOT_MD_FILENAME}\` file with site-specific`,
+    'instructions, conventions and context provided by the developer. Treat',
+    'these instructions as authoritative for this project and follow them',
+    'when responding or calling tools.',
+    '',
+    `<${ROOT_MD_FILENAME}>`,
+    rootMd,
+    `</${ROOT_MD_FILENAME}>`,
+  ].join('\n');
+}
+
 /** Derives a short title from the first user message (used as fallback). */
 export function deriveChatTitle(messages: UIMessage[]): string {
   const first = messages.find((m) => m.role === 'user');
@@ -358,12 +418,13 @@ export interface RunChatStreamOptions {
 export async function runChatStream(
   options: RunChatStreamOptions
 ): Promise<Response> {
-  const {model, config, messages, cmsClient, user, chatId} = options;
+  const {rootConfig, model, config, messages, cmsClient, user, chatId} =
+    options;
   const languageModel = resolveLanguageModel(model);
   const tools: ToolSet =
     model.capabilities?.tools === false ? {} : createCmsTools();
 
-  const systemPrompt =
+  const basePrompt =
     config.systemPrompt ||
     [
       'You are an assistant embedded in the Root CMS admin UI.',
@@ -371,6 +432,8 @@ export async function runChatStream(
       'the project, and use the provided tools to read and write CMS docs.',
       'Be concise and use markdown for rich responses.',
     ].join(' ');
+  const rootMd = await readRootMd(rootConfig.rootDir);
+  const systemPrompt = buildSystemPrompt(basePrompt, rootMd);
 
   const modelMessages = await convertToModelMessages(messages, {tools});
   const result = streamText({
