@@ -14,7 +14,7 @@ export function getResponsiveValue<T>(value: ResponsiveType<T>) {
       mobile: valueMap.mobile || valueMap.default,
       tablet: valueMap.tablet || valueMap.default,
       desktop: valueMap.desktop || valueMap.default,
-      default: valueMap.default || valueMap.default,
+      default: valueMap.default,
     };
   }
   return {

@@ -9,9 +9,9 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const require = createRequire(import.meta.url);
 const packageJson = require(path.join(__dirname, '../package.json'));
 
-async function main(argv) {
+async function main() {
   const cli = new CliRunner('root-password-protect', packageJson.version);
   await cli.run();
 }
 
-main(process.argv);
+main();

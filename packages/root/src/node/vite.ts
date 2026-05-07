@@ -40,7 +40,7 @@ export async function createViteServer(
     // files in the public dir.
     publicDir: false,
     server: {
-      ...(viteConfig.server || {}),
+      ...viteConfig.server,
       middlewareMode: true,
       hmr: hmrOptions,
     },
@@ -59,7 +59,7 @@ export async function createViteServer(
           },
         },
       },
-      ...(viteConfig.optimizeDeps || {}),
+      ...viteConfig.optimizeDeps,
       include: [
         ...(options?.optimizeDeps || []),
         ...(viteConfig.optimizeDeps?.include || []),
@@ -67,11 +67,11 @@ export async function createViteServer(
       extensions: [...(viteConfig.optimizeDeps?.extensions || []), '.tsx'],
     },
     ssr: {
-      ...(viteConfig.ssr || {}),
+      ...viteConfig.ssr,
       noExternal: ['@blinkk/root', '@blinkk/root-cms/richtext'],
     },
     esbuild: {
-      ...(viteConfig.esbuild || {}),
+      ...viteConfig.esbuild,
       jsx: 'automatic',
       jsxImportSource: 'preact',
     },

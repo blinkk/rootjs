@@ -148,7 +148,7 @@ Jumplinks.Component = (props: JumplinksProps) => {
           window._isSmoothScrolling = false;
           if (document.activeElement) {
             const el = document.activeElement as HTMLElement;
-            el.blur && el.blur();
+            if (el.blur) el.blur();
           }
           onScroll();
         }, 750);

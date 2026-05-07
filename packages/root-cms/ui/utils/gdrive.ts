@@ -20,7 +20,7 @@ export function parseGoogleDriveId(url: string): string | null {
     if (dIndex !== -1 && dIndex < parts.length - 1) {
       return parts[dIndex + 1];
     }
-  } catch (e) {
+  } catch {
     // Not a URL
     return null;
   }

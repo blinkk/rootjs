@@ -608,7 +608,7 @@ export async function translateString(
   try {
     const translations = JSON.parse(jsonText);
     return translations;
-  } catch (err) {
+  } catch {
     console.error('Failed to parse AI translation response:', responseText);
     throw new Error('Invalid response format from AI translation');
   }

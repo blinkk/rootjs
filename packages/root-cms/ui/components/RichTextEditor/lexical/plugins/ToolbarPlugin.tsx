@@ -703,7 +703,3 @@ export function ToolbarActionIcon(props: ToolbarActionIconProps) {
     </Tooltip>
   );
 }
-
-function IconMenuItemPlaceholder() {
-  return <div style={{width: 16, height: 16}}></div>;
-}

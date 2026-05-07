@@ -1,6 +1,6 @@
 import {promises as fs} from 'node:fs';
 import path from 'node:path';
-import {assert, beforeEach, test, expect, afterEach} from 'vitest';
+import {assert, beforeEach, test, expect} from 'vitest';
 import {fileExists} from '../src/utils/fsutils.js';
 import {Fixture, loadFixture} from './testutils.js';
 

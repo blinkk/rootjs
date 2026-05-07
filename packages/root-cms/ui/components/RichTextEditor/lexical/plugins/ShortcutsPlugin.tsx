@@ -32,7 +32,6 @@ import {
   formatNumberedList,
   formatParagraph,
 } from '../utils/toolbar.js';
-import {sanitizeUrl} from '../utils/url.js';
 
 export interface ShortcutsPluginProps {
   editor: LexicalEditor;

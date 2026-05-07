@@ -54,7 +54,7 @@ export function EditJsonModal(
     try {
       JSON.parse(s);
       setValid(true);
-    } catch (e) {
+    } catch {
       setValid(false);
     }
     setChanged(s !== initialValue);

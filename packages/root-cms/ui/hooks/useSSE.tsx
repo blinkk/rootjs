@@ -1,3 +1,5 @@
+// oxlint-disable no-unused-expressions
+
 /**
  * Hook for handling server-sent events (SSE).
  *
