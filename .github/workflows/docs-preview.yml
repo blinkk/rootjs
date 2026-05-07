@@ -128,20 +128,74 @@ jobs:
       - name: Build Root.js packages from PR head
         run: pnpm run build
 
-      - name: Build static docs preview
+      - name: Build docs Firebase package
         working-directory: docs
+        run: pnpm run build
+
+      - name: Pack Root.js packages for Firebase Functions
         run: |
-          rm -rf dist/
-          pnpm exec root build
+          mkdir -p docs/functions/vendor
+          pnpm --dir packages/root pack --pack-destination "$PWD/docs/functions/vendor"
+          pnpm --dir packages/root-cms pack --pack-destination "$PWD/docs/functions/vendor"
 
       - name: Configure Firebase Hosting preview
+        id: preview-config
         working-directory: docs
         run: |
-          node -e "
+          PR_NUMBER="${{ steps.preview-context.outputs.pr_number }}" node <<'NODE'
             const fs = require('fs');
+            const prNumber = process.env.PR_NUMBER;
+            const functionGroup = `previewpr${prNumber}`;
+            const serverFunction = `${functionGroup}-server`;
+
+            const indexJs = [
+              "import {server} from '@blinkk/root/functions';",
+              '',
+              `const ${functionGroup} = {`,
+              '  server: server({',
+              "    mode: 'production',",
+              '    httpsOptions: {',
+              '      minInstances: 0,',
+              '    },',
+              '  }),',
+              '};',
+              '',
+              `export {${functionGroup}};`,
+              '',
+            ].join('\n');
+            fs.writeFileSync('functions/index.js', indexJs);
+
+            const vendorFiles = fs.readdirSync('functions/vendor');
+            const rootTarball = vendorFiles.find((name) => {
+              return /^blinkk-root-\d.*\.tgz$/.test(name);
+            });
+            const rootCmsTarball = vendorFiles.find((name) => {
+              return /^blinkk-root-cms-\d.*\.tgz$/.test(name);
+            });
+            if (!rootTarball || !rootCmsTarball) {
+              throw new Error('Missing local Root.js package tarballs.');
+            }
+
+            const packageJson = JSON.parse(
+              fs.readFileSync('functions/package.json', 'utf8')
+            );
+            packageJson.dependencies['@blinkk/root'] = `file:vendor/${rootTarball}`;
+            packageJson.dependencies['@blinkk/root-cms'] = `file:vendor/${rootCmsTarball}`;
+            fs.writeFileSync(
+              'functions/package.json',
+              JSON.stringify(packageJson, null, 2) + '\n'
+            );
+
             const config = JSON.parse(fs.readFileSync('firebase.json', 'utf8'));
-            config.hosting.public = 'dist/html';
+            config.hosting.public = 'functions/dist/html';
             config.hosting.cleanUrls = true;
+            config.hosting.rewrites = [
+              {
+                source: '**',
+                function: serverFunction,
+                pinTag: true,
+              },
+            ];
             config.hosting.headers = [
               {
                 source: '**',
@@ -166,11 +220,14 @@ jobs:
                 ],
               },
             ];
-            delete config.hosting.rewrites;
             delete config.hosting.functions;
-            delete config.functions;
             fs.writeFileSync('firebase.json', JSON.stringify(config, null, 2));
-          "
+
+            fs.appendFileSync(
+              process.env.GITHUB_OUTPUT,
+              `server_function=${serverFunction}\n`
+            );
+          NODE
 
       - name: Debug preview build output
         working-directory: docs
@@ -178,8 +235,24 @@ jobs:
           echo "=== Modified firebase.json ==="
           cat firebase.json
           echo ""
-          echo "=== Static build output ==="
-          find dist/html -type f | head -80
+          echo "=== Modified functions/package.json ==="
+          cat functions/package.json
+          echo ""
+          echo "=== Modified functions/index.js ==="
+          cat functions/index.js
+          echo ""
+          echo "=== Function build output ==="
+          find functions/dist/html -type f | head -80
+
+      - name: Deploy preview function to Firebase
+        working-directory: docs
+        run: |
+          # Deploy only the PR-specific SSR function generated above. This does
+          # not deploy or overwrite the public www-server or any other function.
+          pnpm exec firebase deploy \
+            --only "functions:${{ steps.preview-config.outputs.server_function }}" \
+            --project rootjs-dev \
+            --force
 
       - name: Deploy preview to Firebase Hosting
         id: deploy

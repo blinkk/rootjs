@@ -1,0 +1,85 @@
+name: Cleanup rootjs.dev Previews
+
+on:
+  schedule:
+    - cron: "17 * * * *"
+  workflow_dispatch:
+
+defaults:
+  run:
+    shell: bash
+
+env:
+  PREVIEW_MAX_AGE_HOURS: "48"
+
+jobs:
+  cleanup:
+    name: Delete Expired Preview Functions
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GOOGLE_CREDENTIALS }}
+
+      - name: Setup Google Cloud CLI
+        uses: google-github-actions/setup-gcloud@v2
+        with:
+          project_id: rootjs-dev
+
+      - name: Delete expired preview functions
+        run: |
+          set -euo pipefail
+
+          gcloud functions list \
+            --gen2 \
+            --project rootjs-dev \
+            --format=json > /tmp/rootjs-preview-functions.json
+
+          node <<'NODE' > /tmp/rootjs-expired-preview-functions.tsv
+            const fs = require('fs');
+            const maxAgeHours = Number(process.env.PREVIEW_MAX_AGE_HOURS);
+            const cutoff = Date.now() - maxAgeHours * 60 * 60 * 1000;
+            const functions = JSON.parse(
+              fs.readFileSync('/tmp/rootjs-preview-functions.json', 'utf8')
+            );
+
+            for (const fn of functions) {
+              const fullName = fn.name || '';
+              const functionName = fullName.split('/').pop();
+              if (!/^previewpr\d+-server$/.test(functionName)) {
+                continue;
+              }
+
+              const timestamp = Date.parse(fn.updateTime || fn.createTime || '');
+              if (Number.isNaN(timestamp) || timestamp > cutoff) {
+                continue;
+              }
+
+              const region = fullName.match(/\/locations\/([^/]+)\//)?.[1];
+              if (!region) {
+                throw new Error(`Could not determine region for ${fullName}.`);
+              }
+
+              console.log(
+                [functionName, region, new Date(timestamp).toISOString()].join('\t')
+              );
+            }
+          NODE
+
+          if [[ ! -s /tmp/rootjs-expired-preview-functions.tsv ]]; then
+            echo "No expired preview functions found."
+            exit 0
+          fi
+
+          while IFS=$'\t' read -r function_name region updated_at; do
+            echo "Deleting ${function_name} in ${region}, last updated ${updated_at}."
+            gcloud functions delete "$function_name" \
+              --gen2 \
+              --region "$region" \
+              --project rootjs-dev \
+              --quiet
+          done < /tmp/rootjs-expired-preview-functions.tsv
