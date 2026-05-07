@@ -13,6 +13,7 @@ import {
   findModel,
   getAiConfig,
   runChatStream,
+  runEditObjectStream,
   serializeAiConfig,
 } from './ai-chat.js';
 import {ChatClient, RootAiModel, summarizeDiff} from './ai.js';
@@ -833,6 +834,69 @@ export function api(server: Server, options: ApiOptions) {
       }
     }
   });
+
+  /**
+   * Streams an LLM response for the array-item "Edit with AI" diff-viewer
+   * flow. Like `ai.v2.chat`, the server proxies the model's UI message stream
+   * directly to the browser. Differences:
+   *
+   * - The available tool set is restricted to read-only CMS tools — the user
+   *   approves and saves changes manually via the modal's Save button, so
+   *   the model must not write to Firestore directly.
+   * - Conversation state is ephemeral — edit sessions are not persisted to
+   *   Firestore and don't appear in the user's chat history.
+   * - The system prompt instructs the model to emit its proposed JSON in a
+   *   fenced ```json code block which the client extracts to populate the
+   *   diff viewer.
+   */
+  server.use(
+    '/cms/api/ai.v2.editObject',
+    async (req: Request, res: Response) => {
+      if (req.method !== 'POST') {
+        res.status(400).json({success: false, error: 'BAD_REQUEST'});
+        return;
+      }
+      if (!req.user?.email) {
+        res.status(401).json({success: false, error: 'UNAUTHORIZED'});
+        return;
+      }
+      const aiConfig = getAiConfig(req.rootConfig!);
+      if (!aiConfig) {
+        res.status(404).json({success: false, error: 'AI_NOT_CONFIGURED'});
+        return;
+      }
+
+      const body = req.body || {};
+      const messages = (body.messages as UIMessage[]) || [];
+      if (!Array.isArray(messages) || messages.length === 0) {
+        res.status(400).json({success: false, error: 'MISSING_MESSAGES'});
+        return;
+      }
+      const model = findModel(aiConfig, body.modelId);
+      if (!model) {
+        res.status(400).json({success: false, error: 'UNKNOWN_MODEL'});
+        return;
+      }
+
+      try {
+        const streamResponse = await runEditObjectStream({
+          rootConfig: req.rootConfig!,
+          config: aiConfig,
+          model,
+          messages,
+          editData: body.editData,
+        });
+        await pipeWebResponse(streamResponse, res);
+      } catch (err: any) {
+        console.error(err.stack || err);
+        if (!res.headersSent) {
+          res.status(500).json({success: false, error: err.message || 'UNKNOWN'});
+        } else {
+          res.end();
+        }
+      }
+    }
+  );
 
   /** Lists the current user's recent chats. */
   server.use(
