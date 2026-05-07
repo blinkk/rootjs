@@ -114,6 +114,26 @@ jobs:
         working-directory: docs
         run: bash scripts/env-init.sh
 
+      - name: Add preview package version suffix
+        run: |
+          PR_NUMBER="${{ steps.preview-context.outputs.pr_number }}" node <<'NODE'
+            const fs = require('fs');
+            const prNumber = process.env.PR_NUMBER;
+            const packagePaths = [
+              'packages/root/package.json',
+              'packages/root-cms/package.json',
+            ];
+
+            for (const packagePath of packagePaths) {
+              const packageJson = JSON.parse(fs.readFileSync(packagePath, 'utf8'));
+              packageJson.version = `${packageJson.version}-pr.${prNumber}`;
+              fs.writeFileSync(
+                packagePath,
+                JSON.stringify(packageJson, null, 2) + '\n'
+              );
+            }
+          NODE
+
       - name: Build Root.js packages from PR head
         run: pnpm run build
 
