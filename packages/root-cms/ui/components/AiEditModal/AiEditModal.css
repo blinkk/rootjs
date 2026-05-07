@@ -6,7 +6,7 @@
 }
 
 .AiEditModal__JsonInput .mantine-JsonInput-input {
-  font-size: 0.875rem;
+  font-size: 12px;
   line-height: 1.5;
 }
 
@@ -110,15 +110,29 @@
 }
 
 .AiEditModal__ChatPanel__welcome__icon {
-  color: rgb(134, 142, 150);
+  width: 48px;
+  padding: 8px;
+  border-radius: 50%;
+  border: 1px solid #dedede;
+}
+
+.AiEditModal__ChatPanel__welcome__icon svg {
+  width: 100%;
 }
 
 .AiEditModal__ChatPanel__welcome__title {
-  font-weight: 600;
+  color: var(--color-text-dark, #000);
+  font-size: 28px;
+  line-height: 1.2;
+  font-weight: 700;
 }
 
 .AiEditModal__ChatPanel__welcome__body {
-  font-size: 0.875rem;
+  font-size: 16px;
+  line-height: 1.5;
+  text-align: center;
+  max-width: 600px;
+  padding: 0 24px;
 }
 
 .AiEditModal__ChatPanel__welcome__body p {

@@ -29,6 +29,7 @@ import {AiResponse} from '../../../shared/ai/prompts.js';
 import {executeCmsTool} from '../../pages/AIPage/cmsToolHandlers.js';
 import {joinClassNames} from '../../utils/classes.js';
 import {uploadFileToGCS} from '../../utils/gcs.js';
+import {IconRootAI} from '../IconRootAI/IconRootAI.js';
 import {Markdown} from '../Markdown/Markdown.js';
 
 interface ModelInfo {
@@ -276,10 +277,10 @@ function ChatTranscript(props: {
       >
         <div className="AiEditModal__ChatPanel__welcome">
           <div className="AiEditModal__ChatPanel__welcome__icon">
-            <IconRobot size={32} />
+            <IconRootAI />
           </div>
           <div className="AiEditModal__ChatPanel__welcome__title">
-            Root AI is ready
+            Edit with Root AI
           </div>
           {props.welcome && (
             <div className="AiEditModal__ChatPanel__welcome__body">
