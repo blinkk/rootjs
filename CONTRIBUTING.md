@@ -22,3 +22,9 @@ To get started:
 1. Select the package(s) that should include a short message explaining your change using spacebar
 1. Select whether the version bump should be Major (breaking changes), Minor (new feature), or Patch (bug fixes)
 1. Add the newly created changeset file along with your commit
+
+## Releases and Branching
+
+See [RELEASING.md](./RELEASING.md) for the branching strategy used across
+major versions, including how patch releases are maintained on prior majors
+and how pre-releases of the next major are published under npm dist-tags.
