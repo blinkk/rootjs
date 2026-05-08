@@ -4,9 +4,13 @@ import {defineConfig} from '@blinkk/root';
 import {cmsPlugin} from '@blinkk/root-cms/plugin';
 import {crowdinTranslationService} from './plugins/crowdin-translations.js';
 import {deeplTranslationService} from './plugins/deepl-translations.js';
+import {emailNotificationsPlugin} from './plugins/email-notifications.js';
 import {templatesPod} from './plugins/templates-pod.js';
 
 const rootDir = new URL('.', import.meta.url).pathname;
+
+// Email notifications are opt-in via env. See plugins/email-notifications.ts.
+const emailNotifications = emailNotificationsPlugin();
 
 export default defineConfig({
   domain: 'https://rootjs.dev',
@@ -65,6 +69,7 @@ export default defineConfig({
         }),
         deeplTranslationService({apiKey: process.env.DEEPL_API_KEY}),
       ],
+      notifications: emailNotifications ? [emailNotifications] : [],
       checks: [
         {
           id: 'custom/green-check',
