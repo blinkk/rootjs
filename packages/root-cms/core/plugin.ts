@@ -62,7 +62,6 @@ export type {
 export type CMSBuiltInSidebarTool =
   | 'home'
   | 'content'
-  | 'tasks'
   | 'releases'
   | 'data'
   | 'assets'
@@ -277,8 +276,7 @@ export type CMSPluginOptions = {
 
     /**
      * Hide specific built-in sidebar tools. Hiding a tool also removes its
-     * surfaces from the CMS home page (e.g. hiding `'tasks'` removes the task
-     * manager card from the home page). The underlying routes remain
+     * surfaces from the CMS home page. The underlying routes remain
      * accessible via direct URL.
      */
     hiddenBuiltInTools?: CMSBuiltInSidebarTool[];
@@ -366,6 +364,12 @@ export type CMSPluginOptions = {
      * Enables the v2 `TranslationsManager`.
      */
     v2TranslationsManager?: boolean;
+
+    /**
+     * Enables the task manager (sidebar entry, home page card, and
+     * `/cms/tasks` routes).
+     */
+    taskManager?: boolean;
   };
 
   /**

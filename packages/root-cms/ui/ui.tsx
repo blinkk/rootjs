@@ -186,6 +186,7 @@ declare global {
       };
       experiments?: {
         ai?: boolean | {endpoint?: string};
+        taskManager?: boolean;
       };
       ai?: {
         defaultModel?: string;
