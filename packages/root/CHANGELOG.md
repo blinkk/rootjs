@@ -10,6 +10,18 @@
 - 3b1db9e1: feat: add native root jsx runtime and renderer
 - 83871448: feat: upgrade to vite v8
 
+## 2.5.17
+
+## 2.5.16
+
+## 2.5.15
+
+## 2.5.14
+
+### Patch Changes
+
+- 69dd792b: fix: improve ssg build concurrency
+
 ## 2.5.13
 
 ## 2.5.12

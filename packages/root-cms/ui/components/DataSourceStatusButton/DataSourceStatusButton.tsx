@@ -35,6 +35,7 @@ export function DataSourceStatusButton(props: DataSourceStatusButtonProps) {
   const currentUserEmail = window.firebase.user.email || '';
   const canPublish = testCanPublish(roles, currentUserEmail);
   const isPublishAction = props.action === 'publish';
+  const isArchived = Boolean(dataSource.archivedAt);
 
   async function onClick() {
     setLoading(true);
@@ -105,13 +106,17 @@ export function DataSourceStatusButton(props: DataSourceStatusButtonProps) {
       </div>
       <div className="DataSourceStatusButton__button">
         <ConditionalTooltip
-          label="You don't have access to publish this data source"
-          condition={isPublishAction && !canPublish}
+          label={
+            isArchived
+              ? 'Data source is archived'
+              : "You don't have access to publish this data source"
+          }
+          condition={isArchived || (isPublishAction && !canPublish)}
         >
           <Tooltip
             transition="pop"
             label={buttonTooltip}
-            disabled={isPublishAction && !canPublish}
+            disabled={isArchived || (isPublishAction && !canPublish)}
           >
             <Button
               variant="default"
@@ -119,7 +124,7 @@ export function DataSourceStatusButton(props: DataSourceStatusButtonProps) {
               compact
               onClick={() => onClick()}
               loading={loading}
-              disabled={isPublishAction && !canPublish}
+              disabled={isArchived || (isPublishAction && !canPublish)}
             >
               {props.action}
             </Button>

@@ -7,6 +7,7 @@ import {NotificationsProvider} from '@mantine/notifications';
 import {initializeApp} from 'firebase/app';
 import {User, getAuth} from 'firebase/auth';
 import {
+  Firestore,
   doc,
   initializeFirestore,
   serverTimestamp,
@@ -383,36 +384,67 @@ function registerDevServerRedirectShortcut() {
 
 registerDevServerRedirectShortcut();
 
-const app = initializeApp(window.__ROOT_CTX.firebaseConfig);
-const databaseId = window.__ROOT_CTX.firebaseConfig.databaseId || '(default)';
-// const db = getFirestore(app);
-// NOTE(stevenle): the firestore web channel rpc sometimes has issues in
-// collections with a large number of docs. Forcing long polling and disabling
-// fetch streams seems to work for some people. This may cause performance
-// issues however.
-const db = initializeFirestore(
-  app,
-  {
-    experimentalForceLongPolling: true,
-    useFetchStreams: false,
-  } as any,
-  databaseId
-);
-const auth = getAuth(app);
-const storage = getStorage(app);
-auth.onAuthStateChanged((user) => {
-  if (!user) {
-    loginRedirect();
-    return;
-  }
-  window.firebase = {app, auth, db, storage, user};
-  const root = document.getElementById('root')!;
-  root.innerHTML = '';
-  render(<App />, root);
+const root = document.getElementById('root')!;
 
-  updateSession(user);
-  saveUserProfile(user);
-});
+function getStartupErrorMessage(err: any): string {
+  const code = err?.code || '';
+  if (code === 'auth/invalid-api-key') {
+    return 'Firebase API key is invalid.';
+  }
+  return err?.message || 'An unknown startup error occurred.';
+}
+
+function showStartupError(err: any) {
+  console.error(err);
+  root.innerHTML = '';
+  const container = document.createElement('div');
+  container.className = 'bootstrap bootstrap--error';
+
+  const title = document.createElement('h1');
+  title.className = 'bootstrap__error-title';
+  title.textContent = 'Something went wrong';
+
+  const message = document.createElement('p');
+  message.className = 'bootstrap__error-message';
+  message.textContent = getStartupErrorMessage(err);
+
+  container.append(title, message);
+  root.append(container);
+}
+
+try {
+  const app = initializeApp(window.__ROOT_CTX.firebaseConfig);
+  const databaseId = window.__ROOT_CTX.firebaseConfig.databaseId || '(default)';
+  // const db = getFirestore(app);
+  // NOTE(stevenle): the firestore web channel rpc sometimes has issues in
+  // collections with a large number of docs. Forcing long polling and disabling
+  // fetch streams seems to work for some people. This may cause performance
+  // issues however.
+  const db = initializeFirestore(
+    app,
+    {
+      experimentalForceLongPolling: true,
+      useFetchStreams: false,
+    } as any,
+    databaseId
+  );
+  const auth = getAuth(app);
+  const storage = getStorage(app);
+  auth.onAuthStateChanged((user) => {
+    if (!user) {
+      loginRedirect();
+      return;
+    }
+    window.firebase = {app, auth, db, storage, user};
+    root.innerHTML = '';
+    render(<App />, root);
+
+    updateSession(user);
+    saveUserProfile(user, db);
+  });
+} catch (err) {
+  showStartupError(err);
+}
 
 async function updateSession(user: User) {
   const idToken = await user.getIdToken();
@@ -443,7 +475,7 @@ async function updateSession(user: User) {
  * `Projects/<projectId>/UserProfiles/<email>` keyed by email since emails are
  * the canonical identifier used throughout the CMS.
  */
-async function saveUserProfile(user: User) {
+async function saveUserProfile(user: User, db: Firestore) {
   if (!user.email) {
     return;
   }

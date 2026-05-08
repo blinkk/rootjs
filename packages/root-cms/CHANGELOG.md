@@ -24,6 +24,42 @@
 - Updated dependencies [83871448]
   - @blinkk/root@3.0.1-alpha.0
 
+## 2.5.17
+
+### Patch Changes
+
+- 86359bb9: feat: add defaultOpen option to ArrayField (#1061)
+- 9d96d542: fix: propagate context to RichText inline components (#1060)
+- 4bd42e1f: fix: refresh docs list when doc is copied
+  - @blinkk/root@2.5.17
+
+## 2.5.16
+
+### Patch Changes
+
+- 1633812a: feat: add ability to unpublish data sources
+- 149f76ee: feat: make publishing lock badge clickable to edit or remove #1039
+- 11ba4d07: fix: clone schemas before walking in convertOneOfTypes
+  - @blinkk/root@2.5.16
+
+## 2.5.15
+
+### Patch Changes
+
+- 257bea1c: feat: add ability to archive data sources #1033
+- f55c2c09: fix: fix copy doc "overwrite" button
+- e8f81185: feat: add ability to archive docs #1032
+  - @blinkk/root@2.5.15
+
+## 2.5.14
+
+### Patch Changes
+
+- 94a00f57: feat: allow translations plugins to customize import message and color
+- f79b7c93: feat: add pagination to version history modal #1021
+- Updated dependencies [69dd792b]
+  - @blinkk/root@2.5.14
+
 ## 2.5.13
 
 ### Patch Changes

@@ -11,13 +11,26 @@ import {setDocToCache} from '../utils/doc-cache.js';
 import {notifyErrors} from '../utils/notifications.js';
 import {useFirebase} from './useFirebase.js';
 
-export function useDocsList(collectionId: string, options: {orderBy: string}) {
+export interface UseDocsListOptions {
+  orderBy: string;
+  /**
+   * When true, archived docs are included in the results. Defaults to false,
+   * meaning archived docs are filtered out.
+   */
+  includeArchived?: boolean;
+}
+
+export function useDocsList(
+  collectionId: string,
+  options: UseDocsListOptions
+) {
   const [docs, setDocs] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const firebase = useFirebase();
   const db = firebase.db;
 
   const projectId = window.__ROOT_CTX.rootConfig.projectId || 'default';
+  const includeArchived = options.includeArchived ?? false;
 
   const listDocs = async () => {
     setLoading(true);
@@ -63,8 +76,12 @@ export function useDocsList(collectionId: string, options: {orderBy: string}) {
           id: docId,
           slug: slug,
         };
-        docs.push(docData);
+        // Always cache the doc, regardless of archive state.
         setDocToCache(docId, docData);
+        if (!includeArchived && (docData as any)?.sys?.archivedAt) {
+          return;
+        }
+        docs.push(docData);
       });
       setDocs(docs);
     });
@@ -74,7 +91,7 @@ export function useDocsList(collectionId: string, options: {orderBy: string}) {
   useEffect(() => {
     setLoading(true);
     listDocs();
-  }, [collectionId, options.orderBy]);
+  }, [collectionId, options.orderBy, includeArchived]);
 
   return [loading, listDocs, docs] as const;
 }

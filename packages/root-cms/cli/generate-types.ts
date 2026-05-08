@@ -276,6 +276,9 @@ function fieldType(field: Field, options: FieldPropertyOptions): dom.Type {
   if (field.type === 'multiselect') {
     return dom.type.array(dom.type.string);
   }
+  if (field.type === 'number') {
+    return dom.type.number;
+  }
   if (field.type === 'oneof') {
     const oneOf = dom.create.namedTypeReference('RootCMSOneOf');
     if (field.types && Array.isArray(field.types)) {
