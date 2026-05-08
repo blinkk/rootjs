@@ -46,7 +46,7 @@
 }
 
 .AIPage__sidebar__newButton:hover {
-  background: #f1f3f5;
+  background: var(--surface-background-hover);
 }
 
 .AIPage__sidebar__list {
@@ -72,16 +72,21 @@
   padding: 8px 12px;
   border-radius: 6px;
   font-size: 13px;
+  color: var(--color-text-gray);
   cursor: pointer;
-  transition: background 0.15s ease;
+  transition: background 0.15s ease, color 0.15s ease;
 }
 
 .AIPage__sidebar__item:hover {
-  background: #f1f3f5;
+  background: var(--surface-background-hover);
+  color: var(--color-text-default);
 }
 
-.AIPage__sidebar__item--active {
-  background: #e7f5ff;
+.AIPage__sidebar__item--active,
+.AIPage__sidebar__item--active:hover {
+  background: #ede7d8;
+  color: var(--color-text-dark);
+  font-weight: 600;
 }
 
 .AIPage__sidebar__item__title {
