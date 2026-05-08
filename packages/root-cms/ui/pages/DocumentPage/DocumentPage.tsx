@@ -20,10 +20,7 @@ import {
 } from '../../components/DocumentPagePreviewBar/DocumentPagePreviewBar.js';
 import {useEditJsonModal} from '../../components/EditJsonModal/EditJsonModal.js';
 import {SearchPanel} from '../../components/SearchPanel/SearchPanel.js';
-import {
-  SplitPanel,
-  useSplitPanel,
-} from '../../components/SplitPanel/SplitPanel.js';
+import {SplitPanel} from '../../components/SplitPanel/SplitPanel.js';
 import {DraftDocProvider, useDraftDoc} from '../../hooks/useDraftDoc.js';
 import {useLocalStorage} from '../../hooks/useLocalStorage.js';
 import {usePageTitle} from '../../hooks/usePageTitle.js';
@@ -485,9 +482,9 @@ DocumentPage.Preview = (props: PreviewProps) => {
   });
   const [selectedLocale, setSelectedLocale] = useStringParam('locale', '');
   const iframeRef = useRef<HTMLIFrameElement>(null);
+  const previewFrameRef = useRef<HTMLDivElement>(null);
 
   const locales = draft.controller!.getLocales() || [];
-  const splitPanel = useSplitPanel();
 
   const localizedPreviewUrl = getPreviewUrl(collectionId, slug, selectedLocale);
 
@@ -595,7 +592,7 @@ DocumentPage.Preview = (props: PreviewProps) => {
     }
   }, [collectionId, slug, selectedLocale]);
 
-  function updateIframeStyle() {
+  const updateIframeStyle = useCallback(() => {
     if (device === '') {
       setIframeStyle({
         '--iframe-width': '100%',
@@ -604,8 +601,10 @@ DocumentPage.Preview = (props: PreviewProps) => {
       });
       return;
     }
-    const iframe = iframeRef.current!;
-    const container = iframe.parentElement!.parentElement as HTMLElement;
+    const container = previewFrameRef.current;
+    if (!container) {
+      return;
+    }
     const rect = container.getBoundingClientRect();
     const [width, height] = DeviceResolution[device];
     const padding = 20;
@@ -633,19 +632,29 @@ DocumentPage.Preview = (props: PreviewProps) => {
       '--iframe-height': iframeHeight,
       '--iframe-scale': String(normalizedScale),
     });
-  }
+  }, [device, expandVertically]);
 
   useEffect(() => {
     updateIframeStyle();
-    // Listen for split panel resize events
-    const unsubscribe = splitPanel.onResize(updateIframeStyle);
-    // Maintain the aspect ratio when the window is resized.
-    window.addEventListener('resize', updateIframeStyle);
-    return () => {
-      unsubscribe();
-      window.removeEventListener('resize', updateIframeStyle);
+    const container = previewFrameRef.current;
+    if (!container) {
+      return;
+    }
+    let animationFrame = 0;
+    const scheduleIframeStyleUpdate = () => {
+      window.cancelAnimationFrame(animationFrame);
+      animationFrame = window.requestAnimationFrame(updateIframeStyle);
     };
-  }, [device, splitPanel, expandVertically]);
+    const resizeObserver = new window.ResizeObserver(scheduleIframeStyleUpdate);
+    resizeObserver.observe(container);
+    // Maintain the aspect ratio when the window is resized.
+    window.addEventListener('resize', scheduleIframeStyleUpdate);
+    return () => {
+      window.cancelAnimationFrame(animationFrame);
+      resizeObserver.disconnect();
+      window.removeEventListener('resize', scheduleIframeStyleUpdate);
+    };
+  }, [updateIframeStyle]);
 
   return (
     <div className="DocumentPage__main__preview">
@@ -664,6 +673,7 @@ DocumentPage.Preview = (props: PreviewProps) => {
       <div
         className="DocumentPage__main__previewFrame"
         data-device={device || 'full'}
+        ref={previewFrameRef}
         style={iframeStyle}
       >
         {/* The `display: none` inline style is needed to prevent the vdom from re-using the div component for the iframe wrapper below. */}
