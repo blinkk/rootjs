@@ -8,9 +8,9 @@ one, and without painful merges between stable and bleeding-edge code.
 
 Keep `main` as the bleeding edge — it tracks the next major version (e.g. v3
 while v2 is the current stable). When a new major ships, cut a maintenance
-branch named after the previous major (e.g. `2.x` or `release/v2`). That branch
-becomes the home for all patch and minor releases of v2 going forward. When v3
-is released, cut `3.x` from `main` and `main` moves on toward v4.
+branch named after the previous major (e.g. `2.x`). That branch becomes the
+home for all patch and minor releases of v2 going forward. When v3 is
+released, cut `3.x` from `main` and `main` moves on toward v4.
 
 So at any given time the repo has:
 
