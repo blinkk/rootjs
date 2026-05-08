@@ -12,6 +12,11 @@ interface DocStatusBadgesProps {
   docId?: string;
   tooltipPosition?: 'bottom' | 'top';
   hideReleases?: boolean;
+  /**
+   * Optional click handler for the "Locked" publishing-lock badge. When set,
+   * the badge becomes interactive (clickable) so callers can open an edit UI.
+   */
+  onPublishingLockClick?: () => void;
 }
 
 export function DocStatusBadges(props: DocStatusBadgesProps) {
@@ -81,8 +86,43 @@ export function DocStatusBadges(props: DocStatusBadgesProps) {
             size="xs"
             variant="gradient"
             gradient={{from: 'orange', to: 'red'}}
+            className={
+              props.onPublishingLockClick
+                ? 'DocStatusBadges__badge--clickable'
+                : undefined
+            }
+            style={
+              props.onPublishingLockClick ? {cursor: 'pointer'} : undefined
+            }
+            role={props.onPublishingLockClick ? 'button' : undefined}
+            tabIndex={props.onPublishingLockClick ? 0 : undefined}
+            onClick={props.onPublishingLockClick}
+            onKeyDown={
+              props.onPublishingLockClick
+                ? (e: KeyboardEvent) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      props.onPublishingLockClick!();
+                    }
+                  }
+                : undefined
+            }
           >
             Locked
+          </Badge>
+        </Tooltip>
+      )}
+      {!!sys.archivedAt && (
+        <Tooltip
+          {...tooltipProps}
+          label={`Archived ${timeDiff(sys.archivedAt)} by ${sys.archivedBy}`}
+        >
+          <Badge
+            size="xs"
+            variant="gradient"
+            gradient={{from: 'gray', to: 'dark'}}
+          >
+            Archived
           </Badge>
         </Tooltip>
       )}

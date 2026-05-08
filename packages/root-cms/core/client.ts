@@ -82,6 +82,8 @@ export interface DataSource {
   syncedBy?: string;
   publishedAt?: Timestamp;
   publishedBy?: string;
+  archivedAt?: Timestamp;
+  archivedBy?: string;
 }
 
 export interface DataSourceData<T = any> {
@@ -1273,9 +1275,46 @@ export class RootCMSClient {
     const docRef = this.db.doc(dbPath);
     const doc = await docRef.get();
     if (doc.exists) {
-      return doc.data() as DataSource;
+      const dataSource = doc.data() as DataSource;
+      if (dataSource.archivedAt) {
+        console.warn(
+          `warning: data source "${dataSourceId}" is archived` +
+            (dataSource.archivedBy ? ` (archived by ${dataSource.archivedBy})` : '')
+        );
+      }
+      return dataSource;
     }
     return null;
+  }
+
+  /**
+   * Archives a data source. Archived data sources cannot be synced or published.
+   */
+  async archiveDataSource(
+    dataSourceId: string,
+    options?: {archivedBy?: string}
+  ) {
+    const dbPath = `Projects/${this.projectId}/DataSources/${dataSourceId}`;
+    const docRef = this.db.doc(dbPath);
+    const archivedBy = options?.archivedBy || 'root-cms-client';
+    await docRef.update({
+      archivedAt: Timestamp.now(),
+      archivedBy: archivedBy,
+    });
+    console.log(`archived data source: ${dataSourceId}`);
+  }
+
+  /**
+   * Unarchives a data source.
+   */
+  async unarchiveDataSource(dataSourceId: string) {
+    const dbPath = `Projects/${this.projectId}/DataSources/${dataSourceId}`;
+    const docRef = this.db.doc(dbPath);
+    await docRef.update({
+      archivedAt: FieldValue.delete(),
+      archivedBy: FieldValue.delete(),
+    });
+    console.log(`unarchived data source: ${dataSourceId}`);
   }
 
   /**
@@ -1285,6 +1324,9 @@ export class RootCMSClient {
     const dataSource = await this.getDataSource(dataSourceId);
     if (!dataSource) {
       throw new Error(`data source not found: ${dataSourceId}`);
+    }
+    if (dataSource.archivedAt) {
+      throw new Error(`data source is archived: ${dataSourceId}`);
     }
 
     const result = await this.fetchData(dataSource);
@@ -1327,6 +1369,9 @@ export class RootCMSClient {
     if (!dataSource) {
       throw new Error(`data source not found: ${dataSourceId}`);
     }
+    if (dataSource.archivedAt) {
+      throw new Error(`data source is archived: ${dataSourceId}`);
+    }
 
     const dataSourceDocRef = this.db.doc(
       `Projects/${this.projectId}/DataSources/${dataSourceId}`
@@ -1367,6 +1412,46 @@ export class RootCMSClient {
     console.log(`published by: ${publishedBy}`);
   }
 
+  /**
+   * Unpublishes a data source. Removes the `publishedAt`/`publishedBy`
+   * metadata from the DataSource doc and deletes the `Data/published` doc.
+   */
+  async unpublishDataSource(dataSourceId: string) {
+    const dataSource = await this.getDataSource(dataSourceId);
+    if (!dataSource) {
+      throw new Error(`data source not found: ${dataSourceId}`);
+    }
+
+    const dataSourceDocRef = this.db.doc(
+      `Projects/${this.projectId}/DataSources/${dataSourceId}`
+    );
+    const dataDocRefDraft = this.db.doc(
+      `Projects/${this.projectId}/DataSources/${dataSourceId}/Data/draft`
+    );
+    const dataDocRefPublished = this.db.doc(
+      `Projects/${this.projectId}/DataSources/${dataSourceId}/Data/published`
+    );
+
+    const batch = this.db.batch();
+    batch.update(dataSourceDocRef, {
+      publishedAt: FieldValue.delete(),
+      publishedBy: FieldValue.delete(),
+    });
+    // Also remove the embedded `publishedAt`/`publishedBy` from the draft data
+    // doc so it stays in sync.
+    const draftSnapshot = await dataDocRefDraft.get();
+    if (draftSnapshot.exists) {
+      batch.update(dataDocRefDraft, {
+        'dataSource.publishedAt': FieldValue.delete(),
+        'dataSource.publishedBy': FieldValue.delete(),
+      });
+    }
+    batch.delete(dataDocRefPublished);
+    await batch.commit();
+
+    console.log(`unpublished data source: ${dataSourceId}`);
+  }
+
   async publishDataSources(
     dataSourceIds: string[],
     options?: {publishedBy: string; batch?: WriteBatch; commitBatch?: boolean}
@@ -1377,6 +1462,9 @@ export class RootCMSClient {
       const dataSource = await this.getDataSource(id);
       if (!dataSource) {
         throw new Error(`data source not found: ${id}`);
+      }
+      if (dataSource.archivedAt) {
+        throw new Error(`data source is archived: ${id}`);
       }
       const dataSourceDocRef = this.db.doc(
         `Projects/${this.projectId}/DataSources/${id}`
@@ -1569,7 +1657,15 @@ export class RootCMSClient {
     const docRef = this.dbDataSourceDataRef(dataSourceId, {mode});
     const doc = await docRef.get();
     if (doc.exists) {
-      return doc.data() as DataSourceData<T>;
+      const dataSourceData = doc.data() as DataSourceData<T>;
+      if (dataSourceData.dataSource?.archivedAt) {
+        const archivedBy = dataSourceData.dataSource.archivedBy;
+        console.warn(
+          `warning: data source "${dataSourceId}" is archived` +
+            (archivedBy ? ` (archived by ${archivedBy})` : '')
+        );
+      }
+      return dataSourceData;
     }
     return null;
   }

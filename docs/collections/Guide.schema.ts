@@ -99,6 +99,7 @@ export default schema.collection({
                 id: 'blocks',
                 label: 'Section: Blocks',
                 help: 'Add blocks to embed various content types to the section.',
+                defaultOpen: true,
                 of: schema.oneOf({
                   types: schema.glob('/blocks/*/*.schema.ts'),
                 }),

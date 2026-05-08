@@ -11,3 +11,17 @@
 .DocStatusBadges .mantine-Badge-root {
   display: flex;
 }
+
+.DocStatusBadges__badge--clickable {
+  cursor: pointer;
+  transition: opacity 0.15s ease;
+}
+
+.DocStatusBadges__badge--clickable:hover {
+  opacity: 0.9;
+}
+
+.DocStatusBadges__badge--clickable:focus-visible {
+  outline: 2px solid var(--mantine-color-blue-6, #339af0);
+  outline-offset: 2px;
+}

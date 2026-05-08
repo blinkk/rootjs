@@ -15,6 +15,31 @@
 - Updated dependencies [83871448]
   - @blinkk/root@3.0.1-alpha.0
 
+## 2.5.17
+
+### Patch Changes
+
+- @blinkk/root@2.5.17
+
+## 2.5.16
+
+### Patch Changes
+
+- @blinkk/root@2.5.16
+
+## 2.5.15
+
+### Patch Changes
+
+- @blinkk/root@2.5.15
+
+## 2.5.14
+
+### Patch Changes
+
+- Updated dependencies [69dd792b]
+  - @blinkk/root@2.5.14
+
 ## 2.5.13
 
 ### Patch Changes

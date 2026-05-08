@@ -102,6 +102,26 @@ body.menu\:open {
   padding: 0 24px;
 }
 
+.bootstrap--error {
+  gap: 16px;
+}
+
+.bootstrap__error-title {
+  font-size: 48px;
+  font-weight: 900;
+  line-height: 1.1;
+  margin: 0;
+}
+
+.bootstrap__error-message {
+  color: #b00020;
+  font-size: 16px;
+  font-weight: 500;
+  line-height: 1.5;
+  margin: 0;
+  max-width: 640px;
+}
+
 @keyframes bootstrap-loading-error {
   0% {
     opacity: 0;

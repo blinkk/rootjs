@@ -53,6 +53,9 @@ export interface CMSDoc {
       reason: string;
       until?: Timestamp;
     };
+    archivedAt?: Timestamp;
+    archivedBy?: string;
+    locales?: string[];
     /** Google Sheet linked for translations. */
     l10nSheet?: {
       spreadsheetId: string;
@@ -195,6 +198,10 @@ function updatePublishedDocDataInBatch(
 ) {
   if (testPublishingLocked(draftData)) {
     throw new Error(`publishing is locked for doc: ${draftData.id}`);
+  }
+
+  if (testIsArchived(draftData)) {
+    throw new Error(`cannot publish archived doc: ${draftData.id}`);
   }
 
   const projectId = window.__ROOT_CTX.rootConfig.projectId;
@@ -492,6 +499,38 @@ export async function cmsUnlockPublishing(docId: string) {
 }
 
 /**
+ * Archives a doc. Archived docs are hidden from list views by default but are
+ * otherwise left intact. Use {@link cmsUnarchiveDoc} to restore.
+ */
+export async function cmsArchiveDoc(docId: string) {
+  const docRef = getDraftDocRef(docId);
+  await updateDoc(docRef, {
+    'sys.archivedAt': serverTimestamp(),
+    'sys.archivedBy': window.firebase.user.email,
+  });
+  logAction('doc.archive', {metadata: {docId}});
+}
+
+/**
+ * Unarchives a previously archived doc.
+ */
+export async function cmsUnarchiveDoc(docId: string) {
+  const docRef = getDraftDocRef(docId);
+  await updateDoc(docRef, {
+    'sys.archivedAt': deleteField(),
+    'sys.archivedBy': deleteField(),
+  });
+  logAction('doc.unarchive', {metadata: {docId}});
+}
+
+/**
+ * Checks if a doc is archived.
+ */
+export function testIsArchived(docData: CMSDoc) {
+  return Boolean(docData?.sys?.archivedAt);
+}
+
+/**
  * Checks if a doc has a pending scheduled publish.
  */
 export function testIsScheduled(docData: CMSDoc) {
@@ -525,13 +564,23 @@ export async function cmsCopyDoc(
   if (!fromDoc.exists()) {
     throw new Error(`doc ${fromDocId} does not exist`);
   }
-  const fields = fromDoc.data().fields ?? {};
-  await cmsCreateDoc(toDocId, {fields, overwrite: options?.overwrite});
+  const data = fromDoc.data();
+  const fields = data.fields ?? {};
+  const locales = data.sys?.locales;
+  await cmsCreateDoc(toDocId, {
+    fields,
+    locales,
+    overwrite: options?.overwrite,
+  });
 }
 
 export async function cmsCreateDoc(
   docId: string,
-  options?: {fields?: Record<string, any>; overwrite?: boolean}
+  options?: {
+    fields?: Record<string, any>;
+    locales?: string[];
+    overwrite?: boolean;
+  }
 ) {
   const [collectionId, slug] = docId.split('/');
   const docRef = getDraftDocRef(docId);
@@ -548,7 +597,7 @@ export async function cmsCreateDoc(
       createdBy: window.firebase.user.email,
       modifiedAt: serverTimestamp(),
       modifiedBy: window.firebase.user.email,
-      locales: ['en'],
+      locales: options?.locales ?? ['en'],
     },
     fields: options?.fields ?? {},
   };
@@ -558,6 +607,7 @@ export async function cmsCreateDoc(
     const oldData = doc.data();
     data.sys = {
       ...oldData.sys,
+      locales: options?.locales ?? oldData.sys.locales,
       modifiedAt: serverTimestamp(),
       modifiedBy: window.firebase.user.email,
     };
