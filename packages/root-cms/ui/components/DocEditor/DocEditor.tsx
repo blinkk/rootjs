@@ -104,6 +104,7 @@ import {
 } from '../DocStatusBadges/DocStatusBadges.js';
 import {useEditJsonModal} from '../EditJsonModal/EditJsonModal.js';
 import {useEditTranslationsModal} from '../EditTranslationsModal/EditTranslationsModal.js';
+import {IconRootAI} from '../IconRootAI/IconRootAI.js';
 import {useLocalizationModal} from '../LocalizationModal/LocalizationModal.js';
 import {usePublishDocModal} from '../PublishDocModal/PublishDocModal.js';
 import {Viewers} from '../Viewers/Viewers.js';
@@ -1574,12 +1575,10 @@ DocEditor.ArrayField = (props: FieldProps) => {
                                 {experiments.ai && (
                                   <Menu.Item
                                     className="DocEditor__ArrayField__menu__item"
-                                    icon={
-                                      <IconSparkles size={18} stroke="1.75" />
-                                    }
+                                    icon={<IconRootAI size={16} />}
                                     onClick={() => aiEdit(i)}
                                   >
-                                    Edit with AI
+                                    Edit with Root AI
                                   </Menu.Item>
                                 )}
                                 <Menu.Label>REMOVE</Menu.Label>

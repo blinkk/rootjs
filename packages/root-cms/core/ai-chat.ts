@@ -23,7 +23,7 @@ import {
   UIMessage,
 } from 'ai';
 import {Timestamp} from 'firebase-admin/firestore';
-import {createCmsTools} from './ai-tools.js';
+import {createCmsTools, createReadOnlyCmsTools} from './ai-tools.js';
 import {RootCMSClient} from './client.js';
 
 /** Filename of the project-level instructions file loaded into the AI prompt. */
@@ -468,6 +468,127 @@ export async function runChatStream(
       }
     },
   });
+}
+
+export interface RunEditObjectStreamOptions {
+  rootConfig: RootConfig;
+  config: AiConfig;
+  model: AiModelConfig;
+  messages: UIMessage[];
+  /** The JSON object the user is editing. Injected as context for the model. */
+  editData: unknown;
+}
+
+/**
+ * Streaming variant used by the array-item "Edit with AI" diff-viewer flow.
+ *
+ * Differences from `runChatStream`:
+ *
+ * - Uses an edit-specific system prompt that injects the JSON the user is
+ *   editing and the project's `root-cms.d.ts` types, and instructs the model
+ *   to end every response with a fenced ```json block containing the
+ *   complete proposed new JSON. The client extracts that block to populate
+ *   the diff viewer.
+ * - Tools are filtered to read-only (see `createReadOnlyCmsTools`). The user
+ *   approves changes via the modal's "Save" button, so the model must not
+ *   mutate Firestore directly.
+ * - No Firestore persistence — edit sessions are ephemeral and don't show up
+ *   in the user's chat history.
+ */
+export async function runEditObjectStream(
+  options: RunEditObjectStreamOptions
+): Promise<Response> {
+  const {rootConfig, model, config, messages, editData} = options;
+  const languageModel = resolveLanguageModel(model);
+  const tools: ToolSet =
+    model.capabilities?.tools === false ? {} : createReadOnlyCmsTools();
+
+  const editPromptText = (await import('../shared/ai/prompts/edit.txt'))
+    .default;
+  // Strip the legacy `{"data": ..., "message": ...}` output spec from the
+  // bundled prompt — for the streaming flow we replace it with explicit
+  // instructions to emit a fenced ```json code block instead.
+  const promptParts: string[] = [
+    stripLegacyEditOutputSpec(editPromptText),
+    '',
+    'Output format:',
+    '- Begin with a brief 1-2 sentence message describing what you changed.',
+    '- Then emit a single fenced code block tagged ```json containing the',
+    '  COMPLETE proposed new JSON object (including any unmodified fields).',
+    '- The code block must be the LAST content in your response. The CMS UI',
+    '  parses it and shows the result in a diff viewer for the user to',
+    '  approve before saving.',
+    '',
+    'Tool policy:',
+    '- The available tools are READ-ONLY. Use them only when you need extra',
+    '  context (e.g. inspecting the schema or referencing other CMS docs).',
+    '- You MUST NOT attempt to call write tools (e.g. doc_set, doc_create,',
+    '  doc_updateField). The user approves and saves changes manually via',
+    '  the modal\'s Save button.',
+  ];
+
+  // Append the project's root-cms.d.ts type definitions if present so the
+  // model can validate its output against the actual schema.
+  try {
+    const rootCmsDefsPath = path.join(rootConfig.rootDir, 'root-cms.d.ts');
+    const rootCmsDefs = await fs.readFile(rootCmsDefsPath, 'utf8');
+    if (rootCmsDefs.trim()) {
+      promptParts.push(
+        '',
+        'Here is the `root-cms.d.ts` file for this project:',
+        '```',
+        rootCmsDefs,
+        '```'
+      );
+    }
+  } catch (err: any) {
+    if (err?.code !== 'ENOENT') {
+      console.error('failed to read root-cms.d.ts:', err);
+    }
+  }
+
+  // Inject the JSON being edited at the end of the system prompt.
+  promptParts.push(
+    '',
+    'The JSON you must edit is:',
+    '```json',
+    JSON.stringify(editData ?? {}, null, 2),
+    '```'
+  );
+
+  const basePrompt = promptParts.join('\n');
+  const rootMd = await readRootMd(rootConfig.rootDir);
+  const systemPrompt = buildSystemPrompt(basePrompt, rootMd);
+
+  const modelMessages = await convertToModelMessages(messages, {tools});
+  const result = streamText({
+    model: languageModel,
+    system: systemPrompt,
+    messages: modelMessages,
+    tools,
+    stopWhen: stepCountIs(config.maxSteps ?? 10),
+  });
+
+  return result.toUIMessageStreamResponse({
+    sendReasoning: model.capabilities?.reasoning ?? false,
+    originalMessages: messages,
+  });
+}
+
+/**
+ * Removes the trailing legacy output specification block from `edit.txt`
+ * (the `{"data": ..., "message": ...}` JSON envelope used by the Genkit-era
+ * chat). The streaming flow uses fenced code blocks instead, which we
+ * append after this function returns.
+ */
+function stripLegacyEditOutputSpec(prompt: string): string {
+  const marker =
+    'Finally, when you provide your response, it MUST be structured';
+  const idx = prompt.indexOf(marker);
+  if (idx === -1) {
+    return prompt;
+  }
+  return prompt.slice(0, idx).trimEnd();
 }
 
 /**

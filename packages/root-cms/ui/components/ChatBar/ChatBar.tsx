@@ -259,7 +259,7 @@ export function ChatBar(props: {
         </ActionIcon>
       </div>
       <div className="AIPage__ChatBar__disclaimer">
-        Root AI is experimental and makes mistakes. Check all info.
+        Root AI is experimental and can make mistakes. Use with caution.
       </div>
     </div>
   );

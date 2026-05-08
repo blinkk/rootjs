@@ -43,6 +43,37 @@ export const CMS_TOOL_NAMES = [
 export type CmsToolName = (typeof CMS_TOOL_NAMES)[number];
 
 /**
+ * Subset of CMS tools that perform reads only. Used by flows where the user
+ * approves changes via UI (e.g. the array-item "Edit with AI" diff viewer)
+ * and the model must not write to Firestore directly.
+ */
+export const READ_ONLY_CMS_TOOL_NAMES: readonly CmsToolName[] = [
+  'collections_list',
+  'docs_list',
+  'docs_search',
+  'doc_get',
+  'doc_getVersion',
+  'doc_listVersions',
+  'schema_get',
+] as const;
+
+/**
+ * Returns a `ToolSet` filtered to only the read-only CMS tools. Use this in
+ * flows where the AI assists with proposing changes that the user reviews
+ * and saves manually (so the model can read context but cannot mutate data).
+ */
+export function createReadOnlyCmsTools(): ToolSet {
+  const all = createCmsTools();
+  const out: ToolSet = {};
+  for (const name of READ_ONLY_CMS_TOOL_NAMES) {
+    if (all[name]) {
+      out[name] = all[name];
+    }
+  }
+  return out;
+}
+
+/**
  * Schema-only tool definitions. The server passes these to `streamText` so
  * the model knows the contract; the browser provides the actual `execute`.
  *
