@@ -8,26 +8,26 @@ one, and without painful merges between stable and bleeding-edge code.
 
 Keep `main` as the bleeding edge — it tracks the next major version (e.g. v3
 while v2 is the current stable). When a new major ships, cut a maintenance
-branch named after the previous major (e.g. `2.x`). That branch becomes the
+branch named after the previous major (e.g. `v2.x`). That branch becomes the
 home for all patch and minor releases of v2 going forward. When v3 is
-released, cut `3.x` from `main` and `main` moves on toward v4.
+released, cut `v3.x` from `main` and `main` moves on toward v4.
 
 So at any given time the repo has:
 
 - `main` — active development for the next major (breaking changes welcome).
-- `2.x` — maintenance for the previous major (bug fixes, security patches,
+- `v2.x` — maintenance for the previous major (bug fixes, security patches,
   occasional minor features).
-- Older `1.x`, etc. — kept around as long as they are supported.
+- Older `v1.x`, etc. — kept around as long as they are supported.
 
 ## Bug fixes flow forward, never backward
 
 The trick that keeps this clean: bug fixes flow *from old to new*, not the
 other way. When a bug is fixed in v2:
 
-1. Branch off `2.x`, fix the bug, PR back into `2.x`, release a patch.
+1. Branch off `v2.x`, fix the bug, PR back into `v2.x`, release a patch.
 2. Cherry-pick (or merge) that commit forward into `main`.
 
-`main` is almost never merged back into `2.x` — that would drag breaking
+`main` is almost never merged back into `v2.x` — that would drag breaking
 changes into the stable line. Going forward-only means conflicts are localized
 to the specific files the bug touched, and they're resolved once at
 cherry-pick time. If the v3 code has refactored that area heavily, sometimes
@@ -72,7 +72,7 @@ pnpm changeset pre exit
 - **Tag every release** (`v2.4.1`, `v3.0.0-beta.2`) so it's always possible to
   check out exactly what shipped.
 - **Protect release branches** in GitHub — require PRs and passing CI on
-  `main`, `2.x`, etc.
+  `main`, `v2.x`, etc.
 - **Changelogs per branch.** Changesets already writes per-package
   `CHANGELOG.md` files; each maintenance branch maintains its own history,
   which is exactly what's wanted.
