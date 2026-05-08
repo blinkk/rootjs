@@ -35,7 +35,7 @@ jobs:
           set -euo pipefail
 
           gcloud functions list \
-            --gen2 \
+            --v2 \
             --project rootjs-dev \
             --format=json > /tmp/rootjs-preview-functions.json
 
@@ -78,7 +78,7 @@ jobs:
           while IFS=$'\t' read -r function_name region updated_at; do
             echo "Deleting ${function_name} in ${region}, last updated ${updated_at}."
             gcloud functions delete "$function_name" \
-              --gen2 \
+              --v2 \
               --region "$region" \
               --project rootjs-dev \
               --quiet
