@@ -130,7 +130,7 @@ Layout.Side = () => {
           </Layout.SideButton>
         )}
 
-        {!isBuiltInHidden('tasks') && (
+        {experiments.taskManager && (
           <Layout.SideButton
             label="Tasks"
             url="/cms/tasks"

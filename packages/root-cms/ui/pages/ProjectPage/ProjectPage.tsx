@@ -12,9 +12,7 @@ import {Layout} from '../../layout/Layout.js';
 export function ProjectPage() {
   // const projectName = window.__ROOT_CTX.rootConfig.projectName || 'Root CMS';
   usePageTitle('Home');
-  const hiddenBuiltInTools =
-    window.__ROOT_CTX.sidebar?.hiddenBuiltInTools || [];
-  const showTaskManager = !hiddenBuiltInTools.includes('tasks');
+  const showTaskManager = !!window.__ROOT_CTX.experiments?.taskManager;
   return (
     <Layout>
       <div className="ProjectPage">
