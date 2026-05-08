@@ -70,7 +70,14 @@ Layout.Top = () => {
           <a className="Layout__top__logo" href="/cms">
             <RootCMSLogo />
           </a>
-          <div className="Layout__top__version">v{packageJson.version}</div>
+          <a
+            className="Layout__top__version"
+            href="https://github.com/blinkk/rootjs/blob/main/packages/root-cms/CHANGELOG.md"
+            target="_blank"
+            rel="noreferrer noopener"
+          >
+            v{packageJson.version}
+          </a>
           <div className="Layout__top__project">{projectName}</div>
         </>
       ) : (
@@ -78,7 +85,14 @@ Layout.Top = () => {
           <a className="Layout__top__logo" href="/cms">
             {projectName}
           </a>
-          <div className="Layout__top__version">v{packageJson.version}</div>
+          <a
+            className="Layout__top__version"
+            href="https://github.com/blinkk/rootjs/blob/main/packages/root-cms/CHANGELOG.md"
+            target="_blank"
+            rel="noreferrer noopener"
+          >
+            v{packageJson.version}
+          </a>
         </>
       )}
       {showSearchBar && (
