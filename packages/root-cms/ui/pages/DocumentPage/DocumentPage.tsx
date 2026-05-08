@@ -126,20 +126,13 @@ function DocumentPageLayout(props: DocumentPageProps & {canEdit: boolean}) {
     );
   }, [isSearchVisible]);
 
-  const [savedChecksPanelWidth, setSavedChecksPanelWidth] =
-    useLocalStorage<number>('root::DocumentPage::checksPanelWidth', 360);
-  const [checksPanelWidth, setChecksPanelWidth] = useState(
-    savedChecksPanelWidth
-  );
-  const [isDraggingChecks, setIsDraggingChecks] = useState(false);
-  const checksLayoutRef = useRef<HTMLDivElement>(null);
-
   const [savedSearchPanelWidth, setSavedSearchPanelWidth] =
     useLocalStorage<number>('root::DocumentPage::searchPanelWidth', 360);
   const [searchPanelWidth, setSearchPanelWidth] = useState(
     savedSearchPanelWidth
   );
   const [isDraggingSearch, setIsDraggingSearch] = useState(false);
+  const layoutRef = useRef<HTMLDivElement>(null);
 
   // Only one right-hand panel (Checks or Search) is allowed open at a time.
   // Opening either panel closes the other.
@@ -173,37 +166,11 @@ function DocumentPageLayout(props: DocumentPageProps & {canEdit: boolean}) {
     return () => window.removeEventListener('root:toggle-search', handler);
   }, []);
 
-  // Handle checks panel resize dragging.
-  useEffect(() => {
-    if (!isDraggingChecks) return;
-    const onMouseMove = (e: MouseEvent) => {
-      const container = checksLayoutRef.current;
-      if (!container) return;
-      const rect = container.getBoundingClientRect();
-      const newWidth = Math.max(200, Math.min(rect.right - e.clientX, 800));
-      setChecksPanelWidth(newWidth);
-    };
-    const onMouseUp = () => {
-      setIsDraggingChecks(false);
-      // Persist to localStorage only on mouseUp.
-      setChecksPanelWidth((w) => {
-        setSavedChecksPanelWidth(() => w);
-        return w;
-      });
-    };
-    window.addEventListener('mousemove', onMouseMove);
-    window.addEventListener('mouseup', onMouseUp);
-    return () => {
-      window.removeEventListener('mousemove', onMouseMove);
-      window.removeEventListener('mouseup', onMouseUp);
-    };
-  }, [isDraggingChecks]);
-
   // Handle search panel resize dragging.
   useEffect(() => {
     if (!isDraggingSearch) return;
     const onMouseMove = (e: MouseEvent) => {
-      const container = checksLayoutRef.current;
+      const container = layoutRef.current;
       if (!container) return;
       const rect = container.getBoundingClientRect();
       const newWidth = Math.max(240, Math.min(rect.right - e.clientX, 800));
@@ -276,10 +243,9 @@ function DocumentPageLayout(props: DocumentPageProps & {canEdit: boolean}) {
       <div
         className={joinClassNames(
           'DocumentPage__layout',
-          (isDraggingChecks || isDraggingSearch) &&
-            'DocumentPage__layout--dragging'
+          isDraggingSearch && 'DocumentPage__layout--dragging'
         )}
-        ref={checksLayoutRef}
+        ref={layoutRef}
       >
         <SplitPanel className="DocumentPage" localStorageId="DocumentPage">
           <SplitPanel.Item
@@ -386,18 +352,7 @@ function DocumentPageLayout(props: DocumentPageProps & {canEdit: boolean}) {
           </SplitPanel.Item>
         </SplitPanel>
         {hasChecks && isChecksVisible && (
-          <>
-            <div
-              className="DocumentPage__checksDivider"
-              onMouseDown={() => setIsDraggingChecks(true)}
-            />
-            <div
-              className="DocumentPage__checks"
-              style={{flexBasis: `${checksPanelWidth}px`}}
-            >
-              <ChecksPanel docId={docId} />
-            </div>
-          </>
+          <DocumentPageChecksPanel docId={docId} />
         )}
         {isSearchVisible && (
           <>
@@ -419,6 +374,74 @@ function DocumentPageLayout(props: DocumentPageProps & {canEdit: boolean}) {
         )}
       </div>
     </Layout>
+  );
+}
+
+interface DocumentPageChecksPanelProps {
+  docId: string;
+}
+
+/** Renders the checks panel with resize state isolated from DocumentPageLayout. */
+function DocumentPageChecksPanel(props: DocumentPageChecksPanelProps) {
+  const [savedChecksPanelWidth, setSavedChecksPanelWidth] =
+    useLocalStorage<number>('root::DocumentPage::checksPanelWidth', 360);
+  const [checksPanelWidth, setChecksPanelWidth] = useState(
+    savedChecksPanelWidth
+  );
+  const dividerRef = useRef<HTMLDivElement>(null);
+  const checksPanelWidthRef = useRef(checksPanelWidth);
+  const dragCleanupRef = useRef<() => void>();
+  const checksPanel = useMemo(
+    () => <ChecksPanel docId={props.docId} />,
+    [props.docId]
+  );
+
+  const startDragging = useCallback(() => {
+    const layout = dividerRef.current?.parentElement;
+    if (!layout) return;
+    checksPanelWidthRef.current = checksPanelWidth;
+    layout.classList.add('DocumentPage__layout--dragging');
+    const onMouseMove = (e: MouseEvent) => {
+      const container = dividerRef.current?.parentElement;
+      if (!container) return;
+      const rect = container.getBoundingClientRect();
+      const newWidth = Math.max(200, Math.min(rect.right - e.clientX, 800));
+      checksPanelWidthRef.current = newWidth;
+      setChecksPanelWidth(newWidth);
+    };
+    const cleanup = () => {
+      layout.classList.remove('DocumentPage__layout--dragging');
+      window.removeEventListener('mousemove', onMouseMove);
+      window.removeEventListener('mouseup', onMouseUp);
+      dragCleanupRef.current = undefined;
+    };
+    const onMouseUp = () => {
+      cleanup();
+      setSavedChecksPanelWidth(() => checksPanelWidthRef.current);
+    };
+    dragCleanupRef.current = cleanup;
+    window.addEventListener('mousemove', onMouseMove);
+    window.addEventListener('mouseup', onMouseUp);
+  }, [checksPanelWidth, setSavedChecksPanelWidth]);
+
+  useEffect(() => {
+    return () => dragCleanupRef.current?.();
+  }, []);
+
+  return (
+    <>
+      <div
+        className="DocumentPage__checksDivider"
+        ref={dividerRef}
+        onMouseDown={startDragging}
+      />
+      <div
+        className="DocumentPage__checks"
+        style={{flexBasis: `${checksPanelWidth}px`}}
+      >
+        {checksPanel}
+      </div>
+    </>
   );
 }
 
@@ -533,7 +556,6 @@ DocumentPage.Preview = (props: PreviewProps) => {
         !iframeWindow.location.href.startsWith('about:blank')
       ) {
         const currentPath = iframeWindow.location.pathname;
-        // console.log(`iframe url change: ${currentPath}`);
         setIframeUrl(`${domain}${currentPath}`);
       }
     }
@@ -594,10 +616,20 @@ DocumentPage.Preview = (props: PreviewProps) => {
 
   const updateIframeStyle = useCallback(() => {
     if (device === '') {
-      setIframeStyle({
+      const nextStyle = {
         '--iframe-width': '100%',
         '--iframe-height': '100%',
         '--iframe-scale': '1',
+      };
+      setIframeStyle((currentStyle) => {
+        if (
+          currentStyle['--iframe-width'] === nextStyle['--iframe-width'] &&
+          currentStyle['--iframe-height'] === nextStyle['--iframe-height'] &&
+          currentStyle['--iframe-scale'] === nextStyle['--iframe-scale']
+        ) {
+          return currentStyle;
+        }
+        return nextStyle;
       });
       return;
     }
@@ -611,26 +643,36 @@ DocumentPage.Preview = (props: PreviewProps) => {
     const availableWidth = Math.max(rect.width - 2 * padding, 0);
     const availableHeight = Math.max(rect.height - 2 * padding, 0);
 
-    // Calculate scale factors, clamping to 1 if not constraining in that dimension
+    // Calculate scale factors, clamping to 1 if not constraining in that dimension.
     const widthScale =
       availableWidth > 0 && width > 0 ? availableWidth / width : 1;
     const heightScale =
       availableHeight > 0 && height > 0 ? availableHeight / height : 1;
 
-    // Apply the most restrictive scale (smallest value < 1), or 1 if neither is constraining
+    // Apply the most restrictive scale (smallest value < 1), or 1 if neither is constraining.
     const scale = Math.min(widthScale, heightScale, 1);
 
     const normalizedScale = Number(scale.toFixed(4)) || 1;
 
-    // When expanding vertically, adjust iframe height to fill available space
+    // When expanding vertically, adjust iframe height to fill available space.
     const iframeHeight = expandVertically
       ? `${availableHeight / normalizedScale}px`
       : `${height}px`;
 
-    setIframeStyle({
+    const nextStyle = {
       '--iframe-width': `${width}px`,
       '--iframe-height': iframeHeight,
       '--iframe-scale': String(normalizedScale),
+    };
+    setIframeStyle((currentStyle) => {
+      if (
+        currentStyle['--iframe-width'] === nextStyle['--iframe-width'] &&
+        currentStyle['--iframe-height'] === nextStyle['--iframe-height'] &&
+        currentStyle['--iframe-scale'] === nextStyle['--iframe-scale']
+      ) {
+        return currentStyle;
+      }
+      return nextStyle;
     });
   }, [device, expandVertically]);
 
