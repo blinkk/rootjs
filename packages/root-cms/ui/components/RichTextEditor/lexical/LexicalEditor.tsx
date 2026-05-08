@@ -1,7 +1,5 @@
 import './LexicalEditor.css';
 
-import {AutoLinkNode, LinkNode} from '@lexical/link';
-import {ListItemNode, ListNode} from '@lexical/list';
 import {
   InitialConfigType,
   LexicalComposer,
@@ -10,15 +8,12 @@ import {useLexicalComposerContext} from '@lexical/react/LexicalComposerContext';
 import {ContentEditable} from '@lexical/react/LexicalContentEditable';
 import {LexicalErrorBoundary} from '@lexical/react/LexicalErrorBoundary';
 import {HistoryPlugin} from '@lexical/react/LexicalHistoryPlugin';
-import {HorizontalRuleNode} from '@lexical/react/LexicalHorizontalRuleNode';
 import {HorizontalRulePlugin} from '@lexical/react/LexicalHorizontalRulePlugin';
 import {LinkPlugin} from '@lexical/react/LexicalLinkPlugin';
 import {ListPlugin} from '@lexical/react/LexicalListPlugin';
 import {RichTextPlugin} from '@lexical/react/LexicalRichTextPlugin';
 import {TabIndentationPlugin} from '@lexical/react/LexicalTabIndentationPlugin';
 import {TablePlugin} from '@lexical/react/LexicalTablePlugin';
-import {HeadingNode, QuoteNode} from '@lexical/rich-text';
-import {TableCellNode, TableNode, TableRowNode} from '@lexical/table';
 import {$getNodeByKey, $insertNodes, NodeKey} from 'lexical';
 import {useMemo, useState} from 'preact/hooks';
 import * as schema from '../../../../core/schema.js';
@@ -34,6 +29,7 @@ import {
   useSharedHistory,
 } from './hooks/useSharedHistory.js';
 import {ToolbarProvider} from './hooks/useToolbar.js';
+import {LEXICAL_NODES} from './LexicalNodes.js';
 import {LexicalTheme} from './LexicalTheme.js';
 import {BlockComponentModal} from './nodes/BlockComponentModal.js';
 import {
@@ -47,7 +43,6 @@ import {
   $isInlineComponentNode,
   InlineComponentNode,
 } from './nodes/InlineComponentNode.js';
-import {SpecialCharacterNode} from './nodes/SpecialCharacterNode.js';
 import {FloatingLinkEditorPlugin} from './plugins/FloatingLinkEditorPlugin.js';
 import {FloatingToolbarPlugin} from './plugins/FloatingToolbarPlugin.js';
 import {ImagePastePlugin} from './plugins/ImagePastePlugin.js';
@@ -63,21 +58,7 @@ import {TrailingParagraphPlugin} from './plugins/TrailingParagraphPlugin.js';
 const INITIAL_CONFIG: InitialConfigType = {
   namespace: 'RootCMS',
   theme: LexicalTheme,
-  nodes: [
-    AutoLinkNode,
-    HeadingNode,
-    QuoteNode,
-    LinkNode,
-    ListNode,
-    ListItemNode,
-    HorizontalRuleNode,
-    TableNode,
-    TableCellNode,
-    TableRowNode,
-    BlockComponentNode,
-    InlineComponentNode,
-    SpecialCharacterNode,
-  ],
+  nodes: LEXICAL_NODES,
   onError: (err: Error) => {
     console.error('[LexicalEditor] error:', err);
     throw err;

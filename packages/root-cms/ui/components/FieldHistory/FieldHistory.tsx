@@ -3,13 +3,18 @@
 import {ActionIcon, Loader, Tooltip} from '@mantine/core';
 import {IconLanguage} from '@tabler/icons-preact';
 import {useEffect, useState} from 'preact/hooks';
+import {RichTextData} from '../../../shared/richtext.js';
 import {cmsListVersions, cmsReadDocVersion} from '../../utils/doc.js';
 import {sourceHash} from '../../utils/l10n.js';
 import {getNestedValue} from '../../utils/objects.js';
+import {LexicalReadOnly} from '../RichTextEditor/lexical/LexicalReadOnly.js';
 import './FieldHistory.css';
 
 interface FieldVersion {
-  value: string;
+  /** The raw field value (could be string, RichTextData, object, etc.). */
+  rawValue: unknown;
+  /** A string representation used for deduplication. */
+  valueKey: string;
   modifiedBy: string;
   modifiedAt: Date;
   versionId: string;
@@ -56,7 +61,8 @@ export function FieldHistory(props: FieldHistoryProps) {
       if (draftDoc) {
         const draftValue = getNestedValue(draftDoc, deepKey);
         entries.push({
-          value: formatFieldValue(draftValue),
+          rawValue: draftValue,
+          valueKey: toValueKey(draftValue),
           modifiedBy: draftDoc.sys?.modifiedBy || 'Unknown',
           modifiedAt: draftDoc.sys?.modifiedAt?.toDate?.() || new Date(),
           versionId: 'draft',
@@ -67,7 +73,8 @@ export function FieldHistory(props: FieldHistoryProps) {
       for (const version of versions) {
         const value = getNestedValue(version, deepKey);
         entries.push({
-          value: formatFieldValue(value),
+          rawValue: value,
+          valueKey: toValueKey(value),
           modifiedBy: version.sys?.modifiedBy || 'Unknown',
           modifiedAt: version.sys?.modifiedAt?.toDate?.() || new Date(),
           versionId: version._versionId,
@@ -78,7 +85,7 @@ export function FieldHistory(props: FieldHistoryProps) {
       const deduped: FieldVersion[] = [];
       for (const entry of entries) {
         const prev = deduped[deduped.length - 1];
-        if (!prev || prev.value !== entry.value) {
+        if (!prev || prev.valueKey !== entry.valueKey) {
           deduped.push(entry);
         }
       }
@@ -116,17 +123,13 @@ export function FieldHistory(props: FieldHistoryProps) {
             {i === 0 && (
               <span className="FieldHistory__entry__badge">Current</span>
             )}
-            {translatable && entry.value && (
+            {translatable && entry.valueKey && (
               <span className="FieldHistory__entry__translationsLink">
-                <TranslationsLink value={entry.value} />
+                <TranslationsLink value={entry.valueKey} />
               </span>
             )}
           </div>
-          <div className="FieldHistory__entry__value">
-            {entry.value || (
-              <span className="FieldHistory__entry__empty">(empty)</span>
-            )}
-          </div>
+          <FieldValueDisplay rawValue={entry.rawValue} />
         </div>
       ))}
     </div>
@@ -162,6 +165,47 @@ function TranslationsLink(props: {value: string}) {
   );
 }
 
+/** Renders the value for a history entry. */
+function FieldValueDisplay(props: {rawValue: unknown}) {
+  const {rawValue} = props;
+  if (isRichTextData(rawValue)) {
+    return (
+      <div className="FieldHistory__entry__value FieldHistory__entry__value--richtext">
+        <LexicalReadOnly
+          className="FieldHistory__entry__lexical"
+          value={rawValue as RichTextData}
+        />
+      </div>
+    );
+  }
+  const formatted = formatFieldValue(rawValue);
+  return (
+    <div className="FieldHistory__entry__value">
+      {formatted || <span className="FieldHistory__entry__empty">(empty)</span>}
+    </div>
+  );
+}
+
+/** Checks if a value looks like RichTextData. */
+function isRichTextData(value: unknown): boolean {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    Array.isArray((value as any).blocks)
+  );
+}
+
+/** Produces a stable string key for deduplication. */
+function toValueKey(value: unknown): string {
+  if (value === undefined || value === null) {
+    return '';
+  }
+  if (typeof value === 'string') {
+    return value;
+  }
+  return JSON.stringify(value);
+}
+
 /** Converts a field value to a display string. */
 function formatFieldValue(value: unknown): string {
   if (value === undefined || value === null) {
@@ -170,5 +214,39 @@ function formatFieldValue(value: unknown): string {
   if (typeof value === 'string') {
     return value;
   }
+  if (typeof value === 'boolean' || typeof value === 'number') {
+    return String(value);
+  }
+  if (Array.isArray(value)) {
+    return value.map((item) => formatFieldValue(item)).join(', ');
+  }
+  if (isImageValue(value)) {
+    return formatImageValue(value);
+  }
   return JSON.stringify(value);
+}
+
+/** Checks if a value looks like an image field object. */
+function isImageValue(
+  value: unknown
+): value is {src?: string; alt?: string; url?: string} {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+  const obj = value as Record<string, unknown>;
+  return typeof obj.src === 'string' || typeof obj.url === 'string';
+}
+
+/** Formats an image field value. */
+function formatImageValue(value: {
+  src?: string;
+  alt?: string;
+  url?: string;
+}): string {
+  const src = value.src || value.url || '';
+  const alt = value.alt || '';
+  if (alt) {
+    return `${src}\nalt: ${alt}`;
+  }
+  return src;
 }

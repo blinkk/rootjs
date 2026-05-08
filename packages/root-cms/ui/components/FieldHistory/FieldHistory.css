@@ -69,3 +69,18 @@
   color: #adb5bd;
   font-style: italic;
 }
+
+.FieldHistory__entry__value--richtext {
+  background: #f8f9fa;
+  border: 1px solid #dee2e6;
+  border-radius: 4px;
+  padding: 10px;
+  white-space: normal;
+}
+
+.FieldHistory__entry__lexical {
+  font-size: 13px;
+  line-height: 1.5;
+  outline: none;
+  cursor: default;
+}
