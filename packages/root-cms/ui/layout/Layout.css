@@ -37,6 +37,12 @@
   background-color: #efefef;
   padding: 0 8px;
   border-radius: 20px;
+  color: inherit;
+  text-decoration: none;
+}
+
+.Layout__top__version:hover {
+  background-color: #e5e5e5;
 }
 
 .Layout__top__project {
