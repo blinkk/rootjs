@@ -721,11 +721,11 @@ export function api(server: Server, options: ApiOptions) {
   );
 
   // ===========================================================================
-  // /cms/api/ai.v2.* — Vercel AI SDK powered chat for /cms/ai.
+  // /cms/api/ai.* — Vercel AI SDK powered chat for /cms/ai.
   // ===========================================================================
 
   /** Returns the available models (without API keys) for the model picker. */
-  server.use('/cms/api/ai.v2.config', async (req: Request, res: Response) => {
+  server.use('/cms/api/ai.config', async (req: Request, res: Response) => {
     if (!req.user?.email) {
       res.status(401).json({success: false, error: 'UNAUTHORIZED'});
       return;
@@ -746,7 +746,7 @@ export function api(server: Server, options: ApiOptions) {
    * resulting UI message stream is piped back to the browser. Final messages
    * are persisted to Firestore once the stream finishes.
    */
-  server.use('/cms/api/ai.v2.chat', async (req: Request, res: Response) => {
+  server.use('/cms/api/ai.chat', async (req: Request, res: Response) => {
     if (req.method !== 'POST') {
       res.status(400).json({success: false, error: 'BAD_REQUEST'});
       return;
@@ -821,7 +821,7 @@ export function api(server: Server, options: ApiOptions) {
 
   /**
    * Streams an LLM response for the array-item "Edit with AI" diff-viewer
-   * flow. Like `ai.v2.chat`, the server proxies the model's UI message stream
+   * flow. Like `ai.chat`, the server proxies the model's UI message stream
    * directly to the browser. Differences:
    *
    * - The available tool set is restricted to read-only CMS tools — the user
@@ -834,7 +834,7 @@ export function api(server: Server, options: ApiOptions) {
    *   diff viewer.
    */
   server.use(
-    '/cms/api/ai.v2.editObject',
+    '/cms/api/ai.editObject',
     async (req: Request, res: Response) => {
       if (req.method !== 'POST') {
         res.status(400).json({success: false, error: 'BAD_REQUEST'});
@@ -884,7 +884,7 @@ export function api(server: Server, options: ApiOptions) {
 
   /** Lists the current user's recent chats. */
   server.use(
-    '/cms/api/ai.v2.chats.list',
+    '/cms/api/ai.chats.list',
     async (req: Request, res: Response) => {
       if (!req.user?.email) {
         res.status(401).json({success: false, error: 'UNAUTHORIZED'});
@@ -913,7 +913,7 @@ export function api(server: Server, options: ApiOptions) {
 
   /** Returns the full message history for a chat. */
   server.use(
-    '/cms/api/ai.v2.chats.get',
+    '/cms/api/ai.chats.get',
     async (req: Request, res: Response) => {
       if (!req.user?.email) {
         res.status(401).json({success: false, error: 'UNAUTHORIZED'});
@@ -947,7 +947,7 @@ export function api(server: Server, options: ApiOptions) {
 
   /** Deletes a chat from history. */
   server.use(
-    '/cms/api/ai.v2.chats.delete',
+    '/cms/api/ai.chats.delete',
     async (req: Request, res: Response) => {
       if (req.method !== 'POST') {
         res.status(400).json({success: false, error: 'BAD_REQUEST'});
