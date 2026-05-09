@@ -12,9 +12,11 @@
 import './AIPage.css';
 
 import {useChat} from '@ai-sdk/react';
-import {ActionIcon, Loader, Menu, Tooltip} from '@mantine/core';
+import {ActionIcon, Button, Loader, Menu, Tooltip} from '@mantine/core';
+import {showNotification} from '@mantine/notifications';
 import {
   IconCheck,
+  IconChecklist,
   IconChevronDown,
   IconCopy,
   IconMessageCirclePlus,
@@ -33,6 +35,7 @@ import {
 import {marked} from 'marked';
 import {useCallback, useEffect, useMemo, useRef, useState} from 'preact/hooks';
 import {useLocation} from 'preact-iso';
+import {AgentPicker} from '../../components/AgentPicker/AgentPicker.js';
 import {Markdown} from '../../components/Markdown/Markdown.js';
 import {usePageTitle} from '../../hooks/usePageTitle.js';
 import {Layout} from '../../layout/Layout.js';
@@ -292,6 +295,10 @@ function ChatExperience(props: {
           models={models}
           selectedModel={selectedModel}
           onSelectModel={setSelectedModelId}
+          activeChatId={activeChatId}
+          onConvertedToTask={(taskId) => {
+            route(`/cms/tasks/${taskId}`);
+          }}
         />
         <ChatPane
           key={resetKey}
@@ -370,7 +377,46 @@ function ChatHeader(props: {
   models: ModelInfo[];
   selectedModel?: ModelInfo;
   onSelectModel: (id: string) => void;
+  activeChatId: string;
+  onConvertedToTask: (taskId: string) => void;
 }) {
+  const [converting, setConverting] = useState(false);
+
+  async function convertToTask(agentName: string | null) {
+    if (!props.activeChatId) {
+      showNotification({
+        title: 'No chat to convert',
+        message: 'Send at least one message before converting.',
+        color: 'orange',
+        autoClose: 3000,
+      });
+      return;
+    }
+    setConverting(true);
+    try {
+      const res = await fetch('/cms/api/agents.chatConvertToTask', {
+        method: 'POST',
+        credentials: 'include',
+        headers: {'content-type': 'application/json'},
+        body: JSON.stringify({chatId: props.activeChatId, agentName}),
+      });
+      const data = await res.json();
+      if (!data.success) {
+        throw new Error(data.error || 'convert failed');
+      }
+      props.onConvertedToTask(data.taskId);
+    } catch (err) {
+      showNotification({
+        title: 'Could not convert to task',
+        message: err instanceof Error ? err.message : String(err),
+        color: 'red',
+        autoClose: false,
+      });
+    } finally {
+      setConverting(false);
+    }
+  }
+
   return (
     <div className="AIPage__header">
       <Menu
@@ -396,15 +442,32 @@ function ChatHeader(props: {
                   {model.description}
                 </div>
               )}
-              {/* <div className="AIPage__modelPicker__option__caps">
-                {model.capabilities.tools && <span>tools</span>}
-                {model.capabilities.reasoning && <span>reasoning</span>}
-                {model.capabilities.attachments && <span>attachments</span>}
-              </div> */}
             </div>
           </Menu.Item>
         ))}
       </Menu>
+      <div className="AIPage__header__actions">
+        <AgentPicker
+          placeholder="Browse agents"
+          onSelect={(agent) => convertToTask(agent?.name || null)}
+          noAssigneeLabel="Unassigned task"
+        />
+        <Tooltip
+          label="Convert this chat into a task in the Task Manager"
+          withinPortal
+        >
+          <Button
+            size="xs"
+            variant="default"
+            loading={converting}
+            disabled={!props.activeChatId}
+            leftIcon={<IconChecklist size={14} strokeWidth="1.8" />}
+            onClick={() => convertToTask(null)}
+          >
+            Convert to task
+          </Button>
+        </Tooltip>
+      </div>
     </div>
   );
 }

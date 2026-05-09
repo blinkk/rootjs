@@ -340,10 +340,28 @@ export function TaskCommentInput(props: TaskCommentInputProps) {
 export function extractMentions(content: string): string[] {
   const result = new Set<string>();
   // Email-shaped token preceded by start-of-string or whitespace.
-  const re = /(^|\s)@([A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,})/g;
+  const emailRe = /(^|\s)@([A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,})/g;
   let match: RegExpExecArray | null;
-  while ((match = re.exec(content)) !== null) {
+  while ((match = emailRe.exec(content)) !== null) {
     result.add(match[2].toLowerCase());
+  }
+  return Array.from(result);
+}
+
+/**
+ * Extracts agent mentions from `content` of the form `@<agent-name>` where
+ * `<agent-name>` is the slug used in `defineAgent({name})`. Mentions must be
+ * preceded by a word boundary and cannot overlap with email-shaped mentions
+ * (those are picked up by `extractMentions` instead).
+ */
+export function extractAgentMentions(content: string): string[] {
+  const result = new Set<string>();
+  // Slug-shaped token preceded by start-of-string or whitespace and NOT
+  // followed by `@` (which would make it an email mention).
+  const agentRe = /(^|\s)@([a-z0-9][a-z0-9-]*)(?![A-Za-z0-9._%+-]*@)/g;
+  let match: RegExpExecArray | null;
+  while ((match = agentRe.exec(content)) !== null) {
+    result.add(match[2]);
   }
   return Array.from(result);
 }

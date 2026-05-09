@@ -126,7 +126,15 @@
   position: absolute;
   top: 0;
   left: 0;
+  right: 0;
   z-index: 100;
+}
+
+.AIPage__header__actions {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .AIPage__modelPicker {
