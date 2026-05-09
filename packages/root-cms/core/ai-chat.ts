@@ -493,7 +493,12 @@ export async function runChatStream(
     ].join(' ');
   const rootMd = await readRootMd(rootConfig.rootDir);
   const agentsBlock = await buildAgentsBlock(options.viteServer);
-  const systemPrompt = buildSystemPrompt(basePrompt, rootMd, agentsBlock);
+  const {getLinkingConventions} = await import('./agents/conventions.js');
+  const systemPrompt = `${buildSystemPrompt(
+    basePrompt,
+    rootMd,
+    agentsBlock
+  )}\n\n${getLinkingConventions()}`;
 
   const modelMessages = await convertToModelMessages(messages, {tools});
   const result = streamText({

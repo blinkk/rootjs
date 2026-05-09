@@ -56,6 +56,7 @@ import {
   InlineComponentNode,
 } from './nodes/InlineComponentNode.js';
 import {SpecialCharacterNode} from './nodes/SpecialCharacterNode.js';
+import {AgentMentionPlugin} from './plugins/AgentMentionPlugin.js';
 import {FloatingLinkEditorPlugin} from './plugins/FloatingLinkEditorPlugin.js';
 import {FloatingToolbarPlugin} from './plugins/FloatingToolbarPlugin.js';
 import {ImagePastePlugin} from './plugins/ImagePastePlugin.js';
@@ -591,6 +592,7 @@ function Editor(props: EditorProps) {
         <SpecialCharacterPlugin />
         <PasteCleanupPlugin />
         {props.variant !== 'comment' && <ImagePastePlugin />}
+        {props.variant === 'comment' && <AgentMentionPlugin />}
         {floatingAnchorElem && (
           <>
             <FloatingToolbarPlugin

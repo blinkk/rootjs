@@ -1,0 +1,68 @@
+.AgentMentionMenu {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  margin-top: 4px;
+  min-width: 240px;
+  max-width: 340px;
+  max-height: 280px;
+  overflow-y: auto;
+  background: #ffffff;
+  border: 1px solid #d0d7de;
+  border-radius: 8px;
+  box-shadow:
+    0 1px 3px rgba(31, 35, 40, 0.12),
+    0 8px 24px rgba(66, 74, 83, 0.12);
+  padding: 4px;
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.AgentMentionMenu__item {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 6px 8px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
+  width: 100%;
+  font: inherit;
+  color: #1f2328;
+}
+
+.AgentMentionMenu__item:hover,
+.AgentMentionMenu__item--active {
+  background: #ddf4ff;
+}
+
+.AgentMentionMenu__icon {
+  font-size: 16px;
+  line-height: 1.2;
+  flex-shrink: 0;
+}
+
+.AgentMentionMenu__body {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.AgentMentionMenu__name {
+  font-weight: 600;
+  font-size: 13px;
+  line-height: 1.2;
+}
+
+.AgentMentionMenu__desc {
+  font-size: 11px;
+  color: #57606a;
+  margin-top: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}

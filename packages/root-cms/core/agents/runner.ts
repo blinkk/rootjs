@@ -12,6 +12,7 @@
 import {generateText, stepCountIs, ToolSet} from 'ai';
 import {resolveLanguageModel, type AiModelConfig} from '../ai-chat.js';
 import {TokenBudget} from './budget.js';
+import {getLinkingConventions} from './conventions.js';
 import type {AgentRunContext} from './run-context.js';
 import {
   addAgentReaction,
@@ -87,7 +88,7 @@ export async function runAgent(
   try {
     const result = await generateText({
       model: languageModel,
-      system: ctx.agent.systemPrompt,
+      system: `${ctx.agent.systemPrompt}\n\n${getLinkingConventions()}`,
       prompt,
       tools,
       stopWhen: ({steps}: {steps: Array<Record<string, unknown>>}) => {
@@ -209,7 +210,7 @@ export async function runAgentSubcall(
   const budget = new TokenBudget(agent.maxTokensPerTask ?? null);
   const result = await generateText({
     model: languageModel,
-    system: agent.systemPrompt,
+    system: `${agent.systemPrompt}\n\n${getLinkingConventions()}`,
     prompt,
     tools,
     stopWhen: stepCountIs(maxSteps),
