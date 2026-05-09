@@ -1,3 +1,4 @@
+export * from './agents/index.js';
 export * from './client.js';
 export * from './route.js';
 export * from './runtime.js';

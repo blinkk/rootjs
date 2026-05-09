@@ -33,10 +33,93 @@ export interface Task {
   createdBy: string;
   updatedAt?: Timestamp;
   updatedBy?: string;
+  /** Optional link to a parent task; set when this task was filed by an agent as a subtask. */
+  parentTaskId?: string | null;
+  /** Optional link to the AI chat session that this task was converted from. */
+  sourceChatId?: string | null;
+  /** Agent run state, present when the assignee is `agent:<name>`. */
+  agentRun?: AgentRunMetadata;
 }
 
 export type TaskPriority = 'high' | 'medium' | 'normal';
 export type TaskUnsubscribe = () => void;
+
+/**
+ * Agent assignees use the form `agent:<name>` (e.g. `agent:content-manager`)
+ * to distinguish them from human assignees, which are emails.
+ */
+export const AGENT_ASSIGNEE_PREFIX = 'agent:';
+
+/**
+ * Returns the agent name for an `agent:<name>` assignee, or null for humans.
+ */
+export function getAgentAssigneeName(assignee?: string | null): string | null {
+  if (!assignee || !assignee.startsWith(AGENT_ASSIGNEE_PREFIX)) {
+    return null;
+  }
+  return assignee.slice(AGENT_ASSIGNEE_PREFIX.length) || null;
+}
+
+/**
+ * Tracks the lifecycle of a single agent run on a task. Workers update this via
+ * Firestore transactions; the UI reads it to render run status and surface
+ * cancel/retry affordances.
+ */
+export interface AgentRunMetadata {
+  /** Run lifecycle state. */
+  status: 'idle' | 'running' | 'errored' | 'cancelled';
+  /** Worker instance that holds the lease, or null when idle. */
+  leasedBy?: string | null;
+  /** Lease acquisition timestamp; consumers may treat stale leases as expired. */
+  leasedAt?: Timestamp | null;
+  /** Cumulative tokens consumed across all steps in the current run. */
+  tokensUsed?: number;
+  /** Per-task token budget; the run halts when `tokensUsed` exceeds this. */
+  tokensCap?: number;
+  /** Last error message when status is `errored`. */
+  lastError?: string | null;
+  /** Timestamp the run last transitioned state. */
+  updatedAt?: Timestamp | null;
+}
+
+/**
+ * Tight emoji set used for reactions on task comments. Agents post reactions
+ * to communicate progress without spawning new comments.
+ */
+export const TASK_COMMENT_REACTIONS = [
+  '👀',
+  '🤔',
+  '💬',
+  '✅',
+  '⚠️',
+  '❌',
+] as const;
+
+export type TaskCommentReaction = (typeof TASK_COMMENT_REACTIONS)[number];
+
+/**
+ * A structured proposal posted by an agent. Proposals carry the intended
+ * mutating tool call; the actual mutation runs only after a human clicks
+ * "Apply" and the call is executed under their Firebase auth.
+ */
+export interface TaskProposal {
+  /** The mutating tool the agent wants to invoke (e.g. `update_doc`). */
+  tool: string;
+  /** Input that will be passed to the tool when applied. */
+  input: Record<string, unknown>;
+  /** Human-readable explanation surfaced in the proposal comment. */
+  rationale?: string;
+  /** Pre-rendered diff summary (markdown) shown to reviewers. */
+  diffSummary?: string;
+  /** Lifecycle state; transitions one-way from `pending`. */
+  status: 'pending' | 'applied' | 'rejected' | 'expired';
+  /** Email of the human who applied or rejected the proposal. */
+  appliedBy?: string;
+  /** Timestamp the proposal was applied or rejected. */
+  appliedAt?: Timestamp;
+  /** Optional error message recorded if Apply failed. */
+  applyError?: string | null;
+}
 
 export interface TaskAttachment extends UploadedFile {
   id: string;
@@ -70,6 +153,16 @@ export interface TaskComment {
   deletedBy?: string;
   isDeleted?: boolean;
   history?: TaskCommentHistoryEntry[];
+  /**
+   * Emoji reactions keyed by emoji; values are the reactor identifiers
+   * (lower-cased emails for humans, `agent:<name>` for agents).
+   */
+  reactions?: Record<string, string[]>;
+  /**
+   * Present on proposal comments posted by agents. The mutation only runs
+   * after a human applies the proposal under their Firebase auth.
+   */
+  proposal?: TaskProposal;
 }
 
 export type TaskMetadataField =
@@ -798,4 +891,92 @@ export async function deleteTaskComment(taskId: string, commentId: string) {
   logAction('tasks.comment.delete', {
     metadata: {taskId, commentId},
   });
+}
+
+/**
+ * Toggles a reaction on a task comment for the current user. Adds the user as
+ * a reactor if absent; removes them if already present.
+ */
+export async function toggleTaskCommentReaction(
+  taskId: string,
+  commentId: string,
+  emoji: TaskCommentReaction
+) {
+  if (!taskId || !commentId) {
+    throw new Error('missing task or comment id');
+  }
+  const reactor = (window.firebase.user.email || '').toLowerCase();
+  if (!reactor) {
+    throw new Error('missing user');
+  }
+
+  const db = window.firebase.db;
+  const commentRef = taskCommentDocRef(taskId, commentId);
+  await runTransaction(db, async (transaction) => {
+    const snapshot = await transaction.get(commentRef);
+    if (!snapshot.exists()) {
+      throw new Error('comment not found');
+    }
+    const data = snapshot.data() as TaskComment;
+    const reactions = {...(data.reactions || {})};
+    const reactors = new Set<string>(reactions[emoji] || []);
+    if (reactors.has(reactor)) {
+      reactors.delete(reactor);
+    } else {
+      reactors.add(reactor);
+    }
+    if (reactors.size === 0) {
+      delete reactions[emoji];
+    } else {
+      reactions[emoji] = Array.from(reactors);
+    }
+    transaction.update(commentRef, {reactions});
+  });
+
+  logAction('tasks.comment.reaction', {
+    metadata: {taskId, commentId, emoji},
+  });
+}
+
+/**
+ * Cancels an in-flight agent run on a task. The worker observes the status
+ * change between steps and exits cleanly. Failed cancels (no run in flight)
+ * are a no-op.
+ */
+export async function cancelTaskAgentRun(taskId: string) {
+  if (!taskId) {
+    throw new Error('missing task id');
+  }
+  const taskRef = taskDocRef(taskId);
+  const userEmail = window.firebase.user.email || '';
+  await updateDoc(taskRef, {
+    'agentRun.status': 'cancelled',
+    'agentRun.updatedAt': serverTimestamp(),
+    updatedAt: serverTimestamp(),
+    updatedBy: userEmail,
+  });
+  logAction('tasks.agentRun.cancel', {metadata: {taskId}});
+}
+
+/**
+ * Resets an errored or cancelled agent run so a worker can re-claim the task.
+ * Used by the "Retry" button on the task UI.
+ */
+export async function retryTaskAgentRun(taskId: string) {
+  if (!taskId) {
+    throw new Error('missing task id');
+  }
+  const taskRef = taskDocRef(taskId);
+  const userEmail = window.firebase.user.email || '';
+  await updateDoc(taskRef, {
+    'agentRun.status': 'idle',
+    'agentRun.leasedBy': null,
+    'agentRun.leasedAt': null,
+    'agentRun.lastError': null,
+    'agentRun.tokensUsed': 0,
+    'agentRun.updatedAt': serverTimestamp(),
+    updatedAt: serverTimestamp(),
+    updatedBy: userEmail,
+  });
+  logAction('tasks.agentRun.retry', {metadata: {taskId}});
 }

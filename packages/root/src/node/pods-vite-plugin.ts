@@ -8,10 +8,12 @@ import {collectPods, invalidatePodCache, ResolvedPod} from './pod-collector.js';
 export const VIRTUAL_ROUTES_ID = 'virtual:root/routes';
 export const VIRTUAL_SCHEMAS_ID = 'virtual:root/schemas';
 export const VIRTUAL_TRANSLATIONS_ID = 'virtual:root/translations';
+export const VIRTUAL_AGENTS_ID = 'virtual:root/agents';
 
 const RESOLVED_VIRTUAL_ROUTES = '\0' + VIRTUAL_ROUTES_ID;
 const RESOLVED_VIRTUAL_SCHEMAS = '\0' + VIRTUAL_SCHEMAS_ID;
 const RESOLVED_VIRTUAL_TRANSLATIONS = '\0' + VIRTUAL_TRANSLATIONS_ID;
+const RESOLVED_VIRTUAL_AGENTS = '\0' + VIRTUAL_AGENTS_ID;
 
 export function rootPodsVitePlugin(rootConfig: RootConfig): VitePlugin {
   let podsPromise: Promise<ResolvedPod[]> | null = null;
@@ -31,6 +33,7 @@ export function rootPodsVitePlugin(rootConfig: RootConfig): VitePlugin {
       if (id === VIRTUAL_ROUTES_ID) return RESOLVED_VIRTUAL_ROUTES;
       if (id === VIRTUAL_SCHEMAS_ID) return RESOLVED_VIRTUAL_SCHEMAS;
       if (id === VIRTUAL_TRANSLATIONS_ID) return RESOLVED_VIRTUAL_TRANSLATIONS;
+      if (id === VIRTUAL_AGENTS_ID) return RESOLVED_VIRTUAL_AGENTS;
       return null;
     },
 
@@ -44,11 +47,16 @@ export function rootPodsVitePlugin(rootConfig: RootConfig): VitePlugin {
       if (id === RESOLVED_VIRTUAL_TRANSLATIONS) {
         return buildTranslationsModule(rootConfig, await getPods());
       }
+      if (id === RESOLVED_VIRTUAL_AGENTS) {
+        return buildAgentsModule(rootConfig);
+      }
       return null;
     },
 
     configureServer(server) {
       const watchDirs: string[] = [];
+      const userAgentsDir = path.join(rootConfig.rootDir, 'agents');
+      watchDirs.push(userAgentsDir);
       getPods().then((pods) => {
         for (const pod of pods) {
           if (pod.routesDir) watchDirs.push(pod.routesDir);
@@ -71,6 +79,7 @@ export function rootPodsVitePlugin(rootConfig: RootConfig): VitePlugin {
           RESOLVED_VIRTUAL_ROUTES,
           RESOLVED_VIRTUAL_SCHEMAS,
           RESOLVED_VIRTUAL_TRANSLATIONS,
+          RESOLVED_VIRTUAL_AGENTS,
         ];
         for (const modId of mods) {
           const mod = server.moduleGraph.getModuleById(modId);
@@ -225,6 +234,43 @@ async function scanRootSchemaFiles(rootDir: string): Promise<string[]> {
     const normalized = file.replace(/\\/g, '/');
     return !excludeDirs.some((dir) => normalized.startsWith(dir + '/'));
   });
+}
+
+async function buildAgentsModule(rootConfig: RootConfig): Promise<string> {
+  const rootDir = rootConfig.rootDir;
+  const imports: string[] = [];
+  const entries: string[] = [];
+  let idx = 0;
+
+  const agentsDir = path.join(rootDir, 'agents');
+  if (await isDirectory(agentsDir)) {
+    const files = await glob('**/*.{ts,tsx,js,jsx,mjs}', {cwd: agentsDir});
+    for (const file of files) {
+      const parts = path.parse(file);
+      // Skip test files, type-declaration files, and underscore-prefixed
+      // module names (the established convention for "private" modules).
+      if (
+        parts.name.startsWith('_') ||
+        parts.name.endsWith('.test') ||
+        parts.name.endsWith('.spec') ||
+        parts.name.endsWith('.d')
+      ) {
+        continue;
+      }
+      const modulePath = `/agents/${file.replace(/\\/g, '/')}`;
+      const varName = `_a${idx++}`;
+      imports.push(`import * as ${varName} from '${modulePath}';`);
+      entries.push(`  '${modulePath}': ${varName},`);
+    }
+  }
+
+  return [
+    ...imports,
+    '',
+    'export const AGENT_MODULES = {',
+    ...entries,
+    '};',
+  ].join('\n');
 }
 
 async function buildTranslationsModule(

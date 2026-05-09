@@ -6,11 +6,15 @@ function stubVirtualModules(): Plugin {
     name: 'stub-virtual-modules',
     resolveId(id) {
       if (id === 'virtual:root/schemas') return '\0virtual:root/schemas';
+      if (id === 'virtual:root/agents') return '\0virtual:root/agents';
       return null;
     },
     load(id) {
       if (id === '\0virtual:root/schemas') {
         return 'export const SCHEMA_MODULES = {};';
+      }
+      if (id === '\0virtual:root/agents') {
+        return 'export const AGENT_MODULES = {};';
       }
       return null;
     },
