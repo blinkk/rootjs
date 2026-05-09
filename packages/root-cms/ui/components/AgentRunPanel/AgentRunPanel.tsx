@@ -1,6 +1,6 @@
 import './AgentRunPanel.css';
 
-import {Button, Loader, Tooltip} from '@mantine/core';
+import {Button, Loader, RingProgress, Tooltip} from '@mantine/core';
 import {showNotification} from '@mantine/notifications';
 import {
   IconAlertTriangle,
@@ -111,6 +111,33 @@ export function AgentRunPanel(props: AgentRunPanelProps) {
             <div className="AgentRunPanel__desc">{agent.description}</div>
           )}
         </div>
+        {tokensCap !== undefined && tokensPct !== null && (
+          <Tooltip
+            label={
+              <span>
+                {tokensUsed.toLocaleString()} / {tokensCap.toLocaleString()}{' '}
+                tokens used
+              </span>
+            }
+            withinPortal
+            position="top"
+          >
+            <div className="AgentRunPanel__tokenRing">
+              <RingProgress
+                size={36}
+                thickness={4}
+                sections={[
+                  {value: tokensPct, color: tokensRingColor(tokensPct)},
+                ]}
+                label={
+                  <div className="AgentRunPanel__tokenRingLabel">
+                    {tokensPct}%
+                  </div>
+                }
+              />
+            </div>
+          </Tooltip>
+        )}
       </div>
 
       <div
@@ -128,26 +155,6 @@ export function AgentRunPanel(props: AgentRunPanelProps) {
         </span>
         <span className="AgentRunPanel__statusLabel">{statusMeta.label}</span>
       </div>
-
-      {tokensCap !== undefined && (
-        <div className="AgentRunPanel__tokens">
-          <div className="AgentRunPanel__tokensRow">
-            <span className="AgentRunPanel__tokensLabel">Tokens</span>
-            <span className="AgentRunPanel__tokensValue">
-              {tokensUsed.toLocaleString()}
-              {tokensCap > 0 && <> / {tokensCap.toLocaleString()}</>}
-            </span>
-          </div>
-          {tokensPct !== null && (
-            <div className="AgentRunPanel__progress">
-              <div
-                className="AgentRunPanel__progressFill"
-                style={{width: `${tokensPct}%`}}
-              />
-            </div>
-          )}
-        </div>
-      )}
 
       {run?.lastError && (
         <div className="AgentRunPanel__error">
@@ -226,6 +233,16 @@ export function AgentRunPanel(props: AgentRunPanelProps) {
       </div>
     </Surface>
   );
+}
+
+/**
+ * Picks a ring color that escalates as the run approaches its token cap so
+ * the user gets a visual cue that the agent might be running long.
+ */
+function tokensRingColor(pct: number): string {
+  if (pct >= 90) return 'red';
+  if (pct >= 70) return 'orange';
+  return 'indigo';
 }
 
 function summarizeToolInput(

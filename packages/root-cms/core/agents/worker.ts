@@ -536,8 +536,31 @@ export class AgentWorker {
       .collection('Comments')
       .orderBy('createdAt', 'asc')
       .get();
-    const comments = commentsSnap.docs.map((d) => d.data());
-    const prompt = buildAgentPrompt(taskData, comments);
+    const comments = commentsSnap.docs.map((d) => ({
+      ...d.data(),
+      id: d.id,
+    }));
+    // Find the trigger comment so we can quote it back to the agent and
+    // demand a reply.
+    const triggerComment = comments.find(
+      (c) => (c as {id?: string}).id === triggerCommentId
+    );
+    const triggerContent = String(
+      (triggerComment as {content?: string} | undefined)?.content || ''
+    );
+    const triggerAuthor = String(
+      (triggerComment as {createdBy?: string} | undefined)?.createdBy || ''
+    );
+    const basePrompt = buildAgentPrompt(taskData, comments);
+    const prompt =
+      `${basePrompt}\n\n# You were @-mentioned\n\n` +
+      `**${triggerAuthor || 'Someone'}** just @-mentioned you in a ` +
+      `comment on this task:\n\n` +
+      `> ${triggerContent.replace(/\n/g, '\n> ') || '(empty comment)'}\n\n` +
+      `**Reply directly with \`task_reply\`** as your final action — ` +
+      `the human is expecting you to respond to this specific comment. ` +
+      `If the mention asks you to do work, do it first (read, propose, ` +
+      `subtask) and then summarize what you did in the reply.`;
 
     const ctx: AgentRunContext = {
       agent,

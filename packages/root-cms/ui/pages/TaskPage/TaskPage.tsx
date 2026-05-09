@@ -36,11 +36,15 @@ import {AgentPicker} from '../../components/AgentPicker/AgentPicker.js';
 import {AgentRunPanel} from '../../components/AgentRunPanel/AgentRunPanel.js';
 import {CommentReactions} from '../../components/CommentReactions/CommentReactions.js';
 import {Heading} from '../../components/Heading/Heading.js';
-import {MarkdownWithMentions} from '../../components/Markdown/MarkdownWithMentions.js';
+import {
+  highlightAgentMentions,
+  MarkdownWithMentions,
+} from '../../components/Markdown/MarkdownWithMentions.js';
 import {ProposalComment} from '../../components/ProposalComment/ProposalComment.js';
 import {SubtasksPanel} from '../../components/SubtasksPanel/SubtasksPanel.js';
 import {Surface} from '../../components/Surface/Surface.js';
 import {TaskCommentEditor} from '../../components/TaskCommentEditor/TaskCommentEditor.js';
+import {useAgents} from '../../hooks/useAgents.js';
 import {usePageTitle} from '../../hooks/usePageTitle.js';
 import {Layout} from '../../layout/Layout.js';
 import {joinClassNames} from '../../utils/classes.js';
@@ -1168,18 +1172,30 @@ function TaskRichTextHtml(props: {
   tag: 'p' | 'h4' | 'blockquote';
   html?: string;
 }) {
+  const {agents} = useAgents();
   if (!props.html) {
     return null;
   }
   const Component = props.tag;
-  return <Component dangerouslySetInnerHTML={{__html: props.html}} />;
+  return (
+    <Component
+      dangerouslySetInnerHTML={{
+        __html: highlightAgentMentions(props.html, agents),
+      }}
+    />
+  );
 }
 
 function TaskRichTextListItem(props: {item: RichTextListItem}) {
+  const {agents} = useAgents();
   return (
     <li>
       {props.item.content && (
-        <span dangerouslySetInnerHTML={{__html: props.item.content}} />
+        <span
+          dangerouslySetInnerHTML={{
+            __html: highlightAgentMentions(props.item.content, agents),
+          }}
+        />
       )}
       {props.item.items && props.item.items.length > 0 && (
         <ul>

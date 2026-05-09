@@ -15,6 +15,22 @@
   gap: 10px;
 }
 
+.AgentRunPanel__tokenRing {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  cursor: default;
+}
+
+.AgentRunPanel__tokenRingLabel {
+  font-size: 9px;
+  font-weight: 700;
+  color: #4b5563;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+
 .AgentRunPanel__avatar {
   /* Sizing + background come from the AgentAvatar component itself. */
   border: 1px solid rgba(0, 0, 0, 0.06);
@@ -25,6 +41,7 @@
   flex-direction: column;
   gap: 2px;
   min-width: 0;
+  flex: 1;
 }
 
 .AgentRunPanel__name {
@@ -86,44 +103,6 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-}
-
-.AgentRunPanel__tokens {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.AgentRunPanel__tokensRow {
-  display: flex;
-  justify-content: space-between;
-  font-size: 11px;
-  color: #6b7280;
-  font-variant-numeric: tabular-nums;
-}
-
-.AgentRunPanel__tokensLabel {
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  font-weight: 600;
-}
-
-.AgentRunPanel__tokensValue {
-  color: #111827;
-}
-
-.AgentRunPanel__progress {
-  height: 4px;
-  background: #f3f4f6;
-  border-radius: 2px;
-  overflow: hidden;
-}
-
-.AgentRunPanel__progressFill {
-  height: 100%;
-  background: linear-gradient(90deg, #6366f1, #8b5cf6);
-  border-radius: 2px;
-  transition: width 200ms ease-out;
 }
 
 .AgentRunPanel__error {
