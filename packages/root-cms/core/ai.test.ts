@@ -12,9 +12,9 @@ import {
   ROOT_MD_FILENAME,
   serializeAiConfig,
   stripUndefined,
-} from './ai-chat.js';
+} from './ai.js';
 
-describe('ai-chat', () => {
+describe('ai', () => {
   const config: AiConfig = {
     models: [
       {

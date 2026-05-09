@@ -15,7 +15,7 @@ import {
   serializeAiConfig,
   summarizeDiff,
   translateString,
-} from './ai-chat.js';
+} from './ai.js';
 import {type CMSCheck} from './checks.js';
 import {RootCMSClient, parseDocId, unmarshalData} from './client.js';
 import {runCronJobs} from './cron.js';
@@ -512,7 +512,7 @@ export function api(server: Server, options: ApiOptions) {
   });
 
   // ===========================================================================
-  // One-shot AI tasks. These wrap the Vercel AI SDK helpers in `ai-chat.ts`
+  // One-shot AI tasks. These wrap the Vercel AI SDK helpers in `ai.ts`
   // and use the `ai` config registered on the cmsPlugin.
   // ===========================================================================
 

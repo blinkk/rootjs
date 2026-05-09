@@ -1,9 +1,11 @@
 /**
- * Vercel AI SDK-based chat for the `/cms/ai` page.
+ * Vercel AI SDK-backed AI features for Root CMS.
  *
- * The chat runs as a lightweight proxy between the CMS UI and the underlying
- * model provider. Conversation history is persisted to Firestore so that users
- * can resume past chats.
+ * Powers the `/cms/ai` chat page (streaming chat with tool use and Firestore
+ * history) plus the one-shot task helpers (diff summaries, publish messages,
+ * translations, alt text, image generation) used by the `/cms/api/ai.*`
+ * endpoints. The CMS proxies requests directly to the configured model
+ * provider — keys live on the server, never on the client.
  */
 import crypto from 'node:crypto';
 import {promises as fs} from 'node:fs';
