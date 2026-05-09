@@ -78,7 +78,6 @@ jobs:
           while IFS=$'\t' read -r function_name region updated_at; do
             echo "Deleting ${function_name} in ${region}, last updated ${updated_at}."
             gcloud functions delete "$function_name" \
-              --v2 \
               --region "$region" \
               --project rootjs-dev \
               --quiet
