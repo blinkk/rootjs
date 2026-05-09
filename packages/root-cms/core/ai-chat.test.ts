@@ -6,6 +6,7 @@ import {
   AiConfig,
   buildSystemPrompt,
   deriveChatTitle,
+  extractJsonFromResponse,
   findModel,
   readRootMd,
   ROOT_MD_FILENAME,
@@ -169,6 +170,48 @@ describe('ai-chat', () => {
       expect(stripUndefined('hello')).toBe('hello');
       expect(stripUndefined(42)).toBe(42);
       expect(stripUndefined(null)).toBeNull();
+    });
+  });
+
+  describe('extractJsonFromResponse', () => {
+    it('should extract plain JSON', () => {
+      const input = '{"en": "Hello", "es": "Hola"}';
+      expect(extractJsonFromResponse(input)).toBe(input);
+    });
+
+    it('should extract JSON from markdown code blocks with json specifier', () => {
+      const input = '```json\n{"en": "Hello", "es": "Hola"}\n```';
+      expect(extractJsonFromResponse(input)).toBe(
+        '{"en": "Hello", "es": "Hola"}'
+      );
+    });
+
+    it('should extract JSON from code blocks without language specifier', () => {
+      const input = '```\n{"en": "Hello", "es": "Hola"}\n```';
+      expect(extractJsonFromResponse(input)).toBe(
+        '{"en": "Hello", "es": "Hola"}'
+      );
+    });
+
+    it('should handle JSON with whitespace', () => {
+      const input = '  \n  {"en": "Hello"}  \n  ';
+      expect(extractJsonFromResponse(input)).toBe('{"en": "Hello"}');
+    });
+
+    it('should handle multiline JSON in code blocks', () => {
+      const input = '```json\n{\n  "en": "Hello",\n  "es": "Hola"\n}\n```';
+      expect(extractJsonFromResponse(input)).toBe(
+        '{\n  "en": "Hello",\n  "es": "Hola"\n}'
+      );
+    });
+
+    it('should handle empty strings', () => {
+      expect(extractJsonFromResponse('')).toBe('');
+    });
+
+    it('should handle JSON with only whitespace around code blocks', () => {
+      const input = '  ```json\n{"locale": "value"}\n```  ';
+      expect(extractJsonFromResponse(input)).toBe('{"locale": "value"}');
     });
   });
 });

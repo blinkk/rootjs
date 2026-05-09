@@ -25,12 +25,18 @@ import {
   lastAssistantMessageIsCompleteWithToolCalls,
 } from 'ai';
 import {useCallback, useEffect, useMemo, useRef, useState} from 'preact/hooks';
-import {AiResponse} from '../../../shared/ai/prompts.js';
 import {executeCmsTool} from '../../pages/AIPage/cmsToolHandlers.js';
 import {joinClassNames} from '../../utils/classes.js';
 import {uploadFileToGCS} from '../../utils/gcs.js';
 import {IconRootAI} from '../IconRootAI/IconRootAI.js';
 import {Markdown} from '../Markdown/Markdown.js';
+
+/** Result emitted by the "Edit with AI" chat to the parent modal. */
+export interface AiResponse {
+  message: string;
+  data: Record<string, any> | null;
+  error?: string;
+}
 
 interface ModelInfo {
   id: string;

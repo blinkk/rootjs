@@ -10,11 +10,10 @@ import {
 } from '@tabler/icons-preact';
 import {useRef, useState} from 'preact/hooks';
 import {useMemo, useCallback} from 'preact/hooks';
-import {AiResponse} from '../../../shared/ai/prompts.js';
 import {useModalTheme} from '../../hooks/useModalTheme.js';
 import {deserializeDocJson} from '../../utils/doc.js';
 import {JsDiff} from '../JsDiff/JsDiff.js';
-import {ChatPanel} from './ChatPanel.js';
+import {AiResponse, ChatPanel} from './ChatPanel.js';
 
 const MODAL_ID = 'AiEditModal';
 

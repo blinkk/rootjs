@@ -25,7 +25,6 @@ import * as jsonwebtoken from 'jsonwebtoken';
 import sirv from 'sirv';
 import {SSEEvent, SSESchemaChangedEvent} from '../shared/sse.js';
 import {type AiConfig} from './ai-chat.js';
-import {type RootAiModel} from './ai.js';
 import {api} from './api.js';
 import {type CMSCheck} from './checks.js';
 import {Action, RootCMSClient} from './client.js';
@@ -123,7 +122,7 @@ export interface CMSAIConfig {
   /** Custom API endpoint for chat prompts. */
   endpoint?: string;
   /** Gen AI model to use. */
-  model?: RootAiModel;
+  model?: string;
 }
 
 /**

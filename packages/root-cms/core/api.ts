@@ -4,19 +4,18 @@ import {Server, Request, Response} from '@blinkk/root';
 import {multipartMiddleware} from '@blinkk/root/middleware';
 import {UIMessage} from 'ai';
 import {
-  ChatPrompt,
-  AiResponse,
-  SendPromptOptions,
-} from '../shared/ai/prompts.js';
-import {
   ChatStore,
   findModel,
+  generateAltText,
+  generateImage,
+  generatePublishMessage,
   getAiConfig,
   runChatStream,
   runEditObjectStream,
   serializeAiConfig,
+  summarizeDiff,
+  translateString,
 } from './ai-chat.js';
-import {ChatClient, RootAiModel, summarizeDiff} from './ai.js';
 import {type CMSCheck} from './checks.js';
 import {RootCMSClient, parseDocId, unmarshalData} from './client.js';
 import {runCronJobs} from './cron.js';
@@ -126,20 +125,6 @@ async function pipeWebResponse(
     reader.releaseLock();
     res.end();
   }
-}
-
-export interface ChatApiRequest {
-  chatId: string;
-  prompt: ChatPrompt | ChatPrompt[];
-  model?: RootAiModel;
-  options?: SendPromptOptions;
-}
-
-export interface ChatApiResponse {
-  success: boolean;
-  chatId: string;
-  response: AiResponse;
-  error?: string;
 }
 
 export interface ApiOptions {
@@ -526,47 +511,19 @@ export function api(server: Server, options: ApiOptions) {
     }
   });
 
+  // ===========================================================================
+  // One-shot AI tasks. These wrap the Vercel AI SDK helpers in `ai-chat.ts`
+  // and use the `ai` config registered on the cmsPlugin.
+  // ===========================================================================
+
   /**
-   * AI chatbot.
+   * Summarizes the changes between two doc versions.
+   *
+   * ```
+   * POST /cms/api/ai.diff
+   * {"docId": "Pages/index", "beforeVersion": "published", "afterVersion": "draft"}
+   * ```
    */
-  server.use('/cms/api/ai.chat', async (req: Request, res: Response) => {
-    if (
-      req.method !== 'POST' ||
-      !String(req.get('content-type')).startsWith('application/json')
-    ) {
-      res.status(400).json({success: false, error: 'BAD_REQUEST'});
-      return;
-    }
-    if (!req.user?.email) {
-      res.status(401).json({success: false, error: 'UNAUTHORIZED'});
-      return;
-    }
-    const reqBody: ChatApiRequest = req.body || {};
-    if (!reqBody.prompt) {
-      res.status(400).json({success: false, error: 'MISSING_PROMPT'});
-      return;
-    }
-    const prompt = reqBody.prompt;
-
-    try {
-      const cmsClient = new RootCMSClient(req.rootConfig!);
-      const chatClient = new ChatClient(cmsClient, req.user.email);
-      const chat = await chatClient.getOrCreateChat(reqBody.chatId);
-      const apiResponse: ChatApiResponse = {
-        success: true,
-        chatId: chat.id,
-        response: await chat.sendPrompt(prompt, {
-          mode: reqBody.options?.mode || 'chat',
-          editData: reqBody.options?.editData,
-        }),
-      };
-      res.status(200).json(apiResponse);
-    } catch (err) {
-      console.error(err.stack || err);
-      res.status(500).json({success: false, error: 'UNKNOWN'});
-    }
-  });
-
   server.use('/cms/api/ai.diff', async (req: Request, res: Response) => {
     if (
       req.method !== 'POST' ||
@@ -575,7 +532,6 @@ export function api(server: Server, options: ApiOptions) {
       res.status(400).json({success: false, error: 'BAD_REQUEST'});
       return;
     }
-
     if (!req.user?.email) {
       res.status(401).json({success: false, error: 'UNAUTHORIZED'});
       return;
@@ -608,43 +564,25 @@ export function api(server: Server, options: ApiOptions) {
         res.status(200).json({success: true, summary: ''});
         return;
       }
-      const summary = await summarizeDiff(cmsClient, {
+      const summary = await summarizeDiff(req.rootConfig!, {
         before: diffPayload.before,
         after: diffPayload.after,
       });
       res.status(200).json({success: true, summary});
     } catch (err: any) {
       console.error(err.stack || err);
-      res.status(500).json({success: false, error: 'UNKNOWN'});
+      res.status(500).json({success: false, error: err.message || 'UNKNOWN'});
     }
   });
 
-  server.use('/cms/api/ai.list_chats', async (req: Request, res: Response) => {
-    if (
-      req.method !== 'POST' ||
-      !String(req.get('content-type')).startsWith('application/json')
-    ) {
-      res.status(400).json({success: false, error: 'BAD_REQUEST'});
-      return;
-    }
-    if (!req.user?.email) {
-      res.status(401).json({success: false, error: 'UNAUTHORIZED'});
-      return;
-    }
-    const reqBody = req.body || {};
-    const limit = reqBody.limit;
-
-    try {
-      const cmsClient = new RootCMSClient(req.rootConfig!);
-      const chatClient = new ChatClient(cmsClient, req.user.email);
-      const chats = await chatClient.listChats({limit});
-      res.status(200).json({success: true, chats});
-    } catch (err) {
-      console.error(err.stack || err);
-      res.status(500).json({success: false, error: 'UNKNOWN'});
-    }
-  });
-
+  /**
+   * Generates an image from a text prompt using the configured image model.
+   *
+   * ```
+   * POST /cms/api/ai.generate_image
+   * {"prompt": "A red apple", "aspectRatio": "16:9"}
+   * ```
+   */
   server.use(
     '/cms/api/ai.generate_image',
     async (req: Request, res: Response) => {
@@ -669,13 +607,11 @@ export function api(server: Server, options: ApiOptions) {
       }
 
       try {
-        const cmsClient = new RootCMSClient(req.rootConfig!);
-        const {generateImage} = await import('./ai.js');
-        const imageUrl = await generateImage(cmsClient, {
+        const result = await generateImage(req.rootConfig!, {
           prompt,
           aspectRatio,
         });
-        res.status(200).json({success: true, image: imageUrl});
+        res.status(200).json({success: true, image: result.imageUrl});
       } catch (err: any) {
         console.error(err.stack || err);
         res.status(500).json({success: false, error: err.message || 'UNKNOWN'});
@@ -683,6 +619,15 @@ export function api(server: Server, options: ApiOptions) {
     }
   );
 
+  /**
+   * Generates a concise publish message describing changes since the last
+   * publish.
+   *
+   * ```
+   * POST /cms/api/ai.publish_message
+   * {"docId": "Pages/index"}
+   * ```
+   */
   server.use(
     '/cms/api/ai.publish_message',
     async (req: Request, res: Response) => {
@@ -693,7 +638,6 @@ export function api(server: Server, options: ApiOptions) {
         res.status(400).json({success: false, error: 'BAD_REQUEST'});
         return;
       }
-
       if (!req.user?.email) {
         res.status(401).json({success: false, error: 'UNAUTHORIZED'});
         return;
@@ -713,25 +657,65 @@ export function api(server: Server, options: ApiOptions) {
 
       try {
         const cmsClient = new RootCMSClient(req.rootConfig!);
-        const beforeVersion: DocVersion = 'published';
-        const afterVersion: DocVersion = 'draft';
         const diffPayload = await buildDocDiffPayload(cmsClient, docId, {
-          beforeVersion,
-          afterVersion,
+          beforeVersion: 'published',
+          afterVersion: 'draft',
         });
         if (!diffPayload.before && !diffPayload.after) {
           res.status(200).json({success: true, message: 'Initial version'});
           return;
         }
-        const {generatePublishMessage} = await import('./ai.js');
-        const message = await generatePublishMessage(cmsClient, {
+        const message = await generatePublishMessage(req.rootConfig!, {
           before: diffPayload.before,
           after: diffPayload.after,
         });
         res.status(200).json({success: true, message});
       } catch (err: any) {
         console.error(err.stack || err);
-        res.status(500).json({success: false, error: 'UNKNOWN'});
+        res.status(500).json({success: false, error: err.message || 'UNKNOWN'});
+      }
+    }
+  );
+
+  /**
+   * Generates alt text for an image given its URL.
+   *
+   * ```
+   * POST /cms/api/ai.generate_alt_text
+   * {"imageUrl": "https://..."}
+   * ```
+   */
+  server.use(
+    '/cms/api/ai.generate_alt_text',
+    async (req: Request, res: Response) => {
+      if (
+        req.method !== 'POST' ||
+        !String(req.get('content-type')).startsWith('application/json')
+      ) {
+        res.status(400).json({success: false, error: 'BAD_REQUEST'});
+        return;
+      }
+      if (!req.user?.email) {
+        res.status(401).json({success: false, error: 'UNAUTHORIZED'});
+        return;
+      }
+      const reqBody = req.body || {};
+      const imageUrl =
+        typeof reqBody.imageUrl === 'string' ? reqBody.imageUrl.trim() : '';
+      if (!imageUrl) {
+        res.status(400).json({
+          success: false,
+          error: 'MISSING_REQUIRED_FIELD',
+          field: 'imageUrl',
+        });
+        return;
+      }
+      try {
+        const altText = await generateAltText(req.rootConfig!, {imageUrl});
+        res.status(200).json({success: true, altText});
+      } catch (err: any) {
+        console.error(err.stack || err);
+        res.status(500).json({success: false, error: err.message || 'UNKNOWN'});
       }
     }
   );
@@ -1009,9 +993,7 @@ export function api(server: Server, options: ApiOptions) {
     }
 
     try {
-      const cmsClient = new RootCMSClient(req.rootConfig!);
-      const {translateString} = await import('./ai.js');
-      const translations = await translateString(cmsClient, {
+      const translations = await translateString(req.rootConfig!, {
         sourceText,
         targetLocales,
         description,

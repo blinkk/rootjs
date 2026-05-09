@@ -56,7 +56,6 @@ import {
   deleteFileFromGCS,
 } from '../../../utils/gcs.js';
 import {downloadFromDrive, parseGoogleDriveId} from '../../../utils/gdrive.js';
-import {ChatController, useLegacyChat} from '../../ChatBar/legacyChat.js';
 import {FieldProps} from './FieldProps.js';
 import {GenerateImageForm} from './GenerateImageForm.js';
 
@@ -93,7 +92,7 @@ interface FileFieldContextValue {
   removeFile: () => void;
   requestFileUpload: () => void;
   requestFileDownload: () => void;
-  requestGenerateAltText: (chat: ChatController) => void;
+  requestGenerateAltText: () => void;
   requestPlaceholderModalOpen: () => void;
   requestImageEditorOpen: () => void;
   showAltText: boolean;
@@ -400,49 +399,35 @@ export function FileFieldInternal(props: FileFieldInternalProps) {
     setValue({...value, alt: newAltText || ''});
   }
 
-  async function requestGenerateAltText(chat: ChatController) {
+  async function requestGenerateAltText() {
     const uploadedFile = value;
-    if (!uploadedFile?.src || !chat) {
+    if (!uploadedFile?.src) {
       return;
     }
     setLoadingState('loading');
-    const resp = await chat.sendPrompt(
-      chat.addMessage({
-        sender: 'user',
-        blocks: [
-          {
-            type: 'image',
-            image: {
-              src: uploadedFile.src,
-            },
-          },
-        ],
-      }),
-      [
-        {
-          text: 'Generate alt text for the image above.',
-        },
-        {
-          media: {
-            url: uploadedFile.src,
-          },
-        },
-      ],
-      {
-        mode: 'altText',
+    try {
+      const res = await window.fetch('/cms/api/ai.generate_alt_text', {
+        method: 'POST',
+        headers: {'content-type': 'application/json'},
+        body: JSON.stringify({imageUrl: uploadedFile.src}),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || 'Failed to generate alt text');
       }
-    );
-    if (resp?.error) {
+      if (data.altText) {
+        setAltText(data.altText);
+      }
+    } catch (err: any) {
       showNotification({
         title: 'Sorry, something went wrong.',
-        message: resp.error,
+        message: err.message || 'Unknown error',
         color: 'red',
         autoClose: true,
       });
-    } else if (resp?.message) {
-      setAltText(resp.message);
+    } finally {
+      setLoadingState('complete');
     }
-    setLoadingState('complete');
   }
 
   return (
@@ -686,7 +671,6 @@ FileField.Preview = () => {
   const ctx = useFileField();
   const [dragging, setDragging] = useState(false);
   const [copied, setCopied] = useState(false);
-  const chat = useLegacyChat();
   const experiments = window.__ROOT_CTX.experiments || {};
 
   // Videos and images are the only files that get the canvas preview.
@@ -1045,7 +1029,7 @@ FileField.Preview = () => {
                   <ActionIcon
                     className="DocEditor__ImageField__imagePreview__Image__Alt__AiButton"
                     onClick={() => {
-                      ctx.requestGenerateAltText(chat);
+                      ctx.requestGenerateAltText();
                     }}
                     disabled={ctx.loadingState === 'loading'}
                   >

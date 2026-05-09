@@ -15,7 +15,9 @@ import {createOpenAICompatible} from '@ai-sdk/openai-compatible';
 import {RootConfig} from '@blinkk/root';
 import {
   convertToModelMessages,
+  generateImage as generateImageSdk,
   generateText,
+  ImageModel,
   LanguageModel,
   stepCountIs,
   streamText,
@@ -85,6 +87,14 @@ export interface AiConfig {
   /** Id of the default model. Defaults to the first model in `models`. */
   defaultModel?: string;
   /**
+   * Image generation models. Used by the image generator and any other
+   * features that produce images. Only the `openai` and `google` providers
+   * support image generation.
+   */
+  imageModels?: AiModelConfig[];
+  /** Id of the default image model. Defaults to the first entry in `imageModels`. */
+  defaultImageModel?: string;
+  /**
    * Optional system prompt prepended to every conversation. If a `ROOT.md`
    * file exists at the project root, its contents are appended to this
    * prompt automatically.
@@ -152,6 +162,34 @@ export function resolveLanguageModel(model: AiModelConfig): LanguageModel {
   }
 }
 
+/** Resolves an `AiModelConfig` to an AI SDK `ImageModel` instance. */
+export function resolveImageModel(model: AiModelConfig): ImageModel {
+  const modelId = model.modelId || model.id;
+  switch (model.provider) {
+    case 'openai': {
+      const provider = createOpenAI({
+        apiKey: model.apiKey,
+        baseURL: model.baseURL,
+        headers: model.headers,
+      });
+      return provider.image(modelId);
+    }
+    case 'google': {
+      const provider = createGoogleGenerativeAI({
+        apiKey: model.apiKey,
+        baseURL: model.baseURL,
+        headers: model.headers,
+      });
+      return provider.image(modelId);
+    }
+    default: {
+      throw new Error(
+        `provider "${model.provider}" does not support image generation`
+      );
+    }
+  }
+}
+
 /** Strips secrets from `AiConfig` before sending to the browser. */
 export function serializeAiConfig(config: AiConfig) {
   return {
@@ -167,6 +205,7 @@ export function serializeAiConfig(config: AiConfig) {
         attachments: m.capabilities?.attachments ?? false,
       },
     })),
+    imageGenerationEnabled: !!config.imageModels?.length,
   };
 }
 
@@ -195,6 +234,44 @@ export function findModel(
   }
   const defaultId = config.defaultModel || config.models[0]?.id;
   return config.models.find((m) => m.id === defaultId) || null;
+}
+
+/** Returns the image model config matching `modelId`, or the default image model. */
+export function findImageModel(
+  config: AiConfig,
+  modelId?: string
+): AiModelConfig | null {
+  const imageModels = config.imageModels || [];
+  if (imageModels.length === 0) {
+    return null;
+  }
+  if (modelId) {
+    const match = imageModels.find((m) => m.id === modelId);
+    if (match) {
+      return match;
+    }
+  }
+  const defaultId = config.defaultImageModel || imageModels[0]?.id;
+  return imageModels.find((m) => m.id === defaultId) || null;
+}
+
+/**
+ * Resolves the AiConfig + default chat model from the given root config.
+ * Throws a descriptive error if AI is not configured.
+ */
+function requireDefaultModel(rootConfig: RootConfig): {
+  config: AiConfig;
+  model: AiModelConfig;
+} {
+  const config = getAiConfig(rootConfig);
+  if (!config) {
+    throw new Error('AI is not configured. Set `ai` on the cmsPlugin config.');
+  }
+  const model = findModel(config);
+  if (!model) {
+    throw new Error('No AI chat model configured.');
+  }
+  return {config, model};
 }
 
 /**
@@ -613,4 +690,287 @@ export function stripUndefined<T>(value: T): T {
     return out as unknown as T;
   }
   return value;
+}
+
+// ===========================================================================
+// One-shot task helpers — used by the `/cms/api/ai.*` endpoints for tasks
+// that don't need a streaming chat session (diff summaries, publish
+// messages, translations, alt text, image generation).
+// ===========================================================================
+
+export interface SummarizeDiffOptions {
+  before: Record<string, any> | null;
+  after: Record<string, any> | null;
+}
+
+/**
+ * Generates a natural language summary of the differences between two JSON
+ * payloads.
+ */
+export async function summarizeDiff(
+  rootConfig: RootConfig,
+  options: SummarizeDiffOptions
+): Promise<string> {
+  const {model} = requireDefaultModel(rootConfig);
+  const languageModel = resolveLanguageModel(model);
+
+  const beforeJson = JSON.stringify(options.before ?? null, null, 2);
+  const afterJson = JSON.stringify(options.after ?? null, null, 2);
+
+  const system = [
+    'Summarize CMS document changes in 2-4 bullet points.',
+    'Focus on content changes only. Ignore metadata like timestamps.',
+    'If no meaningful changes, say "No significant changes."',
+  ].join('\n');
+
+  const prompt = [
+    'Before:',
+    beforeJson,
+    '',
+    'After:',
+    afterJson,
+    '',
+    'What changed?',
+  ].join('\n');
+
+  const result = await generateText({
+    model: languageModel,
+    system,
+    prompt,
+    // Respond more quickly with less creativity.
+    temperature: 0.3,
+  });
+
+  return result.text?.trim() || '';
+}
+
+/**
+ * Generates a concise commit-style publish message based on document changes.
+ */
+export async function generatePublishMessage(
+  rootConfig: RootConfig,
+  options: SummarizeDiffOptions
+): Promise<string> {
+  const {model} = requireDefaultModel(rootConfig);
+  const languageModel = resolveLanguageModel(model);
+
+  const beforeJson = JSON.stringify(options.before ?? null, null, 2);
+  const afterJson = JSON.stringify(options.after ?? null, null, 2);
+
+  const system = [
+    'You are an assistant that generates concise commit-style messages for CMS document changes.',
+    'Generate a single short sentence (maximum 60 characters) describing the most important change.',
+    'Use imperative mood like "Add feature" or "Update content" or "Fix typo".',
+    'Focus on the key content change, ignore structural metadata changes.',
+    'Do not use punctuation at the end.',
+    'Examples: "Add new hero image", "Update pricing details", "Fix typo in headline"',
+  ].join('\n');
+
+  const prompt = [
+    'Previous version JSON:',
+    '```json',
+    beforeJson,
+    '```',
+    '',
+    'Updated version JSON:',
+    '```json',
+    afterJson,
+    '```',
+    '',
+    'Generate a commit message for these changes.',
+  ].join('\n');
+
+  const result = await generateText({
+    model: languageModel,
+    system,
+    prompt,
+  });
+
+  return result.text?.trim() || '';
+}
+
+export interface TranslateStringOptions {
+  sourceText: string;
+  targetLocales: string[];
+  description?: string;
+  existingTranslations?: Record<string, string>;
+}
+
+/**
+ * Translates a source string into multiple target locales using AI.
+ */
+export async function translateString(
+  rootConfig: RootConfig,
+  options: TranslateStringOptions
+): Promise<Record<string, string>> {
+  const {model} = requireDefaultModel(rootConfig);
+  const languageModel = resolveLanguageModel(model);
+
+  const system = [
+    'You are a professional translator assistant.',
+    'Translate the given source text into the requested target languages.',
+    'Maintain the tone, style, and intent of the original text.',
+    'Return ONLY a valid JSON object with locale codes as keys and translations as values.',
+    'Do not include any markdown formatting, code blocks, or explanatory text.',
+  ].join('\n');
+
+  const userPromptParts: string[] = [
+    `Source text: "${options.sourceText}"`,
+    '',
+  ];
+
+  if (options.description) {
+    userPromptParts.push(`Context/Description: ${options.description}`, '');
+  }
+
+  if (
+    options.existingTranslations &&
+    Object.keys(options.existingTranslations).length > 0
+  ) {
+    userPromptParts.push('Existing translations for reference:');
+    Object.entries(options.existingTranslations).forEach(
+      ([locale, translation]) => {
+        if (translation) {
+          userPromptParts.push(`- ${locale}: "${translation}"`);
+        }
+      }
+    );
+    userPromptParts.push('');
+  }
+
+  userPromptParts.push(
+    `Target locales: ${options.targetLocales.join(', ')}`,
+    '',
+    'Provide translations as a JSON object with locale codes as keys.'
+  );
+
+  const result = await generateText({
+    model: languageModel,
+    system,
+    prompt: userPromptParts.join('\n'),
+  });
+
+  const responseText = result.text || '{}';
+  const jsonText = extractJsonFromResponse(responseText);
+  try {
+    return JSON.parse(jsonText);
+  } catch (err) {
+    console.error('failed to parse AI translation response:', responseText);
+    throw new Error('Invalid response format from AI translation');
+  }
+}
+
+export interface GenerateAltTextOptions {
+  /** Absolute URL or data URL of the image to describe. */
+  imageUrl: string;
+}
+
+/**
+ * Generates concise alt text for the given image URL using a multimodal model.
+ */
+export async function generateAltText(
+  rootConfig: RootConfig,
+  options: GenerateAltTextOptions
+): Promise<string> {
+  const {model} = requireDefaultModel(rootConfig);
+  const languageModel = resolveLanguageModel(model);
+
+  const system = [
+    'Create a descriptive and concise alt text for the attached image.',
+    '',
+    '- The alt text should be a brief but comprehensive description of the image, including key subjects, the setting, and any relevant details or actions.',
+    '- The alt text should not exceed 125 characters.',
+    '- Only provide one generation, and include only that data in the response. No surrounding text, clarifications, etc. Just the alt text.',
+  ].join('\n');
+
+  const result = await generateText({
+    model: languageModel,
+    system,
+    messages: [
+      {
+        role: 'user',
+        content: [
+          {type: 'text', text: 'Generate alt text for the image above.'},
+          {type: 'image', image: new URL(options.imageUrl)},
+        ],
+      },
+    ],
+  });
+
+  return result.text?.trim() || '';
+}
+
+/** Allowed aspect ratios for image generation. */
+export type AspectRatio =
+  | '1:1'
+  | '2:3'
+  | '3:2'
+  | '3:4'
+  | '4:3'
+  | '4:5'
+  | '5:4'
+  | '9:16'
+  | '16:9'
+  | '21:9';
+
+export interface GenerateImageOptions {
+  prompt: string;
+  aspectRatio: AspectRatio;
+  /** Specific image model id from `AiConfig.imageModels`. */
+  modelId?: string;
+}
+
+export interface GenerateImageResult {
+  /** Generated image as a `data:image/...` URL. */
+  imageUrl: string;
+}
+
+/**
+ * Generates an image using the configured `imageModels`. Returns the image as
+ * a base64-encoded data URL so the caller can either inline it or upload it
+ * to storage.
+ */
+export async function generateImage(
+  rootConfig: RootConfig,
+  options: GenerateImageOptions
+): Promise<GenerateImageResult> {
+  const config = getAiConfig(rootConfig);
+  if (!config) {
+    throw new Error('AI is not configured. Set `ai` on the cmsPlugin config.');
+  }
+  const imageModelConfig = findImageModel(config, options.modelId);
+  if (!imageModelConfig) {
+    throw new Error(
+      'No image model configured. Set `ai.imageModels` on the cmsPlugin config.'
+    );
+  }
+
+  const imageModel = resolveImageModel(imageModelConfig);
+  const result = await generateImageSdk({
+    model: imageModel,
+    prompt: options.prompt,
+    aspectRatio: options.aspectRatio,
+  });
+
+  if (!result.image) {
+    throw new Error('No image generated');
+  }
+  const mediaType = result.image.mediaType || 'image/png';
+  return {imageUrl: `data:${mediaType};base64,${result.image.base64}`};
+}
+
+/**
+ * Extracts JSON from an AI response that may contain markdown code blocks.
+ * @internal
+ */
+export function extractJsonFromResponse(responseText: string): string {
+  let jsonText = responseText.trim();
+  if (jsonText.startsWith('```')) {
+    const lines = jsonText.split('\n');
+    jsonText = lines.slice(1, -1).join('\n');
+    if (jsonText.startsWith('json')) {
+      jsonText = jsonText.substring(4).trim();
+    }
+  }
+  return jsonText;
 }
