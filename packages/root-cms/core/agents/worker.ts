@@ -14,7 +14,8 @@ import {randomUUID} from 'node:crypto';
 import type {RootConfig} from '@blinkk/root';
 import {FieldValue, Timestamp} from 'firebase-admin/firestore';
 import {findModel, getAiConfig, type AiConfig} from '../ai-chat.js';
-import {RootCMSClient} from '../client.js';
+import type {CMSCheck} from '../checks.js';
+import {RootCMSClient, getCmsPlugin} from '../client.js';
 import {loadAgents} from './registry.js';
 import {AGENT_ASSIGNEE_PREFIX, type AgentRunContext} from './run-context.js';
 import {runAgent} from './runner.js';
@@ -38,6 +39,12 @@ export interface AgentWorkerOptions {
    * Override hook for tests: if provided, called instead of `runAgent`.
    */
   runner?: typeof runAgent;
+  /**
+   * Optional override for the CMS checks exposed to agent runs. When
+   * omitted, the worker reads them from the registered CMS plugin config.
+   * Tests pass an explicit list to avoid spinning up the plugin.
+   */
+  checks?: CMSCheck[];
 }
 
 /**
@@ -51,6 +58,7 @@ export class AgentWorker {
   private readonly aiConfig: AiConfig;
   private readonly maxConcurrent: number;
   private readonly runner: typeof runAgent;
+  private readonly checks: CMSCheck[];
   private unsubscribe: (() => void) | null = null;
   private readonly inflight = new Map<string, Promise<void>>();
 
@@ -68,6 +76,7 @@ export class AgentWorker {
     this.aiConfig = aiConfig;
     this.maxConcurrent = Math.max(1, options.maxConcurrent ?? 3);
     this.runner = options.runner ?? runAgent;
+    this.checks = options.checks ?? readChecksFromPlugin(rootConfig);
   }
 
   /**
@@ -225,6 +234,7 @@ export class AgentWorker {
       projectId: this.cmsClient.projectId,
       taskId,
       createdBy: assignee,
+      checks: this.checks,
     };
 
     await this.runner({ctx, model, prompt});
@@ -276,6 +286,21 @@ export function ensureAgentWorker(rootConfig: RootConfig): AgentWorker | null {
 export function _resetSharedAgentWorkerForTests() {
   _sharedWorker?.stop();
   _sharedWorker = null;
+}
+
+/**
+ * Pulls the registered CMS checks off the root-cms plugin config so the
+ * worker can hand them to agent runs. Returns an empty array when the
+ * plugin or its `checks` field is absent.
+ */
+function readChecksFromPlugin(rootConfig: RootConfig): CMSCheck[] {
+  try {
+    const cmsPlugin = getCmsPlugin(rootConfig);
+    const config = cmsPlugin.getConfig() as {checks?: CMSCheck[]};
+    return Array.isArray(config.checks) ? config.checks : [];
+  } catch {
+    return [];
+  }
 }
 
 /** Builds the agent's first-turn user prompt from the task fields. */

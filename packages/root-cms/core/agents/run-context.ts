@@ -6,6 +6,7 @@
  */
 
 import type {Firestore} from 'firebase-admin/firestore';
+import type {CMSCheck} from '../checks.js';
 import type {RootCMSClient} from '../client.js';
 import type {AgentDefinition} from './types.js';
 
@@ -33,4 +34,10 @@ export interface AgentRunContext {
   createdBy: string;
   /** AbortSignal that fires when the user cancels the run. */
   signal?: AbortSignal;
+  /**
+   * CMS checks registered via the plugin config. The runner threads these
+   * through so the QA-style read tools can list and execute them. Optional
+   * because not every project registers checks.
+   */
+  checks?: CMSCheck[];
 }

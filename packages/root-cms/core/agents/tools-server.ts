@@ -156,6 +156,73 @@ export function createServerReadTools(ctx: AgentRunContext): ToolSet {
         return {found: true, collectionId, fields: collection.fields};
       },
     }),
+
+    cms_checks_list: tool({
+      description:
+        'List the CMS checks registered in this project. Returns each check ' +
+        'with its id, label, optional description, and the collections it ' +
+        'applies to. Use this to discover what `cms_check_run` can run.',
+      inputSchema: z.object({}),
+      execute: async () => {
+        const checks = ctx.checks || [];
+        return {
+          checks: checks.map((c) => ({
+            id: c.id,
+            label: c.label,
+            description: c.description,
+            collections: c.collections,
+          })),
+        };
+      },
+    }),
+
+    cms_check_run: tool({
+      description:
+        'Run a registered CMS check against a single document. Returns ' +
+        '`{status, message, metadata}` where status is "success", ' +
+        '"warning", or "error". Use this to validate content before ' +
+        'proposing fixes. Discover available check ids with ' +
+        '`cms_checks_list`.',
+      inputSchema: z.object({
+        checkId: z.string(),
+        docId: z
+          .string()
+          .describe('Full doc id in the form "Collection/slug".'),
+      }),
+      execute: async ({checkId, docId}) => {
+        const check = (ctx.checks || []).find((c) => c.id === checkId);
+        if (!check) {
+          throw new Error(`cms_check_run: unknown check "${checkId}"`);
+        }
+        const {collection, slug} = parseDocId(docId);
+        if (
+          check.collections &&
+          check.collections.length > 0 &&
+          !check.collections.includes(collection)
+        ) {
+          throw new Error(
+            `cms_check_run: check "${checkId}" is not registered for ` +
+              `collection "${collection}"`
+          );
+        }
+        const collectionSchema = await ctx.cmsClient.getCollection(collection);
+        const result = await check.run({
+          rootConfig: ctx.cmsClient.rootConfig,
+          cmsClient: ctx.cmsClient,
+          docId,
+          collectionId: collection,
+          slug,
+          collectionSchema,
+        });
+        return {
+          checkId,
+          docId,
+          status: result.status,
+          message: result.message,
+          metadata: result.metadata || null,
+        };
+      },
+    }),
   };
 }
 
