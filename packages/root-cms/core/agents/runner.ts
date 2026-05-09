@@ -90,7 +90,21 @@ export async function runAgent(
       system: ctx.agent.systemPrompt,
       prompt,
       tools,
-      stopWhen: stepCountIs(maxSteps),
+      stopWhen: ({steps}: {steps: Array<Record<string, unknown>>}) => {
+        if (steps.length >= maxSteps) {
+          return true;
+        }
+        // Stop the run as soon as the agent posts a reply — that's the
+        // explicit "I'm handing this back" signal. Without this the model
+        // may keep iterating after the handoff comment, defeating the
+        // purpose of `task_reply.reassign: true`.
+        const last = steps[steps.length - 1] as
+          | {toolCalls?: Array<{toolName: string}>}
+          | undefined;
+        return Boolean(
+          last?.toolCalls?.some((tc) => tc.toolName === 'task_reply')
+        );
+      },
       abortSignal: ctx.signal,
       onStepFinish: async (step) => {
         budget.consume(step.usage);
@@ -140,8 +154,12 @@ export async function runAgent(
   }
 
   await addAgentReaction(ctx, starterId, '✅');
+  // Important: set a terminal status (`completed`) so the worker's
+  // `where('agentRun.status', '==', 'idle')` listener does not immediately
+  // re-claim and re-run the same task in a loop. The human moves it back
+  // to `idle` via Retry or by reassigning to an agent.
   await updateAgentRunStatus(ctx, {
-    status: 'idle',
+    status: 'completed',
     tokensUsed: budget.used,
     lastError: null,
     leasedBy: null,

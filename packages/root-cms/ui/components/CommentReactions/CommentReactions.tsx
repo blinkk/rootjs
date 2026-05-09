@@ -1,9 +1,8 @@
 import './CommentReactions.css';
 
-import {ActionIcon, Tooltip} from '@mantine/core';
 import {showNotification} from '@mantine/notifications';
-import {IconMoodPlus} from '@tabler/icons-preact';
-import {useState} from 'preact/hooks';
+import {IconMoodSmile} from '@tabler/icons-preact';
+import {useEffect, useRef, useState} from 'preact/hooks';
 import {joinClassNames} from '../../utils/classes.js';
 import {
   TASK_COMMENT_REACTIONS,
@@ -19,17 +18,45 @@ export interface CommentReactionsProps {
 }
 
 /**
- * Renders the row of emoji reactions on a task comment plus a "+" button to
- * add a new one. Clicking an existing reaction toggles the current user's
- * presence on it.
+ * GitHub-style reaction row. Existing reactions render as small chips with
+ * a count; clicking a chip toggles the current user. The "add reaction"
+ * trigger is a subtle smiley icon next to the chips that opens a horizontal
+ * emoji palette.
  */
 export function CommentReactions(props: CommentReactionsProps) {
   const reactions = props.reactions || {};
   const [pickerOpen, setPickerOpen] = useState(false);
+  const containerRef = useRef<HTMLDivElement | null>(null);
   const currentUser = (window.firebase.user.email || '').toLowerCase();
   const present = Object.entries(reactions).filter(
     ([, reactors]) => reactors.length > 0
   );
+
+  // Close the picker on outside click / escape, the way GitHub's behaves.
+  useEffect(() => {
+    if (!pickerOpen) {
+      return;
+    }
+    function onDocClick(e: MouseEvent) {
+      if (
+        containerRef.current &&
+        !containerRef.current.contains(e.target as Node)
+      ) {
+        setPickerOpen(false);
+      }
+    }
+    function onKey(e: KeyboardEvent) {
+      if (e.key === 'Escape') {
+        setPickerOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', onDocClick);
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('mousedown', onDocClick);
+      document.removeEventListener('keydown', onKey);
+    };
+  }, [pickerOpen]);
 
   async function toggle(emoji: TaskCommentReaction) {
     try {
@@ -45,59 +72,75 @@ export function CommentReactions(props: CommentReactionsProps) {
     }
   }
 
+  // Hide the row entirely when there are no reactions and we're not hovering.
+  // GitHub keeps the add button hidden until hover/focus to reduce noise.
   return (
-    <div className={joinClassNames('CommentReactions', props.className)}>
+    <div
+      ref={containerRef}
+      className={joinClassNames(
+        'CommentReactions',
+        present.length === 0 && 'CommentReactions--empty',
+        props.className
+      )}
+    >
       {present.map(([emoji, reactors]) => {
         const isMine = reactors.includes(currentUser);
         return (
-          <Tooltip
+          <button
             key={emoji}
-            label={reactors.join(', ')}
-            withinPortal
-            position="top"
+            type="button"
+            title={reactors.join(', ')}
+            className={joinClassNames(
+              'CommentReactions__chip',
+              isMine && 'CommentReactions__chip--mine'
+            )}
+            onClick={() => toggle(emoji as TaskCommentReaction)}
           >
-            <button
-              type="button"
-              className={joinClassNames(
-                'CommentReactions__chip',
-                isMine && 'CommentReactions__chip--mine'
-              )}
-              onClick={() => toggle(emoji as TaskCommentReaction)}
-            >
-              <span className="CommentReactions__emoji">{emoji}</span>
-              <span className="CommentReactions__count">{reactors.length}</span>
-            </button>
-          </Tooltip>
+            <span className="CommentReactions__emoji">{emoji}</span>
+            <span className="CommentReactions__count">{reactors.length}</span>
+          </button>
         );
       })}
-      <Tooltip label="Add reaction" withinPortal position="top">
-        <ActionIcon
-          size="sm"
-          variant="subtle"
-          onClick={() => setPickerOpen((p) => !p)}
+      <div className="CommentReactions__addWrap">
+        <button
+          type="button"
           aria-label="Add reaction"
+          title="Add reaction"
+          className={joinClassNames(
+            'CommentReactions__add',
+            pickerOpen && 'CommentReactions__add--open'
+          )}
+          onClick={() => setPickerOpen((p) => !p)}
         >
-          <IconMoodPlus size={16} strokeWidth="1.8" />
-        </ActionIcon>
-      </Tooltip>
-      {pickerOpen && (
-        <div
-          className="CommentReactions__picker"
-          role="menu"
-          aria-label="Pick a reaction"
-        >
-          {TASK_COMMENT_REACTIONS.map((emoji) => (
-            <button
-              key={emoji}
-              type="button"
-              className="CommentReactions__pickerItem"
-              onClick={() => toggle(emoji)}
-            >
-              {emoji}
-            </button>
-          ))}
-        </div>
-      )}
+          <IconMoodSmile size={14} strokeWidth="1.8" />
+          <span className="CommentReactions__addPlus">+</span>
+        </button>
+        {pickerOpen && (
+          <div
+            className="CommentReactions__palette"
+            role="menu"
+            aria-label="Pick a reaction"
+          >
+            {TASK_COMMENT_REACTIONS.map((emoji) => {
+              const reactors = reactions[emoji] || [];
+              const isMine = reactors.includes(currentUser);
+              return (
+                <button
+                  key={emoji}
+                  type="button"
+                  className={joinClassNames(
+                    'CommentReactions__paletteItem',
+                    isMine && 'CommentReactions__paletteItem--mine'
+                  )}
+                  onClick={() => toggle(emoji)}
+                >
+                  {emoji}
+                </button>
+              );
+            })}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

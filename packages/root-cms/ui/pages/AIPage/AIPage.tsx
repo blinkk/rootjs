@@ -37,6 +37,12 @@ import {useCallback, useEffect, useMemo, useRef, useState} from 'preact/hooks';
 import {useLocation} from 'preact-iso';
 import {AgentPicker} from '../../components/AgentPicker/AgentPicker.js';
 import {Markdown} from '../../components/Markdown/Markdown.js';
+import {MentionDropdown} from '../../components/MentionDropdown/MentionDropdown.js';
+import {useAgents} from '../../hooks/useAgents.js';
+import {
+  replaceMentionRange,
+  useMentionAutocomplete,
+} from '../../hooks/useMentionAutocomplete.js';
 import {usePageTitle} from '../../hooks/usePageTitle.js';
 import {Layout} from '../../layout/Layout.js';
 import {joinClassNames} from '../../utils/classes.js';
@@ -857,6 +863,26 @@ function ChatComposer(props: {
   const fileRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
+  const {agents} = useAgents();
+  const mention = useMentionAutocomplete({
+    items: agents.map((a) => ({
+      value: a.name,
+      icon: a.icon,
+      description: a.description,
+    })),
+    onAccept: (item, range) => {
+      const next = replaceMentionRange(text, range, item.value);
+      setText(next.text);
+      requestAnimationFrame(() => {
+        const el = textareaRef.current;
+        if (el) {
+          el.focus();
+          el.setSelectionRange(next.caret, next.caret);
+        }
+      });
+    },
+  });
+
   const fitTextarea = () => {
     window.requestAnimationFrame(() => {
       const el = textareaRef.current;
@@ -886,6 +912,9 @@ function ChatComposer(props: {
   };
 
   const onKeyDown = (e: KeyboardEvent) => {
+    if (mention.handleKeyDown(e)) {
+      return;
+    }
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       submit();
@@ -949,6 +978,14 @@ function ChatComposer(props: {
         </div>
       )}
       <div className="AIPage__composer__row">
+        {mention.state.open && (
+          <MentionDropdown
+            items={mention.visibleItems}
+            activeIndex={mention.state.index}
+            onSelect={mention.accept}
+            className="AIPage__composer__mentions"
+          />
+        )}
         {props.canAttach && (
           <Tooltip
             label="Attach file"
@@ -979,6 +1016,7 @@ function ChatComposer(props: {
           autofocus
           disabled={props.disabled}
           onKeyDown={onKeyDown}
+          onInput={mention.handleInput}
           onChange={(e) => setText((e.target as HTMLTextAreaElement).value)}
           onPaste={(e) => {
             const items = e.clipboardData?.items || [];

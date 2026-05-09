@@ -232,7 +232,20 @@ export class AgentWorker {
     );
     const taskSnap = await taskRef.get();
     const taskData = taskSnap.data() || {};
-    const prompt = buildAgentPrompt(taskData);
+
+    // Load the full comment history so the agent can see prior messages
+    // (its own questions, the human's replies, applied/rejected proposals).
+    // Without this the agent re-asks the same question every time the human
+    // re-assigns the task, since each `generateText` call starts a fresh
+    // model context.
+    const commentsSnap = await this.cmsClient.db
+      .collection(
+        `Projects/${this.cmsClient.projectId}/Tasks/${taskId}/Comments`
+      )
+      .orderBy('createdAt', 'asc')
+      .get();
+    const comments = commentsSnap.docs.map((d) => d.data());
+    const prompt = buildAgentPrompt(taskData, comments);
 
     const model =
       (agent.model && findModel(this.aiConfig, agent.model)) ||
@@ -332,22 +345,87 @@ function readChecksFromPlugin(rootConfig: RootConfig): CMSCheck[] {
   }
 }
 
-/** Builds the agent's first-turn user prompt from the task fields. */
-export function buildAgentPrompt(task: Record<string, unknown>): string {
+/**
+ * Builds the agent's user prompt: task title + description plus any prior
+ * conversation history (comments authored by the agent and the human).
+ *
+ * Including history is what stops the loop bug — without it, every fresh
+ * `generateText` invocation sees only the task description and re-asks the
+ * same question the agent already asked on a previous turn.
+ */
+export function buildAgentPrompt(
+  task: Record<string, unknown>,
+  comments: Array<Record<string, unknown>> = []
+): string {
   const title = String(task.title || '').trim();
   const description = String(task.description || '').trim();
-  const lines: string[] = [];
+  const lines: string[] = ['# Task'];
   if (title) {
-    lines.push(`# ${title}`);
+    lines.push(`**${title}**`);
   }
   if (description) {
-    if (title) {
-      lines.push('');
-    }
-    lines.push(description);
+    lines.push('', description);
   }
-  if (lines.length === 0) {
+  if (!title && !description) {
     lines.push('Investigate this task and propose next steps.');
   }
+
+  const visible = comments.filter((c) => !c.isDeleted);
+  if (visible.length > 0) {
+    lines.push('', '# Conversation history');
+    lines.push(
+      'Previous comments on this task, oldest first. Use this to avoid ' +
+        're-asking questions already answered, and to understand how prior ' +
+        'proposals were resolved.',
+      ''
+    );
+    for (const comment of visible) {
+      lines.push(renderCommentForPrompt(comment));
+      lines.push('');
+    }
+  }
+
+  lines.push(
+    '# Your turn',
+    'Continue from the latest comment above. If the human just answered ' +
+      'a question of yours, act on the answer. If a previous proposal was ' +
+      'rejected, do not re-propose the same change. If everything looks ' +
+      'resolved, finish without further action.'
+  );
   return lines.join('\n');
+}
+
+function renderCommentForPrompt(comment: Record<string, unknown>): string {
+  const author = formatAuthor(comment.createdBy);
+  const proposal = comment.proposal as
+    | {
+        tool?: string;
+        rationale?: string;
+        diffSummary?: string;
+        status?: string;
+      }
+    | undefined;
+  if (proposal) {
+    const status = proposal.status || 'pending';
+    const summary = [
+      `_${author}_ posted **proposal** \`${proposal.tool}\` — status: **${status}**`,
+    ];
+    if (proposal.rationale) {
+      summary.push(`> ${proposal.rationale}`);
+    }
+    if (proposal.diffSummary) {
+      summary.push('```diff', proposal.diffSummary, '```');
+    }
+    return summary.join('\n');
+  }
+  const content = String(comment.content || '').trim();
+  return `_${author}_:\n${content || '(empty)'}`;
+}
+
+function formatAuthor(value: unknown): string {
+  const str = String(value || 'unknown');
+  if (str.startsWith('agent:')) {
+    return `🤖 ${str.slice('agent:'.length)} (agent)`;
+  }
+  return str;
 }

@@ -311,15 +311,25 @@ export function createServerReadTools(ctx: AgentRunContext): ToolSet {
 
     task_reply: tool({
       description:
-        'Post a regular reply comment on the current task. Use this to ' +
-        'ask the reviewer a clarifying question, share progress notes, or ' +
-        'summarize findings. NOT for proposing CMS changes — those go ' +
-        'through `proposeChange`. NOT for status reactions — those happen ' +
-        'automatically.',
+        'Post a reply on the current task and hand control back to the ' +
+        'human. Use this when you have a question for the reviewer, when ' +
+        "you've finished a turn of work and need their input, or when " +
+        "you're stuck. Posting a reply automatically reassigns the task " +
+        'back to the human who requested the run, and ends your run for ' +
+        'this turn — they can re-assign it back to you when ready. Set ' +
+        '`reassign: false` only when you want to leave a status note ' +
+        'without handing off.',
       inputSchema: z.object({
         content: z.string().min(1).describe('Markdown body of the reply.'),
+        reassign: z
+          .boolean()
+          .default(true)
+          .describe(
+            'Whether to reassign the task back to the human (default ' +
+              'true). Set false to post a note without handing off.'
+          ),
       }),
-      execute: async ({content}) => {
+      execute: async ({content, reassign}) => {
         const commentRef = ctx.db
           .collection(`Projects/${ctx.projectId}/Tasks/${ctx.taskId}/Comments`)
           .doc();
@@ -335,7 +345,42 @@ export function createServerReadTools(ctx: AgentRunContext): ToolSet {
           history: [],
           reactions: {},
         });
-        return {ok: true, commentId: commentRef.id};
+
+        let reassignedTo: string | null = null;
+        if (reassign) {
+          // Resolve the human to hand off to: prefer agentRun.requestedBy
+          // (the user who triggered the run), fall back to task.createdBy
+          // when that's an email rather than another agent.
+          const taskRef = ctx.db.doc(
+            `Projects/${ctx.projectId}/Tasks/${ctx.taskId}`
+          );
+          const taskSnap = await taskRef.get();
+          const data = (taskSnap.data() || {}) as Record<string, unknown>;
+          const agentRun =
+            (data.agentRun as Record<string, unknown> | undefined) || {};
+          const requestedBy = agentRun.requestedBy as string | undefined;
+          const createdBy = data.createdBy as string | undefined;
+          const candidate =
+            requestedBy && !requestedBy.startsWith('agent:')
+              ? requestedBy
+              : createdBy && !createdBy.startsWith('agent:')
+              ? createdBy
+              : null;
+          if (candidate) {
+            await taskRef.update({
+              assignee: candidate,
+              'agentRun.status': 'idle',
+              'agentRun.leasedBy': null,
+              'agentRun.leasedAt': null,
+              'agentRun.updatedAt': FieldValue.serverTimestamp(),
+              updatedAt: FieldValue.serverTimestamp(),
+              updatedBy: ctx.createdBy,
+            });
+            reassignedTo = candidate;
+          }
+        }
+
+        return {ok: true, commentId: commentRef.id, reassignedTo};
       },
     }),
   };

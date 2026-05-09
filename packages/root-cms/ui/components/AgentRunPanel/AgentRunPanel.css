@@ -1,0 +1,163 @@
+.AgentRunPanel {
+  margin-top: 12px;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  background: linear-gradient(180deg, #fafbff 0%, #ffffff 80%);
+  border: 1px solid #e4e7ec;
+  border-radius: 8px;
+}
+
+.AgentRunPanel__header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.AgentRunPanel__avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: #f5f3ff;
+  border: 1px solid #ddd6fe;
+  color: #6d28d9;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  flex-shrink: 0;
+}
+
+.AgentRunPanel__heading {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.AgentRunPanel__name {
+  font-weight: 600;
+  font-size: 13px;
+  color: #111827;
+  line-height: 1.2;
+}
+
+.AgentRunPanel__desc {
+  font-size: 11px;
+  color: #6b7280;
+  line-height: 1.4;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.AgentRunPanel__status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  align-self: flex-start;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.AgentRunPanel__status--idle {
+  background: #f3f4f6;
+  color: #4b5563;
+}
+
+.AgentRunPanel__status--running {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+
+.AgentRunPanel__status--completed {
+  background: #d1fae5;
+  color: #047857;
+}
+
+.AgentRunPanel__status--errored {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+.AgentRunPanel__status--cancelled {
+  background: #fed7aa;
+  color: #9a3412;
+}
+
+.AgentRunPanel__statusIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.AgentRunPanel__tokens {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.AgentRunPanel__tokensRow {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  color: #6b7280;
+  font-variant-numeric: tabular-nums;
+}
+
+.AgentRunPanel__tokensLabel {
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-weight: 600;
+}
+
+.AgentRunPanel__tokensValue {
+  color: #111827;
+}
+
+.AgentRunPanel__progress {
+  height: 4px;
+  background: #f3f4f6;
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.AgentRunPanel__progressFill {
+  height: 100%;
+  background: linear-gradient(90deg, #6366f1, #8b5cf6);
+  border-radius: 2px;
+  transition: width 200ms ease-out;
+}
+
+.AgentRunPanel__error {
+  display: flex;
+  gap: 6px;
+  align-items: flex-start;
+  padding: 8px 10px;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 6px;
+  color: #7f1d1d;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.AgentRunPanel__error svg {
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.AgentRunPanel__actions {
+  display: flex;
+  gap: 6px;
+}
+
+.AgentRunPanel__actions:empty {
+  display: none;
+}

@@ -66,8 +66,12 @@ export function getAgentAssigneeName(assignee?: string | null): string | null {
  * cancel/retry affordances.
  */
 export interface AgentRunMetadata {
-  /** Run lifecycle state. */
-  status: 'idle' | 'running' | 'errored' | 'cancelled';
+  /**
+   * Run lifecycle state. The worker listens on `idle`; everything else is
+   * terminal until a human triggers a transition (retry → `idle`,
+   * cancel → `cancelled`, reassign → `idle` via `assignTaskToAgent`).
+   */
+  status: 'idle' | 'running' | 'completed' | 'errored' | 'cancelled';
   /** Worker instance that holds the lease, or null when idle. */
   leasedBy?: string | null;
   /** Lease acquisition timestamp; consumers may treat stale leases as expired. */
@@ -80,6 +84,13 @@ export interface AgentRunMetadata {
   lastError?: string | null;
   /** Timestamp the run last transitioned state. */
   updatedAt?: Timestamp | null;
+  /**
+   * Email of the human who requested this run. Set when the user assigns the
+   * task to an agent (or converts a chat to a task with an agent). Used by
+   * `task_reply` to route the task back to the right person when the agent
+   * has a question.
+   */
+  requestedBy?: string | null;
 }
 
 /**
@@ -959,6 +970,7 @@ export async function assignTaskToAgent(taskId: string, agentName: string) {
     'agentRun.lastError': null,
     'agentRun.leasedBy': null,
     'agentRun.leasedAt': null,
+    'agentRun.requestedBy': userEmail,
     'agentRun.updatedAt': serverTimestamp(),
     updatedAt: serverTimestamp(),
     updatedBy: userEmail,
@@ -1002,6 +1014,7 @@ export async function retryTaskAgentRun(taskId: string) {
     'agentRun.leasedAt': null,
     'agentRun.lastError': null,
     'agentRun.tokensUsed': 0,
+    'agentRun.requestedBy': userEmail,
     'agentRun.updatedAt': serverTimestamp(),
     updatedAt: serverTimestamp(),
     updatedBy: userEmail,

@@ -260,6 +260,7 @@ export function registerAgentApi(server: Server) {
         'agentRun.leasedAt': null,
         'agentRun.lastError': null,
         'agentRun.tokensUsed': 0,
+        'agentRun.requestedBy': req.user.email,
         'agentRun.updatedAt': FieldValue.serverTimestamp(),
         updatedAt: FieldValue.serverTimestamp(),
         updatedBy: req.user.email,
@@ -391,6 +392,7 @@ async function createTaskFromChat(
                 agentRun: {
                   status: 'idle',
                   tokensUsed: 0,
+                  requestedBy: createdBy,
                   updatedAt: FieldValue.serverTimestamp(),
                 },
               }

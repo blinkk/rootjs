@@ -559,6 +559,12 @@
   border-radius: 24px;
   background: var(--surface-background);
   transition: box-shadow 0.18s ease, border-color 0.18s ease;
+  position: relative;
+}
+
+.AIPage__composer__mentions {
+  bottom: calc(100% + 8px);
+  left: 16px;
 }
 
 .AIPage__composer__row:focus-within {

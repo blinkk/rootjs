@@ -71,7 +71,7 @@ export async function addAgentReaction(
 export async function updateAgentRunStatus(
   ctx: AgentRunContext,
   patch: {
-    status: 'running' | 'errored' | 'cancelled' | 'idle';
+    status: 'running' | 'completed' | 'errored' | 'cancelled' | 'idle';
     leasedBy?: string | null;
     leasedAt?: FirebaseFirestore.Timestamp | null;
     tokensUsed?: number;
