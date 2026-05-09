@@ -904,15 +904,17 @@ export function cmsPlugin(options: CMSPluginOptions): CMSPlugin {
 
       // Start the in-process agent worker on the first authenticated request
       // (when `req.rootConfig` is available). Idempotent — subsequent
-      // requests are no-ops once the worker is running.
+      // requests are no-ops once the worker is running. Captures
+      // `req.viteServer` in dev so the worker can resolve agents through the
+      // Vite SSR loader.
       server.use((req: Request, _res: Response, next: NextFunction) => {
         if (req.rootConfig) {
-          // Lazy import keeps the agents subsystem from loading on
-          // projects that never use AI features.
           import('./agents/worker.js')
             .then(({ensureAgentWorker}) => {
               try {
-                ensureAgentWorker(req.rootConfig!);
+                ensureAgentWorker(req.rootConfig!, {
+                  viteServer: req.viteServer,
+                });
               } catch (err) {
                 console.error('[agent worker] startup failed:', err);
               }

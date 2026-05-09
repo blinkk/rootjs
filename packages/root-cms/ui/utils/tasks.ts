@@ -939,6 +939,34 @@ export async function toggleTaskCommentReaction(
 }
 
 /**
+ * Assigns a task to an agent. Sets the assignee to `agent:<name>` and seeds
+ * `agentRun.status: 'idle'` so the worker picks the task up. Used by the
+ * TaskMetadataPanel agent picker and any other "assign to agent" surface.
+ */
+export async function assignTaskToAgent(taskId: string, agentName: string) {
+  if (!taskId) {
+    throw new Error('missing task id');
+  }
+  if (!agentName) {
+    throw new Error('missing agent name');
+  }
+  const taskRef = taskDocRef(taskId);
+  const userEmail = window.firebase.user.email || '';
+  await updateDoc(taskRef, {
+    assignee: `${AGENT_ASSIGNEE_PREFIX}${agentName}`,
+    'agentRun.status': 'idle',
+    'agentRun.tokensUsed': 0,
+    'agentRun.lastError': null,
+    'agentRun.leasedBy': null,
+    'agentRun.leasedAt': null,
+    'agentRun.updatedAt': serverTimestamp(),
+    updatedAt: serverTimestamp(),
+    updatedBy: userEmail,
+  });
+  logAction('tasks.assignToAgent', {metadata: {taskId, agentName}});
+}
+
+/**
  * Cancels an in-flight agent run on a task. The worker observes the status
  * change between steps and exits cleanly. Failed cancels (no run in flight)
  * are a no-op.

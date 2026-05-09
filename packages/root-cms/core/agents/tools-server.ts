@@ -13,8 +13,10 @@
  */
 
 import {tool, ToolSet} from 'ai';
+import {FieldValue} from 'firebase-admin/firestore';
 import {z} from 'zod';
 import {SearchIndexService} from '../search-index.js';
+import {loadAgents} from './registry.js';
 import type {AgentRunContext} from './run-context.js';
 
 /**
@@ -157,11 +159,11 @@ export function createServerReadTools(ctx: AgentRunContext): ToolSet {
       },
     }),
 
-    cms_checks_list: tool({
+    checks_list: tool({
       description:
         'List the CMS checks registered in this project. Returns each check ' +
         'with its id, label, optional description, and the collections it ' +
-        'applies to. Use this to discover what `cms_check_run` can run.',
+        'applies to. Use this to discover what `check_run` can run.',
       inputSchema: z.object({}),
       execute: async () => {
         const checks = ctx.checks || [];
@@ -176,13 +178,13 @@ export function createServerReadTools(ctx: AgentRunContext): ToolSet {
       },
     }),
 
-    cms_check_run: tool({
+    check_run: tool({
       description:
         'Run a registered CMS check against a single document. Returns ' +
         '`{status, message, metadata}` where status is "success", ' +
         '"warning", or "error". Use this to validate content before ' +
         'proposing fixes. Discover available check ids with ' +
-        '`cms_checks_list`.',
+        '`checks_list`.',
       inputSchema: z.object({
         checkId: z.string(),
         docId: z
@@ -192,7 +194,7 @@ export function createServerReadTools(ctx: AgentRunContext): ToolSet {
       execute: async ({checkId, docId}) => {
         const check = (ctx.checks || []).find((c) => c.id === checkId);
         if (!check) {
-          throw new Error(`cms_check_run: unknown check "${checkId}"`);
+          throw new Error(`check_run: unknown check "${checkId}"`);
         }
         const {collection, slug} = parseDocId(docId);
         if (
@@ -201,7 +203,7 @@ export function createServerReadTools(ctx: AgentRunContext): ToolSet {
           !check.collections.includes(collection)
         ) {
           throw new Error(
-            `cms_check_run: check "${checkId}" is not registered for ` +
+            `check_run: check "${checkId}" is not registered for ` +
               `collection "${collection}"`
           );
         }
@@ -221,6 +223,119 @@ export function createServerReadTools(ctx: AgentRunContext): ToolSet {
           message: result.message,
           metadata: result.metadata || null,
         };
+      },
+    }),
+
+    agents_list: tool({
+      description:
+        'List the agents registered on this site. Returns each agent with ' +
+        'name, icon, description, and allowedTools. Use this to discover ' +
+        'who you can hand off to via `createSubtask`.',
+      inputSchema: z.object({}),
+      execute: async () => {
+        const agents = await loadAgents({viteServer: ctx.viteServer});
+        return {
+          agents: Array.from(agents.values()).map((agent) => ({
+            name: agent.name,
+            icon: agent.icon,
+            description: agent.description,
+            allowedTools: agent.allowedTools,
+          })),
+        };
+      },
+    }),
+
+    tasks_list: tool({
+      description:
+        'List tasks in this project. Returns task metadata (id, title, ' +
+        'status, assignee, priority, parentTaskId). Optional filters: ' +
+        '`assignee` (email or `agent:<name>`), `status` (e.g. "new", ' +
+        '"in-progress", "in-review", "closed"), and `limit` (default 25, ' +
+        'max 100).',
+      inputSchema: z.object({
+        assignee: z.string().optional(),
+        status: z.string().optional(),
+        limit: z.number().int().min(1).max(100).default(25),
+      }),
+      execute: async ({assignee, status, limit}) => {
+        let query: FirebaseFirestore.Query = ctx.db.collection(
+          `Projects/${ctx.projectId}/Tasks`
+        );
+        if (assignee) {
+          query = query.where('assignee', '==', assignee);
+        }
+        if (status) {
+          query = query.where('status', '==', status);
+        }
+        const snap = await query.limit(limit).get();
+        return {
+          tasks: snap.docs.map((d) => {
+            const data = d.data();
+            return {
+              id: d.id,
+              title: data.title,
+              status: data.status,
+              assignee: data.assignee,
+              priority: data.priority,
+              parentTaskId: data.parentTaskId || null,
+              sourceChatId: data.sourceChatId || null,
+              agentRunStatus: data.agentRun?.status || null,
+            };
+          }),
+        };
+      },
+    }),
+
+    users_list: tool({
+      description:
+        'List users with access to this project. Returns each user as ' +
+        '`{email, role}` where role is one of ADMIN, EDITOR, CONTRIBUTOR, ' +
+        'VIEWER. Wildcard domain entries appear as `*@example.com`. Use ' +
+        'this when you need to mention or assign a human teammate.',
+      inputSchema: z.object({}),
+      execute: async () => {
+        const projectRef = ctx.db.doc(`Projects/${ctx.projectId}`);
+        const snap = await projectRef.get();
+        const data = (snap.data() || {}) as {
+          roles?: Record<string, string>;
+        };
+        const roles = data.roles || {};
+        return {
+          users: Object.entries(roles).map(([email, role]) => ({
+            email,
+            role,
+          })),
+        };
+      },
+    }),
+
+    task_reply: tool({
+      description:
+        'Post a regular reply comment on the current task. Use this to ' +
+        'ask the reviewer a clarifying question, share progress notes, or ' +
+        'summarize findings. NOT for proposing CMS changes — those go ' +
+        'through `proposeChange`. NOT for status reactions — those happen ' +
+        'automatically.',
+      inputSchema: z.object({
+        content: z.string().min(1).describe('Markdown body of the reply.'),
+      }),
+      execute: async ({content}) => {
+        const commentRef = ctx.db
+          .collection(`Projects/${ctx.projectId}/Tasks/${ctx.taskId}/Comments`)
+          .doc();
+        await commentRef.set({
+          id: commentRef.id,
+          taskId: ctx.taskId,
+          parentId: null,
+          content,
+          body: null,
+          mentions: [],
+          createdAt: FieldValue.serverTimestamp(),
+          createdBy: ctx.createdBy,
+          history: [],
+          reactions: {},
+        });
+        return {ok: true, commentId: commentRef.id};
       },
     }),
   };

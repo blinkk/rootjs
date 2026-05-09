@@ -18,9 +18,15 @@ discovered automatically by the `virtual:root/agents` Vite plugin.
 1. Create `agents/<slug>.ts` exporting `defineAgent({...})` as default.
 2. The slug must match `/^[a-z0-9][a-z0-9-]*$/` and be unique.
 3. Pick the smallest `allowedTools` set that does the job:
-   - `read` — server-side CMS reads + CMS checks.
-   - `propose` — post mutating tool calls for human review.
-   - `subtask` — file follow-up tasks for other agents or humans.
+   - `read` — server-side CMS reads (`docs_list`, `doc_get`,
+     `schema_get`, `docs_search`, `doc_listVersions`,
+     `collections_list`), CMS checks (`checks_list`, `check_run`),
+     project introspection (`agents_list`, `tasks_list`, `users_list`),
+     and conversational replies (`task_reply`).
+   - `propose` — post mutating tool calls for human review
+     (`proposeChange`).
+   - `subtask` — file follow-up tasks for other agents or humans
+     (`createSubtask`).
 4. Restart `pnpm dev`; the agent appears in the AgentPicker on `/cms/ai`
    and in the task assignee dropdown.
 

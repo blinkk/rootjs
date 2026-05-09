@@ -271,6 +271,13 @@
   gap: 8px;
 }
 
+.TaskPage__metadata__assignee {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  align-items: stretch;
+}
+
 .TaskPage__metadata__date input {
   border: 1px solid #ced4da;
   border-radius: 4px;

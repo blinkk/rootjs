@@ -45,6 +45,12 @@ export interface AgentWorkerOptions {
    * Tests pass an explicit list to avoid spinning up the plugin.
    */
   checks?: CMSCheck[];
+  /**
+   * Vite dev server used to resolve `virtual:root/agents` in dev. Captured
+   * from the first request that triggers `ensureAgentWorker`. Omit in prod;
+   * the registry falls back to the standard dynamic import.
+   */
+  viteServer?: import('vite').ViteDevServer;
 }
 
 /**
@@ -59,6 +65,7 @@ export class AgentWorker {
   private readonly maxConcurrent: number;
   private readonly runner: typeof runAgent;
   private readonly checks: CMSCheck[];
+  private viteServer?: import('vite').ViteDevServer;
   private unsubscribe: (() => void) | null = null;
   private readonly inflight = new Map<string, Promise<void>>();
 
@@ -77,6 +84,18 @@ export class AgentWorker {
     this.maxConcurrent = Math.max(1, options.maxConcurrent ?? 3);
     this.runner = options.runner ?? runAgent;
     this.checks = options.checks ?? readChecksFromPlugin(rootConfig);
+    this.viteServer = options.viteServer;
+  }
+
+  /**
+   * Updates the captured Vite dev server. Used by the lazy startup path so a
+   * later request that has `req.viteServer` can supply it even though the
+   * first request didn't.
+   */
+  setViteServer(viteServer: import('vite').ViteDevServer | undefined) {
+    if (viteServer) {
+      this.viteServer = viteServer;
+    }
   }
 
   /**
@@ -149,7 +168,7 @@ export class AgentWorker {
 
   private async processTask(taskId: string, assignee: string): Promise<void> {
     const agentName = assignee.slice(AGENT_ASSIGNEE_PREFIX.length);
-    const agents = await loadAgents();
+    const agents = await loadAgents({viteServer: this.viteServer});
     const agent = agents.get(agentName);
     if (!agent) {
       await this.markTaskErrored(
@@ -235,6 +254,7 @@ export class AgentWorker {
       taskId,
       createdBy: assignee,
       checks: this.checks,
+      viteServer: this.viteServer,
     };
 
     await this.runner({ctx, model, prompt});
@@ -270,14 +290,23 @@ export class AgentWorker {
  * silent no-op on projects that haven't enabled AI agents.
  */
 let _sharedWorker: AgentWorker | null = null;
-export function ensureAgentWorker(rootConfig: RootConfig): AgentWorker | null {
+export function ensureAgentWorker(
+  rootConfig: RootConfig,
+  options: {viteServer?: import('vite').ViteDevServer} = {}
+): AgentWorker | null {
   if (_sharedWorker) {
+    // The first request that woke the worker may not have had a viteServer
+    // (it's only attached on dev requests). Refresh on every call so a later
+    // dev request can supply one.
+    _sharedWorker.setViteServer(options.viteServer);
     return _sharedWorker;
   }
   if (!getAiConfig(rootConfig)) {
     return null;
   }
-  _sharedWorker = new AgentWorker(rootConfig);
+  _sharedWorker = new AgentWorker(rootConfig, {
+    viteServer: options.viteServer,
+  });
   _sharedWorker.start();
   return _sharedWorker;
 }

@@ -40,7 +40,7 @@ export function registerAgentApi(server: Server) {
       return;
     }
     try {
-      const agents = await loadAgents();
+      const agents = await loadAgents({viteServer: req.viteServer});
       const list = Array.from(agents.values()).map((agent) => ({
         name: agent.name,
         icon: agent.icon,
@@ -301,7 +301,7 @@ export function registerAgentApi(server: Server) {
 
       let assignee: string | null = null;
       if (agentName) {
-        const agents = await loadAgents();
+        const agents = await loadAgents({viteServer: req.viteServer});
         if (!agents.has(String(agentName))) {
           res.status(400).json({success: false, error: 'UNKNOWN_AGENT'});
           return;

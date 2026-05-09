@@ -6,6 +6,7 @@
  */
 
 import type {Firestore} from 'firebase-admin/firestore';
+import type {ViteDevServer} from 'vite';
 import type {CMSCheck} from '../checks.js';
 import type {RootCMSClient} from '../client.js';
 import type {AgentDefinition} from './types.js';
@@ -40,4 +41,10 @@ export interface AgentRunContext {
    * because not every project registers checks.
    */
   checks?: CMSCheck[];
+  /**
+   * Vite dev server captured by the worker in dev. Tools that need to load
+   * project-defined modules at runtime (currently `agents_list`) use it to
+   * resolve `virtual:root/agents` through Vite SSR. Omitted in prod.
+   */
+  viteServer?: ViteDevServer;
 }

@@ -32,6 +32,7 @@ import {
   RichTextData,
   RichTextListItem,
 } from '../../../shared/richtext.js';
+import {AgentPicker} from '../../components/AgentPicker/AgentPicker.js';
 import {CommentReactions} from '../../components/CommentReactions/CommentReactions.js';
 import {Heading} from '../../components/Heading/Heading.js';
 import {Markdown} from '../../components/Markdown/Markdown.js';
@@ -46,6 +47,7 @@ import {errorMessage} from '../../utils/notifications.js';
 import {
   addTaskComment,
   addTaskAttachment,
+  assignTaskToAgent,
   cancelTaskAgentRun,
   deleteTaskComment,
   editTaskComment,
@@ -534,14 +536,18 @@ function TaskAttachments(props: {task: Task}) {
 /** Renders editable task metadata and writes changes to history. */
 function TaskMetadataPanel(props: {task: Task}) {
   const {task} = props;
-  const [assignee, setAssignee] = useState(task.assignee || '');
+  const isAgentAssignee = Boolean(getAgentAssigneeName(task.assignee));
+  const [assignee, setAssignee] = useState(
+    isAgentAssignee ? '' : task.assignee || ''
+  );
   const [targetLaunchDate, setTargetLaunchDate] = useState(
     formatDateInputValue(task.targetLaunchDate)
   );
   const [savingField, setSavingField] = useState<TaskMetadataField | ''>('');
 
   useEffect(() => {
-    setAssignee(task.assignee || '');
+    const isAgent = Boolean(getAgentAssigneeName(task.assignee));
+    setAssignee(isAgent ? '' : task.assignee || '');
     setTargetLaunchDate(formatDateInputValue(task.targetLaunchDate));
   }, [task.assignee, task.targetLaunchDate]);
 
@@ -606,8 +612,8 @@ function TaskMetadataPanel(props: {task: Task}) {
             size="xs"
             type="email"
             placeholder="teammate@example.com"
-            value={assignee}
-            disabled={savingField === 'assignee'}
+            value={isAgentAssignee ? '' : assignee}
+            disabled={savingField === 'assignee' || isAgentAssignee}
             onChange={(e: ChangeEvent<HTMLInputElement>) =>
               setAssignee(e.currentTarget.value)
             }
@@ -615,6 +621,23 @@ function TaskMetadataPanel(props: {task: Task}) {
             onKeyDown={(e: KeyboardEvent) => {
               if (e.key === 'Enter') {
                 (e.currentTarget as HTMLInputElement).blur();
+              }
+            }}
+          />
+          <AgentPicker
+            placeholder="or pick agent…"
+            selectedAgent={getAgentAssigneeName(task.assignee)}
+            noAssigneeLabel="Clear assignee"
+            onSelect={(agent) => {
+              if (agent) {
+                saveMetadata('assignee', () =>
+                  assignTaskToAgent(task.id, agent.name)
+                );
+              } else {
+                setAssignee('');
+                saveMetadata('assignee', () =>
+                  updateTaskAssignee(task.id, null)
+                );
               }
             }}
           />

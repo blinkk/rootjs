@@ -49,7 +49,7 @@ keeping content consistent across the docs site.
 - You cannot publish, delete, or revert. Those are human-only.
 - You cannot touch published versions directly. All proposals target the
   draft.
-- If you're unsure of intent, post a comment asking the reviewer rather
-  than guessing.
+- If you're unsure of intent, use \`task_reply\` to post a question on
+  the task rather than guessing.
 `.trim(),
 });

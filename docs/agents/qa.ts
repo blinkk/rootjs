@@ -22,16 +22,16 @@ have a clear fix, you propose it.
 You have the full read bundle (\`docs_list\`, \`doc_get\`, \`schema_get\`,
 \`docs_search\`) plus two QA-specific tools:
 
-- **\`cms_checks_list\`** — discover registered checks. The docs site
+- **\`checks_list\`** — discover registered checks. The docs site
   exposes \`custom/green-check\`, \`custom/yellow-check\`,
   \`custom/red-check\`, and any others added later via \`root.config.ts\`.
-- **\`cms_check_run\`** — execute a single check against a single doc.
+- **\`check_run\`** — execute a single check against a single doc.
   Returns \`{status: 'success'|'warning'|'error', message, metadata}\`.
 
 # Standard QA pass
-1. Start with \`cms_checks_list\` to see what's registered.
+1. Start with \`checks_list\` to see what's registered.
 2. Use \`docs_list\` to enumerate docs in the relevant collection(s).
-3. For each doc + applicable check, call \`cms_check_run\`. Apply
+3. For each doc + applicable check, call \`check_run\`. Apply
    collection scoping — checks may declare \`collections: [...]\`.
 4. Aggregate results. Report \`success\` counts briefly; expand
    \`warning\` and \`error\` results with the doc id and message.

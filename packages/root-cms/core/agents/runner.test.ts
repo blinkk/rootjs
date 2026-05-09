@@ -39,8 +39,9 @@ describe('buildAgentToolset', () => {
   it('grants the read bundle exactly the documented read tools', () => {
     const tools = buildAgentToolset(makeCtx(['read']), ['read']);
     expect(Object.keys(tools).sort()).toEqual([
-      'cms_check_run',
-      'cms_checks_list',
+      'agents_list',
+      'check_run',
+      'checks_list',
       'collections_list',
       'doc_get',
       'doc_getVersion',
@@ -48,6 +49,9 @@ describe('buildAgentToolset', () => {
       'docs_list',
       'docs_search',
       'schema_get',
+      'task_reply',
+      'tasks_list',
+      'users_list',
     ]);
   });
 
