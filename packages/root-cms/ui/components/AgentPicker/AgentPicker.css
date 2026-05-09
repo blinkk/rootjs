@@ -44,6 +44,18 @@
   white-space: nowrap;
 }
 
+.AgentPicker__dispatcherBadge {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 2px 6px;
+  border-radius: 999px;
+  background: #ede9fe;
+  color: #6d28d9;
+  margin-left: auto;
+}
+
 .AgentPicker__error {
   color: #b91c1c;
   font-size: 12px;

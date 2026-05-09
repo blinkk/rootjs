@@ -1,0 +1,108 @@
+.SubtasksPanel {
+  margin-top: 12px;
+  padding: 14px;
+  background: #ffffff;
+  border: 1px solid #e4e7ec;
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.SubtasksPanel__header {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #6b7280;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.SubtasksPanel__count {
+  background: #f3f4f6;
+  color: #4b5563;
+  border-radius: 999px;
+  padding: 1px 8px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.SubtasksPanel__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.SubtasksPanel__item {
+  display: block;
+}
+
+.SubtasksPanel__link {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border-radius: 6px;
+  text-decoration: none;
+  color: #1f2937;
+  font-size: 13px;
+  transition: background 80ms ease-out;
+}
+
+.SubtasksPanel__link:hover {
+  background: #f6f8fa;
+}
+
+.SubtasksPanel__noAgent {
+  width: 20px;
+  text-align: center;
+  color: #9ca3af;
+}
+
+.SubtasksPanel__title {
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.SubtasksPanel__status {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: #f3f4f6;
+  color: #4b5563;
+}
+
+.SubtasksPanel__status--running {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+
+.SubtasksPanel__status--completed {
+  background: #d1fae5;
+  color: #047857;
+}
+
+.SubtasksPanel__status--errored {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+.SubtasksPanel__status--cancelled {
+  background: #fed7aa;
+  color: #9a3412;
+}
+
+.SubtasksPanel__status--idle {
+  background: #e0e7ff;
+  color: #3730a3;
+}

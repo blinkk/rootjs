@@ -41,6 +41,9 @@ export const CMS_TOOL_NAMES = [
   'doc_translateField',
   'schema_get',
   'chats_convertToTask',
+  'tasks_list',
+  'tasks_get',
+  'tasks_update',
 ] as const;
 export type CmsToolName = (typeof CMS_TOOL_NAMES)[number];
 
@@ -58,6 +61,8 @@ export const READ_ONLY_CMS_TOOL_NAMES: readonly CmsToolName[] = [
   'doc_getVersion',
   'doc_listVersions',
   'schema_get',
+  'tasks_list',
+  'tasks_get',
 ] as const;
 
 /**
@@ -304,6 +309,53 @@ export function createCmsTools(): ToolSet {
         collectionId: z
           .string()
           .describe('Collection id, e.g. "Pages" or "BlogPosts".'),
+      }),
+    }),
+
+    tasks_list: tool({
+      description:
+        'List tasks in this project. Filter by `assignee` (email or ' +
+        '`agent:<name>`), `status` (e.g. "new", "in-progress", "closed"), ' +
+        'and `limit` (default 25, max 100). Returns id, title, status, ' +
+        'assignee, priority, parentTaskId, sourceChatId, and the agent ' +
+        'run status when assigned to an agent.',
+      inputSchema: z.object({
+        assignee: z.string().optional(),
+        status: z.string().optional(),
+        limit: z.number().int().min(1).max(100).default(25),
+      }),
+    }),
+
+    tasks_get: tool({
+      description:
+        'Read a single task by id. Returns full task fields plus the ' +
+        'comment timeline and any agent run state.',
+      inputSchema: z.object({
+        taskId: z.string().describe('Numeric task id (e.g. "42").'),
+      }),
+    }),
+
+    tasks_update: tool({
+      description:
+        'Update mutable task fields. All updates run under the current ' +
+        "user's Firebase auth and are written to the task's event " +
+        'history. Always confirm with the user before calling. Use this ' +
+        'to retitle a task, change its assignee (use `agent:<name>` to ' +
+        'route to an agent), shift status, or update priority.',
+      inputSchema: z.object({
+        taskId: z.string(),
+        title: z.string().optional(),
+        description: z.string().optional(),
+        assignee: z
+          .string()
+          .nullable()
+          .optional()
+          .describe(
+            'Email of a human assignee, `agent:<name>` to route to an ' +
+              'agent, or null to unassign.'
+          ),
+        status: z.string().optional(),
+        priority: z.enum(['high', 'medium', 'normal']).optional(),
       }),
     }),
 

@@ -459,6 +459,33 @@ export interface AgentRunStep {
   createdBy?: string;
 }
 
+/**
+ * Subscribes to subtasks of `parentTaskId` so the parent task UI can show a
+ * live list of work the dispatcher delegated. Ordered oldest-first so the
+ * panel reads top-to-bottom.
+ */
+export function subscribeSubtasks(
+  parentTaskId: string,
+  onTasks: (tasks: Task[]) => void,
+  onError?: (err: Error) => void
+): TaskUnsubscribe {
+  return onSnapshot(
+    query(
+      tasksCollectionRef(),
+      // composed client-side via filter to dodge composite-index requirements
+      orderBy('createdAt', 'asc')
+    ),
+    (snapshot) => {
+      onTasks(
+        snapshot.docs
+          .map((d) => ({...(d.data() as object), id: d.id}) as Task)
+          .filter((t) => t.parentTaskId === parentTaskId)
+      );
+    },
+    onError
+  );
+}
+
 function taskAgentStepsCollectionRef(taskId: string) {
   const db = window.firebase.db;
   const projectId = window.__ROOT_CTX.rootConfig.projectId;

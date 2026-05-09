@@ -36,7 +36,7 @@ import {marked} from 'marked';
 import {useCallback, useEffect, useMemo, useRef, useState} from 'preact/hooks';
 import {useLocation} from 'preact-iso';
 import {AgentPicker} from '../../components/AgentPicker/AgentPicker.js';
-import {Markdown} from '../../components/Markdown/Markdown.js';
+import {MarkdownWithMentions} from '../../components/Markdown/MarkdownWithMentions.js';
 import {MentionDropdown} from '../../components/MentionDropdown/MentionDropdown.js';
 import {useAgents} from '../../hooks/useAgents.js';
 import {
@@ -387,6 +387,8 @@ function ChatHeader(props: {
   onConvertedToTask: (taskId: string) => void;
 }) {
   const [converting, setConverting] = useState(false);
+  const {agents} = useAgents();
+  const dispatcherAgent = agents.find((a) => a.dispatcher);
 
   async function convertToTask(agentName: string | null) {
     if (!props.activeChatId) {
@@ -468,7 +470,7 @@ function ChatHeader(props: {
             loading={converting}
             disabled={!props.activeChatId}
             leftIcon={<IconChecklist size={14} strokeWidth="1.8" />}
-            onClick={() => convertToTask(null)}
+            onClick={() => convertToTask(dispatcherAgent?.name || null)}
           >
             Convert to task
           </Button>
@@ -697,7 +699,7 @@ function PartView(props: {part: any}) {
     }
     return (
       <div className="AIPage__textPart">
-        <Markdown code={part.text} />
+        <MarkdownWithMentions code={part.text} />
       </div>
     );
   }
@@ -755,7 +757,7 @@ function ReasoningPartView(props: {text: string}) {
       </button>
       {open && (
         <div className="AIPage__reasoning__body">
-          <Markdown code={props.text} />
+          <MarkdownWithMentions code={props.text} />
         </div>
       )}
     </div>

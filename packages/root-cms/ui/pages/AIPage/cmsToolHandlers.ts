@@ -150,6 +150,173 @@ async function agentsList() {
   return {agents: data.agents || []};
 }
 
+async function tasksList(input: {
+  assignee?: string;
+  status?: string;
+  limit?: number;
+}) {
+  const {firebase, rootConfig} = getCtx();
+  const max = Math.min(Math.max(input.limit ?? 25, 1), 100);
+  const colRef = fbCollection(
+    firebase.db,
+    'Projects',
+    rootConfig.projectId,
+    'Tasks'
+  );
+  // Compose the query progressively to dodge composite-index requirements
+  // when the caller doesn't filter.
+  const constraints: any[] = [];
+  if (input.assignee) {
+    constraints.push(
+      (await import('firebase/firestore')).where(
+        'assignee',
+        '==',
+        input.assignee
+      )
+    );
+  }
+  if (input.status) {
+    constraints.push(
+      (await import('firebase/firestore')).where('status', '==', input.status)
+    );
+  }
+  constraints.push(fbLimit(max));
+  const snap = await getDocs(query(colRef, ...constraints));
+  return {
+    tasks: snap.docs.map((d) => {
+      const data = d.data() as any;
+      return {
+        id: d.id,
+        title: data.title,
+        status: data.status,
+        assignee: data.assignee,
+        priority: data.priority,
+        parentTaskId: data.parentTaskId || null,
+        sourceChatId: data.sourceChatId || null,
+        agentRunStatus: data.agentRun?.status || null,
+      };
+    }),
+  };
+}
+
+async function tasksGet(input: {taskId: string}) {
+  const {firebase, rootConfig} = getCtx();
+  const ref = doc(
+    firebase.db,
+    'Projects',
+    rootConfig.projectId,
+    'Tasks',
+    input.taskId
+  );
+  const snap = await fbGetDoc(ref);
+  if (!snap.exists()) {
+    return {found: false};
+  }
+  const data = snap.data() as any;
+  // Include the comment timeline so the chat assistant can summarize without
+  // a second tool call.
+  const commentsCol = fbCollection(
+    firebase.db,
+    'Projects',
+    rootConfig.projectId,
+    'Tasks',
+    input.taskId,
+    'Comments'
+  );
+  const commentsSnap = await getDocs(
+    query(commentsCol, orderBy('createdAt', 'asc'), fbLimit(50))
+  );
+  return {
+    found: true,
+    task: {
+      id: snap.id,
+      title: data.title,
+      description: data.description,
+      status: data.status,
+      assignee: data.assignee,
+      priority: data.priority,
+      parentTaskId: data.parentTaskId || null,
+      sourceChatId: data.sourceChatId || null,
+      agentRun: data.agentRun || null,
+      createdAt: unmarshalData(data.createdAt),
+      createdBy: data.createdBy,
+    },
+    comments: commentsSnap.docs.map((d) => {
+      const c = d.data() as any;
+      return {
+        id: d.id,
+        content: c.content,
+        createdBy: c.createdBy,
+        createdAt: unmarshalData(c.createdAt),
+        proposalStatus: c.proposal?.status || null,
+        proposalTool: c.proposal?.tool || null,
+      };
+    }),
+  };
+}
+
+async function tasksUpdate(input: {
+  taskId: string;
+  title?: string;
+  description?: string;
+  assignee?: string | null;
+  status?: string;
+  priority?: 'high' | 'medium' | 'normal';
+}) {
+  const {firebase, rootConfig} = getCtx();
+  const ref = doc(
+    firebase.db,
+    'Projects',
+    rootConfig.projectId,
+    'Tasks',
+    input.taskId
+  );
+  const snap = await fbGetDoc(ref);
+  if (!snap.exists()) {
+    throw new Error(`task not found: ${input.taskId}`);
+  }
+  // Lazily import the task helpers — they encapsulate the audit-history
+  // writes we want for assignee/title/status/priority changes.
+  const helpers = await import('../../utils/tasks.js');
+  const tasks: string[] = [];
+  if (input.title !== undefined) {
+    await helpers.updateTaskTitle(input.taskId, input.title);
+    tasks.push('title');
+  }
+  if (input.description !== undefined) {
+    await helpers.updateTaskDescription(input.taskId, input.description);
+    tasks.push('description');
+  }
+  if (input.assignee !== undefined) {
+    if (
+      input.assignee &&
+      input.assignee.startsWith(helpers.AGENT_ASSIGNEE_PREFIX)
+    ) {
+      const agentName = input.assignee.slice(
+        helpers.AGENT_ASSIGNEE_PREFIX.length
+      );
+      await helpers.assignTaskToAgent(input.taskId, agentName);
+    } else {
+      await helpers.updateTaskAssignee(input.taskId, input.assignee);
+    }
+    tasks.push('assignee');
+  }
+  if (input.status !== undefined) {
+    await helpers.updateTaskStatus(input.taskId, input.status);
+    tasks.push('status');
+  }
+  if (input.priority !== undefined) {
+    await helpers.updateTaskPriority(input.taskId, input.priority);
+    tasks.push('priority');
+  }
+  return {
+    ok: true,
+    taskId: input.taskId,
+    url: `/cms/tasks/${input.taskId}`,
+    updated: tasks,
+  };
+}
+
 async function chatsConvertToTask(input: {agentName?: string; title?: string}) {
   // The current chat id is reflected in the URL: `/cms/ai/chat/<id>`. The
   // chat composer rewrites it via `history.replaceState` once the first
@@ -575,6 +742,9 @@ const HANDLERS: Record<string, (input: any) => Promise<unknown>> = {
   agents_list: agentsList,
   chats_convertToTask: chatsConvertToTask,
   collections_list: collectionsList,
+  tasks_list: tasksList,
+  tasks_get: tasksGet,
+  tasks_update: tasksUpdate,
   docs_list: docsList,
   docs_search: docsSearch,
   doc_get: docGet,

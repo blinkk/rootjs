@@ -240,6 +240,7 @@ export function createServerReadTools(ctx: AgentRunContext): ToolSet {
             iconUrl: agent.iconUrl || null,
             description: agent.description,
             allowedTools: agent.allowedTools,
+            dispatcher: Boolean(agent.dispatcher),
           })),
         };
       },
@@ -347,40 +348,55 @@ export function createServerReadTools(ctx: AgentRunContext): ToolSet {
         });
 
         let reassignedTo: string | null = null;
+        let deferredFor: string[] | null = null;
         if (reassign) {
-          // Resolve the human to hand off to: prefer agentRun.requestedBy
-          // (the user who triggered the run), fall back to task.createdBy
-          // when that's an email rather than another agent.
-          const taskRef = ctx.db.doc(
-            `Projects/${ctx.projectId}/Tasks/${ctx.taskId}`
-          );
-          const taskSnap = await taskRef.get();
-          const data = (taskSnap.data() || {}) as Record<string, unknown>;
-          const agentRun =
-            (data.agentRun as Record<string, unknown> | undefined) || {};
-          const requestedBy = agentRun.requestedBy as string | undefined;
-          const createdBy = data.createdBy as string | undefined;
-          const candidate =
-            requestedBy && !requestedBy.startsWith('agent:')
-              ? requestedBy
-              : createdBy && !createdBy.startsWith('agent:')
-              ? createdBy
-              : null;
-          if (candidate) {
-            await taskRef.update({
-              assignee: candidate,
-              'agentRun.status': 'idle',
-              'agentRun.leasedBy': null,
-              'agentRun.leasedAt': null,
-              'agentRun.updatedAt': FieldValue.serverTimestamp(),
-              updatedAt: FieldValue.serverTimestamp(),
-              updatedBy: ctx.createdBy,
-            });
-            reassignedTo = candidate;
+          // If the agent has spawned subtasks that are still in flight,
+          // skip the reassign — the worker re-wakes the parent agent
+          // when the last subtask finishes (`maybeWakeParentTask`). Don't
+          // bounce a half-finished delegation back to the human.
+          const liveSubtasks = await findLiveSubtaskIds(ctx);
+          if (liveSubtasks.length > 0) {
+            deferredFor = liveSubtasks;
+          } else {
+            // Resolve the human to hand off to: prefer agentRun.requestedBy
+            // (the user who triggered the run), fall back to task.createdBy
+            // when that's an email rather than another agent.
+            const taskRef = ctx.db.doc(
+              `Projects/${ctx.projectId}/Tasks/${ctx.taskId}`
+            );
+            const taskSnap = await taskRef.get();
+            const data = (taskSnap.data() || {}) as Record<string, unknown>;
+            const agentRun =
+              (data.agentRun as Record<string, unknown> | undefined) || {};
+            const requestedBy = agentRun.requestedBy as string | undefined;
+            const createdBy = data.createdBy as string | undefined;
+            const candidate =
+              requestedBy && !requestedBy.startsWith('agent:')
+                ? requestedBy
+                : createdBy && !createdBy.startsWith('agent:')
+                ? createdBy
+                : null;
+            if (candidate) {
+              await taskRef.update({
+                assignee: candidate,
+                'agentRun.status': 'idle',
+                'agentRun.leasedBy': null,
+                'agentRun.leasedAt': null,
+                'agentRun.updatedAt': FieldValue.serverTimestamp(),
+                updatedAt: FieldValue.serverTimestamp(),
+                updatedBy: ctx.createdBy,
+              });
+              reassignedTo = candidate;
+            }
           }
         }
 
-        return {ok: true, commentId: commentRef.id, reassignedTo};
+        return {
+          ok: true,
+          commentId: commentRef.id,
+          reassignedTo,
+          deferredFor,
+        };
       },
     }),
   };
@@ -410,4 +426,27 @@ function versionDocPath(
     return `Projects/${projectId}/Collections/${collection}/Published/${slug}`;
   }
   return `Projects/${projectId}/Collections/${collection}/Drafts/${slug}/Versions/${versionId}`;
+}
+
+/**
+ * Returns ids of subtasks of the current task that are not yet terminal.
+ * Used by `task_reply` to decide whether to defer the reassign-to-human
+ * handoff (waiting for the spawn-and-wait pattern to resolve naturally).
+ */
+async function findLiveSubtaskIds(ctx: AgentRunContext): Promise<string[]> {
+  const TERMINAL = new Set(['completed', 'errored', 'cancelled']);
+  const snap = await ctx.db
+    .collection(`Projects/${ctx.projectId}/Tasks`)
+    .where('parentTaskId', '==', ctx.taskId)
+    .get();
+  const live: string[] = [];
+  snap.docs.forEach((d) => {
+    const data = d.data();
+    const status = (data.agentRun as {status?: string} | undefined)?.status;
+    // Tasks without agentRun are human-owned; treat as pending.
+    if (!status || !TERMINAL.has(status)) {
+      live.push(d.id);
+    }
+  });
+  return live;
 }

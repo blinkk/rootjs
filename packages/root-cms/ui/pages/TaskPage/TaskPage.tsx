@@ -36,8 +36,9 @@ import {AgentPicker} from '../../components/AgentPicker/AgentPicker.js';
 import {AgentRunPanel} from '../../components/AgentRunPanel/AgentRunPanel.js';
 import {CommentReactions} from '../../components/CommentReactions/CommentReactions.js';
 import {Heading} from '../../components/Heading/Heading.js';
-import {Markdown} from '../../components/Markdown/Markdown.js';
+import {MarkdownWithMentions} from '../../components/Markdown/MarkdownWithMentions.js';
 import {ProposalComment} from '../../components/ProposalComment/ProposalComment.js';
+import {SubtasksPanel} from '../../components/SubtasksPanel/SubtasksPanel.js';
 import {Surface} from '../../components/Surface/Surface.js';
 import {TaskCommentEditor} from '../../components/TaskCommentEditor/TaskCommentEditor.js';
 import {usePageTitle} from '../../hooks/usePageTitle.js';
@@ -99,6 +100,28 @@ export function TaskPage(props: {id: string}) {
   const [error, setError] = useState('');
 
   usePageTitle(task ? `Task: ${task.title}` : `Task: ${taskId}`);
+
+  // Scroll to a permalinked comment once the task data has loaded — both on
+  // initial mount (when the URL already has a `#comment-<id>` fragment) and
+  // when the user navigates to a permalink while staying on the page.
+  useEffect(() => {
+    function scrollToHash() {
+      const hash = window.location.hash;
+      if (!hash || !hash.startsWith('#comment-')) {
+        return;
+      }
+      // Defer one tick so the DOM has the comment node by the time we look.
+      requestAnimationFrame(() => {
+        const el = document.getElementById(hash.slice(1));
+        if (el) {
+          el.scrollIntoView({behavior: 'smooth', block: 'center'});
+        }
+      });
+    }
+    scrollToHash();
+    window.addEventListener('hashchange', scrollToHash);
+    return () => window.removeEventListener('hashchange', scrollToHash);
+  }, [task?.id]);
 
   useEffect(() => {
     setLoading(true);
@@ -174,6 +197,7 @@ export function TaskPage(props: {id: string}) {
               {getAgentAssigneeName(task.assignee) && (
                 <AgentRunPanel task={task} />
               )}
+              <SubtasksPanel parentTaskId={task.id} />
             </aside>
           </div>
         )}
@@ -866,11 +890,21 @@ function TaskCommentCard(props: {
         )}
       </div>
       <div className="TaskPage__timelineItem__content">
-        <Surface className="TaskPage__comment">
+        <Surface
+          id={`comment-${comment.id}`}
+          className={joinClassNames(
+            'TaskPage__comment',
+            window.location.hash === `#comment-${comment.id}` &&
+              'TaskPage__comment--highlighted'
+          )}
+        >
           <div className="TaskPage__comment__header">
             <div>
               <b>{formatTaskUser(comment.createdBy || 'unknown')}</b>{' '}
-              <span>{formatTaskDateTime(comment.createdAt)}</span>
+              <CommentPermalink
+                commentId={comment.id}
+                createdAt={comment.createdAt}
+              />
               {comment.updatedAt && !comment.isDeleted && (
                 <span> edited {formatTaskDateTime(comment.updatedAt)}</span>
               )}
@@ -949,7 +983,7 @@ function TaskCommentCard(props: {
                   data={comment.body}
                 />
               ) : (
-                <Markdown
+                <MarkdownWithMentions
                   className="TaskPage__comment__markdown"
                   code={comment.content}
                 />
@@ -1238,6 +1272,52 @@ function formatTaskDate(ts?: Timestamp | null) {
     day: 'numeric',
     year: 'numeric',
   });
+}
+
+/** Renders a comment's date as a permalink. Clicking copies the full URL
+ * (including the `#comment-<id>` fragment) so users can share a deep link
+ * to a specific reply. */
+function CommentPermalink(props: {
+  commentId: string;
+  createdAt?: Timestamp | null;
+}) {
+  const href = `#comment-${props.commentId}`;
+  function onClick(e: MouseEvent) {
+    // Preserve default-link navigation if user is doing modifier-click /
+    // middle-click; otherwise copy the absolute URL.
+    if (e.metaKey || e.ctrlKey || e.shiftKey || (e as any).button !== 0) {
+      return;
+    }
+    e.preventDefault();
+    const url = `${window.location.origin}${window.location.pathname}${href}`;
+    if (navigator.clipboard?.writeText) {
+      navigator.clipboard
+        .writeText(url)
+        .then(() =>
+          showNotification({
+            title: 'Link copied',
+            message: 'Comment permalink copied to clipboard.',
+            color: 'green',
+            autoClose: 2000,
+          })
+        )
+        .catch(() => {
+          window.location.hash = href;
+        });
+    } else {
+      window.location.hash = href;
+    }
+  }
+  return (
+    <a
+      className="TaskPage__comment__permalink"
+      href={href}
+      title="Copy permalink to this comment"
+      onClick={onClick}
+    >
+      {formatTaskDateTime(props.createdAt)}
+    </a>
+  );
 }
 
 function formatTaskDateTime(ts?: Timestamp | null) {

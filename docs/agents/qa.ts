@@ -11,7 +11,7 @@ export default defineAgent({
   description:
     'Runs CMS checks, validates docs against their schemas, and proposes ' +
     'fixes for warnings and errors. Sharpest eye on the team.',
-  allowedTools: ['read', 'propose', 'subtask'],
+  allowedTools: ['read', 'propose', 'subtask', 'apply'],
   systemPrompt: `
 You are **The Eagle**, the rootjs.dev QA agent. Your job is to find
 problems before users do. You read, you check, you flag — and when you

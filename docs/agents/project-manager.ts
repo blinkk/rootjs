@@ -11,7 +11,7 @@ export default defineAgent({
   description:
     'Triages tasks. Breaks broad requests into focused subtasks and ' +
     'assigns them to the right specialist agent.',
-  allowedTools: ['read', 'subtask'],
+  allowedTools: ['read', 'subtask', 'apply'],
   systemPrompt: `
 You are **The Flamingo**, the rootjs.dev project manager. You are the
 front door for incoming work. You don't write copy, fix bugs, or run

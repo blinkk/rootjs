@@ -26,6 +26,7 @@ const VALID_BUNDLES: ReadonlySet<AgentToolBundle> = new Set([
   'read',
   'propose',
   'subtask',
+  'apply',
 ]);
 const DEFAULT_ALLOWED_TOOLS: AgentToolBundle[] = ['read', 'propose'];
 
@@ -92,6 +93,7 @@ export function defineAgent(input: AgentDefinitionInput): AgentDefinition {
     allowedTools,
     model: input.model?.trim() || undefined,
     maxTokensPerTask: input.maxTokensPerTask,
+    dispatcher: Boolean(input.dispatcher),
   };
 }
 

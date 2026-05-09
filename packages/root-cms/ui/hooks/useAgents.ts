@@ -12,7 +12,9 @@ export interface AgentSummary {
   /** Avatar image URL; null when not configured (UI falls back to a letter avatar). */
   iconUrl?: string | null;
   description: string;
-  allowedTools: ('read' | 'propose' | 'subtask')[];
+  allowedTools: ('read' | 'propose' | 'subtask' | 'apply')[];
+  /** True when the agent is a user-facing dispatcher (front-of-house). */
+  dispatcher?: boolean;
 }
 
 interface UseAgentsResult {
@@ -44,7 +46,14 @@ export function useAgents(): UseAgentsResult {
           setLoading(false);
           return;
         }
-        setAgents(data.agents || []);
+        // Sort dispatchers first so pickers can render them at the top
+        // without each consumer re-sorting.
+        const sorted = [...(data.agents || [])].sort((a, b) => {
+          if (a.dispatcher && !b.dispatcher) return -1;
+          if (!a.dispatcher && b.dispatcher) return 1;
+          return a.name.localeCompare(b.name);
+        });
+        setAgents(sorted);
         setLoading(false);
       })
       .catch((err) => {

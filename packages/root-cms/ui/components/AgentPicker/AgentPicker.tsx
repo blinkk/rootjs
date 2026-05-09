@@ -75,19 +75,34 @@ export function AgentPicker(props: AgentPickerProps) {
           {props.noAssigneeLabel}
         </Menu.Item>
       )}
-      {agents.map((agent) => (
-        <Menu.Item key={agent.name} onClick={() => props.onSelect(agent)}>
-          <div className="AgentPicker__option">
-            <AgentAvatar
-              name={agent.name}
-              iconUrl={agent.iconUrl}
-              size={20}
-              className="AgentPicker__optionIcon"
-            />
-            <span className="AgentPicker__optionName">{agent.name}</span>
-          </div>
-        </Menu.Item>
-      ))}
+      {agents.map((agent, idx) => {
+        // The list comes pre-sorted with dispatchers first (see useAgents).
+        // Inject a divider/label before the first non-dispatcher when both
+        // groups exist so the hierarchy is visible.
+        const showSpecialistHeader =
+          !agent.dispatcher && idx > 0 && agents[idx - 1]?.dispatcher === true;
+        return (
+          <>
+            {showSpecialistHeader && <Menu.Label>Specialists</Menu.Label>}
+            <Menu.Item key={agent.name} onClick={() => props.onSelect(agent)}>
+              <div className="AgentPicker__option">
+                <AgentAvatar
+                  name={agent.name}
+                  iconUrl={agent.iconUrl}
+                  size={20}
+                  className="AgentPicker__optionIcon"
+                />
+                <span className="AgentPicker__optionName">{agent.name}</span>
+                {agent.dispatcher && (
+                  <span className="AgentPicker__dispatcherBadge">
+                    dispatcher
+                  </span>
+                )}
+              </div>
+            </Menu.Item>
+          </>
+        );
+      })}
     </Menu>
   );
 }

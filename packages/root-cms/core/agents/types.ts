@@ -9,7 +9,7 @@
  * purpose so site authors don't accidentally hand agents dangerous tools and
  * so the underlying tool surface can grow without breaking existing agents.
  */
-export type AgentToolBundle = 'read' | 'propose' | 'subtask';
+export type AgentToolBundle = 'read' | 'propose' | 'subtask' | 'apply';
 
 /**
  * Resolved agent definition shape. Returned by `defineAgent()` and registered
@@ -50,6 +50,20 @@ export interface AgentDefinition {
    * project default if unset.
    */
   maxTokensPerTask?: number;
+  /**
+   * When true, this agent is a "dispatcher" — the user-facing front-of-house
+   * that delegates to specialist agents instead of doing the work itself.
+   * Sites typically have one (e.g. `@blinkk`) but can declare multiple.
+   *
+   * Dispatcher agents:
+   * - Are surfaced first in the AgentPicker (above non-dispatchers).
+   * - Are the default selection in the chat → task conversion flow when no
+   *   other agent is named.
+   * - Should be granted `read + subtask` (and optionally `apply`) so they
+   *   can route work and approve peer proposals without doing CMS edits
+   *   themselves.
+   */
+  dispatcher?: boolean;
 }
 
 /**
@@ -65,4 +79,5 @@ export interface AgentDefinitionInput {
   allowedTools?: AgentToolBundle[];
   model?: string;
   maxTokensPerTask?: number;
+  dispatcher?: boolean;
 }

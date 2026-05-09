@@ -12,13 +12,21 @@
 
 import {randomUUID} from 'node:crypto';
 import type {RootConfig} from '@blinkk/root';
+import {generateText} from 'ai';
 import {FieldValue, Timestamp} from 'firebase-admin/firestore';
-import {findModel, getAiConfig, type AiConfig} from '../ai-chat.js';
+import {
+  findModel,
+  getAiConfig,
+  resolveLanguageModel,
+  type AiConfig,
+} from '../ai-chat.js';
 import type {CMSCheck} from '../checks.js';
 import {RootCMSClient, getCmsPlugin} from '../client.js';
+import {getLinkingConventions} from './conventions.js';
 import {loadAgents} from './registry.js';
 import {AGENT_ASSIGNEE_PREFIX, type AgentRunContext} from './run-context.js';
-import {runAgent} from './runner.js';
+import {buildAgentToolset, DEFAULT_MAX_STEPS, runAgent} from './runner.js';
+import {addAgentReaction} from './task-helpers.js';
 import type {AgentDefinition} from './types.js';
 
 /** How long a worker can hold a task lease before another worker may steal it. */
@@ -67,7 +75,11 @@ export class AgentWorker {
   private readonly checks: CMSCheck[];
   private viteServer?: import('vite').ViteDevServer;
   private unsubscribe: (() => void) | null = null;
+  private unsubscribeComments: (() => void) | null = null;
   private readonly inflight = new Map<string, Promise<void>>();
+  private readonly commentSeen = new Set<string>();
+  private readonly mentionsInflight = new Set<string>();
+  private readonly startedAt = Timestamp.now();
 
   constructor(rootConfig: RootConfig, options: AgentWorkerOptions = {}) {
     this.instanceId = options.instanceId || randomUUID();
@@ -126,6 +138,39 @@ export class AgentWorker {
         console.error(`[AgentWorker:${this.instanceId}] snapshot error:`, err);
       }
     );
+
+    // Second listener: react to new task comments. When a comment mentions
+    // an agent, the worker either reassigns (mention is first token of the
+    // comment) or runs the agent ephemerally on the task.
+    const commentsQuery = this.cmsClient.db
+      .collectionGroup('Comments')
+      .where('createdAt', '>=', this.startedAt);
+    this.unsubscribeComments = commentsQuery.onSnapshot(
+      (snapshot) => {
+        for (const change of snapshot.docChanges()) {
+          if (change.type !== 'added') {
+            continue;
+          }
+          const id = change.doc.ref.path;
+          if (this.commentSeen.has(id)) {
+            continue;
+          }
+          this.commentSeen.add(id);
+          this.maybeProcessComment(change.doc).catch((err) => {
+            console.error(
+              `[AgentWorker:${this.instanceId}] comment dispatch failed:`,
+              err
+            );
+          });
+        }
+      },
+      (err) => {
+        console.error(
+          `[AgentWorker:${this.instanceId}] comments listener error:`,
+          err
+        );
+      }
+    );
   }
 
   /** Tears down the listener. In-flight runs continue to completion. */
@@ -133,6 +178,10 @@ export class AgentWorker {
     if (this.unsubscribe) {
       this.unsubscribe();
       this.unsubscribe = null;
+    }
+    if (this.unsubscribeComments) {
+      this.unsubscribeComments();
+      this.unsubscribeComments = null;
     }
   }
 
@@ -271,6 +320,270 @@ export class AgentWorker {
     };
 
     await this.runner({ctx, model, prompt});
+
+    // Autonomous chaining: if this task was a subtask, see if its parent is
+    // ready to resume (all siblings terminal). The runner already wrote a
+    // terminal status for this task; we read fresh data so we don't miss
+    // sibling completions that landed mid-run.
+    const parentId = (taskData.parentTaskId as string | undefined) || null;
+    if (parentId) {
+      await this.maybeWakeParentTask(parentId, assignee).catch((err) => {
+        console.error(
+          `[AgentWorker:${this.instanceId}] wake-parent on ${parentId} failed:`,
+          err
+        );
+      });
+    }
+  }
+
+  /**
+   * Re-arms a parent task's `agentRun` so its agent resumes once every
+   * subtask under it is terminal. Posts a summary comment so the parent
+   * agent's next run sees the wake reason in conversation history.
+   */
+  private async maybeWakeParentTask(
+    parentId: string,
+    completedBy: string
+  ): Promise<void> {
+    const parentRef = this.cmsClient.db.doc(
+      `Projects/${this.cmsClient.projectId}/Tasks/${parentId}`
+    );
+    const parentSnap = await parentRef.get();
+    if (!parentSnap.exists) {
+      return;
+    }
+    const parentData = parentSnap.data() || {};
+    const parentAssignee = String(parentData.assignee || '');
+    if (!parentAssignee.startsWith(AGENT_ASSIGNEE_PREFIX)) {
+      // Parent is human-owned (or unassigned) — no agent to wake.
+      return;
+    }
+    const parentRun = (parentData.agentRun as Record<string, unknown>) || {};
+    const parentStatus = parentRun.status as string | undefined;
+    // Don't disturb a run that's currently in flight or queued; we only
+    // wake parents that already wrapped up so they pick up the loose ends.
+    const TERMINAL = new Set(['completed', 'errored', 'cancelled']);
+    if (!parentStatus || !TERMINAL.has(parentStatus)) {
+      return;
+    }
+
+    const siblingsSnap = await this.cmsClient.db
+      .collection(`Projects/${this.cmsClient.projectId}/Tasks`)
+      .where('parentTaskId', '==', parentId)
+      .get();
+    const stillRunning = siblingsSnap.docs.some((d) => {
+      const data = d.data();
+      const status = (data.agentRun as {status?: string} | undefined)?.status;
+      // Tasks without agentRun are human-owned and effectively pending.
+      if (!status) return true;
+      return !TERMINAL.has(status);
+    });
+    if (stillRunning) {
+      return;
+    }
+
+    await parentRef.update({
+      'agentRun.status': 'idle',
+      'agentRun.leasedBy': null,
+      'agentRun.leasedAt': null,
+      'agentRun.lastError': null,
+      'agentRun.updatedAt': FieldValue.serverTimestamp(),
+    });
+
+    const commentRef = parentRef.collection('Comments').doc();
+    await commentRef.set({
+      id: commentRef.id,
+      taskId: parentId,
+      parentId: null,
+      content: 'All subtasks completed — parent agent woken to gather results.',
+      body: null,
+      mentions: [],
+      createdAt: FieldValue.serverTimestamp(),
+      createdBy: completedBy,
+      history: [],
+      reactions: {},
+    });
+  }
+
+  /**
+   * Dispatcher invoked for every new task comment. Parses `@<agent-slug>`
+   * mentions and either reassigns the task (first-token mention) or fires
+   * an ephemeral agent run that doesn't change the assignee.
+   *
+   * Self-mentions (an agent referencing itself) are ignored, and we do not
+   * recurse on comments authored by the same agent we'd dispatch to.
+   */
+  private async maybeProcessComment(
+    doc: FirebaseFirestore.QueryDocumentSnapshot
+  ): Promise<void> {
+    const data = doc.data();
+    const path = doc.ref.path;
+    // Comments live at Projects/<p>/Tasks/<id>/Comments/<id>. Ignore comments
+    // from other projects (the collectionGroup query doesn't scope by project).
+    const parts = path.split('/');
+    if (
+      parts[0] !== 'Projects' ||
+      parts[1] !== this.cmsClient.projectId ||
+      parts[2] !== 'Tasks' ||
+      parts[4] !== 'Comments'
+    ) {
+      return;
+    }
+    const taskId = parts[3];
+    const commentId = parts[5];
+    const content = String(data.content || '');
+    if (!content) {
+      return;
+    }
+
+    const mentions = extractAgentMentions(content);
+    if (mentions.length === 0) {
+      return;
+    }
+    const author = String(data.createdBy || '');
+
+    // If the comment STARTS with `@<agent>`, treat that as a reassign signal.
+    // The remaining mentions (if any) become ephemeral runs.
+    const leading = content.trim().match(/^@([a-z0-9][a-z0-9-]*)\b/);
+    const reassignTarget = leading?.[1] || null;
+
+    const agents = await loadAgents({viteServer: this.viteServer});
+
+    if (reassignTarget && agents.has(reassignTarget)) {
+      const target = `${AGENT_ASSIGNEE_PREFIX}${reassignTarget}`;
+      if (target !== author) {
+        await this.reassignTaskFromMention(taskId, reassignTarget, author);
+      }
+    }
+
+    for (const name of mentions) {
+      if (name === reassignTarget) {
+        // Already handled by the reassignment path above.
+        continue;
+      }
+      const agent = agents.get(name);
+      if (!agent) {
+        continue;
+      }
+      const targetIdentity = `${AGENT_ASSIGNEE_PREFIX}${name}`;
+      if (targetIdentity === author) {
+        continue;
+      }
+      const dedupeKey = `${taskId}:${name}:${commentId}`;
+      if (this.mentionsInflight.has(dedupeKey)) {
+        continue;
+      }
+      this.mentionsInflight.add(dedupeKey);
+      this.runAgentMention(taskId, agent, commentId).finally(() => {
+        this.mentionsInflight.delete(dedupeKey);
+      });
+    }
+  }
+
+  /**
+   * Reassigns the task to `agentName` and seeds `agentRun.idle` so the
+   * primary task listener picks it up. The triggering author becomes the
+   * `requestedBy` so `task_reply` knows where to hand back.
+   */
+  private async reassignTaskFromMention(
+    taskId: string,
+    agentName: string,
+    requestedBy: string
+  ): Promise<void> {
+    const taskRef = this.cmsClient.db.doc(
+      `Projects/${this.cmsClient.projectId}/Tasks/${taskId}`
+    );
+    await taskRef.update({
+      assignee: `${AGENT_ASSIGNEE_PREFIX}${agentName}`,
+      'agentRun.status': 'idle',
+      'agentRun.tokensUsed': 0,
+      'agentRun.lastError': null,
+      'agentRun.leasedBy': null,
+      'agentRun.leasedAt': null,
+      'agentRun.requestedBy': requestedBy || null,
+      'agentRun.updatedAt': FieldValue.serverTimestamp(),
+      updatedAt: FieldValue.serverTimestamp(),
+      updatedBy: requestedBy || `${AGENT_ASSIGNEE_PREFIX}${agentName}`,
+    });
+  }
+
+  /**
+   * Runs the agent ephemerally on the task: reads context, lets the agent
+   * act through its tools, and posts a 👀 → ✅/❌ reaction on the
+   * triggering comment. Crucially, this does NOT touch the task's
+   * `agentRun` field — the task's primary assignee is unaffected.
+   */
+  private async runAgentMention(
+    taskId: string,
+    agent: AgentDefinition,
+    triggerCommentId: string
+  ): Promise<void> {
+    const model =
+      (agent.model && findModel(this.aiConfig, agent.model)) ||
+      findModel(this.aiConfig);
+    if (!model) {
+      return;
+    }
+    const taskRef = this.cmsClient.db.doc(
+      `Projects/${this.cmsClient.projectId}/Tasks/${taskId}`
+    );
+    const taskSnap = await taskRef.get();
+    if (!taskSnap.exists) {
+      return;
+    }
+    const taskData = taskSnap.data() || {};
+    const commentsSnap = await taskRef
+      .collection('Comments')
+      .orderBy('createdAt', 'asc')
+      .get();
+    const comments = commentsSnap.docs.map((d) => d.data());
+    const prompt = buildAgentPrompt(taskData, comments);
+
+    const ctx: AgentRunContext = {
+      agent,
+      cmsClient: this.cmsClient,
+      db: this.cmsClient.db,
+      projectId: this.cmsClient.projectId,
+      taskId,
+      createdBy: `${AGENT_ASSIGNEE_PREFIX}${agent.name}`,
+      checks: this.checks,
+      viteServer: this.viteServer,
+    };
+
+    await addAgentReaction(ctx, triggerCommentId, '👀').catch(() => undefined);
+
+    try {
+      await generateText({
+        model: resolveLanguageModel(model),
+        system: `${agent.systemPrompt}\n\n${getLinkingConventions()}`,
+        prompt,
+        tools: buildAgentToolset(ctx, agent.allowedTools),
+        stopWhen: ({steps}: {steps: Array<Record<string, unknown>>}) => {
+          if (steps.length >= DEFAULT_MAX_STEPS) {
+            return true;
+          }
+          const last = steps[steps.length - 1] as
+            | {toolCalls?: Array<{toolName: string}>}
+            | undefined;
+          // Mention runs end after task_reply, same as primary runs.
+          return Boolean(
+            last?.toolCalls?.some((tc) => tc.toolName === 'task_reply')
+          );
+        },
+      });
+      await addAgentReaction(ctx, triggerCommentId, '✅').catch(
+        () => undefined
+      );
+    } catch (err) {
+      console.error(
+        `[AgentWorker:${this.instanceId}] mention run failed for ` +
+          `${agent.name} on task ${taskId}:`,
+        err
+      );
+      await addAgentReaction(ctx, triggerCommentId, '❌').catch(
+        () => undefined
+      );
+    }
   }
 
   private async markTaskErrored(
@@ -335,6 +648,23 @@ export function _resetSharedAgentWorkerForTests() {
  * worker can hand them to agent runs. Returns an empty array when the
  * plugin or its `checks` field is absent.
  */
+/**
+ * Extracts `@<agent-slug>` mentions from comment text. Mirrors the
+ * client-side `extractAgentMentions` in `ui/components/TaskCommentInput`
+ * so the worker can dispatch on the same patterns the UI surfaces.
+ */
+function extractAgentMentions(content: string): string[] {
+  const result = new Set<string>();
+  // Slug-shaped token preceded by start-of-string or whitespace and NOT
+  // followed by `@` (which would be an email mention).
+  const re = /(^|\s)@([a-z0-9][a-z0-9-]*)(?![A-Za-z0-9._%+-]*@)/g;
+  let match: RegExpExecArray | null;
+  while ((match = re.exec(content)) !== null) {
+    result.add(match[2]);
+  }
+  return Array.from(result);
+}
+
 function readChecksFromPlugin(rootConfig: RootConfig): CMSCheck[] {
   try {
     const cmsPlugin = getCmsPlugin(rootConfig);

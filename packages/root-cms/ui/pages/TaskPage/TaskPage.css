@@ -380,6 +380,22 @@
 .TaskPage__comment {
   overflow: visible;
   position: relative;
+  scroll-margin-top: 80px;
+  transition: box-shadow 200ms ease-out;
+}
+
+.TaskPage__comment--highlighted {
+  box-shadow: 0 0 0 2px #fde68a;
+}
+
+.TaskPage__comment__permalink {
+  color: var(--color-text-gray, #6b7280);
+  text-decoration: none;
+}
+
+.TaskPage__comment__permalink:hover {
+  color: #0969da;
+  text-decoration: underline;
 }
 
 /* Proposal cards live inside the comment surface but outside the padded

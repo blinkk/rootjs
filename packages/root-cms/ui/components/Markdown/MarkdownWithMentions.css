@@ -1,0 +1,32 @@
+.AgentMentionInline {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: #ede9fe;
+  color: #6d28d9;
+  font-weight: 600;
+  font-size: 0.95em;
+  cursor: help;
+  text-decoration: none;
+  white-space: nowrap;
+  line-height: 1.4;
+  transition:
+    background 80ms ease-out,
+    color 80ms ease-out;
+}
+
+.AgentMentionInline:hover {
+  background: #ddd6fe;
+  color: #5b21b6;
+}
+
+.AgentMentionInline--dispatcher {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.AgentMentionInline--dispatcher:hover {
+  background: #fde68a;
+  color: #78350f;
+}

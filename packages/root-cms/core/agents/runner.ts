@@ -21,6 +21,7 @@ import {
   recordAgentStep,
   updateAgentRunStatus,
 } from './task-helpers.js';
+import {createApplyTool} from './tools-apply.js';
 import {createProposeTool} from './tools-propose.js';
 import {createServerReadTools} from './tools-server.js';
 import {createSubtaskTool} from './tools-subtask.js';
@@ -221,6 +222,9 @@ export function buildAgentToolset(
   }
   if (bundles.includes('subtask')) {
     Object.assign(out, createSubtaskTool(ctx));
+  }
+  if (bundles.includes('apply')) {
+    Object.assign(out, createApplyTool(ctx));
   }
   return out;
 }

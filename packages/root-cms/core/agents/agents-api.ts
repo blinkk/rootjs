@@ -46,6 +46,7 @@ export function registerAgentApi(server: Server) {
         iconUrl: agent.iconUrl || null,
         description: agent.description,
         allowedTools: agent.allowedTools,
+        dispatcher: Boolean(agent.dispatcher),
       }));
       res.status(200).json({success: true, agents: list});
     } catch (err) {
