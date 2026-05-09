@@ -150,6 +150,47 @@ async function agentsList() {
   return {agents: data.agents || []};
 }
 
+async function chatsConvertToTask(input: {agentName?: string; title?: string}) {
+  // The current chat id is reflected in the URL: `/cms/ai/chat/<id>`. The
+  // chat composer rewrites it via `history.replaceState` once the first
+  // message is persisted.
+  const match = window.location.pathname.match(/\/cms\/ai\/chat\/([^/?#]+)/);
+  const chatId = match?.[1];
+  if (!chatId) {
+    throw new Error(
+      'No active chat to convert — send a message first so the chat is ' +
+        'persisted, then try again.'
+    );
+  }
+  const res = await fetch('/cms/api/agents.chatConvertToTask', {
+    method: 'POST',
+    credentials: 'include',
+    headers: {'content-type': 'application/json'},
+    body: JSON.stringify({
+      chatId,
+      agentName: input.agentName,
+      title: input.title,
+    }),
+  });
+  if (!res.ok) {
+    throw new Error(`chats.convertToTask failed: ${res.status}`);
+  }
+  const data = await res.json();
+  if (!data.success) {
+    throw new Error(data.error || 'chats.convertToTask failed');
+  }
+  // Navigate the user to the new task so they see the agent kick off.
+  // Defer one tick so the model's tool result lands in the chat first.
+  setTimeout(() => {
+    window.location.href = `/cms/tasks/${data.taskId}`;
+  }, 50);
+  return {
+    taskId: data.taskId,
+    url: `/cms/tasks/${data.taskId}`,
+    assignedAgent: input.agentName || null,
+  };
+}
+
 async function docsList(input: {
   collectionId: string;
   mode?: 'draft' | 'published';
@@ -532,6 +573,7 @@ function simplifyFields(fields: any[]): any[] {
 
 const HANDLERS: Record<string, (input: any) => Promise<unknown>> = {
   agents_list: agentsList,
+  chats_convertToTask: chatsConvertToTask,
   collections_list: collectionsList,
   docs_list: docsList,
   docs_search: docsSearch,

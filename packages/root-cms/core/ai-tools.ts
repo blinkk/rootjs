@@ -40,6 +40,7 @@ export const CMS_TOOL_NAMES = [
   'doc_listVersions',
   'doc_translateField',
   'schema_get',
+  'chats_convertToTask',
 ] as const;
 export type CmsToolName = (typeof CMS_TOOL_NAMES)[number];
 
@@ -303,6 +304,31 @@ export function createCmsTools(): ToolSet {
         collectionId: z
           .string()
           .describe('Collection id, e.g. "Pages" or "BlogPosts".'),
+      }),
+    }),
+
+    chats_convertToTask: tool({
+      description:
+        'Convert the current chat into a task in the Task Manager. Use ' +
+        'this when the user agrees to hand the work off to an agent (e.g. ' +
+        '"yes, file this with The Owl"). Pass `agentName` to assign the ' +
+        'task to a specific agent (look up valid names with ' +
+        '`agents_list`). Pass an optional short `title`; otherwise the ' +
+        "chat's auto-derived title is used. Always confirm with the user " +
+        'before calling — say which agent you intend to route to and ' +
+        'wait for them to agree.',
+      inputSchema: z.object({
+        agentName: z
+          .string()
+          .optional()
+          .describe(
+            'Slug of the agent to assign to (without `agent:` prefix). ' +
+              'Omit for an unassigned task.'
+          ),
+        title: z
+          .string()
+          .optional()
+          .describe('Optional task title; falls back to the chat title.'),
       }),
     }),
   };

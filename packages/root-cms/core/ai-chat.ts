@@ -367,11 +367,12 @@ async function buildAgentsBlock(
   const lines: string[] = [
     '<agents>',
     'This project has specialist agents registered. They run in the',
-    'background as task assignees and can be reached by converting the chat',
-    "into a task (the 'Convert to task' button in the header) with the",
-    'right agent picked. When the user asks a question that maps cleanly to',
-    'one of these agents, suggest converting the chat to a task assigned to',
-    'that agent and briefly explain what the agent will do.',
+    'background as task assignees. When the user asks a question that maps',
+    'cleanly to one of these agents, suggest routing the work to that',
+    'agent and briefly explain what they will do. After the user agrees,',
+    'call the `chats_convertToTask` tool with the chosen agent name to',
+    'create the task and hand off — do NOT ask the user to click the',
+    '"Convert to task" button themselves once they have agreed.',
     '',
     'Agents available in this project:',
   ];
