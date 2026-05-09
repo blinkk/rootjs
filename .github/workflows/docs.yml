@@ -4,49 +4,37 @@ on:
   push:
     branches:
       - main
-    # Ignore "release" tags since the release would not be available on npm yet.
-    tags-ignore:
-      - "@blinkk/.*"
   workflow_dispatch:
+
+defaults:
+  run:
+    shell: bash
+
+env:
+  FORCE_COLOR: true
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    # Skip deploy on "ci: release" commits because package versions are bumped
-    # but not yet published to npm, causing Firebase deploy to fail.
-    if: "!startsWith(github.event.head_commit.message, 'ci: release')"
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: "22"
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
         with:
           version: "8.9.0"
 
-      - name: Get pnpm store directory
-        shell: bash
-        run: |
-          echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
-
-      - name: Setup pnpm cache
-        uses: actions/cache@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
-          path: ${{ env.STORE_PATH }}
-          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
-          restore-keys: |
-            ${{ runner.os }}-pnpm-store-
+          node-version: "22"
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
 
       - name: Install dependencies
-        run: |
-          pnpm install
-          pnpm add -g firebase-tools@13.35.1
+        run: pnpm install --frozen-lockfile
 
       - name: Authenticate to Google Cloud
         uses: google-github-actions/auth@v2
@@ -62,9 +50,138 @@ jobs:
         working-directory: docs
         run: bash scripts/env-init.sh
 
-      - name: Build root
+      - name: Add deploy package version suffix
+        run: |
+          SHORT_SHA="${GITHUB_SHA::7}" node <<'NODE'
+            const fs = require('fs');
+            const path = require('path');
+            const shortSha = process.env.SHORT_SHA;
+
+            // The deployed Firebase function installs package tarballs with
+            // npm, outside the pnpm workspace. Give every Root.js package a
+            // matching deploy-specific version and rewrite Root.js
+            // package-to-package dependency ranges so npm can resolve the
+            // local tarballs without falling back to the published npm
+            // packages.
+            const packageDirs = fs.readdirSync('packages', {withFileTypes: true})
+              .filter((entry) => entry.isDirectory())
+              .map((entry) => path.join('packages', entry.name));
+            const packages = packageDirs
+              .map((packageDir) => {
+                const packagePath = path.join(packageDir, 'package.json');
+                if (!fs.existsSync(packagePath)) {
+                  return undefined;
+                }
+                const packageJson = JSON.parse(fs.readFileSync(packagePath, 'utf8'));
+                if (!packageJson.name?.startsWith('@blinkk/root')) {
+                  return undefined;
+                }
+                return {packageDir, packagePath, packageJson};
+              })
+              .filter(Boolean);
+            const versionsByName = Object.fromEntries(
+              packages.map(({packageJson}) => [
+                packageJson.name,
+                `${packageJson.version}-deploy.${shortSha}`,
+              ])
+            );
+
+            for (const {packagePath, packageJson} of packages) {
+              packageJson.version = versionsByName[packageJson.name];
+              for (const dependencyType of [
+                'dependencies',
+                'devDependencies',
+                'peerDependencies',
+                'optionalDependencies',
+              ]) {
+                const dependencies = packageJson[dependencyType];
+                if (!dependencies) {
+                  continue;
+                }
+                for (const dependencyName of Object.keys(dependencies)) {
+                  if (versionsByName[dependencyName]) {
+                    dependencies[dependencyName] = versionsByName[dependencyName];
+                  }
+                }
+              }
+              fs.writeFileSync(
+                packagePath,
+                JSON.stringify(packageJson, null, 2) + '\n'
+              );
+            }
+          NODE
+
+      - name: Build Root.js packages
         run: pnpm run build
 
-      - name: Build and deploy rootjs.dev
+      - name: Build docs Firebase package
         working-directory: docs
-        run: pnpm run deploy
+        run: pnpm run build
+
+      - name: Pack Root.js packages for Firebase Functions
+        run: |
+          mkdir -p docs/functions/vendor
+          # Pack every @blinkk/root* workspace package so the Firebase function
+          # can install the local build instead of the published npm build.
+          for package_json in packages/*/package.json; do
+            package_name="$(node -p "require('./${package_json}').name")"
+            if [[ "$package_name" == @blinkk/root* ]]; then
+              pnpm --dir "$(dirname "$package_json")" pack --pack-destination "$PWD/docs/functions/vendor"
+            fi
+          done
+
+      - name: Rewrite functions/package.json to use vendored tarballs
+        working-directory: docs
+        run: |
+          node <<'NODE'
+            const fs = require('fs');
+            const vendorFiles = fs.readdirSync('functions/vendor');
+            // root package names are converted to pnpm tarball names like
+            // @blinkk/root-cms -> blinkk-root-cms-<version>.tgz. Map them back
+            // so only Root.js dependencies present in functions/package.json
+            // are replaced with local tarballs.
+            const tarballsByPackage = new Map(
+              vendorFiles
+                .filter((name) => name.endsWith('.tgz'))
+                .map((name) => {
+                  const packageName = name
+                    .replace(/-\d.*\.tgz$/, '')
+                    .replace(/^blinkk-/, '@blinkk/');
+                  return [packageName, name];
+                })
+            );
+
+            const packageJson = JSON.parse(
+              fs.readFileSync('functions/package.json', 'utf8')
+            );
+            for (const dependencyName of Object.keys(packageJson.dependencies || {})) {
+              const tarball = tarballsByPackage.get(dependencyName);
+              if (dependencyName.startsWith('@blinkk/root') && !tarball) {
+                throw new Error(`Missing local tarball for ${dependencyName}.`);
+              }
+              if (tarball) {
+                packageJson.dependencies[dependencyName] = `file:vendor/${tarball}`;
+              }
+            }
+            fs.writeFileSync(
+              'functions/package.json',
+              JSON.stringify(packageJson, null, 2) + '\n'
+            );
+          NODE
+
+      - name: Debug deploy build output
+        working-directory: docs
+        run: |
+          echo "=== functions/package.json ==="
+          cat functions/package.json
+          echo ""
+          echo "=== functions/vendor ==="
+          ls -la functions/vendor
+
+      - name: Deploy rootjs.dev to Firebase
+        working-directory: docs
+        run: |
+          pnpm exec firebase deploy \
+            --only hosting,functions:www-server,functions:www-cron \
+            --project rootjs-dev \
+            --force
