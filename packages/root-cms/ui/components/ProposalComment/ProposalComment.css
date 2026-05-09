@@ -1,0 +1,94 @@
+.ProposalComment {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid #c7d2fe;
+  border-radius: 8px;
+  background: #eef2ff;
+  margin-top: 8px;
+}
+
+.ProposalComment__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
+.ProposalComment__title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 600;
+  font-size: 14px;
+  color: #312e81;
+}
+
+.ProposalComment__icon {
+  font-size: 16px;
+}
+
+.ProposalComment__badge {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 2px 8px;
+  border-radius: 10px;
+  background: #c7d2fe;
+  color: #312e81;
+}
+
+.ProposalComment__badge--applied {
+  background: #bbf7d0;
+  color: #14532d;
+}
+
+.ProposalComment__badge--rejected,
+.ProposalComment__badge--expired {
+  background: #fecaca;
+  color: #7f1d1d;
+}
+
+.ProposalComment__rationale {
+  font-size: 13px;
+  color: #1e293b;
+  white-space: pre-wrap;
+}
+
+.ProposalComment__diff {
+  background: #ffffff;
+  border: 1px solid #c7d2fe;
+  border-radius: 6px;
+  padding: 8px 12px;
+  font-size: 12px;
+}
+
+.ProposalComment__diffMarkdown {
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.ProposalComment__diffMarkdown pre {
+  margin: 0;
+  white-space: pre-wrap;
+}
+
+.ProposalComment__error {
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 6px;
+  padding: 8px 12px;
+  font-size: 12px;
+  color: #7f1d1d;
+}
+
+.ProposalComment__actions {
+  display: flex;
+  gap: 6px;
+}
+
+.ProposalComment__resolved {
+  font-size: 12px;
+  color: #475569;
+}

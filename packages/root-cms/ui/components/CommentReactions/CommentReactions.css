@@ -1,0 +1,68 @@
+.CommentReactions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  align-items: center;
+  margin-top: 8px;
+  position: relative;
+}
+
+.CommentReactions__chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 12px;
+  border: 1px solid #d4d4d8;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.CommentReactions__chip:hover {
+  background: #f4f4f5;
+}
+
+.CommentReactions__chip--mine {
+  background: #eef2ff;
+  border-color: #6366f1;
+  color: #312e81;
+}
+
+.CommentReactions__emoji {
+  font-size: 14px;
+}
+
+.CommentReactions__count {
+  font-variant-numeric: tabular-nums;
+}
+
+.CommentReactions__picker {
+  position: absolute;
+  bottom: calc(100% + 4px);
+  left: 0;
+  display: flex;
+  gap: 2px;
+  padding: 4px 6px;
+  background: #ffffff;
+  border: 1px solid #d4d4d8;
+  border-radius: 6px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  z-index: 10;
+}
+
+.CommentReactions__pickerItem {
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-size: 18px;
+  line-height: 1;
+  padding: 4px 6px;
+  border-radius: 4px;
+}
+
+.CommentReactions__pickerItem:hover {
+  background: #f4f4f5;
+}

@@ -32,8 +32,10 @@ import {
   RichTextData,
   RichTextListItem,
 } from '../../../shared/richtext.js';
+import {CommentReactions} from '../../components/CommentReactions/CommentReactions.js';
 import {Heading} from '../../components/Heading/Heading.js';
 import {Markdown} from '../../components/Markdown/Markdown.js';
+import {ProposalComment} from '../../components/ProposalComment/ProposalComment.js';
 import {Surface} from '../../components/Surface/Surface.js';
 import {TaskCommentEditor} from '../../components/TaskCommentEditor/TaskCommentEditor.js';
 import {usePageTitle} from '../../hooks/usePageTitle.js';
@@ -44,10 +46,13 @@ import {errorMessage} from '../../utils/notifications.js';
 import {
   addTaskComment,
   addTaskAttachment,
+  cancelTaskAgentRun,
   deleteTaskComment,
   editTaskComment,
+  getAgentAssigneeName,
   normalizeTaskStatus,
   removeTaskAttachment,
+  retryTaskAgentRun,
   subscribeTask,
   subscribeTaskComments,
   subscribeTaskEvents,
@@ -165,6 +170,9 @@ export function TaskPage(props: {id: string}) {
             </main>
             <aside className="TaskPage__side">
               <TaskMetadataPanel task={task} />
+              {getAgentAssigneeName(task.assignee) && (
+                <AgentRunPanel task={task} />
+              )}
             </aside>
           </div>
         )}
@@ -644,6 +652,100 @@ function TaskMetadataPanel(props: {task: Task}) {
   );
 }
 
+/** Sidebar panel that surfaces the current agent run status and lets the
+ * user cancel an in-flight run or retry an errored/cancelled one. */
+function AgentRunPanel(props: {task: Task}) {
+  const {task} = props;
+  const agentName = getAgentAssigneeName(task.assignee);
+  const run = task.agentRun;
+  const status = run?.status || 'idle';
+  const [busy, setBusy] = useState(false);
+
+  async function onCancel() {
+    setBusy(true);
+    try {
+      await cancelTaskAgentRun(task.id);
+    } catch (err) {
+      showNotification({
+        title: 'Could not cancel run',
+        message: errorMessage(err),
+        color: 'red',
+        autoClose: false,
+      });
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function onRetry() {
+    setBusy(true);
+    try {
+      await retryTaskAgentRun(task.id);
+    } catch (err) {
+      showNotification({
+        title: 'Could not retry run',
+        message: errorMessage(err),
+        color: 'red',
+        autoClose: false,
+      });
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <Surface className="TaskPage__agentRun">
+      <div className="TaskPage__metadata__field">
+        <label>Agent run</label>
+        <div className="TaskPage__agentRun__status">
+          <b>{agentName}</b>
+          <span
+            className={joinClassNames(
+              'TaskPage__agentRun__badge',
+              `TaskPage__agentRun__badge--${status}`
+            )}
+          >
+            {status}
+          </span>
+        </div>
+        {run?.tokensUsed !== undefined && run?.tokensCap !== undefined && (
+          <div className="TaskPage__agentRun__tokens">
+            {run.tokensUsed.toLocaleString()} / {run.tokensCap.toLocaleString()}{' '}
+            tokens
+          </div>
+        )}
+        {run?.lastError && (
+          <div className="TaskPage__agentRun__error">{run.lastError}</div>
+        )}
+        <div className="TaskPage__agentRun__actions">
+          {status === 'running' && (
+            <Button
+              size="xs"
+              variant="default"
+              loading={busy}
+              leftIcon={<IconX size={14} strokeWidth="1.8" />}
+              onClick={onCancel}
+            >
+              Cancel run
+            </Button>
+          )}
+          {(status === 'errored' || status === 'cancelled') && (
+            <Button
+              size="xs"
+              color="dark"
+              loading={busy}
+              leftIcon={<IconCheck size={14} strokeWidth="1.8" />}
+              onClick={onRetry}
+            >
+              Retry
+            </Button>
+          )}
+        </div>
+      </div>
+    </Surface>
+  );
+}
+
 /** Combines task comments and metadata changes into a single timeline. */
 function TaskTimeline(props: {
   task: Task;
@@ -925,6 +1027,16 @@ function TaskCommentCard(props: {
                 />
               )}
             </div>
+          )}
+          {!comment.isDeleted && comment.proposal && (
+            <ProposalComment comment={comment} />
+          )}
+          {!comment.isDeleted && (
+            <CommentReactions
+              taskId={comment.taskId}
+              commentId={comment.id}
+              reactions={comment.reactions}
+            />
           )}
         </Surface>
         {replying && (

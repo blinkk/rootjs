@@ -608,3 +608,67 @@
     align-self: flex-end;
   }
 }
+
+.TaskPage__agentRun {
+  margin-top: 12px;
+}
+
+.TaskPage__agentRun__status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.TaskPage__agentRun__badge {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 2px 8px;
+  border-radius: 10px;
+  background: #e5e7eb;
+  color: #374151;
+}
+
+.TaskPage__agentRun__badge--running {
+  background: #dbeafe;
+  color: #1e40af;
+}
+
+.TaskPage__agentRun__badge--errored {
+  background: #fecaca;
+  color: #7f1d1d;
+}
+
+.TaskPage__agentRun__badge--cancelled {
+  background: #fed7aa;
+  color: #7c2d12;
+}
+
+.TaskPage__agentRun__badge--idle {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+.TaskPage__agentRun__tokens {
+  font-size: 12px;
+  color: #6b7280;
+  font-variant-numeric: tabular-nums;
+  margin-bottom: 8px;
+}
+
+.TaskPage__agentRun__error {
+  font-size: 12px;
+  color: #7f1d1d;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 4px;
+  padding: 6px 8px;
+  margin-bottom: 8px;
+}
+
+.TaskPage__agentRun__actions {
+  display: flex;
+  gap: 6px;
+}
+

@@ -902,6 +902,28 @@ export function cmsPlugin(options: CMSPluginOptions): CMSPlugin {
         translations: options.translations,
       });
 
+      // Start the in-process agent worker on the first authenticated request
+      // (when `req.rootConfig` is available). Idempotent — subsequent
+      // requests are no-ops once the worker is running.
+      server.use((req: Request, _res: Response, next: NextFunction) => {
+        if (req.rootConfig) {
+          // Lazy import keeps the agents subsystem from loading on
+          // projects that never use AI features.
+          import('./agents/worker.js')
+            .then(({ensureAgentWorker}) => {
+              try {
+                ensureAgentWorker(req.rootConfig!);
+              } catch (err) {
+                console.error('[agent worker] startup failed:', err);
+              }
+            })
+            .catch((err) => {
+              console.error('[agent worker] import failed:', err);
+            });
+        }
+        next();
+      });
+
       // Render the CMS SPA.
       server.use('/cms', async (req: Request, res: Response) => {
         try {

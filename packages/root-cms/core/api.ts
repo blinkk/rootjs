@@ -8,6 +8,7 @@ import {
   AiResponse,
   SendPromptOptions,
 } from '../shared/ai/prompts.js';
+import {registerAgentApi} from './agents/agents-api.js';
 import {
   ChatStore,
   findModel,
@@ -159,6 +160,9 @@ export interface ApiOptions {
  * Registers API middleware handlers.
  */
 export function api(server: Server, options: ApiOptions) {
+  // Mount agent endpoints (agents.list, proposalApply/Reject, taskCancelRun/RetryRun).
+  registerAgentApi(server);
+
   /**
    * Reads the collection's schema defined in `/collections/<id>.schema.ts`.
    */
@@ -890,7 +894,9 @@ export function api(server: Server, options: ApiOptions) {
       } catch (err: any) {
         console.error(err.stack || err);
         if (!res.headersSent) {
-          res.status(500).json({success: false, error: err.message || 'UNKNOWN'});
+          res
+            .status(500)
+            .json({success: false, error: err.message || 'UNKNOWN'});
         } else {
           res.end();
         }
