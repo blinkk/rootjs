@@ -1,7 +1,7 @@
 /**
  * Chat panel used inside the array-item "Edit with AI" modal. Built on top of
  * the Vercel AI SDK (`ai`, `@ai-sdk/react`) and streams responses from
- * `/cms/api/ai.editObject`.
+ * `/cms/api/ai.edit_object`.
  *
  * The endpoint exposes a READ-ONLY tool subset — the model can inspect CMS
  * docs and schemas for context but cannot mutate Firestore. Edits are
@@ -154,7 +154,7 @@ function ChatPanelInner(props: {
   const transport = useMemo(
     () =>
       new DefaultChatTransport<UIMessage>({
-        api: '/cms/api/ai.editObject',
+        api: '/cms/api/ai.edit_object',
         credentials: 'include',
         prepareSendMessagesRequest: ({messages}) => ({
           body: {

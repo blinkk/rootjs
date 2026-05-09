@@ -834,7 +834,7 @@ export function api(server: Server, options: ApiOptions) {
    *   diff viewer.
    */
   server.use(
-    '/cms/api/ai.editObject',
+    '/cms/api/ai.edit_object',
     async (req: Request, res: Response) => {
       if (req.method !== 'POST') {
         res.status(400).json({success: false, error: 'BAD_REQUEST'});
