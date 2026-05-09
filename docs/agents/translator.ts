@@ -9,7 +9,6 @@ import {defineAgent} from '@blinkk/root-cms';
 
 export default defineAgent({
   name: 'translator',
-  icon: '🦢',
   description:
     'Localizes CMS content into the project locales (de, es, fr, it, pt). ' +
     'Posts translation proposals one field at a time.',

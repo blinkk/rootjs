@@ -21,8 +21,14 @@ export interface AgentDefinition {
    * The assignee form is `agent:<name>`.
    */
   name: string;
-  /** Single emoji or short string used as the agent's avatar in the UI. */
-  icon: string;
+  /**
+   * Optional avatar image URL. When omitted the UI renders a colored circle
+   * with the agent's first letter (color derived deterministically from the
+   * name so the same agent gets the same color across surfaces).
+   *
+   * Use absolute URLs (`https://...`) or root-relative paths (`/avatars/...`).
+   */
+  iconUrl?: string;
   /** One-line description shown in pickers and lists. */
   description: string;
   /**
@@ -52,7 +58,8 @@ export interface AgentDefinition {
  */
 export interface AgentDefinitionInput {
   name: string;
-  icon: string;
+  /** Optional URL to an avatar image. Falls back to a colored letter avatar. */
+  iconUrl?: string;
   description: string;
   systemPrompt: string;
   allowedTools?: AgentToolBundle[];

@@ -2,6 +2,7 @@ import './MentionDropdown.css';
 
 import type {MentionItem} from '../../hooks/useMentionAutocomplete.js';
 import {joinClassNames} from '../../utils/classes.js';
+import {AgentAvatar} from '../AgentAvatar/AgentAvatar.js';
 
 export interface MentionDropdownProps {
   items: MentionItem[];
@@ -39,9 +40,12 @@ export function MentionDropdown(props: MentionDropdownProps) {
             props.onSelect(item);
           }}
         >
-          {item.icon && (
-            <span className="MentionDropdown__icon">{item.icon}</span>
-          )}
+          <AgentAvatar
+            name={item.value}
+            iconUrl={item.iconUrl}
+            size={22}
+            className="MentionDropdown__icon"
+          />
           <div className="MentionDropdown__body">
             <div className="MentionDropdown__value">@{item.value}</div>
             {item.description && (

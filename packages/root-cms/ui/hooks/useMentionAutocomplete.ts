@@ -3,8 +3,9 @@ import {useCallback, useMemo, useState} from 'preact/hooks';
 export interface MentionItem {
   /** Slug inserted into the text (without the leading `@`). */
   value: string;
-  /** Optional emoji or short label rendered before the value. */
-  icon?: string;
+  /** Optional avatar image URL. When omitted the dropdown renders a colored
+   * letter avatar based on `value`. */
+  iconUrl?: string | null;
   /** Optional longer description rendered as secondary text. */
   description?: string;
 }

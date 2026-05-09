@@ -378,7 +378,7 @@ async function buildAgentsBlock(
   ];
   for (const agent of agents.values()) {
     lines.push(
-      `- ${agent.icon} \`@${agent.name}\` — ${agent.description} ` +
+      `- \`@${agent.name}\` — ${agent.description} ` +
         `(tools: ${agent.allowedTools.join(', ')})`
     );
   }

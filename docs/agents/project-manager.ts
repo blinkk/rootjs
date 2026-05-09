@@ -8,7 +8,6 @@ import {defineAgent} from '@blinkk/root-cms';
 
 export default defineAgent({
   name: 'project-manager',
-  icon: '🦩',
   description:
     'Triages tasks. Breaks broad requests into focused subtasks and ' +
     'assigns them to the right specialist agent.',

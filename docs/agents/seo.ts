@@ -8,7 +8,6 @@ import {defineAgent} from '@blinkk/root-cms';
 
 export default defineAgent({
   name: 'seo',
-  icon: '🐦',
   description:
     'Improves discoverability: meta titles/descriptions, image alt text, ' +
     'heading hierarchy, and structured data.',

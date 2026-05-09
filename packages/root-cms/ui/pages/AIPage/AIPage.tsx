@@ -867,7 +867,7 @@ function ChatComposer(props: {
   const mention = useMentionAutocomplete({
     items: agents.map((a) => ({
       value: a.name,
-      icon: a.icon,
+      iconUrl: a.iconUrl,
       description: a.description,
     })),
     onAccept: (item, range) => {

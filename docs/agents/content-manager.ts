@@ -9,7 +9,6 @@ import {defineAgent} from '@blinkk/root-cms';
 
 export default defineAgent({
   name: 'content-manager',
-  icon: '🦜',
   description:
     'Drafts and reorganizes CMS content. Use for routine content updates, ' +
     'new doc creation, and bulk edits across a collection.',

@@ -8,7 +8,6 @@ import {defineAgent} from '@blinkk/root-cms';
 
 export default defineAgent({
   name: 'editor',
-  icon: '🦉',
   description:
     'Copy editor and proofreader. Tightens prose, fixes grammar, and ' +
     'enforces a consistent voice across the docs site.',

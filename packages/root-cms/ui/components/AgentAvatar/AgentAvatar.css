@@ -1,0 +1,17 @@
+.AgentAvatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  font-weight: 600;
+  line-height: 1;
+  flex-shrink: 0;
+  overflow: hidden;
+  user-select: none;
+  vertical-align: middle;
+}
+
+.AgentAvatar--image {
+  background: #f3f4f6;
+  object-fit: cover;
+}

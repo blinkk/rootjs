@@ -4,7 +4,6 @@ import {defineAgent} from './define.js';
 describe('defineAgent', () => {
   const validInput = {
     name: 'content-manager',
-    icon: '📝',
     description: 'Manages content updates.',
     systemPrompt: 'You manage content.',
   };
@@ -12,7 +11,7 @@ describe('defineAgent', () => {
   it('returns a normalized definition with default tool bundles', () => {
     const def = defineAgent(validInput);
     expect(def.name).toBe('content-manager');
-    expect(def.icon).toBe('📝');
+    expect(def.iconUrl).toBeUndefined();
     expect(def.description).toBe('Manages content updates.');
     expect(def.systemPrompt).toBe('You manage content.');
     expect(def.allowedTools).toEqual(['read', 'propose']);
@@ -31,19 +30,16 @@ describe('defineAgent', () => {
   it('trims whitespace from string fields', () => {
     const def = defineAgent({
       name: '  content-manager  ',
-      icon: ' 📝 ',
       description: '  Manages content.  ',
       systemPrompt: '  You manage content.  ',
     });
     expect(def.name).toBe('content-manager');
-    expect(def.icon).toBe('📝');
     expect(def.description).toBe('Manages content.');
     expect(def.systemPrompt).toBe('You manage content.');
   });
 
   it('rejects missing required fields', () => {
     expect(() => defineAgent({...validInput, name: ''})).toThrow(/name/);
-    expect(() => defineAgent({...validInput, icon: ''})).toThrow(/icon/);
     expect(() => defineAgent({...validInput, description: ''})).toThrow(
       /description/
     );
@@ -62,6 +58,28 @@ describe('defineAgent', () => {
     expect(() => defineAgent({...validInput, name: 'AGENT'})).toThrow(
       /invalid name/
     );
+  });
+
+  it('accepts http, https, root-relative, and data URLs as iconUrl', () => {
+    expect(
+      defineAgent({...validInput, iconUrl: 'https://example.com/a.png'}).iconUrl
+    ).toBe('https://example.com/a.png');
+    expect(
+      defineAgent({...validInput, iconUrl: '/avatars/owl.svg'}).iconUrl
+    ).toBe('/avatars/owl.svg');
+    expect(
+      defineAgent({...validInput, iconUrl: 'data:image/svg+xml;base64,xyz'})
+        .iconUrl
+    ).toBe('data:image/svg+xml;base64,xyz');
+  });
+
+  it('rejects relative or scheme-less iconUrl values', () => {
+    expect(() =>
+      defineAgent({...validInput, iconUrl: 'avatars/owl.png'})
+    ).toThrow(/iconUrl must be/);
+    expect(() =>
+      defineAgent({...validInput, iconUrl: 'ftp://example.com/a.png'})
+    ).toThrow(/iconUrl must be/);
   });
 
   it('rejects unknown tool bundles', () => {

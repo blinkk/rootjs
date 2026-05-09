@@ -8,7 +8,6 @@ import {defineAgent} from '@blinkk/root-cms';
 
 export default defineAgent({
   name: 'qa',
-  icon: '🦅',
   description:
     'Runs CMS checks, validates docs against their schemas, and proposes ' +
     'fixes for warnings and errors. Sharpest eye on the team.',

@@ -8,7 +8,6 @@ import {defineAgent} from '@blinkk/root-cms';
 
 export default defineAgent({
   name: 'client-liaison',
-  icon: '🐧',
   description:
     'Drafts client-facing responses for status updates, change ' +
     'confirmations, and clarification questions. Reads-only.',

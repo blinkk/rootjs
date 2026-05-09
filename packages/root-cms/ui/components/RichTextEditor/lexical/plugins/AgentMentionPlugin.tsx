@@ -14,6 +14,7 @@ import {createPortal} from 'preact/compat';
 import {useCallback, useMemo, useState} from 'preact/hooks';
 import {useAgents, type AgentSummary} from '../../../../hooks/useAgents.js';
 import {joinClassNames} from '../../../../utils/classes.js';
+import {AgentAvatar} from '../../../AgentAvatar/AgentAvatar.js';
 
 import './AgentMentionPlugin.css';
 
@@ -110,9 +111,12 @@ export function AgentMentionPlugin() {
                   selectOptionAndCleanUp(option);
                 }}
               >
-                <span className="AgentMentionMenu__icon">
-                  {option.agent.icon}
-                </span>
+                <AgentAvatar
+                  name={option.agent.name}
+                  iconUrl={option.agent.iconUrl}
+                  size={22}
+                  className="AgentMentionMenu__icon"
+                />
                 <span className="AgentMentionMenu__body">
                   <span className="AgentMentionMenu__name">
                     @{option.agent.name}

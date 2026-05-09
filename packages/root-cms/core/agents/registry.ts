@@ -141,7 +141,7 @@ function isAgentDefinition(value: unknown): value is AgentDefinition {
   const v = value as Record<string, unknown>;
   return (
     typeof v.name === 'string' &&
-    typeof v.icon === 'string' &&
+    (v.iconUrl === undefined || typeof v.iconUrl === 'string') &&
     typeof v.description === 'string' &&
     typeof v.systemPrompt === 'string' &&
     Array.isArray(v.allowedTools)

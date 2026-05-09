@@ -4,6 +4,7 @@ import {Loader, Menu} from '@mantine/core';
 import {IconRobot} from '@tabler/icons-preact';
 import {AgentSummary, useAgents} from '../../hooks/useAgents.js';
 import {joinClassNames} from '../../utils/classes.js';
+import {AgentAvatar} from '../AgentAvatar/AgentAvatar.js';
 
 export interface AgentPickerProps {
   /** Callback fired when the user picks an agent. Pass `null` to clear. */
@@ -40,7 +41,15 @@ export function AgentPicker(props: AgentPickerProps) {
           className={joinClassNames('AgentPicker__trigger', props.className)}
         >
           <span className="AgentPicker__triggerIcon">
-            {selected ? selected.icon : <IconRobot size={16} />}
+            {selected ? (
+              <AgentAvatar
+                name={selected.name}
+                iconUrl={selected.iconUrl}
+                size={18}
+              />
+            ) : (
+              <IconRobot size={16} />
+            )}
           </span>
           <span>
             {selected ? selected.name : props.placeholder || 'Pick an agent'}
@@ -69,7 +78,12 @@ export function AgentPicker(props: AgentPickerProps) {
       {agents.map((agent) => (
         <Menu.Item key={agent.name} onClick={() => props.onSelect(agent)}>
           <div className="AgentPicker__option">
-            <span className="AgentPicker__optionIcon">{agent.icon}</span>
+            <AgentAvatar
+              name={agent.name}
+              iconUrl={agent.iconUrl}
+              size={20}
+              className="AgentPicker__optionIcon"
+            />
             <span className="AgentPicker__optionName">{agent.name}</span>
           </div>
         </Menu.Item>

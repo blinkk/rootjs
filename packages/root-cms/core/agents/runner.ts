@@ -74,7 +74,7 @@ export async function runAgent(
 
   const starterId = await postAgentStatusComment(
     ctx,
-    `${ctx.agent.icon} ${ctx.agent.name} picked up this task.`,
+    `**@${ctx.agent.name}** picked up this task.`,
     '👀'
   );
   // Wipe step history from prior runs so the live activity feed only shows

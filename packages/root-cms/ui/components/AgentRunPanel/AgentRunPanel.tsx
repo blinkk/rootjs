@@ -8,7 +8,6 @@ import {
   IconClockHour4,
   IconCircleCheck,
   IconRefresh,
-  IconRobot,
   IconX,
 } from '@tabler/icons-preact';
 import {useEffect, useState} from 'preact/hooks';
@@ -23,6 +22,7 @@ import {
   type AgentRunStep,
   type Task,
 } from '../../utils/tasks.js';
+import {AgentAvatar} from '../AgentAvatar/AgentAvatar.js';
 import {Surface} from '../Surface/Surface.js';
 
 export interface AgentRunPanelProps {
@@ -99,9 +99,12 @@ export function AgentRunPanel(props: AgentRunPanelProps) {
   return (
     <Surface className="AgentRunPanel">
       <div className="AgentRunPanel__header">
-        <div className="AgentRunPanel__avatar" aria-hidden="true">
-          {agent?.icon || <IconRobot size={18} strokeWidth="1.8" />}
-        </div>
+        <AgentAvatar
+          name={agentName}
+          iconUrl={agent?.iconUrl}
+          size={36}
+          className="AgentRunPanel__avatar"
+        />
         <div className="AgentRunPanel__heading">
           <div className="AgentRunPanel__name">{agentName}</div>
           {agent?.description && (

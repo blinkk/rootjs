@@ -28,7 +28,7 @@ describe('loadAgents', () => {
       '/agents/content-manager.ts': {
         default: defineAgent({
           name: 'content-manager',
-          icon: '📝',
+
           description: 'Manages content.',
           systemPrompt: 'You manage content.',
         }),
@@ -36,7 +36,7 @@ describe('loadAgents', () => {
       '/agents/translator.ts': {
         default: defineAgent({
           name: 'translator',
-          icon: '🌐',
+
           description: 'Translates copy.',
           systemPrompt: 'You translate copy.',
         }),
@@ -44,8 +44,8 @@ describe('loadAgents', () => {
     };
     const agents = await loadAgents();
     expect(agents.size).toBe(2);
-    expect(agents.get('content-manager')?.icon).toBe('📝');
-    expect(agents.get('translator')?.icon).toBe('🌐');
+    expect(agents.get('content-manager')?.name).toBe('content-manager');
+    expect(agents.get('translator')?.name).toBe('translator');
   });
 
   it('also accepts a named `agent` export', async () => {
@@ -53,7 +53,7 @@ describe('loadAgents', () => {
       '/agents/content-manager.ts': {
         agent: defineAgent({
           name: 'content-manager',
-          icon: '📝',
+
           description: 'Manages content.',
           systemPrompt: 'You manage content.',
         }),
@@ -68,7 +68,7 @@ describe('loadAgents', () => {
       '/agents/a.ts': {
         default: defineAgent({
           name: 'duplicate',
-          icon: '📝',
+
           description: 'A',
           systemPrompt: 'A',
         }),
@@ -76,7 +76,7 @@ describe('loadAgents', () => {
       '/agents/b.ts': {
         default: defineAgent({
           name: 'duplicate',
-          icon: '🌐',
+
           description: 'B',
           systemPrompt: 'B',
         }),
@@ -104,7 +104,7 @@ describe('loadAgents', () => {
       '/agents/content-manager.ts': {
         default: defineAgent({
           name: 'content-manager',
-          icon: '📝',
+
           description: 'Manages content.',
           systemPrompt: 'You manage content.',
         }),
@@ -124,7 +124,7 @@ describe('getAgent', () => {
       '/agents/content-manager.ts': {
         default: defineAgent({
           name: 'content-manager',
-          icon: '📝',
+
           description: 'Manages content.',
           systemPrompt: 'You manage content.',
         }),

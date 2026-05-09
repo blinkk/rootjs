@@ -47,9 +47,18 @@ export function defineAgent(input: AgentDefinitionInput): AgentDefinition {
       `defineAgent: invalid name "${name}" (must match ${AGENT_NAME_PATTERN})`
     );
   }
-  const icon = (input.icon || '').trim();
-  if (!icon) {
-    throw new Error(`defineAgent[${name}]: missing required field "icon"`);
+  const iconUrl = (input.iconUrl || '').trim() || undefined;
+  if (
+    iconUrl &&
+    !iconUrl.startsWith('/') &&
+    !iconUrl.startsWith('http://') &&
+    !iconUrl.startsWith('https://') &&
+    !iconUrl.startsWith('data:')
+  ) {
+    throw new Error(
+      `defineAgent[${name}]: iconUrl must be an absolute URL, ` +
+        'root-relative path (/...), or data: URI'
+    );
   }
   const description = (input.description || '').trim();
   if (!description) {
@@ -77,7 +86,7 @@ export function defineAgent(input: AgentDefinitionInput): AgentDefinition {
 
   return {
     name,
-    icon,
+    iconUrl,
     description,
     systemPrompt,
     allowedTools,

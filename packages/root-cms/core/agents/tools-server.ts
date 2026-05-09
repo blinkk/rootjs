@@ -237,7 +237,7 @@ export function createServerReadTools(ctx: AgentRunContext): ToolSet {
         return {
           agents: Array.from(agents.values()).map((agent) => ({
             name: agent.name,
-            icon: agent.icon,
+            iconUrl: agent.iconUrl || null,
             description: agent.description,
             allowedTools: agent.allowedTools,
           })),

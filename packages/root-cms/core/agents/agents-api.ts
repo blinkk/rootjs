@@ -43,7 +43,7 @@ export function registerAgentApi(server: Server) {
       const agents = await loadAgents({viteServer: req.viteServer});
       const list = Array.from(agents.values()).map((agent) => ({
         name: agent.name,
-        icon: agent.icon,
+        iconUrl: agent.iconUrl || null,
         description: agent.description,
         allowedTools: agent.allowedTools,
       }));

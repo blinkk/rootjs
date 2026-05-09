@@ -9,7 +9,8 @@ import {useEffect, useState} from 'preact/hooks';
 
 export interface AgentSummary {
   name: string;
-  icon: string;
+  /** Avatar image URL; null when not configured (UI falls back to a letter avatar). */
+  iconUrl?: string | null;
   description: string;
   allowedTools: ('read' | 'propose' | 'subtask')[];
 }
