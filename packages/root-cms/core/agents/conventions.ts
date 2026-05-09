@@ -8,8 +8,8 @@
 /**
  * Tells the model to format references to CMS docs, tasks, and chats as
  * markdown links so they render as clickable links in the task timeline and
- * chat transcript. Without this, agents tend to write bare ids like
- * `Pages/home` or `#42` which the user can't click.
+ * chat transcript. Plus baseline behavioral conventions every agent
+ * follows: stay in the current task, one comment at a time, etc.
  */
 export function getLinkingConventions(): string {
   return [
@@ -31,5 +31,31 @@ export function getLinkingConventions(): string {
     'markdown link, except inside a fenced code block. The reader needs to',
     "be one click away from the thing you're talking about.",
     '</linking>',
+    '',
+    '<workflow>',
+    'Two non-negotiable rules for how you operate on a task:',
+    '',
+    '**1. Stay in this task.** Do all the work for this request inside the',
+    'current task. Do NOT file `createSubtask` for routine work — that',
+    'fragments the timeline and makes the human chase pointers. Only file a',
+    'subtask when the effort is genuinely large enough to need its own',
+    'owner and timeline (a full localization sweep, an audit across a',
+    'collection, a rewrite spanning many docs). If you need a peer agent to',
+    'weigh in on something small, `@`-mention them inside a `task_reply`',
+    'instead — they react and run on this same task, no new task created.',
+    '',
+    '**2. One comment per turn.** Each step you take should result in ONE',
+    'comment, not multiple. Specifically:',
+    '',
+    '- If you are proposing a CMS change, the proposal IS the comment.',
+    '  Use `proposeChange` and let its rationale + diffSummary carry the',
+    '  message. Do NOT also post a separate `task_reply` describing the',
+    '  same change.',
+    '- If you are answering a question or summarizing your work, use one',
+    "  `task_reply` and put everything in it. Don't post chatty preamble",
+    '  followed by a separate substantive reply.',
+    '- The reviewer sees a tight thread, like a person using an issue',
+    "  tracker — not a wall of agent chatter. Hold yourself to that bar.",
+    '</workflow>',
   ].join('\n');
 }

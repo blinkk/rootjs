@@ -79,7 +79,6 @@ export class AgentWorker {
   private readonly inflight = new Map<string, Promise<void>>();
   private readonly commentSeen = new Set<string>();
   private readonly mentionsInflight = new Set<string>();
-  private readonly startedAt = Timestamp.now();
 
   constructor(rootConfig: RootConfig, options: AgentWorkerOptions = {}) {
     this.instanceId = options.instanceId || randomUUID();
@@ -142,11 +141,25 @@ export class AgentWorker {
     // Second listener: react to new task comments. When a comment mentions
     // an agent, the worker either reassigns (mention is first token of the
     // comment) or runs the agent ephemerally on the task.
-    const commentsQuery = this.cmsClient.db
-      .collectionGroup('Comments')
-      .where('createdAt', '>=', this.startedAt);
+    //
+    // We skip the *first* snapshot batch entirely — Firestore delivers
+    // every existing matching doc as `added` on initial attach, which we
+    // don't want to re-process. Subsequent snapshots are real diffs.
+    // (Earlier we filtered with `where('createdAt', '>=', startedAt)` but
+    // that's unreliable across client/server clock skew.)
+    let commentsListenerPrimed = false;
+    const commentsQuery = this.cmsClient.db.collectionGroup('Comments');
     this.unsubscribeComments = commentsQuery.onSnapshot(
       (snapshot) => {
+        if (!commentsListenerPrimed) {
+          commentsListenerPrimed = true;
+          // Mark every doc in the initial state as seen so we don't
+          // re-process them if the listener flutters.
+          snapshot.docs.forEach((doc) => {
+            this.commentSeen.add(doc.ref.path);
+          });
+          return;
+        }
         for (const change of snapshot.docChanges()) {
           if (change.type !== 'added') {
             continue;

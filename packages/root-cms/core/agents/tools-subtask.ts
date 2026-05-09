@@ -25,8 +25,16 @@ export function createSubtaskTool(ctx: AgentRunContext): ToolSet {
       description:
         'File a subtask under the current task and assign it to another ' +
         'agent or a human. Subtasks are fire-and-forget — the parent does ' +
-        'not block. Use this when work needs human visibility between ' +
-        'agents (e.g. handing translation off to a localization agent).',
+        'not block.\n\n' +
+        'IMPORTANT — use sparingly. Default to handling the work yourself ' +
+        'in the current task, even when it spans multiple specialties: ' +
+        'an `@`-mention in a `task_reply` pulls another agent in to ' +
+        'collaborate without spawning a new task. Reserve `createSubtask` ' +
+        'for genuinely large efforts (a full localization sweep, a ' +
+        'multi-doc rewrite, an audit across a whole collection) where ' +
+        'the work needs its own timeline, owner, and deliverable. If the ' +
+        'work fits in a few proposals or one round-trip with a peer, ' +
+        'keep it inline.',
       inputSchema: z.object({
         title: z.string().min(1),
         description: z.string().optional(),

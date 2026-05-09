@@ -1042,6 +1042,7 @@ function TaskCommentComposer(props: {
   const [body, setBody] = useState<RichTextData | null>(null);
   const [editorKey, setEditorKey] = useState(0);
   const [submitting, setSubmitting] = useState(false);
+  const {agents} = useAgents();
   const isReply = Boolean(props.parentId);
 
   async function onSubmit(e: Event) {
@@ -1052,6 +1053,26 @@ function TaskCommentComposer(props: {
     setSubmitting(true);
     try {
       await addTaskComment(props.taskId, body, props.parentId);
+
+      // If this isn't a reply (top-level comment), and the comment starts
+      // with `@<agent-slug>` for a registered agent, reassign the task to
+      // that agent. Server-side does this too via the comments listener,
+      // but the client-side path is more reliable across clock skew and
+      // gets the picker/page state to update immediately.
+      if (!props.parentId) {
+        const leading = extractLeadingAgentMention(body, agents);
+        if (leading) {
+          await assignTaskToAgent(props.taskId, leading).catch((err) => {
+            showNotification({
+              title: 'Could not reassign to agent',
+              message: errorMessage(err),
+              color: 'red',
+              autoClose: 4000,
+            });
+          });
+        }
+      }
+
       setBody(null);
       setEditorKey((value) => value + 1);
       props.onSubmitted?.();
@@ -1293,6 +1314,37 @@ function formatTaskDate(ts?: Timestamp | null) {
 /** Renders a comment's date as a permalink. Clicking copies the full URL
  * (including the `#comment-<id>` fragment) so users can share a deep link
  * to a specific reply. */
+/**
+ * Inspects a freshly-composed comment body for a leading `@<agent>` token.
+ * Returns the agent name if the token matches a registered agent and is the
+ * very first thing in the comment (modulo whitespace). Used to auto-
+ * reassign the task to the @-mentioned agent on submit.
+ */
+function extractLeadingAgentMention(
+  body: RichTextData | null,
+  agents: Array<{name: string}>
+): string | null {
+  if (!body?.blocks?.length) {
+    return null;
+  }
+  const firstBlock = body.blocks[0];
+  let firstText = '';
+  if (firstBlock.type === 'paragraph' || firstBlock.type === 'heading') {
+    firstText = firstBlock.data?.text || '';
+  } else {
+    return null;
+  }
+  // Strip HTML tags so the leading `@` is unwrapped from any `<span>`s the
+  // Lexical mention plugin inserts.
+  const plain = firstText.replace(/<[^>]+>/g, '').trim();
+  const match = plain.match(/^@([a-z0-9][a-z0-9-]*)\b/);
+  if (!match) {
+    return null;
+  }
+  const name = match[1];
+  return agents.some((a) => a.name === name) ? name : null;
+}
+
 function CommentPermalink(props: {
   commentId: string;
   createdAt?: Timestamp | null;

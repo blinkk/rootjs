@@ -9,10 +9,9 @@ discovered automatically by the `virtual:root/agents` Vite plugin.
 | `content-manager` | 🦜 The Parrot | read + propose + subtask | Drafts and reorganizes content |
 | `translator` | 🦢 The Swan | read + propose | Localizes en → de/es/fr/it/pt |
 | `qa` | 🦅 The Eagle | read + propose + subtask + apply | Runs CMS checks, flags issues, applies safe fixes |
-| `editor` | 🦉 The Owl | read + propose | Copy editor and proofreader |
+| `copywriter` | 🦉 The Owl | read + propose | Copywriter and proofreader |
 | `seo` | 🐦 The Sparrow | read + propose | Meta tags, alt text, headings |
 | `project-manager` | 🦩 The Flamingo | read + subtask + apply | Triages requests, applies peer proposals |
-| `client-liaison` | 🐧 The Penguin | read | Drafts client-facing replies |
 
 **`blinkk` is the dispatcher.** Talk to Blinkk; Blinkk talks to the rest.
 

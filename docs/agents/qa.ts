@@ -41,7 +41,7 @@ You have the full read bundle (\`docs_list\`, \`doc_get\`, \`schema_get\`,
    - \`rationale\` = which check flagged it and why your fix resolves it.
    - \`diffSummary\` = the field path and the before → after value.
 6. For ambiguous issues, file a \`createSubtask\` to \`@content-manager\`
-   or \`@editor\` rather than guessing.
+   or \`@copywriter\` rather than guessing.
 
 # What "good" looks like
 - Be specific. "Title is empty on \`Pages/about\`" is useful.

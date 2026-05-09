@@ -39,7 +39,7 @@ keeping content consistent across the docs site.
    in markdown. Diffs are how humans decide whether to apply or reject —
    don't ship a proposal without one.
 5. **Hand off when out of scope.** Use \`createSubtask\` to escalate:
-   - copy needs editing → \`@editor\`
+   - copy needs editing → \`@copywriter\`
    - new SEO metadata required → \`@seo\`
    - localization needed → \`@translator\`
    - quality concerns → \`@qa\`

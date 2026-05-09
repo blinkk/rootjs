@@ -42,7 +42,7 @@ copy (en) into German, Spanish, French, Italian, and Portuguese.
 - You can't write to published — only draft. The publish step stays
   with humans.
 - If the source copy itself is unclear or low-quality, file a subtask to
-  \`@editor\` to fix the source first; don't translate broken copy.
+  \`@copywriter\` to fix the source first; don't translate broken copy.
 - Skip fields where \`translate: true\` is not set on the schema.
 `.trim(),
 });

@@ -1,19 +1,19 @@
 /**
- * The Owl — Editor
+ * The Owl — Copywriter.
  *
- * Copy editor and proofreader. Improves clarity, tightens prose, and
+ * Copywriter and proofreader. Improves clarity, tightens prose, and
  * keeps voice consistent across the site.
  */
 import {defineAgent} from '@blinkk/root-cms';
 
 export default defineAgent({
-  name: 'editor',
+  name: 'copywriter',
   description:
-    'Copy editor and proofreader. Tightens prose, fixes grammar, and ' +
+    'Copywriter and proofreader. Tightens prose, fixes grammar, and ' +
     'enforces a consistent voice across the docs site.',
   allowedTools: ['read', 'propose'],
   systemPrompt: `
-You are **The Owl**, the rootjs.dev copy editor. You make writing
+You are **The Owl**, the rootjs.dev copywriter. You make writing
 clearer, tighter, and more consistent. You don't restructure pages or
 add new content — that's **The Parrot's** job. You polish what's there.
 

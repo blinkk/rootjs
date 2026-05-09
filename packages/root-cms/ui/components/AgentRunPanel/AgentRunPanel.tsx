@@ -1,6 +1,6 @@
 import './AgentRunPanel.css';
 
-import {Button, Loader, RingProgress, Tooltip} from '@mantine/core';
+import {Button, Loader, Tooltip} from '@mantine/core';
 import {showNotification} from '@mantine/notifications';
 import {
   IconAlertTriangle,
@@ -116,25 +116,14 @@ export function AgentRunPanel(props: AgentRunPanelProps) {
             label={
               <span>
                 {tokensUsed.toLocaleString()} / {tokensCap.toLocaleString()}{' '}
-                tokens used
+                tokens used ({tokensPct}%)
               </span>
             }
             withinPortal
             position="top"
           >
             <div className="AgentRunPanel__tokenRing">
-              <RingProgress
-                size={36}
-                thickness={4}
-                sections={[
-                  {value: tokensPct, color: tokensRingColor(tokensPct)},
-                ]}
-                label={
-                  <div className="AgentRunPanel__tokenRingLabel">
-                    {tokensPct}%
-                  </div>
-                }
-              />
+              <TokenRing pct={tokensPct} color={tokensRingColor(tokensPct)} />
             </div>
           </Tooltip>
         )}
@@ -240,9 +229,56 @@ export function AgentRunPanel(props: AgentRunPanelProps) {
  * the user gets a visual cue that the agent might be running long.
  */
 function tokensRingColor(pct: number): string {
-  if (pct >= 90) return 'red';
-  if (pct >= 70) return 'orange';
-  return 'indigo';
+  if (pct >= 90) return '#dc2626'; // red
+  if (pct >= 70) return '#ea580c'; // orange
+  return '#6366f1'; // indigo
+}
+
+/**
+ * Tiny SVG ring that animates `stroke-dashoffset` between renders so the
+ * token gauge fills in smoothly as the run progresses, rather than
+ * snapping per step.
+ */
+function TokenRing(props: {pct: number; color: string}) {
+  const size = 36;
+  const stroke = 4;
+  const radius = (size - stroke) / 2;
+  const circumference = 2 * Math.PI * radius;
+  const offset = circumference - (props.pct / 100) * circumference;
+  return (
+    <svg
+      width={size}
+      height={size}
+      className="AgentRunPanel__tokenRingSvg"
+      role="img"
+      aria-label={`${props.pct}% of token budget used`}
+    >
+      <circle
+        cx={size / 2}
+        cy={size / 2}
+        r={radius}
+        fill="none"
+        stroke="#e5e7eb"
+        strokeWidth={stroke}
+      />
+      <circle
+        cx={size / 2}
+        cy={size / 2}
+        r={radius}
+        fill="none"
+        stroke={props.color}
+        strokeWidth={stroke}
+        strokeLinecap="round"
+        strokeDasharray={circumference}
+        strokeDashoffset={offset}
+        transform={`rotate(-90 ${size / 2} ${size / 2})`}
+        style={{
+          transition:
+            'stroke-dashoffset 500ms cubic-bezier(0.22, 1, 0.36, 1), stroke 200ms ease-out',
+        }}
+      />
+    </svg>
+  );
 }
 
 function summarizeToolInput(

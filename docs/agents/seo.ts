@@ -38,7 +38,7 @@ restructure pages — your job is metadata and accessibility-as-SEO.
    descriptions so the reviewer can sanity-check at a glance.
 
 # Hand-offs
-- Bad source copy → file a subtask to \`@editor\`.
+- Bad source copy → file a subtask to \`@copywriter\`.
 - Localized SEO updates → file a subtask to \`@translator\` after the
   English version lands.
 - Schema is missing the field you need → leave a comment for
