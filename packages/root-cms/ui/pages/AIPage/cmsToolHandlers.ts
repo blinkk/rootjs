@@ -138,6 +138,18 @@ async function collectionsList() {
   };
 }
 
+async function agentsList() {
+  const res = await fetch('/cms/api/agents.list', {credentials: 'include'});
+  if (!res.ok) {
+    throw new Error(`agents.list failed: ${res.status}`);
+  }
+  const data = await res.json();
+  if (!data.success) {
+    throw new Error(data.error || 'agents.list failed');
+  }
+  return {agents: data.agents || []};
+}
+
 async function docsList(input: {
   collectionId: string;
   mode?: 'draft' | 'published';
@@ -519,6 +531,7 @@ function simplifyFields(fields: any[]): any[] {
 // ---------------------------------------------------------------------------
 
 const HANDLERS: Record<string, (input: any) => Promise<unknown>> = {
+  agents_list: agentsList,
   collections_list: collectionsList,
   docs_list: docsList,
   docs_search: docsSearch,

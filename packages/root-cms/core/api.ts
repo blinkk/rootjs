@@ -825,6 +825,7 @@ export function api(server: Server, options: ApiOptions) {
         messages,
         chatId,
         user: req.user.email,
+        viteServer: req.viteServer,
       });
       // Surface the chat id so clients can persist it for the next request.
       streamResponse.headers.set('x-root-cms-chat-id', chatId);

@@ -27,6 +27,7 @@ import {validateFields, validateValue} from './validation.js';
 
 /** Tool ids handled client-side. Kept in sync with the schemas below. */
 export const CMS_TOOL_NAMES = [
+  'agents_list',
   'collections_list',
   'docs_list',
   'docs_search',
@@ -48,6 +49,7 @@ export type CmsToolName = (typeof CMS_TOOL_NAMES)[number];
  * and the model must not write to Firestore directly.
  */
 export const READ_ONLY_CMS_TOOL_NAMES: readonly CmsToolName[] = [
+  'agents_list',
   'collections_list',
   'docs_list',
   'docs_search',
@@ -98,6 +100,15 @@ export function createReadOnlyCmsTools(): ToolSet {
  */
 export function createCmsTools(): ToolSet {
   return {
+    agents_list: tool({
+      description:
+        'List the AI agents registered on this site. Returns each agent ' +
+        'with name, icon, description, and allowedTools. Use this to tell ' +
+        'the user what agents are available, or to suggest converting the ' +
+        'current chat into a task assigned to a specific agent.',
+      inputSchema: z.object({}),
+    }),
+
     collections_list: tool({
       description:
         'List all CMS collections defined in the project. Returns each ' +

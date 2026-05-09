@@ -23,6 +23,7 @@ import {
   UIMessage,
 } from 'ai';
 import {Timestamp} from 'firebase-admin/firestore';
+import type {AgentDefinition} from './agents/types.js';
 import {createCmsTools, createReadOnlyCmsTools} from './ai-tools.js';
 import {RootCMSClient} from './client.js';
 
@@ -321,23 +322,73 @@ export async function readRootMd(rootDir: string): Promise<string | null> {
  */
 export function buildSystemPrompt(
   basePrompt: string,
-  rootMd: string | null
+  rootMd: string | null,
+  agentsBlock?: string | null
 ): string {
-  if (!rootMd) {
-    return basePrompt;
+  const parts: string[] = [basePrompt];
+  if (rootMd) {
+    parts.push(
+      '',
+      `The project includes a \`${ROOT_MD_FILENAME}\` file with site-specific`,
+      'instructions, conventions and context provided by the developer. Treat',
+      'these instructions as authoritative for this project and follow them',
+      'when responding or calling tools.',
+      '',
+      `<${ROOT_MD_FILENAME}>`,
+      rootMd,
+      `</${ROOT_MD_FILENAME}>`
+    );
   }
-  return [
-    basePrompt,
+  if (agentsBlock) {
+    parts.push('', agentsBlock);
+  }
+  return parts.join('\n');
+}
+
+/**
+ * Loads the registered agents and renders them as a system-prompt block so
+ * the chat assistant knows about the project's specialist agents and can
+ * suggest converting questions into agent-assigned tasks. Returns null when
+ * no agents are registered.
+ */
+async function buildAgentsBlock(
+  viteServer: import('vite').ViteDevServer | undefined
+): Promise<string | null> {
+  let agents: ReadonlyMap<string, AgentDefinition>;
+  try {
+    const {loadAgents} = await import('./agents/registry.js');
+    agents = await loadAgents({viteServer});
+  } catch {
+    return null;
+  }
+  if (agents.size === 0) {
+    return null;
+  }
+  const lines: string[] = [
+    '<agents>',
+    'This project has specialist agents registered. They run in the',
+    'background as task assignees and can be reached by converting the chat',
+    "into a task (the 'Convert to task' button in the header) with the",
+    'right agent picked. When the user asks a question that maps cleanly to',
+    'one of these agents, suggest converting the chat to a task assigned to',
+    'that agent and briefly explain what the agent will do.',
     '',
-    `The project includes a \`${ROOT_MD_FILENAME}\` file with site-specific`,
-    'instructions, conventions and context provided by the developer. Treat',
-    'these instructions as authoritative for this project and follow them',
-    'when responding or calling tools.',
+    'Agents available in this project:',
+  ];
+  for (const agent of agents.values()) {
+    lines.push(
+      `- ${agent.icon} \`@${agent.name}\` — ${agent.description} ` +
+        `(tools: ${agent.allowedTools.join(', ')})`
+    );
+  }
+  lines.push(
     '',
-    `<${ROOT_MD_FILENAME}>`,
-    rootMd,
-    `</${ROOT_MD_FILENAME}>`,
-  ].join('\n');
+    'When asked "what agents are available?" or similar, list the agents',
+    'above with their icons and one-line descriptions. Do not invent agents',
+    'that are not in this list.',
+    '</agents>'
+  );
+  return lines.join('\n');
 }
 
 /** Derives a short title from the first user message (used as fallback). */
@@ -408,6 +459,13 @@ export interface RunChatStreamOptions {
   messages: UIMessage[];
   chatId: string;
   user: string;
+  /**
+   * Optional Vite dev server. When provided, used to resolve the agent
+   * registry so the chat's system prompt can include the list of available
+   * agents. Required for the agent picker to actually surface agents in
+   * dev (where the registry lives behind a virtual module).
+   */
+  viteServer?: import('vite').ViteDevServer;
 }
 
 /**
@@ -433,7 +491,8 @@ export async function runChatStream(
       'Be concise and use markdown for rich responses.',
     ].join(' ');
   const rootMd = await readRootMd(rootConfig.rootDir);
-  const systemPrompt = buildSystemPrompt(basePrompt, rootMd);
+  const agentsBlock = await buildAgentsBlock(options.viteServer);
+  const systemPrompt = buildSystemPrompt(basePrompt, rootMd, agentsBlock);
 
   const modelMessages = await convertToModelMessages(messages, {tools});
   const result = streamText({
@@ -524,7 +583,7 @@ export async function runEditObjectStream(
     '  context (e.g. inspecting the schema or referencing other CMS docs).',
     '- You MUST NOT attempt to call write tools (e.g. doc_set, doc_create,',
     '  doc_updateField). The user approves and saves changes manually via',
-    '  the modal\'s Save button.',
+    "  the modal's Save button.",
   ];
 
   // Append the project's root-cms.d.ts type definitions if present so the
