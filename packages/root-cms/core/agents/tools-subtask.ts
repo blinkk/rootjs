@@ -52,7 +52,7 @@ export function createSubtaskTool(ctx: AgentRunContext): ToolSet {
             'createSubtask: pass at most one of assigneeAgent or assigneeEmail'
           );
         }
-        const assignee = await resolveAssignee(input);
+        const assignee = await resolveAssignee(ctx, input);
         const subtaskId = await allocateAndCreateSubtask(ctx, {
           title: input.title,
           description: input.description,
@@ -72,14 +72,26 @@ interface CreateSubtaskInput {
   priority: 'high' | 'medium' | 'normal';
 }
 
-async function resolveAssignee(input: {
-  assigneeAgent?: string;
-  assigneeEmail?: string;
-}): Promise<string | null> {
+async function resolveAssignee(
+  ctx: AgentRunContext,
+  input: {
+    assigneeAgent?: string;
+    assigneeEmail?: string;
+  }
+): Promise<string | null> {
   if (input.assigneeAgent) {
-    const agents = await loadAgents();
+    // Pass the run context's vite server through so the registry resolves
+    // `virtual:root/agents` correctly in dev. Without this, every agent
+    // name reads as "unknown" and createSubtask bounces with
+    // "unknown agent" — the same hiccup we hit on the API endpoints
+    // earlier in this stack.
+    const agents = await loadAgents({viteServer: ctx.viteServer});
     if (!agents.has(input.assigneeAgent)) {
-      throw new Error(`createSubtask: unknown agent "${input.assigneeAgent}"`);
+      const known = Array.from(agents.keys()).join(', ') || '(none)';
+      throw new Error(
+        `createSubtask: unknown agent "${input.assigneeAgent}" ` +
+          `(known: ${known})`
+      );
     }
     return `${AGENT_ASSIGNEE_PREFIX}${input.assigneeAgent}`;
   }
