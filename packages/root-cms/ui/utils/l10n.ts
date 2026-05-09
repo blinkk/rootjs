@@ -67,6 +67,54 @@ export async function loadTranslations(options?: {
 }
 
 /**
+ * Loads translations only for the given source strings. Computes the hash for
+ * each string and fetches just those translation documents from Firestore in
+ * parallel, which is much faster than loading the entire translations
+ * collection when only a small set of strings is needed.
+ *
+ * Returns a map like:
+ * ```
+ * {
+ *   "<hash>": {"source": "Hello", "es": "Hola", "fr": "Bonjour"},
+ * }
+ * ```
+ */
+export async function loadTranslationsForStrings(
+  strings: string[]
+): Promise<TranslationsMap> {
+  if (strings.length === 0) {
+    return {};
+  }
+  const projectId = window.__ROOT_CTX.rootConfig.projectId;
+  const db = window.firebase.db;
+
+  // Compute hashes for all strings in parallel.
+  const hashEntries = await Promise.all(
+    strings.map(async (str) => ({
+      hash: await sourceHash(str),
+      source: str,
+    }))
+  );
+
+  // Fetch translation docs for each hash in parallel.
+  const snapshots = await Promise.all(
+    hashEntries.map(({hash}) => {
+      const docRef = doc(db, 'Projects', projectId, 'Translations', hash);
+      return getDoc(docRef).then((snap) => ({hash, snap}));
+    })
+  );
+
+  // Build the TranslationsMap from non-empty snapshots.
+  const translationsMap: TranslationsMap = {};
+  snapshots.forEach(({hash, snap}) => {
+    if (snap.exists()) {
+      translationsMap[hash] = snap.data() as Translation;
+    }
+  });
+  return translationsMap;
+}
+
+/**
  * Fetches translations by hash.
  */
 export async function getTranslationByHash(hash: string) {

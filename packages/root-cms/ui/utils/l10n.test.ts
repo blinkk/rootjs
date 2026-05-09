@@ -1,5 +1,5 @@
 import {beforeEach, describe, expect, it, vi} from 'vitest';
-import {batchUpdateTags} from './l10n.js';
+import {batchUpdateTags, loadTranslationsForStrings} from './l10n.js';
 
 // Mock values used in the function.
 const mockProjectId = 'test-project-id';
@@ -21,6 +21,9 @@ const mockWriteBatch = vi.fn();
 const mockBatchUpdate = vi.fn();
 const mockBatchCommit = vi.fn();
 const mockDoc = vi.fn();
+// mockGetDoc is wired through the module mock so that loadTranslationsForStrings
+// (which calls getDoc directly) can have its behaviour controlled per test.
+const mockGetDoc = vi.fn();
 const mockArrayUnion = vi.fn((...args: any[]) => ({
   __type: 'arrayUnion',
   values: args,
@@ -30,9 +33,11 @@ vi.mock('firebase/firestore', () => ({
   arrayUnion: (...args: any[]) => mockArrayUnion(...args),
   writeBatch: (...args: any[]) => mockWriteBatch(...args),
   doc: (...args: any[]) => mockDoc(...args),
-  // Add other functions if they are imported but not used in the test path
+  // getDoc is routed through mockGetDoc so tests for loadTranslationsForStrings
+  // can control snapshot return values. Other functions are simple stubs because
+  // they are imported by l10n.ts but not exercised by these tests.
+  getDoc: (...args: any[]) => mockGetDoc(...args),
   collection: vi.fn(),
-  getDoc: vi.fn(),
   getDocs: vi.fn(),
   query: vi.fn(),
   updateDoc: vi.fn(),
@@ -125,5 +130,73 @@ describe('batchUpdateTags', () => {
     expect(mockBatchUpdate).toHaveBeenCalledWith('doc-ref-1', {
       tags: {__type: 'arrayUnion', values: ['newTag']},
     });
+  });
+});
+
+describe('loadTranslationsForStrings', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('returns an empty map for an empty strings array', async () => {
+    const result = await loadTranslationsForStrings([]);
+    expect(result).toEqual({});
+    expect(mockGetDoc).not.toHaveBeenCalled();
+  });
+
+  it('fetches translations for the provided strings', async () => {
+    mockDoc.mockImplementation(
+      (_db, _col, _proj, _sub, hash) => `doc-ref-${hash}`
+    );
+    mockGetDoc.mockImplementation((ref: string) => {
+      // 'aaf4c61ddcc5e8a2dabede0f3b482cd9aea9434d' is the SHA-1 hash of
+      // the normalised string 'hello' (computed by sourceHash()).
+      if (ref === 'doc-ref-aaf4c61ddcc5e8a2dabede0f3b482cd9aea9434d') {
+        return Promise.resolve({
+          exists: () => true,
+          data: () => ({source: 'hello', en: 'hello', es: 'hola'}),
+        });
+      }
+      return Promise.resolve({exists: () => false, data: () => undefined});
+    });
+
+    const result = await loadTranslationsForStrings(['hello']);
+
+    expect(mockGetDoc).toHaveBeenCalledTimes(1);
+    // The result map should be keyed by the hash of the normalized string.
+    const hashes = Object.keys(result);
+    expect(hashes).toHaveLength(1);
+    expect(result[hashes[0]]).toEqual({source: 'hello', en: 'hello', es: 'hola'});
+  });
+
+  it('skips strings that have no existing translation document', async () => {
+    mockDoc.mockImplementation(
+      (_db, _col, _proj, _sub, hash) => `doc-ref-${hash}`
+    );
+    // All snapshots report non-existent.
+    mockGetDoc.mockResolvedValue({exists: () => false, data: () => undefined});
+
+    const result = await loadTranslationsForStrings(['missing string']);
+
+    expect(mockGetDoc).toHaveBeenCalledTimes(1);
+    expect(result).toEqual({});
+  });
+
+  it('fetches multiple strings in parallel and builds the map', async () => {
+    mockDoc.mockImplementation(
+      (_db: any, _col: any, _proj: any, _sub: any, hash: string) =>
+        `doc-ref-${hash}`
+    );
+    // Both strings have translations.
+    mockGetDoc.mockResolvedValue({
+      exists: () => true,
+      data: () => ({source: 'some string', en: 'some string'}),
+    });
+
+    const strings = ['foo', 'bar'];
+    const result = await loadTranslationsForStrings(strings);
+
+    expect(mockGetDoc).toHaveBeenCalledTimes(2);
+    expect(Object.keys(result)).toHaveLength(2);
   });
 });

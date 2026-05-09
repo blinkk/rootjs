@@ -32,7 +32,7 @@ import {GoogleSheetId, getSpreadsheetUrl} from '../../utils/gsheets.js';
 import {
   Translation,
   TranslationsMap,
-  loadTranslations,
+  loadTranslationsForStrings,
 } from '../../utils/l10n.js';
 import {notifyErrors} from '../../utils/notifications.js';
 import './DocTranslationsPage.css';
@@ -63,11 +63,11 @@ export function DocTranslationsPage(props: DocTranslationsPageProps) {
 
   async function init() {
     try {
-      const [sourceStrings, translationsMap, linkedSheet] = await Promise.all([
+      const [sourceStrings, linkedSheet] = await Promise.all([
         extractStringsForDoc(docId),
-        loadTranslations(),
         cmsGetLinkedGoogleSheetL10n(docId),
       ]);
+      const translationsMap = await loadTranslationsForStrings(sourceStrings);
       setSourceStrings(sourceStrings);
       setTranslationsMap(translationsMap);
       setLinkedSheet(linkedSheet);
