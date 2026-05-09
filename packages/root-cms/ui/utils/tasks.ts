@@ -443,6 +443,51 @@ export function subscribeTaskComments(
   );
 }
 
+/**
+ * Single step in an agent run, persisted live by the runner so the UI can
+ * stream the agent's tool calls + reasoning. Stored under the task's
+ * `AgentSteps` subcollection.
+ */
+export interface AgentRunStep {
+  id: string;
+  index: number;
+  text?: string | null;
+  toolCalls?: Array<{toolName: string; input?: Record<string, string> | null}>;
+  toolResults?: Array<{toolName: string; ok: boolean; error?: string | null}>;
+  tokensUsed?: number;
+  createdAt?: Timestamp;
+  createdBy?: string;
+}
+
+function taskAgentStepsCollectionRef(taskId: string) {
+  const db = window.firebase.db;
+  const projectId = window.__ROOT_CTX.rootConfig.projectId;
+  return collection(db, 'Projects', projectId, 'Tasks', taskId, 'AgentSteps');
+}
+
+/**
+ * Streams the live step events for an in-flight or just-completed agent run.
+ * Each step is appended in `createdAt` order.
+ */
+export function subscribeAgentSteps(
+  taskId: string,
+  onSteps: (steps: AgentRunStep[]) => void,
+  onError?: (err: Error) => void
+): TaskUnsubscribe {
+  return onSnapshot(
+    query(taskAgentStepsCollectionRef(taskId), orderBy('createdAt', 'asc')),
+    (snapshot) => {
+      onSteps(
+        snapshot.docs.map((d) => ({
+          ...(d.data() as Record<string, unknown>),
+          id: d.id,
+        })) as AgentRunStep[]
+      );
+    },
+    onError
+  );
+}
+
 export function subscribeTaskEvents(
   taskId: string,
   onEvents: (events: TaskEvent[]) => void,

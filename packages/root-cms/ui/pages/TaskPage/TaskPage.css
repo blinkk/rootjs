@@ -382,6 +382,19 @@
   position: relative;
 }
 
+/* Proposal cards live inside the comment surface but outside the padded
+   body — give them their own horizontal/bottom padding so they don't
+   crowd the surface edges. */
+.TaskPage__comment > .ProposalComment {
+  margin: 0 16px 14px;
+}
+
+/* Same for the reaction row + emoji picker — adds breathing room on the
+   bottom and lifts the picker off the surface edge. */
+.TaskPage__comment > .CommentReactions {
+  margin: 0 16px 12px;
+}
+
 .TaskPage__comment__header {
   align-items: center;
   background: #f6f7f8;

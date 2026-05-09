@@ -70,12 +70,7 @@ export function AgentPicker(props: AgentPickerProps) {
         <Menu.Item key={agent.name} onClick={() => props.onSelect(agent)}>
           <div className="AgentPicker__option">
             <span className="AgentPicker__optionIcon">{agent.icon}</span>
-            <div>
-              <div className="AgentPicker__optionName">{agent.name}</div>
-              <div className="AgentPicker__optionDescription">
-                {agent.description}
-              </div>
-            </div>
+            <span className="AgentPicker__optionName">{agent.name}</span>
           </div>
         </Menu.Item>
       ))}

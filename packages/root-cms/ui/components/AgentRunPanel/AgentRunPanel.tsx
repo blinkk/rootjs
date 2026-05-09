@@ -11,7 +11,7 @@ import {
   IconRobot,
   IconX,
 } from '@tabler/icons-preact';
-import {useState} from 'preact/hooks';
+import {useEffect, useState} from 'preact/hooks';
 import {useAgents} from '../../hooks/useAgents.js';
 import {joinClassNames} from '../../utils/classes.js';
 import {errorMessage} from '../../utils/notifications.js';
@@ -19,6 +19,8 @@ import {
   cancelTaskAgentRun,
   getAgentAssigneeName,
   retryTaskAgentRun,
+  subscribeAgentSteps,
+  type AgentRunStep,
   type Task,
 } from '../../utils/tasks.js';
 import {Surface} from '../Surface/Surface.js';
@@ -42,6 +44,15 @@ export function AgentRunPanel(props: AgentRunPanelProps) {
   const run = task.agentRun;
   const status = (run?.status as RunStatus | undefined) || 'idle';
   const [busy, setBusy] = useState(false);
+  const [steps, setSteps] = useState<AgentRunStep[]>([]);
+
+  useEffect(() => {
+    if (!task.id) {
+      return;
+    }
+    const unsub = subscribeAgentSteps(task.id, setSteps);
+    return () => unsub();
+  }, [task.id]);
 
   async function onCancel() {
     setBusy(true);
@@ -142,6 +153,38 @@ export function AgentRunPanel(props: AgentRunPanelProps) {
         </div>
       )}
 
+      {steps.length > 0 && (
+        <div className="AgentRunPanel__activity">
+          <div className="AgentRunPanel__activityHeader">Activity</div>
+          <ol className="AgentRunPanel__activityList">
+            {steps.map((step) => (
+              <li key={step.id} className="AgentRunPanel__activityItem">
+                <span className="AgentRunPanel__activityIndex">
+                  {step.index}
+                </span>
+                <div className="AgentRunPanel__activityBody">
+                  {(step.toolCalls || []).map((tc, i) => (
+                    <div key={i} className="AgentRunPanel__activityTool">
+                      <span className="AgentRunPanel__activityToolName">
+                        {tc.toolName}
+                      </span>
+                      <span className="AgentRunPanel__activityToolInput">
+                        {summarizeToolInput(tc.input)}
+                      </span>
+                    </div>
+                  ))}
+                  {(step.toolCalls || []).length === 0 && step.text && (
+                    <div className="AgentRunPanel__activityText">
+                      {step.text}
+                    </div>
+                  )}
+                </div>
+              </li>
+            ))}
+          </ol>
+        </div>
+      )}
+
       <div className="AgentRunPanel__actions">
         {status === 'running' && (
           <Tooltip
@@ -180,6 +223,27 @@ export function AgentRunPanel(props: AgentRunPanelProps) {
       </div>
     </Surface>
   );
+}
+
+function summarizeToolInput(
+  input: Record<string, string> | null | undefined
+): string {
+  if (!input) {
+    return '';
+  }
+  // Prefer the most identifying fields when present.
+  if (input.docId) return input.docId;
+  if (input.checkId && input.docId) return `${input.checkId} → ${input.docId}`;
+  if (input.checkId) return input.checkId;
+  if (input.collectionId) return input.collectionId;
+  if (input.tool) return input.tool;
+  if (input.title) return input.title;
+  if (input.query) return input.query;
+  // Fallback: first key=value pair.
+  const entries = Object.entries(input);
+  if (entries.length === 0) return '';
+  const [k, v] = entries[0];
+  return `${k}=${v}`;
 }
 
 const STATUS_META: Record<

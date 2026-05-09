@@ -16,7 +16,9 @@ import {getLinkingConventions} from './conventions.js';
 import type {AgentRunContext} from './run-context.js';
 import {
   addAgentReaction,
+  clearAgentSteps,
   postAgentStatusComment,
+  recordAgentStep,
   updateAgentRunStatus,
 } from './task-helpers.js';
 import {createProposeTool} from './tools-propose.js';
@@ -75,6 +77,9 @@ export async function runAgent(
     `${ctx.agent.icon} ${ctx.agent.name} picked up this task.`,
     '👀'
   );
+  // Wipe step history from prior runs so the live activity feed only shows
+  // the current run.
+  await clearAgentSteps(ctx);
   await updateAgentRunStatus(ctx, {
     status: 'running',
     tokensUsed: 0,
@@ -84,6 +89,7 @@ export async function runAgent(
   let cancelled = false;
   let lastError: string | null = null;
   let finalText = '';
+  let stepIndex = 0;
 
   try {
     const result = await generateText({
@@ -109,6 +115,34 @@ export async function runAgent(
       abortSignal: ctx.signal,
       onStepFinish: async (step) => {
         budget.consume(step.usage);
+        stepIndex += 1;
+        // Persist the step so the AgentRunPanel can stream it live. Best
+        // effort — a Firestore write failure here must not crash the run.
+        try {
+          await recordAgentStep(ctx, {
+            index: stepIndex,
+            text: step.text,
+            toolCalls: (step.toolCalls || []).map((tc) => ({
+              toolName: tc.toolName,
+              input: tc.input,
+            })),
+            toolResults: (step.toolResults || []).map((tr) => ({
+              toolName: tr.toolName,
+              ok: !(tr as {error?: unknown}).error,
+              error: (tr as {error?: string}).error,
+            })),
+            tokensUsed: budget.used,
+          });
+          await updateAgentRunStatus(ctx, {
+            status: 'running',
+            tokensUsed: budget.used,
+          });
+        } catch (err) {
+          console.error(
+            `[agent ${ctx.agent.name}] step ${stepIndex} record failed:`,
+            err
+          );
+        }
         if (budget.isExceeded()) {
           // Surface as an error post-loop; halt by throwing.
           throw new Error(
