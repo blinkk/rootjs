@@ -221,6 +221,8 @@ declare global {
         hasImport: boolean;
         hasExport: boolean;
       }>;
+      /** Default UI variant for `oneOf` fields. */
+      defaultOneOfVariant?: 'dropdown' | 'picker';
     };
     firebase: FirebaseContextObject;
   }

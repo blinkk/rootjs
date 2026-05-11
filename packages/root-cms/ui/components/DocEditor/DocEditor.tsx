@@ -1731,7 +1731,8 @@ DocEditor.ArrayFieldPreview = (props: ArrayFieldPreviewProps) => {
 
 DocEditor.OneOfField = (props: FieldProps) => {
   const field = props.field as schema.OneOfField;
-  const variant = field.variant || 'dropdown';
+  const variant =
+    field.variant || window.__ROOT_CTX.defaultOneOfVariant || 'dropdown';
   const [type, setType] = useState('');
   const collectionTypes = useCollectionSchemaTypes();
   const typesMap: Record<string, schema.Schema> = {};

@@ -144,6 +144,7 @@ export async function renderApp(
       hasImport: isFunction(t.onImport),
       hasExport: isFunction(t.onExport),
     })),
+    defaultOneOfVariant: cmsConfig.defaultOneOfVariant || 'dropdown',
   };
   const projectName = cmsConfig.name || cmsConfig.id || '';
   const title = getCmsTitle(projectName, cmsConfig.minimalBranding);
