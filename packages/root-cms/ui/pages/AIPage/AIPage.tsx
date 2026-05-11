@@ -1,7 +1,7 @@
 /**
  * `/cms/ai` page. Built on top of the Vercel AI SDK (`ai`, `@ai-sdk/react`).
  *
- * The server (`/cms/api/ai.v2.*`) proxies the configured providers and
+ * The server (`/cms/api/ai.*`) proxies the configured providers and
  * persists chat history to Firestore. This page is responsible for:
  *
  * - Listing past chats and resuming them.
@@ -84,7 +84,7 @@ export function AIPage(props: {chatId?: string}) {
 
   useEffect(() => {
     let active = true;
-    fetch('/cms/api/ai.v2.config', {credentials: 'include'})
+    fetch('/cms/api/ai.config', {credentials: 'include'})
       .then(async (res) => {
         const data = (await res.json()) as AiConfigResponse;
         if (active) {
@@ -168,7 +168,7 @@ function ChatExperience(props: {
 
   const refreshChats = async () => {
     try {
-      const res = await fetch('/cms/api/ai.v2.chats.list', {
+      const res = await fetch('/cms/api/ai.chats.list', {
         method: 'POST',
         credentials: 'include',
         headers: {'content-type': 'application/json'},
@@ -194,7 +194,7 @@ function ChatExperience(props: {
   /** Fetches a chat by id and applies it to state without the activeChatId guard. */
   const loadChat = async (id: string) => {
     try {
-      const res = await fetch('/cms/api/ai.v2.chats.get', {
+      const res = await fetch('/cms/api/ai.chats.get', {
         method: 'POST',
         credentials: 'include',
         headers: {'content-type': 'application/json'},
@@ -232,7 +232,7 @@ function ChatExperience(props: {
       return;
     }
     try {
-      const res = await fetch('/cms/api/ai.v2.chats.get', {
+      const res = await fetch('/cms/api/ai.chats.get', {
         method: 'POST',
         credentials: 'include',
         headers: {'content-type': 'application/json'},
@@ -260,7 +260,7 @@ function ChatExperience(props: {
 
   const deleteChat = async (id: string) => {
     try {
-      await fetch('/cms/api/ai.v2.chats.delete', {
+      await fetch('/cms/api/ai.chats.delete', {
         method: 'POST',
         credentials: 'include',
         headers: {'content-type': 'application/json'},
@@ -429,7 +429,7 @@ function ChatPane(props: {
   const transport = useMemo(
     () =>
       new DefaultChatTransport<UIMessage>({
-        api: '/cms/api/ai.v2.chat',
+        api: '/cms/api/ai.chat',
         credentials: 'include',
         prepareSendMessagesRequest: ({messages}) => ({
           body: {

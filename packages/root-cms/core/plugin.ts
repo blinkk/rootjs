@@ -24,8 +24,7 @@ import {Firestore, getFirestore} from 'firebase-admin/firestore';
 import * as jsonwebtoken from 'jsonwebtoken';
 import sirv from 'sirv';
 import {SSEEvent, SSESchemaChangedEvent} from '../shared/sse.js';
-import {type AiConfig} from './ai-chat.js';
-import {type RootAiModel} from './ai.js';
+import {type AiConfig} from './ai.js';
 import {api} from './api.js';
 import {type CMSCheck} from './checks.js';
 import {Action, RootCMSClient} from './client.js';
@@ -33,7 +32,7 @@ import {type CMSNotificationService} from './services-notifications.js';
 import {sse, SSEBroadcastFn} from './sse.js';
 import {type CMSTranslationService} from './translations.js';
 
-export type {AiConfig, AiModelConfig, AiProvider} from './ai-chat.js';
+export type {AiConfig, AiModelConfig, AiProvider} from './ai.js';
 export type {
   CMSCheck,
   CheckResult,
@@ -123,7 +122,7 @@ export interface CMSAIConfig {
   /** Custom API endpoint for chat prompts. */
   endpoint?: string;
   /** Gen AI model to use. */
-  model?: RootAiModel;
+  model?: string;
 }
 
 /**

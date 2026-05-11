@@ -1,43 +1,704 @@
+/**
+ * Vercel AI SDK-backed AI features for Root CMS.
+ *
+ * Powers the `/cms/ai` chat page (streaming chat with tool use and Firestore
+ * history) plus the one-shot task helpers (diff summaries, publish messages,
+ * translations, alt text, image generation) used by the `/cms/api/ai.*`
+ * endpoints. The CMS proxies requests directly to the configured model
+ * provider — keys live on the server, never on the client.
+ */
 import crypto from 'node:crypto';
-import fs from 'node:fs';
+import {promises as fs} from 'node:fs';
 import path from 'node:path';
-import {vertexAI} from '@genkit-ai/google-genai';
-import {Timestamp} from 'firebase-admin/firestore';
-import {GenerateOptions, Genkit, genkit, MessageData} from 'genkit';
-import {logger} from 'genkit/logging';
+import {createAnthropic} from '@ai-sdk/anthropic';
+import {createGoogleGenerativeAI} from '@ai-sdk/google';
+import {createOpenAI} from '@ai-sdk/openai';
+import {createOpenAICompatible} from '@ai-sdk/openai-compatible';
+import {RootConfig} from '@blinkk/root';
 import {
-  ChatPrompt,
-  AiResponse,
-  SendPromptOptions,
-} from '../shared/ai/prompts.js';
+  convertToModelMessages,
+  generateImage as generateImageSdk,
+  generateText,
+  ImageModel,
+  LanguageModel,
+  stepCountIs,
+  streamText,
+  ToolSet,
+  UIMessage,
+} from 'ai';
+import {Timestamp} from 'firebase-admin/firestore';
+import {createCmsTools, createReadOnlyCmsTools} from './ai-tools.js';
 import {RootCMSClient} from './client.js';
-import {CMSPluginOptions} from './plugin.js';
 
-// Suppress the "Shutting down all Genkit servers..." message.
-logger.setLogLevel('warn');
-
-type HistoryItem = MessageData;
+/** Filename of the project-level instructions file loaded into the AI prompt. */
+export const ROOT_MD_FILENAME = 'ROOT.md';
 
 /**
- * Supported Root AI models. Defaults to 'gemini-3-flash-preview'.
+ * Provider type for an AI model. Use `openai-compatible` for any OpenAI-style
+ * endpoint (e.g. local Ollama, vLLM, OpenRouter).
  */
-export type RootAiModel =
-  | 'gemini-3-pro-preview'
-  | 'gemini-3-flash-preview'
-  | 'gemini-2.5-flash'
-  | 'gemini-2.0-pro'
-  | string;
+export type AiProvider =
+  | 'openai'
+  | 'openai-compatible'
+  | 'anthropic'
+  | 'google';
 
-export type RootAiImagenModel = 'gemini-2.5-flash-image' | string;
+/**
+ * Configuration for a single chat model.
+ *
+ * Inspired by Ollama's `Modelfile` and LiteLLM's model config: each entry maps
+ * a CMS-facing id to a provider, model id and credentials.
+ */
+export interface AiModelConfig {
+  /** Stable id used by the CMS UI and stored alongside chat history. */
+  id: string;
+  /** Optional human-readable label rendered in the model picker. */
+  label?: string;
+  /** Optional description shown under the label. */
+  description?: string;
+  /** AI provider/family to route requests to. */
+  provider: AiProvider;
+  /**
+   * Provider-specific model id (e.g. `gpt-4o`, `claude-opus-4-5`,
+   * `gemini-2.5-pro`). Defaults to `id` if omitted.
+   */
+  modelId?: string;
+  /** API key for the provider. */
+  apiKey?: string;
+  /** Override the provider's base URL (required for `openai-compatible`). */
+  baseURL?: string;
+  /** Custom headers to send with each request. */
+  headers?: Record<string, string>;
+  /** Capabilities advertised to the UI. */
+  capabilities?: {
+    /** Whether the model can call tools. Defaults to `true`. */
+    tools?: boolean;
+    /** Whether the model can stream reasoning/thinking. Defaults to `false`. */
+    reasoning?: boolean;
+    /** Whether the model accepts image attachments. Defaults to `false`. */
+    attachments?: boolean;
+  };
+}
 
-const DEFAULT_MODEL: RootAiModel = 'gemini-3-flash-preview';
-const DEFAULT_IMAGEGEN_MODEL: RootAiImagenModel = 'gemini-2.5-flash-image';
+/**
+ * Full AI config registered on the cms plugin.
+ */
+export interface AiConfig {
+  /** Models exposed in the model picker. The first entry is the default. */
+  models: AiModelConfig[];
+  /** Id of the default model. Defaults to the first model in `models`. */
+  defaultModel?: string;
+  /**
+   * Image generation models. Used by the image generator and any other
+   * features that produce images. Only the `openai` and `google` providers
+   * support image generation.
+   */
+  imageModels?: AiModelConfig[];
+  /** Id of the default image model. Defaults to the first entry in `imageModels`. */
+  defaultImageModel?: string;
+  /**
+   * Optional system prompt prepended to every conversation. If a `ROOT.md`
+   * file exists at the project root, its contents are appended to this
+   * prompt automatically.
+   */
+  systemPrompt?: string;
+  /** Maximum tool-loop steps before stopping. Defaults to 10. */
+  maxSteps?: number;
+}
 
-// Rename models from '@genkit-ai/google-vertexai' to '@genkit-ai/google-genai'.
-const LEGACY_MODEL_RENAME: Record<string, string> = {
-  'vertexai/gemini-2.5-flash': 'gemini-2.5-flash',
-  'vertexai/gemini-2.0-pro': 'gemini-2.0-pro',
-};
+interface ChatRecord {
+  id: string;
+  createdBy: string;
+  createdAt: Timestamp;
+  modifiedAt: Timestamp;
+  modelId?: string;
+  title?: string;
+  messages: UIMessage[];
+}
+
+/** Resolves an `AiModelConfig` to an AI SDK `LanguageModel` instance. */
+export function resolveLanguageModel(model: AiModelConfig): LanguageModel {
+  const modelId = model.modelId || model.id;
+  switch (model.provider) {
+    case 'openai': {
+      const provider = createOpenAI({
+        apiKey: model.apiKey,
+        baseURL: model.baseURL,
+        headers: model.headers,
+      });
+      return provider(modelId);
+    }
+    case 'openai-compatible': {
+      if (!model.baseURL) {
+        throw new Error(
+          `model "${model.id}" requires a baseURL for provider "openai-compatible"`
+        );
+      }
+      const provider = createOpenAICompatible({
+        name: model.id,
+        baseURL: model.baseURL,
+        apiKey: model.apiKey,
+        headers: model.headers,
+      });
+      return provider(modelId);
+    }
+    case 'anthropic': {
+      const provider = createAnthropic({
+        apiKey: model.apiKey,
+        baseURL: model.baseURL,
+        headers: model.headers,
+      });
+      return provider(modelId);
+    }
+    case 'google': {
+      const provider = createGoogleGenerativeAI({
+        apiKey: model.apiKey,
+        baseURL: model.baseURL,
+        headers: model.headers,
+      });
+      return provider(modelId);
+    }
+    default: {
+      throw new Error(`unknown ai provider: ${(model as any).provider}`);
+    }
+  }
+}
+
+/** Resolves an `AiModelConfig` to an AI SDK `ImageModel` instance. */
+export function resolveImageModel(model: AiModelConfig): ImageModel {
+  const modelId = model.modelId || model.id;
+  switch (model.provider) {
+    case 'openai': {
+      const provider = createOpenAI({
+        apiKey: model.apiKey,
+        baseURL: model.baseURL,
+        headers: model.headers,
+      });
+      return provider.image(modelId);
+    }
+    case 'google': {
+      const provider = createGoogleGenerativeAI({
+        apiKey: model.apiKey,
+        baseURL: model.baseURL,
+        headers: model.headers,
+      });
+      return provider.image(modelId);
+    }
+    default: {
+      throw new Error(
+        `provider "${model.provider}" does not support image generation`
+      );
+    }
+  }
+}
+
+/** Strips secrets from `AiConfig` before sending to the browser. */
+export function serializeAiConfig(config: AiConfig) {
+  return {
+    defaultModel: config.defaultModel || config.models[0]?.id,
+    models: config.models.map((m) => ({
+      id: m.id,
+      label: m.label || m.id,
+      description: m.description,
+      provider: m.provider,
+      capabilities: {
+        tools: m.capabilities?.tools !== false,
+        reasoning: m.capabilities?.reasoning ?? false,
+        attachments: m.capabilities?.attachments ?? false,
+      },
+    })),
+    imageGenerationEnabled: !!config.imageModels?.length,
+  };
+}
+
+/** Returns the AI config registered on the CMS plugin, or `null`. */
+export function getAiConfig(rootConfig: RootConfig): AiConfig | null {
+  const cmsPlugin = rootConfig.plugins?.find((p) => p.name === 'root-cms') as
+    | {getConfig: () => {ai?: AiConfig}}
+    | undefined;
+  const ai = cmsPlugin?.getConfig().ai;
+  if (!ai || !Array.isArray(ai.models) || ai.models.length === 0) {
+    return null;
+  }
+  return ai;
+}
+
+/** Returns the model config matching `modelId`, or the default model. */
+export function findModel(
+  config: AiConfig,
+  modelId?: string
+): AiModelConfig | null {
+  if (modelId) {
+    const match = config.models.find((m) => m.id === modelId);
+    if (match) {
+      return match;
+    }
+  }
+  const defaultId = config.defaultModel || config.models[0]?.id;
+  return config.models.find((m) => m.id === defaultId) || null;
+}
+
+/** Returns the image model config matching `modelId`, or the default image model. */
+export function findImageModel(
+  config: AiConfig,
+  modelId?: string
+): AiModelConfig | null {
+  const imageModels = config.imageModels || [];
+  if (imageModels.length === 0) {
+    return null;
+  }
+  if (modelId) {
+    const match = imageModels.find((m) => m.id === modelId);
+    if (match) {
+      return match;
+    }
+  }
+  const defaultId = config.defaultImageModel || imageModels[0]?.id;
+  return imageModels.find((m) => m.id === defaultId) || null;
+}
+
+/**
+ * Resolves the AiConfig + default chat model from the given root config.
+ * Throws a descriptive error if AI is not configured.
+ */
+function requireDefaultModel(rootConfig: RootConfig): {
+  config: AiConfig;
+  model: AiModelConfig;
+} {
+  const config = getAiConfig(rootConfig);
+  if (!config) {
+    throw new Error('AI is not configured. Set `ai` on the cmsPlugin config.');
+  }
+  const model = findModel(config);
+  if (!model) {
+    throw new Error('No AI chat model configured.');
+  }
+  return {config, model};
+}
+
+/**
+ * Persists chat sessions to Firestore so that users can resume past
+ * conversations from the chat history sidebar.
+ */
+export class ChatStore {
+  cmsClient: RootCMSClient;
+  user: string;
+
+  constructor(cmsClient: RootCMSClient, user: string) {
+    this.cmsClient = cmsClient;
+    this.user = user;
+  }
+
+  collection() {
+    return this.cmsClient.db.collection(
+      `Projects/${this.cmsClient.projectId}/AiChats`
+    );
+  }
+
+  async createChat(options?: {
+    id?: string;
+    modelId?: string;
+  }): Promise<ChatRecord> {
+    const id = options?.id || crypto.randomUUID();
+    const now = Timestamp.now();
+    const record: ChatRecord = {
+      id,
+      createdBy: this.user,
+      createdAt: now,
+      modifiedAt: now,
+      modelId: options?.modelId,
+      messages: [],
+    };
+    await this.collection().doc(id).set(record);
+    return record;
+  }
+
+  async getChat(id: string): Promise<ChatRecord | null> {
+    const snap = await this.collection().doc(id).get();
+    if (!snap.exists) {
+      return null;
+    }
+    const data = snap.data() as ChatRecord;
+    if (data.createdBy !== this.user) {
+      return null;
+    }
+    return data;
+  }
+
+  async listChats(options?: {limit?: number}): Promise<ChatRecord[]> {
+    const limit = options?.limit ?? 50;
+    // Sort client-side to avoid requiring a Firestore composite index on
+    // (createdBy, modifiedAt).
+    const res = await this.collection()
+      .where('createdBy', '==', this.user)
+      .get();
+    const records = res.docs.map((d) => d.data() as ChatRecord);
+    records.sort((a, b) => {
+      const aMs = a.modifiedAt?.toMillis?.() ?? 0;
+      const bMs = b.modifiedAt?.toMillis?.() ?? 0;
+      return bMs - aMs;
+    });
+    return records.slice(0, limit);
+  }
+
+  async deleteChat(id: string): Promise<void> {
+    const chat = await this.getChat(id);
+    if (!chat) {
+      return;
+    }
+    await this.collection().doc(id).delete();
+  }
+
+  async updateMessages(
+    id: string,
+    messages: UIMessage[],
+    options?: {modelId?: string; title?: string}
+  ): Promise<void> {
+    const updates: Record<string, any> = {
+      messages,
+      modifiedAt: Timestamp.now(),
+    };
+    if (options?.modelId) {
+      updates.modelId = options.modelId;
+    }
+    if (options?.title) {
+      updates.title = options.title;
+    }
+    await this.collection().doc(id).update(updates);
+  }
+}
+
+/**
+ * Reads the project's `ROOT.md` file, if present. Mirrors the convention used
+ * by tools like `AGENTS.md` and `CLAUDE.md`: developers can drop a markdown
+ * file at the project root to give Root AI extra context about site-specific
+ * patterns or conventions.
+ *
+ * Returns the file contents (trimmed) or `null` if the file is missing or
+ * unreadable.
+ */
+export async function readRootMd(rootDir: string): Promise<string | null> {
+  const filePath = path.join(rootDir, ROOT_MD_FILENAME);
+  try {
+    const contents = await fs.readFile(filePath, 'utf8');
+    const trimmed = contents.trim();
+    return trimmed || null;
+  } catch (err: any) {
+    if (err && err.code === 'ENOENT') {
+      return null;
+    }
+    console.error(`failed to read ${ROOT_MD_FILENAME}:`, err);
+    return null;
+  }
+}
+
+/**
+ * Builds the full system prompt by combining the configured/default base
+ * prompt with the contents of `ROOT.md`, when present. The project-level
+ * file is appended under a clearly delimited section so the model can
+ * distinguish it from the framework-provided instructions.
+ */
+export function buildSystemPrompt(
+  basePrompt: string,
+  rootMd: string | null
+): string {
+  if (!rootMd) {
+    return basePrompt;
+  }
+  return [
+    basePrompt,
+    '',
+    `The project includes a \`${ROOT_MD_FILENAME}\` file with site-specific`,
+    'instructions, conventions and context provided by the developer. Treat',
+    'these instructions as authoritative for this project and follow them',
+    'when responding or calling tools.',
+    '',
+    `<${ROOT_MD_FILENAME}>`,
+    rootMd,
+    `</${ROOT_MD_FILENAME}>`,
+  ].join('\n');
+}
+
+/** Derives a short title from the first user message (used as fallback). */
+export function deriveChatTitle(messages: UIMessage[]): string {
+  const first = messages.find((m) => m.role === 'user');
+  if (!first) {
+    return 'New chat';
+  }
+  const text = first.parts
+    .filter((p: any) => p.type === 'text')
+    .map((p: any) => p.text)
+    .join(' ')
+    .trim();
+  if (!text) {
+    return 'New chat';
+  }
+  return text.length > 60 ? `${text.slice(0, 57)}…` : text;
+}
+
+/**
+ * Uses the AI model to generate a short summary title for the chat.
+ * Falls back to `deriveChatTitle` if the generation fails.
+ */
+export async function generateChatTitle(
+  model: LanguageModel,
+  messages: UIMessage[]
+): Promise<string> {
+  const fallback = deriveChatTitle(messages);
+  if (fallback === 'New chat') {
+    return fallback;
+  }
+  try {
+    const result = await generateText({
+      model,
+      system:
+        'Generate a short title (max 50 characters) summarizing the following conversation. ' +
+        'Return only the title text, no quotes or punctuation at the end.',
+      prompt: messages
+        .slice(0, 6)
+        .map((m) => {
+          const text = m.parts
+            .filter((p: any) => p.type === 'text')
+            .map((p: any) => p.text)
+            .join(' ');
+          return `${m.role}: ${text}`;
+        })
+        .join('\n'),
+      maxOutputTokens: 30,
+    });
+    const title = result.text
+      .trim()
+      .replace(/["']+$/g, '')
+      .replace(/^["']+/g, '');
+    if (title) {
+      return title.length > 80 ? `${title.slice(0, 77)}…` : title;
+    }
+  } catch (err) {
+    console.error('failed to generate chat title:', err);
+  }
+  return fallback;
+}
+
+export interface RunChatStreamOptions {
+  rootConfig: RootConfig;
+  cmsClient: RootCMSClient;
+  config: AiConfig;
+  model: AiModelConfig;
+  messages: UIMessage[];
+  chatId: string;
+  user: string;
+}
+
+/**
+ * Builds a streaming response that proxies the model's UI message stream
+ * directly to the client. Persists the final message list to Firestore once
+ * the stream finishes.
+ */
+export async function runChatStream(
+  options: RunChatStreamOptions
+): Promise<Response> {
+  const {rootConfig, model, config, messages, cmsClient, user, chatId} =
+    options;
+  const languageModel = resolveLanguageModel(model);
+  const tools: ToolSet =
+    model.capabilities?.tools === false ? {} : createCmsTools();
+
+  const basePrompt =
+    config.systemPrompt ||
+    [
+      'You are an assistant embedded in the Root CMS admin UI.',
+      'Help the user explore and edit content, answer questions about',
+      'the project, and use the provided tools to read and write CMS docs.',
+      'Be concise and use markdown for rich responses.',
+    ].join(' ');
+  const rootMd = await readRootMd(rootConfig.rootDir);
+  const systemPrompt = buildSystemPrompt(basePrompt, rootMd);
+
+  const modelMessages = await convertToModelMessages(messages, {tools});
+  const result = streamText({
+    model: languageModel,
+    system: systemPrompt,
+    messages: modelMessages,
+    tools,
+    stopWhen: stepCountIs(config.maxSteps ?? 10),
+  });
+
+  return result.toUIMessageStreamResponse({
+    sendReasoning: model.capabilities?.reasoning ?? false,
+    originalMessages: messages,
+    onFinish: async ({messages: finalMessages}) => {
+      const store = new ChatStore(cmsClient, user);
+      const title = await generateChatTitle(languageModel, finalMessages);
+      const updates = {
+        modelId: model.id,
+        title,
+      };
+      try {
+        // Firestore rejects `undefined` values, but the AI SDK frequently
+        // produces messages with `metadata: undefined`. Strip them before
+        // persisting.
+        await store.updateMessages(
+          chatId,
+          stripUndefined(finalMessages) as UIMessage[],
+          updates
+        );
+      } catch (err) {
+        console.error('failed to persist chat history:', err);
+      }
+    },
+  });
+}
+
+export interface RunEditObjectStreamOptions {
+  rootConfig: RootConfig;
+  config: AiConfig;
+  model: AiModelConfig;
+  messages: UIMessage[];
+  /** The JSON object the user is editing. Injected as context for the model. */
+  editData: unknown;
+}
+
+/**
+ * Streaming variant used by the array-item "Edit with AI" diff-viewer flow.
+ *
+ * Differences from `runChatStream`:
+ *
+ * - Uses an edit-specific system prompt that injects the JSON the user is
+ *   editing and the project's `root-cms.d.ts` types, and instructs the model
+ *   to end every response with a fenced ```json block containing the
+ *   complete proposed new JSON. The client extracts that block to populate
+ *   the diff viewer.
+ * - Tools are filtered to read-only (see `createReadOnlyCmsTools`). The user
+ *   approves changes via the modal's "Save" button, so the model must not
+ *   mutate Firestore directly.
+ * - No Firestore persistence — edit sessions are ephemeral and don't show up
+ *   in the user's chat history.
+ */
+export async function runEditObjectStream(
+  options: RunEditObjectStreamOptions
+): Promise<Response> {
+  const {rootConfig, model, config, messages, editData} = options;
+  const languageModel = resolveLanguageModel(model);
+  const tools: ToolSet =
+    model.capabilities?.tools === false ? {} : createReadOnlyCmsTools();
+
+  const editPromptText = (await import('../shared/ai/prompts/edit.txt'))
+    .default;
+  // Strip the legacy `{"data": ..., "message": ...}` output spec from the
+  // bundled prompt — for the streaming flow we replace it with explicit
+  // instructions to emit a fenced ```json code block instead.
+  const promptParts: string[] = [
+    stripLegacyEditOutputSpec(editPromptText),
+    '',
+    'Output format:',
+    '- Begin with a brief 1-2 sentence message describing what you changed.',
+    '- Then emit a single fenced code block tagged ```json containing the',
+    '  COMPLETE proposed new JSON object (including any unmodified fields).',
+    '- The code block must be the LAST content in your response. The CMS UI',
+    '  parses it and shows the result in a diff viewer for the user to',
+    '  approve before saving.',
+    '',
+    'Tool policy:',
+    '- The available tools are READ-ONLY. Use them only when you need extra',
+    '  context (e.g. inspecting the schema or referencing other CMS docs).',
+    '- You MUST NOT attempt to call write tools (e.g. doc_set, doc_create,',
+    '  doc_updateField). The user approves and saves changes manually via',
+    '  the modal\'s Save button.',
+  ];
+
+  // Append the project's root-cms.d.ts type definitions if present so the
+  // model can validate its output against the actual schema.
+  try {
+    const rootCmsDefsPath = path.join(rootConfig.rootDir, 'root-cms.d.ts');
+    const rootCmsDefs = await fs.readFile(rootCmsDefsPath, 'utf8');
+    if (rootCmsDefs.trim()) {
+      promptParts.push(
+        '',
+        'Here is the `root-cms.d.ts` file for this project:',
+        '```',
+        rootCmsDefs,
+        '```'
+      );
+    }
+  } catch (err: any) {
+    if (err?.code !== 'ENOENT') {
+      console.error('failed to read root-cms.d.ts:', err);
+    }
+  }
+
+  // Inject the JSON being edited at the end of the system prompt.
+  promptParts.push(
+    '',
+    'The JSON you must edit is:',
+    '```json',
+    JSON.stringify(editData ?? {}, null, 2),
+    '```'
+  );
+
+  const basePrompt = promptParts.join('\n');
+  const rootMd = await readRootMd(rootConfig.rootDir);
+  const systemPrompt = buildSystemPrompt(basePrompt, rootMd);
+
+  const modelMessages = await convertToModelMessages(messages, {tools});
+  const result = streamText({
+    model: languageModel,
+    system: systemPrompt,
+    messages: modelMessages,
+    tools,
+    stopWhen: stepCountIs(config.maxSteps ?? 10),
+  });
+
+  return result.toUIMessageStreamResponse({
+    sendReasoning: model.capabilities?.reasoning ?? false,
+    originalMessages: messages,
+  });
+}
+
+/**
+ * Removes the trailing legacy output specification block from `edit.txt`
+ * (the `{"data": ..., "message": ...}` JSON envelope used by the Genkit-era
+ * chat). The streaming flow uses fenced code blocks instead, which we
+ * append after this function returns.
+ */
+function stripLegacyEditOutputSpec(prompt: string): string {
+  const marker =
+    'Finally, when you provide your response, it MUST be structured';
+  const idx = prompt.indexOf(marker);
+  if (idx === -1) {
+    return prompt;
+  }
+  return prompt.slice(0, idx).trimEnd();
+}
+
+/**
+ * Recursively removes `undefined` values from an object/array. Returns a new
+ * structure; the input is not mutated. Used to clean payloads before sending
+ * them to Firestore, which rejects `undefined` outright.
+ */
+export function stripUndefined<T>(value: T): T {
+  if (Array.isArray(value)) {
+    return value
+      .filter((v) => v !== undefined)
+      .map((v) => stripUndefined(v)) as unknown as T;
+  }
+  if (value && typeof value === 'object') {
+    const out: Record<string, unknown> = {};
+    for (const [k, v] of Object.entries(value)) {
+      if (v === undefined) {
+        continue;
+      }
+      out[k] = stripUndefined(v);
+    }
+    return out as unknown as T;
+  }
+  return value;
+}
+
+// ===========================================================================
+// One-shot task helpers — used by the `/cms/api/ai.*` endpoints for tasks
+// that don't need a streaming chat session (diff summaries, publish
+// messages, translations, alt text, image generation).
+// ===========================================================================
 
 export interface SummarizeDiffOptions {
   before: Record<string, any> | null;
@@ -49,33 +710,22 @@ export interface SummarizeDiffOptions {
  * payloads.
  */
 export async function summarizeDiff(
-  cmsClient: RootCMSClient,
+  rootConfig: RootConfig,
   options: SummarizeDiffOptions
 ): Promise<string> {
-  const cmsPluginOptions = cmsClient.cmsPlugin.getConfig();
-  const firebaseConfig = cmsPluginOptions.firebaseConfig;
-  // Use fastest model for diff summarization
-  const model: RootAiModel = 'gemini-2.5-flash';
-
-  const ai = genkit({
-    plugins: [
-      vertexAI({
-        projectId: firebaseConfig.projectId,
-        location: firebaseConfig.location || 'us-central1',
-      }),
-    ],
-  });
+  const {model} = requireDefaultModel(rootConfig);
+  const languageModel = resolveLanguageModel(model);
 
   const beforeJson = JSON.stringify(options.before ?? null, null, 2);
   const afterJson = JSON.stringify(options.after ?? null, null, 2);
 
-  const systemPrompt = [
+  const system = [
     'Summarize CMS document changes in 2-4 bullet points.',
     'Focus on content changes only. Ignore metadata like timestamps.',
     'If no meaningful changes, say "No significant changes."',
   ].join('\n');
 
-  const diffPrompt = [
+  const prompt = [
     'Before:',
     beforeJson,
     '',
@@ -85,60 +735,40 @@ export async function summarizeDiff(
     'What changed?',
   ].join('\n');
 
-  const res = await generate(ai, model, {
-    messages: [
-      {
-        role: 'system',
-        content: [{text: systemPrompt}],
-      },
-    ],
-    prompt: [{text: diffPrompt}],
-    config: {
-      // Respond more quickly with less creativity.
-      temperature: 0.3,
-    },
+  const result = await generateText({
+    model: languageModel,
+    system,
+    prompt,
+    // Respond more quickly with less creativity.
+    temperature: 0.3,
   });
 
-  return res.text?.trim() || '';
+  return result.text?.trim() || '';
 }
 
 /**
- * Generates a concise publish message based on document changes.
+ * Generates a concise commit-style publish message based on document changes.
  */
 export async function generatePublishMessage(
-  cmsClient: RootCMSClient,
+  rootConfig: RootConfig,
   options: SummarizeDiffOptions
 ): Promise<string> {
-  const cmsPluginOptions = cmsClient.cmsPlugin.getConfig();
-  const firebaseConfig = cmsPluginOptions.firebaseConfig;
-  const model: RootAiModel =
-    (typeof cmsPluginOptions.experiments?.ai === 'object'
-      ? cmsPluginOptions.experiments.ai.model
-      : undefined) || DEFAULT_MODEL;
-
-  const ai = genkit({
-    plugins: [
-      vertexAI({
-        projectId: firebaseConfig.projectId,
-        location: firebaseConfig.location || 'us-central1',
-      }),
-    ],
-  });
+  const {model} = requireDefaultModel(rootConfig);
+  const languageModel = resolveLanguageModel(model);
 
   const beforeJson = JSON.stringify(options.before ?? null, null, 2);
   const afterJson = JSON.stringify(options.after ?? null, null, 2);
 
-  const systemPrompt = [
+  const system = [
     'You are an assistant that generates concise commit-style messages for CMS document changes.',
     'Generate a single short sentence (maximum 60 characters) describing the most important change.',
     'Use imperative mood like "Add feature" or "Update content" or "Fix typo".',
     'Focus on the key content change, ignore structural metadata changes.',
     'Do not use punctuation at the end.',
     'Examples: "Add new hero image", "Update pricing details", "Fix typo in headline"',
-    'Include ',
   ].join('\n');
 
-  const diffPrompt = [
+  const prompt = [
     'Previous version JSON:',
     '```json',
     beforeJson,
@@ -152,369 +782,13 @@ export async function generatePublishMessage(
     'Generate a commit message for these changes.',
   ].join('\n');
 
-  const res = await generate(ai, model, {
-    messages: [
-      {
-        role: 'system',
-        content: [{text: systemPrompt}],
-      },
-    ],
-    prompt: [{text: diffPrompt}],
+  const result = await generateText({
+    model: languageModel,
+    system,
+    prompt,
   });
 
-  return res.text?.trim() || '';
-}
-
-/** Allowed aspect ratios for image generation (https://docs.cloud.google.com/vertex-ai/generative-ai/docs/reference/rest/v1beta1/GenerationConfig#ImageConfig). */
-export type AspectRatio =
-  | '1:1'
-  | '2:3'
-  | '3:2'
-  | '3:4'
-  | '4:3'
-  | '4:5'
-  | '5:4'
-  | '9:16'
-  | '16:9'
-  | '21:9';
-
-export interface GenerateImageOptions {
-  prompt: string;
-  aspectRatio: AspectRatio;
-  model?: RootAiImagenModel;
-}
-
-/**
- * Generates an image using Vertex AI.
- */
-export async function generateImage(
-  cmsClient: RootCMSClient,
-  options: GenerateImageOptions
-): Promise<string> {
-  const cmsPluginOptions = cmsClient.cmsPlugin.getConfig();
-  const firebaseConfig = cmsPluginOptions.firebaseConfig;
-  const model = options.model || DEFAULT_IMAGEGEN_MODEL;
-
-  const ai = genkit({
-    plugins: [
-      vertexAI({
-        projectId: firebaseConfig.projectId,
-        location: firebaseConfig.location || 'us-central1',
-      }),
-    ],
-  });
-
-  const res = await generate(ai, model, {
-    prompt: [
-      {
-        text: options.prompt,
-      },
-    ],
-    config: {
-      imageConfig: {
-        aspectRatio: options.aspectRatio,
-      },
-    },
-    output: {
-      format: 'media',
-    },
-  });
-
-  if (!res.media) {
-    throw new Error('No image generated');
-  }
-
-  return res.media.url;
-}
-
-/**
- * Wrapper around \`ai.generate\` that normalizes the request options based on the
- * model.
- */
-async function generate(ai: Genkit, model: string, options: GenerateOptions) {
-  const generateOptions = {
-    ...options,
-    model: vertexAI.model(model),
-  };
-
-  // NOTE(stevenle): the global location is required for
-  // \`gemini-3-flash-preview\`, it may be possible to remove this in the
-  // future.
-  if (model.startsWith('gemini-3')) {
-    generateOptions.config = {
-      ...generateOptions.config,
-      location: 'global',
-    };
-  }
-
-  return ai.generate(generateOptions);
-}
-
-export class Chat {
-  chatClient: ChatClient;
-  cmsClient: RootCMSClient;
-  cmsPluginOptions: CMSPluginOptions;
-  id: string;
-  history: HistoryItem[];
-  model: string;
-  ai: Genkit;
-
-  constructor(
-    chatClient: ChatClient,
-    id: string,
-    options?: {history?: HistoryItem[]; model?: string}
-  ) {
-    this.chatClient = chatClient;
-    this.cmsClient = chatClient.cmsClient;
-    this.cmsPluginOptions = this.cmsClient.cmsPlugin.getConfig();
-    this.id = id;
-    this.history = options?.history ?? [];
-    this.model = cleanModelName(
-      options?.model ||
-        (typeof this.cmsPluginOptions.experiments?.ai === 'object'
-          ? this.cmsPluginOptions.experiments.ai.model
-          : undefined) ||
-        DEFAULT_MODEL
-    );
-    const firebaseConfig = this.cmsPluginOptions.firebaseConfig;
-    this.ai = genkit({
-      plugins: [
-        vertexAI({
-          projectId: firebaseConfig.projectId,
-          location: firebaseConfig.location || 'us-central1',
-        }),
-      ],
-    });
-  }
-
-  /** Builds the messages for the AI request. */
-  private async buildMessages(
-    options: SendPromptOptions
-  ): Promise<MessageData[]> {
-    const messages = this.history;
-    const hasSystemPrompt = messages.some(
-      (msg) => msg.role === 'system' && msg.content.length > 0
-    );
-    if (!hasSystemPrompt) {
-      messages.push({
-        role: 'system',
-        content: [{text: await this.buildSystemPrompt(options)}],
-      });
-    }
-    // Additional data sent for "edit" mode requests.
-    if (options.mode === 'edit') {
-      messages.push({
-        role: 'user',
-        content: [
-          {
-            text: [
-              'The JSON you must edit is:',
-              '',
-              JSON.stringify(options.editData || {}, null, 2),
-            ].join(''),
-          },
-        ],
-      });
-    }
-    return messages;
-  }
-
-  /** Builds the request sent to the AI based on the `ChatMode`. */
-  private async buildGenerateRequest(
-    prompt: ChatPrompt | ChatPrompt[],
-    options: SendPromptOptions
-  ): Promise<{
-    messages: MessageData[];
-    model: string;
-    prompt: ChatPrompt | ChatPrompt[];
-  }> {
-    if (options.mode === 'edit') {
-      return {
-        messages: await this.buildMessages(options),
-        model: this.model,
-        prompt: prompt,
-      };
-    }
-    return {
-      messages: await this.buildMessages(options),
-      model: this.model,
-      prompt: prompt,
-    };
-  }
-
-  /** Sends the request to the AI and stores the history in the session and the database. */
-  async sendPrompt(
-    prompt: ChatPrompt | ChatPrompt[],
-    options: SendPromptOptions = {}
-  ): Promise<AiResponse> {
-    const chatRequest = await this.buildGenerateRequest(prompt, options);
-    // TODO: Use streaming responses per https://genkit.dev/docs/models/#streaming
-    // to improve UI performance.
-    const res = await generate(this.ai, chatRequest.model, {
-      messages: chatRequest.messages,
-      prompt: Array.isArray(prompt) ? prompt.flat() : prompt,
-    });
-    this.history = res.messages;
-    await this.dbDoc().update({
-      history: this.history,
-      modifiedAt: Timestamp.now(),
-    });
-    // Using the `output` property provides both data and text responses.
-    if (options.mode === 'edit') {
-      const aiResponse = res.output as AiResponse & {editData?: any};
-      if (aiResponse?.data && !aiResponse.message) {
-        aiResponse.message = '';
-      }
-      return aiResponse;
-    }
-    return {message: res.text, data: null};
-  }
-
-  dbDoc() {
-    return this.chatClient.dbCollection().doc(this.id);
-  }
-
-  /**
-   * Builds the system prompt sent to the AI, based on the `ChatMode` and
-   * supplied `SendPromptOptions`. `SendPromptOptions` may contain data or
-   * references to information needed to construct the prompt.
-   */
-  private async buildSystemPrompt(options: SendPromptOptions): Promise<string> {
-    const serializedRootConfig = JSON.stringify(
-      this.cmsClient.rootConfig,
-      null,
-      2
-    );
-
-    // Edit mode prompts.
-    if (options.mode === 'edit') {
-      const rootDir = process.cwd();
-      // The `root-cms.d.ts` file may not be bundled with the server code,
-      // so check whether it exists first before attempting to add it to the prompt.
-      const rootCmsDefsPath = path.resolve(rootDir, 'root-cms.d.ts');
-      const rootCmsDefs = fs.existsSync(rootCmsDefsPath)
-        ? fs.readFileSync(rootCmsDefsPath, {
-            encoding: 'utf8',
-          })
-        : null;
-      const text = [(await import('../shared/ai/prompts/edit.txt')).default];
-      if (rootCmsDefs) {
-        text.push(
-          'Here is the `root-cms.d.ts` file for this project:',
-          '```',
-          rootCmsDefs,
-          '```'
-        );
-      }
-      return text.join('\n');
-    }
-
-    if (options.mode === 'altText') {
-      return (await import('../shared/ai/prompts/altText.txt')).default;
-    }
-
-    // Chat mode (default) prompts.
-    const systemText = [
-      `You are an assistant for a headless CMS called Root CMS which is used on a website called ${
-        this.cmsPluginOptions.name || this.cmsPluginOptions.id
-      }. Your job is to answer questions about the docs in the system, and if requested, help suggest changes to the JSON data in the docs. If you don't know the answer, just say that you don't know, don't try to make up an answer. Be friendly and playful with your messaging.`,
-      '',
-      'Here is the root.config.ts file for the site:',
-      '```',
-      serializedRootConfig,
-      '```',
-      '',
-      'Here are the docs that exist in the system:',
-    ];
-    const pages = await this.cmsClient.listDocs('Pages', {mode: 'draft'});
-    pages.docs.forEach((doc: any) => {
-      systemText.push(JSON.stringify(doc));
-    });
-    return systemText.join('\n');
-  }
-}
-
-export class ChatClient {
-  cmsClient: RootCMSClient;
-  user: string;
-
-  constructor(cmsClient: RootCMSClient, user: string) {
-    this.cmsClient = cmsClient;
-    this.user = user;
-  }
-
-  private async createChat(): Promise<Chat> {
-    const chatId = crypto.randomUUID();
-    // Save chat to db so that user has a chat history and can enable "sharing"
-    // with others. Store the model used with the metadata.
-    const docRef = this.dbCollection().doc(chatId);
-    const chat = new Chat(this, chatId);
-    await docRef.set({
-      id: chatId,
-      createdBy: this.user,
-      createdAt: Timestamp.now(),
-      modifiedAt: Timestamp.now(),
-      model: chat.model,
-    });
-    return chat;
-  }
-
-  async getOrCreateChat(chatId?: string): Promise<Chat> {
-    return chatId ? this.getChat(chatId) : this.createChat();
-  }
-
-  private async getChat(chatId: string): Promise<Chat> {
-    // Fetch chat from db to preserve the conversation's history.
-    const docRef = this.dbCollection().doc(chatId);
-    const chatDoc = await docRef.get();
-    if (!chatDoc.exists) {
-      throw new Error(`${chatId} does not exist`);
-    }
-    const chatData = chatDoc.data() || {};
-    return new Chat(this, chatId, {
-      history: chatData.history,
-      model: chatData.model,
-    });
-  }
-
-  async listChats(options?: {limit?: number}): Promise<any[]> {
-    const limit = options?.limit || 20;
-    const query = this.dbCollection()
-      .where('createdBy', '==', this.user)
-      .limit(limit)
-      .orderBy('createdAt', 'desc');
-    const res = await query.get();
-    return res.docs.map((doc) => doc.data());
-  }
-
-  dbCollection() {
-    return this.cmsClient.db.collection(
-      `Projects/${this.cmsClient.projectId}/Experiments/ai/Chat`
-    );
-  }
-}
-
-function cleanModelName(model: string) {
-  return LEGACY_MODEL_RENAME[model] || model;
-}
-
-/**
- * Extracts JSON from an AI response that may contain markdown code blocks.
- * @internal
- */
-export function extractJsonFromResponse(responseText: string): string {
-  let jsonText = responseText.trim();
-
-  // Remove markdown code blocks if present.
-  if (jsonText.startsWith('```')) {
-    const lines = jsonText.split('\n');
-    jsonText = lines.slice(1, -1).join('\n');
-    if (jsonText.startsWith('json')) {
-      jsonText = jsonText.substring(4).trim();
-    }
-  }
-
-  return jsonText;
+  return result.text?.trim() || '';
 }
 
 export interface TranslateStringOptions {
@@ -528,26 +802,13 @@ export interface TranslateStringOptions {
  * Translates a source string into multiple target locales using AI.
  */
 export async function translateString(
-  cmsClient: RootCMSClient,
+  rootConfig: RootConfig,
   options: TranslateStringOptions
 ): Promise<Record<string, string>> {
-  const cmsPluginOptions = cmsClient.cmsPlugin.getConfig();
-  const firebaseConfig = cmsPluginOptions.firebaseConfig;
-  const model: RootAiModel =
-    (typeof cmsPluginOptions.experiments?.ai === 'object'
-      ? cmsPluginOptions.experiments.ai.model
-      : undefined) || DEFAULT_MODEL;
+  const {model} = requireDefaultModel(rootConfig);
+  const languageModel = resolveLanguageModel(model);
 
-  const ai = genkit({
-    plugins: [
-      vertexAI({
-        projectId: firebaseConfig.projectId,
-        location: firebaseConfig.location || 'us-central1',
-      }),
-    ],
-  });
-
-  const systemPrompt = [
+  const system = [
     'You are a professional translator assistant.',
     'Translate the given source text into the requested target languages.',
     'Maintain the tone, style, and intent of the original text.',
@@ -585,31 +846,133 @@ export async function translateString(
     'Provide translations as a JSON object with locale codes as keys.'
   );
 
-  const userPrompt = userPromptParts.join('\n');
+  const result = await generateText({
+    model: languageModel,
+    system,
+    prompt: userPromptParts.join('\n'),
+  });
 
-  const res = await generate(ai, model, {
+  const responseText = result.text || '{}';
+  const jsonText = extractJsonFromResponse(responseText);
+  try {
+    return JSON.parse(jsonText);
+  } catch (err) {
+    console.error('failed to parse AI translation response:', responseText);
+    throw new Error('Invalid response format from AI translation');
+  }
+}
+
+export interface GenerateAltTextOptions {
+  /** Absolute URL or data URL of the image to describe. */
+  imageUrl: string;
+}
+
+/**
+ * Generates concise alt text for the given image URL using a multimodal model.
+ */
+export async function generateAltText(
+  rootConfig: RootConfig,
+  options: GenerateAltTextOptions
+): Promise<string> {
+  const {model} = requireDefaultModel(rootConfig);
+  const languageModel = resolveLanguageModel(model);
+
+  const system = [
+    'Create a descriptive and concise alt text for the attached image.',
+    '',
+    '- The alt text should be a brief but comprehensive description of the image, including key subjects, the setting, and any relevant details or actions.',
+    '- The alt text should not exceed 125 characters.',
+    '- Only provide one generation, and include only that data in the response. No surrounding text, clarifications, etc. Just the alt text.',
+  ].join('\n');
+
+  const result = await generateText({
+    model: languageModel,
+    system,
     messages: [
       {
-        role: 'system',
-        content: [{text: systemPrompt}],
-      },
-      {
         role: 'user',
-        content: [{text: userPrompt}],
+        content: [
+          {type: 'text', text: 'Generate alt text for the image above.'},
+          {type: 'image', image: new URL(options.imageUrl)},
+        ],
       },
     ],
   });
 
-  const responseText = res.text || '{}';
+  return result.text?.trim() || '';
+}
 
-  // Try to extract JSON from the response.
-  const jsonText = extractJsonFromResponse(responseText);
+/** Allowed aspect ratios for image generation. */
+export type AspectRatio =
+  | '1:1'
+  | '2:3'
+  | '3:2'
+  | '3:4'
+  | '4:3'
+  | '4:5'
+  | '5:4'
+  | '9:16'
+  | '16:9'
+  | '21:9';
 
-  try {
-    const translations = JSON.parse(jsonText);
-    return translations;
-  } catch (err) {
-    console.error('Failed to parse AI translation response:', responseText);
-    throw new Error('Invalid response format from AI translation');
+export interface GenerateImageOptions {
+  prompt: string;
+  aspectRatio: AspectRatio;
+  /** Specific image model id from `AiConfig.imageModels`. */
+  modelId?: string;
+}
+
+export interface GenerateImageResult {
+  /** Generated image as a `data:image/...` URL. */
+  imageUrl: string;
+}
+
+/**
+ * Generates an image using the configured `imageModels`. Returns the image as
+ * a base64-encoded data URL so the caller can either inline it or upload it
+ * to storage.
+ */
+export async function generateImage(
+  rootConfig: RootConfig,
+  options: GenerateImageOptions
+): Promise<GenerateImageResult> {
+  const config = getAiConfig(rootConfig);
+  if (!config) {
+    throw new Error('AI is not configured. Set `ai` on the cmsPlugin config.');
   }
+  const imageModelConfig = findImageModel(config, options.modelId);
+  if (!imageModelConfig) {
+    throw new Error(
+      'No image model configured. Set `ai.imageModels` on the cmsPlugin config.'
+    );
+  }
+
+  const imageModel = resolveImageModel(imageModelConfig);
+  const result = await generateImageSdk({
+    model: imageModel,
+    prompt: options.prompt,
+    aspectRatio: options.aspectRatio,
+  });
+
+  if (!result.image) {
+    throw new Error('No image generated');
+  }
+  const mediaType = result.image.mediaType || 'image/png';
+  return {imageUrl: `data:${mediaType};base64,${result.image.base64}`};
+}
+
+/**
+ * Extracts JSON from an AI response that may contain markdown code blocks.
+ * @internal
+ */
+export function extractJsonFromResponse(responseText: string): string {
+  let jsonText = responseText.trim();
+  if (jsonText.startsWith('```')) {
+    const lines = jsonText.split('\n');
+    jsonText = lines.slice(1, -1).join('\n');
+    if (jsonText.startsWith('json')) {
+      jsonText = jsonText.substring(4).trim();
+    }
+  }
+  return jsonText;
 }

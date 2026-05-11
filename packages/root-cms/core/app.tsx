@@ -2,7 +2,7 @@ import crypto from 'node:crypto';
 import path from 'node:path';
 import {Request, Response, RootConfig} from '@blinkk/root';
 import {renderJsxToString} from '@blinkk/root/jsx';
-import {serializeAiConfig} from './ai-chat.js';
+import {serializeAiConfig} from './ai.js';
 import {CMSPluginOptions} from './plugin.js';
 import {getCollectionSchema, getProjectSchemas} from './project.js';
 import {Collection} from './schema.js';

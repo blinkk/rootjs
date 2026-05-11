@@ -1,7 +1,7 @@
 /**
  * Chat panel used inside the array-item "Edit with AI" modal. Built on top of
  * the Vercel AI SDK (`ai`, `@ai-sdk/react`) and streams responses from
- * `/cms/api/ai.v2.editObject`.
+ * `/cms/api/ai.edit_object`.
  *
  * The endpoint exposes a READ-ONLY tool subset — the model can inspect CMS
  * docs and schemas for context but cannot mutate Firestore. Edits are
@@ -25,12 +25,18 @@ import {
   lastAssistantMessageIsCompleteWithToolCalls,
 } from 'ai';
 import {useCallback, useEffect, useMemo, useRef, useState} from 'preact/hooks';
-import {AiResponse} from '../../../shared/ai/prompts.js';
 import {executeCmsTool} from '../../pages/AIPage/cmsToolHandlers.js';
 import {joinClassNames} from '../../utils/classes.js';
 import {uploadFileToGCS} from '../../utils/gcs.js';
 import {IconRootAI} from '../IconRootAI/IconRootAI.js';
 import {Markdown} from '../Markdown/Markdown.js';
+
+/** Result emitted by the "Edit with AI" chat to the parent modal. */
+export interface AiResponse {
+  message: string;
+  data: Record<string, any> | null;
+  error?: string;
+}
 
 interface ModelInfo {
   id: string;
@@ -72,7 +78,7 @@ export function ChatPanel(props: ChatPanelProps) {
 
   useEffect(() => {
     let active = true;
-    fetch('/cms/api/ai.v2.config', {credentials: 'include'})
+    fetch('/cms/api/ai.config', {credentials: 'include'})
       .then(async (res) => {
         const data = (await res.json()) as AiConfigResponse;
         if (active) {
@@ -148,7 +154,7 @@ function ChatPanelInner(props: {
   const transport = useMemo(
     () =>
       new DefaultChatTransport<UIMessage>({
-        api: '/cms/api/ai.v2.editObject',
+        api: '/cms/api/ai.edit_object',
         credentials: 'include',
         prepareSendMessagesRequest: ({messages}) => ({
           body: {
