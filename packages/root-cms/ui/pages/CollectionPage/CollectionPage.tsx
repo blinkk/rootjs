@@ -304,6 +304,7 @@ CollectionPage.DocsList = (props: {
                 onAction={(e) => {
                   if (
                     e.action === 'archive' ||
+                    e.action === 'copy' ||
                     e.action === 'unarchive' ||
                     e.action === 'delete' ||
                     e.action === 'unpublish' ||
