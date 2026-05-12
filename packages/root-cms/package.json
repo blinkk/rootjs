@@ -1,6 +1,6 @@
 {
   "name": "@blinkk/root-cms",
-  "version": "3.0.1-alpha.1",
+  "version": "3.0.1-beta.2",
   "author": "s@blinkk.com",
   "license": "MIT",
   "engines": {
@@ -169,7 +169,7 @@
     "yjs": "13.6.27"
   },
   "peerDependencies": {
-    "@blinkk/root": "3.0.1-alpha.1",
+    "@blinkk/root": "3.0.1-beta.2",
     "firebase-admin": ">=11",
     "firebase-functions": ">=4"
   },

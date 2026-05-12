@@ -1,5 +1,13 @@
 # @blinkk/root-cms
 
+## 3.0.1-beta.2
+
+### Patch Changes
+
+- f930a90c: feat: refactor root ai with streaming, logic/reasoning, and tool calling
+- a4bad35a: feat: add permission groups for role-based access control to collections
+  - @blinkk/root@3.0.1-beta.2
+
 ## 3.0.1-alpha.1
 
 ### Patch Changes
@@ -23,7 +31,6 @@
 - Updated dependencies [3b1db9e1]
 - Updated dependencies [83871448]
   - @blinkk/root@3.0.1-alpha.0
-
 
 ## 2.5.17
 
