@@ -467,6 +467,12 @@ export type CMSPluginOptions = {
    * include or exclude specific collections or docs from being indexed.
    */
   searchIndex?: CMSSearchIndexConfig;
+
+  /**
+   * Default UI variant for `oneOf` fields. Individual fields can still
+   * override this by setting their own `variant`. Defaults to `'dropdown'`.
+   */
+  defaultOneOfVariant?: 'dropdown' | 'picker';
 };
 
 export type CMSPlugin = Plugin & {
