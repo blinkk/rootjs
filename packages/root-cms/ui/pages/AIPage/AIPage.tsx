@@ -114,6 +114,38 @@ const EXECUTION_MODES: ExecutionModeInfo[] = [
   },
 ];
 
+const EXECUTION_MODE_STORAGE_KEY = 'root-cms.ai.executionMode';
+
+function isExecutionMode(value: string | null): value is ExecutionMode {
+  return EXECUTION_MODES.some((mode) => mode.id === value);
+}
+
+function readStoredExecutionMode(): ExecutionMode {
+  if (typeof window === 'undefined') {
+    return 'approve';
+  }
+  try {
+    const value = window.localStorage.getItem(EXECUTION_MODE_STORAGE_KEY);
+    if (isExecutionMode(value)) {
+      return value;
+    }
+  } catch (err) {
+    console.error('failed to read AI execution mode preference', err);
+  }
+  return 'approve';
+}
+
+function persistExecutionMode(mode: ExecutionMode) {
+  if (typeof window === 'undefined') {
+    return;
+  }
+  try {
+    window.localStorage.setItem(EXECUTION_MODE_STORAGE_KEY, mode);
+  } catch (err) {
+    console.error('failed to save AI execution mode preference', err);
+  }
+}
+
 interface PendingToolApproval {
   toolCallId: string;
   toolName: string;
@@ -204,7 +236,7 @@ function ChatExperience(props: {
     props.config.defaultModel || models[0]?.id || ''
   );
   const [executionMode, setExecutionMode] =
-    useState<ExecutionMode>('approve');
+    useState<ExecutionMode>(readStoredExecutionMode);
   // The chat id used for the next mount of `ChatPane`. Empty for "new chat".
   const [pendingChatId, setPendingChatId] = useState<string>(
     props.initialChatId || NEW_CHAT_ID
@@ -246,6 +278,10 @@ function ChatExperience(props: {
       loadChat(props.initialChatId);
     }
   }, []);
+
+  useEffect(() => {
+    persistExecutionMode(executionMode);
+  }, [executionMode]);
 
   /** Fetches a chat by id and applies it to state without the activeChatId guard. */
   const loadChat = async (id: string) => {
