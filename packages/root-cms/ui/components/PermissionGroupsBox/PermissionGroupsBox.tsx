@@ -10,11 +10,14 @@ import {
 import {IconTrash, IconX} from '@tabler/icons-preact';
 import {useMemo, useState} from 'preact/hooks';
 import {UserRole} from '../../../core/client.js';
+import {useUserProfiles} from '../../hooks/useUserProfile.js';
 import {joinClassNames} from '../../utils/classes.js';
 import {
   PermissionGroup,
   newPermissionGroup,
 } from '../../utils/permissionGroups.js';
+import {UserProfile, isOrgEmail} from '../../utils/user-profile.js';
+import {EmailAvatar} from '../EmailAvatar/EmailAvatar.js';
 import {Text} from '../Text/Text.js';
 import './PermissionGroupsBox.css';
 
@@ -139,6 +142,8 @@ interface PermissionGroupEditorProps {
 function PermissionGroupEditor(props: PermissionGroupEditorProps) {
   const {group, collectionOptions, disabled} = props;
   const [emailInput, setEmailInput] = useState('');
+  const profileEmails = group.users.filter((email) => !isOrgEmail(email));
+  const {profiles} = useUserProfiles(profileEmails);
 
   function setName(name: string) {
     props.onChange({...group, name});
@@ -250,22 +255,35 @@ function PermissionGroupEditor(props: PermissionGroupEditorProps) {
         </form>
         {group.users.length > 0 && (
           <ul className="PermissionGroupsBox__editor__userList">
-            {group.users.map((email) => (
-              <li key={email} className="PermissionGroupsBox__editor__userItem">
-                <span className="PermissionGroupsBox__editor__userItem__email">
-                  {email}
-                </span>
-                <ActionIcon
-                  size="sm"
-                  variant="transparent"
-                  disabled={disabled}
-                  onClick={() => removeUser(email)}
-                  title={`Remove ${email}`}
+            {group.users.map((email) => {
+              const profile: UserProfile | null =
+                profiles.get(email.toLowerCase()) || null;
+              return (
+                <li
+                  key={email}
+                  className="PermissionGroupsBox__editor__userItem"
                 >
-                  <IconX size={14} />
-                </ActionIcon>
-              </li>
-            ))}
+                  <EmailAvatar
+                    className="PermissionGroupsBox__editor__userItem__avatar"
+                    email={email}
+                    profile={profile}
+                    size={24}
+                  />
+                  <span className="PermissionGroupsBox__editor__userItem__email">
+                    {email}
+                  </span>
+                  <ActionIcon
+                    size="sm"
+                    variant="transparent"
+                    disabled={disabled}
+                    onClick={() => removeUser(email)}
+                    title={`Remove ${email}`}
+                  >
+                    <IconX size={14} />
+                  </ActionIcon>
+                </li>
+              );
+            })}
           </ul>
         )}
       </div>

@@ -1,8 +1,11 @@
 import {Button, Select, TextInput} from '@mantine/core';
 import {useState} from 'preact/hooks';
 import {UserRole} from '../../../core/client.js';
+import {useUserProfiles} from '../../hooks/useUserProfile.js';
 import {joinClassNames} from '../../utils/classes.js';
 import {sortByKey} from '../../utils/objects.js';
+import {UserProfile, isOrgEmail} from '../../utils/user-profile.js';
+import {EmailAvatar} from '../EmailAvatar/EmailAvatar.js';
 import {Text} from '../Text/Text.js';
 import './ShareBox.css';
 
@@ -16,6 +19,10 @@ export interface ShareBoxProps {
 export function ShareBox(props: ShareBoxProps) {
   const {roles, onChange, currentUserIsAdmin} = props;
   const [emailInput, setEmailInput] = useState('');
+  const profileEmails = Object.keys(roles).filter(
+    (email) => !isOrgEmail(email)
+  );
+  const {profiles} = useUserProfiles(profileEmails);
 
   function setRole(email: string, role: UserRole) {
     onChange({...roles, [email]: role});
@@ -38,7 +45,11 @@ export function ShareBox(props: ShareBoxProps) {
 
   const users: ShareBoxUserProps[] = sortByKey(
     Object.keys(roles).map((email) => {
-      return {email, role: roles[email]};
+      return {
+        email,
+        role: roles[email],
+        profile: profiles.get(email.toLowerCase()) || null,
+      };
     }),
     'email'
   );
@@ -91,6 +102,7 @@ export function ShareBox(props: ShareBoxProps) {
 export interface ShareBoxUserProps {
   email: string;
   role: UserRole;
+  profile?: UserProfile | null;
   currentUserIsAdmin: boolean;
   onRoleChange: (email: string, newRole: UserRole) => void;
   onRemove: (email: string) => void;
@@ -100,6 +112,12 @@ ShareBox.User = (props: ShareBoxUserProps) => {
   const isCurrentUser = props.email === window.firebase.user.email;
   return (
     <div className="ShareBox__user">
+      <EmailAvatar
+        className="ShareBox__user__avatar"
+        email={props.email}
+        profile={props.profile}
+        size={24}
+      />
       <Text
         className="ShareBox__user__email"
         size="body-sm"

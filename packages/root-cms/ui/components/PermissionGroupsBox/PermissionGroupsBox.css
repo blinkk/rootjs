@@ -21,13 +21,17 @@
   transform: rotate(-90deg);
 }
 
-.PermissionGroupsBox__accordion [aria-expanded="true"] .mantine-Accordion-icon {
+.PermissionGroupsBox__accordion [aria-expanded='true'] .mantine-Accordion-icon {
   transform: rotate(0deg) !important;
 }
 
 .PermissionGroupsBox__accordion .mantine-Accordion-control {
   padding-top: 12px;
   padding-bottom: 12px;
+}
+
+.PermissionGroupsBox__accordion .mantine-Accordion-item:last-child {
+  border-bottom: none;
 }
 
 .PermissionGroupsBox__trigger {
@@ -97,15 +101,16 @@
 }
 
 .PermissionGroupsBox__editor__userItem {
-  display: flex;
+  display: grid;
+  grid-template-columns: 24px minmax(0, 1fr) auto;
   align-items: center;
-  justify-content: space-between;
   gap: 8px;
   padding: 6px 12px;
   font-size: 13px;
 }
 
-.PermissionGroupsBox__editor__userItem + .PermissionGroupsBox__editor__userItem {
+.PermissionGroupsBox__editor__userItem
+  + .PermissionGroupsBox__editor__userItem {
   border-top: 1px solid var(--color-border);
 }
 
@@ -118,6 +123,11 @@
   text-overflow: ellipsis;
   white-space: nowrap;
   min-width: 0;
+}
+
+.PermissionGroupsBox__editor__userItem__avatar {
+  width: 24px;
+  height: 24px;
 }
 
 .PermissionGroupsBox__editor__footer {

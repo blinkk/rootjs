@@ -7,12 +7,16 @@
 .ShareBox__user {
   width: 100%;
   display: grid;
-  grid-template-columns: 1fr 120px;
   align-items: center;
   gap: 8px;
 }
 
+.ShareBox__addUser {
+  grid-template-columns: 1fr 120px;
+}
+
 .ShareBox__user {
+  grid-template-columns: 24px minmax(0, 1fr) 120px;
   padding: 6px 16px;
 }
 
@@ -37,4 +41,13 @@
 .ShareBox__user__email {
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.ShareBox__user__avatar {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: block;
+  object-fit: cover;
+  flex-shrink: 0;
 }
