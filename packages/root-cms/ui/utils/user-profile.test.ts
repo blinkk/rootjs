@@ -3,6 +3,7 @@ import {
   getAvatarColor,
   getEmailAvatarInitial,
   getUserInitials,
+  isOrgEmail,
 } from './user-profile.js';
 
 describe('getUserInitials', () => {
@@ -58,5 +59,15 @@ describe('getEmailAvatarInitial', () => {
   it('returns a placeholder when no usable characters exist', () => {
     expect(getEmailAvatarInitial('')).toBe('?');
     expect(getEmailAvatarInitial('*@...')).toBe('?');
+  });
+});
+
+describe('isOrgEmail', () => {
+  it('returns true for domain wildcard role entries', () => {
+    expect(isOrgEmail('*@blinkk.com')).toBe(true);
+  });
+
+  it('returns false for concrete user emails', () => {
+    expect(isOrgEmail('test@blinkk.com')).toBe(false);
   });
 });

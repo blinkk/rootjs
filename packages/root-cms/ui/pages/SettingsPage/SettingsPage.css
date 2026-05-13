@@ -6,8 +6,15 @@
 .SettingsPage__section {
   display: grid;
   grid-template-columns: 1fr 1fr;
+  align-items: start;
   gap: var(--page-padding-lg);
   max-width: 1280px;
+}
+
+.SettingsPage__section__left {
+  position: sticky;
+  top: var(--page-padding-lg);
+  align-self: start;
 }
 
 .SettingsPage__section__left__title {
@@ -78,6 +85,10 @@
   display: flex;
   flex-direction: column;
   gap: 8px;
+}
+
+.SettingsPage__share__subsection .SettingsPage__section__right__title {
+  margin-bottom: 0;
 }
 
 .SettingsPage__share__saveBar {

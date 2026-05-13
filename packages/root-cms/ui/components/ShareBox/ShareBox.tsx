@@ -4,11 +4,8 @@ import {UserRole} from '../../../core/client.js';
 import {useUserProfiles} from '../../hooks/useUserProfile.js';
 import {joinClassNames} from '../../utils/classes.js';
 import {sortByKey} from '../../utils/objects.js';
-import {
-  UserProfile,
-  getAvatarColor,
-  getEmailAvatarInitial,
-} from '../../utils/user-profile.js';
+import {UserProfile, isOrgEmail} from '../../utils/user-profile.js';
+import {EmailAvatar} from '../EmailAvatar/EmailAvatar.js';
 import {Text} from '../Text/Text.js';
 import './ShareBox.css';
 
@@ -111,53 +108,15 @@ export interface ShareBoxUserProps {
   onRemove: (email: string) => void;
 }
 
-function isOrgEmail(email: string): boolean {
-  return email.trim().startsWith('*@');
-}
-
-function ShareBoxAvatar(props: {email: string; profile?: UserProfile | null}) {
-  const [imgError, setImgError] = useState(false);
-  const photoURL = props.profile?.photoURL || '';
-  const displayName = props.profile?.displayName || props.email;
-  if (photoURL && !imgError) {
-    return (
-      <img
-        className="ShareBox__user__avatar"
-        src={photoURL}
-        alt={displayName}
-        onError={() => setImgError(true)}
-      />
-    );
-  }
-  const initial = getEmailAvatarInitial(props.email);
-  return (
-    <svg
-      className="ShareBox__user__avatar"
-      viewBox="0 0 28 28"
-      role="img"
-      aria-label={displayName}
-    >
-      <circle cx="14" cy="14" r="14" fill={getAvatarColor(props.email)} />
-      <text
-        x="14"
-        y="14"
-        textAnchor="middle"
-        dominantBaseline="central"
-        fill="#fff"
-        fontSize="13"
-        fontWeight="600"
-      >
-        {initial}
-      </text>
-    </svg>
-  );
-}
-
 ShareBox.User = (props: ShareBoxUserProps) => {
   const isCurrentUser = props.email === window.firebase.user.email;
   return (
     <div className="ShareBox__user">
-      <ShareBoxAvatar email={props.email} profile={props.profile} />
+      <EmailAvatar
+        className="ShareBox__user__avatar"
+        email={props.email}
+        profile={props.profile}
+      />
       <Text
         className="ShareBox__user__email"
         size="body-sm"

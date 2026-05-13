@@ -401,7 +401,6 @@ function ShareSection() {
             <Heading className="SettingsPage__section__right__title" size="h3">
               Groups
             </Heading>
-            <Text></Text>
             <PermissionGroupsBox
               groups={draft.permissionGroups}
               onChange={setGroups}

@@ -200,12 +200,17 @@ export function getEmailAvatarInitial(email: string): string {
     return '?';
   }
   const [localPart, domain = ''] = trimmed.split('@');
-  const source = localPart === '*' ? domain : localPart || trimmed;
+  const source = isOrgEmail(trimmed) ? domain : localPart || trimmed;
   const alphanum = source.replace(/[^a-zA-Z0-9]/g, '');
   if (alphanum.length === 0) {
     return '?';
   }
   return alphanum[0].toUpperCase();
+}
+
+/** Returns true when an email role entry represents a domain wildcard. */
+export function isOrgEmail(email: string): boolean {
+  return email.trim().startsWith('*@');
 }
 
 /**
