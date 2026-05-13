@@ -38,6 +38,43 @@ function loadValidators(): Promise<Validators> {
   return validatorsPromise;
 }
 
+export const WRITE_CMS_TOOL_NAMES = [
+  'doc_set',
+  'doc_create',
+  'doc_updateField',
+  'doc_duplicate',
+] as const;
+
+export type CmsWriteToolName = (typeof WRITE_CMS_TOOL_NAMES)[number];
+
+export interface CmsToolDetail {
+  label: string;
+  value: string;
+}
+
+export interface CmsToolReceipt {
+  type: 'cms-write-receipt';
+  title: string;
+  summary: string;
+  docId?: string;
+  adminUrl?: string;
+  details: CmsToolDetail[];
+}
+
+export interface CmsToolPreview {
+  toolName: CmsWriteToolName;
+  title: string;
+  summary: string;
+  docId?: string;
+  path?: string;
+  before?: unknown;
+  after?: unknown;
+  details: CmsToolDetail[];
+  error?: string;
+  errors?: unknown[];
+  hint?: string;
+}
+
 interface RootCtxLike {
   rootConfig: {projectId: string};
   collections: Record<
@@ -47,6 +84,10 @@ interface RootCtxLike {
   firebase: {db: Firestore; user: {email?: string | null}};
 }
 
+export function isCmsWriteTool(toolName: string): toolName is CmsWriteToolName {
+  return (WRITE_CMS_TOOL_NAMES as readonly string[]).includes(toolName);
+}
+
 function getCtx(): RootCtxLike {
   const w = window as any;
   return {
@@ -54,6 +95,13 @@ function getCtx(): RootCtxLike {
     collections: w.__ROOT_CTX.collections || {},
     firebase: w.firebase,
   };
+}
+
+function getDocAdminUrl(docId: string): string {
+  const {collection, slug} = parseDocId(docId);
+  return `/cms/content/${encodeURIComponent(collection)}/${encodeURIComponent(
+    slug
+  )}`;
 }
 
 function parseDocId(docId: string): {collection: string; slug: string} {
@@ -123,6 +171,335 @@ function unmarshalData(data: any): any {
 }
 
 // marshalData is imported from shared/marshal.js above.
+
+function cloneJson<T>(value: T): T {
+  return JSON.parse(JSON.stringify(value ?? null));
+}
+
+function normalizeToolValue(value: any): any {
+  if (typeof value !== 'string') {
+    return value;
+  }
+  const trimmed = value.trim();
+  if (
+    (trimmed.startsWith('{') && trimmed.endsWith('}')) ||
+    (trimmed.startsWith('[') && trimmed.endsWith(']'))
+  ) {
+    try {
+      return JSON.parse(trimmed);
+    } catch {
+      return value;
+    }
+  }
+  return value;
+}
+
+function setValueAtPath(target: any, path: string, value: any) {
+  const segments = path.split('.');
+  let cursor = target;
+  for (let i = 0; i < segments.length - 1; i++) {
+    const segment = segments[i];
+    const key = Array.isArray(cursor) ? Number(segment) : segment;
+    const nextSegment = segments[i + 1];
+    if (cursor[key] === undefined || cursor[key] === null) {
+      cursor[key] = /^\d+$/.test(nextSegment) ? [] : {};
+    }
+    cursor = cursor[key];
+  }
+  const last = segments[segments.length - 1];
+  const key = Array.isArray(cursor) ? Number(last) : last;
+  cursor[key] = value;
+}
+
+async function readDraftFields(
+  docId: string
+): Promise<{found: boolean; fields: Record<string, any>; raw?: any}> {
+  const snap = await fbGetDoc(draftDocRef(docId));
+  if (!snap.exists()) {
+    return {found: false, fields: {}};
+  }
+  const raw = snap.data() as any;
+  return {
+    found: true,
+    fields: unmarshalData(raw.fields || {}),
+    raw,
+  };
+}
+
+function createReceipt(options: {
+  title: string;
+  summary: string;
+  docId?: string;
+  details?: CmsToolDetail[];
+}): CmsToolReceipt {
+  return {
+    type: 'cms-write-receipt',
+    title: options.title,
+    summary: options.summary,
+    docId: options.docId,
+    adminUrl: options.docId ? getDocAdminUrl(options.docId) : undefined,
+    details: [
+      ...(options.details || []),
+      {label: 'Status', value: 'Saved to draft'},
+      {label: 'Publishing', value: 'Manual publish still required'},
+    ],
+  };
+}
+
+function createPreviewError(options: {
+  toolName: CmsWriteToolName;
+  title: string;
+  summary: string;
+  docId?: string;
+  path?: string;
+  error: string;
+  errors?: unknown[];
+  hint?: string;
+  details?: CmsToolDetail[];
+}): CmsToolPreview {
+  return {
+    toolName: options.toolName,
+    title: options.title,
+    summary: options.summary,
+    docId: options.docId,
+    path: options.path,
+    details: options.details || [],
+    error: options.error,
+    errors: options.errors,
+    hint: options.hint,
+  };
+}
+
+export async function previewCmsWriteTool(
+  toolName: string,
+  input: any
+): Promise<CmsToolPreview> {
+  if (!isCmsWriteTool(toolName)) {
+    throw new Error(`not a write tool: ${toolName}`);
+  }
+  switch (toolName) {
+    case 'doc_set':
+      return previewDocSet(input);
+    case 'doc_create':
+      return previewDocCreate(input);
+    case 'doc_updateField':
+      return previewDocUpdateField(input);
+    case 'doc_duplicate':
+      return previewDocDuplicate(input);
+  }
+}
+
+async function previewDocSet(input: {
+  docId: string;
+  fields: Record<string, any>;
+}): Promise<CmsToolPreview> {
+  const {collection: collectionId} = parseDocId(input.docId);
+  const schema = await getCachedSchema(collectionId);
+  const {validateFields} = await loadValidators();
+  const errors = validateFields(input.fields, schema);
+  if (errors.length > 0) {
+    return createPreviewError({
+      toolName: 'doc_set',
+      title: 'Replace draft fields',
+      summary: `Could not validate the replacement fields for ${input.docId}.`,
+      docId: input.docId,
+      error: 'VALIDATION_FAILED',
+      errors,
+      hint:
+        'The fields payload does not match the collection schema. Read the doc and schema, then retry with a valid payload.',
+    });
+  }
+
+  const before = await readDraftFields(input.docId);
+  return {
+    toolName: 'doc_set',
+    title: 'Replace draft fields',
+    summary: `Replace all draft fields for ${input.docId}.`,
+    docId: input.docId,
+    before: before.found ? before.fields : {},
+    after: input.fields || {},
+    details: [
+      {label: 'Document', value: input.docId},
+      {
+        label: 'Operation',
+        value: before.found ? 'Replace draft' : 'Create draft',
+      },
+    ],
+  };
+}
+
+async function previewDocCreate(input: {
+  docId: string;
+  fields?: Record<string, any>;
+}): Promise<CmsToolPreview> {
+  const {collection: collectionId} = parseDocId(input.docId);
+  const existing = await fbGetDoc(draftDocRef(input.docId));
+  if (existing.exists()) {
+    return createPreviewError({
+      toolName: 'doc_create',
+      title: 'Create draft document',
+      summary: `${input.docId} already exists.`,
+      docId: input.docId,
+      error: 'ALREADY_EXISTS',
+      hint: 'Use an unused slug, or use an update tool for the existing draft.',
+    });
+  }
+
+  if (input.fields) {
+    const schema = await getCachedSchema(collectionId);
+    const {validateFields} = await loadValidators();
+    const errors = validateFields(input.fields, schema);
+    if (errors.length > 0) {
+      return createPreviewError({
+        toolName: 'doc_create',
+        title: 'Create draft document',
+        summary: `Could not validate the initial fields for ${input.docId}.`,
+        docId: input.docId,
+        error: 'VALIDATION_FAILED',
+        errors,
+        hint: 'The fields payload does not match the collection schema.',
+      });
+    }
+  }
+
+  return {
+    toolName: 'doc_create',
+    title: 'Create draft document',
+    summary: `Create ${input.docId} as a new draft document.`,
+    docId: input.docId,
+    before: {},
+    after: input.fields || {},
+    details: [
+      {label: 'Document', value: input.docId},
+      {label: 'Operation', value: 'Create draft'},
+    ],
+  };
+}
+
+async function previewDocUpdateField(input: {
+  docId: string;
+  path: string;
+  value: any;
+}): Promise<CmsToolPreview> {
+  const value = normalizeToolValue(input.value);
+  const {collection: collectionId} = parseDocId(input.docId);
+  const schema = await getCachedSchema(collectionId);
+  const {validateValueAtPath} = await loadValidators();
+  const errors = validateValueAtPath(schema, input.path, value);
+  if (errors.length > 0) {
+    return createPreviewError({
+      toolName: 'doc_updateField',
+      title: 'Update draft field',
+      summary: `Could not validate ${input.path} for ${input.docId}.`,
+      docId: input.docId,
+      path: input.path,
+      error: 'VALIDATION_FAILED',
+      errors,
+      hint:
+        'The value does not match the field schema. Inspect the doc and schema, then retry with a valid value.',
+    });
+  }
+
+  const ref = draftDocRef(input.docId);
+  const snap = await fbGetDoc(ref);
+  if (!snap.exists()) {
+    return createPreviewError({
+      toolName: 'doc_updateField',
+      title: 'Update draft field',
+      summary: `${input.docId} does not exist.`,
+      docId: input.docId,
+      path: input.path,
+      error: 'NOT_FOUND',
+      hint: `Doc "${input.docId}" does not exist.`,
+    });
+  }
+
+  const raw = snap.data() as any;
+  const storagePath = resolveArrayObjectPath(raw.fields || {}, input.path);
+  if (!storagePath.ok) {
+    return createPreviewError({
+      toolName: 'doc_updateField',
+      title: 'Update draft field',
+      summary: `Could not resolve ${input.path} in ${input.docId}.`,
+      docId: input.docId,
+      path: input.path,
+      error: 'VALIDATION_FAILED',
+      errors: [storagePath.error],
+      hint:
+        'Use zero-based array indices for existing array items, or set the whole array field when appending or removing items.',
+    });
+  }
+
+  const before = unmarshalData(raw.fields || {});
+  const after = cloneJson(before);
+  setValueAtPath(after, input.path, value);
+  return {
+    toolName: 'doc_updateField',
+    title: 'Update draft field',
+    summary: `Update ${input.path} in ${input.docId}.`,
+    docId: input.docId,
+    path: input.path,
+    before,
+    after,
+    details: [
+      {label: 'Document', value: input.docId},
+      {label: 'Field path', value: input.path},
+      {label: 'Operation', value: 'Update draft field'},
+    ],
+  };
+}
+
+async function previewDocDuplicate(input: {
+  fromDocId: string;
+  toDocId: string;
+}): Promise<CmsToolPreview> {
+  const fromRef = draftDocRef(input.fromDocId);
+  const fromSnap = await fbGetDoc(fromRef);
+  if (!fromSnap.exists()) {
+    return createPreviewError({
+      toolName: 'doc_duplicate',
+      title: 'Duplicate draft document',
+      summary: `${input.fromDocId} does not exist.`,
+      docId: input.toDocId,
+      error: 'NOT_FOUND',
+      hint: `Source doc "${input.fromDocId}" does not exist.`,
+      details: [{label: 'Source', value: input.fromDocId}],
+    });
+  }
+
+  const toRef = draftDocRef(input.toDocId);
+  const toSnap = await fbGetDoc(toRef);
+  if (toSnap.exists()) {
+    return createPreviewError({
+      toolName: 'doc_duplicate',
+      title: 'Duplicate draft document',
+      summary: `${input.toDocId} already exists.`,
+      docId: input.toDocId,
+      error: 'ALREADY_EXISTS',
+      hint: `Target doc "${input.toDocId}" already exists.`,
+      details: [
+        {label: 'Source', value: input.fromDocId},
+        {label: 'Target', value: input.toDocId},
+      ],
+    });
+  }
+
+  const fromData = fromSnap.data() as any;
+  const fields = unmarshalData(fromData.fields || {});
+  return {
+    toolName: 'doc_duplicate',
+    title: 'Duplicate draft document',
+    summary: `Duplicate ${input.fromDocId} to ${input.toDocId}.`,
+    docId: input.toDocId,
+    before: {},
+    after: fields,
+    details: [
+      {label: 'Source', value: input.fromDocId},
+      {label: 'Target', value: input.toDocId},
+      {label: 'Operation', value: 'Create draft copy'},
+    ],
+  };
+}
 
 // ---------------------------------------------------------------------------
 // Handler implementations
@@ -277,7 +654,19 @@ async function docSet(input: {docId: string; fields: Record<string, any>}) {
     fields: marshalData(input.fields),
   };
   await setDoc(ref, data);
-  return {success: true, docId: input.docId};
+  return {
+    success: true,
+    docId: input.docId,
+    receipt: createReceipt({
+      title: 'Updated draft document',
+      summary: `Replaced all draft fields for ${input.docId}.`,
+      docId: input.docId,
+      details: [
+        {label: 'Document', value: input.docId},
+        {label: 'Operation', value: 'Replace draft fields'},
+      ],
+    }),
+  };
 }
 
 async function docCreate(input: {docId: string; fields?: Record<string, any>}) {
@@ -324,7 +713,19 @@ async function docCreate(input: {docId: string; fields?: Record<string, any>}) {
     fields: input.fields ? marshalData(input.fields) : {},
   };
   await setDoc(ref, data);
-  return {success: true, docId: input.docId};
+  return {
+    success: true,
+    docId: input.docId,
+    receipt: createReceipt({
+      title: 'Created draft document',
+      summary: `Created ${input.docId} as a new draft document.`,
+      docId: input.docId,
+      details: [
+        {label: 'Document', value: input.docId},
+        {label: 'Operation', value: 'Create draft'},
+      ],
+    }),
+  };
 }
 
 async function docUpdateField(input: {
@@ -332,21 +733,7 @@ async function docUpdateField(input: {
   path: string;
   value: any;
 }) {
-  let value = input.value;
-  // Auto-parse JSON strings that the AI model forgot to parse.
-  if (typeof value === 'string') {
-    const trimmed = value.trim();
-    if (
-      (trimmed.startsWith('{') && trimmed.endsWith('}')) ||
-      (trimmed.startsWith('[') && trimmed.endsWith(']'))
-    ) {
-      try {
-        value = JSON.parse(trimmed);
-      } catch {
-        // Not valid JSON; keep the original string value.
-      }
-    }
-  }
+  const value = normalizeToolValue(input.value);
 
   const {collection: collectionId} = parseDocId(input.docId);
   const schema = await getCachedSchema(collectionId);
@@ -401,7 +788,21 @@ async function docUpdateField(input: {
     'sys.modifiedAt': serverTimestamp(),
     'sys.modifiedBy': firebase.user?.email || 'root-cms-ai',
   });
-  return {success: true, docId: input.docId, path: input.path};
+  return {
+    success: true,
+    docId: input.docId,
+    path: input.path,
+    receipt: createReceipt({
+      title: 'Updated draft field',
+      summary: `Updated ${input.path} in ${input.docId}.`,
+      docId: input.docId,
+      details: [
+        {label: 'Document', value: input.docId},
+        {label: 'Field path', value: input.path},
+        {label: 'Operation', value: 'Update draft field'},
+      ],
+    }),
+  };
 }
 
 // docPublish, docDelete, and docRevertDraft are intentionally NOT
@@ -449,7 +850,21 @@ async function docDuplicate(input: {fromDocId: string; toDocId: string}) {
     fields: fromData.fields || {},
   };
   await setDoc(toRef, data);
-  return {success: true, fromDocId: input.fromDocId, toDocId: input.toDocId};
+  return {
+    success: true,
+    fromDocId: input.fromDocId,
+    toDocId: input.toDocId,
+    receipt: createReceipt({
+      title: 'Duplicated draft document',
+      summary: `Duplicated ${input.fromDocId} to ${input.toDocId}.`,
+      docId: input.toDocId,
+      details: [
+        {label: 'Source', value: input.fromDocId},
+        {label: 'Target', value: input.toDocId},
+        {label: 'Operation', value: 'Create draft copy'},
+      ],
+    }),
+  };
 }
 
 async function docListVersions(input: {docId: string; limit?: number}) {

@@ -60,6 +60,8 @@ interface AttachmentPreview {
   url: string;
   filename: string;
   mediaType: string;
+  textContent?: string;
+  textTruncated?: boolean;
   width?: number;
   height?: number;
 }
@@ -247,9 +249,13 @@ function ChatPanelInner(props: {
           if (!text && attachments.length === 0) {
             return;
           }
+          const preparedAttachments = prepareAttachmentsForSend(attachments);
+          const messageText = [text, preparedAttachments.text]
+            .filter(Boolean)
+            .join('\n\n');
           sendMessage({
-            text,
-            files: attachments.map((a) => ({
+            text: messageText,
+            files: preparedAttachments.files.map((a) => ({
               type: 'file',
               mediaType: a.mediaType,
               url: a.url,
@@ -555,13 +561,17 @@ function ChatComposer(props: {
   const uploadFile = async (file: File) => {
     setUploading(true);
     try {
+      const mediaType = file.type || guessMimeType(file.name);
+      const inlineText = await readInlineAttachmentText(file, mediaType);
       const data: any = await uploadFileToGCS(file, {disableGci: true});
       setAttachments((prev) => [
         ...prev,
         {
           url: data.src,
           filename: data.filename || file.name,
-          mediaType: file.type || guessMimeType(file.name),
+          mediaType,
+          textContent: inlineText?.text,
+          textTruncated: inlineText?.truncated,
           width: data.width,
           height: data.height,
         },
@@ -596,11 +606,10 @@ function ChatComposer(props: {
             <input
               ref={fileRef}
               type="file"
-              accept="image/png,image/jpeg,image/webp"
               className="AiEditModal__ChatPanel__composer__imageUpload__input"
               onChange={onFileChange}
             />
-            <Tooltip label="Upload image">
+            <Tooltip label="Upload file">
               <ActionIcon
                 component="div"
                 className="AiEditModal__ChatPanel__composer__imageUpload__icon"
@@ -623,7 +632,7 @@ function ChatComposer(props: {
           onPaste={(e) => {
             const items = e.clipboardData?.items || [];
             for (const item of items) {
-              if (item.kind === 'file' && item.type.startsWith('image/')) {
+              if (item.kind === 'file') {
                 const file = item.getAsFile();
                 if (file && props.canAttach) {
                   uploadFile(file);
@@ -696,11 +705,88 @@ function ChatComposer(props: {
   );
 }
 
+const MAX_INLINE_ATTACHMENT_CHARS = 100_000;
+
+function prepareAttachmentsForSend(attachments: AttachmentPreview[]): {
+  files: AttachmentPreview[];
+  text: string;
+} {
+  const files = attachments.filter(shouldSendAsModelFile);
+  const textBlocks = attachments
+    .filter((attachment) => !shouldSendAsModelFile(attachment))
+    .map(formatAttachmentForPrompt);
+  return {
+    files,
+    text: textBlocks.length ? `Attached files:\n\n${textBlocks.join('\n\n')}` : '',
+  };
+}
+
+function shouldSendAsModelFile(attachment: AttachmentPreview): boolean {
+  return attachment.mediaType.startsWith('image/');
+}
+
+function formatAttachmentForPrompt(attachment: AttachmentPreview): string {
+  const title = `File: ${attachment.filename} (${attachment.mediaType})`;
+  if (attachment.textContent !== undefined) {
+    const truncated = attachment.textTruncated
+      ? '\n\n[Content truncated before sending to the model.]'
+      : '';
+    return `${title}\nURL: ${attachment.url}\n\n~~~\n${attachment.textContent}${truncated}\n~~~`;
+  }
+  return `${title}\nURL: ${attachment.url}\n\n[The file was uploaded, but its binary content was not inlined into this chat message.]`;
+}
+
+async function readInlineAttachmentText(
+  file: File,
+  mediaType: string
+): Promise<{text: string; truncated: boolean} | null> {
+  if (!isTextLikeAttachment(file.name, mediaType)) {
+    return null;
+  }
+  const text = await file.text();
+  if (text.length <= MAX_INLINE_ATTACHMENT_CHARS) {
+    return {text, truncated: false};
+  }
+  return {
+    text: text.slice(0, MAX_INLINE_ATTACHMENT_CHARS),
+    truncated: true,
+  };
+}
+
+function isTextLikeAttachment(filename: string, mediaType: string): boolean {
+  if (mediaType.startsWith('text/')) {
+    return true;
+  }
+  return [
+    '.css',
+    '.js',
+    '.jsx',
+    '.json',
+    '.md',
+    '.mdx',
+    '.mjs',
+    '.scss',
+    '.ts',
+    '.tsx',
+    '.txt',
+    '.yaml',
+    '.yml',
+  ].some((ext) => filename.toLowerCase().endsWith(ext));
+}
+
 function guessMimeType(filename: string): string {
   const lower = filename.toLowerCase();
   if (lower.endsWith('.png')) return 'image/png';
   if (lower.endsWith('.webp')) return 'image/webp';
-  return 'image/jpeg';
+  if (lower.endsWith('.jpg') || lower.endsWith('.jpeg')) return 'image/jpeg';
+  if (lower.endsWith('.gif')) return 'image/gif';
+  if (lower.endsWith('.svg')) return 'image/svg+xml';
+  if (lower.endsWith('.pdf')) return 'application/pdf';
+  if (lower.endsWith('.json')) return 'application/json';
+  if (lower.endsWith('.csv')) return 'text/csv';
+  if (lower.endsWith('.md')) return 'text/markdown';
+  if (lower.endsWith('.txt')) return 'text/plain';
+  return 'application/octet-stream';
 }
 
 /** Concatenates all `text` parts of an assistant message. */

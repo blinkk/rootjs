@@ -33,6 +33,8 @@ import {RootCMSClient} from './client.js';
 /** Filename of the project-level instructions file loaded into the AI prompt. */
 export const ROOT_MD_FILENAME = 'ROOT.md';
 
+export type AiExecutionMode = 'read' | 'suggest' | 'approve' | 'auto';
+
 /**
  * Provider type for an AI model. Use `openai-compatible` for any OpenAI-style
  * endpoint (e.g. local Ollama, vLLM, OpenRouter).
@@ -255,6 +257,18 @@ export function findImageModel(
   }
   const defaultId = config.defaultImageModel || imageModels[0]?.id;
   return imageModels.find((m) => m.id === defaultId) || null;
+}
+
+export function normalizeExecutionMode(value: unknown): AiExecutionMode {
+  if (
+    value === 'read' ||
+    value === 'suggest' ||
+    value === 'approve' ||
+    value === 'auto'
+  ) {
+    return value;
+  }
+  return 'approve';
 }
 
 /**
@@ -487,6 +501,48 @@ export interface RunChatStreamOptions {
   messages: UIMessage[];
   chatId: string;
   user: string;
+  executionMode?: AiExecutionMode;
+}
+
+function buildExecutionModePrompt(mode: AiExecutionMode): string {
+  const common = [
+    'Root AI execution workflow:',
+    '- For content-changing tasks, first gather the relevant context with read tools.',
+    '- Before the first write, briefly state a plan that names the target docs, fields, intended changes, assumptions, and validation checks.',
+    '- Never claim a draft change was applied until the matching tool output reports success.',
+    '- After write tools finish, provide a short receipt with changed docs, changed fields, validation result, and a reminder that publishing remains manual.',
+  ];
+  if (mode === 'read') {
+    common.push(
+      '',
+      'Current execution mode: Read only.',
+      '- You only have read-only CMS tools.',
+      '- Do not propose tool writes or ask for approval to write. Answer from the context you can read.'
+    );
+  } else if (mode === 'suggest') {
+    common.push(
+      '',
+      'Current execution mode: Suggest changes.',
+      '- You only have read-only CMS tools.',
+      '- Do not call write tools. Provide proposed edits, field paths, and rationale for the user to review.'
+    );
+  } else if (mode === 'approve') {
+    common.push(
+      '',
+      'Current execution mode: Ask before writing.',
+      '- Write tools are available, but the UI will pause each draft write for user approval with a diff.',
+      '- Call write tools only after you have enough context to make a specific, reviewable change.',
+      '- If the user rejects a write, revise the plan instead of retrying the same write.'
+    );
+  } else {
+    common.push(
+      '',
+      'Current execution mode: Auto-apply draft edits.',
+      '- Draft-only write tools may run without an approval pause.',
+      '- Keep edits narrowly scoped to the user request and summarize the exact draft changes afterward.'
+    );
+  }
+  return common.join('\n');
 }
 
 /**
@@ -497,11 +553,23 @@ export interface RunChatStreamOptions {
 export async function runChatStream(
   options: RunChatStreamOptions
 ): Promise<Response> {
-  const {rootConfig, model, config, messages, cmsClient, user, chatId} =
-    options;
+  const {
+    rootConfig,
+    model,
+    config,
+    messages,
+    cmsClient,
+    user,
+    chatId,
+    executionMode = 'approve',
+  } = options;
   const languageModel = resolveLanguageModel(model);
   const tools: ToolSet =
-    model.capabilities?.tools === false ? {} : createCmsTools();
+    model.capabilities?.tools === false
+      ? {}
+      : executionMode === 'read' || executionMode === 'suggest'
+      ? createReadOnlyCmsTools()
+      : createCmsTools();
 
   const basePrompt =
     config.systemPrompt ||
@@ -512,7 +580,10 @@ export async function runChatStream(
       'Be concise and use markdown for rich responses.',
     ].join(' ');
   const rootMd = await readRootMd(rootConfig.rootDir);
-  const systemPrompt = buildSystemPrompt(basePrompt, rootMd);
+  const systemPrompt = buildSystemPrompt(
+    [basePrompt, '', buildExecutionModePrompt(executionMode)].join('\n'),
+    rootMd
+  );
 
   const modelMessages = await convertToModelMessages(messages, {tools});
   const result = streamText({

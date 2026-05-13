@@ -10,6 +10,7 @@ import {
   generateImage,
   generatePublishMessage,
   getAiConfig,
+  normalizeExecutionMode,
   runChatStream,
   runEditObjectStream,
   serializeAiConfig,
@@ -772,6 +773,7 @@ export function api(server: Server, options: ApiOptions) {
       res.status(400).json({success: false, error: 'UNKNOWN_MODEL'});
       return;
     }
+    const executionMode = normalizeExecutionMode(body.executionMode);
 
     const cmsClient = new RootCMSClient(req.rootConfig!);
     const store = new ChatStore(cmsClient, req.user.email);
@@ -805,6 +807,7 @@ export function api(server: Server, options: ApiOptions) {
         messages,
         chatId,
         user: req.user.email,
+        executionMode,
       });
       // Surface the chat id so clients can persist it for the next request.
       streamResponse.headers.set('x-root-cms-chat-id', chatId);
