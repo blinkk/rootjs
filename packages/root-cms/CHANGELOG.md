@@ -1,5 +1,13 @@
 # @blinkk/root-cms
 
+## 3.0.1-beta.3
+
+### Patch Changes
+
+- d9e013b0: feat: improve plan and excute flow in root ai
+- f61fcd68: fix: improve array path handling in doc_updateField tool
+  - @blinkk/root@3.0.1-beta.3
+
 ## 3.0.1-beta.2
 
 ### Patch Changes
