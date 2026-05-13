@@ -33,12 +33,19 @@ import {
 import {marked} from 'marked';
 import {useCallback, useEffect, useMemo, useRef, useState} from 'preact/hooks';
 import {useLocation} from 'preact-iso';
+import {JsDiff} from '../../components/JsDiff/JsDiff.js';
 import {Markdown} from '../../components/Markdown/Markdown.js';
 import {usePageTitle} from '../../hooks/usePageTitle.js';
 import {Layout} from '../../layout/Layout.js';
 import {joinClassNames} from '../../utils/classes.js';
 import {uploadFileToGCS} from '../../utils/gcs.js';
-import {executeCmsTool} from './cmsToolHandlers.js';
+import {stableJsonStringify} from '../../utils/objects.js';
+import type {CmsToolPreview} from './cmsToolHandlers.js';
+import {
+  executeCmsTool,
+  isCmsWriteTool,
+  previewCmsWriteTool,
+} from './cmsToolHandlers.js';
 
 interface ModelInfo {
   id: string;
@@ -70,8 +77,87 @@ interface AttachmentPreview {
   url: string;
   filename: string;
   mediaType: string;
+  textContent?: string;
+  textTruncated?: boolean;
   width?: number;
   height?: number;
+}
+
+type ExecutionMode = 'read' | 'suggest' | 'approve' | 'auto';
+
+interface ExecutionModeInfo {
+  id: ExecutionMode;
+  label: string;
+  description: string;
+}
+
+const EXECUTION_MODES: ExecutionModeInfo[] = [
+  {
+    id: 'approve',
+    label: 'Ask before writing',
+    description: 'Read freely, then pause for approval before draft edits.',
+  },
+  {
+    id: 'suggest',
+    label: 'Suggest changes',
+    description: 'Research and propose edits without calling write tools.',
+  },
+  {
+    id: 'read',
+    label: 'Read only',
+    description: 'Inspect CMS content without planning or applying writes.',
+  },
+  {
+    id: 'auto',
+    label: 'Auto-apply draft edits',
+    description: 'Apply draft-only writes without approval in this chat.',
+  },
+];
+
+const EXECUTION_MODE_STORAGE_KEY = 'root-cms.ai.executionMode';
+
+function isExecutionMode(value: string | null): value is ExecutionMode {
+  return EXECUTION_MODES.some((mode) => mode.id === value);
+}
+
+function readStoredExecutionMode(): ExecutionMode {
+  if (typeof window === 'undefined') {
+    return 'approve';
+  }
+  try {
+    const value = window.localStorage.getItem(EXECUTION_MODE_STORAGE_KEY);
+    if (isExecutionMode(value)) {
+      return value;
+    }
+  } catch (err) {
+    console.error('failed to read AI execution mode preference', err);
+  }
+  return 'approve';
+}
+
+function persistExecutionMode(mode: ExecutionMode) {
+  if (typeof window === 'undefined') {
+    return;
+  }
+  try {
+    window.localStorage.setItem(EXECUTION_MODE_STORAGE_KEY, mode);
+  } catch (err) {
+    console.error('failed to save AI execution mode preference', err);
+  }
+}
+
+interface PendingToolApproval {
+  toolCallId: string;
+  toolName: string;
+  input: any;
+  preview: CmsToolPreview;
+  status: 'pending' | 'executing';
+}
+
+interface ToolApprovalControls {
+  approvals: Record<string, PendingToolApproval>;
+  onApprove: (toolCallId: string) => void;
+  onReject: (toolCallId: string) => void;
 }
 
 const NEW_CHAT_ID = '';
@@ -149,6 +235,8 @@ function ChatExperience(props: {
   const [selectedModelId, setSelectedModelId] = useState<string>(
     props.config.defaultModel || models[0]?.id || ''
   );
+  const [executionMode, setExecutionMode] =
+    useState<ExecutionMode>(readStoredExecutionMode);
   // The chat id used for the next mount of `ChatPane`. Empty for "new chat".
   const [pendingChatId, setPendingChatId] = useState<string>(
     props.initialChatId || NEW_CHAT_ID
@@ -190,6 +278,10 @@ function ChatExperience(props: {
       loadChat(props.initialChatId);
     }
   }, []);
+
+  useEffect(() => {
+    persistExecutionMode(executionMode);
+  }, [executionMode]);
 
   /** Fetches a chat by id and applies it to state without the activeChatId guard. */
   const loadChat = async (id: string) => {
@@ -292,12 +384,15 @@ function ChatExperience(props: {
           models={models}
           selectedModel={selectedModel}
           onSelectModel={setSelectedModelId}
+          executionMode={executionMode}
+          onSelectExecutionMode={setExecutionMode}
         />
         <ChatPane
           key={resetKey}
           initialChatId={pendingChatId}
           model={selectedModel}
           initialMessages={initialMessages}
+          executionMode={executionMode}
           onChatPersisted={(id) => {
             setActiveChatId(id);
             refreshChats();
@@ -370,7 +465,12 @@ function ChatHeader(props: {
   models: ModelInfo[];
   selectedModel?: ModelInfo;
   onSelectModel: (id: string) => void;
+  executionMode: ExecutionMode;
+  onSelectExecutionMode: (mode: ExecutionMode) => void;
 }) {
+  const selectedMode =
+    EXECUTION_MODES.find((mode) => mode.id === props.executionMode) ||
+    EXECUTION_MODES[0];
   return (
     <div className="AIPage__header">
       <Menu
@@ -405,6 +505,31 @@ function ChatHeader(props: {
           </Menu.Item>
         ))}
       </Menu>
+      <Menu
+        control={
+          <button type="button" className="AIPage__modePicker">
+            <IconTool size={16} />
+            <span>{selectedMode.label}</span>
+            <IconChevronDown size={14} />
+          </button>
+        }
+      >
+        {EXECUTION_MODES.map((mode) => (
+          <Menu.Item
+            key={mode.id}
+            onClick={() => props.onSelectExecutionMode(mode.id)}
+          >
+            <div className="AIPage__modePicker__option">
+              <div className="AIPage__modePicker__option__label">
+                {mode.label}
+              </div>
+              <div className="AIPage__modePicker__option__description">
+                {mode.description}
+              </div>
+            </div>
+          </Menu.Item>
+        ))}
+      </Menu>
     </div>
   );
 }
@@ -413,6 +538,7 @@ function ChatPane(props: {
   initialChatId: string;
   model?: ModelInfo;
   initialMessages: UIMessage[];
+  executionMode: ExecutionMode;
   onChatPersisted: (id: string) => void;
 }) {
   // Lock in the chat id for the lifetime of this mount. We generate one
@@ -425,6 +551,137 @@ function ChatPane(props: {
   );
   const modelRef = useRef(props.model?.id);
   modelRef.current = props.model?.id;
+  const executionModeRef = useRef(props.executionMode);
+  executionModeRef.current = props.executionMode;
+  const [pendingApprovals, setPendingApprovals] = useState<
+    Record<string, PendingToolApproval>
+  >({});
+  const approvalResolvers = useRef<
+    Record<string, (decision: 'approve' | 'reject') => void>
+  >({});
+
+  useEffect(() => {
+    return () => {
+      for (const resolve of Object.values(approvalResolvers.current)) {
+        resolve('reject');
+      }
+      approvalResolvers.current = {};
+    };
+  }, []);
+
+  const waitForApproval = useCallback(
+    (toolCallId: string, toolName: string, input: any, preview: CmsToolPreview) =>
+      new Promise<'approve' | 'reject'>((resolve) => {
+        approvalResolvers.current[toolCallId] = resolve;
+        setPendingApprovals((prev) => ({
+          ...prev,
+          [toolCallId]: {
+            toolCallId,
+            toolName,
+            input,
+            preview,
+            status: 'pending',
+          },
+        }));
+      }),
+    []
+  );
+
+  const approveToolCall = useCallback((toolCallId: string) => {
+    setPendingApprovals((prev) => {
+      const approval = prev[toolCallId];
+      if (!approval) {
+        return prev;
+      }
+      return {
+        ...prev,
+        [toolCallId]: {...approval, status: 'executing'},
+      };
+    });
+    approvalResolvers.current[toolCallId]?.('approve');
+    delete approvalResolvers.current[toolCallId];
+  }, []);
+
+  const rejectToolCall = useCallback((toolCallId: string) => {
+    setPendingApprovals((prev) => {
+      const next = {...prev};
+      delete next[toolCallId];
+      return next;
+    });
+    approvalResolvers.current[toolCallId]?.('reject');
+    delete approvalResolvers.current[toolCallId];
+  }, []);
+
+  const resolveToolOutput = useCallback(
+    async (toolCall: {toolCallId: string; toolName: string; input: any}) => {
+      if (!isCmsWriteTool(toolCall.toolName)) {
+        return await executeCmsTool(toolCall.toolName, toolCall.input);
+      }
+
+      const mode = executionModeRef.current;
+      if (mode === 'read' || mode === 'suggest') {
+        return {
+          success: false,
+          error: 'WRITE_BLOCKED_BY_MODE',
+          message:
+            mode === 'read'
+              ? 'The current execution mode is read only. Do not call write tools.'
+              : 'The current execution mode only allows suggestions. Propose the change in chat instead of calling write tools.',
+        };
+      }
+
+      let preview: CmsToolPreview;
+      try {
+        preview = await previewCmsWriteTool(toolCall.toolName, toolCall.input);
+      } catch (err: any) {
+        return {
+          success: false,
+          error: 'PREVIEW_FAILED',
+          message: err?.message || String(err),
+        };
+      }
+      if (preview.error) {
+        return {
+          success: false,
+          error: preview.error,
+          message: preview.summary,
+          errors: preview.errors,
+          hint: preview.hint,
+        };
+      }
+
+      if (mode === 'approve') {
+        const decision = await waitForApproval(
+          toolCall.toolCallId,
+          toolCall.toolName,
+          toolCall.input,
+          preview
+        );
+        if (decision === 'reject') {
+          return {
+            success: false,
+            error: 'USER_REJECTED',
+            message:
+              'The user rejected this draft change. Do not retry unless they ask for a revised version.',
+          };
+        }
+      }
+
+      try {
+        return await executeCmsTool(toolCall.toolName, toolCall.input);
+      } finally {
+        setPendingApprovals((prev) => {
+          if (!prev[toolCall.toolCallId]) {
+            return prev;
+          }
+          const next = {...prev};
+          delete next[toolCall.toolCallId];
+          return next;
+        });
+      }
+    },
+    [waitForApproval]
+  );
 
   const transport = useMemo(
     () =>
@@ -436,6 +693,7 @@ function ChatPane(props: {
             messages,
             chatId: effectiveChatId,
             modelId: modelRef.current,
+            executionMode: executionModeRef.current,
           },
         }),
       }),
@@ -452,7 +710,7 @@ function ChatPane(props: {
     // Tools execute in the browser using the signed-in user's Firebase
     // credentials. The result is fed back to the model on the next round.
     onToolCall: async ({toolCall}) => {
-      const output = await executeCmsTool(toolCall.toolName, toolCall.input);
+      const output = await resolveToolOutput(toolCall);
       addToolOutput({
         tool: toolCall.toolName as any,
         toolCallId: toolCall.toolCallId,
@@ -472,6 +730,11 @@ function ChatPane(props: {
         messages={messages}
         isStreaming={isStreaming}
         emptyMessage={!props.model ? 'Select a model to start.' : undefined}
+        toolApprovals={{
+          approvals: pendingApprovals,
+          onApprove: approveToolCall,
+          onReject: rejectToolCall,
+        }}
       />
       {error && (
         <div className="AIPage__error">
@@ -487,9 +750,13 @@ function ChatPane(props: {
           if (!text && attachments.length === 0) {
             return;
           }
+          const preparedAttachments = prepareAttachmentsForSend(attachments);
+          const messageText = [text, preparedAttachments.text]
+            .filter(Boolean)
+            .join('\n\n');
           sendMessage({
-            text,
-            files: attachments.map((a) => ({
+            text: messageText,
+            files: preparedAttachments.files.map((a) => ({
               type: 'file',
               mediaType: a.mediaType,
               url: a.url,
@@ -506,6 +773,7 @@ function ChatTranscript(props: {
   messages: UIMessage[];
   isStreaming: boolean;
   emptyMessage?: string;
+  toolApprovals?: ToolApprovalControls;
 }) {
   const ref = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -535,7 +803,11 @@ function ChatTranscript(props: {
     <div className="AIPage__transcript" ref={ref}>
       <div className="AIPage__transcript__inner">
         {props.messages.map((m) => (
-          <MessageView key={m.id} message={m} />
+          <MessageView
+            key={m.id}
+            message={m}
+            toolApprovals={props.toolApprovals}
+          />
         ))}
         {props.isStreaming && (
           <div className="AIPage__streamingIndicator">
@@ -548,7 +820,10 @@ function ChatTranscript(props: {
   );
 }
 
-function MessageView(props: {message: UIMessage}) {
+function MessageView(props: {
+  message: UIMessage;
+  toolApprovals?: ToolApprovalControls;
+}) {
   const message = props.message;
   const isUser = message.role === 'user';
   const username = isUser ? 'You' : 'Root AI';
@@ -601,7 +876,11 @@ function MessageView(props: {message: UIMessage}) {
         <div className="AIPage__message__username">{username}</div>
         <div className="AIPage__message__parts">
           {(message.parts || []).map((part, i) => (
-            <PartView key={i} part={part} />
+            <PartView
+              key={i}
+              part={part}
+              toolApprovals={props.toolApprovals}
+            />
           ))}
         </div>
         <button
@@ -620,7 +899,7 @@ function MessageView(props: {message: UIMessage}) {
   );
 }
 
-function PartView(props: {part: any}) {
+function PartView(props: {part: any; toolApprovals?: ToolApprovalControls}) {
   const part = props.part;
   if (part.type === 'text') {
     if (!part.text) {
@@ -646,10 +925,10 @@ function PartView(props: {part: any}) {
     );
   }
   if (typeof part.type === 'string' && part.type.startsWith('tool-')) {
-    return <ToolPartView part={part} />;
+    return <ToolPartView part={part} toolApprovals={props.toolApprovals} />;
   }
   if (part.type === 'dynamic-tool') {
-    return <ToolPartView part={part} />;
+    return <ToolPartView part={part} toolApprovals={props.toolApprovals} />;
   }
   if (part.type === 'step-start') {
     return null;
@@ -714,7 +993,10 @@ function FilePartView(props: {part: any}) {
   );
 }
 
-function ToolPartView(props: {part: any}) {
+function ToolPartView(props: {
+  part: any;
+  toolApprovals?: ToolApprovalControls;
+}) {
   const part = props.part;
   // Static tool parts are typed `tool-<toolName>`; dynamic-tool uses
   // `toolName`.
@@ -723,18 +1005,40 @@ function ToolPartView(props: {part: any}) {
       ? part.type.slice('tool-'.length)
       : part.toolName || 'tool';
   const state: string = part.state || '';
-  const [open, setOpen] = useState(false);
+  const toolCallId = getToolCallId(part);
+  const approvalControls = props.toolApprovals;
+  const approval = toolCallId
+    ? approvalControls?.approvals[toolCallId]
+    : undefined;
+  const [open, setOpen] = useState(!!approval);
+
+  useEffect(() => {
+    if (approval || part.output || part.errorText) {
+      setOpen(true);
+    }
+  }, [approval, part.output, part.errorText]);
 
   return (
-    <div className="AIPage__tool">
+    <div
+      className={joinClassNames(
+        'AIPage__tool',
+        approval && 'AIPage__tool--approval'
+      )}
+    >
       <button
         type="button"
         className="AIPage__tool__header"
         onClick={() => setOpen(!open)}
       >
         <IconTool size={14} />
-        <code>{toolName}</code>
-        <span className="AIPage__tool__state">{prettyToolState(state)}</span>
+        <span className="AIPage__tool__title">
+          {prettyToolName(toolName, part.input)}
+        </span>
+        <span className="AIPage__tool__state">
+          {approval
+            ? prettyApprovalState(approval.status)
+            : prettyToolState(state)}
+        </span>
         <IconChevronDown
           size={14}
           style={{
@@ -745,14 +1049,28 @@ function ToolPartView(props: {part: any}) {
       </button>
       {open && (
         <div className="AIPage__tool__body">
+          <ToolTimelineSummary
+            toolName={toolName}
+            input={part.input}
+            output={part.output}
+            approval={approval}
+          />
+          {approval && approvalControls && (
+            <ToolApprovalCard
+              approval={approval}
+              onApprove={() => approvalControls.onApprove(approval.toolCallId)}
+              onReject={() => approvalControls.onReject(approval.toolCallId)}
+            />
+          )}
+          {part.output?.receipt && <ToolReceipt output={part.output} />}
           {part.input && (
-            <details open>
+            <details>
               <summary>Input</summary>
               <pre>{JSON.stringify(part.input, null, 2)}</pre>
             </details>
           )}
           {part.output && (
-            <details open>
+            <details>
               <summary>Output</summary>
               <pre>{JSON.stringify(part.output, null, 2)}</pre>
             </details>
@@ -764,6 +1082,204 @@ function ToolPartView(props: {part: any}) {
       )}
     </div>
   );
+}
+
+function getToolCallId(part: any): string {
+  return part.toolCallId || part.id || '';
+}
+
+function prettyToolName(toolName: string, input: any): string {
+  switch (toolName) {
+    case 'collections_list':
+      return 'List collections';
+    case 'docs_list':
+      return `List ${input?.collectionId || 'documents'}`;
+    case 'docs_search':
+      return `Search docs${input?.query ? ` for "${input.query}"` : ''}`;
+    case 'doc_get':
+      return `Read ${input?.docId || 'document'}`;
+    case 'doc_getVersion':
+      return `Read ${input?.docId || 'document'} version`;
+    case 'doc_set':
+      return `Replace ${input?.docId || 'draft fields'}`;
+    case 'doc_create':
+      return `Create ${input?.docId || 'draft document'}`;
+    case 'doc_updateField':
+      return `Update ${input?.path || 'field'}`;
+    case 'doc_duplicate':
+      return `Duplicate ${input?.fromDocId || 'document'}`;
+    case 'doc_listVersions':
+      return `List versions for ${input?.docId || 'document'}`;
+    case 'doc_translateField':
+      return 'Translate field text';
+    case 'schema_get':
+      return `Read ${input?.collectionId || 'collection'} schema`;
+    default:
+      return toolName;
+  }
+}
+
+function ToolTimelineSummary(props: {
+  toolName: string;
+  input: any;
+  output: any;
+  approval?: PendingToolApproval;
+}) {
+  const summary = getToolSummary(props.toolName, props.input, props.output);
+  if (!summary && !props.approval) {
+    return null;
+  }
+  return (
+    <div className="AIPage__toolSummary">
+      <div className="AIPage__toolSummary__label">
+        {props.approval ? 'Waiting for approval' : summary?.label}
+      </div>
+      <div className="AIPage__toolSummary__text">
+        {props.approval ? props.approval.preview.summary : summary?.text}
+      </div>
+    </div>
+  );
+}
+
+function getToolSummary(toolName: string, input: any, output: any) {
+  if (output?.receipt) {
+    return {label: 'Applied draft change', text: output.receipt.summary};
+  }
+  if (output?.error) {
+    return {
+      label: 'Needs attention',
+      text: output.message || output.hint || String(output.error),
+    };
+  }
+  switch (toolName) {
+    case 'collections_list':
+      return {label: 'Read context', text: 'Loaded available CMS collections.'};
+    case 'docs_list':
+      return {
+        label: 'Read context',
+        text: `Loaded documents from ${input?.collectionId || 'a collection'}.`,
+      };
+    case 'docs_search':
+      return {
+        label: 'Read context',
+        text: `Searched indexed docs for "${input?.query || ''}".`,
+      };
+    case 'doc_get':
+      return {
+        label: 'Read context',
+        text: `Loaded ${input?.docId || 'a document'}.`,
+      };
+    case 'doc_getVersion':
+      return {
+        label: 'Read context',
+        text: `Loaded ${input?.docId || 'a document'} at ${
+          input?.versionId || 'a version'
+        }.`,
+      };
+    case 'doc_listVersions':
+      return {
+        label: 'Read context',
+        text: `Loaded version history for ${input?.docId || 'a document'}.`,
+      };
+    case 'schema_get':
+      return {
+        label: 'Read context',
+        text: `Loaded the ${input?.collectionId || 'collection'} schema.`,
+      };
+    case 'doc_translateField':
+      return {label: 'Generated translation', text: 'Translated field text.'};
+    default:
+      return null;
+  }
+}
+
+function ToolApprovalCard(props: {
+  approval: PendingToolApproval;
+  onApprove: () => void;
+  onReject: () => void;
+}) {
+  const preview = props.approval.preview;
+  const hasDiff = preview.before !== undefined && preview.after !== undefined;
+  return (
+    <div className="AIPage__approval">
+      <div className="AIPage__approval__header">
+        <div>
+          <div className="AIPage__approval__title">{preview.title}</div>
+          <div className="AIPage__approval__summary">{preview.summary}</div>
+        </div>
+        <div className="AIPage__approval__status">
+          {props.approval.status === 'executing' ? 'Applying' : 'Review'}
+        </div>
+      </div>
+      {preview.details.length > 0 && (
+        <div className="AIPage__approval__details">
+          {preview.details.map((detail) => (
+            <div key={`${detail.label}:${detail.value}`}>
+              <span>{detail.label}</span>
+              <strong>{detail.value}</strong>
+            </div>
+          ))}
+        </div>
+      )}
+      {hasDiff && (
+        <JsDiff
+          className="AIPage__approval__diff"
+          oldCode={stableJsonStringify(preview.before)}
+          newCode={stableJsonStringify(preview.after)}
+        />
+      )}
+      <div className="AIPage__approval__actions">
+        <button
+          type="button"
+          className="AIPage__approval__button"
+          disabled={props.approval.status === 'executing'}
+          onClick={props.onReject}
+        >
+          Reject
+        </button>
+        <button
+          type="button"
+          className="AIPage__approval__button AIPage__approval__button--primary"
+          disabled={props.approval.status === 'executing'}
+          onClick={props.onApprove}
+        >
+          Approve draft edit
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function ToolReceipt(props: {output: any}) {
+  const receipt = props.output.receipt;
+  return (
+    <div className="AIPage__receipt">
+      <div className="AIPage__receipt__title">
+        <IconCheck size={14} />
+        <span>{receipt.title}</span>
+      </div>
+      <div className="AIPage__receipt__summary">{receipt.summary}</div>
+      {receipt.details?.length > 0 && (
+        <div className="AIPage__receipt__details">
+          {receipt.details.map((detail: any) => (
+            <div key={`${detail.label}:${detail.value}`}>
+              <span>{detail.label}</span>
+              <strong>{detail.value}</strong>
+            </div>
+          ))}
+        </div>
+      )}
+      {receipt.adminUrl && (
+        <a className="AIPage__receipt__link" href={receipt.adminUrl}>
+          Open document
+        </a>
+      )}
+    </div>
+  );
+}
+
+function prettyApprovalState(status: PendingToolApproval['status']): string {
+  return status === 'executing' ? 'applying…' : 'waiting for approval';
 }
 
 function prettyToolState(state: string): string {
@@ -832,13 +1348,17 @@ function ChatComposer(props: {
   const uploadFile = async (file: File) => {
     setUploading(true);
     try {
+      const mediaType = file.type || guessMimeType(file.name);
+      const inlineText = await readInlineAttachmentText(file, mediaType);
       const data: any = await uploadFileToGCS(file, {disableGci: true});
       setAttachments((prev) => [
         ...prev,
         {
           url: data.src,
           filename: data.filename || file.name,
-          mediaType: file.type || guessMimeType(file.name),
+          mediaType,
+          textContent: inlineText?.text,
+          textTruncated: inlineText?.truncated,
           width: data.width,
           height: data.height,
         },
@@ -900,7 +1420,6 @@ function ChatComposer(props: {
               <input
                 ref={fileRef}
                 type="file"
-                accept="image/png,image/jpeg,image/webp"
                 style={{display: 'none'}}
                 onChange={onFileChange}
               />
@@ -920,7 +1439,7 @@ function ChatComposer(props: {
           onPaste={(e) => {
             const items = e.clipboardData?.items || [];
             for (const item of items) {
-              if (item.kind === 'file' && item.type.startsWith('image/')) {
+              if (item.kind === 'file') {
                 const file = item.getAsFile();
                 if (file && props.canAttach) {
                   uploadFile(file);
@@ -963,11 +1482,88 @@ function ChatComposer(props: {
   );
 }
 
+const MAX_INLINE_ATTACHMENT_CHARS = 100_000;
+
+function prepareAttachmentsForSend(attachments: AttachmentPreview[]): {
+  files: AttachmentPreview[];
+  text: string;
+} {
+  const files = attachments.filter(shouldSendAsModelFile);
+  const textBlocks = attachments
+    .filter((attachment) => !shouldSendAsModelFile(attachment))
+    .map(formatAttachmentForPrompt);
+  return {
+    files,
+    text: textBlocks.length ? `Attached files:\n\n${textBlocks.join('\n\n')}` : '',
+  };
+}
+
+function shouldSendAsModelFile(attachment: AttachmentPreview): boolean {
+  return attachment.mediaType.startsWith('image/');
+}
+
+function formatAttachmentForPrompt(attachment: AttachmentPreview): string {
+  const title = `File: ${attachment.filename} (${attachment.mediaType})`;
+  if (attachment.textContent !== undefined) {
+    const truncated = attachment.textTruncated
+      ? '\n\n[Content truncated before sending to the model.]'
+      : '';
+    return `${title}\nURL: ${attachment.url}\n\n~~~\n${attachment.textContent}${truncated}\n~~~`;
+  }
+  return `${title}\nURL: ${attachment.url}\n\n[The file was uploaded, but its binary content was not inlined into this chat message.]`;
+}
+
+async function readInlineAttachmentText(
+  file: File,
+  mediaType: string
+): Promise<{text: string; truncated: boolean} | null> {
+  if (!isTextLikeAttachment(file.name, mediaType)) {
+    return null;
+  }
+  const text = await file.text();
+  if (text.length <= MAX_INLINE_ATTACHMENT_CHARS) {
+    return {text, truncated: false};
+  }
+  return {
+    text: text.slice(0, MAX_INLINE_ATTACHMENT_CHARS),
+    truncated: true,
+  };
+}
+
+function isTextLikeAttachment(filename: string, mediaType: string): boolean {
+  if (mediaType.startsWith('text/')) {
+    return true;
+  }
+  return [
+    '.css',
+    '.js',
+    '.jsx',
+    '.json',
+    '.md',
+    '.mdx',
+    '.mjs',
+    '.scss',
+    '.ts',
+    '.tsx',
+    '.txt',
+    '.yaml',
+    '.yml',
+  ].some((ext) => filename.toLowerCase().endsWith(ext));
+}
+
 function guessMimeType(filename: string): string {
   const lower = filename.toLowerCase();
   if (lower.endsWith('.png')) return 'image/png';
   if (lower.endsWith('.webp')) return 'image/webp';
-  return 'image/jpeg';
+  if (lower.endsWith('.jpg') || lower.endsWith('.jpeg')) return 'image/jpeg';
+  if (lower.endsWith('.gif')) return 'image/gif';
+  if (lower.endsWith('.svg')) return 'image/svg+xml';
+  if (lower.endsWith('.pdf')) return 'application/pdf';
+  if (lower.endsWith('.json')) return 'application/json';
+  if (lower.endsWith('.csv')) return 'text/csv';
+  if (lower.endsWith('.md')) return 'text/markdown';
+  if (lower.endsWith('.txt')) return 'text/plain';
+  return 'application/octet-stream';
 }
 
 /** Generates a stable chat id used for both client state and Firestore. */
