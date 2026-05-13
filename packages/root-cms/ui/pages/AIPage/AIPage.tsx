@@ -688,9 +688,15 @@ function ChatPane(props: {
       new DefaultChatTransport<UIMessage>({
         api: '/cms/api/ai.chat',
         credentials: 'include',
+        // Send only the latest message (the new user turn, or a tool-result
+        // turn after an auto-resubmit). The server has the rest of the
+        // history persisted in Firestore under `chatId` and merges it in
+        // before calling `streamText`. Without this, every turn would
+        // re-POST the full conversation (including any prior tool results)
+        // and large chats would exceed body-parser's payload limit.
         prepareSendMessagesRequest: ({messages}) => ({
           body: {
-            messages,
+            message: messages.at(-1),
             chatId: effectiveChatId,
             modelId: modelRef.current,
             executionMode: executionModeRef.current,
