@@ -16,8 +16,10 @@
     "@blinkk/root-password-protect": "3.0.0"
   },
   "changesets": [
+    "calm-countries-hammer",
     "clever-foxes-chat",
     "four-files-obey",
+    "gentle-pans-add",
     "gold-plums-love",
     "good-lobsters-breathe",
     "honest-teachers-notice",
