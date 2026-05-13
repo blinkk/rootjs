@@ -267,6 +267,7 @@ function PermissionGroupEditor(props: PermissionGroupEditorProps) {
                     className="PermissionGroupsBox__editor__userItem__avatar"
                     email={email}
                     profile={profile}
+                    size={24}
                   />
                   <span className="PermissionGroupsBox__editor__userItem__email">
                     {email}

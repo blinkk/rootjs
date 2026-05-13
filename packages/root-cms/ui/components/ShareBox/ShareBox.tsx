@@ -116,6 +116,7 @@ ShareBox.User = (props: ShareBoxUserProps) => {
         className="ShareBox__user__avatar"
         email={props.email}
         profile={props.profile}
+        size={24}
       />
       <Text
         className="ShareBox__user__email"

@@ -16,7 +16,7 @@
 }
 
 .ShareBox__user {
-  grid-template-columns: 28px minmax(0, 1fr) 120px;
+  grid-template-columns: 24px minmax(0, 1fr) 120px;
   padding: 6px 16px;
 }
 
@@ -44,8 +44,8 @@
 }
 
 .ShareBox__user__avatar {
-  width: 28px;
-  height: 28px;
+  width: 24px;
+  height: 24px;
   border-radius: 50%;
   display: block;
   object-fit: cover;

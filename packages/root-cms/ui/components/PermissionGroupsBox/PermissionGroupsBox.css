@@ -21,7 +21,7 @@
   transform: rotate(-90deg);
 }
 
-.PermissionGroupsBox__accordion [aria-expanded="true"] .mantine-Accordion-icon {
+.PermissionGroupsBox__accordion [aria-expanded='true'] .mantine-Accordion-icon {
   transform: rotate(0deg) !important;
 }
 
@@ -102,14 +102,15 @@
 
 .PermissionGroupsBox__editor__userItem {
   display: grid;
-  grid-template-columns: 28px minmax(0, 1fr) auto;
+  grid-template-columns: 24px minmax(0, 1fr) auto;
   align-items: center;
   gap: 8px;
   padding: 6px 12px;
   font-size: 13px;
 }
 
-.PermissionGroupsBox__editor__userItem + .PermissionGroupsBox__editor__userItem {
+.PermissionGroupsBox__editor__userItem
+  + .PermissionGroupsBox__editor__userItem {
   border-top: 1px solid var(--color-border);
 }
 
@@ -125,8 +126,8 @@
 }
 
 .PermissionGroupsBox__editor__userItem__avatar {
-  width: 28px;
-  height: 28px;
+  width: 24px;
+  height: 24px;
 }
 
 .PermissionGroupsBox__editor__footer {
