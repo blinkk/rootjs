@@ -23,6 +23,7 @@ import {
 import {Collection} from '../../../core/schema.js';
 import {
   marshalData,
+  resolveArrayObjectPath,
   unmarshalData as unmarshalDataBase,
 } from '../../../shared/marshal.js';
 import {fetchCollectionSchema} from '../../utils/collection.js';
@@ -364,9 +365,36 @@ async function docUpdateField(input: {
     };
   }
 
-  const {firebase} = getCtx();
   const ref = draftDocRef(input.docId);
-  const fieldKey = `fields.${input.path}`;
+  const snap = await fbGetDoc(ref);
+  if (!snap.exists()) {
+    return {
+      success: false,
+      docId: input.docId,
+      path: input.path,
+      error: 'NOT_FOUND',
+      hint: `Doc "${input.docId}" does not exist.`,
+    };
+  }
+
+  const raw = snap.data() as any;
+  const storagePath = resolveArrayObjectPath(raw.fields || {}, input.path);
+  if (!storagePath.ok) {
+    return {
+      success: false,
+      docId: input.docId,
+      path: input.path,
+      error: 'VALIDATION_FAILED',
+      errors: [storagePath.error],
+      hint:
+        'The path could not be resolved against the current draft. Use ' +
+        'zero-based array indices for existing array items, or set the ' +
+        'whole array field when appending or removing items.',
+    };
+  }
+
+  const {firebase} = getCtx();
+  const fieldKey = `fields.${storagePath.path}`;
   const marshalled = marshalData(value);
   await updateDoc(ref, {
     [fieldKey]: marshalled,
