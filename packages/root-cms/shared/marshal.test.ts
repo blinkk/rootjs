@@ -4,6 +4,7 @@ import {
   unmarshalData,
   isArrayObject,
   isRichTextData,
+  resolveArrayObjectPath,
 } from './marshal.js';
 
 describe('marshalData', () => {
@@ -197,6 +198,75 @@ describe('isArrayObject', () => {
 
   it('returns false for null', () => {
     expect(isArrayObject(null)).toBe(false);
+  });
+});
+
+describe('resolveArrayObjectPath', () => {
+  const data = {
+    content: {
+      modules: {
+        first: {
+          title: 'One',
+          links: {
+            link1: {label: 'A'},
+            link2: {label: 'B'},
+            _array: ['link1', 'link2'],
+          },
+        },
+        second: {title: 'Two'},
+        _array: ['first', 'second'],
+      },
+    },
+  };
+
+  it('leaves paths to whole array fields unchanged', () => {
+    expect(resolveArrayObjectPath(data, 'content.modules')).toEqual({
+      ok: true,
+      path: 'content.modules',
+      segments: ['content', 'modules'],
+    });
+  });
+
+  it('maps array item indices to stored array keys', () => {
+    expect(resolveArrayObjectPath(data, 'content.modules.0.title')).toEqual({
+      ok: true,
+      path: 'content.modules.first.title',
+      segments: ['content', 'modules', 'first', 'title'],
+    });
+  });
+
+  it('maps nested array item indices to stored array keys', () => {
+    expect(
+      resolveArrayObjectPath(data, 'content.modules.0.links.1.label')
+    ).toEqual({
+      ok: true,
+      path: 'content.modules.first.links.link2.label',
+      segments: ['content', 'modules', 'first', 'links', 'link2', 'label'],
+    });
+  });
+
+  it('rejects out-of-range array item indices', () => {
+    const result = resolveArrayObjectPath(data, 'content.modules.2.title');
+    expect(result).toMatchObject({
+      ok: false,
+      error: {
+        path: 'content.modules.2',
+        expected: 'existing array item',
+        received: '2',
+      },
+    });
+  });
+
+  it('rejects nested array fields without a numeric index', () => {
+    const result = resolveArrayObjectPath(data, 'content.modules.title');
+    expect(result).toMatchObject({
+      ok: false,
+      error: {
+        path: 'content.modules.title',
+        expected: 'array index',
+        received: 'title',
+      },
+    });
   });
 });
 

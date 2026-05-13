@@ -24,6 +24,7 @@ import {
   Schema,
 } from './schema.js';
 import {validateFields, validateValue} from './validation.js';
+import type {ValidationError} from './validation.js';
 
 /** Tool ids handled client-side. Kept in sync with the schemas below. */
 export const CMS_TOOL_NAMES = [
@@ -209,15 +210,23 @@ export function createCmsTools(): ToolSet {
     doc_updateField: tool({
       description:
         'Update a single field on a draft CMS document by JSON path. ' +
-        'Use dotted paths (e.g. "hero.title") and array indices (e.g. ' +
-        '"sections.0.heading"). The value is validated against the field ' +
-        'schema and the call is rejected if the shape is wrong (e.g. ' +
-        'passing a string to a richtext field). Only updates the draft ' +
-        'version; users must publish separately. Always confirm with the ' +
-        'user before calling.',
+        'Paths are relative to the doc fields object; do not prefix them ' +
+        'with "fields.". Use dotted paths (e.g. "hero.title") and ' +
+        'zero-based array indices. For example, update the first module ' +
+        'title with path "content.modules.0.title". To append or remove ' +
+        'array items, first read the current doc, then set the whole array ' +
+        'path (e.g. "content.modules") to the updated array. The value is ' +
+        'validated against the field schema and the call is rejected if the ' +
+        'shape is wrong (e.g. passing a string to a richtext field). Only ' +
+        'updates the draft version; users must publish separately. Always ' +
+        'confirm with the user before calling.',
       inputSchema: z.object({
         docId: z.string(),
-        path: z.string().describe('Dotted JSON path within the fields object.'),
+        path: z
+          .string()
+          .describe(
+            'Dotted JSON path within the fields object, e.g. "content.modules.0.title".'
+          ),
         value: z.any().describe('JSON value to set at the path.'),
       }),
     }),
@@ -310,7 +319,11 @@ export function validateValueAtPath(
   path: string,
   value: any
 ): Array<{path: string; message: string; expected?: string; received?: any}> {
-  const field = resolveFieldAtPath(collection, path);
+  const resolution = resolveFieldAtPath(collection, path);
+  if (resolution.error) {
+    return [resolution.error];
+  }
+  const field = resolution.field;
   if (!field) {
     return [];
   }
@@ -321,14 +334,22 @@ export {validateFields};
 
 /**
  * Walks `schema` to find the field declaration at `path`. Numeric segments
- * traverse arrays; non-numeric segments traverse object/oneof fields. Returns
- * `null` if the path can't be resolved (e.g. it dives into a `richtext`
- * payload or a `oneof` whose discriminator we can't determine).
+ * traverse arrays; non-numeric segments traverse object/oneof fields.
+ * Unresolvable schema paths return `{field: null}` so callers can fall back to
+ * "no validation"; malformed array paths return a validation error.
  */
-function resolveFieldAtPath(schema: Schema, path: string): Field | null {
-  const segments = path.split('.').filter((s) => s.length > 0);
+function resolveFieldAtPath(
+  schema: Schema,
+  path: string
+): {field: Field | null; error?: ValidationError} {
+  const syntaxError = validatePathSyntax(path);
+  if (syntaxError) {
+    return {field: null, error: syntaxError};
+  }
+
+  const segments = path.trim().split('.');
   if (segments.length === 0) {
-    return null;
+    return {field: null};
   }
 
   let currentFields: Field[] = schema.fields || [];
@@ -336,12 +357,34 @@ function resolveFieldAtPath(schema: Schema, path: string): Field | null {
 
   for (let i = 0; i < segments.length; i++) {
     const segment = segments[i];
-    const isIndex = /^\d+$/.test(segment);
+    const segmentPath = segments.slice(0, i + 1).join('.');
+    const isNumeric = /^\d+$/.test(segment);
+    const isIndex = /^(0|[1-9]\d*)$/.test(segment);
+
+    if (isNumeric && !isIndex) {
+      return {
+        field: null,
+        error: createPathError(
+          segmentPath,
+          'Array indices must be zero-based numeric path segments without leading zeros.',
+          'array index',
+          segment
+        ),
+      };
+    }
 
     if (isIndex) {
       // Expect the previous field to be an array.
       if (!currentField || currentField.type !== 'array') {
-        return null;
+        return {
+          field: null,
+          error: createPathError(
+            segmentPath,
+            'Array index path segments can only be used after an array field.',
+            'array field',
+            currentField?.type || 'root'
+          ),
+        };
       }
       const arrayField = currentField as ArrayField;
       const itemField = arrayField.of as Field;
@@ -349,6 +392,18 @@ function resolveFieldAtPath(schema: Schema, path: string): Field | null {
       currentFields =
         itemField.type === 'object' ? (itemField as ObjectField).fields : [];
       continue;
+    }
+
+    if (currentField?.type === 'array') {
+      return {
+        field: null,
+        error: createPathError(
+          segmentPath,
+          'Array fields must be followed by a zero-based numeric index before nested fields.',
+          'array index',
+          segment
+        ),
+      };
     }
 
     // Object or oneof: look up by id.
@@ -367,7 +422,7 @@ function resolveFieldAtPath(schema: Schema, path: string): Field | null {
       }
     }
     if (!next) {
-      return null;
+      return {field: null};
     }
     currentField = next;
     if (next.type === 'object') {
@@ -379,5 +434,61 @@ function resolveFieldAtPath(schema: Schema, path: string): Field | null {
     }
   }
 
-  return currentField;
+  return {field: currentField};
+}
+
+function validatePathSyntax(path: string): ValidationError | null {
+  const trimmed = path.trim();
+  if (!trimmed) {
+    return createPathError(
+      path,
+      'Path is required and must be relative to the doc fields object.',
+      'non-empty field path',
+      path
+    );
+  }
+
+  const segments = trimmed.split('.');
+  if (segments.some((segment) => segment.length === 0)) {
+    return createPathError(
+      path,
+      'Path must use dotted field segments without empty segments.',
+      'dotted field path',
+      path
+    );
+  }
+
+  if (segments[0] === 'fields') {
+    return createPathError(
+      path,
+      'Path must be relative to the fields object; remove the leading "fields." prefix.',
+      'field path without fields prefix',
+      path
+    );
+  }
+
+  if (segments.some((segment) => /[\[\]]/.test(segment))) {
+    return createPathError(
+      path,
+      'Use dotted zero-based array indices, e.g. "content.modules.0.title".',
+      'dotted array index path',
+      path
+    );
+  }
+
+  return null;
+}
+
+function createPathError(
+  path: string,
+  message: string,
+  expected: string,
+  received: any
+): ValidationError {
+  return {
+    path,
+    message,
+    expected,
+    received,
+  };
 }

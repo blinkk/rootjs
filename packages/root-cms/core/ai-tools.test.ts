@@ -13,6 +13,14 @@ describe('validateValueAtPath', () => {
         fields: [
           {id: 'subtitle', type: 'string'},
           {id: 'body', type: 'richtext'},
+          {
+            id: 'modules',
+            type: 'array',
+            of: {
+              type: 'object',
+              fields: [{id: 'foo', type: 'string'}],
+            },
+          },
         ],
       } as any,
       {
@@ -80,6 +88,92 @@ describe('validateValueAtPath', () => {
       '/image.png'
     );
     expect(errors[0]).toMatchObject({expected: 'object', received: 'string'});
+  });
+
+  it('accepts a valid whole array item update', () => {
+    expect(
+      validateValueAtPath(collection, 'sections.0', {
+        heading: 'Hero',
+        image: {src: '/hero.png'},
+      })
+    ).toEqual([]);
+  });
+
+  it('rejects an array item with the wrong shape', () => {
+    const errors = validateValueAtPath(collection, 'sections.0', 'not object');
+    expect(errors[0]).toMatchObject({
+      path: 'sections.0',
+      expected: 'object',
+      received: 'string',
+    });
+  });
+
+  it('rejects nested array fields without a numeric index', () => {
+    const errors = validateValueAtPath(collection, 'sections.heading', 'Hero');
+    expect(errors[0]).toMatchObject({
+      path: 'sections.heading',
+      expected: 'array index',
+      received: 'heading',
+    });
+  });
+
+  it('rejects numeric path segments outside array fields', () => {
+    const errors = validateValueAtPath(
+      collection,
+      'content.0.subtitle',
+      'Hero'
+    );
+    expect(errors[0]).toMatchObject({
+      path: 'content.0',
+      expected: 'array field',
+      received: 'object',
+    });
+  });
+
+  it('rejects array indices with leading zeroes', () => {
+    const errors = validateValueAtPath(
+      collection,
+      'sections.01.heading',
+      'Hero'
+    );
+    expect(errors[0]).toMatchObject({
+      path: 'sections.01',
+      expected: 'array index',
+      received: '01',
+    });
+  });
+
+  it('rejects bracket notation for array items', () => {
+    const errors = validateValueAtPath(
+      collection,
+      'sections[0].heading',
+      'Hero'
+    );
+    expect(errors[0]).toMatchObject({
+      path: 'sections[0].heading',
+      expected: 'dotted array index path',
+    });
+  });
+
+  it('rejects field-prefixed paths before array items', () => {
+    const errors = validateValueAtPath(
+      collection,
+      'fields.content.modules.1.foo',
+      'Hero'
+    );
+    expect(errors[0]).toMatchObject({
+      path: 'fields.content.modules.1.foo',
+      expected: 'field path without fields prefix',
+    });
+  });
+
+  it('validates nested object array items by zero-based index', () => {
+    const errors = validateValueAtPath(collection, 'content.modules.0.foo', 42);
+    expect(errors[0]).toMatchObject({
+      path: 'content.modules.0.foo',
+      expected: 'string',
+      received: 'number',
+    });
   });
 
   it('returns empty when the path cannot be resolved', () => {

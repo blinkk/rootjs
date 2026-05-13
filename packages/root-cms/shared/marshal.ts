@@ -12,6 +12,21 @@ export interface ArrayObject {
   _array: string[];
 }
 
+export interface ArrayObjectPathError {
+  /** The path segment where resolution failed. */
+  path: string;
+  /** Human-readable error message. */
+  message: string;
+  /** Expected path segment or current data shape. */
+  expected?: string;
+  /** Actual path segment or current data shape. */
+  received?: any;
+}
+
+export type ArrayObjectPathResult =
+  | {ok: true; path: string; segments: string[]}
+  | {ok: false; error: ArrayObjectPathError};
+
 /**
  * Returns true if `data` looks like an already-marshaled ArrayObject (has an
  * `_array` key that is a string[]).
@@ -23,6 +38,90 @@ export function isArrayObject(data: any): data is ArrayObject {
     !Array.isArray(data) &&
     Array.isArray(data._array)
   );
+}
+
+/**
+ * Converts a user-facing CMS path with array indices into the stored
+ * Firestore path that uses ArrayObject keys.
+ */
+export function resolveArrayObjectPath(
+  data: any,
+  path: string
+): ArrayObjectPathResult {
+  const trimmed = path.trim();
+  if (!trimmed) {
+    return {
+      ok: false,
+      error: {
+        path,
+        message: 'Path is required.',
+        expected: 'non-empty field path',
+        received: path,
+      },
+    };
+  }
+
+  const segments = trimmed.split('.');
+  const storageSegments: string[] = [];
+  let current = data;
+
+  for (let i = 0; i < segments.length; i++) {
+    const segment = segments[i];
+    const segmentPath = segments.slice(0, i + 1).join('.');
+    const isIndex = /^(0|[1-9]\d*)$/.test(segment);
+
+    if (isIndex) {
+      if (isArrayObject(current)) {
+        const key = current._array[Number(segment)];
+        if (key === undefined) {
+          return {
+            ok: false,
+            error: {
+              path: segmentPath,
+              message: 'Array index is out of range for the current draft.',
+              expected: 'existing array item',
+              received: segment,
+            },
+          };
+        }
+        storageSegments.push(key);
+        current = current[key];
+        continue;
+      }
+
+      return {
+        ok: false,
+        error: {
+          path: segmentPath,
+          message:
+            'Array index path segments can only target existing CMS array items.',
+          expected: 'array object',
+          received: getType(current),
+        },
+      };
+    }
+
+    if (isArrayObject(current)) {
+      return {
+        ok: false,
+        error: {
+          path: segmentPath,
+          message:
+            'Array fields must be followed by a zero-based numeric index before nested fields.',
+          expected: 'array index',
+          received: segment,
+        },
+      };
+    }
+
+    storageSegments.push(segment);
+    current =
+      current !== null && typeof current === 'object'
+        ? current[segment]
+        : undefined;
+  }
+
+  return {ok: true, path: storageSegments.join('.'), segments: storageSegments};
 }
 
 /**
@@ -142,4 +241,11 @@ export function unmarshalData(
 /** Generates a random 6-char alphanumeric key. */
 function randKey(): string {
   return Math.random().toString(36).slice(2, 8);
+}
+
+function getType(value: any): string {
+  if (value === null) return 'null';
+  if (Array.isArray(value)) return 'array';
+  if (typeof value === 'number' && Number.isNaN(value)) return 'nan';
+  return typeof value;
 }
