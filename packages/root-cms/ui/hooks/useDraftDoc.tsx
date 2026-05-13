@@ -22,6 +22,7 @@ import {
   UnsubscribeCallback,
 } from '../utils/json-trie-store.js';
 import {errorMessage} from '../utils/notifications.js';
+import {deepEqual} from '../utils/objects.js';
 import {TIME_UNITS} from '../utils/time.js';
 
 const SAVE_DELAY = 3 * TIME_UNITS.second;
@@ -200,6 +201,10 @@ export class DraftDocController extends EventListener {
     if (this.readOnly) {
       return;
     }
+    if (!testDraftUpdateChangesValue(this.store.get(key), value)) {
+      // Avoid metadata-only writes that make published docs look like drafts.
+      return;
+    }
     if (value === undefined) {
       // Firestore doesn't support `undefined`, so use deleteField() instead.
       this.pendingUpdates.set(key, deleteField());
@@ -220,8 +225,16 @@ export class DraftDocController extends EventListener {
     if (this.readOnly) {
       return;
     }
+    const changedUpdates: Record<string, any> = {};
     for (const key in updates) {
       const val = updates[key];
+      if (
+        !testDraftUpdateChangesValue(this.store.get(key), val, {
+          deleteNull: true,
+        })
+      ) {
+        continue;
+      }
       if (val === null || val === undefined) {
         // Firestore doesn't support `undefined`, so use deleteField() instead.
         // NOTE(stevenle): this doesn't currently handle nested `undefined`
@@ -230,8 +243,13 @@ export class DraftDocController extends EventListener {
       } else {
         this.pendingUpdates.set(key, val);
       }
+      changedUpdates[key] = val;
     }
-    this.store.update(updates);
+    if (Object.keys(changedUpdates).length === 0) {
+      // Avoid metadata-only writes when every batch update is a no-op.
+      return;
+    }
+    this.store.update(changedUpdates);
     this.setSaveState(SaveState.UPDATES_PENDING);
     if (this.autoSave) {
       this.queueChanges();
@@ -243,6 +261,10 @@ export class DraftDocController extends EventListener {
    */
   async removeKey(key: string) {
     if (this.readOnly) {
+      return;
+    }
+    if (!testDraftUpdateChangesValue(this.store.get(key), undefined)) {
+      // Avoid metadata-only writes when deleting a value that is already absent.
       return;
     }
     this.pendingUpdates.set(key, deleteField());
@@ -384,6 +406,28 @@ export class DraftDocController extends EventListener {
     super.dispose();
     this.stop();
   }
+}
+
+/**
+ * Returns whether a requested draft update would change the current value.
+ * This prevents no-op field edits from being saved as metadata-only writes.
+ */
+export function testDraftUpdateChangesValue(
+  currentValue: any,
+  newValue: any,
+  options?: {deleteNull?: boolean}
+): boolean {
+  if (newValue === undefined || (options?.deleteNull && newValue === null)) {
+    return currentValue !== undefined;
+  }
+  if (currentValue === newValue && isMutableDraftValue(currentValue)) {
+    return true;
+  }
+  return !deepEqual(currentValue, newValue);
+}
+
+function isMutableDraftValue(value: any): boolean {
+  return typeof value === 'object' && value !== null;
 }
 
 function applyUpdates(data: any, updates: any) {
