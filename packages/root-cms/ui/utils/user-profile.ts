@@ -193,6 +193,21 @@ export function getUserInitials(email: string, displayName?: string): string {
   return alphanum.slice(0, 2).toUpperCase();
 }
 
+/** Returns the one-letter fallback for settings user-list avatars. */
+export function getEmailAvatarInitial(email: string): string {
+  const trimmed = email.trim();
+  if (!trimmed) {
+    return '?';
+  }
+  const [localPart, domain = ''] = trimmed.split('@');
+  const source = localPart === '*' ? domain : localPart || trimmed;
+  const alphanum = source.replace(/[^a-zA-Z0-9]/g, '');
+  if (alphanum.length === 0) {
+    return '?';
+  }
+  return alphanum[0].toUpperCase();
+}
+
 /**
  * Returns a deterministic background color for an email so missing-photo
  * avatars are visually distinct but stable across renders.

@@ -1,5 +1,9 @@
 import {describe, expect, it} from 'vitest';
-import {getAvatarColor, getUserInitials} from './user-profile.js';
+import {
+  getAvatarColor,
+  getEmailAvatarInitial,
+  getUserInitials,
+} from './user-profile.js';
 
 describe('getUserInitials', () => {
   it('uses the first letters of two display name words', () => {
@@ -35,5 +39,24 @@ describe('getAvatarColor', () => {
 
   it('returns a hex color from the predefined palette', () => {
     expect(getAvatarColor('zoe@example.com')).toMatch(/^#[0-9a-f]{6}$/i);
+  });
+});
+
+describe('getEmailAvatarInitial', () => {
+  it('uses the first letter of a user email local part', () => {
+    expect(getEmailAvatarInitial('alex@example.com')).toBe('A');
+  });
+
+  it('uses the first letter of the domain for org wildcards', () => {
+    expect(getEmailAvatarInitial('*@blinkk.com')).toBe('B');
+  });
+
+  it('strips non-alphanumeric characters', () => {
+    expect(getEmailAvatarInitial('.zoe@example.com')).toBe('Z');
+  });
+
+  it('returns a placeholder when no usable characters exist', () => {
+    expect(getEmailAvatarInitial('')).toBe('?');
+    expect(getEmailAvatarInitial('*@...')).toBe('?');
   });
 });
