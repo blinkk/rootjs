@@ -13,7 +13,7 @@
 
 .SettingsPage__section__left {
   position: sticky;
-  top: var(--page-padding-lg);
+  top: 0;
   align-self: start;
 }
 
