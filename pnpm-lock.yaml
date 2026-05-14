@@ -27,6 +27,8 @@ importers:
         specifier: ^5.2.2
         version: 5.2.2
 
+  apps/mock-localllm: {}
+
   docs:
     dependencies:
       '@blinkk/root':
