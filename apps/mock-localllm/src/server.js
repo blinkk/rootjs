@@ -3,25 +3,29 @@
  *
  * Implements just enough of the OpenAI API for the Vercel AI SDK's
  * `openai-compatible` provider and other OpenAI-style clients:
- *  - `POST /v1/chat/completions` — buffered and streamed chat completions.
+ *  - `POST /v1/chat/completions` — buffered and streamed chat completions,
+ *    including assistant tool calls.
  *  - `GET  /v1/models` — lists the mock model ids.
  *  - `GET  /` — a small health/info payload for manual checks.
  *
  * Responses are driven entirely by the user-supplied `mock.config.js`: a
- * matched rule's `response` may be a single string (delivered as one chunk) or
- * an array of strings (streamed chunk-by-chunk with a randomized inter-chunk
- * delay, so streaming UI can be exercised without a real model).
+ * matched rule resolves to an assistant turn that may contain text and/or tool
+ * calls. Text given as an array of strings is streamed chunk-by-chunk with a
+ * randomized inter-chunk delay, so streaming UI can be exercised without a
+ * real model.
  *
  * The endpoints are also accepted without the `/v1` prefix so the server works
  * regardless of whether the configured `baseURL` includes it.
  */
 import http from 'node:http';
-import {extractPrompt, matchRule} from './matcher.js';
+import {matchRule} from './matcher.js';
 import {
   buildChunk,
   buildCompletion,
   buildUsageChunk,
   createCompletionId,
+  toolCallArgsDelta,
+  toolCallOpenDelta,
 } from './openai.js';
 
 const CORS_HEADERS = {
@@ -56,24 +60,6 @@ function resolveDelayMs(delay) {
     return Math.floor(min + Math.random() * (max - min));
   }
   return 0;
-}
-
-/**
- * Normalizes a rule `response` into an array of chunk strings. A plain string
- * becomes a single-element array; an array is returned with its items coerced
- * to strings. Anything else yields a single empty chunk.
- */
-function toChunks(response) {
-  if (Array.isArray(response)) {
-    return response.map((part) => String(part));
-  }
-  if (typeof response === 'string') {
-    return [response];
-  }
-  if (response === undefined || response === null) {
-    return [''];
-  }
-  return [String(response)];
 }
 
 /** Sends a JSON response with CORS headers. */
@@ -138,10 +124,11 @@ async function handleChatCompletions(req, res, config) {
 
   const modelId =
     body.model || (config.models && config.models[0]) || 'mock-llm';
-  const promptText = extractPrompt(body.messages);
-  const {response, delay, ruleIndex} = matchRule(config, promptText);
-  const chunks = toChunks(response);
-  const fullText = chunks.join('');
+  const {promptText, text, toolCalls, delay, ruleIndex, turnIndex} = matchRule(
+    config,
+    body.messages
+  );
+  const fullText = text.join('');
   const stream = body.stream === true;
   const includeUsage = Boolean(
     body.stream_options && body.stream_options.include_usage
@@ -149,9 +136,13 @@ async function handleChatCompletions(req, res, config) {
   const id = createCompletionId();
 
   const ruleLabel = ruleIndex >= 0 ? `rule #${ruleIndex}` : 'fallback';
+  const toolLabel =
+    toolCalls.length > 0
+      ? ` tools=${toolCalls.map((toolCall) => toolCall.name).join(',')}`
+      : '';
   console.log(
     `[mock-localllm] chat.completions ${stream ? 'stream' : 'buffered'} ` +
-      `model=${modelId} match=${ruleLabel} ` +
+      `model=${modelId} match=${ruleLabel} turn=${turnIndex}${toolLabel} ` +
       `prompt=${JSON.stringify(previewText(promptText))}`
   );
 
@@ -159,7 +150,13 @@ async function handleChatCompletions(req, res, config) {
     sendJson(
       res,
       200,
-      buildCompletion({id, model: modelId, content: fullText, promptText})
+      buildCompletion({
+        id,
+        model: modelId,
+        content: fullText,
+        promptText,
+        toolCalls,
+      })
     );
     return;
   }
@@ -187,28 +184,61 @@ async function handleChatCompletions(req, res, config) {
     res.write(`data: ${JSON.stringify(chunk)}\n\n`);
   };
 
+  // Pauses for the configured inter-chunk delay, if any.
+  const pause = async () => {
+    const ms = resolveDelayMs(delay);
+    if (ms > 0) {
+      await sleep(ms);
+    }
+  };
+
   try {
     // The opening chunk announces the assistant role, like the real API.
     writeChunk(
       buildChunk({id, model: modelId, delta: {role: 'assistant', content: ''}})
     );
-    for (const part of chunks) {
+    // Stream the message text, one configured chunk at a time.
+    for (const part of text) {
       if (aborted) {
         break;
       }
-      const ms = resolveDelayMs(delay);
-      if (ms > 0) {
-        await sleep(ms);
-      }
+      await pause();
       writeChunk(buildChunk({id, model: modelId, delta: {content: part}}));
     }
-    if (!aborted) {
+    // Stream any tool calls: an opening delta (id + name) then the arguments.
+    for (let i = 0; i < toolCalls.length; i++) {
+      if (aborted) {
+        break;
+      }
+      const toolCall = toolCalls[i];
+      await pause();
       writeChunk(
-        buildChunk({id, model: modelId, delta: {}, finishReason: 'stop'})
+        buildChunk({id, model: modelId, delta: toolCallOpenDelta(i, toolCall)})
       );
+      if (aborted) {
+        break;
+      }
+      await pause();
+      writeChunk(
+        buildChunk({
+          id,
+          model: modelId,
+          delta: toolCallArgsDelta(i, toolCall.arguments),
+        })
+      );
+    }
+    if (!aborted) {
+      const finishReason = toolCalls.length > 0 ? 'tool_calls' : 'stop';
+      writeChunk(buildChunk({id, model: modelId, delta: {}, finishReason}));
       if (includeUsage) {
         writeChunk(
-          buildUsageChunk({id, model: modelId, promptText, content: fullText})
+          buildUsageChunk({
+            id,
+            model: modelId,
+            promptText,
+            content: fullText,
+            toolCalls,
+          })
         );
       }
       if (!res.writableEnded) {

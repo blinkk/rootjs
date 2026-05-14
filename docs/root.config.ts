@@ -69,16 +69,16 @@ export default defineConfig({
           {
             // Mock LLM served by the `apps/mock-localllm` package. Run
             // `pnpm --filter @private/mock-localllm dev` to start it, then
-            // pick "Local LLM" in the model picker to test the AI UI without
-            // calling a real provider. Responses are defined in
-            // `apps/mock-localllm/mock.config.js`.
+            // pick "Local LLM" in the model picker to test the AI UI (chat,
+            // streaming, and tool calls) without calling a real provider.
+            // Responses are defined in `apps/mock-localllm/mock.config.js`.
             id: 'local-llm',
             label: 'Local LLM',
             provider: 'openai-compatible',
             modelId: 'mock-llm',
             baseURL: 'http://localhost:8765/v1',
             apiKey: 'mock',
-            capabilities: {tools: false, reasoning: false, attachments: false},
+            capabilities: {tools: true, reasoning: false, attachments: false},
           },
         ],
       },
