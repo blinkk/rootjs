@@ -1,5 +1,12 @@
 # @blinkk/root-cms
 
+## 3.0.1-beta.4
+
+### Patch Changes
+
+- a57eb0a8: fix: improve ai network payload issues via server-side calls
+  - @blinkk/root@3.0.1-beta.4
+
 ## 3.0.1-beta.3
 
 ### Patch Changes
