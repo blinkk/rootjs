@@ -1,20 +1,32 @@
 /**
  * Built-in CMS tools exposed to the chat model on the `/cms/ai` page.
  *
- * Tools are defined here as schema-only declarations (no `execute`). The
- * server passes them through to `streamText`, the model emits tool calls,
- * and the browser executes them via `onToolCall` in `useChat`. This means:
+ * Read tools (`doc_get`, `docs_list`, etc.) execute server-side via the
+ * Firebase Admin SDK when a `CmsToolContext` is passed to the factory. This
+ * keeps potentially-large doc payloads off the wire: results stay in the
+ * model's server-side context instead of round-tripping through the browser
+ * on every chat turn.
  *
- * - Reads/writes happen with the signed-in user's Firebase credentials and
- *   respect Firestore security rules.
- * - Other connected clients see writes in real time via Firestore listeners.
- * - The server stays a thin streaming proxy.
+ * Write tools (`doc_set`, `doc_create`, `doc_updateField`, `doc_duplicate`)
+ * stay schema-only here — the browser executes them via `onToolCall` so the
+ * user can approve diffs in the UI and so Firestore listeners on other tabs
+ * see the change immediately.
  *
  * Validation helpers (`validateFields`, `validateValueAtPath`) live here
- * too so the client can run the same checks the old server-side tools did.
+ * too so both browser and server can share the same checks.
+ *
+ * Browser-import safety: this module is dynamically imported by the browser
+ * bundle (cmsToolHandlers.ts) to reuse the validators, so it must not pull
+ * server-only modules into runtime imports. `RootCMSClient` and `RootConfig`
+ * are referenced as types only; the actual instance is passed in at call
+ * time via `CmsToolContext`.
  */
+import type {RootConfig} from '@blinkk/root';
 import {tool, ToolSet} from 'ai';
 import {z} from 'zod';
+import {unmarshalData} from '../shared/marshal.js';
+import {normalizeSlug} from '../shared/slug.js';
+import type {RootCMSClient} from './client.js';
 import {
   ArrayField,
   Collection,
@@ -59,12 +71,38 @@ export const READ_ONLY_CMS_TOOL_NAMES: readonly CmsToolName[] = [
 ] as const;
 
 /**
+ * Result of a server-side search invocation. Loosely-typed — the result is
+ * serialized to JSON and handed to the model, so extra fields are fine.
+ * `hits` is an array of objects each carrying at least a `docId`.
+ */
+export interface CmsSearchResult {
+  hits: Array<Record<string, unknown> | {docId: string}>;
+}
+
+/**
+ * Context passed into the tool factory to enable server-side execution of
+ * the read tools. The caller (typically `runChatStream` in `core/ai.ts`)
+ * owns the Firebase Admin client and the schema/search lookups.
+ */
+export interface CmsToolContext {
+  cmsClient: RootCMSClient;
+  user: string;
+  rootConfig: RootConfig;
+  loadCollection: (collectionId: string) => Promise<Collection | null>;
+  loadAllCollections: () => Promise<Record<string, Collection>>;
+  search: (
+    query: string,
+    options: {limit: number}
+  ) => Promise<CmsSearchResult>;
+}
+
+/**
  * Returns a `ToolSet` filtered to only the read-only CMS tools. Use this in
  * flows where the AI assists with proposing changes that the user reviews
  * and saves manually (so the model can read context but cannot mutate data).
  */
-export function createReadOnlyCmsTools(): ToolSet {
-  const all = createCmsTools();
+export function createReadOnlyCmsTools(ctx: CmsToolContext): ToolSet {
+  const all = createCmsTools(ctx);
   const out: ToolSet = {};
   for (const name of READ_ONLY_CMS_TOOL_NAMES) {
     if (all[name]) {
@@ -75,8 +113,16 @@ export function createReadOnlyCmsTools(): ToolSet {
 }
 
 /**
- * Schema-only tool definitions. The server passes these to `streamText` so
- * the model knows the contract; the browser provides the actual `execute`.
+ * Builds the full tool set advertised to the model.
+ *
+ * Read tools (`collections_list`, `docs_list`, `docs_search`, `doc_get`,
+ * `doc_getVersion`, `doc_listVersions`, `schema_get`) carry a server-side
+ * `execute` so the Vercel AI SDK runs them in-process; their results stay
+ * in the model's server-side context and never round-trip through the
+ * browser. Write tools (`doc_set`, `doc_create`, `doc_updateField`,
+ * `doc_duplicate`, `doc_translateField`) remain schema-only — the browser
+ * executes them via `onToolCall` so the user can approve diffs before
+ * persistence.
  *
  * Safety policy: this tool set is intentionally read + draft-write only.
  * The following operations are deliberately NOT exposed to the model
@@ -97,13 +143,23 @@ export function createReadOnlyCmsTools(): ToolSet {
  * If you add new write tools here, keep them limited to draft-mode edits
  * the user can easily review before publishing.
  */
-export function createCmsTools(): ToolSet {
+export function createCmsTools(ctx: CmsToolContext): ToolSet {
   return {
     collections_list: tool({
       description:
         'List all CMS collections defined in the project. Returns each ' +
         'collection id along with optional name/description metadata.',
       inputSchema: z.object({}),
+      execute: async () => {
+        const collections = await ctx.loadAllCollections();
+        return {
+          collections: Object.entries(collections).map(([id, meta]) => ({
+            id,
+            name: meta.name,
+            description: meta.description,
+          })),
+        };
+      },
     }),
 
     docs_list: tool({
@@ -121,6 +177,20 @@ export function createCmsTools(): ToolSet {
           .describe('Whether to read draft or published versions.'),
         limit: z.number().int().min(1).max(100).default(25),
       }),
+      execute: async ({collectionId, mode = 'draft', limit = 25}) => {
+        const max = clampInt(limit, 1, 100, 25);
+        const result = await ctx.cmsClient.listDocs<any>(collectionId, {
+          mode,
+          limit: max,
+        });
+        return {
+          docs: result.docs.map((d: any) => ({
+            id: d.id,
+            slug: d.slug,
+            sys: unmarshalSys(d.sys),
+          })),
+        };
+      },
     }),
 
     docs_search: tool({
@@ -131,6 +201,10 @@ export function createCmsTools(): ToolSet {
         query: z.string().min(1),
         limit: z.number().int().min(1).max(50).default(10),
       }),
+      execute: async ({query, limit = 10}) => {
+        const max = clampInt(limit, 1, 50, 10);
+        return await ctx.search(query, {limit: max});
+      },
     }),
 
     doc_get: tool({
@@ -145,6 +219,23 @@ export function createCmsTools(): ToolSet {
           ),
         mode: z.enum(['draft', 'published']).default('draft'),
       }),
+      execute: async ({docId, mode = 'draft'}) => {
+        const {collection, slug} = parseDocId(docId);
+        const raw = await ctx.cmsClient.getRawDoc(collection, slug, {mode});
+        if (!raw) {
+          return {found: false};
+        }
+        return {
+          found: true,
+          doc: {
+            id: raw.id,
+            collection: raw.collection,
+            slug: raw.slug,
+            sys: unmarshalSys(raw.sys),
+            fields: unmarshalFields(raw.fields),
+          },
+        };
+      },
     }),
 
     doc_getVersion: tool({
@@ -164,6 +255,32 @@ export function createCmsTools(): ToolSet {
             'Version identifier: "draft", "published", or a numeric timestamp.'
           ),
       }),
+      execute: async ({docId, versionId}) => {
+        const {collection, slug} = parseDocId(docId);
+        let path: string;
+        if (versionId === 'draft') {
+          path = `Projects/${ctx.cmsClient.projectId}/Collections/${collection}/Drafts/${slug}`;
+        } else if (versionId === 'published') {
+          path = `Projects/${ctx.cmsClient.projectId}/Collections/${collection}/Published/${slug}`;
+        } else {
+          path = `Projects/${ctx.cmsClient.projectId}/Collections/${collection}/Drafts/${slug}/Versions/${versionId}`;
+        }
+        const snap = await ctx.cmsClient.db.doc(path).get();
+        if (!snap.exists) {
+          return {found: false};
+        }
+        const raw = snap.data() as any;
+        return {
+          found: true,
+          doc: {
+            id: raw.id,
+            collection: raw.collection,
+            slug: raw.slug,
+            sys: unmarshalSys(raw.sys),
+            fields: unmarshalFields(raw.fields),
+          },
+        };
+      },
     }),
 
     doc_set: tool({
@@ -267,6 +384,27 @@ export function createCmsTools(): ToolSet {
           ),
         limit: z.number().int().min(1).max(50).default(10),
       }),
+      execute: async ({docId, limit = 10}) => {
+        const {collection, slug} = parseDocId(docId);
+        const max = clampInt(limit, 1, 50, 10);
+        const path = `Projects/${ctx.cmsClient.projectId}/Collections/${collection}/Drafts/${slug}/Versions`;
+        const snap = await ctx.cmsClient.db
+          .collection(path)
+          .orderBy('sys.modifiedAt', 'desc')
+          .limit(max)
+          .get();
+        return {
+          versions: snap.docs.map((d) => {
+            const data = d.data() as any;
+            return {
+              versionId: d.id,
+              sys: unmarshalSys(data.sys),
+              tags: data.tags || [],
+              publishMessage: data.publishMessage,
+            };
+          }),
+        };
+      },
     }),
 
     doc_translateField: tool({
@@ -302,8 +440,88 @@ export function createCmsTools(): ToolSet {
           .string()
           .describe('Collection id, e.g. "Pages" or "BlogPosts".'),
       }),
+      execute: async ({collectionId}) => {
+        const schema = await ctx.loadCollection(collectionId);
+        if (!schema) {
+          return {found: false, collectionId};
+        }
+        return {
+          found: true,
+          collectionId,
+          fields: simplifyFields(schema.fields || []),
+        };
+      },
     }),
   };
+}
+
+/** Parses a docId like "Pages/home" into `{collection, slug}`. */
+function parseDocId(docId: string): {collection: string; slug: string} {
+  const idx = docId.indexOf('/');
+  if (idx <= 0 || idx === docId.length - 1) {
+    throw new Error(`invalid docId: "${docId}" (expected "Collection/slug")`);
+  }
+  return {
+    collection: docId.slice(0, idx),
+    slug: normalizeSlug(docId.slice(idx + 1)),
+  };
+}
+
+/** Clamp `value` into `[min, max]`, falling back to `fallback` on NaN. */
+function clampInt(
+  value: number,
+  min: number,
+  max: number,
+  fallback: number
+): number {
+  const n = Number.isFinite(value) ? Math.trunc(value) : fallback;
+  return Math.min(Math.max(n, min), max);
+}
+
+/**
+ * Unmarshal a doc's `sys` block from Firestore Admin representation.
+ *
+ * The default duck-typing in `shared/marshal.unmarshalData` calls `toMillis()`
+ * on anything that has it, which covers both client and Admin SDK Timestamps.
+ */
+function unmarshalSys(sys: unknown): Record<string, unknown> {
+  return unmarshalData(sys ?? {}) as Record<string, unknown>;
+}
+
+/** Unmarshal a doc's `fields` block (drops `_arrayKey` arrays into arrays). */
+function unmarshalFields(fields: unknown): Record<string, unknown> {
+  return unmarshalData(fields ?? {}) as Record<string, unknown>;
+}
+
+/**
+ * Reduces a collection's field definitions down to the bits the model needs
+ * (id, type, label, options, nested shape). Drops Root-internal metadata
+ * (preview, conditional visibility, default UI widget hints, etc.) since
+ * those would bloat the model context without adding decision-useful info.
+ */
+function simplifyFields(fields: Field[]): unknown[] {
+  return fields.map((f: any) => {
+    const out: any = {id: f.id, type: f.type};
+    if (f.label) out.label = f.label;
+    if (f.description) out.description = f.description;
+    if (f.required) out.required = true;
+    if (f.translate) out.translate = true;
+    if (f.options) out.options = f.options;
+    if (f.type === 'object' && f.fields) {
+      out.fields = simplifyFields(f.fields);
+    }
+    if (f.type === 'array' && f.of) {
+      out.of = simplifyFields([f.of])[0];
+    }
+    if (f.type === 'oneof' && f.types) {
+      out.types = f.types.map((t: any) =>
+        typeof t === 'string'
+          ? t
+          : {id: t.id, fields: simplifyFields(t.fields || [])}
+      );
+    }
+    return out;
+  });
 }
 
 /**

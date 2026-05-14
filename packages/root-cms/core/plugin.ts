@@ -767,6 +767,15 @@ export function cmsPlugin(options: CMSPluginOptions): CMSPlugin {
       server: Server,
       serverOptions: ConfigureServerOptions
     ) => {
+      // The AI chat routes echo prior tool results (e.g. full CMS docs read
+      // via `doc_get`) back to the server on every turn, so the request body
+      // can easily exceed body-parser's 100kb default. Use a larger limit for
+      // those routes only; body-parser short-circuits when `req._body` is
+      // already set, so the global parser below is a no-op for them.
+      server.use(
+        ['/cms/api/ai.chat', '/cms/api/ai.edit_object'],
+        bodyParser.json({limit: '4mb'})
+      );
       server.use(bodyParser.json());
       // Handle body-parser errors (e.g. PayloadTooLargeError) gracefully
       // instead of letting them bubble up as unhandled 500 errors.

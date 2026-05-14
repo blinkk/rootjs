@@ -27,8 +27,14 @@ import {
   UIMessage,
 } from 'ai';
 import {Timestamp} from 'firebase-admin/firestore';
-import {createCmsTools, createReadOnlyCmsTools} from './ai-tools.js';
+import {
+  CmsToolContext,
+  createCmsTools,
+  createReadOnlyCmsTools,
+} from './ai-tools.js';
 import {RootCMSClient} from './client.js';
+import {Collection} from './schema.js';
+import {SearchIndexService} from './search-index.js';
 
 /** Filename of the project-level instructions file loaded into the AI prompt. */
 export const ROOT_MD_FILENAME = 'ROOT.md';
@@ -502,6 +508,45 @@ export interface RunChatStreamOptions {
   chatId: string;
   user: string;
   executionMode?: AiExecutionMode;
+  /**
+   * Loads a single collection's schema. The caller owns dev-vs-prod schema
+   * resolution (Vite SSR vs. prebuilt `dist/collections/*.json`).
+   */
+  loadCollection: (collectionId: string) => Promise<Collection | null>;
+  /** Loads every project collection keyed by id. */
+  loadAllCollections: () => Promise<Record<string, Collection>>;
+}
+
+/**
+ * Builds the `CmsToolContext` used by the server-side tool `execute` blocks.
+ *
+ * Search is instantiated lazily — `SearchIndexService` boots a MiniSearch
+ * index from Firestore, which is wasteful when the chat never needs it.
+ */
+function buildCmsToolContext(options: {
+  rootConfig: RootConfig;
+  cmsClient: RootCMSClient;
+  user: string;
+  loadCollection: (collectionId: string) => Promise<Collection | null>;
+  loadAllCollections: () => Promise<Record<string, Collection>>;
+}): CmsToolContext {
+  let searchService: SearchIndexService | null = null;
+  return {
+    rootConfig: options.rootConfig,
+    cmsClient: options.cmsClient,
+    user: options.user,
+    loadCollection: options.loadCollection,
+    loadAllCollections: options.loadAllCollections,
+    search: async (query, opts) => {
+      if (!searchService) {
+        searchService = new SearchIndexService(
+          options.rootConfig,
+          options.loadCollection
+        );
+      }
+      return await searchService.search(query, opts);
+    },
+  };
 }
 
 function buildExecutionModePrompt(mode: AiExecutionMode): string {
@@ -562,14 +607,23 @@ export async function runChatStream(
     user,
     chatId,
     executionMode = 'approve',
+    loadCollection,
+    loadAllCollections,
   } = options;
   const languageModel = resolveLanguageModel(model);
+  const toolContext = buildCmsToolContext({
+    rootConfig,
+    cmsClient,
+    user,
+    loadCollection,
+    loadAllCollections,
+  });
   const tools: ToolSet =
     model.capabilities?.tools === false
       ? {}
       : executionMode === 'read' || executionMode === 'suggest'
-      ? createReadOnlyCmsTools()
-      : createCmsTools();
+      ? createReadOnlyCmsTools(toolContext)
+      : createCmsTools(toolContext);
 
   const basePrompt =
     config.systemPrompt ||
@@ -622,11 +676,15 @@ export async function runChatStream(
 
 export interface RunEditObjectStreamOptions {
   rootConfig: RootConfig;
+  cmsClient: RootCMSClient;
+  user: string;
   config: AiConfig;
   model: AiModelConfig;
   messages: UIMessage[];
   /** The JSON object the user is editing. Injected as context for the model. */
   editData: unknown;
+  loadCollection: (collectionId: string) => Promise<Collection | null>;
+  loadAllCollections: () => Promise<Record<string, Collection>>;
 }
 
 /**
@@ -648,10 +706,29 @@ export interface RunEditObjectStreamOptions {
 export async function runEditObjectStream(
   options: RunEditObjectStreamOptions
 ): Promise<Response> {
-  const {rootConfig, model, config, messages, editData} = options;
+  const {
+    rootConfig,
+    cmsClient,
+    user,
+    model,
+    config,
+    messages,
+    editData,
+    loadCollection,
+    loadAllCollections,
+  } = options;
   const languageModel = resolveLanguageModel(model);
+  const toolContext = buildCmsToolContext({
+    rootConfig,
+    cmsClient,
+    user,
+    loadCollection,
+    loadAllCollections,
+  });
   const tools: ToolSet =
-    model.capabilities?.tools === false ? {} : createReadOnlyCmsTools();
+    model.capabilities?.tools === false
+      ? {}
+      : createReadOnlyCmsTools(toolContext);
 
   const editPromptText = (await import('../shared/ai/prompts/edit.txt'))
     .default;

@@ -763,11 +763,6 @@ export function api(server: Server, options: ApiOptions) {
     }
 
     const body = req.body || {};
-    const messages = (body.messages as UIMessage[]) || [];
-    if (!Array.isArray(messages) || messages.length === 0) {
-      res.status(400).json({success: false, error: 'MISSING_MESSAGES'});
-      return;
-    }
     const model = findModel(aiConfig, body.modelId);
     if (!model) {
       res.status(400).json({success: false, error: 'UNKNOWN_MODEL'});
@@ -780,10 +775,12 @@ export function api(server: Server, options: ApiOptions) {
     const requestedChatId =
       typeof body.chatId === 'string' ? body.chatId.trim() : '';
     let chatId = '';
+    let storedMessages: UIMessage[] = [];
     if (requestedChatId) {
       const existing = await store.getChat(requestedChatId);
       if (existing) {
         chatId = existing.id;
+        storedMessages = (existing.messages as UIMessage[]) || [];
       } else {
         // Honor the client-supplied id so a single chat session keeps the
         // same Firestore doc id even before the first response is saved.
@@ -798,6 +795,28 @@ export function api(server: Server, options: ApiOptions) {
       chatId = created.id;
     }
 
+    // Two request shapes are accepted so we can roll the client over
+    // without coordinating deploys:
+    //
+    //   - `{message: UIMessage}` (preferred): just the latest user message
+    //     or tool-result message. The server appends it to the persisted
+    //     chat history before handing off to `runChatStream`. Keeps wire
+    //     bodies small as conversations grow.
+    //   - `{messages: UIMessage[]}` (legacy): the entire local message
+    //     array. Passed through as-is, which is what the old client did.
+    //
+    // Once every reachable client has shipped the new form, the legacy
+    // branch can be deleted.
+    let messages: UIMessage[];
+    if (body.message && typeof body.message === 'object') {
+      messages = [...storedMessages, body.message as UIMessage];
+    } else if (Array.isArray(body.messages) && body.messages.length > 0) {
+      messages = body.messages as UIMessage[];
+    } else {
+      res.status(400).json({success: false, error: 'MISSING_MESSAGES'});
+      return;
+    }
+
     try {
       const streamResponse = await runChatStream({
         rootConfig: req.rootConfig!,
@@ -808,6 +827,10 @@ export function api(server: Server, options: ApiOptions) {
         chatId,
         user: req.user.email,
         executionMode,
+        loadCollection: (collectionId) =>
+          getCollectionSchema(req, collectionId),
+        loadAllCollections: async () =>
+          (await options.getRenderer(req)).getCollections(),
       });
       // Surface the chat id so clients can persist it for the next request.
       streamResponse.headers.set('x-root-cms-chat-id', chatId);
@@ -868,10 +891,16 @@ export function api(server: Server, options: ApiOptions) {
       try {
         const streamResponse = await runEditObjectStream({
           rootConfig: req.rootConfig!,
+          cmsClient: new RootCMSClient(req.rootConfig!),
+          user: req.user.email,
           config: aiConfig,
           model,
           messages,
           editData: body.editData,
+          loadCollection: (collectionId) =>
+            getCollectionSchema(req, collectionId),
+          loadAllCollections: async () =>
+            (await options.getRenderer(req)).getCollections(),
         });
         await pipeWebResponse(streamResponse, res);
       } catch (err: any) {
