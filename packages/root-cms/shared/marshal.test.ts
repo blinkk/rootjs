@@ -319,4 +319,21 @@ describe('isRichTextData', () => {
   it('returns false for null', () => {
     expect(isRichTextData(null)).toBe(false);
   });
+
+  it('returns false when `blocks` uses `_array` object notation', () => {
+    // Rich text data should never round-trip through `marshalData` with
+    // `_array` blocks. Returning false here means `marshalData` will treat
+    // the value as a regular nested object and re-marshal the inner
+    // `_array` array — surfacing the corruption rather than persisting it.
+    expect(
+      isRichTextData({
+        time: 1721761211720,
+        version: 'lexical-0.31.2',
+        blocks: {
+          _array: ['abc'],
+          abc: {type: 'paragraph', data: {text: 'Hello'}},
+        },
+      })
+    ).toBe(false);
+  });
 });

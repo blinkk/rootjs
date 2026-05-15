@@ -28,6 +28,8 @@ Root CMS JSON File Structure:
 
 When creating arrays in your JSON output, you must _never_ forget to add an `_array` key. If you forget to add an `_array` key, the output will NOT work with Root CMS. When adding new array items, you can create your own array keys.
 
+The ONE exception to this rule is the `blocks` array inside a Rich Text field (see #3 below). Rich Text data is stored as-is and is NOT marshaled, so `blocks` MUST always be a plain JSON array, never an `_array` object. Wrapping rich text `blocks` in `_array` notation will corrupt the data when it is saved.
+
 2. Images and file fields have system-provided metadata, that looks like this example:
 
 ```
@@ -42,7 +44,7 @@ When creating arrays in your JSON output, you must _never_ forget to add an `_ar
 }
 ```
 
-3. Rich Text fields are stored as Editor.js documents, which look like this. You may generate your own UIDs for the `id` fields.
+3. Rich Text fields are stored as Editor.js / Lexical documents, which look like this. You may generate your own UIDs for the `id` fields. Note that `blocks` MUST be a plain JSON array — do NOT use the `_array` object notation here.
 
 ```
 {
