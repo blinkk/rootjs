@@ -19,6 +19,7 @@ import {
   IconCopy,
   IconMessageCirclePlus,
   IconPaperclip,
+  IconPencil,
   IconRobot,
   IconSend2,
   IconTool,
@@ -31,6 +32,7 @@ import {
   lastAssistantMessageIsCompleteWithToolCalls,
 } from 'ai';
 import {marked} from 'marked';
+import type {ComponentChildren} from 'preact';
 import {useCallback, useEffect, useMemo, useRef, useState} from 'preact/hooks';
 import {useLocation} from 'preact-iso';
 import {JsDiff} from '../../components/JsDiff/JsDiff.js';
@@ -115,6 +117,7 @@ const EXECUTION_MODES: ExecutionModeInfo[] = [
 ];
 
 const EXECUTION_MODE_STORAGE_KEY = 'root-cms.ai.executionMode';
+const SELECTED_MODEL_STORAGE_KEY = 'root-cms.ai.selectedModel';
 
 function isExecutionMode(value: string | null): value is ExecutionMode {
   return EXECUTION_MODES.some((mode) => mode.id === value);
@@ -133,6 +136,32 @@ function readStoredExecutionMode(): ExecutionMode {
     console.error('failed to read AI execution mode preference', err);
   }
   return 'approve';
+}
+
+function readStoredSelectedModel(models: ModelInfo[]): string | null {
+  if (typeof window === 'undefined') {
+    return null;
+  }
+  try {
+    const value = window.localStorage.getItem(SELECTED_MODEL_STORAGE_KEY);
+    if (value && models.some((model) => model.id === value)) {
+      return value;
+    }
+  } catch (err) {
+    console.error('failed to read AI model preference', err);
+  }
+  return null;
+}
+
+function persistSelectedModel(modelId: string) {
+  if (typeof window === 'undefined') {
+    return;
+  }
+  try {
+    window.localStorage.setItem(SELECTED_MODEL_STORAGE_KEY, modelId);
+  } catch (err) {
+    console.error('failed to save AI model preference', err);
+  }
 }
 
 function persistExecutionMode(mode: ExecutionMode) {
@@ -232,9 +261,13 @@ function ChatExperience(props: {
 }) {
   const {route} = useLocation();
   const models = props.config.models || [];
-  const [selectedModelId, setSelectedModelId] = useState<string>(
-    props.config.defaultModel || models[0]?.id || ''
-  );
+  const getPreferredModelId = () =>
+    readStoredSelectedModel(models) ||
+    props.config.defaultModel ||
+    models[0]?.id ||
+    '';
+  const [selectedModelId, setSelectedModelId] =
+    useState<string>(getPreferredModelId);
   const [executionMode, setExecutionMode] = useState<ExecutionMode>(
     readStoredExecutionMode
   );
@@ -313,6 +346,7 @@ function ChatExperience(props: {
   };
 
   const startNewChat = () => {
+    setSelectedModelId(getPreferredModelId());
     setPendingChatId(NEW_CHAT_ID);
     setActiveChatId(NEW_CHAT_ID);
     setInitialMessages([]);
@@ -371,6 +405,11 @@ function ChatExperience(props: {
   const selectedModel =
     models.find((m) => m.id === selectedModelId) || models[0];
 
+  const selectModel = (id: string) => {
+    setSelectedModelId(id);
+    persistSelectedModel(id);
+  };
+
   return (
     <div className="AIPage__layout">
       <ChatHistorySidebar
@@ -381,19 +420,16 @@ function ChatExperience(props: {
         onDelete={deleteChat}
       />
       <div className="AIPage__main">
-        <ChatHeader
-          models={models}
-          selectedModel={selectedModel}
-          onSelectModel={setSelectedModelId}
-          executionMode={executionMode}
-          onSelectExecutionMode={setExecutionMode}
-        />
         <ChatPane
           key={resetKey}
           initialChatId={pendingChatId}
           model={selectedModel}
           initialMessages={initialMessages}
           executionMode={executionMode}
+          models={models}
+          selectedModel={selectedModel}
+          onSelectModel={selectModel}
+          onSelectExecutionMode={setExecutionMode}
           onChatPersisted={(id) => {
             setActiveChatId(id);
             refreshChats();
@@ -473,14 +509,51 @@ function ChatHeader(props: {
     EXECUTION_MODES.find((mode) => mode.id === props.executionMode) ||
     EXECUTION_MODES[0];
   return (
-    <div className="AIPage__header">
+    <div className="AIPage__options">
       <Menu
         control={
-          <button type="button" className="AIPage__modelPicker">
-            <IconRobot size={16} />
-            <span>{props.selectedModel?.label || 'Select model'}</span>
-            <IconChevronDown size={14} />
-          </button>
+          <Button
+            type="button"
+            className="AIPage__modePicker"
+            variant="subtle"
+            color="dark"
+            size="xs"
+            compact
+            leftIcon={<IconPencil size={16} />}
+          >
+            {selectedMode.label}
+          </Button>
+        }
+      >
+        {EXECUTION_MODES.map((mode) => (
+          <Menu.Item
+            key={mode.id}
+            onClick={() => props.onSelectExecutionMode(mode.id)}
+          >
+            <div className="AIPage__modePicker__option">
+              <div className="AIPage__modePicker__option__label">
+                {mode.label}
+              </div>
+              <div className="AIPage__modePicker__option__description">
+                {mode.description}
+              </div>
+            </div>
+          </Menu.Item>
+        ))}
+      </Menu>
+      <Menu
+        control={
+          <Button
+            type="button"
+            className="AIPage__modelPicker"
+            variant="subtle"
+            color="dark"
+            size="xs"
+            compact
+            leftIcon={<IconRobot size={16} />}
+          >
+            {props.selectedModel?.label || 'Select model'}
+          </Button>
         }
       >
         {props.models.map((model) => (
@@ -506,31 +579,6 @@ function ChatHeader(props: {
           </Menu.Item>
         ))}
       </Menu>
-      <Menu
-        control={
-          <button type="button" className="AIPage__modePicker">
-            <IconTool size={16} />
-            <span>{selectedMode.label}</span>
-            <IconChevronDown size={14} />
-          </button>
-        }
-      >
-        {EXECUTION_MODES.map((mode) => (
-          <Menu.Item
-            key={mode.id}
-            onClick={() => props.onSelectExecutionMode(mode.id)}
-          >
-            <div className="AIPage__modePicker__option">
-              <div className="AIPage__modePicker__option__label">
-                {mode.label}
-              </div>
-              <div className="AIPage__modePicker__option__description">
-                {mode.description}
-              </div>
-            </div>
-          </Menu.Item>
-        ))}
-      </Menu>
     </div>
   );
 }
@@ -540,6 +588,10 @@ function ChatPane(props: {
   model?: ModelInfo;
   initialMessages: UIMessage[];
   executionMode: ExecutionMode;
+  models: ModelInfo[];
+  selectedModel?: ModelInfo;
+  onSelectModel: (id: string) => void;
+  onSelectExecutionMode: (mode: ExecutionMode) => void;
   onChatPersisted: (id: string) => void;
 }) {
   // Lock in the chat id for the lifetime of this mount. We generate one
@@ -758,6 +810,15 @@ function ChatPane(props: {
         canAttach={props.model?.capabilities.attachments ?? false}
         isStreaming={isStreaming}
         onStop={stop}
+        controls={
+          <ChatHeader
+            models={props.models}
+            selectedModel={props.selectedModel}
+            onSelectModel={props.onSelectModel}
+            executionMode={props.executionMode}
+            onSelectExecutionMode={props.onSelectExecutionMode}
+          />
+        }
         onSend={(text, attachments) => {
           if (!text && attachments.length === 0) {
             return;
@@ -1038,7 +1099,9 @@ function ToolPartView(props: {
         className="AIPage__tool__header"
         onClick={() => setOpen(!open)}
       >
-        <IconTool size={14} />
+        <Badge variant="filled" color="dark" size="xs">
+          {toolName}
+        </Badge>
         <span className="AIPage__tool__title">
           {prettyToolName(toolName, part.input)}
         </span>
@@ -1328,6 +1391,7 @@ function ChatComposer(props: {
   isStreaming: boolean;
   onSend: (text: string, attachments: AttachmentPreview[]) => void;
   onStop: () => void;
+  controls?: ComponentChildren;
 }) {
   const [text, setText] = useState('');
   const [attachments, setAttachments] = useState<AttachmentPreview[]>([]);
@@ -1431,26 +1495,32 @@ function ChatComposer(props: {
         </div>
       )}
       <div className="AIPage__composer__row">
-        {props.canAttach && (
-          <Tooltip
-            label="Attach file"
-            className="AIPage__composer__attachTooltip"
+        <Tooltip
+          label={
+            props.canAttach
+              ? 'Attach file'
+              : "Model doesn't support attachments"
+          }
+          className="AIPage__composer__attachTooltip"
+        >
+          <ActionIcon
+            component="label"
+            radius="xl"
+            className={joinClassNames(
+              'AIPage__composer__attach',
+              !props.canAttach && 'AIPage__composer__attach--disabled'
+            )}
+            disabled={!props.canAttach}
           >
-            <ActionIcon
-              component="label"
-              radius="xl"
-              className="AIPage__composer__attach"
-            >
-              {uploading ? <Loader size="xs" /> : <IconPaperclip size={18} />}
-              <input
-                ref={fileRef}
-                type="file"
-                style={{display: 'none'}}
-                onChange={onFileChange}
-              />
-            </ActionIcon>
-          </Tooltip>
-        )}
+            {uploading ? <Loader size="xs" /> : <IconPaperclip size={18} />}
+            <input
+              ref={fileRef}
+              type="file"
+              style={{display: 'none'}}
+              onChange={onFileChange}
+            />
+          </ActionIcon>
+        </Tooltip>
         <textarea
           ref={textareaRef}
           className="AIPage__composer__textarea"
@@ -1500,9 +1570,7 @@ function ChatComposer(props: {
           </ActionIcon>
         )}
       </div>
-      <div className="AIPage__composer__disclaimer">
-        Root AI is experimental and can make mistakes. Use with caution.
-      </div>
+      {props.controls}
     </div>
   );
 }

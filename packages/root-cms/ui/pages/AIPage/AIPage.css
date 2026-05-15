@@ -118,51 +118,24 @@
   position: relative;
 }
 
-.AIPage__header {
-  padding: 12px 20px;
+.AIPage__options {
+  max-width: 800px;
+  margin: 10px auto 0;
   display: flex;
   align-items: center;
+  justify-content: space-between;
   flex-wrap: wrap;
-  gap: 12px;
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  z-index: 100;
+  gap: 8px;
 }
 
-.AIPage__modelPicker {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 6px 12px;
-  font-size: 14px;
-  font-weight: 600;
-  border: 1px solid var(--color-border);
-  background: var(--surface-background);
-  border-radius: 8px;
-  cursor: pointer;
-}
-
-.AIPage__modelPicker:hover {
-  background: #f1f3f5;
-}
-
+.AIPage__modelPicker,
 .AIPage__modePicker {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 6px 12px;
-  font-size: 14px;
-  font-weight: 600;
-  border: 1px solid var(--color-border);
-  background: var(--surface-background);
-  border-radius: 8px;
-  cursor: pointer;
+  font-weight: 500;
 }
 
+.AIPage__modelPicker:hover,
 .AIPage__modePicker:hover {
-  background: #f1f3f5;
+  background: #efefef;
 }
 
 .AIPage__modelPicker__option {
@@ -173,7 +146,7 @@
 }
 
 .AIPage__modelPicker__option__label {
-  font-weight: 600;
+  font-weight: 500;
 }
 
 .AIPage__modelPicker__option__description {
@@ -189,7 +162,8 @@
 }
 
 .AIPage__modePicker__option__label {
-  font-weight: 600;
+  font-weight: 500;
+  margin-bottom: 4px;
 }
 
 .AIPage__modePicker__option__description {
@@ -732,11 +706,9 @@
   flex-shrink: 0;
 }
 
-.AIPage__composer__disclaimer {
-  margin-top: 10px;
-  text-align: center;
-  font-size: 12px;
-  color: dimgray;
+.AIPage__composer__attach--disabled {
+  opacity: 0.3;
+  pointer-events: none;
 }
 
 .AIPage__notEnabled {
