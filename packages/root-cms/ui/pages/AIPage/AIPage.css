@@ -118,19 +118,24 @@
   position: relative;
 }
 
-.AIPage__header {
+.AIPage__options {
   max-width: 800px;
   margin: 10px auto 0;
   display: flex;
   align-items: center;
-  justify-content: center;
+  justify-content: space-between;
   flex-wrap: wrap;
   gap: 8px;
 }
 
 .AIPage__modelPicker,
 .AIPage__modePicker {
-  font-weight: 600;
+  font-weight: 500;
+}
+
+.AIPage__modelPicker:hover,
+.AIPage__modePicker:hover {
+  background: #efefef;
 }
 
 .AIPage__modelPicker__option {
@@ -141,7 +146,7 @@
 }
 
 .AIPage__modelPicker__option__label {
-  font-weight: 600;
+  font-weight: 500;
 }
 
 .AIPage__modelPicker__option__description {
@@ -157,7 +162,8 @@
 }
 
 .AIPage__modePicker__option__label {
-  font-weight: 600;
+  font-weight: 500;
+  margin-bottom: 4px;
 }
 
 .AIPage__modePicker__option__description {
@@ -698,6 +704,11 @@
 
 .AIPage__composer__attach {
   flex-shrink: 0;
+}
+
+.AIPage__composer__attach--disabled {
+  opacity: 0.3;
+  pointer-events: none;
 }
 
 .AIPage__notEnabled {

@@ -12,7 +12,6 @@
 import './AIPage.css';
 
 import {useChat} from '@ai-sdk/react';
-import type {ComponentChildren} from 'preact';
 import {ActionIcon, Badge, Button, Loader, Menu, Tooltip} from '@mantine/core';
 import {
   IconCheck,
@@ -20,6 +19,7 @@ import {
   IconCopy,
   IconMessageCirclePlus,
   IconPaperclip,
+  IconPencil,
   IconRobot,
   IconSend2,
   IconTool,
@@ -32,6 +32,7 @@ import {
   lastAssistantMessageIsCompleteWithToolCalls,
 } from 'ai';
 import {marked} from 'marked';
+import type {ComponentChildren} from 'preact';
 import {useCallback, useEffect, useMemo, useRef, useState} from 'preact/hooks';
 import {useLocation} from 'preact-iso';
 import {JsDiff} from '../../components/JsDiff/JsDiff.js';
@@ -265,9 +266,8 @@ function ChatExperience(props: {
     props.config.defaultModel ||
     models[0]?.id ||
     '';
-  const [selectedModelId, setSelectedModelId] = useState<string>(
-    getPreferredModelId
-  );
+  const [selectedModelId, setSelectedModelId] =
+    useState<string>(getPreferredModelId);
   const [executionMode, setExecutionMode] = useState<ExecutionMode>(
     readStoredExecutionMode
   );
@@ -509,7 +509,38 @@ function ChatHeader(props: {
     EXECUTION_MODES.find((mode) => mode.id === props.executionMode) ||
     EXECUTION_MODES[0];
   return (
-    <div className="AIPage__header">
+    <div className="AIPage__options">
+      <Menu
+        control={
+          <Button
+            type="button"
+            className="AIPage__modePicker"
+            variant="subtle"
+            color="dark"
+            size="xs"
+            compact
+            leftIcon={<IconPencil size={16} />}
+          >
+            {selectedMode.label}
+          </Button>
+        }
+      >
+        {EXECUTION_MODES.map((mode) => (
+          <Menu.Item
+            key={mode.id}
+            onClick={() => props.onSelectExecutionMode(mode.id)}
+          >
+            <div className="AIPage__modePicker__option">
+              <div className="AIPage__modePicker__option__label">
+                {mode.label}
+              </div>
+              <div className="AIPage__modePicker__option__description">
+                {mode.description}
+              </div>
+            </div>
+          </Menu.Item>
+        ))}
+      </Menu>
       <Menu
         control={
           <Button
@@ -520,7 +551,6 @@ function ChatHeader(props: {
             size="xs"
             compact
             leftIcon={<IconRobot size={16} />}
-            rightIcon={<IconChevronDown size={14} />}
           >
             {props.selectedModel?.label || 'Select model'}
           </Button>
@@ -545,38 +575,6 @@ function ChatHeader(props: {
                 {model.capabilities.reasoning && <span>reasoning</span>}
                 {model.capabilities.attachments && <span>attachments</span>}
               </div> */}
-            </div>
-          </Menu.Item>
-        ))}
-      </Menu>
-      <Menu
-        control={
-          <Button
-            type="button"
-            className="AIPage__modePicker"
-            variant="subtle"
-            color="dark"
-            size="xs"
-            compact
-            leftIcon={<IconTool size={16} />}
-            rightIcon={<IconChevronDown size={14} />}
-          >
-            {selectedMode.label}
-          </Button>
-        }
-      >
-        {EXECUTION_MODES.map((mode) => (
-          <Menu.Item
-            key={mode.id}
-            onClick={() => props.onSelectExecutionMode(mode.id)}
-          >
-            <div className="AIPage__modePicker__option">
-              <div className="AIPage__modePicker__option__label">
-                {mode.label}
-              </div>
-              <div className="AIPage__modePicker__option__description">
-                {mode.description}
-              </div>
             </div>
           </Menu.Item>
         ))}
@@ -1495,26 +1493,32 @@ function ChatComposer(props: {
         </div>
       )}
       <div className="AIPage__composer__row">
-        {props.canAttach && (
-          <Tooltip
-            label="Attach file"
-            className="AIPage__composer__attachTooltip"
+        <Tooltip
+          label={
+            props.canAttach
+              ? 'Attach file'
+              : "Model doesn't support attachments"
+          }
+          className="AIPage__composer__attachTooltip"
+        >
+          <ActionIcon
+            component="label"
+            radius="xl"
+            className={joinClassNames(
+              'AIPage__composer__attach',
+              !props.canAttach && 'AIPage__composer__attach--disabled'
+            )}
+            disabled={!props.canAttach}
           >
-            <ActionIcon
-              component="label"
-              radius="xl"
-              className="AIPage__composer__attach"
-            >
-              {uploading ? <Loader size="xs" /> : <IconPaperclip size={18} />}
-              <input
-                ref={fileRef}
-                type="file"
-                style={{display: 'none'}}
-                onChange={onFileChange}
-              />
-            </ActionIcon>
-          </Tooltip>
-        )}
+            {uploading ? <Loader size="xs" /> : <IconPaperclip size={18} />}
+            <input
+              ref={fileRef}
+              type="file"
+              style={{display: 'none'}}
+              onChange={onFileChange}
+            />
+          </ActionIcon>
+        </Tooltip>
         <textarea
           ref={textareaRef}
           className="AIPage__composer__textarea"
