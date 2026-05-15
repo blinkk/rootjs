@@ -12,7 +12,7 @@
 import './AIPage.css';
 
 import {useChat} from '@ai-sdk/react';
-import {ActionIcon, Loader, Menu, Tooltip} from '@mantine/core';
+import {ActionIcon, Badge, Button, Loader, Menu, Tooltip} from '@mantine/core';
 import {
   IconCheck,
   IconChevronDown,
@@ -235,8 +235,9 @@ function ChatExperience(props: {
   const [selectedModelId, setSelectedModelId] = useState<string>(
     props.config.defaultModel || models[0]?.id || ''
   );
-  const [executionMode, setExecutionMode] =
-    useState<ExecutionMode>(readStoredExecutionMode);
+  const [executionMode, setExecutionMode] = useState<ExecutionMode>(
+    readStoredExecutionMode
+  );
   // The chat id used for the next mount of `ChatPane`. Empty for "new chat".
   const [pendingChatId, setPendingChatId] = useState<string>(
     props.initialChatId || NEW_CHAT_ID
@@ -570,7 +571,12 @@ function ChatPane(props: {
   }, []);
 
   const waitForApproval = useCallback(
-    (toolCallId: string, toolName: string, input: any, preview: CmsToolPreview) =>
+    (
+      toolCallId: string,
+      toolName: string,
+      input: any,
+      preview: CmsToolPreview
+    ) =>
       new Promise<'approve' | 'reject'>((resolve) => {
         approvalResolvers.current[toolCallId] = resolve;
         setPendingApprovals((prev) => ({
@@ -882,11 +888,7 @@ function MessageView(props: {
         <div className="AIPage__message__username">{username}</div>
         <div className="AIPage__message__parts">
           {(message.parts || []).map((part, i) => (
-            <PartView
-              key={i}
-              part={part}
-              toolApprovals={props.toolApprovals}
-            />
+            <PartView key={i} part={part} toolApprovals={props.toolApprovals} />
           ))}
         </div>
         <button
@@ -1213,9 +1215,13 @@ function ToolApprovalCard(props: {
           <div className="AIPage__approval__title">{preview.title}</div>
           <div className="AIPage__approval__summary">{preview.summary}</div>
         </div>
-        <div className="AIPage__approval__status">
+        <Badge
+          className="AIPage__approval__status"
+          variant="light"
+          color="gray"
+        >
           {props.approval.status === 'executing' ? 'Applying' : 'Review'}
-        </div>
+        </Badge>
       </div>
       {preview.details.length > 0 && (
         <div className="AIPage__approval__details">
@@ -1235,22 +1241,28 @@ function ToolApprovalCard(props: {
         />
       )}
       <div className="AIPage__approval__actions">
-        <button
+        <Button
+          variant="default"
+          color="dark"
+          size="xs"
           type="button"
           className="AIPage__approval__button"
           disabled={props.approval.status === 'executing'}
           onClick={props.onReject}
         >
           Reject
-        </button>
-        <button
+        </Button>
+        <Button
+          variant="filled"
+          color="green"
+          size="xs"
           type="button"
           className="AIPage__approval__button AIPage__approval__button--primary"
           disabled={props.approval.status === 'executing'}
           onClick={props.onApprove}
         >
           Approve draft edit
-        </button>
+        </Button>
       </div>
     </div>
   );
@@ -1276,9 +1288,16 @@ function ToolReceipt(props: {output: any}) {
         </div>
       )}
       {receipt.adminUrl && (
-        <a className="AIPage__receipt__link" href={receipt.adminUrl}>
+        <Button
+          component="a"
+          className="AIPage__receipt__link"
+          variant="default"
+          size="xs"
+          compact
+          href={receipt.adminUrl}
+        >
           Open document
-        </a>
+        </Button>
       )}
     </div>
   );
@@ -1500,7 +1519,9 @@ function prepareAttachmentsForSend(attachments: AttachmentPreview[]): {
     .map(formatAttachmentForPrompt);
   return {
     files,
-    text: textBlocks.length ? `Attached files:\n\n${textBlocks.join('\n\n')}` : '',
+    text: textBlocks.length
+      ? `Attached files:\n\n${textBlocks.join('\n\n')}`
+      : '',
   };
 }
 

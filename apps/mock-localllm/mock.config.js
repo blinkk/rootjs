@@ -102,8 +102,21 @@ export default {
       // with a longer array + delay, this is handy for exercising streaming UI.
       prompt: /\b(stream|loading|long)\b/i,
       response: [
-        'Streaming ', 'this ', 'response ', 'one ', 'word ', 'at ', 'a ',
-        'time ', 'so ', 'you ', 'can ', 'watch ', 'the ', 'UI ', 'update ',
+        'Streaming ',
+        'this ',
+        'response ',
+        'one ',
+        'word ',
+        'at ',
+        'a ',
+        'time ',
+        'so ',
+        'you ',
+        'can ',
+        'watch ',
+        'the ',
+        'UI ',
+        'update ',
         'incrementally.',
       ],
       delay: {min: 120, max: 400},
@@ -151,6 +164,28 @@ export default {
           ],
         },
         'Those are the top results from the CMS search above.',
+      ],
+    },
+    {
+      // A tool-call loop that exercises a real Root CMS write tool. The CMS
+      // previews write tools in the browser so users can approve and save the
+      // draft change manually.
+      prompt: 'update sandbox title',
+      responses: [
+        {
+          text: 'I can update the Sandbox test title.\n\n',
+          toolCalls: [
+            {
+              name: 'doc_updateField',
+              arguments: {
+                docId: 'Sandbox/test',
+                path: 'meta.title',
+                value: 'Updated sandbox title',
+              },
+            },
+          ],
+        },
+        'I prepared the draft title update for Sandbox/test.',
       ],
     },
   ],
