@@ -674,6 +674,35 @@ test('validates richtext fields', () => {
       },
     ]
   `);
+
+  // Invalid data - blocks formatted as an _array object. Rich text data
+  // (Lexical/EditorJS) is stored as-is in Firestore and must use a plain JSON
+  // array for `blocks`. The LLM tool prompts call this out, but guard against
+  // regressions here so doc_updateField/doc_set cannot persist invalid shapes.
+  expect(
+    validateFields(
+      {
+        body: {
+          version: 'lexical-0.31.2',
+          time: 1763675872000,
+          blocks: {
+            _array: ['abc'],
+            abc: {type: 'paragraph', data: {text: 'Hello'}},
+          },
+        },
+      },
+      testSchema
+    )
+  ).toMatchInlineSnapshot(`
+    [
+      {
+        "expected": "array",
+        "message": "Expected array, received object",
+        "path": "body.blocks",
+        "received": "object",
+      },
+    ]
+  `);
 });
 
 test('validates reference fields', () => {

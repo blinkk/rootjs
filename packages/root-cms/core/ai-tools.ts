@@ -291,7 +291,12 @@ export function createCmsTools(ctx: CmsToolContext): ToolSet {
         'against the collection schema and the call is rejected on ' +
         'validation errors. Prefer `doc_updateField` for targeted edits. ' +
         'Only writes the draft version; users must publish separately. ' +
-        'Always confirm with the user before calling.',
+        'Always confirm with the user before calling. ' +
+        'Format: pass plain JSON. Arrays must be plain JSON arrays — do ' +
+        'NOT use the `_array` object notation. The tool marshals the ' +
+        'payload into Firestore storage shape on its own. Rich text ' +
+        'fields use the `{version, time, blocks}` shape with `blocks` as ' +
+        'a plain JSON array of `{type, data}` objects.',
       inputSchema: z.object({
         docId: z
           .string()
@@ -310,7 +315,12 @@ export function createCmsTools(ctx: CmsToolContext): ToolSet {
       description:
         'Create a new draft CMS document with the given slug. Fails if the ' +
         'doc already exists. Pass optional initial fields (validated against ' +
-        'the collection schema). Always confirm with the user before calling.',
+        'the collection schema). Always confirm with the user before calling. ' +
+        'Format: pass plain JSON for `fields`. Arrays must be plain JSON ' +
+        'arrays — do NOT use the `_array` object notation. The tool ' +
+        'marshals the payload into Firestore storage shape on its own. ' +
+        'Rich text fields use the `{version, time, blocks}` shape with ' +
+        '`blocks` as a plain JSON array of `{type, data}` objects.',
       inputSchema: z.object({
         docId: z
           .string()
@@ -336,7 +346,13 @@ export function createCmsTools(ctx: CmsToolContext): ToolSet {
         'validated against the field schema and the call is rejected if the ' +
         'shape is wrong (e.g. passing a string to a richtext field). Only ' +
         'updates the draft version; users must publish separately. Always ' +
-        'confirm with the user before calling.',
+        'confirm with the user before calling. ' +
+        'Format: pass `value` as plain JSON. Arrays must be plain JSON ' +
+        'arrays — do NOT use the `_array` object notation. The tool ' +
+        'marshals the value into Firestore storage shape on its own. ' +
+        'Rich text fields use the `{version, time, blocks}` shape and ' +
+        '`blocks` MUST be a plain JSON array of `{type, data}` objects ' +
+        '(never wrapped in `_array`).',
       inputSchema: z.object({
         docId: z.string(),
         path: z

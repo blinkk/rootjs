@@ -72,6 +72,28 @@ describe('validateValueAtPath', () => {
     );
   });
 
+  it('rejects lexical data with `_array` object notation for blocks', () => {
+    // Rich text data (Lexical/EditorJS) is stored as-is in Firestore — `blocks`
+    // must be a plain JSON array, not the `_array` object notation used for
+    // marshaled CMS arrays. doc_updateField round-trips the value through
+    // `marshalData()`, which silently corrupts data shaped like this.
+    const errors = validateValueAtPath(collection, 'content.body', {
+      version: 'lexical-0.31.2',
+      time: 1763675872000,
+      blocks: {
+        _array: ['abc'],
+        abc: {type: 'paragraph', data: {text: 'Hello'}},
+      },
+    });
+    expect(errors).toContainEqual(
+      expect.objectContaining({
+        path: 'content.body.blocks',
+        expected: 'array',
+        received: 'object',
+      })
+    );
+  });
+
   it('walks into array items by numeric index', () => {
     const errors = validateValueAtPath(collection, 'sections.0.heading', 42);
     expect(errors[0]).toMatchObject({
