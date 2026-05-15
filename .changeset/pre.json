@@ -13,11 +13,13 @@
     "@blinkk/rds": "3.0.0",
     "@blinkk/root": "3.0.0",
     "@blinkk/root-cms": "3.0.0",
-    "@blinkk/root-password-protect": "3.0.0"
+    "@blinkk/root-password-protect": "3.0.0",
+    "@private/mock-localllm": "0.0.0"
   },
   "changesets": [
     "calm-countries-hammer",
     "clever-foxes-chat",
+    "few-dryers-design",
     "four-files-obey",
     "fuzzy-donuts-unite",
     "gentle-pans-add",

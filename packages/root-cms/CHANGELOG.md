@@ -1,5 +1,12 @@
 # @blinkk/root-cms
 
+## 3.0.1-beta.5
+
+### Patch Changes
+
+- c9d988e1: feat: add mock OpenAI-compatible LLM server for local UI testing
+  - @blinkk/root@3.0.1-beta.5
+
 ## 3.0.1-beta.4
 
 ### Patch Changes
