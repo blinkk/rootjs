@@ -1,0 +1,17 @@
+{
+  "name": "@private/mock-localllm",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Mock OpenAI-compatible LLM server for local UI testing.",
+  "type": "module",
+  "main": "src/index.js",
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "dev": "node src/index.js",
+    "start": "node src/index.js"
+  },
+  "author": "",
+  "license": "MIT"
+}

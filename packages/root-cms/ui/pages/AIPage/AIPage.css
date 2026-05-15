@@ -513,13 +513,6 @@
 
 .AIPage__approval__status {
   align-self: flex-start;
-  color: #1864ab;
-  background: #e7f5ff;
-  border-radius: 999px;
-  padding: 2px 8px;
-  font-size: 12px;
-  font-weight: 700;
-  white-space: nowrap;
 }
 
 .AIPage__approval__details,
@@ -566,36 +559,6 @@
   padding: 10px 12px;
 }
 
-.AIPage__approval__button {
-  border: 1px solid var(--color-border);
-  background: #fff;
-  color: #212529;
-  border-radius: 6px;
-  padding: 7px 10px;
-  font: inherit;
-  font-weight: 700;
-  cursor: pointer;
-}
-
-.AIPage__approval__button:hover:not(:disabled) {
-  background: #f1f3f5;
-}
-
-.AIPage__approval__button--primary {
-  border-color: #1864ab;
-  background: #1864ab;
-  color: #fff;
-}
-
-.AIPage__approval__button--primary:hover:not(:disabled) {
-  background: #0b5ca8;
-}
-
-.AIPage__approval__button:disabled {
-  opacity: 0.6;
-  cursor: default;
-}
-
 .AIPage__receipt {
   background: #fff;
   border: 1px solid #b2dfb2;
@@ -618,15 +581,7 @@
 }
 
 .AIPage__receipt__link {
-  display: inline-flex;
   margin: 10px 12px;
-  font-weight: 700;
-  color: #1864ab;
-  text-decoration: none;
-}
-
-.AIPage__receipt__link:hover {
-  text-decoration: underline;
 }
 
 .AIPage__tool__body {
