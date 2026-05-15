@@ -1,26 +1,31 @@
-.AIPage {
+.RootAIChat {
   background: var(--page-background);
   width: 100%;
   height: 100%;
   display: flex;
   flex-direction: column;
+  min-height: 0;
 }
 
-.AIPage__loading {
+.RootAIChat__loading {
   flex: 1;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
-.AIPage__layout {
+.RootAIChat__layout {
   flex: 1;
   display: grid;
   grid-template-columns: 260px 1fr;
   min-height: 0;
 }
 
-.AIPage__sidebar {
+.RootAIChat--panel .RootAIChat__layout {
+  grid-template-columns: 1fr;
+}
+
+.RootAIChat__sidebar {
   border-right: 1px solid var(--color-border);
   background: var(--surface-background);
   display: flex;
@@ -29,7 +34,7 @@
   overflow: hidden;
 }
 
-.AIPage__sidebar__newButton {
+.RootAIChat__sidebar__newButton {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -45,11 +50,11 @@
   transition: background 0.15s ease;
 }
 
-.AIPage__sidebar__newButton:hover {
+.RootAIChat__sidebar__newButton:hover {
   background: #f1f3f5;
 }
 
-.AIPage__sidebar__list {
+.RootAIChat__sidebar__list {
   flex: 1;
   overflow: auto;
   padding: 0 8px 12px;
@@ -58,14 +63,14 @@
   gap: 2px;
 }
 
-.AIPage__sidebar__empty {
+.RootAIChat__sidebar__empty {
   padding: 12px;
   text-align: center;
   color: dimgray;
   font-size: 13px;
 }
 
-.AIPage__sidebar__item {
+.RootAIChat__sidebar__item {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -76,22 +81,22 @@
   transition: background 0.15s ease;
 }
 
-.AIPage__sidebar__item:hover {
+.RootAIChat__sidebar__item:hover {
   background: #f1f3f5;
 }
 
-.AIPage__sidebar__item--active {
+.RootAIChat__sidebar__item--active {
   background: #e7f5ff;
 }
 
-.AIPage__sidebar__item__title {
+.RootAIChat__sidebar__item__title {
   flex: 1;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.AIPage__sidebar__item__delete {
+.RootAIChat__sidebar__item__delete {
   background: transparent;
   border: none;
   color: dimgray;
@@ -102,15 +107,15 @@
   transition: opacity 0.15s ease;
 }
 
-.AIPage__sidebar__item:hover .AIPage__sidebar__item__delete {
+.RootAIChat__sidebar__item:hover .RootAIChat__sidebar__item__delete {
   opacity: 1;
 }
 
-.AIPage__sidebar__item__delete:hover {
+.RootAIChat__sidebar__item__delete:hover {
   background: rgba(0, 0, 0, 0.08);
 }
 
-.AIPage__main {
+.RootAIChat__main {
   display: flex;
   flex-direction: column;
   min-width: 0;
@@ -118,7 +123,33 @@
   position: relative;
 }
 
-.AIPage__options {
+.RootAIChat__panelHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 0 12px;
+  height: 36px;
+  flex-shrink: 0;
+  border-bottom: 1px solid var(--color-border);
+  background: white;
+}
+
+.RootAIChat__panelHeader__title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.RootAIChat__panelHeader__actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.RootAIChat__options {
   max-width: 800px;
   margin: 10px auto 0;
   display: flex;
@@ -128,57 +159,57 @@
   gap: 8px;
 }
 
-.AIPage__modelPicker,
-.AIPage__modePicker {
+.RootAIChat__modelPicker,
+.RootAIChat__modePicker {
   font-weight: 500;
 }
 
-.AIPage__modelPicker:hover,
-.AIPage__modePicker:hover {
+.RootAIChat__modelPicker:hover,
+.RootAIChat__modePicker:hover {
   background: #efefef;
 }
 
-.AIPage__modelPicker__option {
+.RootAIChat__modelPicker__option {
   display: flex;
   flex-direction: column;
   gap: 2px;
   min-width: 200px;
 }
 
-.AIPage__modelPicker__option__label {
+.RootAIChat__modelPicker__option__label {
   font-weight: 500;
 }
 
-.AIPage__modelPicker__option__description {
+.RootAIChat__modelPicker__option__description {
   font-size: 12px;
   color: dimgray;
 }
 
-.AIPage__modePicker__option {
+.RootAIChat__modePicker__option {
   display: flex;
   flex-direction: column;
   gap: 2px;
   max-width: 280px;
 }
 
-.AIPage__modePicker__option__label {
+.RootAIChat__modePicker__option__label {
   font-weight: 500;
   margin-bottom: 4px;
 }
 
-.AIPage__modePicker__option__description {
+.RootAIChat__modePicker__option__description {
   font-size: 12px;
   color: dimgray;
   line-height: 1.35;
 }
 
-.AIPage__modelPicker__option__caps {
+.RootAIChat__modelPicker__option__caps {
   display: flex;
   gap: 4px;
   margin-top: 2px;
 }
 
-.AIPage__modelPicker__option__caps span {
+.RootAIChat__modelPicker__option__caps span {
   font-size: 10px;
   text-transform: uppercase;
   letter-spacing: 0.04em;
@@ -188,7 +219,7 @@
   padding: 2px 6px;
 }
 
-.AIPage__transcript {
+.RootAIChat__transcript {
   flex: 1;
   overflow: auto;
   padding: 72px 20px 32px;
@@ -196,13 +227,17 @@
   scroll-behavior: smooth;
 }
 
-.AIPage__transcript--empty {
+.RootAIChat--panel .RootAIChat__transcript {
+  padding: 24px 14px 16px;
+}
+
+.RootAIChat__transcript--empty {
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
-.AIPage__transcript__inner {
+.RootAIChat__transcript__inner {
   max-width: 800px;
   margin: 0 auto;
   display: flex;
@@ -210,7 +245,11 @@
   gap: 32px;
 }
 
-.AIPage__welcome {
+.RootAIChat--panel .RootAIChat__transcript__inner {
+  gap: 20px;
+}
+
+.RootAIChat__welcome {
   text-align: center;
   display: flex;
   flex-direction: column;
@@ -218,24 +257,32 @@
   gap: 12px;
 }
 
-.AIPage__welcome__icon {
+.RootAIChat__welcome__icon {
   border: 1px solid var(--color-border);
   border-radius: 50%;
   padding: 8px;
 }
 
-.AIPage__welcome__title {
+.RootAIChat__welcome__title {
   font-size: 28px;
   font-weight: 700;
 }
 
-.AIPage__welcome__body {
+.RootAIChat__welcome__body {
   max-width: 480px;
   font-size: 16px;
   color: dimgray;
 }
 
-.AIPage__streamingIndicator {
+.RootAIChat--panel .RootAIChat__welcome__title {
+  font-size: 20px;
+}
+
+.RootAIChat--panel .RootAIChat__welcome__body {
+  font-size: 13px;
+}
+
+.RootAIChat__streamingIndicator {
   display: flex;
   gap: 8px;
   align-items: center;
@@ -244,7 +291,7 @@
   padding-left: 44px;
 }
 
-.AIPage__error {
+.RootAIChat__error {
   max-width: 800px;
   margin: 0 auto 12px;
   padding: 12px 16px;
@@ -255,13 +302,17 @@
   font-size: 14px;
 }
 
-.AIPage__message {
+.RootAIChat__message {
   display: grid;
   grid-template-columns: 28px 1fr;
   gap: 16px;
 }
 
-.AIPage__message__avatar {
+.RootAIChat--panel .RootAIChat__message {
+  gap: 10px;
+}
+
+.RootAIChat__message__avatar {
   width: 28px;
   height: 28px;
   border-radius: 50%;
@@ -273,23 +324,23 @@
   background: var(--surface-background);
 }
 
-.AIPage__message__avatar img {
+.RootAIChat__message__avatar img {
   width: 100%;
   height: 100%;
   object-fit: cover;
 }
 
-.AIPage__message__body {
+.RootAIChat__message__body {
   min-width: 0;
   position: relative;
 }
 
-.AIPage__message__username {
+.RootAIChat__message__username {
   font-weight: 700;
   line-height: 28px;
 }
 
-.AIPage__message__copy {
+.RootAIChat__message__copy {
   position: absolute;
   top: 0;
   right: 0;
@@ -308,22 +359,22 @@
   padding: 0;
 }
 
-.AIPage__message:hover .AIPage__message__copy,
-.AIPage__message__copy--copied {
+.RootAIChat__message:hover .RootAIChat__message__copy,
+.RootAIChat__message__copy--copied {
   opacity: 1;
 }
 
-.AIPage__message__copy:hover {
+.RootAIChat__message__copy:hover {
   background: #f1f3f5;
   color: #333;
 }
 
-.AIPage__message__copy--copied {
+.RootAIChat__message__copy--copied {
   color: var(--color-text-dark);
   border-color: var(--color-border);
 }
 
-.AIPage__message__parts {
+.RootAIChat__message__parts {
   margin-top: 4px;
   display: flex;
   flex-direction: column;
@@ -332,19 +383,24 @@
   line-height: 1.6;
 }
 
-.AIPage__textPart {
+.RootAIChat--panel .RootAIChat__message__parts {
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.RootAIChat__textPart {
   white-space: normal;
 }
 
-.AIPage__textPart p {
+.RootAIChat__textPart p {
   margin: 0;
 }
 
-.AIPage__textPart p + p {
+.RootAIChat__textPart p + p {
   margin-top: 1em;
 }
 
-.AIPage__textPart pre {
+.RootAIChat__textPart pre {
   background: #f8f9fa;
   border: 1px solid #DADCE0;
   border-radius: 8px;
@@ -355,19 +411,19 @@
   white-space: pre;
 }
 
-.AIPage__textPart code {
+.RootAIChat__textPart code {
   font-family: var(--font-family-mono);
   font-size: 0.9em;
 }
 
-.AIPage__reasoning {
+.RootAIChat__reasoning {
   border: 1px solid var(--color-border);
   border-radius: 8px;
   background: #f8f9fa;
   font-size: 14px;
 }
 
-.AIPage__reasoning__toggle {
+.RootAIChat__reasoning__toggle {
   display: flex;
   align-items: center;
   gap: 6px;
@@ -381,12 +437,12 @@
   color: #495057;
 }
 
-.AIPage__reasoning__body {
+.RootAIChat__reasoning__body {
   padding: 0 12px 12px;
   color: #495057;
 }
 
-.AIPage__filePart img {
+.RootAIChat__filePart img {
   max-width: 320px;
   max-height: 240px;
   display: block;
@@ -394,7 +450,7 @@
   border: 1px solid var(--color-border);
 }
 
-.AIPage__filePart--link {
+.RootAIChat__filePart--link {
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -402,25 +458,25 @@
   font-size: 14px;
 }
 
-.AIPage__sourcePart {
+.RootAIChat__sourcePart {
   display: inline-block;
   font-size: 13px;
   color: #1971c2;
 }
 
-.AIPage__tool {
+.RootAIChat__tool {
   border: 1px solid var(--color-border);
   border-radius: 8px;
   background: #f8f9fa;
   font-size: 13px;
 }
 
-.AIPage__tool--approval {
+.RootAIChat__tool--approval {
   border-color: #99c2ff;
   background: #f5f9ff;
 }
 
-.AIPage__tool__header {
+.RootAIChat__tool__header {
   display: flex;
   align-items: center;
   gap: 6px;
@@ -432,42 +488,42 @@
   cursor: pointer;
 }
 
-.AIPage__tool__title {
+.RootAIChat__tool__title {
   font-weight: 600;
   color: #212529;
 }
 
-.AIPage__tool__state {
+.RootAIChat__tool__state {
   color: dimgray;
   font-size: 12px;
 }
 
-.AIPage__toolSummary {
+.RootAIChat__toolSummary {
   background: #fff;
   border: 1px solid var(--color-border);
   border-radius: 6px;
   padding: 8px 10px;
 }
 
-.AIPage__toolSummary__label {
+.RootAIChat__toolSummary__label {
   font-size: 12px;
   font-weight: 700;
   color: #495057;
 }
 
-.AIPage__toolSummary__text {
+.RootAIChat__toolSummary__text {
   margin-top: 2px;
   color: #343a40;
 }
 
-.AIPage__approval {
+.RootAIChat__approval {
   background: #fff;
   border: 1px solid #99c2ff;
   border-radius: 8px;
   overflow: hidden;
 }
 
-.AIPage__approval__header {
+.RootAIChat__approval__header {
   display: flex;
   justify-content: space-between;
   gap: 16px;
@@ -475,22 +531,22 @@
   border-bottom: 1px solid var(--color-border);
 }
 
-.AIPage__approval__title {
+.RootAIChat__approval__title {
   font-weight: 700;
   color: #212529;
 }
 
-.AIPage__approval__summary {
+.RootAIChat__approval__summary {
   margin-top: 2px;
   color: #495057;
 }
 
-.AIPage__approval__status {
+.RootAIChat__approval__status {
   align-self: flex-start;
 }
 
-.AIPage__approval__details,
-.AIPage__receipt__details {
+.RootAIChat__approval__details,
+.RootAIChat__receipt__details {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
   gap: 8px;
@@ -498,13 +554,13 @@
   border-bottom: 1px solid var(--color-border);
 }
 
-.AIPage__approval__details div,
-.AIPage__receipt__details div {
+.RootAIChat__approval__details div,
+.RootAIChat__receipt__details div {
   min-width: 0;
 }
 
-.AIPage__approval__details span,
-.AIPage__receipt__details span {
+.RootAIChat__approval__details span,
+.RootAIChat__receipt__details span {
   display: block;
   color: dimgray;
   font-size: 11px;
@@ -512,8 +568,8 @@
   text-transform: uppercase;
 }
 
-.AIPage__approval__details strong,
-.AIPage__receipt__details strong {
+.RootAIChat__approval__details strong,
+.RootAIChat__receipt__details strong {
   display: block;
   margin-top: 2px;
   color: #212529;
@@ -521,26 +577,26 @@
   overflow-wrap: anywhere;
 }
 
-.AIPage__approval__diff {
+.RootAIChat__approval__diff {
   max-height: 320px;
   border-bottom: 1px solid var(--color-border);
 }
 
-.AIPage__approval__actions {
+.RootAIChat__approval__actions {
   display: flex;
   justify-content: flex-end;
   gap: 8px;
   padding: 10px 12px;
 }
 
-.AIPage__receipt {
+.RootAIChat__receipt {
   background: #fff;
   border: 1px solid #b2dfb2;
   border-radius: 8px;
   overflow: hidden;
 }
 
-.AIPage__receipt__title {
+.RootAIChat__receipt__title {
   display: flex;
   align-items: center;
   gap: 6px;
@@ -549,36 +605,36 @@
   font-weight: 700;
 }
 
-.AIPage__receipt__summary {
+.RootAIChat__receipt__summary {
   padding: 4px 12px 10px;
   color: #343a40;
 }
 
-.AIPage__receipt__link {
+.RootAIChat__receipt__link {
   margin: 10px 12px;
 }
 
-.AIPage__tool__body {
+.RootAIChat__tool__body {
   padding: 0 12px 12px;
   display: flex;
   flex-direction: column;
   gap: 8px;
 }
 
-.AIPage__tool__body details {
+.RootAIChat__tool__body details {
   background: #fff;
   border: 1px solid var(--color-border);
   border-radius: 6px;
   padding: 6px 10px;
 }
 
-.AIPage__tool__body summary {
+.RootAIChat__tool__body summary {
   font-weight: 600;
   cursor: pointer;
   font-size: 12px;
 }
 
-.AIPage__tool__body pre {
+.RootAIChat__tool__body pre {
   margin: 6px 0 0;
   font-family: var(--font-family-mono);
   font-size: 12px;
@@ -588,13 +644,13 @@
   overflow: auto;
 }
 
-.AIPage__tool__error {
+.RootAIChat__tool__error {
   color: #c92a2a;
   font-family: var(--font-family-mono);
   font-size: 12px;
 }
 
-.AIPage__unknownPart pre {
+.RootAIChat__unknownPart pre {
   font-family: var(--font-family-mono);
   font-size: 12px;
   color: #868e96;
@@ -605,7 +661,7 @@
   white-space: pre-wrap;
 }
 
-.AIPage__composer {
+.RootAIChat__composer {
   flex-shrink: 0;
   padding: 12px 20px 20px;
   position: relative;
@@ -614,14 +670,18 @@
   border-top: 1px solid var(--color-border);
 }
 
+.RootAIChat--panel .RootAIChat__composer {
+  padding: 10px 12px 12px;
+}
+
 /* Vertically align the composer buttons. */
-.AIPage__composer__attachTooltip,
-.AIPage__composer__button {
+.RootAIChat__composer__attachTooltip,
+.RootAIChat__composer__button {
   position: relative;
   top: -3px;
 }
 
-.AIPage__composer__attachments {
+.RootAIChat__composer__attachments {
   display: flex;
   gap: 8px;
   margin-bottom: 8px;
@@ -631,7 +691,7 @@
   margin-right: auto;
 }
 
-.AIPage__composer__attachment {
+.RootAIChat__composer__attachment {
   position: relative;
   width: 64px;
   height: 64px;
@@ -641,20 +701,20 @@
   background: #f8f9fa;
 }
 
-.AIPage__composer__attachment img {
+.RootAIChat__composer__attachment img {
   width: 100%;
   height: 100%;
   object-fit: cover;
 }
 
-.AIPage__composer__attachment__name {
+.RootAIChat__composer__attachment__name {
   display: block;
   padding: 8px;
   font-size: 11px;
   word-break: break-all;
 }
 
-.AIPage__composer__attachment__remove {
+.RootAIChat__composer__attachment__remove {
   position: absolute;
   top: 2px;
   right: 2px;
@@ -671,7 +731,7 @@
   padding: 0;
 }
 
-.AIPage__composer__row {
+.RootAIChat__composer__row {
   max-width: 800px;
   margin: 0 auto;
   display: flex;
@@ -684,12 +744,12 @@
   transition: box-shadow 0.18s ease, border-color 0.18s ease;
 }
 
-.AIPage__composer__row:focus-within {
+.RootAIChat__composer__row:focus-within {
   box-shadow: rgba(0, 0, 0, 0.05) 0 2px 6px;
   border-color: #ccc;
 }
 
-.AIPage__composer__textarea {
+.RootAIChat__composer__textarea {
   flex: 1;
   border: none;
   outline: none;
@@ -702,16 +762,21 @@
   padding: 4px 0;
 }
 
-.AIPage__composer__attach {
+.RootAIChat--panel .RootAIChat__composer__textarea {
+  font-size: 14px;
+  line-height: 22px;
+}
+
+.RootAIChat__composer__attach {
   flex-shrink: 0;
 }
 
-.AIPage__composer__attach--disabled {
+.RootAIChat__composer__attach--disabled {
   opacity: 0.3;
   pointer-events: none;
 }
 
-.AIPage__notEnabled {
+.RootAIChat__notEnabled {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -725,24 +790,34 @@
   padding: 0 24px;
 }
 
-.AIPage__notEnabled__icon {
+.RootAIChat__notEnabled__close {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+}
+
+.RootAIChat__notEnabled__icon {
   border: 1px solid var(--color-border);
   border-radius: 50%;
   padding: 6px;
 }
 
-.AIPage__notEnabled__title {
+.RootAIChat__notEnabled__title {
   font-size: 24px;
   line-height: 1.2;
   font-weight: 700;
 }
 
-.AIPage__notEnabled__body {
+.RootAIChat--panel .RootAIChat__notEnabled__title {
+  font-size: 18px;
+}
+
+.RootAIChat__notEnabled__body {
   font-size: 14px;
   color: dimgray;
 }
 
-.AIPage__notEnabled__body code {
+.RootAIChat__notEnabled__body code {
   background: #f8f9fa;
   border: 1px solid var(--color-border);
   border-radius: 4px;
@@ -750,7 +825,7 @@
   font-family: var(--font-family-mono);
 }
 
-.AIPage__notEnabled__error {
+.RootAIChat__notEnabled__error {
   margin-top: 12px;
   padding: 8px 12px;
   background: #fff5f5;

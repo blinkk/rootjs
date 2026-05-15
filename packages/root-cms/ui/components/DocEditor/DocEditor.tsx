@@ -31,6 +31,7 @@ import {
   IconListCheck,
   IconLock,
   IconPlanet,
+  IconRobot,
   IconRocket,
   IconRowInsertBottom,
   IconRowInsertTop,
@@ -275,6 +276,19 @@ DocEditor.StatusBar = (props: StatusBarProps) => {
       return false;
     }
   });
+  const [aiActive, setAiActive] = useState(() => {
+    try {
+      const val = window.localStorage.getItem(
+        'root::DocumentPage::aiVisible'
+      );
+      return val ? JSON.parse(val) === true : false;
+    } catch {
+      return false;
+    }
+  });
+  const aiAvailable = !!(
+    window.__ROOT_CTX.ai || window.__ROOT_CTX.experiments?.ai
+  );
 
   useEffect(() => {
     const handler = (e: Event) => {
@@ -290,6 +304,14 @@ DocEditor.StatusBar = (props: StatusBarProps) => {
     };
     window.addEventListener('root:search-visible', handler);
     return () => window.removeEventListener('root:search-visible', handler);
+  }, []);
+
+  useEffect(() => {
+    const handler = (e: Event) => {
+      setAiActive((e as CustomEvent).detail === true);
+    };
+    window.addEventListener('root:ai-visible', handler);
+    return () => window.removeEventListener('root:ai-visible', handler);
   }, []);
 
   const urlLocale = (query.locale as string) || '';
@@ -362,6 +384,24 @@ DocEditor.StatusBar = (props: StatusBarProps) => {
           >
             Checks
           </Button>
+        </div>
+      )}
+      {aiAvailable && (
+        <div className="DocEditor__statusBar__ai">
+          <Tooltip label="Root AI (⌘ + i)" transition="pop" withArrow>
+            <Button
+              className={aiActive ? 'DocEditor__aiButton--active' : ''}
+              variant="default"
+              color="dark"
+              size="xs"
+              leftIcon={<IconRobot size={16} />}
+              onClick={() => {
+                window.dispatchEvent(new CustomEvent('root:toggle-ai'));
+              }}
+            >
+              AI
+            </Button>
+          </Tooltip>
         </div>
       )}
       <div className="DocEditor__statusBar__i18n">

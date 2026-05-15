@@ -19,6 +19,7 @@ import {
   type Device,
 } from '../../components/DocumentPagePreviewBar/DocumentPagePreviewBar.js';
 import {useEditJsonModal} from '../../components/EditJsonModal/EditJsonModal.js';
+import {RootAIChat} from '../../components/RootAIChat/RootAIChat.js';
 import {SearchPanel} from '../../components/SearchPanel/SearchPanel.js';
 import {SplitPanel} from '../../components/SplitPanel/SplitPanel.js';
 import {DraftDocProvider, useDraftDoc} from '../../hooks/useDraftDoc.js';
@@ -112,6 +113,16 @@ function DocumentPageLayout(props: DocumentPageProps & {canEdit: boolean}) {
   const isSearchVisibleRef = useRef(isSearchVisible);
   isSearchVisibleRef.current = isSearchVisible;
 
+  const isAiConfigured = !!(
+    window.__ROOT_CTX.ai || window.__ROOT_CTX.experiments?.ai
+  );
+  const [isAiVisible, setIsAiVisible] = useLocalStorage<boolean>(
+    'root::DocumentPage::aiVisible',
+    false
+  );
+  const isAiVisibleRef = useRef(isAiVisible);
+  isAiVisibleRef.current = isAiVisible;
+
   // Broadcast checks visibility so the StatusBar button can reflect it.
   useEffect(() => {
     window.dispatchEvent(
@@ -126,6 +137,13 @@ function DocumentPageLayout(props: DocumentPageProps & {canEdit: boolean}) {
     );
   }, [isSearchVisible]);
 
+  // Broadcast AI panel visibility so the StatusBar button can reflect it.
+  useEffect(() => {
+    window.dispatchEvent(
+      new CustomEvent('root:ai-visible', {detail: isAiVisible})
+    );
+  }, [isAiVisible]);
+
   const [savedSearchPanelWidth, setSavedSearchPanelWidth] =
     useLocalStorage<number>('root::DocumentPage::searchPanelWidth', 360);
   const [searchPanelWidth, setSearchPanelWidth] = useState(
@@ -134,14 +152,15 @@ function DocumentPageLayout(props: DocumentPageProps & {canEdit: boolean}) {
   const [isDraggingSearch, setIsDraggingSearch] = useState(false);
   const layoutRef = useRef<HTMLDivElement>(null);
 
-  // Only one right-hand panel (Checks or Search) is allowed open at a time.
-  // Opening either panel closes the other.
+  // Only one right-hand panel (Checks, Search, AI) is allowed open at a time.
+  // Opening any one of them closes the others.
   useEffect(() => {
     const handler = () => {
       const willBeVisible = !isChecksVisibleRef.current;
       setIsChecksVisible(() => willBeVisible);
       if (willBeVisible) {
         setIsSearchVisible(() => false);
+        setIsAiVisible(() => false);
       }
     };
     window.addEventListener('root:toggle-checks', handler);
@@ -156,6 +175,7 @@ function DocumentPageLayout(props: DocumentPageProps & {canEdit: boolean}) {
       setIsSearchVisible(() => willBeVisible);
       if (willBeVisible) {
         setIsChecksVisible(() => false);
+        setIsAiVisible(() => false);
         // Defer to allow the panel to mount before dispatching focus.
         requestAnimationFrame(() => {
           window.dispatchEvent(new CustomEvent('root:focus-search'));
@@ -164,6 +184,20 @@ function DocumentPageLayout(props: DocumentPageProps & {canEdit: boolean}) {
     };
     window.addEventListener('root:toggle-search', handler);
     return () => window.removeEventListener('root:toggle-search', handler);
+  }, []);
+
+  // Listen for toggle event from DocEditor's AI button and the Mod+I hotkey.
+  useEffect(() => {
+    const handler = () => {
+      const willBeVisible = !isAiVisibleRef.current;
+      setIsAiVisible(() => willBeVisible);
+      if (willBeVisible) {
+        setIsChecksVisible(() => false);
+        setIsSearchVisible(() => false);
+      }
+    };
+    window.addEventListener('root:toggle-ai', handler);
+    return () => window.removeEventListener('root:toggle-ai', handler);
   }, []);
 
   // Handle search panel resize dragging.
@@ -233,9 +267,21 @@ function DocumentPageLayout(props: DocumentPageProps & {canEdit: boolean}) {
     window.dispatchEvent(new CustomEvent('root:toggle-search'));
   }, []);
 
+  const toggleAi = useCallback(() => {
+    if (!isAiConfigured) {
+      return;
+    }
+    window.dispatchEvent(new CustomEvent('root:toggle-ai'));
+  }, [isAiConfigured]);
+
+  const closeAi = useCallback(() => {
+    setIsAiVisible(() => false);
+  }, [setIsAiVisible]);
+
   useHotkeys([
     ['mod+S', saveDraft],
     ['mod+shift+F', toggleSearch],
+    ['mod+I', toggleAi],
   ]);
 
   return (
@@ -332,6 +378,7 @@ function DocumentPageLayout(props: DocumentPageProps & {canEdit: boolean}) {
                 (!hasCollectionUrl || !isPreviewVisible) &&
                   !isChecksVisible &&
                   !isSearchVisible &&
+                  !isAiVisible &&
                   'DocumentPage__side__editor--centered'
               )}
             >
@@ -372,8 +419,90 @@ function DocumentPageLayout(props: DocumentPageProps & {canEdit: boolean}) {
             </div>
           </>
         )}
+        {isAiConfigured && isAiVisible && (
+          <DocumentPageAiPanel docId={docId} onClose={closeAi} />
+        )}
       </div>
     </Layout>
+  );
+}
+
+interface DocumentPageAiPanelProps {
+  docId: string;
+  onClose: () => void;
+}
+
+/**
+ * Renders the Root AI panel with resize state isolated from DocumentPageLayout.
+ * Memoizes the chat so drag-resizing the panel does not re-render the
+ * conversation tree.
+ */
+function DocumentPageAiPanel(props: DocumentPageAiPanelProps) {
+  const [savedAiPanelWidth, setSavedAiPanelWidth] = useLocalStorage<number>(
+    'root::DocumentPage::aiPanelWidth',
+    420
+  );
+  const [aiPanelWidth, setAiPanelWidth] = useState(savedAiPanelWidth);
+  const dividerRef = useRef<HTMLDivElement>(null);
+  const aiPanelWidthRef = useRef(aiPanelWidth);
+  const dragCleanupRef = useRef<() => void>();
+  const aiChat = useMemo(
+    () => (
+      <RootAIChat
+        variant="panel"
+        docContext={{docId: props.docId}}
+        onClose={props.onClose}
+      />
+    ),
+    [props.docId, props.onClose]
+  );
+
+  const startDragging = useCallback(() => {
+    const layout = dividerRef.current?.parentElement;
+    if (!layout) return;
+    aiPanelWidthRef.current = aiPanelWidth;
+    layout.classList.add('DocumentPage__layout--dragging');
+    const onMouseMove = (e: MouseEvent) => {
+      const container = dividerRef.current?.parentElement;
+      if (!container) return;
+      const rect = container.getBoundingClientRect();
+      const newWidth = Math.max(280, Math.min(rect.right - e.clientX, 800));
+      aiPanelWidthRef.current = newWidth;
+      setAiPanelWidth(newWidth);
+    };
+    const cleanup = () => {
+      layout.classList.remove('DocumentPage__layout--dragging');
+      window.removeEventListener('mousemove', onMouseMove);
+      window.removeEventListener('mouseup', onMouseUp);
+      dragCleanupRef.current = undefined;
+    };
+    const onMouseUp = () => {
+      cleanup();
+      setSavedAiPanelWidth(() => aiPanelWidthRef.current);
+    };
+    dragCleanupRef.current = cleanup;
+    window.addEventListener('mousemove', onMouseMove);
+    window.addEventListener('mouseup', onMouseUp);
+  }, [aiPanelWidth, setSavedAiPanelWidth]);
+
+  useEffect(() => {
+    return () => dragCleanupRef.current?.();
+  }, []);
+
+  return (
+    <>
+      <div
+        className="DocumentPage__aiDivider"
+        ref={dividerRef}
+        onMouseDown={startDragging}
+      />
+      <div
+        className="DocumentPage__ai"
+        style={{flexBasis: `${aiPanelWidth}px`}}
+      >
+        {aiChat}
+      </div>
+    </>
   );
 }
 

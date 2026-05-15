@@ -25,7 +25,7 @@ import {
   lastAssistantMessageIsCompleteWithToolCalls,
 } from 'ai';
 import {useCallback, useEffect, useMemo, useRef, useState} from 'preact/hooks';
-import {executeCmsTool} from '../../pages/AIPage/cmsToolHandlers.js';
+import {executeCmsTool} from '../RootAIChat/cmsToolHandlers.js';
 import {joinClassNames} from '../../utils/classes.js';
 import {uploadFileToGCS} from '../../utils/gcs.js';
 import {IconRootAI} from '../IconRootAI/IconRootAI.js';
