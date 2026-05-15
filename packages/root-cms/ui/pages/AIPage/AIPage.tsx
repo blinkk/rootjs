@@ -1099,7 +1099,9 @@ function ToolPartView(props: {
         className="AIPage__tool__header"
         onClick={() => setOpen(!open)}
       >
-        <IconTool size={14} />
+        <Badge variant="filled" color="dark" size="xs">
+          {toolName}
+        </Badge>
         <span className="AIPage__tool__title">
           {prettyToolName(toolName, part.input)}
         </span>
