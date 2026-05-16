@@ -1,6 +1,7 @@
 import {
   FieldPath,
   Timestamp,
+  arrayRemove,
   arrayUnion,
   collection,
   doc,
@@ -29,6 +30,12 @@ export interface Task {
   priority?: TaskPriority;
   status?: string;
   targetLaunchDate?: Timestamp | null;
+  /**
+   * Lower-cased emails of users subscribed to notifications for this task.
+   * Subscribers are notified (e.g. via the email notification plugin) when the
+   * task metadata changes or new comments are added.
+   */
+  subscribers?: string[];
   createdAt: Timestamp;
   createdBy: string;
   updatedAt?: Timestamp;
@@ -558,6 +565,107 @@ export async function removeTaskAttachment(
   }
 }
 
+/**
+ * Adds the given email to the task's `subscribers` list. Subscribed users are
+ * notified when the task changes (e.g. via the email notification plugin).
+ * Idempotent — adding an email that is already subscribed is a no-op.
+ */
+export async function subscribeToTask(taskId: string, email?: string) {
+  if (!taskId) {
+    throw new Error('missing task id');
+  }
+  const normalized = (email || window.firebase.user.email || '')
+    .trim()
+    .toLowerCase();
+  if (!normalized) {
+    throw new Error('missing subscriber email');
+  }
+  await updateDoc(taskDocRef(taskId), {
+    subscribers: arrayUnion(normalized),
+    updatedAt: serverTimestamp(),
+    updatedBy: window.firebase.user.email || '',
+  });
+  logAction('tasks.subscribe', {metadata: {taskId, email: normalized}});
+}
+
+/**
+ * Removes the given email from the task's `subscribers` list. Idempotent.
+ */
+export async function unsubscribeFromTask(taskId: string, email?: string) {
+  if (!taskId) {
+    throw new Error('missing task id');
+  }
+  const normalized = (email || window.firebase.user.email || '')
+    .trim()
+    .toLowerCase();
+  if (!normalized) {
+    throw new Error('missing subscriber email');
+  }
+  await updateDoc(taskDocRef(taskId), {
+    subscribers: arrayRemove(normalized),
+    updatedAt: serverTimestamp(),
+    updatedBy: window.firebase.user.email || '',
+  });
+  logAction('tasks.unsubscribe', {metadata: {taskId, email: normalized}});
+}
+
+/** Returns true if the given email is subscribed to the task. */
+export function isUserSubscribedToTask(task: Task, email?: string): boolean {
+  const normalized = (email || window.firebase.user.email || '')
+    .trim()
+    .toLowerCase();
+  if (!normalized) {
+    return false;
+  }
+  return (task.subscribers || [])
+    .map((s) => s.toLowerCase())
+    .includes(normalized);
+}
+
+const MENTION_RE = /(?:^|[\s(])@([A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,})/gi;
+
+/**
+ * Extracts `@email` mentions from a comment string or rich-text body.
+ * Returns lower-cased, deduplicated emails.
+ */
+export function extractMentions(content: string | RichTextData): string[] {
+  let text: string;
+  if (typeof content === 'string') {
+    text = content;
+  } else {
+    text = stringifyRichTextForMentions(content);
+  }
+  const matches = new Set<string>();
+  let m: RegExpExecArray | null;
+  while ((m = MENTION_RE.exec(text)) !== null) {
+    matches.add(m[1].toLowerCase());
+  }
+  return Array.from(matches);
+}
+
+function stringifyRichTextForMentions(data: RichTextData | null): string {
+  if (!data?.blocks?.length) {
+    return '';
+  }
+  const parts: string[] = [];
+  for (const block of data.blocks) {
+    const text =
+      typeof (block as any).data?.text === 'string'
+        ? (block as any).data.text
+        : '';
+    parts.push(text.replace(/<[^>]+>/g, ' '));
+    const items = (block as any).data?.items;
+    if (Array.isArray(items)) {
+      for (const item of items) {
+        if (typeof item?.content === 'string') {
+          parts.push(item.content.replace(/<[^>]+>/g, ' '));
+        }
+      }
+    }
+  }
+  return parts.join(' ');
+}
+
 async function updateTaskMetadataField(
   taskId: string,
   field: TaskMetadataField,
@@ -647,7 +755,9 @@ export async function addTaskComment(
 
   const commentRef = doc(taskCommentsCollectionRef(taskId));
   const commentId = commentRef.id;
-  const mentions = (options?.mentions || []).map((m) => m.toLowerCase());
+  const mentions = options?.mentions
+    ? options.mentions.map((m) => m.toLowerCase())
+    : extractMentions(content);
 
   await setDoc(commentRef, {
     id: commentId,
@@ -660,6 +770,19 @@ export async function addTaskComment(
     createdBy: window.firebase.user.email || '',
     history: [],
   });
+
+  // Auto-subscribe the comment author to future updates on this task. Best
+  // effort — failures here should not block the comment.
+  const authorEmail = (window.firebase.user.email || '').toLowerCase();
+  if (authorEmail) {
+    try {
+      await updateDoc(taskDocRef(taskId), {
+        subscribers: arrayUnion(authorEmail),
+      });
+    } catch (err) {
+      console.error('failed to auto-subscribe commenter:', err);
+    }
+  }
 
   logAction('tasks.comment.add', {
     metadata: {taskId, commentId, parentId: parentId || null, mentions},
@@ -693,7 +816,9 @@ export async function editTaskComment(
     throw new Error('comment not found');
   }
   const data = snapshot.data() as TaskComment;
-  const mentions = (options?.mentions || []).map((m) => m.toLowerCase());
+  const mentions = options?.mentions
+    ? options.mentions.map((m) => m.toLowerCase())
+    : extractMentions(content);
 
   await updateDoc(commentRef, {
     content: contentText,

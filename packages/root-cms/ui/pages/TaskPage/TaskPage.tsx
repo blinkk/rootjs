@@ -12,6 +12,8 @@ import {
 } from '@mantine/core';
 import {showNotification} from '@mantine/notifications';
 import {
+  IconBell,
+  IconBellOff,
   IconCalendar,
   IconCheck,
   IconCornerDownRight,
@@ -22,6 +24,8 @@ import {
   IconPencil,
   IconTrash,
   IconUser,
+  IconUserMinus,
+  IconUserPlus,
   IconX,
 } from '@tabler/icons-preact';
 import {Timestamp} from 'firebase/firestore';
@@ -46,17 +50,20 @@ import {
   addTaskAttachment,
   deleteTaskComment,
   editTaskComment,
+  isUserSubscribedToTask,
   normalizeTaskStatus,
   removeTaskAttachment,
   subscribeTask,
   subscribeTaskComments,
   subscribeTaskEvents,
+  subscribeToTask,
   Task,
   TaskAttachment,
   TaskComment,
   TaskEvent,
   TaskMetadataField,
   TaskPriority,
+  unsubscribeFromTask,
   updateTaskTitle,
   updateTaskDescription,
   updateTaskAssignee,
@@ -143,6 +150,7 @@ export function TaskPage(props: {id: string}) {
                 {formatTaskStatus(task.status)}
               </span>
             )}
+            {task && <TaskSubscribeButton task={task} />}
           </div>
         </div>
 
@@ -165,6 +173,7 @@ export function TaskPage(props: {id: string}) {
             </main>
             <aside className="TaskPage__side">
               <TaskMetadataPanel task={task} />
+              <TaskSubscribersPanel task={task} />
             </aside>
           </div>
         )}
@@ -640,6 +649,173 @@ function TaskMetadataPanel(props: {task: Task}) {
           />
         </div>
       </div>
+    </Surface>
+  );
+}
+
+/**
+ * Inline button that toggles the current user's subscription to the task.
+ */
+function TaskSubscribeButton(props: {task: Task}) {
+  const {task} = props;
+  const currentUserEmail = window.firebase.user.email || '';
+  const subscribed = isUserSubscribedToTask(task, currentUserEmail);
+  const [saving, setSaving] = useState(false);
+
+  async function toggleSubscription() {
+    if (!currentUserEmail) {
+      return;
+    }
+    setSaving(true);
+    try {
+      if (subscribed) {
+        await unsubscribeFromTask(task.id, currentUserEmail);
+      } else {
+        await subscribeToTask(task.id, currentUserEmail);
+      }
+    } catch (err) {
+      showNotification({
+        title: 'Could not update subscription',
+        message: errorMessage(err),
+        color: 'red',
+        autoClose: false,
+      });
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <Tooltip
+      label={subscribed ? 'Unsubscribe from updates' : 'Subscribe to updates'}
+    >
+      <Button
+        compact
+        size="xs"
+        variant={subscribed ? 'light' : 'default'}
+        loading={saving}
+        leftIcon={
+          subscribed ? (
+            <IconBellOff size={14} strokeWidth="1.8" />
+          ) : (
+            <IconBell size={14} strokeWidth="1.8" />
+          )
+        }
+        onClick={toggleSubscription}
+      >
+        {subscribed ? 'Subscribed' : 'Subscribe'}
+      </Button>
+    </Tooltip>
+  );
+}
+
+/**
+ * Sidebar panel showing the list of users subscribed to a task. Allows the
+ * current user to add or remove subscribers (typically themselves, but admins
+ * can add teammates by email too).
+ */
+function TaskSubscribersPanel(props: {task: Task}) {
+  const {task} = props;
+  const currentUserEmail = window.firebase.user.email || '';
+  const subscribers = (task.subscribers || []).slice().sort();
+  const [draftEmail, setDraftEmail] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [removingEmail, setRemovingEmail] = useState('');
+
+  async function addSubscriber(e: Event) {
+    e.preventDefault();
+    const email = draftEmail.trim().toLowerCase();
+    if (!email) {
+      return;
+    }
+    setSaving(true);
+    try {
+      await subscribeToTask(task.id, email);
+      setDraftEmail('');
+    } catch (err) {
+      showNotification({
+        title: 'Could not add subscriber',
+        message: errorMessage(err),
+        color: 'red',
+        autoClose: false,
+      });
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function removeSubscriber(email: string) {
+    setRemovingEmail(email);
+    try {
+      await unsubscribeFromTask(task.id, email);
+    } catch (err) {
+      showNotification({
+        title: 'Could not remove subscriber',
+        message: errorMessage(err),
+        color: 'red',
+        autoClose: false,
+      });
+    } finally {
+      setRemovingEmail('');
+    }
+  }
+
+  return (
+    <Surface className="TaskPage__subscribers">
+      <div className="TaskPage__subscribers__top">
+        <div className="TaskPage__subscribers__label">Subscribers</div>
+        <div className="TaskPage__subscribers__count">{subscribers.length}</div>
+      </div>
+      {subscribers.length > 0 ? (
+        <ul className="TaskPage__subscribers__list">
+          {subscribers.map((email) => (
+            <li key={email} className="TaskPage__subscribers__item">
+              <span className="TaskPage__subscribers__email">
+                {formatTaskUser(email)}
+                {email === currentUserEmail && (
+                  <span className="TaskPage__subscribers__you"> (you)</span>
+                )}
+              </span>
+              <Tooltip label="Remove subscriber">
+                <ActionIcon
+                  size="sm"
+                  disabled={removingEmail === email}
+                  onClick={() => removeSubscriber(email)}
+                >
+                  <IconUserMinus size={14} strokeWidth="1.8" />
+                </ActionIcon>
+              </Tooltip>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <div className="TaskPage__subscribers__empty">
+          No one is subscribed yet.
+        </div>
+      )}
+      <form className="TaskPage__subscribers__form" onSubmit={addSubscriber}>
+        <TextInput
+          size="xs"
+          type="email"
+          placeholder="teammate@example.com"
+          value={draftEmail}
+          disabled={saving}
+          onChange={(e: ChangeEvent<HTMLInputElement>) =>
+            setDraftEmail(e.currentTarget.value)
+          }
+        />
+        <Button
+          compact
+          size="xs"
+          color="dark"
+          type="submit"
+          loading={saving}
+          disabled={!draftEmail.trim()}
+          leftIcon={<IconUserPlus size={14} strokeWidth="1.8" />}
+        >
+          Add
+        </Button>
+      </form>
     </Surface>
   );
 }

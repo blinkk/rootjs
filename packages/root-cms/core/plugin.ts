@@ -47,6 +47,25 @@ export type {
   NotificationResult,
   NotificationServiceContext,
 } from './services-notifications.js';
+export {EmailClient} from './email-client.js';
+export type {
+  EmailDoc,
+  EmailStatus,
+  SendEmailOptions,
+  SendEmailResult,
+} from './email-client.js';
+export {
+  RootEmailNotificationPlugin,
+  TASK_SUBSCRIBERS_RECIPIENT,
+} from './email-notification-plugin.js';
+export type {
+  EmailNotificationFilter,
+  EmailNotificationRecipient,
+  EmailNotificationTemplate,
+  EmailTemplateContext,
+  EmailTemplateOutput,
+  RootEmailNotificationPluginOptions,
+} from './email-notification-plugin.js';
 export type {
   CMSTranslationService,
   TranslationExportResult,
