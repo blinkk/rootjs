@@ -509,6 +509,11 @@ export interface RunChatStreamOptions {
   user: string;
   executionMode?: AiExecutionMode;
   /**
+   * When set, tells the model which document the user is currently viewing
+   * in the CMS UI so phrases like "this document" can be resolved.
+   */
+  activeDocId?: string;
+  /**
    * Loads a single collection's schema. The caller owns dev-vs-prod schema
    * resolution (Vite SSR vs. prebuilt `dist/collections/*.json`).
    */
@@ -547,6 +552,15 @@ function buildCmsToolContext(options: {
       return await searchService.search(query, opts);
     },
   };
+}
+
+function buildActiveDocPrompt(docId: string): string {
+  return [
+    'Active document context:',
+    `- The user is currently viewing and editing the document \`${docId}\` in the CMS UI.`,
+    '- When the user refers to "this document", "this draft", "the current doc/page", or similar without naming a doc, they mean this document.',
+    '- Default to targeting this document for read and write tools unless the user explicitly names a different one.',
+  ].join('\n');
 }
 
 function buildExecutionModePrompt(mode: AiExecutionMode): string {
@@ -607,6 +621,7 @@ export async function runChatStream(
     user,
     chatId,
     executionMode = 'approve',
+    activeDocId,
     loadCollection,
     loadAllCollections,
   } = options;
@@ -634,10 +649,11 @@ export async function runChatStream(
       'Be concise and use markdown for rich responses.',
     ].join(' ');
   const rootMd = await readRootMd(rootConfig.rootDir);
-  const systemPrompt = buildSystemPrompt(
-    [basePrompt, '', buildExecutionModePrompt(executionMode)].join('\n'),
-    rootMd
-  );
+  const promptSections = [basePrompt, '', buildExecutionModePrompt(executionMode)];
+  if (activeDocId) {
+    promptSections.push('', buildActiveDocPrompt(activeDocId));
+  }
+  const systemPrompt = buildSystemPrompt(promptSections.join('\n'), rootMd);
 
   const modelMessages = await convertToModelMessages(messages, {tools});
   const result = streamText({

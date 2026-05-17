@@ -33,6 +33,7 @@
 
 .DocEditor__statusBar__search,
 .DocEditor__statusBar__checks,
+.DocEditor__statusBar__ai,
 .DocEditor__statusBar__i18n {
   margin-right: 8px;
 }
@@ -42,7 +43,8 @@
 }
 
 .DocEditor__checksButton--active,
-.DocEditor__searchButton--active {
+.DocEditor__searchButton--active,
+.DocEditor__aiButton--active {
   color: var(--mantine-color-blue-7, #1c7ed6);
   background-color: var(--mantine-color-blue-0, #e7f5ff);
   border-color: var(--mantine-color-blue-3, #74c0fc);

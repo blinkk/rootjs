@@ -769,6 +769,10 @@ export function api(server: Server, options: ApiOptions) {
       return;
     }
     const executionMode = normalizeExecutionMode(body.executionMode);
+    const activeDocId =
+      typeof body.docId === 'string' && body.docId.trim()
+        ? body.docId.trim()
+        : undefined;
 
     const cmsClient = new RootCMSClient(req.rootConfig!);
     const store = new ChatStore(cmsClient, req.user.email);
@@ -827,6 +831,7 @@ export function api(server: Server, options: ApiOptions) {
         chatId,
         user: req.user.email,
         executionMode,
+        activeDocId,
         loadCollection: (collectionId) =>
           getCollectionSchema(req, collectionId),
         loadAllCollections: async () =>
