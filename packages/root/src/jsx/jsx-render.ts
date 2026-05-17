@@ -162,6 +162,11 @@ const LT = '&lt;';
 const GT = '&gt;';
 const QUOT = '&quot;';
 
+// Shared empty object reused as the per-component context map when no contexts
+// have ever been pushed. Components only ever read from this map, so sharing is
+// safe and avoids a per-render allocation in the common case.
+const EMPTY_GLOBAL_CTX: Record<string, any> = {};
+
 /** Returns `true` when `value` is neither `null` nor `undefined`. */
 function isDef<T>(value: T | null | undefined): value is T {
   return value !== null && value !== undefined;
@@ -204,14 +209,24 @@ function escapeAttr(str: string): string {
   return result + str.slice(last);
 }
 
+const STYLE_KEY_CACHE = new Map<string, string>();
+const UPPERCASE_RE = /[A-Z]/g;
+
+function toKebabCase(key: string): string {
+  let cached = STYLE_KEY_CACHE.get(key);
+  if (cached === undefined) {
+    cached = key.replace(UPPERCASE_RE, (m) => '-' + m.toLowerCase());
+    STYLE_KEY_CACHE.set(key, cached);
+  }
+  return cached;
+}
+
 function styleToString(style: Record<string, any>): string {
   const parts: string[] = [];
   for (const key in style) {
     const value = style[key];
     if (!isDef(value) || value === '') continue;
-    // Convert camelCase to kebab-case.
-    const cssKey = key.replace(/[A-Z]/g, (m) => '-' + m.toLowerCase());
-    parts.push(`${cssKey}:${value}`);
+    parts.push(`${toKebabCase(key)}:${value}`);
   }
   return parts.join(';');
 }
@@ -232,15 +247,27 @@ export function renderJsxToString(
 ): string {
   const mode = options?.mode ?? 'pretty';
   const isPretty = mode === 'pretty';
-  const blockSet = new Set(DEFAULT_BLOCK_ELEMENTS);
-  if (options?.blockElements) {
+  // In minimal mode `blockSet` is unused (the `isPretty` guard short-circuits
+  // any `.has()` call). In pretty mode without custom block elements, reuse the
+  // module-level Set instead of allocating a copy.
+  let blockSet: ReadonlySet<string> = DEFAULT_BLOCK_ELEMENTS;
+  if (isPretty && options?.blockElements && options.blockElements.length > 0) {
+    const merged = new Set(DEFAULT_BLOCK_ELEMENTS);
     for (const el of options.blockElements) {
-      blockSet.add(el);
+      merged.add(el);
     }
+    blockSet = merged;
   }
 
   // Context stacks: context.__c (id) -> value[]
   const contextStacks = new Map<string, any[]>();
+
+  // Version counter that bumps whenever a context value is pushed or popped.
+  // `buildGlobalContext` uses it to skip rebuilding when nothing changed
+  // between sibling component renders (the common case).
+  let ctxVersion = 0;
+  let cachedGlobalCtx: Record<string, any> = EMPTY_GLOBAL_CTX;
+  let cachedGlobalCtxVersion = 0;
 
   function pushCtx(contextId: string, value: any) {
     let stack = contextStacks.get(contextId);
@@ -249,14 +276,22 @@ export function renderJsxToString(
       contextStacks.set(contextId, stack);
     }
     stack.push(value);
+    ctxVersion++;
   }
 
   function popCtx(contextId: string) {
     contextStacks.get(contextId)?.pop();
+    ctxVersion++;
   }
 
   /** Builds the __n (global context) map for hooks. */
   function buildGlobalContext(): Record<string, any> {
+    if (ctxVersion === cachedGlobalCtxVersion) return cachedGlobalCtx;
+    if (contextStacks.size === 0) {
+      cachedGlobalCtx = EMPTY_GLOBAL_CTX;
+      cachedGlobalCtxVersion = ctxVersion;
+      return cachedGlobalCtx;
+    }
     const globalCtx: Record<string, any> = {};
     for (const [contextId, stack] of contextStacks) {
       if (stack.length > 0) {
@@ -267,6 +302,8 @@ export function renderJsxToString(
         };
       }
     }
+    cachedGlobalCtx = globalCtx;
+    cachedGlobalCtxVersion = ctxVersion;
     return globalCtx;
   }
 
@@ -275,7 +312,13 @@ export function renderJsxToString(
     if (typeof node === 'string') return escapeHtml(node);
     if (typeof node === 'number' || typeof node === 'bigint')
       return String(node);
-    if (Array.isArray(node)) return node.map((n) => render(n, inline)).join('');
+    if (Array.isArray(node)) {
+      let out = '';
+      for (let i = 0; i < node.length; i++) {
+        out += render(node[i], inline);
+      }
+      return out;
+    }
 
     // Must be a VNode-like object.
     if (typeof node !== 'object' || !('type' in node)) return '';
@@ -511,7 +554,11 @@ export function renderJsxToString(
     if (!isDef(children)) return '';
     if (Array.isArray(children)) {
       const inline = isPretty && hasMixedContent(children);
-      return children.map((child) => render(child, inline)).join('');
+      let out = '';
+      for (let i = 0; i < children.length; i++) {
+        out += render(children[i], inline);
+      }
+      return out;
     }
     return render(children);
   }

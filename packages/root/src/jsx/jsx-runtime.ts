@@ -99,18 +99,20 @@ export function jsx(
   props: Record<string, any>,
   key?: Key
 ): VNode {
-  const resolvedKey = key !== undefined ? key : props.key ?? null;
+  const propsKey = props.key;
+  // `key` is stored on the VNode directly; strip it from props when present so
+  // it doesn't leak into rendered attributes.
+  let finalProps = props;
+  if (propsKey !== undefined) {
+    const {key: _, ...rest} = props;
+    finalProps = rest;
+  }
+
   const vnode: VNode = {
     type,
-    props,
-    key: resolvedKey,
+    props: finalProps,
+    key: key !== undefined ? key : propsKey ?? null,
   };
-
-  // Strip `key` from props (it's stored on the VNode directly).
-  if (props.key !== undefined) {
-    const {key: _, ...rest} = props;
-    vnode.props = rest;
-  }
 
   if (options.vnode) {
     options.vnode(vnode);
