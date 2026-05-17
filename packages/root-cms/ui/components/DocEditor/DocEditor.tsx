@@ -38,7 +38,6 @@ import {
   IconSearch,
   IconTrash,
   IconTriangleFilled,
-  IconSparkles,
 } from '@tabler/icons-preact';
 import {createContext} from 'preact';
 import {
@@ -278,9 +277,7 @@ DocEditor.StatusBar = (props: StatusBarProps) => {
   });
   const [aiActive, setAiActive] = useState(() => {
     try {
-      const val = window.localStorage.getItem(
-        'root::DocumentPage::aiVisible'
-      );
+      const val = window.localStorage.getItem('root::DocumentPage::aiVisible');
       return val ? JSON.parse(val) === true : false;
     } catch {
       return false;
@@ -344,66 +341,77 @@ DocEditor.StatusBar = (props: StatusBarProps) => {
           <DocStatusBadges
             doc={data as CMSDoc}
             docId={props.docId}
-            onPublishingLockClick={
-              canEdit ? onPublishingLockClick : undefined
-            }
+            onPublishingLockClick={canEdit ? onPublishingLockClick : undefined}
           />
         </div>
       )}
-      <div className="DocEditor__statusBar__search">
-        <Tooltip
-          label="Advanced search (⌘ + Shift + f)"
-          transition="pop"
-          withArrow
-        >
-          <Button
-            className={searchActive ? 'DocEditor__searchButton--active' : ''}
-            variant="default"
-            color="dark"
-            size="xs"
-            leftIcon={<IconSearch size={16} />}
-            onClick={() => {
-              window.dispatchEvent(new CustomEvent('root:toggle-search'));
-            }}
-          >
-            Search
-          </Button>
-        </Tooltip>
-      </div>
-      {(window.__ROOT_CTX.checks || []).length > 0 && (
-        <div className="DocEditor__statusBar__checks">
-          <Button
-            className={checksActive ? 'DocEditor__checksButton--active' : ''}
-            variant="default"
-            color="dark"
-            size="xs"
-            leftIcon={<IconListCheck size={16} />}
-            onClick={() => {
-              window.dispatchEvent(new CustomEvent('root:toggle-checks'));
-            }}
-          >
-            Checks
-          </Button>
-        </div>
-      )}
-      {aiAvailable && (
-        <div className="DocEditor__statusBar__ai">
-          <Tooltip label="Root AI (⌘ + i)" transition="pop" withArrow>
+      <div className="DocEditor__statusBar__buttonGroup">
+        <div className="DocEditor__statusBar__search">
+          <Tooltip label="⌘ + Shift + f" transition="pop" withArrow>
             <Button
-              className={aiActive ? 'DocEditor__aiButton--active' : ''}
+              className={joinClassNames(
+                'DocEditor__statusBar__buttonGroup__button',
+                searchActive
+                  ? 'DocEditor__statusBar__buttonGroup__button--active'
+                  : ''
+              )}
               variant="default"
               color="dark"
               size="xs"
-              leftIcon={<IconRobot size={16} />}
+              leftIcon={<IconSearch size={16} />}
               onClick={() => {
-                window.dispatchEvent(new CustomEvent('root:toggle-ai'));
+                window.dispatchEvent(new CustomEvent('root:toggle-search'));
               }}
             >
-              AI
+              Search
             </Button>
           </Tooltip>
         </div>
-      )}
+        {(window.__ROOT_CTX.checks || []).length > 0 && (
+          <div className="DocEditor__statusBar__checks">
+            <Button
+              className={joinClassNames(
+                'DocEditor__statusBar__buttonGroup__button',
+                checksActive
+                  ? 'DocEditor__statusBar__buttonGroup__button--active'
+                  : ''
+              )}
+              variant="default"
+              color="dark"
+              size="xs"
+              leftIcon={<IconListCheck size={16} />}
+              onClick={() => {
+                window.dispatchEvent(new CustomEvent('root:toggle-checks'));
+              }}
+            >
+              Checks
+            </Button>
+          </div>
+        )}
+        {aiAvailable && (
+          <div className="DocEditor__statusBar__ai">
+            <Tooltip label="⌘ + i" transition="pop" withArrow>
+              <Button
+                className={joinClassNames(
+                  'DocEditor__statusBar__buttonGroup__button',
+                  aiActive
+                    ? 'DocEditor__statusBar__buttonGroup__button--active'
+                    : ''
+                )}
+                variant="default"
+                color="dark"
+                size="xs"
+                leftIcon={<IconRobot size={16} />}
+                onClick={() => {
+                  window.dispatchEvent(new CustomEvent('root:toggle-ai'));
+                }}
+              >
+                Root AI
+              </Button>
+            </Tooltip>
+          </div>
+        )}
+      </div>
       <div className="DocEditor__statusBar__i18n">
         <Button
           variant="default"
@@ -1531,7 +1539,11 @@ DocEditor.ArrayField = (props: FieldProps) => {
                         <details
                           className="DocEditor__ArrayField__item"
                           key={key}
-                          open={newlyAdded.includes(key) || itemInDeeplink(key) || !!field.defaultOpen}
+                          open={
+                            newlyAdded.includes(key) ||
+                            itemInDeeplink(key) ||
+                            !!field.defaultOpen
+                          }
                           onToggle={(e) => {
                             if ((e.target as HTMLDetailsElement).open) {
                               requestHighlightNode(
