@@ -1,5 +1,6 @@
 import {schema} from '@blinkk/root-cms';
 import EmojiSchema from '@/components/Emoji/Emoji.schema.js';
+import {richTextWithBlocksField} from '@/fields/richTextWithBlocksField.js';
 
 export default schema.collection({
   name: 'BlogPosts',
@@ -82,9 +83,35 @@ export default schema.collection({
           ],
         }),
         schema.array({
+          id: 'sections',
+          label: 'Sections',
+          preview: ['{title} #{id}', '#{id}', '{title}'],
+          of: schema.object({
+            fields: [
+              schema.string({
+                id: 'id',
+                label: 'ID',
+                help: 'Used for deep linking, tracking, etc.',
+              }),
+              schema.string({
+                id: 'title',
+                label: 'Title',
+                help: 'Main headline title.',
+                translate: true,
+                variant: 'textarea',
+              }),
+              richTextWithBlocksField({
+                id: 'body',
+                label: 'Body copy',
+                exclude: ['CopyBlock'],
+              }),
+            ],
+          }),
+        }),
+        schema.array({
           id: 'blocks',
           label: 'Content blocks',
-          help: 'Add blocks to embed various content types to the blog.',
+          help: 'Deprecated. Use "sections" instead.',
           defaultOpen: true,
           of: schema.oneOf({
             types: schema.glob('/blocks/*/*.schema.ts'),
@@ -94,6 +121,7 @@ export default schema.collection({
             'm{_index:02}: {_type}',
             'm{_index:02}',
           ],
+          deprecated: true,
         }),
       ],
     }),

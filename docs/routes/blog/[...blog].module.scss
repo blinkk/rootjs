@@ -18,21 +18,36 @@
   margin-top: 10px;
 }
 
-.body {
-  h2 {
-    margin-top: 40px;
-  }
+.sectionTitle {
+  margin-top: 40px;
+  margin-bottom: 20px;
+}
 
-  .block\:ImageBlock {
-    margin-top: 40px;
-    margin-bottom: 40px;
-  }
-
+.body,
+.sectionBody {
   > *:first-child {
     margin-top: 0;
   }
 
   > *:last-child {
     margin-bottom: 0;
+  }
+
+  p {
+    margin-top: 10px;
+  }
+
+  a:not([class]) {
+    text-underline-offset: 4px;
+  }
+
+  :global(.CodeBlock) {
+    margin-top: 20px;
+    margin-bottom: 20px;
+  }
+
+  :global(.ImageBlock) {
+    margin-top: 20px;
+    margin-bottom: 20px;
   }
 }

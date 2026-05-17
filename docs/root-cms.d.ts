@@ -72,7 +72,19 @@ export interface BlogPostsFields {
   content?: {
     /** Main content body. Top content body. */
     body?: RootCMSRichText;
-    /** Content blocks. Add blocks to embed various content types to the blog. */
+    /** Sections */
+    sections?: {
+      /** ID. Used for deep linking, tracking, etc. */
+      id?: string;
+      /** Title. Main headline title. */
+      title?: string;
+      /** Body copy */
+      body?: RootCMSRichText;
+    }[];
+    /**
+     * Content blocks. Deprecated. Use 'sections' instead.
+     * @deprecated
+    */
     blocks?: RootCMSOneOf<RootCMSOneOfOption<'ButtonsBlock', ButtonsBlockFields> | RootCMSOneOfOption<'CodeBlock', CodeBlockFields> | RootCMSOneOfOption<'CopyBlock', CopyBlockFields> | RootCMSOneOfOption<'ImageBlock', ImageBlockFields>>[];
   };
 }
