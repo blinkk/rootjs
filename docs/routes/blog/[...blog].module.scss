@@ -41,6 +41,14 @@
     text-underline-offset: 4px;
   }
 
+  code {
+    border: 1px solid #DADCE0;
+    background: #F8F9FA;
+    padding: 2px 4px;
+    border-radius: 4px;
+    font-size: 13px;
+  }
+
   :global(.CodeBlock) {
     margin-top: 20px;
     margin-bottom: 20px;

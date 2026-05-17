@@ -1,9 +1,10 @@
 import {useTranslations} from '@blinkk/root';
-import {Image, ImageProps} from '@/components/Image/Image';
-import {Text} from '@/components/Text/Text';
-import {useImageService} from '@/hooks/useImageService';
-import {ImageBlockFields} from '@/root-cms';
-import {joinClassNames} from '@/utils/classes';
+import {CSSProperties} from 'preact/compat';
+import {Image, ImageProps} from '@/components/Image/Image.js';
+import {Text} from '@/components/Text/Text.js';
+import {useImageService} from '@/hooks/useImageService.js';
+import {ImageBlockFields} from '@/root-cms.js';
+import {joinClassNames} from '@/utils/classes.js';
 import styles from './ImageBlock.module.scss';
 
 export type ImageBlockProps = ImageBlockFields & {
@@ -25,13 +26,20 @@ export function ImageBlock(props: ImageBlockProps) {
     imageWrapperProps.href = imageSrc;
     imageWrapperProps.target = '_blank';
   }
+  const inlineStyles: CSSProperties = {};
+  if (props.advanced?.maxWidth) {
+    inlineStyles['--image-max-width'] = props.advanced.maxWidth;
+  }
+
   return (
     <figure
       className={joinClassNames(
         props.className,
         styles.imageBlock,
+        props.advanced?.bordered && styles.bordered,
         ...options.map((option) => styles[option])
       )}
+      style={inlineStyles}
     >
       <ImageWrapper {...imageWrapperProps}>
         <Image {...(props.image as ImageProps)} />

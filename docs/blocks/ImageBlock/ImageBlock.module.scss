@@ -8,6 +8,10 @@
     padding: 0;
   }
 
+  .imageBlock img {
+    max-width: var(--image-max-width, 100%);
+  }
+
   .caption {
     text-align: center;
     margin-top: 20px;
@@ -27,5 +31,9 @@
 
   .pad-0 img {
     padding: 0;
+  }
+
+  .centered img {
+    margin: 0 auto;
   }
 }
