@@ -7,14 +7,16 @@ export type CodeBlockProps = CodeBlockFields & {
 };
 
 export function CodeBlock(props: CodeBlockProps) {
+  let languageLabel = props.language;
+  if (languageLabel === 'bash') {
+    languageLabel = 'sh';
+  }
   return (
     <root-code
       className={joinClassNames(props.className, styles.codeBlock)}
       data-language={props.language}
     >
-      {props.language && (
-        <div className={styles.language}>{props.language}</div>
-      )}
+      {languageLabel && <div className={styles.language}>{languageLabel}</div>}
       <pre>
         <code>{props.code || ''}</code>
       </pre>
