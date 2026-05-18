@@ -23,6 +23,7 @@ import {runCronJobs} from './cron.js';
 import {arrayToCsv, csvToArray} from './csv.js';
 import {SearchIndexService, RebuildResult} from './search-index.js';
 import {type CMSTranslationService} from './translations.js';
+import {assertPublicHttpUrl, UnsafeUrlError} from './url-safety.js';
 
 type AppModule = typeof import('./app.js');
 
@@ -453,6 +454,7 @@ export function api(server: Server, options: ApiOptions) {
 
     if (!req.user?.email) {
       res.status(401).json({success: false, error: 'UNAUTHORIZED'});
+      return;
     }
 
     const reqBody = req.body || {};
@@ -463,7 +465,7 @@ export function api(server: Server, options: ApiOptions) {
     }
     const cmsClient = new RootCMSClient(req.rootConfig!);
     try {
-      await cmsClient.syncDataSource(dataSourceId, {syncedBy: req.user!.email});
+      await cmsClient.syncDataSource(dataSourceId, {syncedBy: req.user.email});
       res.status(200).json({success: true, id: dataSourceId});
     } catch (err) {
       console.error(err.stack || err);
@@ -485,6 +487,7 @@ export function api(server: Server, options: ApiOptions) {
 
     if (!req.user?.email) {
       res.status(401).json({success: false, error: 'UNAUTHORIZED'});
+      return;
     }
 
     const reqBody = req.body || {};
@@ -495,13 +498,14 @@ export function api(server: Server, options: ApiOptions) {
         error: 'MISSING_REQUIRED_FIELD',
         field: 'action',
       });
+      return;
     }
     const metadata = reqBody.metadata || {};
 
     const cmsClient = new RootCMSClient(req.rootConfig!);
     try {
       await cmsClient.logAction(action, {
-        by: req.user?.email,
+        by: req.user.email,
         metadata: metadata,
         links: reqBody.links,
       });
@@ -711,6 +715,19 @@ export function api(server: Server, options: ApiOptions) {
         });
         return;
       }
+      // Validate against SSRF: the Vercel AI SDK may fetch URL-typed images
+      // server-side before forwarding to the provider, so an attacker-supplied
+      // URL pointed at a private/metadata address would be fetched from the
+      // CMS host's network.
+      try {
+        await assertPublicHttpUrl(imageUrl);
+      } catch (err) {
+        if (err instanceof UnsafeUrlError) {
+          res.status(400).json({success: false, error: 'INVALID_IMAGE_URL'});
+          return;
+        }
+        throw err;
+      }
       try {
         const altText = await generateAltText(req.rootConfig!, {imageUrl});
         res.status(200).json({success: true, altText});
@@ -775,6 +792,27 @@ export function api(server: Server, options: ApiOptions) {
         : undefined;
 
     const cmsClient = new RootCMSClient(req.rootConfig!);
+    // Require the user to have an assigned role on this project. Write tools
+    // dispatched by the model are gated client-side by Firestore rules, but
+    // we still want to deny AI access to ACL'd users with no role and to
+    // restrict auto-apply execution to publishers.
+    try {
+      const role = await cmsClient.getUserRole(req.user.email);
+      if (!role) {
+        res.status(403).json({success: false, error: 'FORBIDDEN'});
+        return;
+      }
+      if (executionMode === 'auto' && role !== 'ADMIN' && role !== 'EDITOR') {
+        res
+          .status(403)
+          .json({success: false, error: 'AUTO_MODE_REQUIRES_EDITOR'});
+        return;
+      }
+    } catch (err) {
+      console.error('failed to resolve user role:', err);
+      res.status(500).json({success: false, error: 'UNKNOWN'});
+      return;
+    }
     const store = new ChatStore(cmsClient, req.user.email);
     const requestedChatId =
       typeof body.chatId === 'string' ? body.chatId.trim() : '';
@@ -906,10 +944,23 @@ export function api(server: Server, options: ApiOptions) {
         return;
       }
 
+      const editCmsClient = new RootCMSClient(req.rootConfig!);
+      try {
+        const role = await editCmsClient.getUserRole(req.user.email);
+        if (!role) {
+          res.status(403).json({success: false, error: 'FORBIDDEN'});
+          return;
+        }
+      } catch (err) {
+        console.error('failed to resolve user role:', err);
+        res.status(500).json({success: false, error: 'UNKNOWN'});
+        return;
+      }
+
       try {
         const streamResponse = await runEditObjectStream({
           rootConfig: req.rootConfig!,
-          cmsClient: new RootCMSClient(req.rootConfig!),
+          cmsClient: editCmsClient,
           user: req.user.email,
           config: aiConfig,
           model,

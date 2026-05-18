@@ -271,13 +271,22 @@ SignIn.GLogo = () => (
 
 function loginSuccessRedirect() {
   const params = new URLSearchParams(window.location.search);
-  let redirectUrl = params.get('continue');
-  if (
-    !redirectUrl ||
-    !redirectUrl.startsWith('/') ||
-    redirectUrl.startsWith('/cms/login')
-  ) {
-    redirectUrl = '/cms';
+  const continueParam = params.get('continue') || '';
+  let redirectUrl = '/cms';
+  // Resolve the continue value against the current origin and only honor
+  // it if the result stays on this origin. This rejects absolute URLs
+  // (`https://evil/`), protocol-relative URLs (`//evil`), and backslash
+  // tricks that would otherwise pass a simple `startsWith('/')` check.
+  try {
+    const parsed = new URL(continueParam, window.location.origin);
+    if (
+      parsed.origin === window.location.origin &&
+      !parsed.pathname.startsWith('/cms/login')
+    ) {
+      redirectUrl = parsed.pathname + parsed.search + parsed.hash;
+    }
+  } catch {
+    // Fall through to the default.
   }
   window.location.replace(redirectUrl);
 }
