@@ -1,5 +1,4 @@
 @use 'breakpoints';
-@use 'tokens';
 
 .content {
   padding: 60px 0 120px;
@@ -11,7 +10,19 @@
 }
 
 .headline {
+  text-wrap: pretty;
   margin-bottom: 40px;
+}
+
+.headlineLink {
+  color: inherit;
+  text-decoration: none;
+
+  &:hover,
+  &:focus-visible {
+    text-decoration: underline;
+    text-underline-offset: 6px;
+  }
 }
 
 .headlinePublishDate {

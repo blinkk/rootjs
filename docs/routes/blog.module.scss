@@ -1,0 +1,22 @@
+.content {
+  padding: 60px 0 120px;
+}
+
+.title {
+  max-width: 800px;
+  margin: 0 auto 20px;
+}
+
+.posts {
+  display: grid;
+}
+
+.post {
+  padding-top: 56px;
+  padding-bottom: 72px;
+  border-top: 1px solid #DADCE0;
+
+  &:first-child {
+    border-top: 0;
+  }
+}
