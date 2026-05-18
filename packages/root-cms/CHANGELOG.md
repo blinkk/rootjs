@@ -1,5 +1,12 @@
 # @blinkk/root-cms
 
+## 3.0.1-beta.7
+
+### Patch Changes
+
+- 3952727d: fix: improve doc editor rendering performance
+  - @blinkk/root@3.0.1-beta.7
+
 ## 3.0.1-beta.6
 
 ### Patch Changes
