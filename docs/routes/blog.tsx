@@ -5,6 +5,7 @@ import {Container} from '@/components/Container/Container.js';
 import {Text} from '@/components/Text/Text.js';
 import {BaseLayout} from '@/layouts/BaseLayout.js';
 import {BlogPostsDoc} from '@/root-cms.js';
+import {joinClassNames} from '@/utils/classes.js';
 import styles from './blog.module.scss';
 
 interface PageProps {
@@ -22,7 +23,11 @@ export default function Page(props: PageProps) {
     <BaseLayout title="Blog">
       <Container>
         <div className={styles.content}>
-          <Text as="h1" size="h2" className={styles.title}>
+          <Text
+            as="h1"
+            size="h2"
+            className={joinClassNames(styles.title, 'sr-only')}
+          >
             Blog
           </Text>
           <div className={styles.posts}>
