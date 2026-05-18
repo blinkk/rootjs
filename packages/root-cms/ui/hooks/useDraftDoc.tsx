@@ -184,6 +184,16 @@ export class DraftDocController extends EventListener {
     return this.store.subscribe(key, callback);
   }
 
+  /**
+   * Subscribes to changes within a given key's subtree.
+   */
+  subscribeSubtree(
+    key: string,
+    callback: SubscribeCallback
+  ): UnsubscribeCallback {
+    return this.store.subscribeSubtree(key, callback);
+  }
+
   getData(): CMSDoc | null {
     return this.store.getDataSnapshot() as CMSDoc | null;
   }

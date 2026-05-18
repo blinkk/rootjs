@@ -18,6 +18,7 @@ export enum JsonTrieStoreEventType {
  */
 class TrieNode {
   public subscribers: Set<SubscribeCallback> = new Set();
+  public subtreeSubscribers: Set<SubscribeCallback> = new Set();
   public children: Map<string, TrieNode> = new Map();
 }
 
@@ -66,10 +67,10 @@ export class JsonTrieStore extends EventListener {
    * the new data for those paths.
    */
   public update(updates: Record<string, any>) {
-    const pathsToNotify = new Set<{path: string; value: any}>();
+    const pathsToNotify = new Map<string, any>();
 
     const addPathToNotify = (path: string, oldValue: any, newValue: any) => {
-      pathsToNotify.add({path, value: newValue});
+      pathsToNotify.set(path, newValue);
       // Add child paths.
       if (isObject(oldValue) && isObject(newValue)) {
         Object.entries(newValue).forEach(([key, childValue]) => {
@@ -107,12 +108,22 @@ export class JsonTrieStore extends EventListener {
       addPathToNotify(path, oldValue, newValue);
     });
 
+    const subtreeNodesToNotify = new Map<string, TrieNode>();
+    pathsToNotify.forEach((_value, path) => {
+      this.collectSubtreeNotifications(path, subtreeNodesToNotify);
+    });
+
     // Trigger notifications for all affected paths.
-    pathsToNotify.forEach((item) => {
-      const node = this.getTrieNode(item.path);
+    pathsToNotify.forEach((value, path) => {
+      const node = this.getTrieNode(path);
       if (node && node.subscribers.size > 0) {
-        node.subscribers.forEach((cb) => cb(item.value));
+        node.subscribers.forEach((cb) => cb(value));
       }
+    });
+
+    subtreeNodesToNotify.forEach((node, path) => {
+      const value = this.get(path);
+      node.subtreeSubscribers.forEach((cb) => cb(value));
     });
 
     // Notify subscribers on the root that data has changed.
@@ -157,6 +168,29 @@ export class JsonTrieStore extends EventListener {
   }
 
   /**
+   * Subscribes a callback to changes anywhere within a path's subtree.
+   * @param path The dot-notation path to watch for descendant changes.
+   * @param callback The function to execute with the full value at the path.
+   * @returns A function to unsubscribe the callback.
+   */
+  public subscribeSubtree(
+    path: string,
+    callback: SubscribeCallback
+  ): UnsubscribeCallback {
+    const node = this.getTrieNode(path, true)!;
+    node.subtreeSubscribers.add(callback);
+    window.setTimeout(() => {
+      const value = this.get(path);
+      if (value !== undefined) {
+        callback(value);
+      }
+    });
+    return () => {
+      node.subtreeSubscribers.delete(callback);
+    };
+  }
+
+  /**
    * Returns the current stored data.
    */
   public getDataSnapshot(): Record<string, any> {
@@ -173,6 +207,7 @@ export class JsonTrieStore extends EventListener {
     // By clearing the root's children and subscribers, we allow the garbage
     // collector to reclaim the memory used by the entire trie.
     this.root.subscribers.clear();
+    this.root.subtreeSubscribers.clear();
     this.root.children.clear();
   }
 
@@ -190,11 +225,36 @@ export class JsonTrieStore extends EventListener {
     const newValue = this.getValueFromPath(path, newData);
     if (!deepEqual(oldValue, newValue)) {
       node.subscribers.forEach((callback) => callback(newValue));
+      node.subtreeSubscribers.forEach((callback) => callback(newValue));
     }
     node.children.forEach((childNode, key) => {
       const newPath = path ? `${path}.${key}` : key;
       this.notifyOnUpdate(childNode, newPath, oldData, newData);
     });
+  }
+
+  private collectSubtreeNotifications(
+    path: string,
+    nodesToNotify: Map<string, TrieNode>
+  ) {
+    let currentNode: TrieNode | undefined = this.root;
+    if (currentNode.subtreeSubscribers.size > 0) {
+      nodesToNotify.set('', currentNode);
+    }
+    if (!path) {
+      return;
+    }
+    let currentPath = '';
+    for (const key of path.split('.')) {
+      currentNode = currentNode.children.get(key);
+      if (!currentNode) {
+        return;
+      }
+      currentPath = currentPath ? `${currentPath}.${key}` : key;
+      if (currentNode.subtreeSubscribers.size > 0) {
+        nodesToNotify.set(currentPath, currentNode);
+      }
+    }
   }
 
   private getValueFromPath(path: string, source: Record<string, any>): any {
