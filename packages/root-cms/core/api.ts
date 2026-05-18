@@ -788,11 +788,24 @@ export function api(server: Server, options: ApiOptions) {
       } else {
         // Honor the client-supplied id so a single chat session keeps the
         // same Firestore doc id even before the first response is saved.
-        const created = await store.createChat({
-          id: requestedChatId,
-          modelId: model.id,
-        });
-        chatId = created.id;
+        // `createChat` uses Firestore `create`, which fails if the id is
+        // already in use (e.g. the chat exists but is owned by another user
+        // — in which case `getChat` returned null above).
+        try {
+          const created = await store.createChat({
+            id: requestedChatId,
+            modelId: model.id,
+          });
+          chatId = created.id;
+        } catch (err: any) {
+          if (err?.code === 6 /* ALREADY_EXISTS */) {
+            res
+              .status(409)
+              .json({success: false, error: 'CHAT_ID_CONFLICT'});
+            return;
+          }
+          throw err;
+        }
       }
     } else {
       const created = await store.createChat({modelId: model.id});

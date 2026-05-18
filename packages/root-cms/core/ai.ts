@@ -329,7 +329,9 @@ export class ChatStore {
       modelId: options?.modelId,
       messages: [],
     };
-    await this.collection().doc(id).set(record);
+    // Use `create` rather than `set` so a client-supplied id cannot overwrite
+    // an existing chat owned by another user. Firestore throws on conflict.
+    await this.collection().doc(id).create(record);
     return record;
   }
 

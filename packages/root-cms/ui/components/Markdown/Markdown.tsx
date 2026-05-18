@@ -1,5 +1,9 @@
 import {marked} from 'marked';
 
+import {
+  sanitizeBlockHtml,
+  sanitizeInlineHtml,
+} from '../../../shared/sanitize.js';
 import {joinClassNames} from '../../utils/classes.js';
 
 interface MarkdownProps {
@@ -10,8 +14,15 @@ interface MarkdownProps {
 
 export function Markdown(props: MarkdownProps) {
   const code = props.code || '';
-  // TODO(stevenle): sanitize so it only accepts basic formatting and links.
-  const html = props.inline ? marked.parseInline(code) : marked.parse(code);
+  const rawHtml = props.inline
+    ? marked.parseInline(code)
+    : marked.parse(code);
+  const html =
+    typeof rawHtml === 'string'
+      ? props.inline
+        ? sanitizeInlineHtml(rawHtml)
+        : sanitizeBlockHtml(rawHtml)
+      : '';
   return (
     <div
       className={joinClassNames('Markdown', props.className)}

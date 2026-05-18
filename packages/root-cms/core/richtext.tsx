@@ -2,6 +2,10 @@ import {StringParamsProvider, useTranslations} from '@blinkk/root';
 import {Component, FunctionalComponent, createContext} from 'preact';
 import {useContext} from 'preact/hooks';
 import {renderToString} from 'preact-render-to-string';
+import {
+  sanitizeBlockHtml,
+  sanitizeInlineHtml,
+} from '../shared/sanitize.js';
 
 export interface RichTextBlock {
   type: string;
@@ -152,7 +156,7 @@ RichText.ParagraphBlock = (props: RichTextParagraphBlockProps) => {
     return null;
   }
   const t = useRichTextTranslations();
-  const html = t(props.data.text);
+  const html = sanitizeInlineHtml(t(props.data.text));
   return <p dangerouslySetInnerHTML={{__html: html}} />;
 };
 
@@ -173,7 +177,7 @@ RichText.HeadingBlock = (props: RichTextHeadingBlockProps) => {
   const t = useRichTextTranslations();
   const level = props.data.level || 2;
   const Component = `h${level}` as HeadingComponent;
-  const html = t(props.data.text);
+  const html = sanitizeInlineHtml(t(props.data.text));
   return <Component dangerouslySetInnerHTML={{__html: html}} />;
 };
 
@@ -263,7 +267,7 @@ export interface RichTextHtmlBlockProps {
 
 RichText.HtmlBlock = (props: RichTextHtmlBlockProps) => {
   const t = useRichTextTranslations();
-  const html = t(props.data?.html || '');
+  const html = sanitizeBlockHtml(t(props.data?.html || ''));
   if (!html) {
     return null;
   }

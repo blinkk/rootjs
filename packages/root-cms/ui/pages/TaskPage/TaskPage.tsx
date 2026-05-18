@@ -32,6 +32,7 @@ import {
   RichTextData,
   RichTextListItem,
 } from '../../../shared/richtext.js';
+import {sanitizeInlineHtml} from '../../../shared/sanitize.js';
 import {Heading} from '../../components/Heading/Heading.js';
 import {Markdown} from '../../components/Markdown/Markdown.js';
 import {Surface} from '../../components/Surface/Surface.js';
@@ -1098,14 +1099,22 @@ function TaskRichTextHtml(props: {
     return null;
   }
   const Component = props.tag;
-  return <Component dangerouslySetInnerHTML={{__html: props.html}} />;
+  return (
+    <Component
+      dangerouslySetInnerHTML={{__html: sanitizeInlineHtml(props.html)}}
+    />
+  );
 }
 
 function TaskRichTextListItem(props: {item: RichTextListItem}) {
   return (
     <li>
       {props.item.content && (
-        <span dangerouslySetInnerHTML={{__html: props.item.content}} />
+        <span
+          dangerouslySetInnerHTML={{
+            __html: sanitizeInlineHtml(props.item.content),
+          }}
+        />
       )}
       {props.item.items && props.item.items.length > 0 && (
         <ul>
