@@ -61,7 +61,6 @@ import {
 import {
   DraftDocContext,
   DraftDocController,
-  DraftDocEventType,
   SaveState,
   useDraftDoc,
   useDraftDocField,
@@ -443,7 +442,7 @@ DocEditor.StatusBar = (props: StatusBarProps) => {
           </Button>
         ) : testIsScheduled(data as CMSDoc) ? (
           <Tooltip
-            label={`Scheduled ${formatDateTime(data.sys!.scheduledAt)} by ${
+            label={`Scheduled ${formatDateTime(data.sys!.scheduledAt!)} by ${
               data.sys!.scheduledBy
             }`}
             transition="pop"
@@ -515,13 +514,35 @@ DocEditor.SaveState = () => {
 };
 
 DocEditor.Field = (props: FieldProps) => {
+  if (props.field.deprecated) {
+    return <DocEditor.DeprecatedField {...props} />;
+  }
+  return <DocEditor.FieldBody {...props} />;
+};
+
+/** Renders deprecated fields only when existing data still needs editing. */
+DocEditor.DeprecatedField = (props: FieldProps) => {
+  const [fieldValueEmpty, setFieldValueEmpty] = useState(true);
+  const types = useCollectionSchemaTypes();
+
+  useDraftDocField(props.deepKey, (newValue: any) => {
+    setFieldValueEmpty(testFieldEmpty(props.field, newValue, types));
+  });
+
+  if (fieldValueEmpty) {
+    return null;
+  }
+
+  return <DocEditor.FieldBody {...props} />;
+};
+
+/** Renders a field after visibility checks have already passed. */
+DocEditor.FieldBody = (props: FieldProps) => {
   const field = props.field;
   const level = props.level ?? 0;
   const deeplink = useDeeplink();
   const targeted = deeplink.value === props.deepKey;
   const ref = useRef<HTMLDivElement>(null);
-  const [fieldValueEmpty, setFieldValueEmpty] = useState(true);
-  const types = useCollectionSchemaTypes();
 
   const showFieldHeader = useMemo(() => {
     if (field.type === 'object') {
@@ -534,20 +555,11 @@ DocEditor.Field = (props: FieldProps) => {
     return !props.hideHeader && !field.hideLabel;
   }, [props.hideHeader, field]);
 
-  useDraftDocField(props.deepKey, (newValue: any) => {
-    setFieldValueEmpty(testFieldEmpty(field, newValue, types));
-  });
-
   useEffect(() => {
     if (targeted) {
       scrollToDeeplink(ref.current!);
     }
   }, [targeted]);
-
-  // Hide deprecated fields that are empty.
-  if (field.deprecated && fieldValueEmpty) {
-    return null;
-  }
 
   return (
     <div
@@ -606,17 +618,12 @@ DocEditor.Field = (props: FieldProps) => {
 DocEditor.FieldHeader = (props: FieldProps & {className?: string}) => {
   const field = props.field;
   const label = field.label || field.id;
-  const [value, setValue] = useState<any>(null);
 
   const deeplink = useDeeplink();
   const deeplinkUrl = useMemo(
     () => buildDeeplinkUrl(props.deepKey || ''),
     [props.deepKey]
   );
-
-  useDraftDocField(props.deepKey, (value: any) => {
-    setValue(value);
-  });
 
   return (
     <div className={joinClassNames(props.className, 'DocEditor__FieldHeader')}>
@@ -647,7 +654,6 @@ DocEditor.FieldHeader = (props: FieldProps & {className?: string}) => {
       )}
       <DocEditor.FieldHeaderTranslationsActionIcon
         field={field}
-        value={value}
         deepKey={props.deepKey}
       />
     </div>
@@ -656,7 +662,6 @@ DocEditor.FieldHeader = (props: FieldProps & {className?: string}) => {
 
 interface FieldHeaderTranslationsActionIconProps {
   field: schema.Field;
-  value: any;
   deepKey: string;
 }
 
@@ -681,30 +686,37 @@ DocEditor.FieldHeaderTranslationsActionIconInner = (
   props: FieldHeaderTranslationsActionIconProps
 ) => {
   const field = props.field;
-  const value = props.value;
   const editTranslationsModal = useEditTranslationsModal();
   const draft = useDraftDoc();
+  const [value, setValue] = useState<any>(() =>
+    draft.controller.getValue(props.deepKey)
+  );
+
+  useDraftDocField(props.deepKey, (value: any) => {
+    setValue(value);
+  });
 
   const types = useCollectionSchemaTypes();
   const actionIconDisabled = useMemo(
     () => testFieldEmpty(field, value, types),
-    [field, value]
+    [field, types, value]
   );
 
-  // Check for disableTranslations metadata
+  // Check for disableTranslations metadata.
   const [doNotTranslate, setDoNotTranslate] = useState(false);
 
   useEffect(() => {
-    if (props.deepKey && draft.controller) {
-      const metadataKey = getMetadataKey(props.deepKey);
-      const unsubscribe = draft.controller.subscribe(
-        metadataKey,
-        (metadata: any) => {
-          setDoNotTranslate(metadata?.disableTranslations || false);
-        }
-      );
-      return unsubscribe;
+    if (!props.deepKey || !draft.controller) {
+      return;
     }
+    const metadataKey = getMetadataKey(props.deepKey);
+    const unsubscribe = draft.controller.subscribe(
+      metadataKey,
+      (metadata: any) => {
+        setDoNotTranslate(metadata?.disableTranslations || false);
+      }
+    );
+    return unsubscribe;
   }, [props.deepKey, draft.controller]);
 
   return (
@@ -726,7 +738,7 @@ DocEditor.FieldHeaderTranslationsActionIconInner = (
                 strings: translateStrings,
                 l10nSheet: docData?.sys?.l10nSheet,
                 field: {
-                  id: field.id,
+                  id: field.id || props.deepKey,
                   deepKey: props.deepKey,
                 },
                 draft: draft,
@@ -753,7 +765,7 @@ DocEditor.FieldHeaderTranslationsActionIconInner = (
                 strings: translateStrings,
                 l10nSheet: docData?.sys?.l10nSheet,
                 field: {
-                  id: field.id,
+                  id: field.id || props.deepKey,
                   deepKey: props.deepKey,
                 },
                 draft: draft,
@@ -809,7 +821,17 @@ DocEditor.ObjectFieldDrawer = (props: FieldProps) => {
   const iconPosition = inline ? 'left' : 'right';
 
   const deeplink = useDeeplink();
-  const initialOpen = !collapsed || deeplink.value.includes(props.deepKey);
+  const deeplinkOpen = deeplink.value.includes(props.deepKey);
+  const initialOpen = !collapsed || deeplinkOpen;
+  const [open, setOpen] = useState(initialOpen);
+  const [renderFields, setRenderFields] = useState(initialOpen);
+
+  useEffect(() => {
+    if (deeplinkOpen) {
+      setOpen(true);
+      setRenderFields(true);
+    }
+  }, [deeplinkOpen]);
 
   return (
     <div
@@ -820,7 +842,17 @@ DocEditor.ObjectFieldDrawer = (props: FieldProps) => {
     >
       <details
         className="DocEditor__ObjectFieldDrawer__drawer"
-        open={initialOpen}
+        open={open}
+        onToggle={(e) => {
+          if (e.currentTarget !== e.target) {
+            return;
+          }
+          const isOpen = (e.target as HTMLDetailsElement).open;
+          setOpen(isOpen);
+          if (isOpen) {
+            setRenderFields(true);
+          }
+        }}
       >
         <summary
           className={joinClassNames(
@@ -837,15 +869,17 @@ DocEditor.ObjectFieldDrawer = (props: FieldProps) => {
             <IconChevronDown size={16} />
           </div>
         </summary>
-        <div className="DocEditor__ObjectFieldDrawer__drawer__content DocEditor__ObjectFieldDrawer__fields">
-          {field.fields.map((field) => (
-            <DocEditor.Field
-              key={field.id}
-              field={field}
-              deepKey={`${props.deepKey}.${field.id}`}
-            />
-          ))}
-        </div>
+        {renderFields && (
+          <div className="DocEditor__ObjectFieldDrawer__drawer__content DocEditor__ObjectFieldDrawer__fields">
+            {field.fields.map((field) => (
+              <DocEditor.Field
+                key={field.id}
+                field={field}
+                deepKey={`${props.deepKey}.${field.id}`}
+              />
+            ))}
+          </div>
+        )}
       </details>
     </div>
   );
@@ -1252,6 +1286,14 @@ DocEditor.ArrayField = (props: FieldProps) => {
     });
   };
 
+  const pasteBeforeFromVirtualClipboard = async (index: number) => {
+    pasteBefore(index, await virtualClipboard.get());
+  };
+
+  const pasteAfterFromVirtualClipboard = async (index: number) => {
+    pasteAfter(index, await virtualClipboard.get());
+  };
+
   const insertBefore = (index: number) => {
     dispatch({
       type: 'insertBefore',
@@ -1516,198 +1558,34 @@ DocEditor.ArrayField = (props: FieldProps) => {
             >
               {order.map((key: string, i: number) => {
                 return (
-                  <Draggable key={key} index={i} draggableId={key}>
-                    {(provided, snapshot) => (
-                      <div
-                        ref={provided.innerRef}
-                        {...provided.draggableProps}
-                        className={joinClassNames(
-                          'DocEditor__ArrayField__item__wrapper',
-                          snapshot.isDragging &&
-                            'DocEditor__ArrayField__item__wrapper--dragging',
-                          cutIndex === i &&
-                            'DocEditor__ArrayField__item__wrapper--cut'
-                        )}
-                      >
-                        <div
-                          className="DocEditor__ArrayField__item__handle"
-                          {...provided.dragHandleProps}
-                          onClick={() => focusFieldHeader(props.deepKey, i)}
-                        >
-                          <IconGripVertical size={18} stroke={'1.5'} />
-                        </div>
-                        <details
-                          className="DocEditor__ArrayField__item"
-                          key={key}
-                          open={
-                            newlyAdded.includes(key) ||
-                            itemInDeeplink(key) ||
-                            !!field.defaultOpen
-                          }
-                          onToggle={(e) => {
-                            if ((e.target as HTMLDetailsElement).open) {
-                              requestHighlightNode(
-                                `${props.deepKey}.${order[i]}`,
-                                {scroll: true}
-                              );
-                            } else {
-                              requestHighlightNode(null);
-                            }
-                          }}
-                          onMouseEnter={() => {
-                            requestHighlightNode(
-                              `${props.deepKey}.${order[i]}`
-                            );
-                          }}
-                          onMouseLeave={() => {
-                            requestHighlightNode(null);
-                          }}
-                        >
-                          <summary
-                            id={`summary-for-${props.deepKey}.${order[i]}`}
-                            className="DocEditor__ArrayField__item__header"
-                            onKeyDown={(e: KeyboardEvent) =>
-                              handleKeyDown(e, key)
-                            }
-                            tabIndex={0}
-                          >
-                            <div className="DocEditor__ArrayField__item__header__icon">
-                              <IconTriangleFilled size={6} />
-                            </div>
-                            <DocEditor.ArrayFieldPreview
-                              field={field}
-                              deepKey={`${props.deepKey}.${key}`}
-                              index={i}
-                            />
-                            <div className="DocEditor__ArrayField__item__header__controls">
-                              <div className="DocEditor__ArrayField__item__header__controls__arrows">
-                                <button
-                                  className="DocEditor__ArrayField__item__header__controls__arrow DocEditor__ArrayField__item__header__controls__arrows--up"
-                                  onClick={() => moveUp(i)}
-                                >
-                                  <IconCircleArrowUp
-                                    size={20}
-                                    strokeWidth={1.75}
-                                  />
-                                </button>
-                                <button
-                                  className="DocEditor__ArrayField__item__header__controls__arrow DocEditor__ArrayField__item__header__controls__arrows--down"
-                                  onClick={() => moveDown(i)}
-                                >
-                                  <IconCircleArrowDown
-                                    size={20}
-                                    strokeWidth={1.75}
-                                  />
-                                </button>
-                              </div>
-                              <Menu
-                                className="DocEditor__ArrayField__item__header__controls__menu"
-                                position="bottom"
-                                transitionDuration={0}
-                                control={
-                                  <ActionIcon className="DocEditor__ArrayField__item__header__controls__dots">
-                                    <IconDotsVertical size={16} />
-                                  </ActionIcon>
-                                }
-                              >
-                                <Menu.Label>INSERT</Menu.Label>
-                                <Menu.Item
-                                  className="DocEditor__ArrayField__menu__item"
-                                  icon={<IconRowInsertTop size={18} />}
-                                  onClick={() => insertBefore(i)}
-                                >
-                                  Add before
-                                </Menu.Item>
-                                <Menu.Item
-                                  className="DocEditor__ArrayField__menu__item"
-                                  icon={<IconRowInsertBottom size={18} />}
-                                  onClick={() => insertAfter(i)}
-                                >
-                                  Add after
-                                </Menu.Item>
-                                <Menu.Item
-                                  className="DocEditor__ArrayField__menu__item"
-                                  icon={<IconCopy size={18} />}
-                                  onClick={() => duplicate(i)}
-                                >
-                                  Duplicate
-                                </Menu.Item>
-                                <Menu.Label>CLIPBOARD</Menu.Label>
-                                <Menu.Item
-                                  className="DocEditor__ArrayField__menu__item"
-                                  icon={<IconClipboardCopy size={18} />}
-                                  onClick={() => copyToVirtualClipboard(i)}
-                                >
-                                  Copy
-                                </Menu.Item>
-                                <Menu.Item
-                                  className="DocEditor__ArrayField__menu__item"
-                                  icon={<IconRowInsertTop size={18} />}
-                                  onClick={async () =>
-                                    pasteBefore(i, await virtualClipboard.get())
-                                  }
-                                >
-                                  Paste before
-                                </Menu.Item>
-                                <Menu.Item
-                                  className="DocEditor__ArrayField__menu__item"
-                                  icon={<IconRowInsertBottom size={18} />}
-                                  onClick={async () =>
-                                    pasteAfter(i, await virtualClipboard.get())
-                                  }
-                                >
-                                  Paste after
-                                </Menu.Item>
-                                <Menu.Label>CODE</Menu.Label>
-                                <Menu.Item
-                                  className="DocEditor__ArrayField__menu__item"
-                                  icon={<IconBraces size={18} />}
-                                  onClick={() => editJson(i)}
-                                >
-                                  Edit JSON
-                                </Menu.Item>
-                                {experiments.ai && (
-                                  <Menu.Item
-                                    className="DocEditor__ArrayField__menu__item"
-                                    icon={<IconRootAI size={16} />}
-                                    onClick={() => aiEdit(i)}
-                                  >
-                                    Edit with Root AI
-                                  </Menu.Item>
-                                )}
-                                <Menu.Label>REMOVE</Menu.Label>
-                                <Menu.Item
-                                  className="DocEditor__ArrayField__menu__item"
-                                  icon={<IconTrash size={18} />}
-                                  onClick={() => removeAt(i)}
-                                >
-                                  Remove
-                                </Menu.Item>
-                              </Menu>
-                            </div>
-                          </summary>
-                          <div className="DocEditor__ArrayField__item__body">
-                            <DocEditor.Field
-                              key={`${props.deepKey}.${key}`}
-                              field={field.of}
-                              deepKey={`${props.deepKey}.${key}`}
-                              hideHeader
-                              isArrayChild
-                              onFocus={() => {
-                                requestHighlightNode(
-                                  `${props.deepKey}.${key}`,
-                                  {scroll: true}
-                                );
-                              }}
-                              onBlur={() => {
-                                requestHighlightNode(null);
-                              }}
-                            />
-                          </div>
-                        </details>
-                      </div>
-                    )}
-                  </Draggable>
+                  <DocEditor.ArrayFieldItem
+                    key={key}
+                    field={field}
+                    parentDeepKey={props.deepKey}
+                    itemKey={key}
+                    index={i}
+                    initialOpen={
+                      newlyAdded.includes(key) ||
+                      itemInDeeplink(key) ||
+                      !!field.defaultOpen
+                    }
+                    deeplinkOpen={itemInDeeplink(key)}
+                    isCut={cutIndex === i}
+                    aiEnabled={!!experiments.ai}
+                    onFocusHeader={focusFieldHeader}
+                    onHeaderKeyDown={handleKeyDown}
+                    onMoveUp={moveUp}
+                    onMoveDown={moveDown}
+                    onInsertBefore={insertBefore}
+                    onInsertAfter={insertAfter}
+                    onDuplicate={duplicate}
+                    onCopy={copyToVirtualClipboard}
+                    onPasteBefore={pasteBeforeFromVirtualClipboard}
+                    onPasteAfter={pasteAfterFromVirtualClipboard}
+                    onEditJson={editJson}
+                    onAiEdit={aiEdit}
+                    onRemove={removeAt}
+                  />
                 );
               })}
               {provided.placeholder}
@@ -1720,6 +1598,229 @@ DocEditor.ArrayField = (props: FieldProps) => {
   );
 };
 
+interface ArrayFieldItemProps {
+  field: schema.ArrayField;
+  parentDeepKey: string;
+  itemKey: string;
+  index: number;
+  initialOpen: boolean;
+  deeplinkOpen: boolean;
+  isCut: boolean;
+  aiEnabled: boolean;
+  onFocusHeader: (deepKey: string, index: number) => void;
+  onHeaderKeyDown: (e: KeyboardEvent, arrayKey: string) => void;
+  onMoveUp: (index: number) => void;
+  onMoveDown: (index: number) => void;
+  onInsertBefore: (index: number) => void;
+  onInsertAfter: (index: number) => void;
+  onDuplicate: (index: number) => void;
+  onCopy: (index: number) => void;
+  onPasteBefore: (index: number) => void;
+  onPasteAfter: (index: number) => void;
+  onEditJson: (index: number) => void;
+  onAiEdit: (index: number) => void;
+  onRemove: (index: number) => void;
+}
+
+/** Renders one array row and lazily mounts its editor body. */
+DocEditor.ArrayFieldItem = (props: ArrayFieldItemProps) => {
+  const itemDeepKey = `${props.parentDeepKey}.${props.itemKey}`;
+  const [open, setOpen] = useState(props.initialOpen);
+  const [renderBody, setRenderBody] = useState(props.initialOpen);
+
+  useEffect(() => {
+    if (props.deeplinkOpen) {
+      setOpen(true);
+      setRenderBody(true);
+    }
+  }, [props.deeplinkOpen]);
+
+  return (
+    <Draggable
+      key={props.itemKey}
+      index={props.index}
+      draggableId={props.itemKey}
+    >
+      {(provided, snapshot) => (
+        <div
+          ref={provided.innerRef}
+          {...(provided.draggableProps as any)}
+          className={joinClassNames(
+            'DocEditor__ArrayField__item__wrapper',
+            snapshot.isDragging &&
+              'DocEditor__ArrayField__item__wrapper--dragging',
+            props.isCut && 'DocEditor__ArrayField__item__wrapper--cut'
+          )}
+        >
+          <div
+            className="DocEditor__ArrayField__item__handle"
+            {...(provided.dragHandleProps as any)}
+            onClick={() =>
+              props.onFocusHeader(props.parentDeepKey, props.index)
+            }
+          >
+            <IconGripVertical size={18} stroke={'1.5'} />
+          </div>
+          <details
+            className="DocEditor__ArrayField__item"
+            open={open}
+            onToggle={(e) => {
+              if (e.currentTarget !== e.target) {
+                return;
+              }
+              const isOpen = (e.target as HTMLDetailsElement).open;
+              setOpen(isOpen);
+              if (isOpen) {
+                setRenderBody(true);
+                requestHighlightNode(itemDeepKey, {scroll: true});
+              } else {
+                requestHighlightNode(null);
+              }
+            }}
+            onMouseEnter={() => {
+              requestHighlightNode(itemDeepKey);
+            }}
+            onMouseLeave={() => {
+              requestHighlightNode(null);
+            }}
+          >
+            <summary
+              id={`summary-for-${itemDeepKey}`}
+              className="DocEditor__ArrayField__item__header"
+              onKeyDown={(e: KeyboardEvent) =>
+                props.onHeaderKeyDown(e, props.itemKey)
+              }
+              tabIndex={0}
+            >
+              <div className="DocEditor__ArrayField__item__header__icon">
+                <IconTriangleFilled size={6} />
+              </div>
+              <DocEditor.ArrayFieldPreview
+                field={props.field}
+                deepKey={itemDeepKey}
+                index={props.index}
+              />
+              <div className="DocEditor__ArrayField__item__header__controls">
+                <div className="DocEditor__ArrayField__item__header__controls__arrows">
+                  <button
+                    className="DocEditor__ArrayField__item__header__controls__arrow DocEditor__ArrayField__item__header__controls__arrows--up"
+                    onClick={() => props.onMoveUp(props.index)}
+                  >
+                    <IconCircleArrowUp size={20} strokeWidth={1.75} />
+                  </button>
+                  <button
+                    className="DocEditor__ArrayField__item__header__controls__arrow DocEditor__ArrayField__item__header__controls__arrows--down"
+                    onClick={() => props.onMoveDown(props.index)}
+                  >
+                    <IconCircleArrowDown size={20} strokeWidth={1.75} />
+                  </button>
+                </div>
+                <Menu
+                  className="DocEditor__ArrayField__item__header__controls__menu"
+                  position="bottom"
+                  transitionDuration={0}
+                  control={
+                    <ActionIcon className="DocEditor__ArrayField__item__header__controls__dots">
+                      <IconDotsVertical size={16} />
+                    </ActionIcon>
+                  }
+                >
+                  <Menu.Label>INSERT</Menu.Label>
+                  <Menu.Item
+                    className="DocEditor__ArrayField__menu__item"
+                    icon={<IconRowInsertTop size={18} />}
+                    onClick={() => props.onInsertBefore(props.index)}
+                  >
+                    Add before
+                  </Menu.Item>
+                  <Menu.Item
+                    className="DocEditor__ArrayField__menu__item"
+                    icon={<IconRowInsertBottom size={18} />}
+                    onClick={() => props.onInsertAfter(props.index)}
+                  >
+                    Add after
+                  </Menu.Item>
+                  <Menu.Item
+                    className="DocEditor__ArrayField__menu__item"
+                    icon={<IconCopy size={18} />}
+                    onClick={() => props.onDuplicate(props.index)}
+                  >
+                    Duplicate
+                  </Menu.Item>
+                  <Menu.Label>CLIPBOARD</Menu.Label>
+                  <Menu.Item
+                    className="DocEditor__ArrayField__menu__item"
+                    icon={<IconClipboardCopy size={18} />}
+                    onClick={() => props.onCopy(props.index)}
+                  >
+                    Copy
+                  </Menu.Item>
+                  <Menu.Item
+                    className="DocEditor__ArrayField__menu__item"
+                    icon={<IconRowInsertTop size={18} />}
+                    onClick={() => props.onPasteBefore(props.index)}
+                  >
+                    Paste before
+                  </Menu.Item>
+                  <Menu.Item
+                    className="DocEditor__ArrayField__menu__item"
+                    icon={<IconRowInsertBottom size={18} />}
+                    onClick={() => props.onPasteAfter(props.index)}
+                  >
+                    Paste after
+                  </Menu.Item>
+                  <Menu.Label>CODE</Menu.Label>
+                  <Menu.Item
+                    className="DocEditor__ArrayField__menu__item"
+                    icon={<IconBraces size={18} />}
+                    onClick={() => props.onEditJson(props.index)}
+                  >
+                    Edit JSON
+                  </Menu.Item>
+                  {props.aiEnabled && (
+                    <Menu.Item
+                      className="DocEditor__ArrayField__menu__item"
+                      icon={<IconRootAI size={16} />}
+                      onClick={() => props.onAiEdit(props.index)}
+                    >
+                      Edit with Root AI
+                    </Menu.Item>
+                  )}
+                  <Menu.Label>REMOVE</Menu.Label>
+                  <Menu.Item
+                    className="DocEditor__ArrayField__menu__item"
+                    icon={<IconTrash size={18} />}
+                    onClick={() => props.onRemove(props.index)}
+                  >
+                    Remove
+                  </Menu.Item>
+                </Menu>
+              </div>
+            </summary>
+            {renderBody && (
+              <div className="DocEditor__ArrayField__item__body">
+                <DocEditor.Field
+                  key={itemDeepKey}
+                  field={props.field.of}
+                  deepKey={itemDeepKey}
+                  hideHeader
+                  isArrayChild
+                  onFocus={() => {
+                    requestHighlightNode(itemDeepKey, {scroll: true});
+                  }}
+                  onBlur={() => {
+                    requestHighlightNode(null);
+                  }}
+                />
+              </div>
+            )}
+          </details>
+        </div>
+      )}
+    </Draggable>
+  );
+};
+
 interface ArrayFieldPreviewProps {
   field: schema.ArrayField;
   deepKey: string;
@@ -1728,38 +1829,32 @@ interface ArrayFieldPreviewProps {
 
 DocEditor.ArrayFieldPreview = (props: ArrayFieldPreviewProps) => {
   const draft = useDraftDoc().controller;
+  const types = useCollectionSchemaTypes();
   const [value, setValue] = useState<any>(draft.getValue(props.deepKey));
 
   const previewImage = useMemo(() => {
-    return arrayPreviewImage(props.field, value);
-  }, [value]);
+    return arrayPreviewImage(props.field, value, types);
+  }, [props.field, types, value]);
   const previewText = useMemo(() => {
-    return arrayPreview(props.field, value, props.index);
-  }, [value, props.index]);
+    return arrayPreview(props.field, value, props.index, types);
+  }, [props.field, props.index, types, value]);
 
-  // Since re-calculating the preview text can be expensive, use a debounced
-  // callback for updating the value.
-  const onValueChange = useCallback(
-    debounce(() => {
-      const newValue = draft.getValue(props.deepKey);
-      // A new object is created to force re-rendering on the preview text.
-      setValue({...newValue});
-    }, 250),
-    [props.deepKey, draft]
+  const updateValue = useMemo(
+    () =>
+      debounce((newValue: any) => {
+        if (newValue && typeof newValue === 'object') {
+          // A new object is created to force re-rendering on the preview text.
+          setValue({...newValue});
+        } else {
+          setValue(newValue);
+        }
+      }, 250),
+    []
   );
 
   useEffect(() => {
-    return draft.on(
-      DraftDocEventType.VALUE_CHANGE,
-      (key: string, newValue: any) => {
-        if (key === props.deepKey) {
-          setValue(newValue);
-        } else if (key.startsWith(props.deepKey)) {
-          onValueChange();
-        }
-      }
-    );
-  }, [props.deepKey, draft]);
+    return draft.subscribeSubtree(props.deepKey, updateValue);
+  }, [props.deepKey, draft, updateValue]);
 
   return (
     <div className="DocEditor__ArrayField__item__header__preview">
@@ -1787,12 +1882,13 @@ DocEditor.OneOfField = (props: FieldProps) => {
     field.variant || window.__ROOT_CTX.defaultOneOfVariant || 'dropdown';
   const [type, setType] = useState('');
   const collectionTypes = useCollectionSchemaTypes();
+  const oneOfTypes = Array.isArray(field.types) ? field.types : [];
   const typesMap: Record<string, schema.Schema> = {};
   const orderedSchemas: schema.Schema[] = [];
   const dropdownValues: Array<{value: string; label: string}> = [
     {value: '', label: field.placeholder || 'Select type'},
   ];
-  field.types.forEach((typedef) => {
+  oneOfTypes.forEach((typedef) => {
     let resolved: schema.Schema | undefined;
     let name = '';
     if (typeof typedef === 'string') {
@@ -2003,15 +2099,17 @@ function arrayMove<T = unknown>(arr: T[], fromIndex: number, toIndex: number) {
 function getSchemaPreviewTemplates(
   arrayOfField: schema.ObjectLikeField,
   data: any,
+  types: Record<string, schema.Schema>,
   key: 'title' | 'image' = 'title'
 ): string | string[] | null {
-  const types = useCollectionSchemaTypes();
   if (arrayOfField.type === 'oneof') {
     const oneOfField = arrayOfField as schema.OneOfField;
     const selectedTypeName = data?._type;
     if (selectedTypeName) {
       let selectedSchema: schema.Schema | undefined;
-      const fieldTypes = oneOfField.types || [];
+      const fieldTypes = Array.isArray(oneOfField.types)
+        ? oneOfField.types
+        : [];
       if (typeof fieldTypes[0] === 'string') {
         selectedSchema = types[selectedTypeName];
       } else {
@@ -2025,15 +2123,16 @@ function getSchemaPreviewTemplates(
   return null;
 }
 
-/** Returns the first line of text from rich text data. */
 /** Builds the preview image for an array item. */
 function arrayPreviewImage(
   field: schema.ArrayField,
-  data: any
+  data: any,
+  types: Record<string, schema.Schema>
 ): string | undefined {
   const schemaLevelTemplates = getSchemaPreviewTemplates(
     field.of,
     data,
+    types,
     'image'
   );
   if (!schemaLevelTemplates) {
@@ -2046,12 +2145,14 @@ function arrayPreviewImage(
 function arrayPreview(
   field: schema.ArrayField,
   data: any,
-  index: number
+  index: number,
+  types: Record<string, schema.Schema>
 ): string {
   // First, check if the item has a preview defined at the schema level.
   const schemaLevelTemplates = getSchemaPreviewTemplates(
     field.of,
     data,
+    types,
     'title'
   );
   if (schemaLevelTemplates) {
