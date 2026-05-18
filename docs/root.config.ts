@@ -120,7 +120,7 @@ export default defineConfig({
         },
       ],
       experiments: {
-        ai: true,
+        taskManager: true,
       },
       preview: {
         channel: true,

@@ -27,7 +27,7 @@ interface CollectionPageProps {
 export function CollectionPage(props: CollectionPageProps) {
   const {route} = useLocation();
   const projectId = window.__ROOT_CTX.rootConfig.projectId;
-  usePageTitle(props.collection ? `Content: ${props.collection}` : 'Content');
+  usePageTitle(props.collection ? props.collection : 'Content');
 
   // If no collection is selected, select one by default.
   useEffect(() => {
