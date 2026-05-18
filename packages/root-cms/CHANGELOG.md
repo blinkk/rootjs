@@ -1,5 +1,12 @@
 # @blinkk/root-cms
 
+## 3.0.1-beta.6
+
+### Patch Changes
+
+- fd7c0c90: feat: add Root AI side panel to document page
+  - @blinkk/root@3.0.1-beta.6
+
 ## 3.0.1-beta.5
 
 ### Patch Changes

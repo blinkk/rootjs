@@ -1,5 +1,7 @@
 # @blinkk/root
 
+## 3.0.1-beta.6
+
 ## 3.0.1-beta.5
 
 ## 3.0.1-beta.4
