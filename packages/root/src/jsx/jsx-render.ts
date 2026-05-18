@@ -222,13 +222,19 @@ function toKebabCase(key: string): string {
 }
 
 function styleToString(style: Record<string, any>): string {
-  const parts: string[] = [];
+  let result = '';
+  let first = true;
   for (const key in style) {
     const value = style[key];
     if (!isDef(value) || value === '') continue;
-    parts.push(`${toKebabCase(key)}:${value}`);
+    if (first) {
+      first = false;
+    } else {
+      result += ';';
+    }
+    result += `${toKebabCase(key)}:${value}`;
   }
-  return parts.join(';');
+  return result;
 }
 
 export interface JsxRenderOptions {
@@ -260,7 +266,7 @@ export function renderJsxToString(
   }
 
   // Context stacks: context.__c (id) -> value[]
-  const contextStacks = new Map<string, any[]>();
+  let contextStacks: Map<string, any[]> | undefined;
 
   // Version counter that bumps whenever a context value is pushed or popped.
   // `buildGlobalContext` uses it to skip rebuilding when nothing changed
@@ -270,6 +276,9 @@ export function renderJsxToString(
   let cachedGlobalCtxVersion = 0;
 
   function pushCtx(contextId: string, value: any) {
+    if (!contextStacks) {
+      contextStacks = new Map<string, any[]>();
+    }
     let stack = contextStacks.get(contextId);
     if (!stack) {
       stack = [];
@@ -280,14 +289,20 @@ export function renderJsxToString(
   }
 
   function popCtx(contextId: string) {
-    contextStacks.get(contextId)?.pop();
+    const stack = contextStacks?.get(contextId);
+    if (stack) {
+      stack.pop();
+      if (stack.length === 0) {
+        contextStacks?.delete(contextId);
+      }
+    }
     ctxVersion++;
   }
 
   /** Builds the __n (global context) map for hooks. */
   function buildGlobalContext(): Record<string, any> {
     if (ctxVersion === cachedGlobalCtxVersion) return cachedGlobalCtx;
-    if (contextStacks.size === 0) {
+    if (!contextStacks || contextStacks.size === 0) {
       cachedGlobalCtx = EMPTY_GLOBAL_CTX;
       cachedGlobalCtxVersion = ctxVersion;
       return cachedGlobalCtx;
@@ -379,7 +394,7 @@ export function renderJsxToString(
     if ((fn as any).contextType) {
       const ctx = (fn as any).contextType;
       const ctxId: string = ctx.__c;
-      const stack = contextStacks.get(ctxId);
+      const stack = contextStacks?.get(ctxId);
       const value =
         stack && stack.length > 0 ? stack[stack.length - 1] : ctx.__;
       if (typeof props.children === 'function') {
@@ -476,7 +491,7 @@ export function renderJsxToString(
 
   function renderAttrs(tag: string, props: Record<string, any>): string {
     if (!props) return '';
-    const parts: string[] = [];
+    let result = '';
     for (const key in props) {
       if (
         key === 'children' ||
@@ -505,7 +520,7 @@ export function renderJsxToString(
 
       // Boolean attributes.
       if (value === true) {
-        parts.push(' ', attrName);
+        result += ' ' + attrName;
         continue;
       }
 
@@ -515,9 +530,9 @@ export function renderJsxToString(
         if (!value) continue;
       }
 
-      parts.push(' ', attrName, '="', escapeAttr(String(value)), '"');
+      result += ' ' + attrName + '="' + escapeAttr(String(value)) + '"';
     }
-    return parts.join('');
+    return result;
   }
 
   /**
