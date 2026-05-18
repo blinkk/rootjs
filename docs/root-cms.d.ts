@@ -92,6 +92,43 @@ export interface BlogPostsFields {
 /** Generated from `/collections/BlogPosts.schema.ts`. */
 export type BlogPostsDoc = RootCMSDoc<BlogPostsFields>;
 
+/** Generated from `/collections/BlogSandbox.schema.ts`. */
+export interface BlogSandboxFields {
+  /** Meta */
+  meta?: {
+    /** Title */
+    title?: string;
+    /** Description. Description for SEO and social shares. */
+    description?: string;
+    /** Image. Meta image for social shares. Recommended size: 1200x600. */
+    image?: RootCMSImage;
+    /** Related Posts */
+    relatedPosts?: RootCMSReference[];
+  };
+  /** Content */
+  content?: {
+    /** Main content body. Top content body. */
+    body?: RootCMSRichText;
+    /** Sections */
+    sections?: {
+      /** ID. Used for deep linking, tracking, etc. */
+      id?: string;
+      /** Title. Main headline title. */
+      title?: string;
+      /** Body copy */
+      body?: RootCMSRichText;
+    }[];
+    /**
+     * Content blocks. Deprecated. Use 'sections' instead.
+     * @deprecated
+    */
+    blocks?: RootCMSOneOf<RootCMSOneOfOption<'ButtonsBlock', ButtonsBlockFields> | RootCMSOneOfOption<'CodeBlock', CodeBlockFields> | RootCMSOneOfOption<'CopyBlock', CopyBlockFields> | RootCMSOneOfOption<'ImageBlock', ImageBlockFields>>[];
+  };
+}
+
+/** Generated from `/collections/BlogSandbox.schema.ts`. */
+export type BlogSandboxDoc = RootCMSDoc<BlogSandboxFields>;
+
 /** Generated from `/components/Button/Button.schema.ts`. */
 export interface ButtonFields {
   /** Button Options */

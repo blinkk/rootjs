@@ -168,7 +168,7 @@
   align-items: center;
   text-align: center;
   gap: 12px;
-  margin-top: 80px;
+  padding: 80px 40px;
 }
 
 .CollectionPage__collection__docsEmpty__title {
