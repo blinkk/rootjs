@@ -17,6 +17,7 @@
     "@private/mock-localllm": "0.0.0"
   },
   "changesets": [
+    "beige-timers-walk",
     "calm-countries-hammer",
     "clever-foxes-chat",
     "few-dryers-design",

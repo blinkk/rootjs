@@ -1,5 +1,12 @@
 # @blinkk/root-cms
 
+## 3.0.1-beta.8
+
+### Patch Changes
+
+- 7d492821: fix: fix cmd+f searchability of collapsed array items
+  - @blinkk/root@3.0.1-beta.8
+
 ## 3.0.1-beta.7
 
 ### Patch Changes
