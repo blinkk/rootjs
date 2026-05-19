@@ -5,11 +5,13 @@ import {afterEach, beforeEach, describe, expect, it} from 'vitest';
 import {
   AiConfig,
   buildSystemPrompt,
+  buildTitlePromptContext,
   deriveChatTitle,
   extractJsonFromResponse,
   findModel,
   readRootMd,
   ROOT_MD_FILENAME,
+  sanitizeGeneratedTitle,
   serializeAiConfig,
   stripUndefined,
 } from './ai.js';
@@ -92,6 +94,157 @@ describe('ai', () => {
       const title = deriveChatTitle([
         {id: '1', role: 'user', parts: [{type: 'text', text: longText}]} as any,
       ]);
+      expect(title.length).toBeLessThanOrEqual(60);
+      expect(title.endsWith('…')).toBe(true);
+    });
+  });
+
+  describe('buildTitlePromptContext', () => {
+    it('returns an empty string for no messages', () => {
+      expect(buildTitlePromptContext([])).toBe('');
+    });
+
+    it('includes the first user turn and first assistant text turn', () => {
+      const ctx = buildTitlePromptContext([
+        {
+          id: '1',
+          role: 'user',
+          parts: [{type: 'text', text: 'Translate the homepage hero'}],
+        } as any,
+        {
+          id: '2',
+          role: 'assistant',
+          parts: [
+            {type: 'text', text: 'Sure, which locales should I target?'},
+          ],
+        } as any,
+      ]);
+      expect(ctx).toContain('User: Translate the homepage hero');
+      expect(ctx).toContain('Assistant: Sure, which locales should I target?');
+    });
+
+    it('skips tool-call and reasoning parts when building the transcript', () => {
+      const ctx = buildTitlePromptContext([
+        {
+          id: '1',
+          role: 'user',
+          parts: [{type: 'text', text: 'List blog posts from March'}],
+        } as any,
+        {
+          id: '2',
+          role: 'assistant',
+          parts: [
+            {type: 'reasoning', text: 'Internal thoughts the user never sees'},
+            {type: 'tool-call', toolName: 'searchDocs', input: {q: 'march'}},
+            {type: 'text', text: 'I found 3 posts in March.'},
+          ],
+        } as any,
+      ]);
+      expect(ctx).toContain('User: List blog posts from March');
+      expect(ctx).toContain('Assistant: I found 3 posts in March.');
+      expect(ctx).not.toContain('Internal thoughts');
+      expect(ctx).not.toContain('searchDocs');
+    });
+
+    it('ignores assistant turns with no text content', () => {
+      const ctx = buildTitlePromptContext([
+        {
+          id: '1',
+          role: 'user',
+          parts: [{type: 'text', text: 'Fix the broken image'}],
+        } as any,
+        {
+          id: '2',
+          role: 'assistant',
+          parts: [{type: 'tool-call', toolName: 'readDoc', input: {}}],
+        } as any,
+        {
+          id: '3',
+          role: 'assistant',
+          parts: [{type: 'text', text: 'The image path was wrong.'}],
+        } as any,
+      ]);
+      expect(ctx).toContain('Assistant: The image path was wrong.');
+    });
+
+    it('stops after the first user/assistant text pair', () => {
+      const ctx = buildTitlePromptContext([
+        {
+          id: '1',
+          role: 'user',
+          parts: [{type: 'text', text: 'first question'}],
+        } as any,
+        {
+          id: '2',
+          role: 'assistant',
+          parts: [{type: 'text', text: 'first answer'}],
+        } as any,
+        {
+          id: '3',
+          role: 'user',
+          parts: [{type: 'text', text: 'follow-up question'}],
+        } as any,
+      ]);
+      expect(ctx).not.toContain('follow-up question');
+    });
+
+    it('truncates very long pasted blobs', () => {
+      const blob = 'a'.repeat(2000);
+      const ctx = buildTitlePromptContext([
+        {id: '1', role: 'user', parts: [{type: 'text', text: blob}]} as any,
+      ]);
+      expect(ctx.length).toBeLessThan(blob.length);
+      expect(ctx.endsWith('…')).toBe(true);
+    });
+  });
+
+  describe('sanitizeGeneratedTitle', () => {
+    it('returns empty for empty input', () => {
+      expect(sanitizeGeneratedTitle('')).toBe('');
+      expect(sanitizeGeneratedTitle('   ')).toBe('');
+    });
+
+    it('strips surrounding quotes', () => {
+      expect(sanitizeGeneratedTitle('"Translate Hero Copy"')).toBe(
+        'Translate Hero Copy'
+      );
+      expect(sanitizeGeneratedTitle('“Translate Hero Copy”')).toBe(
+        'Translate Hero Copy'
+      );
+    });
+
+    it('strips a leading "Title:" prefix', () => {
+      expect(sanitizeGeneratedTitle('Title: Translate Hero Copy')).toBe(
+        'Translate Hero Copy'
+      );
+      expect(sanitizeGeneratedTitle('Chat title — Debug Upload')).toBe(
+        'Debug Upload'
+      );
+    });
+
+    it('drops trailing punctuation', () => {
+      expect(sanitizeGeneratedTitle('Translate Hero Copy.')).toBe(
+        'Translate Hero Copy'
+      );
+      expect(sanitizeGeneratedTitle('Translate Hero Copy!')).toBe(
+        'Translate Hero Copy'
+      );
+    });
+
+    it('keeps only the first non-empty line', () => {
+      const raw = 'Translate Hero Copy\n\nThis title summarizes the chat.';
+      expect(sanitizeGeneratedTitle(raw)).toBe('Translate Hero Copy');
+    });
+
+    it('strips markdown emphasis', () => {
+      expect(sanitizeGeneratedTitle('**Translate Hero Copy**')).toBe(
+        'Translate Hero Copy'
+      );
+      expect(sanitizeGeneratedTitle('`Debug Upload`')).toBe('Debug Upload');
+    });
+
+    it('truncates overly long titles with an ellipsis', () => {
+      const title = sanitizeGeneratedTitle('a'.repeat(120));
       expect(title.length).toBeLessThanOrEqual(60);
       expect(title.endsWith('…')).toBe(true);
     });
