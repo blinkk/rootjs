@@ -821,17 +821,7 @@ DocEditor.ObjectFieldDrawer = (props: FieldProps) => {
   const iconPosition = inline ? 'left' : 'right';
 
   const deeplink = useDeeplink();
-  const deeplinkOpen = deeplink.value.includes(props.deepKey);
-  const initialOpen = !collapsed || deeplinkOpen;
-  const [open, setOpen] = useState(initialOpen);
-  const [renderFields, setRenderFields] = useState(initialOpen);
-
-  useEffect(() => {
-    if (deeplinkOpen) {
-      setOpen(true);
-      setRenderFields(true);
-    }
-  }, [deeplinkOpen]);
+  const initialOpen = !collapsed || deeplink.value.includes(props.deepKey);
 
   return (
     <div
@@ -842,17 +832,7 @@ DocEditor.ObjectFieldDrawer = (props: FieldProps) => {
     >
       <details
         className="DocEditor__ObjectFieldDrawer__drawer"
-        open={open}
-        onToggle={(e) => {
-          if (e.currentTarget !== e.target) {
-            return;
-          }
-          const isOpen = (e.target as HTMLDetailsElement).open;
-          setOpen(isOpen);
-          if (isOpen) {
-            setRenderFields(true);
-          }
-        }}
+        open={initialOpen}
       >
         <summary
           className={joinClassNames(
@@ -869,17 +849,15 @@ DocEditor.ObjectFieldDrawer = (props: FieldProps) => {
             <IconChevronDown size={16} />
           </div>
         </summary>
-        {renderFields && (
-          <div className="DocEditor__ObjectFieldDrawer__drawer__content DocEditor__ObjectFieldDrawer__fields">
-            {field.fields.map((field) => (
-              <DocEditor.Field
-                key={field.id}
-                field={field}
-                deepKey={`${props.deepKey}.${field.id}`}
-              />
-            ))}
-          </div>
-        )}
+        <div className="DocEditor__ObjectFieldDrawer__drawer__content DocEditor__ObjectFieldDrawer__fields">
+          {field.fields.map((field) => (
+            <DocEditor.Field
+              key={field.id}
+              field={field}
+              deepKey={`${props.deepKey}.${field.id}`}
+            />
+          ))}
+        </div>
       </details>
     </div>
   );
@@ -1569,7 +1547,6 @@ DocEditor.ArrayField = (props: FieldProps) => {
                       itemInDeeplink(key) ||
                       !!field.defaultOpen
                     }
-                    deeplinkOpen={itemInDeeplink(key)}
                     isCut={cutIndex === i}
                     aiEnabled={!!experiments.ai}
                     onFocusHeader={focusFieldHeader}
@@ -1604,7 +1581,6 @@ interface ArrayFieldItemProps {
   itemKey: string;
   index: number;
   initialOpen: boolean;
-  deeplinkOpen: boolean;
   isCut: boolean;
   aiEnabled: boolean;
   onFocusHeader: (deepKey: string, index: number) => void;
@@ -1622,18 +1598,8 @@ interface ArrayFieldItemProps {
   onRemove: (index: number) => void;
 }
 
-/** Renders one array row and lazily mounts its editor body. */
 DocEditor.ArrayFieldItem = (props: ArrayFieldItemProps) => {
   const itemDeepKey = `${props.parentDeepKey}.${props.itemKey}`;
-  const [open, setOpen] = useState(props.initialOpen);
-  const [renderBody, setRenderBody] = useState(props.initialOpen);
-
-  useEffect(() => {
-    if (props.deeplinkOpen) {
-      setOpen(true);
-      setRenderBody(true);
-    }
-  }, [props.deeplinkOpen]);
 
   return (
     <Draggable
@@ -1663,15 +1629,9 @@ DocEditor.ArrayFieldItem = (props: ArrayFieldItemProps) => {
           </div>
           <details
             className="DocEditor__ArrayField__item"
-            open={open}
+            open={props.initialOpen}
             onToggle={(e) => {
-              if (e.currentTarget !== e.target) {
-                return;
-              }
-              const isOpen = (e.target as HTMLDetailsElement).open;
-              setOpen(isOpen);
-              if (isOpen) {
-                setRenderBody(true);
+              if ((e.target as HTMLDetailsElement).open) {
                 requestHighlightNode(itemDeepKey, {scroll: true});
               } else {
                 requestHighlightNode(null);
@@ -1797,23 +1757,21 @@ DocEditor.ArrayFieldItem = (props: ArrayFieldItemProps) => {
                 </Menu>
               </div>
             </summary>
-            {renderBody && (
-              <div className="DocEditor__ArrayField__item__body">
-                <DocEditor.Field
-                  key={itemDeepKey}
-                  field={props.field.of}
-                  deepKey={itemDeepKey}
-                  hideHeader
-                  isArrayChild
-                  onFocus={() => {
-                    requestHighlightNode(itemDeepKey, {scroll: true});
-                  }}
-                  onBlur={() => {
-                    requestHighlightNode(null);
-                  }}
-                />
-              </div>
-            )}
+            <div className="DocEditor__ArrayField__item__body">
+              <DocEditor.Field
+                key={itemDeepKey}
+                field={props.field.of}
+                deepKey={itemDeepKey}
+                hideHeader
+                isArrayChild
+                onFocus={() => {
+                  requestHighlightNode(itemDeepKey, {scroll: true});
+                }}
+                onBlur={() => {
+                  requestHighlightNode(null);
+                }}
+              />
+            </div>
           </details>
         </div>
       )}
