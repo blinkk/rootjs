@@ -2,6 +2,7 @@ import crypto from 'node:crypto';
 import path from 'node:path';
 import {Request, Response, RootConfig} from '@blinkk/root';
 import {renderJsxToString} from '@blinkk/root/jsx';
+import {serializeJsonForScript} from '../shared/safe-json.js';
 import {serializeAiConfig} from './ai.js';
 import {CMSPluginOptions} from './plugin.js';
 import {getCollectionSchema, getProjectSchemas} from './project.js';
@@ -64,7 +65,7 @@ function App(props: AppProps) {
         </div>
         <script
           dangerouslySetInnerHTML={{
-            __html: `window.__ROOT_CTX = ${JSON.stringify(props.ctx)}`,
+            __html: `window.__ROOT_CTX = ${serializeJsonForScript(props.ctx)}`,
           }}
           nonce="{NONCE}"
         />
@@ -233,7 +234,7 @@ function SignIn(props: SignInProps) {
         </div>
         <script
           dangerouslySetInnerHTML={{
-            __html: `window.__ROOT_CTX = ${JSON.stringify(props.ctx)}`,
+            __html: `window.__ROOT_CTX = ${serializeJsonForScript(props.ctx)}`,
           }}
           nonce="{NONCE}"
         />
@@ -328,7 +329,6 @@ function setSecurityHeaders(
     'max-age=63072000; includeSubdomains; preload'
   );
   res.setHeader('x-content-type-options', 'nosniff');
-  res.setHeader('x-xss-protection', '1; mode=block');
 
   const frameAncestors = ["'self'"];
   const allowedIframeOrigins = options.cmsConfig.allowedIframeOrigins;

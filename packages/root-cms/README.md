@@ -78,3 +78,17 @@ Using Firestore Studio:
 - Under `Add its first document` set `Document ID` to your project ID
 - For the first record set `Field name` to `roles` with a `Field type` of `map`
 - In the map set the new `Field name` to your e-mail, `Field type` to `string` and `Field value` to `ADMIN` and save.
+
+## A note on `*@domain` role grants
+
+The rules above support a wildcard `*@example.com` entry in `roles` that
+matches every signed-in user whose verified email ends in `@example.com`.
+This is convenient for granting access to a whole workspace, but be aware:
+
+- Anyone Firebase Auth admits with an `@example.com` email — including
+  newly-created accounts and any account that you no longer control —
+  gains the role immediately, with no opt-in or audit trail.
+- Never use a wildcard for a free-email provider (e.g. `*@gmail.com`):
+  that grants access to anyone with a Google account.
+- Prefer explicit per-email grants for `ADMIN` and `EDITOR`; reserve the
+  wildcard for `CONTRIBUTOR` or `VIEWER` if you use it at all.

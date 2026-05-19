@@ -1075,7 +1075,12 @@ function PartView(props: {part: any; toolApprovals?: ToolApprovalControls}) {
   }
   if (part.type === 'source-url') {
     return (
-      <a className="RootAIChat__sourcePart" href={part.url} target="_blank">
+      <a
+        className="RootAIChat__sourcePart"
+        href={part.url}
+        target="_blank"
+        rel="noopener noreferrer"
+      >
         {part.title || part.url}
       </a>
     );
@@ -1142,6 +1147,7 @@ function FilePartView(props: {part: any}) {
       className="RootAIChat__filePart RootAIChat__filePart--link"
       href={part.url}
       target="_blank"
+      rel="noopener noreferrer"
     >
       <IconPaperclip size={14} />
       <span>{part.filename || part.url}</span>

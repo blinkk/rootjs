@@ -31,12 +31,16 @@ export function sse(server: Server) {
       res.status(401).json({success: false, error: 'NOT_AUTHORIZED'});
       return;
     }
+    // No CORS headers: the SSE stream is intended to be consumed by the
+    // CMS UI which is served from the same origin. Returning a wildcard
+    // `Access-Control-Allow-Origin` would let a different origin observe
+    // events any time the user is signed in (EventSource ignores the
+    // wildcard when `withCredentials` is true, but the bare-cookieless
+    // form would still receive non-auth-scoped events).
     res.writeHead(200, {
       'Content-Type': 'text/event-stream',
       'Cache-Control': 'no-cache',
       Connection: 'keep-alive',
-      'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Headers': 'Cache-Control',
     });
     sseClients.add(res);
     const connectedMessage = formatMessage<SSEConnectedEvent>(
