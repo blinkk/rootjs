@@ -463,8 +463,90 @@ export function deriveChatTitle(messages: UIMessage[]): string {
 }
 
 /**
- * Uses the AI model to generate a short summary title for the chat.
- * Falls back to `deriveChatTitle` if the generation fails.
+ * Extracts the first user turn and first assistant text turn as a plain-text
+ * transcript, suitable for the title-generation prompt. Skips tool-call
+ * parts, reasoning chunks, and attachments so the model sees the
+ * conversational substance and nothing else.
+ *
+ * Only the opening exchange is included on purpose — the chat title should
+ * describe what the conversation is *about*, anchored on the user's initial
+ * ask, not drift as later follow-ups arrive.
+ */
+export function buildTitlePromptContext(messages: UIMessage[]): string {
+  const lines: string[] = [];
+  let haveUser = false;
+  let haveAssistant = false;
+  for (const m of messages) {
+    if (m.role !== 'user' && m.role !== 'assistant') {
+      continue;
+    }
+    if (m.role === 'user' && haveUser) {
+      continue;
+    }
+    if (m.role === 'assistant' && haveAssistant) {
+      continue;
+    }
+    const text = (m.parts || [])
+      .filter((p: any) => p.type === 'text' && typeof p.text === 'string')
+      .map((p: any) => p.text)
+      .join(' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+    if (!text) {
+      continue;
+    }
+    // Cap each side so a long pasted blob can't blow the prompt budget; the
+    // opening few hundred chars are more than enough to capture the topic.
+    const truncated = text.length > 800 ? `${text.slice(0, 800)}…` : text;
+    lines.push(`${m.role === 'user' ? 'User' : 'Assistant'}: ${truncated}`);
+    if (m.role === 'user') {
+      haveUser = true;
+    } else {
+      haveAssistant = true;
+    }
+    if (haveUser && haveAssistant) {
+      break;
+    }
+  }
+  return lines.join('\n\n');
+}
+
+/**
+ * Strips the cruft LLMs commonly emit around a title — leading "Title:"
+ * preamble, surrounding quotes, trailing punctuation, internal newlines —
+ * and enforces a hard length cap.
+ */
+export function sanitizeGeneratedTitle(raw: string): string {
+  let title = (raw || '').trim();
+  if (!title) {
+    return '';
+  }
+  // Keep only the first non-empty line — some models add a one-line title
+  // followed by a justification paragraph.
+  const firstLine = title.split(/\r?\n/).find((l) => l.trim().length > 0);
+  title = (firstLine || '').trim();
+  // Drop a "Title:"/"Chat title:"/"Topic:" prefix.
+  title = title.replace(/^\s*(?:chat\s+)?(?:title|topic)\s*[:\-—]\s*/i, '');
+  // Strip wrapping quotes (straight + smart) and any markdown emphasis.
+  title = title.replace(/^[\s"'“”‘’`*_]+|[\s"'“”‘’`*_]+$/g, '');
+  // Drop trailing sentence punctuation.
+  title = title.replace(/[.!?,;:]+$/g, '').trim();
+  // Collapse any remaining internal whitespace.
+  title = title.replace(/\s+/g, ' ');
+  if (!title) {
+    return '';
+  }
+  return title.length > 60 ? `${title.slice(0, 57)}…` : title;
+}
+
+/**
+ * Uses the AI model to generate a short summary title for the chat. The
+ * prompt is anchored on the user's initial question (and, if available, the
+ * assistant's first reply) so the title captures *intent and topic* rather
+ * than echoing the first line verbatim.
+ *
+ * Falls back to `deriveChatTitle` if the generation fails or returns an
+ * empty result.
  */
 export async function generateChatTitle(
   model: LanguageModel,
@@ -474,30 +556,44 @@ export async function generateChatTitle(
   if (fallback === 'New chat') {
     return fallback;
   }
+  const context = buildTitlePromptContext(messages);
+  if (!context) {
+    return fallback;
+  }
   try {
     const result = await generateText({
       model,
-      system:
-        'Generate a short title (max 50 characters) summarizing the following conversation. ' +
-        'Return only the title text, no quotes or punctuation at the end.',
-      prompt: messages
-        .slice(0, 6)
-        .map((m) => {
-          const text = m.parts
-            .filter((p: any) => p.type === 'text')
-            .map((p: any) => p.text)
-            .join(' ');
-          return `${m.role}: ${text}`;
-        })
-        .join('\n'),
+      system: [
+        'You write short, descriptive titles for chat conversations in a',
+        'CMS admin tool. A user has just opened a new chat. Read the',
+        'opening exchange and produce a title that summarizes what the',
+        'conversation is about.',
+        '',
+        'Rules:',
+        '- Output ONLY the title text. No quotes, no trailing punctuation,',
+        '  no "Title:" prefix, no markdown.',
+        '- 3 to 6 words. Hard cap of 60 characters.',
+        '- Use a noun phrase in Title Case (e.g. "Translate Homepage Hero",',
+        '  "Debug Image Upload Error", "Draft Blog Post About Pricing").',
+        '- Describe the user\'s task or topic. Do NOT echo the user\'s',
+        '  message verbatim and do NOT start with a verb like "How to" or',
+        '  a question word.',
+        '- If the user wrote in a non-English language, write the title in',
+        '  the same language.',
+        '- Do not include emoji.',
+      ].join('\n'),
+      prompt: [
+        'Opening exchange:',
+        '',
+        context,
+        '',
+        'Title:',
+      ].join('\n'),
       maxOutputTokens: 30,
     });
-    const title = result.text
-      .trim()
-      .replace(/["']+$/g, '')
-      .replace(/^["']+/g, '');
+    const title = sanitizeGeneratedTitle(result.text);
     if (title) {
-      return title.length > 80 ? `${title.slice(0, 77)}…` : title;
+      return title;
     }
   } catch (err) {
     console.error('failed to generate chat title:', err);
@@ -514,6 +610,13 @@ export interface RunChatStreamOptions {
   chatId: string;
   user: string;
   executionMode?: AiExecutionMode;
+  /**
+   * Title already saved on this chat. When non-empty the server will NOT
+   * regenerate it on this turn — titles are derived once, on the first
+   * assistant response, so they describe the original ask instead of
+   * thrashing as follow-up messages arrive.
+   */
+  existingTitle?: string;
   /**
    * When set, tells the model which document the user is currently viewing
    * in the CMS UI so phrases like "this document" can be resolved.
@@ -643,6 +746,7 @@ export async function runChatStream(
     user,
     chatId,
     executionMode = 'approve',
+    existingTitle,
     activeDocId,
     loadCollection,
     loadAllCollections,
@@ -691,11 +795,16 @@ export async function runChatStream(
     originalMessages: messages,
     onFinish: async ({messages: finalMessages}) => {
       const store = new ChatStore(cmsClient, user);
-      const title = await generateChatTitle(languageModel, finalMessages);
-      const updates = {
-        modelId: model.id,
-        title,
-      };
+      // Generate a title only on the first assistant response. Once a chat
+      // has a saved title we keep it stable so follow-up messages do not
+      // overwrite it with a re-summary of the original question.
+      const updates: {modelId: string; title?: string} = {modelId: model.id};
+      if (!existingTitle) {
+        const title = await generateChatTitle(languageModel, finalMessages);
+        if (title && title !== 'New chat') {
+          updates.title = title;
+        }
+      }
       try {
         // Firestore rejects `undefined` values, but the AI SDK frequently
         // produces messages with `metadata: undefined`. Strip them before

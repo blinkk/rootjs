@@ -818,11 +818,13 @@ export function api(server: Server, options: ApiOptions) {
       typeof body.chatId === 'string' ? body.chatId.trim() : '';
     let chatId = '';
     let storedMessages: UIMessage[] = [];
+    let existingTitle = '';
     if (requestedChatId) {
       const existing = await store.getChat(requestedChatId);
       if (existing) {
         chatId = existing.id;
         storedMessages = (existing.messages as UIMessage[]) || [];
+        existingTitle = existing.title || '';
       } else {
         // Honor the client-supplied id so a single chat session keeps the
         // same Firestore doc id even before the first response is saved.
@@ -882,6 +884,7 @@ export function api(server: Server, options: ApiOptions) {
         chatId,
         user: req.user.email,
         executionMode,
+        existingTitle,
         activeDocId,
         loadCollection: (collectionId) =>
           getCollectionSchema(req, collectionId),
