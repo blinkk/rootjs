@@ -274,6 +274,60 @@ test('pretty mode: void block elements get newlines', () => {
 `);
 });
 
+test('pretty mode: base element is block', () => {
+  const vnode = (
+    <head>
+      <base href="/" />
+      <link rel="stylesheet" href="a.css" />
+    </head>
+  );
+  const output = renderJsxToString(vnode, {mode: 'pretty'});
+  expect(output).toBe(`<head>
+<base href="/">
+<link rel="stylesheet" href="a.css">
+</head>
+`);
+});
+
+test('pretty mode: metadata elements stay block within mixed content', () => {
+  // A stray text/expression node alongside elements triggers the inline
+  // heuristic, but non-visual metadata/resource elements (meta/link/script/
+  // style/base/title) should still each render on their own line.
+  const vnode = (
+    <head>
+      {'text'}
+      <meta charSet="utf-8" />
+      <link rel="stylesheet" href="a.css" />
+      <script src="a.js"></script>
+      <style>{'.x{color:red}'}</style>
+    </head>
+  );
+  const output = renderJsxToString(vnode, {mode: 'pretty'});
+  expect(output).toBe(`<head>
+text<meta charset="utf-8">
+<link rel="stylesheet" href="a.css">
+<script src="a.js"></script>
+<style>.x{color:red}</style>
+</head>
+`);
+});
+
+test('pretty mode: script/style break onto their own line beside text', () => {
+  const vnode = (
+    <div>
+      content
+      <script src="x.js"></script>
+      <style>{'.y{color:blue}'}</style>
+    </div>
+  );
+  const output = renderJsxToString(vnode, {mode: 'pretty'});
+  expect(output).toBe(`<div>
+content<script src="x.js"></script>
+<style>.y{color:blue}</style>
+</div>
+`);
+});
+
 test('pretty mode: custom block elements', () => {
   const vnode = (
     <div>
