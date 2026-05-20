@@ -1,0 +1,56 @@
+.BouncingLoader {
+  --_g: no-repeat radial-gradient(farthest-side, #000 94%, #0000);
+  background:
+    var(--_g) 50% 0,
+    var(--_g) 100% 0;
+  background-size: calc(var(--dot-size) * 0.86) calc(var(--dot-size) * 0.86);
+  position: relative;
+  animation: BouncingLoader--shift 1.5s linear infinite;
+}
+
+.BouncingLoader::before {
+  content: '';
+  position: absolute;
+  height: calc(var(--dot-size) * 0.86);
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: #000;
+  left: 0;
+  top: 0;
+  animation:
+    BouncingLoader--slide 1.5s linear infinite,
+    BouncingLoader--bounce 0.5s cubic-bezier(0, 200, 0.8, 200) infinite;
+}
+
+@keyframes BouncingLoader--shift {
+  0%, 31% {
+    background-position: 50% 0, 100% 0;
+  }
+  33% {
+    background-position: 50% 100%, 100% 0;
+  }
+  43%, 64% {
+    background-position: 50% 0, 100% 0;
+  }
+  66% {
+    background-position: 50% 0, 100% 100%;
+  }
+  79% {
+    background-position: 50% 0, 100% 0;
+  }
+  100% {
+    transform: translateX(calc(-100% / 3));
+  }
+}
+
+@keyframes BouncingLoader--slide {
+  100% {
+    left: calc(100% + 7px);
+  }
+}
+
+@keyframes BouncingLoader--bounce {
+  100% {
+    top: -0.1px;
+  }
+}

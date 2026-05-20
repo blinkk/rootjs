@@ -39,11 +39,12 @@ import {marked} from 'marked';
 import type {ComponentChildren} from 'preact';
 import {useCallback, useEffect, useMemo, useRef, useState} from 'preact/hooks';
 import {useLocation} from 'preact-iso';
-import {JsDiff} from '../JsDiff/JsDiff.js';
-import {Markdown} from '../Markdown/Markdown.js';
 import {joinClassNames} from '../../utils/classes.js';
 import {uploadFileToGCS} from '../../utils/gcs.js';
 import {stableJsonStringify} from '../../utils/objects.js';
+import {BouncingLoader} from '../BouncingLoader/BouncingLoader.js';
+import {JsDiff} from '../JsDiff/JsDiff.js';
+import {Markdown} from '../Markdown/Markdown.js';
 import type {CmsToolPreview} from './cmsToolHandlers.js';
 import {
   executeCmsTool,
@@ -242,10 +243,7 @@ export function RootAIChat(props: RootAIChatProps) {
 
   return (
     <div
-      className={joinClassNames(
-        'RootAIChat',
-        `RootAIChat--${props.variant}`
-      )}
+      className={joinClassNames('RootAIChat', `RootAIChat--${props.variant}`)}
     >
       {!config && !configError ? (
         <div className="RootAIChat__loading">
@@ -255,7 +253,9 @@ export function RootAIChat(props: RootAIChatProps) {
         <ChatExperience
           variant={props.variant}
           config={config!}
-          initialChatId={props.variant === 'panel' ? undefined : props.initialChatId}
+          initialChatId={
+            props.variant === 'panel' ? undefined : props.initialChatId
+          }
           docContext={props.docContext}
           onClose={props.onClose}
         />
@@ -971,8 +971,7 @@ function ChatTranscript(props: {
         ))}
         {props.isStreaming && (
           <div className="RootAIChat__streamingIndicator">
-            <Loader size="xs" color="gray" />
-            <span>Thinking…</span>
+            <BouncingLoader size={6} />
           </div>
         )}
       </div>

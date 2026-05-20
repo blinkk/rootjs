@@ -86,7 +86,7 @@
 }
 
 .RootAIChat__sidebar__item--active {
-  background: #e7f5ff;
+  background: #f5f5f5;
 }
 
 .RootAIChat__sidebar__item__title {
@@ -283,11 +283,6 @@
 }
 
 .RootAIChat__streamingIndicator {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-  font-size: 14px;
-  color: dimgray;
   padding-left: 44px;
 }
 
@@ -379,7 +374,7 @@
   display: flex;
   flex-direction: column;
   gap: 12px;
-  font-size: 15px;
+  font-size: 14px;
   line-height: 1.6;
 }
 
@@ -456,6 +451,29 @@
   border: 1px solid #DADCE0;
   border-radius: 4px;
   padding: 0.1em 0.3em;
+}
+
+.RootAIChat__textPart table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 1em 0;
+  font-size: 0.9em;
+}
+
+.RootAIChat__textPart th,
+.RootAIChat__textPart td {
+  border: 1px solid #DADCE0;
+  padding: 8px 12px;
+  text-align: left;
+}
+
+.RootAIChat__textPart th {
+  background: #f1f3f4;
+  font-weight: 600;
+}
+
+.RootAIChat__textPart tr:nth-child(even) {
+  background: #f8f9fa;
 }
 
 .RootAIChat__reasoning {
@@ -540,14 +558,8 @@
   font-size: 12px;
 }
 
-.RootAIChat__toolSummary {
-  background: #fff;
-  border: 1px solid var(--color-border);
-  border-radius: 6px;
-  padding: 8px 10px;
-}
-
 .RootAIChat__toolSummary__label {
+  display: none;
   font-size: 12px;
   font-weight: 700;
   color: #495057;
