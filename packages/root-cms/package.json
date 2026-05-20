@@ -140,8 +140,8 @@
     "@types/jsonwebtoken": "9.0.1",
     "@types/node": "24.3.1",
     "@types/sanitize-html": "2.13.0",
-    "@vitest/browser": "4.1.2",
-    "@vitest/browser-playwright": "4.1.2",
+    "@vitest/browser": "4.1.6",
+    "@vitest/browser-playwright": "4.1.6",
     "concurrently": "7.6.0",
     "esbuild": "0.25.9",
     "firebase": "12.2.1",
@@ -166,8 +166,8 @@
     "react-json-view-compare": "2.0.2",
     "tsup": "8.5.0",
     "typescript": "5.9.2",
-    "vite": "8.0.3",
-    "vitest": "4.1.2",
+    "vite": "8.0.13",
+    "vitest": "4.1.6",
     "yjs": "13.6.27"
   },
   "peerDependencies": {
