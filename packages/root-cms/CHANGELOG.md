@@ -1,5 +1,30 @@
 # @blinkk/root-cms
 
+## 3.0.1
+
+### Patch Changes
+
+- 7d492821: fix: fix cmd+f searchability of collapsed array items
+- aef77ddd: chore: root ai style tweaks
+- d9e013b0: feat: improve plan and excute flow in root ai
+- f930a90c: feat: refactor root ai with streaming, logic/reasoning, and tool calling
+- c9d988e1: feat: add mock OpenAI-compatible LLM server for local UI testing
+- 2a7212c4: feat: expand cmd+k search to jump to cms objects and recent views
+- a57eb0a8: fix: improve ai network payload issues via server-side calls
+- f61fcd68: fix: improve array path handling in doc_updateField tool
+- b0967de6: feat: add document editor search panel
+- 12b1e2c6: feat: add picker variant + presets to schema.oneOf()
+- 76fea4ec: feat: add task manager ui
+- fd7c0c90: feat: add Root AI side panel to document page
+- a4bad35a: feat: add permission groups for role-based access control to collections
+- 0c8af595: feat: add user avatars and @mention autocomplete for task comments
+- 3952727d: fix: improve doc editor rendering performance
+- 9d316222: feat: add global search bar to top right of CMS UI
+- 83871448: feat: upgrade to vite v8
+- Updated dependencies [3b1db9e1]
+- Updated dependencies [83871448]
+  - @blinkk/root@3.0.1
+
 ## 3.0.1-beta.9
 
 ### Patch Changes

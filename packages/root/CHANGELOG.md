@@ -1,5 +1,12 @@
 # @blinkk/root
 
+## 3.0.1
+
+### Patch Changes
+
+- 3b1db9e1: feat: add native root jsx runtime and renderer
+- 83871448: feat: upgrade to vite v8
+
 ## 3.0.1-beta.9
 
 ## 3.0.1-beta.8
