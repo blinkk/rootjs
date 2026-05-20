@@ -375,6 +375,53 @@ test('pretty mode: custom block elements', () => {
 `);
 });
 
+test('pretty mode: select renders each option on its own line', () => {
+  const vnode = (
+    <select name="color">
+      <option value="r">Red</option>
+      <option value="g">Green</option>
+    </select>
+  );
+  const output = renderJsxToString(vnode, {mode: 'pretty'});
+  expect(output).toBe(`<select name="color">
+<option value="r">Red</option>
+<option value="g">Green</option>
+</select>
+`);
+});
+
+test('pretty mode: select with optgroups breaks onto their own lines', () => {
+  const vnode = (
+    <select name="food">
+      <optgroup label="Fruit">
+        <option value="a">Apple</option>
+        <option value="b">Banana</option>
+      </optgroup>
+    </select>
+  );
+  const output = renderJsxToString(vnode, {mode: 'pretty'});
+  expect(output).toBe(`<select name="food">
+<optgroup label="Fruit">
+<option value="a">Apple</option>
+<option value="b">Banana</option>
+</optgroup>
+</select>
+`);
+});
+
+test('minimal mode: select options stay compact', () => {
+  const vnode = (
+    <select name="color">
+      <option value="r">Red</option>
+      <option value="g">Green</option>
+    </select>
+  );
+  const output = renderJsxToString(vnode, {mode: 'minimal'});
+  expect(output).toBe(
+    '<select name="color"><option value="r">Red</option><option value="g">Green</option></select>'
+  );
+});
+
 test('minimal mode: no extra whitespace', () => {
   const vnode = (
     <html>
