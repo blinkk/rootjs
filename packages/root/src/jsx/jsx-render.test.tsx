@@ -196,7 +196,7 @@ test('renders numbers and ignores booleans/null', () => {
   expect(output).toBe('<div>42text</div>');
 });
 
-test('skips event handlers', () => {
+test('skips function event handlers', () => {
   const vnode = (
     <button onClick={() => {}} onMouseOver={() => {}}>
       click
@@ -204,6 +204,36 @@ test('skips event handlers', () => {
   );
   const output = renderJsxToString(vnode, {mode: 'minimal'});
   expect(output).toBe('<button>click</button>');
+});
+
+test('preserves string event handlers', () => {
+  const vnode = (
+    <select onChange={'this.form.submit()'}>
+      <option value="a">a</option>
+    </select>
+  );
+  const output = renderJsxToString(vnode, {mode: 'minimal'});
+  expect(output).toBe(
+    '<select onChange="this.form.submit()"><option value="a">a</option></select>'
+  );
+});
+
+test('preserves and escapes string event handlers, skips function ones', () => {
+  const vnode = (
+    <button onClick={'doStuff("a" & "b")'} onMouseOver={() => {}}>
+      click
+    </button>
+  );
+  const output = renderJsxToString(vnode, {mode: 'minimal'});
+  expect(output).toBe(
+    '<button onClick="doStuff(&quot;a&quot; &amp; &quot;b&quot;)">click</button>'
+  );
+});
+
+test('skips function-valued non-event props', () => {
+  const vnode = <div title={(() => 'x') as any} />;
+  const output = renderJsxToString(vnode, {mode: 'minimal'});
+  expect(output).toBe('<div></div>');
 });
 
 // --- Pretty mode tests ---
