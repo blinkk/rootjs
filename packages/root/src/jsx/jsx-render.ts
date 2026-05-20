@@ -27,6 +27,7 @@ const DEFAULT_BLOCK_ELEMENTS = new Set([
   'address',
   'article',
   'aside',
+  'base',
   'blockquote',
   'body',
   'dd',
@@ -74,6 +75,22 @@ const DEFAULT_BLOCK_ELEMENTS = new Set([
   'title',
   'tr',
   'ul',
+]);
+
+/**
+ * Non-visual metadata and resource elements. These produce no inline rendered
+ * content, so in pretty mode they always start on their own line — even inside
+ * a parent with mixed text/element children, where the inline heuristic would
+ * otherwise keep all siblings on a single line. (`base`/`link`/`meta` are void;
+ * `script`/`style`/`title` render no visible text.)
+ */
+const ALWAYS_BLOCK_ELEMENTS = new Set([
+  'base',
+  'link',
+  'meta',
+  'script',
+  'style',
+  'title',
 ]);
 
 /** JSX prop name -> HTML attribute name. */
@@ -446,7 +463,12 @@ export function renderJsxToString(
     props: Record<string, any>,
     inline?: boolean
   ): string {
-    const isBlock = isPretty && !inline && blockSet.has(tag);
+    // Metadata/resource elements always break onto their own line, even within
+    // mixed (text + element) content where the inline heuristic applies, since
+    // they render no inline visual output.
+    const isBlock =
+      isPretty &&
+      (ALWAYS_BLOCK_ELEMENTS.has(tag) || (!inline && blockSet.has(tag)));
     const isVoid = VOID_ELEMENTS.has(tag);
     const attrs = renderAttrs(tag, props);
     let result = '<' + tag + attrs + '>';
