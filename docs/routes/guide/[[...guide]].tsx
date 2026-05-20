@@ -68,6 +68,13 @@ const GUIDE_LINKS = [
       return ctx.currentPath === '/guide/migration/v2/';
     },
   },
+  {
+    label: 'v3 Migration Guide',
+    href: '/guide/migration/v3',
+    isActive: (ctx: RequestContext) => {
+      return ctx.currentPath === '/guide/migration/v3/';
+    },
+  },
 ];
 
 const CMS_LINKS = [
