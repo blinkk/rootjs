@@ -39,6 +39,7 @@ import {marked} from 'marked';
 import type {ComponentChildren} from 'preact';
 import {useCallback, useEffect, useMemo, useRef, useState} from 'preact/hooks';
 import {useLocation} from 'preact-iso';
+import {BouncingLoader} from '../BouncingLoader/BouncingLoader.js';
 import {JsDiff} from '../JsDiff/JsDiff.js';
 import {Markdown} from '../Markdown/Markdown.js';
 import {joinClassNames} from '../../utils/classes.js';
@@ -971,8 +972,7 @@ function ChatTranscript(props: {
         ))}
         {props.isStreaming && (
           <div className="RootAIChat__streamingIndicator">
-            <Loader size="xs" color="gray" />
-            <span>Thinking…</span>
+            <BouncingLoader size={8} />
           </div>
         )}
       </div>
