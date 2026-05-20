@@ -42,7 +42,8 @@ import type {ValidationError} from './validation.js';
 export const CMS_TOOL_NAMES = [
   'collections_list',
   'docs_list',
-  'docs_search',
+  // TODO: re-enable once search quality improves.
+  // 'docs_search',
   'doc_get',
   'doc_getVersion',
   'doc_set',
@@ -63,7 +64,8 @@ export type CmsToolName = (typeof CMS_TOOL_NAMES)[number];
 export const READ_ONLY_CMS_TOOL_NAMES: readonly CmsToolName[] = [
   'collections_list',
   'docs_list',
-  'docs_search',
+  // TODO: re-enable once search quality improves.
+  // 'docs_search',
   'doc_get',
   'doc_getVersion',
   'doc_listVersions',
@@ -193,19 +195,20 @@ export function createCmsTools(ctx: CmsToolContext): ToolSet {
       },
     }),
 
-    docs_search: tool({
-      description:
-        'Run a full-text search across all indexed CMS docs. Returns the ' +
-        'top matching doc ids ordered by relevance.',
-      inputSchema: z.object({
-        query: z.string().min(1),
-        limit: z.number().int().min(1).max(50).default(10),
-      }),
-      execute: async ({query, limit = 10}) => {
-        const max = clampInt(limit, 1, 50, 10);
-        return await ctx.search(query, {limit: max});
-      },
-    }),
+    // TODO: re-enable once search quality improves.
+    // docs_search: tool({
+    //   description:
+    //     'Run a full-text search across all indexed CMS docs. Returns the ' +
+    //     'top matching doc ids ordered by relevance.',
+    //   inputSchema: z.object({
+    //     query: z.string().min(1),
+    //     limit: z.number().int().min(1).max(50).default(10),
+    //   }),
+    //   execute: async ({query, limit = 10}) => {
+    //     const max = clampInt(limit, 1, 50, 10);
+    //     return await ctx.search(query, {limit: max});
+    //   },
+    // }),
 
     doc_get: tool({
       description:
