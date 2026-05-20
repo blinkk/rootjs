@@ -78,8 +78,10 @@ export interface DOMAttributes {
   onError?: EventHandler;
 }
 
+// Event handler props accept a function (client-side handler, stripped during
+// SSR) or a string (an inline HTML event attribute, preserved in the output).
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-type EventHandler = (...args: any[]) => void;
+type EventHandler = string | ((...args: any[]) => void);
 
 export interface AriaAttributes {
   role?: string;

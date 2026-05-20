@@ -529,11 +529,14 @@ export function renderJsxToString(
       if (tag === 'textarea' && (key === 'value' || key === 'defaultValue')) {
         continue;
       }
-      // Skip event handlers.
-      if (key.length > 2 && key[0] === 'o' && key[1] === 'n') continue;
 
       let value = props[key];
       if (!isDef(value)) continue;
+      // Skip function-valued props such as event handlers (e.g. onClick={fn}):
+      // client-side handler functions can't be serialized to HTML. String
+      // values like <select onChange="..."> are inline HTML event attributes,
+      // so they are preserved and rendered as-is.
+      if (typeof value === 'function') continue;
       // For standard and boolean attributes, `false` removes the attribute.
       // For data-* attributes, `false` is rendered as the string "false".
       if (value === false && !key.startsWith('data-')) continue;
