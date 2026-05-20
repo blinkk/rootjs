@@ -971,7 +971,7 @@ function ChatTranscript(props: {
         ))}
         {props.isStreaming && (
           <div className="RootAIChat__streamingIndicator">
-            <BouncingLoader size={8} />
+            <BouncingLoader size={6} />
           </div>
         )}
       </div>
