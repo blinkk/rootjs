@@ -86,7 +86,7 @@
 }
 
 .RootAIChat__sidebar__item--active {
-  background: #e7f5ff;
+  background: #f5f5f5;
 }
 
 .RootAIChat__sidebar__item__title {
@@ -535,14 +535,8 @@
   font-size: 12px;
 }
 
-.RootAIChat__toolSummary {
-  background: #fff;
-  border: 1px solid var(--color-border);
-  border-radius: 6px;
-  padding: 8px 10px;
-}
-
 .RootAIChat__toolSummary__label {
+  display: none;
   font-size: 12px;
   font-weight: 700;
   color: #495057;
