@@ -22,7 +22,11 @@ const VOID_ELEMENTS = new Set([
 /** Tags whose text content may contain literal newlines that should not be treated as block-child indicators. */
 const RAW_CONTENT_ELEMENTS = new Set(['pre', 'textarea', 'script', 'style']);
 
-/** Standard HTML block-level elements. */
+/**
+ * Standard HTML block-level elements. Also includes the `<select>` content
+ * model (`select`/`optgroup`/`option`) so that each `<option>` renders on its
+ * own line in pretty mode, even though those tags aren't block-level per CSS.
+ */
 const DEFAULT_BLOCK_ELEMENTS = new Set([
   'address',
   'article',
@@ -59,11 +63,14 @@ const DEFAULT_BLOCK_ELEMENTS = new Set([
   'nav',
   'noscript',
   'ol',
+  'optgroup',
+  'option',
   'p',
   'pre',
   'script',
   'search',
   'section',
+  'select',
   'style',
   'summary',
   'table',
