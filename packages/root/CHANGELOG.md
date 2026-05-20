@@ -1,5 +1,12 @@
 # @blinkk/root
 
+## 3.0.2
+
+### Patch Changes
+
+- 19d81d51: fix: jsx render meta elements on their own line in pretty mode
+- ead5f31f: fix: preserve string-valued event handler attrs in jsx render
+
 ## 3.0.1
 
 ### Patch Changes
