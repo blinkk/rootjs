@@ -10,6 +10,7 @@ import {
   deriveChatTitle,
   extractJsonFromResponse,
   findModel,
+  mergeIncomingMessage,
   readRootMd,
   ROOT_MD_FILENAME,
   sanitizeGeneratedTitle,
@@ -314,12 +315,10 @@ describe('ai', () => {
   });
 
   describe('buildExecutionModePrompt', () => {
-    it('omits the write workflow in read and suggest modes', () => {
-      for (const mode of ['read', 'suggest'] as const) {
-        const prompt = buildExecutionModePrompt(mode);
-        expect(prompt).not.toContain('Before the first write');
-        expect(prompt).not.toContain('After write tools finish');
-      }
+    it('omits the write workflow in read mode', () => {
+      const prompt = buildExecutionModePrompt('read');
+      expect(prompt).not.toContain('Before the first write');
+      expect(prompt).not.toContain('After write tools finish');
     });
 
     it('includes the write workflow in approve and auto modes', () => {
@@ -332,13 +331,42 @@ describe('ai', () => {
 
     it('always names the current execution mode', () => {
       expect(buildExecutionModePrompt('read')).toContain('Read only');
-      expect(buildExecutionModePrompt('suggest')).toContain('Suggest changes');
       expect(buildExecutionModePrompt('approve')).toContain(
         'Ask before writing'
       );
       expect(buildExecutionModePrompt('auto')).toContain(
         'Auto-apply draft edits'
       );
+    });
+  });
+
+  describe('mergeIncomingMessage', () => {
+    const msg = (id: string, text: string): any => ({
+      id,
+      role: 'user',
+      parts: [{type: 'text', text}],
+    });
+
+    it('appends a message with a new id', () => {
+      const result = mergeIncomingMessage([msg('a', 'hi')], msg('b', 'there'));
+      expect(result.map((m) => m.id)).toEqual(['a', 'b']);
+    });
+
+    it('replaces an existing message by id (resubmitted tool results)', () => {
+      const result = mergeIncomingMessage(
+        [msg('a', 'hi'), msg('b', 'old')],
+        msg('b', 'new')
+      );
+      expect(result).toHaveLength(2);
+      expect((result[1].parts[0] as any).text).toBe('new');
+    });
+
+    it('drops any messages after the replaced id', () => {
+      const result = mergeIncomingMessage(
+        [msg('a', '1'), msg('b', '2'), msg('c', '3')],
+        msg('b', '2-updated')
+      );
+      expect(result.map((m) => m.id)).toEqual(['a', 'b']);
     });
   });
 

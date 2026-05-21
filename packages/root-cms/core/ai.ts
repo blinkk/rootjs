@@ -39,7 +39,7 @@ import {SearchIndexService} from './search-index.js';
 /** Filename of the project-level instructions file loaded into the AI prompt. */
 export const ROOT_MD_FILENAME = 'ROOT.md';
 
-export type AiExecutionMode = 'read' | 'suggest' | 'approve' | 'auto';
+export type AiExecutionMode = 'read' | 'approve' | 'auto';
 
 /**
  * Provider type for an AI model. Use `openai-compatible` for any OpenAI-style
@@ -266,12 +266,7 @@ export function findImageModel(
 }
 
 export function normalizeExecutionMode(value: unknown): AiExecutionMode {
-  if (
-    value === 'read' ||
-    value === 'suggest' ||
-    value === 'approve' ||
-    value === 'auto'
-  ) {
+  if (value === 'read' || value === 'approve' || value === 'auto') {
     return value;
   }
   return 'approve';
@@ -394,6 +389,33 @@ export class ChatStore {
     }
     await this.collection().doc(id).update(updates);
   }
+}
+
+/**
+ * Merges the latest incoming message into the persisted chat history.
+ *
+ * The client posts only the last message; the server holds the rest in
+ * Firestore. After client-side tool execution the SDK resubmits the *same*
+ * assistant message — now carrying tool results — under the id it was
+ * streamed with. That id already exists in the persisted history (saved by
+ * `onFinish` before the results came back), so a naive append would
+ * duplicate it: the stored copy still has unresolved tool calls, which
+ * convert to `tool_use` blocks with no following `tool_result` and the model
+ * provider rejects the request.
+ *
+ * Replacing the matched entry (and dropping anything after it) keeps message
+ * ids unique and the tool-call/result pairing intact. A genuinely new
+ * message id is appended as usual.
+ */
+export function mergeIncomingMessage(
+  stored: UIMessage[],
+  incoming: UIMessage
+): UIMessage[] {
+  const idx = stored.findIndex((m) => m.id === incoming.id);
+  if (idx === -1) {
+    return [...stored, incoming];
+  }
+  return [...stored.slice(0, idx), incoming];
 }
 
 /**
@@ -745,13 +767,6 @@ export function buildExecutionModePrompt(mode: AiExecutionMode): string {
       '- You only have read-only CMS tools.',
       '- Do not propose tool writes or ask for approval to write. Answer from the context you can read.'
     );
-  } else if (mode === 'suggest') {
-    common.push(
-      '',
-      'Current execution mode: Suggest changes.',
-      '- You only have read-only CMS tools.',
-      '- Do not call write tools. Provide proposed edits, field paths, and rationale for the user to review.'
-    );
   } else if (mode === 'approve') {
     common.push(
       '',
@@ -804,7 +819,7 @@ export async function runChatStream(
   const tools: ToolSet =
     model.capabilities?.tools === false
       ? {}
-      : executionMode === 'read' || executionMode === 'suggest'
+      : executionMode === 'read'
       ? createReadOnlyCmsTools(toolContext)
       : createCmsTools(toolContext);
 

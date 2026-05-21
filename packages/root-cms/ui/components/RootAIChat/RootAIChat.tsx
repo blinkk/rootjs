@@ -110,7 +110,7 @@ interface AttachmentPreview {
   height?: number;
 }
 
-type ExecutionMode = 'read' | 'suggest' | 'approve' | 'auto';
+type ExecutionMode = 'read' | 'approve' | 'auto';
 
 interface ExecutionModeInfo {
   id: ExecutionMode;
@@ -123,11 +123,6 @@ const EXECUTION_MODES: ExecutionModeInfo[] = [
     id: 'approve',
     label: 'Ask before writing',
     description: 'Read freely, then pause for approval before draft edits.',
-  },
-  {
-    id: 'suggest',
-    label: 'Suggest changes',
-    description: 'Research and propose edits without calling write tools.',
   },
   {
     id: 'read',
@@ -760,14 +755,12 @@ function ChatPane(props: {
       }
 
       const mode = executionModeRef.current;
-      if (mode === 'read' || mode === 'suggest') {
+      if (mode === 'read') {
         return {
           success: false,
           error: 'WRITE_BLOCKED_BY_MODE',
           message:
-            mode === 'read'
-              ? 'The current execution mode is read only. Do not call write tools.'
-              : 'The current execution mode only allows suggestions. Propose the change in chat instead of calling write tools.',
+            'The current execution mode is read only. Do not call write tools.',
         };
       }
 
