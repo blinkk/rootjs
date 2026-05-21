@@ -1262,6 +1262,8 @@ function prettyToolName(toolName: string, input: any): string {
       return `Create ${input?.docId || 'draft document'}`;
     case 'doc_updateField':
       return `Update ${input?.path || 'field'}`;
+    case 'doc_edit':
+      return `Edit ${input?.docId || 'document'}`;
     case 'doc_duplicate':
       return `Duplicate ${input?.fromDocId || 'document'}`;
     case 'doc_listVersions':

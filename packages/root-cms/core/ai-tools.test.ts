@@ -1,5 +1,5 @@
 import {describe, expect, it} from 'vitest';
-import {validateValueAtPath} from './ai-tools.js';
+import {applyDocEdits, validateValueAtPath} from './ai-tools.js';
 import {Collection} from './schema.js';
 
 describe('validateValueAtPath', () => {
@@ -230,5 +230,280 @@ describe('validateValueAtPath', () => {
     expect(
       validateValueAtPath(collection, 'unknown.deeply.nested', 'anything')
     ).toEqual([]);
+  });
+});
+
+describe('applyDocEdits', () => {
+  function baseFields() {
+    return {
+      hero: {title: 'Old title', subtitle: 'Sub'},
+      content: {
+        modules: [
+          {_type: 'text', body: 'first'},
+          {_type: 'text', body: 'second'},
+        ],
+      },
+      tags: ['a', 'b'],
+    };
+  }
+
+  it('sets a nested field value', () => {
+    const result = applyDocEdits(baseFields(), [
+      {op: 'set', path: 'hero.title', value: 'New title'},
+    ]);
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.fields.hero.title).toBe('New title');
+      expect(result.fields.hero.subtitle).toBe('Sub');
+    }
+  });
+
+  it('sets a value inside an array item by index', () => {
+    const result = applyDocEdits(baseFields(), [
+      {op: 'set', path: 'content.modules.0.body', value: 'updated'},
+    ]);
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.fields.content.modules[0].body).toBe('updated');
+    }
+  });
+
+  it('creates a new object key with set', () => {
+    const result = applyDocEdits(baseFields(), [
+      {op: 'set', path: 'hero.cta', value: {label: 'Go'}},
+    ]);
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.fields.hero.cta).toEqual({label: 'Go'});
+    }
+  });
+
+  it('appends an array item when no index is given', () => {
+    const result = applyDocEdits(baseFields(), [
+      {
+        op: 'insert_item',
+        path: 'content.modules',
+        value: {_type: 'text', body: 'third'},
+      },
+    ]);
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.fields.content.modules).toHaveLength(3);
+      expect(result.fields.content.modules[2]).toEqual({
+        _type: 'text',
+        body: 'third',
+      });
+    }
+  });
+
+  it('inserts an array item before the given index', () => {
+    const result = applyDocEdits(baseFields(), [
+      {
+        op: 'insert_item',
+        path: 'content.modules',
+        index: 0,
+        value: {_type: 'text', body: 'zeroth'},
+      },
+    ]);
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.fields.content.modules.map((m: any) => m.body)).toEqual([
+        'zeroth',
+        'first',
+        'second',
+      ]);
+    }
+  });
+
+  it('creates the array when inserting into a missing field', () => {
+    const result = applyDocEdits({content: {}}, [
+      {
+        op: 'insert_item',
+        path: 'content.modules',
+        value: {_type: 'text', body: 'first'},
+      },
+    ]);
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.fields.content.modules).toEqual([
+        {_type: 'text', body: 'first'},
+      ]);
+    }
+  });
+
+  it('removes an array item by index', () => {
+    const result = applyDocEdits(baseFields(), [
+      {op: 'remove_item', path: 'content.modules', index: 0},
+    ]);
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.fields.content.modules).toHaveLength(1);
+      expect(result.fields.content.modules[0].body).toBe('second');
+    }
+  });
+
+  it('applies multiple operations in order', () => {
+    const result = applyDocEdits(baseFields(), [
+      {op: 'remove_item', path: 'content.modules', index: 0},
+      {
+        op: 'insert_item',
+        path: 'content.modules',
+        value: {_type: 'text', body: 'third'},
+      },
+      {op: 'set', path: 'content.modules.1.body', value: 'third-edited'},
+      {op: 'set', path: 'hero.title', value: 'Combined'},
+    ]);
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.fields.content.modules.map((m: any) => m.body)).toEqual([
+        'second',
+        'third-edited',
+      ]);
+      expect(result.fields.hero.title).toBe('Combined');
+    }
+  });
+
+  it('does not mutate the input fields', () => {
+    const input = baseFields();
+    applyDocEdits(input, [
+      {op: 'set', path: 'hero.title', value: 'Changed'},
+      {op: 'remove_item', path: 'content.modules', index: 0},
+    ]);
+    expect(input.hero.title).toBe('Old title');
+    expect(input.content.modules).toHaveLength(2);
+  });
+
+  it('reports the index of the failing operation', () => {
+    const result = applyDocEdits(baseFields(), [
+      {op: 'set', path: 'hero.title', value: 'ok'},
+      {op: 'remove_item', path: 'content.modules', index: 9},
+    ]);
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.error.opIndex).toBe(1);
+      expect(result.error.op).toBe('remove_item');
+    }
+  });
+
+  it('rejects a set without a value', () => {
+    const result = applyDocEdits(baseFields(), [
+      {op: 'set', path: 'hero.title'},
+    ]);
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.error).toMatchObject({op: 'set', expected: 'value'});
+    }
+  });
+
+  it('rejects an insert without a value', () => {
+    const result = applyDocEdits(baseFields(), [
+      {op: 'insert_item', path: 'content.modules'},
+    ]);
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.error).toMatchObject({
+        op: 'insert_item',
+        expected: 'value',
+      });
+    }
+  });
+
+  it('rejects a remove without an index', () => {
+    const result = applyDocEdits(baseFields(), [
+      {op: 'remove_item', path: 'content.modules'},
+    ]);
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.error).toMatchObject({
+        op: 'remove_item',
+        expected: 'index',
+      });
+    }
+  });
+
+  it('rejects a remove index out of range', () => {
+    const result = applyDocEdits(baseFields(), [
+      {op: 'remove_item', path: 'content.modules', index: 5},
+    ]);
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.error.message).toMatch(/out of range/i);
+    }
+  });
+
+  it('rejects an insert index out of range', () => {
+    const result = applyDocEdits(baseFields(), [
+      {op: 'insert_item', path: 'content.modules', index: 9, value: {}},
+    ]);
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.error.message).toMatch(/out of range/i);
+    }
+  });
+
+  it('rejects insert when the target is not an array', () => {
+    const result = applyDocEdits(baseFields(), [
+      {op: 'insert_item', path: 'hero.title', value: 'x'},
+    ]);
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.error).toMatchObject({
+        op: 'insert_item',
+        expected: 'array',
+      });
+    }
+  });
+
+  it('rejects remove when the target is not an array', () => {
+    const result = applyDocEdits(baseFields(), [
+      {op: 'remove_item', path: 'hero', index: 0},
+    ]);
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.error).toMatchObject({
+        op: 'remove_item',
+        expected: 'array',
+      });
+    }
+  });
+
+  it('rejects "fields."-prefixed paths', () => {
+    const result = applyDocEdits(baseFields(), [
+      {op: 'set', path: 'fields.hero.title', value: 'x'},
+    ]);
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.error.expected).toBe('field path without fields prefix');
+    }
+  });
+
+  it('rejects bracket notation in paths', () => {
+    const result = applyDocEdits(baseFields(), [
+      {op: 'set', path: 'content.modules[0].body', value: 'x'},
+    ]);
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.error.expected).toBe('dotted array index path');
+    }
+  });
+
+  it('rejects an out-of-range array index in the middle of a path', () => {
+    const result = applyDocEdits(baseFields(), [
+      {op: 'set', path: 'content.modules.9.body', value: 'x'},
+    ]);
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.error.path).toBe('content.modules.9');
+    }
+  });
+
+  it('rejects an unknown operation', () => {
+    const result = applyDocEdits(baseFields(), [
+      {op: 'replace' as any, path: 'hero.title', value: 'x'},
+    ]);
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.error.message).toMatch(/unknown operation/i);
+    }
   });
 });
