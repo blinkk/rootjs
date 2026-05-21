@@ -14,19 +14,17 @@ Input Requirements & Handling:
 
 Root CMS JSON File Structure:
 
-- Root CMS JSON files are standard JSON files described by the TypeScript interface in `root-cms.d.ts`. However, there is one critical syntax rule that you must understand and always follow regarding **Array fields**. An Array field is a list of repeated items — for example, a list of modules on a page, or a list of items within a module. Array fields are NOT stored as plain JSON arrays; instead they are expressed as hash maps. The order of the resulting data when Root CMS unmarshals the data is provided by a special key called `_array`. For example, to represent an Array field of `[1, 2, 3]` in the CMS, the JSON data may look like this. You may generate your own UIDs for the keys and the items within `_array`.
+- Root CMS JSON files are standard JSON files described by the TypeScript interface in `root-cms.d.ts`. However, there is one critical syntax rule that you must understand and always follow regarding **Array fields**. An Array field is a list of repeated items — for example, a list of modules on a page, or a list of items within a module. The items in an Array field are always objects (e.g. `[{"foo": 1}, {"foo": 2}]`); an Array field never contains primitive values like `[1, 2, 3]` or `["a", "b"]`. Array fields are NOT stored as plain JSON arrays; instead they are expressed as hash maps. The order of the resulting data when Root CMS unmarshals the data is provided by a special key called `_array`. For example, to represent an Array field whose items are `[{"foo": 1}, {"foo": 2}]`, the JSON data may look like this. For each key, autogenerate a random 6-letter string (e.g. `kxmfqa`); never use human-readable names or numbers as keys.
 
 ```json
 {
-  "_array": ["2HGwoV", "LjFHWk", "OLakGA", "UaGHJh"],
-  "2HGwoV": 1,
-  "LjFHWk": 2,
-  "OLakGA": 3,
-  "UaGHJh": 4
+  "_array": ["kxmfqa", "wnzrbh"],
+  "kxmfqa": {"foo": 1},
+  "wnzrbh": {"foo": 2}
 }
 ```
 
-When creating an Array field in your JSON output, you must _never_ forget to add an `_array` key. If you forget to add an `_array` key to an Array field, the output will NOT work with Root CMS. When adding new array items, you can create your own array keys.
+When creating an Array field in your JSON output, you must _never_ forget to add an `_array` key. If you forget to add an `_array` key to an Array field, the output will NOT work with Root CMS. When adding new array items, autogenerate a new random 6-letter key for each item.
 
 The `_array` object notation applies ONLY to Array fields. Every OTHER array-shaped value is a plain JSON array and MUST NEVER be wrapped in an `_array` object. In particular:
 
