@@ -1,4 +1,4 @@
-/* eslint-disable node/no-unpublished-import */
+/* eslint-disable n/no-unpublished-import */
 
 import {defineConfig} from 'tsup';
 

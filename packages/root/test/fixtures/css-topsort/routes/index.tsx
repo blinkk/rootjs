@@ -1,4 +1,4 @@
-/* eslint-disable import/order */
+/* eslint-disable import-x/order */
 
 import {Layout} from '../components/layout';
 import {A} from '../components/a';

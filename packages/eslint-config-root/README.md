@@ -1,30 +1,40 @@
 # ESLint config for Root.js projects
 
+A shareable [flat config](https://eslint.org/docs/latest/use/configure/configuration-files)
+for Root.js projects. Requires ESLint 10+.
+
 ## Setup
 
 Install deps:
 
 ```sh
-yarn add eslint prettier typescript
-yarn add -D @blinkk/eslint-config-root
+npm install -D @blinkk/eslint-config-root eslint prettier typescript
 ```
 
-Add eslint config file `.eslintrc.json`:
+Add an `eslint.config.js` at the root of your project:
 
-```json
-{
-  "extends": [
-    "@blinkk/root"
-  ]
-}
+```js
+const rootConfig = require('@blinkk/eslint-config-root');
+
+module.exports = [
+  {
+    ignores: ['**/dist/**', '**/build/**'],
+  },
+  ...rootConfig,
+];
 ```
 
-Add `.eslintignore`:
+Or, using ESM (`eslint.config.mjs`, or `.js` with `"type": "module"`):
 
-```
-node_modules/
-build/
-dist/
+```js
+import rootConfig from '@blinkk/eslint-config-root';
+
+export default [
+  {
+    ignores: ['**/dist/**', '**/build/**'],
+  },
+  ...rootConfig,
+];
 ```
 
 Add scripts to `package.json`:
@@ -32,8 +42,8 @@ Add scripts to `package.json`:
 ```json
 {
   "scripts": {
-    "lint": "eslint . --ext .ts,.tsx",
-    "fix": "eslint . --ext .ts,.tsx --fix"
+    "lint": "eslint .",
+    "fix": "eslint . --fix"
   }
 }
 ```
