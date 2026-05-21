@@ -2,6 +2,7 @@
   "name": "@blinkk/root-project",
   "version": "1.0.0",
   "private": true,
+  "type": "module",
   "description": "Root.js is a developer-focused CMS that writes directly to Firestore.",
   "packageManager": "pnpm@8.9.0",
   "main": "index.js",
@@ -9,8 +10,8 @@
     "cms:dev": "./scripts/dev_cms.sh",
     "build": "turbo run build --filter=\"@blinkk/*\"",
     "changeset": "changeset",
-    "lint": "eslint . --ext .ts,.tsx",
-    "fix": "eslint . --ext .ts,.tsx --fix",
+    "lint": "eslint .",
+    "fix": "eslint . --fix",
     "version": "changeset version && pnpm install --no-frozen-lockfile",
     "release": "pnpm run build && changeset publish",
     "release:ci": "pnpm run build && changeset publish --provenance",
@@ -35,10 +36,10 @@
   "homepage": "https://github.com/blinkk/rootjs#readme",
   "devDependencies": {
     "@blinkk/eslint-config-root": "workspace:*",
-    "@changesets/cli": "^2.26.2",
-    "eslint": "^8.51.0",
-    "prettier": "^3.0.3",
-    "turbo": "^1.10.15",
-    "typescript": "^5.2.2"
+    "@changesets/cli": "2.31.0",
+    "eslint": "10.4.0",
+    "prettier": "3.8.3",
+    "turbo": "2.9.14",
+    "typescript": "6.0.3"
   }
 }

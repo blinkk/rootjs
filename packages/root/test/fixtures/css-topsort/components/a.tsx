@@ -1,4 +1,4 @@
-/* eslint-disable import/order */
+/* eslint-disable import-x/order */
 
 import {B} from './b';
 import styles from './a.module.scss';

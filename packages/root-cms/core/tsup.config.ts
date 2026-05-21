@@ -1,5 +1,3 @@
-/* eslint-disable node/no-unpublished-import */
-
 import {defineConfig} from 'tsup';
 
 export default defineConfig({
@@ -15,6 +13,11 @@ export default defineConfig({
   },
   target: 'node22',
   dts: {
+    // tsup passes `baseUrl` which will be deprecated in typescript 7.0.
+    // https://github.com/egoist/tsup/issues/1388
+    compilerOptions: {
+      ignoreDeprecations: '6.0',
+    },
     entry: [
       './core/client.ts',
       './core/core.ts',

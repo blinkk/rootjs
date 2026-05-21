@@ -23,13 +23,13 @@
     "build": "tsup ./src/create-root.ts --format=esm"
   },
   "dependencies": {
-    "commander": "^11.0.0",
-    "degit": "^2.8.4",
-    "kleur": "^4.1.5"
+    "commander": "11.0.0",
+    "degit": "2.8.4",
+    "kleur": "4.1.5"
   },
   "devDependencies": {
-    "@types/degit": "^2.8.4",
-    "@types/node": "^20.8.4",
-    "tsup": "^8.0.1"
+    "@types/degit": "2.8.4",
+    "@types/node": "^25.9.1",
+    "tsup": "8.5.1"
   }
 }

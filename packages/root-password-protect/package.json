@@ -4,7 +4,7 @@
   "author": "s@blinkk.com",
   "license": "MIT",
   "engines": {
-    "node": ">=18.0.0"
+    "node": ">=22.0.0"
   },
   "repository": {
     "type": "git",
@@ -49,8 +49,8 @@
     "@blinkk/root": "workspace:*",
     "@types/body-parser": "1.19.3",
     "@types/micromatch": "4.0.6",
-    "@types/node": "20.11.25",
+    "@types/node": "25.9.1",
     "preact": "10.27.1",
-    "tsup": "8.5.0"
+    "tsup": "8.5.1"
   }
 }

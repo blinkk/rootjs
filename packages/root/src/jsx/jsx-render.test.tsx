@@ -1,4 +1,4 @@
-/* eslint-disable node/no-extraneous-import */
+/* eslint-disable n/no-extraneous-import */
 /* eslint-disable prettier/prettier */
 /** @jsxImportSource . */
 
