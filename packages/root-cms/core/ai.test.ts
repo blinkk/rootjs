@@ -4,11 +4,14 @@ import path from 'node:path';
 import {afterEach, beforeEach, describe, expect, it} from 'vitest';
 import {
   AiConfig,
+  buildExecutionModePrompt,
   buildSystemPrompt,
   buildTitlePromptContext,
   deriveChatTitle,
   extractJsonFromResponse,
   findModel,
+  mergeIncomingMessage,
+  sanitizeDanglingToolCalls,
   readRootMd,
   ROOT_MD_FILENAME,
   sanitizeGeneratedTitle,
@@ -309,6 +312,129 @@ describe('ai', () => {
       expect(firstClose).toBe(lastClose);
       // The escaped form should appear in the body.
       expect(result).toContain('<\\/ROOT.md>');
+    });
+  });
+
+  describe('buildExecutionModePrompt', () => {
+    it('omits the write workflow in read mode', () => {
+      const prompt = buildExecutionModePrompt('read');
+      expect(prompt).not.toContain('Before the first write');
+      expect(prompt).not.toContain('After write tools finish');
+    });
+
+    it('includes the write workflow in approve and auto modes', () => {
+      for (const mode of ['approve', 'auto'] as const) {
+        const prompt = buildExecutionModePrompt(mode);
+        expect(prompt).toContain('Before the first write');
+        expect(prompt).toContain('After write tools finish');
+      }
+    });
+
+    it('always names the current execution mode', () => {
+      expect(buildExecutionModePrompt('read')).toContain('Read only');
+      expect(buildExecutionModePrompt('approve')).toContain(
+        'Ask before writing'
+      );
+      expect(buildExecutionModePrompt('auto')).toContain(
+        'Auto-apply draft edits'
+      );
+    });
+  });
+
+  describe('mergeIncomingMessage', () => {
+    const msg = (id: string, text: string): any => ({
+      id,
+      role: 'user',
+      parts: [{type: 'text', text}],
+    });
+
+    it('appends a message with a new id', () => {
+      const result = mergeIncomingMessage([msg('a', 'hi')], msg('b', 'there'));
+      expect(result.map((m) => m.id)).toEqual(['a', 'b']);
+    });
+
+    it('replaces an existing message by id (resubmitted tool results)', () => {
+      const result = mergeIncomingMessage(
+        [msg('a', 'hi'), msg('b', 'old')],
+        msg('b', 'new')
+      );
+      expect(result).toHaveLength(2);
+      expect((result[1].parts[0] as any).text).toBe('new');
+    });
+
+    it('drops any messages after the replaced id', () => {
+      const result = mergeIncomingMessage(
+        [msg('a', '1'), msg('b', '2'), msg('c', '3')],
+        msg('b', '2-updated')
+      );
+      expect(result.map((m) => m.id)).toEqual(['a', 'b']);
+    });
+  });
+
+  describe('sanitizeDanglingToolCalls', () => {
+    const userMsg = (id: string): any => ({
+      id,
+      role: 'user',
+      parts: [{type: 'text', text: 'hi'}],
+    });
+    const assistantWithTool = (id: string, state: string): any => ({
+      id,
+      role: 'assistant',
+      parts: [
+        {type: 'text', text: 'on it'},
+        {
+          type: 'tool-doc_updateField',
+          toolCallId: `${id}-call`,
+          state,
+          input: {docId: 'Pages/home'},
+        },
+      ],
+    });
+
+    it('returns the same array when every tool call is resolved', () => {
+      const messages = [
+        userMsg('a'),
+        assistantWithTool('b', 'output-available'),
+      ];
+      expect(sanitizeDanglingToolCalls(messages)).toBe(messages);
+    });
+
+    it('synthesizes an aborted result for an unresolved tool call', () => {
+      const messages = [
+        assistantWithTool('b', 'input-available'),
+        userMsg('c'),
+      ];
+      const result = sanitizeDanglingToolCalls(messages);
+      const toolPart = (result[0].parts as any[]).find((p) =>
+        p.type.startsWith('tool-')
+      );
+      expect(toolPart.state).toBe('output-available');
+      expect(toolPart.output).toMatchObject({success: false, error: 'ABORTED'});
+      // The user message and the assistant text part are left untouched.
+      expect(result[1]).toBe(messages[1]);
+      expect((result[0].parts as any[])[0]).toEqual({
+        type: 'text',
+        text: 'on it',
+      });
+    });
+
+    it('also heals input-streaming parts', () => {
+      const result = sanitizeDanglingToolCalls([
+        assistantWithTool('b', 'input-streaming'),
+      ]);
+      const toolPart = (result[0].parts as any[])[1];
+      expect(toolPart.state).toBe('output-available');
+    });
+
+    it('ignores tool-like parts on non-assistant messages', () => {
+      const messages = [
+        {
+          id: 'x',
+          role: 'user',
+          parts: [{type: 'tool-doc_get', state: 'input-available'}],
+        } as any,
+      ];
+      expect(sanitizeDanglingToolCalls(messages)).toBe(messages);
     });
   });
 

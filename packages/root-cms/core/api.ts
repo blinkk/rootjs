@@ -10,6 +10,7 @@ import {
   generateImage,
   generatePublishMessage,
   getAiConfig,
+  mergeIncomingMessage,
   normalizeExecutionMode,
   runChatStream,
   runEditObjectStream,
@@ -866,7 +867,7 @@ export function api(server: Server, options: ApiOptions) {
     // branch can be deleted.
     let messages: UIMessage[];
     if (body.message && typeof body.message === 'object') {
-      messages = [...storedMessages, body.message as UIMessage];
+      messages = mergeIncomingMessage(storedMessages, body.message as UIMessage);
     } else if (Array.isArray(body.messages) && body.messages.length > 0) {
       messages = body.messages as UIMessage[];
     } else {
