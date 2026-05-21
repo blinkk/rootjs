@@ -294,7 +294,6 @@ export function createCmsTools(ctx: CmsToolContext): ToolSet {
         'against the collection schema and the call is rejected on ' +
         'validation errors. Prefer `doc_updateField` for targeted edits. ' +
         'Only writes the draft version; users must publish separately. ' +
-        'Always confirm with the user before calling. ' +
         'Format: pass plain JSON. Arrays must be plain JSON arrays — do ' +
         'NOT use the `_array` object notation. The tool marshals the ' +
         'payload into Firestore storage shape on its own. Rich text ' +
@@ -318,7 +317,7 @@ export function createCmsTools(ctx: CmsToolContext): ToolSet {
       description:
         'Create a new draft CMS document with the given slug. Fails if the ' +
         'doc already exists. Pass optional initial fields (validated against ' +
-        'the collection schema). Always confirm with the user before calling. ' +
+        'the collection schema). ' +
         'Format: pass plain JSON for `fields`. Arrays must be plain JSON ' +
         'arrays — do NOT use the `_array` object notation. The tool ' +
         'marshals the payload into Firestore storage shape on its own. ' +
@@ -348,8 +347,7 @@ export function createCmsTools(ctx: CmsToolContext): ToolSet {
         'path (e.g. "content.modules") to the updated array. The value is ' +
         'validated against the field schema and the call is rejected if the ' +
         'shape is wrong (e.g. passing a string to a richtext field). Only ' +
-        'updates the draft version; users must publish separately. Always ' +
-        'confirm with the user before calling. ' +
+        'updates the draft version; users must publish separately. ' +
         'Format: pass `value` as plain JSON. Arrays must be plain JSON ' +
         'arrays — do NOT use the `_array` object notation. The tool ' +
         'marshals the value into Firestore storage shape on its own. ' +
@@ -375,7 +373,7 @@ export function createCmsTools(ctx: CmsToolContext): ToolSet {
       description:
         'Duplicate an existing CMS document to a new slug. Copies all ' +
         'draft fields to the target doc id. Fails if the target already ' +
-        'exists. Always confirm with the user before calling.',
+        'exists.',
       inputSchema: z.object({
         fromDocId: z
           .string()

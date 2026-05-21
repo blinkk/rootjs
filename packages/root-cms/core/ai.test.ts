@@ -4,6 +4,7 @@ import path from 'node:path';
 import {afterEach, beforeEach, describe, expect, it} from 'vitest';
 import {
   AiConfig,
+  buildExecutionModePrompt,
   buildSystemPrompt,
   buildTitlePromptContext,
   deriveChatTitle,
@@ -309,6 +310,35 @@ describe('ai', () => {
       expect(firstClose).toBe(lastClose);
       // The escaped form should appear in the body.
       expect(result).toContain('<\\/ROOT.md>');
+    });
+  });
+
+  describe('buildExecutionModePrompt', () => {
+    it('omits the write workflow in read and suggest modes', () => {
+      for (const mode of ['read', 'suggest'] as const) {
+        const prompt = buildExecutionModePrompt(mode);
+        expect(prompt).not.toContain('Before the first write');
+        expect(prompt).not.toContain('After write tools finish');
+      }
+    });
+
+    it('includes the write workflow in approve and auto modes', () => {
+      for (const mode of ['approve', 'auto'] as const) {
+        const prompt = buildExecutionModePrompt(mode);
+        expect(prompt).toContain('Before the first write');
+        expect(prompt).toContain('After write tools finish');
+      }
+    });
+
+    it('always names the current execution mode', () => {
+      expect(buildExecutionModePrompt('read')).toContain('Read only');
+      expect(buildExecutionModePrompt('suggest')).toContain('Suggest changes');
+      expect(buildExecutionModePrompt('approve')).toContain(
+        'Ask before writing'
+      );
+      expect(buildExecutionModePrompt('auto')).toContain(
+        'Auto-apply draft edits'
+      );
     });
   });
 
