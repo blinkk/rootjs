@@ -219,9 +219,9 @@ export function TranslationsTable() {
         const source = translations.source || '';
         const hashStr = hash || '';
 
-        let matchesSource = false;
-        let matchesHash = false;
-        let matchesTranslation = false;
+        let matchesSource: boolean;
+        let matchesHash: boolean;
+        let matchesTranslation: boolean;
 
         if (exactMatchesOnly) {
           matchesSource = source.toLowerCase() === query;

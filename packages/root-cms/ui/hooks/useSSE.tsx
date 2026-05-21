@@ -70,7 +70,9 @@ export function SSEProvider(props: SSEProviderProps) {
   };
 
   const connect = useCallback(() => {
-    DEBUG && console.log('[sse] connecting...');
+    if (DEBUG) {
+      console.log('[sse] connecting...');
+    }
     clearCurrent();
 
     const sseEventSource = new EventSource(SSE_CONNECT_URL);
@@ -79,7 +81,9 @@ export function SSEProvider(props: SSEProviderProps) {
     sseEventSource.addEventListener(
       SSEEvent.CONNECTED,
       (event: MessageEvent<string>) => {
-        DEBUG && console.log('[sse] connected');
+        if (DEBUG) {
+          console.log('[sse] connected');
+        }
         reconnectingRef.current = false;
         backoffRef.current.attempt = 0;
 
@@ -106,7 +110,9 @@ export function SSEProvider(props: SSEProviderProps) {
         return;
       }
       const data = parse(event.data);
-      DEBUG && console.log('[sse] event:', event.type, data);
+      if (DEBUG) {
+        console.log('[sse] event:', event.type, data);
+      }
       emitter.emit(event.type, data, event);
     };
 
@@ -115,7 +121,9 @@ export function SSEProvider(props: SSEProviderProps) {
     });
 
     sseEventSource.addEventListener('error', () => {
-      DEBUG && console.log('[sse] disconnected');
+      if (DEBUG) {
+        console.log('[sse] disconnected');
+      }
 
       if (
         sseEventSource.readyState === EventSource.CLOSED &&

@@ -1160,7 +1160,7 @@ function formatTaskAttachmentName(attachment: TaskAttachment) {
   const filename = attachment.filename || urlFilename || 'Attachment';
   try {
     return decodeURIComponent(filename);
-  } catch (err) {
+  } catch {
     return filename;
   }
 }

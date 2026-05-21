@@ -65,8 +65,8 @@ export function DocPickerModal(
   const {innerProps: props} = modalProps;
   let collections = Object.keys(window.__ROOT_CTX.collections);
   if (props.collections?.length) {
-    collections = collections.filter(
-      (collection) => props.collections?.includes(collection)
+    collections = collections.filter((collection) =>
+      props.collections?.includes(collection)
     );
   }
 

@@ -683,9 +683,14 @@ describe('RootCMSClient Validation', () => {
       const {RootCMSClient} = await import('./client.js');
       const client = new RootCMSClient(mockRootConfig);
 
-      await client.setRawDoc('Pages', 'parent/child/page', {fields: {}}, {
-        mode: 'draft',
-      });
+      await client.setRawDoc(
+        'Pages',
+        'parent/child/page',
+        {fields: {}},
+        {
+          mode: 'draft',
+        }
+      );
 
       expect(mockDocRef.set).toHaveBeenCalled();
       const savedData = mockDocRef.set.mock.calls[0][0];

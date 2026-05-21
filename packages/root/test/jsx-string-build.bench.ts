@@ -5,7 +5,7 @@
  * pnpm vitest bench test/jsx-string-build.bench.ts
  * ```
  */
-import {bench, describe} from 'vitest';
+import {afterAll, bench, describe} from 'vitest';
 
 const AMP = '&amp;';
 const LT = '&lt;';
@@ -334,4 +334,11 @@ describe('jsx string building', () => {
       renderedInner
     ).length;
   });
+});
+
+afterAll(() => {
+  // Read `sink` so the benchmarked work above isn't optimized away.
+  if (sink === Number.MIN_SAFE_INTEGER) {
+    console.log(sink);
+  }
 });

@@ -14,9 +14,7 @@ interface MarkdownProps {
 
 export function Markdown(props: MarkdownProps) {
   const code = props.code || '';
-  const rawHtml = props.inline
-    ? marked.parseInline(code)
-    : marked.parse(code);
+  const rawHtml = props.inline ? marked.parseInline(code) : marked.parse(code);
   const html =
     typeof rawHtml === 'string'
       ? props.inline

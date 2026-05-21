@@ -775,7 +775,7 @@ function validatePathSyntax(path: string): ValidationError | null {
     );
   }
 
-  if (segments.some((segment) => /[\[\]]/.test(segment))) {
+  if (segments.some((segment) => /[[\]]/.test(segment))) {
     return createPathError(
       path,
       'Use dotted zero-based array indices, e.g. "content.modules.0.title".',

@@ -66,9 +66,7 @@ describe('convertOneOfTypes', () => {
       id: 'pages',
       name: 'Pages',
       url: '/[...slug]',
-      fields: [
-        schema.oneOf({id: 'root', types: ['Container']}),
-      ],
+      fields: [schema.oneOf({id: 'root', types: ['Container']})],
     };
 
     const result = convertOneOfTypes(collection, schemaModules);

@@ -1,8 +1,8 @@
 import path from 'node:path';
 import glob from 'tiny-glob';
 import {RootConfig} from '../core/config.js';
-import {Pod, PodConfig} from '../core/pod.js';
 import {Plugin} from '../core/plugin.js';
+import {Pod, PodConfig} from '../core/pod.js';
 import {isDirectory, isJsFile} from '../utils/fsutils.js';
 
 export interface ResolvedPodRoute {
@@ -40,7 +40,9 @@ export function invalidatePodCache() {
   cachedPods = null;
 }
 
-export async function collectPods(rootConfig: RootConfig): Promise<ResolvedPod[]> {
+export async function collectPods(
+  rootConfig: RootConfig
+): Promise<ResolvedPod[]> {
   if (cachedPods) {
     return cachedPods;
   }
@@ -69,7 +71,7 @@ export async function collectPods(rootConfig: RootConfig): Promise<ResolvedPod[]
     resolved.push(resolvedPod);
   }
 
-  validateCollectionIds(resolved, rootConfig);
+  validateCollectionIds(resolved);
 
   cachedPods = resolved;
   return resolved;
@@ -232,10 +234,7 @@ async function scanTranslationFiles(
   }));
 }
 
-function validateCollectionIds(
-  pods: ResolvedPod[],
-  rootConfig: RootConfig
-) {
+function validateCollectionIds(pods: ResolvedPod[]) {
   const seenIds = new Map<string, string>();
 
   for (const pod of pods) {
@@ -245,7 +244,7 @@ function validateCollectionIds(
         throw new Error(
           `Collection "${col.id}" is defined by both "${existing}" and ` +
             `"${pod.name}". Use rootConfig.pods['${pod.name}'].collections.rename ` +
-            `to disambiguate.`
+            'to disambiguate.'
         );
       }
       seenIds.set(col.id, pod.name);

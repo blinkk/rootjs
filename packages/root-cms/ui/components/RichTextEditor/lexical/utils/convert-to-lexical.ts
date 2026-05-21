@@ -330,7 +330,7 @@ function createListItemNodes(
 ) {
   const nodes: ListItemNode[] = [];
   if (listItem.content) {
-    const itemNode = createListItemTextNode(listItem, parentStyle);
+    const itemNode = createListItemTextNode(listItem);
     nodes.push(itemNode);
   }
   if (listItem.items && listItem.items.length > 0) {
@@ -340,10 +340,7 @@ function createListItemNodes(
   return nodes;
 }
 
-function createListItemTextNode(
-  listItem: RichTextListItem,
-  parentStyle: 'number' | 'bullet'
-) {
+function createListItemTextNode(listItem: RichTextListItem) {
   const listItemNode = $createListItemNode();
 
   if (listItem.content) {

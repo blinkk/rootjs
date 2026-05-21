@@ -17,7 +17,7 @@ export async function writeFile(filepath: string, content: string) {
 export async function makeDir(dirpath: string) {
   try {
     await fs.promises.access(dirpath);
-  } catch (e) {
+  } catch {
     await fs.promises.mkdir(dirpath, {recursive: true});
   }
 }

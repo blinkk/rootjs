@@ -13,9 +13,8 @@ export async function batchAsyncCalls<T, U>(
     }
   }
 
-  const workers = Array.from(
-    {length: Math.min(concurrency, data.length)},
-    () => worker()
+  const workers = Array.from({length: Math.min(concurrency, data.length)}, () =>
+    worker()
   );
   await Promise.all(workers);
   return result;

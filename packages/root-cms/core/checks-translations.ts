@@ -161,7 +161,9 @@ export interface TranslationsCheckOptions {
  * A first-party CMS check that verifies all translatable strings in a document
  * have translations for each of the document's enabled locales.
  */
-export function translationsCheck(options?: TranslationsCheckOptions): CMSCheck {
+export function translationsCheck(
+  options?: TranslationsCheckOptions
+): CMSCheck {
   return {
     id: 'root-cms/translations',
     label: 'Missing Translations',

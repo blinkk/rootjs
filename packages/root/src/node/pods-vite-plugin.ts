@@ -1,6 +1,6 @@
 import path from 'node:path';
-import type {Plugin as VitePlugin} from 'vite';
 import glob from 'tiny-glob';
+import type {Plugin as VitePlugin} from 'vite';
 import {RootConfig} from '../core/config.js';
 import {isDirectory, isJsFile} from '../utils/fsutils.js';
 import {collectPods, invalidatePodCache, ResolvedPod} from './pod-collector.js';

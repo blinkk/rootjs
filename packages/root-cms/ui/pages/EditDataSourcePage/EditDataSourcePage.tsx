@@ -138,8 +138,8 @@ export function EditDataSourcePage(props: {id: string}) {
       title: 'Unarchive data source',
       children: (
         <Text size="body-sm" weight="semi-bold">
-          Are you sure you want to unarchive data source{' '}
-          <code>{props.id}</code>?
+          Are you sure you want to unarchive data source <code>{props.id}</code>
+          ?
         </Text>
       ),
       labels: {confirm: 'Unarchive', cancel: 'Cancel'},
@@ -178,9 +178,9 @@ export function EditDataSourcePage(props: {id: string}) {
       title: 'Unpublish data source',
       children: (
         <Text size="body-sm" weight="semi-bold">
-          Are you sure you want to unpublish data source{' '}
-          <code>{props.id}</code>? The published data will be removed and will
-          no longer be available to production. There is no undo.
+          Are you sure you want to unpublish data source <code>{props.id}</code>
+          ? The published data will be removed and will no longer be available
+          to production. There is no undo.
         </Text>
       ),
       labels: {confirm: 'Unpublish', cancel: 'Cancel'},

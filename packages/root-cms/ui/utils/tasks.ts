@@ -181,10 +181,9 @@ export async function createTask(options: {
     const lastTaskId =
       typeof counterData.lastTaskId === 'number' ? counterData.lastTaskId : 0;
     let nextTaskId = Math.floor(lastTaskId) + 1;
-    let taskRef = taskDocRef(String(nextTaskId));
 
     for (let i = 0; i < TASK_ID_ALLOCATION_ATTEMPTS; i++) {
-      taskRef = taskDocRef(String(nextTaskId));
+      const taskRef = taskDocRef(String(nextTaskId));
       const taskSnapshot = await transaction.get(taskRef);
       if (!taskSnapshot.exists()) {
         transaction.set(

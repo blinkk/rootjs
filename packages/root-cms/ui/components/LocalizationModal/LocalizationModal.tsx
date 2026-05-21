@@ -1003,80 +1003,85 @@ LocalizationModal.Translations = (props: TranslationsProps) => {
 
         if (action === 'import') {
           if (Array.isArray(resData.data)) {
-          // Convert returned rows to CsvTranslation format for import.
-          const importedRows: CsvTranslation[] = resData.data.map(
-            (row: {
-              source: unknown;
-              translations?: Record<string, unknown>;
-            }) => {
-              const safeRow: CsvTranslation = {
-                source: String(row?.source ?? ''),
-              };
-              const translations = row?.translations;
-              if (translations && typeof translations === 'object') {
-                locales.forEach((locale) => {
-                  const value = (translations as Record<string, unknown>)[
-                    locale
-                  ];
-                  if (value != null) {
-                    safeRow[locale] = String(value);
+            // Convert returned rows to CsvTranslation format for import.
+            const importedRows: CsvTranslation[] = resData.data.map(
+              (row: {
+                source: unknown;
+                translations?: Record<string, unknown>;
+              }) => {
+                const safeRow: CsvTranslation = {
+                  source: String(row?.source ?? ''),
+                };
+                const translations = row?.translations;
+                if (translations && typeof translations === 'object') {
+                  locales.forEach((locale) => {
+                    const value = (translations as Record<string, unknown>)[
+                      locale
+                    ];
+                    if (value !== null && value !== undefined) {
+                      safeRow[locale] = String(value);
+                    }
+                  });
+                }
+                return safeRow;
+              }
+            );
+            const importedTranslations = await cmsDocImportTranslations(
+              props.docId,
+              importedRows,
+              {
+                actionMetadata: {
+                  service: serviceId,
+                  numStrings: importedRows.length,
+                  locales,
+                },
+                actionLinks: [
+                  {
+                    label: 'Open translations',
+                    url: `/cms/content/${props.docId}?modal=localization`,
+                  },
+                ],
+              }
+            );
+            setTranslationsMap((currentTranslations) => {
+              return mergeTranslations(
+                currentTranslations,
+                importedTranslations
+              );
+            });
+
+            // Auto-tag imported translations with the doc ID.
+            const docTags = [props.docId];
+            const tagUpdates: Array<{hash: string; tags: string[]}> = [];
+            for (const row of importedRows) {
+              const hash = await sourceHash(row.source);
+              const existing = translationsMap[hash];
+              const existingTags = existing?.tags || [];
+              const newTags = Array.from(
+                new Set([...existingTags, ...docTags])
+              );
+              tagUpdates.push({hash, tags: newTags});
+            }
+            if (tagUpdates.length > 0) {
+              await batchUpdateTags(tagUpdates, {mode: 'union'});
+              setTranslationsMap((prev) => {
+                const next = {...prev};
+                tagUpdates.forEach(({hash, tags}) => {
+                  if (next[hash]) {
+                    next[hash] = {...next[hash], tags};
                   }
                 });
-              }
-              return safeRow;
-            }
-          );
-          const importedTranslations = await cmsDocImportTranslations(
-            props.docId,
-            importedRows,
-            {
-              actionMetadata: {
-                service: serviceId,
-                numStrings: importedRows.length,
-                locales,
-              },
-              actionLinks: [
-                {
-                  label: 'Open translations',
-                  url: `/cms/content/${props.docId}?modal=localization`,
-                },
-              ],
-            }
-          );
-          setTranslationsMap((currentTranslations) => {
-            return mergeTranslations(currentTranslations, importedTranslations);
-          });
-
-          // Auto-tag imported translations with the doc ID.
-          const docTags = [props.docId];
-          const tagUpdates: Array<{hash: string; tags: string[]}> = [];
-          for (const row of importedRows) {
-            const hash = await sourceHash(row.source);
-            const existing = translationsMap[hash];
-            const existingTags = existing?.tags || [];
-            const newTags = Array.from(new Set([...existingTags, ...docTags]));
-            tagUpdates.push({hash, tags: newTags});
-          }
-          if (tagUpdates.length > 0) {
-            await batchUpdateTags(tagUpdates, {mode: 'union'});
-            setTranslationsMap((prev) => {
-              const next = {...prev};
-              tagUpdates.forEach(({hash, tags}) => {
-                if (next[hash]) {
-                  next[hash] = {...next[hash], tags};
-                }
+                return next;
               });
-              return next;
-            });
-          }
+            }
 
-          updateNotification({
-            id: notificationId,
-            title: 'Imported!',
-            message: `Imported translations from ${serviceLabel}.`,
-            loading: false,
-            autoClose: 5000,
-          });
+            updateNotification({
+              id: notificationId,
+              title: 'Imported!',
+              message: `Imported translations from ${serviceLabel}.`,
+              loading: false,
+              autoClose: 5000,
+            });
           } else {
             // TranslationImportResult: display notification with optional link.
             const importData = resData.data || {};
@@ -1088,7 +1093,12 @@ LocalizationModal.Translations = (props: TranslationsProps) => {
             updateNotification({
               id: notificationId,
               title: importTitle,
-              color: importData.status === 'success' ? 'green' : importData.status === 'error' ? 'red' : undefined,
+              color:
+                importData.status === 'success'
+                  ? 'green'
+                  : importData.status === 'error'
+                    ? 'red'
+                    : undefined,
               message: importLink?.url ? (
                 <div>
                   <div>{importMessage}</div>
@@ -1121,7 +1131,12 @@ LocalizationModal.Translations = (props: TranslationsProps) => {
           updateNotification({
             id: notificationId,
             title: exportTitle,
-            color: exportData.status === 'success' ? 'green' : exportData.status === 'error' ? 'red' : undefined,
+            color:
+              exportData.status === 'success'
+                ? 'green'
+                : exportData.status === 'error'
+                  ? 'red'
+                  : undefined,
             message: exportLink?.url ? (
               <div>
                 <div>{exportMessage}</div>

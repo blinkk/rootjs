@@ -1,11 +1,9 @@
 import path from 'node:path';
+import {ROUTE_MODULES, POD_ROUTE_MODULES} from 'virtual:root/routes';
 import {RootConfig} from '../core/config.js';
 import {Route, RouteModule} from '../core/types.js';
 import {replaceParams, testPathHasParams} from '../utils/url-path-params.js';
 import {RouteTrie} from './route-trie.js';
-
-// @ts-ignore — virtual module provided by rootPodsVitePlugin
-import {ROUTE_MODULES, POD_ROUTE_MODULES} from 'virtual:root/routes';
 
 const ROUTES_FILES = ROUTE_MODULES as Record<string, RouteModule>;
 const POD_ROUTES = (POD_ROUTE_MODULES || {}) as Record<

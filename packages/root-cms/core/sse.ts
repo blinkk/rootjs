@@ -19,7 +19,7 @@ export function sse(server: Server) {
     sseClients.forEach((res: Response) => {
       try {
         res.write(message);
-      } catch (error) {
+      } catch {
         // Remove failed connections.
         sseClients.delete(res);
       }

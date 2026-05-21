@@ -25,11 +25,11 @@ import {
   lastAssistantMessageIsCompleteWithToolCalls,
 } from 'ai';
 import {useCallback, useEffect, useMemo, useRef, useState} from 'preact/hooks';
-import {executeCmsTool} from '../RootAIChat/cmsToolHandlers.js';
 import {joinClassNames} from '../../utils/classes.js';
 import {uploadFileToGCS} from '../../utils/gcs.js';
 import {IconRootAI} from '../IconRootAI/IconRootAI.js';
 import {Markdown} from '../Markdown/Markdown.js';
+import {executeCmsTool} from '../RootAIChat/cmsToolHandlers.js';
 
 /** Result emitted by the "Edit with AI" chat to the parent modal. */
 export interface AiResponse {
@@ -717,7 +717,9 @@ function prepareAttachmentsForSend(attachments: AttachmentPreview[]): {
     .map(formatAttachmentForPrompt);
   return {
     files,
-    text: textBlocks.length ? `Attached files:\n\n${textBlocks.join('\n\n')}` : '',
+    text: textBlocks.length
+      ? `Attached files:\n\n${textBlocks.join('\n\n')}`
+      : '',
   };
 }
 

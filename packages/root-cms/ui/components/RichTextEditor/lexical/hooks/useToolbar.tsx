@@ -2,10 +2,6 @@ import {ElementFormatType} from 'lexical';
 import {ComponentChildren, createContext} from 'preact';
 import {useCallback, useContext, useMemo, useState} from 'preact/hooks';
 
-const ROOT_TYPES = {
-  root: 'Root',
-};
-
 export const TOOLBAR_BLOCK_LABELS = {
   paragraph: 'Normal',
   h1: 'Heading 1',
@@ -41,7 +37,7 @@ const INITIAL_TOOLBAR_STATE = {
   isLowercase: false,
   isUppercase: false,
   isCapitalize: false,
-  rootType: 'root' as keyof typeof ROOT_TYPES,
+  rootType: 'root' as const,
 };
 
 type ToolbarState = typeof INITIAL_TOOLBAR_STATE;

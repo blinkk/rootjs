@@ -817,7 +817,7 @@ export function api(server: Server, options: ApiOptions) {
     const store = new ChatStore(cmsClient, req.user.email);
     const requestedChatId =
       typeof body.chatId === 'string' ? body.chatId.trim() : '';
-    let chatId = '';
+    let chatId: string;
     let storedMessages: UIMessage[] = [];
     let existingTitle = '';
     if (requestedChatId) {
@@ -840,9 +840,7 @@ export function api(server: Server, options: ApiOptions) {
           chatId = created.id;
         } catch (err: any) {
           if (err?.code === 6 /* ALREADY_EXISTS */) {
-            res
-              .status(409)
-              .json({success: false, error: 'CHAT_ID_CONFLICT'});
+            res.status(409).json({success: false, error: 'CHAT_ID_CONFLICT'});
             return;
           }
           throw err;
@@ -867,7 +865,10 @@ export function api(server: Server, options: ApiOptions) {
     // branch can be deleted.
     let messages: UIMessage[];
     if (body.message && typeof body.message === 'object') {
-      messages = mergeIncomingMessage(storedMessages, body.message as UIMessage);
+      messages = mergeIncomingMessage(
+        storedMessages,
+        body.message as UIMessage
+      );
     } else if (Array.isArray(body.messages) && body.messages.length > 0) {
       messages = body.messages as UIMessage[];
     } else {
@@ -919,136 +920,127 @@ export function api(server: Server, options: ApiOptions) {
    *   fenced ```json code block which the client extracts to populate the
    *   diff viewer.
    */
-  server.use(
-    '/cms/api/ai.edit_object',
-    async (req: Request, res: Response) => {
-      if (req.method !== 'POST') {
-        res.status(400).json({success: false, error: 'BAD_REQUEST'});
-        return;
-      }
-      if (!req.user?.email) {
-        res.status(401).json({success: false, error: 'UNAUTHORIZED'});
-        return;
-      }
-      const aiConfig = getAiConfig(req.rootConfig!);
-      if (!aiConfig) {
-        res.status(404).json({success: false, error: 'AI_NOT_CONFIGURED'});
-        return;
-      }
+  server.use('/cms/api/ai.edit_object', async (req: Request, res: Response) => {
+    if (req.method !== 'POST') {
+      res.status(400).json({success: false, error: 'BAD_REQUEST'});
+      return;
+    }
+    if (!req.user?.email) {
+      res.status(401).json({success: false, error: 'UNAUTHORIZED'});
+      return;
+    }
+    const aiConfig = getAiConfig(req.rootConfig!);
+    if (!aiConfig) {
+      res.status(404).json({success: false, error: 'AI_NOT_CONFIGURED'});
+      return;
+    }
 
-      const body = req.body || {};
-      const messages = (body.messages as UIMessage[]) || [];
-      if (!Array.isArray(messages) || messages.length === 0) {
-        res.status(400).json({success: false, error: 'MISSING_MESSAGES'});
-        return;
-      }
-      const model = findModel(aiConfig, body.modelId);
-      if (!model) {
-        res.status(400).json({success: false, error: 'UNKNOWN_MODEL'});
-        return;
-      }
+    const body = req.body || {};
+    const messages = (body.messages as UIMessage[]) || [];
+    if (!Array.isArray(messages) || messages.length === 0) {
+      res.status(400).json({success: false, error: 'MISSING_MESSAGES'});
+      return;
+    }
+    const model = findModel(aiConfig, body.modelId);
+    if (!model) {
+      res.status(400).json({success: false, error: 'UNKNOWN_MODEL'});
+      return;
+    }
 
-      const editCmsClient = new RootCMSClient(req.rootConfig!);
-      try {
-        const role = await editCmsClient.getUserRole(req.user.email);
-        if (!role) {
-          res.status(403).json({success: false, error: 'FORBIDDEN'});
-          return;
-        }
-      } catch (err) {
-        console.error('failed to resolve user role:', err);
-        res.status(500).json({success: false, error: 'UNKNOWN'});
+    const editCmsClient = new RootCMSClient(req.rootConfig!);
+    try {
+      const role = await editCmsClient.getUserRole(req.user.email);
+      if (!role) {
+        res.status(403).json({success: false, error: 'FORBIDDEN'});
         return;
       }
+    } catch (err) {
+      console.error('failed to resolve user role:', err);
+      res.status(500).json({success: false, error: 'UNKNOWN'});
+      return;
+    }
 
-      try {
-        const streamResponse = await runEditObjectStream({
-          rootConfig: req.rootConfig!,
-          cmsClient: editCmsClient,
-          user: req.user.email,
-          config: aiConfig,
-          model,
-          messages,
-          editData: body.editData,
-          loadCollection: (collectionId) =>
-            getCollectionSchema(req, collectionId),
-          loadAllCollections: async () =>
-            (await options.getRenderer(req)).getCollections(),
-        });
-        await pipeWebResponse(streamResponse, res);
-      } catch (err: any) {
-        console.error(err.stack || err);
-        if (!res.headersSent) {
-          res.status(500).json({success: false, error: err.message || 'UNKNOWN'});
-        } else {
-          res.end();
-        }
+    try {
+      const streamResponse = await runEditObjectStream({
+        rootConfig: req.rootConfig!,
+        cmsClient: editCmsClient,
+        user: req.user.email,
+        config: aiConfig,
+        model,
+        messages,
+        editData: body.editData,
+        loadCollection: (collectionId) =>
+          getCollectionSchema(req, collectionId),
+        loadAllCollections: async () =>
+          (await options.getRenderer(req)).getCollections(),
+      });
+      await pipeWebResponse(streamResponse, res);
+    } catch (err: any) {
+      console.error(err.stack || err);
+      if (!res.headersSent) {
+        res.status(500).json({success: false, error: err.message || 'UNKNOWN'});
+      } else {
+        res.end();
       }
     }
-  );
+  });
 
   /** Lists the current user's recent chats. */
-  server.use(
-    '/cms/api/ai.chats.list',
-    async (req: Request, res: Response) => {
-      if (!req.user?.email) {
-        res.status(401).json({success: false, error: 'UNAUTHORIZED'});
-        return;
-      }
-      const cmsClient = new RootCMSClient(req.rootConfig!);
-      const store = new ChatStore(cmsClient, req.user.email);
-      try {
-        const chats = await store.listChats({limit: req.body?.limit});
-        res.status(200).json({
-          success: true,
-          chats: chats.map((c) => ({
-            id: c.id,
-            title: c.title,
-            modelId: c.modelId,
-            createdAt: c.createdAt.toMillis(),
-            modifiedAt: c.modifiedAt.toMillis(),
-          })),
-        });
-      } catch (err: any) {
-        console.error(err.stack || err);
-        res.status(500).json({success: false, error: 'UNKNOWN'});
-      }
+  server.use('/cms/api/ai.chats.list', async (req: Request, res: Response) => {
+    if (!req.user?.email) {
+      res.status(401).json({success: false, error: 'UNAUTHORIZED'});
+      return;
     }
-  );
-
-  /** Returns the full message history for a chat. */
-  server.use(
-    '/cms/api/ai.chats.get',
-    async (req: Request, res: Response) => {
-      if (!req.user?.email) {
-        res.status(401).json({success: false, error: 'UNAUTHORIZED'});
-        return;
-      }
-      const id = String(req.body?.id || '').trim();
-      if (!id) {
-        res.status(400).json({success: false, error: 'MISSING_ID'});
-        return;
-      }
-      const cmsClient = new RootCMSClient(req.rootConfig!);
-      const store = new ChatStore(cmsClient, req.user.email);
-      const chat = await store.getChat(id);
-      if (!chat) {
-        res.status(404).json({success: false, error: 'NOT_FOUND'});
-        return;
-      }
+    const cmsClient = new RootCMSClient(req.rootConfig!);
+    const store = new ChatStore(cmsClient, req.user.email);
+    try {
+      const chats = await store.listChats({limit: req.body?.limit});
       res.status(200).json({
         success: true,
-        chat: {
-          id: chat.id,
-          title: chat.title,
-          modelId: chat.modelId,
-          messages: chat.messages,
-          createdAt: chat.createdAt.toMillis(),
-          modifiedAt: chat.modifiedAt.toMillis(),
-        },
+        chats: chats.map((c) => ({
+          id: c.id,
+          title: c.title,
+          modelId: c.modelId,
+          createdAt: c.createdAt.toMillis(),
+          modifiedAt: c.modifiedAt.toMillis(),
+        })),
       });
+    } catch (err: any) {
+      console.error(err.stack || err);
+      res.status(500).json({success: false, error: 'UNKNOWN'});
     }
-  );
+  });
+
+  /** Returns the full message history for a chat. */
+  server.use('/cms/api/ai.chats.get', async (req: Request, res: Response) => {
+    if (!req.user?.email) {
+      res.status(401).json({success: false, error: 'UNAUTHORIZED'});
+      return;
+    }
+    const id = String(req.body?.id || '').trim();
+    if (!id) {
+      res.status(400).json({success: false, error: 'MISSING_ID'});
+      return;
+    }
+    const cmsClient = new RootCMSClient(req.rootConfig!);
+    const store = new ChatStore(cmsClient, req.user.email);
+    const chat = await store.getChat(id);
+    if (!chat) {
+      res.status(404).json({success: false, error: 'NOT_FOUND'});
+      return;
+    }
+    res.status(200).json({
+      success: true,
+      chat: {
+        id: chat.id,
+        title: chat.title,
+        modelId: chat.modelId,
+        messages: chat.messages,
+        createdAt: chat.createdAt.toMillis(),
+        modifiedAt: chat.modifiedAt.toMillis(),
+      },
+    });
+  });
 
   /** Deletes a chat from history. */
   server.use(
@@ -1162,7 +1154,7 @@ export function api(server: Server, options: ApiOptions) {
     let collectionSchema = null;
     try {
       collectionSchema = await getCollectionSchema(req, collectionId);
-    } catch (err) {
+    } catch {
       // Schema may not be available, continue with null.
     }
 

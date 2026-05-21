@@ -59,7 +59,7 @@ export function AiEditModal(modalProps: ContextModalProps<AiEditModalProps>) {
     }
     try {
       return JSON.parse(value);
-    } catch (e) {
+    } catch {
       return null;
     }
   }, [value]);

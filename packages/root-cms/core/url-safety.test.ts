@@ -26,21 +26,21 @@ describe('assertPublicHttpUrl', () => {
   });
 
   it('rejects literal IPv4 loopback', async () => {
-    await expect(
-      assertPublicHttpUrl('https://127.0.0.1/foo')
-    ).rejects.toThrow(/ip address not allowed/);
+    await expect(assertPublicHttpUrl('https://127.0.0.1/foo')).rejects.toThrow(
+      /ip address not allowed/
+    );
   });
 
   it('rejects literal IPv4 private ranges', async () => {
     await expect(assertPublicHttpUrl('https://10.0.0.1/')).rejects.toThrow(
       /ip address not allowed/
     );
-    await expect(
-      assertPublicHttpUrl('https://192.168.1.1/')
-    ).rejects.toThrow(/ip address not allowed/);
-    await expect(
-      assertPublicHttpUrl('https://172.16.0.1/')
-    ).rejects.toThrow(/ip address not allowed/);
+    await expect(assertPublicHttpUrl('https://192.168.1.1/')).rejects.toThrow(
+      /ip address not allowed/
+    );
+    await expect(assertPublicHttpUrl('https://172.16.0.1/')).rejects.toThrow(
+      /ip address not allowed/
+    );
   });
 
   it('rejects link-local AWS/GCP metadata range', async () => {
@@ -53,9 +53,9 @@ describe('assertPublicHttpUrl', () => {
     await expect(assertPublicHttpUrl('https://[::1]/foo')).rejects.toThrow(
       /ip address not allowed/
     );
-    await expect(
-      assertPublicHttpUrl('https://[fd00::1]/foo')
-    ).rejects.toThrow(/ip address not allowed/);
+    await expect(assertPublicHttpUrl('https://[fd00::1]/foo')).rejects.toThrow(
+      /ip address not allowed/
+    );
   });
 
   it('rejects IPv4-mapped IPv6 loopback', async () => {

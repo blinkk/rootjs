@@ -1,5 +1,5 @@
-import {isIP} from 'node:net';
 import {lookup} from 'node:dns/promises';
+import {isIP} from 'node:net';
 
 const PRIVATE_HOSTNAMES = new Set([
   'localhost',
@@ -118,7 +118,7 @@ export async function assertPublicHttpUrl(
     return parsed;
   }
   // Otherwise resolve DNS and check every record.
-  let addresses: Array<{address: string; family: number}> = [];
+  let addresses: Array<{address: string; family: number}>;
   try {
     addresses = await lookup(hostname, {all: true, verbatim: true});
   } catch (err: any) {

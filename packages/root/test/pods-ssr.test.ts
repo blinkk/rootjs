@@ -25,7 +25,9 @@ afterAll(async () => {
   }
 });
 
-async function fetchPath(urlPath: string): Promise<{status: number; body: string}> {
+async function fetchPath(
+  urlPath: string
+): Promise<{status: number; body: string}> {
   const res = await fetch(`http://localhost:${port}${urlPath}`);
   const body = await res.text();
   return {status: res.status, body};

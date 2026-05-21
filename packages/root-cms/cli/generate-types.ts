@@ -286,7 +286,6 @@ function fieldType(field: Field, options: FieldPropertyOptions): dom.Type {
       field.types.forEach((schema: Schema | string) => {
         let typeName: string = '';
         if (typeof schema === 'string') {
-          typeName = schema;
           return;
         } else if (schema?.name) {
           typeName = schema.name;

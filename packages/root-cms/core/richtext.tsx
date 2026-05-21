@@ -2,10 +2,7 @@ import {StringParamsProvider, useTranslations} from '@blinkk/root';
 import {Component, FunctionalComponent, createContext} from 'preact';
 import {useContext} from 'preact/hooks';
 import {renderToString} from 'preact-render-to-string';
-import {
-  sanitizeBlockHtml,
-  sanitizeInlineHtml,
-} from '../shared/sanitize.js';
+import {sanitizeBlockHtml, sanitizeInlineHtml} from '../shared/sanitize.js';
 
 export interface RichTextBlock {
   type: string;
