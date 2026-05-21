@@ -14,19 +14,40 @@ const REGISTRY_TIMEOUT_MS = 3000;
 export const checkVersionTask: StartupTask = {
   name: 'check-version',
   throttle: ONE_DAY_MS,
+  // Skip the check when disabled via env var, when the version is unknown, or
+  // for pre-release (alpha/beta/rc) builds that are intentionally ahead of the
+  // latest stable release.
+  enabled(ctx) {
+    return (
+      !isVersionCheckDisabled() && !!ctx.version && !isPrerelease(ctx.version)
+    );
+  },
   async run(ctx) {
     const current = ctx.version;
-    // Skip the check for pre-release builds: users on alpha/beta/rc versions
-    // are intentionally ahead of the latest stable release.
-    if (!current || isPrerelease(current)) {
-      return;
-    }
     const latest = await fetchLatestVersion();
-    if (latest && isNewerVersion(current, latest)) {
+    if (current && latest && isNewerVersion(current, latest)) {
       printUpdateNotice(current, latest);
     }
   },
 };
+
+/**
+ * Whether the version check has been disabled via environment variable. Honors
+ * the `@blinkk/root`-specific `ROOT_DISABLE_VERSION_CHECK` as well as the de
+ * facto `NO_UPDATE_NOTIFIER` convention. Either can be set in the shell or in a
+ * project's `.env` file, which the CLI loads on startup.
+ */
+function isVersionCheckDisabled(): boolean {
+  return (
+    isEnvEnabled('ROOT_DISABLE_VERSION_CHECK') ||
+    isEnvEnabled('NO_UPDATE_NOTIFIER')
+  );
+}
+
+function isEnvEnabled(name: string): boolean {
+  const value = (process.env[name] || '').trim().toLowerCase();
+  return value !== '' && value !== '0' && value !== 'false';
+}
 
 async function fetchLatestVersion(): Promise<string | null> {
   const controller = new AbortController();

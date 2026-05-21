@@ -24,6 +24,12 @@ export interface StartupTask {
    */
   throttle?: number;
   /**
+   * Optional predicate evaluated before the throttle check. When it returns
+   * false the task is skipped entirely (and its throttle is left untouched).
+   * Useful for opt-out flags, e.g. an env var that disables the task.
+   */
+  enabled?: (ctx: StartupTaskContext) => boolean;
+  /**
    * Task logic. Thrown errors are swallowed by the runner so that a failing
    * startup task never prevents `root` commands from starting.
    */
@@ -54,8 +60,9 @@ export async function runStartupTasks(ctx: StartupTaskContext): Promise<void> {
   try {
     const state = await readState();
     const now = Date.now();
-    const dueTasks = STARTUP_TASKS.filter((task) =>
-      isDue(task, state.lastRun[task.name], now)
+    const dueTasks = STARTUP_TASKS.filter(
+      (task) =>
+        isEnabled(task, ctx) && isDue(task, state.lastRun[task.name], now)
     );
     if (dueTasks.length === 0) {
       return;
@@ -76,6 +83,10 @@ export async function runStartupTasks(ctx: StartupTaskContext): Promise<void> {
   } catch {
     // Never let startup tasks interfere with the command.
   }
+}
+
+function isEnabled(task: StartupTask, ctx: StartupTaskContext): boolean {
+  return !task.enabled || task.enabled(ctx);
 }
 
 function isDue(

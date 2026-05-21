@@ -20,6 +20,7 @@ beforeEach(() => {
 afterEach(() => {
   vi.restoreAllMocks();
   vi.unstubAllGlobals();
+  vi.unstubAllEnvs();
 });
 
 function loggedUpdateNotice(log: ReturnType<typeof vi.spyOn>): boolean {
@@ -57,6 +58,20 @@ test('no notice when already on the latest version', async () => {
 
   await runStartupTasks({rootDir: '/tmp/project', version: '1.0.0'});
   assert.equal(fetchMock.mock.calls.length, 1);
+  assert.isFalse(loggedUpdateNotice(log));
+});
+
+test('version check can be disabled via env var', async () => {
+  const fetchMock = vi.fn(async () => ({
+    ok: true,
+    json: async () => ({version: '99.0.0'}),
+  }));
+  vi.stubGlobal('fetch', fetchMock);
+  vi.stubEnv('ROOT_DISABLE_VERSION_CHECK', '1');
+  const log = vi.spyOn(console, 'log').mockImplementation(() => {});
+
+  await runStartupTasks({rootDir: '/tmp/project', version: '1.0.0'});
+  assert.equal(fetchMock.mock.calls.length, 0);
   assert.isFalse(loggedUpdateNotice(log));
 });
 
