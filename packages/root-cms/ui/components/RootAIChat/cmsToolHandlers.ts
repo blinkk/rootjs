@@ -20,6 +20,7 @@ import {
   Timestamp,
   updateDoc,
 } from 'firebase/firestore';
+import type {DocEditOperation} from '../../../core/ai-tools.js';
 import {Collection} from '../../../core/schema.js';
 import {
   marshalData,
@@ -42,6 +43,7 @@ export const WRITE_CMS_TOOL_NAMES = [
   'doc_set',
   'doc_create',
   'doc_updateField',
+  'doc_edit',
   'doc_duplicate',
 ] as const;
 
@@ -161,6 +163,39 @@ function normalizeToolValue(value: any): any {
   return value;
 }
 
+/** Normalizes raw `doc_edit` operations, parsing stringified JSON values. */
+function normalizeOperations(operations: any): DocEditOperation[] {
+  if (!Array.isArray(operations)) {
+    return [];
+  }
+  return operations.map((op) => {
+    const out: DocEditOperation = {op: op?.op, path: op?.path};
+    if (op && 'value' in op) {
+      out.value = normalizeToolValue(op.value);
+    }
+    if (op && op.index !== undefined && op.index !== null) {
+      out.index = op.index;
+    }
+    return out;
+  });
+}
+
+/** Short human-readable label for a single `doc_edit` operation. */
+function describeOperation(op: DocEditOperation): string {
+  switch (op.op) {
+    case 'set':
+      return `Set ${op.path}`;
+    case 'insert':
+      return op.index === undefined
+        ? `Insert into ${op.path} (append)`
+        : `Insert into ${op.path} at ${op.index}`;
+    case 'remove':
+      return `Remove ${op.path}[${op.index}]`;
+    default:
+      return `${op.op} ${op.path}`;
+  }
+}
+
 function setValueAtPath(target: any, path: string, value: any) {
   const segments = path.split('.');
   let cursor = target;
@@ -251,6 +286,8 @@ export async function previewCmsWriteTool(
       return previewDocCreate(input);
     case 'doc_updateField':
       return previewDocUpdateField(input);
+    case 'doc_edit':
+      return previewDocEdit(input);
     case 'doc_duplicate':
       return previewDocDuplicate(input);
   }
@@ -272,8 +309,7 @@ async function previewDocSet(input: {
       docId: input.docId,
       error: 'VALIDATION_FAILED',
       errors,
-      hint:
-        'The fields payload does not match the collection schema. Read the doc and schema, then retry with a valid payload.',
+      hint: 'The fields payload does not match the collection schema. Read the doc and schema, then retry with a valid payload.',
     });
   }
 
@@ -362,8 +398,7 @@ async function previewDocUpdateField(input: {
       path: input.path,
       error: 'VALIDATION_FAILED',
       errors,
-      hint:
-        'The value does not match the field schema. Inspect the doc and schema, then retry with a valid value.',
+      hint: 'The value does not match the field schema. Inspect the doc and schema, then retry with a valid value.',
     });
   }
 
@@ -392,8 +427,7 @@ async function previewDocUpdateField(input: {
       path: input.path,
       error: 'VALIDATION_FAILED',
       errors: [storagePath.error],
-      hint:
-        'Use zero-based array indices for existing array items, or set the whole array field when appending or removing items.',
+      hint: 'Use zero-based array indices for existing array items, or set the whole array field when appending or removing items.',
     });
   }
 
@@ -412,6 +446,79 @@ async function previewDocUpdateField(input: {
       {label: 'Document', value: input.docId},
       {label: 'Field path', value: input.path},
       {label: 'Operation', value: 'Update draft field'},
+    ],
+  };
+}
+
+async function previewDocEdit(input: {
+  docId: string;
+  operations: any[];
+}): Promise<CmsToolPreview> {
+  const operations = normalizeOperations(input.operations);
+  const {collection: collectionId} = parseDocId(input.docId);
+  const schema = await getCachedSchema(collectionId);
+
+  const before = await readDraftFields(input.docId);
+  if (!before.found) {
+    return createPreviewError({
+      toolName: 'doc_edit',
+      title: 'Edit draft document',
+      summary: `${input.docId} does not exist.`,
+      docId: input.docId,
+      error: 'NOT_FOUND',
+      hint: `Doc "${input.docId}" does not exist. Create it with \`doc_create\` first.`,
+    });
+  }
+
+  const {applyDocEdits, validateFields} = await loadValidators();
+  const applied = applyDocEdits(before.fields, operations);
+  if (!applied.ok) {
+    return createPreviewError({
+      toolName: 'doc_edit',
+      title: 'Edit draft document',
+      summary: `Operation ${applied.error.opIndex + 1} (${
+        applied.error.op
+      }) could not be applied to ${input.docId}.`,
+      docId: input.docId,
+      error: 'INVALID_OPERATION',
+      errors: [applied.error],
+      hint:
+        'Fix the failing operation. Use zero-based array indices, target ' +
+        'arrays for insert/remove, and read the doc with `doc_get` to ' +
+        'confirm the current shape.',
+    });
+  }
+
+  const errors = validateFields(applied.fields, schema);
+  if (errors.length > 0) {
+    return createPreviewError({
+      toolName: 'doc_edit',
+      title: 'Edit draft document',
+      summary: `The edits to ${input.docId} did not match the collection schema.`,
+      docId: input.docId,
+      error: 'VALIDATION_FAILED',
+      errors,
+      hint:
+        'The resulting fields do not match the collection schema. Inspect ' +
+        'the doc and schema, then retry with valid values.',
+    });
+  }
+
+  return {
+    toolName: 'doc_edit',
+    title: 'Edit draft document',
+    summary: `Apply ${operations.length} edit${
+      operations.length === 1 ? '' : 's'
+    } to ${input.docId}.`,
+    docId: input.docId,
+    before: before.fields,
+    after: applied.fields,
+    details: [
+      {label: 'Document', value: input.docId},
+      ...operations.map((op, i) => ({
+        label: `Operation ${i + 1}`,
+        value: describeOperation(op),
+      })),
     ],
   };
 }
@@ -671,6 +778,79 @@ async function docUpdateField(input: {
   };
 }
 
+async function docEdit(input: {docId: string; operations: any[]}) {
+  const operations = normalizeOperations(input.operations);
+  const {collection: collectionId} = parseDocId(input.docId);
+  const schema = await getCachedSchema(collectionId);
+
+  const ref = draftDocRef(input.docId);
+  const snap = await fbGetDoc(ref);
+  if (!snap.exists()) {
+    return {
+      success: false,
+      docId: input.docId,
+      error: 'NOT_FOUND',
+      hint: `Doc "${input.docId}" does not exist.`,
+    };
+  }
+  const raw = snap.data() as any;
+  const currentFields = unmarshalData(raw.fields || {});
+
+  const {applyDocEdits, validateFields} = await loadValidators();
+  const applied = applyDocEdits(currentFields, operations);
+  if (!applied.ok) {
+    return {
+      success: false,
+      docId: input.docId,
+      error: 'INVALID_OPERATION',
+      errors: [applied.error],
+      hint:
+        'Fix the failing operation. Use zero-based array indices, target ' +
+        'arrays for insert/remove, and read the doc with `doc_get` to ' +
+        'confirm the current shape.',
+    };
+  }
+
+  const errors = validateFields(applied.fields, schema);
+  if (errors.length > 0) {
+    return {
+      success: false,
+      docId: input.docId,
+      error: 'VALIDATION_FAILED',
+      errors,
+      hint:
+        'The resulting fields did not match the collection schema. Inspect ' +
+        'the doc with `doc_get`, then retry with valid values.',
+    };
+  }
+
+  const {firebase} = getCtx();
+  await updateDoc(ref, {
+    fields: marshalData(applied.fields),
+    'sys.modifiedAt': serverTimestamp(),
+    'sys.modifiedBy': firebase.user?.email || 'root-cms-ai',
+  });
+  return {
+    success: true,
+    docId: input.docId,
+    receipt: createReceipt({
+      title: 'Edited draft document',
+      summary: `Applied ${operations.length} edit${
+        operations.length === 1 ? '' : 's'
+      } to ${input.docId}.`,
+      docId: input.docId,
+      details: [
+        {label: 'Document', value: input.docId},
+        {label: 'Operations', value: String(operations.length)},
+        ...operations.map((op, i) => ({
+          label: `Operation ${i + 1}`,
+          value: describeOperation(op),
+        })),
+      ],
+    }),
+  };
+}
+
 // docPublish, docDelete, and docRevertDraft are intentionally NOT
 // implemented here — see the safety policy comment in `core/ai-tools.ts`
 // (`createCmsTools`). Publishing, permanent deletes, and discarding
@@ -766,6 +946,7 @@ const HANDLERS: Record<string, (input: any) => Promise<unknown>> = {
   doc_set: docSet,
   doc_create: docCreate,
   doc_updateField: docUpdateField,
+  doc_edit: docEdit,
   doc_duplicate: docDuplicate,
   doc_translateField: docTranslateField,
 };

@@ -49,6 +49,7 @@ export const CMS_TOOL_NAMES = [
   'doc_set',
   'doc_create',
   'doc_updateField',
+  'doc_edit',
   'doc_duplicate',
   'doc_listVersions',
   'doc_translateField',
@@ -92,10 +93,7 @@ export interface CmsToolContext {
   rootConfig: RootConfig;
   loadCollection: (collectionId: string) => Promise<Collection | null>;
   loadAllCollections: () => Promise<Record<string, Collection>>;
-  search: (
-    query: string,
-    options: {limit: number}
-  ) => Promise<CmsSearchResult>;
+  search: (query: string, options: {limit: number}) => Promise<CmsSearchResult>;
 }
 
 /**
@@ -342,9 +340,10 @@ export function createCmsTools(ctx: CmsToolContext): ToolSet {
         'Paths are relative to the doc fields object; do not prefix them ' +
         'with "fields.". Use dotted paths (e.g. "hero.title") and ' +
         'zero-based array indices. For example, update the first module ' +
-        'title with path "content.modules.0.title". To append or remove ' +
-        'array items, first read the current doc, then set the whole array ' +
-        'path (e.g. "content.modules") to the updated array. The value is ' +
+        'title with path "content.modules.0.title". To insert or remove ' +
+        'array items, prefer `doc_edit` (it supports insert/remove ' +
+        'operations); alternatively set the whole array path here (e.g. ' +
+        '"content.modules") to the updated array. The value is ' +
         'validated against the field schema and the call is rejected if the ' +
         'shape is wrong (e.g. passing a string to a richtext field). Only ' +
         'updates the draft version; users must publish separately. ' +
@@ -362,6 +361,79 @@ export function createCmsTools(ctx: CmsToolContext): ToolSet {
             'Dotted JSON path within the fields object, e.g. "content.modules.0.title".'
           ),
         value: z.any().describe('JSON value to set at the path.'),
+      }),
+    }),
+
+    doc_edit: tool({
+      description:
+        'Apply multiple edits to a draft CMS document in a single call. ' +
+        'Use this when a change spans more than one field or needs to add ' +
+        'or remove array items (e.g. append a new module AND update a ' +
+        'title). Pass an ordered `operations` list; each operation has an ' +
+        '`op`:\n' +
+        '- "set": set the value at `path` (e.g. "hero.title" or ' +
+        '"content.modules.0.title"). Provide `value`.\n' +
+        '- "insert": insert `value` into the array at `path` (e.g. ' +
+        '"content.modules"). Optionally pass a zero-based `index` to ' +
+        'insert before; omit `index` to append.\n' +
+        '- "remove": remove the array item at zero-based `index` from the ' +
+        'array at `path`.\n' +
+        'Operations apply in order against the current draft. Array ' +
+        'indices in each operation refer to the array state AFTER earlier ' +
+        'operations have been applied. The whole result is validated ' +
+        'against the collection schema and the call is rejected as a group ' +
+        'on any error — nothing is written unless every operation succeeds. ' +
+        'Paths are relative to the doc fields object; do not prefix them ' +
+        'with "fields.". Use dotted paths and zero-based array indices. ' +
+        'Only writes the draft version; users must publish separately. ' +
+        'Format: pass `value` as plain JSON. Arrays must be plain JSON ' +
+        'arrays — do NOT use the `_array` object notation. The tool ' +
+        'marshals values into Firestore storage shape on its own. Rich ' +
+        'text fields use the `{version, time, blocks}` shape with `blocks` ' +
+        'as a plain JSON array of `{type, data}` objects.',
+      inputSchema: z.object({
+        docId: z
+          .string()
+          .describe(
+            'Full doc id in the form "Collection/slug" (e.g. "Pages/home").'
+          ),
+        operations: z
+          .array(
+            z.object({
+              op: z
+                .enum(['set', 'insert', 'remove'])
+                .describe(
+                  'Operation: "set" a field value, "insert" an array item, or "remove" an array item.'
+                ),
+              path: z
+                .string()
+                .describe(
+                  'Dotted path within the fields object. For "set" it ' +
+                    'targets the field to write (e.g. "hero.title"); for ' +
+                    '"insert"/"remove" it targets the array (e.g. ' +
+                    '"content.modules").'
+                ),
+              value: z
+                .any()
+                .optional()
+                .describe(
+                  'JSON value. Required for "set" (the new field value) and ' +
+                    '"insert" (the new array item). Ignored for "remove".'
+                ),
+              index: z
+                .number()
+                .int()
+                .min(0)
+                .optional()
+                .describe(
+                  'Zero-based array index. For "insert" it is the position ' +
+                    'to insert before (omit to append); for "remove" it is ' +
+                    'the item to delete (required).'
+                ),
+            })
+          )
+          .min(1)
+          .describe('Ordered list of edit operations to apply to the draft.'),
       }),
     }),
 
@@ -726,4 +798,409 @@ function createPathError(
     expected,
     received,
   };
+}
+
+/** A single edit operation handled by the `doc_edit` tool. */
+export interface DocEditOperation {
+  op: 'set' | 'insert' | 'remove';
+  /** Dotted path within the fields object (no leading "fields." prefix). */
+  path: string;
+  /** Value to write ("set") or insert ("insert"). Ignored for "remove". */
+  value?: any;
+  /** Zero-based array index for "insert" (optional) and "remove" (required). */
+  index?: number;
+}
+
+/** A structural failure applying one operation in a `doc_edit` batch. */
+export interface DocEditError {
+  /** Zero-based position of the failing operation in the input list. */
+  opIndex: number;
+  op: string;
+  path: string;
+  message: string;
+  expected?: string;
+  received?: any;
+}
+
+export type ApplyDocEditsResult =
+  | {ok: true; fields: Record<string, any>}
+  | {ok: false; error: DocEditError};
+
+const INDEX_RE = /^(0|[1-9]\d*)$/;
+
+/**
+ * Applies a sequence of `doc_edit` operations to a plain-JSON `fields` object
+ * and returns the resulting fields, or the first operation that failed.
+ *
+ * Pure: the input is deep-cloned and never mutated, so callers can validate
+ * the result against the collection schema (via `validateFields`) before
+ * persisting. Operations run in order — array indices in each op refer to the
+ * array state after earlier ops have been applied.
+ *
+ * This performs structural checks only (path resolves against the current
+ * data, the target is an array for insert/remove, the index is in range).
+ * Type/schema validation is the caller's responsibility.
+ */
+export function applyDocEdits(
+  fields: Record<string, any>,
+  operations: DocEditOperation[]
+): ApplyDocEditsResult {
+  const draft: Record<string, any> = JSON.parse(JSON.stringify(fields ?? {}));
+  for (let i = 0; i < operations.length; i++) {
+    const error = applyOneEdit(draft, operations[i], i);
+    if (error) {
+      return {ok: false, error};
+    }
+  }
+  return {ok: true, fields: draft};
+}
+
+function applyOneEdit(
+  draft: Record<string, any>,
+  op: DocEditOperation,
+  opIndex: number
+): DocEditError | null {
+  if (op.op !== 'set' && op.op !== 'insert' && op.op !== 'remove') {
+    return makeEditError(
+      opIndex,
+      op,
+      typeof op.path === 'string' ? op.path : String(op.path),
+      `Unknown operation "${op.op}".`,
+      'set | insert | remove',
+      op.op
+    );
+  }
+
+  if (typeof op.path !== 'string') {
+    return makeEditError(
+      opIndex,
+      op,
+      String(op.path),
+      'Operation `path` must be a string.',
+      'string',
+      typeName(op.path)
+    );
+  }
+
+  const syntax = validatePathSyntax(op.path);
+  if (syntax) {
+    return {opIndex, op: op.op, ...syntax};
+  }
+  const segments = op.path.trim().split('.');
+  const lastSeg = segments[segments.length - 1];
+  const childPath = op.path.trim();
+  const lastIsIndex = INDEX_RE.test(lastSeg);
+
+  // For "remove" the array (and the whole path) must already exist; "set" and
+  // "insert" may create intermediate containers along the way.
+  const parent = navigateToParent(draft, segments, op.op !== 'remove');
+  if (!parent.ok) {
+    return {opIndex, op: op.op, ...parent.error};
+  }
+  const container = parent.container;
+
+  if (op.op === 'set') {
+    if (op.value === undefined) {
+      return makeEditError(
+        opIndex,
+        op,
+        childPath,
+        'A "set" operation requires a `value`.',
+        'value',
+        'undefined'
+      );
+    }
+    if (Array.isArray(container)) {
+      if (!lastIsIndex) {
+        return makeEditError(
+          opIndex,
+          op,
+          childPath,
+          'Use a zero-based array index to set an array item.',
+          'array index',
+          lastSeg
+        );
+      }
+      const idx = Number(lastSeg);
+      if (idx > container.length) {
+        return makeEditError(
+          opIndex,
+          op,
+          childPath,
+          'Array index is out of range; set an existing index or append at the array length.',
+          `0..${container.length}`,
+          idx
+        );
+      }
+      container[idx] = op.value;
+      return null;
+    }
+    if (container && typeof container === 'object') {
+      if (lastIsIndex) {
+        return makeEditError(
+          opIndex,
+          op,
+          childPath,
+          'Array index used on a non-array field.',
+          'object key',
+          lastSeg
+        );
+      }
+      container[lastSeg] = op.value;
+      return null;
+    }
+    return makeEditError(
+      opIndex,
+      op,
+      childPath,
+      'Cannot set a value here; the parent is not an object or array.',
+      'object or array',
+      typeName(container)
+    );
+  }
+
+  // insert / remove target the ARRAY located at op.path.
+  let arr = getChild(container, lastSeg, lastIsIndex);
+
+  if (op.op === 'insert') {
+    if (op.value === undefined) {
+      return makeEditError(
+        opIndex,
+        op,
+        childPath,
+        'An "insert" operation requires a `value`.',
+        'value',
+        'undefined'
+      );
+    }
+    if (arr === undefined || arr === null) {
+      arr = [];
+      const setError = setChild(
+        container,
+        lastSeg,
+        lastIsIndex,
+        arr,
+        opIndex,
+        op
+      );
+      if (setError) {
+        return setError;
+      }
+    }
+    if (!Array.isArray(arr)) {
+      return makeEditError(
+        opIndex,
+        op,
+        childPath,
+        'The target of an "insert" must be an array field.',
+        'array',
+        typeName(arr)
+      );
+    }
+    const at = op.index === undefined ? arr.length : op.index;
+    if (at < 0 || at > arr.length) {
+      return makeEditError(
+        opIndex,
+        op,
+        childPath,
+        'Insert index is out of range.',
+        `0..${arr.length}`,
+        at
+      );
+    }
+    arr.splice(at, 0, op.value);
+    return null;
+  }
+
+  // remove
+  if (!Array.isArray(arr)) {
+    return makeEditError(
+      opIndex,
+      op,
+      childPath,
+      'The target of a "remove" must be an array field.',
+      'array',
+      typeName(arr)
+    );
+  }
+  if (op.index === undefined) {
+    return makeEditError(
+      opIndex,
+      op,
+      childPath,
+      'A "remove" operation requires an `index`.',
+      'index',
+      'undefined'
+    );
+  }
+  if (op.index < 0 || op.index >= arr.length) {
+    return makeEditError(
+      opIndex,
+      op,
+      childPath,
+      'Remove index is out of range.',
+      `0..${Math.max(arr.length - 1, 0)}`,
+      op.index
+    );
+  }
+  arr.splice(op.index, 1);
+  return null;
+}
+
+interface PathFailure {
+  path: string;
+  message: string;
+  expected?: string;
+  received?: any;
+}
+
+/**
+ * Walks `root` through every segment except the last and returns the parent
+ * container of the final segment. When `create` is true, missing intermediate
+ * object/array containers are created on the way down.
+ */
+function navigateToParent(
+  root: any,
+  segments: string[],
+  create: boolean
+): {ok: true; container: any} | {ok: false; error: PathFailure} {
+  let cur = root;
+  for (let i = 0; i < segments.length - 1; i++) {
+    const seg = segments[i];
+    const segPath = segments.slice(0, i + 1).join('.');
+    const isIndex = INDEX_RE.test(seg);
+    if (Array.isArray(cur)) {
+      if (!isIndex) {
+        return pathFail(
+          segPath,
+          'Expected a zero-based array index after an array field.',
+          'array index',
+          seg
+        );
+      }
+      const idx = Number(seg);
+      if (idx >= cur.length) {
+        return pathFail(
+          segPath,
+          'Array index is out of range for the current draft.',
+          `0..${Math.max(cur.length - 1, 0)}`,
+          idx
+        );
+      }
+      cur = cur[idx];
+      continue;
+    }
+    if (cur === null || typeof cur !== 'object') {
+      return pathFail(
+        segPath,
+        'Path walks through a value that is not an object or array.',
+        'object or array',
+        typeName(cur)
+      );
+    }
+    if (isIndex) {
+      return pathFail(
+        segPath,
+        'Array index used on a non-array field.',
+        'object key',
+        seg
+      );
+    }
+    if (cur[seg] === undefined || cur[seg] === null) {
+      if (!create) {
+        return pathFail(
+          segPath,
+          'Path segment does not exist in the current draft.',
+          'existing field',
+          seg
+        );
+      }
+      cur[seg] = INDEX_RE.test(segments[i + 1]) ? [] : {};
+    }
+    cur = cur[seg];
+  }
+  return {ok: true, container: cur};
+}
+
+function getChild(container: any, seg: string, isIndex: boolean): any {
+  if (Array.isArray(container)) {
+    return isIndex ? container[Number(seg)] : undefined;
+  }
+  if (container && typeof container === 'object') {
+    return container[seg];
+  }
+  return undefined;
+}
+
+function setChild(
+  container: any,
+  seg: string,
+  isIndex: boolean,
+  value: any,
+  opIndex: number,
+  op: DocEditOperation
+): DocEditError | null {
+  if (Array.isArray(container)) {
+    if (!isIndex) {
+      return makeEditError(
+        opIndex,
+        op,
+        op.path.trim(),
+        'Use a zero-based array index for an array field.',
+        'array index',
+        seg
+      );
+    }
+    container[Number(seg)] = value;
+    return null;
+  }
+  if (container && typeof container === 'object') {
+    if (isIndex) {
+      return makeEditError(
+        opIndex,
+        op,
+        op.path.trim(),
+        'Array index used on a non-array field.',
+        'object key',
+        seg
+      );
+    }
+    container[seg] = value;
+    return null;
+  }
+  return makeEditError(
+    opIndex,
+    op,
+    op.path.trim(),
+    'Cannot write here; the parent is not an object or array.',
+    'object or array',
+    typeName(container)
+  );
+}
+
+function pathFail(
+  path: string,
+  message: string,
+  expected: string,
+  received: any
+): {ok: false; error: PathFailure} {
+  return {ok: false, error: {path, message, expected, received}};
+}
+
+function makeEditError(
+  opIndex: number,
+  op: DocEditOperation,
+  path: string,
+  message: string,
+  expected?: string,
+  received?: any
+): DocEditError {
+  return {opIndex, op: op.op, path, message, expected, received};
+}
+
+function typeName(value: any): string {
+  if (value === null) return 'null';
+  if (value === undefined) return 'undefined';
+  if (Array.isArray(value)) return 'array';
+  return typeof value;
 }
