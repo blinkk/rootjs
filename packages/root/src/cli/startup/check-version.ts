@@ -16,7 +16,9 @@ export const checkVersionTask: StartupTask = {
   throttle: ONE_DAY_MS,
   async run(ctx) {
     const current = ctx.version;
-    if (!current) {
+    // Skip the check for pre-release builds: users on alpha/beta/rc versions
+    // are intentionally ahead of the latest stable release.
+    if (!current || isPrerelease(current)) {
       return;
     }
     const latest = await fetchLatestVersion();
@@ -61,6 +63,14 @@ export function isNewerVersion(current: string, latest: string): boolean {
     }
   }
   return false;
+}
+
+/**
+ * Returns true if `version` is an alpha, beta, or rc pre-release build, e.g.
+ * `3.1.0-rc.1`.
+ */
+export function isPrerelease(version: string): boolean {
+  return /-(alpha|beta|rc)\b/i.test(version);
 }
 
 function parseVersion(version: string): [number, number, number] {

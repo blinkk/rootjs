@@ -60,6 +60,19 @@ test('no notice when already on the latest version', async () => {
   assert.isFalse(loggedUpdateNotice(log));
 });
 
+test('pre-release builds skip the version check (no network call)', async () => {
+  const fetchMock = vi.fn(async () => ({
+    ok: true,
+    json: async () => ({version: '99.0.0'}),
+  }));
+  vi.stubGlobal('fetch', fetchMock);
+  const log = vi.spyOn(console, 'log').mockImplementation(() => {});
+
+  await runStartupTasks({rootDir: '/tmp/project', version: '3.1.0-rc.1'});
+  assert.equal(fetchMock.mock.calls.length, 0);
+  assert.isFalse(loggedUpdateNotice(log));
+});
+
 test('a failing task never throws and is still throttled', async () => {
   const fetchMock = vi.fn(async () => {
     throw new Error('network down');
