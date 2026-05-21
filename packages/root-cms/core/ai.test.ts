@@ -11,6 +11,7 @@ import {
   extractJsonFromResponse,
   findModel,
   mergeIncomingMessage,
+  sanitizeDanglingToolCalls,
   readRootMd,
   ROOT_MD_FILENAME,
   sanitizeGeneratedTitle,
@@ -367,6 +368,73 @@ describe('ai', () => {
         msg('b', '2-updated')
       );
       expect(result.map((m) => m.id)).toEqual(['a', 'b']);
+    });
+  });
+
+  describe('sanitizeDanglingToolCalls', () => {
+    const userMsg = (id: string): any => ({
+      id,
+      role: 'user',
+      parts: [{type: 'text', text: 'hi'}],
+    });
+    const assistantWithTool = (id: string, state: string): any => ({
+      id,
+      role: 'assistant',
+      parts: [
+        {type: 'text', text: 'on it'},
+        {
+          type: 'tool-doc_updateField',
+          toolCallId: `${id}-call`,
+          state,
+          input: {docId: 'Pages/home'},
+        },
+      ],
+    });
+
+    it('returns the same array when every tool call is resolved', () => {
+      const messages = [
+        userMsg('a'),
+        assistantWithTool('b', 'output-available'),
+      ];
+      expect(sanitizeDanglingToolCalls(messages)).toBe(messages);
+    });
+
+    it('synthesizes an aborted result for an unresolved tool call', () => {
+      const messages = [
+        assistantWithTool('b', 'input-available'),
+        userMsg('c'),
+      ];
+      const result = sanitizeDanglingToolCalls(messages);
+      const toolPart = (result[0].parts as any[]).find((p) =>
+        p.type.startsWith('tool-')
+      );
+      expect(toolPart.state).toBe('output-available');
+      expect(toolPart.output).toMatchObject({success: false, error: 'ABORTED'});
+      // The user message and the assistant text part are left untouched.
+      expect(result[1]).toBe(messages[1]);
+      expect((result[0].parts as any[])[0]).toEqual({
+        type: 'text',
+        text: 'on it',
+      });
+    });
+
+    it('also heals input-streaming parts', () => {
+      const result = sanitizeDanglingToolCalls([
+        assistantWithTool('b', 'input-streaming'),
+      ]);
+      const toolPart = (result[0].parts as any[])[1];
+      expect(toolPart.state).toBe('output-available');
+    });
+
+    it('ignores tool-like parts on non-assistant messages', () => {
+      const messages = [
+        {
+          id: 'x',
+          role: 'user',
+          parts: [{type: 'tool-doc_get', state: 'input-available'}],
+        } as any,
+      ];
+      expect(sanitizeDanglingToolCalls(messages)).toBe(messages);
     });
   });
 

@@ -419,6 +419,64 @@ export function mergeIncomingMessage(
 }
 
 /**
+ * Tool-call part states that mean a result has not arrived yet. A persisted
+ * chat can end on one of these if a turn was abandoned mid-approval: the
+ * assistant message is saved by `onFinish` before the client-side write tool
+ * resolves, so the call is stored without an output.
+ */
+const UNRESOLVED_TOOL_STATES = new Set(['input-streaming', 'input-available']);
+
+/** True if a UIMessage part is a tool call (static `tool-<name>` or dynamic). */
+function isToolCallPart(part: any): boolean {
+  return (
+    !!part &&
+    typeof part.type === 'string' &&
+    (part.type.startsWith('tool-') || part.type === 'dynamic-tool')
+  );
+}
+
+/**
+ * Synthesizes an aborted result for any tool-call part still awaiting one, so
+ * every `tool_use` keeps a matching `tool_result` when the history is handed
+ * to the model. Left unresolved, such parts (from an abandoned turn) make the
+ * provider reject the next request. Returns the original array unchanged when
+ * there is nothing to repair.
+ */
+export function sanitizeDanglingToolCalls(messages: UIMessage[]): UIMessage[] {
+  let changed = false;
+  const result = messages.map((message) => {
+    if (message.role !== 'assistant' || !Array.isArray(message.parts)) {
+      return message;
+    }
+    let partsChanged = false;
+    const parts = message.parts.map((part: any) => {
+      if (isToolCallPart(part) && UNRESOLVED_TOOL_STATES.has(part.state)) {
+        partsChanged = true;
+        return {
+          ...part,
+          state: 'output-available',
+          output: {
+            success: false,
+            error: 'ABORTED',
+            message:
+              'This tool call never completed because the chat turn was ' +
+              'abandoned before it ran. Do not assume it succeeded; ask the ' +
+              'user before retrying.',
+          },
+        };
+      }
+      return part;
+    });
+    if (!partsChanged) {
+      return message;
+    }
+    changed = true;
+    return {...message, parts};
+  });
+  return changed ? result : messages;
+}
+
+/**
  * Reads the project's `ROOT.md` file, if present. Mirrors the convention used
  * by tools like `AGENTS.md` and `CLAUDE.md`: developers can drop a markdown
  * file at the project root to give Root AI extra context about site-specific
@@ -848,7 +906,13 @@ export async function runChatStream(
   }
   const systemPrompt = buildSystemPrompt(promptSections.join('\n'), rootMd);
 
-  const modelMessages = await convertToModelMessages(messages, {tools});
+  // Heal any tool calls left unresolved by an abandoned turn (e.g. the user
+  // closed the chat mid-approval). Without a synthesized result they convert
+  // to `tool_use` blocks with no matching `tool_result` and the provider
+  // rejects the request. Reusing the sanitized list as `originalMessages`
+  // persists the repaired history back to Firestore in `onFinish`.
+  const sanitizedMessages = sanitizeDanglingToolCalls(messages);
+  const modelMessages = await convertToModelMessages(sanitizedMessages, {tools});
   const result = streamText({
     model: languageModel,
     system: systemPrompt,
@@ -859,7 +923,7 @@ export async function runChatStream(
 
   return result.toUIMessageStreamResponse({
     sendReasoning: model.capabilities?.reasoning ?? false,
-    originalMessages: messages,
+    originalMessages: sanitizedMessages,
     onFinish: async ({messages: finalMessages}) => {
       const store = new ChatStore(cmsClient, user);
       // Generate a title only on the first assistant response. Once a chat
