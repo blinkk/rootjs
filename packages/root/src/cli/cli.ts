@@ -77,7 +77,10 @@ class CliRunner {
         '--host <host>',
         'network address the server should listen on, e.g. 127.0.0.1'
       )
-      .action(dev);
+      .action((rootProjectDir, options) => {
+        options.version = this.version;
+        dev(rootProjectDir, options);
+      });
     program
       .command('gae-deploy <appdir>')
       .description(
