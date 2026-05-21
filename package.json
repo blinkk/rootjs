@@ -36,10 +36,10 @@
   "homepage": "https://github.com/blinkk/rootjs#readme",
   "devDependencies": {
     "@blinkk/eslint-config-root": "workspace:*",
-    "@changesets/cli": "^2.26.2",
-    "eslint": "^10.4.0",
-    "prettier": "^3.0.3",
-    "turbo": "^1.10.15",
-    "typescript": "^5.2.2"
+    "@changesets/cli": "2.31.0",
+    "eslint": "10.4.0",
+    "prettier": "3.8.3",
+    "turbo": "2.9.14",
+    "typescript": "6.0.3"
   }
 }
