@@ -34,6 +34,11 @@ describe('validateValueAtPath', () => {
           ],
         },
       } as any,
+      {
+        id: 'tags',
+        type: 'multiselect',
+        options: ['a', 'b', 'c'],
+      } as any,
     ],
   };
 
@@ -92,6 +97,29 @@ describe('validateValueAtPath', () => {
         received: 'object',
       })
     );
+  });
+
+  it('rejects multiselect data with `_array` object notation', () => {
+    // Multiselect values are stored as a plain JSON array of strings, not the
+    // `_array` object notation used for marshaled CMS arrays. doc_updateField
+    // round-trips the value through `marshalData()`, which silently corrupts
+    // data shaped like this.
+    const errors = validateValueAtPath(collection, 'tags', {
+      _array: ['k1', 'k2'],
+      k1: 'a',
+      k2: 'b',
+    });
+    expect(errors).toContainEqual(
+      expect.objectContaining({
+        path: 'tags',
+        expected: 'array',
+        received: 'object',
+      })
+    );
+  });
+
+  it('accepts a multiselect value as a plain string array', () => {
+    expect(validateValueAtPath(collection, 'tags', ['a', 'b'])).toEqual([]);
   });
 
   it('walks into array items by numeric index', () => {
