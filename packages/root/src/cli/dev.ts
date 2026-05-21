@@ -26,6 +26,7 @@ import {collectPods} from '../node/pod-collector.js';
 import {createViteServer} from '../node/vite.js';
 import {DevServerAssetMap} from '../render/asset-map/dev-asset-map.js';
 import {dirExists, isDirectory, isJsFile} from '../utils/fsutils.js';
+import {getContentType} from '../utils/mime.js';
 import {findOpenPort} from '../utils/ports.js';
 import {getSessionCookieSecret} from '../utils/rand.js';
 
@@ -333,18 +334,21 @@ function rootDevServer404Middleware() {
     if (!DEV_SERVER_404_LOG_IGNORE_PATHS.has(req.path)) {
       console.error(`❓ 404 ${req.originalUrl}`);
     }
-    if (req.renderer) {
-      const url = req.path;
-      const ext = path.extname(url);
-      if (!ext) {
-        const renderer = req.renderer;
-        const data = await renderer.renderDevServer404(req);
-        const html = data.html || '';
-        res.status(404).set({'Content-Type': 'text/html'}).end(html);
-        return;
-      }
+    const ext = path.extname(req.path);
+    if (req.renderer && !ext) {
+      const renderer = req.renderer;
+      const data = await renderer.renderDevServer404(req);
+      const html = data.html || '';
+      res.status(404).set({'Content-Type': 'text/html'}).end(html);
+      return;
     }
-    res.status(404).set({'Content-Type': 'text/plain'}).end('404');
+    // Set the content type from the extension so module scripts (.js/.mjs)
+    // get a JavaScript MIME type even when missing, instead of text/plain
+    // which the browser's ESM loader rejects.
+    res
+      .status(404)
+      .set({'Content-Type': getContentType(ext, 'text/plain')})
+      .end('404');
   };
 }
 
