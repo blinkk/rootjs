@@ -120,14 +120,14 @@ interface ExecutionModeInfo {
 
 const EXECUTION_MODES: ExecutionModeInfo[] = [
   {
-    id: 'approve',
-    label: 'Ask before writing',
-    description: 'Read freely, then pause for approval before draft edits.',
-  },
-  {
     id: 'read',
     label: 'Read only',
     description: 'Inspect CMS content without planning or applying writes.',
+  },
+  {
+    id: 'approve',
+    label: 'Ask before writing',
+    description: 'Read freely, then pause for approval before draft edits.',
   },
   {
     id: 'auto',
