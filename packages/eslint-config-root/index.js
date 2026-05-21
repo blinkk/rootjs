@@ -1,11 +1,11 @@
-const js = require('@eslint/js');
-const tseslint = require('typescript-eslint');
-const nodePlugin = require('eslint-plugin-n').default;
-const importPlugin = require('eslint-plugin-import-x').default;
-const prettierRecommended = require('eslint-plugin-prettier/recommended');
-const globals = require('globals');
+import js from '@eslint/js';
+import tseslint from 'typescript-eslint';
+import nodePlugin from 'eslint-plugin-n';
+import importPlugin from 'eslint-plugin-import-x';
+import prettierRecommended from 'eslint-plugin-prettier/recommended';
+import globals from 'globals';
 
-module.exports = tseslint.config(
+export default tseslint.config(
   js.configs.recommended,
   nodePlugin.configs['flat/recommended-module'],
   prettierRecommended,

@@ -1,6 +1,6 @@
-const rootConfig = require('@blinkk/eslint-config-root');
+import rootConfig from '@blinkk/eslint-config-root';
 
-module.exports = [
+export default [
   {
     ignores: [
       '**/node_modules/**',

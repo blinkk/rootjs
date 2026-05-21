@@ -2,6 +2,7 @@
   "name": "@blinkk/root-project",
   "version": "1.0.0",
   "private": true,
+  "type": "module",
   "description": "Root.js is a developer-focused CMS that writes directly to Firestore.",
   "packageManager": "pnpm@8.9.0",
   "main": "index.js",

@@ -4,6 +4,8 @@
   "description": "ESLint config for Root.js projects.",
   "author": "s@blinkk.com",
   "license": "MIT",
+  "type": "module",
+  "main": "index.js",
   "keywords": [
     "eslint",
     "eslintconfig"
