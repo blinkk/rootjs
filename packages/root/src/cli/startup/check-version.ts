@@ -1,4 +1,4 @@
-import {cyan, dim, green, yellow} from 'kleur/colors';
+import {dim, green, yellow} from 'kleur/colors';
 
 import type {StartupTask} from './startup-tasks.js';
 
@@ -106,11 +106,8 @@ function parseVersion(version: string): [number, number, number] {
 
 function printUpdateNotice(current: string, latest: string) {
   const bar = dim('┃');
-  const cmd = cyan(`npm i ${PACKAGE_NAME}@latest`);
+  const label = yellow(`Update available for ${PACKAGE_NAME}:`);
   console.log();
-  console.log(
-    `${bar} ${yellow('Update available:')} ${dim(current)} → ${green(latest)}`
-  );
-  console.log(`${bar} Run ${cmd} to update.`);
+  console.log(`${bar} ${label} ${dim(current)} → ${green(latest)}`);
   console.log();
 }
