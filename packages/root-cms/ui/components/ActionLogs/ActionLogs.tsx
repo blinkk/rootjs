@@ -500,14 +500,7 @@ function ActionLogsCompact(props: ActionLogsProps) {
   }
 
   return (
-    <div
-      className={joinClassNames(
-        props.className,
-        'ActionLogsCompact',
-        'ActionLogsCompact--loading'
-      )}
-    >
-      {/* {loading &&  */}
+    <div className={joinClassNames(props.className, 'ActionLogsCompact')}>
       <Accordion className="ActionLogsCompact__table" multiple>
         {actions.map((action, i) => (
           <Accordion.Item

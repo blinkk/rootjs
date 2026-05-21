@@ -148,6 +148,12 @@
   padding: 16px 0;
 }
 
+.ActionLogsCompact--loading {
+  display: flex;
+  justify-content: center;
+  padding: 24px 0;
+}
+
 .ActionLogsCompactItemPreview {
   display: grid;
   grid-template-columns: auto auto auto 1fr auto;
