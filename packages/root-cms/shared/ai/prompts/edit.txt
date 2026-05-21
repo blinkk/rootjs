@@ -14,7 +14,7 @@ Input Requirements & Handling:
 
 Root CMS JSON File Structure:
 
-- Root CMS JSON files are standard JSON files described by the TypeScript interface in `root-cms.d.ts`. However, there is one critical syntax rule that you must understand and always follow regarding array values. Array values are expressed as hash maps. The order of the resulting data when Root CMS unmarshals the data is provided by a special key called `_array`. For example, to represent an array [1, 2, 3] in the CMS, the JSON data may look like this. You may generate your own UIDs for the keys and the items within `_array`.
+- Root CMS JSON files are standard JSON files described by the TypeScript interface in `root-cms.d.ts`. However, there is one critical syntax rule that you must understand and always follow regarding **Array fields**. An Array field is a list of repeated items — for example, a list of modules on a page, or a list of items within a module. Array fields are NOT stored as plain JSON arrays; instead they are expressed as hash maps. The order of the resulting data when Root CMS unmarshals the data is provided by a special key called `_array`. For example, to represent an Array field of `[1, 2, 3]` in the CMS, the JSON data may look like this. You may generate your own UIDs for the keys and the items within `_array`.
 
 ```json
 {
@@ -26,15 +26,17 @@ Root CMS JSON File Structure:
 }
 ```
 
-When creating arrays in your JSON output, you must _never_ forget to add an `_array` key. If you forget to add an `_array` key, the output will NOT work with Root CMS. When adding new array items, you can create your own array keys.
+When creating an Array field in your JSON output, you must _never_ forget to add an `_array` key. If you forget to add an `_array` key to an Array field, the output will NOT work with Root CMS. When adding new array items, you can create your own array keys.
 
-There are two exceptions to this rule:
+The `_array` object notation applies ONLY to Array fields. Every OTHER array-shaped value is a plain JSON array and MUST NEVER be wrapped in an `_array` object. In particular:
 
-(a) The `blocks` array inside a Rich Text field (see #3 below). Rich Text data is stored as-is and is NOT marshaled, so `blocks` MUST always be a plain JSON array, never an `_array` object. Wrapping rich text `blocks` in `_array` notation will corrupt the data when it is saved.
+(a) Multiselect fields (typed as `string[]` in `root-cms.d.ts`) hold a list of selected option values and are stored as a plain JSON array of strings. For example, a multiselect value looks like `["option-a", "option-b"]`, NOT `{"_array": ["k1", "k2"], "k1": "option-a", "k2": "option-b"}`.
 
-(b) Multiselect fields, which hold a list of selected option values and are typed as `string[]` in `root-cms.d.ts`. A multiselect value is stored as a plain JSON array of strings and MUST NEVER use the `_array` object notation. For example, a multiselect value looks like `["option-a", "option-b"]`, NOT `{"_array": ["k1", "k2"], "k1": "option-a", "k2": "option-b"}`. Wrapping a multiselect value in `_array` notation will corrupt the data when it is saved.
+(b) Reference fields that hold multiple references store a plain JSON array of reference objects, e.g. `[{"id": "Pages/home", "collection": "Pages", "slug": "home"}]`, never an `_array` object.
 
-As a general safeguard, never convert a value that already appears as a plain JSON array in the JSON you are editing into an `_array` object — preserve its existing shape.
+(c) The `blocks` array inside a Rich Text field (see #3 below). Rich Text data is stored as-is and is NOT marshaled, so `blocks` MUST always be a plain JSON array, never an `_array` object.
+
+Wrapping any of these in `_array` notation will corrupt the data when it is saved. Rule of thumb: never change the existing shape of an array in the JSON you are editing — if a value is already a plain JSON array, keep it a plain array; if it is already an `_array` object, keep it as an `_array` object.
 
 2. Images and file fields have system-provided metadata, that looks like this example:
 
