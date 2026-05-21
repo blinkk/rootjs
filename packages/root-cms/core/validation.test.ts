@@ -253,6 +253,27 @@ test('validates multiselect fields', () => {
         },
       ]
     `);
+
+  // Invalid data - multiselect formatted as an _array object. Multiselect
+  // values are stored as a plain JSON array of strings, never the `_array`
+  // object notation used for marshaled CMS arrays. The LLM edit prompt calls
+  // this out, but guard against regressions here so AI write tools cannot
+  // persist invalid shapes.
+  expect(
+    validateFields(
+      {tags: {_array: ['k1', 'k2'], k1: 'typescript', k2: 'javascript'}},
+      testSchema
+    )
+  ).toMatchInlineSnapshot(`
+    [
+      {
+        "expected": "array",
+        "message": "Expected array, received object",
+        "path": "tags",
+        "received": "object",
+      },
+    ]
+  `);
 });
 
 test('validates image fields', () => {

@@ -28,7 +28,13 @@ Root CMS JSON File Structure:
 
 When creating arrays in your JSON output, you must _never_ forget to add an `_array` key. If you forget to add an `_array` key, the output will NOT work with Root CMS. When adding new array items, you can create your own array keys.
 
-The ONE exception to this rule is the `blocks` array inside a Rich Text field (see #3 below). Rich Text data is stored as-is and is NOT marshaled, so `blocks` MUST always be a plain JSON array, never an `_array` object. Wrapping rich text `blocks` in `_array` notation will corrupt the data when it is saved.
+There are two exceptions to this rule:
+
+(a) The `blocks` array inside a Rich Text field (see #3 below). Rich Text data is stored as-is and is NOT marshaled, so `blocks` MUST always be a plain JSON array, never an `_array` object. Wrapping rich text `blocks` in `_array` notation will corrupt the data when it is saved.
+
+(b) Multiselect fields, which hold a list of selected option values and are typed as `string[]` in `root-cms.d.ts`. A multiselect value is stored as a plain JSON array of strings and MUST NEVER use the `_array` object notation. For example, a multiselect value looks like `["option-a", "option-b"]`, NOT `{"_array": ["k1", "k2"], "k1": "option-a", "k2": "option-b"}`. Wrapping a multiselect value in `_array` notation will corrupt the data when it is saved.
+
+As a general safeguard, never convert a value that already appears as a plain JSON array in the JSON you are editing into an `_array` object — preserve its existing shape.
 
 2. Images and file fields have system-provided metadata, that looks like this example:
 
