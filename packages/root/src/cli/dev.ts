@@ -28,6 +28,7 @@ import {DevServerAssetMap} from '../render/asset-map/dev-asset-map.js';
 import {dirExists, isDirectory, isJsFile} from '../utils/fsutils.js';
 import {findOpenPort} from '../utils/ports.js';
 import {getSessionCookieSecret} from '../utils/rand.js';
+import {runStartupTasks} from './startup/startup-tasks.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -38,6 +39,7 @@ const DEV_SERVER_404_LOG_IGNORE_PATHS = new Set([
 
 export interface DevOptions {
   host?: string;
+  version?: string;
 }
 
 export async function dev(rootProjectDir?: string, options?: DevOptions) {
@@ -46,6 +48,10 @@ export async function dev(rootProjectDir?: string, options?: DevOptions) {
   const defaultPort = parseInt(process.env.PORT || '4007');
   const host = options?.host || 'localhost';
   const port = await findOpenPort(defaultPort, defaultPort + 10);
+
+  // Run startup tasks (e.g. the npm version check) without blocking server
+  // startup. Failures are handled internally and never interrupt `root dev`.
+  void runStartupTasks({rootDir, version: options?.version});
 
   let currentServer: http.Server | null = null;
   let currentViteServer: ViteDevServer | null = null;
