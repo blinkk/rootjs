@@ -13,6 +13,7 @@ import {getElements} from '../node/element-graph.js';
 import {bundleRootConfig, loadRootConfig} from '../node/load-config.js';
 import {collectPods} from '../node/pod-collector.js';
 import {rootPodsVitePlugin} from '../node/pods-vite-plugin.js';
+import {pruneEmptyChunksPlugin} from '../node/vite-plugin-prune-empty-chunks.js';
 import {preactToRootJsxPlugin} from '../node/vite-plugin-root-jsx-virtual.js';
 import {BuildAssetMap} from '../render/asset-map/build-asset-map.js';
 import {htmlMinify} from '../render/html-minify.js';
@@ -113,6 +114,7 @@ export async function build(rootProjectDir?: string, options?: BuildOptions) {
     rootPodsVitePlugin(rootConfig),
     ...(viteConfig.plugins || []),
     ...getVitePlugins(rootPlugins),
+    pruneEmptyChunksPlugin(),
   ];
 
   const baseConfig: UserConfig = {
