@@ -373,11 +373,11 @@ export function createCmsTools(ctx: CmsToolContext): ToolSet {
         '`op`:\n' +
         '- "set": set the value at `path` (e.g. "hero.title" or ' +
         '"content.modules.0.title"). Provide `value`.\n' +
-        '- "insert": insert `value` into the array at `path` (e.g. ' +
+        '- "insert_item": insert `value` into the array at `path` (e.g. ' +
         '"content.modules"). Optionally pass a zero-based `index` to ' +
         'insert before; omit `index` to append.\n' +
-        '- "remove": remove the array item at zero-based `index` from the ' +
-        'array at `path`.\n' +
+        '- "remove_item": remove the array item at zero-based `index` from ' +
+        'the array at `path`.\n' +
         'Operations apply in order against the current draft. Array ' +
         'indices in each operation refer to the array state AFTER earlier ' +
         'operations have been applied. The whole result is validated ' +
@@ -401,16 +401,16 @@ export function createCmsTools(ctx: CmsToolContext): ToolSet {
           .array(
             z.object({
               op: z
-                .enum(['set', 'insert', 'remove'])
+                .enum(['set', 'insert_item', 'remove_item'])
                 .describe(
-                  'Operation: "set" a field value, "insert" an array item, or "remove" an array item.'
+                  'Operation: "set" a field value, "insert_item" into an array, or "remove_item" from an array.'
                 ),
               path: z
                 .string()
                 .describe(
                   'Dotted path within the fields object. For "set" it ' +
                     'targets the field to write (e.g. "hero.title"); for ' +
-                    '"insert"/"remove" it targets the array (e.g. ' +
+                    '"insert_item"/"remove_item" it targets the array (e.g. ' +
                     '"content.modules").'
                 ),
               value: z
@@ -418,7 +418,8 @@ export function createCmsTools(ctx: CmsToolContext): ToolSet {
                 .optional()
                 .describe(
                   'JSON value. Required for "set" (the new field value) and ' +
-                    '"insert" (the new array item). Ignored for "remove".'
+                    '"insert_item" (the new array item). Ignored for ' +
+                    '"remove_item".'
                 ),
               index: z
                 .number()
@@ -426,9 +427,9 @@ export function createCmsTools(ctx: CmsToolContext): ToolSet {
                 .min(0)
                 .optional()
                 .describe(
-                  'Zero-based array index. For "insert" it is the position ' +
-                    'to insert before (omit to append); for "remove" it is ' +
-                    'the item to delete (required).'
+                  'Zero-based array index. For "insert_item" it is the ' +
+                    'position to insert before (omit to append); for ' +
+                    '"remove_item" it is the item to delete (required).'
                 ),
             })
           )
@@ -802,12 +803,12 @@ function createPathError(
 
 /** A single edit operation handled by the `doc_edit` tool. */
 export interface DocEditOperation {
-  op: 'set' | 'insert' | 'remove';
+  op: 'set' | 'insert_item' | 'remove_item';
   /** Dotted path within the fields object (no leading "fields." prefix). */
   path: string;
-  /** Value to write ("set") or insert ("insert"). Ignored for "remove". */
+  /** Value to write ("set") or insert ("insert_item"). Unused for "remove_item". */
   value?: any;
-  /** Zero-based array index for "insert" (optional) and "remove" (required). */
+  /** Zero-based array index for "insert_item" (optional) and "remove_item" (required). */
   index?: number;
 }
 
@@ -838,8 +839,8 @@ const INDEX_RE = /^(0|[1-9]\d*)$/;
  * array state after earlier ops have been applied.
  *
  * This performs structural checks only (path resolves against the current
- * data, the target is an array for insert/remove, the index is in range).
- * Type/schema validation is the caller's responsibility.
+ * data, the target is an array for insert_item/remove_item, the index is in
+ * range). Type/schema validation is the caller's responsibility.
  */
 export function applyDocEdits(
   fields: Record<string, any>,
@@ -860,13 +861,13 @@ function applyOneEdit(
   op: DocEditOperation,
   opIndex: number
 ): DocEditError | null {
-  if (op.op !== 'set' && op.op !== 'insert' && op.op !== 'remove') {
+  if (op.op !== 'set' && op.op !== 'insert_item' && op.op !== 'remove_item') {
     return makeEditError(
       opIndex,
       op,
       typeof op.path === 'string' ? op.path : String(op.path),
       `Unknown operation "${op.op}".`,
-      'set | insert | remove',
+      'set | insert_item | remove_item',
       op.op
     );
   }
@@ -891,9 +892,9 @@ function applyOneEdit(
   const childPath = op.path.trim();
   const lastIsIndex = INDEX_RE.test(lastSeg);
 
-  // For "remove" the array (and the whole path) must already exist; "set" and
-  // "insert" may create intermediate containers along the way.
-  const parent = navigateToParent(draft, segments, op.op !== 'remove');
+  // For "remove_item" the array (and the whole path) must already exist;
+  // "set" and "insert_item" may create intermediate containers on the way.
+  const parent = navigateToParent(draft, segments, op.op !== 'remove_item');
   if (!parent.ok) {
     return {opIndex, op: op.op, ...parent.error};
   }
@@ -959,16 +960,16 @@ function applyOneEdit(
     );
   }
 
-  // insert / remove target the ARRAY located at op.path.
+  // insert_item / remove_item target the ARRAY located at op.path.
   let arr = getChild(container, lastSeg, lastIsIndex);
 
-  if (op.op === 'insert') {
+  if (op.op === 'insert_item') {
     if (op.value === undefined) {
       return makeEditError(
         opIndex,
         op,
         childPath,
-        'An "insert" operation requires a `value`.',
+        'An "insert_item" operation requires a `value`.',
         'value',
         'undefined'
       );
@@ -992,7 +993,7 @@ function applyOneEdit(
         opIndex,
         op,
         childPath,
-        'The target of an "insert" must be an array field.',
+        'The target of an "insert_item" must be an array field.',
         'array',
         typeName(arr)
       );
@@ -1012,13 +1013,13 @@ function applyOneEdit(
     return null;
   }
 
-  // remove
+  // remove_item
   if (!Array.isArray(arr)) {
     return makeEditError(
       opIndex,
       op,
       childPath,
-      'The target of a "remove" must be an array field.',
+      'The target of a "remove_item" must be an array field.',
       'array',
       typeName(arr)
     );
@@ -1028,7 +1029,7 @@ function applyOneEdit(
       opIndex,
       op,
       childPath,
-      'A "remove" operation requires an `index`.',
+      'A "remove_item" operation requires an `index`.',
       'index',
       'undefined'
     );

@@ -281,7 +281,7 @@ describe('applyDocEdits', () => {
   it('appends an array item when no index is given', () => {
     const result = applyDocEdits(baseFields(), [
       {
-        op: 'insert',
+        op: 'insert_item',
         path: 'content.modules',
         value: {_type: 'text', body: 'third'},
       },
@@ -299,7 +299,7 @@ describe('applyDocEdits', () => {
   it('inserts an array item before the given index', () => {
     const result = applyDocEdits(baseFields(), [
       {
-        op: 'insert',
+        op: 'insert_item',
         path: 'content.modules',
         index: 0,
         value: {_type: 'text', body: 'zeroth'},
@@ -318,7 +318,7 @@ describe('applyDocEdits', () => {
   it('creates the array when inserting into a missing field', () => {
     const result = applyDocEdits({content: {}}, [
       {
-        op: 'insert',
+        op: 'insert_item',
         path: 'content.modules',
         value: {_type: 'text', body: 'first'},
       },
@@ -333,7 +333,7 @@ describe('applyDocEdits', () => {
 
   it('removes an array item by index', () => {
     const result = applyDocEdits(baseFields(), [
-      {op: 'remove', path: 'content.modules', index: 0},
+      {op: 'remove_item', path: 'content.modules', index: 0},
     ]);
     expect(result.ok).toBe(true);
     if (result.ok) {
@@ -344,9 +344,9 @@ describe('applyDocEdits', () => {
 
   it('applies multiple operations in order', () => {
     const result = applyDocEdits(baseFields(), [
-      {op: 'remove', path: 'content.modules', index: 0},
+      {op: 'remove_item', path: 'content.modules', index: 0},
       {
-        op: 'insert',
+        op: 'insert_item',
         path: 'content.modules',
         value: {_type: 'text', body: 'third'},
       },
@@ -367,7 +367,7 @@ describe('applyDocEdits', () => {
     const input = baseFields();
     applyDocEdits(input, [
       {op: 'set', path: 'hero.title', value: 'Changed'},
-      {op: 'remove', path: 'content.modules', index: 0},
+      {op: 'remove_item', path: 'content.modules', index: 0},
     ]);
     expect(input.hero.title).toBe('Old title');
     expect(input.content.modules).toHaveLength(2);
@@ -376,12 +376,12 @@ describe('applyDocEdits', () => {
   it('reports the index of the failing operation', () => {
     const result = applyDocEdits(baseFields(), [
       {op: 'set', path: 'hero.title', value: 'ok'},
-      {op: 'remove', path: 'content.modules', index: 9},
+      {op: 'remove_item', path: 'content.modules', index: 9},
     ]);
     expect(result.ok).toBe(false);
     if (!result.ok) {
       expect(result.error.opIndex).toBe(1);
-      expect(result.error.op).toBe('remove');
+      expect(result.error.op).toBe('remove_item');
     }
   });
 
@@ -397,27 +397,33 @@ describe('applyDocEdits', () => {
 
   it('rejects an insert without a value', () => {
     const result = applyDocEdits(baseFields(), [
-      {op: 'insert', path: 'content.modules'},
+      {op: 'insert_item', path: 'content.modules'},
     ]);
     expect(result.ok).toBe(false);
     if (!result.ok) {
-      expect(result.error).toMatchObject({op: 'insert', expected: 'value'});
+      expect(result.error).toMatchObject({
+        op: 'insert_item',
+        expected: 'value',
+      });
     }
   });
 
   it('rejects a remove without an index', () => {
     const result = applyDocEdits(baseFields(), [
-      {op: 'remove', path: 'content.modules'},
+      {op: 'remove_item', path: 'content.modules'},
     ]);
     expect(result.ok).toBe(false);
     if (!result.ok) {
-      expect(result.error).toMatchObject({op: 'remove', expected: 'index'});
+      expect(result.error).toMatchObject({
+        op: 'remove_item',
+        expected: 'index',
+      });
     }
   });
 
   it('rejects a remove index out of range', () => {
     const result = applyDocEdits(baseFields(), [
-      {op: 'remove', path: 'content.modules', index: 5},
+      {op: 'remove_item', path: 'content.modules', index: 5},
     ]);
     expect(result.ok).toBe(false);
     if (!result.ok) {
@@ -427,7 +433,7 @@ describe('applyDocEdits', () => {
 
   it('rejects an insert index out of range', () => {
     const result = applyDocEdits(baseFields(), [
-      {op: 'insert', path: 'content.modules', index: 9, value: {}},
+      {op: 'insert_item', path: 'content.modules', index: 9, value: {}},
     ]);
     expect(result.ok).toBe(false);
     if (!result.ok) {
@@ -437,21 +443,27 @@ describe('applyDocEdits', () => {
 
   it('rejects insert when the target is not an array', () => {
     const result = applyDocEdits(baseFields(), [
-      {op: 'insert', path: 'hero.title', value: 'x'},
+      {op: 'insert_item', path: 'hero.title', value: 'x'},
     ]);
     expect(result.ok).toBe(false);
     if (!result.ok) {
-      expect(result.error).toMatchObject({op: 'insert', expected: 'array'});
+      expect(result.error).toMatchObject({
+        op: 'insert_item',
+        expected: 'array',
+      });
     }
   });
 
   it('rejects remove when the target is not an array', () => {
     const result = applyDocEdits(baseFields(), [
-      {op: 'remove', path: 'hero', index: 0},
+      {op: 'remove_item', path: 'hero', index: 0},
     ]);
     expect(result.ok).toBe(false);
     if (!result.ok) {
-      expect(result.error).toMatchObject({op: 'remove', expected: 'array'});
+      expect(result.error).toMatchObject({
+        op: 'remove_item',
+        expected: 'array',
+      });
     }
   });
 

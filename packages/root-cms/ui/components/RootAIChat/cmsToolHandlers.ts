@@ -185,11 +185,11 @@ function describeOperation(op: DocEditOperation): string {
   switch (op.op) {
     case 'set':
       return `Set ${op.path}`;
-    case 'insert':
+    case 'insert_item':
       return op.index === undefined
         ? `Insert into ${op.path} (append)`
         : `Insert into ${op.path} at ${op.index}`;
-    case 'remove':
+    case 'remove_item':
       return `Remove ${op.path}[${op.index}]`;
     default:
       return `${op.op} ${op.path}`;
@@ -484,7 +484,8 @@ async function previewDocEdit(input: {
       errors: [applied.error],
       hint:
         'Fix the failing operation. Use zero-based array indices, target ' +
-        'arrays for insert/remove, and read the doc with `doc_get` to ' +
+        'arrays for insert_item/remove_item, and read the doc with ' +
+        '`doc_get` to ' +
         'confirm the current shape.',
     });
   }
@@ -806,7 +807,8 @@ async function docEdit(input: {docId: string; operations: any[]}) {
       errors: [applied.error],
       hint:
         'Fix the failing operation. Use zero-based array indices, target ' +
-        'arrays for insert/remove, and read the doc with `doc_get` to ' +
+        'arrays for insert_item/remove_item, and read the doc with ' +
+        '`doc_get` to ' +
         'confirm the current shape.',
     };
   }
