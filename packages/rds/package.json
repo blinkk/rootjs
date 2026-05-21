@@ -32,7 +32,7 @@
     "typescript": "^5.0.4"
   },
   "peerDependencies": {
-    "@blinkk/root": "2.2.13",
+    "@blinkk/root": "*",
     "preact": "*"
   },
   "dependencies": {
