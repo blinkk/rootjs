@@ -4,7 +4,7 @@
   "author": "s@blinkk.com",
   "license": "MIT",
   "engines": {
-    "node": ">=16.0.0"
+    "node": ">=22.0.0"
   },
   "repository": {
     "type": "git",
@@ -164,8 +164,8 @@
     "react-dom": "npm:@preact/compat@18.3.1",
     "react-easy-crop": "5.5.6",
     "react-json-view-compare": "2.0.2",
-    "tsup": "8.5.0",
-    "typescript": "5.9.2",
+    "tsup": "8.5.1",
+    "typescript": "6.0.3",
     "vite": "8.0.13",
     "vitest": "4.1.6",
     "yjs": "13.6.27"

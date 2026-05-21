@@ -1,5 +1,3 @@
-/* eslint-disable n/no-unpublished-import */
-
 import {defineConfig} from 'tsup';
 
 export default defineConfig({
@@ -9,11 +7,16 @@ export default defineConfig({
     plugin: './src/plugin/plugin.tsx',
   },
   sourcemap: 'inline',
-  target: 'node18',
+  target: 'node22',
   dts: {
     entry: {
       core: './src/core/core.ts',
       plugin: './src/plugin/plugin.tsx',
+    },
+    // tsup passes `baseUrl` which will be deprecated in typescript 7.0.
+    // https://github.com/egoist/tsup/issues/1388
+    compilerOptions: {
+      ignoreDeprecations: '6.0',
     },
   },
   format: ['esm'],
