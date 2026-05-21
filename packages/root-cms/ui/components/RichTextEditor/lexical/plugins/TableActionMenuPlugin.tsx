@@ -109,7 +109,7 @@ export function TableActionMenuPlugin(props: TableActionMenuPluginProps) {
             }
           }
         }
-      } catch (e) {
+      } catch {
         // Handle case where table node is no longer valid
         setIsRowHeader(false);
         setIsColumnHeader(false);

@@ -117,9 +117,7 @@ describe('ai', () => {
         {
           id: '2',
           role: 'assistant',
-          parts: [
-            {type: 'text', text: 'Sure, which locales should I target?'},
-          ],
+          parts: [{type: 'text', text: 'Sure, which locales should I target?'}],
         } as any,
       ]);
       expect(ctx).toContain('User: Translate the homepage hero');

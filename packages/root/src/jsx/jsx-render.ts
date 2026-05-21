@@ -1,3 +1,4 @@
+/* eslint-disable n/no-extraneous-import */
 import {options as preactOptions} from 'preact';
 import {VNode, Fragment} from './jsx-runtime.js';
 

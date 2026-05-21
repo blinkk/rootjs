@@ -1,4 +1,4 @@
-import {Button, InputWrapper, TextInput, Textarea} from '@mantine/core';
+import {Button, InputWrapper, TextInput} from '@mantine/core';
 import {ContextModalProps, useModals} from '@mantine/modals';
 import {showNotification} from '@mantine/notifications';
 import {IconLock, IconLockOpen} from '@tabler/icons-preact';

@@ -733,19 +733,6 @@ function getEmptyTaskMessage(filter: TaskFilter, layout: TaskListLayout) {
   }
 }
 
-function getTaskAvatarLabel(value: string) {
-  const source =
-    value
-      .split('@')[0]
-      .replace(/[._-]+/g, ' ')
-      .trim() || '?';
-  const words = source.split(/\s+/).filter(Boolean);
-  if (words.length >= 2) {
-    return `${words[0][0]}${words[1][0]}`.toUpperCase();
-  }
-  return source.slice(0, 2).toUpperCase();
-}
-
 function formatTaskUser(email: string) {
   return email.split('@')[0] || email;
 }
@@ -773,8 +760,8 @@ function getTaskStatusColumns(tasks: Task[], filter: TaskFilter) {
     filter === 'open'
       ? TASK_OPEN_STATUS_COLUMNS
       : filter === 'closed'
-      ? TASK_CLOSED_STATUS_COLUMNS
-      : TASK_STATUS_COLUMNS;
+        ? TASK_CLOSED_STATUS_COLUMNS
+        : TASK_STATUS_COLUMNS;
   const knownStatuses = new Set(baseColumns.map((column) => column.value));
   const customStatuses = tasks
     .map((task) => getTaskStatusValue(task))

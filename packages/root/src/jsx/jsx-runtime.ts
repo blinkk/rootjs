@@ -104,14 +104,14 @@ export function jsx(
   // it doesn't leak into rendered attributes.
   let finalProps = props;
   if (propsKey !== undefined) {
-    const {key: _, ...rest} = props;
-    finalProps = rest;
+    finalProps = {...props};
+    delete finalProps.key;
   }
 
   const vnode: VNode = {
     type,
     props: finalProps,
-    key: key !== undefined ? key : propsKey ?? null,
+    key: key !== undefined ? key : (propsKey ?? null),
   };
 
   if (options.vnode) {

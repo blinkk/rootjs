@@ -35,7 +35,9 @@ function walk(value: any, ids: Set<string>) {
 }
 
 /** Checks if an object matches the reference value shape `{id, collection, slug}`. */
-function isReferenceValue(obj: any): obj is {id: string; collection: string; slug: string} {
+function isReferenceValue(
+  obj: any
+): obj is {id: string; collection: string; slug: string} {
   return (
     typeof obj.id === 'string' &&
     typeof obj.collection === 'string' &&

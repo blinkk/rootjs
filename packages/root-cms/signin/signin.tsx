@@ -204,10 +204,10 @@ SignIn.Button = (props: ButtonProps) => {
     status === 'popup'
       ? 'Signing in…'
       : status === 'verifying'
-      ? 'Authorizing…'
-      : status === 'redirecting'
-      ? 'Redirecting…'
-      : 'Sign in with Google';
+        ? 'Authorizing…'
+        : status === 'redirecting'
+          ? 'Redirecting…'
+          : 'Sign in with Google';
 
   return (
     <button

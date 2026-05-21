@@ -47,7 +47,7 @@ export function AiSummary(props: AiSummaryProps) {
     }
   }
 
-  let content = null;
+  let content;
   if (status === 'idle' || status === 'loading') {
     content = (
       <div className="AiSummary__loading">

@@ -1,5 +1,3 @@
-import path from 'node:path';
-
 const TEMPLATE_NAMES = [
   'Divider',
   'Section',

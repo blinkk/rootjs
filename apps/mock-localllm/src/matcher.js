@@ -41,8 +41,7 @@ function contentToText(content) {
   if (Array.isArray(content)) {
     return content
       .filter(
-        (part) =>
-          part && part.type === 'text' && typeof part.text === 'string'
+        (part) => part && part.type === 'text' && typeof part.text === 'string'
       )
       .map((part) => part.text)
       .join(' ')

@@ -73,8 +73,8 @@ export function JsDiff(props: JsDiffProps) {
       const type = part.added
         ? 'added'
         : part.removed
-        ? 'removed'
-        : 'unchanged';
+          ? 'removed'
+          : 'unchanged';
       const partLines = part.value.split('\n');
 
       partLines.forEach((line: string, lineIndex: number) => {

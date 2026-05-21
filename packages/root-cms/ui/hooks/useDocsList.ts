@@ -20,10 +20,7 @@ export interface UseDocsListOptions {
   includeArchived?: boolean;
 }
 
-export function useDocsList(
-  collectionId: string,
-  options: UseDocsListOptions
-) {
+export function useDocsList(collectionId: string, options: UseDocsListOptions) {
   const [docs, setDocs] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const firebase = useFirebase();

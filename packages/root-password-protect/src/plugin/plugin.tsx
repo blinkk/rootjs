@@ -57,9 +57,9 @@ export function passwordProtectPlugin(
   const protectedRoutes = protectedRoutesUserConfig.filter((protectedRoute) => {
     return Boolean(
       protectedRoute.source &&
-        protectedRoute.password &&
-        protectedRoute.password.hash &&
-        protectedRoute.password.salt
+      protectedRoute.password &&
+      protectedRoute.password.hash &&
+      protectedRoute.password.salt
     );
   });
 

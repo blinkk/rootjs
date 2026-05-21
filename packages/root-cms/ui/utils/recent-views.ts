@@ -36,7 +36,7 @@ function read(): RecentView[] {
         typeof v.label === 'string' &&
         typeof v.kind === 'string'
     );
-  } catch (_err) {
+  } catch {
     return [];
   }
 }
@@ -59,8 +59,10 @@ export function recordRecentView(view: Omit<RecentView, 'viewedAt'>): void {
     return;
   }
   const existing = read().filter((v) => v.url !== view.url);
-  const next: RecentView[] = [{...view, viewedAt: Date.now()}, ...existing]
-    .slice(0, MAX_RECENT);
+  const next: RecentView[] = [
+    {...view, viewedAt: Date.now()},
+    ...existing,
+  ].slice(0, MAX_RECENT);
   write(next);
 }
 
@@ -94,11 +96,11 @@ export function useRecentViews(): RecentView[] {
  * release).
  */
 export function recentViewFromUrl(rawUrl: string): RecentView | null {
-  let pathname = rawUrl;
+  let pathname = rawUrl.split('?')[0] || rawUrl;
   try {
     pathname = new URL(rawUrl, window.location.origin).pathname;
-  } catch (_err) {
-    pathname = rawUrl.split('?')[0] || rawUrl;
+  } catch {
+    // Not a parseable URL; fall back to the raw path above.
   }
   pathname = pathname.replace(/\/+$/, '');
   const segments = pathname.split('/').filter(Boolean);

@@ -1848,7 +1848,7 @@ DocEditor.OneOfField = (props: FieldProps) => {
   ];
   oneOfTypes.forEach((typedef) => {
     let resolved: schema.Schema | undefined;
-    let name = '';
+    let name: string;
     if (typeof typedef === 'string') {
       resolved = collectionTypes[typedef];
       name = typedef;

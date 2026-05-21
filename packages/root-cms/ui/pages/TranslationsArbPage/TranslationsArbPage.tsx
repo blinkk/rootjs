@@ -6,7 +6,6 @@ import {Text} from '../../components/Text/Text.js';
 import {usePageTitle} from '../../hooks/usePageTitle.js';
 import {Layout} from '../../layout/Layout.js';
 import {Arb} from '../../utils/arb.js';
-import {fetchCollectionSchema} from '../../utils/collection.js';
 import {getDraftDocs} from '../../utils/doc.js';
 import {extractStringsWithMetadataForDoc} from '../../utils/extract.js';
 import {sourceHash} from '../../utils/l10n.js';
@@ -60,7 +59,6 @@ TranslationsArbPage.RequestForm = () => {
     console.log(drafts);
 
     for (const docId in drafts) {
-      const draft = drafts[docId];
       const stringsWithMeta = await extractStringsWithMetadataForDoc(docId);
 
       for (const [source, metadata] of stringsWithMeta.entries()) {

@@ -188,8 +188,8 @@ export function AddToReleaseModal(
               mode === 'new'
                 ? ' AddToReleaseModal__mode__option--selected'
                 : mode
-                ? ' AddToReleaseModal__mode__option--unselected'
-                : ''
+                  ? ' AddToReleaseModal__mode__option--unselected'
+                  : ''
             }`}
           >
             <div className="AddToReleaseModal__mode__option__input">
@@ -211,8 +211,8 @@ export function AddToReleaseModal(
               mode === 'existing'
                 ? ' AddToReleaseModal__mode__option--selected'
                 : mode
-                ? ' AddToReleaseModal__mode__option--unselected'
-                : ''
+                  ? ' AddToReleaseModal__mode__option--unselected'
+                  : ''
             }`}
           >
             <div className="AddToReleaseModal__mode__option__input">

@@ -85,11 +85,6 @@ import {
 } from '../utils/toolbar.js';
 import {sanitizeUrl} from '../utils/url.js';
 
-const rootTypeToRootName = {
-  root: 'Root',
-  table: 'Table',
-};
-
 function dropDownActiveClass(active: boolean) {
   return active ? 'active dropdown-item-active' : '';
 }
@@ -132,7 +127,7 @@ function BlockTypeIcon(props: BlockTypeIconProps) {
 
 interface BlockFormatDropDownProps {
   blockType: ToolbarBlockType;
-  rootType: keyof typeof rootTypeToRootName;
+  rootType: 'root' | 'table';
   editor: LexicalEditor;
   disabled?: boolean;
 }
@@ -411,8 +406,8 @@ export function ToolbarPlugin(props: ToolbarPluginProps) {
         $isElementNode(matchingParent)
           ? matchingParent.getFormatType()
           : $isElementNode(node)
-          ? node.getFormatType()
-          : parent?.getFormatType() || 'left'
+            ? node.getFormatType()
+            : parent?.getFormatType() || 'left'
       );
     }
     if ($isRangeSelection(selection)) {

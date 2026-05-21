@@ -513,7 +513,8 @@ export async function build(rootProjectDir?: string, options?: BuildOptions) {
             e
           );
           throw new Error(
-            `BuildError: ${urlPath} (${sitemapItem.route.src}) failed to build.`
+            `BuildError: ${urlPath} (${sitemapItem.route.src}) failed to build.`,
+            {cause: e}
           );
         }
       }

@@ -80,7 +80,7 @@ export interface DOMAttributes {
 
 // Event handler props accept a function (client-side handler, stripped during
 // SSR) or a string (an inline HTML event attribute, preserved in the output).
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+
 type EventHandler = string | ((...args: any[]) => void);
 
 export interface AriaAttributes {
@@ -159,8 +159,7 @@ export interface AriaAttributes {
  */
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 export interface HTMLAttributes<T = HTMLElement>
-  extends DOMAttributes,
-    AriaAttributes {
+  extends DOMAttributes, AriaAttributes {
   // Standard HTML Attributes
   accept?: string;
   acceptCharset?: string;
@@ -314,7 +313,7 @@ export interface HTMLAttributes<T = HTMLElement>
 /**
  * SVG-specific attributes.
  */
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
+
 export interface SVGAttributes<T = SVGElement> extends HTMLAttributes<T> {
   accentHeight?: number | string;
   accumulate?: 'none' | 'sum';
@@ -423,9 +422,10 @@ export interface SVGAttributes<T = SVGElement> extends HTMLAttributes<T> {
 /**
  * Script-specific HTML attributes (for the `<Script>` component).
  */
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-export interface ScriptHTMLAttributes<T = HTMLScriptElement>
-  extends HTMLAttributes<T> {
+
+export interface ScriptHTMLAttributes<
+  T = HTMLScriptElement,
+> extends HTMLAttributes<T> {
   async?: boolean;
   crossOrigin?: string;
   defer?: boolean;

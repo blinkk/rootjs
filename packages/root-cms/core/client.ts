@@ -292,7 +292,7 @@ export class RootCMSClient {
     collectionId: string,
     options: {mode: 'draft' | 'published'}
   ) {
-    let modeCollection = '';
+    let modeCollection: string;
     if (options.mode === 'draft') {
       modeCollection = 'Drafts';
     } else if (options.mode === 'published') {
@@ -770,7 +770,7 @@ export class RootCMSClient {
     const unpublishedDocs: any[] = [];
 
     for (const doc of docs) {
-      const {id, collection, slug} = doc;
+      const {collection, slug} = doc;
       const draftRef = this.db.doc(
         `${projectCollectionsPath}/${collection}/Drafts/${slug}`
       );
@@ -1024,7 +1024,12 @@ export class RootCMSClient {
     for (const snapshot of querySnapshot.docs) {
       const dataSource = snapshot.data() as DataSource;
       const cron = dataSource.cron;
-      if (!cron || !cron.enabled || cron.interval == null || !cron.unit) {
+      if (
+        !cron ||
+        !cron.enabled ||
+        typeof cron.interval !== 'number' ||
+        !cron.unit
+      ) {
         continue;
       }
 
@@ -1279,7 +1284,9 @@ export class RootCMSClient {
       if (dataSource.archivedAt) {
         console.warn(
           `warning: data source "${dataSourceId}" is archived` +
-            (dataSource.archivedBy ? ` (archived by ${dataSource.archivedBy})` : '')
+            (dataSource.archivedBy
+              ? ` (archived by ${dataSource.archivedBy})`
+              : '')
         );
       }
       return dataSource;

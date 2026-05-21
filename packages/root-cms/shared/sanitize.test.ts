@@ -87,9 +87,7 @@ describe('sanitizeBlockHtml', () => {
   });
 
   it('allows data: image sources', () => {
-    const out = sanitizeBlockHtml(
-      '<img src="data:image/png;base64,iVBORw0K">'
-    );
+    const out = sanitizeBlockHtml('<img src="data:image/png;base64,iVBORw0K">');
     expect(out).toContain('data:image/png');
   });
 

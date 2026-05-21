@@ -15,10 +15,12 @@ export interface SchemaModule {
 // Vite's ssrLoadModule. Outside Vite (e.g. tests, CLI), it falls back to {}.
 let _SCHEMA_MODULES: Record<string, SchemaModule> = {};
 try {
-  // @ts-ignore — virtual module provided by rootPodsVitePlugin
+  // @ts-expect-error — virtual module provided by rootPodsVitePlugin
   const mod = await import('virtual:root/schemas');
   _SCHEMA_MODULES = mod.SCHEMA_MODULES || {};
-} catch {}
+} catch {
+  // Virtual module unavailable outside Vite; keep the empty fallback.
+}
 
 export const SCHEMA_MODULES = _SCHEMA_MODULES as Record<string, SchemaModule>;
 

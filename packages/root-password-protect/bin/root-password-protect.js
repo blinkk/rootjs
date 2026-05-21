@@ -11,7 +11,7 @@ const packageJson = require(path.join(__dirname, '../package.json'));
 
 async function main(argv) {
   const cli = new CliRunner('root-password-protect', packageJson.version);
-  await cli.run();
+  await cli.run(argv);
 }
 
 main(process.argv);

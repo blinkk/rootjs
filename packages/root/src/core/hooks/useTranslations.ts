@@ -20,7 +20,7 @@ export function useTranslations() {
   let i18nContext: I18nContext | null = null;
   try {
     i18nContext = useI18nContext();
-  } catch (err) {
+  } catch {
     console.warn('I18nContext not found');
   }
   const translations = i18nContext?.translations || {};

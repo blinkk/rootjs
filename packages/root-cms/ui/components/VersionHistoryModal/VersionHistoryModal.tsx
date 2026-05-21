@@ -189,8 +189,8 @@ export function VersionHistoryModal(
     return v.tags?.includes('published');
   });
 
-  const hasPublishedVersions = versions.some(
-    (v) => v.tags?.includes('published')
+  const hasPublishedVersions = versions.some((v) =>
+    v.tags?.includes('published')
   );
 
   if (loading) {

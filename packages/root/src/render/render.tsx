@@ -105,7 +105,7 @@ export class Renderer {
     if (url.includes('%')) {
       try {
         url = decodeURI(url);
-      } catch (e) {
+      } catch {
         // Intentionally ignored.
       }
     }
@@ -179,7 +179,7 @@ export class Renderer {
     // Create a hook to auto-inject nonce values.
     // https://preactjs.com/guide/v10/options/
     const preactHook = preactOptions.vnode;
-    let mainHtml = '';
+    let mainHtml: string;
     try {
       preactOptions.vnode = (vnode: VNode<any>) => {
         // Inject nonce to `<script>` tags.
