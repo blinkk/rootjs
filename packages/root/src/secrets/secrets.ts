@@ -10,7 +10,7 @@ import {
   writeEnvFile,
 } from './env-file.js';
 import {accessSecretJson, writeSecretJson} from './gcloud.js';
-import {sha256} from './hash.js';
+import {hashValue, randomSalt} from './hash.js';
 import {
   isValidEnvName,
   manifestPath,
@@ -27,11 +27,16 @@ export const STATE_FILENAME = 'secrets-sync.json';
 interface LocalStateEntry {
   /** ISO-8601 UTC timestamp last synced for this key. */
   updatedAt: string;
-  /** sha256 of the last value written to `.env`, for local-edit detection. */
+  /** Salted sha256 of the last value written to `.env`, for edit detection. */
   hash: string;
 }
 
-type LocalState = Record<string, LocalStateEntry>;
+interface LocalState {
+  /** Random per-file salt so hashes resist rainbow-table reversal. */
+  salt: string;
+  /** Map of managed env name to its last-synced metadata. */
+  secrets: Record<string, LocalStateEntry>;
+}
 
 export interface SyncOptions {
   rootDir: string;
@@ -126,12 +131,12 @@ async function doSync(options: SyncOptions): Promise<SyncResult> {
   const state = await readLocalState(rootDir);
 
   const plans: KeyPlan[] = resolved.keys.map((key) => {
-    const synced = state[key.name];
+    const synced = state.secrets[key.name];
     const envVal = parsed[key.name];
     const remoteChanged =
       force || !synced || key.updatedAt !== synced.updatedAt;
     const localChanged = synced
-      ? sha256(envVal ?? '') !== synced.hash
+      ? hashValue(state.salt, envVal ?? '') !== synced.hash
       : envVal !== undefined;
     return {key, synced, envVal, remoteChanged, localChanged};
   });
@@ -158,7 +163,7 @@ async function doSync(options: SyncOptions): Promise<SyncResult> {
   }
 
   const updates: Record<string, string> = {};
-  const nextState: LocalState = {...state};
+  const nextState: LocalState = {salt: state.salt, secrets: {...state.secrets}};
 
   for (const plan of plans) {
     const name = plan.key.name;
@@ -185,17 +190,20 @@ async function doSync(options: SyncOptions): Promise<SyncResult> {
       result.overwritten.push(name);
     }
     updates[name] = theirs;
-    nextState[name] = {updatedAt: plan.key.updatedAt, hash: sha256(theirs)};
+    nextState.secrets[name] = {
+      updatedAt: plan.key.updatedAt,
+      hash: hashValue(state.salt, theirs),
+    };
     result.changed.push(name);
   }
 
   // Keys recorded in state but no longer managed are removed from `.env`.
   const managed = new Set(resolved.keys.map((key) => key.name));
   const removals: string[] = [];
-  for (const name of Object.keys(state)) {
+  for (const name of Object.keys(state.secrets)) {
     if (!managed.has(name)) {
       removals.push(name);
-      delete nextState[name];
+      delete nextState.secrets[name];
       result.removed.push(name);
     }
   }
@@ -263,7 +271,7 @@ export async function setSecret(options: SetSecretOptions): Promise<void> {
     await writeEnvFile(envFilePath, next);
   }
   const state = await readLocalState(rootDir);
-  state[name] = {updatedAt, hash: sha256(value)};
+  state.secrets[name] = {updatedAt, hash: hashValue(state.salt, value)};
   await writeLocalState(rootDir, state);
 }
 
@@ -301,8 +309,8 @@ export async function removeSecret(
     await writeEnvFile(envFilePath, next);
   }
   const state = await readLocalState(rootDir);
-  if (state[name]) {
-    delete state[name];
+  if (state.secrets[name]) {
+    delete state.secrets[name];
     await writeLocalState(rootDir, state);
   }
 }
@@ -338,11 +346,11 @@ export async function getSecretsStatus(
   const parsed = parseEnv(content);
   const state = await readLocalState(rootDir);
   const keys: KeyStatus[] = resolved.keys.map((key) => {
-    const synced = state[key.name];
+    const synced = state.secrets[key.name];
     const envVal = parsed[key.name];
     const remoteChanged = !synced || key.updatedAt !== synced.updatedAt;
     const localChanged = synced
-      ? sha256(envVal ?? '') !== synced.hash
+      ? hashValue(state.salt, envVal ?? '') !== synced.hash
       : envVal !== undefined;
     let kind: KeyStatusKind;
     if (!synced) {
@@ -386,13 +394,22 @@ async function readLocalState(rootDir: string): Promise<LocalState> {
   try {
     const raw = await fs.promises.readFile(localStatePath(rootDir), 'utf8');
     const parsed = JSON.parse(raw);
-    if (parsed && typeof parsed === 'object') {
-      return parsed as LocalState;
+    if (
+      parsed &&
+      typeof parsed === 'object' &&
+      typeof parsed.salt === 'string' &&
+      parsed.secrets &&
+      typeof parsed.secrets === 'object'
+    ) {
+      return {
+        salt: parsed.salt,
+        secrets: parsed.secrets as Record<string, LocalStateEntry>,
+      };
     }
   } catch {
-    // Missing or corrupt state; start fresh.
+    // Missing or corrupt state; start fresh with a new salt.
   }
-  return {};
+  return {salt: randomSalt(), secrets: {}};
 }
 
 async function writeLocalState(

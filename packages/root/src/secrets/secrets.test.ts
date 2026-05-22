@@ -1,3 +1,4 @@
+import crypto from 'node:crypto';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -79,9 +80,14 @@ function readEnv(): Record<string, string> {
   );
 }
 
-function readState(): Record<string, {updatedAt: string; hash: string}> {
+function readState(): {
+  salt?: string;
+  secrets: Record<string, {updatedAt: string; hash: string}>;
+} {
   const file = localStatePath(rootDir);
-  return fs.existsSync(file) ? JSON.parse(fs.readFileSync(file, 'utf8')) : {};
+  return fs.existsSync(file)
+    ? JSON.parse(fs.readFileSync(file, 'utf8'))
+    : {secrets: {}};
 }
 
 test('first sync pulls the remote value into .env and records state', async () => {
@@ -91,8 +97,15 @@ test('first sync pulls the remote value into .env and records state', async () =
   const result = await syncSecrets({rootDir, apply: true});
   assert.deepEqual(result.changed, ['API_KEY']);
   assert.equal(readEnv().API_KEY, 'v1');
-  assert.equal(readState().API_KEY.updatedAt, 't1');
+  assert.equal(readState().secrets.API_KEY.updatedAt, 't1');
   assert.equal(process.env.API_KEY, 'v1');
+
+  // The stored hash is salted, not a bare sha256 of the value.
+  const state = readState();
+  assert.isString(state.salt);
+  assert.equal(state.salt!.length, 32);
+  const bareSha = crypto.createHash('sha256').update('v1').digest('hex');
+  assert.notEqual(state.secrets.API_KEY.hash, bareSha);
 });
 
 test('a second sync with no changes is a no-op', async () => {
@@ -162,7 +175,7 @@ test('a key removed from the manifest is deleted from .env', async () => {
   assert.deepEqual(result.removed, ['API_KEY']);
   assert.isUndefined(readEnv().API_KEY);
   assert.equal(readEnv().OTHER, 'o1');
-  assert.isUndefined(readState().API_KEY);
+  assert.isUndefined(readState().secrets.API_KEY);
 });
 
 test('unmanaged .env lines are always preserved', async () => {
@@ -215,7 +228,7 @@ test('a fetch failure is recorded, skipped, and retried next run', async () => {
   assert.equal(failed.errors.length, 1);
   assert.deepEqual(failed.changed, []);
   assert.isUndefined(readEnv().API_KEY);
-  assert.isUndefined(readState().API_KEY); // state untouched -> will retry
+  assert.isUndefined(readState().secrets.API_KEY); // state untouched -> will retry
 
   gsmErrors.clear();
   const ok = await syncSecrets({rootDir, apply: true});
@@ -248,7 +261,7 @@ test('setSecret stores the value in GSM, the manifest, .env, and state', async (
   const manifest = await readManifest(manifestPath(rootDir));
   assert.equal(manifest!.secrets.API_KEY.updatedBy, 'me@example.com');
   assert.isString(manifest!.secrets.API_KEY.updatedAt);
-  assert.equal(readState().API_KEY.hash.length, 64);
+  assert.equal(readState().secrets.API_KEY.hash.length, 64);
 });
 
 test('removeSecret clears the value from the manifest, GSM, .env, and state', async () => {
@@ -269,7 +282,7 @@ test('removeSecret clears the value from the manifest, GSM, .env, and state', as
 
   assert.deepEqual(gsmStore.get('site-a'), {});
   assert.isUndefined(readEnv().API_KEY);
-  assert.isUndefined(readState().API_KEY);
+  assert.isUndefined(readState().secrets.API_KEY);
   const manifest = await readManifest(manifestPath(rootDir));
   assert.isUndefined(manifest!.secrets.API_KEY);
 });
