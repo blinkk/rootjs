@@ -49,7 +49,7 @@ test('handles falsy attribute values', () => {
   // false: standard/boolean removed, data-* rendered as "false"
   expect(
     renderJsxToString(<div id={false as any} hidden={false} data-hidden={false} />, {mode: 'minimal'})
-  ).toBe('<div data-hidden="false"></div>');
+  ).toBe('<div id="false" data-hidden="false"></div>');
 
   // null: all removed
   expect(

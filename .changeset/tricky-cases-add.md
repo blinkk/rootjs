@@ -2,4 +2,4 @@
 '@blinkk/root': patch
 ---
 
-fix: serialize true for non-boolean attrs in jsx
+fix: serialize boolean attrs as string in jsx

@@ -580,11 +580,12 @@ export function renderJsxToString(
       // values like <select onChange="..."> are inline HTML event attributes,
       // so they are preserved and rendered as-is.
       if (typeof value === 'function') continue;
-      // For standard and boolean attributes, `false` removes the attribute.
-      // For data-* attributes, `false` is rendered as the string "false".
-      if (value === false && !key.startsWith('data-')) continue;
 
       const attrName = PROP_TO_ATTR[key] || key;
+
+      // For boolean attributes, `false` removes the attribute. For all other
+      // attributes, `false` is stringified (e.g. data-foo="false").
+      if (value === false && BOOLEAN_ATTRS.has(attrName)) continue;
 
       // Boolean attributes are minimized when true; other attributes use
       // explicit string serialization (e.g. id="true", data-foo="true").
