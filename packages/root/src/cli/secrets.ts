@@ -52,15 +52,13 @@ export function registerSecretsCommands(program: Command) {
     .action(action(secretsInit));
 
   secrets
-    .command('set <name> [value]')
-    .description('store a secret value (prompts if no value is given)')
+    .command('set <name>')
+    .description(
+      'store a secret value, read from a prompt (TTY) or piped stdin'
+    )
     .option(
       '--manifest <path>',
       'target manifest (defaults to ./.root.secrets.json)'
-    )
-    .option(
-      '--value <value>',
-      'the secret value (avoid: leaks to shell history)'
     )
     .action(action(secretsSet));
 
@@ -143,31 +141,19 @@ async function secretsInit(opts: InitOptions) {
 
 interface SetOptions {
   manifest?: string;
-  value?: string;
 }
 
-async function secretsSet(
-  name: string,
-  value: string | undefined,
-  opts: SetOptions
-) {
+async function secretsSet(name: string, opts: SetOptions) {
   const rootDir = process.cwd();
   const manifestFilePath = opts.manifest
     ? path.resolve(rootDir, opts.manifest)
     : manifestPath(rootDir);
 
-  let secretValue = value ?? opts.value;
-  if (secretValue !== undefined) {
-    console.log(
-      `${BAR} ${yellow('warning:')} ${dim(
-        'a value passed on the command line can leak to shell history and the process list'
-      )}`
-    );
-  } else {
-    secretValue = await promptSecret(`Value for ${name}: `);
-  }
+  // The value is only ever read from stdin (a masked prompt on a TTY, or piped
+  // input) so it never appears in argv, shell history, or the process list.
+  const secretValue = await readSecretValue(name);
   if (!secretValue) {
-    throw new Error('no value provided');
+    throw new Error('no value provided on stdin');
   }
 
   await setSecret({rootDir, manifestFilePath, name, value: secretValue});
@@ -379,6 +365,35 @@ function isPathGitIgnored(
       resolve(undefined);
     }
   });
+}
+
+/**
+ * Reads the secret value from stdin only — a masked prompt when attached to a
+ * TTY, otherwise the piped input — so the value never reaches argv.
+ */
+function readSecretValue(name: string): Promise<string> {
+  if (process.stdin.isTTY) {
+    return promptSecret(`Value for ${name}: `);
+  }
+  return readStdin().then(stripOneTrailingNewline);
+}
+
+/** Reads all of stdin as a UTF-8 string. */
+function readStdin(): Promise<string> {
+  return new Promise((resolve, reject) => {
+    let data = '';
+    process.stdin.setEncoding('utf8');
+    process.stdin.on('data', (chunk) => {
+      data += chunk;
+    });
+    process.stdin.on('end', () => resolve(data));
+    process.stdin.on('error', reject);
+  });
+}
+
+/** Strips a single trailing newline so `echo value | root secrets set` works. */
+function stripOneTrailingNewline(value: string): string {
+  return value.replace(/\r?\n$/, '');
 }
 
 /** Prompts for a secret value, masking the typed characters on a TTY. */
