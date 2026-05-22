@@ -21,6 +21,7 @@ import {ActionIcon, Badge, Button, Loader, Menu, Tooltip} from '@mantine/core';
 import {
   IconCheck,
   IconChevronDown,
+  IconChevronRight,
   IconCopy,
   IconMessageCirclePlus,
   IconPaperclip,
@@ -1166,19 +1167,15 @@ function ToolPartView(props: {
     : undefined;
   const [open, setOpen] = useState(!!approval);
 
+  // Auto-open only for pending approvals, which need a user decision.
   useEffect(() => {
-    if (approval || part.output || part.errorText) {
+    if (approval) {
       setOpen(true);
     }
-  }, [approval, part.output, part.errorText]);
+  }, [approval]);
 
   return (
-    <div
-      className={joinClassNames(
-        'RootAIChat__tool',
-        approval && 'RootAIChat__tool--approval'
-      )}
-    >
+    <div className="RootAIChat__tool">
       <button
         type="button"
         className="RootAIChat__tool__header"
@@ -1205,12 +1202,6 @@ function ToolPartView(props: {
       </button>
       {open && (
         <div className="RootAIChat__tool__body">
-          <ToolTimelineSummary
-            toolName={toolName}
-            input={part.input}
-            output={part.output}
-            approval={approval}
-          />
           {approval && approvalControls && (
             <ToolApprovalCard
               approval={approval}
@@ -1221,13 +1212,25 @@ function ToolPartView(props: {
           {part.output?.receipt && <ToolReceipt output={part.output} />}
           {part.input && (
             <details>
-              <summary>Input</summary>
+              <summary>
+                <IconChevronRight
+                  size={14}
+                  className="RootAIChat__tool__json__icon"
+                />
+                <span>Input</span>
+              </summary>
               <pre>{JSON.stringify(part.input, null, 2)}</pre>
             </details>
           )}
           {part.output && (
             <details>
-              <summary>Output</summary>
+              <summary>
+                <IconChevronRight
+                  size={14}
+                  className="RootAIChat__tool__json__icon"
+                />
+                <span>Output</span>
+              </summary>
               <pre>{JSON.stringify(part.output, null, 2)}</pre>
             </details>
           )}
@@ -1274,80 +1277,6 @@ function prettyToolName(toolName: string, input: any): string {
       return `Read ${input?.collectionId || 'collection'} schema`;
     default:
       return toolName;
-  }
-}
-
-function ToolTimelineSummary(props: {
-  toolName: string;
-  input: any;
-  output: any;
-  approval?: PendingToolApproval;
-}) {
-  const summary = getToolSummary(props.toolName, props.input, props.output);
-  if (!summary && !props.approval) {
-    return null;
-  }
-  return (
-    <div className="RootAIChat__toolSummary">
-      <div className="RootAIChat__toolSummary__label">
-        {props.approval ? 'Waiting for approval' : summary?.label}
-      </div>
-      <div className="RootAIChat__toolSummary__text">
-        {props.approval ? props.approval.preview.summary : summary?.text}
-      </div>
-    </div>
-  );
-}
-
-function getToolSummary(toolName: string, input: any, output: any) {
-  if (output?.receipt) {
-    return {label: 'Applied draft change', text: output.receipt.summary};
-  }
-  if (output?.error) {
-    return {
-      label: 'Needs attention',
-      text: output.message || output.hint || String(output.error),
-    };
-  }
-  switch (toolName) {
-    case 'collections_list':
-      return {label: 'Read context', text: 'Loaded available CMS collections.'};
-    case 'docs_list':
-      return {
-        label: 'Read context',
-        text: `Loaded documents from ${input?.collectionId || 'a collection'}.`,
-      };
-    case 'docs_search':
-      return {
-        label: 'Read context',
-        text: `Searched indexed docs for "${input?.query || ''}".`,
-      };
-    case 'doc_get':
-      return {
-        label: 'Read context',
-        text: `Loaded ${input?.docId || 'a document'}.`,
-      };
-    case 'doc_getVersion':
-      return {
-        label: 'Read context',
-        text: `Loaded ${input?.docId || 'a document'} at ${
-          input?.versionId || 'a version'
-        }.`,
-      };
-    case 'doc_listVersions':
-      return {
-        label: 'Read context',
-        text: `Loaded version history for ${input?.docId || 'a document'}.`,
-      };
-    case 'schema_get':
-      return {
-        label: 'Read context',
-        text: `Loaded the ${input?.collectionId || 'collection'} schema.`,
-      };
-    case 'doc_translateField':
-      return {label: 'Generated translation', text: 'Translated field text.'};
-    default:
-      return null;
   }
 }
 

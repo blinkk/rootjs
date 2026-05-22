@@ -525,15 +525,7 @@
 }
 
 .RootAIChat__tool {
-  border: 1px solid var(--color-border);
-  border-radius: 8px;
-  background: #f8f9fa;
   font-size: 13px;
-}
-
-.RootAIChat__tool--approval {
-  border-color: #99c2ff;
-  background: #f5f9ff;
 }
 
 .RootAIChat__tool__header {
@@ -541,7 +533,7 @@
   align-items: center;
   gap: 6px;
   width: 100%;
-  padding: 8px 12px;
+  padding: 4px 0;
   background: transparent;
   border: none;
   font: inherit;
@@ -556,18 +548,6 @@
 .RootAIChat__tool__state {
   color: dimgray;
   font-size: 12px;
-}
-
-.RootAIChat__toolSummary__label {
-  display: none;
-  font-size: 12px;
-  font-weight: 700;
-  color: #495057;
-}
-
-.RootAIChat__toolSummary__text {
-  margin-top: 2px;
-  color: #343a40;
 }
 
 .RootAIChat__approval {
@@ -669,7 +649,7 @@
 }
 
 .RootAIChat__tool__body {
-  padding: 0 12px 12px;
+  padding: 4px 0 8px;
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -683,9 +663,26 @@
 }
 
 .RootAIChat__tool__body summary {
+  display: flex;
+  align-items: center;
+  gap: 4px;
   font-weight: 600;
   cursor: pointer;
   font-size: 12px;
+  list-style: none;
+}
+
+.RootAIChat__tool__body summary::-webkit-details-marker {
+  display: none;
+}
+
+.RootAIChat__tool__json__icon {
+  flex-shrink: 0;
+  transition: transform 0.15s ease;
+}
+
+.RootAIChat__tool__body details[open] > summary .RootAIChat__tool__json__icon {
+  transform: rotate(90deg);
 }
 
 .RootAIChat__tool__body pre {
