@@ -15,11 +15,11 @@ import {
   writeManifest,
 } from '../secrets/manifest.js';
 import {
-  EnvImportResult,
+  EnvPushResult,
   getSecretsStatus,
-  importEnvToSecrets,
   isSecretsSyncEnabled,
   KeyStatus,
+  pushEnvToSecrets,
   removeSecret,
   setSecret,
   syncSecrets,
@@ -74,22 +74,6 @@ export function registerSecretsCommands(program: Command) {
     .action(action(secretsRm));
 
   secrets
-    .command('import')
-    .description(
-      'migrate existing .env values into Secret Manager + the manifest'
-    )
-    .option(
-      '--manifest <path>',
-      'target manifest (defaults to ./.root.secrets.json)'
-    )
-    .option(
-      '--keys <names>',
-      'comma-separated subset of .env keys (default: all)'
-    )
-    .option('--yes', 'skip the confirmation prompt')
-    .action(action(secretsImport));
-
-  secrets
     .command('sync')
     .description('three-way merge managed secrets into .env')
     .action(action(secretsSync));
@@ -100,6 +84,22 @@ export function registerSecretsCommands(program: Command) {
       'force-download managed secrets into .env (overwrites local edits)'
     )
     .action(action(secretsPull));
+
+  secrets
+    .command('push')
+    .description(
+      'push .env values up to Secret Manager and record them in the manifest'
+    )
+    .option(
+      '--manifest <path>',
+      'target manifest (defaults to ./.root.secrets.json)'
+    )
+    .option(
+      '--keys <names>',
+      'comma-separated subset of .env keys (default: all)'
+    )
+    .option('--yes', 'skip the confirmation prompt')
+    .action(action(secretsPush));
 
   secrets
     .command('status')
@@ -193,13 +193,13 @@ async function secretsRm(name: string, opts: {manifest?: string}) {
   );
 }
 
-interface ImportOptions {
+interface PushOptions {
   manifest?: string;
   keys?: string;
   yes?: boolean;
 }
 
-async function secretsImport(opts: ImportOptions) {
+async function secretsPush(opts: PushOptions) {
   const rootDir = process.cwd();
   const manifestFilePath = opts.manifest
     ? path.resolve(rootDir, opts.manifest)
@@ -231,13 +231,13 @@ async function secretsImport(opts: ImportOptions) {
         return promptYesNo(`${BAR} continue? [y/N] `);
       };
 
-  const result = await importEnvToSecrets({
+  const result = await pushEnvToSecrets({
     rootDir,
     manifestFilePath,
     only,
     confirm,
   });
-  printImportResult(result, rootDir, manifestFilePath);
+  printPushResult(result, rootDir, manifestFilePath);
 }
 
 async function secretsSync() {
@@ -377,8 +377,8 @@ function printSyncSummary(
   console.log();
 }
 
-function printImportResult(
-  result: EnvImportResult,
+function printPushResult(
+  result: EnvPushResult,
   rootDir: string,
   manifestFilePath: string
 ) {
@@ -387,20 +387,20 @@ function printImportResult(
     return;
   }
   console.log();
-  if (result.imported.length === 0) {
-    console.log(`${BAR} ${yellow('secrets:')} nothing to import`);
+  if (result.pushed.length === 0) {
+    console.log(`${BAR} ${yellow('secrets:')} nothing to push`);
   } else {
     console.log(
-      `${BAR} ${green('secrets:')} imported ${result.imported.length} value(s) into "${result.gsmKey}"`
+      `${BAR} ${green('secrets:')} pushed ${result.pushed.length} value(s) to "${result.gsmKey}"`
     );
-    for (const name of result.imported) {
+    for (const name of result.pushed) {
       console.log(`${BAR}   ${green('+')} ${name}`);
     }
   }
   for (const skip of result.skipped) {
     console.log(`${BAR}   ${dim('-')} ${skip.name} ${dim(`(${skip.reason})`)}`);
   }
-  if (result.imported.length > 0) {
+  if (result.pushed.length > 0) {
     console.log(
       `${BAR}   ${dim(`commit ${rel(rootDir, manifestFilePath)} to share`)}`
     );

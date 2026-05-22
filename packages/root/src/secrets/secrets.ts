@@ -315,24 +315,24 @@ export async function removeSecret(
   }
 }
 
-export interface ImportEnvOptions {
+export interface PushEnvOptions {
   rootDir: string;
-  /** Resolved path to the manifest to import into (site or shared). */
+  /** Resolved path to the manifest to push into (site or shared). */
   manifestFilePath: string;
-  /** Optional allowlist of `.env` keys to import; default imports all. */
+  /** Optional allowlist of `.env` keys to push; default pushes all. */
   only?: string[];
   /** Defaults to `git config user.email`. */
   updatedBy?: string;
   /**
    * Called with the candidate NAMES (never values) and target gsmKey before any
-   * write. Return false to abort. Omit to import without confirmation.
+   * write. Return false to abort. Omit to push without confirmation.
    */
   confirm?: (names: string[], gsmKey: string) => Promise<boolean>;
 }
 
-export interface EnvImportResult {
+export interface EnvPushResult {
   /** Names written to GSM + the manifest. */
-  imported: string[];
+  pushed: string[];
   /** Names skipped, with a reason (not in `.env`, invalid, or shared). */
   skipped: Array<{name: string; reason: string}>;
   /** True if the confirm callback declined. */
@@ -342,15 +342,15 @@ export interface EnvImportResult {
 }
 
 /**
- * Bulk-imports values from the local `.env` into Secret Manager and records them
- * in the manifest, in a single GSM version write. Existing GSM values for the
- * same keys are overwritten (a "force push"). Keys already provided by a shared
+ * Pushes the values in the local `.env` up to Secret Manager and records them in
+ * the manifest, in a single GSM version write. Existing GSM values for the same
+ * keys are overwritten (a "force push"). Keys already provided by a shared
  * manifest, invalid names, and (with `only`) names absent from `.env` are
  * skipped. Secret values never leave this function.
  */
-export async function importEnvToSecrets(
-  options: ImportEnvOptions
-): Promise<EnvImportResult> {
+export async function pushEnvToSecrets(
+  options: PushEnvOptions
+): Promise<EnvPushResult> {
   const {rootDir, manifestFilePath, only} = options;
   const manifest = await readManifest(manifestFilePath);
   if (!manifest) {
@@ -379,16 +379,16 @@ export async function importEnvToSecrets(
   }
 
   if (candidates.length === 0) {
-    return {imported: [], skipped, aborted: false, gsmKey: manifest.gsmKey};
+    return {pushed: [], skipped, aborted: false, gsmKey: manifest.gsmKey};
   }
   if (
     options.confirm &&
     !(await options.confirm(candidates, manifest.gsmKey))
   ) {
-    return {imported: [], skipped, aborted: true, gsmKey: manifest.gsmKey};
+    return {pushed: [], skipped, aborted: true, gsmKey: manifest.gsmKey};
   }
 
-  // Single read-modify-write of the gsmKey blob for all imported values.
+  // Single read-modify-write of the gsmKey blob for all pushed values.
   const blob = await accessSecretJson(manifest.gsmKey, manifest.gcpProjectId);
   for (const name of candidates) {
     blob[name] = parsed[name];
@@ -412,7 +412,7 @@ export async function importEnvToSecrets(
   await writeLocalState(rootDir, state);
 
   return {
-    imported: candidates,
+    pushed: candidates,
     skipped,
     aborted: false,
     gsmKey: manifest.gsmKey,
@@ -421,7 +421,7 @@ export async function importEnvToSecrets(
 
 /**
  * Names a site pulls from a shared manifest — these can't also be declared in
- * the site manifest, so they're excluded when importing into it. Returns empty
+ * the site manifest, so they're excluded when pushing into it. Returns empty
  * when the target isn't the site manifest, or on any resolution error.
  */
 async function sharedImportedNames(
