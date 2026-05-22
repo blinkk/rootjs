@@ -1181,7 +1181,14 @@ function ToolPartView(props: {
         className="RootAIChat__tool__header"
         onClick={() => setOpen(!open)}
       >
-        <Badge variant="filled" color="dark" size="xs">
+        <IconChevronDown
+          className={joinClassNames(
+            'RootAIChat__tool__header__icon',
+            open && 'RootAIChat__tool__header__icon--open'
+          )}
+          size={14}
+        />
+        <Badge color="dark" variant="filled" size="xs">
           {toolName}
         </Badge>
         <span className="RootAIChat__tool__title">
@@ -1192,13 +1199,6 @@ function ToolPartView(props: {
             ? prettyApprovalState(approval.status)
             : prettyToolState(state)}
         </span>
-        <IconChevronDown
-          size={14}
-          style={{
-            marginLeft: 'auto',
-            transform: open ? 'rotate(0deg)' : 'rotate(-90deg)',
-          }}
-        />
       </button>
       {open && (
         <div className="RootAIChat__tool__body">

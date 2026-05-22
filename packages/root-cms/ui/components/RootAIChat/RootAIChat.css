@@ -540,6 +540,15 @@
   cursor: pointer;
 }
 
+.RootAIChat__tool__header__icon {
+  transform: rotate(-90deg);
+  transition: transform 0.15s ease;
+}
+
+.RootAIChat__tool__header__icon--open {
+  transform: rotate(0deg);
+}
+
 .RootAIChat__tool__title {
   font-weight: 600;
   color: #212529;
@@ -649,7 +658,7 @@
 }
 
 .RootAIChat__tool__body {
-  padding: 4px 0 8px;
+  padding: 4px 0 8px 18px;
   display: flex;
   flex-direction: column;
   gap: 8px;
