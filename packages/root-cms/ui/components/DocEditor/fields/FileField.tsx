@@ -1077,8 +1077,8 @@ FileField.UploadButton = (props: {className?: string; compact?: boolean}) => {
       {loading && !props.compact
         ? 'Uploading...'
         : ctx.value?.src
-        ? 'Upload'
-        : 'Paste, drop, or click to upload'}
+          ? 'Upload'
+          : 'Paste, drop, or click to upload'}
     </Button>
   );
 };
@@ -1294,9 +1294,8 @@ function testSupportsCreatePlaceholder(acceptedFileTypes: string[]) {
 function canvasPreviewInlineStyles(uploadedFile: UploadedFile) {
   const inlineStyles: CSSProperties = {};
   if (uploadedFile.width && uploadedFile.height) {
-    inlineStyles[
-      '--canvas-aspect-ratio'
-    ] = `${uploadedFile.width} / ${uploadedFile.height}`;
+    inlineStyles['--canvas-aspect-ratio'] =
+      `${uploadedFile.width} / ${uploadedFile.height}`;
 
     inlineStyles['--canvas-asset-width'] = `${uploadedFile.width}px`;
     let maxHeight = Math.min(uploadedFile.height, 280);
