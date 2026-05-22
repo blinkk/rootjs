@@ -28,6 +28,7 @@ import {DevServerAssetMap} from '../render/asset-map/dev-asset-map.js';
 import {dirExists, isDirectory, isJsFile} from '../utils/fsutils.js';
 import {findOpenPort} from '../utils/ports.js';
 import {getSessionCookieSecret} from '../utils/rand.js';
+import {syncSecretsOnDev} from './secrets.js';
 import {runStartupTasks} from './startup/startup-tasks.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -48,6 +49,10 @@ export async function dev(rootProjectDir?: string, options?: DevOptions) {
   const defaultPort = parseInt(process.env.PORT || '4007');
   const host = options?.host || 'localhost';
   const port = await findOpenPort(defaultPort, defaultPort + 10);
+
+  // Block on a secrets sync (if configured) so managed values are live before
+  // the server starts. Bounded by an internal timeout; never throws.
+  await syncSecretsOnDev(rootDir);
 
   // Run startup tasks (e.g. the npm version check) without blocking server
   // startup. Failures are handled internally and never interrupt `root dev`.
