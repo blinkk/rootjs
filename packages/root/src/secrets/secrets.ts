@@ -315,6 +315,138 @@ export async function removeSecret(
   }
 }
 
+export interface ImportEnvOptions {
+  rootDir: string;
+  /** Resolved path to the manifest to import into (site or shared). */
+  manifestFilePath: string;
+  /** Optional allowlist of `.env` keys to import; default imports all. */
+  only?: string[];
+  /** Defaults to `git config user.email`. */
+  updatedBy?: string;
+  /**
+   * Called with the candidate NAMES (never values) and target gsmKey before any
+   * write. Return false to abort. Omit to import without confirmation.
+   */
+  confirm?: (names: string[], gsmKey: string) => Promise<boolean>;
+}
+
+export interface EnvImportResult {
+  /** Names written to GSM + the manifest. */
+  imported: string[];
+  /** Names skipped, with a reason (not in `.env`, invalid, or shared). */
+  skipped: Array<{name: string; reason: string}>;
+  /** True if the confirm callback declined. */
+  aborted: boolean;
+  /** The gsmKey the values were (or would be) written to. */
+  gsmKey: string;
+}
+
+/**
+ * Bulk-imports values from the local `.env` into Secret Manager and records them
+ * in the manifest, in a single GSM version write. Existing GSM values for the
+ * same keys are overwritten (a "force push"). Keys already provided by a shared
+ * manifest, invalid names, and (with `only`) names absent from `.env` are
+ * skipped. Secret values never leave this function.
+ */
+export async function importEnvToSecrets(
+  options: ImportEnvOptions
+): Promise<EnvImportResult> {
+  const {rootDir, manifestFilePath, only} = options;
+  const manifest = await readManifest(manifestFilePath);
+  if (!manifest) {
+    throw new Error(
+      `no manifest at ${manifestFilePath}; run \`root secrets init\` first`
+    );
+  }
+
+  const content = await readEnvFile(envPath(rootDir));
+  const parsed = parseEnv(content);
+  const skipped: Array<{name: string; reason: string}> = [];
+  const sharedNames = await sharedImportedNames(rootDir, manifestFilePath);
+
+  const requested = only && only.length > 0 ? only : Object.keys(parsed);
+  const candidates: string[] = [];
+  for (const name of requested) {
+    if (!Object.prototype.hasOwnProperty.call(parsed, name)) {
+      skipped.push({name, reason: 'not found in .env'});
+    } else if (!isValidEnvName(name)) {
+      skipped.push({name, reason: 'invalid name'});
+    } else if (sharedNames.has(name)) {
+      skipped.push({name, reason: 'provided by shared manifest'});
+    } else {
+      candidates.push(name);
+    }
+  }
+
+  if (candidates.length === 0) {
+    return {imported: [], skipped, aborted: false, gsmKey: manifest.gsmKey};
+  }
+  if (
+    options.confirm &&
+    !(await options.confirm(candidates, manifest.gsmKey))
+  ) {
+    return {imported: [], skipped, aborted: true, gsmKey: manifest.gsmKey};
+  }
+
+  // Single read-modify-write of the gsmKey blob for all imported values.
+  const blob = await accessSecretJson(manifest.gsmKey, manifest.gcpProjectId);
+  for (const name of candidates) {
+    blob[name] = parsed[name];
+  }
+  await writeSecretJson(manifest.gsmKey, manifest.gcpProjectId, blob);
+
+  const updatedAt = new Date().toISOString();
+  const updatedBy = options.updatedBy ?? (await getGitEmail());
+  for (const name of candidates) {
+    manifest.secrets[name] = {updatedAt, ...(updatedBy ? {updatedBy} : {})};
+  }
+  await writeManifest(manifestFilePath, manifest);
+
+  const state = await readLocalState(rootDir);
+  for (const name of candidates) {
+    state.secrets[name] = {
+      updatedAt,
+      hash: hashValue(state.salt, parsed[name]),
+    };
+  }
+  await writeLocalState(rootDir, state);
+
+  return {
+    imported: candidates,
+    skipped,
+    aborted: false,
+    gsmKey: manifest.gsmKey,
+  };
+}
+
+/**
+ * Names a site pulls from a shared manifest — these can't also be declared in
+ * the site manifest, so they're excluded when importing into it. Returns empty
+ * when the target isn't the site manifest, or on any resolution error.
+ */
+async function sharedImportedNames(
+  rootDir: string,
+  manifestFilePath: string
+): Promise<Set<string>> {
+  if (path.resolve(manifestFilePath) !== path.resolve(manifestPath(rootDir))) {
+    return new Set();
+  }
+  try {
+    const resolved = await resolveManagedKeys(rootDir);
+    if (!resolved || !resolved.shared) {
+      return new Set();
+    }
+    const sharedGsmKey = resolved.shared.gsmKey;
+    return new Set(
+      resolved.keys
+        .filter((key) => key.gsmKey === sharedGsmKey)
+        .map((key) => key.name)
+    );
+  } catch {
+    return new Set();
+  }
+}
+
 export type KeyStatusKind =
   | 'in-sync'
   | 'remote-newer'

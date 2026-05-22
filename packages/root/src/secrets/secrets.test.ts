@@ -39,6 +39,7 @@ import {
 } from './manifest.js';
 import {
   getSecretsStatus,
+  importEnvToSecrets,
   localStatePath,
   removeSecret,
   setSecret,
@@ -296,4 +297,96 @@ test('getSecretsStatus reports per-key state without network', async () => {
   const {keys} = await getSecretsStatus(rootDir);
   assert.deepEqual(accessLog, []); // no network
   assert.equal(keys.find((k) => k.name === 'API_KEY')!.kind, 'in-sync');
+});
+
+test('importEnvToSecrets bulk-pushes all .env values, leaving them in-sync', async () => {
+  writeSiteManifest({});
+  fs.writeFileSync(
+    path.join(rootDir, '.env'),
+    'API_KEY=abc\nDB_URL=postgres://x\n'
+  );
+
+  const result = await importEnvToSecrets({
+    rootDir,
+    manifestFilePath: manifestPath(rootDir),
+    updatedBy: 'me@example.com',
+  });
+
+  assert.deepEqual([...result.imported].sort(), ['API_KEY', 'DB_URL']);
+  assert.deepEqual(gsmStore.get('site-a'), {
+    API_KEY: 'abc',
+    DB_URL: 'postgres://x',
+  });
+  const manifest = await readManifest(manifestPath(rootDir));
+  assert.equal(manifest!.secrets.DB_URL.updatedBy, 'me@example.com');
+  assert.equal(readState().secrets.API_KEY.hash.length, 64);
+  // Everything is recorded as in-sync afterwards (no re-pull needed).
+  const {keys} = await getSecretsStatus(rootDir);
+  assert.isTrue(keys.every((k) => k.kind === 'in-sync'));
+});
+
+test('importEnvToSecrets honors the keys allowlist and reports missing keys', async () => {
+  writeSiteManifest({});
+  fs.writeFileSync(path.join(rootDir, '.env'), 'API_KEY=abc\nIGNORED=nope\n');
+
+  const result = await importEnvToSecrets({
+    rootDir,
+    manifestFilePath: manifestPath(rootDir),
+    only: ['API_KEY', 'MISSING'],
+    updatedBy: 'me@example.com',
+  });
+
+  assert.deepEqual(result.imported, ['API_KEY']);
+  assert.deepEqual(result.skipped, [
+    {name: 'MISSING', reason: 'not found in .env'},
+  ]);
+  assert.deepEqual(gsmStore.get('site-a'), {API_KEY: 'abc'});
+});
+
+test('importEnvToSecrets skips keys provided by a shared manifest', async () => {
+  const sharedPath = path.join(
+    rootDir,
+    '..',
+    `shared-${path.basename(rootDir)}.json`
+  );
+  const shared = emptyManifest('proj', 'global');
+  shared.secrets = {DATABASE_URL: {updatedAt: 's1'}};
+  await writeManifest(sharedPath, shared);
+  writeSiteManifest(
+    {},
+    {import: {manifest: `../shared-${path.basename(rootDir)}.json`}}
+  );
+  fs.writeFileSync(
+    path.join(rootDir, '.env'),
+    'API_KEY=abc\nDATABASE_URL=local\n'
+  );
+
+  const result = await importEnvToSecrets({
+    rootDir,
+    manifestFilePath: manifestPath(rootDir),
+    updatedBy: 'me@example.com',
+  });
+
+  assert.deepEqual(result.imported, ['API_KEY']);
+  assert.deepEqual(result.skipped, [
+    {name: 'DATABASE_URL', reason: 'provided by shared manifest'},
+  ]);
+  assert.deepEqual(gsmStore.get('site-a'), {API_KEY: 'abc'});
+  fs.rmSync(sharedPath, {force: true});
+});
+
+test('importEnvToSecrets writes nothing when confirm declines', async () => {
+  writeSiteManifest({});
+  fs.writeFileSync(path.join(rootDir, '.env'), 'API_KEY=abc\n');
+
+  const result = await importEnvToSecrets({
+    rootDir,
+    manifestFilePath: manifestPath(rootDir),
+    confirm: async () => false,
+  });
+
+  assert.isTrue(result.aborted);
+  assert.deepEqual(result.imported, []);
+  assert.isUndefined(gsmStore.get('site-a'));
+  assert.isFalse(fs.existsSync(localStatePath(rootDir)));
 });

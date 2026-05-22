@@ -15,7 +15,9 @@ import {
   writeManifest,
 } from '../secrets/manifest.js';
 import {
+  EnvImportResult,
   getSecretsStatus,
+  importEnvToSecrets,
   isSecretsSyncEnabled,
   KeyStatus,
   removeSecret,
@@ -70,6 +72,22 @@ export function registerSecretsCommands(program: Command) {
       'target manifest (defaults to ./.root.secrets.json)'
     )
     .action(action(secretsRm));
+
+  secrets
+    .command('import')
+    .description(
+      'migrate existing .env values into Secret Manager + the manifest'
+    )
+    .option(
+      '--manifest <path>',
+      'target manifest (defaults to ./.root.secrets.json)'
+    )
+    .option(
+      '--keys <names>',
+      'comma-separated subset of .env keys (default: all)'
+    )
+    .option('--yes', 'skip the confirmation prompt')
+    .action(action(secretsImport));
 
   secrets
     .command('sync')
@@ -173,6 +191,53 @@ async function secretsRm(name: string, opts: {manifest?: string}) {
   console.log(
     `${BAR}   ${dim(`commit ${rel(rootDir, manifestFilePath)} to share this change`)}`
   );
+}
+
+interface ImportOptions {
+  manifest?: string;
+  keys?: string;
+  yes?: boolean;
+}
+
+async function secretsImport(opts: ImportOptions) {
+  const rootDir = process.cwd();
+  const manifestFilePath = opts.manifest
+    ? path.resolve(rootDir, opts.manifest)
+    : manifestPath(rootDir);
+  const only = opts.keys
+    ? opts.keys
+        .split(',')
+        .map((k) => k.trim())
+        .filter(Boolean)
+    : undefined;
+
+  // The confirm callback receives names only (never values). Skipped entirely
+  // with --yes; on a non-TTY without --yes we refuse rather than hang.
+  const confirm = opts.yes
+    ? undefined
+    : async (names: string[], gsmKey: string) => {
+        if (!process.stdin.isTTY) {
+          throw new Error(
+            'refusing to import without --yes on a non-interactive shell'
+          );
+        }
+        console.log();
+        console.log(
+          `${BAR} ${green('secrets:')} push ${names.length} value(s) from .env to "${gsmKey}":`
+        );
+        for (const name of names) {
+          console.log(`${BAR}   ${name}`);
+        }
+        return promptYesNo(`${BAR} continue? [y/N] `);
+      };
+
+  const result = await importEnvToSecrets({
+    rootDir,
+    manifestFilePath,
+    only,
+    confirm,
+  });
+  printImportResult(result, rootDir, manifestFilePath);
 }
 
 async function secretsSync() {
@@ -312,6 +377,37 @@ function printSyncSummary(
   console.log();
 }
 
+function printImportResult(
+  result: EnvImportResult,
+  rootDir: string,
+  manifestFilePath: string
+) {
+  if (result.aborted) {
+    console.log(`${BAR} ${yellow('secrets:')} aborted, nothing written`);
+    return;
+  }
+  console.log();
+  if (result.imported.length === 0) {
+    console.log(`${BAR} ${yellow('secrets:')} nothing to import`);
+  } else {
+    console.log(
+      `${BAR} ${green('secrets:')} imported ${result.imported.length} value(s) into "${result.gsmKey}"`
+    );
+    for (const name of result.imported) {
+      console.log(`${BAR}   ${green('+')} ${name}`);
+    }
+  }
+  for (const skip of result.skipped) {
+    console.log(`${BAR}   ${dim('-')} ${skip.name} ${dim(`(${skip.reason})`)}`);
+  }
+  if (result.imported.length > 0) {
+    console.log(
+      `${BAR}   ${dim(`commit ${rel(rootDir, manifestFilePath)} to share`)}`
+    );
+  }
+  console.log();
+}
+
 /** Ensures `.root/` is git-ignored; returns true if it added the entry. */
 async function ensureRootGitignored(rootDir: string): Promise<boolean> {
   const gitignore = path.join(rootDir, '.gitignore');
@@ -394,6 +490,21 @@ function readStdin(): Promise<string> {
 /** Strips a single trailing newline so `echo value | root secrets set` works. */
 function stripOneTrailingNewline(value: string): string {
   return value.replace(/\r?\n$/, '');
+}
+
+/** Prompts a yes/no question; resolves true only for an affirmative answer. */
+function promptYesNo(question: string): Promise<boolean> {
+  return new Promise((resolve) => {
+    const rl = readline.createInterface({
+      input: process.stdin,
+      output: process.stdout,
+    });
+    rl.question(question, (answer) => {
+      rl.close();
+      const normalized = answer.trim().toLowerCase();
+      resolve(normalized === 'y' || normalized === 'yes');
+    });
+  });
 }
 
 /** Prompts for a secret value, masking the typed characters on a TTY. */
