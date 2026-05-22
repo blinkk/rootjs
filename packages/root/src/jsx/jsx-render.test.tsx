@@ -41,6 +41,11 @@ test('renders boolean attributes', () => {
 });
 
 test('handles falsy attribute values', () => {
+  // true: boolean attrs are minimized, non-boolean attrs render as "true"
+  expect(
+    renderJsxToString(<div id={true as any} hidden data-hidden={true} />, {mode: 'minimal'})
+  ).toBe('<div id="true" hidden data-hidden="true"></div>');
+
   // false: standard/boolean removed, data-* rendered as "false"
   expect(
     renderJsxToString(<div id={false as any} hidden={false} data-hidden={false} />, {mode: 'minimal'})

@@ -101,6 +101,41 @@ const ALWAYS_BLOCK_ELEMENTS = new Set([
   'title',
 ]);
 
+/**
+ * HTML/SVG boolean attributes.
+ * When present with a truthy value, render as a minimized attribute.
+ */
+const BOOLEAN_ATTRS = new Set([
+  'allowfullscreen',
+  'async',
+  'autofocus',
+  'autoplay',
+  'capture',
+  'checked',
+  'controls',
+  'default',
+  'defer',
+  'disabled',
+  'download',
+  'draggable',
+  'formnovalidate',
+  'hidden',
+  'inert',
+  'ismap',
+  'itemscope',
+  'loop',
+  'multiple',
+  'muted',
+  'nomodule',
+  'novalidate',
+  'open',
+  'playsinline',
+  'readonly',
+  'required',
+  'reversed',
+  'selected',
+]);
+
 /** JSX prop name -> HTML attribute name. */
 const PROP_TO_ATTR: Record<string, string> = {
   acceptCharset: 'accept-charset',
@@ -551,8 +586,9 @@ export function renderJsxToString(
 
       const attrName = PROP_TO_ATTR[key] || key;
 
-      // Boolean attributes.
-      if (value === true) {
+      // Boolean attributes are minimized when true; other attributes use
+      // explicit string serialization (e.g. id="true", data-foo="true").
+      if (value === true && BOOLEAN_ATTRS.has(attrName)) {
         result += ' ' + attrName;
         continue;
       }
