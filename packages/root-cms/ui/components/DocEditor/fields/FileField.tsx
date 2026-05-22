@@ -924,7 +924,7 @@ FileField.Preview = () => {
                     </td>
                   </tr>
                 )}
-                {ctx.value?.width && ctx.value?.height && (
+                {ctx.value?.width != null && ctx.value?.height != null ? (
                   <tr>
                     <td>
                       <b>Dimensions</b>
@@ -933,7 +933,7 @@ FileField.Preview = () => {
                       {ctx.value.width}x{ctx.value.height}
                     </td>
                   </tr>
-                )}
+                ) : null}
                 <tr>
                   <td>
                     <b>URL</b>
@@ -954,11 +954,11 @@ FileField.Preview = () => {
           </div>
         ) : (
           <>
-            {ctx.value?.width && ctx.value?.height && (
+            {ctx.value?.width != null && ctx.value?.height != null ? (
               <Box radius="sm" className="FileField__Preview__Info">
                 {ctx.value.width}x{ctx.value.height}
               </Box>
-            )}
+            ) : null}
             {testIsImageFile(ctx.value?.src) && (
               <img
                 onClick={() => {
@@ -1075,8 +1075,8 @@ FileField.UploadButton = (props: {className?: string; compact?: boolean}) => {
       {loading && !props.compact
         ? 'Uploading...'
         : ctx.value?.src
-          ? 'Upload'
-          : 'Paste, drop, or click to upload'}
+        ? 'Upload'
+        : 'Paste, drop, or click to upload'}
     </Button>
   );
 };
@@ -1292,8 +1292,9 @@ function testSupportsCreatePlaceholder(acceptedFileTypes: string[]) {
 function canvasPreviewInlineStyles(uploadedFile: UploadedFile) {
   const inlineStyles: CSSProperties = {};
   if (uploadedFile.width && uploadedFile.height) {
-    inlineStyles['--canvas-aspect-ratio'] =
-      `${uploadedFile.width} / ${uploadedFile.height}`;
+    inlineStyles[
+      '--canvas-aspect-ratio'
+    ] = `${uploadedFile.width} / ${uploadedFile.height}`;
 
     inlineStyles['--canvas-asset-width'] = `${uploadedFile.width}px`;
     let maxHeight = Math.min(uploadedFile.height, 280);
