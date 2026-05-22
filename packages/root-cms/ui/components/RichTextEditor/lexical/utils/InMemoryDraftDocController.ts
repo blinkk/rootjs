@@ -50,6 +50,20 @@ export class InMemoryDraftDocController extends EventListener {
     };
   }
 
+  /**
+   * Subscribes to changes anywhere within a given key's subtree. Mirrors the
+   * `DraftDocController.subscribeSubtree` API so that components like
+   * `DocEditor.ArrayFieldPreview` (which expect this method) work when
+   * rendered inside a `DocEditor` driven by this in-memory controller.
+   *
+   * Since `notify()` already walks the key hierarchy and fires every ancestor
+   * listener whenever any descendant changes, plain `subscribe` provides the
+   * same subtree-change semantics here.
+   */
+  subscribeSubtree(key: string, cb: Listener) {
+    return this.subscribe(key, cb);
+  }
+
   getDataSnapshot() {
     return cloneData(this.data);
   }
@@ -115,3 +129,4 @@ export function getKeyHierarchy(key: string) {
   }
   return keys;
 }
+

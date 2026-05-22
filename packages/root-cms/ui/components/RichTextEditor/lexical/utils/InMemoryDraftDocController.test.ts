@@ -26,4 +26,19 @@ describe('InMemoryDraftDocController', () => {
 
       controller.updateKey('block.foo', 'baz');
     }));
+
+  it('should expose a subscribeSubtree method', () => {
+    // `DocEditor.ArrayFieldPreview` calls `draft.subscribeSubtree(...)`, so the
+    // in-memory controller must expose this API for block edit modals to work.
+    const controller = new InMemoryDraftDocController({foo: 'bar'});
+    expect(typeof controller.subscribeSubtree).toBe('function');
+    const seen: any[] = [];
+    const unsubscribe = controller.subscribeSubtree('block.foo', (value) => {
+      seen.push(value);
+    });
+    expect(seen).toEqual(['bar']);
+    controller.updateKey('block.foo', 'baz');
+    expect(seen).toEqual(['bar', 'baz']);
+    unsubscribe();
+  });
 });
