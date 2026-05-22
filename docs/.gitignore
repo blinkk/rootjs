@@ -1,3 +1,4 @@
 dist/
 functions/
 .firebase
+.root/
