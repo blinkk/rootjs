@@ -19,19 +19,19 @@
   },
   "type": "module",
   "module": "./dist/core.js",
-  "types": "./dist/core.d.ts",
+  "types": "./dist/core/core.d.ts",
   "exports": {
     ".": {
-      "types": "./dist/core.d.ts",
+      "types": "./dist/core/core.d.ts",
       "import": "./dist/core.js"
     },
     "./plugin": {
-      "types": "./dist/plugin.d.ts",
+      "types": "./dist/plugin/plugin.d.ts",
       "import": "./dist/plugin.js"
     }
   },
   "scripts": {
-    "build": "rm -rf dist && tsup-node",
+    "build": "node ../../scripts/build-esbuild.mjs @blinkk/root-password-protect",
     "dev": "pnpm build --watch",
     "test": "pnpm build"
   },
@@ -50,7 +50,8 @@
     "@types/body-parser": "1.19.3",
     "@types/micromatch": "4.0.6",
     "@types/node": "25.9.1",
+    "esbuild": "0.28.0",
     "preact": "10.27.1",
-    "tsup": "8.5.1"
+    "typescript": "6.0.3"
   }
 }

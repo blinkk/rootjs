@@ -21,27 +21,27 @@
   },
   "type": "module",
   "module": "./dist/core.js",
-  "types": "./dist/core.d.ts",
+  "types": "./dist/core/core.d.ts",
   "exports": {
     ".": {
-      "types": "./dist/core.d.ts",
+      "types": "./dist/core/core.d.ts",
       "import": "./dist/core.js"
     },
     "./cli": {
-      "types": "./dist/cli.d.ts",
+      "types": "./dist/cli/cli.d.ts",
       "import": "./dist/cli.js"
     },
     "./client": "./client.d.ts",
     "./core": {
-      "types": "./dist/core.d.ts",
+      "types": "./dist/core/core.d.ts",
       "import": "./dist/core.js"
     },
     "./functions": {
-      "types": "./dist/functions.d.ts",
+      "types": "./dist/functions/functions.d.ts",
       "import": "./dist/functions.js"
     },
     "./jsx": {
-      "types": "./dist/jsx.d.ts",
+      "types": "./dist/jsx/jsx.d.ts",
       "import": "./dist/jsx.js"
     },
     "./jsx/jsx-runtime": {
@@ -53,20 +53,20 @@
       "import": "./dist/jsx/jsx-dev-runtime.js"
     },
     "./middleware": {
-      "types": "./dist/middleware.d.ts",
+      "types": "./dist/middleware/middleware.d.ts",
       "import": "./dist/middleware.js"
     },
     "./node": {
-      "types": "./dist/node.d.ts",
+      "types": "./dist/node/node.d.ts",
       "import": "./dist/node.js"
     },
     "./render": {
-      "types": "./dist/render.d.ts",
+      "types": "./dist/render/render.d.ts",
       "import": "./dist/render.js"
     }
   },
   "scripts": {
-    "build": "rm -rf dist && tsup-node",
+    "build": "node ../../scripts/build-esbuild.mjs @blinkk/root",
     "dev": "nodemon --watch src -e ts,tsx --exec pnpm build",
     "test": "pnpm build && vitest run --test-timeout=30000",
     "test:watch": "pnpm build && vitest"
@@ -80,7 +80,7 @@
     "compression": "1.7.4",
     "cookie-parser": "1.4.6",
     "dotenv": "16.4.5",
-    "esbuild": "0.25.9",
+    "esbuild": "0.28.0",
     "express": "5.1.0",
     "fs-extra": "11.1.1",
     "html-minifier-terser": "7.2.0",
@@ -129,7 +129,6 @@
     "nodemon": "3.0.1",
     "preact": "10.27.1",
     "preact-render-to-string": "6.6.1",
-    "tsup": "8.5.1",
     "typescript": "6.0.3",
     "vitest": "4.1.6"
   }

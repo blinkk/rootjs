@@ -15,7 +15,7 @@
  *
  * ## Why this test is important
  *
- * After enabling code splitting in @blinkk/root-cms (via `splitting: true` in tsup.config.ts),
+ * After enabling code splitting in @blinkk/root-cms,
  * this test ensures that:
  * - The bundled code doesn't have circular dependency issues
  * - Schema files can successfully import {schema} from '@blinkk/root-cms'
