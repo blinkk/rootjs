@@ -924,17 +924,16 @@ FileField.Preview = () => {
                     </td>
                   </tr>
                 )}
-                {Number.isFinite(ctx.value?.width) &&
-                  Number.isFinite(ctx.value?.height) && (
-                    <tr>
-                      <td>
-                        <b>Dimensions</b>
-                      </td>
-                      <td>
-                        {ctx.value!.width}x{ctx.value!.height}
-                      </td>
-                    </tr>
-                  )}
+                {Boolean(ctx.value?.width && ctx.value?.height) && (
+                  <tr>
+                    <td>
+                      <b>Dimensions</b>
+                    </td>
+                    <td>
+                      {ctx.value!.width}x{ctx.value!.height}
+                    </td>
+                  </tr>
+                )}
                 <tr>
                   <td>
                     <b>URL</b>
@@ -955,12 +954,11 @@ FileField.Preview = () => {
           </div>
         ) : (
           <>
-            {Number.isFinite(ctx.value?.width) &&
-              Number.isFinite(ctx.value?.height) && (
-                <Box radius="sm" className="FileField__Preview__Info">
-                  {ctx.value!.width}x{ctx.value!.height}
-                </Box>
-              )}
+            {Boolean(ctx.value?.width && ctx.value?.height) && (
+              <Box radius="sm" className="FileField__Preview__Info">
+                {ctx.value!.width}x{ctx.value!.height}
+              </Box>
+            )}
             {testIsImageFile(ctx.value?.src) && (
               <img
                 onClick={() => {
