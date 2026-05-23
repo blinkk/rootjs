@@ -352,6 +352,7 @@
 
 .DocEditor__ArrayField__item__header__preview__title {
   font-family: var(--font-family-mono);
+  font-size: 12px;
   font-weight: 500;
   flex: 1;
   padding-right: 8px;
