@@ -19,6 +19,7 @@ export default defineConfig({
   sourcemap: true,
   deps: {
     neverBundle: [/^virtual:/],
+    skipNodeModulesBundle: true,
   },
   globImport: false,
   dts: true,

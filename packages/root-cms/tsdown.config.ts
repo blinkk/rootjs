@@ -21,6 +21,7 @@ export default defineConfig([
     sourcemap: true,
     deps: {
       neverBundle: [/^virtual:/],
+      skipNodeModulesBundle: true,
     },
     tsconfig: './core/tsconfig.json',
     dts: true,

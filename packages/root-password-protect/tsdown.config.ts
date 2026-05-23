@@ -11,6 +11,9 @@ export default defineConfig({
   target: 'node22',
   fixedExtension: false,
   sourcemap: 'inline',
+  deps: {
+    skipNodeModulesBundle: true,
+  },
   tsconfig: './tsconfig.json',
   dts: true,
 });

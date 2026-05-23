@@ -5,4 +5,7 @@ export default defineConfig({
   format: 'esm',
   platform: 'node',
   fixedExtension: false,
+  deps: {
+    skipNodeModulesBundle: true,
+  },
 });
