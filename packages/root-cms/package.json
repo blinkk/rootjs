@@ -157,6 +157,7 @@
     "react-json-view-compare": "2.0.2",
     "@tsdown/css": "0.22.0",
     "tsdown": "0.22.0",
+    "unrun": "0.3.0",
     "typescript": "6.0.3",
     "vite": "8.0.14",
     "vitest": "4.1.6",

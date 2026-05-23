@@ -30,6 +30,7 @@
   "devDependencies": {
     "@types/degit": "2.8.4",
     "@types/node": "^25.9.1",
-    "tsdown": "0.22.0"
+    "tsdown": "0.22.0",
+    "unrun": "0.3.0"
   }
 }

@@ -51,6 +51,7 @@
     "@types/micromatch": "4.0.6",
     "@types/node": "25.9.1",
     "preact": "10.27.1",
-    "tsdown": "0.22.0"
+    "tsdown": "0.22.0",
+    "unrun": "0.3.0"
   }
 }
