@@ -80,7 +80,7 @@
     "compression": "1.7.4",
     "cookie-parser": "1.4.6",
     "dotenv": "16.4.5",
-    "esbuild": "0.25.9",
+    "esbuild": "0.28.0",
     "express": "5.1.0",
     "fs-extra": "11.1.1",
     "html-minifier-terser": "7.2.0",
@@ -92,7 +92,7 @@
     "sirv": "2.0.3",
     "source-map-support": "0.5.21",
     "tiny-glob": "0.2.9",
-    "vite": "8.0.13",
+    "vite": "8.0.14",
     "workspace-tools": "0.37.0"
   },
   "peerDependencies": {

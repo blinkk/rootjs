@@ -1,0 +1,56 @@
+import {defineConfig} from 'tsdown';
+
+export default defineConfig([
+  {
+    name: 'node-lib',
+    entry: {
+      app: './core/app.tsx',
+      cli: './cli/cli.ts',
+      client: './core/client.ts',
+      core: './core/core.ts',
+      functions: './core/functions.ts',
+      plugin: './core/plugin.ts',
+      project: './core/project.ts',
+      richtext: './core/richtext.tsx',
+    },
+    outDir: './dist',
+    format: 'esm',
+    platform: 'node',
+    target: 'node22',
+    fixedExtension: false,
+    sourcemap: true,
+    deps: {
+      neverBundle: [/^virtual:/],
+    },
+    tsconfig: './core/tsconfig.json',
+    dts: true,
+  },
+  {
+    name: 'ui',
+    entry: ['./ui/ui.tsx'],
+    outDir: './dist/ui',
+    format: 'esm',
+    platform: 'browser',
+    target: 'es2020',
+    minify: true,
+    sourcemap: true,
+    alias: {
+      react: '@preact/compat',
+      'react-dom': '@preact/compat',
+    },
+    tsconfig: './ui/tsconfig.json',
+    dts: false,
+  },
+  {
+    name: 'signin',
+    entry: ['./signin/signin.tsx'],
+    outDir: './dist/ui',
+    format: 'esm',
+    platform: 'browser',
+    target: 'es2020',
+    minify: true,
+    sourcemap: true,
+    tsconfig: './signin/tsconfig.json',
+    dts: false,
+  },
+]);

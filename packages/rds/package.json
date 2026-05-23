@@ -29,7 +29,7 @@
     "@blinkk/root": "workspace:*",
     "copyfiles": "^2.4.1",
     "preact": "*",
-    "typescript": "^5.0.4"
+    "typescript": "6.0.3"
   },
   "peerDependencies": {
     "@blinkk/root": "*",
