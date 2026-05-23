@@ -924,13 +924,13 @@ FileField.Preview = () => {
                     </td>
                   </tr>
                 )}
-                {ctx.value?.width && ctx.value?.height && (
+                {Boolean(ctx.value?.width && ctx.value?.height) && (
                   <tr>
                     <td>
                       <b>Dimensions</b>
                     </td>
                     <td>
-                      {ctx.value.width}x{ctx.value.height}
+                      {ctx.value!.width}x{ctx.value!.height}
                     </td>
                   </tr>
                 )}
@@ -954,9 +954,9 @@ FileField.Preview = () => {
           </div>
         ) : (
           <>
-            {ctx.value?.width && ctx.value?.height && (
+            {Boolean(ctx.value?.width && ctx.value?.height) && (
               <Box radius="sm" className="FileField__Preview__Info">
-                {ctx.value.width}x{ctx.value.height}
+                {ctx.value!.width}x{ctx.value!.height}
               </Box>
             )}
             {testIsImageFile(ctx.value?.src) && (
