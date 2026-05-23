@@ -4,7 +4,7 @@ export {Head} from './components/Head.js';
 export {Html, HTML_CONTEXT} from './components/Html.js';
 export {Script} from './components/Script.js';
 export {
-  StringParamsContext,
+  type StringParamsContext,
   StringParamsProvider,
   useStringParams,
 } from './hooks/useStringParams.js';
@@ -13,11 +13,14 @@ export {
   useTranslationMiddleware,
 } from './hooks/useTranslationsMiddleware.js';
 export {
-  I18nContext,
+  type I18nContext,
   useI18nContext,
   getTranslations,
 } from './hooks/useI18nContext.js';
-export {RequestContext, useRequestContext} from './hooks/useRequestContext.js';
+export {
+  type RequestContext,
+  useRequestContext,
+} from './hooks/useRequestContext.js';
 export {useTranslations} from './hooks/useTranslations.js';
 export * from './pod.js';
 export * from './plugin.js';

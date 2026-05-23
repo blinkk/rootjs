@@ -1,6 +1,6 @@
 import {Command, InvalidArgumentError} from 'commander';
 import {bgGreen, black} from 'kleur/colors';
-import {build, BuildOptions} from './build.js';
+import {build, type BuildOptions} from './build.js';
 import {codegen} from './codegen.js';
 import {createPackage} from './create-package.js';
 import {dev, createDevServer} from './dev.js';
@@ -133,7 +133,7 @@ function numberFlag(value: string) {
 export {
   CliRunner,
   build,
-  BuildOptions,
+  type BuildOptions,
   createPackage,
   dev,
   createDevServer,

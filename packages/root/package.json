@@ -66,7 +66,7 @@
     }
   },
   "scripts": {
-    "build": "rm -rf dist && tsup-node",
+    "build": "rm -rf dist && tsdown",
     "dev": "nodemon --watch src -e ts,tsx --exec pnpm build",
     "test": "pnpm build && vitest run --test-timeout=30000",
     "test:watch": "pnpm build && vitest"
@@ -129,7 +129,7 @@
     "nodemon": "3.0.1",
     "preact": "10.27.1",
     "preact-render-to-string": "6.6.1",
-    "tsup": "8.5.1",
+    "tsdown": "0.22.0",
     "typescript": "6.0.3",
     "vitest": "4.1.6"
   }

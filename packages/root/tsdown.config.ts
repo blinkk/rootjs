@@ -1,4 +1,4 @@
-import {defineConfig} from 'tsup';
+import {defineConfig} from 'tsdown';
 
 export default defineConfig({
   entry: {
@@ -12,16 +12,14 @@ export default defineConfig({
     node: 'src/node/node.ts',
     render: 'src/render/render.tsx',
   },
-  sourcemap: true,
+  format: 'esm',
+  platform: 'node',
   target: 'node18',
-  dts: {
-    // tsup passes `baseUrl` which will be deprecated in typescript 7.0.
-    // https://github.com/egoist/tsup/issues/1388
-    compilerOptions: {
-      ignoreDeprecations: '6.0',
-    },
+  fixedExtension: false,
+  sourcemap: true,
+  deps: {
+    neverBundle: [/^virtual:/],
   },
-  format: ['esm'],
-  splitting: true,
-  external: [/^virtual:/],
+  globImport: false,
+  dts: true,
 });

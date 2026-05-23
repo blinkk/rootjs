@@ -1,4 +1,4 @@
-import {I18nContext, useI18nContext} from './useI18nContext.js';
+import {type I18nContext, useI18nContext} from './useI18nContext.js';
 import {useStringParams} from './useStringParams.js';
 import {useTranslationMiddleware} from './useTranslationsMiddleware.js';
 
