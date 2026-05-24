@@ -13,7 +13,7 @@ const configs = {
     entryPoints: {
       'create-root': 'src/create-root.ts',
     },
-    target: 'node16',
+    target: 'node22',
   },
   '@blinkk/root': {
     packageDir: 'packages/root',
@@ -32,7 +32,7 @@ const configs = {
     external: ['virtual:*'],
     sourcemap: true,
     splitting: true,
-    target: 'node18',
+    target: 'node22',
     tsconfig: 'tsconfig.json',
   },
   '@blinkk/root-cms': {
