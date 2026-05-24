@@ -31,7 +31,7 @@
     }
   },
   "scripts": {
-    "build": "node ../../scripts/build-esbuild.mjs @blinkk/root-password-protect",
+    "build": "node ../../scripts/build-esbuild.mjs ./esbuild.config.json",
     "dev": "pnpm build --watch",
     "test": "pnpm build"
   },

@@ -66,7 +66,7 @@
     }
   },
   "scripts": {
-    "build": "node ../../scripts/build-esbuild.mjs @blinkk/root",
+    "build": "node ../../scripts/build-esbuild.mjs ./esbuild.config.json",
     "dev": "nodemon --watch src -e ts,tsx --exec pnpm build",
     "test": "pnpm build && vitest run --test-timeout=30000",
     "test:watch": "pnpm build && vitest"

@@ -1,0 +1,18 @@
+{
+  "clean": false,
+  "entryPoints": {
+    "app": "core/app.tsx",
+    "cli": "cli/cli.ts",
+    "client": "core/client.ts",
+    "core": "core/core.ts",
+    "functions": "core/functions.ts",
+    "plugin": "core/plugin.ts",
+    "project": "core/project.ts",
+    "richtext": "core/richtext.tsx"
+  },
+  "dtsProject": "tsconfig.build.json",
+  "external": ["virtual:*"],
+  "splitting": true,
+  "target": "node22",
+  "tsconfig": "core/tsconfig.json"
+}

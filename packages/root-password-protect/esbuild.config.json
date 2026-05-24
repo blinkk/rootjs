@@ -1,0 +1,11 @@
+{
+  "entryPoints": {
+    "cli": "src/cli/cli.ts",
+    "core": "src/core/core.ts",
+    "plugin": "src/plugin/plugin.tsx"
+  },
+  "dtsProject": "tsconfig.build.json",
+  "sourcemap": "inline",
+  "target": "node22",
+  "tsconfig": "tsconfig.json"
+}

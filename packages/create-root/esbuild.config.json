@@ -1,0 +1,6 @@
+{
+  "entryPoints": {
+    "create-root": "src/create-root.ts"
+  },
+  "target": "node22"
+}

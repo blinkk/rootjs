@@ -20,7 +20,7 @@
     "create-root": "./dist/create-root.js"
   },
   "scripts": {
-    "build": "node ../../scripts/build-esbuild.mjs @blinkk/create-root"
+    "build": "node ../../scripts/build-esbuild.mjs ./esbuild.config.json"
   },
   "dependencies": {
     "commander": "11.0.0",
