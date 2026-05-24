@@ -5,7 +5,7 @@
   "author": "s@blinkk.com",
   "license": "MIT",
   "engines": {
-    "node": ">=16.0.0"
+    "node": ">=22.0.0"
   },
   "repository": {
     "type": "git",
@@ -20,7 +20,7 @@
     "create-root": "./dist/create-root.js"
   },
   "scripts": {
-    "build": "tsup ./src/create-root.ts --format=esm"
+    "build": "node ../../scripts/build-esbuild.mjs ./esbuild.config.json"
   },
   "dependencies": {
     "commander": "11.0.0",
@@ -30,6 +30,6 @@
   "devDependencies": {
     "@types/degit": "2.8.4",
     "@types/node": "^25.9.1",
-    "tsup": "8.5.1"
+    "esbuild": "0.28.0"
   }
 }

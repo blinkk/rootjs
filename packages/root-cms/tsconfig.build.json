@@ -1,0 +1,13 @@
+{
+  "extends": "./core/tsconfig.json",
+  "compilerOptions": {
+    "declarationMap": false,
+    "emitDeclarationOnly": true,
+    "noCheck": true,
+    "outDir": "dist",
+    "rootDir": ".",
+    "skipLibCheck": true
+  },
+  "include": ["cli/**/*.ts", "core/**/*.ts", "core/**/*.tsx", "shared/**/*.ts"],
+  "exclude": ["**/*.test.ts", "**/*.test.tsx"]
+}

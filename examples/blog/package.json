@@ -24,7 +24,6 @@
     "preact": "10.27.1"
   },
   "devDependencies": {
-    "@blinkk/rds": "workspace:*",
     "@types/node": "18.11.18"
   }
 }

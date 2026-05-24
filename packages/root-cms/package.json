@@ -18,42 +18,41 @@
     "root-cms": "./bin/root-cms.js"
   },
   "type": "module",
-  "module": "./dist/index.js",
-  "types": "./dist/index.d.ts",
+  "module": "./dist/core.js",
+  "types": "./dist/core/core.d.ts",
   "exports": {
     ".": {
-      "types": "./dist/core.d.ts",
+      "types": "./dist/core/core.d.ts",
       "import": "./dist/core.js"
     },
     "./client": {
-      "types": "./dist/client.d.ts",
+      "types": "./dist/core/client.d.ts",
       "import": "./dist/client.js"
     },
     "./core": {
-      "types": "./dist/core.d.ts",
+      "types": "./dist/core/core.d.ts",
       "import": "./dist/core.js"
     },
     "./functions": {
-      "types": "./dist/functions.d.ts",
+      "types": "./dist/core/functions.d.ts",
       "import": "./dist/functions.js"
     },
     "./plugin": {
-      "types": "./dist/plugin.d.ts",
+      "types": "./dist/core/plugin.d.ts",
       "import": "./dist/plugin.js"
     },
     "./project": {
-      "types": "./dist/project.d.ts",
+      "types": "./dist/core/project.d.ts",
       "import": "./dist/project.js"
     },
     "./richtext": {
-      "types": "./dist/richtext.d.ts",
+      "types": "./dist/core/richtext.d.ts",
       "import": "./dist/richtext.js"
     }
   },
   "scripts": {
     "build": "rm -rf dist && concurrently -n \"core,signin,ui\" npm:build:core npm:build:signin npm:build:ui",
-    "build:core": "tsup-node --config=./core/tsup.config.ts",
-    "//": "NOTE: esbuild is used here because tsup doesn't currently support aliases.",
+    "build:core": "node ../../scripts/build-esbuild.mjs ./esbuild.config.json",
     "build:ui": "esbuild ui/ui.tsx --bundle --minify --alias:react=@preact/compat --alias:react-dom=@preact/compat --tsconfig=ui/tsconfig.json --outdir=dist/ui --legal-comments=external",
     "build:signin": "esbuild signin/signin.tsx --bundle --minify --tsconfig=signin/tsconfig.json --outdir=dist/ui --legal-comments=external",
     "dev": "rm -rf dist && concurrently -k -n \"core,ui\" npm:dev:core npm:dev:signin npm:dev:ui",
@@ -143,7 +142,7 @@
     "@vitest/browser": "4.1.6",
     "@vitest/browser-playwright": "4.1.6",
     "concurrently": "7.6.0",
-    "esbuild": "0.25.9",
+    "esbuild": "0.28.0",
     "firebase": "12.2.1",
     "firebase-admin": "13.5.0",
     "firebase-functions": "6.4.0",
@@ -164,7 +163,6 @@
     "react-dom": "npm:@preact/compat@18.3.1",
     "react-easy-crop": "5.5.6",
     "react-json-view-compare": "2.0.2",
-    "tsup": "8.5.1",
     "typescript": "6.0.3",
     "vite": "8.0.13",
     "vitest": "4.1.6",

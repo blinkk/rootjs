@@ -13,7 +13,6 @@ NEW_VERSION=$1
 # Define the list of package.json files to update
 FILES=(
   "./packages/create-root/package.json"
-  "./packages/rds/package.json"
   "./packages/root/package.json"
   "./packages/root-cms/package.json"
   "./packages/root-password-protect/package.json"
