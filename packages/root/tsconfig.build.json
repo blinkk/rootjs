@@ -3,7 +3,6 @@
   "compilerOptions": {
     "declarationMap": false,
     "emitDeclarationOnly": true,
-    "ignoreDeprecations": "6.0",
     "noCheck": true,
     "rootDir": "src",
     "skipLibCheck": true
