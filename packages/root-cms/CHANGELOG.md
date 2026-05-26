@@ -1,5 +1,19 @@
 # @blinkk/root-cms
 
+## 3.0.3
+
+### Patch Changes
+
+- 2ef4479: fix: fix array field rendering in rich text component modal
+- f1c5eaf: feat: add doc_edit AI tool for batch draft edits
+- acba131: fix: guard against non-array fields using \_array notation
+- 5f6b4f1: fix: harden and clarify AI system prompts
+- 8a54923: fix: hide archived data sources from release selection modal
+- Updated dependencies [e3970a7]
+- Updated dependencies [d68fb2c]
+- Updated dependencies [1ad324c]
+  - @blinkk/root@3.0.3
+
 ## 3.0.2
 
 ### Patch Changes
@@ -797,7 +811,6 @@
 - 7525e3d: refactor: remove schema fields from ROOT_CTX #509
 - 20629af: feat: add alt text to video files
 - 04e9b83: fix: restrict scheduling to the future
-
   - this wasn't working previously
   - tidy up use of datetime-local across cms views
 
