@@ -1,5 +1,13 @@
 # @blinkk/root
 
+## 3.0.3
+
+### Patch Changes
+
+- e3970a7: feat: add npm version check as a startup task
+- d68fb2c: fix: prune 0-byte JS chunks and their dangling imports from build output
+- 1ad324c: fix: serialize boolean attrs as string in jsx
+
 ## 3.0.2
 
 ### Patch Changes
