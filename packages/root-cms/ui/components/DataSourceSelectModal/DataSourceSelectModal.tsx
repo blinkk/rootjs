@@ -42,7 +42,7 @@ export function DataSourceSelectModal(
   useEffect(() => {
     async function init() {
       const res = await listDataSources();
-      setDataSources(res);
+      setDataSources(res.filter((ds) => !ds.archivedAt));
       setLoading(false);
     }
     init();
