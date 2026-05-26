@@ -14,7 +14,7 @@
     "fix": "eslint . --fix",
     "version": "changeset version && pnpm install --no-frozen-lockfile",
     "release": "pnpm run build && changeset publish",
-    "release:ci": "pnpm run build && changeset publish --provenance",
+    "release:ci": "pnpm run build && changeset publish",
     "test": "pnpm run build && turbo run test",
     "test:prod": "turbo run test:prod --filter=\"@examples/blog\"",
     "cms": "pnpm --filter=\"@blinkk/root-cms\"",
