@@ -40,6 +40,12 @@ test('renders boolean attributes', () => {
   expect(output).toBe('<input type="checkbox" checked disabled>');
 });
 
+test('renders disableRemotePlayback as a boolean attribute', () => {
+  const vnode = <video disableRemotePlayback />;
+  const output = renderJsxToString(vnode, {mode: 'minimal'});
+  expect(output).toBe('<video disableremoteplayback></video>');
+});
+
 test('handles falsy attribute values', () => {
   // true: boolean attrs are minimized, non-boolean attrs render as "true"
   expect(
