@@ -71,6 +71,10 @@
   gap: 12px;
 }
 
+.DataSourcePage__DataTable {
+  overflow: auto;
+}
+
 .DataSourcePage__DataTable__table td {
   max-width: 400px;
   overflow: hidden;
