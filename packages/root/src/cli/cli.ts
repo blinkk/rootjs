@@ -6,6 +6,7 @@ import {createPackage} from './create-package.js';
 import {dev, createDevServer} from './dev.js';
 import {gaeDeploy} from './gae-deploy.js';
 import {preview, createPreviewServer} from './preview.js';
+import {registerSecretsCommands} from './secrets.js';
 import {start, createProdServer} from './start.js';
 
 class CliRunner {
@@ -118,6 +119,7 @@ class CliRunner {
         'network address the server should listen on, e.g. 127.0.0.1'
       )
       .action(start);
+    registerSecretsCommands(program);
     await program.parseAsync(argv);
   }
 }
