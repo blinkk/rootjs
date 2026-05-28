@@ -244,12 +244,23 @@ async function secretsSync() {
   const rootDir = process.cwd();
   const result = await syncSecrets({rootDir, apply: true});
   printSyncSummary(result);
+  // syncSecrets never throws for gcloud/network failures (it records them so
+  // they retry), so the CLI must translate them into a non-zero exit itself.
+  failOnSyncErrors(result);
 }
 
 async function secretsPull() {
   const rootDir = process.cwd();
   const result = await syncSecrets({rootDir, apply: true, force: true});
   printSyncSummary(result, {pull: true});
+  failOnSyncErrors(result);
+}
+
+/** Marks the process as failed when a sync hit any gcloud fetch errors. */
+function failOnSyncErrors(result: SyncResult) {
+  if (result.errors.length > 0) {
+    process.exitCode = 1;
+  }
 }
 
 async function secretsStatus() {
@@ -345,6 +356,11 @@ function printSyncSummary(
   }
   if (result.conflicts.length) {
     parts.push(yellow(`${result.conflicts.length} conflict`));
+  }
+  // Surface failures in the headline so a sync that fetched nothing can never
+  // masquerade as "up to date".
+  if (result.errors.length) {
+    parts.push(red(`${result.errors.length} error`));
   }
 
   console.log();
