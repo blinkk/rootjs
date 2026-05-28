@@ -71,7 +71,7 @@ export function extractFields(
 
     const metadataKey = `@${field.id}`;
     const metadata = data[metadataKey];
-    if (metadata?.translate === false) {
+    if (metadata?.translate === false || metadata?.disableTranslations) {
       return;
     }
 
@@ -93,7 +93,7 @@ export function extractFieldsWithMetadata(
 
     const metadataKey = `@${field.id}`;
     const metadata = data[metadataKey];
-    if (metadata?.translate === false) {
+    if (metadata?.translate === false || metadata?.disableTranslations) {
       return;
     }
 

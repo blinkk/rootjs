@@ -43,6 +43,26 @@ describe('extract', () => {
       expect(strings.has('This is a description')).toBe(false);
     });
 
+    it('should skip fields marked with legacy disableTranslations', () => {
+      const fields: schema.Field[] = [
+        {type: 'string', id: 'title', translate: true},
+        {type: 'string', id: 'description', translate: true},
+      ];
+      const data = {
+        title: 'Hello World',
+        description: 'This is a description',
+        '@description': {
+          disableTranslations: true,
+        },
+      };
+      const strings = new Set<string>();
+
+      extractFields(strings, fields, data);
+
+      expect(strings.has('Hello World')).toBe(true);
+      expect(strings.has('This is a description')).toBe(false);
+    });
+
     it('should extract fields when translate metadata is not false', () => {
       const fields: schema.Field[] = [
         {type: 'string', id: 'title', translate: true},

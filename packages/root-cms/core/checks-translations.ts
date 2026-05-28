@@ -35,7 +35,7 @@ function extractTranslatableStrings(
 
       const metadataKey = `@${field.id}`;
       const metadata = fieldData[metadataKey];
-      if (metadata?.translate === false) {
+      if (metadata?.translate === false || metadata?.disableTranslations) {
         continue;
       }
 
