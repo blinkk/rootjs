@@ -112,7 +112,7 @@ jobs:
 
       - name: Download .env from Secrets Manager
         working-directory: docs
-        run: bash scripts/env-init.sh
+        run: pnpm exec root secrets pull
 
       - name: Add preview package version suffix
         run: |
