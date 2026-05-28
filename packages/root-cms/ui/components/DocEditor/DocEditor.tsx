@@ -702,7 +702,6 @@ DocEditor.FieldHeaderTranslationsActionIconInner = (
     [field, types, value]
   );
 
-  // Check for disableTranslations metadata.
   const [doNotTranslate, setDoNotTranslate] = useState(false);
 
   useEffect(() => {
@@ -713,7 +712,7 @@ DocEditor.FieldHeaderTranslationsActionIconInner = (
     const unsubscribe = draft.controller.subscribe(
       metadataKey,
       (metadata: any) => {
-        setDoNotTranslate(metadata?.disableTranslations || false);
+        setDoNotTranslate(metadata?.translate === false);
       }
     );
     return unsubscribe;
