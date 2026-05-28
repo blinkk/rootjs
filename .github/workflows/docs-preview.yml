@@ -110,10 +110,6 @@ jobs:
         with:
           project_id: rootjs-dev
 
-      - name: Download .env from Secrets Manager
-        working-directory: docs
-        run: pnpm exec root secrets pull
-
       - name: Add preview package version suffix
         run: |
           PR_NUMBER="${{ steps.preview-context.outputs.pr_number }}" node <<'NODE'
@@ -175,6 +171,10 @@ jobs:
 
       - name: Build Root.js packages from PR head
         run: pnpm run build
+
+      - name: Download .env from Secrets Manager
+        working-directory: docs
+        run: pnpm exec root secrets pull
 
       - name: Build docs Firebase package
         working-directory: docs
