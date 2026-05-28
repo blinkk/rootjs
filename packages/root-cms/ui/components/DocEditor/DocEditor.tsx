@@ -22,6 +22,7 @@ import {
   IconCircleArrowDown,
   IconCircleArrowUp,
   IconCirclePlus,
+  IconClipboard,
   IconClipboardCopy,
   IconGripVertical,
   IconCopy,
@@ -819,9 +820,59 @@ DocEditor.ObjectFieldDrawer = (props: FieldProps) => {
   const collapsed = field.drawerOptions?.collapsed || false;
   const inline = field.drawerOptions?.inline || false;
   const iconPosition = inline ? 'left' : 'right';
+  const draft = useDraftDoc().controller;
+  const virtualClipboard = useVirtualClipboard();
+  const editJsonModal = useEditJsonModal();
 
   const deeplink = useDeeplink();
   const initialOpen = !collapsed || deeplink.value.includes(props.deepKey);
+
+  const copyToClipboard = () => {
+    const data = draft.getValue(props.deepKey) || {};
+    virtualClipboard.set(data);
+    showNotification({
+      message: 'Copied to clipboard',
+      autoClose: 2000,
+    });
+  };
+
+  const pasteFromClipboard = async () => {
+    const data = await virtualClipboard.get();
+    if (!data || typeof data !== 'object') {
+      showNotification({
+        message: 'Clipboard empty (nothing to paste)',
+        color: 'red',
+        autoClose: 2000,
+      });
+      return;
+    }
+    draft.updateKey(props.deepKey, data);
+    showNotification({
+      message: 'Pasted from clipboard',
+      autoClose: 2000,
+    });
+  };
+
+  const clearValue = async () => {
+    await draft.removeKey(props.deepKey);
+    showNotification({
+      message: 'Cleared',
+      autoClose: 2000,
+    });
+    // Clear is destructive, so persist immediately instead of waiting for autosave.
+    await draft.flush();
+  };
+
+  const editJson = () => {
+    const data = draft.getValue(props.deepKey) || {};
+    editJsonModal.open({
+      data: data,
+      onSave: (newValue) => {
+        draft.updateKey(props.deepKey, newValue);
+        editJsonModal.close();
+      },
+    });
+  };
 
   return (
     <div
@@ -845,8 +896,58 @@ DocEditor.ObjectFieldDrawer = (props: FieldProps) => {
             field={field}
             deepKey={props.deepKey}
           />
-          <div className="DocEditor__ObjectFieldDrawer__drawer__toggle__icon">
-            <IconChevronDown size={16} />
+          <div className="DocEditor__ObjectFieldDrawer__drawer__toggle__controls">
+            <Menu
+              className="DocEditor__ObjectFieldDrawer__drawer__menu"
+              position="bottom"
+              transitionDuration={0}
+              control={
+                <ActionIcon
+                  className="DocEditor__ObjectFieldDrawer__drawer__menu__dots"
+                  onClick={(e: MouseEvent) => {
+                    e.stopPropagation();
+                    e.preventDefault();
+                  }}
+                >
+                  <IconDotsVertical size={16} />
+                </ActionIcon>
+              }
+            >
+              <Menu.Label>CLIPBOARD</Menu.Label>
+              <Menu.Item
+                className="DocEditor__ObjectFieldDrawer__drawer__menu__item"
+                icon={<IconClipboardCopy size={18} />}
+                onClick={copyToClipboard}
+              >
+                Copy
+              </Menu.Item>
+              <Menu.Item
+                className="DocEditor__ObjectFieldDrawer__drawer__menu__item"
+                icon={<IconClipboard size={18} />}
+                onClick={pasteFromClipboard}
+              >
+                Paste
+              </Menu.Item>
+              <Menu.Label>CODE</Menu.Label>
+              <Menu.Item
+                className="DocEditor__ObjectFieldDrawer__drawer__menu__item"
+                icon={<IconBraces size={18} />}
+                onClick={editJson}
+              >
+                Edit JSON
+              </Menu.Item>
+              <Menu.Label>ACTIONS</Menu.Label>
+              <Menu.Item
+                className="DocEditor__ObjectFieldDrawer__drawer__menu__item"
+                icon={<IconTrash size={18} />}
+                onClick={clearValue}
+              >
+                Clear
+              </Menu.Item>
+            </Menu>
+            <div className="DocEditor__ObjectFieldDrawer__drawer__toggle__icon">
+              <IconChevronDown size={16} />
+            </div>
           </div>
         </summary>
         <div className="DocEditor__ObjectFieldDrawer__drawer__content DocEditor__ObjectFieldDrawer__fields">
@@ -1908,8 +2009,9 @@ DocEditor.OneOfField = (props: FieldProps) => {
   }
 
   useDraftDocField(props.deepKey, (newValue: any) => {
+    // Keep local selection state in sync when the value is cleared externally.
+    setType(newValue?._type || '');
     if (newValue?._type) {
-      setType(newValue._type || '');
       cachedValues[newValue._type] = newValue;
     }
   });

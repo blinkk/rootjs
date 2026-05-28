@@ -82,4 +82,54 @@ describe('JsonTrieStore', () => {
     expect(abcSubtree).toHaveBeenCalledOnce();
     expect(abcSubtree).toHaveBeenCalledWith({title: 'New'});
   });
+
+  it('notifies descendant subscribers when clearing a parent object', async () => {
+    const store = new JsonTrieStore({
+      fields: {
+        meta: {
+          title: 'Old title',
+          nested: {body: 'Old body'},
+        },
+      },
+    });
+    const titleExact = vi.fn();
+    const bodyExact = vi.fn();
+
+    store.subscribe('fields.meta.title', titleExact);
+    store.subscribe('fields.meta.nested.body', bodyExact);
+    await waitForInitialSubscriptionCallbacks();
+    titleExact.mockClear();
+    bodyExact.mockClear();
+
+    store.update({'fields.meta': undefined});
+
+    expect(titleExact).toHaveBeenCalledOnce();
+    expect(titleExact).toHaveBeenCalledWith(undefined);
+    expect(bodyExact).toHaveBeenCalledOnce();
+    expect(bodyExact).toHaveBeenCalledWith(undefined);
+  });
+
+  it('notifies descendant subscribers when replacing an empty parent with an object', async () => {
+    const store = new JsonTrieStore({
+      fields: {},
+    });
+    const titleExact = vi.fn();
+    const bodyExact = vi.fn();
+
+    store.subscribe('fields.meta.title', titleExact);
+    store.subscribe('fields.meta.nested.body', bodyExact);
+    await waitForInitialSubscriptionCallbacks();
+
+    store.update({
+      'fields.meta': {
+        title: 'New title',
+        nested: {body: 'New body'},
+      },
+    });
+
+    expect(titleExact).toHaveBeenCalledOnce();
+    expect(titleExact).toHaveBeenCalledWith('New title');
+    expect(bodyExact).toHaveBeenCalledOnce();
+    expect(bodyExact).toHaveBeenCalledWith('New body');
+  });
 });

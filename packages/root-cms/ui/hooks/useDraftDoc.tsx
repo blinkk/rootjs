@@ -212,9 +212,9 @@ export class DraftDocController extends EventListener {
     }
     if (value === undefined) {
       // Firestore doesn't support `undefined`, so use deleteField() instead.
-      this.pendingUpdates.set(key, deleteField());
+      this.setPendingUpdate(key, deleteField());
     } else {
-      this.pendingUpdates.set(key, value);
+      this.setPendingUpdate(key, value);
     }
     this.store.set(key, value);
     this.setSaveState(SaveState.UPDATES_PENDING);
@@ -236,9 +236,9 @@ export class DraftDocController extends EventListener {
         // Firestore doesn't support `undefined`, so use deleteField() instead.
         // NOTE(stevenle): this doesn't currently handle nested `undefined`
         // values.
-        this.pendingUpdates.set(key, deleteField());
+        this.setPendingUpdate(key, deleteField());
       } else {
-        this.pendingUpdates.set(key, val);
+        this.setPendingUpdate(key, val);
       }
     }
     this.store.update(updates);
@@ -255,12 +255,34 @@ export class DraftDocController extends EventListener {
     if (this.readOnly) {
       return;
     }
-    this.pendingUpdates.set(key, deleteField());
+    this.setPendingUpdate(key, deleteField());
     this.store.set(key, undefined);
     this.setSaveState(SaveState.UPDATES_PENDING);
     if (this.autoSave) {
       this.queueChanges();
     }
+  }
+
+  /**
+   * Adds a pending Firestore update for a key while removing queued descendant
+   * updates that would conflict with it in a single updateDoc() payload.
+   */
+  private setPendingUpdate(key: string, value: any) {
+    // Firestore updateDoc() rejects ancestor/descendant paths in one payload.
+    // If a parent object is replaced or deleted, that parent update wins.
+    for (const pendingKey of this.pendingUpdates.keys()) {
+      if (isDescendantKey(pendingKey, key)) {
+        this.pendingUpdates.delete(pendingKey);
+      }
+    }
+    this.pendingUpdates.set(key, value);
+  }
+
+  /** Returns pending updates normalized for Firestore updateDoc(). */
+  private getPendingUpdates() {
+    return removeOverlappingChildUpdates(
+      Object.fromEntries(this.pendingUpdates)
+    );
   }
 
   /**
@@ -310,7 +332,7 @@ export class DraftDocController extends EventListener {
       return;
     }
 
-    const updates = Object.fromEntries(this.pendingUpdates);
+    const updates = this.getPendingUpdates();
     updates['sys.modifiedAt'] = serverTimestamp();
     updates['sys.modifiedBy'] = window.firebase.user.email;
 
@@ -418,6 +440,36 @@ function splitKey(key: string) {
   const head = key.substring(0, index);
   const tail = key.substring(index + 1);
   return [head, tail] as const;
+}
+
+/**
+ * Returns a copy of the update payload with child paths removed whenever their
+ * parent path is also present.
+ */
+export function removeOverlappingChildUpdates(updates: Record<string, any>) {
+  const result = {...updates};
+  for (const key in result) {
+    if (hasAncestorKey(key, result)) {
+      delete result[key];
+    }
+  }
+  return result;
+}
+
+/** Returns true when any ancestor of a dot-notation key exists in values. */
+function hasAncestorKey(key: string, values: Record<string, any>) {
+  const segments = key.split('.');
+  for (let i = 1; i < segments.length; i++) {
+    if (segments.slice(0, i).join('.') in values) {
+      return true;
+    }
+  }
+  return false;
+}
+
+/** Returns true when key is nested below parentKey. */
+function isDescendantKey(key: string, parentKey: string) {
+  return key.startsWith(`${parentKey}.`);
 }
 
 export interface DraftDocProviderProps {

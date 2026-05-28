@@ -71,21 +71,21 @@ export class JsonTrieStore extends EventListener {
 
     const addPathToNotify = (path: string, oldValue: any, newValue: any) => {
       pathsToNotify.set(path, newValue);
-      // Add child paths.
-      if (isObject(oldValue) && isObject(newValue)) {
-        Object.entries(newValue).forEach(([key, childValue]) => {
-          const childOldValue = oldValue[key];
-          if (!deepEqual(childOldValue, childValue)) {
-            addPathToNotify(`${path}.${key}`, childOldValue, childValue);
-          }
-        });
-        // Notify any deleted keys.
-        Object.keys(oldValue).forEach((key) => {
-          if (!(key in newValue)) {
-            addPathToNotify(`${path}.${key}`, oldValue[key], undefined);
-          }
-        });
+      if (!isObject(oldValue) && !isObject(newValue)) {
+        return;
       }
+
+      // Parent object replacement/deletion must wake descendant subscribers.
+      const oldKeys = isObject(oldValue) ? Object.keys(oldValue) : [];
+      const newKeys = isObject(newValue) ? Object.keys(newValue) : [];
+      const childKeys = new Set([...oldKeys, ...newKeys]);
+      childKeys.forEach((key) => {
+        const childOldValue = isObject(oldValue) ? oldValue[key] : undefined;
+        const childNewValue = isObject(newValue) ? newValue[key] : undefined;
+        if (!deepEqual(childOldValue, childNewValue)) {
+          addPathToNotify(`${path}.${key}`, childOldValue, childNewValue);
+        }
+      });
     };
 
     // Apply all mutations to the data object in-place.
