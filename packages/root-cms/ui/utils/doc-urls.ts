@@ -124,11 +124,14 @@ function normalizeUrlPath(
 ) {
   // Collapse multiple slashes, e.g. `/foo//bar` => `/foo/bar`;
   urlPath = urlPath.replace(/\/+/g, '/');
-  // Remove trailing slash.
+  // Remove trailing slash. Paths ending with a file extension (e.g.
+  // `/files/foo.pdf`) always have any trailing slash stripped, regardless of
+  // the `trailingSlash` config.
   if (
-    options?.trailingSlash === false &&
-    urlPath !== '/' &&
-    urlPath.endsWith('/')
+    testPathHasFileExt(urlPath) ||
+    (options?.trailingSlash === false &&
+      urlPath !== '/' &&
+      urlPath.endsWith('/'))
   ) {
     urlPath = urlPath.replace(/\/*$/g, '');
   }
@@ -140,9 +143,26 @@ function normalizeUrlPath(
   if (!urlPath.startsWith('/')) {
     urlPath = `/${urlPath}`;
   }
-  // Add trailing slash if needed.
-  if (options?.trailingSlash && !urlPath.endsWith('/')) {
+  // Add trailing slash if needed. Skip paths with file extensions so that
+  // collection URLs like `/files/[slug].pdf` are preserved as-is.
+  if (
+    options?.trailingSlash &&
+    !testPathHasFileExt(urlPath) &&
+    !urlPath.endsWith('/')
+  ) {
     urlPath = `${urlPath}/`;
   }
   return urlPath;
+}
+
+/**
+ * Returns true if the last segment of the URL path contains a file extension,
+ * e.g. `/files/foo.pdf` or `/sitemap.xml`.
+ */
+function testPathHasFileExt(urlPath: string) {
+  const noTrailing = urlPath.replace(/\/+$/g, '');
+  const lastSlash = noTrailing.lastIndexOf('/');
+  const basename =
+    lastSlash >= 0 ? noTrailing.slice(lastSlash + 1) : noTrailing;
+  return basename.includes('.');
 }
