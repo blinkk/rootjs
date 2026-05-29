@@ -33,18 +33,21 @@ function extractTranslatableStrings(
         continue;
       }
 
-      // Check for "do not translate" metadata.
       const metadataKey = `@${field.id}`;
       const metadata = fieldData[metadataKey];
-      if (metadata?.disableTranslations) {
+      if (metadata?.translate === false || metadata?.disableTranslations) {
         continue;
       }
 
-      walkField(field, value);
+      walkField(field, value, metadata);
     }
   }
 
-  function walkField(field: schema.Field, value: any) {
+  function walkField(
+    field: schema.Field,
+    value: any,
+    metadata?: Record<string, any>
+  ) {
     if (!value) {
       return;
     }
@@ -66,7 +69,8 @@ function extractTranslatableStrings(
       if (
         (field as schema.ImageField).translate &&
         value.alt &&
-        (field as schema.ImageField).alt !== false
+        (field as schema.ImageField).alt !== false &&
+        metadata?.alt !== false
       ) {
         addString(value.alt);
       }

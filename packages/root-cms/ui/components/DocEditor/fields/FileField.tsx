@@ -98,6 +98,8 @@ interface FileFieldContextValue {
   showAltText: boolean;
   altText: string;
   setAltText: (altText: string) => void;
+  altDisabledByMetadata: boolean;
+  setAltDisabledByMetadata?: (disabled: boolean) => void;
   allowEditing: boolean;
 }
 
@@ -127,6 +129,13 @@ export interface FileFieldInternalProps {
   showNamingOptions?: boolean;
   accept?: string[];
   allowEditing?: boolean;
+  /** Whether the alt text field is disabled via per-field metadata. */
+  altDisabledByMetadata?: boolean;
+  /**
+   * Setter for the per-field `alt` metadata. When provided, the menu shows a
+   * toggle to disable the alt text input on a per-instance basis.
+   */
+  setAltDisabledByMetadata?: (disabled: boolean) => void;
 }
 
 export function FileFieldInternal(props: FileFieldInternalProps) {
@@ -153,7 +162,8 @@ export function FileFieldInternal(props: FileFieldInternalProps) {
     (props.variant === 'image' ? IMAGE_MIMETYPES : []);
 
   const altText = value?.alt || '';
-  const showAltText = field.alt !== false;
+  const altDisabledByMetadata = props.altDisabledByMetadata === true;
+  const showAltText = field.alt !== false && !altDisabledByMetadata;
 
   async function uploadFile(
     file: File,
@@ -450,6 +460,8 @@ export function FileFieldInternal(props: FileFieldInternalProps) {
         showAltText: showAltText,
         altText: altText,
         setAltText: setAltText,
+        altDisabledByMetadata: altDisabledByMetadata,
+        setAltDisabledByMetadata: props.setAltDisabledByMetadata,
         allowEditing: allowEditing,
       }}
     >
@@ -654,6 +666,20 @@ export function FileField(props: FileFieldProps) {
   const [loadingState, setLoadingState] =
     useState<FileFieldLoadingState | null>(null);
 
+  const metadataKey = getMetadataKey(props.deepKey);
+  const [metadata, setMetadata] =
+    useDraftDocValue<Record<string, any> | null>(metadataKey);
+  const altDisabledByMetadata = metadata?.alt === false;
+  const setAltDisabledByMetadata = (disabled: boolean) => {
+    const next = {...(metadata || {})};
+    if (disabled) {
+      next.alt = false;
+    } else {
+      delete next.alt;
+    }
+    setMetadata(Object.keys(next).length === 0 ? null : next);
+  };
+
   return (
     <FileFieldInternal
       field={field}
@@ -663,6 +689,12 @@ export function FileField(props: FileFieldProps) {
       setLoadingState={setLoadingState}
       variant={props.variant}
       allowEditing={props.allowEditing}
+      altDisabledByMetadata={altDisabledByMetadata}
+      setAltDisabledByMetadata={
+        props.variant === 'image' && field.alt !== false
+          ? setAltDisabledByMetadata
+          : undefined
+      }
     />
   );
 }
@@ -832,6 +864,23 @@ FileField.Preview = () => {
                 Use dark canvas
               </Menu.Item>
             )}
+          {ctx.allowEditing && ctx.setAltDisabledByMetadata && (
+            <Menu.Item
+              icon={
+                ctx.altDisabledByMetadata ? (
+                  <IconSquareCheckFilled size={16} />
+                ) : (
+                  <IconSquareCheck size={16} style={{opacity: 0.25}} />
+                )
+              }
+              closeOnItemClick={false}
+              onClick={() => {
+                ctx.setAltDisabledByMetadata?.(!ctx.altDisabledByMetadata);
+              }}
+            >
+              Disable alt text
+            </Menu.Item>
+          )}
           <Divider />
           <Menu.Item
             color="red"
@@ -1307,6 +1356,12 @@ function canvasPreviewInlineStyles(uploadedFile: UploadedFile) {
     inlineStyles['--canvas-bg-color'] = '#000';
   }
   return inlineStyles;
+}
+
+function getMetadataKey(key: string) {
+  const parts = key.split('.');
+  const last = parts.pop();
+  return [...parts, `@${last}`].join('.');
 }
 
 /** Returns whether a string is an SVG. */

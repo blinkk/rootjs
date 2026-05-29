@@ -69,14 +69,13 @@ export function extractFields(
     }
     const fieldValue = data[field.id];
 
-    // Check if field has "do not translate" metadata
     const metadataKey = `@${field.id}`;
     const metadata = data[metadataKey];
-    if (metadata?.disableTranslations) {
-      return; // Skip this field
+    if (metadata?.translate === false || metadata?.disableTranslations) {
+      return;
     }
 
-    extractField(strings, field, fieldValue, types);
+    extractField(strings, field, fieldValue, types, metadata);
   });
 }
 
@@ -92,11 +91,10 @@ export function extractFieldsWithMetadata(
     }
     const fieldValue = data[field.id];
 
-    // Check if field has "do not translate" metadata
     const metadataKey = `@${field.id}`;
     const metadata = data[metadataKey];
-    if (metadata?.disableTranslations) {
-      return; // Skip this field
+    if (metadata?.translate === false || metadata?.disableTranslations) {
+      return;
     }
 
     const description = metadata?.description;
@@ -105,7 +103,8 @@ export function extractFieldsWithMetadata(
       field,
       fieldValue,
       types,
-      description
+      description,
+      metadata
     );
   });
 }
@@ -114,7 +113,8 @@ export function extractField(
   strings: Set<string>,
   field: schema.Field,
   fieldValue: any,
-  types: Record<string, schema.Schema> = {}
+  types: Record<string, schema.Schema> = {},
+  metadata?: Record<string, any>
 ) {
   if (!fieldValue) {
     return;
@@ -143,7 +143,8 @@ export function extractField(
       field.translate &&
       fieldValue &&
       fieldValue.alt &&
-      field.alt !== false
+      field.alt !== false &&
+      metadata?.alt !== false
     ) {
       addString(fieldValue.alt);
     }
@@ -182,7 +183,8 @@ export function extractFieldWithMetadata(
   field: schema.Field,
   fieldValue: any,
   types: Record<string, schema.Schema> = {},
-  description?: string
+  description?: string,
+  metadata?: Record<string, any>
 ) {
   if (!fieldValue) {
     return;
@@ -225,7 +227,8 @@ export function extractFieldWithMetadata(
       field.translate &&
       fieldValue &&
       fieldValue.alt &&
-      field.alt !== false
+      field.alt !== false &&
+      metadata?.alt !== false
     ) {
       addStringWithMeta(fieldValue.alt);
     }

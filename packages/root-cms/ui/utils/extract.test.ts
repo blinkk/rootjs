@@ -23,7 +23,27 @@ describe('extract', () => {
       expect(strings.has('hello-world')).toBe(false);
     });
 
-    it('should skip fields marked with disableTranslations', () => {
+    it('should skip fields marked with translate: false', () => {
+      const fields: schema.Field[] = [
+        {type: 'string', id: 'title', translate: true},
+        {type: 'string', id: 'description', translate: true},
+      ];
+      const data = {
+        title: 'Hello World',
+        description: 'This is a description',
+        '@description': {
+          translate: false,
+        },
+      };
+      const strings = new Set<string>();
+
+      extractFields(strings, fields, data);
+
+      expect(strings.has('Hello World')).toBe(true);
+      expect(strings.has('This is a description')).toBe(false);
+    });
+
+    it('should skip fields marked with legacy disableTranslations', () => {
       const fields: schema.Field[] = [
         {type: 'string', id: 'title', translate: true},
         {type: 'string', id: 'description', translate: true},
@@ -43,7 +63,7 @@ describe('extract', () => {
       expect(strings.has('This is a description')).toBe(false);
     });
 
-    it('should extract fields without disableTranslations metadata', () => {
+    it('should extract fields when translate metadata is not false', () => {
       const fields: schema.Field[] = [
         {type: 'string', id: 'title', translate: true},
         {type: 'string', id: 'description', translate: true},
@@ -52,7 +72,7 @@ describe('extract', () => {
         title: 'Hello World',
         description: 'This is a description',
         '@description': {
-          disableTranslations: false,
+          description: 'translator note',
         },
       };
       const strings = new Set<string>();
@@ -89,14 +109,14 @@ describe('extract', () => {
       });
     });
 
-    it('should skip fields marked with disableTranslations', () => {
+    it('should skip fields marked with translate: false', () => {
       const fields: schema.Field[] = [
         {type: 'string', id: 'title', translate: true},
       ];
       const data = {
         title: 'Hello World',
         '@title': {
-          disableTranslations: true,
+          translate: false,
           description: 'Some description',
         },
       };
@@ -142,6 +162,21 @@ describe('extract', () => {
       extractField(strings, field, value);
 
       expect(strings.has('Hero image')).toBe(true);
+    });
+
+    it('should skip image alt text when metadata alt is false', () => {
+      const fields: schema.Field[] = [
+        {type: 'image', id: 'hero', translate: true},
+      ];
+      const data = {
+        hero: {src: 'image.jpg', alt: 'Hero image'},
+        '@hero': {alt: false},
+      };
+      const strings = new Set<string>();
+
+      extractFields(strings, fields, data);
+
+      expect(strings.has('Hero image')).toBe(false);
     });
 
     it('should extract multiselect values when translate is true', () => {

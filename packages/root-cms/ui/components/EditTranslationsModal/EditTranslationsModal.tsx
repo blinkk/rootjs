@@ -93,7 +93,7 @@ export function EditTranslationsModal(
     if (props.field?.deepKey && draft?.controller) {
       const metadataKey = getMetadataKey(props.field.deepKey);
       const metadata = draft.controller.getValue(metadataKey) || {};
-      setDoNotTranslate(metadata.disableTranslations || false);
+      setDoNotTranslate(metadata.translate === false);
       setDescription(metadata.description || '');
     }
   }, [props.field?.deepKey, draft?.controller]);
@@ -128,9 +128,9 @@ export function EditTranslationsModal(
         const metadata = draft.controller.getValue(metadataKey) || {};
         // Only store non-default values to avoid superfluous data.
         if (doNotTranslate) {
-          metadata.disableTranslations = true;
+          metadata.translate = false;
         } else {
-          delete metadata.disableTranslations;
+          delete metadata.translate;
         }
         if (description) {
           metadata.description = description;
