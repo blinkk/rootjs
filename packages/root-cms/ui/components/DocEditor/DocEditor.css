@@ -177,7 +177,7 @@
   border-top: 1px solid var(--color-border);
   border-bottom: 1px solid var(--color-border);
   align-items: center;
-  justify-content: space-between;
+  gap: 8px;
   cursor: pointer;
   transition: all 0.3s ease;
   user-select: none;
@@ -188,7 +188,9 @@
 }
 
 .DocEditor__ObjectFieldDrawer__drawer__toggle__header {
+  flex: 1;
   margin-bottom: 0;
+  min-width: 0;
 }
 
 .DocEditor__ObjectFieldDrawer__drawer__content {
@@ -200,13 +202,29 @@
 }
 
 .DocEditor__ObjectFieldDrawer__drawer[open] > summary > .DocEditor__ObjectFieldDrawer__drawer__toggle__icon {
-  transform: rotate(-180deg);
+  transform: rotate(90deg);
+}
+
+.DocEditor__ObjectFieldDrawer__drawer__menu {
+  margin-left: auto;
+  padding-right: 4px;
+}
+
+.DocEditor__ObjectFieldDrawer__drawer__menu__dots {
+  width: 20px;
+  height: 20px;
+  min-width: 20px;
+  min-height: 20px;
+  padding: 0;
+  line-height: 1;
+}
+
+.DocEditor__ObjectFieldDrawer__confirmText {
+  text-wrap: pretty;
 }
 
 .DocEditor__ObjectFieldDrawer--inline .DocEditor__ObjectFieldDrawer__drawer__toggle {
-  flex-direction: row-reverse;
-  justify-content: flex-end;
-  gap: 16px;
+  justify-content: flex-start;
   border-top: none;
   border-bottom: none;
 }
@@ -398,24 +416,29 @@
   font-family: var(--font-family-mono);
 }
 
-.DocEditor__ArrayField__item__header__controls__menu [role="menuitem"] {
+.DocEditor__ArrayField__item__header__controls__menu [role="menuitem"],
+.DocEditor__ObjectFieldDrawer__drawer__menu [role="menuitem"] {
   padding: 8px 12px;
   font-size: 14px;
 }
 
-.DocEditor__ArrayField__item__header__controls__menu [role="menuitem"]:hover {
+.DocEditor__ArrayField__item__header__controls__menu [role="menuitem"]:hover,
+.DocEditor__ObjectFieldDrawer__drawer__menu [role="menuitem"]:hover {
   background-color: var(--button-background-hover);
 }
 
-.DocEditor__ArrayField__item__header__controls__menu [role="menuitem"]:active {
+.DocEditor__ArrayField__item__header__controls__menu [role="menuitem"]:active,
+.DocEditor__ObjectFieldDrawer__drawer__menu [role="menuitem"]:active {
   background-color: var(--button-background-active);
 }
 
-.DocEditor__ArrayField__menu__item {
+.DocEditor__ArrayField__menu__item,
+.DocEditor__ObjectFieldDrawer__drawer__menu__item {
   padding: 6px 10px;
 }
 
-.DocEditor__ArrayField__menu__item .mantine-Menu-itemLabel {
+.DocEditor__ArrayField__menu__item .mantine-Menu-itemLabel,
+.DocEditor__ObjectFieldDrawer__drawer__menu__item .mantine-Menu-itemLabel {
   font-size: 12px;
 }
 
