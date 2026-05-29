@@ -5,7 +5,16 @@ import {describe, it, expect, vi, beforeEach, afterEach} from 'vitest';
 
 // Mock dependencies.
 vi.mock('node:fs');
-vi.mock('node:readline');
+// Mock readline so promptYesNo() always resolves to "yes". This must be a
+// single top-level mock: declaring multiple vi.mock('node:readline', ...) calls
+// (e.g. inside individual tests) races with this one after Vitest hoists them,
+// which made these tests flaky on CI.
+vi.mock('node:readline', () => ({
+  createInterface: () => ({
+    question: (_q: string, cb: (a: string) => void) => cb('yes'),
+    close: vi.fn(),
+  }),
+}));
 vi.mock('cli-progress');
 vi.mock('@blinkk/root/node', () => ({
   loadRootConfig: vi.fn().mockResolvedValue({}),
@@ -76,14 +85,6 @@ describe('Import CLI', () => {
         return '{}';
       });
 
-      // Mock prompt to say yes.
-      vi.mock('node:readline', () => ({
-        createInterface: () => ({
-          question: (_q: string, cb: (a: string) => void) => cb('yes'),
-          close: vi.fn(),
-        }),
-      }));
-
       const mockDocRef = {
         set: vi.fn().mockResolvedValue(undefined),
       };
@@ -128,14 +129,6 @@ describe('Import CLI', () => {
         })
       );
 
-      // Mock prompt.
-      vi.mock('node:readline', () => ({
-        createInterface: () => ({
-          question: (_q: string, cb: (a: string) => void) => cb('yes'),
-          close: vi.fn(),
-        }),
-      }));
-
       const mockDocRef = {
         set: vi.fn().mockResolvedValue(undefined),
       };
@@ -174,14 +167,6 @@ describe('Import CLI', () => {
           ref: {_referencePath: 'Projects/other'},
         })
       );
-
-      // Mock prompt.
-      vi.mock('node:readline', () => ({
-        createInterface: () => ({
-          question: (_q: string, cb: (a: string) => void) => cb('yes'),
-          close: vi.fn(),
-        }),
-      }));
 
       const mockDocRef = {
         set: vi.fn().mockResolvedValue(undefined),
