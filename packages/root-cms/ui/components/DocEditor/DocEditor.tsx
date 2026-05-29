@@ -15,10 +15,12 @@ import {
   Select,
   Tooltip,
 } from '@mantine/core';
+import {useModals} from '@mantine/modals';
 import {showNotification} from '@mantine/notifications';
 import {
   IconBraces,
   IconChevronDown,
+  IconChevronRight,
   IconCircleArrowDown,
   IconCircleArrowUp,
   IconCirclePlus,
@@ -67,6 +69,7 @@ import {
   useDraftDocField,
   useDraftDocSaveState,
 } from '../../hooks/useDraftDoc.js';
+import {useModalTheme} from '../../hooks/useModalTheme.js';
 import {useProjectRoles} from '../../hooks/useProjectRoles.js';
 import {
   ClipboardData,
@@ -108,6 +111,7 @@ import {IconRootAI} from '../IconRootAI/IconRootAI.js';
 import {useLocalizationModal} from '../LocalizationModal/LocalizationModal.js';
 import {useLockPublishingModal} from '../LockPublishingModal/LockPublishingModal.js';
 import {usePublishDocModal} from '../PublishDocModal/PublishDocModal.js';
+import {Text} from '../Text/Text.js';
 import {Viewers} from '../Viewers/Viewers.js';
 import {BooleanField} from './fields/BooleanField.js';
 import {DateField} from './fields/DateField.js';
@@ -819,10 +823,11 @@ DocEditor.ObjectFieldDrawer = (props: FieldProps) => {
   const field = props.field as schema.ObjectField;
   const collapsed = field.drawerOptions?.collapsed || false;
   const inline = field.drawerOptions?.inline || false;
-  const iconPosition = inline ? 'left' : 'right';
   const draft = useDraftDoc().controller;
   const virtualClipboard = useVirtualClipboard();
   const editJsonModal = useEditJsonModal();
+  const modals = useModals();
+  const modalTheme = useModalTheme();
 
   const deeplink = useDeeplink();
   const initialOpen = !collapsed || deeplink.value.includes(props.deepKey);
@@ -853,14 +858,40 @@ DocEditor.ObjectFieldDrawer = (props: FieldProps) => {
     });
   };
 
-  const clearValue = async () => {
+  const clearValue = async (modalId?: string) => {
     await draft.removeKey(props.deepKey);
     showNotification({
       message: 'Cleared',
       autoClose: 2000,
     });
-    // Clear is destructive, so persist immediately instead of waiting for autosave.
+    // Clear is destructive, so persist immediately instead of waiting for
+    // autosave.
     await draft.flush();
+    if (modalId) {
+      modals.closeModal(modalId);
+    }
+  };
+
+  const confirmClear = () => {
+    const label = field.label || field.id || 'drawer';
+    const modalId = modals.openConfirmModal({
+      ...modalTheme,
+      title: `Clear ${label}?`,
+      children: (
+        <Text
+          size="body-sm"
+          weight="semi-bold"
+          className="DocEditor__ObjectFieldDrawer__confirmText"
+        >
+          This will clear all values in this section. There is no undo.
+        </Text>
+      ),
+      labels: {confirm: 'Clear', cancel: 'Cancel'},
+      cancelProps: {size: 'xs'},
+      confirmProps: {color: 'red', size: 'xs'},
+      closeOnConfirm: false,
+      onConfirm: () => clearValue(modalId),
+    });
   };
 
   const editJson = () => {
@@ -885,70 +916,63 @@ DocEditor.ObjectFieldDrawer = (props: FieldProps) => {
         className="DocEditor__ObjectFieldDrawer__drawer"
         open={initialOpen}
       >
-        <summary
-          className={joinClassNames(
-            'DocEditor__ObjectFieldDrawer__drawer__toggle',
-            `DocEditor__ObjectFieldDrawer__drawer__toggle--icon-${iconPosition}`
-          )}
-        >
+        <summary className="DocEditor__ObjectFieldDrawer__drawer__toggle">
+          <div className="DocEditor__ObjectFieldDrawer__drawer__toggle__icon">
+            <IconChevronRight size={16} />
+          </div>
           <DocEditor.FieldHeader
             className="DocEditor__ObjectFieldDrawer__drawer__toggle__header"
             field={field}
             deepKey={props.deepKey}
           />
-          <div className="DocEditor__ObjectFieldDrawer__drawer__toggle__controls">
-            <Menu
-              className="DocEditor__ObjectFieldDrawer__drawer__menu"
-              position="bottom"
-              transitionDuration={0}
-              control={
-                <ActionIcon
-                  className="DocEditor__ObjectFieldDrawer__drawer__menu__dots"
-                  onClick={(e: MouseEvent) => {
-                    e.stopPropagation();
-                    e.preventDefault();
-                  }}
-                >
-                  <IconDotsVertical size={16} />
-                </ActionIcon>
-              }
+          <Menu
+            className="DocEditor__ObjectFieldDrawer__drawer__menu"
+            position="bottom"
+            transitionDuration={0}
+            control={
+              <ActionIcon
+                className="DocEditor__ObjectFieldDrawer__drawer__menu__dots"
+                onClick={(e: MouseEvent) => {
+                  e.stopPropagation();
+                  e.preventDefault();
+                }}
+              >
+                <IconDotsVertical size={16} />
+              </ActionIcon>
+            }
+          >
+            <Menu.Label>CLIPBOARD</Menu.Label>
+            <Menu.Item
+              className="DocEditor__ObjectFieldDrawer__drawer__menu__item"
+              icon={<IconClipboardCopy size={18} />}
+              onClick={copyToClipboard}
             >
-              <Menu.Label>CLIPBOARD</Menu.Label>
-              <Menu.Item
-                className="DocEditor__ObjectFieldDrawer__drawer__menu__item"
-                icon={<IconClipboardCopy size={18} />}
-                onClick={copyToClipboard}
-              >
-                Copy
-              </Menu.Item>
-              <Menu.Item
-                className="DocEditor__ObjectFieldDrawer__drawer__menu__item"
-                icon={<IconClipboard size={18} />}
-                onClick={pasteFromClipboard}
-              >
-                Paste
-              </Menu.Item>
-              <Menu.Label>CODE</Menu.Label>
-              <Menu.Item
-                className="DocEditor__ObjectFieldDrawer__drawer__menu__item"
-                icon={<IconBraces size={18} />}
-                onClick={editJson}
-              >
-                Edit JSON
-              </Menu.Item>
-              <Menu.Label>ACTIONS</Menu.Label>
-              <Menu.Item
-                className="DocEditor__ObjectFieldDrawer__drawer__menu__item"
-                icon={<IconTrash size={18} />}
-                onClick={clearValue}
-              >
-                Clear
-              </Menu.Item>
-            </Menu>
-            <div className="DocEditor__ObjectFieldDrawer__drawer__toggle__icon">
-              <IconChevronDown size={16} />
-            </div>
-          </div>
+              Copy
+            </Menu.Item>
+            <Menu.Item
+              className="DocEditor__ObjectFieldDrawer__drawer__menu__item"
+              icon={<IconClipboard size={18} />}
+              onClick={pasteFromClipboard}
+            >
+              Paste
+            </Menu.Item>
+            <Menu.Label>CODE</Menu.Label>
+            <Menu.Item
+              className="DocEditor__ObjectFieldDrawer__drawer__menu__item"
+              icon={<IconBraces size={18} />}
+              onClick={editJson}
+            >
+              Edit JSON
+            </Menu.Item>
+            <Menu.Label>ACTIONS</Menu.Label>
+            <Menu.Item
+              className="DocEditor__ObjectFieldDrawer__drawer__menu__item"
+              icon={<IconTrash size={18} />}
+              onClick={confirmClear}
+            >
+              Clear
+            </Menu.Item>
+          </Menu>
         </summary>
         <div className="DocEditor__ObjectFieldDrawer__drawer__content DocEditor__ObjectFieldDrawer__fields">
           {field.fields.map((field) => (

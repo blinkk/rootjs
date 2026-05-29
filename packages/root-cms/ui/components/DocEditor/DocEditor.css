@@ -177,7 +177,7 @@
   border-top: 1px solid var(--color-border);
   border-bottom: 1px solid var(--color-border);
   align-items: center;
-  justify-content: space-between;
+  gap: 8px;
   cursor: pointer;
   transition: all 0.3s ease;
   user-select: none;
@@ -188,7 +188,9 @@
 }
 
 .DocEditor__ObjectFieldDrawer__drawer__toggle__header {
+  flex: 1;
   margin-bottom: 0;
+  min-width: 0;
 }
 
 .DocEditor__ObjectFieldDrawer__drawer__content {
@@ -199,42 +201,32 @@
   transition: transform 0.3s ease;
 }
 
-.DocEditor__ObjectFieldDrawer__drawer__toggle__controls {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-
 .DocEditor__ObjectFieldDrawer__drawer[open] > summary > .DocEditor__ObjectFieldDrawer__drawer__toggle__icon {
-  transform: rotate(-180deg);
+  transform: rotate(90deg);
 }
 
-.DocEditor__ObjectFieldDrawer__drawer[open] > summary .DocEditor__ObjectFieldDrawer__drawer__toggle__icon {
-  transform: rotate(-180deg);
+.DocEditor__ObjectFieldDrawer__drawer__menu {
+  margin-left: auto;
+  padding-right: 4px;
+}
+
+.DocEditor__ObjectFieldDrawer__drawer__menu__dots {
+  width: 20px;
+  height: 20px;
+  min-width: 20px;
+  min-height: 20px;
+  padding: 0;
+  line-height: 1;
+}
+
+.DocEditor__ObjectFieldDrawer__confirmText {
+  text-wrap: pretty;
 }
 
 .DocEditor__ObjectFieldDrawer--inline .DocEditor__ObjectFieldDrawer__drawer__toggle {
   justify-content: flex-start;
-  gap: 16px;
   border-top: none;
   border-bottom: none;
-}
-
-.DocEditor__ObjectFieldDrawer--inline .DocEditor__ObjectFieldDrawer__drawer__toggle__controls {
-  display: contents;
-}
-
-.DocEditor__ObjectFieldDrawer--inline .DocEditor__ObjectFieldDrawer__drawer__toggle__icon {
-  order: 1;
-}
-
-.DocEditor__ObjectFieldDrawer--inline .DocEditor__ObjectFieldDrawer__drawer__toggle__header {
-  order: 2;
-}
-
-.DocEditor__ObjectFieldDrawer--inline .DocEditor__ObjectFieldDrawer__drawer__menu {
-  order: 3;
-  margin-left: auto;
 }
 
 .DocEditor__ObjectFieldDrawer--inline .DocEditor__ObjectFieldDrawer__drawer__content {
