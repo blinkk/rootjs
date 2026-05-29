@@ -1,5 +1,13 @@
 # @blinkk/root-cms
 
+## 3.0.4
+
+### Patch Changes
+
+- d9f8cd8: feat: add context menu to drawers
+- Updated dependencies [611d858]
+  - @blinkk/root@3.0.4
+
 ## 3.0.3
 
 ### Patch Changes
