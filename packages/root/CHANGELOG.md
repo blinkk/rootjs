@@ -1,5 +1,11 @@
 # @blinkk/root
 
+## 3.0.4
+
+### Patch Changes
+
+- 611d858: feat: add cli for syncing .env secrets with google cloud secrets manager
+
 ## 3.0.3
 
 ### Patch Changes
