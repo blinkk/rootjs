@@ -64,6 +64,28 @@ function getPreviewUrl(
   return `${basePreviewPath}?${query}`;
 }
 
+/**
+ * Reuses the child frame's current URL so query params added by the preview can
+ * survive content-triggered reloads, while still forcing preview mode on.
+ */
+function getReloadUrl(iframe: HTMLIFrameElement, fallbackUrl: string) {
+  try {
+    const currentUrl = iframe.contentWindow?.location.href;
+    if (currentUrl && !currentUrl.startsWith('about:blank')) {
+      const reloadUrl = new URL(currentUrl);
+      reloadUrl.searchParams.set('preview', 'true');
+      return reloadUrl.toString();
+    }
+  } catch {
+    // Fall back to the canonical preview url if the iframe location is not
+    // readable.
+  }
+
+  const reloadUrl = new URL(fallbackUrl, window.location.origin);
+  reloadUrl.searchParams.set('preview', 'true');
+  return reloadUrl.toString();
+}
+
 export function DocumentPage(props: DocumentPageProps) {
   const collectionId = props.collection;
   const slug = props.slug;
@@ -659,10 +681,11 @@ DocumentPage.Preview = (props: PreviewProps) => {
       return;
     }
     const iframe = iframeRef.current!;
+    const nextUrl = getReloadUrl(iframe, localizedPreviewUrl);
     iframe.src = 'about:blank';
     window.requestAnimationFrame(() => {
-      if (iframe.src !== localizedPreviewUrl) {
-        iframe.src = localizedPreviewUrl;
+      if (iframe.src !== nextUrl) {
+        iframe.src = nextUrl;
       } else {
         iframe.contentWindow!.location.reload();
       }
@@ -684,8 +707,10 @@ DocumentPage.Preview = (props: PreviewProps) => {
         basePreviewPath === servingPath &&
         !iframeWindow.location.href.startsWith('about:blank')
       ) {
-        const currentPath = iframeWindow.location.pathname;
-        setIframeUrl(`${domain}${currentPath}`);
+        const currentUrl = iframeWindow.location;
+        setIframeUrl(
+          `${domain}${currentUrl.pathname}${currentUrl.search}${currentUrl.hash}`
+        );
       }
     }
     iframe.addEventListener('load', onIframeLoad);
