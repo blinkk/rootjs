@@ -65,23 +65,39 @@ function getPreviewUrl(
 }
 
 /**
- * Reuses the child frame's current URL so query params added by the preview can
- * survive content-triggered reloads, while still forcing preview mode on.
+ * Builds the URL to use when reloading the preview iframe.
+ *
+ * Preserves query params and hash that the child frame may have added (e.g.
+ * preview/debug flags toggled inside the previewed page) so they survive
+ * content-triggered reloads, while still forcing `preview=true` on.
+ *
+ * Only reuses the child URL when its pathname matches the expected preview
+ * path -- if the user has navigated the iframe to an unrelated page, we
+ * deliberately reset back to the canonical preview URL rather than reloading
+ * whatever site happens to be loaded.
  */
 function getReloadUrl(iframe: HTMLIFrameElement, fallbackUrl: string) {
+  const reloadUrl = new URL(fallbackUrl, window.location.origin);
   try {
-    const currentUrl = iframe.contentWindow?.location.href;
-    if (currentUrl && !currentUrl.startsWith('about:blank')) {
-      const reloadUrl = new URL(currentUrl);
-      reloadUrl.searchParams.set('preview', 'true');
-      return reloadUrl.toString();
+    const currentHref = iframe.contentWindow?.location.href;
+    if (currentHref && !currentHref.startsWith('about:blank')) {
+      const currentUrl = new URL(currentHref);
+      if (
+        currentUrl.origin === reloadUrl.origin &&
+        currentUrl.pathname === reloadUrl.pathname
+      ) {
+        // Carry over any params/hash the child added on top of the canonical
+        // preview URL.
+        currentUrl.searchParams.forEach((value, key) => {
+          reloadUrl.searchParams.set(key, value);
+        });
+        reloadUrl.hash = currentUrl.hash;
+      }
     }
   } catch {
-    // Fall back to the canonical preview url if the iframe location is not
-    // readable.
+    // Cross-origin or otherwise unreadable iframe location -- fall back to the
+    // canonical preview URL.
   }
-
-  const reloadUrl = new URL(fallbackUrl, window.location.origin);
   reloadUrl.searchParams.set('preview', 'true');
   return reloadUrl.toString();
 }
