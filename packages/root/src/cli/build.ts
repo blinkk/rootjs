@@ -457,7 +457,7 @@ export async function build(rootProjectDir?: string, options?: BuildOptions) {
             const outFilePath = urlPath.slice(1);
             const outPath = path.join(buildDir, outFilePath);
             await makeDir(path.dirname(outPath));
-            await writeFile(outPath, body);
+            await writeFile(outPath, normalizeLineEndings(body));
             printFileOutput(fileSize(outPath), 'dist/html/', outFilePath);
             return;
           }
@@ -506,7 +506,7 @@ export async function build(rootProjectDir?: string, options?: BuildOptions) {
           } else if (rootConfig.minifyHtml) {
             html = await htmlMinify(html, rootConfig.minifyHtmlOptions);
           }
-          await writeFile(outPath, html);
+          await writeFile(outPath, normalizeLineEndings(html));
 
           printFileOutput(fileSize(outPath), 'dist/html/', outFilePath);
         } catch (e) {
@@ -642,4 +642,8 @@ function formatParams(params: Record<string, string>) {
       return `  ${key}: ${value}`;
     })
     .join('\n');
+}
+
+function normalizeLineEndings(str: string): string {
+  return str.replace(/\r\n?/g, '\n');
 }
