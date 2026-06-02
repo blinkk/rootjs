@@ -1,6 +1,7 @@
 import {Button, Modal, useMantineTheme} from '@mantine/core';
 import {useState} from 'preact/hooks';
 import {useLocation} from 'preact-iso';
+import {renderAutoSlug} from '../../../shared/auto-slug.js';
 import {getSlugError, normalizeSlug} from '../../../shared/slug.js';
 import {useCollectionSchema} from '../../hooks/useCollectionSchema.js';
 import {cmsCreateDoc} from '../../utils/doc.js';
@@ -18,20 +19,23 @@ interface NewDocModalProps {
 
 export function NewDocModal(props: NewDocModalProps) {
   const {route} = useLocation();
-  const [slug, setSlug] = useState('');
-  const [rpcLoading, setRpcLoading] = useState(false);
-  const [slugError, setSlugError] = useState('');
-  const [error, setError] = useState('');
   const theme = useMantineTheme();
   const collectionId = props.collection;
   const rootCollection = window.__ROOT_CTX.collections[collectionId];
   if (!rootCollection) {
     throw new Error(`collection not found: ${collectionId}`);
   }
+  const [initialSlug] = useState(() =>
+    rootCollection.autoSlug ? renderAutoSlug(rootCollection.autoSlug) : ''
+  );
+  const [slug, setSlug] = useState(initialSlug);
+  const [rpcLoading, setRpcLoading] = useState(false);
+  const [slugError, setSlugError] = useState(() => validateSlug(initialSlug));
+  const [error, setError] = useState('');
   const collection = useCollectionSchema(collectionId);
 
-  function validateSlug(slug: string) {
-    const cleanSlug = normalizeSlug(slug);
+  function validateSlug(value: string) {
+    const cleanSlug = normalizeSlug(value);
     return cleanSlug ? getSlugError(cleanSlug, rootCollection.slugRegex) : '';
   }
 
@@ -99,6 +103,7 @@ export function NewDocModal(props: NewDocModalProps) {
         <SlugInput
           className="NewDocModal__slug"
           collectionId={collectionId}
+          initialSlug={initialSlug}
           onChange={(newValue: {collectionId: string; slug: string}) => {
             setSlug(newValue.slug);
             setSlugError(validateSlug(newValue.slug));

@@ -179,6 +179,7 @@ function serializeCollection(collection: Collection): Partial<Collection> {
     previewUrl: collection.previewUrl,
     preview: collection.preview,
     slugRegex: collection.slugRegex,
+    autoSlug: collection.autoSlug,
     autolock: collection.autolock,
     autolockReason: collection.autolockReason,
     sortOptions: collection.sortOptions,

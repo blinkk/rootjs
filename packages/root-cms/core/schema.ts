@@ -500,6 +500,26 @@ export type Collection = SchemaWithTypes & {
    */
   slugRegex?: string;
   /**
+   * Template used to auto-fill the slug when creating a new doc. The template
+   * supports `{placeholder}` tokens; the field is pre-populated in the "New
+   * Doc" modal and the user can edit or regenerate the value before
+   * submitting.
+   *
+   * Supported tokens:
+   * - `{date}` — current date as `YYYYMMDD`
+   * - `{date:FORMAT}` — current date in a custom format. Supported format
+   *   tokens: `YYYY`, `YY`, `MM`, `DD`, `HH`, `mm`, `ss`
+   *   (e.g. `{date:YYYY-MM-DD}` → `2026-06-02`)
+   * - `{adjective}` — random adjective from a built-in word list
+   * - `{noun}` — random noun from a built-in word list
+   * - `{random}` / `{random:N}` — random alphanumeric string of length N
+   *   (default 6)
+   *
+   * Example: `autoSlug: '{date:YYYYMMDD}-{adjective}-{noun}'` →
+   * `20260602-red-bear`
+   */
+  autoSlug?: string;
+  /**
    * Automatically add a publishing lock whenever the doc is edited.
    */
   autolock?: boolean;
