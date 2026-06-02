@@ -64,6 +64,44 @@ function getPreviewUrl(
   return `${basePreviewPath}?${query}`;
 }
 
+/**
+ * Builds the URL to use when reloading the preview iframe.
+ *
+ * Preserves query params and hash that the child frame may have added (e.g.
+ * preview/debug flags toggled inside the previewed page) so they survive
+ * content-triggered reloads, while still forcing `preview=true` on.
+ *
+ * Only reuses the child URL when its pathname matches the expected preview
+ * path -- if the user has navigated the iframe to an unrelated page, we
+ * deliberately reset back to the canonical preview URL rather than reloading
+ * whatever site happens to be loaded.
+ */
+function getReloadUrl(iframe: HTMLIFrameElement, fallbackUrl: string) {
+  const reloadUrl = new URL(fallbackUrl, window.location.origin);
+  try {
+    const currentHref = iframe.contentWindow?.location.href;
+    if (currentHref && !currentHref.startsWith('about:blank')) {
+      const currentUrl = new URL(currentHref);
+      if (
+        currentUrl.origin === reloadUrl.origin &&
+        currentUrl.pathname === reloadUrl.pathname
+      ) {
+        // Carry over any params/hash the child added on top of the canonical
+        // preview URL.
+        currentUrl.searchParams.forEach((value, key) => {
+          reloadUrl.searchParams.set(key, value);
+        });
+        reloadUrl.hash = currentUrl.hash;
+      }
+    }
+  } catch {
+    // Cross-origin or otherwise unreadable iframe location -- fall back to the
+    // canonical preview URL.
+  }
+  reloadUrl.searchParams.set('preview', 'true');
+  return reloadUrl.toString();
+}
+
 export function DocumentPage(props: DocumentPageProps) {
   const collectionId = props.collection;
   const slug = props.slug;
@@ -639,6 +677,11 @@ DocumentPage.Preview = (props: PreviewProps) => {
   const locales = draft.controller!.getLocales() || [];
 
   const localizedPreviewUrl = getPreviewUrl(collectionId, slug, selectedLocale);
+  // Keep the latest preview URL in a ref so long-lived callbacks (e.g. the
+  // onFlush handler registered once on mount) always reload to the current
+  // locale's URL instead of the locale active at mount time.
+  const localizedPreviewUrlRef = useRef(localizedPreviewUrl);
+  localizedPreviewUrlRef.current = localizedPreviewUrl;
 
   const localeOptions = useMemo(
     () => [
@@ -659,10 +702,11 @@ DocumentPage.Preview = (props: PreviewProps) => {
       return;
     }
     const iframe = iframeRef.current!;
+    const nextUrl = getReloadUrl(iframe, localizedPreviewUrlRef.current);
     iframe.src = 'about:blank';
     window.requestAnimationFrame(() => {
-      if (iframe.src !== localizedPreviewUrl) {
-        iframe.src = localizedPreviewUrl;
+      if (iframe.src !== nextUrl) {
+        iframe.src = nextUrl;
       } else {
         iframe.contentWindow!.location.reload();
       }
@@ -684,8 +728,13 @@ DocumentPage.Preview = (props: PreviewProps) => {
         basePreviewPath === servingPath &&
         !iframeWindow.location.href.startsWith('about:blank')
       ) {
-        const currentPath = iframeWindow.location.pathname;
-        setIframeUrl(`${domain}${currentPath}`);
+        const currentUrl = iframeWindow.location;
+        // Strip query params and hash from the displayed URL so the URL bar
+        // mirrors the public/prod URL. This avoids editors accidentally
+        // copying preview-only params (e.g. `preview=true`, debug flags) or
+        // internal hash state into places like social media. The "open in
+        // new tab" button still uses the full preview URL.
+        setIframeUrl(`${domain}${currentUrl.pathname}`);
       }
     }
     iframe.addEventListener('load', onIframeLoad);
