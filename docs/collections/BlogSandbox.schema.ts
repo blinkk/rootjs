@@ -6,6 +6,7 @@ export default schema.collection({
   description: 'Blog Sandbox (Preview Only)',
   url: '/blog/sandbox/[slug]',
   group: 'Sandbox',
+  autoSlug: '{date:YYYYMMDD}-{adjective}-{noun}',
   preview: {
     title: 'meta.title',
     image: 'meta.image',
