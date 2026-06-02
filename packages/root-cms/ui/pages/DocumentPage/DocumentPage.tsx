@@ -677,6 +677,11 @@ DocumentPage.Preview = (props: PreviewProps) => {
   const locales = draft.controller!.getLocales() || [];
 
   const localizedPreviewUrl = getPreviewUrl(collectionId, slug, selectedLocale);
+  // Keep the latest preview URL in a ref so long-lived callbacks (e.g. the
+  // onFlush handler registered once on mount) always reload to the current
+  // locale's URL instead of the locale active at mount time.
+  const localizedPreviewUrlRef = useRef(localizedPreviewUrl);
+  localizedPreviewUrlRef.current = localizedPreviewUrl;
 
   const localeOptions = useMemo(
     () => [
@@ -697,7 +702,7 @@ DocumentPage.Preview = (props: PreviewProps) => {
       return;
     }
     const iframe = iframeRef.current!;
-    const nextUrl = getReloadUrl(iframe, localizedPreviewUrl);
+    const nextUrl = getReloadUrl(iframe, localizedPreviewUrlRef.current);
     iframe.src = 'about:blank';
     window.requestAnimationFrame(() => {
       if (iframe.src !== nextUrl) {
@@ -724,8 +729,16 @@ DocumentPage.Preview = (props: PreviewProps) => {
         !iframeWindow.location.href.startsWith('about:blank')
       ) {
         const currentUrl = iframeWindow.location;
+        // Strip `preview=true` from the displayed URL so the URL bar mirrors
+        // the public/prod URL. This avoids editors accidentally copying a
+        // preview-only URL into places like social media.
+        const displaySearchParams = new URLSearchParams(currentUrl.search);
+        displaySearchParams.delete('preview');
+        const displaySearch = displaySearchParams.toString();
         setIframeUrl(
-          `${domain}${currentUrl.pathname}${currentUrl.search}${currentUrl.hash}`
+          `${domain}${currentUrl.pathname}${
+            displaySearch ? `?${displaySearch}` : ''
+          }${currentUrl.hash}`
         );
       }
     }
