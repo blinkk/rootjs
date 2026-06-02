@@ -15,13 +15,19 @@ export interface SlugInputProps {
   className?: string;
   collectionId?: string;
   collectionDisabled?: boolean;
+  /**
+   * Initial value to populate the slug input with. Used to pre-fill the
+   * field on mount; remount the component (e.g. via a changing `key`) to
+   * reset it to a new initial value.
+   */
+  initialSlug?: string;
   onChange?: (newValue: {collectionId: string; slug: string}) => void;
 }
 
 export function SlugInput(props: SlugInputProps) {
   const [collectionId, setCollectionId] = useState(props.collectionId || '');
   const slugRef = useRef<HTMLInputElement>(null);
-  const [slug, setSlug] = useState('');
+  const [slug, setSlug] = useState(props.initialSlug || '');
 
   const rootCollection = window.__ROOT_CTX.collections[collectionId];
   const collectionOptions: Array<{value: string; label: string}> = [];
