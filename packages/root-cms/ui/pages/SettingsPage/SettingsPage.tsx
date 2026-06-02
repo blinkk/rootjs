@@ -222,7 +222,7 @@ function SiteAdminSection() {
 }
 
 interface ShareDoc {
-  roles: Record<string, UserRole>;
+  globalRoles: Record<string, UserRole>;
   permissionGroups: PermissionGroup[];
 }
 
@@ -242,38 +242,49 @@ function ShareSection() {
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  // Derived effective project roles (groups + globalRoles merged). Read-only
+  // mirror of the Project doc's `roles` field; used for the admin check.
+  const [savedRoles, setSavedRoles] = useState<Record<string, UserRole>>({});
   // Snapshot of the saved/server state. Used to compute the dirty flag and to
   // diff per-collection role writes on save.
   const [savedState, setSavedState] = useState<ShareDoc>({
-    roles: {},
+    globalRoles: {},
     permissionGroups: [],
   });
   const [draft, setDraft] = useState<ShareDoc>({
-    roles: {},
+    globalRoles: {},
     permissionGroups: [],
   });
 
   useEffect(() => {
     getDoc(docRef).then((snapshot) => {
       const data = snapshot.data() || {};
+      const rolesField = (data.roles || {}) as Record<string, UserRole>;
+      // Back-compat: projects saved before `globalRoles` existed only have the
+      // derived `roles` field. Seed `globalRoles` from it so the admin sees the
+      // same list; users that exist only via collection-scoped groups will be
+      // dropped from the global section on the next save.
+      const globalRoles = (data.globalRoles ||
+        rolesField) as Record<string, UserRole>;
       const initial: ShareDoc = {
-        roles: (data.roles || {}) as Record<string, UserRole>,
+        globalRoles,
         permissionGroups: (data.permissionGroups || []) as PermissionGroup[],
       };
+      setSavedRoles(rolesField);
       setSavedState(initial);
       setDraft({
-        roles: {...initial.roles},
+        globalRoles: {...initial.globalRoles},
         permissionGroups: initial.permissionGroups.map((g) => ({...g})),
       });
       setLoading(false);
     });
   }, []);
 
-  const currentUserIsAdmin = isCurrentUserAdmin(savedState.roles);
+  const currentUserIsAdmin = isCurrentUserAdmin(savedRoles);
   const dirty = !shareDocsEqual(savedState, draft);
 
-  function setRoles(roles: Record<string, UserRole>) {
-    setDraft((prev) => ({...prev, roles}));
+  function setRoles(globalRoles: Record<string, UserRole>) {
+    setDraft((prev) => ({...prev, globalRoles}));
   }
 
   function setGroups(permissionGroups: PermissionGroup[]) {
@@ -282,7 +293,7 @@ function ShareSection() {
 
   function discard() {
     setDraft({
-      roles: {...savedState.roles},
+      globalRoles: {...savedState.globalRoles},
       permissionGroups: savedState.permissionGroups.map((g) => ({...g})),
     });
   }
@@ -296,9 +307,10 @@ function ShareSection() {
       // Derive the effective project + per-collection roles by merging the
       // direct ShareBox entries with the permission groups.
       const {projectRoles: derivedProjectRoles, collectionRoles} =
-        derivedRolesFromGroups(draft.permissionGroups, draft.roles);
+        derivedRolesFromGroups(draft.permissionGroups, draft.globalRoles);
 
       await updateDoc(docRef, {
+        globalRoles: draft.globalRoles,
         roles: derivedProjectRoles,
         permissionGroups: draft.permissionGroups,
       });
@@ -329,12 +341,13 @@ function ShareSection() {
       }
 
       const nextSavedState: ShareDoc = {
-        roles: derivedProjectRoles,
+        globalRoles: draft.globalRoles,
         permissionGroups: draft.permissionGroups,
       };
+      setSavedRoles(derivedProjectRoles);
       setSavedState(nextSavedState);
       setDraft({
-        roles: {...nextSavedState.roles},
+        globalRoles: {...nextSavedState.globalRoles},
         permissionGroups: nextSavedState.permissionGroups.map((g) => ({...g})),
       });
       logAction('acls.save_groups', {
@@ -392,7 +405,7 @@ function ShareSection() {
             </Heading>
             <ShareBox
               className="SettingsPage__section__users__sharebox"
-              roles={draft.roles}
+              roles={draft.globalRoles}
               onChange={setRoles}
               currentUserIsAdmin={currentUserIsAdmin}
             />
