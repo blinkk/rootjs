@@ -1,5 +1,15 @@
 # @blinkk/root-cms
 
+## 3.0.5
+
+### Patch Changes
+
+- f27dbe2: fix: update the reload url used by the iframe preview
+- f66000c: feat: add `autoSlug` option to auto-fill new doc slugs
+- 863dec6: fix: separate global user roles from group-derived roles
+- Updated dependencies [7474983]
+  - @blinkk/root@3.0.5
+
 ## 3.0.4
 
 ### Patch Changes
