@@ -8,7 +8,8 @@
     "jsx/jsx-dev-runtime": "src/jsx/jsx-dev-runtime.ts",
     "middleware": "src/middleware/middleware.ts",
     "node": "src/node/node.ts",
-    "render": "src/render/render.tsx"
+    "render": "src/render/render.tsx",
+    "utils": "src/utils/utils.ts"
   },
   "dtsProject": "tsconfig.build.json",
   "external": ["virtual:*"],

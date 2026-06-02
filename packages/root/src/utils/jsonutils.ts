@@ -24,19 +24,27 @@ function normalizeData(value: unknown): unknown {
   return value;
 }
 
+export interface JsonStringifyOptions {
+  /**
+   * Indentation passed through to `JSON.stringify`. Accepts a number of
+   * spaces or an indent string.
+   */
+  indent?: number | string;
+}
+
 /**
  * Serializes data to a JSON string with Unix (LF) line endings.
  *
  * Unlike `JSON.stringify()`, this:
  * - Recursively normalizes `\r\n` and `\r` to `\n` in string values, so
- *   round-tripping through JSON.parse won't yield CRLF line endings.
+ *   round-tripping through `JSON.parse` won't yield CRLF line endings.
  * - Normalizes line endings in the resulting JSON string itself.
- *
- * The signature mirrors `JSON.stringify`'s common form (value + optional
- * indent).
  */
-export function stringifyJson(value: unknown, indent?: number | string): string {
+export function jsonStringify(
+  value: unknown,
+  options?: JsonStringifyOptions
+): string {
   const normalized = normalizeData(value);
-  const serialized = JSON.stringify(normalized, null, indent);
+  const serialized = JSON.stringify(normalized, null, options?.indent);
   return normalizeLineEndings(serialized);
 }
