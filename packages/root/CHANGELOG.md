@@ -1,5 +1,11 @@
 # @blinkk/root
 
+## 3.0.5
+
+### Patch Changes
+
+- 7474983: fix: normalize line endings in html output files
+
 ## 3.0.4
 
 ### Patch Changes
