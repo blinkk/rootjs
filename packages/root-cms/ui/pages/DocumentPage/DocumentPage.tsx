@@ -729,17 +729,12 @@ DocumentPage.Preview = (props: PreviewProps) => {
         !iframeWindow.location.href.startsWith('about:blank')
       ) {
         const currentUrl = iframeWindow.location;
-        // Strip `preview=true` from the displayed URL so the URL bar mirrors
-        // the public/prod URL. This avoids editors accidentally copying a
-        // preview-only URL into places like social media.
-        const displaySearchParams = new URLSearchParams(currentUrl.search);
-        displaySearchParams.delete('preview');
-        const displaySearch = displaySearchParams.toString();
-        setIframeUrl(
-          `${domain}${currentUrl.pathname}${
-            displaySearch ? `?${displaySearch}` : ''
-          }${currentUrl.hash}`
-        );
+        // Strip query params and hash from the displayed URL so the URL bar
+        // mirrors the public/prod URL. This avoids editors accidentally
+        // copying preview-only params (e.g. `preview=true`, debug flags) or
+        // internal hash state into places like social media. The "open in
+        // new tab" button still uses the full preview URL.
+        setIframeUrl(`${domain}${currentUrl.pathname}`);
       }
     }
     iframe.addEventListener('load', onIframeLoad);
