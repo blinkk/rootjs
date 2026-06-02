@@ -1,6 +1,5 @@
-import {ActionIcon, Button, Modal, Tooltip, useMantineTheme} from '@mantine/core';
-import {IconReload} from '@tabler/icons-preact';
-import {useMemo, useState} from 'preact/hooks';
+import {Button, Modal, useMantineTheme} from '@mantine/core';
+import {useState} from 'preact/hooks';
 import {useLocation} from 'preact-iso';
 import {renderAutoSlug} from '../../../shared/auto-slug.js';
 import {getSlugError, normalizeSlug} from '../../../shared/slug.js';
@@ -26,12 +25,8 @@ export function NewDocModal(props: NewDocModalProps) {
   if (!rootCollection) {
     throw new Error(`collection not found: ${collectionId}`);
   }
-  const autoSlugTemplate = rootCollection.autoSlug;
-  const [refreshCount, setRefreshCount] = useState(0);
-  const initialSlug = useMemo(
-    () => (autoSlugTemplate ? renderAutoSlug(autoSlugTemplate) : ''),
-    // Re-generate whenever the refresh button is clicked.
-    [autoSlugTemplate, refreshCount]
+  const [initialSlug] = useState(() =>
+    rootCollection.autoSlug ? renderAutoSlug(rootCollection.autoSlug) : ''
   );
   const [slug, setSlug] = useState(initialSlug);
   const [rpcLoading, setRpcLoading] = useState(false);
@@ -42,17 +37,6 @@ export function NewDocModal(props: NewDocModalProps) {
   function validateSlug(value: string) {
     const cleanSlug = normalizeSlug(value);
     return cleanSlug ? getSlugError(cleanSlug, rootCollection.slugRegex) : '';
-  }
-
-  function onRefresh() {
-    if (!autoSlugTemplate) {
-      return;
-    }
-    const next = renderAutoSlug(autoSlugTemplate);
-    setSlug(next);
-    setSlugError(validateSlug(next));
-    setError('');
-    setRefreshCount((n) => n + 1);
   }
 
   function onClose() {
@@ -116,33 +100,16 @@ export function NewDocModal(props: NewDocModalProps) {
       </div>
 
       <form onSubmit={(e) => onSubmit(e)}>
-        <div className="NewDocModal__slugRow">
-          <SlugInput
-            // Remount on refresh so the new initial value takes effect.
-            key={`slug-${refreshCount}`}
-            className="NewDocModal__slug"
-            collectionId={collectionId}
-            initialSlug={initialSlug}
-            onChange={(newValue: {collectionId: string; slug: string}) => {
-              setSlug(newValue.slug);
-              setSlugError(validateSlug(newValue.slug));
-              setError('');
-            }}
-          />
-          {autoSlugTemplate && (
-            <Tooltip label="Regenerate slug" withArrow>
-              <ActionIcon
-                className="NewDocModal__refresh"
-                variant="subtle"
-                size="lg"
-                onClick={() => onRefresh()}
-                aria-label="Regenerate slug"
-              >
-                <IconReload size={16} />
-              </ActionIcon>
-            </Tooltip>
-          )}
-        </div>
+        <SlugInput
+          className="NewDocModal__slug"
+          collectionId={collectionId}
+          initialSlug={initialSlug}
+          onChange={(newValue: {collectionId: string; slug: string}) => {
+            setSlug(newValue.slug);
+            setSlugError(validateSlug(newValue.slug));
+            setError('');
+          }}
+        />
 
         {error && <div className="NewDocModal__slugError">{error}</div>}
 

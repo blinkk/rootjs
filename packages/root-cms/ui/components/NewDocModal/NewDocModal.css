@@ -8,24 +8,6 @@
   margin-top: 16px;
 }
 
-.NewDocModal__slugRow {
-  margin-top: 16px;
-  display: flex;
-  align-items: flex-start;
-  gap: 8px;
-}
-
-.NewDocModal__slugRow .NewDocModal__slug {
-  flex: 1 1 auto;
-  margin-top: 0;
-  min-width: 0;
-}
-
-.NewDocModal__refresh {
-  margin-top: 2px;
-  flex: 0 0 auto;
-}
-
 .NewDocModal__slugError {
   margin-top: 12px;
   padding: 8px 12px;
