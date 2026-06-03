@@ -11,6 +11,7 @@ import {
 import {ComponentChildren, createContext} from 'preact';
 import {useContext, useEffect, useMemo, useState} from 'preact/hooks';
 import {logAction} from '../utils/actions.js';
+import {syncDocAssetUsages} from '../utils/asset-library.js';
 import {debounce} from '../utils/debounce.js';
 import {setDocToCache} from '../utils/doc-cache.js';
 import {CMSDoc} from '../utils/doc.js';
@@ -359,6 +360,11 @@ export class DraftDocController extends EventListener {
     try {
       this.setSaveState(SaveState.SAVING);
       await updateDoc(this.docRef, updates);
+      await syncDocAssetUsages(
+        this.docId,
+        this.store.get('fields') || {},
+        'draft'
+      );
       this.setSaveState(SaveState.SAVED);
       if (!options?.quiet) {
         this.dispatch(DraftDocEventType.FLUSH);

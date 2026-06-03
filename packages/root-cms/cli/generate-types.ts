@@ -31,6 +31,8 @@ export interface RootCMSFile {
   width?: number;
   height?: number;
   alt?: string;
+  assetId?: string;
+  assetVersion?: number;
 }
 
 export type RootCMSImage = RootCMSFile;

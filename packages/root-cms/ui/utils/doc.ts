@@ -24,6 +24,7 @@ import {
 } from 'firebase/firestore';
 import {testValidRichTextData} from '../../shared/richtext.js';
 import {logAction} from './actions.js';
+import {clearDocAssetUsages, syncDocAssetUsages} from './asset-library.js';
 import {removeDocFromCache, removeDocsFromCache} from './doc-cache.js';
 import {GoogleSheetId} from './gsheets.js';
 import {
@@ -113,6 +114,9 @@ export async function cmsDeleteDoc(docId: string) {
   // Delete any scheduled doc.
   batch.delete(scheduledDocRef);
   await batch.commit();
+  await clearDocAssetUsages(docId, 'draft');
+  await clearDocAssetUsages(docId, 'published');
+  await clearDocAssetUsages(docId, 'scheduled');
   console.log(`deleted doc: ${docId}`);
   logAction('doc.delete', {metadata: {docId}});
 }
@@ -172,6 +176,11 @@ export async function cmsPublishDocs(
   }
 
   for (const docId of docIds) {
+    await syncDocAssetUsages(
+      docId,
+      draftDocs[docId]?.fields || {},
+      'published'
+    );
     const metadata: Record<string, unknown> = {docId};
     if (options?.publishMessage) {
       metadata.publishMessage = options.publishMessage;
@@ -388,6 +397,7 @@ export async function cmsUnpublishDoc(docId: string) {
   // Delete the "published" doc.
   batch.delete(publishedDocRef);
   await batch.commit();
+  await clearDocAssetUsages(docId, 'published');
   console.log(`unpublished ${docId}`);
   logAction('doc.unpublish', {metadata: {docId}});
   removeDocFromCache(docId);

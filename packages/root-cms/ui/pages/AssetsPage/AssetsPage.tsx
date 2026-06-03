@@ -1,17 +1,39 @@
 import {ActionIcon, Button, Textarea, Tooltip} from '@mantine/core';
+import {showNotification} from '@mantine/notifications';
 import {IconCopy} from '@tabler/icons-preact';
 import {useState} from 'preact/hooks';
+import type {FileFieldValueType} from '../../components/DocEditor/fields/FileField.js';
 import {FileUploader} from '../../components/DocEditor/fields/FileUploader.js';
 import {Heading} from '../../components/Heading/Heading.js';
 import {Surface} from '../../components/Surface/Surface.js';
 import {Text} from '../../components/Text/Text.js';
 import {usePageTitle} from '../../hooks/usePageTitle.js';
 import {Layout} from '../../layout/Layout.js';
+import {saveFileAsLibraryAsset} from '../../utils/asset-library.js';
 import './AssetsPage.css';
 
 export function AssetsPage() {
   usePageTitle('Assets');
   const [file, setFile] = useState<any>(null);
+
+  async function handleFileChange(nextFile: FileFieldValueType) {
+    if (!nextFile?.src || nextFile.assetId) {
+      setFile(nextFile);
+      return;
+    }
+    try {
+      const asset = await saveFileAsLibraryAsset(nextFile);
+      setFile(asset.file);
+    } catch (err) {
+      console.error(err);
+      setFile(nextFile);
+      showNotification({
+        title: 'Asset library save failed',
+        message: String(err),
+        color: 'red',
+      });
+    }
+  }
   const gcsUrl = file?.gcsPath
     ? `https://storage.googleapis.com${file.gcsPath}`
     : '';
@@ -21,12 +43,14 @@ export function AssetsPage() {
       <div className="AssetsPage" data-testid="assets-page">
         <div className="AssetsPage__header">
           <Heading size="h1">Assets</Heading>
-          <Text as="p">Upload assets to the project's GCS bucket.</Text>
+          <Text as="p">
+            Upload reusable assets to the project's GCS-backed asset library.
+          </Text>
         </div>
         <Surface className="AssetsPage__content">
           <FileUploader
             value={file}
-            onChange={setFile}
+            onChange={handleFileChange}
             showNamingOptions
             accept={['*/*']}
             allowEditing={false}

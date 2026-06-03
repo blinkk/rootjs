@@ -39,7 +39,7 @@ import {
 import {ComponentChildren, createContext} from 'preact';
 import {ChangeEvent, CSSProperties, forwardRef} from 'preact/compat';
 import {lazy, Suspense} from 'preact/compat';
-import {useContext, useMemo, useRef, useState} from 'preact/hooks';
+import {useContext, useEffect, useMemo, useRef, useState} from 'preact/hooks';
 import * as schema from '../../../../core/schema.js';
 import {useDraftDocValue} from '../../../hooks/useDraftDoc.js';
 import {useGapiClient} from '../../../hooks/useGapiClient.js';
@@ -55,6 +55,11 @@ import {
   uploadFileToGCS,
   deleteFileFromGCS,
 } from '../../../utils/gcs.js';
+import type {LibraryAsset} from '../../../utils/asset-library.js';
+import {
+  listLibraryAssets,
+  saveFileAsLibraryAsset,
+} from '../../../utils/asset-library.js';
 import {downloadFromDrive, parseGoogleDriveId} from '../../../utils/gdrive.js';
 import {FieldProps} from './FieldProps.js';
 import {GenerateImageForm} from './GenerateImageForm.js';
@@ -95,6 +100,8 @@ interface FileFieldContextValue {
   requestGenerateAltText: () => void;
   requestPlaceholderModalOpen: () => void;
   requestImageEditorOpen: () => void;
+  requestAssetLibraryOpen: () => void;
+  saveCurrentFileAsLibraryAsset: () => void;
   showAltText: boolean;
   altText: string;
   setAltText: (altText: string) => void;
@@ -145,6 +152,7 @@ export function FileFieldInternal(props: FileFieldInternalProps) {
   const [placeholderModalOpened, setPlaceholderModalOpened] = useState(false);
   const [deleteModalOpened, setDeleteModalOpened] = useState(false);
   const [imageEditorOpened, setImageEditorOpened] = useState(false);
+  const [assetLibraryOpened, setAssetLibraryOpened] = useState(false);
   const gapiClient = useGapiClient();
   const allowEditing = props.allowEditing !== false;
 
@@ -402,6 +410,34 @@ export function FileFieldInternal(props: FileFieldInternalProps) {
     setImageEditorOpened(true);
   }
 
+  function requestAssetLibraryOpen() {
+    setAssetLibraryOpened(true);
+  }
+
+  async function saveCurrentFileAsLibraryAsset() {
+    if (!value?.src) {
+      return;
+    }
+    setLoadingState('loading');
+    try {
+      const asset = await saveFileAsLibraryAsset(value);
+      setValue(asset.file);
+      setLoadingState('complete');
+      showNotification({
+        message: 'Saved file to asset library',
+        color: 'green',
+      });
+    } catch (err) {
+      console.error(err);
+      setLoadingState('error');
+      showNotification({
+        title: 'Asset library save failed',
+        message: String(err),
+        color: 'red',
+      });
+    }
+  }
+
   function setAltText(newAltText: string) {
     if (!value?.src) {
       return;
@@ -457,6 +493,8 @@ export function FileFieldInternal(props: FileFieldInternalProps) {
         requestFileDownload: requestFileDownload,
         requestPlaceholderModalOpen: requestPlaceholderModalOpen,
         requestImageEditorOpen: requestImageEditorOpen,
+        requestAssetLibraryOpen: requestAssetLibraryOpen,
+        saveCurrentFileAsLibraryAsset: saveCurrentFileAsLibraryAsset,
         showAltText: showAltText,
         altText: altText,
         setAltText: setAltText,
@@ -517,6 +555,16 @@ export function FileFieldInternal(props: FileFieldInternalProps) {
           </Button>
         </Group>
       </Modal>
+      {assetLibraryOpened && (
+        <AssetLibraryModal
+          opened={assetLibraryOpened}
+          onClose={() => setAssetLibraryOpened(false)}
+          onSelect={(asset) => {
+            setValue(asset.file);
+            setAssetLibraryOpened(false);
+          }}
+        />
+      )}
       {imageEditorOpened && value?.src && (
         <Suspense fallback={null}>
           <ImageEditorDialog
@@ -772,6 +820,14 @@ FileField.Preview = () => {
           {ctx.allowEditing && (
             <>
               <Menu.Label size="sm">REPLACE</Menu.Label>
+              {ctx.field.assetLibrary && (
+                <Menu.Item
+                  icon={<IconPhotoStar size={16} />}
+                  onClick={() => ctx.requestAssetLibraryOpen()}
+                >
+                  Choose from library
+                </Menu.Item>
+              )}
               <Menu.Item
                 icon={
                   ctx.variant === 'image' ? (
@@ -841,6 +897,14 @@ FileField.Preview = () => {
           >
             {copied ? 'Copied!' : 'Copy URL'}
           </Menu.Item>
+          {ctx.allowEditing && ctx.field.assetLibrary && !ctx.value?.assetId && (
+            <Menu.Item
+              icon={<IconPhotoStar size={16} />}
+              onClick={() => ctx.saveCurrentFileAsLibraryAsset()}
+            >
+              Save to asset library
+            </Menu.Item>
+          )}
           {ctx.allowEditing &&
             testIsImageFile(ctx.value?.src || '') &&
             ctx.value?.canvasBgColor && (
@@ -1091,6 +1155,69 @@ FileField.Preview = () => {
     </div>
   );
 };
+
+function AssetLibraryModal(props: {
+  opened: boolean;
+  onClose: () => void;
+  onSelect: (asset: LibraryAsset) => void;
+}) {
+  const [loading, setLoading] = useState(false);
+  const [assets, setAssets] = useState<LibraryAsset[]>([]);
+
+  useEffect(() => {
+    if (!props.opened) {
+      return;
+    }
+    setLoading(true);
+    listLibraryAssets()
+      .then(setAssets)
+      .catch((err) => {
+        console.error(err);
+        showNotification({
+          title: 'Failed to load assets',
+          message: String(err),
+          color: 'red',
+        });
+      })
+      .finally(() => setLoading(false));
+  }, [props.opened]);
+
+  return (
+    <Modal
+      size="lg"
+      opened={props.opened}
+      onClose={props.onClose}
+      title="Asset library"
+      centered
+    >
+      {loading && <Loader size="sm" />}
+      {!loading && assets.length === 0 && (
+        <Text size="sm" color="dimmed">
+          No library assets have been created yet.
+        </Text>
+      )}
+      {!loading && assets.length > 0 && (
+        <div className="FileField__AssetLibrary">
+          {assets.map((asset) => (
+            <button
+              key={asset.id}
+              className="FileField__AssetLibrary__Item"
+              type="button"
+              onClick={() => props.onSelect(asset)}
+            >
+              {testIsImageFile(asset.file.src) ? (
+                <img src={asset.file.src} alt={asset.file.alt || ''} />
+              ) : (
+                <IconPaperclip size={20} />
+              )}
+              <span>{asset.filename || asset.file.filename || asset.id}</span>
+            </button>
+          ))}
+        </div>
+      )}
+    </Modal>
+  );
+}
 
 FileField.UploadButton = (props: {className?: string; compact?: boolean}) => {
   const ctx = useFileField();

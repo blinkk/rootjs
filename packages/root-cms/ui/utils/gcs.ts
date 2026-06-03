@@ -41,6 +41,8 @@ export interface UploadFileOptions {
   cacheControl?: string;
   disableGci?: boolean;
   checkExists?: boolean;
+  /** Directory under the project ID where the file should be uploaded. */
+  uploadDir?: string;
 }
 
 export interface UploadedFile {
@@ -55,6 +57,10 @@ export interface UploadedFile {
   canvasBgColor?: 'light' | 'dark';
   /** The original source URL if the image has been edited. */
   originalSrc?: string;
+  /** Asset library ID when this file is denormalized from a shared asset. */
+  assetId?: string;
+  /** Asset library version denormalized into the document. */
+  assetVersion?: number;
 }
 
 /** Uploads a File object to GCS. */
@@ -66,7 +72,8 @@ export async function uploadFileToGCS(
   const hashHex = await sha1(file);
   const ext = getFileExt(file.name);
   const filename = getGcsFilename(file, hashHex, ext, options);
-  const filePath = `${projectId}/uploads/${filename}`;
+  const uploadDir = options?.uploadDir || 'uploads';
+  const filePath = `${projectId}/${uploadDir}/${filename}`;
   const gcsRef = storageRef(window.firebase.storage, filePath);
 
   if (options?.checkExists) {

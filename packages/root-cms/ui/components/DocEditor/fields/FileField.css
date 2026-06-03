@@ -276,3 +276,36 @@
 .FileField__NamingModeItem {
   padding: 8px 10px;
 }
+
+.FileField__AssetLibrary {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 12px;
+}
+
+.FileField__AssetLibrary__Item {
+  align-items: center;
+  background: var(--color-bg, #fff);
+  border: 1px solid var(--color-border, #ddd);
+  border-radius: 6px;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-height: 120px;
+  padding: 8px;
+}
+
+.FileField__AssetLibrary__Item img {
+  max-height: 80px;
+  max-width: 100%;
+  object-fit: contain;
+}
+
+.FileField__AssetLibrary__Item span {
+  font-size: 11px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  width: 100%;
+}
