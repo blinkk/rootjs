@@ -36,6 +36,19 @@ export default schema.define({
       id: 'date',
       label: 'DateField',
     }),
+    schema.multiselect({
+      id: 'multiselect',
+      label: 'MultiSelect',
+      translate: true,
+      creatable: true,
+    }),
+    schema.multiselect({
+      id: 'multiselectStringList',
+      label: 'MultiSelect (String List)',
+      translate: true,
+      variant: 'list',
+      creatable: true,
+    }),
     schema.string({
       id: 'string',
       label: 'StringField (Textarea)',

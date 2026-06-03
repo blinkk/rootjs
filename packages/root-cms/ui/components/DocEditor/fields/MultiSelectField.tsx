@@ -3,8 +3,20 @@ import {useMemo} from 'preact/hooks';
 import * as schema from '../../../../core/schema.js';
 import {useDraftDocValue} from '../../../hooks/useDraftDoc.js';
 import {FieldProps} from './FieldProps.js';
+import {StringListField} from './StringListField.js';
 
 export function MultiSelectField(props: FieldProps) {
+  const field = props.field as schema.MultiSelectField;
+
+  if (field.variant === 'list') {
+    return <StringListField {...props} />;
+  }
+
+  return <DefaultMultiSelectField {...props} />;
+}
+
+/** Default multiselect variant using the Mantine MultiSelect dropdown. */
+function DefaultMultiSelectField(props: FieldProps) {
   const field = props.field as schema.MultiSelectField;
   const [value, setValue] = useDraftDocValue<string[]>(props.deepKey, []);
 
