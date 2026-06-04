@@ -832,9 +832,12 @@ DocumentPage.Preview = (props: PreviewProps) => {
 
     const normalizedScale = Number(scale.toFixed(4)) || 1;
 
-    // When expanding vertically, adjust iframe height to fill available space.
+    // When expanding vertically, adjust iframe height to fill the available
+    // space, reserving a little room at the bottom so the device resolution
+    // label remains visible below the iframe.
+    const labelReserve = 28;
     const iframeHeight = expandVertically
-      ? `${availableHeight / normalizedScale}px`
+      ? `${Math.max(availableHeight - labelReserve, 0) / normalizedScale}px`
       : `${height}px`;
 
     const nextStyle = {
