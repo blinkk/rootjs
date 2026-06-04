@@ -21,6 +21,7 @@ jobs:
   preview:
     name: Firebase Preview
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     if: >-
       github.event_name == 'workflow_dispatch' ||
       (github.event.issue.pull_request && startsWith(github.event.comment.body,

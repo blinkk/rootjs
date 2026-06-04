@@ -16,6 +16,7 @@ jobs:
   cleanup:
     name: Delete Expired Preview Functions
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     permissions:
       contents: read
 
