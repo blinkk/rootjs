@@ -30,19 +30,12 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: '22'
-
-      # A newer version of npm is required for publishing with OIDC.
-      - name: Update npm
-        # NOTE(stevenle): npm@latest isn't working due to a bug upstream.
-        # https://github.com/npm/cli/issues/9151
-        run: |
-            npm install -g npm@~11.10.0
+          node-version: '24'
 
       - name: Setup PNPM
         uses: pnpm/action-setup@v4
         with:
-          version: '8.9.0'
+          version: '11.5.1'
           run_install: false
 
       - name: Install dependencies
