@@ -16,12 +16,6 @@ defaults:
 
 env:
   FORCE_COLOR: true
-  # This job intentionally rewrites Root.js package.json versions (see the
-  # "Add deploy package version suffix" step), which makes pnpm consider the
-  # lockfile out of date. Disable pnpm's automatic dependency check that runs
-  # before `pnpm run`/`pnpm exec` so it doesn't try (and fail) to reinstall
-  # with CI's default frozen lockfile.
-  PNPM_CONFIG_VERIFY_DEPS_BEFORE_RUN: "false"
 
 jobs:
   preview:

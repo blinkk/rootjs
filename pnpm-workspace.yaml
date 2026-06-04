@@ -10,3 +10,4 @@ allowBuilds:
   re2: true
   unrs-resolver: true
 autoInstallPeers: false
+verifyDepsBeforeRun: warn
