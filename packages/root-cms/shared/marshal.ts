@@ -249,3 +249,75 @@ function getType(value: any): string {
   if (typeof value === 'number' && Number.isNaN(value)) return 'nan';
   return typeof value;
 }
+
+/**
+ * Recursively walks stored (marshaled) Firestore data and returns the dotted
+ * paths of every node for which `predicate` returns true. The returned paths use
+ * stored ArrayObject keys (not numeric indices), so they can be passed directly
+ * to a Firestore `update()` call as field paths.
+ *
+ * Traversal rules:
+ * - If `predicate(node)` is true, the node's path is collected and the walk does
+ *   NOT descend into it (matched value objects have no nested matches).
+ * - Rich text data (EditorJS format) is skipped entirely.
+ * - ArrayObjects are traversed via their `_array` key order; the `_array` key
+ *   itself is not treated as a child.
+ * - For plain objects (including oneOf blocks carrying a `_type` discriminator),
+ *   keys beginning with `_` (internal markers) or `@` (field metadata siblings)
+ *   are not descended.
+ *
+ * Note: this operates on RAW stored data (ArrayObject shape), not the output of
+ * `unmarshalData` (plain arrays).
+ *
+ * @param data The stored data to walk (e.g. a doc's `fields` object).
+ * @param predicate Returns true for nodes whose path should be collected.
+ * @param options.prefix A path prefix to prepend to every collected path.
+ */
+export function collectPathsByPredicate(
+  data: any,
+  predicate: (node: any) => boolean,
+  options?: {prefix?: string}
+): string[] {
+  const results: string[] = [];
+
+  function walk(node: any, path: string) {
+    if (node === null || typeof node !== 'object') {
+      return;
+    }
+    if (predicate(node)) {
+      if (path) {
+        results.push(path);
+      }
+      return;
+    }
+    // Do not descend into rich text data (EditorJS format).
+    if (isRichTextData(node)) {
+      return;
+    }
+    if (isArrayObject(node)) {
+      for (const key of node._array) {
+        walk(node[key], path ? `${path}.${key}` : key);
+      }
+      return;
+    }
+    if (Array.isArray(node)) {
+      // Plain arrays should not appear in stored data (arrays are stored as
+      // ArrayObjects), but handle them defensively.
+      for (let i = 0; i < node.length; i++) {
+        walk(node[i], path ? `${path}.${i}` : String(i));
+      }
+      return;
+    }
+    for (const key of Object.keys(node)) {
+      // Skip internal markers (`_array`, `_type`, `_arrayKey`, ...) and field
+      // metadata siblings (`@<fieldname>`).
+      if (key.startsWith('_') || key.startsWith('@')) {
+        continue;
+      }
+      walk(node[key], path ? `${path}.${key}` : key);
+    }
+  }
+
+  walk(data, options?.prefix || '');
+  return results;
+}

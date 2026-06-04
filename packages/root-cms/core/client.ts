@@ -2,12 +2,24 @@ import crypto from 'node:crypto';
 import {type Plugin, type RootConfig} from '@blinkk/root';
 import {App} from 'firebase-admin/app';
 import {
+  DocumentReference,
   FieldValue,
   Firestore,
   Query,
   Timestamp,
   WriteBatch,
 } from 'firebase-admin/firestore';
+import {
+  Asset,
+  AssetFile,
+  AssetFolder,
+  assetFieldValueIsCurrent,
+  assetToFieldValue,
+  buildUsageKey,
+  isAssetRef,
+  normalizeAssetDir,
+} from '../shared/asset.js';
+import {collectPathsByPredicate} from '../shared/marshal.js';
 import {normalizeSlug} from '../shared/slug.js';
 import {CMSPlugin} from './plugin.js';
 import {Collection} from './schema.js';
@@ -1851,6 +1863,477 @@ export class RootCMSClient {
   createBatchRequest(options: BatchRequestOptions): BatchRequest {
     return new BatchRequest(this, options);
   }
+
+  // ===========================================================================
+  // Asset library
+  //
+  // Assets are library entries stored at `Projects/{projectId}/Assets/{assetId}`
+  // that hold canonical file metadata. When an image/file field picks an asset,
+  // the asset's data is denormalized inline onto the doc (so doc GETs stay O(1)
+  // Firestore RPCs); replacing the asset fans the new data out to every
+  // referencing DRAFT doc.
+  //
+  // Usage is tracked by two server-maintained indexes (security rules forbid
+  // client writes outside `Drafts/**`):
+  //   - reverse: `Assets/{assetId}/Usages/{docKey}` -> {docId, collection, slug}
+  //   - forward: `AssetUsagesByDoc/{docKey}`        -> {docId, assetIds: []}
+  // ===========================================================================
+
+  dbAssetsPath() {
+    return `Projects/${this.projectId}/Assets`;
+  }
+
+  dbAssetRef(assetId: string) {
+    return this.db.doc(`${this.dbAssetsPath()}/${assetId}`);
+  }
+
+  dbAssetUsagesPath(assetId: string) {
+    return `${this.dbAssetsPath()}/${assetId}/Usages`;
+  }
+
+  dbAssetUsageRef(assetId: string, docId: string) {
+    return this.db.doc(
+      `${this.dbAssetUsagesPath(assetId)}/${buildUsageKey(docId)}`
+    );
+  }
+
+  dbAssetUsagesByDocRef(docId: string) {
+    return this.db.doc(
+      `Projects/${this.projectId}/AssetUsagesByDoc/${buildUsageKey(docId)}`
+    );
+  }
+
+  dbAssetFoldersPath() {
+    return `Projects/${this.projectId}/AssetFolders`;
+  }
+
+  /** Reads a single asset. */
+  async getAsset(assetId: string): Promise<Asset | null> {
+    const snapshot = await this.dbAssetRef(assetId).get();
+    if (!snapshot.exists) {
+      return null;
+    }
+    return snapshot.data() as Asset;
+  }
+
+  /** Lists assets, optionally filtered to a single folder (`dir`). */
+  async listAssets(options?: {dir?: string}): Promise<{assets: Asset[]}> {
+    let query: Query = this.db.collection(this.dbAssetsPath());
+    if (options?.dir !== undefined) {
+      query = query.where('dir', '==', normalizeAssetDir(options.dir));
+    }
+    const snapshot = await query.get();
+    const assets = snapshot.docs.map((doc) => doc.data() as Asset);
+    return {assets};
+  }
+
+  /** Creates a new library asset from an uploaded file. */
+  async createAsset(
+    file: AssetFile,
+    options: {createdBy: string; dir?: string; assetId?: string}
+  ): Promise<Asset> {
+    const assetId = options.assetId || generateAssetId();
+    const now = Date.now();
+    const asset: Asset = {
+      ...stripUndefinedValues(file),
+      id: assetId,
+      version: 1,
+      dir: normalizeAssetDir(options.dir),
+      sys: {
+        createdAt: now,
+        createdBy: options.createdBy,
+        modifiedAt: now,
+        modifiedBy: options.createdBy,
+      },
+    };
+    await this.dbAssetRef(assetId).set(asset);
+    return asset;
+  }
+
+  /**
+   * Replaces an asset's file (bytes already uploaded to GCS by the client) and
+   * fans the new file out to every referencing draft doc.
+   */
+  async replaceAsset(
+    assetId: string,
+    newFile: AssetFile,
+    options: {replacedBy: string}
+  ): Promise<{asset: Asset; docsUpdated: number}> {
+    const existing = await this.getAsset(assetId);
+    if (!existing) {
+      throw new Error(`asset not found: ${assetId}`);
+    }
+    const now = Date.now();
+    const asset: Asset = {
+      ...existing,
+      ...stripUndefinedValues(newFile),
+      id: assetId,
+      version: (existing.version || 0) + 1,
+      // Folder placement and asset-authoritative alt are preserved across a file
+      // replacement unless the new file explicitly provides an alt.
+      dir: existing.dir,
+      alt: newFile.alt ?? existing.alt,
+      sys: {
+        ...(existing.sys || {}),
+        modifiedAt: now,
+        modifiedBy: options.replacedBy,
+        replacedAt: now,
+        replacedBy: options.replacedBy,
+      },
+    };
+    await this.dbAssetRef(assetId).set(asset);
+    const {docsUpdated} = await this.fanOutAsset(asset, options.replacedBy);
+    return {asset, docsUpdated};
+  }
+
+  /**
+   * Updates an asset's (asset-authoritative) alt text and fans it out to every
+   * referencing draft doc.
+   */
+  async setAssetAlt(
+    assetId: string,
+    alt: string,
+    options: {updatedBy: string}
+  ): Promise<{asset: Asset; docsUpdated: number}> {
+    const existing = await this.getAsset(assetId);
+    if (!existing) {
+      throw new Error(`asset not found: ${assetId}`);
+    }
+    const asset: Asset = {
+      ...existing,
+      alt,
+      version: (existing.version || 0) + 1,
+      sys: {
+        ...(existing.sys || {}),
+        modifiedAt: Date.now(),
+        modifiedBy: options.updatedBy,
+      },
+    };
+    await this.dbAssetRef(assetId).set(asset);
+    const {docsUpdated} = await this.fanOutAsset(asset, options.updatedBy);
+    return {asset, docsUpdated};
+  }
+
+  /**
+   * Rewrites the inline value(s) of every draft doc that references `asset` so
+   * they pick up the asset's current file/alt. Re-scans each doc (rather than
+   * trusting stored paths) so it is robust to array reorders, paste, and
+   * duplication. Drafts only — published copies update on next publish.
+   */
+  private async fanOutAsset(
+    asset: Asset,
+    modifiedBy: string
+  ): Promise<{docsUpdated: number}> {
+    const usagesSnapshot = await this.db
+      .collection(this.dbAssetUsagesPath(asset.id))
+      .get();
+    const usages = usagesSnapshot.docs.map(
+      (d) => d.data() as {docId: string; collection: string; slug: string}
+    );
+    if (usages.length === 0) {
+      return {docsUpdated: 0};
+    }
+
+    const newValue = assetToFieldValue(asset);
+    const predicate = (n: any) => isAssetRef(n) && n.assetId === asset.id;
+
+    let docsUpdated = 0;
+    let batch = this.db.batch();
+    let batchCount = 0;
+    const staleUsageRefs: DocumentReference[] = [];
+
+    const chunkSize = 200;
+    for (let i = 0; i < usages.length; i += chunkSize) {
+      const chunk = usages.slice(i, i + chunkSize);
+      const refs = chunk.map((u) =>
+        this.dbDocRef(u.collection, u.slug, {mode: 'draft'})
+      );
+      const snapshots = await this.db.getAll(...refs);
+      for (let j = 0; j < snapshots.length; j++) {
+        const snapshot = snapshots[j];
+        const usage = chunk[j];
+        const data = snapshot.data();
+        if (!data) {
+          staleUsageRefs.push(this.dbAssetUsageRef(asset.id, usage.docId));
+          continue;
+        }
+        const paths = collectPathsByPredicate(data.fields || {}, predicate, {
+          prefix: 'fields',
+        });
+        if (paths.length === 0) {
+          staleUsageRefs.push(this.dbAssetUsageRef(asset.id, usage.docId));
+          continue;
+        }
+        const updates: Record<string, any> = {};
+        for (const path of paths) {
+          const current = getValueAtPath(data, path);
+          if (assetFieldValueIsCurrent(current, asset)) {
+            continue;
+          }
+          updates[path] = newValue;
+        }
+        if (Object.keys(updates).length === 0) {
+          continue;
+        }
+        updates['sys.modifiedAt'] = FieldValue.serverTimestamp();
+        updates['sys.modifiedBy'] = modifiedBy;
+        batch.update(snapshot.ref, updates);
+        batchCount += 1;
+        docsUpdated += 1;
+        if (batchCount >= 400) {
+          await batch.commit();
+          batch = this.db.batch();
+          batchCount = 0;
+        }
+      }
+    }
+    if (batchCount > 0) {
+      await batch.commit();
+    }
+    if (staleUsageRefs.length > 0) {
+      await this.deleteRefs(staleUsageRefs);
+    }
+    return {docsUpdated};
+  }
+
+  /**
+   * Reconciles the usage indexes for a single draft doc. Called on pick/detach,
+   * on a debounced draft flush, and after copy/create. Server-authoritative.
+   */
+  async syncUsagesForDoc(docId: string): Promise<void> {
+    const {collection, slug} = parseDocId(docId);
+    const data = await this.getRawDoc(collection, slug, {mode: 'draft'});
+
+    const currAssetIds = new Set<string>();
+    if (data) {
+      const paths = collectPathsByPredicate(
+        data.fields || {},
+        (n) => isAssetRef(n),
+        {prefix: 'fields'}
+      );
+      for (const path of paths) {
+        const value = getValueAtPath(data, path);
+        if (value?.assetId) {
+          currAssetIds.add(value.assetId);
+        }
+      }
+    }
+
+    const forwardRef = this.dbAssetUsagesByDocRef(docId);
+    const forwardSnapshot = await forwardRef.get();
+    const prevAssetIds: string[] = forwardSnapshot.exists
+      ? forwardSnapshot.data()?.assetIds || []
+      : [];
+
+    const toAdd = [...currAssetIds].filter((id) => !prevAssetIds.includes(id));
+    const toRemove = prevAssetIds.filter((id) => !currAssetIds.has(id));
+    if (toAdd.length === 0 && toRemove.length === 0) {
+      return;
+    }
+
+    const batch = this.db.batch();
+    for (const assetId of toAdd) {
+      batch.set(this.dbAssetUsageRef(assetId, docId), {docId, collection, slug});
+    }
+    for (const assetId of toRemove) {
+      batch.delete(this.dbAssetUsageRef(assetId, docId));
+    }
+    if (currAssetIds.size > 0) {
+      batch.set(forwardRef, {docId, assetIds: [...currAssetIds]});
+    } else {
+      batch.delete(forwardRef);
+    }
+    await batch.commit();
+  }
+
+  /** Removes all usage-index entries for a doc (call on doc delete). */
+  async purgeDocUsages(docId: string): Promise<void> {
+    const forwardRef = this.dbAssetUsagesByDocRef(docId);
+    const forwardSnapshot = await forwardRef.get();
+    if (!forwardSnapshot.exists) {
+      return;
+    }
+    const assetIds: string[] = forwardSnapshot.data()?.assetIds || [];
+    const batch = this.db.batch();
+    for (const assetId of assetIds) {
+      batch.delete(this.dbAssetUsageRef(assetId, docId));
+    }
+    batch.delete(forwardRef);
+    await batch.commit();
+  }
+
+  /** Returns the number of docs referencing an asset (reverse-index count). */
+  async getAssetUsageCount(assetId: string): Promise<number> {
+    const snapshot = await this.db
+      .collection(this.dbAssetUsagesPath(assetId))
+      .count()
+      .get();
+    return snapshot.data().count;
+  }
+
+  /**
+   * Deletes a library asset. Throws if the asset is still in use unless
+   * `force` is set. GCS bytes are intentionally NOT deleted (the same object
+   * may be referenced by independent uploads elsewhere).
+   */
+  async deleteAsset(assetId: string, options?: {force?: boolean}): Promise<void> {
+    const usageCount = await this.getAssetUsageCount(assetId);
+    if (usageCount > 0 && !options?.force) {
+      throw new Error(`asset is in use by ${usageCount} doc(s)`);
+    }
+    await this.deleteCollectionDocs(this.dbAssetUsagesPath(assetId));
+    await this.dbAssetRef(assetId).delete();
+  }
+
+  /** Lists asset folders, optionally filtered to direct children of `parent`. */
+  async listAssetFolders(parent?: string): Promise<{folders: AssetFolder[]}> {
+    let query: Query = this.db.collection(this.dbAssetFoldersPath());
+    if (parent !== undefined) {
+      query = query.where('parent', '==', normalizeAssetDir(parent));
+    }
+    const snapshot = await query.get();
+    const folders = snapshot.docs.map((d) => d.data() as AssetFolder);
+    return {folders};
+  }
+
+  /** Creates an (initially empty) asset folder. */
+  async createAssetFolder(options: {
+    name: string;
+    parent?: string;
+  }): Promise<AssetFolder> {
+    const parent = normalizeAssetDir(options.parent);
+    const name = options.name.trim();
+    if (!name || name.includes('/')) {
+      throw new Error(`invalid folder name: ${options.name}`);
+    }
+    const path = parent === '/' ? `/${name}` : `${parent}/${name}`;
+    const folderId = buildUsageKey(path.slice(1));
+    const folder: AssetFolder = {id: folderId, path, name, parent};
+    await this.db.doc(`${this.dbAssetFoldersPath()}/${folderId}`).set(folder);
+    return folder;
+  }
+
+  /** Moves an asset into a different folder (library-only; no doc fan-out). */
+  async moveAsset(assetId: string, dir: string): Promise<void> {
+    await this.dbAssetRef(assetId).update({dir: normalizeAssetDir(dir)});
+  }
+
+  /** Renames an asset's display filename (library-only; no doc fan-out). */
+  async renameAsset(assetId: string, filename: string): Promise<void> {
+    await this.dbAssetRef(assetId).update({filename});
+  }
+
+  /**
+   * Rebuilds the usage indexes from scratch by scanning all draft docs. ADMIN
+   * backstop for drift from paste/duplication/JSON edits/migration.
+   */
+  async rebuildAllUsages(): Promise<{docsScanned: number; usages: number}> {
+    const projectPrefix = `Projects/${this.projectId}/Collections/`;
+    const snapshot = await this.db.collectionGroup('Drafts').get();
+    const reverse = new Map<
+      string,
+      Map<string, {collection: string; slug: string}>
+    >();
+    const forward = new Map<string, string[]>();
+    let docsScanned = 0;
+    for (const docSnapshot of snapshot.docs) {
+      if (!docSnapshot.ref.path.startsWith(projectPrefix)) {
+        continue;
+      }
+      const data = docSnapshot.data();
+      if (!data || !data.id || !data.collection || !data.slug) {
+        continue;
+      }
+      docsScanned += 1;
+      const paths = collectPathsByPredicate(
+        data.fields || {},
+        (n) => isAssetRef(n),
+        {prefix: 'fields'}
+      );
+      const assetIds = new Set<string>();
+      for (const path of paths) {
+        const value = getValueAtPath(data, path);
+        if (value?.assetId) {
+          assetIds.add(value.assetId);
+        }
+      }
+      if (assetIds.size === 0) {
+        continue;
+      }
+      forward.set(data.id, [...assetIds]);
+      for (const assetId of assetIds) {
+        if (!reverse.has(assetId)) {
+          reverse.set(assetId, new Map());
+        }
+        reverse
+          .get(assetId)!
+          .set(data.id, {collection: data.collection, slug: data.slug});
+      }
+    }
+
+    // Wipe the existing indexes, then write the freshly computed ones.
+    await this.deleteCollectionDocs(
+      `Projects/${this.projectId}/AssetUsagesByDoc`
+    );
+    const assetsSnapshot = await this.db.collection(this.dbAssetsPath()).get();
+    for (const assetDoc of assetsSnapshot.docs) {
+      await this.deleteCollectionDocs(this.dbAssetUsagesPath(assetDoc.id));
+    }
+
+    let batch = this.db.batch();
+    let count = 0;
+    let usages = 0;
+    const maybeCommit = async (force = false) => {
+      if (count > 0 && (force || count >= 400)) {
+        await batch.commit();
+        batch = this.db.batch();
+        count = 0;
+      }
+    };
+    for (const [docId, assetIds] of forward) {
+      batch.set(this.dbAssetUsagesByDocRef(docId), {docId, assetIds});
+      count += 1;
+      await maybeCommit();
+    }
+    for (const [assetId, docs] of reverse) {
+      for (const [docId, info] of docs) {
+        batch.set(this.dbAssetUsageRef(assetId, docId), {
+          docId,
+          collection: info.collection,
+          slug: info.slug,
+        });
+        usages += 1;
+        count += 1;
+        await maybeCommit();
+      }
+    }
+    await maybeCommit(true);
+    return {docsScanned, usages};
+  }
+
+  /** Deletes every doc in a (sub)collection in chunked batches. */
+  private async deleteCollectionDocs(collectionPath: string): Promise<void> {
+    const snapshot = await this.db.collection(collectionPath).get();
+    await this.deleteRefs(snapshot.docs.map((d) => d.ref));
+  }
+
+  /** Deletes a list of doc refs in chunked batches. */
+  private async deleteRefs(refs: DocumentReference[]): Promise<void> {
+    let batch = this.db.batch();
+    let count = 0;
+    for (const ref of refs) {
+      batch.delete(ref);
+      count += 1;
+      if (count >= 400) {
+        await batch.commit();
+        batch = this.db.batch();
+        count = 0;
+      }
+    }
+    if (count > 0) {
+      await batch.commit();
+    }
+  }
 }
 
 /**
@@ -2237,6 +2720,35 @@ export function parseDocId(docId: string) {
     throw new Error(`invalid doc id: ${docId}`);
   }
   return {collection, slug};
+}
+
+/** Resolves a dotted field path against a (stored) object. */
+export function getValueAtPath(obj: any, path: string): any {
+  const segments = path.split('.');
+  let current = obj;
+  for (const segment of segments) {
+    if (current === null || typeof current !== 'object') {
+      return undefined;
+    }
+    current = current[segment];
+  }
+  return current;
+}
+
+/** Generates a stable, random asset id. */
+function generateAssetId(): string {
+  return crypto.randomBytes(12).toString('hex');
+}
+
+/** Returns a shallow copy of `obj` with all `undefined` values removed. */
+function stripUndefinedValues<T extends Record<string, any>>(obj: T): T {
+  const out: Record<string, any> = {};
+  for (const [key, value] of Object.entries(obj)) {
+    if (value !== undefined) {
+      out[key] = value;
+    }
+  }
+  return out as T;
 }
 
 export interface BatchRequestOptions {

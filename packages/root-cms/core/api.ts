@@ -32,6 +32,42 @@ function testValidCollectionId(id: string): boolean {
   return /^[A-Za-z0-9_-]+$/.test(id);
 }
 
+/**
+ * Validates that a request is a signed-in JSON POST from a user with one of the
+ * `allowedRoles`. On success returns an authenticated `RootCMSClient`; otherwise
+ * writes the appropriate error response and returns null.
+ */
+async function authorizeAssetRequest(
+  req: Request,
+  res: Response,
+  allowedRoles: string[]
+): Promise<RootCMSClient | null> {
+  if (
+    req.method !== 'POST' ||
+    !String(req.get('content-type')).startsWith('application/json')
+  ) {
+    res.status(400).json({success: false, error: 'BAD_REQUEST'});
+    return null;
+  }
+  if (!req.user?.email) {
+    res.status(401).json({success: false, error: 'UNAUTHORIZED'});
+    return null;
+  }
+  const cmsClient = new RootCMSClient(req.rootConfig!);
+  try {
+    const role = await cmsClient.getUserRole(req.user.email);
+    if (!role || !allowedRoles.includes(role)) {
+      res.status(403).json({success: false, error: 'FORBIDDEN'});
+      return null;
+    }
+  } catch (err: any) {
+    console.error(err.stack || err);
+    res.status(500).json({success: false, error: 'UNKNOWN'});
+    return null;
+  }
+  return cmsClient;
+}
+
 type DocVersion = 'draft' | 'published';
 
 interface BuildDocDiffOptions {
@@ -364,6 +400,276 @@ export function api(server: Server, options: ApiOptions) {
     searchRebuildJobs.set(projectId, job);
     res.status(202).json({success: true, started: true, force});
   });
+
+  // ===========================================================================
+  // Asset library endpoints.
+  //
+  // Usage-index writes are server-authoritative because Firestore security
+  // rules only allow CONTRIBUTORs to write under `Collections/*/Drafts/**`.
+  // The bytes for create/replace are uploaded client-side (Firebase Storage SDK
+  // is client-only); these endpoints persist metadata and fan out.
+  // ===========================================================================
+  const ASSET_EDIT_ROLES = ['ADMIN', 'EDITOR', 'CONTRIBUTOR'];
+  const ASSET_MANAGE_ROLES = ['ADMIN', 'EDITOR'];
+
+  /**
+   * Reconciles the asset usage indexes for a single draft doc. Called by the
+   * editor on pick/detach and on a debounced flush.
+   *
+   * POST /cms/api/assets.syncUsages {"docId": "Pages/home"}
+   */
+  server.use(
+    '/cms/api/assets.syncUsages',
+    async (req: Request, res: Response) => {
+      const cmsClient = await authorizeAssetRequest(req, res, ASSET_EDIT_ROLES);
+      if (!cmsClient) {
+        return;
+      }
+      const docId = String((req.body || {}).docId || '');
+      if (!docId) {
+        res.status(400).json({success: false, error: 'MISSING_DOC_ID'});
+        return;
+      }
+      try {
+        await cmsClient.syncUsagesForDoc(docId);
+        res.status(200).json({success: true});
+      } catch (err: any) {
+        console.error(err.stack || err);
+        res.status(500).json({success: false, error: 'UNKNOWN'});
+      }
+    }
+  );
+
+  /**
+   * Removes all usage-index entries for a doc (call on doc delete).
+   *
+   * POST /cms/api/assets.purgeDoc {"docId": "Pages/home"}
+   */
+  server.use('/cms/api/assets.purgeDoc', async (req: Request, res: Response) => {
+    const cmsClient = await authorizeAssetRequest(req, res, ASSET_EDIT_ROLES);
+    if (!cmsClient) {
+      return;
+    }
+    const docId = String((req.body || {}).docId || '');
+    if (!docId) {
+      res.status(400).json({success: false, error: 'MISSING_DOC_ID'});
+      return;
+    }
+    try {
+      await cmsClient.purgeDocUsages(docId);
+      res.status(200).json({success: true});
+    } catch (err: any) {
+      console.error(err.stack || err);
+      res.status(500).json({success: false, error: 'UNKNOWN'});
+    }
+  });
+
+  /**
+   * Creates a library asset from an already-uploaded file.
+   *
+   * POST /cms/api/assets.create {"file": {...UploadedFile}, "dir": "/logos"}
+   */
+  server.use('/cms/api/assets.create', async (req: Request, res: Response) => {
+    const cmsClient = await authorizeAssetRequest(req, res, ASSET_MANAGE_ROLES);
+    if (!cmsClient) {
+      return;
+    }
+    const body = req.body || {};
+    if (!body.file || !body.file.src) {
+      res.status(400).json({success: false, error: 'BAD_REQUEST'});
+      return;
+    }
+    try {
+      const asset = await cmsClient.createAsset(body.file, {
+        createdBy: req.user!.email!,
+        dir: body.dir,
+      });
+      res.status(200).json({success: true, data: asset});
+    } catch (err: any) {
+      console.error(err.stack || err);
+      res.status(500).json({success: false, error: 'UNKNOWN'});
+    }
+  });
+
+  /**
+   * Replaces an asset's file and fans the new file out to every referencing
+   * draft doc.
+   *
+   * POST /cms/api/assets.replace {"assetId": "...", "file": {...UploadedFile}}
+   */
+  server.use('/cms/api/assets.replace', async (req: Request, res: Response) => {
+    const cmsClient = await authorizeAssetRequest(req, res, ASSET_MANAGE_ROLES);
+    if (!cmsClient) {
+      return;
+    }
+    const body = req.body || {};
+    if (!body.assetId || !body.file || !body.file.src) {
+      res.status(400).json({success: false, error: 'BAD_REQUEST'});
+      return;
+    }
+    try {
+      const result = await cmsClient.replaceAsset(body.assetId, body.file, {
+        replacedBy: req.user!.email!,
+      });
+      res.status(200).json({success: true, data: result});
+    } catch (err: any) {
+      console.error(err.stack || err);
+      res.status(500).json({success: false, error: 'UNKNOWN'});
+    }
+  });
+
+  /**
+   * Updates an asset's (asset-authoritative) alt text and fans it out.
+   *
+   * POST /cms/api/assets.setAlt {"assetId": "...", "alt": "..."}
+   */
+  server.use('/cms/api/assets.setAlt', async (req: Request, res: Response) => {
+    const cmsClient = await authorizeAssetRequest(req, res, ASSET_MANAGE_ROLES);
+    if (!cmsClient) {
+      return;
+    }
+    const body = req.body || {};
+    if (!body.assetId) {
+      res.status(400).json({success: false, error: 'BAD_REQUEST'});
+      return;
+    }
+    try {
+      const result = await cmsClient.setAssetAlt(
+        body.assetId,
+        String(body.alt || ''),
+        {updatedBy: req.user!.email!}
+      );
+      res.status(200).json({success: true, data: result});
+    } catch (err: any) {
+      console.error(err.stack || err);
+      res.status(500).json({success: false, error: 'UNKNOWN'});
+    }
+  });
+
+  /**
+   * Deletes a library asset (blocked if in use unless `force`).
+   *
+   * POST /cms/api/assets.delete {"assetId": "...", "force": false}
+   */
+  server.use('/cms/api/assets.delete', async (req: Request, res: Response) => {
+    const cmsClient = await authorizeAssetRequest(req, res, ASSET_MANAGE_ROLES);
+    if (!cmsClient) {
+      return;
+    }
+    const body = req.body || {};
+    if (!body.assetId) {
+      res.status(400).json({success: false, error: 'BAD_REQUEST'});
+      return;
+    }
+    try {
+      await cmsClient.deleteAsset(body.assetId, {force: !!body.force});
+      res.status(200).json({success: true});
+    } catch (err: any) {
+      console.error(err.stack || err);
+      res.status(400).json({success: false, error: err.message || 'UNKNOWN'});
+    }
+  });
+
+  /**
+   * Moves an asset into a folder. POST /cms/api/assets.move
+   * {"assetId": "...", "dir": "/logos"}
+   */
+  server.use('/cms/api/assets.move', async (req: Request, res: Response) => {
+    const cmsClient = await authorizeAssetRequest(req, res, ASSET_MANAGE_ROLES);
+    if (!cmsClient) {
+      return;
+    }
+    const body = req.body || {};
+    if (!body.assetId) {
+      res.status(400).json({success: false, error: 'BAD_REQUEST'});
+      return;
+    }
+    try {
+      await cmsClient.moveAsset(body.assetId, String(body.dir || '/'));
+      res.status(200).json({success: true});
+    } catch (err: any) {
+      console.error(err.stack || err);
+      res.status(500).json({success: false, error: 'UNKNOWN'});
+    }
+  });
+
+  /**
+   * Renames an asset's display filename. POST /cms/api/assets.rename
+   * {"assetId": "...", "filename": "..."}
+   */
+  server.use('/cms/api/assets.rename', async (req: Request, res: Response) => {
+    const cmsClient = await authorizeAssetRequest(req, res, ASSET_MANAGE_ROLES);
+    if (!cmsClient) {
+      return;
+    }
+    const body = req.body || {};
+    if (!body.assetId || !body.filename) {
+      res.status(400).json({success: false, error: 'BAD_REQUEST'});
+      return;
+    }
+    try {
+      await cmsClient.renameAsset(body.assetId, String(body.filename));
+      res.status(200).json({success: true});
+    } catch (err: any) {
+      console.error(err.stack || err);
+      res.status(500).json({success: false, error: 'UNKNOWN'});
+    }
+  });
+
+  /**
+   * Creates an asset folder. POST /cms/api/assets.createFolder
+   * {"name": "logos", "parent": "/"}
+   */
+  server.use(
+    '/cms/api/assets.createFolder',
+    async (req: Request, res: Response) => {
+      const cmsClient = await authorizeAssetRequest(
+        req,
+        res,
+        ASSET_MANAGE_ROLES
+      );
+      if (!cmsClient) {
+        return;
+      }
+      const body = req.body || {};
+      if (!body.name) {
+        res.status(400).json({success: false, error: 'BAD_REQUEST'});
+        return;
+      }
+      try {
+        const folder = await cmsClient.createAssetFolder({
+          name: String(body.name),
+          parent: body.parent,
+        });
+        res.status(200).json({success: true, data: folder});
+      } catch (err: any) {
+        console.error(err.stack || err);
+        res.status(400).json({success: false, error: err.message || 'UNKNOWN'});
+      }
+    }
+  );
+
+  /**
+   * Rebuilds the asset usage indexes from scratch (ADMIN backstop).
+   *
+   * POST /cms/api/assets.rebuildUsages {}
+   */
+  server.use(
+    '/cms/api/assets.rebuildUsages',
+    async (req: Request, res: Response) => {
+      const cmsClient = await authorizeAssetRequest(req, res, ['ADMIN']);
+      if (!cmsClient) {
+        return;
+      }
+      try {
+        const result = await cmsClient.rebuildAllUsages();
+        res.status(200).json({success: true, data: result});
+      } catch (err: any) {
+        console.error(err.stack || err);
+        res.status(500).json({success: false, error: 'UNKNOWN'});
+      }
+    }
+  );
 
   /**
    * Accepts a JSON object containing {headers: [...], rows: [...]} and sends

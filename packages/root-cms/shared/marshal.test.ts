@@ -5,6 +5,7 @@ import {
   isArrayObject,
   isRichTextData,
   resolveArrayObjectPath,
+  collectPathsByPredicate,
 } from './marshal.js';
 
 describe('marshalData', () => {
@@ -335,5 +336,101 @@ describe('isRichTextData', () => {
         },
       })
     ).toBe(false);
+  });
+});
+
+describe('collectPathsByPredicate', () => {
+  // Matches inline values backed by a library asset, like the fan-out walk does.
+  const isAsset = (n: any) => !!n && typeof n === 'object' && !!n.assetId;
+
+  it('collects a top-level matching field', () => {
+    const fields = {
+      title: 'Home',
+      hero: {src: 'a', assetId: 'logo'},
+    };
+    expect(
+      collectPathsByPredicate(fields, isAsset, {prefix: 'fields'})
+    ).toEqual(['fields.hero']);
+  });
+
+  it('does not descend into a matched node', () => {
+    const fields = {
+      hero: {src: 'a', assetId: 'logo', nested: {assetId: 'inner'}},
+    };
+    // Only the outer match is collected; the walk stops at it.
+    expect(
+      collectPathsByPredicate(fields, isAsset, {prefix: 'fields'})
+    ).toEqual(['fields.hero']);
+  });
+
+  it('uses stored ArrayObject keys (not numeric indices) for array items', () => {
+    const fields = {
+      modules: {
+        _array: ['k1', 'k2'],
+        k1: {image: {src: 'a', assetId: 'logo'}},
+        k2: {image: {src: 'b'}},
+      },
+    };
+    expect(
+      collectPathsByPredicate(fields, isAsset, {prefix: 'fields'})
+    ).toEqual(['fields.modules.k1.image']);
+  });
+
+  it('reaches assets inside oneOf blocks (skips the _type marker)', () => {
+    const fields = {
+      blocks: {
+        _array: ['b1'],
+        b1: {_type: 'ImageBlock', image: {src: 'a', assetId: 'logo'}},
+      },
+    };
+    expect(
+      collectPathsByPredicate(fields, isAsset, {prefix: 'fields'})
+    ).toEqual(['fields.blocks.b1.image']);
+  });
+
+  it('skips rich text data', () => {
+    const fields = {
+      body: {
+        time: 1,
+        version: '2.0',
+        blocks: [{type: 'image', data: {file: {assetId: 'logo'}}}],
+      },
+    };
+    expect(collectPathsByPredicate(fields, isAsset, {prefix: 'fields'})).toEqual(
+      []
+    );
+  });
+
+  it('skips `@<field>` metadata siblings', () => {
+    const fields = {
+      image: {src: 'a', assetId: 'logo'},
+      '@image': {alt: false, assetId: 'should-be-ignored'},
+    };
+    expect(
+      collectPathsByPredicate(fields, isAsset, {prefix: 'fields'})
+    ).toEqual(['fields.image']);
+  });
+
+  it('collects multiple matches across nested structures', () => {
+    const fields = {
+      hero: {src: 'a', assetId: 'logo'},
+      meta: {ogImage: {src: 'b', assetId: 'logo'}},
+      gallery: {
+        _array: ['g1', 'g2'],
+        g1: {photo: {src: 'c', assetId: 'logo'}},
+        g2: {photo: {src: 'd', assetId: 'other'}},
+      },
+    };
+    const onlyLogo = (n: any) => isAsset(n) && n.assetId === 'logo';
+    expect(
+      collectPathsByPredicate(fields, onlyLogo, {prefix: 'fields'}).sort()
+    ).toEqual(['fields.gallery.g1.photo', 'fields.hero', 'fields.meta.ogImage']);
+  });
+
+  it('returns no paths when nothing matches', () => {
+    const fields = {title: 'Home', hero: {src: 'a'}};
+    expect(collectPathsByPredicate(fields, isAsset, {prefix: 'fields'})).toEqual(
+      []
+    );
   });
 });
