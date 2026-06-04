@@ -411,6 +411,7 @@ export interface SVGAttributes<T = SVGElement> extends HTMLAttributes<T> {
   xlinkShow?: string;
   xlinkTitle?: string;
   xlinkType?: string;
+  xmlns?: string;
   xmlBase?: string;
   xmlLang?: string;
   xmlSpace?: string;
