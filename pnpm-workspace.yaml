@@ -3,3 +3,10 @@ packages:
   - "apps/*"
   - "examples/*"
   - "packages/*"
+allowBuilds:
+  '@firebase/util': true
+  esbuild: true
+  protobufjs: true
+  re2: true
+  unrs-resolver: true
+autoInstallPeers: false
