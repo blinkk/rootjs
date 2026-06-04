@@ -17,7 +17,7 @@ env:
   # lockfile out of date. Disable pnpm's automatic dependency check that runs
   # before `pnpm run`/`pnpm exec` so it doesn't try (and fail) to reinstall
   # with CI's default frozen lockfile.
-  pnpm_config_verify_deps_before_run: "false"
+  PNPM_CONFIG_VERIFY_DEPS_BEFORE_RUN: "false"
 
 jobs:
   deploy:
