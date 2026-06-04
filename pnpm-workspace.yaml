@@ -5,6 +5,7 @@ packages:
   - "packages/*"
 allowBuilds:
   '@firebase/util': true
+  '@parcel/watcher': set this to true or false
   esbuild: true
   protobufjs: true
   re2: true
