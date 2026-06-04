@@ -1,6 +1,6 @@
 {
   "name": "@blinkk/eslint-config-root",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "ESLint config for Root.js projects.",
   "author": "s@blinkk.com",
   "license": "MIT",
@@ -11,7 +11,7 @@
     "eslintconfig"
   ],
   "engines": {
-    "node": ">=20.19.0"
+    "node": ">=24"
   },
   "repository": {
     "type": "git",
