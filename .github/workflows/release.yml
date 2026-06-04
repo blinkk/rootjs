@@ -56,7 +56,7 @@ jobs:
 
       - name: Install playwright deps
         working-directory: ./packages/root-cms
-        run: pnpm exec playwright install
+        run: pnpm exec playwright install chromium
 
       - name: Unit tests
         run: pnpm test
