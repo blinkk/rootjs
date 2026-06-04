@@ -1,10 +1,15 @@
 .AssetsPage {
   background: var(--page-background);
   padding: var(--page-padding-lg);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
 }
 
 .AssetsPage__header {
-  margin-bottom: 30px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 }
 
 .AssetsPage p {
@@ -12,33 +17,132 @@
   max-width: 600px;
 }
 
-.AssetsPage__content {
-  max-width: 640px;
-  width: 100%;
-  padding: 20px;
+.AssetsPage__body {
+  display: grid;
+  grid-template-columns: 1fr 320px;
+  gap: 16px;
+  align-items: start;
 }
 
-.AssetsPage__urlGroup {
+@media (max-width: 900px) {
+  .AssetsPage__body {
+    grid-template-columns: 1fr;
+  }
+}
+
+.AssetsPage__browser {
+  padding: 16px;
+}
+
+.AssetsPage__browser__toolbar {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.AssetsPage__detail {
+  padding: 16px;
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  margin-top: 12px;
+  gap: 12px;
+  position: sticky;
+  top: 16px;
 }
 
-.AssetsPage__urlRow__label {
-  font-size: 12px;
-  font-weight: 500;
-  color: #666;
-  margin-bottom: 4px;
-}
-
-.AssetsPage__urlRow__input {
+.AssetsPage__detail__preview {
+  width: 100%;
+  height: 180px;
   display: flex;
-  flex-direction: row;
-  align-items: flex-start;
-  gap: 8px;
+  align-items: center;
+  justify-content: center;
+  background:
+    repeating-conic-gradient(#f4f4f4 0% 25%, #fff 0% 50%) 50% / 16px 16px;
+  border-radius: 6px;
+  overflow: hidden;
 }
 
-.AssetsPage__urlRow__input textarea {
+.AssetsPage__detail__preview img {
+  max-width: 100%;
+  max-height: 180px;
+  object-fit: contain;
+}
+
+.AssetsPage__detail__fileIcon {
   font-size: 12px;
+  color: #666;
+  padding: 8px;
+  text-align: center;
+  word-break: break-all;
+}
+
+.AssetsPage__detail__name {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.AssetsPage__detail__name span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.AssetsPage__detail__meta {
+  font-size: 12px;
+  color: #666;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.AssetsPage__detail__url {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+}
+
+.AssetsPage__detail__url > :first-child {
+  flex: 1;
+  min-width: 0;
+}
+
+.AssetsPage__detail__url textarea {
+  font-size: 12px;
+}
+
+.AssetsPage__detail__alt {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.AssetsPage__detail__usages {
+  font-size: 13px;
+}
+
+.AssetsPage__detail__usages__count {
+  font-weight: 600;
+}
+
+.AssetsPage__detail__usages__list {
+  margin: 6px 0 0;
+  padding-left: 18px;
+  max-height: 140px;
+  overflow: auto;
+  font-size: 12px;
+  color: #555;
+}
+
+.AssetsPage__detail__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.AssetsPage__footer {
+  border-top: 1px solid #eee;
+  padding-top: 8px;
 }

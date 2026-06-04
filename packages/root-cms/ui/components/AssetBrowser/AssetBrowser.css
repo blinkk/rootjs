@@ -1,0 +1,123 @@
+.AssetBrowser {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-height: 240px;
+}
+
+.AssetBrowser__toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.AssetBrowser__breadcrumbs {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  font-size: 14px;
+}
+
+.AssetBrowser__crumb {
+  background: none;
+  border: none;
+  padding: 2px 4px;
+  cursor: pointer;
+  color: var(--mantine-color-blue-7, #1c7ed6);
+  font: inherit;
+}
+
+.AssetBrowser__crumb:hover {
+  text-decoration: underline;
+}
+
+.AssetBrowser__crumbSep {
+  color: #999;
+  padding: 0 2px;
+}
+
+.AssetBrowser__actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.AssetBrowser__loading,
+.AssetBrowser__empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 160px;
+  color: #888;
+  grid-column: 1 / -1;
+}
+
+.AssetBrowser__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 12px;
+}
+
+.AssetBrowser__tile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 10px;
+  border: 1px solid #e6e6e6;
+  border-radius: 8px;
+  background: #fff;
+  cursor: pointer;
+  font: inherit;
+  text-align: center;
+}
+
+.AssetBrowser__tile:hover {
+  border-color: #c0c0c0;
+  background: #fafafa;
+}
+
+.AssetBrowser__tile.selected {
+  border-color: var(--mantine-color-blue-6, #228be6);
+  box-shadow: 0 0 0 1px var(--mantine-color-blue-6, #228be6);
+}
+
+.AssetBrowser__tile--folder {
+  color: var(--mantine-color-yellow-7, #f08c00);
+}
+
+.AssetBrowser__tile__thumb {
+  width: 100%;
+  height: 90px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  background:
+    repeating-conic-gradient(#f4f4f4 0% 25%, #fff 0% 50%) 50% / 16px 16px;
+  border-radius: 4px;
+}
+
+.AssetBrowser__tile__thumb img {
+  max-width: 100%;
+  max-height: 90px;
+  object-fit: contain;
+}
+
+.AssetBrowser__tile__fileExt {
+  font-size: 12px;
+  text-transform: uppercase;
+  color: #666;
+  font-weight: 600;
+}
+
+.AssetBrowser__tile__label {
+  font-size: 12px;
+  width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: #333;
+}

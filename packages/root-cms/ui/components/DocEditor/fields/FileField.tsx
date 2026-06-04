@@ -28,6 +28,8 @@ import {
   IconExternalLink,
   IconFileUpload,
   IconInfoCircle,
+  IconLibraryPhoto,
+  IconLinkOff,
   IconPaperclip,
   IconPhotoStar,
   IconPhotoUp,
@@ -41,6 +43,8 @@ import {ChangeEvent, CSSProperties, forwardRef} from 'preact/compat';
 import {lazy, Suspense} from 'preact/compat';
 import {useContext, useMemo, useRef, useState} from 'preact/hooks';
 import * as schema from '../../../../core/schema.js';
+import {assetToFieldValue} from '../../../../shared/asset.js';
+import {useAssetPickerModal} from '../../AssetPickerModal/AssetPickerModal.js';
 import {useDraftDocValue} from '../../../hooks/useDraftDoc.js';
 import {useGapiClient} from '../../../hooks/useGapiClient.js';
 import {joinClassNames} from '../../../utils/classes.js';
@@ -101,6 +105,14 @@ interface FileFieldContextValue {
   altDisabledByMetadata: boolean;
   setAltDisabledByMetadata?: (disabled: boolean) => void;
   allowEditing: boolean;
+  /** Whether to offer the "Choose from library" asset picker. */
+  enableLibraryPicker: boolean;
+  /** Whether the current value is backed by a library asset. */
+  isLibraryAsset: boolean;
+  /** Opens the asset library picker. */
+  pickFromLibrary: () => void;
+  /** Detaches the current value from its library asset (keeps the file). */
+  detachFromLibrary: () => void;
 }
 
 const FileFieldContext = createContext<FileFieldContextValue | null>(null);
@@ -136,6 +148,12 @@ export interface FileFieldInternalProps {
    * toggle to disable the alt text input on a per-instance basis.
    */
   setAltDisabledByMetadata?: (disabled: boolean) => void;
+  /**
+   * Whether to offer the "Choose from library" asset picker. Set by the
+   * doc-connected `FileField`; standalone uploaders (e.g. the asset manager)
+   * leave it off.
+   */
+  enableLibraryPicker?: boolean;
 }
 
 export function FileFieldInternal(props: FileFieldInternalProps) {
@@ -164,6 +182,28 @@ export function FileFieldInternal(props: FileFieldInternalProps) {
   const altText = value?.alt || '';
   const altDisabledByMetadata = props.altDisabledByMetadata === true;
   const showAltText = field.alt !== false && !altDisabledByMetadata;
+
+  // Asset library integration.
+  const assetPickerModal = useAssetPickerModal();
+  const enableLibraryPicker = props.enableLibraryPicker === true;
+  const isLibraryAsset = !!value?.assetId;
+  function pickFromLibrary() {
+    assetPickerModal.open({
+      accept: acceptedFileTypes,
+      onSelect: (asset) => {
+        setValue(assetToFieldValue(asset));
+      },
+    });
+  }
+  function detachFromLibrary() {
+    if (!value) {
+      return;
+    }
+    const next = {...value};
+    delete next.assetId;
+    delete next.assetVersion;
+    setValue(next);
+  }
 
   async function uploadFile(
     file: File,
@@ -463,6 +503,10 @@ export function FileFieldInternal(props: FileFieldInternalProps) {
         altDisabledByMetadata: altDisabledByMetadata,
         setAltDisabledByMetadata: props.setAltDisabledByMetadata,
         allowEditing: allowEditing,
+        enableLibraryPicker: enableLibraryPicker,
+        isLibraryAsset: isLibraryAsset,
+        pickFromLibrary: pickFromLibrary,
+        detachFromLibrary: detachFromLibrary,
       }}
     >
       <Modal
@@ -689,6 +733,7 @@ export function FileField(props: FileFieldProps) {
       setLoadingState={setLoadingState}
       variant={props.variant}
       allowEditing={props.allowEditing}
+      enableLibraryPicker={true}
       altDisabledByMetadata={altDisabledByMetadata}
       setAltDisabledByMetadata={
         props.variant === 'image' && field.alt !== false
@@ -808,6 +853,28 @@ FileField.Preview = () => {
                     Edit image
                   </Menu.Item>
                 )}
+              <Divider />
+            </>
+          )}
+          {ctx.enableLibraryPicker && (
+            <>
+              <Menu.Label size="sm">LIBRARY</Menu.Label>
+              <Menu.Item
+                icon={<IconLibraryPhoto size={16} />}
+                onClick={() => ctx.pickFromLibrary()}
+              >
+                {ctx.isLibraryAsset
+                  ? 'Replace from library'
+                  : 'Choose from library'}
+              </Menu.Item>
+              {ctx.isLibraryAsset && (
+                <Menu.Item
+                  icon={<IconLinkOff size={16} />}
+                  onClick={() => ctx.detachFromLibrary()}
+                >
+                  Detach from library
+                </Menu.Item>
+              )}
               <Divider />
             </>
           )}
@@ -1059,15 +1126,24 @@ FileField.Preview = () => {
               radius={0}
               className="DocEditor__ImageField__imagePreview__Image__Alt__Textarea"
               value={ctx.altText}
-              placeholder="Alt text"
+              placeholder={
+                ctx.isLibraryAsset
+                  ? 'Alt text is managed in the asset library'
+                  : 'Alt text'
+              }
               size="xs"
               autosize
+              readOnly={ctx.isLibraryAsset}
               disabled={ctx.loadingState === 'loading'}
               onChange={(e: ChangeEvent<HTMLInputElement>) => {
+                if (ctx.isLibraryAsset) {
+                  return;
+                }
                 ctx?.setAltText(e.currentTarget.value);
               }}
             />
             {experiments.ai &&
+              !ctx.isLibraryAsset &&
               !ctx.altText &&
               ctx.value?.src?.startsWith('http') && (
                 <Tooltip
@@ -1187,6 +1263,16 @@ FileField.Empty = () => {
     <div className="FileField__Empty">
       <div className="FileField__Empty__Label">
         <FileField.UploadButton />
+        {ctx.enableLibraryPicker && (
+          <Button
+            variant="default"
+            size="xs"
+            leftIcon={<IconLibraryPhoto size={16} />}
+            onClick={() => ctx.pickFromLibrary()}
+          >
+            Choose from library
+          </Button>
+        )}
         {testSupportsCreatePlaceholder(ctx.acceptedFileTypes) && (
           <div>
             <Tooltip label="Create placeholder image">

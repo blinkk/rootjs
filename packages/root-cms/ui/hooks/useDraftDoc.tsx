@@ -11,6 +11,7 @@ import {
 import {ComponentChildren, createContext} from 'preact';
 import {useContext, useEffect, useMemo, useState} from 'preact/hooks';
 import {logAction} from '../utils/actions.js';
+import {assetsSyncUsages, collectAssetIds} from '../utils/assets.js';
 import {debounce} from '../utils/debounce.js';
 import {setDocToCache} from '../utils/doc-cache.js';
 import {CMSDoc} from '../utils/doc.js';
@@ -62,6 +63,11 @@ export class DraftDocController extends EventListener {
   private store: JsonTrieStore;
 
   private pendingUpdates = new Map<string, any>();
+  /**
+   * Joined, sorted set of library asset ids referenced by the draft as of the
+   * last usage reconcile. `null` until the first reconcile after load.
+   */
+  private lastAssetIdsKey: string | null = null;
   private dbUnsubscribe?: () => void;
   private saveState = SaveState.NO_CHANGES;
   private autolock = false;
@@ -368,6 +374,7 @@ export class DraftDocController extends EventListener {
         throttle: SAVE_ACTION_LOG_THROTTLE,
         throttleId: this.docId,
       });
+      this.maybeSyncAssetUsages();
     } catch (err) {
       console.error('failed to update doc:', err);
       this.setSaveState(SaveState.ERROR);
@@ -395,6 +402,35 @@ export class DraftDocController extends EventListener {
         console.log(this.pendingUpdates);
       }
     }
+  }
+
+  /**
+   * Reconciles the asset library usage index for this doc when the set of
+   * referenced library assets changes. Usage writes are server-authoritative
+   * (security rules forbid client writes to the index), so this calls the
+   * `assets.syncUsages` endpoint. Fire-and-forget; the server re-scans the
+   * draft authoritatively.
+   */
+  private maybeSyncAssetUsages() {
+    if (this.readOnly) {
+      return;
+    }
+    const data = this.getData();
+    const fields = (data && (data as any).fields) || {};
+    const key = collectAssetIds(fields).join(',');
+    if (this.lastAssetIdsKey === key) {
+      return;
+    }
+    const isFirstReconcile = this.lastAssetIdsKey === null;
+    this.lastAssetIdsKey = key;
+    // On the first reconcile after load, only sync if the doc actually
+    // references assets (avoids a no-op call for asset-free docs).
+    if (isFirstReconcile && !key) {
+      return;
+    }
+    assetsSyncUsages(this.docId).catch((err) => {
+      console.error('failed to sync asset usages:', err);
+    });
   }
 
   getLocales(): string[] {

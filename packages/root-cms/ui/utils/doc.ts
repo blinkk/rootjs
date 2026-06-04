@@ -24,6 +24,11 @@ import {
 } from 'firebase/firestore';
 import {testValidRichTextData} from '../../shared/richtext.js';
 import {logAction} from './actions.js';
+import {
+  assetsPurgeDoc,
+  assetsSyncUsages,
+  collectAssetIds,
+} from './assets.js';
 import {removeDocFromCache, removeDocsFromCache} from './doc-cache.js';
 import {GoogleSheetId} from './gsheets.js';
 import {
@@ -115,6 +120,8 @@ export async function cmsDeleteDoc(docId: string) {
   await batch.commit();
   console.log(`deleted doc: ${docId}`);
   logAction('doc.delete', {metadata: {docId}});
+  // Drop any asset-library usage-index entries for the deleted doc.
+  assetsPurgeDoc(docId).catch((err) => console.error(err));
 }
 
 export async function cmsPublishDoc(
@@ -615,6 +622,10 @@ export async function cmsCreateDoc(
 
   await setDoc(docRef, data);
   logAction('doc.create', {metadata: {docId}});
+  // Register asset-library usages for any assets carried in via copy/duplicate.
+  if (collectAssetIds(data.fields).length > 0) {
+    assetsSyncUsages(docId).catch((err) => console.error(err));
+  }
 }
 
 export interface CsvTranslation {

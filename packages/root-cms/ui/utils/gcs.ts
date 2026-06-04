@@ -55,6 +55,15 @@ export interface UploadedFile {
   canvasBgColor?: 'light' | 'dark';
   /** The original source URL if the image has been edited. */
   originalSrc?: string;
+  /**
+   * Set when this value is backed by a library asset. The asset's data is
+   * denormalized inline (so doc GETs stay O(1)); `assetId` links the value back
+   * to the library so a replace can fan the new file out. Not part of the
+   * public `RootCMSImage` type — renderers ignore it.
+   */
+  assetId?: string;
+  /** The asset `version` denormalized at pick/replace time (advisory). */
+  assetVersion?: number;
 }
 
 /** Uploads a File object to GCS. */
