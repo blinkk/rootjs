@@ -445,24 +445,27 @@ export function api(server: Server, options: ApiOptions) {
    *
    * POST /cms/api/assets.purgeDoc {"docId": "Pages/home"}
    */
-  server.use('/cms/api/assets.purgeDoc', async (req: Request, res: Response) => {
-    const cmsClient = await authorizeAssetRequest(req, res, ASSET_EDIT_ROLES);
-    if (!cmsClient) {
-      return;
+  server.use(
+    '/cms/api/assets.purgeDoc',
+    async (req: Request, res: Response) => {
+      const cmsClient = await authorizeAssetRequest(req, res, ASSET_EDIT_ROLES);
+      if (!cmsClient) {
+        return;
+      }
+      const docId = String((req.body || {}).docId || '');
+      if (!docId) {
+        res.status(400).json({success: false, error: 'MISSING_DOC_ID'});
+        return;
+      }
+      try {
+        await cmsClient.purgeDocUsages(docId);
+        res.status(200).json({success: true});
+      } catch (err: any) {
+        console.error(err.stack || err);
+        res.status(500).json({success: false, error: 'UNKNOWN'});
+      }
     }
-    const docId = String((req.body || {}).docId || '');
-    if (!docId) {
-      res.status(400).json({success: false, error: 'MISSING_DOC_ID'});
-      return;
-    }
-    try {
-      await cmsClient.purgeDocUsages(docId);
-      res.status(200).json({success: true});
-    } catch (err: any) {
-      console.error(err.stack || err);
-      res.status(500).json({success: false, error: 'UNKNOWN'});
-    }
-  });
+  );
 
   /**
    * Creates a library asset from an already-uploaded file.

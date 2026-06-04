@@ -88,9 +88,9 @@ describe('assetFieldValueIsCurrent', () => {
 
   it('returns false for a different asset or an independent upload', () => {
     expect(assetFieldValueIsCurrent({src: 'x'}, ASSET)).toBe(false);
-    expect(
-      assetFieldValueIsCurrent({src: 'x', assetId: 'other'}, ASSET)
-    ).toBe(false);
+    expect(assetFieldValueIsCurrent({src: 'x', assetId: 'other'}, ASSET)).toBe(
+      false
+    );
   });
 });
 

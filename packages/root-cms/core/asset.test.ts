@@ -46,7 +46,11 @@ function makeRef(path: string): any {
     },
     async get() {
       const data = store.get(path);
-      return {exists: data !== undefined, data: () => clone(data), ref: makeRef(path)};
+      return {
+        exists: data !== undefined,
+        data: () => clone(data),
+        ref: makeRef(path),
+      };
     },
     async set(data: any) {
       store.set(path, clone(data));
@@ -64,7 +68,10 @@ function makeRef(path: string): any {
   };
 }
 
-function makeQuery(path: string, filters: Array<{field: string; val: any}> = []): any {
+function makeQuery(
+  path: string,
+  filters: Array<{field: string; val: any}> = []
+): any {
   return {
     where(field: string, _op: string, val: any) {
       return makeQuery(path, [...filters, {field, val}]);
@@ -203,7 +210,10 @@ describe('RootCMSClient asset library', () => {
 
   it('syncUsagesForDoc records reverse + forward index entries', async () => {
     const client = await newClient();
-    const asset = await client.createAsset({src: 'https://img/v1'}, {createdBy: 'a@b.com'});
+    const asset = await client.createAsset(
+      {src: 'https://img/v1'},
+      {createdBy: 'a@b.com'}
+    );
     // A draft that references the asset in a nested array item.
     store.set(draftPath('Pages', 'home'), {
       id: 'Pages/home',
@@ -212,7 +222,9 @@ describe('RootCMSClient asset library', () => {
       fields: {
         modules: {
           _array: ['k1'],
-          k1: {image: {src: 'https://img/v1', assetId: asset.id, assetVersion: 1}},
+          k1: {
+            image: {src: 'https://img/v1', assetId: asset.id, assetVersion: 1},
+          },
         },
       },
     });
@@ -222,8 +234,14 @@ describe('RootCMSClient asset library', () => {
     const usage = store.get(
       `Projects/${PROJECT}/Assets/${asset.id}/Usages/Pages--home`
     );
-    expect(usage).toMatchObject({docId: 'Pages/home', collection: 'Pages', slug: 'home'});
-    const forward = store.get(`Projects/${PROJECT}/AssetUsagesByDoc/Pages--home`);
+    expect(usage).toMatchObject({
+      docId: 'Pages/home',
+      collection: 'Pages',
+      slug: 'home',
+    });
+    const forward = store.get(
+      `Projects/${PROJECT}/AssetUsagesByDoc/Pages--home`
+    );
     expect(forward.assetIds).toEqual([asset.id]);
 
     // Count reflects the single usage.
@@ -273,7 +291,10 @@ describe('RootCMSClient asset library', () => {
 
   it('replaceAsset does not touch independent (non-library) uploads', async () => {
     const client = await newClient();
-    const asset = await client.createAsset({src: 'https://img/v1'}, {createdBy: 'a@b.com'});
+    const asset = await client.createAsset(
+      {src: 'https://img/v1'},
+      {createdBy: 'a@b.com'}
+    );
     store.set(draftPath('Pages', 'home'), {
       id: 'Pages/home',
       collection: 'Pages',
@@ -284,7 +305,11 @@ describe('RootCMSClient asset library', () => {
       },
     });
     await client.syncUsagesForDoc('Pages/home');
-    await client.replaceAsset(asset.id, {src: 'https://img/v2'}, {replacedBy: 'e@b.com'});
+    await client.replaceAsset(
+      asset.id,
+      {src: 'https://img/v2'},
+      {replacedBy: 'e@b.com'}
+    );
 
     const draft = store.get(draftPath('Pages', 'home'));
     expect(draft.fields.hero.src).toBe('https://img/v2');
@@ -293,7 +318,10 @@ describe('RootCMSClient asset library', () => {
 
   it('deleteAsset is blocked while in use, allowed with force', async () => {
     const client = await newClient();
-    const asset = await client.createAsset({src: 'https://img/v1'}, {createdBy: 'a@b.com'});
+    const asset = await client.createAsset(
+      {src: 'https://img/v1'},
+      {createdBy: 'a@b.com'}
+    );
     store.set(draftPath('Pages', 'home'), {
       id: 'Pages/home',
       collection: 'Pages',
@@ -310,7 +338,10 @@ describe('RootCMSClient asset library', () => {
 
   it('syncUsagesForDoc removes usages when the asset is detached', async () => {
     const client = await newClient();
-    const asset = await client.createAsset({src: 'https://img/v1'}, {createdBy: 'a@b.com'});
+    const asset = await client.createAsset(
+      {src: 'https://img/v1'},
+      {createdBy: 'a@b.com'}
+    );
     store.set(draftPath('Pages', 'home'), {
       id: 'Pages/home',
       collection: 'Pages',
@@ -329,6 +360,8 @@ describe('RootCMSClient asset library', () => {
     });
     await client.syncUsagesForDoc('Pages/home');
     expect(await client.getAssetUsageCount(asset.id)).toBe(0);
-    expect(store.get(`Projects/${PROJECT}/AssetUsagesByDoc/Pages--home`)).toBeUndefined();
+    expect(
+      store.get(`Projects/${PROJECT}/AssetUsagesByDoc/Pages--home`)
+    ).toBeUndefined();
   });
 });

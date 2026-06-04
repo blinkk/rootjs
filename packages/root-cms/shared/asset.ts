@@ -116,7 +116,8 @@ export function assetToFieldValue(asset: Asset): AssetRef {
   if (asset.gcsPath !== undefined) value.gcsPath = asset.gcsPath;
   if (asset.width !== undefined) value.width = asset.width;
   if (asset.height !== undefined) value.height = asset.height;
-  if (asset.canvasBgColor !== undefined) value.canvasBgColor = asset.canvasBgColor;
+  if (asset.canvasBgColor !== undefined)
+    value.canvasBgColor = asset.canvasBgColor;
   // Alt is asset-authoritative: always reflect the asset's alt (default '').
   value.alt = asset.alt ?? '';
   return value;

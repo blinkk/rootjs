@@ -44,7 +44,6 @@ import {lazy, Suspense} from 'preact/compat';
 import {useContext, useMemo, useRef, useState} from 'preact/hooks';
 import * as schema from '../../../../core/schema.js';
 import {assetToFieldValue} from '../../../../shared/asset.js';
-import {useAssetPickerModal} from '../../AssetPickerModal/AssetPickerModal.js';
 import {useDraftDocValue} from '../../../hooks/useDraftDoc.js';
 import {useGapiClient} from '../../../hooks/useGapiClient.js';
 import {joinClassNames} from '../../../utils/classes.js';
@@ -60,6 +59,7 @@ import {
   deleteFileFromGCS,
 } from '../../../utils/gcs.js';
 import {downloadFromDrive, parseGoogleDriveId} from '../../../utils/gdrive.js';
+import {useAssetPickerModal} from '../../AssetPickerModal/AssetPickerModal.js';
 import {FieldProps} from './FieldProps.js';
 import {GenerateImageForm} from './GenerateImageForm.js';
 
@@ -711,8 +711,9 @@ export function FileField(props: FileFieldProps) {
     useState<FileFieldLoadingState | null>(null);
 
   const metadataKey = getMetadataKey(props.deepKey);
-  const [metadata, setMetadata] =
-    useDraftDocValue<Record<string, any> | null>(metadataKey);
+  const [metadata, setMetadata] = useDraftDocValue<Record<string, any> | null>(
+    metadataKey
+  );
   const altDisabledByMetadata = metadata?.alt === false;
   const setAltDisabledByMetadata = (disabled: boolean) => {
     const next = {...(metadata || {})};

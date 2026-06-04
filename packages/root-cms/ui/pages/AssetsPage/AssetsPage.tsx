@@ -210,7 +210,10 @@ function AssetDetail(props: AssetDetailProps) {
   }
 
   async function move() {
-    const dir = window.prompt('Move to folder (e.g. /logos):', asset.dir || '/');
+    const dir = window.prompt(
+      'Move to folder (e.g. /logos):',
+      asset.dir || '/'
+    );
     if (dir === null) {
       return;
     }

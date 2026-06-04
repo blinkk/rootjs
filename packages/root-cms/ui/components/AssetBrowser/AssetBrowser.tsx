@@ -9,8 +9,8 @@ import {
   listAssetFolders,
   listAssets,
 } from '../../utils/assets.js';
-import {getFileExt, testIsImageFile} from '../../utils/gcs.js';
 import {joinClassNames} from '../../utils/classes.js';
+import {getFileExt, testIsImageFile} from '../../utils/gcs.js';
 import {notifyErrors} from '../../utils/notifications.js';
 
 export interface AssetBrowserProps {

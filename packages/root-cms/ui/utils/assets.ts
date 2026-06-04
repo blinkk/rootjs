@@ -91,7 +91,12 @@ function assetsCollection() {
 }
 
 function assetFoldersCollection() {
-  return collection(window.firebase.db, 'Projects', projectId(), 'AssetFolders');
+  return collection(
+    window.firebase.db,
+    'Projects',
+    projectId(),
+    'AssetFolders'
+  );
 }
 
 /** Lists assets, optionally filtered to a single folder (`dir`). */

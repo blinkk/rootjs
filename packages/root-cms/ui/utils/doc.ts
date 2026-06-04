@@ -24,11 +24,7 @@ import {
 } from 'firebase/firestore';
 import {testValidRichTextData} from '../../shared/richtext.js';
 import {logAction} from './actions.js';
-import {
-  assetsPurgeDoc,
-  assetsSyncUsages,
-  collectAssetIds,
-} from './assets.js';
+import {assetsPurgeDoc, assetsSyncUsages, collectAssetIds} from './assets.js';
 import {removeDocFromCache, removeDocsFromCache} from './doc-cache.js';
 import {GoogleSheetId} from './gsheets.js';
 import {

@@ -2133,7 +2133,11 @@ export class RootCMSClient {
 
     const batch = this.db.batch();
     for (const assetId of toAdd) {
-      batch.set(this.dbAssetUsageRef(assetId, docId), {docId, collection, slug});
+      batch.set(this.dbAssetUsageRef(assetId, docId), {
+        docId,
+        collection,
+        slug,
+      });
     }
     for (const assetId of toRemove) {
       batch.delete(this.dbAssetUsageRef(assetId, docId));
@@ -2176,7 +2180,10 @@ export class RootCMSClient {
    * `force` is set. GCS bytes are intentionally NOT deleted (the same object
    * may be referenced by independent uploads elsewhere).
    */
-  async deleteAsset(assetId: string, options?: {force?: boolean}): Promise<void> {
+  async deleteAsset(
+    assetId: string,
+    options?: {force?: boolean}
+  ): Promise<void> {
     const usageCount = await this.getAssetUsageCount(assetId);
     if (usageCount > 0 && !options?.force) {
       throw new Error(`asset is in use by ${usageCount} doc(s)`);
