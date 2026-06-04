@@ -8,12 +8,44 @@ import {page} from '@vitest/browser/context';
 import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest';
 import {AssetsPage} from './AssetsPage.js';
 
-vi.mock('../../utils/gcs.js', async (importOriginal) => {
+vi.mock('preact-iso', async (importOriginal) => {
   const actual: any = await importOriginal();
   return {
     ...actual,
-    checkFileExists: vi.fn(),
-    uploadFileToGCS: vi.fn(),
+    useLocation: () => ({url: '/cms/assets'}),
+  };
+});
+
+vi.mock('../../utils/asset-library.js', () => {
+  const DEFAULT_ASSET_FOLDER = 'uploads';
+  const normalizeAssetFolderPath = (path?: string) =>
+    (path || DEFAULT_ASSET_FOLDER)
+      .replaceAll('\\', '/')
+      .split('/')
+      .map((part) => part.trim())
+      .filter(Boolean)
+      .join('/') || DEFAULT_ASSET_FOLDER;
+  return {
+    DEFAULT_ASSET_FOLDER,
+    createAssetFolder: vi.fn(),
+    createLibraryAsset: vi.fn(),
+    getLibraryAssetFolder: (asset: any) =>
+      normalizeAssetFolderPath(asset.folder),
+    getLibraryAssetPath: (asset: any) =>
+      `${normalizeAssetFolderPath(asset.folder)}/${
+        asset.filename || asset.file?.filename || asset.id
+      }`,
+    listLibraryAssetFolders: vi.fn(async () => [
+      {
+        id: 'uploads',
+        path: 'uploads',
+        name: 'uploads',
+        parentPath: '',
+      },
+    ]),
+    listLibraryAssets: vi.fn(async () => []),
+    normalizeAssetFolderPath,
+    replaceLibraryAsset: vi.fn(),
   };
 });
 
@@ -55,7 +87,10 @@ describe('AssetsPage', () => {
       .element(page.getByRole('heading', {name: 'Assets'}))
       .toBeVisible();
     await expect
-      .element(page.getByTitle('Drop or paste to upload a file'))
+      .element(page.getByRole('button', {name: 'Upload asset'}))
+      .toBeVisible();
+    await expect
+      .element(page.getByRole('button', {name: 'uploads'}))
       .toBeVisible();
     await expect
       .element(page.getByTestId('assets-page'))

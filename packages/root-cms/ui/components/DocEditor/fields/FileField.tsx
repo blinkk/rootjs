@@ -52,11 +52,11 @@ import {
   testIsImageFile,
   testIsVideoFile,
   UploadedFile,
-  uploadFileToGCS,
   deleteFileFromGCS,
 } from '../../../utils/gcs.js';
 import type {LibraryAsset} from '../../../utils/asset-library.js';
 import {
+  createLibraryAsset,
   listLibraryAssets,
   saveFileAsLibraryAsset,
 } from '../../../utils/asset-library.js';
@@ -192,11 +192,14 @@ export function FileFieldInternal(props: FileFieldInternalProps) {
       const cacheControl =
         field.cacheControl || (mode === 'clean' ? 'no-cache' : undefined);
 
-      const uploadedFile = await uploadFileToGCS(file, {
-        namingMode: mode,
-        checkExists: options?.checkExists ?? false,
-        cacheControl,
+      const asset = await createLibraryAsset(file, {
+        uploadOptions: {
+          namingMode: mode,
+          checkExists: options?.checkExists ?? false,
+          cacheControl,
+        },
       });
+      const uploadedFile = asset.file;
 
       // Preserve previous alt text when a new file is uploaded.
       if (
@@ -820,14 +823,12 @@ FileField.Preview = () => {
           {ctx.allowEditing && (
             <>
               <Menu.Label size="sm">REPLACE</Menu.Label>
-              {ctx.field.assetLibrary && (
-                <Menu.Item
-                  icon={<IconPhotoStar size={16} />}
-                  onClick={() => ctx.requestAssetLibraryOpen()}
-                >
-                  Choose from library
-                </Menu.Item>
-              )}
+              <Menu.Item
+                icon={<IconPhotoStar size={16} />}
+                onClick={() => ctx.requestAssetLibraryOpen()}
+              >
+                Choose from library
+              </Menu.Item>
               <Menu.Item
                 icon={
                   ctx.variant === 'image' ? (
@@ -897,7 +898,7 @@ FileField.Preview = () => {
           >
             {copied ? 'Copied!' : 'Copy URL'}
           </Menu.Item>
-          {ctx.allowEditing && ctx.field.assetLibrary && !ctx.value?.assetId && (
+          {ctx.allowEditing && !ctx.value?.assetId && (
             <Menu.Item
               icon={<IconPhotoStar size={16} />}
               onClick={() => ctx.saveCurrentFileAsLibraryAsset()}
@@ -1314,6 +1315,19 @@ FileField.Empty = () => {
     <div className="FileField__Empty">
       <div className="FileField__Empty__Label">
         <FileField.UploadButton />
+        <div>
+          <Tooltip label="Choose from asset library">
+            <ActionIcon
+              className="FileField__Empty__Label__LibraryButton"
+              onClick={() => {
+                ctx.requestAssetLibraryOpen();
+              }}
+              title="Choose from asset library"
+            >
+              <IconPhotoStar size={16} />
+            </ActionIcon>
+          </Tooltip>
+        </div>
         {testSupportsCreatePlaceholder(ctx.acceptedFileTypes) && (
           <div>
             <Tooltip label="Create placeholder image">

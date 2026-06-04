@@ -12,6 +12,7 @@ import {
 import {showNotification} from '@mantine/notifications';
 import {IconSparkles} from '@tabler/icons-preact';
 import {useState} from 'preact/hooks';
+import {createLibraryAsset} from '../../../utils/asset-library.js';
 import {UploadedFile} from '../../../utils/gcs.js';
 
 interface GenerateImageFormProps {
@@ -110,7 +111,7 @@ export function GenerateImageForm(props: GenerateImageFormProps) {
     }
   }
 
-  function handleSimpleSubmit(e: Event) {
+  async function handleSimpleSubmit(e: Event) {
     e.preventDefault();
     const formData = new FormData(e.target as HTMLFormElement);
     const w = parseInt(formData.get('width') as string, 10);
@@ -133,20 +134,27 @@ export function GenerateImageForm(props: GenerateImageFormProps) {
     }
     svgParts.push('</svg>');
     const svg = svgParts.join('');
-
-    const encoder = new TextEncoder();
-    const uint8Array = encoder.encode(svg);
-    const src = `data:image/svg+xml;base64,${btoa(
-      String.fromCharCode(...uint8Array)
-    )}`;
-    const placeholderFile: UploadedFile = {
-      src: src,
-      filename: 'placeholder.svg',
-      width: w,
-      height: h,
-      alt: '',
-    };
-    props.onSubmit(placeholderFile);
+    setSaving(true);
+    try {
+      const file = new File([svg], 'placeholder.svg', {type: 'image/svg+xml'});
+      const asset = await createLibraryAsset(file);
+      const placeholderFile: UploadedFile = {
+        ...asset.file,
+        width: w,
+        height: h,
+        alt: '',
+      };
+      props.onSubmit(placeholderFile);
+    } catch (err: any) {
+      console.error(err);
+      showNotification({
+        title: 'Save failed',
+        message: err.message || 'Failed to upload placeholder image',
+        color: 'red',
+      });
+    } finally {
+      setSaving(false);
+    }
   }
 
   async function handleAiSave() {
@@ -158,9 +166,7 @@ export function GenerateImageForm(props: GenerateImageFormProps) {
       const blob = await res.blob();
       const file = new File([blob], 'generated-image.png', {type: 'image/png'});
 
-      // Upload to GCS.
-      const {uploadFileToGCS} = await import('../../../utils/gcs.js');
-      const uploadedFile = await uploadFileToGCS(file);
+      const asset = await createLibraryAsset(file);
 
       // Calculate dimensions based on aspect ratio.
       const [wRatio, hRatio] = aspectRatio.split(':').map(Number);
@@ -169,7 +175,7 @@ export function GenerateImageForm(props: GenerateImageFormProps) {
       const calculatedHeight = Math.round((calculatedWidth * hRatio) / wRatio);
 
       const placeholderFile: UploadedFile = {
-        ...uploadedFile,
+        ...asset.file,
         width: calculatedWidth,
         height: calculatedHeight,
         alt: prompt,
@@ -237,8 +243,8 @@ export function GenerateImageForm(props: GenerateImageFormProps) {
             />
           </Stack>
           <Group justify="flex-end" mt="md">
-            <Button variant="filled" type="submit">
-              Create
+            <Button variant="filled" type="submit" loading={saving}>
+              {saving ? 'Saving...' : 'Create'}
             </Button>
           </Group>
         </form>

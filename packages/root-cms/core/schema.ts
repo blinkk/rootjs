@@ -139,8 +139,6 @@ export type ImageField = CommonFieldProps & {
   cacheControl?: string;
   /** Set to `false` to disable the alt text input. */
   alt?: boolean;
-  /** Enables picking and reusing denormalized files from the asset library. */
-  assetLibrary?: boolean;
 };
 
 export function image(field: Omit<ImageField, 'type'>): ImageField {
@@ -162,8 +160,6 @@ export type FileField = CommonFieldProps & {
   cacheControl?: string;
   /** Set to `false` to disable the alt text input. */
   alt?: boolean;
-  /** Enables picking and reusing denormalized files from the asset library. */
-  assetLibrary?: boolean;
 };
 
 export function file(field: Omit<FileField, 'type'>): FileField {

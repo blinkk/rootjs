@@ -1,44 +1,257 @@
 .AssetsPage {
   background: var(--page-background);
+  min-height: 100%;
   padding: var(--page-padding-lg);
 }
 
+.AssetsPage__hiddenInput {
+  display: none;
+}
+
 .AssetsPage__header {
-  margin-bottom: 30px;
+  align-items: flex-start;
+  display: flex;
+  gap: 16px;
+  justify-content: space-between;
+  margin-bottom: 24px;
 }
 
 .AssetsPage p {
   margin-top: 8px;
-  max-width: 600px;
+  max-width: 640px;
 }
 
-.AssetsPage__content {
-  max-width: 640px;
+.AssetsPage__layout {
+  align-items: stretch;
+  display: grid;
+  gap: 16px;
+  grid-template-columns: minmax(220px, 280px) minmax(360px, 1fr) minmax(
+      280px,
+      360px
+    );
+}
+
+.AssetsPage__treePanel,
+.AssetsPage__browserPanel,
+.AssetsPage__detailsPanel {
+  min-height: 520px;
+  min-width: 0;
+  padding: 16px;
+}
+
+.AssetsPage__panelHeader,
+.AssetsPage__browserHeader {
+  align-items: center;
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.AssetsPage__panelTitle,
+.AssetsPage__detailsName {
+  color: #212529;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.AssetsPage__crumb,
+.AssetsPage__detailsMeta {
+  color: #6c757d;
+  font-size: 11px;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+.AssetsPage__tree {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.AssetsPage__treeRow {
+  align-items: center;
+  appearance: none;
+  background: transparent;
+  border: 0;
+  border-radius: 4px;
+  color: #343a40;
+  cursor: pointer;
+  display: grid;
+  font: inherit;
+  font-size: 12px;
+  gap: 6px;
+  grid-template-columns: 16px 16px minmax(0, 1fr);
+  min-height: 30px;
+  padding: 5px 8px;
+  text-align: left;
   width: 100%;
-  padding: 20px;
+}
+
+.AssetsPage__treeRow:hover {
+  background: #f1f3f5;
+}
+
+.AssetsPage__treeRow--selected {
+  background: #e7f5ff;
+  color: #0b7285;
+  font-weight: 700;
+}
+
+.AssetsPage__treeRow span:last-child {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.AssetsPage__treeToggle {
+  align-items: center;
+  display: flex;
+  height: 16px;
+  justify-content: center;
+  width: 16px;
+}
+
+.AssetsPage__loading,
+.AssetsPage__emptyFolder,
+.AssetsPage__detailsEmpty,
+.AssetsPage__treeEmpty {
+  align-items: center;
+  color: #6c757d;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  justify-content: center;
+  min-height: 160px;
+  text-align: center;
+}
+
+.AssetsPage__fileGrid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(auto-fill, minmax(128px, 1fr));
+}
+
+.AssetsPage__tile {
+  align-items: center;
+  appearance: none;
+  aspect-ratio: 1;
+  background: #fff;
+  border: 1px solid #dee2e6;
+  border-radius: 6px;
+  color: #343a40;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  justify-content: center;
+  min-width: 0;
+  padding: 10px;
+}
+
+.AssetsPage__tile:hover {
+  border-color: #74c0fc;
+}
+
+.AssetsPage__tile--selected {
+  border-color: #1098ad;
+  box-shadow: 0 0 0 2px rgba(16, 152, 173, 0.16);
+}
+
+.AssetsPage__tile--folder {
+  background: #f8f9fa;
+}
+
+.AssetsPage__tile img {
+  max-height: 76px;
+  max-width: 100%;
+  object-fit: contain;
+}
+
+.AssetsPage__tile span {
+  font-size: 11px;
+  line-height: 1.25;
+  max-width: 100%;
+  overflow: hidden;
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.AssetsPage__details {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.AssetsPage__detailsPreview {
+  align-items: center;
+  aspect-ratio: 16 / 10;
+  background: #f8f9fa;
+  border: 1px solid #e9ecef;
+  border-radius: 6px;
+  display: flex;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.AssetsPage__detailsPreview img {
+  height: 100%;
+  object-fit: contain;
+  width: 100%;
 }
 
 .AssetsPage__urlGroup {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  margin-top: 12px;
 }
 
 .AssetsPage__urlRow__label {
+  color: #666;
   font-size: 12px;
   font-weight: 500;
-  color: #666;
   margin-bottom: 4px;
 }
 
 .AssetsPage__urlRow__input {
+  align-items: flex-start;
   display: flex;
   flex-direction: row;
-  align-items: flex-start;
   gap: 8px;
 }
 
 .AssetsPage__urlRow__input textarea {
   font-size: 12px;
+}
+
+@media (max-width: 1100px) {
+  .AssetsPage__layout {
+    grid-template-columns: minmax(220px, 280px) minmax(360px, 1fr);
+  }
+
+  .AssetsPage__detailsPanel {
+    grid-column: 1 / -1;
+    min-height: 0;
+  }
+}
+
+@media (max-width: 760px) {
+  .AssetsPage {
+    padding: var(--page-padding);
+  }
+
+  .AssetsPage__header {
+    flex-direction: column;
+  }
+
+  .AssetsPage__layout {
+    grid-template-columns: 1fr;
+  }
+
+  .AssetsPage__treePanel,
+  .AssetsPage__browserPanel,
+  .AssetsPage__detailsPanel {
+    min-height: 0;
+  }
 }

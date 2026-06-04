@@ -1,16 +1,20 @@
 import {
   collection,
   doc,
+  getDoc,
   getDocs,
   limit,
   orderBy,
   query,
   serverTimestamp,
-  setDoc,
   where,
   writeBatch,
 } from 'firebase/firestore';
-import {UploadedFile, uploadFileToGCS} from './gcs.js';
+import type {QueryConstraint} from 'firebase/firestore';
+import {uploadFileToGCS} from './gcs.js';
+import type {UploadedFile, UploadFileOptions} from './gcs.js';
+
+export const DEFAULT_ASSET_FOLDER = 'uploads';
 
 export interface LibraryAssetFile extends UploadedFile {
   assetId: string;
@@ -21,7 +25,20 @@ export interface LibraryAsset {
   id: string;
   file: LibraryAssetFile;
   filename?: string;
+  folder?: string;
+  path?: string;
   version: number;
+  createdAt?: unknown;
+  createdBy?: string;
+  modifiedAt?: unknown;
+  modifiedBy?: string;
+}
+
+export interface LibraryAssetFolder {
+  id: string;
+  path: string;
+  name: string;
+  parentPath: string;
   createdAt?: unknown;
   createdBy?: string;
   modifiedAt?: unknown;
@@ -50,55 +67,104 @@ export function createLibraryFile(
   return {...file, assetId, assetVersion: version};
 }
 
-export async function createLibraryAsset(file: File): Promise<LibraryAsset> {
+export async function createLibraryAsset(
+  file: File,
+  options?: {
+    folder?: string;
+    uploadOptions?: UploadFileOptions;
+  }
+): Promise<LibraryAsset> {
   const id = crypto.randomUUID();
   const version = 1;
+  const folder = normalizeAssetFolderPath(options?.folder);
   const uploaded = await uploadFileToGCS(file, {
-    uploadDir: `assets/${id}/v${version}`,
+    ...options?.uploadOptions,
+    uploadDir: folder,
   });
   const assetFile = createLibraryFile(id, version, uploaded);
+  const filename = uploaded.filename || file.name;
   const asset: LibraryAsset = {
     id,
     file: assetFile,
-    filename: uploaded.filename || file.name,
+    filename,
+    folder,
+    path: assetPath(folder, filename),
     version,
     createdAt: serverTimestamp(),
     createdBy: window.firebase.user.email || 'unknown',
     modifiedAt: serverTimestamp(),
     modifiedBy: window.firebase.user.email || 'unknown',
   };
-  await setDoc(assetDocRef(id), asset);
+  const batch = writeBatch(window.firebase.db);
+  setAssetFolderDocsInBatch(batch, folder);
+  batch.set(assetDocRef(id), asset);
+  await batch.commit();
   return asset;
 }
 
 export async function saveFileAsLibraryAsset(
-  file: UploadedFile
+  file: UploadedFile,
+  folderPath?: string
 ): Promise<LibraryAsset> {
   const id = crypto.randomUUID();
   const version = 1;
+  const folder = normalizeAssetFolderPath(folderPath);
   const assetFile = createLibraryFile(id, version, file);
+  const filename = file.filename || id;
   const asset: LibraryAsset = {
     id,
     file: assetFile,
-    filename: file.filename,
+    filename,
+    folder,
+    path: assetPath(folder, filename),
     version,
     createdAt: serverTimestamp(),
     createdBy: window.firebase.user.email || 'unknown',
     modifiedAt: serverTimestamp(),
     modifiedBy: window.firebase.user.email || 'unknown',
   };
-  await setDoc(assetDocRef(id), asset);
+  const batch = writeBatch(window.firebase.db);
+  setAssetFolderDocsInBatch(batch, folder);
+  batch.set(assetDocRef(id), asset);
+  await batch.commit();
   return asset;
 }
 
-export async function listLibraryAssets(max = 50): Promise<LibraryAsset[]> {
-  const snapshot = await getDocs(
-    query(assetCollectionRef(), orderBy('modifiedAt', 'desc'), limit(max))
-  );
+export async function createAssetFolder(
+  folderPath: string
+): Promise<LibraryAssetFolder> {
+  const folder = normalizeAssetFolderPath(folderPath);
+  const batch = writeBatch(window.firebase.db);
+  setAssetFolderDocsInBatch(batch, folder);
+  await batch.commit();
+  return folderFromPath(folder);
+}
+
+export async function listLibraryAssets(max?: number): Promise<LibraryAsset[]> {
+  const constraints: QueryConstraint[] = [orderBy('modifiedAt', 'desc')];
+  if (max) {
+    constraints.push(limit(max));
+  }
+  const snapshot = await getDocs(query(assetCollectionRef(), ...constraints));
   return snapshot.docs.map((docSnap) => ({
     ...(docSnap.data() as LibraryAsset),
     id: docSnap.id,
   }));
+}
+
+export async function listLibraryAssetFolders(): Promise<LibraryAssetFolder[]> {
+  const snapshot = await getDocs(
+    query(assetFolderCollectionRef(), orderBy('path', 'asc'))
+  );
+  const foldersByPath = new Map<string, LibraryAssetFolder>();
+  foldersByPath.set(DEFAULT_ASSET_FOLDER, folderFromPath(DEFAULT_ASSET_FOLDER));
+  snapshot.docs.forEach((docSnap) => {
+    const folder = docSnap.data() as LibraryAssetFolder;
+    foldersByPath.set(folder.path, {...folder, id: docSnap.id});
+  });
+  return [...foldersByPath.values()].sort((a, b) =>
+    a.path.localeCompare(b.path)
+  );
 }
 
 export async function replaceLibraryAsset(assetId: string, file: File) {
@@ -106,15 +172,22 @@ export async function replaceLibraryAsset(assetId: string, file: File) {
   const usageSnapshot = await getDocs(
     query(assetUsageCollectionRef(), where('assetId', '==', assetId))
   );
+  const existingAsset = (await getDoc(assetRef)).data() as
+    | LibraryAsset
+    | undefined;
+  const folder = normalizeAssetFolderPath(existingAsset?.folder);
   const nextVersion = Date.now();
   const uploaded = await uploadFileToGCS(file, {
-    uploadDir: `assets/${assetId}/v${nextVersion}`,
+    uploadDir: folder,
   });
   const assetFile = createLibraryFile(assetId, nextVersion, uploaded);
+  const filename = uploaded.filename || file.name;
   const batch = writeBatch(window.firebase.db);
   batch.update(assetRef, {
     file: assetFile,
-    filename: uploaded.filename || file.name,
+    filename,
+    folder,
+    path: assetPath(folder, filename),
     version: nextVersion,
     modifiedAt: serverTimestamp(),
     modifiedBy: window.firebase.user.email || 'unknown',
@@ -132,6 +205,31 @@ export async function replaceLibraryAsset(assetId: string, file: File) {
     });
   });
   await batch.commit();
+}
+
+export function normalizeAssetFolderPath(folderPath?: string): string {
+  const normalized = (folderPath || DEFAULT_ASSET_FOLDER)
+    .replaceAll('\\', '/')
+    .split('/')
+    .map((part) => part.trim())
+    .filter(Boolean);
+  if (normalized.length === 0) {
+    return DEFAULT_ASSET_FOLDER;
+  }
+  if (normalized.some((part) => part === '.' || part === '..')) {
+    throw new Error('Folder names cannot be "." or "..".');
+  }
+  return normalized.join('/');
+}
+
+export function getLibraryAssetFolder(asset: LibraryAsset): string {
+  return normalizeAssetFolderPath(asset.folder);
+}
+
+export function getLibraryAssetPath(asset: LibraryAsset): string {
+  const folder = getLibraryAssetFolder(asset);
+  const filename = asset.filename || asset.file.filename || asset.id;
+  return asset.path || assetPath(folder, filename);
 }
 
 export async function syncDocAssetUsages(
@@ -210,6 +308,43 @@ function assetUsageId(mode: string, docId: string, path: string) {
   return encodeURIComponent(`${mode}:${docId}:${path}`);
 }
 
+function assetPath(folder: string, filename: string) {
+  return `${normalizeAssetFolderPath(folder)}/${filename}`;
+}
+
+function folderFromPath(folderPath: string): LibraryAssetFolder {
+  const path = normalizeAssetFolderPath(folderPath);
+  const parts = path.split('/');
+  const name = parts[parts.length - 1];
+  const parentPath = parts.length > 1 ? parts.slice(0, -1).join('/') : '';
+  return {
+    id: assetFolderId(path),
+    path,
+    name,
+    parentPath,
+  };
+}
+
+function setAssetFolderDocsInBatch(
+  batch: ReturnType<typeof writeBatch>,
+  folderPath: string
+) {
+  const parts = normalizeAssetFolderPath(folderPath).split('/');
+  for (let i = 1; i <= parts.length; i++) {
+    const path = parts.slice(0, i).join('/');
+    const folder = folderFromPath(path);
+    batch.set(
+      assetFolderDocRef(path),
+      {
+        ...folder,
+        modifiedAt: serverTimestamp(),
+        modifiedBy: window.firebase.user.email || 'unknown',
+      },
+      {merge: true}
+    );
+  }
+}
+
 function assetCollectionRef() {
   return collection(
     window.firebase.db,
@@ -221,6 +356,23 @@ function assetCollectionRef() {
 
 function assetDocRef(assetId: string) {
   return doc(assetCollectionRef(), assetId);
+}
+
+function assetFolderCollectionRef() {
+  return collection(
+    window.firebase.db,
+    'Projects',
+    window.__ROOT_CTX.rootConfig.projectId,
+    'AssetFolders'
+  );
+}
+
+function assetFolderDocRef(folderPath: string) {
+  return doc(assetFolderCollectionRef(), assetFolderId(folderPath));
+}
+
+function assetFolderId(folderPath: string) {
+  return encodeURIComponent(normalizeAssetFolderPath(folderPath));
 }
 
 function assetUsageCollectionRef() {
