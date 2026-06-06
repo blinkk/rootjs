@@ -98,8 +98,11 @@ export interface RootUserConfig {
   jsxRenderer?: JsxRenderOptions;
 
   /**
-   * Whether to automatically minify HTML output. This is enabled by default,
-   * in order to disable, pass `minifyHtml: false` to root.config.ts.
+   * Whether to minify HTML output via html-minifier-terser. Disabled by
+   * default; pass `minifyHtml: true` to opt in.
+   *
+   * Ignored when the built-in JSX renderer (`jsxRenderer`) is enabled, since
+   * that renderer controls its own output formatting via its `mode` option.
    */
   minifyHtml?: boolean;
 
@@ -109,7 +112,12 @@ export interface RootUserConfig {
   minifyHtmlOptions?: HtmlMinifyOptions;
 
   /**
-   * Whether to pretty print HTML output.
+   * Whether to pretty print HTML output via js-beautify. Disabled by default;
+   * pass `prettyHtml: true` to opt in. When both `prettyHtml` and `minifyHtml`
+   * are set, `prettyHtml` takes precedence.
+   *
+   * Ignored when the built-in JSX renderer (`jsxRenderer`) is enabled, since
+   * that renderer controls its own output formatting via its `mode` option.
    */
   prettyHtml?: boolean;
 

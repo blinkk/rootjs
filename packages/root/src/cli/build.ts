@@ -16,8 +16,7 @@ import {rootPodsVitePlugin} from '../node/pods-vite-plugin.js';
 import {pruneEmptyChunksPlugin} from '../node/vite-plugin-prune-empty-chunks.js';
 import {preactToRootJsxPlugin} from '../node/vite-plugin-root-jsx-virtual.js';
 import {BuildAssetMap} from '../render/asset-map/build-asset-map.js';
-import {htmlMinify} from '../render/html-minify.js';
-import {htmlPretty} from '../render/html-pretty.js';
+import {transformHtml} from '../render/html-transform.js';
 import {batchAsyncCalls} from '../utils/batch.js';
 import {
   copyGlob,
@@ -499,13 +498,7 @@ export async function build(rootProjectDir?: string, options?: BuildOptions) {
           }
 
           // Render html and save the file to dist/html.
-          // TODO(stevenle): consolidate post-build html transformation logic.
-          let html = data.html || '';
-          if (rootConfig.prettyHtml) {
-            html = await htmlPretty(html, rootConfig.prettyHtmlOptions);
-          } else if (rootConfig.minifyHtml) {
-            html = await htmlMinify(html, rootConfig.minifyHtmlOptions);
-          }
+          const html = await transformHtml(data.html || '', rootConfig);
           await writeFile(outPath, normalizeLineEndings(html));
 
           printFileOutput(fileSize(outPath), 'dist/html/', outFilePath);
