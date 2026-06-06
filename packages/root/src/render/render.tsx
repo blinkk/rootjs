@@ -34,8 +34,7 @@ import {parseTagNames} from '../utils/elements.js';
 import {toHrefLang} from '../utils/i18n.js';
 import {replaceParams} from '../utils/url-path-params.js';
 import {AssetMap} from './asset-map/asset-map.js';
-import {htmlMinify} from './html-minify.js';
-import {htmlPretty} from './html-pretty.js';
+import {transformHtml} from './html-transform.js';
 import {getFallbackLocales} from './i18n-fallbacks.js';
 import {normalizeUrlPath, Router} from './router.js';
 
@@ -405,13 +404,7 @@ export class Renderer {
         nonce,
       });
 
-      // TODO(stevenle): consolidate post-build html transformation logic.
-      let html = output.html;
-      if (this.rootConfig.prettyHtml) {
-        html = await htmlPretty(html, this.rootConfig.prettyHtmlOptions);
-      } else if (this.rootConfig.minifyHtml !== false) {
-        html = await htmlMinify(html, this.rootConfig.minifyHtmlOptions);
-      }
+      let html = await transformHtml(output.html, this.rootConfig);
       if (req.viteServer) {
         html = await req.viteServer.transformIndexHtml(currentPath, html);
         if (nonce) {
