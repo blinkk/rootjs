@@ -1,7 +1,6 @@
 import path from 'node:path';
-import {ComponentChildren} from '@blinkk/root/jsx/jsx-runtime';
+import {ComponentChildren, FunctionalComponent} from '@blinkk/root/jsx';
 import {RichTextContext} from '@blinkk/root-cms/richtext';
-import {FunctionalComponent} from 'preact';
 import {buildModuleInfo, ModuleInfoContext} from '@/hooks/useModuleInfo.js';
 import {RootNode} from '../RootNode/RootNode.js';
 
