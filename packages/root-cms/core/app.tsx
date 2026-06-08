@@ -146,6 +146,9 @@ export async function renderApp(
       hasExport: isFunction(t.onExport),
     })),
     defaultOneOfVariant: cmsConfig.defaultOneOfVariant || 'dropdown',
+    csv: {
+      excludeLocales: cmsConfig.csv?.excludeLocales || [],
+    },
   };
   const projectName = cmsConfig.name || cmsConfig.id || '';
   const title = getCmsTitle(projectName, cmsConfig.minimalBranding);

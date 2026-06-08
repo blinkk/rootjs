@@ -61,6 +61,7 @@ import {
 import {
   batchSaveTranslations,
   batchUpdateTags,
+  isCsvLocaleExcluded,
   sourceHash,
 } from '../../utils/l10n.js';
 import {TranslationsMap, loadTranslations} from '../../utils/l10n.js';
@@ -649,7 +650,9 @@ LocalizationModal.Translations = (props: TranslationsProps) => {
   }
 
   function formatCsvData() {
-    const nonEnLocales = locales.filter((l) => l !== 'en');
+    const nonEnLocales = locales.filter(
+      (l) => l !== 'en' && !isCsvLocaleExcluded(l)
+    );
     const headers = ['source', 'en', ...nonEnLocales];
     const rows: Array<Record<string, string>> = [];
     sourceStrings.forEach((source) => {
@@ -702,9 +705,21 @@ LocalizationModal.Translations = (props: TranslationsProps) => {
             throw new Error(`RPCError: ${errorText}`);
           }
           const resData = (await res.json()).data;
+          // Drop columns for any excluded locales so they aren't imported.
+          const filteredData = (resData as Array<Record<string, string>>).map(
+            (row) => {
+              const filtered: Record<string, string> = {};
+              Object.entries(row).forEach(([column, value]) => {
+                if (column === 'source' || !isCsvLocaleExcluded(column)) {
+                  filtered[column] = value;
+                }
+              });
+              return filtered;
+            }
+          );
           const importedTranslations = await cmsDocImportTranslations(
             props.docId,
-            resData
+            filteredData
           );
           setTranslationsMap((currentTranslations) => {
             return mergeTranslations(currentTranslations, importedTranslations);

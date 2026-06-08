@@ -1,5 +1,5 @@
-import {beforeEach, describe, expect, it, vi} from 'vitest';
-import {batchUpdateTags} from './l10n.js';
+import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest';
+import {batchUpdateTags, isCsvLocaleExcluded} from './l10n.js';
 
 // Mock values used in the function.
 const mockProjectId = 'test-project-id';
@@ -38,6 +38,68 @@ vi.mock('firebase/firestore', () => ({
   updateDoc: vi.fn(),
   where: vi.fn(),
 }));
+
+describe('isCsvLocaleExcluded', () => {
+  const originalCtx = window.__ROOT_CTX;
+
+  afterEach(() => {
+    window.__ROOT_CTX = originalCtx;
+  });
+
+  function setExcludeLocales(patterns?: string[]) {
+    window.__ROOT_CTX = {
+      ...originalCtx,
+      csv: patterns ? {excludeLocales: patterns} : undefined,
+    } as any;
+  }
+
+  it('returns false when no patterns are configured', () => {
+    setExcludeLocales();
+    expect(isCsvLocaleExcluded('en')).toBe(false);
+    expect(isCsvLocaleExcluded('ALL_es')).toBe(false);
+  });
+
+  it('matches `*` wildcard patterns', () => {
+    setExcludeLocales(['ALL_*']);
+    expect(isCsvLocaleExcluded('ALL_es')).toBe(true);
+    expect(isCsvLocaleExcluded('ALL_fr')).toBe(true);
+    expect(isCsvLocaleExcluded('ALL_')).toBe(true);
+    expect(isCsvLocaleExcluded('es')).toBe(false);
+    expect(isCsvLocaleExcluded('es_ALL')).toBe(false);
+  });
+
+  it('matches `?` single-character wildcard patterns', () => {
+    setExcludeLocales(['e?']);
+    expect(isCsvLocaleExcluded('en')).toBe(true);
+    expect(isCsvLocaleExcluded('es')).toBe(true);
+    expect(isCsvLocaleExcluded('e')).toBe(false);
+    expect(isCsvLocaleExcluded('eng')).toBe(false);
+  });
+
+  it('matches case-insensitively', () => {
+    setExcludeLocales(['all_*']);
+    expect(isCsvLocaleExcluded('ALL_es')).toBe(true);
+  });
+
+  it('supports exact (non-wildcard) patterns', () => {
+    setExcludeLocales(['de']);
+    expect(isCsvLocaleExcluded('de')).toBe(true);
+    expect(isCsvLocaleExcluded('de_DE')).toBe(false);
+  });
+
+  it('matches if any of multiple patterns match', () => {
+    setExcludeLocales(['ALL_*', 'xx']);
+    expect(isCsvLocaleExcluded('ALL_es')).toBe(true);
+    expect(isCsvLocaleExcluded('xx')).toBe(true);
+    expect(isCsvLocaleExcluded('en')).toBe(false);
+  });
+
+  it('treats regex special chars in patterns literally', () => {
+    setExcludeLocales(['en.US']);
+    expect(isCsvLocaleExcluded('en.US')).toBe(true);
+    expect(isCsvLocaleExcluded('enXUS')).toBe(false);
+  });
+});
 
 describe('batchUpdateTags', () => {
   beforeEach(() => {
