@@ -175,17 +175,30 @@ function removeTrailingWhitespace(str: string) {
 }
 
 /**
+ * Cache of compiled wildcard patterns. Imports can call
+ * `isLocaleExcludedFromTranslations()` many times per row/column, so we avoid
+ * recompiling the same pattern on every call.
+ */
+const wildcardRegExpCache = new Map<string, RegExp>();
+
+/**
  * Converts a wildcard pattern (e.g. `ALL_*`) to a case-insensitive RegExp.
  * Supports `*` (matches any number of characters) and `?` (matches a single
- * character).
+ * character). Compiled regexes are memoized per pattern.
  */
 function wildcardToRegExp(pattern: string): RegExp {
+  const cached = wildcardRegExpCache.get(pattern);
+  if (cached) {
+    return cached;
+  }
   const regexStr = pattern
     // Escape regex special chars except `*` and `?`.
     .replace(/[.+^${}()|[\]\\]/g, '\\$&')
     .replace(/\*/g, '.*')
     .replace(/\?/g, '.');
-  return new RegExp(`^${regexStr}$`, 'i');
+  const regExp = new RegExp(`^${regexStr}$`, 'i');
+  wildcardRegExpCache.set(pattern, regExp);
+  return regExp;
 }
 
 /**
