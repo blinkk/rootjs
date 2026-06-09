@@ -1,5 +1,5 @@
-import {beforeEach, describe, expect, it, vi} from 'vitest';
-import {batchUpdateTags} from './l10n.js';
+import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest';
+import {batchUpdateTags, isLocaleExcludedFromTranslations} from './l10n.js';
 
 // Mock values used in the function.
 const mockProjectId = 'test-project-id';
@@ -38,6 +38,68 @@ vi.mock('firebase/firestore', () => ({
   updateDoc: vi.fn(),
   where: vi.fn(),
 }));
+
+describe('isLocaleExcludedFromTranslations', () => {
+  const originalCtx = window.__ROOT_CTX;
+
+  afterEach(() => {
+    window.__ROOT_CTX = originalCtx;
+  });
+
+  function setExcludeLocales(patterns?: string[]) {
+    window.__ROOT_CTX = {
+      ...originalCtx,
+      excludeLocalesFromTranslations: patterns,
+    } as any;
+  }
+
+  it('returns false when no patterns are configured', () => {
+    setExcludeLocales();
+    expect(isLocaleExcludedFromTranslations('en')).toBe(false);
+    expect(isLocaleExcludedFromTranslations('ALL_es')).toBe(false);
+  });
+
+  it('matches `*` wildcard patterns', () => {
+    setExcludeLocales(['ALL_*']);
+    expect(isLocaleExcludedFromTranslations('ALL_es')).toBe(true);
+    expect(isLocaleExcludedFromTranslations('ALL_fr')).toBe(true);
+    expect(isLocaleExcludedFromTranslations('ALL_')).toBe(true);
+    expect(isLocaleExcludedFromTranslations('es')).toBe(false);
+    expect(isLocaleExcludedFromTranslations('es_ALL')).toBe(false);
+  });
+
+  it('matches `?` single-character wildcard patterns', () => {
+    setExcludeLocales(['e?']);
+    expect(isLocaleExcludedFromTranslations('en')).toBe(true);
+    expect(isLocaleExcludedFromTranslations('es')).toBe(true);
+    expect(isLocaleExcludedFromTranslations('e')).toBe(false);
+    expect(isLocaleExcludedFromTranslations('eng')).toBe(false);
+  });
+
+  it('matches case-insensitively', () => {
+    setExcludeLocales(['all_*']);
+    expect(isLocaleExcludedFromTranslations('ALL_es')).toBe(true);
+  });
+
+  it('supports exact (non-wildcard) patterns', () => {
+    setExcludeLocales(['de']);
+    expect(isLocaleExcludedFromTranslations('de')).toBe(true);
+    expect(isLocaleExcludedFromTranslations('de_DE')).toBe(false);
+  });
+
+  it('matches if any of multiple patterns match', () => {
+    setExcludeLocales(['ALL_*', 'xx']);
+    expect(isLocaleExcludedFromTranslations('ALL_es')).toBe(true);
+    expect(isLocaleExcludedFromTranslations('xx')).toBe(true);
+    expect(isLocaleExcludedFromTranslations('en')).toBe(false);
+  });
+
+  it('treats regex special chars in patterns literally', () => {
+    setExcludeLocales(['en.US']);
+    expect(isLocaleExcludedFromTranslations('en.US')).toBe(true);
+    expect(isLocaleExcludedFromTranslations('enXUS')).toBe(false);
+  });
+});
 
 describe('batchUpdateTags', () => {
   beforeEach(() => {

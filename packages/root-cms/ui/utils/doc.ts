@@ -28,6 +28,7 @@ import {removeDocFromCache, removeDocsFromCache} from './doc-cache.js';
 import {GoogleSheetId} from './gsheets.js';
 import {
   getTranslationsCollection,
+  isLocaleExcludedFromTranslations,
   normalizeString,
   sourceHash,
 } from './l10n.js';
@@ -659,7 +660,8 @@ export async function cmsDocImportTranslations(
         return;
       }
       const locale = normalizeLocale(column);
-      if (locale) {
+      // Skip locales excluded from translation import/export (e.g. `ALL_*`).
+      if (locale && !isLocaleExcludedFromTranslations(locale)) {
         translation[locale] = normalizeString(str || '');
       }
     });

@@ -61,6 +61,7 @@ import {
 import {
   batchSaveTranslations,
   batchUpdateTags,
+  isLocaleExcludedFromTranslations,
   sourceHash,
 } from '../../utils/l10n.js';
 import {TranslationsMap, loadTranslations} from '../../utils/l10n.js';
@@ -649,7 +650,9 @@ LocalizationModal.Translations = (props: TranslationsProps) => {
   }
 
   function formatCsvData() {
-    const nonEnLocales = locales.filter((l) => l !== 'en');
+    const nonEnLocales = locales.filter(
+      (l) => l !== 'en' && !isLocaleExcludedFromTranslations(l)
+    );
     const headers = ['source', 'en', ...nonEnLocales];
     const rows: Array<Record<string, string>> = [];
     sourceStrings.forEach((source) => {

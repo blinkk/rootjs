@@ -223,6 +223,11 @@ declare global {
       }>;
       /** Default UI variant for `oneOf` fields. */
       defaultOneOfVariant?: 'dropdown' | 'picker';
+      /**
+       * Locales to exclude from translation import/export. Patterns support
+       * wildcards, e.g. `ALL_*`.
+       */
+      excludeLocalesFromTranslations?: string[];
     };
     firebase: FirebaseContextObject;
   }

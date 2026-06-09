@@ -36,7 +36,11 @@ import {
 import {useEffect, useMemo, useState} from 'preact/hooks';
 import {useArrayParam, useStringParam} from '../../hooks/useQueryParam.js';
 import {joinClassNames} from '../../utils/classes.js';
-import {batchUpdateTags, loadTranslations} from '../../utils/l10n.js';
+import {
+  batchUpdateTags,
+  isLocaleExcludedFromTranslations,
+  loadTranslations,
+} from '../../utils/l10n.js';
 import {notifyErrors} from '../../utils/notifications.js';
 
 ModuleRegistry.registerModules([ClientSideRowModelModule]);
@@ -57,7 +61,11 @@ export function TranslationsTable() {
   const locales = window.__ROOT_CTX.rootConfig.i18n?.locales || [];
   const allLocales = [
     'en',
-    ...locales.filter((l: string) => l !== 'en').sort(),
+    ...locales
+      .filter(
+        (l: string) => l !== 'en' && !isLocaleExcludedFromTranslations(l)
+      )
+      .sort(),
   ];
 
   // URL State.

@@ -174,6 +174,45 @@ function removeTrailingWhitespace(str: string) {
     .replace(/&nbsp;$/, '');
 }
 
+/**
+ * Cache of compiled wildcard patterns. Imports can call
+ * `isLocaleExcludedFromTranslations()` many times per row/column, so we avoid
+ * recompiling the same pattern on every call.
+ */
+const wildcardRegExpCache = new Map<string, RegExp>();
+
+/**
+ * Converts a wildcard pattern (e.g. `ALL_*`) to a case-insensitive RegExp.
+ * Supports `*` (matches any number of characters) and `?` (matches a single
+ * character). Compiled regexes are memoized per pattern.
+ */
+function wildcardToRegExp(pattern: string): RegExp {
+  const cached = wildcardRegExpCache.get(pattern);
+  if (cached) {
+    return cached;
+  }
+  const regexStr = pattern
+    // Escape regex special chars except `*` and `?`.
+    .replace(/[.+^${}()|[\]\\]/g, '\\$&')
+    .replace(/\*/g, '.*')
+    .replace(/\?/g, '.');
+  const regExp = new RegExp(`^${regexStr}$`, 'i');
+  wildcardRegExpCache.set(pattern, regExp);
+  return regExp;
+}
+
+/**
+ * Returns true if a locale should be excluded from translation import/export
+ * (CSV, Google Sheets, translation services), based on the
+ * `excludeLocalesFromTranslations` patterns configured in the CMS plugin.
+ * Patterns support wildcards, e.g. `ALL_*`.
+ */
+export function isLocaleExcludedFromTranslations(locale: string): boolean {
+  const patterns =
+    window.__ROOT_CTX.excludeLocalesFromTranslations || [];
+  return patterns.some((pattern) => wildcardToRegExp(pattern).test(locale));
+}
+
 export function normalizeLocale(locale: string) {
   const i18nConfig = window.__ROOT_CTX.rootConfig.i18n || {};
   const i18nLocales = i18nConfig.locales || ['en'];

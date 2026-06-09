@@ -32,6 +32,7 @@ import {GoogleSheetId, getSpreadsheetUrl} from '../../utils/gsheets.js';
 import {
   Translation,
   TranslationsMap,
+  isLocaleExcludedFromTranslations,
   loadTranslations,
 } from '../../utils/l10n.js';
 import {notifyErrors} from '../../utils/notifications.js';
@@ -58,7 +59,9 @@ export function DocTranslationsPage(props: DocTranslationsPageProps) {
   const pruneModal = usePruneTranslationsModal();
 
   const i18nConfig = window.__ROOT_CTX.rootConfig.i18n || {};
-  const defaultLocales = i18nConfig.locales || [];
+  const defaultLocales = (i18nConfig.locales || []).filter(
+    (l) => !isLocaleExcludedFromTranslations(l)
+  );
   const [i18nLocales, setI18nLocales] = useArrayParam('locale', defaultLocales);
 
   async function init() {
@@ -283,7 +286,9 @@ interface DocTranslationsPageTableProps {
 
 DocTranslationsPage.Table = (props: DocTranslationsPageTableProps) => {
   const i18nConfig = window.__ROOT_CTX.rootConfig.i18n || {};
-  const allLocales = i18nConfig.locales || [];
+  const allLocales = (i18nConfig.locales || []).filter(
+    (l) => !isLocaleExcludedFromTranslations(l)
+  );
   const sourceToTranslationsMap = useMemo(() => {
     const results: {[source: string]: Record<string, string>} = {};
     Object.values(props.translationsMap).forEach(

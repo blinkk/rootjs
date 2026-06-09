@@ -473,6 +473,24 @@ export type CMSPluginOptions = {
    * override this by setting their own `variant`. Defaults to `'dropdown'`.
    */
   defaultOneOfVariant?: 'dropdown' | 'picker';
+
+  /**
+   * Locales to exclude from translation import and export (CSV, Google Sheets,
+   * and any registered translation services). Each entry is matched against
+   * the locale id and supports wildcards, where `*` matches any number of
+   * characters and `?` matches a single character. Matching is
+   * case-insensitive. Excluded locales are omitted from exports and ignored
+   * when importing.
+   *
+   * Example:
+   * ```ts
+   * cmsPlugin({
+   *   // Exclude pseudo-locales like `ALL_es`, `ALL_fr`, etc.
+   *   excludeLocalesFromTranslations: ['ALL_*'],
+   * });
+   * ```
+   */
+  excludeLocalesFromTranslations?: string[];
 };
 
 export type CMSPlugin = Plugin & {
