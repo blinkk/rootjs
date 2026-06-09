@@ -295,10 +295,17 @@ export async function build(rootProjectDir?: string, options?: BuildOptions) {
 
   // Use the output of the client build to generate an asset map, which is used
   // by the renderer for automatically injecting dependencies for a page.
+  const podRoutes = pods.flatMap((pod) =>
+    pod.routeFiles.map((route) => ({
+      src: `pod/${pod.name}/${route.relPath}`,
+      filePath: route.filePath,
+    }))
+  );
   const assetMap = BuildAssetMap.fromViteManifest(
     rootConfig,
     clientManifest,
-    elementGraph
+    elementGraph,
+    podRoutes
   );
 
   // Save the root's asset map to `dist/.root/manifest.json` for use by the prod

@@ -17,6 +17,17 @@ export type BuildAssetManifest = Record<
   }
 >;
 
+/**
+ * A pod route, used to alias the route's virtual `pod/<name>/...` src to the
+ * real asset built from the route's file. See `fromViteManifest()`.
+ */
+export interface PodRouteAsset {
+  /** Virtual src, e.g. `pod/<name>/<relPath>`. */
+  src: string;
+  /** Absolute path to the pod route file. */
+  filePath: string;
+}
+
 export class BuildAssetMap implements AssetMap {
   private rootConfig: RootConfig;
   private srcToAsset: Map<string, BuildAsset>;
@@ -58,7 +69,8 @@ export class BuildAssetMap implements AssetMap {
   static fromViteManifest(
     rootConfig: RootConfig,
     clientManifest: Manifest,
-    elementsGraph: ElementGraph
+    elementsGraph: ElementGraph,
+    podRoutes: PodRouteAsset[] = []
   ) {
     const assetMap = new BuildAssetMap(rootConfig);
 
@@ -94,6 +106,42 @@ export class BuildAssetMap implements AssetMap {
         isElement: isElement,
       };
       assetMap.add(new BuildAsset(assetMap, assetData));
+    });
+
+    // Pod routes are looked up by their virtual `pod/<name>/...` src at render
+    // time, but the manifest keys them by their real file path. Register an
+    // alias for each pod route so `get(route.src)` resolves to the built asset
+    // (and the route's CSS deps are collected) instead of logging
+    // "could not find build asset". Like user `routes/`, the alias has no asset
+    // URL of its own (the route's client JS is injected via elements/bundles).
+    podRoutes.forEach((podRoute) => {
+      if (assetMap.srcToAsset.has(podRoute.src)) {
+        return;
+      }
+      const relPath = path
+        .relative(rootConfig.rootDir, podRoute.filePath)
+        .replace(/\\/g, '/');
+      // `realPathRelativeTo()` returns a `path.relative()` result with
+      // OS-specific separators; normalize to forward slashes to match the
+      // manifest keys (and `relPath` above) on Windows/symlinked setups.
+      const realPath = realPathRelativeTo(rootConfig.rootDir, relPath).replace(
+        /\\/g,
+        '/'
+      );
+      const candidateKeys = [relPath, realPath];
+      for (const key of candidateKeys) {
+        const asset = assetMap.srcToAsset.get(key);
+        if (asset) {
+          assetMap.add(
+            new BuildAsset(assetMap, {
+              ...asset.toJson(),
+              src: podRoute.src,
+              assetUrl: '',
+            })
+          );
+          break;
+        }
+      }
     });
 
     return assetMap;
