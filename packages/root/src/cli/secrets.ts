@@ -424,9 +424,16 @@ function printPushResult(
   console.log();
 }
 
-/** Ensures `.root/` is git-ignored; returns true if it added the entry. */
+/**
+ * Ensures `.root/` is git-ignored; returns true if it added the entry. In a
+ * monorepo the project may live in a subdirectory, so the entry is written to
+ * the `.gitignore` at the enclosing git repository root (falling back to
+ * `rootDir` when not inside a git repo). The `.root/` pattern matches the
+ * directory at any depth, so it still ignores the project's `.root/` folder.
+ */
 async function ensureRootGitignored(rootDir: string): Promise<boolean> {
-  const gitignore = path.join(rootDir, '.gitignore');
+  const gitRoot = (await gitToplevel(rootDir)) ?? rootDir;
+  const gitignore = path.join(gitRoot, '.gitignore');
   let content = '';
   try {
     content = await fs.promises.readFile(gitignore, 'utf8');
@@ -450,6 +457,33 @@ async function warnIfEnvNotIgnored(rootDir: string): Promise<void> {
       `${BAR}   ${yellow('warning:')} ${dim('.env is not git-ignored — add it to .gitignore')}`
     );
   }
+}
+
+/**
+ * Returns the absolute path of the enclosing git repository's top-level
+ * directory, or undefined if `rootDir` is not inside a git repo (or git is
+ * unavailable).
+ */
+function gitToplevel(rootDir: string): Promise<string | undefined> {
+  return new Promise((resolve) => {
+    try {
+      const child = spawn('git', ['rev-parse', '--show-toplevel'], {
+        cwd: rootDir,
+      });
+      let stdout = '';
+      child.stdout.setEncoding('utf8');
+      child.stdout.on('data', (chunk) => {
+        stdout += chunk;
+      });
+      child.on('error', () => resolve(undefined));
+      child.on('close', (code) => {
+        const toplevel = stdout.trim();
+        resolve(code === 0 && toplevel ? toplevel : undefined);
+      });
+    } catch {
+      resolve(undefined);
+    }
+  });
 }
 
 /** Returns true/false if known, or undefined if git can't answer. */
