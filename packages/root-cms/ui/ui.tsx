@@ -223,14 +223,11 @@ declare global {
       }>;
       /** Default UI variant for `oneOf` fields. */
       defaultOneOfVariant?: 'dropdown' | 'picker';
-      /** Configuration for the CSV import/export feature. */
-      csv?: {
-        /**
-         * Locales to exclude from CSV import/export. Patterns support
-         * wildcards, e.g. `ALL_*`.
-         */
-        excludeLocales?: string[];
-      };
+      /**
+       * Locales to exclude from translation import/export. Patterns support
+       * wildcards, e.g. `ALL_*`.
+       */
+      excludeLocalesFromTranslations?: string[];
     };
     firebase: FirebaseContextObject;
   }

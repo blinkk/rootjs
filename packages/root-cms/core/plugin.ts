@@ -475,28 +475,22 @@ export type CMSPluginOptions = {
   defaultOneOfVariant?: 'dropdown' | 'picker';
 
   /**
-   * Configuration for the CSV import/export feature in the Localization modal.
+   * Locales to exclude from translation import and export (CSV, Google Sheets,
+   * and any registered translation services). Each entry is matched against
+   * the locale id and supports wildcards, where `*` matches any number of
+   * characters and `?` matches a single character. Matching is
+   * case-insensitive. Excluded locales are omitted from exports and ignored
+   * when importing.
+   *
+   * Example:
+   * ```ts
+   * cmsPlugin({
+   *   // Exclude pseudo-locales like `ALL_es`, `ALL_fr`, etc.
+   *   excludeLocalesFromTranslations: ['ALL_*'],
+   * });
+   * ```
    */
-  csv?: {
-    /**
-     * Locales to exclude from CSV import and export. Each entry is matched
-     * against the locale id and supports wildcards, where `*` matches any
-     * number of characters and `?` matches a single character. Matching is
-     * case-insensitive. Excluded locales are omitted from the exported CSV and
-     * ignored when importing.
-     *
-     * Example:
-     * ```ts
-     * cmsPlugin({
-     *   csv: {
-     *     // Exclude pseudo-locales like `ALL_es`, `ALL_fr`, etc.
-     *     excludeLocales: ['ALL_*'],
-     *   },
-     * });
-     * ```
-     */
-    excludeLocales?: string[];
-  };
+  excludeLocalesFromTranslations?: string[];
 };
 
 export type CMSPlugin = Plugin & {

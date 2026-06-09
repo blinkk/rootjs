@@ -189,12 +189,14 @@ function wildcardToRegExp(pattern: string): RegExp {
 }
 
 /**
- * Returns true if a locale should be excluded from CSV import/export, based on
- * the `csv.excludeLocales` patterns configured in the CMS plugin. Patterns
- * support wildcards, e.g. `ALL_*`.
+ * Returns true if a locale should be excluded from translation import/export
+ * (CSV, Google Sheets, translation services), based on the
+ * `excludeLocalesFromTranslations` patterns configured in the CMS plugin.
+ * Patterns support wildcards, e.g. `ALL_*`.
  */
-export function isCsvLocaleExcluded(locale: string): boolean {
-  const patterns = window.__ROOT_CTX.csv?.excludeLocales || [];
+export function isLocaleExcludedFromTranslations(locale: string): boolean {
+  const patterns =
+    window.__ROOT_CTX.excludeLocalesFromTranslations || [];
   return patterns.some((pattern) => wildcardToRegExp(pattern).test(locale));
 }
 
