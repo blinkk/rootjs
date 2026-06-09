@@ -1,4 +1,5 @@
 .RootAIChat {
+  position: relative;
   background: var(--page-background);
   width: 100%;
   height: 100%;
