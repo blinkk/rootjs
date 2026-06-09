@@ -15,6 +15,7 @@ import {useEffect, useState} from 'preact/hooks';
 import {ConditionalTooltip} from '../../components/ConditionalTooltip/ConditionalTooltip.js';
 import {DocPreviewCard} from '../../components/DocPreviewCard/DocPreviewCard.js';
 import {Heading} from '../../components/Heading/Heading.js';
+import {Markdown} from '../../components/Markdown/Markdown.js';
 import {ReleaseStatusBadge} from '../../components/ReleaseStatusBadge/ReleaseStatusBadge.js';
 import {useScheduleReleaseModal} from '../../components/ScheduleReleaseModal/ScheduleReleaseModal.js';
 import {Surface} from '../../components/Surface/Surface.js';
@@ -80,7 +81,12 @@ export function ReleasePage(props: {id: string}) {
               </Tooltip>
             </div>
           </div>
-          {release?.description && <Text as="p">{release.description}</Text>}
+          {release?.description && (
+            <Markdown
+              className="ReleasePage__header__description"
+              code={release.description}
+            />
+          )}
         </div>
 
         {loading ? (
