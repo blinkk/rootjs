@@ -38,6 +38,11 @@ export interface Doc<Fields = any> {
       until?: Timestamp;
     };
     locales?: string[];
+    /**
+     * Reverse index of asset manager ids embedded in the doc's fields,
+     * (re)computed whenever the doc draft is saved in the CMS UI.
+     */
+    assets?: string[];
   };
   fields: Fields;
 }

@@ -24,6 +24,7 @@ import {
 } from 'firebase/firestore';
 import {testValidRichTextData} from '../../shared/richtext.js';
 import {logAction} from './actions.js';
+import {extractAssetIds} from './assets.js';
 import {removeDocFromCache, removeDocsFromCache} from './doc-cache.js';
 import {GoogleSheetId} from './gsheets.js';
 import {
@@ -57,6 +58,12 @@ export interface CMSDoc {
     archivedAt?: Timestamp;
     archivedBy?: string;
     locales?: string[];
+    /**
+     * Reverse index of asset manager ids embedded in the doc's fields,
+     * (re)computed on every draft save. Used to find docs that use an asset
+     * and to fan out asset updates (see `ui/utils/assets.ts`).
+     */
+    assets?: string[];
     /** Google Sheet linked for translations. */
     l10nSheet?: {
       spreadsheetId: string;
@@ -589,6 +596,7 @@ export async function cmsCreateDoc(
   if (doc.exists() && !options?.overwrite) {
     throw new Error(`${docId} already exists`);
   }
+  const fields = options?.fields ?? {};
   const data = {
     id: docId,
     collection: collectionId,
@@ -599,8 +607,8 @@ export async function cmsCreateDoc(
       modifiedAt: serverTimestamp(),
       modifiedBy: window.firebase.user.email,
       locales: options?.locales ?? ['en'],
-    },
-    fields: options?.fields ?? {},
+    } as Record<string, any>,
+    fields: fields,
   };
 
   // Preserve "sys" values when copying and overwriting a doc.
@@ -612,6 +620,15 @@ export async function cmsCreateDoc(
       modifiedAt: serverTimestamp(),
       modifiedBy: window.firebase.user.email,
     };
+  }
+
+  // Index any asset manager references embedded in the fields (e.g. when
+  // copying a doc) so the asset manager can find docs that use an asset.
+  const assetIds = extractAssetIds(fields);
+  if (assetIds.length > 0) {
+    data.sys.assets = assetIds;
+  } else {
+    delete data.sys.assets;
   }
 
   await setDoc(docRef, data);
@@ -842,6 +859,7 @@ export async function cmsRestoreVersion(docId: string, version: Version) {
   const updates = {
     'sys.modifiedAt': serverTimestamp(),
     'sys.modifiedBy': window.firebase.user.email,
+    'sys.assets': extractAssetIds(version.fields || {}),
     fields: version.fields || {},
   };
   await updateDoc(docRef, updates);

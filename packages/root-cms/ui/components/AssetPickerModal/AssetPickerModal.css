@@ -1,0 +1,8 @@
+.AssetPickerModal {
+  min-height: 320px;
+}
+
+.AssetPickerModal .AssetBrowser__listing {
+  max-height: 50vh;
+  overflow-y: auto;
+}

@@ -1,0 +1,74 @@
+import './AssetPickerModal.css';
+
+import {ContextModalProps, useModals} from '@mantine/modals';
+import {useModalTheme} from '../../hooks/useModalTheme.js';
+import {AssetFile} from '../../utils/assets.js';
+import {AssetBrowser} from '../AssetBrowser/AssetBrowser.js';
+
+const MODAL_ID = 'AssetPickerModal';
+
+export interface AssetPickerModalProps {
+  [key: string]: unknown;
+  /** Called when the user selects a file from the asset manager. */
+  onSelect?: (asset: AssetFile) => void;
+  /** Accept list used to filter pickable files, e.g. `['image/png', '.mp4']`. */
+  accept?: string[];
+}
+
+/**
+ * Hook for opening the asset picker modal, which allows users to select a
+ * file from the project's asset manager (e.g. for image/file fields).
+ */
+export function useAssetPickerModal() {
+  // Degrade gracefully when used outside a `ModalsProvider` (e.g. the
+  // standalone `FileUploader` component rendered in a non-CMS context).
+  let modals: ReturnType<typeof useModals> | null = null;
+  try {
+    modals = useModals();
+  } catch {
+    modals = null;
+  }
+  const modalTheme = useModalTheme();
+  return {
+    enabled: modals !== null,
+    open: (props: AssetPickerModalProps) => {
+      if (!modals) {
+        console.warn(
+          'useAssetPickerModal() requires a <ModalsProvider> context.'
+        );
+        return;
+      }
+      modals.openContextModal(MODAL_ID, {
+        ...modalTheme,
+        title: 'Select from asset manager',
+        innerProps: props,
+        size: '800px',
+        overflow: 'inside',
+      });
+    },
+    close: () => {
+      modals?.closeModal(MODAL_ID);
+    },
+  };
+}
+
+export function AssetPickerModal(
+  modalProps: ContextModalProps<AssetPickerModalProps>
+) {
+  const {innerProps: props, context, id} = modalProps;
+
+  function onPickFile(asset: AssetFile) {
+    if (props.onSelect) {
+      props.onSelect(asset);
+    }
+    context.closeModal(id);
+  }
+
+  return (
+    <div className="AssetPickerModal">
+      <AssetBrowser mode="pick" accept={props.accept} onPickFile={onPickFile} />
+    </div>
+  );
+}
+
+AssetPickerModal.id = MODAL_ID;

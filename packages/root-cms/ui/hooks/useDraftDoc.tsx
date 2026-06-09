@@ -11,6 +11,7 @@ import {
 import {ComponentChildren, createContext} from 'preact';
 import {useContext, useEffect, useMemo, useState} from 'preact/hooks';
 import {logAction} from '../utils/actions.js';
+import {extractAssetIds} from '../utils/assets.js';
 import {debounce} from '../utils/debounce.js';
 import {setDocToCache} from '../utils/doc-cache.js';
 import {CMSDoc} from '../utils/doc.js';
@@ -336,6 +337,15 @@ export class DraftDocController extends EventListener {
     updates['sys.modifiedAt'] = serverTimestamp();
     updates['sys.modifiedBy'] = window.firebase.user.email;
 
+    // Keep the doc's asset reverse index (`sys.assets`) in sync on every save
+    // so the asset manager can find (and fan updates out to) docs that embed
+    // an asset.
+    const assetIds = extractAssetIds(this.store.get('fields') || {});
+    const prevAssetIds: string[] = this.store.get('sys.assets') || [];
+    if (!testStringArraysEqual(assetIds, prevAssetIds)) {
+      updates['sys.assets'] = assetIds;
+    }
+
     // If autolock is enabled on the collection, add a publishing lock if one
     // doesn't already exist on the doc.
     if (
@@ -470,6 +480,11 @@ function hasAncestorKey(key: string, values: Record<string, any>) {
 /** Returns true when key is nested below parentKey. */
 function isDescendantKey(key: string, parentKey: string) {
   return key.startsWith(`${parentKey}.`);
+}
+
+/** Returns true when two string arrays contain the same items in order. */
+function testStringArraysEqual(a: string[], b: string[]) {
+  return a.length === b.length && a.every((item, i) => item === b[i]);
 }
 
 export interface DraftDocProviderProps {

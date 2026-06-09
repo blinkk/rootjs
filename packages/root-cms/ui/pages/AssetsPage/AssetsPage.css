@@ -1,6 +1,7 @@
 .AssetsPage {
   background: var(--page-background);
   padding: var(--page-padding-lg);
+  min-height: 100%;
 }
 
 .AssetsPage__header {
@@ -12,33 +13,6 @@
   max-width: 600px;
 }
 
-.AssetsPage__content {
-  max-width: 640px;
-  width: 100%;
-  padding: 20px;
-}
-
-.AssetsPage__urlGroup {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  margin-top: 12px;
-}
-
-.AssetsPage__urlRow__label {
-  font-size: 12px;
-  font-weight: 500;
-  color: #666;
-  margin-bottom: 4px;
-}
-
-.AssetsPage__urlRow__input {
-  display: flex;
-  flex-direction: row;
-  align-items: flex-start;
-  gap: 8px;
-}
-
-.AssetsPage__urlRow__input textarea {
-  font-size: 12px;
+.AssetsPage__browser {
+  max-width: 960px;
 }

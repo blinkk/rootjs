@@ -28,6 +28,7 @@ import {
   IconExternalLink,
   IconFileUpload,
   IconInfoCircle,
+  IconLibraryPhoto,
   IconPaperclip,
   IconPhotoStar,
   IconPhotoUp,
@@ -35,6 +36,7 @@ import {
   IconSquareCheck,
   IconSquareCheckFilled,
   IconTrash,
+  IconUnlink,
 } from '@tabler/icons-preact';
 import {ComponentChildren, createContext} from 'preact';
 import {ChangeEvent, CSSProperties, forwardRef} from 'preact/compat';
@@ -43,6 +45,7 @@ import {useContext, useMemo, useRef, useState} from 'preact/hooks';
 import * as schema from '../../../../core/schema.js';
 import {useDraftDocValue} from '../../../hooks/useDraftDoc.js';
 import {useGapiClient} from '../../../hooks/useGapiClient.js';
+import {buildAssetFieldValue} from '../../../utils/assets.js';
 import {joinClassNames} from '../../../utils/classes.js';
 import {
   buildDownloadURL,
@@ -56,6 +59,7 @@ import {
   deleteFileFromGCS,
 } from '../../../utils/gcs.js';
 import {downloadFromDrive, parseGoogleDriveId} from '../../../utils/gdrive.js';
+import {useAssetPickerModal} from '../../AssetPickerModal/AssetPickerModal.js';
 import {FieldProps} from './FieldProps.js';
 import {GenerateImageForm} from './GenerateImageForm.js';
 
@@ -95,6 +99,10 @@ interface FileFieldContextValue {
   requestGenerateAltText: () => void;
   requestPlaceholderModalOpen: () => void;
   requestImageEditorOpen: () => void;
+  /** Whether the asset picker is available (requires a ModalsProvider). */
+  assetPickerEnabled: boolean;
+  requestAssetPicker: () => void;
+  unlinkAsset: () => void;
   showAltText: boolean;
   altText: string;
   setAltText: (altText: string) => void;
@@ -146,6 +154,7 @@ export function FileFieldInternal(props: FileFieldInternalProps) {
   const [deleteModalOpened, setDeleteModalOpened] = useState(false);
   const [imageEditorOpened, setImageEditorOpened] = useState(false);
   const gapiClient = useGapiClient();
+  const assetPickerModal = useAssetPickerModal();
   const allowEditing = props.allowEditing !== false;
 
   // New state from FileUploader
@@ -402,6 +411,39 @@ export function FileFieldInternal(props: FileFieldInternalProps) {
     setImageEditorOpened(true);
   }
 
+  /**
+   * Opens the asset picker modal for selecting a file from the asset manager.
+   * The selected asset's file data is copied into the doc along with an
+   * `assetId` backlink so updates to the asset can be synced to the doc.
+   */
+  function requestAssetPicker() {
+    assetPickerModal.open({
+      accept: acceptedFileTypes,
+      onSelect: (asset) => {
+        const newValue = buildAssetFieldValue(asset);
+        // Preserve previous alt text when the asset doesn't define one.
+        if (!newValue.alt && altText) {
+          newValue.alt = altText;
+        }
+        setValue(newValue);
+        setLoadingState('complete');
+      },
+    });
+  }
+
+  /**
+   * Removes the `assetId` backlink from the field value, keeping the file
+   * data. The doc will no longer receive updates when the asset changes.
+   */
+  function unlinkAsset() {
+    if (!value?.assetId) {
+      return;
+    }
+    const newValue = {...value};
+    delete newValue.assetId;
+    setValue(newValue);
+  }
+
   function setAltText(newAltText: string) {
     if (!value?.src) {
       return;
@@ -457,6 +499,9 @@ export function FileFieldInternal(props: FileFieldInternalProps) {
         requestFileDownload: requestFileDownload,
         requestPlaceholderModalOpen: requestPlaceholderModalOpen,
         requestImageEditorOpen: requestImageEditorOpen,
+        assetPickerEnabled: assetPickerModal.enabled,
+        requestAssetPicker: requestAssetPicker,
+        unlinkAsset: unlinkAsset,
         showAltText: showAltText,
         altText: altText,
         setAltText: setAltText,
@@ -667,8 +712,9 @@ export function FileField(props: FileFieldProps) {
     useState<FileFieldLoadingState | null>(null);
 
   const metadataKey = getMetadataKey(props.deepKey);
-  const [metadata, setMetadata] =
-    useDraftDocValue<Record<string, any> | null>(metadataKey);
+  const [metadata, setMetadata] = useDraftDocValue<Record<string, any> | null>(
+    metadataKey
+  );
   const altDisabledByMetadata = metadata?.alt === false;
   const setAltDisabledByMetadata = (disabled: boolean) => {
     const next = {...(metadata || {})};
@@ -784,6 +830,14 @@ FileField.Preview = () => {
               >
                 Upload {ctx.variant === 'image' ? 'image' : 'file'}
               </Menu.Item>
+              {ctx.assetPickerEnabled && (
+                <Menu.Item
+                  icon={<IconLibraryPhoto size={16} />}
+                  onClick={() => ctx.requestAssetPicker()}
+                >
+                  Select from assets
+                </Menu.Item>
+              )}
               {testSupportsCreatePlaceholder(ctx.acceptedFileTypes) && (
                 <Menu.Item
                   disabled={!ctx.value?.src}
@@ -841,6 +895,25 @@ FileField.Preview = () => {
           >
             {copied ? 'Copied!' : 'Copy URL'}
           </Menu.Item>
+          {ctx.value?.assetId && (
+            <Menu.Item<'a'>
+              component="a"
+              href={`/cms/assets?asset=${ctx.value.assetId}`}
+              target="_blank"
+              rel="noreferrer"
+              icon={<IconExternalLink size={16} />}
+            >
+              View in assets
+            </Menu.Item>
+          )}
+          {ctx.allowEditing && ctx.value?.assetId && (
+            <Menu.Item
+              icon={<IconUnlink size={16} />}
+              onClick={() => ctx.unlinkAsset()}
+            >
+              Unlink from assets
+            </Menu.Item>
+          )}
           {ctx.allowEditing &&
             testIsImageFile(ctx.value?.src || '') &&
             ctx.value?.canvasBgColor && (
@@ -960,6 +1033,22 @@ FileField.Preview = () => {
                     <td>{ctx.value.filename}</td>
                   </tr>
                 )}
+                {ctx.value?.assetId && (
+                  <tr>
+                    <td>
+                      <b>Asset</b>
+                    </td>
+                    <td>
+                      <a
+                        href={`/cms/assets?asset=${ctx.value.assetId}`}
+                        target="_blank"
+                        rel="noreferrer"
+                      >
+                        Open in asset manager
+                      </a>
+                    </td>
+                  </tr>
+                )}
                 {ctx.value?.uploadedAt && (
                   <tr>
                     <td>
@@ -1007,6 +1096,17 @@ FileField.Preview = () => {
               <Box radius="sm" className="FileField__Preview__Info">
                 {ctx.value!.width}x{ctx.value!.height}
               </Box>
+            )}
+            {ctx.value?.assetId && (
+              <Tooltip
+                label="Linked to the asset manager. Updates to the asset sync to this doc."
+                withArrow
+              >
+                <Box radius="sm" className="FileField__Preview__AssetBadge">
+                  <IconLibraryPhoto size={10} />
+                  ASSET
+                </Box>
+              </Tooltip>
             )}
             {testIsImageFile(ctx.value?.src) && (
               <img
@@ -1187,6 +1287,21 @@ FileField.Empty = () => {
     <div className="FileField__Empty">
       <div className="FileField__Empty__Label">
         <FileField.UploadButton />
+        {ctx.allowEditing && ctx.assetPickerEnabled && (
+          <div>
+            <Tooltip label="Select from assets">
+              <ActionIcon
+                className="FileField__Empty__Label__AssetPickerButton"
+                onClick={() => {
+                  ctx.requestAssetPicker();
+                }}
+                title="Select from assets"
+              >
+                <IconLibraryPhoto size={16} />
+              </ActionIcon>
+            </Tooltip>
+          </div>
+        )}
         {testSupportsCreatePlaceholder(ctx.acceptedFileTypes) && (
           <div>
             <Tooltip label="Create placeholder image">

@@ -111,6 +111,22 @@
   z-index: 1;
 }
 
+.FileField__Preview__AssetBadge {
+  position: absolute;
+  bottom: 0px;
+  left: 0px;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  background: #1971c2;
+  color: #fff;
+  font-size: 8px;
+  font-weight: 700;
+  padding: 2px 5px;
+  pointer-events: all;
+  z-index: 1;
+}
+
 .FileField__Preview__Actions__Trash {
   pointer-events: all;
 }
