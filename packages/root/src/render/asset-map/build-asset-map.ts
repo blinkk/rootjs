@@ -121,10 +121,14 @@ export class BuildAssetMap implements AssetMap {
       const relPath = path
         .relative(rootConfig.rootDir, podRoute.filePath)
         .replace(/\\/g, '/');
-      const candidateKeys = [
-        relPath,
-        realPathRelativeTo(rootConfig.rootDir, relPath),
-      ];
+      // `realPathRelativeTo()` returns a `path.relative()` result with
+      // OS-specific separators; normalize to forward slashes to match the
+      // manifest keys (and `relPath` above) on Windows/symlinked setups.
+      const realPath = realPathRelativeTo(rootConfig.rootDir, relPath).replace(
+        /\\/g,
+        '/'
+      );
+      const candidateKeys = [relPath, realPath];
       for (const key of candidateKeys) {
         const asset = assetMap.srcToAsset.get(key);
         if (asset) {

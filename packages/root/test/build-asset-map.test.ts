@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import type {Manifest} from 'vite';
-import {afterEach, beforeEach, expect, test} from 'vitest';
+import {afterEach, beforeEach, expect, test, vi} from 'vitest';
 import {RootConfig} from '../src/core/config.js';
 import {ElementGraph} from '../src/node/element-graph.js';
 import {BuildAssetMap} from '../src/render/asset-map/build-asset-map.js';
@@ -64,6 +64,16 @@ test('does not alias when the pod route has no built asset', async () => {
     [{src: 'pod/blog/api.ts', filePath: routeFilePath}]
   );
 
-  const asset = await assetMap.get('pod/blog/api.ts');
-  expect(asset).toBeNull();
+  // The missing-asset lookup logs via console.log; stub it so the test output
+  // stays clean, and assert it fired.
+  const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+  try {
+    const asset = await assetMap.get('pod/blog/api.ts');
+    expect(asset).toBeNull();
+    expect(logSpy).toHaveBeenCalledWith(
+      'could not find build asset: pod/blog/api.ts'
+    );
+  } finally {
+    logSpy.mockRestore();
+  }
 });
