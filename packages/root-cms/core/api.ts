@@ -96,9 +96,37 @@ function isDocVersion(value: unknown): value is DocVersion {
 }
 
 /**
+ * Returns the given `Cache-Control` value with the `no-transform` directive
+ * added (defaulting to `no-cache` when none is set). `no-transform` instructs
+ * the Express `compression` middleware and any intermediary proxy to leave the
+ * body untouched — i.e. not gzip it. This is required for SSE/streaming
+ * responses: gzip buffers a window of output before flushing, so without it the
+ * stream is delivered to the client all at once instead of incrementally.
+ */
+function withNoTransform(cacheControl: string | null): string {
+  const value = cacheControl?.trim() || 'no-cache';
+  if (/(?:^|,)\s*no-transform\s*(?:,|$)/i.test(value)) {
+    return value;
+  }
+  return `${value}, no-transform`;
+}
+
+/**
  * Pipes a Web `Response` (e.g. from `streamText().toUIMessageStreamResponse()`)
- * to an Express `Response`. Headers are copied verbatim and the body is
- * streamed without buffering.
+ * to an Express `Response`, streaming the body through without buffering.
+ *
+ * Two upstream layers will otherwise hold the SSE chunks back:
+ * - The global `compression()` middleware (added in `root start`) treats
+ *   `text/event-stream` as compressible and keeps chunks in a gzip window, so
+ *   nothing reaches the client until the response ends. Adding `no-transform`
+ *   to `Cache-Control` makes `compression` skip the response, and signals any
+ *   intermediary proxy not to gzip it either.
+ * - Reverse proxies (nginx and friends) buffer unless sent
+ *   `X-Accel-Buffering: no`.
+ *
+ * Note: App Engine *Standard* additionally buffers every response into a single
+ * reply at its frontend and does not stream incrementally, regardless of these
+ * headers. Deploy on Cloud Run or App Engine Flexible for real-time streaming.
  */
 async function pipeWebResponse(
   webResponse: globalThis.Response,
@@ -108,7 +136,13 @@ async function pipeWebResponse(
   webResponse.headers.forEach((value, key) => {
     res.setHeader(key, value);
   });
-  // Disable buffering for streaming responses.
+  // Keep the stream unbuffered: `no-transform` disables gzip (in the
+  // `compression` middleware and proxies), and `X-Accel-Buffering` covers
+  // nginx-style reverse proxies.
+  res.setHeader(
+    'Cache-Control',
+    withNoTransform(webResponse.headers.get('cache-control'))
+  );
   res.setHeader('X-Accel-Buffering', 'no');
   if (!webResponse.body) {
     res.end();
