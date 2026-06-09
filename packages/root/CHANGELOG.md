@@ -1,5 +1,12 @@
 # @blinkk/root
 
+## 3.0.6
+
+### Patch Changes
+
+- 9b76e19: fix: write .root gitignore entry at git repo root
+- 3761126: fix: resolve pod assets in asset map
+
 ## 3.0.5
 
 ### Patch Changes

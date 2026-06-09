@@ -1,5 +1,16 @@
 # @blinkk/root-cms
 
+## 3.0.6
+
+### Patch Changes
+
+- 5c0ebec: fix: prevent gzip buffering of AI chat streaming responses
+- c17d6e4: feat: support markdown formatting in release descriptions
+- 6a38a67: feat: add `excludeLocalesFromTranslations` config to exclude locales from translation import/export
+- Updated dependencies [9b76e19]
+- Updated dependencies [3761126]
+  - @blinkk/root@3.0.6
+
 ## 3.0.5
 
 ### Patch Changes
