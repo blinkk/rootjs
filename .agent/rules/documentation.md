@@ -62,6 +62,9 @@ When working on this project, please adhere to the following guidelines:
 ### Version Control & Contributions
 
 - **Changesets**: If your changes require a release (version bump), you must create a changeset. Run `pnpm changeset` and follow the prompts.
+  - **When to create one**: Only create a changeset when the feature or bug fix is big/important enough to be worth mentioning in the changelog. Never create changesets for small bug fixes or style changes.
+  - **Message format**: The changeset message should be a single line, similar to the first line of the git commit message.
+  - Use conventional commit style messages (e.g. `feat:`, `fix:`, `chore:`). Do NOT prefix the package name in the message (bad: `feat(root-cms): lorem ipsum`, good: `feat: lorem ipsum`).
 - **Commit Messages**: Follow the conventional commit format (e.g., `feat: add new feature`, `fix: resolve issue`).
   - Use `feat` for new features, `fix` for bug fixes, `ci` for github actions workflows, `chore` for general cleanups / style tweaks / etc. Avoid other prefixes.
   - Avoid adding the package name in the commit message (bad: `feat(root-cms): lorem ipsum`, good: `feat: lorem ipsum`).
