@@ -27,6 +27,19 @@
   margin-top: 4px;
 }
 
+.ReleasePage__header__description {
+  margin-top: 4px;
+  max-width: 800px;
+}
+
+.ReleasePage__header__description > :first-child {
+  margin-top: 0;
+}
+
+.ReleasePage__header__description > :last-child {
+  margin-bottom: 0;
+}
+
 .ReleasePage__header__controls {
   display: flex;
   align-items: center;
