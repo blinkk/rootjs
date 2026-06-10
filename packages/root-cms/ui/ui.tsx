@@ -14,8 +14,8 @@ import {
   setDoc,
 } from 'firebase/firestore';
 import {getStorage} from 'firebase/storage';
-import {render, FunctionComponent} from 'preact';
-import {LocationProvider, Router, Route, lazy} from 'preact-iso';
+import {render} from 'preact';
+import {LocationProvider, Router, Route} from 'preact-iso';
 import type {CMSBuiltInSidebarTool} from '../core/plugin.js';
 import {Collection} from '../core/schema.js';
 import {AddToReleaseModal} from './components/AddToReleaseModal/AddToReleaseModal.js';
@@ -41,15 +41,7 @@ import {PendingReleasesProvider} from './hooks/usePendingReleases.js';
 import {SiteSettingsProvider} from './hooks/useSiteSettings.js';
 import {SSEProvider} from './hooks/useSSE.js';
 import {UserPreferencesProvider} from './hooks/useUserPreferences.js';
-
-/** Lazy-loads a named component export for use as a route component. */
-function lazyRoute<P>(
-  factory: () => Promise<FunctionComponent<P>>
-): FunctionComponent<P> {
-  return lazy(() =>
-    factory().then((component) => ({default: component}))
-  ) as unknown as FunctionComponent<P>;
-}
+import {lazyRoute} from './utils/lazy-route.js';
 
 const AIPage = lazyRoute(() =>
   import('./pages/AIPage/AIPage.js').then((m) => m.AIPage)
