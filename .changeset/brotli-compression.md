@@ -17,6 +17,3 @@ of dynamic responses. In an end-to-end test against `root start` with a
 (27.6 kB vs 74 kB) at lower CPU cost (~6ms vs ~12ms total response time).
 Note that brotli's library default (q11) is intentionally avoided — it is
 ~10-50x more expensive and only appropriate for compress-once static assets.
-
-Also memoizes `getTranslations()` (the `/translations/*.json` locale map),
-which was rebuilt from `import.meta.glob` on every page render.

@@ -21,15 +21,7 @@ export function useI18nContext() {
   return context;
 }
 
-/**
- * Memoized map of locale -> translations, loaded from the project's
- * `/translations/*.json` files. Built once per process — `getTranslations()`
- * is called on every page render, and the underlying files cannot change at
- * runtime (in dev, module reloads reset the memo).
- */
-let TRANSLATIONS: Record<string, Record<string, string>> | null = null;
-
-function loadTranslationsMap(): Record<string, Record<string, string>> {
+export function getTranslations(locale: string): Record<string, string> {
   const translations: Record<string, Record<string, string>> = {};
   const translationsFiles = import.meta.glob(['/translations/*.json'], {
     eager: true,
@@ -42,12 +34,5 @@ function loadTranslationsMap(): Record<string, Record<string, string>> {
       translations[locale] = module.default;
     }
   });
-  return translations;
-}
-
-export function getTranslations(locale: string): Record<string, string> {
-  if (!TRANSLATIONS) {
-    TRANSLATIONS = loadTranslationsMap();
-  }
-  return TRANSLATIONS[locale] || {};
+  return translations[locale] || {};
 }
