@@ -108,6 +108,14 @@
   gap: 10px;
 }
 
+.AssetBrowser__nameCell__text {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1px;
+  min-width: 0;
+}
+
 .AssetBrowser__nameCell__name {
   font-weight: 500;
   overflow-wrap: anywhere;
@@ -116,6 +124,23 @@
 .AssetBrowser__nameCell__dimens {
   color: var(--color-text-gray);
   font-weight: 400;
+}
+
+.AssetBrowser__nameCell__path {
+  appearance: none;
+  background: none;
+  border: none;
+  padding: 0;
+  font-family: var(--font-family-default);
+  font-size: 11px;
+  color: var(--color-text-gray);
+  cursor: pointer;
+  overflow-wrap: anywhere;
+  text-align: left;
+}
+
+.AssetBrowser__nameCell__path:hover {
+  text-decoration: underline;
 }
 
 .AssetBrowser__modifiedCell {

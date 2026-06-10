@@ -41,8 +41,10 @@ import {
   deleteAsset,
   findDocsUsingAsset,
   getAsset,
+  getRelativeFolderPath,
   joinFolderPath,
   listAssets,
+  listAssetsRecursive,
   moveAsset,
   parseFolderPath,
   renameAsset,
@@ -95,6 +97,9 @@ export function AssetBrowser(props: AssetBrowserProps) {
   const [filter, setFilter] = useState('');
   const [dragging, setDragging] = useState(false);
   const [uploading, setUploading] = useState(false);
+  // Recursive listing of the current folder's descendants, lazily fetched the
+  // first time the user types a name filter (then filtered client-side).
+  const [searchIndex, setSearchIndex] = useState<Asset[] | null>(null);
 
   const [newFolderModalOpened, setNewFolderModalOpened] = useState(false);
   const [renameTarget, setRenameTarget] = useState<Asset | null>(null);
@@ -107,6 +112,8 @@ export function AssetBrowser(props: AssetBrowserProps) {
   // Writes to the Assets db collection require publish-level permissions.
   const canManage = testCanPublish(roles, currentUserEmail);
 
+  const searching = filter.trim().length > 0;
+
   function setFolder(newFolder: string) {
     setInternalFolder(newFolder);
     setFilter('');
@@ -117,6 +124,8 @@ export function AssetBrowser(props: AssetBrowserProps) {
 
   async function reload(folderPath: string) {
     setLoading(true);
+    // Invalidate the search index so an active search refetches fresh data.
+    setSearchIndex(null);
     await notifyErrors(async () => {
       const res = await listAssets(folderPath);
       setAssets(res);
@@ -127,6 +136,25 @@ export function AssetBrowser(props: AssetBrowserProps) {
   useEffect(() => {
     reload(folder);
   }, [folder]);
+
+  // Fetches the recursive descendants listing when a name search starts. The
+  // result is cached until the folder changes or the listing is reloaded;
+  // subsequent keystrokes filter client-side.
+  useEffect(() => {
+    if (!searching || searchIndex !== null) {
+      return;
+    }
+    let cancelled = false;
+    notifyErrors(async () => {
+      const res = await listAssetsRecursive(folder);
+      if (!cancelled) {
+        setSearchIndex(res);
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [searching, searchIndex, folder]);
 
   // Deep link: open the details modal for ?asset=<id>.
   const initialAssetId = props.mode === 'manage' ? props.initialAssetId : '';
@@ -144,7 +172,9 @@ export function AssetBrowser(props: AssetBrowserProps) {
   }, [initialAssetId]);
 
   const filteredAssets = useMemo(() => {
-    let res = assets;
+    const needle = filter.trim().toLowerCase();
+    // Name searches match recursively across the folder's subfolders.
+    let res = needle ? searchIndex || [] : assets;
     if (props.mode === 'pick') {
       res = res.filter(
         (asset) =>
@@ -155,12 +185,11 @@ export function AssetBrowser(props: AssetBrowserProps) {
           )
       );
     }
-    const needle = filter.trim().toLowerCase();
     if (needle) {
       res = res.filter((asset) => asset.name.toLowerCase().includes(needle));
     }
     return res;
-  }, [assets, filter, props.mode, props.accept]);
+  }, [assets, searchIndex, filter, props.mode, props.accept]);
 
   async function uploadFiles(files: File[]) {
     if (files.length === 0 || uploading) {
@@ -260,7 +289,7 @@ export function AssetBrowser(props: AssetBrowserProps) {
         <div className="AssetBrowser__toolbar__actions">
           <TextInput
             className="AssetBrowser__toolbar__filter"
-            placeholder="Filter by name"
+            placeholder="Search by name"
             size="xs"
             icon={<IconSearch size={14} />}
             value={filter}
@@ -316,7 +345,7 @@ export function AssetBrowser(props: AssetBrowserProps) {
           uploadFiles(Array.from(e.dataTransfer?.files || []));
         }}
       >
-        {loading ? (
+        {loading || (searching && searchIndex === null) ? (
           <div className="AssetBrowser__loading">
             <Loader color="gray" size="lg" />
           </div>
@@ -326,7 +355,9 @@ export function AssetBrowser(props: AssetBrowserProps) {
             data-testid="asset-browser-empty"
           >
             {filter ? (
-              <div>No assets match "{filter}".</div>
+              <div>
+                No assets match "{filter}" in this folder or its subfolders.
+              </div>
             ) : (
               <>
                 <div>This folder is empty.</div>
@@ -367,8 +398,16 @@ export function AssetBrowser(props: AssetBrowserProps) {
                         <div className="AssetBrowser__thumb">
                           <IconFolder size={24} stroke="1.5" />
                         </div>
-                        <div className="AssetBrowser__nameCell__name">
-                          {asset.name}
+                        <div className="AssetBrowser__nameCell__text">
+                          <div className="AssetBrowser__nameCell__name">
+                            {asset.name}
+                          </div>
+                          <AssetLocation
+                            asset={asset}
+                            folder={folder}
+                            searching={searching}
+                            onNavigate={setFolder}
+                          />
                         </div>
                       </div>
                     </td>
@@ -427,14 +466,24 @@ export function AssetBrowser(props: AssetBrowserProps) {
                     <td>
                       <div className="AssetBrowser__nameCell">
                         <AssetThumbnail file={asset.file} size={36} />
-                        <div className="AssetBrowser__nameCell__name">
-                          {asset.name}
-                          {Boolean(asset.file?.width && asset.file?.height) && (
-                            <span className="AssetBrowser__nameCell__dimens">
-                              {' '}
-                              ({asset.file.width}x{asset.file.height})
-                            </span>
-                          )}
+                        <div className="AssetBrowser__nameCell__text">
+                          <div className="AssetBrowser__nameCell__name">
+                            {asset.name}
+                            {Boolean(
+                              asset.file?.width && asset.file?.height
+                            ) && (
+                              <span className="AssetBrowser__nameCell__dimens">
+                                {' '}
+                                ({asset.file.width}x{asset.file.height})
+                              </span>
+                            )}
+                          </div>
+                          <AssetLocation
+                            asset={asset}
+                            folder={folder}
+                            searching={searching}
+                            onNavigate={setFolder}
+                          />
                         </div>
                       </div>
                     </td>
@@ -625,6 +674,35 @@ function FileActionsMenu(props: {
         </>
       )}
     </Menu>
+  );
+}
+
+/**
+ * During a recursive name search, shows the subfolder an asset lives in
+ * (relative to the folder being searched). Clicking it navigates to that
+ * folder.
+ */
+function AssetLocation(props: {
+  asset: Asset;
+  folder: string;
+  searching: boolean;
+  onNavigate: (folder: string) => void;
+}) {
+  const asset = props.asset;
+  if (!props.searching || asset.parent === props.folder) {
+    return null;
+  }
+  return (
+    <button
+      className="AssetBrowser__nameCell__path"
+      title="Go to folder"
+      onClick={(e) => {
+        e.stopPropagation();
+        props.onNavigate(asset.parent);
+      }}
+    >
+      in {getRelativeFolderPath(asset.parent, props.folder)}
+    </button>
   );
 }
 

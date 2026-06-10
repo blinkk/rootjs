@@ -22,6 +22,7 @@ import {
   doc,
   getDoc,
   getDocs,
+  limit,
   query,
   serverTimestamp,
   updateDoc,
@@ -160,6 +161,67 @@ export async function listAssets(folderPath: string): Promise<Asset[]> {
     assets.push(snap.data() as Asset);
   });
   return sortAssets(assets);
+}
+
+/**
+ * Max entries returned by {@link listAssetsRecursive}. Bounds the read cost
+ * of recursive name searches in very large asset libraries.
+ */
+const MAX_RECURSIVE_RESULTS = 1000;
+
+/**
+ * Lists all assets within a folder and its subfolders. Because folders are
+ * stored as `parent` path strings, all descendants are fetched with a single
+ * auto-indexed range query on the path prefix. Used for recursive name
+ * searches; results are capped at {@link MAX_RECURSIVE_RESULTS} entries.
+ */
+export async function listAssetsRecursive(
+  folderPath: string
+): Promise<Asset[]> {
+  const colRef = getAssetsDbCollection();
+  let q;
+  if (folderPath) {
+    // The range query matches by string prefix, e.g. querying `foo` also
+    // matches `foobar`, so exact descendants are filtered below.
+    q = query(
+      colRef,
+      where('parent', '>=', folderPath),
+      where('parent', '<=', `${folderPath}\uf8ff`),
+      limit(MAX_RECURSIVE_RESULTS)
+    );
+  } else {
+    // At the root, every asset is a descendant.
+    q = query(colRef, limit(MAX_RECURSIVE_RESULTS));
+  }
+  const snapshot = await getDocs(q);
+  const assets: Asset[] = [];
+  snapshot.forEach((snap) => {
+    const data = snap.data() as Asset;
+    if (!folderPath || isDescendantPath(data.parent, folderPath)) {
+      assets.push(data);
+    }
+  });
+  return sortAssets(assets);
+}
+
+/**
+ * Returns a folder path relative to a base folder, e.g.
+ * `getRelativeFolderPath('marketing/q1', 'marketing')` returns `'q1'`.
+ */
+export function getRelativeFolderPath(
+  folderPath: string,
+  basePath: string
+): string {
+  if (!basePath) {
+    return folderPath;
+  }
+  if (folderPath === basePath) {
+    return '';
+  }
+  if (folderPath.startsWith(`${basePath}/`)) {
+    return folderPath.slice(basePath.length + 1);
+  }
+  return folderPath;
 }
 
 /** Fetches a single asset by id. */

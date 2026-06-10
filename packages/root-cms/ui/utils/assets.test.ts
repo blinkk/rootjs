@@ -7,6 +7,7 @@ import {
   collectAssetFieldPaths,
   extractAssetIds,
   getFolderId,
+  getRelativeFolderPath,
   joinFolderPath,
   parseFolderPath,
   validateAssetName,
@@ -66,6 +67,19 @@ describe('folder paths', () => {
   it('builds deterministic folder ids', () => {
     expect(getFolderId('foo/bar')).toEqual('folder-foo%2Fbar');
     expect(getFolderId('foo/bar')).toEqual(getFolderId('foo/bar'));
+  });
+
+  it('returns folder paths relative to a base folder', () => {
+    expect(getRelativeFolderPath('marketing/q1', 'marketing')).toEqual('q1');
+    expect(getRelativeFolderPath('marketing/q1/img', 'marketing')).toEqual(
+      'q1/img'
+    );
+    expect(getRelativeFolderPath('marketing', 'marketing')).toEqual('');
+    expect(getRelativeFolderPath('marketing/q1', '')).toEqual('marketing/q1');
+    // Sibling prefix folders are not treated as relative.
+    expect(getRelativeFolderPath('marketingX', 'marketing')).toEqual(
+      'marketingX'
+    );
   });
 });
 
