@@ -176,7 +176,7 @@ Layout.Side = () => {
 
         {!isBuiltInHidden('assets') && (
           <Layout.SideButton
-            label="Assets"
+            label="Asset Library"
             url="/cms/assets"
             active={currentUrl.startsWith('/cms/assets')}
           >

@@ -20,6 +20,7 @@ import type {CMSBuiltInSidebarTool} from '../core/plugin.js';
 import {Collection} from '../core/schema.js';
 import {AddToReleaseModal} from './components/AddToReleaseModal/AddToReleaseModal.js';
 import {AiEditModal} from './components/AiEditModal/AiEditModal.js';
+import {AssetPickerModal} from './components/AssetPickerModal/AssetPickerModal.js';
 import {ComponentPickerModal} from './components/ComponentPickerModal/ComponentPickerModal.js';
 import {CopyDocModal} from './components/CopyDocModal/CopyDocModal.js';
 import {DataSourceSelectModal} from './components/DataSourceSelectModal/DataSourceSelectModal.js';
@@ -251,6 +252,7 @@ function App() {
                     modals={{
                       [AddToReleaseModal.id]: AddToReleaseModal,
                       [AiEditModal.id]: AiEditModal,
+                      [AssetPickerModal.id]: AssetPickerModal,
                       [ComponentPickerModal.id]: ComponentPickerModal,
                       [CopyDocModal.id]: CopyDocModal,
                       [DocPickerModal.id]: DocPickerModal,

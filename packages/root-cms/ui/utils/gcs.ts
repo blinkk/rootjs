@@ -55,6 +55,12 @@ export interface UploadedFile {
   canvasBgColor?: 'light' | 'dark';
   /** The original source URL if the image has been edited. */
   originalSrc?: string;
+  /**
+   * When the file was selected from the asset library, the id of the asset at
+   * `Projects/<projectId>/Assets/<assetId>`. Updates to the asset fan out to
+   * docs that embed it (see `ui/utils/assets.ts`).
+   */
+  assetId?: string;
 }
 
 /** Uploads a File object to GCS. */
@@ -351,6 +357,43 @@ export function testIsVideoFile(src: string) {
   }
   const ext = getFileExt(src);
   return VIDEO_EXTS.includes(ext);
+}
+
+/**
+ * Tests whether a filename matches an accept list as used by the image/file
+ * fields. Accept entries can be mime types (`image/png`), wildcard mime types
+ * (e.g. `image/*` or the global wildcard) or extensions (`.mp4`).
+ */
+export function testFileMatchesAccept(
+  filename: string,
+  accept?: string[]
+): boolean {
+  if (!accept || accept.length === 0) {
+    return true;
+  }
+  const ext = getFileExt(filename);
+  return accept.some((entry) => {
+    const type = String(entry).toLowerCase().trim();
+    if (type === '*' || type === '*/*' || type === `*/${ext}`) {
+      return true;
+    }
+    if (type.endsWith('/*')) {
+      const prefix = type.split('/')[0];
+      if (prefix === 'image') {
+        return IMAGE_EXTS.includes(ext);
+      }
+      if (prefix === 'video') {
+        return VIDEO_EXTS.includes(ext);
+      }
+      return false;
+    }
+    if (type.includes('/')) {
+      // Mime types match by subtype, e.g. `image/svg+xml` matches `svg`.
+      const subtype = normalizeExt(type.split('/')[1].split('+')[0]);
+      return subtype === ext;
+    }
+    return normalizeExt(type.replace(/^\./, '')) === ext;
+  });
 }
 
 export function buildDownloadURL(src: string) {

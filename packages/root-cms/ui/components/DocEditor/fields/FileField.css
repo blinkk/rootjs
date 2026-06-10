@@ -32,6 +32,7 @@
 }
 
 .FileField__Preview {
+  --floating-button-position: 6px;
   padding: 10px;
   pointer-events: none;
   position: relative;
@@ -41,8 +42,8 @@
 .FileField__Preview__InfoButton {
   pointer-events: all;
   position: absolute;
-  top: 8px;
-  right: 8px;
+  top: var(--floating-button-position);
+  right: var(--floating-button-position);
   z-index: 2;
   display: flex;
   flex-direction: row;
@@ -61,8 +62,8 @@
 .FileField__reupload {
   pointer-events: all;
   position: absolute;
-  bottom: 8px;
-  right: 8px;
+  bottom: var(--floating-button-position);
+  right: var(--floating-button-position);
   z-index: 1;
 }
 
@@ -100,8 +101,9 @@
 
 .FileField__Preview__Info {
   position: absolute;
-  top: 0px;
-  left: 0px;
+  top: var(--floating-button-position);
+  left: var(--floating-button-position);
+  border-radius: 4px;
   background: #000;
   color: #fff;
   font-size: 8px;
@@ -109,6 +111,35 @@
   padding: 2px 5px;
   pointer-events: all;
   z-index: 1;
+}
+
+/* When the asset library badge is active, move the dimens box to the bottom left. */
+.FileField__Preview:has(.FileField__Preview__AssetLibraryBadge) .FileField__Preview__Info {
+  top: auto;
+  bottom: var(--floating-button-position);
+}
+
+.FileField__Preview__AssetLibraryBadge {
+  position: absolute;
+  top: var(--floating-button-position);
+  left: var(--floating-button-position);
+  border-radius: 4px;
+  display: block;
+  background: #1971c2;
+  color: #fff;
+  font-size: 8px;
+  font-weight: 700;
+  padding: 2px 5px;
+  pointer-events: all;
+  z-index: 1;
+}
+
+a.FileField__Preview__AssetLibraryBadge {
+  text-decoration: none;
+}
+
+a.FileField__Preview__AssetLibraryBadge:active {
+  transform: translateY(1px);
 }
 
 .FileField__Preview__Actions__Trash {
@@ -202,6 +233,10 @@
   background-color: #f3d9fa;
 }
 
+.FileField__Empty {
+  padding-top: 20px;
+}
+
 .FileField__Empty:focus {
   outline: 1px solid rgb(51, 154, 240);
 }
@@ -227,9 +262,29 @@
   margin-right: 6px;
 }
 
+.FileField__Empty__AssetLibrary {
+  font-size: 12px;
+  font-weight: 500;
+  position: relative;
+  z-index: 2;
+}
+
+.FileField__Empty__AssetLibrary__link {
+  appearance: none;
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+  color: var(--color-text-default);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
 .FileField__Empty__AcceptTypes {
+  margin-top: 20px;
   font-size: 10px;
-  display: inline;
+  display: block;
   position: relative;
   z-index: 1;
 }
@@ -275,4 +330,12 @@
 
 .FileField__NamingModeItem {
   padding: 8px 10px;
+}
+
+.FileField__Preview__Menu {
+  width: 214px;
+}
+
+.FileField__Preview__Menu .mantine-Menu-itemLabel {
+  font-size: 13px;
 }
