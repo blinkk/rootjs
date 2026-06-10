@@ -1,5 +1,5 @@
 ---
-'@blinkk/root-cms': minor
+'@blinkk/root-cms': patch
 ---
 
-feat: add asset manager for uploading, organizing and selecting assets in image/file fields
+feat: asset manager for uploading and organizing project assets

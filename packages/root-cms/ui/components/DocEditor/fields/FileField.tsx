@@ -45,7 +45,11 @@ import {useContext, useMemo, useRef, useState} from 'preact/hooks';
 import * as schema from '../../../../core/schema.js';
 import {useDraftDocValue} from '../../../hooks/useDraftDoc.js';
 import {useGapiClient} from '../../../hooks/useGapiClient.js';
-import {buildAssetFieldValue} from '../../../utils/assets.js';
+import {
+  buildAssetFieldValue,
+  getAsset,
+  getAssetPickerLastFolder,
+} from '../../../utils/assets.js';
 import {joinClassNames} from '../../../utils/classes.js';
 import {
   buildDownloadURL,
@@ -415,10 +419,25 @@ export function FileFieldInternal(props: FileFieldInternalProps) {
    * Opens the asset picker modal for selecting a file from the asset library.
    * The selected asset's file data is copied into the doc along with an
    * `assetId` backlink so updates to the asset can be synced to the doc.
+   *
+   * The picker opens in the folder of the currently-linked asset (when
+   * replacing a value backed by `assetId`) or the user's last visited folder.
    */
-  function requestAssetPicker() {
+  async function requestAssetPicker() {
+    let initialFolder = getAssetPickerLastFolder();
+    if (value?.assetId) {
+      try {
+        const asset = await getAsset(value.assetId);
+        if (asset) {
+          initialFolder = asset.parent || '';
+        }
+      } catch (err) {
+        console.warn('failed to resolve linked asset folder:', err);
+      }
+    }
     assetPickerModal.open({
       accept: acceptedFileTypes,
+      initialFolder,
       onSelect: (asset) => {
         const newValue = buildAssetFieldValue(asset);
         // Preserve previous alt text when the asset doesn't define one.

@@ -74,6 +74,10 @@ export interface AssetBrowserProps {
   mode: AssetBrowserMode;
   /** Current folder path. When provided, the folder state is controlled. */
   folder?: string;
+  /**
+   * Initial folder path when uncontrolled. Ignored if `folder` is provided.
+   */
+  initialFolder?: string;
   /** Called when the user navigates to a folder. */
   onFolderChange?: (folder: string) => void;
   /** Pick mode: called when the user selects a file. */
@@ -90,7 +94,9 @@ export interface AssetBrowserProps {
  * organizing (folders, rename, move, delete) and inspecting assets.
  */
 export function AssetBrowser(props: AssetBrowserProps) {
-  const [internalFolder, setInternalFolder] = useState(props.folder || '');
+  const [internalFolder, setInternalFolder] = useState(
+    props.folder ?? props.initialFolder ?? ''
+  );
   const folder = props.folder ?? internalFolder;
   const [assets, setAssets] = useState<Asset[]>([]);
   const [loading, setLoading] = useState(true);

@@ -2,7 +2,7 @@ import './AssetPickerModal.css';
 
 import {ContextModalProps, useModals} from '@mantine/modals';
 import {useModalTheme} from '../../hooks/useModalTheme.js';
-import {AssetFile} from '../../utils/assets.js';
+import {AssetFile, setAssetPickerLastFolder} from '../../utils/assets.js';
 import {AssetBrowser} from '../AssetBrowser/AssetBrowser.js';
 
 const MODAL_ID = 'AssetPickerModal';
@@ -13,6 +13,8 @@ export interface AssetPickerModalProps {
   onSelect?: (asset: AssetFile) => void;
   /** Accept list used to filter pickable files, e.g. `['image/png', '.mp4']`. */
   accept?: string[];
+  /** Folder path the picker opens to. Defaults to the project root. */
+  initialFolder?: string;
 }
 
 /**
@@ -66,7 +68,13 @@ export function AssetPickerModal(
 
   return (
     <div className="AssetPickerModal">
-      <AssetBrowser mode="pick" accept={props.accept} onPickFile={onPickFile} />
+      <AssetBrowser
+        mode="pick"
+        accept={props.accept}
+        initialFolder={props.initialFolder}
+        onFolderChange={setAssetPickerLastFolder}
+        onPickFile={onPickFile}
+      />
     </div>
   );
 }

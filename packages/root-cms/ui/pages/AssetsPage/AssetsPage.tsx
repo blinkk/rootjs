@@ -35,10 +35,10 @@ export function AssetsPage() {
         <div className="AssetsPage__header">
           <Heading size="h1">Asset Library</Heading>
           <Text as="p">
-            Upload and organize the project's assets. Files can be selected from
-            image and file fields in the doc editor; replacing a file or
-            updating its alt text automatically updates all draft docs that use
-            it.
+            The asset library can be used to store and organize files used
+            throughout the project. Replacing a file in the asset library
+            automatically updates all draft docs that use it (requires
+            re-publishing).
           </Text>
         </div>
         <AssetBrowser

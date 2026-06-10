@@ -91,6 +91,31 @@ export function getAssetsDbCollection() {
   return collection(db, 'Projects', projectId, 'Assets');
 }
 
+const ASSET_PICKER_LAST_FOLDER_KEY = 'root-cms:assetPicker:lastFolder';
+
+function getAssetPickerStorageKey(): string {
+  const projectId = window.__ROOT_CTX.rootConfig.projectId;
+  return `${ASSET_PICKER_LAST_FOLDER_KEY}:${projectId}`;
+}
+
+/** Returns the last folder the user navigated to in the asset picker modal. */
+export function getAssetPickerLastFolder(): string {
+  try {
+    return localStorage.getItem(getAssetPickerStorageKey()) || '';
+  } catch {
+    return '';
+  }
+}
+
+/** Persists the last folder the user navigated to in the asset picker modal. */
+export function setAssetPickerLastFolder(folder: string): void {
+  try {
+    localStorage.setItem(getAssetPickerStorageKey(), folder || '');
+  } catch {
+    // localStorage may be unavailable; ignore.
+  }
+}
+
 /**
  * Validates a file or folder display name. Returns the trimmed name or throws
  * an `AssetNameError`.
