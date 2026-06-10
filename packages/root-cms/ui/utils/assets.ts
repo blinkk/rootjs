@@ -602,6 +602,37 @@ function isAssetFieldValue(data: any): data is AssetFieldValue {
 }
 
 /**
+ * Returns true if `data` contains any asset-linked field value at any nesting
+ * depth. Short-circuits on the first match.
+ */
+export function containsAssetId(data: any): boolean {
+  if (!data || typeof data !== 'object') {
+    return false;
+  }
+  if (Array.isArray(data)) {
+    for (const item of data) {
+      if (containsAssetId(item)) {
+        return true;
+      }
+    }
+    return false;
+  }
+  // Ignore non-plain objects (e.g. Timestamps).
+  if (typeof data.toMillis === 'function') {
+    return false;
+  }
+  if (isAssetFieldValue(data)) {
+    return true;
+  }
+  for (const key of Object.keys(data)) {
+    if (containsAssetId(data[key])) {
+      return true;
+    }
+  }
+  return false;
+}
+
+/**
  * Finds all draft docs that use an asset by querying the `sys.assets` reverse
  * index across every collection in the project. Note that the index is
  * (re)computed whenever a doc draft is saved, so docs that haven't been saved

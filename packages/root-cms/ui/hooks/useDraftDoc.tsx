@@ -11,7 +11,7 @@ import {
 import {ComponentChildren, createContext} from 'preact';
 import {useContext, useEffect, useMemo, useState} from 'preact/hooks';
 import {logAction} from '../utils/actions.js';
-import {extractAssetIds} from '../utils/assets.js';
+import {containsAssetId, extractAssetIds} from '../utils/assets.js';
 import {debounce} from '../utils/debounce.js';
 import {setDocToCache} from '../utils/doc-cache.js';
 import {CMSDoc} from '../utils/doc.js';
@@ -68,6 +68,12 @@ export class DraftDocController extends EventListener {
   private autolock = false;
   private autolockReason = 'autolock';
   private autolockApplied = false;
+  /**
+   * Set when a queued update may have changed the doc's set of asset ids.
+   * Gates the expensive `sys.assets` recompute at flush time so it only runs
+   * when an asset-bearing field was actually touched.
+   */
+  private mightHaveAssetChanges = false;
   /** When true, prevents any writes to the DB (e.g. user lacks edit access). */
   readOnly = false;
   /** When false, draft changes are only written by explicitly calling flush(). */
@@ -125,6 +131,7 @@ export class DraftDocController extends EventListener {
       return;
     }
     this.started = true;
+    let initialLoad = true;
     this.dbUnsubscribe = onSnapshot(this.docRef, (snapshot) => {
       // Ignore local db write callbacks.
       if (snapshot.metadata.hasPendingWrites) {
@@ -137,6 +144,15 @@ export class DraftDocController extends EventListener {
         applyUpdates(data, Object.fromEntries(this.pendingUpdates));
       }
       this.store.setData(data);
+      // Backfill `sys.assets` on the next flush if a legacy doc loaded without
+      // the reverse index. Only checked on initial load to avoid retriggering
+      // on every remote sync.
+      if (initialLoad) {
+        initialLoad = false;
+        if (!Array.isArray((data as any)?.sys?.assets)) {
+          this.mightHaveAssetChanges = true;
+        }
+      }
     });
   }
 
@@ -277,6 +293,14 @@ export class DraftDocController extends EventListener {
       }
     }
     this.pendingUpdates.set(key, value);
+    // If the change involves a value that contains an asset link (either added
+    // or removed), flag the next flush to recompute `sys.assets`. Short-
+    // circuiting `containsAssetId` keeps the check cheap for primitives.
+    if (!this.mightHaveAssetChanges && key.startsWith('fields')) {
+      if (containsAssetId(value) || containsAssetId(this.store.get(key))) {
+        this.mightHaveAssetChanges = true;
+      }
+    }
   }
 
   /** Returns pending updates normalized for Firestore updateDoc(). */
@@ -337,13 +361,16 @@ export class DraftDocController extends EventListener {
     updates['sys.modifiedAt'] = serverTimestamp();
     updates['sys.modifiedBy'] = window.firebase.user.email;
 
-    // Keep the doc's asset reverse index (`sys.assets`) in sync on every save
-    // so the asset library can find (and fan updates out to) docs that embed
-    // an asset.
-    const assetIds = extractAssetIds(this.store.get('fields') || {});
-    const prevAssetIds: string[] = this.store.get('sys.assets') || [];
-    if (!testStringArraysEqual(assetIds, prevAssetIds)) {
-      updates['sys.assets'] = assetIds;
+    // Keep the doc's asset reverse index (`sys.assets`) in sync so the asset
+    // library can find (and fan updates out to) docs that embed an asset. The
+    // walk is gated on `mightHaveAssetChanges` so it only runs when a queued
+    // field update could plausibly have changed the asset set.
+    if (this.mightHaveAssetChanges) {
+      const assetIds = extractAssetIds(this.store.get('fields') || {});
+      const prevAssetIds: string[] = this.store.get('sys.assets') || [];
+      if (!testStringArraysEqual(assetIds, prevAssetIds)) {
+        updates['sys.assets'] = assetIds;
+      }
     }
 
     // If autolock is enabled on the collection, add a publishing lock if one
@@ -369,6 +396,9 @@ export class DraftDocController extends EventListener {
     try {
       this.setSaveState(SaveState.SAVING);
       await updateDoc(this.docRef, updates);
+      // The asset index is now in sync with the saved field state; subsequent
+      // flushes only recompute when another asset-bearing edit is queued.
+      this.mightHaveAssetChanges = false;
       this.setSaveState(SaveState.SAVED);
       if (!options?.quiet) {
         this.dispatch(DraftDocEventType.FLUSH);
