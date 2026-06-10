@@ -1,6 +1,5 @@
 import path from 'node:path';
 
-import compression from 'compression';
 import cookieParser from 'cookie-parser';
 import {default as express} from 'express';
 import {dim} from 'kleur/colors';
@@ -9,6 +8,7 @@ import sirv from 'sirv';
 import {RootConfig} from '../core/config.js';
 import {configureServerPlugins} from '../core/plugin.js';
 import {Request, Response, NextFunction, Server} from '../core/types.js';
+import {compressionMiddleware} from '../middleware/compression.js';
 import {hooksMiddleware} from '../middleware/hooks.js';
 import {
   headersMiddleware,
@@ -56,7 +56,7 @@ export async function createProdServer(options: {
 
   const server: Server = express();
   server.disable('x-powered-by');
-  server.use(compression());
+  server.use(compressionMiddleware());
 
   // Inject request context vars.
   server.use(rootProjectMiddleware({rootConfig}));

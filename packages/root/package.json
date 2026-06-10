@@ -81,7 +81,7 @@
     "bundle-require": "4.0.2",
     "busboy": "1.6.0",
     "commander": "11.0.0",
-    "compression": "1.7.4",
+    "compression": "1.8.1",
     "cookie-parser": "1.4.6",
     "dotenv": "16.4.5",
     "esbuild": "0.28.0",
