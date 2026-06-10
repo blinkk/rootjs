@@ -2,4 +2,4 @@
 '@blinkk/root-cms': patch
 ---
 
-fix: recover from route import failures after CMS rebuilds and redeploys
+fix: add route import failure recovery with automatic page reload
