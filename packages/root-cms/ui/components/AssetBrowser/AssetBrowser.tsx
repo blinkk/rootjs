@@ -8,7 +8,6 @@ import {
   Modal,
   Table,
   TextInput,
-  Tooltip,
 } from '@mantine/core';
 import {
   hideNotification,
@@ -53,6 +52,7 @@ import {testFileMatchesAccept, uploadFileToGCS} from '../../utils/gcs.js';
 import {notifyErrors} from '../../utils/notifications.js';
 import {testCanPublish} from '../../utils/permissions.js';
 import {getTimeAgo} from '../../utils/time.js';
+import {UserAvatar} from '../UserAvatar/UserAvatar.js';
 import {AssetDetailsModal} from './AssetDetailsModal.js';
 import {
   AssetThumbnail,
@@ -347,10 +347,8 @@ export function AssetBrowser(props: AssetBrowserProps) {
           >
             <thead>
               <tr>
-                <th className="AssetBrowser__table__thumbCol"></th>
                 <th>name</th>
-                <th>dimensions</th>
-                <th>modified</th>
+                <th className="AssetBrowser__table__modifiedCol">modified</th>
                 <th className="AssetBrowser__table__actionsCol"></th>
               </tr>
             </thead>
@@ -365,48 +363,53 @@ export function AssetBrowser(props: AssetBrowserProps) {
                     }
                   >
                     <td>
-                      <div className="AssetBrowser__thumb">
-                        <IconFolder size={24} stroke="1.5" />
+                      <div className="AssetBrowser__nameCell">
+                        <div className="AssetBrowser__thumb">
+                          <IconFolder size={24} stroke="1.5" />
+                        </div>
+                        <div className="AssetBrowser__nameCell__name">
+                          {asset.name}
+                        </div>
                       </div>
                     </td>
-                    <td className="AssetBrowser__row__name">{asset.name}</td>
-                    <td>—</td>
                     <td>
-                      <AssetTimestamp asset={asset} />
+                      <AssetModifiedBy asset={asset} />
                     </td>
                     <td onClick={(e) => e.stopPropagation()}>
-                      {props.mode === 'manage' && canManage && (
-                        <Menu
-                          shadow="sm"
-                          position="bottom"
-                          placement="end"
-                          control={
-                            <ActionIcon size="sm">
-                              <IconDotsVertical size={16} />
-                            </ActionIcon>
-                          }
-                        >
-                          <Menu.Item
-                            icon={<IconPencil size={14} />}
-                            onClick={() => setRenameTarget(asset)}
+                      <div className="AssetBrowser__actionsCell">
+                        {props.mode === 'manage' && canManage && (
+                          <Menu
+                            shadow="sm"
+                            position="bottom"
+                            placement="end"
+                            control={
+                              <ActionIcon size="sm">
+                                <IconDotsVertical size={16} />
+                              </ActionIcon>
+                            }
                           >
-                            Rename
-                          </Menu.Item>
-                          <Menu.Item
-                            icon={<IconFolderSymlink size={14} />}
-                            onClick={() => setMoveTarget(asset)}
-                          >
-                            Move
-                          </Menu.Item>
-                          <Menu.Item
-                            color="red"
-                            icon={<IconTrash size={14} />}
-                            onClick={() => setDeleteTarget(asset)}
-                          >
-                            Delete
-                          </Menu.Item>
-                        </Menu>
-                      )}
+                            <Menu.Item
+                              icon={<IconPencil size={14} />}
+                              onClick={() => setRenameTarget(asset)}
+                            >
+                              Rename
+                            </Menu.Item>
+                            <Menu.Item
+                              icon={<IconFolderSymlink size={14} />}
+                              onClick={() => setMoveTarget(asset)}
+                            >
+                              Move
+                            </Menu.Item>
+                            <Menu.Item
+                              color="red"
+                              icon={<IconTrash size={14} />}
+                              onClick={() => setDeleteTarget(asset)}
+                            >
+                              Delete
+                            </Menu.Item>
+                          </Menu>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ) : (
@@ -422,39 +425,46 @@ export function AssetBrowser(props: AssetBrowserProps) {
                     }}
                   >
                     <td>
-                      <AssetThumbnail file={asset.file} size={36} />
+                      <div className="AssetBrowser__nameCell">
+                        <AssetThumbnail file={asset.file} size={36} />
+                        <div className="AssetBrowser__nameCell__name">
+                          {asset.name}
+                          {Boolean(asset.file?.width && asset.file?.height) && (
+                            <span className="AssetBrowser__nameCell__dimens">
+                              {' '}
+                              ({asset.file.width}x{asset.file.height})
+                            </span>
+                          )}
+                        </div>
+                      </div>
                     </td>
-                    <td className="AssetBrowser__row__name">{asset.name}</td>
                     <td>
-                      {asset.file?.width && asset.file?.height
-                        ? `${asset.file.width}x${asset.file.height}`
-                        : '—'}
-                    </td>
-                    <td>
-                      <AssetTimestamp asset={asset} />
+                      <AssetModifiedBy asset={asset} />
                     </td>
                     <td onClick={(e) => e.stopPropagation()}>
-                      {props.mode === 'pick' ? (
-                        <Button
-                          variant="filled"
-                          color="dark"
-                          size="xs"
-                          compact
-                          onClick={() => onPickFile(asset)}
-                          rightIcon={<IconArrowRight size={14} />}
-                        >
-                          Select
-                        </Button>
-                      ) : (
-                        <FileActionsMenu
-                          asset={asset}
-                          canManage={canManage}
-                          onDetails={() => setDetailsTarget(asset)}
-                          onRename={() => setRenameTarget(asset)}
-                          onMove={() => setMoveTarget(asset)}
-                          onDelete={() => setDeleteTarget(asset)}
-                        />
-                      )}
+                      <div className="AssetBrowser__actionsCell">
+                        {props.mode === 'pick' ? (
+                          <Button
+                            variant="filled"
+                            color="dark"
+                            size="xs"
+                            compact
+                            onClick={() => onPickFile(asset)}
+                            rightIcon={<IconArrowRight size={14} />}
+                          >
+                            Select
+                          </Button>
+                        ) : (
+                          <FileActionsMenu
+                            asset={asset}
+                            canManage={canManage}
+                            onDetails={() => setDetailsTarget(asset)}
+                            onRename={() => setRenameTarget(asset)}
+                            onMove={() => setMoveTarget(asset)}
+                            onDelete={() => setDeleteTarget(asset)}
+                          />
+                        )}
+                      </div>
                     </td>
                   </tr>
                 )
@@ -618,16 +628,19 @@ function FileActionsMenu(props: {
   );
 }
 
-function AssetTimestamp(props: {asset: Asset}) {
+/**
+ * Renders who last modified an asset (avatar with name/email tooltip) along
+ * with a relative timestamp.
+ */
+function AssetModifiedBy(props: {asset: Asset}) {
   const ts = props.asset.modifiedAt || props.asset.createdAt;
-  if (!ts || typeof ts.toMillis !== 'function') {
-    return <span>—</span>;
-  }
   const by = props.asset.modifiedBy || props.asset.createdBy || '';
+  const millis = ts && typeof ts.toMillis === 'function' ? ts.toMillis() : 0;
   return (
-    <Tooltip label={by} disabled={!by} transition="pop">
-      <span>{getTimeAgo(ts.toMillis())}</span>
-    </Tooltip>
+    <div className="AssetBrowser__modifiedCell">
+      {by && <UserAvatar email={by} size={20} />}
+      <span>{millis ? getTimeAgo(millis) : '—'}</span>
+    </div>
   );
 }
 

@@ -90,21 +90,45 @@
   font-size: 12px;
 }
 
-.AssetBrowser__table th.AssetBrowser__table__thumbCol {
-  width: 56px;
+.AssetBrowser__table th.AssetBrowser__table__modifiedCol {
+  width: 160px;
 }
 
 .AssetBrowser__table th.AssetBrowser__table__actionsCol {
-  width: 70px;
+  width: 90px;
 }
 
 .AssetBrowser__row {
   cursor: pointer;
 }
 
-.AssetBrowser__row__name {
+.AssetBrowser__nameCell {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.AssetBrowser__nameCell__name {
   font-weight: 500;
   overflow-wrap: anywhere;
+}
+
+.AssetBrowser__nameCell__dimens {
+  color: var(--color-text-gray);
+  font-weight: 400;
+}
+
+.AssetBrowser__modifiedCell {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+}
+
+.AssetBrowser__actionsCell {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
 }
 
 .AssetBrowser__thumb {
