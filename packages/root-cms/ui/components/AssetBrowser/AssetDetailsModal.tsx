@@ -331,7 +331,7 @@ export function AssetDetailsModal(props: AssetDetailsModalProps) {
         {confirmingDelete && (
           <div className="AssetBrowser__details__confirmDelete">
             <div>
-              Delete <b>{asset.name}</b> from the asset manager?
+              Delete <b>{asset.name}</b> from the asset library?
               {usageDocs && usageDocs.length > 0 && (
                 <>
                   {' '}

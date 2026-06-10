@@ -338,7 +338,7 @@ export class DraftDocController extends EventListener {
     updates['sys.modifiedBy'] = window.firebase.user.email;
 
     // Keep the doc's asset reverse index (`sys.assets`) in sync on every save
-    // so the asset manager can find (and fan updates out to) docs that embed
+    // so the asset library can find (and fan updates out to) docs that embed
     // an asset.
     const assetIds = extractAssetIds(this.store.get('fields') || {});
     const prevAssetIds: string[] = this.store.get('sys.assets') || [];

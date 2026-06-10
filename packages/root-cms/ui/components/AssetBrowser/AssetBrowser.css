@@ -64,7 +64,6 @@
   border: 1px solid var(--color-border);
   border-radius: var(--surface-border-radius);
   background: var(--surface-background);
-  min-height: 160px;
   overflow: hidden;
 }
 
@@ -90,16 +89,31 @@
   font-size: 12px;
 }
 
+/* The listing wrapper already provides the rounded border. */
+.AssetBrowser__listing .mantine-Table-root {
+  border: none;
+}
+
+.AssetBrowser__table td,
+.AssetBrowser__table th {
+  border-left: none !important;
+}
+
 .AssetBrowser__table th.AssetBrowser__table__modifiedCol {
-  width: 160px;
+  width: 200px;
 }
 
 .AssetBrowser__table th.AssetBrowser__table__actionsCol {
-  width: 90px;
+  width: 0;
+  white-space: nowrap;
 }
 
 .AssetBrowser__row {
   cursor: pointer;
+}
+
+.AssetBrowser__row:hover {
+  background: var(--button-background-hover) !important;
 }
 
 .AssetBrowser__nameCell {

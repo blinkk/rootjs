@@ -1,5 +1,5 @@
 /**
- * @fileoverview Data layer for the asset manager.
+ * @fileoverview Data layer for the asset library.
  *
  * Assets are stored in a flat DB collection at
  * `Projects/<projectId>/Assets/<assetId>`. Both files and folders live in the
@@ -52,14 +52,14 @@ export interface AssetBase {
   modifiedBy: string;
 }
 
-/** A file entry in the asset manager. */
+/** A file entry in the asset library. */
 export interface AssetFile extends AssetBase {
   type: 'file';
   /** The uploaded file data (same shape stored in image/file fields). */
   file: UploadedFile;
 }
 
-/** A folder entry in the asset manager. */
+/** A folder entry in the asset library. */
 export interface AssetFolder extends AssetBase {
   type: 'folder';
 }
@@ -142,11 +142,20 @@ function sortAssets(assets: Asset[]): Asset[] {
     if (a.type !== b.type) {
       return a.type === 'folder' ? -1 : 1;
     }
-    return a.name.localeCompare(b.name, undefined, {
+    return (a.name || '').localeCompare(b.name || '', undefined, {
       numeric: true,
       sensitivity: 'base',
     });
   });
+}
+
+/** Drops docs that don't look like proper Asset entries. */
+function isValidAsset(data: any): data is Asset {
+  return (
+    !!data &&
+    typeof data.name === 'string' &&
+    (data.type === 'file' || data.type === 'folder')
+  );
 }
 
 /**
@@ -158,7 +167,10 @@ export async function listAssets(folderPath: string): Promise<Asset[]> {
   const snapshot = await getDocs(q);
   const assets: Asset[] = [];
   snapshot.forEach((snap) => {
-    assets.push(snap.data() as Asset);
+    const data = snap.data();
+    if (isValidAsset(data)) {
+      assets.push(data);
+    }
   });
   return sortAssets(assets);
 }
@@ -196,7 +208,10 @@ export async function listAssetsRecursive(
   const snapshot = await getDocs(q);
   const assets: Asset[] = [];
   snapshot.forEach((snap) => {
-    const data = snap.data() as Asset;
+    const data = snap.data();
+    if (!isValidAsset(data)) {
+      return;
+    }
     if (!folderPath || isDescendantPath(data.parent, folderPath)) {
       assets.push(data);
     }
@@ -235,7 +250,7 @@ export async function getAsset(assetId: string): Promise<Asset | null> {
 }
 
 /**
- * Creates a folder within the asset manager. No-op if the folder already
+ * Creates a folder within the asset library. No-op if the folder already
  * exists.
  */
 export async function createAssetFolder(
@@ -263,7 +278,7 @@ export async function createAssetFolder(
 }
 
 /**
- * Adds an uploaded file to the asset manager.
+ * Adds an uploaded file to the asset library.
  */
 export async function createAssetFile(options: {
   parent: string;
@@ -450,7 +465,7 @@ async function moveFolder(
 }
 
 /**
- * Deletes an asset from the asset manager. Folders must be empty. The
+ * Deletes an asset from the asset library. Folders must be empty. The
  * underlying GCS file is left untouched since published docs may still
  * reference it.
  */
@@ -511,7 +526,7 @@ export async function updateAssetAltText(
 
 /**
  * Builds the field value to embed in a doc when an asset is selected from the
- * asset manager. The full file data is copied into the doc (so fetching the
+ * asset library. The full file data is copied into the doc (so fetching the
  * doc requires no extra RPCs) along with an `assetId` backlink used to keep
  * the copy in sync.
  */

@@ -39,7 +39,7 @@ export interface Doc<Fields = any> {
     };
     locales?: string[];
     /**
-     * Reverse index of asset manager ids embedded in the doc's fields,
+     * Reverse index of asset library ids embedded in the doc's fields,
      * (re)computed whenever the doc draft is saved in the CMS UI.
      */
     assets?: string[];

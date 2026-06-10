@@ -9,7 +9,7 @@ const MODAL_ID = 'AssetPickerModal';
 
 export interface AssetPickerModalProps {
   [key: string]: unknown;
-  /** Called when the user selects a file from the asset manager. */
+  /** Called when the user selects a file from the asset library. */
   onSelect?: (asset: AssetFile) => void;
   /** Accept list used to filter pickable files, e.g. `['image/png', '.mp4']`. */
   accept?: string[];
@@ -17,7 +17,7 @@ export interface AssetPickerModalProps {
 
 /**
  * Hook for opening the asset picker modal, which allows users to select a
- * file from the project's asset manager (e.g. for image/file fields).
+ * file from the project's asset library (e.g. for image/file fields).
  */
 export function useAssetPickerModal() {
   // Degrade gracefully when used outside a `ModalsProvider` (e.g. the
@@ -40,7 +40,7 @@ export function useAssetPickerModal() {
       }
       modals.openContextModal(MODAL_ID, {
         ...modalTheme,
-        title: 'Select from asset manager',
+        title: 'Select from asset library',
         innerProps: props,
         size: '800px',
         overflow: 'inside',

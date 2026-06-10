@@ -85,7 +85,7 @@ export interface AssetBrowserProps {
 }
 
 /**
- * A Drive-like file browser for the project's asset manager. Lists the
+ * A Drive-like file browser for the project's asset library. Lists the
  * contents of a folder with breadcrumb navigation and supports uploading,
  * organizing (folders, rename, move, delete) and inspecting assets.
  */
@@ -492,18 +492,7 @@ export function AssetBrowser(props: AssetBrowserProps) {
                     </td>
                     <td onClick={(e) => e.stopPropagation()}>
                       <div className="AssetBrowser__actionsCell">
-                        {props.mode === 'pick' ? (
-                          <Button
-                            variant="filled"
-                            color="dark"
-                            size="xs"
-                            compact
-                            onClick={() => onPickFile(asset)}
-                            rightIcon={<IconArrowRight size={14} />}
-                          >
-                            Select
-                          </Button>
-                        ) : (
+                        {props.mode !== 'pick' && (
                           <FileActionsMenu
                             asset={asset}
                             canManage={canManage}

@@ -412,7 +412,7 @@ export function FileFieldInternal(props: FileFieldInternalProps) {
   }
 
   /**
-   * Opens the asset picker modal for selecting a file from the asset manager.
+   * Opens the asset picker modal for selecting a file from the asset library.
    * The selected asset's file data is copied into the doc along with an
    * `assetId` backlink so updates to the asset can be synced to the doc.
    */
@@ -802,6 +802,7 @@ FileField.Preview = () => {
           </Tooltip>
         )}
         <Menu
+          classNames={{body: 'FileField__Preview__Menu'}}
           shadow="sm"
           control={
             <ActionIcon
@@ -835,7 +836,7 @@ FileField.Preview = () => {
                   icon={<IconLibraryPhoto size={16} />}
                   onClick={() => ctx.requestAssetPicker()}
                 >
-                  Select from assets
+                  Select from asset library
                 </Menu.Item>
               )}
               {testSupportsCreatePlaceholder(ctx.acceptedFileTypes) && (
@@ -903,7 +904,7 @@ FileField.Preview = () => {
               rel="noreferrer"
               icon={<IconExternalLink size={16} />}
             >
-              View in assets
+              View in asset library
             </Menu.Item>
           )}
           {ctx.allowEditing && ctx.value?.assetId && (
@@ -911,7 +912,7 @@ FileField.Preview = () => {
               icon={<IconUnlink size={16} />}
               onClick={() => ctx.unlinkAsset()}
             >
-              Unlink from assets
+              Unlink from asset library
             </Menu.Item>
           )}
           {ctx.allowEditing &&
@@ -1044,7 +1045,7 @@ FileField.Preview = () => {
                         target="_blank"
                         rel="noreferrer"
                       >
-                        Open in asset manager
+                        Open in asset library
                       </a>
                     </td>
                   </tr>
@@ -1098,15 +1099,13 @@ FileField.Preview = () => {
               </Box>
             )}
             {ctx.value?.assetId && (
-              <Tooltip
-                label="Linked to the asset manager. Updates to the asset sync to this doc."
-                withArrow
+              <a
+                className="FileField__Preview__AssetLibraryBadge"
+                href={`/cms/assets/?asset=${ctx.value?.assetId}`}
+                target="_blank"
               >
-                <Box radius="sm" className="FileField__Preview__AssetBadge">
-                  <IconLibraryPhoto size={10} />
-                  ASSET
-                </Box>
-              </Tooltip>
+                ASSET LIBRARY
+              </a>
             )}
             {testIsImageFile(ctx.value?.src) && (
               <img
@@ -1287,21 +1286,6 @@ FileField.Empty = () => {
     <div className="FileField__Empty">
       <div className="FileField__Empty__Label">
         <FileField.UploadButton />
-        {ctx.allowEditing && ctx.assetPickerEnabled && (
-          <div>
-            <Tooltip label="Select from assets">
-              <ActionIcon
-                className="FileField__Empty__Label__AssetPickerButton"
-                onClick={() => {
-                  ctx.requestAssetPicker();
-                }}
-                title="Select from assets"
-              >
-                <IconLibraryPhoto size={16} />
-              </ActionIcon>
-            </Tooltip>
-          </div>
-        )}
         {testSupportsCreatePlaceholder(ctx.acceptedFileTypes) && (
           <div>
             <Tooltip label="Create placeholder image">
@@ -1318,6 +1302,18 @@ FileField.Empty = () => {
           </div>
         )}
       </div>
+      {ctx.allowEditing && ctx.assetPickerEnabled && (
+        <div className="FileField__Empty__AssetLibrary">
+          or select from{' '}
+          <button
+            type="button"
+            className="FileField__Empty__AssetLibrary__link"
+            onClick={() => ctx.requestAssetPicker()}
+          >
+            asset library
+          </button>
+        </div>
+      )}
       {acceptsLabel && (
         <div>
           <div className="FileField__Empty__AcceptTypes">

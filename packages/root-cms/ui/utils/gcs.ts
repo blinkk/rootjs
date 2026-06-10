@@ -56,7 +56,7 @@ export interface UploadedFile {
   /** The original source URL if the image has been edited. */
   originalSrc?: string;
   /**
-   * When the file was selected from the asset manager, the id of the asset at
+   * When the file was selected from the asset library, the id of the asset at
    * `Projects/<projectId>/Assets/<assetId>`. Updates to the asset fan out to
    * docs that embed it (see `ui/utils/assets.ts`).
    */

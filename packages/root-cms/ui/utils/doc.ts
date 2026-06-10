@@ -59,7 +59,7 @@ export interface CMSDoc {
     archivedBy?: string;
     locales?: string[];
     /**
-     * Reverse index of asset manager ids embedded in the doc's fields,
+     * Reverse index of asset library ids embedded in the doc's fields,
      * (re)computed on every draft save. Used to find docs that use an asset
      * and to fan out asset updates (see `ui/utils/assets.ts`).
      */
@@ -622,8 +622,8 @@ export async function cmsCreateDoc(
     };
   }
 
-  // Index any asset manager references embedded in the fields (e.g. when
-  // copying a doc) so the asset manager can find docs that use an asset.
+  // Index any asset library references embedded in the fields (e.g. when
+  // copying a doc) so the asset library can find docs that use an asset.
   const assetIds = extractAssetIds(fields);
   if (assetIds.length > 0) {
     data.sys.assets = assetIds;

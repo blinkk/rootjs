@@ -9,7 +9,7 @@ import {Layout} from '../../layout/Layout.js';
 import './AssetsPage.css';
 
 /**
- * The asset manager page. Provides a Drive-like interface for uploading and
+ * The asset library page. Provides a Drive-like interface for uploading and
  * organizing the project's assets. Assets can be selected from image/file
  * fields in the doc editor, and updates to an asset fan out to all draft docs
  * that use it.
@@ -33,7 +33,7 @@ export function AssetsPage() {
     <Layout>
       <div className="AssetsPage" data-testid="assets-page">
         <div className="AssetsPage__header">
-          <Heading size="h1">Assets</Heading>
+          <Heading size="h1">Asset Library</Heading>
           <Text as="p">
             Upload and organize the project's assets. Files can be selected from
             image and file fields in the doc editor; replacing a file or
