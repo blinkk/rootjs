@@ -1,6 +1,7 @@
 {
   "entryPoints": {
     "cli": "src/cli/cli.ts",
+    "build-worker": "src/cli/build-worker.ts",
     "core": "src/core/core.ts",
     "functions": "src/functions/functions.ts",
     "jsx": "src/jsx/jsx.ts",

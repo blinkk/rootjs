@@ -44,6 +44,10 @@ class CliRunner {
         '10'
       )
       .option(
+        '--threads [num]',
+        'renders pages using worker threads; pass a number for exactly N workers, or omit the value (or pass "auto") to pick based on cpu cores and page count'
+      )
+      .option(
         '--filter <urlPathRegex>',
         'builds the url paths that match the given regex, e.g. "/products/.*"',
         ''
