@@ -274,8 +274,7 @@ export function AssetDetailsModal(props: AssetDetailsModalProps) {
             <Loader color="gray" size="sm" />
           ) : usageDocs.length === 0 ? (
             <div className="AssetBrowser__details__usage__empty">
-              No docs use this asset. NOTE: docs that haven't been saved since
-              this asset was selected may not appear here.
+              No docs use this asset.
             </div>
           ) : (
             <div className="AssetBrowser__details__usage__list">
