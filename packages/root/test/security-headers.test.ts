@@ -3,7 +3,7 @@ import path from 'node:path';
 import {afterAll, beforeAll, test, expect} from 'vitest';
 import {createDevServer} from '../dist/cli.js';
 
-const HSTS_VALUE = 'max-age=63072000; includeSubdomains; preload';
+const HSTS_VALUE = 'max-age=63072000; includeSubDomains; preload';
 
 const rootDir = path.resolve(__dirname, './fixtures/security-headers');
 const disabledRootDir = path.resolve(

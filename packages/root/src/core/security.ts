@@ -59,7 +59,7 @@ export function setSecurityHeaders(
   const contentSecurityPolicy = securityConfig.contentSecurityPolicy;
   if (typeof contentSecurityPolicy === 'object') {
     // Copy the CSP `directives` value since the `script-src` value will be
-    // updated with a `nonce-` value..
+    // updated with a `nonce-` value.
     const directives = {...contentSecurityPolicy.directives};
     if (options.nonce) {
       // Create a new array for `script-src` and append a `nonce-` value.
@@ -92,7 +92,7 @@ export function setSecurityHeaders(
   if (securityConfig.strictTransportSecurity) {
     res.setHeader(
       'strict-transport-security',
-      'max-age=63072000; includeSubdomains; preload'
+      'max-age=63072000; includeSubDomains; preload'
     );
   }
 
