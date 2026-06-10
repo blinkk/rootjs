@@ -98,6 +98,18 @@ export class Renderer {
     return this.router.get(url);
   }
 
+  /** Returns all routes that match a given url path. */
+  getRouteMatches(url: string): Array<[Route, Record<string, string>]> {
+    return this.router.matchAll(url);
+  }
+
+  /** Walks all routes registered with the router. */
+  async walkRoutes(
+    cb: (urlPathFormat: string, route: Route) => void | Promise<void>
+  ) {
+    await this.router.walk(cb);
+  }
+
   async handle(req: Request, res: Response, next: NextFunction) {
     let url = req.path;
     // Decode unicode paths.

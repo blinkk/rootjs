@@ -1,4 +1,5 @@
 /* eslint-disable no-control-regex */
+import os from 'node:os';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 
@@ -8,7 +9,7 @@ import glob from 'tiny-glob';
 import {build as viteBuild, Manifest, ManifestChunk, UserConfig} from 'vite';
 
 import {getVitePlugins} from '../core/plugin.js';
-import {Route, Sitemap} from '../core/types.js';
+import {Route, Sitemap, SitemapItem} from '../core/types.js';
 import {getElements} from '../node/element-graph.js';
 import {bundleRootConfig, loadRootConfig} from '../node/load-config.js';
 import {collectPods} from '../node/pod-collector.js';
@@ -16,7 +17,6 @@ import {rootPodsVitePlugin} from '../node/pods-vite-plugin.js';
 import {pruneEmptyChunksPlugin} from '../node/vite-plugin-prune-empty-chunks.js';
 import {preactToRootJsxPlugin} from '../node/vite-plugin-root-jsx-virtual.js';
 import {BuildAssetMap} from '../render/asset-map/build-asset-map.js';
-import {transformHtml} from '../render/html-transform.js';
 import {batchAsyncCalls} from '../utils/batch.js';
 import {
   copyGlob,
@@ -28,6 +28,8 @@ import {
   rmDir,
   writeFile,
 } from '../utils/fsutils.js';
+import {buildPage, BuildPageResult} from './build-page.js';
+import {BuildPageError, BuildWorkerPool} from './build-worker-pool.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -38,6 +40,11 @@ export interface BuildOptions {
   mode?: string;
   concurrency?: string | number;
   filter?: string;
+  /**
+   * Renders pages using N worker threads. When passed without a value, uses
+   * one thread per available CPU core (minus one for the main thread).
+   */
+  threads?: string | boolean;
 }
 
 export async function build(rootProjectDir?: string, options?: BuildOptions) {
@@ -420,107 +427,138 @@ export async function build(rootProjectDir?: string, options?: BuildOptions) {
     }
     const domain = rootConfig.domain!;
 
-    console.log('\nhtml output:');
-    const batchSize = Number(options?.concurrency || 10);
-
-    await batchAsyncCalls(
-      Object.entries(sitemap),
-      batchSize,
-      async ([urlPath, sitemapItem]) => {
-        // If "excludeDefaultLocaleFromIntlPaths" is true, ignore /intl/en/... in
-        // the SSG build and exclude it from sitemap.xml.
-        if (rootConfig.build?.excludeDefaultLocaleFromIntlPaths) {
-          const defaultLocale = rootConfig.i18n?.defaultLocale || 'en';
-          if (sitemapItem.locale === defaultLocale) {
-            return;
-          }
-        }
-
-        try {
-          const routeModule = sitemapItem.route.module;
-          if (routeModule.getStaticContent) {
-            let props: any;
-            if (routeModule.getStaticProps) {
-              props = await routeModule.getStaticProps({
-                rootConfig,
-                params: sitemapItem.params,
-              });
-              if (props?.notFound) {
-                return;
-              }
-            } else {
-              props = {rootConfig, params: sitemapItem.params};
-            }
-            const result = await routeModule.getStaticContent(props);
-            let body: string;
-            if (typeof result === 'string') {
-              body = result;
-            } else if (result && typeof result === 'object') {
-              body = result.body;
-            } else {
-              body = '';
-            }
-            const outFilePath = urlPath.slice(1);
-            const outPath = path.join(buildDir, outFilePath);
-            await makeDir(path.dirname(outPath));
-            await writeFile(outPath, normalizeLineEndings(body));
-            printFileOutput(fileSize(outPath), 'dist/html/', outFilePath);
-            return;
-          }
-
-          const data = await renderer.renderRoute(sitemapItem.route, {
-            routeParams: sitemapItem.params,
+    /** Adds an entry to sitemap.xml for a rendered page. */
+    const addSitemapXmlItem = (
+      urlPath: string,
+      sitemapItem: SitemapItem,
+      outFilePath: string
+    ) => {
+      // Save the url to sitemap.xml. Ignore error files (e.g. 404.html).
+      if (!rootConfig.sitemap || !outFilePath.endsWith('index.html')) {
+        return;
+      }
+      const sitemapXmlItem: {
+        url: string;
+        locale: string;
+        alts: Array<{locale: string; hreflang: string; url: string}>;
+      } = {
+        url: `${domain}${urlPath}`,
+        locale: sitemapItem.locale,
+        alts: [],
+      };
+      sitemapXmlItems.push(sitemapXmlItem);
+      if (sitemapItem.alts) {
+        Object.entries(sitemapItem.alts).forEach(([altLocale, item]) => {
+          sitemapXmlItem.alts.push({
+            url: `${domain}${item.urlPath}`,
+            locale: altLocale,
+            hreflang: item.hrefLang,
           });
-          if (data.notFound) {
-            return;
-          }
+        });
+      }
+    };
 
-          let outFilePath = path.join(urlPath.slice(1), 'index.html');
-          if (outFilePath.endsWith('404/index.html')) {
-            outFilePath = outFilePath.replace('404/index.html', '404.html');
-          }
-          const outPath = path.join(buildDir, outFilePath);
+    /** Handles the result of a page render. */
+    const onPageResult = (
+      sitemapItem: SitemapItem,
+      result: BuildPageResult
+    ) => {
+      if (result.notFound || !result.outFilePath) {
+        return;
+      }
+      if (!result.staticContent) {
+        addSitemapXmlItem(result.urlPath, sitemapItem, result.outFilePath);
+      }
+      printFileOutput(
+        fileSize(path.join(buildDir, result.outFilePath)),
+        'dist/html/',
+        result.outFilePath
+      );
+    };
 
-          // Save the url to sitemap.xml. Ignore error files (e.g. 404.html).
-          if (rootConfig.sitemap && outFilePath.endsWith('index.html')) {
-            const sitemapXmlItem: {
-              url: string;
-              locale: string;
-              alts: Array<{locale: string; hreflang: string; url: string}>;
-            } = {
-              url: `${domain}${urlPath}`,
-              locale: sitemapItem.locale,
-              alts: [],
-            };
-            sitemapXmlItems.push(sitemapXmlItem);
-            if (sitemapItem.alts) {
-              Object.entries(sitemapItem.alts).forEach(([altLocale, item]) => {
-                sitemapXmlItem.alts.push({
-                  url: `${domain}${item.urlPath}`,
-                  locale: altLocale,
-                  hreflang: item.hrefLang,
-                });
-              });
-            }
-          }
-
-          // Render html and save the file to dist/html.
-          const html = await transformHtml(data.html || '', rootConfig);
-          await writeFile(outPath, normalizeLineEndings(html));
-
-          printFileOutput(fileSize(outPath), 'dist/html/', outFilePath);
-        } catch (e) {
-          logBuildError(
-            {route: sitemapItem.route, params: sitemapItem.params, urlPath},
-            e
-          );
-          throw new Error(
-            `BuildError: ${urlPath} (${sitemapItem.route.src}) failed to build.`,
-            {cause: e}
-          );
+    // If "excludeDefaultLocaleFromIntlPaths" is true, ignore /intl/en/... in
+    // the SSG build and exclude it from sitemap.xml.
+    const sitemapEntries = Object.entries(sitemap).filter(([, sitemapItem]) => {
+      if (rootConfig.build?.excludeDefaultLocaleFromIntlPaths) {
+        const defaultLocale = rootConfig.i18n?.defaultLocale || 'en';
+        if (sitemapItem.locale === defaultLocale) {
+          return false;
         }
       }
-    );
+      return true;
+    });
+
+    console.log('\nhtml output:');
+    const concurrency = Number(options?.concurrency || 10);
+    const numThreads = parseNumThreads(options?.threads);
+
+    if (numThreads > 0) {
+      // Render pages in parallel using worker threads. Each worker loads the
+      // server bundle (dist/server/render.js) and renders pages
+      // independently.
+      const pool = new BuildWorkerPool({
+        numWorkers: numThreads,
+        workerConcurrency: Math.max(Math.ceil(concurrency / numThreads), 1),
+        rootDir,
+        mode,
+      });
+      try {
+        await pool.ready();
+        await Promise.all(
+          sitemapEntries.map(async ([urlPath, sitemapItem]) => {
+            try {
+              const result = await pool.run({
+                urlPath,
+                params: sitemapItem.params,
+                routeSrc: sitemapItem.route.src,
+                locale: sitemapItem.locale,
+              });
+              onPageResult(sitemapItem, result);
+            } catch (e) {
+              if (e instanceof BuildPageError) {
+                logBuildError(
+                  {
+                    route: sitemapItem.route,
+                    params: sitemapItem.params,
+                    urlPath,
+                  },
+                  new Error(e.workerError)
+                );
+              }
+              throw e;
+            }
+          })
+        );
+      } finally {
+        await pool.terminate();
+      }
+    } else {
+      await batchAsyncCalls(
+        sitemapEntries,
+        concurrency,
+        async ([urlPath, sitemapItem]) => {
+          try {
+            const result = await buildPage(
+              renderer,
+              rootConfig,
+              buildDir,
+              sitemapItem.route,
+              {urlPath, params: sitemapItem.params}
+            );
+            onPageResult(sitemapItem, result);
+          } catch (e) {
+            logBuildError(
+              {route: sitemapItem.route, params: sitemapItem.params, urlPath},
+              e
+            );
+            throw new Error(
+              `BuildError: ${urlPath} (${sitemapItem.route.src}) failed to build.`,
+              {cause: e}
+            );
+          }
+        }
+      );
+    }
 
     // Generate sitemap.xml.
     if (rootConfig.sitemap) {
@@ -565,6 +603,25 @@ export async function build(rootProjectDir?: string, options?: BuildOptions) {
 
 function isRouteFile(filepath: string) {
   return filepath.startsWith('routes') && isJsFile(filepath);
+}
+
+/**
+ * Parses the `--threads` flag. Returns 0 when unset (single-threaded build).
+ * When passed without a value (`--threads`), defaults to one worker per
+ * available CPU core, minus one for the main thread.
+ */
+function parseNumThreads(threads?: string | boolean): number {
+  if (threads === undefined || threads === false) {
+    return 0;
+  }
+  if (threads === true) {
+    return Math.max(os.availableParallelism() - 1, 1);
+  }
+  const num = parseInt(threads);
+  if (isNaN(num) || num < 0) {
+    throw new Error(`invalid --threads value: ${threads}`);
+  }
+  return num;
 }
 
 function fileSize(filepath: string) {
@@ -642,8 +699,4 @@ function formatParams(params: Record<string, string>) {
       return `  ${key}: ${value}`;
     })
     .join('\n');
-}
-
-function normalizeLineEndings(str: string): string {
-  return str.replace(/\r\n?/g, '\n');
 }
