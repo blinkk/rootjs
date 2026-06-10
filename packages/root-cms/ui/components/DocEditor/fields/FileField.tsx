@@ -1101,7 +1101,7 @@ FileField.Preview = () => {
             {ctx.value?.assetId && (
               <a
                 className="FileField__Preview__AssetLibraryBadge"
-                href={`/cms/assets/?asset=${ctx.value?.assetId}`}
+                href={`/cms/assets?asset=${ctx.value?.assetId}`}
                 target="_blank"
               >
                 ASSET LIBRARY

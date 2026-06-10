@@ -376,6 +376,10 @@
   gap: 8px;
 }
 
+.AssetBrowser__details__buttons__delete {
+  margin-left: auto;
+}
+
 .AssetBrowser__details__confirmDelete {
   display: flex;
   flex-direction: column;

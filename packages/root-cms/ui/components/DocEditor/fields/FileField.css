@@ -32,6 +32,7 @@
 }
 
 .FileField__Preview {
+  --floating-button-position: 6px;
   padding: 10px;
   pointer-events: none;
   position: relative;
@@ -41,8 +42,8 @@
 .FileField__Preview__InfoButton {
   pointer-events: all;
   position: absolute;
-  top: 8px;
-  right: 8px;
+  top: var(--floating-button-position);
+  right: var(--floating-button-position);
   z-index: 2;
   display: flex;
   flex-direction: row;
@@ -61,8 +62,8 @@
 .FileField__reupload {
   pointer-events: all;
   position: absolute;
-  bottom: 8px;
-  right: 8px;
+  bottom: var(--floating-button-position);
+  right: var(--floating-button-position);
   z-index: 1;
 }
 
@@ -100,8 +101,9 @@
 
 .FileField__Preview__Info {
   position: absolute;
-  top: 0px;
-  left: 0px;
+  top: var(--floating-button-position);
+  left: var(--floating-button-position);
+  border-radius: 4px;
   background: #000;
   color: #fff;
   font-size: 8px;
@@ -114,16 +116,15 @@
 /* When the asset library badge is active, move the dimens box to the bottom left. */
 .FileField__Preview:has(.FileField__Preview__AssetLibraryBadge) .FileField__Preview__Info {
   top: auto;
-  bottom: 0px;
+  bottom: var(--floating-button-position);
 }
 
 .FileField__Preview__AssetLibraryBadge {
   position: absolute;
-  top: 0px;
-  left: 0px;
-  display: flex;
-  align-items: center;
-  gap: 3px;
+  top: var(--floating-button-position);
+  left: var(--floating-button-position);
+  border-radius: 4px;
+  display: block;
   background: #1971c2;
   color: #fff;
   font-size: 8px;
@@ -131,7 +132,14 @@
   padding: 2px 5px;
   pointer-events: all;
   z-index: 1;
+}
+
+a.FileField__Preview__AssetLibraryBadge {
   text-decoration: none;
+}
+
+a.FileField__Preview__AssetLibraryBadge:active {
+  transform: translateY(1px);
 }
 
 .FileField__Preview__Actions__Trash {

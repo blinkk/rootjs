@@ -15,7 +15,7 @@ import './AssetsPage.css';
  * that use it.
  */
 export function AssetsPage() {
-  usePageTitle('Assets');
+  usePageTitle('Asset Library');
   const [folder, setFolder] = useQueryParam('folder', '');
   // One-shot deep link used to auto-open an asset's details modal, e.g.
   // `?asset=<id>`. The param is consumed (removed from the URL) on load.

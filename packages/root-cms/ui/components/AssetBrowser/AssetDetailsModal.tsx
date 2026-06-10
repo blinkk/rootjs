@@ -152,7 +152,7 @@ export function AssetDetailsModal(props: AssetDetailsModalProps) {
       onClose={props.onClose}
       title={asset.name}
       size="lg"
-      overflow="inside"
+      overflow="outside"
       centered
     >
       <div className="AssetBrowser__details">
@@ -316,8 +316,9 @@ export function AssetDetailsModal(props: AssetDetailsModalProps) {
                 Replace file
               </Button>
               <Button
+                className="AssetBrowser__details__buttons__delete"
                 color="red"
-                variant="outline"
+                variant="filled"
                 size="xs"
                 leftIcon={<IconTrash size={14} />}
                 disabled={saving}

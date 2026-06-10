@@ -145,12 +145,15 @@ export function AssetBrowser(props: AssetBrowserProps) {
       return;
     }
     let cancelled = false;
-    notifyErrors(async () => {
-      const res = await listAssetsRecursive(folder);
+    (async () => {
+      let res: Asset[] = [];
+      await notifyErrors(async () => {
+        res = await listAssetsRecursive(folder);
+      });
       if (!cancelled) {
         setSearchIndex(res);
       }
-    });
+    })();
     return () => {
       cancelled = true;
     };
