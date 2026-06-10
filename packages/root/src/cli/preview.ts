@@ -13,6 +13,7 @@ import {hooksMiddleware} from '../middleware/hooks.js';
 import {
   headersMiddleware,
   rootProjectMiddleware,
+  securityHeadersMiddleware,
   trailingSlashMiddleware,
 } from '../middleware/middleware.js';
 import {redirectsMiddleware} from '../middleware/redirects.js';
@@ -64,6 +65,10 @@ export async function createPreviewServer(options: {
 
   // Inject request context vars.
   server.use(rootProjectMiddleware({rootConfig}));
+  // Set security-related HTTP headers (e.g. HSTS) on all responses. The
+  // renderer re-sets these on rendered HTML responses (along with the
+  // per-request CSP nonce).
+  server.use(securityHeadersMiddleware({rootConfig}));
   server.use(await rootPreviewRendererMiddleware({rootConfig, distDir}));
   server.use(hooksMiddleware());
 
