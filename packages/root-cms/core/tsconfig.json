@@ -13,6 +13,7 @@
     "sourceMap": true,
     "strict": true,
     "target": "es2020",
+    "rootDir": "..",
     "outDir": "dist",
     "types": [
       "node",
