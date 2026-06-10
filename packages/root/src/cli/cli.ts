@@ -45,7 +45,7 @@ class CliRunner {
       )
       .option(
         '--threads [num]',
-        'renders pages using N worker threads; pass without a value to use one thread per cpu core'
+        'renders pages using worker threads; pass a number for exactly N workers, or omit the value (or pass "auto") to pick based on cpu cores and page count'
       )
       .option(
         '--filter <urlPathRegex>',

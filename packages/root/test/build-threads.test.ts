@@ -59,5 +59,16 @@ test(
     for (const relPath of Object.keys(baseline)) {
       expect(threaded[relPath], relPath).toEqual(baseline[relPath]);
     }
+
+    // Auto mode picks a worker count based on cpu cores and page count (and
+    // may stay in-process for small builds); output should be identical
+    // either way.
+    await fixture.cleanup();
+    await fixture.build({threads: 'auto'});
+    const auto = await collectOutput(htmlDir);
+    expect(Object.keys(auto).sort()).toEqual(Object.keys(baseline).sort());
+    for (const relPath of Object.keys(baseline)) {
+      expect(auto[relPath], relPath).toEqual(baseline[relPath]);
+    }
   }
 );

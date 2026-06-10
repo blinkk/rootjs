@@ -41,8 +41,9 @@ export interface BuildOptions {
   concurrency?: string | number;
   filter?: string;
   /**
-   * Renders pages using N worker threads. When passed without a value, uses
-   * one thread per available CPU core (minus one for the main thread).
+   * Renders pages using worker threads. Pass a number to use exactly N
+   * workers, or pass without a value (or "auto") to pick a worker count
+   * automatically based on CPU cores and the number of pages to build.
    */
   threads?: string | boolean;
 }
@@ -490,7 +491,10 @@ export async function build(rootProjectDir?: string, options?: BuildOptions) {
 
     console.log('\nhtml output:');
     const concurrency = Number(options?.concurrency || 10);
-    const numThreads = parseNumThreads(options?.threads);
+    const numThreads = resolveNumThreads(
+      options?.threads,
+      sitemapEntries.length
+    );
 
     if (numThreads > 0) {
       // Render pages in parallel using worker threads. Each worker loads the
@@ -606,16 +610,42 @@ function isRouteFile(filepath: string) {
 }
 
 /**
- * Parses the `--threads` flag. Returns 0 when unset (single-threaded build).
- * When passed without a value (`--threads`), defaults to one worker per
- * available CPU core, minus one for the main thread.
+ * Minimum number of pages per worker thread in "auto" mode. Each worker pays
+ * a fixed startup cost (loading the server bundle, config, and manifests), so
+ * spawning a worker is only worthwhile when it has enough pages to render.
  */
-function parseNumThreads(threads?: string | boolean): number {
+const MIN_PAGES_PER_THREAD = 10;
+
+/**
+ * Resolves the `--threads` flag to a worker count. Returns 0 for an
+ * in-process (single-threaded) build.
+ *
+ * - unset: 0 (in-process build).
+ * - `--threads` or `--threads auto`: picks a worker count based on the
+ *   machine's CPU cores and the number of pages to build. One core is
+ *   reserved for the main thread, and each worker should have at least
+ *   `MIN_PAGES_PER_THREAD` pages to justify its startup cost. Small builds
+ *   resolve to 0 and stay in-process.
+ * - `--threads <num>`: uses exactly N workers (no workload heuristics).
+ */
+function resolveNumThreads(
+  threads: string | boolean | undefined,
+  numPages: number
+): number {
   if (threads === undefined || threads === false) {
     return 0;
   }
-  if (threads === true) {
-    return Math.max(os.availableParallelism() - 1, 1);
+  if (threads === true || threads === 'auto') {
+    const maxByCpu = Math.max(os.availableParallelism() - 1, 1);
+    const maxByPages = Math.floor(numPages / MIN_PAGES_PER_THREAD);
+    const numThreads = Math.min(maxByCpu, maxByPages);
+    // A single worker is never faster than rendering in-process (same
+    // parallelism, plus startup and messaging overhead).
+    if (numThreads <= 1) {
+      return 0;
+    }
+    console.log(`rendering with ${numThreads} worker threads`);
+    return numThreads;
   }
   const num = parseInt(threads);
   if (isNaN(num) || num < 0) {

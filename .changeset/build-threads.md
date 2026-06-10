@@ -23,9 +23,14 @@ Usage:
 # Render pages using 8 worker threads.
 root build --threads 8
 
-# Use one thread per available CPU core.
+# Pick a worker count automatically based on cpu cores and page count.
 root build --threads
+root build --threads auto
 ```
+
+In auto mode, one core is reserved for the main thread and each worker must
+have enough pages to justify its startup cost; small builds automatically
+stay in-process.
 
 The flag is opt-in; builds without `--threads` behave exactly as before.
 `-c/--concurrency` is distributed across workers (e.g. `-c 30 --threads 6`
