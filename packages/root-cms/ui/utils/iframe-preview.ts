@@ -1,3 +1,5 @@
+import {HighlightNodeMessage} from '../../shared/embed-protocol.js';
+
 interface HighlightNodeOptions {
   /** Whether to scroll to the element in the preview. */
   scroll: boolean;
@@ -15,7 +17,10 @@ export function requestHighlightNode(
   if (!iframeEl) {
     return;
   }
-  iframeEl.contentWindow?.postMessage({highlightNode: {deepKey, options}}, '*');
+  const message: HighlightNodeMessage = {highlightNode: {deepKey, options}};
+  // The preview iframe is same-origin (preview URLs are relative paths served
+  // by the same root server).
+  iframeEl.contentWindow?.postMessage(message, window.location.origin);
 }
 
 /** Returns the iframe element used for previewing content. */

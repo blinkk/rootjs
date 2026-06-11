@@ -1,26 +1,6 @@
-import {SaveState} from '../hooks/useDraftDoc.js';
+import {RootEmbedMessage} from '../../shared/embed-protocol.js';
 
-/**
- * Lifecycle messages posted from the headless (embedded) pages (the doc
- * editor and the Root AI panel) to the parent window that frames them. All
- * messages are namespaced under `root` to avoid colliding with the
- * un-namespaced `{scrollToDeeplink}` / `{highlightNode}` messages used by the
- * in-CMS preview channel.
- */
-export interface RootEmbedMessage {
-  root: {
-    /** The lifecycle event type. */
-    type: 'ready' | 'saved' | 'published' | 'error';
-    /** The doc being edited, e.g. "Pages/about" (when applicable). */
-    docId?: string;
-    /** Current save state (included on `saved`). */
-    saveState?: SaveState;
-    /** Epoch millis the doc was published (included on `published`). */
-    publishedAt?: number;
-    /** Error message (included on `error`). */
-    error?: string;
-  };
-}
+export type {RootEmbedMessage} from '../../shared/embed-protocol.js';
 
 /**
  * Returns the origins allowed to embed the CMS, as configured via
@@ -62,14 +42,18 @@ function getReferrerOrigin(): string {
 }
 
 /**
- * Posts a lifecycle message to the parent window. Messages are targeted at the
- * configured allowed origins (never `'*'`), so a session-bearing editor never
- * leaks document content or events to an arbitrary parent. When no origins are
- * configured, falls back to the referrer origin; if that is also unavailable,
- * the message is dropped.
+ * Posts a lifecycle message to the window that framed this page: the parent
+ * window when iframed, or the opener when opened as a pop-up via
+ * `window.open()`. Messages are targeted at the configured allowed origins
+ * (never `'*'`), so a session-bearing editor never leaks document content or
+ * events to an arbitrary parent. When no origins are configured, falls back
+ * to the referrer origin; if that is also unavailable, the message is
+ * dropped.
  */
 export function postToParent(payload: RootEmbedMessage['root']) {
-  if (window.parent === window) {
+  const target: Window | null =
+    window.parent !== window ? window.parent : window.opener;
+  if (!target) {
     return;
   }
   const message: RootEmbedMessage = {root: payload};
@@ -77,11 +61,11 @@ export function postToParent(payload: RootEmbedMessage['root']) {
   if (targets.length === 0) {
     const referrerOrigin = getReferrerOrigin();
     if (referrerOrigin) {
-      window.parent.postMessage(message, referrerOrigin);
+      target.postMessage(message, referrerOrigin);
     }
     return;
   }
   targets.forEach((origin) => {
-    window.parent.postMessage(message, origin);
+    target.postMessage(message, origin);
   });
 }

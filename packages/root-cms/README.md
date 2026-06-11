@@ -92,3 +92,80 @@ This is convenient for granting access to a whole workspace, but be aware:
   that grants access to anyone with a Google account.
 - Prefer explicit per-email grants for `ADMIN` and `EDITOR`; reserve the
   wildcard for `CONTRIBUTOR` or `VIEWER` if you use it at all.
+
+# Embedding the CMS (`@blinkk/root-cms/browser-client`)
+
+`@blinkk/root-cms/browser-client` is a dependency-free, framework-agnostic
+browser library for embedding Root CMS into another site. It wraps the
+underlying iframe/postMessage wiring behind a typed API, so the wire protocol
+can evolve without breaking your integration.
+
+For pop-up/iframe embedding (the doc editor and Root AI), the embedding page's
+origin must be allowlisted in the CMS plugin config:
+
+```ts
+// root.config.ts
+cmsPlugin({
+  // ...
+  allowedIframeOrigins: ['https://app.example.com'],
+});
+```
+
+## Headless doc editor (pop-up or iframe)
+
+Opens `/cms/embed/content/<collection>/<slug>`, a minimal version of the doc
+editor with explicit (non-auto) saving. In `popup` mode, call from a user
+gesture (e.g. a click handler) to avoid pop-up blockers. Closing the editor
+discards unsaved changes.
+
+```ts
+import {RootCMSBrowserClient} from '@blinkk/root-cms/browser-client';
+
+const root = new RootCMSBrowserClient({cmsOrigin: 'https://cms.example.com'});
+
+const editor = root.openEditor('Pages/about', {
+  mode: 'popup', // or 'iframe' (pass `container`)
+  deeplink: 'hero.title', // optional: field to scroll to on load
+});
+editor.on('ready', () => console.log('editor loaded'));
+editor.on('saved', () => location.reload());
+editor.on('published', () => editor.closeAndReload());
+editor.on('close', () => console.log('editor closed'));
+editor.focusField('hero.image'); // scroll the editor to a field
+editor.reload();
+editor.close(); // or editor.closeAndReload()
+```
+
+## Headless Root AI (pop-up or iframe)
+
+Opens `/cms/embed/ai`, the compact Root AI chat, optionally with a doc as
+context:
+
+```ts
+const ai = root.openRootAI({docId: 'Pages/about', mode: 'popup'});
+ai.on('ready', () => console.log('chat loaded'));
+ai.close();
+```
+
+## Field focus from the in-CMS preview pane ("click to edit")
+
+When your site is rendered inside the CMS preview pane, use a
+`PreviewConnection` to focus editor fields from the page and to highlight page
+nodes when the editor requests it. The preview pane is same-origin with the
+CMS, so no config is needed and the connection is inert when the page is not
+embedded:
+
+```ts
+import {RootCMSBrowserClient} from '@blinkk/root-cms/browser-client';
+
+const preview = RootCMSBrowserClient.connectPreview();
+if (preview.isEmbedded) {
+  // "Click to edit": focus the field in the doc editor.
+  el.addEventListener('click', () => preview.focusField('hero.title'));
+  // Highlight page nodes when the editor hovers/focuses a field.
+  preview.on('highlight', ({deepKey, scroll}) => {
+    clearHighlights();
+    if (deepKey) highlightNode(deepKey, {scroll});
+  });
+}
+```
