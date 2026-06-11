@@ -19,6 +19,7 @@ import {
   Timestamp,
   collection,
   deleteDoc,
+  deleteField,
   doc,
   getDoc,
   getDocs,
@@ -33,7 +34,7 @@ import {
 import {logAction} from './actions.js';
 import {removeDocsFromCache} from './doc-cache.js';
 import type {CMSDoc} from './doc.js';
-import {UploadedFile} from './gcs.js';
+import {UploadedFile, getFileExt} from './gcs.js';
 import {autokey} from './rand.js';
 
 export type AssetType = 'file' | 'folder';
@@ -522,14 +523,40 @@ export async function replaceAssetFile(
   if (!file.alt && asset.file?.alt) {
     file.alt = asset.file.alt;
   }
+  if (asset.file?.altDisabled) {
+    file.altDisabled = true;
+  }
   const docRef = doc(getAssetsDbCollection(), asset.id);
-  await updateDoc(docRef, {
+  const updates: Record<string, any> = {
     file: file,
     modifiedAt: serverTimestamp(),
     modifiedBy: window.firebase.user.email,
-  });
+  };
+  // When the new file has a different extension (e.g. replacing `hero.png`
+  // with a webp), update the asset's display name to match.
+  const newExt = getFileExt(file.filename || file.src || '');
+  const newName = replaceFileExt(asset.name, newExt);
+  if (newName !== asset.name) {
+    updates.name = newName;
+  }
+  await updateDoc(docRef, updates);
   logAction('asset.replace', {metadata: {assetId: asset.id, name: asset.name}});
   return (await getAsset(asset.id)) as AssetFile;
+}
+
+/**
+ * Swaps a filename's extension, e.g. `replaceFileExt('hero.png', 'webp')`
+ * returns `'hero.webp'`. Names without an extension are returned unchanged.
+ */
+export function replaceFileExt(name: string, newExt: string): string {
+  const dotIndex = (name || '').lastIndexOf('.');
+  if (!newExt || dotIndex <= 0) {
+    return name;
+  }
+  if (getFileExt(name) === newExt) {
+    return name;
+  }
+  return `${name.slice(0, dotIndex)}.${newExt}`;
 }
 
 /**
@@ -550,16 +577,45 @@ export async function updateAssetAltText(
 }
 
 /**
+ * Enables/disables alt text handling for an asset (e.g. for decorative
+ * images). The alt text stored on the asset is preserved so it can be
+ * restored when re-enabled, but it is no longer propagated to docs. Callers
+ * should follow up with {@link syncAssetToDocs} to fan the change out to docs
+ * that use the asset.
+ */
+export async function updateAssetAltDisabled(
+  asset: AssetFile,
+  disabled: boolean
+): Promise<AssetFile> {
+  const docRef = doc(getAssetsDbCollection(), asset.id);
+  await updateDoc(docRef, {
+    'file.altDisabled': disabled ? true : deleteField(),
+    modifiedAt: serverTimestamp(),
+    modifiedBy: window.firebase.user.email,
+  });
+  logAction('asset.alt_disabled', {
+    metadata: {assetId: asset.id, name: asset.name, disabled},
+  });
+  return (await getAsset(asset.id)) as AssetFile;
+}
+
+/**
  * Builds the field value to embed in a doc when an asset is selected from the
  * asset library. The full file data is copied into the doc (so fetching the
  * doc requires no extra RPCs) along with an `assetId` backlink used to keep
  * the copy in sync.
  */
 export function buildAssetFieldValue(asset: AssetFile): AssetFieldValue {
-  return {
+  const value: AssetFieldValue = {
     ...removeUndefinedValues(asset.file),
     assetId: asset.id,
   };
+  // When alt text handling is disabled, the alt text stored on the asset is
+  // kept on the asset itself but not propagated to docs.
+  if (value.altDisabled) {
+    value.alt = '';
+  }
+  return value;
 }
 
 /**
@@ -785,10 +841,14 @@ export function buildSyncedFieldValue(
   previousFile?: UploadedFile
 ): AssetFieldValue {
   const next = buildAssetFieldValue(asset);
-  const prevAlt = previousFile?.alt ?? asset.file?.alt ?? '';
-  const docAlt = existingValue?.alt || '';
-  if (docAlt && docAlt !== prevAlt) {
-    next.alt = docAlt;
+  // Doc-level alt customizations are dropped when the asset disables alt
+  // text handling.
+  if (!asset.file?.altDisabled) {
+    const prevAlt = previousFile?.alt ?? asset.file?.alt ?? '';
+    const docAlt = existingValue?.alt || '';
+    if (docAlt && docAlt !== prevAlt) {
+      next.alt = docAlt;
+    }
   }
   const prevBgColor = previousFile?.canvasBgColor ?? asset.file?.canvasBgColor;
   if (

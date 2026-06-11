@@ -10,6 +10,7 @@ import {
   getRelativeFolderPath,
   joinFolderPath,
   parseFolderPath,
+  replaceFileExt,
   validateAssetName,
 } from './assets.js';
 
@@ -162,6 +163,25 @@ describe('collectAssetFieldPaths', () => {
   });
 });
 
+describe('replaceFileExt', () => {
+  it('swaps a filename extension', () => {
+    expect(replaceFileExt('hero.png', 'webp')).toEqual('hero.webp');
+    expect(replaceFileExt('a.b.png', 'avif')).toEqual('a.b.avif');
+  });
+
+  it('returns the name unchanged when the ext matches', () => {
+    expect(replaceFileExt('hero.png', 'png')).toEqual('hero.png');
+    // `jpeg` normalizes to `jpg`.
+    expect(replaceFileExt('hero.jpeg', 'jpg')).toEqual('hero.jpeg');
+  });
+
+  it('returns names without an extension unchanged', () => {
+    expect(replaceFileExt('My Photo', 'png')).toEqual('My Photo');
+    expect(replaceFileExt('.gitignore', 'png')).toEqual('.gitignore');
+    expect(replaceFileExt('hero.png', '')).toEqual('hero.png');
+  });
+});
+
 describe('buildAssetFieldValue', () => {
   it('copies the file data and adds the assetId backlink', () => {
     const value = buildAssetFieldValue(testAsset());
@@ -178,6 +198,12 @@ describe('buildAssetFieldValue', () => {
   it('removes undefined values', () => {
     const value = buildAssetFieldValue(testAsset({width: undefined}));
     expect('width' in value).toBe(false);
+  });
+
+  it('clears alt text when alt is disabled for the asset', () => {
+    const value = buildAssetFieldValue(testAsset({altDisabled: true}));
+    expect(value.alt).toEqual('');
+    expect(value.altDisabled).toBe(true);
   });
 });
 
@@ -205,6 +231,22 @@ describe('buildSyncedFieldValue', () => {
     const previousFile = {src: 'https://example.com/old.png', alt: 'Old alt'};
     const value = buildSyncedFieldValue(testAsset(), existing, previousFile);
     expect(value.alt).toEqual('Custom doc alt');
+  });
+
+  it('drops doc-customized alt text when alt is disabled for the asset', () => {
+    const existing = {
+      src: 'https://example.com/old.png',
+      alt: 'Custom doc alt',
+      assetId: 'asset123',
+    };
+    const previousFile = {src: 'https://example.com/old.png', alt: 'Old alt'};
+    const value = buildSyncedFieldValue(
+      testAsset({altDisabled: true}),
+      existing,
+      previousFile
+    );
+    expect(value.alt).toEqual('');
+    expect(value.altDisabled).toBe(true);
   });
 
   it('preserves doc-customized canvas bg color', () => {

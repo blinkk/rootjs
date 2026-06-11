@@ -1,6 +1,7 @@
 import {
   ActionIcon,
   Button,
+  Checkbox,
   Loader,
   Modal,
   Table,
@@ -24,12 +25,15 @@ import {
   deleteAsset,
   findDocsUsingAsset,
   replaceAssetFile,
+  replaceFileExt,
   syncAssetToDocs,
+  updateAssetAltDisabled,
   updateAssetAltText,
 } from '../../utils/assets.js';
 import {CMSDoc} from '../../utils/doc.js';
 import {
   UploadedFile,
+  getFileExt,
   testIsImageFile,
   testIsVideoFile,
   uploadFileToGCS,
@@ -61,6 +65,7 @@ export function AssetDetailsModal(props: AssetDetailsModalProps) {
   const [altText, setAltText] = useState(props.asset.file?.alt || '');
   const [saving, setSaving] = useState(false);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
+  const [pendingReplace, setPendingReplace] = useState<File | null>(null);
   const [usageDocs, setUsageDocs] = useState<CMSDoc[] | null>(null);
 
   const file = asset.file || ({} as UploadedFile);
@@ -68,6 +73,7 @@ export function AssetDetailsModal(props: AssetDetailsModalProps) {
   const isImage = testIsImageFile(filename);
   const isVideo = testIsVideoFile(filename);
   const altDirty = altText !== (file.alt || '');
+  const altDisabled = file.altDisabled === true;
 
   useEffect(() => {
     findDocsUsingAsset(asset.id)
@@ -114,25 +120,51 @@ export function AssetDetailsModal(props: AssetDetailsModalProps) {
   function onReplaceFile() {
     const inputEl = document.createElement('input');
     inputEl.type = 'file';
-    inputEl.onchange = async () => {
+    inputEl.onchange = () => {
       const newFile = inputEl.files?.[0];
       if (!newFile) {
         return;
       }
-      setSaving(true);
-      await notifyErrors(async () => {
-        const previousFile = {...file};
-        const uploadedFile = await uploadFileToGCS(newFile);
-        const updated = await replaceAssetFile(asset, uploadedFile);
-        setAsset(updated);
-        setAltText(updated.file?.alt || '');
-        props.onChanged(updated);
-        await syncDocs(updated, previousFile);
-      });
-      setSaving(false);
+      // Replacing a file with a different extension changes the asset's file
+      // type and serving URL, so ask for confirmation first.
+      const oldExt = getFileExt(filename);
+      const newExt = getFileExt(newFile.name);
+      if (oldExt && newExt && oldExt !== newExt) {
+        setPendingReplace(newFile);
+        return;
+      }
+      replaceFile(newFile);
     };
     inputEl.click();
     inputEl.remove();
+  }
+
+  async function replaceFile(newFile: File) {
+    setPendingReplace(null);
+    setSaving(true);
+    await notifyErrors(async () => {
+      const previousFile = {...file};
+      const uploadedFile = await uploadFileToGCS(newFile);
+      const updated = await replaceAssetFile(asset, uploadedFile);
+      setAsset(updated);
+      setAltText(updated.file?.alt || '');
+      props.onChanged(updated);
+      await syncDocs(updated, previousFile);
+    });
+    setSaving(false);
+  }
+
+  async function onToggleAltDisabled(disabled: boolean) {
+    setSaving(true);
+    await notifyErrors(async () => {
+      const previousFile = {...file};
+      const updated = await updateAssetAltDisabled(asset, disabled);
+      setAsset(updated);
+      setAltText(updated.file?.alt || '');
+      props.onChanged(updated);
+      await syncDocs(updated, previousFile);
+    });
+    setSaving(false);
   }
 
   async function onDelete() {
@@ -246,28 +278,50 @@ export function AssetDetailsModal(props: AssetDetailsModalProps) {
 
         {(isImage || isVideo) && (
           <div className="AssetBrowser__details__alt">
-            <Textarea
-              label="Alt text"
-              description="Used as the default alt text when the asset is selected in a doc. Updating it syncs docs that use this asset."
-              autosize
-              minRows={1}
-              size="xs"
-              value={altText}
-              disabled={!props.canManage || saving}
-              onChange={(e: ChangeEvent<HTMLTextAreaElement>) =>
-                setAltText(e.currentTarget.value)
-              }
-            />
-            {props.canManage && altDirty && (
-              <Button
+            {altDisabled ? (
+              <div className="AssetBrowser__details__alt__disabledNote">
+                Alt text is disabled for this asset. Docs that use it hide the
+                alt text input and render no alt text.
+              </div>
+            ) : (
+              <>
+                <Textarea
+                  label="Alt text"
+                  description="Used as the default alt text when the asset is selected in a doc. Updating it syncs docs that use this asset."
+                  autosize
+                  minRows={1}
+                  size="xs"
+                  value={altText}
+                  disabled={!props.canManage || saving}
+                  onChange={(e: ChangeEvent<HTMLTextAreaElement>) =>
+                    setAltText(e.currentTarget.value)
+                  }
+                />
+                {props.canManage && altDirty && (
+                  <Button
+                    size="xs"
+                    color="dark"
+                    mt={8}
+                    loading={saving}
+                    onClick={() => onSaveAltText()}
+                  >
+                    Save alt text
+                  </Button>
+                )}
+              </>
+            )}
+            {props.canManage && (
+              <Checkbox
+                className="AssetBrowser__details__alt__disableCheckbox"
+                label="Disable alt text (e.g. decorative images)"
                 size="xs"
-                color="dark"
                 mt={8}
-                loading={saving}
-                onClick={() => onSaveAltText()}
-              >
-                Save alt text
-              </Button>
+                checked={altDisabled}
+                disabled={saving}
+                onChange={(e: ChangeEvent<HTMLInputElement>) =>
+                  onToggleAltDisabled(e.currentTarget.checked)
+                }
+              />
             )}
           </div>
         )}
@@ -332,6 +386,46 @@ export function AssetDetailsModal(props: AssetDetailsModalProps) {
             </>
           )}
         </div>
+        {pendingReplace && (
+          <div className="AssetBrowser__details__confirmReplace">
+            <div>
+              The new file has a different type (<b>.{getFileExt(filename)}</b>{' '}
+              → <b>.{getFileExt(pendingReplace.name)}</b>). Replacing will
+              change the asset's file extension and serving URL
+              {replaceFileExt(asset.name, getFileExt(pendingReplace.name)) !==
+                asset.name && (
+                <>
+                  , and the asset will be renamed to{' '}
+                  <b>
+                    {replaceFileExt(
+                      asset.name,
+                      getFileExt(pendingReplace.name)
+                    )}
+                  </b>
+                </>
+              )}
+              . Docs that use this asset will be updated.
+            </div>
+            <div className="AssetBrowser__details__confirmReplace__buttons">
+              <Button
+                variant="default"
+                size="xs"
+                onClick={() => setPendingReplace(null)}
+                disabled={saving}
+              >
+                Cancel
+              </Button>
+              <Button
+                color="dark"
+                size="xs"
+                loading={saving}
+                onClick={() => replaceFile(pendingReplace)}
+              >
+                Replace
+              </Button>
+            </div>
+          </div>
+        )}
         {confirmingDelete && (
           <div className="AssetBrowser__details__confirmDelete">
             <div>

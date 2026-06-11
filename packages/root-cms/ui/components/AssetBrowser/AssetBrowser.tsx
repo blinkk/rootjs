@@ -3,6 +3,7 @@ import './AssetBrowser.css';
 import {
   ActionIcon,
   Button,
+  Checkbox,
   Loader,
   Menu,
   Modal,
@@ -15,7 +16,6 @@ import {
   updateNotification,
 } from '@mantine/notifications';
 import {
-  IconArrowRight,
   IconChevronRight,
   IconCopy,
   IconDotsVertical,
@@ -48,9 +48,16 @@ import {
   moveAsset,
   parseFolderPath,
   renameAsset,
+  syncAssetToDocs,
+  updateAssetAltDisabled,
 } from '../../utils/assets.js';
 import {joinClassNames} from '../../utils/classes.js';
-import {testFileMatchesAccept, uploadFileToGCS} from '../../utils/gcs.js';
+import {
+  testFileMatchesAccept,
+  testIsImageFile,
+  testIsVideoFile,
+  uploadFileToGCS,
+} from '../../utils/gcs.js';
 import {notifyErrors} from '../../utils/notifications.js';
 import {testCanPublish} from '../../utils/permissions.js';
 import {getTimeAgo} from '../../utils/time.js';
@@ -109,9 +116,14 @@ export function AssetBrowser(props: AssetBrowserProps) {
 
   const [newFolderModalOpened, setNewFolderModalOpened] = useState(false);
   const [renameTarget, setRenameTarget] = useState<Asset | null>(null);
-  const [moveTarget, setMoveTarget] = useState<Asset | null>(null);
-  const [deleteTarget, setDeleteTarget] = useState<Asset | null>(null);
+  const [moveTarget, setMoveTarget] = useState<Asset[] | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<Asset[] | null>(null);
+  const [disableAltTarget, setDisableAltTarget] = useState<AssetFile[] | null>(
+    null
+  );
   const [detailsTarget, setDetailsTarget] = useState<AssetFile | null>(null);
+  // Multi-select for bulk actions (manage mode), keyed by asset id.
+  const [selected, setSelected] = useState<Map<string, Asset>>(new Map());
 
   const {roles} = useProjectRoles();
   const currentUserEmail = window.firebase.user.email || '';
@@ -132,6 +144,7 @@ export function AssetBrowser(props: AssetBrowserProps) {
     setLoading(true);
     // Invalidate the search index so an active search refetches fresh data.
     setSearchIndex(null);
+    setSelected(new Map());
     await notifyErrors(async () => {
       const res = await listAssets(folderPath);
       setAssets(res);
@@ -285,6 +298,41 @@ export function AssetBrowser(props: AssetBrowserProps) {
 
   const showUpload = canManage;
 
+  // Multi-select for bulk actions (move, delete, disable alt text).
+  const showSelection = props.mode === 'manage' && canManage;
+  const selectedAssets = Array.from(selected.values());
+  // Alt text only applies to file assets that render as images/videos.
+  const selectedAltFiles = selectedAssets.filter(
+    (asset): asset is AssetFile =>
+      asset.type === 'file' &&
+      !asset.file?.altDisabled &&
+      (testIsImageFile(asset.file?.filename || asset.name) ||
+        testIsVideoFile(asset.file?.filename || asset.name))
+  );
+  const allSelected =
+    filteredAssets.length > 0 &&
+    filteredAssets.every((asset) => selected.has(asset.id));
+
+  function toggleSelected(asset: Asset) {
+    setSelected((prev) => {
+      const next = new Map(prev);
+      if (next.has(asset.id)) {
+        next.delete(asset.id);
+      } else {
+        next.set(asset.id, asset);
+      }
+      return next;
+    });
+  }
+
+  function toggleSelectAll() {
+    if (allSelected) {
+      setSelected(new Map());
+    } else {
+      setSelected(new Map(filteredAssets.map((asset) => [asset.id, asset])));
+    }
+  }
+
   return (
     <div
       className={joinClassNames(
@@ -329,6 +377,48 @@ export function AssetBrowser(props: AssetBrowserProps) {
           )}
         </div>
       </div>
+      {showSelection && selectedAssets.length > 0 && (
+        <div className="AssetBrowser__selectionBar">
+          <div className="AssetBrowser__selectionBar__count">
+            {selectedAssets.length} selected
+          </div>
+          <div className="AssetBrowser__selectionBar__actions">
+            <Button
+              variant="default"
+              size="xs"
+              leftIcon={<IconFolderSymlink size={14} />}
+              onClick={() => setMoveTarget(selectedAssets)}
+            >
+              Move
+            </Button>
+            {selectedAltFiles.length > 0 && (
+              <Button
+                variant="default"
+                size="xs"
+                onClick={() => setDisableAltTarget(selectedAltFiles)}
+              >
+                Disable alt text
+              </Button>
+            )}
+            <Button
+              color="red"
+              size="xs"
+              leftIcon={<IconTrash size={14} />}
+              onClick={() => setDeleteTarget(selectedAssets)}
+            >
+              Delete
+            </Button>
+            <Button
+              variant="subtle"
+              color="gray"
+              size="xs"
+              onClick={() => setSelected(new Map())}
+            >
+              Clear
+            </Button>
+          </div>
+        </div>
+      )}
       <div
         className={joinClassNames(
           'AssetBrowser__listing',
@@ -387,6 +477,17 @@ export function AssetBrowser(props: AssetBrowserProps) {
           >
             <thead>
               <tr>
+                {showSelection && (
+                  <th className="AssetBrowser__table__checkboxCol">
+                    <Checkbox
+                      size="xs"
+                      aria-label="Select all"
+                      checked={allSelected}
+                      indeterminate={!allSelected && selected.size > 0}
+                      onChange={() => toggleSelectAll()}
+                    />
+                  </th>
+                )}
                 <th>name</th>
                 <th className="AssetBrowser__table__modifiedCol">modified</th>
                 <th className="AssetBrowser__table__actionsCol"></th>
@@ -402,6 +503,19 @@ export function AssetBrowser(props: AssetBrowserProps) {
                       setFolder(joinFolderPath(asset.parent, asset.name))
                     }
                   >
+                    {showSelection && (
+                      <td
+                        className="AssetBrowser__checkboxCell"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <Checkbox
+                          size="xs"
+                          aria-label={`Select ${asset.name}`}
+                          checked={selected.has(asset.id)}
+                          onChange={() => toggleSelected(asset)}
+                        />
+                      </td>
+                    )}
                     <td>
                       <div className="AssetBrowser__nameCell">
                         <div className="AssetBrowser__thumb">
@@ -444,14 +558,14 @@ export function AssetBrowser(props: AssetBrowserProps) {
                             </Menu.Item>
                             <Menu.Item
                               icon={<IconFolderSymlink size={14} />}
-                              onClick={() => setMoveTarget(asset)}
+                              onClick={() => setMoveTarget([asset])}
                             >
                               Move
                             </Menu.Item>
                             <Menu.Item
                               color="red"
                               icon={<IconTrash size={14} />}
-                              onClick={() => setDeleteTarget(asset)}
+                              onClick={() => setDeleteTarget([asset])}
                             >
                               Delete
                             </Menu.Item>
@@ -472,6 +586,19 @@ export function AssetBrowser(props: AssetBrowserProps) {
                       }
                     }}
                   >
+                    {showSelection && (
+                      <td
+                        className="AssetBrowser__checkboxCell"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <Checkbox
+                          size="xs"
+                          aria-label={`Select ${asset.name}`}
+                          checked={selected.has(asset.id)}
+                          onChange={() => toggleSelected(asset)}
+                        />
+                      </td>
+                    )}
                     <td>
                       <div className="AssetBrowser__nameCell">
                         <AssetThumbnail file={asset.file} size={36} />
@@ -507,8 +634,8 @@ export function AssetBrowser(props: AssetBrowserProps) {
                             canManage={canManage}
                             onDetails={() => setDetailsTarget(asset)}
                             onRename={() => setRenameTarget(asset)}
-                            onMove={() => setMoveTarget(asset)}
-                            onDelete={() => setDeleteTarget(asset)}
+                            onMove={() => setMoveTarget([asset])}
+                            onDelete={() => setDeleteTarget([asset])}
                           />
                         )}
                       </div>
@@ -540,9 +667,9 @@ export function AssetBrowser(props: AssetBrowserProps) {
           }}
         />
       )}
-      {moveTarget && (
+      {moveTarget && moveTarget.length > 0 && (
         <MoveAssetModal
-          asset={moveTarget}
+          assets={moveTarget}
           onClose={() => setMoveTarget(null)}
           onMoved={() => {
             setMoveTarget(null);
@@ -550,12 +677,22 @@ export function AssetBrowser(props: AssetBrowserProps) {
           }}
         />
       )}
-      {deleteTarget && (
+      {deleteTarget && deleteTarget.length > 0 && (
         <DeleteAssetModal
-          asset={deleteTarget}
+          assets={deleteTarget}
           onClose={() => setDeleteTarget(null)}
           onDeleted={() => {
             setDeleteTarget(null);
+            reload(folder);
+          }}
+        />
+      )}
+      {disableAltTarget && disableAltTarget.length > 0 && (
+        <DisableAltTextModal
+          assets={disableAltTarget}
+          onClose={() => setDisableAltTarget(null)}
+          onDone={() => {
+            setDisableAltTarget(null);
             reload(folder);
           }}
         />
@@ -818,12 +955,12 @@ function RenameAssetModal(props: {
 }
 
 function MoveAssetModal(props: {
-  asset: Asset;
+  assets: Asset[];
   onClose: () => void;
   onMoved: () => void;
 }) {
-  const asset = props.asset;
-  const [path, setPath] = useState(asset.parent);
+  const assets = props.assets;
+  const [path, setPath] = useState(assets[0]?.parent || '');
   const [folders, setFolders] = useState<AssetFolder[]>([]);
   const [loading, setLoading] = useState(true);
   const [moving, setMoving] = useState(false);
@@ -836,35 +973,61 @@ function MoveAssetModal(props: {
     }).then(() => setLoading(false));
   }, [path]);
 
-  const assetPath =
-    asset.type === 'folder' ? joinFolderPath(asset.parent, asset.name) : '';
+  const folderAssetPaths = assets
+    .filter((asset) => asset.type === 'folder')
+    .map((asset) => joinFolderPath(asset.parent, asset.name));
 
   function isDisabledFolder(folderPath: string) {
     // A folder cannot be moved into itself or its own subtree.
-    if (asset.type !== 'folder') {
-      return false;
-    }
-    return folderPath === assetPath || folderPath.startsWith(`${assetPath}/`);
+    return folderAssetPaths.some(
+      (assetPath) =>
+        folderPath === assetPath || folderPath.startsWith(`${assetPath}/`)
+    );
   }
 
   async function onMove() {
     setMoving(true);
-    await notifyErrors(async () => {
-      await moveAsset(asset, path);
+    const failed: string[] = [];
+    let numMoved = 0;
+    for (const asset of assets) {
+      try {
+        await moveAsset(asset, path);
+        numMoved += 1;
+      } catch (err) {
+        console.error(`failed to move ${asset.name}:`, err);
+        failed.push(asset.name);
+      }
+    }
+    setMoving(false);
+    if (failed.length > 0) {
       showNotification({
-        message: `Moved "${asset.name}" to ${path || 'Assets'}.`,
+        title: 'Move failed',
+        message: `Failed to move: ${failed.join(', ')}`,
+        color: 'red',
+        autoClose: false,
+      });
+    }
+    if (numMoved > 0) {
+      showNotification({
+        message:
+          assets.length === 1
+            ? `Moved "${assets[0].name}" to ${path || 'Assets'}.`
+            : `Moved ${numMoved} item(s) to ${path || 'Assets'}.`,
         color: 'green',
       });
-      props.onMoved();
-    });
-    setMoving(false);
+    }
+    props.onMoved();
   }
 
   return (
     <Modal
       opened
       onClose={props.onClose}
-      title={`Move "${asset.name}"`}
+      title={
+        assets.length === 1
+          ? `Move "${assets[0].name}"`
+          : `Move ${assets.length} items`
+      }
       size="md"
       centered
     >
@@ -900,7 +1063,7 @@ function MoveAssetModal(props: {
           color="dark"
           fullWidth
           loading={moving}
-          disabled={path === asset.parent}
+          disabled={assets.every((asset) => asset.parent === path)}
           onClick={() => onMove()}
         >
           Move here
@@ -910,58 +1073,107 @@ function MoveAssetModal(props: {
   );
 }
 
+/**
+ * Max files for which doc usage is looked up before deleting. Usage requires
+ * a query per file per collection, so very large selections skip the check.
+ */
+const MAX_USAGE_LOOKUPS = 20;
+
 function DeleteAssetModal(props: {
-  asset: Asset;
+  assets: Asset[];
   onClose: () => void;
   onDeleted: () => void;
 }) {
-  const asset = props.asset;
+  const assets = props.assets;
   const [loading, setLoading] = useState(false);
   const [usageCount, setUsageCount] = useState<number | null>(null);
 
+  const files = assets.filter((asset) => asset.type === 'file');
+  const hasFolders = assets.some((asset) => asset.type === 'folder');
+
   useEffect(() => {
-    if (asset.type !== 'file') {
+    if (files.length === 0 || files.length > MAX_USAGE_LOOKUPS) {
       return;
     }
-    findDocsUsingAsset(asset.id)
-      .then((docs) => setUsageCount(docs.length))
+    Promise.all(files.map((asset) => findDocsUsingAsset(asset.id)))
+      .then((results) => {
+        const docIds = new Set(results.flat().map((cmsDoc) => cmsDoc.id));
+        setUsageCount(docIds.size);
+      })
       .catch(() => setUsageCount(null));
-  }, [asset.id]);
+  }, [assets.map((asset) => asset.id).join(',')]);
 
   async function onDelete() {
     setLoading(true);
-    await notifyErrors(async () => {
-      await deleteAsset(asset);
-      showNotification({message: `Deleted "${asset.name}".`, color: 'green'});
-      props.onDeleted();
-    });
+    const failed: string[] = [];
+    let numDeleted = 0;
+    for (const asset of assets) {
+      try {
+        await deleteAsset(asset);
+        numDeleted += 1;
+      } catch (err) {
+        console.error(`failed to delete ${asset.name}:`, err);
+        failed.push(asset.name);
+      }
+    }
     setLoading(false);
+    if (failed.length > 0) {
+      showNotification({
+        title: 'Delete failed',
+        message: `Failed to delete: ${failed.join(', ')}. Note that folders must be empty before they can be deleted.`,
+        color: 'red',
+        autoClose: false,
+      });
+    }
+    if (numDeleted > 0) {
+      showNotification({
+        message:
+          assets.length === 1
+            ? `Deleted "${assets[0].name}".`
+            : `Deleted ${numDeleted} item(s).`,
+        color: 'green',
+      });
+    }
+    props.onDeleted();
   }
 
   return (
     <Modal
       opened
       onClose={props.onClose}
-      title={`Delete ${asset.type}?`}
+      title={
+        assets.length === 1
+          ? `Delete ${assets[0].type}?`
+          : `Delete ${assets.length} items?`
+      }
       size="sm"
       centered
     >
       <div className="AssetBrowser__deleteModal">
         <div className="AssetBrowser__deleteModal__text">
-          Are you sure you want to delete <b>{asset.name}</b> from the asset
-          manager?
-          {asset.type === 'file' && (
+          Are you sure you want to delete{' '}
+          {assets.length === 1 ? (
+            <b>{assets[0].name}</b>
+          ) : (
+            <b>{assets.length} items</b>
+          )}{' '}
+          from the asset manager?
+          {files.length > 0 && (
             <>
               {' '}
-              The underlying file is not deleted from GCS, and docs that
-              currently use the asset keep their copy of the file.
+              The underlying files are not deleted from GCS, and docs that
+              currently use the assets keep their copy of the files.
             </>
           )}
+          {hasFolders && (
+            <> Folders must be empty before they can be deleted.</>
+          )}
         </div>
-        {asset.type === 'file' && usageCount !== null && usageCount > 0 && (
+        {usageCount !== null && usageCount > 0 && (
           <div className="AssetBrowser__deleteModal__warning">
-            This asset is currently used in {usageCount} doc(s). Those docs will
-            no longer receive updates when the asset changes.
+            {assets.length === 1 ? 'This asset is' : 'These assets are'}{' '}
+            currently used in {usageCount} doc(s). Those docs will no longer
+            receive updates when the asset changes.
           </div>
         )}
         <div className="AssetBrowser__deleteModal__buttons">
@@ -970,6 +1182,80 @@ function DeleteAssetModal(props: {
           </Button>
           <Button color="red" loading={loading} onClick={() => onDelete()}>
             Delete
+          </Button>
+        </div>
+      </div>
+    </Modal>
+  );
+}
+
+/**
+ * Confirmation modal for bulk-disabling alt text handling on file assets
+ * (e.g. decorative images). Each updated asset is synced to the draft docs
+ * that use it so their embedded alt text is cleared.
+ */
+function DisableAltTextModal(props: {
+  assets: AssetFile[];
+  onClose: () => void;
+  onDone: () => void;
+}) {
+  const assets = props.assets;
+  const [loading, setLoading] = useState(false);
+
+  async function onConfirm() {
+    setLoading(true);
+    const failed: string[] = [];
+    let numUpdated = 0;
+    for (const asset of assets) {
+      try {
+        const previousFile = asset.file;
+        const updated = await updateAssetAltDisabled(asset, true);
+        await syncAssetToDocs(updated, {previousFile});
+        numUpdated += 1;
+      } catch (err) {
+        console.error(`failed to disable alt text for ${asset.name}:`, err);
+        failed.push(asset.name);
+      }
+    }
+    setLoading(false);
+    if (failed.length > 0) {
+      showNotification({
+        title: 'Failed to disable alt text',
+        message: `Failed to update: ${failed.join(', ')}`,
+        color: 'red',
+        autoClose: false,
+      });
+    }
+    if (numUpdated > 0) {
+      showNotification({
+        message: `Disabled alt text for ${numUpdated} file(s).`,
+        color: 'green',
+      });
+    }
+    props.onDone();
+  }
+
+  return (
+    <Modal
+      opened
+      onClose={props.onClose}
+      title="Disable alt text?"
+      size="sm"
+      centered
+    >
+      <div className="AssetBrowser__deleteModal">
+        <div className="AssetBrowser__deleteModal__text">
+          Disable alt text for <b>{assets.length} file(s)</b>? The alt text
+          input is hidden in docs that use these assets and their embedded alt
+          text is cleared. Alt text can be re-enabled per asset from its
+          details.
+        </div>
+        <div className="AssetBrowser__deleteModal__buttons">
+          <Button variant="default" onClick={props.onClose} disabled={loading}>
+            Cancel
+          </Button>
+          <Button color="dark" loading={loading} onClick={() => onConfirm()}>
+            Disable alt text
           </Button>
         </div>
       </div>
