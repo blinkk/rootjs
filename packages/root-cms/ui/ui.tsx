@@ -78,6 +78,11 @@ const EditDataSourcePage = lazyRoute(() =>
     (m) => m.EditDataSourcePage
   )
 );
+const EmbeddedAIPage = lazyRoute(() =>
+  import('./pages/EmbeddedAIPage/EmbeddedAIPage.js').then(
+    (m) => m.EmbeddedAIPage
+  )
+);
 const EmbeddedDocumentPage = lazyRoute(() =>
   import('./pages/EmbeddedDocumentPage/EmbeddedDocumentPage.js').then(
     (m) => m.EmbeddedDocumentPage
@@ -294,6 +299,10 @@ function App() {
                           <Route
                             path="/cms/embed/content/:collection/:slug"
                             component={EmbeddedDocumentPage}
+                          />
+                          <Route
+                            path="/cms/embed/ai"
+                            component={EmbeddedAIPage}
                           />
                           <Route path="/cms/data" component={DataPage} />
                           <Route

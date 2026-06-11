@@ -1,17 +1,18 @@
 import {SaveState} from '../hooks/useDraftDoc.js';
 
 /**
- * Lifecycle messages posted from the headless (embedded) doc editor to the
- * parent window that frames it. All messages are namespaced under `root` to
- * avoid colliding with the un-namespaced `{scrollToDeeplink}` / `{highlightNode}`
- * messages used by the in-CMS preview channel.
+ * Lifecycle messages posted from the headless (embedded) pages (the doc
+ * editor and the Root AI panel) to the parent window that frames them. All
+ * messages are namespaced under `root` to avoid colliding with the
+ * un-namespaced `{scrollToDeeplink}` / `{highlightNode}` messages used by the
+ * in-CMS preview channel.
  */
 export interface RootEmbedMessage {
   root: {
     /** The lifecycle event type. */
-    type: 'ready' | 'saved' | 'published' | 'error';
-    /** The doc being edited, e.g. "Pages/about". */
-    docId: string;
+    type: 'ready' | 'saved' | 'published' | 'error' | 'close';
+    /** The doc being edited, e.g. "Pages/about" (when applicable). */
+    docId?: string;
     /** Current save state (included on `saved`). */
     saveState?: SaveState;
     /** Epoch millis the doc was published (included on `published`). */
