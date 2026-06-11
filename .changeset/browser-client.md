@@ -1,5 +1,5 @@
 ---
-'@blinkk/root-cms': minor
+'@blinkk/root-cms': patch
 ---
 
-feat: add `@blinkk/root-cms/browser-client`, a typed client library for embedding the CMS (headless doc editor, Root AI, and preview field focus/highlight)
+feat: add `@blinkk/root-cms/browser-client` for embedding cms tools
