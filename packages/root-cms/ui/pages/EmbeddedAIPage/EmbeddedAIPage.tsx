@@ -13,9 +13,9 @@ import {postToParent} from '../../utils/embed-bridge.js';
  * no chat history sidebar and a fresh chat per load.
  *
  * An optional `?docId=` query param (e.g. `?docId=Pages/about`) tells the AI
- * which document the user is editing. Clicking the panel's close button posts
- * a `close` lifecycle message to the parent window so the embedding page can
- * dismiss the iframe/pop-up.
+ * which document the user is editing. Unlike the document page panel, there
+ * is no close button -- dismissing the iframe/pop-up is up to the embedding
+ * page.
  */
 export function EmbeddedAIPage() {
   usePageTitle('Root AI');
@@ -33,11 +33,7 @@ export function EmbeddedAIPage() {
 
   return (
     <div className="EmbeddedAIPage">
-      <RootAIChat
-        variant="panel"
-        docContext={docId ? {docId} : undefined}
-        onClose={() => postToParent({type: 'close', docId: docId || undefined})}
-      />
+      <RootAIChat variant="panel" docContext={docId ? {docId} : undefined} />
     </div>
   );
 }

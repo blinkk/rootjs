@@ -10,7 +10,7 @@ import {SaveState} from '../hooks/useDraftDoc.js';
 export interface RootEmbedMessage {
   root: {
     /** The lifecycle event type. */
-    type: 'ready' | 'saved' | 'published' | 'error' | 'close';
+    type: 'ready' | 'saved' | 'published' | 'error';
     /** The doc being edited, e.g. "Pages/about" (when applicable). */
     docId?: string;
     /** Current save state (included on `saved`). */
