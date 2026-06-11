@@ -1,6 +1,7 @@
 import './EmbeddedDocumentPage.css';
 
 import {Button} from '@mantine/core';
+import {IconDeviceFloppy} from '@tabler/icons-preact';
 import {useEffect, useRef, useState} from 'preact/hooks';
 import {DocEditor} from '../../components/DocEditor/DocEditor.js';
 import {
@@ -112,6 +113,44 @@ function EmbeddedDocumentPageInner(
         (which targets `.DocumentPage__side` as its scroll container) keeps
         working for the headless editor.
       */}
+      {props.canEdit && !loading && (
+        <div className="EmbeddedDocumentPage__saveBar">
+          <Button
+            component="a"
+            className="EmbeddedDocumentPage__saveBar__docId"
+            href={`/cms/content/${props.collection}/${props.slug}`}
+            target="_blank"
+            rel="noreferrer noopener"
+            title="Open in new tab"
+            compact
+            size="xs"
+            variant="default"
+          >
+            {docId}
+          </Button>
+          <div className="EmbeddedDocumentPage__saveBar__controls">
+            <div className="EmbeddedDocumentPage__saveBar__saveState">
+              {saveState === SaveState.UPDATES_PENDING && 'unsaved changes'}
+              {saveState === SaveState.SAVED && 'saved!'}
+              {saveState === SaveState.ERROR && 'error saving'}
+            </div>
+            <Button
+              color="dark"
+              compact
+              size="xs"
+              leftIcon={<IconDeviceFloppy size={16} />}
+              loading={saveState === SaveState.SAVING}
+              disabled={
+                saveState !== SaveState.UPDATES_PENDING &&
+                saveState !== SaveState.ERROR
+              }
+              onClick={() => controller.flush()}
+            >
+              Save
+            </Button>
+          </div>
+        </div>
+      )}
       <div
         className={joinClassNames(
           'EmbeddedDocumentPage__editor',
@@ -120,27 +159,6 @@ function EmbeddedDocumentPageInner(
       >
         <DocEditor docId={docId} hideStatusBar />
       </div>
-      {props.canEdit && !loading && (
-        <div className="EmbeddedDocumentPage__saveBar">
-          <div className="EmbeddedDocumentPage__saveBar__saveState">
-            {saveState === SaveState.UPDATES_PENDING && 'unsaved changes'}
-            {saveState === SaveState.SAVED && 'saved!'}
-            {saveState === SaveState.ERROR && 'error saving'}
-          </div>
-          <Button
-            color="dark"
-            size="xs"
-            loading={saveState === SaveState.SAVING}
-            disabled={
-              saveState !== SaveState.UPDATES_PENDING &&
-              saveState !== SaveState.ERROR
-            }
-            onClick={() => controller.flush()}
-          >
-            Save
-          </Button>
-        </div>
-      )}
     </div>
   );
 }

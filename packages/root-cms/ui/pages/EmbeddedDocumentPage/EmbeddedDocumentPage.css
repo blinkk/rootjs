@@ -14,21 +14,36 @@
   max-height: none;
   overflow: auto;
   overflow-anchor: none;
-  padding: 0 16px;
+  padding: 12px 16px;
 }
 
 .EmbeddedDocumentPage__saveBar {
   flex-shrink: 0;
   display: flex;
   align-items: center;
-  justify-content: flex-end;
+  justify-content: space-between;
   gap: 16px;
   padding: 8px 16px;
-  border-top: 1px solid var(--color-border);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.EmbeddedDocumentPage__saveBar__docId {
+  border: none;
+  margin-left: -8px;
+}
+
+/* .EmbeddedDocumentPage__saveBar__docId:hover {
+  text-decoration: underline;
+} */
+
+.EmbeddedDocumentPage__saveBar__controls {
+  display: flex;
+  align-items: center;
+  gap: 16px;
 }
 
 .EmbeddedDocumentPage__saveBar__saveState {
-  font-size: 14px;
+  font-size: 12px;
   font-style: italic;
   font-weight: 500;
 }
