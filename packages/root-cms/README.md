@@ -142,7 +142,7 @@ Opens `/cms/embed/ai`, the compact Root AI chat, optionally with a doc as
 context:
 
 ```ts
-const ai = root.openAI({docId: 'Pages/about', mode: 'popup'});
+const ai = root.openRootAI({docId: 'Pages/about', mode: 'popup'});
 ai.on('ready', () => console.log('chat loaded'));
 ai.close();
 ```

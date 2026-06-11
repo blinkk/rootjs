@@ -6,7 +6,7 @@
  * - Opening the headless doc editor in a pop-up or iframe
  *   ({@link RootCMSBrowserClient.openEditor}).
  * - Opening the headless Root AI chat in a pop-up or iframe
- *   ({@link RootCMSBrowserClient.openAI}).
+ *   ({@link RootCMSBrowserClient.openRootAI}).
  * - Communicating with the doc editor from a site rendered inside the in-CMS
  *   preview pane ({@link RootCMSBrowserClient.connectPreview}).
  *
@@ -53,7 +53,7 @@ export interface OpenEditorOptions {
   height?: number;
 }
 
-export interface OpenAIOptions extends Omit<OpenEditorOptions, 'deeplink'> {
+export interface OpenRootAIOptions extends Omit<OpenEditorOptions, 'deeplink'> {
   /** Doc to provide as context to the AI chat, e.g. `Pages/about`. */
   docId?: string;
 }
@@ -129,7 +129,7 @@ export class EmbeddedEditor {
   }
 }
 
-/** Handle to a headless Root AI chat opened via {@link RootCMSBrowserClient.openAI}. */
+/** Handle to a headless Root AI chat opened via {@link RootCMSBrowserClient.openRootAI}. */
 export class EmbeddedAI {
   private embedWindow: EmbedWindow;
 
@@ -308,7 +308,7 @@ export class RootCMSBrowserClient {
    * doc as context. In popup mode, call from a user gesture (e.g. a click
    * handler) to avoid pop-up blockers.
    */
-  openAI(options?: OpenAIOptions): EmbeddedAI {
+  openRootAI(options?: OpenRootAIOptions): EmbeddedAI {
     const url = new URL(`${this.cmsOrigin}/cms/embed/ai`);
     if (options?.docId) {
       url.searchParams.set('docId', options.docId);

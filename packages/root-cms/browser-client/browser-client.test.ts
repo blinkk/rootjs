@@ -293,7 +293,7 @@ describe('openEditor (popup mode)', () => {
   });
 });
 
-describe('openAI', () => {
+describe('openRootAI', () => {
   let root: RootCMSBrowserClient;
   let container: HTMLElement;
 
@@ -308,13 +308,17 @@ describe('openAI', () => {
   });
 
   it('creates an iframe with the ai embed url', () => {
-    const ai = root.openAI({mode: 'iframe', container});
+    const ai = root.openRootAI({mode: 'iframe', container});
     expect(ai.element!.src).toEqual(`${CMS_ORIGIN}/cms/embed/ai`);
     ai.close();
   });
 
   it('adds the docId query param', () => {
-    const ai = root.openAI({mode: 'iframe', container, docId: 'Pages/about'});
+    const ai = root.openRootAI({
+      mode: 'iframe',
+      container,
+      docId: 'Pages/about',
+    });
     expect(ai.element!.src).toEqual(
       `${CMS_ORIGIN}/cms/embed/ai?docId=Pages%2Fabout`
     );
