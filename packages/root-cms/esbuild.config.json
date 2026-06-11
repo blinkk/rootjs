@@ -2,6 +2,7 @@
   "clean": false,
   "entryPoints": {
     "app": "core/app.tsx",
+    "browser-client": "browser-client/browser-client.ts",
     "cli": "cli/cli.ts",
     "client": "core/client.ts",
     "core": "core/core.ts",

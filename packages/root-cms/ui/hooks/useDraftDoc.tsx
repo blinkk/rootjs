@@ -10,6 +10,7 @@ import {
 } from 'firebase/firestore';
 import {ComponentChildren, createContext} from 'preact';
 import {useContext, useEffect, useMemo, useState} from 'preact/hooks';
+import {SaveState} from '../../shared/embed-protocol.js';
 import {logAction} from '../utils/actions.js';
 import {containsAssetId, extractAssetIds} from '../utils/assets.js';
 import {debounce} from '../utils/debounce.js';
@@ -28,13 +29,7 @@ import {TIME_UNITS} from '../utils/time.js';
 const SAVE_DELAY = 3 * TIME_UNITS.second;
 const SAVE_ACTION_LOG_THROTTLE = 5 * TIME_UNITS.minute;
 
-export enum SaveState {
-  NO_CHANGES = 'NO_CHANGES',
-  UPDATES_PENDING = 'UPDATE_PENDING',
-  SAVING = 'SAVING',
-  SAVED = 'SAVED',
-  ERROR = 'ERROR',
-}
+export {SaveState} from '../../shared/embed-protocol.js';
 
 export enum DraftDocEventType {
   /** Changes made to the draft doc and are pending a save to the DB. */

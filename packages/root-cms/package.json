@@ -25,6 +25,10 @@
       "types": "./dist/core/core.d.ts",
       "import": "./dist/core.js"
     },
+    "./browser-client": {
+      "types": "./dist/browser-client/browser-client.d.ts",
+      "import": "./dist/browser-client.js"
+    },
     "./client": {
       "types": "./dist/core/client.d.ts",
       "import": "./dist/client.js"

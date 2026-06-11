@@ -1,19 +1,11 @@
 import {ComponentChildren, createContext} from 'preact';
 import {useContext, useEffect, useState} from 'preact/hooks';
+import {isScrollToDeeplinkMessage} from '../../shared/embed-protocol.js';
 import {isAllowedOrigin} from '../utils/embed-bridge.js';
 
 export interface DeeplinkContext {
   value: string;
   setValue: (value: string) => void;
-}
-
-/** Messages that can be sent to the DocEditor window. */
-interface DocEditorMessage {
-  /** Scrolls to a specific deeplink within the field editor. */
-  scrollToDeeplink?: {
-    /** The key of the field to scroll to. */
-    deepKey: string;
-  };
 }
 
 interface ScrollToDeeplinkOptions {
@@ -49,9 +41,8 @@ export function DeeplinkProvider(props: {children: ComponentChildren}) {
       if (!isAllowedOrigin(event.origin)) {
         return;
       }
-      const req = event.data as DocEditorMessage;
-      if (req.scrollToDeeplink) {
-        const deepKey = req.scrollToDeeplink.deepKey;
+      if (isScrollToDeeplinkMessage(event.data)) {
+        const deepKey = event.data.scrollToDeeplink.deepKey;
         const element = document.getElementById(deepKey);
         if (element) {
           setValue(deepKey);

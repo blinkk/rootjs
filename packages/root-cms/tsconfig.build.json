@@ -3,11 +3,18 @@
   "compilerOptions": {
     "declarationMap": false,
     "emitDeclarationOnly": true,
+    "lib": ["esnext", "dom", "dom.iterable"],
     "noCheck": true,
     "outDir": "dist",
     "rootDir": ".",
     "skipLibCheck": true
   },
-  "include": ["cli/**/*.ts", "core/**/*.ts", "core/**/*.tsx", "shared/**/*.ts"],
+  "include": [
+    "browser-client/**/*.ts",
+    "cli/**/*.ts",
+    "core/**/*.ts",
+    "core/**/*.tsx",
+    "shared/**/*.ts"
+  ],
   "exclude": ["**/*.test.ts", "**/*.test.tsx"]
 }
