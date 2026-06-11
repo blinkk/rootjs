@@ -1,6 +1,34 @@
 .EmbeddedDocumentPage {
   height: 100vh;
   width: 100%;
-  overflow: auto;
+  display: flex;
+  flex-direction: column;
   background: var(--mantine-color-body, #fff);
+}
+
+/* Overrides the `.DocumentPage__side` max-height (which accounts for the
+   regular CMS top nav) so the editor flexes to fill the embedded viewport. */
+.EmbeddedDocumentPage .EmbeddedDocumentPage__editor {
+  flex: 1;
+  min-height: 0;
+  max-height: none;
+  overflow: auto;
+  overflow-anchor: none;
+  padding: 0 16px;
+}
+
+.EmbeddedDocumentPage__saveBar {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 16px;
+  padding: 8px 16px;
+  border-top: 1px solid var(--color-border);
+}
+
+.EmbeddedDocumentPage__saveBar__saveState {
+  font-size: 14px;
+  font-style: italic;
+  font-weight: 500;
 }

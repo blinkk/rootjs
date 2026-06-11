@@ -1,15 +1,16 @@
 import './EmbeddedDocumentPage.css';
 
-import {useEffect, useRef} from 'preact/hooks';
+import {Button} from '@mantine/core';
+import {useEffect, useRef, useState} from 'preact/hooks';
 import {DocEditor} from '../../components/DocEditor/DocEditor.js';
 import {
   DraftDocProvider,
   SaveState,
   useDraftDoc,
+  useDraftDocSaveState,
 } from '../../hooks/useDraftDoc.js';
 import {usePageTitle} from '../../hooks/usePageTitle.js';
 import {useProjectRoles} from '../../hooks/useProjectRoles.js';
-import {useArrayParam} from '../../hooks/useQueryParam.js';
 import {joinClassNames} from '../../utils/classes.js';
 import {CMSDoc} from '../../utils/doc.js';
 import {postToParent} from '../../utils/embed-bridge.js';
@@ -24,12 +25,14 @@ interface EmbeddedDocumentPageProps {
  * Headless ("embedded") version of the document editor, intended to be loaded
  * inside an iframe / pop-up by a client previewing a page ("click to edit").
  *
- * Renders only the `DocEditor` -- no top nav, sidebar, side-by-side preview, or
- * Checks/Search/AI panels. A `postMessage` bridge notifies the parent window of
+ * Renders only the `DocEditor` fields (no status bar, top nav, sidebar,
+ * side-by-side preview, or Checks/Search/AI panels) plus a save bar. Saving is
+ * explicit: autosave is disabled and changes are only persisted when the user
+ * clicks "Save"; pending changes are discarded when the iframe/pop-up is
+ * closed without saving. A `postMessage` bridge notifies the parent window of
  * editor lifecycle events (`ready`, `saved`, `published`). Field focus
- * ("click to edit") works via the existing `DeeplinkProvider` (`?deeplink=` and
- * inbound `scrollToDeeplink` messages). The set of editable fields can be
- * scoped via the `?fields=` query param (comma-separated top-level field ids).
+ * ("click to edit") works via the existing `DeeplinkProvider` (`?deeplink=`
+ * and inbound `scrollToDeeplink` messages).
  */
 export function EmbeddedDocumentPage(props: EmbeddedDocumentPageProps) {
   const docId = `${props.collection}/${props.slug}`;
@@ -37,8 +40,13 @@ export function EmbeddedDocumentPage(props: EmbeddedDocumentPageProps) {
   const currentUserEmail = window.firebase.user.email || '';
   const canEdit = testCanEdit(roles, currentUserEmail);
   return (
-    <DraftDocProvider docId={docId} readOnly={!canEdit}>
-      <EmbeddedDocumentPageInner {...props} />
+    <DraftDocProvider
+      docId={docId}
+      readOnly={!canEdit}
+      autoSave={false}
+      flushOnStop={false}
+    >
+      <EmbeddedDocumentPageInner {...props} canEdit={canEdit} />
     </DraftDocProvider>
   );
 }
@@ -51,15 +59,17 @@ function toMillis(ts: CMSDoc['sys']['publishedAt']): number {
   return 0;
 }
 
-function EmbeddedDocumentPageInner(props: EmbeddedDocumentPageProps) {
+function EmbeddedDocumentPageInner(
+  props: EmbeddedDocumentPageProps & {canEdit: boolean}
+) {
   const docId = `${props.collection}/${props.slug}`;
   usePageTitle(docId);
   const draft = useDraftDoc();
   const controller = draft.controller;
   const loading = draft.loading;
 
-  // Limit the editor to specific top-level fields when `?fields=` is provided.
-  const [visibleFields] = useArrayParam('fields');
+  const [saveState, setSaveState] = useState<SaveState>(SaveState.NO_CHANGES);
+  useDraftDocSaveState(setSaveState);
 
   // Notify the parent window once the doc has finished loading.
   const readySentRef = useRef(false);
@@ -96,13 +106,41 @@ function EmbeddedDocumentPageInner(props: EmbeddedDocumentPageProps) {
   }, [controller, docId]);
 
   return (
-    // The `DocumentPage__side` class is reused so that scrollToDeeplink()
-    // (which targets `.DocumentPage__side` as its scroll container) keeps
-    // working for the headless editor.
-    <div
-      className={joinClassNames('EmbeddedDocumentPage', 'DocumentPage__side')}
-    >
-      <DocEditor docId={docId} visibleFields={visibleFields} />
+    <div className="EmbeddedDocumentPage">
+      {/*
+        The `DocumentPage__side` class is reused so that scrollToDeeplink()
+        (which targets `.DocumentPage__side` as its scroll container) keeps
+        working for the headless editor.
+      */}
+      <div
+        className={joinClassNames(
+          'EmbeddedDocumentPage__editor',
+          'DocumentPage__side'
+        )}
+      >
+        <DocEditor docId={docId} hideStatusBar />
+      </div>
+      {props.canEdit && !loading && (
+        <div className="EmbeddedDocumentPage__saveBar">
+          <div className="EmbeddedDocumentPage__saveBar__saveState">
+            {saveState === SaveState.UPDATES_PENDING && 'unsaved changes'}
+            {saveState === SaveState.SAVED && 'saved!'}
+            {saveState === SaveState.ERROR && 'error saving'}
+          </div>
+          <Button
+            color="dark"
+            size="xs"
+            loading={saveState === SaveState.SAVING}
+            disabled={
+              saveState !== SaveState.UPDATES_PENDING &&
+              saveState !== SaveState.ERROR
+            }
+            onClick={() => controller.flush()}
+          >
+            Save
+          </Button>
+        </div>
+      )}
     </div>
   );
 }

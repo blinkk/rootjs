@@ -131,11 +131,6 @@ interface DocEditorProps {
   className?: string;
   docId: string;
   hideStatusBar?: boolean;
-  /**
-   * When provided, only the listed top-level fields (by field id) are rendered;
-   * all other fields are hidden. An empty/undefined value renders all fields.
-   */
-  visibleFields?: string[];
 }
 
 const COLLECTION_SCHEMA_TYPES_CONTEXT = createContext<
@@ -155,12 +150,7 @@ export function DocEditor(props: DocEditorProps) {
   const collection = useCollectionSchema(collectionId);
   const draft = useDraftDoc();
   const loading = collection.loading || draft.loading;
-  const allFields = collection.schema?.fields || [];
-  const visibleFields = props.visibleFields;
-  const fields =
-    visibleFields && visibleFields.length > 0
-      ? allFields.filter((field) => visibleFields.includes(field.id!))
-      : allFields;
+  const fields = collection.schema?.fields || [];
 
   return (
     <COLLECTION_SCHEMA_TYPES_CONTEXT.Provider
