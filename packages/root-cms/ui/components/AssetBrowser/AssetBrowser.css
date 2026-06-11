@@ -395,3 +395,7 @@
   display: flex;
   gap: 8px;
 }
+
+.AssetBrowser__details__table td:first-child {
+  width: 100px;
+}

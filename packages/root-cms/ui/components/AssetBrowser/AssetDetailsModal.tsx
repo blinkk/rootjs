@@ -151,7 +151,7 @@ export function AssetDetailsModal(props: AssetDetailsModalProps) {
       opened
       onClose={props.onClose}
       title={asset.name}
-      size="lg"
+      size={720}
       overflow="outside"
       centered
     >
@@ -173,7 +173,11 @@ export function AssetDetailsModal(props: AssetDetailsModalProps) {
           )}
         </div>
 
-        <Table verticalSpacing="xs" fontSize="xs">
+        <Table
+          className="AssetBrowser__details__table"
+          verticalSpacing="xs"
+          fontSize="xs"
+        >
           <tbody>
             <tr>
               <td>
