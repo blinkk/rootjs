@@ -53,7 +53,6 @@ export default defineConfig({
       gci: true,
       sidebar: {
         tools: {
-          design: {label: 'Design System', iframeUrl: '/design'},
           templates: {label: 'Templates', iframeUrl: '/cms-tools/templates/'},
         },
       },
