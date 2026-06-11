@@ -78,6 +78,11 @@ const EditDataSourcePage = lazyRoute(() =>
     (m) => m.EditDataSourcePage
   )
 );
+const EmbeddedDocumentPage = lazyRoute(() =>
+  import('./pages/EmbeddedDocumentPage/EmbeddedDocumentPage.js').then(
+    (m) => m.EmbeddedDocumentPage
+  )
+);
 const EditReleasePage = lazyRoute(() =>
   import('./pages/EditReleasePage/EditReleasePage.js').then(
     (m) => m.EditReleasePage
@@ -221,6 +226,12 @@ declare global {
        * wildcards, e.g. `ALL_*`.
        */
       excludeLocalesFromTranslations?: string[];
+      /**
+       * Origins allowed to embed the CMS in an iframe (e.g. the headless doc
+       * editor). Used to validate inbound postMessages and target outbound
+       * lifecycle messages from the embedded editor.
+       */
+      allowedIframeOrigins?: string[];
     };
     firebase: FirebaseContextObject;
   }
@@ -279,6 +290,10 @@ function App() {
                           <Route
                             path="/cms/content/:collection/:slug"
                             component={DocumentPage}
+                          />
+                          <Route
+                            path="/cms/embed/content/:collection/:slug"
+                            component={EmbeddedDocumentPage}
                           />
                           <Route path="/cms/data" component={DataPage} />
                           <Route

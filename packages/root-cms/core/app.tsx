@@ -148,6 +148,7 @@ export async function renderApp(
     defaultOneOfVariant: cmsConfig.defaultOneOfVariant || 'dropdown',
     excludeLocalesFromTranslations:
       cmsConfig.excludeLocalesFromTranslations || [],
+    allowedIframeOrigins: cmsConfig.allowedIframeOrigins || [],
   };
   const projectName = cmsConfig.name || cmsConfig.id || '';
   const title = getCmsTitle(projectName, cmsConfig.minimalBranding);

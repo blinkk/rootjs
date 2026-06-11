@@ -1,5 +1,6 @@
 import {ComponentChildren, createContext} from 'preact';
 import {useContext, useEffect, useState} from 'preact/hooks';
+import {isAllowedOrigin} from '../utils/embed-bridge.js';
 
 export interface DeeplinkContext {
   value: string;
@@ -43,6 +44,11 @@ export function DeeplinkProvider(props: {children: ComponentChildren}) {
   // fields can be focused.
   useEffect(() => {
     const handleMessage = (event: MessageEvent) => {
+      // Only accept messages from same-origin (the in-CMS preview iframe) or
+      // from an explicitly allowed embed origin.
+      if (!isAllowedOrigin(event.origin)) {
+        return;
+      }
       const req = event.data as DocEditorMessage;
       if (req.scrollToDeeplink) {
         const deepKey = req.scrollToDeeplink.deepKey;
