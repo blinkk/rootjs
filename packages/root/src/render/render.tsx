@@ -190,6 +190,13 @@ export class Renderer {
 
     // Create a hook to auto-inject nonce values.
     // https://preactjs.com/guide/v10/options/
+    // NOTE: `preactOptions.vnode` is a global, so the hook must be installed
+    // and restored within a single synchronous block. Resolve the JSX
+    // renderer first (which may involve a dynamic import) so that no `await`
+    // occurs while the hook is swapped. Awaiting inside the swapped window
+    // allows concurrent renders to interleave, leaking a stale hook (and its
+    // nonce) into other requests.
+    const renderJsxFn = await this.getJsxRenderFn();
     const preactHook = preactOptions.vnode;
     let mainHtml: string;
     try {
@@ -215,11 +222,9 @@ export class Renderer {
           preactHook(vnode);
         }
       };
-      mainHtml = await this.renderJsx(vdom);
+      mainHtml = renderJsxFn(vdom);
+    } finally {
       preactOptions.vnode = preactHook;
-    } catch (err) {
-      preactOptions.vnode = preactHook;
-      throw err;
     }
 
     const jsDeps = new Set<string>();
@@ -601,13 +606,19 @@ export class Renderer {
   }
 
   /**
-   * Renders JSX via either the `@blinkk/root/jsx` package or
-   * `preact-render-to-string` depending if the `jsxRenderer` config is set up
-   * in `root.config.ts`.
+   * Resolves a synchronous JSX render function, using either the
+   * `@blinkk/root/jsx` package or `preact-render-to-string` depending if the
+   * `jsxRenderer` config is set up in `root.config.ts`.
+   *
+   * Resolving the renderer up front (rather than awaiting inside the render
+   * call) allows callers that temporarily swap global state (e.g. the
+   * `preact.options.vnode` nonce hook) to render synchronously without
+   * yielding to the event loop.
    */
-  private async renderJsx(vnode: any) {
+  private async getJsxRenderFn(): Promise<(vnode: any) => string> {
     if (this.rootConfig.jsxRenderer?.mode) {
-      return renderJsxToString(vnode, this.getJsxRenderOptions());
+      const options = this.getJsxRenderOptions();
+      return (vnode: any) => renderJsxToString(vnode, options);
     }
     const {renderToString} = await import('preact-render-to-string');
     if (!renderToString) {
@@ -615,7 +626,17 @@ export class Renderer {
         'failed to render jsx. either install preact-render-to-string or add the "jsxRenderer" config to root.config.ts'
       );
     }
-    return renderToString(vnode);
+    return (vnode: any) => renderToString(vnode);
+  }
+
+  /**
+   * Renders JSX via either the `@blinkk/root/jsx` package or
+   * `preact-render-to-string` depending if the `jsxRenderer` config is set up
+   * in `root.config.ts`.
+   */
+  private async renderJsx(vnode: any) {
+    const render = await this.getJsxRenderFn();
+    return render(vnode);
   }
 
   private getConfiguredStyleEntries() {
