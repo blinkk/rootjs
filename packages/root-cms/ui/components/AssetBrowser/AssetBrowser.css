@@ -59,6 +59,30 @@
   cursor: default;
 }
 
+.AssetBrowser__selectionBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+  padding: 6px 12px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--surface-border-radius);
+  background: var(--chip-background);
+}
+
+.AssetBrowser__selectionBar__count {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.AssetBrowser__selectionBar__actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .AssetBrowser__listing {
   position: relative;
   border: 1px solid var(--color-border);
@@ -101,6 +125,15 @@
 
 .AssetBrowser__table th.AssetBrowser__table__modifiedCol {
   width: 200px;
+}
+
+.AssetBrowser__table th.AssetBrowser__table__checkboxCol {
+  width: 0;
+  white-space: nowrap;
+}
+
+.AssetBrowser__checkboxCell {
+  cursor: default;
 }
 
 .AssetBrowser__table th.AssetBrowser__table__actionsCol {
@@ -378,6 +411,27 @@
 
 .AssetBrowser__details__buttons__delete {
   margin-left: auto;
+}
+
+.AssetBrowser__details__alt__disabledNote {
+  font-size: 12px;
+  color: var(--color-text-gray);
+}
+
+.AssetBrowser__details__confirmReplace {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 13px;
+  color: #e67700;
+  background: #fff9db;
+  border-radius: 4px;
+  padding: 12px;
+}
+
+.AssetBrowser__details__confirmReplace__buttons {
+  display: flex;
+  gap: 8px;
 }
 
 .AssetBrowser__details__confirmDelete {

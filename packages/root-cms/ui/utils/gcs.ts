@@ -24,6 +24,16 @@ export const GCI_SUPPORTED_EXTS = [
 /** Extensions compatible with the image field. */
 export const IMAGE_EXTS = [...GCI_SUPPORTED_EXTS, 'svg'];
 
+/**
+ * Image extensions that preview as images in the CMS but are excluded from
+ * the image field's default accept list. To accept one of these, a field
+ * must opt in via its `exts` config, e.g. `exts: ['image/avif']`.
+ */
+export const OPT_IN_IMAGE_EXTS = ['avif'];
+
+/** All extensions that are previewed as images in the CMS UI. */
+export const PREVIEW_IMAGE_EXTS = [...IMAGE_EXTS, ...OPT_IN_IMAGE_EXTS];
+
 export const VIDEO_EXTS = ['mp4', 'webm'];
 
 export const GCI_URL_PREFIX = 'https://lh3.googleusercontent.com/';
@@ -53,6 +63,12 @@ export interface UploadedFile {
   uploadedBy?: string;
   uploadedAt?: string | number;
   canvasBgColor?: 'light' | 'dark';
+  /**
+   * When true, alt text handling is disabled for the file (e.g. decorative
+   * images). The alt text input is hidden in docs that use the file and no
+   * alt text is propagated from the asset library.
+   */
+  altDisabled?: boolean;
   /** The original source URL if the image has been edited. */
   originalSrc?: string;
   /**
@@ -189,7 +205,7 @@ async function finalizeUpload(
   meta.uploadedAt = String(Math.floor(new Date().getTime()));
   const gcsPath = `/${gcsRef.bucket}/${gcsRef.fullPath}`;
   let fileUrl = `https://storage.googleapis.com${gcsPath}`;
-  if (IMAGE_EXTS.includes(ext)) {
+  if (PREVIEW_IMAGE_EXTS.includes(ext)) {
     const dimens = await getImageDimensions(file);
     meta.width = dimens.width;
     meta.height = dimens.height;
@@ -341,7 +357,7 @@ export function testIsImageFile(src: string) {
     return true;
   }
   const ext = getFileExt(src);
-  return IMAGE_EXTS.includes(ext);
+  return PREVIEW_IMAGE_EXTS.includes(ext);
 }
 
 export function testIsGoogleCloudImageFile(src: string) {
@@ -380,6 +396,8 @@ export function testFileMatchesAccept(
     if (type.endsWith('/*')) {
       const prefix = type.split('/')[0];
       if (prefix === 'image') {
+        // Opt-in exts (e.g. avif) are excluded from the wildcard; they only
+        // match an explicit entry like `image/avif` or `.avif`.
         return IMAGE_EXTS.includes(ext);
       }
       if (prefix === 'video') {

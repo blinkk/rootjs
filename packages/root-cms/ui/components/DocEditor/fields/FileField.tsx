@@ -176,7 +176,11 @@ export function FileFieldInternal(props: FileFieldInternalProps) {
 
   const altText = value?.alt || '';
   const altDisabledByMetadata = props.altDisabledByMetadata === true;
-  const showAltText = field.alt !== false && !altDisabledByMetadata;
+  // Alt text can be disabled per field (schema), per instance (metadata) or
+  // per asset (asset library).
+  const altDisabledByAsset = value?.altDisabled === true;
+  const showAltText =
+    field.alt !== false && !altDisabledByMetadata && !altDisabledByAsset;
 
   async function uploadFile(
     file: File,
