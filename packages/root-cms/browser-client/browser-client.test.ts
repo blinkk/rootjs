@@ -21,11 +21,44 @@ describe('RootCMSBrowserClient', () => {
     );
   });
 
+  it('throws on a non-http(s) cmsOrigin', () => {
+    expect(
+      () => new RootCMSBrowserClient({cmsOrigin: 'javascript:alert(1)'})
+    ).toThrow(/invalid cmsOrigin/);
+    expect(
+      () => new RootCMSBrowserClient({cmsOrigin: 'data:text/html,hi'})
+    ).toThrow(/invalid cmsOrigin/);
+    expect(
+      () => new RootCMSBrowserClient({cmsOrigin: 'blob:https://x.example/123'})
+    ).toThrow(/invalid cmsOrigin/);
+  });
+
   it('throws on an invalid docId', () => {
     const root = new RootCMSBrowserClient({cmsOrigin: CMS_ORIGIN});
     expect(() => root.openEditor('Pages')).toThrow(/invalid docId/);
     expect(() => root.openEditor('Pages/')).toThrow(/invalid docId/);
     expect(() => root.openEditor('/about')).toThrow(/invalid docId/);
+    // Dot segments must not survive to traverse out of the embed path.
+    expect(() => root.openEditor('../about')).toThrow(/invalid docId/);
+    expect(() => root.openEditor('Pages/..')).toThrow(/invalid docId/);
+    expect(() => root.openEditor('./about')).toThrow(/invalid docId/);
+  });
+
+  it('encodes docId segments to prevent url injection', () => {
+    const root = new RootCMSBrowserClient({cmsOrigin: CMS_ORIGIN});
+    const container = document.createElement('div');
+    document.body.appendChild(container);
+    // A `?` in the collection must not inject a query string.
+    const editor = root.openEditor('Pages?evil=1/about', {
+      mode: 'iframe',
+      container,
+    });
+    const src = new URL(editor.element!.src);
+    expect(src.origin).toEqual(CMS_ORIGIN);
+    expect(src.pathname).toEqual('/cms/embed/content/Pages%3Fevil%3D1/about');
+    expect(src.search).toEqual('');
+    editor.close();
+    container.remove();
   });
 
   it('normalizes url-like slugs in the docId', () => {

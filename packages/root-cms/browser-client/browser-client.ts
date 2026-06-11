@@ -30,6 +30,11 @@ export type {
 } from '../shared/embed-protocol.js';
 export type {EmbedWindowEvents} from './embed-window.js';
 
+/** Whether a path segment is a relative-traversal segment (`.` or `..`). */
+function isDotSegment(segment: string): boolean {
+  return segment === '.' || segment === '..';
+}
+
 export interface RootCMSBrowserClientOptions {
   /** Origin of the Root CMS server, e.g. `https://cms.example.com`. */
   cmsOrigin: string;
@@ -234,13 +239,23 @@ export class RootCMSBrowserClient {
   readonly cmsOrigin: string;
 
   constructor(options: RootCMSBrowserClientOptions) {
+    let url: URL;
     try {
-      this.cmsOrigin = new URL(options.cmsOrigin).origin;
+      url = new URL(options.cmsOrigin);
     } catch {
       throw new Error(
         `invalid cmsOrigin: "${options?.cmsOrigin}" (expected e.g. "https://cms.example.com")`
       );
     }
+    // Only http(s) origins are meaningful here. Reject other schemes (e.g.
+    // `javascript:`, `data:`, `blob:`) so the constructor doesn't silently
+    // accept an origin that can never serve the CMS.
+    if (url.protocol !== 'https:' && url.protocol !== 'http:') {
+      throw new Error(
+        `invalid cmsOrigin: "${options?.cmsOrigin}" (expected an http(s) origin, e.g. "https://cms.example.com")`
+      );
+    }
+    this.cmsOrigin = url.origin;
   }
 
   /**
@@ -255,14 +270,27 @@ export class RootCMSBrowserClient {
   openEditor(docId: string, options?: OpenEditorOptions): EmbeddedEditor {
     const [collection, ...slugParts] = docId.split('/');
     const slug = normalizeSlug(slugParts.join('/'));
-    if (!collection || !slug) {
+    // Reject empty or dot segments (`.` / `..`). `normalizeSlug` strips
+    // slashes but not dots, and `encodeURIComponent` leaves dots intact, so a
+    // bare dot segment would otherwise survive path normalization and let a
+    // malicious docId traverse out of `/cms/embed/content/`.
+    if (
+      !collection ||
+      !slug ||
+      isDotSegment(collection) ||
+      isDotSegment(slug)
+    ) {
       throw new Error(
         `invalid docId: "${docId}" (expected "<collection>/<slug>")`
       );
     }
     const normalizedDocId = `${collection}/${slug}`;
+    // Encode each segment so characters like `?`, `#`, and `/` stay inside the
+    // path segment instead of injecting a query/fragment or new path part.
     const url = new URL(
-      `${this.cmsOrigin}/cms/embed/content/${collection}/${slug}`
+      `${this.cmsOrigin}/cms/embed/content/${encodeURIComponent(
+        collection
+      )}/${encodeURIComponent(slug)}`
     );
     if (options?.deeplink) {
       url.searchParams.set('deeplink', options.deeplink);
