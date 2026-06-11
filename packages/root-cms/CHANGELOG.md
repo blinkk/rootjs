@@ -1,5 +1,19 @@
 # @blinkk/root-cms
 
+## 3.1.1
+
+### Patch Changes
+
+- 0cac125: feat: asset manager for uploading and organizing project assets
+- 108b2a6: feat: add `@blinkk/root-cms/browser-client` for embedding cms tools
+- 8f65a3f: feat: add embeddable Root AI route for iframe/pop-up embedding
+- c8a9f6d: feat: add headless doc editor mode for embedding via iframe/pop-up
+- 3b92f15: fix: add route import failure recovery with automatic page reload
+- Updated dependencies [2dbff86]
+- Updated dependencies [cdc3aa4]
+- Updated dependencies [005ee08]
+  - @blinkk/root@3.1.1
+
 ## 3.0.6
 
 ### Patch Changes

@@ -1,5 +1,13 @@
 # @blinkk/root
 
+## 3.1.1
+
+### Patch Changes
+
+- 2dbff86: feat: brotli compression for prod/preview server responses
+- cdc3aa4: feat: parallel SSG rendering with `root build --threads`
+- 005ee08: fix: set security headers (e.g. HSTS) on all server responses
+
 ## 3.0.6
 
 ### Patch Changes
