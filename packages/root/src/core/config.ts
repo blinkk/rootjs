@@ -190,16 +190,19 @@ export interface RootI18nConfig {
    *
    * ```
    * i18n: {
-   *   locales: ['en', 'es-419_mx', 'es-419_co'],
+   *   locales: ['en', 'en_mx', 'en_co', 'en_gb', 'en_ca', 'fr_ca'],
    *   translationLanguages: {
-   *     'es-419_mx': 'es-419',
-   *     'es-419_co': 'es-419',
+   *     en_mx: 'es-419',
+   *     en_co: 'es-419',
+   *     en_gb: 'en-GB',
+   *     en_ca: 'en-GB',
+   *     fr_ca: 'fr-CA',
    *   },
    * }
    * ```
    *
-   * With the config above, translations for the `es-419_mx` and `es-419_co`
-   * locales are imported and exported using a single `es-419` language. The
+   * With the config above, translations for the `en_mx` and `en_co` locales
+   * are imported and exported using a single `es-419` language. The
    * conversion applies anywhere translations are used, e.g. CSV and Google
    * Sheets import/export, translation services, and the CMS translations
    * pages. Locales not listed here use the locale id as the translation

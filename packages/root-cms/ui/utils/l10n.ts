@@ -101,7 +101,7 @@ export async function updateTranslationByHash(
       continue;
     }
     // A key may be a root locale or a translation language shared by multiple
-    // root locales (e.g. `es-419` covering `es-419_mx` and `es-419_co`).
+    // root locales (e.g. `es-419` covering `en_mx` and `en_co`).
     for (const locale of getLocalesForTranslationLanguage(key)) {
       updates[locale] = translations[key];
     }
@@ -233,7 +233,7 @@ export function normalizeLocale(locale: string) {
 
 /**
  * Returns the "translation language" for a root locale, as configured in
- * `i18n.translationLanguages` (e.g. `es-419` for the `es-419_mx` locale).
+ * `i18n.translationLanguages` (e.g. `es-419` for the `en_mx` locale).
  * Returns the locale itself if no mapping is configured.
  */
 export function getTranslationLanguage(locale: string): string {
@@ -253,7 +253,7 @@ export function toTranslationLanguages(locales: string[]): string[] {
 
 /**
  * Expands a translation language (or root locale) to the root locales it
- * covers, e.g. `es-419` may return `['es-419_mx', 'es-419_co']`. Returns an
+ * covers, e.g. `es-419` may return `['en_mx', 'en_co']`. Returns an
  * empty array if the value doesn't match any locale in the root config.
  */
 export function getLocalesForTranslationLanguage(lang: string): string[] {
@@ -306,7 +306,7 @@ export async function batchSaveTranslations(
       const updates: Record<string, any> = {source: entry.source};
       for (const [locale, value] of Object.entries(entry.locales)) {
         // A key may be a root locale or a translation language shared by
-        // multiple root locales (e.g. `es-419` covering `es-419_mx`).
+        // multiple root locales (e.g. `es-419` covering `en_mx`).
         for (const normalized of getLocalesForTranslationLanguage(locale)) {
           updates[normalized] = normalizeString(value);
         }

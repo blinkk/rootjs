@@ -11,10 +11,13 @@
  *
  * ```ts
  * i18n: {
- *   locales: ['en', 'es-419_mx', 'es-419_co'],
+ *   locales: ['en', 'en_mx', 'en_co', 'en_gb', 'en_ca', 'fr_ca'],
  *   translationLanguages: {
- *     'es-419_mx': 'es-419',
- *     'es-419_co': 'es-419',
+ *     en_mx: 'es-419',
+ *     en_co: 'es-419',
+ *     en_gb: 'en-GB',
+ *     en_ca: 'en-GB',
+ *     fr_ca: 'fr-CA',
  *   },
  * }
  * ```
@@ -30,7 +33,7 @@ export interface TranslationLanguagesI18nConfig {
 
 /**
  * Returns the translation language for a root locale, e.g. `es-419` for the
- * `es-419_mx` locale. Returns the locale itself if no mapping is configured.
+ * `en_mx` locale. Returns the locale itself if no mapping is configured.
  */
 export function getTranslationLanguage(
   i18nConfig: TranslationLanguagesI18nConfig,
@@ -68,8 +71,8 @@ export function toTranslationLanguages(
 /**
  * Expands a translation language (or root locale) to the root locales it
  * covers. A value matches a root locale directly or via its configured
- * translation language, e.g. `es-419` returns both `es-419_mx` and
- * `es-419_co` with the example config above. Returns an empty array if the
+ * translation language, e.g. `es-419` returns both `en_mx` and `en_co` with
+ * the example config above. Returns an empty array if the
  * value doesn't match any configured locale.
  */
 export function getLocalesForTranslationLanguage(

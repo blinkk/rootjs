@@ -7,26 +7,31 @@ import {
 } from './translation-languages.js';
 
 const i18nConfig = {
-  locales: ['en', 'fr', 'es-419_mx', 'es-419_co'],
+  locales: ['en', 'fr', 'en_mx', 'en_co', 'en_gb', 'en_ca', 'fr_ca'],
   translationLanguages: {
-    'es-419_mx': 'es-419',
-    'es-419_co': 'es-419',
+    en_mx: 'es-419',
+    en_co: 'es-419',
+    en_gb: 'en-GB',
+    en_ca: 'en-GB',
+    fr_ca: 'fr-CA',
   },
 };
 
 describe('getTranslationLanguage', () => {
   it('returns the configured translation language for a locale', () => {
-    expect(getTranslationLanguage(i18nConfig, 'es-419_mx')).toEqual('es-419');
-    expect(getTranslationLanguage(i18nConfig, 'es-419_co')).toEqual('es-419');
+    expect(getTranslationLanguage(i18nConfig, 'en_mx')).toEqual('es-419');
+    expect(getTranslationLanguage(i18nConfig, 'en_co')).toEqual('es-419');
+    expect(getTranslationLanguage(i18nConfig, 'en_gb')).toEqual('en-GB');
+    expect(getTranslationLanguage(i18nConfig, 'fr_ca')).toEqual('fr-CA');
   });
 
   it('matches locales case-insensitively', () => {
-    expect(getTranslationLanguage(i18nConfig, 'ES-419_MX')).toEqual('es-419');
+    expect(getTranslationLanguage(i18nConfig, 'EN_MX')).toEqual('es-419');
   });
 
   it('returns the locale itself when no mapping is configured', () => {
     expect(getTranslationLanguage(i18nConfig, 'fr')).toEqual('fr');
-    expect(getTranslationLanguage({}, 'es-419_mx')).toEqual('es-419_mx');
+    expect(getTranslationLanguage({}, 'en_mx')).toEqual('en_mx');
   });
 });
 
@@ -36,6 +41,8 @@ describe('toTranslationLanguages', () => {
       'en',
       'fr',
       'es-419',
+      'en-GB',
+      'fr-CA',
     ]);
   });
 
@@ -47,33 +54,40 @@ describe('toTranslationLanguages', () => {
 describe('getLocalesForTranslationLanguage', () => {
   it('expands a translation language to its root locales', () => {
     expect(getLocalesForTranslationLanguage(i18nConfig, 'es-419')).toEqual([
-      'es-419_mx',
-      'es-419_co',
+      'en_mx',
+      'en_co',
+    ]);
+    expect(getLocalesForTranslationLanguage(i18nConfig, 'en-GB')).toEqual([
+      'en_gb',
+      'en_ca',
+    ]);
+    expect(getLocalesForTranslationLanguage(i18nConfig, 'fr-CA')).toEqual([
+      'fr_ca',
     ]);
   });
 
   it('matches a root locale directly', () => {
     expect(getLocalesForTranslationLanguage(i18nConfig, 'fr')).toEqual(['fr']);
-    expect(getLocalesForTranslationLanguage(i18nConfig, 'es-419_mx')).toEqual([
-      'es-419_mx',
+    expect(getLocalesForTranslationLanguage(i18nConfig, 'en_mx')).toEqual([
+      'en_mx',
     ]);
   });
 
   it('matches case-insensitively', () => {
     expect(getLocalesForTranslationLanguage(i18nConfig, 'ES-419')).toEqual([
-      'es-419_mx',
-      'es-419_co',
+      'en_mx',
+      'en_co',
     ]);
   });
 
   it('includes a root locale that matches the language id directly', () => {
     const config = {
-      locales: ['en', 'es-419', 'es-419_mx'],
-      translationLanguages: {'es-419_mx': 'es-419'},
+      locales: ['en', 'es-419', 'en_mx'],
+      translationLanguages: {en_mx: 'es-419'},
     };
     expect(getLocalesForTranslationLanguage(config, 'es-419')).toEqual([
       'es-419',
-      'es-419_mx',
+      'en_mx',
     ]);
   });
 
@@ -84,7 +98,7 @@ describe('getLocalesForTranslationLanguage', () => {
 
 describe('getTranslationForLanguage', () => {
   it('returns the first non-empty translation across the locale group', () => {
-    const row = {source: 'Hello', 'es-419_mx': '', 'es-419_co': 'Hola'};
+    const row = {source: 'Hello', en_mx: '', en_co: 'Hola'};
     expect(getTranslationForLanguage(i18nConfig, row, 'es-419')).toEqual(
       'Hola'
     );
