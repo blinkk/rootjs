@@ -29,6 +29,12 @@ import {
   writeFile,
 } from '../utils/fsutils.js';
 import {buildPage, BuildPageResult} from './build-page.js';
+import {
+  BuildLogMode,
+  BuildProgress,
+  formatBytes,
+  parseBuildLogMode,
+} from './build-progress.js';
 import {BuildPageError, BuildWorkerPool} from './build-worker-pool.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -46,22 +52,36 @@ export interface BuildOptions {
    * automatically based on CPU cores and the number of pages to build.
    */
   threads?: string | boolean;
+  /**
+   * Build log output mode: "progress" (default) shows a progress indicator
+   * and a final summary, "verbose" prints one line per output file, and
+   * "quiet" prints only the final summary.
+   */
+  log?: string;
+  /** Global `-q, --quiet` flag; equivalent to `log: 'quiet'`. */
+  quiet?: boolean;
 }
+
+/** Active log mode for the current build. */
+let activeLogMode: BuildLogMode = 'progress';
 
 export async function build(rootProjectDir?: string, options?: BuildOptions) {
   const mode = options?.mode || 'production';
   process.env.NODE_ENV = mode;
+  activeLogMode = options?.quiet ? 'quiet' : parseBuildLogMode(options?.log);
 
   const rootDir = path.resolve(rootProjectDir || process.cwd());
   const rootConfig = await loadRootConfig(rootDir, {command: 'build'});
   const distDir = path.join(rootDir, 'dist');
   const ssrOnly = options?.ssrOnly || false;
 
-  console.log();
-  console.log(`${dim('┃')} project:  ${rootDir}`);
-  console.log(`${dim('┃')} output:   ${distDir}/html`);
-  console.log(`${dim('┃')} mode:     ${mode}`);
-  console.log();
+  if (activeLogMode !== 'quiet') {
+    console.log();
+    console.log(`${dim('┃')} project:  ${rootDir}`);
+    console.log(`${dim('┃')} output:   ${distDir}/html`);
+    console.log(`${dim('┃')} mode:     ${mode}`);
+    console.log();
+  }
 
   await rmDir(distDir);
   await makeDir(distDir);
@@ -129,6 +149,8 @@ export async function build(rootProjectDir?: string, options?: BuildOptions) {
     root: rootDir,
     mode: mode,
     plugins: vitePlugins,
+    // In quiet mode, only surface vite warnings and errors.
+    logLevel: activeLogMode === 'quiet' ? 'warn' : viteConfig.logLevel,
   };
 
   // Bundle the render.js file with vite along with any plugins `ssrInput()`
@@ -364,7 +386,9 @@ export async function build(rootProjectDir?: string, options?: BuildOptions) {
 
   // Copy files from `dist/client/{assets,chunks}` to `dist/html` using the
   // root manifest. Ignore route files.
-  console.log('\njs/css output:');
+  if (activeLogMode !== 'quiet') {
+    console.log('\njs/css output:');
+  }
   await Promise.all(
     Object.keys(rootManifest).map(async (src) => {
       const assetData = rootManifest[src];
@@ -470,10 +494,9 @@ export async function build(rootProjectDir?: string, options?: BuildOptions) {
       if (!result.staticContent) {
         addSitemapXmlItem(result.urlPath, sitemapItem, result.outFilePath);
       }
-      printFileOutput(
-        fileSize(path.join(buildDir, result.outFilePath)),
-        'dist/html/',
-        result.outFilePath
+      progress.add(
+        result.outFilePath,
+        fileSizeBytes(path.join(buildDir, result.outFilePath))
       );
     };
 
@@ -489,80 +512,110 @@ export async function build(rootProjectDir?: string, options?: BuildOptions) {
       return true;
     });
 
-    console.log('\nhtml output:');
+    if (activeLogMode !== 'quiet') {
+      console.log('\nhtml output:');
+    }
     const concurrency = Number(options?.concurrency || 10);
-    const numThreads = resolveNumThreads(
+    const resolvedThreads = resolveNumThreads(
       options?.threads,
       sitemapEntries.length
     );
-
-    if (numThreads > 0) {
-      // Render pages in parallel using worker threads. Each worker loads the
-      // server bundle (dist/server/render.js) and renders pages
-      // independently.
-      const pool = new BuildWorkerPool({
-        numWorkers: numThreads,
-        workerConcurrency: Math.max(Math.ceil(concurrency / numThreads), 1),
-        rootDir,
-        mode,
-      });
-      try {
-        await pool.ready();
-        await Promise.all(
-          sitemapEntries.map(async ([urlPath, sitemapItem]) => {
-            try {
-              const result = await pool.run({
-                urlPath,
-                params: sitemapItem.params,
-                routeSrc: sitemapItem.route.src,
-                locale: sitemapItem.locale,
-              });
-              onPageResult(sitemapItem, result);
-            } catch (e) {
-              if (e instanceof BuildPageError) {
-                logBuildError(
-                  {
-                    route: sitemapItem.route,
-                    params: sitemapItem.params,
-                    urlPath,
-                  },
-                  new Error(e.workerError)
-                );
-              }
-              throw e;
-            }
-          })
-        );
-      } finally {
-        await pool.terminate();
-      }
-    } else {
-      await batchAsyncCalls(
-        sitemapEntries,
-        concurrency,
-        async ([urlPath, sitemapItem]) => {
-          try {
-            const result = await buildPage(
-              renderer,
-              rootConfig,
-              buildDir,
-              sitemapItem.route,
-              {urlPath, params: sitemapItem.params}
-            );
-            onPageResult(sitemapItem, result);
-          } catch (e) {
-            logBuildError(
-              {route: sitemapItem.route, params: sitemapItem.params, urlPath},
-              e
-            );
-            throw new Error(
-              `BuildError: ${urlPath} (${sitemapItem.route.src}) failed to build.`,
-              {cause: e}
-            );
-          }
-        }
+    const numThreads = resolvedThreads.count;
+    const workerConcurrency =
+      numThreads > 0 ? Math.max(Math.ceil(concurrency / numThreads), 1) : 0;
+    // Log the render parallelism (helps troubleshoot what `--threads=auto`
+    // resolved to, e.g. when investigating OOM issues on CI builders).
+    if (activeLogMode !== 'quiet') {
+      const threadsDesc =
+        numThreads > 0
+          ? `${numThreads} workers x ${workerConcurrency} pages/worker`
+          : `in-process, ${concurrency} concurrent pages`;
+      console.log(
+        `  ${dim(`threads: ${threadsDesc} (${resolvedThreads.source})`)}`
       );
     }
+    const progress = new BuildProgress({
+      total: sitemapEntries.length,
+      mode: activeLogMode,
+      itemLabel: 'pages',
+      outputDirLabel: 'dist/html/',
+    });
+
+    try {
+      if (numThreads > 0) {
+        // Render pages in parallel using worker threads. Each worker loads the
+        // server bundle (dist/server/render.js) and renders pages
+        // independently.
+        const pool = new BuildWorkerPool({
+          numWorkers: numThreads,
+          workerConcurrency,
+          rootDir,
+          mode,
+        });
+        try {
+          await pool.ready();
+          await Promise.all(
+            sitemapEntries.map(async ([urlPath, sitemapItem]) => {
+              try {
+                const result = await pool.run({
+                  urlPath,
+                  params: sitemapItem.params,
+                  routeSrc: sitemapItem.route.src,
+                  locale: sitemapItem.locale,
+                });
+                onPageResult(sitemapItem, result);
+              } catch (e) {
+                if (e instanceof BuildPageError) {
+                  progress.abort();
+                  logBuildError(
+                    {
+                      route: sitemapItem.route,
+                      params: sitemapItem.params,
+                      urlPath,
+                    },
+                    new Error(e.workerError)
+                  );
+                }
+                throw e;
+              }
+            })
+          );
+        } finally {
+          await pool.terminate();
+        }
+      } else {
+        await batchAsyncCalls(
+          sitemapEntries,
+          concurrency,
+          async ([urlPath, sitemapItem]) => {
+            try {
+              const result = await buildPage(
+                renderer,
+                rootConfig,
+                buildDir,
+                sitemapItem.route,
+                {urlPath, params: sitemapItem.params}
+              );
+              onPageResult(sitemapItem, result);
+            } catch (e) {
+              progress.abort();
+              logBuildError(
+                {route: sitemapItem.route, params: sitemapItem.params, urlPath},
+                e
+              );
+              throw new Error(
+                `BuildError: ${urlPath} (${sitemapItem.route.src}) failed to build.`,
+                {cause: e}
+              );
+            }
+          }
+        );
+      }
+    } catch (e) {
+      progress.abort();
+      throw e;
+    }
+    progress.finish();
 
     // Generate sitemap.xml.
     if (rootConfig.sitemap) {
@@ -626,9 +679,17 @@ const MIN_PAGES_PER_THREAD = 10;
  */
 const MEMORY_PER_THREAD = 1024 * 1024 * 1024; // 1GB
 
+/** Result of resolving the `--threads` flag. */
+interface ResolvedThreads {
+  /** Number of worker threads to use (0 = in-process build). */
+  count: number;
+  /** Human-readable description of how the count was determined. */
+  source: string;
+}
+
 /**
- * Resolves the `--threads` flag to a worker count. Returns 0 for an
- * in-process (single-threaded) build.
+ * Resolves the `--threads` flag to a worker count. Returns a count of 0 for
+ * an in-process (single-threaded) build.
  *
  * - unset: 0 (in-process build).
  * - `--threads` or `--threads auto`: picks a worker count based on the
@@ -642,9 +703,9 @@ const MEMORY_PER_THREAD = 1024 * 1024 * 1024; // 1GB
 function resolveNumThreads(
   threads: string | boolean | undefined,
   numPages: number
-): number {
+): ResolvedThreads {
   if (threads === undefined || threads === false) {
-    return 0;
+    return {count: 0, source: '--threads not set'};
   }
   if (threads === true || threads === 'auto') {
     const maxByCpu = Math.max(os.availableParallelism() - 1, 1);
@@ -655,32 +716,29 @@ function resolveNumThreads(
       1
     );
     const numThreads = Math.min(maxByCpu, maxByPages, maxByMemory);
+    // Surface each limit so it's clear which one is binding, e.g.
+    // "auto = min(cpu 31, pages 212, memory 14)".
+    const source = `auto = min(cpu ${maxByCpu}, pages ${maxByPages}, memory ${maxByMemory})`;
     // A single worker is never faster than rendering in-process (same
     // parallelism, plus startup and messaging overhead).
     if (numThreads <= 1) {
-      return 0;
+      return {count: 0, source};
     }
-    console.log(`rendering with ${numThreads} worker threads`);
-    return numThreads;
+    return {count: numThreads, source};
   }
   const num = parseInt(threads);
   if (isNaN(num) || num < 0) {
     throw new Error(`invalid --threads value: ${threads}`);
   }
-  return num;
+  return {count: num, source: `--threads=${num}`};
+}
+
+function fileSizeBytes(filepath: string): number {
+  return fsExtra.statSync(filepath).size;
 }
 
 function fileSize(filepath: string) {
-  const stats = fsExtra.statSync(filepath);
-  const bytes = stats.size;
-
-  const k = 1024;
-  if (bytes < k) {
-    return (bytes / k).toFixed(2) + ' kB';
-  }
-  const units = ['B', 'kB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB'];
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
-  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + units[i];
+  return formatBytes(fileSizeBytes(filepath));
 }
 
 function printFileOutput(
@@ -688,6 +746,9 @@ function printFileOutput(
   outputDir: string,
   outputFile: string
 ) {
+  if (activeLogMode === 'quiet') {
+    return;
+  }
   const indent = ' '.repeat(2);
   const paddedSize = fileSize.padStart(9, ' ');
   console.log(

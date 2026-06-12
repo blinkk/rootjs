@@ -1,4 +1,4 @@
-import {Command, InvalidArgumentError} from 'commander';
+import {Command, InvalidArgumentError, Option} from 'commander';
 import {bgGreen, black} from 'kleur/colors';
 import {build, BuildOptions} from './build.js';
 import {codegen} from './codegen.js';
@@ -52,7 +52,15 @@ class CliRunner {
         'builds the url paths that match the given regex, e.g. "/products/.*"',
         ''
       )
-      .action(build);
+      .addOption(
+        new Option(
+          '--log <mode>',
+          'build log output: "progress" (default) shows a progress indicator and a final summary, "verbose" prints one line per output file, "quiet" prints only the final summary'
+        ).choices(['progress', 'verbose', 'quiet'])
+      )
+      .action((rootProjectDir, options, cmd) =>
+        build(rootProjectDir, cmd.optsWithGlobals())
+      );
     program
       .command('codegen [type] [name]')
       .description('generates boilerplate code')
