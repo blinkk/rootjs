@@ -652,8 +652,8 @@ function toTimestamp(ts: any): Timestamp | null {
  * tooltip showing the exact date and time.
  *
  * Formats:
- * - `compact` (default): `jun12 07:51am`
- * - `long`: `June 12, 2026 07:51am`
+ * - `compact` (default): `Jun 12, 10:21 AM`
+ * - `long`: `June 12, 2026 10:21 AM`
  */
 function ActionTimestamp(props: {
   timestamp: Timestamp;
@@ -675,36 +675,36 @@ function ActionTimestamp(props: {
 }
 
 const MONTHS = [
-  'jan',
-  'feb',
-  'mar',
-  'apr',
-  'may',
-  'jun',
-  'jul',
-  'aug',
-  'sep',
-  'oct',
-  'nov',
-  'dec',
+  'Jan',
+  'Feb',
+  'Mar',
+  'Apr',
+  'May',
+  'Jun',
+  'Jul',
+  'Aug',
+  'Sep',
+  'Oct',
+  'Nov',
+  'Dec',
 ];
 
 function formatTime(date: Date) {
   const hours24 = date.getHours();
-  const ampm = hours24 < 12 ? 'am' : 'pm';
+  const ampm = hours24 < 12 ? 'AM' : 'PM';
   const hh = String(hours24 % 12 || 12).padStart(2, '0');
   const min = String(date.getMinutes()).padStart(2, '0');
-  return `${hh}:${min}${ampm}`;
+  return `${hh}:${min} ${ampm}`;
 }
 
-/** Formats a timestamp as a fixed-width compact date, e.g. "jun12 07:51am". */
+/** Formats a timestamp as a fixed-width compact date, e.g. "Jun 12, 10:21 AM". */
 function formatCompactDate(millis: number) {
   const date = new Date(millis);
   const dd = String(date.getDate()).padStart(2, '0');
-  return `${MONTHS[date.getMonth()]}${dd} ${formatTime(date)}`;
+  return `${MONTHS[date.getMonth()]} ${dd}, ${formatTime(date)}`;
 }
 
-/** Formats a timestamp as a long date, e.g. "June 12, 2026 07:51am". */
+/** Formats a timestamp as a long date, e.g. "June 12, 2026 10:21 AM". */
 function formatLongDate(millis: number) {
   const date = new Date(millis);
   const month = date.toLocaleDateString('en', {month: 'long'});

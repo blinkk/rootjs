@@ -168,7 +168,7 @@
   display: grid;
   /**
    * Each accordion row is its own grid. The timestamp renders in a
-   * fixed-width format (e.g. "jun12 07:51am") so its column can be `auto`;
+   * fixed-width format (e.g. "Jun 12, 10:21 AM") so its column can be `auto`;
    * the action column uses a fixed width to keep columns aligned across rows.
    */
   grid-template-columns: auto auto 170px 1fr auto;
@@ -200,8 +200,8 @@
 }
 
 .ActionLogsCompactItemPreview__action {
-  /** Shrink the chip to its content within the fixed-width column. */
-  justify-self: start;
+  /** Align the chip to the right edge of its fixed-width column. */
+  justify-self: end;
   max-width: 100%;
   padding: 2px 6px;
   border-radius: 3px;
