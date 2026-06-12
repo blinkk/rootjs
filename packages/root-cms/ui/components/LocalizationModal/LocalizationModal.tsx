@@ -334,8 +334,8 @@ LocalizationModal.Translations = (props: TranslationsProps) => {
   const [sourceStrings, setSourceStrings] = useState<string[]>([]);
   const locales = window.__ROOT_CTX.rootConfig.i18n?.locales || [];
   // The translations UI operates on "translation languages", which may be
-  // shared by multiple root locales (e.g. `es-419` covering `en_mx` and
-  // `en_co`, per the `i18n.translationLanguages` config).
+  // shared by multiple root locales (e.g. `es-419` covering `es_mx` and
+  // `es_co`, per the `i18n.translationLanguages` config).
   const translationLanguages = toTranslationLanguages(locales);
   const defaultLocale =
     (props.locale && getTranslationLanguage(props.locale)) ||

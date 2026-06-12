@@ -7,10 +7,10 @@ import {
 } from './translation-languages.js';
 
 const i18nConfig = {
-  locales: ['en', 'fr', 'en_mx', 'en_co', 'en_gb', 'en_ca', 'fr_ca'],
+  locales: ['en', 'fr', 'es_mx', 'es_co', 'en_gb', 'en_ca', 'fr_ca'],
   translationLanguages: {
-    en_mx: 'es-419',
-    en_co: 'es-419',
+    es_mx: 'es-419',
+    es_co: 'es-419',
     en_gb: 'en-GB',
     en_ca: 'en-GB',
     fr_ca: 'fr-CA',
@@ -19,19 +19,19 @@ const i18nConfig = {
 
 describe('getTranslationLanguage', () => {
   it('returns the configured translation language for a locale', () => {
-    expect(getTranslationLanguage(i18nConfig, 'en_mx')).toEqual('es-419');
-    expect(getTranslationLanguage(i18nConfig, 'en_co')).toEqual('es-419');
+    expect(getTranslationLanguage(i18nConfig, 'es_mx')).toEqual('es-419');
+    expect(getTranslationLanguage(i18nConfig, 'es_co')).toEqual('es-419');
     expect(getTranslationLanguage(i18nConfig, 'en_gb')).toEqual('en-GB');
     expect(getTranslationLanguage(i18nConfig, 'fr_ca')).toEqual('fr-CA');
   });
 
   it('matches locales case-insensitively', () => {
-    expect(getTranslationLanguage(i18nConfig, 'EN_MX')).toEqual('es-419');
+    expect(getTranslationLanguage(i18nConfig, 'ES_MX')).toEqual('es-419');
   });
 
   it('returns the locale itself when no mapping is configured', () => {
     expect(getTranslationLanguage(i18nConfig, 'fr')).toEqual('fr');
-    expect(getTranslationLanguage({}, 'en_mx')).toEqual('en_mx');
+    expect(getTranslationLanguage({}, 'es_mx')).toEqual('es_mx');
   });
 });
 
@@ -54,8 +54,8 @@ describe('toTranslationLanguages', () => {
 describe('getLocalesForTranslationLanguage', () => {
   it('expands a translation language to its root locales', () => {
     expect(getLocalesForTranslationLanguage(i18nConfig, 'es-419')).toEqual([
-      'en_mx',
-      'en_co',
+      'es_mx',
+      'es_co',
     ]);
     expect(getLocalesForTranslationLanguage(i18nConfig, 'en-GB')).toEqual([
       'en_gb',
@@ -68,26 +68,26 @@ describe('getLocalesForTranslationLanguage', () => {
 
   it('matches a root locale directly', () => {
     expect(getLocalesForTranslationLanguage(i18nConfig, 'fr')).toEqual(['fr']);
-    expect(getLocalesForTranslationLanguage(i18nConfig, 'en_mx')).toEqual([
-      'en_mx',
+    expect(getLocalesForTranslationLanguage(i18nConfig, 'es_mx')).toEqual([
+      'es_mx',
     ]);
   });
 
   it('matches case-insensitively', () => {
     expect(getLocalesForTranslationLanguage(i18nConfig, 'ES-419')).toEqual([
-      'en_mx',
-      'en_co',
+      'es_mx',
+      'es_co',
     ]);
   });
 
   it('includes a root locale that matches the language id directly', () => {
     const config = {
-      locales: ['en', 'es-419', 'en_mx'],
-      translationLanguages: {en_mx: 'es-419'},
+      locales: ['en', 'es-419', 'es_mx'],
+      translationLanguages: {es_mx: 'es-419'},
     };
     expect(getLocalesForTranslationLanguage(config, 'es-419')).toEqual([
       'es-419',
-      'en_mx',
+      'es_mx',
     ]);
   });
 
@@ -98,7 +98,7 @@ describe('getLocalesForTranslationLanguage', () => {
 
 describe('getTranslationForLanguage', () => {
   it('returns the first non-empty translation across the locale group', () => {
-    const row = {source: 'Hello', en_mx: '', en_co: 'Hola'};
+    const row = {source: 'Hello', es_mx: '', es_co: 'Hola'};
     expect(getTranslationForLanguage(i18nConfig, row, 'es-419')).toEqual(
       'Hola'
     );

@@ -157,19 +157,32 @@ export type RootConfig = RootUserConfig & {
 
 export interface LocaleGroup {
   label?: string;
-  locales: string[];
+  locales: RootLocale[];
 }
+
+/**
+ * A site-defined locale identifier, as configured in `i18n.locales`.
+ * Root is agnostic to its format.
+ */
+export type RootLocale = string;
+
+/**
+ * The language identifier used by translation systems (CSV/Sheets columns,
+ * translation services, CMS translations pages), mapped from a root locale
+ * via `i18n.translationLanguages`. Defaults to the root locale id.
+ */
+export type TranslationLanguage = string;
 
 export interface RootI18nConfig {
   /**
    * Locales enabled for the site.
    */
-  locales?: string[];
+  locales?: RootLocale[];
 
   /**
    * The default locale to use. Defaults is `en`.
    */
-  defaultLocale?: string;
+  defaultLocale?: RootLocale;
 
   /**
    * URL format for localized content. Default is `/[locale]/[base]/[path]`.
@@ -190,10 +203,10 @@ export interface RootI18nConfig {
    *
    * ```
    * i18n: {
-   *   locales: ['en', 'en_mx', 'en_co', 'en_gb', 'en_ca', 'fr_ca'],
+   *   locales: ['en', 'es_mx', 'es_co', 'en_gb', 'en_ca', 'fr_ca'],
    *   translationLanguages: {
-   *     en_mx: 'es-419',
-   *     en_co: 'es-419',
+   *     es_mx: 'es-419',
+   *     es_co: 'es-419',
    *     en_gb: 'en-GB',
    *     en_ca: 'en-GB',
    *     fr_ca: 'fr-CA',
@@ -201,14 +214,14 @@ export interface RootI18nConfig {
    * }
    * ```
    *
-   * With the config above, translations for the `en_mx` and `en_co` locales
+   * With the config above, translations for the `es_mx` and `es_co` locales
    * are imported and exported using a single `es-419` language. The
    * conversion applies anywhere translations are used, e.g. CSV and Google
    * Sheets import/export, translation services, and the CMS translations
    * pages. Locales not listed here use the locale id as the translation
    * language.
    */
-  translationLanguages?: Record<string, string>;
+  translationLanguages?: Record<RootLocale, TranslationLanguage>;
 }
 
 export interface RootBuildConfig {

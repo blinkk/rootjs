@@ -662,7 +662,7 @@ export async function cmsDocImportTranslations(
       source: normalizeString(row.source),
     };
     // A column may be a root locale or a translation language shared by
-    // multiple root locales (e.g. `es-419` covering `en_mx` and `en_co`).
+    // multiple root locales (e.g. `es-419` covering `es_mx` and `es_co`).
     // Language columns fan out to every locale in the group,
     // but a column that names a root locale directly takes precedence.
     const fromLanguageColumns: Record<string, string> = {};
