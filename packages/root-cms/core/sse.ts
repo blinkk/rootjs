@@ -39,8 +39,13 @@ export function sse(server: Server) {
     // form would still receive non-auth-scoped events).
     res.writeHead(200, {
       'Content-Type': 'text/event-stream',
-      'Cache-Control': 'no-cache',
+      // `no-transform` opts out of the `compression()` middleware (used by
+      // `root start` / `root preview`), which would otherwise hold SSE chunks
+      // in a gzip/brotli window and never deliver them incrementally.
+      'Cache-Control': 'no-cache, no-transform',
       Connection: 'keep-alive',
+      // Disable buffering in nginx-style reverse proxies.
+      'X-Accel-Buffering': 'no',
     });
     sseClients.add(res);
     const connectedMessage = formatMessage<SSEConnectedEvent>(
