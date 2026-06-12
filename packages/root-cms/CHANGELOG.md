@@ -1,5 +1,16 @@
 # @blinkk/root-cms
 
+## 3.1.2
+
+### Patch Changes
+
+- 5028a70: fix: show AI alt text button when top-level ai config is set
+- 3ff0727: feat: add `i18n.translationLanguages` config to map root locales to translation languages
+- Updated dependencies [d931e51]
+- Updated dependencies [edb7772]
+- Updated dependencies [3ff0727]
+  - @blinkk/root@3.1.2
+
 ## 3.1.1
 
 ### Patch Changes

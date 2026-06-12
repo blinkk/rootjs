@@ -1,5 +1,13 @@
 # @blinkk/root
 
+## 3.1.2
+
+### Patch Changes
+
+- d931e51: feat: add `--log` flag to `root build` with progress indicator
+- edb7772: fix: prevent worker thread OOM crashes in `root build --threads`
+- 3ff0727: feat: add `i18n.translationLanguages` config to map root locales to translation languages
+
 ## 3.1.1
 
 ### Patch Changes
