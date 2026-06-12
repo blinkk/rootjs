@@ -516,10 +516,24 @@ export async function build(rootProjectDir?: string, options?: BuildOptions) {
       console.log('\nhtml output:');
     }
     const concurrency = Number(options?.concurrency || 10);
-    const numThreads = resolveNumThreads(
+    const resolvedThreads = resolveNumThreads(
       options?.threads,
       sitemapEntries.length
     );
+    const numThreads = resolvedThreads.count;
+    const workerConcurrency =
+      numThreads > 0 ? Math.max(Math.ceil(concurrency / numThreads), 1) : 0;
+    // Log the render parallelism (helps troubleshoot what `--threads=auto`
+    // resolved to, e.g. when investigating OOM issues on CI builders).
+    if (activeLogMode !== 'quiet') {
+      const threadsDesc =
+        numThreads > 0
+          ? `${numThreads} workers x ${workerConcurrency} pages/worker`
+          : `in-process, ${concurrency} concurrent pages`;
+      console.log(
+        `  ${dim(`threads: ${threadsDesc} (${resolvedThreads.source})`)}`
+      );
+    }
     const progress = new BuildProgress({
       total: sitemapEntries.length,
       mode: activeLogMode,
@@ -534,7 +548,7 @@ export async function build(rootProjectDir?: string, options?: BuildOptions) {
         // independently.
         const pool = new BuildWorkerPool({
           numWorkers: numThreads,
-          workerConcurrency: Math.max(Math.ceil(concurrency / numThreads), 1),
+          workerConcurrency,
           rootDir,
           mode,
         });
@@ -665,9 +679,17 @@ const MIN_PAGES_PER_THREAD = 10;
  */
 const MEMORY_PER_THREAD = 1024 * 1024 * 1024; // 1GB
 
+/** Result of resolving the `--threads` flag. */
+interface ResolvedThreads {
+  /** Number of worker threads to use (0 = in-process build). */
+  count: number;
+  /** Human-readable description of how the count was determined. */
+  source: string;
+}
+
 /**
- * Resolves the `--threads` flag to a worker count. Returns 0 for an
- * in-process (single-threaded) build.
+ * Resolves the `--threads` flag to a worker count. Returns a count of 0 for
+ * an in-process (single-threaded) build.
  *
  * - unset: 0 (in-process build).
  * - `--threads` or `--threads auto`: picks a worker count based on the
@@ -681,9 +703,9 @@ const MEMORY_PER_THREAD = 1024 * 1024 * 1024; // 1GB
 function resolveNumThreads(
   threads: string | boolean | undefined,
   numPages: number
-): number {
+): ResolvedThreads {
   if (threads === undefined || threads === false) {
-    return 0;
+    return {count: 0, source: '--threads not set'};
   }
   if (threads === true || threads === 'auto') {
     const maxByCpu = Math.max(os.availableParallelism() - 1, 1);
@@ -694,19 +716,21 @@ function resolveNumThreads(
       1
     );
     const numThreads = Math.min(maxByCpu, maxByPages, maxByMemory);
+    // Surface each limit so it's clear which one is binding, e.g.
+    // "auto = min(cpu 31, pages 212, memory 14)".
+    const source = `auto = min(cpu ${maxByCpu}, pages ${maxByPages}, memory ${maxByMemory})`;
     // A single worker is never faster than rendering in-process (same
     // parallelism, plus startup and messaging overhead).
     if (numThreads <= 1) {
-      return 0;
+      return {count: 0, source};
     }
-    console.log(`rendering with ${numThreads} worker threads`);
-    return numThreads;
+    return {count: numThreads, source};
   }
   const num = parseInt(threads);
   if (isNaN(num) || num < 0) {
     throw new Error(`invalid --threads value: ${threads}`);
   }
-  return num;
+  return {count: num, source: `--threads=${num}`};
 }
 
 function fileSizeBytes(filepath: string): number {
