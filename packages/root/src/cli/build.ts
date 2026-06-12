@@ -617,13 +617,24 @@ function isRouteFile(filepath: string) {
 const MIN_PAGES_PER_THREAD = 10;
 
 /**
+ * Estimated memory footprint per worker thread (in bytes), used to cap the
+ * worker count in "auto" mode. Each worker loads the site's server bundle,
+ * config, and manifests, and holds in-flight renders, which can add up to
+ * hundreds of MB on large sites. Without a memory cap, high-core machines
+ * (e.g. 32-core CI runners) can spawn more workers than the machine's RAM
+ * supports, leading to out-of-memory crashes.
+ */
+const MEMORY_PER_THREAD = 1024 * 1024 * 1024; // 1GB
+
+/**
  * Resolves the `--threads` flag to a worker count. Returns 0 for an
  * in-process (single-threaded) build.
  *
  * - unset: 0 (in-process build).
  * - `--threads` or `--threads auto`: picks a worker count based on the
- *   machine's CPU cores and the number of pages to build. One core is
- *   reserved for the main thread, and each worker should have at least
+ *   machine's CPU cores, free memory, and the number of pages to build. One
+ *   core is reserved for the main thread, each worker is budgeted
+ *   `MEMORY_PER_THREAD` of free memory, and each worker should have at least
  *   `MIN_PAGES_PER_THREAD` pages to justify its startup cost. Small builds
  *   resolve to 0 and stay in-process.
  * - `--threads <num>`: uses exactly N workers (no workload heuristics).
@@ -638,7 +649,12 @@ function resolveNumThreads(
   if (threads === true || threads === 'auto') {
     const maxByCpu = Math.max(os.availableParallelism() - 1, 1);
     const maxByPages = Math.floor(numPages / MIN_PAGES_PER_THREAD);
-    const numThreads = Math.min(maxByCpu, maxByPages);
+    // Reserve 1 worker's worth of memory for the main thread.
+    const maxByMemory = Math.max(
+      Math.floor(os.freemem() / MEMORY_PER_THREAD) - 1,
+      1
+    );
+    const numThreads = Math.min(maxByCpu, maxByPages, maxByMemory);
     // A single worker is never faster than rendering in-process (same
     // parallelism, plus startup and messaging overhead).
     if (numThreads <= 1) {
