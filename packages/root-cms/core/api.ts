@@ -3,6 +3,7 @@ import path from 'node:path';
 import {Server, Request, Response} from '@blinkk/root';
 import {multipartMiddleware} from '@blinkk/root/middleware';
 import {UIMessage} from 'ai';
+import {toTranslationLanguages} from '../shared/translation-languages.js';
 import {
   ChatStore,
   findModel,
@@ -1322,7 +1323,9 @@ export function api(server: Server, options: ApiOptions) {
 
     try {
       const cmsClient = new RootCMSClient(req.rootConfig!);
-      const locales = req.rootConfig?.i18n?.locales || [];
+      const i18nConfig = req.rootConfig?.i18n || {};
+      const locales = i18nConfig.locales || [];
+      const translationLanguages = toTranslationLanguages(i18nConfig, locales);
 
       const result = await handler(
         {
@@ -1332,6 +1335,7 @@ export function api(server: Server, options: ApiOptions) {
           collectionId,
           slug,
           locales,
+          translationLanguages,
           user: {email: req.user!.email},
         },
         data

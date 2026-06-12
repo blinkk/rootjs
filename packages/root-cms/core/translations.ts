@@ -1,10 +1,15 @@
 import type {CMSService, CMSServiceContext} from './services.js';
 
-/** A row of translation data keyed by locale. */
+/** A row of translation data keyed by translation language. */
 export interface TranslationRow {
   /** The source string. */
   source: string;
-  /** Map of locale code to translated string. */
+  /**
+   * Map of translation language to translated string. Translation languages
+   * are derived from the project's locales via the `i18n.translationLanguages`
+   * config in root.config.ts; when no mapping is configured, the keys are the
+   * locale ids themselves.
+   */
   translations: Record<string, string>;
   /** Optional translator notes/context for the source string. */
   description?: string;
@@ -20,6 +25,14 @@ export interface TranslationServiceContext extends CMSServiceContext {
   slug: string;
   /** The locales configured for the project. */
   locales: string[];
+  /**
+   * The translation languages for the project, derived from `locales` via the
+   * `i18n.translationLanguages` config in root.config.ts (deduped, since
+   * multiple locales may share a translation language). Equal to `locales`
+   * when no mapping is configured. The `translations` keys in
+   * `TranslationRow` data use these languages.
+   */
+  translationLanguages: string[];
   /** The email of the user performing the action. */
   user: {email: string};
 }

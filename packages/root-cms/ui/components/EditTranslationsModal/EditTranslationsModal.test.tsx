@@ -8,6 +8,11 @@ const mockCmsDocImportTranslations = vi.fn();
 
 vi.mock('../../utils/l10n.js', () => ({
   loadTranslations: (...args: any[]) => mockLoadTranslations(...args),
+  toTranslationLanguages: (locales: string[]) => locales,
+  getTranslationForLanguage: (
+    translations: Record<string, string>,
+    lang: string
+  ) => translations?.[lang] || '',
 }));
 
 vi.mock('../../utils/doc.js', () => ({

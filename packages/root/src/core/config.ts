@@ -181,6 +181,31 @@ export interface RootI18nConfig {
    * locales.
    */
   groups?: Record<string, LocaleGroup>;
+
+  /**
+   * Maps a root locale to the "translation language" used by translation
+   * systems. Translation systems often use different language identifiers
+   * than root locales, and multiple root locales may share the same
+   * translations. For example:
+   *
+   * ```
+   * i18n: {
+   *   locales: ['en', 'es-419_mx', 'es-419_co'],
+   *   translationLanguages: {
+   *     'es-419_mx': 'es-419',
+   *     'es-419_co': 'es-419',
+   *   },
+   * }
+   * ```
+   *
+   * With the config above, translations for the `es-419_mx` and `es-419_co`
+   * locales are imported and exported using a single `es-419` language. The
+   * conversion applies anywhere translations are used, e.g. CSV and Google
+   * Sheets import/export, translation services, and the CMS translations
+   * pages. Locales not listed here use the locale id as the translation
+   * language.
+   */
+  translationLanguages?: Record<string, string>;
 }
 
 export interface RootBuildConfig {

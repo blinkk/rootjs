@@ -14,7 +14,9 @@ import {Layout} from '../../layout/Layout.js';
 import {
   Translation,
   getTranslationByHash,
+  getTranslationForLanguage,
   normalizeString,
+  toTranslationLanguages,
   updateTranslationByHash,
 } from '../../utils/l10n.js';
 
@@ -97,7 +99,11 @@ interface TranslationsEditPagePropsForm {
 TranslationsEditPage.Form = (props: TranslationsEditPagePropsForm) => {
   const translations = props.translations;
   const locales = window.__ROOT_CTX.rootConfig.i18n.locales || [];
-  const nonEnLocales = locales.filter((l) => l !== 'en');
+  // Fields are keyed by "translation language", which may be shared by
+  // multiple root locales (per the `i18n.translationLanguages` config).
+  const nonEnLocales = toTranslationLanguages(locales).filter(
+    (l) => l !== 'en'
+  );
   const [tags, setTags] = useState<string[]>(translations.tags || []);
   const [saving, setSaving] = useState<'translations' | 'tags' | null>(null);
 
@@ -164,7 +170,7 @@ TranslationsEditPage.Form = (props: TranslationsEditPagePropsForm) => {
             radius={0}
             name={locale}
             label={locale}
-            value={translations[locale] || ''}
+            value={getTranslationForLanguage(translations, locale)}
             autosize
             disabled={!!saving}
           />

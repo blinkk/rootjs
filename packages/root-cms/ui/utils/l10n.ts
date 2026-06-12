@@ -9,6 +9,12 @@ import {
   where,
   writeBatch,
 } from 'firebase/firestore';
+import {
+  getLocalesForTranslationLanguage as sharedGetLocalesForTranslationLanguage,
+  getTranslationForLanguage as sharedGetTranslationForLanguage,
+  getTranslationLanguage as sharedGetTranslationLanguage,
+  toTranslationLanguages as sharedToTranslationLanguages,
+} from '../../shared/translation-languages.js';
 import {logAction} from './actions.js';
 import {TIME_UNITS} from './time.js';
 
@@ -94,8 +100,9 @@ export async function updateTranslationByHash(
       updates.tags = translations.tags;
       continue;
     }
-    const locale = normalizeLocale(key);
-    if (locale) {
+    // A key may be a root locale or a translation language shared by multiple
+    // root locales (e.g. `es-419` covering `es-419_mx` and `es-419_co`).
+    for (const locale of getLocalesForTranslationLanguage(key)) {
       updates[locale] = translations[key];
     }
   }
@@ -208,8 +215,7 @@ function wildcardToRegExp(pattern: string): RegExp {
  * Patterns support wildcards, e.g. `ALL_*`.
  */
 export function isLocaleExcludedFromTranslations(locale: string): boolean {
-  const patterns =
-    window.__ROOT_CTX.excludeLocalesFromTranslations || [];
+  const patterns = window.__ROOT_CTX.excludeLocalesFromTranslations || [];
   return patterns.some((pattern) => wildcardToRegExp(pattern).test(locale));
 }
 
@@ -223,6 +229,49 @@ export function normalizeLocale(locale: string) {
   }
   // Ignore locales that are not in the root config.
   return null;
+}
+
+/**
+ * Returns the "translation language" for a root locale, as configured in
+ * `i18n.translationLanguages` (e.g. `es-419` for the `es-419_mx` locale).
+ * Returns the locale itself if no mapping is configured.
+ */
+export function getTranslationLanguage(locale: string): string {
+  const i18nConfig = window.__ROOT_CTX.rootConfig.i18n || {};
+  return sharedGetTranslationLanguage(i18nConfig, locale);
+}
+
+/**
+ * Converts a list of root locales to translation languages, removing
+ * duplicates (multiple root locales may share a translation language) while
+ * preserving order.
+ */
+export function toTranslationLanguages(locales: string[]): string[] {
+  const i18nConfig = window.__ROOT_CTX.rootConfig.i18n || {};
+  return sharedToTranslationLanguages(i18nConfig, locales);
+}
+
+/**
+ * Expands a translation language (or root locale) to the root locales it
+ * covers, e.g. `es-419` may return `['es-419_mx', 'es-419_co']`. Returns an
+ * empty array if the value doesn't match any locale in the root config.
+ */
+export function getLocalesForTranslationLanguage(lang: string): string[] {
+  const i18nConfig = window.__ROOT_CTX.rootConfig.i18n || {};
+  return sharedGetLocalesForTranslationLanguage(i18nConfig, lang);
+}
+
+/**
+ * Reads the translation for a translation language (or root locale) from a
+ * translations map keyed by root locale, checking all root locales that
+ * share the language and returning the first non-empty value.
+ */
+export function getTranslationForLanguage(
+  translations: Record<string, unknown>,
+  lang: string
+): string {
+  const i18nConfig = window.__ROOT_CTX.rootConfig.i18n || {};
+  return sharedGetTranslationForLanguage(i18nConfig, translations, lang);
 }
 
 /**
@@ -256,8 +305,9 @@ export async function batchSaveTranslations(
       const docRef = doc(db, 'Projects', projectId, 'Translations', entry.hash);
       const updates: Record<string, any> = {source: entry.source};
       for (const [locale, value] of Object.entries(entry.locales)) {
-        const normalized = normalizeLocale(locale);
-        if (normalized) {
+        // A key may be a root locale or a translation language shared by
+        // multiple root locales (e.g. `es-419` covering `es-419_mx`).
+        for (const normalized of getLocalesForTranslationLanguage(locale)) {
           updates[normalized] = normalizeString(value);
         }
       }

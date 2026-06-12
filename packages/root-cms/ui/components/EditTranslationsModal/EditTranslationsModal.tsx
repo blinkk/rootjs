@@ -23,7 +23,11 @@ import {useModalTheme} from '../../hooks/useModalTheme.js';
 import {joinClassNames} from '../../utils/classes.js';
 import {CsvTranslation, cmsDocImportTranslations} from '../../utils/doc.js';
 import {GoogleSheetId, getSpreadsheetUrl} from '../../utils/gsheets.js';
-import {loadTranslations} from '../../utils/l10n.js';
+import {
+  getTranslationForLanguage,
+  loadTranslations,
+  toTranslationLanguages,
+} from '../../utils/l10n.js';
 import {notifyErrors} from '../../utils/notifications.js';
 import {FieldHistory} from '../FieldHistory/FieldHistory.js';
 import {Heading} from '../Heading/Heading.js';
@@ -70,7 +74,9 @@ export function EditTranslationsModal(
   const {innerProps: props, context, id} = modalProps;
   const strings = props.strings || [];
   const i18nConfig = window.__ROOT_CTX.rootConfig.i18n || {};
-  const i18nLocales = i18nConfig.locales || ['en'];
+  // Edits are keyed by "translation language", which may be shared by
+  // multiple root locales (per the `i18n.translationLanguages` config).
+  const i18nLocales = toTranslationLanguages(i18nConfig.locales || ['en']);
   const [translationsMap, setTranslationsMap] = useState<
     Record<string, Record<string, string>>
   >({});
@@ -102,7 +108,16 @@ export function EditTranslationsModal(
     loadTranslations({tags: [props.docId]}).then((res) => {
       const translationsMap: Record<string, Record<string, string>> = {};
       Object.values(res).forEach((row) => {
-        translationsMap[row.source] = row;
+        // Re-key rows from root locales to translation languages so edits
+        // and saves apply to every root locale that shares the language.
+        const langRow: Record<string, string> = {source: row.source};
+        i18nLocales.forEach((lang) => {
+          const value = getTranslationForLanguage(row, lang);
+          if (value) {
+            langRow[lang] = value;
+          }
+        });
+        translationsMap[row.source] = langRow;
       });
       setTranslationsMap(translationsMap);
       setLoading(false);

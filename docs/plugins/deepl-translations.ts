@@ -78,9 +78,12 @@ export function deeplTranslationService(
         return [];
       }
 
-      // Translate source texts to each locale in parallel.
+      // Translate source texts to each translation language in parallel.
+      // Translation languages may be shared by multiple root locales (per
+      // the `i18n.translationLanguages` config in root.config.ts).
+      const languages = ctx.translationLanguages || ctx.locales;
       const results = await Promise.all(
-        ctx.locales.map(async (locale) => {
+        languages.map(async (locale) => {
           const translated = await translateTexts(sourceTexts, locale, 'en');
           return {locale, translated};
         })

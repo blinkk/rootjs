@@ -12,6 +12,12 @@ import {TranslationsTable} from './TranslationsTable.js';
 vi.mock('../../utils/l10n.js', () => ({
   loadTranslations: vi.fn(),
   batchUpdateTags: vi.fn(),
+  isLocaleExcludedFromTranslations: () => false,
+  toTranslationLanguages: (locales: string[]) => locales,
+  getTranslationForLanguage: (
+    translations: Record<string, string>,
+    lang: string
+  ) => translations?.[lang] || '',
 }));
 
 // Mock notifications.
