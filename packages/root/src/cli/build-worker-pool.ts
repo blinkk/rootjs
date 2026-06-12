@@ -128,10 +128,32 @@ class BuildWorker {
     });
   }
 
+  /**
+   * Rejects all in-flight tasks after a worker-level failure (fatal error,
+   * crash, or non-zero exit — e.g. an OOM kill).
+   *
+   * Each task is rejected with its own `BuildPageError` so the build log
+   * names every page that was in flight when the worker died. Without this,
+   * worker deaths surface as a single generic error with no route context,
+   * making OOM crashes impossible to trace back to pages. Note the in-flight
+   * pages are the OOM *suspects*, not necessarily the cause (memory pressure
+   * is cumulative), which is why the message says "while rendering".
+   */
   private failAll(err: Error) {
     const pendingTasks = Array.from(this.inFlight.values());
     this.inFlight.clear();
-    pendingTasks.forEach((pending) => pending.reject(err));
+    pendingTasks.forEach((pending) =>
+      pending.reject(
+        new BuildPageError(
+          pending.task.urlPath,
+          pending.task.params,
+          pending.task.routeSrc,
+          `worker thread died while rendering this page (` +
+            `${pendingTasks.length} page(s) were in flight): ` +
+            String(err.message || err)
+        )
+      )
+    );
   }
 
   /** Pulls tasks off the pool's queue until at max concurrency. */
