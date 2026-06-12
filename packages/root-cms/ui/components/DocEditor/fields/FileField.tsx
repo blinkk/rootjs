@@ -45,6 +45,7 @@ import {useContext, useMemo, useRef, useState} from 'preact/hooks';
 import * as schema from '../../../../core/schema.js';
 import {useDraftDocValue} from '../../../hooks/useDraftDoc.js';
 import {useGapiClient} from '../../../hooks/useGapiClient.js';
+import {testAiEnabled} from '../../../utils/ai.js';
 import {
   buildAssetFieldValue,
   getAsset,
@@ -772,7 +773,7 @@ FileField.Preview = () => {
   const ctx = useFileField();
   const [dragging, setDragging] = useState(false);
   const [copied, setCopied] = useState(false);
-  const experiments = window.__ROOT_CTX.experiments || {};
+  const aiEnabled = testAiEnabled();
 
   // Videos and images are the only files that get the canvas preview.
   // Other types just show the info panel. Videos with zero dimensions
@@ -1189,7 +1190,7 @@ FileField.Preview = () => {
                 ctx?.setAltText(e.currentTarget.value);
               }}
             />
-            {experiments.ai &&
+            {aiEnabled &&
               !ctx.altText &&
               ctx.value?.src?.startsWith('http') && (
                 <Tooltip

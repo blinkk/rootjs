@@ -20,6 +20,7 @@ import {ChangeEvent} from 'preact/compat';
 import {useEffect, useState} from 'preact/hooks';
 import {DraftDocContext} from '../../hooks/useDraftDoc.js';
 import {useModalTheme} from '../../hooks/useModalTheme.js';
+import {testAiEnabled} from '../../utils/ai.js';
 import {joinClassNames} from '../../utils/classes.js';
 import {CsvTranslation, cmsDocImportTranslations} from '../../utils/doc.js';
 import {GoogleSheetId, getSpreadsheetUrl} from '../../utils/gsheets.js';
@@ -246,10 +247,7 @@ export function EditTranslationsModal(
   }
 
   function shouldShowAiButton() {
-    const experiments = (window as any).__ROOT_CTX?.experiments || {};
-    const aiEnabled = !!experiments.ai;
-
-    if (!aiEnabled) return false;
+    if (!testAiEnabled()) return false;
 
     // Check if any translation fields are blank.
     for (const source of strings) {

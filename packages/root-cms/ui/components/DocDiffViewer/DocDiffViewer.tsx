@@ -3,6 +3,7 @@ import './DocDiffViewer.css';
 import {Button, Loader} from '@mantine/core';
 import {IconCircleCheckFilled} from '@tabler/icons-preact';
 import {useEffect, useState} from 'preact/hooks';
+import {testAiEnabled} from '../../utils/ai.js';
 import {joinClassNames} from '../../utils/classes.js';
 import {CMSDoc, cmsReadDocVersion, unmarshalData} from '../../utils/doc.js';
 import {stableJsonStringify} from '../../utils/objects.js';
@@ -33,9 +34,8 @@ export function DocDiffViewer(props: DocDiffViewerProps) {
   const [leftDoc, setLeftDoc] = useState<CMSDoc | null>(null);
   const [rightDoc, setRightDoc] = useState<CMSDoc | null>(null);
 
-  const experiments = (window as any).__ROOT_CTX?.experiments || {};
   const showAiSummary =
-    experiments.ai &&
+    testAiEnabled() &&
     left.docId === right.docId &&
     props.showAiSummary !== false;
 

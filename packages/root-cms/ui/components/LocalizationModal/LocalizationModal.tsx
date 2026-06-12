@@ -42,6 +42,7 @@ import {DraftDocController} from '../../hooks/useDraftDoc.js';
 import {GapiClient, useGapiClient} from '../../hooks/useGapiClient.js';
 import {useModalTheme} from '../../hooks/useModalTheme.js';
 import {logAction} from '../../utils/actions.js';
+import {testAiEnabled} from '../../utils/ai.js';
 import {
   CsvTranslation,
   cmsDocImportTranslations,
@@ -435,9 +436,7 @@ LocalizationModal.Translations = (props: TranslationsProps) => {
   }
 
   function shouldShowAiButton() {
-    const experiments = (window as any).__ROOT_CTX?.experiments || {};
-    const aiEnabled = !!experiments.ai;
-    if (!aiEnabled || !selectedLocale) return false;
+    if (!testAiEnabled() || !selectedLocale) return false;
     // Show if any translations are missing for the selected locale.
     return sourceStrings.some((source) => {
       const pending = pendingEdits[source]?.[selectedLocale];
