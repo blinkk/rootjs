@@ -12,7 +12,12 @@
 
 .ProjectPage__section {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  /**
+   * Match the collection list width used on the collection page
+   * (CollectionPage `--side-width: 400px`, which includes the page padding).
+   * The action logs side is variable width.
+   */
+  grid-template-columns: calc(400px - var(--page-padding)) 1fr;
   gap: 24px;
 }
 

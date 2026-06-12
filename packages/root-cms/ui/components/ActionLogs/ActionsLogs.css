@@ -97,11 +97,21 @@
   gap: 2px 8px;
 }
 
+.ActionsLogs__timestamp {
+  cursor: default;
+}
+
 .ActionsLogs__user {
   color: var(--color-text-secondary);
   display: inline-flex;
   align-items: center;
   gap: 6px;
+  /**
+   * Align the avatar + email with text in sibling cells. Without this, the
+   * inline-flex baseline is derived from the avatar image (its bottom edge),
+   * which shifts the cell content up relative to other cells.
+   */
+  vertical-align: middle;
 }
 
 .ActionsLogs__user__email {
@@ -156,7 +166,12 @@
 
 .ActionLogsCompactItemPreview {
   display: grid;
-  grid-template-columns: auto auto auto 1fr auto;
+  /**
+   * Each accordion row is its own grid. The timestamp renders in a
+   * fixed-width format (e.g. "Jun 12, 10:21 AM") so its column can be `auto`;
+   * the action column uses a fixed width to keep columns aligned across rows.
+   */
+  grid-template-columns: auto auto 170px 1fr auto;
   gap: 12px;
   align-items: center;
   font-family: var(--font-family-mono);
@@ -180,15 +195,22 @@
 
 .ActionLogsCompactItemPreview__timestamp {
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .ActionLogsCompactItemPreview__action {
+  /** Align the chip to the right edge of its fixed-width column. */
+  justify-self: end;
+  max-width: 100%;
   padding: 2px 6px;
   border-radius: 3px;
   background: var(--chip-background);
   color: var(--chip-text-color);
   font-weight: 600;
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .ActionLogsCompactItemPreview__actionMetaId {
