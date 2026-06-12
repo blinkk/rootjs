@@ -1,0 +1,18 @@
+.RouteLoading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: 100vh;
+  opacity: 0;
+  animation: RouteLoading-fade-in 150ms ease 150ms forwards;
+}
+
+@keyframes RouteLoading-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
