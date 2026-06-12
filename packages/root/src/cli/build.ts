@@ -688,16 +688,31 @@ interface ResolvedThreads {
 }
 
 /**
+ * Returns the memory (in bytes) available for worker threads. Prefers
+ * `process.availableMemory()`, which counts reclaimable memory (file caches,
+ * inactive pages) that the OS will hand back under pressure. `os.freemem()`
+ * only counts truly-free pages, which on macOS (and Linux with a warm page
+ * cache) is often near zero even when most RAM is reclaimable, causing
+ * `--threads=auto` to always resolve to an in-process build.
+ */
+function availableMemory(): number {
+  if (typeof process.availableMemory === 'function') {
+    return process.availableMemory();
+  }
+  return os.freemem();
+}
+
+/**
  * Resolves the `--threads` flag to a worker count. Returns a count of 0 for
  * an in-process (single-threaded) build.
  *
  * - unset: 0 (in-process build).
  * - `--threads` or `--threads auto`: picks a worker count based on the
- *   machine's CPU cores, free memory, and the number of pages to build. One
- *   core is reserved for the main thread, each worker is budgeted
- *   `MEMORY_PER_THREAD` of free memory, and each worker should have at least
- *   `MIN_PAGES_PER_THREAD` pages to justify its startup cost. Small builds
- *   resolve to 0 and stay in-process.
+ *   machine's CPU cores, available memory, and the number of pages to build.
+ *   One core is reserved for the main thread, each worker is budgeted
+ *   `MEMORY_PER_THREAD` of available memory, and each worker should have at
+ *   least `MIN_PAGES_PER_THREAD` pages to justify its startup cost. Small
+ *   builds resolve to 0 and stay in-process.
  * - `--threads <num>`: uses exactly N workers (no workload heuristics).
  */
 function resolveNumThreads(
@@ -712,7 +727,7 @@ function resolveNumThreads(
     const maxByPages = Math.floor(numPages / MIN_PAGES_PER_THREAD);
     // Reserve 1 worker's worth of memory for the main thread.
     const maxByMemory = Math.max(
-      Math.floor(os.freemem() / MEMORY_PER_THREAD) - 1,
+      Math.floor(availableMemory() / MEMORY_PER_THREAD) - 1,
       1
     );
     const numThreads = Math.min(maxByCpu, maxByPages, maxByMemory);
