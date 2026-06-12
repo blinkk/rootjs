@@ -167,10 +167,11 @@
 .ActionLogsCompactItemPreview {
   display: grid;
   /**
-   * Each accordion row is its own grid, so the timestamp and action columns
-   * use fixed widths to keep the columns aligned across rows.
+   * Each accordion row is its own grid. The timestamp renders in a
+   * fixed-width format (e.g. "jun12 07:51am") so its column can be `auto`;
+   * the action column uses a fixed width to keep columns aligned across rows.
    */
-  grid-template-columns: auto 110px 170px 1fr auto;
+  grid-template-columns: auto auto 170px 1fr auto;
   gap: 12px;
   align-items: center;
   font-family: var(--font-family-mono);
