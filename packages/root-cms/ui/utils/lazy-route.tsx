@@ -27,6 +27,15 @@ export interface ImportRouteComponentOptions {
   reload?: () => void;
 }
 
+export interface LazyRouteOptions extends ImportRouteComponentOptions {
+  /**
+   * Whether the loading screen renders within the app frame (topbar,
+   * sidebar). Defaults to true. Disable for routes that render outside the
+   * frame, e.g. the embedded pages.
+   */
+  frame?: boolean;
+}
+
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
@@ -103,7 +112,7 @@ export async function importRouteComponent<P>(
  */
 export function lazyRoute<P>(
   factory: () => Promise<FunctionComponent<P>>,
-  options?: ImportRouteComponentOptions
+  options?: LazyRouteOptions
 ): FunctionComponent<P> {
   let component: FunctionComponent<P> | null = null;
   let promise: Promise<void> | null = null;
@@ -137,7 +146,7 @@ export function lazyRoute<P>(
       // Start the import during render (rather than waiting for the effect)
       // so the chunk request goes out as early as possible.
       load();
-      return <RouteLoading />;
+      return <RouteLoading frame={options?.frame} />;
     }
     const Component = component;
     return <Component {...(props as any)} />;

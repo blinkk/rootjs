@@ -18,6 +18,14 @@ vi.mock('@mantine/core', async () => {
   };
 });
 
+// The app frame requires the router location context and the global firebase
+// objects, which aren't available in tests.
+vi.mock('../layout/Layout.js', () => {
+  return {
+    Layout: ({children}: any) => <div className="Layout">{children}</div>,
+  };
+});
+
 function TestComponent() {
   return <div>test page</div>;
 }
@@ -99,10 +107,21 @@ describe('lazyRoute', () => {
     );
     const LazyComponent = lazyRoute(factory);
     const result = render(<LazyComponent />);
-    expect(result.container.querySelector('.RouteLoading')).toBeTruthy();
+    // The loading screen renders within the app frame by default.
+    expect(
+      result.container.querySelector('.Layout .RouteLoading')
+    ).toBeTruthy();
     resolveImport(TestComponent);
     await result.findByText('test page');
     expect(result.container.querySelector('.RouteLoading')).toBeFalsy();
+  });
+
+  test('shows a frameless loading indicator for frameless routes', () => {
+    const factory = vi.fn(() => new Promise<FunctionComponent>(() => {}));
+    const LazyComponent = lazyRoute(factory, {frame: false});
+    const result = render(<LazyComponent />);
+    expect(result.container.querySelector('.RouteLoading')).toBeTruthy();
+    expect(result.container.querySelector('.Layout')).toBeFalsy();
   });
 
   test('renders immediately once the import has resolved', async () => {

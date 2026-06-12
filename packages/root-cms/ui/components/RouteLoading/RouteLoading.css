@@ -3,7 +3,19 @@
   align-items: center;
   justify-content: center;
   width: 100%;
-  min-height: 100vh;
+  height: 100vh;
+}
+
+/* When rendered within the app frame, the `.Layout__main > *:first-child`
+   rule sizes the element to the content area (below the topbar, beside the
+   sidebar), which uses the standard page background. */
+.RouteLoading--framed {
+  background: var(--page-background);
+}
+
+/* Fade the spinner in after a short delay so it doesn't flash when the
+   import resolves quickly. */
+.RouteLoading > * {
   opacity: 0;
   animation: RouteLoading-fade-in 150ms ease 150ms forwards;
 }
