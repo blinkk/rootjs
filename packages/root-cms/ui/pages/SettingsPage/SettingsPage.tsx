@@ -1,6 +1,7 @@
 import './SettingsPage.css';
 import {Button, LoadingOverlay, Switch, Textarea} from '@mantine/core';
 import {showNotification} from '@mantine/notifications';
+import {IconCheck} from '@tabler/icons-preact';
 import {doc, getDoc, setDoc, updateDoc} from 'firebase/firestore';
 import {useEffect, useMemo, useRef, useState} from 'preact/hooks';
 import {UserRole} from '../../../core/client.js';
@@ -13,6 +14,7 @@ import {useSearchIndexStatus} from '../../hooks/useGlobalSearch.js';
 import {usePageTitle} from '../../hooks/usePageTitle.js';
 import {useProjectRoles} from '../../hooks/useProjectRoles.js';
 import {SITE_SETTINGS, useSiteSettings} from '../../hooks/useSiteSettings.js';
+import {useUnsavedChangesWarning} from '../../hooks/useUnsavedChangesWarning.js';
 import {useUserPreferences} from '../../hooks/useUserPreferences.js';
 import {Layout} from '../../layout/Layout.js';
 import {logAction} from '../../utils/actions.js';
@@ -264,8 +266,10 @@ function ShareSection() {
       // derived `roles` field. Seed `globalRoles` from it so the admin sees the
       // same list; users that exist only via collection-scoped groups will be
       // dropped from the global section on the next save.
-      const globalRoles = (data.globalRoles ||
-        rolesField) as Record<string, UserRole>;
+      const globalRoles = (data.globalRoles || rolesField) as Record<
+        string,
+        UserRole
+      >;
       const initial: ShareDoc = {
         globalRoles,
         permissionGroups: (data.permissionGroups || []) as PermissionGroup[],
@@ -282,6 +286,7 @@ function ShareSection() {
 
   const currentUserIsAdmin = isCurrentUserAdmin(savedRoles);
   const dirty = !shareDocsEqual(savedState, draft);
+  useUnsavedChangesWarning(dirty);
 
   function setRoles(globalRoles: Record<string, UserRole>) {
     setDraft((prev) => ({...prev, globalRoles}));
@@ -438,7 +443,8 @@ function ShareSection() {
               <Button
                 size="xs"
                 radius={0}
-                color="dark"
+                color={dirty ? 'green' : 'dark'}
+                leftIcon={<IconCheck size={14} />}
                 loading={saving}
                 disabled={!dirty || !currentUserIsAdmin}
                 onClick={save}

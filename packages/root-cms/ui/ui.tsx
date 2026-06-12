@@ -42,6 +42,7 @@ import {SiteSettingsProvider} from './hooks/useSiteSettings.js';
 import {SSEProvider} from './hooks/useSSE.js';
 import {UserPreferencesProvider} from './hooks/useUserPreferences.js';
 import {lazyRoute} from './utils/lazy-route.js';
+import {installNavigationGuards} from './utils/navigation-guard.js';
 
 const AIPage = lazyRoute(() =>
   import('./pages/AIPage/AIPage.js').then((m) => m.AIPage)
@@ -410,6 +411,10 @@ function registerDevServerRedirectShortcut() {
 }
 
 registerDevServerRedirectShortcut();
+
+// Install the unsaved-changes navigation guards before the app renders so
+// the guard listeners run ahead of preact-iso's click/popstate listeners.
+installNavigationGuards();
 
 const root = document.getElementById('root')!;
 
