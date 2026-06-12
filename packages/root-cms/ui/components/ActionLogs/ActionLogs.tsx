@@ -16,6 +16,7 @@ import {useEffect, useMemo, useState} from 'preact/hooks';
 import {Action, listActions} from '../../utils/actions.js';
 import {joinClassNames} from '../../utils/classes.js';
 import {getSpreadsheetUrl} from '../../utils/gsheets.js';
+import {getPreciseTimeAgo} from '../../utils/time.js';
 import {Surface} from '../Surface/Surface.js';
 import {UserAvatar} from '../UserAvatar/UserAvatar.js';
 import './ActionsLogs.css';
@@ -30,6 +31,18 @@ export interface ActionLogsProps {
 
 /** Number of actions to display per page. */
 const PAGE_SIZE = 50;
+
+/**
+ * Actions that modify a doc's content, for which a "Show changes" diff link
+ * can be displayed.
+ */
+const DOC_CHANGE_ACTIONS = [
+  'doc.save',
+  'doc.publish',
+  'doc.restore_version',
+  'doc.import_translations',
+  'doc.revert',
+];
 
 /** Time filter options. */
 const TIME_FILTERS = [
@@ -241,7 +254,7 @@ export function ActionLogs(props: ActionLogsProps) {
             {paginatedActions.map((action, index) => (
               <tr key={index} className="ActionsLogs__table__row">
                 <td className="ActionsLogs__table__col ActionsLogs__table__col--nowrap">
-                  {formatDate(action.timestamp)}
+                  <ActionTimestamp timestamp={action.timestamp} />
                 </td>
                 <td className="ActionsLogs__table__col ActionsLogs__table__col--nowrap">
                   <span className="ActionsLogs__user">
@@ -383,6 +396,31 @@ function QuickLinks(props: {action: Action; label?: string; limit?: number}) {
     );
   }
 
+  // For actions that change doc content, link to a diff of the changes
+  // around the time of the action.
+  if (DOC_CHANGE_ACTIONS.includes(action.action) && action.metadata?.docId) {
+    const millis = toTimestamp(action.timestamp)?.toMillis();
+    if (millis) {
+      links.push(
+        <Tooltip
+          key="changes"
+          transition="pop"
+          label={`Show changes to ${action.metadata.docId}`}
+        >
+          <Button
+            component="a"
+            variant="default"
+            size="xs"
+            compact
+            href={getCompareUrl(action.metadata.docId, millis)}
+          >
+            {label('Show changes')}
+          </Button>
+        </Tooltip>
+      );
+    }
+  }
+
   if (action.action !== 'datasource.delete' && action.metadata?.datasourceId) {
     links.push(
       <Tooltip
@@ -480,6 +518,24 @@ function QuickLinks(props: {action: Action; label?: string; limit?: number}) {
 }
 
 /**
+ * Returns a compare url that diffs the doc's changes around the given
+ * timestamp, i.e. from the version snapshot saved before the timestamp to the
+ * version snapshot saved after it (or the current draft if none exists yet).
+ */
+function getCompareUrl(docId: string, millis: number) {
+  const left = toCompareUrlParam(docId, `before:${millis}`);
+  const right = toCompareUrlParam(docId, `after:${millis}`);
+  return `/cms/compare?left=${left}&right=${right}`;
+}
+
+function toCompareUrlParam(docId: string, versionId: string) {
+  return encodeURIComponent(`${docId}@${versionId}`)
+    .replaceAll('%2F', '/')
+    .replaceAll('%40', '@')
+    .replaceAll('%3A', ':');
+}
+
+/**
  * Compact variant of the action logs. Used primarily by the main ProjectPage.
  */
 function ActionLogsCompact(props: ActionLogsProps) {
@@ -526,7 +582,7 @@ function ActionLogsCompactItemPreview(props: {action: Action}) {
         <UserAvatar email={actionBy} size={20} />
       </div>
       <div className="ActionLogsCompactItemPreview__timestamp">
-        {formatDate(action.timestamp)}
+        <ActionTimestamp timestamp={action.timestamp} />
       </div>
       <div className="ActionLogsCompactItemPreview__action">
         {action.action}
@@ -592,17 +648,50 @@ function toTimestamp(ts: any): Timestamp | null {
   return null;
 }
 
-function formatDate(timestamp: Timestamp) {
-  const validTs = toTimestamp(timestamp);
-  if (!validTs) {
-    return 'Invalid date';
+/**
+ * Displays a humanized timestamp (e.g. "5 minutes ago") with a tooltip
+ * showing the exact date and time.
+ */
+function ActionTimestamp(props: {timestamp: Timestamp}) {
+  const millis = toTimestamp(props.timestamp)?.toMillis() || 0;
+  const [label, setLabel] = useState(() =>
+    millis ? getPreciseTimeAgo(millis) : ''
+  );
+
+  // Periodically refresh the label so that relative times (e.g. "just now")
+  // stay up to date.
+  useEffect(() => {
+    if (!millis) {
+      return;
+    }
+    setLabel(getPreciseTimeAgo(millis));
+    const interval = window.setInterval(() => {
+      setLabel(getPreciseTimeAgo(millis));
+    }, 60000);
+    return () => window.clearInterval(interval);
+  }, [millis]);
+
+  if (!millis) {
+    return <span>Invalid date</span>;
   }
-  const date = validTs.toDate();
-  const mm = String(date.getMonth() + 1).padStart(2, '0');
-  const dd = String(date.getDate()).padStart(2, '0');
-  const hh = String(date.getHours()).padStart(2, '0');
-  const min = String(date.getMinutes()).padStart(2, '0');
-  return `${mm}/${dd} ${hh}:${min}`;
+
+  return (
+    <Tooltip transition="pop" label={formatExactDateTime(millis)}>
+      <span className="ActionsLogs__timestamp">{label}</span>
+    </Tooltip>
+  );
+}
+
+/** Formats a timestamp as an exact date time, e.g. "Jun 11, 2026, 07:23:45 PM". */
+function formatExactDateTime(millis: number) {
+  return new Date(millis).toLocaleString('en', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+  });
 }
 
 /** A pretty printer for JavaScript objects. */

@@ -872,10 +872,34 @@ export async function cmsRestoreVersion(docId: string, version: Version) {
   });
 }
 
+/**
+ * Format for time-anchored version ids (e.g. `before:1718000000000`), which
+ * resolve to the version snapshot nearest to a timestamp. Used by the action
+ * logs to link to a diff of the changes around the time of an action.
+ */
+const VERSION_TIME_ANCHOR_RE = /^(before|after):(\d+)$/;
+
+/**
+ * Tolerance (in millis) applied to time-anchored version lookups to account
+ * for the delay between a version snapshot being saved and the corresponding
+ * action being logged.
+ */
+const VERSION_TIME_ANCHOR_TOLERANCE = 10 * 1000;
+
 export async function cmsReadDocVersion(
   docId: string,
   versionId: string | 'draft' | 'published'
 ): Promise<CMSDoc | null> {
+  // Resolve time-anchored version ids, e.g. `before:<millis>`.
+  const timeAnchor = String(versionId).match(VERSION_TIME_ANCHOR_RE);
+  if (timeAnchor) {
+    return await readDocVersionAtTime(
+      docId,
+      timeAnchor[1] as 'before' | 'after',
+      parseInt(timeAnchor[2])
+    );
+  }
+
   let docRef: DocumentReference;
   if (versionId === 'draft') {
     docRef = getDraftDocRef(docId);
@@ -890,6 +914,52 @@ export async function cmsReadDocVersion(
     return snapshot.data() as CMSDoc;
   }
   return null;
+}
+
+/**
+ * Reads the doc version snapshot nearest to the given timestamp.
+ *
+ * - `before` returns the latest version saved before the timestamp, or null
+ *   if no version exists (e.g. the doc was created around the timestamp).
+ * - `after` returns the earliest version saved at or after the timestamp,
+ *   falling back to the current draft if no version exists yet.
+ */
+async function readDocVersionAtTime(
+  docId: string,
+  anchor: 'before' | 'after',
+  millis: number
+): Promise<CMSDoc | null> {
+  const db = window.firebase.db;
+  const draftDocRef = getDraftDocRef(docId);
+  const versionsCollection = collection(db, draftDocRef.path, 'Versions');
+  const boundary = Timestamp.fromMillis(millis - VERSION_TIME_ANCHOR_TOLERANCE);
+  let q: Query;
+  if (anchor === 'before') {
+    q = query(
+      versionsCollection,
+      where('sys.modifiedAt', '<', boundary),
+      orderBy('sys.modifiedAt', 'desc'),
+      limit(1)
+    );
+  } else {
+    q = query(
+      versionsCollection,
+      where('sys.modifiedAt', '>=', boundary),
+      orderBy('sys.modifiedAt', 'asc'),
+      limit(1)
+    );
+  }
+  const querySnapshot = await getDocs(q);
+  if (querySnapshot.empty) {
+    // If no version snapshot exists after the timestamp (e.g. the versions
+    // cron job hasn't run yet), fall back to the current draft, which
+    // contains the latest changes.
+    if (anchor === 'after') {
+      return await cmsReadDocVersion(docId, 'draft');
+    }
+    return null;
+  }
+  return querySnapshot.docs[0].data() as CMSDoc;
 }
 
 /**

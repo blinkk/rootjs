@@ -48,6 +48,32 @@ export function timestamp(): number {
   return Math.floor(new Date().getTime());
 }
 
+/**
+ * Returns a compact, precise "time ago" string, e.g. "4h 2m ago". Falls back
+ * to a "mm/dd hh:mm" date string for timestamps older than a day.
+ */
+export function getPreciseTimeAgo(millis: number) {
+  const elapsed = Math.abs(new Date().getTime() - millis);
+  if (elapsed < TIME_UNITS.minute) {
+    return 'just now';
+  }
+  if (elapsed < TIME_UNITS.hour) {
+    const mins = Math.floor(elapsed / TIME_UNITS.minute);
+    return `${mins}m ago`;
+  }
+  if (elapsed < TIME_UNITS.day) {
+    const hours = Math.floor(elapsed / TIME_UNITS.hour);
+    const mins = Math.floor((elapsed % TIME_UNITS.hour) / TIME_UNITS.minute);
+    return mins ? `${hours}h ${mins}m ago` : `${hours}h ago`;
+  }
+  const date = new Date(millis);
+  const mm = String(date.getMonth() + 1).padStart(2, '0');
+  const dd = String(date.getDate()).padStart(2, '0');
+  const hh = String(date.getHours()).padStart(2, '0');
+  const min = String(date.getMinutes()).padStart(2, '0');
+  return `${mm}/${dd} ${hh}:${min}`;
+}
+
 export function formatDateTime(ts: Timestamp) {
   const date = new Date(ts.toMillis());
   return date.toLocaleDateString('en', {
