@@ -7,6 +7,7 @@ import {IconGitCompare, IconPackage, IconSparkles} from '@tabler/icons-preact';
 import {useState, useRef, useEffect} from 'preact/hooks';
 import {useModalTheme} from '../../hooks/useModalTheme.js';
 import {useProjectRoles} from '../../hooks/useProjectRoles.js';
+import {testAiEnabled} from '../../utils/ai.js';
 import {joinClassNames} from '../../utils/classes.js';
 import {getDocFromCacheOrFetch} from '../../utils/doc-cache.js';
 import {cmsPublishDoc, cmsScheduleDoc} from '../../utils/doc.js';
@@ -57,9 +58,7 @@ export function PublishDocModal(
   const dateTimeRef = useRef<HTMLInputElement>(null);
   const modals = useModals();
   const modalTheme = useModalTheme();
-  const aiAvailable = !!(
-    window.__ROOT_CTX.ai || window.__ROOT_CTX.experiments?.ai
-  );
+  const aiAvailable = testAiEnabled();
 
   const {roles, loading: rolesLoading} = useProjectRoles();
   const currentUserEmail = window.firebase.user.email || '';

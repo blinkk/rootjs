@@ -12,6 +12,7 @@ import {
 import {showNotification} from '@mantine/notifications';
 import {IconSparkles} from '@tabler/icons-preact';
 import {useState} from 'preact/hooks';
+import {testAiImageGenerationEnabled} from '../../../utils/ai.js';
 import {UploadedFile} from '../../../utils/gcs.js';
 
 interface GenerateImageFormProps {
@@ -65,9 +66,7 @@ export function GenerateImageForm(props: GenerateImageFormProps) {
   const [height, setHeight] = useState(props.initialHeight || 900);
   const [aspectRatio, setAspectRatio] = useState<string>('16:9');
 
-  const experiments = (window as any).__ROOT_CTX?.experiments || {};
-
-  const aiEnabled = !!experiments.ai;
+  const aiEnabled = testAiImageGenerationEnabled();
 
   async function handleGenerate() {
     if (!prompt) {

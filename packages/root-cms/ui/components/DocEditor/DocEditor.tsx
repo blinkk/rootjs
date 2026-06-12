@@ -75,6 +75,7 @@ import {
   ClipboardData,
   useVirtualClipboard,
 } from '../../hooks/useVirtualClipboard.js';
+import {testAiEnabled} from '../../utils/ai.js';
 import {joinClassNames} from '../../utils/classes.js';
 import {debounce} from '../../utils/debounce.js';
 import {
@@ -287,9 +288,7 @@ DocEditor.StatusBar = (props: StatusBarProps) => {
       return false;
     }
   });
-  const aiAvailable = !!(
-    window.__ROOT_CTX.ai || window.__ROOT_CTX.experiments?.ai
-  );
+  const aiAvailable = testAiEnabled();
 
   useEffect(() => {
     const handler = (e: Event) => {
@@ -1330,7 +1329,6 @@ DocEditor.ArrayField = (props: FieldProps) => {
   const [value, dispatch] = useReducer(arrayReducer, {_array: []});
   const deeplink = useDeeplink();
   const virtualClipboard = useVirtualClipboard();
-  const experiments = window.__ROOT_CTX.experiments || {};
 
   const data = value ?? {};
   const order = data._array || [];
@@ -1672,7 +1670,7 @@ DocEditor.ArrayField = (props: FieldProps) => {
                       !!field.defaultOpen
                     }
                     isCut={cutIndex === i}
-                    aiEnabled={!!experiments.ai}
+                    aiEnabled={testAiEnabled()}
                     onFocusHeader={focusFieldHeader}
                     onHeaderKeyDown={handleKeyDown}
                     onMoveUp={moveUp}

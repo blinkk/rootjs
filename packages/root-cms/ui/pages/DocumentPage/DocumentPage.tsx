@@ -28,6 +28,7 @@ import {usePageTitle} from '../../hooks/usePageTitle.js';
 import {useProjectRoles} from '../../hooks/useProjectRoles.js';
 import {useStringParam} from '../../hooks/useQueryParam.js';
 import {Layout} from '../../layout/Layout.js';
+import {testAiEnabled} from '../../utils/ai.js';
 import {joinClassNames} from '../../utils/classes.js';
 import {getDocPreviewPath, getDocServingPath} from '../../utils/doc-urls.js';
 import {testCanEdit} from '../../utils/permissions.js';
@@ -151,9 +152,7 @@ function DocumentPageLayout(props: DocumentPageProps & {canEdit: boolean}) {
   const isSearchVisibleRef = useRef(isSearchVisible);
   isSearchVisibleRef.current = isSearchVisible;
 
-  const isAiConfigured = !!(
-    window.__ROOT_CTX.ai || window.__ROOT_CTX.experiments?.ai
-  );
+  const isAiConfigured = testAiEnabled();
   const [isAiVisible, setIsAiVisible] = useLocalStorage<boolean>(
     'root::DocumentPage::aiVisible',
     false

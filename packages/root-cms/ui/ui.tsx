@@ -194,6 +194,7 @@ declare global {
       };
       ai?: {
         defaultModel?: string;
+        imageGenerationEnabled?: boolean;
         models: Array<{
           id: string;
           label: string;

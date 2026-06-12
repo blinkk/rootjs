@@ -25,6 +25,7 @@ import type {CMSBuiltInSidebarTool} from '../../core/plugin.js';
 import packageJson from '../../package.json' assert {type: 'json'};
 import {RootCMSLogo} from '../components/RootCMSLogo/RootCMSLogo.js';
 import {SearchBar} from '../components/SearchBar/SearchBar.js';
+import {testAiEnabled} from '../utils/ai.js';
 import {joinClassNames} from '../utils/classes.js';
 import './Layout.css';
 
@@ -194,7 +195,7 @@ Layout.Side = () => {
           </Layout.SideButton>
         )}
 
-        {(experiments.ai || window.__ROOT_CTX.ai) && !isBuiltInHidden('ai') && (
+        {testAiEnabled() && !isBuiltInHidden('ai') && (
           <Layout.SideButton
             label="Root AI"
             url="/cms/ai"
