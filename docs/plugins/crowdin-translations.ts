@@ -366,7 +366,10 @@ export function crowdinTranslationService(
       data: TranslationRow[]
     ): Promise<TranslationExportResult> {
       const projectId = await getProjectId();
-      const {collectionId, slug, locales} = ctx;
+      const {collectionId, slug} = ctx;
+      // Translation languages may be shared by multiple root locales (per
+      // the `i18n.translationLanguages` config in root.config.ts).
+      const locales = ctx.translationLanguages || ctx.locales;
       const fileName = `${slug}.csv`;
 
       // Generate CSV with source column + context column + one column per locale.
@@ -439,7 +442,10 @@ export function crowdinTranslationService(
       data: TranslationRow[]
     ): Promise<TranslationRow[]> {
       const projectId = await getProjectId();
-      const {collectionId, slug, locales} = ctx;
+      const {collectionId, slug} = ctx;
+      // Translation languages may be shared by multiple root locales (per
+      // the `i18n.translationLanguages` config in root.config.ts).
+      const locales = ctx.translationLanguages || ctx.locales;
       const fileName = `${slug}.csv`;
 
       // Find directory and file in Crowdin.

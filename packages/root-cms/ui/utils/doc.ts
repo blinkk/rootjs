@@ -28,8 +28,10 @@ import {extractAssetIds} from './assets.js';
 import {removeDocFromCache, removeDocsFromCache} from './doc-cache.js';
 import {GoogleSheetId} from './gsheets.js';
 import {
+  getLocalesForTranslationLanguage,
   getTranslationsCollection,
   isLocaleExcludedFromTranslations,
+  normalizeLocale,
   normalizeString,
   sourceHash,
 } from './l10n.js';
@@ -651,19 +653,6 @@ export async function cmsDocImportTranslations(
     actionLinks?: Array<{label: string; url: string; target?: string}>;
   }
 ) {
-  const i18nConfig = window.__ROOT_CTX.rootConfig.i18n || {};
-  const i18nLocales = i18nConfig.locales || ['en'];
-
-  function normalizeLocale(locale: string) {
-    for (const l of i18nLocales) {
-      if (String(l).toLowerCase() === locale.toLowerCase()) {
-        return l;
-      }
-    }
-    // Ignore locales that are not in the root config.
-    return null;
-  }
-
   const translationsMap: Record<string, CsvTranslation> = {};
   for (const row of csvData) {
     if (!row.source) {
@@ -672,16 +661,28 @@ export async function cmsDocImportTranslations(
     const translation: CsvTranslation = {
       source: normalizeString(row.source),
     };
+    // A column may be a root locale or a translation language shared by
+    // multiple root locales (e.g. `es-419` covering `es_mx` and `es_co`).
+    // Language columns fan out to every locale in the group,
+    // but a column that names a root locale directly takes precedence.
+    const fromLanguageColumns: Record<string, string> = {};
+    const fromLocaleColumns: Record<string, string> = {};
     Object.entries(row).forEach(([column, str]) => {
       if (column === 'source') {
         return;
       }
-      const locale = normalizeLocale(column);
-      // Skip locales excluded from translation import/export (e.g. `ALL_*`).
-      if (locale && !isLocaleExcludedFromTranslations(locale)) {
-        translation[locale] = normalizeString(str || '');
+      const exactLocale = normalizeLocale(column);
+      for (const locale of getLocalesForTranslationLanguage(column)) {
+        // Skip locales excluded from translation import/export (e.g. `ALL_*`).
+        if (isLocaleExcludedFromTranslations(locale)) {
+          continue;
+        }
+        const target =
+          locale === exactLocale ? fromLocaleColumns : fromLanguageColumns;
+        target[locale] = normalizeString(str || '');
       }
     });
+    Object.assign(translation, fromLanguageColumns, fromLocaleColumns);
 
     const hash = await sourceHash(translation.source);
     translationsMap[hash] = translation;

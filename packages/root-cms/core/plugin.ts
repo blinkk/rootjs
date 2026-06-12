@@ -49,8 +49,10 @@ export type {
 } from './services-notifications.js';
 export type {
   CMSTranslationService,
+  RootLocale,
   TranslationExportResult,
   TranslationImportResult,
+  TranslationLanguage,
   TranslationRow,
   TranslationServiceContext,
 } from './translations.js';

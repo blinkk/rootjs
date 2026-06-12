@@ -62,8 +62,12 @@ import {
 import {
   batchSaveTranslations,
   batchUpdateTags,
+  getLocalesForTranslationLanguage,
+  getTranslationForLanguage,
+  getTranslationLanguage,
   isLocaleExcludedFromTranslations,
   sourceHash,
+  toTranslationLanguages,
 } from '../../utils/l10n.js';
 import {TranslationsMap, loadTranslations} from '../../utils/l10n.js';
 import {useExportSheetModal} from '../ExportSheetModal/ExportSheetModal.js';
@@ -330,7 +334,14 @@ LocalizationModal.Translations = (props: TranslationsProps) => {
   const [loading, setLoading] = useState(true);
   const [sourceStrings, setSourceStrings] = useState<string[]>([]);
   const locales = window.__ROOT_CTX.rootConfig.i18n?.locales || [];
-  const defaultLocale = props.locale || locales.find((l) => l !== 'en') || 'en';
+  // The translations UI operates on "translation languages", which may be
+  // shared by multiple root locales (e.g. `es-419` covering `es_mx` and
+  // `es_co`, per the `i18n.translationLanguages` config).
+  const translationLanguages = toTranslationLanguages(locales);
+  const defaultLocale =
+    (props.locale && getTranslationLanguage(props.locale)) ||
+    translationLanguages.find((l) => l !== 'en') ||
+    'en';
   const [selectedLocale, setSelectedLocale] = useState(defaultLocale);
   const [filterMissing, setFilterMissing] = useState(false);
   const [translationsMap, setTranslationsMap] = useState<TranslationsMap>({});
@@ -339,7 +350,10 @@ LocalizationModal.Translations = (props: TranslationsProps) => {
     const result: Record<string, string> = {};
     Object.values(translationsMap).forEach(
       (translation: Record<string, string>) => {
-        result[translation.source] = translation[selectedLocale] || '';
+        result[translation.source] = getTranslationForLanguage(
+          translation,
+          selectedLocale
+        );
       }
     );
     return result;
@@ -580,7 +594,7 @@ LocalizationModal.Translations = (props: TranslationsProps) => {
     return results;
   }, [translationsMap]);
 
-  const localeOptions = locales.map((locale) => ({
+  const localeOptions = translationLanguages.map((locale) => ({
     value: locale,
     label: getLocaleLabel(locale),
   }));
@@ -643,23 +657,23 @@ LocalizationModal.Translations = (props: TranslationsProps) => {
   function getTranslation(source: string, locale: string): string {
     const row = sourceToTranslationsMap[source];
     if (row) {
-      return row[locale] || '';
+      return getTranslationForLanguage(row, locale);
     }
     return '';
   }
 
   function formatCsvData() {
-    const nonEnLocales = locales.filter(
-      (l) => l !== 'en' && !isLocaleExcludedFromTranslations(l)
-    );
-    const headers = ['source', 'en', ...nonEnLocales];
+    const nonEnLanguages = toTranslationLanguages(
+      locales.filter((l) => !isLocaleExcludedFromTranslations(l))
+    ).filter((lang) => lang !== 'en');
+    const headers = ['source', 'en', ...nonEnLanguages];
     const rows: Array<Record<string, string>> = [];
     sourceStrings.forEach((source) => {
       const row: Record<string, string> = {
         source: source,
         en: getTranslation(source, 'en') || source,
       };
-      nonEnLocales.forEach((l) => {
+      nonEnLanguages.forEach((l) => {
         row[l] = getTranslation(source, l);
       });
       rows.push(row);
@@ -769,7 +783,7 @@ LocalizationModal.Translations = (props: TranslationsProps) => {
         // When exporting strings, avoid overwriting cells where there is an
         // existing translation. If users want to export translations from the
         // CMS to the sheet, they should clear those cells first.
-        preserveColumns: locales,
+        preserveColumns: translationLanguages,
       });
     }
     logAction('doc.export_to_sheet', {
@@ -907,7 +921,7 @@ LocalizationModal.Translations = (props: TranslationsProps) => {
         exportSheetModal.open({
           docId: props.docId,
           csvData: formatCsvData(),
-          locales: locales,
+          locales: translationLanguages,
         });
         return;
       }
@@ -945,10 +959,11 @@ LocalizationModal.Translations = (props: TranslationsProps) => {
           ? await extractStringsWithMetadataForDoc(props.docId)
           : null;
 
-      // Build translation row data from current source strings.
+      // Build translation row data from current source strings, keyed by
+      // translation language.
       const data = sourceStrings.map((source) => {
         const translations: Record<string, string> = {};
-        locales.forEach((locale) => {
+        translationLanguages.forEach((locale) => {
           translations[locale] = getTranslation(source, locale) ?? '';
         });
         const description = stringsWithMeta?.get(source)?.description;
@@ -1016,13 +1031,19 @@ LocalizationModal.Translations = (props: TranslationsProps) => {
                 };
                 const translations = row?.translations;
                 if (translations && typeof translations === 'object') {
-                  locales.forEach((locale) => {
-                    const value = (translations as Record<string, unknown>)[
-                      locale
-                    ];
-                    if (value !== null && value !== undefined) {
-                      safeRow[locale] = String(value);
+                  // Keys may be root locales or translation languages;
+                  // `cmsDocImportTranslations()` expands languages to the
+                  // root locales they cover.
+                  Object.entries(
+                    translations as Record<string, unknown>
+                  ).forEach(([key, value]) => {
+                    if (value === null || value === undefined) {
+                      return;
                     }
+                    if (getLocalesForTranslationLanguage(key).length === 0) {
+                      return;
+                    }
+                    safeRow[key] = String(value);
                   });
                 }
                 return safeRow;

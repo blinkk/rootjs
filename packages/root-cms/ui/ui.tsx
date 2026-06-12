@@ -164,6 +164,7 @@ declare global {
           locales?: string[];
           urlFormat?: string;
           groups?: Record<string, {label?: string; locales: string[]}>;
+          translationLanguages?: Record<string, string>;
         };
         server: {
           trailingSlash?: boolean;

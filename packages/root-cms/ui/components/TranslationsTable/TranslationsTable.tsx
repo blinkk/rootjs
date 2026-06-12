@@ -38,8 +38,10 @@ import {useArrayParam, useStringParam} from '../../hooks/useQueryParam.js';
 import {joinClassNames} from '../../utils/classes.js';
 import {
   batchUpdateTags,
+  getTranslationForLanguage,
   isLocaleExcludedFromTranslations,
   loadTranslations,
+  toTranslationLanguages,
 } from '../../utils/l10n.js';
 import {notifyErrors} from '../../utils/notifications.js';
 
@@ -59,12 +61,16 @@ export function TranslationsTable() {
   >({});
 
   const locales = window.__ROOT_CTX.rootConfig.i18n?.locales || [];
+  // Columns are "translation languages", which may be shared by multiple
+  // root locales (per the `i18n.translationLanguages` config).
   const allLocales = [
     'en',
-    ...locales
-      .filter(
+    ...toTranslationLanguages(
+      locales.filter(
         (l: string) => l !== 'en' && !isLocaleExcludedFromTranslations(l)
       )
+    )
+      .filter((lang: string) => lang !== 'en')
       .sort(),
   ];
 
@@ -235,15 +241,15 @@ export function TranslationsTable() {
           matchesSource = source.toLowerCase() === query;
           matchesHash = hashStr.toLowerCase() === query;
           matchesTranslation = allLocales.some((locale) => {
-            const translation = translations[locale];
-            return (translation || '').toLowerCase() === query;
+            const translation = getTranslationForLanguage(translations, locale);
+            return translation.toLowerCase() === query;
           });
         } else {
           matchesSource = source.toLowerCase().includes(query);
           matchesHash = hashStr.toLowerCase().includes(query);
           matchesTranslation = allLocales.some((locale) => {
-            const translation = translations[locale];
-            return (translation || '').toLowerCase().includes(query);
+            const translation = getTranslationForLanguage(translations, locale);
+            return translation.toLowerCase().includes(query);
           });
         }
 
@@ -258,7 +264,7 @@ export function TranslationsTable() {
         tags: rowTags,
       };
       allLocales.forEach((locale) => {
-        row[locale] = translations[locale] || '';
+        row[locale] = getTranslationForLanguage(translations, locale);
       });
       data.push(row);
     });
