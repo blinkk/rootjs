@@ -1,5 +1,6 @@
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
+import v8 from 'node:v8';
 import {Worker} from 'node:worker_threads';
 
 import {
@@ -10,6 +11,21 @@ import {
 } from './build-page.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
+/**
+ * Heap size limit (in MB) for each worker thread.
+ *
+ * Worker threads do not inherit the main thread's heap size limit (e.g. from
+ * `NODE_OPTIONS=--max-old-space-size=...`). When `resourceLimits` is unset,
+ * v8 sizes each worker's heap from the memory available at spawn time, which
+ * can collapse to a few hundred MB when many workers start concurrently —
+ * causing "JavaScript heap out of memory" crashes on large builds even on
+ * machines with plenty of RAM. Give each worker the same heap limit as the
+ * main thread so flags like `--max-old-space-size` apply to workers too.
+ */
+const WORKER_HEAP_LIMIT_MB = Math.ceil(
+  v8.getHeapStatistics().heap_size_limit / (1024 * 1024)
+);
 
 export interface BuildWorkerPoolOptions {
   /** Number of worker threads. */
@@ -68,6 +84,7 @@ class BuildWorker {
     this.concurrency = options.workerConcurrency;
     this.worker = new Worker(path.resolve(__dirname, './build-worker.js'), {
       workerData: {rootDir: options.rootDir, mode: options.mode},
+      resourceLimits: {maxOldGenerationSizeMb: WORKER_HEAP_LIMIT_MB},
     });
     let onReady!: () => void;
     let onFailed!: (err: Error) => void;
