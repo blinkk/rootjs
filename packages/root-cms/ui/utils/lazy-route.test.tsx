@@ -1,6 +1,11 @@
 import {render} from '@testing-library/preact';
+import {FunctionComponent} from 'preact';
 import {beforeEach, describe, expect, test, vi} from 'vitest';
-import {ROUTE_IMPORT_RELOAD_KEY, importRouteComponent} from './lazy-route.js';
+import {
+  ROUTE_IMPORT_RELOAD_KEY,
+  importRouteComponent,
+  lazyRoute,
+} from './lazy-route.js';
 
 vi.mock('@mantine/core', async () => {
   const actual: any = await vi.importActual('@mantine/core');
@@ -9,6 +14,15 @@ vi.mock('@mantine/core', async () => {
     Button: ({children, onClick}: any) => (
       <button onClick={onClick}>{children}</button>
     ),
+    Loader: () => <div>loading...</div>,
+  };
+});
+
+// The app frame requires the router location context and the global firebase
+// objects, which aren't available in tests.
+vi.mock('../layout/Layout.js', () => {
+  return {
+    Layout: ({children}: any) => <div className="Layout">{children}</div>,
   };
 });
 
@@ -74,5 +88,64 @@ describe('importRouteComponent', () => {
     const result = render(<ErrorComponent />);
     expect(result.getByText('Page failed to load')).toBeTruthy();
     expect(result.getByText('fetch failed')).toBeTruthy();
+  });
+});
+
+describe('lazyRoute', () => {
+  beforeEach(() => {
+    window.sessionStorage.clear();
+    vi.restoreAllMocks();
+  });
+
+  test('shows a loading indicator until the import resolves', async () => {
+    let resolveImport!: (component: FunctionComponent) => void;
+    const factory = vi.fn(
+      () =>
+        new Promise<FunctionComponent>((resolve) => {
+          resolveImport = resolve;
+        })
+    );
+    const LazyComponent = lazyRoute(factory);
+    const result = render(<LazyComponent />);
+    // The loading screen renders within the app frame by default.
+    expect(
+      result.container.querySelector('.Layout .RouteLoading')
+    ).toBeTruthy();
+    resolveImport(TestComponent);
+    await result.findByText('test page');
+    expect(result.container.querySelector('.RouteLoading')).toBeFalsy();
+  });
+
+  test('shows a frameless loading indicator for frameless routes', () => {
+    const factory = vi.fn(() => new Promise<FunctionComponent>(() => {}));
+    const LazyComponent = lazyRoute(factory, {frame: false});
+    const result = render(<LazyComponent />);
+    expect(result.container.querySelector('.RouteLoading')).toBeTruthy();
+    expect(result.container.querySelector('.Layout')).toBeFalsy();
+  });
+
+  test('renders immediately once the import has resolved', async () => {
+    const factory = vi.fn().mockResolvedValue(TestComponent);
+    const LazyComponent = lazyRoute(factory);
+    const first = render(<LazyComponent />);
+    await first.findByText('test page');
+    first.unmount();
+
+    const second = render(<LazyComponent />);
+    expect(second.container.querySelector('.RouteLoading')).toBeFalsy();
+    expect(second.container.textContent).toContain('test page');
+    expect(factory).toHaveBeenCalledTimes(1);
+  });
+
+  test('renders the error screen when the import fails', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    window.sessionStorage.setItem(ROUTE_IMPORT_RELOAD_KEY, String(Date.now()));
+    const factory = vi.fn().mockRejectedValue(new Error('fetch failed'));
+    const reload = vi.fn();
+    const LazyComponent = lazyRoute(factory, {retryDelayMs: 0, reload});
+    const result = render(<LazyComponent />);
+    expect(result.container.querySelector('.RouteLoading')).toBeTruthy();
+    await result.findByText('Page failed to load');
+    expect(reload).not.toHaveBeenCalled();
   });
 });

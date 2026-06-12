@@ -79,15 +79,19 @@ const EditDataSourcePage = lazyRoute(() =>
     (m) => m.EditDataSourcePage
   )
 );
-const EmbeddedAIPage = lazyRoute(() =>
-  import('./pages/EmbeddedAIPage/EmbeddedAIPage.js').then(
-    (m) => m.EmbeddedAIPage
-  )
+const EmbeddedAIPage = lazyRoute(
+  () =>
+    import('./pages/EmbeddedAIPage/EmbeddedAIPage.js').then(
+      (m) => m.EmbeddedAIPage
+    ),
+  {frame: false}
 );
-const EmbeddedDocumentPage = lazyRoute(() =>
-  import('./pages/EmbeddedDocumentPage/EmbeddedDocumentPage.js').then(
-    (m) => m.EmbeddedDocumentPage
-  )
+const EmbeddedDocumentPage = lazyRoute(
+  () =>
+    import('./pages/EmbeddedDocumentPage/EmbeddedDocumentPage.js').then(
+      (m) => m.EmbeddedDocumentPage
+    ),
+  {frame: false}
 );
 const EditReleasePage = lazyRoute(() =>
   import('./pages/EditReleasePage/EditReleasePage.js').then(

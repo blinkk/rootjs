@@ -1,6 +1,7 @@
 import {FunctionComponent} from 'preact';
-import {lazy} from 'preact-iso';
+import {useEffect, useState} from 'preact/hooks';
 import {RouteLoadError} from '../components/RouteLoadError/RouteLoadError.js';
+import {RouteLoading} from '../components/RouteLoading/RouteLoading.js';
 
 /** Number of times to attempt a route import before giving up. */
 const ROUTE_IMPORT_ATTEMPTS = 3;
@@ -24,6 +25,15 @@ export interface ImportRouteComponentOptions {
   retryDelayMs?: number;
   /** Reloads the page. Overridable in tests. */
   reload?: () => void;
+}
+
+export interface LazyRouteOptions extends ImportRouteComponentOptions {
+  /**
+   * Whether the loading screen renders within the app frame (topbar,
+   * sidebar). Defaults to true. Disable for routes that render outside the
+   * frame, e.g. the embedded pages.
+   */
+  frame?: boolean;
 }
 
 function sleep(ms: number): Promise<void> {
@@ -64,9 +74,8 @@ function reloadOnRouteImportError(reload: () => void): boolean {
  * reloaded to fetch the latest version of the CMS. If a reload was already
  * attempted recently, resolves to a `RouteLoadError` screen instead.
  *
- * NOTE: The returned promise never rejects. preact-iso treats a promise
- * thrown during render as a suspension and only listens for it to resolve, so
- * a rejected import would otherwise leave the router suspended forever.
+ * NOTE: The returned promise never rejects; failures resolve to a component
+ * that renders the error screen, so callers can render the result directly.
  */
 export async function importRouteComponent<P>(
   factory: () => Promise<FunctionComponent<P>>,
@@ -95,11 +104,51 @@ export async function importRouteComponent<P>(
   return () => <RouteLoadError error={lastError} />;
 }
 
-/** Lazy-loads a named component export for use as a route component. */
+/**
+ * Lazy-loads a named component export for use as a route component. While the
+ * import is pending a loading screen is rendered, and once it resolves the
+ * component is cached so subsequent navigations to the route render
+ * immediately without a loading state.
+ */
 export function lazyRoute<P>(
-  factory: () => Promise<FunctionComponent<P>>
+  factory: () => Promise<FunctionComponent<P>>,
+  options?: LazyRouteOptions
 ): FunctionComponent<P> {
-  return lazy(() =>
-    importRouteComponent(factory).then((component) => ({default: component}))
-  ) as unknown as FunctionComponent<P>;
+  let component: FunctionComponent<P> | null = null;
+  let promise: Promise<void> | null = null;
+
+  function load(): Promise<void> {
+    if (!promise) {
+      promise = importRouteComponent(factory, options).then((c) => {
+        component = c;
+      });
+    }
+    return promise;
+  }
+
+  return function LazyRoute(props: P) {
+    const [, setLoaded] = useState(component !== null);
+    useEffect(() => {
+      if (component) {
+        return;
+      }
+      let cancelled = false;
+      load().then(() => {
+        if (!cancelled) {
+          setLoaded(true);
+        }
+      });
+      return () => {
+        cancelled = true;
+      };
+    }, []);
+    if (!component) {
+      // Start the import during render (rather than waiting for the effect)
+      // so the chunk request goes out as early as possible.
+      load();
+      return <RouteLoading frame={options?.frame} />;
+    }
+    const Component = component;
+    return <Component {...(props as any)} />;
+  };
 }
