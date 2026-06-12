@@ -36,6 +36,7 @@ import {
   DefaultChatTransport,
   lastAssistantMessageIsCompleteWithToolCalls,
 } from 'ai';
+import {doc, onSnapshot} from 'firebase/firestore';
 import {marked} from 'marked';
 import type {ComponentChildren} from 'preact';
 import {useCallback, useEffect, useMemo, useRef, useState} from 'preact/hooks';
@@ -43,6 +44,7 @@ import {useLocation} from 'preact-iso';
 import {joinClassNames} from '../../utils/classes.js';
 import {uploadFileToGCS} from '../../utils/gcs.js';
 import {stableJsonStringify} from '../../utils/objects.js';
+import {testHasExperimentParam} from '../../utils/url-params.js';
 import {BouncingLoader} from '../BouncingLoader/BouncingLoader.js';
 import {JsDiff} from '../JsDiff/JsDiff.js';
 import {Markdown} from '../Markdown/Markdown.js';
@@ -211,6 +213,15 @@ interface ToolApprovalControls {
 }
 
 const NEW_CHAT_ID = '';
+
+/**
+ * Experiment (`?e=AiFirestoreStream`): some hosting setups buffer SSE
+ * responses and deliver the whole AI reply at once (Firebase Hosting
+ * rewrites, App Engine standard). When enabled, the server mirrors the
+ * in-progress assistant message to the chat's Firestore doc and the client
+ * renders it via `onSnapshot` while the HTTP response is held upstream.
+ */
+const EXPERIMENT_FIRESTORE_STREAM = testHasExperimentParam('AiFirestoreStream');
 
 export function RootAIChat(props: RootAIChatProps) {
   const [config, setConfig] = useState<AiConfigResponse | null>(null);
@@ -836,6 +847,9 @@ function ChatPane(props: {
             modelId: modelRef.current,
             executionMode: executionModeRef.current,
             docId: docContextRef.current?.docId,
+            ...(EXPERIMENT_FIRESTORE_STREAM
+              ? {experiments: {firestoreStream: true}}
+              : undefined),
           },
         }),
       }),
@@ -866,10 +880,62 @@ function ChatPane(props: {
 
   const isStreaming = status === 'streaming' || status === 'submitted';
 
+  // Experiment (`AiFirestoreStream`): while a response is in flight, watch
+  // the chat doc's `streamingMessage` field and overlay it on the transcript
+  // so output renders incrementally even when the SSE response is buffered
+  // upstream. The overlay is dropped once `useChat` receives the real
+  // response and `status` leaves the streaming state.
+  const [streamingOverlay, setStreamingOverlay] = useState<UIMessage | null>(
+    null
+  );
+
+  useEffect(() => {
+    if (!EXPERIMENT_FIRESTORE_STREAM || !isStreaming) {
+      setStreamingOverlay(null);
+      return;
+    }
+    const projectId = window.__ROOT_CTX.rootConfig.projectId;
+    const chatDocRef = doc(
+      window.firebase.db,
+      'Projects',
+      projectId,
+      'AiChats',
+      effectiveChatId
+    );
+    return onSnapshot(chatDocRef, (snapshot) => {
+      const message = snapshot.data()?.streamingMessage as
+        | UIMessage
+        | undefined;
+      // The server deletes the field when the stream ends; keep the last
+      // snapshot so the text doesn't flicker away before the buffered HTTP
+      // response arrives.
+      if (message?.id) {
+        setStreamingOverlay(message);
+      }
+    });
+  }, [isStreaming, effectiveChatId]);
+
+  const displayMessages = useMemo(() => {
+    if (!streamingOverlay || !isStreaming) {
+      return messages;
+    }
+    // Tool-result resubmits continue the previous assistant message under
+    // the same id; the overlay snapshot is seeded from the persisted message
+    // on the server, so it supersedes the local copy. Otherwise the overlay
+    // is a brand new assistant turn — append it.
+    const index = messages.findIndex((m) => m.id === streamingOverlay.id);
+    if (index === -1) {
+      return [...messages, streamingOverlay];
+    }
+    const merged = messages.slice();
+    merged[index] = streamingOverlay;
+    return merged;
+  }, [messages, streamingOverlay, isStreaming]);
+
   return (
     <>
       <ChatTranscript
-        messages={messages}
+        messages={displayMessages}
         isStreaming={isStreaming}
         emptyMessage={!props.model ? 'Select a model to start.' : undefined}
         toolApprovals={{

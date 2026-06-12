@@ -825,6 +825,11 @@ export function api(server: Server, options: ApiOptions) {
       typeof body.docId === 'string' && body.docId.trim()
         ? body.docId.trim()
         : undefined;
+    // Experimental (`AiFirestoreStream`): opted into per-request by clients
+    // running with `?e=AiFirestoreStream`. Mirrors in-progress output to the
+    // chat's Firestore doc so the stream renders incrementally even when an
+    // upstream proxy buffers the SSE response (see `pipeWebResponse` notes).
+    const mirrorStreamToFirestore = body.experiments?.firestoreStream === true;
 
     const cmsClient = new RootCMSClient(req.rootConfig!);
     // Require the user to have an assigned role on this project. Write tools
@@ -922,6 +927,7 @@ export function api(server: Server, options: ApiOptions) {
         executionMode,
         existingTitle,
         activeDocId,
+        mirrorStreamToFirestore,
         loadCollection: (collectionId) =>
           getCollectionSchema(req, collectionId),
         loadAllCollections: async () =>

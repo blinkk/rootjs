@@ -17,16 +17,19 @@ import {createOpenAICompatible} from '@ai-sdk/openai-compatible';
 import {RootConfig} from '@blinkk/root';
 import {
   convertToModelMessages,
+  createUIMessageStreamResponse,
   generateImage as generateImageSdk,
   generateText,
   ImageModel,
   LanguageModel,
+  readUIMessageStream,
   stepCountIs,
   streamText,
   ToolSet,
   UIMessage,
+  UIMessageChunk,
 } from 'ai';
-import {Timestamp} from 'firebase-admin/firestore';
+import {FieldValue, Timestamp} from 'firebase-admin/firestore';
 import {
   CmsToolContext,
   createCmsTools,
@@ -122,6 +125,13 @@ interface ChatRecord {
   modelId?: string;
   title?: string;
   messages: UIMessage[];
+  /**
+   * Experimental (`AiFirestoreStream`): snapshot of the in-progress assistant
+   * message while a response is streaming, mirrored here so clients behind
+   * SSE-buffering proxies can render it via `onSnapshot`. Deleted when the
+   * stream ends — `messages` remains the source of truth.
+   */
+  streamingMessage?: UIMessage;
 }
 
 /** Resolves an `AiModelConfig` to an AI SDK `LanguageModel` instance. */
@@ -388,6 +398,16 @@ export class ChatStore {
       updates.title = options.title;
     }
     await this.collection().doc(id).update(updates);
+  }
+
+  async setStreamingMessage(id: string, message: UIMessage): Promise<void> {
+    await this.collection().doc(id).update({streamingMessage: message});
+  }
+
+  async clearStreamingMessage(id: string): Promise<void> {
+    await this.collection()
+      .doc(id)
+      .update({streamingMessage: FieldValue.delete()});
   }
 }
 
@@ -705,6 +725,14 @@ export interface RunChatStreamOptions {
   loadCollection: (collectionId: string) => Promise<Collection | null>;
   /** Loads every project collection keyed by id. */
   loadAllCollections: () => Promise<Record<string, Collection>>;
+  /**
+   * Experimental (`AiFirestoreStream`): also mirrors the in-progress
+   * assistant message to the chat's Firestore doc (throttled) so clients
+   * behind SSE-buffering proxies (Firebase Hosting rewrites, App Engine
+   * standard) can render the stream via `onSnapshot` instead of waiting for
+   * the buffered HTTP response.
+   */
+  mirrorStreamToFirestore?: boolean;
 }
 
 /**
@@ -914,10 +942,10 @@ export async function runChatStream(
     stopWhen: stepCountIs(config.maxSteps ?? 10),
   });
 
-  return result.toUIMessageStreamResponse({
+  const streamOptions = {
     sendReasoning: model.capabilities?.reasoning ?? false,
     originalMessages: sanitizedMessages,
-    onFinish: async ({messages: finalMessages}) => {
+    onFinish: async ({messages: finalMessages}: {messages: UIMessage[]}) => {
       const store = new ChatStore(cmsClient, user);
       // Generate a title only on the first assistant response. Once a chat
       // has a saved title we keep it stable so follow-up messages do not
@@ -942,7 +970,79 @@ export async function runChatStream(
         console.error('failed to persist chat history:', err);
       }
     },
+  };
+  if (!options.mirrorStreamToFirestore) {
+    return result.toUIMessageStreamResponse(streamOptions);
+  }
+  // Tee the UI message stream: one branch becomes the HTTP response (which
+  // may be buffered by upstream proxies), the other is mirrored to Firestore
+  // so the client can render incremental output via `onSnapshot`.
+  const [responseStream, mirrorStream] = result
+    .toUIMessageStream(streamOptions)
+    .tee();
+  const lastMessage = sanitizedMessages.at(-1);
+  void mirrorStreamingMessageToFirestore({
+    stream: mirrorStream,
+    store: new ChatStore(cmsClient, user),
+    chatId,
+    // Tool-result resubmits continue the previous assistant message (same
+    // id), so seed the reader with it to keep snapshots complete.
+    resumeMessage:
+      lastMessage?.role === 'assistant'
+        ? (structuredClone(lastMessage) as UIMessage)
+        : undefined,
   });
+  return createUIMessageStreamResponse({stream: responseStream});
+}
+
+/**
+ * Minimum interval between Firestore writes while mirroring a streaming
+ * response. Firestore sustains ~1 write/sec per document; intermediate
+ * snapshots are complete message states, so skipped ones are never missed.
+ */
+const STREAMING_MESSAGE_WRITE_INTERVAL_MS = 500;
+
+/**
+ * Consumes a UI message stream and periodically writes the assembled
+ * in-progress assistant message to the chat doc's `streamingMessage` field
+ * (see `RunChatStreamOptions.mirrorStreamToFirestore`). The field is deleted
+ * when the stream ends; `onFinish` persists the final messages separately.
+ * Mirroring is best-effort — failures are logged, never surfaced to the
+ * HTTP response branch.
+ */
+async function mirrorStreamingMessageToFirestore(options: {
+  stream: ReadableStream<UIMessageChunk>;
+  store: ChatStore;
+  chatId: string;
+  resumeMessage?: UIMessage;
+}) {
+  const {stream, store, chatId, resumeMessage} = options;
+  let lastWriteAt = 0;
+  try {
+    const messageStates = readUIMessageStream({
+      stream,
+      message: resumeMessage,
+      onError: (err) => {
+        console.error('[root-cms ai] stream mirror error:', err);
+      },
+    });
+    for await (const message of messageStates) {
+      const now = Date.now();
+      if (now - lastWriteAt < STREAMING_MESSAGE_WRITE_INTERVAL_MS) {
+        continue;
+      }
+      lastWriteAt = now;
+      await store.setStreamingMessage(chatId, stripUndefined(message));
+    }
+  } catch (err) {
+    console.error('[root-cms ai] failed to mirror stream to firestore:', err);
+  } finally {
+    try {
+      await store.clearStreamingMessage(chatId);
+    } catch (err) {
+      console.error('[root-cms ai] failed to clear streaming message:', err);
+    }
+  }
 }
 
 export interface RunEditObjectStreamOptions {
