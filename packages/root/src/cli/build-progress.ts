@@ -52,6 +52,8 @@ interface WritableStreamLike {
   isTTY?: boolean;
 }
 
+type AnyWriteFn = (...args: unknown[]) => unknown;
+
 export interface BuildProgressOptions {
   /** Total number of files expected. */
   total: number;
@@ -72,6 +74,14 @@ export interface BuildProgressOptions {
   intervalMs?: number;
   /** Number of largest files to list in the summary. Defaults to 5. */
   summaryTopN?: number;
+  /**
+   * Streams to intercept while the TTY progress bar is active. Anything
+   * written to these streams (e.g. `console.log` calls from user code during
+   * page renders) clears the bar first so the log prints on its own line,
+   * then the bar is redrawn below. Defaults to
+   * `[process.stdout, process.stderr]` when `stream` is not overridden.
+   */
+  interceptStreams?: WritableStreamLike[];
 }
 
 const BAR_WIDTH = 20;
@@ -82,6 +92,12 @@ const BAR_WIDTH = 20;
  * Tracks completed files and bytes written, and renders progress according
  * to the configured `BuildLogMode`. Designed to keep CI logs readable: a
  * 10,000-page build emits ~10 progress lines instead of 10,000.
+ *
+ * While the interactive (TTY) progress bar is active, writes to
+ * `interceptStreams` from other sources (e.g. `console.log` from user code
+ * rendering pages, including output forwarded from worker threads) are
+ * wrapped so log lines appear above the bar instead of interleaving with it.
+ * Call `finish()` or `abort()` to restore the streams.
  */
 export class BuildProgress {
   private readonly total: number;
@@ -102,6 +118,13 @@ export class BuildProgress {
   private lastMilestone = 0;
   private ttyLineActive = false;
   private done = false;
+  /** Writes to `this.stream`, bypassing the log interceptor. */
+  private streamWrite: (str: string) => unknown;
+  /** Restores the original `write` of each intercepted stream. */
+  private restoreWrites: Array<() => void> = [];
+  /** True when intercepted output ended without a trailing newline. */
+  private foreignLineOpen = false;
+  private redrawTimer: ReturnType<typeof setTimeout> | null = null;
 
   constructor(options: BuildProgressOptions) {
     this.total = options.total;
@@ -114,6 +137,13 @@ export class BuildProgress {
     this.intervalMs = options.intervalMs ?? (this.isTTY ? 80 : 5000);
     this.summaryTopN = options.summaryTopN ?? 5;
     this.startedAt = this.now();
+    this.streamWrite = (str: string) => this.stream.write(str);
+    const interceptStreams =
+      options.interceptStreams ??
+      (options.stream ? [] : [process.stdout, process.stderr]);
+    if (this.isTTY && this.mode === 'progress') {
+      this.interceptLogs(interceptStreams);
+    }
   }
 
   /** Records a completed output file. */
@@ -137,6 +167,7 @@ export class BuildProgress {
   abort() {
     this.clearTtyLine();
     this.done = true;
+    this.restoreLogs();
   }
 
   /** Prints the final summary. */
@@ -145,6 +176,7 @@ export class BuildProgress {
       return;
     }
     this.done = true;
+    this.restoreLogs();
     this.clearTtyLine();
     const elapsed = formatDuration(this.now() - this.startedAt);
     const summary = `${this.completed} ${this.itemLabel} (${formatBytes(
@@ -200,12 +232,13 @@ export class BuildProgress {
   }
 
   private renderTtyLine(now: number) {
+    this.closeForeignLine();
     const ratio = this.total > 0 ? this.completed / this.total : 0;
     const filled = Math.round(ratio * BAR_WIDTH);
     const bar = '▕' + '█'.repeat(filled) + '░'.repeat(BAR_WIDTH - filled) + '▏';
     const pct = String(Math.floor(ratio * 100)).padStart(3, ' ');
     const line = `  ${bar} ${pct}% · ${this.completed}/${this.total} ${this.itemLabel} · ${formatBytes(this.totalBytes)} · ${formatDuration(now - this.startedAt)}${this.eta(now)}`;
-    this.stream.write(`\r\x1b[2K${line}`);
+    this.streamWrite(`\r\x1b[2K${line}`);
     this.ttyLineActive = true;
   }
 
@@ -222,13 +255,77 @@ export class BuildProgress {
 
   private clearTtyLine() {
     if (this.ttyLineActive) {
-      this.stream.write('\r\x1b[2K');
+      this.streamWrite('\r\x1b[2K');
       this.ttyLineActive = false;
     }
   }
 
   private println(line: string) {
     this.clearTtyLine();
-    this.stream.write(line + '\n');
+    this.closeForeignLine();
+    this.streamWrite(line + '\n');
+  }
+
+  /**
+   * Patches `write` on each stream so foreign output (user logs) clears the
+   * progress bar line before printing and schedules a redraw after. The
+   * progress bar's own writes go through `streamWrite` and bypass the patch.
+   */
+  private interceptLogs(streams: WritableStreamLike[]) {
+    // eslint-disable-next-line @typescript-eslint/no-this-alias
+    const self = this;
+    for (const stream of streams) {
+      const original = stream.write as AnyWriteFn;
+      if (stream === this.stream) {
+        this.streamWrite = (str: string) => original.call(stream, str);
+      }
+      stream.write = function (...args: unknown[]) {
+        self.clearTtyLine();
+        const chunk = args[0];
+        const text = typeof chunk === 'string' ? chunk : String(chunk ?? '');
+        self.foreignLineOpen = text.length > 0 && !text.endsWith('\n');
+        const result = original.apply(stream, args);
+        self.scheduleRedraw();
+        return result;
+      } as WritableStreamLike['write'];
+      this.restoreWrites.push(() => {
+        stream.write = original as WritableStreamLike['write'];
+      });
+    }
+  }
+
+  /** Redraws the progress bar shortly after foreign output interrupts it. */
+  private scheduleRedraw() {
+    if (this.done || this.redrawTimer !== null || this.completed === 0) {
+      return;
+    }
+    this.redrawTimer = setTimeout(() => {
+      this.redrawTimer = null;
+      if (!this.done) {
+        this.renderTtyLine(this.now());
+      }
+    }, 0);
+    this.redrawTimer.unref?.();
+  }
+
+  /**
+   * If intercepted output left a partial (unterminated) line, terminate it
+   * so the next progress bar render doesn't overwrite it with `\r`.
+   */
+  private closeForeignLine() {
+    if (this.foreignLineOpen) {
+      this.streamWrite('\n');
+      this.foreignLineOpen = false;
+    }
+  }
+
+  private restoreLogs() {
+    if (this.redrawTimer) {
+      clearTimeout(this.redrawTimer);
+      this.redrawTimer = null;
+    }
+    while (this.restoreWrites.length > 0) {
+      this.restoreWrites.pop()!();
+    }
   }
 }
