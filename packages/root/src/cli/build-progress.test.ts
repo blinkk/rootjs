@@ -209,3 +209,57 @@ test('abort suppresses the summary and clears the progress line', () => {
   progress.finish();
   assert.notInclude(stream.output(), '✓');
 });
+
+test('intercepted logs print above the TTY progress bar', async () => {
+  const stream = new FakeStream({isTTY: true});
+  const stderr = new FakeStream({isTTY: true});
+  const clock = fakeClock();
+  const progress = new BuildProgress({
+    total: 10,
+    mode: 'progress',
+    stream,
+    interceptStreams: [stream, stderr],
+    now: clock.now,
+    intervalMs: 0,
+  });
+  clock.advance(100);
+  progress.add('page-0/index.html', 1024);
+  // Simulate user code logging mid-build (e.g. console.log during render).
+  stream.write('user log\n');
+  stderr.write('warning log\n');
+  // The bar is cleared before each foreign log line.
+  const raw = stream.chunks.join('');
+  assert.include(raw, '\r\x1b[2Kuser log\n');
+  assert.equal(stderr.output(), 'warning log\n');
+  // The bar redraws (async) after foreign output.
+  await new Promise((resolve) => setTimeout(resolve, 5));
+  const lastChunk = stripAnsi(stream.chunks[stream.chunks.length - 1]);
+  assert.include(lastChunk, '1/10 pages');
+  progress.finish();
+  // Streams are restored: writes no longer trigger bar redraws.
+  const numChunks = stream.chunks.length;
+  stream.write('after\n');
+  await new Promise((resolve) => setTimeout(resolve, 5));
+  assert.equal(stream.chunks.length, numChunks + 1);
+});
+
+test('intercepted partial lines are terminated before the bar redraws', async () => {
+  const stream = new FakeStream({isTTY: true});
+  const clock = fakeClock();
+  const progress = new BuildProgress({
+    total: 10,
+    mode: 'progress',
+    stream,
+    interceptStreams: [stream],
+    now: clock.now,
+    intervalMs: 0,
+  });
+  clock.advance(100);
+  progress.add('page-0/index.html', 1024);
+  stream.write('no trailing newline');
+  await new Promise((resolve) => setTimeout(resolve, 5));
+  const output = stream.output();
+  // The partial line is kept on its own line, with the bar below it.
+  assert.include(output, 'no trailing newline\n');
+  progress.finish();
+});
