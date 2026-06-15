@@ -46,6 +46,22 @@ test('renders disableRemotePlayback as a boolean attribute', () => {
   expect(output).toBe('<video disableremoteplayback></video>');
 });
 
+test('renders popover as a boolean attribute', () => {
+  // `<div popover />` should minimize to `popover` (treated as "auto" by the
+  // browser) rather than rendering an invalid `popover="true"` value.
+  expect(renderJsxToString(<div popover />, {mode: 'minimal'})).toBe(
+    '<div popover></div>'
+  );
+  // `popover={false}` removes the attribute.
+  expect(
+    renderJsxToString(<div popover={false} />, {mode: 'minimal'})
+  ).toBe('<div></div>');
+  // Explicit string values are preserved.
+  expect(
+    renderJsxToString(<div popover="manual" />, {mode: 'minimal'})
+  ).toBe('<div popover="manual"></div>');
+});
+
 test('handles falsy attribute values', () => {
   // true: boolean attrs are minimized, non-boolean attrs render as "true"
   expect(

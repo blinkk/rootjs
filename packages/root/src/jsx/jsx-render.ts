@@ -131,6 +131,7 @@ const BOOLEAN_ATTRS = new Set([
   'novalidate',
   'open',
   'playsinline',
+  'popover',
   'readonly',
   'required',
   'reversed',
