@@ -31,6 +31,7 @@ import {
 } from '@tabler/icons-preact';
 import {ChangeEvent} from 'preact/compat';
 import {useEffect, useMemo, useState} from 'preact/hooks';
+import {usePagination} from '../../hooks/usePagination.js';
 import {useProjectRoles} from '../../hooks/useProjectRoles.js';
 import {
   Asset,
@@ -61,6 +62,7 @@ import {
 import {notifyErrors} from '../../utils/notifications.js';
 import {testCanPublish} from '../../utils/permissions.js';
 import {getTimeAgo} from '../../utils/time.js';
+import {Pagination, PaginationSummary} from '../Pagination/Pagination.js';
 import {UserAvatar} from '../UserAvatar/UserAvatar.js';
 import {AssetDetailsModal} from './AssetDetailsModal.js';
 import {
@@ -94,6 +96,9 @@ export interface AssetBrowserProps {
   /** Manage mode: opens the details modal for an asset id on load (deep link). */
   initialAssetId?: string;
 }
+
+/** Number of assets to display per page. */
+const PAGE_SIZE = 100;
 
 /**
  * A Drive-like file browser for the project's asset library. Lists the
@@ -213,6 +218,14 @@ export function AssetBrowser(props: AssetBrowserProps) {
     return res;
   }, [assets, searchIndex, filter, props.mode, props.accept]);
 
+  // Paginate the listing, resetting to the first page when the folder or the
+  // search filter changes.
+  const pagination = usePagination(filteredAssets, {
+    pageSize: PAGE_SIZE,
+    resetDeps: [folder, filter],
+  });
+  const pageItems = pagination.pageItems;
+
   async function uploadFiles(files: File[]) {
     if (files.length === 0 || uploading) {
       return;
@@ -309,9 +322,10 @@ export function AssetBrowser(props: AssetBrowserProps) {
       (testIsImageFile(asset.file?.filename || asset.name) ||
         testIsVideoFile(asset.file?.filename || asset.name))
   );
+  // Select-all applies to the assets visible on the current page; selections
+  // made on other pages are preserved.
   const allSelected =
-    filteredAssets.length > 0 &&
-    filteredAssets.every((asset) => selected.has(asset.id));
+    pageItems.length > 0 && pageItems.every((asset) => selected.has(asset.id));
 
   function toggleSelected(asset: Asset) {
     setSelected((prev) => {
@@ -326,11 +340,15 @@ export function AssetBrowser(props: AssetBrowserProps) {
   }
 
   function toggleSelectAll() {
-    if (allSelected) {
-      setSelected(new Map());
-    } else {
-      setSelected(new Map(filteredAssets.map((asset) => [asset.id, asset])));
-    }
+    setSelected((prev) => {
+      const next = new Map(prev);
+      if (allSelected) {
+        pageItems.forEach((asset) => next.delete(asset.id));
+      } else {
+        pageItems.forEach((asset) => next.set(asset.id, asset));
+      }
+      return next;
+    });
   }
 
   return (
@@ -483,7 +501,10 @@ export function AssetBrowser(props: AssetBrowserProps) {
                       size="xs"
                       aria-label="Select all"
                       checked={allSelected}
-                      indeterminate={!allSelected && selected.size > 0}
+                      indeterminate={
+                        !allSelected &&
+                        pageItems.some((asset) => selected.has(asset.id))
+                      }
                       onChange={() => toggleSelectAll()}
                     />
                   </th>
@@ -494,7 +515,7 @@ export function AssetBrowser(props: AssetBrowserProps) {
               </tr>
             </thead>
             <tbody>
-              {filteredAssets.map((asset) =>
+              {pageItems.map((asset) =>
                 asset.type === 'folder' ? (
                   <tr
                     key={asset.id}
@@ -647,6 +668,22 @@ export function AssetBrowser(props: AssetBrowserProps) {
           </Table>
         )}
       </div>
+
+      {pagination.totalPages > 1 && (
+        <div className="AssetBrowser__footer">
+          <PaginationSummary
+            start={pagination.start}
+            end={pagination.end}
+            total={pagination.totalItems}
+            noun="asset"
+          />
+          <Pagination
+            total={pagination.totalPages}
+            page={pagination.page}
+            onChange={pagination.setPage}
+          />
+        </div>
+      )}
 
       <NewFolderModal
         opened={newFolderModalOpened}

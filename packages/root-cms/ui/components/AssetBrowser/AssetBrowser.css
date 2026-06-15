@@ -118,6 +118,14 @@
   border: none;
 }
 
+.AssetBrowser__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
 .AssetBrowser__table td,
 .AssetBrowser__table th {
   border-left: none !important;
