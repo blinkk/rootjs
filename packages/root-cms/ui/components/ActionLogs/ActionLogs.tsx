@@ -3,7 +3,6 @@ import {
   Button,
   Loader,
   MultiSelect,
-  Pagination,
   Select,
   Table,
   TextInput,
@@ -13,9 +12,11 @@ import {useDebouncedValue} from '@mantine/hooks';
 import {IconSearch} from '@tabler/icons-preact';
 import {Timestamp} from 'firebase/firestore';
 import {useEffect, useMemo, useState} from 'preact/hooks';
+import {usePagination} from '../../hooks/usePagination.js';
 import {Action, listActions} from '../../utils/actions.js';
 import {joinClassNames} from '../../utils/classes.js';
 import {getSpreadsheetUrl} from '../../utils/gsheets.js';
+import {Pagination, PaginationSummary} from '../Pagination/Pagination.js';
 import {Surface} from '../Surface/Surface.js';
 import {UserAvatar} from '../UserAvatar/UserAvatar.js';
 import './ActionsLogs.css';
@@ -78,9 +79,6 @@ export function ActionLogs(props: ActionLogsProps) {
   const [actionFilters, setActionFilters] = useState<string[]>([]);
   const [userFilters, setUserFilters] = useState<string[]>([]);
   const [timeFilter, setTimeFilter] = useState<string | null>('all');
-
-  // Pagination state.
-  const [currentPage, setCurrentPage] = useState(1);
 
   const {actions, loading} = useActions();
 
@@ -162,22 +160,12 @@ export function ActionLogs(props: ActionLogsProps) {
     });
   }, [actions, debouncedSearch, actionFilters, userFilters, timeFilter]);
 
-  // Paginate filtered actions (skip pagination in compact mode).
-  const totalPages = props.compact
-    ? 1
-    : Math.ceil(filteredActions.length / PAGE_SIZE);
-  const paginatedActions = useMemo(() => {
-    if (props.compact) {
-      return filteredActions;
-    }
-    const start = (currentPage - 1) * PAGE_SIZE;
-    return filteredActions.slice(start, start + PAGE_SIZE);
-  }, [filteredActions, currentPage, props.compact]);
-
-  // Reset to page 1 when filters change.
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [debouncedSearch, actionFilters, userFilters, timeFilter]);
+  // Paginate filtered actions, resetting to the first page when filters change.
+  const pagination = usePagination(filteredActions, {
+    pageSize: PAGE_SIZE,
+    resetDeps: [debouncedSearch, actionFilters, userFilters, timeFilter],
+  });
+  const paginatedActions = pagination.pageItems;
 
   if (loading) {
     return (
@@ -229,12 +217,17 @@ export function ActionLogs(props: ActionLogsProps) {
               onChange={setTimeFilter}
             />
           </div>
-          <div className="ActionsLog__summary">
-            Showing {paginatedActions.length} of {filteredActions.length}{' '}
-            actions
-            {filteredActions.length !== actions.length &&
-              ` (filtered from ${actions.length} total)`}
-          </div>
+          <PaginationSummary
+            start={pagination.start}
+            end={pagination.end}
+            total={pagination.totalItems}
+            noun="action"
+            note={
+              filteredActions.length !== actions.length
+                ? `filtered from ${actions.length} total`
+                : undefined
+            }
+          />
         </div>
       )}
 
@@ -294,16 +287,11 @@ export function ActionLogs(props: ActionLogsProps) {
         </Table>
       </Surface>
 
-      {!props.compact && totalPages > 1 && (
-        <div className="ActionsLog__pagination">
-          <Pagination
-            total={totalPages}
-            value={currentPage}
-            onChange={setCurrentPage}
-            size="sm"
-          />
-        </div>
-      )}
+      <Pagination
+        total={pagination.totalPages}
+        page={pagination.page}
+        onChange={pagination.setPage}
+      />
     </div>
   );
 }
