@@ -3,6 +3,7 @@ import {ContextModalProps, useModals} from '@mantine/modals';
 import {useEffect, useState} from 'preact/hooks';
 import {useModalTheme} from '../../hooks/useModalTheme.js';
 import {DataSource, listDataSources} from '../../utils/data-source.js';
+import {DataSourceIcon} from '../DataSourceIcon/DataSourceIcon.js';
 import './DataSourceSelectModal.css';
 
 const MODAL_ID = 'DataSourceSelectModal';
@@ -72,11 +73,17 @@ export function DataSourceSelectModal(
         <div className="DataSourceSelectModal__list">
           {dataSources.map((ds) => (
             <div key={ds.id} className="DataSourceSelectModal__item">
+              <DataSourceIcon
+                className="DataSourceSelectModal__item__icon"
+                type={ds.type}
+              />
               <div className="DataSourceSelectModal__item__info">
                 <div className="DataSourceSelectModal__item__id">{ds.id}</div>
-                <div className="DataSourceSelectModal__item__description">
-                  {ds.description || ''}
-                </div>
+                {ds.description && (
+                  <div className="DataSourceSelectModal__item__description">
+                    {ds.description}
+                  </div>
+                )}
               </div>
               <div className="DataSourceSelectModal__item__action">
                 {selectedIds.includes(ds.id) ? (
