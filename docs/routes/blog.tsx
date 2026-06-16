@@ -20,7 +20,10 @@ let cmsClient: RootCMSClient | null = null;
 
 export default function Page(props: PageProps) {
   return (
-    <BaseLayout title="Blog">
+    <BaseLayout
+      title="Blog – Root.js"
+      description="Learn more about the latest features updates for Root.js and its AI-ready content engine."
+    >
       <Container>
         <div className={styles.content}>
           <Text
