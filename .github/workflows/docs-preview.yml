@@ -2,7 +2,7 @@ name: Deploy rootjs.dev Preview
 
 on:
   issue_comment:
-    types: [ created ]
+    types: [created]
   workflow_dispatch:
     inputs:
       pr_number:
@@ -22,7 +22,7 @@ env:
   # WARN to stdout on every `pnpm run`/`pnpm exec` — and FORCE_COLOR adds ANSI
   # codes — which corrupts the captured `firebase --json` output below. Disable
   # the check for this workflow so stdout only contains the command's own output.
-  PNPM_CONFIG_VERIFY_DEPS_BEFORE_RUN: "false"
+  PNPM_CONFIG_VERIFY_DEPS_BEFORE_RUN: 'false'
 
 jobs:
   preview:
@@ -96,12 +96,12 @@ jobs:
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
         with:
-          version: "11.5.1"
+          version: '11.7.0'
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: "24"
+          node-version: '24'
           cache: pnpm
           cache-dependency-path: pnpm-lock.yaml
 
