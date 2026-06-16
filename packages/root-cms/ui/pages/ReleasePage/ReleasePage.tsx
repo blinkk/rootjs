@@ -13,6 +13,7 @@ import {showNotification, updateNotification} from '@mantine/notifications';
 import {IconSettings} from '@tabler/icons-preact';
 import {useEffect, useState} from 'preact/hooks';
 import {ConditionalTooltip} from '../../components/ConditionalTooltip/ConditionalTooltip.js';
+import {DataSourceIcon} from '../../components/DataSourceIcon/DataSourceIcon.js';
 import {DocPreviewCard} from '../../components/DocPreviewCard/DocPreviewCard.js';
 import {Heading} from '../../components/Heading/Heading.js';
 import {Markdown} from '../../components/Markdown/Markdown.js';
@@ -24,6 +25,7 @@ import {useModalTheme} from '../../hooks/useModalTheme.js';
 import {usePageTitle} from '../../hooks/usePageTitle.js';
 import {useProjectRoles} from '../../hooks/useProjectRoles.js';
 import {Layout} from '../../layout/Layout.js';
+import {DataSource, getDataSource} from '../../utils/data-source.js';
 import {notifyErrors} from '../../utils/notifications.js';
 import {testCanPublish} from '../../utils/permissions.js';
 import {
@@ -351,6 +353,36 @@ ReleasePage.DocsList = (props: {release: Release}) => {
 ReleasePage.DataSourcesList = (props: {release: Release}) => {
   const release = props.release;
   const ids = release.dataSourceIds || [];
+  const [dataSources, setDataSources] = useState<Record<string, DataSource>>(
+    {}
+  );
+
+  useEffect(() => {
+    let cancelled = false;
+    async function fetchAll() {
+      const entries = await Promise.all(
+        ids.map(async (id) => {
+          const ds = await getDataSource(id);
+          return [id, ds] as const;
+        })
+      );
+      if (cancelled) {
+        return;
+      }
+      const map: Record<string, DataSource> = {};
+      for (const [id, ds] of entries) {
+        if (ds) {
+          map[id] = ds;
+        }
+      }
+      setDataSources(map);
+    }
+    fetchAll();
+    return () => {
+      cancelled = true;
+    };
+  }, [ids.join(',')]);
+
   return (
     <div className="ReleasePage__DataSourcesList">
       <div className="ReleasePage__DataSourcesList__header">
@@ -366,11 +398,31 @@ ReleasePage.DataSourcesList = (props: {release: Release}) => {
         </Button>
       </div>
       <div className="ReleasePage__DataSourcesList__items">
-        {ids.map((id) => (
-          <div key={id} className="ReleasePage__DataSourcesList__item">
-            <a href={`/cms/data/${id}`}>{id}</a>
-          </div>
-        ))}
+        {ids.map((id) => {
+          const ds = dataSources[id];
+          return (
+            <a
+              key={id}
+              className="ReleasePage__DataSourcesList__item"
+              href={`/cms/data/${id}`}
+            >
+              <DataSourceIcon
+                className="ReleasePage__DataSourcesList__item__icon"
+                type={ds?.type}
+              />
+              <div className="ReleasePage__DataSourcesList__item__info">
+                <div className="ReleasePage__DataSourcesList__item__id">
+                  {id}
+                </div>
+                {ds?.description && (
+                  <div className="ReleasePage__DataSourcesList__item__description">
+                    {ds.description}
+                  </div>
+                )}
+              </div>
+            </a>
+          );
+        })}
       </div>
     </div>
   );

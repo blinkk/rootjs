@@ -14,6 +14,7 @@ import {useLocation} from 'preact-iso';
 import {isSlugValid} from '../../../shared/slug.js';
 import {ConditionalTooltip} from '../../components/ConditionalTooltip/ConditionalTooltip.js';
 import {useProjectRoles} from '../../hooks/useProjectRoles.js';
+import {DataSource, getDataSource} from '../../utils/data-source.js';
 import {notifyErrors} from '../../utils/notifications.js';
 import {testCanPublish} from '../../utils/permissions.js';
 import {
@@ -23,6 +24,7 @@ import {
   getRelease,
   updateRelease,
 } from '../../utils/release.js';
+import {DataSourceIcon} from '../DataSourceIcon/DataSourceIcon.js';
 import {useDataSourceSelectModal} from '../DataSourceSelectModal/DataSourceSelectModal.js';
 import {useDocPickerModal} from '../DocPickerModal/DocPickerModal.js';
 import {DocPreviewCard} from '../DocPreviewCard/DocPreviewCard.js';
@@ -347,21 +349,65 @@ ReleaseForm.DataSourceIds = (props: {
   onRemove: (id: string) => void;
   canEdit: boolean;
 }) => {
+  const [dataSources, setDataSources] = useState<Record<string, DataSource>>(
+    {}
+  );
+
+  useEffect(() => {
+    let cancelled = false;
+    async function fetchAll() {
+      const entries = await Promise.all(
+        props.ids.map(async (id) => {
+          const ds = await getDataSource(id);
+          return [id, ds] as const;
+        })
+      );
+      if (cancelled) {
+        return;
+      }
+      const map: Record<string, DataSource> = {};
+      for (const [id, ds] of entries) {
+        if (ds) {
+          map[id] = ds;
+        }
+      }
+      setDataSources(map);
+    }
+    fetchAll();
+    return () => {
+      cancelled = true;
+    };
+  }, [props.ids.join(',')]);
+
   return (
     <div className="ReleaseForm__DataSourceIds">
-      {props.ids.map((id) => (
-        <div key={id} className="ReleaseForm__DataSourceIds__item">
-          <span className="ReleaseForm__DataSourceIds__item__id">{id}</span>
-          {props.canEdit && (
-            <ActionIcon
-              className="ReleaseForm__DataSourceIds__item__remove"
-              onClick={() => props.onRemove(id)}
-            >
-              <IconTrash size={16} />
-            </ActionIcon>
-          )}
-        </div>
-      ))}
+      {props.ids.map((id) => {
+        const ds = dataSources[id];
+        return (
+          <div key={id} className="ReleaseForm__DataSourceIds__item">
+            <DataSourceIcon
+              className="ReleaseForm__DataSourceIds__item__icon"
+              type={ds?.type}
+            />
+            <div className="ReleaseForm__DataSourceIds__item__info">
+              <div className="ReleaseForm__DataSourceIds__item__id">{id}</div>
+              {ds?.description && (
+                <div className="ReleaseForm__DataSourceIds__item__description">
+                  {ds.description}
+                </div>
+              )}
+            </div>
+            {props.canEdit && (
+              <ActionIcon
+                className="ReleaseForm__DataSourceIds__item__remove"
+                onClick={() => props.onRemove(id)}
+              >
+                <IconTrash size={16} />
+              </ActionIcon>
+            )}
+          </div>
+        );
+      })}
     </div>
   );
 };
