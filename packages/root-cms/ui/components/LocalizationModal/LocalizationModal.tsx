@@ -69,7 +69,7 @@ import {
   sourceHash,
   toTranslationLanguages,
 } from '../../utils/l10n.js';
-import {TranslationsMap, loadTranslations} from '../../utils/l10n.js';
+import {TranslationsMap, loadTranslationsByHashes} from '../../utils/l10n.js';
 import {useExportSheetModal} from '../ExportSheetModal/ExportSheetModal.js';
 import {Heading} from '../Heading/Heading.js';
 import {ProgressiveLoader} from '../ProgressiveLoader/ProgressiveLoader.js';
@@ -613,11 +613,12 @@ LocalizationModal.Translations = (props: TranslationsProps) => {
     setLoading(true);
     Promise.all([
       extractStringsForDoc(props.docId),
-      loadTranslations(),
       cmsGetLinkedGoogleSheetL10n(props.docId),
     ])
-      .then(async ([sourceStrings, translationsMap, linkedSheet]) => {
-        // Compute missing tags before showing the UI to prevent flash.
+      .then(async ([sourceStrings, linkedSheet]) => {
+        // Hash each source string and load only the matching translations,
+        // instead of downloading the project's entire translations collection
+        // (which can be very large and is the main cause of slow loads).
         const docTags = [props.docId];
         const hashesWithSources = await Promise.all(
           sourceStrings.map(async (source) => ({
@@ -625,6 +626,10 @@ LocalizationModal.Translations = (props: TranslationsProps) => {
             hash: await sourceHash(source),
           }))
         );
+        const translationsMap = await loadTranslationsByHashes(
+          hashesWithSources.map((item) => item.hash)
+        );
+        // Compute missing tags before showing the UI to prevent flash.
         const missing = new Set<string>();
         for (const {source, hash} of hashesWithSources) {
           if (translationsMap[hash]) {

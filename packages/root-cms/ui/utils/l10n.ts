@@ -2,6 +2,7 @@ import {
   arrayUnion,
   collection,
   doc,
+  documentId,
   getDoc,
   getDocs,
   query,
@@ -71,6 +72,40 @@ export async function loadTranslations(options?: {
     const hash = doc.id;
     translationsMap[hash] = doc.data() as Translation;
   });
+  return translationsMap;
+}
+
+/**
+ * Loads translations for a specific set of source-string hashes. Only the
+ * matching translation docs are fetched (by id), instead of downloading the
+ * project's entire translations collection. This keeps doc-scoped localization
+ * UIs fast even when a project has a very large number of translated strings.
+ */
+export async function loadTranslationsByHashes(
+  hashes: string[]
+): Promise<TranslationsMap> {
+  const uniqueHashes = Array.from(new Set(hashes)).filter(Boolean);
+  const translationsMap: TranslationsMap = {};
+  if (uniqueHashes.length === 0) {
+    return translationsMap;
+  }
+  const colRef = getTranslationsCollection();
+  // Firestore allows a maximum of 30 values per `in` query, so fetch the
+  // matching docs in parallel chunks.
+  const CHUNK_SIZE = 30;
+  const chunks: string[][] = [];
+  for (let i = 0; i < uniqueHashes.length; i += CHUNK_SIZE) {
+    chunks.push(uniqueHashes.slice(i, i + CHUNK_SIZE));
+  }
+  await Promise.all(
+    chunks.map(async (chunk) => {
+      const q = query(colRef, where(documentId(), 'in', chunk));
+      const querySnapshot = await getDocs(q);
+      querySnapshot.forEach((doc) => {
+        translationsMap[doc.id] = doc.data() as Translation;
+      });
+    })
+  );
   return translationsMap;
 }
 
