@@ -1,5 +1,11 @@
 # @blinkk/root
 
+## 3.1.3
+
+### Patch Changes
+
+- c91caf0: fix: progress bar interleaving with console logs during build
+
 ## 3.1.2
 
 ### Patch Changes
