@@ -99,6 +99,7 @@ export async function loadTranslationsByHashes(
   }
   await Promise.all(
     chunks.map(async (chunk) => {
+      // Fetch by doc id only (not by tag) so missing-tag detection still works.
       const q = query(colRef, where(documentId(), 'in', chunk));
       const querySnapshot = await getDocs(q);
       querySnapshot.forEach((doc) => {
