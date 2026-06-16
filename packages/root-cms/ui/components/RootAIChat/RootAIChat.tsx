@@ -32,20 +32,34 @@ import {
   IconX,
 } from '@tabler/icons-preact';
 import type {UIMessage} from 'ai';
-import {
-  DefaultChatTransport,
-  lastAssistantMessageIsCompleteWithToolCalls,
-} from 'ai';
+import {lastAssistantMessageIsCompleteWithToolCalls} from 'ai';
 import {marked} from 'marked';
 import type {ComponentChildren} from 'preact';
 import {useCallback, useEffect, useMemo, useRef, useState} from 'preact/hooks';
 import {useLocation} from 'preact-iso';
+import type {SerializedClientModel} from '../../../shared/ai/models.js';
+import {
+  ChatSummary,
+  deleteChat as deleteStoredChat,
+  generateChatTitle,
+  getChat as getStoredChat,
+  listChats as listStoredChats,
+  saveChat as saveStoredChat,
+} from '../../utils/ai-chats.js';
 import {joinClassNames} from '../../utils/classes.js';
 import {uploadFileToGCS} from '../../utils/gcs.js';
 import {stableJsonStringify} from '../../utils/objects.js';
 import {BouncingLoader} from '../BouncingLoader/BouncingLoader.js';
 import {JsDiff} from '../JsDiff/JsDiff.js';
 import {Markdown} from '../Markdown/Markdown.js';
+import {
+  ClientTurnConfig,
+  createClientChatTransport,
+} from './clientChatTransport.js';
+import {
+  createClientCmsTools,
+  createReadOnlyClientCmsTools,
+} from './clientCmsTools.js';
 import type {CmsToolPreview} from './cmsToolHandlers.js';
 import {
   executeCmsTool,
@@ -87,18 +101,12 @@ interface ModelInfo {
   };
 }
 
-interface ChatSummary {
-  id: string;
-  title?: string;
-  modelId?: string;
-  createdAt: number;
-  modifiedAt: number;
-}
-
 interface AiConfigResponse {
   enabled: boolean;
   defaultModel?: string;
   models?: ModelInfo[];
+  /** Whether the signed-in user may use the auto-apply execution mode. */
+  canAutoApply?: boolean;
 }
 
 interface AttachmentPreview {
@@ -322,6 +330,8 @@ function ChatExperience(props: {
     props.initialChatId || NEW_CHAT_ID
   );
   const [initialMessages, setInitialMessages] = useState<UIMessage[]>([]);
+  // Title of the chat being resumed, so ChatPane doesn't regenerate it.
+  const [initialTitle, setInitialTitle] = useState<string>('');
   const [chats, setChats] = useState<ChatSummary[]>([]);
   // Bumped to force ChatPane to remount on explicit user actions ("new chat",
   // "open chat"). Auto-assigning a chat id from ChatPane does NOT bump this,
@@ -333,16 +343,8 @@ function ChatExperience(props: {
       return;
     }
     try {
-      const res = await fetch('/cms/api/ai.chats.list', {
-        method: 'POST',
-        credentials: 'include',
-        headers: {'content-type': 'application/json'},
-        body: JSON.stringify({}),
-      });
-      const data = await res.json();
-      if (data.success) {
-        setChats(data.chats || []);
-      }
+      const chats = await listStoredChats();
+      setChats(chats);
     } catch (err) {
       console.error('failed to load chat list', err);
     }
@@ -360,39 +362,39 @@ function ChatExperience(props: {
     persistExecutionMode(executionMode);
   }, [executionMode]);
 
-  /** Fetches a chat by id and applies it to state without the activeChatId guard. */
-  const loadChat = async (id: string) => {
+  /** Fetches a chat by id and applies it to state. */
+  const applyChat = async (id: string): Promise<boolean> => {
     try {
-      const res = await fetch('/cms/api/ai.chats.get', {
-        method: 'POST',
-        credentials: 'include',
-        headers: {'content-type': 'application/json'},
-        body: JSON.stringify({id}),
-      });
-      const data = await res.json();
-      if (!data.success) {
-        return;
+      const chat = await getStoredChat(id);
+      if (!chat) {
+        return false;
       }
       setPendingChatId(id);
       setActiveChatId(id);
-      setInitialMessages((data.chat.messages || []) as UIMessage[]);
-      if (data.chat.modelId) {
-        const exists = models.find((m) => m.id === data.chat.modelId);
+      setInitialMessages((chat.messages || []) as UIMessage[]);
+      setInitialTitle(chat.title || '');
+      if (chat.modelId) {
+        const exists = models.find((m) => m.id === chat.modelId);
         if (exists) {
-          setSelectedModelId(data.chat.modelId);
+          setSelectedModelId(chat.modelId);
         }
       }
       setResetKey((k) => k + 1);
+      return true;
     } catch (err) {
       console.error('failed to load chat', err);
+      return false;
     }
   };
+
+  const loadChat = (id: string) => applyChat(id);
 
   const startNewChat = () => {
     setSelectedModelId(getPreferredModelId());
     setPendingChatId(NEW_CHAT_ID);
     setActiveChatId(NEW_CHAT_ID);
     setInitialMessages([]);
+    setInitialTitle('');
     setResetKey((k) => k + 1);
     if (!isPanel) {
       route('/cms/ai');
@@ -403,43 +405,15 @@ function ChatExperience(props: {
     if (id === activeChatId) {
       return;
     }
-    try {
-      const res = await fetch('/cms/api/ai.chats.get', {
-        method: 'POST',
-        credentials: 'include',
-        headers: {'content-type': 'application/json'},
-        body: JSON.stringify({id}),
-      });
-      const data = await res.json();
-      if (!data.success) {
-        return;
-      }
-      setPendingChatId(id);
-      setActiveChatId(id);
-      setInitialMessages((data.chat.messages || []) as UIMessage[]);
-      if (data.chat.modelId) {
-        const exists = models.find((m) => m.id === data.chat.modelId);
-        if (exists) {
-          setSelectedModelId(data.chat.modelId);
-        }
-      }
-      setResetKey((k) => k + 1);
-      if (!isPanel) {
-        route(`/cms/ai/chat/${id}`);
-      }
-    } catch (err) {
-      console.error('failed to load chat', err);
+    const ok = await applyChat(id);
+    if (ok && !isPanel) {
+      route(`/cms/ai/chat/${id}`);
     }
   };
 
   const deleteChat = async (id: string) => {
     try {
-      await fetch('/cms/api/ai.chats.delete', {
-        method: 'POST',
-        credentials: 'include',
-        headers: {'content-type': 'application/json'},
-        body: JSON.stringify({id}),
-      });
+      await deleteStoredChat(id);
       if (activeChatId === id) {
         startNewChat();
       }
@@ -475,9 +449,11 @@ function ChatExperience(props: {
         <ChatPane
           key={resetKey}
           initialChatId={pendingChatId}
+          initialTitle={initialTitle}
           model={selectedModel}
           initialMessages={initialMessages}
           executionMode={executionMode}
+          canAutoApply={props.config.canAutoApply ?? false}
           models={models}
           selectedModel={selectedModel}
           docContext={props.docContext}
@@ -584,11 +560,17 @@ function ChatHeader(props: {
   selectedModel?: ModelInfo;
   onSelectModel: (id: string) => void;
   executionMode: ExecutionMode;
+  canAutoApply: boolean;
   onSelectExecutionMode: (mode: ExecutionMode) => void;
 }) {
+  // Auto-apply requires a publisher role; hide it otherwise (the server also
+  // downgrades it defensively).
+  const availableModes = props.canAutoApply
+    ? EXECUTION_MODES
+    : EXECUTION_MODES.filter((mode) => mode.id !== 'auto');
   const selectedMode =
-    EXECUTION_MODES.find((mode) => mode.id === props.executionMode) ||
-    EXECUTION_MODES[0];
+    availableModes.find((mode) => mode.id === props.executionMode) ||
+    availableModes[0];
   return (
     <div className="RootAIChat__options">
       <Menu
@@ -606,7 +588,7 @@ function ChatHeader(props: {
           </Button>
         }
       >
-        {EXECUTION_MODES.map((mode) => (
+        {availableModes.map((mode) => (
           <Menu.Item
             key={mode.id}
             onClick={() => props.onSelectExecutionMode(mode.id)}
@@ -661,9 +643,11 @@ function ChatHeader(props: {
 
 function ChatPane(props: {
   initialChatId: string;
+  initialTitle: string;
   model?: ModelInfo;
   initialMessages: UIMessage[];
   executionMode: ExecutionMode;
+  canAutoApply: boolean;
   models: ModelInfo[];
   selectedModel?: ModelInfo;
   docContext?: RootAIChatDocContext;
@@ -672,10 +656,9 @@ function ChatPane(props: {
   onChatPersisted: (id: string) => void;
 }) {
   // Lock in the chat id for the lifetime of this mount. We generate one
-  // client-side for new chats (the AI SDK doesn't expose response headers,
-  // so the server can't communicate an id back). Subsequent prop changes do
-  // NOT update this so an in-flight conversation isn't disrupted when the
-  // parent learns the id via `onChatPersisted`.
+  // client-side for new chats. Subsequent prop changes do NOT update this so
+  // an in-flight conversation isn't disrupted when the parent learns the id
+  // via `onChatPersisted`.
   const [effectiveChatId] = useState<string>(
     () => props.initialChatId || generateChatId()
   );
@@ -685,6 +668,17 @@ function ChatPane(props: {
   executionModeRef.current = props.executionMode;
   const docContextRef = useRef(props.docContext);
   docContextRef.current = props.docContext;
+  const onChatPersistedRef = useRef(props.onChatPersisted);
+  onChatPersistedRef.current = props.onChatPersisted;
+  // The connection config + effective execution mode from the most recent
+  // `ai.chat.prepare` call. Cached so we don't re-prepare every turn; reused by
+  // the approval flow, tool set, persistence and title generation.
+  const modelConfigRef = useRef<SerializedClientModel | null>(null);
+  const effectiveModeRef = useRef<ExecutionMode>(props.executionMode);
+  const titleRef = useRef<string>(props.initialTitle);
+  const turnCacheRef = useRef<{key: string; config: ClientTurnConfig} | null>(
+    null
+  );
   const [pendingApprovals, setPendingApprovals] = useState<
     Record<string, PendingToolApproval>
   >({});
@@ -755,7 +749,9 @@ function ChatPane(props: {
         return await executeCmsTool(toolCall.toolName, toolCall.input);
       }
 
-      const mode = executionModeRef.current;
+      // Use the mode the server actually applied (it downgrades auto→approve
+      // for non-publishers) so the approval flow matches the system prompt.
+      const mode = effectiveModeRef.current;
       if (mode === 'read') {
         return {
           success: false,
@@ -818,28 +814,82 @@ function ChatPane(props: {
     [waitForApproval]
   );
 
+  // Persists the conversation to Firestore from the browser once a stream
+  // finishes, generating a title on the first assistant response.
+  const persistChat = useCallback(
+    async (finalMessages: UIMessage[]) => {
+      const model = modelConfigRef.current;
+      try {
+        let title = titleRef.current;
+        if (!title && model) {
+          const generated = await generateChatTitle(model, finalMessages);
+          if (generated && generated !== 'New chat') {
+            title = generated;
+            titleRef.current = generated;
+          }
+        }
+        await saveStoredChat(effectiveChatId, {
+          messages: finalMessages,
+          modelId: model?.id || modelRef.current,
+          title: title || undefined,
+        });
+      } catch (err) {
+        console.error('failed to persist chat history', err);
+      }
+      onChatPersistedRef.current(effectiveChatId);
+    },
+    [effectiveChatId]
+  );
+
+  // Streams directly from the browser to the provider. A non-streaming
+  // `ai.chat.prepare` call supplies the system prompt + selected model's
+  // connection config (cached per model/mode/doc).
   const transport = useMemo(
     () =>
-      new DefaultChatTransport<UIMessage>({
-        api: '/cms/api/ai.chat',
-        credentials: 'include',
-        // Send only the latest message (the new user turn, or a tool-result
-        // turn after an auto-resubmit). The server has the rest of the
-        // history persisted in Firestore under `chatId` and merges it in
-        // before calling `streamText`. Without this, every turn would
-        // re-POST the full conversation (including any prior tool results)
-        // and large chats would exceed body-parser's payload limit.
-        prepareSendMessagesRequest: ({messages}) => ({
-          body: {
-            message: messages.at(-1),
-            chatId: effectiveChatId,
-            modelId: modelRef.current,
-            executionMode: executionModeRef.current,
-            docId: docContextRef.current?.docId,
-          },
-        }),
+      createClientChatTransport({
+        loadTurnConfig: async () => {
+          const modelId = modelRef.current;
+          const mode = executionModeRef.current;
+          const docId = docContextRef.current?.docId;
+          const key = `${modelId}|${mode}|${docId || ''}`;
+          const cached = turnCacheRef.current;
+          if (cached && cached.key === key) {
+            return cached.config;
+          }
+          const res = await fetch('/cms/api/ai.chat.prepare', {
+            method: 'POST',
+            credentials: 'include',
+            headers: {'content-type': 'application/json'},
+            body: JSON.stringify({modelId, executionMode: mode, docId}),
+          });
+          const data = await res.json();
+          if (!res.ok || !data.success) {
+            throw new Error(
+              data.error || `ai.chat.prepare failed: ${res.status}`
+            );
+          }
+          const config: ClientTurnConfig = {
+            model: data.model,
+            system: data.system,
+            maxSteps: data.maxSteps,
+          };
+          modelConfigRef.current = data.model;
+          effectiveModeRef.current = (data.executionMode ||
+            mode) as ExecutionMode;
+          turnCacheRef.current = {key, config};
+          return config;
+        },
+        buildTools: (model) => {
+          if (!model.capabilities.tools) {
+            return {};
+          }
+          return effectiveModeRef.current === 'read'
+            ? createReadOnlyClientCmsTools()
+            : createClientCmsTools();
+        },
+        onFinish: persistChat,
       }),
-    [effectiveChatId]
+    [persistChat]
   );
 
   const {messages, sendMessage, status, error, stop, addToolOutput} = useChat({
@@ -849,8 +899,9 @@ function ChatPane(props: {
     // Auto-resubmit once all tool calls in the latest assistant message have
     // results. Without this, the model would stall after a tool call.
     sendAutomaticallyWhen: lastAssistantMessageIsCompleteWithToolCalls,
-    // Tools execute in the browser using the signed-in user's Firebase
-    // credentials. The result is fed back to the model on the next round.
+    // Write tools execute in the browser via the signed-in user's Firebase
+    // credentials (read tools run inside the streamText loop). The result is
+    // fed back to the model on the next round.
     onToolCall: async ({toolCall}) => {
       const output = await resolveToolOutput(toolCall);
       addToolOutput({
@@ -858,9 +909,6 @@ function ChatPane(props: {
         toolCallId: toolCall.toolCallId,
         output,
       });
-    },
-    onFinish: () => {
-      props.onChatPersisted(effectiveChatId);
     },
   });
 
@@ -894,6 +942,7 @@ function ChatPane(props: {
             selectedModel={props.selectedModel}
             onSelectModel={props.onSelectModel}
             executionMode={props.executionMode}
+            canAutoApply={props.canAutoApply}
             onSelectExecutionMode={props.onSelectExecutionMode}
           />
         }

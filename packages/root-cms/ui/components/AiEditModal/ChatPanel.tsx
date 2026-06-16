@@ -1,13 +1,16 @@
 /**
  * Chat panel used inside the array-item "Edit with AI" modal. Built on top of
- * the Vercel AI SDK (`ai`, `@ai-sdk/react`) and streams responses from
- * `/cms/api/ai.edit_object`.
+ * the Vercel AI SDK (`ai`, `@ai-sdk/react`) and streams responses DIRECTLY
+ * from the browser to the model provider (see `createClientChatTransport`).
+ * The non-streaming `/cms/api/ai.edit.prepare` endpoint supplies the system
+ * prompt (with the JSON being edited) and the selected model's connection
+ * config.
  *
- * The endpoint exposes a READ-ONLY tool subset — the model can inspect CMS
- * docs and schemas for context but cannot mutate Firestore. Edits are
- * proposed as a fenced ```json code block in the assistant's message; this
- * component extracts it and forwards it to the modal so it can populate the
- * diff viewer for the user to approve and save.
+ * Only a READ-ONLY tool subset is exposed — the model can inspect CMS docs and
+ * schemas for context but cannot mutate Firestore. Edits are proposed as a
+ * fenced ```json code block in the assistant's message; this component extracts
+ * it and forwards it to the modal so it can populate the diff viewer for the
+ * user to approve and save.
  */
 import {useChat} from '@ai-sdk/react';
 import {ActionIcon, Loader, Tooltip} from '@mantine/core';
@@ -20,15 +23,14 @@ import {
   IconX,
 } from '@tabler/icons-preact';
 import type {UIMessage} from 'ai';
-import {
-  DefaultChatTransport,
-  lastAssistantMessageIsCompleteWithToolCalls,
-} from 'ai';
+import {lastAssistantMessageIsCompleteWithToolCalls} from 'ai';
 import {useCallback, useEffect, useMemo, useRef, useState} from 'preact/hooks';
 import {joinClassNames} from '../../utils/classes.js';
 import {uploadFileToGCS} from '../../utils/gcs.js';
 import {IconRootAI} from '../IconRootAI/IconRootAI.js';
 import {Markdown} from '../Markdown/Markdown.js';
+import {createClientChatTransport} from '../RootAIChat/clientChatTransport.js';
+import {createReadOnlyClientCmsTools} from '../RootAIChat/clientCmsTools.js';
 import {executeCmsTool} from '../RootAIChat/cmsToolHandlers.js';
 
 /** Result emitted by the "Edit with AI" chat to the parent modal. */
@@ -153,18 +155,37 @@ function ChatPanelInner(props: {
   const editDataRef = useRef(props.editModeData);
   editDataRef.current = props.editModeData;
 
+  // Streams directly from the browser. `ai.edit.prepare` (non-streaming)
+  // returns the read-only edit system prompt — which embeds the current JSON
+  // being edited — plus the selected model's connection config. editData can
+  // change between turns, so the prompt is fetched fresh on each send.
   const transport = useMemo(
     () =>
-      new DefaultChatTransport<UIMessage>({
-        api: '/cms/api/ai.edit_object',
-        credentials: 'include',
-        prepareSendMessagesRequest: ({messages}) => ({
-          body: {
-            messages,
-            modelId: props.model.id,
-            editData: editDataRef.current,
-          },
-        }),
+      createClientChatTransport({
+        loadTurnConfig: async () => {
+          const res = await fetch('/cms/api/ai.edit.prepare', {
+            method: 'POST',
+            credentials: 'include',
+            headers: {'content-type': 'application/json'},
+            body: JSON.stringify({
+              modelId: props.model.id,
+              editData: editDataRef.current,
+            }),
+          });
+          const data = await res.json();
+          if (!res.ok || !data.success) {
+            throw new Error(
+              data.error || `ai.edit.prepare failed: ${res.status}`
+            );
+          }
+          return {
+            model: data.model,
+            system: data.system,
+            maxSteps: data.maxSteps,
+          };
+        },
+        buildTools: (model) =>
+          model.capabilities.tools ? createReadOnlyClientCmsTools() : {},
       }),
     [props.model.id]
   );

@@ -2,19 +2,17 @@ import {promises as fs} from 'node:fs';
 import path from 'node:path';
 import {Server, Request, Response} from '@blinkk/root';
 import {multipartMiddleware} from '@blinkk/root/middleware';
-import {UIMessage} from 'ai';
 import {toTranslationLanguages} from '../shared/translation-languages.js';
 import {
-  ChatStore,
+  buildChatSystemPrompt,
+  buildEditSystemPrompt,
   findModel,
   generateAltText,
   generateImage,
   generatePublishMessage,
   getAiConfig,
-  mergeIncomingMessage,
   normalizeExecutionMode,
-  runChatStream,
-  runEditObjectStream,
+  serializeAiClientModel,
   serializeAiConfig,
   summarizeDiff,
   translateString,
@@ -94,75 +92,6 @@ function isRecord(value: unknown): value is Record<string, any> {
 
 function isDocVersion(value: unknown): value is DocVersion {
   return value === 'draft' || value === 'published';
-}
-
-/**
- * Returns the given `Cache-Control` value with the `no-transform` directive
- * added (defaulting to `no-cache` when none is set). `no-transform` instructs
- * the Express `compression` middleware and any intermediary proxy to leave the
- * body untouched — i.e. not gzip it. This is required for SSE/streaming
- * responses: gzip buffers a window of output before flushing, so without it the
- * stream is delivered to the client all at once instead of incrementally.
- */
-function withNoTransform(cacheControl: string | null): string {
-  const value = cacheControl?.trim() || 'no-cache';
-  if (/(?:^|,)\s*no-transform\s*(?:,|$)/i.test(value)) {
-    return value;
-  }
-  return `${value}, no-transform`;
-}
-
-/**
- * Pipes a Web `Response` (e.g. from `streamText().toUIMessageStreamResponse()`)
- * to an Express `Response`, streaming the body through without buffering.
- *
- * Two upstream layers will otherwise hold the SSE chunks back:
- * - The global `compression()` middleware (added in `root start`) treats
- *   `text/event-stream` as compressible and keeps chunks in a gzip window, so
- *   nothing reaches the client until the response ends. Adding `no-transform`
- *   to `Cache-Control` makes `compression` skip the response, and signals any
- *   intermediary proxy not to gzip it either.
- * - Reverse proxies (nginx and friends) buffer unless sent
- *   `X-Accel-Buffering: no`.
- *
- * Note: App Engine *Standard* additionally buffers every response into a single
- * reply at its frontend and does not stream incrementally, regardless of these
- * headers. Deploy on Cloud Run or App Engine Flexible for real-time streaming.
- */
-async function pipeWebResponse(
-  webResponse: globalThis.Response,
-  res: Response
-): Promise<void> {
-  res.status(webResponse.status);
-  webResponse.headers.forEach((value, key) => {
-    res.setHeader(key, value);
-  });
-  // Keep the stream unbuffered: `no-transform` disables gzip (in the
-  // `compression` middleware and proxies), and `X-Accel-Buffering` covers
-  // nginx-style reverse proxies.
-  res.setHeader(
-    'Cache-Control',
-    withNoTransform(webResponse.headers.get('cache-control'))
-  );
-  res.setHeader('X-Accel-Buffering', 'no');
-  if (!webResponse.body) {
-    res.end();
-    return;
-  }
-  const reader = webResponse.body.getReader();
-  try {
-    let done = false;
-    while (!done) {
-      const next = await reader.read();
-      done = next.done;
-      if (next.value) {
-        res.write(next.value);
-      }
-    }
-  } finally {
-    reader.releaseLock();
-    res.end();
-  }
 }
 
 export interface ApiOptions {
@@ -778,7 +707,10 @@ export function api(server: Server, options: ApiOptions) {
   // /cms/api/ai.* — Vercel AI SDK powered chat for /cms/ai.
   // ===========================================================================
 
-  /** Returns the available models (without API keys) for the model picker. */
+  /**
+   * Returns the available models (without API keys) for the model picker,
+   * plus the signed-in user's role so the UI can gate the auto-apply mode.
+   */
   server.use('/cms/api/ai.config', async (req: Request, res: Response) => {
     if (!req.user?.email) {
       res.status(401).json({success: false, error: 'UNAUTHORIZED'});
@@ -789,18 +721,29 @@ export function api(server: Server, options: ApiOptions) {
       res.status(200).json({success: true, enabled: false});
       return;
     }
-    res
-      .status(200)
-      .json({success: true, enabled: true, ...serializeAiConfig(aiConfig)});
+    const cmsClient = new RootCMSClient(req.rootConfig!);
+    const role = await cmsClient.getUserRole(req.user.email).catch(() => null);
+    res.status(200).json({
+      success: true,
+      enabled: true,
+      ...serializeAiConfig(aiConfig),
+      role: role || null,
+      canAutoApply: role === 'ADMIN' || role === 'EDITOR',
+    });
   });
 
   /**
-   * Streams an LLM response using the Vercel AI SDK. The server is a thin
-   * proxy: requests are forwarded directly to the configured provider and the
-   * resulting UI message stream is piped back to the browser. Final messages
-   * are persisted to Firestore once the stream finishes.
+   * Prepares a client-side chat turn. The browser streams the model response
+   * directly from the provider (SSE proxying did not work on App Engine /
+   * Firebase Hosting), so this non-streaming endpoint just hands back what the
+   * client needs: the assembled system prompt (including `ROOT.md`), the
+   * selected model's connection config (WITH the API key — direct
+   * browser-to-provider calls require it), and tool-loop limits.
+   *
+   * Chat history is created and persisted to Firestore directly from the
+   * browser, so this endpoint is stateless.
    */
-  server.use('/cms/api/ai.chat', async (req: Request, res: Response) => {
+  server.use('/cms/api/ai.chat.prepare', async (req: Request, res: Response) => {
     if (req.method !== 'POST') {
       res.status(400).json({success: false, error: 'BAD_REQUEST'});
       return;
@@ -821,141 +764,63 @@ export function api(server: Server, options: ApiOptions) {
       res.status(400).json({success: false, error: 'UNKNOWN_MODEL'});
       return;
     }
-    const executionMode = normalizeExecutionMode(body.executionMode);
+    const requestedMode = normalizeExecutionMode(body.executionMode);
     const activeDocId =
       typeof body.docId === 'string' && body.docId.trim()
         ? body.docId.trim()
         : undefined;
 
-    const cmsClient = new RootCMSClient(req.rootConfig!);
     // Require the user to have an assigned role on this project. Write tools
-    // dispatched by the model are gated client-side by Firestore rules, but
-    // we still want to deny AI access to ACL'd users with no role and to
-    // restrict auto-apply execution to publishers.
+    // dispatched by the model are gated by Firestore rules, but we still deny
+    // AI access to ACL'd users with no role and restrict auto-apply to
+    // publishers. Auto requested by a non-publisher is downgraded to "approve"
+    // so the system prompt and the client approval flow stay in sync.
+    let canAutoApply = false;
     try {
+      const cmsClient = new RootCMSClient(req.rootConfig!);
       const role = await cmsClient.getUserRole(req.user.email);
       if (!role) {
         res.status(403).json({success: false, error: 'FORBIDDEN'});
         return;
       }
-      if (executionMode === 'auto' && role !== 'ADMIN' && role !== 'EDITOR') {
-        res
-          .status(403)
-          .json({success: false, error: 'AUTO_MODE_REQUIRES_EDITOR'});
-        return;
-      }
+      canAutoApply = role === 'ADMIN' || role === 'EDITOR';
     } catch (err) {
       console.error('failed to resolve user role:', err);
       res.status(500).json({success: false, error: 'UNKNOWN'});
       return;
     }
-    const store = new ChatStore(cmsClient, req.user.email);
-    const requestedChatId =
-      typeof body.chatId === 'string' ? body.chatId.trim() : '';
-    let chatId: string;
-    let storedMessages: UIMessage[] = [];
-    let existingTitle = '';
-    if (requestedChatId) {
-      const existing = await store.getChat(requestedChatId);
-      if (existing) {
-        chatId = existing.id;
-        storedMessages = (existing.messages as UIMessage[]) || [];
-        existingTitle = existing.title || '';
-      } else {
-        // Honor the client-supplied id so a single chat session keeps the
-        // same Firestore doc id even before the first response is saved.
-        // `createChat` uses Firestore `create`, which fails if the id is
-        // already in use (e.g. the chat exists but is owned by another user
-        // — in which case `getChat` returned null above).
-        try {
-          const created = await store.createChat({
-            id: requestedChatId,
-            modelId: model.id,
-          });
-          chatId = created.id;
-        } catch (err: any) {
-          if (err?.code === 6 /* ALREADY_EXISTS */) {
-            res.status(409).json({success: false, error: 'CHAT_ID_CONFLICT'});
-            return;
-          }
-          throw err;
-        }
-      }
-    } else {
-      const created = await store.createChat({modelId: model.id});
-      chatId = created.id;
-    }
-
-    // Two request shapes are accepted so we can roll the client over
-    // without coordinating deploys:
-    //
-    //   - `{message: UIMessage}` (preferred): just the latest user message
-    //     or tool-result message. The server appends it to the persisted
-    //     chat history before handing off to `runChatStream`. Keeps wire
-    //     bodies small as conversations grow.
-    //   - `{messages: UIMessage[]}` (legacy): the entire local message
-    //     array. Passed through as-is, which is what the old client did.
-    //
-    // Once every reachable client has shipped the new form, the legacy
-    // branch can be deleted.
-    let messages: UIMessage[];
-    if (body.message && typeof body.message === 'object') {
-      messages = mergeIncomingMessage(
-        storedMessages,
-        body.message as UIMessage
-      );
-    } else if (Array.isArray(body.messages) && body.messages.length > 0) {
-      messages = body.messages as UIMessage[];
-    } else {
-      res.status(400).json({success: false, error: 'MISSING_MESSAGES'});
-      return;
-    }
+    const executionMode =
+      requestedMode === 'auto' && !canAutoApply ? 'approve' : requestedMode;
 
     try {
-      const streamResponse = await runChatStream({
+      const system = await buildChatSystemPrompt({
         rootConfig: req.rootConfig!,
-        cmsClient,
         config: aiConfig,
-        model,
-        messages,
-        chatId,
-        user: req.user.email,
         executionMode,
-        existingTitle,
         activeDocId,
-        loadCollection: (collectionId) =>
-          getCollectionSchema(req, collectionId),
-        loadAllCollections: async () =>
-          (await options.getRenderer(req)).getCollections(),
       });
-      // Surface the chat id so clients can persist it for the next request.
-      streamResponse.headers.set('x-root-cms-chat-id', chatId);
-      await pipeWebResponse(streamResponse, res);
+      res.status(200).json({
+        success: true,
+        model: serializeAiClientModel(model),
+        system,
+        executionMode,
+        canAutoApply,
+        maxSteps: aiConfig.maxSteps ?? 10,
+      });
     } catch (err: any) {
       console.error(err.stack || err);
-      if (!res.headersSent) {
-        res.status(500).json({success: false, error: err.message || 'UNKNOWN'});
-      } else {
-        res.end();
-      }
+      res.status(500).json({success: false, error: err.message || 'UNKNOWN'});
     }
   });
 
   /**
-   * Streams an LLM response for the array-item "Edit with AI" diff-viewer
-   * flow. Like `ai.chat`, the server proxies the model's UI message stream
-   * directly to the browser. Differences:
-   *
-   * - The available tool set is restricted to read-only CMS tools — the user
-   *   approves and saves changes manually via the modal's Save button, so
-   *   the model must not write to Firestore directly.
-   * - Conversation state is ephemeral — edit sessions are not persisted to
-   *   Firestore and don't appear in the user's chat history.
-   * - The system prompt instructs the model to emit its proposed JSON in a
-   *   fenced ```json code block which the client extracts to populate the
-   *   diff viewer.
+   * Prepares a client-side "Edit with AI" turn (array-item diff-viewer flow).
+   * Like `ai.chat.prepare`, the browser streams directly from the provider.
+   * Returns the read-only edit system prompt (with the project's
+   * `root-cms.d.ts` types and the JSON being edited injected as untrusted
+   * data) plus the selected model's connection config.
    */
-  server.use('/cms/api/ai.edit_object', async (req: Request, res: Response) => {
+  server.use('/cms/api/ai.edit.prepare', async (req: Request, res: Response) => {
     if (req.method !== 'POST') {
       res.status(400).json({success: false, error: 'BAD_REQUEST'});
       return;
@@ -971,20 +836,15 @@ export function api(server: Server, options: ApiOptions) {
     }
 
     const body = req.body || {};
-    const messages = (body.messages as UIMessage[]) || [];
-    if (!Array.isArray(messages) || messages.length === 0) {
-      res.status(400).json({success: false, error: 'MISSING_MESSAGES'});
-      return;
-    }
     const model = findModel(aiConfig, body.modelId);
     if (!model) {
       res.status(400).json({success: false, error: 'UNKNOWN_MODEL'});
       return;
     }
 
-    const editCmsClient = new RootCMSClient(req.rootConfig!);
     try {
-      const role = await editCmsClient.getUserRole(req.user.email);
+      const cmsClient = new RootCMSClient(req.rootConfig!);
+      const role = await cmsClient.getUserRole(req.user.email);
       if (!role) {
         res.status(403).json({success: false, error: 'FORBIDDEN'});
         return;
@@ -996,110 +856,21 @@ export function api(server: Server, options: ApiOptions) {
     }
 
     try {
-      const streamResponse = await runEditObjectStream({
+      const system = await buildEditSystemPrompt({
         rootConfig: req.rootConfig!,
-        cmsClient: editCmsClient,
-        user: req.user.email,
-        config: aiConfig,
-        model,
-        messages,
         editData: body.editData,
-        loadCollection: (collectionId) =>
-          getCollectionSchema(req, collectionId),
-        loadAllCollections: async () =>
-          (await options.getRenderer(req)).getCollections(),
       });
-      await pipeWebResponse(streamResponse, res);
-    } catch (err: any) {
-      console.error(err.stack || err);
-      if (!res.headersSent) {
-        res.status(500).json({success: false, error: err.message || 'UNKNOWN'});
-      } else {
-        res.end();
-      }
-    }
-  });
-
-  /** Lists the current user's recent chats. */
-  server.use('/cms/api/ai.chats.list', async (req: Request, res: Response) => {
-    if (!req.user?.email) {
-      res.status(401).json({success: false, error: 'UNAUTHORIZED'});
-      return;
-    }
-    const cmsClient = new RootCMSClient(req.rootConfig!);
-    const store = new ChatStore(cmsClient, req.user.email);
-    try {
-      const chats = await store.listChats({limit: req.body?.limit});
       res.status(200).json({
         success: true,
-        chats: chats.map((c) => ({
-          id: c.id,
-          title: c.title,
-          modelId: c.modelId,
-          createdAt: c.createdAt.toMillis(),
-          modifiedAt: c.modifiedAt.toMillis(),
-        })),
+        model: serializeAiClientModel(model),
+        system,
+        maxSteps: aiConfig.maxSteps ?? 10,
       });
     } catch (err: any) {
       console.error(err.stack || err);
-      res.status(500).json({success: false, error: 'UNKNOWN'});
+      res.status(500).json({success: false, error: err.message || 'UNKNOWN'});
     }
   });
-
-  /** Returns the full message history for a chat. */
-  server.use('/cms/api/ai.chats.get', async (req: Request, res: Response) => {
-    if (!req.user?.email) {
-      res.status(401).json({success: false, error: 'UNAUTHORIZED'});
-      return;
-    }
-    const id = String(req.body?.id || '').trim();
-    if (!id) {
-      res.status(400).json({success: false, error: 'MISSING_ID'});
-      return;
-    }
-    const cmsClient = new RootCMSClient(req.rootConfig!);
-    const store = new ChatStore(cmsClient, req.user.email);
-    const chat = await store.getChat(id);
-    if (!chat) {
-      res.status(404).json({success: false, error: 'NOT_FOUND'});
-      return;
-    }
-    res.status(200).json({
-      success: true,
-      chat: {
-        id: chat.id,
-        title: chat.title,
-        modelId: chat.modelId,
-        messages: chat.messages,
-        createdAt: chat.createdAt.toMillis(),
-        modifiedAt: chat.modifiedAt.toMillis(),
-      },
-    });
-  });
-
-  /** Deletes a chat from history. */
-  server.use(
-    '/cms/api/ai.chats.delete',
-    async (req: Request, res: Response) => {
-      if (req.method !== 'POST') {
-        res.status(400).json({success: false, error: 'BAD_REQUEST'});
-        return;
-      }
-      if (!req.user?.email) {
-        res.status(401).json({success: false, error: 'UNAUTHORIZED'});
-        return;
-      }
-      const id = String(req.body?.id || '').trim();
-      if (!id) {
-        res.status(400).json({success: false, error: 'MISSING_ID'});
-        return;
-      }
-      const cmsClient = new RootCMSClient(req.rootConfig!);
-      const store = new ChatStore(cmsClient, req.user.email);
-      await store.deleteChat(id);
-      res.status(200).json({success: true});
-    }
-  );
 
   server.use('/cms/api/ai.translate', async (req: Request, res: Response) => {
     if (

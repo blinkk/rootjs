@@ -1,206 +1,96 @@
 /**
  * Vercel AI SDK-backed AI features for Root CMS.
  *
- * Powers the `/cms/ai` chat page (streaming chat with tool use and Firestore
- * history) plus the one-shot task helpers (diff summaries, publish messages,
- * translations, alt text, image generation) used by the `/cms/api/ai.*`
- * endpoints. The CMS proxies requests directly to the configured model
- * provider — keys live on the server, never on the client.
+ * The `/cms/ai` chat (and the document-editor AI panel / "Edit with AI" modal)
+ * now stream **directly from the browser** to the configured model provider —
+ * SSE proxying through the server did not work reliably on App Engine and
+ * Firebase Hosting. The server's role for chat is reduced to a pair of
+ * non-streaming "prepare" endpoints (see `core/api.ts`) that assemble the
+ * system prompt (including `ROOT.md`) and hand the client the selected model's
+ * connection config. Chat history is persisted to Firestore from the browser.
+ *
+ * This module still owns:
+ * - Config helpers (`getAiConfig`, `findModel`, serializers).
+ * - System-prompt assembly (`buildChatSystemPrompt`, `buildEditSystemPrompt`)
+ *   used by the prepare endpoints.
+ * - The one-shot task helpers (diff summaries, publish messages, translations,
+ *   alt text, image generation) used by the non-streaming `/cms/api/ai.*`
+ *   endpoints. Those run server-side, so their API keys never reach the client.
+ *
+ * Provider/model resolution and the pure prompt/message helpers live in
+ * browser-safe shared modules (`shared/ai/models.ts`, `shared/ai/prompt-utils.ts`)
+ * so the same code runs on the server and in the client bundle; they are
+ * re-exported here for back-compat.
  */
-import crypto from 'node:crypto';
 import {promises as fs} from 'node:fs';
 import path from 'node:path';
-import {createAnthropic} from '@ai-sdk/anthropic';
-import {createGoogleGenerativeAI} from '@ai-sdk/google';
-import {createOpenAI} from '@ai-sdk/openai';
-import {createOpenAICompatible} from '@ai-sdk/openai-compatible';
 import {RootConfig} from '@blinkk/root';
+import {generateImage as generateImageSdk, generateText} from 'ai';
 import {
-  convertToModelMessages,
-  generateImage as generateImageSdk,
-  generateText,
-  ImageModel,
-  LanguageModel,
-  stepCountIs,
-  streamText,
-  ToolSet,
-  UIMessage,
-} from 'ai';
-import {Timestamp} from 'firebase-admin/firestore';
+  AiConfig,
+  AiExecutionMode,
+  AiModelConfig,
+  normalizeExecutionMode,
+  resolveImageModel,
+  resolveLanguageModel,
+} from '../shared/ai/models.js';
 import {
-  CmsToolContext,
-  createCmsTools,
-  createReadOnlyCmsTools,
-} from './ai-tools.js';
-import {RootCMSClient} from './client.js';
-import {Collection} from './schema.js';
-import {SearchIndexService} from './search-index.js';
+  buildTitlePrompt,
+  buildTitlePromptContext,
+  deriveChatTitle,
+  extractJsonFromResponse,
+  mergeIncomingMessage,
+  sanitizeDanglingToolCalls,
+  sanitizeGeneratedTitle,
+  stripUndefined,
+  TITLE_GENERATION_SYSTEM_PROMPT,
+} from '../shared/ai/prompt-utils.js';
+
+// Re-exports for back-compat (consumers and tests import these from `./ai.js`).
+export type {
+  AiConfig,
+  AiExecutionMode,
+  AiModelCapabilities,
+  AiModelConfig,
+  AiProvider,
+} from '../shared/ai/models.js';
+export {
+  normalizeExecutionMode,
+  resolveImageModel,
+  resolveLanguageModel,
+  withBrowserHeaders,
+} from '../shared/ai/models.js';
+export {
+  buildTitlePrompt,
+  buildTitlePromptContext,
+  deriveChatTitle,
+  extractJsonFromResponse,
+  mergeIncomingMessage,
+  sanitizeDanglingToolCalls,
+  sanitizeGeneratedTitle,
+  stripUndefined,
+  TITLE_GENERATION_SYSTEM_PROMPT,
+} from '../shared/ai/prompt-utils.js';
 
 /** Filename of the project-level instructions file loaded into the AI prompt. */
 export const ROOT_MD_FILENAME = 'ROOT.md';
 
-export type AiExecutionMode = 'read' | 'approve' | 'auto';
+/** Default base system prompt for the Root AI chat. */
+export const DEFAULT_CHAT_SYSTEM_PROMPT = [
+  'You are an assistant embedded in the Root CMS admin UI.',
+  'Help the user explore and edit content, answer questions about the',
+  'project, and use the provided tools to read and write CMS docs.',
+  'Be concise and use markdown for rich responses. When you lack the',
+  'context to act safely, read the relevant docs first or ask the user',
+  'instead of guessing.',
+].join(' ');
 
 /**
- * Provider type for an AI model. Use `openai-compatible` for any OpenAI-style
- * endpoint (e.g. local Ollama, vLLM, OpenRouter).
+ * Strips secrets from `AiConfig` before sending to the browser. Used by the
+ * `/cms/api/ai.config` endpoint and the inlined `window.__ROOT_CTX.ai` to
+ * populate the model picker. The key-bearing connection config is sent
+ * separately (and only for the selected model) via `serializeAiClientModel`.
  */
-export type AiProvider =
-  | 'openai'
-  | 'openai-compatible'
-  | 'anthropic'
-  | 'google';
-
-/**
- * Configuration for a single chat model.
- *
- * Inspired by Ollama's `Modelfile` and LiteLLM's model config: each entry maps
- * a CMS-facing id to a provider, model id and credentials.
- */
-export interface AiModelConfig {
-  /** Stable id used by the CMS UI and stored alongside chat history. */
-  id: string;
-  /** Optional human-readable label rendered in the model picker. */
-  label?: string;
-  /** Optional description shown under the label. */
-  description?: string;
-  /** AI provider/family to route requests to. */
-  provider: AiProvider;
-  /**
-   * Provider-specific model id (e.g. `gpt-4o`, `claude-opus-4-5`,
-   * `gemini-2.5-pro`). Defaults to `id` if omitted.
-   */
-  modelId?: string;
-  /** API key for the provider. */
-  apiKey?: string;
-  /** Override the provider's base URL (required for `openai-compatible`). */
-  baseURL?: string;
-  /** Custom headers to send with each request. */
-  headers?: Record<string, string>;
-  /** Capabilities advertised to the UI. */
-  capabilities?: {
-    /** Whether the model can call tools. Defaults to `true`. */
-    tools?: boolean;
-    /** Whether the model can stream reasoning/thinking. Defaults to `false`. */
-    reasoning?: boolean;
-    /** Whether the model accepts image attachments. Defaults to `false`. */
-    attachments?: boolean;
-  };
-}
-
-/**
- * Full AI config registered on the cms plugin.
- */
-export interface AiConfig {
-  /** Models exposed in the model picker. The first entry is the default. */
-  models: AiModelConfig[];
-  /** Id of the default model. Defaults to the first model in `models`. */
-  defaultModel?: string;
-  /**
-   * Image generation models. Used by the image generator and any other
-   * features that produce images. Only the `openai` and `google` providers
-   * support image generation.
-   */
-  imageModels?: AiModelConfig[];
-  /** Id of the default image model. Defaults to the first entry in `imageModels`. */
-  defaultImageModel?: string;
-  /**
-   * Optional system prompt prepended to every conversation. If a `ROOT.md`
-   * file exists at the project root, its contents are appended to this
-   * prompt automatically.
-   */
-  systemPrompt?: string;
-  /** Maximum tool-loop steps before stopping. Defaults to 10. */
-  maxSteps?: number;
-}
-
-interface ChatRecord {
-  id: string;
-  createdBy: string;
-  createdAt: Timestamp;
-  modifiedAt: Timestamp;
-  modelId?: string;
-  title?: string;
-  messages: UIMessage[];
-}
-
-/** Resolves an `AiModelConfig` to an AI SDK `LanguageModel` instance. */
-export function resolveLanguageModel(model: AiModelConfig): LanguageModel {
-  const modelId = model.modelId || model.id;
-  switch (model.provider) {
-    case 'openai': {
-      const provider = createOpenAI({
-        apiKey: model.apiKey,
-        baseURL: model.baseURL,
-        headers: model.headers,
-      });
-      return provider(modelId);
-    }
-    case 'openai-compatible': {
-      if (!model.baseURL) {
-        throw new Error(
-          `model "${model.id}" requires a baseURL for provider "openai-compatible"`
-        );
-      }
-      const provider = createOpenAICompatible({
-        name: model.id,
-        baseURL: model.baseURL,
-        apiKey: model.apiKey,
-        headers: model.headers,
-      });
-      return provider(modelId);
-    }
-    case 'anthropic': {
-      const provider = createAnthropic({
-        apiKey: model.apiKey,
-        baseURL: model.baseURL,
-        headers: model.headers,
-      });
-      return provider(modelId);
-    }
-    case 'google': {
-      const provider = createGoogleGenerativeAI({
-        apiKey: model.apiKey,
-        baseURL: model.baseURL,
-        headers: model.headers,
-      });
-      return provider(modelId);
-    }
-    default: {
-      throw new Error(`unknown ai provider: ${(model as any).provider}`);
-    }
-  }
-}
-
-/** Resolves an `AiModelConfig` to an AI SDK `ImageModel` instance. */
-export function resolveImageModel(model: AiModelConfig): ImageModel {
-  const modelId = model.modelId || model.id;
-  switch (model.provider) {
-    case 'openai': {
-      const provider = createOpenAI({
-        apiKey: model.apiKey,
-        baseURL: model.baseURL,
-        headers: model.headers,
-      });
-      return provider.image(modelId);
-    }
-    case 'google': {
-      const provider = createGoogleGenerativeAI({
-        apiKey: model.apiKey,
-        baseURL: model.baseURL,
-        headers: model.headers,
-      });
-      return provider.image(modelId);
-    }
-    default: {
-      throw new Error(
-        `provider "${model.provider}" does not support image generation`
-      );
-    }
-  }
-}
-
-/** Strips secrets from `AiConfig` before sending to the browser. */
 export function serializeAiConfig(config: AiConfig) {
   return {
     defaultModel: config.defaultModel || config.models[0]?.id,
@@ -218,6 +108,35 @@ export function serializeAiConfig(config: AiConfig) {
     imageGenerationEnabled: !!config.imageModels?.length,
   };
 }
+
+/**
+ * Serializes a single chat model's full connection config — INCLUDING the API
+ * key, base URL and custom headers — for direct browser-to-provider calls.
+ *
+ * Security note: this intentionally exposes the provider API key to the
+ * authenticated CMS client (the project opted into direct client-side calls).
+ * Only return it from authenticated endpoints, and only for the model the user
+ * actually selected.
+ */
+export function serializeAiClientModel(model: AiModelConfig) {
+  return {
+    id: model.id,
+    label: model.label || model.id,
+    description: model.description,
+    provider: model.provider,
+    modelId: model.modelId || model.id,
+    apiKey: model.apiKey,
+    baseURL: model.baseURL,
+    headers: model.headers,
+    capabilities: {
+      tools: model.capabilities?.tools !== false,
+      reasoning: model.capabilities?.reasoning ?? false,
+      attachments: model.capabilities?.attachments ?? false,
+    },
+  };
+}
+
+export type SerializedAiClientModel = ReturnType<typeof serializeAiClientModel>;
 
 /** Returns the AI config registered on the CMS plugin, or `null`. */
 export function getAiConfig(rootConfig: RootConfig): AiConfig | null {
@@ -265,13 +184,6 @@ export function findImageModel(
   return imageModels.find((m) => m.id === defaultId) || null;
 }
 
-export function normalizeExecutionMode(value: unknown): AiExecutionMode {
-  if (value === 'read' || value === 'approve' || value === 'auto') {
-    return value;
-  }
-  return 'approve';
-}
-
 /**
  * Resolves the AiConfig + default chat model from the given root config.
  * Throws a descriptive error if AI is not configured.
@@ -289,191 +201,6 @@ function requireDefaultModel(rootConfig: RootConfig): {
     throw new Error('No AI chat model configured.');
   }
   return {config, model};
-}
-
-/**
- * Persists chat sessions to Firestore so that users can resume past
- * conversations from the chat history sidebar.
- */
-export class ChatStore {
-  cmsClient: RootCMSClient;
-  user: string;
-
-  constructor(cmsClient: RootCMSClient, user: string) {
-    this.cmsClient = cmsClient;
-    this.user = user;
-  }
-
-  collection() {
-    return this.cmsClient.db.collection(
-      `Projects/${this.cmsClient.projectId}/AiChats`
-    );
-  }
-
-  async createChat(options?: {
-    id?: string;
-    modelId?: string;
-  }): Promise<ChatRecord> {
-    const id = options?.id || crypto.randomUUID();
-    const now = Timestamp.now();
-    const record: ChatRecord = {
-      id,
-      createdBy: this.user,
-      createdAt: now,
-      modifiedAt: now,
-      modelId: options?.modelId,
-      messages: [],
-    };
-    // Use `create` rather than `set` so a client-supplied id cannot overwrite
-    // an existing chat owned by another user. Firestore throws on conflict.
-    await this.collection().doc(id).create(record);
-    return record;
-  }
-
-  async getChat(id: string): Promise<ChatRecord | null> {
-    const snap = await this.collection().doc(id).get();
-    if (!snap.exists) {
-      return null;
-    }
-    const data = snap.data() as ChatRecord;
-    if (data.createdBy !== this.user) {
-      return null;
-    }
-    return data;
-  }
-
-  async listChats(options?: {limit?: number}): Promise<ChatRecord[]> {
-    const rawLimit = options?.limit;
-    const limit =
-      typeof rawLimit === 'number' && Number.isFinite(rawLimit) && rawLimit > 0
-        ? Math.min(Math.floor(rawLimit), 100)
-        : 50;
-    // Sort client-side to avoid requiring a Firestore composite index on
-    // (createdBy, modifiedAt). Bound the Firestore read so a user with
-    // many chats can't turn a single API call into a large server read.
-    const res = await this.collection()
-      .where('createdBy', '==', this.user)
-      .limit(500)
-      .get();
-    const records = res.docs.map((d) => d.data() as ChatRecord);
-    records.sort((a, b) => {
-      const aMs = a.modifiedAt?.toMillis?.() ?? 0;
-      const bMs = b.modifiedAt?.toMillis?.() ?? 0;
-      return bMs - aMs;
-    });
-    return records.slice(0, limit);
-  }
-
-  async deleteChat(id: string): Promise<void> {
-    const chat = await this.getChat(id);
-    if (!chat) {
-      return;
-    }
-    await this.collection().doc(id).delete();
-  }
-
-  async updateMessages(
-    id: string,
-    messages: UIMessage[],
-    options?: {modelId?: string; title?: string}
-  ): Promise<void> {
-    const updates: Record<string, any> = {
-      messages,
-      modifiedAt: Timestamp.now(),
-    };
-    if (options?.modelId) {
-      updates.modelId = options.modelId;
-    }
-    if (options?.title) {
-      updates.title = options.title;
-    }
-    await this.collection().doc(id).update(updates);
-  }
-}
-
-/**
- * Merges the latest incoming message into the persisted chat history.
- *
- * The client posts only the last message; the server holds the rest in
- * Firestore. After client-side tool execution the SDK resubmits the *same*
- * assistant message — now carrying tool results — under the id it was
- * streamed with. That id already exists in the persisted history (saved by
- * `onFinish` before the results came back), so a naive append would
- * duplicate it: the stored copy still has unresolved tool calls, which
- * convert to `tool_use` blocks with no following `tool_result` and the model
- * provider rejects the request.
- *
- * Replacing the matched entry (and dropping anything after it) keeps message
- * ids unique and the tool-call/result pairing intact. A genuinely new
- * message id is appended as usual.
- */
-export function mergeIncomingMessage(
-  stored: UIMessage[],
-  incoming: UIMessage
-): UIMessage[] {
-  const idx = stored.findIndex((m) => m.id === incoming.id);
-  if (idx === -1) {
-    return [...stored, incoming];
-  }
-  return [...stored.slice(0, idx), incoming];
-}
-
-/**
- * Tool-call part states that mean a result has not arrived yet. A persisted
- * chat can end on one of these if a turn was abandoned mid-approval: the
- * assistant message is saved by `onFinish` before the client-side write tool
- * resolves, so the call is stored without an output.
- */
-const UNRESOLVED_TOOL_STATES = new Set(['input-streaming', 'input-available']);
-
-/** True if a UIMessage part is a tool call (static `tool-<name>` or dynamic). */
-function isToolCallPart(part: any): boolean {
-  return (
-    !!part &&
-    typeof part.type === 'string' &&
-    (part.type.startsWith('tool-') || part.type === 'dynamic-tool')
-  );
-}
-
-/**
- * Synthesizes an aborted result for any tool-call part still awaiting one, so
- * every `tool_use` keeps a matching `tool_result` when the history is handed
- * to the model. Left unresolved, such parts (from an abandoned turn) make the
- * provider reject the next request. Returns the original array unchanged when
- * there is nothing to repair.
- */
-export function sanitizeDanglingToolCalls(messages: UIMessage[]): UIMessage[] {
-  let changed = false;
-  const result = messages.map((message) => {
-    if (message.role !== 'assistant' || !Array.isArray(message.parts)) {
-      return message;
-    }
-    let partsChanged = false;
-    const parts = message.parts.map((part: any) => {
-      if (isToolCallPart(part) && UNRESOLVED_TOOL_STATES.has(part.state)) {
-        partsChanged = true;
-        return {
-          ...part,
-          state: 'output-available',
-          output: {
-            success: false,
-            error: 'ABORTED',
-            message:
-              'This tool call never completed because the chat turn was ' +
-              'abandoned before it ran. Do not assume it succeeded; ask the ' +
-              'user before retrying.',
-          },
-        };
-      }
-      return part;
-    });
-    if (!partsChanged) {
-      return message;
-    }
-    changed = true;
-    return {...message, parts};
-  });
-  return changed ? result : messages;
 }
 
 /**
@@ -525,112 +252,17 @@ export function buildSystemPrompt(
   ].join('\n');
 }
 
-/** Derives a short title from the first user message (used as fallback). */
-export function deriveChatTitle(messages: UIMessage[]): string {
-  const first = messages.find((m) => m.role === 'user');
-  if (!first) {
-    return 'New chat';
-  }
-  const text = first.parts
-    .filter((p: any) => p.type === 'text')
-    .map((p: any) => p.text)
-    .join(' ')
-    .trim();
-  if (!text) {
-    return 'New chat';
-  }
-  return text.length > 60 ? `${text.slice(0, 57)}…` : text;
-}
-
 /**
- * Extracts the first user turn and first assistant text turn as a plain-text
- * transcript, suitable for the title-generation prompt. Skips tool-call
- * parts, reasoning chunks, and attachments so the model sees the
- * conversational substance and nothing else.
- *
- * Only the opening exchange is included on purpose — the chat title should
- * describe what the conversation is *about*, anchored on the user's initial
- * ask, not drift as later follow-ups arrive.
- */
-export function buildTitlePromptContext(messages: UIMessage[]): string {
-  const lines: string[] = [];
-  let haveUser = false;
-  let haveAssistant = false;
-  for (const m of messages) {
-    if (m.role !== 'user' && m.role !== 'assistant') {
-      continue;
-    }
-    if (m.role === 'user' && haveUser) {
-      continue;
-    }
-    if (m.role === 'assistant' && haveAssistant) {
-      continue;
-    }
-    const text = (m.parts || [])
-      .filter((p: any) => p.type === 'text' && typeof p.text === 'string')
-      .map((p: any) => p.text)
-      .join(' ')
-      .replace(/\s+/g, ' ')
-      .trim();
-    if (!text) {
-      continue;
-    }
-    // Cap each side so a long pasted blob can't blow the prompt budget; the
-    // opening few hundred chars are more than enough to capture the topic.
-    const truncated = text.length > 800 ? `${text.slice(0, 800)}…` : text;
-    lines.push(`${m.role === 'user' ? 'User' : 'Assistant'}: ${truncated}`);
-    if (m.role === 'user') {
-      haveUser = true;
-    } else {
-      haveAssistant = true;
-    }
-    if (haveUser && haveAssistant) {
-      break;
-    }
-  }
-  return lines.join('\n\n');
-}
-
-/**
- * Strips the cruft LLMs commonly emit around a title — leading "Title:"
- * preamble, surrounding quotes, trailing punctuation, internal newlines —
- * and enforces a hard length cap.
- */
-export function sanitizeGeneratedTitle(raw: string): string {
-  let title = (raw || '').trim();
-  if (!title) {
-    return '';
-  }
-  // Keep only the first non-empty line — some models add a one-line title
-  // followed by a justification paragraph.
-  const firstLine = title.split(/\r?\n/).find((l) => l.trim().length > 0);
-  title = (firstLine || '').trim();
-  // Drop a "Title:"/"Chat title:"/"Topic:" prefix.
-  title = title.replace(/^\s*(?:chat\s+)?(?:title|topic)\s*[:\-—]\s*/i, '');
-  // Strip wrapping quotes (straight + smart) and any markdown emphasis.
-  title = title.replace(/^[\s"'“”‘’`*_]+|[\s"'“”‘’`*_]+$/g, '');
-  // Drop trailing sentence punctuation.
-  title = title.replace(/[.!?,;:]+$/g, '').trim();
-  // Collapse any remaining internal whitespace.
-  title = title.replace(/\s+/g, ' ');
-  if (!title) {
-    return '';
-  }
-  return title.length > 60 ? `${title.slice(0, 57)}…` : title;
-}
-
-/**
- * Uses the AI model to generate a short summary title for the chat. The
- * prompt is anchored on the user's initial question (and, if available, the
- * assistant's first reply) so the title captures *intent and topic* rather
- * than echoing the first line verbatim.
+ * Uses the AI model to generate a short summary title for a chat. Kept for
+ * server-side callers; the browser chat generates titles client-side using the
+ * shared `TITLE_GENERATION_SYSTEM_PROMPT` + `buildTitlePrompt` helpers.
  *
  * Falls back to `deriveChatTitle` if the generation fails or returns an
  * empty result.
  */
 export async function generateChatTitle(
-  model: LanguageModel,
-  messages: UIMessage[]
+  model: ReturnType<typeof resolveLanguageModel>,
+  messages: Parameters<typeof deriveChatTitle>[0]
 ): Promise<string> {
   const fallback = deriveChatTitle(messages);
   if (fallback === 'New chat') {
@@ -643,27 +275,8 @@ export async function generateChatTitle(
   try {
     const result = await generateText({
       model,
-      system: [
-        'You write short, descriptive titles for chat conversations in a',
-        'CMS admin tool. A user has just opened a new chat. Read the',
-        'opening exchange and produce a title that summarizes what the',
-        'conversation is about.',
-        '',
-        'Rules:',
-        '- Output ONLY the title text. No quotes, no trailing punctuation,',
-        '  no "Title:" prefix, no markdown.',
-        '- 5 to 10 words. Hard cap of 60 characters.',
-        '- Use a noun phrase in Sentence case (e.g. "Translate homepage',
-        '  hero copy", "Debug image upload error", "Draft blog post about',
-        '  pricing").',
-        "- Describe the user's task or topic. Do NOT echo the user's",
-        '  message verbatim and do NOT start with a verb like "How to" or',
-        '  a question word.',
-        '- If the user wrote in a non-English language, write the title in',
-        '  the same language.',
-        '- Do not include emoji.',
-      ].join('\n'),
-      prompt: ['Opening exchange:', '', context, '', 'Title:'].join('\n'),
+      system: TITLE_GENERATION_SYSTEM_PROMPT,
+      prompt: buildTitlePrompt(context),
       maxOutputTokens: 64,
       temperature: 0.3,
     });
@@ -675,68 +288,6 @@ export async function generateChatTitle(
     console.error('failed to generate chat title:', err);
   }
   return fallback;
-}
-
-export interface RunChatStreamOptions {
-  rootConfig: RootConfig;
-  cmsClient: RootCMSClient;
-  config: AiConfig;
-  model: AiModelConfig;
-  messages: UIMessage[];
-  chatId: string;
-  user: string;
-  executionMode?: AiExecutionMode;
-  /**
-   * Title already saved on this chat. When non-empty the server will NOT
-   * regenerate it on this turn — titles are derived once, on the first
-   * assistant response, so they describe the original ask instead of
-   * thrashing as follow-up messages arrive.
-   */
-  existingTitle?: string;
-  /**
-   * When set, tells the model which document the user is currently viewing
-   * in the CMS UI so phrases like "this document" can be resolved.
-   */
-  activeDocId?: string;
-  /**
-   * Loads a single collection's schema. The caller owns dev-vs-prod schema
-   * resolution (Vite SSR vs. prebuilt `dist/collections/*.json`).
-   */
-  loadCollection: (collectionId: string) => Promise<Collection | null>;
-  /** Loads every project collection keyed by id. */
-  loadAllCollections: () => Promise<Record<string, Collection>>;
-}
-
-/**
- * Builds the `CmsToolContext` used by the server-side tool `execute` blocks.
- *
- * Search is instantiated lazily — `SearchIndexService` boots a MiniSearch
- * index from Firestore, which is wasteful when the chat never needs it.
- */
-function buildCmsToolContext(options: {
-  rootConfig: RootConfig;
-  cmsClient: RootCMSClient;
-  user: string;
-  loadCollection: (collectionId: string) => Promise<Collection | null>;
-  loadAllCollections: () => Promise<Record<string, Collection>>;
-}): CmsToolContext {
-  let searchService: SearchIndexService | null = null;
-  return {
-    rootConfig: options.rootConfig,
-    cmsClient: options.cmsClient,
-    user: options.user,
-    loadCollection: options.loadCollection,
-    loadAllCollections: options.loadAllCollections,
-    search: async (query, opts) => {
-      if (!searchService) {
-        searchService = new SearchIndexService(
-          options.rootConfig,
-          options.loadCollection
-        );
-      }
-      return await searchService.search(query, opts);
-    },
-  };
 }
 
 /**
@@ -835,53 +386,27 @@ export function buildExecutionModePrompt(mode: AiExecutionMode): string {
   return common.join('\n');
 }
 
-/**
- * Builds a streaming response that proxies the model's UI message stream
- * directly to the client. Persists the final message list to Firestore once
- * the stream finishes.
- */
-export async function runChatStream(
-  options: RunChatStreamOptions
-): Promise<Response> {
-  const {
-    rootConfig,
-    model,
-    config,
-    messages,
-    cmsClient,
-    user,
-    chatId,
-    executionMode = 'approve',
-    existingTitle,
-    activeDocId,
-    loadCollection,
-    loadAllCollections,
-  } = options;
-  const languageModel = resolveLanguageModel(model);
-  const toolContext = buildCmsToolContext({
-    rootConfig,
-    cmsClient,
-    user,
-    loadCollection,
-    loadAllCollections,
-  });
-  const tools: ToolSet =
-    model.capabilities?.tools === false
-      ? {}
-      : executionMode === 'read'
-        ? createReadOnlyCmsTools(toolContext)
-        : createCmsTools(toolContext);
+export interface BuildChatSystemPromptOptions {
+  rootConfig: RootConfig;
+  config: AiConfig;
+  executionMode: AiExecutionMode;
+  /**
+   * When set, tells the model which document the user is currently viewing
+   * in the CMS UI so phrases like "this document" can be resolved.
+   */
+  activeDocId?: string;
+}
 
-  const basePrompt =
-    config.systemPrompt ||
-    [
-      'You are an assistant embedded in the Root CMS admin UI.',
-      'Help the user explore and edit content, answer questions about the',
-      'project, and use the provided tools to read and write CMS docs.',
-      'Be concise and use markdown for rich responses. When you lack the',
-      'context to act safely, read the relevant docs first or ask the user',
-      'instead of guessing.',
-    ].join(' ');
+/**
+ * Assembles the chat system prompt: base prompt + workspace context + tool
+ * safety policy + execution-mode workflow + (optional) active-doc context,
+ * with `ROOT.md` appended when present.
+ */
+export async function buildChatSystemPrompt(
+  options: BuildChatSystemPromptOptions
+): Promise<string> {
+  const {rootConfig, config, executionMode, activeDocId} = options;
+  const basePrompt = config.systemPrompt || DEFAULT_CHAT_SYSTEM_PROMPT;
   const rootMd = await readRootMd(rootConfig.rootDir);
   const promptSections = [
     basePrompt,
@@ -895,112 +420,25 @@ export async function runChatStream(
   if (activeDocId) {
     promptSections.push('', buildActiveDocPrompt(activeDocId));
   }
-  const systemPrompt = buildSystemPrompt(promptSections.join('\n'), rootMd);
-
-  // Heal any tool calls left unresolved by an abandoned turn (e.g. the user
-  // closed the chat mid-approval). Without a synthesized result they convert
-  // to `tool_use` blocks with no matching `tool_result` and the provider
-  // rejects the request. Reusing the sanitized list as `originalMessages`
-  // persists the repaired history back to Firestore in `onFinish`.
-  const sanitizedMessages = sanitizeDanglingToolCalls(messages);
-  const modelMessages = await convertToModelMessages(sanitizedMessages, {
-    tools,
-  });
-  const result = streamText({
-    model: languageModel,
-    system: systemPrompt,
-    messages: modelMessages,
-    tools,
-    stopWhen: stepCountIs(config.maxSteps ?? 10),
-  });
-
-  return result.toUIMessageStreamResponse({
-    sendReasoning: model.capabilities?.reasoning ?? false,
-    originalMessages: sanitizedMessages,
-    onFinish: async ({messages: finalMessages}) => {
-      const store = new ChatStore(cmsClient, user);
-      // Generate a title only on the first assistant response. Once a chat
-      // has a saved title we keep it stable so follow-up messages do not
-      // overwrite it with a re-summary of the original question.
-      const updates: {modelId: string; title?: string} = {modelId: model.id};
-      if (!existingTitle) {
-        const title = await generateChatTitle(languageModel, finalMessages);
-        if (title && title !== 'New chat') {
-          updates.title = title;
-        }
-      }
-      try {
-        // Firestore rejects `undefined` values, but the AI SDK frequently
-        // produces messages with `metadata: undefined`. Strip them before
-        // persisting.
-        await store.updateMessages(
-          chatId,
-          stripUndefined(finalMessages) as UIMessage[],
-          updates
-        );
-      } catch (err) {
-        console.error('failed to persist chat history:', err);
-      }
-    },
-  });
+  return buildSystemPrompt(promptSections.join('\n'), rootMd);
 }
 
-export interface RunEditObjectStreamOptions {
+export interface BuildEditSystemPromptOptions {
   rootConfig: RootConfig;
-  cmsClient: RootCMSClient;
-  user: string;
-  config: AiConfig;
-  model: AiModelConfig;
-  messages: UIMessage[];
   /** The JSON object the user is editing. Injected as context for the model. */
   editData: unknown;
-  loadCollection: (collectionId: string) => Promise<Collection | null>;
-  loadAllCollections: () => Promise<Record<string, Collection>>;
 }
 
 /**
- * Streaming variant used by the array-item "Edit with AI" diff-viewer flow.
- *
- * Differences from `runChatStream`:
- *
- * - Uses an edit-specific system prompt that injects the JSON the user is
- *   editing and the project's `root-cms.d.ts` types, and instructs the model
- *   to end every response with a fenced ```json block containing the
- *   complete proposed new JSON. The client extracts that block to populate
- *   the diff viewer.
- * - Tools are filtered to read-only (see `createReadOnlyCmsTools`). The user
- *   approves changes via the modal's "Save" button, so the model must not
- *   mutate Firestore directly.
- * - No Firestore persistence — edit sessions are ephemeral and don't show up
- *   in the user's chat history.
+ * Assembles the system prompt for the array-item "Edit with AI" diff-viewer
+ * flow: the edit instructions + output-format contract + read-only tool policy
+ * + the project's `root-cms.d.ts` types + the JSON being edited (wrapped as
+ * untrusted data), with `ROOT.md` appended when present.
  */
-export async function runEditObjectStream(
-  options: RunEditObjectStreamOptions
-): Promise<Response> {
-  const {
-    rootConfig,
-    cmsClient,
-    user,
-    model,
-    config,
-    messages,
-    editData,
-    loadCollection,
-    loadAllCollections,
-  } = options;
-  const languageModel = resolveLanguageModel(model);
-  const toolContext = buildCmsToolContext({
-    rootConfig,
-    cmsClient,
-    user,
-    loadCollection,
-    loadAllCollections,
-  });
-  const tools: ToolSet =
-    model.capabilities?.tools === false
-      ? {}
-      : createReadOnlyCmsTools(toolContext);
-
+export async function buildEditSystemPrompt(
+  options: BuildEditSystemPromptOptions
+): Promise<string> {
+  const {rootConfig, editData} = options;
   const editPromptText = (await import('../shared/ai/prompts/edit.txt'))
     .default;
   const promptParts: string[] = [
@@ -1058,51 +496,14 @@ export async function runEditObjectStream(
 
   const basePrompt = promptParts.join('\n');
   const rootMd = await readRootMd(rootConfig.rootDir);
-  const systemPrompt = buildSystemPrompt(basePrompt, rootMd);
-
-  const modelMessages = await convertToModelMessages(messages, {tools});
-  const result = streamText({
-    model: languageModel,
-    system: systemPrompt,
-    messages: modelMessages,
-    tools,
-    stopWhen: stepCountIs(config.maxSteps ?? 10),
-  });
-
-  return result.toUIMessageStreamResponse({
-    sendReasoning: model.capabilities?.reasoning ?? false,
-    originalMessages: messages,
-  });
-}
-
-/**
- * Recursively removes `undefined` values from an object/array. Returns a new
- * structure; the input is not mutated. Used to clean payloads before sending
- * them to Firestore, which rejects `undefined` outright.
- */
-export function stripUndefined<T>(value: T): T {
-  if (Array.isArray(value)) {
-    return value
-      .filter((v) => v !== undefined)
-      .map((v) => stripUndefined(v)) as unknown as T;
-  }
-  if (value && typeof value === 'object') {
-    const out: Record<string, unknown> = {};
-    for (const [k, v] of Object.entries(value)) {
-      if (v === undefined) {
-        continue;
-      }
-      out[k] = stripUndefined(v);
-    }
-    return out as unknown as T;
-  }
-  return value;
+  return buildSystemPrompt(basePrompt, rootMd);
 }
 
 // ===========================================================================
 // One-shot task helpers — used by the `/cms/api/ai.*` endpoints for tasks
 // that don't need a streaming chat session (diff summaries, publish
-// messages, translations, alt text, image generation).
+// messages, translations, alt text, image generation). These run server-side
+// so their API keys are never exposed to the client.
 // ===========================================================================
 
 export interface SummarizeDiffOptions {
@@ -1375,20 +776,4 @@ export async function generateImage(
   }
   const mediaType = result.image.mediaType || 'image/png';
   return {imageUrl: `data:${mediaType};base64,${result.image.base64}`};
-}
-
-/**
- * Extracts JSON from an AI response that may contain markdown code blocks.
- * @internal
- */
-export function extractJsonFromResponse(responseText: string): string {
-  let jsonText = responseText.trim();
-  if (jsonText.startsWith('```')) {
-    const lines = jsonText.split('\n');
-    jsonText = lines.slice(1, -1).join('\n');
-    if (jsonText.startsWith('json')) {
-      jsonText = jsonText.substring(4).trim();
-    }
-  }
-  return jsonText;
 }
