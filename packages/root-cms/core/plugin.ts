@@ -301,11 +301,17 @@ export type CMSPluginOptions = {
 
   /**
    * Configures the Root CMS AI chat (`/cms/ai`). Provide one or more models
-   * — the CMS proxies user requests directly to the configured providers.
+   * — each entry declares the provider, model id and credentials. The shape
+   * mirrors open source tools like Ollama and LiteLLM.
    *
-   * The shape mirrors open source tools like Ollama and LiteLLM: each entry
-   * declares the provider, model id and credentials. Keys live on the server,
-   * never on the client.
+   * IMPORTANT: the streaming chat (`/cms/ai`, the document-editor AI panel and
+   * the "Edit with AI" modal) calls the provider DIRECTLY from the browser —
+   * SSE proxying through the server did not work on App Engine / Firebase
+   * Hosting. The selected model's API key is therefore delivered to the
+   * authenticated CMS client. Use keys scoped/billed for this trusted,
+   * signed-in audience. The one-shot helpers (diff summaries, publish
+   * messages, translations, alt text, image generation) still run server-side,
+   * so their keys stay on the server.
    *
    * Example:
    * ```ts
@@ -787,13 +793,12 @@ export function cmsPlugin(options: CMSPluginOptions): CMSPlugin {
       server: Server,
       serverOptions: ConfigureServerOptions
     ) => {
-      // The AI chat routes echo prior tool results (e.g. full CMS docs read
-      // via `doc_get`) back to the server on every turn, so the request body
-      // can easily exceed body-parser's 100kb default. Use a larger limit for
-      // those routes only; body-parser short-circuits when `req._body` is
-      // already set, so the global parser below is a no-op for them.
+      // The AI "prepare" routes can carry a moderately large body (the edit
+      // flow sends the JSON object being edited). Use a larger limit for those
+      // routes only; body-parser short-circuits when `req._body` is already
+      // set, so the global parser below is a no-op for them.
       server.use(
-        ['/cms/api/ai.chat', '/cms/api/ai.edit_object'],
+        ['/cms/api/ai.chat.prepare', '/cms/api/ai.edit.prepare'],
         bodyParser.json({limit: '4mb'})
       );
       server.use(bodyParser.json());
