@@ -79,7 +79,7 @@ jobs:
             const versionsByName = Object.fromEntries(
               packages.map(({packageJson}) => [
                 packageJson.name,
-                `${packageJson.version}-deploy.${shortSha}`,
+                `${packageJson.version}-${shortSha}`,
               ])
             );
 
