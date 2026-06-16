@@ -1,5 +1,14 @@
 # @blinkk/root-cms
 
+## 3.1.3
+
+### Patch Changes
+
+- 510d76f: fix: limit strings extracted in translations modal
+- 1569910: feat: add pagination to asset library page
+- Updated dependencies [c91caf0]
+  - @blinkk/root@3.1.3
+
 ## 3.1.2
 
 ### Patch Changes
