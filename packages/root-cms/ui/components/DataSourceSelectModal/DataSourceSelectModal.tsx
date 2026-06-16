@@ -1,5 +1,6 @@
 import {Button, Loader} from '@mantine/core';
 import {ContextModalProps, useModals} from '@mantine/modals';
+import {IconTable, IconWorld} from '@tabler/icons-preact';
 import {useEffect, useState} from 'preact/hooks';
 import {useModalTheme} from '../../hooks/useModalTheme.js';
 import {DataSource, listDataSources} from '../../utils/data-source.js';
@@ -72,11 +73,20 @@ export function DataSourceSelectModal(
         <div className="DataSourceSelectModal__list">
           {dataSources.map((ds) => (
             <div key={ds.id} className="DataSourceSelectModal__item">
+              <div className="DataSourceSelectModal__item__icon">
+                {ds.type === 'gsheet' ? (
+                  <IconTable size={20} stroke={1.5} />
+                ) : (
+                  <IconWorld size={20} stroke={1.5} />
+                )}
+              </div>
               <div className="DataSourceSelectModal__item__info">
                 <div className="DataSourceSelectModal__item__id">{ds.id}</div>
-                <div className="DataSourceSelectModal__item__description">
-                  {ds.description || ''}
-                </div>
+                {ds.description && (
+                  <div className="DataSourceSelectModal__item__description">
+                    {ds.description}
+                  </div>
+                )}
               </div>
               <div className="DataSourceSelectModal__item__action">
                 {selectedIds.includes(ds.id) ? (
