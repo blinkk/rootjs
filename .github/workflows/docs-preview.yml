@@ -16,6 +16,13 @@ defaults:
 
 env:
   FORCE_COLOR: true
+  # The "Add preview package version suffix" step rewrites packages/*/package.json
+  # after install, which makes pnpm consider node_modules out of sync. With the
+  # repo's verifyDepsBeforeRun: warn setting, pnpm then prints an out-of-sync
+  # WARN to stdout on every `pnpm run`/`pnpm exec` — and FORCE_COLOR adds ANSI
+  # codes — which corrupts the captured `firebase --json` output below. Disable
+  # the check for this workflow so stdout only contains the command's own output.
+  PNPM_CONFIG_VERIFY_DEPS_BEFORE_RUN: "false"
 
 jobs:
   preview:
