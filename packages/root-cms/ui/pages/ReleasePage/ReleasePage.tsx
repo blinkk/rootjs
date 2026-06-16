@@ -397,7 +397,7 @@ ReleasePage.DataSourcesList = (props: {release: Release}) => {
           Edit
         </Button>
       </div>
-      <div className="ReleasePage__DataSourcesList__items">
+      <Surface className="ReleasePage__DataSourcesList__items">
         {ids.map((id) => {
           const ds = dataSources[id];
           return (
@@ -423,7 +423,7 @@ ReleasePage.DataSourcesList = (props: {release: Release}) => {
             </a>
           );
         })}
-      </div>
+      </Surface>
     </div>
   );
 };

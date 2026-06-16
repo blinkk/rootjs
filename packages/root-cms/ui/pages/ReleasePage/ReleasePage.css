@@ -105,18 +105,17 @@
   margin-bottom: 20px;
 }
 
-.ReleasePage__DataSourcesList__items {
-  border-bottom: 1px solid var(--color-border);
-}
-
 .ReleasePage__DataSourcesList__item {
   display: flex;
   align-items: center;
   gap: 12px;
-  border-top: 1px solid var(--color-border);
-  padding: 12px 8px;
+  padding: 12px;
   text-decoration: none;
   color: inherit;
+}
+
+.ReleasePage__DataSourcesList__item + .ReleasePage__DataSourcesList__item {
+  border-top: 1px solid var(--color-border);
 }
 
 .ReleasePage__DataSourcesList__item:hover {
