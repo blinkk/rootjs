@@ -1,6 +1,6 @@
 .EditReleasePage {
-  padding: 60px;
-  padding-top: 48px;
+  background: var(--page-background);
+  padding: var(--page-padding-lg);
 }
 
 .EditReleasePage__header {
@@ -41,4 +41,9 @@
 
 .EditReleasePage__header__controls a {
   display: flex;
+}
+
+.EditReleasePage__form {
+  max-width: 690px;
+  padding: 20px;
 }

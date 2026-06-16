@@ -7,6 +7,7 @@ import {useLocation} from 'preact-iso';
 import {ConditionalTooltip} from '../../components/ConditionalTooltip/ConditionalTooltip.js';
 import {Heading} from '../../components/Heading/Heading.js';
 import {ReleaseForm} from '../../components/ReleaseForm/ReleaseForm.js';
+import {Surface} from '../../components/Surface/Surface.js';
 import {Text} from '../../components/Text/Text.js';
 import {useModalTheme} from '../../hooks/useModalTheme.js';
 import {usePageTitle} from '../../hooks/usePageTitle.js';
@@ -156,7 +157,9 @@ export function EditReleasePage(props: {id: string}) {
             </div>
           </div>
         </div>
-        <ReleaseForm releaseId={props.id} />
+        <Surface className="EditReleasePage__form">
+          <ReleaseForm releaseId={props.id} />
+        </Surface>
       </div>
     </Layout>
   );
