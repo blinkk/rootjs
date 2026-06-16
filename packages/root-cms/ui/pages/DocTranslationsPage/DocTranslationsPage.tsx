@@ -34,7 +34,8 @@ import {
   TranslationsMap,
   getTranslationForLanguage,
   isLocaleExcludedFromTranslations,
-  loadTranslations,
+  loadTranslationsByHashes,
+  sourceHash,
   toTranslationLanguages,
 } from '../../utils/l10n.js';
 import {notifyErrors} from '../../utils/notifications.js';
@@ -72,11 +73,16 @@ export function DocTranslationsPage(props: DocTranslationsPageProps) {
 
   async function init() {
     try {
-      const [sourceStrings, translationsMap, linkedSheet] = await Promise.all([
+      const [sourceStrings, linkedSheet] = await Promise.all([
         extractStringsForDoc(docId),
-        loadTranslations(),
         cmsGetLinkedGoogleSheetL10n(docId),
       ]);
+      // Hash each source string and load only the matching translations,
+      // instead of downloading the project's entire translations collection.
+      const hashes = await Promise.all(
+        sourceStrings.map((source) => sourceHash(source))
+      );
+      const translationsMap = await loadTranslationsByHashes(hashes);
       setSourceStrings(sourceStrings);
       setTranslationsMap(translationsMap);
       setLinkedSheet(linkedSheet);
