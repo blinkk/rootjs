@@ -2,4 +2,4 @@
 '@blinkk/root': patch
 ---
 
-fix: optimize root pretty jsx renderer
+fix: optimize root jsx renderer (pretty newline propagation + escape fast-path)

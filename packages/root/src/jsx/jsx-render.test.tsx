@@ -109,6 +109,33 @@ test('escapes html entities in attributes', () => {
   );
 });
 
+// Boundary cases for the escape fast-path (a no-match precheck that returns the
+// input unchanged before entering the per-character escape loop): specials at
+// the very start/end of a string, consecutive specials, and a lone special.
+test('escapes specials at string boundaries in text', () => {
+  const vnode = <div>{'<a & b>'}</div>;
+  const output = renderJsxToString(vnode, {mode: 'minimal'});
+  expect(output).toBe('<div>&lt;a &amp; b&gt;</div>');
+});
+
+test('escapes consecutive specials in text', () => {
+  const vnode = <div>{'&&<<>>'}</div>;
+  const output = renderJsxToString(vnode, {mode: 'minimal'});
+  expect(output).toBe('<div>&amp;&amp;&lt;&lt;&gt;&gt;</div>');
+});
+
+test('escapes quote at attribute boundaries', () => {
+  const vnode = <div title={'"x"'} />;
+  const output = renderJsxToString(vnode, {mode: 'minimal'});
+  expect(output).toBe('<div title="&quot;x&quot;"></div>');
+});
+
+test('leaves strings without specials unchanged', () => {
+  const vnode = <div title="plain value">{'no specials here'}</div>;
+  const output = renderJsxToString(vnode, {mode: 'minimal'});
+  expect(output).toBe('<div title="plain value">no specials here</div>');
+});
+
 test('renders dangerouslySetInnerHTML', () => {
   const vnode = <div dangerouslySetInnerHTML={{__html: '<b>raw</b>'}} />;
   const output = renderJsxToString(vnode, {mode: 'minimal'});

@@ -225,6 +225,13 @@ const LT = '&lt;';
 const GT = '&gt;';
 const QUOT = '&quot;';
 
+// Single-pass native prechecks for the common case where a string needs no
+// escaping (most class names, URLs, and text). `RegExp.test` scans in native
+// code, which is substantially faster than the JS `charCodeAt` loop below, so
+// strings that don't match return immediately without entering the loop.
+const HTML_ESCAPE_RE = /[&<>]/;
+const ATTR_ESCAPE_RE = /[&<>"]/;
+
 // Shared empty object reused as the per-component context map when no contexts
 // have ever been pushed. Components only ever read from this map, so sharing is
 // safe and avoids a per-render allocation in the common case.
@@ -236,6 +243,7 @@ function isDef<T>(value: T | null | undefined): value is T {
 }
 
 function escapeHtml(str: string): string {
+  if (!HTML_ESCAPE_RE.test(str)) return str;
   let result = '';
   let last = 0;
   for (let i = 0; i < str.length; i++) {
@@ -249,11 +257,11 @@ function escapeHtml(str: string): string {
       last = i + 1;
     }
   }
-  if (last === 0) return str;
   return result + str.slice(last);
 }
 
 function escapeAttr(str: string): string {
+  if (!ATTR_ESCAPE_RE.test(str)) return str;
   let result = '';
   let last = 0;
   for (let i = 0; i < str.length; i++) {
@@ -268,7 +276,6 @@ function escapeAttr(str: string): string {
       last = i + 1;
     }
   }
-  if (last === 0) return str;
   return result + str.slice(last);
 }
 
