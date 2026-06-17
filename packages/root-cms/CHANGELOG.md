@@ -1,5 +1,14 @@
 # @blinkk/root-cms
 
+## 3.1.4
+
+### Patch Changes
+
+- e1ab175: fix: stream ai chat directly from browser to provider
+- a6106e2: feat: add compare viewports to cms preview
+- Updated dependencies [dde0f27]
+  - @blinkk/root@3.1.4
+
 ## 3.1.3
 
 ### Patch Changes

@@ -1,5 +1,11 @@
 # @blinkk/root
 
+## 3.1.4
+
+### Patch Changes
+
+- dde0f27: fix: optimize root jsx renderer (pretty newline propagation + escape fast-path)
+
 ## 3.1.3
 
 ### Patch Changes
