@@ -100,7 +100,7 @@ function cardGrid(h: H, cards = 24, navLinks = 8, tagsPerCard = 4) {
     h(
       'header',
       {class: 'global-header'},
-      h('a', {href: '/', class: 'global-header__logo'}, 'Gradient'),
+      h('a', {href: '/', class: 'global-header__logo'}, 'Example'),
       nav
     ),
     h('section', {class: 'card-grid', role: 'list'}, ...cardEls)
