@@ -2,4 +2,4 @@
 '@blinkk/root': patch
 ---
 
-refactor: optimize root jsx renderer (minimal fast path + attribute lookup)
+refactor: optimize root jsx renderer (minimal + pretty fast paths)

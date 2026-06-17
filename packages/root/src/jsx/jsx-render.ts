@@ -101,6 +101,37 @@ const ALWAYS_BLOCK_ELEMENTS = new Set([
   'title',
 ]);
 
+// Combined per-tag classification flags for the pretty-mode renderer. Each
+// element in `renderElement` needs to know whether a tag is void, an
+// always-block element, a raw-content element, and a default block-level
+// element. These classifications are static (they never depend on render
+// options), so they are precomputed into a single `Map<tag, bitmask>` lookup —
+// one hash probe per element instead of four separate `Set.has` probes. Tags
+// absent from the map (the common inline elements like `span`/`a`/`em`) return
+// `undefined`, treated as flags 0. Runtime-configured block elements
+// (`options.blockElements`) are handled by a separate, usually-absent set so
+// the common path stays a single lookup.
+const TAG_FLAG_VOID = 1;
+const TAG_FLAG_ALWAYS_BLOCK = 2;
+const TAG_FLAG_RAW = 4;
+const TAG_FLAG_BLOCK = 8;
+const TAG_STATIC_FLAGS = new Map<string, number>();
+for (const t of VOID_ELEMENTS) {
+  TAG_STATIC_FLAGS.set(t, (TAG_STATIC_FLAGS.get(t) || 0) | TAG_FLAG_VOID);
+}
+for (const t of ALWAYS_BLOCK_ELEMENTS) {
+  TAG_STATIC_FLAGS.set(
+    t,
+    (TAG_STATIC_FLAGS.get(t) || 0) | TAG_FLAG_ALWAYS_BLOCK
+  );
+}
+for (const t of RAW_CONTENT_ELEMENTS) {
+  TAG_STATIC_FLAGS.set(t, (TAG_STATIC_FLAGS.get(t) || 0) | TAG_FLAG_RAW);
+}
+for (const t of DEFAULT_BLOCK_ELEMENTS) {
+  TAG_STATIC_FLAGS.set(t, (TAG_STATIC_FLAGS.get(t) || 0) | TAG_FLAG_BLOCK);
+}
+
 /**
  * HTML/SVG boolean attributes.
  * When present with a truthy value, render as a minimized attribute.
@@ -333,16 +364,25 @@ export function renderJsxToString(
 ): string {
   const mode = options?.mode ?? 'pretty';
   const isPretty = mode === 'pretty';
-  // In minimal mode `blockSet` is unused (the `isPretty` guard short-circuits
-  // any `.has()` call). In pretty mode without custom block elements, reuse the
-  // module-level Set instead of allocating a copy.
-  let blockSet: ReadonlySet<string> = DEFAULT_BLOCK_ELEMENTS;
+  // Default block-level elements are baked into the module-level
+  // `TAG_STATIC_FLAGS` map (the `TAG_FLAG_BLOCK` bit), so the common case needs
+  // no per-render set. Only when the caller supplies extra `blockElements` do we
+  // build a small `customBlockSet` of just those additions; `renderElement`
+  // consults it via a cheap "is it defined?" guard that is `undefined` (and so
+  // skipped) in the common case.
+  let customBlockSet: Set<string> | undefined;
   if (isPretty && options?.blockElements && options.blockElements.length > 0) {
-    const merged = new Set(DEFAULT_BLOCK_ELEMENTS);
+    customBlockSet = new Set<string>();
     for (const el of options.blockElements) {
-      merged.add(el);
+      // Only track elements that aren't already default block elements, so the
+      // set stays empty (and the guard stays cheap) for redundant config.
+      if (!DEFAULT_BLOCK_ELEMENTS.has(el)) {
+        customBlockSet.add(el);
+      }
     }
-    blockSet = merged;
+    if (customBlockSet.size === 0) {
+      customBlockSet = undefined;
+    }
   }
 
   // Context stacks: context.__c (id) -> value[]
@@ -416,56 +456,65 @@ export function renderJsxToString(
   }
 
   function render(node: any, inline?: boolean): string {
-    if (!isDef(node) || typeof node === 'boolean') {
-      nlFlag = false;
-      return '';
-    }
-    if (typeof node === 'string') {
+    const t = typeof node;
+    if (t === 'string') {
       // escapeHtml only replaces &<>, so it never adds or removes newlines; the
-      // raw text's newline status is preserved. Only scan in pretty mode, and
-      // only this leaf string (each text node is scanned once, never re-walked
-      // by ancestors).
-      nlFlag = isPretty && node.indexOf('\n') >= 0;
+      // raw text's newline status is preserved. Each text node is scanned once
+      // here, never re-walked by ancestors. (`render` is only reached in pretty
+      // mode — minimal mode uses `mRender` — so the scan always applies.)
+      nlFlag = node.indexOf('\n') >= 0;
       return escapeHtml(node);
     }
-    if (typeof node === 'number' || typeof node === 'bigint') {
+    if (t === 'object') {
+      if (node === null) {
+        nlFlag = false;
+        return '';
+      }
+      if (Array.isArray(node)) {
+        let out = '';
+        let anyNewline = false;
+        for (let i = 0; i < node.length; i++) {
+          const child = node[i];
+          // Inline the string leaf (the most common array entry) to skip a
+          // recursive `render` dispatch. This mirrors the string branch above
+          // exactly: escape the text and record whether it contains a newline.
+          if (typeof child === 'string') {
+            out += escapeHtml(child);
+            anyNewline = anyNewline || child.indexOf('\n') >= 0;
+          } else {
+            out += render(child, inline);
+            anyNewline = anyNewline || nlFlag;
+          }
+        }
+        nlFlag = anyNewline;
+        return out;
+      }
+      // Must be a VNode-like object.
+      if (!('type' in node)) {
+        nlFlag = false;
+        return '';
+      }
+      const type = node.type;
+      // HTML element (the most common VNode shape).
+      if (typeof type === 'string') {
+        return renderElement(type, node.props, inline);
+      }
+      // Fragment.
+      if (type === Fragment) {
+        return renderChildren(node.props ? node.props.children : undefined);
+      }
+      // Component (function or class).
+      if (typeof type === 'function') {
+        return renderComponent(node);
+      }
+      return '';
+    }
+    if (t === 'number' || t === 'bigint') {
       nlFlag = false;
       return String(node);
     }
-    if (Array.isArray(node)) {
-      let out = '';
-      let anyNewline = false;
-      for (let i = 0; i < node.length; i++) {
-        out += render(node[i], inline);
-        anyNewline = anyNewline || nlFlag;
-      }
-      nlFlag = anyNewline;
-      return out;
-    }
-
-    // Must be a VNode-like object.
-    if (typeof node !== 'object' || !('type' in node)) {
-      nlFlag = false;
-      return '';
-    }
-
-    const {type, props} = node;
-
-    // Fragment.
-    if (type === Fragment) {
-      return renderChildren(props?.children);
-    }
-
-    // Component (function or class).
-    if (typeof type === 'function') {
-      return renderComponent(node);
-    }
-
-    // HTML element.
-    if (typeof type === 'string') {
-      return renderElement(type, props, inline);
-    }
-
+    // boolean, undefined, function, symbol: render to nothing.
+    nlFlag = false;
     return '';
   }
 
@@ -557,70 +606,85 @@ export function renderJsxToString(
     props: Record<string, any>,
     inline?: boolean
   ): string {
+    // One combined lookup for the static (void / always-block / raw-content /
+    // default-block) classifications, instead of separate `Set.has` probes.
+    // Inline elements (span/a/em/strong/…) miss the map entirely and resolve
+    // to 0.
+    const flags = TAG_STATIC_FLAGS.get(tag) || 0;
     // Metadata/resource elements always break onto their own line, even within
     // mixed (text + element) content where the inline heuristic applies, since
-    // they render no inline visual output.
+    // they render no inline visual output. (`renderElement` is only reached in
+    // pretty mode — minimal mode uses `mElement` — so the block logic always
+    // applies; no `isPretty` guard needed.) `customBlockSet` is consulted only
+    // for runtime-configured block elements and is `undefined` (skipped) in the
+    // common case.
     const isBlock =
-      isPretty &&
-      (ALWAYS_BLOCK_ELEMENTS.has(tag) || (!inline && blockSet.has(tag)));
-    const isVoid = VOID_ELEMENTS.has(tag);
+      (flags & TAG_FLAG_ALWAYS_BLOCK) !== 0 ||
+      (!inline &&
+        ((flags & TAG_FLAG_BLOCK) !== 0 ||
+          (customBlockSet !== undefined && customBlockSet.has(tag))));
     const attrs = renderAttrs(tag, props);
-    let result = '<' + tag + attrs + '>';
+    const openTag = '<' + tag + attrs + '>';
 
-    if (isVoid) {
+    if ((flags & TAG_FLAG_VOID) !== 0) {
       if (isBlock) {
-        result += '\n';
         nlFlag = true;
-      } else {
-        nlFlag = false;
+        return openTag + '\n';
       }
-      return result;
+      nlFlag = false;
+      return openTag;
     }
 
     let inner = '';
     // Whether `inner` contains a newline. For the children path this is read
     // from `nlFlag` (threaded up from the recursive render, no rescan). For the
-    // raw-HTML and textarea leaf paths the string is scanned once here; only in
-    // pretty mode, since minimal mode never consults it.
+    // raw-HTML and textarea leaf paths the string is scanned once here.
     let innerHasNewline = false;
-    if (isDef(props?.dangerouslySetInnerHTML?.__html)) {
-      inner = props.dangerouslySetInnerHTML.__html;
-      innerHasNewline = isPretty && inner.includes('\n');
-    } else if (isDef(props?.children)) {
-      inner = renderChildren(props.children);
-      innerHasNewline = nlFlag;
-    } else if (tag === 'textarea' && props) {
-      // For <textarea>, render value/defaultValue as text content since
-      // browsers ignore the value attribute on textarea elements.
-      const textVal = props.value ?? props.defaultValue;
-      if (isDef(textVal)) {
-        inner = escapeHtml(String(textVal));
-        innerHasNewline = isPretty && inner.includes('\n');
+    if (props) {
+      const dsih = props.dangerouslySetInnerHTML;
+      if (dsih && dsih.__html != null) {
+        inner = dsih.__html;
+        innerHasNewline = inner.includes('\n');
+      } else if (props.children != null) {
+        const children = props.children;
+        // Inline the single string child (e.g. `<h3>Title</h3>`) — the most
+        // common element body — to skip a `renderChildren`/`render` dispatch.
+        // Mirrors the string branch of `render`.
+        if (typeof children === 'string') {
+          inner = escapeHtml(children);
+          innerHasNewline = children.indexOf('\n') >= 0;
+        } else {
+          inner = renderChildren(children);
+          innerHasNewline = nlFlag;
+        }
+      } else if (tag === 'textarea') {
+        // For <textarea>, render value/defaultValue as text content since
+        // browsers ignore the value attribute on textarea elements.
+        const textVal = props.value ?? props.defaultValue;
+        if (textVal != null) {
+          inner = escapeHtml(String(textVal));
+          innerHasNewline = inner.includes('\n');
+        }
       }
     }
 
     if (isBlock) {
+      // Block elements always end with a trailing newline.
+      nlFlag = true;
       // When inner content contains block children (indicated by newlines),
       // add a newline after the opening tag so content starts on its own line.
       // Exempt raw-content elements (pre, textarea, script, style) where
       // newlines are literal text, not block-child indicators.
-      const hasBlockChildren =
-        !RAW_CONTENT_ELEMENTS.has(tag) && innerHasNewline;
+      const hasBlockChildren = (flags & TAG_FLAG_RAW) === 0 && innerHasNewline;
       if (hasBlockChildren) {
-        result += '\n' + inner + '</' + tag + '>\n';
-      } else {
-        result += inner + '</' + tag + '>\n';
+        return openTag + '\n' + inner + '</' + tag + '>\n';
       }
-      // Block elements always end with a trailing newline.
-      nlFlag = true;
-    } else {
-      result += inner + '</' + tag + '>';
-      // Opening/closing tags add no newlines, so the element's newline status
-      // is exactly that of its inner content.
-      nlFlag = innerHasNewline;
+      return openTag + inner + '</' + tag + '>\n';
     }
-
-    return result;
+    // Opening/closing tags add no newlines, so the element's newline status is
+    // exactly that of its inner content.
+    nlFlag = innerHasNewline;
+    return openTag + inner + '</' + tag + '>';
   }
 
   function renderAttrs(tag: string, props: Record<string, any>): string {
@@ -691,28 +755,20 @@ export function renderJsxToString(
   }
 
   /**
-   * Returns true if a child node is a text-like value (string, number).
-   */
-  function isTextNode(child: any): boolean {
-    if (!isDef(child) || typeof child === 'boolean') return false;
-    return (
-      typeof child === 'string' ||
-      typeof child === 'number' ||
-      typeof child === 'bigint'
-    );
-  }
-
-  /**
    * Checks if an array of children contains a mix of text nodes and elements.
    * When mixed, block elements should render inline to avoid breaking text flow.
+   * The per-child type checks are inlined (rather than calling `isTextNode`)
+   * because this scans every child of every element in pretty mode.
    */
   function hasMixedContent(children: any[]): boolean {
     let hasText = false;
     let hasElement = false;
-    for (const child of children) {
-      if (isTextNode(child)) {
+    for (let i = 0; i < children.length; i++) {
+      const child = children[i];
+      const t = typeof child;
+      if (t === 'string' || t === 'number' || t === 'bigint') {
         hasText = true;
-      } else if (isDef(child) && typeof child === 'object' && 'type' in child) {
+      } else if (t === 'object' && child !== null && 'type' in child) {
         hasElement = true;
       }
       if (hasText && hasElement) return true;
@@ -721,17 +777,27 @@ export function renderJsxToString(
   }
 
   function renderChildren(children: any): string {
-    if (!isDef(children)) {
+    if (children == null) {
       nlFlag = false;
       return '';
     }
     if (Array.isArray(children)) {
-      const inline = isPretty && hasMixedContent(children);
+      // `renderChildren` is only reached in pretty mode (minimal uses
+      // `mChildren`), so the mixed-content scan always applies.
+      const inline = hasMixedContent(children);
       let out = '';
       let anyNewline = false;
       for (let i = 0; i < children.length; i++) {
-        out += render(children[i], inline);
-        anyNewline = anyNewline || nlFlag;
+        const child = children[i];
+        // Inline the string leaf to skip a recursive `render` dispatch (mirrors
+        // the string branch of `render`).
+        if (typeof child === 'string') {
+          out += escapeHtml(child);
+          anyNewline = anyNewline || child.indexOf('\n') >= 0;
+        } else {
+          out += render(child, inline);
+          anyNewline = anyNewline || nlFlag;
+        }
       }
       nlFlag = anyNewline;
       return out;
