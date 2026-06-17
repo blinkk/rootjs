@@ -5,7 +5,7 @@ interface HighlightNodeOptions {
   scroll: boolean;
 }
 
-/** Sends a request to the preview iframe to highlight a node. */
+/** Sends a request to the preview iframe(s) to highlight a node. */
 export function requestHighlightNode(
   deepKey: string | null,
   options?: HighlightNodeOptions
@@ -13,19 +13,24 @@ export function requestHighlightNode(
   if (!testEnableChannelToPreview()) {
     return;
   }
-  const iframeEl = getIframePreviewElement();
-  if (!iframeEl) {
+  const iframeEls = getIframePreviewElements();
+  if (iframeEls.length === 0) {
     return;
   }
   const message: HighlightNodeMessage = {highlightNode: {deepKey, options}};
   // The preview iframe is same-origin (preview URLs are relative paths served
-  // by the same root server).
-  iframeEl.contentWindow?.postMessage(message, window.location.origin);
+  // by the same root server). When multiple viewports are shown (2-up), the
+  // node is highlighted in every preview.
+  iframeEls.forEach((iframeEl) => {
+    iframeEl.contentWindow?.postMessage(message, window.location.origin);
+  });
 }
 
-/** Returns the iframe element used for previewing content. */
-function getIframePreviewElement(): HTMLIFrameElement | null {
-  return document.querySelector('iframe[title="iframe preview"]');
+/** Returns the iframe elements used for previewing content. */
+function getIframePreviewElements(): HTMLIFrameElement[] {
+  return Array.from(
+    document.querySelectorAll('iframe[title="iframe preview"]')
+  );
 }
 
 /** Returns whether the channel to the preview should be enabled. */

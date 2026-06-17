@@ -25,6 +25,13 @@
   background: #f5f5f5;
 }
 
+.DocumentPagePreviewBar__divider {
+  width: 1px;
+  align-self: stretch;
+  margin: 6px 4px;
+  background: var(--color-border);
+}
+
 .DocumentPagePreviewBar__navbar {
   flex: 1;
   padding: 2px 24px;
