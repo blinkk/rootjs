@@ -138,87 +138,97 @@ const BOOLEAN_ATTRS = new Set([
   'selected',
 ]);
 
-/** JSX prop name -> HTML attribute name. */
-const PROP_TO_ATTR: Record<string, string> = {
-  acceptCharset: 'accept-charset',
-  autoCapitalize: 'autocapitalize',
-  autoComplete: 'autocomplete',
-  autoFocus: 'autofocus',
-  autoPlay: 'autoplay',
-  charSet: 'charset',
-  className: 'class',
-  colSpan: 'colspan',
-  contentEditable: 'contenteditable',
-  crossOrigin: 'crossorigin',
-  dateTime: 'datetime',
-  disableRemotePlayback: 'disableremoteplayback',
-  encType: 'enctype',
-  formAction: 'formaction',
-  formEncType: 'formenctype',
-  formMethod: 'formmethod',
-  formNoValidate: 'formnovalidate',
-  formTarget: 'formtarget',
-  frameBorder: 'frameborder',
-  hrefLang: 'hreflang',
-  htmlFor: 'for',
-  httpEquiv: 'http-equiv',
-  inputMode: 'inputmode',
-  itemProp: 'itemprop',
-  itemRef: 'itemref',
-  itemScope: 'itemscope',
-  itemType: 'itemtype',
-  maxLength: 'maxlength',
-  mediaGroup: 'mediagroup',
-  minLength: 'minlength',
-  noModule: 'nomodule',
-  noValidate: 'novalidate',
-  playsInline: 'playsinline',
-  readOnly: 'readonly',
-  referrerPolicy: 'referrerpolicy',
-  rowSpan: 'rowspan',
-  spellCheck: 'spellcheck',
-  srcDoc: 'srcdoc',
-  srcLang: 'srclang',
-  srcSet: 'srcset',
-  tabIndex: 'tabindex',
-  useMap: 'usemap',
+/**
+ * JSX prop name -> HTML attribute name.
+ *
+ * A null-prototype object so that the very common "no remapping needed" lookup
+ * (`class`, `href`, `id`, `data-*`, `aria-*`, etc., none of which are keys here)
+ * misses without walking the `Object.prototype` chain. `renderAttrs` performs
+ * one lookup per attribute, so for attribute-heavy trees this is a hot path.
+ */
+const PROP_TO_ATTR: Record<string, string> = Object.assign(
+  Object.create(null),
+  {
+    acceptCharset: 'accept-charset',
+    autoCapitalize: 'autocapitalize',
+    autoComplete: 'autocomplete',
+    autoFocus: 'autofocus',
+    autoPlay: 'autoplay',
+    charSet: 'charset',
+    className: 'class',
+    colSpan: 'colspan',
+    contentEditable: 'contenteditable',
+    crossOrigin: 'crossorigin',
+    dateTime: 'datetime',
+    disableRemotePlayback: 'disableremoteplayback',
+    encType: 'enctype',
+    formAction: 'formaction',
+    formEncType: 'formenctype',
+    formMethod: 'formmethod',
+    formNoValidate: 'formnovalidate',
+    formTarget: 'formtarget',
+    frameBorder: 'frameborder',
+    hrefLang: 'hreflang',
+    htmlFor: 'for',
+    httpEquiv: 'http-equiv',
+    inputMode: 'inputmode',
+    itemProp: 'itemprop',
+    itemRef: 'itemref',
+    itemScope: 'itemscope',
+    itemType: 'itemtype',
+    maxLength: 'maxlength',
+    mediaGroup: 'mediagroup',
+    minLength: 'minlength',
+    noModule: 'nomodule',
+    noValidate: 'novalidate',
+    playsInline: 'playsinline',
+    readOnly: 'readonly',
+    referrerPolicy: 'referrerpolicy',
+    rowSpan: 'rowspan',
+    spellCheck: 'spellcheck',
+    srcDoc: 'srcdoc',
+    srcLang: 'srclang',
+    srcSet: 'srcset',
+    tabIndex: 'tabindex',
+    useMap: 'usemap',
 
-  // SVG presentation attributes (camelCase -> kebab-case).
-  clipPath: 'clip-path',
-  clipRule: 'clip-rule',
-  colorInterpolation: 'color-interpolation',
-  colorInterpolationFilters: 'color-interpolation-filters',
-  dominantBaseline: 'dominant-baseline',
-  fillOpacity: 'fill-opacity',
-  fillRule: 'fill-rule',
-  floodColor: 'flood-color',
-  floodOpacity: 'flood-opacity',
-  imageRendering: 'image-rendering',
-  letterSpacing: 'letter-spacing',
-  lightingColor: 'lighting-color',
-  markerEnd: 'marker-end',
-  markerMid: 'marker-mid',
-  markerStart: 'marker-start',
-  paintOrder: 'paint-order',
-  pointerEvents: 'pointer-events',
-  shapeRendering: 'shape-rendering',
-  stopColor: 'stop-color',
-  stopOpacity: 'stop-opacity',
-  strokeDasharray: 'stroke-dasharray',
-  strokeDashoffset: 'stroke-dashoffset',
-  strokeLinecap: 'stroke-linecap',
-  strokeLinejoin: 'stroke-linejoin',
-  strokeMiterlimit: 'stroke-miterlimit',
-  strokeOpacity: 'stroke-opacity',
-  strokeWidth: 'stroke-width',
-  textAnchor: 'text-anchor',
-  textDecoration: 'text-decoration',
-  textRendering: 'text-rendering',
-  transformOrigin: 'transform-origin',
-  vectorEffect: 'vector-effect',
-  wordSpacing: 'word-spacing',
-  writingMode: 'writing-mode',
-};
+    // SVG presentation attributes (camelCase -> kebab-case).
+    clipPath: 'clip-path',
+    clipRule: 'clip-rule',
+    colorInterpolation: 'color-interpolation',
+    colorInterpolationFilters: 'color-interpolation-filters',
+    dominantBaseline: 'dominant-baseline',
+    fillOpacity: 'fill-opacity',
+    fillRule: 'fill-rule',
+    floodColor: 'flood-color',
+    floodOpacity: 'flood-opacity',
+    imageRendering: 'image-rendering',
+    letterSpacing: 'letter-spacing',
+    lightingColor: 'lighting-color',
+    markerEnd: 'marker-end',
+    markerMid: 'marker-mid',
+    markerStart: 'marker-start',
+    paintOrder: 'paint-order',
+    pointerEvents: 'pointer-events',
+    shapeRendering: 'shape-rendering',
+    stopColor: 'stop-color',
+    stopOpacity: 'stop-opacity',
+    strokeDasharray: 'stroke-dasharray',
+    strokeDashoffset: 'stroke-dashoffset',
+    strokeLinecap: 'stroke-linecap',
+    strokeLinejoin: 'stroke-linejoin',
+    strokeMiterlimit: 'stroke-miterlimit',
+    strokeOpacity: 'stroke-opacity',
+    strokeWidth: 'stroke-width',
+    textAnchor: 'text-anchor',
+    textDecoration: 'text-decoration',
+    textRendering: 'text-rendering',
+    transformOrigin: 'transform-origin',
+    vectorEffect: 'vector-effect',
+    wordSpacing: 'word-spacing',
+    writingMode: 'writing-mode',
+  }
+);
 
 const AMP = '&amp;';
 const LT = '&lt;';
@@ -474,7 +484,7 @@ export function renderJsxToString(
     if (fnAny._isProvider && fnAny._context) {
       const ctx = fnAny._context;
       ctx._stack.push((props as any).value);
-      const result = renderChildren(props.children);
+      const result = activeChildren(props.children);
       ctx._stack.pop();
       return result;
     }
@@ -486,7 +496,7 @@ export function renderJsxToString(
     }
     if (contextId) {
       pushCtx(contextId, (props as any).value);
-      const result = renderChildren(props.children);
+      const result = activeChildren(props.children);
       popCtx(contextId);
       return result;
     }
@@ -499,9 +509,9 @@ export function renderJsxToString(
       const value =
         stack && stack.length > 0 ? stack[stack.length - 1] : ctx.__;
       if (typeof props.children === 'function') {
-        return render(props.children(value));
+        return activeRender(props.children(value));
       }
-      return renderChildren(props.children);
+      return activeChildren(props.children);
     }
 
     // Regular component — set up a fake component instance so Preact hooks
@@ -531,12 +541,12 @@ export function renderJsxToString(
         instance.__H = component.__H;
         (vnode as any).__c = instance;
         (preactOptions as any).__r?.(vnode);
-        return render(instance.render(instance.props, instance.state));
+        return activeRender(instance.render(instance.props, instance.state));
       }
 
       // Functional component.
       const rendered = fn(props, component.context);
-      return render(rendered);
+      return activeRender(rendered);
     } finally {
       preactOptions.diffed?.(vnode as any);
     }
@@ -615,8 +625,14 @@ export function renderJsxToString(
 
   function renderAttrs(tag: string, props: Record<string, any>): string {
     if (!props) return '';
+    const isTextarea = tag === 'textarea';
     let result = '';
     for (const key in props) {
+      const value = props[key];
+      // `null`/`undefined` props produce no attribute. Checking this first
+      // short-circuits absent optional attributes immediately, before the
+      // reserved-key string comparisons.
+      if (value == null) continue;
       if (
         key === 'children' ||
         key === 'dangerouslySetInnerHTML' ||
@@ -628,38 +644,48 @@ export function renderJsxToString(
         continue;
       }
       // Skip value/defaultValue on textarea — rendered as text content.
-      if (tag === 'textarea' && (key === 'value' || key === 'defaultValue')) {
+      if (isTextarea && (key === 'value' || key === 'defaultValue')) {
         continue;
       }
-
-      let value = props[key];
-      if (!isDef(value)) continue;
-      // Skip function-valued props such as event handlers (e.g. onClick={fn}):
-      // client-side handler functions can't be serialized to HTML. String
-      // values like <select onChange="..."> are inline HTML event attributes,
-      // so they are preserved and rendered as-is.
-      if (typeof value === 'function') continue;
 
       const attrName = PROP_TO_ATTR[key] || key;
+      const valueType = typeof value;
 
-      // For boolean attributes, `false` removes the attribute. For all other
-      // attributes, `false` is stringified (e.g. data-foo="false").
-      if (value === false && BOOLEAN_ATTRS.has(attrName)) continue;
-
-      // Boolean attributes are minimized when true; other attributes use
-      // explicit string serialization (e.g. id="true", data-foo="true").
-      if (value === true && BOOLEAN_ATTRS.has(attrName)) {
-        result += ' ' + attrName;
+      // Dispatch ordered by frequency: string and numeric attribute values are
+      // by far the most common, so they are matched first.
+      if (valueType === 'string') {
+        result += ' ' + attrName + '="' + escapeAttr(value) + '"';
+      } else if (valueType === 'number') {
+        // A stringified number never contains characters that require HTML
+        // escaping, so skip `escapeAttr` entirely.
+        result += ' ' + attrName + '="' + value + '"';
+      } else if (value === true) {
+        // Boolean HTML attributes minimize to a bare attribute when `true`;
+        // other attributes are stringified (e.g. id="true").
+        result += BOOLEAN_ATTRS.has(attrName)
+          ? ' ' + attrName
+          : ' ' + attrName + '="true"';
+      } else if (value === false) {
+        // Boolean HTML attributes are removed when `false`; other attributes
+        // are stringified (e.g. data-foo="false").
+        if (!BOOLEAN_ATTRS.has(attrName)) {
+          result += ' ' + attrName + '="false"';
+        }
+      } else if (valueType === 'function') {
+        // Skip function-valued props such as event handlers (e.g.
+        // onClick={fn}): client-side handler functions can't be serialized to
+        // HTML. String-valued inline handlers (e.g. <select onChange="...">)
+        // are preserved by the string branch above.
         continue;
+      } else if (key === 'style' && valueType === 'object') {
+        // Style objects serialize to a CSS string; an empty result is omitted.
+        const styleStr = styleToString(value);
+        if (styleStr) {
+          result += ' ' + attrName + '="' + escapeAttr(styleStr) + '"';
+        }
+      } else {
+        result += ' ' + attrName + '="' + escapeAttr(String(value)) + '"';
       }
-
-      // Style objects.
-      if (key === 'style' && typeof value === 'object') {
-        value = styleToString(value);
-        if (!value) continue;
-      }
-
-      result += ' ' + attrName + '="' + escapeAttr(String(value)) + '"';
     }
     return result;
   }
@@ -713,7 +739,154 @@ export function renderJsxToString(
     return render(children);
   }
 
-  return render(vnode);
+  // ---------------------------------------------------------------------------
+  // Minimal-mode fast path.
+  //
+  // Minimal mode emits compact HTML with no formatting, so it needs none of the
+  // pretty-mode bookkeeping that `render`/`renderChildren`/`renderElement`
+  // carry: the `nlFlag` newline side-channel, the `inline` parameter,
+  // block-element detection, and the mixed-content scan. These dedicated
+  // functions drop all of it, which removes those closure reads/writes and
+  // branches from the hottest traversal loop. Each accumulates into a local
+  // string and returns it (locals beat a shared closure-level buffer, and V8
+  // represents the `+` concatenations as cheap rope/cons strings that flatten
+  // once at the end). Output is byte-identical to the unified path in minimal
+  // mode; the test suite asserts this across all element/attribute shapes.
+  //
+  // `renderComponent` is shared between modes via the `activeRender` /
+  // `activeChildren` indirection assigned below: in minimal mode a component's
+  // rendered subtree continues down `mRender`/`mChildren`, in pretty mode down
+  // `render`/`renderChildren`.
+  // ---------------------------------------------------------------------------
+
+  function mRender(node: any): string {
+    const t = typeof node;
+    if (t === 'string') {
+      return escapeHtml(node);
+    }
+    if (t === 'object') {
+      if (node === null) {
+        return '';
+      }
+      if (Array.isArray(node)) {
+        let out = '';
+        for (let i = 0; i < node.length; i++) {
+          const child = node[i];
+          // Inline the string leaf (the most common array entry) to skip a
+          // recursive `mRender` dispatch; `mRender('...')` is exactly
+          // `escapeHtml('...')`.
+          out += typeof child === 'string' ? escapeHtml(child) : mRender(child);
+        }
+        return out;
+      }
+      if (!('type' in node)) {
+        return '';
+      }
+      const type = node.type;
+      if (typeof type === 'string') {
+        return mElement(type, node.props);
+      }
+      if (type === Fragment) {
+        return mChildren(node.props ? node.props.children : undefined);
+      }
+      if (typeof type === 'function') {
+        return renderComponent(node);
+      }
+      return '';
+    }
+    if (t === 'number' || t === 'bigint') {
+      return String(node);
+    }
+    return '';
+  }
+
+  function mElement(tag: string, props: Record<string, any>): string {
+    const attrs = renderAttrs(tag, props);
+    if (VOID_ELEMENTS.has(tag)) {
+      return '<' + tag + attrs + '>';
+    }
+    let inner = '';
+    if (props) {
+      const dsih = props.dangerouslySetInnerHTML;
+      if (dsih && dsih.__html != null) {
+        inner = dsih.__html;
+      } else {
+        const children = props.children;
+        if (children != null) {
+          // Inline the single string child (e.g. `<h3>Title</h3>`,
+          // `<li>Tag</li>`) — the most common element body — so it skips a
+          // `mChildren` call; `mChildren('...')` is exactly `escapeHtml('...')`.
+          inner =
+            typeof children === 'string'
+              ? escapeHtml(children)
+              : mChildren(children);
+        } else if (tag === 'textarea') {
+          // For <textarea>, render value/defaultValue as text content since
+          // browsers ignore the value attribute on textarea elements.
+          const textVal = props.value ?? props.defaultValue;
+          if (textVal != null) {
+            inner = escapeHtml(String(textVal));
+          }
+        }
+      }
+    }
+    // Single multi-operand concatenation: V8 sizes and fills one flat string
+    // rather than allocating a separate `open` intermediate first.
+    return '<' + tag + attrs + '>' + inner + '</' + tag + '>';
+  }
+
+  function mChildren(children: any): string {
+    if (children == null) {
+      return '';
+    }
+    if (Array.isArray(children)) {
+      let out = '';
+      for (let i = 0; i < children.length; i++) {
+        const child = children[i];
+        const t = typeof child;
+        // Inline the two most common child shapes (text leaf and host element)
+        // so they skip the general `mRender` type-dispatch. These mirror
+        // `mRender` exactly: a string renders as `escapeHtml`, and an object
+        // whose `type` is a string is a host element rendered via `mElement`.
+        if (t === 'string') {
+          out += escapeHtml(child);
+        } else if (
+          t === 'object' &&
+          child !== null &&
+          typeof child.type === 'string'
+        ) {
+          out += mElement(child.type, child.props);
+        } else {
+          out += mRender(child);
+        }
+      }
+      return out;
+    }
+    // Single (non-array) child. Inline the same two common shapes so a
+    // single-child chain (e.g. deeply nested `<div><div>…`) skips a `mRender`
+    // dispatch at every level.
+    const t = typeof children;
+    if (t === 'string') {
+      return escapeHtml(children);
+    }
+    if (
+      t === 'object' &&
+      children !== null &&
+      typeof children.type === 'string'
+    ) {
+      return mElement(children.type, children.props);
+    }
+    return mRender(children);
+  }
+
+  // Select the active recursion functions once per render. Minimal mode uses
+  // the lean `mRender`/`mChildren` fast path above; pretty mode uses the
+  // newline-tracking `render`/`renderChildren`. `renderComponent` and the
+  // context Consumer path call through these so component subtrees stay on the
+  // correct path.
+  const activeRender = isPretty ? render : mRender;
+  const activeChildren = isPretty ? renderChildren : mChildren;
+  return activeRender(vnode);
 }
 
 function noop() {}
