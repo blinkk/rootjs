@@ -3,6 +3,7 @@ import {ActionIcon, Select, Tooltip} from '@mantine/core';
 import {
   IconArrowUpRight,
   IconArrowsVertical,
+  IconColumns2,
   IconDeviceDesktop,
   IconDeviceIpad,
   IconDeviceMobile,
@@ -11,15 +12,25 @@ import {
 } from '@tabler/icons-preact';
 import {joinClassNames} from '../../utils/classes.js';
 
-export type Device = 'mobile' | 'tablet' | 'desktop' | '';
+/** A selectable preview viewport. */
+export type DeviceType = 'mobile' | 'tablet' | 'desktop';
+
+/**
+ * A preview viewport, where the empty string represents the full-width preview.
+ * Retained for backwards compatibility; new code should use `DeviceType` and an
+ * empty `devices` array to represent the full-width preview.
+ */
+export type Device = DeviceType | '';
 
 export interface DocumentPagePreviewBarProps {
-  device: Device;
+  devices: DeviceType[];
+  multiSelect: boolean;
   expandVertically: boolean;
   iframeUrl: string;
   localeOptions: Array<{value: string; label: string}>;
   selectedLocale: string;
-  onToggleDevice: (device: Device) => void;
+  onToggleDevice: (device: DeviceType) => void;
+  onToggleMultiSelect: () => void;
   onToggleExpandVertically: () => void;
   onReloadClick: () => void;
   onOpenNewTab: () => void;
@@ -28,17 +39,21 @@ export interface DocumentPagePreviewBarProps {
 
 export function DocumentPagePreviewBar(props: DocumentPagePreviewBarProps) {
   const {
-    device,
+    devices,
+    multiSelect,
     expandVertically,
     iframeUrl,
     localeOptions,
     selectedLocale,
     onToggleDevice,
+    onToggleMultiSelect,
     onToggleExpandVertically,
     onReloadClick,
     onOpenNewTab,
     onLocaleChange,
   } = props;
+
+  const hasDevice = devices.length > 0;
 
   return (
     <div className="DocumentPagePreviewBar">
@@ -47,8 +62,9 @@ export function DocumentPagePreviewBar(props: DocumentPagePreviewBarProps) {
           <ActionIcon
             className={joinClassNames(
               'DocumentPagePreviewBar__device',
-              device === 'mobile' && 'active'
+              devices.includes('mobile') && 'active'
             )}
+            aria-pressed={devices.includes('mobile')}
             onClick={() => onToggleDevice('mobile')}
           >
             <IconDeviceMobile size={16} />
@@ -58,8 +74,9 @@ export function DocumentPagePreviewBar(props: DocumentPagePreviewBarProps) {
           <ActionIcon
             className={joinClassNames(
               'DocumentPagePreviewBar__device',
-              device === 'tablet' && 'active'
+              devices.includes('tablet') && 'active'
             )}
+            aria-pressed={devices.includes('tablet')}
             onClick={() => onToggleDevice('tablet')}
           >
             <IconDeviceIpad size={16} />
@@ -69,11 +86,26 @@ export function DocumentPagePreviewBar(props: DocumentPagePreviewBarProps) {
           <ActionIcon
             className={joinClassNames(
               'DocumentPagePreviewBar__device',
-              device === 'desktop' && 'active'
+              devices.includes('desktop') && 'active'
             )}
+            aria-pressed={devices.includes('desktop')}
             onClick={() => onToggleDevice('desktop')}
           >
             <IconDeviceDesktop size={16} />
+          </ActionIcon>
+        </Tooltip>
+        <div className="DocumentPagePreviewBar__divider" />
+        <Tooltip label="Compare viewports">
+          <ActionIcon
+            className={joinClassNames(
+              'DocumentPagePreviewBar__device',
+              multiSelect && 'active'
+            )}
+            role="checkbox"
+            aria-checked={multiSelect}
+            onClick={onToggleMultiSelect}
+          >
+            <IconColumns2 size={16} />
           </ActionIcon>
         </Tooltip>
         <Tooltip label="Expand">
@@ -83,7 +115,7 @@ export function DocumentPagePreviewBar(props: DocumentPagePreviewBarProps) {
               expandVertically && 'active'
             )}
             aria-pressed={expandVertically}
-            disabled={device === ''}
+            disabled={!hasDevice}
             onClick={onToggleExpandVertically}
           >
             <IconArrowsVertical size={16} />

@@ -16,7 +16,7 @@ import {ConditionalTooltip} from '../../components/ConditionalTooltip/Conditiona
 import {DocEditor} from '../../components/DocEditor/DocEditor.js';
 import {
   DocumentPagePreviewBar,
-  type Device,
+  type DeviceType,
 } from '../../components/DocumentPagePreviewBar/DocumentPagePreviewBar.js';
 import {useEditJsonModal} from '../../components/EditJsonModal/EditJsonModal.js';
 import {RootAIChat} from '../../components/RootAIChat/RootAIChat.js';
@@ -621,6 +621,31 @@ const DeviceResolution = {
   desktop: [1440, 800],
 };
 
+/** Devices listed in the order they should appear left-to-right. */
+const DEVICE_ORDER: DeviceType[] = ['mobile', 'tablet', 'desktop'];
+
+const DEVICES_STORAGE_KEY = 'root::DocumentPage::preview::devices';
+const LEGACY_DEVICE_STORAGE_KEY = 'root::DocumentPage::preview::device';
+
+/**
+ * Resolves the initial set of selected preview devices, migrating the legacy
+ * single-device preference into the new multi-select array when present.
+ */
+function getInitialDevices(): DeviceType[] {
+  try {
+    const legacy = window.localStorage.getItem(LEGACY_DEVICE_STORAGE_KEY);
+    if (legacy) {
+      const parsed = JSON.parse(legacy);
+      if (DEVICE_ORDER.includes(parsed)) {
+        return [parsed];
+      }
+    }
+  } catch (err) {
+    console.error(err);
+  }
+  return [];
+}
+
 function getLocaleLabel(locale: string) {
   const langNames = new Intl.DisplayNames(['en'], {
     type: 'language',
@@ -656,22 +681,53 @@ DocumentPage.Preview = (props: PreviewProps) => {
   const servingUrl = `${domain}${servingPath}`;
 
   const [iframeUrl, setIframeUrl] = useState(servingUrl);
-  const [device, setDevice] = useLocalStorage<Device>(
-    'root::DocumentPage::preview::device',
-    ''
+  const initialDevices = useMemo(getInitialDevices, []);
+  const [devices, setDevices] = useLocalStorage<DeviceType[]>(
+    DEVICES_STORAGE_KEY,
+    initialDevices
+  );
+  const [multiSelect, setMultiSelect] = useLocalStorage<boolean>(
+    'root::DocumentPage::preview::multiSelect',
+    false
   );
   const [expandVertically, setExpandVertically] = useLocalStorage<boolean>(
     'root::DocumentPage::preview::expandVertically',
     false
   );
-  const [iframeStyle, setIframeStyle] = useState({
-    '--iframe-width': '100%',
-    '--iframe-height': '100%',
-    '--iframe-scale': '1',
+  // Shared layout for the device preview iframes. `scale` is the uniform zoom
+  // applied to every selected viewport; `frameHeight` is the unscaled iframe
+  // height used when expanding vertically.
+  const [previewLayout, setPreviewLayout] = useState({
+    scale: 1,
+    frameHeight: 0,
   });
   const [selectedLocale, setSelectedLocale] = useStringParam('locale', '');
-  const iframeRef = useRef<HTMLIFrameElement>(null);
+  // Tracks the preview iframes by slot index so flush/reload and locale changes
+  // can be applied to every visible viewport.
+  const iframeRefs = useRef(new Map<number, HTMLIFrameElement>());
+  const iframeRefCallbacks = useRef(
+    new Map<number, (el: HTMLIFrameElement | null) => void>()
+  );
   const previewFrameRef = useRef<HTMLDivElement>(null);
+  // Remembers the viewport selection from before 2-up was enabled so it can be
+  // restored when 2-up is turned back off.
+  const preMultiSelectDevicesRef = useRef<DeviceType[]>([]);
+
+  /** Returns a stable ref callback that registers the iframe for a given slot. */
+  const getIframeRef = useCallback((slot: number) => {
+    let callback = iframeRefCallbacks.current.get(slot);
+    if (!callback) {
+      callback = (el: HTMLIFrameElement | null) => {
+        if (el) {
+          iframeRefs.current.set(slot, el);
+        } else {
+          iframeRefs.current.delete(slot);
+        }
+      };
+      iframeRefCallbacks.current.set(slot, callback);
+    }
+    return callback;
+  }, []);
 
   const locales = draft.controller!.getLocales() || [];
 
@@ -693,14 +749,13 @@ DocumentPage.Preview = (props: PreviewProps) => {
     [locales]
   );
 
-  function reloadIframe() {
+  function reloadIframe(iframe: HTMLIFrameElement) {
     // Don't reload the iframe when the tab is hidden. Browsers throttle
     // background timers, so the intermediate about:blank may never resolve,
     // leaving the iframe blank when the user returns.
     if (document.hidden) {
       return;
     }
-    const iframe = iframeRef.current!;
     const nextUrl = getReloadUrl(iframe, localizedPreviewUrlRef.current);
     iframe.src = 'about:blank';
     window.requestAnimationFrame(() => {
@@ -712,9 +767,37 @@ DocumentPage.Preview = (props: PreviewProps) => {
     });
   }
 
+  function reloadAllIframes() {
+    iframeRefs.current.forEach((iframe) => reloadIframe(iframe));
+  }
+
+  // Reload every visible preview iframe whenever the draft is flushed.
   useEffect(() => {
-    const iframe = iframeRef.current!;
-    function onIframeLoad() {
+    const removeOnFlush = draft.controller?.onFlush(() => {
+      reloadAllIframes();
+    });
+    return () => {
+      removeOnFlush?.();
+    };
+  }, []);
+
+  // Navigate every visible iframe to the localized preview url. Runs on mount
+  // (initial load) and whenever the selected locale changes.
+  useEffect(() => {
+    iframeRefs.current.forEach((iframe) => {
+      iframe.src = localizedPreviewUrl;
+    });
+  }, [selectedLocale]);
+
+  // Wire up newly-mounted iframes when the number of viewports changes (e.g.
+  // when a viewport is added to a 2-up comparison). New iframes get their
+  // initial src and a load listener that keeps the url bar in sync; existing
+  // iframes keep their current src so they don't reload unnecessarily.
+  const previewCount = devices.length > 0 ? devices.length : 1;
+  useEffect(() => {
+    const iframes = Array.from(iframeRefs.current.values());
+    function onIframeLoad(event: Event) {
+      const iframe = event.currentTarget as HTMLIFrameElement;
       const iframeWindow = iframe.contentWindow;
       if (!iframeWindow) {
         return;
@@ -736,49 +819,88 @@ DocumentPage.Preview = (props: PreviewProps) => {
         setIframeUrl(`${domain}${currentUrl.pathname}`);
       }
     }
-    iframe.addEventListener('load', onIframeLoad);
-
-    const removeOnFlush = draft.controller?.onFlush(() => {
-      reloadIframe();
+    iframes.forEach((iframe) => {
+      if (!iframe.getAttribute('src')) {
+        iframe.src = localizedPreviewUrlRef.current;
+      }
+      iframe.addEventListener('load', onIframeLoad);
     });
-
     return () => {
-      removeOnFlush();
-      iframe.removeEventListener('load', onIframeLoad);
+      iframes.forEach((iframe) =>
+        iframe.removeEventListener('load', onIframeLoad)
+      );
     };
-  }, []);
-
-  useEffect(() => {
-    const iframe = iframeRef.current!;
-    iframe.src = localizedPreviewUrl;
-  }, [selectedLocale]);
+  }, [previewCount]);
 
   const toggleDevice = useCallback(
-    (targetDevice: Device) => {
-      setDevice((current: Device) => {
-        const nextDevice = current === targetDevice ? '' : targetDevice;
-        if (nextDevice === '') {
+    (targetDevice: DeviceType) => {
+      if (multiSelect) {
+        setDevices((current) => {
+          if (current.includes(targetDevice)) {
+            const next = current.filter((d) => d !== targetDevice);
+            if (next.length === 0) {
+              setExpandVertically(false);
+            }
+            return next;
+          }
+          // Keep the selected viewports in a stable left-to-right order.
+          return DEVICE_ORDER.filter(
+            (d) => d === targetDevice || current.includes(d)
+          );
+        });
+        return;
+      }
+      // Single-select: clicking the active viewport returns to the full preview.
+      setDevices((current) => {
+        const isOnlySelected =
+          current.length === 1 && current[0] === targetDevice;
+        if (isOnlySelected) {
           setExpandVertically(false);
+          return [];
         }
-        return nextDevice;
+        return [targetDevice];
       });
     },
-    [setDevice, setExpandVertically]
+    [multiSelect, setDevices, setExpandVertically]
   );
 
-  const toggleExpandVertically = useCallback(() => {
-    setDevice((currentDevice: Device) => {
-      if (currentDevice) {
-        setExpandVertically((current) => !current);
+  const toggleMultiSelect = useCallback(() => {
+    setMultiSelect((current) => {
+      const next = !current;
+      if (next) {
+        // Entering 2-up: remember the current selection, then ensure at least
+        // two viewports are shown so the toggle has a visible effect. Pair the
+        // active viewport with a contrasting one (mobile/tablet -> desktop,
+        // desktop -> mobile).
+        setDevices((devs) => {
+          preMultiSelectDevicesRef.current = devs;
+          if (devs.length >= 2) {
+            return devs;
+          }
+          const primary: DeviceType = devs[0] || 'desktop';
+          const companion: DeviceType =
+            primary === 'desktop' ? 'mobile' : 'desktop';
+          return DEVICE_ORDER.filter((d) => d === primary || d === companion);
+        });
+      } else {
+        // Leaving 2-up: restore whatever was selected before it was enabled.
+        setDevices(() => preMultiSelectDevicesRef.current);
       }
-      return currentDevice;
+      return next;
     });
-  }, [setDevice, setExpandVertically]);
+  }, [setMultiSelect, setDevices]);
+
+  const toggleExpandVertically = useCallback(() => {
+    if (devices.length === 0) {
+      return;
+    }
+    setExpandVertically((current) => !current);
+  }, [devices, setExpandVertically]);
 
   const onReloadClick = useCallback(() => {
-    // Save any unsaved changes and then reload the iframe.
+    // Save any unsaved changes and then reload the iframes.
     if (draft.controller) {
-      draft.controller.flush().then(() => reloadIframe());
+      draft.controller.flush().then(() => reloadAllIframes());
     }
   }, [draft.controller]);
 
@@ -791,23 +913,13 @@ DocumentPage.Preview = (props: PreviewProps) => {
     }
   }, [collectionId, slug, selectedLocale]);
 
-  const updateIframeStyle = useCallback(() => {
-    if (device === '') {
-      const nextStyle = {
-        '--iframe-width': '100%',
-        '--iframe-height': '100%',
-        '--iframe-scale': '1',
-      };
-      setIframeStyle((currentStyle) => {
-        if (
-          currentStyle['--iframe-width'] === nextStyle['--iframe-width'] &&
-          currentStyle['--iframe-height'] === nextStyle['--iframe-height'] &&
-          currentStyle['--iframe-scale'] === nextStyle['--iframe-scale']
-        ) {
-          return currentStyle;
-        }
-        return nextStyle;
-      });
+  const updatePreviewLayout = useCallback(() => {
+    if (devices.length === 0) {
+      setPreviewLayout((current) =>
+        current.scale === 1 && current.frameHeight === 0
+          ? current
+          : {scale: 1, frameHeight: 0}
+      );
       return;
     }
     const container = previewFrameRef.current;
@@ -815,78 +927,97 @@ DocumentPage.Preview = (props: PreviewProps) => {
       return;
     }
     const rect = container.getBoundingClientRect();
-    const [width, height] = DeviceResolution[device];
     const padding = 20;
-    const availableWidth = Math.max(rect.width - 2 * padding, 0);
-    const availableHeight = Math.max(rect.height - 2 * padding, 0);
+    // Horizontal gap between viewports in a multi-up comparison.
+    const gap = 16;
+    // Reserve a little room beneath each iframe for its resolution label.
+    const labelReserve = 28;
+    const count = devices.length;
+
+    const availableWidth = Math.max(
+      rect.width - 2 * padding - gap * (count - 1),
+      0
+    );
+    const availableHeight = Math.max(
+      rect.height - 2 * padding - labelReserve,
+      0
+    );
+
+    // All viewports share a single zoom level. The width budget is split across
+    // every viewport's intrinsic width; the height budget is constrained by the
+    // tallest viewport so nothing overflows.
+    let totalDeviceWidth = 0;
+    let maxDeviceHeight = 0;
+    for (const d of devices) {
+      const [width, height] = DeviceResolution[d];
+      totalDeviceWidth += width;
+      maxDeviceHeight = Math.max(maxDeviceHeight, height);
+    }
 
     // Calculate scale factors, clamping to 1 if not constraining in that dimension.
     const widthScale =
-      availableWidth > 0 && width > 0 ? availableWidth / width : 1;
+      availableWidth > 0 && totalDeviceWidth > 0
+        ? availableWidth / totalDeviceWidth
+        : 1;
     const heightScale =
-      availableHeight > 0 && height > 0 ? availableHeight / height : 1;
+      availableHeight > 0 && maxDeviceHeight > 0
+        ? availableHeight / maxDeviceHeight
+        : 1;
 
     // Apply the most restrictive scale (smallest value < 1), or 1 if neither is constraining.
     const scale = Math.min(widthScale, heightScale, 1);
-
     const normalizedScale = Number(scale.toFixed(4)) || 1;
 
-    // When expanding vertically, adjust iframe height to fill the available
-    // space, reserving a little room at the bottom so the device resolution
-    // label remains visible below the iframe.
-    const labelReserve = 28;
-    const iframeHeight = expandVertically
-      ? `${Math.max(availableHeight - labelReserve, 0) / normalizedScale}px`
-      : `${height}px`;
+    // When expanding vertically, every iframe fills the available height.
+    const frameHeight = Math.max(availableHeight / normalizedScale, 0);
 
-    const nextStyle = {
-      '--iframe-width': `${width}px`,
-      '--iframe-height': iframeHeight,
-      '--iframe-scale': String(normalizedScale),
-    };
-    setIframeStyle((currentStyle) => {
-      if (
-        currentStyle['--iframe-width'] === nextStyle['--iframe-width'] &&
-        currentStyle['--iframe-height'] === nextStyle['--iframe-height'] &&
-        currentStyle['--iframe-scale'] === nextStyle['--iframe-scale']
-      ) {
-        return currentStyle;
-      }
-      return nextStyle;
-    });
-  }, [device, expandVertically]);
+    setPreviewLayout((current) =>
+      current.scale === normalizedScale && current.frameHeight === frameHeight
+        ? current
+        : {scale: normalizedScale, frameHeight}
+    );
+  }, [devices]);
 
   useEffect(() => {
-    updateIframeStyle();
+    updatePreviewLayout();
     const container = previewFrameRef.current;
     if (!container) {
       return;
     }
     let animationFrame = 0;
-    const scheduleIframeStyleUpdate = () => {
+    const schedulePreviewLayoutUpdate = () => {
       window.cancelAnimationFrame(animationFrame);
-      animationFrame = window.requestAnimationFrame(updateIframeStyle);
+      animationFrame = window.requestAnimationFrame(updatePreviewLayout);
     };
-    const resizeObserver = new window.ResizeObserver(scheduleIframeStyleUpdate);
+    const resizeObserver = new window.ResizeObserver(
+      schedulePreviewLayoutUpdate
+    );
     resizeObserver.observe(container);
     // Maintain the aspect ratio when the window is resized.
-    window.addEventListener('resize', scheduleIframeStyleUpdate);
+    window.addEventListener('resize', schedulePreviewLayoutUpdate);
     return () => {
       window.cancelAnimationFrame(animationFrame);
       resizeObserver.disconnect();
-      window.removeEventListener('resize', scheduleIframeStyleUpdate);
+      window.removeEventListener('resize', schedulePreviewLayoutUpdate);
     };
-  }, [updateIframeStyle]);
+  }, [updatePreviewLayout]);
+
+  const previewPanels =
+    devices.length > 0
+      ? devices.map((device, index) => ({slot: index, device}))
+      : [{slot: 0, device: null as DeviceType | null}];
 
   return (
     <div className="DocumentPage__main__preview">
       <DocumentPagePreviewBar
-        device={device}
+        devices={devices}
+        multiSelect={multiSelect}
         expandVertically={expandVertically}
         iframeUrl={iframeUrl}
         localeOptions={localeOptions}
         selectedLocale={selectedLocale}
         onToggleDevice={toggleDevice}
+        onToggleMultiSelect={toggleMultiSelect}
         onToggleExpandVertically={toggleExpandVertically}
         onReloadClick={onReloadClick}
         onOpenNewTab={openNewTab}
@@ -894,19 +1025,43 @@ DocumentPage.Preview = (props: PreviewProps) => {
       />
       <div
         className="DocumentPage__main__previewFrame"
-        data-device={device || 'full'}
+        data-device={devices.length > 0 ? 'device' : 'full'}
         ref={previewFrameRef}
-        style={iframeStyle}
       >
-        {/* The `display: none` inline style is needed to prevent the vdom from re-using the div component for the iframe wrapper below. */}
-        <div
-          className="DocumentPage__main__previewFrame__deviceLabel"
-          style={{display: device ? undefined : 'none'}}
-        >
-          {device ? `${device}: ${DeviceResolution[device].join('x')}` : ''}
-        </div>
-        <div className="DocumentPage__main__previewFrame__iframeWrap">
-          <iframe ref={iframeRef} title="iframe preview" />
+        <div className="DocumentPage__main__previewFrame__group">
+          {previewPanels.map((panel) => {
+            const device = panel.device;
+            const panelStyle = device
+              ? {
+                  '--iframe-width': `${DeviceResolution[device][0]}px`,
+                  '--iframe-height': `${
+                    expandVertically
+                      ? previewLayout.frameHeight
+                      : DeviceResolution[device][1]
+                  }px`,
+                  '--iframe-scale': String(previewLayout.scale),
+                }
+              : undefined;
+            return (
+              <div
+                key={panel.slot}
+                className="DocumentPage__main__previewFrame__item"
+                style={panelStyle}
+              >
+                <div className="DocumentPage__main__previewFrame__iframeWrap">
+                  <iframe
+                    ref={getIframeRef(panel.slot)}
+                    title="iframe preview"
+                  />
+                </div>
+                {device && (
+                  <div className="DocumentPage__main__previewFrame__deviceLabel">
+                    {`${device}: ${DeviceResolution[device].join('x')}`}
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </div>
       </div>
     </div>
