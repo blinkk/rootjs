@@ -225,6 +225,13 @@ const LT = '&lt;';
 const GT = '&gt;';
 const QUOT = '&quot;';
 
+// Single-pass native prechecks for the common case where a string needs no
+// escaping (most class names, URLs, and text). `RegExp.test` scans in native
+// code, which is substantially faster than the JS `charCodeAt` loop below, so
+// strings that don't match return immediately without entering the loop.
+const HTML_ESCAPE_RE = /[&<>]/;
+const ATTR_ESCAPE_RE = /[&<>"]/;
+
 // Shared empty object reused as the per-component context map when no contexts
 // have ever been pushed. Components only ever read from this map, so sharing is
 // safe and avoids a per-render allocation in the common case.
@@ -236,6 +243,7 @@ function isDef<T>(value: T | null | undefined): value is T {
 }
 
 function escapeHtml(str: string): string {
+  if (!HTML_ESCAPE_RE.test(str)) return str;
   let result = '';
   let last = 0;
   for (let i = 0; i < str.length; i++) {
@@ -249,11 +257,11 @@ function escapeHtml(str: string): string {
       last = i + 1;
     }
   }
-  if (last === 0) return str;
   return result + str.slice(last);
 }
 
 function escapeAttr(str: string): string {
+  if (!ATTR_ESCAPE_RE.test(str)) return str;
   let result = '';
   let last = 0;
   for (let i = 0; i < str.length; i++) {
@@ -268,7 +276,6 @@ function escapeAttr(str: string): string {
       last = i + 1;
     }
   }
-  if (last === 0) return str;
   return result + str.slice(last);
 }
 
@@ -338,6 +345,19 @@ export function renderJsxToString(
   let cachedGlobalCtx: Record<string, any> = EMPTY_GLOBAL_CTX;
   let cachedGlobalCtxVersion = 0;
 
+  // Side-channel reporting whether the most recently returned render string
+  // contains a newline. Pretty mode uses this to decide whether a block
+  // element's children start on their own line, instead of re-scanning the
+  // element's concatenated inner HTML via `inner.includes('\n')`. Because block
+  // elements nest, that rescan walked the same characters once per enclosing
+  // block level (O(html_size * block_depth)); threading the flag up makes it a
+  // single pass. This is safe because rendering is fully synchronous and
+  // single-pass: every code path assigns `nlFlag` before returning, and each
+  // caller reads it immediately after the call, before the next call can
+  // overwrite it. It is only meaningful in pretty mode; in minimal mode the
+  // leaf scans are skipped and the value is never read.
+  let nlFlag = false;
+
   function pushCtx(contextId: string, value: any) {
     if (!contextStacks) {
       contextStacks = new Map<string, any[]>();
@@ -386,20 +406,38 @@ export function renderJsxToString(
   }
 
   function render(node: any, inline?: boolean): string {
-    if (!isDef(node) || typeof node === 'boolean') return '';
-    if (typeof node === 'string') return escapeHtml(node);
-    if (typeof node === 'number' || typeof node === 'bigint')
+    if (!isDef(node) || typeof node === 'boolean') {
+      nlFlag = false;
+      return '';
+    }
+    if (typeof node === 'string') {
+      // escapeHtml only replaces &<>, so it never adds or removes newlines; the
+      // raw text's newline status is preserved. Only scan in pretty mode, and
+      // only this leaf string (each text node is scanned once, never re-walked
+      // by ancestors).
+      nlFlag = isPretty && node.indexOf('\n') >= 0;
+      return escapeHtml(node);
+    }
+    if (typeof node === 'number' || typeof node === 'bigint') {
+      nlFlag = false;
       return String(node);
+    }
     if (Array.isArray(node)) {
       let out = '';
+      let anyNewline = false;
       for (let i = 0; i < node.length; i++) {
         out += render(node[i], inline);
+        anyNewline = anyNewline || nlFlag;
       }
+      nlFlag = anyNewline;
       return out;
     }
 
     // Must be a VNode-like object.
-    if (typeof node !== 'object' || !('type' in node)) return '';
+    if (typeof node !== 'object' || !('type' in node)) {
+      nlFlag = false;
+      return '';
+    }
 
     const {type, props} = node;
 
@@ -520,21 +558,34 @@ export function renderJsxToString(
     let result = '<' + tag + attrs + '>';
 
     if (isVoid) {
-      if (isBlock) result += '\n';
+      if (isBlock) {
+        result += '\n';
+        nlFlag = true;
+      } else {
+        nlFlag = false;
+      }
       return result;
     }
 
     let inner = '';
+    // Whether `inner` contains a newline. For the children path this is read
+    // from `nlFlag` (threaded up from the recursive render, no rescan). For the
+    // raw-HTML and textarea leaf paths the string is scanned once here; only in
+    // pretty mode, since minimal mode never consults it.
+    let innerHasNewline = false;
     if (isDef(props?.dangerouslySetInnerHTML?.__html)) {
       inner = props.dangerouslySetInnerHTML.__html;
+      innerHasNewline = isPretty && inner.includes('\n');
     } else if (isDef(props?.children)) {
       inner = renderChildren(props.children);
+      innerHasNewline = nlFlag;
     } else if (tag === 'textarea' && props) {
       // For <textarea>, render value/defaultValue as text content since
       // browsers ignore the value attribute on textarea elements.
       const textVal = props.value ?? props.defaultValue;
       if (isDef(textVal)) {
         inner = escapeHtml(String(textVal));
+        innerHasNewline = isPretty && inner.includes('\n');
       }
     }
 
@@ -544,14 +595,19 @@ export function renderJsxToString(
       // Exempt raw-content elements (pre, textarea, script, style) where
       // newlines are literal text, not block-child indicators.
       const hasBlockChildren =
-        !RAW_CONTENT_ELEMENTS.has(tag) && inner.includes('\n');
+        !RAW_CONTENT_ELEMENTS.has(tag) && innerHasNewline;
       if (hasBlockChildren) {
         result += '\n' + inner + '</' + tag + '>\n';
       } else {
         result += inner + '</' + tag + '>\n';
       }
+      // Block elements always end with a trailing newline.
+      nlFlag = true;
     } else {
       result += inner + '</' + tag + '>';
+      // Opening/closing tags add no newlines, so the element's newline status
+      // is exactly that of its inner content.
+      nlFlag = innerHasNewline;
     }
 
     return result;
@@ -639,13 +695,19 @@ export function renderJsxToString(
   }
 
   function renderChildren(children: any): string {
-    if (!isDef(children)) return '';
+    if (!isDef(children)) {
+      nlFlag = false;
+      return '';
+    }
     if (Array.isArray(children)) {
       const inline = isPretty && hasMixedContent(children);
       let out = '';
+      let anyNewline = false;
       for (let i = 0; i < children.length; i++) {
         out += render(children[i], inline);
+        anyNewline = anyNewline || nlFlag;
       }
+      nlFlag = anyNewline;
       return out;
     }
     return render(children);

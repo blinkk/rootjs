@@ -109,6 +109,33 @@ test('escapes html entities in attributes', () => {
   );
 });
 
+// Boundary cases for the escape fast-path (a no-match precheck that returns the
+// input unchanged before entering the per-character escape loop): specials at
+// the very start/end of a string, consecutive specials, and a lone special.
+test('escapes specials at string boundaries in text', () => {
+  const vnode = <div>{'<a & b>'}</div>;
+  const output = renderJsxToString(vnode, {mode: 'minimal'});
+  expect(output).toBe('<div>&lt;a &amp; b&gt;</div>');
+});
+
+test('escapes consecutive specials in text', () => {
+  const vnode = <div>{'&&<<>>'}</div>;
+  const output = renderJsxToString(vnode, {mode: 'minimal'});
+  expect(output).toBe('<div>&amp;&amp;&lt;&lt;&gt;&gt;</div>');
+});
+
+test('escapes quote at attribute boundaries', () => {
+  const vnode = <div title={'"x"'} />;
+  const output = renderJsxToString(vnode, {mode: 'minimal'});
+  expect(output).toBe('<div title="&quot;x&quot;"></div>');
+});
+
+test('leaves strings without specials unchanged', () => {
+  const vnode = <div title="plain value">{'no specials here'}</div>;
+  const output = renderJsxToString(vnode, {mode: 'minimal'});
+  expect(output).toBe('<div title="plain value">no specials here</div>');
+});
+
 test('renders dangerouslySetInnerHTML', () => {
   const vnode = <div dangerouslySetInnerHTML={{__html: '<b>raw</b>'}} />;
   const output = renderJsxToString(vnode, {mode: 'minimal'});
@@ -698,4 +725,97 @@ test('svg: preserves non-mapped attributes like viewBox', () => {
   expect(output).toBe(
     '<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><circle cx="50" cy="50" r="40"></circle></svg>'
   );
+});
+
+// Regression tests for the pretty-mode newline propagation that decides whether
+// a block element's children start on their own line. The renderer threads a
+// "did this subtree emit a newline" flag up through the recursion instead of
+// re-scanning each element's concatenated inner HTML; these cases pin the
+// observable formatting so that optimization stays behavior-preserving.
+
+test('pretty mode: deeply nested blocks each break onto their own line', () => {
+  const vnode = (
+    <main>
+      <section>
+        <ul>
+          <li>one</li>
+          <li>two</li>
+        </ul>
+      </section>
+    </main>
+  );
+  const output = renderJsxToString(vnode, {mode: 'pretty'});
+  expect(output).toBe(`<main>
+<section>
+<ul>
+<li>one</li>
+<li>two</li>
+</ul>
+</section>
+</main>
+`);
+});
+
+test('pretty mode: inline wrapper around a block child propagates the break', () => {
+  // The <span> is inline, but it contains a block <div>. The block newline must
+  // propagate through the inline wrapper so the parent <section> treats the
+  // span as a block child and breaks it onto its own line.
+  const vnode = (
+    <section>
+      <span>
+        <div>boxed</div>
+      </span>
+    </section>
+  );
+  const output = renderJsxToString(vnode, {mode: 'pretty'});
+  expect(output).toBe(`<section>
+<span><div>boxed</div>
+</span></section>
+`);
+});
+
+test('pretty mode: textarea newline value triggers parent block break', () => {
+  const vnode = (
+    <div>
+      <textarea defaultValue={'line1\nline2'} />
+    </div>
+  );
+  const output = renderJsxToString(vnode, {mode: 'pretty'});
+  expect(output).toBe(`<div>
+<textarea>line1
+line2</textarea></div>
+`);
+});
+
+test('pretty mode: dangerouslySetInnerHTML newline triggers parent block break', () => {
+  const vnode = (
+    <div>
+      <span dangerouslySetInnerHTML={{__html: 'a\nb'}} />
+    </div>
+  );
+  const output = renderJsxToString(vnode, {mode: 'pretty'});
+  expect(output).toBe(`<div>
+<span>a
+b</span></div>
+`);
+});
+
+test('pretty mode: components are transparent to block-break detection', () => {
+  function Card(props: {children?: any}) {
+    return <article>{props.children}</article>;
+  }
+  const vnode = (
+    <section>
+      <Card>
+        <p>hi</p>
+      </Card>
+    </section>
+  );
+  const output = renderJsxToString(vnode, {mode: 'pretty'});
+  expect(output).toBe(`<section>
+<article>
+<p>hi</p>
+</article>
+</section>
+`);
 });
