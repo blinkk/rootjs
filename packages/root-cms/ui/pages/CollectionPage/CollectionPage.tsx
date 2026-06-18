@@ -1,7 +1,18 @@
 import './CollectionPage.css';
 
-import {Button, Loader, Select, Switch} from '@mantine/core';
-import {IconCirclePlus} from '@tabler/icons-preact';
+import {
+  ActionIcon,
+  Button,
+  Loader,
+  Select,
+  Switch,
+  Tooltip,
+} from '@mantine/core';
+import {
+  IconCirclePlus,
+  IconLayoutList,
+  IconLayoutRows,
+} from '@tabler/icons-preact';
 import {useEffect, useState} from 'preact/hooks';
 import {useLocation} from 'preact-iso';
 import {CollectionTree} from '../../components/CollectionTree/CollectionTree.js';
@@ -19,6 +30,7 @@ import {Layout} from '../../layout/Layout.js';
 import {getDocServingUrl} from '../../utils/doc-urls.js';
 import {getNestedValue} from '../../utils/objects.js';
 import {testCanEdit} from '../../utils/permissions.js';
+import {formatDateTime, getTimeAgo} from '../../utils/time.js';
 
 interface CollectionPageProps {
   collection?: string;
@@ -111,6 +123,15 @@ CollectionPage.Collection = (props: CollectionProps) => {
     return <></>;
   }
 
+  // Collections can force the compact listing via schema (`compactView: true`).
+  // Otherwise the user's per-collection choice is remembered in local storage.
+  const forceCompactView = Boolean(collection.compactView);
+  const [userCompactView, setUserCompactView] = useLocalStorage<boolean>(
+    `root::CollectionPage:${props.collection}:compactView`,
+    false
+  );
+  const compactView = forceCompactView || userCompactView;
+
   const sortOptions = [
     {value: 'slug', label: 'A-Z'},
     {value: 'slugDesc', label: 'Z-A'},
@@ -165,6 +186,33 @@ CollectionPage.Collection = (props: CollectionProps) => {
                     data={sortOptions}
                   />
                 </div>
+                {!forceCompactView && (
+                  <div className="CollectionPage__collection__docsTab__controls__compact">
+                    <Tooltip
+                      label={
+                        compactView
+                          ? 'Switch to default view'
+                          : 'Switch to compact view'
+                      }
+                      transition="pop"
+                      withArrow
+                    >
+                      <ActionIcon
+                        variant={compactView ? 'filled' : 'default'}
+                        color={compactView ? 'dark' : 'gray'}
+                        size="lg"
+                        onClick={() => setUserCompactView(!compactView)}
+                        aria-label="Toggle compact view"
+                      >
+                        {compactView ? (
+                          <IconLayoutRows size={18} />
+                        ) : (
+                          <IconLayoutList size={18} />
+                        )}
+                      </ActionIcon>
+                    </Tooltip>
+                  </div>
+                )}
                 <div className="CollectionPage__collection__docsTab__controls__newDoc">
                   <ConditionalTooltip
                     label="You don't have access to create new documents"
@@ -215,6 +263,7 @@ CollectionPage.Collection = (props: CollectionProps) => {
               <CollectionPage.DocsList
                 collection={props.collection}
                 docs={docs}
+                compact={compactView}
                 reloadDocs={() => listDocs()}
               />
             )}
@@ -228,6 +277,7 @@ CollectionPage.Collection = (props: CollectionProps) => {
 CollectionPage.DocsList = (props: {
   collection: string;
   docs: any[];
+  compact?: boolean;
   reloadDocs: () => void;
 }) => {
   const collectionId = props.collection;
@@ -236,6 +286,7 @@ CollectionPage.DocsList = (props: {
     throw new Error(`could not find collection: ${collectionId}`);
   }
   const hasCollectionUrl = !!rootCollection.url;
+  const compact = !!props.compact;
 
   const docs = props.docs || [];
   function getLiveUrl(slug: string): string {
@@ -243,6 +294,84 @@ CollectionPage.DocsList = (props: {
       return '';
     }
     return getDocServingUrl({collectionId, slug});
+  }
+
+  function onDocAction(e: {action: string}) {
+    if (
+      e.action === 'archive' ||
+      e.action === 'copy' ||
+      e.action === 'unarchive' ||
+      e.action === 'delete' ||
+      e.action === 'unpublish' ||
+      e.action === 'locked' ||
+      e.action === 'unlocked'
+    ) {
+      props.reloadDocs();
+    }
+  }
+
+  if (compact) {
+    return (
+      <div className="CollectionPage__collection__docsList CollectionPage__collection__docsList--compact">
+        {docs.map((doc) => {
+          const cmsUrl = `/cms/content/${collectionId}/${doc.slug}`;
+          const fields = doc.fields || {};
+          const previewImage =
+            getNestedValue(
+              fields,
+              rootCollection.preview?.image || 'meta.image'
+            ) || rootCollection.preview?.defaultImage;
+          return (
+            <div
+              className="CollectionPage__collection__docsList__doc"
+              key={doc.id}
+            >
+              <a
+                className="CollectionPage__collection__docsList__doc__image"
+                href={cmsUrl}
+              >
+                <FilePreview
+                  file={previewImage}
+                  width={48}
+                  height={36}
+                  withPlaceholder={!previewImage?.src}
+                />
+              </a>
+              <a
+                className="CollectionPage__collection__docsList__doc__docId"
+                href={cmsUrl}
+              >
+                {doc.id}
+              </a>
+              <div className="CollectionPage__collection__docsList__doc__badges">
+                <DocStatusBadges doc={doc} />
+              </div>
+              <div className="CollectionPage__collection__docsList__doc__timestamp">
+                {renderTimestamp(
+                  'Created',
+                  doc?.sys?.createdAt,
+                  doc?.sys?.createdBy
+                )}
+              </div>
+              <div className="CollectionPage__collection__docsList__doc__timestamp">
+                {renderTimestamp(
+                  'Modified',
+                  doc?.sys?.modifiedAt,
+                  doc?.sys?.modifiedBy
+                )}
+              </div>
+              <div className="CollectionPage__collection__docsList__doc__controls">
+                <DocActionsMenu
+                  docId={doc.id}
+                  data={doc}
+                  onAction={onDocAction}
+                />
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    );
   }
 
   return (
@@ -298,19 +427,7 @@ CollectionPage.DocsList = (props: {
               <DocActionsMenu
                 docId={doc.id}
                 data={doc}
-                onAction={(e) => {
-                  if (
-                    e.action === 'archive' ||
-                    e.action === 'copy' ||
-                    e.action === 'unarchive' ||
-                    e.action === 'delete' ||
-                    e.action === 'unpublish' ||
-                    e.action === 'locked' ||
-                    e.action === 'unlocked'
-                  ) {
-                    props.reloadDocs();
-                  }
-                }}
+                onAction={onDocAction}
               />
             </div>
           </div>
@@ -319,3 +436,38 @@ CollectionPage.DocsList = (props: {
     </div>
   );
 };
+
+/**
+ * Renders a labeled timestamp (e.g. "Created 3d ago") for the compact docs
+ * list. Returns an em dash when the timestamp is missing. A tooltip shows the
+ * full date and the user who performed the action when available.
+ */
+function renderTimestamp(label: string, ts: any, by?: string) {
+  if (!ts || typeof ts.toMillis !== 'function') {
+    return (
+      <>
+        <span className="CollectionPage__collection__docsList__doc__timestamp__label">
+          {label}
+        </span>
+        <span className="CollectionPage__collection__docsList__doc__timestamp__value">
+          —
+        </span>
+      </>
+    );
+  }
+  const tooltip = by
+    ? `${label} ${formatDateTime(ts)} by ${by}`
+    : `${label} ${formatDateTime(ts)}`;
+  return (
+    <>
+      <span className="CollectionPage__collection__docsList__doc__timestamp__label">
+        {label}
+      </span>
+      <Tooltip label={tooltip} transition="pop" withArrow>
+        <span className="CollectionPage__collection__docsList__doc__timestamp__value">
+          {getTimeAgo(ts.toMillis())}
+        </span>
+      </Tooltip>
+    </>
+  );
+}

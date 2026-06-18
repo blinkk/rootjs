@@ -542,6 +542,18 @@ export type Collection = SchemaWithTypes & {
     /** Sort direction. Defaults to ascending. */
     direction?: 'asc' | 'desc';
   }>;
+  /**
+   * Forces the document listing in the CMS to always use the "compact" view,
+   * which renders a condensed table (image, doc id, badges, created/modified
+   * timestamps, and the actions menu) instead of the default cards with
+   * titles and preview URLs. Useful for collections that don't have meaningful
+   * titles or preview metadata (e.g. redirects).
+   *
+   * When set, the compact-view toggle is hidden in the CMS and the listing is
+   * locked to the compact layout. When unset, users can toggle between the
+   * default and compact views (their choice is remembered per-collection).
+   */
+  compactView?: boolean;
 };
 
 export function defineCollection(
