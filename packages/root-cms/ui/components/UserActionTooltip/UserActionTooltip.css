@@ -1,0 +1,29 @@
+.UserActionTooltip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  /* Cap the tooltip width and allow long emails to wrap onto multiple lines. */
+  max-width: 240px;
+}
+
+.UserActionTooltip__text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.UserActionTooltip__text span {
+  min-width: 0;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.UserActionTooltip__detail {
+  opacity: 0.85;
+}
+
+/* Drop the white separator ring used for stacked avatar groups. */
+.UserActionTooltip .UserAvatar {
+  border: 0;
+  flex-shrink: 0;
+}

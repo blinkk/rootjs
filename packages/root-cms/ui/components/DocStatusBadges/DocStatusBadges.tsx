@@ -5,6 +5,7 @@ import {Timestamp} from 'firebase/firestore';
 import {usePendingReleases} from '../../hooks/usePendingReleases.js';
 import {CMSDoc, testPublishingLocked} from '../../utils/doc.js';
 import {formatDateTime, getTimeAgo} from '../../utils/time.js';
+import {UserActionTooltip} from '../UserActionTooltip/UserActionTooltip.js';
 
 interface DocStatusBadgesProps {
   doc: CMSDoc;
@@ -31,9 +32,10 @@ export function DocStatusBadges(props: DocStatusBadgesProps) {
       {(!sys.publishedAt ||
         !sys.modifiedAt ||
         sys.modifiedAt > sys.publishedAt) && (
-        <Tooltip
-          {...tooltipProps}
-          label={`Modified ${timeDiff(sys.modifiedAt)} by ${sys.modifiedBy}`}
+        <UserActionTooltip
+          position={props.tooltipPosition}
+          message={`Modified ${timeDiff(sys.modifiedAt)}`}
+          user={sys.modifiedBy}
         >
           <Badge
             size="xs"
@@ -42,12 +44,13 @@ export function DocStatusBadges(props: DocStatusBadgesProps) {
           >
             Draft
           </Badge>
-        </Tooltip>
+        </UserActionTooltip>
       )}
       {!!sys.publishedAt && (
-        <Tooltip
-          {...tooltipProps}
-          label={`Published ${timeDiff(sys.publishedAt)} by ${sys.publishedBy}`}
+        <UserActionTooltip
+          position={props.tooltipPosition}
+          message={`Published ${timeDiff(sys.publishedAt)}`}
+          user={sys.publishedBy}
         >
           <Badge
             size="xs"
@@ -56,14 +59,13 @@ export function DocStatusBadges(props: DocStatusBadgesProps) {
           >
             Published
           </Badge>
-        </Tooltip>
+        </UserActionTooltip>
       )}
       {!!sys.scheduledAt && (
-        <Tooltip
-          {...tooltipProps}
-          label={`Scheduled ${formatDateTime(sys.scheduledAt)} by ${
-            sys.scheduledBy
-          }`}
+        <UserActionTooltip
+          position={props.tooltipPosition}
+          message={`Scheduled ${formatDateTime(sys.scheduledAt)}`}
+          user={sys.scheduledBy}
         >
           <Badge
             size="xs"
@@ -72,7 +74,7 @@ export function DocStatusBadges(props: DocStatusBadgesProps) {
           >
             Scheduled
           </Badge>
-        </Tooltip>
+        </UserActionTooltip>
       )}
       {!props.hideReleases && (
         <ReleaseBadges
@@ -81,7 +83,12 @@ export function DocStatusBadges(props: DocStatusBadgesProps) {
         />
       )}
       {testPublishingLocked(doc) && (
-        <Tooltip {...tooltipProps} label={getPublishingLockedLabel(doc)}>
+        <UserActionTooltip
+          position={props.tooltipPosition}
+          message={getPublishingLockedMessage(doc)}
+          detail={doc.sys?.publishingLocked?.reason}
+          user={doc.sys?.publishingLocked?.lockedBy}
+        >
           <Badge
             size="xs"
             variant="gradient"
@@ -110,12 +117,13 @@ export function DocStatusBadges(props: DocStatusBadgesProps) {
           >
             Locked
           </Badge>
-        </Tooltip>
+        </UserActionTooltip>
       )}
       {!!sys.archivedAt && (
-        <Tooltip
-          {...tooltipProps}
-          label={`Archived ${timeDiff(sys.archivedAt)} by ${sys.archivedBy}`}
+        <UserActionTooltip
+          position={props.tooltipPosition}
+          message={`Archived ${timeDiff(sys.archivedAt)}`}
+          user={sys.archivedBy}
         >
           <Badge
             size="xs"
@@ -124,10 +132,22 @@ export function DocStatusBadges(props: DocStatusBadgesProps) {
           >
             Archived
           </Badge>
-        </Tooltip>
+        </UserActionTooltip>
       )}
     </div>
   );
+}
+
+/**
+ * Returns the primary message line for the publishing lock tooltip (without the
+ * "by <user>" suffix and reason, which `UserActionTooltip` renders separately).
+ */
+function getPublishingLockedMessage(docData: CMSDoc): string {
+  const lock = docData.sys?.publishingLocked;
+  if (lock?.until) {
+    return `Locked until ${formatDateTime(lock.until)}`;
+  }
+  return 'Locked';
 }
 
 /**
