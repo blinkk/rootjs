@@ -4,9 +4,6 @@
   gap: 8px;
   /* Cap the tooltip width and allow long emails to wrap onto multiple lines. */
   max-width: 240px;
-  /* `allowPointerEvents` lets users hover into the tooltip and select text. */
-  user-select: text;
-  cursor: text;
 }
 
 .UserActionTooltip__text {
