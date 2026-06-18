@@ -15,6 +15,13 @@ import {TranslationsManager} from './translations-manager.js';
 import {validateFields} from './validation.js';
 import {setValueAtPath} from './values.js';
 
+/**
+ * Maximum number of bytes allowed in a Firestore document id. Slugs are used
+ * as document ids, so a slug exceeding this limit cannot exist in the database.
+ * See https://firebase.google.com/docs/firestore/quotas#collections_documents_and_fields
+ */
+const FIRESTORE_DOC_ID_MAX_BYTES = 1500;
+
 export interface Doc<Fields = any> {
   /** The id of the doc, e.g. "Pages/foo-bar". */
   id: string;
@@ -281,6 +288,12 @@ export class RootCMSClient {
     const modeCollection = this.getModeCollection(options.mode);
     // Slugs with slashes are encoded as `--` in the DB.
     slug = normalizeSlug(slug);
+    // Firestore limits document ids (the slug) to 1500 bytes. A slug that
+    // exceeds this limit can never have been written, so short-circuit and
+    // return null instead of issuing a request that would throw.
+    if (Buffer.byteLength(slug, 'utf8') > FIRESTORE_DOC_ID_MAX_BYTES) {
+      return null;
+    }
     const dbPath = `Projects/${this.projectId}/Collections/${collectionId}/${modeCollection}/${slug}`;
     const docRef = this.db.doc(dbPath);
     const doc = await docRef.get();
