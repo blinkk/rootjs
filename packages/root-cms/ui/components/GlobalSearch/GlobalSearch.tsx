@@ -1,5 +1,9 @@
 import './GlobalSearch.css';
-import {SpotlightProvider, SpotlightAction} from '@mantine/spotlight';
+import {
+  SpotlightProvider,
+  SpotlightAction,
+  openSpotlight,
+} from '@mantine/spotlight';
 import {IconSearch} from '@tabler/icons-preact';
 import {ComponentChildren} from 'preact';
 import {useEffect, useMemo, useState} from 'preact/hooks';
@@ -235,6 +239,25 @@ function buildTipsRow(): SpotlightAction {
   };
 }
 
+/**
+ * Returns true when the event originates from a field where the user is
+ * actively typing, e.g. a text input or a `contenteditable` rich text editor
+ * (Lexical). Cmd+K should not open the global search in those contexts —
+ * Lexical, for instance, binds Cmd+K to "insert link".
+ */
+function isEditableTarget(target: EventTarget | null): boolean {
+  if (!(target instanceof HTMLElement)) {
+    return false;
+  }
+  const tag = target.tagName;
+  if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') {
+    return true;
+  }
+  // True for the contenteditable host and any element nested inside one
+  // (e.g. Lexical rich text fields).
+  return target.isContentEditable;
+}
+
 function GlobalSearchInner(props: {
   children: ComponentChildren;
   query: string;
@@ -272,6 +295,32 @@ function GlobalSearchInner(props: {
   }, []);
 
   const {releases: pendingReleases} = usePendingReleases();
+
+  // Custom Cmd/Ctrl+K handler. We can't use Mantine's built-in `shortcut`
+  // prop because its `useHotkeys` only ignores INPUT/TEXTAREA/SELECT — not
+  // `contenteditable` rich text fields. Lexical binds Cmd+K to "insert link",
+  // so opening the global search at the same time clobbers that. Skip the
+  // shortcut whenever focus is inside any editable field.
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      const isModK =
+        (event.metaKey || event.ctrlKey) &&
+        !event.altKey &&
+        !event.shiftKey &&
+        (event.key.toLowerCase() === 'k' || event.code === 'KeyK');
+      if (!isModK) {
+        return;
+      }
+      if (isEditableTarget(event.target)) {
+        return;
+      }
+      event.preventDefault();
+      openSpotlight();
+    };
+    document.documentElement.addEventListener('keydown', onKeyDown);
+    return () =>
+      document.documentElement.removeEventListener('keydown', onKeyDown);
+  }, []);
 
   // Static spotlight targets: collections (always present), data sources, and
   // active releases (pending = not published, not archived).
@@ -385,7 +434,7 @@ function GlobalSearchInner(props: {
   return (
     <SpotlightProvider
       actions={augmented}
-      shortcut={['mod + K']}
+      shortcut={null}
       onQueryChange={onQueryChange}
       searchPlaceholder="Search docs, collections, releases…"
       searchIcon={<IconSearch size={18} />}
