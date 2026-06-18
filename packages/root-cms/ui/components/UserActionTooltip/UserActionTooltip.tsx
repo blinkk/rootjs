@@ -54,6 +54,7 @@ export function UserActionTooltip(props: UserActionTooltipProps) {
       position={props.position}
       transition={props.transition ?? 'pop'}
       withArrow={props.withArrow ?? true}
+      allowPointerEvents
     >
       {props.children}
     </Tooltip>
