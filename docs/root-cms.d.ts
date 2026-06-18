@@ -170,6 +170,12 @@ export interface CodeBlockFields {
   code?: string;
 }
 
+/** Generated from `/conditions/Conditions.schema.ts`. */
+export interface ConditionsFields {
+  /** Conditions */
+  conditions?: RootCMSOneOf<RootCMSOneOfOption<'IsFeatureFlag', IsFeatureFlagFields> | RootCMSOneOfOption<'IsLocale', IsLocaleFields>>[];
+}
+
 /** Generated from `/blocks/CopyBlock/CopyBlock.schema.ts`. */
 export interface CopyBlockFields {
   /** ID. Used for deep linking, tracking, etc. */
@@ -209,6 +215,24 @@ export interface EmojiFields {
   emojiName?: string;
 }
 
+/** Generated from `/collections/GlobalModules.schema.ts`. */
+export interface GlobalModulesFields {
+  /** [INTERNAL] Description. Internal description for this doc (not shown publicly). */
+  internalDesc?: string;
+  /** Flags. Feature flags for the site. A flag is enabled when all of its conditions are met. */
+  flags?: {
+    /** Name. Unique flag id, e.g. EnableFooBar. */
+    name?: string;
+    /** Description */
+    description?: string;
+    /** Conditions. The flag is enabled when all of these conditions pass. */
+    conditions?: RootCMSOneOf<RootCMSOneOfOption<'IsFeatureFlag', IsFeatureFlagFields> | RootCMSOneOfOption<'IsLocale', IsLocaleFields>>[];
+  }[];
+}
+
+/** Generated from `/collections/GlobalModules.schema.ts`. */
+export type GlobalModulesDoc = RootCMSDoc<GlobalModulesFields>;
+
 /** Generated from `/collections/Guide.schema.ts`. */
 export interface GuideFields {
   /** Meta */
@@ -247,6 +271,18 @@ export interface GuideFields {
 /** Generated from `/collections/Guide.schema.ts`. */
 export type GuideDoc = RootCMSDoc<GuideFields>;
 
+/** Generated from `/templates/If/If.schema.ts`. */
+export interface IfFields {
+  /** [INTERNAL] Description. e.g. 'Show hero only when the EnableNewHero flag is on'. */
+  internalDesc?: string;
+  /** Conditions. Nested modules render only when all of these conditions pass. */
+  conditions?: RootCMSOneOf<RootCMSOneOfOption<'IsFeatureFlag', IsFeatureFlagFields> | RootCMSOneOfOption<'IsLocale', IsLocaleFields>>[];
+  /** Modules (if TRUE). Rendered when all conditions are satisfied. */
+  modulesIfTrue?: RootCMSOneOf<RootCMSOneOfOption<'Divider', DividerFields> | RootCMSOneOfOption<'Spacer', SpacerFields> | RootCMSOneOfOption<'Template50x50', Template50x50Fields> | RootCMSOneOfOption<'TemplateHeadline', TemplateHeadlineFields> | RootCMSOneOfOption<'TemplateImage', TemplateImageFields> | RootCMSOneOfOption<'TemplateJumplinks', TemplateJumplinksFields> | RootCMSOneOfOption<'TemplatePoweredBy', TemplatePoweredByFields> | RootCMSOneOfOption<'TemplateSandbox', TemplateSandboxFields>>[];
+  /** Modules (if FALSE). Rendered when the conditions are NOT satisfied. */
+  modulesIfFalse?: RootCMSOneOf<RootCMSOneOfOption<'Divider', DividerFields> | RootCMSOneOfOption<'Spacer', SpacerFields> | RootCMSOneOfOption<'Template50x50', Template50x50Fields> | RootCMSOneOfOption<'TemplateHeadline', TemplateHeadlineFields> | RootCMSOneOfOption<'TemplateImage', TemplateImageFields> | RootCMSOneOfOption<'TemplateJumplinks', TemplateJumplinksFields> | RootCMSOneOfOption<'TemplatePoweredBy', TemplatePoweredByFields> | RootCMSOneOfOption<'TemplateSandbox', TemplateSandboxFields>>[];
+}
+
 /** Generated from `/blocks/ImageBlock/ImageBlock.schema.ts`. */
 export interface ImageBlockFields {
   /** ID. Used for deep linking, tracking, etc. */
@@ -266,6 +302,22 @@ export interface ImageBlockFields {
   };
 }
 
+/** Generated from `/conditions/IsFeatureFlag/IsFeatureFlag.schema.ts`. */
+export interface IsFeatureFlagFields {
+  /** [INTERNAL] Description */
+  internalDesc?: string;
+  /** Flag. Pick a flag defined in GlobalModules/flags, or type a new one. */
+  flag?: string;
+}
+
+/** Generated from `/conditions/IsLocale/IsLocale.schema.ts`. */
+export interface IsLocaleFields {
+  /** [INTERNAL] Description */
+  internalDesc?: string;
+  /** Locale(s). Locales to match, e.g. 'en', 'de'. Leave empty to match all. */
+  locales?: string[];
+}
+
 /** Generated from `/collections/Pages.schema.ts`. */
 export interface PagesFields {
   /** Meta */
@@ -280,7 +332,7 @@ export interface PagesFields {
   /** Content */
   content?: {
     /** Modules. Compose the page by adding one or more modules. */
-    modules?: RootCMSOneOf<RootCMSOneOfOption<'Divider', DividerFields> | RootCMSOneOfOption<'Section', SectionFields> | RootCMSOneOfOption<'Spacer', SpacerFields> | RootCMSOneOfOption<'Template50x50', Template50x50Fields> | RootCMSOneOfOption<'TemplateHeadline', TemplateHeadlineFields> | RootCMSOneOfOption<'TemplateImage', TemplateImageFields> | RootCMSOneOfOption<'TemplateJumplinks', TemplateJumplinksFields> | RootCMSOneOfOption<'TemplatePoweredBy', TemplatePoweredByFields> | RootCMSOneOfOption<'TemplateSandbox', TemplateSandboxFields>>[];
+    modules?: RootCMSOneOf<RootCMSOneOfOption<'Divider', DividerFields> | RootCMSOneOfOption<'If', IfFields> | RootCMSOneOfOption<'Section', SectionFields> | RootCMSOneOfOption<'Spacer', SpacerFields> | RootCMSOneOfOption<'Template50x50', Template50x50Fields> | RootCMSOneOfOption<'TemplateHeadline', TemplateHeadlineFields> | RootCMSOneOfOption<'TemplateImage', TemplateImageFields> | RootCMSOneOfOption<'TemplateJumplinks', TemplateJumplinksFields> | RootCMSOneOfOption<'TemplatePoweredBy', TemplatePoweredByFields> | RootCMSOneOfOption<'TemplateSandbox', TemplateSandboxFields>>[];
   };
 }
 
@@ -301,7 +353,7 @@ export interface SandboxFields {
   /** Content */
   content?: {
     /** Modules. Compose the page by adding one or more modules. */
-    modules?: RootCMSOneOf<RootCMSOneOfOption<'Divider', DividerFields> | RootCMSOneOfOption<'Section', SectionFields> | RootCMSOneOfOption<'Spacer', SpacerFields> | RootCMSOneOfOption<'Template50x50', Template50x50Fields> | RootCMSOneOfOption<'TemplateHeadline', TemplateHeadlineFields> | RootCMSOneOfOption<'TemplateImage', TemplateImageFields> | RootCMSOneOfOption<'TemplateJumplinks', TemplateJumplinksFields> | RootCMSOneOfOption<'TemplatePoweredBy', TemplatePoweredByFields> | RootCMSOneOfOption<'TemplateSandbox', TemplateSandboxFields>>[];
+    modules?: RootCMSOneOf<RootCMSOneOfOption<'Divider', DividerFields> | RootCMSOneOfOption<'If', IfFields> | RootCMSOneOfOption<'Section', SectionFields> | RootCMSOneOfOption<'Spacer', SpacerFields> | RootCMSOneOfOption<'Template50x50', Template50x50Fields> | RootCMSOneOfOption<'TemplateHeadline', TemplateHeadlineFields> | RootCMSOneOfOption<'TemplateImage', TemplateImageFields> | RootCMSOneOfOption<'TemplateJumplinks', TemplateJumplinksFields> | RootCMSOneOfOption<'TemplatePoweredBy', TemplatePoweredByFields> | RootCMSOneOfOption<'TemplateSandbox', TemplateSandboxFields>>[];
   };
 }
 
@@ -317,7 +369,7 @@ export interface SectionFields {
   /** Module Options. Layout and display options. */
   options?: string[];
   /** Modules */
-  modules?: RootCMSOneOf<RootCMSOneOfOption<'Divider', DividerFields> | RootCMSOneOfOption<'Spacer', SpacerFields> | RootCMSOneOfOption<'Template50x50', Template50x50Fields> | RootCMSOneOfOption<'TemplateHeadline', TemplateHeadlineFields> | RootCMSOneOfOption<'TemplateImage', TemplateImageFields> | RootCMSOneOfOption<'TemplateJumplinks', TemplateJumplinksFields> | RootCMSOneOfOption<'TemplatePoweredBy', TemplatePoweredByFields> | RootCMSOneOfOption<'TemplateSandbox', TemplateSandboxFields>>[];
+  modules?: RootCMSOneOf<RootCMSOneOfOption<'Divider', DividerFields> | RootCMSOneOfOption<'If', IfFields> | RootCMSOneOfOption<'Spacer', SpacerFields> | RootCMSOneOfOption<'Template50x50', Template50x50Fields> | RootCMSOneOfOption<'TemplateHeadline', TemplateHeadlineFields> | RootCMSOneOfOption<'TemplateImage', TemplateImageFields> | RootCMSOneOfOption<'TemplateJumplinks', TemplateJumplinksFields> | RootCMSOneOfOption<'TemplatePoweredBy', TemplatePoweredByFields> | RootCMSOneOfOption<'TemplateSandbox', TemplateSandboxFields>>[];
 }
 
 /** Generated from `/templates/Spacer/Spacer.schema.ts`. */
@@ -437,5 +489,5 @@ export interface TemplateSandboxFields {
   /** RichTextField */
   richtext?: RootCMSRichText;
   /** Modules */
-  modules?: RootCMSOneOf<RootCMSOneOfOption<'Divider', DividerFields> | RootCMSOneOfOption<'Section', SectionFields> | RootCMSOneOfOption<'Spacer', SpacerFields> | RootCMSOneOfOption<'Template50x50', Template50x50Fields> | RootCMSOneOfOption<'TemplateHeadline', TemplateHeadlineFields> | RootCMSOneOfOption<'TemplateImage', TemplateImageFields> | RootCMSOneOfOption<'TemplateJumplinks', TemplateJumplinksFields> | RootCMSOneOfOption<'TemplatePoweredBy', TemplatePoweredByFields> | RootCMSOneOfOption<'TemplateSandbox', TemplateSandboxFields>>[];
+  modules?: RootCMSOneOf<RootCMSOneOfOption<'Divider', DividerFields> | RootCMSOneOfOption<'If', IfFields> | RootCMSOneOfOption<'Section', SectionFields> | RootCMSOneOfOption<'Spacer', SpacerFields> | RootCMSOneOfOption<'Template50x50', Template50x50Fields> | RootCMSOneOfOption<'TemplateHeadline', TemplateHeadlineFields> | RootCMSOneOfOption<'TemplateImage', TemplateImageFields> | RootCMSOneOfOption<'TemplateJumplinks', TemplateJumplinksFields> | RootCMSOneOfOption<'TemplatePoweredBy', TemplatePoweredByFields> | RootCMSOneOfOption<'TemplateSandbox', TemplateSandboxFields>>[];
 }
