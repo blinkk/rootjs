@@ -718,6 +718,35 @@ describe('RootCMSClient Validation', () => {
         client.getRawDoc('Pages', '', {mode: 'draft'})
       ).rejects.toThrow(/slug is required/);
     });
+
+    it('returns null without querying when slug exceeds Firestore id byte limit', async () => {
+      const {RootCMSClient} = await import('./client.js');
+      const client = new RootCMSClient(mockRootConfig);
+
+      const mockDoc = vi.fn();
+      (client as any).db = {doc: mockDoc};
+
+      // A slug of 1501 ASCII chars is 1501 bytes, exceeding the 1500-byte limit.
+      const longSlug = 'a'.repeat(1501);
+      const result = await client.getRawDoc('Pages', longSlug, {mode: 'draft'});
+
+      expect(result).toBeNull();
+      expect(mockDoc).not.toHaveBeenCalled();
+    });
+
+    it('getDoc returns null when slug exceeds Firestore id byte limit', async () => {
+      const {RootCMSClient} = await import('./client.js');
+      const client = new RootCMSClient(mockRootConfig);
+
+      const mockDoc = vi.fn();
+      (client as any).db = {doc: mockDoc};
+
+      const longSlug = 'a'.repeat(1501);
+      const result = await client.getDoc('Pages', longSlug, {mode: 'draft'});
+
+      expect(result).toBeNull();
+      expect(mockDoc).not.toHaveBeenCalled();
+    });
   });
 
   describe('listDocs parameter validation', () => {
