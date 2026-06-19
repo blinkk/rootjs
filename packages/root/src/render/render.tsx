@@ -29,7 +29,11 @@ import {
   SitemapItem,
   Sitemap,
 } from '../core/types.js';
-import {JsxRenderOptions, renderJsxToString} from '../jsx/jsx-render.js';
+import {
+  JsxRenderMode,
+  JsxRenderOptions,
+  renderJsxToString,
+} from '../jsx/jsx-render.js';
 import type {ElementGraph} from '../node/element-graph.js';
 import {parseTagNames} from '../utils/elements.js';
 import {toHrefLang} from '../utils/i18n.js';
@@ -78,7 +82,7 @@ interface RenderHtmlOptions {
    * Overrides the JSX render mode. If not provided, defaults to the
    * `jsxRenderer.mode` specified in `root.config.ts`.
    */
-  renderMode?: JsxRenderOptions['mode'];
+  renderMode?: JsxRenderMode;
 }
 
 export class Renderer {
@@ -159,7 +163,7 @@ export class Renderer {
       locale: string;
       translations?: Record<string, string>;
       nonce?: string;
-      renderMode?: JsxRenderOptions['mode'];
+      renderMode?: JsxRenderMode;
     }
   ) {
     const {currentPath, route, routeParams, nonce} = options;
@@ -627,7 +631,7 @@ export class Renderer {
    * yielding to the event loop.
    */
   private async getJsxRenderFn(renderOptions?: {
-    mode?: JsxRenderOptions['mode'];
+    mode?: JsxRenderMode;
   }): Promise<(vnode: any) => string> {
     // Use the per-render mode override if provided, otherwise fall back to the
     // mode specified by the `jsxRenderer` config in `root.config.ts`.
@@ -652,7 +656,7 @@ export class Renderer {
    */
   private async renderJsx(
     vnode: any,
-    options?: {mode?: JsxRenderOptions['mode']}
+    options?: {mode?: JsxRenderMode}
   ) {
     const render = await this.getJsxRenderFn(options);
     return render(vnode);

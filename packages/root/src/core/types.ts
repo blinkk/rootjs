@@ -6,7 +6,7 @@ import {
 } from 'express';
 import {ComponentType} from 'preact';
 import {ViteDevServer} from 'vite';
-import {JsxRenderOptions} from '../jsx/jsx-render.js';
+import {JsxRenderMode} from '../jsx/jsx-render.js';
 import {Hooks} from '../middleware/hooks.js';
 import {SaveSessionOptions, Session} from '../middleware/session.js';
 import {Renderer} from '../render/render.js';
@@ -245,7 +245,7 @@ export interface HandlerRenderOptions {
    * around block elements; `'minimal'` outputs compact HTML. If not provided,
    * defaults to the `jsxRenderer.mode` specified in `root.config.ts`.
    */
-  renderMode?: JsxRenderOptions['mode'];
+  renderMode?: JsxRenderMode;
 }
 
 export type HandlerRenderFn<Props = any> = (
