@@ -2,4 +2,4 @@
 '@blinkk/root-cms': patch
 ---
 
-fix: don't trigger global Cmd+K search while editing rich text fields
+fix: ignore global cmd+k search hotkey in richtext fields
