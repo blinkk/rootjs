@@ -1,5 +1,5 @@
 .UserAvatar {
-  border: 2px solid var(--mantine-color-body, #fff);
+  border: 1px solid var(--mantine-color-body, #fff);
   box-sizing: content-box;
   transition: opacity 0.2s ease;
 }

@@ -50,6 +50,11 @@ export function UserAvatar(props: UserAvatarProps) {
   const displayName = profile?.displayName || '';
   const photoURL = profile?.photoURL || '';
   const [imgError, setImgError] = useState(false);
+  const [imgLoaded, setImgLoaded] = useState(false);
+
+  const hasPhoto = Boolean(photoURL) && !imgError;
+  const showInitials = !hasPhoto;
+  const avatarColor = getAvatarColor(email || displayName || '?');
 
   const avatar = (
     <Avatar
@@ -58,25 +63,35 @@ export function UserAvatar(props: UserAvatarProps) {
         props.inactive && 'UserAvatar--inactive',
         props.className
       )}
-      src={!imgError && photoURL ? photoURL : undefined}
+      src={hasPhoto ? photoURL : undefined}
       alt={displayName || email}
       size={size}
       radius="xl"
       style={
-        !photoURL || imgError
+        showInitials
           ? {
-              backgroundColor: getAvatarColor(email || displayName || '?'),
+              backgroundColor: avatarColor,
               color: '#fff',
               fontWeight: 600,
               fontSize: Math.max(10, Math.round(size * 0.4)),
+              // 1px colored ring drawn inside the edge (negative offset so it
+              // never shifts layout) to help differentiate auto-generated
+              // avatars, à la Google Docs.
+              outline: `1px solid ${avatarColor}`,
+              outlineOffset: '-1px',
             }
-          : undefined
+          : {
+              // Keep the background transparent until the real image has
+              // loaded so the default placeholder doesn't flash.
+              backgroundColor: imgLoaded ? undefined : 'transparent',
+            }
       }
       imageProps={{
+        onLoad: () => setImgLoaded(true),
         onError: () => setImgError(true),
       }}
     >
-      {!photoURL || imgError ? getUserInitials(email, displayName) : null}
+      {showInitials ? getUserInitials(email, displayName) : null}
     </Avatar>
   );
 

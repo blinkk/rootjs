@@ -125,7 +125,8 @@ import {useLocalizationModal} from '../LocalizationModal/LocalizationModal.js';
 import {useLockPublishingModal} from '../LockPublishingModal/LockPublishingModal.js';
 import {usePublishDocModal} from '../PublishDocModal/PublishDocModal.js';
 import {Text} from '../Text/Text.js';
-import {Viewers} from '../Viewers/Viewers.js';
+import {UserAvatar} from '../UserAvatar/UserAvatar.js';
+import {useFieldViewers, Viewers, ViewersProvider} from '../Viewers/Viewers.js';
 import {BooleanField} from './fields/BooleanField.js';
 import {DateField} from './fields/DateField.js';
 import {DateTimeField} from './fields/DateTimeField.js';
@@ -226,34 +227,36 @@ export function DocEditor(props: DocEditorProps) {
     <COLLECTION_SCHEMA_TYPES_CONTEXT.Provider
       value={collection?.schema?.types || {}}
     >
-      <DeeplinkProvider>
-        <div
-          className={joinClassNames(props.className, 'DocEditor')}
-          ref={rootRef}
-        >
-          <LoadingOverlay
-            visible={loading}
-            loaderProps={{color: 'gray', size: 'xl'}}
-          />
-          <DocEditor.HistoryDeeplink rootRef={rootRef} />
-          {!loading && !props.hideStatusBar && (
-            <DocEditor.StatusBar
-              {...props}
-              draft={draft}
-              collection={collection.schema!}
+      <ViewersProvider id={`doc/${props.docId}`}>
+        <DeeplinkProvider>
+          <div
+            className={joinClassNames(props.className, 'DocEditor')}
+            ref={rootRef}
+          >
+            <LoadingOverlay
+              visible={loading}
+              loaderProps={{color: 'gray', size: 'xl'}}
             />
-          )}
-          <div className="DocEditor__fields">
-            {fields.map((field) => (
-              <DocEditor.Field
-                key={field.id}
-                field={field}
-                deepKey={`fields.${field.id!}`}
+            <DocEditor.HistoryDeeplink rootRef={rootRef} />
+            {!loading && !props.hideStatusBar && (
+              <DocEditor.StatusBar
+                {...props}
+                draft={draft}
+                collection={collection.schema!}
               />
-            ))}
+            )}
+            <div className="DocEditor__fields">
+              {fields.map((field) => (
+                <DocEditor.Field
+                  key={field.id}
+                  field={field}
+                  deepKey={`fields.${field.id!}`}
+                />
+              ))}
+            </div>
           </div>
-        </div>
-      </DeeplinkProvider>
+        </DeeplinkProvider>
+      </ViewersProvider>
     </COLLECTION_SCHEMA_TYPES_CONTEXT.Provider>
   );
 }
@@ -854,12 +857,10 @@ DocEditor.FieldHeader = (props: FieldProps & {className?: string}) => {
         <div className="DocEditor__FieldHeader__label">DEPRECATED: {label}</div>
       ) : (
         <div className="DocEditor__FieldHeader__label">
-          <span>{label}</span>
-          {props.deepKey && (
+          {props.deepKey ? (
             <a
-              className="DocEditor__FieldHeader__label__deeplink"
+              className="DocEditor__FieldHeader__label__link"
               href={deeplinkUrl}
-              tabIndex={-1}
               title="Link to field"
               onClick={(e) => {
                 e.preventDefault();
@@ -867,18 +868,46 @@ DocEditor.FieldHeader = (props: FieldProps & {className?: string}) => {
                 deeplink.setValue(props.deepKey!);
               }}
             >
-              #
+              {label}
             </a>
+          ) : (
+            <span>{label}</span>
           )}
         </div>
       )}
       {field.help && (
         <div className="DocEditor__FieldHeader__help">{field.help}</div>
       )}
-      <DocEditor.FieldHeaderTranslationsActionIcon
-        field={field}
-        deepKey={props.deepKey}
-      />
+      <div className="DocEditor__FieldHeader__actions">
+        <DocEditor.FieldHeaderViewers deepKey={props.deepKey || ''} />
+        <DocEditor.FieldHeaderTranslationsActionIcon
+          field={field}
+          deepKey={props.deepKey}
+        />
+      </div>
+    </div>
+  );
+};
+
+/**
+ * Renders miniature avatars of other viewers who currently have this field
+ * focused. Sized to match the translate icon so it never causes layout shift.
+ */
+DocEditor.FieldHeaderViewers = (props: {deepKey: string}) => {
+  const viewers = useFieldViewers(props.deepKey);
+  if (viewers.length === 0) {
+    return null;
+  }
+  return (
+    <div className="DocEditor__FieldHeader__viewers">
+      {viewers.map((viewer) => (
+        <UserAvatar
+          key={viewer.email}
+          email={viewer.email}
+          size={18}
+          className="DocEditor__FieldHeader__viewers__avatar"
+        />
+      ))}
     </div>
   );
 };

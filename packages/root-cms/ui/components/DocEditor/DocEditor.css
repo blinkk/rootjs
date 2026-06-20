@@ -105,10 +105,36 @@
 }
 
 .DocEditor__field.deeplink-target {
-  padding: 16px;
+  padding: 8px;
+  /* Negative horizontal margins offset the padding so the field contents stay
+   * aligned with unfocused fields (no horizontal shift). */
+  margin-left: -8px;
+  margin-right: -8px;
   background: linear-gradient(rgb(255, 248, 197), rgb(255, 248, 197));
   border: 1px solid rgba(212, 167, 44, 0.4);
   border-radius: 4px;
+}
+
+/* For drawer object fields, highlight the drawer element itself rather than
+ * shifting the whole field with padding + negative margins. */
+.DocEditor__field.deeplink-target:has(
+    > .DocEditor__field__input
+      > .DocEditor__ObjectFieldDrawer
+      > .DocEditor__ObjectFieldDrawer__drawer
+  ) {
+  padding: 0;
+  margin-left: 0;
+  margin-right: 0;
+  background: none;
+  border: none;
+  border-radius: 0;
+}
+
+.DocEditor__field.deeplink-target
+  > .DocEditor__field__input
+  > .DocEditor__ObjectFieldDrawer
+  > .DocEditor__ObjectFieldDrawer__drawer {
+  background: linear-gradient(rgb(255, 248, 197), rgb(255, 248, 197));
 }
 
 .DocEditor__FieldHeader {
@@ -123,20 +149,12 @@
   gap: 8px;
 }
 
-.DocEditor__FieldHeader__label__deeplink {
-  color: #ced4da;
+.DocEditor__FieldHeader__label__link {
+  color: inherit;
   text-decoration: none;
-  opacity: 0;
-  transition: opacity 0.3s ease;
 }
 
-.DocEditor__FieldHeader__label:focus-within
-  .DocEditor__FieldHeader__label__deeplink,
-.DocEditor__FieldHeader__label:hover .DocEditor__FieldHeader__label__deeplink {
-  opacity: 1;
-}
-
-.DocEditor__FieldHeader__label__deeplink:hover {
+.DocEditor__FieldHeader__label__link:hover {
   text-decoration: underline;
   text-underline-offset: 2px;
 }
@@ -147,10 +165,52 @@
   margin-top: 2px;
 }
 
-.DocEditor__FieldHeader__translate {
+/*
+ * Right-aligned actions row (presence avatars + translate icon). Absolutely
+ * positioned so it never causes layout shift; the avatars stay flush with the
+ * right edge of the field even when the translate icon isn't rendered.
+ */
+.DocEditor__FieldHeader__actions {
   position: absolute;
   top: 0;
   right: 0;
+  /* Match the height of the translate ActionIcon (size="xs" = 18px) so the
+   * avatars' centers line up with it (the avatars are taller due to their
+   * border). */
+  height: 18px;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+}
+
+.DocEditor__FieldHeader__translate {
+  display: inline-flex;
+  align-items: center;
+}
+
+/*
+ * Presence avatars for other users focused on this field.
+ */
+.DocEditor__FieldHeader__viewers {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  pointer-events: none;
+}
+
+/* Overlap is applied to the direct flex children (which may be a Tooltip
+ * wrapper element, not the avatar itself) so the layout stays stable on hover. */
+.DocEditor__FieldHeader__viewers > * {
+  pointer-events: auto;
+}
+
+.DocEditor__FieldHeader__viewers > * + * {
+  margin-left: -8px;
+}
+
+.DocEditor__FieldHeader__viewers__avatar {
+  margin-left: 0;
 }
 
 .DocEditor__FieldHeader__translate__iconDisabled {
