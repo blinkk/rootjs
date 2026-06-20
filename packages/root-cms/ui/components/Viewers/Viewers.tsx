@@ -9,8 +9,10 @@ import {
   setDoc,
   updateDoc,
 } from 'firebase/firestore';
-import {useEffect, useState} from 'preact/hooks';
+import {ComponentChildren, createContext} from 'preact';
+import {useContext, useEffect, useMemo, useState} from 'preact/hooks';
 import {normalizeSlug} from '../../../shared/slug.js';
+import {debounce} from '../../utils/debounce.js';
 import {EventListener} from '../../utils/events.js';
 import {throttle} from '../../utils/throttle.js';
 import {TIME_UNITS} from '../../utils/time.js';
@@ -29,6 +31,8 @@ interface Viewer {
   photoURL: string;
   lastViewedAt: Timestamp;
   disconnectedAt: Timestamp;
+  /** The `deepKey` of the field this viewer currently has focused, if any. */
+  focusedField?: string;
 }
 
 export interface ViewersProps {
@@ -44,6 +48,7 @@ class ViewersController extends EventListener {
   started = false;
   timer: Timer = new Timer(UPDATE_INTERVAL);
   idleTimer: Timer = new Timer(IDLE_TIMEOUT);
+  private focusedField = '';
 
   constructor(id: string) {
     super();
@@ -118,6 +123,38 @@ class ViewersController extends EventListener {
     this.idleTimer.reset();
   }, 5000);
 
+  /** Broadcasts the field (`deepKey`) the current user has focused. */
+  setFocusedField(deepKey: string) {
+    const value = deepKey || '';
+    if (this.focusedField === value) {
+      return;
+    }
+    this.focusedField = value;
+    this.writeFocusedField();
+  }
+
+  private writeFocusedField = debounce(async () => {
+    if (!this.started) {
+      return;
+    }
+    const user = window.firebase.user;
+    if (!user.email) {
+      return;
+    }
+    await setDoc(
+      this.docRef,
+      {
+        [user.email]: {
+          email: user.email,
+          photoURL: user.photoURL,
+          focusedField: this.focusedField,
+          lastViewedAt: serverTimestamp(),
+        },
+      },
+      {merge: true}
+    );
+  }, 200);
+
   stop() {
     if (!this.started) {
       return;
@@ -149,17 +186,45 @@ class ViewersController extends EventListener {
   }
 }
 
+function isViewerDisconnected(viewer: Viewer) {
+  if (!viewer.disconnectedAt) {
+    return false;
+  }
+  return viewer.disconnectedAt > viewer.lastViewedAt;
+}
+
+interface ViewersContextValue {
+  viewers: Viewer[];
+  controller: ViewersController | null;
+  /** The `deepKey` of the field the current user currently has focused. */
+  currentFocusedField: string;
+}
+
+const ViewersContext = createContext<ViewersContextValue>({
+  viewers: [],
+  controller: null,
+  currentFocusedField: '',
+});
+
 /**
- * Displays avatars viewing the current page.
+ * Hook that wires up a {@link ViewersController} for the given page `id`. It
+ * keeps the list of other active viewers up to date and tracks which field the
+ * current user has focused so it can be broadcast to other viewers.
  */
-export function Viewers(props: ViewersProps) {
-  const id = normalizeSlug(props.id);
+function useViewersController(id: string): ViewersContextValue {
   const [viewers, setViewers] = useState<Viewer[]>([]);
+  const [controller, setController] = useState<ViewersController | null>(null);
+  const [currentFocusedField, setCurrentFocusedField] = useState('');
 
   useEffect(() => {
+    if (!id) {
+      return;
+    }
     const controller = new ViewersController(id);
+    setController(controller);
     controller.on('change', (viewers: Viewer[]) => setViewers(viewers));
     controller.start();
+
     const onVisibilityChange = () => {
       if (document.hidden || document.visibilityState !== 'visible') {
         controller.stop();
@@ -170,21 +235,116 @@ export function Viewers(props: ViewersProps) {
       }
     };
     document.addEventListener('visibilitychange', onVisibilityChange);
+
+    // Broadcast which field the current user has focused so other viewers can
+    // render a presence indicator next to it.
+    const getFocusedDeepKey = () => {
+      const active = document.activeElement;
+      if (!active) {
+        return '';
+      }
+      const fieldEl = active.closest('.DocEditor__field');
+      return fieldEl?.id || '';
+    };
+    const updateFocusedField = () => {
+      const deepKey = getFocusedDeepKey();
+      controller.setFocusedField(deepKey);
+      setCurrentFocusedField(deepKey);
+    };
+    const onFocusIn = () => updateFocusedField();
+    const onFocusOut = () => {
+      // Defer so `document.activeElement` reflects the newly focused element.
+      window.setTimeout(() => {
+        updateFocusedField();
+      }, 0);
+    };
+    document.addEventListener('focusin', onFocusIn);
+    document.addEventListener('focusout', onFocusOut);
+
     return () => {
       controller.dispose();
       document.removeEventListener('visibilitychange', onVisibilityChange);
+      document.removeEventListener('focusin', onFocusIn);
+      document.removeEventListener('focusout', onFocusOut);
+      setController(null);
+      setCurrentFocusedField('');
     };
   }, [id]);
 
+  return {viewers, controller, currentFocusedField};
+}
+
+/**
+ * Provides viewer presence (including per-field focus) to descendants. Wrap the
+ * doc editor with this so individual fields can render presence indicators.
+ */
+export function ViewersProvider(props: {
+  id: string;
+  children: ComponentChildren;
+}) {
+  const id = normalizeSlug(props.id);
+  const value = useViewersController(id);
+  return (
+    <ViewersContext.Provider value={value}>
+      {props.children}
+    </ViewersContext.Provider>
+  );
+}
+
+export interface FieldViewer {
+  email: string;
+  /** Whether this viewer is the current (signed-in) user. */
+  isCurrentUser: boolean;
+}
+
+/**
+ * Returns the viewers who currently have the field identified by `deepKey`
+ * focused. The current user is only included when at least one *other* viewer
+ * is also focused on the same field (so we never show your own avatar when
+ * you're the only one on the field).
+ */
+export function useFieldViewers(deepKey: string): FieldViewer[] {
+  const {viewers, currentFocusedField} = useContext(ViewersContext);
+  return useMemo(() => {
+    if (!deepKey) {
+      return [];
+    }
+    const others = viewers.filter(
+      (viewer) =>
+        viewer.focusedField === deepKey && !isViewerDisconnected(viewer)
+    );
+    if (others.length === 0) {
+      return [];
+    }
+    const result: FieldViewer[] = others.map((viewer) => ({
+      email: viewer.email,
+      isCurrentUser: false,
+    }));
+    // Include the current user's avatar when they share this field with at
+    // least one other viewer.
+    if (currentFocusedField === deepKey) {
+      const currentEmail = window.firebase.user?.email || '';
+      if (currentEmail) {
+        result.unshift({email: currentEmail, isCurrentUser: true});
+      }
+    }
+    return result;
+  }, [viewers, deepKey, currentFocusedField]);
+}
+
+/**
+ * Displays avatars viewing the current page. When rendered inside a
+ * {@link ViewersProvider} it reuses the shared controller; otherwise it spins
+ * up its own controller (e.g. for standalone usage).
+ */
+export function Viewers(props: ViewersProps) {
+  const id = normalizeSlug(props.id);
+  const context = useContext(ViewersContext);
+  const standalone = useViewersController(context.controller ? '' : id);
+  const viewers = context.controller ? context.viewers : standalone.viewers;
+
   if (viewers.length === 0) {
     return null;
-  }
-
-  function isViewerDisconnected(viewer: Viewer) {
-    if (!viewer.disconnectedAt) {
-      return false;
-    }
-    return viewer.disconnectedAt > viewer.lastViewedAt;
   }
 
   // Use plain CSS instead of `AvatarsGroup` because that
