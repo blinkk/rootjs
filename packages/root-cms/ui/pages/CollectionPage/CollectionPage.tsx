@@ -4,16 +4,18 @@ import {
   ActionIcon,
   Button,
   Loader,
+  Menu,
   Select,
   Switch,
   Tooltip,
 } from '@mantine/core';
 import {
-  IconCirclePlus,
+  IconBaselineDensityMedium,
+  IconBaselineDensitySmall,
+  IconCheck,
   IconChevronUp,
   IconChevronDown,
-  IconLayoutList,
-  IconLayoutRows,
+  IconCirclePlus,
 } from '@tabler/icons-preact';
 import {useEffect, useState} from 'preact/hooks';
 import {useLocation} from 'preact-iso';
@@ -35,6 +37,18 @@ import {getDocServingUrl} from '../../utils/doc-urls.js';
 import {getNestedValue} from '../../utils/objects.js';
 import {testCanEdit} from '../../utils/permissions.js';
 import {formatDateTime, getTimeAgo} from '../../utils/time.js';
+
+/** Document listing density. */
+type Density = 'comfortable' | 'compact';
+
+const DENSITY_OPTIONS: Array<{
+  value: Density;
+  label: string;
+  Icon: typeof IconBaselineDensityMedium;
+}> = [
+  {value: 'comfortable', label: 'Comfortable', Icon: IconBaselineDensityMedium},
+  {value: 'compact', label: 'Compact', Icon: IconBaselineDensitySmall},
+];
 
 interface CollectionPageProps {
   collection?: string;
@@ -128,14 +142,15 @@ CollectionPage.Collection = (props: CollectionProps) => {
   }
 
   // Collections can force the compact listing via schema
-  // (`viewOptions: {compact: true}`). Otherwise the user's per-collection
-  // choice is remembered in local storage.
+  // (`viewOptions: {compact: true}`). Otherwise the user's chosen density is
+  // remembered globally (sticky as the user navigates between collections).
   const forceCompactView = Boolean(collection.viewOptions?.compact);
-  const [userCompactView, setUserCompactView] = useLocalStorage<boolean>(
-    `root::CollectionPage:${props.collection}:compactView`,
-    false
+  const [userDensity, setUserDensity] = useLocalStorage<Density>(
+    'root::CollectionPage:density',
+    'comfortable'
   );
-  const compactView = forceCompactView || userCompactView;
+  const density: Density = forceCompactView ? 'compact' : userDensity;
+  const compactView = density === 'compact';
 
   const sortOptions = [
     {value: 'slug', label: 'A-Z'},
@@ -199,33 +214,11 @@ CollectionPage.Collection = (props: CollectionProps) => {
                   data={sortOptions}
                 />
               </div>
-              {!forceCompactView && (
-                <div className="CollectionPage__collection__docsTab__controls__compact">
-                  <Tooltip
-                    label={
-                      compactView
-                        ? 'Switch to default view'
-                        : 'Switch to compact view'
-                    }
-                    transition="pop"
-                    withArrow
-                  >
-                    <ActionIcon
-                      variant={compactView ? 'filled' : 'default'}
-                      color={compactView ? 'dark' : 'gray'}
-                      size={30}
-                      onClick={() => setUserCompactView(!compactView)}
-                      aria-label="Toggle compact view"
-                    >
-                      {compactView ? (
-                        <IconLayoutRows size={16} />
-                      ) : (
-                        <IconLayoutList size={16} />
-                      )}
-                    </ActionIcon>
-                  </Tooltip>
-                </div>
-              )}
+              <DensityControl
+                density={density}
+                locked={forceCompactView}
+                onChange={setUserDensity}
+              />
               <div className="CollectionPage__collection__docsTab__controls__newDoc">
                 <ConditionalTooltip
                   label="You don't have access to create new documents"
@@ -304,6 +297,71 @@ CollectionPage.Collection = (props: CollectionProps) => {
 };
 
 /**
+ * The "View:" density control. Renders a labeled icon button that opens a menu
+ * for choosing the listing density (Comfortable / Compact). The choice is
+ * sticky across collections (persisted by the caller). When `locked` is true
+ * (the collection forces compact via `viewOptions.compact`), the control is
+ * disabled and the menu is not shown.
+ */
+function DensityControl(props: {
+  density: Density;
+  locked?: boolean;
+  onChange: (density: Density) => void;
+}) {
+  const active =
+    DENSITY_OPTIONS.find((option) => option.value === props.density) ||
+    DENSITY_OPTIONS[0];
+  const ActiveIcon = active.Icon;
+  const control = (
+    <ActionIcon
+      variant="default"
+      color="gray"
+      size={30}
+      disabled={props.locked}
+      aria-label="Change view density"
+    >
+      <ActiveIcon size={16} />
+    </ActionIcon>
+  );
+  return (
+    <div className="CollectionPage__collection__docsTab__controls__density">
+      <div className="CollectionPage__collection__docsTab__controls__density__label">
+        View:
+      </div>
+      {props.locked ? (
+        <Tooltip
+          label="This collection is locked to the compact view"
+          transition="pop"
+          withArrow
+        >
+          {control}
+        </Tooltip>
+      ) : (
+        <Menu position="bottom" placement="end" control={control}>
+          <Menu.Label>View density</Menu.Label>
+          {DENSITY_OPTIONS.map((option) => {
+            const OptionIcon = option.Icon;
+            const isActive = option.value === props.density;
+            return (
+              <Menu.Item
+                key={option.value}
+                icon={<OptionIcon size={18} />}
+                rightSection={
+                  isActive ? <IconCheck size={14} stroke={2.5} /> : undefined
+                }
+                onClick={() => props.onChange(option.value)}
+              >
+                {option.label}
+              </Menu.Item>
+            );
+          })}
+        </Menu>
+      )}
+    </div>
+  );
+}
+
+/**
  * Maps a sortable compact-table column to the `orderBy` values used by the
  * sort dropdown / `useDocsList`. `defaultDir` is applied the first time a column
  * is activated; subsequent clicks toggle between asc and desc.
@@ -312,7 +370,7 @@ const COLUMN_SORTS: Record<
   string,
   {asc: string; desc: string; defaultDir: 'asc' | 'desc'}
 > = {
-  id: {asc: 'slug', desc: 'slugDesc', defaultDir: 'asc'},
+  slug: {asc: 'slug', desc: 'slugDesc', defaultDir: 'asc'},
   title: {asc: 'title', desc: 'titleDesc', defaultDir: 'asc'},
   created: {asc: 'oldest', desc: 'newest', defaultDir: 'desc'},
   modified: {asc: 'modifiedAtAsc', desc: 'modifiedAt', defaultDir: 'desc'},
@@ -429,8 +487,8 @@ CollectionPage.DocsList = (props: {
           <div className="CollectionPage__collection__docsList__header">
             <div className="CollectionPage__collection__docsList__header__image" />
             <SortableHeaderCell
-              column="id"
-              label="ID"
+              column="slug"
+              label="Slug"
               orderBy={props.orderBy}
               onSort={props.onSort}
             />
@@ -489,7 +547,7 @@ CollectionPage.DocsList = (props: {
                   className="CollectionPage__collection__docsList__doc__docId"
                   href={cmsUrl}
                 >
-                  {doc.id}
+                  {doc.slug}
                 </a>
                 <a
                   className="CollectionPage__collection__docsList__doc__title"

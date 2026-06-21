@@ -107,9 +107,14 @@
   font-weight: 500;
 }
 
-.CollectionPage__collection__docsTab__controls__compact {
+.CollectionPage__collection__docsTab__controls__density {
   display: flex;
+  gap: 8px;
   align-items: center;
+}
+
+.CollectionPage__collection__docsTab__controls__density__label {
+  font-weight: 500;
 }
 
 .CollectionPage__collection__docsList__doc {

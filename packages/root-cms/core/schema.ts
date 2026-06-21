@@ -554,10 +554,10 @@ export type Collection = SchemaWithTypes & {
      * titles and preview URLs. Useful for collections that don't have
      * meaningful preview metadata (e.g. redirects).
      *
-     * When set, the compact-view toggle is hidden in the CMS and the listing
-     * is locked to the compact layout. When unset, users can toggle between
-     * the default and compact views (their choice is remembered
-     * per-collection).
+     * When set, the listing is locked to the compact layout and the CMS
+     * "View" density control is disabled. When unset, users can choose the
+     * listing density (their choice is remembered globally and stays sticky as
+     * they navigate between collections).
      */
     compact?: boolean;
   };
