@@ -1076,7 +1076,17 @@ DocEditor.ObjectFieldDrawer = (props: FieldProps) => {
   const modalTheme = useModalTheme();
 
   const deeplink = useDeeplink();
-  const initialOpen = !collapsed || deeplink.value.includes(props.deepKey);
+  const isDeeplinkTarget = deeplink.value.includes(props.deepKey);
+  const [open, setOpen] = useState(!collapsed || isDeeplinkTarget);
+
+  // Open (but never force-close) the drawer when it becomes the deeplink
+  // target, so that clearing the deeplink (e.g. pressing Esc) leaves the
+  // drawer's open state untouched.
+  useEffect(() => {
+    if (isDeeplinkTarget) {
+      setOpen(true);
+    }
+  }, [isDeeplinkTarget]);
 
   const copyToClipboard = () => {
     const data = draft.getValue(props.deepKey) || {};
@@ -1160,7 +1170,10 @@ DocEditor.ObjectFieldDrawer = (props: FieldProps) => {
     >
       <details
         className="DocEditor__ObjectFieldDrawer__drawer"
-        open={initialOpen}
+        open={open}
+        onToggle={(e: Event) => {
+          setOpen((e.currentTarget as HTMLDetailsElement).open);
+        }}
       >
         <summary className="DocEditor__ObjectFieldDrawer__drawer__toggle">
           <div className="DocEditor__ObjectFieldDrawer__drawer__toggle__icon">

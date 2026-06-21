@@ -32,6 +32,27 @@ export function DeeplinkProvider(props: {children: ComponentChildren}) {
     setValue(deeplinkFromUrl);
   }, [deeplinkFromUrl]);
 
+  // Allow pressing "Esc" to unselect the currently highlighted field.
+  useEffect(() => {
+    if (!value) {
+      return;
+    }
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape' || event.defaultPrevented) {
+        return;
+      }
+      setValue('');
+      // Remove the deeplink from the URL without modifying history.
+      const url = new URL(window.location.href);
+      url.searchParams.delete('deeplink');
+      window.history.replaceState({}, '', url.toString());
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [value]);
+
   //  Enable posting messages from the preview frame to the DocEditor so that
   // fields can be focused.
   useEffect(() => {
