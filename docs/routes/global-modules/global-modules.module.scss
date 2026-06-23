@@ -1,0 +1,29 @@
+.wrap {
+  padding: 48px 0 80px;
+}
+
+.intro {
+  margin-top: 8px;
+  margin-bottom: 24px;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.table th,
+.table td {
+  padding: 8px 12px;
+  text-align: left;
+  vertical-align: top;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.12);
+}
+
+.enabled {
+  font-weight: 600;
+}
+
+.muted {
+  color: rgba(0, 0, 0, 0.5);
+}

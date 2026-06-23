@@ -18,6 +18,66 @@ export interface CommonFieldProps {
   hideLabel?: boolean;
 }
 
+/**
+ * Sources the selectable values for a field from a field within another CMS
+ * document.
+ *
+ * Use this when a set of allowed values is managed centrally in the CMS (e.g. a
+ * list of feature flags defined in a global module) and you want other fields
+ * to pick from that list instead of typing free-form strings.
+ *
+ * Example: source a `flag` select's options from the `name` of each item in
+ * the `flags` array of the `GlobalModules/flags` document.
+ *
+ * ```ts
+ * schema.select({
+ *   id: 'flag',
+ *   source: {
+ *     doc: 'GlobalModules/flags',
+ *     field: 'flags',
+ *     valueKey: 'name',
+ *     helpKey: 'description',
+ *   },
+ *   creatable: true,
+ * });
+ * ```
+ */
+export interface DocumentSource {
+  /**
+   * The document to source values from, in `<collection>/<slug>` format, e.g.
+   * `GlobalModules/flags`.
+   */
+  doc: string;
+  /**
+   * The field within the document that holds the values, e.g. `flags`. This is
+   * usually an array; for an array of objects use `valueKey`/`labelKey` to map
+   * each item, and for an array of strings each string is used directly.
+   */
+  field: string;
+  /**
+   * The key on each item to use as the stored value, e.g. `name`. Dot-paths are
+   * supported for nested keys (e.g. `meta.id`). Omit for arrays of strings.
+   */
+  valueKey?: string;
+  /**
+   * The key on each item to use as the display label, e.g. `name`. Dot-paths
+   * are supported. Defaults to `valueKey`.
+   */
+  labelKey?: string;
+  /**
+   * The key on each item to use as secondary help text, shown in a smaller,
+   * dimmed line beneath the label in the dropdown, e.g. `description`. Dot-paths
+   * are supported.
+   */
+  helpKey?: string;
+}
+
+/**
+ * The source of selectable values for a field. Currently only a CMS document
+ * source is supported; other source types may be added in the future.
+ */
+export type FieldValueSource = DocumentSource;
+
 export type StringField = CommonFieldProps & {
   type: 'string';
   default?: string;
@@ -106,7 +166,18 @@ export function boolean(field: Omit<BooleanField, 'type'>): BooleanField {
 export type SelectField = CommonFieldProps & {
   type: 'select';
   default?: string;
+  /** A static list of options to choose from. */
   options?: Array<{value: string; label?: string}> | string[];
+  /**
+   * Dynamically source the options from a field in another CMS document,
+   * instead of the static `options` list. See {@link DocumentSource}.
+   */
+  source?: FieldValueSource;
+  /**
+   * Whether to allow the user to enter arbitrary values that aren't in the
+   * options/source list. Defaults to `false`.
+   */
+  creatable?: boolean;
   translate?: boolean;
   searchable?: boolean;
 };
@@ -117,9 +188,6 @@ export function select(field: Omit<SelectField, 'type'>): SelectField {
 
 export type MultiSelectField = Omit<SelectField, 'type'> & {
   type: 'multiselect';
-  /** Set to `true` to allow users to create arbitrary values. */
-  creatable?: boolean;
-  translate?: boolean;
 };
 
 export function multiselect(
