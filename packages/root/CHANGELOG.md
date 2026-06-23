@@ -1,5 +1,12 @@
 # @blinkk/root
 
+## 3.1.5
+
+### Patch Changes
+
+- 1d17349: refactor: optimize root jsx renderer (minimal + pretty fast paths)
+- 692b957: feat: add renderMode option to override JSX render mode per request
+
 ## 3.1.4
 
 ### Patch Changes
