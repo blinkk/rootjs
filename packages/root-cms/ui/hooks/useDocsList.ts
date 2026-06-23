@@ -43,6 +43,8 @@ export function useDocsList(collectionId: string, options: UseDocsListOptions) {
     const orderBy = options.orderBy;
     if (orderBy === 'modifiedAt') {
       dbQuery = query(dbCollection, queryOrderby('sys.modifiedAt', 'desc'));
+    } else if (orderBy === 'modifiedAtAsc') {
+      dbQuery = query(dbCollection, queryOrderby('sys.modifiedAt'));
     } else if (orderBy === 'newest') {
       dbQuery = query(dbCollection, queryOrderby('sys.createdAt', 'desc'));
     } else if (orderBy === 'oldest') {
@@ -51,6 +53,12 @@ export function useDocsList(collectionId: string, options: UseDocsListOptions) {
       dbQuery = query(dbCollection, queryOrderby(documentId()));
     } else if (orderBy === 'slugDesc') {
       dbQuery = query(dbCollection, queryOrderby(documentId(), 'desc'));
+    } else if (orderBy === 'title' || orderBy === 'titleDesc') {
+      const direction = orderBy === 'titleDesc' ? 'desc' : 'asc';
+      const titleField = resolveTitleFieldPath(collectionId);
+      dbQuery = titleField
+        ? query(dbCollection, queryOrderby(titleField, direction))
+        : query(dbCollection, queryOrderby(documentId(), direction));
     } else {
       const col = window.__ROOT_CTX.collections[collectionId] as any;
       const custom = col?.sortOptions?.find((s: any) => s.id === orderBy);
@@ -91,4 +99,23 @@ export function useDocsList(collectionId: string, options: UseDocsListOptions) {
   }, [collectionId, options.orderBy, includeArchived]);
 
   return [loading, listDocs, docs] as const;
+}
+
+/**
+ * Resolves the Firestore field path used to sort a collection's docs by title,
+ * derived from the collection's `preview.title` config (defaults to
+ * `meta.title`). Returns an empty string when the title is a template string
+ * (contains `{}` placeholders) or is otherwise not a plain field path, in which
+ * case callers should fall back to sorting by document id.
+ */
+function resolveTitleFieldPath(collectionId: string): string {
+  const collection = window.__ROOT_CTX.collections[collectionId] as any;
+  let title = collection?.preview?.title ?? 'meta.title';
+  if (Array.isArray(title)) {
+    title = title[0];
+  }
+  if (typeof title !== 'string' || !title || title.includes('{')) {
+    return '';
+  }
+  return `fields.${title}`;
 }

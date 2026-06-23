@@ -610,6 +610,25 @@ export type Collection = SchemaWithTypes & {
     /** Sort direction. Defaults to ascending. */
     direction?: 'asc' | 'desc';
   }>;
+  /**
+   * Options that control how the document listing for this collection is
+   * rendered in the CMS.
+   */
+  viewOptions?: {
+    /**
+     * Forces the document listing to always use the "compact" view, which
+     * renders a condensed table (image, doc id, title, badges, and
+     * created/modified timestamps) instead of the default cards with large
+     * titles and preview URLs. Useful for collections that don't have
+     * meaningful preview metadata (e.g. redirects).
+     *
+     * When set, the listing is locked to the compact layout and the CMS
+     * "View" density control is disabled. When unset, users can choose the
+     * listing density (their choice is remembered globally and stays sticky as
+     * they navigate between collections).
+     */
+    compact?: boolean;
+  };
 };
 
 export function defineCollection(

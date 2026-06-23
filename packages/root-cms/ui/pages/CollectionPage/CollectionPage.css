@@ -44,7 +44,7 @@
 }
 
 .CollectionPage__side__search input::-webkit-input-placeholder {
-  color: #E5E5E5;
+  color: #e5e5e5;
 }
 
 .CollectionPage__main {
@@ -88,20 +88,32 @@
   align-items: center;
 }
 
-.CollectionPage__collection__docsTab__controls__showArchived .mantine-Switch-root {
+.CollectionPage__collection__docsTab__controls__showArchived
+  .mantine-Switch-root {
   display: flex;
   align-items: center;
   flex-direction: row-reverse;
   gap: 8px;
 }
 
-.CollectionPage__collection__docsTab__controls__showArchived .mantine-Switch-label {
+.CollectionPage__collection__docsTab__controls__showArchived
+  .mantine-Switch-label {
   color: var(--color-text-default);
   font-weight: 500;
   margin-left: 0;
 }
 
 .CollectionPage__collection__docsTab__controls__sort__label {
+  font-weight: 500;
+}
+
+.CollectionPage__collection__docsTab__controls__density {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.CollectionPage__collection__docsTab__controls__density__label {
   font-weight: 500;
 }
 
@@ -112,7 +124,8 @@
   overflow: hidden;
 }
 
-.CollectionPage__collection__docsList__doc + .CollectionPage__collection__docsList__doc {
+.CollectionPage__collection__docsList__doc
+  + .CollectionPage__collection__docsList__doc {
   border-top: 1px solid var(--color-border);
 }
 
@@ -130,12 +143,38 @@
   margin-bottom: 90px;
 }
 
+/* Reload state: keep the previous docs visible but dim them, with a spinner
+ * that stays pinned to the top of the viewport while scrolling. */
+.CollectionPage__collection__docsTab__content__list {
+  position: relative;
+}
+
+.CollectionPage__collection__docsTab__content__items--loading {
+  opacity: 0.5;
+  pointer-events: none;
+  transition: opacity 0.1s ease;
+}
+
+.CollectionPage__collection__docsTab__content__reloading {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  /* Zero-height so the spinner overlays the list without shifting it. */
+  height: 0;
+  display: flex;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.CollectionPage__collection__docsTab__content__reloading > * {
+  margin-top: 24px;
+}
+
 .CollectionPage__collection__docsList__doc__content__header {
   display: flex;
   align-items: center;
   gap: 12px;
 }
-
 
 .CollectionPage__collection__docsList__doc__content__header__docId {
   font-size: 14px;
@@ -175,4 +214,156 @@
 .CollectionPage__collection__docsEmpty__title {
   font-size: 14px;
   font-weight: 500;
+}
+
+/* Compact docs list. */
+.CollectionPage__collection__docsList--compact
+  .CollectionPage__collection__docsList__doc,
+.CollectionPage__collection__docsList--compact
+  .CollectionPage__collection__docsList__header {
+  display: grid;
+  /*
+   * Use deterministic column widths (no content-based `auto`/`min-content`)
+   * so every row resolves to identical track sizes and the columns line up
+   * into a proper table. The Title column gets the largest share of the
+   * flexible space; the ID column is kept snug. The Status column is wide
+   * enough to fit two badges.
+   */
+  grid-template-columns:
+    48px minmax(0, 0.8fr) minmax(0, 2.5fr) 150px 110px
+    110px 32px;
+  align-items: center;
+  gap: 16px;
+  padding: 8px 12px;
+}
+
+/* When any doc belongs to a release, insert a dedicated Release column between
+ * Status and Created. */
+.CollectionPage__collection__docsList--withRelease
+  .CollectionPage__collection__docsList__doc,
+.CollectionPage__collection__docsList--withRelease
+  .CollectionPage__collection__docsList__header {
+  grid-template-columns:
+    48px minmax(0, 0.8fr) minmax(0, 2.5fr) 150px minmax(0, 1fr) 110px
+    110px 32px;
+}
+
+.CollectionPage__collection__docsList__doc__releases {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  min-width: 0;
+}
+
+.CollectionPage__collection__docsList__doc__releases .mantine-Badge-root {
+  max-width: 100%;
+}
+
+.CollectionPage__collection__docsList__header {
+  border-bottom: 1px solid var(--color-border);
+}
+
+.CollectionPage__collection__docsList__header__cell {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #ababab;
+}
+
+.CollectionPage__collection__docsList__header__cell--sortable {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  /* Reset button styles. */
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #ababab;
+  cursor: pointer;
+  text-align: left;
+}
+
+.CollectionPage__collection__docsList__header__cell--sortable:hover {
+  color: var(--color-text-default);
+}
+
+.CollectionPage__collection__docsList__header__cell--active {
+  color: var(--color-text-default);
+}
+
+.CollectionPage__collection__docsList--compact
+  .CollectionPage__collection__docsList__doc__image {
+  display: block;
+  box-sizing: content-box;
+  width: 48px;
+  height: 36px;
+  border: 1px solid var(--color-border);
+  flex-shrink: 0;
+  line-height: 0;
+}
+
+.CollectionPage__collection__docsList--compact
+  .CollectionPage__collection__docsList__doc__docId {
+  font-size: 13px;
+  font-weight: 500;
+  text-decoration: none;
+  color: var(--color-text-default);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.CollectionPage__collection__docsList--compact
+  .CollectionPage__collection__docsList__doc__docId:hover {
+  text-decoration: underline;
+}
+
+.CollectionPage__collection__docsList--compact
+  .CollectionPage__collection__docsList__doc__title {
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+  color: var(--color-text-default);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.CollectionPage__collection__docsList--compact
+  .CollectionPage__collection__docsList__doc__title:hover {
+  text-decoration: underline;
+}
+
+.CollectionPage__collection__docsList--compact
+  .CollectionPage__collection__docsList__doc__badges {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.CollectionPage__collection__docsList__doc__timestamp {
+  display: flex;
+  align-items: center;
+  font-size: 12px;
+  line-height: 1.3;
+  min-width: 0;
+}
+
+.CollectionPage__collection__docsList__doc__timestamp__value {
+  display: block;
+  color: var(--color-text-default);
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  cursor: default;
 }
