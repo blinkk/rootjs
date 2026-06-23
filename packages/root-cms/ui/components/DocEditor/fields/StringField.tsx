@@ -16,7 +16,8 @@ interface HighlighterProps {
 }
 
 function Highlighter(props: HighlighterProps) {
-  const {value, variant, scrollRef} = props;
+  const {variant, scrollRef} = props;
+  const value = typeof props.value === 'string' ? props.value : '';
   const parts = value.split(/([\u00A0\u2011])/g);
   return (
     <div
@@ -45,6 +46,16 @@ export function StringField(props: FieldProps) {
   const highlighterRef = useRef<HTMLDivElement>(null);
   const inputHighlighterRef = useRef<HTMLDivElement>(null);
   const [jsonError, setJsonError] = useState<string | null>(null);
+
+  // Surface mismatched data instead of silently rendering "[object Object]".
+  // The FieldErrorBoundary catches this and shows an inline error, while the
+  // rest of the editor keeps working.
+  if (value !== null && value !== undefined && typeof value !== 'string') {
+    throw new Error(
+      `Expected a string value but got ${typeof value}. The stored data for ` +
+        'this field may be corrupted. Fix it using "Edit JSON" or restore a previous version.'
+    );
+  }
 
   const onChange = (e: ChangeEvent<HTMLInputElement>) => {
     setValue(e.currentTarget.value);
