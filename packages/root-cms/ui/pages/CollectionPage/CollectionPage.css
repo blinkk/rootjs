@@ -217,16 +217,6 @@
 }
 
 /* Compact docs list. */
-.CollectionPage__collection__docsList__scroll {
-  /* On narrow viewports the table scrolls horizontally instead of crushing
-   * the ID/Title columns. */
-  overflow-x: auto;
-}
-
-.CollectionPage__collection__docsList--compact {
-  min-width: 800px;
-}
-
 .CollectionPage__collection__docsList--compact
   .CollectionPage__collection__docsList__doc,
 .CollectionPage__collection__docsList--compact
@@ -245,6 +235,29 @@
   align-items: center;
   gap: 16px;
   padding: 8px 12px;
+}
+
+/* When any doc belongs to a release, insert a dedicated Release column between
+ * Status and Created. */
+.CollectionPage__collection__docsList--withRelease
+  .CollectionPage__collection__docsList__doc,
+.CollectionPage__collection__docsList--withRelease
+  .CollectionPage__collection__docsList__header {
+  grid-template-columns:
+    48px minmax(0, 0.8fr) minmax(0, 2.5fr) 150px minmax(0, 1fr) 110px
+    110px 32px;
+}
+
+.CollectionPage__collection__docsList__doc__releases {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  min-width: 0;
+}
+
+.CollectionPage__collection__docsList__doc__releases .mantine-Badge-root {
+  max-width: 100%;
 }
 
 .CollectionPage__collection__docsList__header {
@@ -334,37 +347,7 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  /*
-   * Badges (especially the release badge, which can have a long id) keep their
-   * full size; the column scrolls horizontally instead of truncating them.
-   */
-  overflow-x: auto;
-  overflow-y: hidden;
-  scrollbar-width: thin;
-}
-
-.CollectionPage__collection__docsList--compact
-  .CollectionPage__collection__docsList__doc__badges::-webkit-scrollbar {
-  height: 4px;
-}
-
-.CollectionPage__collection__docsList--compact
-  .CollectionPage__collection__docsList__doc__badges::-webkit-scrollbar-thumb {
-  background: var(--color-border);
-  border-radius: 2px;
-}
-
-.CollectionPage__collection__docsList--compact
-  .CollectionPage__collection__docsList__doc__badges
-  .DocStatusBadges {
-  flex-wrap: nowrap;
-  flex-shrink: 0;
-}
-
-.CollectionPage__collection__docsList--compact
-  .CollectionPage__collection__docsList__doc__badges
-  .mantine-Badge-root {
-  flex-shrink: 0;
+  min-width: 0;
 }
 
 .CollectionPage__collection__docsList__doc__timestamp {

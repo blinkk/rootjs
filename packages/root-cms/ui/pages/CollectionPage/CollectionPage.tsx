@@ -2,6 +2,7 @@ import './CollectionPage.css';
 
 import {
   ActionIcon,
+  Badge,
   Button,
   Loader,
   Menu,
@@ -29,6 +30,7 @@ import {Surface} from '../../components/Surface/Surface.js';
 import {UserActionTooltip} from '../../components/UserActionTooltip/UserActionTooltip.js';
 import {useDocsList} from '../../hooks/useDocsList.js';
 import {useLocalStorage} from '../../hooks/useLocalStorage.js';
+import {usePendingReleases} from '../../hooks/usePendingReleases.js';
 import {usePageTitle} from '../../hooks/usePageTitle.js';
 import {useProjectRoles} from '../../hooks/useProjectRoles.js';
 import {Layout} from '../../layout/Layout.js';
@@ -459,6 +461,10 @@ CollectionPage.DocsList = (props: {
   const compact = !!props.compact;
 
   const docs = props.docs || [];
+  const {getReleasesForDoc} = usePendingReleases();
+  // Only show the Release column when at least one doc belongs to a release.
+  const showReleaseColumn =
+    compact && docs.some((doc) => getReleasesForDoc(doc.id).length > 0);
   function getLiveUrl(slug: string): string {
     if (!hasCollectionUrl) {
       return '';
@@ -482,99 +488,132 @@ CollectionPage.DocsList = (props: {
 
   if (compact) {
     return (
-      <div className="CollectionPage__collection__docsList__scroll">
-        <div className="CollectionPage__collection__docsList CollectionPage__collection__docsList--compact">
-          <div className="CollectionPage__collection__docsList__header">
-            <div className="CollectionPage__collection__docsList__header__image" />
-            <SortableHeaderCell
-              column="slug"
-              label="Slug"
-              orderBy={props.orderBy}
-              onSort={props.onSort}
-            />
-            <SortableHeaderCell
-              column="title"
-              label="Title"
-              orderBy={props.orderBy}
-              onSort={props.onSort}
-            />
-            <div className="CollectionPage__collection__docsList__header__cell">
-              Status
-            </div>
-            <SortableHeaderCell
-              column="created"
-              label="Created"
-              orderBy={props.orderBy}
-              onSort={props.onSort}
-            />
-            <SortableHeaderCell
-              column="modified"
-              label="Modified"
-              orderBy={props.orderBy}
-              onSort={props.onSort}
-            />
-            <div className="CollectionPage__collection__docsList__header__controls" />
+      <div
+        className={joinClassNames(
+          'CollectionPage__collection__docsList',
+          'CollectionPage__collection__docsList--compact',
+          showReleaseColumn &&
+            'CollectionPage__collection__docsList--withRelease'
+        )}
+      >
+        <div className="CollectionPage__collection__docsList__header">
+          <div className="CollectionPage__collection__docsList__header__image" />
+          <SortableHeaderCell
+            column="slug"
+            label="Slug"
+            orderBy={props.orderBy}
+            onSort={props.onSort}
+          />
+          <SortableHeaderCell
+            column="title"
+            label="Title"
+            orderBy={props.orderBy}
+            onSort={props.onSort}
+          />
+          <div className="CollectionPage__collection__docsList__header__cell">
+            Status
           </div>
-          {docs.map((doc) => {
-            const cmsUrl = `/cms/content/${collectionId}/${doc.slug}`;
-            const fields = doc.fields || {};
-            const previewTitle = getNestedValue(
-              fields,
-              rootCollection.preview?.title || 'meta.title'
-            );
-            const previewImage =
-              getNestedValue(
-                fields,
-                rootCollection.preview?.image || 'meta.image'
-              ) || rootCollection.preview?.defaultImage;
-            return (
-              <div
-                className="CollectionPage__collection__docsList__doc"
-                key={doc.id}
-              >
-                <a
-                  className="CollectionPage__collection__docsList__doc__image"
-                  href={cmsUrl}
-                >
-                  <FilePreview
-                    file={previewImage}
-                    width={48}
-                    height={36}
-                    withPlaceholder={!previewImage?.src}
-                  />
-                </a>
-                <a
-                  className="CollectionPage__collection__docsList__doc__docId"
-                  href={cmsUrl}
-                >
-                  {doc.slug}
-                </a>
-                <a
-                  className="CollectionPage__collection__docsList__doc__title"
-                  href={cmsUrl}
-                >
-                  {previewTitle || '[UNTITLED]'}
-                </a>
-                <div className="CollectionPage__collection__docsList__doc__badges">
-                  <DocStatusBadges doc={doc} />
-                </div>
-                <div className="CollectionPage__collection__docsList__doc__timestamp">
-                  {renderTimestamp(doc?.sys?.createdAt, doc?.sys?.createdBy)}
-                </div>
-                <div className="CollectionPage__collection__docsList__doc__timestamp">
-                  {renderTimestamp(doc?.sys?.modifiedAt, doc?.sys?.modifiedBy)}
-                </div>
-                <div className="CollectionPage__collection__docsList__doc__controls">
-                  <DocActionsMenu
-                    docId={doc.id}
-                    data={doc}
-                    onAction={onDocAction}
-                  />
-                </div>
-              </div>
-            );
-          })}
+          {showReleaseColumn && (
+            <div className="CollectionPage__collection__docsList__header__cell">
+              Release
+            </div>
+          )}
+          <SortableHeaderCell
+            column="created"
+            label="Created"
+            orderBy={props.orderBy}
+            onSort={props.onSort}
+          />
+          <SortableHeaderCell
+            column="modified"
+            label="Modified"
+            orderBy={props.orderBy}
+            onSort={props.onSort}
+          />
+          <div className="CollectionPage__collection__docsList__header__controls" />
         </div>
+        {docs.map((doc) => {
+          const cmsUrl = `/cms/content/${collectionId}/${doc.slug}`;
+          const fields = doc.fields || {};
+          const previewTitle = getNestedValue(
+            fields,
+            rootCollection.preview?.title || 'meta.title'
+          );
+          const previewImage =
+            getNestedValue(
+              fields,
+              rootCollection.preview?.image || 'meta.image'
+            ) || rootCollection.preview?.defaultImage;
+          const releases = showReleaseColumn ? getReleasesForDoc(doc.id) : [];
+          return (
+            <div
+              className="CollectionPage__collection__docsList__doc"
+              key={doc.id}
+            >
+              <a
+                className="CollectionPage__collection__docsList__doc__image"
+                href={cmsUrl}
+              >
+                <FilePreview
+                  file={previewImage}
+                  width={48}
+                  height={36}
+                  withPlaceholder={!previewImage?.src}
+                />
+              </a>
+              <a
+                className="CollectionPage__collection__docsList__doc__docId"
+                href={cmsUrl}
+              >
+                {doc.slug}
+              </a>
+              <a
+                className="CollectionPage__collection__docsList__doc__title"
+                href={cmsUrl}
+              >
+                {previewTitle || '[UNTITLED]'}
+              </a>
+              <div className="CollectionPage__collection__docsList__doc__badges">
+                <DocStatusBadges doc={doc} hideReleases />
+              </div>
+              {showReleaseColumn && (
+                <div className="CollectionPage__collection__docsList__doc__releases">
+                  {releases.map((release) => (
+                    <Tooltip
+                      key={release.id}
+                      transition="pop"
+                      label={`In release: ${release.id}`}
+                    >
+                      <Badge
+                        component="a"
+                        href={`/cms/releases/${release.id}`}
+                        size="xs"
+                        variant="gradient"
+                        gradient={{from: 'violet', to: 'grape'}}
+                        style={{cursor: 'pointer'}}
+                      >
+                        {release.id}
+                      </Badge>
+                    </Tooltip>
+                  ))}
+                </div>
+              )}
+              <div className="CollectionPage__collection__docsList__doc__timestamp">
+                {renderTimestamp(doc?.sys?.createdAt, doc?.sys?.createdBy)}
+              </div>
+              <div className="CollectionPage__collection__docsList__doc__timestamp">
+                {renderTimestamp(doc?.sys?.modifiedAt, doc?.sys?.modifiedBy)}
+              </div>
+              <div className="CollectionPage__collection__docsList__doc__controls">
+                <DocActionsMenu
+                  docId={doc.id}
+                  data={doc}
+                  onAction={onDocAction}
+                />
+              </div>
+            </div>
+          );
+        })}
       </div>
     );
   }
