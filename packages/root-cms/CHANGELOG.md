@@ -1,5 +1,17 @@
 # @blinkk/root-cms
 
+## 3.1.5
+
+### Patch Changes
+
+- e1d769e: fix: short-circuit getDoc/getRawDoc for oversized slugs
+- 375b75d: fix: ignore global cmd+k search hotkey in richtext fields
+- cc6a95c: feat: add a compact document listing view to the CMS
+- 30bea99: feat: add source/reference support for select fields
+- Updated dependencies [1d17349]
+- Updated dependencies [692b957]
+  - @blinkk/root@3.1.5
+
 ## 3.1.4
 
 ### Patch Changes
