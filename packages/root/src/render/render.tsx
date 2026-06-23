@@ -29,7 +29,11 @@ import {
   SitemapItem,
   Sitemap,
 } from '../core/types.js';
-import {JsxRenderOptions, renderJsxToString} from '../jsx/jsx-render.js';
+import {
+  JsxRenderMode,
+  JsxRenderOptions,
+  renderJsxToString,
+} from '../jsx/jsx-render.js';
 import type {ElementGraph} from '../node/element-graph.js';
 import {parseTagNames} from '../utils/elements.js';
 import {toHrefLang} from '../utils/i18n.js';
@@ -74,6 +78,11 @@ interface RenderHtmlOptions {
   headComponents?: ComponentChildren[];
   /** Attrs passed to the <body> tag. */
   bodyAttrs?: preact.JSX.HTMLAttributes<HTMLBodyElement>;
+  /**
+   * Overrides the JSX render mode. If not provided, defaults to the
+   * `jsxRenderer.mode` specified in `root.config.ts`.
+   */
+  renderMode?: JsxRenderMode;
 }
 
 export class Renderer {
@@ -154,6 +163,7 @@ export class Renderer {
       locale: string;
       translations?: Record<string, string>;
       nonce?: string;
+      renderMode?: JsxRenderMode;
     }
   ) {
     const {currentPath, route, routeParams, nonce} = options;
@@ -196,7 +206,7 @@ export class Renderer {
     // occurs while the hook is swapped. Awaiting inside the swapped window
     // allows concurrent renders to interleave, leaking a stale hook (and its
     // nonce) into other requests.
-    const renderJsxFn = await this.getJsxRenderFn();
+    const renderJsxFn = await this.getJsxRenderFn({mode: options.renderMode});
     const preactHook = preactOptions.vnode;
     let mainHtml: string;
     try {
@@ -291,6 +301,7 @@ export class Renderer {
         ...styleTags,
         ...scriptTags,
       ],
+      renderMode: options.renderMode,
     });
     return {html};
   }
@@ -420,6 +431,7 @@ export class Renderer {
         locale,
         translations,
         nonce,
+        renderMode: options?.renderMode,
       });
 
       let html = await transformHtml(output.html, this.rootConfig);
@@ -610,14 +622,22 @@ export class Renderer {
    * `@blinkk/root/jsx` package or `preact-render-to-string` depending if the
    * `jsxRenderer` config is set up in `root.config.ts`.
    *
+   * A `mode` override may be passed to render in a specific mode for a single
+   * render, overriding the `jsxRenderer.mode` from `root.config.ts`.
+   *
    * Resolving the renderer up front (rather than awaiting inside the render
    * call) allows callers that temporarily swap global state (e.g. the
    * `preact.options.vnode` nonce hook) to render synchronously without
    * yielding to the event loop.
    */
-  private async getJsxRenderFn(): Promise<(vnode: any) => string> {
-    if (this.rootConfig.jsxRenderer?.mode) {
-      const options = this.getJsxRenderOptions();
+  private async getJsxRenderFn(renderOptions?: {
+    mode?: JsxRenderMode;
+  }): Promise<(vnode: any) => string> {
+    // Use the per-render mode override if provided, otherwise fall back to the
+    // mode specified by the `jsxRenderer` config in `root.config.ts`.
+    const mode = renderOptions?.mode ?? this.rootConfig.jsxRenderer?.mode;
+    if (mode) {
+      const options = {...this.getJsxRenderOptions(), mode};
       return (vnode: any) => renderJsxToString(vnode, options);
     }
     const {renderToString} = await import('preact-render-to-string');
@@ -634,8 +654,11 @@ export class Renderer {
    * `preact-render-to-string` depending if the `jsxRenderer` config is set up
    * in `root.config.ts`.
    */
-  private async renderJsx(vnode: any) {
-    const render = await this.getJsxRenderFn();
+  private async renderJsx(
+    vnode: any,
+    options?: {mode?: JsxRenderMode}
+  ) {
+    const render = await this.getJsxRenderFn(options);
     return render(vnode);
   }
 
@@ -664,7 +687,7 @@ export class Renderer {
         />
       </html>
     );
-    const content = await this.renderJsx(page);
+    const content = await this.renderJsx(page, {mode: options?.renderMode});
     return `<!doctype html>\n${content}`;
   }
 

@@ -348,9 +348,15 @@ function styleToString(style: Record<string, any>): string {
   return result;
 }
 
+/**
+ * JSX render mode. `'pretty'` adds newlines around block elements; `'minimal'`
+ * outputs compact HTML.
+ */
+export type JsxRenderMode = 'pretty' | 'minimal';
+
 export interface JsxRenderOptions {
   /** Render mode. `'pretty'` adds newlines around block elements; `'minimal'` outputs compact HTML. Default: `'pretty'`. */
-  mode?: 'pretty' | 'minimal';
+  mode?: JsxRenderMode;
   /** Additional tag names to treat as block-level elements in pretty mode. */
   blockElements?: string[];
 }

@@ -6,6 +6,7 @@ import {
 } from 'express';
 import {ComponentType} from 'preact';
 import {ViteDevServer} from 'vite';
+import {JsxRenderMode} from '../jsx/jsx-render.js';
 import {Hooks} from '../middleware/hooks.js';
 import {SaveSessionOptions, Session} from '../middleware/session.js';
 import {Renderer} from '../render/render.js';
@@ -239,6 +240,12 @@ export interface HandlerRenderOptions {
    * `/translations/{locale}.json`.
    */
   translations?: Record<string, string>;
+  /**
+   * Overrides the JSX render mode for this render. `'pretty'` adds newlines
+   * around block elements; `'minimal'` outputs compact HTML. If not provided,
+   * defaults to the `jsxRenderer.mode` specified in `root.config.ts`.
+   */
+  renderMode?: JsxRenderMode;
 }
 
 export type HandlerRenderFn<Props = any> = (
