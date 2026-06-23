@@ -1,0 +1,35 @@
+.FieldErrorBoundary {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 10px 12px;
+  border: 1px solid #f3c2c2;
+  border-radius: 4px;
+  background: #fdf2f2;
+  color: #b00020;
+}
+
+.FieldErrorBoundary__icon {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.FieldErrorBoundary__body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.FieldErrorBoundary__title {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.FieldErrorBoundary__message {
+  font-size: 12px;
+  font-family: var(--font-family-monospace, monospace);
+  word-break: break-word;
+}

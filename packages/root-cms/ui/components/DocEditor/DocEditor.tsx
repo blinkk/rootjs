@@ -108,6 +108,7 @@ import {
 } from '../DocStatusBadges/DocStatusBadges.js';
 import {useEditJsonModal} from '../EditJsonModal/EditJsonModal.js';
 import {useEditTranslationsModal} from '../EditTranslationsModal/EditTranslationsModal.js';
+import {FieldErrorBoundary} from '../FieldErrorBoundary/FieldErrorBoundary.js';
 import {IconRootAI} from '../IconRootAI/IconRootAI.js';
 import {useLocalizationModal} from '../LocalizationModal/LocalizationModal.js';
 import {useLockPublishingModal} from '../LockPublishingModal/LockPublishingModal.js';
@@ -579,41 +580,43 @@ DocEditor.FieldBody = (props: FieldProps) => {
     >
       {showFieldHeader && <DocEditor.FieldHeader {...props} />}
       <div className="DocEditor__field__input">
-        {field.type === 'array' ? (
-          <DocEditor.ArrayField {...props} />
-        ) : field.type === 'boolean' ? (
-          <BooleanField {...props} />
-        ) : field.type === 'date' ? (
-          <DateField {...props} />
-        ) : field.type === 'datetime' ? (
-          <DateTimeField {...props} />
-        ) : field.type === 'file' ? (
-          <FileField {...props} />
-        ) : field.type === 'image' ? (
-          <ImageField {...props} />
-        ) : field.type === 'multiselect' ? (
-          <MultiSelectField {...props} />
-        ) : field.type === 'number' ? (
-          <NumberField {...props} />
-        ) : field.type === 'object' ? (
-          <DocEditor.ObjectField {...props} />
-        ) : field.type === 'oneof' ? (
-          <DocEditor.OneOfField {...props} />
-        ) : field.type === 'reference' ? (
-          <ReferenceField {...props} />
-        ) : field.type === 'references' ? (
-          <ReferencesField {...props} />
-        ) : field.type === 'richtext' ? (
-          <RichTextField {...props} />
-        ) : field.type === 'select' ? (
-          <SelectField {...props} />
-        ) : field.type === 'string' ? (
-          <StringField {...props} />
-        ) : (
-          <div className="DocEditor__field__input__unknown">
-            Unknown field type: {(field as any).type}
-          </div>
-        )}
+        <FieldErrorBoundary deepKey={props.deepKey}>
+          {field.type === 'array' ? (
+            <DocEditor.ArrayField {...props} />
+          ) : field.type === 'boolean' ? (
+            <BooleanField {...props} />
+          ) : field.type === 'date' ? (
+            <DateField {...props} />
+          ) : field.type === 'datetime' ? (
+            <DateTimeField {...props} />
+          ) : field.type === 'file' ? (
+            <FileField {...props} />
+          ) : field.type === 'image' ? (
+            <ImageField {...props} />
+          ) : field.type === 'multiselect' ? (
+            <MultiSelectField {...props} />
+          ) : field.type === 'number' ? (
+            <NumberField {...props} />
+          ) : field.type === 'object' ? (
+            <DocEditor.ObjectField {...props} />
+          ) : field.type === 'oneof' ? (
+            <DocEditor.OneOfField {...props} />
+          ) : field.type === 'reference' ? (
+            <ReferenceField {...props} />
+          ) : field.type === 'references' ? (
+            <ReferencesField {...props} />
+          ) : field.type === 'richtext' ? (
+            <RichTextField {...props} />
+          ) : field.type === 'select' ? (
+            <SelectField {...props} />
+          ) : field.type === 'string' ? (
+            <StringField {...props} />
+          ) : (
+            <div className="DocEditor__field__input__unknown">
+              Unknown field type: {(field as any).type}
+            </div>
+          )}
+        </FieldErrorBoundary>
       </div>
     </div>
   );
