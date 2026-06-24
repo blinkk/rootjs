@@ -230,11 +230,11 @@
    * enough to fit two badges.
    */
   grid-template-columns:
-    48px minmax(0, 0.8fr) minmax(0, 2.5fr) 150px 110px
-    110px 32px;
+    40px minmax(0, 0.8fr) minmax(0, 2.5fr) 120px 110px
+    110px 28px;
   align-items: center;
-  gap: 16px;
-  padding: 8px 12px;
+  gap: 14px;
+  padding: 5px 12px;
 }
 
 /* When any doc belongs to a release, insert a dedicated Release column between
@@ -244,20 +244,36 @@
 .CollectionPage__collection__docsList--withRelease
   .CollectionPage__collection__docsList__header {
   grid-template-columns:
-    48px minmax(0, 0.8fr) minmax(0, 2.5fr) 150px minmax(0, 1fr) 110px
-    110px 32px;
+    40px minmax(0, 0.8fr) minmax(0, 2.5fr) 120px minmax(0, 1.4fr) 110px
+    110px 28px;
 }
 
 .CollectionPage__collection__docsList__doc__releases {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 6px;
   min-width: 0;
+  overflow: hidden;
+}
+
+/*
+ * Let a long release ID ellipsize within the column instead of overflowing.
+ * Every link in the flex chain (Tooltip wrapper -> Tooltip body -> Badge) must
+ * be allowed to shrink below its content width (min-width: 0), otherwise the
+ * badge keeps its full intrinsic width and gets clipped by the cell.
+ */
+.CollectionPage__collection__docsList__doc__releases .mantine-Tooltip-root,
+.CollectionPage__collection__docsList__doc__releases .mantine-Tooltip-body {
+  display: inline-flex;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .CollectionPage__collection__docsList__doc__releases .mantine-Badge-root {
+  min-width: 0;
   max-width: 100%;
+  overflow: hidden;
 }
 
 .CollectionPage__collection__docsList__header {
@@ -303,8 +319,8 @@
   .CollectionPage__collection__docsList__doc__image {
   display: block;
   box-sizing: content-box;
-  width: 48px;
-  height: 36px;
+  width: 40px;
+  height: 30px;
   border: 1px solid var(--color-border);
   flex-shrink: 0;
   line-height: 0;
@@ -346,7 +362,7 @@
   .CollectionPage__collection__docsList__doc__badges {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
   min-width: 0;
 }
 

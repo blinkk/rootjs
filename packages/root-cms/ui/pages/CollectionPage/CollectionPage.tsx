@@ -556,8 +556,8 @@ CollectionPage.DocsList = (props: {
               >
                 <FilePreview
                   file={previewImage}
-                  width={48}
-                  height={36}
+                  width={40}
+                  height={30}
                   withPlaceholder={!previewImage?.src}
                 />
               </a>
@@ -587,9 +587,14 @@ CollectionPage.DocsList = (props: {
                       <Badge
                         component="a"
                         href={`/cms/releases/${release.id}`}
-                        size="xs"
-                        variant="gradient"
-                        gradient={{from: 'violet', to: 'grape'}}
+                        size="sm"
+                        radius="sm"
+                        variant="filled"
+                        classNames={{
+                          root: 'DocStatusBadges__badge DocStatusBadges__badge--release DocStatusBadges__releaseBadge',
+                          inner:
+                            'DocStatusBadges__badge__inner DocStatusBadges__releaseBadge__inner',
+                        }}
                         style={{cursor: 'pointer'}}
                       >
                         {release.id}

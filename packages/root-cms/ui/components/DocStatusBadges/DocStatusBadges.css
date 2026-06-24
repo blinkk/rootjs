@@ -1,15 +1,233 @@
 .DocStatusBadges {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 6px;
+  min-width: 0;
 }
 
+/*
+ * Each badge is wrapped in a Mantine Tooltip. Make those wrappers flex items
+ * that center their content so every badge (text or icon-only) sits on the
+ * same vertical midline.
+ */
 .DocStatusBadges .mantine-Tooltip-root {
+  display: inline-flex;
+  align-items: center;
+  min-width: 0;
+}
+
+.DocStatusBadges .mantine-Tooltip-body {
+  display: inline-flex;
+  align-items: center;
+  min-width: 0;
+}
+
+/*
+ * Compact status pill (Sanity / Hygraph / Contentful style). Each tone uses a
+ * hand-tuned background + text pairing (defined below) rather than Mantine's
+ * pale `light` variant, so the label always meets WCAG AA contrast and stays
+ * legible against the surface.
+ */
+.DocStatusBadges__badge {
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  height: 20px;
+  padding: 0 7px;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: 0.02em;
+  text-transform: none;
+  vertical-align: middle;
+  border: 1px solid transparent;
+  border-radius: 5px;
+  max-width: 100%;
+}
+
+.DocStatusBadges__badge__inner {
+  display: flex;
+  align-items: center;
+  color: inherit;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  /* Avoid clipping descenders (e.g. the "g" in "Changed"). */
+  line-height: 1.4;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.DocStatusBadges__badge__leftSection {
+  display: flex;
+  align-items: center;
+  margin-right: 4px;
+  color: inherit;
+}
+
+/* Icon-only badge (e.g. the "Locked" shield): square, snug padding. */
+.DocStatusBadges__badge--iconOnly {
+  padding: 0 4px;
+}
+
+.DocStatusBadges__badge--iconOnly .DocStatusBadges__badge__inner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* SVG icons default to baseline alignment; force block so they center. */
+.DocStatusBadges__badge svg {
   display: block;
 }
 
-.DocStatusBadges .mantine-Badge-root {
+/* Structured tooltip for the publishing-lock ("Locked") badge. */
+.DocStatusBadges__lockTooltip {
   display: flex;
+  flex-direction: column;
+  gap: 2px;
+  text-align: left;
+}
+
+.DocStatusBadges__lockTooltip__top {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Consistent 1px ring around the avatar (matches UserActionTooltip). */
+.DocStatusBadges__lockTooltip__top .UserAvatar {
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  flex-shrink: 0;
+}
+
+.DocStatusBadges__lockTooltip__topText {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.DocStatusBadges__lockTooltip__line {
+  line-height: 1.4;
+}
+
+.DocStatusBadges__lockTooltip__divider {
+  height: 1px;
+  margin: 4px 0;
+  background-color: currentColor;
+  opacity: 0.3;
+}
+
+.DocStatusBadges__lockTooltip__reason {
+  white-space: pre-line;
+  line-height: 1.4;
+  opacity: 0.95;
+}
+
+/* Structured tooltip for the "Changed" badge. */
+.DocStatusBadges__changedTooltip {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  text-align: left;
+}
+
+.DocStatusBadges__changedTooltip__title {
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+/* An avatar + "<action> <date> / by <email>" row inside a tooltip. */
+.DocStatusBadges__tooltipRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.DocStatusBadges__tooltipRow__text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+/* Keep the "<action> <date>" line on one row when there's space. */
+.DocStatusBadges__tooltipRow__text .DocStatusBadges__lockTooltip__line:first-child {
+  white-space: nowrap;
+}
+
+/* Consistent 1px ring around the avatar (matches UserActionTooltip). */
+.DocStatusBadges__tooltipRow .UserAvatar {
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  flex-shrink: 0;
+}
+
+/*
+ * Status tones. Each pairs a soft tinted background with a deep, fully-
+ * saturated label and a matching-hue border for stronger definition and
+ * high (WCAG AA) contrast. Scheme: Draft = Yellow-Orange, Changed = Blue,
+ * Published = Green.
+ */
+.DocStatusBadges__badge--draft {
+  background-color: #fff2dd !important;
+  color: #8a4500 !important;
+  border-color: #f3c98a !important;
+}
+
+.DocStatusBadges__badge--changed {
+  background-color: #e7f1ff !important;
+  color: #14529e !important;
+  border-color: #a9cdf5 !important;
+}
+
+.DocStatusBadges__badge--published {
+  background-color: #e3f6e8 !important;
+  color: #156c35 !important;
+  border-color: #a3dcb4 !important;
+}
+
+.DocStatusBadges__badge--scheduled {
+  background-color: #efe9ff !important;
+  color: #4f31ad !important;
+  border-color: #c7b8f3 !important;
+}
+
+.DocStatusBadges__badge--locked {
+  background-color: #ffe9e0 !important;
+  color: #9c3200 !important;
+  border-color: #f5b79e !important;
+}
+
+.DocStatusBadges__badge--archived {
+  background-color: #ebedf0 !important;
+  color: #3b4248 !important;
+  border-color: #c5cbd2 !important;
+}
+
+.DocStatusBadges__badge--release {
+  background-color: #efe9ff !important;
+  color: #4f31ad !important;
+  border-color: #c7b8f3 !important;
+}
+
+/* Release badges can have long IDs — keep them from overflowing the column. */
+.DocStatusBadges__releaseBadge {
+  max-width: 100%;
+  min-width: 0;
+  /* Clip the (ellipsized) label inside the badge's rounded corners. */
+  overflow: hidden;
+}
+
+.DocStatusBadges__releaseBadge__inner {
+  display: block;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: var(--font-family-monospace, monospace);
+  font-size: 11px;
+  letter-spacing: 0;
 }
 
 .DocStatusBadges__badge--clickable {
@@ -18,7 +236,7 @@
 }
 
 .DocStatusBadges__badge--clickable:hover {
-  opacity: 0.9;
+  opacity: 0.7;
 }
 
 .DocStatusBadges__badge--clickable:focus-visible {

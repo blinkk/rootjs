@@ -2,10 +2,18 @@ import {Badge, Tooltip} from '@mantine/core';
 import {Timestamp} from 'firebase/firestore';
 import {Release} from '../../utils/release.js';
 import {getTimeAgo} from '../../utils/time.js';
+import '../DocStatusBadges/DocStatusBadges.css';
 
 const TOOLTIP_PROPS = {
   transition: 'pop',
 };
+
+function badgeClassNames(tone: string) {
+  return {
+    root: `DocStatusBadges__badge DocStatusBadges__badge--${tone}`,
+    inner: 'DocStatusBadges__badge__inner',
+  };
+}
 
 export interface ReleaseStatusBadgeProps {
   release: Release;
@@ -21,7 +29,12 @@ export function ReleaseStatusBadge(props: ReleaseStatusBadgeProps) {
           release.archivedBy
         }`}
       >
-        <Badge size="xs" color="gray" variant="filled">
+        <Badge
+          size="sm"
+          radius="sm"
+          variant="filled"
+          classNames={badgeClassNames('archived')}
+        >
           Archived
         </Badge>
       </Tooltip>
@@ -38,9 +51,10 @@ export function ReleaseStatusBadge(props: ReleaseStatusBadgeProps) {
         width={240}
       >
         <Badge
-          size="xs"
-          variant="gradient"
-          gradient={{from: 'grape', to: 'pink', deg: 35}}
+          size="sm"
+          radius="sm"
+          variant="filled"
+          classNames={badgeClassNames('scheduled')}
         >
           Scheduled
         </Badge>
@@ -56,9 +70,10 @@ export function ReleaseStatusBadge(props: ReleaseStatusBadgeProps) {
         }`}
       >
         <Badge
-          size="xs"
-          variant="gradient"
-          gradient={{from: 'teal', to: 'lime', deg: 105}}
+          size="sm"
+          radius="sm"
+          variant="filled"
+          classNames={badgeClassNames('published')}
         >
           Published
         </Badge>
@@ -66,7 +81,12 @@ export function ReleaseStatusBadge(props: ReleaseStatusBadgeProps) {
     );
   }
   return (
-    <Badge size="xs" variant="gradient" gradient={{from: 'indigo', to: 'cyan'}}>
+    <Badge
+      size="sm"
+      radius="sm"
+      variant="filled"
+      classNames={badgeClassNames('draft')}
+    >
       Unpublished
     </Badge>
   );

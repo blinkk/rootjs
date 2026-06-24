@@ -22,8 +22,11 @@
   opacity: 0.85;
 }
 
-/* Drop the white separator ring used for stacked avatar groups. */
+/*
+ * Consistent 1px ring around the avatar (replaces the 2px white separator ring
+ * used for stacked avatar groups). Reads against the dark tooltip background.
+ */
 .UserActionTooltip .UserAvatar {
-  border: 0;
+  border: 1px solid rgba(255, 255, 255, 0.35);
   flex-shrink: 0;
 }
