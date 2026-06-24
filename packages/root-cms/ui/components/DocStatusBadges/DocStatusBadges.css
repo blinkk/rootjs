@@ -44,6 +44,9 @@
   border: 1px solid transparent;
   border-radius: 5px;
   max-width: 100%;
+  /* Allow the badge to shrink and truncate when the column is squeezed. */
+  min-width: 0;
+  overflow: hidden;
 }
 
 .DocStatusBadges__badge__inner {
@@ -56,6 +59,18 @@
   line-height: 1.4;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+/*
+ * Text badges ellipsize when the Status column is too narrow to fit them all
+ * (e.g. "Changed" + "Scheduled" side by side). Icon-only badges are excluded so
+ * their glyph stays centered.
+ */
+.DocStatusBadges__badge:not(.DocStatusBadges__badge--iconOnly)
+  .DocStatusBadges__badge__inner {
+  display: block;
+  max-width: 100%;
+  white-space: nowrap;
 }
 
 .DocStatusBadges__badge__leftSection {
@@ -191,24 +206,6 @@
   background-color: #efe9ff !important;
   color: #4f31ad !important;
   border-color: #c7b8f3 !important;
-}
-
-/*
- * Scheduled labels can be long for a narrow Status column. Let them ellipsize
- * within the badge (same overflow behavior as release names) instead of being
- * clipped by the column edge.
- */
-.DocStatusBadges__badge--scheduled {
-  min-width: 0;
-  overflow: hidden;
-}
-
-.DocStatusBadges__badge--scheduled .DocStatusBadges__badge__inner {
-  display: block;
-  max-width: 100%;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 .DocStatusBadges__badge--locked {
