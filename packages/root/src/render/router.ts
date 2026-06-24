@@ -71,26 +71,28 @@ export class Router {
 
       const routePath = formatUrl(urlFormat);
       const localeRoutePath = formatUrl(i18nUrlFormat);
+      const routeModule = ROUTES_FILES[modulePath];
 
       trie.add(routePath, {
         src,
-        module: ROUTES_FILES[modulePath],
+        module: routeModule,
         locale: defaultLocale,
         isDefaultLocale: true,
         routePath: routePath,
         localeRoutePath: localeRoutePath,
       });
 
-      // At the moment, all routes are assumed to use the site-wide i18n config.
-      // TODO(stevenle): provide routes with a way to override the default
-      // i18n serving behavior.
+      // A route can override the site-wide `i18n.locales` by exporting a
+      // `config` object with its own `locales` list. The default-locale path
+      // (added above) is always generated.
+      const routeLocales = routeModule.config?.locales || locales;
       if (i18nUrlFormat.includes('[locale]')) {
-        locales.forEach((locale) => {
+        routeLocales.forEach((locale) => {
           const localePath = localeRoutePath.replace('[locale]', locale);
           if (localePath !== relativeRoutePath) {
             trie.add(localePath, {
               src,
-              module: ROUTES_FILES[modulePath],
+              module: routeModule,
               locale: locale,
               isDefaultLocale: false,
               routePath,
@@ -126,8 +128,9 @@ export class Router {
         podName: entry.podName,
       });
 
+      const podRouteLocales = entry.module.config?.locales || locales;
       if (i18nUrlFormat.includes('[locale]')) {
-        locales.forEach((locale) => {
+        podRouteLocales.forEach((locale) => {
           const localePath = normalizedLocaleRoutePath.replace(
             '[locale]',
             locale
