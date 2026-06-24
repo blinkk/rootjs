@@ -66,6 +66,7 @@ import {
   isCmsWriteTool,
   previewCmsWriteTool,
 } from './cmsToolHandlers.js';
+import {prettyToolName, prettyToolState} from './toolLabels.js';
 
 export type RootAIChatVariant = 'page' | 'panel';
 
@@ -1296,39 +1297,6 @@ function getToolCallId(part: any): string {
   return part.toolCallId || part.id || '';
 }
 
-function prettyToolName(toolName: string, input: any): string {
-  switch (toolName) {
-    case 'collections_list':
-      return 'List collections';
-    case 'docs_list':
-      return `List ${input?.collectionId || 'documents'}`;
-    case 'docs_search':
-      return `Search docs${input?.query ? ` for "${input.query}"` : ''}`;
-    case 'doc_get':
-      return `Read ${input?.docId || 'document'}`;
-    case 'doc_getVersion':
-      return `Read ${input?.docId || 'document'} version`;
-    case 'doc_set':
-      return `Replace ${input?.docId || 'draft fields'}`;
-    case 'doc_create':
-      return `Create ${input?.docId || 'draft document'}`;
-    case 'doc_updateField':
-      return `Update ${input?.path || 'field'}`;
-    case 'doc_edit':
-      return `Edit ${input?.docId || 'document'}`;
-    case 'doc_duplicate':
-      return `Duplicate ${input?.fromDocId || 'document'}`;
-    case 'doc_listVersions':
-      return `List versions for ${input?.docId || 'document'}`;
-    case 'doc_translateField':
-      return 'Translate field text';
-    case 'schema_get':
-      return `Read ${input?.collectionId || 'collection'} schema`;
-    default:
-      return toolName;
-  }
-}
-
 function ToolApprovalCard(props: {
   approval: PendingToolApproval;
   onApprove: () => void;
@@ -1433,21 +1401,6 @@ function ToolReceipt(props: {output: any}) {
 
 function prettyApprovalState(status: PendingToolApproval['status']): string {
   return status === 'executing' ? 'applying…' : 'waiting for approval';
-}
-
-function prettyToolState(state: string): string {
-  switch (state) {
-    case 'input-streaming':
-      return 'preparing…';
-    case 'input-available':
-      return 'running…';
-    case 'output-available':
-      return 'done';
-    case 'output-error':
-      return 'error';
-    default:
-      return state;
-  }
 }
 
 function ChatComposer(props: {

@@ -139,14 +139,12 @@
   margin: 0 0 8px;
 }
 
-.AiEditModal__ChatPanel__streamingIndicator {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 4px 8px;
-  font-size: 0.75rem;
-  color: rgb(134, 142, 150);
-}
+/*
+ * Tool-call, reasoning ("Thinking" toggle), and streaming-indicator styles are
+ * shared with the Root AI page via `RootAIChat.css` (imported by ChatPanel.tsx)
+ * to keep the two surfaces consistent. The corresponding `AiEditModal__ChatPanel__tool*`,
+ * `__reasoning*`, and `__streamingIndicator` rules intentionally live there.
+ */
 
 .AiEditModal__ChatPanel__error {
   margin: 8px 0;
@@ -214,29 +212,6 @@
   margin-bottom: 0;
 }
 
-.AiEditModal__ChatPanel__reasoning {
-  font-size: 0.8125rem;
-  border-left: 2px solid rgb(222, 226, 230);
-  padding-left: 8px;
-  color: rgb(73, 80, 87);
-}
-
-.AiEditModal__ChatPanel__reasoning__toggle {
-  background: none;
-  border: none;
-  padding: 0;
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  color: rgb(134, 142, 150);
-  font-weight: 500;
-}
-
-.AiEditModal__ChatPanel__reasoning__body {
-  margin-top: 4px;
-}
-
 .AiEditModal__ChatPanel__filePart img {
   max-width: 200px;
   border-radius: 4px;
@@ -248,52 +223,6 @@
   gap: 4px;
   font-size: 0.8125rem;
   color: rgb(34, 139, 230);
-}
-
-.AiEditModal__ChatPanel__tool {
-  border: 1px solid rgb(222, 226, 230);
-  border-radius: 4px;
-  font-size: 0.8125rem;
-  background: rgb(248, 249, 250);
-}
-
-.AiEditModal__ChatPanel__tool__header {
-  width: 100%;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 4px 8px;
-  background: none;
-  border: none;
-  cursor: pointer;
-  text-align: left;
-}
-
-.AiEditModal__ChatPanel__tool__state {
-  color: rgb(134, 142, 150);
-  font-size: 0.75rem;
-}
-
-.AiEditModal__ChatPanel__tool__body {
-  padding: 6px 8px;
-  border-top: 1px solid rgb(222, 226, 230);
-}
-
-.AiEditModal__ChatPanel__tool__body pre {
-  font-size: 0.75rem;
-  background: white;
-  padding: 6px;
-  border-radius: 4px;
-  white-space: pre-wrap;
-  word-break: break-word;
-  max-height: 200px;
-  overflow: auto;
-  margin: 4px 0 0;
-}
-
-.AiEditModal__ChatPanel__tool__error {
-  color: rgb(201, 42, 42);
-  margin-top: 4px;
 }
 
 .AiEditModal__ChatPanel__composer {
