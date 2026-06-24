@@ -182,7 +182,22 @@ jobs:
       - name: Deploy rootjs.dev to Firebase
         working-directory: docs
         run: |
-          pnpm exec firebase deploy \
+          # firebase-tools resolves credentials from GOOGLE_APPLICATION_CREDENTIALS
+          # via GoogleAuth.getAccessToken(), which performs a network token
+          # exchange that intermittently fails with "Failed to authenticate, have
+          # you run firebase login?" (the same commit succeeds on a re-run).
+          # Retry the deploy a few times to ride out those transient failures.
+          attempt=1
+          max_attempts=3
+          until pnpm exec firebase deploy \
             --only hosting,functions:www-server,functions:www-cron \
             --project rootjs-dev \
-            --force
+            --force; do
+            if [[ "$attempt" -ge "$max_attempts" ]]; then
+              echo "firebase deploy failed after ${max_attempts} attempts." >&2
+              exit 1
+            fi
+            echo "firebase deploy attempt ${attempt} failed; retrying in 15s..." >&2
+            attempt=$((attempt + 1))
+            sleep 15
+          done
