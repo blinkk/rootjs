@@ -13,13 +13,13 @@
  * user to approve and save.
  */
 import {useChat} from '@ai-sdk/react';
-import {ActionIcon, Loader, Tooltip} from '@mantine/core';
+import {ActionIcon, Badge, Loader, Tooltip} from '@mantine/core';
 import {
   IconChevronDown,
+  IconChevronRight,
   IconPaperclip,
   IconRobot,
   IconSend2,
-  IconTool,
   IconX,
 } from '@tabler/icons-preact';
 import type {UIMessage} from 'ai';
@@ -27,11 +27,18 @@ import {lastAssistantMessageIsCompleteWithToolCalls} from 'ai';
 import {useCallback, useEffect, useMemo, useRef, useState} from 'preact/hooks';
 import {joinClassNames} from '../../utils/classes.js';
 import {uploadFileToGCS} from '../../utils/gcs.js';
+import {BouncingLoader} from '../BouncingLoader/BouncingLoader.js';
 import {IconRootAI} from '../IconRootAI/IconRootAI.js';
 import {Markdown} from '../Markdown/Markdown.js';
+// Tool-call, reasoning, and streaming-indicator UI is shared with the Root AI
+// page (`RootAIChat`) so the two surfaces stay visually consistent. Reuse its
+// stylesheet and the `RootAIChat__*` class names below rather than duplicating
+// the styles here.
+import '../RootAIChat/RootAIChat.css';
 import {createClientChatTransport} from '../RootAIChat/clientChatTransport.js';
 import {createReadOnlyClientCmsTools} from '../RootAIChat/clientCmsTools.js';
 import {executeCmsTool} from '../RootAIChat/cmsToolHandlers.js';
+import {prettyToolName, prettyToolState} from '../RootAIChat/toolLabels.js';
 
 /** Result emitted by the "Edit with AI" chat to the parent modal. */
 export interface AiResponse {
@@ -332,9 +339,8 @@ function ChatTranscript(props: {
           <MessageView key={m.id} message={m} />
         ))}
         {props.isStreaming && (
-          <div className="AiEditModal__ChatPanel__streamingIndicator">
-            <Loader size="xs" color="gray" />
-            <span>Thinking…</span>
+          <div className="RootAIChat__streamingIndicator">
+            <BouncingLoader size={6} />
           </div>
         )}
       </div>
@@ -419,13 +425,13 @@ function ReasoningPartView(props: {text: string}) {
   return (
     <div
       className={joinClassNames(
-        'AiEditModal__ChatPanel__reasoning',
-        open && 'AiEditModal__ChatPanel__reasoning--open'
+        'RootAIChat__reasoning',
+        open && 'RootAIChat__reasoning--open'
       )}
     >
       <button
         type="button"
-        className="AiEditModal__ChatPanel__reasoning__toggle"
+        className="RootAIChat__reasoning__toggle"
         onClick={() => setOpen(!open)}
       >
         <IconChevronDown
@@ -435,7 +441,7 @@ function ReasoningPartView(props: {text: string}) {
         <span>Thinking</span>
       </button>
       {open && (
-        <div className="AiEditModal__ChatPanel__reasoning__body">
+        <div className="RootAIChat__reasoning__body">
           <Markdown code={props.text} />
         </div>
       )}
@@ -473,63 +479,60 @@ function ToolPartView(props: {part: any}) {
   const state: string = part.state || '';
   const [open, setOpen] = useState(false);
   return (
-    <div className="AiEditModal__ChatPanel__tool">
+    <div className="RootAIChat__tool">
       <button
         type="button"
-        className="AiEditModal__ChatPanel__tool__header"
+        className="RootAIChat__tool__header"
         onClick={() => setOpen(!open)}
       >
-        <IconTool size={14} />
-        <code>{toolName}</code>
-        <span className="AiEditModal__ChatPanel__tool__state">
-          {prettyToolState(state)}
-        </span>
         <IconChevronDown
+          className={joinClassNames(
+            'RootAIChat__tool__header__icon',
+            open && 'RootAIChat__tool__header__icon--open'
+          )}
           size={14}
-          style={{
-            marginLeft: 'auto',
-            transform: open ? 'rotate(0deg)' : 'rotate(-90deg)',
-          }}
         />
+        <Badge color="dark" variant="filled" size="xs">
+          {toolName}
+        </Badge>
+        <span className="RootAIChat__tool__title">
+          {prettyToolName(toolName, part.input)}
+        </span>
+        <span className="RootAIChat__tool__state">{prettyToolState(state)}</span>
       </button>
       {open && (
-        <div className="AiEditModal__ChatPanel__tool__body">
+        <div className="RootAIChat__tool__body">
           {part.input && (
-            <details open>
-              <summary>Input</summary>
+            <details>
+              <summary>
+                <IconChevronRight
+                  size={14}
+                  className="RootAIChat__tool__json__icon"
+                />
+                <span>Input</span>
+              </summary>
               <pre>{JSON.stringify(part.input, null, 2)}</pre>
             </details>
           )}
           {part.output && (
-            <details open>
-              <summary>Output</summary>
+            <details>
+              <summary>
+                <IconChevronRight
+                  size={14}
+                  className="RootAIChat__tool__json__icon"
+                />
+                <span>Output</span>
+              </summary>
               <pre>{JSON.stringify(part.output, null, 2)}</pre>
             </details>
           )}
           {part.errorText && (
-            <div className="AiEditModal__ChatPanel__tool__error">
-              {part.errorText}
-            </div>
+            <div className="RootAIChat__tool__error">{part.errorText}</div>
           )}
         </div>
       )}
     </div>
   );
-}
-
-function prettyToolState(state: string): string {
-  switch (state) {
-    case 'input-streaming':
-      return 'preparing…';
-    case 'input-available':
-      return 'running…';
-    case 'output-available':
-      return 'done';
-    case 'output-error':
-      return 'error';
-    default:
-      return state;
-  }
 }
 
 function ChatComposer(props: {
