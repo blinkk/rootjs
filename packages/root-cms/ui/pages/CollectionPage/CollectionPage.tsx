@@ -30,12 +30,13 @@ import {Surface} from '../../components/Surface/Surface.js';
 import {UserActionTooltip} from '../../components/UserActionTooltip/UserActionTooltip.js';
 import {useDocsList} from '../../hooks/useDocsList.js';
 import {useLocalStorage} from '../../hooks/useLocalStorage.js';
-import {usePendingReleases} from '../../hooks/usePendingReleases.js';
 import {usePageTitle} from '../../hooks/usePageTitle.js';
+import {usePendingReleases} from '../../hooks/usePendingReleases.js';
 import {useProjectRoles} from '../../hooks/useProjectRoles.js';
 import {Layout} from '../../layout/Layout.js';
 import {joinClassNames} from '../../utils/classes.js';
 import {getDocServingUrl} from '../../utils/doc-urls.js';
+import {testPublishingLocked} from '../../utils/doc.js';
 import {getNestedValue} from '../../utils/objects.js';
 import {testCanEdit} from '../../utils/permissions.js';
 import {formatDateTime, getTimeAgo} from '../../utils/time.js';
@@ -444,6 +445,32 @@ function SortableHeaderCell(props: {
   );
 }
 
+/**
+ * Counts the status badges DocStatusBadges would render for a doc (release
+ * badges live in their own column and are excluded). Used to size the Status
+ * column so the busiest row's pills aren't truncated.
+ */
+function countStatusBadges(doc: any): number {
+  const sys = doc?.sys || {};
+  let count = 0;
+  if (!sys.publishedAt || !sys.modifiedAt || sys.modifiedAt > sys.publishedAt) {
+    count++; // Draft
+  }
+  if (sys.publishedAt) {
+    count++; // Published
+  }
+  if (sys.scheduledAt) {
+    count++; // Scheduled
+  }
+  if (testPublishingLocked(doc)) {
+    count++; // Locked
+  }
+  if (sys.archivedAt) {
+    count++; // Archived
+  }
+  return count;
+}
+
 CollectionPage.DocsList = (props: {
   collection: string;
   docs: any[];
@@ -465,9 +492,14 @@ CollectionPage.DocsList = (props: {
   // Only show the Release column when at least one doc belongs to a release.
   const showReleaseColumn =
     compact && docs.some((doc) => getReleasesForDoc(doc.id).length > 0);
-  // Give the Status column extra room when any doc shows a Scheduled badge
-  // (its date label is wider than the other status pills).
-  const hasScheduled = compact && docs.some((doc) => !!doc?.sys?.scheduledAt);
+  // Widen the Status column to fit the row with the most status badges (a
+  // published doc with newer edits + a scheduled publish + a lock can stack 3+
+  // pills, which overflow the default width).
+  const maxStatusBadges = compact
+    ? docs.reduce((max, doc) => Math.max(max, countStatusBadges(doc)), 1)
+    : 1;
+  const statusColumnWidth =
+    maxStatusBadges <= 1 ? 80 : maxStatusBadges === 2 ? 150 : 215;
   function getLiveUrl(slug: string): string {
     if (!hasCollectionUrl) {
       return '';
@@ -496,9 +528,9 @@ CollectionPage.DocsList = (props: {
           'CollectionPage__collection__docsList',
           'CollectionPage__collection__docsList--compact',
           showReleaseColumn &&
-            'CollectionPage__collection__docsList--withRelease',
-          hasScheduled && 'CollectionPage__collection__docsList--withScheduled'
+            'CollectionPage__collection__docsList--withRelease'
         )}
+        style={{['--docs-status-width' as any]: `${statusColumnWidth}px`}}
       >
         <div className="CollectionPage__collection__docsList__header">
           <div className="CollectionPage__collection__docsList__header__image" />
@@ -592,8 +624,8 @@ CollectionPage.DocsList = (props: {
                         component="a"
                         href={`/cms/releases/${release.id}`}
                         size="sm"
-                        radius="sm"
-                        variant="filled"
+                        variant="gradient"
+                        gradient={{from: 'violet', to: 'grape'}}
                         classNames={{
                           root: 'DocStatusBadges__badge DocStatusBadges__badge--release DocStatusBadges__releaseBadge',
                           inner:

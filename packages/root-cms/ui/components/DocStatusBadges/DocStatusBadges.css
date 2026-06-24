@@ -1,7 +1,7 @@
 .DocStatusBadges {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 4px;
   min-width: 0;
 }
 
@@ -33,16 +33,17 @@
   align-items: center;
   justify-content: center;
   box-sizing: border-box;
-  height: 20px;
+  height: 16px;
   padding: 0 7px;
-  font-size: 11px;
+  font-size: 9px;
   font-weight: 600;
   line-height: 1;
-  letter-spacing: 0.02em;
-  text-transform: none;
+  letter-spacing: 0.25px;
+  text-transform: uppercase;
   vertical-align: middle;
   border: 1px solid transparent;
-  border-radius: 5px;
+  /* Pill corners, matching the original Mantine badge radius. */
+  border-radius: 999px;
   max-width: 100%;
   /* Allow the badge to shrink and truncate when the column is squeezed. */
   min-width: 0;
@@ -54,7 +55,8 @@
   align-items: center;
   color: inherit;
   font-weight: 600;
-  letter-spacing: 0.02em;
+  letter-spacing: 0.25px;
+  text-transform: uppercase;
   /* Avoid clipping descenders (e.g. the "g" in "Changed"). */
   line-height: 1.4;
   overflow: hidden;
@@ -179,55 +181,9 @@
 }
 
 /*
- * Status tones. Each pairs a soft tinted background with a deep, fully-
- * saturated label and a matching-hue border for stronger definition and
- * high (WCAG AA) contrast. Scheme: Draft = Yellow-Orange, Changed = Blue,
- * Published = Green.
+ * Badge colors come from Mantine's `variant="gradient"` (the original badge
+ * palette). Only the font styling, sizing, and truncation are handled in CSS.
  */
-.DocStatusBadges__badge--draft {
-  background-color: #fff2dd !important;
-  color: #8a4500 !important;
-  border-color: #f3c98a !important;
-}
-
-.DocStatusBadges__badge--changed {
-  background-color: #e7f1ff !important;
-  color: #14529e !important;
-  border-color: #a9cdf5 !important;
-}
-
-.DocStatusBadges__badge--published {
-  background-image: linear-gradient(135deg, #40c057 0%, #37b24d 100%) !important;
-  background-color: #2f9e44 !important;
-  color: #ffffff !important;
-  border-color: #2b8a3e !important;
-}
-
-.DocStatusBadges__badge--scheduled {
-  background-image: linear-gradient(135deg, #845ef7 0%, #5f3dc4 100%) !important;
-  background-color: #7048e8 !important;
-  color: #ffffff !important;
-  border-color: #5f3dc4 !important;
-}
-
-.DocStatusBadges__badge--locked {
-  background-image: linear-gradient(135deg, #ff922b 0%, #e8590c 100%) !important;
-  background-color: #f76707 !important;
-  color: #ffffff !important;
-  border-color: #d9480f !important;
-}
-
-.DocStatusBadges__badge--archived {
-  background-color: #ebedf0 !important;
-  color: #3b4248 !important;
-  border-color: #c5cbd2 !important;
-}
-
-.DocStatusBadges__badge--release {
-  background-color: #efe9ff !important;
-  color: #4f31ad !important;
-  border-color: #c7b8f3 !important;
-}
 
 /* Release badges can have long IDs — keep them from overflowing the column. */
 .DocStatusBadges__releaseBadge {
@@ -244,7 +200,7 @@
   text-overflow: ellipsis;
   white-space: nowrap;
   font-family: var(--font-family-monospace, monospace);
-  font-size: 11px;
+  font-size: 9px;
   letter-spacing: 0;
 }
 

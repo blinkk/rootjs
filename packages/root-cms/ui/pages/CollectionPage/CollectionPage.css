@@ -186,6 +186,38 @@
   flex-shrink: 0;
 }
 
+/* On narrow viewports, shrink the (non-compact) thumbnail column so the title
+ * and metadata get more room. The preview image is rendered at a fixed 120px,
+ * so scale its inner media down to fit the narrower container. */
+@media (max-width: 600px) {
+  .CollectionPage__collection__docsList:not(
+      .CollectionPage__collection__docsList--compact
+    )
+    .CollectionPage__collection__docsList__doc__image {
+    width: 72px;
+  }
+  .CollectionPage__collection__docsList:not(
+      .CollectionPage__collection__docsList--compact
+    )
+    .CollectionPage__collection__docsList__doc__image > a,
+  .CollectionPage__collection__docsList:not(
+      .CollectionPage__collection__docsList--compact
+    )
+    .CollectionPage__collection__docsList__doc__image img,
+  .CollectionPage__collection__docsList:not(
+      .CollectionPage__collection__docsList--compact
+    )
+    .CollectionPage__collection__docsList__doc__image picture,
+  .CollectionPage__collection__docsList:not(
+      .CollectionPage__collection__docsList--compact
+    )
+    .CollectionPage__collection__docsList__doc__image video {
+    display: block;
+    width: 100% !important;
+    height: auto !important;
+  }
+}
+
 .CollectionPage__collection__docsList__doc__content__title {
   line-height: 36px;
   font-size: 24px;
@@ -230,7 +262,8 @@
    * enough to fit two badges.
    */
   grid-template-columns:
-    40px minmax(0, 0.8fr) minmax(0, 2.5fr) 120px 110px
+    40px minmax(0, 0.8fr) minmax(0, 2.5fr)
+    minmax(0, var(--docs-status-width, 80px)) 110px
     110px 28px;
   align-items: center;
   gap: 14px;
@@ -244,27 +277,9 @@
 .CollectionPage__collection__docsList--withRelease
   .CollectionPage__collection__docsList__header {
   grid-template-columns:
-    40px minmax(0, 0.8fr) minmax(0, 2.5fr) 120px minmax(0, 1.4fr) 110px
-    110px 28px;
-}
-
-/* When any doc has a Scheduled badge, widen the Status column so its longer
- * date label isn't squeezed. */
-.CollectionPage__collection__docsList--withScheduled
-  .CollectionPage__collection__docsList__doc,
-.CollectionPage__collection__docsList--withScheduled
-  .CollectionPage__collection__docsList__header {
-  grid-template-columns:
-    40px minmax(0, 0.8fr) minmax(0, 2.5fr) 180px 110px
-    110px 28px;
-}
-
-.CollectionPage__collection__docsList--withRelease.CollectionPage__collection__docsList--withScheduled
-  .CollectionPage__collection__docsList__doc,
-.CollectionPage__collection__docsList--withRelease.CollectionPage__collection__docsList--withScheduled
-  .CollectionPage__collection__docsList__header {
-  grid-template-columns:
-    40px minmax(0, 0.8fr) minmax(0, 2.5fr) 180px minmax(0, 1.4fr) 110px
+    40px minmax(0, 0.8fr) minmax(0, 2.5fr)
+    minmax(0, var(--docs-status-width, 80px))
+    minmax(0, 1.4fr) 110px
     110px 28px;
 }
 

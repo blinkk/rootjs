@@ -18,6 +18,13 @@
   overflow-wrap: anywhere;
 }
 
+.UserActionTooltip__heading {
+  padding-bottom: 6px;
+  margin-bottom: 6px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+  font-weight: 600;
+}
+
 .UserActionTooltip__detail {
   opacity: 0.85;
 }

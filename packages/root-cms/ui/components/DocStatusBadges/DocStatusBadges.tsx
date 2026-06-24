@@ -1,7 +1,6 @@
 import './DocStatusBadges.css';
 
 import {Badge, Tooltip} from '@mantine/core';
-import {IconShield} from '@tabler/icons-preact';
 import {Timestamp} from 'firebase/firestore';
 import {ComponentChildren} from 'preact';
 import {usePendingReleases} from '../../hooks/usePendingReleases.js';
@@ -14,7 +13,6 @@ import {useVersionHistoryModal} from '../VersionHistoryModal/VersionHistoryModal
 
 type StatusTone =
   | 'draft'
-  | 'changed'
   | 'published'
   | 'scheduled'
   | 'locked'
@@ -22,9 +20,23 @@ type StatusTone =
   | 'release';
 
 /**
- * Renders a compact status pill with a hand-tuned, high-contrast color tone.
- * Colors are defined in CSS (not Mantine's pale `light` variant) so the
- * background/text pairing meets WCAG AA contrast.
+ * Per-tone Mantine gradient (matches the original badge colors exactly).
+ */
+const TONE_GRADIENTS: Record<
+  StatusTone,
+  {from: string; to: string; deg?: number}
+> = {
+  draft: {from: 'indigo', to: 'cyan'},
+  published: {from: 'teal', to: 'lime', deg: 105},
+  scheduled: {from: 'grape', to: 'pink', deg: 35},
+  locked: {from: 'orange', to: 'red'},
+  archived: {from: 'gray', to: 'dark'},
+  release: {from: 'violet', to: 'grape'},
+};
+
+/**
+ * Renders a compact status pill using the original Mantine gradient colors,
+ * with the updated font styling/sizing applied via CSS.
  */
 function StatusBadge(props: {
   tone: StatusTone;
@@ -44,8 +56,8 @@ function StatusBadge(props: {
   return (
     <Badge
       size="sm"
-      radius="sm"
-      variant="filled"
+      variant="gradient"
+      gradient={TONE_GRADIENTS[tone]}
       leftSection={leftSection}
       classNames={{
         root: joinClassNames(
@@ -78,12 +90,6 @@ interface DocStatusBadgesProps {
    * the badge becomes interactive (clickable) so callers can open an edit UI.
    */
   onPublishingLockClick?: () => void;
-  /**
-   * When true, the "Locked" badge shows the "Locked" text label next to the
-   * shield icon. Defaults to false (icon-only), which is used in dense list
-   * views; the doc editor opts in to the labeled variant.
-   */
-  showLockedLabel?: boolean;
 }
 
 export function DocStatusBadges(props: DocStatusBadgesProps) {
@@ -93,59 +99,58 @@ export function DocStatusBadges(props: DocStatusBadgesProps) {
   };
   const doc = props.doc;
   const sys = doc.sys;
-  const publishState = getPublishState(sys);
-  const compareDraftModal = useCompareDraftModal({
+  const versionHistoryModal = useVersionHistoryModal({
     docId: props.docId || doc.id,
   });
-  const onChangedClick = compareDraftModal.enabled
-    ? () => compareDraftModal.open()
-    : undefined;
-  const versionHistoryModal = useVersionHistoryModal({
+  const compareDraftModal = useCompareDraftModal({
     docId: props.docId || doc.id,
   });
   // Shared by the Draft and Published badges: both open the version history.
   const onShowVersionHistory = versionHistoryModal.enabled
     ? () => versionHistoryModal.open()
     : undefined;
+  // When a doc is both published and has newer unpublished edits, clicking the
+  // Draft badge shows the diff between published and draft.
+  const hasUnpublishedChanges =
+    !!sys.publishedAt && !!sys.modifiedAt && sys.modifiedAt > sys.publishedAt;
+  const onDraftClick =
+    hasUnpublishedChanges && compareDraftModal.enabled
+      ? () => compareDraftModal.open()
+      : onShowVersionHistory;
   return (
     <div className="DocStatusBadges">
-      {/*
-        Single publish-state badge (Draft / Published / Changed), following the
-        Sanity/Hygraph/Contentful convention of collapsing "published doc with
-        newer unpublished edits" into one "Changed" badge rather than stacking
-        separate Draft + Published badges.
-      */}
-      {publishState === 'draft' && (
+      {(!sys.publishedAt ||
+        !sys.modifiedAt ||
+        sys.modifiedAt > sys.publishedAt) && (
         <UserActionTooltip
           position={props.tooltipPosition}
+          heading={hasUnpublishedChanges ? 'Unpublished changes' : undefined}
           message={`Modified ${timeDiff(sys.modifiedAt)}`}
           user={sys.modifiedBy}
         >
           <StatusBadge
             tone="draft"
             className={
-              onShowVersionHistory
-                ? 'DocStatusBadges__badge--clickable'
-                : undefined
+              onDraftClick ? 'DocStatusBadges__badge--clickable' : undefined
             }
-            style={onShowVersionHistory ? {cursor: 'pointer'} : undefined}
-            role={onShowVersionHistory ? 'button' : undefined}
-            tabIndex={onShowVersionHistory ? 0 : undefined}
+            style={onDraftClick ? {cursor: 'pointer'} : undefined}
+            role={onDraftClick ? 'button' : undefined}
+            tabIndex={onDraftClick ? 0 : undefined}
             onClick={
-              onShowVersionHistory
+              onDraftClick
                 ? (e: MouseEvent) => {
                     e.preventDefault();
                     e.stopPropagation();
-                    onShowVersionHistory();
+                    onDraftClick();
                   }
                 : undefined
             }
             onKeyDown={
-              onShowVersionHistory
+              onDraftClick
                 ? (e: KeyboardEvent) => {
                     if (e.key === 'Enter' || e.key === ' ') {
                       e.preventDefault();
-                      onShowVersionHistory();
+                      onDraftClick();
                     }
                   }
                 : undefined
@@ -155,7 +160,7 @@ export function DocStatusBadges(props: DocStatusBadgesProps) {
           </StatusBadge>
         </UserActionTooltip>
       )}
-      {publishState === 'published' && (
+      {!!sys.publishedAt && (
         <UserActionTooltip
           position={props.tooltipPosition}
           message={`Published ${timeDiff(sys.publishedAt ?? null)}`}
@@ -195,52 +200,6 @@ export function DocStatusBadges(props: DocStatusBadgesProps) {
           </StatusBadge>
         </UserActionTooltip>
       )}
-      {publishState === 'changed' && (
-        <Tooltip
-          position={props.tooltipPosition}
-          transition="pop"
-          withArrow
-          label={
-            <ChangedTooltip
-              modifiedAt={sys.modifiedAt}
-              modifiedBy={sys.modifiedBy}
-              publishedAt={sys.publishedAt}
-              publishedBy={sys.publishedBy}
-            />
-          }
-        >
-          <StatusBadge
-            tone="changed"
-            className={
-              onChangedClick ? 'DocStatusBadges__badge--clickable' : undefined
-            }
-            style={onChangedClick ? {cursor: 'pointer'} : undefined}
-            role={onChangedClick ? 'button' : undefined}
-            tabIndex={onChangedClick ? 0 : undefined}
-            onClick={
-              onChangedClick
-                ? (e: MouseEvent) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    onChangedClick();
-                  }
-                : undefined
-            }
-            onKeyDown={
-              onChangedClick
-                ? (e: KeyboardEvent) => {
-                    if (e.key === 'Enter' || e.key === ' ') {
-                      e.preventDefault();
-                      onChangedClick();
-                    }
-                  }
-                : undefined
-            }
-          >
-            Changed
-          </StatusBadge>
-        </Tooltip>
-      )}
       {!!sys.scheduledAt && (
         <UserActionTooltip
           position={props.tooltipPosition}
@@ -267,19 +226,11 @@ export function DocStatusBadges(props: DocStatusBadgesProps) {
         >
           <StatusBadge
             tone="locked"
-            leftSection={
-              props.showLockedLabel ? (
-                <IconShield size={12} stroke={2.25} />
-              ) : undefined
-            }
-            className={joinClassNames(
-              props.showLockedLabel
-                ? undefined
-                : 'DocStatusBadges__badge--iconOnly',
+            className={
               props.onPublishingLockClick
                 ? 'DocStatusBadges__badge--clickable'
                 : undefined
-            )}
+            }
             style={
               props.onPublishingLockClick ? {cursor: 'pointer'} : undefined
             }
@@ -298,11 +249,7 @@ export function DocStatusBadges(props: DocStatusBadgesProps) {
                 : undefined
             }
           >
-            {props.showLockedLabel ? (
-              'Locked'
-            ) : (
-              <IconShield size={13} stroke={2.25} />
-            )}
+            Locked
           </StatusBadge>
         </Tooltip>
       )}
@@ -315,94 +262,6 @@ export function DocStatusBadges(props: DocStatusBadgesProps) {
           <StatusBadge tone="archived">Archived</StatusBadge>
         </UserActionTooltip>
       )}
-    </div>
-  );
-}
-
-type PublishState = 'draft' | 'published' | 'changed';
-
-/**
- * Computes the single publish-state for a doc, mirroring the convention used by
- * Sanity, Hygraph, and Contentful:
- *   - `draft`: never published.
- *   - `changed`: published, but has newer unpublished edits.
- *   - `published`: published and up to date.
- */
-function getPublishState(sys: CMSDoc['sys']): PublishState {
-  if (!sys.publishedAt) {
-    return 'draft';
-  }
-  if (!sys.modifiedAt) {
-    return 'published';
-  }
-  return sys.modifiedAt > sys.publishedAt ? 'changed' : 'published';
-}
-
-/**
- * Structured tooltip content for the "Changed" badge. Renders:
- *   Unpublished changes
- *   ---
- *   [avatar]  Modified <date>
- *             by <email>
- *   ---
- *   [avatar]  Published <date>
- *             by <email>
- */
-function ChangedTooltip(props: {
-  modifiedAt: Timestamp | null;
-  modifiedBy?: string | null;
-  publishedAt?: Timestamp | null;
-  publishedBy?: string | null;
-}) {
-  return (
-    <div className="DocStatusBadges__changedTooltip">
-      <div className="DocStatusBadges__changedTooltip__title">
-        Unpublished changes
-      </div>
-      <div className="DocStatusBadges__lockTooltip__divider" />
-      <TooltipUserRow
-        action="Modified"
-        date={props.modifiedAt}
-        user={props.modifiedBy}
-      />
-      {props.publishedAt && (
-        <>
-          <div className="DocStatusBadges__lockTooltip__divider" />
-          <TooltipUserRow
-            action="Published"
-            date={props.publishedAt}
-            user={props.publishedBy}
-          />
-        </>
-      )}
-    </div>
-  );
-}
-
-/**
- * A tooltip row showing "<action> <date>" / "by <email>" with the user's
- * avatar on the left.
- */
-function TooltipUserRow(props: {
-  action: string;
-  date: Timestamp | null | undefined;
-  user?: string | null;
-}) {
-  return (
-    <div className="DocStatusBadges__tooltipRow">
-      {props.user && (
-        <UserAvatar email={props.user} size={20} withTooltip={false} />
-      )}
-      <div className="DocStatusBadges__tooltipRow__text">
-        <div className="DocStatusBadges__lockTooltip__line">
-          {props.action} {props.date ? formatDateTime(props.date) : 'just now'}
-        </div>
-        {props.user && (
-          <div className="DocStatusBadges__lockTooltip__line">
-            by {props.user}
-          </div>
-        )}
-      </div>
     </div>
   );
 }
@@ -486,8 +345,8 @@ function ReleaseBadges(props: {
             component="a"
             href={`/cms/releases/${release.id}`}
             size="sm"
-            radius="sm"
-            variant="filled"
+            variant="gradient"
+            gradient={TONE_GRADIENTS.release}
             classNames={{
               root: 'DocStatusBadges__badge DocStatusBadges__badge--release DocStatusBadges__releaseBadge',
               inner:

@@ -345,7 +345,6 @@ DocEditor.StatusBar = (props: StatusBarProps) => {
           <DocStatusBadges
             doc={data as CMSDoc}
             docId={props.docId}
-            showLockedLabel
             onPublishingLockClick={canEdit ? onPublishingLockClick : undefined}
           />
         </div>
