@@ -1,10 +1,12 @@
 import './DocStatusBadges.css';
 
-import {Badge, Tooltip} from '@mantine/core';
+import {Badge, Popover, Tooltip} from '@mantine/core';
 import {Timestamp} from 'firebase/firestore';
 import {ComponentChildren} from 'preact';
+import {useState} from 'preact/hooks';
 import {usePendingReleases} from '../../hooks/usePendingReleases.js';
 import {CMSDoc, testPublishingLocked} from '../../utils/doc.js';
+import {Release} from '../../utils/release.js';
 import {formatDateTime, getTimeAgo} from '../../utils/time.js';
 import {useCompareDraftModal} from '../CompareDraftModal/CompareDraftModal.js';
 import {UserActionTooltip} from '../UserActionTooltip/UserActionTooltip.js';
@@ -333,32 +335,94 @@ function ReleaseBadges(props: {
   if (releases.length === 0) {
     return null;
   }
+  // When a doc belongs to multiple releases, collapse them into a single badge
+  // that opens a clickable list of releases.
+  if (releases.length > 1) {
+    return <MultiReleaseBadge releases={releases} />;
+  }
+  const release = releases[0];
   return (
-    <>
-      {releases.map((release) => (
-        <Tooltip
-          key={release.id}
-          {...props.tooltipProps}
-          label={`In release: ${release.id}`}
+    <Tooltip {...props.tooltipProps} label={`In release: ${release.id}`}>
+      <Badge
+        component="a"
+        href={`/cms/releases/${release.id}`}
+        size="sm"
+        variant="gradient"
+        gradient={TONE_GRADIENTS.release}
+        classNames={{
+          root: 'DocStatusBadges__badge DocStatusBadges__badge--release DocStatusBadges__releaseBadge',
+          inner:
+            'DocStatusBadges__badge__inner DocStatusBadges__releaseBadge__inner',
+        }}
+        style={{cursor: 'pointer'}}
+      >
+        {release.id}
+      </Badge>
+    </Tooltip>
+  );
+}
+
+/**
+ * A single badge representing membership in multiple releases. Clicking it
+ * opens an interactive popover listing each release; the popover stays open so
+ * the user can click through to a specific release.
+ */
+function MultiReleaseBadge(props: {releases: Release[]}) {
+  const [opened, setOpened] = useState(false);
+  const releases = props.releases;
+  return (
+    <Popover
+      opened={opened}
+      onClose={() => setOpened(false)}
+      withArrow
+      withCloseButton={false}
+      position="bottom"
+      placement="center"
+      spacing={4}
+      width={220}
+      target={
+        <Badge
+          size="sm"
+          variant="gradient"
+          gradient={TONE_GRADIENTS.release}
+          classNames={{
+            root: 'DocStatusBadges__badge DocStatusBadges__badge--release DocStatusBadges__releaseBadge DocStatusBadges__badge--clickable',
+            inner:
+              'DocStatusBadges__badge__inner DocStatusBadges__releaseBadge__inner',
+          }}
+          style={{cursor: 'pointer'}}
+          role="button"
+          tabIndex={0}
+          aria-label={`${releases.length} releases`}
+          onClick={(e: MouseEvent) => {
+            e.preventDefault();
+            e.stopPropagation();
+            setOpened((value) => !value);
+          }}
+          onKeyDown={(e: KeyboardEvent) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              setOpened((value) => !value);
+            }
+          }}
         >
-          <Badge
-            component="a"
+          {releases.length} releases
+        </Badge>
+      }
+    >
+      <div className="DocStatusBadges__releaseList">
+        <div className="DocStatusBadges__releaseList__title">In releases</div>
+        {releases.map((release) => (
+          <a
+            key={release.id}
+            className="DocStatusBadges__releaseList__item"
             href={`/cms/releases/${release.id}`}
-            size="sm"
-            variant="gradient"
-            gradient={TONE_GRADIENTS.release}
-            classNames={{
-              root: 'DocStatusBadges__badge DocStatusBadges__badge--release DocStatusBadges__releaseBadge',
-              inner:
-                'DocStatusBadges__badge__inner DocStatusBadges__releaseBadge__inner',
-            }}
-            style={{cursor: 'pointer'}}
           >
             {release.id}
-          </Badge>
-        </Tooltip>
-      ))}
-    </>
+          </a>
+        ))}
+      </div>
+    </Popover>
   );
 }
 

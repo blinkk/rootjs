@@ -2,7 +2,6 @@ import './CollectionPage.css';
 
 import {
   ActionIcon,
-  Badge,
   Button,
   Loader,
   Menu,
@@ -446,11 +445,12 @@ function SortableHeaderCell(props: {
 }
 
 /**
- * Counts the status badges DocStatusBadges would render for a doc (release
- * badges live in their own column and are excluded). Used to size the Status
- * column so the busiest row's pills aren't truncated.
+ * Counts the status badges DocStatusBadges would render for a doc. Used to size
+ * the Status column so the busiest row's pills aren't truncated. A doc in one
+ * or more releases adds a single release badge (multiple releases collapse into
+ * one "N releases" badge).
  */
-function countStatusBadges(doc: any): number {
+function countStatusBadges(doc: any, releaseCount: number): number {
   const sys = doc?.sys || {};
   let count = 0;
   if (!sys.publishedAt || !sys.modifiedAt || sys.modifiedAt > sys.publishedAt) {
@@ -467,6 +467,9 @@ function countStatusBadges(doc: any): number {
   }
   if (sys.archivedAt) {
     count++; // Archived
+  }
+  if (releaseCount > 0) {
+    count++; // Release (single badge regardless of release count)
   }
   return count;
 }
@@ -489,14 +492,18 @@ CollectionPage.DocsList = (props: {
 
   const docs = props.docs || [];
   const {getReleasesForDoc} = usePendingReleases();
-  // Only show the Release column when at least one doc belongs to a release.
-  const showReleaseColumn =
-    compact && docs.some((doc) => getReleasesForDoc(doc.id).length > 0);
   // Widen the Status column to fit the row with the most status badges (a
-  // published doc with newer edits + a scheduled publish + a lock can stack 3+
-  // pills, which overflow the default width).
+  // published doc with newer edits + a scheduled publish + a lock + a release
+  // can stack several pills, which overflow the default width).
   const maxStatusBadges = compact
-    ? docs.reduce((max, doc) => Math.max(max, countStatusBadges(doc)), 1)
+    ? docs.reduce(
+        (max, doc) =>
+          Math.max(
+            max,
+            countStatusBadges(doc, getReleasesForDoc(doc.id).length)
+          ),
+        1
+      )
     : 1;
   const statusColumnWidth =
     maxStatusBadges <= 1 ? 80 : maxStatusBadges === 2 ? 150 : 215;
@@ -526,9 +533,7 @@ CollectionPage.DocsList = (props: {
       <div
         className={joinClassNames(
           'CollectionPage__collection__docsList',
-          'CollectionPage__collection__docsList--compact',
-          showReleaseColumn &&
-            'CollectionPage__collection__docsList--withRelease'
+          'CollectionPage__collection__docsList--compact'
         )}
         style={{['--docs-status-width' as any]: `${statusColumnWidth}px`}}
       >
@@ -549,11 +554,6 @@ CollectionPage.DocsList = (props: {
           <div className="CollectionPage__collection__docsList__header__cell">
             Status
           </div>
-          {showReleaseColumn && (
-            <div className="CollectionPage__collection__docsList__header__cell">
-              Release
-            </div>
-          )}
           <SortableHeaderCell
             column="created"
             label="Created"
@@ -580,7 +580,6 @@ CollectionPage.DocsList = (props: {
               fields,
               rootCollection.preview?.image || 'meta.image'
             ) || rootCollection.preview?.defaultImage;
-          const releases = showReleaseColumn ? getReleasesForDoc(doc.id) : [];
           return (
             <div
               className="CollectionPage__collection__docsList__doc"
@@ -610,35 +609,8 @@ CollectionPage.DocsList = (props: {
                 {previewTitle || '[UNTITLED]'}
               </a>
               <div className="CollectionPage__collection__docsList__doc__badges">
-                <DocStatusBadges doc={doc} hideReleases />
+                <DocStatusBadges doc={doc} />
               </div>
-              {showReleaseColumn && (
-                <div className="CollectionPage__collection__docsList__doc__releases">
-                  {releases.map((release) => (
-                    <Tooltip
-                      key={release.id}
-                      transition="pop"
-                      label={`In release: ${release.id}`}
-                    >
-                      <Badge
-                        component="a"
-                        href={`/cms/releases/${release.id}`}
-                        size="sm"
-                        variant="gradient"
-                        gradient={{from: 'violet', to: 'grape'}}
-                        classNames={{
-                          root: 'DocStatusBadges__badge DocStatusBadges__badge--release DocStatusBadges__releaseBadge',
-                          inner:
-                            'DocStatusBadges__badge__inner DocStatusBadges__releaseBadge__inner',
-                        }}
-                        style={{cursor: 'pointer'}}
-                      >
-                        {release.id}
-                      </Badge>
-                    </Tooltip>
-                  ))}
-                </div>
-              )}
               <div className="CollectionPage__collection__docsList__doc__timestamp">
                 {renderTimestamp(doc?.sys?.createdAt, doc?.sys?.createdBy)}
               </div>

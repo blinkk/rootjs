@@ -245,47 +245,6 @@
   padding: 5px 12px;
 }
 
-/* When any doc belongs to a release, insert a dedicated Release column between
- * Status and Created. */
-.CollectionPage__collection__docsList--withRelease
-  .CollectionPage__collection__docsList__doc,
-.CollectionPage__collection__docsList--withRelease
-  .CollectionPage__collection__docsList__header {
-  grid-template-columns:
-    40px minmax(0, 0.8fr) minmax(0, 2.5fr)
-    minmax(0, var(--docs-status-width, 80px))
-    minmax(0, 1.4fr) 110px
-    110px 28px;
-}
-
-.CollectionPage__collection__docsList__doc__releases {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 6px;
-  min-width: 0;
-  overflow: hidden;
-}
-
-/*
- * Let a long release ID ellipsize within the column instead of overflowing.
- * Every link in the flex chain (Tooltip wrapper -> Tooltip body -> Badge) must
- * be allowed to shrink below its content width (min-width: 0), otherwise the
- * badge keeps its full intrinsic width and gets clipped by the cell.
- */
-.CollectionPage__collection__docsList__doc__releases .mantine-Tooltip-root,
-.CollectionPage__collection__docsList__doc__releases .mantine-Tooltip-body {
-  display: inline-flex;
-  min-width: 0;
-  max-width: 100%;
-}
-
-.CollectionPage__collection__docsList__doc__releases .mantine-Badge-root {
-  min-width: 0;
-  max-width: 100%;
-  overflow: hidden;
-}
-
 .CollectionPage__collection__docsList__header {
   border-bottom: 1px solid var(--color-border);
 }
