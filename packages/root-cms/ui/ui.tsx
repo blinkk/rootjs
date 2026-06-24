@@ -453,14 +453,19 @@ try {
   const databaseId = window.__ROOT_CTX.firebaseConfig.databaseId || '(default)';
   // const db = getFirestore(app);
   // NOTE(stevenle): the firestore web channel rpc sometimes has issues in
-  // collections with a large number of docs. Forcing long polling and disabling
-  // fetch streams seems to work for some people. This may cause performance
-  // issues however.
+  // collections with a large number of docs.
+  //
+  // We previously forced long polling (`experimentalForceLongPolling: true`)
+  // unconditionally as a workaround, but that transport can get into a stuck
+  // state where the `channel?gsessionid=...` long-poll session stalls and never
+  // completes, leaving requests like getDocs() pending forever (the CMS hangs
+  // on a loading spinner until a hard reload). Use auto-detect instead so the
+  // SDK prefers the more reliable WebChannel/fetch-stream transport and only
+  // falls back to long polling on networks that actually require it.
   const db = initializeFirestore(
     app,
     {
-      experimentalForceLongPolling: true,
-      useFetchStreams: false,
+      experimentalAutoDetectLongPolling: true,
     } as any,
     databaseId
   );
