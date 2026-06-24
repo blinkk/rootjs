@@ -182,7 +182,7 @@ jobs:
       - name: Deploy rootjs.dev to Firebase
         working-directory: docs
         run: |
-          pnpm exec firebase deploy \
+          scripts/deploy_firebase.sh deploy \
             --only hosting,functions:www-server,functions:www-cron \
             --project rootjs-dev \
             --force

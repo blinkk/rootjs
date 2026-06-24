@@ -330,7 +330,7 @@ jobs:
         run: |
           # Deploy only the PR-specific SSR function generated above. This does
           # not deploy or overwrite the public www-server or any other function.
-          pnpm exec firebase deploy \
+          scripts/deploy_firebase.sh deploy \
             --only "functions:${{ steps.preview-config.outputs.server_function }}" \
             --project rootjs-dev \
             --force
@@ -341,7 +341,7 @@ jobs:
         run: |
           CHANNEL="pr-${{ steps.preview-context.outputs.pr_number }}"
           OUTPUT_FILE="$(mktemp)"
-          pnpm exec firebase hosting:channel:deploy "$CHANNEL" \
+          scripts/deploy_firebase.sh hosting:channel:deploy "$CHANNEL" \
             --project rootjs-dev \
             --expires 2d \
             --json > "$OUTPUT_FILE"
