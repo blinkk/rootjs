@@ -158,7 +158,7 @@ export function DocStatusBadges(props: DocStatusBadgesProps) {
       {publishState === 'published' && (
         <UserActionTooltip
           position={props.tooltipPosition}
-          message={`Published ${timeDiff(sys.publishedAt)}`}
+          message={`Published ${timeDiff(sys.publishedAt ?? null)}`}
           user={sys.publishedBy}
         >
           <StatusBadge
