@@ -3,6 +3,13 @@
   background: var(--page-background);
 }
 
+/* Shrink the folder sidebar on narrow viewports so the docs list keeps room. */
+@media (max-width: 1280px) {
+  .CollectionPage {
+    --side-width: 280px;
+  }
+}
+
 .CollectionPage__layout {
   position: relative;
   min-height: calc(100vh - var(--header-height));
@@ -186,38 +193,6 @@
   flex-shrink: 0;
 }
 
-/* On narrow viewports, shrink the (non-compact) thumbnail column so the title
- * and metadata get more room. The preview image is rendered at a fixed 120px,
- * so scale its inner media down to fit the narrower container. */
-@media (max-width: 600px) {
-  .CollectionPage__collection__docsList:not(
-      .CollectionPage__collection__docsList--compact
-    )
-    .CollectionPage__collection__docsList__doc__image {
-    width: 72px;
-  }
-  .CollectionPage__collection__docsList:not(
-      .CollectionPage__collection__docsList--compact
-    )
-    .CollectionPage__collection__docsList__doc__image > a,
-  .CollectionPage__collection__docsList:not(
-      .CollectionPage__collection__docsList--compact
-    )
-    .CollectionPage__collection__docsList__doc__image img,
-  .CollectionPage__collection__docsList:not(
-      .CollectionPage__collection__docsList--compact
-    )
-    .CollectionPage__collection__docsList__doc__image picture,
-  .CollectionPage__collection__docsList:not(
-      .CollectionPage__collection__docsList--compact
-    )
-    .CollectionPage__collection__docsList__doc__image video {
-    display: block;
-    width: 100% !important;
-    height: auto !important;
-  }
-}
-
 .CollectionPage__collection__docsList__doc__content__title {
   line-height: 36px;
   font-size: 24px;
@@ -281,31 +256,6 @@
     minmax(0, var(--docs-status-width, 80px))
     minmax(0, 1.4fr) 110px
     110px 28px;
-}
-
-/* On narrow viewports give the Title column a smaller share of the flexible
- * space so it doesn't dominate the row. */
-@media (max-width: 900px) {
-  .CollectionPage__collection__docsList--compact
-    .CollectionPage__collection__docsList__doc,
-  .CollectionPage__collection__docsList--compact
-    .CollectionPage__collection__docsList__header {
-    grid-template-columns:
-      40px minmax(0, 0.8fr) minmax(0, 1.2fr)
-      minmax(0, var(--docs-status-width, 80px)) 110px
-      110px 28px;
-    gap: 10px;
-  }
-  .CollectionPage__collection__docsList--withRelease
-    .CollectionPage__collection__docsList__doc,
-  .CollectionPage__collection__docsList--withRelease
-    .CollectionPage__collection__docsList__header {
-    grid-template-columns:
-      40px minmax(0, 0.8fr) minmax(0, 1.2fr)
-      minmax(0, var(--docs-status-width, 80px))
-      minmax(0, 1.4fr) 110px
-      110px 28px;
-  }
 }
 
 .CollectionPage__collection__docsList__doc__releases {
