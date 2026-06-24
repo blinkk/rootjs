@@ -179,12 +179,27 @@ export type GetStaticContent = (
   props: any
 ) => Promise<StaticContentResult | string> | StaticContentResult | string;
 
+/**
+ * Route-level config that a route module can export to override the site-wide
+ * serving behavior on a per-route basis.
+ */
+export interface RouteConfig {
+  /**
+   * Overrides the site-wide `i18n.locales` for this route. When set, the SSG
+   * build only generates localized paths for the locales listed here instead of
+   * the locales defined in `root.config.ts`. The default-locale path is always
+   * generated. Defaults to the site-wide `i18n.locales`.
+   */
+  locales?: string[];
+}
+
 export interface RouteModule {
   default?: ComponentType<unknown>;
   getStaticPaths?: GetStaticPaths;
   getStaticProps?: GetStaticProps;
   handle?: Handler;
   getStaticContent?: GetStaticContent;
+  config?: RouteConfig;
 }
 
 export interface Route {
