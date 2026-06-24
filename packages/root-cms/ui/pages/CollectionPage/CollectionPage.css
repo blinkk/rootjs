@@ -283,6 +283,31 @@
     110px 28px;
 }
 
+/* On narrow viewports give the Title column a smaller share of the flexible
+ * space so it doesn't dominate the row. */
+@media (max-width: 900px) {
+  .CollectionPage__collection__docsList--compact
+    .CollectionPage__collection__docsList__doc,
+  .CollectionPage__collection__docsList--compact
+    .CollectionPage__collection__docsList__header {
+    grid-template-columns:
+      40px minmax(0, 0.8fr) minmax(0, 1.2fr)
+      minmax(0, var(--docs-status-width, 80px)) 110px
+      110px 28px;
+    gap: 10px;
+  }
+  .CollectionPage__collection__docsList--withRelease
+    .CollectionPage__collection__docsList__doc,
+  .CollectionPage__collection__docsList--withRelease
+    .CollectionPage__collection__docsList__header {
+    grid-template-columns:
+      40px minmax(0, 0.8fr) minmax(0, 1.2fr)
+      minmax(0, var(--docs-status-width, 80px))
+      minmax(0, 1.4fr) 110px
+      110px 28px;
+  }
+}
+
 .CollectionPage__collection__docsList__doc__releases {
   display: flex;
   align-items: center;
