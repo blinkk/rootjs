@@ -330,26 +330,10 @@ jobs:
         run: |
           # Deploy only the PR-specific SSR function generated above. This does
           # not deploy or overwrite the public www-server or any other function.
-          #
-          # firebase-tools resolves credentials from GOOGLE_APPLICATION_CREDENTIALS
-          # via GoogleAuth.getAccessToken(), which performs a network token
-          # exchange that intermittently fails with "Failed to authenticate, have
-          # you run firebase login?" (the same commit succeeds on a re-run).
-          # Retry the deploy a few times to ride out those transient failures.
-          attempt=1
-          max_attempts=3
-          until pnpm exec firebase deploy \
+          scripts/deploy_firebase.sh deploy \
             --only "functions:${{ steps.preview-config.outputs.server_function }}" \
             --project rootjs-dev \
-            --force; do
-            if [[ "$attempt" -ge "$max_attempts" ]]; then
-              echo "firebase deploy failed after ${max_attempts} attempts." >&2
-              exit 1
-            fi
-            echo "firebase deploy attempt ${attempt} failed; retrying in 15s..." >&2
-            attempt=$((attempt + 1))
-            sleep 15
-          done
+            --force
 
       - name: Deploy preview to Firebase Hosting
         id: deploy
@@ -357,24 +341,10 @@ jobs:
         run: |
           CHANNEL="pr-${{ steps.preview-context.outputs.pr_number }}"
           OUTPUT_FILE="$(mktemp)"
-          # Retry to ride out the intermittent "Failed to authenticate" error
-          # from firebase-tools' credential token exchange (see the function
-          # deploy step above).
-          attempt=1
-          max_attempts=3
-          until pnpm exec firebase hosting:channel:deploy "$CHANNEL" \
+          scripts/deploy_firebase.sh hosting:channel:deploy "$CHANNEL" \
             --project rootjs-dev \
             --expires 2d \
-            --json > "$OUTPUT_FILE"; do
-            if [[ "$attempt" -ge "$max_attempts" ]]; then
-              echo "firebase hosting:channel:deploy failed after ${max_attempts} attempts." >&2
-              cat "$OUTPUT_FILE" >&2 || true
-              exit 1
-            fi
-            echo "hosting deploy attempt ${attempt} failed; retrying in 15s..." >&2
-            attempt=$((attempt + 1))
-            sleep 15
-          done
+            --json > "$OUTPUT_FILE"
 
           cat "$OUTPUT_FILE"
           URL="$(node -e "
