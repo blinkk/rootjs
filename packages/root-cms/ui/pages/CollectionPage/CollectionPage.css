@@ -248,6 +248,26 @@
     110px 28px;
 }
 
+/* When any doc has a Scheduled badge, widen the Status column so its longer
+ * date label isn't squeezed. */
+.CollectionPage__collection__docsList--withScheduled
+  .CollectionPage__collection__docsList__doc,
+.CollectionPage__collection__docsList--withScheduled
+  .CollectionPage__collection__docsList__header {
+  grid-template-columns:
+    40px minmax(0, 0.8fr) minmax(0, 2.5fr) 180px 110px
+    110px 28px;
+}
+
+.CollectionPage__collection__docsList--withRelease.CollectionPage__collection__docsList--withScheduled
+  .CollectionPage__collection__docsList__doc,
+.CollectionPage__collection__docsList--withRelease.CollectionPage__collection__docsList--withScheduled
+  .CollectionPage__collection__docsList__header {
+  grid-template-columns:
+    40px minmax(0, 0.8fr) minmax(0, 2.5fr) 180px minmax(0, 1.4fr) 110px
+    110px 28px;
+}
+
 .CollectionPage__collection__docsList__doc__releases {
   display: flex;
   align-items: center;

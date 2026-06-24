@@ -465,6 +465,9 @@ CollectionPage.DocsList = (props: {
   // Only show the Release column when at least one doc belongs to a release.
   const showReleaseColumn =
     compact && docs.some((doc) => getReleasesForDoc(doc.id).length > 0);
+  // Give the Status column extra room when any doc shows a Scheduled badge
+  // (its date label is wider than the other status pills).
+  const hasScheduled = compact && docs.some((doc) => !!doc?.sys?.scheduledAt);
   function getLiveUrl(slug: string): string {
     if (!hasCollectionUrl) {
       return '';
@@ -493,7 +496,8 @@ CollectionPage.DocsList = (props: {
           'CollectionPage__collection__docsList',
           'CollectionPage__collection__docsList--compact',
           showReleaseColumn &&
-            'CollectionPage__collection__docsList--withRelease'
+            'CollectionPage__collection__docsList--withRelease',
+          hasScheduled && 'CollectionPage__collection__docsList--withScheduled'
         )}
       >
         <div className="CollectionPage__collection__docsList__header">
