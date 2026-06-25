@@ -27,7 +27,7 @@ import {SSEEvent, SSESchemaChangedEvent} from '../shared/sse.js';
 import {type AiConfig} from './ai.js';
 import {api} from './api.js';
 import {type CMSCheck} from './checks.js';
-import {Action, RootCMSClient} from './client.js';
+import {Action, RootCMSClient, UserRole} from './client.js';
 import {type CMSNotificationService} from './services-notifications.js';
 import {sse, SSEBroadcastFn} from './sse.js';
 import {type CMSTranslationService} from './translations.js';
@@ -114,6 +114,11 @@ const NONCONF_STATIC_PATHS = [
 
 export interface CMSUser {
   email: string;
+  /**
+   * The user's role within the project's ACL, or `null` if unassigned. This is
+   * populated on `req.user` for every authenticated request.
+   */
+  role?: UserRole | null;
 }
 
 /**
@@ -683,7 +688,8 @@ export function cmsPlugin(options: CMSPluginOptions): CMSPlugin {
         console.log('session failed: user is not in the firestore acl list');
         return null;
       }
-      return {email: jwt.email};
+      const role = await cmsClient.getUserRole(jwt.email).catch(() => null);
+      return {email: jwt.email, role};
     }
 
     try {
@@ -716,7 +722,8 @@ export function cmsPlugin(options: CMSPluginOptions): CMSPlugin {
         return null;
       }
       // JWT verified.
-      return {email: jwt.email!};
+      const role = await cmsClient.getUserRole(jwt.email!).catch(() => null);
+      return {email: jwt.email!, role};
     } catch (err) {
       console.error('failed to verify jwt token');
       console.error(err);
