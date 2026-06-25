@@ -330,10 +330,33 @@ jobs:
         run: |
           # Deploy only the PR-specific SSR function generated above. This does
           # not deploy or overwrite the public www-server or any other function.
-          scripts/deploy_firebase.sh deploy \
+          #
+          # The retry logic is inlined (rather than calling
+          # scripts/deploy_firebase.sh) because this workflow runs its steps
+          # from the default branch but checks out the PR head as the working
+          # tree. PRs branched before the script was added would not have it on
+          # disk, causing "No such file or directory" (exit 127). Inlining keeps
+          # this step working regardless of the checked-out PR's contents.
+          #
+          # firebase-tools resolves credentials from GOOGLE_APPLICATION_CREDENTIALS
+          # via GoogleAuth.getAccessToken(), a network token exchange that
+          # intermittently fails with "Failed to authenticate". Retry to ride
+          # out those transient failures.
+          attempt=1
+          max_attempts="${FIREBASE_DEPLOY_MAX_ATTEMPTS:-3}"
+          retry_delay="${FIREBASE_DEPLOY_RETRY_DELAY:-15}"
+          until pnpm exec firebase deploy \
             --only "functions:${{ steps.preview-config.outputs.server_function }}" \
             --project rootjs-dev \
-            --force
+            --force; do
+            if [[ "$attempt" -ge "$max_attempts" ]]; then
+              echo "firebase deploy failed after ${max_attempts} attempts." >&2
+              exit 1
+            fi
+            echo "firebase deploy attempt ${attempt} failed; retrying in ${retry_delay}s..." >&2
+            attempt=$((attempt + 1))
+            sleep "$retry_delay"
+          done
 
       - name: Deploy preview to Firebase Hosting
         id: deploy
@@ -341,10 +364,24 @@ jobs:
         run: |
           CHANNEL="pr-${{ steps.preview-context.outputs.pr_number }}"
           OUTPUT_FILE="$(mktemp)"
-          scripts/deploy_firebase.sh hosting:channel:deploy "$CHANNEL" \
+          # See the note above: retry is inlined so this works against any PR
+          # checkout. All retry diagnostics go to stderr so the captured stdout
+          # only contains the firebase --json output.
+          attempt=1
+          max_attempts="${FIREBASE_DEPLOY_MAX_ATTEMPTS:-3}"
+          retry_delay="${FIREBASE_DEPLOY_RETRY_DELAY:-15}"
+          until pnpm exec firebase hosting:channel:deploy "$CHANNEL" \
             --project rootjs-dev \
             --expires 2d \
-            --json > "$OUTPUT_FILE"
+            --json > "$OUTPUT_FILE"; do
+            if [[ "$attempt" -ge "$max_attempts" ]]; then
+              echo "firebase hosting:channel:deploy failed after ${max_attempts} attempts." >&2
+              exit 1
+            fi
+            echo "firebase hosting:channel:deploy attempt ${attempt} failed; retrying in ${retry_delay}s..." >&2
+            attempt=$((attempt + 1))
+            sleep "$retry_delay"
+          done
 
           cat "$OUTPUT_FILE"
           URL="$(node -e "
