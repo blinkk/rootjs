@@ -84,7 +84,15 @@ export type Request = ExpressRequest & {
   /** The root.js renderer, to render routes within middleware. */
   renderer?: Renderer;
   /** Logged in user for the request. */
-  user?: {email: string};
+  user?: {
+    email: string;
+    /**
+     * The user's role, when provided by an auth plugin (e.g. Root CMS sets
+     * this to `'ADMIN' | 'EDITOR' | 'CONTRIBUTOR' | 'VIEWER'`, or `null` when
+     * the user has no assigned role).
+     */
+    role?: string | null;
+  };
 
   /**
    * Handler context, provided to route files that export a custom `handler()`
