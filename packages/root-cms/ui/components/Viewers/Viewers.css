@@ -10,6 +10,26 @@
 .Viewers__avatar {
   border: 2px solid var(--mantine-color-body, #fff);
   box-sizing: content-box;
+  position: relative;
+  /* Active avatars stack above their overlapping neighbors. */
+  z-index: 1;
+}
+
+/* Keep inactive (disconnected) avatars below active ones so the active users
+ * are always visually on top. */
+.Viewers__avatar.UserAvatar--inactive {
+  z-index: 0;
+}
+
+/* Avatars that can be clicked to follow/deeplink to a viewer's focused field. */
+.Viewers__avatar--follow {
+  cursor: pointer;
+}
+
+.Viewers__avatar--follow:hover {
+  /* Raise above neighbors on hover without affecting layout (transforms and
+   * filters would nudge surrounding content / cause a visible shift). */
+  z-index: 2;
 }
 
 .Viewers > *:first-child {

@@ -12,11 +12,16 @@ import {
 import {ComponentChildren, createContext} from 'preact';
 import {useContext, useEffect, useMemo, useState} from 'preact/hooks';
 import {normalizeSlug} from '../../../shared/slug.js';
+import {
+  scrollToDeeplink,
+  useOptionalDeeplink,
+} from '../../hooks/useDeeplink.js';
 import {debounce} from '../../utils/debounce.js';
 import {EventListener} from '../../utils/events.js';
 import {throttle} from '../../utils/throttle.js';
 import {TIME_UNITS} from '../../utils/time.js';
 import {Timer} from '../../utils/timer.js';
+import {getAvatarColor} from '../../utils/user-profile.js';
 import {UserAvatar} from '../UserAvatar/UserAvatar.js';
 import './Viewers.css';
 
@@ -295,6 +300,8 @@ export interface FieldViewer {
   email: string;
   /** Whether this viewer is the current (signed-in) user. */
   isCurrentUser: boolean;
+  /** Deterministic color for this user (used to color-code presence). */
+  color: string;
 }
 
 /**
@@ -319,13 +326,18 @@ export function useFieldViewers(deepKey: string): FieldViewer[] {
     const result: FieldViewer[] = others.map((viewer) => ({
       email: viewer.email,
       isCurrentUser: false,
+      color: getAvatarColor(viewer.email),
     }));
     // Include the current user's avatar when they share this field with at
     // least one other viewer.
     if (currentFocusedField === deepKey) {
       const currentEmail = window.firebase.user?.email || '';
       if (currentEmail) {
-        result.unshift({email: currentEmail, isCurrentUser: true});
+        result.unshift({
+          email: currentEmail,
+          isCurrentUser: true,
+          color: getAvatarColor(currentEmail),
+        });
       }
     }
     return result;
@@ -342,10 +354,26 @@ export function Viewers(props: ViewersProps) {
   const context = useContext(ViewersContext);
   const standalone = useViewersController(context.controller ? '' : id);
   const viewers = context.controller ? context.viewers : standalone.viewers;
+  const deeplink = useOptionalDeeplink();
 
   if (viewers.length === 0) {
     return null;
   }
+
+  // Deeplinks to the field a viewer currently has focused (à la Figma's
+  // "click an avatar to follow"). Only available inside the doc editor where a
+  // `<DeeplinkProvider>` is present.
+  const followViewer = (deepKey: string) => {
+    if (!deeplink || !deepKey) {
+      return;
+    }
+    // setValue keeps the `?deeplink=` URL param in sync.
+    deeplink.setValue(deepKey);
+    const element = document.getElementById(deepKey);
+    if (element) {
+      scrollToDeeplink(element, {behavior: 'smooth', force: true});
+    }
+  };
 
   // Use plain CSS instead of `AvatarsGroup` because that
   // component doesn't support using Tooltips as children.
@@ -355,15 +383,28 @@ export function Viewers(props: ViewersProps) {
 
   return (
     <div className="Viewers">
-      {visibleViewers.map((viewer) => (
-        <UserAvatar
-          key={viewer.email}
-          email={viewer.email}
-          size={30}
-          inactive={isViewerDisconnected(viewer)}
-          className="Viewers__avatar"
-        />
-      ))}
+      {visibleViewers.map((viewer) => {
+        const canFollow = Boolean(
+          deeplink && viewer.focusedField && !isViewerDisconnected(viewer)
+        );
+        return (
+          <UserAvatar
+            key={viewer.email}
+            email={viewer.email}
+            size={30}
+            colorRing
+            inactive={isViewerDisconnected(viewer)}
+            className={
+              canFollow
+                ? 'Viewers__avatar Viewers__avatar--follow'
+                : 'Viewers__avatar'
+            }
+            onClick={
+              canFollow ? () => followViewer(viewer.focusedField!) : undefined
+            }
+          />
+        );
+      })}
       {overflow > 0 && (
         <Avatar className="Viewers__avatar" size={30} radius="xl">
           +{overflow}
