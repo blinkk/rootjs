@@ -61,6 +61,16 @@
   width: 120px;
 }
 
+.DataSourceForm__cron__weekday {
+  width: 140px;
+}
+
+.DataSourceForm__cron__time {
+  font-size: 14px;
+  padding: 6px 8px;
+  border: 1px solid #ced4da;
+}
+
 .DataSourceForm__submit {
   margin-top: 30px;
 }
