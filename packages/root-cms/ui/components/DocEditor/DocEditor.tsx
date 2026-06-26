@@ -411,10 +411,10 @@ DocEditor.StatusBar = (props: StatusBarProps) => {
 
   return (
     <div className="DocEditor__statusBar">
+      <DocEditor.SaveState />
       <div className="DocEditor__statusBar__viewers">
         <Viewers id={`doc/${props.docId}`} />
       </div>
-      <DocEditor.SaveState />
       {data?.sys && (
         <div className="DocEditor__statusBar__statusBadges">
           <DocStatusBadges
@@ -864,8 +864,18 @@ DocEditor.FieldHeader = (props: FieldProps & {className?: string}) => {
               title="Link to field"
               onClick={(e) => {
                 e.preventDefault();
-                window.history.replaceState({}, '', deeplinkUrl);
-                deeplink.setValue(props.deepKey!);
+                // Stop the event before it reaches the preact-iso router's
+                // document-level click handler, which would otherwise treat
+                // this same-origin `<a href>` as a navigation and pushState the
+                // deeplink URL back after we just cleared it.
+                e.stopPropagation();
+                // Toggle: re-clicking the already-focused field clears the
+                // deeplink instead of re-applying it.
+                if (deeplink.value === props.deepKey) {
+                  deeplink.setValue('');
+                } else {
+                  deeplink.setValue(props.deepKey!);
+                }
               }}
             >
               {label}
@@ -892,19 +902,54 @@ DocEditor.FieldHeader = (props: FieldProps & {className?: string}) => {
 /**
  * Renders miniature avatars of other viewers who currently have this field
  * focused. Sized to match the translate icon so it never causes layout shift.
+ *
+ * Also color-codes the field: the enclosing `.DocEditor__field` gets a colored
+ * border matching the (first other) viewer focused on it, à la Google Docs, so
+ * it's easy to tell at a glance who is on which field.
  */
 DocEditor.FieldHeaderViewers = (props: {deepKey: string}) => {
   const viewers = useFieldViewers(props.deepKey);
+  const ref = useRef<HTMLDivElement>(null);
+
+  // The color to highlight the field with: prefer the first *other* viewer so
+  // the highlight reflects who else is here (not your own color).
+  const highlightColor = useMemo(() => {
+    const other = viewers.find((viewer) => !viewer.isCurrentUser);
+    return (other || viewers[0])?.color || '';
+  }, [viewers]);
+
+  useEffect(() => {
+    const fieldEl = ref.current?.closest<HTMLElement>('.DocEditor__field');
+    if (!fieldEl) {
+      return;
+    }
+    if (highlightColor) {
+      fieldEl.style.setProperty('--presence-color', highlightColor);
+      fieldEl.classList.add('DocEditor__field--presence');
+    } else {
+      fieldEl.style.removeProperty('--presence-color');
+      fieldEl.classList.remove('DocEditor__field--presence');
+    }
+    return () => {
+      fieldEl.style.removeProperty('--presence-color');
+      fieldEl.classList.remove('DocEditor__field--presence');
+    };
+  }, [highlightColor]);
+
   if (viewers.length === 0) {
-    return null;
+    // Keep an (empty) anchor element mounted so the cleanup effect above can
+    // still find the field and clear the highlight when viewers leave.
+    return <div ref={ref} className="DocEditor__FieldHeader__viewers" />;
   }
   return (
-    <div className="DocEditor__FieldHeader__viewers">
+    <div ref={ref} className="DocEditor__FieldHeader__viewers">
       {viewers.map((viewer) => (
         <UserAvatar
           key={viewer.email}
           email={viewer.email}
           size={18}
+          colorRing
+          ringWidth={1}
           className="DocEditor__FieldHeader__viewers__avatar"
         />
       ))}

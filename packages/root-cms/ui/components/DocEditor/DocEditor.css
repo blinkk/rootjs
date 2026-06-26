@@ -27,6 +27,7 @@
 }
 
 .DocEditor__statusBar__saveState,
+.DocEditor__statusBar__viewers,
 .DocEditor__statusBar__statusBadges {
   margin-right: 16px;
 }
@@ -135,6 +136,19 @@
   > .DocEditor__ObjectFieldDrawer
   > .DocEditor__ObjectFieldDrawer__drawer {
   background: linear-gradient(rgb(255, 248, 197), rgb(255, 248, 197));
+}
+
+/*
+ * Presence highlight: when another user has this field focused, outline the
+ * field in that user's color (matching their avatar), à la Google Docs. An
+ * outline is used (instead of border/padding) so it never shifts layout.
+ */
+.DocEditor__field--presence {
+  position: relative;
+  border-radius: 2px;
+  outline: 1px solid var(--presence-color, transparent);
+  outline-offset: 4px;
+  transition: outline-color 0.2s ease;
 }
 
 .DocEditor__FieldHeader {
