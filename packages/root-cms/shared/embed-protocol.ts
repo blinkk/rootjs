@@ -47,6 +47,24 @@ export interface RootEmbedMessage {
   };
 }
 
+/**
+ * Posted from an iframed sidebar tool to the parent CMS window to report the
+ * tool's current location. The CMS mirrors this into its own address bar so
+ * the tool's sub-path, query params, and hash survive a refresh and can be
+ * deep-linked/shared.
+ *
+ * Same-origin tools are synced automatically (the CMS reads
+ * `contentWindow.location` directly), so this message only needs to be posted
+ * by cross-origin tools, which the browser prevents the CMS from reading.
+ */
+export interface RootToolLocationMessage {
+  rootTool: {
+    type: 'locationchange';
+    /** The tool's current URL, absolute or relative to the tool's origin. */
+    url: string;
+  };
+}
+
 /** Requests that the doc editor scroll to (focus) a specific field. */
 export interface ScrollToDeeplinkMessage {
   scrollToDeeplink: {
@@ -78,6 +96,19 @@ export function isRootEmbedMessage(data: unknown): data is RootEmbedMessage {
     typeof root === 'object' &&
     root !== null &&
     EMBED_MESSAGE_TYPES.includes(root.type)
+  );
+}
+
+/** Returns whether a postMessage payload is a {@link RootToolLocationMessage}. */
+export function isRootToolLocationMessage(
+  data: unknown
+): data is RootToolLocationMessage {
+  const req = (data as RootToolLocationMessage)?.rootTool;
+  return (
+    typeof req === 'object' &&
+    req !== null &&
+    req.type === 'locationchange' &&
+    typeof req.url === 'string'
   );
 }
 

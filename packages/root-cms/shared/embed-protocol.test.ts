@@ -2,6 +2,7 @@ import {describe, it, expect} from 'vitest';
 import {
   isHighlightNodeMessage,
   isRootEmbedMessage,
+  isRootToolLocationMessage,
   isScrollToDeeplinkMessage,
 } from './embed-protocol.js';
 
@@ -47,6 +48,32 @@ describe('isScrollToDeeplinkMessage', () => {
       false
     );
     expect(isScrollToDeeplinkMessage({root: {type: 'ready'}})).toBe(false);
+  });
+});
+
+describe('isRootToolLocationMessage', () => {
+  it('accepts locationchange messages', () => {
+    expect(
+      isRootToolLocationMessage({
+        rootTool: {type: 'locationchange', url: '/foo?a=1#h'},
+      })
+    ).toBe(true);
+  });
+
+  it('rejects malformed payloads', () => {
+    expect(isRootToolLocationMessage(null)).toBe(false);
+    expect(isRootToolLocationMessage({})).toBe(false);
+    expect(isRootToolLocationMessage({rootTool: null})).toBe(false);
+    expect(isRootToolLocationMessage({rootTool: {}})).toBe(false);
+    expect(
+      isRootToolLocationMessage({rootTool: {type: 'locationchange'}})
+    ).toBe(false);
+    expect(
+      isRootToolLocationMessage({rootTool: {type: 'other', url: '/foo'}})
+    ).toBe(false);
+    expect(
+      isRootToolLocationMessage({rootTool: {type: 'locationchange', url: 1}})
+    ).toBe(false);
   });
 });
 
