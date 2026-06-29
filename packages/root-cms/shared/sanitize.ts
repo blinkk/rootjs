@@ -58,7 +58,7 @@ const ALLOWED_ATTRIBUTES: Record<string, string[]> = {
 };
 
 const COMMON_OPTIONS: IOptions = {
-  allowedSchemes: ['http', 'https', 'mailto', 'tel'],
+  allowedSchemes: ['http', 'https', 'mailto', 'tel', 'sms'],
   allowedSchemesByTag: {
     img: ['http', 'https', 'data'],
   },

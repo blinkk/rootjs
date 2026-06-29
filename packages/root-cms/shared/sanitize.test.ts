@@ -48,6 +48,11 @@ describe('sanitizeInlineHtml', () => {
     expect(out).toContain('href="tel:+1234567890"');
   });
 
+  it('preserves sms: hrefs', () => {
+    const out = sanitizeInlineHtml('<a href="sms:+1234567890">x</a>');
+    expect(out).toContain('href="sms:+1234567890"');
+  });
+
   it('drops block-level tags in inline context', () => {
     const out = sanitizeInlineHtml('<p>hi</p><div>x</div>');
     expect(out).not.toContain('<p>');
@@ -109,5 +114,10 @@ describe('sanitizeBlockHtml', () => {
   it('preserves tel: hrefs', () => {
     const out = sanitizeBlockHtml('<a href="tel:+1234567890">x</a>');
     expect(out).toContain('href="tel:+1234567890"');
+  });
+
+  it('preserves sms: hrefs', () => {
+    const out = sanitizeBlockHtml('<a href="sms:+1234567890">x</a>');
+    expect(out).toContain('href="sms:+1234567890"');
   });
 });
