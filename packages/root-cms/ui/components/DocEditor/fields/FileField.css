@@ -9,7 +9,8 @@
 }
 
 .FileField:has(.dragging) .FileField__Dropzone,
-.FileField:has(.dragging) .FileField__Canvas {
+.FileField:has(.dragging) .FileField__Canvas,
+.FileField:has(.dragging) .FileField__Canvas__Info {
   background-color: #f3d9fa;
 }
 
