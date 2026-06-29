@@ -42,6 +42,11 @@ describe('DocStatusBadges', () => {
       publishedAt: mockTimestamp(1647485978000),
       publishedBy: 'test@example.com',
     });
+    const changedDoc = createDoc({
+      modifiedAt: mockTimestamp(1647485978000 + 100000),
+      publishedAt: mockTimestamp(1647485978000),
+      publishedBy: 'test@example.com',
+    });
     const lockedDoc = createDoc({
       publishingLocked: {
         lockedBy: 'test@example.com',
@@ -69,6 +74,9 @@ describe('DocStatusBadges', () => {
         </div>
         <div>
           <DocStatusBadges doc={publishedDoc} />
+        </div>
+        <div>
+          <DocStatusBadges doc={changedDoc} />
         </div>
         <div>
           <DocStatusBadges doc={lockedDoc} />

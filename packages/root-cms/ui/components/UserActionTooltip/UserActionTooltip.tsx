@@ -6,6 +6,11 @@ import {UserAvatar} from '../UserAvatar/UserAvatar.js';
 
 export interface UserActionTooltipProps {
   /**
+   * Optional heading shown above the message, separated by a divider line
+   * (e.g. "Unpublished changes").
+   */
+  heading?: ComponentChildren;
+  /**
    * Primary message line, typically an action and/or timestamp, e.g.
    * "Published 3d ago" or "May 1, 2026".
    */
@@ -37,11 +42,14 @@ export interface UserActionTooltipProps {
  * doc status badges, the compact collection listing's created/modified cells).
  */
 export function UserActionTooltip(props: UserActionTooltipProps) {
-  const {message, detail, user} = props;
+  const {heading, message, detail, user} = props;
   const label = (
     <div className="UserActionTooltip">
       {user && <UserAvatar email={user} size={20} withTooltip={false} />}
       <div className="UserActionTooltip__text">
+        {heading && (
+          <span className="UserActionTooltip__heading">{heading}</span>
+        )}
         <span>{message}</span>
         {detail && <span className="UserActionTooltip__detail">{detail}</span>}
         {user && <span>by {user}</span>}
