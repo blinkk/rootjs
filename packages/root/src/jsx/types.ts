@@ -192,7 +192,7 @@ export interface HTMLAttributes<T = HTMLElement>
   controls?: boolean;
   controlsList?: string;
   coords?: string;
-  crossOrigin?: string;
+  crossOrigin?: boolean | 'anonymous' | 'use-credentials' | (string & {});
   data?: string;
   dateTime?: string;
   default?: boolean;
@@ -428,7 +428,7 @@ export interface ScriptHTMLAttributes<
   T = HTMLScriptElement,
 > extends HTMLAttributes<T> {
   async?: boolean;
-  crossOrigin?: string;
+  crossOrigin?: boolean | 'anonymous' | 'use-credentials' | (string & {});
   defer?: boolean;
   integrity?: string;
   noModule?: boolean;

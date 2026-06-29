@@ -147,6 +147,7 @@ const BOOLEAN_ATTRS = new Set([
   'default',
   'defer',
   'disabled',
+  'disablepictureinpicture',
   'disableremoteplayback',
   'download',
   'draggable',
@@ -170,6 +171,24 @@ const BOOLEAN_ATTRS = new Set([
 ]);
 
 /**
+ * Enumerated attributes that have no boolean form. When written as a bare JSX
+ * prop (e.g. `<link crossorigin />`, which Preact passes as `true`), rendering
+ * `="true"` would be an invalid value, so emit the attribute's spec-defined
+ * default instead. For `crossorigin` the missing/invalid-value default is
+ * `anonymous`.
+ *
+ * Keyed by HTML attribute name (post-`PROP_TO_ATTR` remapping). A
+ * null-prototype object so the common "not enumerated" lookup misses without
+ * walking `Object.prototype`.
+ */
+const ENUMERATED_ATTR_TRUE_DEFAULTS: Record<string, string> = Object.assign(
+  Object.create(null),
+  {
+    crossorigin: 'anonymous',
+  }
+);
+
+/**
  * JSX prop name -> HTML attribute name.
  *
  * A null-prototype object so that the very common "no remapping needed" lookup
@@ -191,6 +210,7 @@ const PROP_TO_ATTR: Record<string, string> = Object.assign(
     contentEditable: 'contenteditable',
     crossOrigin: 'crossorigin',
     dateTime: 'datetime',
+    disablePictureInPicture: 'disablepictureinpicture',
     disableRemotePlayback: 'disableremoteplayback',
     encType: 'enctype',
     formAction: 'formaction',
@@ -730,11 +750,19 @@ export function renderJsxToString(
         // escaping, so skip `escapeAttr` entirely.
         result += ' ' + attrName + '="' + value + '"';
       } else if (value === true) {
-        // Boolean HTML attributes minimize to a bare attribute when `true`;
-        // other attributes are stringified (e.g. id="true").
-        result += BOOLEAN_ATTRS.has(attrName)
-          ? ' ' + attrName
-          : ' ' + attrName + '="true"';
+        // Boolean HTML attributes minimize to a bare attribute when `true`.
+        // Enumerated attributes with no boolean form (e.g. crossorigin) render
+        // their spec default rather than the invalid `="true"`. Everything else
+        // is stringified (e.g. id="true").
+        if (BOOLEAN_ATTRS.has(attrName)) {
+          result += ' ' + attrName;
+        } else {
+          const enumDefault = ENUMERATED_ATTR_TRUE_DEFAULTS[attrName];
+          result +=
+            enumDefault !== undefined
+              ? ' ' + attrName + '="' + enumDefault + '"'
+              : ' ' + attrName + '="true"';
+        }
       } else if (value === false) {
         // Boolean HTML attributes are removed when `false`; other attributes
         // are stringified (e.g. data-foo="false").
