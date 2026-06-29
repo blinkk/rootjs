@@ -46,6 +46,12 @@ test('renders disableRemotePlayback as a boolean attribute', () => {
   expect(output).toBe('<video disableremoteplayback></video>');
 });
 
+test('renders disablePictureInPicture as a boolean attribute', () => {
+  const vnode = <video disablePictureInPicture />;
+  const output = renderJsxToString(vnode, {mode: 'minimal'});
+  expect(output).toBe('<video disablepictureinpicture></video>');
+});
+
 test('renders popover as a boolean attribute', () => {
   // `<div popover />` should minimize to `popover` (treated as "auto" by the
   // browser) rather than rendering an invalid `popover="true"` value.
@@ -60,6 +66,23 @@ test('renders popover as a boolean attribute', () => {
   expect(
     renderJsxToString(<div popover="manual" />, {mode: 'minimal'})
   ).toBe('<div popover="manual"></div>');
+});
+
+test('renders crossorigin with a valid default value', () => {
+  // `<link crossorigin />` should render `crossorigin="anonymous"` (the
+  // spec-defined missing/invalid-value default) rather than the invalid
+  // `crossorigin="true"`.
+  expect(
+    renderJsxToString(<link rel="preload" href="/x.js" crossOrigin />, {
+      mode: 'minimal',
+    })
+  ).toBe('<link rel="preload" href="/x.js" crossorigin="anonymous">');
+  // Explicit string values are preserved.
+  expect(
+    renderJsxToString(<link href="/x.js" crossOrigin="use-credentials" />, {
+      mode: 'minimal',
+    })
+  ).toBe('<link href="/x.js" crossorigin="use-credentials">');
 });
 
 test('handles falsy attribute values', () => {
