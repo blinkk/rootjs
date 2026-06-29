@@ -64,5 +64,6 @@ export type {
   ScriptHTMLAttributes,
   DOMAttributes,
   AriaAttributes,
+  CSSProperties,
 } from './types.js';
 export type {JSX} from './types.js';

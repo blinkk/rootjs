@@ -83,6 +83,35 @@ export interface DOMAttributes {
 
 type EventHandler = string | ((...args: any[]) => void);
 
+// =============================================================================
+// CSS Types
+// =============================================================================
+
+/**
+ * The camelCase CSS property names recognized by the DOM, derived from the
+ * string-valued members of lib.dom's `CSSStyleDeclaration` (e.g.
+ * `backgroundColor`, `alignItems`, `cssFloat`). The numeric index signature,
+ * `length`, `parentRule`, and method members are filtered out.
+ */
+type CSSPropertyName = {
+  [K in keyof CSSStyleDeclaration]: K extends string
+    ? CSSStyleDeclaration[K] extends string
+      ? K
+      : never
+    : never;
+}[keyof CSSStyleDeclaration];
+
+/**
+ * Typed CSS style object accepted by the `style` prop. Each known CSS property
+ * maps to a `string` or `number` (a number is emitted verbatim, matching the
+ * renderer's `styleToString`), and CSS custom properties (`--my-var`) are also
+ * permitted.
+ */
+export interface CSSProperties
+  extends Partial<Record<CSSPropertyName, string | number>> {
+  [key: `--${string}`]: string | number | undefined;
+}
+
 export interface AriaAttributes {
   role?: string;
   'aria-activedescendant'?: string;
@@ -285,7 +314,7 @@ export interface HTMLAttributes<T = HTMLElement>
   srcSet?: string;
   start?: number;
   step?: number | string;
-  style?: string | Record<string, string | number>;
+  style?: string | CSSProperties;
   summary?: string;
   tabIndex?: number;
   target?: string;
