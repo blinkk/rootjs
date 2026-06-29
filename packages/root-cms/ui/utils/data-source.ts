@@ -23,10 +23,37 @@ export type GsheetDataFormat = 'array' | 'map';
 
 export type CronUnit = 'minutes' | 'hours' | 'days';
 
+/**
+ * Data source sync schedule type.
+ *
+ * - `interval`: sync every N minutes/hours/days (uses `interval` + `unit`).
+ * - `daily` / `weekly` / `custom`: sync on a specific cron schedule (uses
+ *   `expression` + `timezone`). `daily` and `weekly` are UI presets stored as
+ *   standard cron expressions; `custom` allows an arbitrary expression.
+ */
+export type CronScheduleType = 'interval' | 'daily' | 'weekly' | 'custom';
+
 export interface DataSourceCron {
   enabled: boolean;
-  interval: number;
-  unit: CronUnit;
+  /**
+   * Scheduling mode. Defaults to `interval` when unset (for backwards
+   * compatibility).
+   */
+  schedule?: CronScheduleType;
+  /** Interval value, used when `schedule` is `interval`. */
+  interval?: number;
+  /** Interval unit, used when `schedule` is `interval`. */
+  unit?: CronUnit;
+  /**
+   * Standard 5-field cron expression, used when `schedule` is `daily`,
+   * `weekly`, or `custom`, e.g. `0 19 * * *` for "every day at 7pm".
+   */
+  expression?: string;
+  /**
+   * IANA timezone used to evaluate `expression`, e.g. `America/New_York`.
+   * Defaults to UTC when unset.
+   */
+  timezone?: string;
   autoPublish?: boolean;
 }
 

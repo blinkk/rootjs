@@ -9,6 +9,7 @@ import {
   WriteBatch,
 } from 'firebase-admin/firestore';
 import {normalizeSlug} from '../shared/slug.js';
+import {isCronDue} from './cron-schedule.js';
 import {CMSPlugin} from './plugin.js';
 import {Collection} from './schema.js';
 import {TranslationsManager} from './translations-manager.js';
@@ -62,10 +63,39 @@ export type HttpMethod = 'GET' | 'POST';
 
 export type CronUnit = 'minutes' | 'hours' | 'days';
 
+/**
+ * Data source sync schedule type.
+ *
+ * - `interval`: sync every N minutes/hours/days (uses `interval` + `unit`).
+ * - `daily` / `weekly` / `custom`: sync on a specific cron schedule (uses
+ *   `expression` + `timezone`). `daily` and `weekly` are UI presets that are
+ *   stored as standard cron expressions; `custom` allows an arbitrary
+ *   expression.
+ */
+export type CronScheduleType = 'interval' | 'daily' | 'weekly' | 'custom';
+
 export interface DataSourceCron {
   enabled: boolean;
-  interval: number;
-  unit: CronUnit;
+  /**
+   * Scheduling mode. Defaults to `interval` when unset (for backwards
+   * compatibility with data sources created before specific schedules were
+   * supported).
+   */
+  schedule?: CronScheduleType;
+  /** Interval value, used when `schedule` is `interval`. */
+  interval?: number;
+  /** Interval unit, used when `schedule` is `interval`. */
+  unit?: CronUnit;
+  /**
+   * Standard 5-field cron expression, used when `schedule` is `daily`,
+   * `weekly`, or `custom`, e.g. `0 19 * * *` for "every day at 7pm".
+   */
+  expression?: string;
+  /**
+   * IANA timezone used to evaluate `expression`, e.g. `America/New_York`.
+   * Defaults to UTC when unset.
+   */
+  timezone?: string;
   autoPublish?: boolean;
 }
 
@@ -1042,49 +1072,43 @@ export class RootCMSClient {
     for (const snapshot of querySnapshot.docs) {
       const dataSource = snapshot.data() as DataSource;
       const cron = dataSource.cron;
-      if (
-        !cron ||
-        !cron.enabled ||
-        typeof cron.interval !== 'number' ||
-        !cron.unit
-      ) {
+      if (!cron || !cron.enabled) {
         continue;
       }
 
-      // Normalize and validate the interval value.
-      const interval = Number(cron.interval);
-      if (
-        !Number.isFinite(interval) ||
-        interval <= 0 ||
-        !Number.isInteger(interval)
-      ) {
-        continue;
-      }
+      const lastSyncMs = dataSource.syncedAt
+        ? dataSource.syncedAt.toMillis()
+        : 0;
 
-      // Calculate the interval in milliseconds.
-      let intervalMs = interval;
-      switch (cron.unit) {
-        case 'minutes':
-          intervalMs *= 60 * 1000;
-          break;
-        case 'hours':
-          intervalMs *= 60 * 60 * 1000;
-          break;
-        case 'days':
-          intervalMs *= 24 * 60 * 60 * 1000;
-          break;
-        default:
+      // Determine whether the data source is due for sync based on its
+      // schedule. `interval` (the default for legacy sources) syncs every N
+      // units of time; the other modes use a cron expression.
+      const schedule = cron.schedule || 'interval';
+      let due: boolean;
+      if (schedule === 'interval') {
+        due = isIntervalDue(cron, lastSyncMs, now);
+      } else {
+        const expression = (cron.expression || '').trim();
+        if (!expression) {
           continue;
+        }
+        try {
+          due = isCronDue({
+            expression: expression,
+            timezone: cron.timezone,
+            lastSyncMs: lastSyncMs,
+            now: now,
+          });
+        } catch (err) {
+          console.error(
+            `cron: invalid cron expression for data source ${dataSource.id}: ` +
+              `"${expression}":`,
+            String(err)
+          );
+          continue;
+        }
       }
-
-      // Check if enough time has passed since the last sync.
-      let lastSyncMs = dataSource.syncedAt ? dataSource.syncedAt.toMillis() : 0;
-      // Guard against future syncedAt values (e.g., from skewed client clocks)
-      // so that now - lastSyncMs does not become negative and block scheduling.
-      if (lastSyncMs > now) {
-        lastSyncMs = now;
-      }
-      if (now - lastSyncMs < intervalMs) {
+      if (!due) {
         continue;
       }
 
@@ -2145,6 +2169,48 @@ export function unmarshalArray(arrObject: ArrayObject): any[] {
 
 function isObject(data: any): boolean {
   return typeof data === 'object' && !Array.isArray(data) && data !== null;
+}
+
+/**
+ * Returns true if an interval-scheduled data source is due for sync, i.e. at
+ * least `interval` units of time have elapsed since the last sync.
+ */
+function isIntervalDue(
+  cron: DataSourceCron,
+  lastSyncMs: number,
+  now: number
+): boolean {
+  // Normalize and validate the interval value.
+  const interval = Number(cron.interval);
+  if (
+    !cron.unit ||
+    !Number.isFinite(interval) ||
+    interval <= 0 ||
+    !Number.isInteger(interval)
+  ) {
+    return false;
+  }
+
+  // Calculate the interval in milliseconds.
+  let intervalMs = interval;
+  switch (cron.unit) {
+    case 'minutes':
+      intervalMs *= 60 * 1000;
+      break;
+    case 'hours':
+      intervalMs *= 60 * 60 * 1000;
+      break;
+    case 'days':
+      intervalMs *= 24 * 60 * 60 * 1000;
+      break;
+    default:
+      return false;
+  }
+
+  // Guard against future syncedAt values (e.g., from skewed client clocks) so
+  // that now - lastSyncMs does not become negative and block scheduling.
+  const normalizedLastSyncMs = lastSyncMs > now ? now : lastSyncMs;
+  return now - normalizedLastSyncMs >= intervalMs;
 }
 
 /**

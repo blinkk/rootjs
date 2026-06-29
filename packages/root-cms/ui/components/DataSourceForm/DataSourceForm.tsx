@@ -10,11 +10,14 @@ import {
 import {showNotification} from '@mantine/notifications';
 import {useEffect, useRef, useState} from 'preact/hooks';
 import {useLocation} from 'preact-iso';
+import {isValidCronExpression} from '../../../core/cron-schedule.js';
 import {isSlugValid} from '../../../shared/slug.js';
 import {useGapiClient} from '../../hooks/useGapiClient.js';
 import {
+  CronScheduleType,
   CronUnit,
   DataSource,
+  DataSourceCron,
   DataSourceType,
   GsheetDataFormat,
   HttpMethod,
@@ -47,8 +50,14 @@ export function DataSourceForm(props: DataSourceFormProps) {
   const [dataFormat, setDataFormat] = useState<GsheetDataFormat>('map');
   const [httpMethod, setHttpMethod] = useState<HttpMethod>('GET');
   const [cronEnabled, setCronEnabled] = useState(false);
+  const [cronSchedule, setCronSchedule] = useState<CronScheduleType>('interval');
   const [cronInterval, setCronInterval] = useState<number>(1);
   const [cronUnit, setCronUnit] = useState<CronUnit>('hours');
+  const [cronDailyTime, setCronDailyTime] = useState('09:00');
+  const [cronWeeklyDay, setCronWeeklyDay] = useState('1');
+  const [cronWeeklyTime, setCronWeeklyTime] = useState('09:00');
+  const [cronExpression, setCronExpression] = useState('');
+  const [cronTimezone, setCronTimezone] = useState(getDefaultTimezone());
   const [cronAutoPublish, setCronAutoPublish] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(!!props.dataSourceId);
@@ -68,14 +77,32 @@ export function DataSourceForm(props: DataSourceFormProps) {
       setDataSourceType(dataSource?.type || 'http');
       setDataFormat(dataSource?.dataFormat || 'map');
       if (dataSource?.cron) {
-        setCronEnabled(dataSource.cron.enabled || false);
-        setCronInterval(dataSource.cron.interval || 1);
-        setCronUnit(dataSource.cron.unit || 'hours');
-        setCronAutoPublish(dataSource.cron.autoPublish || false);
+        const cron = dataSource.cron;
+        const schedule = cron.schedule || 'interval';
+        setCronEnabled(cron.enabled || false);
+        setCronSchedule(schedule);
+        setCronInterval(cron.interval || 1);
+        setCronUnit(cron.unit || 'hours');
+        setCronTimezone(cron.timezone || getDefaultTimezone());
+        if (schedule === 'daily') {
+          setCronDailyTime(cronToTime(cron.expression));
+        } else if (schedule === 'weekly') {
+          setCronWeeklyTime(cronToTime(cron.expression));
+          setCronWeeklyDay(cronToWeekday(cron.expression));
+        } else if (schedule === 'custom') {
+          setCronExpression(cron.expression || '');
+        }
+        setCronAutoPublish(cron.autoPublish || false);
       } else {
         setCronEnabled(false);
+        setCronSchedule('interval');
         setCronInterval(1);
         setCronUnit('hours');
+        setCronDailyTime('09:00');
+        setCronWeeklyDay('1');
+        setCronWeeklyTime('09:00');
+        setCronExpression('');
+        setCronTimezone(getDefaultTimezone());
         setCronAutoPublish(false);
       }
     });
@@ -155,20 +182,35 @@ export function DataSourceForm(props: DataSourceFormProps) {
       dataSource.dataFormat = (dataFormat || 'map') as any;
     }
 
-    if (cronEnabled) {
-      dataSource.cron = {
-        enabled: true,
-        interval: cronInterval,
-        unit: cronUnit,
-        autoPublish: cronAutoPublish,
-      };
+    const cron: DataSourceCron = {
+      enabled: cronEnabled,
+      schedule: cronSchedule,
+      autoPublish: cronEnabled && cronAutoPublish,
+    };
+    if (cronSchedule === 'interval') {
+      cron.interval = cronInterval;
+      cron.unit = cronUnit;
     } else {
-      dataSource.cron = {
-        enabled: false,
-        interval: cronInterval,
-        unit: cronUnit,
-      };
+      let expression = '';
+      if (cronSchedule === 'daily') {
+        expression = buildDailyCron(cronDailyTime);
+      } else if (cronSchedule === 'weekly') {
+        expression = buildWeeklyCron(cronWeeklyTime, cronWeeklyDay);
+      } else {
+        expression = cronExpression.trim();
+      }
+      // Only validate the expression when the schedule is actually enabled, so
+      // that disabling a partially-configured schedule can still be saved.
+      if (cronEnabled && !isValidCronExpression(expression)) {
+        setError(
+          'invalid cron expression (expected 5 fields, e.g. "0 19 * * *")'
+        );
+        return;
+      }
+      cron.expression = expression;
+      cron.timezone = cronTimezone;
     }
+    dataSource.cron = cron;
 
     try {
       setDataSource(dataSource as DataSource);
@@ -344,30 +386,119 @@ export function DataSourceForm(props: DataSourceFormProps) {
         />
         {cronEnabled && (
           <div className="DataSourceForm__cron">
-            <div className="DataSourceForm__cron__row">
-              <span>Run every</span>
-              <NumberInput
-                className="DataSourceForm__cron__interval"
-                value={cronInterval}
-                onChange={(val) => setCronInterval(Number(val) || 1)}
-                min={1}
-                size="xs"
-                radius={0}
-              />
+            <div className="DataSourceForm__input">
               <Select
-                className="DataSourceForm__cron__unit"
+                label="Schedule"
                 data={[
-                  {value: 'minutes', label: 'minutes'},
-                  {value: 'hours', label: 'hours'},
-                  {value: 'days', label: 'days'},
+                  {value: 'interval', label: 'Interval'},
+                  {value: 'daily', label: 'Daily'},
+                  {value: 'weekly', label: 'Weekly'},
+                  {value: 'custom', label: 'Custom (cron expression)'},
                 ]}
-                value={cronUnit}
-                onChange={(e: CronUnit) => setCronUnit(e)}
+                value={cronSchedule}
+                onChange={(e: CronScheduleType) => setCronSchedule(e)}
                 size="xs"
                 radius={0}
                 dropdownComponent="div"
               />
             </div>
+
+            {cronSchedule === 'interval' && (
+              <div className="DataSourceForm__cron__row">
+                <span>Run every</span>
+                <NumberInput
+                  className="DataSourceForm__cron__interval"
+                  value={cronInterval}
+                  onChange={(val) => setCronInterval(Number(val) || 1)}
+                  min={1}
+                  size="xs"
+                  radius={0}
+                />
+                <Select
+                  className="DataSourceForm__cron__unit"
+                  data={[
+                    {value: 'minutes', label: 'minutes'},
+                    {value: 'hours', label: 'hours'},
+                    {value: 'days', label: 'days'},
+                  ]}
+                  value={cronUnit}
+                  onChange={(e: CronUnit) => setCronUnit(e)}
+                  size="xs"
+                  radius={0}
+                  dropdownComponent="div"
+                />
+              </div>
+            )}
+
+            {cronSchedule === 'daily' && (
+              <div className="DataSourceForm__cron__row">
+                <span>Run every day at</span>
+                <input
+                  type="time"
+                  className="DataSourceForm__cron__time"
+                  value={cronDailyTime}
+                  onChange={(e) =>
+                    setCronDailyTime((e.target as HTMLInputElement).value)
+                  }
+                />
+              </div>
+            )}
+
+            {cronSchedule === 'weekly' && (
+              <div className="DataSourceForm__cron__row">
+                <span>Run every</span>
+                <Select
+                  className="DataSourceForm__cron__weekday"
+                  data={WEEKDAYS}
+                  value={cronWeeklyDay}
+                  onChange={(val: string) => val && setCronWeeklyDay(val)}
+                  size="xs"
+                  radius={0}
+                  dropdownComponent="div"
+                />
+                <span>at</span>
+                <input
+                  type="time"
+                  className="DataSourceForm__cron__time"
+                  value={cronWeeklyTime}
+                  onChange={(e) =>
+                    setCronWeeklyTime((e.target as HTMLInputElement).value)
+                  }
+                />
+              </div>
+            )}
+
+            {cronSchedule === 'custom' && (
+              <div className="DataSourceForm__input">
+                <TextInput
+                  label="Cron expression"
+                  description='Standard 5-field cron, e.g. "0 19 * * *" runs every day at 7pm, "0 17 * * 5" runs every Friday at 5pm.'
+                  placeholder="0 19 * * *"
+                  value={cronExpression}
+                  onChange={(e: any) =>
+                    setCronExpression((e.target as HTMLInputElement).value)
+                  }
+                  size="xs"
+                  radius={0}
+                />
+              </div>
+            )}
+
+            {cronSchedule !== 'interval' && (
+              <div className="DataSourceForm__input">
+                <Select
+                  label="Timezone"
+                  data={TIMEZONE_OPTIONS}
+                  value={cronTimezone}
+                  onChange={(val: string) => val && setCronTimezone(val)}
+                  searchable
+                  size="xs"
+                  radius={0}
+                  dropdownComponent="div"
+                />
+              </div>
+            )}
+
             <Checkbox
               className="DataSourceForm__input"
               label="Auto-publish after sync"
@@ -439,4 +570,82 @@ function headersToString(headers: Record<string, string>) {
     lines.push(`${key}: ${val}`);
   }
   return lines.join('\n');
+}
+
+const WEEKDAYS = [
+  {value: '0', label: 'Sunday'},
+  {value: '1', label: 'Monday'},
+  {value: '2', label: 'Tuesday'},
+  {value: '3', label: 'Wednesday'},
+  {value: '4', label: 'Thursday'},
+  {value: '5', label: 'Friday'},
+  {value: '6', label: 'Saturday'},
+];
+
+const TIMEZONE_OPTIONS = getTimezoneOptions();
+
+function getTimezoneOptions(): string[] {
+  try {
+    return (Intl as any).supportedValuesOf('timeZone');
+  } catch (err) {
+    return ['UTC'];
+  }
+}
+
+function getDefaultTimezone(): string {
+  try {
+    return Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
+  } catch (err) {
+    return 'UTC';
+  }
+}
+
+/** Parses a "HH:mm" time string into [hours, minutes], clamped to valid ranges. */
+function parseTimeParts(time: string): [number, number] {
+  const [hStr, mStr] = (time || '').split(':');
+  const hours = clamp(parseInt(hStr, 10) || 0, 0, 23);
+  const minutes = clamp(parseInt(mStr, 10) || 0, 0, 59);
+  return [hours, minutes];
+}
+
+function clamp(value: number, min: number, max: number): number {
+  return Math.max(min, Math.min(max, value));
+}
+
+/** Builds a cron expression for a daily schedule, e.g. "0 19 * * *". */
+function buildDailyCron(time: string): string {
+  const [hours, minutes] = parseTimeParts(time);
+  return `${minutes} ${hours} * * *`;
+}
+
+/** Builds a cron expression for a weekly schedule, e.g. "0 17 * * 5". */
+function buildWeeklyCron(time: string, dayOfWeek: string): string {
+  const [hours, minutes] = parseTimeParts(time);
+  return `${minutes} ${hours} * * ${dayOfWeek}`;
+}
+
+/** Extracts a "HH:mm" time string from a cron expression's minute/hour fields. */
+function cronToTime(expression?: string): string {
+  const fields = (expression || '').trim().split(/\s+/);
+  if (fields.length < 2) {
+    return '09:00';
+  }
+  const minutes = pad2(parseInt(fields[0], 10) || 0);
+  const hours = pad2(parseInt(fields[1], 10) || 0);
+  return `${hours}:${minutes}`;
+}
+
+/** Extracts the day-of-week field (0-6) from a cron expression. */
+function cronToWeekday(expression?: string): string {
+  const fields = (expression || '').trim().split(/\s+/);
+  const dayOfWeek = fields[4];
+  // Normalize Sunday (7) to 0 for the select options.
+  if (dayOfWeek === '7') {
+    return '0';
+  }
+  return dayOfWeek && /^[0-6]$/.test(dayOfWeek) ? dayOfWeek : '1';
+}
+
+function pad2(value: number): string {
+  return String(value).padStart(2, '0');
 }
