@@ -38,6 +38,21 @@ describe('sanitizeInlineHtml', () => {
     expect(out).not.toContain('data:');
   });
 
+  it('preserves mailto: hrefs', () => {
+    const out = sanitizeInlineHtml('<a href="mailto:hi@x.test">x</a>');
+    expect(out).toContain('href="mailto:hi@x.test"');
+  });
+
+  it('preserves tel: hrefs', () => {
+    const out = sanitizeInlineHtml('<a href="tel:+1234567890">x</a>');
+    expect(out).toContain('href="tel:+1234567890"');
+  });
+
+  it('preserves sms: hrefs', () => {
+    const out = sanitizeInlineHtml('<a href="sms:+1234567890">x</a>');
+    expect(out).toContain('href="sms:+1234567890"');
+  });
+
   it('drops block-level tags in inline context', () => {
     const out = sanitizeInlineHtml('<p>hi</p><div>x</div>');
     expect(out).not.toContain('<p>');
@@ -94,5 +109,15 @@ describe('sanitizeBlockHtml', () => {
   it('blocks protocol-relative URLs', () => {
     const out = sanitizeBlockHtml('<a href="//evil.test">x</a>');
     expect(out).not.toContain('//evil.test');
+  });
+
+  it('preserves tel: hrefs', () => {
+    const out = sanitizeBlockHtml('<a href="tel:+1234567890">x</a>');
+    expect(out).toContain('href="tel:+1234567890"');
+  });
+
+  it('preserves sms: hrefs', () => {
+    const out = sanitizeBlockHtml('<a href="sms:+1234567890">x</a>');
+    expect(out).toContain('href="sms:+1234567890"');
   });
 });
