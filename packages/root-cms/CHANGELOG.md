@@ -1,5 +1,17 @@
 # @blinkk/root-cms
 
+## 3.1.6
+
+### Patch Changes
+
+- eee7bc9: feat: add user role to auth object
+- 45480ad: chore: switch to experimentalAutoDetectLongPolling
+- e116632: feat: add support for tel: and sms: URL schemes in sanitizer
+- 8db3f16: feat: sync sidebar tool location with cms url
+- 282d013: feat: add cron expression support for data source scheduling
+- Updated dependencies [eee7bc9]
+  - @blinkk/root@3.1.6
+
 ## 3.1.5
 
 ### Patch Changes
