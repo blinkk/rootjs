@@ -49,7 +49,8 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 14px;
+  font-size: 12px;
+  margin-top: 8px;
   margin-bottom: 12px;
 }
 
@@ -66,7 +67,7 @@
 }
 
 .DataSourceForm__cron__time {
-  font-size: 14px;
+  font-size: 12px;
   padding: 6px 8px;
   border: 1px solid #ced4da;
 }
