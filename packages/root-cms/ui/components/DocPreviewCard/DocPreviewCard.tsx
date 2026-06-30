@@ -1,6 +1,7 @@
 import './DocPreviewCard.css';
 
 import {Loader} from '@mantine/core';
+import {IconFileOff} from '@tabler/icons-preact';
 import {useEffect, useState} from 'preact/hooks';
 import {joinClassNames} from '../../utils/classes.js';
 import {getDocFromCacheOrFetch} from '../../utils/doc-cache.js';
@@ -52,9 +53,31 @@ export function DocPreviewCard(props: DocPreviewCardProps) {
     );
   }
 
-  // Short circuit if there is no doc (i.e. a stale reference).
+  // If there is no doc (i.e. a stale reference to a doc that was deleted or
+  // archived), show a "not found" indicator instead of a blank card.
   if (!doc) {
-    return;
+    return (
+      <div
+        className={joinClassNames(
+          props.className,
+          'DocPreviewCard',
+          'DocPreviewCard--notfound',
+          props.variant && `DocPreviewCard--${props.variant}`
+        )}
+      >
+        <div className="DocPreviewCard__notfound__icon">
+          <IconFileOff size={24} stroke={1.5} />
+        </div>
+        <div className="DocPreviewCard__content">
+          <div className="DocPreviewCard__content__header">
+            <div className="DocPreviewCard__content__header__docId">{docId}</div>
+          </div>
+          <div className="DocPreviewCard__notfound__message">
+            Doc not found (was it deleted or archived?)
+          </div>
+        </div>
+      </div>
+    );
   }
 
   const [collection] = docId.split('/');
