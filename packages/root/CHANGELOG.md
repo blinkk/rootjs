@@ -1,5 +1,11 @@
 # @blinkk/root
 
+## 3.1.6
+
+### Patch Changes
+
+- eee7bc9: feat: add user role to auth object
+
 ## 3.1.5
 
 ### Patch Changes
