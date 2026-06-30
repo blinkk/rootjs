@@ -1,5 +1,11 @@
 import {ComponentChildren, createContext} from 'preact';
-import {useContext, useEffect, useState} from 'preact/hooks';
+import {
+  useCallback,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+} from 'preact/hooks';
 import {isScrollToDeeplinkMessage} from '../../shared/embed-protocol.js';
 import {isAllowedOrigin} from '../utils/embed-bridge.js';
 
@@ -20,17 +26,68 @@ function getDeeplinkFromUrl(): string {
   return params.get('deeplink') || '';
 }
 
+/** Writes (or clears) the `deeplink` query param without touching history. */
+function syncDeeplinkUrl(deepKey: string) {
+  const url = new URL(window.location.href);
+  if (deepKey) {
+    url.searchParams.set('deeplink', deepKey);
+  } else {
+    url.searchParams.delete('deeplink');
+  }
+  window.history.replaceState({}, '', url.toString());
+}
+
 const DEEPLINK_CONTEXT = createContext<DeeplinkContext | null>(null);
 
 export function DeeplinkProvider(props: {children: ComponentChildren}) {
-  const deeplinkFromUrl = getDeeplinkFromUrl();
-  const [value, setValue] = useState(deeplinkFromUrl);
+  const [value, setValueState] = useState(getDeeplinkFromUrl);
+
+  // Live mirror of `value` so `setValue` can read the current value
+  // synchronously (without depending on a possibly-stale render closure).
+  const valueRef = useRef(value);
+  valueRef.current = value;
+
+  // Tracks a field that was *just* cleared so we can ignore the preview
+  // iframe's `scrollToDeeplink` echo (clicking/focusing in the preview posts a
+  // message back, which would otherwise immediately re-add the deeplink and
+  // cause a visible "flash off then back on" in the URL).
+  const recentlyCleared = useRef<{deepKey: string; at: number} | null>(null);
+
+  // Single source of truth: update React state AND keep the URL in sync. This
+  // avoids fragile "read the URL on every render" coupling that made the
+  // deeplink toggle unreliable.
+  const setValue = useCallback((next: string) => {
+    const prev = valueRef.current;
+    if (!next && prev) {
+      // Mark the cleared key synchronously so an echo arriving before React
+      // commits the new state is still suppressed.
+      recentlyCleared.current = {deepKey: prev, at: Date.now()};
+    } else if (next) {
+      recentlyCleared.current = null;
+    }
+    valueRef.current = next;
+    setValueState(next);
+    syncDeeplinkUrl(next);
+  }, []);
+
   const deeplinkCtx = {value, setValue};
 
-  // When navigating between docs (URL changes), update the deeplink.
+  // Allow pressing "Esc" to unselect the currently highlighted field.
   useEffect(() => {
-    setValue(deeplinkFromUrl);
-  }, [deeplinkFromUrl]);
+    if (!value) {
+      return;
+    }
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape' || event.defaultPrevented) {
+        return;
+      }
+      setValue('');
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [value, setValue]);
 
   //  Enable posting messages from the preview frame to the DocEditor so that
   // fields can be focused.
@@ -43,14 +100,21 @@ export function DeeplinkProvider(props: {children: ComponentChildren}) {
       }
       if (isScrollToDeeplinkMessage(event.data)) {
         const deepKey = event.data.scrollToDeeplink.deepKey;
+        // Ignore the preview's echo of a deeplink the user just toggled off.
+        // Match the exact key as well as parent/child keys, since the echo can
+        // reference a nested field of the one that was cleared.
+        const cleared = recentlyCleared.current;
+        if (cleared && Date.now() - cleared.at < 1000) {
+          const a = cleared.deepKey;
+          const b = deepKey;
+          if (a === b || a.startsWith(`${b}.`) || b.startsWith(`${a}.`)) {
+            return;
+          }
+        }
         const element = document.getElementById(deepKey);
         if (element) {
           setValue(deepKey);
           scrollToDeeplink(element, {behavior: 'smooth', force: true});
-          // Update the URL without modifying the history.
-          const url = new URL(window.location.href);
-          url.searchParams.set('deeplink', deepKey);
-          window.history.replaceState({}, '', url.toString());
         }
       }
     };
@@ -58,7 +122,7 @@ export function DeeplinkProvider(props: {children: ComponentChildren}) {
     return () => {
       window.removeEventListener('message', handleMessage);
     };
-  }, []);
+  }, [setValue]);
 
   return (
     <DEEPLINK_CONTEXT.Provider value={deeplinkCtx}>
@@ -75,6 +139,15 @@ export function useDeeplink(): DeeplinkContext {
     );
   }
   return ctxValue;
+}
+
+/**
+ * Like {@link useDeeplink} but returns `null` instead of throwing when there is
+ * no surrounding `<DeeplinkProvider>`. Useful for components that can be used
+ * both inside and outside the doc editor (e.g. {@link Viewers}).
+ */
+export function useOptionalDeeplink(): DeeplinkContext | null {
+  return useContext(DEEPLINK_CONTEXT);
 }
 
 /** Opens all the ancestor detail elements. */

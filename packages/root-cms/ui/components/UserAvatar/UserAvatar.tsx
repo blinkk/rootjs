@@ -29,6 +29,23 @@ export interface UserAvatarProps {
    * inactive (e.g. disconnected from a viewing session).
    */
   inactive?: boolean;
+  /**
+   * Optional click handler. When provided, the avatar becomes interactive
+   * (e.g. to deeplink to the field a viewer is focused on).
+   */
+  onClick?: (e: MouseEvent) => void;
+  /**
+   * If true, draws a colored ring around the avatar using the user's
+   * deterministic color (à la Google Docs), so the same user is easy to
+   * recognize across the UI even when they have a profile photo. When a
+   * profile photo is shown, this is the only color cue.
+   */
+  colorRing?: boolean;
+  /**
+   * Width (in px) of the colored ring drawn when {@link colorRing} is set. A
+   * white ring of 1px is always drawn just outside it. Defaults to 2.
+   */
+  ringWidth?: number;
 }
 
 /**
@@ -50,33 +67,65 @@ export function UserAvatar(props: UserAvatarProps) {
   const displayName = profile?.displayName || '';
   const photoURL = profile?.photoURL || '';
   const [imgError, setImgError] = useState(false);
+  const [imgLoaded, setImgLoaded] = useState(false);
+
+  const hasPhoto = Boolean(photoURL) && !imgError;
+  const showInitials = !hasPhoto;
+  const avatarColor = getAvatarColor(email || displayName || '?');
+
+  // Color-codes users consistently across the UI (à la Google Docs): a ring in
+  // the user's color directly around the photo, then a 1px white ring just
+  // outside that. Drawn with box-shadow so it never shifts layout.
+  const ringWidth = props.ringWidth ?? 2;
+  const ringStyle = props.colorRing
+    ? {
+        boxShadow: `0 0 0 ${ringWidth}px ${avatarColor}, 0 0 0 ${
+          ringWidth + 1
+        }px #fff`,
+      }
+    : undefined;
 
   const avatar = (
     <Avatar
       className={joinClassNames(
         'UserAvatar',
         props.inactive && 'UserAvatar--inactive',
+        props.onClick && 'UserAvatar--clickable',
+        props.colorRing && 'UserAvatar--colorRing',
         props.className
       )}
-      src={!imgError && photoURL ? photoURL : undefined}
+      src={hasPhoto ? photoURL : undefined}
       alt={displayName || email}
       size={size}
       radius="xl"
+      onClick={props.onClick}
       style={
-        !photoURL || imgError
+        showInitials
           ? {
-              backgroundColor: getAvatarColor(email || displayName || '?'),
+              backgroundColor: avatarColor,
               color: '#fff',
               fontWeight: 600,
               fontSize: Math.max(10, Math.round(size * 0.4)),
+              // 1px colored ring drawn inside the edge (negative offset so it
+              // never shifts layout) to help differentiate auto-generated
+              // avatars, à la Google Docs.
+              outline: `1px solid ${avatarColor}`,
+              outlineOffset: '-1px',
+              ...ringStyle,
             }
-          : undefined
+          : {
+              // Keep the background transparent until the real image has
+              // loaded so the default placeholder doesn't flash.
+              backgroundColor: imgLoaded ? undefined : 'transparent',
+              ...ringStyle,
+            }
       }
       imageProps={{
+        onLoad: () => setImgLoaded(true),
         onError: () => setImgError(true),
       }}
     >
-      {!photoURL || imgError ? getUserInitials(email, displayName) : null}
+      {showInitials ? getUserInitials(email, displayName) : null}
     </Avatar>
   );
 
