@@ -118,6 +118,32 @@ describe('DocPreviewCard', () => {
       .toMatchScreenshot('DocPreviewCard-badges.png');
   });
 
+  it('renders not found indicator for a stale reference', async () => {
+    render(
+      <div data-testid="card-notfound" style={{width: '300px'}}>
+        <DocPreviewCard docId="products/deleted-doc" />
+      </div>
+    );
+    await expect.element(page.getByText('products/deleted-doc')).toBeVisible();
+    await expect.element(page.getByText(/Doc not found/)).toBeVisible();
+    await expect
+      .element(page.getByTestId('card-notfound'))
+      .toMatchScreenshot('DocPreviewCard-notfound.png');
+  });
+
+  it('renders compact not found indicator for a stale reference', async () => {
+    render(
+      <div data-testid="card-notfound-compact" style={{width: '300px'}}>
+        <DocPreviewCard docId="products/deleted-doc" variant="compact" />
+      </div>
+    );
+    await expect.element(page.getByText('products/deleted-doc')).toBeVisible();
+    await expect.element(page.getByText(/Doc not found/)).toBeVisible();
+    await expect
+      .element(page.getByTestId('card-notfound-compact'))
+      .toMatchScreenshot('DocPreviewCard-notfound-compact.png');
+  });
+
   it('renders compact with badges', async () => {
     const doc = createDoc('products/test-doc', {
       publishedAt: mockTimestamp(1647485978000),
