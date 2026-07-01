@@ -2,33 +2,21 @@ import {useEffect, useRef, useState} from 'preact/hooks';
 import {isRootToolLocationMessage} from '../../../shared/embed-protocol.js';
 import {usePageTitle} from '../../hooks/usePageTitle.js';
 import {Layout} from '../../layout/Layout.js';
+import {
+  IFRAME_PATH_PARAM,
+  computeStoredPath,
+  getRelativePath,
+  getStoredIframePath,
+  resolveInitialSrc,
+} from '../../utils/iframe-url-sync.js';
 import './SidebarToolsPage.css';
 
 interface SidebarToolsPageProps {
   id: string;
 }
 
-/**
- * Query param on the CMS tool URL (`/cms/tools/:id`) that stores the iframe's
- * current location (its origin-relative `pathname + search + hash`). Mirroring
- * the iframe's location here keeps the address bar in sync with where the user
- * is inside the tool, so the path survives a refresh and can be shared.
- */
-const IFRAME_PATH_PARAM = 'path';
-
 /** Polling interval (ms) used to detect SPA navigations in same-origin tools. */
 const POLL_INTERVAL_MS = 400;
-
-/** Returns the origin-relative `pathname + search + hash` of a URL. */
-function getRelativePath(url: URL): string {
-  return `${url.pathname}${url.search}${url.hash}`;
-}
-
-/** Reads the stored iframe sub-path from the current CMS URL. */
-function getStoredIframePath(): string {
-  const params = new URLSearchParams(window.location.search);
-  return params.get(IFRAME_PATH_PARAM) || '';
-}
 
 export function SidebarToolsPage(props: SidebarToolsPageProps) {
   const sidebarTools = window.__ROOT_CTX.sidebar?.tools || {};
@@ -98,7 +86,12 @@ export function SidebarToolsPage(props: SidebarToolsPageProps) {
   return (
     <Layout>
       <div className="SidebarToolsPage">
-        <ToolIframe iframeUrl={tool.iframeUrl} />
+        {/*
+          Key by tool id so switching tools (e.g. /cms/tools/a -> /cms/tools/b)
+          remounts the iframe with the new URL instead of reusing the stale
+          initial src captured on first mount.
+        */}
+        <ToolIframe key={props.id} iframeUrl={tool.iframeUrl} />
       </div>
     </Layout>
   );
@@ -128,23 +121,18 @@ function ToolIframe(props: ToolIframeProps) {
   const iframeRef = useRef<HTMLIFrameElement>(null);
 
   // Resolve the iframe's base URL once. `iframeUrl` may be absolute or relative
-  // to the CMS origin.
+  // to the CMS origin. This component is keyed by tool id, so switching tools
+  // remounts it and re-runs these initializers with the new URL.
   const [base] = useState(() => new URL(props.iframeUrl, window.location.href));
 
-  // Compute the initial src once, restoring any stored sub-path. Resolving the
-  // stored origin-relative path against the tool's origin reconstructs the full
-  // URL the user was last on.
-  const [initialSrc] = useState(() => {
-    const stored = getStoredIframePath();
-    if (!stored) {
-      return props.iframeUrl;
-    }
-    try {
-      return new URL(stored, base.origin).toString();
-    } catch {
-      return props.iframeUrl;
-    }
-  });
+  // Compute the initial src once, restoring any stored sub-path so a refresh or
+  // shared link lands the user back where they were inside the tool.
+  const [initialSrc] = useState(() =>
+    resolveInitialSrc(
+      props.iframeUrl,
+      getStoredIframePath(window.location.search)
+    )
+  );
 
   useEffect(() => {
     const iframe = iframeRef.current;
@@ -152,7 +140,6 @@ function ToolIframe(props: ToolIframeProps) {
       return;
     }
 
-    const homePath = getRelativePath(base);
     let lastSynced: string | null = null;
     // Set true once we detect the tool has navigated to a cross-origin page,
     // whose location the browser won't let us read. We then rely on the tool
@@ -165,9 +152,10 @@ function ToolIframe(props: ToolIframeProps) {
         return;
       }
       lastSynced = relativePath;
+      const stored = computeStoredPath(props.iframeUrl, relativePath);
       const url = new URL(window.location.href);
-      if (relativePath && relativePath !== homePath) {
-        url.searchParams.set(IFRAME_PATH_PARAM, relativePath);
+      if (stored) {
+        url.searchParams.set(IFRAME_PATH_PARAM, stored);
       } else {
         // At the tool's home location: drop the param to keep the URL clean.
         url.searchParams.delete(IFRAME_PATH_PARAM);
@@ -242,7 +230,7 @@ function ToolIframe(props: ToolIframeProps) {
       window.clearTimeout(pollTimer);
       window.removeEventListener('message', handleMessage);
     };
-  }, [base]);
+  }, [base, props.iframeUrl]);
 
   return <iframe ref={iframeRef} src={initialSrc} />;
 }
