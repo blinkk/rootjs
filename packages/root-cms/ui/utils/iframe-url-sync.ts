@@ -20,7 +20,7 @@ export function getRelativePath(url: URL): string {
 
 /**
  * Normalizes a URL for comparison by stripping a trailing slash from the
- * pathname, so `https://x/tool` and `https://x/tool/` compare equal.
+ * pathname, so `https://example.com/tool` and `https://example.com/tool/` compare equal.
  */
 function normalizeHref(url: URL): string {
   const pathname = url.pathname.replace(/\/+$/, '') || '/';

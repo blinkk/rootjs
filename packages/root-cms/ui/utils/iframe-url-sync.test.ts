@@ -8,10 +8,10 @@ import {
 
 describe('getRelativePath', () => {
   it('returns pathname + search + hash', () => {
-    expect(getRelativePath(new URL('https://x.com/tool/sub?a=1#h'))).toBe(
+    expect(getRelativePath(new URL('https://example.com/tool/sub?a=1#h'))).toBe(
       '/tool/sub?a=1#h'
     );
-    expect(getRelativePath(new URL('https://x.com/'))).toBe('/');
+    expect(getRelativePath(new URL('https://example.com/'))).toBe('/');
   });
 });
 
@@ -27,30 +27,30 @@ describe('getStoredIframePath', () => {
 
 describe('resolveInitialSrc', () => {
   it('returns the iframe url when nothing is stored', () => {
-    expect(resolveInitialSrc('https://x.com/tool', '')).toBe(
-      'https://x.com/tool'
+    expect(resolveInitialSrc('https://example.com/tool', '')).toBe(
+      'https://example.com/tool'
     );
   });
 
   it('restores a stored sub-path onto the tool origin', () => {
-    expect(resolveInitialSrc('https://x.com/tool', '/tool/sub?a=1#h')).toBe(
-      'https://x.com/tool/sub?a=1#h'
-    );
+    expect(
+      resolveInitialSrc('https://example.com/tool', '/tool/sub?a=1#h')
+    ).toBe('https://example.com/tool/sub?a=1#h');
   });
 
   // The stored path is origin-relative, so a trailing slash on the configured
   // iframe url does not change how it is restored.
   it('restores regardless of a trailing slash on the iframe url', () => {
     const withoutSlash = resolveInitialSrc(
-      'https://x.com/tool',
+      'https://example.com/tool',
       '/tool/sub?a=1#h'
     );
     const withSlash = resolveInitialSrc(
-      'https://x.com/tool/',
+      'https://example.com/tool/',
       '/tool/sub?a=1#h'
     );
-    expect(withoutSlash).toBe('https://x.com/tool/sub?a=1#h');
-    expect(withSlash).toBe('https://x.com/tool/sub?a=1#h');
+    expect(withoutSlash).toBe('https://example.com/tool/sub?a=1#h');
+    expect(withSlash).toBe('https://example.com/tool/sub?a=1#h');
   });
 
   it('resolves relative iframe urls against the cms origin', () => {
@@ -62,30 +62,30 @@ describe('resolveInitialSrc', () => {
 
 describe('computeStoredPath', () => {
   it('stores a sub-path when navigated away from home', () => {
-    expect(computeStoredPath('https://x.com/tool', '/tool/sub?a=1#h')).toBe(
-      '/tool/sub?a=1#h'
-    );
+    expect(
+      computeStoredPath('https://example.com/tool', '/tool/sub?a=1#h')
+    ).toBe('/tool/sub?a=1#h');
   });
 
   it('drops the param at the home location', () => {
-    expect(computeStoredPath('https://x.com/tool', '/tool')).toBeNull();
+    expect(computeStoredPath('https://example.com/tool', '/tool')).toBeNull();
   });
 
   // Trailing-slash differences between the configured url and the loaded
   // location should still be treated as home so the url stays clean.
   it('treats trailing-slash variants of home as home', () => {
-    expect(computeStoredPath('https://x.com/tool', '/tool/')).toBeNull();
-    expect(computeStoredPath('https://x.com/tool/', '/tool')).toBeNull();
-    expect(computeStoredPath('https://x.com/tool/', '/tool/')).toBeNull();
+    expect(computeStoredPath('https://example.com/tool', '/tool/')).toBeNull();
+    expect(computeStoredPath('https://example.com/tool/', '/tool')).toBeNull();
+    expect(computeStoredPath('https://example.com/tool/', '/tool/')).toBeNull();
   });
 
   it('preserves the sub-path (including its trailing slash) when stored', () => {
-    expect(computeStoredPath('https://x.com/tool', '/tool/sub/')).toBe(
+    expect(computeStoredPath('https://example.com/tool', '/tool/sub/')).toBe(
       '/tool/sub/'
     );
   });
 
   it('returns null for an empty relative path', () => {
-    expect(computeStoredPath('https://x.com/tool', '')).toBeNull();
+    expect(computeStoredPath('https://example.com/tool', '')).toBeNull();
   });
 });
