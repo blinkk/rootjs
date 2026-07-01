@@ -11,7 +11,7 @@
 .FileField:has(.dragging) .FileField__Dropzone,
 .FileField:has(.dragging) .FileField__Canvas,
 .FileField:has(.dragging) .FileField__Canvas__Info {
-  background-color: #f3d9fa;
+  background-color: rgb(249, 238, 252);
 }
 
 .FileField:has(.FileField__Canvas) {
@@ -194,7 +194,7 @@ a.FileField__Preview__AssetLibraryBadge:active {
 }
 
 .FileField__Canvas.dragging {
-  background-color: #f3d9fa;
+  background-color: rgb(249, 238, 252);
 }
 
 .FileField__Preview__Image {
@@ -231,7 +231,7 @@ a.FileField__Preview__AssetLibraryBadge:active {
 }
 
 .FileField__Dropzone.dragging {
-  background-color: #f3d9fa;
+  background-color: rgb(249, 238, 252);
 }
 
 .FileField__Empty {
