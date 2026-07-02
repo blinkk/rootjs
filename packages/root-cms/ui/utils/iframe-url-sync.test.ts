@@ -1,91 +1,147 @@
 import {describe, it, expect} from 'vitest';
 import {
-  computeStoredPath,
-  getRelativePath,
-  getStoredIframePath,
-  resolveInitialSrc,
+  cmsToolPrefix,
+  cmsUrlToIframeSrc,
+  iframeLocationToCmsUrl,
 } from './iframe-url-sync.js';
 
-describe('getRelativePath', () => {
-  it('returns pathname + search + hash', () => {
-    expect(getRelativePath(new URL('https://example.com/tool/sub?a=1#h'))).toBe(
-      '/tool/sub?a=1#h'
-    );
-    expect(getRelativePath(new URL('https://example.com/'))).toBe('/');
+/** Builds a UrlParts from a relative url like "/foo?a=1#h". */
+function parts(relative: string) {
+  const url = new URL(relative, 'https://cms.example.com');
+  return {pathname: url.pathname, search: url.search, hash: url.hash};
+}
+
+describe('cmsToolPrefix', () => {
+  it('builds the tool route prefix', () => {
+    expect(cmsToolPrefix('foo')).toBe('/cms/tools/foo');
   });
 });
 
-describe('getStoredIframePath', () => {
-  it('reads the path param', () => {
-    expect(getStoredIframePath('?path=%2Ftool%2Fsub%3Fa%3D1')).toBe(
-      '/tool/sub?a=1'
-    );
-    expect(getStoredIframePath('')).toBe('');
-    expect(getStoredIframePath('?other=1')).toBe('');
-  });
-});
-
-describe('resolveInitialSrc', () => {
-  it('returns the iframe url when nothing is stored', () => {
-    expect(resolveInitialSrc('https://example.com/tool', '')).toBe(
-      'https://example.com/tool'
-    );
-  });
-
-  it('restores a stored sub-path onto the tool origin', () => {
+describe('iframeLocationToCmsUrl', () => {
+  it('mirrors a sub-path onto the cms tool prefix', () => {
     expect(
-      resolveInitialSrc('https://example.com/tool', '/tool/sub?a=1#h')
-    ).toBe('https://example.com/tool/sub?a=1#h');
+      iframeLocationToCmsUrl('/myroute/foo', 'foo', parts('/myroute/foo/bar/'))
+    ).toBe('/cms/tools/foo/bar/');
   });
 
-  // The stored path is origin-relative, so a trailing slash on the configured
-  // iframe url does not change how it is restored.
-  it('restores regardless of a trailing slash on the iframe url', () => {
-    const withoutSlash = resolveInitialSrc(
-      'https://example.com/tool',
-      '/tool/sub?a=1#h'
-    );
-    const withSlash = resolveInitialSrc(
-      'https://example.com/tool/',
-      '/tool/sub?a=1#h'
-    );
-    expect(withoutSlash).toBe('https://example.com/tool/sub?a=1#h');
-    expect(withSlash).toBe('https://example.com/tool/sub?a=1#h');
+  it('preserves query params and hash', () => {
+    expect(
+      iframeLocationToCmsUrl(
+        '/myroute/foo',
+        'foo',
+        parts('/myroute/foo/bar/?preview=true#section')
+      )
+    ).toBe('/cms/tools/foo/bar/?preview=true#section');
   });
 
-  it('resolves relative iframe urls against the cms origin', () => {
-    expect(resolveInitialSrc('/local-tool', '/local-tool/sub')).toBe(
-      `${window.location.origin}/local-tool/sub`
-    );
+  it('returns the bare prefix at the tool home', () => {
+    expect(
+      iframeLocationToCmsUrl('/myroute/foo', 'foo', parts('/myroute/foo'))
+    ).toBe('/cms/tools/foo');
+  });
+
+  // A trailing slash on the iframe url should not change the mirrored result.
+  it('works whether or not the iframe url has a trailing slash', () => {
+    expect(
+      iframeLocationToCmsUrl('/myroute/foo/', 'foo', parts('/myroute/foo/bar/'))
+    ).toBe('/cms/tools/foo/bar/');
+    expect(
+      iframeLocationToCmsUrl('/myroute/foo', 'foo', parts('/myroute/foo/bar/'))
+    ).toBe('/cms/tools/foo/bar/');
+  });
+
+  it('handles absolute (cross-origin) iframe urls', () => {
+    expect(
+      iframeLocationToCmsUrl(
+        'https://tool.example.com/app',
+        'design',
+        parts('/app/insights/?q=1')
+      )
+    ).toBe('/cms/tools/design/insights/?q=1');
+  });
+
+  it('handles a tool mounted at the domain root', () => {
+    expect(
+      iframeLocationToCmsUrl('https://tool.example.com/', 'foo', parts('/bar/'))
+    ).toBe('/cms/tools/foo/bar/');
+  });
+
+  it('returns null when the iframe navigates outside its base path', () => {
+    expect(
+      iframeLocationToCmsUrl('/myroute/foo', 'foo', parts('/somewhere/else'))
+    ).toBeNull();
+  });
+
+  // Guard against a prefix that is a string-prefix but not a path-prefix.
+  it('does not treat a sibling path as a sub-path', () => {
+    expect(
+      iframeLocationToCmsUrl('/myroute/foo', 'foo', parts('/myroute/foobar'))
+    ).toBeNull();
   });
 });
 
-describe('computeStoredPath', () => {
-  it('stores a sub-path when navigated away from home', () => {
+describe('cmsUrlToIframeSrc', () => {
+  it('appends the cms sub-path onto the iframe base', () => {
     expect(
-      computeStoredPath('https://example.com/tool', '/tool/sub?a=1#h')
-    ).toBe('/tool/sub?a=1#h');
+      cmsUrlToIframeSrc('/myroute/foo', 'foo', parts('/cms/tools/foo/bar/'))
+    ).toBe('http://localhost:3000/myroute/foo/bar/');
   });
 
-  it('drops the param at the home location', () => {
-    expect(computeStoredPath('https://example.com/tool', '/tool')).toBeNull();
+  it('preserves query params and hash', () => {
+    expect(
+      cmsUrlToIframeSrc(
+        'https://tool.example.com/app',
+        'design',
+        parts('/cms/tools/design/insights/?preview=true#s')
+      )
+    ).toBe('https://tool.example.com/app/insights/?preview=true#s');
   });
 
-  // Trailing-slash differences between the configured url and the loaded
-  // location should still be treated as home so the url stays clean.
-  it('treats trailing-slash variants of home as home', () => {
-    expect(computeStoredPath('https://example.com/tool', '/tool/')).toBeNull();
-    expect(computeStoredPath('https://example.com/tool/', '/tool')).toBeNull();
-    expect(computeStoredPath('https://example.com/tool/', '/tool/')).toBeNull();
+  it('returns the configured iframe url verbatim at the tool home', () => {
+    expect(
+      cmsUrlToIframeSrc('/myroute/foo/', 'foo', parts('/cms/tools/foo'))
+    ).toBe('/myroute/foo/');
   });
 
-  it('preserves the sub-path (including its trailing slash) when stored', () => {
-    expect(computeStoredPath('https://example.com/tool', '/tool/sub/')).toBe(
-      '/tool/sub/'
+  // Round-trips regardless of a trailing slash on the configured iframe url.
+  it('restores the same sub-path with or without a trailing slash', () => {
+    const withSlash = cmsUrlToIframeSrc(
+      'https://tool.example.com/app/',
+      'app',
+      parts('/cms/tools/app/x/y/')
     );
+    const withoutSlash = cmsUrlToIframeSrc(
+      'https://tool.example.com/app',
+      'app',
+      parts('/cms/tools/app/x/y/')
+    );
+    expect(withSlash).toBe('https://tool.example.com/app/x/y/');
+    expect(withoutSlash).toBe('https://tool.example.com/app/x/y/');
   });
 
-  it('returns null for an empty relative path', () => {
-    expect(computeStoredPath('https://example.com/tool', '')).toBeNull();
+  it('handles a tool mounted at the domain root', () => {
+    expect(
+      cmsUrlToIframeSrc(
+        'https://tool.example.com/',
+        'foo',
+        parts('/cms/tools/foo/bar/')
+      )
+    ).toBe('https://tool.example.com/bar/');
+  });
+});
+
+describe('round trip', () => {
+  it('cms -> iframe -> cms is stable', () => {
+    const iframeUrl = 'https://tool.example.com/app';
+    const cmsUrl = '/cms/tools/app/reports/2024/?tab=all#top';
+    const src = cmsUrlToIframeSrc(iframeUrl, 'app', parts(cmsUrl));
+    const loc = new URL(src);
+    expect(
+      iframeLocationToCmsUrl(iframeUrl, 'app', {
+        pathname: loc.pathname,
+        search: loc.search,
+        hash: loc.hash,
+      })
+    ).toBe(cmsUrl);
   });
 });

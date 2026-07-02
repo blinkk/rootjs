@@ -3,11 +3,8 @@ import {isRootToolLocationMessage} from '../../../shared/embed-protocol.js';
 import {usePageTitle} from '../../hooks/usePageTitle.js';
 import {Layout} from '../../layout/Layout.js';
 import {
-  IFRAME_PATH_PARAM,
-  computeStoredPath,
-  getRelativePath,
-  getStoredIframePath,
-  resolveInitialSrc,
+  cmsUrlToIframeSrc,
+  iframeLocationToCmsUrl,
 } from '../../utils/iframe-url-sync.js';
 import './SidebarToolsPage.css';
 
@@ -91,13 +88,14 @@ export function SidebarToolsPage(props: SidebarToolsPageProps) {
           remounts the iframe with the new URL instead of reusing the stale
           initial src captured on first mount.
         */}
-        <ToolIframe key={props.id} iframeUrl={tool.iframeUrl} />
+        <ToolIframe key={props.id} id={props.id} iframeUrl={tool.iframeUrl} />
       </div>
     </Layout>
   );
 }
 
 interface ToolIframeProps {
+  id: string;
   iframeUrl: string;
 }
 
@@ -105,17 +103,19 @@ interface ToolIframeProps {
  * Renders a sidebar tool inside an iframe and keeps the iframe's location in
  * sync with the CMS URL, both ways:
  *
- * - On mount, the iframe is opened at the sub-path stored on the CMS URL (the
- *   `path` query param), so refreshing or sharing the page lands the user back
- *   where they were inside the tool.
- * - As the user navigates within the tool, the CMS URL's `path` param is
- *   updated to mirror the iframe's location (path, query params, and hash).
+ * - On mount, the iframe is opened at the sub-path taken from the CMS URL
+ *   (`/cms/tools/:id/<sub-path>`), so refreshing or sharing the page lands the
+ *   user back where they were inside the tool.
+ * - As the user navigates within the tool, the CMS URL is updated to mirror
+ *   the iframe's location: the sub-path relative to the tool's base, plus its
+ *   query params and hash. A tool at `/cms/tools/foo` iframed to `/myroute/foo`
+ *   that navigates to `/myroute/foo/bar/` shows `/cms/tools/foo/bar/`.
  *
  * Same-origin tools are synced automatically by reading `contentWindow`. The
  * browser blocks reading the location of a cross-origin tool, so those tools
  * can opt in by posting a {@link RootToolLocationMessage} on navigation; until
  * they do, the initial restore on refresh still works (the iframe is simply
- * opened at the stored URL).
+ * opened at the mirrored URL).
  */
 function ToolIframe(props: ToolIframeProps) {
   const iframeRef = useRef<HTMLIFrameElement>(null);
@@ -125,13 +125,10 @@ function ToolIframe(props: ToolIframeProps) {
   // remounts it and re-runs these initializers with the new URL.
   const [base] = useState(() => new URL(props.iframeUrl, window.location.href));
 
-  // Compute the initial src once, restoring any stored sub-path so a refresh or
-  // shared link lands the user back where they were inside the tool.
+  // Compute the initial src once, restoring the sub-path from the CMS URL so a
+  // refresh or shared link lands the user back where they were inside the tool.
   const [initialSrc] = useState(() =>
-    resolveInitialSrc(
-      props.iframeUrl,
-      getStoredIframePath(window.location.search)
-    )
+    cmsUrlToIframeSrc(props.iframeUrl, props.id, window.location)
   );
 
   useEffect(() => {
@@ -146,34 +143,33 @@ function ToolIframe(props: ToolIframeProps) {
     // posting location updates instead of polling.
     let crossOrigin = false;
 
-    /** Mirrors the tool's relative location into the CMS URL `path` param. */
-    const syncCmsUrl = (relativePath: string) => {
-      if (relativePath === lastSynced) {
+    /** Mirrors the tool's location into the CMS URL. */
+    const syncCmsUrl = (loc: {
+      pathname: string;
+      search: string;
+      hash: string;
+    }) => {
+      const cmsUrl = iframeLocationToCmsUrl(props.iframeUrl, props.id, loc);
+      // A null result means the tool navigated outside its base path and can't
+      // be represented under /cms/tools/:id; leave the CMS URL untouched.
+      if (cmsUrl === null || cmsUrl === lastSynced) {
         return;
       }
-      lastSynced = relativePath;
-      const stored = computeStoredPath(props.iframeUrl, relativePath);
-      const url = new URL(window.location.href);
-      if (stored) {
-        url.searchParams.set(IFRAME_PATH_PARAM, stored);
-      } else {
-        // At the tool's home location: drop the param to keep the URL clean.
-        url.searchParams.delete(IFRAME_PATH_PARAM);
-      }
+      lastSynced = cmsUrl;
       // Use replaceState (not pushState) so each in-tool navigation doesn't add
       // a redundant CMS history entry on top of the iframe's own history entry.
       // Preserve the existing history state so the router isn't disrupted.
-      window.history.replaceState(window.history.state, '', url.toString());
+      window.history.replaceState(window.history.state, '', cmsUrl);
     };
 
-    /** Reads the same-origin tool's relative location, or null if unreadable. */
-    const readRelativePath = (): string | null => {
+    /** Reads the same-origin tool's location, or null if unreadable. */
+    const readIframeLocation = () => {
       try {
         const loc = iframe.contentWindow?.location;
         if (!loc || loc.href === 'about:blank') {
           return null;
         }
-        return `${loc.pathname}${loc.search}${loc.hash}`;
+        return {pathname: loc.pathname, search: loc.search, hash: loc.hash};
       } catch {
         // Cross-origin: the browser blocks reading the location.
         crossOrigin = true;
@@ -182,9 +178,9 @@ function ToolIframe(props: ToolIframeProps) {
     };
 
     const handleLoad = () => {
-      const relativePath = readRelativePath();
-      if (relativePath !== null) {
-        syncCmsUrl(relativePath);
+      const loc = readIframeLocation();
+      if (loc) {
+        syncCmsUrl(loc);
       }
     };
     iframe.addEventListener('load', handleLoad);
@@ -194,9 +190,9 @@ function ToolIframe(props: ToolIframeProps) {
     let pollTimer = 0;
     const poll = () => {
       if (!crossOrigin) {
-        const relativePath = readRelativePath();
-        if (relativePath !== null) {
-          syncCmsUrl(relativePath);
+        const loc = readIframeLocation();
+        if (loc) {
+          syncCmsUrl(loc);
         }
       }
       if (!crossOrigin) {
@@ -218,7 +214,11 @@ function ToolIframe(props: ToolIframeProps) {
       }
       try {
         const toolUrl = new URL(event.data.rootTool.url, base.origin);
-        syncCmsUrl(getRelativePath(toolUrl));
+        syncCmsUrl({
+          pathname: toolUrl.pathname,
+          search: toolUrl.search,
+          hash: toolUrl.hash,
+        });
       } catch {
         // Ignore malformed URLs.
       }
@@ -230,7 +230,7 @@ function ToolIframe(props: ToolIframeProps) {
       window.clearTimeout(pollTimer);
       window.removeEventListener('message', handleMessage);
     };
-  }, [base, props.iframeUrl]);
+  }, [base, props.id, props.iframeUrl]);
 
   return <iframe ref={iframeRef} src={initialSrc} />;
 }

@@ -4,6 +4,7 @@ import {defineConfig} from '@blinkk/root';
 import {cmsPlugin} from '@blinkk/root-cms/plugin';
 import {crowdinTranslationService} from './plugins/crowdin-translations.js';
 import {deeplTranslationService} from './plugins/deepl-translations.js';
+import {exampleToolPod} from './plugins/example-tools-pod.js';
 import {templatesPod} from './plugins/templates-pod.js';
 
 const rootDir = new URL('.', import.meta.url).pathname;
@@ -37,6 +38,8 @@ export default defineConfig({
   },
   plugins: [
     templatesPod(),
+    exampleToolPod('a'),
+    exampleToolPod('b'),
     cmsPlugin({
       id: 'www',
       name: 'Root.js',
@@ -54,6 +57,8 @@ export default defineConfig({
       sidebar: {
         tools: {
           templates: {label: 'Templates', iframeUrl: '/cms-tools/templates/'},
+          a: {label: 'Example Tool A', iframeUrl: '/cms-tools/a/'},
+          b: {label: 'Example Tool B', iframeUrl: '/cms-tools/b/'},
         },
       },
       ai: {
