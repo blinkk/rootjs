@@ -388,12 +388,15 @@ export async function syncFolder(
    - **Existing**: skip cheaply when the provider gives a pre-download
      hash that matches (`contentHash`, Drive). Otherwise `download()`,
      compute SHA-1 (the same `sha1()` gcs.ts already uses for naming);
-     if it equals `source.contentHash` → **unchanged**, write nothing.
+     if it equals `source.contentHash` → **unchanged**: a strict no-op —
+     no GCS upload, no asset doc write, and no doc fan-out (see §6.3).
      If different → `uploadFileToGCS` → `replaceAssetFile(asset, file)`
      (which already preserves alt text and fixes the display-name
      extension) → **`syncAssetToDocs(asset, {previousFile})`** so every
      doc embedding the asset picks up the new export — this is the
-     payoff of reusing the asset library's fan-out.
+     payoff of reusing the asset library's fan-out. `syncAssetToDocs`
+     is called *only* on this changed-bytes path, and only for the
+     individual asset that changed — never folder-wide.
      Clear `missingSince` if it was set.
    - **Missing** (local `source.remoteId` absent remotely): set
      `source.missingSince` (once). **Never auto-delete** — published docs
@@ -416,21 +419,37 @@ the folder simply causes the next sync to import a fresh copy into the
 folder (the moved asset keeps working, now unmanaged — its `source`
 could be cleared on move as a refinement).
 
-### 6.3 Change detection
+### 6.3 Change detection — unchanged files cause zero writes and zero fan-out
 
-Figma has no per-node content hash, so "changed?" is answered by
-downloading and hashing. Two mitigations keep re-syncs cheap:
+Invariant: **a file whose exported bytes are unchanged since the last
+sync produces no side effects** — no GCS upload, no `Assets/*` doc
+write, no `modifiedAt` bump, and above all no `syncAssetToDocs` fan-out
+(which would otherwise rewrite every draft doc embedding the asset and
+churn `sys.modifiedAt`/`sys.modifiedBy` across the project). Re-syncing
+a folder where nothing changed leaves both the asset library and all
+docs byte-for-byte identical.
 
-- **File-version fast path:** if the file `version` returned during
-  enumeration equals the `remoteVersion` recorded on *every* local asset
-  from the previous sync, the whole file is untouched → finish
-  immediately with "everything up to date" (no image renders, no
-  downloads).
-- **Hash skip:** SHA-1 of downloaded bytes vs `source.contentHash`
-  avoids GCS re-uploads and, critically, avoids no-op
-  `replaceAssetFile` + doc fan-outs. (GCS hash-naming means identical
-  bytes would produce the same `src` anyway; skipping keeps Firestore
-  timestamps honest.)
+The invariant is enforced by three tiers of checks, cheapest first:
+
+1. **File-version fast path (skips the whole sync):** if the file
+   `version` returned during enumeration equals the `remoteVersion`
+   recorded on *every* local asset from the previous sync, the whole
+   file is untouched → finish immediately with "everything up to date"
+   (no image renders, no downloads, no writes).
+2. **Provider hash skip (skips the download):** when the provider
+   exposes a content hash before download (Drive's `md5Checksum`;
+   Figma has none), a match against `source.contentHash` skips the
+   item without downloading.
+3. **Byte hash skip (skips all writes):** otherwise download and SHA-1
+   the bytes (the same `sha1()` gcs.ts already uses for naming); a
+   match against `source.contentHash` ends the item as **unchanged**
+   before any upload or Firestore write. Only a hash mismatch proceeds
+   to `replaceAssetFile` + per-asset `syncAssetToDocs`.
+
+(GCS hash-naming means identical bytes would produce the same `src`
+anyway, so a redundant replace would be *visually* harmless — but it
+would still dirty asset/doc timestamps and trigger doc writes, which is
+why the skip happens before any write, not after.)
 
 ### 6.4 Removed-in-source assets
 
@@ -537,7 +556,10 @@ All in `ui/components/`, Mantine modals registered in `ui.tsx`'s
   `createAssetFile` accepts `source`; fix `moveFolder` to preserve extra
   folder fields (`sync`) on rename/move.
 - Unit tests: URL parsing, name sanitization/dedupe, diff algorithm
-  (new/changed/unchanged/missing) with a fake provider.
+  (new/changed/unchanged/missing) with a fake provider — including an
+  explicit assertion that an all-unchanged re-sync performs zero
+  uploads, zero Firestore writes, and zero `syncAssetToDocs` calls
+  (the §6.3 invariant).
 
 **Phase 2 — Figma provider + UI**
 - `providers/figma.ts` (parse, checkAccess, enumerate, render-URL
