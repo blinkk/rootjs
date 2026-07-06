@@ -350,7 +350,7 @@ function App() {
                           <Route path="/cms/tasks" component={TasksPage} />
                           <Route path="/cms/tasks/:id" component={TaskPage} />
                           <Route
-                            path="/cms/tools/:id"
+                            path="/cms/tools/:id/:rest*"
                             component={SidebarToolsPage}
                           />
                           <Route
