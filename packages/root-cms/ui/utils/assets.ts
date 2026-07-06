@@ -53,16 +53,108 @@ export interface AssetBase {
   modifiedBy: string;
 }
 
+/**
+ * Provenance of an asset imported from an external sync source (e.g. a
+ * Figma export). The `remoteId` is the stable identity used by the sync
+ * engine to update assets in place on re-sync (see
+ * `ui/utils/asset-sync/engine.ts`).
+ */
+export interface AssetSource {
+  /** Sync provider id, e.g. `figma`. */
+  provider: string;
+  /** Stable remote identity, unique within the source. */
+  remoteId: string;
+  /** Remote display name at last sync (e.g. the Figma node name). */
+  remoteName?: string;
+  /** SHA-1 of the file bytes at last sync (used to skip no-op re-syncs). */
+  contentHash?: string;
+  /**
+   * Provider-native content hash, when the provider reports one before
+   * download (e.g. Google Drive's `md5Checksum`). Lets the sync engine skip
+   * the download entirely for unchanged files.
+   */
+  remoteHash?: string;
+  /** Provider version hint at last sync (e.g. the Figma file version). */
+  remoteVersion?: string;
+  syncedAt: Timestamp;
+  /**
+   * Set when a sync finds the remote item gone. Synced assets are never
+   * auto-deleted (docs may embed them); this flags them for manual cleanup.
+   */
+  missingSince?: Timestamp;
+}
+
 /** A file entry in the asset library. */
 export interface AssetFile extends AssetBase {
   type: 'file';
   /** The uploaded file data (same shape stored in image/file fields). */
   file: UploadedFile;
+  /** Provenance when the file was imported from an external sync source. */
+  source?: AssetSource;
+}
+
+/** Result summary of the last completed folder sync. */
+export interface AssetFolderSyncResult {
+  ok: boolean;
+  error?: string;
+  added: number;
+  updated: number;
+  unchanged: number;
+  /** Synced assets whose remote item no longer exists. */
+  missing: number;
+  failed: number;
+}
+
+/**
+ * Connection between an asset folder and an external sync source. Stored on
+ * the folder's db doc so the connection is shared with all project users and
+ * can be re-synced later. Deliberately contains NO credentials -- users
+ * authenticate with their own per-user token (see
+ * `ui/utils/asset-sync/tokens.ts`), so only users with access to the remote
+ * source can sync.
+ */
+export interface AssetFolderSync {
+  /** Sync provider id, e.g. `figma`. */
+  provider: string;
+  /** The source URL as entered by the user. */
+  url: string;
+  /** Figma source ref (when `provider` is `figma`). */
+  figma?: {
+    fileKey: string;
+    /** Node id in API format (e.g. `12:345`). Absent = whole file. */
+    nodeId?: string;
+  };
+  /** Google Drive source ref (reserved for a future provider). */
+  gdrive?: {
+    folderId: string;
+  };
+  connectedAt: Timestamp;
+  connectedBy: string;
+  /**
+   * The provider's source version at the last fully-successful sync (e.g.
+   * the Figma file `version`). When the current remote version matches, the
+   * sync engine can skip downloads entirely ("everything up to date").
+   */
+  lastRemoteVersion?: string;
+  lastSyncedAt?: Timestamp;
+  lastSyncedBy?: string;
+  lastSyncResult?: AssetFolderSyncResult;
+  /**
+   * Best-effort concurrency lease while a sync runs. Cleared when the sync
+   * finishes; treated as stale after 10 minutes (e.g. abandoned tab).
+   */
+  state?: {
+    status: 'syncing';
+    startedAt: Timestamp;
+    startedBy: string;
+  };
 }
 
 /** A folder entry in the asset library. */
 export interface AssetFolder extends AssetBase {
   type: 'folder';
+  /** Connection to an external sync source (e.g. a Figma file/node). */
+  sync?: AssetFolderSync;
 }
 
 export type Asset = AssetFile | AssetFolder;
@@ -310,6 +402,8 @@ export async function createAssetFile(options: {
   parent: string;
   file: UploadedFile;
   name?: string;
+  /** Provenance when the file was imported from an external sync source. */
+  source?: AssetSource;
 }): Promise<AssetFile> {
   const file = removeUndefinedValues(options.file);
   const name = validateAssetName(
@@ -323,6 +417,7 @@ export async function createAssetFile(options: {
     parent: options.parent || '',
     name: name,
     file: file,
+    ...(options.source ? {source: removeUndefinedValues(options.source)} : {}),
     createdAt: serverTimestamp(),
     createdBy: window.firebase.user.email,
     modifiedAt: serverTimestamp(),
@@ -436,9 +531,11 @@ async function moveFolder(
     }
   };
 
-  // Create the new folder doc (preserving the original created metadata).
+  // Create the new folder doc (preserving the original created metadata and
+  // any extra fields, e.g. the `sync` source connection).
   const newFolderId = getFolderId(newPath);
   batch.set(doc(colRef, newFolderId), {
+    ...folder,
     id: newFolderId,
     type: 'folder',
     parent: newParent,
@@ -510,6 +607,101 @@ export async function deleteAsset(asset: Asset) {
 }
 
 /**
+ * Connects an asset folder to an external sync source. Replaces any existing
+ * connection on the folder.
+ */
+export async function connectFolderSync(
+  folder: AssetFolder,
+  sync: Pick<AssetFolderSync, 'provider' | 'url' | 'figma' | 'gdrive'>
+): Promise<AssetFolder> {
+  const folderPath = joinFolderPath(folder.parent, folder.name);
+  const docRef = doc(getAssetsDbCollection(), folder.id);
+  const syncData: AssetFolderSync = {
+    ...removeUndefinedValues(sync),
+    connectedAt: Timestamp.now(),
+    connectedBy: window.firebase.user.email!,
+  };
+  await updateDoc(docRef, {
+    sync: syncData,
+    modifiedAt: serverTimestamp(),
+    modifiedBy: window.firebase.user.email,
+  });
+  logAction('asset.sync_connect', {
+    metadata: {folder: folderPath, provider: sync.provider, url: sync.url},
+  });
+  return (await getAsset(folder.id)) as AssetFolder;
+}
+
+/**
+ * Disconnects an asset folder from its sync source. Previously synced assets
+ * are left in place (only the connection is removed).
+ */
+export async function disconnectFolderSync(folder: AssetFolder) {
+  const folderPath = joinFolderPath(folder.parent, folder.name);
+  const docRef = doc(getAssetsDbCollection(), folder.id);
+  await updateDoc(docRef, {
+    sync: deleteField(),
+    modifiedAt: serverTimestamp(),
+    modifiedBy: window.firebase.user.email,
+  });
+  logAction('asset.sync_disconnect', {
+    metadata: {folder: folderPath, provider: folder.sync?.provider},
+  });
+}
+
+/**
+ * Marks a folder sync as running (best-effort concurrency lease, see
+ * `AssetFolderSync.state`).
+ */
+export async function setFolderSyncState(folderId: string) {
+  const docRef = doc(getAssetsDbCollection(), folderId);
+  await updateDoc(docRef, {
+    'sync.state': {
+      status: 'syncing',
+      startedAt: Timestamp.now(),
+      startedBy: window.firebase.user.email,
+    },
+  });
+}
+
+/**
+ * Records the result of a folder sync and clears the running state.
+ * `remoteVersion` should only be provided when the sync fully succeeded so
+ * the fast path (skipping unchanged sources) never skips failed items.
+ */
+export async function finalizeFolderSync(
+  folderId: string,
+  result: AssetFolderSyncResult,
+  options?: {remoteVersion?: string}
+) {
+  const docRef = doc(getAssetsDbCollection(), folderId);
+  const updates: Record<string, any> = {
+    'sync.state': deleteField(),
+    'sync.lastSyncedAt': Timestamp.now(),
+    'sync.lastSyncedBy': window.firebase.user.email,
+    'sync.lastSyncResult': removeUndefinedValues(result),
+  };
+  if (options?.remoteVersion) {
+    updates['sync.lastRemoteVersion'] = options.remoteVersion;
+  }
+  await updateDoc(docRef, updates);
+}
+
+/**
+ * Flags/unflags a synced asset whose remote item no longer exists at the
+ * source. Does not bump `modifiedAt` (the file contents are unchanged).
+ */
+export async function updateAssetSourceMissing(
+  assetId: string,
+  missing: boolean
+) {
+  const docRef = doc(getAssetsDbCollection(), assetId);
+  await updateDoc(docRef, {
+    'source.missingSince': missing ? Timestamp.now() : deleteField(),
+  });
+}
+
+/**
  * Replaces the file of an asset (e.g. uploading a new version). Preserves the
  * existing alt text when the new upload doesn't define one. Returns the
  * updated asset; callers should follow up with {@link syncAssetToDocs} to fan
@@ -517,7 +709,11 @@ export async function deleteAsset(asset: Asset) {
  */
 export async function replaceAssetFile(
   asset: AssetFile,
-  newFile: UploadedFile
+  newFile: UploadedFile,
+  options?: {
+    /** Updated provenance when the replacement comes from a sync source. */
+    source?: AssetSource;
+  }
 ): Promise<AssetFile> {
   const file = removeUndefinedValues(newFile);
   if (!file.alt && asset.file?.alt) {
@@ -532,6 +728,9 @@ export async function replaceAssetFile(
     modifiedAt: serverTimestamp(),
     modifiedBy: window.firebase.user.email,
   };
+  if (options?.source) {
+    updates.source = removeUndefinedValues(options.source);
+  }
   // When the new file has a different extension (e.g. replacing `hero.png`
   // with a webp), update the asset's display name to match.
   const newExt = getFileExt(file.filename || file.src || '');

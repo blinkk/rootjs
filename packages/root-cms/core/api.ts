@@ -31,6 +31,22 @@ function testValidCollectionId(id: string): boolean {
   return /^[A-Za-z0-9_-]+$/.test(id);
 }
 
+/**
+ * Download hosts the asset sync relay (`assets.sync_proxy`) is allowed to
+ * fetch from. Only known sync-provider download hosts belong here -- the
+ * relay must never become a general-purpose proxy.
+ */
+const SYNC_PROXY_ALLOWED_HOSTS: RegExp[] = [
+  // Figma image render/export buckets, e.g.
+  // `figma-alpha-api.s3.us-west-2.amazonaws.com`.
+  /^figma-[a-z0-9-]+\.s3([.-][a-z0-9-]+)*\.amazonaws\.com$/,
+  // Figma-owned download hosts, e.g. `s3-alpha.figma.com`.
+  /(^|\.)figma\.com$/,
+];
+
+/** Max response size the asset sync relay will forward (100MB). */
+const SYNC_PROXY_MAX_BYTES = 100 * 1024 * 1024;
+
 type DocVersion = 'draft' | 'published';
 
 interface BuildDocDiffOptions {
@@ -437,6 +453,86 @@ export function api(server: Server, options: ApiOptions) {
       res.status(500).json({success: false, error: 'UNKNOWN'});
     }
   });
+
+  /**
+   * Relays an asset download for the asset sync feature (see
+   * `ui/utils/asset-sync/`), used as a fallback when the browser can't
+   * fetch a provider's (pre-signed, unauthenticated) download URL directly
+   * due to CORS. The relay is deliberately dumb: it only allows known
+   * provider download hosts (no user-controlled hosts, preventing SSRF),
+   * forwards no client headers, follows no redirects, and caps the
+   * response size.
+   *
+   * ```
+   * POST /cms/api/assets.sync_proxy
+   * {"url": "https://figma-alpha-api.s3.us-west-2.amazonaws.com/images/..."}
+   * ```
+   */
+  server.use(
+    '/cms/api/assets.sync_proxy',
+    async (req: Request, res: Response) => {
+      if (
+        req.method !== 'POST' ||
+        !String(req.get('content-type')).startsWith('application/json')
+      ) {
+        res.status(400).json({success: false, error: 'BAD_REQUEST'});
+        return;
+      }
+      if (!req.user?.email) {
+        res.status(401).json({success: false, error: 'UNAUTHORIZED'});
+        return;
+      }
+      const url = req.body?.url;
+      if (!url || typeof url !== 'string') {
+        res.status(400).json({success: false, error: 'MISSING_URL'});
+        return;
+      }
+      try {
+        const parsed = await assertPublicHttpUrl(url);
+        const hostname = parsed.hostname.toLowerCase();
+        const allowed = SYNC_PROXY_ALLOWED_HOSTS.some((re) =>
+          re.test(hostname)
+        );
+        if (!allowed) {
+          res.status(400).json({success: false, error: 'HOST_NOT_ALLOWED'});
+          return;
+        }
+        const upstream = await fetch(url, {redirect: 'error'});
+        if (!upstream.ok) {
+          res.status(502).json({
+            success: false,
+            error: 'UPSTREAM_ERROR',
+            status: upstream.status,
+          });
+          return;
+        }
+        const contentLength = Number(
+          upstream.headers.get('content-length') || 0
+        );
+        if (contentLength > SYNC_PROXY_MAX_BYTES) {
+          res.status(413).json({success: false, error: 'FILE_TOO_LARGE'});
+          return;
+        }
+        const buffer = Buffer.from(await upstream.arrayBuffer());
+        if (buffer.length > SYNC_PROXY_MAX_BYTES) {
+          res.status(413).json({success: false, error: 'FILE_TOO_LARGE'});
+          return;
+        }
+        res.setHeader(
+          'Content-Type',
+          upstream.headers.get('content-type') || 'application/octet-stream'
+        );
+        res.status(200).end(buffer);
+      } catch (err) {
+        if (err instanceof UnsafeUrlError) {
+          res.status(400).json({success: false, error: 'UNSAFE_URL'});
+          return;
+        }
+        console.error(err.stack || err);
+        res.status(502).json({success: false, error: 'DOWNLOAD_FAILED'});
+      }
+    }
+  );
 
   /**
    * Logs an action.

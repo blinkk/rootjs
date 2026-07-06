@@ -327,7 +327,8 @@ async function getVideoDimensions(
   });
 }
 
-async function sha1(file: File) {
+/** Computes the SHA-1 hex digest of a file's contents. */
+export async function sha1(file: File) {
   const buffer = await file.arrayBuffer();
   const hashBuffer = await crypto.subtle.digest('SHA-1', buffer);
   const hashArray = Array.from(new Uint8Array(hashBuffer));

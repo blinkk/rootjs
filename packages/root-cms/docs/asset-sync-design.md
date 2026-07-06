@@ -1,6 +1,8 @@
 # Design: Syncing Assets from External Sources (Figma, Google Drive, …)
 
-Status: draft / proposal
+Status: implemented (v1) — see `ui/utils/asset-sync/` for the engine and
+providers, `ui/components/AssetBrowser/AssetSyncModals.tsx` for the UI, and
+`assets.sync_proxy` in `core/api.ts` for the download relay.
 Author: root-cms team
 
 ## 1. Overview
@@ -122,6 +124,14 @@ export interface AssetFolderSync {
   };
   connectedAt: Timestamp;
   connectedBy: string; // email
+  /**
+   * The provider's source version at the last fully-successful sync (e.g.
+   * the Figma file `version`). Drives the §6.3 fast path: when the current
+   * remote version matches, the sync skips downloads entirely. Only
+   * advanced when a sync completes with zero failures, so failed items are
+   * always retried.
+   */
+  lastRemoteVersion?: string;
   lastSyncedAt?: Timestamp;
   lastSyncedBy?: string;
   /** Result summary of the last completed sync. */
@@ -133,6 +143,7 @@ export interface AssetFolderSync {
     unchanged: number;
     /** Remote ids present last time but missing now (see §6.4). */
     missing: number;
+    failed: number;
   };
   /**
    * Best-effort concurrency lease (see §6.5). Cleared when a sync
@@ -181,8 +192,11 @@ export interface AssetSource {
   remoteName?: string;
   /** SHA-1 of the exported bytes at last sync (change detection, §6.3). */
   contentHash?: string;
-  /** Provider hint for cheap change detection (Figma file `version`;
-      Drive `md5Checksum`/`modifiedTime`). */
+  /** Provider-native content hash, when reported before download (Drive's
+      `md5Checksum`; none for Figma). Skips the download when unchanged. */
+  remoteHash?: string;
+  /** The source version at the time this asset was written (informational;
+      the fast path keys off the folder-level `sync.lastRemoteVersion`). */
   remoteVersion?: string;
   syncedAt: Timestamp;
   /** Set when a sync finds the remote node gone; never auto-deleted. */
@@ -432,10 +446,13 @@ docs byte-for-byte identical.
 The invariant is enforced by three tiers of checks, cheapest first:
 
 1. **File-version fast path (skips the whole sync):** if the file
-   `version` returned during enumeration equals the `remoteVersion`
-   recorded on *every* local asset from the previous sync, the whole
-   file is untouched → finish immediately with "everything up to date"
-   (no image renders, no downloads, no writes).
+   `version` returned during enumeration equals the folder's
+   `sync.lastRemoteVersion` (recorded on the last fully-successful sync)
+   and the folder still contains every synced asset, the whole file is
+   untouched → finish immediately with "everything up to date" (no image
+   renders, no downloads, no per-file writes). Keeping this marker on the
+   folder (rather than per-asset) means unchanged-but-re-versioned files
+   never need a metadata write to keep the fast path armed.
 2. **Provider hash skip (skips the download):** when the provider
    exposes a content hash before download (Drive's `md5Checksum`;
    Figma has none), a match against `source.contentHash` skips the
