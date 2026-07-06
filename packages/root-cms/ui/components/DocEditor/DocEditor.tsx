@@ -45,6 +45,7 @@ import {
   IconTriangleFilled,
 } from '@tabler/icons-preact';
 import {createContext, RefObject} from 'preact';
+import {CSSProperties} from 'preact/compat';
 import {
   useContext,
   useEffect,
@@ -768,6 +769,16 @@ DocEditor.FieldBody = (props: FieldProps) => {
   const targeted = deeplink.value === props.deepKey;
   const ref = useRef<HTMLDivElement>(null);
 
+  // Presence highlight: color the field to match the (first other) viewer
+  // focused on it, à la Google Docs. Applied declaratively (rather than via
+  // imperative classList/style mutations) so it survives re-renders such as the
+  // `deeplink-target` class toggling on/off.
+  const fieldViewers = useFieldViewers(props.deepKey);
+  const presenceColor = useMemo(() => {
+    const other = fieldViewers.find((viewer) => !viewer.isCurrentUser);
+    return (other || fieldViewers[0])?.color || '';
+  }, [fieldViewers]);
+
   const showFieldHeader = useMemo(() => {
     if (field.type === 'object') {
       // Default to the "drawer" variant.
@@ -790,8 +801,14 @@ DocEditor.FieldBody = (props: FieldProps) => {
       className={joinClassNames(
         'DocEditor__field',
         field.deprecated && 'DocEditor__field--deprecated',
-        targeted && 'deeplink-target'
+        targeted && 'deeplink-target',
+        presenceColor && 'DocEditor__field--presence'
       )}
+      style={
+        presenceColor
+          ? ({'--presence-color': presenceColor} as CSSProperties)
+          : undefined
+      }
       data-type={field.type}
       data-level={level}
       id={props.deepKey}
@@ -902,47 +919,16 @@ DocEditor.FieldHeader = (props: FieldProps & {className?: string}) => {
 /**
  * Renders miniature avatars of other viewers who currently have this field
  * focused. Sized to match the translate icon so it never causes layout shift.
- *
- * Also color-codes the field: the enclosing `.DocEditor__field` gets a colored
- * border matching the (first other) viewer focused on it, à la Google Docs, so
- * it's easy to tell at a glance who is on which field.
+ * (The field's colored presence border is applied in `FieldBody`.)
  */
 DocEditor.FieldHeaderViewers = (props: {deepKey: string}) => {
   const viewers = useFieldViewers(props.deepKey);
-  const ref = useRef<HTMLDivElement>(null);
-
-  // The color to highlight the field with: prefer the first *other* viewer so
-  // the highlight reflects who else is here (not your own color).
-  const highlightColor = useMemo(() => {
-    const other = viewers.find((viewer) => !viewer.isCurrentUser);
-    return (other || viewers[0])?.color || '';
-  }, [viewers]);
-
-  useEffect(() => {
-    const fieldEl = ref.current?.closest<HTMLElement>('.DocEditor__field');
-    if (!fieldEl) {
-      return;
-    }
-    if (highlightColor) {
-      fieldEl.style.setProperty('--presence-color', highlightColor);
-      fieldEl.classList.add('DocEditor__field--presence');
-    } else {
-      fieldEl.style.removeProperty('--presence-color');
-      fieldEl.classList.remove('DocEditor__field--presence');
-    }
-    return () => {
-      fieldEl.style.removeProperty('--presence-color');
-      fieldEl.classList.remove('DocEditor__field--presence');
-    };
-  }, [highlightColor]);
 
   if (viewers.length === 0) {
-    // Keep an (empty) anchor element mounted so the cleanup effect above can
-    // still find the field and clear the highlight when viewers leave.
-    return <div ref={ref} className="DocEditor__FieldHeader__viewers" />;
+    return null;
   }
   return (
-    <div ref={ref} className="DocEditor__FieldHeader__viewers">
+    <div className="DocEditor__FieldHeader__viewers">
       {viewers.map((viewer) => (
         <UserAvatar
           key={viewer.email}
