@@ -1,5 +1,12 @@
 # @blinkk/root-cms
 
+## 3.1.7
+
+### Patch Changes
+
+- b71daa9: fix: remount sidebar tool iframe when switching tools
+  - @blinkk/root@3.1.7
+
 ## 3.1.6
 
 ### Patch Changes
