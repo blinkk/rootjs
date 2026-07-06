@@ -37,10 +37,24 @@ export interface VersionHistoryModalProps {
 }
 
 export function useVersionHistoryModal(props: VersionHistoryModalProps) {
-  const modals = useModals();
+  // Degrade gracefully when rendered outside a `ModalsProvider` (e.g. visual
+  // tests that render badges in isolation).
+  let modals: ReturnType<typeof useModals> | null = null;
+  try {
+    modals = useModals();
+  } catch {
+    modals = null;
+  }
   const modalTheme = useModalTheme();
   return {
+    enabled: modals !== null,
     open: () => {
+      if (!modals) {
+        console.warn(
+          'useVersionHistoryModal() requires a <ModalsProvider> context.'
+        );
+        return;
+      }
       modals.openContextModal(MODAL_ID, {
         ...modalTheme,
         title: `Version history: ${props.docId}`,

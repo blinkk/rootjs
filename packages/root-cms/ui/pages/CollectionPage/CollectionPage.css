@@ -3,6 +3,13 @@
   background: var(--page-background);
 }
 
+/* Shrink the folder sidebar on narrow viewports so the docs list keeps room. */
+@media (max-width: 1280px) {
+  .CollectionPage {
+    --side-width: 280px;
+  }
+}
+
 .CollectionPage__layout {
   position: relative;
   min-height: calc(100vh - var(--header-height));
@@ -230,34 +237,12 @@
    * enough to fit two badges.
    */
   grid-template-columns:
-    48px minmax(0, 0.8fr) minmax(0, 2.5fr) 150px 110px
-    110px 32px;
+    40px minmax(0, 0.8fr) minmax(0, 2.5fr)
+    minmax(0, var(--docs-status-width, 80px)) 110px
+    110px 28px;
   align-items: center;
-  gap: 16px;
-  padding: 8px 12px;
-}
-
-/* When any doc belongs to a release, insert a dedicated Release column between
- * Status and Created. */
-.CollectionPage__collection__docsList--withRelease
-  .CollectionPage__collection__docsList__doc,
-.CollectionPage__collection__docsList--withRelease
-  .CollectionPage__collection__docsList__header {
-  grid-template-columns:
-    48px minmax(0, 0.8fr) minmax(0, 2.5fr) 150px minmax(0, 1fr) 110px
-    110px 32px;
-}
-
-.CollectionPage__collection__docsList__doc__releases {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 8px;
-  min-width: 0;
-}
-
-.CollectionPage__collection__docsList__doc__releases .mantine-Badge-root {
-  max-width: 100%;
+  gap: 14px;
+  padding: 5px 12px;
 }
 
 .CollectionPage__collection__docsList__header {
@@ -303,8 +288,8 @@
   .CollectionPage__collection__docsList__doc__image {
   display: block;
   box-sizing: content-box;
-  width: 48px;
-  height: 36px;
+  width: 40px;
+  height: 30px;
   border: 1px solid var(--color-border);
   flex-shrink: 0;
   line-height: 0;
@@ -346,7 +331,7 @@
   .CollectionPage__collection__docsList__doc__badges {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
   min-width: 0;
 }
 
