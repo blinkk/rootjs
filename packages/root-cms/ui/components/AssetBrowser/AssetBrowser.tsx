@@ -396,6 +396,28 @@ export function AssetBrowser(props: AssetBrowserProps) {
               setFilter(e.currentTarget.value)
             }
           />
+          {props.mode === 'manage' &&
+            canManage &&
+            currentFolder &&
+            (currentFolder.sync ? (
+              <Button
+                variant="default"
+                size="xs"
+                leftIcon={<IconRefresh size={16} />}
+                onClick={() => setSyncRunTarget(currentFolder)}
+              >
+                Sync
+              </Button>
+            ) : (
+              <Button
+                variant="default"
+                size="xs"
+                leftIcon={<IconCloudDownload size={16} />}
+                onClick={() => setSyncSettingsTarget(currentFolder)}
+              >
+                Connect sync source
+              </Button>
+            ))}
           {showUpload && props.mode === 'manage' && (
             <Button
               variant="default"
@@ -423,7 +445,6 @@ export function AssetBrowser(props: AssetBrowserProps) {
         <AssetSyncBar
           folder={currentFolder}
           canManage={canManage}
-          onSyncNow={() => setSyncRunTarget(currentFolder)}
           onSettings={() => setSyncSettingsTarget(currentFolder)}
         />
       )}
@@ -629,29 +650,6 @@ export function AssetBrowser(props: AssetBrowserProps) {
                             >
                               Move
                             </Menu.Item>
-                            {asset.sync ? (
-                              <>
-                                <Menu.Item
-                                  icon={<IconRefresh size={14} />}
-                                  onClick={() => setSyncRunTarget(asset)}
-                                >
-                                  Sync now
-                                </Menu.Item>
-                                <Menu.Item
-                                  icon={<IconSettings size={14} />}
-                                  onClick={() => setSyncSettingsTarget(asset)}
-                                >
-                                  Sync settings
-                                </Menu.Item>
-                              </>
-                            ) : (
-                              <Menu.Item
-                                icon={<IconCloudDownload size={14} />}
-                                onClick={() => setSyncSettingsTarget(asset)}
-                              >
-                                Connect sync source
-                              </Menu.Item>
-                            )}
                             <Menu.Item
                               color="red"
                               icon={<IconTrash size={14} />}
@@ -854,12 +852,12 @@ export function AssetBrowser(props: AssetBrowserProps) {
 
 /**
  * Header strip shown inside a folder that is connected to a sync source
- * (e.g. a Figma file), with the last-synced status and sync actions.
+ * (e.g. a Figma file), with the last-synced status and a shortcut to the
+ * sync settings. The sync action itself is the "Sync" toolbar button.
  */
 function AssetSyncBar(props: {
   folder: AssetFolder;
   canManage: boolean;
-  onSyncNow: () => void;
   onSettings: () => void;
 }) {
   const sync = props.folder.sync!;
@@ -896,14 +894,6 @@ function AssetSyncBar(props: {
       </div>
       {props.canManage && (
         <div className="AssetBrowser__syncBar__actions">
-          <Button
-            variant="default"
-            size="xs"
-            leftIcon={<IconRefresh size={14} />}
-            onClick={props.onSyncNow}
-          >
-            Sync now
-          </Button>
           <ActionIcon
             size="sm"
             title="Sync settings"

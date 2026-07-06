@@ -531,9 +531,10 @@ real CORS behavior first and drop this endpoint entirely if unneeded.
 All in `ui/components/`, Mantine modals registered in `ui.tsx`'s
 `ModalsProvider` map like the existing ones.
 
-1. **Connect** — `AssetBrowser` (manage mode) folder context menu +
-   folder-view header: “Connect sync source…” opens
-   `ConnectSyncSourceModal`:
+1. **Connect** — inside a folder in `AssetBrowser` (manage mode), a
+   “Connect sync source” toolbar button opens the connect modal; once a
+   source is connected the button becomes “Sync” and runs a sync
+   directly:
    - Paste URL → provider auto-detected via `parseSourceUrl` (Figma icon
      appears; Drive listed as "coming soon").
    - If no stored token: inline PAT field with a "how to create a token"
