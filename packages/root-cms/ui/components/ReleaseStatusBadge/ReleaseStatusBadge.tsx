@@ -1,19 +1,13 @@
-import {Badge, Tooltip} from '@mantine/core';
+import {Tooltip} from '@mantine/core';
 import {Timestamp} from 'firebase/firestore';
 import {Release} from '../../utils/release.js';
 import {getTimeAgo} from '../../utils/time.js';
+import {StatusBadge} from '../DocStatusBadges/DocStatusBadges.js';
 import '../DocStatusBadges/DocStatusBadges.css';
 
 const TOOLTIP_PROPS = {
   transition: 'pop',
 };
-
-function badgeClassNames(tone: string) {
-  return {
-    root: `DocStatusBadges__badge DocStatusBadges__badge--${tone}`,
-    inner: 'DocStatusBadges__badge__inner',
-  };
-}
 
 export interface ReleaseStatusBadgeProps {
   release: Release;
@@ -29,14 +23,7 @@ export function ReleaseStatusBadge(props: ReleaseStatusBadgeProps) {
           release.archivedBy
         }`}
       >
-        <Badge
-          size="sm"
-          radius="sm"
-          variant="filled"
-          classNames={badgeClassNames('archived')}
-        >
-          Archived
-        </Badge>
+        <StatusBadge tone="archived">Archived</StatusBadge>
       </Tooltip>
     );
   }
@@ -50,14 +37,7 @@ export function ReleaseStatusBadge(props: ReleaseStatusBadgeProps) {
         wrapLines
         width={240}
       >
-        <Badge
-          size="sm"
-          radius="sm"
-          variant="filled"
-          classNames={badgeClassNames('scheduled')}
-        >
-          Scheduled
-        </Badge>
+        <StatusBadge tone="scheduled">Scheduled</StatusBadge>
       </Tooltip>
     );
   }
@@ -69,27 +49,11 @@ export function ReleaseStatusBadge(props: ReleaseStatusBadgeProps) {
           release.publishedBy
         }`}
       >
-        <Badge
-          size="sm"
-          radius="sm"
-          variant="filled"
-          classNames={badgeClassNames('published')}
-        >
-          Published
-        </Badge>
+        <StatusBadge tone="published">Published</StatusBadge>
       </Tooltip>
     );
   }
-  return (
-    <Badge
-      size="sm"
-      radius="sm"
-      variant="filled"
-      classNames={badgeClassNames('draft')}
-    >
-      Unpublished
-    </Badge>
-  );
+  return <StatusBadge tone="draft">Unpublished</StatusBadge>;
 }
 
 function testIsValidTimestamp(ts: any): ts is Timestamp {

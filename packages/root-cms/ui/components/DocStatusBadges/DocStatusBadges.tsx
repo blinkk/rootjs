@@ -13,7 +13,7 @@ import {UserActionTooltip} from '../UserActionTooltip/UserActionTooltip.js';
 import {UserAvatar} from '../UserAvatar/UserAvatar.js';
 import {useVersionHistoryModal} from '../VersionHistoryModal/VersionHistoryModal.js';
 
-type StatusTone =
+export type StatusTone =
   | 'draft'
   | 'published'
   | 'scheduled'
@@ -24,7 +24,7 @@ type StatusTone =
 /**
  * Per-tone Mantine gradient (matches the original badge colors exactly).
  */
-const TONE_GRADIENTS: Record<
+export const TONE_GRADIENTS: Record<
   StatusTone,
   {from: string; to: string; deg?: number}
 > = {
@@ -40,7 +40,7 @@ const TONE_GRADIENTS: Record<
  * Renders a compact status pill using the original Mantine gradient colors,
  * with the updated font styling/sizing applied via CSS.
  */
-function StatusBadge(props: {
+export function StatusBadge(props: {
   tone: StatusTone;
   children: ComponentChildren;
   leftSection?: ComponentChildren;
