@@ -587,9 +587,8 @@
 
 .AssetBrowser__syncProgress__phase {
   font-size: 13px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .AssetBrowser__syncProgress__token,
