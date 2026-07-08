@@ -362,20 +362,35 @@ download concurrency (default 4) and the provider batches `/v1/images`
 ids (Figma accepts large id lists per call); on 429, back off using the
 `Retry-After` header and resume.
 
-### 5.2 Google Drive provider (future, validates the abstraction)
+### 5.2 Google Drive provider (`ui/utils/asset-sync/gdrive.ts`)
 
-- `parseSourceUrl`: `https://drive.google.com/drive/folders/<folderId>`.
-- Auth: the existing `useGapiClient` OAuth flow with
-  `drive.readonly` — the `SyncAuthContext` wraps `gapiClient.login()`,
-  so per-user access enforcement works identically (Drive's ACL decides).
-- `listRemoteAssets`: `drive.files.list({q: '<folderId>' in parents})`;
-  Drive supplies `md5Checksum` + `modifiedTime`, so `contentHash` is
-  known **before** download and unchanged files skip download entirely
-  (an optimization Figma can't offer).
-- `download`: existing `downloadFromDrive()` nearly verbatim.
+- `parseSourceUrl`: `https://drive.google.com/drive/folders/<folderId>`
+  (plus `/drive/u/<n>/folders/…` and `open?id=…` forms).
+- Auth: `authType: 'oauth'` — the provider interface grew a small OAuth
+  extension (`interactiveLogin()`, `loginLabel`, `createAuthContext()`)
+  and the UI shows a "Sign in with Google" button instead of a token
+  input. Sign-in uses the same GIS token flow and consent cache as
+  `useGapiClient` (one consent covers both features), with the read-only
+  Drive scope added; the access token is held in memory only. Per-user
+  access enforcement works identically to Figma: Drive's ACL decides.
+  Requires `gapi: {apiKey, clientId}` in the cmsPlugin options.
+- `listRemoteAssets`: Drive REST `files.list` (`'<folderId>' in parents`,
+  paginated, shared-drive aware) via plain `fetch` + Bearer token. Drive
+  supplies `md5Checksum`, so `contentHash` is known **before** download
+  and unchanged files skip the download entirely (an optimization Figma
+  can't offer). There is no cheap folder-level version, so
+  `RemoteAssetList.version` is unset and the whole-sync fast path doesn't
+  apply — a no-change re-sync costs one listing call, zero downloads.
+  v1 scope: direct children only (no subfolder recursion); native Google
+  editors files (Docs/Sheets/Slides) are skipped — no binary content.
+- `download`: `files/<id>?alt=media` with the Bearer token.
+- Rate limits (429 / 403 rate-limit reasons) reuse the Figma provider's
+  pattern: visible countdown, `Retry-After` honored, typed
+  `SyncRateLimitError` on exhaustion.
 
-Nothing in the engine, schema, or UI changes — which is the test the
-abstraction has to pass.
+The engine, schema, and folder UI needed no changes beyond the optional
+OAuth fields on the provider interface — the test the abstraction had to
+pass.
 
 ## 6. Sync engine (`ui/utils/asset-sync/engine.ts`)
 

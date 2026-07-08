@@ -161,7 +161,12 @@ async function loadGapiScript() {
 
 let loadGisScriptPromise: Promise<void> | null = null;
 
-async function loadGisScript() {
+/**
+ * Loads the Google Identity Services script (used for OAuth token flows).
+ * Exported for non-hook consumers (e.g. the Google Drive asset sync
+ * provider in `ui/utils/asset-sync/gdrive.ts`).
+ */
+export async function loadGisScript() {
   if (!loadGisScriptPromise) {
     loadGisScriptPromise = new Promise((resolve, reject) => {
       const script = document.createElement('script');
