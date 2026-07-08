@@ -57,7 +57,11 @@ function startTsc(options) {
   if (!config.dtsProject) {
     return options.watch ? undefined : 0;
   }
-  const tscBin = packageRequire.resolve('typescript/bin/tsc');
+  // Resolve tsc via the package root instead of `typescript/bin/tsc` directly:
+  // TypeScript 7 no longer lists `./bin/tsc` in its package `exports`, so the
+  // subpath can't be resolved. `typescript/package.json` is always exported.
+  const tscPkg = packageRequire.resolve('typescript/package.json');
+  const tscBin = path.join(path.dirname(tscPkg), 'bin', 'tsc');
   const tscArgs = [tscBin, '--project', config.dtsProject];
   if (options.watch) {
     const child = spawn(
