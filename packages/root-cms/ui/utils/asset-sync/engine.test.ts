@@ -11,6 +11,7 @@ import {
   RemoteAsset,
   SyncAuthContext,
   SyncInProgressError,
+  SyncRateLimitError,
 } from './types.js';
 
 /** Builds a fake Timestamp-ish value. */
@@ -391,6 +392,33 @@ describe('syncFolder', () => {
     expect(deps.finalizeFolderSync).toHaveBeenCalledWith(
       'folder-icons',
       expect.objectContaining({ok: false, failed: 1}),
+      {remoteVersion: undefined}
+    );
+  });
+
+  it('aborts the download queue on a rate limit and rethrows', async () => {
+    const folder = makeFolder();
+    const {provider} = makeProvider({
+      version: 'v1',
+      remote: [
+        {remoteId: 'file:1:0', filename: 'a.png', contents: 'aaa'},
+        {remoteId: 'file:2:0', filename: 'b.png', contents: 'bbb'},
+      ],
+    });
+    provider.download = async () => {
+      throw new SyncRateLimitError('rate limited');
+    };
+    const deps = makeDeps({folder});
+    await expect(
+      syncFolder({folder, provider, auth: AUTH, deps, concurrency: 1})
+    ).rejects.toThrow(SyncRateLimitError);
+    // The first rate-limited item aborts the queue -- the remaining items
+    // are not attempted (each would just be rate-limited again), and no
+    // partial writes happen for them.
+    expect(deps.createAssetFile).not.toHaveBeenCalled();
+    expect(deps.finalizeFolderSync).toHaveBeenCalledWith(
+      'folder-icons',
+      expect.objectContaining({ok: false, error: 'rate limited'}),
       {remoteVersion: undefined}
     );
   });

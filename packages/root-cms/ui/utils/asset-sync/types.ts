@@ -96,6 +96,30 @@ export class SyncInProgressError extends Error {
   }
 }
 
+/**
+ * Thrown when the provider's API rate limit is still exhausted after the
+ * provider's own retries. The engine aborts the sync (nothing is lost --
+ * re-syncing later picks up where it left off, since unchanged items are
+ * skipped by hash and `lastRemoteVersion` is only advanced on success).
+ */
+export class SyncRateLimitError extends Error {
+  constructor(
+    message: string,
+    readonly retryAfterSeconds?: number
+  ) {
+    super(message);
+    this.name = 'SyncRateLimitError';
+  }
+}
+
+/**
+ * Passed by the engine into provider calls so providers can surface
+ * transient, user-facing status (e.g. a rate-limit backoff countdown).
+ */
+export interface SyncProviderContext {
+  onStatus?: (message: string) => void;
+}
+
 /** Provides the per-user credential for a sync provider. */
 export interface SyncAuthContext {
   /**
@@ -143,7 +167,8 @@ export interface AssetSyncProvider {
    */
   listRemoteAssets(
     source: SyncSourceRef,
-    auth: SyncAuthContext
+    auth: SyncAuthContext,
+    ctx?: SyncProviderContext
   ): Promise<RemoteAssetList>;
   /**
    * Optional hook called with the subset of assets that actually need
@@ -155,13 +180,15 @@ export interface AssetSyncProvider {
   prepareDownloads?(
     assets: RemoteAsset[],
     source: SyncSourceRef,
-    auth: SyncAuthContext
+    auth: SyncAuthContext,
+    ctx?: SyncProviderContext
   ): Promise<void>;
   /** Downloads one asset's bytes as a File (named `asset.filename`). */
   download(
     asset: RemoteAsset,
     source: SyncSourceRef,
-    auth: SyncAuthContext
+    auth: SyncAuthContext,
+    ctx?: SyncProviderContext
   ): Promise<File>;
 }
 
@@ -174,6 +201,11 @@ export interface SyncProgress {
   completed?: number;
   /** Name of an item currently being processed. */
   currentName?: string;
+  /**
+   * Transient provider status shown in place of the default phase text,
+   * e.g. a rate-limit backoff countdown.
+   */
+  note?: string;
 }
 
 /** Per-item failure collected during a sync. */

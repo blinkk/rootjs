@@ -54,6 +54,8 @@ import {
   SyncAuthContext,
   SyncInProgressError,
   SyncProgress,
+  SyncProviderContext,
+  SyncRateLimitError,
   SyncSummary,
 } from './types.js';
 
@@ -153,8 +155,21 @@ export async function syncFolder(
     throw new Error(`Unknown sync provider: ${sync.provider}`);
   }
   const auth = options.auth ?? createBrowserAuthContext(provider.id);
-  const onProgress = options.onProgress || (() => {});
   const concurrency = options.concurrency || DEFAULT_CONCURRENCY;
+
+  // Progress reporting. Providers report transient status (e.g. rate-limit
+  // backoff countdowns) through `providerCtx.onStatus`, which re-emits the
+  // latest progress with a `note`; regular progress events clear the note.
+  let lastProgress: SyncProgress = {phase: 'enumerating'};
+  const onProgress = (progress: SyncProgress) => {
+    lastProgress = progress;
+    options.onProgress?.(progress);
+  };
+  const providerCtx: SyncProviderContext = {
+    onStatus: (message: string) => {
+      options.onProgress?.({...lastProgress, note: message});
+    },
+  };
 
   // Resolve the token before taking the lease or writing anything, so a
   // missing token surfaces as a prompt with zero side effects.
@@ -189,7 +204,7 @@ export async function syncFolder(
 
   try {
     onProgress({phase: 'enumerating'});
-    const remoteList = await provider.listRemoteAssets(sync, auth);
+    const remoteList = await provider.listRemoteAssets(sync, auth, providerCtx);
     remoteVersion = remoteList.version;
 
     const folderPath = joinFolderPath(folder.parent, folder.name);
@@ -252,7 +267,7 @@ export async function syncFolder(
     // Let the provider batch per-item download prep (e.g. Figma render URL
     // resolution) for just the items that actually need downloading.
     if (provider.prepareDownloads && candidates.length > 0) {
-      await provider.prepareDownloads(candidates, sync, auth);
+      await provider.prepareDownloads(candidates, sync, auth, providerCtx);
     }
 
     // Pre-assign de-duped names for new imports (deterministic by remote id
@@ -275,7 +290,16 @@ export async function syncFolder(
     let completed = 0;
     onProgress({phase: 'downloading', total: candidates.length, completed});
 
+    // A rate-limited item means every remaining item would also be
+    // rate-limited (after its own long retries), so the first one aborts
+    // the queue. Nothing is lost: re-syncing later resumes cheaply since
+    // already-imported items are skipped by content hash.
+    let rateLimitError: SyncRateLimitError | null = null;
+
     await runPool(candidates, concurrency, async (remoteAsset) => {
+      if (rateLimitError) {
+        return;
+      }
       onProgress({
         phase: 'downloading',
         total: candidates.length,
@@ -285,6 +309,10 @@ export async function syncFolder(
       try {
         await syncItem(remoteAsset);
       } catch (err: any) {
+        if (err instanceof SyncRateLimitError) {
+          rateLimitError = err;
+          return;
+        }
         console.error(`failed to sync "${remoteAsset.name}":`, err);
         summary.failed.push({
           name: remoteAsset.name,
@@ -295,9 +323,18 @@ export async function syncFolder(
       onProgress({phase: 'downloading', total: candidates.length, completed});
     });
 
+    if (rateLimitError) {
+      throw rateLimitError;
+    }
+
     async function syncItem(remoteAsset: RemoteAsset) {
       const existing = syncedByRemoteId.get(remoteAsset.remoteId);
-      const file = await provider!.download(remoteAsset, sync!, auth);
+      const file = await provider!.download(
+        remoteAsset,
+        sync!,
+        auth,
+        providerCtx
+      );
       const contentHash = await deps.sha1(file);
       // Unchanged bytes: strict no-op (no upload, no db write, no fan-out).
       if (existing && existing.source?.contentHash === contentHash) {

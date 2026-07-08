@@ -17,6 +17,8 @@ import {
   RemoteAssetList,
   SyncAccessError,
   SyncAuthContext,
+  SyncProviderContext,
+  SyncRateLimitError,
   SyncSourceRef,
   SyncTokenRequiredError,
 } from './types.js';
@@ -33,6 +35,9 @@ const IMAGES_BATCH_SIZE = 50;
 
 /** Max retries for rate-limited (429) API requests. */
 const MAX_RATE_LIMIT_RETRIES = 3;
+
+/** Max seconds to wait out a single Retry-After before retrying. */
+const MAX_RETRY_WAIT_SECONDS = 120;
 
 /** Formats supported by the Figma images API. */
 type FigmaExportFormat = 'png' | 'jpg' | 'svg' | 'pdf';
@@ -116,19 +121,43 @@ export function parseFigmaUrl(url: string): FigmaSourceRef | null {
 
 /**
  * Calls the Figma REST API, mapping auth failures to typed errors and
- * retrying rate-limited requests with backoff.
+ * retrying rate-limited requests with backoff. Rate-limit waits honor the
+ * `Retry-After` header and are surfaced to the user as a countdown via
+ * `onStatus`; when retries are exhausted a {@link SyncRateLimitError} is
+ * thrown so the sync fails with a clear "try again in a bit" message
+ * instead of hanging silently.
  */
-async function figmaFetch(path: string, token: string): Promise<any> {
+async function figmaFetch(
+  path: string,
+  token: string,
+  onStatus?: (message: string) => void
+): Promise<any> {
   let attempt = 0;
   for (;;) {
     const res = await fetch(`${FIGMA_API_ORIGIN}${path}`, {
       headers: {'X-Figma-Token': token},
     });
-    if (res.status === 429 && attempt < MAX_RATE_LIMIT_RETRIES) {
+    if (res.status === 429) {
       attempt += 1;
-      const retryAfter = Number(res.headers.get('retry-after')) || 0;
-      const delaySeconds = Math.min(Math.max(retryAfter, 5 * attempt), 60);
-      await sleep(delaySeconds * 1000);
+      const retryAfter = Number(res.headers?.get?.('retry-after')) || 0;
+      if (attempt > MAX_RATE_LIMIT_RETRIES) {
+        throw new SyncRateLimitError(
+          'Figma is rate-limiting API requests for your account. Wait a minute or two, then sync again — the sync picks up where it left off.',
+          retryAfter || undefined
+        );
+      }
+      // Honor Retry-After (capped), with a growing floor when absent.
+      const delaySeconds = Math.min(
+        Math.max(retryAfter, 10 * attempt),
+        MAX_RETRY_WAIT_SECONDS
+      );
+      for (let remaining = delaySeconds; remaining > 0; remaining--) {
+        onStatus?.(
+          `Figma rate limit reached — retrying in ${remaining}s… (attempt ${attempt} of ${MAX_RATE_LIMIT_RETRIES})`
+        );
+        await sleep(1000);
+      }
+      onStatus?.('Retrying…');
       continue;
     }
     if (res.ok) {
@@ -241,7 +270,8 @@ function collectExportableNodes(
 
 async function listRemoteAssets(
   source: SyncSourceRef,
-  auth: SyncAuthContext
+  auth: SyncAuthContext,
+  ctx?: SyncProviderContext
 ): Promise<RemoteAssetList> {
   const figma = source.figma;
   if (!figma?.fileKey) {
@@ -254,7 +284,8 @@ async function listRemoteAssets(
   if (figma.nodeId) {
     const data = await figmaFetch(
       `/v1/files/${encodeURIComponent(figma.fileKey)}/nodes?ids=${encodeURIComponent(figma.nodeId)}`,
-      token
+      token,
+      ctx?.onStatus
     );
     version = data?.version ? String(data.version) : undefined;
     const nodeData = data?.nodes?.[figma.nodeId];
@@ -267,7 +298,8 @@ async function listRemoteAssets(
   } else {
     const data = await figmaFetch(
       `/v1/files/${encodeURIComponent(figma.fileKey)}`,
-      token
+      token,
+      ctx?.onStatus
     );
     version = data?.version ? String(data.version) : undefined;
     roots = data?.document ? [data.document] : [];
@@ -301,7 +333,8 @@ async function listRemoteAssets(
 async function prepareDownloads(
   assets: RemoteAsset[],
   source: SyncSourceRef,
-  auth: SyncAuthContext
+  auth: SyncAuthContext,
+  ctx?: SyncProviderContext
 ): Promise<void> {
   const fileKey = source.figma?.fileKey;
   if (!fileKey) {
@@ -334,7 +367,8 @@ async function prepareDownloads(
       }
       const data = await figmaFetch(
         `/v1/images/${encodeURIComponent(fileKey)}?${params.toString()}`,
-        token
+        token,
+        ctx?.onStatus
       );
       if (data?.err) {
         throw new Error(`Figma image render failed: ${data.err}`);

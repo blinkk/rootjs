@@ -1,5 +1,6 @@
 import {afterEach, describe, expect, it, vi} from 'vitest';
 import {FIGMA_PROVIDER, buildExportFilename, parseFigmaUrl} from './figma.js';
+import {SyncAuthContext, SyncRateLimitError} from './types.js';
 
 describe('parseFigmaUrl', () => {
   it('parses design URLs', () => {
@@ -154,6 +155,84 @@ describe('FIGMA_PROVIDER.validateToken', () => {
     const check = await FIGMA_PROVIDER.validateToken!('tok', SOURCE);
     expect(check.valid).toBe(false);
     expect(check.error).toContain("can't read this Figma file");
+  });
+});
+
+describe('FIGMA_PROVIDER rate limiting', () => {
+  const SOURCE = {
+    provider: 'figma',
+    url: 'https://www.figma.com/design/AbC123/File',
+    figma: {fileKey: 'AbC123'},
+  };
+  const AUTH: SyncAuthContext = {
+    getToken: async () => 'tok',
+    invalidateToken: () => {},
+  };
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.useRealTimers();
+  });
+
+  it('retries a rate-limited request and reports a countdown', async () => {
+    vi.useFakeTimers();
+    let calls = 0;
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => {
+        calls += 1;
+        if (calls === 1) {
+          return {
+            ok: false,
+            status: 429,
+            headers: {get: () => '1'},
+            json: async () => ({}),
+          } as any;
+        }
+        return {
+          ok: true,
+          status: 200,
+          headers: {get: () => null},
+          json: async () => ({
+            version: '9',
+            document: {id: '0:0', name: 'root', children: []},
+          }),
+        } as any;
+      })
+    );
+    const notes: string[] = [];
+    const promise = FIGMA_PROVIDER.listRemoteAssets(SOURCE, AUTH, {
+      onStatus: (message) => notes.push(message),
+    });
+    await vi.advanceTimersByTimeAsync(11_000);
+    const result = await promise;
+    expect(result.version).toEqual('9');
+    expect(calls).toEqual(2);
+    expect(notes.some((n) => n.includes('rate limit'))).toBe(true);
+  });
+
+  it('throws SyncRateLimitError after exhausting retries', async () => {
+    vi.useFakeTimers();
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(
+        async () =>
+          ({
+            ok: false,
+            status: 429,
+            headers: {get: () => null},
+            json: async () => ({}),
+          }) as any
+      )
+    );
+    const promise = FIGMA_PROVIDER.listRemoteAssets(SOURCE, AUTH).catch(
+      (err) => err
+    );
+    // Backoff floors are 10s + 20s + 30s before the final attempt.
+    await vi.advanceTimersByTimeAsync(61_000);
+    const err = await promise;
+    expect(err).toBeInstanceOf(SyncRateLimitError);
+    expect(String(err.message)).toContain('rate-limiting');
   });
 });
 

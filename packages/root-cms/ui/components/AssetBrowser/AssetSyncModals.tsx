@@ -346,17 +346,26 @@ export function SyncProgressModal(props: {
           <div className="AssetBrowser__syncProgress__running">
             <Loader color="gray" size="sm" />
             <div className="AssetBrowser__syncProgress__phase">
-              {progress.phase === 'enumerating' && 'Finding exportable assets…'}
-              {progress.phase === 'downloading' &&
-                (progress.total
-                  ? `Importing ${Math.min(
-                      (progress.completed ?? 0) + 1,
-                      progress.total
-                    )} of ${progress.total}${
-                      progress.currentName ? ` — ${progress.currentName}` : ''
-                    }`
-                  : 'Importing…')}
-              {progress.phase === 'finalizing' && 'Finishing up…'}
+              {progress.note ? (
+                progress.note
+              ) : (
+                <>
+                  {progress.phase === 'enumerating' &&
+                    'Finding exportable assets…'}
+                  {progress.phase === 'downloading' &&
+                    (progress.total
+                      ? `Importing ${Math.min(
+                          (progress.completed ?? 0) + 1,
+                          progress.total
+                        )} of ${progress.total}${
+                          progress.currentName
+                            ? ` — ${progress.currentName}`
+                            : ''
+                        }`
+                      : 'Importing…')}
+                  {progress.phase === 'finalizing' && 'Finishing up…'}
+                </>
+              )}
             </div>
           </div>
         )}
