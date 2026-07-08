@@ -186,7 +186,7 @@ DataPage.DataSourcesTable = () => {
           </Table>
         )}
         {!loading && filteredDataSources.length === 0 && (
-          <Text as="p">No data sources found for this filter.</Text>
+          <Text className="DataPage__emptyText">No data sources found.</Text>
         )}
       </Surface>
     </div>

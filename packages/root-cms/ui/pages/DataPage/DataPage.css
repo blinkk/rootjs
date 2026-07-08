@@ -16,6 +16,10 @@
   margin-top: 20px;
 }
 
+.DataPage__emptyText {
+  padding: 20px;
+}
+
 .DataPage__DataSourcesTable__filters {
   margin-bottom: 20px;
   display: flex;
