@@ -384,16 +384,57 @@ async function fetchViaProxy(url: string): Promise<Response> {
 }
 
 async function validateToken(
-  token: string
-): Promise<{valid: boolean; account?: string}> {
+  token: string,
+  source?: SyncSourceRef
+): Promise<{valid: boolean; account?: string; error?: string}> {
+  // `/v1/me` provides the account display name, but scoped personal access
+  // tokens created with only "File content" access (which is all syncing
+  // needs, and what the token help suggests) are not allowed to call it --
+  // Figma responds 403 "Invalid scope". Only an explicit invalid-token
+  // error means the token is bad; otherwise fall back to checking the
+  // actual file being connected, which is the access that matters anyway.
   const res = await fetch(`${FIGMA_API_ORIGIN}/v1/me`, {
     headers: {'X-Figma-Token': token},
   });
-  if (!res.ok) {
+  if (res.ok) {
+    const me = await res.json().catch(() => ({}));
+    return {valid: true, account: me?.email || me?.handle};
+  }
+  const body = await res.json().catch(() => ({}));
+  const err = String(body?.err || body?.message || '').toLowerCase();
+  if (res.status === 401 || err.includes('token')) {
     return {valid: false};
   }
-  const me = await res.json().catch(() => ({}));
-  return {valid: true, account: me?.email || me?.handle};
+  const fileKey = source?.figma?.fileKey;
+  if (!fileKey) {
+    // The token is real (just scope-limited, e.g. no user-info scope).
+    // Access to the source is verified when the sync runs.
+    return {valid: true};
+  }
+  const fileRes = await fetch(
+    `${FIGMA_API_ORIGIN}/v1/files/${encodeURIComponent(fileKey)}?depth=1`,
+    {headers: {'X-Figma-Token': token}}
+  );
+  if (fileRes.ok) {
+    return {valid: true};
+  }
+  const fileBody = await fileRes.json().catch(() => ({}));
+  const fileErr = String(
+    fileBody?.err || fileBody?.message || ''
+  ).toLowerCase();
+  if (fileRes.status === 403 && fileErr.includes('token')) {
+    return {valid: false};
+  }
+  if (fileRes.status === 403 || fileRes.status === 404) {
+    return {
+      valid: false,
+      error:
+        "The token looks OK, but it can't read this Figma file. Check that the token belongs to an account with access to the file and includes read access to file content.",
+    };
+  }
+  // Unexpected response (e.g. rate limited); give the token the benefit of
+  // the doubt -- the sync itself will surface any real auth error.
+  return {valid: true};
 }
 
 export const FIGMA_PROVIDER: AssetSyncProvider = {

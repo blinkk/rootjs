@@ -126,10 +126,16 @@ export interface AssetSyncProvider {
    */
   parseSourceUrl(url: string): SyncSourceRef | null;
   /**
-   * Validates a token (e.g. via a "who am I" endpoint). Returns a display
-   * string for the connected account when available.
+   * Validates a token, preferably against `source` when provided (which
+   * also verifies the user can access the source). Returns a display string
+   * for the connected account when available, and a user-facing `error`
+   * when the failure is more specific than "invalid token" (e.g. the token
+   * is fine but lacks access to the source).
    */
-  validateToken?(token: string): Promise<{valid: boolean; account?: string}>;
+  validateToken?(
+    token: string,
+    source?: SyncSourceRef
+  ): Promise<{valid: boolean; account?: string; error?: string}>;
   /**
    * Enumerates the exportable assets at the source. Also serves as the
    * access check: implementations should throw {@link SyncAccessError} when

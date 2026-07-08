@@ -1,4 +1,4 @@
-import {describe, expect, it} from 'vitest';
+import {afterEach, describe, expect, it, vi} from 'vitest';
 import {FIGMA_PROVIDER, buildExportFilename, parseFigmaUrl} from './figma.js';
 
 describe('parseFigmaUrl', () => {
@@ -75,6 +75,85 @@ describe('buildExportFilename', () => {
   it('defaults to png and normalizes jpeg', () => {
     expect(buildExportFilename('hero', {})).toEqual('hero.png');
     expect(buildExportFilename('hero', {format: 'JPEG'})).toEqual('hero.jpg');
+  });
+});
+
+describe('FIGMA_PROVIDER.validateToken', () => {
+  /** Stubs global fetch, routing by URL substring. */
+  function stubFetch(routes: Record<string, {status: number; body: any}>) {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (url: string) => {
+        const match = Object.entries(routes).find(([key]) =>
+          String(url).includes(key)
+        );
+        const {status, body} = match ? match[1] : {status: 404, body: {}};
+        return {
+          ok: status >= 200 && status < 300,
+          status,
+          json: async () => body,
+        } as any;
+      })
+    );
+  }
+
+  const SOURCE = {
+    provider: 'figma',
+    url: 'https://www.figma.com/design/AbC123/File',
+    figma: {fileKey: 'AbC123'},
+  };
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it('accepts tokens that can call /v1/me', async () => {
+    stubFetch({'/v1/me': {status: 200, body: {email: 'a@example.com'}}});
+    expect(await FIGMA_PROVIDER.validateToken!('tok', SOURCE)).toEqual({
+      valid: true,
+      account: 'a@example.com',
+    });
+  });
+
+  it('accepts scoped file-content tokens that cannot call /v1/me', async () => {
+    // Scoped PATs with only "File content" access get 403 "Invalid scope"
+    // from /v1/me; validation must fall back to the target file.
+    stubFetch({
+      '/v1/me': {status: 403, body: {status: 403, err: 'Invalid scope'}},
+      '/v1/files/AbC123': {status: 200, body: {name: 'File'}},
+    });
+    expect(await FIGMA_PROVIDER.validateToken!('tok', SOURCE)).toEqual({
+      valid: true,
+    });
+  });
+
+  it('accepts scope-limited tokens when no source is available', async () => {
+    stubFetch({
+      '/v1/me': {status: 403, body: {status: 403, err: 'Invalid scope'}},
+    });
+    expect((await FIGMA_PROVIDER.validateToken!('tok')).valid).toBe(true);
+  });
+
+  it('rejects invalid tokens', async () => {
+    stubFetch({
+      '/v1/me': {status: 403, body: {status: 403, err: 'Invalid token'}},
+    });
+    expect((await FIGMA_PROVIDER.validateToken!('bad', SOURCE)).valid).toBe(
+      false
+    );
+  });
+
+  it('reports missing file access with a specific error', async () => {
+    stubFetch({
+      '/v1/me': {status: 403, body: {status: 403, err: 'Invalid scope'}},
+      '/v1/files/AbC123': {
+        status: 403,
+        body: {status: 403, err: 'Not authorized'},
+      },
+    });
+    const check = await FIGMA_PROVIDER.validateToken!('tok', SOURCE);
+    expect(check.valid).toBe(false);
+    expect(check.error).toContain("can't read this Figma file");
   });
 });
 

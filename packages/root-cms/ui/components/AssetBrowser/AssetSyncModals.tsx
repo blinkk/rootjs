@@ -87,10 +87,11 @@ export function ConnectSyncModal(props: {
       const token = tokenInput.trim();
       if (token) {
         if (provider.validateToken) {
-          const check = await provider.validateToken(token);
+          const check = await provider.validateToken(token, parsed.source);
           if (!check.valid) {
             setError(
-              `The ${provider.label} token appears to be invalid. Check the token and try again.`
+              check.error ||
+                `The ${provider.label} token appears to be invalid. Check the token and try again.`
             );
             setSubmitting(false);
             return;
@@ -307,10 +308,11 @@ export function SyncProgressModal(props: {
     setSavingToken(true);
     try {
       if (provider.validateToken) {
-        const check = await provider.validateToken(token);
+        const check = await provider.validateToken(token, folder.sync);
         if (!check.valid) {
           setError(
-            `The ${provider.label} token appears to be invalid. Check the token and try again.`
+            check.error ||
+              `The ${provider.label} token appears to be invalid. Check the token and try again.`
           );
           setSavingToken(false);
           return;
