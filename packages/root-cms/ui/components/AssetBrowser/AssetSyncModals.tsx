@@ -3,6 +3,7 @@ import {showNotification} from '@mantine/notifications';
 import {
   IconAlertTriangle,
   IconBrandFigma,
+  IconBrandGoogleDrive,
   IconCloudDownload,
 } from '@tabler/icons-preact';
 import {ChangeEvent} from 'preact/compat';
@@ -36,6 +37,9 @@ export function SyncProviderIcon(props: {provider?: string; size?: number}) {
   if (props.provider === 'figma') {
     return <IconBrandFigma size={size} />;
   }
+  if (props.provider === 'gdrive') {
+    return <IconBrandGoogleDrive size={size} />;
+  }
   return <IconCloudDownload size={size} />;
 }
 
@@ -66,8 +70,11 @@ export function ConnectSyncModal(props: {
 
   const parsed = useMemo(() => parseSyncSourceUrl(url), [url]);
   const provider: AssetSyncProvider | null = parsed?.provider || null;
-  const hasStoredToken = provider ? !!getProviderToken(provider.id) : false;
-  const showTokenSection = !!provider && (!hasStoredToken || showTokenInput);
+  const isOAuth = provider?.authType === 'oauth';
+  const hasStoredToken =
+    provider && !isOAuth ? !!getProviderToken(provider.id) : false;
+  const showTokenSection =
+    !!provider && !isOAuth && (!hasStoredToken || showTokenInput);
   const folderPath = joinFolderPath(folder.parent, folder.name);
 
   async function onSubmit() {
@@ -84,24 +91,32 @@ export function ConnectSyncModal(props: {
     }
     setSubmitting(true);
     try {
-      const token = tokenInput.trim();
-      if (token) {
-        if (provider.validateToken) {
-          const check = await provider.validateToken(token, parsed.source);
-          if (!check.valid) {
-            setError(
-              check.error ||
-                `The ${provider.label} token appears to be invalid. Check the token and try again.`
-            );
-            setSubmitting(false);
-            return;
-          }
+      if (isOAuth) {
+        // Interactive sign-in must happen within the submit click gesture
+        // so the popup isn't blocked. With prior consent this is silent.
+        if (provider.interactiveLogin) {
+          await provider.interactiveLogin();
         }
-        setProviderToken(provider.id, token);
-      } else if (!hasStoredToken) {
-        setError(`Enter your ${provider.label} access token.`);
-        setSubmitting(false);
-        return;
+      } else {
+        const token = tokenInput.trim();
+        if (token) {
+          if (provider.validateToken) {
+            const check = await provider.validateToken(token, parsed.source);
+            if (!check.valid) {
+              setError(
+                check.error ||
+                  `The ${provider.label} token appears to be invalid. Check the token and try again.`
+              );
+              setSubmitting(false);
+              return;
+            }
+          }
+          setProviderToken(provider.id, token);
+        } else if (!hasStoredToken) {
+          setError(`Enter your ${provider.label} access token.`);
+          setSubmitting(false);
+          return;
+        }
       }
       const updated = await connectFolderSync(folder, parsed.source);
       showNotification({
@@ -149,24 +164,30 @@ export function ConnectSyncModal(props: {
         }}
       >
         <div className="AssetBrowser__syncModal__text">
-          Sync the exportable assets of a Figma file or node into this folder.
-          Assets marked for export in Figma are imported here and can be
-          re-synced when the designs change.
+          Sync assets from an external source into this folder — the exportable
+          assets of a Figma file or node, or the files of a Google Drive folder.
+          The connection is saved with this folder and can be re-synced when the
+          source changes.
         </div>
         <TextInput
           data-autofocus
           label="Source URL"
-          placeholder="https://www.figma.com/design/..."
+          placeholder="https://www.figma.com/design/… or https://drive.google.com/drive/folders/…"
           description={
             provider
               ? `Source: ${provider.label}`
-              : 'Link to a Figma file, or a specific node ("Copy link to selection" in Figma).'
+              : 'Link to a Figma file/node ("Copy link to selection" in Figma) or a Google Drive folder.'
           }
           value={url}
           onChange={(e: ChangeEvent<HTMLInputElement>) =>
             setUrl(e.currentTarget.value)
           }
         />
+        {isOAuth && provider?.tokenHelp && (
+          <div className="AssetBrowser__syncModal__tokenHelp">
+            {provider.tokenHelp.text}
+          </div>
+        )}
         {showTokenSection && provider && (
           <div className="AssetBrowser__syncModal__token">
             <TextInput
@@ -328,6 +349,23 @@ export function SyncProgressModal(props: {
     }
   }
 
+  /** OAuth providers: interactive sign-in (within the click gesture). */
+  async function signInAndRetry() {
+    if (!provider?.interactiveLogin) {
+      return;
+    }
+    setSavingToken(true);
+    setError('');
+    try {
+      await provider.interactiveLogin();
+      setSavingToken(false);
+      run();
+    } catch (err: any) {
+      setError(String(err?.message || err));
+      setSavingToken(false);
+    }
+  }
+
   const running = status === 'running';
 
   return (
@@ -370,7 +408,31 @@ export function SyncProgressModal(props: {
           </div>
         )}
 
-        {status === 'token' && provider && (
+        {status === 'token' && provider && provider.authType === 'oauth' && (
+          <div className="AssetBrowser__syncProgress__token">
+            <div className="AssetBrowser__syncModal__text">
+              {provider.tokenHelp?.text ||
+                `Sign in to ${provider.label} to sync. Only your account's access to the source is used.`}
+            </div>
+            {error && (
+              <div className="AssetBrowser__syncModal__error">{error}</div>
+            )}
+            <div className="AssetBrowser__syncModal__buttons">
+              <Button variant="default" onClick={props.onClose}>
+                Cancel
+              </Button>
+              <Button
+                color="dark"
+                loading={savingToken}
+                onClick={() => signInAndRetry()}
+              >
+                {provider.loginLabel || `Sign in to ${provider.label}`}
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {status === 'token' && provider && provider.authType !== 'oauth' && (
           <div className="AssetBrowser__syncProgress__token">
             <div className="AssetBrowser__syncModal__text">
               A {provider.label} access token is needed to sync. Your token is

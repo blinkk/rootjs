@@ -137,7 +137,29 @@ export interface AssetSyncProvider {
   id: string;
   /** Display name, e.g. `Figma`. */
   label: string;
-  /** Help copy for the token prompt in the UI. */
+  /**
+   * How users authenticate with the provider. Defaults to `token` (the
+   * user pastes a personal access token, stored in the browser token
+   * store). `oauth` providers sign the user in interactively via
+   * {@link interactiveLogin} instead, and typically supply their own
+   * {@link createAuthContext}.
+   */
+  authType?: 'token' | 'oauth';
+  /**
+   * OAuth providers: interactively signs the user in (e.g. opens the
+   * Google sign-in popup). Must be called from a user gesture (click
+   * handler) so the popup isn't blocked.
+   */
+  interactiveLogin?(): Promise<void>;
+  /** OAuth providers: sign-in button label, e.g. `Sign in with Google`. */
+  loginLabel?: string;
+  /**
+   * Returns the auth context used by the sync engine. When absent, the
+   * engine falls back to the browser token store (`tokens.ts`), which
+   * suits `token`-type providers.
+   */
+  createAuthContext?(): SyncAuthContext;
+  /** Help copy for the token/sign-in prompt in the UI. */
   tokenHelp?: {
     /** Short instructions, e.g. where to create a token. */
     text: string;

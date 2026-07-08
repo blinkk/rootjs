@@ -7,9 +7,13 @@
  */
 
 import {FIGMA_PROVIDER} from './figma.js';
+import {GDRIVE_PROVIDER} from './gdrive.js';
 import {AssetSyncProvider, SyncSourceRef} from './types.js';
 
-export const SYNC_PROVIDERS: AssetSyncProvider[] = [FIGMA_PROVIDER];
+export const SYNC_PROVIDERS: AssetSyncProvider[] = [
+  FIGMA_PROVIDER,
+  GDRIVE_PROVIDER,
+];
 
 /** Returns the sync provider with the given id, if registered. */
 export function getSyncProvider(id: string): AssetSyncProvider | null {

@@ -154,7 +154,10 @@ export async function syncFolder(
   if (!provider) {
     throw new Error(`Unknown sync provider: ${sync.provider}`);
   }
-  const auth = options.auth ?? createBrowserAuthContext(provider.id);
+  const auth =
+    options.auth ??
+    provider.createAuthContext?.() ??
+    createBrowserAuthContext(provider.id);
   const concurrency = options.concurrency || DEFAULT_CONCURRENCY;
 
   // Progress reporting. Providers report transient status (e.g. rate-limit
