@@ -16,7 +16,9 @@ import {
   updateNotification,
 } from '@mantine/notifications';
 import {
+  IconAlertTriangle,
   IconChevronRight,
+  IconCloudDownload,
   IconCopy,
   IconDotsVertical,
   IconDownload,
@@ -25,7 +27,9 @@ import {
   IconFolderSymlink,
   IconInfoCircle,
   IconPencil,
+  IconRefresh,
   IconSearch,
+  IconSettings,
   IconTrash,
   IconUpload,
 } from '@tabler/icons-preact';
@@ -33,6 +37,7 @@ import {ChangeEvent} from 'preact/compat';
 import {useEffect, useMemo, useState} from 'preact/hooks';
 import {usePagination} from '../../hooks/usePagination.js';
 import {useProjectRoles} from '../../hooks/useProjectRoles.js';
+import {getSyncProvider} from '../../utils/asset-sync/registry.js';
 import {
   Asset,
   AssetFile,
@@ -42,6 +47,7 @@ import {
   deleteAsset,
   findDocsUsingAsset,
   getAsset,
+  getFolderId,
   getRelativeFolderPath,
   joinFolderPath,
   listAssets,
@@ -70,6 +76,11 @@ import {
   copyAssetUrl,
   downloadAssetFile,
 } from './AssetPreview.js';
+import {
+  ConnectSyncModal,
+  SyncProgressModal,
+  SyncProviderIcon,
+} from './AssetSyncModals.js';
 
 export type AssetBrowserMode = 'manage' | 'pick';
 
@@ -129,6 +140,12 @@ export function AssetBrowser(props: AssetBrowserProps) {
   const [detailsTarget, setDetailsTarget] = useState<AssetFile | null>(null);
   // Multi-select for bulk actions (manage mode), keyed by asset id.
   const [selected, setSelected] = useState<Map<string, Asset>>(new Map());
+  // The current folder's own db doc (for its sync-source connection).
+  const [currentFolder, setCurrentFolder] = useState<AssetFolder | null>(null);
+  // Folder targeted by the sync settings / sync run modals.
+  const [syncSettingsTarget, setSyncSettingsTarget] =
+    useState<AssetFolder | null>(null);
+  const [syncRunTarget, setSyncRunTarget] = useState<AssetFolder | null>(null);
 
   const {roles} = useProjectRoles();
   const currentUserEmail = window.firebase.user.email || '';
@@ -151,8 +168,15 @@ export function AssetBrowser(props: AssetBrowserProps) {
     setSearchIndex(null);
     setSelected(new Map());
     await notifyErrors(async () => {
-      const res = await listAssets(folderPath);
+      const [res, folderAsset] = await Promise.all([
+        listAssets(folderPath),
+        // Fetch the current folder's own doc (for its sync connection).
+        folderPath ? getAsset(getFolderId(folderPath)) : Promise.resolve(null),
+      ]);
       setAssets(res);
+      setCurrentFolder(
+        folderAsset && folderAsset.type === 'folder' ? folderAsset : null
+      );
     });
     setLoading(false);
   }
@@ -372,6 +396,28 @@ export function AssetBrowser(props: AssetBrowserProps) {
               setFilter(e.currentTarget.value)
             }
           />
+          {props.mode === 'manage' &&
+            canManage &&
+            currentFolder &&
+            (currentFolder.sync ? (
+              <Button
+                variant="default"
+                size="xs"
+                leftIcon={<IconRefresh size={16} />}
+                onClick={() => setSyncRunTarget(currentFolder)}
+              >
+                Sync
+              </Button>
+            ) : (
+              <Button
+                variant="default"
+                size="xs"
+                leftIcon={<IconCloudDownload size={16} />}
+                onClick={() => setSyncSettingsTarget(currentFolder)}
+              >
+                Connect sync source
+              </Button>
+            ))}
           {showUpload && props.mode === 'manage' && (
             <Button
               variant="default"
@@ -395,6 +441,13 @@ export function AssetBrowser(props: AssetBrowserProps) {
           )}
         </div>
       </div>
+      {props.mode === 'manage' && currentFolder?.sync && !searching && (
+        <AssetSyncBar
+          folder={currentFolder}
+          canManage={canManage}
+          onSettings={() => setSyncSettingsTarget(currentFolder)}
+        />
+      )}
       {showSelection && selectedAssets.length > 0 && (
         <div className="AssetBrowser__selectionBar">
           <div className="AssetBrowser__selectionBar__count">
@@ -545,6 +598,20 @@ export function AssetBrowser(props: AssetBrowserProps) {
                         <div className="AssetBrowser__nameCell__text">
                           <div className="AssetBrowser__nameCell__name">
                             {asset.name}
+                            {asset.sync && (
+                              <span
+                                className="AssetBrowser__syncBadge"
+                                title={`Synced from ${
+                                  getSyncProvider(asset.sync.provider)?.label ||
+                                  asset.sync.provider
+                                }`}
+                              >
+                                <SyncProviderIcon
+                                  provider={asset.sync.provider}
+                                  size={12}
+                                />
+                              </span>
+                            )}
                           </div>
                           <AssetLocation
                             asset={asset}
@@ -632,6 +699,15 @@ export function AssetBrowser(props: AssetBrowserProps) {
                               <span className="AssetBrowser__nameCell__dimens">
                                 {' '}
                                 ({asset.file.width}x{asset.file.height})
+                              </span>
+                            )}
+                            {asset.source?.missingSince && (
+                              <span
+                                className="AssetBrowser__missingBadge"
+                                title="This asset no longer exists at its sync source. It is kept here since docs may still use it; delete it manually if unused."
+                              >
+                                <IconAlertTriangle size={12} />
+                                removed in source
                               </span>
                             )}
                           </div>
@@ -745,6 +821,87 @@ export function AssetBrowser(props: AssetBrowserProps) {
             reload(folder);
           }}
         />
+      )}
+      {syncSettingsTarget && (
+        <ConnectSyncModal
+          folder={syncSettingsTarget}
+          onClose={() => setSyncSettingsTarget(null)}
+          onConnected={(updatedFolder, runSync) => {
+            setSyncSettingsTarget(null);
+            reload(folder);
+            if (runSync) {
+              setSyncRunTarget(updatedFolder);
+            }
+          }}
+          onDisconnected={() => {
+            setSyncSettingsTarget(null);
+            reload(folder);
+          }}
+        />
+      )}
+      {syncRunTarget && (
+        <SyncProgressModal
+          folder={syncRunTarget}
+          onClose={() => setSyncRunTarget(null)}
+          onSynced={() => reload(folder)}
+        />
+      )}
+    </div>
+  );
+}
+
+/**
+ * Header strip shown inside a folder that is connected to a sync source
+ * (e.g. a Figma file), with the last-synced status and a shortcut to the
+ * sync settings. The sync action itself is the "Sync" toolbar button.
+ */
+function AssetSyncBar(props: {
+  folder: AssetFolder;
+  canManage: boolean;
+  onSettings: () => void;
+}) {
+  const sync = props.folder.sync!;
+  const provider = getSyncProvider(sync.provider);
+  const lastSyncedMillis =
+    sync.lastSyncedAt && typeof sync.lastSyncedAt.toMillis === 'function'
+      ? sync.lastSyncedAt.toMillis()
+      : 0;
+  return (
+    <div className="AssetBrowser__syncBar">
+      <div className="AssetBrowser__syncBar__info">
+        <SyncProviderIcon provider={sync.provider} size={16} />
+        <span>
+          Synced from{' '}
+          <a href={sync.url} target="_blank" rel="noreferrer">
+            {provider?.label || sync.provider}
+          </a>
+          {lastSyncedMillis ? (
+            <>
+              {' '}
+              · last synced {getTimeAgo(lastSyncedMillis)}
+              {sync.lastSyncedBy ? ` by ${sync.lastSyncedBy}` : ''}
+            </>
+          ) : (
+            <> · never synced</>
+          )}
+          {sync.lastSyncResult && !sync.lastSyncResult.ok && (
+            <span className="AssetBrowser__syncBar__warning">
+              {' '}
+              · last sync had errors
+            </span>
+          )}
+        </span>
+      </div>
+      {props.canManage && (
+        <div className="AssetBrowser__syncBar__actions">
+          <ActionIcon
+            size="sm"
+            title="Sync settings"
+            onClick={props.onSettings}
+          >
+            <IconSettings size={16} />
+          </ActionIcon>
+        </div>
       )}
     </div>
   );

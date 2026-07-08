@@ -461,3 +461,162 @@
 .AssetBrowser__details__table td:first-child {
   width: 100px;
 }
+
+/* Asset sync (external sources, e.g. Figma). */
+
+.AssetBrowser__syncBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+  padding: 6px 12px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--surface-border-radius);
+  background: var(--chip-background);
+}
+
+.AssetBrowser__syncBar__info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  min-width: 0;
+}
+
+.AssetBrowser__syncBar__info a {
+  color: inherit;
+  font-weight: 600;
+}
+
+.AssetBrowser__syncBar__warning {
+  color: #e67700;
+}
+
+.AssetBrowser__syncBar__actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.AssetBrowser__syncBadge {
+  display: inline-flex;
+  align-items: center;
+  margin-left: 6px;
+  color: var(--color-text-gray);
+  vertical-align: middle;
+}
+
+.AssetBrowser__missingBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  margin-left: 6px;
+  padding: 1px 6px;
+  border-radius: 10px;
+  font-size: 11px;
+  color: #e67700;
+  background: #fff9db;
+  vertical-align: middle;
+}
+
+.AssetBrowser__syncModal {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.AssetBrowser__syncModal__text {
+  font-size: 13px;
+  color: var(--color-text-gray);
+}
+
+.AssetBrowser__syncModal__token {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.AssetBrowser__syncModal__tokenHelp {
+  font-size: 12px;
+  color: var(--color-text-gray);
+}
+
+.AssetBrowser__syncModal__tokenSaved {
+  font-size: 12px;
+  color: var(--color-text-gray);
+}
+
+.AssetBrowser__syncModal__linkButton {
+  border: none;
+  background: none;
+  padding: 0;
+  font-size: 12px;
+  color: inherit;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.AssetBrowser__syncModal__error {
+  font-size: 13px;
+  color: #c92a2a;
+  background: #fff5f5;
+  border-radius: 4px;
+  padding: 8px 12px;
+}
+
+.AssetBrowser__syncModal__buttons {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.AssetBrowser__syncProgress {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.AssetBrowser__syncProgress__running {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 0;
+}
+
+.AssetBrowser__syncProgress__phase {
+  font-size: 13px;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.AssetBrowser__syncProgress__token,
+.AssetBrowser__syncProgress__conflict,
+.AssetBrowser__syncProgress__done,
+.AssetBrowser__syncProgress__error {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.AssetBrowser__syncProgress__counts {
+  margin: 0;
+  padding-left: 20px;
+  font-size: 13px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.AssetBrowser__syncProgress__counts svg {
+  vertical-align: -2px;
+  color: #e67700;
+}
+
+.AssetBrowser__syncProgress__failed ul {
+  margin: 8px 0 0;
+  padding-left: 20px;
+  font-size: 12px;
+  color: var(--color-text-gray);
+}
