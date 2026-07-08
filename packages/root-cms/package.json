@@ -169,7 +169,7 @@
     "react-dom": "npm:@preact/compat@18.3.1",
     "react-easy-crop": "5.5.6",
     "react-json-view-compare": "2.0.2",
-    "typescript": "6.0.3",
+    "typescript": "7.0.2",
     "vite": "8.0.13",
     "vitest": "4.1.6",
     "yjs": "13.6.27"
