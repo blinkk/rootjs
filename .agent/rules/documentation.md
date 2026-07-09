@@ -26,7 +26,7 @@ The project is a monorepo managed with `pnpm` and `turbo`.
 
 ### Documentation (`docs/`)
 
-Contains documentation for the project, likely powering `rootjs.dev`.
+Contains documentation for the project, powering `rootjs.dev`.
 
 ### Examples (`examples/`)
 
@@ -52,7 +52,6 @@ When working on this project, please adhere to the following guidelines:
 
 - **Use Turbo**: Use `turbo run build` or `turbo run test` to run tasks across the monorepo efficiently.
 - **Dev Server**: Use `pnpm dev` in specific package or app directories for development.
-- **Visual Tests**: Always use the `--update` flag with `pnpm run test:visual`.
 
 ### UI Development
 
