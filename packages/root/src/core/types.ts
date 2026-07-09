@@ -68,9 +68,7 @@ export type RequestMiddleware =
 
 /** Root.js express app. */
 export type Server = Express & {
-  use(
-    ...middlewares: Array<RequestMiddleware | RequestMiddleware[]>
-  ): any;
+  use(...middlewares: Array<RequestMiddleware | RequestMiddleware[]>): any;
   use(
     urlPath: string,
     ...middlewares: Array<RequestMiddleware | RequestMiddleware[]>
