@@ -169,9 +169,11 @@ declare global {
         gci: string | boolean;
         i18n: {
           locales?: string[];
+          defaultLocale?: string;
           urlFormat?: string;
           groups?: Record<string, {label?: string; locales: string[]}>;
           translationLanguages?: Record<string, string>;
+          fallbacks?: Record<string, string[]>;
         };
         server: {
           trailingSlash?: boolean;
@@ -199,6 +201,7 @@ declare global {
       experiments?: {
         ai?: boolean | {endpoint?: string};
         taskManager?: boolean;
+        v2TranslationsManager?: boolean;
       };
       ai?: {
         defaultModel?: string;

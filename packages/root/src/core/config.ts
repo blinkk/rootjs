@@ -222,6 +222,24 @@ export interface RootI18nConfig {
    * language.
    */
   translationLanguages?: Record<RootLocale, TranslationLanguage>;
+
+  /**
+   * Locale fallback chains for translations. When a translation is missing
+   * for a locale, each fallback locale is checked (in order) before falling
+   * back to `defaultLocale` and finally the source string. Fallbacks are
+   * resolved recursively, e.g. with the config below, `en-CA` resolves to
+   * `['en-CA', 'en-GB', 'en']`. For example:
+   *
+   * ```
+   * i18n: {
+   *   locales: ['en', 'en-GB', 'en-CA'],
+   *   fallbacks: {
+   *     'en-CA': ['en-GB'],
+   *   },
+   * }
+   * ```
+   */
+  fallbacks?: Record<RootLocale, RootLocale[]>;
 }
 
 export interface RootBuildConfig {
