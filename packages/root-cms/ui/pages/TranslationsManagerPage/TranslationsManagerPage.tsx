@@ -1,6 +1,13 @@
 import './TranslationsManagerPage.css';
 
-import {Badge, Button, Loader, Menu, TextInput, Tooltip} from '@mantine/core';
+import {
+  ActionIcon,
+  Badge,
+  Loader,
+  Menu,
+  TextInput,
+  Tooltip,
+} from '@mantine/core';
 import {useModals} from '@mantine/modals';
 import {showNotification} from '@mantine/notifications';
 import {
@@ -346,9 +353,9 @@ TranslationsManagerPage.DocRow = (props: {
           position="bottom"
           placement="end"
           control={
-            <Button variant="subtle" color="dark" size="xs" compact>
+            <ActionIcon>
               <IconDotsVertical size={16} />
-            </Button>
+            </ActionIcon>
           }
         >
           <Menu.Item

@@ -2,11 +2,11 @@
   display: flex;
   flex-direction: column;
   position: relative;
-  height: calc(100vh - 48px - 60px) !important;
+  background: var(--page-background);
 }
 
 .TranslationsManagerEditPage__header {
-  padding: 48px 60px 30px;
+  padding: var(--page-padding) var(--page-padding) 20px;
   position: sticky;
   left: 0;
 }
@@ -42,7 +42,7 @@
 .TranslationsManagerEditPage__content {
   flex: 1;
   overflow: auto;
-  padding: 0 60px;
+  padding: 0 var(--page-padding);
 }
 
 .TranslationsManagerEditPage__content--loading {
@@ -67,6 +67,7 @@
 }
 
 .TranslationsManagerEditPage__Table {
+  background-color: #fff;
   border-collapse: collapse;
   width: 100%;
 }
@@ -77,6 +78,15 @@
   padding: 0;
   min-width: 240px;
   vertical-align: top;
+}
+
+.TranslationsManagerEditPage__Table td {
+  /* Table-cell height trick: a definite (tiny) height lets the textarea's
+   * height: 100% resolve against the cell's *used* height. Table cells always
+   * expand to fit content, so the cell still grows to the tallest textarea in
+   * the row, and shorter/empty textareas stretch to fill it instead of
+   * collapsing to their one-line auto-grow min-height. */
+  height: 1px;
 }
 
 .TranslationsManagerEditPage__Table__headerLabel {
@@ -130,7 +140,7 @@
   align-items: center;
   justify-content: space-between;
   gap: 20px;
-  padding: 16px 60px;
+  padding: 16px var(--page-padding);
   border-top: 1px solid #e9ecef;
   background: #fff;
 }

@@ -138,6 +138,7 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  text-decoration: none;
 }
 
 .TranslationsManagerPage__docsList__doc__id:hover {
