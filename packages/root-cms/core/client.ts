@@ -8,11 +8,19 @@ import {
   Timestamp,
   WriteBatch,
 } from 'firebase-admin/firestore';
+import {resolveLocaleFallbacks} from '../shared/locale-fallbacks.js';
 import {normalizeSlug} from '../shared/slug.js';
 import {isCronDue} from './cron-schedule.js';
 import {CMSPlugin} from './plugin.js';
 import {Collection} from './schema.js';
-import {TranslationsManager} from './translations-manager.js';
+import {
+  TranslationsLocaleDoc,
+  TranslationsLocaleDocWithRef,
+  TranslationsManager,
+  buildTranslationsDbPath,
+  buildTranslationsLocaleDocDbPath,
+  chunkArray,
+} from './translations-manager.js';
 import {validateFields} from './validation.js';
 import {setValueAtPath} from './values.js';
 
@@ -730,6 +738,20 @@ export class RootCMSClient {
       }
     }
 
+    // If the v2 translations manager is enabled, prefetch the draft
+    // translations locale docs for each doc so that the doc's translations
+    // are published in the same batch as the doc itself.
+    let tm: TranslationsManager | null = null;
+    let translationsByDocId: Record<string, TranslationsLocaleDocWithRef[]> =
+      {};
+    if (this.isV2TranslationsEnabled()) {
+      tm = this.getTranslationsManager();
+      translationsByDocId = await tm.getTranslationsLocaleDocs(
+        docs.map((doc) => doc.id),
+        'draft'
+      );
+    }
+
     // Each transaction or batch can write a max of 500 ops, so commit the
     // batch in chunks, starting a new batch after each commit.
     // https://firebase.google.com/docs/firestore/manage-data/transactions
@@ -812,6 +834,15 @@ export class RootCMSClient {
       });
       batchCount += 1;
 
+      // Publish the doc's translations within the same batch so the doc and
+      // its translations go live atomically.
+      if (tm) {
+        const localeDocs = translationsByDocId[id] || [];
+        batchCount += tm.addPublishTranslationsOps(localeDocs, batch, {
+          publishedBy,
+        });
+      }
+
       publishedDocs.push(doc);
 
       if (batchCount >= 400) {
@@ -861,6 +892,27 @@ export class RootCMSClient {
       return [];
     }
 
+    // If the v2 translations manager is enabled, unpublish each doc's
+    // translations along with the doc.
+    let draftTranslationsByDocId: Record<
+      string,
+      TranslationsLocaleDocWithRef[]
+    > = {};
+    let publishedTranslationsByDocId: Record<
+      string,
+      TranslationsLocaleDocWithRef[]
+    > = {};
+    const v2TranslationsEnabled = this.isV2TranslationsEnabled();
+    if (v2TranslationsEnabled) {
+      const tm = this.getTranslationsManager();
+      const docIdsToUnpublish = docs.map((doc) => doc.id);
+      [draftTranslationsByDocId, publishedTranslationsByDocId] =
+        await Promise.all([
+          tm.getTranslationsLocaleDocs(docIdsToUnpublish, 'draft'),
+          tm.getTranslationsLocaleDocs(docIdsToUnpublish, 'published'),
+        ]);
+    }
+
     let batchCount = 0;
     let batch = options?.batch || this.db.batch();
     const unpublishedDocs: any[] = [];
@@ -895,6 +947,22 @@ export class RootCMSClient {
       // Delete the published doc.
       batch.delete(publishedRef);
       batchCount += 1;
+
+      // Unpublish the doc's translations: delete the published locale docs
+      // and clear the published metadata from the draft locale docs.
+      if (v2TranslationsEnabled) {
+        for (const localeDoc of publishedTranslationsByDocId[doc.id] || []) {
+          batch.delete(localeDoc.ref);
+          batchCount += 1;
+        }
+        for (const localeDoc of draftTranslationsByDocId[doc.id] || []) {
+          batch.update(localeDoc.ref, {
+            'sys.publishedAt': FieldValue.delete(),
+            'sys.publishedBy': FieldValue.delete(),
+          });
+          batchCount += 1;
+        }
+      }
 
       unpublishedDocs.push(doc);
 
@@ -952,6 +1020,20 @@ export class RootCMSClient {
     if (docs.length === 0) {
       console.log('no docs to schedule');
       return [];
+    }
+
+    // If the v2 translations manager is enabled, prefetch the draft
+    // translations locale docs for each doc so that the doc's translations
+    // are published in the same batch as the doc itself.
+    let tm: TranslationsManager | null = null;
+    let translationsByDocId: Record<string, TranslationsLocaleDocWithRef[]> =
+      {};
+    if (this.isV2TranslationsEnabled()) {
+      tm = this.getTranslationsManager();
+      translationsByDocId = await tm.getTranslationsLocaleDocs(
+        docs.map((doc) => doc.id),
+        'draft'
+      );
     }
 
     // Each transaction or batch can write a max of 500 ops, so commit the
@@ -1034,6 +1116,15 @@ export class RootCMSClient {
         'sys.publishedBy': scheduledBy || 'root-cms-client',
       });
       batchCount += 1;
+
+      // Publish the doc's translations within the same batch so the doc and
+      // its translations go live atomically.
+      if (tm) {
+        const localeDocs = translationsByDocId[id] || [];
+        batchCount += tm.addPublishTranslationsOps(localeDocs, batch, {
+          publishedBy: scheduledBy || 'root-cms-client',
+        });
+      }
 
       publishedDocs.push(doc);
 
@@ -1220,13 +1311,21 @@ export class RootCMSClient {
    * replace the v1 translations system.
    */
   getTranslationsManager(): TranslationsManager {
-    const cmsPluginOptions = this.cmsPlugin.getConfig();
-    if (cmsPluginOptions.experiments?.v2TranslationsManager) {
+    if (!this.isV2TranslationsEnabled()) {
       throw new Error(
         '`v2TranslationsManager` is not enabled. update root.config.ts and add: `{experiments: {v2TranslationsManager: true}}`'
       );
     }
     return new TranslationsManager(this);
+  }
+
+  /**
+   * Returns true if the v2 `TranslationsManager` is enabled via the
+   * `experiments.v2TranslationsManager` plugin config flag.
+   */
+  isV2TranslationsEnabled(): boolean {
+    const cmsPluginOptions = this.cmsPlugin.getConfig();
+    return Boolean(cmsPluginOptions.experiments?.v2TranslationsManager);
   }
 
   /**
@@ -1336,33 +1435,6 @@ export class RootCMSClient {
   ): Promise<LocaleTranslations> {
     const translationsMap = await this.loadTranslations(options);
     return translationsForLocale(translationsMap, locale);
-  }
-
-  /**
-   * Firestore path for a translations file.
-   */
-  dbTranslationsPath(
-    translationsId: string,
-    options: {mode: 'draft' | 'published'}
-  ) {
-    const mode = options.mode;
-    if (!(mode === 'draft' || mode === 'published')) {
-      throw new Error(`invalid mode: ${mode}`);
-    }
-    const slug = normalizeSlug(translationsId);
-    const dbPath = `Projects/${this.projectId}/TranslationsManager/${mode}/Translations/${slug}`;
-    return dbPath;
-  }
-
-  /**
-   * Firestore doc ref for a translations file.
-   */
-  dbTranslationsRef(
-    translationsId: string,
-    options: {mode: 'draft' | 'published'}
-  ) {
-    const dbPath = this.dbTranslationsPath(translationsId, options);
-    return this.db.doc(dbPath);
   }
 
   /**
@@ -2373,9 +2445,15 @@ export interface BatchRequestOptions {
   mode: 'draft' | 'published';
   /**
    * Whether to automatically fetch translations for the docs retrieved in the
-   * request.
+   * request (including docs returned by queries).
    */
   translate?: boolean;
+  /**
+   * Locales to fetch translations for. Each locale is expanded through its
+   * fallback chain (per the `i18n.fallbacks` config). Defaults to the locales
+   * configured in `i18n.locales`.
+   */
+  locales?: string[];
 }
 
 export interface BatchRequestQuery {
@@ -2392,24 +2470,6 @@ export interface BatchRequestQueryOptions {
   query?: (query: Query) => Query;
 }
 
-export interface TranslationsDoc {
-  id: string;
-  sys: {
-    modifiedAt: Timestamp;
-    modifiedBy: string;
-    publishedAt?: Timestamp;
-    publishedBy?: string;
-    linkedSheet?: {
-      spreadsheetId: string;
-      gid: number;
-      linkedAt: Timestamp;
-      linkedBy: string;
-    };
-    tags?: string[];
-  };
-  strings: TranslationsMap;
-}
-
 export class BatchRequest {
   cmsClient: RootCMSClient;
   private options: BatchRequestOptions;
@@ -2418,6 +2478,15 @@ export class BatchRequest {
   private dataSourceIds: string[] = [];
   private queries: BatchRequestQuery[] = [];
   private translationsIds: string[] = [];
+  /**
+   * Translations ids auto-collected from query results when
+   * `options.translate` is enabled. Kept separate from the explicitly-added
+   * ids so that the merge order is deterministic (generic translations first,
+   * doc-specific translations last).
+   */
+  private queryTranslationsIds: string[] = [];
+  /** Translations ids auto-collected from `addDoc()` docs. */
+  private docTranslationsIds: string[] = [];
 
   constructor(cmsClient: RootCMSClient, options: BatchRequestOptions) {
     this.cmsClient = cmsClient;
@@ -2455,7 +2524,7 @@ export class BatchRequest {
   }
 
   /**
-   * Adds a translation file to the request.
+   * Adds a translations doc to the request.
    */
   addTranslations(translationsId: string) {
     this.translationsIds.push(translationsId);
@@ -2465,25 +2534,25 @@ export class BatchRequest {
    * Fetches data from the DB.
    */
   async fetch(): Promise<BatchResponse> {
-    const res = new BatchResponse();
+    const res = new BatchResponse(this.cmsClient.rootConfig.i18n || {});
 
     const promises = [
       this.fetchDocs(res),
       this.fetchQueries(res),
       this.fetchDataSources(res),
     ];
-    // If `options.translate` is disabled and translations are requested,
-    // fetch the translations in parallel with the other docs.
+    // If `options.translate` is disabled, any explicitly-added translations
+    // can be fetched in parallel with the other docs.
     if (!this.options.translate && this.translationsIds.length > 0) {
       promises.push(this.fetchTranslations(res));
     }
 
     await Promise.all(promises);
 
-    // If `options.translate` is enabled, the fetchX() methods will
-    // automatically add each doc's translations id to the request, so
-    // translations should be fetched after all the other docs are fetched.
-    if (this.translationsIds.length > 0) {
+    // If `options.translate` is enabled, `fetchDocs()` and `fetchQueries()`
+    // auto-collect each doc's translations id, so translations are fetched
+    // after all the other docs are fetched.
+    if (this.options.translate) {
       await this.fetchTranslations(res);
     }
 
@@ -2511,7 +2580,7 @@ export class BatchRequest {
       res.docs[docId] = docData;
 
       if (this.options.translate) {
-        this.addTranslations(docId);
+        this.docTranslationsIds.push(docId);
       }
     });
   }
@@ -2549,6 +2618,11 @@ export class BatchRequest {
       results.forEach((result) => {
         const doc = unmarshalData(result.data()) as Doc;
         docs.push(doc);
+        // Based on the results of the query, fetch the corresponding
+        // translations for each doc.
+        if (this.options.translate && doc.id) {
+          this.queryTranslationsIds.push(doc.id);
+        }
       });
       res.queries[queryItem.queryId] = docs;
     };
@@ -2577,24 +2651,95 @@ export class BatchRequest {
   }
 
   private async fetchTranslations(res: BatchResponse) {
-    if (this.translationsIds.length === 0) {
+    // Order the translations ids so that precedence is deterministic:
+    // generic translations (e.g. "common") first, docs returned from queries
+    // next, and specific docs (e.g. "Pages/index") last.
+    const translationsIds = Array.from(
+      new Set([
+        ...this.translationsIds,
+        ...this.queryTranslationsIds,
+        ...this.docTranslationsIds,
+      ])
+    );
+    if (translationsIds.length === 0) {
       return;
     }
+    const mode = this.options.mode;
+    const project = this.cmsClient.projectId;
+    const i18nConfig = this.cmsClient.rootConfig.i18n || {};
 
-    const docRefs = this.translationsIds.map((translationsId) => {
-      return this.cmsClient.dbTranslationsRef(translationsId, {
-        mode: this.options.mode,
-      });
-    });
-    const docs = await this.db.getAll(...docRefs);
-    this.translationsIds.forEach((translationsId, i) => {
-      const doc = docs[i];
-      if (!doc.exists) {
-        // console.warn(`translations "${translationsId}" does not exist`);
-        return;
+    const locales = this.options.locales || i18nConfig.locales;
+    if (locales && locales.length > 0) {
+      // When the locales are known, expand each locale through its fallback
+      // chain and fetch the exact locale doc refs with `getAll()`.
+      const localeSet = new Set<string>();
+      for (const locale of locales) {
+        for (const fallback of resolveLocaleFallbacks(i18nConfig, locale)) {
+          localeSet.add(fallback);
+        }
       }
-      res.translations[translationsId] = doc.data() as TranslationsDoc;
-    });
+      const localeDocRefs: Array<{
+        translationsId: string;
+        locale: string;
+        ref: FirebaseFirestore.DocumentReference;
+      }> = [];
+      for (const translationsId of translationsIds) {
+        for (const locale of localeSet) {
+          const dbPath = buildTranslationsLocaleDocDbPath({
+            project,
+            mode,
+            id: translationsId,
+            locale,
+          });
+          localeDocRefs.push({
+            translationsId,
+            locale,
+            ref: this.db.doc(dbPath),
+          });
+        }
+      }
+      // Fetch the refs in chunks. Missing locale docs are fine (e.g. a
+      // translations doc may not have every locale).
+      const chunks = chunkArray(localeDocRefs, 300);
+      const snapshotChunks = await Promise.all(
+        chunks.map((chunk) => this.db.getAll(...chunk.map((item) => item.ref)))
+      );
+      const snapshots = snapshotChunks.flat();
+      localeDocRefs.forEach((item, i) => {
+        const snapshot = snapshots[i];
+        if (!snapshot.exists) {
+          return;
+        }
+        res.translations[item.translationsId] ??= {};
+        res.translations[item.translationsId][item.locale] =
+          snapshot.data() as TranslationsLocaleDoc;
+      });
+    } else {
+      // When the locales are unknown, query the translations locale docs by
+      // translations id (chunked due to Firestore's `in` query limits).
+      const dbPath = buildTranslationsDbPath({project, mode});
+      const collectionRef = this.db.collection(dbPath);
+      const snapshots = await Promise.all(
+        chunkArray(translationsIds, 10).map((chunk) =>
+          collectionRef.where('id', 'in', chunk).get()
+        )
+      );
+      const localeDocsById: Record<string, TranslationsLocaleDoc[]> = {};
+      snapshots.forEach((snapshot) => {
+        snapshot.docs.forEach((doc) => {
+          const localeDoc = doc.data() as TranslationsLocaleDoc;
+          localeDocsById[localeDoc.id] ??= [];
+          localeDocsById[localeDoc.id].push(localeDoc);
+        });
+      });
+      // Store the results in insertion (precedence) order.
+      for (const translationsId of translationsIds) {
+        for (const localeDoc of localeDocsById[translationsId] || []) {
+          res.translations[translationsId] ??= {};
+          res.translations[translationsId][localeDoc.locale] = localeDoc;
+        }
+      }
+    }
   }
 }
 
@@ -2602,55 +2747,69 @@ export class BatchResponse {
   docs: Record<string, Doc> = {};
   queries: Record<string, Doc[]> = {};
   dataSources: Record<string, DataSourceData> = {};
-  translations: Record<string, TranslationsDoc> = {};
+  /**
+   * Translations locale docs retrieved in the request, keyed by translations
+   * id then by locale. The ids are in precedence order: generic translations
+   * (e.g. "common") first, doc-specific translations last.
+   */
+  translations: Record<string, Record<string, TranslationsLocaleDoc>> = {};
+
+  private i18nConfig: RootConfig['i18n'];
+
+  constructor(i18nConfig?: RootConfig['i18n']) {
+    this.i18nConfig = i18nConfig || {};
+  }
 
   /**
    * Returns a map of translations for a given locale or locale fallbacks.
    *
-   * The input is either a single locale (e.g. "de") or an array of locales
-   * representing the fallback tree, e.g. ["en-CA", "en-GB", "en"].
-   *
-   * TODO(stevenle): support the locale fallback tree.
+   * The input is either a single locale (e.g. "de"), which is expanded
+   * through the fallback chain configured in `i18n.fallbacks`, or an array of
+   * locales representing an explicit fallback chain, e.g.
+   * `["en-CA", "en-GB", "en"]`.
    *
    * The returned value is a flat map of source string to translated string,
    * e.g.:
    * {"<source>": "<translation>"}
    */
-  getTranslations(locale: string): LocaleTranslations {
-    const translationsMap = this.getTranslationsMap();
-    const translations = translationsForLocale(translationsMap, locale);
-    return translations;
-  }
+  getTranslations(locale: string | string[]): LocaleTranslations {
+    const fallbackLocales = Array.isArray(locale)
+      ? locale
+      : resolveLocaleFallbacks(this.i18nConfig, locale);
 
-  /**
-   * Merges the strings from all translations files retrieved in the request.
-   * The returned value is a map of string to translations, e.g.:
-   *
-   * {"<hash>": {"source": "<source>", "<locale>": "<translation>"}}
-   */
-  private getTranslationsMap(): TranslationsMap {
-    // Load translations in the following order:
-    // - generic translations (e.g. "global")
-    // - docs returned from queries (e.g. "list all blog posts")
-    // - specific docs (e.g. "Pages/index")
-    const translationsDocs = Object.values(this.translations).reverse();
-
-    // Consolidate the strings from all of the translations files.
-    // {"<hash>": {"source": "<source>", "<locale>": "<translation>"}}
-    const translationsMap: TranslationsMap = {};
-    for (const translationsDoc of translationsDocs) {
-      const strings = translationsDoc.strings || {};
-      for (const hash in strings) {
-        const translations = strings[hash];
-        translationsMap[hash] ??= {source: translations.source};
-        for (const locale in translations) {
-          if (locale !== 'source' && translations[locale]) {
-            translationsMap[hash][locale] = translations[locale];
+    // Merge the strings from all of the translations docs. The docs are
+    // merged in precedence order (generic translations first, doc-specific
+    // translations last) so that later docs override earlier ones.
+    const merged: Record<
+      string,
+      {source: string; translations: Record<string, string>}
+    > = {};
+    for (const localeDocs of Object.values(this.translations)) {
+      for (const localeDoc of Object.values(localeDocs)) {
+        const strings = localeDoc.strings || {};
+        for (const hash in strings) {
+          const entry = strings[hash];
+          merged[hash] ??= {source: entry.source, translations: {}};
+          if (entry.translation) {
+            merged[hash].translations[localeDoc.locale] = entry.translation;
           }
         }
       }
     }
 
-    return translationsMap;
+    // For each string, pick the first locale in the fallback chain with a
+    // non-empty translation, falling back to the source string.
+    const localeTranslations: LocaleTranslations = {};
+    for (const item of Object.values(merged)) {
+      let translation = item.source;
+      for (const fallbackLocale of fallbackLocales) {
+        if (item.translations[fallbackLocale]) {
+          translation = item.translations[fallbackLocale];
+          break;
+        }
+      }
+      localeTranslations[item.source] = translation;
+    }
+    return localeTranslations;
   }
 }
