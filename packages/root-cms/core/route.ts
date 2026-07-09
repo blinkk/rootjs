@@ -33,8 +33,10 @@ import {
   RootConfig,
   RouteParams,
 } from '@blinkk/root';
+import {resolveLocaleFallbacks} from '../shared/locale-fallbacks.js';
 import {normalizeSlug} from '../shared/slug.js';
 import {DocMode, RootCMSClient, translationsForLocale} from './client.js';
+import {translationsForLocaleV2} from './translations-manager.js';
 
 export interface RootCMSDoc<Fields = any> {
   /** The id of the doc, e.g. "Pages/foo-bar". */
@@ -229,8 +231,46 @@ export function createRoute(options: CreateRouteOptions): Route {
     return resolvePromisesMap(promisesMap);
   }
 
+  /**
+   * Loads the translations used by the route. When the v2 translations
+   * manager is enabled, translations are read from the v2 per-locale docs
+   * (using the same ids as the v1 tags); otherwise the v1 translations
+   * collection is used.
+   */
+  function loadRouteTranslations(
+    cmsClient: RootCMSClient,
+    translationsTags: string[],
+    mode: DocMode
+  ): Promise<Record<string, any>> {
+    if (cmsClient.isV2TranslationsEnabled()) {
+      const tm = cmsClient.getTranslationsManager();
+      return tm.loadTranslations({ids: translationsTags, mode});
+    }
+    return cmsClient.loadTranslations({tags: translationsTags});
+  }
+
+  /**
+   * Flattens a loaded translations map to a source -> translation map for a
+   * locale, resolving the locale's fallback chain (`i18n.fallbacks`) when the
+   * v2 translations manager is enabled.
+   */
+  function translationsMapForLocale(
+    cmsClient: RootCMSClient,
+    translationsMap: Record<string, any>,
+    locale: string
+  ): Record<string, string> {
+    if (cmsClient.isV2TranslationsEnabled()) {
+      const fallbackLocales = resolveLocaleFallbacks(
+        cmsClient.rootConfig.i18n,
+        locale
+      );
+      return translationsForLocaleV2(translationsMap, fallbackLocales);
+    }
+    return translationsForLocale(translationsMap, locale);
+  }
+
   async function generateProps(routeContext: RouteContext, locale: string) {
-    const {slug, mode} = routeContext;
+    const {slug, mode, cmsClient} = routeContext;
     const translationsTags = [
       'common',
       `${options.collection}/${normalizeSlug(slug)}`,
@@ -239,12 +279,16 @@ export function createRoute(options: CreateRouteOptions): Route {
       const tags = options.translations(routeContext)?.tags || [];
       translationsTags.push(...tags);
     }
+    const siteLocales = cmsClient.rootConfig.i18n?.locales || ['en'];
 
     const [doc, translationsMap, data] = await Promise.all([
       cmsClient.getDoc<RootCMSDoc>(options.collection, slug, {
         mode,
       }),
-      cmsClient.loadTranslations({tags: translationsTags}),
+      // Only load translations for sites that have >1 locale configured.
+      siteLocales.length > 1
+        ? loadRouteTranslations(cmsClient, translationsTags, mode)
+        : Promise.resolve({}),
       fetchData(routeContext),
     ]);
     if (!doc) {
@@ -255,7 +299,11 @@ export function createRoute(options: CreateRouteOptions): Route {
       return {notFound: true};
     }
 
-    const translations = translationsForLocale(translationsMap, locale);
+    const translations = translationsMapForLocale(
+      cmsClient,
+      translationsMap,
+      locale
+    );
     let props: any = {...data, locale, mode, slug, doc};
     if (options.preRenderHook) {
       props = await options.preRenderHook(props, routeContext);
@@ -310,7 +358,7 @@ export function createRoute(options: CreateRouteOptions): Route {
         }),
         // Only load translations for sites that have >1 locale configured.
         siteLocales.length > 1
-          ? cmsClient.loadTranslations({tags: translationsTags})
+          ? loadRouteTranslations(cmsClient, translationsTags, mode)
           : Promise.resolve({}),
         fetchData(routeContext),
       ]);
@@ -413,7 +461,11 @@ export function createRoute(options: CreateRouteOptions): Route {
         }
       }
 
-      const translations = translationsForLocale(translationsMap, locale);
+      const translations = translationsMapForLocale(
+        cmsClient,
+        translationsMap,
+        locale
+      );
       let props: any = {...data, req, locale, mode, slug, doc, country};
       if (options.preRenderHook) {
         props = await options.preRenderHook(props, routeContext);
