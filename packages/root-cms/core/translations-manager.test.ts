@@ -16,7 +16,7 @@ import {
   translationsForLocaleV2,
 } from './translations-manager.js';
 
-const FIREBASE_PROJECT_ID = 'rootjs-cms';
+const FIREBASE_PROJECT_ID = 'rootjs-cms-admin-tests';
 
 function getTestApp() {
   const existing = getApps().find((app) => app.name === 'tm-test');
@@ -97,9 +97,7 @@ describe.skipIf(!process.env.FIRESTORE_EMULATOR_HOST)(
 
       const dbPath = `Projects/${cmsClient.projectId}/TranslationsManager/draft/Translations`;
       // Slashes in the translations id are normalized to `--` in doc keys.
-      const esDoc = await cmsClient.db
-        .doc(`${dbPath}/Pages--index:es`)
-        .get();
+      const esDoc = await cmsClient.db.doc(`${dbPath}/Pages--index:es`).get();
       expect(esDoc.exists).toBe(true);
       const esData = esDoc.data() as TranslationsLocaleDoc;
       expect(esData.id).toBe('Pages/index');
@@ -115,9 +113,7 @@ describe.skipIf(!process.env.FIRESTORE_EMULATOR_HOST)(
       });
       expect(esData.sys.modifiedAt).toBeDefined();
 
-      const frDoc = await cmsClient.db
-        .doc(`${dbPath}/Pages--index:fr`)
-        .get();
+      const frDoc = await cmsClient.db.doc(`${dbPath}/Pages--index:fr`).get();
       expect(frDoc.exists).toBe(true);
       expect((frDoc.data() as TranslationsLocaleDoc).strings).toEqual({
         [hashStr('one')]: {source: 'one', translation: 'un'},
@@ -160,12 +156,20 @@ describe.skipIf(!process.env.FIRESTORE_EMULATOR_HOST)(
 
     it('loads translations by tags using array-contains-any', async () => {
       const tm = cmsClient.getTranslationsManager();
-      await tm.saveTranslations('common', {hello: {es: 'hola'}}, {
-        tags: ['common'],
-      });
-      await tm.saveTranslations('Pages/foo', {bye: {es: 'adios'}}, {
-        tags: ['Pages/foo'],
-      });
+      await tm.saveTranslations(
+        'common',
+        {hello: {es: 'hola'}},
+        {
+          tags: ['common'],
+        }
+      );
+      await tm.saveTranslations(
+        'Pages/foo',
+        {bye: {es: 'adios'}},
+        {
+          tags: ['Pages/foo'],
+        }
+      );
       const strings = await tm.loadTranslations({
         tags: ['common', 'other'],
         mode: 'draft',
@@ -303,9 +307,7 @@ describe.skipIf(!process.env.FIRESTORE_EMULATOR_HOST)(
       it('migrates the linked l10n sheet from the doc', async () => {
         await seedV1Translation('hello', {es: 'hola'}, ['Pages/index']);
         await cmsClient.db
-          .doc(
-            `Projects/${cmsClient.projectId}/Collections/Pages/Drafts/index`
-          )
+          .doc(`Projects/${cmsClient.projectId}/Collections/Pages/Drafts/index`)
           .set({
             id: 'Pages/index',
             collection: 'Pages',

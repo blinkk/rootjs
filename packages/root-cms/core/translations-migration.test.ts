@@ -14,7 +14,7 @@ import {
   migrateV1TranslationsIfNeeded,
 } from './translations-migration.js';
 
-const FIREBASE_PROJECT_ID = 'rootjs-cms';
+const FIREBASE_PROJECT_ID = 'rootjs-cms-admin-tests';
 
 function getTestApp() {
   const existing = getApps().find((app) => app.name === 'migration-test');

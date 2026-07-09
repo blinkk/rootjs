@@ -9,7 +9,7 @@ import {Timestamp, getFirestore} from 'firebase-admin/firestore';
 import {beforeEach, describe, expect, it} from 'vitest';
 import {RootCMSClient} from './client.js';
 
-const FIREBASE_PROJECT_ID = 'rootjs-cms';
+const FIREBASE_PROJECT_ID = 'rootjs-cms-admin-tests';
 
 function getTestApp() {
   const existing = getApps().find((app) => app.name === 'batch-test');

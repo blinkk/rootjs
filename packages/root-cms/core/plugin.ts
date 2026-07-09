@@ -855,9 +855,8 @@ export function cmsPlugin(options: CMSPluginOptions): CMSPlugin {
         // translations before the build (SSG reads translations at build
         // time). A failure fails the build.
         if (options.experiments?.v2TranslationsManager) {
-          const {migrateV1TranslationsIfNeeded} = await import(
-            './translations-migration.js'
-          );
+          const {migrateV1TranslationsIfNeeded} =
+            await import('./translations-migration.js');
           const cmsClient = new RootCMSClient(rootConfig);
           try {
             await migrateV1TranslationsIfNeeded(cmsClient, {
