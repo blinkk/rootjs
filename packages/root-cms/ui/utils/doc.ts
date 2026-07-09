@@ -36,6 +36,15 @@ import {
   normalizeString,
   sourceHash,
 } from './l10n.js';
+import {
+  TranslationsLocaleDocWithRef,
+  addDeleteTranslationsOpsToBatch,
+  addPublishTranslationsOpsToBatch,
+  addUnpublishTranslationsOpsToBatch,
+  getDraftTranslationsLocaleDocs,
+  getTranslationsLocaleDocs,
+  testV2TranslationsEnabled,
+} from './translations-manager.js';
 
 export interface CMSDoc {
   id: string;
@@ -128,6 +137,17 @@ export async function cmsDeleteDoc(docId: string) {
   batch.delete(publishedDocRef);
   // Delete any scheduled doc.
   batch.delete(scheduledDocRef);
+  // Delete the doc's translations (draft and published) in the same batch.
+  if (testV2TranslationsEnabled()) {
+    const [draftTranslations, publishedTranslations] = await Promise.all([
+      getTranslationsLocaleDocs([docId], 'draft'),
+      getTranslationsLocaleDocs([docId], 'published'),
+    ]);
+    addDeleteTranslationsOpsToBatch(batch, [
+      ...(draftTranslations[docId] || []),
+      ...(publishedTranslations[docId] || []),
+    ]);
+  }
   await batch.commit();
   console.log(`deleted doc: ${docId}`);
   logAction('doc.delete', {metadata: {docId}});
@@ -166,6 +186,14 @@ export async function cmsPublishDocs(
   const db = window.firebase.db;
 
   const draftDocs = await getDraftDocs(docIds);
+
+  // If the v2 translations manager is enabled, prefetch each doc's draft
+  // translations locale docs so the translations are published in the same
+  // write batch as the doc.
+  const v2TranslationsEnabled = testV2TranslationsEnabled();
+  const translationsByDocId: Record<string, TranslationsLocaleDocWithRef[]> =
+    v2TranslationsEnabled ? await getDraftTranslationsLocaleDocs(docIds) : {};
+
   const batch = options?.batch || new MultiBatch(db);
   const versionTags = ['published'];
   if (options?.releaseId) {
@@ -176,6 +204,11 @@ export async function cmsPublishDocs(
     if (!draftData) {
       throw new Error(`doc does not exist: ${docId}`);
     }
+    // Reserve capacity for the doc's writes plus its translations writes (2
+    // per locale doc) so the doc and its translations are committed
+    // atomically within a single underlying batch.
+    const translationsLocaleDocs = translationsByDocId[docId] || [];
+    batch.ensureCapacity(4 + 2 * translationsLocaleDocs.length);
     updatePublishedDocDataInBatch(
       batch,
       docId,
@@ -183,6 +216,9 @@ export async function cmsPublishDocs(
       versionTags,
       options?.publishMessage
     );
+    if (v2TranslationsEnabled) {
+      addPublishTranslationsOpsToBatch(batch, translationsLocaleDocs);
+    }
   });
   if (!options?.batch || options?.commitBatch) {
     await batch.commit();
@@ -414,6 +450,18 @@ export async function cmsUnpublishDoc(docId: string) {
   batch.delete(scheduledDocRef);
   // Delete the "published" doc.
   batch.delete(publishedDocRef);
+  // Unpublish the doc's translations in the same batch.
+  if (testV2TranslationsEnabled()) {
+    const [draftTranslations, publishedTranslations] = await Promise.all([
+      getTranslationsLocaleDocs([docId], 'draft'),
+      getTranslationsLocaleDocs([docId], 'published'),
+    ]);
+    addUnpublishTranslationsOpsToBatch(
+      batch,
+      draftTranslations[docId] || [],
+      publishedTranslations[docId] || []
+    );
+  }
   await batch.commit();
   console.log(`unpublished ${docId}`);
   logAction('doc.unpublish', {metadata: {docId}});

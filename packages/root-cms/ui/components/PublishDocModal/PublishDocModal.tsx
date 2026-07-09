@@ -15,6 +15,7 @@ import {errorMessage} from '../../utils/notifications.js';
 import {testCanPublish} from '../../utils/permissions.js';
 import {extractReferenceDocIds} from '../../utils/references.js';
 import {getLocalISOString} from '../../utils/time.js';
+import {testV2TranslationsEnabled} from '../../utils/translations-manager.js';
 import {useAddToReleaseModal} from '../AddToReleaseModal/AddToReleaseModal.js';
 import {AiSummary} from '../AiSummary/AiSummary.js';
 import {DocDiffViewer} from '../DocDiffViewer/DocDiffViewer.js';
@@ -271,6 +272,14 @@ export function PublishDocModal(
               </label>
             </div>
           </div>
+
+          {testV2TranslationsEnabled() && (
+            <div className="PublishDocModal__form__translationsNote">
+              <Text size="body-sm" color="gray">
+                The doc's translations will be published together with the doc.
+              </Text>
+            </div>
+          )}
 
           <div className="PublishDocModal__form__publishMessage">
             <div className="PublishDocModal__form__publishMessage__wrapper">
