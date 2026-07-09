@@ -101,6 +101,7 @@ import {autokey} from '../../utils/rand.js';
 import {buildPreviewValue} from '../../utils/schema-previews.js';
 import {testFieldEmpty} from '../../utils/test-field-empty.js';
 import {formatDateTime} from '../../utils/time.js';
+import {testV2TranslationsEnabled} from '../../utils/translations-manager.js';
 import {useAiEditModal} from '../AiEditModal/AiEditModal.js';
 import {
   ComponentPickerOption,
@@ -494,6 +495,12 @@ DocEditor.StatusBar = (props: StatusBarProps) => {
           size="xs"
           leftIcon={<IconPlanet size={16} />}
           onClick={() => {
+            // When the v2 translations manager is enabled, the doc's
+            // translations are edited in the translations manager.
+            if (testV2TranslationsEnabled()) {
+              route(`/cms/translations/${props.docId}`);
+              return;
+            }
             localizationModal.open({
               docId: props.docId,
               collection: props.collection,

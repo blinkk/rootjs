@@ -144,6 +144,16 @@ const TranslationsArbPage = lazyRoute(() =>
     (m) => m.TranslationsArbPage
   )
 );
+const TranslationsManagerEditPage = lazyRoute(() =>
+  import('./pages/TranslationsManagerEditPage/TranslationsManagerEditPage.js').then(
+    (m) => m.TranslationsManagerEditPage
+  )
+);
+const TranslationsManagerPage = lazyRoute(() =>
+  import('./pages/TranslationsManagerPage/TranslationsManagerPage.js').then(
+    (m) => m.TranslationsManagerPage
+  )
+);
 const TranslationsEditPage = lazyRoute(() =>
   import('./pages/TranslationsEditPage/TranslationsEditPage.js').then(
     (m) => m.TranslationsEditPage
@@ -255,6 +265,46 @@ declare global {
 }
 
 function App() {
+  const v2TranslationsEnabled = Boolean(
+    window.__ROOT_CTX.experiments?.v2TranslationsManager
+  );
+  // NOTE: conditional route children must be arrays (not fragments) —
+  // preact-iso's Router only flattens arrays.
+  const translationsRoutes = v2TranslationsEnabled
+    ? [
+        <Route
+          key="translations"
+          path="/cms/translations"
+          component={TranslationsManagerPage}
+        />,
+        <Route
+          key="translations-edit"
+          path="/cms/translations/:translationsId*"
+          component={TranslationsManagerEditPage}
+        />,
+      ]
+    : [
+        <Route
+          key="translations"
+          path="/cms/translations"
+          component={TranslationsPage}
+        />,
+        <Route
+          key="translations-arb"
+          path="/cms/translations/arb"
+          component={TranslationsArbPage}
+        />,
+        <Route
+          key="translations-hash"
+          path="/cms/translations/:hash"
+          component={TranslationsEditPage}
+        />,
+        <Route
+          key="translations-doc"
+          path="/cms/translations/:collection/:slug"
+          component={DocTranslationsPage}
+        />,
+      ];
   return (
     <MantineProvider
       theme={{
@@ -361,22 +411,7 @@ function App() {
                               path="/cms/tools/:id/:rest*"
                               component={SidebarToolsPage}
                             />
-                            <Route
-                              path="/cms/translations"
-                              component={TranslationsPage}
-                            />
-                            <Route
-                              path="/cms/translations/arb"
-                              component={TranslationsArbPage}
-                            />
-                            <Route
-                              path="/cms/translations/:hash"
-                              component={TranslationsEditPage}
-                            />
-                            <Route
-                              path="/cms/translations/:collection/:slug"
-                              component={DocTranslationsPage}
-                            />
+                            {translationsRoutes}
                             <Route default component={NotFoundPage} />
                           </Router>
                         </AppErrorBoundary>
