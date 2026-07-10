@@ -18,6 +18,14 @@ export const ROUTE_IMPORT_RELOAD_KEY = 'root::lazyRoute::reloadedAt';
 /** Minimum time between automatic reloads triggered by route import failures. */
 const ROUTE_IMPORT_RELOAD_INTERVAL_MS = 60 * 1000;
 
+/**
+ * Time to wait after triggering an automatic reload before falling back to
+ * the error screen. The reload may never happen (e.g. it can be blocked by an
+ * unsaved-changes prompt), in which case the route would otherwise be stuck
+ * on the loading screen forever.
+ */
+const ROUTE_IMPORT_RELOAD_GRACE_MS = 10 * 1000;
+
 export interface ImportRouteComponentOptions {
   /** Number of times to attempt the import before giving up. */
   attempts?: number;
@@ -72,7 +80,8 @@ function reloadOnRouteImportError(reload: () => void): boolean {
  * change), when the login session expires, or due to flaky network requests.
  * If the import still fails after all attempts, the page is automatically
  * reloaded to fetch the latest version of the CMS. If a reload was already
- * attempted recently, resolves to a `RouteLoadError` screen instead.
+ * attempted recently (or the triggered reload never happens), resolves to a
+ * `RouteLoadError` screen instead.
  *
  * NOTE: The returned promise never rejects; failures resolve to a component
  * that renders the error screen, so callers can render the result directly.
@@ -97,9 +106,15 @@ export async function importRouteComponent<P>(
   }
   console.error('failed to import route component:', lastError);
   if (reloadOnRouteImportError(reload)) {
-    // The page is about to reload; return a promise that never settles so the
-    // router stays in its current state until the reload occurs.
-    return new Promise(() => {});
+    // The page is about to reload; keep the loading screen up while the
+    // reload happens, but fall back to the error screen if the page is still
+    // alive after a grace period (e.g. the reload was blocked by an
+    // unsaved-changes prompt).
+    return new Promise((resolve) => {
+      setTimeout(() => {
+        resolve(() => <RouteLoadError error={lastError} />);
+      }, ROUTE_IMPORT_RELOAD_GRACE_MS);
+    });
   }
   return () => <RouteLoadError error={lastError} />;
 }

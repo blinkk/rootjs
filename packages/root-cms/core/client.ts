@@ -1749,11 +1749,16 @@ export class RootCMSClient {
   }
 
   /**
-   * Gets the user's role from the project's ACL.
+   * Looks up the user's entry in the project's ACL with a single Firestore
+   * read. `exists` is `true` if the user (or their domain's wildcard entry,
+   * e.g. `*@example.com`) is in the ACL; `role` may be `null` for entries
+   * without an assigned role.
    */
-  async getUserRole(email: string): Promise<UserRole | null> {
+  async getUserAcl(
+    email: string
+  ): Promise<{exists: boolean; role: UserRole | null}> {
     if (!email) {
-      return null;
+      return {exists: false, role: null};
     }
     const docRef = this.db.doc(`Projects/${this.projectId}`);
     const snapshot = await docRef.get();
@@ -1761,46 +1766,36 @@ export class RootCMSClient {
     const acl = data.roles || {};
 
     if (email in acl) {
-      return acl[email];
+      return {exists: true, role: acl[email] ?? null};
     }
 
     // Check wildcard domains, e.g. `*@example.com`.
     if (!email.includes('@')) {
       console.warn(`invalid email: ${email}`);
-      return null;
+      return {exists: false, role: null};
     }
     const domain = email.split('@').at(-1);
-    if (domain && `*@${domain}` in acl) {
-      return acl[`*@${domain}`];
+    const wildcard = `*@${domain}`;
+    if (domain && wildcard in acl) {
+      return {exists: true, role: acl[wildcard] ?? null};
     }
-    return null;
+    return {exists: false, role: null};
+  }
+
+  /**
+   * Gets the user's role from the project's ACL.
+   */
+  async getUserRole(email: string): Promise<UserRole | null> {
+    const acl = await this.getUserAcl(email);
+    return acl.role;
   }
 
   /**
    * Verifies user exists in the ACL list.
    */
   async userExistsInAcl(email: string): Promise<boolean> {
-    if (!email) {
-      return false;
-    }
-    const docRef = this.db.doc(`Projects/${this.projectId}`);
-    const snapshot = await docRef.get();
-    const data = snapshot.data() || {};
-    const acl = data.roles || {};
-    if (email in acl) {
-      return true;
-    }
-
-    // Check wildcard domains, e.g. `*@example.com`.
-    if (!email.includes('@')) {
-      console.warn(`invalid email: ${email}`);
-      return false;
-    }
-    const domain = email.split('@').at(-1);
-    if (domain && `*@${domain}` in acl) {
-      return true;
-    }
-    return false;
+    const acl = await this.getUserAcl(email);
+    return acl.exists;
   }
 
   /**

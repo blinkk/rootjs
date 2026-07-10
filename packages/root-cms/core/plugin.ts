@@ -112,6 +112,72 @@ const NONCONF_STATIC_PATHS = [
   '/cms/static/ui.js',
 ];
 
+/**
+ * Max time to wait for the Firebase Auth / Firestore calls that verify the
+ * current user's session. The Firestore gRPC channel can get into a stuck
+ * state where requests never settle (e.g. after credentials expire or a
+ * long-lived connection drops); without a deadline every request awaiting
+ * `getCurrentUser()` would hang and the CMS would sit on its loading screen
+ * until the server is restarted.
+ */
+const GET_CURRENT_USER_TIMEOUT_MS = 15 * 1000;
+
+class TimeoutError extends Error {}
+
+/**
+ * Rejects with a `TimeoutError` if the promise doesn't settle within
+ * `timeoutMs`. The underlying promise's eventual rejection (if any) is still
+ * consumed so it doesn't surface as an unhandled rejection.
+ */
+function withTimeout<T>(
+  promise: Promise<T>,
+  timeoutMs: number,
+  label: string
+): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const timer = setTimeout(() => {
+      reject(new TimeoutError(`${label} timed out after ${timeoutMs}ms`));
+    }, timeoutMs);
+    promise.then(
+      (value) => {
+        clearTimeout(timer);
+        resolve(value);
+      },
+      (err) => {
+        clearTimeout(timer);
+        reject(err);
+      }
+    );
+  });
+}
+
+/**
+ * Returns true if the error indicates the server's Google Cloud credentials
+ * have expired and require reauthentication.
+ * See: https://github.com/googleapis/nodejs-firestore/issues/1023
+ */
+function isGcloudReauthError(err: unknown): boolean {
+  const message = (err as Error)?.message || '';
+  return (
+    message.includes('reauth related error') ||
+    message.includes('invalid_grant')
+  );
+}
+
+function logGcloudReauthHint() {
+  console.log('\n');
+  console.log('==================================================');
+  console.log('Google Cloud Reauthentication Required');
+  console.log('==================================================');
+  console.log(
+    'Your Google Cloud credentials have expired or require reauthentication.'
+  );
+  console.log('Please run the following command to reauthenticate:');
+  console.log('\n    gcloud auth application-default login\n');
+  console.log('==================================================');
+  console.log('\n');
+}
+
 export interface CMSUser {
   email: string;
   /**
@@ -683,52 +749,55 @@ export function cmsPlugin(options: CMSPluginOptions): CMSPlugin {
       }
       // Verify the user exists in the DB's ACL list.
       const cmsClient = new RootCMSClient(req.rootConfig!);
-      const userHasAccess = await cmsClient.userExistsInAcl(jwt.email);
-      if (!userHasAccess) {
+      const acl = await cmsClient.getUserAcl(jwt.email);
+      if (!acl.exists) {
         console.log('session failed: user is not in the firestore acl list');
         return null;
       }
-      const role = await cmsClient.getUserRole(jwt.email).catch(() => null);
-      return {email: jwt.email, role};
+      return {email: jwt.email, role: acl.role};
     }
 
+    let jwt: DecodedIdToken;
     try {
       // Verify the idToken using firebase auth, checking for token revocations.
-      const jwt = await auth.verifySessionCookie(sessionCookie, true);
-      if (isExpired(jwt)) {
-        console.log('session failed: token is expired');
-        return null;
-      }
-      // Verify user's email is verified.
-      if (!jwt.email || !jwt.email_verified) {
-        console.log('session failed: email not verified');
-        return null;
-      }
-      // Check whether user is authorized.
-      if (options.isUserAuthorized) {
-        const authorized = await options.isUserAuthorized(req, {
-          email: jwt.email!,
-        });
-        if (!authorized) {
-          console.log('session failed: not authorized');
-          return null;
-        }
-      }
-      // Verify the user exists in the DB's ACL list.
-      const cmsClient = new RootCMSClient(req.rootConfig!);
-      const userHasAccess = await cmsClient.userExistsInAcl(jwt.email);
-      if (!userHasAccess) {
-        console.log('session failed: user is not in the firestore acl list');
-        return null;
-      }
-      // JWT verified.
-      const role = await cmsClient.getUserRole(jwt.email!).catch(() => null);
-      return {email: jwt.email!, role};
+      // An invalid, expired, or revoked cookie throws here and is treated as
+      // "signed out". Errors from the checks below are backend failures and
+      // are left to propagate so callers can respond with an explicit error
+      // instead of bouncing an authenticated user to the login page.
+      jwt = await auth.verifySessionCookie(sessionCookie, true);
     } catch (err) {
       console.error('failed to verify jwt token');
       console.error(err);
       return null;
     }
+    if (isExpired(jwt)) {
+      console.log('session failed: token is expired');
+      return null;
+    }
+    // Verify user's email is verified.
+    if (!jwt.email || !jwt.email_verified) {
+      console.log('session failed: email not verified');
+      return null;
+    }
+    // Check whether user is authorized.
+    if (options.isUserAuthorized) {
+      const authorized = await options.isUserAuthorized(req, {
+        email: jwt.email,
+      });
+      if (!authorized) {
+        console.log('session failed: not authorized');
+        return null;
+      }
+    }
+    // Verify the user exists in the DB's ACL list.
+    const cmsClient = new RootCMSClient(req.rootConfig!);
+    const acl = await cmsClient.getUserAcl(jwt.email);
+    if (!acl.exists) {
+      console.log('session failed: user is not in the firestore acl list');
+      return null;
+    }
+    // JWT verified.
+    return {email: jwt.email, role: acl.role};
   }
 
   function redirectToLogin(req: Request, res: Response) {
@@ -911,10 +980,71 @@ export function cmsPlugin(options: CMSPluginOptions): CMSPlugin {
         res.redirect('/cms/login');
       });
 
+      // Serve the CMS UI's static assets before any auth middleware runs.
+      // These files ship with the root-cms package and contain no project
+      // data, and serving them without blocking on auth guarantees the CMS
+      // shell can always boot — even when the Firestore/Auth backend is slow
+      // or stuck, or when the login session expires while the app is open
+      // (requests for lazy route chunks would otherwise get redirected to the
+      // login page and the dynamic import would fail).
+      const staticDir = path.resolve(__dirname, 'ui');
+      if (process.env.NODE_ENV === 'development') {
+        // In dev, the `?c=` cachebust param is fixed for the lifetime of the
+        // server process while the UI may be rebuilt underneath it, so
+        // disable browser caching to avoid serving a stale ui.js that
+        // references hashed chunk files that no longer exist.
+        server.use(
+          '/cms/static',
+          (req: Request, res: Response, next: NextFunction) => {
+            res.setHeader('cache-control', 'no-store');
+            next();
+          }
+        );
+      }
+      server.use(
+        '/cms/static',
+        sirv(staticDir, {dev: process.env.NODE_ENV === 'development'})
+      );
+
       // Inject the current user into the req object and check if login is
       // required, sending unauthenticated users to the login page.
       server.use(async (req: Request, res: Response, next: NextFunction) => {
-        const user = await getCurrentUser(req);
+        let user: CMSUser | null;
+        try {
+          user = await withTimeout(
+            getCurrentUser(req),
+            GET_CURRENT_USER_TIMEOUT_MS,
+            'getCurrentUser()'
+          );
+        } catch (err) {
+          // A failure here is an infra error (e.g. a stuck Firestore channel
+          // or expired server credentials), not an invalid session. Respond
+          // with an explicit 503 on paths that require login so the request
+          // fails fast and visibly. Without this, the rejected middleware
+          // promise would leave the request hanging forever and the CMS stuck
+          // on its loading screen until the server restarts.
+          console.error('failed to fetch the current user:');
+          console.error(err);
+          if (isGcloudReauthError(err)) {
+            logGcloudReauthHint();
+          }
+          if (loginRequired(req)) {
+            res.setHeader('cache-control', 'no-store');
+            if (String(req.originalUrl).toLowerCase().startsWith('/cms/api')) {
+              res.status(503).json({success: false, error: 'AUTH_UNAVAILABLE'});
+            } else {
+              res
+                .status(503)
+                .send(
+                  'Root CMS was unable to verify your login session (the auth backend did not respond). Reload the page to try again, and check the server logs if the problem persists.'
+                );
+            }
+            return;
+          }
+          // Public paths that don't require login proceed without a user.
+          next();
+          return;
+        }
         if (user) {
           req.user = user;
         }
@@ -928,12 +1058,6 @@ export function cmsPlugin(options: CMSPluginOptions): CMSPlugin {
 
         next();
       });
-
-      const staticDir = path.resolve(__dirname, 'ui');
-      server.use(
-        '/cms/static',
-        sirv(staticDir, {dev: process.env.NODE_ENV === 'development'})
-      );
 
       // Register server-sent events (SSE) endpoints.
       const sseData = sse(server);
@@ -973,22 +1097,8 @@ export function cmsPlugin(options: CMSPluginOptions): CMSPlugin {
       // Handle Firestore reauth errors.
       // See: https://github.com/googleapis/nodejs-firestore/issues/1023
       process.on('unhandledRejection', (reason) => {
-        const err = reason as any;
-        if (
-          err?.message?.includes('reauth related error') ||
-          err?.message?.includes('invalid_grant')
-        ) {
-          console.log('\n');
-          console.log('==================================================');
-          console.log('Google Cloud Reauthentication Required');
-          console.log('==================================================');
-          console.log(
-            'Your Google Cloud credentials have expired or require reauthentication.'
-          );
-          console.log('Please run the following command to reauthenticate:');
-          console.log('\n    gcloud auth application-default login\n');
-          console.log('==================================================');
-          console.log('\n');
+        if (isGcloudReauthError(reason)) {
+          logGcloudReauthHint();
         }
       });
     },
