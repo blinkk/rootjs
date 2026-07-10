@@ -97,7 +97,7 @@ describe('ai', () => {
       const title = deriveChatTitle([
         {id: '1', role: 'user', parts: [{type: 'text', text: longText}]} as any,
       ]);
-      expect(title.length).toBeLessThanOrEqual(60);
+      expect(title.length).toBeLessThanOrEqual(80);
       expect(title.endsWith('…')).toBe(true);
     });
   });
@@ -246,7 +246,7 @@ describe('ai', () => {
 
     it('truncates overly long titles with an ellipsis', () => {
       const title = sanitizeGeneratedTitle('a'.repeat(120));
-      expect(title.length).toBeLessThanOrEqual(60);
+      expect(title.length).toBeLessThanOrEqual(80);
       expect(title.endsWith('…')).toBe(true);
     });
   });

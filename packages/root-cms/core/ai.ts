@@ -277,7 +277,7 @@ export async function generateChatTitle(
       model,
       system: TITLE_GENERATION_SYSTEM_PROMPT,
       prompt: buildTitlePrompt(context),
-      maxOutputTokens: 64,
+      maxOutputTokens: 96,
       temperature: 0.3,
     });
     const title = sanitizeGeneratedTitle(result.text);
