@@ -11,6 +11,20 @@
  */
 import type {UIMessage} from 'ai';
 
+/**
+ * Hard cap on the length of a generated/derived chat title. Titles double as
+ * the session summary in the Root AI sidebar, so this leaves room for a
+ * slightly fuller summary while still fitting on one line.
+ */
+export const MAX_TITLE_LENGTH = 80;
+
+/** Truncates a title to `MAX_TITLE_LENGTH`, appending an ellipsis if cut. */
+function truncateTitle(text: string): string {
+  return text.length > MAX_TITLE_LENGTH
+    ? `${text.slice(0, MAX_TITLE_LENGTH - 3)}…`
+    : text;
+}
+
 /** Derives a short title from the first user message (used as fallback). */
 export function deriveChatTitle(messages: UIMessage[]): string {
   const first = messages.find((m) => m.role === 'user');
@@ -25,7 +39,7 @@ export function deriveChatTitle(messages: UIMessage[]): string {
   if (!text) {
     return 'New chat';
   }
-  return text.length > 60 ? `${text.slice(0, 57)}…` : text;
+  return truncateTitle(text);
 }
 
 /**
@@ -102,7 +116,7 @@ export function sanitizeGeneratedTitle(raw: string): string {
   if (!title) {
     return '';
   }
-  return title.length > 60 ? `${title.slice(0, 57)}…` : title;
+  return truncateTitle(title);
 }
 
 /** System prompt used to generate a short summary title for a chat. */
@@ -115,7 +129,7 @@ export const TITLE_GENERATION_SYSTEM_PROMPT = [
   'Rules:',
   '- Output ONLY the title text. No quotes, no trailing punctuation,',
   '  no "Title:" prefix, no markdown.',
-  '- 5 to 10 words. Hard cap of 60 characters.',
+  '- 7 to 12 words. Hard cap of 80 characters.',
   '- Use a noun phrase in Sentence case (e.g. "Translate homepage',
   '  hero copy", "Debug image upload error", "Draft blog post about',
   '  pricing").',
