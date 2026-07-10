@@ -1,6 +1,6 @@
-import {render} from '@testing-library/preact';
+import {cleanup, render} from '@testing-library/preact';
 import {FunctionComponent} from 'preact';
-import {beforeEach, describe, expect, test, vi} from 'vitest';
+import {afterEach, beforeEach, describe, expect, test, vi} from 'vitest';
 import {
   ROUTE_IMPORT_RELOAD_KEY,
   importRouteComponent,
@@ -29,6 +29,12 @@ vi.mock('../layout/Layout.js', () => {
 function TestComponent() {
   return <div>test page</div>;
 }
+
+// The testing library's auto-cleanup requires vitest globals, which aren't
+// enabled, so clean up rendered components explicitly to keep tests isolated.
+afterEach(() => {
+  cleanup();
+});
 
 describe('importRouteComponent', () => {
   beforeEach(() => {
@@ -67,12 +73,35 @@ describe('importRouteComponent', () => {
     vi.spyOn(console, 'error').mockImplementation(() => {});
     const factory = vi.fn().mockRejectedValue(new Error('fetch failed'));
     const reload = vi.fn();
-    // The returned promise intentionally never settles when reloading, so
-    // wait on the reload spy instead of awaiting the result.
+    // The returned promise doesn't settle until a grace period after the
+    // reload is triggered, so wait on the reload spy instead of awaiting the
+    // result.
     void importRouteComponent(factory, {retryDelayMs: 0, reload});
     await vi.waitFor(() => expect(reload).toHaveBeenCalledTimes(1));
     expect(factory).toHaveBeenCalledTimes(3);
     expect(window.sessionStorage.getItem(ROUTE_IMPORT_RELOAD_KEY)).toBeTruthy();
+  });
+
+  test('falls back to an error screen if the triggered reload never happens', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    const factory = vi.fn().mockRejectedValue(new Error('fetch failed'));
+    const reload = vi.fn();
+    vi.useFakeTimers();
+    let ErrorComponent: FunctionComponent;
+    try {
+      const promise = importRouteComponent(factory, {retryDelayMs: 0, reload});
+      // Run through the retry delays and the post-reload grace period.
+      await vi.advanceTimersByTimeAsync(60 * 1000);
+      expect(reload).toHaveBeenCalledTimes(1);
+      ErrorComponent = await promise;
+    } finally {
+      // Restore real timers before rendering so the testing library's
+      // auto-cleanup works as usual.
+      vi.useRealTimers();
+    }
+    const result = render(<ErrorComponent />);
+    expect(result.getByText('Page failed to load')).toBeTruthy();
+    expect(result.getByText('fetch failed')).toBeTruthy();
   });
 
   test('falls back to an error screen if a reload was recently attempted', async () => {

@@ -424,6 +424,13 @@ installNavigationGuards();
 
 const root = document.getElementById('root')!;
 
+/**
+ * Max time to wait for Firebase Auth to report the auth state before showing
+ * an error screen. Without a deadline, a stalled auth request would leave the
+ * "Loading..." screen up indefinitely with no way to tell what went wrong.
+ */
+const AUTH_STATE_TIMEOUT_MS = 15 * 1000;
+
 function getStartupErrorMessage(err: any): string {
   const code = err?.code || '';
   if (code === 'auth/invalid-api-key') {
@@ -446,7 +453,13 @@ function showStartupError(err: any) {
   message.className = 'bootstrap__error-message';
   message.textContent = getStartupErrorMessage(err);
 
-  container.append(title, message);
+  const reloadButton = document.createElement('button');
+  reloadButton.type = 'button';
+  reloadButton.className = 'bootstrap__error-button';
+  reloadButton.textContent = 'Reload page';
+  reloadButton.addEventListener('click', () => window.location.reload());
+
+  container.append(title, message, reloadButton);
   root.append(container);
 }
 
@@ -473,18 +486,38 @@ try {
   );
   const auth = getAuth(app);
   const storage = getStorage(app);
-  auth.onAuthStateChanged((user) => {
-    if (!user) {
-      loginRedirect();
-      return;
-    }
-    window.firebase = {app, auth, db, storage, user};
-    root.innerHTML = '';
-    render(<App />, root);
+  // Watchdog: if the auth state never arrives (e.g. a stalled network
+  // request), replace the loading screen with an error screen instead of
+  // spinning forever. If the auth state eventually arrives after the deadline,
+  // the app still renders over the error screen and recovers.
+  const authWatchdog = window.setTimeout(() => {
+    showStartupError(
+      new Error(
+        'Timed out waiting for Firebase Authentication to respond. Check your network connection and reload the page.'
+      )
+    );
+  }, AUTH_STATE_TIMEOUT_MS);
+  auth.onAuthStateChanged(
+    (user) => {
+      window.clearTimeout(authWatchdog);
+      if (!user) {
+        loginRedirect();
+        return;
+      }
+      window.firebase = {app, auth, db, storage, user};
+      root.innerHTML = '';
+      render(<App />, root);
 
-    updateSession(user);
-    saveUserProfile(user, db);
-  });
+      updateSession(user).catch((err) => {
+        console.error('failed to update login session:', err);
+      });
+      saveUserProfile(user, db);
+    },
+    (err) => {
+      window.clearTimeout(authWatchdog);
+      showStartupError(err);
+    }
+  );
 } catch (err) {
   showStartupError(err);
 }

@@ -139,6 +139,24 @@ body.menu\:open {
   max-width: 640px;
 }
 
+.bootstrap__error-button {
+  appearance: none;
+  background: #1a1b1e;
+  border: none;
+  border-radius: 4px;
+  color: #fff;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  margin-top: 8px;
+  padding: 10px 20px;
+}
+
+.bootstrap__error-button:hover {
+  background: #333;
+}
+
 .sr-only {
   position: absolute;
   width: 1px;
