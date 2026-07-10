@@ -29,9 +29,38 @@ describe('iframeLocationToCmsUrl', () => {
       iframeLocationToCmsUrl(
         '/myroute/foo',
         'foo',
+        parts('/myroute/foo/bar/?q=1#section')
+      )
+    ).toBe('/cms/tools/foo/bar/?q=1#section');
+  });
+
+  // `?preview=true` is an auth-transport param; it should be hidden from the
+  // clean CMS URL while other params are preserved.
+  it('strips preview=true from the cms url', () => {
+    expect(
+      iframeLocationToCmsUrl(
+        '/myroute/foo',
+        'foo',
         parts('/myroute/foo/bar/?preview=true#section')
       )
-    ).toBe('/cms/tools/foo/bar/?preview=true#section');
+    ).toBe('/cms/tools/foo/bar/#section');
+  });
+
+  it('strips preview=true but keeps other params', () => {
+    expect(
+      iframeLocationToCmsUrl(
+        '/myroute/foo',
+        'foo',
+        parts('/myroute/foo/bar/?preview=true&q=1')
+      )
+    ).toBe('/cms/tools/foo/bar/?q=1');
+    expect(
+      iframeLocationToCmsUrl(
+        '/myroute/foo',
+        'foo',
+        parts('/myroute/foo/bar/?q=1&preview=true')
+      )
+    ).toBe('/cms/tools/foo/bar/?q=1');
   });
 
   it('returns the bare prefix at the tool home', () => {
@@ -128,6 +157,35 @@ describe('cmsUrlToIframeSrc', () => {
       )
     ).toBe('https://tool.example.com/bar/');
   });
+
+  // The CMS URL strips `preview=true`, so it must be re-added onto the iframe
+  // src when the configured iframe url uses it (otherwise a refresh would drop
+  // preview/auth mode).
+  it('restores preview=true from the configured iframe url', () => {
+    expect(
+      cmsUrlToIframeSrc(
+        '/myroute/foo/?preview=true',
+        'foo',
+        parts('/cms/tools/foo/bar/')
+      )
+    ).toBe('http://localhost:3000/myroute/foo/bar/?preview=true');
+  });
+
+  it('restores preview=true alongside the cms url params', () => {
+    expect(
+      cmsUrlToIframeSrc(
+        '/myroute/foo/?preview=true',
+        'foo',
+        parts('/cms/tools/foo/bar/?q=1')
+      )
+    ).toBe('http://localhost:3000/myroute/foo/bar/?q=1&preview=true');
+  });
+
+  it('does not add preview=true when the iframe url lacks it', () => {
+    expect(
+      cmsUrlToIframeSrc('/myroute/foo', 'foo', parts('/cms/tools/foo/bar/?q=1'))
+    ).toBe('http://localhost:3000/myroute/foo/bar/?q=1');
+  });
 });
 
 describe('round trip', () => {
@@ -143,5 +201,24 @@ describe('round trip', () => {
         hash: loc.hash,
       })
     ).toBe(cmsUrl);
+  });
+
+  // With a preview-authed iframe url, the CMS URL stays clean (no preview) but
+  // the iframe src keeps preview=true, and the round trip is stable.
+  it('keeps the cms url clean while preserving preview on the iframe', () => {
+    const iframeUrl = 'https://tool.example.com/app/?preview=true';
+    const cleanCmsUrl = '/cms/tools/app/reports/?tab=all#top';
+    const src = cmsUrlToIframeSrc(iframeUrl, 'app', parts(cleanCmsUrl));
+    expect(src).toBe(
+      'https://tool.example.com/app/reports/?tab=all&preview=true#top'
+    );
+    const loc = new URL(src);
+    expect(
+      iframeLocationToCmsUrl(iframeUrl, 'app', {
+        pathname: loc.pathname,
+        search: loc.search,
+        hash: loc.hash,
+      })
+    ).toBe(cleanCmsUrl);
   });
 });

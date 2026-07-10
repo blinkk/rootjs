@@ -20,9 +20,54 @@ export interface UrlParts {
   hash: string;
 }
 
+/**
+ * Query param used to enforce Root CMS auth / draft-preview mode on a route
+ * (see `loginRequired()` in core/plugin.ts). It's an auth-transport param, not
+ * something the user navigates to, so it's stripped from the CMS URL to keep
+ * tool URLs clean and re-added onto the iframe src from the configured iframe
+ * URL. See {@link stripPreviewParam} and {@link restorePreviewParam}.
+ */
+const PREVIEW_PARAM = 'preview';
+
 /** Returns the CMS route prefix for a tool, e.g. `/cms/tools/foo`. */
 export function cmsToolPrefix(id: string): string {
   return `/cms/tools/${id}`;
+}
+
+/**
+ * Removes `preview=true` from a search string so it doesn't leak into the CMS
+ * URL. Any other params are preserved. The search is returned verbatim when it
+ * has no `preview=true`, so unrelated URLs aren't needlessly re-encoded.
+ */
+function stripPreviewParam(search: string): string {
+  if (!search.includes(`${PREVIEW_PARAM}=`)) {
+    return search;
+  }
+  const params = new URLSearchParams(search);
+  if (params.get(PREVIEW_PARAM) !== 'true') {
+    return search;
+  }
+  params.delete(PREVIEW_PARAM);
+  const result = params.toString();
+  return result ? `?${result}` : '';
+}
+
+/**
+ * Restores `preview=true` onto an iframe search string when the configured
+ * iframe `base` URL uses it. Because the CMS URL strips `preview=true`, it must
+ * be re-added when rebuilding the iframe src on refresh, or the tool would lose
+ * its auth / preview mode.
+ */
+function restorePreviewParam(search: string, base: URL): string {
+  if (base.searchParams.get(PREVIEW_PARAM) !== 'true') {
+    return search;
+  }
+  const params = new URLSearchParams(search);
+  if (params.get(PREVIEW_PARAM) === 'true') {
+    return search;
+  }
+  params.set(PREVIEW_PARAM, 'true');
+  return `?${params.toString()}`;
 }
 
 /** Strips trailing slashes from a path, preserving the root `/`. */
@@ -73,7 +118,8 @@ export function iframeLocationToCmsUrl(
   if (subpath === null) {
     return null;
   }
-  return `${cmsToolPrefix(id)}${subpath}${loc.search}${loc.hash}`;
+  const search = stripPreviewParam(loc.search);
+  return `${cmsToolPrefix(id)}${subpath}${search}${loc.hash}`;
 }
 
 /**
@@ -104,7 +150,8 @@ export function cmsUrlToIframeSrc(
       basePath === '/' ? subpath || '/' : `${basePath}${subpath}`;
     // The CMS URL mirrors the iframe's search/hash, so prefer it; fall back to
     // any search/hash on the configured iframe URL when the CMS URL has none.
-    target.search = loc.search || base.search;
+    // The CMS URL strips `preview=true`, so re-add it from the iframe base URL.
+    target.search = restorePreviewParam(loc.search || base.search, base);
     target.hash = loc.hash || base.hash;
     return target.toString();
   } catch {
