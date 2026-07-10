@@ -1,5 +1,15 @@
 # @blinkk/root-cms
 
+## 3.1.8
+
+### Patch Changes
+
+- 34cfb5d: feat: add middleware for requiring cms login
+- 6961b0c: fix: prevent the CMS loading screen from hanging indefinitely
+- c889552: feat: sync exportable assets from Figma into asset library folders
+- 7a7261a: feat: add google drive asset sync provider to asset library
+  - @blinkk/root@3.1.8
+
 ## 3.1.7
 
 ### Patch Changes
