@@ -1,10 +1,12 @@
 import {Command} from 'commander';
 import {bgGreen, black} from 'kleur/colors';
+import {clientCall, clientMethods} from './client-cli.js';
 import {docsGet, docsSet, docsDownload, docsUpload} from './docs.js';
 import {exportData} from './export.js';
 import {generateTypes} from './generate-types.js';
 import {importData} from './import.js';
 import {initFirebase} from './init-firebase.js';
+import {installSkill} from './skill.js';
 
 class CliRunner {
   private name: string;
@@ -19,7 +21,12 @@ class CliRunner {
     const program = new Command(this.name);
     program.version(this.version);
     program.option('-q, --quiet', 'quiet');
-    program.hook('preAction', (cmd) => {
+    program.hook('preAction', (cmd, actionCommand) => {
+      // The `client.*` commands emit machine-readable JSON on stdout, so skip
+      // the decorative banner to keep their output clean for AI agents.
+      if (actionCommand.name().startsWith('client.')) {
+        return;
+      }
       if (!cmd.opts().quiet) {
         console.log(
           `🥕 ${bgGreen(black(` ${this.name} `))} v${this.version}\n`
@@ -149,12 +156,61 @@ class CliRunner {
         'doc mode: "draft" or "published" (default: "draft")'
       )
       .action(docsUpload);
+    program
+      .command('client.call <method> [jsonArgs]')
+      .description(
+        'calls a method on the RootCMSClient with JSON-encoded arguments\n\n' +
+          'Designed for AI agents. Arguments are a JSON array of positional\n' +
+          'args passed on the command line. When jsonArgs is omitted the\n' +
+          'method is called with no arguments; pass `-` to read the JSON args\n' +
+          'from stdin. The result is printed to stdout as a JSON envelope:\n' +
+          '  {"ok": true, "result": <value>}\n' +
+          '  {"ok": false, "error": "<message>"}\n\n' +
+          'Run `root-cms client.methods` to discover available methods and\n' +
+          'their argument signatures.\n\n' +
+          'Usage examples:\n' +
+          '  $ root-cms client.call getDoc \'["Pages", "home", {"mode": "draft"}]\'\n' +
+          '  $ root-cms client.call listDocs \'["Pages", {"mode": "published"}]\'\n' +
+          '  $ root-cms client.call publishScheduledDocs\n' +
+          '  $ echo \'["Pages", "home", {"mode": "draft"}]\' | root-cms client.call getDoc -'
+      )
+      .action(clientCall);
+    program
+      .command('client.methods')
+      .description(
+        'lists the methods available on the RootCMSClient\n\n' +
+          'Designed for AI discovery of available functionality. Prints each\n' +
+          "method's signature and description.\n\n" +
+          'Usage examples:\n' +
+          '  $ root-cms client.methods\n' +
+          '  $ root-cms client.methods --json\n' +
+          '  $ root-cms client.methods --json --types'
+      )
+      .option('--json', 'output machine-readable JSON')
+      .option('--types', 'include referenced type/interface definitions')
+      .action(clientMethods);
+    program
+      .command('skill.install [dir]')
+      .description(
+        'installs the bundled "root-cms-cli" agent skill\n\n' +
+          'Copies the skill (which teaches AI coding agents how to use the\n' +
+          '`root-cms client.*` commands) into a local skills directory.\n' +
+          'Defaults to `.claude/skills`, creating `.claude/skills/root-cms-cli`.\n\n' +
+          'Usage examples:\n' +
+          '  $ root-cms skill.install\n' +
+          '  $ root-cms skill.install ./my-agent/skills\n' +
+          '  $ root-cms skill.install --force'
+      )
+      .option('--force', 'overwrite the skill if it is already installed')
+      .action(installSkill);
     await program.parseAsync(argv);
   }
 }
 
 export {
   CliRunner,
+  clientCall,
+  clientMethods,
   docsGet,
   docsSet,
   docsDownload,
@@ -163,4 +219,5 @@ export {
   generateTypes,
   importData,
   initFirebase,
+  installSkill,
 };
