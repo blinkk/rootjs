@@ -137,15 +137,17 @@ as `{"_seconds","_nanoseconds"}`, `{"_latitude","_longitude"}`, and
 ## Downloadable agent skill
 
 A ready-to-use skill that teaches AI coding agents how to use these commands
-ships with the package. Install it into your project's `.claude/skills/`
-directory with:
+ships with the package. Install it with:
 
 ```bash
 root-cms skill.install
 ```
 
-This creates `.claude/skills/root-cms-cli/`. Pass a different directory to
-install elsewhere (e.g. `root-cms skill.install ./my-agent/skills`), or
+Root stays agnostic of any particular AI provider: the command auto-detects
+existing agent skills directories (e.g. `.claude/skills`, `.agent/skills`, or
+any `.*/skills` directory already in your project) and installs into them. If
+none is found, it installs to `.agent/skills`. Pass an explicit directory to
+override detection (e.g. `root-cms skill.install ./my-agent/skills`), or
 `--force` to overwrite an existing copy.
 
 # Embedding the CMS (`@blinkk/root-cms/browser-client`)

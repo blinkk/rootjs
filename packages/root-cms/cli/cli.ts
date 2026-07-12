@@ -194,8 +194,12 @@ class CliRunner {
       .description(
         'installs the bundled "root-cms-cli" agent skill\n\n' +
           'Copies the skill (which teaches AI coding agents how to use the\n' +
-          '`root-cms client.*` commands) into a local skills directory.\n' +
-          'Defaults to `.claude/skills`, creating `.claude/skills/root-cms-cli`.\n\n' +
+          '`root-cms client.*` commands) into a local skills directory.\n\n' +
+          'When no directory is given, existing agent skills directories are\n' +
+          'auto-detected (e.g. `.claude/skills`, `.agent/skills`, or any\n' +
+          '`.*/skills` dir already in the project) so Root does not assume a\n' +
+          'specific AI provider. If none is found, it installs to\n' +
+          '`.agent/skills`.\n\n' +
           'Usage examples:\n' +
           '  $ root-cms skill.install\n' +
           '  $ root-cms skill.install ./my-agent/skills\n' +
