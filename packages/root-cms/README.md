@@ -93,6 +93,63 @@ This is convenient for granting access to a whole workspace, but be aware:
 - Prefer explicit per-email grants for `ADMIN` and `EDITOR`; reserve the
   wildcard for `CONTRIBUTOR` or `VIEWER` if you use it at all.
 
+# CLI for AI agents (`root-cms client.*`)
+
+The `root-cms` CLI exposes two commands that let an AI coding agent (or any
+script) drive the `RootCMSClient` programmatically. Run them from the root of a
+Root.js project (a directory containing `root.config.ts`).
+
+Discover the available API:
+
+```bash
+# Human-readable list of methods + descriptions
+root-cms client.methods
+
+# Machine-readable JSON, including referenced type/interface definitions
+root-cms client.methods --json --types
+```
+
+Call any method with a JSON array of positional arguments:
+
+```bash
+# getDoc(collectionId, slug, options)
+root-cms client.call getDoc '["Pages", "home", {"mode": "draft"}]'
+
+# A no-arg method (omit the JSON array)
+root-cms client.call publishScheduledDocs
+
+# Read large args from stdin by passing `-`
+echo '["Pages/home", {"title": "Hello"}]' | root-cms client.call saveDraftData -
+```
+
+`client.call` prints a single-line JSON envelope to stdout and exits non-zero
+on failure:
+
+```json
+{"ok": true, "result": <value>}
+{"ok": false, "error": "<message>"}
+```
+
+Firestore `Timestamp`, `GeoPoint`, and `DocumentReference` values are encoded
+as `{"_seconds","_nanoseconds"}`, `{"_latitude","_longitude"}`, and
+`{"_referencePath"}` respectively in both arguments and results.
+
+## Downloadable agent skill
+
+A ready-to-use skill that teaches AI coding agents how to use these commands
+ships with the package. Install it with:
+
+```bash
+root-cms skill.install
+```
+
+Root stays agnostic of any particular AI provider: the command auto-detects
+existing agent skills directories (e.g. `.claude/skills`, `.agent/skills`, or
+any `.*/skills` directory already in your project) and installs into them. If
+none is found, it installs to `.agent/skills`. Pass an explicit directory to
+override detection (e.g. `root-cms skill.install ./my-agent/skills`), or
+`--force` to overwrite an existing copy.
+
 # Embedding the CMS (`@blinkk/root-cms/browser-client`)
 
 `@blinkk/root-cms/browser-client` is a dependency-free, framework-agnostic

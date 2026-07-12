@@ -1,3 +1,5 @@
+import {Timestamp, GeoPoint} from 'firebase-admin/firestore';
+
 /**
  * Parses a comma-separated filter string into include and exclude patterns.
  * Exclude patterns are prefixed with "!".
@@ -164,6 +166,65 @@ export function convertForExport(obj: any): any {
     const converted: any = {};
     for (const [key, value] of Object.entries(obj)) {
       converted[key] = convertForExport(value);
+    }
+    return converted;
+  }
+
+  return obj;
+}
+
+/**
+ * Recursively converts exported/JSON data back into Firestore types.
+ *
+ * Recognizes the serialized forms produced by {@link convertForExport}:
+ * - `{_seconds, _nanoseconds}` -> `Timestamp`
+ * - `{_latitude, _longitude}` -> `GeoPoint`
+ * - `{_referencePath}` -> `DocumentReference`
+ *
+ * `db` is a Firestore instance used to construct DocumentReferences.
+ */
+export function convertFirestoreTypes(obj: any, db: any): any {
+  if (obj === null || obj === undefined) {
+    return obj;
+  }
+
+  // Timestamp objects ({_seconds, _nanoseconds}).
+  if (
+    typeof obj === 'object' &&
+    '_seconds' in obj &&
+    '_nanoseconds' in obj &&
+    Object.keys(obj).length === 2
+  ) {
+    return new Timestamp(obj._seconds, obj._nanoseconds);
+  }
+
+  // GeoPoint objects ({_latitude, _longitude}).
+  if (
+    typeof obj === 'object' &&
+    '_latitude' in obj &&
+    '_longitude' in obj &&
+    Object.keys(obj).length === 2
+  ) {
+    return new GeoPoint(obj._latitude, obj._longitude);
+  }
+
+  // DocumentReference objects ({_referencePath}).
+  if (
+    typeof obj === 'object' &&
+    '_referencePath' in obj &&
+    Object.keys(obj).length === 1
+  ) {
+    return db.doc(obj._referencePath);
+  }
+
+  if (Array.isArray(obj)) {
+    return obj.map((item) => convertFirestoreTypes(item, db));
+  }
+
+  if (typeof obj === 'object') {
+    const converted: any = {};
+    for (const [key, value] of Object.entries(obj)) {
+      converted[key] = convertFirestoreTypes(value, db);
     }
     return converted;
   }

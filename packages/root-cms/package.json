@@ -12,7 +12,8 @@
     "directory": "packages/root-cms"
   },
   "files": [
-    "dist/**/*"
+    "dist/**/*",
+    "skills/**/*"
   ],
   "bin": {
     "root-cms": "./bin/root-cms.js"

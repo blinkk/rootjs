@@ -2,9 +2,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 import * as readline from 'node:readline';
 import {loadRootConfig} from '@blinkk/root/node';
-import {Timestamp, GeoPoint} from 'firebase-admin/firestore';
 import {RootCMSClient, unmarshalData, getCmsPlugin} from '../core/client.js';
-import {convertForExport} from './utils.js';
+import {convertForExport, convertFirestoreTypes} from './utils.js';
 
 export interface DocsGetOptions {
   /** Doc mode: "draft" or "published". */
@@ -272,56 +271,4 @@ function parseDocId(docId: string): {collection: string; slug: string} {
     );
   }
   return {collection, slug};
-}
-
-/**
- * Recursively converts exported JSON back to Firestore types.
- */
-function convertFirestoreTypes(obj: any, db: any): any {
-  if (obj === null || obj === undefined) {
-    return obj;
-  }
-
-  // Timestamp objects ({_seconds, _nanoseconds}).
-  if (
-    typeof obj === 'object' &&
-    '_seconds' in obj &&
-    '_nanoseconds' in obj &&
-    Object.keys(obj).length === 2
-  ) {
-    return new Timestamp(obj._seconds, obj._nanoseconds);
-  }
-
-  // GeoPoint objects ({_latitude, _longitude}).
-  if (
-    typeof obj === 'object' &&
-    '_latitude' in obj &&
-    '_longitude' in obj &&
-    Object.keys(obj).length === 2
-  ) {
-    return new GeoPoint(obj._latitude, obj._longitude);
-  }
-
-  // DocumentReference objects ({_referencePath}).
-  if (
-    typeof obj === 'object' &&
-    '_referencePath' in obj &&
-    Object.keys(obj).length === 1
-  ) {
-    return db.doc(obj._referencePath);
-  }
-
-  if (Array.isArray(obj)) {
-    return obj.map((item) => convertFirestoreTypes(item, db));
-  }
-
-  if (typeof obj === 'object') {
-    const converted: any = {};
-    for (const [key, value] of Object.entries(obj)) {
-      converted[key] = convertFirestoreTypes(value, db);
-    }
-    return converted;
-  }
-
-  return obj;
 }
