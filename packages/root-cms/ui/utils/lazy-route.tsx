@@ -49,6 +49,25 @@ function sleep(ms: number): Promise<void> {
 }
 
 /**
+ * Marker used to identify the error screen component returned by
+ * `importRouteComponent()` so `lazyRoute()` can avoid caching failures.
+ */
+const ROUTE_LOAD_ERROR_MARKER = Symbol('RouteLoadError');
+
+function routeLoadErrorComponent<P>(error: unknown): FunctionComponent<P> {
+  const ErrorComponent = () => <RouteLoadError error={error} />;
+  (ErrorComponent as any)[ROUTE_LOAD_ERROR_MARKER] = true;
+  return ErrorComponent;
+}
+
+/** Returns true if the component is the error screen from a failed import. */
+export function isRouteLoadErrorComponent(
+  component: FunctionComponent<any>
+): boolean {
+  return Boolean((component as any)[ROUTE_LOAD_ERROR_MARKER]);
+}
+
+/**
  * Attempts a full page reload to recover from a route import failure, which
  * typically happens when the server rebuilds or redeploys and the hashed
  * chunk files referenced by the version of the app running in the browser no
@@ -112,58 +131,73 @@ export async function importRouteComponent<P>(
     // unsaved-changes prompt).
     return new Promise((resolve) => {
       setTimeout(() => {
-        resolve(() => <RouteLoadError error={lastError} />);
+        resolve(routeLoadErrorComponent<P>(lastError));
       }, ROUTE_IMPORT_RELOAD_GRACE_MS);
     });
   }
-  return () => <RouteLoadError error={lastError} />;
+  return routeLoadErrorComponent<P>(lastError);
 }
 
 /**
  * Lazy-loads a named component export for use as a route component. While the
  * import is pending a loading screen is rendered, and once it resolves the
  * component is cached so subsequent navigations to the route render
- * immediately without a loading state.
+ * immediately without a loading state. Failed imports resolve to an error
+ * screen that is NOT cached, so navigating back to the route retries the
+ * import.
  */
 export function lazyRoute<P>(
   factory: () => Promise<FunctionComponent<P>>,
   options?: LazyRouteOptions
 ): FunctionComponent<P> {
   let component: FunctionComponent<P> | null = null;
-  let promise: Promise<void> | null = null;
+  let promise: Promise<FunctionComponent<P>> | null = null;
 
-  function load(): Promise<void> {
+  function load(): Promise<FunctionComponent<P>> {
+    if (component) {
+      return Promise.resolve(component);
+    }
     if (!promise) {
       promise = importRouteComponent(factory, options).then((c) => {
-        component = c;
+        if (isRouteLoadErrorComponent(c)) {
+          // Don't cache failures; the next mount retries the import.
+          promise = null;
+        } else {
+          component = c;
+        }
+        return c;
       });
     }
     return promise;
   }
 
   return function LazyRoute(props: P) {
-    const [, setLoaded] = useState(component !== null);
+    // NOTE: functions passed to `useState` are treated as lazy initializers,
+    // so the component must be wrapped.
+    const [resolved, setResolved] = useState<FunctionComponent<P> | null>(
+      () => component
+    );
     useEffect(() => {
-      if (component) {
+      if (resolved) {
         return;
       }
       let cancelled = false;
-      load().then(() => {
+      load().then((c) => {
         if (!cancelled) {
-          setLoaded(true);
+          setResolved(() => c);
         }
       });
       return () => {
         cancelled = true;
       };
     }, []);
-    if (!component) {
+    if (!resolved) {
       // Start the import during render (rather than waiting for the effect)
       // so the chunk request goes out as early as possible.
       load();
       return <RouteLoading frame={options?.frame} />;
     }
-    const Component = component;
+    const Component = resolved;
     return <Component {...(props as any)} />;
   };
 }

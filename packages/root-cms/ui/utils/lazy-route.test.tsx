@@ -177,4 +177,27 @@ describe('lazyRoute', () => {
     await result.findByText('Page failed to load');
     expect(reload).not.toHaveBeenCalled();
   });
+
+  test('retries the import on remount after a failure', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    window.sessionStorage.setItem(ROUTE_IMPORT_RELOAD_KEY, String(Date.now()));
+    // The first mount exhausts all 3 attempts; the import succeeds on the
+    // 4th call, which happens when the route is mounted a second time.
+    const factory = vi
+      .fn()
+      .mockRejectedValueOnce(new Error('fetch failed'))
+      .mockRejectedValueOnce(new Error('fetch failed'))
+      .mockRejectedValueOnce(new Error('fetch failed'))
+      .mockResolvedValue(TestComponent);
+    const reload = vi.fn();
+    const LazyComponent = lazyRoute(factory, {retryDelayMs: 0, reload});
+    const first = render(<LazyComponent />);
+    await first.findByText('Page failed to load');
+    first.unmount();
+
+    const second = render(<LazyComponent />);
+    await second.findByText('test page');
+    expect(factory).toHaveBeenCalledTimes(4);
+    expect(reload).not.toHaveBeenCalled();
+  });
 });
