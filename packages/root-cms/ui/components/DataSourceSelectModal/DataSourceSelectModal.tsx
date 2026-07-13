@@ -3,6 +3,8 @@ import {ContextModalProps, useModals} from '@mantine/modals';
 import {useEffect, useState} from 'preact/hooks';
 import {useModalTheme} from '../../hooks/useModalTheme.js';
 import {DataSource, listDataSources} from '../../utils/data-source.js';
+import {notifyErrors} from '../../utils/notifications.js';
+import {withTimeout} from '../../utils/with-timeout.js';
 import {DataSourceIcon} from '../DataSourceIcon/DataSourceIcon.js';
 import './DataSourceSelectModal.css';
 
@@ -42,8 +44,14 @@ export function DataSourceSelectModal(
 
   useEffect(() => {
     async function init() {
-      const res = await listDataSources();
-      setDataSources(res.filter((ds) => !ds.archivedAt));
+      await notifyErrors(async () => {
+        const res = await withTimeout(
+          listDataSources(),
+          undefined,
+          'loading data sources'
+        );
+        setDataSources(res.filter((ds) => !ds.archivedAt));
+      });
       setLoading(false);
     }
     init();

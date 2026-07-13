@@ -9,6 +9,7 @@ import {
 import {useEffect, useState} from 'preact/hooks';
 import {setDocToCache} from '../utils/doc-cache.js';
 import {notifyErrors} from '../utils/notifications.js';
+import {withTimeout} from '../utils/with-timeout.js';
 import {useFirebase} from './useFirebase.js';
 
 export interface UseDocsListOptions {
@@ -70,7 +71,11 @@ export function useDocsList(collectionId: string, options: UseDocsListOptions) {
       }
     }
     await notifyErrors(async () => {
-      const snapshot = await getDocs(dbQuery);
+      const snapshot = await withTimeout(
+        getDocs(dbQuery),
+        undefined,
+        'loading docs'
+      );
       const docs: any[] = [];
       snapshot.docs.forEach((d) => {
         const data = d.data();

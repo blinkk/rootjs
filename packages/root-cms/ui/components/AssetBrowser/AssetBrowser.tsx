@@ -68,6 +68,7 @@ import {
 import {notifyErrors} from '../../utils/notifications.js';
 import {testCanPublish} from '../../utils/permissions.js';
 import {getTimeAgo} from '../../utils/time.js';
+import {withTimeout} from '../../utils/with-timeout.js';
 import {Pagination, PaginationSummary} from '../Pagination/Pagination.js';
 import {UserAvatar} from '../UserAvatar/UserAvatar.js';
 import {AssetDetailsModal} from './AssetDetailsModal.js';
@@ -168,11 +169,17 @@ export function AssetBrowser(props: AssetBrowserProps) {
     setSearchIndex(null);
     setSelected(new Map());
     await notifyErrors(async () => {
-      const [res, folderAsset] = await Promise.all([
-        listAssets(folderPath),
-        // Fetch the current folder's own doc (for its sync connection).
-        folderPath ? getAsset(getFolderId(folderPath)) : Promise.resolve(null),
-      ]);
+      const [res, folderAsset] = await withTimeout(
+        Promise.all([
+          listAssets(folderPath),
+          // Fetch the current folder's own doc (for its sync connection).
+          folderPath
+            ? getAsset(getFolderId(folderPath))
+            : Promise.resolve(null),
+        ]),
+        undefined,
+        'loading assets'
+      );
       setAssets(res);
       setCurrentFolder(
         folderAsset && folderAsset.type === 'folder' ? folderAsset : null

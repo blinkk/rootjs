@@ -21,7 +21,9 @@ import {usePageTitle} from '../../hooks/usePageTitle.js';
 import {useProjectRoles} from '../../hooks/useProjectRoles.js';
 import {Layout} from '../../layout/Layout.js';
 import {DataSource, listDataSources} from '../../utils/data-source.js';
+import {notifyErrors} from '../../utils/notifications.js';
 import {testCanEdit} from '../../utils/permissions.js';
+import {withTimeout} from '../../utils/with-timeout.js';
 
 export function DataPage() {
   usePageTitle('Data Sources');
@@ -73,8 +75,14 @@ DataPage.DataSourcesTable = () => {
     !!url && url.startsWith('https://docs.google.com/spreadsheets/');
 
   async function init() {
-    const dataSources = await listDataSources();
-    setTableData(dataSources);
+    await notifyErrors(async () => {
+      const dataSources = await withTimeout(
+        listDataSources(),
+        undefined,
+        'loading data sources'
+      );
+      setTableData(dataSources);
+    });
     setLoading(false);
   }
 

@@ -20,6 +20,7 @@ import type {CMSBuiltInSidebarTool} from '../core/plugin.js';
 import {Collection} from '../core/schema.js';
 import {AddToReleaseModal} from './components/AddToReleaseModal/AddToReleaseModal.js';
 import {AiEditModal} from './components/AiEditModal/AiEditModal.js';
+import {AppErrorBoundary} from './components/AppErrorBoundary/AppErrorBoundary.js';
 import {AssetPickerModal} from './components/AssetPickerModal/AssetPickerModal.js';
 import {CompareDraftModal} from './components/CompareDraftModal/CompareDraftModal.js';
 import {ComponentPickerModal} from './components/ComponentPickerModal/ComponentPickerModal.js';
@@ -288,89 +289,94 @@ function App() {
                   >
                     <LocationProvider>
                       <GlobalSearch>
-                        <Router>
-                          <Route path="/cms" component={ProjectPage} />
-                          <Route path="/cms/ai" component={AIPage} />
-                          <Route
-                            path="/cms/ai/chat/:chatId"
-                            component={AIPage}
-                          />
-                          <Route path="/cms/assets" component={AssetsPage} />
-                          <Route path="/cms/compare" component={ComparePage} />
-                          <Route
-                            path="/cms/content/:collection?"
-                            component={CollectionPage}
-                          />
-                          <Route
-                            path="/cms/content/:collection/:slug"
-                            component={DocumentPage}
-                          />
-                          <Route
-                            path="/cms/embed/content/:collection/:slug"
-                            component={EmbeddedDocumentPage}
-                          />
-                          <Route
-                            path="/cms/embed/ai"
-                            component={EmbeddedAIPage}
-                          />
-                          <Route path="/cms/data" component={DataPage} />
-                          <Route
-                            path="/cms/data/new"
-                            component={NewDataSourcePage}
-                          />
-                          <Route
-                            path="/cms/data/:id"
-                            component={DataSourcePage}
-                          />
-                          <Route
-                            path="/cms/data/:id/edit"
-                            component={EditDataSourcePage}
-                          />
-                          <Route path="/cms/logs" component={LogsPage} />
-                          <Route
-                            path="/cms/releases"
-                            component={ReleasesPage}
-                          />
-                          <Route
-                            path="/cms/releases/new"
-                            component={NewReleasePage}
-                          />
-                          <Route
-                            path="/cms/releases/:id"
-                            component={ReleasePage}
-                          />
-                          <Route
-                            path="/cms/releases/:id/edit"
-                            component={EditReleasePage}
-                          />
-                          <Route
-                            path="/cms/settings"
-                            component={SettingsPage}
-                          />
-                          <Route path="/cms/tasks" component={TasksPage} />
-                          <Route path="/cms/tasks/:id" component={TaskPage} />
-                          <Route
-                            path="/cms/tools/:id/:rest*"
-                            component={SidebarToolsPage}
-                          />
-                          <Route
-                            path="/cms/translations"
-                            component={TranslationsPage}
-                          />
-                          <Route
-                            path="/cms/translations/arb"
-                            component={TranslationsArbPage}
-                          />
-                          <Route
-                            path="/cms/translations/:hash"
-                            component={TranslationsEditPage}
-                          />
-                          <Route
-                            path="/cms/translations/:collection/:slug"
-                            component={DocTranslationsPage}
-                          />
-                          <Route default component={NotFoundPage} />
-                        </Router>
+                        <AppErrorBoundary>
+                          <Router>
+                            <Route path="/cms" component={ProjectPage} />
+                            <Route path="/cms/ai" component={AIPage} />
+                            <Route
+                              path="/cms/ai/chat/:chatId"
+                              component={AIPage}
+                            />
+                            <Route path="/cms/assets" component={AssetsPage} />
+                            <Route
+                              path="/cms/compare"
+                              component={ComparePage}
+                            />
+                            <Route
+                              path="/cms/content/:collection?"
+                              component={CollectionPage}
+                            />
+                            <Route
+                              path="/cms/content/:collection/:slug"
+                              component={DocumentPage}
+                            />
+                            <Route
+                              path="/cms/embed/content/:collection/:slug"
+                              component={EmbeddedDocumentPage}
+                            />
+                            <Route
+                              path="/cms/embed/ai"
+                              component={EmbeddedAIPage}
+                            />
+                            <Route path="/cms/data" component={DataPage} />
+                            <Route
+                              path="/cms/data/new"
+                              component={NewDataSourcePage}
+                            />
+                            <Route
+                              path="/cms/data/:id"
+                              component={DataSourcePage}
+                            />
+                            <Route
+                              path="/cms/data/:id/edit"
+                              component={EditDataSourcePage}
+                            />
+                            <Route path="/cms/logs" component={LogsPage} />
+                            <Route
+                              path="/cms/releases"
+                              component={ReleasesPage}
+                            />
+                            <Route
+                              path="/cms/releases/new"
+                              component={NewReleasePage}
+                            />
+                            <Route
+                              path="/cms/releases/:id"
+                              component={ReleasePage}
+                            />
+                            <Route
+                              path="/cms/releases/:id/edit"
+                              component={EditReleasePage}
+                            />
+                            <Route
+                              path="/cms/settings"
+                              component={SettingsPage}
+                            />
+                            <Route path="/cms/tasks" component={TasksPage} />
+                            <Route path="/cms/tasks/:id" component={TaskPage} />
+                            <Route
+                              path="/cms/tools/:id/:rest*"
+                              component={SidebarToolsPage}
+                            />
+                            <Route
+                              path="/cms/translations"
+                              component={TranslationsPage}
+                            />
+                            <Route
+                              path="/cms/translations/arb"
+                              component={TranslationsArbPage}
+                            />
+                            <Route
+                              path="/cms/translations/:hash"
+                              component={TranslationsEditPage}
+                            />
+                            <Route
+                              path="/cms/translations/:collection/:slug"
+                              component={DocTranslationsPage}
+                            />
+                            <Route default component={NotFoundPage} />
+                          </Router>
+                        </AppErrorBoundary>
                       </GlobalSearch>
                     </LocationProvider>
                   </ModalsProvider>

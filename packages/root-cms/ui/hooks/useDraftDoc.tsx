@@ -25,6 +25,7 @@ import {
 } from '../utils/json-trie-store.js';
 import {errorMessage} from '../utils/notifications.js';
 import {TIME_UNITS} from '../utils/time.js';
+import {DATA_FETCH_TIMEOUT_MS, TimeoutError} from '../utils/with-timeout.js';
 
 const SAVE_DELAY = 3 * TIME_UNITS.second;
 const SAVE_ACTION_LOG_THROTTLE = 5 * TIME_UNITS.minute;
@@ -40,6 +41,8 @@ export enum DraftDocEventType {
   SAVE_STATE_CHANGE = 'SAVE_STATE_CHANGE',
   /** Data was saved to the DB. */
   FLUSH = 'FLUSH',
+  /** The db snapshot listener failed, e.g. permission denied. */
+  ERROR = 'ERROR',
 }
 
 /**
@@ -127,28 +130,38 @@ export class DraftDocController extends EventListener {
     }
     this.started = true;
     let initialLoad = true;
-    this.dbUnsubscribe = onSnapshot(this.docRef, (snapshot) => {
-      // Ignore local db write callbacks.
-      if (snapshot.metadata.hasPendingWrites) {
-        return;
-      }
-      const data = snapshot.data() || {};
-      // Save the user's local changes to the snapshot so that their updates
-      // are not overwritten.
-      if (this.pendingUpdates.size > 0) {
-        applyUpdates(data, Object.fromEntries(this.pendingUpdates));
-      }
-      this.store.setData(data);
-      // Backfill `sys.assets` on the next flush if a legacy doc loaded without
-      // the reverse index. Only checked on initial load to avoid retriggering
-      // on every remote sync.
-      if (initialLoad) {
-        initialLoad = false;
-        if (!Array.isArray((data as any)?.sys?.assets)) {
-          this.mightHaveAssetChanges = true;
+    this.dbUnsubscribe = onSnapshot(
+      this.docRef,
+      (snapshot) => {
+        // Ignore local db write callbacks.
+        if (snapshot.metadata.hasPendingWrites) {
+          return;
         }
+        const data = snapshot.data() || {};
+        // Save the user's local changes to the snapshot so that their updates
+        // are not overwritten.
+        if (this.pendingUpdates.size > 0) {
+          applyUpdates(data, Object.fromEntries(this.pendingUpdates));
+        }
+        this.store.setData(data);
+        // Backfill `sys.assets` on the next flush if a legacy doc loaded without
+        // the reverse index. Only checked on initial load to avoid retriggering
+        // on every remote sync.
+        if (initialLoad) {
+          initialLoad = false;
+          if (!Array.isArray((data as any)?.sys?.assets)) {
+            this.mightHaveAssetChanges = true;
+          }
+        }
+      },
+      (err) => {
+        // The snapshot listener stops on terminal errors (e.g. permission
+        // denied). Without this callback the editor's loading state would
+        // never resolve; dispatch so the UI can show an error instead.
+        console.error('draft doc snapshot error:', err);
+        this.dispatch(DraftDocEventType.ERROR, err);
       }
-    });
+    );
   }
 
   /**
@@ -179,6 +192,13 @@ export class DraftDocController extends EventListener {
    */
   onSaveStateChange(callback: (saveState: SaveState) => void) {
     return this.on(DraftDocEventType.SAVE_STATE_CHANGE, callback);
+  }
+
+  /**
+   * Adds a listener for db snapshot errors.
+   */
+  onError(callback: (err: unknown) => void) {
+    return this.on(DraftDocEventType.ERROR, callback);
   }
 
   /**
@@ -525,6 +545,8 @@ export interface DraftDocProviderProps {
 
 export interface DraftDocContext {
   loading: boolean;
+  /** Set when the initial load failed or timed out; cleared on recovery. */
+  error?: unknown;
   controller: DraftDocController;
 }
 
@@ -535,6 +557,7 @@ const DRAFT_DOC_CONTEXT = createContext<DraftDocContext | null>(null);
  */
 export function DraftDocProvider(props: DraftDocProviderProps) {
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<unknown>(null);
 
   const controller = useMemo(
     () => new DraftDocController(props.docId),
@@ -548,12 +571,39 @@ export function DraftDocProvider(props: DraftDocProviderProps) {
 
   useEffect(() => {
     setLoading(true);
+    setError(null);
+    // Watchdog: if the first snapshot never arrives (e.g. a stuck Firestore
+    // channel, which the SDK retries silently without ever erroring), show an
+    // error instead of leaving the editor's loading state up forever. A late
+    // snapshot still recovers via the change listener below.
+    let watchdogId: number | undefined = window.setTimeout(() => {
+      setError(
+        new TimeoutError(
+          'The document took too long to load. Check your network connection and try reloading the page.'
+        )
+      );
+    }, DATA_FETCH_TIMEOUT_MS);
+    const clearWatchdog = () => {
+      if (watchdogId) {
+        window.clearTimeout(watchdogId);
+        watchdogId = undefined;
+      }
+    };
     controller.onChange((data: CMSDoc) => {
+      clearWatchdog();
+      setError(null);
       setLoading(false);
       setDocToCache(data.id, data);
     });
+    controller.onError((err: unknown) => {
+      clearWatchdog();
+      setError(err);
+    });
     controller.start();
-    return () => controller.dispose();
+    return () => {
+      clearWatchdog();
+      controller.dispose();
+    };
   }, [controller]);
 
   // Automatically start/stop the db watcher N seconds after the browser
@@ -585,8 +635,8 @@ export function DraftDocProvider(props: DraftDocProviderProps) {
   }, [controller]);
 
   const contextValue = useMemo(
-    () => ({loading, controller}),
-    [loading, controller]
+    () => ({loading, error, controller}),
+    [loading, error, controller]
   );
 
   return (

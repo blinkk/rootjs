@@ -6,7 +6,9 @@ import {useEffect, useState} from 'preact/hooks';
 import {testAiEnabled} from '../../utils/ai.js';
 import {joinClassNames} from '../../utils/classes.js';
 import {CMSDoc, cmsReadDocVersion, unmarshalData} from '../../utils/doc.js';
+import {notifyErrors} from '../../utils/notifications.js';
 import {stableJsonStringify} from '../../utils/objects.js';
+import {withTimeout} from '../../utils/with-timeout.js';
 import {AiSummary} from '../AiSummary/AiSummary.js';
 import {JsDiff} from '../JsDiff/JsDiff.js';
 
@@ -49,12 +51,18 @@ export function DocDiffViewer(props: DocDiffViewerProps) {
 
   async function init() {
     setLoading(true);
-    const [leftDoc, rightDoc] = await Promise.all([
-      cmsReadDocVersion(left.docId, left.versionId),
-      cmsReadDocVersion(right.docId, right.versionId),
-    ]);
-    setLeftDoc(leftDoc);
-    setRightDoc(rightDoc);
+    await notifyErrors(async () => {
+      const [leftDoc, rightDoc] = await withTimeout(
+        Promise.all([
+          cmsReadDocVersion(left.docId, left.versionId),
+          cmsReadDocVersion(right.docId, right.versionId),
+        ]),
+        undefined,
+        'loading doc versions'
+      );
+      setLeftDoc(leftDoc);
+      setRightDoc(rightDoc);
+    });
     setLoading(false);
   }
 

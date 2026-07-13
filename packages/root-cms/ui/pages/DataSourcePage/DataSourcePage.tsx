@@ -23,6 +23,8 @@ import {
   getFromDataSource,
   getDataSource,
 } from '../../utils/data-source.js';
+import {notifyErrors} from '../../utils/notifications.js';
+import {withTimeout} from '../../utils/with-timeout.js';
 import './DataSourcePage.css';
 
 export function DataSourcePage(props: {id: string}) {
@@ -33,12 +35,22 @@ export function DataSourcePage(props: {id: string}) {
   const id = props.id;
 
   async function init() {
-    const dataSource = await getDataSource(id);
-    setDataSource(dataSource);
-    if (dataSource) {
-      const data = await getFromDataSource(id, {mode: 'draft'});
-      setData(data);
-    }
+    await notifyErrors(async () => {
+      const dataSource = await withTimeout(
+        getDataSource(id),
+        undefined,
+        'loading the data source'
+      );
+      setDataSource(dataSource);
+      if (dataSource) {
+        const data = await withTimeout(
+          getFromDataSource(id, {mode: 'draft'}),
+          undefined,
+          'loading the data source data'
+        );
+        setData(data);
+      }
+    });
     setLoading(false);
   }
 
