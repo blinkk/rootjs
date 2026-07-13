@@ -1,6 +1,7 @@
 import {doc, getDoc} from 'firebase/firestore';
 import {useEffect, useState} from 'preact/hooks';
 import {UserRole} from '../../core/client.js';
+import {withTimeout} from '../utils/with-timeout.js';
 
 /** Module-level cache so the Firestore fetch happens at most once. */
 let cachedRolesPromise: Promise<Record<string, UserRole>> | null = null;
@@ -11,10 +12,18 @@ function fetchRoles(): Promise<Record<string, UserRole>> {
       const db = window.firebase.db;
       const projectId = window.__ROOT_CTX.rootConfig.projectId || 'default';
       const docRef = doc(db, 'Projects', projectId);
-      const snapshot = await getDoc(docRef);
+      const snapshot = await withTimeout(
+        getDoc(docRef),
+        undefined,
+        'loading project roles'
+      );
       const data = snapshot.data() || {};
       return (data.roles || {}) as Record<string, UserRole>;
     })();
+    // Don't cache failures; the next caller retries the fetch.
+    cachedRolesPromise.catch(() => {
+      cachedRolesPromise = null;
+    });
   }
   return cachedRolesPromise;
 }
@@ -30,10 +39,16 @@ export function useProjectRoles() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetchRoles().then((roles) => {
-      setRoles(roles);
-      setLoading(false);
-    });
+    fetchRoles()
+      .then((roles) => {
+        setRoles(roles);
+      })
+      .catch((err) => {
+        console.error('failed to load project roles:', err);
+      })
+      .finally(() => {
+        setLoading(false);
+      });
   }, []);
 
   return {roles, loading};

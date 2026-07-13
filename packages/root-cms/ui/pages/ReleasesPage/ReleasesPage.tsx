@@ -10,8 +10,10 @@ import {Text} from '../../components/Text/Text.js';
 import {usePageTitle} from '../../hooks/usePageTitle.js';
 import {useProjectRoles} from '../../hooks/useProjectRoles.js';
 import {Layout} from '../../layout/Layout.js';
+import {notifyErrors} from '../../utils/notifications.js';
 import {testCanPublish} from '../../utils/permissions.js';
 import {Release, listReleases} from '../../utils/release.js';
+import {withTimeout} from '../../utils/with-timeout.js';
 
 type ReleaseListFilter = 'active' | 'unpublished' | 'published' | 'archived';
 
@@ -61,8 +63,14 @@ ReleasesPage.ReleasesTable = () => {
   const [filter, setFilter] = useState<ReleaseListFilter>('active');
 
   async function init() {
-    const releases = await listReleases();
-    setTableData(releases);
+    await notifyErrors(async () => {
+      const releases = await withTimeout(
+        listReleases(),
+        undefined,
+        'loading releases'
+      );
+      setTableData(releases);
+    });
     setLoading(false);
   }
 

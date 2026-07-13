@@ -38,7 +38,11 @@ export function useGapiClient(): GapiClient {
   });
 
   async function initGapi() {
-    await Promise.all([loadGapiScript(), loadGisScript()]);
+    try {
+      await Promise.all([loadGapiScript(), loadGisScript()]);
+    } catch (err) {
+      console.error('failed to init gapi:', err);
+    }
     setLoading(false);
   }
 
@@ -155,6 +159,10 @@ async function loadGapiScript() {
 
       document.head.appendChild(script);
     });
+    // Don't cache failures; the next caller retries the script load.
+    loadGapiScriptPromise.catch(() => {
+      loadGapiScriptPromise = null;
+    });
   }
   return loadGapiScriptPromise;
 }
@@ -182,6 +190,10 @@ export async function loadGisScript() {
       };
 
       document.head.appendChild(script);
+    });
+    // Don't cache failures; the next caller retries the script load.
+    loadGisScriptPromise.catch(() => {
+      loadGisScriptPromise = null;
     });
   }
   return loadGisScriptPromise;

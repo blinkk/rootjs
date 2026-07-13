@@ -30,6 +30,7 @@ import {
   toTranslationLanguages,
 } from '../../utils/l10n.js';
 import {notifyErrors} from '../../utils/notifications.js';
+import {withTimeout} from '../../utils/with-timeout.js';
 import {FieldHistory} from '../FieldHistory/FieldHistory.js';
 import {Heading} from '../Heading/Heading.js';
 
@@ -106,23 +107,31 @@ export function EditTranslationsModal(
   }, [props.field?.deepKey, draft?.controller]);
 
   useEffect(() => {
-    loadTranslations({tags: [props.docId]}).then((res) => {
-      const translationsMap: Record<string, Record<string, string>> = {};
-      Object.values(res).forEach((row) => {
-        // Re-key rows from root locales to translation languages so edits
-        // and saves apply to every root locale that shares the language.
-        const langRow: Record<string, string> = {source: row.source};
-        i18nLocales.forEach((lang) => {
-          const value = getTranslationForLanguage(row, lang);
-          if (value) {
-            langRow[lang] = value;
-          }
+    const init = async () => {
+      await notifyErrors(async () => {
+        const res = await withTimeout(
+          loadTranslations({tags: [props.docId]}),
+          undefined,
+          'loading translations'
+        );
+        const translationsMap: Record<string, Record<string, string>> = {};
+        Object.values(res).forEach((row) => {
+          // Re-key rows from root locales to translation languages so edits
+          // and saves apply to every root locale that shares the language.
+          const langRow: Record<string, string> = {source: row.source};
+          i18nLocales.forEach((lang) => {
+            const value = getTranslationForLanguage(row, lang);
+            if (value) {
+              langRow[lang] = value;
+            }
+          });
+          translationsMap[row.source] = langRow;
         });
-        translationsMap[row.source] = langRow;
+        setTranslationsMap(translationsMap);
       });
-      setTranslationsMap(translationsMap);
       setLoading(false);
-    });
+    };
+    init();
   }, [props.docId]);
 
   async function onSave() {

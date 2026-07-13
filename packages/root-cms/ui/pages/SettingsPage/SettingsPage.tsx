@@ -23,6 +23,7 @@ import {
   PermissionGroup,
   derivedRolesFromGroups,
 } from '../../utils/permissionGroups.js';
+import {withTimeout} from '../../utils/with-timeout.js';
 
 function formatRelative(ts: number | null): string {
   if (!ts) {
@@ -259,29 +260,37 @@ function ShareSection() {
   });
 
   useEffect(() => {
-    getDoc(docRef).then((snapshot) => {
-      const data = snapshot.data() || {};
-      const rolesField = (data.roles || {}) as Record<string, UserRole>;
-      // Back-compat: projects saved before `globalRoles` existed only have the
-      // derived `roles` field. Seed `globalRoles` from it so the admin sees the
-      // same list; users that exist only via collection-scoped groups will be
-      // dropped from the global section on the next save.
-      const globalRoles = (data.globalRoles || rolesField) as Record<
-        string,
-        UserRole
-      >;
-      const initial: ShareDoc = {
-        globalRoles,
-        permissionGroups: (data.permissionGroups || []) as PermissionGroup[],
-      };
-      setSavedRoles(rolesField);
-      setSavedState(initial);
-      setDraft({
-        globalRoles: {...initial.globalRoles},
-        permissionGroups: initial.permissionGroups.map((g) => ({...g})),
+    const init = async () => {
+      await notifyErrors(async () => {
+        const snapshot = await withTimeout(
+          getDoc(docRef),
+          undefined,
+          'loading sharing settings'
+        );
+        const data = snapshot.data() || {};
+        const rolesField = (data.roles || {}) as Record<string, UserRole>;
+        // Back-compat: projects saved before `globalRoles` existed only have the
+        // derived `roles` field. Seed `globalRoles` from it so the admin sees the
+        // same list; users that exist only via collection-scoped groups will be
+        // dropped from the global section on the next save.
+        const globalRoles = (data.globalRoles || rolesField) as Record<
+          string,
+          UserRole
+        >;
+        const initial: ShareDoc = {
+          globalRoles,
+          permissionGroups: (data.permissionGroups || []) as PermissionGroup[],
+        };
+        setSavedRoles(rolesField);
+        setSavedState(initial);
+        setDraft({
+          globalRoles: {...initial.globalRoles},
+          permissionGroups: initial.permissionGroups.map((g) => ({...g})),
+        });
       });
       setLoading(false);
-    });
+    };
+    init();
   }, []);
 
   const currentUserIsAdmin = isCurrentUserAdmin(savedRoles);

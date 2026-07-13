@@ -5,7 +5,9 @@ import {IconLanguage} from '@tabler/icons-preact';
 import {useEffect, useState} from 'preact/hooks';
 import {cmsListVersions, cmsReadDocVersion} from '../../utils/doc.js';
 import {sourceHash} from '../../utils/l10n.js';
+import {notifyErrors} from '../../utils/notifications.js';
 import {getNestedValue} from '../../utils/objects.js';
+import {withTimeout} from '../../utils/with-timeout.js';
 import './FieldHistory.css';
 
 interface FieldVersion {
@@ -44,10 +46,19 @@ export function FieldHistory(props: FieldHistoryProps) {
   useEffect(() => {
     async function fetchFieldHistory() {
       setLoading(true);
-      const [versionsResult, draftDoc] = await Promise.all([
-        cmsListVersions(docId),
-        cmsReadDocVersion(docId, 'draft'),
-      ]);
+      await notifyErrors(fetchFieldHistoryInner);
+      setLoading(false);
+    }
+
+    async function fetchFieldHistoryInner() {
+      const [versionsResult, draftDoc] = await withTimeout(
+        Promise.all([
+          cmsListVersions(docId),
+          cmsReadDocVersion(docId, 'draft'),
+        ]),
+        undefined,
+        'loading field history'
+      );
       const versions = versionsResult.versions;
 
       const entries: FieldVersion[] = [];
@@ -84,7 +95,6 @@ export function FieldHistory(props: FieldHistoryProps) {
       }
 
       setFieldVersions(deduped);
-      setLoading(false);
     }
 
     fetchFieldHistory();

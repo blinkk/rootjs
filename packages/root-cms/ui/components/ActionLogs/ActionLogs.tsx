@@ -16,6 +16,8 @@ import {usePagination} from '../../hooks/usePagination.js';
 import {Action, listActions} from '../../utils/actions.js';
 import {joinClassNames} from '../../utils/classes.js';
 import {getSpreadsheetUrl} from '../../utils/gsheets.js';
+import {notifyErrors} from '../../utils/notifications.js';
+import {withTimeout} from '../../utils/with-timeout.js';
 import {Pagination, PaginationSummary} from '../Pagination/Pagination.js';
 import {Surface} from '../Surface/Surface.js';
 import {UserAvatar} from '../UserAvatar/UserAvatar.js';
@@ -58,11 +60,19 @@ function useActions(limit?: number) {
   const [actions, setActions] = useState<Action[]>([]);
 
   useEffect(() => {
-    // Fetch actions, applying limit if specified.
-    listActions(limit ? {limit: limit} : undefined).then((actions) => {
-      setActions(actions);
+    const init = async () => {
+      await notifyErrors(async () => {
+        // Fetch actions, applying limit if specified.
+        const actions = await withTimeout(
+          listActions(limit ? {limit: limit} : undefined),
+          undefined,
+          'loading action logs'
+        );
+        setActions(actions);
+      });
       setLoading(false);
-    });
+    };
+    init();
   }, [limit]);
 
   return {loading, actions};

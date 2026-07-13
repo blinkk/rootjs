@@ -35,6 +35,7 @@ import {
   publishRelease,
 } from '../../utils/release.js';
 import {timestamp} from '../../utils/time.js';
+import {withTimeout} from '../../utils/with-timeout.js';
 
 export function ReleasePage(props: {id: string}) {
   const [loading, setLoading] = useState(true);
@@ -46,7 +47,11 @@ export function ReleasePage(props: {id: string}) {
   async function init() {
     setLoading(true);
     await notifyErrors(async () => {
-      const release = await getRelease(id);
+      const release = await withTimeout(
+        getRelease(id),
+        undefined,
+        'loading the release'
+      );
       setRelease(release);
       setUpdated(timestamp());
     });

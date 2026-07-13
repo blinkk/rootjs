@@ -23,6 +23,8 @@ import {
   cmsReadDocVersion,
   cmsRestoreVersion,
 } from '../../utils/doc.js';
+import {notifyErrors} from '../../utils/notifications.js';
+import {withTimeout} from '../../utils/with-timeout.js';
 import {useCopyDocModal} from '../CopyDocModal/CopyDocModal.js';
 import {Text} from '../Text/Text.js';
 import './VersionHistoryModal.css';
@@ -91,38 +93,50 @@ export function VersionHistoryModal(
 
   async function fetchVersions() {
     setLoading(true);
-    const [result, draftDoc] = await Promise.all([
-      cmsListVersions(docId, {limit: PAGE_SIZE}),
-      cmsReadDocVersion(docId, 'draft'),
-    ]);
+    await notifyErrors(async () => {
+      const [result, draftDoc] = await withTimeout(
+        Promise.all([
+          cmsListVersions(docId, {limit: PAGE_SIZE}),
+          cmsReadDocVersion(docId, 'draft'),
+        ]),
+        undefined,
+        'loading version history'
+      );
 
-    cursorRef.current = result.lastDoc;
-    setHasMore(result.hasMore);
+      cursorRef.current = result.lastDoc;
+      setHasMore(result.hasMore);
 
-    // Add a virtual "draft" version at the top.
-    const draftVersion: Version = {
-      _versionId: 'draft',
-      sys: {
-        modifiedAt:
-          draftDoc?.sys?.modifiedAt || ({toDate: () => new Date()} as any),
-        modifiedBy: draftDoc?.sys?.modifiedBy || 'Unknown',
-      },
-    } as any;
-    setVersions([draftVersion, ...result.versions]);
-    setSelectedVersions(['draft']);
+      // Add a virtual "draft" version at the top.
+      const draftVersion: Version = {
+        _versionId: 'draft',
+        sys: {
+          modifiedAt:
+            draftDoc?.sys?.modifiedAt || ({toDate: () => new Date()} as any),
+          modifiedBy: draftDoc?.sys?.modifiedBy || 'Unknown',
+        },
+      } as any;
+      setVersions([draftVersion, ...result.versions]);
+      setSelectedVersions(['draft']);
+    });
     setLoading(false);
   }
 
   async function loadMore() {
     if (!hasMore || loadingMore) return;
     setLoadingMore(true);
-    const result = await cmsListVersions(docId, {
-      limit: PAGE_SIZE,
-      cursor: cursorRef.current!,
+    await notifyErrors(async () => {
+      const result = await withTimeout(
+        cmsListVersions(docId, {
+          limit: PAGE_SIZE,
+          cursor: cursorRef.current!,
+        }),
+        undefined,
+        'loading version history'
+      );
+      cursorRef.current = result.lastDoc;
+      setHasMore(result.hasMore);
+      setVersions((prev) => [...prev, ...result.versions]);
     });
-    cursorRef.current = result.lastDoc;
-    setHasMore(result.hasMore);
-    setVersions((prev) => [...prev, ...result.versions]);
     setLoadingMore(false);
   }
 

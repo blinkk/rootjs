@@ -98,6 +98,7 @@ import {
   useComponentPickerModal,
 } from '../ComponentPickerModal/ComponentPickerModal.js';
 import {ConditionalTooltip} from '../ConditionalTooltip/ConditionalTooltip.js';
+import {DataLoadError} from '../DataLoadError/DataLoadError.js';
 import {
   DocActionEvent,
   DocActionsMenu,
@@ -153,6 +154,14 @@ export function DocEditor(props: DocEditorProps) {
   const draft = useDraftDoc();
   const loading = collection.loading || draft.loading;
   const fields = collection.schema?.fields || [];
+
+  if (draft.error) {
+    return (
+      <div className={joinClassNames(props.className, 'DocEditor')}>
+        <DataLoadError title="Failed to load document" error={draft.error} />
+      </div>
+    );
+  }
 
   return (
     <COLLECTION_SCHEMA_TYPES_CONTEXT.Provider

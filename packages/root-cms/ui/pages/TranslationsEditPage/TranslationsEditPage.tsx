@@ -19,6 +19,8 @@ import {
   toTranslationLanguages,
   updateTranslationByHash,
 } from '../../utils/l10n.js';
+import {notifyErrors} from '../../utils/notifications.js';
+import {withTimeout} from '../../utils/with-timeout.js';
 
 import './TranslationsEditPage.css';
 
@@ -35,13 +37,19 @@ export function TranslationsEditPage(props: TranslationsEditPageProps) {
 
   async function init() {
     setLoading(true);
-    const translations = await getTranslationByHash(hash);
+    await notifyErrors(async () => {
+      const translations = await withTimeout(
+        getTranslationByHash(hash),
+        undefined,
+        'loading the translation'
+      );
+      if (!translations?.source) {
+        setNotFound(true);
+        return;
+      }
+      setTranslations(translations);
+    });
     setLoading(false);
-    if (!translations?.source) {
-      setNotFound(true);
-      return;
-    }
-    setTranslations(translations);
   }
 
   async function onChange(newTranslations: Translation) {

@@ -44,6 +44,7 @@ import {
   toTranslationLanguages,
 } from '../../utils/l10n.js';
 import {notifyErrors} from '../../utils/notifications.js';
+import {withTimeout} from '../../utils/with-timeout.js';
 
 ModuleRegistry.registerModules([ClientSideRowModelModule]);
 
@@ -195,12 +196,18 @@ export function TranslationsTable() {
 
   async function updateTranslationsMap() {
     setIsLoading(true);
+    // NOTE: the loading state is cleared outside the notifyErrors() callback
+    // so the spinner also clears when loadTranslations() fails.
     await notifyErrors(async () => {
-      const data = await loadTranslations();
+      const data = await withTimeout(
+        loadTranslations(),
+        undefined,
+        'loading translations'
+      );
       console.log('Loaded translations:', Object.keys(data).length);
       setTranslationsMap(data);
-      setIsLoading(false);
     });
+    setIsLoading(false);
   }
 
   useEffect(() => {
