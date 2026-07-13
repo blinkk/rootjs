@@ -1,5 +1,13 @@
 # @blinkk/root-cms
 
+## 3.1.9
+
+### Patch Changes
+
+- 7745afe: fix: add error handling and timeouts to all CMS loading indicators
+- 479feb7: feat: ai-friendly root-cms client CLI commands and agent skill
+  - @blinkk/root@3.1.9
+
 ## 3.1.8
 
 ### Patch Changes
