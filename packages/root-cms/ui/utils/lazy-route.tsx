@@ -10,6 +10,13 @@ const ROUTE_IMPORT_ATTEMPTS = 3;
 const ROUTE_IMPORT_RETRY_DELAY_MS = 250;
 
 /**
+ * Max time to wait for a route chunk import before treating the attempt as
+ * failed. A dynamic import whose network request stalls never rejects on its
+ * own, which would otherwise leave the route's loading screen up forever.
+ */
+const ROUTE_IMPORT_TIMEOUT_MS = 15 * 1000;
+
+/**
  * Storage key holding the timestamp of the last automatic reload triggered by
  * a route import failure, used to guard against reload loops.
  */
@@ -31,6 +38,8 @@ export interface ImportRouteComponentOptions {
   attempts?: number;
   /** Base delay between retries (multiplied by the attempt number). */
   retryDelayMs?: number;
+  /** Max time to wait for each import attempt before treating it as failed. */
+  importTimeoutMs?: number;
   /** Reloads the page. Overridable in tests. */
   reload?: () => void;
 }
@@ -46,6 +55,29 @@ export interface LazyRouteOptions extends ImportRouteComponentOptions {
 
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/**
+ * Rejects if the promise doesn't settle within `timeoutMs`. The underlying
+ * promise's eventual rejection (if any) is still consumed so it doesn't
+ * surface as an unhandled rejection.
+ */
+function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const timer = setTimeout(() => {
+      reject(new Error(`the page took too long to load (>${timeoutMs}ms)`));
+    }, timeoutMs);
+    promise.then(
+      (value) => {
+        clearTimeout(timer);
+        resolve(value);
+      },
+      (err) => {
+        clearTimeout(timer);
+        reject(err);
+      }
+    );
+  });
 }
 
 /**
@@ -97,6 +129,8 @@ function reloadOnRouteImportError(reload: () => void): boolean {
  * Imports a route component, retrying a few times on failure. Dynamic imports
  * can fail when the server rebuilds or redeploys (the hashed chunk files
  * change), when the login session expires, or due to flaky network requests.
+ * An import whose network request stalls without settling is treated as
+ * failed after a timeout so the loading screen can never spin forever.
  * If the import still fails after all attempts, the page is automatically
  * reloaded to fetch the latest version of the CMS. If a reload was already
  * attempted recently (or the triggered reload never happens), resolves to a
@@ -111,11 +145,12 @@ export async function importRouteComponent<P>(
 ): Promise<FunctionComponent<P>> {
   const attempts = options?.attempts ?? ROUTE_IMPORT_ATTEMPTS;
   const retryDelayMs = options?.retryDelayMs ?? ROUTE_IMPORT_RETRY_DELAY_MS;
+  const importTimeoutMs = options?.importTimeoutMs ?? ROUTE_IMPORT_TIMEOUT_MS;
   const reload = options?.reload ?? (() => window.location.reload());
   let lastError: unknown;
   for (let attempt = 1; attempt <= attempts; attempt++) {
     try {
-      return await factory();
+      return await withTimeout(factory(), importTimeoutMs);
     } catch (err) {
       lastError = err;
       if (attempt < attempts) {

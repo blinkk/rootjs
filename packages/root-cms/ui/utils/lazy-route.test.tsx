@@ -82,6 +82,22 @@ describe('importRouteComponent', () => {
     expect(window.sessionStorage.getItem(ROUTE_IMPORT_RELOAD_KEY)).toBeTruthy();
   });
 
+  test('treats a stalled import as failed after a timeout', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    window.sessionStorage.setItem(ROUTE_IMPORT_RELOAD_KEY, String(Date.now()));
+    // The import promise never settles, simulating a stalled network request.
+    const factory = vi.fn(() => new Promise<FunctionComponent>(() => {}));
+    const reload = vi.fn();
+    const ErrorComponent = await importRouteComponent(factory, {
+      retryDelayMs: 0,
+      importTimeoutMs: 10,
+      reload,
+    });
+    expect(factory).toHaveBeenCalledTimes(3);
+    const result = render(<ErrorComponent />);
+    expect(result.getByText('Page failed to load')).toBeTruthy();
+  });
+
   test('falls back to an error screen if the triggered reload never happens', async () => {
     vi.spyOn(console, 'error').mockImplementation(() => {});
     const factory = vi.fn().mockRejectedValue(new Error('fetch failed'));
