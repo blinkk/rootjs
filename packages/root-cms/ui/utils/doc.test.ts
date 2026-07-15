@@ -167,51 +167,32 @@ describe('cmsSetDocSortKey', () => {
     setupWindowMocks();
   });
 
-  it('updates draft, published, and scheduled docs without bumping modifiedAt', async () => {
+  it('updates the draft doc sort key and bumps modifiedAt', async () => {
     await cmsSetDocSortKey('pages/foo', 'a5');
 
-    expect(mocks.updateDoc).toHaveBeenCalledTimes(3);
+    // Only the draft doc is written; the published doc keeps its existing
+    // order until the doc is published again.
+    expect(mocks.updateDoc).toHaveBeenCalledTimes(1);
     expect(mocks.updateDoc).toHaveBeenCalledWith(
       'doc:Projects/test-project/Collections/pages/Drafts/foo',
-      {'sys.sortKey': 'a5'}
+      {
+        'sys.sortKey': 'a5',
+        'sys.modifiedAt': {type: 'serverTimestamp'},
+        'sys.modifiedBy': 'editor@example.com',
+      }
     );
-    expect(mocks.updateDoc).toHaveBeenCalledWith(
-      'doc:Projects/test-project/Collections/pages/Published/foo',
-      {'sys.sortKey': 'a5'}
-    );
-    expect(mocks.updateDoc).toHaveBeenCalledWith(
-      'doc:Projects/test-project/Collections/pages/Scheduled/foo',
-      {'sys.sortKey': 'a5'}
-    );
-    // Reordering must not touch any other sys field (e.g. sys.modifiedAt).
-    for (const call of mocks.updateDoc.mock.calls) {
-      expect(Object.keys(call[1])).toEqual(['sys.sortKey']);
-    }
     expect(mocks.logAction).toHaveBeenCalledWith('doc.reorder', {
       metadata: {docId: 'pages/foo', sortKey: 'a5'},
     });
   });
 
-  it('tolerates missing published/scheduled copies and permission errors', async () => {
-    mocks.updateDoc
-      .mockResolvedValueOnce(undefined) // Draft.
-      .mockRejectedValueOnce({code: 'not-found'}) // Published.
-      .mockRejectedValueOnce({code: 'permission-denied'}); // Scheduled.
-
-    await expect(cmsSetDocSortKey('pages/foo', 'a5')).resolves.toBeUndefined();
-    expect(mocks.logAction).toHaveBeenCalledWith('doc.reorder', {
-      metadata: {docId: 'pages/foo', sortKey: 'a5'},
-    });
-  });
-
-  it('rethrows unexpected errors from the published mirror', async () => {
-    mocks.updateDoc
-      .mockResolvedValueOnce(undefined) // Draft.
-      .mockRejectedValueOnce({code: 'unavailable'}); // Published.
+  it('propagates write errors', async () => {
+    mocks.updateDoc.mockRejectedValueOnce({code: 'permission-denied'});
 
     await expect(cmsSetDocSortKey('pages/foo', 'a5')).rejects.toEqual({
-      code: 'unavailable',
+      code: 'permission-denied',
     });
+    expect(mocks.logAction).not.toHaveBeenCalled();
   });
 });
 
@@ -232,7 +213,7 @@ describe('cmsAssignSortKeys', () => {
     });
   });
 
-  it('updates draft docs in a batch and mirrors to published/scheduled', async () => {
+  it('updates draft docs in a batch, bumping modifiedAt', async () => {
     await cmsAssignSortKeys([
       {docId: 'pages/a', sortKey: 'a1'},
       {docId: 'pages/b', sortKey: 'a2'},
@@ -242,23 +223,24 @@ describe('cmsAssignSortKeys', () => {
     expect(batches[0].update).toHaveBeenCalledTimes(2);
     expect(batches[0].update).toHaveBeenCalledWith(
       'doc:Projects/test-project/Collections/pages/Drafts/a',
-      {'sys.sortKey': 'a1'}
+      {
+        'sys.sortKey': 'a1',
+        'sys.modifiedAt': {type: 'serverTimestamp'},
+        'sys.modifiedBy': 'editor@example.com',
+      }
     );
     expect(batches[0].update).toHaveBeenCalledWith(
       'doc:Projects/test-project/Collections/pages/Drafts/b',
-      {'sys.sortKey': 'a2'}
+      {
+        'sys.sortKey': 'a2',
+        'sys.modifiedAt': {type: 'serverTimestamp'},
+        'sys.modifiedBy': 'editor@example.com',
+      }
     );
     expect(batches[0].commit).toHaveBeenCalledTimes(1);
-    // Published + scheduled mirrors are fired individually per doc.
-    expect(mocks.updateDoc).toHaveBeenCalledTimes(4);
-    expect(mocks.updateDoc).toHaveBeenCalledWith(
-      'doc:Projects/test-project/Collections/pages/Published/a',
-      {'sys.sortKey': 'a1'}
-    );
-    expect(mocks.updateDoc).toHaveBeenCalledWith(
-      'doc:Projects/test-project/Collections/pages/Scheduled/b',
-      {'sys.sortKey': 'a2'}
-    );
+    // Only drafts are written; published docs keep their existing order
+    // until the docs are published again.
+    expect(mocks.updateDoc).not.toHaveBeenCalled();
     expect(mocks.logAction).toHaveBeenCalledWith('doc.assign_sort_keys', {
       metadata: {collectionId: 'pages', count: 2},
     });

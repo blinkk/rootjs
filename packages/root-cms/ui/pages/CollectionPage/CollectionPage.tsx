@@ -25,6 +25,7 @@ import {
   IconCirclePlus,
   IconGripVertical,
 } from '@tabler/icons-preact';
+import {Timestamp} from 'firebase/firestore';
 import {ComponentChildren} from 'preact';
 import {useEffect, useState} from 'preact/hooks';
 import {useLocation} from 'preact-iso';
@@ -740,6 +741,24 @@ CollectionPage.DocsList = (props: {
   const reorderable = !!props.reorderable;
 
   /**
+   * Returns an optimistic local copy of a doc with an updated sort key.
+   * `sys.modifiedAt` is also updated so the doc immediately shows as having
+   * unpublished changes (the persisted write does the same server-side; the
+   * new order requires publishing to take effect on live listings).
+   */
+  function withSortKey(doc: any, sortKey: string) {
+    return {
+      ...doc,
+      sys: {
+        ...doc.sys,
+        sortKey,
+        modifiedAt: Timestamp.now(),
+        modifiedBy: window.firebase.user.email,
+      },
+    };
+  }
+
+  /**
    * Moves a doc to a new position in the custom order (used by drag-and-drop
    * and the "Move to top/bottom" menu actions). Updates the list optimistically
    * and persists the new `sys.sortKey`.
@@ -771,7 +790,7 @@ CollectionPage.DocsList = (props: {
           console.error('failed to generate sort key', err);
         }
         if (newKey) {
-          next[toIndex] = {...moved, sys: {...moved.sys, sortKey: newKey}};
+          next[toIndex] = withSortKey(moved, newKey);
           props.onDocsChange(next);
           await cmsSetDocSortKey(moved.id, newKey);
           return;
@@ -781,10 +800,9 @@ CollectionPage.DocsList = (props: {
       // renormalize by assigning fresh, evenly-spaced keys to every doc in
       // the current display order.
       const keys = generateNKeysBetween(null, null, next.length);
-      const renormalized = next.map((doc: any, i: number) => ({
-        ...doc,
-        sys: {...doc.sys, sortKey: keys[i]},
-      }));
+      const renormalized = next.map((doc: any, i: number) =>
+        withSortKey(doc, keys[i])
+      );
       props.onDocsChange(renormalized);
       await cmsAssignSortKeys(
         renormalized.map((doc: any) => ({

@@ -616,9 +616,10 @@ export type Collection = SchemaWithTypes & {
    *
    * When enabled, the CMS shows a "Custom order" sort option where editors
    * can drag docs (or use "Move to top/bottom") to reorder them. The order is
-   * stored as a fractional-index string at `sys.sortKey` on both the draft
-   * and published copies of the doc, so reordering applies to live listings
-   * immediately without publishing (and without marking docs as edited).
+   * stored as a fractional-index string at `sys.sortKey` on the draft doc.
+   * Like any other edit, reordering updates `sys.modifiedAt`, and docs need
+   * to be published for the new order to take effect on live (published)
+   * listings.
    *
    * On the server, `listDocs()` returns docs in the custom order by default
    * for collections with this option (when no `orderBy` or `query` option is

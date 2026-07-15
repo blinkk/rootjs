@@ -543,38 +543,19 @@ export async function cmsUnarchiveDoc(docId: string) {
  * Sets the custom sort order key for a doc (see the `customSorting`
  * collection option).
  *
- * The key is written to the draft doc and mirrored (best effort) to the
- * published and scheduled copies so that reordering applies to live listings
- * immediately, without a publish. `sys.modifiedAt` is intentionally left
- * untouched: reordering is presentation metadata and should not mark the doc
- * as having unpublished changes.
+ * Like any other edit, the key is written to the draft doc and
+ * `sys.modifiedAt` is updated, so the doc shows as having unpublished
+ * changes. The new order takes effect on live (published) listings when the
+ * doc is published (publishing copies the draft `sys`, including
+ * `sys.sortKey`, to the published doc).
  */
 export async function cmsSetDocSortKey(docId: string, sortKey: string) {
-  await updateDoc(getDraftDocRef(docId), {'sys.sortKey': sortKey});
-  await Promise.all([
-    updateSortKeyIfAllowed(getPublishedDocRef(docId), sortKey),
-    updateSortKeyIfAllowed(getScheduledDocRef(docId), sortKey),
-  ]);
+  await updateDoc(getDraftDocRef(docId), {
+    'sys.sortKey': sortKey,
+    'sys.modifiedAt': serverTimestamp(),
+    'sys.modifiedBy': window.firebase.user.email,
+  });
   logAction('doc.reorder', {metadata: {docId, sortKey}});
-}
-
-/**
- * Best-effort `sys.sortKey` update. Ignores "not-found" (the doc has no
- * published or scheduled copy) and "permission-denied" (contributors can only
- * write drafts; the sort key converges on the next publish, which copies the
- * whole draft `sys`).
- */
-async function updateSortKeyIfAllowed(
-  docRef: DocumentReference,
-  sortKey: string
-) {
-  try {
-    await updateDoc(docRef, {'sys.sortKey': sortKey});
-  } catch (err: any) {
-    if (err?.code !== 'not-found' && err?.code !== 'permission-denied') {
-      throw err;
-    }
-  }
 }
 
 /**
@@ -583,9 +564,9 @@ async function updateSortKeyIfAllowed(
  * `sys.sortKey` yet (e.g. docs created before the option was enabled or docs
  * created by import scripts) and to renormalize keys.
  *
- * Like {@link cmsSetDocSortKey}, draft docs are the source of truth and the
- * published/scheduled copies are updated best-effort, and `sys.modifiedAt` is
- * left untouched.
+ * Like {@link cmsSetDocSortKey}, the keys are written to the draft docs and
+ * `sys.modifiedAt` is updated — docs need to be published for the new order
+ * to take effect on live listings.
  */
 export async function cmsAssignSortKeys(
   entries: Array<{docId: string; sortKey: string}>
@@ -599,7 +580,11 @@ export async function cmsAssignSortKeys(
   let batch = writeBatch(db);
   let count = 0;
   for (const entry of entries) {
-    batch.update(getDraftDocRef(entry.docId), {'sys.sortKey': entry.sortKey});
+    batch.update(getDraftDocRef(entry.docId), {
+      'sys.sortKey': entry.sortKey,
+      'sys.modifiedAt': serverTimestamp(),
+      'sys.modifiedBy': window.firebase.user.email,
+    });
     count += 1;
     if (count >= 500) {
       await batch.commit();
@@ -609,29 +594,6 @@ export async function cmsAssignSortKeys(
   }
   if (count > 0) {
     await batch.commit();
-  }
-  // Mirror to the published/scheduled copies individually (a `batch.update()`
-  // on a doc that doesn't exist would fail the entire batch). Failures here
-  // are non-fatal: the draft keys are already saved.
-  const mirrorChunkSize = 50;
-  for (let i = 0; i < entries.length; i += mirrorChunkSize) {
-    const chunk = entries.slice(i, i + mirrorChunkSize);
-    await Promise.all(
-      chunk.flatMap((entry) => [
-        updateSortKeyIfAllowed(
-          getPublishedDocRef(entry.docId),
-          entry.sortKey
-        ).catch((err) =>
-          console.error(`failed to update sort key: ${entry.docId}`, err)
-        ),
-        updateSortKeyIfAllowed(
-          getScheduledDocRef(entry.docId),
-          entry.sortKey
-        ).catch((err) =>
-          console.error(`failed to update sort key: ${entry.docId}`, err)
-        ),
-      ])
-    );
   }
   const collectionId = entries[0].docId.split('/')[0];
   logAction('doc.assign_sort_keys', {
@@ -903,21 +865,6 @@ export function getPublishedDocRef(docId: string) {
     'Collections',
     collectionId,
     'Published',
-    slug
-  );
-}
-
-export function getScheduledDocRef(docId: string) {
-  const projectId = window.__ROOT_CTX.rootConfig.projectId;
-  const db = window.firebase.db;
-  const [collectionId, slug] = docId.split('/');
-  return doc(
-    db,
-    'Projects',
-    projectId,
-    'Collections',
-    collectionId,
-    'Scheduled',
     slug
   );
 }
