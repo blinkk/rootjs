@@ -771,7 +771,7 @@ describe('RootCMSClient Validation', () => {
     });
   });
 
-  describe('listDocs manual sorting', () => {
+  describe('listDocs custom sorting', () => {
     /**
      * Creates a chainable firestore query mock that records `orderBy()` calls
      * and returns an empty result set.
@@ -798,12 +798,12 @@ describe('RootCMSClient Validation', () => {
       return client;
     }
 
-    it('defaults to orderBy sys.sortKey when manualSorting is enabled', async () => {
+    it('defaults to orderBy sys.sortKey when customSorting is enabled', async () => {
       const {queryMock, orderByCalls} = createQueryMock();
       const client = await createClient(queryMock);
       mockGetCollectionSchema.mockResolvedValue({
         name: 'Products',
-        manualSorting: true,
+        customSorting: true,
         fields: [],
       });
 
@@ -812,7 +812,7 @@ describe('RootCMSClient Validation', () => {
       expect(orderByCalls).toEqual([['sys.sortKey', undefined]]);
     });
 
-    it('does not order when manualSorting is not enabled', async () => {
+    it('does not order when customSorting is not enabled', async () => {
       const {queryMock, orderByCalls} = createQueryMock();
       const client = await createClient(queryMock);
       mockGetCollectionSchema.mockResolvedValue({name: 'Pages', fields: []});
@@ -822,12 +822,12 @@ describe('RootCMSClient Validation', () => {
       expect(orderByCalls).toEqual([]);
     });
 
-    it('explicit orderBy takes precedence over the manual sorting default', async () => {
+    it('explicit orderBy takes precedence over the custom sorting default', async () => {
       const {queryMock, orderByCalls} = createQueryMock();
       const client = await createClient(queryMock);
       mockGetCollectionSchema.mockResolvedValue({
         name: 'Products',
-        manualSorting: true,
+        customSorting: true,
         fields: [],
       });
 
@@ -840,12 +840,12 @@ describe('RootCMSClient Validation', () => {
       expect(orderByCalls).toEqual([['sys.createdAt', 'desc']]);
     });
 
-    it('skips the manual sorting default when a query fn is provided', async () => {
+    it('skips the custom sorting default when a query fn is provided', async () => {
       const {queryMock, orderByCalls} = createQueryMock();
       const client = await createClient(queryMock);
       mockGetCollectionSchema.mockResolvedValue({
         name: 'Products',
-        manualSorting: true,
+        customSorting: true,
         fields: [],
       });
 
@@ -869,12 +869,12 @@ describe('RootCMSClient Validation', () => {
       expect(orderByCalls).toEqual([]);
     });
 
-    it('memoizes the manualSorting lookup per collection', async () => {
+    it('memoizes the customSorting lookup per collection', async () => {
       const {queryMock} = createQueryMock();
       const client = await createClient(queryMock);
       mockGetCollectionSchema.mockResolvedValue({
         name: 'Products',
-        manualSorting: true,
+        customSorting: true,
         fields: [],
       });
 

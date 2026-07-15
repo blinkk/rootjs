@@ -186,7 +186,7 @@ function serializeCollection(collection: Collection): Partial<Collection> {
     autolock: collection.autolock,
     autolockReason: collection.autolockReason,
     sortOptions: collection.sortOptions,
-    manualSorting: collection.manualSorting,
+    customSorting: collection.customSorting,
     viewOptions: collection.viewOptions,
   };
 }

@@ -76,7 +76,7 @@ beforeEach(async () => {
           title: 'meta.title',
           image: 'meta.image',
         },
-        manualSorting: true,
+        customSorting: true,
       },
     },
     rootConfig: {
@@ -92,7 +92,7 @@ afterEach(() => {
   cleanup();
 });
 
-describe('CollectionPage.DocsList manual sorting', () => {
+describe('CollectionPage.DocsList custom sorting', () => {
   it('renders drag handles in the comfortable view', async () => {
     render(
       <MantineProvider>
@@ -101,7 +101,7 @@ describe('CollectionPage.DocsList manual sorting', () => {
             <CollectionPage.DocsList
               collection="BlogPosts"
               docs={MOCK_DOCS}
-              orderBy="manual"
+              orderBy="custom"
               reloadDocs={() => {}}
               reorderable
               onDocsChange={() => {}}
@@ -138,7 +138,7 @@ describe('CollectionPage.DocsList manual sorting', () => {
               collection="BlogPosts"
               docs={MOCK_DOCS}
               compact
-              orderBy="manual"
+              orderBy="custom"
               reloadDocs={() => {}}
               reorderable
               onDocsChange={() => {}}

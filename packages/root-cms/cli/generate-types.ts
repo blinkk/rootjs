@@ -76,8 +76,8 @@ export interface RootCMSDoc<Fields extends {}> {
     publishedBy?: string;
     locales?: string[];
     /**
-     * Fractional-index string defining the doc's manual order within the
-     * collection. See the \`manualSorting\` collection option.
+     * Fractional-index string defining the doc's custom order within the
+     * collection. See the \`customSorting\` collection option.
      */
     sortKey?: string;
   };

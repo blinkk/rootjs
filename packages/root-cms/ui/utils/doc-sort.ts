@@ -9,7 +9,7 @@ interface SortableDoc {
 }
 
 /**
- * Sorts docs into their manual order (see the `manualSorting` collection
+ * Sorts docs into their custom order (see the `customSorting` collection
  * option). Returns a new array.
  *
  * Docs with a `sys.sortKey` come first, ordered by key (ascending) with the
@@ -19,7 +19,7 @@ interface SortableDoc {
  * (newest first) so they never silently disappear from the CMS; the
  * collection page shows a banner for assigning them a position.
  */
-export function sortDocsManualOrder<T extends SortableDoc>(docs: T[]): T[] {
+export function sortDocsCustomOrder<T extends SortableDoc>(docs: T[]): T[] {
   const keyed: T[] = [];
   const keyless: T[] = [];
   docs.forEach((doc) => {

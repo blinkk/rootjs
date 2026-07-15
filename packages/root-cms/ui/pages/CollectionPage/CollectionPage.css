@@ -245,7 +245,7 @@
   padding: 5px 12px;
 }
 
-/* Compact docs list with reordering enabled ("Manual order" sort): prepend a
+/* Compact docs list with reordering enabled ("Custom order" sort): prepend a
  * narrow track for the drag handle. */
 .CollectionPage__collection__docsList--compact.CollectionPage__collection__docsList--reorderable
   .CollectionPage__collection__docsList__doc,
@@ -286,7 +286,7 @@
     rgba(0, 0, 0, 0.04) 0 7px 7px -5px;
 }
 
-/* "Assign positions" banner shown in the "Manual order" view when some docs
+/* "Assign positions" banner shown in the "Custom order" view when some docs
  * don't have a sort key yet. */
 .CollectionPage__collection__assignPositions {
   display: flex;

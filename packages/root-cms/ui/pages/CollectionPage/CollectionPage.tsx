@@ -146,11 +146,11 @@ CollectionPage.Collection = (props: CollectionProps) => {
   const canEdit = testCanEdit(roles, currentUserEmail);
 
   const collection = window.__ROOT_CTX.collections[props.collection];
-  const manualSortingEnabled = Boolean(collection?.manualSorting);
+  const customSortingEnabled = Boolean(collection?.customSorting);
 
   const [orderBy, setOrderBy] = useLocalStorage<string>(
     `root::CollectionPage:${props.collection}:orderBy`,
-    manualSortingEnabled ? 'manual' : 'modifiedAt'
+    customSortingEnabled ? 'custom' : 'modifiedAt'
   );
   const [showArchived, setShowArchived] = useLocalStorage<boolean>(
     `root::CollectionPage:${props.collection}:showArchived`,
@@ -164,9 +164,9 @@ CollectionPage.Collection = (props: CollectionProps) => {
   }
 
   // Guard against a stale "manual" value in localStorage (e.g. when the
-  // collection's `manualSorting` option is later removed from the schema).
+  // collection's `customSorting` option is later removed from the schema).
   const effectiveOrderBy =
-    orderBy === 'manual' && !manualSortingEnabled ? 'modifiedAt' : orderBy;
+    orderBy === 'custom' && !customSortingEnabled ? 'modifiedAt' : orderBy;
 
   // Collections can force the compact listing via schema
   // (`viewOptions: {compact: true}`). Otherwise the user's chosen density is
@@ -180,7 +180,7 @@ CollectionPage.Collection = (props: CollectionProps) => {
   const compactView = density === 'compact';
 
   const sortOptions = [
-    ...(manualSortingEnabled ? [{value: 'manual', label: 'Manual order'}] : []),
+    ...(customSortingEnabled ? [{value: 'custom', label: 'Custom order'}] : []),
     {value: 'slug', label: 'A-Z'},
     {value: 'slugDesc', label: 'Z-A'},
     {value: 'title', label: 'Title (A-Z)'},
@@ -200,8 +200,8 @@ CollectionPage.Collection = (props: CollectionProps) => {
     includeArchived: showArchived,
   });
 
-  const manualMode = effectiveOrderBy === 'manual';
-  const keylessCount = manualMode
+  const customSortMode = effectiveOrderBy === 'custom';
+  const keylessCount = customSortMode
     ? docs.filter((doc: any) => !doc.sys?.sortKey).length
     : 0;
 
@@ -270,7 +270,7 @@ CollectionPage.Collection = (props: CollectionProps) => {
               </div>
             </div>
           </div>
-          {manualMode && !loading && keylessCount > 0 && canEdit && (
+          {customSortMode && !loading && keylessCount > 0 && canEdit && (
             <AssignPositionsBanner
               collectionId={props.collection}
               docs={docs}
@@ -326,7 +326,7 @@ CollectionPage.Collection = (props: CollectionProps) => {
                     orderBy={effectiveOrderBy}
                     onSort={setOrderBy}
                     reloadDocs={() => listDocs()}
-                    reorderable={manualMode && canEdit}
+                    reorderable={customSortMode && canEdit}
                     onDocsChange={setDocs}
                   />
                 </div>
@@ -516,12 +516,12 @@ function countStatusBadges(doc: any, releaseCount: number): number {
 }
 
 /**
- * Banner shown in the "Manual order" view when some docs don't have a
- * `sys.sortKey` yet (docs created before the collection's `manualSorting`
+ * Banner shown in the "Custom order" view when some docs don't have a
+ * `sys.sortKey` yet (docs created before the collection's `customSorting`
  * option was enabled, or docs created by import scripts). Offers a one-click
  * action that appends positions for those docs — in the currently displayed
  * order — after the current max sort key. This also serves as the one-time
- * initialization when enabling manual sorting on an existing collection.
+ * initialization when enabling custom sorting on an existing collection.
  */
 function AssignPositionsBanner(props: {
   collectionId: string;
@@ -571,8 +571,8 @@ function AssignPositionsBanner(props: {
       <div className="CollectionPage__collection__assignPositions__text">
         <b>
           {props.keylessCount === 1
-            ? '1 doc has no manual position.'
-            : `${props.keylessCount} docs have no manual position.`}
+            ? '1 doc has no position in the custom order.'
+            : `${props.keylessCount} docs have no position in the custom order.`}
         </b>{' '}
         Unpositioned docs are shown at the end of the list and are excluded from
         API results ordered by <code>sys.sortKey</code>.
@@ -591,7 +591,7 @@ function AssignPositionsBanner(props: {
 
 /**
  * Wraps the docs list in a drag-and-drop context when reordering is enabled
- * ("Manual order" sort + edit permission); otherwise renders a plain div so
+ * ("Custom order" sort + edit permission); otherwise renders a plain div so
  * the list markup stays identical.
  */
 function ReorderableList(props: {
@@ -686,7 +686,7 @@ CollectionPage.DocsList = (props: {
   orderBy?: string;
   onSort?: (orderBy: string) => void;
   reloadDocs: () => void;
-  /** Enables drag-to-reorder (the "Manual order" sort mode). */
+  /** Enables drag-to-reorder (the "Custom order" sort mode). */
   reorderable?: boolean;
   /** Called with the updated docs array after an optimistic reorder. */
   onDocsChange?: (docs: any[]) => void;
@@ -740,7 +740,7 @@ CollectionPage.DocsList = (props: {
   const reorderable = !!props.reorderable;
 
   /**
-   * Moves a doc to a new position in the manual order (used by drag-and-drop
+   * Moves a doc to a new position in the custom order (used by drag-and-drop
    * and the "Move to top/bottom" menu actions). Updates the list optimistically
    * and persists the new `sys.sortKey`.
    */

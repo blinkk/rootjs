@@ -52,8 +52,8 @@ export interface Doc<Fields = any> {
      */
     assets?: string[];
     /**
-     * Fractional-index string defining the doc's manual order within the
-     * collection. See the `manualSorting` collection option.
+     * Fractional-index string defining the doc's custom order within the
+     * collection. See the `customSorting` collection option.
      */
     sortKey?: string;
   };
@@ -185,8 +185,8 @@ export interface ListDocsOptions {
   /**
    * DB field path to order results by, e.g. `sys.createdAt`.
    *
-   * For collections with the `manualSorting` option, when `orderBy` and
-   * `query` are both unset, results default to the manual order (i.e.
+   * For collections with the `customSorting` option, when `orderBy` and
+   * `query` are both unset, results default to the custom order (i.e.
    * `orderBy: 'sys.sortKey'`). Pass an explicit `orderBy` to override.
    */
   orderBy?: string;
@@ -278,8 +278,8 @@ export class RootCMSClient {
   readonly projectId: string;
   readonly app: App;
   readonly db: Firestore;
-  /** Memoized `manualSorting` collection option, see `hasManualSorting()`. */
-  private _manualSortingCache = new Map<string, boolean>();
+  /** Memoized `customSorting` collection option, see `hasCustomSorting()`. */
+  private _customSortingCache = new Map<string, boolean>();
 
   constructor(rootConfig: RootConfig) {
     this.rootConfig = rootConfig;
@@ -403,23 +403,23 @@ export class RootCMSClient {
   }
 
   /**
-   * Returns whether a collection has the `manualSorting` option enabled.
+   * Returns whether a collection has the `customSorting` option enabled.
    * The result is memoized per collection since this is called on the
    * `listDocs()` hot path. Returns false when the collection schema cannot
    * be loaded (e.g. in standalone scripts outside the vite server).
    */
-  private async hasManualSorting(collectionId: string): Promise<boolean> {
-    let manualSorting = this._manualSortingCache.get(collectionId);
-    if (manualSorting === undefined) {
+  private async hasCustomSorting(collectionId: string): Promise<boolean> {
+    let customSorting = this._customSortingCache.get(collectionId);
+    if (customSorting === undefined) {
       try {
         const collection = await this.getCollection(collectionId);
-        manualSorting = Boolean(collection?.manualSorting);
+        customSorting = Boolean(collection?.customSorting);
       } catch {
-        manualSorting = false;
+        customSorting = false;
       }
-      this._manualSortingCache.set(collectionId, manualSorting);
+      this._customSortingCache.set(collectionId, customSorting);
     }
-    return manualSorting;
+    return customSorting;
   }
 
   /**
@@ -638,14 +638,14 @@ export class RootCMSClient {
       query = query.offset(options.offset);
     }
     let orderBy = options.orderBy;
-    // Collections with `manualSorting` default to the manual order. The
+    // Collections with `customSorting` default to the custom order. The
     // default is skipped when a `query` fn is provided, since adding an
     // orderBy to a filtered query may require a composite index (and would
     // exclude docs that don't have a `sys.sortKey`).
     if (
       !orderBy &&
       !options.query &&
-      (await this.hasManualSorting(collectionId))
+      (await this.hasCustomSorting(collectionId))
     ) {
       orderBy = 'sys.sortKey';
     }

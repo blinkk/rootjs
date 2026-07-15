@@ -61,8 +61,8 @@ export interface CMSDoc {
     archivedAt?: Timestamp;
     archivedBy?: string;
     /**
-     * Fractional-index string defining the doc's manual order within the
-     * collection. See the `manualSorting` collection option.
+     * Fractional-index string defining the doc's custom order within the
+     * collection. See the `customSorting` collection option.
      */
     sortKey?: string;
     locales?: string[];
@@ -540,7 +540,7 @@ export async function cmsUnarchiveDoc(docId: string) {
 }
 
 /**
- * Sets the manual sort order key for a doc (see the `manualSorting`
+ * Sets the custom sort order key for a doc (see the `customSorting`
  * collection option).
  *
  * The key is written to the draft doc and mirrored (best effort) to the
@@ -578,7 +578,7 @@ async function updateSortKeyIfAllowed(
 }
 
 /**
- * Batch-assigns manual sort order keys to docs (see the `manualSorting`
+ * Batch-assigns custom sort order keys to docs (see the `customSorting`
  * collection option). Used to initialize positions for docs that don't have a
  * `sys.sortKey` yet (e.g. docs created before the option was enabled or docs
  * created by import scripts) and to renormalize keys.
@@ -754,11 +754,11 @@ export async function cmsCreateDoc(
     };
   }
 
-  // For collections with manual sorting enabled, assign a sort key that
-  // places the new doc at the end of the manual order. Overwriting an
+  // For collections with custom sorting enabled, assign a sort key that
+  // places the new doc at the end of the custom order. Overwriting an
   // already-keyed doc preserves its position (via the "sys" merge above).
   const rootCollection = window.__ROOT_CTX.collections?.[collectionId];
-  if (rootCollection?.manualSorting && !data.sys.sortKey) {
+  if (rootCollection?.customSorting && !data.sys.sortKey) {
     try {
       data.sys.sortKey = generateKeyAfter(await fetchMaxSortKey(collectionId));
     } catch (err) {

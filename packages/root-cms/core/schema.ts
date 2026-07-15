@@ -611,17 +611,17 @@ export type Collection = SchemaWithTypes & {
     direction?: 'asc' | 'desc';
   }>;
   /**
-   * Enables manual ordering of docs in the collection, e.g. for curated
-   * listings like storefronts.
+   * Enables custom (user-defined) ordering of docs in the collection, e.g.
+   * for curated listings like storefronts.
    *
-   * When enabled, the CMS shows a "Manual order" sort option where editors
+   * When enabled, the CMS shows a "Custom order" sort option where editors
    * can drag docs (or use "Move to top/bottom") to reorder them. The order is
    * stored as a fractional-index string at `sys.sortKey` on both the draft
    * and published copies of the doc, so reordering applies to live listings
    * immediately without publishing (and without marking docs as edited).
    *
-   * On the server, `listDocs()` returns docs in manual order by default for
-   * collections with this option (when no `orderBy` or `query` option is
+   * On the server, `listDocs()` returns docs in the custom order by default
+   * for collections with this option (when no `orderBy` or `query` option is
    * passed). To order explicitly, use `listDocs(id, {orderBy:
    * 'sys.sortKey'})`.
    *
@@ -640,7 +640,7 @@ export type Collection = SchemaWithTypes & {
    * filter may require a new composite index (the first such query returns an
    * error with a link for creating the index).
    */
-  manualSorting?: boolean;
+  customSorting?: boolean;
   /**
    * Options that control how the document listing for this collection is
    * rendered in the CMS.

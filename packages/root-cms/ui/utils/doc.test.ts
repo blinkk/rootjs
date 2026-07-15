@@ -286,13 +286,13 @@ describe('cmsAssignSortKeys', () => {
   });
 });
 
-describe('cmsCreateDoc manual sorting', () => {
+describe('cmsCreateDoc custom sorting', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    setupWindowMocks({pages: {manualSorting: true}});
+    setupWindowMocks({pages: {customSorting: true}});
   });
 
-  it('assigns a sort key at the end of the manual order', async () => {
+  it('assigns a sort key at the end of the custom order', async () => {
     mocks.getDoc.mockResolvedValueOnce({exists: () => false});
     // Max sort key query returns the current largest key.
     mocks.getDocs.mockResolvedValueOnce({
@@ -319,7 +319,7 @@ describe('cmsCreateDoc manual sorting', () => {
     expect(savedData.sys.sortKey).toBe('a0');
   });
 
-  it('does not assign a sort key when manualSorting is disabled', async () => {
+  it('does not assign a sort key when customSorting is disabled', async () => {
     setupWindowMocks({pages: {}});
     mocks.getDoc.mockResolvedValueOnce({exists: () => false});
 

@@ -61,7 +61,7 @@ export interface DocActionsMenuProps {
   onDelete?: () => void;
   onAction?: (event: DocActionEvent) => void;
   /**
-   * When provided (i.e. the docs list is in "Manual order" mode), renders
+   * When provided (i.e. the docs list is in "Custom order" mode), renders
    * "Move to top" / "Move to bottom" menu items that call back with the
    * requested position.
    */

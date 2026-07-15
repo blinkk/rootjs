@@ -1,9 +1,9 @@
 /**
- * Fractional indexing utilities used for manually ordering docs within a
- * collection (see the `manualSorting` collection option).
+ * Fractional indexing utilities used for custom (user-defined) ordering of
+ * docs within a collection (see the `customSorting` collection option).
  *
  * A "sort key" is an opaque base-62 string. Sorting keys in ascending order
- * (by code point) yields the manual order. `generateKeyBetween()` returns a
+ * (by code point) yields the custom order. `generateKeyBetween()` returns a
  * key strictly between two neighboring keys, so moving an item only requires
  * writing a new key to that one item.
  *
@@ -85,7 +85,7 @@ export function generateKeyBetween(a: string | null, b: string | null): string {
 /**
  * Returns `n` distinct keys in sorted order, all strictly between `a` and `b`
  * (same semantics as {@link generateKeyBetween}). Used for bulk-assigning
- * positions, e.g. when initializing the manual order of an existing
+ * positions, e.g. when initializing the custom order of an existing
  * collection.
  */
 export function generateNKeysBetween(

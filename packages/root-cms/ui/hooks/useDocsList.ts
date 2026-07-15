@@ -8,7 +8,7 @@ import {
 } from 'firebase/firestore';
 import {useEffect, useState} from 'preact/hooks';
 import {setDocToCache} from '../utils/doc-cache.js';
-import {sortDocsManualOrder} from '../utils/doc-sort.js';
+import {sortDocsCustomOrder} from '../utils/doc-sort.js';
 import {notifyErrors} from '../utils/notifications.js';
 import {withTimeout} from '../utils/with-timeout.js';
 import {useFirebase} from './useFirebase.js';
@@ -61,10 +61,10 @@ export function useDocsList(collectionId: string, options: UseDocsListOptions) {
       dbQuery = titleField
         ? query(dbCollection, queryOrderby(titleField, direction))
         : query(dbCollection, queryOrderby(documentId(), direction));
-    } else if (orderBy === 'manual') {
-      // Manual order is sorted in memory below. A firestore
+    } else if (orderBy === 'custom') {
+      // Custom order is sorted in memory below. A firestore
       // `orderBy('sys.sortKey')` query would silently exclude docs that don't
-      // have a sort key yet (e.g. docs created before the `manualSorting`
+      // have a sort key yet (e.g. docs created before the `customSorting`
       // option was enabled), so fetch in the default (document id) order.
       dbQuery = dbCollection;
     } else {
@@ -100,8 +100,8 @@ export function useDocsList(collectionId: string, options: UseDocsListOptions) {
         }
         docs.push(docData);
       });
-      if (orderBy === 'manual') {
-        docs = sortDocsManualOrder(docs);
+      if (orderBy === 'custom') {
+        docs = sortDocsCustomOrder(docs);
       }
       setDocs(docs);
     });
