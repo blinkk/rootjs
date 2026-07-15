@@ -237,7 +237,14 @@ func processPendingEmails(ctx context.Context, fsClient *firestore.Client, proje
 			msg.HTMLBody = htmlBody
 		}
 
-		if err := mail.Send(ctx, msg); err != nil {
+		// Bound the Mail API RPC so a stalled backend fails fast instead of
+		// hanging until the App Engine request deadline (~60s). A wedged mail RPC
+		// would otherwise tie up the instance's request slot for a full minute,
+		// and one stuck message would block the rest of the batch.
+		sendCtx, cancel := context.WithTimeout(ctx, mailSendTimeout)
+		err := mail.Send(sendCtx, msg)
+		cancel()
+		if err != nil {
 			log.Printf("failed to send email %s: %v", doc.Ref.ID, err)
 			result.Failed++
 			result.Errors = append(result.Errors, fmt.Sprintf("%s: %v", doc.Ref.ID, err))
@@ -266,3 +273,7 @@ func processPendingEmails(ctx context.Context, fsClient *firestore.Client, proje
 	log.Printf("processed %d emails for project %s: %d sent, %d failed", len(docs), projectId, result.Sent, result.Failed)
 	return result, nil
 }
+
+// mailSendTimeout bounds each Mail API send so a stalled backend can't hang the
+// request (and the instance's request slot) up to the App Engine deadline.
+const mailSendTimeout = 25 * time.Second
