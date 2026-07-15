@@ -82,7 +82,7 @@ export function getCollectionSchema(
 
   const fileId = `/collections/${collectionId}.schema.ts`;
   const module = SCHEMA_MODULES[fileId];
-  if (!module.default) {
+  if (!module?.default) {
     console.warn(`collection schema not exported in: ${fileId}`);
     return null;
   }

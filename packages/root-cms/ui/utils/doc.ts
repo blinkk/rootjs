@@ -23,6 +23,7 @@ import {
   QueryDocumentSnapshot,
 } from 'firebase/firestore';
 import {testValidRichTextData} from '../../shared/richtext.js';
+import {generateKeyAfter} from '../../shared/sort-key.js';
 import {logAction} from './actions.js';
 import {extractAssetIds} from './assets.js';
 import {removeDocFromCache, removeDocsFromCache} from './doc-cache.js';
@@ -59,6 +60,11 @@ export interface CMSDoc {
     };
     archivedAt?: Timestamp;
     archivedBy?: string;
+    /**
+     * Fractional-index string defining the doc's manual order within the
+     * collection. See the `manualSorting` collection option.
+     */
+    sortKey?: string;
     locales?: string[];
     /**
      * Reverse index of asset library ids embedded in the doc's fields,
@@ -534,6 +540,130 @@ export async function cmsUnarchiveDoc(docId: string) {
 }
 
 /**
+ * Sets the manual sort order key for a doc (see the `manualSorting`
+ * collection option).
+ *
+ * The key is written to the draft doc and mirrored (best effort) to the
+ * published and scheduled copies so that reordering applies to live listings
+ * immediately, without a publish. `sys.modifiedAt` is intentionally left
+ * untouched: reordering is presentation metadata and should not mark the doc
+ * as having unpublished changes.
+ */
+export async function cmsSetDocSortKey(docId: string, sortKey: string) {
+  await updateDoc(getDraftDocRef(docId), {'sys.sortKey': sortKey});
+  await Promise.all([
+    updateSortKeyIfAllowed(getPublishedDocRef(docId), sortKey),
+    updateSortKeyIfAllowed(getScheduledDocRef(docId), sortKey),
+  ]);
+  logAction('doc.reorder', {metadata: {docId, sortKey}});
+}
+
+/**
+ * Best-effort `sys.sortKey` update. Ignores "not-found" (the doc has no
+ * published or scheduled copy) and "permission-denied" (contributors can only
+ * write drafts; the sort key converges on the next publish, which copies the
+ * whole draft `sys`).
+ */
+async function updateSortKeyIfAllowed(
+  docRef: DocumentReference,
+  sortKey: string
+) {
+  try {
+    await updateDoc(docRef, {'sys.sortKey': sortKey});
+  } catch (err: any) {
+    if (err?.code !== 'not-found' && err?.code !== 'permission-denied') {
+      throw err;
+    }
+  }
+}
+
+/**
+ * Batch-assigns manual sort order keys to docs (see the `manualSorting`
+ * collection option). Used to initialize positions for docs that don't have a
+ * `sys.sortKey` yet (e.g. docs created before the option was enabled or docs
+ * created by import scripts) and to renormalize keys.
+ *
+ * Like {@link cmsSetDocSortKey}, draft docs are the source of truth and the
+ * published/scheduled copies are updated best-effort, and `sys.modifiedAt` is
+ * left untouched.
+ */
+export async function cmsAssignSortKeys(
+  entries: Array<{docId: string; sortKey: string}>
+) {
+  if (entries.length === 0) {
+    return;
+  }
+  const db = window.firebase.db;
+  // Update the draft docs in chunks (firestore batches are limited to 500
+  // writes).
+  let batch = writeBatch(db);
+  let count = 0;
+  for (const entry of entries) {
+    batch.update(getDraftDocRef(entry.docId), {'sys.sortKey': entry.sortKey});
+    count += 1;
+    if (count >= 500) {
+      await batch.commit();
+      batch = writeBatch(db);
+      count = 0;
+    }
+  }
+  if (count > 0) {
+    await batch.commit();
+  }
+  // Mirror to the published/scheduled copies individually (a `batch.update()`
+  // on a doc that doesn't exist would fail the entire batch). Failures here
+  // are non-fatal: the draft keys are already saved.
+  const mirrorChunkSize = 50;
+  for (let i = 0; i < entries.length; i += mirrorChunkSize) {
+    const chunk = entries.slice(i, i + mirrorChunkSize);
+    await Promise.all(
+      chunk.flatMap((entry) => [
+        updateSortKeyIfAllowed(
+          getPublishedDocRef(entry.docId),
+          entry.sortKey
+        ).catch((err) =>
+          console.error(`failed to update sort key: ${entry.docId}`, err)
+        ),
+        updateSortKeyIfAllowed(
+          getScheduledDocRef(entry.docId),
+          entry.sortKey
+        ).catch((err) =>
+          console.error(`failed to update sort key: ${entry.docId}`, err)
+        ),
+      ])
+    );
+  }
+  const collectionId = entries[0].docId.split('/')[0];
+  logAction('doc.assign_sort_keys', {
+    metadata: {collectionId, count: entries.length},
+  });
+}
+
+/**
+ * Returns the largest `sys.sortKey` among a collection's draft docs
+ * (including archived docs), or null when no doc has a sort key. Note that
+ * firestore's `orderBy()` excludes docs without the field, which is exactly
+ * what's needed here.
+ */
+export async function fetchMaxSortKey(
+  collectionId: string
+): Promise<string | null> {
+  const projectId = window.__ROOT_CTX.rootConfig.projectId;
+  const db = window.firebase.db;
+  const dbCollection = collection(
+    db,
+    'Projects',
+    projectId,
+    'Collections',
+    collectionId,
+    'Drafts'
+  );
+  const q = query(dbCollection, orderBy('sys.sortKey', 'desc'), limit(1));
+  const snapshot = await getDocs(q);
+  return snapshot.docs[0]?.data()?.sys?.sortKey ?? null;
+}
+
+/**
  * Checks if a doc is archived.
  */
 export function testIsArchived(docData: CMSDoc) {
@@ -622,6 +752,20 @@ export async function cmsCreateDoc(
       modifiedAt: serverTimestamp(),
       modifiedBy: window.firebase.user.email,
     };
+  }
+
+  // For collections with manual sorting enabled, assign a sort key that
+  // places the new doc at the end of the manual order. Overwriting an
+  // already-keyed doc preserves its position (via the "sys" merge above).
+  const rootCollection = window.__ROOT_CTX.collections?.[collectionId];
+  if (rootCollection?.manualSorting && !data.sys.sortKey) {
+    try {
+      data.sys.sortKey = generateKeyAfter(await fetchMaxSortKey(collectionId));
+    } catch (err) {
+      // A sort key failure shouldn't block doc creation; the CMS shows an
+      // "assign positions" banner for keyless docs.
+      console.error(`failed to assign sort key: ${docId}`, err);
+    }
   }
 
   // Index any asset library references embedded in the fields (e.g. when
@@ -759,6 +903,21 @@ export function getPublishedDocRef(docId: string) {
     'Collections',
     collectionId,
     'Published',
+    slug
+  );
+}
+
+export function getScheduledDocRef(docId: string) {
+  const projectId = window.__ROOT_CTX.rootConfig.projectId;
+  const db = window.firebase.db;
+  const [collectionId, slug] = docId.split('/');
+  return doc(
+    db,
+    'Projects',
+    projectId,
+    'Collections',
+    collectionId,
+    'Scheduled',
     slug
   );
 }
