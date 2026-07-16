@@ -1,5 +1,12 @@
 # @blinkk/root-cms
 
+## 3.1.10
+
+### Patch Changes
+
+- 5788efa: feat: add custom document ordering to collections
+  - @blinkk/root@3.1.10
+
 ## 3.1.9
 
 ### Patch Changes
