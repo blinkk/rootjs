@@ -1,6 +1,12 @@
 import './CollectionPage.css';
 
 import {
+  DragDropContext,
+  Draggable,
+  Droppable,
+  DropResult,
+} from '@hello-pangea/dnd';
+import {
   ActionIcon,
   Button,
   Loader,
@@ -9,6 +15,7 @@ import {
   Switch,
   Tooltip,
 } from '@mantine/core';
+import {showNotification} from '@mantine/notifications';
 import {
   IconBaselineDensityMedium,
   IconBaselineDensitySmall,
@@ -16,9 +23,16 @@ import {
   IconChevronUp,
   IconChevronDown,
   IconCirclePlus,
+  IconGripVertical,
 } from '@tabler/icons-preact';
+import {Timestamp} from 'firebase/firestore';
+import {ComponentChildren} from 'preact';
 import {useEffect, useState} from 'preact/hooks';
 import {useLocation} from 'preact-iso';
+import {
+  generateKeyBetween,
+  generateNKeysBetween,
+} from '../../../shared/sort-key.js';
 import {CollectionTree} from '../../components/CollectionTree/CollectionTree.js';
 import {ConditionalTooltip} from '../../components/ConditionalTooltip/ConditionalTooltip.js';
 import {DocActionsMenu} from '../../components/DocActionsMenu/DocActionsMenu.js';
@@ -35,7 +49,12 @@ import {useProjectRoles} from '../../hooks/useProjectRoles.js';
 import {Layout} from '../../layout/Layout.js';
 import {joinClassNames} from '../../utils/classes.js';
 import {getDocServingUrl} from '../../utils/doc-urls.js';
-import {testPublishingLocked} from '../../utils/doc.js';
+import {
+  cmsAssignSortKeys,
+  cmsSetDocSortKey,
+  fetchMaxSortKey,
+  testPublishingLocked,
+} from '../../utils/doc.js';
 import {getNestedValue} from '../../utils/objects.js';
 import {testCanEdit} from '../../utils/permissions.js';
 import {formatDateTime, getTimeAgo} from '../../utils/time.js';
@@ -127,9 +146,12 @@ CollectionPage.Collection = (props: CollectionProps) => {
   const currentUserEmail = window.firebase.user.email || '';
   const canEdit = testCanEdit(roles, currentUserEmail);
 
+  const collection = window.__ROOT_CTX.collections[props.collection];
+  const customSortingEnabled = Boolean(collection?.customSorting);
+
   const [orderBy, setOrderBy] = useLocalStorage<string>(
     `root::CollectionPage:${props.collection}:orderBy`,
-    'modifiedAt'
+    customSortingEnabled ? 'custom' : 'modifiedAt'
   );
   const [showArchived, setShowArchived] = useLocalStorage<boolean>(
     `root::CollectionPage:${props.collection}:showArchived`,
@@ -137,11 +159,15 @@ CollectionPage.Collection = (props: CollectionProps) => {
   );
   const [newDocModalOpen, setNewDocModalOpen] = useState(false);
 
-  const collection = window.__ROOT_CTX.collections[props.collection];
   if (!collection) {
     route('/cms/content');
     return <></>;
   }
+
+  // Guard against a stale "manual" value in localStorage (e.g. when the
+  // collection's `customSorting` option is later removed from the schema).
+  const effectiveOrderBy =
+    orderBy === 'custom' && !customSortingEnabled ? 'modifiedAt' : orderBy;
 
   // Collections can force the compact listing via schema
   // (`viewOptions: {compact: true}`). Otherwise the user's chosen density is
@@ -155,6 +181,7 @@ CollectionPage.Collection = (props: CollectionProps) => {
   const compactView = density === 'compact';
 
   const sortOptions = [
+    ...(customSortingEnabled ? [{value: 'custom', label: 'Custom order'}] : []),
     {value: 'slug', label: 'A-Z'},
     {value: 'slugDesc', label: 'Z-A'},
     {value: 'title', label: 'Title (A-Z)'},
@@ -169,10 +196,15 @@ CollectionPage.Collection = (props: CollectionProps) => {
     })) || []),
   ];
 
-  const [loading, listDocs, docs] = useDocsList(props.collection, {
-    orderBy,
+  const [loading, listDocs, docs, setDocs] = useDocsList(props.collection, {
+    orderBy: effectiveOrderBy,
     includeArchived: showArchived,
   });
+
+  const customSortMode = effectiveOrderBy === 'custom';
+  const keylessCount = customSortMode
+    ? docs.filter((doc: any) => !doc.sys?.sortKey).length
+    : 0;
 
   // Only blank the page on the very first load. Subsequent reloads (e.g. after
   // changing the sort) keep the previous docs visible and dim them with a
@@ -211,7 +243,7 @@ CollectionPage.Collection = (props: CollectionProps) => {
                 </div>
                 <Select
                   size="xs"
-                  value={orderBy}
+                  value={effectiveOrderBy}
                   onChange={(value: any) => setOrderBy(value || 'modifiedAt')}
                   data={sortOptions}
                 />
@@ -239,6 +271,14 @@ CollectionPage.Collection = (props: CollectionProps) => {
               </div>
             </div>
           </div>
+          {customSortMode && !loading && keylessCount > 0 && canEdit && (
+            <AssignPositionsBanner
+              collectionId={props.collection}
+              docs={docs}
+              keylessCount={keylessCount}
+              onAssigned={() => listDocs()}
+            />
+          )}
           <Surface className="CollectionPage__collection__docsTab__content">
             {showInitialLoader ? (
               <div className="CollectionPage__collection__docsTab__content__loading">
@@ -284,9 +324,11 @@ CollectionPage.Collection = (props: CollectionProps) => {
                     collection={props.collection}
                     docs={docs}
                     compact={compactView}
-                    orderBy={orderBy}
+                    orderBy={effectiveOrderBy}
                     onSort={setOrderBy}
                     reloadDocs={() => listDocs()}
+                    reorderable={customSortMode && canEdit}
+                    onDocsChange={setDocs}
                   />
                 </div>
               </div>
@@ -474,6 +516,170 @@ function countStatusBadges(doc: any, releaseCount: number): number {
   return count;
 }
 
+/**
+ * Banner shown in the "Custom order" view when some docs don't have a
+ * `sys.sortKey` yet (docs created before the collection's `customSorting`
+ * option was enabled, or docs created by import scripts). Offers a one-click
+ * action that appends positions for those docs — in the currently displayed
+ * order — after the current max sort key. This also serves as the one-time
+ * initialization when enabling custom sorting on an existing collection.
+ */
+function AssignPositionsBanner(props: {
+  collectionId: string;
+  docs: any[];
+  keylessCount: number;
+  onAssigned: () => void;
+}) {
+  const [loading, setLoading] = useState(false);
+
+  async function assignPositions() {
+    setLoading(true);
+    try {
+      // `props.docs` is already in display order (keyed docs first, keyless
+      // docs at the end), so assignment preserves what the editor sees.
+      const keyless = props.docs.filter((doc: any) => !doc.sys?.sortKey);
+      // Append after the true max key in the db (hidden archived docs may
+      // hold a larger key than any doc in the current view).
+      const maxKey = await fetchMaxSortKey(props.collectionId);
+      const keys = generateNKeysBetween(maxKey, null, keyless.length);
+      await cmsAssignSortKeys(
+        keyless.map((doc: any, i: number) => ({
+          docId: doc.id,
+          sortKey: keys[i],
+        }))
+      );
+      showNotification({
+        title: 'Assigned positions',
+        message: `Assigned positions to ${keyless.length} doc(s).`,
+        autoClose: 5000,
+      });
+      props.onAssigned();
+    } catch (err) {
+      console.error(err);
+      showNotification({
+        title: 'Failed to assign positions',
+        message: String(err),
+        color: 'red',
+        autoClose: false,
+      });
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <div className="CollectionPage__collection__assignPositions">
+      <div className="CollectionPage__collection__assignPositions__text">
+        <b>
+          {props.keylessCount === 1
+            ? '1 doc has no position in the custom order.'
+            : `${props.keylessCount} docs have no position in the custom order.`}
+        </b>{' '}
+        Unpositioned docs are shown at the end of the list and are excluded from
+        API results ordered by <code>sys.sortKey</code>.
+      </div>
+      <Button
+        size="xs"
+        color="dark"
+        loading={loading}
+        onClick={() => assignPositions()}
+      >
+        Assign positions
+      </Button>
+    </div>
+  );
+}
+
+/**
+ * Wraps the docs list in a drag-and-drop context when reordering is enabled
+ * ("Custom order" sort + edit permission); otherwise renders a plain div so
+ * the list markup stays identical.
+ */
+function ReorderableList(props: {
+  enabled?: boolean;
+  onReorder: (fromIndex: number, toIndex: number) => void;
+  className?: string;
+  style?: any;
+  children: ComponentChildren;
+}) {
+  if (!props.enabled) {
+    return (
+      <div className={props.className} style={props.style}>
+        {props.children}
+      </div>
+    );
+  }
+  return (
+    <DragDropContext
+      onDragEnd={(result: DropResult) => {
+        const {source, destination} = result;
+        if (!destination || destination.index === source.index) {
+          return;
+        }
+        props.onReorder(source.index, destination.index);
+      }}
+    >
+      <Droppable
+        droppableId="CollectionPage__docsList__droppable"
+        direction="vertical"
+      >
+        {(provided: any) => (
+          <div
+            ref={provided.innerRef}
+            {...provided.droppableProps}
+            className={props.className}
+            style={props.style}
+          >
+            {props.children}
+            {provided.placeholder}
+          </div>
+        )}
+      </Droppable>
+    </DragDropContext>
+  );
+}
+
+/**
+ * A doc row in the docs list. When reordering is enabled, the row is
+ * draggable and renders a grip handle as its first cell (the handle also
+ * supports keyboard dragging: tab to it, then space + arrow keys).
+ */
+function ReorderableRow(props: {
+  enabled?: boolean;
+  draggableId: string;
+  index: number;
+  children: ComponentChildren;
+}) {
+  const className = 'CollectionPage__collection__docsList__doc';
+  if (!props.enabled) {
+    return <div className={className}>{props.children}</div>;
+  }
+  return (
+    <Draggable draggableId={props.draggableId} index={props.index}>
+      {(provided: any, snapshot: any) => (
+        <div
+          ref={provided.innerRef}
+          {...provided.draggableProps}
+          className={joinClassNames(
+            className,
+            snapshot.isDragging &&
+              'CollectionPage__collection__docsList__doc--dragging'
+          )}
+        >
+          <div
+            className="CollectionPage__collection__docsList__doc__handle"
+            {...provided.dragHandleProps}
+            aria-label="Reorder doc"
+          >
+            <IconGripVertical size={16} stroke="1.5" />
+          </div>
+          {props.children}
+        </div>
+      )}
+    </Draggable>
+  );
+}
+
 CollectionPage.DocsList = (props: {
   collection: string;
   docs: any[];
@@ -481,6 +687,10 @@ CollectionPage.DocsList = (props: {
   orderBy?: string;
   onSort?: (orderBy: string) => void;
   reloadDocs: () => void;
+  /** Enables drag-to-reorder (the "Custom order" sort mode). */
+  reorderable?: boolean;
+  /** Called with the updated docs array after an optimistic reorder. */
+  onDocsChange?: (docs: any[]) => void;
 }) => {
   const collectionId = props.collection;
   const rootCollection = window.__ROOT_CTX.collections[props.collection];
@@ -528,16 +738,106 @@ CollectionPage.DocsList = (props: {
     }
   }
 
+  const reorderable = !!props.reorderable;
+
+  /**
+   * Returns an optimistic local copy of a doc with an updated sort key.
+   * `sys.modifiedAt` is also updated so the doc immediately shows as having
+   * unpublished changes (the persisted write does the same server-side; the
+   * new order requires publishing to take effect on live listings).
+   */
+  function withSortKey(doc: any, sortKey: string) {
+    return {
+      ...doc,
+      sys: {
+        ...doc.sys,
+        sortKey,
+        modifiedAt: Timestamp.now(),
+        modifiedBy: window.firebase.user.email,
+      },
+    };
+  }
+
+  /**
+   * Moves a doc to a new position in the custom order (used by drag-and-drop
+   * and the "Move to top/bottom" menu actions). Updates the list optimistically
+   * and persists the new `sys.sortKey`.
+   */
+  async function handleReorder(fromIndex: number, toIndex: number) {
+    if (
+      !props.onDocsChange ||
+      fromIndex === toIndex ||
+      fromIndex < 0 ||
+      fromIndex >= docs.length
+    ) {
+      return;
+    }
+    toIndex = Math.max(0, Math.min(docs.length - 1, toIndex));
+    const next = [...docs];
+    const [moved] = next.splice(fromIndex, 1);
+    next.splice(toIndex, 0, moved);
+    try {
+      if (next.every((doc: any) => doc.sys?.sortKey)) {
+        let newKey: string | null = null;
+        try {
+          const prevKey = next[toIndex - 1]?.sys?.sortKey ?? null;
+          const nextKey = next[toIndex + 1]?.sys?.sortKey ?? null;
+          newKey = generateKeyBetween(prevKey, nextKey);
+        } catch (err) {
+          // Duplicate or malformed neighbor keys (e.g. from concurrent
+          // editors) can make it impossible to generate a key between two
+          // docs. Fall through to renormalizing the whole list.
+          console.error('failed to generate sort key', err);
+        }
+        if (newKey) {
+          next[toIndex] = withSortKey(moved, newKey);
+          props.onDocsChange(next);
+          await cmsSetDocSortKey(moved.id, newKey);
+          return;
+        }
+      }
+      // Some docs have no sort key yet (or neighbor keys collided):
+      // renormalize by assigning fresh, evenly-spaced keys to every doc in
+      // the current display order.
+      const keys = generateNKeysBetween(null, null, next.length);
+      const renormalized = next.map((doc: any, i: number) =>
+        withSortKey(doc, keys[i])
+      );
+      props.onDocsChange(renormalized);
+      await cmsAssignSortKeys(
+        renormalized.map((doc: any) => ({
+          docId: doc.id,
+          sortKey: doc.sys.sortKey,
+        }))
+      );
+    } catch (err) {
+      console.error('failed to reorder doc', err);
+      showNotification({
+        title: 'Failed to reorder',
+        message: String(err),
+        color: 'red',
+        autoClose: false,
+      });
+      props.reloadDocs();
+    }
+  }
+
   if (compact) {
     return (
-      <div
+      <ReorderableList
+        enabled={reorderable}
+        onReorder={handleReorder}
         className={joinClassNames(
           'CollectionPage__collection__docsList',
-          'CollectionPage__collection__docsList--compact'
+          'CollectionPage__collection__docsList--compact',
+          reorderable && 'CollectionPage__collection__docsList--reorderable'
         )}
         style={{['--docs-status-width' as any]: `${statusColumnWidth}px`}}
       >
         <div className="CollectionPage__collection__docsList__header">
+          {reorderable && (
+            <div className="CollectionPage__collection__docsList__header__handle" />
+          )}
           <div className="CollectionPage__collection__docsList__header__image" />
           <SortableHeaderCell
             column="slug"
@@ -568,7 +868,7 @@ CollectionPage.DocsList = (props: {
           />
           <div className="CollectionPage__collection__docsList__header__controls" />
         </div>
-        {docs.map((doc) => {
+        {docs.map((doc, index) => {
           const cmsUrl = `/cms/content/${collectionId}/${doc.slug}`;
           const fields = doc.fields || {};
           const previewTitle = getNestedValue(
@@ -581,9 +881,11 @@ CollectionPage.DocsList = (props: {
               rootCollection.preview?.image || 'meta.image'
             ) || rootCollection.preview?.defaultImage;
           return (
-            <div
-              className="CollectionPage__collection__docsList__doc"
+            <ReorderableRow
               key={doc.id}
+              enabled={reorderable}
+              draggableId={doc.id}
+              index={index}
             >
               <a
                 className="CollectionPage__collection__docsList__doc__image"
@@ -622,18 +924,31 @@ CollectionPage.DocsList = (props: {
                   docId={doc.id}
                   data={doc}
                   onAction={onDocAction}
+                  onMoveTo={
+                    reorderable
+                      ? (position) =>
+                          handleReorder(
+                            index,
+                            position === 'top' ? 0 : docs.length - 1
+                          )
+                      : undefined
+                  }
                 />
               </div>
-            </div>
+            </ReorderableRow>
           );
         })}
-      </div>
+      </ReorderableList>
     );
   }
 
   return (
-    <div className="CollectionPage__collection__docsList">
-      {docs.map((doc) => {
+    <ReorderableList
+      enabled={reorderable}
+      onReorder={handleReorder}
+      className="CollectionPage__collection__docsList"
+    >
+      {docs.map((doc, index) => {
         const cmsUrl = `/cms/content/${collectionId}/${doc.slug}`;
         const liveUrl = getLiveUrl(doc.slug);
         const fields = doc.fields || {};
@@ -647,9 +962,11 @@ CollectionPage.DocsList = (props: {
             rootCollection.preview?.image || 'meta.image'
           ) || rootCollection.preview?.defaultImage;
         return (
-          <div
-            className="CollectionPage__collection__docsList__doc"
+          <ReorderableRow
             key={doc.id}
+            enabled={reorderable}
+            draggableId={doc.id}
+            index={index}
           >
             <div className="CollectionPage__collection__docsList__doc__image">
               <a href={cmsUrl}>
@@ -685,12 +1002,21 @@ CollectionPage.DocsList = (props: {
                 docId={doc.id}
                 data={doc}
                 onAction={onDocAction}
+                onMoveTo={
+                  reorderable
+                    ? (position) =>
+                        handleReorder(
+                          index,
+                          position === 'top' ? 0 : docs.length - 1
+                        )
+                    : undefined
+                }
               />
             </div>
-          </div>
+          </ReorderableRow>
         );
       })}
-    </div>
+    </ReorderableList>
   );
 };
 

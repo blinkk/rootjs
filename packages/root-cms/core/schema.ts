@@ -611,6 +611,38 @@ export type Collection = SchemaWithTypes & {
     direction?: 'asc' | 'desc';
   }>;
   /**
+   * Enables custom (user-defined) ordering of docs in the collection, e.g.
+   * for curated listings like storefronts.
+   *
+   * When enabled, the CMS shows a "Custom order" sort option where editors
+   * can drag docs (or use "Move to top/bottom") to reorder them. The order is
+   * stored as a fractional-index string at `sys.sortKey` on the draft doc.
+   * Like any other edit, reordering updates `sys.modifiedAt`, and docs need
+   * to be published for the new order to take effect on live (published)
+   * listings.
+   *
+   * On the server, `listDocs()` returns docs in the custom order by default
+   * for collections with this option (when no `orderBy` or `query` option is
+   * passed). To order explicitly, use `listDocs(id, {orderBy:
+   * 'sys.sortKey'})`.
+   *
+   * NOTE: firestore's `orderBy()` excludes docs that don't have the ordered
+   * field. Docs created outside the CMS (e.g. import scripts using
+   * `saveDraftData()`) have no `sys.sortKey` and are excluded from ordered
+   * results until positions are assigned — the CMS shows an "assign
+   * positions" banner for this (which also serves as the one-time
+   * initialization when enabling this option on an existing collection).
+   * Import scripts can assign keys themselves using `generateKeyBetween()` /
+   * `generateNKeysBetween()` / `generateKeyAfter()` exported from
+   * `@blinkk/root-cms`.
+   *
+   * NOTE: sorting by `sys.sortKey` alone uses firestore's automatic
+   * single-field index. As with `sortOptions`, combining it with a `where()`
+   * filter may require a new composite index (the first such query returns an
+   * error with a link for creating the index).
+   */
+  customSorting?: boolean;
+  /**
    * Options that control how the document listing for this collection is
    * rendered in the CMS.
    */

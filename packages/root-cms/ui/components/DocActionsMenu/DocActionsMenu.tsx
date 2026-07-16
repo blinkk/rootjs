@@ -6,6 +6,8 @@ import {
   IconArchive,
   IconArchiveOff,
   IconArrowBack,
+  IconArrowBarToDown,
+  IconArrowBarToUp,
   IconCloudOff,
   IconCopy,
   IconDotsVertical,
@@ -58,6 +60,12 @@ export interface DocActionsMenuProps {
   data?: CMSDoc;
   onDelete?: () => void;
   onAction?: (event: DocActionEvent) => void;
+  /**
+   * When provided (i.e. the docs list is in "Custom order" mode), renders
+   * "Move to top" / "Move to bottom" menu items that call back with the
+   * requested position.
+   */
+  onMoveTo?: (position: 'top' | 'bottom') => void;
 }
 
 export function DocActionsMenu(props: DocActionsMenuProps) {
@@ -366,6 +374,24 @@ export function DocActionsMenu(props: DocActionsMenuProps) {
         </ActionIcon>
       }
     >
+      {props.onMoveTo && (
+        <Menu.Item
+          icon={<IconArrowBarToUp size={20} />}
+          onClick={() => props.onMoveTo!('top')}
+          disabled={!canEdit}
+        >
+          Move to top
+        </Menu.Item>
+      )}
+      {props.onMoveTo && (
+        <Menu.Item
+          icon={<IconArrowBarToDown size={20} />}
+          onClick={() => props.onMoveTo!('bottom')}
+          disabled={!canEdit}
+        >
+          Move to bottom
+        </Menu.Item>
+      )}
       {!isArchived && (
         <Menu.Item
           icon={<IconPackage size={20} />}

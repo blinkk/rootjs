@@ -54,6 +54,11 @@ export interface RootCMSDoc<Fields = any> {
     publishedAt?: number;
     publishedBy?: string;
     locales?: string[];
+    /**
+     * Fractional-index string defining the doc's custom order within the
+     * collection. See the `customSorting` collection option.
+     */
+    sortKey?: string;
   };
   /** User-entered field values from the CMS. */
   fields?: Fields;

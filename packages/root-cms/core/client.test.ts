@@ -770,4 +770,118 @@ describe('RootCMSClient Validation', () => {
       );
     });
   });
+
+  describe('listDocs custom sorting', () => {
+    /**
+     * Creates a chainable firestore query mock that records `orderBy()` calls
+     * and returns an empty result set.
+     */
+    function createQueryMock() {
+      const orderByCalls: any[] = [];
+      const queryMock: any = {
+        limit: vi.fn(() => queryMock),
+        offset: vi.fn(() => queryMock),
+        orderBy: vi.fn((...args: any[]) => {
+          orderByCalls.push(args);
+          return queryMock;
+        }),
+        where: vi.fn(() => queryMock),
+        get: vi.fn(async () => ({forEach: () => {}})),
+      };
+      return {queryMock, orderByCalls};
+    }
+
+    async function createClient(queryMock: any) {
+      const {RootCMSClient} = await import('./client.js');
+      const client = new RootCMSClient(mockRootConfig);
+      (client as any).db = {collection: vi.fn(() => queryMock)};
+      return client;
+    }
+
+    it('defaults to orderBy sys.sortKey when customSorting is enabled', async () => {
+      const {queryMock, orderByCalls} = createQueryMock();
+      const client = await createClient(queryMock);
+      mockGetCollectionSchema.mockResolvedValue({
+        name: 'Products',
+        customSorting: true,
+        fields: [],
+      });
+
+      await client.listDocs('Products', {mode: 'published'});
+
+      expect(orderByCalls).toEqual([['sys.sortKey', undefined]]);
+    });
+
+    it('does not order when customSorting is not enabled', async () => {
+      const {queryMock, orderByCalls} = createQueryMock();
+      const client = await createClient(queryMock);
+      mockGetCollectionSchema.mockResolvedValue({name: 'Pages', fields: []});
+
+      await client.listDocs('Pages', {mode: 'published'});
+
+      expect(orderByCalls).toEqual([]);
+    });
+
+    it('explicit orderBy takes precedence over the custom sorting default', async () => {
+      const {queryMock, orderByCalls} = createQueryMock();
+      const client = await createClient(queryMock);
+      mockGetCollectionSchema.mockResolvedValue({
+        name: 'Products',
+        customSorting: true,
+        fields: [],
+      });
+
+      await client.listDocs('Products', {
+        mode: 'published',
+        orderBy: 'sys.createdAt',
+        orderByDirection: 'desc',
+      });
+
+      expect(orderByCalls).toEqual([['sys.createdAt', 'desc']]);
+    });
+
+    it('skips the custom sorting default when a query fn is provided', async () => {
+      const {queryMock, orderByCalls} = createQueryMock();
+      const client = await createClient(queryMock);
+      mockGetCollectionSchema.mockResolvedValue({
+        name: 'Products',
+        customSorting: true,
+        fields: [],
+      });
+
+      await client.listDocs('Products', {
+        mode: 'published',
+        query: (q: any) => q.where('sys.locales', 'array-contains', 'en'),
+      });
+
+      expect(orderByCalls).toEqual([]);
+      expect(queryMock.where).toHaveBeenCalled();
+    });
+
+    it('degrades to no default when the collection schema fails to load', async () => {
+      const {queryMock, orderByCalls} = createQueryMock();
+      const client = await createClient(queryMock);
+      mockGetCollectionSchema.mockRejectedValue(new Error('no schemas'));
+
+      await expect(
+        client.listDocs('Products', {mode: 'published'})
+      ).resolves.toEqual({docs: []});
+      expect(orderByCalls).toEqual([]);
+    });
+
+    it('memoizes the customSorting lookup per collection', async () => {
+      const {queryMock} = createQueryMock();
+      const client = await createClient(queryMock);
+      mockGetCollectionSchema.mockResolvedValue({
+        name: 'Products',
+        customSorting: true,
+        fields: [],
+      });
+
+      await client.listDocs('Products', {mode: 'published'});
+      await client.listDocs('Products', {mode: 'draft'});
+
+      expect(mockGetCollectionSchema).toHaveBeenCalledTimes(1);
+    });
+  });
 });

@@ -8,6 +8,7 @@ import {
 } from 'firebase/firestore';
 import {useEffect, useState} from 'preact/hooks';
 import {setDocToCache} from '../utils/doc-cache.js';
+import {sortDocsCustomOrder} from '../utils/doc-sort.js';
 import {notifyErrors} from '../utils/notifications.js';
 import {withTimeout} from '../utils/with-timeout.js';
 import {useFirebase} from './useFirebase.js';
@@ -60,6 +61,12 @@ export function useDocsList(collectionId: string, options: UseDocsListOptions) {
       dbQuery = titleField
         ? query(dbCollection, queryOrderby(titleField, direction))
         : query(dbCollection, queryOrderby(documentId(), direction));
+    } else if (orderBy === 'custom') {
+      // Custom order is sorted in memory below. A firestore
+      // `orderBy('sys.sortKey')` query would silently exclude docs that don't
+      // have a sort key yet (e.g. docs created before the `customSorting`
+      // option was enabled), so fetch in the default (document id) order.
+      dbQuery = dbCollection;
     } else {
       const col = window.__ROOT_CTX.collections[collectionId] as any;
       const custom = col?.sortOptions?.find((s: any) => s.id === orderBy);
@@ -76,7 +83,7 @@ export function useDocsList(collectionId: string, options: UseDocsListOptions) {
         undefined,
         'loading docs'
       );
-      const docs: any[] = [];
+      let docs: any[] = [];
       snapshot.docs.forEach((d) => {
         const data = d.data();
         const slug = d.id;
@@ -93,6 +100,9 @@ export function useDocsList(collectionId: string, options: UseDocsListOptions) {
         }
         docs.push(docData);
       });
+      if (orderBy === 'custom') {
+        docs = sortDocsCustomOrder(docs);
+      }
       setDocs(docs);
     });
     setLoading(false);
@@ -103,7 +113,7 @@ export function useDocsList(collectionId: string, options: UseDocsListOptions) {
     listDocs();
   }, [collectionId, options.orderBy, includeArchived]);
 
-  return [loading, listDocs, docs] as const;
+  return [loading, listDocs, docs, setDocs] as const;
 }
 
 /**
