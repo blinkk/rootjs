@@ -711,12 +711,14 @@ LocalizationModal.Translations = (props: TranslationsProps) => {
     fileInput.addEventListener('change', async () => {
       const file = fileInput.files?.[0];
       if (file) {
-        const formData = new FormData();
-        formData.append('file', file);
         try {
+          // Send the CSV as JSON rather than multipart/form-data; some
+          // deployments sit behind WAFs that block multipart requests.
+          const csv = await file.text();
           const res = await fetch('/cms/api/csv.import', {
             method: 'POST',
-            body: formData,
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({csv}),
           });
           if (res.status !== 200) {
             const errorText = await res.text();

@@ -388,6 +388,11 @@ export function api(server: Server, options: ApiOptions) {
    * Imports a CSV file and returns a JSON array of objects representing the
    * CSV.
    *
+   * Accepts either a JSON body (`{"csv": "<csv text>"}`) or a
+   * `multipart/form-data` upload with a `file` field. The CMS UI sends JSON
+   * since some deployments sit behind WAFs that block multipart requests;
+   * multipart is kept for backwards compatibility.
+   *
    * Sample response:
    *
    * ```json
@@ -404,14 +409,21 @@ export function api(server: Server, options: ApiOptions) {
     '/cms/api/csv.import',
     multipartMiddleware(),
     (req: Request, res: Response) => {
-      if (req.method !== 'POST' || !req.files || !req.files.file) {
+      if (req.method !== 'POST') {
         res.status(400).json({success: false, error: 'BAD_REQUEST'});
         return;
       }
 
       try {
-        const file = req.files.file;
-        const csvString = file.buffer.toString('utf8');
+        let csvString: string;
+        if (req.files?.file) {
+          csvString = req.files.file.buffer.toString('utf8');
+        } else if (typeof req.body?.csv === 'string') {
+          csvString = req.body.csv;
+        } else {
+          res.status(400).json({success: false, error: 'BAD_REQUEST'});
+          return;
+        }
         const rows = csvToArray(csvString);
         res.status(200).json({success: true, data: rows});
       } catch (err) {
