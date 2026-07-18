@@ -1123,6 +1123,13 @@ function arrayReducer(state: ArrayFieldValue, action: ArrayAction) {
       const data = state ?? {};
       const order = [...(data._array || [])];
       const key = order[action.index];
+      if (!key) {
+        // The item no longer exists (e.g. removed by a concurrent update
+        // before the dispatch landed). Writing would target a bogus
+        // `undefined` key.
+        console.error('updateItem: no item at index', action.index);
+        return state;
+      }
       const newValue = action.newValue ?? {};
       action.draft.updateKey(`${action.deepKey}.${key}`, newValue);
       return {
@@ -1202,11 +1209,14 @@ function arrayReducer(state: ArrayFieldValue, action: ArrayAction) {
       };
     }
     case 'moveUp': {
-      if (action.index === 0) {
-        return state;
-      }
       const data = state ?? {};
       const order = [...(data._array || [])];
+      // Bounds-check against the current state; a stale index (e.g. from a
+      // dispatch racing a concurrent update) would otherwise make arraySwap()
+      // write `undefined` entries into `_array`.
+      if (action.index <= 0 || action.index >= order.length) {
+        return state;
+      }
       arraySwap(order, action.index, action.index - 1);
       action.draft.updateKeys({
         [`${action.deepKey}._array`]: order,
@@ -1220,7 +1230,7 @@ function arrayReducer(state: ArrayFieldValue, action: ArrayAction) {
     case 'moveDown': {
       const data = state ?? {};
       const order = [...(data._array || [])];
-      if (action.index >= order.length - 1) {
+      if (action.index < 0 || action.index >= order.length - 1) {
         return state;
       }
       arraySwap(order, action.index, action.index + 1);
@@ -1261,6 +1271,10 @@ function arrayReducer(state: ArrayFieldValue, action: ArrayAction) {
       const order = data._array || [];
       const newOrder = [...order];
       const oldKey = newOrder[action.index];
+      if (!oldKey) {
+        console.error('removeAt: no item at index', action.index);
+        return state;
+      }
       delete data[oldKey];
       newOrder.splice(action.index, 1);
       action.draft.updateKeys({

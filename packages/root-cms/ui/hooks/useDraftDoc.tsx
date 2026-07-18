@@ -2,6 +2,7 @@ import {showNotification} from '@mantine/notifications';
 import {
   doc,
   DocumentReference,
+  FieldValue,
   Firestore,
   onSnapshot,
   updateDoc,
@@ -266,8 +267,8 @@ export class DraftDocController extends EventListener {
       const val = updates[key];
       if (val === null || val === undefined) {
         // Firestore doesn't support `undefined`, so use deleteField() instead.
-        // NOTE(stevenle): this doesn't currently handle nested `undefined`
-        // values.
+        // Nested `undefined` values are pruned at flush time by
+        // `removeUndefinedValuesDeep()`.
         this.setPendingUpdate(key, deleteField());
       } else {
         this.setPendingUpdate(key, val);
@@ -320,9 +321,19 @@ export class DraftDocController extends EventListener {
 
   /** Returns pending updates normalized for Firestore updateDoc(). */
   private getPendingUpdates() {
-    return removeOverlappingChildUpdates(
+    const updates = removeOverlappingChildUpdates(
       Object.fromEntries(this.pendingUpdates)
     );
+    // Firestore rejects `undefined` anywhere in the payload. Queued object
+    // values share references with the local store, so a child key that was
+    // removed after its parent was queued (e.g. pasting an array item and then
+    // deleting one of its sub-fields before the debounced save fires) could
+    // otherwise inject `undefined` into the parent object. Dropping the key
+    // from the parent write achieves the deletion.
+    for (const key in updates) {
+      updates[key] = removeUndefinedValuesDeep(updates[key]);
+    }
+    return updates;
   }
 
   /**
@@ -406,7 +417,9 @@ export class DraftDocController extends EventListener {
     // Immediately clear the pending updates so that there's no race condition
     // with any new updates the user makes while the changes are being saved to
     // the db. If the db save fails for any reason, re-apply the pending updates
-    // and re-queue the db save.
+    // and re-queue the db save. Keep the original (unpruned) entries around so
+    // a retry preserves the store-object aliasing that later edits rely on.
+    const prevPending = new Map(this.pendingUpdates);
     this.pendingUpdates.clear();
     try {
       this.setSaveState(SaveState.SAVING);
@@ -435,7 +448,7 @@ export class DraftDocController extends EventListener {
         color: 'red',
         autoClose: false,
       });
-      for (const key in updates) {
+      for (const [key, value] of prevPending) {
         // Ignore sys updates.
         if (key.startsWith('sys.')) {
           continue;
@@ -444,7 +457,7 @@ export class DraftDocController extends EventListener {
         if (this.pendingUpdates.has(key)) {
           continue;
         }
-        this.pendingUpdates.set(key, updates[key]);
+        this.pendingUpdates.set(key, value);
         this.queueChanges();
         console.log('re-queued updates');
         console.log(this.pendingUpdates);
@@ -481,13 +494,55 @@ function applyUpdates(data: any, updates: any) {
       data[head] ??= {};
       applyUpdates(data[head], {[tail]: val});
     } else {
-      if (typeof val === 'undefined') {
+      if (typeof val === 'undefined' || val instanceof FieldValue) {
+        // The only FieldValue sentinel stored in pendingUpdates is
+        // deleteField() (from removeKey()), which locally means "remove the
+        // key". Copying the sentinel into the data as a value would leak it to
+        // subscribers and eventually back into a Firestore write.
         delete data[key];
       } else {
         data[key] = val;
       }
     }
   }
+}
+
+/**
+ * Returns a copy of a value with `undefined` entries removed from plain
+ * objects and arrays. Non-plain objects (e.g. Timestamp or FieldValue
+ * sentinels) are returned as-is. Firestore rejects `undefined` anywhere in an
+ * updateDoc() payload.
+ */
+export function removeUndefinedValuesDeep(value: any): any {
+  if (Array.isArray(value)) {
+    const result: any[] = [];
+    for (const item of value) {
+      if (item !== undefined) {
+        result.push(removeUndefinedValuesDeep(item));
+      }
+    }
+    return result;
+  }
+  if (isPlainObject(value)) {
+    const result: Record<string, any> = {};
+    for (const key of Object.keys(value)) {
+      const val = value[key];
+      if (val !== undefined) {
+        result[key] = removeUndefinedValuesDeep(val);
+      }
+    }
+    return result;
+  }
+  return value;
+}
+
+/** Returns true for plain objects (object literals, JSON-parsed objects). */
+function isPlainObject(value: any): boolean {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+  const proto = Object.getPrototypeOf(value);
+  return proto === Object.prototype || proto === null;
 }
 
 function splitKey(key: string) {
