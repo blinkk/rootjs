@@ -1,6 +1,5 @@
 import {
   Timestamp,
-  WriteBatch,
   collection,
   deleteField,
   doc,
@@ -13,6 +12,7 @@ import {
   writeBatch,
 } from 'firebase/firestore';
 import {logAction} from './actions.js';
+import {MultiBatch} from './batch.js';
 import {GSpreadsheet, parseSpreadsheetUrl} from './gsheets.js';
 
 export type DataSourceType = 'http' | 'gsheet';
@@ -375,14 +375,14 @@ export async function unpublishDataSource(id: string) {
 
 export async function cmsPublishDataSources(
   ids: string[],
-  options?: {batch?: WriteBatch; commitBatch?: boolean}
+  options?: {batch?: MultiBatch; commitBatch?: boolean}
 ) {
   if (ids.length === 0) {
     return;
   }
   const db = window.firebase.db;
   const projectId = window.__ROOT_CTX.rootConfig.projectId;
-  const batch = options?.batch || writeBatch(db);
+  const batch = options?.batch || new MultiBatch(db);
   for (const id of ids) {
     const dataSource = await getDataSource(id);
     if (!dataSource) {
@@ -392,6 +392,10 @@ export async function cmsPublishDataSources(
       throw new Error(`data source is archived: ${id}`);
     }
     const dataRes = await getFromDataSource(id, {mode: 'draft'});
+    // Each published data source adds 3 writes to the batch. Reserve capacity
+    // for all of them so the writes for a single data source are committed
+    // atomically.
+    batch.ensureCapacity(3);
     const dataSourceDocRef = doc(db, 'Projects', projectId, 'DataSources', id);
     const dataDocRefDraft = doc(
       db,

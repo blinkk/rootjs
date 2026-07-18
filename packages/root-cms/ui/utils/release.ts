@@ -11,10 +11,10 @@ import {
   runTransaction,
   serverTimestamp,
   updateDoc,
-  writeBatch,
 } from 'firebase/firestore';
 import {renderAutoSlug} from '../../shared/auto-slug.js';
 import {logAction} from './actions.js';
+import {MultiBatch} from './batch.js';
 import {cmsPublishDataSources} from './data-source.js';
 import {cmsPublishDocs} from './doc.js';
 
@@ -138,16 +138,12 @@ export async function publishRelease(id: string) {
   const db = window.firebase.db;
   const docRef = doc(db, 'Projects', projectId, COLLECTION_ID, id);
 
-  // Create a batch request and publish docs and update the release in an
-  // atomic write to firestore.
-  const batch = writeBatch(db);
-  // Update the release's publishedAt.
-  batch.update(docRef, {
-    publishedAt: serverTimestamp(),
-    publishedBy: window.firebase.user.email,
-    scheduledAt: deleteField(),
-    scheduledBy: deleteField(),
-  });
+  // Create a batch request that publishes the release's docs and data sources
+  // and updates the release. `MultiBatch` automatically splits the writes
+  // across multiple batch requests as needed to stay within firestore's
+  // per-batch write limits, so there is no limit on the number of docs in a
+  // release.
+  const batch = new MultiBatch(db);
   if (dataSourceIds.length > 0) {
     await cmsPublishDataSources(dataSourceIds, {batch, commitBatch: false});
   }
@@ -156,6 +152,16 @@ export async function publishRelease(id: string) {
     releaseId: id,
     publishMessage: release.description,
   });
+  // Update the release's publishedAt. This write is intentionally added last
+  // so that if any of the previous batches fails to commit, the release is
+  // not marked as published and publishing can be retried.
+  batch.update(docRef, {
+    publishedAt: serverTimestamp(),
+    publishedBy: window.firebase.user.email,
+    scheduledAt: deleteField(),
+    scheduledBy: deleteField(),
+  });
+  await batch.commit();
   console.log(`published release: ${id}`);
   const metadata: Record<string, unknown> = {
     releaseId: id,
