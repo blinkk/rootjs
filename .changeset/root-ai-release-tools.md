@@ -1,5 +1,5 @@
 ---
-'@blinkk/root-cms': minor
+'@blinkk/root-cms': patch
 ---
 
-feat: add release tools to Root AI for creating and editing releases
+feat: add tools to root ai for creating and editing releases
