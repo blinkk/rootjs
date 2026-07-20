@@ -16,8 +16,10 @@ import {
   Tooltip,
 } from '@mantine/core';
 import {useModals} from '@mantine/modals';
-import {showNotification} from '@mantine/notifications';
+import {hideNotification, showNotification} from '@mantine/notifications';
 import {
+  IconArrowBackUp,
+  IconArrowForwardUp,
   IconBraces,
   IconChevronDown,
   IconChevronRight,
@@ -67,6 +69,8 @@ import {
   SaveState,
   useDraftDoc,
   useDraftDocField,
+  useDraftDocHistory,
+  useDraftDocHistoryApplied,
   useDraftDocSaveState,
 } from '../../hooks/useDraftDoc.js';
 import {useModalTheme} from '../../hooks/useModalTheme.js';
@@ -86,6 +90,11 @@ import {
 import {extractField} from '../../utils/extract.js';
 import {getDefaultFieldValue, normalizePresetData} from '../../utils/fields.js';
 import {requestHighlightNode} from '../../utils/iframe-preview.js';
+import {
+  isEditableTarget,
+  isRedoKeyEvent,
+  isUndoKeyEvent,
+} from '../../utils/keyboard.js';
 import {deepMerge} from '../../utils/objects.js';
 import {testCanEdit, testCanPublish} from '../../utils/permissions.js';
 import {autokey} from '../../utils/rand.js';
@@ -134,6 +143,54 @@ interface DocEditorProps {
   className?: string;
   docId: string;
   hideStatusBar?: boolean;
+}
+
+/**
+ * Shows a transient notification with an "Undo" button after a destructive
+ * one-click action (e.g. removing an array item, clearing a section). The
+ * undo is scoped to the history entry that was just created, so it no-ops
+ * (with an explanation) if newer edits have landed in the meantime.
+ */
+function showUndoNotification(draft: DraftDocController, message: string) {
+  const entry = draft.history.peekUndo();
+  if (!entry) {
+    showNotification({message, autoClose: 2000});
+    return;
+  }
+  const notificationId = `undo-${entry.id}`;
+  showNotification({
+    id: notificationId,
+    message: (
+      <div className="DocEditor__undoNotification">
+        <Text size="body-sm">{message}</Text>
+        <Button
+          variant="default"
+          size="xs"
+          compact
+          onClick={() => {
+            hideNotification(notificationId);
+            const result = draft.undo({onlyEntryId: entry.id});
+            if (result.status === 'empty') {
+              showNotification({
+                message: 'Newer edits were made. Use ⌘Z to undo step by step.',
+                autoClose: 4000,
+              });
+            } else if (result.status === 'conflict') {
+              showNotification({
+                title: 'Undo discarded',
+                message: 'This field was changed by another editor.',
+                color: 'yellow',
+                autoClose: 5000,
+              });
+            }
+          }}
+        >
+          Undo
+        </Button>
+      </div>
+    ),
+    autoClose: 4000,
+  });
 }
 
 const COLLECTION_SCHEMA_TYPES_CONTEXT = createContext<
@@ -349,6 +406,7 @@ DocEditor.StatusBar = (props: StatusBarProps) => {
         <Viewers id={`doc/${props.docId}`} />
       </div>
       <DocEditor.SaveState />
+      {canEdit && <DocEditor.UndoRedoButtons />}
       {data?.sys && (
         <div className="DocEditor__statusBar__statusBadges">
           <DocStatusBadges
@@ -523,6 +581,93 @@ DocEditor.SaveState = () => {
       {saveState === SaveState.SAVING && 'saving...'}
       {saveState === SaveState.UPDATES_PENDING && 'saving...'}
       {saveState === SaveState.ERROR && 'error saving'}
+    </div>
+  );
+};
+
+DocEditor.UndoRedoButtons = () => {
+  const history = useDraftDocHistory();
+
+  // The handler closes over the latest history state via a ref so the
+  // document-level listener only binds once.
+  const historyRef = useRef(history);
+  historyRef.current = history;
+
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      // Text inputs and contenteditable (Lexical) keep their own undo/redo;
+      // the doc-level shortcut only fires outside of them.
+      if (isEditableTarget(event.target)) {
+        return;
+      }
+      // Ignore events from open modals (e.g. the reference editor modal,
+      // which nests its own doc editor) so the main doc isn't undone while
+      // a modal has focus.
+      if (
+        event.target instanceof HTMLElement &&
+        event.target.closest('[role="dialog"]')
+      ) {
+        return;
+      }
+      if (isUndoKeyEvent(event)) {
+        event.preventDefault();
+        event.stopPropagation();
+        historyRef.current.undo();
+      } else if (isRedoKeyEvent(event)) {
+        event.preventDefault();
+        event.stopPropagation();
+        historyRef.current.redo();
+      }
+    };
+    document.documentElement.addEventListener('keydown', onKeyDown);
+    return () => {
+      document.documentElement.removeEventListener('keydown', onKeyDown);
+    };
+  }, []);
+
+  const undoLabel = history.undoLabel
+    ? `Undo: ${history.undoLabel} (⌘ Z)`
+    : 'Undo (⌘ Z)';
+  const redoLabel = history.redoLabel
+    ? `Redo: ${history.redoLabel} (⌘ ⇧ Z)`
+    : 'Redo (⌘ ⇧ Z)';
+
+  return (
+    <div className="DocEditor__statusBar__undoRedo">
+      <Tooltip
+        label={undoLabel}
+        transition="pop"
+        withArrow
+        disabled={!history.canUndo}
+      >
+        <ActionIcon
+          className="DocEditor__statusBar__undoRedo__button"
+          variant="default"
+          size="sm"
+          disabled={!history.canUndo}
+          onClick={() => history.undo()}
+          aria-label="Undo"
+        >
+          <IconArrowBackUp size={16} strokeWidth={1.75} />
+        </ActionIcon>
+      </Tooltip>
+      <Tooltip
+        label={redoLabel}
+        transition="pop"
+        withArrow
+        disabled={!history.canRedo}
+      >
+        <ActionIcon
+          className="DocEditor__statusBar__undoRedo__button"
+          variant="default"
+          size="sm"
+          disabled={!history.canRedo}
+          onClick={() => history.redo()}
+          aria-label="Redo"
+        >
+          <IconArrowForwardUp size={16} strokeWidth={1.75} />
+        </ActionIcon>
+      </Tooltip>
     </div>
   );
 };
@@ -869,13 +1014,13 @@ DocEditor.ObjectFieldDrawer = (props: FieldProps) => {
   };
 
   const clearValue = async (modalId?: string) => {
-    await draft.removeKey(props.deepKey);
-    showNotification({
-      message: 'Cleared',
-      autoClose: 2000,
+    draft.history.group('Cleared section', () => {
+      draft.removeKey(props.deepKey);
     });
+    showUndoNotification(draft, 'Section cleared');
     // Clear is destructive, so persist immediately instead of waiting for
-    // autosave.
+    // autosave. Undoing afterwards re-queues the restored values through the
+    // normal save flow.
     await draft.flush();
     if (modalId) {
       modals.closeModal(modalId);
@@ -893,7 +1038,7 @@ DocEditor.ObjectFieldDrawer = (props: FieldProps) => {
           weight="semi-bold"
           className="DocEditor__ObjectFieldDrawer__confirmText"
         >
-          This will clear all values in this section. There is no undo.
+          This will clear all values in this section. You can undo this with ⌘Z.
         </Text>
       ),
       labels: {confirm: 'Clear', cancel: 'Cancel'},
@@ -1277,10 +1422,13 @@ function arrayReducer(state: ArrayFieldValue, action: ArrayAction) {
       }
       delete data[oldKey];
       newOrder.splice(action.index, 1);
+      // A single updateKeys() call so the removal (order + item data) is
+      // captured as one undoable history entry. `undefined` values map to
+      // deleteField() in the db and delete the key from the local store.
       action.draft.updateKeys({
         [`${action.deepKey}._array`]: newOrder,
+        [`${action.deepKey}.${oldKey}`]: undefined,
       });
-      action.draft.removeKey(`${action.deepKey}.${oldKey}`);
       return {
         ...data,
         _array: newOrder,
@@ -1367,6 +1515,17 @@ DocEditor.ArrayField = (props: FieldProps) => {
     dispatch({type: 'update', newValue});
   });
 
+  // Undo/redo restores write child keys (e.g. `<deepKey>._array`) directly,
+  // which does not notify this component's plain subscription on the parent
+  // key, so re-pull the array value whenever a history entry touches this
+  // field's subtree.
+  useDraftDocHistoryApplied((keys: string[]) => {
+    const prefix = `${props.deepKey}.`;
+    if (keys.some((key) => key === props.deepKey || key.startsWith(prefix))) {
+      dispatch({type: 'update', newValue: draft.getValue(props.deepKey)});
+    }
+  });
+
   // Focus the field that was just moved or pasted.
   useEffect(() => {
     if (value._moved) {
@@ -1451,12 +1610,22 @@ DocEditor.ArrayField = (props: FieldProps) => {
   };
 
   const removeAt = (index: number) => {
-    dispatch({
-      type: 'removeAt',
-      draft: draft,
-      deepKey: props.deepKey,
-      index: index,
+    // The label appears in the undo tooltip. When called from a cut+paste
+    // move, the nested group joins the outer "Moved item" group instead.
+    draft.history.group('Removed item', () => {
+      dispatch({
+        type: 'removeAt',
+        draft: draft,
+        deepKey: props.deepKey,
+        index: index,
+      });
     });
+  };
+
+  /** Removes an item and offers a transient "Undo" action. */
+  const removeItem = (index: number) => {
+    removeAt(index);
+    showUndoNotification(draft, 'Item removed');
   };
 
   /** Focus the field header (the clickable "summary" part). */
@@ -1518,15 +1687,18 @@ DocEditor.ArrayField = (props: FieldProps) => {
       return;
     }
 
-    pasteAfter(index, data);
-    if (cutIndex !== null) {
-      let indexToRemove = cutIndex;
-      if (index < cutIndex) {
-        indexToRemove += 1;
+    // Group so that a cut+paste (move) undoes as a single step.
+    draft.history.group('Moved item', () => {
+      pasteAfter(index, data);
+      if (cutIndex !== null) {
+        let indexToRemove = cutIndex;
+        if (index < cutIndex) {
+          indexToRemove += 1;
+        }
+        removeAt(indexToRemove);
+        setCutIndex(null);
       }
-      removeAt(indexToRemove);
-      setCutIndex(null);
-    }
+    });
     showNotification({
       message: 'Pasted item',
       autoClose: 2000,
@@ -1596,11 +1768,7 @@ DocEditor.ArrayField = (props: FieldProps) => {
         pasteFromVirtualClipboard(index);
       } else if (e.metaKey && (e.key === 'Backspace' || e.key === 'Delete')) {
         e.preventDefault();
-        removeAt(index);
-        showNotification({
-          message: 'Deleted item',
-          autoClose: 2000,
-        });
+        removeItem(index);
       } else if (e.key === 'ArrowUp') {
         e.preventDefault();
         moveUp(index);
@@ -1709,7 +1877,7 @@ DocEditor.ArrayField = (props: FieldProps) => {
                     onPasteAfter={pasteAfterFromVirtualClipboard}
                     onEditJson={editJson}
                     onAiEdit={aiEdit}
-                    onRemove={removeAt}
+                    onRemove={removeItem}
                   />
                 );
               })}
