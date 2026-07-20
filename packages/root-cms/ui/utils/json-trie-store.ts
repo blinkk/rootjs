@@ -101,7 +101,15 @@ export class JsonTrieStore extends EventListener {
         current = current[key];
       }
       const oldValue = current[lastKey];
-      current[lastKey] = newValue;
+      if (newValue === undefined) {
+        // Remove the key entirely rather than storing `undefined`. Objects in
+        // the store are shared by reference with pending Firestore updates
+        // (and with subscribers), and Firestore rejects `undefined` values, so
+        // a `key: undefined` entry must never linger in the data tree.
+        delete current[lastKey];
+      } else {
+        current[lastKey] = newValue;
+      }
       this.dispatch(JsonTrieStoreEventType.VALUE_CHANGE, path, newValue);
 
       // Collect notify subscribers on the current path and child paths.
