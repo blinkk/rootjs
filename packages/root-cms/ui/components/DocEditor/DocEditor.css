@@ -31,11 +31,11 @@
   margin-right: 16px;
 }
 
-.DocEditor__statusBar__undoRedo {
+.DocEditor__undoRedo {
   display: flex;
   align-items: center;
-  gap: 4px;
-  margin-right: 16px;
+  gap: 2px;
+  margin-right: 4px;
 }
 
 .DocEditor__undoNotification {

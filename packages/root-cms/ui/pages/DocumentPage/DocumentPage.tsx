@@ -348,6 +348,7 @@ function DocumentPageLayout(props: DocumentPageProps & {canEdit: boolean}) {
                 <div className="DocumentPage__side__header__docId">{docId}</div>
               </div>
               <div className="DocumentPage__side__header__buttons">
+                {canEdit && <DocEditor.UndoRedoButtons />}
                 <ConditionalTooltip
                   label="You don't have access to edit this document"
                   condition={!canEdit}

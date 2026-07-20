@@ -44,7 +44,7 @@ import {
   IconTrash,
   IconTriangleFilled,
 } from '@tabler/icons-preact';
-import {createContext} from 'preact';
+import {createContext, RefObject} from 'preact';
 import {
   useContext,
   useEffect,
@@ -211,6 +211,7 @@ export function DocEditor(props: DocEditorProps) {
   const draft = useDraftDoc();
   const loading = collection.loading || draft.loading;
   const fields = collection.schema?.fields || [];
+  const rootRef = useRef<HTMLDivElement>(null);
 
   if (draft.error) {
     return (
@@ -225,11 +226,15 @@ export function DocEditor(props: DocEditorProps) {
       value={collection?.schema?.types || {}}
     >
       <DeeplinkProvider>
-        <div className={joinClassNames(props.className, 'DocEditor')}>
+        <div
+          className={joinClassNames(props.className, 'DocEditor')}
+          ref={rootRef}
+        >
           <LoadingOverlay
             visible={loading}
             loaderProps={{color: 'gray', size: 'xl'}}
           />
+          <DocEditor.HistoryDeeplink rootRef={rootRef} />
           {!loading && !props.hideStatusBar && (
             <DocEditor.StatusBar
               {...props}
@@ -406,7 +411,6 @@ DocEditor.StatusBar = (props: StatusBarProps) => {
         <Viewers id={`doc/${props.docId}`} />
       </div>
       <DocEditor.SaveState />
-      {canEdit && <DocEditor.UndoRedoButtons />}
       {data?.sys && (
         <div className="DocEditor__statusBar__statusBadges">
           <DocStatusBadges
@@ -585,6 +589,11 @@ DocEditor.SaveState = () => {
   );
 };
 
+/**
+ * Undo/redo buttons for the doc editor, including the document-level
+ * keyboard shortcuts (⌘Z / ⌘⇧Z). Rendered in the DocumentPage side header
+ * next to the save button.
+ */
 DocEditor.UndoRedoButtons = () => {
   const history = useDraftDocHistory();
 
@@ -633,43 +642,89 @@ DocEditor.UndoRedoButtons = () => {
     : 'Redo (⌘ ⇧ Z)';
 
   return (
-    <div className="DocEditor__statusBar__undoRedo">
-      <Tooltip
-        label={undoLabel}
-        transition="pop"
-        withArrow
-        disabled={!history.canUndo}
-      >
+    <div className="DocEditor__undoRedo">
+      <Tooltip label={undoLabel} disabled={!history.canUndo}>
         <ActionIcon
-          className="DocEditor__statusBar__undoRedo__button"
-          variant="default"
-          size="sm"
+          className="DocEditor__undoRedo__button"
           disabled={!history.canUndo}
           onClick={() => history.undo()}
           aria-label="Undo"
         >
-          <IconArrowBackUp size={16} strokeWidth={1.75} />
+          <IconArrowBackUp size={16} />
         </ActionIcon>
       </Tooltip>
-      <Tooltip
-        label={redoLabel}
-        transition="pop"
-        withArrow
-        disabled={!history.canRedo}
-      >
+      <Tooltip label={redoLabel} disabled={!history.canRedo}>
         <ActionIcon
-          className="DocEditor__statusBar__undoRedo__button"
-          variant="default"
-          size="sm"
+          className="DocEditor__undoRedo__button"
           disabled={!history.canRedo}
           onClick={() => history.redo()}
           aria-label="Redo"
         >
-          <IconArrowForwardUp size={16} strokeWidth={1.75} />
+          <IconArrowForwardUp size={16} />
         </ActionIcon>
       </Tooltip>
     </div>
   );
+};
+
+/**
+ * Finds the closest rendered field element for an applied history deepkey.
+ * Applied keys often target values without their own field div (array order
+ * keys like `<deepKey>._array`, array item keys), so walk up the key path
+ * until a rendered `.DocEditor__field` is found. The search is scoped to the
+ * editor root so nested editors (e.g. the reference editor modal) never
+ * match each other's fields.
+ */
+function resolveHistoryFieldElement(
+  root: HTMLElement,
+  deepKey: string
+): HTMLElement | null {
+  let key = deepKey;
+  while (key && key !== 'fields') {
+    const el = root.querySelector<HTMLElement>(`[id="${key}"]`);
+    if (el && el.classList.contains('DocEditor__field')) {
+      return el;
+    }
+    const index = key.lastIndexOf('.');
+    if (index === -1) {
+      return null;
+    }
+    key = key.slice(0, index);
+  }
+  return null;
+}
+
+/**
+ * Headless component that gives the user a visual indicator of what an
+ * undo/redo changed by deeplinking to the affected field: the existing
+ * deeplink functionality highlights the field and scrolls it into view
+ * (opening collapsed drawers along the way).
+ */
+DocEditor.HistoryDeeplink = (props: {rootRef: RefObject<HTMLDivElement>}) => {
+  const deeplink = useDeeplink();
+  const deeplinkRef = useRef(deeplink);
+  deeplinkRef.current = deeplink;
+
+  useDraftDocHistoryApplied((keys: string[]) => {
+    // Wait a beat for the re-render triggered by the restore, so fields
+    // recreated by the undo (e.g. a restored array item) are in the DOM.
+    window.setTimeout(() => {
+      const root = props.rootRef.current;
+      if (!root) {
+        return;
+      }
+      for (const key of keys) {
+        const el = resolveHistoryFieldElement(root, key);
+        if (el) {
+          deeplinkRef.current.setValue(el.id);
+          scrollToDeeplink(el, {behavior: 'smooth', force: true});
+          return;
+        }
+      }
+    }, 50);
+  });
+
+  return null;
 };
 
 DocEditor.Field = (props: FieldProps) => {
