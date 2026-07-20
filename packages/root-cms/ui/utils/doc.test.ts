@@ -3,7 +3,9 @@ import {
   cmsAssignSortKeys,
   cmsCopyDoc,
   cmsCreateDoc,
+  cmsPublishDocs,
   cmsSetDocSortKey,
+  getDraftDocs,
 } from './doc.js';
 
 const mocks = vi.hoisted(() => ({
@@ -11,6 +13,7 @@ const mocks = vi.hoisted(() => ({
   collection: vi.fn(),
   deleteField: vi.fn(),
   doc: vi.fn(),
+  documentId: vi.fn(),
   getDoc: vi.fn(),
   getDocs: vi.fn(),
   limit: vi.fn(),
@@ -33,6 +36,7 @@ vi.mock('firebase/firestore', () => ({
   collection: mocks.collection,
   deleteField: mocks.deleteField,
   doc: mocks.doc,
+  documentId: mocks.documentId,
   getDoc: mocks.getDoc,
   getDocs: mocks.getDocs,
   limit: mocks.limit,
@@ -341,5 +345,163 @@ describe('cmsCreateDoc custom sorting', () => {
     expect(mocks.setDoc).toHaveBeenCalled();
     const savedData = mocks.setDoc.mock.calls[0][1];
     expect(savedData.sys.sortKey).toBeUndefined();
+  });
+});
+
+/**
+ * Fake db of draft docs, keyed by the "Drafts" collection path, then by slug,
+ * e.g. `fakeDrafts['Projects/test-project/Collections/pages/Drafts']['foo']`.
+ */
+let fakeDrafts: Record<string, Record<string, any>>;
+
+function addFakeDrafts(collectionId: string, slugs: string[]) {
+  const path = `Projects/test-project/Collections/${collectionId}/Drafts`;
+  const collectionDrafts = (fakeDrafts[path] ??= {});
+  slugs.forEach((slug) => {
+    collectionDrafts[slug] = {
+      id: `${collectionId}/${slug}`,
+      collection: collectionId,
+      slug: slug,
+      sys: {},
+      fields: {title: `title for ${slug}`},
+    };
+  });
+}
+
+function setupDraftQueryMocks() {
+  fakeDrafts = {};
+  mocks.collection.mockImplementation((_db: unknown, ...path: string[]) => ({
+    path: path.join('/'),
+  }));
+  // documentId() is just a sentinel field path. query()/where() pass the
+  // requested chunk straight through so the fake db (getDocs) can resolve it.
+  mocks.documentId.mockReturnValue('__name__');
+  mocks.where.mockImplementation((_field: any, _op: any, chunk: string[]) => ({
+    chunk,
+  }));
+  mocks.query.mockImplementation((colRef: any, whereClause: any) => ({
+    colRef,
+    chunk: whereClause.chunk,
+  }));
+  // Resolve a query by returning only the docs whose slug is in the chunk,
+  // mirroring firestore's `where(documentId(), 'in', chunk)` semantics.
+  mocks.getDocs.mockImplementation(
+    (q: {colRef: {path: string}; chunk: string[]}) => {
+      const collectionDrafts = fakeDrafts[q.colRef.path] || {};
+      const matched = q.chunk
+        .filter((slug) => collectionDrafts[slug] !== undefined)
+        .map((slug) => ({id: slug, data: () => collectionDrafts[slug]}));
+      return {
+        forEach: (cb: (doc: {id: string; data: () => any}) => void) =>
+          matched.forEach(cb),
+      };
+    }
+  );
+}
+
+describe('getDraftDocs', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    setupWindowMocks();
+    setupDraftQueryMocks();
+  });
+
+  it('fetches draft docs across collections', async () => {
+    addFakeDrafts('pages', ['foo', 'bar']);
+    addFakeDrafts('blog', ['baz']);
+
+    const drafts = await getDraftDocs(['pages/foo', 'pages/bar', 'blog/baz']);
+
+    expect(Object.keys(drafts).sort()).toEqual([
+      'blog/baz',
+      'pages/bar',
+      'pages/foo',
+    ]);
+    expect((drafts['pages/foo'] as any).fields).toEqual({
+      title: 'title for foo',
+    });
+    // One query per collection (both under the 30-slug chunk limit).
+    expect(mocks.getDocs).toHaveBeenCalledTimes(2);
+  });
+
+  it('chunks `in` queries into batches of 30 per collection', async () => {
+    const pageSlugs = Array.from({length: 65}, (_, i) => `page-${i}`);
+    const blogSlugs = Array.from({length: 5}, (_, i) => `post-${i}`);
+    addFakeDrafts('pages', pageSlugs);
+    addFakeDrafts('blog', blogSlugs);
+    const docIds = [
+      ...pageSlugs.map((slug) => `pages/${slug}`),
+      ...blogSlugs.map((slug) => `blog/${slug}`),
+    ];
+
+    const drafts = await getDraftDocs(docIds);
+
+    // 65 page slugs chunked by 30 => 3 queries (30 + 30 + 5), plus 1 query
+    // for the 5 blog slugs.
+    expect(mocks.getDocs).toHaveBeenCalledTimes(4);
+    mocks.getDocs.mock.calls.forEach(([q]) => {
+      expect(q.chunk.length).toBeLessThanOrEqual(30);
+    });
+    expect(Object.keys(drafts)).toHaveLength(70);
+  });
+});
+
+describe('cmsPublishDocs', () => {
+  let batches: Array<{
+    set: any;
+    update: any;
+    delete: any;
+    commit: any;
+    numWrites: () => number;
+  }>;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    setupWindowMocks();
+    setupDraftQueryMocks();
+    batches = [];
+    mocks.writeBatch.mockImplementation(() => {
+      const batch = {
+        set: vi.fn(),
+        update: vi.fn(),
+        delete: vi.fn(),
+        commit: vi.fn().mockResolvedValue(undefined),
+        numWrites: () =>
+          batch.set.mock.calls.length +
+          batch.update.mock.calls.length +
+          batch.delete.mock.calls.length,
+      };
+      batches.push(batch);
+      return batch;
+    });
+  });
+
+  it('publishes more than 100 docs (issue #457)', async () => {
+    const slugs = Array.from({length: 120}, (_, i) => `page-${i}`);
+    addFakeDrafts('pages', slugs);
+    const docIds = slugs.map((slug) => `pages/${slug}`);
+
+    await cmsPublishDocs(docIds);
+
+    // Draft docs are fetched with `in` queries chunked at 30 slugs.
+    expect(mocks.getDocs).toHaveBeenCalledTimes(4);
+    // Each published doc adds 4 writes (draft sys update, published copy,
+    // scheduled delete, version snapshot), and writes are split across
+    // batches of at most 400 => 120 docs = 480 writes = 2 batches (400 + 80).
+    expect(batches.length).toBe(2);
+    expect(batches[0].numWrites()).toBe(400);
+    expect(batches[1].numWrites()).toBe(80);
+    batches.forEach((batch) => {
+      expect(batch.commit).toHaveBeenCalledTimes(1);
+    });
+    expect(mocks.removeDocsFromCache).toHaveBeenCalledWith(docIds);
+  });
+
+  it('throws if a doc does not exist', async () => {
+    addFakeDrafts('pages', ['exists']);
+
+    await expect(
+      cmsPublishDocs(['pages/exists', 'pages/missing'])
+    ).rejects.toThrow('doc does not exist: pages/missing');
   });
 });

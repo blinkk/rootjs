@@ -16,7 +16,6 @@ import {
   documentId,
   where,
   Query,
-  WriteBatch,
   DocumentReference,
   limit,
   startAfter,
@@ -26,6 +25,7 @@ import {testValidRichTextData} from '../../shared/richtext.js';
 import {generateKeyAfter} from '../../shared/sort-key.js';
 import {logAction} from './actions.js';
 import {extractAssetIds} from './assets.js';
+import {MultiBatch} from './batch.js';
 import {removeDocFromCache, removeDocsFromCache} from './doc-cache.js';
 import {GoogleSheetId} from './gsheets.js';
 import {
@@ -142,10 +142,21 @@ export async function cmsPublishDoc(
 
 /**
  * Batch publishes a group of docs.
+ *
+ * There is no limit on the number of docs that can be published at once. The
+ * writes are automatically split across multiple batch requests to stay
+ * within firestore's per-batch write limits. When a shared `batch` is
+ * provided, the caller is responsible for committing it (unless
+ * `commitBatch: true` is passed).
  */
 export async function cmsPublishDocs(
   docIds: string[],
-  options?: {batch?: WriteBatch; releaseId?: string; publishMessage?: string}
+  options?: {
+    batch?: MultiBatch;
+    commitBatch?: boolean;
+    releaseId?: string;
+    publishMessage?: string;
+  }
 ) {
   if (docIds.length === 0) {
     console.log('no docs to publish');
@@ -154,14 +165,8 @@ export async function cmsPublishDocs(
 
   const db = window.firebase.db;
 
-  if (docIds.length > 100) {
-    throw new Error(
-      'publish docs exceeds limit of 100 docs. break up your request into multiple calls.'
-    );
-  }
-
   const draftDocs = await getDraftDocs(docIds);
-  const batch = options?.batch || writeBatch(db);
+  const batch = options?.batch || new MultiBatch(db);
   const versionTags = ['published'];
   if (options?.releaseId) {
     versionTags.push(`release:${options.releaseId}`);
@@ -179,7 +184,9 @@ export async function cmsPublishDocs(
       options?.publishMessage
     );
   });
-  await batch.commit();
+  if (!options?.batch || options?.commitBatch) {
+    await batch.commit();
+  }
 
   if (docIds.length === 1) {
     console.log(`published ${docIds[0]}`);
@@ -206,7 +213,7 @@ export async function cmsPublishDocs(
  * - Copies the "draft" data to "published" data
  */
 function updatePublishedDocDataInBatch(
-  batch: WriteBatch,
+  batch: MultiBatch,
   docId: string,
   draftData: CMSDoc,
   versionTags: string[],
@@ -219,6 +226,10 @@ function updatePublishedDocDataInBatch(
   if (testIsArchived(draftData)) {
     throw new Error(`cannot publish archived doc: ${draftData.id}`);
   }
+
+  // Each published doc adds 4 writes to the batch. Reserve capacity for all
+  // of them so the writes for a single doc are committed atomically.
+  batch.ensureCapacity(4);
 
   const projectId = window.__ROOT_CTX.rootConfig.projectId;
   const db = window.firebase.db;
@@ -900,9 +911,18 @@ export async function getDraftDocs(
       collectionSlugs[collectionId] = [slug];
     }
   });
+  // Firestore allows a maximum of 30 values per `in` query, so fetch the docs
+  // in parallel chunks of 30 slugs per collection.
+  const CHUNK_SIZE = 30;
+  const chunks: Array<{collectionId: string; slugs: string[]}> = [];
+  Object.entries(collectionSlugs).forEach(([collectionId, slugs]) => {
+    for (let i = 0; i < slugs.length; i += CHUNK_SIZE) {
+      chunks.push({collectionId, slugs: slugs.slice(i, i + CHUNK_SIZE)});
+    }
+  });
   const drafts: Record<string, CMSDoc> = {};
   await Promise.all(
-    Object.entries(collectionSlugs).map(async ([collectionId, slugs]) => {
+    chunks.map(async ({collectionId, slugs}) => {
       const dbCollection = collection(
         db,
         'Projects',

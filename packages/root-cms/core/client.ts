@@ -730,10 +730,11 @@ export class RootCMSClient {
       }
     }
 
-    // // Each transaction or batch can write a max of 500 ops.
-    // // https://firebase.google.com/docs/firestore/manage-data/transactions
+    // Each transaction or batch can write a max of 500 ops, so commit the
+    // batch in chunks, starting a new batch after each commit.
+    // https://firebase.google.com/docs/firestore/manage-data/transactions
     let batchCount = 0;
-    const batch = options?.batch || this.db.batch();
+    let batch = options?.batch || this.db.batch();
     const versionTags = ['published'];
     if (options?.releaseId) {
       versionTags.push(`release:${options.releaseId}`);
@@ -815,6 +816,7 @@ export class RootCMSClient {
 
       if (batchCount >= 400) {
         await batch.commit();
+        batch = this.db.batch();
         batchCount = 0;
       }
     }
@@ -860,7 +862,7 @@ export class RootCMSClient {
     }
 
     let batchCount = 0;
-    const batch = options?.batch || this.db.batch();
+    let batch = options?.batch || this.db.batch();
     const unpublishedDocs: any[] = [];
 
     for (const doc of docs) {
@@ -898,6 +900,7 @@ export class RootCMSClient {
 
       if (batchCount >= 400) {
         await batch.commit();
+        batch = this.db.batch();
         batchCount = 0;
       }
     }
@@ -951,10 +954,11 @@ export class RootCMSClient {
       return [];
     }
 
-    // Each transaction or batch can write a max of 500 ops.
+    // Each transaction or batch can write a max of 500 ops, so commit the
+    // batch in chunks, starting a new batch after each commit.
     // https://firebase.google.com/docs/firestore/manage-data/transactions
     let batchCount = 0;
-    const batch = this.db.batch();
+    let batch = this.db.batch();
     const versionTags = ['published'];
     const publishedDocs: any[] = [];
     for (const doc of docs) {
@@ -1035,8 +1039,8 @@ export class RootCMSClient {
 
       if (batchCount >= 400) {
         await batch.commit();
+        batch = this.db.batch();
         batchCount = 0;
-        continue;
       }
     }
 
@@ -1070,26 +1074,27 @@ export class RootCMSClient {
 
     for (const snapshot of querySnapshot.docs) {
       const release = snapshot.data() as Release;
-      const batch = this.db.batch();
       const publishedBy = release.scheduledBy || 'root-cms-client';
-      batch.update(snapshot.ref, {
+      const dataSourceIds = release.dataSourceIds || [];
+      if (dataSourceIds.length > 0) {
+        await this.publishDataSources(dataSourceIds, {publishedBy});
+      }
+      const docIds = release.docIds || [];
+      if (docIds.length > 0) {
+        await this.publishDocs(docIds, {
+          publishedBy,
+          releaseId: release.id,
+        });
+      }
+
+      // Mark the release as published only after the doc and data source
+      // writes above have been committed. If any of those writes fails, the
+      // release remains scheduled and publishing is retried on the next run.
+      await snapshot.ref.update({
         publishedAt: Timestamp.now(),
         publishedBy: publishedBy,
         scheduledAt: FieldValue.delete(),
         scheduledBy: FieldValue.delete(),
-      });
-      const dataSourceIds = release.dataSourceIds || [];
-      if (dataSourceIds.length > 0) {
-        await this.publishDataSources(dataSourceIds, {
-          publishedBy,
-          batch,
-          commitBatch: false,
-        });
-      }
-      await this.publishDocs(release.docIds || [], {
-        publishedBy,
-        batch,
-        releaseId: release.id,
       });
 
       // Log an action for the published release.
