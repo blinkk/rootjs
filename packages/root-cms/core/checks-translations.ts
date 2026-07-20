@@ -225,11 +225,18 @@ export function translationsCheck(
         };
       }
 
-      // Load all translations tagged to this document.
+      // Load all translations tagged to this document. When the v2
+      // translations manager is enabled, read the doc's draft translations
+      // from the v2 per-locale docs instead (both shapes are maps of
+      // `{source: ..., [locale]: ...}` values, keyed by hash in v1 and by
+      // source in v2).
       const docId = `${collectionId}/${slug}`;
-      const translationsMap = await cmsClient.loadTranslations({
-        tags: [docId],
-      });
+      const translationsMap = cmsClient.isV2TranslationsEnabled()
+        ? await cmsClient.getTranslationsManager().loadTranslations({
+            ids: [docId],
+            mode: 'draft',
+          })
+        : await cmsClient.loadTranslations({tags: [docId]});
 
       // Build a map from source string to available translations.
       const sourceToTranslations: Map<

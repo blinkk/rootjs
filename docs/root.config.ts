@@ -44,14 +44,14 @@ export default defineConfig({
       id: 'www',
       name: 'Root.js',
       firebaseConfig: {
-        apiKey: process.env.GAPI_API_KEY,
+        apiKey: process.env.GAPI_API_KEY!,
         authDomain: 'rootjs-dev.firebaseapp.com',
         projectId: 'rootjs-dev',
         storageBucket: 'rootjs-dev.appspot.com',
       },
       gapi: {
-        apiKey: process.env.GAPI_API_KEY,
-        clientId: process.env.GAPI_CLIENT_ID,
+        apiKey: process.env.GAPI_API_KEY!,
+        clientId: process.env.GAPI_CLIENT_ID!,
       },
       gci: true,
       sidebar: {
@@ -125,6 +125,7 @@ export default defineConfig({
       ],
       experiments: {
         taskManager: true,
+        v2TranslationsManager: true,
       },
       preview: {
         channel: true,

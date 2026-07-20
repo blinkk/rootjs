@@ -850,6 +850,29 @@ export function cmsPlugin(options: CMSPluginOptions): CMSPlugin {
        */
       preBuild: async (rootConfig: RootConfig) => {
         await writeCollectionSchemasToJson(rootConfig);
+
+        // When the v2 translations manager is enabled, migrate v1
+        // translations before the build (SSG reads translations at build
+        // time). A failure fails the build.
+        if (options.experiments?.v2TranslationsManager) {
+          const {migrateV1TranslationsIfNeeded} =
+            await import('./translations-migration.js');
+          const cmsClient = new RootCMSClient(rootConfig);
+          try {
+            await migrateV1TranslationsIfNeeded(cmsClient, {
+              trigger: 'build',
+            });
+          } catch (err) {
+            console.error(
+              '[root cms] v1 -> v2 translations migration failed. the build ' +
+                'requires Firestore access when `v2TranslationsManager` is ' +
+                'enabled — ensure application default credentials (ADC) are ' +
+                'available, e.g. run `gcloud auth application-default login` ' +
+                'or set GOOGLE_APPLICATION_CREDENTIALS.'
+            );
+            throw err;
+          }
+        }
       },
     },
 
@@ -869,6 +892,25 @@ export function cmsPlugin(options: CMSPluginOptions): CMSPlugin {
       server: Server,
       serverOptions: ConfigureServerOptions
     ) => {
+      // When the v2 translations manager is enabled, migrate v1 translations
+      // on dev server startup. Fire-and-forget so dev startup isn't blocked;
+      // prod servers never migrate (the migration runs at build time via the
+      // preBuild hook).
+      if (
+        options.experiments?.v2TranslationsManager &&
+        serverOptions.type === 'dev'
+      ) {
+        import('./translations-migration.js')
+          .then(({migrateV1TranslationsIfNeeded}) => {
+            const cmsClient = new RootCMSClient(serverOptions.rootConfig);
+            return migrateV1TranslationsIfNeeded(cmsClient, {trigger: 'dev'});
+          })
+          .catch((err) => {
+            console.error('[root cms] v1 -> v2 translations migration failed:');
+            console.error(err);
+          });
+      }
+
       // The AI "prepare" routes can carry a moderately large body (the edit
       // flow sends the JSON object being edited). Use a larger limit for those
       // routes only; body-parser short-circuits when `req._body` is already
