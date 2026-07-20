@@ -33,6 +33,14 @@ export function prettyToolName(toolName: string, input: any): string {
       return 'Translate field text';
     case 'schema_get':
       return `Read ${input?.collectionId || 'collection'} schema`;
+    case 'releases_list':
+      return 'List releases';
+    case 'release_get':
+      return `Read release ${input?.releaseId || ''}`.trim();
+    case 'release_create':
+      return `Create release ${input?.releaseId || ''}`.trim();
+    case 'release_update':
+      return `Update release ${input?.releaseId || ''}`.trim();
     default:
       return toolName;
   }

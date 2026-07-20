@@ -21,9 +21,11 @@ import {
 import {
   createCmsTools,
   createReadOnlyCmsTools,
+  getReleaseStatus,
   simplifyFields,
   type CmsToolDoc,
   type CmsToolReadBackend,
+  type CmsToolRelease,
 } from '../../../core/ai-tools.js';
 import {fetchCollectionSchema} from '../../utils/collection.js';
 import {
@@ -33,6 +35,11 @@ import {
   parseDocId,
   unmarshalData,
 } from '../../utils/doc.js';
+import {
+  Release,
+  getRelease as cmsGetRelease,
+  listReleases as cmsListReleases,
+} from '../../utils/release.js';
 
 /** Shapes a raw Firestore CMS doc into the model-ready tool doc. */
 function shapeDoc(docId: string, raw: CMSDoc): CmsToolDoc {
@@ -43,6 +50,33 @@ function shapeDoc(docId: string, raw: CMSDoc): CmsToolDoc {
     slug: (raw as any).slug || slug,
     sys: unmarshalData((raw as any).sys || {}),
     fields: unmarshalData((raw as any).fields || {}),
+  };
+}
+
+/** Converts a Firestore Timestamp-ish value to epoch millis, if present. */
+function toMillis(value: any): number | undefined {
+  if (value && typeof value.toMillis === 'function') {
+    return value.toMillis();
+  }
+  return undefined;
+}
+
+/** Shapes a raw Firestore release into the model-ready tool release. */
+export function shapeRelease(release: Release): CmsToolRelease {
+  return {
+    id: release.id,
+    description: release.description || undefined,
+    docIds: release.docIds || [],
+    dataSourceIds: release.dataSourceIds || [],
+    status: getReleaseStatus(release),
+    createdAt: toMillis(release.createdAt),
+    createdBy: release.createdBy || undefined,
+    scheduledAt: toMillis(release.scheduledAt),
+    scheduledBy: release.scheduledBy || undefined,
+    publishedAt: toMillis(release.publishedAt),
+    publishedBy: release.publishedBy || undefined,
+    archivedAt: toMillis(release.archivedAt),
+    archivedBy: release.archivedBy || undefined,
   };
 }
 
@@ -112,6 +146,16 @@ export function createClientCmsToolBackend(): CmsToolReadBackend {
         console.error(`failed to load schema for ${collectionId}:`, err);
         return null;
       }
+    },
+
+    async listReleases({limit}) {
+      const releases = await cmsListReleases();
+      return releases.slice(0, limit).map(shapeRelease);
+    },
+
+    async getRelease(releaseId) {
+      const release = await cmsGetRelease(releaseId);
+      return release ? shapeRelease(release) : null;
     },
   };
 }

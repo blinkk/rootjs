@@ -7,10 +7,10 @@
  * `ui/components/RootAIChat/clientCmsTools.ts`). The factory itself is
  * data-source agnostic.
  *
- * Write tools (`doc_set`, `doc_create`, `doc_updateField`, `doc_duplicate`)
- * stay schema-only here — the browser executes them via `onToolCall` so the
- * user can approve diffs in the UI and so Firestore listeners on other tabs
- * see the change immediately.
+ * Write tools (`doc_set`, `doc_create`, `doc_updateField`, `doc_duplicate`,
+ * `release_create`, `release_update`) stay schema-only here — the browser
+ * executes them via `onToolCall` so the user can approve diffs in the UI and
+ * so Firestore listeners on other tabs see the change immediately.
  *
  * Validation helpers (`validateFields`, `validateValueAtPath`) live here
  * too so both browser and server can share the same checks.
@@ -48,6 +48,10 @@ export const CMS_TOOL_NAMES = [
   'doc_listVersions',
   'doc_translateField',
   'schema_get',
+  'releases_list',
+  'release_get',
+  'release_create',
+  'release_update',
 ] as const;
 export type CmsToolName = (typeof CMS_TOOL_NAMES)[number];
 
@@ -65,6 +69,8 @@ export const READ_ONLY_CMS_TOOL_NAMES: readonly CmsToolName[] = [
   'doc_getVersion',
   'doc_listVersions',
   'schema_get',
+  'releases_list',
+  'release_get',
 ] as const;
 
 /** A CMS document shaped for the model (fields/sys already unmarshalled). */
@@ -96,6 +102,74 @@ export interface CmsToolCollectionSummary {
   id: string;
   name?: string;
   description?: string;
+}
+
+/** Lifecycle status of a release, derived via `getReleaseStatus()`. */
+export type CmsToolReleaseStatus =
+  | 'unpublished'
+  | 'scheduled'
+  | 'published'
+  | 'archived';
+
+/** A CMS release shaped for the model (timestamps in epoch millis). */
+export interface CmsToolRelease {
+  id: string;
+  description?: string;
+  /** Full doc ids (e.g. "Pages/home") published together by this release. */
+  docIds: string[];
+  /** Data source ids published with the release. Managed via the CMS UI. */
+  dataSourceIds: string[];
+  status: CmsToolReleaseStatus;
+  createdAt?: number;
+  createdBy?: string;
+  scheduledAt?: number;
+  scheduledBy?: string;
+  publishedAt?: number;
+  publishedBy?: string;
+  archivedAt?: number;
+  archivedBy?: string;
+}
+
+/**
+ * Derives the lifecycle status of a release from its stamp fields. Archived
+ * wins over everything (an archived release can never be published), then
+ * published (publishing clears `scheduledAt`), then scheduled.
+ */
+export function getReleaseStatus(release: {
+  archivedAt?: unknown;
+  publishedAt?: unknown;
+  scheduledAt?: unknown;
+}): CmsToolReleaseStatus {
+  if (release.archivedAt) {
+    return 'archived';
+  }
+  if (release.publishedAt) {
+    return 'published';
+  }
+  if (release.scheduledAt) {
+    return 'scheduled';
+  }
+  return 'unpublished';
+}
+
+/**
+ * Computes the new `docIds` list for a `release_update` call: the existing
+ * ids plus `addDocIds` minus `removeDocIds`, deduped and sorted (matching how
+ * the CMS UI maintains the list). Removal wins when an id appears in both.
+ */
+export function computeReleaseDocIds(
+  existingDocIds: string[],
+  addDocIds?: string[],
+  removeDocIds?: string[]
+): string[] {
+  const ids = new Set(existingDocIds);
+  for (const docId of addDocIds || []) {
+    ids.add(docId);
+  }
+  for (const docId of removeDocIds || []) {
+    ids.delete(docId);
+  }
+  return Array.from(ids).sort();
 }
 
 /**
@@ -134,6 +208,10 @@ export interface CmsToolReadBackend {
    * `simplifyFields`), or `null` if the collection is unknown.
    */
   getSchemaFields(collectionId: string): Promise<unknown[] | null>;
+  /** Lists releases, most recently created first. */
+  listReleases(options: {limit: number}): Promise<CmsToolRelease[]>;
+  /** Reads a single release, or `null` if it does not exist. */
+  getRelease(releaseId: string): Promise<CmsToolRelease | null>;
 }
 
 /**
@@ -156,11 +234,13 @@ export function createReadOnlyCmsTools(backend: CmsToolReadBackend): ToolSet {
  * Builds the full tool set advertised to the model.
  *
  * Read tools (`collections_list`, `docs_list`, `docs_search`, `doc_get`,
- * `doc_getVersion`, `doc_listVersions`, `schema_get`) carry an `execute` that
- * delegates to the supplied `CmsToolReadBackend`. Write tools (`doc_set`,
- * `doc_create`, `doc_updateField`, `doc_duplicate`, `doc_translateField`)
- * remain schema-only — the browser executes them via `onToolCall` so the user
- * can approve diffs before persistence.
+ * `doc_getVersion`, `doc_listVersions`, `schema_get`, `releases_list`,
+ * `release_get`) carry an `execute` that delegates to the supplied
+ * `CmsToolReadBackend`. Write tools (`doc_set`, `doc_create`,
+ * `doc_updateField`, `doc_duplicate`, `doc_translateField`,
+ * `release_create`, `release_update`) remain schema-only — the browser
+ * executes them via `onToolCall` so the user can approve diffs before
+ * persistence.
  *
  * Safety policy: this tool set is intentionally read + draft-write only.
  * The following operations are deliberately NOT exposed to the model
@@ -176,10 +256,21 @@ export function createReadOnlyCmsTools(backend: CmsToolReadBackend): ToolSet {
  *   - `doc_schedule` / `doc_unschedule` — affects future production state.
  *   - `doc_lockPublishing` / `doc_unlockPublishing` — affects governance state.
  *   - `doc_restoreVersion` — overwrites the current draft with old data.
+ *   - `release_publish` / `release_schedule` / `release_unschedule` —
+ *     pushes the release's docs to production (now or at a future time).
+ *   - `release_delete` / `release_archive` / `release_unarchive` —
+ *     destructive/governance state on releases.
  *   - Bulk variants (e.g. `docs_publish`) of any of the above.
  *
+ * `release_create` and `release_update` are exposed because grouping docs
+ * into a release publishes nothing by itself — but the client handlers
+ * restrict `release_update` to UNPUBLISHED releases, since editing the doc
+ * list of a scheduled release would change what auto-publishes at the
+ * scheduled time (equivalent to `doc_schedule`, which is excluded above).
+ *
  * If you add new write tools here, keep them limited to draft-mode edits
- * the user can easily review before publishing.
+ * (or similarly non-publishing changes) the user can easily review before
+ * publishing.
  */
 export function createCmsTools(backend: CmsToolReadBackend): ToolSet {
   return {
@@ -494,6 +585,89 @@ export function createCmsTools(backend: CmsToolReadBackend): ToolSet {
         }
         return {found: true, collectionId, fields};
       },
+    }),
+
+    releases_list: tool({
+      description:
+        'List CMS releases, most recently created first. A release is a ' +
+        'named group of docs (and data sources) that the user can publish ' +
+        'together, immediately or at a scheduled time. Each result ' +
+        'includes the release status ("unpublished", "scheduled", ' +
+        '"published" or "archived") and its doc ids.',
+      inputSchema: z.object({
+        limit: z.number().int().min(1).max(100).default(50),
+      }),
+      execute: async ({limit = 50}) => {
+        const max = clampInt(limit, 1, 100, 50);
+        return {releases: await backend.listReleases({limit: max})};
+      },
+    }),
+
+    release_get: tool({
+      description:
+        'Read a single CMS release, including its status, description, ' +
+        'doc ids, and schedule/publish metadata.',
+      inputSchema: z.object({
+        releaseId: z
+          .string()
+          .describe('Release id, e.g. "20260318-golden-meadow".'),
+      }),
+      execute: async ({releaseId}) => {
+        const release = await backend.getRelease(releaseId);
+        return release ? {found: true, release} : {found: false};
+      },
+    }),
+
+    release_create: tool({
+      description:
+        'Create a new CMS release with an optional description and ' +
+        'initial list of doc ids. Doc ids use the full "Collection/slug" ' +
+        'form and every doc must already exist as a draft. Fails if the ' +
+        'release id is already taken. Creating a release does NOT publish ' +
+        'anything — the user publishes or schedules the release from the ' +
+        'CMS UI. Requires publish permissions (ADMIN or EDITOR role).',
+      inputSchema: z.object({
+        releaseId: z
+          .string()
+          .describe(
+            'Release id using lowercase letters, numbers and dashes, ' +
+              'e.g. "spring-launch" or "20260318-golden-meadow".'
+          ),
+        description: z
+          .string()
+          .optional()
+          .describe('Optional description shown in the releases UI.'),
+        docIds: z
+          .array(z.string())
+          .optional()
+          .describe('Doc ids to include in the release, e.g. ["Pages/home"].'),
+      }),
+    }),
+
+    release_update: tool({
+      description:
+        'Update an UNPUBLISHED CMS release: add docs, remove docs, and/or ' +
+        'change the description. Pass full doc ids (e.g. "Pages/home"); ' +
+        'added docs must already exist as drafts. Scheduled, published and ' +
+        'archived releases cannot be edited with this tool — the user must ' +
+        'manage those from the CMS UI (e.g. unschedule first). Updating a ' +
+        'release does NOT publish anything — publishing remains manual. ' +
+        'Requires publish permissions (ADMIN or EDITOR role).',
+      inputSchema: z.object({
+        releaseId: z.string().describe('Release id to update.'),
+        description: z
+          .string()
+          .optional()
+          .describe('New description for the release.'),
+        addDocIds: z
+          .array(z.string())
+          .optional()
+          .describe('Doc ids to add to the release.'),
+        removeDocIds: z
+          .array(z.string())
+          .optional()
+          .describe('Doc ids to remove from the release.'),
+      }),
     }),
   };
 }
