@@ -17,6 +17,7 @@ import {
 } from '../../hooks/useGlobalSearch.js';
 import {usePendingReleases} from '../../hooks/usePendingReleases.js';
 import {DataSource, listDataSources} from '../../utils/data-source.js';
+import {isEditableTarget} from '../../utils/keyboard.js';
 import {
   RecentView,
   recentViewFromUrl,
@@ -237,25 +238,6 @@ function buildTipsRow(): SpotlightAction {
     onTrigger: () => {},
     meta,
   };
-}
-
-/**
- * Returns true when the event originates from a field where the user is
- * actively typing, e.g. a text input or a `contenteditable` rich text editor
- * (Lexical). Cmd+K should not open the global search in those contexts —
- * Lexical, for instance, binds Cmd+K to "insert link".
- */
-function isEditableTarget(target: EventTarget | null): boolean {
-  if (!(target instanceof HTMLElement)) {
-    return false;
-  }
-  const tag = target.tagName;
-  if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') {
-    return true;
-  }
-  // True for the contenteditable host and any element nested inside one
-  // (e.g. Lexical rich text fields).
-  return target.isContentEditable;
 }
 
 function GlobalSearchInner(props: {
