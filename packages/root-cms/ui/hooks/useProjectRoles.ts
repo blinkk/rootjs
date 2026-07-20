@@ -6,7 +6,12 @@ import {withTimeout} from '../utils/with-timeout.js';
 /** Module-level cache so the Firestore fetch happens at most once. */
 let cachedRolesPromise: Promise<Record<string, UserRole>> | null = null;
 
-function fetchRoles(): Promise<Record<string, UserRole>> {
+/**
+ * Fetches the roles defined for the current project, sharing the same cached
+ * result as the `useProjectRoles()` hook. Exported for non-component callers
+ * (e.g. the Root AI tool handlers) that need to check permissions.
+ */
+export function fetchProjectRoles(): Promise<Record<string, UserRole>> {
   if (!cachedRolesPromise) {
     cachedRolesPromise = (async () => {
       const db = window.firebase.db;
@@ -39,7 +44,7 @@ export function useProjectRoles() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetchRoles()
+    fetchProjectRoles()
       .then((roles) => {
         setRoles(roles);
       })

@@ -12,6 +12,7 @@
  * through the browser on every chat turn.
  */
 import {
+  deleteField,
   doc,
   Firestore,
   getDoc as fbGetDoc,
@@ -27,7 +28,16 @@ import {
   resolveArrayObjectPath,
   unmarshalData as unmarshalDataBase,
 } from '../../../shared/marshal.js';
+import {isSlugValid} from '../../../shared/slug.js';
+import {fetchProjectRoles} from '../../hooks/useProjectRoles.js';
 import {fetchCollectionSchema} from '../../utils/collection.js';
+import {testCanPublish} from '../../utils/permissions.js';
+import {
+  Release,
+  addRelease,
+  getRelease as cmsGetRelease,
+  updateRelease as cmsUpdateRelease,
+} from '../../utils/release.js';
 
 /** Lazily import the validators so we don't double-bundle them. */
 type Validators = typeof import('../../../core/ai-tools.js');
@@ -45,6 +55,8 @@ export const WRITE_CMS_TOOL_NAMES = [
   'doc_updateField',
   'doc_edit',
   'doc_duplicate',
+  'release_create',
+  'release_update',
 ] as const;
 
 export type CmsWriteToolName = (typeof WRITE_CMS_TOOL_NAMES)[number];
@@ -60,6 +72,8 @@ export interface CmsToolReceipt {
   summary: string;
   docId?: string;
   adminUrl?: string;
+  /** Label for the `adminUrl` button. Defaults to "Open document". */
+  linkLabel?: string;
   details: CmsToolDetail[];
 }
 
@@ -72,6 +86,8 @@ export interface CmsToolPreview {
   before?: unknown;
   after?: unknown;
   details: CmsToolDetail[];
+  /** Label for the approve button. Defaults to "Approve draft edit". */
+  approveLabel?: string;
   error?: string;
   errors?: unknown[];
   hint?: string;
@@ -290,6 +306,10 @@ export async function previewCmsWriteTool(
       return previewDocEdit(input);
     case 'doc_duplicate':
       return previewDocDuplicate(input);
+    case 'release_create':
+      return previewReleaseCreate(input);
+    case 'release_update':
+      return previewReleaseUpdate(input);
   }
 }
 
@@ -577,13 +597,496 @@ async function previewDocDuplicate(input: {
 }
 
 // ---------------------------------------------------------------------------
+// Release tools
+// ---------------------------------------------------------------------------
+//
+// `release_create` and `release_update` group docs for the user to publish
+// later — they never publish anything themselves. Updates are limited to
+// UNPUBLISHED releases: editing the doc list of a scheduled release would
+// change what auto-publishes at the scheduled time. Publishing, scheduling,
+// archiving and deleting releases remain user-only actions in the CMS UI
+// (see the safety policy in `core/ai-tools.ts`).
+
+interface ReleaseCreateInput {
+  releaseId: string;
+  description?: string;
+  docIds?: string[];
+}
+
+interface ReleaseUpdateInput {
+  releaseId: string;
+  description?: string;
+  addDocIds?: string[];
+  removeDocIds?: string[];
+}
+
+function getReleaseAdminUrl(releaseId: string): string {
+  return `/cms/releases/${encodeURIComponent(releaseId)}`;
+}
+
+function createReleaseReceipt(options: {
+  title: string;
+  summary: string;
+  releaseId: string;
+  details?: CmsToolDetail[];
+}): CmsToolReceipt {
+  return {
+    type: 'cms-write-receipt',
+    title: options.title,
+    summary: options.summary,
+    adminUrl: getReleaseAdminUrl(options.releaseId),
+    linkLabel: 'Open release',
+    details: [
+      ...(options.details || []),
+      {label: 'Status', value: 'Release saved'},
+      {
+        label: 'Publishing',
+        value: 'Publish or schedule manually from the CMS UI',
+      },
+    ],
+  };
+}
+
+/**
+ * Returns an error message if the signed-in user lacks permission to create
+ * or edit releases (publish permissions, i.e. ADMIN or EDITOR). Fails open
+ * when the roles lookup itself errors — Firestore security rules are the
+ * authoritative gate; this pre-check just produces friendlier errors.
+ */
+async function getReleasePermissionError(): Promise<string | null> {
+  let roles: Awaited<ReturnType<typeof fetchProjectRoles>>;
+  try {
+    roles = await fetchProjectRoles();
+  } catch (err) {
+    console.error('failed to load project roles:', err);
+    return null;
+  }
+  const email = getCtx().firebase.user?.email || '';
+  if (!testCanPublish(roles, email)) {
+    return (
+      `The signed-in user (${email || 'unknown'}) does not have permission ` +
+      'to create or edit releases. Releases require the ADMIN or EDITOR role.'
+    );
+  }
+  return null;
+}
+
+/**
+ * Normalizes a doc-id list input, parsing stringified JSON, trimming and
+ * deduping entries. Returns `null` when the value is not a list of
+ * non-empty strings (so callers can reject malformed input instead of
+ * silently dropping it).
+ */
+function normalizeDocIdList(value: any): string[] | null {
+  if (value === undefined || value === null) {
+    return [];
+  }
+  const parsed = normalizeToolValue(value);
+  if (!Array.isArray(parsed)) {
+    return null;
+  }
+  const ids = new Set<string>();
+  for (const item of parsed) {
+    if (typeof item !== 'string' || !item.trim()) {
+      return null;
+    }
+    ids.add(item.trim());
+  }
+  return Array.from(ids);
+}
+
+interface ReleaseDocIdError {
+  docId: string;
+  message: string;
+}
+
+/**
+ * Canonicalizes doc ids for release membership (normalizing nested slugs
+ * like "Pages/foo/bar" to "Pages/foo--bar", matching how the CMS stores doc
+ * ids) and verifies each doc exists as a draft. Returns the sorted canonical
+ * ids plus any per-doc errors.
+ */
+async function resolveReleaseDocIds(
+  rawDocIds: string[]
+): Promise<{docIds: string[]; errors: ReleaseDocIdError[]}> {
+  const canonical = new Set<string>();
+  const errors: ReleaseDocIdError[] = [];
+  await Promise.all(
+    rawDocIds.map(async (rawDocId) => {
+      let docId: string;
+      try {
+        const {collection, slug} = parseDocId(rawDocId);
+        docId = `${collection}/${slug}`;
+      } catch {
+        errors.push({
+          docId: rawDocId,
+          message: 'Doc id must use the form "Collection/slug".',
+        });
+        return;
+      }
+      const snap = await fbGetDoc(draftDocRef(docId));
+      if (!snap.exists()) {
+        errors.push({
+          docId: rawDocId,
+          message: 'Doc does not exist as a draft.',
+        });
+        return;
+      }
+      canonical.add(docId);
+    })
+  );
+  errors.sort((a, b) => (a.docId < b.docId ? -1 : a.docId > b.docId ? 1 : 0));
+  return {docIds: Array.from(canonical).sort(), errors};
+}
+
+/**
+ * Expands remove ids to also match their canonical "Collection/slug" form so
+ * "Pages/foo/bar" removes a stored "Pages/foo--bar" entry. Invalid ids are
+ * kept verbatim (they can still match a legacy entry). Removed docs are NOT
+ * required to exist, so stale references to deleted docs can be cleaned up.
+ */
+function expandRemoveDocIds(removeDocIds: string[]): string[] {
+  const out = new Set<string>();
+  for (const removeDocId of removeDocIds) {
+    out.add(removeDocId);
+    try {
+      const {collection, slug} = parseDocId(removeDocId);
+      out.add(`${collection}/${slug}`);
+    } catch {
+      // Keep the raw id only.
+    }
+  }
+  return Array.from(out);
+}
+
+interface ReleasePlanError {
+  ok: false;
+  error: string;
+  summary: string;
+  errors?: unknown[];
+  hint?: string;
+}
+
+interface ReleaseCreatePlanOk {
+  ok: true;
+  releaseId: string;
+  description?: string;
+  docIds: string[];
+}
+
+/**
+ * Validates a `release_create` call and computes the release payload.
+ * Shared by the approval preview and the execute handler so both apply the
+ * same checks.
+ */
+async function planReleaseCreate(
+  input: ReleaseCreateInput
+): Promise<ReleaseCreatePlanOk | ReleasePlanError> {
+  const releaseId =
+    typeof input?.releaseId === 'string' ? input.releaseId.trim() : '';
+  if (!releaseId || !isSlugValid(releaseId)) {
+    return {
+      ok: false,
+      error: 'INVALID_RELEASE_ID',
+      summary: `"${releaseId}" is not a valid release id.`,
+      hint:
+        'Release ids use lowercase letters, numbers, underscores and ' +
+        'dashes, e.g. "spring-launch".',
+    };
+  }
+  const permissionError = await getReleasePermissionError();
+  if (permissionError) {
+    return {
+      ok: false,
+      error: 'PERMISSION_DENIED',
+      summary: permissionError,
+      hint: 'Ask a project ADMIN or EDITOR to make release changes.',
+    };
+  }
+  const rawDocIds = normalizeDocIdList(input.docIds);
+  if (!rawDocIds) {
+    return {
+      ok: false,
+      error: 'INVALID_INPUT',
+      summary: '`docIds` must be an array of non-empty doc id strings.',
+      hint: 'Pass doc ids like ["Pages/home", "BlogPosts/launch"].',
+    };
+  }
+  const existing = await cmsGetRelease(releaseId);
+  if (existing) {
+    return {
+      ok: false,
+      error: 'ALREADY_EXISTS',
+      summary: `Release "${releaseId}" already exists.`,
+      hint:
+        'Choose an unused release id, or use `release_update` to modify ' +
+        'the existing release.',
+    };
+  }
+  const resolved = await resolveReleaseDocIds(rawDocIds);
+  if (resolved.errors.length > 0) {
+    return {
+      ok: false,
+      error: 'INVALID_DOC_IDS',
+      summary: 'Some docs could not be added to the release.',
+      errors: resolved.errors,
+      hint:
+        'Docs must exist before adding them to a release. Use `docs_list` ' +
+        'to find valid doc ids.',
+    };
+  }
+  const description =
+    typeof input.description === 'string'
+      ? input.description.trim() || undefined
+      : undefined;
+  return {ok: true, releaseId, description, docIds: resolved.docIds};
+}
+
+interface ReleaseUpdatePlanOk {
+  ok: true;
+  releaseId: string;
+  before: {id: string; description?: string; docIds: string[]};
+  after: {id: string; description?: string; docIds: string[]};
+  addedDocIds: string[];
+  removedDocIds: string[];
+  descriptionChanged: boolean;
+}
+
+/**
+ * Validates a `release_update` call against the current release state and
+ * computes the resulting doc list/description. Shared by the approval
+ * preview and the execute handler so both apply the same checks.
+ */
+async function planReleaseUpdate(
+  input: ReleaseUpdateInput
+): Promise<ReleaseUpdatePlanOk | ReleasePlanError> {
+  const releaseId =
+    typeof input?.releaseId === 'string' ? input.releaseId.trim() : '';
+  if (!releaseId) {
+    return {
+      ok: false,
+      error: 'INVALID_RELEASE_ID',
+      summary: 'Missing `releaseId`.',
+      hint: 'Use `releases_list` to find valid release ids.',
+    };
+  }
+  const permissionError = await getReleasePermissionError();
+  if (permissionError) {
+    return {
+      ok: false,
+      error: 'PERMISSION_DENIED',
+      summary: permissionError,
+      hint: 'Ask a project ADMIN or EDITOR to make release changes.',
+    };
+  }
+  const addRaw = normalizeDocIdList(input.addDocIds);
+  const removeRaw = normalizeDocIdList(input.removeDocIds);
+  if (!addRaw || !removeRaw) {
+    return {
+      ok: false,
+      error: 'INVALID_INPUT',
+      summary:
+        '`addDocIds` and `removeDocIds` must be arrays of non-empty doc ' +
+        'id strings.',
+      hint: 'Pass doc ids like ["Pages/home"].',
+    };
+  }
+  const description =
+    typeof input.description === 'string' ? input.description : undefined;
+  if (
+    addRaw.length === 0 &&
+    removeRaw.length === 0 &&
+    description === undefined
+  ) {
+    return {
+      ok: false,
+      error: 'NO_CHANGES',
+      summary: 'No changes were requested.',
+      hint: 'Pass `description`, `addDocIds` and/or `removeDocIds`.',
+    };
+  }
+  const release = await cmsGetRelease(releaseId);
+  if (!release) {
+    return {
+      ok: false,
+      error: 'NOT_FOUND',
+      summary: `Release "${releaseId}" does not exist.`,
+      hint:
+        'Use `releases_list` to find valid release ids, or create one ' +
+        'with `release_create`.',
+    };
+  }
+  const {computeReleaseDocIds, getReleaseStatus} = await loadValidators();
+  const status = getReleaseStatus(release);
+  if (status !== 'unpublished') {
+    const hints: Record<string, string> = {
+      scheduled:
+        'The release is scheduled for publishing. The user must ' +
+        'unschedule it from the CMS UI before it can be edited.',
+      published:
+        'The release has already been published. Create a new release ' +
+        'for further changes.',
+      archived:
+        'The release is archived. The user must unarchive it from the ' +
+        'CMS UI before it can be edited.',
+    };
+    return {
+      ok: false,
+      error: 'RELEASE_NOT_EDITABLE',
+      summary: `Release "${releaseId}" is ${status} and cannot be edited.`,
+      hint: hints[status],
+    };
+  }
+  const resolvedAdds = await resolveReleaseDocIds(addRaw);
+  if (resolvedAdds.errors.length > 0) {
+    return {
+      ok: false,
+      error: 'INVALID_DOC_IDS',
+      summary: 'Some docs could not be added to the release.',
+      errors: resolvedAdds.errors,
+      hint:
+        'Docs must exist before adding them to a release. Use `docs_list` ' +
+        'to find valid doc ids.',
+    };
+  }
+  const existingDocIds = Array.from(new Set(release.docIds || [])).sort();
+  const newDocIds = computeReleaseDocIds(
+    existingDocIds,
+    resolvedAdds.docIds,
+    expandRemoveDocIds(removeRaw)
+  );
+  const oldDescription = release.description || undefined;
+  const newDescription =
+    description !== undefined
+      ? description.trim() || undefined
+      : oldDescription;
+  const docsChanged =
+    JSON.stringify(existingDocIds) !== JSON.stringify(newDocIds);
+  const descriptionChanged = newDescription !== oldDescription;
+  if (!docsChanged && !descriptionChanged) {
+    return {
+      ok: false,
+      error: 'NO_CHANGES',
+      summary: `The requested update would not change release "${releaseId}".`,
+      hint:
+        'Check the current release contents with `release_get`, then ' +
+        'retry with docs that are not already in the requested state.',
+    };
+  }
+  return {
+    ok: true,
+    releaseId,
+    before: {
+      id: releaseId,
+      description: oldDescription,
+      docIds: existingDocIds,
+    },
+    after: {id: releaseId, description: newDescription, docIds: newDocIds},
+    addedDocIds: newDocIds.filter((id) => !existingDocIds.includes(id)),
+    removedDocIds: existingDocIds.filter((id) => !newDocIds.includes(id)),
+    descriptionChanged,
+  };
+}
+
+/** Short human-readable summary of a planned `release_update`. */
+function describeReleaseUpdate(plan: ReleaseUpdatePlanOk): string {
+  const parts: string[] = [];
+  if (plan.addedDocIds.length > 0) {
+    const n = plan.addedDocIds.length;
+    parts.push(`add ${n} doc${n === 1 ? '' : 's'}`);
+  }
+  if (plan.removedDocIds.length > 0) {
+    const n = plan.removedDocIds.length;
+    parts.push(`remove ${n} doc${n === 1 ? '' : 's'}`);
+  }
+  if (plan.descriptionChanged) {
+    parts.push('update the description');
+  }
+  return `Update release ${plan.releaseId}: ${parts.join(', ')}.`;
+}
+
+async function previewReleaseCreate(
+  input: ReleaseCreateInput
+): Promise<CmsToolPreview> {
+  const plan = await planReleaseCreate(input);
+  if (!plan.ok) {
+    return createPreviewError({
+      toolName: 'release_create',
+      title: 'Create release',
+      summary: plan.summary,
+      error: plan.error,
+      errors: plan.errors,
+      hint: plan.hint,
+    });
+  }
+  const after: Record<string, unknown> = {id: plan.releaseId};
+  if (plan.description) {
+    after.description = plan.description;
+  }
+  after.docIds = plan.docIds;
+  return {
+    toolName: 'release_create',
+    title: 'Create release',
+    summary: `Create release ${plan.releaseId} with ${plan.docIds.length} doc${
+      plan.docIds.length === 1 ? '' : 's'
+    }.`,
+    before: {},
+    after,
+    details: [
+      {label: 'Release', value: plan.releaseId},
+      {label: 'Docs', value: String(plan.docIds.length)},
+      {label: 'Operation', value: 'Create release'},
+    ],
+    approveLabel: 'Approve release change',
+  };
+}
+
+async function previewReleaseUpdate(
+  input: ReleaseUpdateInput
+): Promise<CmsToolPreview> {
+  const plan = await planReleaseUpdate(input);
+  if (!plan.ok) {
+    return createPreviewError({
+      toolName: 'release_update',
+      title: 'Update release',
+      summary: plan.summary,
+      error: plan.error,
+      errors: plan.errors,
+      hint: plan.hint,
+    });
+  }
+  const details: CmsToolDetail[] = [{label: 'Release', value: plan.releaseId}];
+  if (plan.addedDocIds.length > 0) {
+    details.push({label: 'Add docs', value: plan.addedDocIds.join(', ')});
+  }
+  if (plan.removedDocIds.length > 0) {
+    details.push({label: 'Remove docs', value: plan.removedDocIds.join(', ')});
+  }
+  if (plan.descriptionChanged) {
+    details.push({
+      label: 'Description',
+      value: plan.after.description || '(cleared)',
+    });
+  }
+  return {
+    toolName: 'release_update',
+    title: 'Update release',
+    summary: describeReleaseUpdate(plan),
+    before: plan.before,
+    after: plan.after,
+    details,
+    approveLabel: 'Approve release change',
+  };
+}
+
+// ---------------------------------------------------------------------------
 // Handler implementations
 // ---------------------------------------------------------------------------
 //
 // Only write tools live here. Read tools (`doc_get`, `docs_list`,
 // `docs_search`, `doc_getVersion`, `doc_listVersions`, `schema_get`,
-// `collections_list`) execute server-side via the `execute` blocks in
-// `core/ai-tools.ts`.
+// `collections_list`, `releases_list`, `release_get`) execute via the
+// `execute` blocks in `core/ai-tools.ts`.
 
 async function getCachedSchema(collectionId: string): Promise<Collection> {
   return await fetchCollectionSchema(collectionId);
@@ -940,6 +1443,90 @@ async function docTranslateField(input: {
   return {translations: data.translations};
 }
 
+async function releaseCreate(input: ReleaseCreateInput) {
+  const plan = await planReleaseCreate(input);
+  if (!plan.ok) {
+    return {
+      success: false,
+      releaseId: input?.releaseId,
+      error: plan.error,
+      message: plan.summary,
+      errors: plan.errors,
+      hint: plan.hint,
+    };
+  }
+  const release: Partial<Release> = {docIds: plan.docIds};
+  if (plan.description) {
+    release.description = plan.description;
+  }
+  await addRelease(plan.releaseId, release);
+  return {
+    success: true,
+    releaseId: plan.releaseId,
+    docIds: plan.docIds,
+    receipt: createReleaseReceipt({
+      title: 'Created release',
+      summary: `Created release ${plan.releaseId} with ${
+        plan.docIds.length
+      } doc${plan.docIds.length === 1 ? '' : 's'}.`,
+      releaseId: plan.releaseId,
+      details: [
+        {label: 'Release', value: plan.releaseId},
+        {label: 'Docs', value: String(plan.docIds.length)},
+        {label: 'Operation', value: 'Create release'},
+      ],
+    }),
+  };
+}
+
+async function releaseUpdate(input: ReleaseUpdateInput) {
+  const plan = await planReleaseUpdate(input);
+  if (!plan.ok) {
+    return {
+      success: false,
+      releaseId: input?.releaseId,
+      error: plan.error,
+      message: plan.summary,
+      errors: plan.errors,
+      hint: plan.hint,
+    };
+  }
+  const updates: Record<string, unknown> = {docIds: plan.after.docIds};
+  if (plan.descriptionChanged) {
+    updates.description =
+      plan.after.description !== undefined
+        ? plan.after.description
+        : deleteField();
+  }
+  await cmsUpdateRelease(plan.releaseId, updates as Partial<Release>);
+  const details: CmsToolDetail[] = [{label: 'Release', value: plan.releaseId}];
+  if (plan.addedDocIds.length > 0) {
+    details.push({label: 'Added', value: plan.addedDocIds.join(', ')});
+  }
+  if (plan.removedDocIds.length > 0) {
+    details.push({label: 'Removed', value: plan.removedDocIds.join(', ')});
+  }
+  if (plan.descriptionChanged) {
+    details.push({
+      label: 'Description',
+      value: plan.after.description || '(cleared)',
+    });
+  }
+  return {
+    success: true,
+    releaseId: plan.releaseId,
+    docIds: plan.after.docIds,
+    addedDocIds: plan.addedDocIds,
+    removedDocIds: plan.removedDocIds,
+    receipt: createReleaseReceipt({
+      title: 'Updated release',
+      summary: describeReleaseUpdate(plan),
+      releaseId: plan.releaseId,
+      details,
+    }),
+  };
+}
+
 // ---------------------------------------------------------------------------
 // Dispatcher
 // ---------------------------------------------------------------------------
@@ -951,6 +1538,8 @@ const HANDLERS: Record<string, (input: any) => Promise<unknown>> = {
   doc_edit: docEdit,
   doc_duplicate: docDuplicate,
   doc_translateField: docTranslateField,
+  release_create: releaseCreate,
+  release_update: releaseUpdate,
 };
 
 /**

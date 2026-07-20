@@ -1357,7 +1357,7 @@ function ToolApprovalCard(props: {
           disabled={props.approval.status === 'executing'}
           onClick={props.onApprove}
         >
-          Approve draft edit
+          {preview.approveLabel || 'Approve draft edit'}
         </Button>
       </div>
     </div>
@@ -1392,7 +1392,7 @@ function ToolReceipt(props: {output: any}) {
           compact
           href={receipt.adminUrl}
         >
-          Open document
+          {receipt.linkLabel || 'Open document'}
         </Button>
       )}
     </div>

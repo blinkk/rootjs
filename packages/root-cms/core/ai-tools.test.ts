@@ -1,5 +1,13 @@
 import {describe, expect, it} from 'vitest';
-import {applyDocEdits, validateValueAtPath} from './ai-tools.js';
+import {
+  applyDocEdits,
+  computeReleaseDocIds,
+  createCmsTools,
+  createReadOnlyCmsTools,
+  getReleaseStatus,
+  validateValueAtPath,
+  type CmsToolReadBackend,
+} from './ai-tools.js';
 import {Collection} from './schema.js';
 
 describe('validateValueAtPath', () => {
@@ -505,5 +513,159 @@ describe('applyDocEdits', () => {
     if (!result.ok) {
       expect(result.error.message).toMatch(/unknown operation/i);
     }
+  });
+});
+
+describe('getReleaseStatus', () => {
+  it('returns "unpublished" when no stamps are set', () => {
+    expect(getReleaseStatus({})).toBe('unpublished');
+  });
+
+  it('returns "scheduled" when only scheduledAt is set', () => {
+    expect(getReleaseStatus({scheduledAt: 1234})).toBe('scheduled');
+  });
+
+  it('returns "published" when publishedAt is set', () => {
+    expect(getReleaseStatus({publishedAt: 1234})).toBe('published');
+  });
+
+  it('prefers "published" over "scheduled"', () => {
+    expect(getReleaseStatus({publishedAt: 1234, scheduledAt: 5678})).toBe(
+      'published'
+    );
+  });
+
+  it('prefers "archived" over everything else', () => {
+    expect(
+      getReleaseStatus({archivedAt: 1, publishedAt: 2, scheduledAt: 3})
+    ).toBe('archived');
+  });
+
+  it('treats truthy Timestamp-like objects as set', () => {
+    expect(getReleaseStatus({scheduledAt: {toMillis: () => 1}})).toBe(
+      'scheduled'
+    );
+  });
+});
+
+describe('computeReleaseDocIds', () => {
+  it('adds docs, deduped and sorted', () => {
+    expect(
+      computeReleaseDocIds(['Pages/home'], ['BlogPosts/a', 'Pages/home'])
+    ).toEqual(['BlogPosts/a', 'Pages/home']);
+  });
+
+  it('removes docs', () => {
+    expect(
+      computeReleaseDocIds(['Pages/a', 'Pages/b'], undefined, ['Pages/a'])
+    ).toEqual(['Pages/b']);
+  });
+
+  it('applies adds and removes together, removal winning on overlap', () => {
+    expect(
+      computeReleaseDocIds(['Pages/a'], ['Pages/b', 'Pages/c'], ['Pages/b'])
+    ).toEqual(['Pages/a', 'Pages/c']);
+  });
+
+  it('ignores removals of docs not in the release', () => {
+    expect(computeReleaseDocIds(['Pages/a'], [], ['Pages/zzz'])).toEqual([
+      'Pages/a',
+    ]);
+  });
+
+  it('dedupes an existing list with duplicates', () => {
+    expect(computeReleaseDocIds(['Pages/a', 'Pages/a'], [], [])).toEqual([
+      'Pages/a',
+    ]);
+  });
+
+  it('returns an empty list when everything is removed', () => {
+    expect(computeReleaseDocIds(['Pages/a'], undefined, ['Pages/a'])).toEqual(
+      []
+    );
+  });
+
+  it('does not mutate the inputs', () => {
+    const existing = ['Pages/b', 'Pages/a'];
+    computeReleaseDocIds(existing, ['Pages/c'], ['Pages/a']);
+    expect(existing).toEqual(['Pages/b', 'Pages/a']);
+  });
+});
+
+describe('release tools wiring', () => {
+  function stubBackend(): CmsToolReadBackend {
+    return {
+      listCollections: async () => [],
+      listDocs: async () => [],
+      getDoc: async () => null,
+      getDocVersion: async () => null,
+      listVersions: async () => [],
+      getSchemaFields: async () => null,
+      listReleases: async ({limit}) => {
+        return [
+          {
+            id: 'spring-launch',
+            docIds: ['Pages/home'],
+            dataSourceIds: [],
+            status: 'unpublished' as const,
+          },
+        ].slice(0, limit);
+      },
+      getRelease: async (releaseId) => {
+        if (releaseId !== 'spring-launch') {
+          return null;
+        }
+        return {
+          id: 'spring-launch',
+          docIds: ['Pages/home'],
+          dataSourceIds: [],
+          status: 'unpublished' as const,
+        };
+      },
+    };
+  }
+
+  it('exposes read tools with execute and write tools schema-only', () => {
+    const tools = createCmsTools(stubBackend());
+    expect(tools.releases_list.execute).toBeTypeOf('function');
+    expect(tools.release_get.execute).toBeTypeOf('function');
+    // Write tools are executed in the browser via `onToolCall` so the user
+    // can approve them first — they must NOT carry an execute here.
+    expect(tools.release_create.execute).toBeUndefined();
+    expect(tools.release_update.execute).toBeUndefined();
+  });
+
+  it('releases_list returns releases from the backend', async () => {
+    const tools = createCmsTools(stubBackend());
+    const result: any = await (tools.releases_list.execute as any)(
+      {limit: 10},
+      {} as any
+    );
+    expect(result.releases).toHaveLength(1);
+    expect(result.releases[0].id).toBe('spring-launch');
+  });
+
+  it('release_get reports found/not-found', async () => {
+    const tools = createCmsTools(stubBackend());
+    const found: any = await (tools.release_get.execute as any)(
+      {releaseId: 'spring-launch'},
+      {} as any
+    );
+    expect(found).toMatchObject({found: true});
+    expect(found.release.status).toBe('unpublished');
+    const missing: any = await (tools.release_get.execute as any)(
+      {releaseId: 'nope'},
+      {} as any
+    );
+    expect(missing).toEqual({found: false});
+  });
+
+  it('includes release read tools (but not write tools) in the read-only set', () => {
+    const tools = createReadOnlyCmsTools(stubBackend());
+    expect(tools.releases_list).toBeDefined();
+    expect(tools.release_get).toBeDefined();
+    expect(tools.release_create).toBeUndefined();
+    expect(tools.release_update).toBeUndefined();
+    expect(tools.doc_set).toBeUndefined();
   });
 });

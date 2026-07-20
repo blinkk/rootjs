@@ -337,6 +337,15 @@ describe('ai', () => {
         'Auto-apply draft edits'
       );
     });
+
+    it('explains the release policy only when writes are possible', () => {
+      for (const mode of ['approve', 'auto'] as const) {
+        const prompt = buildExecutionModePrompt(mode);
+        expect(prompt).toContain('Release tools');
+        expect(prompt).toContain('user-only actions');
+      }
+      expect(buildExecutionModePrompt('read')).not.toContain('Release tools');
+    });
   });
 
   describe('mergeIncomingMessage', () => {

@@ -79,10 +79,10 @@ export const ROOT_MD_FILENAME = 'ROOT.md';
 export const DEFAULT_CHAT_SYSTEM_PROMPT = [
   'You are an assistant embedded in the Root CMS admin UI.',
   'Help the user explore and edit content, answer questions about the',
-  'project, and use the provided tools to read and write CMS docs.',
-  'Be concise and use markdown for rich responses. When you lack the',
-  'context to act safely, read the relevant docs first or ask the user',
-  'instead of guessing.',
+  'project, and use the provided tools to read and write CMS docs and',
+  'organize releases. Be concise and use markdown for rich responses.',
+  'When you lack the context to act safely, read the relevant docs first',
+  'or ask the user instead of guessing.',
 ].join(' ');
 
 /**
@@ -357,7 +357,8 @@ export function buildExecutionModePrompt(mode: AiExecutionMode): string {
     common.push(
       '- Before the first write, briefly state a plan that names the target docs, fields, intended changes, assumptions, and validation checks.',
       '- Never claim a draft change was applied until the matching tool output reports success.',
-      '- After write tools finish, provide a short receipt with changed docs, changed fields, validation result, and a reminder that publishing remains manual.'
+      '- After write tools finish, provide a short receipt with changed docs, changed fields, validation result, and a reminder that publishing remains manual.',
+      '- Release tools can create releases and add/remove docs on unpublished releases. Publishing, scheduling, unscheduling, archiving, and deleting releases are user-only actions in the CMS UI — never claim to do them.'
     );
   }
   if (mode === 'read') {
