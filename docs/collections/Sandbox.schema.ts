@@ -15,4 +15,5 @@ export default schema.collection({
   },
   autolock: false,
   fields: PagesSchema.fields,
+  customSorting: true,
 });
