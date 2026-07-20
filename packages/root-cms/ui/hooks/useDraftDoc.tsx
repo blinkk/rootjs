@@ -17,6 +17,11 @@ import {containsAssetId, extractAssetIds} from '../utils/assets.js';
 import {debounce} from '../utils/debounce.js';
 import {setDocToCache} from '../utils/doc-cache.js';
 import {CMSDoc} from '../utils/doc.js';
+import {
+  EditHistory,
+  EditHistoryApplyResult,
+  EditHistoryChange,
+} from '../utils/edit-history.js';
 import {EventListener} from '../utils/events.js';
 import {
   JsonTrieStore,
@@ -44,6 +49,13 @@ export enum DraftDocEventType {
   FLUSH = 'FLUSH',
   /** The db snapshot listener failed, e.g. permission denied. */
   ERROR = 'ERROR',
+  /** The undo/redo history stacks changed. */
+  HISTORY_CHANGE = 'HISTORY_CHANGE',
+  /**
+   * An undo/redo was applied to the draft. Payload is the list of deepkeys
+   * that were written.
+   */
+  HISTORY_APPLIED = 'HISTORY_APPLIED',
 }
 
 /**
@@ -57,11 +69,15 @@ export class DraftDocController extends EventListener {
   readonly docId: string;
   readonly collectionId: string;
   readonly slug: string;
+  /** In-session undo/redo history of field edits. */
+  readonly history = new EditHistory();
   private db: Firestore;
   private docRef: DocumentReference;
   private store: JsonTrieStore;
 
   private pendingUpdates = new Map<string, any>();
+  /** Set while an undo/redo is being applied, to suppress history capture. */
+  private isApplyingHistory = false;
   private dbUnsubscribe?: () => void;
   private saveState = SaveState.NO_CHANGES;
   private autolock = false;
@@ -113,6 +129,9 @@ export class DraftDocController extends EventListener {
         this.dispatch(DraftDocEventType.VALUE_CHANGE, key, value);
       }
     );
+    this.history.onChange(() => {
+      this.dispatch(DraftDocEventType.HISTORY_CHANGE);
+    });
     const collection = window.__ROOT_CTX.collections[collectionId];
     if (collection) {
       this.autolock = !!collection.autolock;
@@ -145,6 +164,12 @@ export class DraftDocController extends EventListener {
           applyUpdates(data, Object.fromEntries(this.pendingUpdates));
         }
         this.store.setData(data);
+        // Remote replacements (another editor's write, version restore,
+        // revert draft, AI edits) invalidate history entries whose expected
+        // values no longer match. Our own committed writes are skipped above
+        // via `hasPendingWrites`, and merged local pending updates keep their
+        // entries valid, so this only drops genuinely stale entries.
+        this.history.handleRemoteData((key) => this.store.get(key));
         // Backfill `sys.assets` on the next flush if a legacy doc loaded without
         // the reverse index. Only checked on initial load to avoid retriggering
         // on every remote sync.
@@ -243,6 +268,7 @@ export class DraftDocController extends EventListener {
     if (this.readOnly) {
       return;
     }
+    this.captureHistory({[key]: value});
     if (value === undefined) {
       // Firestore doesn't support `undefined`, so use deleteField() instead.
       this.setPendingUpdate(key, deleteField());
@@ -263,6 +289,7 @@ export class DraftDocController extends EventListener {
     if (this.readOnly) {
       return;
     }
+    this.captureHistory(updates);
     for (const key in updates) {
       const val = updates[key];
       if (val === null || val === undefined) {
@@ -288,12 +315,91 @@ export class DraftDocController extends EventListener {
     if (this.readOnly) {
       return;
     }
+    this.captureHistory({[key]: undefined});
     this.setPendingUpdate(key, deleteField());
     this.store.set(key, undefined);
     this.setSaveState(SaveState.UPDATES_PENDING);
     if (this.autoSave) {
       this.queueChanges();
     }
+  }
+
+  /**
+   * Records the before/after transition of a pending write in the undo
+   * history. Only content keys (`fields` and below) are captured; `sys.*`
+   * bookkeeping writes are not undoable. Suppressed while an undo/redo is
+   * itself being applied.
+   */
+  private captureHistory(updates: Record<string, any>) {
+    if (this.isApplyingHistory) {
+      return;
+    }
+    const changes: Record<string, EditHistoryChange> = {};
+    // Read all before-values prior to any store mutation so multi-key
+    // updates with overlapping ancestor/descendant keys capture consistent
+    // transitions.
+    for (const key in updates) {
+      if (key === 'fields' || key.startsWith('fields.')) {
+        changes[key] = {before: this.store.get(key), after: updates[key]};
+      }
+    }
+    if (Object.keys(changes).length > 0) {
+      this.history.capture(changes);
+    }
+  }
+
+  /**
+   * Reverts the most recent field edit. The restore goes through
+   * `updateKeys()`, so autosave, save states, and `sys.assets` bookkeeping
+   * treat it exactly like a hand edit.
+   *
+   * When `onlyEntryId` is set, the undo is a no-op unless that entry is
+   * still on top of the stack (used by transient "Undo" toasts so they can
+   * never revert a newer edit).
+   */
+  undo(options?: {onlyEntryId?: string}): EditHistoryApplyResult {
+    return this.applyHistory('undo', options);
+  }
+
+  /** Re-applies the most recently undone field edit. */
+  redo(): EditHistoryApplyResult {
+    return this.applyHistory('redo');
+  }
+
+  private applyHistory(
+    direction: 'undo' | 'redo',
+    options?: {onlyEntryId?: string}
+  ): EditHistoryApplyResult {
+    if (this.readOnly) {
+      return {status: 'empty'};
+    }
+    if (options?.onlyEntryId) {
+      const top =
+        direction === 'undo'
+          ? this.history.peekUndo()
+          : this.history.peekRedo();
+      if (!top || top.id !== options.onlyEntryId) {
+        return {status: 'empty'};
+      }
+    }
+    const getValue = (key: string) => this.store.get(key);
+    const result =
+      direction === 'undo'
+        ? this.history.undo(getValue)
+        : this.history.redo(getValue);
+    if (result.status === 'applied') {
+      this.isApplyingHistory = true;
+      try {
+        this.updateKeys(result.updates);
+      } finally {
+        this.isApplyingHistory = false;
+      }
+      this.dispatch(
+        DraftDocEventType.HISTORY_APPLIED,
+        Object.keys(result.updates)
+      );
+    }
+    return result;
   }
 
   /**
@@ -482,6 +588,7 @@ export class DraftDocController extends EventListener {
    */
   async dispose() {
     super.dispose();
+    this.history.dispose();
     this.stop();
   }
 }
@@ -755,6 +862,78 @@ export function useDraftDocField<T>(deepKey: string, cb: (data: T) => void) {
   const {controller} = useDraftDoc();
   useEffect(() => {
     return controller.subscribe(deepKey, cb);
+  }, [controller]);
+}
+
+export interface DraftDocHistoryState {
+  canUndo: boolean;
+  canRedo: boolean;
+  /** Optional label of the entry that would be undone, e.g. "Removed item". */
+  undoLabel?: string;
+  redoLabel?: string;
+  undo: () => void;
+  redo: () => void;
+}
+
+/**
+ * Hook for the doc editor's undo/redo controls. Subscribes to history stack
+ * changes and surfaces a toast when an undo/redo is discarded because the
+ * targeted field was changed elsewhere (e.g. by another editor).
+ */
+export function useDraftDocHistory(): DraftDocHistoryState {
+  const {controller} = useDraftDoc();
+
+  const readState = () => ({
+    canUndo: controller.history.canUndo(),
+    canRedo: controller.history.canRedo(),
+    undoLabel: controller.history.peekUndo()?.label,
+    redoLabel: controller.history.peekRedo()?.label,
+  });
+  const [state, setState] = useState(readState);
+
+  useEffect(() => {
+    setState(readState());
+    return controller.on(DraftDocEventType.HISTORY_CHANGE, () => {
+      setState(readState());
+    });
+  }, [controller]);
+
+  const notifyConflict = (label: string) => {
+    showNotification({
+      title: `${label} discarded`,
+      message: 'This field was changed by another editor.',
+      color: 'yellow',
+      autoClose: 5000,
+    });
+  };
+
+  const undo = () => {
+    const result = controller.undo();
+    if (result.status === 'conflict') {
+      notifyConflict('Undo');
+    }
+  };
+
+  const redo = () => {
+    const result = controller.redo();
+    if (result.status === 'conflict') {
+      notifyConflict('Redo');
+    }
+  };
+
+  return {...state, undo, redo};
+}
+
+/**
+ * Hook that fires a callback whenever an undo/redo write is applied to the
+ * draft. The callback receives the list of deepkeys that were written. Used
+ * by components that mirror draft state locally (e.g. array fields) and are
+ * not subscribed to the exact keys an undo may touch.
+ */
+export function useDraftDocHistoryApplied(cb: (keys: string[]) => void) {
+  const {controller} = useDraftDoc();
+  useEffect(() => {
+    return controller.on(DraftDocEventType.HISTORY_APPLIED, cb);
   }, [controller]);
 }
 
