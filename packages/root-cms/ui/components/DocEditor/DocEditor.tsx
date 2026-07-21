@@ -2051,6 +2051,17 @@ interface ArrayFieldItemProps {
 DocEditor.ArrayFieldItem = (props: ArrayFieldItemProps) => {
   const itemDeepKey = `${props.parentDeepKey}.${props.itemKey}`;
 
+  // The drawer is natively toggled by the user, so `initialOpen` only ever
+  // forces it open (e.g. newly-added items or deeplink targets) — never
+  // closed. Without this, clearing the deeplink would re-render with a falsy
+  // `initialOpen` and collapse a drawer the user had open.
+  const [open, setOpen] = useState(props.initialOpen);
+  useEffect(() => {
+    if (props.initialOpen) {
+      setOpen(true);
+    }
+  }, [props.initialOpen]);
+
   return (
     <Draggable
       key={props.itemKey}
@@ -2079,9 +2090,11 @@ DocEditor.ArrayFieldItem = (props: ArrayFieldItemProps) => {
           </div>
           <details
             className="DocEditor__ArrayField__item"
-            open={props.initialOpen}
+            open={open}
             onToggle={(e) => {
-              if ((e.target as HTMLDetailsElement).open) {
+              const isOpen = (e.target as HTMLDetailsElement).open;
+              setOpen(isOpen);
+              if (isOpen) {
                 requestHighlightNode(itemDeepKey, {scroll: true});
               } else {
                 requestHighlightNode(null);
