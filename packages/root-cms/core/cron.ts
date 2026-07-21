@@ -1,6 +1,7 @@
 import {RootConfig} from '@blinkk/root';
 import {Timestamp} from 'firebase-admin/firestore';
 import {RootCMSClient} from './client.js';
+import {DependencyGraphService} from './dependency-graph.js';
 import {LoadSchemaFn, SearchIndexService} from './search-index.js';
 import {VersionsService} from './versions.js';
 
@@ -10,6 +11,13 @@ import {VersionsService} from './versions.js';
  * every tick.
  */
 export const SEARCH_INDEX_MIN_INTERVAL_MS = 5 * 60 * 1000;
+
+/**
+ * The minimum interval between incremental dependency graph updates. Kept
+ * short (one cron tick) so that reference changes are reflected in the graph
+ * shortly after docs are saved or published.
+ */
+export const DEPENDENCY_GRAPH_MIN_INTERVAL_MS = 60 * 1000;
 
 export interface RunCronJobsOptions {
   /**
@@ -40,6 +48,7 @@ export async function runCronJobs(
       rootConfig,
       options.loadSchema
     ),
+    runCronJob('updateDependencyGraph', runUpdateDependencyGraph, rootConfig),
   ]);
 }
 
@@ -71,6 +80,20 @@ async function runSyncScheduledDataSources(rootConfig: RootConfig) {
 async function runSaveVersions(rootConfig: RootConfig) {
   const service = new VersionsService(rootConfig);
   await service.saveVersions();
+}
+
+/**
+ * Incrementally updates the dependency graph. No-op unless the feature is
+ * enabled via the `dependencyGraph` cmsPlugin option.
+ */
+async function runUpdateDependencyGraph(rootConfig: RootConfig) {
+  const service = new DependencyGraphService(rootConfig);
+  if (!service.isEnabled()) {
+    return;
+  }
+  await service.runCronUpdate({
+    minIntervalMs: DEPENDENCY_GRAPH_MIN_INTERVAL_MS,
+  });
 }
 
 async function runIncrementalSearchIndex(

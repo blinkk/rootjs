@@ -21,6 +21,10 @@ import {type CMSCheck} from './checks.js';
 import {RootCMSClient, parseDocId, unmarshalData} from './client.js';
 import {runCronJobs} from './cron.js';
 import {arrayToCsv, csvToArray} from './csv.js';
+import {
+  DependencyGraphService,
+  DependencyGraphRebuildResult,
+} from './dependency-graph.js';
 import {SearchIndexService, RebuildResult} from './search-index.js';
 import {type CMSTranslationService} from './translations.js';
 import {assertPublicHttpUrl, UnsafeUrlError} from './url-safety.js';
@@ -344,6 +348,161 @@ export function api(server: Server, options: ApiOptions) {
     searchRebuildJobs.set(projectId, job);
     res.status(202).json({success: true, started: true, force});
   });
+
+  // Tracks in-flight dependency graph rebuilds, keyed by projectId. Only one
+  // rebuild per project may run at a time.
+  const dependencyGraphRebuildJobs = new Map<
+    string,
+    Promise<DependencyGraphRebuildResult>
+  >();
+
+  /**
+   * Queries the dependency graph for the docs referenced by one or more docs.
+   * Requires the `dependencyGraph` cmsPlugin option to be enabled.
+   *
+   * Authentication: any signed-in CMS user.
+   *
+   * Sample request:
+   *
+   * ```
+   * POST /cms/api/dependency_graph.query
+   * {"docIds": ["Pages/index"], "mode": "draft", "transitive": true}
+   * ```
+   */
+  server.use(
+    '/cms/api/dependency_graph.query',
+    async (req: Request, res: Response) => {
+      if (
+        req.method !== 'POST' ||
+        !String(req.get('content-type')).startsWith('application/json')
+      ) {
+        res.status(400).json({success: false, error: 'BAD_REQUEST'});
+        return;
+      }
+      if (!req.user?.email) {
+        res.status(401).json({success: false, error: 'UNAUTHORIZED'});
+        return;
+      }
+      const body = req.body || {};
+      const docIds = Array.isArray(body.docIds)
+        ? body.docIds.filter((id: any) => typeof id === 'string')
+        : [];
+      if (docIds.length === 0) {
+        res.status(400).json({
+          success: false,
+          error: 'MISSING_REQUIRED_FIELD',
+          field: 'docIds',
+        });
+        return;
+      }
+      const mode = body.mode === 'published' ? 'published' : 'draft';
+      const transitive = body.transitive !== false;
+      try {
+        const service = new DependencyGraphService(req.rootConfig!);
+        if (!service.isEnabled()) {
+          res.status(404).json({success: false, error: 'NOT_ENABLED'});
+          return;
+        }
+        const graph = await service.getGraph(mode);
+        const deps = graph.getDependencies(docIds, {transitive});
+        res.setHeader('Cache-Control', 'no-store');
+        res.status(200).json({
+          success: true,
+          mode,
+          deps,
+          lastRun: graph.lastRun,
+        });
+      } catch (err) {
+        console.error(err.stack || err);
+        res.status(500).json({success: false, error: 'UNKNOWN'});
+      }
+    }
+  );
+
+  /**
+   * Returns the dependency graph's current status (last run, ref counts).
+   * Authentication: any signed-in CMS user.
+   */
+  server.use(
+    '/cms/api/dependency_graph.status',
+    async (req: Request, res: Response) => {
+      if (!req.user?.email) {
+        res.status(401).json({success: false, error: 'UNAUTHORIZED'});
+        return;
+      }
+      try {
+        const cmsClient = new RootCMSClient(req.rootConfig!);
+        const service = new DependencyGraphService(req.rootConfig!);
+        const status = await service.getStatus();
+        const running = dependencyGraphRebuildJobs.has(cmsClient.projectId);
+        res.setHeader('Cache-Control', 'no-store');
+        res.status(200).json({success: true, status, running});
+      } catch (err) {
+        console.error(err.stack || err);
+        res.status(500).json({success: false, error: 'UNKNOWN'});
+      }
+    }
+  );
+
+  /**
+   * Triggers a rebuild of the dependency graph. ADMIN-only.
+   *
+   * Sample request:
+   *
+   * ```
+   * POST /cms/api/dependency_graph.rebuild
+   * {"force": true}
+   * ```
+   */
+  server.use(
+    '/cms/api/dependency_graph.rebuild',
+    async (req: Request, res: Response) => {
+      if (req.method !== 'POST') {
+        res.status(400).json({success: false, error: 'BAD_REQUEST'});
+        return;
+      }
+      if (!req.user?.email) {
+        res.status(401).json({success: false, error: 'UNAUTHORIZED'});
+        return;
+      }
+      const cmsClient = new RootCMSClient(req.rootConfig!);
+      try {
+        const role = await cmsClient.getUserRole(req.user.email);
+        if (role !== 'ADMIN') {
+          res.status(403).json({success: false, error: 'FORBIDDEN'});
+          return;
+        }
+      } catch (err) {
+        console.error(err.stack || err);
+        res.status(500).json({success: false, error: 'UNKNOWN'});
+        return;
+      }
+
+      const service = new DependencyGraphService(req.rootConfig!);
+      if (!service.isEnabled()) {
+        res.status(404).json({success: false, error: 'NOT_ENABLED'});
+        return;
+      }
+      const body = req.body || {};
+      const force = !!body.force;
+      const projectId = cmsClient.projectId;
+      if (dependencyGraphRebuildJobs.has(projectId)) {
+        res.status(202).json({success: true, alreadyRunning: true});
+        return;
+      }
+      const job = service
+        .rebuildGraph({force})
+        .catch((err) => {
+          console.error('dependency_graph.rebuild failed:', err.stack || err);
+          throw err;
+        })
+        .finally(() => {
+          dependencyGraphRebuildJobs.delete(projectId);
+        });
+      dependencyGraphRebuildJobs.set(projectId, job);
+      res.status(202).json({success: true, started: true, force});
+    }
+  );
 
   /**
    * Accepts a JSON object containing {headers: [...], rows: [...]} and sends
