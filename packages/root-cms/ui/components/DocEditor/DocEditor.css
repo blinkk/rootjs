@@ -138,6 +138,27 @@
   background: linear-gradient(rgb(255, 248, 197), rgb(255, 248, 197));
 }
 
+/*
+ * Presence highlight: when another user has this field focused, tint the
+ * field's actual input element (textarea, text input, etc.) in that user's
+ * color (matching their avatar), à la Google Docs. Note: the focused field is
+ * always the innermost `.DocEditor__field` (focus tracking resolves the
+ * closest field element), so these descendant selectors never leak into
+ * nested child fields (which are themselves `.DocEditor__field` elements with
+ * their own presence state).
+ */
+.DocEditor__field--presence
+  > .DocEditor__field__input
+  :is(
+    textarea,
+    select,
+    input:not([type='checkbox'], [type='radio'], [type='file'])
+  ) {
+  border-color: var(--presence-color);
+  box-shadow: 0 0 0 1px var(--presence-color);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
 .DocEditor__FieldHeader {
   position: relative;
   padding-right: 30px;

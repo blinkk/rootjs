@@ -45,6 +45,7 @@ import {
   IconTriangleFilled,
 } from '@tabler/icons-preact';
 import {createContext, RefObject} from 'preact';
+import {CSSProperties} from 'preact/compat';
 import {
   useContext,
   useEffect,
@@ -768,6 +769,17 @@ DocEditor.FieldBody = (props: FieldProps) => {
   const targeted = deeplink.value === props.deepKey;
   const ref = useRef<HTMLDivElement>(null);
 
+  // Presence highlight: tint the field's input element (textarea, text input,
+  // etc.) to match the (first other) viewer focused on it, à la Google Docs.
+  // Applied declaratively (rather than via imperative classList/style
+  // mutations) so it survives re-renders such as the `deeplink-target` class
+  // toggling on/off.
+  const fieldViewers = useFieldViewers(props.deepKey);
+  const presenceColor = useMemo(() => {
+    const other = fieldViewers.find((viewer) => !viewer.isCurrentUser);
+    return (other || fieldViewers[0])?.color || '';
+  }, [fieldViewers]);
+
   const showFieldHeader = useMemo(() => {
     if (field.type === 'object') {
       // Default to the "drawer" variant.
@@ -790,8 +802,14 @@ DocEditor.FieldBody = (props: FieldProps) => {
       className={joinClassNames(
         'DocEditor__field',
         field.deprecated && 'DocEditor__field--deprecated',
-        targeted && 'deeplink-target'
+        targeted && 'deeplink-target',
+        presenceColor && 'DocEditor__field--presence'
       )}
+      style={
+        presenceColor
+          ? ({'--presence-color': presenceColor} as CSSProperties)
+          : undefined
+      }
       data-type={field.type}
       data-level={level}
       id={props.deepKey}
