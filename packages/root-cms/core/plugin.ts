@@ -243,6 +243,30 @@ export interface CMSSearchIndexConfig {
   excludeDocIds?: string[];
 }
 
+/**
+ * Configuration options for the dependency graph. Pass `true` (or an empty
+ * object) to the `dependencyGraph` plugin option to enable the feature with
+ * default options.
+ */
+export interface CMSDependencyGraphConfig {
+  /**
+   * Collections to track in the dependency graph. If specified, only docs in
+   * these collections are scanned for outgoing references. If unset, all
+   * collections are scanned (subject to `excludeCollections`).
+   *
+   * Note that these filters only control which docs are scanned for outgoing
+   * references — referenced doc ids are always recorded as-is, even when the
+   * referenced doc lives in a collection that is not scanned.
+   */
+  includeCollections?: string[];
+
+  /**
+   * Collections to exclude from the dependency graph. Applied after
+   * `includeCollections`.
+   */
+  excludeCollections?: string[];
+}
+
 export interface CMSSidebarTool {
   /** URL for the sidebar icon image. */
   icon?: string;
@@ -568,6 +592,25 @@ export type CMSPluginOptions = {
    * include or exclude specific collections or docs from being indexed.
    */
   searchIndex?: CMSSearchIndexConfig;
+
+  /**
+   * Enables the dependency graph, which tracks reference field usages
+   * (`schema.reference()` / `schema.references()`) between docs. The graph is
+   * kept up to date automatically by the CMS cron job and can be queried via
+   * `RootCMSClient.getDependencyGraph()` to resolve the full set of
+   * referenced docs that need to be fetched when fetching one or more docs.
+   *
+   * Disabled by default. Pass `true` to enable with default options, or a
+   * config object to scope the graph to specific collections.
+   *
+   * Example:
+   * ```ts
+   * cmsPlugin({
+   *   dependencyGraph: true,
+   * });
+   * ```
+   */
+  dependencyGraph?: boolean | CMSDependencyGraphConfig;
 
   /**
    * Default UI variant for `oneOf` fields. Individual fields can still

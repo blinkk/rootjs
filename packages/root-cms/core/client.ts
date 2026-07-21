@@ -11,6 +11,7 @@ import {
 import {resolveLocaleFallbacks} from '../shared/locale-fallbacks.js';
 import {normalizeSlug} from '../shared/slug.js';
 import {isCronDue} from './cron-schedule.js';
+import type {DependencyGraph} from './dependency-graph.js';
 import {CMSPlugin} from './plugin.js';
 import {Collection} from './schema.js';
 import {
@@ -2121,6 +2122,55 @@ export class RootCMSClient {
       .catch((err) => {
         console.error('failed to notify the email service:', err);
       });
+  }
+
+  /**
+   * Returns the dependency graph for a given mode, which tracks reference
+   * field usages between docs. Requires the `dependencyGraph` option to be
+   * enabled on the cmsPlugin config (the graph is kept up to date by the CMS
+   * cron job).
+   *
+   * Example:
+   * ```ts
+   * const graph = await cmsClient.getDependencyGraph({mode: 'published'});
+   * const depIds = graph.getDependencies(['Pages/index']);
+   * // => ['Authors/alice', 'BlogPosts/hello-world', ...]
+   * ```
+   */
+  async getDependencyGraph(options: {mode: DocMode}): Promise<DependencyGraph> {
+    // Lazy load the dependency graph module to minimize the amount of code
+    // loaded when the client is initialized.
+    const {DependencyGraphService} = await import('./dependency-graph.js');
+    const service = new DependencyGraphService(this.rootConfig);
+    return service.getGraph(options.mode);
+  }
+
+  /**
+   * Returns the ids of the docs referenced by the given doc(s), i.e. the
+   * additional docs that need to be fetched when fetching the given docs.
+   * Dependencies are resolved transitively by default (pass
+   * `transitive: false` for direct references only).
+   *
+   * Requires the `dependencyGraph` option to be enabled on the cmsPlugin
+   * config.
+   *
+   * Example:
+   * ```ts
+   * const depIds = await cmsClient.getDocDependencies(['Pages/index'], {
+   *   mode: 'published',
+   * });
+   * const req = cmsClient.createBatchRequest({mode: 'published'});
+   * req.addDoc('Pages/index');
+   * depIds.forEach((docId) => req.addDoc(docId));
+   * const res = await req.fetch();
+   * ```
+   */
+  async getDocDependencies(
+    docIds: string | string[],
+    options: {mode: DocMode; transitive?: boolean}
+  ): Promise<string[]> {
+    const graph = await this.getDependencyGraph({mode: options.mode});
+    return graph.getDependencies(docIds, {transitive: options.transitive});
   }
 
   /**
