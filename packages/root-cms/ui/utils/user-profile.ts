@@ -216,19 +216,24 @@ export function isOrgEmail(email: string): boolean {
 /**
  * Returns a deterministic background color for an email so missing-photo
  * avatars are visually distinct but stable across renders.
+ *
+ * The palette is a bright, saturated, Figma-style spread of hues so different
+ * users are easy to tell apart at a glance.
  */
 export function getAvatarColor(email: string): string {
   const palette = [
-    '#1f6feb',
-    '#0e7490',
-    '#0f766e',
-    '#15803d',
-    '#9333ea',
-    '#c026d3',
-    '#db2777',
-    '#dc2626',
-    '#ea580c',
-    '#b45309',
+    '#1e88ff', // blue
+    '#00b8d9', // cyan
+    '#00c781', // green
+    '#36b37e', // teal-green
+    '#ffab00', // amber
+    '#ff8b00', // orange
+    '#ff5630', // red-orange
+    '#f5365c', // pink-red
+    '#e040fb', // magenta
+    '#9c5cff', // violet
+    '#6554ff', // indigo
+    '#ff7eb6', // pink
   ];
   let hash = 0;
   for (let i = 0; i < email.length; i++) {

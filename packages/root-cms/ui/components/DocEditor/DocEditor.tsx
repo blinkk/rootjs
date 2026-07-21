@@ -45,6 +45,7 @@ import {
   IconTriangleFilled,
 } from '@tabler/icons-preact';
 import {createContext, RefObject} from 'preact';
+import {CSSProperties} from 'preact/compat';
 import {
   useContext,
   useEffect,
@@ -125,7 +126,8 @@ import {useLocalizationModal} from '../LocalizationModal/LocalizationModal.js';
 import {useLockPublishingModal} from '../LockPublishingModal/LockPublishingModal.js';
 import {usePublishDocModal} from '../PublishDocModal/PublishDocModal.js';
 import {Text} from '../Text/Text.js';
-import {Viewers} from '../Viewers/Viewers.js';
+import {UserAvatar} from '../UserAvatar/UserAvatar.js';
+import {useFieldViewers, Viewers, ViewersProvider} from '../Viewers/Viewers.js';
 import {BooleanField} from './fields/BooleanField.js';
 import {DateField} from './fields/DateField.js';
 import {DateTimeField} from './fields/DateTimeField.js';
@@ -226,34 +228,36 @@ export function DocEditor(props: DocEditorProps) {
     <COLLECTION_SCHEMA_TYPES_CONTEXT.Provider
       value={collection?.schema?.types || {}}
     >
-      <DeeplinkProvider>
-        <div
-          className={joinClassNames(props.className, 'DocEditor')}
-          ref={rootRef}
-        >
-          <LoadingOverlay
-            visible={loading}
-            loaderProps={{color: 'gray', size: 'xl'}}
-          />
-          <DocEditor.HistoryDeeplink rootRef={rootRef} />
-          {!loading && !props.hideStatusBar && (
-            <DocEditor.StatusBar
-              {...props}
-              draft={draft}
-              collection={collection.schema!}
+      <ViewersProvider id={`doc/${props.docId}`}>
+        <DeeplinkProvider>
+          <div
+            className={joinClassNames(props.className, 'DocEditor')}
+            ref={rootRef}
+          >
+            <LoadingOverlay
+              visible={loading}
+              loaderProps={{color: 'gray', size: 'xl'}}
             />
-          )}
-          <div className="DocEditor__fields">
-            {fields.map((field) => (
-              <DocEditor.Field
-                key={field.id}
-                field={field}
-                deepKey={`fields.${field.id!}`}
+            <DocEditor.HistoryDeeplink rootRef={rootRef} />
+            {!loading && !props.hideStatusBar && (
+              <DocEditor.StatusBar
+                {...props}
+                draft={draft}
+                collection={collection.schema!}
               />
-            ))}
+            )}
+            <div className="DocEditor__fields">
+              {fields.map((field) => (
+                <DocEditor.Field
+                  key={field.id}
+                  field={field}
+                  deepKey={`fields.${field.id!}`}
+                />
+              ))}
+            </div>
           </div>
-        </div>
-      </DeeplinkProvider>
+        </DeeplinkProvider>
+      </ViewersProvider>
     </COLLECTION_SCHEMA_TYPES_CONTEXT.Provider>
   );
 }
@@ -408,10 +412,10 @@ DocEditor.StatusBar = (props: StatusBarProps) => {
 
   return (
     <div className="DocEditor__statusBar">
+      <DocEditor.SaveState />
       <div className="DocEditor__statusBar__viewers">
         <Viewers id={`doc/${props.docId}`} />
       </div>
-      <DocEditor.SaveState />
       {data?.sys && (
         <div className="DocEditor__statusBar__statusBadges">
           <DocStatusBadges
@@ -765,6 +769,17 @@ DocEditor.FieldBody = (props: FieldProps) => {
   const targeted = deeplink.value === props.deepKey;
   const ref = useRef<HTMLDivElement>(null);
 
+  // Presence highlight: tint the field's input element (textarea, text input,
+  // etc.) to match the (first other) viewer focused on it, à la Google Docs.
+  // Applied declaratively (rather than via imperative classList/style
+  // mutations) so it survives re-renders such as the `deeplink-target` class
+  // toggling on/off.
+  const fieldViewers = useFieldViewers(props.deepKey);
+  const presenceColor = useMemo(() => {
+    const other = fieldViewers.find((viewer) => !viewer.isCurrentUser);
+    return (other || fieldViewers[0])?.color || '';
+  }, [fieldViewers]);
+
   const showFieldHeader = useMemo(() => {
     if (field.type === 'object') {
       // Default to the "drawer" variant.
@@ -787,8 +802,14 @@ DocEditor.FieldBody = (props: FieldProps) => {
       className={joinClassNames(
         'DocEditor__field',
         field.deprecated && 'DocEditor__field--deprecated',
-        targeted && 'deeplink-target'
+        targeted && 'deeplink-target',
+        presenceColor && 'DocEditor__field--presence'
       )}
+      style={
+        presenceColor
+          ? ({'--presence-color': presenceColor} as CSSProperties)
+          : undefined
+      }
       data-type={field.type}
       data-level={level}
       id={props.deepKey}
@@ -854,31 +875,69 @@ DocEditor.FieldHeader = (props: FieldProps & {className?: string}) => {
         <div className="DocEditor__FieldHeader__label">DEPRECATED: {label}</div>
       ) : (
         <div className="DocEditor__FieldHeader__label">
-          <span>{label}</span>
-          {props.deepKey && (
+          {props.deepKey ? (
             <a
-              className="DocEditor__FieldHeader__label__deeplink"
+              className="DocEditor__FieldHeader__label__link"
               href={deeplinkUrl}
-              tabIndex={-1}
               title="Link to field"
               onClick={(e) => {
                 e.preventDefault();
-                window.history.replaceState({}, '', deeplinkUrl);
-                deeplink.setValue(props.deepKey!);
+                // Stop the event before it reaches the preact-iso router's
+                // document-level click handler, which would otherwise treat
+                // this same-origin `<a href>` as a navigation and pushState the
+                // deeplink URL back after we just cleared it.
+                e.stopPropagation();
+                // Toggle: re-clicking the already-focused field clears the
+                // deeplink instead of re-applying it.
+                if (deeplink.value === props.deepKey) {
+                  deeplink.setValue('');
+                } else {
+                  deeplink.setValue(props.deepKey!);
+                }
               }}
             >
-              #
+              {label}
             </a>
+          ) : (
+            <span>{label}</span>
           )}
         </div>
       )}
       {field.help && (
         <div className="DocEditor__FieldHeader__help">{field.help}</div>
       )}
-      <DocEditor.FieldHeaderTranslationsActionIcon
-        field={field}
-        deepKey={props.deepKey}
-      />
+      <div className="DocEditor__FieldHeader__actions">
+        <DocEditor.FieldHeaderViewers deepKey={props.deepKey || ''} />
+        <DocEditor.FieldHeaderTranslationsActionIcon
+          field={field}
+          deepKey={props.deepKey}
+        />
+      </div>
+    </div>
+  );
+};
+
+/**
+ * Renders miniature avatars of other viewers who currently have this field
+ * focused. Sized to match the translate icon so it never causes layout shift.
+ */
+DocEditor.FieldHeaderViewers = (props: {deepKey: string}) => {
+  const viewers = useFieldViewers(props.deepKey);
+
+  if (viewers.length === 0) {
+    return null;
+  }
+  return (
+    <div className="DocEditor__FieldHeader__viewers">
+      {viewers.map((viewer) => (
+        <UserAvatar
+          key={viewer.email}
+          email={viewer.email}
+          size={18}
+          colorRing
+          className="DocEditor__FieldHeader__viewers__avatar"
+        />
+      ))}
     </div>
   );
 };
@@ -1047,7 +1106,17 @@ DocEditor.ObjectFieldDrawer = (props: FieldProps) => {
   const modalTheme = useModalTheme();
 
   const deeplink = useDeeplink();
-  const initialOpen = !collapsed || deeplink.value.includes(props.deepKey);
+  const isDeeplinkTarget = deeplink.value.includes(props.deepKey);
+  const [open, setOpen] = useState(!collapsed || isDeeplinkTarget);
+
+  // Open (but never force-close) the drawer when it becomes the deeplink
+  // target, so that clearing the deeplink (e.g. pressing Esc) leaves the
+  // drawer's open state untouched.
+  useEffect(() => {
+    if (isDeeplinkTarget) {
+      setOpen(true);
+    }
+  }, [isDeeplinkTarget]);
 
   const copyToClipboard = () => {
     const data = draft.getValue(props.deepKey) || {};
@@ -1131,7 +1200,10 @@ DocEditor.ObjectFieldDrawer = (props: FieldProps) => {
     >
       <details
         className="DocEditor__ObjectFieldDrawer__drawer"
-        open={initialOpen}
+        open={open}
+        onToggle={(e: Event) => {
+          setOpen((e.currentTarget as HTMLDetailsElement).open);
+        }}
       >
         <summary className="DocEditor__ObjectFieldDrawer__drawer__toggle">
           <div className="DocEditor__ObjectFieldDrawer__drawer__toggle__icon">
@@ -1979,6 +2051,17 @@ interface ArrayFieldItemProps {
 DocEditor.ArrayFieldItem = (props: ArrayFieldItemProps) => {
   const itemDeepKey = `${props.parentDeepKey}.${props.itemKey}`;
 
+  // The drawer is natively toggled by the user, so `initialOpen` only ever
+  // forces it open (e.g. newly-added items or deeplink targets) — never
+  // closed. Without this, clearing the deeplink would re-render with a falsy
+  // `initialOpen` and collapse a drawer the user had open.
+  const [open, setOpen] = useState(props.initialOpen);
+  useEffect(() => {
+    if (props.initialOpen) {
+      setOpen(true);
+    }
+  }, [props.initialOpen]);
+
   return (
     <Draggable
       key={props.itemKey}
@@ -2007,9 +2090,11 @@ DocEditor.ArrayFieldItem = (props: ArrayFieldItemProps) => {
           </div>
           <details
             className="DocEditor__ArrayField__item"
-            open={props.initialOpen}
+            open={open}
             onToggle={(e) => {
-              if ((e.target as HTMLDetailsElement).open) {
+              const isOpen = (e.target as HTMLDetailsElement).open;
+              setOpen(isOpen);
+              if (isOpen) {
                 requestHighlightNode(itemDeepKey, {scroll: true});
               } else {
                 requestHighlightNode(null);
