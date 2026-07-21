@@ -24,7 +24,8 @@ export interface NotificationServiceContext extends CMSServiceContext {}
  * Notification services react to actions in the CMS (publishes, schema
  * changes, comments, etc.) and dispatch them to an external channel.
  * Initially this is intended for email, with Slack, webhooks, and other
- * transports planned.
+ * transports planned. See `emailNotifications()` for a built-in email
+ * implementation backed by the Root.js email service.
  *
  * Multiple notification services may be registered; each independently
  * decides whether and how to handle a given action.

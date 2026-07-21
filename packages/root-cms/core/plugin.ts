@@ -47,6 +47,14 @@ export type {
   NotificationResult,
   NotificationServiceContext,
 } from './services-notifications.js';
+export {
+  emailNotifications,
+  renderEmailTemplate,
+} from './services-notifications-email.js';
+export type {
+  EmailNotificationTemplate,
+  EmailNotificationsOptions,
+} from './services-notifications-email.js';
 export type {
   CMSTranslationService,
   RootLocale,
@@ -522,7 +530,20 @@ export type CMSPluginOptions = {
    * external channels (email, Slack, webhooks, etc.). Each service defines
    * an optional server-side `onAction` handler.
    *
-   * Example:
+   * Use the built-in `emailNotifications()` service to send emails via the
+   * Root.js email service:
+   * ```ts
+   * cmsPlugin({
+   *   notifications: [
+   *     emailNotifications({
+   *       actions: ['doc.publish', 'release.*'],
+   *       to: ['cms-alerts@example.com'],
+   *     }),
+   *   ],
+   * });
+   * ```
+   *
+   * Custom services can be defined inline:
    * ```ts
    * cmsPlugin({
    *   notifications: [
