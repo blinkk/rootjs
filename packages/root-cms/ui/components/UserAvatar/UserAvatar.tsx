@@ -42,8 +42,8 @@ export interface UserAvatarProps {
    */
   colorRing?: boolean;
   /**
-   * Width (in px) of the colored ring drawn when {@link colorRing} is set. A
-   * white ring of 1px is always drawn just outside it. Defaults to 2.
+   * Width (in px) of the colored ring drawn when {@link colorRing} is set.
+   * Defaults to 2.
    */
   ringWidth?: number;
 }
@@ -74,15 +74,11 @@ export function UserAvatar(props: UserAvatarProps) {
   const avatarColor = getAvatarColor(email || displayName || '?');
 
   // Color-codes users consistently across the UI (à la Google Docs): a ring in
-  // the user's color directly around the photo, then a 1px white ring just
-  // outside that. Drawn with box-shadow so it never shifts layout.
+  // the user's color directly around the photo. Drawn with box-shadow so it
+  // never shifts layout.
   const ringWidth = props.ringWidth ?? 2;
   const ringStyle = props.colorRing
-    ? {
-        boxShadow: `0 0 0 ${ringWidth}px ${avatarColor}, 0 0 0 ${
-          ringWidth + 1
-        }px #fff`,
-      }
+    ? {boxShadow: `0 0 0 ${ringWidth}px ${avatarColor}`}
     : undefined;
 
   const avatar = (

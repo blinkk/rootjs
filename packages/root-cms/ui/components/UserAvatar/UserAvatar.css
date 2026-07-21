@@ -28,7 +28,7 @@
 }
 
 /* When a color ring is drawn, the colored border should sit directly against
- * the photo (the white ring is provided by the box-shadow outside it). */
+ * the photo (no white border/gap in between). */
 .UserAvatar--colorRing {
   border: none;
 }
