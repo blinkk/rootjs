@@ -31,6 +31,16 @@ import {setValueAtPath} from './values.js';
  */
 const FIRESTORE_DOC_ID_MAX_BYTES = 1500;
 
+/**
+ * Base URL of the default hosted Root.js services backend
+ * (`apps/root-services`), which provides the email service used by
+ * `sendEmail()`.
+ */
+const DEFAULT_EMAIL_SERVICE_URL = 'https://services.rootjs.dev';
+
+/** Max time to wait for the email service to process the email queue. */
+const EMAIL_SERVICE_TIMEOUT_MS = 60 * 1000;
+
 export interface Doc<Fields = any> {
   /** The id of the doc, e.g. "Pages/foo-bar". */
   id: string;
@@ -278,6 +288,48 @@ export interface ListActionsOptions {
    * Max number of actions to return. Defaults to 100.
    */
   limit?: number;
+}
+
+/**
+ * Options for `RootCMSClient.sendEmail()`.
+ *
+ * Emails are queued in the `Projects/${projectId}/Emails` collection in
+ * firestore and delivered by the Root.js email service (`apps/root-services`),
+ * which sends pending emails using the App Engine Mail API.
+ */
+export interface SendEmailOptions {
+  /** Recipient email address(es). */
+  to: string | string[];
+  /**
+   * Sender email address. The sender must be authorized to send email via the
+   * App Engine Mail API, e.g. `noreply@<gcp-project-id>.appspotmail.com`.
+   * Defaults to `noreply@<gcp-project-id>.appspotmail.com`.
+   */
+  from?: string;
+  /** Subject line. */
+  subject: string;
+  /**
+   * Plain-text body. When omitted, a plain-text body is derived from
+   * `htmlBody`.
+   */
+  body?: string;
+  /** Optional HTML body. */
+  htmlBody?: string;
+  /**
+   * Optional expiration date. If the email is still unsent when the email
+   * service processes the queue after this date (e.g. the service was down),
+   * the email is marked as expired and skipped instead of being delivered
+   * late.
+   */
+  expiresAt?: Date;
+  /**
+   * Email service used to trigger delivery immediately after the email is
+   * queued. Setting this to `true` uses the default hosted service at
+   * https://services.rootjs.dev. Set to a base URL to use a self-hosted
+   * deployment of the service (`apps/root-services`). When unset, the email
+   * remains queued until the email service's cron next processes the queue.
+   */
+  emailService?: string | boolean;
 }
 
 export class RootCMSClient {
@@ -2005,6 +2057,73 @@ export class RootCMSClient {
   }
 
   /**
+   * Queues an email in the `Projects/${projectId}/Emails` collection in
+   * firestore, which is processed by the Root.js email service
+   * (`apps/root-services`). Returns the id of the queued email doc.
+   *
+   * Delivery is asynchronous: the email service sends pending emails when its
+   * `/_/send_emails` endpoint is called (typically via a cron). Pass the
+   * `emailService` option to notify the service right away.
+   */
+  async sendEmail(options: SendEmailOptions): Promise<string> {
+    const to = Array.isArray(options.to) ? options.to : [options.to];
+    const recipients = to.map((email) => String(email).trim()).filter(Boolean);
+    if (recipients.length === 0) {
+      throw new Error('missing required: "to"');
+    }
+    if (!options.subject) {
+      throw new Error('missing required: "subject"');
+    }
+    const gcpProjectId = this.cmsPlugin.getConfig().firebaseConfig.projectId;
+    const email: Record<string, any> = {
+      status: 'pending',
+      createdAt: Timestamp.now(),
+      from: options.from || `noreply@${gcpProjectId}.appspotmail.com`,
+      to: recipients,
+      subject: options.subject,
+      // The email service always reads the `body` field, so fall back to a
+      // plain-text version of the html body when no body is provided.
+      body: options.body ?? htmlToPlainText(options.htmlBody || ''),
+    };
+    if (options.htmlBody) {
+      email.htmlBody = options.htmlBody;
+    }
+    if (options.expiresAt) {
+      email.expiredAt = Timestamp.fromDate(options.expiresAt);
+    }
+    const colRef = this.db.collection(`Projects/${this.projectId}/Emails`);
+    const docRef = await colRef.add(email);
+    if (options.emailService) {
+      this.notifyEmailService(options.emailService);
+    }
+    return docRef.id;
+  }
+
+  /**
+   * Notifies the email service that pending emails are ready for delivery.
+   * Fire-and-forget: queued emails are eventually delivered when the email
+   * service's cron next runs, even if this request fails.
+   */
+  private notifyEmailService(emailService: string | boolean) {
+    const baseUrl =
+      typeof emailService === 'string'
+        ? emailService.replace(/\/+$/, '')
+        : DEFAULT_EMAIL_SERVICE_URL;
+    const params = new URLSearchParams({projectId: this.projectId});
+    const url = `${baseUrl}/_/send_emails?${params.toString()}`;
+    fetch(url, {signal: AbortSignal.timeout(EMAIL_SERVICE_TIMEOUT_MS)})
+      .then(async (res) => {
+        if (res.status !== 200) {
+          const err = await res.text();
+          console.error(`email service returned ${res.status}: ${err}`);
+        }
+      })
+      .catch((err) => {
+        console.error('failed to notify the email service:', err);
+      });
+  }
+
+  /**
    * Creates a batch request that is capable of fetching one or more docs,
    * corresponding translations, and dataSources.
    */
@@ -2397,6 +2516,26 @@ export function translationsForLocale(
     localeTranslations[source] = translation;
   });
   return localeTranslations;
+}
+
+/**
+ * Converts an HTML string to a rough plain-text equivalent. Used as a
+ * fallback for the plain-text body of emails that only provide an HTML body.
+ */
+function htmlToPlainText(html: string): string {
+  return html
+    .replace(/<(style|script)[\s\S]*?<\/\1>/gi, '')
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<\/(p|div|h[1-6]|li|tr|table|ul|ol|blockquote|pre)>/gi, '\n')
+    .replace(/<[^>]+>/g, '')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&amp;/g, '&')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
 }
 
 /** A pretty printer for JavaScript objects. */
