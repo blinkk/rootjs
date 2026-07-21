@@ -20,6 +20,7 @@ export interface EmailNotificationTemplate {
   body?: string;
   /**
    * HTML body. Values injected into an HTML string template are HTML-escaped.
+   * Omit (while providing `body`) to send a plain-text-only email.
    */
   html?: string;
 }
@@ -78,10 +79,15 @@ export interface EmailNotificationsOptions<T = any> {
   ) => T | Promise<T>;
   /**
    * Templates used to render the email. Either an object with `{placeholder}`
-   * string templates (missing values fall back to the default templates) or a
-   * function that returns the final email content for full control. Function
-   * results are used verbatim, i.e. no placeholder rendering or HTML escaping
-   * is applied.
+   * string templates or a function that returns the final email content for
+   * full control. Function results are used verbatim, i.e. no placeholder
+   * rendering or HTML escaping is applied.
+   *
+   * A missing `subject` falls back to the default subject template. The
+   * default body and html templates (see `DEFAULT_EMAIL_TEMPLATE`) apply only
+   * when neither `body` nor `html` is provided. Providing only `body` sends a
+   * plain-text-only email; providing only `html` derives the plain-text body
+   * from the html.
    */
   template?:
     | EmailNotificationTemplate
@@ -106,25 +112,30 @@ export interface EmailNotificationsOptions<T = any> {
   expireAfterMinutes?: number;
 }
 
-/** Default subject line template. */
-const DEFAULT_SUBJECT_TEMPLATE = '[Root CMS] {action} by {by}';
-
-/** Default plain-text body template. */
-const DEFAULT_BODY_TEMPLATE = [
-  'Action: {action}',
-  'By: {by}',
-  'Time: {timestamp}',
-  '',
-  'Metadata:',
-  '{metadata}',
-].join('\n');
-
-/** Default HTML body template. */
-const DEFAULT_HTML_TEMPLATE = [
-  '<h2>{action}</h2>',
-  '<p><strong>By:</strong> {by}<br><strong>Time:</strong> {timestamp}</p>',
-  '<pre>{metadata}</pre>',
-].join('\n');
+/**
+ * Default templates used by {@link emailNotifications} when no custom
+ * template content is provided. Exported so custom templates can compose with
+ * the defaults, e.g.
+ * `template: {...DEFAULT_EMAIL_TEMPLATE, subject: 'Custom subject'}`.
+ */
+export const DEFAULT_EMAIL_TEMPLATE: Readonly<
+  Required<EmailNotificationTemplate>
+> = Object.freeze({
+  subject: '[Root CMS] {action} by {by}',
+  body: [
+    'Action: {action}',
+    'By: {by}',
+    'Time: {timestamp}',
+    '',
+    'Metadata:',
+    '{metadata}',
+  ].join('\n'),
+  html: [
+    '<h2>{action}</h2>',
+    '<p><strong>By:</strong> {by}<br><strong>Time:</strong> {timestamp}</p>',
+    '<pre>{metadata}</pre>',
+  ].join('\n'),
+});
 
 /**
  * Creates a {@link CMSNotificationService} that sends email notifications
@@ -189,28 +200,40 @@ export function emailNotifications<T = any>(
       if (typeof options.template === 'function') {
         email = {...(await options.template(data, action, ctx))};
         if (!email.subject) {
-          email.subject = renderEmailTemplate(DEFAULT_SUBJECT_TEMPLATE, data);
+          email.subject = renderEmailTemplate(
+            DEFAULT_EMAIL_TEMPLATE.subject,
+            data
+          );
         }
         if (!email.body && !email.html) {
-          email.body = renderEmailTemplate(DEFAULT_BODY_TEMPLATE, data);
+          email.body = renderEmailTemplate(DEFAULT_EMAIL_TEMPLATE.body, data);
         }
       } else {
+        // The default body and html templates apply only when the template
+        // provides neither, so that a body-only template sends a
+        // plain-text-only email (and an html-only template derives its
+        // plain-text body from the html in `sendEmail()`).
         const template = options.template || {};
         email = {
           subject: renderEmailTemplate(
-            template.subject || DEFAULT_SUBJECT_TEMPLATE,
+            template.subject || DEFAULT_EMAIL_TEMPLATE.subject,
             data
-          ),
-          body: renderEmailTemplate(
-            template.body || DEFAULT_BODY_TEMPLATE,
-            data
-          ),
-          html: renderEmailTemplate(
-            template.html || DEFAULT_HTML_TEMPLATE,
-            data,
-            {escapeHtml: true}
           ),
         };
+        if (template.body) {
+          email.body = renderEmailTemplate(template.body, data);
+        }
+        if (template.html) {
+          email.html = renderEmailTemplate(template.html, data, {
+            escapeHtml: true,
+          });
+        }
+        if (!email.body && !email.html) {
+          email.body = renderEmailTemplate(DEFAULT_EMAIL_TEMPLATE.body, data);
+          email.html = renderEmailTemplate(DEFAULT_EMAIL_TEMPLATE.html, data, {
+            escapeHtml: true,
+          });
+        }
       }
 
       // Queue the email for delivery.

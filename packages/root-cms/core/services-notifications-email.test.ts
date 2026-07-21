@@ -1,6 +1,7 @@
 import {beforeEach, describe, expect, it, vi} from 'vitest';
 import type {Action} from './client.js';
 import {
+  DEFAULT_EMAIL_TEMPLATE,
   emailNotifications,
   renderEmailTemplate,
 } from './services-notifications-email.js';
@@ -255,6 +256,51 @@ describe('emailNotifications', () => {
 
     const email = sendEmail.mock.calls[0][0];
     expect(email.subject).toBe('Pages/foo published');
+    expect(email.body).toContain('Action: doc.publish');
+    expect(email.htmlBody).toContain('<h2>doc.publish</h2>');
+  });
+
+  it('sends a plain-text-only email when the template only has a body', async () => {
+    const {ctx, sendEmail} = testContext();
+    const service = emailNotifications({
+      to: ['a@example.com'],
+      template: {
+        subject: '{metadata.docId} published',
+        body: '{metadata.docId} was published by {by}.',
+      },
+    });
+    await service.onAction!(ctx, testAction());
+
+    const email = sendEmail.mock.calls[0][0];
+    expect(email.subject).toBe('Pages/foo published');
+    expect(email.body).toBe('Pages/foo was published by user@example.com.');
+    expect(email.htmlBody).toBeUndefined();
+  });
+
+  it('omits the plain-text body when the template only has html', async () => {
+    const {ctx, sendEmail} = testContext();
+    const service = emailNotifications({
+      to: ['a@example.com'],
+      template: {html: '<p>{metadata.docId} was published.</p>'},
+    });
+    await service.onAction!(ctx, testAction());
+
+    // `sendEmail()` derives the plain-text body from the html body.
+    const email = sendEmail.mock.calls[0][0];
+    expect(email.htmlBody).toBe('<p>Pages/foo was published.</p>');
+    expect(email.body).toBeUndefined();
+  });
+
+  it('composes custom templates with the exported defaults', async () => {
+    const {ctx, sendEmail} = testContext();
+    const service = emailNotifications({
+      to: ['a@example.com'],
+      template: {...DEFAULT_EMAIL_TEMPLATE, subject: 'custom subject'},
+    });
+    await service.onAction!(ctx, testAction());
+
+    const email = sendEmail.mock.calls[0][0];
+    expect(email.subject).toBe('custom subject');
     expect(email.body).toContain('Action: doc.publish');
     expect(email.htmlBody).toContain('<h2>doc.publish</h2>');
   });

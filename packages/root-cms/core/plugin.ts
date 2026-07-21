@@ -48,6 +48,7 @@ export type {
   NotificationServiceContext,
 } from './services-notifications.js';
 export {
+  DEFAULT_EMAIL_TEMPLATE,
   emailNotifications,
   renderEmailTemplate,
 } from './services-notifications-email.js';
