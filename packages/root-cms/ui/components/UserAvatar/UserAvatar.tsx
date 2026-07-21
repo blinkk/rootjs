@@ -43,7 +43,7 @@ export interface UserAvatarProps {
   colorRing?: boolean;
   /**
    * Width (in px) of the colored ring drawn when {@link colorRing} is set.
-   * Defaults to 2.
+   * Defaults to 1.
    */
   ringWidth?: number;
 }
@@ -76,7 +76,7 @@ export function UserAvatar(props: UserAvatarProps) {
   // Color-codes users consistently across the UI (à la Google Docs): a ring in
   // the user's color directly around the photo. Drawn with box-shadow so it
   // never shifts layout.
-  const ringWidth = props.ringWidth ?? 2;
+  const ringWidth = props.ringWidth ?? 1;
   const ringStyle = props.colorRing
     ? {boxShadow: `0 0 0 ${ringWidth}px ${avatarColor}`}
     : undefined;

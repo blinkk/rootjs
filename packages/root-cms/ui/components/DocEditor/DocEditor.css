@@ -139,24 +139,36 @@
 }
 
 /*
- * Presence highlight: when another user has this field focused, tint the
- * field's actual input element (textarea, text input, etc.) in that user's
- * color (matching their avatar), à la Google Docs. Note: the focused field is
- * always the innermost `.DocEditor__field` (focus tracking resolves the
- * closest field element), so these descendant selectors never leak into
- * nested child fields (which are themselves `.DocEditor__field` elements with
- * their own presence state).
+ * Presence highlight: when another user has this field focused, outline the
+ * field's actual input element (textarea, text input, select, etc.) in that
+ * user's color (matching their avatar), à la Google Docs. An outline (drawn
+ * just outside the control's own border) is used rather than tinting the
+ * border itself, which renders poorly on controls with inner chrome (e.g.
+ * selects). Note: focusing a container field directly (e.g. an array item
+ * drawer's toggle) marks the container as the presence field, so the rule is
+ * limited to leaf fields (no nested `.DocEditor__field`) to avoid outlining
+ * every input inside the container at once.
  */
-.DocEditor__field--presence
+/* For composite controls (e.g. the multiselect field or the richtext editor),
+ * outline the outer wrapper rather than the inner input (`[type='search']` is
+ * excluded below for that reason). */
+.DocEditor__field--presence:not(:has(.DocEditor__field))
   > .DocEditor__field__input
   :is(
     textarea,
     select,
-    input:not([type='checkbox'], [type='radio'], [type='file'])
+    .LexicalEditor,
+    .DocEditor__MultiSelectField,
+    input:not(
+      [type='checkbox'],
+      [type='radio'],
+      [type='file'],
+      [type='search']
+    )
   ) {
-  border-color: var(--presence-color);
-  box-shadow: 0 0 0 1px var(--presence-color);
-  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  outline: 1px solid var(--presence-color);
+  outline-offset: 1px;
+  transition: outline-color 0.2s ease;
 }
 
 .DocEditor__FieldHeader {

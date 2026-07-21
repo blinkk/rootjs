@@ -935,7 +935,6 @@ DocEditor.FieldHeaderViewers = (props: {deepKey: string}) => {
           email={viewer.email}
           size={18}
           colorRing
-          ringWidth={1}
           className="DocEditor__FieldHeader__viewers__avatar"
         />
       ))}

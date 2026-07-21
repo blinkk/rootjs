@@ -8,8 +8,6 @@
 }
 
 .Viewers__avatar {
-  border: 2px solid var(--mantine-color-body, #fff);
-  box-sizing: content-box;
   position: relative;
   /* Active avatars stack above their overlapping neighbors. */
   z-index: 1;
