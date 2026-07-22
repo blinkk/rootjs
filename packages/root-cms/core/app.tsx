@@ -149,6 +149,9 @@ export async function renderApp(
     excludeLocalesFromTranslations:
       cmsConfig.excludeLocalesFromTranslations || [],
     allowedIframeOrigins: cmsConfig.allowedIframeOrigins || [],
+    // Matches `resolveDependencyGraphConfig()`: `true` or a config object
+    // enables the feature.
+    dependencyGraphEnabled: Boolean(cmsConfig.dependencyGraph),
   };
   const projectName = cmsConfig.name || cmsConfig.id || '';
   const title = getCmsTitle(projectName, cmsConfig.minimalBranding);

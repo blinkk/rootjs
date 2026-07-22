@@ -541,6 +541,149 @@ describe.skipIf(!process.env.FIRESTORE_EMULATOR_HOST)(
       });
     });
 
+    it('updates published edges in the publish batch (no cron)', async () => {
+      const {cmsClient, createService} = project;
+      await seedDoc(cmsClient, 'Pages/index', {author: ref('Authors/alice')});
+      const service = createService();
+      await service.rebuildGraph();
+      const statusBefore = await service.getStatus();
+
+      // Load (and cache) the published graph before publishing.
+      let publishedGraph = await service.getGraph('published');
+      expect(publishedGraph.edges).toEqual({});
+
+      // Change the draft's refs, then publish — without running the cron.
+      await seedDoc(cmsClient, 'Pages/index', {author: ref('Authors/bob')});
+      await cmsClient.publishDocs(['Pages/index'], {publishedBy: 'test'});
+
+      publishedGraph = await service.getGraph('published');
+      expect(publishedGraph.edges).toEqual({'Pages/index': ['Authors/bob']});
+
+      // The fast-path bumps the cache stamp without moving the cron's
+      // incremental watermark.
+      const statusAfter = await service.getStatus();
+      expect(statusAfter.lastRun).toBe(statusBefore.lastRun);
+    });
+
+    it('removes published edges in the unpublish batch (no cron)', async () => {
+      const {cmsClient, createService} = project;
+      await seedDoc(cmsClient, 'Pages/index', {author: ref('Authors/alice')});
+      const service = createService();
+      await service.rebuildGraph();
+      await cmsClient.publishDocs(['Pages/index'], {publishedBy: 'test'});
+      let publishedGraph = await service.getGraph('published');
+      expect(publishedGraph.edges).toEqual({'Pages/index': ['Authors/alice']});
+
+      await cmsClient.unpublishDocs(['Pages/index'], {unpublishedBy: 'test'});
+      publishedGraph = await service.getGraph('published');
+      expect(publishedGraph.edges).toEqual({});
+    });
+
+    it('updates published edges when scheduled docs are published', async () => {
+      const {cmsClient, createService} = project;
+      await seedDoc(cmsClient, 'Pages/index', {author: ref('Authors/alice')});
+      const service = createService();
+      await service.rebuildGraph();
+
+      // Seed a scheduled doc whose scheduledAt is in the past.
+      await cmsClient.db
+        .doc(
+          `Projects/${cmsClient.projectId}/Collections/Pages/Scheduled/index`
+        )
+        .set({
+          id: 'Pages/index',
+          collection: 'Pages',
+          slug: 'index',
+          sys: {
+            createdAt: Timestamp.now(),
+            createdBy: 'test',
+            modifiedAt: Timestamp.now(),
+            modifiedBy: 'test',
+            scheduledAt: Timestamp.fromMillis(Date.now() - 60 * 1000),
+            scheduledBy: 'test',
+            locales: ['en'],
+          },
+          fields: marshalData({author: ref('Authors/bob')}),
+        });
+      await cmsClient.publishScheduledDocs();
+
+      const publishedGraph = await service.getGraph('published');
+      expect(publishedGraph.edges).toEqual({'Pages/index': ['Authors/bob']});
+    });
+
+    it('skips the publish fast-path until the graph is built', async () => {
+      const {cmsClient, createService} = project;
+      await seedDoc(cmsClient, 'Pages/index', {author: ref('Authors/alice')});
+      await cmsClient.publishDocs(['Pages/index'], {publishedBy: 'test'});
+
+      const service = createService();
+      const status = await service.getStatus();
+      expect(status.lastRun).toBe(null);
+      const graphDocs = await cmsClient.db
+        .collection(`Projects/${cmsClient.projectId}/DependencyGraph`)
+        .get();
+      expect(graphDocs.empty).toBe(true);
+    });
+
+    it('does not write graph docs when the feature is disabled', async () => {
+      const disabled = createTestProject({dependencyGraph: false});
+      await seedDoc(disabled.cmsClient, 'Pages/index', {
+        author: ref('Authors/alice'),
+      });
+      await disabled.cmsClient.publishDocs(['Pages/index'], {
+        publishedBy: 'test',
+      });
+      const graphDocs = await disabled.cmsClient.db
+        .collection(`Projects/${disabled.cmsClient.projectId}/DependencyGraph`)
+        .get();
+      expect(graphDocs.empty).toBe(true);
+    });
+
+    it('syncs published docs on demand (UI publish path)', async () => {
+      const {cmsClient, createService} = project;
+      await seedDoc(cmsClient, 'Pages/index', {title: 'No refs yet'});
+      const service = createService();
+      await service.rebuildGraph();
+
+      // Simulate a client-side (CMS UI) publish by writing the published doc
+      // directly, then sync.
+      await seedDoc(
+        cmsClient,
+        'Pages/index',
+        {author: ref('Authors/alice')},
+        {mode: 'published'}
+      );
+      let result = await service.syncPublishedDocs(['Pages/index']);
+      expect(result.synced).toBe(1);
+      let publishedGraph = await service.getGraph('published');
+      expect(publishedGraph.edges).toEqual({'Pages/index': ['Authors/alice']});
+
+      // Simulate a client-side unpublish/delete — the published doc is gone,
+      // so its edges are removed on the next sync.
+      await cmsClient.db
+        .doc(
+          `Projects/${cmsClient.projectId}/Collections/Pages/Published/index`
+        )
+        .delete();
+      result = await service.syncPublishedDocs(['Pages/index']);
+      expect(result.synced).toBe(1);
+      publishedGraph = await service.getGraph('published');
+      expect(publishedGraph.edges).toEqual({});
+    });
+
+    it('ignores invalid and untracked doc ids in syncPublishedDocs', async () => {
+      const scoped = createTestProject({
+        dependencyGraph: {includeCollections: ['Pages']},
+      });
+      const service = scoped.createService();
+      await service.rebuildGraph();
+      const result = await service.syncPublishedDocs([
+        'no-slash',
+        'Posts/untracked',
+      ]);
+      expect(result.synced).toBe(0);
+    });
+
     it('picks up collections added after the initial build', async () => {
       const {cmsClient, rootConfig, createService} = project;
       await seedDoc(cmsClient, 'Pages/index', {author: ref('Authors/alice')});

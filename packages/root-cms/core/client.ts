@@ -11,7 +11,11 @@ import {
 import {resolveLocaleFallbacks} from '../shared/locale-fallbacks.js';
 import {normalizeSlug} from '../shared/slug.js';
 import {isCronDue} from './cron-schedule.js';
-import type {DependencyGraph} from './dependency-graph.js';
+import type {
+  DependencyGraph,
+  DependencyGraphBatchOp,
+  DependencyGraphService,
+} from './dependency-graph.js';
 import {CMSPlugin} from './plugin.js';
 import {Collection} from './schema.js';
 import {
@@ -805,6 +809,17 @@ export class RootCMSClient {
       );
     }
 
+    // If the dependency graph is enabled, update the published-mode edges in
+    // the same batch as the publish so new references are queryable
+    // immediately (without waiting for the next cron tick).
+    const depGraphOps = await this.buildDependencyGraphPublishOps(
+      docs.map((doc) => ({
+        collection: doc.collection,
+        slug: doc.slug,
+        fields: doc.fields,
+      }))
+    );
+
     // Each transaction or batch can write a max of 500 ops, so commit the
     // batch in chunks, starting a new batch after each commit.
     // https://firebase.google.com/docs/firestore/manage-data/transactions
@@ -905,6 +920,16 @@ export class RootCMSClient {
       }
     }
 
+    for (const op of depGraphOps) {
+      if (batchCount >= 400) {
+        await batch.commit();
+        batch = this.db.batch();
+        batchCount = 0;
+      }
+      op(batch);
+      batchCount += 1;
+    }
+
     if (batchCount > 0) {
       await batch.commit();
     }
@@ -966,6 +991,12 @@ export class RootCMSClient {
         ]);
     }
 
+    // If the dependency graph is enabled, remove the published-mode edges in
+    // the same batch as the unpublish.
+    const depGraphOps = await this.buildDependencyGraphUnpublishOps(
+      docs.map((doc) => ({collection: doc.collection, slug: doc.slug}))
+    );
+
     let batchCount = 0;
     let batch = options?.batch || this.db.batch();
     const unpublishedDocs: any[] = [];
@@ -1024,6 +1055,16 @@ export class RootCMSClient {
         batch = this.db.batch();
         batchCount = 0;
       }
+    }
+
+    for (const op of depGraphOps) {
+      if (batchCount >= 400) {
+        await batch.commit();
+        batch = this.db.batch();
+        batchCount = 0;
+      }
+      op(batch);
+      batchCount += 1;
     }
 
     if (batchCount > 0) {
@@ -1088,6 +1129,16 @@ export class RootCMSClient {
         'draft'
       );
     }
+
+    // If the dependency graph is enabled, update the published-mode edges in
+    // the same batch as the publish.
+    const depGraphOps = await this.buildDependencyGraphPublishOps(
+      docs.map((doc) => ({
+        collection: doc.collection || '',
+        slug: doc.slug || '',
+        fields: doc.data?.fields,
+      }))
+    );
 
     // Each transaction or batch can write a max of 500 ops, so commit the
     // batch in chunks, starting a new batch after each commit.
@@ -1186,6 +1237,16 @@ export class RootCMSClient {
         batch = this.db.batch();
         batchCount = 0;
       }
+    }
+
+    for (const op of depGraphOps) {
+      if (batchCount >= 400) {
+        await batch.commit();
+        batch = this.db.batch();
+        batchCount = 0;
+      }
+      op(batch);
+      batchCount += 1;
     }
 
     if (batchCount > 0) {
@@ -2171,6 +2232,58 @@ export class RootCMSClient {
   ): Promise<string[]> {
     const graph = await this.getDependencyGraph({mode: options.mode});
     return graph.getDependencies(docIds, {transitive: options.transitive});
+  }
+
+  /**
+   * Returns the dependency graph service when the feature is enabled, or
+   * `null` otherwise.
+   */
+  private async getDependencyGraphService(): Promise<DependencyGraphService | null> {
+    const {DependencyGraphService} = await import('./dependency-graph.js');
+    const service = new DependencyGraphService(this.rootConfig);
+    return service.isEnabled() ? service : null;
+  }
+
+  /**
+   * Builds the dependency graph writes for a set of docs being published.
+   * Returns an empty list when the feature is disabled or the graph is not in
+   * use. Errors are logged and swallowed so a graph failure never blocks
+   * publishing (the CMS cron reconciles the graph).
+   */
+  private async buildDependencyGraphPublishOps(
+    docs: Array<{collection: string; slug: string; fields?: any}>
+  ): Promise<DependencyGraphBatchOp[]> {
+    try {
+      const service = await this.getDependencyGraphService();
+      if (!service) {
+        return [];
+      }
+      return await service.buildPublishBatchOps(docs);
+    } catch (err) {
+      console.error('failed to build dependency graph updates:');
+      console.error(String(err.stack || err));
+      return [];
+    }
+  }
+
+  /**
+   * Builds the dependency graph writes for a set of docs being unpublished.
+   * See `buildDependencyGraphPublishOps()`.
+   */
+  private async buildDependencyGraphUnpublishOps(
+    docs: Array<{collection: string; slug: string}>
+  ): Promise<DependencyGraphBatchOp[]> {
+    try {
+      const service = await this.getDependencyGraphService();
+      if (!service) {
+        return [];
+      }
+      return await service.buildUnpublishBatchOps(docs);
+    } catch (err) {
+      console.error('failed to build dependency graph updates:');
+      console.error(String(err.stack || err));
+      return [];
+    }
   }
 
   /**

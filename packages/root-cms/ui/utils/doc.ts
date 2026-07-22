@@ -151,6 +151,8 @@ export async function cmsDeleteDoc(docId: string) {
   await batch.commit();
   console.log(`deleted doc: ${docId}`);
   logAction('doc.delete', {metadata: {docId}});
+  // Remove the doc's edges from the dependency graph.
+  await cmsSyncDependencyGraph([docId]);
 }
 
 export async function cmsPublishDoc(
@@ -220,7 +222,8 @@ export async function cmsPublishDocs(
       addPublishTranslationsOpsToBatch(batch, translationsLocaleDocs);
     }
   });
-  if (!options?.batch || options?.commitBatch) {
+  const commitsBatch = !options?.batch || options?.commitBatch;
+  if (commitsBatch) {
     await batch.commit();
   }
 
@@ -240,6 +243,13 @@ export async function cmsPublishDocs(
 
   // Reset doc cache for published docs.
   removeDocsFromCache(docIds);
+
+  // Update the dependency graph for the published docs. When a shared batch
+  // was provided (e.g. release publishing), the caller is responsible for
+  // syncing after it commits the batch.
+  if (commitsBatch) {
+    await cmsSyncDependencyGraph(docIds);
+  }
 }
 
 /**
@@ -343,6 +353,38 @@ function updatePublishedDocDataInBatch(
     versionData.publishMessage = publishMessage;
   }
   batch.set(versionRef, versionData);
+}
+
+/**
+ * Notifies the server to re-sync the published-mode dependency graph edges
+ * for the given docs. No-op unless the `dependencyGraph` cmsPlugin option is
+ * enabled. Publishing happens client-side, so without this call the graph
+ * would only pick up new references on the next server cron tick. Failures
+ * are logged and ignored — the CMS cron reconciles the graph automatically.
+ */
+export async function cmsSyncDependencyGraph(docIds: string[]) {
+  if (!window.__ROOT_CTX.dependencyGraphEnabled || docIds.length === 0) {
+    return;
+  }
+  try {
+    // The endpoint caps the number of doc ids per request, so sync in chunks
+    // (relevant when publishing large releases).
+    for (let i = 0; i < docIds.length; i += 500) {
+      const chunk = docIds.slice(i, i + 500);
+      const res = await fetch('/cms/api/dependency_graph.sync_published', {
+        method: 'POST',
+        headers: {'content-type': 'application/json'},
+        body: JSON.stringify({docIds: chunk}),
+      });
+      if (res.status !== 200) {
+        const err = await res.text();
+        console.error('failed to sync dependency graph:', err);
+        return;
+      }
+    }
+  } catch (err) {
+    console.error('failed to sync dependency graph:', err);
+  }
 }
 
 /**
@@ -466,6 +508,8 @@ export async function cmsUnpublishDoc(docId: string) {
   console.log(`unpublished ${docId}`);
   logAction('doc.unpublish', {metadata: {docId}});
   removeDocFromCache(docId);
+  // Remove the doc's edges from the dependency graph.
+  await cmsSyncDependencyGraph([docId]);
 }
 
 export async function cmsRevertDraft(docId: string) {
