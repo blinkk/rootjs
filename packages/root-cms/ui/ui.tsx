@@ -259,6 +259,12 @@ declare global {
        * lifecycle messages from the embedded editor.
        */
       allowedIframeOrigins?: string[];
+      /**
+       * Whether the dependency graph is enabled via the `dependencyGraph`
+       * cmsPlugin option. When enabled, the UI notifies the server after
+       * client-side publishes so the graph is updated immediately.
+       */
+      dependencyGraphEnabled?: boolean;
     };
     firebase: FirebaseContextObject;
   }

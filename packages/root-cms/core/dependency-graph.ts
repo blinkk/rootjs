@@ -42,12 +42,21 @@
  *     the last run, and reconcile deletions by diffing tracked slugs against
  *     the live doc-id set per collection.
  *   - `force: true` — drop everything and re-extract every doc.
+ *
+ * Publish fast-path: to avoid a staleness window between publishing a doc and
+ * the next cron tick, publish/unpublish flows update the published-mode edges
+ * directly — server-side publishes weave `buildPublishBatchOps()` /
+ * `buildUnpublishBatchOps()` into the publish write batch, and the CMS UI
+ * (which publishes client-side) calls `/cms/api/dependency_graph.sync_published`
+ * after committing, which runs `syncPublishedDocs()`. The cron remains the
+ * source of truth and reconciles anything the fast-path misses.
  */
 
 import fs from 'node:fs';
 import path from 'node:path';
 import {RootConfig} from '@blinkk/root';
 import {
+  FieldValue,
   Firestore,
   Query,
   Timestamp,
@@ -83,7 +92,18 @@ interface DependencyGraphMeta {
   refDocCounts: Record<DocMode, number>;
   /** Total number of outgoing reference edges, per mode. */
   refCounts: Record<DocMode, number>;
+  /**
+   * Timestamp of the last edge write, bumped by publish-time fast-path
+   * updates (which leave `lastRun` — the cron's incremental watermark —
+   * untouched). Used only as the in-process cache validation stamp; cron
+   * rebuilds rewrite the meta doc without this field, falling back to
+   * `lastRun` as the stamp.
+   */
+  updatedAt?: Timestamp;
 }
+
+/** A single buffered write produced for a caller-managed Firestore batch. */
+export type DependencyGraphBatchOp = (batch: WriteBatch) => void;
 
 /**
  * A `{mode}--{collectionId}` doc in the DependencyGraph subcollection, holding
@@ -612,6 +632,192 @@ export class DependencyGraphService {
   }
 
   /**
+   * Returns true when the graph has been built at least once. Publish-time
+   * fast-path updates are skipped until the cron (or a manual rebuild)
+   * bootstraps the graph, so a partial graph is never served.
+   */
+  private async isGraphBuilt(): Promise<boolean> {
+    const meta = await this.readMeta();
+    return Boolean(meta?.lastRun);
+  }
+
+  /**
+   * Builds the writes that update `published--<collection>` edge docs for a
+   * set of entries. A `null` refIds removes the doc's edges (unpublish /
+   * delete). The final op bumps `_meta.updatedAt` so in-process graph caches
+   * revalidate, without moving `lastRun` (the cron's incremental watermark).
+   *
+   * NOTE: a cron rebuild racing with these writes can momentarily overwrite
+   * them; the next cron tick re-extracts the affected docs (their
+   * `sys.publishedAt` is past the cron's watermark), so the graph converges
+   * within one tick in the worst case.
+   */
+  private buildPublishedRefsOps(
+    entries: Array<{collection: string; slug: string; refIds: string[] | null}>
+  ): DependencyGraphBatchOp[] {
+    const refsByCollection = new Map<
+      string,
+      Record<string, string[] | FieldValue>
+    >();
+    for (const entry of entries) {
+      let refs = refsByCollection.get(entry.collection);
+      if (!refs) {
+        refs = {};
+        refsByCollection.set(entry.collection, refs);
+      }
+      refs[entry.slug] =
+        entry.refIds && entry.refIds.length > 0
+          ? entry.refIds
+          : FieldValue.delete();
+    }
+    const ops: DependencyGraphBatchOp[] = [];
+    for (const [collectionId, refs] of refsByCollection) {
+      const ref = this.db.doc(
+        this.graphDocPath(this.edgeDocId('published', collectionId))
+      );
+      ops.push((batch) =>
+        batch.set(
+          ref,
+          {mode: 'published', collection: collectionId, refs},
+          {merge: true}
+        )
+      );
+    }
+    const metaRef = this.db.doc(this.graphDocPath(META_DOC_ID));
+    const updatedAt = Timestamp.now();
+    ops.push((batch) => batch.set(metaRef, {updatedAt}, {merge: true}));
+    return ops;
+  }
+
+  /**
+   * Builds the writes that sync the published-mode edges for docs being
+   * published, so new references are queryable immediately (without waiting
+   * for the next cron tick). Callers weave the returned ops into the same
+   * batch as the publish writes. Returns an empty list when the feature is
+   * disabled, no tracked docs are affected, or the graph has never been
+   * built.
+   */
+  async buildPublishBatchOps(
+    docs: Array<{collection: string; slug: string; fields?: any}>
+  ): Promise<DependencyGraphBatchOp[]> {
+    if (!this.isEnabled()) {
+      return [];
+    }
+    const entries: Array<{
+      collection: string;
+      slug: string;
+      refIds: string[] | null;
+    }> = [];
+    for (const doc of docs) {
+      if (!doc.collection || !doc.slug) {
+        continue;
+      }
+      if (!this.isCollectionTracked(doc.collection)) {
+        continue;
+      }
+      entries.push({
+        collection: doc.collection,
+        slug: normalizeSlug(doc.slug),
+        refIds: extractRefDocIds(doc.fields || {}),
+      });
+    }
+    if (entries.length === 0 || !(await this.isGraphBuilt())) {
+      return [];
+    }
+    return this.buildPublishedRefsOps(entries);
+  }
+
+  /**
+   * Builds the writes that remove the published-mode edges for docs being
+   * unpublished. See `buildPublishBatchOps()`.
+   */
+  async buildUnpublishBatchOps(
+    docs: Array<{collection: string; slug: string}>
+  ): Promise<DependencyGraphBatchOp[]> {
+    if (!this.isEnabled()) {
+      return [];
+    }
+    const entries: Array<{
+      collection: string;
+      slug: string;
+      refIds: string[] | null;
+    }> = [];
+    for (const doc of docs) {
+      if (!doc.collection || !doc.slug) {
+        continue;
+      }
+      if (!this.isCollectionTracked(doc.collection)) {
+        continue;
+      }
+      entries.push({
+        collection: doc.collection,
+        slug: normalizeSlug(doc.slug),
+        refIds: null,
+      });
+    }
+    if (entries.length === 0 || !(await this.isGraphBuilt())) {
+      return [];
+    }
+    return this.buildPublishedRefsOps(entries);
+  }
+
+  /**
+   * Re-reads the given docs from the `Published` collection and syncs their
+   * published-mode edges: existing docs get their refs re-extracted, missing
+   * docs (unpublished or deleted) get their edges removed. Used by the
+   * `/cms/api/dependency_graph.sync_published` endpoint, which the CMS UI
+   * calls after client-side publishes. Idempotent — the graph is synced to
+   * whatever is currently in the database.
+   */
+  async syncPublishedDocs(docIds: string[]): Promise<{synced: number}> {
+    this.assertEnabled();
+    const targets: Array<{collection: string; slug: string}> = [];
+    const seen = new Set<string>();
+    for (const docId of docIds) {
+      let parsed: {collection: string; slug: string};
+      try {
+        parsed = parseDocId(docId);
+      } catch {
+        continue;
+      }
+      if (!this.isCollectionTracked(parsed.collection)) {
+        continue;
+      }
+      const key = `${parsed.collection}/${parsed.slug}`;
+      if (seen.has(key)) {
+        continue;
+      }
+      seen.add(key);
+      targets.push(parsed);
+    }
+    if (targets.length === 0 || !(await this.isGraphBuilt())) {
+      return {synced: 0};
+    }
+    const docRefs = targets.map((target) =>
+      this.db.doc(
+        `${this.docsCollectionPath('published', target.collection)}/${target.slug}`
+      )
+    );
+    const snaps: FirebaseFirestore.DocumentSnapshot[] = [];
+    for (let i = 0; i < docRefs.length; i += 300) {
+      const chunk = docRefs.slice(i, i + 300);
+      snaps.push(...(await this.db.getAll(...chunk)));
+    }
+    const entries = targets.map((target, i) => {
+      const snap = snaps[i];
+      const data = (snap.exists ? snap.data() : null) as CmsDocData | null;
+      return {
+        collection: target.collection,
+        slug: target.slug,
+        refIds: data ? extractRefDocIds(data.fields || {}) : null,
+      };
+    });
+    const ops = this.buildPublishedRefsOps(entries);
+    await this.commitInChunks(ops);
+    return {synced: targets.length};
+  }
+
+  /**
    * Orchestrates a graph rebuild (incremental by default; full when
    * `force: true`).
    */
@@ -825,9 +1031,12 @@ export class DependencyGraphService {
       return new DependencyGraph(mode, {}, null);
     }
     const lastRunMillis = meta.lastRun.toMillis();
+    // Publish-time fast-path updates bump `updatedAt` without moving
+    // `lastRun`, so the cache is validated against `updatedAt` when present.
+    const cacheStamp = meta.updatedAt?.toMillis() ?? lastRunMillis;
     const cacheKey = `${this.projectId}::${mode}`;
     const cached = graphCache.get(cacheKey);
-    if (cached && cached.lastRunMillis === lastRunMillis) {
+    if (cached && cached.lastRunMillis === cacheStamp) {
       return cached.graph;
     }
     const snap = await this.db
@@ -849,7 +1058,7 @@ export class DependencyGraphService {
       }
     });
     const graph = new DependencyGraph(mode, edges, lastRunMillis);
-    graphCache.set(cacheKey, {lastRunMillis, graph});
+    graphCache.set(cacheKey, {lastRunMillis: cacheStamp, graph});
     return graph;
   }
 

@@ -16,7 +16,7 @@ import {renderAutoSlug} from '../../shared/auto-slug.js';
 import {logAction} from './actions.js';
 import {MultiBatch} from './batch.js';
 import {cmsPublishDataSources} from './data-source.js';
-import {cmsPublishDocs} from './doc.js';
+import {cmsPublishDocs, cmsSyncDependencyGraph} from './doc.js';
 
 export interface Release {
   id: string;
@@ -163,6 +163,9 @@ export async function publishRelease(id: string) {
   });
   await batch.commit();
   console.log(`published release: ${id}`);
+  // Update the dependency graph for the released docs (cmsPublishDocs skips
+  // the sync when writing to a shared batch, since the batch commits here).
+  await cmsSyncDependencyGraph(docIds);
   const metadata: Record<string, unknown> = {
     releaseId: id,
     docIds,

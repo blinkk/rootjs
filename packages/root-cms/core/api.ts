@@ -505,6 +505,68 @@ export function api(server: Server, options: ApiOptions) {
   );
 
   /**
+   * Syncs the published-mode dependency graph edges for specific docs by
+   * re-reading them from the `Published` collection (missing docs have their
+   * edges removed). The CMS UI calls this after publishing, unpublishing, or
+   * deleting docs client-side, so the graph reflects new references
+   * immediately instead of waiting for the next cron tick. Idempotent — the
+   * graph is synced to whatever is currently in the database.
+   *
+   * Authentication: any signed-in CMS user.
+   *
+   * Sample request:
+   *
+   * ```
+   * POST /cms/api/dependency_graph.sync_published
+   * {"docIds": ["Pages/index"]}
+   * ```
+   */
+  server.use(
+    '/cms/api/dependency_graph.sync_published',
+    async (req: Request, res: Response) => {
+      if (
+        req.method !== 'POST' ||
+        !String(req.get('content-type')).startsWith('application/json')
+      ) {
+        res.status(400).json({success: false, error: 'BAD_REQUEST'});
+        return;
+      }
+      if (!req.user?.email) {
+        res.status(401).json({success: false, error: 'UNAUTHORIZED'});
+        return;
+      }
+      const body = req.body || {};
+      const docIds = Array.isArray(body.docIds)
+        ? body.docIds.filter((id: any) => typeof id === 'string')
+        : [];
+      if (docIds.length === 0) {
+        res.status(400).json({
+          success: false,
+          error: 'MISSING_REQUIRED_FIELD',
+          field: 'docIds',
+        });
+        return;
+      }
+      if (docIds.length > 1000) {
+        res.status(400).json({success: false, error: 'TOO_MANY_DOC_IDS'});
+        return;
+      }
+      try {
+        const service = new DependencyGraphService(req.rootConfig!);
+        if (!service.isEnabled()) {
+          res.status(404).json({success: false, error: 'NOT_ENABLED'});
+          return;
+        }
+        const result = await service.syncPublishedDocs(docIds);
+        res.status(200).json({success: true, ...result});
+      } catch (err) {
+        console.error(err.stack || err);
+        res.status(500).json({success: false, error: 'UNKNOWN'});
+      }
+    }
+  );
+
+  /**
    * Accepts a JSON object containing {headers: [...], rows: [...]} and sends
    * an HTTP response with a corresponding CSV file as an attachment.
    *
