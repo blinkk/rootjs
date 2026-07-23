@@ -1,5 +1,20 @@
 # @blinkk/root-cms
 
+## 3.2.1
+
+### Patch Changes
+
+- 6633d7a: fix: skip hidden and OS junk files (.DS_Store, Thumbs.db, etc) in asset library syncs
+- 0f8c27b: fix: remove limit on the number of docs in a release
+- 064a281: feat: add email notifications service for cms action logs
+- 5f5786a: feat: v2 translations manager with fallback chains
+- 8c7787d: feat: add tools to root ai for creating and editing releases
+- 0133b2c: feat: add opt-in dependency graph api for tracking reference field usages between docs
+- 93ebc02: fix: prevent undefined values from reaching firestore
+- 6e57234: feat: undo/redo field edits in the doc editor
+- 28b0d11: fix: update the dependency graph at publish time to avoid stale references
+  - @blinkk/root@3.2.1
+
 ## 3.1.10
 
 ### Patch Changes
