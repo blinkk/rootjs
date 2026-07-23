@@ -407,6 +407,10 @@ export async function syncFolder(
 1. **Lease.** Set `sync.state = {status:'syncing', startedAt, startedBy}`
    on the folder doc (see §6.5).
 2. **Enumerate remote.** `provider.listRemoteAssets(folder.sync, auth)`.
+   The engine then drops hidden files and OS artifacts (`.DS_Store`,
+   `Thumbs.db`, `._*` resource forks, Office `~$` lock files, …; see
+   `isIgnoredSourceFile()` in `names.ts`) so junk that OSes drop into
+   synced Drive folders is never imported, for any provider.
 3. **Enumerate local.** `listAssets(folderPath)` → index the folder's
    `AssetFile`s by `source.remoteId` (assets without `source`, i.e.
    manually uploaded files coexisting in the folder, are ignored).

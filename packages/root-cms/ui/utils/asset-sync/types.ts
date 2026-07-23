@@ -185,7 +185,9 @@ export interface AssetSyncProvider {
   /**
    * Enumerates the exportable assets at the source. Also serves as the
    * access check: implementations should throw {@link SyncAccessError} when
-   * the user's token cannot read the source.
+   * the user's token cannot read the source. Providers don't need to
+   * filter out hidden/OS-artifact names (`.DS_Store` etc.) -- the engine
+   * drops them via `isIgnoredSourceFile()` in `names.ts`.
    */
   listRemoteAssets(
     source: SyncSourceRef,

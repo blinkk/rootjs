@@ -46,6 +46,8 @@ function makeFolder(sync?: Partial<AssetFolderSync>): AssetFolder {
 
 interface FakeRemote {
   remoteId: string;
+  /** Remote display name; defaults to `remoteId`. */
+  name?: string;
   filename: string;
   /** File contents; the fake sha1 is `sha1:<contents>`. */
   contents: string;
@@ -64,7 +66,7 @@ function makeProvider(options: {version?: string; remote: FakeRemote[]}) {
       version: options.version,
       assets: options.remote.map((r) => ({
         remoteId: r.remoteId,
-        name: r.remoteId,
+        name: r.name ?? r.remoteId,
         filename: r.filename,
         ...(r.contentHash ? {contentHash: r.contentHash} : {}),
         ref: {contents: r.contents},
@@ -473,6 +475,52 @@ describe('syncFolder', () => {
       'folder-icons',
       expect.objectContaining({ok: false, error: 'no access'}),
       {remoteVersion: undefined}
+    );
+  });
+
+  it('never imports hidden or OS junk files from the source', async () => {
+    const folder = makeFolder();
+    const {provider, downloaded} = makeProvider({
+      version: 'v1',
+      remote: [
+        {
+          remoteId: 'file:1',
+          name: 'hero.png',
+          filename: 'hero.png',
+          contents: 'aaa',
+        },
+        {
+          remoteId: 'file:2',
+          name: '.DS_Store',
+          filename: '.DS_Store',
+          contents: 'junk',
+        },
+        {
+          remoteId: 'file:3',
+          name: 'Thumbs.db',
+          filename: 'Thumbs.db',
+          contents: 'junk',
+        },
+      ],
+    });
+    // A junk file imported before this rule existed is flagged missing on
+    // the next sync (never auto-deleted), like any item gone at the source.
+    const deps = makeDeps({
+      folder,
+      localAssets: [makeSyncedAsset('file:2', 'junk')],
+    });
+    const summary = await syncFolder({folder, provider, auth: AUTH, deps});
+
+    expect(summary.added).toEqual(1);
+    expect(summary.missing).toEqual(1);
+    expect(downloaded).toEqual(['file:1']);
+    expect(deps.createAssetFile).toHaveBeenCalledTimes(1);
+    expect((deps.createAssetFile as any).mock.calls[0][0].name).toEqual(
+      'hero.png'
+    );
+    expect(deps.updateAssetSourceMissing).toHaveBeenCalledWith(
+      'asset-file:2',
+      true
     );
   });
 

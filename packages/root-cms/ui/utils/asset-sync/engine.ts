@@ -45,7 +45,11 @@ import {
   updateAssetSourceMissing,
 } from '../assets.js';
 import {UploadedFile, sha1, uploadFileToGCS} from '../gcs.js';
-import {buildUniqueAssetName, sanitizeAssetName} from './names.js';
+import {
+  buildUniqueAssetName,
+  isIgnoredSourceFile,
+  sanitizeAssetName,
+} from './names.js';
 import {getSyncProvider} from './registry.js';
 import {createBrowserAuthContext} from './tokens.js';
 import {
@@ -209,6 +213,13 @@ export async function syncFolder(
     onProgress({phase: 'enumerating'});
     const remoteList = await provider.listRemoteAssets(sync, auth, providerCtx);
     remoteVersion = remoteList.version;
+    // Hidden files and OS artifacts (e.g. `.DS_Store`, `Thumbs.db`) are
+    // never imported, regardless of provider. Any imported before this
+    // rule existed are flagged missing below, like items gone from the
+    // source (never auto-deleted).
+    const remoteAssets = remoteList.assets.filter(
+      (asset) => !isIgnoredSourceFile(asset.name)
+    );
 
     const folderPath = joinFolderPath(folder.parent, folder.name);
     const localAssets = await deps.listAssets(folderPath);
@@ -225,11 +236,11 @@ export async function syncFolder(
       }
     }
 
-    const remoteIds = new Set(remoteList.assets.map((a) => a.remoteId));
+    const remoteIds = new Set(remoteAssets.map((a) => a.remoteId));
     const missingAssets = Array.from(syncedByRemoteId.values()).filter(
       (asset) => !remoteIds.has(asset.source!.remoteId)
     );
-    const reappearedAssets = remoteList.assets.filter(
+    const reappearedAssets = remoteAssets.filter(
       (a) => syncedByRemoteId.get(a.remoteId)?.source?.missingSince
     );
 
@@ -241,17 +252,17 @@ export async function syncFolder(
       freshFolder.sync?.lastRemoteVersion === remoteVersion &&
       missingAssets.length === 0 &&
       reappearedAssets.length === 0 &&
-      remoteList.assets.every((a) => syncedByRemoteId.has(a.remoteId))
+      remoteAssets.every((a) => syncedByRemoteId.has(a.remoteId))
     ) {
       summary.upToDate = true;
-      summary.unchanged = remoteList.assets.length;
+      summary.unchanged = remoteAssets.length;
       return summary;
     }
 
     // Split into new imports and existing assets to check. Provider-reported
     // hashes (e.g. Drive's md5) skip unchanged items before downloading.
     const candidates: RemoteAsset[] = [];
-    for (const remoteAsset of remoteList.assets) {
+    for (const remoteAsset of remoteAssets) {
       const existing = syncedByRemoteId.get(remoteAsset.remoteId);
       if (
         existing &&
