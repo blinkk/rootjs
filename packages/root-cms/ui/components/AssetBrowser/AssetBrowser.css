@@ -580,15 +580,99 @@
 
 .AssetBrowser__syncProgress__running {
   display: flex;
-  align-items: center;
+  flex-direction: column;
+  gap: 8px;
+  padding: 8px 0;
+}
+
+.AssetBrowser__syncProgress__status {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
   gap: 12px;
-  padding: 12px 0;
 }
 
 .AssetBrowser__syncProgress__phase {
   font-size: 13px;
+  font-weight: 500;
   min-width: 0;
   overflow-wrap: anywhere;
+}
+
+.AssetBrowser__syncProgress__count {
+  flex-shrink: 0;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text-gray);
+}
+
+.AssetBrowser__syncProgress__bar {
+  position: relative;
+  height: 6px;
+  border-radius: 999px;
+  background: #e9ecef;
+  overflow: hidden;
+}
+
+.AssetBrowser__syncProgress__barFill {
+  height: 100%;
+  width: 0%;
+  border-radius: 999px;
+  background: #343a40;
+  transition: width 200ms ease;
+}
+
+/* While enumerating there is no item count yet, so sweep a partial bar
+ * instead of showing a misleading percentage. */
+.AssetBrowser__syncProgress__bar--indeterminate
+  .AssetBrowser__syncProgress__barFill {
+  width: 35%;
+  transition: none;
+  animation: AssetBrowser__syncSweep 1.4s ease-in-out infinite;
+}
+
+/* 286% of the fill's own width == the full track width (100 / 35). */
+@keyframes AssetBrowser__syncSweep {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(286%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .AssetBrowser__syncProgress__bar--indeterminate
+    .AssetBrowser__syncProgress__barFill {
+    width: 100%;
+    animation: none;
+    opacity: 0.35;
+  }
+}
+
+/* Reserve the row so the modal doesn't jump as items come and go. */
+.AssetBrowser__syncProgress__detail {
+  min-height: 18px;
+  font-size: 12px;
+}
+
+.AssetBrowser__syncProgress__current {
+  display: block;
+  color: var(--color-text-gray);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.AssetBrowser__syncProgress__note {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: #e67700;
+}
+
+.AssetBrowser__syncProgress__note svg {
+  flex-shrink: 0;
 }
 
 .AssetBrowser__syncProgress__token,
@@ -600,23 +684,179 @@
   gap: 16px;
 }
 
-.AssetBrowser__syncProgress__counts {
-  margin: 0;
-  padding-left: 20px;
-  font-size: 13px;
+.AssetBrowser__syncSummary {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 12px;
 }
 
-.AssetBrowser__syncProgress__counts svg {
-  vertical-align: -2px;
+.AssetBrowser__syncSummary__banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px;
+  border-radius: 6px;
+}
+
+.AssetBrowser__syncSummary__banner svg {
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.AssetBrowser__syncSummary__banner--success {
+  background: #ebfbee;
+  color: #2b8a3e;
+}
+
+.AssetBrowser__syncSummary__banner--warning {
+  background: #fff9db;
   color: #e67700;
 }
 
-.AssetBrowser__syncProgress__failed ul {
-  margin: 8px 0 0;
-  padding-left: 20px;
+.AssetBrowser__syncSummary__banner--neutral {
+  background: #f1f3f5;
+  color: var(--color-text-gray);
+}
+
+.AssetBrowser__syncSummary__bannerText {
+  min-width: 0;
+}
+
+.AssetBrowser__syncSummary__title {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.AssetBrowser__syncSummary__subtitle {
+  margin-top: 2px;
   font-size: 12px;
   color: var(--color-text-gray);
+}
+
+.AssetBrowser__syncSummary__stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(76px, 1fr));
+  gap: 8px;
+}
+
+.AssetBrowser__syncStat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 10px 8px;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  color: var(--color-text-default);
+}
+
+.AssetBrowser__syncStat__icon {
+  display: flex;
+  color: var(--color-text-gray);
+}
+
+.AssetBrowser__syncStat__value {
+  font-size: 20px;
+  font-weight: 600;
+  line-height: 1.2;
+  font-variant-numeric: tabular-nums;
+}
+
+.AssetBrowser__syncStat__label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-text-gray);
+}
+
+.AssetBrowser__syncStat--added:not(.AssetBrowser__syncStat--zero)
+  .AssetBrowser__syncStat__icon {
+  color: #2b8a3e;
+}
+
+.AssetBrowser__syncStat--updated:not(.AssetBrowser__syncStat--zero)
+  .AssetBrowser__syncStat__icon {
+  color: #1971c2;
+}
+
+.AssetBrowser__syncStat--missing .AssetBrowser__syncStat__icon {
+  color: #e67700;
+}
+
+.AssetBrowser__syncStat--failed .AssetBrowser__syncStat__icon {
+  color: #c92a2a;
+}
+
+/* De-emphasize counts of zero so the meaningful numbers stand out. */
+.AssetBrowser__syncStat--zero {
+  color: var(--color-text-gray);
+  opacity: 0.6;
+}
+
+.AssetBrowser__syncSummary__note {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--color-text-gray);
+}
+
+.AssetBrowser__syncSummary__note svg {
+  flex-shrink: 0;
+}
+
+.AssetBrowser__syncSummary__callout {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: 6px;
+  font-size: 13px;
+}
+
+.AssetBrowser__syncSummary__callout svg {
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.AssetBrowser__syncSummary__callout--warning {
+  background: #fff9db;
+  color: #e67700;
+}
+
+.AssetBrowser__syncSummary__callout--error {
+  background: #fff5f5;
+  color: #c92a2a;
+}
+
+.AssetBrowser__syncSummary__failed {
+  min-width: 0;
+  flex: 1;
+}
+
+.AssetBrowser__syncSummary__failedTitle {
+  font-weight: 600;
+}
+
+.AssetBrowser__syncSummary__failedList {
+  margin: 6px 0 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 180px;
+  overflow-y: auto;
+}
+
+.AssetBrowser__syncSummary__failedName {
+  font-size: 12px;
+  font-weight: 500;
+  overflow-wrap: anywhere;
+}
+
+.AssetBrowser__syncSummary__failedError {
+  font-size: 12px;
+  color: var(--color-text-gray);
+  overflow-wrap: anywhere;
 }

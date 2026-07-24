@@ -1,11 +1,18 @@
-import {Button, Loader, Modal, TextInput, Tooltip} from '@mantine/core';
+import {Button, Modal, TextInput} from '@mantine/core';
 import {showNotification} from '@mantine/notifications';
 import {
   IconAlertTriangle,
   IconBrandFigma,
   IconBrandGoogleDrive,
+  IconCircleCheck,
+  IconCirclePlus,
+  IconCircleX,
   IconCloudDownload,
+  IconEqual,
+  IconFileX,
+  IconRefresh,
 } from '@tabler/icons-preact';
+import {ComponentChildren} from 'preact';
 import {ChangeEvent} from 'preact/compat';
 import {useEffect, useMemo, useRef, useState} from 'preact/hooks';
 import {syncFolder} from '../../utils/asset-sync/engine.js';
@@ -30,6 +37,7 @@ import {
   disconnectFolderSync,
   joinFolderPath,
 } from '../../utils/assets.js';
+import {joinClassNames} from '../../utils/classes.js';
 
 /** Renders the icon for a sync provider. */
 export function SyncProviderIcon(props: {provider?: string; size?: number}) {
@@ -380,33 +388,7 @@ export function SyncProgressModal(props: {
       centered
     >
       <div className="AssetBrowser__syncProgress">
-        {status === 'running' && (
-          <div className="AssetBrowser__syncProgress__running">
-            <Loader color="gray" size="sm" />
-            <div className="AssetBrowser__syncProgress__phase">
-              {progress.note ? (
-                progress.note
-              ) : (
-                <>
-                  {progress.phase === 'enumerating' &&
-                    'Finding exportable assets…'}
-                  {progress.phase === 'downloading' &&
-                    (progress.total
-                      ? `Importing ${Math.min(
-                          (progress.completed ?? 0) + 1,
-                          progress.total
-                        )} of ${progress.total}${
-                          progress.currentName
-                            ? ` — ${progress.currentName}`
-                            : ''
-                        }`
-                      : 'Importing…')}
-                  {progress.phase === 'finalizing' && 'Finishing up…'}
-                </>
-              )}
-            </div>
-          </div>
-        )}
+        {status === 'running' && <SyncRunningView progress={progress} />}
 
         {status === 'token' && provider && provider.authType === 'oauth' && (
           <div className="AssetBrowser__syncProgress__token">
@@ -502,57 +484,13 @@ export function SyncProgressModal(props: {
 
         {status === 'done' && summary && (
           <div className="AssetBrowser__syncProgress__done">
-            {summary.upToDate ? (
-              <div className="AssetBrowser__syncModal__text">
-                Everything is up to date — the source hasn't changed since the
-                last sync ({summary.unchanged} asset(s) unchanged).
-              </div>
-            ) : (
-              <ul className="AssetBrowser__syncProgress__counts">
-                <li>{summary.added} added</li>
-                <li>
-                  {summary.updated} updated
-                  {summary.updatedDocIds.length > 0 && (
-                    <>
-                      {' '}
-                      (refreshed in {new Set(summary.updatedDocIds).size}{' '}
-                      doc(s))
-                    </>
-                  )}
-                </li>
-                <li>{summary.unchanged} unchanged</li>
-                {summary.missing > 0 && (
-                  <li>
-                    <IconAlertTriangle size={14} /> {summary.missing} no longer
-                    in the source (kept in the folder; delete manually if
-                    unused)
-                  </li>
-                )}
-              </ul>
-            )}
-            {summary.failed.length > 0 && (
-              <div className="AssetBrowser__syncProgress__failed">
-                <div className="AssetBrowser__syncModal__error">
-                  {summary.failed.length} item(s) failed to sync. Syncing again
-                  will retry them.
-                </div>
-                <ul>
-                  {summary.failed.slice(0, 10).map((item) => (
-                    <li key={item.name}>
-                      <Tooltip label={item.error} withArrow>
-                        <span>
-                          {item.name}: {item.error}
-                        </span>
-                      </Tooltip>
-                    </li>
-                  ))}
-                  {summary.failed.length > 10 && (
-                    <li>…and {summary.failed.length - 10} more</li>
-                  )}
-                </ul>
-              </div>
-            )}
+            <SyncSummaryView summary={summary} />
             <div className="AssetBrowser__syncModal__buttons">
+              {summary.failed.length > 0 && (
+                <Button variant="default" onClick={() => run()}>
+                  Retry failed
+                </Button>
+              )}
               <Button color="dark" onClick={props.onClose}>
                 Done
               </Button>
@@ -575,5 +513,243 @@ export function SyncProgressModal(props: {
         )}
       </div>
     </Modal>
+  );
+}
+
+/** Headline describing what the sync is currently doing. */
+function syncPhaseLabel(progress: SyncProgress): string {
+  if (progress.phase === 'enumerating') {
+    return 'Finding exportable assets…';
+  }
+  if (progress.phase === 'finalizing') {
+    return 'Finishing up…';
+  }
+  return progress.total ? 'Importing assets…' : 'Importing…';
+}
+
+/**
+ * Live progress for a running sync. The bar is determinate once the number
+ * of items to import is known, and animates as an indeterminate sweep while
+ * the source is still being enumerated. Transient provider status (e.g. a
+ * rate-limit backoff countdown) replaces the current item line.
+ */
+export function SyncRunningView(props: {progress: SyncProgress}) {
+  const progress = props.progress;
+  const total = progress.total ?? 0;
+  const completed = Math.min(progress.completed ?? 0, total);
+  const determinate = progress.phase === 'downloading' && total > 0;
+  const finalizing = progress.phase === 'finalizing';
+  const indeterminate = !determinate && !finalizing;
+  const percent = determinate ? Math.round((completed / total) * 100) : 100;
+  const label = syncPhaseLabel(progress);
+  return (
+    <div className="AssetBrowser__syncProgress__running">
+      <div className="AssetBrowser__syncProgress__status">
+        <div className="AssetBrowser__syncProgress__phase">{label}</div>
+        {determinate && (
+          <div className="AssetBrowser__syncProgress__count">
+            {completed} / {total}
+          </div>
+        )}
+      </div>
+      <div
+        className={joinClassNames(
+          'AssetBrowser__syncProgress__bar',
+          indeterminate && 'AssetBrowser__syncProgress__bar--indeterminate'
+        )}
+        role="progressbar"
+        aria-label={label}
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-valuenow={determinate ? percent : undefined}
+      >
+        <div
+          className="AssetBrowser__syncProgress__barFill"
+          style={indeterminate ? undefined : {width: `${percent}%`}}
+        />
+      </div>
+      <div className="AssetBrowser__syncProgress__detail">
+        {progress.note ? (
+          <span className="AssetBrowser__syncProgress__note">
+            <IconAlertTriangle size={13} />
+            {progress.note}
+          </span>
+        ) : (
+          progress.currentName && (
+            <span className="AssetBrowser__syncProgress__current">
+              {progress.currentName}
+            </span>
+          )
+        )}
+      </div>
+    </div>
+  );
+}
+
+/** A single count in the completed-sync stat grid. */
+function SyncStat(props: {
+  icon: ComponentChildren;
+  label: string;
+  value: number;
+  tone: 'added' | 'updated' | 'unchanged' | 'missing' | 'failed';
+}) {
+  return (
+    <div
+      className={joinClassNames(
+        'AssetBrowser__syncStat',
+        `AssetBrowser__syncStat--${props.tone}`,
+        props.value === 0 && 'AssetBrowser__syncStat--zero'
+      )}
+    >
+      <div className="AssetBrowser__syncStat__icon">{props.icon}</div>
+      <div className="AssetBrowser__syncStat__value">{props.value}</div>
+      <div className="AssetBrowser__syncStat__label">{props.label}</div>
+    </div>
+  );
+}
+
+/** Number of failed items listed before the "show all" toggle. */
+const FAILED_PREVIEW_COUNT = 5;
+
+/**
+ * Result of a completed sync: a status banner, a grid of per-outcome counts,
+ * and callouts for the outcomes that need follow-up (assets no longer at the
+ * source, and per-item failures).
+ */
+export function SyncSummaryView(props: {summary: SyncSummary}) {
+  const summary = props.summary;
+  const [showAllFailed, setShowAllFailed] = useState(false);
+  const failedCount = summary.failed.length;
+  const changed = summary.added + summary.updated;
+  const docCount = new Set(summary.updatedDocIds).size;
+  const visibleFailed = showAllFailed
+    ? summary.failed
+    : summary.failed.slice(0, FAILED_PREVIEW_COUNT);
+
+  let tone: 'success' | 'warning' | 'neutral' = 'success';
+  let title = 'Sync complete';
+  let subtitle = `${summary.added} added, ${summary.updated} updated.`;
+  if (failedCount > 0) {
+    tone = 'warning';
+    title = `Synced with ${failedCount} error${failedCount === 1 ? '' : 's'}`;
+    subtitle = 'Syncing again will retry the items that failed.';
+  } else if (summary.upToDate) {
+    tone = 'neutral';
+    title = 'Everything is up to date';
+    subtitle = "The source hasn't changed since the last sync.";
+  } else if (changed === 0) {
+    tone = 'neutral';
+    title = 'No changes to import';
+    subtitle = 'Every asset already matches the source.';
+  }
+
+  return (
+    <div className="AssetBrowser__syncSummary">
+      <div
+        className={joinClassNames(
+          'AssetBrowser__syncSummary__banner',
+          `AssetBrowser__syncSummary__banner--${tone}`
+        )}
+      >
+        {tone === 'warning' ? (
+          <IconAlertTriangle size={20} />
+        ) : (
+          <IconCircleCheck size={20} />
+        )}
+        <div className="AssetBrowser__syncSummary__bannerText">
+          <div className="AssetBrowser__syncSummary__title">{title}</div>
+          <div className="AssetBrowser__syncSummary__subtitle">{subtitle}</div>
+        </div>
+      </div>
+
+      <div className="AssetBrowser__syncSummary__stats">
+        <SyncStat
+          tone="added"
+          icon={<IconCirclePlus size={16} />}
+          label="Added"
+          value={summary.added}
+        />
+        <SyncStat
+          tone="updated"
+          icon={<IconRefresh size={16} />}
+          label="Updated"
+          value={summary.updated}
+        />
+        <SyncStat
+          tone="unchanged"
+          icon={<IconEqual size={16} />}
+          label="Unchanged"
+          value={summary.unchanged}
+        />
+        {summary.missing > 0 && (
+          <SyncStat
+            tone="missing"
+            icon={<IconFileX size={16} />}
+            label="Missing"
+            value={summary.missing}
+          />
+        )}
+        {failedCount > 0 && (
+          <SyncStat
+            tone="failed"
+            icon={<IconCircleX size={16} />}
+            label="Failed"
+            value={failedCount}
+          />
+        )}
+      </div>
+
+      {docCount > 0 && (
+        <div className="AssetBrowser__syncSummary__note">
+          <IconRefresh size={14} />
+          Refreshed in {docCount} document{docCount === 1 ? '' : 's'}.
+        </div>
+      )}
+
+      {summary.missing > 0 && (
+        <div className="AssetBrowser__syncSummary__callout AssetBrowser__syncSummary__callout--warning">
+          <IconAlertTriangle size={16} />
+          <div>
+            {summary.missing} asset{summary.missing === 1 ? ' is' : 's are'} no
+            longer in the source. They were kept in this folder — delete them
+            manually if they're unused.
+          </div>
+        </div>
+      )}
+
+      {failedCount > 0 && (
+        <div className="AssetBrowser__syncSummary__callout AssetBrowser__syncSummary__callout--error">
+          <IconCircleX size={16} />
+          <div className="AssetBrowser__syncSummary__failed">
+            <div className="AssetBrowser__syncSummary__failedTitle">
+              {failedCount} item{failedCount === 1 ? '' : 's'} failed to sync
+            </div>
+            <ul className="AssetBrowser__syncSummary__failedList">
+              {visibleFailed.map((item, i) => (
+                <li key={`${item.name}-${i}`}>
+                  <div className="AssetBrowser__syncSummary__failedName">
+                    {item.name}
+                  </div>
+                  <div className="AssetBrowser__syncSummary__failedError">
+                    {item.error}
+                  </div>
+                </li>
+              ))}
+            </ul>
+            {failedCount > FAILED_PREVIEW_COUNT && (
+              <button
+                type="button"
+                className="AssetBrowser__syncModal__linkButton"
+                onClick={() => setShowAllFailed(!showAllFailed)}
+              >
+                {showAllFailed
+                  ? 'Show less'
+                  : `Show all ${failedCount} failures`}
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
   );
 }
