@@ -64,8 +64,22 @@ export default defineConfig({
       ai: {
         models: [
           {
-            id: 'claude-opus-4-7',
-            label: 'Claude Opus 4.7',
+            id: 'claude-sonnet-5',
+            label: 'Claude Sonnet 5',
+            provider: 'anthropic',
+            apiKey: process.env.ANTHROPIC_API_KEY,
+            capabilities: {tools: true, reasoning: true, attachments: true},
+          },
+          {
+            id: 'claude-opus-5',
+            label: 'Claude Opus 5',
+            provider: 'anthropic',
+            apiKey: process.env.ANTHROPIC_API_KEY,
+            capabilities: {tools: true, reasoning: true, attachments: true},
+          },
+          {
+            id: 'claude-fable-5',
+            label: 'Claude Fable 5',
             provider: 'anthropic',
             apiKey: process.env.ANTHROPIC_API_KEY,
             capabilities: {tools: true, reasoning: true, attachments: true},
