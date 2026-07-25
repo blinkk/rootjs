@@ -1,3 +1,10 @@
+/**
+ * @fileoverview Visual tests for the sync progress and summary views.
+ *
+ * Reference screenshots are not committed for this file -- run
+ * `pnpm test:visual` once to generate them for your platform.
+ */
+
 import '../../styles/global.css';
 import './AssetBrowser.css';
 import {cleanup, render} from '@testing-library/preact';
