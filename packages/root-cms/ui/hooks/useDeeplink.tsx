@@ -1,11 +1,25 @@
 import {ComponentChildren, createContext} from 'preact';
-import {useContext, useEffect, useState} from 'preact/hooks';
+import {
+  useCallback,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+} from 'preact/hooks';
+import {useLocation} from 'preact-iso';
 import {isScrollToDeeplinkMessage} from '../../shared/embed-protocol.js';
 import {isAllowedOrigin} from '../utils/embed-bridge.js';
 
 export interface DeeplinkContext {
   value: string;
+  /** Sets the targeted field without touching the URL. */
   setValue: (value: string) => void;
+  /**
+   * Sets the targeted field and mirrors it into the `deeplink` URL param,
+   * replacing the current history entry. Use this instead of `setValue()`
+   * whenever the URL should reflect the newly targeted field.
+   */
+  setUrlValue: (value: string) => void;
 }
 
 interface ScrollToDeeplinkOptions {
@@ -15,22 +29,99 @@ interface ScrollToDeeplinkOptions {
   behavior: 'auto' | 'smooth';
 }
 
+/** Max time to wait for a deeplinked field to render before giving up. */
+const DEEPLINK_ELEMENT_TIMEOUT_MS = 3000;
+
+/** How often to re-check for the deeplinked field while waiting for it. */
+const DEEPLINK_ELEMENT_POLL_MS = 50;
+
 function getDeeplinkFromUrl(): string {
   const params = new URLSearchParams(window.location.search);
   return params.get('deeplink') || '';
 }
 
+/** Updates the `deeplink` param in the URL without adding a history entry. */
+function replaceDeeplinkInUrl(deepKey: string) {
+  const url = new URL(window.location.href);
+  if (deepKey) {
+    url.searchParams.set('deeplink', deepKey);
+  } else {
+    url.searchParams.delete('deeplink');
+  }
+  // Preserve the existing history state so the router isn't disrupted.
+  window.history.replaceState(window.history.state, '', url.toString());
+}
+
+/**
+ * Waits for the field element for a deep key to exist in the DOM and then
+ * invokes the callback. A deeplink that arrives through a client-side URL
+ * change can land before the targeted field has rendered (e.g. when the same
+ * navigation also switches docs), so the element is polled for a short while.
+ * Returns a function that cancels the wait.
+ */
+function whenDeeplinkElementReady(
+  deepKey: string,
+  callback: (element: HTMLElement) => void
+): () => void {
+  const deadline = Date.now() + DEEPLINK_ELEMENT_TIMEOUT_MS;
+  let timer = 0;
+  const check = () => {
+    const element = document.getElementById(deepKey);
+    if (element) {
+      callback(element);
+      return;
+    }
+    if (Date.now() < deadline) {
+      timer = window.setTimeout(check, DEEPLINK_ELEMENT_POLL_MS);
+    }
+  };
+  // Defer the first check so any re-render triggered by the deeplink change
+  // (e.g. collapsed drawers re-opening) has been flushed to the DOM.
+  timer = window.setTimeout(check, 0);
+  return () => window.clearTimeout(timer);
+}
+
 const DEEPLINK_CONTEXT = createContext<DeeplinkContext | null>(null);
 
 export function DeeplinkProvider(props: {children: ComponentChildren}) {
-  const deeplinkFromUrl = getDeeplinkFromUrl();
-  const [value, setValue] = useState(deeplinkFromUrl);
-  const deeplinkCtx = {value, setValue};
+  // NOTE: `useLocation()` is what makes the URL check below reactive. Reading
+  // `window.location` alone would only pick up the deeplink on a full page
+  // load, since client-side navigations within the CMS never re-mount the doc
+  // editor.
+  const {url} = useLocation();
+  const [value, setValue] = useState(getDeeplinkFromUrl);
 
-  // When navigating between docs (URL changes), update the deeplink.
+  // The deeplink last seen in (or written to) the URL. In-app updates rewrite
+  // the URL themselves and do their own scrolling, so tracking it here keeps
+  // the URL watcher below from re-applying a deeplink already handled.
+  const urlDeeplinkRef = useRef(value);
+
+  const setUrlValue = useCallback((newValue: string) => {
+    urlDeeplinkRef.current = newValue;
+    replaceDeeplinkInUrl(newValue);
+    setValue(newValue);
+  }, []);
+
+  const deeplinkCtx = {value, setValue, setUrlValue};
+
+  // Apply deeplinks that arrive via a client-side URL change, e.g. a sidebar
+  // tool or global search linking to a field on a doc.
   useEffect(() => {
-    setValue(deeplinkFromUrl);
-  }, [deeplinkFromUrl]);
+    const urlDeeplink = getDeeplinkFromUrl();
+    if (urlDeeplink === urlDeeplinkRef.current) {
+      return;
+    }
+    urlDeeplinkRef.current = urlDeeplink;
+    setValue(urlDeeplink);
+    if (!urlDeeplink) {
+      return;
+    }
+    // The scroll is forced because the editor is likely already scrolled from
+    // wherever the user navigated from, which would otherwise suppress it.
+    return whenDeeplinkElementReady(urlDeeplink, (element) => {
+      scrollToDeeplink(element, {behavior: 'smooth', force: true});
+    });
+  }, [url]);
 
   //  Enable posting messages from the preview frame to the DocEditor so that
   // fields can be focused.
@@ -45,12 +136,8 @@ export function DeeplinkProvider(props: {children: ComponentChildren}) {
         const deepKey = event.data.scrollToDeeplink.deepKey;
         const element = document.getElementById(deepKey);
         if (element) {
-          setValue(deepKey);
+          setUrlValue(deepKey);
           scrollToDeeplink(element, {behavior: 'smooth', force: true});
-          // Update the URL without modifying the history.
-          const url = new URL(window.location.href);
-          url.searchParams.set('deeplink', deepKey);
-          window.history.replaceState({}, '', url.toString());
         }
       }
     };
@@ -58,7 +145,7 @@ export function DeeplinkProvider(props: {children: ComponentChildren}) {
     return () => {
       window.removeEventListener('message', handleMessage);
     };
-  }, []);
+  }, [setUrlValue]);
 
   return (
     <DEEPLINK_CONTEXT.Provider value={deeplinkCtx}>

@@ -863,8 +863,7 @@ DocEditor.FieldHeader = (props: FieldProps & {className?: string}) => {
               title="Link to field"
               onClick={(e) => {
                 e.preventDefault();
-                window.history.replaceState({}, '', deeplinkUrl);
-                deeplink.setValue(props.deepKey!);
+                deeplink.setUrlValue(props.deepKey!);
               }}
             >
               #
