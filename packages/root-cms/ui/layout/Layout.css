@@ -51,6 +51,12 @@
   background-color: #e5e5e5;
 }
 
+/* Wrapper added by the tooltip around the version badge. */
+.Layout__top__version__tooltip {
+  display: flex;
+  align-items: center;
+}
+
 .Layout__top__project {
   font-size: 14px;
   line-height: 16px;
