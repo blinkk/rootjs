@@ -1,4 +1,6 @@
 .Layout {
+  --side-button-height: 36px;
+  --side-button-icon-size: 22px;
   display: grid;
   grid-template-areas:
     'top top'
@@ -112,7 +114,7 @@
 .Layout__side__button {
   display: block;
   width: 100%;
-  height: 48px;
+  height: var(--side-button-height);
 }
 
 .Layout__side__button a {
@@ -125,6 +127,12 @@
   text-decoration: none;
   transition: background-color 0.18s ease;
 }
+
+/* .Layout__side__button a::before {
+  content: '';
+  display: block;
+  background: transparent;
+} */
 
 .Layout__side__button a:hover {
   background-color: var(--button-background-hover);
@@ -156,19 +164,19 @@
 .Layout__side__button img,
 .Layout__side__button svg {
   display: block;
-  width: 24px;
-  height: 24px;
+  width: var(--side-button-icon-size);
+  height: var(--side-button-icon-size);
   object-fit: contain;
   object-position: center;
 }
 
 .Layout__side__button__icon {
   display: flex;
-  flex: 0 0 24px;
+  flex: 0 0 var(--side-button-icon-size);
   align-items: center;
   justify-content: center;
-  width: 24px;
-  height: 24px;
+  width: var(--side-button-icon-size);
+  height: var(--side-button-icon-size);
 }
 
 .Layout__side__button__label {
@@ -194,7 +202,7 @@
 .Layout__side__toggle__button {
   display: flex;
   width: 100%;
-  height: 40px;
+  height: var(--side-button-height);
   align-items: center;
   justify-content: center;
   gap: 12px;
@@ -202,23 +210,23 @@
   transition: background-color 0.18s ease;
 }
 
-.Layout__side__toggle__button:hover {
+/* .Layout__side__toggle__button:hover {
   background-color: var(--button-background-hover);
-}
+} */
 
 .Layout__side__toggle__icon {
   display: flex;
-  flex: 0 0 24px;
+  flex: 0 0 var(--side-button-icon-size);
   align-items: center;
   justify-content: center;
-  width: 24px;
-  height: 24px;
+  width: var(--side-button-icon-size);
+  height: var(--side-button-icon-size);
 }
 
 .Layout__side__toggle__icon svg {
   display: block;
-  width: 24px;
-  height: 24px;
+  width: var(--side-button-icon-size);
+  height: var(--side-button-icon-size);
 }
 
 .Layout__side__toggle__label {
