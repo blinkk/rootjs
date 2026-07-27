@@ -54,6 +54,24 @@ describe('Layout', () => {
     expect(labels).toContain('Settings');
   });
 
+  it('keeps the sidebar icons in place when toggled', async () => {
+    const {container} = renderLayout();
+    const iconPositions = () =>
+      Array.from(
+        container.querySelectorAll(
+          '.Layout__side__button__icon, .Layout__side__toggle__icon, .Layout__side__user__button'
+        )
+      ).map((el) => el.getBoundingClientRect().left);
+    const collapsed = iconPositions();
+    expect(collapsed.length).toBeGreaterThan(1);
+    const toggle = container.querySelector(
+      '.Layout__side__toggle__button'
+    ) as HTMLElement;
+    toggle.click();
+    await new Promise((resolve) => window.setTimeout(resolve, 0));
+    expect(iconPositions()).toEqual(collapsed);
+  });
+
   it('does not overflow the page when the viewport is short', async () => {
     const {container} = renderLayout();
     const side = container.querySelector('.Layout__side') as HTMLElement;

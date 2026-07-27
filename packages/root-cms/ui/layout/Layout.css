@@ -1,6 +1,19 @@
 .Layout {
   --side-button-height: 36px;
   --side-button-icon-size: 22px;
+  /**
+   * Distance from the left edge of the sidebar to the left edge of the sidebar
+   * icons. When collapsed, the icons are centered within the sidebar's content
+   * box, which excludes the sidebar's right border. Expanded rows indent by the
+   * same amount so that the icons stay put when the sidebar is toggled.
+   */
+  --side-icon-offset: calc(
+    (
+        var(--sidebar-width-collapsed) - var(--sidebar-border-width) -
+          var(--side-button-icon-size)
+      ) /
+      2
+  );
   display: grid;
   grid-template-areas:
     'top top'
@@ -83,7 +96,7 @@
 
 .Layout__side {
   grid-area: side;
-  border-right: 1px solid var(--color-border);
+  border-right: var(--sidebar-border-width) solid var(--color-border);
   height: calc(100vh - 48px);
   max-height: 100vh;
   display: flex;
@@ -199,7 +212,7 @@
 .Layout--sidebar-expanded .Layout__side__button a {
   justify-content: flex-start;
   gap: 12px;
-  padding: 0 12px;
+  padding: 0 12px 0 var(--side-icon-offset);
 }
 
 .Layout__side__toggle {
@@ -248,7 +261,7 @@
 
 .Layout--sidebar-expanded .Layout__side__toggle__button {
   justify-content: flex-start;
-  padding: 0 12px;
+  padding: 0 12px 0 var(--side-icon-offset);
 }
 
 .Layout__side__user {
@@ -259,7 +272,7 @@
 
 .Layout--sidebar-expanded .Layout__side__user {
   justify-content: flex-start;
-  padding: 0 12px;
+  padding: 0 12px 0 var(--side-icon-offset);
 }
 
 .Layout__side__user__button {
