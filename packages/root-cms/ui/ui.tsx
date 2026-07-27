@@ -189,6 +189,14 @@ declare global {
           trailingSlash?: boolean;
         };
       };
+      /**
+       * Metadata about the deployed build. Only set when the app is prebuilt
+       * (i.e. `root build` + `root start`); `null` on the dev server.
+       */
+      build?: {
+        /** Epoch millis for when `root build` finished. */
+        timestamp: number;
+      } | null;
       firebaseConfig: Record<string, string>;
       gapi?: {
         apiKey: string;

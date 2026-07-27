@@ -26,6 +26,7 @@ import sirv from 'sirv';
 import {SSEEvent, SSESchemaChangedEvent} from '../shared/sse.js';
 import {type AiConfig} from './ai.js';
 import {api} from './api.js';
+import {writeBuildInfo} from './build-info.js';
 import {type CMSCheck} from './checks.js';
 import {Action, RootCMSClient, UserRole} from './client.js';
 import {type CMSNotificationService} from './services-notifications.js';
@@ -938,6 +939,14 @@ export function cmsPlugin(options: CMSPluginOptions): CMSPlugin {
             throw err;
           }
         }
+      },
+
+      /**
+       * Saves build metadata to `dist/.root-cms/build.json` so that prebuilt
+       * servers can report when they were built.
+       */
+      postBuild: async (rootConfig: RootConfig) => {
+        await writeBuildInfo(rootConfig.rootDir);
       },
     },
 

@@ -4,6 +4,7 @@ import {Request, Response, RootConfig} from '@blinkk/root';
 import {renderJsxToString} from '@blinkk/root/jsx';
 import {serializeJsonForScript} from '../shared/safe-json.js';
 import {serializeAiConfig} from './ai.js';
+import {getBuildInfo} from './build-info.js';
 import {CMSPluginOptions} from './plugin.js';
 import {getCollectionSchema, getProjectSchemas} from './project.js';
 import {Collection} from './schema.js';
@@ -110,6 +111,8 @@ export async function renderApp(
   if (gci === true) {
     gci = 'https://services.rootjs.dev';
   }
+  // Only set on prebuilt (deployed) servers; `null` on the dev server.
+  const buildInfo = await getBuildInfo(rootConfig.rootDir);
   const ctx = {
     rootConfig: {
       projectId: cmsConfig.id || 'default',
@@ -123,6 +126,7 @@ export async function renderApp(
         trailingSlash: rootConfig.server?.trailingSlash,
       },
     },
+    build: buildInfo,
     firebaseConfig: cmsConfig.firebaseConfig,
     gapi: cmsConfig.gapi,
     collections: collections,

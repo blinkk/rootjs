@@ -1,7 +1,7 @@
 import '../styles/global.css';
 import '../styles/theme.css';
 import {MantineProvider} from '@mantine/core';
-import {render} from '@testing-library/preact';
+import {fireEvent, render, waitFor} from '@testing-library/preact';
 import {LocationProvider} from 'preact-iso';
 import {describe, it, beforeEach, expect} from 'vitest';
 import {Layout} from './Layout.js';
@@ -67,5 +67,31 @@ describe('Layout', () => {
     expect(buttons.clientHeight).toBeLessThanOrEqual(
       side.getBoundingClientRect().height
     );
+  });
+
+  it('does not add a build tooltip to the version when not prebuilt', async () => {
+    const {container} = renderLayout();
+    expect(container.querySelector('.Layout__top__version')).not.toBeNull();
+    expect(
+      container.querySelector('.Layout__top__version__tooltip')
+    ).toBeNull();
+  });
+
+  it('shows the build timestamp on hover when the app is prebuilt', async () => {
+    (window as any).__ROOT_CTX.build = {
+      timestamp: new Date('2026-07-27T12:00:00Z').getTime(),
+    };
+    const {container} = renderLayout();
+    const tooltip = container.querySelector(
+      '.Layout__top__version__tooltip'
+    ) as HTMLElement;
+    expect(tooltip).not.toBeNull();
+    fireEvent.pointerEnter(tooltip);
+    const label = await waitFor(() => {
+      const el = document.querySelector('.mantine-Tooltip-body');
+      expect(el).not.toBeNull();
+      return el as HTMLElement;
+    });
+    expect(label.textContent).toMatch(/^Built .*2026/);
   });
 });

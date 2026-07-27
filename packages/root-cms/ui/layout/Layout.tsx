@@ -113,14 +113,7 @@ Layout.Top = () => {
           <a className="Layout__top__logo" href="/cms">
             <RootCMSLogo />
           </a>
-          <a
-            className="Layout__top__version"
-            href="https://github.com/blinkk/rootjs/blob/main/packages/root-cms/CHANGELOG.md"
-            target="_blank"
-            rel="noreferrer noopener"
-          >
-            v{packageJson.version}
-          </a>
+          <Layout.Version />
           <div className="Layout__top__project">{projectName}</div>
         </>
       ) : (
@@ -128,14 +121,7 @@ Layout.Top = () => {
           <a className="Layout__top__logo" href="/cms">
             {projectName}
           </a>
-          <a
-            className="Layout__top__version"
-            href="https://github.com/blinkk/rootjs/blob/main/packages/root-cms/CHANGELOG.md"
-            target="_blank"
-            rel="noreferrer noopener"
-          >
-            v{packageJson.version}
-          </a>
+          <Layout.Version />
         </>
       )}
       {showSearchBar && (
@@ -146,6 +132,51 @@ Layout.Top = () => {
     </div>
   );
 };
+
+/**
+ * The Root CMS version badge in the top bar, which links to the changelog.
+ * When the app is prebuilt (i.e. deployed, not the dev server), a tooltip
+ * shows when the server was built.
+ */
+Layout.Version = () => {
+  const buildTimestamp = window.__ROOT_CTX.build?.timestamp;
+  const version = (
+    <a
+      className="Layout__top__version"
+      href="https://github.com/blinkk/rootjs/blob/main/packages/root-cms/CHANGELOG.md"
+      target="_blank"
+      rel="noreferrer noopener"
+    >
+      v{packageJson.version}
+    </a>
+  );
+  if (!buildTimestamp) {
+    return version;
+  }
+  return (
+    <Tooltip
+      className="Layout__top__version__tooltip"
+      label={`Built ${formatBuildTime(buildTimestamp)}`}
+      position="bottom"
+      withArrow
+    >
+      {version}
+    </Tooltip>
+  );
+};
+
+/** Formats a build timestamp in the user's local time zone. */
+function formatBuildTime(timestamp: number) {
+  const date = new Date(timestamp);
+  return date.toLocaleDateString('en', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    timeZoneName: 'short',
+  });
+}
 
 Layout.Side = () => {
   const {url} = useLocation();
