@@ -1,7 +1,7 @@
 .DocumentPage__layout {
   display: flex;
   height: calc(100vh - 48px);
-  width: calc(100vw - 48px);
+  width: calc(100vw - var(--sidebar-width, 48px));
 }
 
 .DocumentPage__layout > .SplitPanel {
