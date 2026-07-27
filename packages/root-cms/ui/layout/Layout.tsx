@@ -311,7 +311,7 @@ Layout.Side = () => {
                 <Avatar
                   src={user.photoURL}
                   alt={user.email!}
-                  size={30}
+                  size={22}
                   radius="xl"
                 />
                 {expanded && (

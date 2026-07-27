@@ -207,13 +207,13 @@
   align-items: center;
   justify-content: center;
   gap: 12px;
-  color: var(--color-text-gray);
+  color: var(--color-text-default);
   transition: background-color 0.18s ease;
 }
 
-/* .Layout__side__toggle__button:hover {
+.Layout__side__toggle__button:hover {
   background-color: var(--button-background-hover);
-} */
+}
 
 .Layout__side__toggle__icon {
   display: flex;
