@@ -1,5 +1,14 @@
 # @blinkk/root-cms
 
+## 3.2.2
+
+### Patch Changes
+
+- 021e094: feat: add a progress bar and a richer summary to the asset library sync ui
+- 2fe2d25: feat: show the server build timestamp in a tooltip on the cms version number
+- 9e348bc: feat: add an expand/collapse toggle to the cms sidebar
+  - @blinkk/root@3.2.2
+
 ## 3.2.1
 
 ### Patch Changes
