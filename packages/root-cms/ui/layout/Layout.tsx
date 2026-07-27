@@ -13,23 +13,50 @@ import {
   IconFolder,
   IconHome,
   IconLanguage,
+  IconLayoutSidebarLeftCollapse,
+  IconLayoutSidebarLeftExpand,
   IconLogout,
   IconPhoto,
   IconRobot,
   IconRocket,
   IconSettings,
 } from '@tabler/icons-preact';
-import {ComponentChildren} from 'preact';
+import {ComponentChildren, createContext} from 'preact';
+import {useCallback, useContext, useMemo} from 'preact/hooks';
 import {useLocation} from 'preact-iso';
 import type {CMSBuiltInSidebarTool} from '../../core/plugin.js';
 import packageJson from '../../package.json' assert {type: 'json'};
 import {RootCMSLogo} from '../components/RootCMSLogo/RootCMSLogo.js';
 import {SearchBar} from '../components/SearchBar/SearchBar.js';
+import {useLocalStorage} from '../hooks/useLocalStorage.js';
 import {testAiEnabled} from '../utils/ai.js';
 import {joinClassNames} from '../utils/classes.js';
 import './Layout.css';
 
 const ICON_STROKE = '1.5';
+
+const SIDEBAR_EXPANDED_STORAGE_KEY = 'root::Layout::sidebarExpanded';
+
+/** State of the left-hand sidebar, shared by the layout and its children. */
+interface SidebarState {
+  /** Whether the sidebar is expanded to show the link labels. */
+  expanded: boolean;
+  /** Toggles the sidebar between its expanded and collapsed states. */
+  toggle: () => void;
+}
+
+const SidebarContext = createContext<SidebarState>({
+  expanded: false,
+  toggle: () => {},
+});
+
+/**
+ * Returns the expand/collapse state of the left-hand sidebar. The state is
+ * persisted to local storage and defaults to collapsed.
+ */
+function useSidebar(): SidebarState {
+  return useContext(SidebarContext);
+}
 
 interface LayoutProps {
   className?: string;
@@ -37,13 +64,28 @@ interface LayoutProps {
 }
 
 export function Layout(props: LayoutProps) {
+  const [expanded, setExpanded] = useLocalStorage<boolean>(
+    SIDEBAR_EXPANDED_STORAGE_KEY,
+    false
+  );
+  const toggle = useCallback(() => {
+    setExpanded((current) => !current);
+  }, [setExpanded]);
+  const sidebar = useMemo(() => ({expanded, toggle}), [expanded, toggle]);
   return (
-    <div className="Layout">
-      <Layout.Top />
-      <Layout.Side />
-      <Layout.Main {...props}>{props.children}</Layout.Main>
-      <Layout.Bottom />
-    </div>
+    <SidebarContext.Provider value={sidebar}>
+      <div
+        className={joinClassNames(
+          'Layout',
+          expanded && 'Layout--sidebar-expanded'
+        )}
+      >
+        <Layout.Top />
+        <Layout.Side />
+        <Layout.Main {...props}>{props.children}</Layout.Main>
+        <Layout.Bottom />
+      </div>
+    </SidebarContext.Provider>
   );
 }
 
@@ -109,6 +151,7 @@ Layout.Side = () => {
   const {url} = useLocation();
   const currentUrl = url.replace(/\/*$/g, '');
   const user = window.firebase.user;
+  const {expanded} = useSidebar();
   const sidebarTools = window.__ROOT_CTX.sidebar?.tools;
   const hiddenBuiltInTools = new Set<CMSBuiltInSidebarTool>(
     window.__ROOT_CTX.sidebar?.hiddenBuiltInTools || []
@@ -257,37 +300,82 @@ Layout.Side = () => {
           </Layout.SideButton>
         )}
       </div>
-      <div className="Layout__side__user">
-        <Menu
-          shadow="md"
-          position="right"
-          control={
-            <UnstyledButton>
-              <Avatar
-                src={user.photoURL}
-                alt={user.email!}
-                size={30}
-                radius="xl"
-              />
-            </UnstyledButton>
-          }
-        >
-          <Menu.Label>
-            <Text size="xs" color="dimmed" truncate>
-              Signed in as {user.email}
-            </Text>
-          </Menu.Label>
-          <Divider />
-          <Menu.Item
-            color="red"
-            icon={<IconLogout style={{width: 14, height: 14}} />}
-            onClick={onSignOut}
+      <div className="Layout__side__footer">
+        <Layout.SideToggleButton />
+        <div className="Layout__side__user">
+          <Menu
+            shadow="md"
+            position="right"
+            control={
+              <UnstyledButton className="Layout__side__user__button">
+                <Avatar
+                  src={user.photoURL}
+                  alt={user.email!}
+                  size={22}
+                  radius="xl"
+                />
+                {expanded && (
+                  <div className="Layout__side__user__email">{user.email}</div>
+                )}
+              </UnstyledButton>
+            }
           >
-            Sign out
-          </Menu.Item>
-        </Menu>
+            <Menu.Label>
+              <Text size="xs" color="dimmed" truncate>
+                Signed in as {user.email}
+              </Text>
+            </Menu.Label>
+            <Divider />
+            <Menu.Item
+              color="red"
+              icon={<IconLogout style={{width: 14, height: 14}} />}
+              onClick={onSignOut}
+            >
+              Sign out
+            </Menu.Item>
+          </Menu>
+        </div>
       </div>
     </div>
+  );
+};
+
+/**
+ * Button that expands or collapses the left-hand sidebar. The sidebar link
+ * labels are only visible when the sidebar is expanded.
+ */
+Layout.SideToggleButton = () => {
+  const {expanded, toggle} = useSidebar();
+  const label = expanded ? 'Collapse sidebar' : 'Expand sidebar';
+  const button = (
+    <UnstyledButton
+      className="Layout__side__toggle__button"
+      onClick={toggle}
+      aria-label={label}
+      aria-expanded={expanded}
+    >
+      <div className="Layout__side__toggle__icon">
+        {expanded ? (
+          <IconLayoutSidebarLeftCollapse stroke={ICON_STROKE} />
+        ) : (
+          <IconLayoutSidebarLeftExpand stroke={ICON_STROKE} />
+        )}
+      </div>
+      {expanded && <div className="Layout__side__toggle__label">{label}</div>}
+    </UnstyledButton>
+  );
+  if (expanded) {
+    return <div className="Layout__side__toggle">{button}</div>;
+  }
+  return (
+    <Tooltip
+      className="Layout__side__toggle"
+      label={label}
+      position="right"
+      withArrow
+    >
+      {button}
+    </Tooltip>
   );
 };
 
@@ -301,6 +389,29 @@ interface SideButtonProps {
 }
 
 Layout.SideButton = (props: SideButtonProps) => {
+  const {expanded} = useSidebar();
+  const link = (
+    <a
+      className={joinClassNames(props.active && 'active')}
+      href={props.url}
+      target={props.external ? '_blank' : undefined}
+      rel={props.external ? 'noreferrer noopener' : undefined}
+    >
+      <div className="Layout__side__button__icon">{props.children}</div>
+      {expanded && (
+        <div className="Layout__side__button__label">{props.label}</div>
+      )}
+    </a>
+  );
+  // The label is already visible when the sidebar is expanded, so the tooltip
+  // is only used in the collapsed state.
+  if (expanded) {
+    return (
+      <div className={joinClassNames('Layout__side__button', props.className)}>
+        {link}
+      </div>
+    );
+  }
   return (
     <Tooltip
       className={joinClassNames('Layout__side__button', props.className)}
@@ -308,14 +419,7 @@ Layout.SideButton = (props: SideButtonProps) => {
       position="right"
       withArrow
     >
-      <a
-        className={joinClassNames(props.active && 'active')}
-        href={props.url}
-        target={props.external ? '_blank' : undefined}
-        rel={props.external ? 'noreferrer noopener' : undefined}
-      >
-        {props.children}
-      </a>
+      {link}
     </Tooltip>
   );
 };

@@ -1,6 +1,7 @@
 :root {
-  --font-family-default: "Inter", sans-serif;
-  --font-family-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  --font-family-default: 'Inter', sans-serif;
+  --font-family-mono:
+    ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   --color-text-default: #333333;
   --color-text-dark: #333333;
   --color-text-gray: #6b7280;
@@ -18,6 +19,8 @@
   --chip-background: #efefef;
   --chip-text-color: #000;
   --header-height: 48px;
+  --sidebar-width: 48px;
+  --sidebar-width-expanded: 208px;
 }
 
 html {
