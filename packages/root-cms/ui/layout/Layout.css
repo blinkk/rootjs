@@ -84,7 +84,8 @@
   flex-direction: column;
   align-items: center;
   justify-content: space-between;
-  padding-bottom: 12px;
+  padding-top: 8px;
+  padding-bottom: 8px;
   overflow: hidden;
 }
 
@@ -153,8 +154,8 @@
 .Layout__side__divider {
   background-color: var(--color-border);
   height: 1px;
-  margin-top: 12px;
-  margin-bottom: 12px;
+  margin-top: 8px;
+  margin-bottom: 8px;
 }
 
 .Layout__side__button a.active::after {
