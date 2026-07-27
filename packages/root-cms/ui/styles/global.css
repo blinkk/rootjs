@@ -19,8 +19,10 @@
   --chip-background: #efefef;
   --chip-text-color: #000;
   --header-height: 48px;
-  --sidebar-width: 48px;
+  --sidebar-width-collapsed: 48px;
   --sidebar-width-expanded: 208px;
+  --sidebar-border-width: 1px;
+  --sidebar-width: var(--sidebar-width-collapsed);
 }
 
 html {
