@@ -142,7 +142,7 @@
 } */
 
 .Layout__side__button a:hover {
-  background-color: var(--button-background-hover);
+  background-color: var(--surface-background-hover);
 }
 
 .Layout__side__button a::after {
@@ -218,7 +218,7 @@
 }
 
 .Layout__side__toggle__button:hover {
-  background-color: var(--button-background-hover);
+  background-color: var(--surface-background-hover);
 }
 
 .Layout__side__toggle__icon {
