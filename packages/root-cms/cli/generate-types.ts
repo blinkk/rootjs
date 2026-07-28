@@ -17,6 +17,24 @@ export async function generateTypes() {
     rootConfig,
     modulePath
   )) as ProjectModule;
+  await generateTypesFromProject(project, rootDir);
+}
+
+/**
+ * Generates `root-cms.d.ts` from an already-loaded project module.
+ *
+ * Used by the dev server's schema watcher, which loads the project module
+ * through the running vite dev server instead of `viteSsrLoadModule()`. The
+ * CLI flow above boots (and tears down) a standalone vite server, which is
+ * fine for a one-shot process but leaks when called repeatedly in a
+ * long-running process: `loadRootConfig()` bundles `root.config.ts` into a
+ * temp module that stays in node's ESM cache forever, and the vite server is
+ * not fully released after `close()`.
+ */
+export async function generateTypesFromProject(
+  project: ProjectModule,
+  rootDir: string
+) {
   const schemas = project.getProjectSchemas();
   const outputPath = path.resolve(rootDir, 'root-cms.d.ts');
   await generateSchemaDts(outputPath, schemas);
