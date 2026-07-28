@@ -1,5 +1,17 @@
 # @blinkk/root-cms
 
+## 3.3.1
+
+### Patch Changes
+
+- c4b8dce: chore: require node 24 and build for the node24 target
+- 0eafb75: fix: memory leak in the dev schema watcher that regenerates root-cms.d.ts
+- 2cc5ec0: fix: apply the cms doc editor deeplink on client-side url changes
+- 18c25df: feat: sync page navigations across the cms preview panes when comparing viewports
+- Updated dependencies [c4b8dce]
+- Updated dependencies [b8a0d3a]
+  - @blinkk/root@3.3.1
+
 ## 3.2.2
 
 ### Patch Changes

@@ -1,5 +1,12 @@
 # @blinkk/root
 
+## 3.3.1
+
+### Patch Changes
+
+- c4b8dce: chore: require node 24 and build for the node24 target
+- b8a0d3a: fix: avoid rendering duplicate attributes when both `class` and `className` are set
+
 ## 3.2.2
 
 ## 3.2.1
