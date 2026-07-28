@@ -16,6 +16,6 @@
   "external": ["virtual:*"],
   "sourcemap": true,
   "splitting": true,
-  "target": "node22",
+  "target": "node24",
   "tsconfig": "tsconfig.json"
 }

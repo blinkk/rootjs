@@ -6,6 +6,6 @@
   },
   "dtsProject": "tsconfig.build.json",
   "sourcemap": "inline",
-  "target": "node22",
+  "target": "node24",
   "tsconfig": "tsconfig.json"
 }

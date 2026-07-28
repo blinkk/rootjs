@@ -2,5 +2,5 @@
   "entryPoints": {
     "create-root": "src/create-root.ts"
   },
-  "target": "node22"
+  "target": "node24"
 }

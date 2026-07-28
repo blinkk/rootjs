@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "engines": {
-    "node": ">=18.0.0"
+    "node": ">=24.0.0"
   },
   "scripts": {
     "dev": "pnpm run types && root dev",
@@ -24,6 +24,6 @@
     "preact": "10.27.1"
   },
   "devDependencies": {
-    "@types/node": "18.11.18"
+    "@types/node": "24.3.1"
   }
 }
