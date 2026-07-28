@@ -14,6 +14,6 @@
   "dtsProject": "tsconfig.build.json",
   "external": ["virtual:*"],
   "splitting": true,
-  "target": "node22",
+  "target": "node24",
   "tsconfig": "core/tsconfig.json"
 }
