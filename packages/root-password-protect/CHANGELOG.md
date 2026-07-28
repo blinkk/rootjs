@@ -1,5 +1,14 @@
 # @blinkk/root-password-protect
 
+## 3.3.1
+
+### Patch Changes
+
+- c4b8dce: chore: require node 24 and build for the node24 target
+- Updated dependencies [c4b8dce]
+- Updated dependencies [b8a0d3a]
+  - @blinkk/root@3.3.1
+
 ## 3.2.2
 
 ### Patch Changes
