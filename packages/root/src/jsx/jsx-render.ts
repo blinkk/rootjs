@@ -738,7 +738,20 @@ export function renderJsxToString(
         continue;
       }
 
-      const attrName = PROP_TO_ATTR[key] || key;
+      // Prop aliases (e.g. `className`, `htmlFor`) render as an HTML attribute
+      // that may also have been passed directly (e.g. `class`, `for`), usually
+      // via a spread. Emitting both would produce a duplicate attribute, which
+      // is invalid HTML, so the alias yields to the canonical prop. This
+      // matches preact-render-to-string, where `class` wins over `className`
+      // regardless of the order the props were declared in.
+      let attrName = key;
+      const aliasedName = PROP_TO_ATTR[key];
+      if (isDef(aliasedName)) {
+        if (isDef(props[aliasedName])) {
+          continue;
+        }
+        attrName = aliasedName;
+      }
       const valueType = typeof value;
 
       // Dispatch ordered by frequency: string and numeric attribute values are
