@@ -184,6 +184,90 @@ test('maps JSX prop names to HTML attributes', () => {
   );
 });
 
+// Duplicate attributes: `className`/`class` (and other aliases like
+// `htmlFor`/`for`) both map to the same HTML attribute. Rendering both would
+// emit invalid HTML (`<div class="a" class="b">`), so the alias yields to the
+// canonical prop, regardless of the order the props were declared in.
+
+test('dedupes class and className into a single class attribute', () => {
+  expect(
+    renderJsxToString(<div class="a" className="b" />, {mode: 'minimal'})
+  ).toBe('<div class="a"></div>');
+  // Declaration order doesn't matter: `class` always wins.
+  expect(
+    renderJsxToString(<div className="b" class="a" />, {mode: 'minimal'})
+  ).toBe('<div class="a"></div>');
+});
+
+test('dedupes class and className applied via spread props', () => {
+  // The common real-world shape: a component forwards props and adds its own
+  // class name, so both keys end up on the same element.
+  const props = {class: 'base'};
+  expect(
+    renderJsxToString(<div {...props} className="extra" />, {mode: 'minimal'})
+  ).toBe('<div class="base"></div>');
+  expect(
+    renderJsxToString(<div className="extra" {...props} />, {mode: 'minimal'})
+  ).toBe('<div class="base"></div>');
+});
+
+test('dedupes class and className within a component', () => {
+  function Card(props: {class?: string; children?: any}) {
+    return (
+      <div {...props} className="card">
+        {props.children}
+      </div>
+    );
+  }
+  expect(
+    renderJsxToString(<Card class="promo">hi</Card>, {mode: 'minimal'})
+  ).toBe('<div class="promo">hi</div>');
+  // Without a `class` prop, `className` still renders as `class`.
+  expect(renderJsxToString(<Card>hi</Card>, {mode: 'minimal'})).toBe(
+    '<div class="card">hi</div>'
+  );
+});
+
+test('falls back to className when class is null or undefined', () => {
+  // An undefined/null `class` produces no attribute, so it shouldn't suppress
+  // the `className` alias.
+  expect(
+    renderJsxToString(<div class={undefined} className="b" />, {
+      mode: 'minimal',
+    })
+  ).toBe('<div class="b"></div>');
+  expect(
+    renderJsxToString(<div class={null as any} className="b" />, {
+      mode: 'minimal',
+    })
+  ).toBe('<div class="b"></div>');
+  // An empty string is a real value and still wins over the alias.
+  expect(
+    renderJsxToString(<div class="" className="b" />, {mode: 'minimal'})
+  ).toBe('<div class=""></div>');
+});
+
+test('dedupes other aliased attributes', () => {
+  expect(
+    renderJsxToString(<label htmlFor="x" for="y" />, {mode: 'minimal'})
+  ).toBe('<label for="y"></label>');
+  expect(
+    renderJsxToString(<meta charSet="utf-8" {...{charset: 'latin1'}} />, {
+      mode: 'minimal',
+    })
+  ).toBe('<meta charset="latin1">');
+  expect(
+    renderJsxToString(<div tabIndex={0} {...{tabindex: 1}} />, {
+      mode: 'minimal',
+    })
+  ).toBe('<div tabindex="1"></div>');
+  expect(
+    renderJsxToString(<path strokeWidth="2" stroke-width="4" />, {
+      mode: 'minimal',
+    })
+  ).toBe('<path stroke-width="4"></path>');
+});
+
 test('renders functional components', () => {
   function Greeting(props: {name: string}) {
     return <span>Hello, {props.name}!</span>;
