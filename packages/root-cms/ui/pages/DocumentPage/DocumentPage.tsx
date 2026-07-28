@@ -32,6 +32,12 @@ import {testAiEnabled} from '../../utils/ai.js';
 import {joinClassNames} from '../../utils/classes.js';
 import {getDocPreviewPath, getDocServingPath} from '../../utils/doc-urls.js';
 import {testCanEdit} from '../../utils/permissions.js';
+import {
+  getPreviewPathFromUrlKey,
+  getPreviewSrcFromUrlKey,
+  getPreviewUrlKey,
+  getPreviewUrlKeyFromUrl,
+} from '../../utils/preview-url-sync.js';
 
 interface DocumentPageProps {
   collection: string;
@@ -709,6 +715,9 @@ DocumentPage.Preview = (props: PreviewProps) => {
   const iframeRefCallbacks = useRef(
     new Map<number, (el: HTMLIFrameElement | null) => void>()
   );
+  // The url the preview panes are expected to be showing. Used to detect when
+  // the user navigates within a pane so the other panes can be brought along.
+  const syncedUrlKey = useRef<string | null>(null);
   const previewFrameRef = useRef<HTMLDivElement>(null);
   // Remembers the viewport selection from before 2-up was enabled so it can be
   // restored when 2-up is turned back off.
@@ -750,6 +759,73 @@ DocumentPage.Preview = (props: PreviewProps) => {
     [locales]
   );
 
+  /**
+   * Records the page the preview panes are showing and mirrors it into the
+   * preview url bar. Note that if the preview path is different than the
+   * serving path, then the serving path is always displayed regardless of the
+   * iframe url changes.
+   */
+  function setSyncedUrlKey(urlKey: string | null) {
+    syncedUrlKey.current = urlKey;
+    if (urlKey && basePreviewPath === servingPath) {
+      // Strip query params from the displayed URL so the URL bar mirrors the
+      // public/prod URL. This avoids editors accidentally copying preview-only
+      // params (e.g. `preview=true`, debug flags) into places like social
+      // media. The "open in new tab" button still uses the full preview URL.
+      setIframeUrl(`${domain}${getPreviewPathFromUrlKey(urlKey)}`);
+    }
+  }
+
+  /** Navigates a preview iframe to a url the panes should all be showing. */
+  function setIframeSrc(iframe: HTMLIFrameElement, nextUrl: string) {
+    setSyncedUrlKey(getPreviewUrlKeyFromUrl(nextUrl));
+    iframe.src = nextUrl;
+  }
+
+  /**
+   * Called when a preview iframe finishes loading a page. When the user
+   * navigates within a pane (e.g. by clicking a link), every other pane is sent
+   * to the same page so all of the viewports stay comparable.
+   *
+   * Only full page loads are synced. Client-side url changes (history state
+   * changes, hash changes) don't fire a load event and are left alone, since
+   * they're page-local state rather than a different page.
+   */
+  function onIframeLoad(event: Event) {
+    const iframe = event.currentTarget as HTMLIFrameElement;
+    let urlKey: string | null = null;
+    try {
+      const loc = iframe.contentWindow?.location;
+      if (loc && loc.href && !loc.href.startsWith('about:blank')) {
+        urlKey = getPreviewUrlKey(loc);
+      }
+    } catch {
+      // Cross-origin: the browser blocks reading the location.
+      return;
+    }
+    if (!urlKey || urlKey === syncedUrlKey.current) {
+      return;
+    }
+    setSyncedUrlKey(urlKey);
+    const nextUrl = getPreviewSrcFromUrlKey(urlKey);
+    iframeRefs.current.forEach((other) => {
+      if (other !== iframe) {
+        other.src = nextUrl;
+      }
+    });
+  }
+
+  /**
+   * Returns the url a newly-mounted pane should open at, which is whatever page
+   * the other panes are showing (or the doc's preview url when there are none).
+   */
+  function getInitialIframeSrc(): string {
+    if (syncedUrlKey.current) {
+      return getPreviewSrcFromUrlKey(syncedUrlKey.current);
+    }
+    return localizedPreviewUrlRef.current;
+  }
+
   function reloadIframe(iframe: HTMLIFrameElement) {
     // Don't reload the iframe when the tab is hidden. Browsers throttle
     // background timers, so the intermediate about:blank may never resolve,
@@ -758,6 +834,7 @@ DocumentPage.Preview = (props: PreviewProps) => {
       return;
     }
     const nextUrl = getReloadUrl(iframe, localizedPreviewUrlRef.current);
+    setSyncedUrlKey(getPreviewUrlKeyFromUrl(nextUrl));
     iframe.src = 'about:blank';
     window.requestAnimationFrame(() => {
       if (iframe.src !== nextUrl) {
@@ -786,43 +863,21 @@ DocumentPage.Preview = (props: PreviewProps) => {
   // (initial load) and whenever the selected locale changes.
   useEffect(() => {
     iframeRefs.current.forEach((iframe) => {
-      iframe.src = localizedPreviewUrl;
+      setIframeSrc(iframe, localizedPreviewUrl);
     });
   }, [selectedLocale]);
 
   // Wire up newly-mounted iframes when the number of viewports changes (e.g.
-  // when a viewport is added to a 2-up comparison). New iframes get their
-  // initial src and a load listener that keeps the url bar in sync; existing
-  // iframes keep their current src so they don't reload unnecessarily.
+  // when a viewport is added to a multi-pane comparison). New iframes are
+  // opened at whatever page the other panes are showing and get a load listener
+  // that keeps the panes and the url bar in sync; existing iframes keep their
+  // current src so they don't reload unnecessarily.
   const previewCount = devices.length > 0 ? devices.length : 1;
   useEffect(() => {
     const iframes = Array.from(iframeRefs.current.values());
-    function onIframeLoad(event: Event) {
-      const iframe = event.currentTarget as HTMLIFrameElement;
-      const iframeWindow = iframe.contentWindow;
-      if (!iframeWindow) {
-        return;
-      }
-      // Whenever the iframe url changes (e.g. user navigates to a different
-      // page), update the iframe url bar. Note that if the preview path is
-      // different than the serving path, then the serving path will always be
-      // displayed regardless of the iframe url changes.
-      if (
-        basePreviewPath === servingPath &&
-        !iframeWindow.location.href.startsWith('about:blank')
-      ) {
-        const currentUrl = iframeWindow.location;
-        // Strip query params and hash from the displayed URL so the URL bar
-        // mirrors the public/prod URL. This avoids editors accidentally
-        // copying preview-only params (e.g. `preview=true`, debug flags) or
-        // internal hash state into places like social media. The "open in
-        // new tab" button still uses the full preview URL.
-        setIframeUrl(`${domain}${currentUrl.pathname}`);
-      }
-    }
     iframes.forEach((iframe) => {
       if (!iframe.getAttribute('src')) {
-        iframe.src = localizedPreviewUrlRef.current;
+        setIframeSrc(iframe, getInitialIframeSrc());
       }
       iframe.addEventListener('load', onIframeLoad);
     });
