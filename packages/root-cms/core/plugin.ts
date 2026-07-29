@@ -288,7 +288,12 @@ export interface CMSDependencyGraphConfig {
 }
 
 export interface CMSSidebarTool {
-  /** URL for the sidebar icon image. */
+  /**
+   * Sidebar icon URL. For consistency with other icons used by Root CMS, we
+   * recommend picking an icon from https://tabler.io/icons with the stroke
+   * weight set to "1.5". Paste the "Data URI" or "Base64 Data URI" from the
+   * icon's download modal.
+   */
   icon?: string;
   /** Label. */
   label?: string;
