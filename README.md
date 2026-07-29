@@ -7,7 +7,7 @@
 - 📁 File Routes
 - 🇯🇵 i18n
 - 🔌 Plugins
-- 📇 CMS
+- 🗄️ CMS
 - 🤖 AI
 
 [Read the Docs to Learn More](https://rootjs.dev)
