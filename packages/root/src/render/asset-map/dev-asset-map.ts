@@ -1,7 +1,6 @@
 import path from 'node:path';
 import {ModuleGraph, ModuleNode, searchForWorkspaceRoot} from 'vite';
 import {RootConfig} from '../../core/config.js';
-import {directoryContains} from '../../utils/fsutils.js';
 import {Asset, AssetMap} from './asset-map.js';
 
 export class DevServerAssetMap implements AssetMap {
@@ -13,7 +12,7 @@ export class DevServerAssetMap implements AssetMap {
     this.moduleGraph = moduleGraph;
   }
 
-  async get(src: string): Promise<Asset | null> {
+  get(src: string): Asset | null {
     const file = path.resolve(this.rootConfig.rootDir, src);
 
     const viteModules = this.moduleGraph.getModulesByFile(file);
@@ -27,7 +26,7 @@ export class DevServerAssetMap implements AssetMap {
 
     // On dev, in some cases the module doesn't make it into the module graph
     // so return a generic asset.
-    if (file.startsWith(this.rootConfig.rootDir)) {
+    if (directoryContains(this.rootConfig.rootDir, file)) {
       const assetUrl = file.slice(this.rootConfig.rootDir.length);
       return {
         src: src,
@@ -38,7 +37,7 @@ export class DevServerAssetMap implements AssetMap {
       };
     }
     const workspaceRoot = searchForWorkspaceRoot(this.rootConfig.rootDir);
-    if (await directoryContains(workspaceRoot, file)) {
+    if (directoryContains(workspaceRoot, file)) {
       const assetUrl = `/@fs/${file}`;
       return {
         src: src,
@@ -56,6 +55,12 @@ export class DevServerAssetMap implements AssetMap {
   filePathToSrc(file: string) {
     return path.relative(this.rootConfig.rootDir, file);
   }
+}
+
+/** Returns true when a path is contained by a directory. */
+function directoryContains(dir: string, file: string): boolean {
+  const relativePath = path.relative(dir, file);
+  return relativePath !== '..' && !relativePath.startsWith(`..${path.sep}`);
 }
 
 export class DevServerAsset implements Asset {
