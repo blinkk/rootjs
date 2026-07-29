@@ -98,4 +98,4 @@ and field builders) come from `packages/root-cms/core/schema.ts`.
 ### PR Instructions
 
 - **Title**: Use the first line of the commit message.
-- **Model Name**: Include the model name in the description, e.g. "Generated with <App> (<Model Name>)".
+- **Model Name**: Include the model name in the description, e.g. "Generated with {APP_NAME} ({MODEL_NAME})".
