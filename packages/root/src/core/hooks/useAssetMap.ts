@@ -2,15 +2,15 @@ import {createContext} from 'preact';
 import {useContext} from 'preact/hooks';
 import type {Asset, AssetMap} from '../../render/asset-map/asset-map.js';
 
-export const ASSET_CONTEXT = createContext<AssetMap | null>(null);
+export const ASSET_MAP_CONTEXT = createContext<AssetMap | null>(null);
 
 /**
  * Returns the asset map for the current render.
  */
 export function useAssetMap(): AssetMap {
-  const assetMap = useContext(ASSET_CONTEXT);
+  const assetMap = useContext(ASSET_MAP_CONTEXT);
   if (!assetMap) {
-    throw new Error('ASSET_CONTEXT not found');
+    throw new Error('ASSET_MAP_CONTEXT not found');
   }
   return assetMap;
 }

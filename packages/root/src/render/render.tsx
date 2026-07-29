@@ -8,7 +8,7 @@ import {
 } from 'preact';
 import {HtmlContext, HTML_CONTEXT} from '../core/components/Html.js';
 import {RootConfig} from '../core/config.js';
-import {ASSET_CONTEXT} from '../core/hooks/useAsset.js';
+import {ASSET_MAP_CONTEXT} from '../core/hooks/useAssetMap.js';
 import {getTranslations, I18N_CONTEXT} from '../core/hooks/useI18nContext.js';
 import {
   RequestContext,
@@ -190,7 +190,7 @@ export class Renderer {
       scriptDeps: [],
     };
     const vdom = (
-      <ASSET_CONTEXT.Provider value={this.assetMap}>
+      <ASSET_MAP_CONTEXT.Provider value={this.assetMap}>
         <REQUEST_CONTEXT.Provider value={ctx}>
           <I18N_CONTEXT.Provider value={{locale, translations}}>
             <HTML_CONTEXT.Provider value={htmlContext}>
@@ -198,7 +198,7 @@ export class Renderer {
             </HTML_CONTEXT.Provider>
           </I18N_CONTEXT.Provider>
         </REQUEST_CONTEXT.Provider>
-      </ASSET_CONTEXT.Provider>
+      </ASSET_MAP_CONTEXT.Provider>
     );
 
     // Create a hook to auto-inject nonce values.

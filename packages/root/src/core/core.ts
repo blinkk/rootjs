@@ -3,7 +3,7 @@ export {Body} from './components/Body.js';
 export {Head} from './components/Head.js';
 export {Html, HTML_CONTEXT} from './components/Html.js';
 export {Script} from './components/Script.js';
-export {useAsset, useAssetMap, useAssetUrl} from './hooks/useAsset.js';
+export {useAsset, useAssetMap, useAssetUrl} from './hooks/useAssetMap.js';
 export {
   StringParamsContext,
   StringParamsProvider,
