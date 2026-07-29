@@ -21,15 +21,27 @@ import {
 } from '@mantine/core';
 import {hideNotification, showNotification} from '@mantine/notifications';
 import {
+  IconCheck,
   IconCopy,
   IconCrop,
   IconDotsVertical,
   IconDownload,
   IconExternalLink,
   IconFile,
+  IconFileMusic,
+  IconFileTypeCsv,
+  IconFileTypeDocx,
+  IconFileTypePdf,
+  IconFileTypePpt,
+  IconFileTypeTxt,
+  IconFileTypeXls,
+  IconFileTypeXml,
   IconFileUpload,
+  IconFileZip,
   IconInfoCircle,
+  IconJson,
   IconLibraryPhoto,
+  IconMovie,
   IconPaperclip,
   IconPhotoStar,
   IconPhotoUp,
@@ -771,26 +783,28 @@ export function FileField(props: FileFieldProps) {
 }
 
 /**
- * The info toggle and overflow menu for a file preview. Rendered floating on
- * top of the canvas for images and videos, and inline within the file card for
- * everything else.
+ * The overflow menu for a file preview, plus the info toggle when the preview
+ * has a metadata panel to toggle. Rendered floating on top of the canvas for
+ * images and videos, and inline within the file card for everything else.
  */
-FileField.PreviewActions = (props: {toggleInfo: () => void}) => {
+FileField.PreviewActions = (props: {toggleInfo?: () => void}) => {
   const ctx = useFileField();
   const [copied, setCopied] = useState(false);
   return (
     <>
-      <Tooltip label="Toggle file info" position="top" withArrow>
-        <ActionIcon
-          onClick={() => props.toggleInfo()}
-          size="sm"
-          variant="outline"
-          className="FileField__Preview__InfoButton__Icon"
-          aria-label="Toggle file info"
-        >
-          <IconInfoCircle size={16} />
-        </ActionIcon>
-      </Tooltip>
+      {props.toggleInfo && (
+        <Tooltip label="Toggle file info" position="top" withArrow>
+          <ActionIcon
+            onClick={() => props.toggleInfo?.()}
+            size="sm"
+            variant="outline"
+            className="FileField__Preview__InfoButton__Icon"
+            aria-label="Toggle file info"
+          >
+            <IconInfoCircle size={16} />
+          </ActionIcon>
+        </Tooltip>
+      )}
       <Menu
         classNames={{body: 'FileField__Preview__Menu'}}
         shadow="sm"
@@ -870,12 +884,8 @@ FileField.PreviewActions = (props: {toggleInfo: () => void}) => {
           icon={<IconCopy size={16} />}
           onClick={() => {
             setCopied(false);
-            let url = ctx.value?.src || '';
-            if (testIsGoogleCloudImageFile(url)) {
-              url = url.split('=')[0] + '=s0';
-            }
             navigator.clipboard
-              .writeText(url)
+              .writeText(getShareableUrl(ctx.value))
               .then(() => setCopied(true))
               .finally(() =>
                 setTimeout(() => {
@@ -1020,26 +1030,21 @@ FileField.DropTarget = (props: {
 
 /**
  * Compact preview row for files that have no visual preview (PDFs, archives,
- * documents, etc.). Shows a file type tile, the file name, a summary line and
- * the preview actions.
+ * documents, etc.). Shows a file type tile, the file name, a summary line, the
+ * file URL and the preview actions.
  */
-FileField.FileCard = (props: {toggleInfo: () => void}) => {
+FileField.FileCard = () => {
   const ctx = useFileField();
   const src = ctx.value?.src || '';
   const filename = ctx.value?.filename || getFilenameFromSrc(src);
-  // Files without a dot in their name (e.g. `dataset`) have no extension.
-  const ext = filename.includes('.') ? getFileExt(filename) : '';
+  const FileIcon = getFileIcon(filename);
   const uploadedAt = ctx.value?.uploadedAt
     ? new Date(parseInt(String(ctx.value.uploadedAt), 10))
     : null;
   return (
     <div className="FileField__FileCard">
       <div className="FileField__FileCard__Icon">
-        {ext && ext.length <= 4 ? (
-          <div className="FileField__FileCard__Icon__Ext">{ext}</div>
-        ) : (
-          <IconFile size={20} stroke="1.5" />
-        )}
+        <FileIcon size={22} stroke="1.5" />
       </div>
       <div className="FileField__FileCard__Meta">
         <a
@@ -1053,7 +1058,10 @@ FileField.FileCard = (props: {toggleInfo: () => void}) => {
         </a>
         <div className="FileField__FileCard__Meta__Summary">
           {uploadedAt && (
-            <span>Uploaded {uploadedAt.toLocaleDateString()}</span>
+            <span>
+              Uploaded {uploadedAt.toLocaleDateString()}
+              {ctx.value?.uploadedBy && <> by {ctx.value.uploadedBy}</>}
+            </span>
           )}
           {ctx.value?.assetId && (
             <a
@@ -1066,23 +1074,55 @@ FileField.FileCard = (props: {toggleInfo: () => void}) => {
             </a>
           )}
         </div>
+        <FileField.UrlRow />
       </div>
       <div className="FileField__FileCard__Actions">
         {ctx.allowEditing && <FileField.UploadButton compact />}
-        <FileField.PreviewActions toggleInfo={props.toggleInfo} />
+        <FileField.PreviewActions />
       </div>
     </div>
   );
 };
 
 /**
- * Table of file metadata shown when the info panel is open. The `card` variant
- * omits the rows that the file card already surfaces (the file name and the
- * asset library link).
+ * The file's URL alongside a copy-to-clipboard button. The URL wraps to at most
+ * two lines so that long URLs stay fully readable without unbounding the card.
  */
-FileField.InfoTable = (props: {variant: 'canvas' | 'card'}) => {
+FileField.UrlRow = () => {
   const ctx = useFileField();
-  const showFileRows = props.variant === 'canvas';
+  const [copied, setCopied] = useState(false);
+  const url = getShareableUrl(ctx.value);
+  if (!url) {
+    return null;
+  }
+  return (
+    <div className="FileField__FileCard__Url">
+      <span className="FileField__FileCard__Url__Value" title={url}>
+        {url}
+      </span>
+      <Tooltip label={copied ? 'Copied!' : 'Copy URL'} position="top" withArrow>
+        <ActionIcon
+          size="sm"
+          variant="transparent"
+          className="FileField__FileCard__Url__CopyButton"
+          aria-label="Copy URL"
+          onClick={() => {
+            navigator.clipboard.writeText(url).then(() => {
+              setCopied(true);
+              setTimeout(() => setCopied(false), 2000);
+            });
+          }}
+        >
+          {copied ? <IconCheck size={14} /> : <IconCopy size={14} />}
+        </ActionIcon>
+      </Tooltip>
+    </div>
+  );
+};
+
+/** Table of file metadata shown when the canvas info panel is open. */
+FileField.InfoTable = () => {
+  const ctx = useFileField();
   return (
     <Table
       className="FileField__Canvas__Info__Table"
@@ -1090,7 +1130,7 @@ FileField.InfoTable = (props: {variant: 'canvas' | 'card'}) => {
       fontSize="xs"
     >
       <tbody>
-        {showFileRows && ctx.value?.filename && (
+        {ctx.value?.filename && (
           <tr>
             <td>
               <b>Name</b>
@@ -1098,7 +1138,7 @@ FileField.InfoTable = (props: {variant: 'canvas' | 'card'}) => {
             <td>{ctx.value.filename}</td>
           </tr>
         )}
-        {showFileRows && ctx.value?.assetId && (
+        {ctx.value?.assetId && (
           <tr>
             <td>
               <b>Asset</b>
@@ -1212,7 +1252,7 @@ FileField.Preview = () => {
                   size={16}
                   className="FileField__Canvas__Info__Icon"
                 />
-                <FileField.InfoTable variant="canvas" />
+                <FileField.InfoTable />
               </div>
             ) : (
               <>
@@ -1275,12 +1315,7 @@ FileField.Preview = () => {
       ) : (
         <FileField.DropTarget className="FileField__File">
           <LoadingOverlay visible={ctx.loadingState === 'loading'} />
-          <FileField.FileCard toggleInfo={toggleInfo} />
-          {infoOpened && (
-            <div className="FileField__File__Details">
-              <FileField.InfoTable variant="card" />
-            </div>
-          )}
+          <FileField.FileCard />
         </FileField.DropTarget>
       )}
       {ctx.allowEditing &&
@@ -1602,6 +1637,58 @@ function canvasPreviewInlineStyles(uploadedFile: UploadedFile) {
     inlineStyles['--canvas-bg-color'] = '#000';
   }
   return inlineStyles;
+}
+
+/**
+ * File type icons keyed by extension. Extensions not listed here fall back to
+ * the generic file icon.
+ */
+const FILE_EXT_ICONS: Record<string, typeof IconFile> = {
+  '7z': IconFileZip,
+  bz2: IconFileZip,
+  csv: IconFileTypeCsv,
+  doc: IconFileTypeDocx,
+  docx: IconFileTypeDocx,
+  gz: IconFileZip,
+  json: IconJson,
+  m4a: IconFileMusic,
+  mov: IconMovie,
+  mp3: IconFileMusic,
+  mp4: IconMovie,
+  ogg: IconFileMusic,
+  pdf: IconFileTypePdf,
+  ppt: IconFileTypePpt,
+  pptx: IconFileTypePpt,
+  rar: IconFileZip,
+  tar: IconFileZip,
+  txt: IconFileTypeTxt,
+  wav: IconFileMusic,
+  webm: IconMovie,
+  xls: IconFileTypeXls,
+  xlsx: IconFileTypeXls,
+  xml: IconFileTypeXml,
+  zip: IconFileZip,
+};
+
+/** Returns the icon to render for a file, based on its extension. */
+function getFileIcon(filename: string): typeof IconFile {
+  // Files without a dot in their name (e.g. `dataset`) have no extension.
+  if (!filename.includes('.')) {
+    return IconFile;
+  }
+  return FILE_EXT_ICONS[getFileExt(filename)] || IconFile;
+}
+
+/**
+ * Returns the canonical URL to share for a file. Images served by the Google
+ * Image Service are normalized to their full-size serving URL.
+ */
+function getShareableUrl(uploadedFile: FileFieldValueType): string {
+  const src = uploadedFile?.src || '';
+  if (testIsGoogleCloudImageFile(src)) {
+    return src.split('=')[0] + '=s0';
+  }
+  return src;
 }
 
 /**
