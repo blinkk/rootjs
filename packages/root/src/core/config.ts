@@ -55,6 +55,23 @@ export interface RootUserConfig {
   };
 
   /**
+   * Whether to auto-inject `<link rel="modulepreload">` tags for the JS chunks
+   * imported by the page's `<script type="module">` tags. Disabled by default;
+   * pass `modulePreload: true` to opt in.
+   *
+   * Root injects a `<script type="module">` tag for every custom element and
+   * bundle used on the page, but the shared chunks those scripts import are
+   * only discovered once the browser has downloaded and parsed the script.
+   * Preloading them removes that request waterfall.
+   *
+   * Chunks that are already injected as `<script>` tags are skipped, and no
+   * tags are injected by the dev server (where modules are served unbundled).
+   *
+   * @see {@link https://developer.mozilla.org/en-US/docs/Web/HTML/Attributes/rel/modulepreload}
+   */
+  modulePreload?: boolean;
+
+  /**
    * Config options for localization and internationalization.
    */
   i18n?: RootI18nConfig;

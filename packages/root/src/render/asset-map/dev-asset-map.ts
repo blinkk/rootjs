@@ -34,6 +34,7 @@ export class DevServerAssetMap implements AssetMap {
         assetUrl: assetUrl,
         getCssDeps: async () => [],
         getJsDeps: async () => [assetUrl],
+        getModulePreloadDeps: async () => [],
       };
     }
     const workspaceRoot = searchForWorkspaceRoot(this.rootConfig.rootDir);
@@ -44,6 +45,7 @@ export class DevServerAssetMap implements AssetMap {
         assetUrl: assetUrl,
         getCssDeps: async () => [],
         getJsDeps: async () => [assetUrl],
+        getModulePreloadDeps: async () => [],
       };
     }
 
@@ -89,6 +91,15 @@ export class DevServerAsset implements Asset {
     const deps = new Set<string>();
     this.collectJs(this, deps, visited);
     return Array.from(deps);
+  }
+
+  /**
+   * The dev server serves modules unbundled and unhashed, so there are no
+   * shared chunks to preload. Returning an empty list keeps
+   * `<link rel="modulepreload">` tags out of the dev server's HTML.
+   */
+  async getModulePreloadDeps(): Promise<string[]> {
+    return [];
   }
 
   getImportedModules() {

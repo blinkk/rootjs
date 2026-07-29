@@ -172,6 +172,13 @@ function realPathRelativeTo(rootDir: string, src: string) {
   return path.relative(rootDir, realpath);
 }
 
+/**
+ * Returns true if a serving URL points to a JS module.
+ */
+function isJsAssetUrl(assetUrl: string) {
+  return assetUrl.endsWith('.js') || assetUrl.endsWith('.mjs');
+}
+
 export class BuildAsset {
   src: string;
   assetUrl: string;
@@ -212,6 +219,15 @@ export class BuildAsset {
     return Array.from(deps);
   }
 
+  async getModulePreloadDeps(): Promise<string[]> {
+    // Seed `visited` with this asset so that the walk starts at the imported
+    // modules and this asset's own URL is left out of the results.
+    const visited = new Set<string>([this.src]);
+    const deps = new Set<string>();
+    await this.collectModulePreload(this.importedModules, deps, visited);
+    return Array.from(deps);
+  }
+
   private async collectJs(
     asset: BuildAsset | null,
     urls: Set<string>,
@@ -234,6 +250,35 @@ export class BuildAsset {
       asset.importedModules.map(async (src) => {
         const importedAsset = (await this.assetMap.get(src)) as BuildAsset;
         this.collectJs(importedAsset, urls, visited);
+      })
+    );
+  }
+
+  /**
+   * Walks `srcs` and their transitive imports, collecting the JS chunk URL of
+   * every module along the way.
+   */
+  private async collectModulePreload(
+    srcs: string[],
+    urls: Set<string>,
+    visited: Set<string>
+  ) {
+    await Promise.all(
+      srcs.map(async (src) => {
+        if (visited.has(src)) {
+          return;
+        }
+        visited.add(src);
+        const asset = (await this.assetMap.get(src)) as BuildAsset | null;
+        if (!asset || !asset.src) {
+          return;
+        }
+        // Route files have no asset URL of their own, and CSS deps are
+        // injected as stylesheets rather than preloaded.
+        if (asset.assetUrl && isJsAssetUrl(asset.assetUrl)) {
+          urls.add(asset.assetUrl);
+        }
+        await this.collectModulePreload(asset.importedModules, urls, visited);
       })
     );
   }
