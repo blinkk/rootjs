@@ -52,6 +52,48 @@ test('aliases pod route srcs to their built asset', async () => {
   expect(await asset!.getCssDeps()).toEqual(['/assets/index.abcd1234.css']);
 });
 
+test('collects module preload deps from the import graph', async () => {
+  const elementRelPath = 'elements/root-a/root-a.ts';
+  const clientManifest = {
+    [elementRelPath]: {
+      file: 'assets/root-a.min.js',
+      src: elementRelPath,
+      isEntry: true,
+      imports: ['_shared.min.js'],
+      css: ['assets/root-a.css'],
+    },
+    '_shared.min.js': {
+      file: 'chunks/shared.min.js',
+      imports: ['_deep.min.js'],
+    },
+    '_deep.min.js': {
+      file: 'chunks/deep.min.js',
+      // Cyclic imports should not cause an infinite walk.
+      imports: ['_shared.min.js'],
+    },
+  } as unknown as Manifest;
+
+  const elementGraph = new ElementGraph({
+    'root-a': {
+      filePath: path.join(rootDir, elementRelPath),
+      relPath: elementRelPath,
+    },
+  });
+  const assetMap = BuildAssetMap.fromViteManifest(
+    {rootDir} as RootConfig,
+    clientManifest,
+    elementGraph
+  );
+
+  const asset = await assetMap.get(elementRelPath);
+  // The element's own URL is injected as a `<script>` tag, so it's excluded.
+  // CSS deps are injected as stylesheets and excluded as well.
+  expect(await asset!.getModulePreloadDeps()).toEqual([
+    '/chunks/shared.min.js',
+    '/chunks/deep.min.js',
+  ]);
+});
+
 test('does not alias when the pod route has no built asset', async () => {
   const routeFilePath = path.join(rootDir, 'pods/blog/routes/api.ts');
   fs.mkdirSync(path.dirname(routeFilePath), {recursive: true});

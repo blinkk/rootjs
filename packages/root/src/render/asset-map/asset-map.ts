@@ -18,6 +18,14 @@ export interface Asset {
    * Recursively walks all deps and returns a list of JS asset URLs.
    */
   getJsDeps(): Promise<string[]>;
+
+  /**
+   * Recursively walks all deps and returns a list of JS chunk URLs that the
+   * browser loads as a result of importing this asset. The asset's own URL is
+   * excluded. These URLs are injected as `<link rel="modulepreload">` tags
+   * when `modulePreload` is enabled in `root.config.ts`.
+   */
+  getModulePreloadDeps(): Promise<string[]>;
 }
 
 export interface AssetMap {

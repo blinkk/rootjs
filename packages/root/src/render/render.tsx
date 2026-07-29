@@ -239,6 +239,11 @@ export class Renderer {
 
     const jsDeps = new Set<string>();
     const cssDeps = new Set<string>();
+    // Chunks imported by the injected scripts, collected only when
+    // `modulePreload` is enabled in `root.config.ts`.
+    const preloadDeps = this.rootConfig.modulePreload
+      ? new Set<string>()
+      : null;
 
     // Walk the route's dependency tree for CSS dependencies that are added via
     // `import 'foo.scss'` or `import 'foo.module.scss'`.
@@ -262,7 +267,7 @@ export class Renderer {
 
     // Parse the HTML for custom elements that are found within the project
     // and automatically inject the script deps for them.
-    await this.collectElementDeps(mainHtml, jsDeps, cssDeps);
+    await this.collectElementDeps(mainHtml, jsDeps, cssDeps, preloadDeps);
 
     // Add user defined scripts added via the `<Script>` component.
     await Promise.all(
@@ -276,6 +281,10 @@ export class Renderer {
           jsDeps.add(scriptAsset.assetUrl);
           const scriptJsDeps = await scriptAsset.getJsDeps();
           scriptJsDeps.forEach((dep) => jsDeps.add(dep));
+          if (preloadDeps) {
+            const scriptPreloadDeps = await scriptAsset.getModulePreloadDeps();
+            scriptPreloadDeps.forEach((dep) => preloadDeps.add(dep));
+          }
         }
       })
     );
@@ -283,6 +292,13 @@ export class Renderer {
     const styleTags = Array.from(cssDeps).map((cssUrl) => {
       return <link rel="stylesheet" href={cssUrl} nonce={nonce} />;
     });
+    // Chunks that are already injected as `<script>` tags are fetched by the
+    // browser anyway, so preloading them would only duplicate the request.
+    const preloadTags = Array.from(preloadDeps || [])
+      .filter((jsUrl) => !jsDeps.has(jsUrl))
+      .map((jsUrl) => {
+        return <link rel="modulepreload" href={jsUrl} nonce={nonce} />;
+      });
     const scriptTags = Array.from(jsDeps).map((jsUrls) => {
       // TODO(stevenle): after verifying this doesn't cause any negative side
       // effects, make async the default.
@@ -299,6 +315,7 @@ export class Renderer {
       headComponents: [
         ...htmlContext.headComponents,
         ...styleTags,
+        ...preloadTags,
         ...scriptTags,
       ],
       renderMode: options.renderMode,
@@ -793,12 +810,15 @@ export class Renderer {
 
   /**
    * Parses rendered HTML for custom element tags used on the page and
-   * automatically adds the JS/CSS deps to the page.
+   * automatically adds the JS/CSS deps to the page. When `preloadDeps` is
+   * provided, the chunks imported by those elements are collected into it for
+   * `<link rel="modulepreload">` injection.
    */
   private async collectElementDeps(
     html: string,
     jsDeps: Set<string>,
-    cssDeps: Set<string>
+    cssDeps: Set<string>,
+    preloadDeps?: Set<string> | null
   ): Promise<{jsDeps: Set<string>; cssDeps: Set<string>}> {
     const elementsMap = this.elementGraph.sourceFiles;
     const assetMap = this.assetMap;
@@ -822,6 +842,10 @@ export class Renderer {
         }
         const assetJsDeps = await asset.getJsDeps();
         assetJsDeps.forEach((dep) => jsDeps.add(dep));
+        if (preloadDeps) {
+          const assetPreloadDeps = await asset.getModulePreloadDeps();
+          assetPreloadDeps.forEach((dep) => preloadDeps.add(dep));
+        }
         const assetCssDeps = await asset.getCssDeps();
         assetCssDeps.forEach((dep) => {
           // Ignore ?inline css deps.
