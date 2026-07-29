@@ -26,6 +26,7 @@ import {
   IconDotsVertical,
   IconDownload,
   IconExternalLink,
+  IconFile,
   IconFileUpload,
   IconInfoCircle,
   IconLibraryPhoto,
@@ -769,203 +770,147 @@ export function FileField(props: FileFieldProps) {
   );
 }
 
-FileField.Preview = () => {
+/**
+ * The info toggle and overflow menu for a file preview. Rendered floating on
+ * top of the canvas for images and videos, and inline within the file card for
+ * everything else.
+ */
+FileField.PreviewActions = (props: {toggleInfo: () => void}) => {
   const ctx = useFileField();
-  const [dragging, setDragging] = useState(false);
   const [copied, setCopied] = useState(false);
-  const aiEnabled = testAiEnabled();
-
-  // Videos and images are the only files that get the canvas preview.
-  // Other types just show the info panel. Videos with zero dimensions
-  // (e.g. missing metadata) are treated as non-previewable.
-  const hasValidDimensions =
-    !!ctx.value?.width &&
-    !!ctx.value?.height &&
-    Number(ctx.value.width) > 0 &&
-    Number(ctx.value.height) > 0;
-  const filename = ctx.value?.filename || '';
-  const isVideo = testIsVideoFile(filename);
-  const supportsCanvasPreview =
-    testIsImageFile(filename) || (isVideo && hasValidDimensions);
-  const [infoOpened, setInfoOpened] = useState(!supportsCanvasPreview);
-
-  // Keep infoOpened in sync when the file type changes (e.g. uploading a PDF
-  // after an MP4). Without this, the state would be stale from the first file.
-  const prevFileSrcRef = useRef(ctx.value?.src);
-  if (ctx.value?.src !== prevFileSrcRef.current) {
-    prevFileSrcRef.current = ctx.value?.src;
-    const newFilename = ctx.value?.filename || '';
-    const newSupportsCanvas =
-      testIsImageFile(newFilename) ||
-      (testIsVideoFile(newFilename) && hasValidDimensions);
-    if (!newSupportsCanvas && !infoOpened) {
-      setInfoOpened(true);
-    } else if (newSupportsCanvas && infoOpened) {
-      setInfoOpened(false);
-    }
-  }
-
-  if (!ctx.value?.src) {
-    return null;
-  }
-
   return (
-    <div className="FileField__Preview">
-      <div className="FileField__Preview__InfoButton">
-        {supportsCanvasPreview && (
-          <Tooltip label="Toggle file info" position="top" withArrow>
-            <ActionIcon
-              onClick={() => setInfoOpened((o) => !o)}
-              size="sm"
-              variant="outline"
-              className="FileField__Preview__InfoButton__Icon"
-              aria-label="Toggle file info"
-            >
-              <IconInfoCircle size={16} />
-            </ActionIcon>
-          </Tooltip>
-        )}
-        <Menu
-          classNames={{body: 'FileField__Preview__Menu'}}
-          shadow="sm"
-          control={
-            <ActionIcon
-              variant="outline"
-              size="sm"
-              radius="sm"
-              c="black"
-              className="FileField__Preview__InfoButton__Icon"
-            >
-              <IconDotsVertical size={16} />
-            </ActionIcon>
-          }
+    <>
+      <Tooltip label="Toggle file info" position="top" withArrow>
+        <ActionIcon
+          onClick={() => props.toggleInfo()}
+          size="sm"
+          variant="outline"
+          className="FileField__Preview__InfoButton__Icon"
+          aria-label="Toggle file info"
         >
-          {ctx.allowEditing && (
-            <>
-              <Menu.Label size="sm">REPLACE</Menu.Label>
-              <Menu.Item
-                icon={
-                  ctx.variant === 'image' ? (
-                    <IconPhotoUp size={16} />
-                  ) : (
-                    <IconFileUpload size={16} />
-                  )
-                }
-                onClick={() => ctx.requestFileUpload()}
-              >
-                Upload {ctx.variant === 'image' ? 'image' : 'file'}
-              </Menu.Item>
-              {ctx.assetPickerEnabled && (
-                <Menu.Item
-                  icon={<IconLibraryPhoto size={16} />}
-                  onClick={() => ctx.requestAssetPicker()}
-                >
-                  Select from asset library
-                </Menu.Item>
-              )}
-              {testSupportsCreatePlaceholder(ctx.acceptedFileTypes) && (
-                <Menu.Item
-                  disabled={!ctx.value?.src}
-                  icon={<IconPhotoStar size={16} />}
-                  onClick={() => {
-                    ctx.requestPlaceholderModalOpen();
-                  }}
-                >
-                  Placeholder image
-                </Menu.Item>
-              )}
-              {testIsImageFile(ctx.value?.src) &&
-                !ctx.value?.src?.endsWith('.svg') && (
-                  <Menu.Item
-                    disabled={!ctx.value?.src}
-                    icon={<IconCrop size={16} />}
-                    closeMenuOnClick
-                    onClick={() => {
-                      ctx.requestImageEditorOpen();
-                    }}
-                  >
-                    Edit image
-                  </Menu.Item>
-                )}
-              <Divider />
-            </>
-          )}
-          <Menu.Item
-            disabled={ctx.value?.src?.startsWith('data:')}
-            onClick={() => {
-              ctx?.requestFileDownload();
-            }}
-            icon={<IconDownload size={16} />}
+          <IconInfoCircle size={16} />
+        </ActionIcon>
+      </Tooltip>
+      <Menu
+        classNames={{body: 'FileField__Preview__Menu'}}
+        shadow="sm"
+        control={
+          <ActionIcon
+            variant="outline"
+            size="sm"
+            radius="sm"
+            c="black"
+            className="FileField__Preview__InfoButton__Icon"
           >
-            Download file
-          </Menu.Item>
-          <Menu.Item
-            closeOnItemClick={false}
-            icon={<IconCopy size={16} />}
-            onClick={() => {
-              setCopied(false);
-              let url = ctx.value?.src || '';
-              if (testIsGoogleCloudImageFile(url)) {
-                url = url.split('=')[0] + '=s0';
-              }
-              navigator.clipboard
-                .writeText(url)
-                .then(() => setCopied(true))
-                .finally(() =>
-                  setTimeout(() => {
-                    setCopied(false);
-                  }, 2000)
-                );
-            }}
-          >
-            {copied ? 'Copied!' : 'Copy URL'}
-          </Menu.Item>
-          {ctx.value?.assetId && (
-            <Menu.Item<'a'>
-              component="a"
-              href={`/cms/assets?asset=${ctx.value.assetId}`}
-              target="_blank"
-              rel="noreferrer"
-              icon={<IconExternalLink size={16} />}
-            >
-              View in asset library
-            </Menu.Item>
-          )}
-          {ctx.allowEditing && ctx.value?.assetId && (
-            <Menu.Item
-              icon={<IconUnlink size={16} />}
-              onClick={() => ctx.unlinkAsset()}
-            >
-              Unlink from asset library
-            </Menu.Item>
-          )}
-          {ctx.allowEditing &&
-            testIsImageFile(ctx.value?.src || '') &&
-            ctx.value?.canvasBgColor && (
-              <Menu.Item
-                icon={
-                  ctx.value?.canvasBgColor === 'dark' ? (
-                    <IconSquareCheckFilled size={16} />
-                  ) : (
-                    <IconSquareCheck size={16} style={{opacity: 0.25}} />
-                  )
-                }
-                closeOnItemClick={false}
-                onClick={() => {
-                  const newColor =
-                    ctx.value?.canvasBgColor === 'dark' ? 'light' : 'dark';
-                  if (ctx.value) {
-                    ctx.setValue({...ctx.value, canvasBgColor: newColor});
-                  }
-                }}
-              >
-                Use dark canvas
-              </Menu.Item>
-            )}
-          {ctx.allowEditing && ctx.setAltDisabledByMetadata && (
+            <IconDotsVertical size={16} />
+          </ActionIcon>
+        }
+      >
+        {ctx.allowEditing && (
+          <>
+            <Menu.Label size="sm">REPLACE</Menu.Label>
             <Menu.Item
               icon={
-                ctx.altDisabledByMetadata ? (
+                ctx.variant === 'image' ? (
+                  <IconPhotoUp size={16} />
+                ) : (
+                  <IconFileUpload size={16} />
+                )
+              }
+              onClick={() => ctx.requestFileUpload()}
+            >
+              Upload {ctx.variant === 'image' ? 'image' : 'file'}
+            </Menu.Item>
+            {ctx.assetPickerEnabled && (
+              <Menu.Item
+                icon={<IconLibraryPhoto size={16} />}
+                onClick={() => ctx.requestAssetPicker()}
+              >
+                Select from asset library
+              </Menu.Item>
+            )}
+            {testSupportsCreatePlaceholder(ctx.acceptedFileTypes) && (
+              <Menu.Item
+                disabled={!ctx.value?.src}
+                icon={<IconPhotoStar size={16} />}
+                onClick={() => {
+                  ctx.requestPlaceholderModalOpen();
+                }}
+              >
+                Placeholder image
+              </Menu.Item>
+            )}
+            {testIsImageFile(ctx.value?.src) &&
+              !ctx.value?.src?.endsWith('.svg') && (
+                <Menu.Item
+                  disabled={!ctx.value?.src}
+                  icon={<IconCrop size={16} />}
+                  closeMenuOnClick
+                  onClick={() => {
+                    ctx.requestImageEditorOpen();
+                  }}
+                >
+                  Edit image
+                </Menu.Item>
+              )}
+            <Divider />
+          </>
+        )}
+        <Menu.Item
+          disabled={ctx.value?.src?.startsWith('data:')}
+          onClick={() => {
+            ctx?.requestFileDownload();
+          }}
+          icon={<IconDownload size={16} />}
+        >
+          Download file
+        </Menu.Item>
+        <Menu.Item
+          closeOnItemClick={false}
+          icon={<IconCopy size={16} />}
+          onClick={() => {
+            setCopied(false);
+            let url = ctx.value?.src || '';
+            if (testIsGoogleCloudImageFile(url)) {
+              url = url.split('=')[0] + '=s0';
+            }
+            navigator.clipboard
+              .writeText(url)
+              .then(() => setCopied(true))
+              .finally(() =>
+                setTimeout(() => {
+                  setCopied(false);
+                }, 2000)
+              );
+          }}
+        >
+          {copied ? 'Copied!' : 'Copy URL'}
+        </Menu.Item>
+        {ctx.value?.assetId && (
+          <Menu.Item<'a'>
+            component="a"
+            href={`/cms/assets?asset=${ctx.value.assetId}`}
+            target="_blank"
+            rel="noreferrer"
+            icon={<IconExternalLink size={16} />}
+          >
+            View in asset library
+          </Menu.Item>
+        )}
+        {ctx.allowEditing && ctx.value?.assetId && (
+          <Menu.Item
+            icon={<IconUnlink size={16} />}
+            onClick={() => ctx.unlinkAsset()}
+          >
+            Unlink from asset library
+          </Menu.Item>
+        )}
+        {ctx.allowEditing &&
+          testIsImageFile(ctx.value?.src || '') &&
+          ctx.value?.canvasBgColor && (
+            <Menu.Item
+              icon={
+                ctx.value?.canvasBgColor === 'dark' ? (
                   <IconSquareCheckFilled size={16} />
                 ) : (
                   <IconSquareCheck size={16} style={{opacity: 0.25}} />
@@ -973,205 +918,371 @@ FileField.Preview = () => {
               }
               closeOnItemClick={false}
               onClick={() => {
-                ctx.setAltDisabledByMetadata?.(!ctx.altDisabledByMetadata);
+                const newColor =
+                  ctx.value?.canvasBgColor === 'dark' ? 'light' : 'dark';
+                if (ctx.value) {
+                  ctx.setValue({...ctx.value, canvasBgColor: newColor});
+                }
               }}
             >
-              Disable alt text
+              Use dark canvas
             </Menu.Item>
           )}
-          <Divider />
+        {ctx.allowEditing && ctx.setAltDisabledByMetadata && (
           <Menu.Item
-            color="red"
+            icon={
+              ctx.altDisabledByMetadata ? (
+                <IconSquareCheckFilled size={16} />
+              ) : (
+                <IconSquareCheck size={16} style={{opacity: 0.25}} />
+              )
+            }
+            closeOnItemClick={false}
             onClick={() => {
-              ctx?.removeFile();
+              ctx.setAltDisabledByMetadata?.(!ctx.altDisabledByMetadata);
             }}
-            icon={<IconTrash size={16} />}
           >
-            Remove file
+            Disable alt text
           </Menu.Item>
-        </Menu>
-      </div>
-
-      <div
-        className={joinClassNames(
-          'FileField__Canvas',
-          infoOpened && 'FileField__Canvas--infoOpened',
-          dragging && 'dragging'
         )}
-        style={canvasPreviewInlineStyles(ctx.value)}
-        onDragOver={(e) => {
-          e.preventDefault();
-          setDragging(true);
-        }}
-        onDragLeave={(e) => {
-          e.preventDefault();
-          setDragging(false);
-        }}
-        onDrop={(e) => {
-          e.preventDefault();
-          setDragging(false);
-          const file = e.dataTransfer?.files[0];
-          if (file && ctx) {
-            ctx.handleFile(file);
-          }
-        }}
-        onPaste={(e) => {
-          e.preventDefault();
-          // Handle Files.
-          const file = e.clipboardData?.files[0];
-          if (file) {
-            ctx.handleFile(file);
+        <Divider />
+        <Menu.Item
+          color="red"
+          onClick={() => {
+            ctx?.removeFile();
+          }}
+          icon={<IconTrash size={16} />}
+        >
+          Remove file
+        </Menu.Item>
+      </Menu>
+    </>
+  );
+};
+
+/**
+ * Wraps preview content with drag-and-drop and paste handlers so that the
+ * current file can be replaced by dropping or pasting onto the preview.
+ */
+FileField.DropTarget = (props: {
+  className?: string;
+  style?: CSSProperties;
+  children: ComponentChildren;
+}) => {
+  const ctx = useFileField();
+  const [dragging, setDragging] = useState(false);
+  return (
+    <div
+      className={joinClassNames(props.className, dragging && 'dragging')}
+      style={props.style}
+      onDragOver={(e) => {
+        e.preventDefault();
+        setDragging(true);
+      }}
+      onDragLeave={(e) => {
+        e.preventDefault();
+        setDragging(false);
+      }}
+      onDrop={(e) => {
+        e.preventDefault();
+        setDragging(false);
+        const file = e.dataTransfer?.files[0];
+        if (file) {
+          ctx.handleFile(file);
+        }
+      }}
+      onPaste={(e) => {
+        e.preventDefault();
+        // Handle Files.
+        const file = e.clipboardData?.files[0];
+        if (file) {
+          ctx.handleFile(file);
+          return;
+        }
+        // Handle SVG text (supports copying SVG from Figma) or Drive URLs.
+        const text = e.clipboardData?.getData('text/plain');
+        if (text) {
+          if (parseGoogleDriveId(text)) {
+            ctx.handleFile(text);
             return;
           }
-          // Handle SVG text (supports copying SVG from Figma) or Drive URLs.
-          const text = e.clipboardData?.getData('text/plain');
-          if (text) {
-            if (parseGoogleDriveId(text)) {
-              ctx.handleFile(text);
-              return;
-            }
-            if (testSvg(text)) {
-              ctx.handleFile(text, {as: 'svg'});
-              return;
-            }
+          if (testSvg(text)) {
+            ctx.handleFile(text, {as: 'svg'});
+            return;
           }
-        }}
-      >
-        <LoadingOverlay visible={ctx.loadingState === 'loading'} />
-        {infoOpened ? (
-          <div className="FileField__Canvas__Info">
-            <IconPaperclip
-              size={16}
-              className="FileField__Canvas__Info__Icon"
-            />
-            <Table
-              className="FileField__Canvas__Info__Table"
-              verticalSpacing="xs"
-              fontSize="xs"
-            >
-              <tbody>
-                {ctx.value?.filename && (
-                  <tr>
-                    <td>
-                      <b>Name</b>
-                    </td>
-                    <td>{ctx.value.filename}</td>
-                  </tr>
-                )}
-                {ctx.value?.assetId && (
-                  <tr>
-                    <td>
-                      <b>Asset</b>
-                    </td>
-                    <td>
-                      <a
-                        href={`/cms/assets?asset=${ctx.value.assetId}`}
-                        target="_blank"
-                        rel="noreferrer"
-                      >
-                        Open in asset library
-                      </a>
-                    </td>
-                  </tr>
-                )}
-                {ctx.value?.uploadedAt && (
-                  <tr>
-                    <td>
-                      <b>Uploaded</b>
-                    </td>
-                    <td>
-                      {new Date(
-                        parseInt(ctx.value.uploadedAt as string, 10)
-                      ).toLocaleString()}
-                      {ctx.value.uploadedBy && <> by {ctx.value.uploadedBy}</>}
-                    </td>
-                  </tr>
-                )}
-                {Boolean(ctx.value?.width && ctx.value?.height) && (
-                  <tr>
-                    <td>
-                      <b>Dimensions</b>
-                    </td>
-                    <td>
-                      {ctx.value!.width}x{ctx.value!.height}
-                    </td>
-                  </tr>
-                )}
-                <tr>
-                  <td>
-                    <b>URL</b>
-                  </td>
-                  <td>
-                    <Textarea
-                      readOnly
-                      value={ctx.value?.src}
-                      size="xs"
-                      radius={0}
-                      autosize
-                      maxRows={10}
-                    />
-                  </td>
-                </tr>
-              </tbody>
-            </Table>
-          </div>
+        }
+      }}
+    >
+      {props.children}
+    </div>
+  );
+};
+
+/**
+ * Compact preview row for files that have no visual preview (PDFs, archives,
+ * documents, etc.). Shows a file type tile, the file name, a summary line and
+ * the preview actions.
+ */
+FileField.FileCard = (props: {toggleInfo: () => void}) => {
+  const ctx = useFileField();
+  const src = ctx.value?.src || '';
+  const filename = ctx.value?.filename || getFilenameFromSrc(src);
+  // Files without a dot in their name (e.g. `dataset`) have no extension.
+  const ext = filename.includes('.') ? getFileExt(filename) : '';
+  const uploadedAt = ctx.value?.uploadedAt
+    ? new Date(parseInt(String(ctx.value.uploadedAt), 10))
+    : null;
+  return (
+    <div className="FileField__FileCard">
+      <div className="FileField__FileCard__Icon">
+        {ext && ext.length <= 4 ? (
+          <div className="FileField__FileCard__Icon__Ext">{ext}</div>
         ) : (
-          <>
-            {Boolean(ctx.value?.width && ctx.value?.height) && (
-              <Box radius="sm" className="FileField__Preview__Info">
-                {ctx.value!.width}x{ctx.value!.height}
-              </Box>
-            )}
-            {ctx.value?.assetId && (
-              <a
-                className="FileField__Preview__AssetLibraryBadge"
-                href={`/cms/assets?asset=${ctx.value?.assetId}`}
-                target="_blank"
-              >
-                ASSET LIBRARY
-              </a>
-            )}
-            {testIsImageFile(ctx.value?.src) && (
-              <img
-                onClick={() => {
-                  ctx?.focusDropZone();
-                }}
-                onDblClick={() => {
-                  if (ctx.allowEditing) {
-                    ctx?.requestFileUpload();
-                  }
-                }}
-                src={ctx.value.src}
-                alt={ctx.value.alt || 'Uploaded file preview'}
-                className="FileField__Preview__Image"
-              />
-            )}
-            {testIsVideoFile(ctx.value?.src) && (
-              <>
-                <video
-                  className="FileField__Preview__Image"
-                  controls
-                  muted
-                  preload="metadata"
-                >
-                  <source
-                    src={ctx.value.src}
-                    type={`video/${getFileExt(ctx.value.src)}`}
-                  />
-                </video>
-              </>
-            )}
-          </>
-        )}
-        {ctx.allowEditing && (
-          <div className="FileField__reupload">
-            <FileField.UploadButton
-              className="FileField__reupload__button"
-              compact
-            />
-          </div>
+          <IconFile size={20} stroke="1.5" />
         )}
       </div>
+      <div className="FileField__FileCard__Meta">
+        <a
+          className="FileField__FileCard__Meta__Name"
+          href={src}
+          target="_blank"
+          rel="noreferrer"
+          title={filename}
+        >
+          {filename}
+        </a>
+        <div className="FileField__FileCard__Meta__Summary">
+          {uploadedAt && (
+            <span>Uploaded {uploadedAt.toLocaleDateString()}</span>
+          )}
+          {ctx.value?.assetId && (
+            <a
+              className="FileField__FileCard__Meta__AssetBadge"
+              href={`/cms/assets?asset=${ctx.value.assetId}`}
+              target="_blank"
+              rel="noreferrer"
+            >
+              ASSET LIBRARY
+            </a>
+          )}
+        </div>
+      </div>
+      <div className="FileField__FileCard__Actions">
+        {ctx.allowEditing && <FileField.UploadButton compact />}
+        <FileField.PreviewActions toggleInfo={props.toggleInfo} />
+      </div>
+    </div>
+  );
+};
+
+/**
+ * Table of file metadata shown when the info panel is open. The `card` variant
+ * omits the rows that the file card already surfaces (the file name and the
+ * asset library link).
+ */
+FileField.InfoTable = (props: {variant: 'canvas' | 'card'}) => {
+  const ctx = useFileField();
+  const showFileRows = props.variant === 'canvas';
+  return (
+    <Table
+      className="FileField__Canvas__Info__Table"
+      verticalSpacing="xs"
+      fontSize="xs"
+    >
+      <tbody>
+        {showFileRows && ctx.value?.filename && (
+          <tr>
+            <td>
+              <b>Name</b>
+            </td>
+            <td>{ctx.value.filename}</td>
+          </tr>
+        )}
+        {showFileRows && ctx.value?.assetId && (
+          <tr>
+            <td>
+              <b>Asset</b>
+            </td>
+            <td>
+              <a
+                href={`/cms/assets?asset=${ctx.value.assetId}`}
+                target="_blank"
+                rel="noreferrer"
+              >
+                Open in asset library
+              </a>
+            </td>
+          </tr>
+        )}
+        {ctx.value?.uploadedAt && (
+          <tr>
+            <td>
+              <b>Uploaded</b>
+            </td>
+            <td>
+              {new Date(
+                parseInt(ctx.value.uploadedAt as string, 10)
+              ).toLocaleString()}
+              {ctx.value.uploadedBy && <> by {ctx.value.uploadedBy}</>}
+            </td>
+          </tr>
+        )}
+        {Boolean(ctx.value?.width && ctx.value?.height) && (
+          <tr>
+            <td>
+              <b>Dimensions</b>
+            </td>
+            <td>
+              {ctx.value!.width}x{ctx.value!.height}
+            </td>
+          </tr>
+        )}
+        <tr>
+          <td>
+            <b>URL</b>
+          </td>
+          <td>
+            <Textarea
+              readOnly
+              value={ctx.value?.src}
+              size="xs"
+              radius={0}
+              autosize
+              maxRows={10}
+            />
+          </td>
+        </tr>
+      </tbody>
+    </Table>
+  );
+};
+
+FileField.Preview = () => {
+  const ctx = useFileField();
+  const aiEnabled = testAiEnabled();
+
+  // Images and videos are the only files that get the canvas preview. Every
+  // other file type renders as a compact file card. Videos with zero
+  // dimensions (e.g. missing metadata) are treated as non-previewable.
+  const hasValidDimensions =
+    !!ctx.value?.width &&
+    !!ctx.value?.height &&
+    Number(ctx.value.width) > 0 &&
+    Number(ctx.value.height) > 0;
+  const src = ctx.value?.src || '';
+  const filename = ctx.value?.filename || src;
+  const supportsCanvasPreview =
+    testIsImageFile(filename) ||
+    (testIsVideoFile(filename) && hasValidDimensions);
+  const [infoOpened, setInfoOpened] = useState(false);
+  const toggleInfo = () => setInfoOpened((opened) => !opened);
+
+  // Collapse the info panel whenever the file changes so that the preview of
+  // the new file is always the first thing shown.
+  const prevFileSrcRef = useRef(src);
+  if (src !== prevFileSrcRef.current) {
+    prevFileSrcRef.current = src;
+    if (infoOpened) {
+      setInfoOpened(false);
+    }
+  }
+
+  if (!src) {
+    return null;
+  }
+
+  return (
+    <div className="FileField__Preview">
+      {supportsCanvasPreview ? (
+        <>
+          <div className="FileField__Preview__InfoButton">
+            <FileField.PreviewActions toggleInfo={toggleInfo} />
+          </div>
+          <FileField.DropTarget
+            className={joinClassNames(
+              'FileField__Canvas',
+              infoOpened && 'FileField__Canvas--infoOpened'
+            )}
+            style={canvasPreviewInlineStyles(ctx.value)}
+          >
+            <LoadingOverlay visible={ctx.loadingState === 'loading'} />
+            {infoOpened ? (
+              <div className="FileField__Canvas__Info">
+                <IconPaperclip
+                  size={16}
+                  className="FileField__Canvas__Info__Icon"
+                />
+                <FileField.InfoTable variant="canvas" />
+              </div>
+            ) : (
+              <>
+                {Boolean(ctx.value?.width && ctx.value?.height) && (
+                  <Box radius="sm" className="FileField__Preview__Info">
+                    {ctx.value!.width}x{ctx.value!.height}
+                  </Box>
+                )}
+                {ctx.value?.assetId && (
+                  <a
+                    className="FileField__Preview__AssetLibraryBadge"
+                    href={`/cms/assets?asset=${ctx.value?.assetId}`}
+                    target="_blank"
+                  >
+                    ASSET LIBRARY
+                  </a>
+                )}
+                {testIsImageFile(ctx.value?.src) && (
+                  <img
+                    onClick={() => {
+                      ctx?.focusDropZone();
+                    }}
+                    onDblClick={() => {
+                      if (ctx.allowEditing) {
+                        ctx?.requestFileUpload();
+                      }
+                    }}
+                    src={ctx.value.src}
+                    alt={ctx.value.alt || 'Uploaded file preview'}
+                    className="FileField__Preview__Image"
+                  />
+                )}
+                {testIsVideoFile(ctx.value?.src) && (
+                  <>
+                    <video
+                      className="FileField__Preview__Image"
+                      controls
+                      muted
+                      preload="metadata"
+                    >
+                      <source
+                        src={ctx.value.src}
+                        type={`video/${getFileExt(ctx.value.src)}`}
+                      />
+                    </video>
+                  </>
+                )}
+              </>
+            )}
+            {ctx.allowEditing && (
+              <div className="FileField__reupload">
+                <FileField.UploadButton
+                  className="FileField__reupload__button"
+                  compact
+                />
+              </div>
+            )}
+          </FileField.DropTarget>
+        </>
+      ) : (
+        <FileField.DropTarget className="FileField__File">
+          <LoadingOverlay visible={ctx.loadingState === 'loading'} />
+          <FileField.FileCard toggleInfo={toggleInfo} />
+          {infoOpened && (
+            <div className="FileField__File__Details">
+              <FileField.InfoTable variant="card" />
+            </div>
+          )}
+        </FileField.DropTarget>
+      )}
       {ctx.allowEditing &&
         ctx.showAltText &&
         (ctx.altText ||
@@ -1491,6 +1602,26 @@ function canvasPreviewInlineStyles(uploadedFile: UploadedFile) {
     inlineStyles['--canvas-bg-color'] = '#000';
   }
   return inlineStyles;
+}
+
+/**
+ * Derives a display filename from a file's URL, used for legacy values that
+ * were saved without a `filename`.
+ */
+function getFilenameFromSrc(src: string): string {
+  if (!src) {
+    return '';
+  }
+  if (src.startsWith('data:')) {
+    const ext = src.slice(5).split(';')[0].split('/').pop();
+    return ext ? `untitled.${ext}` : 'untitled';
+  }
+  try {
+    const pathname = new URL(src, window.location.href).pathname;
+    return decodeURIComponent(pathname.split('/').pop() || '') || src;
+  } catch {
+    return src;
+  }
 }
 
 function getMetadataKey(key: string) {

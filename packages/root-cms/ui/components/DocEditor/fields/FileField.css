@@ -11,11 +11,13 @@
 
 .FileField:has(.dragging) .FileField__Dropzone,
 .FileField:has(.dragging) .FileField__Canvas,
-.FileField:has(.dragging) .FileField__Canvas__Info {
+.FileField:has(.dragging) .FileField__Canvas__Info,
+.FileField:has(.dragging) .FileField__File__Details {
   background-color: var(--file-field-dragging-bg-color);
 }
 
-.FileField:has(.FileField__Canvas) {
+.FileField:has(.FileField__Canvas),
+.FileField:has(.FileField__File) {
   padding: 0;
 }
 
@@ -73,8 +75,113 @@
   display: none;
 }
 
-.FileField__Preview:has(.FileField__Canvas) {
+.FileField__Preview:has(.FileField__Canvas),
+.FileField__Preview:has(.FileField__File) {
   padding: 0;
+}
+
+/* Compact preview for files with no visual preview (PDFs, archives, etc.). */
+.FileField__File {
+  position: relative;
+}
+
+.FileField__FileCard {
+  align-items: center;
+  display: flex;
+  /* Narrow fields (e.g. nested array items) wrap the actions onto their own
+     row instead of squeezing the file name. */
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  padding: 8px 10px;
+  position: relative;
+  z-index: 1;
+}
+
+.FileField__FileCard__Icon {
+  align-items: center;
+  background: var(--chip-background);
+  border-radius: 4px;
+  color: var(--color-text-gray);
+  display: flex;
+  flex-shrink: 0;
+  height: 36px;
+  justify-content: center;
+  pointer-events: all;
+  width: 48px;
+}
+
+.FileField__FileCard__Icon__Ext {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.FileField__FileCard__Meta {
+  flex: 1 1 160px;
+  min-width: 0;
+}
+
+.FileField__FileCard__Meta__Name {
+  color: var(--color-text-default);
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  overflow: hidden;
+  pointer-events: all;
+  text-decoration: none;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.FileField__FileCard__Meta__Name:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.FileField__FileCard__Meta__Summary {
+  align-items: center;
+  color: var(--color-text-gray);
+  display: flex;
+  flex-wrap: wrap;
+  font-size: 11px;
+  gap: 6px;
+  margin-top: 2px;
+}
+
+/* Separates the text items in the summary line, but not the asset badge. */
+.FileField__FileCard__Meta__Summary > span + span::before {
+  content: '·';
+  margin-right: 6px;
+}
+
+.FileField__FileCard__Meta__AssetBadge {
+  background: #1971c2;
+  border-radius: 4px;
+  color: #fff;
+  font-size: 8px;
+  font-weight: 700;
+  padding: 2px 5px;
+  pointer-events: all;
+  text-decoration: none;
+}
+
+.FileField__FileCard__Actions {
+  align-items: center;
+  display: flex;
+  flex-shrink: 0;
+  gap: 4px;
+  margin-left: auto;
+  pointer-events: all;
+}
+
+.FileField__File__Details {
+  background-color: #fff;
+  border-top: 1px solid var(--color-border);
+  padding: 10px;
+  pointer-events: all;
+  position: relative;
+  z-index: 1;
 }
 
 .DocEditor__ImageField__imagePreview__Image__Alt {
