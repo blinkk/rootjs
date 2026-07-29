@@ -6,6 +6,7 @@
 - 🕸️ Web Components
 - 📁 File Routes
 - 🇯🇵 i18n
+- 🔌 Plugins
 - 📇 CMS
 - 🤖 AI
 
