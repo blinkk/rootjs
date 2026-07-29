@@ -28,10 +28,8 @@ export default defineConfig({
         },
       },
     },
-    build: {
-      modulePreload: false,
-    },
   },
+  modulePreload: true,
   server: {
     trailingSlash: true,
     sessionCookieSecret: process.env.COOKIE_SECRET,
