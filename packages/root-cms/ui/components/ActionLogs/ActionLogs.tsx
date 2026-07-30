@@ -6,7 +6,6 @@ import {
   Select,
   Table,
   TextInput,
-  Tooltip,
 } from '@mantine/core';
 import {useDebouncedValue} from '@mantine/hooks';
 import {IconSearch} from '@tabler/icons-preact';
@@ -20,6 +19,7 @@ import {notifyErrors} from '../../utils/notifications.js';
 import {withTimeout} from '../../utils/with-timeout.js';
 import {Pagination, PaginationSummary} from '../Pagination/Pagination.js';
 import {Surface} from '../Surface/Surface.js';
+import {Tooltip} from '../Tooltip/Tooltip.js';
 import {UserAvatar} from '../UserAvatar/UserAvatar.js';
 import './ActionsLogs.css';
 
