@@ -396,6 +396,93 @@ export async function createAssetFolder(
 }
 
 /**
+ * Max number of folders created by a single folder upload. Bounds the write
+ * cost of accidentally uploading a huge directory tree.
+ */
+const MAX_UPLOAD_FOLDERS = 200;
+
+/**
+ * Validates every segment of a relative folder path (e.g. the folder path of a
+ * file within a folder upload), returning the normalized path. Throws an
+ * `AssetNameError` if any segment is invalid.
+ */
+export function validateFolderPath(folderPath: string): string {
+  return parseFolderPath(folderPath).map(validateAssetName).join('/');
+}
+
+/**
+ * Ensures a set of folder paths, relative to a parent folder, exist in the
+ * asset library, creating any missing folders (and their ancestors) along the
+ * way. Used by folder uploads, which mirror the uploaded directory structure.
+ * Existing folders are left untouched so their created metadata and any sync
+ * connection are preserved. Writes are batched (max 500 ops per batch).
+ */
+export async function createAssetFolderPaths(
+  parent: string,
+  relativePaths: string[]
+): Promise<void> {
+  // Expand each path into its full chain of ancestors, e.g. `a/b/c` also
+  // requires `a` and `a/b`.
+  const paths = new Set<string>();
+  for (const relativePath of relativePaths) {
+    let current = parent || '';
+    for (const segment of parseFolderPath(relativePath)) {
+      current = joinFolderPath(current, validateAssetName(segment));
+      paths.add(current);
+    }
+  }
+  if (paths.size === 0) {
+    return;
+  }
+  if (paths.size > MAX_UPLOAD_FOLDERS) {
+    throw new Error(
+      `Too many folders in upload (${paths.size}, max ${MAX_UPLOAD_FOLDERS}).`
+    );
+  }
+
+  const colRef = getAssetsDbCollection();
+  const db = window.firebase.db;
+  // Sorted so parent folders are created before their children.
+  const folderPaths = Array.from(paths).sort();
+  const snapshots = await Promise.all(
+    folderPaths.map((folderPath) =>
+      getDoc(doc(colRef, getFolderId(folderPath)))
+    )
+  );
+  const missing = folderPaths.filter((_, i) => !snapshots[i].exists());
+  if (missing.length === 0) {
+    return;
+  }
+
+  let batch = writeBatch(db);
+  let numOps = 0;
+  for (const folderPath of missing) {
+    const segments = parseFolderPath(folderPath);
+    const folderId = getFolderId(folderPath);
+    batch.set(doc(colRef, folderId), {
+      id: folderId,
+      type: 'folder',
+      parent: segments.slice(0, -1).join('/'),
+      name: segments[segments.length - 1],
+      createdAt: serverTimestamp(),
+      createdBy: window.firebase.user.email,
+      modifiedAt: serverTimestamp(),
+      modifiedBy: window.firebase.user.email,
+    });
+    numOps += 1;
+    if (numOps >= 400) {
+      await batch.commit();
+      batch = writeBatch(db);
+      numOps = 0;
+    }
+  }
+  if (numOps > 0) {
+    await batch.commit();
+  }
+  logAction('asset.folder_create', {metadata: {folders: missing}});
+}
+
+/**
  * Adds an uploaded file to the asset library.
  */
 export async function createAssetFile(options: {
