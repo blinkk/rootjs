@@ -33,5 +33,5 @@ export interface AssetMap {
    * Returns the asset for a given src file. The `src` value should be a path
    * relative to the project root, e.g. "routes/index.tsx".
    */
-  get: (src: string) => Promise<Asset | null>;
+  get: (src: string) => Asset | null;
 }

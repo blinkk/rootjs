@@ -37,7 +37,16 @@ export class BuildAssetMap implements AssetMap {
     this.srcToAsset = new Map();
   }
 
-  async get(src: string): Promise<Asset | null> {
+  get(src: string): Asset | null {
+    const asset = this.find(src);
+    if (asset) {
+      return asset;
+    }
+    console.log(`could not find build asset: ${src}`);
+    return null;
+  }
+
+  private find(src: string): BuildAsset | undefined {
     const asset = this.srcToAsset.get(src);
     if (asset) {
       return asset;
@@ -50,8 +59,7 @@ export class BuildAssetMap implements AssetMap {
         return asset;
       }
     }
-    console.log(`could not find build asset: ${src}`);
-    return null;
+    return undefined;
   }
 
   private add(asset: BuildAsset) {
