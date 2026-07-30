@@ -1,0 +1,8 @@
+/*
+ * Shrink-wrap the tooltip's wrapper around its child. The `mantine-Tooltip-root`
+ * class is included to win over Mantine's own `display: inline-block` without
+ * relying on stylesheet order.
+ */
+.Tooltip.mantine-Tooltip-root {
+  display: inline-flex;
+}
