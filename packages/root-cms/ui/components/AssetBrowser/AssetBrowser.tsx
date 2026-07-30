@@ -22,9 +22,11 @@ import {
   IconCopy,
   IconDotsVertical,
   IconDownload,
+  IconFileUpload,
   IconFolder,
   IconFolderPlus,
   IconFolderSymlink,
+  IconFolderUp,
   IconInfoCircle,
   IconPencil,
   IconRefresh,
@@ -44,6 +46,7 @@ import {
   AssetFolder,
   createAssetFile,
   createAssetFolder,
+  createAssetFolderPaths,
   deleteAsset,
   findDocsUsingAsset,
   getAsset,
@@ -57,15 +60,22 @@ import {
   renameAsset,
   syncAssetToDocs,
   updateAssetAltDisabled,
+  validateFolderPath,
 } from '../../utils/assets.js';
 import {joinClassNames} from '../../utils/classes.js';
+import {
+  MAX_UPLOAD_FILES,
+  UploadFileEntry,
+  getUploadFiles,
+  getUploadFilesFromDataTransfer,
+} from '../../utils/file-tree.js';
 import {
   testFileMatchesAccept,
   testIsImageFile,
   testIsVideoFile,
   uploadFileToGCS,
 } from '../../utils/gcs.js';
-import {notifyErrors} from '../../utils/notifications.js';
+import {errorMessage, notifyErrors} from '../../utils/notifications.js';
 import {testCanPublish} from '../../utils/permissions.js';
 import {getTimeAgo} from '../../utils/time.js';
 import {withTimeout} from '../../utils/with-timeout.js';
@@ -257,40 +267,97 @@ export function AssetBrowser(props: AssetBrowserProps) {
   });
   const pageItems = pagination.pageItems;
 
-  async function uploadFiles(files: File[]) {
-    if (files.length === 0 || uploading) {
+  /**
+   * Uploads files into the current folder. Entries that came from a folder
+   * upload carry the folder path they were nested under, which is mirrored in
+   * the asset library (creating any missing folders) before the files are
+   * uploaded into it.
+   */
+  async function uploadFiles(entries: UploadFileEntry[]) {
+    if (entries.length === 0 || uploading) {
       return;
     }
     const notificationId = 'asset-browser-upload';
     setUploading(true);
+    if (entries.length >= MAX_UPLOAD_FILES) {
+      showNotification({
+        title: 'Upload truncated',
+        message: `Only the first ${MAX_UPLOAD_FILES} files are uploaded at a time.`,
+        color: 'yellow',
+        autoClose: false,
+      });
+    }
     showNotification({
       id: notificationId,
-      message: `Uploading ${files.length} file(s)...`,
+      message: `Uploading ${entries.length} file(s)...`,
       loading: true,
       autoClose: false,
       disallowClose: true,
     });
     const uploaded: AssetFile[] = [];
     const failed: string[] = [];
-    for (let i = 0; i < files.length; i++) {
-      const file = files[i];
+
+    // Resolve each file's destination folder up front so that files with a
+    // path the asset library can't represent are skipped individually.
+    const items: Array<{file: File; label: string; parent: string}> = [];
+    const folderPaths = new Set<string>();
+    for (const entry of entries) {
+      try {
+        const relativePath = validateFolderPath(entry.path);
+        if (relativePath) {
+          folderPaths.add(relativePath);
+        }
+        items.push({
+          file: entry.file,
+          label: relativePath
+            ? `${relativePath}/${entry.file.name}`
+            : entry.file.name,
+          parent: joinFolderPath(folder, relativePath),
+        });
+      } catch (err) {
+        console.error(`invalid upload path for ${entry.file.name}:`, err);
+        failed.push(entry.file.name);
+      }
+    }
+
+    if (folderPaths.size > 0) {
+      try {
+        await createAssetFolderPaths(folder, Array.from(folderPaths));
+      } catch (err) {
+        // Without their db docs the uploaded folders wouldn't show up in the
+        // listing, so bail out before uploading any files.
+        console.error('failed to create upload folders:', err);
+        hideNotification(notificationId);
+        setUploading(false);
+        showNotification({
+          title: 'Upload failed',
+          message: `Failed to create folders: ${errorMessage(err)}`,
+          color: 'red',
+          autoClose: false,
+        });
+        return;
+      }
+    }
+
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i];
       updateNotification({
         id: notificationId,
-        message: `Uploading ${file.name} (${i + 1} of ${files.length})...`,
+        message: `Uploading ${item.label} (${i + 1} of ${items.length})...`,
         loading: true,
         autoClose: false,
         disallowClose: true,
       });
       try {
-        const uploadedFile = await uploadFileToGCS(file);
+        const uploadedFile = await uploadFileToGCS(item.file);
         const asset = await createAssetFile({
-          parent: folder,
+          parent: item.parent,
           file: uploadedFile,
         });
         uploaded.push(asset);
       } catch (err) {
-        console.error(`failed to upload ${file.name}:`, err);
-        failed.push(file.name);
+        console.error(`failed to upload ${item.label}:`, err);
+        failed.push(item.label);
       }
     }
     hideNotification(notificationId);
@@ -313,22 +380,32 @@ export function AssetBrowser(props: AssetBrowserProps) {
     if (
       props.mode === 'pick' &&
       uploaded.length === 1 &&
-      files.length === 1 &&
+      entries.length === 1 &&
+      !entries[0].path &&
       props.onPickFile
     ) {
       props.onPickFile(uploaded[0]);
     }
   }
 
-  function requestUpload() {
+  function requestUpload(options?: {directory?: boolean}) {
     const inputEl = document.createElement('input');
     inputEl.type = 'file';
     inputEl.multiple = true;
-    if (props.mode === 'pick' && props.accept && props.accept.length > 0) {
+    if (options?.directory) {
+      // Non-standard attributes for the directory picker. `webkitdirectory` is
+      // supported by all major browsers; `directory` is the unprefixed name.
+      inputEl.setAttribute('webkitdirectory', '');
+      inputEl.setAttribute('directory', '');
+    } else if (
+      props.mode === 'pick' &&
+      props.accept &&
+      props.accept.length > 0
+    ) {
       inputEl.accept = props.accept.join(',');
     }
     inputEl.onchange = () => {
-      uploadFiles(Array.from(inputEl.files || []));
+      uploadFiles(getUploadFiles(inputEl.files));
     };
     inputEl.click();
     inputEl.remove();
@@ -435,17 +512,47 @@ export function AssetBrowser(props: AssetBrowserProps) {
               New folder
             </Button>
           )}
-          {showUpload && (
-            <Button
-              color="dark"
-              size="xs"
-              leftIcon={<IconUpload size={16} />}
-              loading={uploading}
-              onClick={() => requestUpload()}
-            >
-              Upload
-            </Button>
-          )}
+          {showUpload &&
+            (props.mode === 'manage' ? (
+              <Menu
+                shadow="sm"
+                position="bottom"
+                placement="end"
+                control={
+                  <Button
+                    color="dark"
+                    size="xs"
+                    leftIcon={<IconUpload size={16} />}
+                    loading={uploading}
+                  >
+                    Upload
+                  </Button>
+                }
+              >
+                <Menu.Item
+                  icon={<IconFileUpload size={14} />}
+                  onClick={() => requestUpload()}
+                >
+                  Upload files
+                </Menu.Item>
+                <Menu.Item
+                  icon={<IconFolderUp size={14} />}
+                  onClick={() => requestUpload({directory: true})}
+                >
+                  Upload folder
+                </Menu.Item>
+              </Menu>
+            ) : (
+              <Button
+                color="dark"
+                size="xs"
+                leftIcon={<IconUpload size={16} />}
+                loading={uploading}
+                onClick={() => requestUpload()}
+              >
+                Upload
+              </Button>
+            ))}
         </div>
       </div>
       {props.mode === 'manage' && currentFolder?.sync && !searching && (
@@ -519,7 +626,14 @@ export function AssetBrowser(props: AssetBrowserProps) {
           if (!showUpload) {
             return;
           }
-          uploadFiles(Array.from(e.dataTransfer?.files || []));
+          // `dataTransfer` is only valid during the event, so the dropped
+          // items are read synchronously here and awaited below.
+          const uploadFilesPromise = getUploadFilesFromDataTransfer(
+            e.dataTransfer
+          );
+          notifyErrors(async () => {
+            await uploadFiles(await uploadFilesPromise);
+          });
         }}
       >
         {loading || (searching && searchIndex === null) ? (
@@ -540,7 +654,7 @@ export function AssetBrowser(props: AssetBrowserProps) {
                 <div>This folder is empty.</div>
                 {showUpload && (
                   <div className="AssetBrowser__empty__hint">
-                    Drop files here or click "Upload" to add assets.
+                    Drop files or folders here or click "Upload" to add assets.
                   </div>
                 )}
               </>

@@ -12,6 +12,7 @@ import {
   parseFolderPath,
   replaceFileExt,
   validateAssetName,
+  validateFolderPath,
 } from './assets.js';
 
 function testAsset(file: Record<string, any> = {}): AssetFile {
@@ -81,6 +82,14 @@ describe('folder paths', () => {
     expect(getRelativeFolderPath('marketingX', 'marketing')).toEqual(
       'marketingX'
     );
+  });
+
+  it('validates every segment of a relative folder path', () => {
+    expect(validateFolderPath('')).toEqual('');
+    expect(validateFolderPath('lottie/images')).toEqual('lottie/images');
+    expect(validateFolderPath(' lottie / images ')).toEqual('lottie/images');
+    expect(() => validateFolderPath('lottie/..')).toThrow(AssetNameError);
+    expect(() => validateFolderPath('lottie/ ')).toThrow(AssetNameError);
   });
 });
 
