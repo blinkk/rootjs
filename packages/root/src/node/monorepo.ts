@@ -1,5 +1,9 @@
 import path from 'node:path';
-import {getWorkspaces, getWorkspaceRoot, PackageInfo} from 'workspace-tools';
+import {
+  getWorkspaceInfos,
+  getWorkspaceManagerRoot,
+  PackageInfo,
+} from 'workspace-tools';
 import {fileExistsSync, loadJsonSync} from '../utils/fsutils.js';
 
 interface WorkspacePackage {
@@ -22,12 +26,12 @@ export function loadPackageJson(filepath: string): PackageInfo | null {
 function getMonorepoPackages(
   rootDir: string
 ): Record<string, WorkspacePackage> {
-  const monorepoRoot = getWorkspaceRoot(rootDir);
+  const monorepoRoot = getWorkspaceManagerRoot(rootDir);
   if (!monorepoRoot) {
     return {};
   }
 
-  const workspaces = getWorkspaces(monorepoRoot);
+  const workspaces = getWorkspaceInfos(monorepoRoot) || [];
   const packages: Record<string, WorkspacePackage> = {};
   workspaces.forEach((workspaceInfo) => {
     packages[workspaceInfo.name] = workspaceInfo;
@@ -41,7 +45,7 @@ function getMonorepoPackages(
 export function getMonorepoPackageDeps(
   rootDir: string
 ): Record<string, string> {
-  const monorepoRoot = getWorkspaceRoot(rootDir);
+  const monorepoRoot = getWorkspaceManagerRoot(rootDir);
   if (!monorepoRoot) {
     return {};
   }

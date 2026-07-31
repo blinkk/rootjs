@@ -1,6 +1,6 @@
 import {execSync} from 'node:child_process';
 import fs from 'node:fs';
-import yaml from 'js-yaml';
+import {load as loadYaml} from 'js-yaml';
 
 export interface GaeDeployOptions {
   /** GCP project id. */
@@ -47,7 +47,7 @@ export async function gaeDeploy(appDir: string, options?: GaeDeployOptions) {
   }
 
   // Read the service from `app.yaml` and deploy it.
-  const appYaml = yaml.load(fs.readFileSync(appYamlPath, 'utf8')) as AppYaml;
+  const appYaml = loadYaml(fs.readFileSync(appYamlPath, 'utf8')) as AppYaml;
   const service = appYaml.service;
   if (!service) {
     throw new Error(

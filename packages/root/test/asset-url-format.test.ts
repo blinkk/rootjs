@@ -24,7 +24,7 @@ test('customize asset url format', async () => {
   );
   expect(relStaticFiles).toMatchInlineSnapshot(`
     [
-      "static/assets/main.ClhRHzZO.min.js",
+      "static/assets/main.zZ5ZGPkC.min.js",
       "static/assets/page.D9V3Qi17.css",
     ]
   `);
